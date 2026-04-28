@@ -1,4 +1,7 @@
 // apps/web/src/components/desktop_layout.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # Desktop Layout
 
 use self::desktop_layout_banner::DesktopSyncBanner;

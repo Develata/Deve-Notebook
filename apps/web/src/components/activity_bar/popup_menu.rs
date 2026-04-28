@@ -1,4 +1,7 @@
 // apps/web/src/components/activity_bar/popup_menu.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # ActivityBar Popup Menu
 //!
 //! 弹出菜单，用于切换/固定侧边栏视图。

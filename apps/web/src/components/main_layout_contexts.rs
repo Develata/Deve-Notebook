@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 use super::{ChatControl, SearchControl};
 use leptos::prelude::*;
 use web_sys::UiEvent;

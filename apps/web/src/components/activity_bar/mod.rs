@@ -1,4 +1,7 @@
 // apps/web/src/components/activity_bar/mod.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # ActivityBar 组件 (ActivityBar Component)
 //!
 //! 侧边栏导航条，用于在不同的视图（资源管理器、搜索、源码管理、扩展）之间切换。

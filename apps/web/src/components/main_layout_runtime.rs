@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::components::activity_bar::SidebarView;
 use crate::components::disconnect_overlay::DisconnectedOverlay;
 use crate::hooks::use_core::CoreState;

@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!
 use crate::api::AiBackendCapabilities;
 use crate::hooks::use_core::{ChatContext, ChatMessage};
 use crate::i18n::{Locale, t};

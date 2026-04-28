@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::i18n::{Locale, t};
 use deve_core::models::PeerId;
 

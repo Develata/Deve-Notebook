@@ -1,4 +1,8 @@
 // apps\web\src\components
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # Header 组件 (Header Component)
 //!
 //! 应用程序顶部导航栏，包含标题、状态指示器和常用操作（主页、打开、命令）。

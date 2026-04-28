@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # Lucide-style SVG Icon Components
 //!
 //! 轻量级图标组件（基于 Lucide Design），零外部依赖。

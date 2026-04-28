@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 15_release#runtime-observability
+//!
 use crate::i18n::{Locale, t};
 use leptos::ev::Event;
 use leptos::prelude::*;

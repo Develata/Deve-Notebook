@@ -1,4 +1,7 @@
 // apps/web/src/components/dashboard/mod.rs
+//! plan_ref:
+//!   - 15_release#runtime-observability
+//!
 //! # Dashboard (仪表盘)
 //!
 //! 当没有文档被选中时，在主内容区显示服务器运行指标。

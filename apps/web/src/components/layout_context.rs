@@ -1,4 +1,7 @@
 // apps/web/src/components/layout_context.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # 布局相关 Context 类型
 //!
 //! 定义跨组件共享的布局控制上下文。

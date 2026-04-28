@@ -1,4 +1,8 @@
 // apps\web\src\components
+//! plan_ref:
+//!   - 15_release#runtime-observability
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # BottomBar 组件 (BottomBar Component)
 //!
 //! 底部状态栏，显示分支切换器、连接状态和编辑器统计信息 (字数、行数、字符数)。

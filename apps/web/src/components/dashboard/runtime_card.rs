@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 15_release#runtime-observability
+//!
 //! Runtime release shape card.
 
 use crate::i18n::{Locale, t};

@@ -1,4 +1,8 @@
 // apps/web/src/components/desktop_chat_panel.rs
+//! plan_ref:
+//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # Desktop Chat Panel with Resize Gutter
 //!
 //! Conditionally rendered right-side chat panel for desktop layout.

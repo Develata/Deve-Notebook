@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 15_release#runtime-observability
+//!
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::status_summary::{SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};

@@ -1,4 +1,8 @@
 // apps/web/src/components/dashboard/sync_card.rs
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 15_release#runtime-observability
+//!
 //! # Sync Card (同步状态卡片)
 //!
 //! 显示已连接的 Peer 数量和已处理的操作总数。

@@ -1,4 +1,7 @@
 // apps/web/src/components/dropdown
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # Dropdown 组件 (自动翻转)
 //!
 //! 根据触发器位置与内容高度，自动向上/向下展开。

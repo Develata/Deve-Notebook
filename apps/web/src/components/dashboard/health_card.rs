@@ -1,4 +1,7 @@
 // apps/web/src/components/dashboard/health_card.rs
+//! plan_ref:
+//!   - 15_release#runtime-observability
+//!
 //! # Health Card (健康状态卡片)
 //!
 //! 显示 CPU 使用率、内存占用和服务器运行时间。

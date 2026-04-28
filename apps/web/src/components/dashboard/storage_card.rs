@@ -1,4 +1,8 @@
 // apps/web/src/components/dashboard/storage_card.rs
+//! plan_ref:
+//!   - 04_storage#browser-storage-layering
+//!   - 15_release#runtime-observability
+//!
 //! # Storage Card (存储状态卡片)
 //!
 //! 显示数据库大小和文档数量。

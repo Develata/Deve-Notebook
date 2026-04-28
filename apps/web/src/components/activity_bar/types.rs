@@ -1,4 +1,7 @@
 // apps/web/src/components/activity_bar/types.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # SidebarView 枚举定义
 //!
 //! 侧边栏视图类型，在 ActivityBar、Sidebar、Layout 等组件间共享。
