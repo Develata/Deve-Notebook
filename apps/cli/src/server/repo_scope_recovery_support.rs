@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+
 use super::{AppState, tree_state::RepoTreeRegistry};
 use crate::server::security;
 use deve_core::config::SyncMode;

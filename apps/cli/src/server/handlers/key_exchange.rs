@@ -1,4 +1,9 @@
 // apps/cli/src/server/handlers/key_exchange.rs
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 09_auth#jwt-cookie-contract
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # E2EE 密钥交换处理器
 //!
 //! 通过已认证的 WSS 通道向客户端提供 RepoKey。

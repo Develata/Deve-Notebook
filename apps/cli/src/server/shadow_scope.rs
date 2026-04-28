@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+
 use crate::server::AppState;
 use crate::server::repo_scope::{map_repo_scope_error, stale_remote_scope_detail};
 use crate::server::session::WsSession;

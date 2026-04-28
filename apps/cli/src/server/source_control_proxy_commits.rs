@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+
 use super::{RemoteSourceControlApi, http};
 use anyhow::Result;
 use deve_core::ledger::traits::RepoSelector;

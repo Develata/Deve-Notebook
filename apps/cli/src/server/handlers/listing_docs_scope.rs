@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#tree-projection-contract
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::stale_unbound_remote_scope_detail;

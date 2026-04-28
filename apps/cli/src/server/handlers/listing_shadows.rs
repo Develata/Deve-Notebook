@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#repo-catalog-contract
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};

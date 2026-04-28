@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 06_repository#repo-scope-runtime
+//!   - 03_rendering#document-authority-bridge
+
 use super::http::ProxyScOp;
 use super::{RemoteSourceControlApi, http};
 use anyhow::Result;

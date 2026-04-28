@@ -1,4 +1,8 @@
 // apps/cli/src/server/handlers/search.rs
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # 搜索处理器 (Search Handler)
 //!
 //! 处理来自客户端的搜索请求

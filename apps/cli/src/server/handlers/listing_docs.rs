@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#tree-projection-contract
+
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::document::errors::send_doc_error_with_scope_and_switch_nonce;
