@@ -1,4 +1,9 @@
 // crates/core/src/ledger/manager/merge_ops.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # P2P 合并操作
 //!
 //! 实现 `RepoManager` 的 `merge_peer` 方法。

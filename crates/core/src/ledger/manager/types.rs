@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-scope-runtime
+//!   - 04_storage#repo-runtime-layout
+//!
 use crate::models::{PeerId, RepoId};
 use crate::sync::persist_guard::PersistGuard;
 use redb::Database;

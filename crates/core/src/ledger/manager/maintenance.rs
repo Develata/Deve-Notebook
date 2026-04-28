@@ -1,3 +1,9 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-repair-contract
+//!   - 06_repository#repo-catalog-contract
+//!   - 04_storage#projection-contract
+//!   - 04_storage#repo-runtime-layout
+//!
 use crate::ledger::database_cache::evict_database_paths_under;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::schema::{

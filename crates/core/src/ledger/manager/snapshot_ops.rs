@@ -1,4 +1,8 @@
 // crates/core/src/ledger/manager/snapshot_ops.rs
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 04_storage#projection-contract
+//!
 //! # 快照管理
 //!
 //! 实现 `RepoManager` 的快照保存方法。

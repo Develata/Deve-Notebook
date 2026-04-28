@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 06_repository#repo-catalog-repair-contract
+//!   - 07_diff_logic#source-control-runtime
+//!   - 04_storage#repo-runtime-layout
+//!
 use crate::ledger::database::cached_or_create_database;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;

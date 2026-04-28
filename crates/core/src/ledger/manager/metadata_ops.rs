@@ -1,4 +1,10 @@
 // crates/core/src/ledger/manager/metadata_ops.rs
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 04_storage#projection-contract
+//!   - 04_storage#watcher-contract
+//!   - 04_storage#internal-path-normalization
+//!
 //! # Path/DocId 查询与绑定
 //!
 //! 实现 `RepoManager` 的只读查询与 identity 绑定方法。

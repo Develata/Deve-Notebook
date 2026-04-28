@@ -1,4 +1,8 @@
 // crates/core/src/ledger/manager/mod.rs
+//! plan_ref:
+//!   - 06_repository#repo-catalog-contract
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # RepoManager 实现模块
 //!
 //! 将 `RepoManager` 的方法按功能域拆分为子模块。

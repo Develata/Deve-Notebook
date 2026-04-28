@@ -1,4 +1,9 @@
 // crates/core/src/ledger/manager/ops_ops.rs
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#tree-projection-contract
+//!
 //! # 操作日志追加/读取
 //!
 //! 实现 `RepoManager` 的操作追加和读取方法。

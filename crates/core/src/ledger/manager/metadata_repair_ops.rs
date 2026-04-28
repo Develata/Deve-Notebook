@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#projection-contract
+//!   - 06_repository#tree-projection-contract
+//!   - 06_repository#repo-catalog-repair-contract
+//!
 //! # Metadata Repair 操作
 //!
 //! Invariants:
