@@ -2,6 +2,7 @@
 //! plan_ref:
 //!   - 09_auth#session-probe-policy
 //!   - 09_auth#unauthorized-disconnected-ui
+//!   - 11_i18n#i18n-resource-management
 //!
 //! # App Component (App 组件)
 //!
@@ -18,7 +19,7 @@ use self::app_auth_monitor::{
 use crate::api::{AuthProbe, probe_auth_status};
 use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage};
 use crate::components::main_layout::MainLayout;
-use crate::i18n::Locale;
+use crate::i18n::initial_locale;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -36,7 +37,7 @@ pub fn App() -> impl IntoView {
     const AUTH_MONITOR_MS: u32 = 5_000;
 
     // 全局语言环境状态
-    let locale = RwSignal::new(Locale::default());
+    let locale = RwSignal::new(initial_locale());
     provide_context(locale);
 
     // 认证状态

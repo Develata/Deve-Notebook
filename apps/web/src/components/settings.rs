@@ -10,7 +10,7 @@
 
 use crate::components::icons::X;
 use crate::components::settings_sections::{AiBackendSection, SyncModeSection};
-use crate::i18n::{Locale, t};
+use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
 #[component]
@@ -53,7 +53,10 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                             "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
                                         }
                                     }
-                                    on:click=move |_| locale.set(Locale::En)
+                                    on:click=move |_| {
+                                        persist_locale_preference(Locale::En);
+                                        locale.set(Locale::En);
+                                    }
                                 >
                                     {t::settings::english_language_label()}
                                 </button>
@@ -65,7 +68,10 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                             "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
                                         }
                                     }
-                                    on:click=move |_| locale.set(Locale::Zh)
+                                    on:click=move |_| {
+                                        persist_locale_preference(Locale::Zh);
+                                        locale.set(Locale::Zh);
+                                    }
                                 >
                                     {t::settings::chinese_language_label()}
                                 </button>

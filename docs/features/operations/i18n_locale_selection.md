@@ -27,11 +27,11 @@
 - `Immediate Result`: locale signal changes and UI text re-renders
 - `Application Entry`: `apps/web/src/components/settings.rs`
 
-### `op.i18n.locale.fallback-missing`
+### `op.i18n.locale.fallback-unsupported`
 
-- `Name`: `Fallback Missing Locale`
+- `Name`: `Fallback Unsupported Locale`
 - `Surface`: `i18n-runtime`
-- `Trigger`: unsupported locale or missing key is requested
+- `Trigger`: unsupported locale is requested
 - `Preconditions`: fallback locale is available
 - `Immediate Result`: UI falls back to stable English text
 - `Application Entry`: `apps/web/src/i18n/`

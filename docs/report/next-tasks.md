@@ -32,6 +32,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已加固 `scripts/plan-coverage.sh` i18n 回归门禁：对已迁移的英文 UI 文案做精确回归扫描；同时修正 graph plan_ref anchor 与 Source Control status notice 的剩余 i18n 漏点，使 plan coverage 阻塞项回到 0。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已把 Source Control 错误提示、历史记录提示、counterpart badge 与 diff empty-state 文案集中迁入 `t::source_control::*`，组件侧 i18n allowlist debt 从 22 降到 1；剩余 `"中文"` 为语言选择器自指标签。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已把 Settings 语言选择器的自指语言标签也迁入 `t::settings::*`，`scripts/plan-coverage.sh` 的 i18n allowlisted debt 降到 0。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 i18n locale detection/current preference：启动时优先读取本地 `deve.ui.locale`，其次读取浏览器 `navigator.language`，只接受当前已支持的 `en-* / zh-*` 语言并对不支持标签回退 `en-US`；Settings 与 Command Palette 语言切换会写回本地偏好。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `11_i18n.md` 稳定 anchors，并给 `apps/web/src/i18n/**` 当前 facade 模块补齐 plan_ref；`scripts/plan-coverage.sh --summary-missing-plan-ref` 中 i18n 目录 missing plan_ref 从 17 降到 0。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/web/src/api` WebSocket/API runtime 小批次 plan_ref，并在 `05_network.md`、`15_release.md`、`16_web_thin_client_ledger.md` 补稳定 anchors；全仓 missing plan_ref 从 622 降到 612。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 `apps/web/src/shortcuts` 与 `apps/web/src/storage` plan_ref，并同步 `04_storage.md`、`08_ui_design_01_web.md`、`12_commands.md`、`13_settings.md` 与 `docs/plan/AGENTS.md` 的稳定 anchors；下一轮继续从低耦合 Web runtime/support 模块向高耦合 hooks/components 收敛。

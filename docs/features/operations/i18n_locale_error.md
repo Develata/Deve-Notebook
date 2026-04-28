@@ -47,5 +47,5 @@
 ## Notes
 
 - This file is a summary flow. Use the split locale / error flows as the authoritative implementation read path.
-- Missing-key behavior is currently a plan/code question: compile-time coverage may replace runtime fallback, but the plan must say so explicitly.
+- Missing-key behavior is compile-time constrained by the current Rust `t::*` facade; runtime fallback applies to unsupported locale tags. If external resource files are introduced later, missing-key fallback must be implemented there.
 - Main objects: `locale::selection`, `i18n::catalog`, `protocol::error-code`.

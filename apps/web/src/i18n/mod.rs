@@ -1,6 +1,7 @@
 // apps\web\src\i18n
 //! plan_ref:
 //!   - 11_i18n#i18n-facade-contract
+//!   - 11_i18n#i18n-resource-management
 //!
 //! # Internationalization Module (国际化模块)
 //!
@@ -39,6 +40,9 @@ pub mod sidebar;
 pub mod source_control;
 pub mod time;
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub const LOCALE_STORAGE_KEY: &str = "deve.ui.locale";
+
 /// 语言枚举
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Locale {
@@ -55,6 +59,81 @@ impl Locale {
             Self::Zh => Self::En,
         }
     }
+
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub const fn as_bcp47(self) -> &'static str {
+        match self {
+            Self::En => "en-US",
+            Self::Zh => "zh-CN",
+        }
+    }
+
+    pub fn from_supported_tag(tag: &str) -> Option<Self> {
+        let tag = tag.trim().to_ascii_lowercase();
+        if tag == "auto" || tag.is_empty() {
+            return None;
+        }
+        if tag == "en" || tag.starts_with("en-") || tag.starts_with("en_") {
+            return Some(Self::En);
+        }
+        if tag == "zh" || tag.starts_with("zh-") || tag.starts_with("zh_") {
+            return Some(Self::Zh);
+        }
+        None
+    }
+
+    pub fn detect(configured: Option<&str>, browser_language: Option<&str>) -> Self {
+        configured
+            .and_then(Self::from_supported_tag)
+            .or_else(|| browser_language.and_then(Self::from_supported_tag))
+            .unwrap_or_default()
+    }
+}
+
+pub fn initial_locale() -> Locale {
+    let configured = stored_locale_preference();
+    let browser = browser_language();
+    Locale::detect(configured.as_deref(), browser.as_deref())
+}
+
+pub fn persist_locale_preference(locale: Locale) {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(storage) =
+            web_sys::window().and_then(|window| window.local_storage().ok().flatten())
+        {
+            let _ = storage.set_item(LOCALE_STORAGE_KEY, locale.as_bcp47());
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = locale;
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn stored_locale_preference() -> Option<String> {
+    web_sys::window()
+        .and_then(|window| window.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item(LOCALE_STORAGE_KEY).ok().flatten())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn stored_locale_preference() -> Option<String> {
+    None
+}
+
+#[cfg(target_arch = "wasm32")]
+fn browser_language() -> Option<String> {
+    web_sys::window()
+        .and_then(|window| window.navigator().language())
+        .filter(|language| !language.trim().is_empty())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn browser_language() -> Option<String> {
+    None
 }
 
 /// 应用标题
@@ -84,4 +163,27 @@ pub mod t {
     pub use super::settings;
     pub use super::sidebar;
     pub use super::source_control;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Locale;
+
+    #[test]
+    fn locale_detect_prefers_supported_user_config() {
+        assert_eq!(Locale::detect(Some("zh-CN"), Some("en-US")), Locale::Zh);
+        assert_eq!(Locale::detect(Some("en"), Some("zh-CN")), Locale::En);
+    }
+
+    #[test]
+    fn locale_detect_uses_browser_when_config_is_auto_or_missing() {
+        assert_eq!(Locale::detect(Some("auto"), Some("zh-Hans-CN")), Locale::Zh);
+        assert_eq!(Locale::detect(None, Some("en-GB")), Locale::En);
+    }
+
+    #[test]
+    fn locale_detect_falls_back_to_english_for_unsupported_tags() {
+        assert_eq!(Locale::detect(Some("ja-JP"), Some("fr-FR")), Locale::En);
+        assert_eq!(Locale::detect(None, Some("xx-XX")), Locale::En);
+    }
 }

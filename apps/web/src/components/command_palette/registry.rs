@@ -7,7 +7,7 @@
 
 use super::types::Command;
 use crate::components::main_layout::ChatControl;
-use crate::i18n::{Locale, t};
+use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
 #[path = "registry_merge.rs"]
@@ -50,7 +50,10 @@ pub fn create_static_commands(
             id: "lang".to_string(),
             title: (t::command_palette::toggle_language)(locale).to_string(),
             action: Callback::new(move |_| {
-                locale_signal.update(|l| *l = l.toggle());
+                locale_signal.update(|locale| {
+                    *locale = locale.toggle();
+                    persist_locale_preference(*locale);
+                });
                 set_show.set(false);
             }),
             is_file: false,
