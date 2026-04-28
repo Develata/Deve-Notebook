@@ -1,4 +1,8 @@
 // apps/web/src/editor/sync/context.rs
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 //! SyncContext: 将同步参数打包为一个上下文结构体
 
 use crate::api::WsService;

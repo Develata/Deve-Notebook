@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 05_network#web-ws-runtime
+//!
 use super::snapshot_gate::SnapshotRequestGate;
 use crate::editor::ffi::applyRemoteOpsBatch;
 use deve_core::models::Op;

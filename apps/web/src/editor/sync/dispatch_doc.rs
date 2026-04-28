@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 05_network#web-ws-runtime
+//!
 use super::context::SyncContext;
 use super::history;
 use super::live;

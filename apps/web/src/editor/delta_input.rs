@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use super::EditorStats;
 use super::delta::Delta;
 use super::delta_input_forward::forward_deltas;

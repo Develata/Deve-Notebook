@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use gloo_timers::callback::Timeout;
 use std::cell::RefCell;
 use std::rc::Rc;

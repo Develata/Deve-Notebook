@@ -1,4 +1,8 @@
 // apps/web/src/editor/hook.rs
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 //! # Editor Hook (编辑器钩子)
 //!
 //! **架构作用**:

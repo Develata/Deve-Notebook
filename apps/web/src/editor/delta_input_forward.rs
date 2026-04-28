@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use super::delta::Delta;
 use super::delta_input::DeltaInputCtx;
 use super::op_id::next_client_op_id;

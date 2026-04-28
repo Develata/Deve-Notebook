@@ -1,4 +1,8 @@
 // apps/web/src/editor/sync/decrypt.rs
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 //! # E2EE Decrypt (客户端解密)
 //!
 //! 处理来自 P2P 同步的加密操作，使用 RepoKey 解密后应用到编辑器。

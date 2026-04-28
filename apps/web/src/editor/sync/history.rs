@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use super::context::SyncContext;
 use super::history_replay::{merge_history_tail, replay_buffered_live_ops, replay_pending_overlay};
 use super::history_resend::resend_pending_edits_if_ready;

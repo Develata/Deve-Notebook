@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use super::scope::matches_scope;
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::{PeerId, RepoId};

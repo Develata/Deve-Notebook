@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 05_network#web-ws-runtime
+//!
 use super::SyncContext;
 use super::dispatch_payload;
 use deve_core::protocol::ServerMessage;

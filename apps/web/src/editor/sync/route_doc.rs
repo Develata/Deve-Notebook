@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!
 use super::SyncContext;
 use super::dispatch_doc;
 use deve_core::protocol::ServerMessage;

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use super::context::SyncContext;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteOp, getEditorContent};

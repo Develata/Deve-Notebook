@@ -1,4 +1,8 @@
 // apps\web\src\editor
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 //! # Playback Logic (回放逻辑)
 //!
 //! **架构作用**:

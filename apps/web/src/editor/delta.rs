@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use deve_core::models::Op;
 
 /// Delta 结构 (从 JS 传入)

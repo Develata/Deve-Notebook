@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::EditorContext;
 use deve_core::protocol::ClientMessage;

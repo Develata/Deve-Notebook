@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 pub(super) fn can_send_delta(
     is_playback: bool,
     branch_switch_pending: bool,

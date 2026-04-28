@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#document-authority-bridge
+//!   - 06_repository#repo-scope-runtime
+//!
 use super::buffered_ops::clear_sync_buffers;
 use super::open_scope::{OpenDocScope, OpenRequestKey, open_request_key};
 use crate::api::{ConnectionStatus, WsService};

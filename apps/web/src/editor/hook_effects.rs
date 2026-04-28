@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 05_network#web-ws-runtime
+//!
 use super::EditorStats;
 use super::handshake_reset::{HandshakeResetCtx, setup_handshake_reset_effect};
 use super::hook_editor::{

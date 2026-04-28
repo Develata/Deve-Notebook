@@ -55,6 +55,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core` source-control 批次 plan_ref：read/write callbacks、scope target、diff session、message dispatch、ack/list handling、state reset、notice 与 context provider 绑定 source-control runtime、web WS runtime、repo scope 与 web edit intent 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core/effects` handshake/message runtime 批次 plan_ref：WS handshake、repo scope bootstrap、message dispatch/routing、projection apply、runtime sync、shadow/scope gate 绑定 web WS runtime、repo-scope runtime、document authority 与 tree projection 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `hooks/use_core` 剩余核心批次 plan_ref：tree delta apply、doc/sync/switch callbacks、CoreSignals state assembly/init、browser storage runtime、write gate 与 status context 绑定 tree projection、document authority、web edit intent、repo scope、web WS runtime 与 runtime observability 合同，使 hooks 缺失项收敛到组件/编辑器之外。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `editor` 批次 plan_ref：CodeMirror FFI/hook、delta input、open scope、prefetch/playback、request key、sync decrypt/dispatch/history/live/snapshot/scope 绑定 large document runtime、document authority、web edit intent、web WS runtime 与 repo scope 合同，使 editor 缺失项收敛到 0。
 
 ### MCP Direction
 

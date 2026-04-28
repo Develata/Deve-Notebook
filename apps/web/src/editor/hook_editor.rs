@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 03_rendering#large-document-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 use super::EditorStats;
 use super::buffered_ops::clear_sync_buffers;
 use super::delta_input::{DeltaInputCtx, build_on_delta};

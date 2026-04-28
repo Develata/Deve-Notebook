@@ -1,4 +1,8 @@
 // apps/web/src/editor/sync/mod.rs
+//! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 03_rendering#document-authority-bridge
+//!
 //! 处理编辑器相关的同步消息。
 
 pub mod context;
