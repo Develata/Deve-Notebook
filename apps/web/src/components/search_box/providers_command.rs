@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 12_commands#command-palette-shortcuts
+//!
 use crate::components::command_palette::Command;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 

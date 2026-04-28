@@ -1,4 +1,7 @@
 // apps/web/src/components/search_box/file_ops/path_utils.rs
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!
 //! 路径规范化、目录收集与模糊过滤
 
 use deve_core::models::DocId;

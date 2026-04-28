@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 //! 搜索结果构建: Remove / Move / Copy 操作的候选结果
 
 use crate::components::search_box::types::{FileOpKind, SearchResult};

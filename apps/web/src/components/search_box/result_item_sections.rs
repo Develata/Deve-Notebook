@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use crate::components::icons::{ArrowRight, File, Folder, GitBranch, Plus, Terminal};
 use crate::components::search_box::types::SearchAction;
 use leptos::prelude::*;

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 12_commands#command-palette-shortcuts
+//!
 use crate::components::search_box::types::SearchResult;
 use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;

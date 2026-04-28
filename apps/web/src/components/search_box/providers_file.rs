@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 04_storage#internal-path-normalization
+//!
 use crate::components::search_box::file_ops::validate_doc_shell_path;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use deve_core::models::DocId;

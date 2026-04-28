@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 
 pub const LOCAL_BRANCH_LABEL: &str = "Local";

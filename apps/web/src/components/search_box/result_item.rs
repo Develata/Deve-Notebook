@@ -1,4 +1,8 @@
 // apps/web/src/components/search_box/result_item.rs
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # 搜索结果项渲染组件
 //!
 //! 处理单条搜索结果的渲染和交互逻辑。

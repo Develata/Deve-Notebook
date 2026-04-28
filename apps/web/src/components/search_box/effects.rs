@@ -1,4 +1,8 @@
 // apps\web\src\components\search_box
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 

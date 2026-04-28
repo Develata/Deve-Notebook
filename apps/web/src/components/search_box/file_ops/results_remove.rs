@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchAction, SearchResult};
 use deve_core::protocol::doc_file_op_errors as path_err;
 

@@ -1,4 +1,8 @@
 // apps\web\src\components\search_box
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use crate::components::search_box::SearchUiMode;
 use crate::components::search_box::types::SearchResult;
 use crate::components::search_box::ui_footer::footer;

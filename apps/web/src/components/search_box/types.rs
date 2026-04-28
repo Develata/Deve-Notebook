@@ -1,4 +1,8 @@
 // apps\web\src\components\search_box
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 12_commands#command-palette-shortcuts
+//!
 
 #![allow(dead_code)] // SearchProvider trait 为插件式搜索预留
 

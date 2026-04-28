@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::LOCAL_BRANCH_LABEL;
 use crate::components::search_box::types::{InsertQuery, SearchAction};
