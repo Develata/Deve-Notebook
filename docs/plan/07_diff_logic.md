@@ -179,6 +179,7 @@ MergeRequested
 - 所有 source control 请求 MUST 带 `scope_nonce`。
 - 所有 remote branch source control 请求 MUST 经过 readonly gate。
 - path-only target 仅允许作为 selector 输入，落到算子前必须解析为文档/节点 identity。
+- 唯一兼容例外是 legacy `Deleted + doc_id=None` 的 exact delete selector：stage/discard wrapper 可保持 path-only，但 commit delete planning MUST 再通过当前 node projection 解析目标 identity；非 delete 的 docless tracked entry 不得使用该例外。
 
 ### 4.4 Output Payload Minimums
 

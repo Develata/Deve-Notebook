@@ -93,5 +93,8 @@ check_contains crates/core/src/ledger/manager/commit_ops.rs "preflight_staged_up
 check_contains crates/core/src/ledger/manager/commit_ops.rs "lacks rename evidence"
 check_contains crates/core/tests/source_control_commit_apply_error_test.rs "commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc"
 check_contains crates/core/tests/source_control_commit_apply_error_test.rs "commit_staged_rejects_upsert_move_without_rename_evidence"
+check_contains docs/plan/07_diff_logic.md "legacy \`Deleted + doc_id=None\` 的 exact delete selector"
+check_contains crates/core/src/ledger/manager/source_control_path_target.rs "has_legacy_docless_exact_delete"
+check_contains crates/core/src/ledger/manager/source_control_path_target.rs "path_wrapper_promotes_docless_non_delete_to_tracked_identity"
 
 echo "source-control-baseline-check: ok"

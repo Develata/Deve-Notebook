@@ -22,7 +22,7 @@ impl RepoManager {
     ) -> Result<ScPathTarget> {
         let path = to_forward_slash(path);
         let changes = self.list_changes_in_local_repo(repo_name)?;
-        let doc_id = if has_exact_docless_delete(&changes, &path) {
+        let doc_id = if has_legacy_docless_exact_delete(&changes, &path) {
             None
         } else {
             match self.get_tracked_docid_in_local_repo(repo_name, &path)? {
@@ -34,7 +34,10 @@ impl RepoManager {
     }
 }
 
-fn has_exact_docless_delete(entries: &[ChangeEntry], path: &str) -> bool {
+/// Legacy exception: old scanner/repair paths may produce an exact delete row
+/// without `doc_id`. Keep it path-only until commit, where delete planning must
+/// resolve the current node projection before appending structure facts.
+fn has_legacy_docless_exact_delete(entries: &[ChangeEntry], path: &str) -> bool {
     entries.iter().any(|entry| {
         normalized(&entry.path) == path
             && entry.status == ChangeStatus::Deleted
@@ -285,6 +288,39 @@ mod tests {
             repo.tracked_target_for_path_in_local_repo(repo.local_repo_name(), "notes/a.md")?;
         assert_eq!(target.path, "notes/a.md");
         assert_eq!(target.doc_id, None);
+        Ok(())
+    }
+
+    #[test]
+    fn path_wrapper_promotes_docless_non_delete_to_tracked_identity() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
+        repo.set_vault_root(dir.path().join("vault"));
+        let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
+            repo.local_repo_name(),
+            "notes/a.md",
+            None,
+            "test",
+        )?;
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "notes/a.md".into(),
+                    renamed_from: None,
+                    doc_id: None,
+                    change_type: ChangeStatus::Modified,
+                    content_hash: pending_fs::content_hash("modified"),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )
+        })?;
+
+        let target =
+            repo.tracked_target_for_path_in_local_repo(repo.local_repo_name(), "notes/a.md")?;
+        assert_eq!(target.path, "notes/a.md");
+        assert_eq!(target.doc_id, Some(doc_id));
         Ok(())
     }
 }
