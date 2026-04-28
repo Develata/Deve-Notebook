@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 08_ui_design_03_mobile#mobile-responsive-layout
+//!   - 08_ui_design_03_mobile#mobile-current-native-boundary
+//!
 use super::chat_sheet::MobileChatSheet;
 use super::content::MobileContent;
 use super::drawers::MobileDrawers;

@@ -15,7 +15,7 @@
 
 > **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
-## 0. Current Native Boundary (2026-04-28)
+## 0. Current Native Boundary (2026-04-28) {#mobile-current-native-boundary}
 
 当前代码状态：
 
@@ -29,7 +29,7 @@
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。
 
-## 2. Responsive Architecture
+## 2. Responsive Architecture {#mobile-responsive-layout}
 
 ### 1.1 布局状态机 (Layout State Machine)
 系统布局 $L$ 根据视口宽度 $W_{view}$ 在两种状态间切换：
@@ -48,7 +48,7 @@
 *   `padding-top: env(safe-area-inset-top)`
 *   `padding-bottom: env(safe-area-inset-bottom)`
 
-## 3. Interaction Design
+## 3. Interaction Design {#mobile-interaction-design}
 
 ### 2.1 导航策略 (Navigation)
 移动端移除常驻侧边栏，改为 **Drawer (抽屉)** 模式。

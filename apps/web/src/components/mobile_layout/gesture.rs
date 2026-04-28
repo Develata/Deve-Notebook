@@ -1,4 +1,7 @@
 // apps/web/src/components/mobile_layout/gesture.rs
+//! plan_ref:
+//!   - 08_ui_design_03_mobile#mobile-interaction-design
+//!
 
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;

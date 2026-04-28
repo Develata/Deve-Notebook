@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use crate::components::icons::{ChevronRight, EllipsisVertical, FileText, Plus};
 use leptos::prelude::*;
 

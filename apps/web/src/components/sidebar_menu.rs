@@ -1,4 +1,7 @@
 // apps/web/src/components/sidebar_menu.rs
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 //! # SidebarMenu 组件 (SidebarMenu Component)
 //!
 //! 文件树上下文菜单，提供重命名、复制、移动、删除等操作。

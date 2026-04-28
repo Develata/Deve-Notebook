@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 16_web_thin_client_ledger#web-edit-intent
+//!
 use crate::components::dropdown::AnchorRect;
 use crate::components::sidebar_menu::MenuAction;
 use js_sys::encode_uri_component;

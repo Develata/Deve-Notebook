@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 08_ui_design_03_mobile#mobile-interaction-design
+//!   - 06_repository#repo-scope-runtime
+//!
 use crate::components::icons::X;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;

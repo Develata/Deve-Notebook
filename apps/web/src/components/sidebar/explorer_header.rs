@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use crate::components::icons::Plus;
 use crate::components::main_layout::SearchControl;
 use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 08_ui_design_03_mobile#mobile-interaction-design
+//!   - 03_rendering#large-document-runtime
+//!
 use crate::editor::ffi;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;

@@ -1,4 +1,7 @@
 // apps/web/src/components/sidebar/tree.rs
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!
 //! # 文件树组件逻辑 (File Tree Logic)
 //!
 //! 将扁平的文档列表转换为树结构（仅用于回退）。

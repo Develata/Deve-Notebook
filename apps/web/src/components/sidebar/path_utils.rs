@@ -1,4 +1,8 @@
 // apps/web/src/components/sidebar/path_utils.rs
+//! plan_ref:
+//!   - 04_storage#internal-path-normalization
+//!   - 06_repository#tree-projection-contract
+//!
 //! # 路径工具函数
 //!
 //! 提供文件路径处理工具，如自动重命名以避免冲突。

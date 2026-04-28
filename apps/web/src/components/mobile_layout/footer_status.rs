@@ -1,4 +1,8 @@
 // apps/web/src/components/mobile_layout/footer_status.rs
+//! plan_ref:
+//!   - 08_ui_design_03_mobile#mobile-responsive-layout
+//!   - 15_release#runtime-observability
+//!
 //! # Mobile Footer — Status & Load Indicators
 
 use crate::hooks::use_core::CoreState;

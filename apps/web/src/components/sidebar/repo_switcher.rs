@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#repo-scope-runtime
+//!   - 06_repository#repo-selector-resolution-contract
+//!
 use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::BranchContext;
 use crate::i18n::{Locale, t};

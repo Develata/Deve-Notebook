@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use super::MenuAction;
 use crate::components::icons;
 use crate::i18n::Locale;

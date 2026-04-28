@@ -1,4 +1,8 @@
 // apps\web\src\components\sidebar
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 06_repository#repo-scope-runtime
+//!
 //! # Types (类型定义)
 //!
 //! 包含侧边栏组件之间共享的类型定义，如上下文 Context。

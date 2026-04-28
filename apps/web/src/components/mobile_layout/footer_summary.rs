@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 08_ui_design_03_mobile#mobile-responsive-layout
+//!   - 15_release#runtime-observability
+//!
 use super::footer_status::StatusView;
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::components::icons::{ChevronDown, ChevronUp};

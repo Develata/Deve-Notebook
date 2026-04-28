@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 08_ui_design_01_web#web-layout-persistence
+//!
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::tree::build_file_tree;
 use crate::hooks::use_core::DocContext;

@@ -61,6 +61,8 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/diff_view` 批次 plan_ref：diff model/cache/fold/navigation/split/unified/viewport/conflict actions 绑定 source-control runtime、large document runtime、web layout、runtime observability 与 web edit intent 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/sidebar/source_control` 批次 plan_ref：change item/stage/unstage/conflict/commit/history/repositories/status/error notice 绑定 source-control runtime、repo scope、document authority、web edit intent、native AI chat 与 runtime observability 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components/search_box` 批次 plan_ref：search providers、command routing、file op parser/results、selection、write-gate feedback 与 sheet UI 绑定 search baseline、command palette、repo scope、path normalization、web edit intent 与 web layout 合同。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已补 web 普通 `sidebar` 批次 plan_ref：explorer/tree/item/action/path utils/repo switcher/sidebar menu 绑定 tree projection、repo scope、repo selector、document authority、path normalization、web edit intent 与 web layout 合同。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已给 `08_ui_design_03_mobile.md` 增加 mobile current/native、responsive layout、interaction anchors，并补 web `components/mobile_layout` 批次 plan_ref：drawers/header/footer/gesture/content/chat sheet/toolbar 绑定 Mobile responsive shell、当前 native boundary、interaction design、repo scope、document authority 与 runtime observability 合同。
 
 ### MCP Direction
 
