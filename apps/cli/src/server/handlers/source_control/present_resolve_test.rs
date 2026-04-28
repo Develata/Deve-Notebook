@@ -118,3 +118,26 @@ fn resolve_target_keeps_requested_path_when_doc_id_does_not_match_reused_path() 
         None
     );
 }
+
+#[test]
+fn resolve_target_rejects_unrelated_path_even_when_doc_id_matches() {
+    let doc_id = DocId(Uuid::nil());
+    let entries = vec![ChangeEntry {
+        path: "notes/current.md".into(),
+        renamed_from: None,
+        doc_id: Some(doc_id),
+        status: ChangeStatus::Modified,
+        has_conflict: false,
+    }];
+
+    assert_eq!(
+        resolve_target_path(
+            &entries,
+            &ScPathTarget {
+                path: "notes/unrelated.md".into(),
+                doc_id: Some(doc_id),
+            },
+        ),
+        None
+    );
+}

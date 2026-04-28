@@ -1,6 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
-use deve_core::models::{LedgerEntry, NodeId, PeerId, StructureOp};
+use deve_core::models::{DocId, LedgerEntry, NodeId, PeerId, StructureOp};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::{TempDir, tempdir};
@@ -215,4 +215,56 @@ fn commit_diff_fails_closed_on_missing_structure_targets() {
         .diff_commits(None, &commit.id)
         .expect_err("broken structure diff must fail closed");
     assert!(err.to_string().contains("missing node"));
+}
+
+#[test]
+fn commit_diff_fails_closed_when_doc_has_multiple_live_nodes() {
+    let (_dir, repo) = new_repo();
+    let doc_id = DocId::new();
+    common::append_unvalidated_local_op(
+        &repo,
+        repo.local_repo_name(),
+        &LedgerEntry::new_structure(
+            StructureOp::CreateFile {
+                node_id: NodeId::new(),
+                doc_id,
+                parent_id: None,
+                name: "a.md".into(),
+            },
+            1,
+            PeerId::new("test"),
+            1,
+        ),
+    );
+    common::append_unvalidated_local_op(
+        &repo,
+        repo.local_repo_name(),
+        &LedgerEntry::new_structure(
+            StructureOp::CreateFile {
+                node_id: NodeId::new(),
+                doc_id,
+                parent_id: None,
+                name: "b.md".into(),
+            },
+            1,
+            PeerId::new("test"),
+            2,
+        ),
+    );
+    let commit = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            let ledger_seq = deve_core::ledger::range::get_max_seq(db)?;
+            deve_core::source_control::commits::create(db, "duplicate-doc", 0, ledger_seq)
+        })
+        .expect("create duplicate-doc commit");
+
+    let err = repo
+        .diff_commits(None, &commit.id)
+        .expect_err("duplicate live doc paths must fail closed");
+
+    assert!(
+        err.to_string().contains("multiple live paths"),
+        "unexpected error: {}",
+        err
+    );
 }

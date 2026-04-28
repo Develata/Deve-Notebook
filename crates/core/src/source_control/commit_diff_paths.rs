@@ -23,10 +23,15 @@ pub(super) fn doc_paths_at_seq(db: &Database, seq: u64) -> Result<HashMap<DocId,
     let mut paths = HashMap::<DocId, String>::new();
     for (node_id, state) in &nodes {
         if let Some(doc_id) = state.doc_id {
-            paths.insert(
-                doc_id,
-                path_for(*node_id, &nodes, &mut cache, &mut visiting)?,
-            );
+            let path = path_for(*node_id, &nodes, &mut cache, &mut visiting)?;
+            if let Some(existing) = paths.insert(doc_id, path.clone()) {
+                return Err(anyhow!(
+                    "Commit diff structure maps doc {} to multiple live paths: {}, {}",
+                    doc_id,
+                    existing,
+                    path
+                ));
+            }
         }
     }
     Ok(paths)

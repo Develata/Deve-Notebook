@@ -11,27 +11,39 @@ pub(crate) fn resolve_target_path_strict(
 ) -> Result<Option<String>> {
     let path = normalized(&target.path);
     if let Some(doc_id) = target.doc_id {
-        return Ok(entries
-            .iter()
-            .find(|entry| {
-                entry.doc_id == Some(doc_id)
-                    && normalized(&entry.path) == path
-                    && entry.status != ChangeStatus::Deleted
-            })
-            .or_else(|| {
-                entries.iter().find(|entry| {
-                    entry.doc_id == Some(doc_id) && entry.status != ChangeStatus::Deleted
-                })
-            })
-            .or_else(|| {
-                entries
-                    .iter()
-                    .find(|entry| entry.doc_id == Some(doc_id) && normalized(&entry.path) == path)
-            })
-            .or_else(|| entries.iter().find(|entry| entry.doc_id == Some(doc_id)))
-            .map(|entry| normalized(&entry.path)));
+        return Ok(resolve_with_doc_id(entries, &path, doc_id).map(|entry| normalized(&entry.path)));
     }
     Ok(resolve_without_doc_id(entries, &path)?.map(|entry| normalized(&entry.path)))
+}
+
+fn resolve_with_doc_id<'a>(
+    entries: &'a [ChangeEntry],
+    path: &str,
+    doc_id: deve_core::models::DocId,
+) -> Option<&'a ChangeEntry> {
+    let exact = entries.iter().find(|entry| {
+        entry.doc_id == Some(doc_id)
+            && normalized(&entry.path) == path
+            && entry.status != ChangeStatus::Deleted
+    });
+    if exact.is_some() {
+        return exact;
+    }
+    entries
+        .iter()
+        .find(|entry| {
+            entry.doc_id == Some(doc_id)
+                && entry.status != ChangeStatus::Deleted
+                && entry
+                    .renamed_from
+                    .as_ref()
+                    .is_some_and(|old_path| normalized(old_path) == path)
+        })
+        .or_else(|| {
+            entries
+                .iter()
+                .find(|entry| entry.doc_id == Some(doc_id) && normalized(&entry.path) == path)
+        })
 }
 
 fn resolve_without_doc_id<'a>(
