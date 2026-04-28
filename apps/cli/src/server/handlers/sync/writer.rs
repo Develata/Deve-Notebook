@@ -42,6 +42,7 @@ fn validate(
 ) -> Result<(), ServerError> {
     if session.is_browser_session() {
         if session.active_branch.is_some() {
+            clear_stale_browser_sync_scope(session);
             return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
         }
         if session.active_repo_id != Some(repo_id) {

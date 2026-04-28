@@ -85,6 +85,19 @@ fn rejects_browser_writer_with_stale_remote_readonly_binding() {
     assert_sync_cleared(&session);
 }
 
+#[test]
+fn rejects_browser_writer_on_remote_branch_and_clears_stale_writer() {
+    let repo_id = new_repo_id();
+    let (mut session, _, peer_id) = browser_session(repo_id);
+    session.set_writer_identity(repo_id, peer_id.clone());
+    session.switch_branch(Some("remote".into()));
+
+    let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
+
+    assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
+    assert_sync_cleared(&session);
+}
+
 fn browser_session(repo_id: RepoId) -> (WsSession, RepoId, PeerId) {
     let mut session = WsSession::new();
     let peer_id = PeerId::new("browser-a");
