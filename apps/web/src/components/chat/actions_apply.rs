@@ -13,6 +13,11 @@ use deve_core::models::Op;
 use deve_core::protocol::{ClientMessage, ServerErrorCode};
 use leptos::prelude::*;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ApplyEditPlanError {
+    DocumentTooLarge,
+}
+
 pub fn make_on_apply(core: CoreState) -> Callback<String> {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     Callback::new(move |code: String| {
@@ -31,17 +36,12 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             let _ = web_sys::window().and_then(|window| window.alert_with_message(message).ok());
             return;
         }
-        let utf16_len = getEditorContent().encode_utf16().count();
-        let pos = match u32::try_from(utf16_len) {
-            Ok(v) => v,
-            Err(_) => {
+        let op = match build_append_markdown_op(&getEditorContent(), code) {
+            Ok(op) => op,
+            Err(ApplyEditPlanError::DocumentTooLarge) => {
                 show_apply_block(&core, "document is too large");
                 return;
             }
-        };
-        let op = Op::Insert {
-            pos,
-            content: code.into(),
         };
         let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
             current_repo_id: core.current_repo_id,
@@ -71,17 +71,104 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
                 op.clone(),
             );
         });
-        core.ws.send(ClientMessage::Edit {
+        core.ws.send(build_apply_edit_message(
             doc_id,
             op,
             client_id,
             client_op_id,
-            scope_nonce: Some(scope_nonce),
-        });
+            scope_nonce,
+        ));
     })
 }
 
 fn show_apply_block(core: &CoreState, reason: &str) {
     let message = cannot_action("apply code", reason);
     warn_sync_banner(core.set_sync_banner, message);
+}
+
+fn build_append_markdown_op(current_content: &str, code: String) -> Result<Op, ApplyEditPlanError> {
+    let utf16_len = current_content.encode_utf16().count();
+    build_append_markdown_op_at_utf16_len(utf16_len, code)
+}
+
+fn build_append_markdown_op_at_utf16_len(
+    utf16_len: usize,
+    code: String,
+) -> Result<Op, ApplyEditPlanError> {
+    let pos = u32::try_from(utf16_len).map_err(|_| ApplyEditPlanError::DocumentTooLarge)?;
+    Ok(Op::Insert {
+        pos,
+        content: code.into(),
+    })
+}
+
+fn build_apply_edit_message(
+    doc_id: deve_core::models::DocId,
+    op: Op,
+    client_id: u64,
+    client_op_id: u64,
+    scope_nonce: u64,
+) -> ClientMessage {
+    ClientMessage::Edit {
+        doc_id,
+        op,
+        client_id,
+        client_op_id,
+        scope_nonce: Some(scope_nonce),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        ApplyEditPlanError, build_append_markdown_op, build_append_markdown_op_at_utf16_len,
+        build_apply_edit_message,
+    };
+    use deve_core::models::{DocId, Op};
+    use deve_core::protocol::ClientMessage;
+
+    #[test]
+    fn append_markdown_op_uses_utf16_end_position() {
+        assert_eq!(
+            build_append_markdown_op("a🙂", " patch".to_string()),
+            Ok(Op::Insert {
+                pos: 3,
+                content: " patch".into(),
+            })
+        );
+    }
+
+    #[test]
+    fn append_markdown_op_fails_closed_when_position_overflows() {
+        assert_eq!(
+            build_append_markdown_op_at_utf16_len(u32::MAX as usize + 1, " patch".to_string()),
+            Err(ApplyEditPlanError::DocumentTooLarge)
+        );
+    }
+
+    #[test]
+    fn apply_edit_message_carries_current_scope_nonce() {
+        let doc_id = DocId::from_u128(7);
+        let op = Op::Insert {
+            pos: 3,
+            content: " patch".into(),
+        };
+
+        match build_apply_edit_message(doc_id, op.clone(), 11, 13, 17) {
+            ClientMessage::Edit {
+                doc_id: actual_doc_id,
+                op: actual_op,
+                client_id,
+                client_op_id,
+                scope_nonce,
+            } => {
+                assert_eq!(actual_doc_id, doc_id);
+                assert_eq!(actual_op, op);
+                assert_eq!(client_id, 11);
+                assert_eq!(client_op_id, 13);
+                assert_eq!(scope_nonce, Some(17));
+            }
+            other => panic!("expected Edit message, got {other:?}"),
+        }
+    }
 }

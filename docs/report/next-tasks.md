@@ -27,6 +27,7 @@
 - 2026-04-28: P1 Native AI Chat Minimum 已补当前 Markdown 上下文与 PLAN/BUILD prompt 边界：前端向 Native AI Chat 传递有界当前正文，ai-chat 插件将当前文件、正文、selection、模式写入 system prompt；默认仍不开放 workspace/source-control/shell/MCP/skill 执行能力。
 - 2026-04-28: P1 Native AI Chat Minimum 已把 `/plan`、`/build`、`/agents` slash command 的本地消费路径抽成可单测合同：slash command 只切换 Native `PLAN/BUILD` session mode，不切换 backend，不发起 plugin call。
 - 2026-04-28: P1 Native AI Chat Minimum 已补 BUILD Apply UI gate 的可测合同：assistant code block 的 Apply 标签与点击消费仅在 Native `BUILD` session mode 启用，`PLAN` 与 user message 不暴露写入口。
+- 2026-04-28: P1 Native AI Chat Minimum 已补 BUILD Apply 写入路径合同：受控 Apply 生成追加到当前 Markdown 末尾的 UTF-16 `Op::Insert`，超出 `u32` 位置范围 fail-closed，最终 `ClientMessage::Edit` 必须携带当前 `scope_nonce`。
 - 2026-04-28: P3-10 Desktop/Mobile Native Track 已补当前 native adapter 边界：Desktop/Mobile docs 明确 Web responsive shell 是当前可验收映射，Tauri packaging 仍为 future；adapter 第一阶段仅负责内嵌服务、endpoint/session 注入与 readiness/offline 事件，不得重定义 core/server authority。
 - 2026-04-28: P3-13 Graph / Knowledge Visualization 已补 core 只读 projection baseline：`deve_core::graph` 从 repo-scoped docs 派生节点、已解析边与未解析链接，支持 wikilink / markdown `.md` link 与路径归一化；不读取/写入 ledger、metadata、workspace、search 或 source-control 状态，d3/Pixi 渲染仍是 future。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已把 native/graph 新基线纳入 dev runbook、release workflow 与 release baseline 检查，新增 `scripts/check-graph-baseline.sh` 防止 graph projection 漂移成 ledger/workspace authority path。
