@@ -47,6 +47,9 @@ check_contains apps/cli/src/commands/config.rs "supported_config_keys_match_sett
 check_contains apps/cli/src/commands/config.rs "\"ui.sidebar_width\""
 check_contains apps/cli/src/commands/config.rs "\"ai.mode\""
 check_contains apps/cli/src/commands/config.rs "Updated config.toml is not compatible with runtime config"
+check_contains crates/core/src/config_test.rs "trusted_cli_mode_falls_back_when_agent_cli_path_is_missing"
+check_contains crates/core/src/config_test.rs "trusted_cli_mode_falls_back_when_agent_cli_path_is_relative"
+check_contains crates/core/src/config_test.rs "trusted_cli_mode_is_kept_when_policy_conditions_are_satisfied"
 check_contains docs/plan/13_settings.md '运行模式预设: `standard` (默认), `low-spec` (低配).'
 check_absent docs/plan/13_settings.md '`debug` (调试)'
 check_contains docs/plan/13_settings.md "server-backed Settings API 与统一 GUI"
