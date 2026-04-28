@@ -66,6 +66,7 @@
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 web `components` 最后 misc 批次 plan_ref：merge modal/panel、outline/outline render、pending navigation、playback、quick open、settings、spectator overlay 与 components facade 绑定对应 WS runtime、document authority、markdown whitelist、search/command、settings 与 web edit intent 合同。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补 release workflow 质量门槛验证：修复全量 clippy 暴露的 test/web hygiene 问题，`cargo clippy --all-targets --all-features -- -D warnings`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`、plan coverage、release/architecture/native/graph baseline 均通过。
 - 2026-04-28: P2 Runtime / Release / UI Debt 已补完整 release test gate：`cargo test --locked` 全仓库通过；同时修复 path-only source-control 删除提交在 docless exact delete 下被过早提升为 doc target 的回归，并稳定 watcher create/modify/delete 测试的 debounce 边界。
+- 2026-04-28: P2 Runtime / Release / UI Debt 已完成 REL-006 本地 runtime smoke：`deve_cli serve --dev --port 3101` 暴露 `/api/node/role`，`scripts/smoke-runtime-release-info.sh` 通过；Chrome MCP 登录 dev dashboard 后可见 `embedded-frontend | development | repos:degraded (1/2)` runtime shape。
 
 ### MCP Direction
 
