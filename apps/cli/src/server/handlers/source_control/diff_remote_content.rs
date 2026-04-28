@@ -8,6 +8,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::DOCID_TO_PATH;
 use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::ScPathTarget;
+use deve_core::utils::path::to_forward_slash;
 use std::sync::Arc;
 
 pub(super) fn resolve_remote_content(
@@ -67,7 +68,20 @@ pub(super) fn resolve_tracked_doc_id(
     target: &ScPathTarget,
 ) -> anyhow::Result<Option<DocId>> {
     if let Some(doc_id) = target.doc_id {
-        return Ok(deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)?.map(|_| doc_id));
+        let Some(meta) = deve_core::ledger::node_meta::file_meta_for_doc(db, doc_id)? else {
+            return Ok(None);
+        };
+        let requested = to_forward_slash(&target.path);
+        let canonical = to_forward_slash(&meta.path);
+        if requested != canonical {
+            anyhow::bail!(
+                "Remote document target path mismatch: requested {}, doc {} is at {}",
+                requested,
+                doc_id,
+                canonical
+            );
+        }
+        return Ok(Some(doc_id));
     }
     if let Some(node_id) = deve_core::ledger::node_meta::get_node_id(db, &target.path)? {
         return Ok(

@@ -87,5 +87,7 @@ check_contains apps/cli/src/server/handlers/source_control/service/target.rs "cu
 check_contains apps/cli/src/server/handlers/source_control/service/target_related_test.rs "related_targets_keep_resolved_doc_id_when_old_path_is_reused"
 check_contains crates/core/src/ledger/manager/source_control_workdir.rs "workdir_diff_inputs_for_resolved_target"
 check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs "workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused"
+check_contains apps/cli/src/server/handlers/source_control/diff_remote_content.rs "Remote document target path mismatch"
+check_contains apps/cli/src/server/handlers/source_control/diff_remote_test_extra.rs "remote_diff_rejects_doc_id_path_mismatch"
 
 echo "source-control-baseline-check: ok"

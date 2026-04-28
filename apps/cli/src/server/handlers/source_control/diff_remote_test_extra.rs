@@ -6,7 +6,9 @@
 use super::remote_content::{
     local_counterpart_content, resolve_remote_content, resolve_tracked_doc_id,
 };
-use super::remote_test_support::{build_state, new_repo, seed_pending_entry, write_workspace_file};
+use super::remote_test_support::{
+    build_state, commit_added_file, new_repo, seed_pending_entry, write_workspace_file,
+};
 use deve_core::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::PeerId;
@@ -122,6 +124,31 @@ fn remote_diff_fails_closed_when_local_doc_has_only_legacy_mapping() -> anyhow::
     assert!(
         err.to_string()
             .contains("Tracked document projection missing for legacy-mapped doc")
+    );
+    Ok(())
+}
+
+#[test]
+fn remote_diff_rejects_doc_id_path_mismatch() -> anyhow::Result<()> {
+    let (dir, repo) = new_repo()?;
+    commit_added_file(&dir, &repo, "notes/a.md", "A", "commit a")?;
+    let doc_b = commit_added_file(&dir, &repo, "notes/b.md", "B", "commit b")?;
+
+    let err = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            resolve_tracked_doc_id(
+                db,
+                &ScPathTarget {
+                    path: "notes/a.md".into(),
+                    doc_id: Some(doc_b),
+                },
+            )
+        })
+        .expect_err("remote diff doc_id/path mismatch must fail closed");
+
+    assert!(
+        err.to_string()
+            .contains("Remote document target path mismatch")
     );
     Ok(())
 }
