@@ -80,6 +80,7 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
 
     let diffs = proxy.diff_commits_in_repo(&selector, Some(&first.id), &second.id)?;
     assert_eq!(diffs.len(), 1);
+    assert_eq!(diffs[0].doc_id, Some(doc_id));
     assert_eq!(diffs[0].status, ChangeStatus::Renamed);
     assert_eq!(diffs[0].previous_path.as_deref(), Some("notes/a.md"));
     assert_eq!(diffs[0].path, "notes/b.md");

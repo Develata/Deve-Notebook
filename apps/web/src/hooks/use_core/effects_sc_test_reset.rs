@@ -37,6 +37,7 @@ fn clear_repo_scoped_state_resets_source_control_view() {
     let (commit_diff_request_id, set_commit_diff_request_id) =
         signal(Some("commit-req".to_string()));
     let (commit_diff, set_commit_diff) = signal(vec![CommitFileDiff {
+        doc_id: None,
         path: "notes/a.md".into(),
         status: deve_core::source_control::ChangeStatus::Modified,
         previous_path: None,

@@ -26,6 +26,10 @@ async fn test_proxy_commit_queries_roundtrip() -> anyhow::Result<()> {
     assert_eq!(commits[1].id, c1.id);
     let diffs = proxy.diff_commits_in_repo(&selector, Some(&c1.id), &c2.id)?;
     assert_eq!(diffs.len(), 1);
+    assert_eq!(
+        diffs[0].doc_id,
+        repo.get_docid("notes/b.md")?,
+    );
     assert_eq!(diffs[0].path, "notes/b.md");
     assert_eq!(diffs[0].status, ChangeStatus::Added);
     harness.shutdown().await;

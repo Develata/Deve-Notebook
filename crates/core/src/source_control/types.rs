@@ -78,6 +78,9 @@ pub struct ChangeEntry {
 /// 表示两个提交之间单个文件的变更内容。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitFileDiff {
+    /// 稳定文档身份；docless 结构残留或历史异常场景允许为空
+    #[serde(default)]
+    pub doc_id: Option<DocId>,
     /// 文件路径
     pub path: String,
     /// 变更状态 (Added / Modified / Deleted)

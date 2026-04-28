@@ -75,6 +75,7 @@ pub fn compare_commits(
             &new_content,
         );
         diffs.push(CommitFileDiff {
+            doc_id: Some(doc_id),
             path,
             status,
             previous_path: (old_path != new_path).then_some(old_path).flatten(),

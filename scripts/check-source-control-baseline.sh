@@ -51,4 +51,10 @@ check_contains docs/features/operations/sc_commit_and_push.md "CommitAck"
 check_contains apps/cli/src/server/handlers/source_control/commits.rs "Commit & Push"
 check_absent apps/cli/src/server/handlers/source_control/commits.rs "SyncPush"
 
+# Commit diff must preserve canonical document identity instead of becoming path-only output.
+check_contains docs/plan/07_diff_logic.md "canonical targets"
+check_contains crates/core/src/source_control/types.rs "pub doc_id: Option<DocId>"
+check_contains crates/core/src/source_control/commit_diff.rs "doc_id: Some(doc_id)"
+check_contains crates/core/tests/commit_diff_node_projection_test.rs "assert_eq!(diffs[0].doc_id, Some(doc_id));"
+
 echo "source-control-baseline-check: ok"

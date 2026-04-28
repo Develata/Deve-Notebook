@@ -46,6 +46,10 @@ fn commit_diff_reports_child_rename_after_directory_move() {
     seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage initial");
     let first = repo.commit_staged("initial").expect("commit initial");
+    let doc_id = repo
+        .get_docid("notes/a.md")
+        .expect("lookup doc")
+        .expect("doc id");
 
     std::fs::rename(vault.join("default/notes"), vault.join("default/docs")).expect("rename dir");
     let sync = SyncManager::new(repo.clone(), vault.clone());
@@ -60,6 +64,7 @@ fn commit_diff_reports_child_rename_after_directory_move() {
         .diff_commits(Some(&first.id), &second.id)
         .expect("diff commits");
     assert_eq!(diffs.len(), 1);
+    assert_eq!(diffs[0].doc_id, Some(doc_id));
     assert_eq!(diffs[0].status, ChangeStatus::Renamed);
     assert_eq!(diffs[0].previous_path.as_deref(), Some("notes/a.md"));
     assert_eq!(diffs[0].path, "docs/a.md");

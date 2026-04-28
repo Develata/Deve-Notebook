@@ -82,6 +82,7 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
         .diff_commits(Some(&first.id), &second.id)
         .expect("diff commits");
     assert_eq!(diffs.len(), 1);
+    assert_eq!(diffs[0].doc_id, Some(doc_id));
     assert_eq!(diffs[0].path, "notes/a.md");
     assert_eq!(diffs[0].status, ChangeStatus::Modified);
 }
@@ -146,6 +147,7 @@ fn commit_diff_reports_rename_from_structure_facts() {
         .diff_commits(Some(&first.id), &second.id)
         .expect("diff commits");
     assert_eq!(diffs.len(), 1);
+    assert_eq!(diffs[0].doc_id, Some(doc_id));
     assert_eq!(diffs[0].path, "notes/b.md");
     assert_eq!(diffs[0].previous_path.as_deref(), Some("notes/a.md"));
     assert_eq!(diffs[0].status, ChangeStatus::Renamed);
