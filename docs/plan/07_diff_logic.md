@@ -93,9 +93,10 @@ Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁�
 changed paths 是否落在这些 Deve commits 的 diff 范围内，然后用临时 Git index 基于
 `compare_commits(parent, commit)` 的 projection diff 逐个 `commit-tree` / `update-ref`，
 生成逐 commit Git history 并写回 `GitMirrorCommitted`。失败只会把剩余 records 写入
-`GitMirrorOutOfSync`，不会回滚 Deve ledger commit；CLI mirror report 会输出 per-record
-outcome、失败位置与 repair/retry hint。自动后台执行、完整 repair UI 与
-import/export/push 仍是后续实现。
+`GitMirrorOutOfSync`，不会回滚 Deve ledger commit；CLI mirror/export report 会输出
+per-record outcome、失败位置与 repair/retry hint。`deve_cli git export` 当前复用该
+executor 作为 queued projection export surface；自动后台执行、完整 repair UI、完整
+snapshot bootstrap、import/push 仍是后续实现。
 
 ### 2.4 Diff Identity Model
 

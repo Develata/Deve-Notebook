@@ -1,4 +1,7 @@
-use super::{mirror_report_lines, print_mirror_report, print_status, status_lines_at};
+use super::{
+    export_report_lines, mirror_report_lines, print_export_report, print_mirror_report,
+    print_status, status_lines_at,
+};
 use deve_core::git_bridge::{
     GitMetadataKind, GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord,
     GitMirrorRunReport, GitMirrorState, GitMirrorStatus, GitMirrorSummary,
@@ -176,6 +179,23 @@ fn print_git_mirror_report_handles_committed_record() {
 }
 
 #[test]
+fn print_git_export_report_handles_committed_record() {
+    print_export_report(
+        "default",
+        &GitMirrorRunReport {
+            attempted: 1,
+            committed: 1,
+            out_of_sync: 0,
+            skipped: 0,
+            records: vec![GitMirrorRecord {
+                git_commit_id: Some("abc123".into()),
+                ..record("deve-1", GitMirrorCommitState::Committed, 7, None)
+            }],
+        },
+    );
+}
+
+#[test]
 fn mirror_report_lines_include_noop_and_repair_semantics() {
     let empty = mirror_report_lines("default", &GitMirrorRunReport::default());
     assert!(
@@ -209,5 +229,42 @@ fn mirror_report_lines_include_noop_and_repair_semantics() {
         failed
             .iter()
             .any(|line| line.contains("--retry-out-of-sync"))
+    );
+}
+
+#[test]
+fn export_report_lines_use_export_semantics_and_retry_command() {
+    let empty = export_report_lines("default", &GitMirrorRunReport::default());
+    assert!(
+        empty
+            .iter()
+            .any(|line| line.contains("git_export[default]"))
+    );
+    assert!(
+        empty
+            .iter()
+            .any(|line| line.contains("no queued Git mirror records to export"))
+    );
+
+    let failed = export_report_lines(
+        "default",
+        &GitMirrorRunReport {
+            attempted: 1,
+            committed: 0,
+            out_of_sync: 1,
+            skipped: 0,
+            records: vec![record(
+                "deve-1",
+                GitMirrorCommitState::OutOfSync,
+                7,
+                Some("Git mirror refuses to run with 1 pending source-control change(s)"),
+            )],
+        },
+    );
+
+    assert!(
+        failed
+            .iter()
+            .any(|line| line.contains("deve_cli git export --repo default --retry-out-of-sync"))
     );
 }

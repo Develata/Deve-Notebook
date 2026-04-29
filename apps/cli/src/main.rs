@@ -17,6 +17,7 @@
 //! - `graph`: 输出当前 repo 的只读 GraphProjection JSON
 //! - `git status`: 检查 Git ecosystem mirror bridge 状态
 //! - `git mirror`: 手动执行 queued Git mirror commits
+//! - `git export`: 将 queued Deve commits 导出到 Git mirror
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -163,6 +164,13 @@ pub(crate) enum GitAction {
     /// Execute queued Git mirror commit records
     #[command(visible_alias = "flush")]
     Mirror {
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(long)]
+        retry_out_of_sync: bool,
+    },
+    /// Export queued Deve commits into the Git mirror
+    Export {
         #[arg(long)]
         repo: Option<String>,
         #[arg(long)]

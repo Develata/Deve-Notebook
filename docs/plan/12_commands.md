@@ -30,6 +30,9 @@
 *   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
 *   `deve config print`: 输出当前有效运行时配置。
 *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
+*   `deve git status`: 检查 Git mirror readiness 与 `GitMirrorQueued / Committed / OutOfSync` side-table summary。
+*   `deve git mirror`: 显式执行 queued/out_of_sync Git mirror records；偏 executor / repair 语义。
+*   `deve git export`: 将 queued Deve commits 导出到 Git mirror，并写回 Deve commit 到 Git commit 的映射；当前不做完整 snapshot bootstrap。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 
@@ -44,7 +47,7 @@
     *   `Source Control: Push`: 推送 Deve source-control state；若启用 Git mirror，可触发 mirror publish。
     *   `Git: Status`: 查看 `.git` mirror 是否存在、repo-local `.gitignore` 是否保护 `.notegit/`，并以独立 `queue_state` 显示 `GitMirrorQueued / Committed / OutOfSync` side-table summary；CLI 当前还会列出具体 lagging records、`queued_lag_ms` / `updated_lag_ms`、失败位置与 mirror/retry 命令提示。
     *   `Git: Mirror`: 显式执行 queued Git mirror commit；单个待处理 record 走 worktree/preflight 后的 `git add -A` / `git commit`，多个积压 records 走临时 Git index 的 projection replay，按 Deve commit diff 生成逐 commit Git history；路径越界、父映射缺失或 Git 命令失败进入 `GitMirrorOutOfSync`，CLI 输出 repair/retry hint。
-    *   `Git: Export Mirror`: 将当前 projection 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射。
+    *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射；当前 CLI surface 为 `deve git export`，完整 snapshot bootstrap 仍属 future。
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve ledger commit。
     *   `Git: Push Mirror`: 将 Git mirror 推送到远端；不得绕过 Deve authority。
     *   `Git:*` 文案 MAY 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。

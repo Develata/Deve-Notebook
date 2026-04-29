@@ -5,7 +5,7 @@
 //!
 //! Git mirror bridge diagnostics and explicit executor commands.
 
-use super::git_output::{print_mirror_report, print_status};
+use super::git_output::{print_export_report, print_mirror_report, print_status};
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
 use deve_core::git_bridge::GitMirrorRunOptions;
@@ -39,6 +39,41 @@ pub fn mirror(
     retry_out_of_sync: bool,
     snapshot_depth: usize,
 ) -> Result<()> {
+    run_executor(
+        ledger_dir,
+        vault_root,
+        target_repo,
+        retry_out_of_sync,
+        snapshot_depth,
+        print_mirror_report,
+    )
+}
+
+pub fn export(
+    ledger_dir: &Path,
+    vault_root: &Path,
+    target_repo: Option<&str>,
+    retry_out_of_sync: bool,
+    snapshot_depth: usize,
+) -> Result<()> {
+    run_executor(
+        ledger_dir,
+        vault_root,
+        target_repo,
+        retry_out_of_sync,
+        snapshot_depth,
+        print_export_report,
+    )
+}
+
+fn run_executor(
+    ledger_dir: &Path,
+    vault_root: &Path,
+    target_repo: Option<&str>,
+    retry_out_of_sync: bool,
+    snapshot_depth: usize,
+    print_report: fn(&str, &deve_core::git_bridge::GitMirrorRunReport),
+) -> Result<()> {
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     repo.set_vault_root(vault_root);
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
@@ -51,7 +86,7 @@ pub fn mirror(
                 GitMirrorRunOptions { retry_out_of_sync },
             )
         })?;
-        print_mirror_report(&repo_name, &report);
+        print_report(&repo_name, &report);
     }
     Ok(())
 }

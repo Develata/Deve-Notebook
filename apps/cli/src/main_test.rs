@@ -123,3 +123,30 @@ fn git_mirror_accepts_retry_out_of_sync() {
         other => panic!("unexpected command: {other:?}"),
     }
 }
+
+#[test]
+fn git_export_accepts_retry_out_of_sync() {
+    let args = Args::try_parse_from([
+        "deve",
+        "git",
+        "export",
+        "--repo",
+        "default",
+        "--retry-out-of-sync",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::Git {
+            action:
+                GitAction::Export {
+                    repo,
+                    retry_out_of_sync,
+                },
+        }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+            assert!(retry_out_of_sync);
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}

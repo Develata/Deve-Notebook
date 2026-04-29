@@ -88,6 +88,16 @@ pub async fn run(
                 retry_out_of_sync,
                 config.snapshot_depth,
             )?,
+            GitAction::Export {
+                repo,
+                retry_out_of_sync,
+            } => commands::git::export(
+                ledger_dir,
+                vault_path,
+                repo.as_deref(),
+                retry_out_of_sync,
+                config.snapshot_depth,
+            )?,
         },
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {

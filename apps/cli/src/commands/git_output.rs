@@ -26,6 +26,12 @@ pub(super) fn print_mirror_report(repo_name: &str, report: &GitMirrorRunReport) 
     }
 }
 
+pub(super) fn print_export_report(repo_name: &str, report: &GitMirrorRunReport) {
+    for line in export_report_lines(repo_name, report) {
+        println!("{line}");
+    }
+}
+
 fn status_lines(
     repo_name: &str,
     status: &GitMirrorStatus,
@@ -99,22 +105,62 @@ fn status_lines_at(
 }
 
 fn mirror_report_lines(repo_name: &str, report: &GitMirrorRunReport) -> Vec<String> {
+    run_report_lines(
+        repo_name,
+        report,
+        RunReportCopy {
+            header: "git_mirror",
+            hint_label: "mirror_hint",
+            no_records_hint: "no queued Git mirror records",
+            success_hint: "attempted records are mirrored",
+            retry_action: "mirror",
+        },
+    )
+}
+
+fn export_report_lines(repo_name: &str, report: &GitMirrorRunReport) -> Vec<String> {
+    run_report_lines(
+        repo_name,
+        report,
+        RunReportCopy {
+            header: "git_export",
+            hint_label: "export_hint",
+            no_records_hint: "no queued Git mirror records to export",
+            success_hint: "attempted records are exported to Git mirror",
+            retry_action: "export",
+        },
+    )
+}
+
+struct RunReportCopy {
+    header: &'static str,
+    hint_label: &'static str,
+    no_records_hint: &'static str,
+    success_hint: &'static str,
+    retry_action: &'static str,
+}
+
+fn run_report_lines(
+    repo_name: &str,
+    report: &GitMirrorRunReport,
+    copy: RunReportCopy,
+) -> Vec<String> {
     let mut lines = vec![format!(
-        "git_mirror[{repo_name}]: attempted={} committed={} out_of_sync={} skipped={}",
-        report.attempted, report.committed, report.out_of_sync, report.skipped
+        "{}[{repo_name}]: attempted={} committed={} out_of_sync={} skipped={}",
+        copy.header, report.attempted, report.committed, report.out_of_sync, report.skipped
     )];
     for (index, record) in report.records.iter().enumerate() {
         lines.extend(record_detail_lines("record", index + 1, record, None));
     }
     if report.attempted == 0 {
-        lines.push("  mirror_hint: no queued Git mirror records".to_string());
+        lines.push(format!("  {}: {}", copy.hint_label, copy.no_records_hint));
     } else if report.out_of_sync > 0 {
         lines.push(format!(
             "  repair_hint: fix the reported failure_location/error; retry with `{}`",
-            mirror_command(repo_name, true)
+            git_command(copy.retry_action, repo_name, true)
         ));
     } else {
-        lines.push("  mirror_hint: attempted records are mirrored".to_string());
+        lines.push(format!("  {}: {}", copy.hint_label, copy.success_hint));
     }
     lines
 }
@@ -204,6 +250,20 @@ fn mirror_command(repo_name: &str, retry_out_of_sync: bool) -> String {
     };
     format!(
         "deve_cli git mirror --repo {}{}",
+        shell_quote(repo_name),
+        retry
+    )
+}
+
+fn git_command(action: &str, repo_name: &str, retry_out_of_sync: bool) -> String {
+    let retry = if retry_out_of_sync {
+        " --retry-out-of-sync"
+    } else {
+        ""
+    };
+    format!(
+        "deve_cli git {} --repo {}{}",
+        action,
         shell_quote(repo_name),
         retry
     )
