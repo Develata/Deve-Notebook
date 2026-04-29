@@ -53,6 +53,7 @@
     *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射；当前 CLI surface 为 `deve git export`，同时支持空 Git history 下的首次 snapshot bootstrap。
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve ledger commit；当前 CLI surface 为 `deve git import` dry-run 与 `deve git import --apply` 显式 pending/import 写入，不直接生成 ledger commit。
     *   `Git: Push Mirror`: 将 Git mirror 推送到远端；当前 CLI surface 为 `deve git push`，只发布已映射的 `.git` mirror HEAD，不得绕过 Deve authority。
+    *   `Git: Repair Mirror`: 当前 Web Command Palette 仅提供 CLI-only repair/retry notice，引导用户通过 `deve_cli git status --repo <repo>` 查看 `repair_action[...]`，修复 blocker 后再运行 `deve_cli git export --repo <repo> --retry-out-of-sync`；不得自动执行 Git repair。
     *   `Git:*` 文案 MAY 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:
@@ -63,12 +64,14 @@
 *   **Current implemented subset**:
     *   Command Palette 当前覆盖 Open / Settings / Toggle Language / Switch Peer /
         Establish Branch / Merge Peer / Git Import Changes（CLI-only notice）/
-        Git Push Mirror（CLI-only notice）/ Toggle AI Chat（条件可见）。
+        Git Push Mirror（CLI-only notice）/ Git Repair Mirror（CLI-only notice）/
+        Toggle AI Chat（条件可见）。
     *   Source Control Sync / Commit / Push、Command Palette Git mirror executor/export/status 与 AI Retry / Backend /
         PLAN / BUILD 面板命令仍属于 Planned / Optional，除非后续验收用例绑定到具体实现。
     *   Git import 当前只实现 CLI dry-run 与 pending/import apply；Git push 当前只实现 CLI mirror publish。
         Command Palette 只提供可发现的 CLI-only notice，不得被解释为 Web 已能直接执行 Git import/push；
-        Git push notice 已覆盖 remote/upstream、export/repair、dirty Git worktree 与 dirty Deve Source Control blocker 提示。
+        Git push notice 已覆盖 remote/upstream、export/repair、dirty Git worktree 与 dirty Deve Source Control blocker 提示；
+        Git repair notice 当前只解释 `repair_action[...]`、blocker 修复与 `--retry-out-of-sync` 重试路径。
         blocker repair 的可点击 UI、自动执行与完整 conflict UI 仍属 future。
 
 *   **交互准则 (Command First)**:

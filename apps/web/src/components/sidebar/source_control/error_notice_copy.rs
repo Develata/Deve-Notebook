@@ -4,7 +4,7 @@
 //!
 use crate::hooks::use_core::source_control_notice::{
     SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
-    is_git_import_cli_notice, is_git_push_cli_notice,
+    is_git_import_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
 
@@ -18,6 +18,9 @@ pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
     if is_git_push_cli_notice(notice) {
         return sc::git_push_cli_only_title(locale).to_string();
     }
+    if is_git_repair_cli_notice(notice) {
+        return sc::git_repair_cli_only_title(locale).to_string();
+    }
     server_error::message(locale, notice.code).to_string()
 }
 
@@ -27,6 +30,9 @@ pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
     }
     if is_git_push_cli_notice(notice) {
         return sc::git_push_cli_only_hint(locale).to_string();
+    }
+    if is_git_repair_cli_notice(notice) {
+        return sc::git_repair_cli_only_hint(locale).to_string();
     }
     match notice.code {
         deve_core::protocol::ServerErrorCode::ScDocNotFound
@@ -66,6 +72,12 @@ pub fn details(locale: Locale, notice: &SourceControlNotice) -> Vec<String> {
             .map(str::to_string)
             .collect();
     }
+    if is_git_repair_cli_notice(notice) {
+        return sc::git_repair_cli_only_details(locale)
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+    }
     Vec::new()
 }
 
@@ -99,6 +111,22 @@ mod tests {
             details(Locale::Zh, &notice)
                 .iter()
                 .any(|line| line.contains("deve_cli git export --repo <repo>"))
+        );
+    }
+
+    #[test]
+    fn local_git_repair_notice_uses_cli_copy() {
+        let notice = SourceControlNotice::git_repair_cli_only();
+
+        assert_eq!(
+            title(Locale::En, &notice),
+            sc::git_repair_cli_only_title(Locale::En)
+        );
+        assert!(hint(Locale::En, &notice).contains("repair_action[...]"));
+        assert!(
+            details(Locale::En, &notice)
+                .iter()
+                .any(|line| line.contains("retry-out-of-sync"))
         );
     }
 }

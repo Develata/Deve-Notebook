@@ -26,6 +26,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest release smoke status: `release-smoke-status-2026-04-29.md`
 - Latest file cohesion audit: `soft-size-audit-2026-04-27.md`
 - Latest Git mirror bridge status: `git-mirror-bridge-status-2026-04-29.md`
+- Latest Git mirror Web repair notice status: `git-mirror-web-repair-notice-status-2026-04-29.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 

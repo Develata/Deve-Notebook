@@ -35,3 +35,14 @@ pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> C
         is_file: false,
     }
 }
+
+pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
+    Command {
+        id: "git_repair_mirror".to_string(),
+        title: (t::command_palette::git_repair_mirror)(locale).to_string(),
+        action: Callback::new(move |_| {
+            show_source_control_notice(SourceControlNotice::git_repair_cli_only(), set_show);
+        }),
+        is_file: false,
+    }
+}

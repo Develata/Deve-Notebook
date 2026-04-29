@@ -33,7 +33,7 @@
 | **Graph**    | **Core read-only projection + CLI JSON surface + d3-force/Pixi.js future renderer** | Verified (Projection Surface) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；`deve graph` 只读导出 projection JSON；高性能 Web Canvas 渲染仍是 future。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
-| **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Import/Push CLI) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay、queued export、import apply 与 push CLI surface；自动后台执行与完整 UI 仍属 P1/P2 后续。 |
+| **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Import/Push CLI + Web CLI Notices) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay、queued export、import apply、push CLI surface 与 Web import/push/repair CLI-only notices；自动后台执行与完整 UI 仍属 P1/P2 后续。 |
 | **Build**    | **Tauri v2**             | Partial Skeleton / Planned Packaging | `apps/desktop` 与 `apps/mobile` 已有无 Tauri 依赖的 native shell skeleton，用于固定 adapter/bootstrap/offline/lifecycle 边界；真实 Tauri v2 packaging、菜单、托盘、移动权限、安装包与 auto-update 仍是 future。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
@@ -68,7 +68,8 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - `deve_cli git export` 复用该 executor 作为 queued projection export surface，输出 `git_export[...]` 报告与 export/retry hint；side table 为空且 Git history 为空时，会从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit，只把最新 Deve commit 映射到该 Git commit，后续增量 commit 再以该映射为 parent replay。
 - `deve_cli git import` 当前提供只读 dry-run planning：解析 Git tracked/untracked worktree changes 为 change/blocker；`deve_cli git import --apply` 在无 blocker 时把安全 changes 原子写入 `pending_fs_ops`，并通过 `has_conflict` 保留冲突标记。该 surface 不得被解释为 ledger commit 已完成。
 - `deve_cli git push` 当前提供显式 mirror publish surface：只在 `.git` mirror ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record 且当前 Git HEAD 映射到最新 `GitMirrorCommitted` record 时执行远端 push；失败以 blocker 输出，不回滚 ledger，也不写 `.notegit`。
-- 自动后台执行、完整 repair UI 与 Command Palette Git import/push UI 仍是后续实现，不得被当前 executor、import apply 或 push surface 替代。
+- Web Command Palette 当前只提供 Git import / push / repair 的 CLI-only notices：repair notice 指向 `deve_cli git status --repo <repo>` 的 `repair_action[...]` 与 `deve_cli git export --repo <repo> --retry-out-of-sync`，不直接调用 Web 后端执行 Git。
+- 自动后台执行、完整 repair UI 与 Web 后端直接执行 Git import/push/repair 仍是后续实现，不得被当前 executor、import apply、push surface 或 CLI-only notices 替代。
 
 该 bridge 的工程边界：
 

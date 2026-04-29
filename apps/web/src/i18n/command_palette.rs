@@ -78,6 +78,13 @@ pub fn git_push_mirror(locale: Locale) -> &'static str {
     }
 }
 
+pub fn git_repair_mirror(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git: Repair Mirror",
+        Locale::Zh => "Git: 修复 Mirror",
+    }
+}
+
 pub fn toggle_ai_chat(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "AI: Toggle Chat Panel",
@@ -95,5 +102,7 @@ mod tests {
         assert_eq!(git_import_changes(Locale::Zh), "Git: 导入外部变更");
         assert_eq!(git_push_mirror(Locale::En), "Git: Push Mirror");
         assert_eq!(git_push_mirror(Locale::Zh), "Git: 推送 Mirror");
+        assert_eq!(git_repair_mirror(Locale::En), "Git: Repair Mirror");
+        assert_eq!(git_repair_mirror(Locale::Zh), "Git: 修复 Mirror");
     }
 }

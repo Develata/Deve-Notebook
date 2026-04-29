@@ -60,6 +60,41 @@ pub fn git_push_cli_only_details(locale: Locale) -> [&'static str; 5] {
     }
 }
 
+pub fn git_repair_cli_only_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git mirror repair is CLI-only",
+        Locale::Zh => "Git mirror 修复只能通过 CLI 执行",
+    }
+}
+
+pub fn git_repair_cli_only_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Run `deve_cli git status --repo <repo>` to inspect `repair_action[...]`, fix the subject, then run `deve_cli git export --repo <repo> --retry-out-of-sync`."
+        }
+        Locale::Zh => {
+            "请运行 `deve_cli git status --repo <repo>` 查看 `repair_action[...]`，修复 subject 后再运行 `deve_cli git export --repo <repo> --retry-out-of-sync`。"
+        }
+    }
+}
+
+pub fn git_repair_cli_only_details(locale: Locale) -> [&'static str; 4] {
+    match locale {
+        Locale::En => [
+            "`repair_action[...]` is diagnostic only; Web never runs Git repair automatically.",
+            "Projection/path blockers must be fixed in Deve or the workspace before retry.",
+            "Dirty Git worktree blockers must be cleaned or imported with `deve_cli git import --apply --repo <repo>`.",
+            "Retry export only after blockers are fixed: `deve_cli git export --repo <repo> --retry-out-of-sync`.",
+        ],
+        Locale::Zh => [
+            "`repair_action[...]` 只用于诊断；Web 不会自动执行 Git 修复。",
+            "projection/path blocker 必须先在 Deve 或 workspace 中修复，再重试。",
+            "Git 工作区脏 blocker 需要先清理，或用 `deve_cli git import --apply --repo <repo>` 导入。",
+            "blocker 修复后再重试导出：`deve_cli git export --repo <repo> --retry-out-of-sync`。",
+        ],
+    }
+}
+
 pub fn git_import_conflict_title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Imported conflict: choose Keep File System or Keep Ledger before staging.",
@@ -92,6 +127,16 @@ mod tests {
             git_push_cli_only_details(Locale::Zh)
                 .iter()
                 .any(|line| line.contains("deve_cli git import --apply --repo <repo>"))
+        );
+        assert_eq!(
+            git_repair_cli_only_title(Locale::En),
+            "Git mirror repair is CLI-only"
+        );
+        assert!(git_repair_cli_only_hint(Locale::Zh).contains("repair_action[...]"));
+        assert!(
+            git_repair_cli_only_details(Locale::En)
+                .iter()
+                .any(|line| line.contains("retry-out-of-sync"))
         );
         assert_eq!(
             git_import_conflict_title(Locale::Zh),

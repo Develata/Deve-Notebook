@@ -15,7 +15,7 @@ mod git;
 #[path = "registry_merge.rs"]
 mod merge;
 
-use git::{git_import_command, git_push_command};
+use git::{git_import_command, git_push_command, git_repair_command};
 use merge::merge_peer_command;
 
 /// 创建静态命令列表。
@@ -90,6 +90,7 @@ pub fn create_static_commands(
         merge_peer_command(locale, set_show),
         git_import_command(locale, set_show),
         git_push_command(locale, set_show),
+        git_repair_command(locale, set_show),
     ];
 
     // Add AI Chat toggle command if ChatControl is available
@@ -154,6 +155,7 @@ mod tests {
 
             assert!(ids.contains(&"git_import_changes"));
             assert!(ids.contains(&"git_push_mirror"));
+            assert!(ids.contains(&"git_repair_mirror"));
         });
     }
 }
