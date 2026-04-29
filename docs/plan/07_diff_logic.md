@@ -87,6 +87,9 @@ mirror ready 时会将成功的 Deve commit 记录为 `GitMirrorQueued`，并提
 `GitMirrorCommitted` / `GitMirrorOutOfSync` 的持久化更新 API 与独立 `queue_state`
 summary；`deve_cli git status` 当前会列出 queued/out_of_sync 的 per-commit lagging
 records、`queued_lag_ms` / `updated_lag_ms`、结构化 `failure_stage` 与 retry 命令提示。
+`GitMirrorOutOfSync` 当前还会暴露 CLI-only `GitMirrorRepairAction` 诊断 schema，
+用于把失败位置映射为 repair action code、subject 与 retryable-after-fix 标记；该
+schema 只用于 status/report，不自动执行 Git，也不授权 Web/后台直接写 Git。
 `deve_cli git mirror` 已提供显式 executor：单个待处理 mirror record 仍走
 worktree preflight 后的 `git add -A` / `git commit` 路径；多个积压 records 会先检查
 Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git

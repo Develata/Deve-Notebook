@@ -7,7 +7,7 @@
 
 use deve_core::git_bridge::{
     GitImportApplyReport, GitImportPlan, GitImportPlanBlocker, GitMirrorCommitState,
-    GitMirrorRecord, GitMirrorRunReport, GitMirrorStatus, GitMirrorSummary,
+    GitMirrorRecord, GitMirrorRepairAction, GitMirrorRunReport, GitMirrorStatus, GitMirrorSummary,
 };
 use deve_core::source_control::ChangeStatus;
 
@@ -318,6 +318,14 @@ fn record_detail_lines(
                 record.failure_exit_status.as_deref().unwrap_or("-")
             ));
         }
+        if let Some(action) = GitMirrorRepairAction::for_record(record) {
+            lines.push(format!(
+                "  repair_action[{index}]: code={} retryable_after_fix={} subject={}",
+                action.code.as_str(),
+                yes_no(action.retryable_after_fix),
+                action.subject.as_deref().unwrap_or("-")
+            ));
+        }
     }
     lines
 }
@@ -414,6 +422,10 @@ fn queue_state_label(summary: &GitMirrorSummary) -> &'static str {
     }
 }
 
+fn yes_no(value: bool) -> &'static str {
+    if value { "yes" } else { "no" }
+}
+
 fn change_status_label(status: ChangeStatus) -> &'static str {
     match status {
         ChangeStatus::Added => "added",
@@ -426,3 +438,7 @@ fn change_status_label(status: ChangeStatus) -> &'static str {
 #[cfg(test)]
 #[path = "git_output_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "git_output_repair_action_test.rs"]
+mod repair_action_tests;
