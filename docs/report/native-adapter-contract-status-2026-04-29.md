@@ -44,13 +44,17 @@ Observed result:
 
 ## Next Work
 
-Next native-adapter work should connect this core contract to a real adapter
-consumer, in this order:
+This report has been superseded by later P3-10 batches:
 
-1. Web bootstrap/connection manager consumes injected endpoint/session data.
-2. Server exposes a native-safe launch mode that binds only loopback and reports
-   service readiness/offline in the same schema.
-3. Desktop shell prototype starts the embedded service and injects the bootstrap
-   payload before Web shell loading.
-4. Mobile shell prototype adds background/foreground reprobe and suspended
-   service semantics.
+- Web bootstrap consumption: `native-web-bootstrap-status-2026-04-29.md`.
+- Server native-safe launch surface: `native-server-launch-status-2026-04-29.md`.
+- Desktop/mobile shell skeletons: `desktop-native-shell-status-2026-04-29.md`
+  and `mobile-native-shell-status-2026-04-29.md`.
+- Native recovery UI and packaging scaffolds:
+  `native-web-recovery-status-2026-04-29.md`,
+  `desktop-packaging-scaffold-status-2026-04-29.md`, and
+  `mobile-packaging-scaffold-status-2026-04-29.md`.
+
+The next native-track step is no longer bootstrap wiring. It should be selected
+from the active queue in `next-tasks.md`, currently embedded service
+supervision, without opening the real Tauri dependency gate by default.

@@ -12,6 +12,7 @@ use web_sys::MouseEvent;
 
 use crate::components::search_box::logic;
 use crate::components::search_box::types::SearchResult;
+use crate::components::touch_feedback::interactive_item_state_class;
 use crate::hooks::use_core::CoreState;
 
 #[path = "result_item_sections.rs"]
@@ -58,13 +59,7 @@ pub fn result_item(
             class=format!(
                 "{} {}",
                 base,
-                if is_sel && is_selectable {
-                    "bg-accent-subtle text-accent"
-                } else if is_selectable {
-                    "text-primary hover:bg-hover"
-                } else {
-                    "text-muted cursor-default"
-                }
+                interactive_item_state_class(is_sel, is_selectable)
             )
             on:click=move |_| {
                 if !is_selectable {

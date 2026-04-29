@@ -64,9 +64,9 @@ The native packaging dependency gate was completed in
 The desktop packaging scaffold split was completed in
 `desktop-packaging-scaffold-status-2026-04-29.md`.
 
-The next P3-10 implementation step should mirror the split for mobile
-packaging:
+The mobile packaging scaffold split was completed in
+`mobile-packaging-scaffold-status-2026-04-29.md`.
 
-1. Keep packaging dependencies isolated to `apps/mobile`.
-2. Preserve the current server launch contract for Docker/release behavior.
-3. Separate packaging acceptance from adapter/session/readiness correctness.
+The next native-track step should follow `next-tasks.md`; preserve the current
+server launch contract for Docker/release behavior and do not open the real
+Tauri dependency gate by default.

@@ -8,6 +8,7 @@
 //! 显示文档大纲，基于 Markdown 标题解析。
 
 use crate::components::outline_render::render_outline_inline;
+use crate::components::touch_feedback::interactive_item_state_class;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -91,7 +92,10 @@ pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl 
 
                     view! {
                         <div
-                            class="min-h-8 py-1.5 pr-2 text-xs text-secondary hover:bg-hover hover:text-primary active:bg-hover cursor-pointer rounded transition-colors truncate flex items-center"
+                            class=format!(
+                                "min-h-8 py-1.5 pr-2 text-xs cursor-pointer rounded transition-colors truncate flex items-center {}",
+                                interactive_item_state_class(false, true),
+                            )
                             style={padding}
                             on:click=move |_| on_click.run(line)
                             title={title_text}

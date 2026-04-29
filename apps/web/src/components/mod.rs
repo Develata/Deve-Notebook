@@ -18,6 +18,7 @@ pub mod playback;
 pub mod settings;
 pub mod sidebar;
 pub mod sidebar_menu;
+pub mod touch_feedback;
 
 pub mod activity_bar;
 pub mod ai_backend_guard;
