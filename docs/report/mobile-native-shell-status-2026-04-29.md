@@ -30,7 +30,8 @@ Out of scope:
 - Tauri Mobile runtime/window/permission bridge/push/file picker/store packaging.
 - Real embedded service process supervision.
 - Native session material generation.
-- Full Web UI recovery copy for service offline and foreground reprobe states.
+- Shell-specific recovery controls beyond the minimal recovery bootstrap
+  payload.
 
 ## Verification
 
@@ -53,10 +54,12 @@ Observed result:
 
 ## Next Work
 
-The next P3-10 implementation step should improve Web native recovery semantics:
+Web native recovery semantics were completed in
+`native-web-recovery-status-2026-04-29.md`.
 
-1. Surface invalid native bootstrap, service offline, foreground reprobe, and
-   session invalid as explicit UI/runtime statuses.
-2. Keep invalid native bootstrap fail-closed without port guessing.
-3. Route session invalid to Unauthorized rather than a generic disconnected
-   state.
+The next P3-10 implementation step should define the native packaging
+dependency gate:
+
+1. Keep Tauri v2/Tauri Mobile dependencies isolated to native app crates.
+2. Preserve the no-Tauri shell skeletons as fast unit-test boundaries.
+3. Separate packaging acceptance from adapter/session/readiness correctness.

@@ -22,6 +22,19 @@ fn gate_state(
     }
 }
 
+fn gate_state_with_status(connection_status: ConnectionStatus) -> RepoWriteGateState<'static> {
+    RepoWriteGateState {
+        connection_status,
+        load_state: "ready",
+        is_read_only: false,
+        handshake_ready: true,
+        writer_ready: true,
+        has_repo: true,
+        pending_branch_switch: false,
+        pending_repo_switch: false,
+    }
+}
+
 #[test]
 fn repo_write_gate_requires_writer_ready() {
     assert_eq!(
@@ -41,6 +54,36 @@ fn repo_write_gate_blocks_remote_branches_as_read_only() {
 #[test]
 fn repo_write_gate_allows_ready_local_repo() {
     assert_eq!(repo_write_block(gate_state(false, true, true)), None);
+}
+
+#[test]
+fn repo_write_gate_blocks_native_session_pending() {
+    assert_eq!(
+        repo_write_block(gate_state_with_status(
+            ConnectionStatus::NativeSessionPending
+        )),
+        Some(RepoWriteBlock::NativeSessionPending)
+    );
+}
+
+#[test]
+fn repo_write_gate_blocks_native_reprobe_required() {
+    assert_eq!(
+        repo_write_block(gate_state_with_status(
+            ConnectionStatus::NativeReprobeRequired
+        )),
+        Some(RepoWriteBlock::NativeReprobeRequired)
+    );
+}
+
+#[test]
+fn repo_source_control_read_gate_blocks_native_recovery_states() {
+    assert_eq!(
+        repo_source_control_read_block(gate_state_with_status(
+            ConnectionStatus::NativeServiceOffline
+        )),
+        Some(RepoWriteBlock::NativeServiceOffline)
+    );
 }
 
 #[test]

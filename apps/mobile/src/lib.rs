@@ -15,6 +15,6 @@ mod types;
 
 pub use shell::MobileShell;
 pub use types::{
-    MobileBootstrap, MobileLifecycleEvent, MobileServiceState, MobileSessionMaterial,
-    MobileShellError, MobileShellSnapshot,
+    MobileBootstrap, MobileLifecycleEvent, MobileRecoveryBootstrap, MobileServiceState,
+    MobileSessionMaterial, MobileShellError, MobileShellSnapshot,
 };

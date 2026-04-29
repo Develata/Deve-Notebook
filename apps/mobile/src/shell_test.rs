@@ -119,6 +119,13 @@ fn mobile_background_resume_requires_fresh_reprobe_before_write() {
     assert!(!snapshot.readiness.repo_handshake_complete);
     assert!(!snapshot.readiness.writer_ready);
     assert!(!snapshot.readiness.scope_nonce_current);
+    assert_eq!(
+        shell
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "foreground_reprobe"
+    );
 }
 
 #[test]
@@ -158,6 +165,13 @@ fn mobile_shell_offline_and_session_invalid_block_bootstrap() {
         offline.bootstrap_for_web(),
         Err(MobileShellError::ServiceOffline { reason }) if reason == "service_dead"
     ));
+    let offline_script = offline
+        .recovery_bootstrap_for_web()
+        .expect("recovery bootstrap")
+        .script_tag()
+        .expect("recovery script");
+    assert!(offline_script.contains("\"service_state\":\"service_offline\""));
+    assert!(!offline_script.contains("service_dead"));
 
     let mut invalid = bound_shell();
     invalid.invalidate_session();
@@ -166,4 +180,11 @@ fn mobile_shell_offline_and_session_invalid_block_bootstrap() {
         Err(MobileShellError::SessionInvalid)
     ));
     assert!(!invalid.snapshot().endpoint.expect("endpoint").session_bound);
+    assert_eq!(
+        invalid
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "session_invalid"
+    );
 }

@@ -46,9 +46,9 @@ pub fn spawn_connection_manager(
     spawn_local(async move {
         let native_bootstrap = read_native_bootstrap();
         let auth_http_base = native_bootstrap.http_base().map(str::to_string);
-        if native_bootstrap.is_blocked() {
-            leptos::logging::error!("Native bootstrap is present but invalid; refusing fallback");
-            set_status.set(ConnectionStatus::Disconnected);
+        if let Some(blocked_status) = native_bootstrap.blocked_status() {
+            leptos::logging::error!("Native bootstrap is present but not ready; refusing fallback");
+            set_status.set(blocked_status);
             return;
         }
 

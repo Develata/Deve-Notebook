@@ -7,8 +7,8 @@ use deve_core::native_adapter::{
 };
 
 use crate::types::{
-    MobileBootstrap, MobileLifecycleEvent, MobileServiceState, MobileSessionMaterial,
-    MobileShellError, MobileShellSnapshot,
+    MobileBootstrap, MobileLifecycleEvent, MobileRecoveryBootstrap, MobileServiceState,
+    MobileSessionMaterial, MobileShellError, MobileShellSnapshot,
 };
 
 #[derive(Debug, Clone)]
@@ -94,6 +94,28 @@ impl MobileShell {
             node_role: endpoint.node_role.clone(),
             session_bound: endpoint.session_bound,
         })
+    }
+
+    pub fn recovery_bootstrap_for_web(&self) -> Option<MobileRecoveryBootstrap> {
+        match self.state {
+            MobileServiceState::ServiceOffline => Some(MobileRecoveryBootstrap {
+                service_state: "service_offline",
+            }),
+            MobileServiceState::SessionInvalid => Some(MobileRecoveryBootstrap {
+                service_state: "session_invalid",
+            }),
+            MobileServiceState::ForegroundReprobe | MobileServiceState::BackgroundSuspended => {
+                Some(MobileRecoveryBootstrap {
+                    service_state: "foreground_reprobe",
+                })
+            }
+            MobileServiceState::ColdStart
+            | MobileServiceState::ServiceStarting
+            | MobileServiceState::EndpointBound
+            | MobileServiceState::SessionBound
+            | MobileServiceState::WebShellLoading
+            | MobileServiceState::RuntimeReady => None,
+        }
     }
 
     pub fn handle_lifecycle_event(

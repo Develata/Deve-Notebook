@@ -6,6 +6,8 @@ use deve_core::native_adapter::{
     NativeEndpointReady, validate_native_endpoint_bases, validate_native_endpoint_ready,
 };
 
+use super::ConnectionStatus;
+
 #[cfg(target_arch = "wasm32")]
 const NATIVE_BOOTSTRAP_GLOBAL: &str = "__DEVE_NATIVE_BOOTSTRAP";
 
@@ -29,6 +31,9 @@ pub(super) enum NativeBootstrapBlocker {
     InvalidShape,
     InvalidEndpoint,
     SessionNotBound,
+    ServiceOffline,
+    ForegroundReprobe,
+    SessionInvalid,
 }
 
 impl NativeBootstrapState {
@@ -39,8 +44,26 @@ impl NativeBootstrapState {
         }
     }
 
-    pub(super) fn is_blocked(&self) -> bool {
-        matches!(self, Self::Blocked(_))
+    pub(super) fn blocked_status(&self) -> Option<ConnectionStatus> {
+        match self {
+            Self::Blocked(NativeBootstrapBlocker::InvalidShape)
+            | Self::Blocked(NativeBootstrapBlocker::InvalidEndpoint) => {
+                Some(ConnectionStatus::NativeBootstrapInvalid)
+            }
+            Self::Blocked(NativeBootstrapBlocker::SessionNotBound) => {
+                Some(ConnectionStatus::NativeSessionPending)
+            }
+            Self::Blocked(NativeBootstrapBlocker::ServiceOffline) => {
+                Some(ConnectionStatus::NativeServiceOffline)
+            }
+            Self::Blocked(NativeBootstrapBlocker::ForegroundReprobe) => {
+                Some(ConnectionStatus::NativeReprobeRequired)
+            }
+            Self::Blocked(NativeBootstrapBlocker::SessionInvalid) => {
+                Some(ConnectionStatus::Unauthorized)
+            }
+            Self::Absent | Self::Ready(_) => None,
+        }
     }
 }
 
@@ -65,6 +88,7 @@ pub(super) fn read_native_bootstrap() -> NativeBootstrapState {
         js_string_field(&value, "ws_base"),
         js_string_field(&value, "node_role"),
         js_bool_field(&value, "session_bound"),
+        js_string_field(&value, "service_state"),
     )
 }
 
@@ -99,7 +123,24 @@ fn parse_native_bootstrap_fields(
     ws_base: Option<String>,
     node_role: Option<String>,
     session_bound: Option<bool>,
+    service_state: Option<String>,
 ) -> NativeBootstrapState {
+    if let Some(service_state) = service_state {
+        match service_state.as_str() {
+            "service_offline" => {
+                return NativeBootstrapState::Blocked(NativeBootstrapBlocker::ServiceOffline);
+            }
+            "foreground_reprobe" => {
+                return NativeBootstrapState::Blocked(NativeBootstrapBlocker::ForegroundReprobe);
+            }
+            "session_invalid" => {
+                return NativeBootstrapState::Blocked(NativeBootstrapBlocker::SessionInvalid);
+            }
+            "endpoint_ready" | "session_bound" | "runtime_ready" => {}
+            _ => return NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape),
+        }
+    }
+
     let (Some(http_base), Some(ws_base), Some(session_bound)) = (http_base, ws_base, session_bound)
     else {
         return NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape);
@@ -143,6 +184,7 @@ mod tests {
             Some(ws_base.to_string()),
             Some("main".to_string()),
             Some(session_bound),
+            None,
         )
     }
 
@@ -181,8 +223,41 @@ mod tests {
                 None,
                 None,
                 Some(true),
+                None,
             ),
             NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
+        );
+    }
+
+    #[test]
+    fn maps_native_service_offline_to_blocked_state() {
+        assert_eq!(
+            parse_native_bootstrap_fields(None, None, None, None, Some("service_offline".into())),
+            NativeBootstrapState::Blocked(NativeBootstrapBlocker::ServiceOffline)
+        );
+    }
+
+    #[test]
+    fn maps_native_session_invalid_to_unauthorized_status() {
+        assert_eq!(
+            parse_native_bootstrap_fields(None, None, None, None, Some("session_invalid".into()))
+                .blocked_status(),
+            Some(ConnectionStatus::Unauthorized)
+        );
+    }
+
+    #[test]
+    fn maps_native_foreground_reprobe_to_recovery_status() {
+        assert_eq!(
+            parse_native_bootstrap_fields(
+                None,
+                None,
+                None,
+                None,
+                Some("foreground_reprobe".into())
+            )
+            .blocked_status(),
+            Some(ConnectionStatus::NativeReprobeRequired)
         );
     }
 }

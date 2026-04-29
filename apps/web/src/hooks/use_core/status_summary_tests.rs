@@ -24,6 +24,44 @@ fn reports_session_expired_for_unauthorized_status() {
 }
 
 #[test]
+fn reports_native_session_pending_before_snapshot_state() {
+    let summary = derive_sync_status(
+        ConnectionStatus::NativeSessionPending,
+        "ready",
+        false,
+        false,
+        true,
+        true,
+        Some("repo-id"),
+        Some("default"),
+        None,
+        false,
+        0,
+    );
+    assert_eq!(summary.kind, SyncStatusKind::NativeSessionPending);
+    assert_eq!(summary.header_text(), "Native Session Pending");
+}
+
+#[test]
+fn reports_native_service_offline_as_specific_recovery_state() {
+    let summary = derive_sync_status(
+        ConnectionStatus::NativeServiceOffline,
+        "loading",
+        false,
+        false,
+        false,
+        false,
+        Some("repo-id"),
+        Some("default"),
+        None,
+        false,
+        0,
+    );
+    assert_eq!(summary.kind, SyncStatusKind::NativeServiceOffline);
+    assert_eq!(summary.header_text(), "Native Service Offline");
+}
+
+#[test]
 fn prefers_loading_state_while_snapshot_is_inflight() {
     let summary = derive_sync_status(
         ConnectionStatus::Connected,

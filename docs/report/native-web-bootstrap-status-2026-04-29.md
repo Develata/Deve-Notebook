@@ -8,8 +8,10 @@ has a minimal code surface.
 Implemented scope:
 
 - Web reads optional `window.__DEVE_NATIVE_BOOTSTRAP`.
-- Accepted bootstrap shape:
+- Accepted ready bootstrap shape:
   `http_base`, `ws_base`, `session_bound`, optional `node_role`.
+- Accepted recovery bootstrap shape: optional `service_state` with
+  `service_offline`, `foreground_reprobe`, or `session_invalid`.
 - Bootstrap endpoint validation reuses `deve_core::native_adapter`.
 - Valid native bootstrap replaces inferred WebSocket candidates with the
   injected `ws_base + /ws`.
@@ -22,8 +24,7 @@ Out of scope:
 
 - Actual Tauri/mobile shell injection.
 - Native embedded service launcher.
-- UI recovery copy for invalid native bootstrap beyond existing disconnected
-  state.
+- Full native runtime packaging and shell-specific recovery controls.
 
 ## Verification
 
@@ -48,9 +49,14 @@ Observed result:
 
 ## Next Work
 
-The next P3-10 implementation step should be server/native launch surface:
+This report was superseded for UI recovery by
+`native-web-recovery-status-2026-04-29.md`.
 
-1. Add a native-safe server launch mode or options object that always binds
-   loopback unless explicitly overridden for Docker/release server use.
-2. Report service readiness/offline in the same endpoint/session vocabulary.
-3. Keep production Web server and Docker release behavior unchanged.
+The next P3-10 implementation step should be native packaging dependency
+gating:
+
+1. Define the minimal Tauri v2/Tauri Mobile dependency surface behind
+   `apps/desktop` and `apps/mobile`.
+2. Keep no-Tauri shell skeletons as the fast unit-test boundary.
+3. Keep packaging acceptance separate from adapter/session/readiness
+   correctness.

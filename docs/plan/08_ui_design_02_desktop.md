@@ -23,6 +23,7 @@
 *   `apps/desktop` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入与 offline/session-invalid recovery 状态机。它不是完整 Tauri 应用。
 *   Tauri v2 native packaging、原生菜单栏、系统托盘、安装包与自动更新仍是 future work；当前仓库不得把这些视为已实现能力。
 *   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
+*   Web 已支持 native recovery bootstrap：`service_offline` 显示原生服务离线恢复状态，`session_invalid` 进入 `Unauthorized`，无效 endpoint/session-pending 不得回退端口扫描。
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
 
@@ -65,6 +66,7 @@ NativeColdStart
 **Endpoint/session injection rules**:
 
 *   Native 壳必须在 Web connection manager 启动前注入 `http_base/ws_base` 与 session 绑定状态；优先使用内存 bridge 或初始 HTML bootstrap。
+*   Native 壳也可以注入只含 `service_state` 的 recovery bootstrap；该 payload 只能表达 `service_offline` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
 *   `?ws_port=` 只能作为开发期 fallback。native production 不得让 Web 端枚举、猜测或扫描本机端口。
 *   session 绑定完成前 Web shell 不得显示可写主界面；过期 session 必须走 `09_auth.md#unauthorized-disconnected-ui`。
 

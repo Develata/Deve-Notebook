@@ -94,6 +94,13 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
             retryable: true,
         })
     );
+    let recovery = shell
+        .recovery_bootstrap_for_web()
+        .expect("recovery bootstrap");
+    let script = recovery.script_tag().expect("recovery script");
+    assert!(script.contains("\"service_state\":\"service_offline\""));
+    assert!(!script.contains("bind_failed"));
+    assert!(!script.contains("secret"));
 }
 
 #[test]
@@ -111,4 +118,11 @@ fn desktop_shell_session_invalid_blocks_bootstrap() {
         Err(DesktopShellError::SessionInvalid)
     ));
     assert_eq!(shell.snapshot().state, DesktopServiceState::SessionInvalid);
+    assert_eq!(
+        shell
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "session_invalid"
+    );
 }

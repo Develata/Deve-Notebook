@@ -90,6 +90,20 @@ impl MobileBootstrap {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct MobileRecoveryBootstrap {
+    pub service_state: &'static str,
+}
+
+impl MobileRecoveryBootstrap {
+    pub fn script_tag(&self) -> Result<String, MobileShellError> {
+        let payload = serde_json::to_string(self)?;
+        Ok(format!(
+            "<script>window.__DEVE_NATIVE_BOOTSTRAP={payload};</script>"
+        ))
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum MobileShellError {
     #[error("mobile service endpoint is invalid: {0}")]

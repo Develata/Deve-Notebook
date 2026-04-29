@@ -1,4 +1,6 @@
 //! plan_ref:
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!   - 09_auth#unauthorized-disconnected-ui
 //!
 
@@ -7,6 +9,10 @@ use crate::api::ConnectionStatus;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SyncStatusKind {
     SessionExpired,
+    NativeBootstrapInvalid,
+    NativeSessionPending,
+    NativeServiceOffline,
+    NativeReprobeRequired,
     Offline,
     Reconnecting,
     SnapshotLoading,
@@ -27,6 +33,10 @@ impl SyncStatusSummary {
     pub fn header_text(&self) -> &'static str {
         match self.kind {
             SyncStatusKind::SessionExpired => "Session Expired",
+            SyncStatusKind::NativeBootstrapInvalid => "Native Bootstrap Invalid",
+            SyncStatusKind::NativeSessionPending => "Native Session Pending",
+            SyncStatusKind::NativeServiceOffline => "Native Service Offline",
+            SyncStatusKind::NativeReprobeRequired => "Native Reprobe Required",
             SyncStatusKind::Offline => "Offline",
             SyncStatusKind::Reconnecting => "Reconnecting",
             SyncStatusKind::SnapshotLoading => "Loading Snapshot",
@@ -57,6 +67,10 @@ pub(crate) fn derive_sync_status(
         .map(ToOwned::to_owned);
     let kind = match connection_status {
         ConnectionStatus::Unauthorized => SyncStatusKind::SessionExpired,
+        ConnectionStatus::NativeBootstrapInvalid => SyncStatusKind::NativeBootstrapInvalid,
+        ConnectionStatus::NativeSessionPending => SyncStatusKind::NativeSessionPending,
+        ConnectionStatus::NativeServiceOffline => SyncStatusKind::NativeServiceOffline,
+        ConnectionStatus::NativeReprobeRequired => SyncStatusKind::NativeReprobeRequired,
         ConnectionStatus::Disconnected => SyncStatusKind::Offline,
         ConnectionStatus::Connecting => SyncStatusKind::Reconnecting,
         ConnectionStatus::Connected if load_state != "ready" => SyncStatusKind::SnapshotLoading,

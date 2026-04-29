@@ -53,10 +53,14 @@ Observed result:
 
 ## Next Work
 
-The next P3-10 implementation step should add a real native shell skeleton:
+Desktop/mobile shell skeletons and Web native recovery semantics were completed
+in `desktop-native-shell-status-2026-04-29.md`,
+`mobile-native-shell-status-2026-04-29.md`, and
+`native-web-recovery-status-2026-04-29.md`.
 
-1. Desktop shell creates/owns session material before injecting Web bootstrap.
-2. Shell injects `window.__DEVE_NATIVE_BOOTSTRAP` only after endpoint/session
-   checks pass.
-3. Shell maps service offline/restart/session invalid states to UI recovery
-   states without granting write authority.
+The next P3-10 implementation step should define the native packaging
+dependency gate:
+
+1. Keep Tauri v2/Tauri Mobile dependencies isolated to native app crates.
+2. Preserve the current server launch contract for Docker/release behavior.
+3. Separate packaging acceptance from adapter/session/readiness correctness.

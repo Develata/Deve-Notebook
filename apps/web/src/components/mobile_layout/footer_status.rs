@@ -59,9 +59,25 @@ pub fn StatusView(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
                 "bg-yellow-500",
                 t::bottom_bar::reconnecting(locale.get()).to_string(),
             ),
+            SyncStatusKind::NativeSessionPending => (
+                "bg-yellow-500",
+                t::bottom_bar::native_session_pending(locale.get()).to_string(),
+            ),
+            SyncStatusKind::NativeReprobeRequired => (
+                "bg-yellow-500",
+                t::bottom_bar::native_reprobe_required(locale.get()).to_string(),
+            ),
             SyncStatusKind::SessionExpired => (
                 "bg-amber-500",
                 t::bottom_bar::unauthorized(locale.get()).to_string(),
+            ),
+            SyncStatusKind::NativeBootstrapInvalid => (
+                "bg-red-500",
+                t::bottom_bar::native_bootstrap_invalid(locale.get()).to_string(),
+            ),
+            SyncStatusKind::NativeServiceOffline => (
+                "bg-red-500",
+                t::bottom_bar::native_service_offline(locale.get()).to_string(),
             ),
             SyncStatusKind::Offline => (
                 "bg-red-500",

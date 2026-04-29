@@ -1,4 +1,6 @@
 //! plan_ref:
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!   - 09_auth#unauthorized-handling
 //!   - 09_auth#unauthorized-disconnected-ui
 //!
@@ -8,6 +10,10 @@ use crate::api::ConnectionStatus;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum RepoWriteBlock {
     SessionExpired,
+    NativeBootstrapInvalid,
+    NativeSessionPending,
+    NativeServiceOffline,
+    NativeReprobeRequired,
     Offline,
     Reconnecting,
     SnapshotLoading,
@@ -21,6 +27,10 @@ impl RepoWriteBlock {
     pub fn label(self) -> &'static str {
         match self {
             RepoWriteBlock::SessionExpired => "session expired",
+            RepoWriteBlock::NativeBootstrapInvalid => "native bootstrap invalid",
+            RepoWriteBlock::NativeSessionPending => "native session pending",
+            RepoWriteBlock::NativeServiceOffline => "native service offline",
+            RepoWriteBlock::NativeReprobeRequired => "native reprobe required",
             RepoWriteBlock::Offline => "offline",
             RepoWriteBlock::Reconnecting => "reconnecting",
             RepoWriteBlock::SnapshotLoading => "snapshot loading",
@@ -47,6 +57,10 @@ pub(crate) struct RepoWriteGateState<'a> {
 pub(crate) fn repo_write_block(state: RepoWriteGateState<'_>) -> Option<RepoWriteBlock> {
     match state.connection_status {
         ConnectionStatus::Unauthorized => Some(RepoWriteBlock::SessionExpired),
+        ConnectionStatus::NativeBootstrapInvalid => Some(RepoWriteBlock::NativeBootstrapInvalid),
+        ConnectionStatus::NativeSessionPending => Some(RepoWriteBlock::NativeSessionPending),
+        ConnectionStatus::NativeServiceOffline => Some(RepoWriteBlock::NativeServiceOffline),
+        ConnectionStatus::NativeReprobeRequired => Some(RepoWriteBlock::NativeReprobeRequired),
         ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline),
         ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting),
         ConnectionStatus::Connected if state.load_state != "ready" => {
@@ -70,6 +84,12 @@ pub(crate) fn repo_source_control_read_block(
     if state.is_read_only {
         return match state.connection_status {
             ConnectionStatus::Unauthorized => Some(RepoWriteBlock::SessionExpired),
+            ConnectionStatus::NativeBootstrapInvalid => {
+                Some(RepoWriteBlock::NativeBootstrapInvalid)
+            }
+            ConnectionStatus::NativeSessionPending => Some(RepoWriteBlock::NativeSessionPending),
+            ConnectionStatus::NativeServiceOffline => Some(RepoWriteBlock::NativeServiceOffline),
+            ConnectionStatus::NativeReprobeRequired => Some(RepoWriteBlock::NativeReprobeRequired),
             ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline),
             ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting),
             ConnectionStatus::Connected if state.load_state != "ready" => {

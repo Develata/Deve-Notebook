@@ -83,6 +83,34 @@ pub fn unauthorized(locale: Locale) -> &'static str {
     }
 }
 
+pub fn native_bootstrap_invalid(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Native Bootstrap Invalid",
+        Locale::Zh => "原生启动参数无效",
+    }
+}
+
+pub fn native_session_pending(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Native Session Pending",
+        Locale::Zh => "等待原生会话",
+    }
+}
+
+pub fn native_service_offline(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Native Service Offline",
+        Locale::Zh => "原生服务离线",
+    }
+}
+
+pub fn native_reprobe_required(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Native Reprobe Required",
+        Locale::Zh => "需要重新探测原生会话",
+    }
+}
+
 pub fn toggle_status_details(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Toggle status details",

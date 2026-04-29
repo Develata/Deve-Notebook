@@ -11,6 +11,7 @@
 use super::Locale;
 
 pub use super::source_control_git::*;
+pub use super::source_control_native::*;
 
 pub fn title(locale: Locale) -> &'static str {
     match locale {

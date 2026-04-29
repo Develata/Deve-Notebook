@@ -50,9 +50,13 @@ Observed result:
 
 ## Next Work
 
-The next P3-10 implementation step should mirror the skeleton for mobile:
+Mobile skeleton and Web native recovery semantics were completed in
+`mobile-native-shell-status-2026-04-29.md` and
+`native-web-recovery-status-2026-04-29.md`.
 
-1. Add a mobile shell skeleton with foreground/background/suspended/resumed
-   transitions.
-2. Keep mobile lifecycle events as reprobe hints, not write grants.
-3. Preserve the same endpoint/session/bootstrap contract as desktop.
+The next P3-10 implementation step should define the native packaging
+dependency gate:
+
+1. Keep Tauri v2 dependencies isolated to `apps/desktop`.
+2. Preserve the no-Tauri desktop shell skeleton as the fast unit-test boundary.
+3. Separate installer/menu/tray/autoupdate acceptance from adapter correctness.

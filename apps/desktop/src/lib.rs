@@ -13,6 +13,6 @@ mod shell;
 mod shell_test;
 
 pub use shell::{
-    DesktopBootstrap, DesktopServiceState, DesktopSessionMaterial, DesktopShell, DesktopShellError,
-    DesktopShellSnapshot,
+    DesktopBootstrap, DesktopRecoveryBootstrap, DesktopServiceState, DesktopSessionMaterial,
+    DesktopShell, DesktopShellError, DesktopShellSnapshot,
 };

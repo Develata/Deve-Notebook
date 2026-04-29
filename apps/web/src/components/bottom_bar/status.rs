@@ -1,4 +1,6 @@
 //! plan_ref:
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!   - 05_network#web-ws-runtime
 //!   - 15_release#runtime-observability
 //!
@@ -45,10 +47,15 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
         SyncStatusKind::Ready => "bg-green-500",
         SyncStatusKind::PendingAck => "bg-sky-500",
         SyncStatusKind::ReadOnly => "bg-slate-400",
-        SyncStatusKind::HandshakingRepo | SyncStatusKind::Reconnecting => "bg-yellow-500",
+        SyncStatusKind::HandshakingRepo
+        | SyncStatusKind::Reconnecting
+        | SyncStatusKind::NativeSessionPending
+        | SyncStatusKind::NativeReprobeRequired => "bg-yellow-500",
         SyncStatusKind::SnapshotLoading => "bg-blue-500",
         SyncStatusKind::SessionExpired => "bg-amber-500",
-        SyncStatusKind::Offline => "bg-red-500",
+        SyncStatusKind::NativeBootstrapInvalid
+        | SyncStatusKind::NativeServiceOffline
+        | SyncStatusKind::Offline => "bg-red-500",
     };
 
     let text = move || {
@@ -67,6 +74,18 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
             }
             SyncStatusKind::Reconnecting => t::bottom_bar::reconnecting(locale.get()).to_string(),
             SyncStatusKind::SessionExpired => t::bottom_bar::unauthorized(locale.get()).to_string(),
+            SyncStatusKind::NativeBootstrapInvalid => {
+                t::bottom_bar::native_bootstrap_invalid(locale.get()).to_string()
+            }
+            SyncStatusKind::NativeSessionPending => {
+                t::bottom_bar::native_session_pending(locale.get()).to_string()
+            }
+            SyncStatusKind::NativeServiceOffline => {
+                t::bottom_bar::native_service_offline(locale.get()).to_string()
+            }
+            SyncStatusKind::NativeReprobeRequired => {
+                t::bottom_bar::native_reprobe_required(locale.get()).to_string()
+            }
             SyncStatusKind::Offline => t::bottom_bar::offline(locale.get()).to_string(),
         }
     };

@@ -58,6 +58,20 @@ impl DesktopBootstrap {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DesktopRecoveryBootstrap {
+    pub service_state: &'static str,
+}
+
+impl DesktopRecoveryBootstrap {
+    pub fn script_tag(&self) -> Result<String, DesktopShellError> {
+        let payload = serde_json::to_string(self)?;
+        Ok(format!(
+            "<script>window.__DEVE_NATIVE_BOOTSTRAP={payload};</script>"
+        ))
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum DesktopShellError {
     #[error("desktop service endpoint is invalid: {0}")]
@@ -155,6 +169,22 @@ impl DesktopShell {
             node_role: endpoint.node_role.clone(),
             session_bound: endpoint.session_bound,
         })
+    }
+
+    pub fn recovery_bootstrap_for_web(&self) -> Option<DesktopRecoveryBootstrap> {
+        match self.state {
+            DesktopServiceState::ServiceOffline => Some(DesktopRecoveryBootstrap {
+                service_state: "service_offline",
+            }),
+            DesktopServiceState::SessionInvalid => Some(DesktopRecoveryBootstrap {
+                service_state: "session_invalid",
+            }),
+            DesktopServiceState::ColdStart
+            | DesktopServiceState::ServiceStarting
+            | DesktopServiceState::EndpointBound
+            | DesktopServiceState::SessionBound
+            | DesktopServiceState::WebShellLoading => None,
+        }
     }
 
     pub fn mark_service_offline(&mut self, reason: impl Into<String>, retryable: bool) {
