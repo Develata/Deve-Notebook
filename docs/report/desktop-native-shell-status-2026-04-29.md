@@ -57,9 +57,13 @@ Mobile skeleton and Web native recovery semantics were completed in
 The native packaging dependency gate was completed in
 `native-packaging-dependency-gate-2026-04-29.md`.
 
-The next P3-10 implementation step should split the first desktop packaging
-scaffold from adapter/session/readiness correctness:
+The desktop packaging scaffold split was completed in
+`desktop-packaging-scaffold-status-2026-04-29.md`.
 
-1. Keep packaging dependencies isolated to `apps/desktop`.
+The next P3-10 implementation step should mirror the split for mobile
+packaging:
+
+1. Keep packaging dependencies isolated to `apps/mobile`.
 2. Preserve the no-Tauri desktop shell skeleton as the fast unit-test boundary.
-3. Separate installer/menu/tray/autoupdate acceptance from adapter correctness.
+3. Separate permission bridge, push, file picker, and store distribution from
+   adapter correctness.

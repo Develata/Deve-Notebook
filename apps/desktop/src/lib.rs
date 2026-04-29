@@ -8,10 +8,19 @@
 //! local service, bind a short-lived session out of band, inject a Web bootstrap
 //! object, and report service recovery state.
 
+#[cfg(feature = "native-packaging")]
+mod packaging;
+#[cfg(all(test, feature = "native-packaging"))]
+mod packaging_test;
 mod shell;
 #[cfg(test)]
 mod shell_test;
 
+#[cfg(feature = "native-packaging")]
+pub use packaging::{
+    DesktopPackagingAcceptance, DesktopPackagingAuthority, DesktopPackagingCapability,
+    DesktopPackagingDependencyBatch, DesktopPackagingScaffold, desktop_packaging_scaffold,
+};
 pub use shell::{
     DesktopBootstrap, DesktopRecoveryBootstrap, DesktopServiceState, DesktopSessionMaterial,
     DesktopShell, DesktopShellError, DesktopShellSnapshot,

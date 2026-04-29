@@ -56,5 +56,7 @@ Observed result:
 The native packaging dependency gate was completed in
 `native-packaging-dependency-gate-2026-04-29.md`.
 
-The next P3-10 step should split the first desktop packaging scaffold from
-adapter/session/readiness correctness.
+The desktop packaging scaffold split was completed in
+`desktop-packaging-scaffold-status-2026-04-29.md`.
+
+The next P3-10 step should mirror the split for mobile packaging.

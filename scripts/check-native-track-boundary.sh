@@ -41,11 +41,18 @@ check_contains Cargo.toml '"apps/mobile"'
 
 check_contains apps/desktop/Cargo.toml "native-packaging = []"
 check_contains apps/mobile/Cargo.toml "native-packaging = []"
+check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
+check_contains apps/desktop/src/packaging.rs "runtime_crate: \"tauri\""
+check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
+check_contains apps/desktop/src/packaging.rs "status: \"planned\""
+check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"
+check_contains apps/desktop/src/packaging.rs "DesktopPackagingCapability::Installer"
 check_no_packaging_dependency_leak
 
 check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-current-native-boundary}"
 check_contains docs/plan/08_ui_design_02_desktop.md "Tauri v2 native packaging"
 check_contains docs/plan/08_ui_design_02_desktop.md "native-packaging"
+check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-packaging-scaffold}"
 check_contains docs/plan/08_ui_design_02_desktop.md "Native adapter **MUST NOT**"
 check_contains docs/plan/08_ui_design_02_desktop.md "service readiness/offline"
 check_contains docs/plan/08_ui_design_02_desktop.md "loopback/IPC endpoint"
@@ -71,8 +78,9 @@ check_contains docs/plan/08_ui_design_03_mobile.md "safe-area、keyboard、foreg
 check_contains docs/plan/14_tech_stack.md "{#native-packaging-dependency-gate}"
 check_contains docs/plan/14_tech_stack.md "native-packaging"
 check_contains docs/plan/14_tech_stack.md "不得进入 workspace root"
+check_contains docs/plan/14_tech_stack.md "Desktop packaging scaffold"
 
-check_contains docs/report/next-tasks.md "Native packaging dependency gate"
+check_contains docs/report/next-tasks.md "Desktop packaging scaffold plan split"
 check_contains docs/report/next-tasks.md "P3-10 Desktop native shell skeleton 已关闭"
 check_contains docs/report/next-tasks.md "P3-10 Mobile native shell skeleton 已关闭"
 check_not_contains docs/report/next-tasks.md "Desktop / Mobile native adapter plan | P3-10"

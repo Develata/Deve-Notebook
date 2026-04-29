@@ -52,10 +52,7 @@ Observed result:
 
 ## Next Work
 
-The next P3-10 step should be a desktop packaging scaffold plan split:
+The desktop packaging scaffold split was completed in
+`desktop-packaging-scaffold-status-2026-04-29.md`.
 
-1. Define the first actual desktop packaging dependency batch behind
-   `apps/desktop` `native-packaging`.
-2. Keep service launch/session/bootstrap correctness in no-packaging unit tests.
-3. Treat installer/menu/tray/autoupdate as packaging acceptance, not core
-   authority.
+The next P3-10 step should mirror the split for mobile packaging.

@@ -96,6 +96,11 @@ packaging runtime 只能在后续批次引入，并必须满足以下门禁：
 - 每次引入或升级 packaging dependency 都必须更新
   `scripts/check-native-track-boundary.sh`、Desktop/Mobile plan 与 dated report。
 
+Desktop packaging scaffold 当前已作为 `apps/desktop` 的 feature-gated code surface
+存在：它声明 planned `tauri` / `tauri-build` dependency batch 与 window/menu/tray/
+installer/auto-update acceptance，但仍不引入实际 Tauri dependency。该 scaffold
+只能作为下一批 dependency decision 的输入，不得被解释为当前已具备 native packaging。
+
 ## 2. Markdown Compatibility Checklist
 
 *   **导出原则**：通用 GFM，无私有语法。

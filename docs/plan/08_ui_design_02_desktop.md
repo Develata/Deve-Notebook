@@ -36,6 +36,21 @@ control。
 
 Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
 
+### 0.2 Desktop Packaging Scaffold {#desktop-packaging-scaffold}
+
+当前 `apps/desktop` 已在 `native-packaging` feature 后提供 packaging scaffold，
+但仍不引入 Tauri runtime dependency。该 scaffold 只描述首个桌面壳层批次：
+
+*   Planned dependency batch: `tauri` + `tauri-build`，只能落在 `apps/desktop`。
+*   Planned capabilities: window shell、menu bar、system tray、installer、auto-update。
+*   Forbidden authorities: ledger、vault、source-control、search index、`.git` mirror、
+    `.notegit`。
+*   no-packaging skeleton tests 仍是 endpoint/session/bootstrap/readiness correctness 的
+    authority；packaging acceptance 不得替代这些测试。
+
+在真正添加 Tauri dependency 前，`scripts/check-native-track-boundary.sh` 必须继续阻止
+Cargo dependency/import 泄漏。
+
 **Adapter inputs**:
 
 *   `profile/config/vault/ledger` 选择必须在 service boot 前完成，并传入后端启动参数；native 层不得在 Web 运行后直接改写这些路径。

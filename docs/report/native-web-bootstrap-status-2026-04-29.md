@@ -55,10 +55,13 @@ This report was superseded for UI recovery by
 The native packaging dependency gate was completed in
 `native-packaging-dependency-gate-2026-04-29.md`.
 
-The next P3-10 implementation step should split the first desktop packaging
-scaffold from adapter/session/readiness correctness:
+The desktop packaging scaffold split was completed in
+`desktop-packaging-scaffold-status-2026-04-29.md`.
 
-1. Define the first packaging dependency batch behind `apps/desktop`
+The next P3-10 implementation step should mirror the split for mobile
+packaging:
+
+1. Define the first packaging dependency/permission batch behind `apps/mobile`
    `native-packaging`.
 2. Keep no-Tauri shell skeletons as the fast unit-test boundary.
 3. Keep packaging acceptance separate from adapter/session/readiness
