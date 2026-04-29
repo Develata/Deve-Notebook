@@ -16,12 +16,13 @@
 - `GitMirrorOutOfSync` records 已持久化结构化 `failure_stage`；CLI 优先读取该字段输出 `failure_location`，旧记录缺字段时才根据 `last_error` 做兼容 fallback。
 - `deve_cli git mirror` 已输出 per-record outcome，并在 no-op、out_of_sync、retry 场景给出 mirror/repair/retry hint；失败位置包括 `mirror_not_ready`、`deve_source_control`、`notegit_protection`、`projection_scope`、`git_history_mapping`、`git_worktree`、`git_command` 或 `mirror_executor`。
 - CLI 新增 `deve_cli git export [--repo <repo>] [--retry-out-of-sync]`，复用 explicit mirror executor 将 queued Deve commits 导出到 Git mirror，并输出 `git_export[...]` report 与 export/retry hint。
+- `git export` 已支持首次 snapshot bootstrap：当 `git_mirror_commits` side table 为空、Git history 为空、source-control clean 且当前 Git changed paths 不越出 Deve projection snapshot 时，从最新 Deve commit 的完整 projection 建立首个 Git commit，并只写入最新 Deve commit 的映射；若 Git 已有 HEAD，则 fail-closed 为 `GitMirrorOutOfSync` / `git_history_mapping`。
 
 ## 仍未实现
 
 - 自动后台 Git mirror executor 与更完整的 retry / repair UI。
 - 更细的 failure subject / offending path / command exit metadata；当前只稳定到 `failure_stage`。
-- 完整 snapshot bootstrap export、`Git: Import Changes`、`Git: Push Mirror`。
+- `Git: Import Changes`、`Git: Push Mirror`。
 
 ## 验证
 

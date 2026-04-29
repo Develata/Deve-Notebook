@@ -45,6 +45,7 @@ pub fn mirror(
         target_repo,
         retry_out_of_sync,
         snapshot_depth,
+        run_mirror_for_repo,
         print_mirror_report,
     )
 }
@@ -62,6 +63,7 @@ pub fn export(
         target_repo,
         retry_out_of_sync,
         snapshot_depth,
+        run_export_for_repo,
         print_export_report,
     )
 }
@@ -72,6 +74,12 @@ fn run_executor(
     target_repo: Option<&str>,
     retry_out_of_sync: bool,
     snapshot_depth: usize,
+    run_report: fn(
+        &RepoManager,
+        &str,
+        &Path,
+        bool,
+    ) -> Result<deve_core::git_bridge::GitMirrorRunReport>,
     print_report: fn(&str, &deve_core::git_bridge::GitMirrorRunReport),
 ) -> Result<()> {
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
@@ -79,14 +87,42 @@ fn run_executor(
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
-        let report = repo.run_on_local_repo(&repo_name, |db| {
-            deve_core::git_bridge::run_pending_mirror(
-                db,
-                &repo_root,
-                GitMirrorRunOptions { retry_out_of_sync },
-            )
-        })?;
+        let report = run_report(&repo, &repo_name, &repo_root, retry_out_of_sync)?;
         print_report(&repo_name, &report);
     }
     Ok(())
+}
+
+fn run_mirror_for_repo(
+    repo: &RepoManager,
+    repo_name: &str,
+    repo_root: &Path,
+    retry_out_of_sync: bool,
+) -> Result<deve_core::git_bridge::GitMirrorRunReport> {
+    repo.run_on_local_repo(repo_name, |db| {
+        deve_core::git_bridge::run_pending_mirror(
+            db,
+            repo_root,
+            GitMirrorRunOptions { retry_out_of_sync },
+        )
+    })
+}
+
+fn run_export_for_repo(
+    repo: &RepoManager,
+    repo_name: &str,
+    repo_root: &Path,
+    retry_out_of_sync: bool,
+) -> Result<deve_core::git_bridge::GitMirrorRunReport> {
+    let repo_info = repo
+        .get_repo_info_for(None, Some(repo_name))?
+        .ok_or_else(|| anyhow::anyhow!("Local repo metadata is missing for {repo_name}"))?;
+    repo.run_on_local_repo(repo_name, |db| {
+        deve_core::git_bridge::export_mirror(
+            db,
+            repo_root,
+            repo_info.uuid,
+            GitMirrorRunOptions { retry_out_of_sync },
+        )
+    })
 }

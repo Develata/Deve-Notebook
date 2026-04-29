@@ -59,7 +59,10 @@ impl GitMirrorFailureStage {
 
     pub fn classify(error: &str) -> Self {
         let normalized = error.to_ascii_lowercase();
-        if normalized.contains("not ready:") || normalized.contains("protectionmissing") {
+        if normalized.contains("not ready:")
+            || normalized.contains("protectionmissing")
+            || normalized.contains("does not ignore .notegit")
+        {
             return Self::MirrorNotReady;
         }
         if normalized.contains("pending source-control")
@@ -80,6 +83,7 @@ impl GitMirrorFailureStage {
         }
         if normalized.contains("parent")
             || normalized.contains("git head does not match")
+            || normalized.contains("requires empty git history")
             || normalized.contains("not mirrored")
         {
             return Self::GitHistoryMapping;
@@ -356,6 +360,16 @@ mod tests {
                 "Git mirror refuses to include path(s) outside queued Deve commit"
             ),
             GitMirrorFailureStage::ProjectionScope
+        );
+        assert_eq!(
+            GitMirrorFailureStage::classify(
+                "Git mirror snapshot bootstrap requires empty Git history, but HEAD is abc"
+            ),
+            GitMirrorFailureStage::GitHistoryMapping
+        );
+        assert_eq!(
+            GitMirrorFailureStage::classify("repo-local .gitignore does not ignore .notegit/"),
+            GitMirrorFailureStage::MirrorNotReady
         );
     }
 }

@@ -1,4 +1,4 @@
-use super::{GitMirrorRunOptions, run_pending_mirror};
+use super::{GitMirrorRunOptions, export_mirror, run_pending_mirror};
 use crate::git_bridge::{
     GitMirrorCommitState, GitMirrorFailureStage, get_record, queue_deve_commit,
 };
@@ -28,6 +28,13 @@ fn init_git_repo(path: &Path) {
     crate::utils::notegit::ensure_gitignore_ignores_notegit(path).expect("gitignore");
 }
 
+fn init_git_repo_without_notegit_ignore(path: &Path) {
+    std::fs::create_dir_all(path).expect("repo dir");
+    git(path, &["init"]);
+    git(path, &["config", "user.email", "deve@example.invalid"]);
+    git(path, &["config", "user.name", "Deve Test"]);
+}
+
 fn git(path: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
         .arg("-C")
@@ -50,6 +57,14 @@ fn new_repo() -> (TempDir, RepoManager, PathBuf) {
     repo.set_vault_root(dir.path().join("vault"));
     let repo_root = dir.path().join("vault").join("default");
     init_git_repo(&repo_root);
+    (dir, repo, repo_root)
+}
+
+fn new_repo_without_git() -> (TempDir, RepoManager, PathBuf) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
+    repo.set_vault_root(dir.path().join("vault"));
+    let repo_root = dir.path().join("vault").join("default");
     (dir, repo, repo_root)
 }
 
@@ -116,6 +131,18 @@ fn run_for_default_repo(repo: &RepoManager, repo_root: &Path) -> super::GitMirro
     .expect("run mirror")
 }
 
+fn export_for_default_repo(repo: &RepoManager, repo_root: &Path) -> super::GitMirrorRunReport {
+    let repo_id = repo
+        .get_repo_info()
+        .expect("repo info")
+        .expect("present")
+        .uuid;
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        export_mirror(db, repo_root, repo_id, GitMirrorRunOptions::default())
+    })
+    .expect("export mirror")
+}
+
 #[test]
 fn run_pending_mirror_commits_single_queued_record() {
     let (dir, repo, repo_root) = new_repo();
@@ -165,6 +192,96 @@ fn run_pending_mirror_replays_multiple_queued_records() {
         "2"
     );
     assert_eq!(git(&repo_root, &["status", "--porcelain"]), "");
+}
+
+#[test]
+fn export_mirror_bootstraps_latest_projection_snapshot() {
+    let (dir, repo, repo_root) = new_repo_without_git();
+    let first = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let second = commit_deve_modification(&dir, &repo, "note.md", "hello world\n");
+    init_git_repo(&repo_root);
+
+    let report = export_for_default_repo(&repo, &repo_root);
+
+    assert_eq!(report.attempted, 1);
+    assert_eq!(report.committed, 1);
+    let first_record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &first.id))
+        .expect("get first");
+    assert!(first_record.is_none());
+    let second_record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &second.id))
+        .expect("get second")
+        .expect("second record");
+    assert_eq!(second_record.state, GitMirrorCommitState::Committed);
+    assert!(second_record.git_commit_id.is_some());
+    assert_eq!(git(&repo_root, &["show", "HEAD:note.md"]), "hello world\n");
+    assert_eq!(
+        git(&repo_root, &["rev-list", "--count", "HEAD"]).trim(),
+        "1"
+    );
+    assert_eq!(git(&repo_root, &["status", "--porcelain"]), "");
+    let body = git(&repo_root, &["log", "-1", "--pretty=%B"]);
+    assert!(body.contains(&format!("Deve-Commit-Id: {}", second.id)));
+    assert!(body.contains(&format!("Deve-Ledger-Seq: {}", second.ledger_seq)));
+}
+
+#[test]
+fn export_mirror_rejects_snapshot_bootstrap_on_existing_git_history() {
+    let (dir, repo, repo_root) = new_repo_without_git();
+    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    init_git_repo(&repo_root);
+    git(&repo_root, &["add", ".gitignore"]);
+    git(
+        &repo_root,
+        &["commit", "--no-gpg-sign", "-m", "manual baseline"],
+    );
+
+    let report = export_for_default_repo(&repo, &repo_root);
+
+    assert_eq!(report.committed, 0);
+    assert_eq!(report.out_of_sync, 1);
+    let record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .expect("get")
+        .expect("record");
+    assert_eq!(record.state, GitMirrorCommitState::OutOfSync);
+    assert_eq!(
+        record.failure_stage,
+        Some(GitMirrorFailureStage::GitHistoryMapping)
+    );
+    assert!(
+        record
+            .last_error
+            .as_deref()
+            .is_some_and(|err| err.contains("requires empty Git history"))
+    );
+}
+
+#[test]
+fn export_mirror_rejects_snapshot_bootstrap_when_mirror_is_not_ready() {
+    let (dir, repo, repo_root) = new_repo_without_git();
+    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    init_git_repo_without_notegit_ignore(&repo_root);
+
+    let report = export_for_default_repo(&repo, &repo_root);
+
+    assert_eq!(report.committed, 0);
+    assert_eq!(report.out_of_sync, 1);
+    let record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .expect("get")
+        .expect("record");
+    assert_eq!(
+        record.failure_stage,
+        Some(GitMirrorFailureStage::MirrorNotReady)
+    );
+    assert!(
+        record
+            .last_error
+            .as_deref()
+            .is_some_and(|err| err.contains("does not ignore .notegit"))
+    );
 }
 
 #[test]

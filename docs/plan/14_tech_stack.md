@@ -33,7 +33,7 @@
 | **Graph**    | **Core read-only projection + CLI JSON surface + d3-force/Pixi.js future renderer** | Verified (Projection Surface) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；`deve graph` 只读导出 projection JSON；高性能 Web Canvas 渲染仍是 future。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
-| **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Export Surface) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay 与 queued export CLI surface；自动后台执行、完整 snapshot bootstrap、import/push 仍属 P1/P2 后续。 |
+| **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Snapshot Export) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay、queued export CLI surface 与首次 snapshot bootstrap；自动后台执行、import/push 仍属 P1/P2 后续。 |
 | **Build**    | **Tauri v2**             | Planned (Rising Priority) | Desktop/Mobile native track 逐步提上日程；先明确 adapter、embedded service 与 offline/readiness 边界。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
@@ -64,8 +64,8 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - `deve_cli git status` 提供只读 mirror 状态骨架：`.git` 是否存在、`.notegit` 是否存在、`.gitignore` 是否保护 `.notegit/`。
 - Lazy-created `git_mirror_commits` side table 记录 `DeveCommit -> GitMirrorQueued / GitMirrorCommitted / GitMirrorOutOfSync`，并为 out-of-sync 记录持久化结构化 `failure_stage`（旧记录缺字段时 CLI 只作兼容性 fallback）；`deve_cli git status` 输出 mirror readiness `state`、独立 `queue_state`/queued/committed/out_of_sync summary、per-commit lagging records、`queued_lag_ms` / `updated_lag_ms`、失败位置与 retry command hint。
 - `deve_cli git mirror` 可显式执行 queued/out_of_sync records；单个 record 走 worktree preflight 后的 `git add -A` / `git commit`，多个 records 走临时 Git index 的 projection replay，用 `commit-tree` / `update-ref` 按 Deve commit diff 生成逐 commit Git history，并写回 Git commit hash；执行报告会输出 per-record outcome、失败位置与 repair/retry hint。
-- `deve_cli git export` 复用该 executor 作为 queued projection export surface，输出 `git_export[...]` 报告与 export/retry hint；完整 snapshot bootstrap 仍是 future。
-- 自动后台执行、完整 repair UI、完整 snapshot bootstrap、import/push 仍是后续实现，不得被当前 executor 替代。
+- `deve_cli git export` 复用该 executor 作为 queued projection export surface，输出 `git_export[...]` 报告与 export/retry hint；side table 为空且 Git history 为空时，会从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit，只把最新 Deve commit 映射到该 Git commit，后续增量 commit 再以该映射为 parent replay。
+- 自动后台执行、完整 repair UI、import/push 仍是后续实现，不得被当前 executor 替代。
 
 该 bridge 的工程边界：
 

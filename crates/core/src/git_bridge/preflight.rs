@@ -72,6 +72,16 @@ pub(super) fn ensure_git_changes_match_deve_commits(
     ensure_git_changes_within(repo_root, expected, "queued Deve commits")
 }
 
+pub(super) fn ensure_git_changes_match_snapshot_paths(
+    repo_root: &Path,
+    paths: impl IntoIterator<Item = String>,
+) -> std::result::Result<(), String> {
+    let mut expected = BTreeSet::new();
+    expected.insert(".gitignore".to_string());
+    expected.extend(paths.into_iter().map(|path| to_forward_slash(&path)));
+    ensure_git_changes_within(repo_root, expected, "current Deve projection snapshot")
+}
+
 pub(super) fn expected_mirror_paths(
     db: &Database,
     record: &GitMirrorRecord,

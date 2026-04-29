@@ -87,6 +87,28 @@ pub fn compare_commits(
     Ok(diffs)
 }
 
+pub(crate) fn projection_files_at_commit(
+    db: &Database,
+    commit_id: &str,
+) -> Result<Vec<CommitFileDiff>> {
+    let commit = load_commit(db, commit_id)?;
+    let path_map = commit_diff_paths::doc_paths_at_seq(db, commit.ledger_seq)?;
+    let mut files = Vec::with_capacity(path_map.len());
+    for (doc_id, path) in path_map {
+        let content = reconstruct_at_seq(db, doc_id, commit.ledger_seq)?;
+        files.push(CommitFileDiff {
+            doc_id: Some(doc_id),
+            path,
+            status: ChangeStatus::Added,
+            previous_path: None,
+            old_content: String::new(),
+            new_content: content,
+        });
+    }
+    files.sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(files)
+}
+
 fn collect_affected_docs(
     ops_range: &[(u64, crate::models::LedgerEntry)],
     path_map_a: &HashMap<DocId, String>,

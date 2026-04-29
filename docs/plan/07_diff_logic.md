@@ -95,8 +95,10 @@ changed paths 是否落在这些 Deve commits 的 diff 范围内，然后用临�
 生成逐 commit Git history 并写回 `GitMirrorCommitted`。失败只会把剩余 records 写入
 `GitMirrorOutOfSync`，不会回滚 Deve ledger commit；CLI mirror/export report 会输出
 per-record outcome、失败位置与 repair/retry hint。`deve_cli git export` 当前复用该
-executor 作为 queued projection export surface；自动后台执行、完整 repair UI、完整
-snapshot bootstrap、import/push 仍是后续实现。
+executor 作为 queued projection export surface；若 side table 为空、Git history 为空且
+当前 projection 干净，则可从最新 Deve commit 的完整 projection 建立首个 snapshot Git
+commit，并只把最新 Deve commit 映射到该 Git commit。自动后台执行、完整 repair UI 与
+import/push 仍是后续实现。
 
 ### 2.4 Diff Identity Model
 

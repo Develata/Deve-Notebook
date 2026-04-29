@@ -12,7 +12,7 @@ mod replay;
 mod status;
 mod store;
 
-pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, run_pending_mirror};
+pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, export_mirror, run_pending_mirror};
 pub use status::{GitMetadataKind, GitMirrorState, GitMirrorStatus, inspect_repo_root};
 pub use store::{
     GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord,

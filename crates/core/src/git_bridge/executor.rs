@@ -9,11 +9,12 @@ use super::preflight::{
     ensure_git_changes_match_deve_commit, ensure_git_worktree, ensure_notegit_is_not_tracked,
     ensure_source_control_clean,
 };
-use super::replay::run_projection_replay;
+use super::replay::{run_projection_replay, run_snapshot_bootstrap};
 use super::status::{GitMirrorState, inspect_repo_root};
 use super::store::{
     GitMirrorCommitState, GitMirrorRecord, list_records, mark_committed, mark_out_of_sync,
 };
+use crate::models::RepoId;
 use anyhow::Result;
 use redb::Database;
 use std::path::Path;
@@ -59,6 +60,19 @@ pub fn run_pending_mirror(
     }
 
     run_one_candidate(db, repo_root, &candidates[0])
+}
+
+pub fn export_mirror(
+    db: &Database,
+    repo_root: &Path,
+    repo_id: RepoId,
+    options: GitMirrorRunOptions,
+) -> Result<GitMirrorRunReport> {
+    let report = run_pending_mirror(db, repo_root, options)?;
+    if report.attempted > 0 || !list_records(db)?.is_empty() {
+        return Ok(report);
+    }
+    run_snapshot_bootstrap(db, repo_root, repo_id)
 }
 
 fn pending_candidates(db: &Database, retry_out_of_sync: bool) -> Result<Vec<GitMirrorRecord>> {
