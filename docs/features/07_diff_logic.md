@@ -60,6 +60,7 @@
 - UI 第一阶段只能展示 `repair_action[...]` / `repair_guidance[...]` 的只读解释与 copyable CLI command，不得直接执行 Git。
 - 真实 record-level review 数据源是受保护 HTTP 只读查询 `GET /api/sc/git-mirror/repair-review`；它只读取 server-side `git_mirror_commits` 与 core repair-action schema，不运行 Git，不写 `.git`/`.notegit`，Web 不解析 CLI 输出。
 - Source Control repair notice 当前会消费该 endpoint；失败或无 record 时继续显示 CLI-only fallback。
+- Repair review 当前支持多条 out-of-sync record 展示，并显式区分 loading、load failed 与 empty record fallback 状态；这些状态只影响展示，不授予 Web repair 写权限。
 - 若后续进入可执行 UI，必须有明确 manual confirmation，且确认内容包含 repo、repair action code、subject、retry command 与 `.notegit` authority 提醒。
 - 任何可执行 repair flow 都必须 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` Git tracking leak 与 stale scope nonce。
 - 后台自动 Git writer 不是该 UI 的一部分；`.git` 仍只是 projection mirror，`.notegit` / ledger source-control state 仍是 authority。

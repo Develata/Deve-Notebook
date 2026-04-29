@@ -30,6 +30,7 @@ pub mod history_compare_logic;
 pub mod history_diff_row;
 pub mod history_empty_state;
 pub mod history_timeline;
+pub mod repair_review_copy;
 pub mod repositories;
 pub mod staged_section_actions;
 pub mod status_notice;

@@ -102,6 +102,41 @@ pub fn git_repair_review_title(locale: Locale) -> &'static str {
     }
 }
 
+pub fn git_repair_review_loading(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Loading record-level repair data...",
+        Locale::Zh => "正在加载 record-level 修复数据...",
+    }
+}
+
+pub fn git_repair_review_load_failed(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Record-level repair data could not load; showing CLI fallback.",
+        Locale::Zh => "无法加载 record-level 修复数据；显示 CLI fallback。",
+    }
+}
+
+pub fn git_repair_review_empty(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "No out-of-sync records are currently reported; showing CLI fallback.",
+        Locale::Zh => "当前没有 out-of-sync 记录；显示 CLI fallback。",
+    }
+}
+
+pub fn git_repair_review_loaded_count(locale: Locale, count: usize) -> String {
+    match locale {
+        Locale::En => format!("{count} out-of-sync record(s) from server-side review data."),
+        Locale::Zh => format!("来自 server-side review data 的 {count} 条 out-of-sync 记录。"),
+    }
+}
+
+pub fn git_repair_review_fallback_record(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "CLI fallback",
+        Locale::Zh => "CLI fallback",
+    }
+}
+
 pub fn git_repair_action_label(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Repair action",
@@ -120,6 +155,13 @@ pub fn git_repair_guidance_label(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Guidance",
         Locale::Zh => "指引",
+    }
+}
+
+pub fn git_repair_commit_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Commit",
+        Locale::Zh => "Commit",
     }
 }
 
@@ -224,7 +266,16 @@ mod tests {
                 .any(|line| line.contains("retry-out-of-sync"))
         );
         assert_eq!(git_repair_review_title(Locale::Zh), "只读修复审阅");
+        assert!(git_repair_review_loading(Locale::En).contains("Loading"));
+        assert!(git_repair_review_load_failed(Locale::En).contains("could not load"));
+        assert!(git_repair_review_empty(Locale::En).contains("No out-of-sync"));
+        assert!(git_repair_review_loaded_count(Locale::En, 2).contains("2"));
+        assert_eq!(
+            git_repair_review_fallback_record(Locale::Zh),
+            "CLI fallback"
+        );
         assert!(git_repair_guidance_value(Locale::En).contains("manual_only=yes"));
+        assert_eq!(git_repair_commit_label(Locale::En), "Commit");
         assert_eq!(
             git_repair_retry_command(),
             "deve_cli git export --repo <repo> --retry-out-of-sync"

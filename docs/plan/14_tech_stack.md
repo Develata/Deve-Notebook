@@ -70,7 +70,7 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - `deve_cli git push` 当前提供显式 mirror publish surface：只在 `.git` mirror ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record 且当前 Git HEAD 映射到最新 `GitMirrorCommitted` record 时执行远端 push；失败以 blocker 输出，不回滚 ledger，也不写 `.notegit`。
 - Web Command Palette 当前只提供 Git import / push / repair 的 CLI-only notices：repair notice 指向 `deve_cli git status --repo <repo>` 的 `repair_action[...]` 与 `deve_cli git export --repo <repo> --retry-out-of-sync`，不直接调用 Web 后端执行 Git。
 - Git mirror repair review 的真实 record-level 数据源固定为受保护 HTTP 只读 query：`GET /api/sc/git-mirror/repair-review` 读取 server-side `git_mirror_commits` 与 core `GitMirrorRepairAction` schema，返回 action code、subject、manual-only next step、retry command 与 `.notegit` authority 提醒；该 endpoint 不运行 Git、不写 `.git`/`.notegit`、不解析 CLI 文本，也不提供后台 executor。
-- Web Source Control repair notice 当前会消费该只读 review 数据替代静态 copy；请求失败或无 record 时回退 CLI-only notice/retry command，不执行 Git。
+- Web Source Control repair notice 当前会消费该只读 review 数据替代静态 copy；支持多条 out-of-sync record，并显式展示 loading、load failed 与 empty fallback 状态；请求失败或无 record 时回退 CLI-only notice/retry command，不执行 Git。
 - Future executable repair UI 必须另行进入 manual confirmation；任何 Git write 都必须经过确认，并 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` tracking leak 与 stale scope nonce。
 - 自动后台执行、完整 repair UI 与 Web 后端直接执行 Git import/push/repair 仍是后续实现，不得被当前 executor、import apply、push surface 或 CLI-only notices 替代。
 

@@ -6,19 +6,25 @@
 use deve_core::git_bridge::GitMirrorRepairReview;
 use gloo_net::http::Request;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GitMirrorRepairReviewFetchError {
+    RequestFailed,
+}
+
 pub async fn fetch_git_mirror_repair_review(
     repo_id: Option<String>,
-) -> Option<GitMirrorRepairReview> {
+) -> Result<GitMirrorRepairReview, GitMirrorRepairReviewFetchError> {
     let response = Request::get(&git_mirror_repair_review_url(repo_id.as_deref()))
         .send()
         .await
-        .ok()?;
+        .map_err(|_| GitMirrorRepairReviewFetchError::RequestFailed)?;
     response
         .ok()
-        .then_some(response)?
+        .then_some(response)
+        .ok_or(GitMirrorRepairReviewFetchError::RequestFailed)?
         .json::<GitMirrorRepairReview>()
         .await
-        .ok()
+        .map_err(|_| GitMirrorRepairReviewFetchError::RequestFailed)
 }
 
 fn git_mirror_repair_review_url(repo_id: Option<&str>) -> String {
