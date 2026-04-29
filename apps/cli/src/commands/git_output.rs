@@ -7,7 +7,8 @@
 
 use deve_core::git_bridge::{
     GitImportApplyReport, GitImportPlan, GitImportPlanBlocker, GitMirrorCommitState,
-    GitMirrorRecord, GitMirrorRepairAction, GitMirrorRunReport, GitMirrorStatus, GitMirrorSummary,
+    GitMirrorRecord, GitMirrorRepairAction, GitMirrorRepairActionCode, GitMirrorRunReport,
+    GitMirrorStatus, GitMirrorSummary,
 };
 use deve_core::source_control::ChangeStatus;
 
@@ -104,8 +105,15 @@ fn status_lines_at(
     }
 
     lines.push(format!("  lagging_records={}", lagging.len()));
+    let retry_command = git_command("export", repo_name, true);
     for (index, record) in lagging.into_iter().enumerate() {
-        lines.extend(record_detail_lines("lag", index + 1, record, Some(now_ms)));
+        lines.extend(record_detail_lines(
+            "lag",
+            index + 1,
+            record,
+            Some(now_ms),
+            Some(retry_command.as_str()),
+        ));
     }
 
     if summary.queued > 0 {
@@ -116,8 +124,8 @@ fn status_lines_at(
     }
     if summary.out_of_sync > 0 {
         lines.push(format!(
-            "  repair_hint: fix the reported failure_location/error, then run `{}`",
-            mirror_command(repo_name, true)
+            "  repair_hint: fix the reported repair_action subject, then run `{}`",
+            retry_command
         ));
     }
     lines
@@ -255,15 +263,22 @@ fn run_report_lines(
         "{}[{repo_name}]: attempted={} committed={} out_of_sync={} skipped={}",
         copy.header, report.attempted, report.committed, report.out_of_sync, report.skipped
     )];
+    let retry_command = git_command(copy.retry_action, repo_name, true);
     for (index, record) in report.records.iter().enumerate() {
-        lines.extend(record_detail_lines("record", index + 1, record, None));
+        lines.extend(record_detail_lines(
+            "record",
+            index + 1,
+            record,
+            None,
+            Some(retry_command.as_str()),
+        ));
     }
     if report.attempted == 0 {
         lines.push(format!("  {}: {}", copy.hint_label, copy.no_records_hint));
     } else if report.out_of_sync > 0 {
         lines.push(format!(
             "  repair_hint: fix the reported failure_location/error; retry with `{}`",
-            git_command(copy.retry_action, repo_name, true)
+            retry_command
         ));
     } else {
         lines.push(format!("  {}: {}", copy.hint_label, copy.success_hint));
@@ -276,6 +291,7 @@ fn record_detail_lines(
     index: usize,
     record: &GitMirrorRecord,
     now_ms: Option<i64>,
+    retry_command: Option<&str>,
 ) -> Vec<String> {
     let mut detail = format!(
         "  {prefix}[{index}]: deve_commit={} state={} ledger_seq={} attempts={} git_commit={}",
@@ -325,9 +341,42 @@ fn record_detail_lines(
                 yes_no(action.retryable_after_fix),
                 action.subject.as_deref().unwrap_or("-")
             ));
+            lines.push(format!(
+                "  repair_guidance[{index}]: manual_only=yes next={} retry_command={}",
+                repair_next_step(action.code),
+                repair_retry_command(&action, retry_command)
+            ));
         }
     }
     lines
+}
+
+fn repair_next_step(code: GitMirrorRepairActionCode) -> &'static str {
+    match code {
+        GitMirrorRepairActionCode::PrepareMirror => "prepare_git_mirror_and_notegit_gitignore",
+        GitMirrorRepairActionCode::CleanDeveSourceControl => {
+            "stage_commit_or_discard_deve_source_control_changes"
+        }
+        GitMirrorRepairActionCode::ProtectNotegit => {
+            "remove_notegit_from_git_tracking_and_restore_gitignore"
+        }
+        GitMirrorRepairActionCode::ResolveProjectionScope => "fix_projection_or_path_subject",
+        GitMirrorRepairActionCode::RepairHistoryMapping => {
+            "repair_git_history_mapping_or_rebootstrap_empty_mirror"
+        }
+        GitMirrorRepairActionCode::CleanGitWorktree => "clean_git_worktree_or_import_changes",
+        GitMirrorRepairActionCode::InspectGitCommand => "inspect_git_command_failure",
+        GitMirrorRepairActionCode::InspectMirrorExecutor => "inspect_mirror_executor_error",
+    }
+}
+
+fn repair_retry_command(action: &GitMirrorRepairAction, retry_command: Option<&str>) -> String {
+    if !action.retryable_after_fix {
+        return "-".to_string();
+    }
+    retry_command
+        .map(|command| format!("`{command}`"))
+        .unwrap_or_else(|| "-".to_string())
 }
 
 fn lag_ms(now_ms: i64, timestamp_ms: i64) -> i64 {

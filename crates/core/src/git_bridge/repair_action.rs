@@ -54,8 +54,35 @@ impl GitMirrorRepairAction {
         Some(Self {
             code: action_code(stage),
             retryable_after_fix: retryable_after_fix(stage),
-            subject: record.failure_subject.clone(),
+            subject: action_subject(stage, record),
         })
+    }
+}
+
+fn action_subject(stage: GitMirrorFailureStage, record: &GitMirrorRecord) -> Option<String> {
+    record
+        .failure_subject
+        .clone()
+        .or_else(|| {
+            if stage == GitMirrorFailureStage::GitCommand {
+                record.failure_command.clone()
+            } else {
+                None
+            }
+        })
+        .or_else(|| Some(default_subject(stage).to_string()))
+}
+
+fn default_subject(stage: GitMirrorFailureStage) -> &'static str {
+    match stage {
+        GitMirrorFailureStage::MirrorNotReady => "mirror_readiness",
+        GitMirrorFailureStage::DeveSourceControl => "deve_source_control",
+        GitMirrorFailureStage::NotegitProtection => ".notegit",
+        GitMirrorFailureStage::ProjectionScope => "projection_scope",
+        GitMirrorFailureStage::GitHistoryMapping => "git_history_mapping",
+        GitMirrorFailureStage::GitWorktree => "git_worktree",
+        GitMirrorFailureStage::GitCommand => "git_command",
+        GitMirrorFailureStage::MirrorExecutor => "mirror_executor",
     }
 }
 
@@ -112,6 +139,28 @@ mod tests {
         assert_eq!(action.code, GitMirrorRepairActionCode::InspectGitCommand);
         assert!(action.retryable_after_fix);
         assert_eq!(action.subject.as_deref(), Some("subject.md"));
+    }
+
+    #[test]
+    fn repair_action_uses_command_or_stage_subject_fallback() {
+        let mut command_record = out_of_sync_record(GitMirrorFailureStage::GitCommand);
+        command_record.failure_subject = None;
+        command_record.failure_command = Some("commit".to_string());
+
+        let command_action =
+            GitMirrorRepairAction::for_record(&command_record).expect("command repair action");
+        assert_eq!(command_action.subject.as_deref(), Some("commit"));
+
+        let mut source_control_record =
+            out_of_sync_record(GitMirrorFailureStage::DeveSourceControl);
+        source_control_record.failure_subject = None;
+
+        let source_control_action = GitMirrorRepairAction::for_record(&source_control_record)
+            .expect("source-control repair action");
+        assert_eq!(
+            source_control_action.subject.as_deref(),
+            Some("deve_source_control")
+        );
     }
 
     #[test]
