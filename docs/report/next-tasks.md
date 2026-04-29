@@ -10,7 +10,6 @@
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
 | 1 | Docker release smoke endpoint verification | P2 (Host-blocked) | Docker host environment, `scripts/smoke-docker-release.sh` | Smoke 脚本已支持 `DEVE_DOCKER_BIN` 并输出 Docker context 诊断；2026-04-29 本轮通过 Windows `docker.exe` fallback 完成 image build，但 agent 内 Linux Docker integration 仍不可用，Windows interop 运行容器阶段不稳定；需要在稳定 Linux `docker` context 下重跑完整 endpoint smoke。 |
-| 2 | Cargo-chef manifest warning triage | P3 | Docker build tooling, cargo-chef recipe generation | Docker build 暴露大量 `unused manifest key: *.plugin` warning，但当前 repo manifests 已无 `plugin` 键；下一步应在稳定 Docker context 内复现并判断是 cargo-chef skeleton warning、旧缓存还是工具链版本问题，避免误改工作区 manifests。 |
 
 ## 最近完成基线
 
@@ -35,6 +34,7 @@
 - P3-10 Desktop/Mobile native adapter plan 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract、boot/lifecycle state machine、endpoint/session injection、offline/readiness 语义与 native forbidden shortcuts；Tauri native shell 代码仍属 future implementation。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。
 - P2 Docker release smoke 已于 2026-04-29 继续重跑：Windows `docker.exe` fallback 可连接 Docker Desktop 并完成 `deve-notebook:local-smoke` image build；但 agent 当前 Linux Docker integration 仍缺失，Docker Desktop proxy 需要 `/run` 写权限，Windows interop 在容器运行阶段不稳定，endpoint smoke 仍未闭环，详见 `release-smoke-status-2026-04-29.md`。
+- P3 Cargo-chef manifest warning triage 已关闭：当前 repo manifests 无 `plugin = ...` 键，`cargo metadata --no-deps --format-version 1` 无 warning；该 warning 需在稳定 Docker context 内复现后再判断是否为 cargo-chef skeleton 或旧缓存噪音，详见 `cargo-chef-warning-triage-2026-04-29.md`。
 - P0 repo health、`repair --check`、WS structured errors、writer-ready `repo_id + scope_nonce`、Source Control doc identity hardening 已记录在 `code-review-2026-04-28.md`。
 - P1 search、settings current boundary、Native AI Chat minimum、graph projection、i18n cleanup、plan_ref sweeps 已记录在 `code-review-2026-04-28.md`。
 - Release/runtime smoke 与 Docker daemon blocker 已记录在 `release-smoke-status-2026-04-28.md`。
