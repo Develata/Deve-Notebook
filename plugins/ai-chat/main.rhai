@@ -76,6 +76,30 @@ fn build_system_prompt(context) {
 }
 
 fn chat(req_id, user_msg, context) {
+    chat(req_id, user_msg, context, [])
+}
+
+fn append_prior_history(history, prior_history) {
+    if prior_history == () || type_of(prior_history) != "array" {
+        return history;
+    }
+
+    let next = history;
+    for message in prior_history {
+        if message["role"] == () || message["content"] == () || message["content"] == "" {
+            continue;
+        }
+        if message["role"] == "user" || message["role"] == "assistant" {
+            next.push(#{
+                role: message["role"],
+                content: message["content"]
+            });
+        }
+    }
+    next
+}
+
+fn chat(req_id, user_msg, context, prior_history) {
     let config = _build_config();
 
     if config.api_key == () || config.api_key == "" {
@@ -85,10 +109,11 @@ fn chat(req_id, user_msg, context) {
         };
     }
 
-    let history = [
-        #{role: "system", content: build_system_prompt(context)},
-        #{role: "user", content: user_msg}
+    let base_history = [
+        #{role: "system", content: build_system_prompt(context)}
     ];
+    let history = append_prior_history(base_history, prior_history);
+    history.push(#{role: "user", content: user_msg});
 
     ai_chat_stream(req_id, config, history)
 }

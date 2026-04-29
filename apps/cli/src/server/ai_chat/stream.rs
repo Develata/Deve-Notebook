@@ -87,12 +87,21 @@ pub async fn execute_stream(
         }
     }
 
-    // 发送结束信号
+    finish_stream_response(req_id, output, tool_builder.build(), finish_reason, sink)
+}
+
+fn finish_stream_response(
+    req_id: &str,
+    output: String,
+    tool_calls: Vec<deve_core::plugin::runtime::chat_stream::ToolCallInfo>,
+    finish_reason: Option<String>,
+    sink: &ChatStreamSink,
+) -> Result<ChatStreamResponse> {
+    let response = finalize_stream_response(output, tool_calls)?;
     if let Some(reason) = finish_reason {
         sink.send_chunk(req_id, None, Some(reason));
     }
-
-    finalize_stream_response(output, tool_builder.build())
+    Ok(response)
 }
 
 fn finalize_stream_response(
@@ -110,6 +119,8 @@ fn finalize_stream_response(
 mod tests {
     use super::*;
     use deve_core::plugin::runtime::chat_stream::ToolCallInfo;
+    use deve_core::protocol::ServerMessage;
+    use std::sync::{Arc, Mutex};
 
     #[test]
     fn finalize_stream_response_rejects_provider_tool_calls() {
@@ -135,5 +146,58 @@ mod tests {
             ChatStreamResponse::Text { content } => assert_eq!(content, "hello"),
             ChatStreamResponse::ToolCalls { .. } => panic!("unexpected tool response"),
         }
+    }
+
+    #[test]
+    fn provider_tool_call_rejection_does_not_send_finish_chunk() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let sent_for_sink = sent.clone();
+        let sink = ChatStreamSink::new(move |msg| {
+            sent_for_sink.lock().unwrap().push(msg);
+        });
+
+        let err = finish_stream_response(
+            "req-1",
+            "partial".to_string(),
+            vec![ToolCallInfo {
+                id: "call_1".to_string(),
+                name: "write_file".to_string(),
+                arguments: "{}".to_string(),
+            }],
+            Some("tool_calls".to_string()),
+            &sink,
+        )
+        .expect_err("native AI must reject provider tool calls before finish");
+
+        assert_eq!(err.to_string(), NATIVE_AI_TOOL_CALLS_DISABLED_ERROR);
+        assert!(sent.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn plain_text_finish_sends_finish_chunk_after_validation() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let sent_for_sink = sent.clone();
+        let sink = ChatStreamSink::new(move |msg| {
+            sent_for_sink.lock().unwrap().push(msg);
+        });
+
+        finish_stream_response(
+            "req-1",
+            "hello".to_string(),
+            vec![],
+            Some("stop".to_string()),
+            &sink,
+        )
+        .expect("plain text response should finish normally");
+
+        let sent = sent.lock().unwrap();
+        assert!(matches!(
+            sent.as_slice(),
+            [ServerMessage::ChatChunk {
+                req_id,
+                delta: None,
+                finish_reason: Some(reason),
+            }] if req_id == "req-1" && reason == "stop"
+        ));
     }
 }

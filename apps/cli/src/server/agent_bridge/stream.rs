@@ -26,7 +26,7 @@ pub(super) async fn spawn_and_stream(
         .spawn()
         .map_err(|err| {
             anyhow::anyhow!(
-                "Failed to spawn '{}': {}. Is it installed and in PATH?",
+                "Failed to spawn '{}': {}. Check AGENT_CLI_PATH points to an existing absolute executable path.",
                 cli_path,
                 err
             )

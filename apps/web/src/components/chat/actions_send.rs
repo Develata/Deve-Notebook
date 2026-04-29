@@ -2,13 +2,16 @@
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!   - 03_rendering#document-authority-bridge
 //!
+use crate::api::ai_backend_to_plugin_id;
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::{ChatMessage, CoreState};
 use leptos::prelude::*;
 
 use crate::components::chat::slash_commands::{ChatSessionMode, consume_slash_command};
 
 const MAX_CHAT_CONTEXT_CHARS: usize = 16_000;
+const MAX_CHAT_HISTORY_MESSAGES: usize = 8;
+const MAX_CHAT_HISTORY_CHARS: usize = 8_000;
 
 pub fn make_send_text(
     core: CoreState,
@@ -33,6 +36,7 @@ pub fn make_send_text(
             return;
         }
         let req_id = uuid::Uuid::new_v4().to_string();
+        let history = bounded_chat_history(core.chat_messages.get_untracked());
         core.append_chat_message("user", &msg, None);
         core.append_chat_message("assistant", "", Some(req_id.clone()));
         core.set_is_chat_streaming.set(true);
@@ -66,8 +70,13 @@ pub fn make_send_text(
             "selection": selection,
             "chat_mode": session_mode.get_untracked().as_str(),
         });
-        let args = vec![serde_json::json!(req_id), serde_json::json!(msg), context];
-        let plugin_id = core.ai_mode.get_untracked();
+        let args = vec![
+            serde_json::json!(req_id),
+            serde_json::json!(msg),
+            context,
+            serde_json::json!(history),
+        ];
+        let plugin_id = ai_backend_to_plugin_id(core.ai_mode.get_untracked().as_str()).to_string();
         core.on_plugin_call
             .run((req_id, plugin_id, "chat".to_string(), args));
     })
@@ -78,6 +87,34 @@ fn truncate_markdown_context(content: String) -> String {
         return content;
     };
     content[..end].to_string()
+}
+
+fn bounded_chat_history(messages: Vec<ChatMessage>) -> Vec<serde_json::Value> {
+    let mut total_chars = 0usize;
+    let mut selected = Vec::new();
+    for message in messages.into_iter().rev() {
+        if message.content.is_empty() {
+            continue;
+        }
+        let role = match message.role.as_str() {
+            "user" | "assistant" => message.role,
+            _ => continue,
+        };
+        let content_len = message.content.chars().count();
+        if total_chars.saturating_add(content_len) > MAX_CHAT_HISTORY_CHARS {
+            break;
+        }
+        total_chars += content_len;
+        selected.push(serde_json::json!({
+            "role": role,
+            "content": message.content,
+        }));
+        if selected.len() >= MAX_CHAT_HISTORY_MESSAGES {
+            break;
+        }
+    }
+    selected.reverse();
+    selected
 }
 
 pub fn make_send_example(
@@ -108,7 +145,11 @@ pub fn make_send_message(
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_CHAT_CONTEXT_CHARS, truncate_markdown_context};
+    use super::{
+        MAX_CHAT_CONTEXT_CHARS, MAX_CHAT_HISTORY_MESSAGES, bounded_chat_history,
+        truncate_markdown_context,
+    };
+    use crate::hooks::use_core::ChatMessage;
 
     #[test]
     fn markdown_context_is_bounded_on_char_boundaries() {
@@ -121,5 +162,55 @@ mod tests {
     fn markdown_context_keeps_short_content() {
         let content = "# Note\n\nbody".to_string();
         assert_eq!(truncate_markdown_context(content.clone()), content);
+    }
+
+    #[test]
+    fn bounded_history_keeps_recent_user_and_assistant_turns() {
+        let history = bounded_chat_history(vec![
+            ChatMessage {
+                role: "system".into(),
+                content: "ignored".into(),
+                req_id: None,
+                ts_ms: 0,
+            },
+            ChatMessage {
+                role: "user".into(),
+                content: "first".into(),
+                req_id: None,
+                ts_ms: 0,
+            },
+            ChatMessage {
+                role: "assistant".into(),
+                content: "second".into(),
+                req_id: Some("req-1".into()),
+                ts_ms: 0,
+            },
+        ]);
+
+        assert_eq!(
+            history,
+            vec![
+                serde_json::json!({"role": "user", "content": "first"}),
+                serde_json::json!({"role": "assistant", "content": "second"}),
+            ]
+        );
+    }
+
+    #[test]
+    fn bounded_history_limits_message_count() {
+        let messages = (0..12)
+            .map(|idx| ChatMessage {
+                role: if idx % 2 == 0 { "user" } else { "assistant" }.into(),
+                content: format!("m{idx}"),
+                req_id: None,
+                ts_ms: 0,
+            })
+            .collect();
+
+        let history = bounded_chat_history(messages);
+
+        assert_eq!(history.len(), MAX_CHAT_HISTORY_MESSAGES);
+        assert_eq!(history[0]["content"], "m4");
+        assert_eq!(history[7]["content"], "m11");
     }
 }

@@ -14,6 +14,7 @@
   assertions:
     - ui_assert: chat_response_visible true
     - ui_assert: chat_response_mentions_current_doc true
+    - ui_assert: plugin_text_response_stops_loading true
 
 - case_id: AI-002
   goal: `/plan` 进入原生 PLAN 模式，且 slash command 本身不会调用任何工具。
@@ -101,6 +102,7 @@
   steps:
     - ui_open: settings
     - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_web plugin_text_response -- --nocapture
     - run: cargo test -p deve_cli agent_bridge -- --nocapture
   assertions:
     - ui_assert: ai_backend_option_visible "native"
@@ -122,6 +124,7 @@
     - ui_assert: chat_error_visible true
     - ui_assert: ai_backend_eq "native"
     - ui_assert: chat_message_contains_trusted_cli_fallback_reason true
+    - ui_assert: chat_streaming_stopped_after_plugin_error true
     - stdout_contains_any: ["trusted mode required", "external agent disabled"]
     - log_not_contains: "spawn subprocess"
 

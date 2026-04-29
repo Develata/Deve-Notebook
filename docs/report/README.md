@@ -38,6 +38,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest graph Web projection panel status: `graph-web-projection-panel-status-2026-04-29.md`
 - Latest graph renderer gate decision: `graph-renderer-gate-decision-2026-04-29.md`
 - Latest Search/settings current-boundary audit: `search-settings-boundary-audit-2026-04-29.md`
+- Latest Native AI Chat boundary audit: `native-ai-chat-boundary-audit-2026-04-30.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 

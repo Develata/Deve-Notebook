@@ -1,6 +1,6 @@
 # 当前下一步任务
 
-> 更新日期：2026-04-29
+> 更新日期：2026-04-30
 >
 > 本文件只记录 active execution queue。已完成的实现历史应进入 dated reports，例如
 > `code-review-2026-04-28.md` 与 `release-smoke-status-2026-04-28.md`。
@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Native AI Chat minimum boundary audit | P1 / Planning | `docs/plan/10_ai_agent.md`, `docs/features/10_ai_agent.md`, `apps/cli/src/server/ai_chat`, `apps/web/src/components/chat`, `crates/core/src/plugin/runtime` | Search/settings current boundary 已收口；下一步审计 AI Chat 是否满足“最小可用 native chat”，并继续保持 MCP retired、Trusted CLI 默认关闭、PLAN/BUILD 为会话模式而非后端切换。 |
+| 1 | Browser UI prefs storage consolidation | P2 / Implementation | `apps/web/src/hooks/use_core/scope_prefs.rs`, UI layout/sidebar/outline/search prefs, `docs/plan/13_settings.md` | Native AI Chat minimum boundary 已收口；下一步把剩余 harmless UI prefs 统一归入非权威 fallback storage，继续保持身份/向量/写权限不得落入裸 `localStorage`。 |
 
 ## 最近完成基线
 
@@ -40,6 +40,7 @@
 - P2 Git mirror executable repair UI decision 已关闭：当前批次明确不进入 Web 可执行 repair UI，不新增 Web Git writer；Web 保持只读 review / CLI-only notice，Git 写操作继续由显式 CLI surface 承担，详见 `git-mirror-executable-repair-ui-decision-2026-04-29.md`。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P1 Search/settings current-boundary audit 已关闭：Search 当前固定为 `search` feature + non-low-spec 下的 repo-scoped baseline scan，Tantivy 常驻索引仍属 future；server route 补齐 stale search scope 回归，Settings 当前保持 `config.toml` + `deve config print/set`，server-backed Settings API/统一 GUI 持久化仍属 future，详见 `search-settings-boundary-audit-2026-04-29.md`。
+- P1 Native AI Chat minimum boundary audit 已关闭：同步 `PluginResponse` completion、backend 产品名与 runtime plugin id 转换层、bounded multi-turn history、provider `tool_calls` 先 fail-closed 后不发送成功 finish、Trusted CLI 文案与 fail-closed 注释均已收口，详见 `native-ai-chat-boundary-audit-2026-04-30.md`。
 - P3-10 Desktop/Mobile native adapter core contract 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract，`deve_core::native_adapter` 已落地平台无关状态/事件/endpoint/session/readiness 合同与定向测试；Tauri desktop/mobile shell、embedded service launcher 与 Web bootstrap 消费仍属后续实现。
 - P3-10 Web native bootstrap 消费已关闭：Web connection manager 可读取 `window.__DEVE_NATIVE_BOOTSTRAP`，复用 core native endpoint/session 校验，有效时只使用注入 endpoint，失效时 fail-closed 且不回退端口推断；浏览器默认路径保持不变，详见 `native-web-bootstrap-status-2026-04-29.md`。
 - P3-10 Server native-safe launch surface 已关闭：新增 `ServerLaunchOptions` 与 hidden `serve --native-loopback` 路径，native 模式只绑定 `127.0.0.1`、占用端口 fail-closed、不进入 proxy fallback，`/api/node/role` 暴露 nullable `native_service` endpoint/session surface；普通 release/Docker `0.0.0.0` 行为保持不变，详见 `native-server-launch-status-2026-04-29.md`。

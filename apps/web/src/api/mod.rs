@@ -22,7 +22,10 @@ mod socket;
 mod status;
 mod writer_id;
 
-pub use self::ai_backend::{AiBackendCapabilities, fetch_ai_backend_capabilities};
+pub use self::ai_backend::{
+    AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
+    AiBackendCapabilities, ai_backend_to_plugin_id, fetch_ai_backend_capabilities,
+};
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
 pub use self::git_mirror::fetch_git_mirror_repair_review;
 pub use self::graph::fetch_graph_projection;

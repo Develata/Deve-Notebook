@@ -2,6 +2,7 @@
 //!   - 07_diff_logic#source-control-runtime
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!
+use crate::api::ai_backend_to_plugin_id;
 use crate::hooks::use_core::{ChatContext, ChatMessage, SourceControlContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -50,7 +51,7 @@ pub fn build_generate_callback(
         chat_ctx.set_is_streaming.set(true);
         chat_ctx.on_plugin_call.run((
             req_id,
-            chat_ctx.ai_mode.get_untracked(),
+            ai_backend_to_plugin_id(chat_ctx.ai_mode.get_untracked().as_str()).to_string(),
             "chat".to_string(),
             args,
         ));

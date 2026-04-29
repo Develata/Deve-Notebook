@@ -1,4 +1,6 @@
-use super::super::message_dispatch_runtime::handle_search_results_message;
+use super::super::message_dispatch_runtime::{
+    handle_plugin_response_message, handle_search_results_message,
+};
 use super::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results, accepts_unscoped_update,
 };
@@ -174,4 +176,63 @@ fn accepts_chat_finish_for_existing_message_after_response_ack() {
     }]);
     assert!(accepts_chat_chunk("req-1", signals));
     assert!(!accepts_chat_chunk("stale", signals));
+}
+
+#[test]
+fn plugin_text_response_finishes_matching_chat_placeholder() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (connection_status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(connection_status);
+    signals.set_plugin_request_ids.set(vec!["req-1".into()]);
+    signals.set_is_chat_streaming.set(true);
+    signals.set_chat_messages.set(vec![ChatMessage {
+        role: "assistant".into(),
+        content: String::new(),
+        req_id: Some("req-1".into()),
+        ts_ms: 0,
+    }]);
+
+    handle_plugin_response_message(
+        "req-1".into(),
+        Some(serde_json::json!({"type": "text", "content": "Missing AI API key"})),
+        None,
+        signals,
+    );
+
+    assert!(!signals.is_chat_streaming.get_untracked());
+    assert_eq!(
+        signals.plugin_request_ids.get_untracked(),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        signals.chat_messages.get_untracked()[0].content,
+        "Missing AI API key"
+    );
+}
+
+#[test]
+fn plugin_text_response_does_not_duplicate_streamed_chat_content() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (connection_status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(connection_status);
+    signals.set_plugin_request_ids.set(vec!["req-1".into()]);
+    signals.set_is_chat_streaming.set(true);
+    signals.set_chat_messages.set(vec![ChatMessage {
+        role: "assistant".into(),
+        content: "hello".into(),
+        req_id: Some("req-1".into()),
+        ts_ms: 0,
+    }]);
+
+    handle_plugin_response_message(
+        "req-1".into(),
+        Some(serde_json::json!({"type": "text", "content": "hello"})),
+        None,
+        signals,
+    );
+
+    assert!(!signals.is_chat_streaming.get_untracked());
+    assert_eq!(signals.chat_messages.get_untracked()[0].content, "hello");
 }

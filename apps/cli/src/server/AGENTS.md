@@ -71,7 +71,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `ws/` | WebSocket connection lifecycle, message routing, and broadcast filtering |
 | `auth/` | Authentication middleware, JWT cookie handling, brute-force protection |
 | `ai_chat/` | OpenAI-compatible streaming chat integration |
-| `agent_bridge/` | Bridge to external AI CLI tools |
+| `agent_bridge/` | Default-off Trusted CLI bridge; policy-gated, not MCP and not a generic plugin authority |
 | `channel_test/` | Integration tests for channel delivery guarantees |
 
 ## For AI Agents

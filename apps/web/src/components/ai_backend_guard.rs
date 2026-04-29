@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!
-use crate::api::AiBackendCapabilities;
+use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
 use crate::hooks::use_core::{ChatContext, ChatMessage};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -14,11 +14,11 @@ pub fn attach_trusted_cli_fallback(
     let last_notice = RwSignal::new(None::<String>);
     Effect::new(move |_| {
         let cap = capabilities.get();
-        if cap.trusted_cli_available || chat.ai_mode.get() != "agent-bridge" {
+        if cap.trusted_cli_available || chat.ai_mode.get() != AI_BACKEND_TRUSTED_CLI {
             return;
         }
 
-        chat.set_ai_mode.set("ai-chat".to_string());
+        chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string());
         let reason = cap
             .trusted_cli_reason
             .unwrap_or_else(|| t::extensions::trusted_cli_unavailable(locale.get()).to_string());

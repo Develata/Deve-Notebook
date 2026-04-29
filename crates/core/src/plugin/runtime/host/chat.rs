@@ -111,7 +111,8 @@ pub fn register_chat_api(engine: &mut Engine, caps: Arc<Capability>) {
         },
     );
 
-    // API: ai_chat_stream_with_tools(req_id, config, history, tools) -> Dynamic
+    // Reserved API: Native AI handlers must reject tools fail-closed; this remains
+    // only for compatibility tests and future explicitly-gated runtimes.
     engine.register_fn(
         "ai_chat_stream_with_tools",
         move |req_id: &str,

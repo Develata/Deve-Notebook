@@ -23,9 +23,47 @@ pub fn handle_plugin_response_message(
     signals
         .set_plugin_request_ids
         .update(|ids| ids.retain(|id| id != &req_id));
+    finish_chat_request_from_plugin_response(&req_id, result.as_ref(), error.as_ref(), signals);
     signals
         .set_plugin_response
         .set(Some((req_id, result, error)));
+}
+
+fn finish_chat_request_from_plugin_response(
+    req_id: &str,
+    result: Option<&serde_json::Value>,
+    error: Option<&deve_core::protocol::ServerError>,
+    signals: CoreSignals,
+) {
+    let response_text = plugin_response_text(result);
+    let error_text = error.and_then(|err| err.detail.as_deref());
+    let mut matched_chat_message = false;
+    signals.set_chat_messages.update(|messages| {
+        let Some(message) = messages
+            .iter_mut()
+            .rev()
+            .find(|msg| msg.req_id.as_deref() == Some(req_id))
+        else {
+            return;
+        };
+        matched_chat_message = true;
+        if message.content.is_empty()
+            && let Some(text) = response_text.or(error_text)
+        {
+            message.content.push_str(text);
+        }
+    });
+    if matched_chat_message {
+        signals.set_is_chat_streaming.set(false);
+    }
+}
+
+fn plugin_response_text(result: Option<&serde_json::Value>) -> Option<&str> {
+    let result = result?;
+    if result.get("type").and_then(|value| value.as_str()) != Some("text") {
+        return None;
+    }
+    result.get("content").and_then(|value| value.as_str())
 }
 
 pub fn handle_chat_chunk_message(

@@ -7,7 +7,9 @@
 //!
 //! Extracted sub-sections: Sync Mode, AI Backend.
 
-use crate::api::{AiBackendCapabilities, fetch_ai_backend_capabilities};
+use crate::api::{
+    AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities, fetch_ai_backend_capabilities,
+};
 use crate::components::ai_backend_guard::attach_trusted_cli_fallback;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -68,7 +70,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 set_trusted_cap.set(fetch_ai_backend_capabilities().await);
             });
         });
-        let is_native = Signal::derive(move || chat.ai_mode.get() == "ai-chat");
+        let is_native = Signal::derive(move || chat.ai_mode.get() == AI_BACKEND_NATIVE);
         let trusted_available = Signal::derive(move || trusted_cap.get().trusted_cli_available);
         attach_trusted_cli_fallback(chat.clone(), trusted_cap, locale);
         let trusted_reason = move || {
@@ -90,7 +92,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                         } else {
                             "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
                         }
-                        on:click=move |_| chat.set_ai_mode.set("ai-chat".to_string())
+                        on:click=move |_| chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string())
                     >
                         {move || t::settings::native_backend(locale.get())}
                     </button>
@@ -106,7 +108,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                         title=trusted_reason
                         on:click=move |_| {
                             if trusted_available.get_untracked() {
-                                chat.set_ai_mode.set("agent-bridge".to_string());
+                                chat.set_ai_mode.set(AI_BACKEND_TRUSTED_CLI.to_string());
                             }
                         }
                     >

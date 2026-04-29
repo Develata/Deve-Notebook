@@ -26,6 +26,8 @@
 - 当前阶段允许的 AI 能力应保持最小化与可理解。
 - AI 不应假装拥有未完成的自动化写入、越权读取或复杂自治能力。
 - Native AI 后端默认拒绝 tools payload 与 provider tool calls；当前 BUILD 只允许后续受控 Markdown Apply 路径。
+- 后端产品语义使用 `native` / `trusted-cli`；`ai-chat` / `agent-bridge` 只是当前兼容层 runtime plugin id，不应出现在 Settings 持久化语义中。
+- AI 未配置、API key 缺失或 Trusted CLI policy fail-closed 时，必须显示明确文本/错误并结束 loading，不得卡住聊天面板。
 
 ### 3. 与核心功能的隔离
 

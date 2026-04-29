@@ -47,11 +47,12 @@ pub struct ChatStreamRequest {
     pub tools: Option<Value>,
 }
 
-/// Response from chat stream - can be text or tool calls
+/// Response from chat stream.
 ///
 /// ## Variants
 /// - `Text`: 普通文本响应，流式传输已完成
-/// - `ToolCalls`: AI 请求调用工具，需要 tool_loop 处理
+/// - `ToolCalls`: reserved compatibility shape. Native AI Chat currently rejects
+///   provider tool calls fail-closed and does not run a tool loop.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ChatStreamResponse {

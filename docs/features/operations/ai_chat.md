@@ -81,3 +81,6 @@
 - `/build` 本身不直接改写 Markdown；任何 Markdown 写入必须走后续受控 apply / edit 路径。
 - `Apply` 只在 BUILD 模式下为 assistant code block 显示；PLAN 模式不得暴露可写入口。
 - Native AI 默认拒绝请求侧 `tools` payload 和响应侧 `tool_calls`，避免 BUILD 模式退化成通用工具循环。
+- 非流式 `PluginResponse` 仍属于 chat request 的完成路径：缺 API key、policy fail-closed 或同步文本结果必须结束 loading；若 assistant placeholder 为空，显示同步文本或明确错误。
+- 产品 backend 名称是 `native` / `trusted-cli`；当前兼容层的 runtime plugin id 是 `ai-chat` / `agent-bridge`，两者必须通过显式转换层连接，不得把 plugin id 当作 Settings 或产品文案语义。
+- 多轮上下文只携带前端已显示的 bounded user/assistant history；不得由插件自行扩大读取范围或扫描 workspace。

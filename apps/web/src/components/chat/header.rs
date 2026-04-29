@@ -2,6 +2,7 @@
 //! plan_ref:
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!
+use crate::api::AI_BACKEND_NATIVE;
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::components::icons::*;
 use crate::hooks::use_core::ChatContext;
@@ -22,8 +23,8 @@ pub fn ChatHeader(
             .as_ref()
             .map(|signal| signal.get())
             .or_else(|| context_ai_mode.map(|signal| signal.get()))
-            .unwrap_or_else(|| "ai-chat".to_string());
-        if mode == "ai-chat" {
+            .unwrap_or_else(|| AI_BACKEND_NATIVE.to_string());
+        if mode == AI_BACKEND_NATIVE {
             t::chat::ai_chat(locale.get())
         } else {
             t::chat::agent_bridge(locale.get())
