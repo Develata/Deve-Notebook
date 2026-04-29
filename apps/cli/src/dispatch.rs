@@ -65,6 +65,16 @@ pub async fn run(
                 repo.as_deref(),
                 config.snapshot_depth,
             )?,
+            GitAction::Mirror {
+                repo,
+                retry_out_of_sync,
+            } => commands::git::mirror(
+                ledger_dir,
+                vault_path,
+                repo.as_deref(),
+                retry_out_of_sync,
+                config.snapshot_depth,
+            )?,
         },
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {

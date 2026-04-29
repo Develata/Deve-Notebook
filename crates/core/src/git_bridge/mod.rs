@@ -5,9 +5,11 @@
 //! Git ecosystem mirror bridge. Deve ledger/source-control state remains
 //! authority; Git metadata is an optional external mirror.
 
+mod executor;
 mod status;
 mod store;
 
+pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, run_pending_mirror};
 pub use status::{GitMetadataKind, GitMirrorState, GitMirrorStatus, inspect_repo_root};
 pub use store::{
     GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorRecord, GitMirrorSummary, get_record,

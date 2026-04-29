@@ -15,6 +15,7 @@
 //! - `dump`: 调试工具，用于检查 ops 记录
 //! - `serve`: 启动 WebSocket 后端服务器 (Backend Architecture)
 //! - `git status`: 检查 Git ecosystem mirror bridge 状态
+//! - `git mirror`: 手动执行 queued Git mirror commits
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -146,6 +147,14 @@ pub(crate) enum GitAction {
     Status {
         #[arg(long)]
         repo: Option<String>,
+    },
+    /// Execute queued Git mirror commit records
+    #[command(visible_alias = "flush")]
+    Mirror {
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(long)]
+        retry_out_of_sync: bool,
     },
 }
 

@@ -67,3 +67,30 @@ fn git_status_accepts_repo_selector() {
         other => panic!("unexpected command: {other:?}"),
     }
 }
+
+#[test]
+fn git_mirror_accepts_retry_out_of_sync() {
+    let args = Args::try_parse_from([
+        "deve",
+        "git",
+        "mirror",
+        "--repo",
+        "default",
+        "--retry-out-of-sync",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::Git {
+            action:
+                GitAction::Mirror {
+                    repo,
+                    retry_out_of_sync,
+                },
+        }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+            assert!(retry_out_of_sync);
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
