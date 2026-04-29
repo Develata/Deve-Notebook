@@ -88,6 +88,8 @@
     - cli_assert: graph_projection_cli_and_http_share_adapter true
     - ui_assert: graph_projection_panel_summary_counts_available true
     - ui_assert: graph_projection_panel_renderer_future_only true
+    - ui_assert: graph_renderer_gate_closed_current_batch true
+    - dependency_assert: graph_renderer_dependency_not_declared_for_current_ui true
 
 - case_id: REL-006
   goal: 当前运行实例暴露可理解的版本、profile、环境与交付形态。

@@ -47,8 +47,9 @@
 - 用户可以查看 commit history / graph。
 - 这些视图必须与当前 repo scope 一致。
 - 当前 graph 的数据面是只读 projection：`deve graph` 与受保护 HTTP query `GET /api/repo/graph` 输出同一类 `GraphProjection` JSON，不写 ledger、workspace、search index 或 source-control state。
-- Web 当前只提供最小 Graph panel scaffold：展示 repo-scoped nodes / edges / unresolved counts，以及 loading / failed / empty / local-only fallback。它不执行布局计算，不引入 d3/Pixi，不写任何 authority。
-- 当前阶段不承诺高性能 Web graph renderer；Canvas / d3-force / Pixi.js 渲染仍属 future。
+- Web 当前只提供最小 Graph panel scaffold：展示 repo-scoped nodes / edges / unresolved counts，以及 loading / failed / empty / local-only fallback。它不执行布局计算，不引入 Graph renderer dependency，不写任何 authority。
+- Current decision (2026-04-29)：Graph renderer gate 关闭；当前阶段不承诺高性能 Web graph renderer、force simulation、Canvas layout、d3-force/Pixi renderer 或 graph interaction state。
+- `apps/web/package-lock.json` 中由 Mermaid 等前端包带来的历史/间接 d3 依赖不代表当前 Graph renderer 已启用；`apps/web/package.json` 不声明 Graph renderer dependency，Graph 验收只覆盖只读 projection 与 summary panel。
 
 ### 4. Merge / Conflict
 
