@@ -22,7 +22,8 @@
 *   Web 端 Mobile responsive shell 已存在，并作为 Mobile 交互规范的当前可验收映射。
 *   `apps/mobile` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入、background/suspended/resumed/foreground reprobe、service offline 与 session invalid recovery 状态机。它不是完整 Tauri Mobile 应用。
 *   Tauri v2 Mobile packaging、系统权限桥接、推送、原生文件选择器与应用商店分发仍是 future work；当前仓库不得把这些视为已实现能力。
-*   packaging runtime 只能在 `apps/mobile` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri Mobile skeleton，以便快速验证 lifecycle/session/readiness contract。
+*   packaging dependency gate 当前明确 closed/deferred：`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为 `DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 仍不得进入当前构建。
+*   packaging runtime 后续只能在 `apps/mobile` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri Mobile skeleton，以便快速验证 lifecycle/session/readiness contract。
 *   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
 *   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；mobile shell 在此基础上继续保留 background/resume fresh reprobe 规则。
 *   真实 mobile process adapter 当前明确 deferred：默认 no-Tauri Mobile skeleton 不启动、不持有、不重启后端子进程；`deve_core::native_adapter::CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定该决策，直到 packaging gate 被显式打开。
@@ -150,6 +151,31 @@ decision 的验收输入：
     fresh reprobe auth、node role、WS repo handshake 与 current `scope_nonce`，packaging 不得绕过。
 *   `scripts/check-native-track-boundary.sh` 必须继续阻止真实 packaging dependency 或 import
     在门禁打开前泄漏到 workspace root、core、cli、web 或 native 默认构建。
+
+### 0.2.1 Mobile Packaging Dependency Gate Decision {#mobile-packaging-dependency-gate-decision}
+
+当前决策：Mobile packaging dependency gate **不打开**；真实 Tauri Mobile runtime
+dependency 继续 deferred 到独立 runtime batch。
+
+当前代码锚点：
+
+*   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
+    DeferredUntilRuntimeBatch`
+*   `real_tauri_dependencies_allowed = false`
+*   `default_build_remains_no_tauri = true`
+*   `native_feature_gate_required = true`
+*   `authority_writes_allowed = false`
+
+原因：
+
+*   Mobile packaging 不只是添加 dependency；它包含 Android/iOS WebView、permission
+    bridge、后台恢复、系统杀进程、分享/文件选择、push 与 store package 验收。
+*   当前 no-runtime skeleton 的核心价值是验证 lifecycle/session/readiness/foreground
+    reprobe 边界；真实 Tauri Mobile dependency 应作为独立平台批次处理。
+*   Packaging scaffold 保留 planned dependency batch，但不得被解释为当前可运行原生移动端。
+
+后续若打开 gate，必须先更新边界脚本，并继续保证 foreground reprobe、writer-ready 与
+repo scope gate 不被 native runtime 绕过。
 
 ## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。

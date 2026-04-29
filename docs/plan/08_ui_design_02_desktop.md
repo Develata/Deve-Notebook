@@ -22,7 +22,8 @@
 *   Web 端 Desktop responsive shell 已存在，并作为 Desktop 交互规范的当前可验收映射。
 *   `apps/desktop` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入与 offline/session-invalid recovery 状态机。它不是完整 Tauri 应用。
 *   Tauri v2 native packaging、原生菜单栏、系统托盘、安装包与自动更新仍是 future work；当前仓库不得把这些视为已实现能力。
-*   packaging runtime 只能在 `apps/desktop` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri skeleton，以便快速验证 adapter/session/readiness contract。
+*   packaging dependency gate 当前明确 closed/deferred：`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为 `DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 仍不得进入当前构建。
+*   packaging runtime 后续只能在 `apps/desktop` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri skeleton，以便快速验证 adapter/session/readiness contract。
 *   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
 *   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；desktop shell 只消费该 contract，不拥有业务 authority。
 *   真实 child-process adapter 当前明确 deferred：默认 no-Tauri skeleton 不启动、不持有、不重启后端子进程；`deve_core::native_adapter::CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定该决策，直到 packaging gate 被显式打开。
@@ -52,6 +53,34 @@ Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate
 
 在真正添加 Tauri dependency 前，`scripts/check-native-track-boundary.sh` 必须继续阻止
 Cargo dependency/import 泄漏。
+
+### 0.2.1 Desktop Packaging Dependency Gate Decision {#desktop-packaging-dependency-gate-decision}
+
+当前决策：Desktop packaging dependency gate **不打开**；真实 `tauri` / `tauri-build`
+dependency 继续 deferred 到独立 runtime batch。
+
+当前代码锚点：
+
+*   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
+    DeferredUntilRuntimeBatch`
+*   `real_tauri_dependencies_allowed = false`
+*   `default_build_remains_no_tauri = true`
+*   `native_feature_gate_required = true`
+*   `authority_writes_allowed = false`
+
+原因：
+
+*   Desktop shell、supervisor、process-adapter decision 都仍处于 contract/skeleton 层；
+    现在打开 Tauri dependency 会把窗口 runtime、菜单/托盘、安装包、auto-update 与
+    service supervision 一次性耦合，回归面过大。
+*   当前仓库仍需要保持低成本 `cargo test -p deve_desktop` default build；真实 Tauri
+    dependency 应作为单独批次接受更重的平台构建、安装包与签名验收。
+*   packaging scaffold 继续保留 planned dependency batch，作为后续打开 gate 的输入；
+    scaffold 不是 dependency gate 已打开的证明。
+
+后续若打开 gate，必须先更新 `scripts/check-native-track-boundary.sh` 的允许规则，并保持：
+默认构建 no-Tauri、依赖只在 `apps/desktop` feature 后、packaging 不获得
+ledger/vault/source-control/search/`.git`/`.notegit` authority。
 
 ### 0.3 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 

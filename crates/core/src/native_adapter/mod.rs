@@ -8,11 +8,16 @@
 //! local service. It is not allowed to become authority for ledger, vault,
 //! source-control, search, or repo-scope write decisions.
 
+mod packaging;
 mod process;
 mod supervisor;
 mod types;
 mod validation;
 
+pub use packaging::{
+    CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY, NativePackagingDependencyGateDecision,
+    NativePackagingDependencyGatePolicy,
+};
 pub use process::{
     CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeProcessAdapterDecision, NativeProcessAdapterPolicy,
 };

@@ -113,6 +113,12 @@ Native embedded service supervision 当前是 no-runtime contract：`deve_core::
 分类；`apps/desktop`、`apps/mobile` 与 native loopback launch surface 复用该 contract。
 它不启动真实子进程，不引入 Tauri dependency，也不授予 native shell 任何 core authority。
 
+Native packaging dependency gate 当前仍是 closed/deferred：
+`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为
+`DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 不允许进入当前
+workspace 构建。`apps/desktop` 与 `apps/mobile` 的 packaging scaffold 只记录 planned
+capabilities 与 forbidden authorities；它不是 gate 已打开的证明。
+
 真实 native process adapter 当前被显式推迟到 packaging gate 之后：
 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定为 `DeferredUntilPackagingGate`，
 `child_process_runtime_enabled = false`、`packaging_gate_required = true`、
