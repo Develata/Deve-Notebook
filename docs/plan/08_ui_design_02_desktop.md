@@ -6,7 +6,7 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
-- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`
+- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
 
 本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。
 
@@ -20,6 +20,7 @@
 当前代码状态：
 
 *   Web 端 Desktop responsive shell 已存在，并作为 Desktop 交互规范的当前可验收映射。
+*   `apps/desktop` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入与 offline/session-invalid recovery 状态机。它不是完整 Tauri 应用。
 *   Tauri v2 native packaging、原生菜单栏、系统托盘、安装包与自动更新仍是 future work；当前仓库不得把这些视为已实现能力。
 *   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。

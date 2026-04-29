@@ -34,7 +34,7 @@
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
 | **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Import/Push CLI) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay、queued export、import apply 与 push CLI surface；自动后台执行与完整 UI 仍属 P1/P2 后续。 |
-| **Build**    | **Tauri v2**             | Planned (Rising Priority) | Desktop/Mobile native track 逐步提上日程；先明确 adapter、embedded service 与 offline/readiness 边界。 |
+| **Build**    | **Tauri v2**             | Partial Skeleton / Planned Packaging | `apps/desktop` 已有无 Tauri 依赖的 native shell skeleton，用于固定 adapter/bootstrap/offline 边界；真实 Tauri v2 packaging、菜单、托盘、安装包与 auto-update 仍是 future。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
 ### 1.1 Graph Visualization {#graph-visualization}

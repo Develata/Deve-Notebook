@@ -5,27 +5,30 @@
 
 ## Purpose
 
-Application binaries for Deve-Notebook. Contains the CLI server (`cli`) providing the Axum WebSocket/HTTP backend, and the Web frontend (`web`) built with Leptos as a WASM single-page application.
+Application binaries for Deve-Notebook. Contains the CLI server (`cli`) providing the Axum WebSocket/HTTP backend, the Web frontend (`web`) built with Leptos as a WASM single-page application, and native shell skeleton crates.
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
 | `cli/` | Axum-based server, CLI commands, WebSocket handlers (see `cli/AGENTS.md`) |
+| `desktop/` | Minimal desktop native shell skeleton for endpoint/session/bootstrap contracts |
 | `web/` | Leptos WASM frontend — editor, sidebar, source control UI (see `web/AGENTS.md`) |
 
 ## For AI Agents
 
 ### Working In This Directory
 
-- `cli` and `web` are separate workspace members with their own `Cargo.toml`.
-- Both depend on `deve_core` for business logic.
+- `cli`, `desktop`, and `web` are separate workspace members with their own `Cargo.toml`.
+- Application crates depend on `deve_core` for business logic and shared contracts.
 - The web app connects to the CLI server via WebSocket for real-time sync.
+- Native shell crates must not write ledger/vault/source-control/search authority directly.
 - `trunk serve` proxies API requests to the CLI server during development.
 
 ### Testing Requirements
 
 - CLI: `cargo test --package deve_cli`
+- Desktop shell: `cargo test --package deve_desktop`
 - Web: Build with `trunk build`; manual testing in browser.
 
 <!-- MANUAL: -->

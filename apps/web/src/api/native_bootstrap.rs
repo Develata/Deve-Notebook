@@ -16,6 +16,7 @@ pub(super) struct NativeWebBootstrap {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub(super) enum NativeBootstrapState {
     Absent,
     Ready(NativeWebBootstrap),
@@ -23,6 +24,7 @@ pub(super) enum NativeBootstrapState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub(super) enum NativeBootstrapBlocker {
     InvalidShape,
     InvalidEndpoint,
@@ -91,6 +93,7 @@ fn js_bool_field(value: &wasm_bindgen::JsValue, key: &str) -> Option<bool> {
         .and_then(|field| field.as_bool())
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 fn parse_native_bootstrap_fields(
     http_base: Option<String>,
     ws_base: Option<String>,
@@ -125,6 +128,7 @@ fn parse_native_bootstrap_fields(
     })
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 fn trim_base(base: String) -> String {
     base.trim_end_matches('/').to_string()
 }
