@@ -6,7 +6,7 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
-- `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`
+- `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
 
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 
@@ -20,6 +20,7 @@
 当前代码状态：
 
 *   Web 端 Mobile responsive shell 已存在，并作为 Mobile 交互规范的当前可验收映射。
+*   `apps/mobile` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入、background/suspended/resumed/foreground reprobe、service offline 与 session invalid recovery 状态机。它不是完整 Tauri Mobile 应用。
 *   Tauri v2 Mobile packaging、系统权限桥接、推送、原生文件选择器与应用商店分发仍是 future work；当前仓库不得把这些视为已实现能力。
 *   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。

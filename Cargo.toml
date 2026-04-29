@@ -2,6 +2,7 @@
 members = [
     "apps/cli",
     "apps/desktop",
+    "apps/mobile",
     "apps/web",
     "crates/core",
 ]
