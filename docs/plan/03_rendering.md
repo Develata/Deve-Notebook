@@ -3,7 +3,7 @@
 ## Metadata
 
 - `Layer`: `Application / UI Shell`
-- `Status`: `Current UI Contract`
+- `Status`: `Current/Future Split Contract`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -19,6 +19,27 @@
 3. 数学公式、Mermaid、Frontmatter、Task List、Code Block 等 widget 如何作为 projection 存在，而不是第二真值。
 
 按钮入口、用户主观体验与 Chrome MCP 路径属于 `docs/features/03_rendering.md`。
+
+## 1.1 Current Implementation Split {#current-rendering-split}
+
+截至 2026-04-29，本章必须按两层理解：
+
+- 当前可验收能力：已有代码路径、已有单元测试或可通过 Chrome MCP 手工验证的行为。
+- Future / Planned 能力：蓝图保留但不能作为当前 release 阻塞项，也不能在 feature 文档里描述成已完成能力。
+
+当前代码支持的 rendering 路径分为三类：
+
+- `apps/web/js/editor_adapter.js` + `apps/web/js/extensions/`：CodeMirror source-first 主编辑器与 widget/decorations adapter。已接入 hybrid syntax hiding、math widget、Mermaid widget、frontmatter parser/styling、task checkbox writeback、image/table/list/blockquote/code-toolbar、Ctrl/Cmd link activation 与 gutter diff。
+- `apps/web/src/editor/`：Rust/WASM editor runtime，负责 snapshot/history/live op、pending overlay、read-only gate 与批量 prefetch，不负责把 projection 写回 ledger authority。
+- `apps/web/src/utils/markdown.rs`：轻量 Markdown-to-HTML 渲染器，主要服务聊天/辅助 HTML 区域；它不是主编辑器 hybrid engine。当前白名单包含 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` HTML allowlist、安全链接属性与 unsafe scheme 降级。
+
+当前仍不得宣称 complete 的能力：
+
+- 独立 Preview Projection / Live Preview / Milkdown。
+- 通用富文本编辑或所见即所得 authority。
+- 任意 HTML、`==highlight==`、emoji shortcode、footnote、wikilink 的完整语义支持。
+- 真正跨超大文档的完整 virtual rendering；现有 `prefetch.rs` 是批量应用/渐进调度基础设施，不等价于完整虚拟渲染引擎。
+- rendering settings 的完整 GUI 持久化；当前只能作为接口合同或 future。
 
 ## 2. Authoritative Entities
 
@@ -139,9 +160,9 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - `==highlight==` 不进入受支持语义集合
 - 任意 HTML 不得当成通用渲染通道
 
-### 4.4 Syntax Whitelist
+### 4.4 Target Syntax Whitelist
 
-块级支持至少包含：
+目标块级支持集合：
 
 - headings
 - paragraphs
@@ -157,7 +178,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - footnote definitions
 - limited HTML block allowlist（如 `<br>`）
 
-行内支持至少包含：
+目标行内支持集合：
 
 - code span
 - math
@@ -167,6 +188,8 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - emoji shortcode
 - footnote refs
 - escaping
+
+当前实现只允许按 `1.1 Current Implementation Split` 的代码-backed 范围验收。目标集合中的 footnote、wikilink、emoji shortcode、完整 preview projection 等条目在当前阶段属于 planned capability，除非对应代码路径、测试和 feature 验收同步补齐。
 
 ## 5. Source-First Contract
 
@@ -204,6 +227,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - engine 可为 KaTeX / MathJax，但接口语义统一。
 - block / inline math 必须保持 source-first reveal。
 - 复制公式时应优先保留源码语义。
+- 当前 CodeMirror adapter 已有 KaTeX 优先的 math widget；若 KaTeX 缺失，必须降级显示源码。
 
 补充：
 
@@ -214,6 +238,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 
 - mermaid 只通过 fenced code block 进入渲染。
 - 图形容器高度与源码块边界必须一致，不允许脱离源码占位。
+- 当前 CodeMirror adapter 静态打包 Mermaid，并在光标进入源码范围时恢复源码显示。
 
 补充：
 
@@ -245,12 +270,14 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
   - `Ellipsis (...)`
 - `Ellipsis` 打开的是可扩展菜单，不是写死逻辑。
 - 若未注册 action，允许显示空状态，但不得报错中断渲染。
+- 当前 lightweight HTML renderer 仅支持 wrapper 与可选 apply button；完整 toolbar 属于 CodeMirror adapter 路径，不应混为同一实现。
 
 ### 6.5 Outline Projection
 
 - outline 必须从解析后的 heading projection 导出。
 - outline 渲染不得发明新语义。
 - 不受支持的 inline syntax 在 outline 中必须按普通文本保留。
+- 当前 outline heading scan 是轻量解析器：跳过 fenced code，支持 heading 层级与 inline code/math/strong/em/del projection；不支持的 `==highlight==` 保留为普通文本。
 
 ### 6.6 Hybrid / Frontmatter / Preview Status
 
@@ -282,6 +309,11 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - first paint 优先首屏 + 预缓冲区
 - 文本可完整加载，但渲染层只虚拟可视区
 - UTF-16 index cache 可作为定位优化，但不是第二真值
+
+当前实现边界：
+
+- `apps/web/src/editor/prefetch.rs` 已提供批量应用与动态 batch size 调度。
+- 这只是大文档 runtime 基础设施，不代表完整 virtual render、search gate 与索引缓存已全部落地。
 
 ## 8. Commands / Inputs / Outputs
 

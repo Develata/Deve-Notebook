@@ -127,7 +127,8 @@ fn escape_html(input: &str) -> String {
 /// - `window.opener` attacks (tabnabbing)
 /// - Referrer leakage
 fn render_link_open(out: &mut String, url: &str, title: &str, _link_type: LinkType) {
-    let escaped_url = escape_html(url);
+    let href = sanitized_href(url);
+    let escaped_url = escape_html(href);
     out.push_str("<a href=\"");
     out.push_str(&escaped_url);
     out.push_str("\" target=\"_blank\" rel=\"noopener noreferrer\"");
@@ -137,6 +138,35 @@ fn render_link_open(out: &mut String, url: &str, title: &str, _link_type: LinkTy
         out.push('"');
     }
     out.push('>');
+}
+
+fn sanitized_href(url: &str) -> &str {
+    let trimmed = url.trim();
+    if is_safe_href(trimmed) { trimmed } else { "#" }
+}
+
+fn is_safe_href(url: &str) -> bool {
+    if url.chars().any(char::is_control) {
+        return false;
+    }
+
+    let Some(colon) = url.find(':') else {
+        return true;
+    };
+
+    let first_path_delim = [url.find('/'), url.find('?'), url.find('#')]
+        .into_iter()
+        .flatten()
+        .min()
+        .unwrap_or(usize::MAX);
+    if colon > first_path_delim {
+        return true;
+    }
+
+    matches!(
+        &url[..colon].to_ascii_lowercase()[..],
+        "http" | "https" | "mailto"
+    )
 }
 
 #[cfg(test)]
@@ -159,5 +189,41 @@ mod tests {
         assert!(html.contains("apply-code"));
         assert!(html.contains("data-code"));
         assert!(html.contains(">Apply</button>"));
+    }
+
+    #[test]
+    fn html_filter_allows_br_only() {
+        let html = render_markdown("a<br>b<script>alert(1)</script><div>x</div>", None);
+
+        assert!(html.contains("<br"));
+        assert!(!html.contains("<script"));
+        assert!(html.contains("alert(1)"));
+        assert!(!html.contains("<div"));
+    }
+
+    #[test]
+    fn link_rendering_adds_blank_target_and_rel() {
+        let html = render_markdown("[site](https://example.com \"safe\")", None);
+
+        assert!(html.contains("href=\"https://example.com\""));
+        assert!(html.contains("target=\"_blank\""));
+        assert!(html.contains("rel=\"noopener noreferrer\""));
+        assert!(html.contains("title=\"safe\""));
+    }
+
+    #[test]
+    fn link_rendering_rejects_script_scheme() {
+        let html = render_markdown("[bad](javascript:alert(1))", None);
+
+        assert!(html.contains("href=\"#\""));
+        assert!(!html.contains("javascript:"));
+    }
+
+    #[test]
+    fn unsupported_highlight_syntax_stays_plain_text() {
+        let html = render_markdown("==mark==", None);
+
+        assert!(html.contains("==mark=="));
+        assert!(!html.contains("<mark"));
     }
 }

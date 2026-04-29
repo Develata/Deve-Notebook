@@ -10,10 +10,29 @@
 - 阅读时可以享受公式、图表、任务列表等增强渲染
 - 光标进入时永远能回到真实源码，不被“富文本假象”困住
 
+## 当前验收边界
+
+截至 2026-04-29，本功能篇只把下列行为视为当前可验收：
+
+- CodeMirror 主编辑器默认 source-first，增强渲染只作为 decoration/widget projection 存在。
+- Hybrid adapter 已接入标题/强调/引用/链接/frontmatter 等语法标记的隐藏与光标 reveal。
+- Math、Mermaid、task checkbox、frontmatter styling、table/image/list/blockquote/code toolbar、Ctrl/Cmd link activation 已有前端 adapter 路径，需通过 Chrome MCP 手工走查确认具体浏览器行为。
+- Outline 当前支持标题扫描、点击跳转、inline code/math/strong/em/del 的轻量渲染，并把不支持语法按普通文本保留。
+- 辅助 HTML 区域使用 lightweight Markdown renderer，只支持 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` allowlist 与安全链接降级；它不是主编辑器 hybrid engine。
+- 大文档当前有批量应用与渐进调度基础设施，但不等价于完整 virtual rendering。
+
+下列能力属于 Future / Planned，不能按当前 complete 能力宣传：
+
+- 独立 Live Preview / Milkdown / 富文本 authority。
+- 任意 HTML、`==highlight==`、完整 footnote、wikilink、emoji shortcode 语义。
+- 完整 virtual render、全文 search gate、UTF-16 index cache 的端到端产品验收。
+- rendering settings 的完整 GUI 持久化。
+
 ## 功能项
 
 ### 1. Source-First 编辑体验
 
+- 状态：当前可验收。
 - 文档打开后默认进入源码编辑态。
 - 所有增强渲染都只是源码之上的视觉投影。
 - 用户在任何时刻都可以通过移动光标看到真实 Markdown 源码。
@@ -21,6 +40,7 @@
 
 ### 2. Cursor Reveal
 
+- 状态：当前 adapter 已实现，需浏览器走查。
 - 当光标进入公式、Frontmatter、强调、引用、列表标记等渲染区域时，对应渲染必须立即让位给源码。
 - 用户不应被只读装饰遮挡，导致无法精确编辑。
 - 原子操作示例：[`operations/rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md)
@@ -28,6 +48,7 @@
 
 ### 3. 数学公式
 
+- 状态：当前 adapter 已实现，需浏览器走查；非主编辑器 HTML 渲染路径不承诺公式渲染。
 - 支持行内公式与块级公式。
 - 用户输入 LaTeX 时可以看到正确渲染结果。
 - 公式块在编辑与阅读之间切换时，不应破坏源码。
@@ -36,6 +57,7 @@
 
 ### 4. Mermaid 图表
 
+- 状态：当前 adapter 已实现，需浏览器走查；只支持 fenced `mermaid` code block。
 - ` ```mermaid ` 代码块应渲染成图表。
 - 图表大小与源码块高度保持可预测关系。
 - 用户进入源码区域时，必须能继续编辑原 Mermaid 文本。
@@ -44,12 +66,14 @@
 
 ### 5. 任务列表与 Frontmatter
 
+- 状态：当前 adapter 已实现，需浏览器走查。
 - 任务列表复选框可点击，点击结果会回写到源码。
 - Frontmatter 具有明显的视觉边界，但光标进入后应还原为标准 YAML 源码。
 - 细粒度操作示例：[`operations/rendering_checkbox_writeback.md`](./operations/rendering_checkbox_writeback.md), [`operations/rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md)
 
 ### 6. Outline
 
+- 状态：当前可验收，但语法支持是轻量子集。
 - Outline 反映标题层级。
 - Outline 不应错误解释非支持语法。
 - 点击 Outline 项后，编辑区应跳转到对应标题位置。
@@ -57,12 +81,14 @@
 
 ### 7. 链接激活
 
+- 状态：当前 adapter 已实现，需浏览器走查。
 - 默认状态下链接不应误触跳转。
 - 仅在按住 `Ctrl/Cmd` 时，链接才转为可点击状态。
 - 细粒度操作示例：[`operations/rendering_link_activation_gate.md`](./operations/rendering_link_activation_gate.md)
 
 ### 8. 长文档体验
 
+- 状态：部分实现；当前仅把批量应用/渐进调度作为可验收基础设施。
 - 打开长文档时，用户应先看到首屏内容。
 - 剩余内容可以渐进加载，但编辑区不应卡死。
 - 在预加载完成前，全文搜索等重操作可以被限制或延后。
