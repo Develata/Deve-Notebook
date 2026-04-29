@@ -71,8 +71,9 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - Web Command Palette 当前只提供 Git import / push / repair 的 CLI-only notices：repair notice 指向 `deve_cli git status --repo <repo>` 的 `repair_action[...]` 与 `deve_cli git export --repo <repo> --retry-out-of-sync`，不直接调用 Web 后端执行 Git。
 - Git mirror repair review 的真实 record-level 数据源固定为受保护 HTTP 只读 query：`GET /api/sc/git-mirror/repair-review` 读取 server-side `git_mirror_commits` 与 core `GitMirrorRepairAction` schema，返回 action code、subject、manual-only next step、retry command 与 `.notegit` authority 提醒；该 endpoint 不运行 Git、不写 `.git`/`.notegit`、不解析 CLI 文本，也不提供后台 executor。
 - Web Source Control repair notice 当前会消费该只读 review 数据替代静态 copy；支持多条 out-of-sync record，并显式展示 loading、load failed 与 empty fallback 状态；请求失败或无 record 时回退 CLI-only notice/retry command，不执行 Git。
+- Current decision (2026-04-29)：本阶段不进入 executable Web repair UI；Web 继续保持 read-only review / CLI-only notice，Git writer 只保留在显式 CLI surface。未来若重新打开 Web 执行入口，必须作为独立 plan batch，而不是复用当前只读 endpoint 扩权。
 - Future executable repair UI 必须另行进入 manual confirmation；任何 Git write 都必须经过确认，并 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` tracking leak 与 stale scope nonce。
-- 自动后台执行、完整 repair UI 与 Web 后端直接执行 Git import/push/repair 仍是后续实现，不得被当前 executor、import apply、push surface 或 CLI-only notices 替代。
+- 自动后台执行、完整 repair UI 与 Web 后端直接执行 Git import/push/repair 仍是 future，不得被当前 executor、import apply、push surface、只读 review endpoint 或 CLI-only notices 替代。
 
 该 bridge 的工程边界：
 

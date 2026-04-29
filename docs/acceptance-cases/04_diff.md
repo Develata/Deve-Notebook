@@ -119,6 +119,8 @@
     - api_assert: git_mirror_repair_review_endpoint_no_git_writer true
     - ui_assert: git_mirror_repair_review_multi_record_available true
     - ui_assert: git_mirror_repair_review_loading_error_empty_fallback true
+    - ui_assert: git_mirror_executable_repair_ui_deferred true
+    - ui_assert: git_mirror_web_repair_writer_absent true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。

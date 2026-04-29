@@ -33,6 +33,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest Git mirror repair review data-source status: `git-mirror-repair-review-data-source-2026-04-29.md`
 - Latest Git mirror repair review Web consumption status: `git-mirror-repair-review-web-consumption-2026-04-29.md`
 - Latest Git mirror repair review UI polish status: `git-mirror-repair-review-ui-polish-2026-04-29.md`
+- Latest Git mirror executable repair UI decision: `git-mirror-executable-repair-ui-decision-2026-04-29.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 

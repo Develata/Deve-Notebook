@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git mirror repair review executable UI decision | P2 / Planning | `docs/plan/14_tech_stack.md`, `docs/features/07_diff_logic.md`, `docs/report/` | 只读 review 已完整落地；下一步决定是否进入 manual confirmation 的 executable repair UI。默认建议暂缓，保留 CLI-only writer，避免 Web Git writer 扩权。 |
+| 1 | Post-Git-mirror priority reselection | P1/P2 / Planning | `docs/report/next-tasks.md`, `docs/plan/`, `docs/report/code-review-2026-04-28.md` | Git mirror 已停靠在 CLI-only writer + Web read-only review；下一步从剩余 P0/P1/P3-10/P3-13/P2 中重选实现批次。默认建议优先复核是否还有 P0 reopened gap，否则转入桌面/移动 packaging runtime 或 graph Web projection UI 的最小可验收批次。 |
 
 ## 最近完成基线
 
@@ -37,6 +37,7 @@
 - P1/P2 Git mirror repair review data-source decision 已关闭：真实 record-level review 数据源固定为 `GET /api/sc/git-mirror/repair-review` 受保护 HTTP 只读 endpoint，读取 server-side side table 与 core repair-action schema，不运行 Git、不写 `.git/.notegit`、不解析 CLI 输出，详见 `git-mirror-repair-review-data-source-2026-04-29.md`。
 - P1/P2 Git mirror repair review Web data consumption 已关闭：Source Control repair notice 会消费只读 endpoint 并优先展示 record-level action/subject/next step/retry command；失败或无 record 回退 CLI-only 静态 review，详见 `git-mirror-repair-review-web-consumption-2026-04-29.md`。
 - P2 Git mirror repair review UI multi-record/error polish 已关闭：repair review copy 拆分为独立模块，UI 支持多条 out-of-sync record、loading、load failed 与 empty fallback 状态，详见 `git-mirror-repair-review-ui-polish-2026-04-29.md`。
+- P2 Git mirror executable repair UI decision 已关闭：当前批次明确不进入 Web 可执行 repair UI，不新增 Web Git writer；Web 保持只读 review / CLI-only notice，Git 写操作继续由显式 CLI surface 承担，详见 `git-mirror-executable-repair-ui-decision-2026-04-29.md`。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P3-10 Desktop/Mobile native adapter core contract 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract，`deve_core::native_adapter` 已落地平台无关状态/事件/endpoint/session/readiness 合同与定向测试；Tauri desktop/mobile shell、embedded service launcher 与 Web bootstrap 消费仍属后续实现。
 - P3-10 Web native bootstrap 消费已关闭：Web connection manager 可读取 `window.__DEVE_NATIVE_BOOTSTRAP`，复用 core native endpoint/session 校验，有效时只使用注入 endpoint，失效时 fail-closed 且不回退端口推断；浏览器默认路径保持不变，详见 `native-web-bootstrap-status-2026-04-29.md`。
