@@ -19,6 +19,7 @@ pub mod commit_message_box;
 pub mod context_menu;
 pub mod error_notice;
 pub mod error_notice_copy;
+pub mod graph_panel;
 pub mod header;
 pub mod history;
 pub mod history_body;
@@ -41,6 +42,7 @@ pub mod unstaged_section_actions;
 
 use self::changes_panel::ChangesPanel;
 use self::error_notice::ErrorNotice;
+use self::graph_panel::GraphPanel;
 use self::header::SourceControlHeader;
 use self::history::History;
 use self::status_notice::StatusNotice;
@@ -54,6 +56,7 @@ pub fn SourceControlView() -> impl IntoView {
 
     let expand_repos = RwSignal::new(true);
     let expand_changes = RwSignal::new(true);
+    let expand_graph = RwSignal::new(false);
     let expand_history = RwSignal::new(false);
 
     let show_repos = RwSignal::new(true);
@@ -89,8 +92,9 @@ pub fn SourceControlView() -> impl IntoView {
                 />
                 <ChangesPanel expanded=expand_changes visible=show_changes />
                 <Show when=move || show_graph.get()>
-                    <History expanded=expand_history />
+                    <GraphPanel expanded=expand_graph />
                 </Show>
+                <History expanded=expand_history />
 
                 <div class="h-8"></div>
             </div>

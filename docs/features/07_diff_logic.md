@@ -47,6 +47,7 @@
 - 用户可以查看 commit history / graph。
 - 这些视图必须与当前 repo scope 一致。
 - 当前 graph 的数据面是只读 projection：`deve graph` 与受保护 HTTP query `GET /api/repo/graph` 输出同一类 `GraphProjection` JSON，不写 ledger、workspace、search index 或 source-control state。
+- Web 当前只提供最小 Graph panel scaffold：展示 repo-scoped nodes / edges / unresolved counts，以及 loading / failed / empty / local-only fallback。它不执行布局计算，不引入 d3/Pixi，不写任何 authority。
 - 当前阶段不承诺高性能 Web graph renderer；Canvas / d3-force / Pixi.js 渲染仍属 future。
 
 ### 4. Merge / Conflict

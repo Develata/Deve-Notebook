@@ -39,6 +39,7 @@ pub mod settings;
 pub mod sidebar;
 pub mod source_control;
 pub mod source_control_git;
+pub mod source_control_graph;
 pub mod source_control_native;
 pub mod time;
 

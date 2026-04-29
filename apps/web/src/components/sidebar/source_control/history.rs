@@ -126,7 +126,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                 <span class=move || if expanded.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
                     <crate::components::icons::ChevronRight class="w-3 h-3" />
                 </span>
-                {move || t::source_control::graph(locale.get())}
+                {move || t::source_control::history(locale.get())}
             </button>
             <Show when=move || expanded.get()>
                 <HistoryBody

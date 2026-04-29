@@ -86,6 +86,8 @@
     - exit_code_eq: 0
     - api_assert: graph_projection_http_endpoint_protected_readonly true
     - cli_assert: graph_projection_cli_and_http_share_adapter true
+    - ui_assert: graph_projection_panel_summary_counts_available true
+    - ui_assert: graph_projection_panel_renderer_future_only true
 
 - case_id: REL-006
   goal: 当前运行实例暴露可理解的版本、profile、环境与交付形态。
