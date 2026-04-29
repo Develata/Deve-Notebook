@@ -51,6 +51,17 @@ pub(super) fn ensure_source_control_clean(db: &Database) -> std::result::Result<
     Ok(())
 }
 
+pub(super) fn ensure_git_worktree_clean(repo_root: &Path) -> std::result::Result<(), String> {
+    let changed = git_changed_paths(repo_root)?;
+    if changed.is_empty() {
+        return Ok(());
+    }
+    Err(format!(
+        "Git mirror refuses to push dirty Git worktree path(s): {}",
+        changed.into_iter().collect::<Vec<_>>().join(", ")
+    ))
+}
+
 pub(super) fn ensure_git_changes_match_deve_commit(
     db: &Database,
     repo_root: &Path,

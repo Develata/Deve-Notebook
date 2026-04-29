@@ -35,6 +35,7 @@
 *   `deve git export`: 将 queued Deve commits 导出到 Git mirror，并写回 Deve commit 到 Git commit 的映射；side table 为空且 Git history 为空时，可从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit。
 *   `deve git import`: 只读 dry-run 规划外部 Git/worktree changes，输出将来可进入 pending/import 的 change/blocker；默认不写 ledger、pending_fs、staging 或 `.notegit`。
 *   `deve git import --apply`: 显式把安全 Git worktree changes 写入 Source Control pending/import；仍不得直接写 ledger、`StagedEntry` 或 `.notegit`，后续必须走 Deve stage/commit。
+*   `deve git push`: 将已导出的 `.git` mirror 推送到远端；默认 remote 取当前 branch upstream，否则 fallback 到 `origin`，可用 `--remote` / `--branch` 显式指定。该命令不得写 ledger、`StagedEntry` 或 `.notegit`，且必须在未导出/失败 mirror record、脏 Git worktree 或未映射 Git HEAD 时 fail-closed。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 
@@ -51,7 +52,7 @@
     *   `Git: Mirror`: 显式执行 queued Git mirror commit；单个待处理 record 走 worktree/preflight 后的 `git add -A` / `git commit`，多个积压 records 走临时 Git index 的 projection replay，按 Deve commit diff 生成逐 commit Git history；路径越界、父映射缺失或 Git 命令失败进入 `GitMirrorOutOfSync`，CLI 输出 repair/retry hint。
     *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射；当前 CLI surface 为 `deve git export`，同时支持空 Git history 下的首次 snapshot bootstrap。
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve ledger commit；当前 CLI surface 为 `deve git import` dry-run 与 `deve git import --apply` 显式 pending/import 写入，不直接生成 ledger commit。
-    *   `Git: Push Mirror`: 将 Git mirror 推送到远端；不得绕过 Deve authority。
+    *   `Git: Push Mirror`: 将 Git mirror 推送到远端；当前 CLI surface 为 `deve git push`，只发布已映射的 `.git` mirror HEAD，不得绕过 Deve authority。
     *   `Git:*` 文案 MAY 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:
@@ -64,7 +65,7 @@
         Establish Branch / Merge Peer / Toggle AI Chat（条件可见）。
     *   Source Control Sync / Commit / Push、Command Palette Git mirror commands 与 AI Retry / Backend /
         PLAN / BUILD 面板命令仍属于 Planned / Optional，除非后续验收用例绑定到具体实现。
-    *   Git import 当前只实现 CLI dry-run 与 pending/import apply；自动 conflict UI、Command Palette 集成与 push 仍属 future。
+    *   Git import 当前只实现 CLI dry-run 与 pending/import apply；Git push 当前只实现 CLI mirror publish；自动 conflict UI 与 Command Palette 集成仍属 future。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

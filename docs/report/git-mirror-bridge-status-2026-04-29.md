@@ -19,13 +19,14 @@
 - `git export` 已支持首次 snapshot bootstrap：当 `git_mirror_commits` side table 为空、Git history 为空、source-control clean 且当前 Git changed paths 不越出 Deve projection snapshot 时，从最新 Deve commit 的完整 projection 建立首个 Git commit，并只写入最新 Deve commit 的映射；若 Git 已有 HEAD，则 fail-closed 为 `GitMirrorOutOfSync` / `git_history_mapping`。
 - CLI 新增 `deve_cli git import [--repo <repo>]`，只读 dry-run 规划外部 Git/worktree changes；当前会检查 mirror readiness、Git worktree、`.notegit` tracked 泄漏与 Git HEAD，并把 tracked/untracked changes 输出为 change/blocker，不写 ledger、pending_fs、staging 或 `.notegit`。
 - CLI 新增 `deve_cli git import --apply [--repo <repo>]`，在无 blocker 时把 Git import plan 写入 `pending_fs_ops`，并通过 `has_conflict` 标记冲突；该路径不写 ledger、`StagedEntry` 或 `.notegit`。
+- CLI 新增 `deve_cli git push [--repo <repo>] [--remote <remote>] [--branch <branch>]`，只推送已导出的 `.git` mirror HEAD；当前会 fail-closed 于 mirror 未 ready、Source Control pending/staged 未清、Git worktree 脏、queued/out_of_sync mirror record 未处理、Git HEAD 未映射到最新 `GitMirrorCommitted` record 或 remote/branch 配置错误。失败只输出 blocker，不回滚 ledger，也不写 `.notegit`。
 
 ## 仍未实现
 
 - 自动后台 Git mirror executor 与更完整的 retry / repair UI。
 - 更细的 failure subject / offending path / command exit metadata；当前只稳定到 `failure_stage`。
 - `Git: Import Changes` 的 Command Palette / UI 集成与更完整冲突交互。
-- `Git: Push Mirror`。
+- `Git: Push Mirror` 的 Command Palette / UI 集成。
 
 ## 验证
 

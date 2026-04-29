@@ -7,7 +7,7 @@
 
 use super::git_output::{
     print_export_report, print_import_apply_report, print_import_plan, print_mirror_report,
-    print_status,
+    print_push_report, print_status,
 };
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
@@ -90,6 +90,34 @@ pub fn import(
             let plan = deve_core::git_bridge::plan_import(&repo_root)?;
             print_import_plan(&repo_name, &plan);
         }
+    }
+    Ok(())
+}
+
+pub fn push(
+    ledger_dir: &Path,
+    vault_root: &Path,
+    target_repo: Option<&str>,
+    remote: Option<&str>,
+    branch: Option<&str>,
+    snapshot_depth: usize,
+) -> Result<()> {
+    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    repo.set_vault_root(vault_root);
+    let repo_names = resolve_local_repo_args(&repo, target_repo)?;
+    for repo_name in repo_names {
+        let repo_root = repo.local_repo_workspace_root(&repo_name)?;
+        let report = repo.run_on_local_repo(&repo_name, |db| {
+            deve_core::git_bridge::push_mirror(
+                db,
+                &repo_root,
+                deve_core::git_bridge::GitMirrorPushOptions {
+                    remote: remote.map(str::to_string),
+                    branch: branch.map(str::to_string),
+                },
+            )
+        })?;
+        print_push_report(&repo_name, &report);
     }
     Ok(())
 }

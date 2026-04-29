@@ -1,5 +1,4 @@
 //! Projection replay for accumulated Git mirror records.
-
 use super::executor::{GitMirrorRunReport, commit_message};
 use super::git_cmd;
 use super::preflight::{
@@ -18,12 +17,10 @@ use crate::utils::{notegit, path::to_forward_slash};
 use anyhow::Result;
 use redb::Database;
 use std::path::Path;
-
 struct ReplayItem {
     record: GitMirrorRecord,
     commit: CommitInfo,
 }
-
 pub(super) fn run_projection_replay(
     db: &Database,
     repo_root: &Path,
@@ -94,7 +91,6 @@ pub(super) fn run_projection_replay(
 
     Ok(report)
 }
-
 pub(super) fn run_snapshot_bootstrap(
     db: &Database,
     repo_root: &Path,
@@ -123,7 +119,6 @@ pub(super) fn run_snapshot_bootstrap(
     }
     Ok(report)
 }
-
 fn prepare_replay(
     db: &Database,
     repo_root: &Path,

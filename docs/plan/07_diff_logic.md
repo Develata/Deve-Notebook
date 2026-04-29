@@ -64,7 +64,7 @@ authority 仍是 ledger facts 与 commit anchors。
 - `pending_fs_ops`、`staging`、`diff cache` 都不是 authority。
 - Git mirror commit 不是 authority；它只是已确认 Deve commit 的外部生态映射。
 
-### 2.3.1 Git Mirror Lifecycle
+### 2.3.1 Git Mirror Lifecycle {#git-mirror-lifecycle}
 
 Git mirror 生命周期必须挂在 Source Control authority 之后：
 
@@ -103,8 +103,11 @@ change/blocker，并 fail-closed 于 mirror 未 ready、缺 Git HEAD、`.notegit
 泄漏或不安全路径；默认不写 `pending_fs_ops`、`StagedEntry`、`CommitAnchor` 或 ledger
 facts。`deve_cli git import --apply` 当前只在无 blocker 时把安全 changes 写入
 `pending_fs_ops`，并保留 `has_conflict` 标记；它仍不写 `StagedEntry`、`CommitAnchor`
-或 ledger facts。自动后台执行、完整 repair UI、Command Palette import UI 与 push 仍是
-后续实现。
+或 ledger facts。`deve_cli git push` 当前只发布已导出的 `.git` mirror：它要求 mirror
+ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record，且当前
+Git HEAD 映射到最新 `GitMirrorCommitted` record；远端推送失败只作为 blocker 输出，不写
+ledger facts 或 `.notegit`。自动后台执行、完整 repair UI 与 Command Palette import/push UI
+仍是后续实现。
 
 ### 2.4 Diff Identity Model
 

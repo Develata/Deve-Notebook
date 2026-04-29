@@ -105,6 +105,18 @@ pub async fn run(
                 apply,
                 config.snapshot_depth,
             )?,
+            GitAction::Push {
+                repo,
+                remote,
+                branch,
+            } => commands::git::push(
+                ledger_dir,
+                vault_path,
+                repo.as_deref(),
+                remote.as_deref(),
+                branch.as_deref(),
+                config.snapshot_depth,
+            )?,
         },
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {

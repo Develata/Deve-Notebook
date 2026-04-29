@@ -10,6 +10,7 @@ mod git_cmd;
 mod import_apply;
 mod import_plan;
 mod preflight;
+mod push;
 mod replay;
 mod status;
 mod store;
@@ -17,6 +18,7 @@ mod store;
 pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, export_mirror, run_pending_mirror};
 pub use import_apply::{GitImportApplyReport, apply_import};
 pub use import_plan::{GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, plan_import};
+pub use push::{GitMirrorPushBlocker, GitMirrorPushOptions, GitMirrorPushReport, push_mirror};
 pub use status::{GitMetadataKind, GitMirrorState, GitMirrorStatus, inspect_repo_root};
 pub use store::{
     GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord,

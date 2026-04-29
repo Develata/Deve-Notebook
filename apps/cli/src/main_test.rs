@@ -166,3 +166,27 @@ fn git_import_accepts_repo_selector() {
         other => panic!("unexpected command: {other:?}"),
     }
 }
+
+#[test]
+fn git_push_accepts_repo_remote_and_branch() {
+    let args = Args::try_parse_from([
+        "deve", "git", "push", "--repo", "default", "--remote", "origin", "--branch", "main",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::Git {
+            action:
+                GitAction::Push {
+                    repo,
+                    remote,
+                    branch,
+                },
+        }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+            assert_eq!(remote.as_deref(), Some("origin"));
+            assert_eq!(branch.as_deref(), Some("main"));
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}

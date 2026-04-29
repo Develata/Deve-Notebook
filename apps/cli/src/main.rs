@@ -19,6 +19,7 @@
 //! - `git mirror`: 手动执行 queued Git mirror commits
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
 //! - `git import`: 规划或显式 apply 外部 Git/worktree changes
+//! - `git push`: 将 Git mirror 发布到远端
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -183,6 +184,15 @@ pub(crate) enum GitAction {
         repo: Option<String>,
         #[arg(long)]
         apply: bool,
+    },
+    /// Push the exported Git mirror to a remote
+    Push {
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(long)]
+        remote: Option<String>,
+        #[arg(long)]
+        branch: Option<String>,
     },
 }
 
