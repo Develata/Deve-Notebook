@@ -200,6 +200,7 @@ impl MobileShell {
     fn require_foreground_reprobe(&mut self) {
         self.state = MobileServiceState::ForegroundReprobe;
         self.readiness.auth_status_valid = false;
+        self.readiness.node_role_readable = false;
         self.readiness.repo_handshake_complete = false;
         self.readiness.writer_ready = false;
         self.readiness.scope_nonce_current = false;

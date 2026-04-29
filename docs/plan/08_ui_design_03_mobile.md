@@ -84,7 +84,7 @@ MobileColdStart
 
 *   `NetworkOffline` 只表示公网不可用；如果 embedded service、session 与 writer gate 仍 ready，本地编辑仍可继续。
 *   `BackgroundSuspended` 只允许降低资源占用或暂停远端同步，不得丢弃未 ack 的本地 pending overlay。
-*   `ForegroundReprobe` 必须重新执行 `/api/auth/status`、`/api/node/role` 与 repo handshake；旧 `scope_nonce` 不得自动恢复写态。
+*   `ForegroundReprobe` 必须重新执行 `/api/auth/status`、`/api/node/role` 与 repo handshake；旧 `scope_nonce` 不得自动恢复写态。当前 mobile shell 会同时清空 auth、node-role、repo-handshake、writer-ready 与 scope freshness，直到 fresh readiness 完整通过。
 *   `ServiceOffline` 表示本机后端不可达；UI 必须进入恢复/只读状态，不得声称 offline-first 仍可写。
 
 **Forbidden native shortcuts**:

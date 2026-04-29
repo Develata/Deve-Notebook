@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Native shell parity review | P3-10 / Review | `apps/desktop/`, `apps/mobile/`, `apps/web/`, `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md` | 在不打开 Tauri/process/packaging gate 的前提下，检查 desktop/mobile/Web native readiness、recovery bootstrap、write gate 与 lifecycle/reprobe 是否还有不一致；若无硬缺口，退出 native track，转回 P1/P2 全局实现项。 |
+| 1 | Git mirror UI/repair polish selection | P1/P2 / Planning | `docs/report/next-tasks.md`, `apps/web/src/components/sidebar/source_control/`, `apps/cli/src/commands/git*.rs`, `crates/core/src/git_bridge/` | 从已落地的 Git mirror CLI status/export/import/push/repair-action 基础上，选择下一块不改变 `.notegit` authority 的 UI/repair polish；优先补 Web 可见 blocker/repair notice 或 CLI repair guidance，不做后台自动 Git 写入。 |
 
 ## 最近完成基线
 
@@ -45,6 +45,7 @@
 - P3-10 Native process adapter decision 已关闭：真实 child-process runtime 当前不进入默认 no-Tauri skeleton；`CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定为 `DeferredUntilPackagingGate`，desktop/mobile 默认构建不 spawn、不持有、不重启后端进程且不写 core authority，详见 `native-process-adapter-decision-2026-04-29.md`。
 - P3-10 Native packaging dependency gate decision 已关闭：真实 `tauri` / `tauri-build` dependency 当前不进入 workspace；`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为 `DeferredUntilRuntimeBatch`，默认构建保持 no-Tauri，packaging scaffold 继续仅作为 planned future input，详见 `native-packaging-dependency-gate-decision-2026-04-29.md`。
 - P3-10 Desktop runtime readiness / foreground reprobe 已关闭：desktop shell snapshot 现包含 `NativeRuntimeReadiness`，`RuntimeReady` 要求 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足，`Foreground` / `Resumed` 会进入 `ForegroundReprobe` 且 stale `scope_nonce` 不恢复写态，详见 `desktop-runtime-readiness-status-2026-04-29.md`。
+- P3-10 Native shell parity review 已关闭：mobile foreground/resume reprobe 现在也清空 `node_role_readable`，desktop/mobile/Web 对 native readiness、`foreground_reprobe` recovery bootstrap 与 write gate 的当前 no-Tauri contract 已对齐；native track 进入干净停靠点，详见 `native-shell-parity-review-2026-04-29.md`。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。
 - P2 Docker release smoke 已关闭：Docker Desktop WSL integration 恢复后，`DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102 scripts/smoke-docker-release.sh` 完整通过，镜像 build、容器启动与宿主 `/api/node/role` endpoint probe 均已验证；脚本同时补充 local proxy bypass 与容器 health 诊断，详见 `release-smoke-status-2026-04-29.md`。
 - P3 Cargo-chef manifest warning triage 已关闭：当前 repo manifests 无 `plugin = ...` 键，`cargo metadata --no-deps --format-version 1` 无 warning；该 warning 需在稳定 Docker context 内复现后再判断是否为 cargo-chef skeleton 或旧缓存噪音，详见 `cargo-chef-warning-triage-2026-04-29.md`。

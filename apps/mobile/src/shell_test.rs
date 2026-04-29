@@ -123,6 +123,7 @@ fn mobile_background_resume_requires_fresh_reprobe_before_write() {
     let snapshot = shell.snapshot();
     assert_eq!(snapshot.state, MobileServiceState::ForegroundReprobe);
     assert!(!snapshot.readiness.auth_status_valid);
+    assert!(!snapshot.readiness.node_role_readable);
     assert!(!snapshot.readiness.repo_handshake_complete);
     assert!(!snapshot.readiness.writer_ready);
     assert!(!snapshot.readiness.scope_nonce_current);
