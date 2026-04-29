@@ -8,6 +8,20 @@ use crate::hooks::use_core::source_control_notice::{
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GitRepairReviewCopy {
+    pub title: String,
+    pub rows: Vec<GitRepairReviewRow>,
+    pub retry_command: String,
+    pub authority_note: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GitRepairReviewRow {
+    pub label: String,
+    pub value: String,
+}
+
 pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
     if is_deleted_no_doc_id_notice(notice) {
         return sc::diff_unavailable(locale).to_string();
@@ -81,9 +95,38 @@ pub fn details(locale: Locale, notice: &SourceControlNotice) -> Vec<String> {
     Vec::new()
 }
 
+pub fn git_repair_review(
+    locale: Locale,
+    notice: &SourceControlNotice,
+) -> Option<GitRepairReviewCopy> {
+    is_git_repair_cli_notice(notice).then(|| GitRepairReviewCopy {
+        title: sc::git_repair_review_title(locale).to_string(),
+        rows: vec![
+            GitRepairReviewRow {
+                label: sc::git_repair_action_label(locale).to_string(),
+                value: sc::git_repair_action_value(locale).to_string(),
+            },
+            GitRepairReviewRow {
+                label: sc::git_repair_guidance_label(locale).to_string(),
+                value: sc::git_repair_guidance_value(locale).to_string(),
+            },
+            GitRepairReviewRow {
+                label: sc::git_repair_subject_label(locale).to_string(),
+                value: sc::git_repair_subject_value(locale).to_string(),
+            },
+            GitRepairReviewRow {
+                label: sc::git_repair_next_step_label(locale).to_string(),
+                value: sc::git_repair_next_step_value(locale).to_string(),
+            },
+        ],
+        retry_command: sc::git_repair_retry_command().to_string(),
+        authority_note: sc::git_repair_authority_note(locale).to_string(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{details, hint, title};
+    use super::{details, git_repair_review, hint, title};
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
     use crate::i18n::{Locale, source_control as sc};
 
@@ -128,5 +171,19 @@ mod tests {
                 .iter()
                 .any(|line| line.contains("retry-out-of-sync"))
         );
+
+        let review = git_repair_review(Locale::En, &notice).expect("repair review");
+        assert_eq!(review.title, sc::git_repair_review_title(Locale::En));
+        assert!(
+            review
+                .rows
+                .iter()
+                .any(|row| row.value.contains("manual_only=yes"))
+        );
+        assert_eq!(
+            review.retry_command,
+            "deve_cli git export --repo <repo> --retry-out-of-sync"
+        );
+        assert!(review.authority_note.contains("read-only"));
     }
 }

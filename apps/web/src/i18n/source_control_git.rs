@@ -95,6 +95,91 @@ pub fn git_repair_cli_only_details(locale: Locale) -> [&'static str; 4] {
     }
 }
 
+pub fn git_repair_review_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Read-only repair review",
+        Locale::Zh => "只读修复审阅",
+    }
+}
+
+pub fn git_repair_action_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Repair action",
+        Locale::Zh => "修复动作",
+    }
+}
+
+pub fn git_repair_action_value(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "`repair_action[...]` from CLI status",
+        Locale::Zh => "CLI status 中的 `repair_action[...]`",
+    }
+}
+
+pub fn git_repair_guidance_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Guidance",
+        Locale::Zh => "指引",
+    }
+}
+
+pub fn git_repair_guidance_value(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "`repair_guidance[...]`: manual_only=yes",
+        Locale::Zh => "`repair_guidance[...]`: manual_only=yes",
+    }
+}
+
+pub fn git_repair_subject_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Subject",
+        Locale::Zh => "Subject",
+    }
+}
+
+pub fn git_repair_subject_value(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Fix the subject reported by `repair_action[...]` before retry.",
+        Locale::Zh => "重试前先修复 `repair_action[...]` 报告的 subject。",
+    }
+}
+
+pub fn git_repair_next_step_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Next step",
+        Locale::Zh => "下一步",
+    }
+}
+
+pub fn git_repair_next_step_value(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Use CLI status to inspect blockers, repair them manually, then retry export."
+        }
+        Locale::Zh => "用 CLI status 检查 blocker，手动修复后再重试 export。",
+    }
+}
+
+pub fn git_repair_retry_command_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Retry command",
+        Locale::Zh => "重试命令",
+    }
+}
+
+pub fn git_repair_retry_command() -> &'static str {
+    "deve_cli git export --repo <repo> --retry-out-of-sync"
+}
+
+pub fn git_repair_authority_note(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "This panel is read-only: Web does not run Git repair, and `.notegit` remains the authority."
+        }
+        Locale::Zh => "此面板只读：Web 不执行 Git repair，`.notegit` 仍是 authority。",
+    }
+}
+
 pub fn git_import_conflict_title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Imported conflict: choose Keep File System or Keep Ledger before staging.",
@@ -138,6 +223,13 @@ mod tests {
                 .iter()
                 .any(|line| line.contains("retry-out-of-sync"))
         );
+        assert_eq!(git_repair_review_title(Locale::Zh), "只读修复审阅");
+        assert!(git_repair_guidance_value(Locale::En).contains("manual_only=yes"));
+        assert_eq!(
+            git_repair_retry_command(),
+            "deve_cli git export --repo <repo> --retry-out-of-sync"
+        );
+        assert!(git_repair_authority_note(Locale::En).contains("read-only"));
         assert_eq!(
             git_import_conflict_title(Locale::Zh),
             "导入冲突：暂存前请选择保留文件系统版本或账本版本。"

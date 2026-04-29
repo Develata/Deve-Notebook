@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git mirror read-only repair review scaffold | P1/P2 / Implementation | `apps/web/src/components/sidebar/source_control/`, `apps/web/src/i18n/`, `docs/report/next-tasks.md` | 在已明确 repair UI boundary 后，先实现 Web 只读 review scaffold：展示 repair action / guidance、subject、next step 与 copyable retry command；不得新增 Web 后端 Git writer，不得执行 Git，不得绕过 Source Control gate。 |
+| 1 | Git mirror repair review data-source decision | P1/P2 / Planning | `docs/plan/14_tech_stack.md`, `docs/features/07_diff_logic.md`, `apps/cli/src/server/handlers/`, `apps/web/src/components/sidebar/source_control/` | 在只读 repair review scaffold 落地后，决定真实 record-level repair data 的只读来源：HTTP status endpoint、server-side status query 或显式 CLI copy/paste；必须保持无 Git writer、无后台执行、fail-closed scope gate。 |
 
 ## 最近完成基线
 
@@ -33,6 +33,7 @@
 - P1/P2 Git mirror Web repair notice 已关闭：Command Palette 新增 `Git: Repair Mirror` CLI-only notice，Source Control notice 独立解释 `repair_action[...]`、blocker 修复与 `deve_cli git export --repo <repo> --retry-out-of-sync` 重试路径；Web 仍不直接执行 Git repair，详见 `git-mirror-web-repair-notice-status-2026-04-29.md`。
 - P1/P2 Git mirror CLI repair guidance 已关闭：`GitMirrorRepairAction` 为旧 record 补齐 subject fallback，CLI record 明细新增 `repair_guidance[...]`，覆盖所有 failure stage 的 manual-only next step 与 retry command，详见 `git-mirror-cli-repair-guidance-status-2026-04-29.md`。
 - P1/P2 Git mirror repair UI boundary split 已关闭：features / acceptance / plan 已明确 future clickable repair UI 必须先只读 review、manual confirmation、fail-closed gates，且禁止 Command Palette 或后台自动 Git writer，详见 `git-mirror-repair-ui-boundary-status-2026-04-29.md`。
+- P1/P2 Git mirror read-only repair review scaffold 已关闭：Source Control repair notice 下方新增只读 review 卡片，展示 repair action/guidance/subject/next step/copyable retry command 与 `.notegit` authority note，不调用 clipboard API、不执行 Git，详见 `git-mirror-readonly-repair-review-status-2026-04-29.md`。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P3-10 Desktop/Mobile native adapter core contract 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract，`deve_core::native_adapter` 已落地平台无关状态/事件/endpoint/session/readiness 合同与定向测试；Tauri desktop/mobile shell、embedded service launcher 与 Web bootstrap 消费仍属后续实现。
 - P3-10 Web native bootstrap 消费已关闭：Web connection manager 可读取 `window.__DEVE_NATIVE_BOOTSTRAP`，复用 core native endpoint/session 校验，有效时只使用注入 endpoint，失效时 fail-closed 且不回退端口推断；浏览器默认路径保持不变，详见 `native-web-bootstrap-status-2026-04-29.md`。

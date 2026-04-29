@@ -57,6 +57,58 @@ pub fn ErrorNotice(
                                     .unwrap_or_else(|| view! {}.into_any())
                             }}
                         </div>
+                        <div>
+                            {move || {
+                                notice
+                                    .get()
+                                    .and_then(|current| copy::git_repair_review(locale.get(), &current))
+                                    .map(|review| {
+                                        let retry_command_attr = review.retry_command.clone();
+                                        let retry_command_text = review.retry_command.clone();
+                                        view! {
+                                            <div
+                                                class="mt-3 rounded-md border border-warning/30 bg-panel/80 p-2 text-xs"
+                                                data-deve-git-repair-review="readonly"
+                                            >
+                                                <p class="font-medium text-primary">{review.title}</p>
+                                                <div class="mt-2 space-y-1">
+                                                    {review
+                                                        .rows
+                                                        .into_iter()
+                                                        .map(|row| {
+                                                            view! {
+                                                                <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+                                                                    <span class="text-muted">{row.label}</span>
+                                                                    <span class="text-secondary">{row.value}</span>
+                                                                </div>
+                                                            }
+                                                        })
+                                                        .collect_view()}
+                                                </div>
+                                                <div class="mt-2">
+                                                    <span class="block text-muted">
+                                                        {crate::i18n::source_control::git_repair_retry_command_label(locale.get())}
+                                                    </span>
+                                                    <code
+                                                        class="mt-1 block select-all rounded border border-default bg-sidebar px-2 py-1 font-mono text-[11px] text-primary"
+                                                        data-deve-git-repair-retry-command=retry_command_attr
+                                                    >
+                                                        {retry_command_text}
+                                                    </code>
+                                                </div>
+                                                <p
+                                                    class="mt-2 border-l border-warning/30 pl-2 text-[11px] text-muted"
+                                                    data-deve-git-repair-manual-only="true"
+                                                >
+                                                    {review.authority_note}
+                                                </p>
+                                            </div>
+                                        }
+                                        .into_any()
+                                    })
+                                    .unwrap_or_else(|| view! {}.into_any())
+                            }}
+                        </div>
                     </div>
                     <button
                         class="text-xs text-secondary hover:text-primary"

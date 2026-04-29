@@ -10,7 +10,7 @@
 
 ## 允许的下一阶段
 
-- 可以实现 Web read-only repair review scaffold：展示 `repair_action[...]` / `repair_guidance[...]` 的解释、subject、next step 与 copyable retry command。
+- Web read-only repair review scaffold 已进入实现：repair notice 下方展示 `repair_action[...]` / `repair_guidance[...]` 的解释、subject、next step、copyable retry command 与 `.notegit` authority note。
 - 可以在 UI 上预留 disabled / future confirmation affordance，但不得执行 Git。
 - 可以把 CLI guidance 文案映射到 Web i18n，但不得新增 Web 后端 Git writer。
 

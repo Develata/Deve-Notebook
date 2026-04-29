@@ -111,6 +111,8 @@
     - cli_assert: git_mirror_repair_guidance_manual_only true
     - ui_assert: git_mirror_clickable_repair_ui_future_requires_manual_confirmation true
     - ui_assert: git_mirror_repair_ui_background_git_writer_absent true
+    - ui_assert: git_mirror_readonly_repair_review_available true
+    - ui_assert: git_mirror_repair_retry_command_copyable_text_only true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。
