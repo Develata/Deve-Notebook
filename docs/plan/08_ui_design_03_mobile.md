@@ -15,7 +15,7 @@
 
 > **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
-## 0. Current Native Boundary (2026-04-28) {#mobile-current-native-boundary}
+## 0. Current Native Boundary (2026-04-29) {#mobile-current-native-boundary}
 
 当前代码状态：
 
@@ -24,6 +24,72 @@
 *   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
+
+### 0.1 Minimal Native Adapter Contract {#mobile-native-adapter-contract}
+
+Mobile native adapter 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-native-adapter-contract`
+的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有
+ledger/vault/source-control/search 的业务真相。
+
+**Adapter inputs**:
+
+*   `profile/config/vault/ledger` 选择必须在 service boot 前完成；Web 运行后 native 层不得直接改写后端路径或 repo scope。
+*   `launch_intent` 可表达分享、文件打开、deeplink、通知点击等入口，但必须转为 application command；不得绕过 writer gate。
+*   `session_material` 必须绑定到当前 app install 与进程会话；不得放入 URL、Web localStorage、日志或系统剪贴板。
+*   `platform_lifecycle` 只允许传递 `foreground/background/suspended/resumed/network-online/network-offline/safe-area/keyboard` 等 shell 事件。
+
+**Adapter outputs**:
+
+*   `NativeEndpointReady { http_base, ws_base, node_role, session_bound }`
+*   `NativeServiceOffline { reason, retryable }`
+*   `NativeServiceSuspended { reason }`
+*   `NativeForegroundReprobe`
+*   `NativePlatformEvent { kind }`
+
+**Boot/lifecycle state machine**:
+
+```text
+MobileColdStart
+  -> ServiceStarting
+  -> EndpointBound(http_base, ws_base)
+  -> SessionBound
+  -> WebShellLoading
+  -> RuntimeReady
+  -> BackgroundSuspended
+  -> ForegroundReprobe
+  -> RuntimeReady | ServiceOffline | SessionInvalid
+```
+
+`RuntimeReady` 的最小条件与 Desktop 一致：本机 endpoint 可达、`/api/auth/status`
+有效、`/api/node/role` 可读取、当前 repo 已完成 ws handshake，且写入路径满足
+`writer_ready(repo_id, scope_nonce)`。`SessionInvalid` 必须进入 `Unauthorized`；
+移动端后台恢复失败不得被伪装成普通断网。
+
+**Endpoint/session injection rules**:
+
+*   Native 壳必须在 Web connection manager 启动前注入 `http_base/ws_base` 与 session 绑定状态；优先使用内存 bridge 或初始 HTML bootstrap。
+*   `?ws_port=` 只能作为开发期 fallback。mobile production 不得让 Web 端枚举、猜测或扫描本机端口。
+*   session 绑定完成前不得打开可写主界面；后台恢复后必须重新 probe session、node role 与 ws repo handshake。
+
+**Offline/background semantics**:
+
+*   `NetworkOffline` 只表示公网不可用；如果 embedded service、session 与 writer gate 仍 ready，本地编辑仍可继续。
+*   `BackgroundSuspended` 只允许降低资源占用或暂停远端同步，不得丢弃未 ack 的本地 pending overlay。
+*   `ForegroundReprobe` 必须重新执行 `/api/auth/status`、`/api/node/role` 与 repo handshake；旧 `scope_nonce` 不得自动恢复写态。
+*   `ServiceOffline` 表示本机后端不可达；UI 必须进入恢复/只读状态，不得声称 offline-first 仍可写。
+
+**Forbidden native shortcuts**:
+
+*   native 层不得直接写 ledger/vault/source-control/search index。
+*   native 层不得直接操作 `.notegit/` 或 `.git/` 来伪造 source-control 成功。
+*   safe-area、keyboard、foreground/background、network online/offline 事件不得被解释成业务可写状态。
+
+**Acceptance before native implementation**:
+
+*   cold start service bind 失败时显示恢复入口，不进入半可写 UI。
+*   session invalid 时进入 `Unauthorized` 并停止普通重连。
+*   network offline 但 service/session/writer ready 时，本地编辑继续可用。
+*   background/resume 后必须重新握手，stale `scope_nonce` 写入被拒绝。
 
 ## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。

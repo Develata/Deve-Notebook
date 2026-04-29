@@ -15,7 +15,7 @@
 
 > **Web Mapping**: 当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
-## 0. Current Native Boundary (2026-04-28)
+## 0. Current Native Boundary (2026-04-29) {#desktop-current-native-boundary}
 
 当前代码状态：
 
@@ -24,6 +24,67 @@
 *   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
+
+### 0.1 Minimal Native Adapter Contract {#desktop-native-adapter-contract}
+
+Desktop native adapter 是进程与平台壳层，不是业务 authority。第一阶段只允许把现有
+Web shell 绑定到本机受控 service，并把 runtime 状态结构化交给 Web/application
+control。
+
+**Adapter inputs**:
+
+*   `profile/config/vault/ledger` 选择必须在 service boot 前完成，并传入后端启动参数；native 层不得在 Web 运行后直接改写这些路径。
+*   `launch_intent` 只表示打开仓库、文档或 deeplink 的意图，必须转为普通 application command；不得绕过 repo scope gate 直接写 ledger。
+*   `session_material` 必须是进程内或同站 cookie 绑定的短生命周期本机会话材料；不得放入 URL、localStorage、日志或 crash report。
+
+**Adapter outputs**:
+
+*   `NativeEndpointReady { http_base, ws_base, node_role, session_bound }`
+*   `NativeServiceOffline { reason, retryable }`
+*   `NativeServiceRestarting { attempt }`
+*   `NativePlatformEvent { kind }`，其中 `kind` 仅允许表达窗口焦点、主题、系统网络 online/offline、关闭/后台驻留请求等 shell 事件。
+
+**Boot state machine**:
+
+```text
+NativeColdStart
+  -> ServiceStarting
+  -> EndpointBound(http_base, ws_base)
+  -> SessionBound
+  -> WebShellLoading
+  -> RuntimeReady
+  -> ServiceRestarting | ServiceOffline | SessionInvalid
+```
+
+`RuntimeReady` 的最小条件是：本机 endpoint 可达、`/api/auth/status` 有效、`/api/node/role`
+可读取、当前 repo 已完成 ws handshake，且写入路径满足
+`writer_ready(repo_id, scope_nonce)`。只要 `SessionInvalid` 出现，UI 必须进入
+`Unauthorized`，不得包装成普通 `Disconnected`。
+
+**Endpoint/session injection rules**:
+
+*   Native 壳必须在 Web connection manager 启动前注入 `http_base/ws_base` 与 session 绑定状态；优先使用内存 bridge 或初始 HTML bootstrap。
+*   `?ws_port=` 只能作为开发期 fallback。native production 不得让 Web 端枚举、猜测或扫描本机端口。
+*   session 绑定完成前 Web shell 不得显示可写主界面；过期 session 必须走 `09_auth.md#unauthorized-disconnected-ui`。
+
+**Offline/readiness semantics**:
+
+*   `NetworkOffline` 只表示公网不可用；如果 embedded service、session 与 writer gate 仍 ready，Desktop 本地编辑仍可继续。
+*   `ServiceOffline` 表示本机后端不可达；UI 必须进入恢复/只读状态，不得假装仍有本地 authority。
+*   App 从后台/驻留状态恢复时必须重新 probe `/api/auth/status`、`/api/node/role`，并重新确认 ws repo handshake；旧 `scope_nonce` 不得自动恢复写态。
+
+**Forbidden native shortcuts**:
+
+*   native 层不得直接写 ledger/vault/source-control/search index。
+*   native 层不得直接操作 `.notegit/` 或 `.git/` 来伪造 source-control 成功。
+*   native 层不得把平台 online/offline、窗口焦点或 Tauri lifecycle 事件解释成业务可写状态。
+
+**Acceptance before native implementation**:
+
+*   service bind 失败时显示恢复入口，不进入半可写 UI。
+*   session invalid 时进入 `Unauthorized` 并停止普通重连。
+*   network offline 但 service/session/writer ready 时，本地编辑继续可用。
+*   resume/restart 后必须重新握手，stale `scope_nonce` 写入被拒绝。
 
 ## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。

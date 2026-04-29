@@ -15,18 +15,38 @@ check_contains() {
     || fail "missing '$pattern' in $file"
 }
 
-check_contains docs/plan/08_ui_design_02_desktop.md "Current Native Boundary (2026-04-28)"
+check_not_contains() {
+  local file="$1"
+  local pattern="$2"
+  ! rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file" \
+    || fail "unexpected '$pattern' in $file"
+}
+
+check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-current-native-boundary}"
 check_contains docs/plan/08_ui_design_02_desktop.md "Tauri v2 native packaging"
 check_contains docs/plan/08_ui_design_02_desktop.md "Native adapter **MUST NOT**"
 check_contains docs/plan/08_ui_design_02_desktop.md "service readiness/offline"
 check_contains docs/plan/08_ui_design_02_desktop.md "loopback/IPC endpoint"
+check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-native-adapter-contract}"
+check_contains docs/plan/08_ui_design_02_desktop.md "NativeEndpointReady { http_base, ws_base, node_role, session_bound }"
+check_contains docs/plan/08_ui_design_02_desktop.md "writer_ready(repo_id, scope_nonce)"
+check_contains docs/plan/08_ui_design_02_desktop.md "09_auth.md#unauthorized-disconnected-ui"
+check_contains docs/plan/08_ui_design_02_desktop.md "native 层不得直接写 ledger/vault/source-control/search index"
 
-check_contains docs/plan/08_ui_design_03_mobile.md "Current Native Boundary (2026-04-28)"
+check_contains docs/plan/08_ui_design_03_mobile.md "{#mobile-current-native-boundary}"
 check_contains docs/plan/08_ui_design_03_mobile.md "Tauri v2 Mobile packaging"
 check_contains docs/plan/08_ui_design_03_mobile.md "Mobile native adapter **MUST NOT**"
 check_contains docs/plan/08_ui_design_03_mobile.md "service readiness/offline"
 check_contains docs/plan/08_ui_design_03_mobile.md "loopback/IPC endpoint"
+check_contains docs/plan/08_ui_design_03_mobile.md "{#mobile-native-adapter-contract}"
+check_contains docs/plan/08_ui_design_03_mobile.md "NativeEndpointReady { http_base, ws_base, node_role, session_bound }"
+check_contains docs/plan/08_ui_design_03_mobile.md "BackgroundSuspended"
+check_contains docs/plan/08_ui_design_03_mobile.md "ForegroundReprobe"
+check_contains docs/plan/08_ui_design_03_mobile.md "writer_ready(repo_id, scope_nonce)"
+check_contains docs/plan/08_ui_design_03_mobile.md "safe-area、keyboard、foreground/background、network online/offline"
 
-check_contains docs/report/next-tasks.md "P3-10 Desktop / Mobile Native Track"
+check_contains docs/report/next-tasks.md "P3-10 Desktop/Mobile native adapter plan 已关闭"
+check_contains docs/report/next-tasks.md "Tauri native shell 代码仍属 future implementation"
+check_not_contains docs/report/next-tasks.md "Desktop / Mobile native adapter plan | P3-10"
 
 echo "native-track-boundary-check: ok"
