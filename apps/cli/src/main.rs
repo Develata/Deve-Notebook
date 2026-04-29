@@ -14,6 +14,7 @@
 //! - `watch`: 监控文件系统变更 (Watcher Service)
 //! - `dump`: 调试工具，用于检查 ops 记录
 //! - `serve`: 启动 WebSocket 后端服务器 (Backend Architecture)
+//! - `git status`: 检查 Git ecosystem mirror bridge 状态
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -105,6 +106,11 @@ pub(crate) enum Commands {
         #[arg(long)]
         repo: Option<String>,
     },
+    /// Inspect Git ecosystem mirror bridge state
+    Git {
+        #[command(subcommand)]
+        action: GitAction,
+    },
     /// Repair known local corruption from backups and quarantine invalid shadows
     Repair {
         /// Run repair readiness checks without executing repair steps
@@ -132,6 +138,15 @@ pub(crate) enum ConfigAction {
     Print,
     /// Set a whitelisted key in config.toml
     Set { key: String, value: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum GitAction {
+    /// Print read-only Git mirror bridge status
+    Status {
+        #[arg(long)]
+        repo: Option<String>,
+    },
 }
 
 #[tokio::main]

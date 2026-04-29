@@ -81,6 +81,10 @@ DeveStaged
 - 外部 Git 操作造成的工作区变化进入 `pending_fs_ops` 或显式 `GitImportRequested`，
   不得直接修改 `CommitAnchor`、`StagedEntry` 或 ledger facts。
 
+当前实现状态：已落地 `.git` mirror internal path 隔离、repo-local `.gitignore`
+保护与只读 `git status` 骨架。`GitMirrorQueued -> GitMirrorCommitted |
+GitMirrorOutOfSync` 的实际 commit 映射、状态持久化、retry/repair 仍是后续实现。
+
 ### 2.4 Diff Identity Model
 
 - 文本 diff 身份：

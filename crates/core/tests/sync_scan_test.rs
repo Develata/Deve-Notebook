@@ -58,3 +58,27 @@ fn scan_fails_closed_on_markdown_path_that_is_not_a_file() {
         .expect_err("non-file markdown path must fail closed");
     assert!(err.to_string().contains("markdown path is not a file"));
 }
+
+#[test]
+fn scan_ignores_git_mirror_markdown_paths() {
+    let dir = TempDir::new().expect("create tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let vault_dir = dir.path().join("vault");
+    let mut repo =
+        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
+    repo.set_vault_root(&vault_dir);
+    let repo = Arc::new(repo);
+    let sync = SyncManager::new(repo.clone(), vault_dir.clone());
+
+    let internal = vault_dir.join("default/.git/objects/x.md");
+    std::fs::create_dir_all(internal.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&internal, "git mirror state").expect("write");
+
+    sync.scan().expect("scan");
+
+    assert!(
+        repo.list_pending_fs_in_local_repo("default")
+            .unwrap()
+            .is_empty()
+    );
+}

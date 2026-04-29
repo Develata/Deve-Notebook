@@ -1,4 +1,6 @@
-use super::{is_ledger_managed_write_target, project_relative_path};
+use super::{
+    is_ledger_managed_relative_path, is_ledger_managed_write_target, project_relative_path,
+};
 use std::path::Path;
 use tempfile::tempdir;
 
@@ -45,4 +47,13 @@ fn project_relative_path_uses_canonical_target_location() {
         .expect("inside project root");
 
     assert_eq!(rel, "vault/default/notes/a.md");
+}
+
+#[test]
+fn git_mirror_paths_are_protected_plugin_targets() {
+    assert!(is_ledger_managed_relative_path("vault/default/.git/config"));
+    assert!(is_ledger_managed_relative_path(
+        "vault/default/notes/.git/objects/x"
+    ));
+    assert!(!is_ledger_managed_relative_path("vault/default/.gitignore"));
 }

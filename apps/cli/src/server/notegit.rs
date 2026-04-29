@@ -13,5 +13,6 @@ pub fn prepare(repo: &RepoManager, _vault_root: &Path) -> Result<PathBuf> {
     std::fs::create_dir_all(&host_keys_dir)?;
     std::fs::create_dir_all(deve_core::utils::notegit::repo_keys_dir(&main_repo_root))?;
     std::fs::create_dir_all(deve_core::utils::notegit::repo_dir(&main_repo_root))?;
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&main_repo_root)?;
     Ok(host_keys_dir)
 }

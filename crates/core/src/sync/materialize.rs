@@ -47,6 +47,7 @@ pub(super) fn materialize_local_repo(
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
     std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
+    crate::utils::notegit::ensure_gitignore_ignores_notegit(&repo_root)?;
     let plan = projection_plan::build(repo, repo_name)?;
     for dir in plan.dirs {
         if dir.is_empty() {

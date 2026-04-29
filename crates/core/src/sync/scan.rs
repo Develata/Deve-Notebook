@@ -48,7 +48,13 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
     let mut on_disk = HashSet::new();
     let mut seen_docs = HashSet::<DocId>::new();
 
-    for entry in WalkDir::new(&repo_root) {
+    let walker = WalkDir::new(&repo_root).into_iter().filter_entry(|entry| {
+        entry
+            .file_name()
+            .to_str()
+            .is_none_or(|name| !crate::utils::notegit::is_internal_repo_segment(name))
+    });
+    for entry in walker {
         let entry =
             entry.map_err(|err| anyhow!("Failed to walk local repo {}: {}", repo_name, err))?;
         let path = entry.path();

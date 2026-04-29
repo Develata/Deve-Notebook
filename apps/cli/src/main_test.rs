@@ -1,4 +1,4 @@
-use super::{Args, Commands, ConfigAction, run_pre_config_command};
+use super::{Args, Commands, ConfigAction, GitAction, run_pre_config_command};
 use clap::Parser;
 use std::sync::Mutex;
 
@@ -53,4 +53,17 @@ fn config_set_runs_before_loading_runtime_config() {
 
     std::env::set_current_dir(old_cwd).expect("restore cwd");
     assert_eq!(loaded.profile, deve_core::config::AppProfile::Standard);
+}
+
+#[test]
+fn git_status_accepts_repo_selector() {
+    let args =
+        Args::try_parse_from(["deve", "git", "status", "--repo", "default"]).expect("parse args");
+
+    match args.command {
+        Some(Commands::Git {
+            action: GitAction::Status { repo },
+        }) => assert_eq!(repo.as_deref(), Some("default")),
+        other => panic!("unexpected command: {other:?}"),
+    }
 }

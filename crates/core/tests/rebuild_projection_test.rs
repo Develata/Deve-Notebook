@@ -108,6 +108,8 @@ fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     std::fs::write(root.join("notes/ghost/keep.bin"), "keep").expect("write attachment");
     std::fs::create_dir_all(root.join(".notegit")).expect("mkdir .notegit");
     std::fs::write(root.join(".notegit/state.json"), "{}").expect("write state");
+    std::fs::create_dir_all(root.join(".git/objects")).expect("mkdir .git");
+    std::fs::write(root.join(".git/objects/loose.md"), "git object").expect("write git state");
 
     let sync = SyncManager::new(repo, dir.path().join("vault"));
     sync.rebuild_projection_local_repo("default")
@@ -120,6 +122,12 @@ fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     assert!(!root.join("notes/ghost/old.md").exists());
     assert!(root.join("notes/ghost/keep.bin").exists());
     assert!(root.join(".notegit/state.json").exists());
+    assert!(root.join(".git/objects/loose.md").exists());
+    assert!(
+        std::fs::read_to_string(root.join(".gitignore"))
+            .expect("read gitignore")
+            .contains(".notegit/")
+    );
     assert!(root.join("notes/empty").is_dir());
 }
 

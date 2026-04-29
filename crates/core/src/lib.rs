@@ -22,6 +22,8 @@
 pub mod config;
 pub mod context;
 pub mod error;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod git_bridge;
 pub mod graph;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ledger;

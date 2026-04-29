@@ -25,6 +25,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Previous broad baseline: `baseline-2026-04-08.md` (historical only)
 - Latest release smoke status: `release-smoke-status-2026-04-28.md`
 - Latest file cohesion audit: `soft-size-audit-2026-04-27.md`
+- Latest Git mirror bridge status: `git-mirror-bridge-status-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 
 ## Archive Contents

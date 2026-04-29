@@ -33,7 +33,7 @@
 | **Graph**    | **Core read-only projection + d3-force/Pixi.js future renderer** | Verified (Projection Baseline) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；高性能 Web Canvas 渲染仍是 future。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
-| **Git Ecosystem** | **First-class mirror bridge** | Planned (P1/P2) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层，支持 export/import/push/status，但不得成为 ledger/source-control 真相。 |
+| **Git Ecosystem** | **First-class mirror bridge** | Partial (Bridge Foundation) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status 骨架；export/import/push 与 commit mirror 仍属 P1/P2 后续。 |
 | **Build**    | **Tauri v2**             | Planned (Rising Priority) | Desktop/Mobile native track 逐步提上日程；先明确 adapter、embedded service 与 offline/readiness 边界。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
@@ -50,9 +50,15 @@ ledger authority 或 repo scope gate。
 ### 1.3 Git Ecosystem Mirror Bridge {#git-ecosystem-bridge}
 
 Deve 的核心版本管理是 ledger-backed Source Control，不复用 Git object store、Git
-index、Git refs 或 `.git/` 目录作为 authority。Git 生态作为 planned first-class
-mirror bridge：projection export、受控 import、backup/publish、远程托管与 release
-交付。
+index、Git refs 或 `.git/` 目录作为 authority。Git 生态作为 first-class mirror
+bridge：projection export、受控 import、backup/publish、远程托管与 release 交付。
+
+当前已实现的 bridge foundation：
+
+- `.git/` 与 `.notegit/` 作为 repo internal path segments 被 watcher / scan / sync / rebuild projection 忽略。
+- `materialize` / `rebuild_projection` / `init` / `serve` 会确保 repo-local `.gitignore` 忽略 `.notegit/`。
+- `deve_cli git status` 提供只读 mirror 状态骨架：`.git` 是否存在、`.notegit` 是否存在、`.gitignore` 是否保护 `.notegit/`。
+- 真实 Git mirror commit、`GitMirrorOutOfSync` 持久化、retry/repair、import/export/push 仍是后续实现，不得被当前 status 骨架替代。
 
 该 bridge 的工程边界：
 

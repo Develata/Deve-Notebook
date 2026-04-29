@@ -2,7 +2,7 @@
 //!   - 12_commands#cli-commands
 
 use crate::commands;
-use crate::{Commands, ConfigAction};
+use crate::{Commands, ConfigAction, GitAction};
 use std::path::{Path, PathBuf};
 
 pub async fn run(
@@ -58,6 +58,14 @@ pub async fn run(
         Some(Commands::ScStatus { repo }) => {
             commands::sc_status::run(ledger_dir, repo.as_deref(), config.snapshot_depth)?
         }
+        Some(Commands::Git { action }) => match action {
+            GitAction::Status { repo } => commands::git::status(
+                ledger_dir,
+                vault_path,
+                repo.as_deref(),
+                config.snapshot_depth,
+            )?,
+        },
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {
             commands::seed::run(ledger_dir, peer, repo, config.snapshot_depth)?

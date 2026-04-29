@@ -24,6 +24,20 @@ fn watcher_ignores_internal_notegit_paths() -> anyhow::Result<()> {
 }
 
 #[test]
+fn watcher_ignores_internal_git_paths() -> anyhow::Result<()> {
+    let mut h = Harness::new(None)?;
+    h.start_watchers()?;
+
+    let internal = h.dir.path().join("vault/main/.git/objects/x.md");
+    std::fs::create_dir_all(internal.parent().expect("parent"))?;
+    std::fs::write(&internal, "tmp")?;
+
+    wait_no_pending(&h, ".git/objects/x.md")?;
+    assert!(h.repo.list_pending_fs_in_local_repo("main")?.is_empty());
+    Ok(())
+}
+
+#[test]
 fn watcher_respects_deveignore_for_matching_markdown() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
     std::fs::write(h.dir.path().join("vault/.deveignore"), "ignored/*.md\n")?;

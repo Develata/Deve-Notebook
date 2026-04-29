@@ -41,7 +41,10 @@ fn walk_dir(
     for entry in std::fs::read_dir(&current)? {
         let entry = entry?;
         let name = entry.file_name().to_string_lossy().to_string();
-        if name == ".notegit" {
+        if crate::utils::notegit::is_internal_repo_segment(&name) {
+            continue;
+        }
+        if relative.is_empty() && name == ".gitignore" {
             continue;
         }
         let path = if relative.is_empty() {

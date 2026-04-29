@@ -30,6 +30,7 @@ pub fn run(
     std::fs::create_dir_all(deve_core::utils::notegit::repo_dir(
         &vault_path.join("default"),
     ))?;
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&vault_path.join("default"))?;
     std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(ledger_dir))?;
 
     // 2. Generate default config.toml

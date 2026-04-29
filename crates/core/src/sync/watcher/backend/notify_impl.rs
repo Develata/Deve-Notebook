@@ -75,6 +75,6 @@ fn keep_event(repo_root: &Path, paths: &[PathBuf]) -> bool {
             return false;
         };
         let rel = to_forward_slash(&rel.to_string_lossy());
-        filter::allows_repo_path(&rel) || !rel.starts_with(".notegit/")
+        filter::allows_repo_path(&rel) || (filter::allows_repo_dir_path(&rel) && path.is_dir())
     })
 }

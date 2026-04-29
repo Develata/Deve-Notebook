@@ -15,7 +15,7 @@ use std::path::Path;
 ///
 /// Invariants:
 /// - 仅 Ledger projection 可决定受管 `.md` 的规范存在性与内容。
-/// - `.notegit/` 与非 Markdown 附件绝不在本流程中删除。
+/// - `.notegit/`、`.git/` 与非 Markdown 附件绝不在本流程中删除。
 ///
 /// Post-conditions:
 /// - 受 Ledger 管辖的 `.md` 文件被无条件覆盖到规范内容。
@@ -28,6 +28,7 @@ pub(super) fn rebuild_local_repo(
     let root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&root)?;
     std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
+    crate::utils::notegit::ensure_gitignore_ignores_notegit(&root)?;
     let plan = projection_plan::build(repo, repo_name)?;
     rebuild_projection_state::rebuild_local_projection_state(repo, repo_name)?;
     for dir in &plan.dirs {
@@ -72,7 +73,7 @@ fn prune_stale_paths(
     for entry in std::fs::read_dir(&current)? {
         let entry = entry?;
         let name = entry.file_name().to_string_lossy().to_string();
-        if name == ".notegit" {
+        if crate::utils::notegit::is_internal_repo_segment(&name) {
             continue;
         }
         let child_rel = if relative.is_empty() {

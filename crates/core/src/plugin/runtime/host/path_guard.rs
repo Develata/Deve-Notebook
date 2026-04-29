@@ -96,7 +96,11 @@ fn is_ledger_managed_relative_path(rel_path: &str) -> bool {
         return true;
     }
     if parts.len() >= 3 && parts[0] == "vault" {
-        if parts.iter().skip(2).any(|part| *part == ".notegit") {
+        if parts
+            .iter()
+            .skip(2)
+            .any(|part| crate::utils::notegit::is_internal_repo_segment(part))
+        {
             return true;
         }
         return rel_path.ends_with(".md");

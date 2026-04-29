@@ -53,7 +53,7 @@ fn validate_segments(
     scope_nonce: Option<u64>,
 ) -> bool {
     for (index, segment) in segments.iter().enumerate() {
-        if *segment == ".notegit" {
+        if deve_core::utils::notegit::is_internal_repo_segment(segment) {
             tracing::error!("路径校验失败 (保留目录): {}", path);
             errors::request_failed_scoped(ch, path_err::reserved_internal_path(path), scope_nonce);
             return false;

@@ -117,7 +117,13 @@ Deve 支持 `.notegit/` 与 `.git/` 在同一个 repo 工作区中共存：
 - Deve core MUST NOT 使用 `.git/` 作为 repo authority、runtime side table 或 hidden metadata 目录。
 - `.git/` 不得参与 ledger fold、repo scope 解析、stage/commit authority 或 repair。
 
-Git mirror 是 planned first-class bridge，而不是 authority 替代品：
+当前实现状态：
+
+- 已实现 `.git/` / `.notegit/` segment-level internal path 过滤，覆盖 watcher、scan、projection rebuild 与 drift enumeration。
+- 已实现 repo-local `.gitignore` 自动保护 `.notegit/` 的 idempotent helper。
+- 已实现只读 Git mirror status 骨架；真实 Git mirror commit / import / export / push 与 `GitMirrorOutOfSync` 持久化仍是后续。
+
+Git mirror 是 first-class bridge，而不是 authority 替代品：
 
 - Deve ledger commit 成功并持久化 projection 后，系统 MAY queue Git mirror update。
 - Git mirror update MAY 执行 `git add -A` 与 Git commit，并在 commit message / notes / trailer 中记录 `Deve-Commit-Id`、`ledger_seq`、`repo_id` 等映射。
