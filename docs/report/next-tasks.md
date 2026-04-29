@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Docker release smoke rerun | P2 | Docker host environment, `scripts/smoke-docker-release.sh` | Docker daemon 可用后重跑；环境阻塞继续与代码失败分开记录。 |
+| 1 | Docker release smoke rerun | P2 (Host-blocked) | Docker host environment, `scripts/smoke-docker-release.sh` | 2026-04-29 重跑仍因 WSL Docker 不可用阻塞；Docker daemon 可用后重跑，环境阻塞继续与代码失败分开记录。 |
 
 ## 最近完成基线
 
@@ -24,6 +24,7 @@
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P3-10 Desktop/Mobile native adapter plan 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract、boot/lifecycle state machine、endpoint/session injection、offline/readiness 语义与 native forbidden shortcuts；Tauri native shell 代码仍属 future implementation。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。
+- P2 Docker release smoke 已于 2026-04-29 重跑前置检查：`docker info` 在当前 WSL 中提示 Docker command/daemon 不可用，`scripts/smoke-docker-release.sh` 在 required 模式下仍停在 daemon unreachable；代码 gate 已通过，详见 `release-smoke-status-2026-04-29.md`。
 - P0 repo health、`repair --check`、WS structured errors、writer-ready `repo_id + scope_nonce`、Source Control doc identity hardening 已记录在 `code-review-2026-04-28.md`。
 - P1 search、settings current boundary、Native AI Chat minimum、graph projection、i18n cleanup、plan_ref sweeps 已记录在 `code-review-2026-04-28.md`。
 - Release/runtime smoke 与 Docker daemon blocker 已记录在 `release-smoke-status-2026-04-28.md`。
