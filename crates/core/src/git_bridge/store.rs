@@ -10,6 +10,8 @@ use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable, TableDefinition, TableError};
 use serde::{Deserialize, Serialize};
 
+use super::failure_metadata::GitMirrorFailureMetadata;
+
 pub const GIT_MIRROR_COMMITS_TABLE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("git_mirror_commits");
 
@@ -72,13 +74,16 @@ impl GitMirrorFailureStage {
         {
             return Self::DeveSourceControl;
         }
+        if normalized.contains("outside queued deve commit")
+            || normalized.contains("outside current deve projection snapshot")
+            || normalized.contains("projection diff")
+        {
+            return Self::ProjectionScope;
+        }
         if normalized.contains(".notegit") || normalized.contains("tracked by git") {
             return Self::NotegitProtection;
         }
-        if normalized.contains("outside queued deve commit")
-            || normalized.contains("unsafe projection path")
-            || normalized.contains("projection diff")
-        {
+        if normalized.contains("unsafe projection path") {
             return Self::ProjectionScope;
         }
         if normalized.contains("parent")
@@ -117,6 +122,12 @@ pub struct GitMirrorRecord {
     pub last_error: Option<String>,
     #[serde(default)]
     pub failure_stage: Option<GitMirrorFailureStage>,
+    #[serde(default)]
+    pub failure_subject: Option<String>,
+    #[serde(default)]
+    pub failure_command: Option<String>,
+    #[serde(default)]
+    pub failure_exit_status: Option<String>,
     pub queued_at_ms: i64,
     pub updated_at_ms: i64,
     #[serde(default)]
@@ -156,6 +167,9 @@ pub fn queue_deve_commit(
         git_commit_id: None,
         last_error: None,
         failure_stage: None,
+        failure_subject: None,
+        failure_command: None,
+        failure_exit_status: None,
         queued_at_ms: now,
         updated_at_ms: now,
         attempts: 0,
@@ -174,6 +188,9 @@ pub fn mark_committed(
     record.git_commit_id = Some(git_commit_id.to_string());
     record.last_error = None;
     record.failure_stage = None;
+    record.failure_subject = None;
+    record.failure_command = None;
+    record.failure_exit_status = None;
     record.attempts = record.attempts.saturating_add(1);
     record.updated_at_ms = chrono::Utc::now().timestamp_millis();
     write_record(db, &record)?;
@@ -187,9 +204,14 @@ pub fn mark_out_of_sync(
 ) -> Result<GitMirrorRecord> {
     let mut record = required_record(db, deve_commit_id)?;
     let error = error.into();
+    let stage = GitMirrorFailureStage::classify(&error);
+    let metadata = GitMirrorFailureMetadata::from_error(stage, &error);
     record.state = GitMirrorCommitState::OutOfSync;
     record.last_error = Some(error.clone());
-    record.failure_stage = Some(GitMirrorFailureStage::classify(&error));
+    record.failure_stage = Some(stage);
+    record.failure_subject = metadata.subject;
+    record.failure_command = metadata.command;
+    record.failure_exit_status = metadata.exit_status;
     record.attempts = record.attempts.saturating_add(1);
     record.updated_at_ms = chrono::Utc::now().timestamp_millis();
     write_record(db, &record)?;
@@ -302,17 +324,30 @@ mod tests {
         queue_deve_commit(&db, repo_id, &commit("c2", 2)).expect("queue c2");
 
         mark_committed(&db, "c1", "abc123").expect("mark committed");
-        let failed = mark_out_of_sync(&db, "c2", "git commit failed").expect("mark failed");
+        let failed = mark_out_of_sync(
+            &db,
+            "c2",
+            "git commit failed (status exit status: 128): missing user.name",
+        )
+        .expect("mark failed");
 
         let summary = summarize_records(&db).expect("summary");
         assert_eq!(summary.queued, 0);
         assert_eq!(summary.committed, 1);
         assert_eq!(summary.out_of_sync, 1);
         assert_eq!(failed.state, GitMirrorCommitState::OutOfSync);
-        assert_eq!(failed.last_error.as_deref(), Some("git commit failed"));
+        assert_eq!(
+            failed.last_error.as_deref(),
+            Some("git commit failed (status exit status: 128): missing user.name")
+        );
         assert_eq!(
             failed.failure_stage,
             Some(GitMirrorFailureStage::GitCommand)
+        );
+        assert_eq!(failed.failure_command.as_deref(), Some("commit"));
+        assert_eq!(
+            failed.failure_exit_status.as_deref(),
+            Some("exit status: 128")
         );
         assert_eq!(
             get_record(&db, "c1")
@@ -341,6 +376,36 @@ mod tests {
 
         assert_eq!(record.deve_commit_id, "legacy");
         assert_eq!(record.failure_stage, None);
+        assert_eq!(record.failure_subject, None);
+        assert_eq!(record.failure_command, None);
+        assert_eq!(record.failure_exit_status, None);
+    }
+
+    #[test]
+    fn out_of_sync_metadata_extracts_offending_subjects() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
+        init_table(&db).expect("init");
+        let repo_id = uuid::Uuid::new_v4();
+        queue_deve_commit(&db, repo_id, &commit("c1", 1)).expect("queue c1");
+
+        let failed = mark_out_of_sync(
+            &db,
+            "c1",
+            "Git mirror refuses to include path(s) outside queued Deve commit: outside.md, .notegit/state",
+        )
+        .expect("mark failed");
+
+        assert_eq!(
+            failed.failure_stage,
+            Some(GitMirrorFailureStage::ProjectionScope)
+        );
+        assert_eq!(
+            failed.failure_subject.as_deref(),
+            Some("outside.md, .notegit/state")
+        );
+        assert_eq!(failed.failure_command, None);
+        assert_eq!(failed.failure_exit_status, None);
     }
 
     #[test]

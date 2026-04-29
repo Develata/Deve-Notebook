@@ -10,6 +10,7 @@
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
 | 1 | Docker release smoke rerun | P2 (Host-blocked) | Docker host environment, `scripts/smoke-docker-release.sh` | 2026-04-29 重跑仍因 WSL Docker 不可用阻塞；Docker daemon 可用后重跑，环境阻塞继续与代码失败分开记录。 |
+| 2 | Git mirror repair-action scope decision | P2/P3 | Git mirror repair metadata, CLI/Web repair UI boundary | Failure metadata 已覆盖 subject / command / exit status；下一步只做 structured repair action schema 设计或继续保持 CLI-only，不能直接引入隐式后台写 Git executor。 |
 
 ## 最近完成基线
 
@@ -28,6 +29,7 @@
 - P1/P2 Git push mirror surface 已关闭：`deve_cli git push [--remote] [--branch]` 只发布已映射的 `.git` mirror HEAD，fail-closed 于未导出/失败 mirror record、脏 Git worktree、未映射 HEAD 或 remote/branch 配置错误；它不写 ledger 或 `.notegit`。
 - P1/P2 Git import UI/conflict polish 已关闭：Command Palette 已提供 `Git: Import Changes` / `Git: Push Mirror` CLI-only notice，Source Control notice 明确 CLI 命令与 blocker 边界，import conflict 条目提示暂存前选择保留文件系统或账本版本。
 - P1/P2 Git push blocker/remote polish 已关闭：CLI push 输出与 Web CLI-only notice 已覆盖 remote/upstream、显式 `--remote/--branch`、export/repair、dirty Git worktree/import 与 dirty Deve Source Control blocker 提示；Web 仍不直接执行 Git push。
+- P1/P2 Git mirror failure metadata polish 已关闭：`GitMirrorOutOfSync` 兼容字段已记录 `failure_subject`、`failure_command`、`failure_exit_status`，CLI record 明细输出 `failure_meta[...]`，旧记录仍按缺省字段反序列化。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P3-10 Desktop/Mobile native adapter plan 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract、boot/lifecycle state machine、endpoint/session injection、offline/readiness 语义与 native forbidden shortcuts；Tauri native shell 代码仍属 future implementation。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。

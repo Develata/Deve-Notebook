@@ -133,6 +133,10 @@ fn git_error(args: &[&str], output: &std::process::Output) -> String {
             output.status
         )
     } else {
-        format!("git {} failed: {detail}", args.join(" "))
+        format!(
+            "git {} failed (status {}): {detail}",
+            args.join(" "),
+            output.status
+        )
     }
 }

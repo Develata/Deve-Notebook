@@ -14,6 +14,7 @@
 - 当前 executor 已覆盖单 record 与多 record：单个待处理 record 执行前检查 Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git changed paths 是否属于该 Deve commit diff 或 `.gitignore`，通过后执行 `git add -A` / `git commit`；多个积压 records 通过临时 Git index 从 Deve projection diff 逐个生成 `commit-tree` 并 `update-ref`，成功后写入 `GitMirrorCommitted` 与 Git commit hash。Git 命令失败、mirror 未 ready、路径越界、父映射缺失或无 projection diff 都写入 `GitMirrorOutOfSync`，不回滚 Deve ledger commit。
 - `deve_cli git status` 已输出 queued/out_of_sync 的 per-commit lagging records，包括 `deve_commit`、`ledger_seq`、`attempts`、`git_commit`、`queued_lag_ms`、`updated_lag_ms`、原始时间戳与失败位置。
 - `GitMirrorOutOfSync` records 已持久化结构化 `failure_stage`；CLI 优先读取该字段输出 `failure_location`，旧记录缺字段时才根据 `last_error` 做兼容 fallback。
+- `GitMirrorOutOfSync` records 已补充兼容 failure metadata：路径类失败可持久化 `failure_subject`，Git 命令失败可持久化 `failure_command` / `failure_exit_status`；CLI `git status` / `git mirror` / `git export` record 明细会输出 `failure_meta[...]`，旧记录缺字段时保持可读。
 - `deve_cli git mirror` 已输出 per-record outcome，并在 no-op、out_of_sync、retry 场景给出 mirror/repair/retry hint；失败位置包括 `mirror_not_ready`、`deve_source_control`、`notegit_protection`、`projection_scope`、`git_history_mapping`、`git_worktree`、`git_command` 或 `mirror_executor`。
 - CLI 新增 `deve_cli git export [--repo <repo>] [--retry-out-of-sync]`，复用 explicit mirror executor 将 queued Deve commits 导出到 Git mirror，并输出 `git_export[...]` report 与 export/retry hint。
 - `git export` 已支持首次 snapshot bootstrap：当 `git_mirror_commits` side table 为空、Git history 为空、source-control clean 且当前 Git changed paths 不越出 Deve projection snapshot 时，从最新 Deve commit 的完整 projection 建立首个 Git commit，并只写入最新 Deve commit 的映射；若 Git 已有 HEAD，则 fail-closed 为 `GitMirrorOutOfSync` / `git_history_mapping`。
@@ -26,7 +27,7 @@
 ## 仍未实现
 
 - 自动后台 Git mirror executor 与更完整的 retry / repair UI。
-- 更细的 failure subject / offending path / command exit metadata；当前只稳定到 `failure_stage`。
+- 更完整的 structured repair action schema；当前 metadata 只覆盖 subject / command / exit status，不自动生成可执行修复操作。
 - Web 后端直接执行 Git import/push、可点击 blocker repair UI 与更完整冲突交互。
 
 ## 验证
@@ -38,6 +39,8 @@
 - `cargo test -p deve_core git_bridge -- --nocapture`
 - `cargo test -p deve_core --test git_mirror_queue_test -- --nocapture`
 - `cargo test -p deve_core git_bridge::executor -- --nocapture`
+- `cargo test -p deve_core git_bridge::store -- --nocapture`
+- `cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture`
 - `cargo test -p deve_core watcher_internal_ignore -- --nocapture`
 - `cargo test -p deve_core scan_ignores_git_mirror_markdown_paths -- --nocapture`
 - `cargo test -p deve_core rebuild_projection_force_overwrites_and_prunes_stale_markdown -- --nocapture`

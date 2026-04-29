@@ -24,6 +24,9 @@ fn record(
         git_commit_id: None,
         last_error: last_error.map(str::to_string),
         failure_stage: last_error.map(GitMirrorFailureStage::classify),
+        failure_subject: None,
+        failure_command: None,
+        failure_exit_status: None,
         queued_at_ms: 1,
         updated_at_ms: 2,
         attempts: 1,
@@ -126,6 +129,41 @@ fn status_lines_include_per_commit_lag_and_retry_hint() {
             .iter()
             .any(|line| line.contains("--retry-out-of-sync"))
     );
+}
+
+#[test]
+fn status_lines_include_git_mirror_failure_metadata() {
+    let mut failed = record(
+        "deve-1",
+        GitMirrorCommitState::OutOfSync,
+        7,
+        Some("git commit failed (status exit status: 128): missing user.name"),
+    );
+    failed.failure_command = Some("commit".to_string());
+    failed.failure_exit_status = Some("exit status: 128".to_string());
+
+    let lines = status_lines_at(
+        "default",
+        &GitMirrorStatus {
+            repo_root: std::path::PathBuf::from("vault/default"),
+            notegit_present: true,
+            git_metadata_kind: GitMetadataKind::Directory,
+            gitignore_protects_notegit: true,
+            state: GitMirrorState::Ready,
+            reason: None,
+        },
+        &GitMirrorSummary {
+            queued: 0,
+            committed: 0,
+            out_of_sync: 1,
+        },
+        &[failed],
+        11,
+    );
+
+    assert!(lines.iter().any(|line| {
+        line.contains("failure_meta[1]: subject=- command=commit exit_status=exit status: 128")
+    }));
 }
 
 #[test]

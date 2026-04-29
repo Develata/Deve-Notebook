@@ -6,6 +6,7 @@
 //! authority; Git metadata is an optional external mirror.
 
 mod executor;
+mod failure_metadata;
 mod git_cmd;
 mod import_apply;
 mod import_plan;

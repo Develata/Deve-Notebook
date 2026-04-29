@@ -94,6 +94,7 @@
     - run: scripts/check-source-control-baseline.sh
     - run: cargo test -p deve_cli source_control -- --nocapture
     - run: cargo test -p deve_web commit_write_block -- --nocapture
+    - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
   assertions:
     - ui_assert: source_control_commit_available true
     - ui_assert: source_control_commit_and_push_available true
@@ -103,6 +104,7 @@
     - ui_assert: command_palette_git_push_cli_notice_available true
     - ui_assert: source_control_git_push_blocker_details_available true
     - ui_assert: command_palette_git_direct_executor_absent true
+    - cli_assert: git_mirror_failure_metadata_available true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。

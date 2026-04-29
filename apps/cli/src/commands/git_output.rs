@@ -307,6 +307,17 @@ fn record_detail_lines(
             "  failure[{index}]: location={} error={}",
             location, error
         ));
+        if record.failure_subject.is_some()
+            || record.failure_command.is_some()
+            || record.failure_exit_status.is_some()
+        {
+            lines.push(format!(
+                "  failure_meta[{index}]: subject={} command={} exit_status={}",
+                record.failure_subject.as_deref().unwrap_or("-"),
+                record.failure_command.as_deref().unwrap_or("-"),
+                record.failure_exit_status.as_deref().unwrap_or("-")
+            ));
+        }
     }
     lines
 }
