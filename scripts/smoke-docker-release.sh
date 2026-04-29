@@ -29,6 +29,17 @@ docker_cmd() {
   command "$DOCKER_BIN" "$@"
 }
 
+curl_local() {
+  curl --noproxy "127.0.0.1,localhost" "$@"
+}
+
+diagnose_container_endpoint() {
+  echo "docker-release-smoke: host endpoint probe failed; collecting container diagnostics" >&2
+  docker_cmd inspect -f 'health={{if .State.Health}}{{.State.Health.Status}}{{else}}<none>{{end}} status={{.State.Status}}' "$CONTAINER_NAME" >&2 || true
+  docker_cmd exec "$CONTAINER_NAME" curl -fsS "http://127.0.0.1:3001/api/node/role" >&2 || true
+  echo >&2
+}
+
 docker_bin_available() {
   if [[ "$DOCKER_BIN" == */* ]]; then
     [[ -x "$DOCKER_BIN" ]]
@@ -81,7 +92,7 @@ docker_cmd run -d \
   "$IMAGE" >/dev/null
 
 for _ in $(seq 1 60); do
-  status="$(curl -fsS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/node/role" || true)"
+  status="$(curl_local -fsS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/node/role" || true)"
   if [[ "$status" == "200" ]]; then
     echo "docker-release-smoke: ok"
     exit 0
@@ -89,5 +100,6 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 
+diagnose_container_endpoint
 docker_cmd logs "$CONTAINER_NAME" >&2 || true
 fail "node-role endpoint did not become healthy on port $HOST_PORT"
