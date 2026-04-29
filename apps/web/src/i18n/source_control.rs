@@ -10,6 +10,8 @@
 
 use super::Locale;
 
+pub use super::source_control_git::*;
+
 pub fn title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Source Control",
@@ -446,6 +448,16 @@ mod tests {
             deleted_change_no_doc_diff(Locale::En, "old.md"),
             "No diff is available for deleted change old.md because it has no document identity."
         );
+        assert_eq!(
+            git_import_cli_only_title(Locale::En),
+            "Git import is CLI-only"
+        );
+        assert!(git_import_cli_only_hint(Locale::En).contains("deve_cli git import --apply"));
+        assert_eq!(
+            git_push_cli_only_title(Locale::Zh),
+            "Git mirror 推送只能通过 CLI 执行"
+        );
+        assert!(git_push_cli_only_hint(Locale::Zh).contains("deve_cli git push"));
         assert_eq!(refresh_change_list(Locale::Zh), "请刷新更改列表后再试。");
     }
 

@@ -4,6 +4,7 @@
 //!
 use crate::hooks::use_core::source_control_notice::{
     SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
+    is_git_import_cli_notice, is_git_push_cli_notice,
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
 
@@ -11,10 +12,22 @@ pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
     if is_deleted_no_doc_id_notice(notice) {
         return sc::diff_unavailable(locale).to_string();
     }
+    if is_git_import_cli_notice(notice) {
+        return sc::git_import_cli_only_title(locale).to_string();
+    }
+    if is_git_push_cli_notice(notice) {
+        return sc::git_push_cli_only_title(locale).to_string();
+    }
     server_error::message(locale, notice.code).to_string()
 }
 
 pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
+    if is_git_import_cli_notice(notice) {
+        return sc::git_import_cli_only_hint(locale).to_string();
+    }
+    if is_git_push_cli_notice(notice) {
+        return sc::git_push_cli_only_hint(locale).to_string();
+    }
     match notice.code {
         deve_core::protocol::ServerErrorCode::ScDocNotFound
             if deleted_no_doc_id_path(notice).is_some() =>
@@ -43,5 +56,34 @@ pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
             sc::selected_item_unavailable(locale).to_string()
         }
         _ => server_error::message(locale, notice.code).to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{hint, title};
+    use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+    use crate::i18n::{Locale, source_control as sc};
+
+    #[test]
+    fn local_git_import_notice_uses_cli_copy() {
+        let notice = SourceControlNotice::git_import_cli_only();
+
+        assert_eq!(
+            title(Locale::En, &notice),
+            sc::git_import_cli_only_title(Locale::En)
+        );
+        assert!(hint(Locale::En, &notice).contains("deve_cli git import --apply"));
+    }
+
+    #[test]
+    fn local_git_push_notice_uses_cli_copy() {
+        let notice = SourceControlNotice::git_push_cli_only();
+
+        assert_eq!(
+            title(Locale::Zh, &notice),
+            sc::git_push_cli_only_title(Locale::Zh)
+        );
+        assert!(hint(Locale::Zh, &notice).contains("deve_cli git push"));
     }
 }

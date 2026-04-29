@@ -88,13 +88,14 @@
 ### `op.ui.command-palette.execute`
 
 1. `User Operation`: 用户按 Enter 或点击某条命令。
-2. `Application Response`: 取当前选中 command，执行其 `action`；根据命令不同，可能打开设置、打开文档搜索、切换语言、切换 peer、触发 merge、切换 AI chat。
+2. `Application Response`: 取当前选中 command，执行其 `action`；根据命令不同，可能打开设置、打开文档搜索、切换语言、切换 peer、触发 merge、切换 AI chat，或为 Git import / push 显示 CLI-only Source Control notice。
 3. `Concrete Modules`:
    - `apps/web/src/components/command_palette/logic.rs`
    - `apps/web/src/components/command_palette/registry.rs`
    - `apps/web/src/components/search_box/`
    - `apps/web/src/components/settings.rs`
    - `apps/web/src/components/chat/`
+   - `apps/web/src/components/sidebar/source_control/error_notice.rs`
 4. `Core Subsystems`:
    - `plugin`
    - `protocol`

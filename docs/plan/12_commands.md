@@ -62,10 +62,13 @@
 
 *   **Current implemented subset**:
     *   Command Palette 当前覆盖 Open / Settings / Toggle Language / Switch Peer /
-        Establish Branch / Merge Peer / Toggle AI Chat（条件可见）。
-    *   Source Control Sync / Commit / Push、Command Palette Git mirror commands 与 AI Retry / Backend /
+        Establish Branch / Merge Peer / Git Import Changes（CLI-only notice）/
+        Git Push Mirror（CLI-only notice）/ Toggle AI Chat（条件可见）。
+    *   Source Control Sync / Commit / Push、Command Palette Git mirror executor/export/status 与 AI Retry / Backend /
         PLAN / BUILD 面板命令仍属于 Planned / Optional，除非后续验收用例绑定到具体实现。
-    *   Git import 当前只实现 CLI dry-run 与 pending/import apply；Git push 当前只实现 CLI mirror publish；自动 conflict UI 与 Command Palette 集成仍属 future。
+    *   Git import 当前只实现 CLI dry-run 与 pending/import apply；Git push 当前只实现 CLI mirror publish。
+        Command Palette 只提供可发现的 CLI-only notice，不得被解释为 Web 已能直接执行 Git import/push；
+        blocker repair、自动执行与完整 conflict UI 仍属 future。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

@@ -38,6 +38,7 @@ pub mod server_error;
 pub mod settings;
 pub mod sidebar;
 pub mod source_control;
+pub mod source_control_git;
 pub mod time;
 
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]

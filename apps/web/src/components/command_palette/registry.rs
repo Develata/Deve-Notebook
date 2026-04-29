@@ -10,9 +10,12 @@ use crate::components::main_layout::ChatControl;
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
+#[path = "registry_git.rs"]
+mod git;
 #[path = "registry_merge.rs"]
 mod merge;
 
+use git::{git_import_command, git_push_command};
 use merge::merge_peer_command;
 
 /// 创建静态命令列表。
@@ -85,6 +88,8 @@ pub fn create_static_commands(
             is_file: false,
         },
         merge_peer_command(locale, set_show),
+        git_import_command(locale, set_show),
+        git_push_command(locale, set_show),
     ];
 
     // Add AI Chat toggle command if ChatControl is available
@@ -120,4 +125,35 @@ pub fn filter_commands(query: &str, commands: Vec<Command>, max_results: usize) 
     }
 
     results
+}
+
+#[cfg(test)]
+mod tests {
+    use super::create_static_commands;
+    use crate::i18n::Locale;
+    use leptos::prelude::*;
+
+    #[test]
+    fn static_commands_include_git_bridge_notices() {
+        let owner = leptos::reactive::owner::Owner::new();
+
+        owner.with(|| {
+            let (_, set_show) = signal(false);
+            let locale = RwSignal::new(Locale::En);
+            let commands = create_static_commands(
+                Locale::En,
+                Callback::new(|_| {}),
+                Callback::new(|_| {}),
+                set_show,
+                locale,
+            );
+            let ids = commands
+                .iter()
+                .map(|command| command.id.as_str())
+                .collect::<Vec<_>>();
+
+            assert!(ids.contains(&"git_import_changes"));
+            assert!(ids.contains(&"git_push_mirror"));
+        });
+    }
 }

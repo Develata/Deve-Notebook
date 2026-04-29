@@ -64,9 +64,36 @@ pub fn merge_peer(locale: Locale) -> &'static str {
     }
 }
 
+pub fn git_import_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git: Import Changes",
+        Locale::Zh => "Git: 导入外部变更",
+    }
+}
+
+pub fn git_push_mirror(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git: Push Mirror",
+        Locale::Zh => "Git: 推送 Mirror",
+    }
+}
+
 pub fn toggle_ai_chat(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "AI: Toggle Chat Panel",
         Locale::Zh => "AI: 切换聊天面板",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn git_bridge_commands_are_localized() {
+        assert_eq!(git_import_changes(Locale::En), "Git: Import Changes");
+        assert_eq!(git_import_changes(Locale::Zh), "Git: 导入外部变更");
+        assert_eq!(git_push_mirror(Locale::En), "Git: Push Mirror");
+        assert_eq!(git_push_mirror(Locale::Zh), "Git: 推送 Mirror");
     }
 }

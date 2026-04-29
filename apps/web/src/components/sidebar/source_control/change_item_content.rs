@@ -6,7 +6,7 @@ use crate::components::sidebar::source_control::change_item_counterpart::{
     counterpart_badge_text, counterpart_badge_title, find_counterpart_kind,
 };
 use crate::components::sidebar::source_control::change_item_meta::ChangeItemMeta;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 
@@ -48,7 +48,14 @@ pub fn ChangeItemContent(
                 })
             }}
             {if has_conflict {
-                view! { <AlertTriangle class="w-3 h-3 text-warning ml-auto shrink-0" /> }.into_any()
+                view! {
+                    <span
+                        class="ml-auto shrink-0"
+                        title=move || t::source_control::git_import_conflict_title(locale.get())
+                    >
+                        <AlertTriangle class="w-3 h-3 text-warning" />
+                    </span>
+                }.into_any()
             } else {
                 view! {}.into_any()
             }}

@@ -87,7 +87,7 @@
     - ui_assert: search_disabled_until_prefetch_complete true
 
 - case_id: DIFF-009
-  goal: Source Control 当前入口与 Git Command Palette 计划项保持分层。
+  goal: Source Control 当前入口与 Git Command Palette CLI-only notice 保持分层。
   preconditions:
     - Source Control 面板可用
   steps:
@@ -99,7 +99,9 @@
     - ui_assert: source_control_commit_and_push_available true
     - ui_assert: command_palette_git_sync_absent true
     - ui_assert: command_palette_git_commit_absent true
-    - ui_assert: command_palette_git_push_absent true
+    - ui_assert: command_palette_git_import_cli_notice_available true
+    - ui_assert: command_palette_git_push_cli_notice_available true
+    - ui_assert: command_palette_git_direct_executor_absent true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。

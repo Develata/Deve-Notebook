@@ -5,6 +5,8 @@
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
+pub const GIT_IMPORT_CLI_NOTICE_DETAIL: &str = "git-import-cli-only";
+pub const GIT_PUSH_CLI_NOTICE_DETAIL: &str = "git-push-cli-only";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceControlNotice {
@@ -19,6 +21,20 @@ impl SourceControlNotice {
             detail: error.detail.clone(),
         })
     }
+
+    pub fn git_import_cli_only() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(GIT_IMPORT_CLI_NOTICE_DETAIL.to_string()),
+        }
+    }
+
+    pub fn git_push_cli_only() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(GIT_PUSH_CLI_NOTICE_DETAIL.to_string()),
+        }
+    }
 }
 
 pub fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
@@ -30,6 +46,14 @@ pub fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
 
 pub fn is_deleted_no_doc_id_notice(notice: &SourceControlNotice) -> bool {
     deleted_no_doc_id_path(notice).is_some()
+}
+
+pub fn is_git_import_cli_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(GIT_IMPORT_CLI_NOTICE_DETAIL)
+}
+
+pub fn is_git_push_cli_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(GIT_PUSH_CLI_NOTICE_DETAIL)
 }
 
 pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
@@ -51,8 +75,9 @@ pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        DELETED_NO_DOC_ID_NOTICE_PREFIX, SourceControlNotice, deleted_no_doc_id_path,
-        is_deleted_no_doc_id_notice, is_source_control_error,
+        DELETED_NO_DOC_ID_NOTICE_PREFIX, GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_PUSH_CLI_NOTICE_DETAIL,
+        SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
+        is_git_import_cli_notice, is_git_push_cli_notice, is_source_control_error,
     };
     use deve_core::protocol::{ServerError, ServerErrorCode};
 
@@ -87,5 +112,22 @@ mod tests {
         };
         assert!(is_deleted_no_doc_id_notice(&notice));
         assert_eq!(deleted_no_doc_id_path(&notice), Some("deleted.md"));
+    }
+
+    #[test]
+    fn local_git_cli_notices_are_detected() {
+        let import_notice = SourceControlNotice::git_import_cli_only();
+        assert_eq!(
+            import_notice.detail.as_deref(),
+            Some(GIT_IMPORT_CLI_NOTICE_DETAIL)
+        );
+        assert!(is_git_import_cli_notice(&import_notice));
+
+        let push_notice = SourceControlNotice::git_push_cli_only();
+        assert_eq!(
+            push_notice.detail.as_deref(),
+            Some(GIT_PUSH_CLI_NOTICE_DETAIL)
+        );
+        assert!(is_git_push_cli_notice(&push_notice));
     }
 }

@@ -9,9 +9,8 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git import UI/conflict polish | P2 | Command Palette, Source Control panel, import conflict copy | CLI apply 已写入 pending/import；下一步补 UI 入口、blocker/conflict 文案与验收用例。 |
-| 2 | Git push Command Palette polish | P2 | Command Palette, Source Control push copy, push blocker UI | CLI push 已能发布 `.git` mirror；下一步补 UI 入口、远端配置提示与 blocker 文案。 |
-| 3 | Docker release smoke rerun | P2 (Host-blocked) | Docker host environment, `scripts/smoke-docker-release.sh` | 2026-04-29 重跑仍因 WSL Docker 不可用阻塞；Docker daemon 可用后重跑，环境阻塞继续与代码失败分开记录。 |
+| 1 | Git push blocker/remote polish | P2 | Source Control push copy, remote config/blocker UI | Command Palette 已提供 CLI-only notice；下一步补更细的 push blocker/remote 配置提示，仍不得把 Web notice 伪装成直接 Git executor。 |
+| 2 | Docker release smoke rerun | P2 (Host-blocked) | Docker host environment, `scripts/smoke-docker-release.sh` | 2026-04-29 重跑仍因 WSL Docker 不可用阻塞；Docker daemon 可用后重跑，环境阻塞继续与代码失败分开记录。 |
 
 ## 最近完成基线
 
@@ -28,6 +27,7 @@
 - P1/P2 Git import dry-run planning 已关闭：`deve_cli git import` 会只读检查 ready Git mirror/Git HEAD，并把 Git tracked/untracked worktree changes 输出为 change/blocker；它不写 ledger、pending_fs、staging 或 `.notegit`。
 - P1/P2 Git import apply surface 已关闭：`deve_cli git import --apply` 在无 blocker 时把安全 Git changes 写入 `pending_fs_ops`，保留 `has_conflict`，并继续要求后续 Deve stage/commit；它不写 ledger、`StagedEntry` 或 `.notegit`。
 - P1/P2 Git push mirror surface 已关闭：`deve_cli git push [--remote] [--branch]` 只发布已映射的 `.git` mirror HEAD，fail-closed 于未导出/失败 mirror record、脏 Git worktree、未映射 HEAD 或 remote/branch 配置错误；它不写 ledger 或 `.notegit`。
+- P1/P2 Git import UI/conflict polish 已关闭：Command Palette 已提供 `Git: Import Changes` / `Git: Push Mirror` CLI-only notice，Source Control notice 明确 CLI 命令与 blocker 边界，import conflict 条目提示暂存前选择保留文件系统或账本版本。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P3-10 Desktop/Mobile native adapter plan 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract、boot/lifecycle state machine、endpoint/session injection、offline/readiness 语义与 native forbidden shortcuts；Tauri native shell 代码仍属 future implementation。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。
