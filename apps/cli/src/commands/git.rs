@@ -6,7 +6,8 @@
 //! Git mirror bridge diagnostics and explicit executor commands.
 
 use super::git_output::{
-    print_export_report, print_import_plan, print_mirror_report, print_status,
+    print_export_report, print_import_apply_report, print_import_plan, print_mirror_report,
+    print_status,
 };
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
@@ -74,6 +75,7 @@ pub fn import(
     ledger_dir: &Path,
     vault_root: &Path,
     target_repo: Option<&str>,
+    apply: bool,
     snapshot_depth: usize,
 ) -> Result<()> {
     let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
@@ -81,8 +83,13 @@ pub fn import(
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
-        let plan = deve_core::git_bridge::plan_import(&repo_root)?;
-        print_import_plan(&repo_name, &plan);
+        if apply {
+            let report = deve_core::git_bridge::apply_import(&repo, &repo_name, &repo_root)?;
+            print_import_apply_report(&repo_name, &report);
+        } else {
+            let plan = deve_core::git_bridge::plan_import(&repo_root)?;
+            print_import_plan(&repo_name, &plan);
+        }
     }
     Ok(())
 }

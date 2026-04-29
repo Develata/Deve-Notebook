@@ -98,10 +98,11 @@ pub async fn run(
                 retry_out_of_sync,
                 config.snapshot_depth,
             )?,
-            GitAction::Import { repo } => commands::git::import(
+            GitAction::Import { repo, apply } => commands::git::import(
                 ledger_dir,
                 vault_path,
                 repo.as_deref(),
+                apply,
                 config.snapshot_depth,
             )?,
         },

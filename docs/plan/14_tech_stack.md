@@ -65,8 +65,8 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - Lazy-created `git_mirror_commits` side table 记录 `DeveCommit -> GitMirrorQueued / GitMirrorCommitted / GitMirrorOutOfSync`，并为 out-of-sync 记录持久化结构化 `failure_stage`（旧记录缺字段时 CLI 只作兼容性 fallback）；`deve_cli git status` 输出 mirror readiness `state`、独立 `queue_state`/queued/committed/out_of_sync summary、per-commit lagging records、`queued_lag_ms` / `updated_lag_ms`、失败位置与 retry command hint。
 - `deve_cli git mirror` 可显式执行 queued/out_of_sync records；单个 record 走 worktree preflight 后的 `git add -A` / `git commit`，多个 records 走临时 Git index 的 projection replay，用 `commit-tree` / `update-ref` 按 Deve commit diff 生成逐 commit Git history，并写回 Git commit hash；执行报告会输出 per-record outcome、失败位置与 repair/retry hint。
 - `deve_cli git export` 复用该 executor 作为 queued projection export surface，输出 `git_export[...]` 报告与 export/retry hint；side table 为空且 Git history 为空时，会从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit，只把最新 Deve commit 映射到该 Git commit，后续增量 commit 再以该映射为 parent replay。
-- `deve_cli git import` 当前提供只读 dry-run planning：解析 Git tracked/untracked worktree changes 为 change/blocker，并明确 future apply 才会写 pending/import；该命令不得被解释为 ledger import 已完成。
-- 自动后台执行、完整 repair UI、Git import apply/push 仍是后续实现，不得被当前 executor 或 dry-run surface 替代。
+- `deve_cli git import` 当前提供只读 dry-run planning：解析 Git tracked/untracked worktree changes 为 change/blocker；`deve_cli git import --apply` 在无 blocker 时把安全 changes 原子写入 `pending_fs_ops`，并通过 `has_conflict` 保留冲突标记。该 surface 不得被解释为 ledger commit 已完成。
+- 自动后台执行、完整 repair UI、Command Palette Git import UI 与 Git push 仍是后续实现，不得被当前 executor 或 import apply surface 替代。
 
 该 bridge 的工程边界：
 

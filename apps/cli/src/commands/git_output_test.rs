@@ -1,11 +1,12 @@
 use super::{
-    export_report_lines, import_plan_lines, mirror_report_lines, print_export_report,
-    print_import_plan, print_mirror_report, print_status, status_lines_at,
+    export_report_lines, import_apply_report_lines, import_plan_lines, mirror_report_lines,
+    print_export_report, print_import_apply_report, print_import_plan, print_mirror_report,
+    print_status, status_lines_at,
 };
 use deve_core::git_bridge::{
-    GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, GitMetadataKind, GitMirrorCommitState,
-    GitMirrorFailureStage, GitMirrorRecord, GitMirrorRunReport, GitMirrorState, GitMirrorStatus,
-    GitMirrorSummary,
+    GitImportApplyReport, GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, GitMetadataKind,
+    GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord, GitMirrorRunReport,
+    GitMirrorState, GitMirrorStatus, GitMirrorSummary,
 };
 use deve_core::source_control::ChangeStatus;
 
@@ -218,6 +219,28 @@ fn print_git_import_plan_handles_dry_run_changes() {
 }
 
 #[test]
+fn print_git_import_apply_report_handles_pending_import() {
+    print_import_apply_report(
+        "default",
+        &GitImportApplyReport {
+            plan: GitImportPlan {
+                repo_root: std::path::PathBuf::from("vault/default"),
+                entries: vec![GitImportPlanEntry {
+                    path: "note.md".into(),
+                    previous_path: None,
+                    status: ChangeStatus::Modified,
+                    git_status: "M".into(),
+                }],
+                blockers: Vec::new(),
+            },
+            applied: 1,
+            skipped: 0,
+            blockers: Vec::new(),
+        },
+    );
+}
+
+#[test]
 fn mirror_report_lines_include_noop_and_repair_semantics() {
     let empty = mirror_report_lines("default", &GitMirrorRunReport::default());
     assert!(
@@ -334,5 +357,94 @@ fn import_plan_lines_are_explicitly_dry_run_and_non_authoritative() {
         blocked
             .iter()
             .any(|line| line.contains("fix blockers before future import apply"))
+    );
+}
+
+#[test]
+fn import_apply_report_lines_point_back_to_deve_source_control() {
+    let applied = import_apply_report_lines(
+        "default",
+        &GitImportApplyReport {
+            plan: GitImportPlan {
+                repo_root: std::path::PathBuf::from("vault/default"),
+                entries: vec![GitImportPlanEntry {
+                    path: "note.md".into(),
+                    previous_path: None,
+                    status: ChangeStatus::Modified,
+                    git_status: "M".into(),
+                }],
+                blockers: Vec::new(),
+            },
+            applied: 1,
+            skipped: 0,
+            blockers: Vec::new(),
+        },
+    );
+
+    assert!(
+        applied
+            .iter()
+            .any(|line| line.contains("git_import_apply[default]: applied=1 skipped=0"))
+    );
+    assert!(
+        applied
+            .iter()
+            .any(|line| line.contains("stage and commit through Deve source control"))
+    );
+
+    let blocked = import_apply_report_lines(
+        "default",
+        &GitImportApplyReport {
+            plan: GitImportPlan {
+                repo_root: std::path::PathBuf::from("vault/default"),
+                entries: Vec::new(),
+                blockers: Vec::new(),
+            },
+            applied: 0,
+            skipped: 0,
+            blockers: vec![GitImportPlanBlocker {
+                path: "-".into(),
+                reason: "source-control staged".into(),
+            }],
+        },
+    );
+
+    assert!(
+        blocked
+            .iter()
+            .any(|line| line.contains("no pending/import writes were performed"))
+    );
+}
+
+#[test]
+fn import_apply_report_lines_count_plan_blockers_once() {
+    let lines = import_apply_report_lines(
+        "default",
+        &GitImportApplyReport {
+            plan: GitImportPlan {
+                repo_root: std::path::PathBuf::from("vault/default"),
+                entries: Vec::new(),
+                blockers: vec![GitImportPlanBlocker {
+                    path: "bad.md".into(),
+                    reason: "unsupported Git status T".into(),
+                }],
+            },
+            applied: 0,
+            skipped: 0,
+            blockers: Vec::new(),
+        },
+    );
+
+    assert!(
+        lines.iter().any(|line| line
+            .contains("git_import_apply[default]: applied=0 skipped=0 changes=0 blockers=1")),
+        "{lines:?}"
+    );
+    assert_eq!(
+        lines
+            .iter()
+            .filter(|line| line.contains("unsupported Git status T"))
+            .count(),
+        1
     );
 }

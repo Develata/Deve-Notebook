@@ -153,13 +153,16 @@ fn git_export_accepts_retry_out_of_sync() {
 
 #[test]
 fn git_import_accepts_repo_selector() {
-    let args =
-        Args::try_parse_from(["deve", "git", "import", "--repo", "default"]).expect("parse args");
+    let args = Args::try_parse_from(["deve", "git", "import", "--repo", "default", "--apply"])
+        .expect("parse args");
 
     match args.command {
         Some(Commands::Git {
-            action: GitAction::Import { repo },
-        }) => assert_eq!(repo.as_deref(), Some("default")),
+            action: GitAction::Import { repo, apply },
+        }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+            assert!(apply);
+        }
         other => panic!("unexpected command: {other:?}"),
     }
 }

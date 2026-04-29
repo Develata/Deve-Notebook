@@ -75,7 +75,7 @@ pub fn init_table(db: &Database) -> Result<()> {
 }
 
 /// 判断两条 entry 的语义字段是否完全相等（忽略 `detected_at`）
-fn semantic_eq(a: &PendingFsEntry, b: &PendingFsEntry) -> bool {
+pub(crate) fn semantic_eq(a: &PendingFsEntry, b: &PendingFsEntry) -> bool {
     a.path == b.path
         && a.renamed_from == b.renamed_from
         && a.doc_id == b.doc_id
@@ -91,33 +91,8 @@ fn semantic_eq(a: &PendingFsEntry, b: &PendingFsEntry) -> bool {
 /// 保持原行（含 `detected_at`）字节不变，以满足 plan 04_storage#watcher-contract
 /// 的重复信号幂等性要求。
 pub fn upsert(db: &Database, entry: &PendingFsEntry) -> Result<()> {
-    let write_txn = db.begin_write()?;
-    let mut skipped = false;
-    {
-        let mut table = write_txn.open_table(PENDING_FS_OPS)?;
-        let previous = table
-            .get(entry.path.as_str())?
-            .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
-            .transpose()?;
-        if let Some(prev) = previous.as_ref()
-            && semantic_eq(prev, entry)
-        {
-            // Byte-stable idempotency: leave existing row untouched.
-            skipped = true;
-        }
-        if !skipped {
-            let bytes = serde_json::to_vec(entry)?;
-            index::replace(
-                &write_txn,
-                previous.as_ref().and_then(|item| item.doc_id),
-                entry.doc_id,
-                &entry.path,
-            )?;
-            table.insert(entry.path.as_str(), bytes.as_slice())?;
-        }
-    }
-    write_txn.commit()?;
-    if skipped {
+    let written = upsert_many(db, std::slice::from_ref(entry))?;
+    if written == 0 {
         tracing::trace!(
             "Pending FS upsert (idempotent skip): {} ({:?})",
             entry.path,
@@ -131,6 +106,41 @@ pub fn upsert(db: &Database, entry: &PendingFsEntry) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// 原子插入或更新多条待确认变更。
+///
+/// 返回实际写入的条目数量；语义完全相同的已有条目会保持字节不变并计为 skipped。
+pub fn upsert_many(db: &Database, entries: &[PendingFsEntry]) -> Result<usize> {
+    let write_txn = db.begin_write()?;
+    let mut written = 0;
+    {
+        let mut table = write_txn.open_table(PENDING_FS_OPS)?;
+        for entry in entries {
+            let previous = table
+                .get(entry.path.as_str())?
+                .map(|guard| serde_json::from_slice::<PendingFsEntry>(guard.value()))
+                .transpose()?;
+            if previous
+                .as_ref()
+                .is_some_and(|prev| semantic_eq(prev, entry))
+            {
+                // Byte-stable idempotency: leave existing row untouched.
+                continue;
+            }
+            let bytes = serde_json::to_vec(entry)?;
+            index::replace(
+                &write_txn,
+                previous.as_ref().and_then(|item| item.doc_id),
+                entry.doc_id,
+                &entry.path,
+            )?;
+            table.insert(entry.path.as_str(), bytes.as_slice())?;
+            written += 1;
+        }
+    }
+    write_txn.commit()?;
+    Ok(written)
 }
 
 /// 移除单条待确认变更（Stage 或 Discard 后调用）
