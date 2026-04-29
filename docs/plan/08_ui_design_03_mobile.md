@@ -97,6 +97,22 @@ MobileColdStart
 *   network offline 但 service/session/writer ready 时，本地编辑继续可用。
 *   background/resume 后必须重新握手，stale `scope_nonce` 写入被拒绝。
 
+### 0.2 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
+
+`apps/mobile` 当前提供 `native-packaging` feature 后的 packaging scaffold，但仍不引入
+真实 Tauri Mobile runtime dependency。该 scaffold 只用于固定下一批 packaging dependency
+decision 的验收输入：
+
+*   planned dependency batch: `tauri` runtime crate + `tauri-build` build crate，状态仍为 `planned`。
+*   packaging capability 只覆盖移动壳层能力：WebView shell、permission bridge、share sheet、
+    deeplink、file picker、push notification、store package。
+*   packaging scaffold 不得获得 ledger/vault/source-control/search index/`.git`/`.notegit`
+    authority；这些业务真相仍只归 core/server。
+*   lifecycle correctness 仍由 no-packaging mobile skeleton tests 保证：background/resume 后必须
+    fresh reprobe auth、node role、WS repo handshake 与 current `scope_nonce`，packaging 不得绕过。
+*   `scripts/check-native-track-boundary.sh` 必须继续阻止真实 packaging dependency 或 import
+    在门禁打开前泄漏到 workspace root、core、cli、web 或 native 默认构建。
+
 ## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。
 *   **SHOULD**: 强烈建议。

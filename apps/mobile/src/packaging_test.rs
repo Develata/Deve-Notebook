@@ -1,0 +1,47 @@
+//! plan_ref:
+//!   - 14_tech_stack#native-packaging-dependency-gate
+
+use crate::{MobilePackagingAuthority, MobilePackagingCapability, mobile_packaging_scaffold};
+
+#[test]
+fn mobile_packaging_scaffold_is_feature_gated_and_planned() {
+    let scaffold = mobile_packaging_scaffold();
+
+    assert_eq!(scaffold.dependency_batch.feature_gate, "native-packaging");
+    assert_eq!(scaffold.dependency_batch.runtime_crate, "tauri");
+    assert_eq!(scaffold.dependency_batch.build_crate, "tauri-build");
+    assert_eq!(scaffold.dependency_batch.status, "planned");
+    assert!(scaffold.dependency_feature_is_isolated());
+}
+
+#[test]
+fn mobile_packaging_acceptance_is_shell_only() {
+    let scaffold = mobile_packaging_scaffold();
+
+    assert_eq!(
+        scaffold.acceptance.capabilities,
+        [
+            MobilePackagingCapability::WebViewShell,
+            MobilePackagingCapability::PermissionBridge,
+            MobilePackagingCapability::ShareSheet,
+            MobilePackagingCapability::DeepLink,
+            MobilePackagingCapability::FilePicker,
+            MobilePackagingCapability::PushNotification,
+            MobilePackagingCapability::StorePackage,
+        ]
+    );
+    assert_eq!(
+        scaffold.acceptance.forbidden_authorities,
+        [
+            MobilePackagingAuthority::Ledger,
+            MobilePackagingAuthority::Vault,
+            MobilePackagingAuthority::SourceControl,
+            MobilePackagingAuthority::SearchIndex,
+            MobilePackagingAuthority::GitMirror,
+            MobilePackagingAuthority::NoteGit,
+        ]
+    );
+    assert!(scaffold.is_authority_free());
+    assert!(scaffold.acceptance.lifecycle_reprobe_remains_required);
+    assert!(scaffold.no_packaging_tests_remain_authoritative);
+}

@@ -101,6 +101,13 @@ Desktop packaging scaffold 当前已作为 `apps/desktop` 的 feature-gated code
 installer/auto-update acceptance，但仍不引入实际 Tauri dependency。该 scaffold
 只能作为下一批 dependency decision 的输入，不得被解释为当前已具备 native packaging。
 
+Mobile packaging scaffold 当前已作为 `apps/mobile` 的 feature-gated code surface
+存在：它声明 planned `tauri` / `tauri-build` dependency batch 与 WebView shell/
+permission bridge/share sheet/deeplink/file picker/push notification/store package
+acceptance，但仍不引入实际 Tauri Mobile dependency。移动端 foreground/background
+lifecycle reprobe、session/readiness correctness 继续由 no-packaging skeleton tests
+保证，packaging 不得取得业务 authority。
+
 ## 2. Markdown Compatibility Checklist
 
 *   **导出原则**：通用 GFM，无私有语法。

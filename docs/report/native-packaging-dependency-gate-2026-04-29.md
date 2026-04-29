@@ -55,4 +55,9 @@ Observed result:
 The desktop packaging scaffold split was completed in
 `desktop-packaging-scaffold-status-2026-04-29.md`.
 
-The next P3-10 step should mirror the split for mobile packaging.
+The mobile packaging scaffold split was completed in
+`mobile-packaging-scaffold-status-2026-04-29.md`.
+
+Do not open the real Tauri dependency gate by default. The next native-track
+step should be selected explicitly from packaging runtime adoption, embedded
+service supervision, or platform bridge work after a focused review.

@@ -63,8 +63,11 @@ The native packaging dependency gate was completed in
 The desktop packaging scaffold split was completed in
 `desktop-packaging-scaffold-status-2026-04-29.md`.
 
-The next P3-10 implementation step should mirror the split for mobile
-packaging:
+The mobile packaging scaffold split was completed in
+`mobile-packaging-scaffold-status-2026-04-29.md`.
+
+The next native-track implementation step should be selected explicitly; do
+not open the real Tauri dependency gate by default:
 
 1. Keep packaging dependencies isolated to `apps/mobile`.
 2. Preserve the no-Tauri desktop/mobile shell skeletons as fast unit-test
