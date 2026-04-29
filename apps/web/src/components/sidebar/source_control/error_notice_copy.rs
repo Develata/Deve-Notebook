@@ -7,6 +7,7 @@ use crate::hooks::use_core::source_control_notice::{
     is_git_import_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
+use deve_core::git_bridge::GitMirrorRepairReview;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GitRepairReviewCopy {
@@ -98,8 +99,17 @@ pub fn details(locale: Locale, notice: &SourceControlNotice) -> Vec<String> {
 pub fn git_repair_review(
     locale: Locale,
     notice: &SourceControlNotice,
+    data: Option<&GitMirrorRepairReview>,
 ) -> Option<GitRepairReviewCopy> {
-    is_git_repair_cli_notice(notice).then(|| GitRepairReviewCopy {
+    if !is_git_repair_cli_notice(notice) {
+        return None;
+    }
+    data.and_then(|review| git_repair_review_from_data(locale, review))
+        .or_else(|| Some(static_git_repair_review(locale)))
+}
+
+fn static_git_repair_review(locale: Locale) -> GitRepairReviewCopy {
+    GitRepairReviewCopy {
         title: sc::git_repair_review_title(locale).to_string(),
         rows: vec![
             GitRepairReviewRow {
@@ -121,6 +131,39 @@ pub fn git_repair_review(
         ],
         retry_command: sc::git_repair_retry_command().to_string(),
         authority_note: sc::git_repair_authority_note(locale).to_string(),
+    }
+}
+
+fn git_repair_review_from_data(
+    locale: Locale,
+    review: &GitMirrorRepairReview,
+) -> Option<GitRepairReviewCopy> {
+    let first = review.records.first()?;
+    Some(GitRepairReviewCopy {
+        title: sc::git_repair_review_title(locale).to_string(),
+        rows: vec![
+            GitRepairReviewRow {
+                label: sc::git_repair_action_label(locale).to_string(),
+                value: format!("{} ({})", first.action_code, first.deve_commit_id),
+            },
+            GitRepairReviewRow {
+                label: sc::git_repair_guidance_label(locale).to_string(),
+                value: "manual_only=yes".to_string(),
+            },
+            GitRepairReviewRow {
+                label: sc::git_repair_subject_label(locale).to_string(),
+                value: first.subject.clone(),
+            },
+            GitRepairReviewRow {
+                label: sc::git_repair_next_step_label(locale).to_string(),
+                value: first.next_step.clone(),
+            },
+        ],
+        retry_command: first
+            .retry_command
+            .clone()
+            .unwrap_or_else(|| sc::git_repair_retry_command().to_string()),
+        authority_note: review.authority.clone(),
     })
 }
 
@@ -129,6 +172,7 @@ mod tests {
     use super::{details, git_repair_review, hint, title};
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
     use crate::i18n::{Locale, source_control as sc};
+    use deve_core::git_bridge::{GitMirrorRepairReview, GitMirrorRepairReviewRecord};
 
     #[test]
     fn local_git_import_notice_uses_cli_copy() {
@@ -172,7 +216,7 @@ mod tests {
                 .any(|line| line.contains("retry-out-of-sync"))
         );
 
-        let review = git_repair_review(Locale::En, &notice).expect("repair review");
+        let review = git_repair_review(Locale::En, &notice, None).expect("repair review");
         assert_eq!(review.title, sc::git_repair_review_title(Locale::En));
         assert!(
             review
@@ -185,5 +229,45 @@ mod tests {
             "deve_cli git export --repo <repo> --retry-out-of-sync"
         );
         assert!(review.authority_note.contains("read-only"));
+    }
+
+    #[test]
+    fn local_git_repair_notice_prefers_record_level_review_data() {
+        let notice = SourceControlNotice::git_repair_cli_only();
+        let data = GitMirrorRepairReview {
+            repo_name: "default".to_string(),
+            manual_only: true,
+            authority: "server-side authority note".to_string(),
+            records: vec![GitMirrorRepairReviewRecord {
+                deve_commit_id: "deve-1".to_string(),
+                ledger_seq: 1,
+                action_code: "resolve_projection_scope".to_string(),
+                retryable_after_fix: true,
+                subject: "docs/example.md".to_string(),
+                next_step: "fix_projection_or_path_subject".to_string(),
+                retry_command: Some(
+                    "deve_cli git export --repo default --retry-out-of-sync".to_string(),
+                ),
+                failure_stage: Some("projection_scope".to_string()),
+                failure_command: None,
+                failure_exit_status: None,
+                last_error: Some("failure".to_string()),
+            }],
+        };
+
+        let review = git_repair_review(Locale::En, &notice, Some(&data)).expect("repair review");
+
+        assert!(
+            review
+                .rows
+                .iter()
+                .any(|row| row.value.contains("resolve_projection_scope"))
+        );
+        assert!(review.rows.iter().any(|row| row.value == "docs/example.md"));
+        assert_eq!(
+            review.retry_command,
+            "deve_cli git export --repo default --retry-out-of-sync"
+        );
+        assert_eq!(review.authority_note, "server-side authority note");
     }
 }

@@ -13,6 +13,7 @@ mod import_plan;
 mod preflight;
 mod push;
 mod repair_action;
+mod repair_review;
 mod replay;
 mod status;
 mod store;
@@ -22,6 +23,7 @@ pub use import_apply::{GitImportApplyReport, apply_import};
 pub use import_plan::{GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, plan_import};
 pub use push::{GitMirrorPushBlocker, GitMirrorPushOptions, GitMirrorPushReport, push_mirror};
 pub use repair_action::{GitMirrorRepairAction, GitMirrorRepairActionCode};
+pub use repair_review::{GitMirrorRepairReview, GitMirrorRepairReviewRecord, build_repair_review};
 pub use status::{GitMetadataKind, GitMirrorState, GitMirrorStatus, inspect_repo_root};
 pub use store::{
     GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord,

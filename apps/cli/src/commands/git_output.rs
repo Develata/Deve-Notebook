@@ -352,22 +352,7 @@ fn record_detail_lines(
 }
 
 fn repair_next_step(code: GitMirrorRepairActionCode) -> &'static str {
-    match code {
-        GitMirrorRepairActionCode::PrepareMirror => "prepare_git_mirror_and_notegit_gitignore",
-        GitMirrorRepairActionCode::CleanDeveSourceControl => {
-            "stage_commit_or_discard_deve_source_control_changes"
-        }
-        GitMirrorRepairActionCode::ProtectNotegit => {
-            "remove_notegit_from_git_tracking_and_restore_gitignore"
-        }
-        GitMirrorRepairActionCode::ResolveProjectionScope => "fix_projection_or_path_subject",
-        GitMirrorRepairActionCode::RepairHistoryMapping => {
-            "repair_git_history_mapping_or_rebootstrap_empty_mirror"
-        }
-        GitMirrorRepairActionCode::CleanGitWorktree => "clean_git_worktree_or_import_changes",
-        GitMirrorRepairActionCode::InspectGitCommand => "inspect_git_command_failure",
-        GitMirrorRepairActionCode::InspectMirrorExecutor => "inspect_mirror_executor_error",
-    }
+    code.next_step()
 }
 
 fn repair_retry_command(action: &GitMirrorRepairAction, retry_command: Option<&str>) -> String {

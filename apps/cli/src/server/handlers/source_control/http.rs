@@ -14,6 +14,7 @@ use std::sync::Arc;
 use crate::server::AppState;
 use crate::server::handlers::source_control::service;
 use crate::server::plugin_host::PluginHostState;
+use deve_core::git_bridge::GitMirrorRepairReview;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ScPathTarget;
@@ -72,6 +73,16 @@ pub async fn status(
 ) -> impl IntoResponse {
     match service::list_changes(state.repo.as_ref(), &q.repo) {
         Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
+        Err(e) => super::errors::http(e),
+    }
+}
+
+pub async fn git_mirror_repair_review(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<RepoQuery>,
+) -> impl IntoResponse {
+    match service::git_mirror_repair_review(state.repo.as_ref(), &q.repo) {
+        Ok(review) => Json::<GitMirrorRepairReview>(review).into_response(),
         Err(e) => super::errors::http(e),
     }
 }

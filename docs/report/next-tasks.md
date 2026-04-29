@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git mirror repair review data-source decision | P1/P2 / Planning | `docs/plan/14_tech_stack.md`, `docs/features/07_diff_logic.md`, `apps/cli/src/server/handlers/`, `apps/web/src/components/sidebar/source_control/` | 在只读 repair review scaffold 落地后，决定真实 record-level repair data 的只读来源：HTTP status endpoint、server-side status query 或显式 CLI copy/paste；必须保持无 Git writer、无后台执行、fail-closed scope gate。 |
+| 1 | Git mirror repair review UI multi-record/error polish | P2 / Implementation | `apps/web/src/components/sidebar/source_control/`, `apps/web/src/i18n/`, `docs/features/07_diff_logic.md` | 当前 Web 已消费只读 endpoint；下一步补多条 out-of-sync record 展示、empty/error/loading 状态与 i18n copy，仍不得新增 Git writer、后台执行或 CLI 文本解析。 |
 
 ## 最近完成基线
 
@@ -34,6 +34,8 @@
 - P1/P2 Git mirror CLI repair guidance 已关闭：`GitMirrorRepairAction` 为旧 record 补齐 subject fallback，CLI record 明细新增 `repair_guidance[...]`，覆盖所有 failure stage 的 manual-only next step 与 retry command，详见 `git-mirror-cli-repair-guidance-status-2026-04-29.md`。
 - P1/P2 Git mirror repair UI boundary split 已关闭：features / acceptance / plan 已明确 future clickable repair UI 必须先只读 review、manual confirmation、fail-closed gates，且禁止 Command Palette 或后台自动 Git writer，详见 `git-mirror-repair-ui-boundary-status-2026-04-29.md`。
 - P1/P2 Git mirror read-only repair review scaffold 已关闭：Source Control repair notice 下方新增只读 review 卡片，展示 repair action/guidance/subject/next step/copyable retry command 与 `.notegit` authority note，不调用 clipboard API、不执行 Git，详见 `git-mirror-readonly-repair-review-status-2026-04-29.md`。
+- P1/P2 Git mirror repair review data-source decision 已关闭：真实 record-level review 数据源固定为 `GET /api/sc/git-mirror/repair-review` 受保护 HTTP 只读 endpoint，读取 server-side side table 与 core repair-action schema，不运行 Git、不写 `.git/.notegit`、不解析 CLI 输出，详见 `git-mirror-repair-review-data-source-2026-04-29.md`。
+- P1/P2 Git mirror repair review Web data consumption 已关闭：Source Control repair notice 会消费只读 endpoint 并优先展示 record-level action/subject/next step/retry command；失败或无 record 回退 CLI-only 静态 review，详见 `git-mirror-repair-review-web-consumption-2026-04-29.md`。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P3-10 Desktop/Mobile native adapter core contract 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract，`deve_core::native_adapter` 已落地平台无关状态/事件/endpoint/session/readiness 合同与定向测试；Tauri desktop/mobile shell、embedded service launcher 与 Web bootstrap 消费仍属后续实现。
 - P3-10 Web native bootstrap 消费已关闭：Web connection manager 可读取 `window.__DEVE_NATIVE_BOOTSTRAP`，复用 core native endpoint/session 校验，有效时只使用注入 endpoint，失效时 fail-closed 且不回退端口推断；浏览器默认路径保持不变，详见 `native-web-bootstrap-status-2026-04-29.md`。

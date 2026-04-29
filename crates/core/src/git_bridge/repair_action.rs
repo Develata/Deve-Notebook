@@ -31,6 +31,19 @@ impl GitMirrorRepairActionCode {
             Self::InspectMirrorExecutor => "inspect_mirror_executor",
         }
     }
+
+    pub fn next_step(self) -> &'static str {
+        match self {
+            Self::PrepareMirror => "prepare_git_mirror_and_notegit_gitignore",
+            Self::CleanDeveSourceControl => "stage_commit_or_discard_deve_source_control_changes",
+            Self::ProtectNotegit => "remove_notegit_from_git_tracking_and_restore_gitignore",
+            Self::ResolveProjectionScope => "fix_projection_or_path_subject",
+            Self::RepairHistoryMapping => "repair_git_history_mapping_or_rebootstrap_empty_mirror",
+            Self::CleanGitWorktree => "clean_git_worktree_or_import_changes",
+            Self::InspectGitCommand => "inspect_git_command_failure",
+            Self::InspectMirrorExecutor => "inspect_mirror_executor_error",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

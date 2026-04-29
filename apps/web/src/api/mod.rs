@@ -12,6 +12,7 @@ mod backoff;
 mod connection;
 mod connection_role;
 mod connection_urls;
+mod git_mirror;
 mod incoming;
 mod native_bootstrap;
 mod output;
@@ -22,5 +23,6 @@ mod writer_id;
 
 pub use self::ai_backend::{AiBackendCapabilities, fetch_ai_backend_capabilities};
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
+pub use self::git_mirror::fetch_git_mirror_repair_review;
 pub use self::service::WsService;
 pub use self::status::ConnectionStatus;

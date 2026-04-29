@@ -2,19 +2,50 @@
 //!   - 07_diff_logic#source-control-runtime
 //!   - 15_release#runtime-observability
 //!
+use crate::api::fetch_git_mirror_repair_review;
 use crate::components::sidebar::source_control::error_notice_copy as copy;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::hooks::use_core::source_control_notice::is_git_repair_cli_notice;
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::Locale;
+use deve_core::git_bridge::GitMirrorRepairReview;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 #[component]
 pub fn ErrorNotice(
     notice: ReadSignal<Option<SourceControlNotice>>,
     block: Signal<Option<RepoWriteBlock>>,
+    current_repo_id: ReadSignal<Option<String>>,
     clear_notice: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let repair_review = RwSignal::new(None::<GitMirrorRepairReview>);
+
+    Effect::new(move |_| {
+        let notice_value = notice.get();
+        let should_fetch =
+            block.get().is_none() && notice_value.as_ref().is_some_and(is_git_repair_cli_notice);
+        let repo_id = current_repo_id.get();
+
+        if !should_fetch {
+            repair_review.set(None);
+            return;
+        }
+
+        repair_review.set(None);
+        spawn_local(async move {
+            let fetched = fetch_git_mirror_repair_review(repo_id.clone()).await;
+            let still_current = current_repo_id.get_untracked() == repo_id
+                && notice
+                    .get_untracked()
+                    .as_ref()
+                    .is_some_and(is_git_repair_cli_notice);
+            if still_current {
+                repair_review.set(fetched);
+            }
+        });
+    });
 
     view! {
         <Show when=move || block.get().is_none() && notice.get().is_some()>
@@ -59,9 +90,16 @@ pub fn ErrorNotice(
                         </div>
                         <div>
                             {move || {
+                                let data = repair_review.get();
                                 notice
                                     .get()
-                                    .and_then(|current| copy::git_repair_review(locale.get(), &current))
+                                    .and_then(|current| {
+                                        copy::git_repair_review(
+                                            locale.get(),
+                                            &current,
+                                            data.as_ref(),
+                                        )
+                                    })
                                     .map(|review| {
                                         let retry_command_attr = review.retry_command.clone();
                                         let retry_command_text = review.retry_command.clone();

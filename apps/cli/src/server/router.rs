@@ -46,6 +46,10 @@ pub fn build_app(
             "/api/sc/status",
             get(handlers::source_control::http::status),
         )
+        .route(
+            "/api/sc/git-mirror/repair-review",
+            get(handlers::source_control::http::git_mirror_repair_review),
+        )
         .route("/api/sc/diff", get(handlers::source_control::http::diff))
         .route(
             "/api/sc/commits",
