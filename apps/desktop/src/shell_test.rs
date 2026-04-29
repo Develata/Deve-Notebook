@@ -6,7 +6,8 @@ use crate::{
 };
 use deve_core::native_adapter::{
     CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY, CURRENT_NATIVE_PROCESS_ADAPTER_POLICY,
-    NativeEndpointReady, NativePackagingDependencyGateDecision, NativeProcessAdapterDecision,
+    NativeEndpointReady, NativePackagingDependencyGateDecision, NativePlatformEventEffect,
+    NativePlatformEventKind, NativeProcessAdapterDecision, NativeRuntimeReadiness,
     NativeServiceFailureKind, NativeServiceOffline, NativeServiceSupervisorState,
 };
 
@@ -17,6 +18,27 @@ fn endpoint() -> NativeEndpointReady {
         node_role: "native-main".to_string(),
         session_bound: false,
     }
+}
+
+fn ready_probe() -> NativeRuntimeReadiness {
+    NativeRuntimeReadiness {
+        endpoint_reachable: true,
+        auth_status_valid: true,
+        node_role_readable: true,
+        repo_handshake_complete: true,
+        writer_ready: true,
+        scope_nonce_current: true,
+    }
+}
+
+fn bound_shell() -> DesktopShell {
+    let mut shell = DesktopShell::new();
+    shell.start_service();
+    shell.bind_endpoint(endpoint()).expect("bind endpoint");
+    shell
+        .bind_session(DesktopSessionMaterial::bound())
+        .expect("bind session");
+    shell
 }
 
 #[test]
@@ -45,6 +67,9 @@ fn desktop_shell_injects_bootstrap_only_after_session_binding() {
         shell.snapshot().supervisor.state,
         NativeServiceSupervisorState::SessionHandoffReady
     );
+    assert!(shell.snapshot().readiness.endpoint_reachable);
+    assert!(shell.snapshot().readiness.auth_status_valid);
+    assert!(shell.snapshot().readiness.node_role_readable);
 }
 
 #[test]
@@ -81,12 +106,7 @@ fn desktop_shell_rejects_non_loopback_service_endpoint() {
 
 #[test]
 fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
-    let mut shell = DesktopShell::new();
-    shell.start_service();
-    shell.bind_endpoint(endpoint()).expect("bind endpoint");
-    shell
-        .bind_session(DesktopSessionMaterial::bound())
-        .expect("bind session");
+    let mut shell = bound_shell();
     shell.mark_service_offline("bind_failed", true);
 
     assert!(matches!(
@@ -95,6 +115,7 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
     ));
     let snapshot = shell.snapshot();
     assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert!(!snapshot.readiness.endpoint_reachable);
     assert_eq!(
         snapshot.offline,
         Some(NativeServiceOffline {
@@ -113,12 +134,7 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
 
 #[test]
 fn desktop_shell_session_invalid_blocks_bootstrap() {
-    let mut shell = DesktopShell::new();
-    shell.start_service();
-    shell.bind_endpoint(endpoint()).expect("bind endpoint");
-    shell
-        .bind_session(DesktopSessionMaterial::bound())
-        .expect("bind session");
+    let mut shell = bound_shell();
     shell.invalidate_session();
 
     assert!(matches!(
@@ -126,6 +142,7 @@ fn desktop_shell_session_invalid_blocks_bootstrap() {
         Err(DesktopShellError::SessionInvalid)
     ));
     assert_eq!(shell.snapshot().state, DesktopServiceState::SessionInvalid);
+    assert!(!shell.snapshot().readiness.auth_status_valid);
     assert_eq!(
         shell
             .recovery_bootstrap_for_web()
@@ -133,6 +150,77 @@ fn desktop_shell_session_invalid_blocks_bootstrap() {
             .service_state,
         "session_invalid"
     );
+}
+
+#[test]
+fn desktop_runtime_ready_requires_writer_and_current_scope() {
+    let mut shell = bound_shell();
+
+    let stale_scope = NativeRuntimeReadiness {
+        scope_nonce_current: false,
+        ..ready_probe()
+    };
+    assert!(!shell.mark_runtime_ready(stale_scope));
+    assert_eq!(shell.snapshot().state, DesktopServiceState::SessionBound);
+
+    assert!(shell.mark_runtime_ready(ready_probe()));
+    assert_eq!(shell.snapshot().state, DesktopServiceState::RuntimeReady);
+}
+
+#[test]
+fn desktop_foreground_resume_requires_fresh_reprobe_before_write() {
+    let mut shell = bound_shell();
+    assert!(shell.mark_runtime_ready(ready_probe()));
+
+    let effect = shell.handle_platform_event(NativePlatformEventKind::Resumed);
+    assert_eq!(effect, NativePlatformEventEffect::RequireForegroundReprobe);
+    let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, DesktopServiceState::ForegroundReprobe);
+    assert!(!snapshot.readiness.auth_status_valid);
+    assert!(!snapshot.readiness.node_role_readable);
+    assert!(!snapshot.readiness.repo_handshake_complete);
+    assert!(!snapshot.readiness.writer_ready);
+    assert!(!snapshot.readiness.scope_nonce_current);
+    assert!(matches!(
+        shell.bootstrap_for_web(),
+        Err(DesktopShellError::ForegroundReprobeRequired)
+    ));
+    assert_eq!(
+        shell
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "foreground_reprobe"
+    );
+}
+
+#[test]
+fn desktop_foreground_reprobe_does_not_restore_stale_scope() {
+    let mut shell = bound_shell();
+    assert!(shell.mark_runtime_ready(ready_probe()));
+    shell.handle_platform_event(NativePlatformEventKind::Foreground);
+
+    let stale_scope = NativeRuntimeReadiness {
+        scope_nonce_current: false,
+        ..ready_probe()
+    };
+    assert!(!shell.complete_foreground_reprobe(stale_scope));
+    assert_eq!(
+        shell.snapshot().state,
+        DesktopServiceState::ForegroundReprobe
+    );
+    assert!(shell.complete_foreground_reprobe(ready_probe()));
+    assert_eq!(shell.snapshot().state, DesktopServiceState::RuntimeReady);
+}
+
+#[test]
+fn desktop_network_events_are_hints_not_write_grants() {
+    let mut shell = bound_shell();
+    let effect = shell.handle_platform_event(NativePlatformEventKind::NetworkOffline);
+
+    assert_eq!(effect, NativePlatformEventEffect::NetworkHintOnly);
+    assert_eq!(shell.snapshot().state, DesktopServiceState::SessionBound);
+    assert!(!shell.snapshot().readiness.writer_ready);
 }
 
 #[test]

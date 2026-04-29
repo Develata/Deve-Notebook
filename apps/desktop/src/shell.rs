@@ -2,8 +2,10 @@
 //!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
 
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativeServiceFailureKind, NativeServiceHealthProbe, NativeServiceOffline,
-    NativeServiceSupervisor, NativeServiceSupervisorError, NativeServiceSupervisorSnapshot,
+    NativeAdapterPlatform, NativeEndpointReady, NativePlatformEventEffect, NativePlatformEventKind,
+    NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceHealthProbe,
+    NativeServiceOffline, NativeServiceSupervisor, NativeServiceSupervisorError,
+    NativeServiceSupervisorSnapshot, classify_native_platform_event,
     validate_native_endpoint_bases, validate_native_endpoint_ready,
 };
 use serde::Serialize;
@@ -16,14 +18,17 @@ pub enum DesktopServiceState {
     EndpointBound,
     SessionBound,
     WebShellLoading,
+    RuntimeReady,
     ServiceOffline,
     SessionInvalid,
+    ForegroundReprobe,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesktopShellSnapshot {
     pub state: DesktopServiceState,
     pub endpoint: Option<NativeEndpointReady>,
+    pub readiness: NativeRuntimeReadiness,
     pub offline: Option<NativeServiceOffline>,
     pub supervisor: NativeServiceSupervisorSnapshot,
 }
@@ -84,6 +89,8 @@ pub enum DesktopShellError {
     ServiceOffline { reason: String },
     #[error("desktop session is invalid")]
     SessionInvalid,
+    #[error("desktop foreground reprobe is required before loading writable shell")]
+    ForegroundReprobeRequired,
     #[error("desktop service supervisor rejected transition: {0}")]
     Supervisor(#[from] NativeServiceSupervisorError),
     #[error("failed to serialize desktop bootstrap: {0}")]
@@ -94,6 +101,7 @@ pub enum DesktopShellError {
 pub struct DesktopShell {
     state: DesktopServiceState,
     endpoint: Option<NativeEndpointReady>,
+    readiness: NativeRuntimeReadiness,
     offline: Option<NativeServiceOffline>,
     supervisor: NativeServiceSupervisor,
 }
@@ -109,6 +117,7 @@ impl DesktopShell {
         Self {
             state: DesktopServiceState::ColdStart,
             endpoint: None,
+            readiness: NativeRuntimeReadiness::default(),
             offline: None,
             supervisor: NativeServiceSupervisor::new(2),
         }
@@ -131,6 +140,8 @@ impl DesktopShell {
                 endpoint_reachable: true,
                 node_role_readable: true,
             })?;
+        self.readiness.endpoint_reachable = true;
+        self.readiness.node_role_readable = true;
         self.endpoint = Some(endpoint);
         self.state = DesktopServiceState::EndpointBound;
         self.offline = None;
@@ -151,8 +162,18 @@ impl DesktopShell {
         self.supervisor.record_session_handoff(session.bound)?;
         endpoint.session_bound = true;
         validate_native_endpoint_ready(endpoint)?;
+        self.readiness.auth_status_valid = true;
         self.state = DesktopServiceState::SessionBound;
         Ok(())
+    }
+
+    pub fn mark_runtime_ready(&mut self, readiness: NativeRuntimeReadiness) -> bool {
+        let ready = readiness.is_runtime_ready();
+        self.readiness = readiness;
+        if ready {
+            self.state = DesktopServiceState::RuntimeReady;
+        }
+        ready
     }
 
     pub fn bootstrap_for_web(&mut self) -> Result<DesktopBootstrap, DesktopShellError> {
@@ -166,6 +187,9 @@ impl DesktopShell {
                 return Err(DesktopShellError::ServiceOffline { reason });
             }
             DesktopServiceState::SessionInvalid => return Err(DesktopShellError::SessionInvalid),
+            DesktopServiceState::ForegroundReprobe => {
+                return Err(DesktopShellError::ForegroundReprobeRequired);
+            }
             _ => {}
         }
 
@@ -192,12 +216,34 @@ impl DesktopShell {
             DesktopServiceState::SessionInvalid => Some(DesktopRecoveryBootstrap {
                 service_state: "session_invalid",
             }),
+            DesktopServiceState::ForegroundReprobe => Some(DesktopRecoveryBootstrap {
+                service_state: "foreground_reprobe",
+            }),
             DesktopServiceState::ColdStart
             | DesktopServiceState::ServiceStarting
             | DesktopServiceState::EndpointBound
             | DesktopServiceState::SessionBound
-            | DesktopServiceState::WebShellLoading => None,
+            | DesktopServiceState::WebShellLoading
+            | DesktopServiceState::RuntimeReady => None,
         }
+    }
+
+    pub fn handle_platform_event(
+        &mut self,
+        event: NativePlatformEventKind,
+    ) -> NativePlatformEventEffect {
+        let effect = classify_native_platform_event(NativeAdapterPlatform::Desktop, event);
+        if effect == NativePlatformEventEffect::RequireForegroundReprobe {
+            self.require_foreground_reprobe();
+        }
+        effect
+    }
+
+    pub fn complete_foreground_reprobe(&mut self, readiness: NativeRuntimeReadiness) -> bool {
+        if self.state != DesktopServiceState::ForegroundReprobe {
+            return false;
+        }
+        self.mark_runtime_ready(readiness)
     }
 
     pub fn mark_service_offline(&mut self, reason: impl Into<String>, retryable: bool) {
@@ -206,6 +252,7 @@ impl DesktopShell {
             reason: reason.into(),
             retryable,
         });
+        self.readiness.endpoint_reachable = false;
     }
 
     pub fn mark_supervisor_failure(
@@ -216,10 +263,12 @@ impl DesktopShell {
         let offline = self.supervisor.record_failure(kind, reason);
         self.state = DesktopServiceState::ServiceOffline;
         self.offline = Some(offline);
+        self.readiness.endpoint_reachable = false;
     }
 
     pub fn invalidate_session(&mut self) {
         self.state = DesktopServiceState::SessionInvalid;
+        self.readiness.auth_status_valid = false;
         if let Some(endpoint) = self.endpoint.as_mut() {
             endpoint.session_bound = false;
         }
@@ -229,8 +278,18 @@ impl DesktopShell {
         DesktopShellSnapshot {
             state: self.state.clone(),
             endpoint: self.endpoint.clone(),
+            readiness: self.readiness,
             offline: self.offline.clone(),
             supervisor: self.supervisor.snapshot(),
         }
+    }
+
+    fn require_foreground_reprobe(&mut self) {
+        self.state = DesktopServiceState::ForegroundReprobe;
+        self.readiness.auth_status_valid = false;
+        self.readiness.node_role_readable = false;
+        self.readiness.repo_handshake_complete = false;
+        self.readiness.writer_ready = false;
+        self.readiness.scope_nonce_current = false;
     }
 }
