@@ -86,12 +86,14 @@ DeveStaged
 mirror ready 时会将成功的 Deve commit 记录为 `GitMirrorQueued`，并提供
 `GitMirrorCommitted` / `GitMirrorOutOfSync` 的持久化更新 API 与独立 `queue_state`
 summary。
-`deve_cli git mirror` 已提供显式最小 executor：仅当当前 repo 恰好有一个待处理
-mirror record，且 Git worktree 可用、`.notegit` 未被 Git tracked、Source Control
-pending/staged 为空、当前 Git changed paths 均属于该 Deve commit diff 或 `.gitignore`
-时，才执行 `git add -A` / `git commit` 并写回 Git commit hash；多个积压
-records 会进入 `GitMirrorOutOfSync`，避免用当前工作区伪造逐 commit 历史。
-projection replay、自动后台执行、完整 retry/repair UI 与 import/export/push 仍是后续实现。
+`deve_cli git mirror` 已提供显式 executor：单个待处理 mirror record 仍走
+worktree preflight 后的 `git add -A` / `git commit` 路径；多个积压 records 会先检查
+Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git
+changed paths 是否落在这些 Deve commits 的 diff 范围内，然后用临时 Git index 基于
+`compare_commits(parent, commit)` 的 projection diff 逐个 `commit-tree` / `update-ref`，
+生成逐 commit Git history 并写回 `GitMirrorCommitted`。失败只会把剩余 records 写入
+`GitMirrorOutOfSync`，不会回滚 Deve ledger commit。自动后台执行、完整 repair UI 与
+import/export/push 仍是后续实现。
 
 ### 2.4 Diff Identity Model
 

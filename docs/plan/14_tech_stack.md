@@ -33,7 +33,7 @@
 | **Graph**    | **Core read-only projection + d3-force/Pixi.js future renderer** | Verified (Projection Baseline) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；高性能 Web Canvas 渲染仍是 future。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
-| **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Executor) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table 与显式单-record executor；projection replay、自动后台执行、export/import/push 仍属 P1/P2 后续。 |
+| **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、显式单-record executor 与多-record projection replay；自动后台执行、export/import/push 仍属 P1/P2 后续。 |
 | **Build**    | **Tauri v2**             | Planned (Rising Priority) | Desktop/Mobile native track 逐步提上日程；先明确 adapter、embedded service 与 offline/readiness 边界。 |
 | **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
 
@@ -59,8 +59,8 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - `materialize` / `rebuild_projection` / `init` / `serve` 会确保 repo-local `.gitignore` 忽略 `.notegit/`。
 - `deve_cli git status` 提供只读 mirror 状态骨架：`.git` 是否存在、`.notegit` 是否存在、`.gitignore` 是否保护 `.notegit/`。
 - Lazy-created `git_mirror_commits` side table 记录 `DeveCommit -> GitMirrorQueued / GitMirrorCommitted / GitMirrorOutOfSync`，`deve_cli git status` 输出 mirror readiness `state` 与独立 `queue_state`/queued/committed/out_of_sync summary。
-- `deve_cli git mirror` 可显式执行单个 queued/out_of_sync record；执行前会检查 Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git changed paths 是否属于该 Deve commit diff 或 `.gitignore`，通过后才运行 `git add -A` / `git commit` 并写回 Git commit hash。多个积压 records fail closed 为 `GitMirrorOutOfSync`，避免伪造逐 commit 映射。
-- Projection replay、自动后台执行、完整 retry/repair UI、import/export/push 仍是后续实现，不得被当前 executor 骨架替代。
+- `deve_cli git mirror` 可显式执行 queued/out_of_sync records；单个 record 走 worktree preflight 后的 `git add -A` / `git commit`，多个 records 走临时 Git index 的 projection replay，用 `commit-tree` / `update-ref` 按 Deve commit diff 生成逐 commit Git history，并写回 Git commit hash。
+- 自动后台执行、完整 repair UI、import/export/push 仍是后续实现，不得被当前 executor 替代。
 
 该 bridge 的工程边界：
 

@@ -122,8 +122,8 @@ Deve 支持 `.notegit/` 与 `.git/` 在同一个 repo 工作区中共存：
 - 已实现 `.git/` / `.notegit/` segment-level internal path 过滤，覆盖 watcher、scan、projection rebuild 与 drift enumeration。
 - 已实现 repo-local `.gitignore` 自动保护 `.notegit/` 的 idempotent helper。
 - 已实现只读 Git mirror status 骨架与 lazy-created `git_mirror_commits` side table；当 `.git` mirror 已存在且 repo-local `.gitignore` 保护 `.notegit/` 时，Deve commit 成功后会写入 `GitMirrorQueued`。
-- 已实现 `GitMirrorCommitted` / `GitMirrorOutOfSync` 的持久化状态更新 API 与 `deve_cli git status` 的独立 `queue_state` summary 观测；真实 `git add -A` / `git commit` executor、import / export / push 仍是后续。
-- 已实现显式 `deve_cli git mirror [--retry-out-of-sync]` executor 的最小闭环：单个 queued record 在 Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git changed paths 均通过 preflight 后，才执行 `git add -A` / `git commit` 并写回 Git commit hash；多个积压 records 会 fail closed 为 `GitMirrorOutOfSync`，避免伪造错误映射。projection replay、自动后台执行、import / export / push 仍是后续。
+- 已实现 `GitMirrorCommitted` / `GitMirrorOutOfSync` 的持久化状态更新 API 与 `deve_cli git status` 的独立 `queue_state` summary 观测。
+- 已实现显式 `deve_cli git mirror [--retry-out-of-sync]` executor：单个 queued record 在 Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git changed paths 均通过 preflight 后，执行 `git add -A` / `git commit` 并写回 Git commit hash；多个积压 records 通过临时 Git index 从 Deve commit diff projection replay 出逐 commit Git history，使用 `commit-tree` / `update-ref` 建立映射，失败只写入 `GitMirrorOutOfSync`。自动后台执行、import / export / push 仍是后续。
 
 Git mirror 是 first-class bridge，而不是 authority 替代品：
 
