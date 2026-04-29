@@ -1,5 +1,7 @@
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!
 //! HTTP/WebSocket server boot sequence.
 
@@ -7,6 +9,7 @@ use super::{
     AppState, ai_chat, metrics, node_role, notegit, plugin_host, prewarm, router, security, setup,
     static_files, tree_state::RepoTreeRegistry,
 };
+use crate::server::launch::ServerLaunchOptions;
 use deve_core::config::{AppProfile, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::{PluginRuntime, host};
@@ -24,11 +27,31 @@ pub async fn start_server(
     #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
     sync_mode: SyncMode,
 ) -> anyhow::Result<()> {
+    start_server_with_options(
+        repo,
+        vault_path,
+        ServerLaunchOptions::release(port),
+        plugins,
+        profile,
+        sync_mode,
+    )
+    .await
+}
+
+pub async fn start_server_with_options(
+    repo: Arc<RepoManager>,
+    vault_path: std::path::PathBuf,
+    launch: ServerLaunchOptions,
+    plugins: Vec<Box<dyn PluginRuntime>>,
+    #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
+    sync_mode: SyncMode,
+) -> anyhow::Result<()> {
+    let port = launch.port();
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
     host::set_repository(repo_api)?;
     host::set_repo_manager(repo.clone())?;
     node_role::set_node_role(node_role::NodeRole {
-        role: "main".into(),
+        role: launch.node_role_label().into(),
         ws_port: port,
         main_port: port,
         version: env!("CARGO_PKG_VERSION").into(),
@@ -36,6 +59,7 @@ pub async fn start_server(
         delivery: static_files::delivery_shape().into(),
         environment: node_role::runtime_environment(),
         repo_health: node_role::RepoHealthSummary::unknown(),
+        native_service: launch.native_service_summary(),
     });
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
@@ -87,8 +111,8 @@ pub async fn start_server(
 
     static_files::validate_static_dir_override()?;
     let app = router::build_app(app_state, port, auth_config)?;
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!("Server running on ws://{}", addr);
+    let addr = launch.bind_addr();
+    println!("Server running on {}", launch.ws_display_base());
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     let result = axum::serve(

@@ -69,6 +69,8 @@ pub(crate) enum Commands {
         dev: bool,
         #[arg(long)]
         dry_run: bool,
+        #[arg(long, hide = true)]
+        native_loopback: bool,
     },
     /// Export ledger to JSONL or Markdown
     Export {

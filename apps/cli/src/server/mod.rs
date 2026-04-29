@@ -12,6 +12,7 @@ pub mod channel;
 include!("test_modules.rs");
 mod error_classify;
 pub mod handlers;
+mod launch;
 pub mod metrics;
 pub mod node_role;
 pub mod node_role_http;
@@ -34,5 +35,6 @@ mod static_files_embed;
 mod tree_state;
 pub mod ws;
 
-pub use start::{start_plugin_host_only, start_server};
+pub use launch::ServerLaunchOptions;
+pub use start::{start_plugin_host_only, start_server, start_server_with_options};
 pub use state::AppState;

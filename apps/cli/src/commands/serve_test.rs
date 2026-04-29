@@ -59,8 +59,37 @@ async fn serve_dry_run_validates_runtime_without_binding() {
             dry_run: true,
             profile: AppProfile::Standard,
             sync_mode: SyncMode::Auto,
+            native_loopback: false,
         },
     )
     .await
     .expect("serve dry-run");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let vault_dir = dir.path().join("vault");
+    std::fs::create_dir_all(&vault_dir).expect("create vault");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("occupy loopback port");
+    let port = listener.local_addr().expect("listener addr").port();
+
+    let err = run(
+        &ledger_dir,
+        vault_dir,
+        ServeOptions {
+            port,
+            snapshot_depth: 8,
+            dev: false,
+            dry_run: false,
+            profile: AppProfile::Standard,
+            sync_mode: SyncMode::Auto,
+            native_loopback: true,
+        },
+    )
+    .await
+    .expect_err("native loopback must fail closed on occupied port");
+
+    assert!(err.to_string().contains("refusing proxy fallback"), "{err}");
 }

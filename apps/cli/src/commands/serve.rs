@@ -1,6 +1,8 @@
 // apps\cli\src\commands
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!   - 08_ui_design_01_web#single-binary-distribution
 //!   - 12_commands#cli-commands
 //!   - 15_release#runtime-observability
@@ -28,6 +30,7 @@ pub struct ServeOptions {
     pub dry_run: bool,
     pub profile: AppProfile,
     pub sync_mode: SyncMode,
+    pub native_loopback: bool,
 }
 
 /// 启动后端服务器
@@ -49,6 +52,7 @@ pub async fn run(
         dry_run,
         profile,
         sync_mode,
+        native_loopback,
     } = options;
     if dev {
         if std::env::var("DEVE_ENV").is_err() {
@@ -65,9 +69,20 @@ pub async fn run(
         return Ok(());
     }
 
-    let bind_addr = format!("0.0.0.0:{}", port);
+    let launch = if native_loopback {
+        server::ServerLaunchOptions::native_loopback(port, false)
+    } else {
+        server::ServerLaunchOptions::release(port)
+    };
+    let bind_addr = launch.bind_addr();
     if let Err(err) = TcpListener::bind(&bind_addr) {
         if err.kind() == std::io::ErrorKind::AddrInUse {
+            if native_loopback {
+                anyhow::bail!(
+                    "Native loopback serve port {} is already in use; refusing proxy fallback",
+                    port
+                );
+            }
             return start_proxy_mode(port).await;
         }
         return Err(err.into());
@@ -76,7 +91,15 @@ pub async fn run(
     let repo_arc = init_runtime(ledger_dir, &vault_path, snapshot_depth)?;
     let plugins = load_plugins()?;
 
-    server::start_server(repo_arc, vault_path, port, plugins, profile, sync_mode).await?;
+    if native_loopback {
+        tracing::info!("Native loopback serve mode enabled on {}", bind_addr);
+        server::start_server_with_options(
+            repo_arc, vault_path, launch, plugins, profile, sync_mode,
+        )
+        .await?;
+    } else {
+        server::start_server(repo_arc, vault_path, port, plugins, profile, sync_mode).await?;
+    }
     Ok(())
 }
 
@@ -111,6 +134,7 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
         delivery: "plugin-host-proxy".into(),
         environment: crate::server::node_role::runtime_environment(),
         repo_health: crate::server::node_role::RepoHealthSummary::unknown(),
+        native_service: None,
     });
     server::start_plugin_host_only(plugins, plugin_port).await
 }

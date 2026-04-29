@@ -22,7 +22,12 @@ pub async fn run(
         Some(Commands::Dump { path, repo }) => {
             commands::dump::run(ledger_dir, path, repo, config.snapshot_depth)?
         }
-        Some(Commands::Serve { port, dev, dry_run }) => {
+        Some(Commands::Serve {
+            port,
+            dev,
+            dry_run,
+            native_loopback,
+        }) => {
             commands::serve::run(
                 ledger_dir,
                 vault_path.to_path_buf(),
@@ -33,6 +38,7 @@ pub async fn run(
                     dry_run,
                     profile: config.profile,
                     sync_mode: config.sync_mode,
+                    native_loopback,
                 },
             )
             .await?

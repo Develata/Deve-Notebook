@@ -1,9 +1,12 @@
 // apps/cli/src/server/node_role.rs
 //! plan_ref:
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!   - 15_release#runtime-observability
 //!
 //! # Node Role State
 
+use deve_core::native_adapter::{NativeEndpointReady, NativeServiceOffline};
 use std::sync::{Arc, OnceLock, RwLock};
 
 #[derive(Clone, Debug)]
@@ -16,6 +19,7 @@ pub struct NodeRole {
     pub delivery: String,
     pub environment: String,
     pub repo_health: RepoHealthSummary,
+    pub native_service: Option<NativeServiceSummary>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -24,6 +28,13 @@ pub struct RepoHealthSummary {
     pub local_total: usize,
     pub healthy: usize,
     pub degraded: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NativeServiceSummary {
+    pub state: String,
+    pub endpoint: Option<NativeEndpointReady>,
+    pub offline: Option<NativeServiceOffline>,
 }
 
 impl RepoHealthSummary {
@@ -98,6 +109,7 @@ fn default_node_role() -> NodeRole {
         delivery: "unknown".into(),
         environment: runtime_environment(),
         repo_health: RepoHealthSummary::unknown(),
+        native_service: None,
     }
 }
 
