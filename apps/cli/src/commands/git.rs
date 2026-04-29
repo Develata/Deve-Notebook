@@ -5,7 +5,9 @@
 //!
 //! Git mirror bridge diagnostics and explicit executor commands.
 
-use super::git_output::{print_export_report, print_mirror_report, print_status};
+use super::git_output::{
+    print_export_report, print_import_plan, print_mirror_report, print_status,
+};
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
 use deve_core::git_bridge::GitMirrorRunOptions;
@@ -66,6 +68,23 @@ pub fn export(
         run_export_for_repo,
         print_export_report,
     )
+}
+
+pub fn import(
+    ledger_dir: &Path,
+    vault_root: &Path,
+    target_repo: Option<&str>,
+    snapshot_depth: usize,
+) -> Result<()> {
+    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    repo.set_vault_root(vault_root);
+    let repo_names = resolve_local_repo_args(&repo, target_repo)?;
+    for repo_name in repo_names {
+        let repo_root = repo.local_repo_workspace_root(&repo_name)?;
+        let plan = deve_core::git_bridge::plan_import(&repo_root)?;
+        print_import_plan(&repo_name, &plan);
+    }
+    Ok(())
 }
 
 fn run_executor(

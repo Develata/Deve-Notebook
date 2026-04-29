@@ -6,8 +6,10 @@
 //! Human-readable Git mirror diagnostics.
 
 use deve_core::git_bridge::{
-    GitMirrorCommitState, GitMirrorRecord, GitMirrorRunReport, GitMirrorStatus, GitMirrorSummary,
+    GitImportPlan, GitMirrorCommitState, GitMirrorRecord, GitMirrorRunReport, GitMirrorStatus,
+    GitMirrorSummary,
 };
+use deve_core::source_control::ChangeStatus;
 
 pub(super) fn print_status(
     repo_name: &str,
@@ -28,6 +30,12 @@ pub(super) fn print_mirror_report(repo_name: &str, report: &GitMirrorRunReport) 
 
 pub(super) fn print_export_report(repo_name: &str, report: &GitMirrorRunReport) {
     for line in export_report_lines(repo_name, report) {
+        println!("{line}");
+    }
+}
+
+pub(super) fn print_import_plan(repo_name: &str, plan: &GitImportPlan) {
+    for line in import_plan_lines(repo_name, plan) {
         println!("{line}");
     }
 }
@@ -130,6 +138,44 @@ fn export_report_lines(repo_name: &str, report: &GitMirrorRunReport) -> Vec<Stri
             retry_action: "export",
         },
     )
+}
+
+fn import_plan_lines(repo_name: &str, plan: &GitImportPlan) -> Vec<String> {
+    let mut lines = vec![format!(
+        "git_import[{repo_name}]: dry_run=true changes={} blockers={}",
+        plan.entries.len(),
+        plan.blockers.len()
+    )];
+    lines.push(format!("  repo_root: {}", plan.repo_root.display()));
+    for (index, entry) in plan.entries.iter().enumerate() {
+        lines.push(format!(
+            "  change[{}]: status={} path={} previous_path={} git_status={}",
+            index + 1,
+            change_status_label(entry.status),
+            entry.path,
+            entry.previous_path.as_deref().unwrap_or("-"),
+            entry.git_status
+        ));
+    }
+    for (index, blocker) in plan.blockers.iter().enumerate() {
+        lines.push(format!(
+            "  blocker[{}]: path={} reason={}",
+            index + 1,
+            blocker.path,
+            blocker.reason
+        ));
+    }
+    if plan.entries.is_empty() && plan.blockers.is_empty() {
+        lines.push("  import_hint: no Git worktree changes to import".to_string());
+    } else if plan.blockers.is_empty() {
+        lines.push(
+            "  import_hint: dry-run only; future apply will write pending/import, not ledger"
+                .to_string(),
+        );
+    } else {
+        lines.push("  import_hint: fix blockers before future import apply".to_string());
+    }
+    lines
 }
 
 struct RunReportCopy {
@@ -294,6 +340,15 @@ fn queue_state_label(summary: &GitMirrorSummary) -> &'static str {
         "queued"
     } else {
         "clean"
+    }
+}
+
+fn change_status_label(status: ChangeStatus) -> &'static str {
+    match status {
+        ChangeStatus::Added => "added",
+        ChangeStatus::Modified => "modified",
+        ChangeStatus::Deleted => "deleted",
+        ChangeStatus::Renamed => "renamed",
     }
 }
 

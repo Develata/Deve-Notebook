@@ -1,11 +1,13 @@
 use super::{
-    export_report_lines, mirror_report_lines, print_export_report, print_mirror_report,
-    print_status, status_lines_at,
+    export_report_lines, import_plan_lines, mirror_report_lines, print_export_report,
+    print_import_plan, print_mirror_report, print_status, status_lines_at,
 };
 use deve_core::git_bridge::{
-    GitMetadataKind, GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord,
-    GitMirrorRunReport, GitMirrorState, GitMirrorStatus, GitMirrorSummary,
+    GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, GitMetadataKind, GitMirrorCommitState,
+    GitMirrorFailureStage, GitMirrorRecord, GitMirrorRunReport, GitMirrorState, GitMirrorStatus,
+    GitMirrorSummary,
 };
+use deve_core::source_control::ChangeStatus;
 
 fn record(
     id: &str,
@@ -196,6 +198,26 @@ fn print_git_export_report_handles_committed_record() {
 }
 
 #[test]
+fn print_git_import_plan_handles_dry_run_changes() {
+    print_import_plan(
+        "default",
+        &GitImportPlan {
+            repo_root: std::path::PathBuf::from("vault/default"),
+            entries: vec![GitImportPlanEntry {
+                path: "renamed.md".into(),
+                previous_path: Some("old.md".into()),
+                status: ChangeStatus::Renamed,
+                git_status: "R100".into(),
+            }],
+            blockers: vec![GitImportPlanBlocker {
+                path: ".notegit/state".into(),
+                reason: "Git import refuses unsafe path: .notegit/state".into(),
+            }],
+        },
+    );
+}
+
+#[test]
 fn mirror_report_lines_include_noop_and_repair_semantics() {
     let empty = mirror_report_lines("default", &GitMirrorRunReport::default());
     assert!(
@@ -266,5 +288,51 @@ fn export_report_lines_use_export_semantics_and_retry_command() {
         failed
             .iter()
             .any(|line| line.contains("deve_cli git export --repo default --retry-out-of-sync"))
+    );
+}
+
+#[test]
+fn import_plan_lines_are_explicitly_dry_run_and_non_authoritative() {
+    let clean = import_plan_lines(
+        "default",
+        &GitImportPlan {
+            repo_root: std::path::PathBuf::from("vault/default"),
+            entries: vec![GitImportPlanEntry {
+                path: "note.md".into(),
+                previous_path: None,
+                status: ChangeStatus::Modified,
+                git_status: "M".into(),
+            }],
+            blockers: Vec::new(),
+        },
+    );
+
+    assert!(
+        clean
+            .iter()
+            .any(|line| line.contains("git_import[default]: dry_run=true changes=1 blockers=0"))
+    );
+    assert!(
+        clean
+            .iter()
+            .any(|line| line.contains("future apply will write pending/import, not ledger"))
+    );
+
+    let blocked = import_plan_lines(
+        "default",
+        &GitImportPlan {
+            repo_root: std::path::PathBuf::from("vault/default"),
+            entries: Vec::new(),
+            blockers: vec![GitImportPlanBlocker {
+                path: ".git/config".into(),
+                reason: "Git import refuses unsafe path: .git/config".into(),
+            }],
+        },
+    );
+
+    assert!(
+        blocked
+            .iter()
+            .any(|line| line.contains("fix blockers before future import apply"))
     );
 }

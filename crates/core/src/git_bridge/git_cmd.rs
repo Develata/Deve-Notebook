@@ -63,22 +63,32 @@ pub(super) fn run_z_paths(
     repo_root: &Path,
     args: &[&str],
 ) -> std::result::Result<Vec<String>, String> {
+    Ok(run_z_fields(repo_root, args)?
+        .into_iter()
+        .map(|path| to_forward_slash(&path))
+        .collect())
+}
+
+pub(super) fn run_z_fields(
+    repo_root: &Path,
+    args: &[&str],
+) -> std::result::Result<Vec<String>, String> {
     let output = base_command(repo_root, args)
         .output()
         .map_err(|err| format!("failed to run git {}: {err}", args.join(" ")))?;
     if !output.status.success() {
         return Err(git_error(args, &output));
     }
-    let mut paths = Vec::new();
+    let mut fields = Vec::new();
     for raw in output.stdout.split(|byte| *byte == 0) {
         if raw.is_empty() {
             continue;
         }
-        let path = std::str::from_utf8(raw)
-            .map_err(|err| format!("git {} returned non-UTF-8 path: {err}", args.join(" ")))?;
-        paths.push(to_forward_slash(path));
+        let field = std::str::from_utf8(raw)
+            .map_err(|err| format!("git {} returned non-UTF-8 field: {err}", args.join(" ")))?;
+        fields.push(field.to_string());
     }
-    Ok(paths)
+    Ok(fields)
 }
 
 pub(super) fn has_staged_changes(repo_root: &Path) -> std::result::Result<bool, String> {

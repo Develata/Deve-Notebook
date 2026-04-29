@@ -97,8 +97,12 @@ changed paths 是否落在这些 Deve commits 的 diff 范围内，然后用临�
 per-record outcome、失败位置与 repair/retry hint。`deve_cli git export` 当前复用该
 executor 作为 queued projection export surface；若 side table 为空、Git history 为空且
 当前 projection 干净，则可从最新 Deve commit 的完整 projection 建立首个 snapshot Git
-commit，并只把最新 Deve commit 映射到该 Git commit。自动后台执行、完整 repair UI 与
-import/push 仍是后续实现。
+commit，并只把最新 Deve commit 映射到该 Git commit。`deve_cli git import` 当前只提供
+只读 dry-run planning：把 Git tracked/untracked worktree changes 解析为
+`GitImportPlan` change/blocker，并 fail-closed 于 mirror 未 ready、缺 Git HEAD、
+`.notegit` tracked 泄漏或不安全路径；它不写 `pending_fs_ops`、`StagedEntry`、
+`CommitAnchor` 或 ledger facts。自动后台执行、完整 repair UI、真正 pending/import
+apply 与 push 仍是后续实现。
 
 ### 2.4 Diff Identity Model
 

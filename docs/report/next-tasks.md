@@ -9,7 +9,9 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Docker release smoke rerun | P2 (Host-blocked) | Docker host environment, `scripts/smoke-docker-release.sh` | 2026-04-29 重跑仍因 WSL Docker 不可用阻塞；Docker daemon 可用后重跑，环境阻塞继续与代码失败分开记录。 |
+| 1 | Git import apply surface | P1/P2 | `deve_core::git_bridge`, source-control pending/import, CLI/API | 在 dry-run plan 基础上实现显式 apply，把安全 Git changes 转入 pending/import，处理 blocker/conflict，仍不得直接写 ledger authority。 |
+| 2 | Git push mirror surface | P2 | Git bridge CLI/API, remote config, auth/error reporting | 只允许推送 `.git` mirror，不得把 `.git` 作为 Deve authority；失败必须可观测且不回滚 ledger。 |
+| 3 | Docker release smoke rerun | P2 (Host-blocked) | Docker host environment, `scripts/smoke-docker-release.sh` | 2026-04-29 重跑仍因 WSL Docker 不可用阻塞；Docker daemon 可用后重跑，环境阻塞继续与代码失败分开记录。 |
 
 ## 最近完成基线
 
@@ -22,7 +24,8 @@
 - P1/P2 Git mirror projection replay repair 已关闭：多个 queued/out_of_sync records 可通过临时 Git index 与 `commit-tree` / `update-ref` 从 Deve commit diff 生成逐 commit Git history；失败只标记剩余 records 为 `GitMirrorOutOfSync`。
 - P1/P2 Git mirror repair/status detail polish 已关闭：`git status` 输出 per-commit lagging records、`queued_lag_ms` / `updated_lag_ms`、结构化 `failure_stage` 与 retry command；`git mirror` 输出 no-op / repair / retry hint。更细的 failure subject / offending path / command exit metadata 仍保留为 future refinement。
 - P1/P2 Git mirror queued export surface 已关闭：`deve_cli git export [--retry-out-of-sync]` 复用 explicit mirror executor，把 queued Deve projection commits 导出为 Git commits 并写回映射。
-- P1/P2 Git mirror snapshot bootstrap export 已关闭：当 side table 为空且 Git history 为空时，`git export` 可从最新 Deve commit 的完整 projection 建立首个 Git commit 并映射最新 Deve commit；import、push 仍保留为 future refinement。
+- P1/P2 Git mirror snapshot bootstrap export 已关闭：当 side table 为空且 Git history 为空时，`git export` 可从最新 Deve commit 的完整 projection 建立首个 Git commit 并映射最新 Deve commit；import apply、push 仍保留为 future refinement。
+- P1/P2 Git import dry-run planning 已关闭：`deve_cli git import` 会只读检查 ready Git mirror/Git HEAD，并把 Git tracked/untracked worktree changes 输出为 change/blocker；它不写 ledger、pending_fs、staging 或 `.notegit`。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P3-10 Desktop/Mobile native adapter plan 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract、boot/lifecycle state machine、endpoint/session injection、offline/readiness 语义与 native forbidden shortcuts；Tauri native shell 代码仍属 future implementation。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。

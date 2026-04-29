@@ -18,6 +18,7 @@
 //! - `git status`: 检查 Git ecosystem mirror bridge 状态
 //! - `git mirror`: 手动执行 queued Git mirror commits
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
+//! - `git import`: 只读规划外部 Git/worktree changes
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -175,6 +176,11 @@ pub(crate) enum GitAction {
         repo: Option<String>,
         #[arg(long)]
         retry_out_of_sync: bool,
+    },
+    /// Plan external Git/worktree changes as a read-only import dry-run
+    Import {
+        #[arg(long)]
+        repo: Option<String>,
     },
 }
 
