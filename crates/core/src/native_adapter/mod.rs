@@ -8,9 +8,14 @@
 //! local service. It is not allowed to become authority for ledger, vault,
 //! source-control, search, or repo-scope write decisions.
 
+mod supervisor;
 mod types;
 mod validation;
 
+pub use supervisor::{
+    NativeServiceFailureKind, NativeServiceHealthProbe, NativeServiceSupervisor,
+    NativeServiceSupervisorError, NativeServiceSupervisorSnapshot, NativeServiceSupervisorState,
+};
 pub use types::{
     NativeAdapterPlatform, NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady,
     NativePlatformEvent, NativePlatformEventEffect, NativePlatformEventKind,

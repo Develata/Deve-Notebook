@@ -2,8 +2,9 @@
 //!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
 
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativeServiceOffline, validate_native_endpoint_bases,
-    validate_native_endpoint_ready,
+    NativeEndpointReady, NativeServiceFailureKind, NativeServiceHealthProbe, NativeServiceOffline,
+    NativeServiceSupervisor, NativeServiceSupervisorError, NativeServiceSupervisorSnapshot,
+    validate_native_endpoint_bases, validate_native_endpoint_ready,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -24,6 +25,7 @@ pub struct DesktopShellSnapshot {
     pub state: DesktopServiceState,
     pub endpoint: Option<NativeEndpointReady>,
     pub offline: Option<NativeServiceOffline>,
+    pub supervisor: NativeServiceSupervisorSnapshot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,6 +84,8 @@ pub enum DesktopShellError {
     ServiceOffline { reason: String },
     #[error("desktop session is invalid")]
     SessionInvalid,
+    #[error("desktop service supervisor rejected transition: {0}")]
+    Supervisor(#[from] NativeServiceSupervisorError),
     #[error("failed to serialize desktop bootstrap: {0}")]
     BootstrapSerialize(#[from] serde_json::Error),
 }
@@ -91,6 +95,7 @@ pub struct DesktopShell {
     state: DesktopServiceState,
     endpoint: Option<NativeEndpointReady>,
     offline: Option<NativeServiceOffline>,
+    supervisor: NativeServiceSupervisor,
 }
 
 impl Default for DesktopShell {
@@ -105,12 +110,14 @@ impl DesktopShell {
             state: DesktopServiceState::ColdStart,
             endpoint: None,
             offline: None,
+            supervisor: NativeServiceSupervisor::new(2),
         }
     }
 
     pub fn start_service(&mut self) {
         self.state = DesktopServiceState::ServiceStarting;
         self.offline = None;
+        self.supervisor.start();
     }
 
     pub fn bind_endpoint(
@@ -119,6 +126,11 @@ impl DesktopShell {
     ) -> Result<(), DesktopShellError> {
         endpoint.session_bound = false;
         validate_native_endpoint_bases(&endpoint)?;
+        self.supervisor
+            .record_health_probe(NativeServiceHealthProbe {
+                endpoint_reachable: true,
+                node_role_readable: true,
+            })?;
         self.endpoint = Some(endpoint);
         self.state = DesktopServiceState::EndpointBound;
         self.offline = None;
@@ -136,6 +148,7 @@ impl DesktopShell {
             .endpoint
             .as_mut()
             .ok_or(DesktopShellError::SessionNotBound)?;
+        self.supervisor.record_session_handoff(session.bound)?;
         endpoint.session_bound = true;
         validate_native_endpoint_ready(endpoint)?;
         self.state = DesktopServiceState::SessionBound;
@@ -195,6 +208,16 @@ impl DesktopShell {
         });
     }
 
+    pub fn mark_supervisor_failure(
+        &mut self,
+        kind: NativeServiceFailureKind,
+        reason: impl Into<String>,
+    ) {
+        let offline = self.supervisor.record_failure(kind, reason);
+        self.state = DesktopServiceState::ServiceOffline;
+        self.offline = Some(offline);
+    }
+
     pub fn invalidate_session(&mut self) {
         self.state = DesktopServiceState::SessionInvalid;
         if let Some(endpoint) = self.endpoint.as_mut() {
@@ -207,6 +230,7 @@ impl DesktopShell {
             state: self.state.clone(),
             endpoint: self.endpoint.clone(),
             offline: self.offline.clone(),
+            supervisor: self.supervisor.snapshot(),
         }
     }
 }

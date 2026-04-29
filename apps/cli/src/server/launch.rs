@@ -4,6 +4,10 @@
 //!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 
 use deve_core::native_adapter::NativeEndpointReady;
+#[cfg(test)]
+use deve_core::native_adapter::{
+    NativeServiceHealthProbe, NativeServiceSupervisor, NativeServiceSupervisorSnapshot,
+};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use super::node_role::NativeServiceSummary;
@@ -78,13 +82,31 @@ impl ServerLaunchOptions {
             offline: None,
         })
     }
+
+    #[cfg(test)]
+    fn native_supervisor_snapshot(&self) -> Option<NativeServiceSupervisorSnapshot> {
+        let native = self.native.as_ref()?;
+        let mut supervisor = NativeServiceSupervisor::new(2);
+        supervisor.start();
+        supervisor
+            .record_health_probe(NativeServiceHealthProbe {
+                endpoint_reachable: true,
+                node_role_readable: true,
+            })
+            .ok()?;
+        if native.session_bound {
+            supervisor.record_session_handoff(true).ok()?;
+        }
+        Some(supervisor.snapshot())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use deve_core::native_adapter::{
-        NativeAdapterError, validate_native_endpoint_bases, validate_native_endpoint_ready,
+        NativeAdapterError, NativeServiceSupervisorState, validate_native_endpoint_bases,
+        validate_native_endpoint_ready,
     };
 
     #[test]
@@ -124,6 +146,30 @@ mod tests {
         assert_eq!(
             validate_native_endpoint_ready(endpoint),
             Err(NativeAdapterError::SessionNotBound)
+        );
+    }
+
+    #[test]
+    fn native_launch_supervisor_tracks_endpoint_and_session_boundaries() {
+        let pending = ServerLaunchOptions::native_loopback(3001, false)
+            .native_supervisor_snapshot()
+            .expect("native supervisor");
+        assert_eq!(pending.state, NativeServiceSupervisorState::EndpointHealthy);
+
+        let ready = ServerLaunchOptions::native_loopback(3001, true)
+            .native_supervisor_snapshot()
+            .expect("native supervisor");
+        assert_eq!(
+            ready.state,
+            NativeServiceSupervisorState::SessionHandoffReady
+        );
+    }
+
+    #[test]
+    fn release_launch_has_no_native_supervisor_surface() {
+        assert_eq!(
+            ServerLaunchOptions::release(3001).native_supervisor_snapshot(),
+            None
         );
     }
 }

@@ -3,7 +3,7 @@
 
 use deve_core::native_adapter::{
     NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness, NativeServiceOffline,
-    NativeServiceSuspended,
+    NativeServiceSupervisorError, NativeServiceSupervisorSnapshot, NativeServiceSuspended,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -56,6 +56,7 @@ pub struct MobileShellSnapshot {
     pub readiness: NativeRuntimeReadiness,
     pub offline: Option<NativeServiceOffline>,
     pub suspended: Option<NativeServiceSuspended>,
+    pub supervisor: NativeServiceSupervisorSnapshot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -116,6 +117,8 @@ pub enum MobileShellError {
     ServiceOffline { reason: String },
     #[error("mobile session is invalid")]
     SessionInvalid,
+    #[error("mobile service supervisor rejected transition: {0}")]
+    Supervisor(#[from] NativeServiceSupervisorError),
     #[error("failed to serialize mobile bootstrap: {0}")]
     BootstrapSerialize(#[from] serde_json::Error),
 }

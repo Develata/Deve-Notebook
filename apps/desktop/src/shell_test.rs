@@ -4,7 +4,10 @@
 use crate::{
     DesktopBootstrap, DesktopServiceState, DesktopSessionMaterial, DesktopShell, DesktopShellError,
 };
-use deve_core::native_adapter::{NativeEndpointReady, NativeServiceOffline};
+use deve_core::native_adapter::{
+    NativeEndpointReady, NativeServiceFailureKind, NativeServiceOffline,
+    NativeServiceSupervisorState,
+};
 
 fn endpoint() -> NativeEndpointReady {
     NativeEndpointReady {
@@ -37,6 +40,10 @@ fn desktop_shell_injects_bootstrap_only_after_session_binding() {
     assert_eq!(bootstrap.ws_base, "ws://127.0.0.1:3001");
     assert!(bootstrap.session_bound);
     assert_eq!(shell.snapshot().state, DesktopServiceState::WebShellLoading);
+    assert_eq!(
+        shell.snapshot().supervisor.state,
+        NativeServiceSupervisorState::SessionHandoffReady
+    );
 }
 
 #[test]
@@ -124,5 +131,53 @@ fn desktop_shell_session_invalid_blocks_bootstrap() {
             .expect("recovery bootstrap")
             .service_state,
         "session_invalid"
+    );
+}
+
+#[test]
+fn desktop_supervisor_classifies_retryable_service_failures() {
+    let mut shell = DesktopShell::new();
+    shell.start_service();
+    shell.mark_supervisor_failure(NativeServiceFailureKind::BindFailed, "port_busy");
+
+    let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Restarting
+    );
+    assert_eq!(
+        snapshot.offline,
+        Some(NativeServiceOffline {
+            reason: "port_busy".to_string(),
+            retryable: true,
+        })
+    );
+    assert_eq!(
+        shell
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "service_offline"
+    );
+}
+
+#[test]
+fn desktop_supervisor_keeps_session_handoff_failure_fatal() {
+    let mut shell = DesktopShell::new();
+    shell.start_service();
+    shell.mark_supervisor_failure(NativeServiceFailureKind::SessionHandoffFailed, "missing");
+
+    let snapshot = shell.snapshot();
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Offline
+    );
+    assert_eq!(
+        snapshot.offline,
+        Some(NativeServiceOffline {
+            reason: "missing".to_string(),
+            retryable: false,
+        })
     );
 }

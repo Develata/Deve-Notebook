@@ -6,7 +6,8 @@ use crate::{
     MobileShellError,
 };
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness,
+    NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness, NativeServiceFailureKind,
+    NativeServiceOffline, NativeServiceSupervisorState,
 };
 
 fn endpoint() -> NativeEndpointReady {
@@ -61,6 +62,10 @@ fn mobile_shell_injects_bootstrap_only_after_session_binding() {
     assert_eq!(bootstrap.ws_base, "ws://127.0.0.1:3001");
     assert!(bootstrap.session_bound);
     assert_eq!(shell.snapshot().state, MobileServiceState::WebShellLoading);
+    assert_eq!(
+        shell.snapshot().supervisor.state,
+        NativeServiceSupervisorState::SessionHandoffReady
+    );
 }
 
 #[test]
@@ -186,5 +191,53 @@ fn mobile_shell_offline_and_session_invalid_block_bootstrap() {
             .expect("recovery bootstrap")
             .service_state,
         "session_invalid"
+    );
+}
+
+#[test]
+fn mobile_supervisor_failure_blocks_endpoint_and_reports_retryability() {
+    let mut shell = bound_shell();
+    shell.mark_supervisor_failure(NativeServiceFailureKind::HealthProbeFailed, "probe_failed");
+
+    let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, MobileServiceState::ServiceOffline);
+    assert!(!snapshot.readiness.endpoint_reachable);
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Restarting
+    );
+    assert_eq!(
+        snapshot.offline,
+        Some(NativeServiceOffline {
+            reason: "probe_failed".to_string(),
+            retryable: true,
+        })
+    );
+    assert!(matches!(
+        shell.bootstrap_for_web(),
+        Err(MobileShellError::ServiceOffline { reason }) if reason == "probe_failed"
+    ));
+}
+
+#[test]
+fn mobile_supervisor_session_handoff_failure_is_not_retryable() {
+    let mut shell = MobileShell::new();
+    shell.start_service();
+    shell.mark_supervisor_failure(
+        NativeServiceFailureKind::SessionHandoffFailed,
+        "session_dead",
+    );
+
+    let snapshot = shell.snapshot();
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Offline
+    );
+    assert_eq!(
+        snapshot.offline,
+        Some(NativeServiceOffline {
+            reason: "session_dead".to_string(),
+            retryable: false,
+        })
     );
 }

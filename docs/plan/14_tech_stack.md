@@ -108,6 +108,11 @@ acceptance，但仍不引入实际 Tauri Mobile dependency。移动端 foregroun
 lifecycle reprobe、session/readiness correctness 继续由 no-packaging skeleton tests
 保证，packaging 不得取得业务 authority。
 
+Native embedded service supervision 当前是 no-runtime contract：`deve_core::native_adapter`
+提供 `NativeServiceSupervisor`、health probe、retry budget 与 session handoff failure
+分类；`apps/desktop`、`apps/mobile` 与 native loopback launch surface 复用该 contract。
+它不启动真实子进程，不引入 Tauri dependency，也不授予 native shell 任何 core authority。
+
 ## 2. Markdown Compatibility Checklist
 
 *   **导出原则**：通用 GFM，无私有语法。

@@ -2,7 +2,8 @@
 //!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness, NativeServiceOffline,
+    NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness, NativeServiceFailureKind,
+    NativeServiceHealthProbe, NativeServiceOffline, NativeServiceSupervisor,
     NativeServiceSuspended, validate_native_endpoint_bases, validate_native_endpoint_ready,
 };
 
@@ -18,6 +19,7 @@ pub struct MobileShell {
     readiness: NativeRuntimeReadiness,
     offline: Option<NativeServiceOffline>,
     suspended: Option<NativeServiceSuspended>,
+    supervisor: NativeServiceSupervisor,
 }
 
 impl Default for MobileShell {
@@ -34,6 +36,7 @@ impl MobileShell {
             readiness: NativeRuntimeReadiness::default(),
             offline: None,
             suspended: None,
+            supervisor: NativeServiceSupervisor::new(2),
         }
     }
 
@@ -41,6 +44,7 @@ impl MobileShell {
         self.state = MobileServiceState::ServiceStarting;
         self.offline = None;
         self.suspended = None;
+        self.supervisor.start();
     }
 
     pub fn bind_endpoint(
@@ -49,6 +53,11 @@ impl MobileShell {
     ) -> Result<(), MobileShellError> {
         endpoint.session_bound = false;
         validate_native_endpoint_bases(&endpoint)?;
+        self.supervisor
+            .record_health_probe(NativeServiceHealthProbe {
+                endpoint_reachable: true,
+                node_role_readable: true,
+            })?;
         self.readiness.endpoint_reachable = true;
         self.endpoint = Some(endpoint);
         self.state = MobileServiceState::EndpointBound;
@@ -63,6 +72,7 @@ impl MobileShell {
             .endpoint
             .as_mut()
             .ok_or(MobileShellError::SessionNotBound)?;
+        self.supervisor.record_session_handoff(session.bound)?;
         endpoint.session_bound = true;
         validate_native_endpoint_ready(endpoint)?;
         self.readiness.auth_status_valid = true;
@@ -157,6 +167,17 @@ impl MobileShell {
         self.readiness.endpoint_reachable = false;
     }
 
+    pub fn mark_supervisor_failure(
+        &mut self,
+        kind: NativeServiceFailureKind,
+        reason: impl Into<String>,
+    ) {
+        let offline = self.supervisor.record_failure(kind, reason);
+        self.state = MobileServiceState::ServiceOffline;
+        self.offline = Some(offline);
+        self.readiness.endpoint_reachable = false;
+    }
+
     pub fn invalidate_session(&mut self) {
         self.state = MobileServiceState::SessionInvalid;
         self.readiness.auth_status_valid = false;
@@ -172,6 +193,7 @@ impl MobileShell {
             readiness: self.readiness,
             offline: self.offline.clone(),
             suspended: self.suspended.clone(),
+            supervisor: self.supervisor.snapshot(),
         }
     }
 

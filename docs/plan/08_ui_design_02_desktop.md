@@ -24,6 +24,7 @@
 *   Tauri v2 native packaging、原生菜单栏、系统托盘、安装包与自动更新仍是 future work；当前仓库不得把这些视为已实现能力。
 *   packaging runtime 只能在 `apps/desktop` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri skeleton，以便快速验证 adapter/session/readiness contract。
 *   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
+*   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；desktop shell 只消费该 contract，不拥有业务 authority。
 *   Web 已支持 native recovery bootstrap：`service_offline` 显示原生服务离线恢复状态，`session_invalid` 进入 `Unauthorized`，无效 endpoint/session-pending 不得回退端口扫描。
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
@@ -50,6 +51,29 @@ Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate
 
 在真正添加 Tauri dependency 前，`scripts/check-native-track-boundary.sh` 必须继续阻止
 Cargo dependency/import 泄漏。
+
+### 0.3 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
+
+当前 desktop native skeleton 已接入共享 `NativeServiceSupervisor`，但仍不启动真实子进程。
+该 contract 只固定 supervisor 状态机与 failure 分类，避免后续 Tauri/process integration
+把 service readiness 与业务写权限混在一起：
+
+```text
+Idle
+  -> Starting
+  -> EndpointHealthy
+  -> SessionHandoffReady
+  -> Restarting | Offline
+```
+
+**Supervisor rules**:
+
+*   `EndpointHealthy` 只表示 loopback endpoint 可达且 `/api/node/role` 可读；它不代表 Web 已可写。
+*   `SessionHandoffReady` 必须在 `EndpointHealthy` 后发生，并且要求 session 已绑定；session handoff 失败是 fatal offline，不自动重试。
+*   `BindFailed`、`HealthProbeFailed`、`ProcessExited` 可在 retry budget 内进入 `Restarting`；超过预算后进入 `Offline`。
+*   `SpawnFailed` 与 `SessionHandoffFailed` 默认不可重试，必须进入 `Offline`。
+*   supervisor 的 `offline.reason` 是 native 内部诊断；recovery bootstrap 仍不得把 reason、token、secret 或 repo 写权限暴露给 Web。
+*   supervisor 不得写 ledger/vault/source-control/search index/`.git`/`.notegit`。
 
 **Adapter inputs**:
 

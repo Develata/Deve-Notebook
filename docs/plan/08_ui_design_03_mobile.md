@@ -24,6 +24,7 @@
 *   Tauri v2 Mobile packaging、系统权限桥接、推送、原生文件选择器与应用商店分发仍是 future work；当前仓库不得把这些视为已实现能力。
 *   packaging runtime 只能在 `apps/mobile` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri Mobile skeleton，以便快速验证 lifecycle/session/readiness contract。
 *   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
+*   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；mobile shell 在此基础上继续保留 background/resume fresh reprobe 规则。
 *   Web 已支持 mobile/native recovery bootstrap：`service_offline`、`foreground_reprobe` 与 `session_invalid` 会映射到明确 UI/写入门禁状态，而不是普通断网。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
@@ -96,6 +97,17 @@ MobileColdStart
 *   session invalid 时进入 `Unauthorized` 并停止普通重连。
 *   network offline 但 service/session/writer ready 时，本地编辑继续可用。
 *   background/resume 后必须重新握手，stale `scope_nonce` 写入被拒绝。
+
+### 0.1.1 Embedded Service Supervisor Contract {#mobile-service-supervisor-contract}
+
+Mobile 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-service-supervisor-contract`
+的 supervisor 状态机，但 Mobile 额外保持生命周期约束：
+
+*   `EndpointHealthy` 和 `SessionHandoffReady` 不得绕过 `ForegroundReprobe`；从后台恢复后仍必须重新 probe auth、node role、WS repo handshake 与 current `scope_nonce`。
+*   `NetworkOffline` 仍只是公网提示；只有 embedded service health probe 失败才可进入 `ServiceOffline`。
+*   `BackgroundSuspended` 不得清空 pending overlay，也不得把旧 supervisor session handoff 直接视为可写。
+*   Health probe、retry budget、session handoff failure 分类与 Desktop 一致：bind/probe/process-exit 可预算内 retry，session handoff failure fatal。
+*   supervisor 不得写 ledger/vault/source-control/search index/`.git`/`.notegit`。
 
 ### 0.2 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
 
