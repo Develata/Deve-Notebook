@@ -6,6 +6,9 @@ mod feature_enabled {
     use crate::server::edit_state_test_support::{edit_harness, seed_doc_with_content};
     use crate::server::repo_scope::ResolvedRepo;
     use crate::server::session::WsSession;
+    use deve_core::ledger::RepoInfo;
+    use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
+    use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
     use deve_core::protocol::{ServerErrorCode, ServerMessage};
     use std::sync::Arc;
     use tokio::sync::mpsc;
@@ -72,6 +75,32 @@ mod feature_enabled {
             search_scope_documents(&h.state, &scope, "needle", 1)?.len(),
             1
         );
+        Ok(())
+    }
+
+    #[test]
+    fn scope_search_scans_remote_branch_documents() -> anyhow::Result<()> {
+        let h = edit_harness(false)?;
+        seed_doc_with_content(&h.state, "default", "notes/local.md", "needle")?;
+        let peer_id = PeerId::new("peer-a");
+        let remote_doc = seed_remote_doc_with_content(
+            &h.state,
+            &peer_id,
+            h.default_repo_id,
+            "notes/remote.md",
+            "remote needle",
+        )?;
+        let scope = ResolvedRepo {
+            repo_id: h.default_repo_id,
+            repo_name: "shadow-notes".into(),
+            branch: Some(peer_id),
+        };
+
+        let results = search_scope_documents(&h.state, &scope, "needle", 10)?;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].0, remote_doc.to_string());
+        assert_eq!(results[0].1, "notes/remote.md");
         Ok(())
     }
 
@@ -220,6 +249,52 @@ mod feature_enabled {
     fn test_channel(state: &Arc<AppState>) -> (DualChannel, mpsc::Receiver<ServerMessage>) {
         let (tx, rx) = mpsc::channel(8);
         (DualChannel::new(state.tx.clone(), tx), rx)
+    }
+
+    fn seed_remote_doc_with_content(
+        state: &Arc<AppState>,
+        peer_id: &PeerId,
+        repo_id: uuid::Uuid,
+        path: &str,
+        content: &str,
+    ) -> anyhow::Result<DocId> {
+        state.repo.ensure_shadow_repo_info(
+            peer_id,
+            &RepoInfo {
+                uuid: repo_id,
+                name: "shadow-notes".into(),
+                url: Some("urn:shadow-notes".into()),
+            },
+        )?;
+        let doc_id = DocId::new();
+        state
+            .repo
+            .run_on_shadow_repo_by_id(peer_id, &repo_id, |db| {
+                let _ = deve_core::ledger::node_meta::ensure_file_node(db, path, doc_id)?;
+                let entry = LedgerEntry::new_content(
+                    doc_id,
+                    Op::Insert {
+                        pos: 0,
+                        content: content.into(),
+                    },
+                    1,
+                    peer_id.clone(),
+                    1,
+                    None,
+                    None,
+                );
+                let bytes = bincode::serialize(&entry)?;
+                let write = db.begin_write()?;
+                write
+                    .open_table(LEDGER_OPS)?
+                    .insert(1u64, bytes.as_slice())?;
+                write
+                    .open_multimap_table(DOC_OPS)?
+                    .insert(doc_id.as_u128(), 1u64)?;
+                write.commit()?;
+                Ok(())
+            })?;
+        Ok(doc_id)
     }
 
     async fn assert_scoped_empty_results(

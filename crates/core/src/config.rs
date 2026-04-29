@@ -62,6 +62,50 @@ impl Default for AiConfig {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiConfig {
+    #[serde(default = "default_ui_locale")]
+    pub locale: String,
+    #[serde(default = "default_ui_theme")]
+    pub theme: String,
+    #[serde(default = "default_true")]
+    pub sidebar_visible: bool,
+    #[serde(default = "default_true")]
+    pub statusbar_visible: bool,
+    #[serde(default = "default_true")]
+    pub outline_visible: bool,
+    #[serde(default = "default_outline_width")]
+    pub outline_width: usize,
+    #[serde(default = "default_sidebar_width")]
+    pub sidebar_width: usize,
+    #[serde(default = "default_right_panel_width")]
+    pub right_panel_width: usize,
+    #[serde(default = "default_outer_gutter")]
+    pub outer_gutter: usize,
+    #[serde(default = "default_recent_commands_count")]
+    pub recent_commands_count: usize,
+    #[serde(default = "default_recent_docs_count")]
+    pub recent_docs_count: usize,
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            locale: default_ui_locale(),
+            theme: default_ui_theme(),
+            sidebar_visible: true,
+            statusbar_visible: true,
+            outline_visible: true,
+            outline_width: default_outline_width(),
+            sidebar_width: default_sidebar_width(),
+            right_panel_width: default_right_panel_width(),
+            outer_gutter: default_outer_gutter(),
+            recent_commands_count: default_recent_commands_count(),
+            recent_docs_count: default_recent_docs_count(),
+        }
+    }
+}
+
 /// 同步模式
 /// 控制 P2P 同步的自动化程度
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -161,6 +205,9 @@ pub struct Config {
     /// 后台压缩并发度
     #[serde(default = "default_concurrency")]
     pub concurrency: usize,
+    /// UI defaults and harmless browser preference seeds.
+    #[serde(default)]
+    pub ui: UiConfig,
     /// AI backend settings.
     #[serde(default)]
     pub ai: AiConfig,
@@ -180,6 +227,33 @@ fn default_snapshot_depth() -> usize {
 }
 fn default_concurrency() -> usize {
     4
+}
+fn default_ui_locale() -> String {
+    "auto".to_string()
+}
+fn default_ui_theme() -> String {
+    "auto".to_string()
+}
+fn default_true() -> bool {
+    true
+}
+fn default_outline_width() -> usize {
+    260
+}
+fn default_sidebar_width() -> usize {
+    250
+}
+fn default_right_panel_width() -> usize {
+    350
+}
+fn default_outer_gutter() -> usize {
+    16
+}
+fn default_recent_commands_count() -> usize {
+    3
+}
+fn default_recent_docs_count() -> usize {
+    10
 }
 fn default_ai_mode() -> String {
     "native".to_string()
@@ -231,6 +305,7 @@ impl Config {
                 merge_strategy: MergeStrategy::default(),
                 snapshot_depth: default_snapshot_depth(),
                 concurrency: default_concurrency(),
+                ui: UiConfig::default(),
                 ai: AiConfig::default(),
             }
         })

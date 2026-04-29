@@ -227,7 +227,8 @@ mod tests {
         set_in_file(&path, "ui.sidebar_width", "300").expect("set ui");
 
         let output = std::fs::read_to_string(path).expect("read config");
-        toml::from_str::<Config>(&output).expect("runtime-compatible config");
+        let config = toml::from_str::<Config>(&output).expect("runtime-compatible config");
+        assert_eq!(config.ui.sidebar_width, 300);
         assert!(output.contains("sidebar_width = 300"));
     }
 

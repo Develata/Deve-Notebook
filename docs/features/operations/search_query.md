@@ -29,9 +29,9 @@
 
 ### `op.search.submit`
 
-- `Name`: `Submit Search Query`
+- `Name`: `Debounced Full-Text Search Submit`
 - `Surface`: `search-input`
-- `Trigger`: Enter 或搜索提交动作
+- `Trigger`: 输入 `?query` 后 100ms debounce 自动触发
 - `Preconditions`: workspace ready，repo scope 稳定，未处于 branch/repo switch
 - `Immediate Result`: 发送 `ClientMessage::Search`
 - `Application Entry`: `apps/web/src/hooks/use_core/callbacks_misc.rs`
@@ -49,7 +49,7 @@
 
 1. 用户打开搜索入口，应用显示统一搜索 UI。
 2. 用户输入查询，前端更新搜索草稿。
-3. 提交时，前端检查 loading、branch/repo switch 和 `scope_nonce`。
+3. 当查询以 `?` 开头且 debounce 后有非空全文查询时，前端检查 loading、branch/repo switch 和 `scope_nonce`。
 4. 前端发送 `ClientMessage::Search { request_id, query, limit, scope_nonce }`。
 5. CLI server 校验 browser scope nonce，并进入 search handler。
 6. Standard profile + `search` feature 下进入 repo-scoped baseline search；当前实现按当前
@@ -90,7 +90,7 @@ scope / disabled feature 覆盖。
 3. 用 Chrome MCP 打开 `http://127.0.0.1:8080/`。
 4. 登录 `admin` / `admin`，等待页面显示 `Ready`，并确认 console 出现 WebSocket connected 日志。
 5. 点击 Search 入口，输入 `?note`。
-6. 等待搜索结果显示 `note.md Full-text match`。
+6. 等待 debounce 自动触发搜索，并显示 `note.md Full-text match`。
 7. 点击结果或按 Enter，确认 Search surface 关闭并打开对应文档。
 
 期望结果：

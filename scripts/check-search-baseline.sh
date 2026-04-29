@@ -31,6 +31,8 @@ check_contains apps/cli/src/server/handlers/search.rs "Search feature disabled f
 check_contains apps/cli/src/server/handlers/search.rs "Search feature not enabled"
 check_contains apps/cli/src/server/handlers/search_test.rs "handler_returns_scoped_empty_results_for_blank_query_and_zero_limit"
 check_contains apps/cli/src/server/handlers/search_test.rs "scope_search_orders_by_score_then_path_before_limit"
+check_contains apps/cli/src/server/handlers/search_test.rs "scope_search_scans_remote_branch_documents"
+check_contains apps/cli/src/server/ws/route/core_test.rs "browser_search_rejects_stale_scope_before_handler"
 check_contains apps/cli/src/server/state.rs "pub search_available: bool"
 check_contains apps/cli/src/server/start.rs "Search baseline scan enabled"
 check_absent apps/cli/src/server/start.rs "load_search_service"

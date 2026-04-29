@@ -66,6 +66,17 @@ projection data、protected HTTP query、CLI JSON 与 summary counts。
 作为 Standard profile 的可选索引实现；低配模式不得依赖常驻重型索引，后续增量索引优化不得反向污染
 ledger authority 或 repo scope gate。
 
+Current decision (2026-04-29)：当前可验收 Search 是 WebSocket repo-scoped baseline scan，
+不是 Tantivy 常驻索引服务。`deve_cli --features search` 且 profile 非 `low-spec` 时，server
+按当前 `repo_id/branch/scope_nonce` 从 ledger docs 重建内容并返回 `(doc_id, path, score)`；
+未编译 `search` feature、`low-spec` profile、缺失或过期 browser `scope_nonce` 都必须 fail-closed
+为结构化 `ProtocolError`。前端只接受 request id、repo、branch 与 scope nonce 同时匹配的
+`SearchResults`，并在 search 不可用时清 pending request 与结果。
+
+Tantivy `SearchService` 仍是 feature-gated library capability / future optimization input：
+当前 CLI server baseline 启动路径不得初始化 Tantivy service、不得要求持久 search index，也不得让
+索引状态成为 ledger/source-control authority。
+
 ### 1.3 Git Ecosystem Mirror Bridge {#git-ecosystem-bridge}
 
 Deve 的核心版本管理是 ledger-backed Source Control，不复用 Git object store、Git

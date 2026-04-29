@@ -161,6 +161,20 @@ async fn browser_search_requires_current_scope_nonce() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_search_rejects_stale_scope_before_handler() -> anyhow::Result<()> {
+    reject_stale_browser_scope(
+        ClientMessage::Search {
+            request_id: "search-1".into(),
+            query: "abc".into(),
+            limit: 10,
+            scope_nonce: Some(16),
+        },
+        "search scope nonce is stale",
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_delete_peer_requires_current_scope_nonce() -> anyhow::Result<()> {
     reject_missing_browser_scope(
         ClientMessage::DeletePeer {

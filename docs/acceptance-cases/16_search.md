@@ -43,6 +43,7 @@ baseline 启动路径初始化索引服务。
     - wait_for_ws: "ProtocolError"
     - run: scripts/check-search-baseline.sh
     - run: cargo test -p deve_cli search -- --nocapture
+    - run: cargo test -p deve_cli browser_search_rejects_stale_scope_before_handler -- --nocapture
     - run: cargo test -p deve_web message_protocol -- --nocapture
   assertions:
     - ws_assert: ProtocolError.code_eq "RequestFailed"
@@ -62,6 +63,7 @@ baseline 启动路径初始化索引服务。
     - inject_ws: SearchResults with stale branch
     - inject_ws: SearchResults with stale scope_nonce
     - run: scripts/check-search-baseline.sh
+    - run: cargo test -p deve_cli browser_search_rejects_stale_scope_before_handler -- --nocapture
     - run: cargo test -p deve_web message_dispatch_gate -- --nocapture
   assertions:
     - ui_assert: search_results_unchanged true

@@ -16,7 +16,7 @@
 - `Trigger`: `Ctrl/Cmd+P`
 - `Preconditions`: 应用主界面已加载，repo scope 已建立
 - `Immediate Result`: 文件搜索面板显示
-- `Application Entry`: `apps/web/src/components/quick_open/mod.rs`, `apps/web/src/components/search_box/`
+- `Application Entry`: `apps/web/src/components/search_box/`
 
 ### `op.repo.open-doc.type-query`
 
@@ -60,7 +60,7 @@
 
 1. `User Operation`: 用户按 `Ctrl/Cmd+P` 打开 Quick Open。
 2. `Application Response`: 显示文件搜索 UI，准备使用当前 repo 的文档列表作为候选源。
-3. `Concrete Modules`: `apps/web/src/components/quick_open/mod.rs`, `apps/web/src/components/search_box/`
+3. `Concrete Modules`: `apps/web/src/components/search_box/`
 4. `Core Subsystems`: 无。此步仍是 UI shell。
 
 ### `op.repo.open-doc.type-query`
@@ -94,6 +94,7 @@
 ## Notes
 
 - `Quick Open` 是入口容器，不是第一层节点；第一层应是 `open-quick-open`、`type-query`、`choose-doc`、`request-open`、`receive-content`。
+- 当前 Quick Open 的真实入口复用 `UnifiedSearch` 空模式与 `FileProvider`；`apps/web/src/components/quick_open/mod.rs` 是预留 provider，不是 current user path。
 - 文档列表与正文读取不是同一操作：列表更接近 `list docs`，正文读取更接近 `OpenDoc`。
 - Quick Open 进入哪一类 provider、以及结果如何先被统一 `SearchAction` 路由，已单独建模在 `command_surface_mode_routing.md` 与 `command_surface_action_routing.md`。
 - `/api/repo/docs` 适合支撑候选列表；真正的文档打开主链路以 WS `OpenDoc` 为中心。
