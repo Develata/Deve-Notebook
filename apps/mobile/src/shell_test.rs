@@ -6,7 +6,8 @@ use crate::{
     MobileShellError,
 };
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness, NativeServiceFailureKind,
+    CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeEndpointReady, NativePlatformEventKind,
+    NativeProcessAdapterDecision, NativeRuntimeReadiness, NativeServiceFailureKind,
     NativeServiceOffline, NativeServiceSupervisorState,
 };
 
@@ -240,4 +241,17 @@ fn mobile_supervisor_session_handoff_failure_is_not_retryable() {
             retryable: false,
         })
     );
+}
+
+#[test]
+fn mobile_default_build_defers_real_process_adapter() {
+    let policy = CURRENT_NATIVE_PROCESS_ADAPTER_POLICY;
+
+    assert_eq!(
+        policy.decision,
+        NativeProcessAdapterDecision::DeferredUntilPackagingGate
+    );
+    assert!(policy.is_deferred_no_runtime());
+    assert!(!policy.child_process_runtime_enabled);
+    assert!(!policy.authority_writes_allowed);
 }

@@ -5,8 +5,8 @@ use crate::{
     DesktopBootstrap, DesktopServiceState, DesktopSessionMaterial, DesktopShell, DesktopShellError,
 };
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativeServiceFailureKind, NativeServiceOffline,
-    NativeServiceSupervisorState,
+    CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeEndpointReady, NativeProcessAdapterDecision,
+    NativeServiceFailureKind, NativeServiceOffline, NativeServiceSupervisorState,
 };
 
 fn endpoint() -> NativeEndpointReady {
@@ -180,4 +180,17 @@ fn desktop_supervisor_keeps_session_handoff_failure_fatal() {
             retryable: false,
         })
     );
+}
+
+#[test]
+fn desktop_default_build_defers_real_process_adapter() {
+    let policy = CURRENT_NATIVE_PROCESS_ADAPTER_POLICY;
+
+    assert_eq!(
+        policy.decision,
+        NativeProcessAdapterDecision::DeferredUntilPackagingGate
+    );
+    assert!(policy.is_deferred_no_runtime());
+    assert!(!policy.child_process_runtime_enabled);
+    assert!(!policy.authority_writes_allowed);
 }

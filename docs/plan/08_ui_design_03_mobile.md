@@ -25,6 +25,7 @@
 *   packaging runtime 只能在 `apps/mobile` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri Mobile skeleton，以便快速验证 lifecycle/session/readiness contract。
 *   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
 *   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；mobile shell 在此基础上继续保留 background/resume fresh reprobe 规则。
+*   真实 mobile process adapter 当前明确 deferred：默认 no-Tauri Mobile skeleton 不启动、不持有、不重启后端子进程；`deve_core::native_adapter::CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定该决策，直到 packaging gate 被显式打开。
 *   Web 已支持 mobile/native recovery bootstrap：`service_offline`、`foreground_reprobe` 与 `session_invalid` 会映射到明确 UI/写入门禁状态，而不是普通断网。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
@@ -108,6 +109,31 @@ Mobile 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-service-supervisor
 *   `BackgroundSuspended` 不得清空 pending overlay，也不得把旧 supervisor session handoff 直接视为可写。
 *   Health probe、retry budget、session handoff failure 分类与 Desktop 一致：bind/probe/process-exit 可预算内 retry，session handoff failure fatal。
 *   supervisor 不得写 ledger/vault/source-control/search index/`.git`/`.notegit`。
+
+### 0.1.2 Process Adapter Decision {#mobile-process-adapter-decision}
+
+当前决策：真实 mobile process adapter **不进入** 默认 no-Tauri Mobile skeleton。
+
+Mobile 比 Desktop 更需要推迟真实 child-process runtime：
+
+*   iOS/Android 后台限制、进程保活、系统杀进程、权限弹窗、WebView 恢复与应用商店
+    package policy 都属于 packaging/runtime 层，不能在当前无 runtime skeleton 中伪造。
+*   mobile foreground/resume 后必须 fresh reprobe auth、node role、WS repo handshake 与
+    current `scope_nonce`；真实进程存活不能替代这些 application readiness 条件。
+*   网络 online/offline、safe-area、keyboard、background/suspended 仍只是 shell/lifecycle
+    hint，不得触发 core authority write。
+
+当前代码锚点与 Desktop 一致：
+
+*   `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
+    DeferredUntilPackagingGate`
+*   `child_process_runtime_enabled = false`
+*   `packaging_gate_required = true`
+*   `authority_writes_allowed = false`
+
+后续若打开真实 mobile process adapter，必须位于 `apps/mobile` 的 `native-packaging`
+feature 后，并且只做受控 spawn/probe/session/restart wiring；不得绕过 foreground
+reprobe、writer-ready 或 repo scope gate。
 
 ### 0.2 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
 

@@ -25,6 +25,7 @@
 *   packaging runtime 只能在 `apps/desktop` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri skeleton，以便快速验证 adapter/session/readiness contract。
 *   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
 *   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；desktop shell 只消费该 contract，不拥有业务 authority。
+*   真实 child-process adapter 当前明确 deferred：默认 no-Tauri skeleton 不启动、不持有、不重启后端子进程；`deve_core::native_adapter::CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定该决策，直到 packaging gate 被显式打开。
 *   Web 已支持 native recovery bootstrap：`service_offline` 显示原生服务离线恢复状态，`session_invalid` 进入 `Unauthorized`，无效 endpoint/session-pending 不得回退端口扫描。
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
@@ -130,6 +131,37 @@ NativeColdStart
 *   session invalid 时进入 `Unauthorized` 并停止普通重连。
 *   network offline 但 service/session/writer ready 时，本地编辑继续可用。
 *   resume/restart 后必须重新握手，stale `scope_nonce` 写入被拒绝。
+
+### 0.4 Process Adapter Decision {#desktop-process-adapter-decision}
+
+当前决策：真实 desktop process adapter **不进入** 默认 no-Tauri skeleton。
+
+原因：
+
+*   supervisor contract 已能固定 readiness/failure/session handoff 语义；现在加入真实
+    child-process runtime 会把 process lifecycle、packaging runtime、platform
+    permission 与 service authority 过早耦合。
+*   默认 skeleton 的工程价值是快速验证 endpoint/session/bootstrap/write-gate 边界；
+    若在该层启动真实后端进程，单元测试会变成集成进程测试，失去低成本回归能力。
+*   子进程 stdout/stderr、crash、signal、port reuse、profile/config/vault/ledger 参数选择
+    都需要 packaging/runtime 批次统一处理；不能由当前 shell skeleton 临时实现。
+
+当前代码锚点：
+
+*   `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
+    DeferredUntilPackagingGate`
+*   `child_process_runtime_enabled = false`
+*   `packaging_gate_required = true`
+*   `authority_writes_allowed = false`
+
+后续若打开真实 process adapter，必须满足：
+
+*   仍只落在 `apps/desktop` 的 `native-packaging` feature 后，不得进入 workspace
+    root、core、cli 或 web 默认构建。
+*   只允许做受控 child-process spawn、health-probe、session-handoff、restart-budget
+    wiring；不得直接写 ledger/vault/source-control/search/`.git`/`.notegit`。
+*   所有可写 UI 仍由 server/core 的 repo scope、writer-ready 与 `scope_nonce` 决定；
+    process running 不等于 writable。
 
 ## 1. Normative Language (规范性用语)
 *   **MUST**: 绝对要求。

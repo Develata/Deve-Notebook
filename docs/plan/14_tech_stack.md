@@ -113,6 +113,14 @@ Native embedded service supervision 当前是 no-runtime contract：`deve_core::
 分类；`apps/desktop`、`apps/mobile` 与 native loopback launch surface 复用该 contract。
 它不启动真实子进程，不引入 Tauri dependency，也不授予 native shell 任何 core authority。
 
+真实 native process adapter 当前被显式推迟到 packaging gate 之后：
+`CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定为 `DeferredUntilPackagingGate`，
+`child_process_runtime_enabled = false`、`packaging_gate_required = true`、
+`authority_writes_allowed = false`。这表示默认 desktop/mobile skeleton 只验证
+adapter/session/bootstrap/readiness contract；后续如需真实 child-process runtime，
+必须在对应 native crate 的 `native-packaging` feature 后实现，并继续禁止 core
+authority writes。
+
 ## 2. Markdown Compatibility Checklist
 
 *   **导出原则**：通用 GFM，无私有语法。
