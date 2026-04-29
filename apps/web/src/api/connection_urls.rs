@@ -1,8 +1,11 @@
 //! plan_ref:
 //!   - 05_network#web-ws-runtime
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!
 
 use super::connection::DEV_WS_PORT;
+use super::native_bootstrap::NativeBootstrapState;
 
 pub(super) fn build_same_origin_ws_url() -> String {
     let window = match web_sys::window() {
@@ -18,7 +21,23 @@ pub(super) fn build_same_origin_ws_url() -> String {
     format!("{}://{}/ws", ws_scheme, host)
 }
 
-pub(super) fn build_ws_urls() -> Vec<String> {
+pub(super) fn build_ws_urls_for_native_state(native: &NativeBootstrapState) -> Vec<String> {
+    match native {
+        NativeBootstrapState::Ready(bootstrap) => return vec![bootstrap.ws_url.clone()],
+        NativeBootstrapState::Blocked(_) => return Vec::new(),
+        NativeBootstrapState::Absent => {}
+    }
+
+    build_inferred_ws_urls()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn build_inferred_ws_urls() -> Vec<String> {
+    vec![format!("ws://localhost:{DEV_WS_PORT}/ws")]
+}
+
+#[cfg(target_arch = "wasm32")]
+fn build_inferred_ws_urls() -> Vec<String> {
     let window = match web_sys::window() {
         Some(w) => w,
         None => return vec![format!("ws://localhost:{DEV_WS_PORT}/ws")],
@@ -60,6 +79,7 @@ pub(super) fn build_ws_urls() -> Vec<String> {
     urls
 }
 
+#[cfg(target_arch = "wasm32")]
 fn normalize_hostname(hostname: String) -> String {
     match hostname.as_str() {
         "" | "0.0.0.0" | "::" | "[::]" => "localhost".to_string(),
@@ -67,12 +87,14 @@ fn normalize_hostname(hostname: String) -> String {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 fn push_ws_url(urls: &mut Vec<String>, url: String) {
     if !urls.iter().any(|current| current == &url) {
         urls.push(url);
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 fn query_port() -> Option<u16> {
     let window = web_sys::window()?;
     let search = window.location().search().ok()?;
@@ -82,4 +104,37 @@ fn query_port() -> Option<u16> {
     let params = web_sys::UrlSearchParams::new_with_str(&search).ok()?;
     let val = params.get("ws_port")?;
     val.parse::<u16>().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::native_bootstrap::{NativeBootstrapBlocker, NativeWebBootstrap};
+
+    #[test]
+    fn native_ready_bootstrap_replaces_inferred_ws_candidates() {
+        let urls =
+            build_ws_urls_for_native_state(&NativeBootstrapState::Ready(NativeWebBootstrap {
+                http_base: "http://127.0.0.1:3001".to_string(),
+                ws_url: "ws://127.0.0.1:3001/ws".to_string(),
+            }));
+
+        assert_eq!(urls, vec!["ws://127.0.0.1:3001/ws"]);
+    }
+
+    #[test]
+    fn blocked_native_bootstrap_does_not_fall_back_to_port_discovery() {
+        let urls = build_ws_urls_for_native_state(&NativeBootstrapState::Blocked(
+            NativeBootstrapBlocker::SessionNotBound,
+        ));
+
+        assert!(urls.is_empty());
+    }
+
+    #[test]
+    fn absent_native_bootstrap_keeps_browser_defaults_without_window() {
+        let urls = build_ws_urls_for_native_state(&NativeBootstrapState::Absent);
+
+        assert_eq!(urls, vec![format!("ws://localhost:{DEV_WS_PORT}/ws")]);
+    }
 }

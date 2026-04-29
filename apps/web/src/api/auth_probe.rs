@@ -16,7 +16,11 @@ pub enum AuthProbe {
 }
 
 pub async fn probe_auth_status() -> AuthProbe {
-    match Request::get("/api/auth/status").send().await {
+    probe_auth_status_with_http_base(None).await
+}
+
+pub async fn probe_auth_status_with_http_base(http_base: Option<&str>) -> AuthProbe {
+    match Request::get(&auth_status_url(http_base)).send().await {
         Ok(response) if response.ok() => match response.json::<AuthStatusResponse>().await {
             Ok(status) if status.authenticated => AuthProbe::Valid,
             Ok(_) => AuthProbe::Invalid,
@@ -33,6 +37,13 @@ pub async fn probe_auth_status() -> AuthProbe {
         }
         Err(_) => AuthProbe::Unknown,
     }
+}
+
+fn auth_status_url(http_base: Option<&str>) -> String {
+    http_base.map_or_else(
+        || "/api/auth/status".to_string(),
+        |base| format!("{}/api/auth/status", base.trim_end_matches('/')),
+    )
 }
 
 fn classify_auth_probe_failure(status: u16, has_auth_error_code: bool) -> AuthProbe {
@@ -52,7 +63,7 @@ fn has_auth_error_code(payload: &Value) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{AuthProbe, classify_auth_probe_failure, has_auth_error_code};
+    use super::{AuthProbe, auth_status_url, classify_auth_probe_failure, has_auth_error_code};
     use serde_json::json;
 
     #[test]
@@ -73,5 +84,14 @@ mod tests {
     fn keeps_non_auth_failures_unknown() {
         assert!(!has_auth_error_code(&json!({ "code": "REQUEST_FAILED" })));
         assert_eq!(classify_auth_probe_failure(500, false), AuthProbe::Unknown);
+    }
+
+    #[test]
+    fn auth_status_url_uses_native_http_base_when_present() {
+        assert_eq!(
+            auth_status_url(Some("http://127.0.0.1:3001/")),
+            "http://127.0.0.1:3001/api/auth/status"
+        );
+        assert_eq!(auth_status_url(None), "/api/auth/status");
     }
 }

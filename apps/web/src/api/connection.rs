@@ -1,5 +1,8 @@
 // apps\web\src\api
 //! plan_ref:
+//!   - 05_network#web-ws-runtime
+//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!   - 09_auth#unauthorized-handling
 //!   - 09_auth#unauthorized-disconnected-ui
 //!
@@ -20,10 +23,11 @@ use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
 use super::ConnectionStatus;
-use super::auth_probe::{AuthProbe, probe_auth_status};
+use super::auth_probe::{AuthProbe, probe_auth_status_with_http_base};
 use super::backoff::BackoffStrategy;
-use super::connection_role::fetch_node_role;
-use super::connection_urls::{build_same_origin_ws_url, build_ws_urls};
+use super::connection_role::{fetch_node_role, fetch_node_role_for_http_base};
+use super::connection_urls::{build_same_origin_ws_url, build_ws_urls_for_native_state};
+use super::native_bootstrap::read_native_bootstrap;
 use super::output::prepare_queue_for_new_connection;
 use super::socket::BrowserSocket;
 
@@ -40,7 +44,15 @@ pub fn spawn_connection_manager(
     set_node_role: WriteSignal<String>,
 ) {
     spawn_local(async move {
-        let urls = build_ws_urls();
+        let native_bootstrap = read_native_bootstrap();
+        let auth_http_base = native_bootstrap.http_base().map(str::to_string);
+        if native_bootstrap.is_blocked() {
+            leptos::logging::error!("Native bootstrap is present but invalid; refusing fallback");
+            set_status.set(ConnectionStatus::Disconnected);
+            return;
+        }
+
+        let urls = build_ws_urls_for_native_state(&native_bootstrap);
         let mut url_idx = 0usize;
         let mut backoff = BackoffStrategy::new();
         let mut queue = VecDeque::new();
@@ -56,7 +68,11 @@ pub fn spawn_connection_manager(
             match BrowserSocket::connect(&url) {
                 Ok((socket, events)) => {
                     set_endpoint.set(url.clone());
-                    spawn_local(fetch_node_role(url.clone(), set_node_role));
+                    if let Some(http_base) = auth_http_base.clone() {
+                        spawn_local(fetch_node_role_for_http_base(http_base, set_node_role));
+                    } else {
+                        spawn_local(fetch_node_role(url.clone(), set_node_role));
+                    }
                     backoff.reset();
                     prepare_queue_for_new_connection(&mut queue);
                     session::run_connected_session(
@@ -72,14 +88,20 @@ pub fn spawn_connection_manager(
 
                     leptos::logging::log!("WS: Connection Lost");
 
-                    if matches!(probe_auth_status().await, AuthProbe::Invalid) {
+                    if matches!(
+                        probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
+                        AuthProbe::Invalid
+                    ) {
                         set_status.set(ConnectionStatus::Unauthorized);
                         return;
                     }
                 }
                 Err(e) => {
                     leptos::logging::error!("WS Open Error: {:?}", e);
-                    if matches!(probe_auth_status().await, AuthProbe::Invalid) {
+                    if matches!(
+                        probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
+                        AuthProbe::Invalid
+                    ) {
                         set_status.set(ConnectionStatus::Unauthorized);
                         return;
                     }
@@ -90,7 +112,10 @@ pub fn spawn_connection_manager(
                 }
             }
 
-            if matches!(probe_auth_status().await, AuthProbe::Invalid) {
+            if matches!(
+                probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
+                AuthProbe::Invalid
+            ) {
                 set_status.set(ConnectionStatus::Unauthorized);
                 return;
             }

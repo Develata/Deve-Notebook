@@ -13,6 +13,7 @@ mod connection;
 mod connection_role;
 mod connection_urls;
 mod incoming;
+mod native_bootstrap;
 mod output;
 mod service;
 mod socket;

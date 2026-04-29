@@ -6,10 +6,14 @@ use gloo_net::http::Request;
 use leptos::prelude::*;
 
 pub(super) async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<String>) {
-    let http_url = ws_url
-        .replace("wss://", "https://")
-        .replace("ws://", "http://")
-        .replace("/ws", "");
+    fetch_node_role_for_http_base(http_base_from_ws_url(&ws_url), set_node_role).await;
+}
+
+pub(super) async fn fetch_node_role_for_http_base(
+    http_base: String,
+    set_node_role: WriteSignal<String>,
+) {
+    let http_url = http_base.trim_end_matches('/');
     let url = format!("{}/api/node/role", http_url);
     let res = Request::get(&url).send().await;
     if let Ok(resp) = res
@@ -17,6 +21,14 @@ pub(super) async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<S
     {
         set_node_role.set(format_node_role_summary(&json));
     }
+}
+
+pub(super) fn http_base_from_ws_url(ws_url: &str) -> String {
+    ws_url
+        .replace("wss://", "https://")
+        .replace("ws://", "http://")
+        .trim_end_matches("/ws")
+        .to_string()
 }
 
 fn format_node_role_summary(json: &serde_json::Value) -> String {
@@ -128,5 +140,17 @@ mod tests {
         }));
 
         assert!(summary.contains("repos:degraded (1/2)"));
+    }
+
+    #[test]
+    fn derives_http_base_from_ws_url() {
+        assert_eq!(
+            http_base_from_ws_url("ws://127.0.0.1:3001/ws"),
+            "http://127.0.0.1:3001"
+        );
+        assert_eq!(
+            http_base_from_ws_url("wss://example.test/ws"),
+            "https://example.test"
+        );
     }
 }
