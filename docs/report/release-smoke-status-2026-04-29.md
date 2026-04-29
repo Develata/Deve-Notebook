@@ -1,7 +1,7 @@
 # Release Smoke Status 2026-04-29
 
-This report records the release/runtime smoke status after the native adapter
-boundary and graph projection surface batches.
+This report records the release/runtime smoke status after the Git push
+blocker/remote polish batch.
 
 ## Summary
 
@@ -9,6 +9,7 @@ boundary and graph projection surface batches.
   host Docker availability.
 - Code gate status: passing.
 - Docker release smoke status: environment-blocked, not a code failure.
+- Latest rerun: after commit `32fc28a1` (`Polish git push blocker guidance`).
 - Worktree note: `.codex` remained untracked and was not part of validation.
 
 ## Passing Gates
@@ -16,10 +17,10 @@ boundary and graph projection surface batches.
 | Gate | Command | Result |
 |---|---|---|
 | Format | `cargo fmt --check` | Passed |
-| Graph baseline | `scripts/check-graph-baseline.sh` | Passed |
-| Release baseline | `scripts/check-release-baseline.sh` | Passed |
-| Graph core tests | `cargo test -p deve_core --lib graph_projection -- --nocapture` | Passed |
-| Graph CLI tests | `cargo test -p deve_cli graph -- --nocapture` | Passed |
+| Diff whitespace | `git diff --check` | Passed |
+| Git push CLI output | `cargo test -p deve_cli push_report_lines -- --nocapture` | Passed |
+| Git push Web notice | `cargo test -p deve_web git_push -- --nocapture` | Passed |
+| Plan coverage | `scripts/plan-coverage.sh` | Passed, 0 blocking violations |
 | Clippy | `cargo clippy --all-targets --all-features -- -D warnings` | Passed |
 | Full test suite | `cargo test` | Passed |
 
@@ -31,7 +32,7 @@ Attempted prerequisite check:
 docker info
 ```
 
-Observed result:
+Observed result after the latest rerun:
 
 ```text
 The command 'docker' could not be found in this WSL 2 distro.
