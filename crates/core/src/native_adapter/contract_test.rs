@@ -1,0 +1,196 @@
+use super::*;
+
+fn endpoint(http_base: &str, ws_base: &str, session_bound: bool) -> NativeEndpointReady {
+    NativeEndpointReady {
+        http_base: http_base.to_string(),
+        ws_base: ws_base.to_string(),
+        node_role: "main".to_string(),
+        session_bound,
+    }
+}
+
+fn ready_probe() -> NativeRuntimeReadiness {
+    NativeRuntimeReadiness {
+        endpoint_reachable: true,
+        auth_status_valid: true,
+        node_role_readable: true,
+        repo_handshake_complete: true,
+        writer_ready: true,
+        scope_nonce_current: true,
+    }
+}
+
+#[test]
+fn native_endpoint_validation_accepts_loopback_bases() {
+    let endpoint = endpoint("http://127.0.0.1:3001", "ws://localhost:3001", true);
+
+    assert_eq!(validate_native_endpoint_ready(&endpoint), Ok(()));
+}
+
+#[test]
+fn native_endpoint_validation_rejects_non_loopback_hosts() {
+    let endpoint = endpoint("http://192.168.1.10:3001", "ws://127.0.0.1:3001", true);
+
+    assert!(matches!(
+        validate_native_endpoint_ready(&endpoint),
+        Err(NativeAdapterError::NonLoopbackHost { field: "http_base" })
+    ));
+}
+
+#[test]
+fn native_endpoint_validation_rejects_scan_like_host_suffixes() {
+    let endpoint = endpoint(
+        "http://127.0.0.1.evil.example:3001",
+        "ws://127.0.0.1:3001",
+        true,
+    );
+
+    assert!(matches!(
+        validate_native_endpoint_ready(&endpoint),
+        Err(NativeAdapterError::NonLoopbackHost { field: "http_base" })
+    ));
+}
+
+#[test]
+fn native_endpoint_validation_rejects_url_credentials() {
+    let endpoint = endpoint("http://token@127.0.0.1:3001", "ws://127.0.0.1:3001", true);
+
+    assert!(matches!(
+        validate_native_endpoint_ready(&endpoint),
+        Err(NativeAdapterError::UserInfoForbidden { field: "http_base" })
+    ));
+}
+
+#[test]
+fn native_endpoint_ready_requires_session_binding() {
+    let endpoint = endpoint("http://127.0.0.1:3001", "ws://127.0.0.1:3001", false);
+
+    assert_eq!(validate_native_endpoint_bases(&endpoint), Ok(()));
+    assert_eq!(
+        validate_native_endpoint_ready(&endpoint),
+        Err(NativeAdapterError::SessionNotBound)
+    );
+}
+
+#[test]
+fn writable_shell_requires_runtime_ready_writer_and_current_scope() {
+    let snapshot = NativeAdapterSnapshot {
+        platform: NativeAdapterPlatform::Desktop,
+        state: NativeAdapterState::RuntimeReady,
+        endpoint: Some(endpoint(
+            "http://127.0.0.1:3001",
+            "ws://127.0.0.1:3001",
+            true,
+        )),
+        readiness: ready_probe(),
+    };
+
+    assert!(can_show_native_writable_shell(&snapshot));
+
+    let stale_scope = NativeAdapterSnapshot {
+        readiness: NativeRuntimeReadiness {
+            scope_nonce_current: false,
+            ..ready_probe()
+        },
+        ..snapshot.clone()
+    };
+    assert!(!can_show_native_writable_shell(&stale_scope));
+
+    let missing_writer = NativeAdapterSnapshot {
+        readiness: NativeRuntimeReadiness {
+            writer_ready: false,
+            ..ready_probe()
+        },
+        ..snapshot
+    };
+    assert!(!can_show_native_writable_shell(&missing_writer));
+}
+
+#[test]
+fn writable_shell_revalidates_injected_endpoint() {
+    let snapshot = NativeAdapterSnapshot {
+        platform: NativeAdapterPlatform::Desktop,
+        state: NativeAdapterState::RuntimeReady,
+        endpoint: Some(endpoint(
+            "http://127.0.0.1.attacker.invalid:3001",
+            "ws://127.0.0.1:3001",
+            true,
+        )),
+        readiness: ready_probe(),
+    };
+
+    assert!(!can_load_native_web_shell(&snapshot));
+    assert!(!can_show_native_writable_shell(&snapshot));
+}
+
+#[test]
+fn session_invalid_and_service_offline_never_allow_writable_shell() {
+    for state in [
+        NativeAdapterState::SessionInvalid,
+        NativeAdapterState::ServiceOffline,
+        NativeAdapterState::ServiceRestarting,
+    ] {
+        let snapshot = NativeAdapterSnapshot {
+            platform: NativeAdapterPlatform::Desktop,
+            state,
+            endpoint: Some(endpoint(
+                "http://127.0.0.1:3001",
+                "ws://127.0.0.1:3001",
+                true,
+            )),
+            readiness: ready_probe(),
+        };
+
+        assert!(!can_show_native_writable_shell(&snapshot));
+        assert!(snapshot.unauthorized_or_recovery_gate());
+    }
+}
+
+#[test]
+fn mobile_foreground_reprobe_does_not_restore_stale_write_scope() {
+    let effect = classify_native_platform_event(
+        NativeAdapterPlatform::Mobile,
+        NativePlatformEventKind::Resumed,
+    );
+    let snapshot = NativeAdapterSnapshot {
+        platform: NativeAdapterPlatform::Mobile,
+        state: NativeAdapterState::ForegroundReprobe,
+        endpoint: Some(endpoint(
+            "http://127.0.0.1:3001",
+            "ws://127.0.0.1:3001",
+            true,
+        )),
+        readiness: NativeRuntimeReadiness {
+            scope_nonce_current: false,
+            ..ready_probe()
+        },
+    };
+
+    assert_eq!(effect, NativePlatformEventEffect::RequireForegroundReprobe);
+    assert!(snapshot.state.requires_fresh_handshake());
+    assert!(!can_show_native_writable_shell(&snapshot));
+}
+
+#[test]
+fn network_offline_is_a_hint_not_a_write_grant_or_revocation() {
+    let effect = classify_native_platform_event(
+        NativeAdapterPlatform::Desktop,
+        NativePlatformEventKind::NetworkOffline,
+    );
+    let snapshot = NativeAdapterSnapshot {
+        platform: NativeAdapterPlatform::Desktop,
+        state: NativeAdapterState::RuntimeReady,
+        endpoint: Some(endpoint(
+            "http://127.0.0.1:3001",
+            "ws://127.0.0.1:3001",
+            true,
+        )),
+        readiness: ready_probe(),
+    };
+
+    assert_eq!(effect, NativePlatformEventEffect::NetworkHintOnly);
+    assert!(!platform_event_can_grant_write(
+        NativePlatformEventKind::NetworkOffline
+    ));
+    assert!(can_show_native_writable_shell(&snapshot));
+}

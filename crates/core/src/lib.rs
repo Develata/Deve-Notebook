@@ -29,6 +29,7 @@ pub mod graph;
 pub mod ledger;
 pub mod merge;
 pub mod models;
+pub mod native_adapter;
 pub mod plugin;
 pub mod protocol;
 pub mod security;
