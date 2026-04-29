@@ -34,6 +34,35 @@ fn export_accepts_out_alias_for_output() {
 }
 
 #[test]
+fn graph_accepts_repo_and_out_alias_for_projection_output() {
+    let args = Args::try_parse_from([
+        "deve",
+        "graph",
+        "--repo",
+        "default",
+        "--out",
+        "/tmp/graph.json",
+        "--pretty",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::Graph {
+            repo,
+            output,
+            pretty,
+            allow_degraded_projection,
+        }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+            assert_eq!(output.as_deref(), Some("/tmp/graph.json"));
+            assert!(pretty);
+            assert!(!allow_degraded_projection);
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
+
+#[test]
 fn config_set_runs_before_loading_runtime_config() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let dir = tempfile::tempdir().expect("tempdir");

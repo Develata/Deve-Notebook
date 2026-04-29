@@ -22,6 +22,7 @@
 *   `deve serve`: 启动 WebSocket 服务端.
 *   `deve dump`: 调试工具 (Dump Ops).
 *   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
+*   `deve graph`: 输出当前 repo 的只读 `GraphProjection` JSON；默认要求健康 Structure Facts authority，显式 `--allow-degraded-projection` 才允许从 metadata fallback 导出。
 *   `deve verify-p2p`: P2P 逻辑验证.
 *   `deve seed`: 种子节点数据注入.
 *   `deve node-check`: 节点一致性检查，可选修复；`--projection` 执行只读 Structure Facts / projection authority 诊断。

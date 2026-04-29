@@ -14,6 +14,7 @@
 //! - `watch`: 监控文件系统变更 (Watcher Service)
 //! - `dump`: 调试工具，用于检查 ops 记录
 //! - `serve`: 启动 WebSocket 后端服务器 (Backend Architecture)
+//! - `graph`: 输出当前 repo 的只读 GraphProjection JSON
 //! - `git status`: 检查 Git ecosystem mirror bridge 状态
 //! - `git mirror`: 手动执行 queued Git mirror commits
 
@@ -76,6 +77,17 @@ pub(crate) enum Commands {
         doc: Option<String>,
         #[arg(long, default_value = "json")]
         format: String,
+        #[arg(long)]
+        allow_degraded_projection: bool,
+    },
+    /// Print repo-scoped read-only graph projection JSON
+    Graph {
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(short, long, visible_alias = "out")]
+        output: Option<String>,
+        #[arg(long)]
+        pretty: bool,
         #[arg(long)]
         allow_degraded_projection: bool,
     },

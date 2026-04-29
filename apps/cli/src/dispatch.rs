@@ -52,6 +52,19 @@ pub async fn run(
             &format,
             allow_degraded_projection,
         )?,
+        Some(Commands::Graph {
+            repo,
+            output,
+            pretty,
+            allow_degraded_projection,
+        }) => commands::graph::run(
+            ledger_dir,
+            repo.as_deref(),
+            output,
+            pretty,
+            allow_degraded_projection,
+            config.snapshot_depth,
+        )?,
         Some(Commands::Recover { repo }) => {
             commands::recover::run(ledger_dir, vault_path, repo, config.snapshot_depth)?
         }

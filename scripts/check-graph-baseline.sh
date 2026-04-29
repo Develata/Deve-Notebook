@@ -16,13 +16,13 @@ fail() {
 contains() {
   local file="$1"
   local text="$2"
-  rg --fixed-strings --quiet "$text" "$file" || fail "missing '$text' in $file"
+  rg --fixed-strings --quiet -- "$text" "$file" || fail "missing '$text' in $file"
 }
 
 absent() {
   local file="$1"
   local text="$2"
-  if rg --fixed-strings --quiet "$text" "$file"; then
+  if rg --fixed-strings --quiet -- "$text" "$file"; then
     fail "unexpected '$text' in $file"
   fi
 }
@@ -34,7 +34,16 @@ contains "$GRAPH" "GraphLinkKind::Wiki"
 contains "$GRAPH" "GraphLinkKind::Markdown"
 contains "$ROOT_DIR/crates/core/src/lib.rs" "pub mod graph;"
 contains "$ROOT_DIR/docs/plan/14_tech_stack.md" "Core read-only projection"
-contains "$ROOT_DIR/docs/report/next-tasks.md" "P3-13 Graph / Knowledge Visualization"
+contains "$ROOT_DIR/docs/plan/14_tech_stack.md" "CLI JSON surface"
+contains "$ROOT_DIR/docs/plan/12_commands.md" "deve graph"
+contains "$ROOT_DIR/apps/cli/src/main.rs" "Graph {"
+contains "$ROOT_DIR/apps/cli/src/dispatch.rs" "commands::graph::run"
+contains "$ROOT_DIR/apps/cli/src/commands/graph.rs" "project_documents"
+contains "$ROOT_DIR/apps/cli/src/commands/graph.rs" "diagnose_projection_local_repo"
+contains "$ROOT_DIR/apps/cli/src/commands/graph.rs" "--allow-degraded-projection"
+contains "$ROOT_DIR/docs/report/next-tasks.md" "P3-13 Graph visualization read-only CLI projection surface 已关闭"
+
+absent "$ROOT_DIR/docs/report/next-tasks.md" "Graph visualization next step | P3-13"
 
 absent "$GRAPH" "crate::ledger"
 absent "$GRAPH" "std::fs"

@@ -9,6 +9,7 @@ pub mod dump;
 pub mod export;
 pub mod git;
 mod git_output;
+pub mod graph;
 pub mod init;
 pub mod live_proxy;
 pub mod node_check;
