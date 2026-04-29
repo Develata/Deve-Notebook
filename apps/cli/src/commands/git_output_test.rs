@@ -1,7 +1,7 @@
 use super::{mirror_report_lines, print_mirror_report, print_status, status_lines_at};
 use deve_core::git_bridge::{
-    GitMetadataKind, GitMirrorCommitState, GitMirrorRecord, GitMirrorRunReport, GitMirrorState,
-    GitMirrorStatus, GitMirrorSummary,
+    GitMetadataKind, GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord,
+    GitMirrorRunReport, GitMirrorState, GitMirrorStatus, GitMirrorSummary,
 };
 
 fn record(
@@ -17,6 +17,7 @@ fn record(
         state,
         git_commit_id: None,
         last_error: last_error.map(str::to_string),
+        failure_stage: last_error.map(GitMirrorFailureStage::classify),
         queued_at_ms: 1,
         updated_at_ms: 2,
         attempts: 1,
@@ -118,6 +119,42 @@ fn status_lines_include_per_commit_lag_and_retry_hint() {
         lines
             .iter()
             .any(|line| line.contains("--retry-out-of-sync"))
+    );
+}
+
+#[test]
+fn status_lines_fallback_classifies_legacy_records_without_failure_stage() {
+    let lines = status_lines_at(
+        "default",
+        &GitMirrorStatus {
+            repo_root: std::path::PathBuf::from("vault/default"),
+            notegit_present: true,
+            git_metadata_kind: GitMetadataKind::Directory,
+            gitignore_protects_notegit: true,
+            state: GitMirrorState::Ready,
+            reason: None,
+        },
+        &GitMirrorSummary {
+            queued: 0,
+            committed: 0,
+            out_of_sync: 1,
+        },
+        &[GitMirrorRecord {
+            failure_stage: None,
+            ..record(
+                "deve-legacy",
+                GitMirrorCommitState::OutOfSync,
+                9,
+                Some("Git mirror refuses unsafe projection path: .notegit/state"),
+            )
+        }],
+        11,
+    );
+
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("failure[1]: location=notegit_protection"))
     );
 }
 

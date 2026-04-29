@@ -30,6 +30,77 @@ impl GitMirrorCommitState {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GitMirrorFailureStage {
+    MirrorNotReady,
+    DeveSourceControl,
+    NotegitProtection,
+    ProjectionScope,
+    GitHistoryMapping,
+    GitWorktree,
+    GitCommand,
+    MirrorExecutor,
+}
+
+impl GitMirrorFailureStage {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::MirrorNotReady => "mirror_not_ready",
+            Self::DeveSourceControl => "deve_source_control",
+            Self::NotegitProtection => "notegit_protection",
+            Self::ProjectionScope => "projection_scope",
+            Self::GitHistoryMapping => "git_history_mapping",
+            Self::GitWorktree => "git_worktree",
+            Self::GitCommand => "git_command",
+            Self::MirrorExecutor => "mirror_executor",
+        }
+    }
+
+    pub fn classify(error: &str) -> Self {
+        let normalized = error.to_ascii_lowercase();
+        if normalized.contains("not ready:") || normalized.contains("protectionmissing") {
+            return Self::MirrorNotReady;
+        }
+        if normalized.contains("pending source-control")
+            || normalized.contains("staged source-control")
+            || normalized.contains("pending_fs")
+            || normalized.contains("staging")
+        {
+            return Self::DeveSourceControl;
+        }
+        if normalized.contains(".notegit") || normalized.contains("tracked by git") {
+            return Self::NotegitProtection;
+        }
+        if normalized.contains("outside queued deve commit")
+            || normalized.contains("unsafe projection path")
+            || normalized.contains("projection diff")
+        {
+            return Self::ProjectionScope;
+        }
+        if normalized.contains("parent")
+            || normalized.contains("git head does not match")
+            || normalized.contains("not mirrored")
+        {
+            return Self::GitHistoryMapping;
+        }
+        if normalized.contains("worktree") || normalized.contains("rev-parse") {
+            return Self::GitWorktree;
+        }
+        if normalized.starts_with("git mirror ") {
+            return Self::MirrorExecutor;
+        }
+        if normalized.starts_with("git ")
+            || normalized.starts_with("failed to run git ")
+            || normalized.contains(" for git ")
+            || normalized.contains(" stdin for git ")
+        {
+            return Self::GitCommand;
+        }
+        Self::MirrorExecutor
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GitMirrorRecord {
     pub deve_commit_id: String,
@@ -40,6 +111,8 @@ pub struct GitMirrorRecord {
     pub git_commit_id: Option<String>,
     #[serde(default)]
     pub last_error: Option<String>,
+    #[serde(default)]
+    pub failure_stage: Option<GitMirrorFailureStage>,
     pub queued_at_ms: i64,
     pub updated_at_ms: i64,
     #[serde(default)]
@@ -78,6 +151,7 @@ pub fn queue_deve_commit(
         state: GitMirrorCommitState::Queued,
         git_commit_id: None,
         last_error: None,
+        failure_stage: None,
         queued_at_ms: now,
         updated_at_ms: now,
         attempts: 0,
@@ -95,6 +169,7 @@ pub fn mark_committed(
     record.state = GitMirrorCommitState::Committed;
     record.git_commit_id = Some(git_commit_id.to_string());
     record.last_error = None;
+    record.failure_stage = None;
     record.attempts = record.attempts.saturating_add(1);
     record.updated_at_ms = chrono::Utc::now().timestamp_millis();
     write_record(db, &record)?;
@@ -107,8 +182,10 @@ pub fn mark_out_of_sync(
     error: impl Into<String>,
 ) -> Result<GitMirrorRecord> {
     let mut record = required_record(db, deve_commit_id)?;
+    let error = error.into();
     record.state = GitMirrorCommitState::OutOfSync;
-    record.last_error = Some(error.into());
+    record.last_error = Some(error.clone());
+    record.failure_stage = Some(GitMirrorFailureStage::classify(&error));
     record.attempts = record.attempts.saturating_add(1);
     record.updated_at_ms = chrono::Utc::now().timestamp_millis();
     write_record(db, &record)?;
@@ -179,8 +256,8 @@ fn write_record(db: &Database, record: &GitMirrorRecord) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{
-        GitMirrorCommitState, get_record, init_table, mark_committed, mark_out_of_sync,
-        queue_deve_commit, summarize_records,
+        GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord, get_record, init_table,
+        mark_committed, mark_out_of_sync, queue_deve_commit, summarize_records,
     };
     use crate::source_control::CommitInfo;
 
@@ -230,10 +307,55 @@ mod tests {
         assert_eq!(failed.state, GitMirrorCommitState::OutOfSync);
         assert_eq!(failed.last_error.as_deref(), Some("git commit failed"));
         assert_eq!(
+            failed.failure_stage,
+            Some(GitMirrorFailureStage::GitCommand)
+        );
+        assert_eq!(
             get_record(&db, "c1")
                 .expect("get")
                 .and_then(|record| record.git_commit_id),
             Some("abc123".to_string())
+        );
+    }
+
+    #[test]
+    fn legacy_record_without_failure_stage_still_decodes() {
+        let raw = serde_json::json!({
+            "deve_commit_id": "legacy",
+            "repo_id": uuid::Uuid::nil(),
+            "ledger_seq": 1,
+            "state": "OutOfSync",
+            "git_commit_id": null,
+            "last_error": "old error",
+            "queued_at_ms": 1,
+            "updated_at_ms": 2,
+            "attempts": 1
+        })
+        .to_string();
+
+        let record: GitMirrorRecord = serde_json::from_str(&raw).expect("decode legacy");
+
+        assert_eq!(record.deve_commit_id, "legacy");
+        assert_eq!(record.failure_stage, None);
+    }
+
+    #[test]
+    fn failure_stage_classification_covers_known_locations() {
+        assert_eq!(
+            GitMirrorFailureStage::classify(
+                "Git mirror refuses to run with 1 pending source-control change(s)"
+            ),
+            GitMirrorFailureStage::DeveSourceControl
+        );
+        assert_eq!(
+            GitMirrorFailureStage::classify("Git mirror refuses unsafe projection path: .notegit"),
+            GitMirrorFailureStage::NotegitProtection
+        );
+        assert_eq!(
+            GitMirrorFailureStage::classify(
+                "Git mirror refuses to include path(s) outside queued Deve commit"
+            ),
+            GitMirrorFailureStage::ProjectionScope
         );
     }
 }

@@ -147,10 +147,13 @@ fn record_detail_lines(
 
     let mut lines = vec![detail];
     if let Some(error) = &record.last_error {
+        let location = record
+            .failure_stage
+            .map(|stage| stage.as_str())
+            .unwrap_or_else(|| failure_location(error));
         lines.push(format!(
             "  failure[{index}]: location={} error={}",
-            failure_location(error),
-            error
+            location, error
         ));
     }
     lines

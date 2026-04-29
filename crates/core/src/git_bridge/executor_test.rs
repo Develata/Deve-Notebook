@@ -1,5 +1,7 @@
 use super::{GitMirrorRunOptions, run_pending_mirror};
-use crate::git_bridge::{GitMirrorCommitState, get_record, queue_deve_commit};
+use crate::git_bridge::{
+    GitMirrorCommitState, GitMirrorFailureStage, get_record, queue_deve_commit,
+};
 use crate::ledger::RepoManager;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::source_control::{ChangeStatus, CommitInfo, commits};
@@ -183,6 +185,10 @@ fn run_pending_mirror_marks_noop_as_out_of_sync() {
         .expect("get")
         .expect("record");
     assert_eq!(record.state, GitMirrorCommitState::OutOfSync);
+    assert_eq!(
+        record.failure_stage,
+        Some(GitMirrorFailureStage::MirrorExecutor)
+    );
     assert!(
         record
             .last_error
@@ -206,6 +212,10 @@ fn run_pending_mirror_rejects_pending_source_control_changes() {
         .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
         .expect("get")
         .expect("record");
+    assert_eq!(
+        record.failure_stage,
+        Some(GitMirrorFailureStage::DeveSourceControl)
+    );
     assert!(
         record
             .last_error
@@ -228,6 +238,10 @@ fn run_pending_mirror_rejects_git_paths_outside_deve_commit() {
         .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
         .expect("get")
         .expect("record");
+    assert_eq!(
+        record.failure_stage,
+        Some(GitMirrorFailureStage::ProjectionScope)
+    );
     assert!(
         record
             .last_error
@@ -257,6 +271,10 @@ fn run_pending_mirror_rejects_tracked_notegit_paths() {
         .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
         .expect("get")
         .expect("record");
+    assert_eq!(
+        record.failure_stage,
+        Some(GitMirrorFailureStage::NotegitProtection)
+    );
     assert!(
         record
             .last_error
