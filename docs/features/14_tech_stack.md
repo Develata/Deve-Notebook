@@ -32,11 +32,14 @@
 
 - 产品应清楚区分“当前已稳定支持”和“未来计划支持”。
 - 不应让未完成平台被误导成已正式可用。
+- Git ecosystem bridge 当前稳定边界是 CLI status/export/import/push 与 Web CLI-only notices；可点击 Git mirror repair UI 是 future UI layer，不得被描述为已完成。
+- Git repair UI 的 future boundary 必须保持 `.notegit` / ledger authority，`.git` 只作为 projection mirror；任何写 Git 的路径都必须显式、可审计、可失败关闭。
 
 ## 非目标
 
 - 当前阶段不要求所有平台具备完全一致的壳层体验。
 - 当前阶段不允许以重依赖堆叠来替代核心功能稳定性。
+- 当前阶段不允许用后台自动 Git writer 替代显式 CLI/手动确认式 repair。
 
 ## Chrome MCP 验收实例
 

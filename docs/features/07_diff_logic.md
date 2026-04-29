@@ -52,10 +52,21 @@
 - 冲突必须以显式方式显示。
 - 只读或 spectator 场景下不能假装支持 commit/merge 写入。
 
+### 5. Git Mirror Repair UI Boundary
+
+当前 Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror`
+的 CLI-only notice。Git mirror repair 的可点击 UI 属于下一阶段能力，但必须先满足以下边界：
+
+- UI 第一阶段只能展示 `repair_action[...]` / `repair_guidance[...]` 的只读解释与 copyable CLI command，不得直接执行 Git。
+- 若后续进入可执行 UI，必须有明确 manual confirmation，且确认内容包含 repo、repair action code、subject、retry command 与 `.notegit` authority 提醒。
+- 任何可执行 repair flow 都必须 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` Git tracking leak 与 stale scope nonce。
+- 后台自动 Git writer 不是该 UI 的一部分；`.git` 仍只是 projection mirror，`.notegit` / ledger source-control state 仍是 authority。
+
 ## 非目标
 
 - 当前阶段不支持跨 repo 自动 merge。
 - 当前阶段不允许 remote spectator 直接提交远端写入。
+- 当前阶段不实现 Web 后端直接 Git repair，也不实现后台自动 Git mirror repair。
 
 ## Chrome MCP 验收实例
 

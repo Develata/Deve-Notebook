@@ -96,6 +96,7 @@
     - run: cargo test -p deve_web commit_write_block -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
+    - run: cargo test -p deve_cli status_lines_include_guidance_for_all_repair_actions -- --nocapture
   assertions:
     - ui_assert: source_control_commit_available true
     - ui_assert: source_control_commit_and_push_available true
@@ -107,6 +108,9 @@
     - ui_assert: command_palette_git_direct_executor_absent true
     - cli_assert: git_mirror_failure_metadata_available true
     - cli_assert: git_mirror_repair_action_cli_only true
+    - cli_assert: git_mirror_repair_guidance_manual_only true
+    - ui_assert: git_mirror_clickable_repair_ui_future_requires_manual_confirmation true
+    - ui_assert: git_mirror_repair_ui_background_git_writer_absent true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。

@@ -36,10 +36,19 @@
 - CLI 命令是系统控制面的正式组成部分。
 - 它不只是调试工具，也服务于多端共享的 application/control 路径。
 
+### 4. Git Mirror Repair Command Boundary
+
+- `Git: Repair Mirror` 当前是 Command Palette 可发现入口，但只打开 Source Control 的 CLI-only notice。
+- 该 notice 指向 `deve_cli git status --repo <repo>` 的 `repair_action[...]` /
+  `repair_guidance[...]`，以及 `deve_cli git export --repo <repo> --retry-out-of-sync`。
+- 下一阶段若加入可点击 repair UI，Command Palette 只能进入 repair review flow，不能绕过 Source Control gate 直接写 Git。
+- 可执行 repair 必须要求 manual confirmation；confirmation 前只能展示诊断、subject、next step 与 copyable retry command。
+
 ## 非目标
 
 - 当前阶段不允许只有显示层按钮能做、命令层做不到的核心能力。
 - 当前阶段不要求把所有未来扩展命令都默认暴露给用户。
+- 当前阶段不允许 Command Palette 触发后台自动 Git repair。
 
 ## Chrome MCP 验收实例
 

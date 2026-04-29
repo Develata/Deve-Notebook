@@ -54,6 +54,7 @@
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve ledger commit；当前 CLI surface 为 `deve git import` dry-run 与 `deve git import --apply` 显式 pending/import 写入，不直接生成 ledger commit。
     *   `Git: Push Mirror`: 将 Git mirror 推送到远端；当前 CLI surface 为 `deve git push`，只发布已映射的 `.git` mirror HEAD，不得绕过 Deve authority。
     *   `Git: Repair Mirror`: 当前 Web Command Palette 仅提供 CLI-only repair/retry notice，引导用户通过 `deve_cli git status --repo <repo>` 查看 `repair_action[...]`，修复 blocker 后再运行 `deve_cli git export --repo <repo> --retry-out-of-sync`；不得自动执行 Git repair。
+    *   Future clickable repair UI: MAY 进入只读 review flow 并展示 `repair_action[...]` / `repair_guidance[...]`、subject、next step 与 retry command；MUST 要求 manual confirmation 后才允许任何 Git write；MUST NOT 从 Command Palette 或后台任务直接执行 Git repair。
     *   `Git:*` 文案 MAY 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:
@@ -72,7 +73,7 @@
         Command Palette 只提供可发现的 CLI-only notice，不得被解释为 Web 已能直接执行 Git import/push；
         Git push notice 已覆盖 remote/upstream、export/repair、dirty Git worktree 与 dirty Deve Source Control blocker 提示；
         Git repair notice 当前只解释 `repair_action[...]`、blocker 修复与 `--retry-out-of-sync` 重试路径。
-        blocker repair 的可点击 UI、自动执行与完整 conflict UI 仍属 future。
+        blocker repair 的可点击 UI 与完整 conflict UI 仍属 future；后台自动 Git repair 不属于当前或下一阶段默认能力。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

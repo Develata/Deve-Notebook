@@ -69,6 +69,7 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - `deve_cli git import` 当前提供只读 dry-run planning：解析 Git tracked/untracked worktree changes 为 change/blocker；`deve_cli git import --apply` 在无 blocker 时把安全 changes 原子写入 `pending_fs_ops`，并通过 `has_conflict` 保留冲突标记。该 surface 不得被解释为 ledger commit 已完成。
 - `deve_cli git push` 当前提供显式 mirror publish surface：只在 `.git` mirror ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record 且当前 Git HEAD 映射到最新 `GitMirrorCommitted` record 时执行远端 push；失败以 blocker 输出，不回滚 ledger，也不写 `.notegit`。
 - Web Command Palette 当前只提供 Git import / push / repair 的 CLI-only notices：repair notice 指向 `deve_cli git status --repo <repo>` 的 `repair_action[...]` 与 `deve_cli git export --repo <repo> --retry-out-of-sync`，不直接调用 Web 后端执行 Git。
+- Future clickable repair UI 必须先进入只读 review flow，展示 repair action code、subject、manual-only next step、retry command 与 `.notegit` authority 提醒；任何 Git write 都必须经过 manual confirmation，并 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` tracking leak 与 stale scope nonce。
 - 自动后台执行、完整 repair UI 与 Web 后端直接执行 Git import/push/repair 仍是后续实现，不得被当前 executor、import apply、push surface 或 CLI-only notices 替代。
 
 该 bridge 的工程边界：
