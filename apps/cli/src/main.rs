@@ -29,6 +29,7 @@ mod commands;
 mod dispatch;
 mod dump_support;
 mod export_entries;
+mod graph_projection;
 #[cfg(test)]
 mod main_test;
 mod server;

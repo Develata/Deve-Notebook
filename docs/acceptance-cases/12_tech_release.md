@@ -81,8 +81,11 @@
     - run: scripts/check-release-baseline.sh
     - run: scripts/check-native-track-boundary.sh
     - run: scripts/check-graph-baseline.sh
+    - run: cargo test -p deve_cli graph -- --nocapture
   assertions:
     - exit_code_eq: 0
+    - api_assert: graph_projection_http_endpoint_protected_readonly true
+    - cli_assert: graph_projection_cli_and_http_share_adapter true
 
 - case_id: REL-006
   goal: 当前运行实例暴露可理解的版本、profile、环境与交付形态。

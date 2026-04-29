@@ -30,7 +30,7 @@
 | **AI Chat**  | **OpenAI-compatible SSE** | Planned (Native) | 第一方最小 chat 能力，读取 Markdown + 对话。 |
 | **Trusted External Agent** | **External CLI Bridge** | Planned (Trusted Only) | 外部 CLI Agent 桥接，可选、默认关闭。 |
 | **MCP**      | **No runtime**   | Retired | 不规划、不保留 MCP runtime；相关需求由 Skills 调用受控 CLI 工具或 Trusted CLI path 承载。 |
-| **Graph**    | **Core read-only projection + CLI JSON surface + d3-force/Pixi.js future renderer** | Verified (Projection Surface) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；`deve graph` 只读导出 projection JSON；高性能 Web Canvas 渲染仍是 future。 |
+| **Graph**    | **Core read-only projection + CLI JSON surface + protected HTTP projection + d3-force/Pixi.js future renderer** | Verified (Projection Data Surface) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；`deve graph` 与 `/api/repo/graph` 只读导出 projection JSON；高性能 Web Canvas 渲染仍是 future。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
 | **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Import/Push CLI + Web CLI Notices) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay、queued export、import apply、push CLI surface 与 Web import/push/repair CLI-only notices；自动后台执行与完整 UI 仍属 P1/P2 后续。 |
@@ -39,11 +39,12 @@
 
 ### 1.1 Graph Visualization {#graph-visualization}
 
-当前已实现部分包括 `deve_core::graph` 的只读 projection baseline 与 `deve graph`
-CLI JSON surface：core graph 从当前 repo docs 派生节点、已解析边与未解析链接，不读取或写入
-ledger authority、workspace、search index 或 source-control runtime；CLI adapter 只负责从当前
-repo 的文档 projection 重建 `GraphDocument`，调用 `project_documents` 并输出 JSON。d3-force /
-Pixi.js 等高性能 Web 渲染仍是 future renderer，不属于当前验收阻塞项。
+当前已实现部分包括 `deve_core::graph` 的只读 projection baseline、`deve graph`
+CLI JSON surface 与受保护 HTTP 只读 query `GET /api/repo/graph`：core graph 从当前 repo
+docs 派生节点、已解析边与未解析链接，不读取或写入 ledger authority、workspace、
+search index 或 source-control runtime；CLI/HTTP adapter 只负责从当前 repo 的文档
+projection 重建 `GraphDocument`，调用 `project_documents` 并输出 JSON。d3-force / Pixi.js
+等高性能 Web 渲染仍是 future renderer，不属于当前验收阻塞项。
 
 ### 1.2 Search Baseline {#search-baseline}
 

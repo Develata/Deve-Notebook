@@ -7,6 +7,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GRAPH="$ROOT_DIR/crates/core/src/graph/mod.rs"
+CLI_GRAPH="$ROOT_DIR/apps/cli/src/graph_projection.rs"
 
 fail() {
   echo "graph-baseline-check: $*" >&2
@@ -38,9 +39,11 @@ contains "$ROOT_DIR/docs/plan/14_tech_stack.md" "CLI JSON surface"
 contains "$ROOT_DIR/docs/plan/12_commands.md" "deve graph"
 contains "$ROOT_DIR/apps/cli/src/main.rs" "Graph {"
 contains "$ROOT_DIR/apps/cli/src/dispatch.rs" "commands::graph::run"
-contains "$ROOT_DIR/apps/cli/src/commands/graph.rs" "project_documents"
-contains "$ROOT_DIR/apps/cli/src/commands/graph.rs" "diagnose_projection_local_repo"
-contains "$ROOT_DIR/apps/cli/src/commands/graph.rs" "--allow-degraded-projection"
+contains "$ROOT_DIR/apps/cli/src/commands/graph.rs" "project_repo_graph"
+contains "$CLI_GRAPH" "project_documents"
+contains "$CLI_GRAPH" "diagnose_projection_local_repo"
+contains "$ROOT_DIR/apps/cli/src/server/router.rs" "/api/repo/graph"
+contains "$CLI_GRAPH" "--allow-degraded-projection"
 contains "$ROOT_DIR/docs/report/next-tasks.md" "P3-13 Graph visualization read-only CLI projection surface 已关闭"
 
 absent "$ROOT_DIR/docs/report/next-tasks.md" "Graph visualization next step | P3-13"

@@ -21,6 +21,7 @@ use std::sync::Arc;
 
 use crate::server::AppState;
 use crate::server::plugin_host::PluginHostState;
+use deve_core::graph::GraphProjection;
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
 use deve_core::plugin::runtime::host;
@@ -28,6 +29,14 @@ use deve_core::plugin::runtime::host;
 #[derive(Deserialize)]
 pub struct DocQuery {
     pub doc_id: String,
+    #[serde(flatten)]
+    pub repo: RepoSelector,
+}
+
+#[derive(Deserialize, Default)]
+pub struct GraphQuery {
+    #[serde(default)]
+    pub allow_degraded_projection: bool,
     #[serde(flatten)]
     pub repo: RepoSelector,
 }
@@ -71,6 +80,20 @@ pub async fn doc_content(
     };
     match Repository::get_doc_content_in_repo(state.repo.as_ref(), &q.repo, doc_id) {
         Ok(content) => content.into_response(),
+        Err(e) => repo_error_response(e),
+    }
+}
+
+pub async fn graph_projection(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<GraphQuery>,
+) -> impl IntoResponse {
+    match crate::graph_projection::project_repo_graph(
+        state.repo.as_ref(),
+        &q.repo,
+        q.allow_degraded_projection,
+    ) {
+        Ok(projection) => Json::<GraphProjection>(projection).into_response(),
         Err(e) => repo_error_response(e),
     }
 }

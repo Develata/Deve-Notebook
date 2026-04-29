@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Post-Git-mirror priority reselection | P1/P2 / Planning | `docs/report/next-tasks.md`, `docs/plan/`, `docs/report/code-review-2026-04-28.md` | Git mirror 已停靠在 CLI-only writer + Web read-only review；下一步从剩余 P0/P1/P3-10/P3-13/P2 中重选实现批次。默认建议优先复核是否还有 P0 reopened gap，否则转入桌面/移动 packaging runtime 或 graph Web projection UI 的最小可验收批次。 |
+| 1 | Graph Web projection panel scaffold | P3-13 / Implementation | `apps/web/src/`, `docs/features/07_diff_logic.md`, `docs/acceptance-cases/` | Graph 已有 core/CLI/HTTP 只读 projection 数据面；下一步做 Web 最小只读 graph panel scaffold，先展示 repo-scoped node/edge/unresolved counts 与 fallback，不引入 d3/Pixi 或写路径。 |
 
 ## 最近完成基线
 
@@ -55,6 +55,8 @@
 - P3-10 Desktop runtime readiness / foreground reprobe 已关闭：desktop shell snapshot 现包含 `NativeRuntimeReadiness`，`RuntimeReady` 要求 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足，`Foreground` / `Resumed` 会进入 `ForegroundReprobe` 且 stale `scope_nonce` 不恢复写态，详见 `desktop-runtime-readiness-status-2026-04-29.md`。
 - P3-10 Native shell parity review 已关闭：mobile foreground/resume reprobe 现在也清空 `node_role_readable`，desktop/mobile/Web 对 native readiness、`foreground_reprobe` recovery bootstrap 与 write gate 的当前 no-Tauri contract 已对齐；native track 进入干净停靠点，详见 `native-shell-parity-review-2026-04-29.md`。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。
+- P1/P2 Post-Git-mirror priority reselection 已关闭：P0 没有重新打开的 blocker；native packaging gate 仍按计划关闭，因此下一实际实现批次转入 P3-13 graph 数据面。
+- P3-13 Graph HTTP projection surface 已关闭：新增 CLI/HTTP 共享只读 adapter 与受保护 `GET /api/repo/graph` query，默认 fail-closed 于损坏 Structure Facts authority；Web graph renderer 仍属后续，详见 `graph-http-projection-status-2026-04-29.md`。
 - P2 Docker release smoke 已关闭：Docker Desktop WSL integration 恢复后，`DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102 scripts/smoke-docker-release.sh` 完整通过，镜像 build、容器启动与宿主 `/api/node/role` endpoint probe 均已验证；脚本同时补充 local proxy bypass 与容器 health 诊断，详见 `release-smoke-status-2026-04-29.md`。
 - P3 Cargo-chef manifest warning triage 已关闭：当前 repo manifests 无 `plugin = ...` 键，`cargo metadata --no-deps --format-version 1` 无 warning；该 warning 需在稳定 Docker context 内复现后再判断是否为 cargo-chef skeleton 或旧缓存噪音，详见 `cargo-chef-warning-triage-2026-04-29.md`。
 - P0 repo health、`repair --check`、WS structured errors、writer-ready `repo_id + scope_nonce`、Source Control doc identity hardening 已记录在 `code-review-2026-04-28.md`。

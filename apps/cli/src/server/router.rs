@@ -77,6 +77,10 @@ pub fn build_app(
         )
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
+        .route(
+            "/api/repo/graph",
+            get(handlers::repo::http::graph_projection),
+        )
         .route("/api/auth/logout", post(auth::handlers::logout))
         .route("/api/auth/me", get(auth::handlers::me))
         .route("/api/admin/dump", get(handlers::admin::dump))
