@@ -47,8 +47,10 @@
     - AUTH_PASS 已设置为 Argon2 PHC 密码哈希
   steps:
     - run: DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
+    - note: use `DEVE_DOCKER_BIN=/path/to/docker DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh` when Docker is not named `docker`
   assertions:
     - http_status_eq: 200
+    - stderr_contains_on_docker_unavailable: "docker-release-smoke: docker_bin="
 
 - case_id: REL-003
   goal: 发布前检查项可验证。

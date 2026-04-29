@@ -9,6 +9,7 @@ IMAGE="${DEVE_DOCKER_SMOKE_IMAGE:-deve-notebook:local-smoke}"
 CONTAINER_NAME="${DEVE_DOCKER_SMOKE_CONTAINER:-deve-docker-smoke-$$}"
 HOST_PORT="${DEVE_DOCKER_SMOKE_PORT:-3001}"
 REQUIRED="${DEVE_DOCKER_SMOKE_REQUIRED:-0}"
+DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
 AUTH_SECRET="${DEVE_DOCKER_SMOKE_AUTH_SECRET:-deve_docker_smoke_secret_32_bytes_ok!!}"
 AUTH_USER="${DEVE_DOCKER_SMOKE_AUTH_USER:-admin}"
 AUTH_PASS="${DEVE_DOCKER_SMOKE_AUTH_PASS:-\$argon2id\$v=19\$m=65536,t=2,p=1\$c29tZXNhbHQ\$CTFhFdXPJO1aFaMaO6Mm5c8y7cJHAph8ArZWb2GRPPc}"
@@ -24,30 +25,50 @@ skip() {
   exit 0
 }
 
+docker_cmd() {
+  command "$DOCKER_BIN" "$@"
+}
+
+docker_bin_available() {
+  if [[ "$DOCKER_BIN" == */* ]]; then
+    [[ -x "$DOCKER_BIN" ]]
+    return
+  fi
+  command -v "$DOCKER_BIN" >/dev/null 2>&1
+}
+
+docker_env_summary() {
+  echo "docker-release-smoke: docker_bin=$DOCKER_BIN"
+  echo "docker-release-smoke: DOCKER_HOST=${DOCKER_HOST:-<unset>}"
+  echo "docker-release-smoke: DOCKER_CONTEXT=${DOCKER_CONTEXT:-<unset>}"
+}
+
 require_or_skip() {
   if [[ "$REQUIRED" == "1" || "$REQUIRED" == "true" ]]; then
+    docker_env_summary >&2
     fail "$1"
   fi
+  docker_env_summary
   skip "$1"
 }
 
 cleanup() {
-  docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  docker_cmd rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
   if [[ -n "$DATA_DIR" ]]; then
     rm -rf "$DATA_DIR"
   fi
 }
 
-command -v docker >/dev/null 2>&1 || require_or_skip "docker command not found"
+docker_bin_available || require_or_skip "docker command not found"
 command -v curl >/dev/null 2>&1 || require_or_skip "curl command not found"
-docker info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
+docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
 
 DATA_DIR="$(mktemp -d)"
 trap cleanup EXIT
 
-docker build -t "$IMAGE" "$ROOT_DIR"
+docker_cmd build -t "$IMAGE" "$ROOT_DIR"
 
-docker run -d \
+docker_cmd run -d \
   --name "$CONTAINER_NAME" \
   -p "$HOST_PORT:3001" \
   -v "$DATA_DIR:/data" \
@@ -68,5 +89,5 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 
-docker logs "$CONTAINER_NAME" >&2 || true
+docker_cmd logs "$CONTAINER_NAME" >&2 || true
 fail "node-role endpoint did not become healthy on port $HOST_PORT"

@@ -98,11 +98,35 @@ but the agent still cannot complete `docker run` plus `curl /api/node/role` from
 a stable Linux Docker context. No application runtime endpoint failure has been
 observed.
 
+## Smoke Script Follow-Up
+
+`scripts/smoke-docker-release.sh` now supports `DEVE_DOCKER_BIN` so operators
+can point the smoke at a non-default Docker CLI without a PATH shim. When Docker
+is missing or unreachable, the script also prints the resolved Docker binary plus
+`DOCKER_HOST` / `DOCKER_CONTEXT`.
+
+Verified script-only fallback behavior without requiring a daemon:
+
+```bash
+DEVE_DOCKER_BIN=/no/such/docker scripts/smoke-docker-release.sh
+```
+
+Result: skipped with Docker binary/context diagnostics.
+
+```bash
+DEVE_DOCKER_BIN=/no/such/docker \
+DEVE_DOCKER_SMOKE_REQUIRED=1 \
+scripts/smoke-docker-release.sh
+```
+
+Result: failed with Docker binary/context diagnostics.
+
 ## Remaining Release Follow-Up
 
 - Enable Docker Desktop WSL integration for this distro so plain Linux
   `docker info` works from the same shell that runs Codex, or run the smoke from
   a normal terminal with a stable Docker context.
-- Re-run `DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102 scripts/smoke-docker-release.sh`.
+- Re-run `DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102 scripts/smoke-docker-release.sh`;
+  if needed, add `DEVE_DOCKER_BIN=/path/to/docker`.
 - Keep `cargo test` / `cargo clippy --all-targets --all-features -- -D warnings`
   as the code gates before any release tag.

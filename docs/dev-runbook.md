@@ -137,11 +137,20 @@ runtime, run:
 DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
 ```
 
+If the Docker CLI is available under a non-default executable name or path, set:
+
+```bash
+DEVE_DOCKER_BIN=/path/to/docker DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
+```
+
 The script builds the local Dockerfile, starts the image with production
 `AUTH_SECRET` / `AUTH_PASS` material, waits for
 `http://127.0.0.1:3001/api/node/role`, then removes the smoke container and
 temporary data directory. Without `DEVE_DOCKER_SMOKE_REQUIRED=1`, a machine that
 does not provide Docker reports a skip instead of failing the local baseline.
+When Docker is missing or unreachable, the script prints the resolved Docker
+binary plus `DOCKER_HOST` / `DOCKER_CONTEXT` so WSL and remote daemon issues are
+diagnosable without changing the script.
 
 ## Runtime Release Info Smoke
 

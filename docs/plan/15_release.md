@@ -122,6 +122,7 @@ services:
 *   **Builder**: `rust:1.92-bookworm` (Multi-stage build), with Node.js, pinned Cargo-installed tools (`cargo-chef`, `trunk`), and `wasm32-unknown-unknown`.
 *   **Optimization**: 使用 `cargo-chef` 缓存依赖构建层。
 *   **Frontend Delivery**: runtime image ships a single `deve_cli` binary with embedded frontend static assets; runtime no longer requires `/app/static` or `DEVE_STATIC_DIR` for normal Docker deployment.
+*   **Local Smoke Diagnostics**: `scripts/smoke-docker-release.sh` MUST support `DEVE_DOCKER_BIN` for non-default Docker CLI paths and print Docker binary/context diagnostics when Docker is missing or unreachable.
 
 ### 5.4 Runtime Observability {#runtime-observability}
 
