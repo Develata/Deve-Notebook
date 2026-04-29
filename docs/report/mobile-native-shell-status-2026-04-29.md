@@ -57,9 +57,13 @@ Observed result:
 Web native recovery semantics were completed in
 `native-web-recovery-status-2026-04-29.md`.
 
-The next P3-10 implementation step should define the native packaging
-dependency gate:
+The native packaging dependency gate was completed in
+`native-packaging-dependency-gate-2026-04-29.md`.
 
-1. Keep Tauri v2/Tauri Mobile dependencies isolated to native app crates.
-2. Preserve the no-Tauri shell skeletons as fast unit-test boundaries.
+The next P3-10 implementation step should split the first desktop packaging
+scaffold from adapter/session/readiness correctness:
+
+1. Keep packaging dependencies isolated to `apps/desktop`.
+2. Preserve the no-Tauri desktop/mobile shell skeletons as fast unit-test
+   boundaries.
 3. Separate packaging acceptance from adapter/session/readiness correctness.

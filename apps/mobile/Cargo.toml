@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+default = []
+native-packaging = []
+
 [dependencies]
 deve_core.workspace = true
 serde.workspace = true

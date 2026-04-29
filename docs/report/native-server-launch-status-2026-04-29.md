@@ -58,9 +58,12 @@ in `desktop-native-shell-status-2026-04-29.md`,
 `mobile-native-shell-status-2026-04-29.md`, and
 `native-web-recovery-status-2026-04-29.md`.
 
-The next P3-10 implementation step should define the native packaging
-dependency gate:
+The native packaging dependency gate was completed in
+`native-packaging-dependency-gate-2026-04-29.md`.
 
-1. Keep Tauri v2/Tauri Mobile dependencies isolated to native app crates.
+The next P3-10 implementation step should split the first desktop packaging
+scaffold from adapter/session/readiness correctness:
+
+1. Keep packaging dependencies isolated to `apps/desktop`.
 2. Preserve the current server launch contract for Docker/release behavior.
 3. Separate packaging acceptance from adapter/session/readiness correctness.

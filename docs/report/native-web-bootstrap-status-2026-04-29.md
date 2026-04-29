@@ -52,11 +52,14 @@ Observed result:
 This report was superseded for UI recovery by
 `native-web-recovery-status-2026-04-29.md`.
 
-The next P3-10 implementation step should be native packaging dependency
-gating:
+The native packaging dependency gate was completed in
+`native-packaging-dependency-gate-2026-04-29.md`.
 
-1. Define the minimal Tauri v2/Tauri Mobile dependency surface behind
-   `apps/desktop` and `apps/mobile`.
+The next P3-10 implementation step should split the first desktop packaging
+scaffold from adapter/session/readiness correctness:
+
+1. Define the first packaging dependency batch behind `apps/desktop`
+   `native-packaging`.
 2. Keep no-Tauri shell skeletons as the fast unit-test boundary.
 3. Keep packaging acceptance separate from adapter/session/readiness
    correctness.

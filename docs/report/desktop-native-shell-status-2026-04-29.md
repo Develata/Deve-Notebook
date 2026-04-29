@@ -54,9 +54,12 @@ Mobile skeleton and Web native recovery semantics were completed in
 `mobile-native-shell-status-2026-04-29.md` and
 `native-web-recovery-status-2026-04-29.md`.
 
-The next P3-10 implementation step should define the native packaging
-dependency gate:
+The native packaging dependency gate was completed in
+`native-packaging-dependency-gate-2026-04-29.md`.
 
-1. Keep Tauri v2 dependencies isolated to `apps/desktop`.
+The next P3-10 implementation step should split the first desktop packaging
+scaffold from adapter/session/readiness correctness:
+
+1. Keep packaging dependencies isolated to `apps/desktop`.
 2. Preserve the no-Tauri desktop shell skeleton as the fast unit-test boundary.
 3. Separate installer/menu/tray/autoupdate acceptance from adapter correctness.

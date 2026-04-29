@@ -6,7 +6,7 @@
 - `Status`: `Reference`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
-- `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`
+- `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
 
 ## 1. Technology Stack
 
@@ -77,6 +77,24 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - Git mirror 以 Deve commit/projection 为粒度同步，不镜像 `.notegit/` 的内部 side-table 操作。
 - Git mirror failure 只产生 `GitMirrorOutOfSync` 与 retry/repair 需求，不回滚 Deve commit。
 - 任何 Git import 都必须生成 Deve ledger facts；任何 Git export 都不得反向改写 ledger authority。
+
+### 1.4 Native Packaging Dependency Gate {#native-packaging-dependency-gate}
+
+当前 native track 的默认构建必须保持无 packaging runtime 依赖。`apps/desktop`
+与 `apps/mobile` 的职责是固定 endpoint/session/bootstrap/lifecycle contract；真实
+packaging runtime 只能在后续批次引入，并必须满足以下门禁：
+
+- 依赖只允许落在 `apps/desktop` 或 `apps/mobile`，不得进入 workspace root
+  dependency、`deve_core`、`deve_cli` 或 `deve_web`。
+- 依赖必须挂在对应 crate 的 `native-packaging` feature 后；默认 feature set
+  仍编译 no-packaging skeleton。
+- `native-packaging` 不得授予 ledger/vault/source-control/search/`.git`/`.notegit`
+  authority；业务真相仍在 core/server。
+- packaging 验收只覆盖窗口、菜单、托盘、权限、安装包、auto-update、移动平台
+  bridge 等壳层能力；adapter/session/readiness correctness 继续由 no-packaging
+  skeleton unit tests 保证。
+- 每次引入或升级 packaging dependency 都必须更新
+  `scripts/check-native-track-boundary.sh`、Desktop/Mobile plan 与 dated report。
 
 ## 2. Markdown Compatibility Checklist
 

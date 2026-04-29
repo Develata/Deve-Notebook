@@ -53,9 +53,8 @@ Observed result:
 
 ## Next Work
 
-The next P3-10 step should be a native packaging dependency gate:
+The native packaging dependency gate was completed in
+`native-packaging-dependency-gate-2026-04-29.md`.
 
-1. Decide the minimal Tauri v2 dependency surface and keep it behind the
-   desktop/mobile crates rather than leaking into core/server.
-2. Define packaging acceptance separately from native adapter correctness.
-3. Keep current no-Tauri shell skeletons as the fast unit-test boundary.
+The next P3-10 step should split the first desktop packaging scaffold from
+adapter/session/readiness correctness.

@@ -22,6 +22,7 @@
 *   Web 端 Desktop responsive shell 已存在，并作为 Desktop 交互规范的当前可验收映射。
 *   `apps/desktop` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入与 offline/session-invalid recovery 状态机。它不是完整 Tauri 应用。
 *   Tauri v2 native packaging、原生菜单栏、系统托盘、安装包与自动更新仍是 future work；当前仓库不得把这些视为已实现能力。
+*   packaging runtime 只能在 `apps/desktop` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri skeleton，以便快速验证 adapter/session/readiness contract。
 *   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
 *   Web 已支持 native recovery bootstrap：`service_offline` 显示原生服务离线恢复状态，`session_invalid` 进入 `Unauthorized`，无效 endpoint/session-pending 不得回退端口扫描。
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
@@ -32,6 +33,8 @@
 Desktop native adapter 是进程与平台壳层，不是业务 authority。第一阶段只允许把现有
 Web shell 绑定到本机受控 service，并把 runtime 状态结构化交给 Web/application
 control。
+
+Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
 
 **Adapter inputs**:
 

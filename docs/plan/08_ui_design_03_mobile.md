@@ -22,6 +22,7 @@
 *   Web 端 Mobile responsive shell 已存在，并作为 Mobile 交互规范的当前可验收映射。
 *   `apps/mobile` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入、background/suspended/resumed/foreground reprobe、service offline 与 session invalid recovery 状态机。它不是完整 Tauri Mobile 应用。
 *   Tauri v2 Mobile packaging、系统权限桥接、推送、原生文件选择器与应用商店分发仍是 future work；当前仓库不得把这些视为已实现能力。
+*   packaging runtime 只能在 `apps/mobile` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri Mobile skeleton，以便快速验证 lifecycle/session/readiness contract。
 *   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
 *   Web 已支持 mobile/native recovery bootstrap：`service_offline`、`foreground_reprobe` 与 `session_invalid` 会映射到明确 UI/写入门禁状态，而不是普通断网。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
@@ -32,6 +33,8 @@
 Mobile native adapter 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-native-adapter-contract`
 的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有
 ledger/vault/source-control/search 的业务真相。
+
+Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
 
 **Adapter inputs**:
 

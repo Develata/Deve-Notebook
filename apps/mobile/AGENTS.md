@@ -8,7 +8,8 @@ Minimal native mobile shell skeleton. This crate fixes mobile lifecycle, endpoin
 
 ## Rules
 
-- Do not add Tauri Mobile, platform permission, push, file picker, or store packaging dependencies without updating `docs/plan/08_ui_design_03_mobile.md` and `docs/plan/14_tech_stack.md`.
+- Do not add Tauri Mobile, platform permission, push, file picker, or store packaging dependencies without updating `docs/plan/08_ui_design_03_mobile.md`, `docs/plan/14_tech_stack.md`, and `scripts/check-native-track-boundary.sh`.
+- Any future packaging runtime must stay behind the `native-packaging` feature in this crate; the default build remains the no-Tauri Mobile shell skeleton.
 - The shell may validate and inject endpoint/session bootstrap data, but must not write ledger, vault, source-control, search index, `.git/`, or `.notegit/` authority.
 - Foreground/background/network/safe-area/keyboard lifecycle events are hints only; they must not grant write authority.
 - Resume from background/suspension must require fresh auth/node-role/WS handshake and current `scope_nonce`.
