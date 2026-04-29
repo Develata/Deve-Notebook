@@ -43,6 +43,8 @@ pub mod source_control_graph;
 pub mod source_control_native;
 pub mod time;
 
+use crate::storage::prefs::{read_pref, write_pref};
+
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub const LOCALE_STORAGE_KEY: &str = "deve.ui.locale";
 
@@ -100,31 +102,11 @@ pub fn initial_locale() -> Locale {
 }
 
 pub fn persist_locale_preference(locale: Locale) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        if let Some(storage) =
-            web_sys::window().and_then(|window| window.local_storage().ok().flatten())
-        {
-            let _ = storage.set_item(LOCALE_STORAGE_KEY, locale.as_bcp47());
-        }
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let _ = locale;
-    }
+    let _ = write_pref(LOCALE_STORAGE_KEY, locale.as_bcp47());
 }
 
-#[cfg(target_arch = "wasm32")]
 fn stored_locale_preference() -> Option<String> {
-    web_sys::window()
-        .and_then(|window| window.local_storage().ok().flatten())
-        .and_then(|storage| storage.get_item(LOCALE_STORAGE_KEY).ok().flatten())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn stored_locale_preference() -> Option<String> {
-    None
+    read_pref(LOCALE_STORAGE_KEY)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -170,7 +152,8 @@ pub mod t {
 
 #[cfg(test)]
 mod tests {
-    use super::Locale;
+    use super::{LOCALE_STORAGE_KEY, Locale, initial_locale, persist_locale_preference};
+    use crate::storage::prefs::remove_pref;
 
     #[test]
     fn locale_detect_prefers_supported_user_config() {
@@ -188,5 +171,15 @@ mod tests {
     fn locale_detect_falls_back_to_english_for_unsupported_tags() {
         assert_eq!(Locale::detect(Some("ja-JP"), Some("fr-FR")), Locale::En);
         assert_eq!(Locale::detect(None, Some("xx-XX")), Locale::En);
+    }
+
+    #[test]
+    fn locale_preference_uses_ui_prefs_fallback_layer() {
+        remove_pref(LOCALE_STORAGE_KEY);
+        persist_locale_preference(Locale::Zh);
+
+        assert_eq!(initial_locale(), Locale::Zh);
+
+        remove_pref(LOCALE_STORAGE_KEY);
     }
 }

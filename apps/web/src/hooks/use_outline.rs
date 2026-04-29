@@ -7,6 +7,7 @@
 //! This hook manages the Outline panel visibility with LocalStorage persistence.
 //! The state survives across document switches and page reloads.
 
+use crate::storage::prefs::{read_bool_pref, write_bool_pref};
 use leptos::prelude::*;
 
 const STORAGE_KEY: &str = "ui_outline_visible";
@@ -14,18 +15,18 @@ const STORAGE_KEY: &str = "ui_outline_visible";
 /// Returns (is_visible, set_visible) for Outline panel.
 ///
 /// # Persistence
-/// - Reads initial state from `localStorage` on mount.
-/// - Writes state changes to `localStorage` automatically.
+/// - Reads initial state from the UI prefs fallback layer on mount.
+/// - Writes state changes to the UI prefs fallback layer automatically.
 ///
 /// # Default
 /// - If no stored value exists, defaults to `true` (visible).
 pub fn use_outline() -> (ReadSignal<bool>, WriteSignal<bool>) {
-    // 1. Read initial state from LocalStorage
+    // 1. Read initial state from the UI prefs fallback layer.
     let initial = read_from_storage().unwrap_or(true);
 
     let (visible, set_visible) = signal(initial);
 
-    // 2. Persist changes to LocalStorage
+    // 2. Persist changes through the UI prefs fallback layer.
     Effect::new(move |_| {
         let val = visible.get();
         write_to_storage(val);
@@ -34,17 +35,12 @@ pub fn use_outline() -> (ReadSignal<bool>, WriteSignal<bool>) {
     (visible, set_visible)
 }
 
-/// Reads boolean value from LocalStorage.
+/// Reads boolean value from UI prefs.
 fn read_from_storage() -> Option<bool> {
-    let window = web_sys::window()?;
-    let storage = window.local_storage().ok()??;
-    let val = storage.get_item(STORAGE_KEY).ok()??;
-    Some(val == "true")
+    read_bool_pref(STORAGE_KEY)
 }
 
-/// Writes boolean value to LocalStorage.
+/// Writes boolean value to UI prefs.
 fn write_to_storage(val: bool) {
-    if let Some(Ok(Some(storage))) = web_sys::window().map(|w| w.local_storage()) {
-        let _ = storage.set_item(STORAGE_KEY, if val { "true" } else { "false" });
-    }
+    let _ = write_bool_pref(STORAGE_KEY, val);
 }

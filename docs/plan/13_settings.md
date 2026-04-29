@@ -116,3 +116,8 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 
 浏览器本地 UI 偏好仅保存主题、布局、语言、最近命令等无害状态。`localStorage` 不可用时可以退回内存态，
 但不得把 repo authority、session secret、peer private key 或业务事实写入该层。
+
+当前实现要求所有前端 UI 偏好通过 `apps/web/src/storage/prefs.rs` 进入浏览器存储 fallback 层。
+除 `storage/prefs.rs` 本身与 `storage/js_bridge.rs` 能力探测外，不得在功能模块中直接调用
+`window.localStorage` / `sessionStorage`。布局宽度、Outline 可见性、语言偏好、快捷键覆盖等均属于
+无害 UI prefs；repo identity、sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。

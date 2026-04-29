@@ -123,10 +123,15 @@
     - WebLightPeer 运行在浏览器环境
   steps:
     - run: cargo test -p deve_web storage_capabilities -- --nocapture
+    - run: cargo test -p deve_web typed_prefs_roundtrip -- --nocapture
+    - run: cargo test -p deve_web shortcut_config_roundtrips -- --nocapture
+    - run: cargo test -p deve_web locale_preference_uses_ui_prefs -- --nocapture
+    - run: scripts/check-browser-prefs-boundary.sh
     - run: cargo test -p deve_web output_write_classification -- --nocapture
   assertions:
     - WebCrypto_Ed25519_key_extractable_false: true
     - IndexedDB_missing_enters_DegradedSyncMode: true
+    - ui_prefs_use_fallback_layer_only: true
     - degraded_mode_blocks_RegisterWriter_and_SyncPush: true
     - degraded_mode_allows_read_and_snapshot_pull: true
 ```

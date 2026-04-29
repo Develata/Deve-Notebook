@@ -10,7 +10,7 @@
 //!
 //! - `types`: 类型定义 (KeyCombo, Shortcut 等)
 //! - `registry`: 快捷键注册表 (注册、查询、冲突检测)
-//! - `config`: 用户自定义配置 (localStorage 持久化)
+//! - `config`: 用户自定义配置 (UI prefs fallback 持久化)
 //! - `global`: 全局快捷键定义和处理
 
 pub mod config;

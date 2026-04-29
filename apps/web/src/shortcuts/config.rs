@@ -4,11 +4,12 @@
 //!   - 13_settings#keyboard-shortcuts
 //!   - 13_settings#browser-ui-prefs
 //!
-//! 用户自定义快捷键配置，支持 localStorage 持久化。
+//! 用户自定义快捷键配置，支持 UI prefs fallback 持久化。
 
 #![allow(dead_code)] // 快捷键系统模块预留
 
 use super::types::KeyCombo;
+use crate::storage::prefs::{read_pref, write_pref};
 use std::collections::HashMap;
 use wasm_bindgen::JsValue;
 
@@ -29,35 +30,21 @@ impl ShortcutConfig {
         Self::default()
     }
 
-    /// 从 localStorage 加载配置
+    /// 从 UI prefs fallback 层加载配置。
     pub fn load() -> Self {
-        let window = match web_sys::window() {
-            Some(w) => w,
+        let data = match read_pref(STORAGE_KEY) {
+            Some(data) => data,
             None => return Self::default(),
-        };
-
-        let storage = match window.local_storage() {
-            Ok(Some(s)) => s,
-            _ => return Self::default(),
-        };
-
-        let data = match storage.get_item(STORAGE_KEY) {
-            Ok(Some(d)) => d,
-            _ => return Self::default(),
         };
 
         // 解析 JSON
         Self::parse_json(&data).unwrap_or_default()
     }
 
-    /// 保存配置到 localStorage
+    /// 保存配置到 UI prefs fallback 层。
     pub fn save(&self) -> Result<(), JsValue> {
-        let window = web_sys::window().ok_or("no window")?;
-        let storage = window.local_storage()?.ok_or("no localStorage")?;
-
         let json = self.to_json();
-        storage.set_item(STORAGE_KEY, &json)?;
-        Ok(())
+        write_pref(STORAGE_KEY, &json).map_err(|err| JsValue::from_str(err.message()))
     }
 
     /// 设置快捷键覆盖
@@ -112,5 +99,27 @@ impl ShortcutConfig {
             })
             .collect();
         format!("{{{}}}", pairs.join(","))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::prefs::remove_pref;
+
+    #[test]
+    fn shortcut_config_roundtrips_through_ui_prefs_layer() {
+        remove_pref(STORAGE_KEY);
+        let mut config = ShortcutConfig::new();
+        config.set_override("open", KeyCombo::new("p", true, false, false));
+
+        config.save().expect("save shortcut prefs");
+        let loaded = ShortcutConfig::load();
+
+        assert_eq!(
+            loaded.get_override("open"),
+            Some(&KeyCombo::new("p", true, false, false))
+        );
+        remove_pref(STORAGE_KEY);
     }
 }
