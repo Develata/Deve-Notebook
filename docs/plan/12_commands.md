@@ -68,7 +68,8 @@
         PLAN / BUILD 面板命令仍属于 Planned / Optional，除非后续验收用例绑定到具体实现。
     *   Git import 当前只实现 CLI dry-run 与 pending/import apply；Git push 当前只实现 CLI mirror publish。
         Command Palette 只提供可发现的 CLI-only notice，不得被解释为 Web 已能直接执行 Git import/push；
-        blocker repair、自动执行与完整 conflict UI 仍属 future。
+        Git push notice 已覆盖 remote/upstream、export/repair、dirty Git worktree 与 dirty Deve Source Control blocker 提示。
+        blocker repair 的可点击 UI、自动执行与完整 conflict UI 仍属 future。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

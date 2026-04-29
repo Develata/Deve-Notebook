@@ -66,4 +66,44 @@ fn push_report_lines_keep_git_as_mirror_only() {
             .iter()
             .any(|line| line.contains("location=git_history_mapping"))
     );
+    assert!(
+        blocked
+            .iter()
+            .any(|line| line.contains("deve_cli git export --repo default"))
+    );
+}
+
+#[test]
+fn push_report_lines_explain_remote_and_worktree_blockers() {
+    let lines = push_report_lines(
+        "default",
+        &GitMirrorPushReport {
+            remote: None,
+            branch: Some("main".into()),
+            remote_url: None,
+            head: Some("abc123".into()),
+            pushed: false,
+            blockers: vec![
+                GitMirrorPushBlocker {
+                    location: "git_remote".into(),
+                    reason: "remote origin not configured".into(),
+                },
+                GitMirrorPushBlocker {
+                    location: "git_worktree".into(),
+                    reason: "worktree has changes".into(),
+                },
+            ],
+        },
+    );
+
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("--remote <remote> --branch <branch>"))
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("deve_cli git import --apply --repo default"))
+    );
 }

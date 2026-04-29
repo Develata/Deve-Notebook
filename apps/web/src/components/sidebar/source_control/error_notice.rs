@@ -37,6 +37,26 @@ pub fn ErrorNotice(
                                     .unwrap_or_default()
                             }}
                         </p>
+                        <div class="mt-2 space-y-1 text-xs text-muted">
+                            {move || {
+                                notice
+                                    .get()
+                                    .map(|current| {
+                                        copy::details(locale.get(), &current)
+                                            .into_iter()
+                                            .map(|detail| {
+                                                view! {
+                                                    <p class="pl-3 border-l border-warning/30">
+                                                        {detail}
+                                                    </p>
+                                                }
+                                            })
+                                            .collect_view()
+                                            .into_any()
+                                    })
+                                    .unwrap_or_else(|| view! {}.into_any())
+                            }}
+                        </div>
                     </div>
                     <button
                         class="text-xs text-secondary hover:text-primary"

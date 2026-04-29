@@ -21,12 +21,13 @@
 - CLI 新增 `deve_cli git import --apply [--repo <repo>]`，在无 blocker 时把 Git import plan 写入 `pending_fs_ops`，并通过 `has_conflict` 标记冲突；该路径不写 ledger、`StagedEntry` 或 `.notegit`。
 - CLI 新增 `deve_cli git push [--repo <repo>] [--remote <remote>] [--branch <branch>]`，只推送已导出的 `.git` mirror HEAD；当前会 fail-closed 于 mirror 未 ready、Source Control pending/staged 未清、Git worktree 脏、queued/out_of_sync mirror record 未处理、Git HEAD 未映射到最新 `GitMirrorCommitted` record 或 remote/branch 配置错误。失败只输出 blocker，不回滚 ledger，也不写 `.notegit`。
 - Command Palette 新增 `Git: Import Changes` 与 `Git: Push Mirror` 可发现入口；当前只在 Source Control 面板显示 CLI-only notice，不直接执行 Web 后端 Git import/push。Source Control conflict 条目会提示 import 后需在暂存前选择保留文件系统或账本版本。
+- Git push CLI 输出与 Web CLI-only notice 已补充 blocker/remote polish：`git_remote` 指向 upstream/origin 或显式 `--remote/--branch`，`git_history_mapping` 指向 export/repair，`git_worktree` 指向 clean/import，`deve_source_control` 指向 stage/commit/discard。
 
 ## 仍未实现
 
 - 自动后台 Git mirror executor 与更完整的 retry / repair UI。
 - 更细的 failure subject / offending path / command exit metadata；当前只稳定到 `failure_stage`。
-- Web 后端直接执行 Git import/push、远端配置/blocker repair UI 与更完整冲突交互。
+- Web 后端直接执行 Git import/push、可点击 blocker repair UI 与更完整冲突交互。
 
 ## 验证
 

@@ -33,11 +33,30 @@ pub fn git_push_cli_only_title(locale: Locale) -> &'static str {
 pub fn git_push_cli_only_hint(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "Run `deve_cli git push --repo <repo>`. Export or repair the mirror first if HEAD is unmapped, queued, or out of sync."
+            "Run `deve_cli git push --repo <repo>`. Add `--remote <remote> --branch <branch>` when upstream/origin is not configured."
         }
         Locale::Zh => {
-            "请运行 `deve_cli git push --repo <repo>`。若 HEAD 未映射、队列未导出或 mirror 失配，请先 export/repair。"
+            "请运行 `deve_cli git push --repo <repo>`。如果未配置 upstream/origin，请加 `--remote <remote> --branch <branch>`。"
         }
+    }
+}
+
+pub fn git_push_cli_only_details(locale: Locale) -> [&'static str; 5] {
+    match locale {
+        Locale::En => [
+            "Remote target: uses branch upstream first, then `origin`; detached HEAD needs `--branch`.",
+            "Mirror mapping: run `deve_cli git export --repo <repo>` before push when HEAD is unmapped or queued.",
+            "Out-of-sync mirror: repair, then rerun export with `--retry-out-of-sync`.",
+            "Dirty Git worktree: clean Git changes or import them with `deve_cli git import --apply --repo <repo>`.",
+            "Dirty Deve Source Control: stage/commit/discard pending Deve changes before pushing.",
+        ],
+        Locale::Zh => [
+            "远端目标：优先使用当前分支 upstream，其次 fallback 到 `origin`；detached HEAD 需要显式 `--branch`。",
+            "Mirror 映射：HEAD 未映射或仍有 queued 记录时，先运行 `deve_cli git export --repo <repo>`。",
+            "Mirror 失配：先修复，再用 `deve_cli git export --retry-out-of-sync --repo <repo>` 重试。",
+            "Git 工作区脏：先清理 Git 变更，或用 `deve_cli git import --apply --repo <repo>` 导入。",
+            "Deve Source Control 脏：先暂存/提交/放弃 Deve pending 变更，再推送。",
+        ],
     }
 }
 
@@ -63,7 +82,17 @@ mod tests {
             git_push_cli_only_title(Locale::Zh),
             "Git mirror 推送只能通过 CLI 执行"
         );
-        assert!(git_push_cli_only_hint(Locale::Zh).contains("deve_cli git push"));
+        assert!(git_push_cli_only_hint(Locale::Zh).contains("--remote <remote> --branch <branch>"));
+        assert!(
+            git_push_cli_only_details(Locale::En)
+                .iter()
+                .any(|line| line.contains("deve_cli git export --repo <repo>"))
+        );
+        assert!(
+            git_push_cli_only_details(Locale::Zh)
+                .iter()
+                .any(|line| line.contains("deve_cli git import --apply --repo <repo>"))
+        );
         assert_eq!(
             git_import_conflict_title(Locale::Zh),
             "导入冲突：暂存前请选择保留文件系统版本或账本版本。"

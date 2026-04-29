@@ -101,6 +101,7 @@
     - ui_assert: command_palette_git_commit_absent true
     - ui_assert: command_palette_git_import_cli_notice_available true
     - ui_assert: command_palette_git_push_cli_notice_available true
+    - ui_assert: source_control_git_push_blocker_details_available true
     - ui_assert: command_palette_git_direct_executor_absent true
 
 - case_id: DIFF-010

@@ -7,9 +7,14 @@
 
 use deve_core::git_bridge::{
     GitImportApplyReport, GitImportPlan, GitImportPlanBlocker, GitMirrorCommitState,
-    GitMirrorPushReport, GitMirrorRecord, GitMirrorRunReport, GitMirrorStatus, GitMirrorSummary,
+    GitMirrorRecord, GitMirrorRunReport, GitMirrorStatus, GitMirrorSummary,
 };
 use deve_core::source_control::ChangeStatus;
+
+#[path = "git_push_output.rs"]
+mod push_output;
+
+pub(super) use push_output::print_push_report;
 
 pub(super) fn print_status(
     repo_name: &str,
@@ -42,12 +47,6 @@ pub(super) fn print_import_plan(repo_name: &str, plan: &GitImportPlan) {
 
 pub(super) fn print_import_apply_report(repo_name: &str, report: &GitImportApplyReport) {
     for line in import_apply_report_lines(repo_name, report) {
-        println!("{line}");
-    }
-}
-
-pub(super) fn print_push_report(repo_name: &str, report: &GitMirrorPushReport) {
-    for line in push_report_lines(repo_name, report) {
         println!("{line}");
     }
 }
@@ -239,41 +238,6 @@ fn import_apply_blockers(report: &GitImportApplyReport) -> Vec<GitImportPlanBloc
     blockers
 }
 
-fn push_report_lines(repo_name: &str, report: &GitMirrorPushReport) -> Vec<String> {
-    let mut lines = vec![format!(
-        "git_push[{repo_name}]: pushed={} remote={} branch={} head={} blockers={}",
-        report.pushed,
-        report.remote.as_deref().unwrap_or("-"),
-        report.branch.as_deref().unwrap_or("-"),
-        report.head.as_deref().unwrap_or("-"),
-        report.blockers.len()
-    )];
-    if let Some(url) = &report.remote_url {
-        lines.push(format!("  remote_url: {url}"));
-    }
-    for (index, blocker) in report.blockers.iter().enumerate() {
-        lines.push(format!(
-            "  blocker[{}]: location={} reason={}",
-            index + 1,
-            blocker.location,
-            blocker.reason
-        ));
-    }
-    if report.pushed {
-        lines.push(
-            "  push_hint: Git mirror HEAD was pushed; Deve ledger remains authority".to_string(),
-        );
-    } else if report.blockers.is_empty() {
-        lines.push("  push_hint: no remote push was needed".to_string());
-    } else {
-        lines.push(
-            "  push_hint: no remote push was performed; fix blockers and export/repair mirror first"
-                .to_string(),
-        );
-    }
-    lines
-}
-
 struct RunReportCopy {
     header: &'static str,
     hint_label: &'static str,
@@ -451,7 +415,3 @@ fn change_status_label(status: ChangeStatus) -> &'static str {
 #[cfg(test)]
 #[path = "git_output_test.rs"]
 mod tests;
-
-#[cfg(test)]
-#[path = "git_push_output_test.rs"]
-mod push_tests;

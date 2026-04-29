@@ -59,9 +59,19 @@ pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
     }
 }
 
+pub fn details(locale: Locale, notice: &SourceControlNotice) -> Vec<String> {
+    if is_git_push_cli_notice(notice) {
+        return sc::git_push_cli_only_details(locale)
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+    }
+    Vec::new()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{hint, title};
+    use super::{details, hint, title};
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
     use crate::i18n::{Locale, source_control as sc};
 
@@ -84,6 +94,11 @@ mod tests {
             title(Locale::Zh, &notice),
             sc::git_push_cli_only_title(Locale::Zh)
         );
-        assert!(hint(Locale::Zh, &notice).contains("deve_cli git push"));
+        assert!(hint(Locale::Zh, &notice).contains("--remote <remote> --branch <branch>"));
+        assert!(
+            details(Locale::Zh, &notice)
+                .iter()
+                .any(|line| line.contains("deve_cli git export --repo <repo>"))
+        );
     }
 }

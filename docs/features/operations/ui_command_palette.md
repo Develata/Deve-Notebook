@@ -88,7 +88,7 @@
 ### `op.ui.command-palette.execute`
 
 1. `User Operation`: 用户按 Enter 或点击某条命令。
-2. `Application Response`: 取当前选中 command，执行其 `action`；根据命令不同，可能打开设置、打开文档搜索、切换语言、切换 peer、触发 merge、切换 AI chat，或为 Git import / push 显示 CLI-only Source Control notice。
+2. `Application Response`: 取当前选中 command，执行其 `action`；根据命令不同，可能打开设置、打开文档搜索、切换语言、切换 peer、触发 merge、切换 AI chat，或为 Git import / push 显示 CLI-only Source Control notice。Git push notice 必须展示 remote/upstream 与常见 blocker 的下一步，不得直接触发 Web Git executor。
 3. `Concrete Modules`:
    - `apps/web/src/components/command_palette/logic.rs`
    - `apps/web/src/components/command_palette/registry.rs`
