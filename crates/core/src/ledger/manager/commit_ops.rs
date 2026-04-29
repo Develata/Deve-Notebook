@@ -51,6 +51,8 @@ impl RepoManager {
         let mut targets = commit_plan::build_targets(staged);
         targets.sort_by_key(|target| target.delete_only);
         self.preflight_staged_commit_targets(repo_name, &targets)?;
+        #[cfg(not(target_arch = "wasm32"))]
+        let git_mirror_repo_id = self.git_mirror_queue_repo_id(repo_name);
 
         let doc_count = targets.len() as u32;
         for target in &targets {
@@ -69,6 +71,17 @@ impl RepoManager {
         let commit = self.run_on_local_repo(repo_name, |db| {
             let ledger_seq = range::get_max_seq(db)?;
             let commit = commits::create(db, message, doc_count, ledger_seq)?;
+            #[cfg(not(target_arch = "wasm32"))]
+            if let Some(repo_id) = git_mirror_repo_id
+                && let Err(err) = crate::git_bridge::queue_deve_commit(db, repo_id, &commit)
+            {
+                tracing::warn!(
+                    repo_name,
+                    deve_commit_id = %commit.id,
+                    error = %err,
+                    "Git mirror queue update failed after Deve commit; ledger commit is kept"
+                );
+            }
             staging::clear(db)?;
             Ok(commit)
         })?;
@@ -126,5 +139,50 @@ impl RepoManager {
             );
         }
         Ok(())
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn git_mirror_queue_repo_id(&self, repo_name: &str) -> Option<crate::models::RepoId> {
+        let repo_root = match self.local_repo_workspace_root(repo_name) {
+            Ok(root) => root,
+            Err(err) => {
+                tracing::warn!(
+                    repo_name,
+                    error = %err,
+                    "Git mirror queue skipped because workspace root is unavailable"
+                );
+                return None;
+            }
+        };
+        match crate::git_bridge::inspect_repo_root(&repo_root) {
+            Ok(status) if status.state == crate::git_bridge::GitMirrorState::Ready => {}
+            Ok(_) => return None,
+            Err(err) => {
+                tracing::warn!(
+                    repo_name,
+                    error = %err,
+                    "Git mirror queue skipped because mirror status could not be inspected"
+                );
+                return None;
+            }
+        }
+        match self.run_on_local_repo(repo_name, Self::read_repo_info_from_db) {
+            Ok(Some(info)) => Some(info.uuid),
+            Ok(None) => {
+                tracing::warn!(
+                    repo_name,
+                    "Git mirror queue skipped because repository metadata is missing"
+                );
+                None
+            }
+            Err(err) => {
+                tracing::warn!(
+                    repo_name,
+                    error = %err,
+                    "Git mirror queue skipped because repository metadata could not be read"
+                );
+                None
+            }
+        }
     }
 }

@@ -82,8 +82,11 @@ DeveStaged
   不得直接修改 `CommitAnchor`、`StagedEntry` 或 ledger facts。
 
 当前实现状态：已落地 `.git` mirror internal path 隔离、repo-local `.gitignore`
-保护与只读 `git status` 骨架。`GitMirrorQueued -> GitMirrorCommitted |
-GitMirrorOutOfSync` 的实际 commit 映射、状态持久化、retry/repair 仍是后续实现。
+保护、只读 `git status` 骨架与 lazy-created `git_mirror_commits` side table。当前在 `.git`
+mirror ready 时会将成功的 Deve commit 记录为 `GitMirrorQueued`，并提供
+`GitMirrorCommitted` / `GitMirrorOutOfSync` 的持久化更新 API 与独立 `queue_state`
+summary。
+真实 Git commit executor、retry/repair 执行闭环与 import/export/push 仍是后续实现。
 
 ### 2.4 Diff Identity Model
 
