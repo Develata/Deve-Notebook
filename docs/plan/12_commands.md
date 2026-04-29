@@ -41,8 +41,8 @@
     *   `Source Control: Sync`: 同步 Deve repo-scoped changes.
     *   `Source Control: Commit`: 提交 staged changes 到 ledger-backed commit anchor.
     *   `Source Control: Push`: 推送 Deve source-control state；若启用 Git mirror，可触发 mirror publish。
-    *   `Git: Status`: 查看 `.git` mirror 是否存在、repo-local `.gitignore` 是否保护 `.notegit/`，并以独立 `queue_state` 显示 `GitMirrorQueued / Committed / OutOfSync` side-table summary；后续还必须显示具体落后项与 repair/retry 入口。
-    *   `Git: Mirror`: 显式执行 queued Git mirror commit；单个待处理 record 走 worktree/preflight 后的 `git add -A` / `git commit`，多个积压 records 走临时 Git index 的 projection replay，按 Deve commit diff 生成逐 commit Git history；路径越界、父映射缺失或 Git 命令失败进入 `GitMirrorOutOfSync`。
+    *   `Git: Status`: 查看 `.git` mirror 是否存在、repo-local `.gitignore` 是否保护 `.notegit/`，并以独立 `queue_state` 显示 `GitMirrorQueued / Committed / OutOfSync` side-table summary；CLI 当前还会列出具体 lagging records、`queued_lag_ms` / `updated_lag_ms`、失败位置与 mirror/retry 命令提示。
+    *   `Git: Mirror`: 显式执行 queued Git mirror commit；单个待处理 record 走 worktree/preflight 后的 `git add -A` / `git commit`，多个积压 records 走临时 Git index 的 projection replay，按 Deve commit diff 生成逐 commit Git history；路径越界、父映射缺失或 Git 命令失败进入 `GitMirrorOutOfSync`，CLI 输出 repair/retry hint。
     *   `Git: Export Mirror`: 将当前 projection 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射。
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve ledger commit。
     *   `Git: Push Mirror`: 将 Git mirror 推送到远端；不得绕过 Deve authority。
@@ -56,7 +56,7 @@
 *   **Current implemented subset**:
     *   Command Palette 当前覆盖 Open / Settings / Toggle Language / Switch Peer /
         Establish Branch / Merge Peer / Toggle AI Chat（条件可见）。
-    *   Source Control Sync / Commit / Push、Git mirror commands 与 AI Retry / Backend /
+    *   Source Control Sync / Commit / Push、Command Palette Git mirror commands 与 AI Retry / Backend /
         PLAN / BUILD 面板命令仍属于 Planned / Optional，除非后续验收用例绑定到具体实现。
 
 *   **交互准则 (Command First)**:

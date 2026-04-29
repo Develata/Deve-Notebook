@@ -9,10 +9,9 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git mirror repair/status detail polish | P1/P2 | `crates/core/src/git_bridge/`, `apps/cli/src/commands/git.rs`, future command palette | 在 projection replay 已落地后，补 per-commit lag detail、repair/retry 输出语义与失败定位；仍不得回滚 Deve ledger commit。 |
-| 2 | Desktop / Mobile native adapter plan | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, future native shell | 实现前先把 minimal adapter 职责定清楚：embedded service、readiness/offline events、endpoint/session injection。 |
-| 3 | Graph visualization next step | P3-13 | `crates/core/src/graph/`, future graph UI | read-only projection 不反向污染 ledger/search/source-control；visualization 只消费 projection。 |
-| 4 | Docker release smoke rerun | P2 | Docker host environment, `scripts/smoke-docker-release.sh` | Docker daemon 可用后重跑；环境阻塞继续与代码失败分开记录。 |
+| 1 | Desktop / Mobile native adapter plan | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, future native shell | 实现前先把 minimal adapter 职责定清楚：embedded service、readiness/offline events、endpoint/session injection。 |
+| 2 | Graph visualization next step | P3-13 | `crates/core/src/graph/`, future graph UI | read-only projection 不反向污染 ledger/search/source-control；visualization 只消费 projection。 |
+| 3 | Docker release smoke rerun | P2 | Docker host environment, `scripts/smoke-docker-release.sh` | Docker daemon 可用后重跑；环境阻塞继续与代码失败分开记录。 |
 
 ## 最近完成基线
 
@@ -23,6 +22,7 @@
 - P1/P2 Git mirror queue/status foundation 已关闭：lazy `git_mirror_commits` side table、`GitMirrorQueued / Committed / OutOfSync` 持久化 API、Deve commit 成功后 mirror-ready queue、`deve_cli git status` 独立 `queue_state` summary 与定向测试已落地；真实 Git executor 与 retry/repair 仍在 active queue。
 - P1/P2 Git mirror explicit executor 已关闭：`deve_cli git mirror` 可在 worktree/preflight 通过后显式执行单个 queued/out_of_sync record 的 `git add -A` / `git commit`，成功写回 Git hash，失败写入 `GitMirrorOutOfSync`。
 - P1/P2 Git mirror projection replay repair 已关闭：多个 queued/out_of_sync records 可通过临时 Git index 与 `commit-tree` / `update-ref` 从 Deve commit diff 生成逐 commit Git history；失败只标记剩余 records 为 `GitMirrorOutOfSync`。
+- P1/P2 Git mirror repair/status detail polish 已关闭：`git status` 输出 per-commit lagging records、`queued_lag_ms` / `updated_lag_ms`、失败位置与 retry command；`git mirror` 输出 no-op / repair / retry hint。Core 结构化 failure stage 字段仍保留为 future refinement。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P0 repo health、`repair --check`、WS structured errors、writer-ready `repo_id + scope_nonce`、Source Control doc identity hardening 已记录在 `code-review-2026-04-28.md`。
 - P1 search、settings current boundary、Native AI Chat minimum、graph projection、i18n cleanup、plan_ref sweeps 已记录在 `code-review-2026-04-28.md`。

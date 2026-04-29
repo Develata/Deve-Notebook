@@ -12,11 +12,13 @@
 - `deve_cli git status` 已输出独立的 mirror readiness `state` 与 queued / committed / out_of_sync summary；queue health 通过 `queue_state` 单独表达。
 - CLI 新增 `deve_cli git mirror [--repo <repo>] [--retry-out-of-sync]`，显式执行 queued Git mirror commit。
 - 当前 executor 已覆盖单 record 与多 record：单个待处理 record 执行前检查 Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git changed paths 是否属于该 Deve commit diff 或 `.gitignore`，通过后执行 `git add -A` / `git commit`；多个积压 records 通过临时 Git index 从 Deve projection diff 逐个生成 `commit-tree` 并 `update-ref`，成功后写入 `GitMirrorCommitted` 与 Git commit hash。Git 命令失败、mirror 未 ready、路径越界、父映射缺失或无 projection diff 都写入 `GitMirrorOutOfSync`，不回滚 Deve ledger commit。
+- `deve_cli git status` 已输出 queued/out_of_sync 的 per-commit lagging records，包括 `deve_commit`、`ledger_seq`、`attempts`、`git_commit`、`queued_lag_ms`、`updated_lag_ms`、原始时间戳与失败位置。
+- `deve_cli git mirror` 已输出 per-record outcome，并在 no-op、out_of_sync、retry 场景给出 mirror/repair/retry hint；失败位置当前由 CLI 根据 `last_error` 分类为 `deve_source_control`、`notegit_protection`、`projection_scope`、`git_history_mapping`、`git_worktree`、`git_command` 或 `mirror_executor`。
 
 ## 仍未实现
 
 - 自动后台 Git mirror executor 与更完整的 retry / repair UI。
-- per-commit status detail、落后项列表与 CLI repair/retry 入口。
+- Core record schema 中的结构化 failure stage / subject 字段；当前 failure location 仍由 CLI 从 `last_error` 文本派生。
 - `Git: Export Mirror`、`Git: Import Changes`、`Git: Push Mirror`。
 
 ## 验证

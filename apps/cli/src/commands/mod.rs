@@ -8,6 +8,7 @@ pub mod config;
 pub mod dump;
 pub mod export;
 pub mod git;
+mod git_output;
 pub mod init;
 pub mod live_proxy;
 pub mod node_check;
