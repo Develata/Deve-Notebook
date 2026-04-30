@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Source Control rename-pair runtime smoke | P2 | `apps/cli` serve path, Web Source Control refresh, watcher callback/WS bridge | Renaming a tracked markdown file under an active vault produces one stable delete/add pending pair in the browser, preserves doc identity, and repeated semantic-equal rename-pair signals do not trigger refresh/rate-limit loops |
+| 1 | Web release warning cleanup: graph_state_attr | P2 | `apps/web/src/components/sidebar/source_control/graph_panel.rs`, release build warning surface | `trunk build --release` no longer emits the `graph_state_attr` unused warning found during Source Control runtime smoke, without changing Graph summary panel behavior |
 
 ## 最近完成基线
 
@@ -75,6 +75,7 @@
 - P1/P2 Watcher external new-file debounce 已关闭：pending upsert 的语义变更信号现在传回 handler，重复外部新增/删除事件不再重复发 `FsChangeDetected` 刷新消息；`deve_core` 全包测试通过，详见 `watcher-external-new-file-debounce-status-2026-04-30.md`。
 - P2 Source Control external new-file runtime smoke 已关闭：隔离 `serve --dev` + Chrome MCP 路径验证外部 markdown 产生唯一 Added pending，重复写入/touch 不再重复 `New file detected`，无 rate-limit UI，详见 `source-control-external-new-file-runtime-smoke-2026-04-30.md`。
 - P2 Watcher rename-pair duplicate refresh hardening 已关闭：pending rename helper 返回语义变化信号，dispatch/handler 对重复 rename-pair 事件不再重复广播 deleted/added 刷新；`deve_core` 全包测试通过，详见 `watcher-rename-pair-debounce-status-2026-04-30.md`。
+- P2 Source Control rename-pair runtime smoke 已关闭：隔离 `serve --dev` + Chrome MCP 路径验证外部 rename 在 Web 中显示稳定单条 R 行，保留 `doc_id` / `renamed_from`，无 rate-limit UI、无 console warning/error；重复语义 handler 日志刷屏已修复并补 plain file event 回归测试，详见 `source-control-rename-pair-runtime-smoke-2026-04-30.md`。
 - P3-10 Desktop runtime readiness / foreground reprobe 已关闭：desktop shell snapshot 现包含 `NativeRuntimeReadiness`，`RuntimeReady` 要求 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足，`Foreground` / `Resumed` 会进入 `ForegroundReprobe` 且 stale `scope_nonce` 不恢复写态，详见 `desktop-runtime-readiness-status-2026-04-29.md`。
 - P3-10 Native shell parity review 已关闭：mobile foreground/resume reprobe 现在也清空 `node_role_readable`，desktop/mobile/Web 对 native readiness、`foreground_reprobe` recovery bootstrap 与 write gate 的当前 no-Tauri contract 已对齐；native track 进入干净停靠点，详见 `native-shell-parity-review-2026-04-29.md`。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。

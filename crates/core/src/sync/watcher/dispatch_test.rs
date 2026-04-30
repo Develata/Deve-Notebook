@@ -274,6 +274,62 @@ fn dispatch_batch_suppresses_duplicate_rename_pair_messages() -> anyhow::Result<
 }
 
 #[test]
+fn dispatch_batch_suppresses_duplicate_rename_refresh_from_plain_events() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    let doc_id = commit_doc(&repo, &sync, &repo_name, "notes/a.md", "base")?;
+    let old = repo_root.join("notes").join("a.md");
+    let new = repo_root.join("notes").join("b.md");
+    std::fs::rename(old, &new)?;
+
+    let messages = Arc::new(Mutex::new(Vec::new()));
+    let callback_messages = messages.clone();
+    let callback: super::WatcherCallback = Arc::new(move |msg| {
+        callback_messages.lock().expect("messages lock").push(msg);
+    });
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![event_for(new.clone())],
+        Some(&callback),
+    )?;
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![event_for(new)],
+        Some(&callback),
+    )?;
+
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert_eq!(pending.len(), 2);
+    assert!(pending.iter().any(|entry| {
+        entry.path == "notes/a.md"
+            && entry.status == ChangeStatus::Deleted
+            && entry.doc_id == Some(doc_id)
+    }));
+    assert!(pending.iter().any(|entry| {
+        entry.path == "notes/b.md"
+            && entry.status == ChangeStatus::Added
+            && entry.renamed_from.as_deref() == Some("notes/a.md")
+            && entry.doc_id == Some(doc_id)
+    }));
+
+    let messages = messages.lock().expect("messages lock");
+    assert_eq!(
+        messages.len(),
+        2,
+        "duplicate plain file signals after rename should not emit another refresh pair"
+    );
+    assert_fs_message(&messages[0], "notes/a.md", "deleted");
+    assert_fs_message(&messages[1], "notes/b.md", "added");
+    Ok(())
+}
+
+#[test]
 fn dispatch_batch_fails_closed_on_dir_change_resolution_error() -> anyhow::Result<()> {
     let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
     let docs = repo_root.join("docs");

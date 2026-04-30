@@ -152,7 +152,6 @@ impl<'a> FsEventHandler<'a> {
             .get_file_meta_for_doc_in_local_repo(self.repo_name, doc_id)?
             && meta.path != repo_path
         {
-            info!("Handler: Rename detected {} -> {}", meta.path, repo_path);
             return self.record_external_rename(&meta.path, repo_path, doc_id);
         }
 
@@ -196,6 +195,7 @@ impl<'a> FsEventHandler<'a> {
         if !changed {
             return Ok(vec![]);
         }
+        info!("Handler: Rename detected {} -> {}", old_path, new_path);
         Ok(vec![
             super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted")?,
             super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added")?,
