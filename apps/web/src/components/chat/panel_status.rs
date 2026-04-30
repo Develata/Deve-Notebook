@@ -24,7 +24,7 @@ pub fn error_notice(
                     }}
                 </div>
                 <button
-                    class="h-11 min-w-11 px-3 rounded bg-panel border border-red-200 text-red-700 active:bg-red-100"
+                    class="h-11 min-w-[44px] px-3 rounded bg-panel border border-red-200 text-red-700 active:bg-red-100"
                     on:click=move |_| retry.run(())
                 >
                     {move || t::chat::retry(locale.get())}

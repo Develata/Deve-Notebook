@@ -27,7 +27,9 @@ pub use self::ai_backend::{
     AiBackendCapabilities, ai_backend_to_plugin_id, fetch_ai_backend_capabilities,
 };
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
-pub use self::git_mirror::fetch_git_mirror_repair_review;
+pub use self::git_mirror::{GitMirrorRepairReview, fetch_git_mirror_repair_review};
+#[cfg(test)]
+pub use self::git_mirror::GitMirrorRepairReviewRecord;
 pub use self::graph::{GraphProjectionFetchError, fetch_graph_projection};
 pub use self::service::WsService;
 pub use self::status::ConnectionStatus;

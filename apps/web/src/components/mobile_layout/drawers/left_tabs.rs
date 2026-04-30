@@ -73,7 +73,7 @@ pub(super) fn LeftDrawerTabs(
                     </div>
                 </div>
                 <button
-                    class="mobile-more-button h-11 min-w-11 px-2 rounded-md bg-panel border border-default text-secondary active:bg-hover active:scale-95 transition-transform duration-150 ease-out"
+                    class="mobile-more-button h-11 min-w-[44px] px-2 rounded-md bg-panel border border-default text-secondary active:bg-hover active:scale-95 transition-transform duration-150 ease-out"
                     title=move || t::sidebar::more(locale.get())
                     aria-label=move || t::sidebar::more(locale.get())
                     on:click=move |_| set_show_more.update(|v| *v = !*v)

@@ -55,6 +55,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest Settings reserved UI acceptance depth: `settings-reserved-ui-acceptance-depth-2026-04-30.md`
 - Latest architecture registry operation ID sync: `architecture-registry-operation-id-sync-2026-04-30.md`
 - Latest mobile AI Chat keyboard regression status: `mobile-ai-chat-keyboard-regression-status-2026-04-30.md`
+- Latest mobile AI Chat viewport smoke: `mobile-ai-chat-viewport-smoke-2026-04-30.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 

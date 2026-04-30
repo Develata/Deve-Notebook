@@ -3,8 +3,8 @@
 //!
 //! Read-only Git mirror repair review copy model.
 
+use crate::api::GitMirrorRepairReview;
 use crate::i18n::{Locale, source_control as sc};
-use deve_core::git_bridge::GitMirrorRepairReview;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GitRepairReviewFetchState {
@@ -132,8 +132,8 @@ fn git_repair_review_from_data(
 #[cfg(test)]
 mod tests {
     use super::{GitRepairReviewFetchState, git_repair_review};
+    use crate::api::{GitMirrorRepairReview, GitMirrorRepairReviewRecord};
     use crate::i18n::Locale;
-    use deve_core::git_bridge::{GitMirrorRepairReview, GitMirrorRepairReviewRecord};
 
     #[test]
     fn repair_review_idle_uses_static_cli_fallback() {

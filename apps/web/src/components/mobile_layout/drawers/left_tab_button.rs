@@ -29,7 +29,7 @@ pub(super) fn LeftDrawerTabButton(
                     "bg-panel border border-default text-secondary active:bg-hover"
                 };
                 format!(
-                    "mobile-sidebar-tab {} h-11 min-w-12 px-3 rounded-md active:scale-95 transition-transform duration-150 ease-out {}",
+                    "mobile-sidebar-tab {} h-11 min-w-[48px] px-3 rounded-md active:scale-95 transition-transform duration-150 ease-out {}",
                     sidebar_tab_class(view),
                     state
                 )

@@ -46,7 +46,7 @@ pub fn InputArea(
                     <span class="text-[10px] text-muted">{move || t::chat::markdown_supported(locale.get())}</span>
                     <button
                         class=move || if mobile {
-                            "h-11 min-w-11 p-2 rounded active:bg-hover text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            "h-11 min-w-[44px] p-2 rounded active:bg-hover text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         } else {
                             "p-1.5 rounded hover:bg-hover text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         }

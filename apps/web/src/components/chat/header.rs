@@ -59,7 +59,7 @@ pub fn ChatHeader(
             {move || if mobile {
                 view! {
                     <button
-                        class="chat-close-button h-11 min-w-11 rounded-md text-secondary active:bg-hover transition-colors duration-200 ease-out"
+                        class="chat-close-button h-11 min-w-[44px] rounded-md text-secondary active:bg-hover transition-colors duration-200 ease-out"
                         on:click=move |_| on_close.run(())
                         title=move || t::chat::toggle_mobile_chat(locale.get())
                         aria-label=move || t::chat::toggle_mobile_chat(locale.get())

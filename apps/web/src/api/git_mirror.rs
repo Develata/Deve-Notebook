@@ -3,8 +3,31 @@
 //!
 //! Read-only Git mirror repair review API.
 
-use deve_core::git_bridge::GitMirrorRepairReview;
 use gloo_net::http::Request;
+use serde::Deserialize;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct GitMirrorRepairReview {
+    pub repo_name: String,
+    pub manual_only: bool,
+    pub authority: String,
+    pub records: Vec<GitMirrorRepairReviewRecord>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+pub struct GitMirrorRepairReviewRecord {
+    pub deve_commit_id: String,
+    pub ledger_seq: u64,
+    pub action_code: String,
+    pub retryable_after_fix: bool,
+    pub subject: String,
+    pub next_step: String,
+    pub retry_command: Option<String>,
+    pub failure_stage: Option<String>,
+    pub failure_command: Option<String>,
+    pub failure_exit_status: Option<i32>,
+    pub last_error: Option<String>,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GitMirrorRepairReviewFetchError {

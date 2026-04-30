@@ -19,7 +19,7 @@ pub(super) fn LeftDrawerHeader(
         >
             <span class="text-primary flex items-center gap-1">{move || title.get()}</span>
             <button
-                class="h-11 min-w-11 px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
+                class="h-11 min-w-[44px] px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
                 title=move || t::sidebar::close_file_tree(locale.get())
                 aria-label=move || t::sidebar::close_file_tree(locale.get())
                 on:click=move |_| on_close.run(())

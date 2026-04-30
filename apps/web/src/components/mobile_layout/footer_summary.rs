@@ -52,7 +52,7 @@ pub fn FooterSummaryRow(
             </div>
 
             <button
-                class="h-11 min-w-11 p-1.5 rounded-md active:bg-hover flex items-center justify-center"
+                class="h-11 min-w-[44px] p-1.5 rounded-md active:bg-hover flex items-center justify-center"
                 title=move || t::bottom_bar::toggle_status_details(locale.get())
                 aria-label=move || t::bottom_bar::toggle_status_details(locale.get())
                 on:click=move |_| set_expanded.update(|v| *v = !*v)

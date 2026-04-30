@@ -18,7 +18,7 @@ pub fn MobileHeader(
     on_command: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let action_btn = "h-11 min-w-11 px-3 text-base text-primary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out";
+    let action_btn = "h-11 min-w-[44px] px-3 text-base text-primary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out";
     view! {
         <div
             class="flex items-center justify-between px-2 py-1 bg-panel border-b border-default"

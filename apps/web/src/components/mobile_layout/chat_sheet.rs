@@ -78,7 +78,7 @@ pub fn MobileChatSheet(
                     fallback=move || {
                         view! {
                             <button
-                                class="mobile-chat-chip h-11 min-w-11 px-3 rounded-full bg-panel border border-default shadow-sm text-sm font-medium text-primary active:bg-hover"
+                                class="mobile-chat-chip h-11 min-w-[44px] px-3 rounded-full bg-panel border border-default shadow-sm text-sm font-medium text-primary active:bg-hover"
                                 title=move || t::chat::toggle_mobile_chat(locale.get())
                                 aria-label=move || t::chat::toggle_mobile_chat(locale.get())
                                 on:click=move |_| set_expanded.set(true)
