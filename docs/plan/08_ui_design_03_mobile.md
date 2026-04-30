@@ -18,12 +18,12 @@
 ## 1. 原生适配器边界 {#mobile-current-native-boundary}
 
 *   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
-*   Mobile native adapter 第一阶段只允许承担：拉起受控内嵌服务、注入本机 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件。
+*   Mobile native adapter 第一阶段只允许承担：绑定/探测已有受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件。
 *   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；真实 `tauri` / `tauri-build` dependency 只能在 `native-packaging` feature 与独立 gate 打开后引入。
 *   mobile process adapter **MUST** 等 process adapter gate 显式打开后才能启动、持有或重启后端子进程。
 *   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；后台恢复失败 **MUST NOT** 被伪装成普通断网。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
-*   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
+*   UI readiness **MUST** 等待受控 service 完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
 
 ### 1.1 Minimal Native Adapter Contract {#mobile-native-adapter-contract}
 

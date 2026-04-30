@@ -31,9 +31,11 @@
     *   $Snapshot(t) \equiv Fold(Fact_1...Fact_t)$，用于启动、校正与加速 fold；Snapshot 可重建，不是独立真值源。
 *   **Projection (投影)**：从 Ledger 派生的、面向用户的可读/可编辑形式（如 Markdown 文件）。
     *   $P = Project(S_{ledger})$。投影不承载权威状态；对投影的外部修改必须先转为差异，再经 Reconciliation 生成 Ledger Facts。
+*   **Deve-authorized Write Path (Deve 授权写路径)**：由 Deve runtime 明确发起、绑定 repo scope / writer gate，并通过 ledger append、projection writeback、source-control import 或 repair 命令产生可审计副作用的写路径。
+    *   裸文件写入、外部编辑器保存、外部 `git checkout/reset/pull/rebase` 造成的 Vault 变化不属于该路径。
 *   **Vault (投影仓)**：宿主文件系统上的一个具体目录路径 `$ROOT/data/vault`。
     *   是 Projection 的物理容器。
-    *   **External Edit**：发生在 Vault 内但未经 Deve authority 写路径产生的修改；不得直接成为权威状态。
+    *   **External Edit**：发生在 Vault 内但未经 Deve-authorized Write Path 产生的修改；不得直接成为权威状态。
 *   **Tree State (树状态)**:
     *   内存文件树缓存 $T_{mem}$，由 `TreeManager` 管理。
     *   用于目录树 UI、减少 IO 扫描并生成 `TreeDelta`。
@@ -60,8 +62,8 @@
 *   **Asset (资产)**：由 DocId 标识的二进制字节序列。
     *   运行时引用形式：`asset://<uuid>`。
     *   物理存储形式：Content Addressable Storage (CAS) 或由 Ledger 管理的 Blob。
-*   **Reconstruction (重建/反推)**：从 Vault 外部突变提取 $\Delta_{fs}$ 的过程。
-    *   Reconstruction 只产生候选差异；它本身不得写 authority。
+*   **Reconstruction (重建/反推)**：从 Vault 内的 External Edit 提取 $\Delta_{fs}$ 的过程。
+    *   Reconstruction 只产生候选差异；它本身不得写 Ledger authority。
 *   **Reconciliation (和解/协调)**：将外部突变合并回权威 Ledger 的过程。
     *   $Merge(L_{current}, \Delta_{fs}) \to L_{next}$。
 *   **Peer (节点)**：P2P 网络拓扑图 $G=(V, E)$ 中的顶点 $v \in V$。

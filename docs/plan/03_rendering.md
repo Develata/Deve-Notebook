@@ -268,7 +268,7 @@ Baseline contract 的行内支持集合：
 - checkbox 点击是例外的“交互式 widget”，但它也只能经源码 delta 回写。
 - blockquote / code block 背景样式是持久化 decoration，不因 cursor reveal 整块移除。
 - frontmatter 在光标离开时可隐藏 `---` 边界，但内容区仍由源码投影而来。
-- callout/admonition 的视觉类型（`NOTE`/`TIP`/`CAUTION`）只能来自源码第一行解析，不得在 UI 层凭颜色或 label 猜测。
+- 若未来启用 callout/admonition，其视觉类型（`NOTE`/`TIP`/`CAUTION`）只能来自源码第一行解析，不得在 UI 层凭颜色或 label 猜测。
 
 ### 6.4 Code Block Toolbar Contract
 
