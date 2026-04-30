@@ -96,6 +96,9 @@ check_contains crates/core/src/plugin/runtime/chat_stream.rs "Native AI Chat cur
 check_contains apps/web/src/components/settings_sections.rs "disabled=move || !native_available.get()"
 check_contains apps/web/src/components/settings_sections.rs "disabled=move || !trusted_available.get()"
 check_contains apps/web/src/components/settings_sections.rs "if trusted_available.get_untracked()"
+check_contains apps/web/src/components/settings_sections.rs "ai_backend_button_state"
+check_contains apps/web/src/components/settings_sections.rs "ai_backend_buttons_disable_only_unavailable_backends"
+check_contains apps/web/src/components/settings_sections.rs "ai_backend_buttons_show_disabled_reason_only_for_disabled_native"
 check_contains apps/web/src/components/ai_backend_guard.rs "backend: AI_BACKEND_NATIVE"
 
 echo "ai-baseline-check: ok"
