@@ -13,7 +13,7 @@
     - run: deve config print
     - http_get: "/api/ai/backend-capabilities"
   assertions:
-    - stdout_contains: "mode = 'trusted-cli'"
+    - stdout_contains: 'mode = "trusted-cli"'
     - http_assert: effective_backend_eq "native"
     - http_assert: effective_backend_reason_visible true
 
