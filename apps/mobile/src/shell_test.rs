@@ -309,6 +309,7 @@ fn mobile_supervisor_session_handoff_failure_is_not_retryable() {
         NativeServiceFailureKind::SessionHandoffFailed,
         "session_dead",
     );
+    shell.mark_service_offline("service_dead", true);
 
     let snapshot = shell.snapshot();
     assert_eq!(

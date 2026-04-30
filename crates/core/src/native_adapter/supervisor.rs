@@ -141,6 +141,11 @@ impl NativeServiceSupervisor {
         &mut self,
         offline: NativeServiceOffline,
     ) -> NativeServiceOffline {
+        if self.state == NativeServiceSupervisorState::Offline {
+            if let Some(current) = self.offline.as_ref().filter(|offline| !offline.retryable) {
+                return current.clone();
+            }
+        }
         let retryable = offline.retryable && self.restart_attempt < self.max_restart_attempts;
         let recorded = NativeServiceOffline {
             reason: offline.reason,
@@ -310,6 +315,33 @@ mod tests {
             snapshot.offline,
             Some(NativeServiceOffline {
                 reason: "still_dead".to_string(),
+                retryable: false,
+            })
+        );
+    }
+
+    #[test]
+    fn external_offline_observation_cannot_upgrade_terminal_offline() {
+        let mut supervisor = NativeServiceSupervisor::new(3);
+        let fatal = supervisor.record_failure(
+            NativeServiceFailureKind::SessionHandoffFailed,
+            "session_missing",
+        );
+        assert!(!fatal.retryable);
+
+        let observed = supervisor.record_service_offline(NativeServiceOffline {
+            reason: "service_dead".to_string(),
+            retryable: true,
+        });
+
+        assert!(!observed.retryable);
+        let snapshot = supervisor.snapshot();
+        assert_eq!(snapshot.state, NativeServiceSupervisorState::Offline);
+        assert_eq!(snapshot.restart_attempt, 0);
+        assert_eq!(
+            snapshot.offline,
+            Some(NativeServiceOffline {
+                reason: "session_missing".to_string(),
                 retryable: false,
             })
         );

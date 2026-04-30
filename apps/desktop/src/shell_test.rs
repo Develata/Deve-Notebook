@@ -328,6 +328,7 @@ fn desktop_supervisor_keeps_session_handoff_failure_fatal() {
     let mut shell = DesktopShell::new();
     shell.start_service();
     shell.mark_supervisor_failure(NativeServiceFailureKind::SessionHandoffFailed, "missing");
+    shell.mark_service_offline("service_dead", true);
 
     let snapshot = shell.snapshot();
     assert_eq!(
