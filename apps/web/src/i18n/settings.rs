@@ -83,8 +83,8 @@ pub fn hybrid_desc(locale: Locale) -> &'static str {
 
 pub fn coming_soon(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Coming in Phase 6",
-        Locale::Zh => "将在 Phase 6 推出",
+        Locale::En => "Future setting: not available in the current release",
+        Locale::Zh => "未来设置：当前版本不可用",
     }
 }
 
@@ -161,5 +161,11 @@ mod tests {
     fn language_buttons_use_self_labels() {
         assert_eq!(english_language_label(), "English");
         assert_eq!(chinese_language_label(), "中文");
+    }
+
+    #[test]
+    fn reserved_setting_copy_marks_future_boundary() {
+        assert!(super::coming_soon(Locale::En).contains("Future setting"));
+        assert!(super::coming_soon(Locale::Zh).contains("未来设置"));
     }
 }

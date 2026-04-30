@@ -40,6 +40,21 @@ pub(super) fn language_button_state(locale: Locale) -> LanguageButtonState {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct ReservedSettingState {
+    pub class: &'static str,
+    pub disabled_attr: &'static str,
+    pub reason: String,
+}
+
+pub(super) fn reserved_setting_state(locale: Locale) -> ReservedSettingState {
+    ReservedSettingState {
+        class: "opacity-50 pointer-events-none grayscale",
+        disabled_attr: "true",
+        reason: t::settings::coming_soon(locale).to_string(),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct SyncModeButtonState {
     pub auto_class: &'static str,
     pub manual_class: &'static str,
@@ -120,7 +135,7 @@ mod tests {
     use super::{
         BUTTON_CLASS_ACCENT_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE,
         SYNC_AUTO_CLASS_ACTIVE, SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state,
-        language_button_state, sync_mode_button_state,
+        language_button_state, reserved_setting_state, sync_mode_button_state,
     };
     use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
     use crate::i18n::Locale;
@@ -145,6 +160,15 @@ mod tests {
         let manual = sync_mode_button_state("manual");
         assert_eq!(manual.auto_class, BUTTON_CLASS_IDLE);
         assert_eq!(manual.manual_class, SYNC_MANUAL_CLASS_ACTIVE);
+    }
+
+    #[test]
+    fn reserved_setting_state_exposes_disabled_reason() {
+        let state = reserved_setting_state(Locale::En);
+        assert_eq!(state.class, "opacity-50 pointer-events-none grayscale");
+        assert_eq!(state.disabled_attr, "true");
+        assert!(state.reason.contains("Future setting"));
+        assert!(state.reason.contains("current release"));
     }
 
     #[test]

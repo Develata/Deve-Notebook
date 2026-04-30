@@ -10,7 +10,7 @@
 
 use crate::components::icons::X;
 use crate::components::settings_sections::{AiBackendSection, SyncModeSection};
-use crate::components::settings_sections_policy::language_button_state;
+use crate::components::settings_sections_policy::{language_button_state, reserved_setting_state};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
@@ -18,6 +18,7 @@ use leptos::prelude::*;
 pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let language_state = Signal::derive(move || language_button_state(locale.get()));
+    let reserved_state = Signal::derive(move || reserved_setting_state(locale.get()));
 
     view! {
         <Show when=move || show.get()>
@@ -85,7 +86,11 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                         </div>
 
                         // 混合模式占位符
-                        <div class="opacity-50 pointer-events-none grayscale">
+                        <div
+                            class=move || reserved_state.get().class
+                            data-deve-setting-disabled=move || reserved_state.get().disabled_attr
+                            title=move || reserved_state.get().reason
+                        >
                              <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="font-medium text-primary">{move || t::settings::hybrid_mode(locale.get())}</h3>
@@ -95,7 +100,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                     <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow"></div>
                                 </div>
                              </div>
-                             <p class="text-xs text-accent mt-2">{move || t::settings::coming_soon(locale.get())}</p>
+                             <p class="text-xs text-accent mt-2">{move || reserved_state.get().reason}</p>
                         </div>
                     </div>
 
