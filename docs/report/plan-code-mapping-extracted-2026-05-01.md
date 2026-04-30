@@ -5,7 +5,7 @@
 ## 迁出原则
 
 - `docs/plan/` 只保留 authority、runtime、protocol、state machine、failure boundary 与 refactor target。
-- 当前代码路径、实现覆盖、文件职责、测试路径属于非权威审计信息，应放在 `docs/report/`、`docs/overview/`，或由工具生成。
+- 除章节 metadata 的高层 `Primary Code Areas` 入口索引外，详细当前代码路径、实现覆盖、文件职责、测试路径属于非权威审计信息，应放在 `docs/report/`、`docs/overview/`，或由工具生成。
 - 代码到 plan 的权威连接由 Rust 文件头 `plan_ref:` 与 `scripts/plan-coverage.sh` 维护。
 - 后续不得把一次性实现扫描结果回写到 plan 正文。
 
