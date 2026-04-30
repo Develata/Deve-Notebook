@@ -157,7 +157,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 
 明确禁止把非标准语法 silently 视为已支持真值能力，例如：
 
-- `==highlight==` 不进入受支持语义集合
+- `==highlight==` 不进入 baseline contract；只能按 extended target 单独规划
 - 任意 HTML 不得当成通用渲染通道
 
 ### 4.4 Baseline Syntax Whitelist

@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- `Layer`: `Peripheral / Deferred`
+- `Layer`: `Peripheral / Optional Product Layer`
 - `Status`: `Optional Product Layer`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`

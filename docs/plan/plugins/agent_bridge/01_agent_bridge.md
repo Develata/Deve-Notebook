@@ -7,7 +7,7 @@
 - `Counterpart Plan`: `docs/plan/10_ai_agent.md`, `docs/plan/17_plugins.md`
 - `Primary Code Areas`: `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`
 
-> 本文只汇总 Native AI Chat 与 Trusted External Agent Bridge 的目标边界，**MUST NOT** 引入独立规范；权威约束以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
+> 本文只汇总 Native AI Chat 与 Trusted External Agent Bridge 的目标边界，不引入独立规范；权威约束以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
 > 启用 AI 功能时，Native AI Chat 是默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
 
 | 通道 | 定位 | 运行时开销目标 | 适用场景 |
@@ -24,14 +24,14 @@
 
 ## 2. 外部 CLI 桥接边界
 
-Trusted Agent Bridge 必须满足：
+Trusted Agent Bridge 的边界摘要：
 
-1. **显式启用**：默认关闭，必须由用户配置启用。
-2. **受控可执行路径**：只能读取显式 `AGENT_CLI_PATH`，不得退化为任意 PATH 搜索。
+1. **显式启用**：默认关闭，由用户配置启用。
+2. **受控可执行路径**：读取显式 `AGENT_CLI_PATH`，不退化为任意 PATH 搜索。
 3. **环境隔离**：子进程只接收 allowlist 环境变量。
-4. **资源上限**：必须具备超时、输出上限与并发上限。
-5. **只读默认**：默认只获得当前 Markdown / 显式上下文；任何写入必须走第 10 章定义的 BUILD / controlled apply 边界。
-6. **失败回退**：trusted policy 不成立时必须回退 Native AI Chat，而不是静默放开外部 CLI。
+4. **资源上限**：具备超时、输出上限与并发上限。
+5. **只读默认**：默认只获得当前 Markdown / 显式上下文；写入路径回到第 10 章定义的 BUILD / controlled apply 边界。
+6. **失败回退**：trusted policy 不成立时回退 Native AI Chat，而不是静默放开外部 CLI。
 
 ## 3. 为什么保留 Trusted Agent Bridge 接口位？
 
@@ -52,10 +52,10 @@ Native AI Chat 的默认边界：
 
 ## 5. 统一前端交互
 
-UI 层共享同一套 Chat surface，但必须明确区分：
+UI 层共享同一套 Chat surface，并区分：
 
 *   `native` backend：第一方 Native AI Chat。
 *   `trusted-cli` backend：显式启用的外部 CLI Agent。
 *   `PLAN / BUILD`：Native AI Chat 的会话模式，不等于 backend。
 
-错误捕获必须区分 external CLI 非零退出、provider 网络错误、policy denied、Unauthorized 与 Disconnected，不得合并为同一 loading/retry 状态。
+错误捕获区分 external CLI 非零退出、provider 网络错误、policy denied、Unauthorized 与 Disconnected，避免合并为同一 loading/retry 状态。

@@ -21,26 +21,28 @@
 
 ## 1. CLI Commands {#cli-commands}
 
-*   `deve init`: 初始化 Vault.
-*   `deve scan`: 扫描并建立索引.
-*   `deve watch`: 监听文件变更.
-*   `deve serve`: 启动 WebSocket 服务端.
-*   `deve dump`: 调试工具 (Dump Ops).
-*   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
-*   `deve graph`: 输出当前 repo 的只读 `GraphProjection` JSON；默认要求健康 Structure Facts authority，显式 `--allow-degraded-projection` 才允许从 metadata fallback 导出。
-*   `deve verify-p2p`: P2P 逻辑验证.
-*   `deve seed`: 种子节点数据注入.
-*   `deve node-check`: 节点一致性检查，可选修复；`--projection` 执行只读 Structure Facts / projection authority 诊断。
-*   `deve recover`: 从 ledger 数据恢复 vault 文件。
-*   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
-*   `deve config print`: 输出当前有效运行时配置。
-*   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
-*   `deve git status`: 检查 Git mirror readiness 与 `GitMirrorQueued / Committed / OutOfSync` side-table summary。
-*   `deve git mirror`: 显式执行 queued/out_of_sync Git mirror records；偏 executor / repair 语义。
-*   `deve git export`: 将 queued Deve commits 导出到 Git mirror，并写回 Deve commit 到 Git commit 的映射；side table 为空且 Git history 为空时，可从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit。
-*   `deve git import`: 只读 dry-run 规划外部 Git/worktree changes，输出可通过 `--apply` 进入 pending/import 的 change/blocker；默认不写 ledger、pending_fs、staging 或 `.notegit`。
-*   `deve git import --apply`: 显式把安全 Git worktree changes 写入 Source Control pending/import；仍不得直接写 ledger、`StagedEntry` 或 `.notegit`，后续必须走 Deve stage/commit。冲突 pending 在 KeepFs resolved staging 时必须清除 pending-only conflict metadata。
-*   `deve git push`: 将已导出的 `.git` mirror 推送到远端；默认 remote 取当前 branch upstream，否则 fallback 到 `origin`，可用 `--remote` / `--branch` 显式指定。该命令不得写 ledger、`StagedEntry` 或 `.notegit`，且必须在未导出/失败 mirror record、脏 Git worktree、脏 Deve Source Control 或未映射 Git HEAD 时 fail-closed。
+*   **Baseline CLI Contract**:
+    *   `deve init`: 初始化 Vault.
+    *   `deve scan`: 扫描并建立索引.
+    *   `deve watch`: 监听文件变更.
+    *   `deve serve`: 启动 WebSocket 服务端.
+    *   `deve dump`: 调试工具 (Dump Ops).
+    *   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
+    *   `deve graph`: 输出当前 repo 的只读 `GraphProjection` JSON；默认要求健康 Structure Facts authority，显式 `--allow-degraded-projection` 才允许从 metadata fallback 导出。
+    *   `deve verify-p2p`: P2P 逻辑验证.
+    *   `deve seed`: 种子节点数据注入.
+    *   `deve node-check`: 节点一致性检查，可选修复；`--projection` 执行只读 Structure Facts / projection authority 诊断。
+    *   `deve recover`: 从 ledger 数据恢复 vault 文件。
+    *   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
+    *   `deve config print`: 输出当前有效运行时配置。
+    *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
+*   **Optional Bridge Contract**:
+    *   `deve git status`: 检查 Git mirror readiness 与 `GitMirrorQueued / Committed / OutOfSync` side-table summary。
+    *   `deve git mirror`: 显式执行 queued/out_of_sync Git mirror records；偏 executor / repair 语义。
+    *   `deve git export`: 将 queued Deve commits 导出到 Git mirror，并写回 Deve commit 到 Git commit 的映射；side table 为空且 Git history 为空时，可从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit。
+    *   `deve git import`: 只读 dry-run 规划外部 Git/worktree changes，输出可通过 `--apply` 进入 pending/import 的 change/blocker；默认不写 ledger、pending_fs、staging 或 `.notegit`。
+    *   `deve git import --apply`: 显式把安全 Git worktree changes 写入 Source Control pending/import；仍不得直接写 ledger、`StagedEntry` 或 `.notegit`，后续必须走 Deve stage/commit。冲突 pending 在 KeepFs resolved staging 时必须清除 pending-only conflict metadata。
+    *   `deve git push`: 将已导出的 `.git` mirror 推送到远端；默认 remote 取当前 branch upstream，否则 fallback 到 `origin`，可用 `--remote` / `--branch` 显式指定。该命令不得写 ledger、`StagedEntry` 或 `.notegit`，且必须在未导出/失败 mirror record、脏 Git worktree、脏 Deve Source Control 或未映射 Git HEAD 时 fail-closed。
 
 ## 2. Command Palette {#command-palette-shortcuts}
 
