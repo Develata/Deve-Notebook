@@ -6,7 +6,6 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
-- `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
 
 ## 1. Scope
 
@@ -377,13 +376,9 @@ MergeRequested
 - 让 remote readonly branch 暴露可写 source control 行为。
 - 把外部编辑三阶段流程误套用到 Web thin client 默认编辑路径。
 
-## 9. Module Boundary
+## 9. Runtime Boundary
 
 ### 9.1 Authority / Diff Core
-
-- `crates/core/src/source_control/`
-- `crates/core/src/ledger/source_control.rs`
-- `crates/core/src/ledger/append_validate.rs`
 
 职责：
 
@@ -394,10 +389,6 @@ MergeRequested
 
 ### 9.2 Repo Manager Integration
 
-- `crates/core/src/ledger/manager/source_control_*.rs`
-- `crates/core/src/ledger/manager/commit_*.rs`
-- `crates/core/src/ledger/manager/merge_ops.rs`
-
 职责：
 
 - repo-bound source control execution
@@ -406,10 +397,6 @@ MergeRequested
 
 ### 9.3 Server Runtime {#source-control-runtime}
 
-- `apps/cli/src/server/ws/route/source_control.rs`
-- `apps/cli/src/server/source_control_proxy*.rs`
-- `apps/cli/src/server/handlers/source_control/`
-
 职责：
 
 - ws/http dispatch
@@ -417,11 +404,6 @@ MergeRequested
 - readonly gating
 
 ### 9.4 Web Runtime
-
-- `apps/web/src/hooks/use_core/callbacks_sc*.rs`
-- `apps/web/src/hooks/use_core/effects_sc*.rs`
-- `apps/web/src/hooks/use_core/diff_session.rs`
-- `apps/web/src/hooks/use_core/source_control_notice.rs`
 
 职责：
 
@@ -432,52 +414,13 @@ MergeRequested
 
 ### 9.5 View Layer
 
-- `apps/web/src/components/sidebar/source_control/`
-- `apps/web/src/components/diff_view/`
-
 职责：
 
 - 展示 changes/history/graph/diff
 - 发出 typed intent
 - 不得直接操作 side tables 或 repo state
 
-## 10. Code Mapping
-
-- pending / staging core:
-  - `crates/core/src/source_control/pending_fs.rs`
-  - `crates/core/src/source_control/staging.rs`
-  - `crates/core/src/source_control/changes.rs`
-- diff / commit:
-  - `crates/core/src/source_control/diff.rs`
-  - `crates/core/src/source_control/commit_diff.rs`
-  - `crates/core/src/source_control/commits.rs`
-  - `crates/core/src/ledger/manager/commit_ops.rs`
-  - `crates/core/src/ledger/manager/commit_apply.rs`
-- target lookup:
-  - `crates/core/src/ledger/manager/source_control_target_lookup.rs`
-  - `crates/core/src/ledger/manager/source_control_path_target.rs`
-- ws/http dispatch:
-  - `apps/cli/src/server/ws/route/source_control.rs`
-  - `apps/cli/src/server/source_control_proxy.rs`
-  - `apps/cli/src/server/source_control_proxy_http.rs`
-- web runtime:
-  - `apps/web/src/hooks/use_core/callbacks_sc_read_diff.rs`
-  - `apps/web/src/hooks/use_core/callbacks_sc_write.rs`
-  - `apps/web/src/hooks/use_core/effects_sc_dispatch_lists.rs`
-  - `apps/web/src/hooks/use_core/diff_session.rs`
-- web views:
-  - `apps/web/src/components/sidebar/source_control/`
-  - `apps/web/src/components/diff_view/`
-
-补充映射：
-
-- ws/http handlers:
-  - `apps/cli/src/server/handlers/source_control/changes.rs`
-  - `apps/cli/src/server/handlers/source_control/commits.rs`
-  - `apps/cli/src/server/handlers/source_control/commit_diff.rs`
-  - `apps/cli/src/server/handlers/source_control/merge.rs`
-
-## 11. Refactor Target
+## 10. Refactor Target
 
 长期应将 source control 主线收敛成单独 runtime：
 

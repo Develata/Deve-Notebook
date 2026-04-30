@@ -6,11 +6,10 @@
 - `Status`: `Planned / Optional`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
-- `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
 
 本章汇总系统所有配置项，包括环境变量、运行时配置文件 (`config.toml`) 以及快捷键映射。
 
-权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约。当前验收边界只覆盖
+权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约。基线验收边界只覆盖
 CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settings API 与统一 GUI
 持久化仍是规划目标，不得在验收中伪装成已完成能力。
 
@@ -52,7 +51,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 ## 2. Configuration Settings (config.toml) {#configuration-settings}
 
 用户可配置的运行时选项存储在 `config.toml`，并可通过 `deve config print/set` 查看或更新。
-浏览器本地 UI 偏好当前仍由前端本地状态/`localStorage` 管理；后续如引入独立设置文件
+浏览器本地 UI 偏好属于前端本地状态/`localStorage` 管理边界；后续如引入独立设置文件
 或 server-backed Settings API，必须先更新本章和验收用例。
 
 ### 2.1 UI Appearance (界面)
@@ -120,8 +119,8 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 浏览器本地 UI 偏好仅保存主题、布局、语言、最近命令等无害状态。`localStorage` 不可用时可以退回内存态，
 但不得把 repo authority、session secret、peer private key 或业务事实写入该层。
 
-所有前端 UI 偏好必须通过 `apps/web/src/storage/prefs.rs` 进入浏览器存储 fallback 层。
-除 `storage/prefs.rs` 本身与 `storage/js_bridge.rs` 能力探测外，不得在功能模块中直接调用
+所有前端 UI 偏好必须通过 browser storage prefs facade 进入浏览器存储 fallback 层。
+除该 facade 本身与底层能力探测外，不得在功能模块中直接调用
 `window.localStorage` / `sessionStorage`。布局宽度、Outline 可见性、语言偏好、快捷键覆盖等均属于
 无害 UI prefs；repo identity、sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。
 `deve.ui.last_scope` 只允许保存最后打开的 `repo_name` 显示别名，用于请求 server 重新解析；不得保存

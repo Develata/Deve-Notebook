@@ -32,7 +32,6 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `15_release.md` | Build, packaging, and deployment |
 | `16_web_thin_client_ledger.md` | Web thin client, repo-scoped state machine, scope gates |
 | `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
-| `验收清单.md` | Acceptance checklist (Chinese) — **deprecated**, see `docs/acceptance-cases/` |
 
 ## Subdirectories
 

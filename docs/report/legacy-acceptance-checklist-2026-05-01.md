@@ -1,9 +1,11 @@
-<!-- DEPRECATED: 本清单已被 docs/acceptance-cases/ 取代。请前往 docs/acceptance-cases/00_index.md 查看当前自动化验收用例集。 -->
+# Legacy Acceptance Checklist Snapshot
+
+> 本文件从 `docs/plan/验收清单.md` 迁出，作为历史快照保留。权威验收入口是 `docs/acceptance-cases/00_index.md`。
 
 ## 说明
 - 本清单已细化为可直接转化为测试用例的条目。
 - 具体测试用例见 `docs/acceptance-cases/00_index.md`。
-- **注意：本文件已废弃，保留仅供历史参考。权威验收入口已迁移至 `docs/acceptance-cases/`。**
+- **注意：本文件为历史快照，保留仅供追溯。权威验收入口已迁移至 `docs/acceptance-cases/`。**
 
 ## 术语与规范性
 - TERM-001: 术语文档包含 MUST/SHOULD/MAY 定义。

@@ -46,7 +46,7 @@ The following documents exist under `docs/` but do not participate in the three-
 | `docs/overview/architecture-diff.md` | Verification Report | Divergence between doc and code views |
 | `docs/plan/plugins/agent_bridge/01_agent_bridge.md` | Design Note | Dual-channel AI architecture; referenced from `10_ai_agent.md` Metadata |
 | `docs/ai-chat-streaming.md` | Design Note | Streaming bridge design; referenced from `10_ai_agent.md` Metadata |
-| `docs/plan/验收清单.md` | Deprecated | Superseded by `docs/acceptance-cases/` |
+| `docs/report/legacy-acceptance-checklist-2026-05-01.md` | Historical Report | Legacy checklist snapshot; superseded by `docs/acceptance-cases/` |
 
 ## Rules
 

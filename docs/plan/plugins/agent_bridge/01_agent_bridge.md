@@ -1,79 +1,54 @@
-# AI 双通道架构 (Dual-Channel AI)
+# AI 双通道边界 (Dual-Channel AI Boundary)
 
-> 本文是历史设计注；权威边界以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
-> Native AI Chat 是当前默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
-> 仓库中保留的 Rhai `ai-chat` 与 `PluginCall` 路径是兼容实现细节，不代表插件平台或外部 Agent 默认启用。
+> 本文只定义 Native AI Chat 与 Trusted External Agent Bridge 的目标边界；权威约束以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
+> Native AI Chat 是默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
 
-| 通道 | 定位 | 运行时开销 | 适用场景 |
-|------|------|-----------|----------|
-| **Native AI Chat** (默认) | 第一方聊天能力，可暂由 bundled Rhai 兼容路径承载 | Rhai Engine ~2-4 MB；SSE 连接按需 | 用户自带 API Key 的简单问答 + 当前 Markdown / 显式上下文 |
-| **Trusted Agent Bridge** (默认关闭) | 外部 CLI 子进程桥接 | 桥接层 ~0 MB 常驻；CLI 进程按需 15-100 MB | 受信任单用户部署中的高级 Agent 能力 |
+| 通道 | 定位 | 运行时开销目标 | 适用场景 |
+|------|------|---------------|----------|
+| **Native AI Chat** | 第一方聊天能力 | 常驻轻量，按需 streaming buffer | 用户自带 API Key 的简单问答 + 当前 Markdown / 显式上下文 |
+| **Trusted Agent Bridge** | 外部 CLI 子进程桥接 | 常驻接近零，外部 CLI 按需启动 | 受信任单用户部署中的高级 Agent 能力 |
 
 ## 1. 目标与范围
 
-*   **目标**：在低资源环境 (768MB) 中提供灵活的 AI 助手，同时避免默认扩大工具权限。
+*   **目标**：在低资源环境中提供可控 AI 助手，同时避免默认扩大工具权限。
 *   **范围**：
-    - **Native AI Chat**：Deve-Notebook 提供第一方聊天 UI 与 OpenAI-compatible SSE runtime。
+    - **Native AI Chat**：Deve-Notebook 提供第一方聊天 UI 与 OpenAI-compatible streaming runtime。
     - **Trusted Agent Bridge**：只在 enabled + trusted + explicit executable path 条件满足时桥接受信任外部 CLI。
 
-## 2. 外部 CLI 桥接架构
+## 2. 外部 CLI 桥接边界
 
-### Backend Bridge (核心机制)
-1. **Frontend**: 用户在 Column 5 (AI Chat Slot) 输入自然语言。
-2. **WebSocket**: 指令发送至 Rust 后盾。
-3. **Subprocess (`tokio::process::Command`)**:
-   - 后端只能在 trusted policy 通过后读取显式 `AGENT_CLI_PATH`。
-   - trusted policy 输入来自 `ai.agent_bridge.enabled` / `ai.agent_bridge.trusted`，
-     或兼容环境变量别名 `DEVE_AI_AGENT_BRIDGE_ENABLED` /
-     `DEVE_AI_AGENT_BRIDGE_TRUSTED`。
-   - `AGENT_CLI_PATH` 必须是受控路径；不得退化为任意 PATH 搜索。
-4. **Streaming**: 将子进程的 `stdout` 和 `stderr` 通过 WebSocket 实时 Push 给前端，实现字级的打字机效果。
+Trusted Agent Bridge 必须满足：
 
-### On-Demand 内存策略
-*   在非对话时段，AI Agent **占用零内存**。
-*   只有当执行指令时才唤起进程，执行完毕后进程立即退出回收，完美契合 768MB 运行环境的限制。
-*   相比于在 Node.js 中常驻服务器，使用 Rust 编写的外部 CLI（如 `zeroclaw`）具有极低的启动延迟和内存指纹。
+1. **显式启用**：默认关闭，必须由用户配置启用。
+2. **受控可执行路径**：只能读取显式 `AGENT_CLI_PATH`，不得退化为任意 PATH 搜索。
+3. **环境隔离**：子进程只接收 allowlist 环境变量。
+4. **资源上限**：必须具备超时、输出上限与并发上限。
+5. **只读默认**：默认只获得当前 Markdown / 显式上下文；任何写入必须走第 10 章定义的 BUILD / controlled apply 边界。
+6. **失败回退**：trusted policy 不成立时必须回退 Native AI Chat，而不是静默放开外部 CLI。
 
-## 3. Trusted Agent Bridge：为什么保留接口位？
+## 3. 为什么保留 Trusted Agent Bridge 接口位？
 
-*   **历史管理**：内置 sqlite/json 历史状态机，支持 `/plan` 和 `/build` 等模式。
-*   **工具支持 (Skills + controlled CLI)**：只适用于用户明确信任外部 CLI 的部署，不是 Native AI 的默认能力；MCP 不再作为产品运行时方向。
-*   **Skills (自定义技能)**：只能由外部 CLI 自己管理，Deve-Notebook 不内建 Skills 装载。
-*   **Token 优化**：滑动窗口和上下文合并已经做到极致。
-*   **外部 CLI 内存参考**：opencode ~50-100 MB/次，zeroclaw ~15-30 MB/次，均为按需启动。
+*   外部 CLI 可以自行管理历史、Skills 与复杂 agent 状态机。
+*   Deve-Notebook 只负责最小桥接、安全前提、streaming 收敛与错误边界。
+*   MCP 不作为产品运行时方向；相关需求由外部 CLI 自己管理，或由未来 Skills 调用受控 CLI 工具承载。
 
-## 4. Native AI Chat：默认方案
+## 4. Native AI Chat 默认方案
 
-Native AI Chat 可暂由内置 Rhai 插件 (`plugins/ai-chat/`) 承载实现，但产品语义仍属于第 10 章第一方能力。
+Native AI Chat 的默认边界：
 
-*   **功能边界 (Minimal Scope)**：
-    - 单轮/多轮对话 (OpenAI 兼容 SSE 流式)
-    - 读取当前 Markdown / 显式选择上下文
-    - 系统提示词注入当前编辑文件上下文
-*   **不做的事 (Out of Scope)**：
-    - 不实现 MCP runtime，不默认启用 Skills / source-control 写入
-    - 不做历史持久化、不做复杂 Agent 状态机
-    - 不做 Token 滑动窗口优化
-*   **资源开销**：Rhai Engine ~2-4 MB，脚本轻量，零额外 crate 依赖
-*   **配置**：环境变量 `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`；
-    Trusted CLI 额外需要 `AGENT_CLI_PATH`，并可通过
-    `DEVE_AI_AGENT_BRIDGE_ENABLED` / `DEVE_AI_AGENT_BRIDGE_TRUSTED`
-    覆盖兼容开关。
+*   单轮/多轮对话。
+*   OpenAI-compatible streaming。
+*   读取当前 Markdown / 显式选择上下文。
+*   不实现 MCP runtime。
+*   不默认启用 Skills / source-control 写入。
+*   不承担复杂 Agent 自治状态机。
 
-## 5. 交互与 UI
+## 5. 统一前端交互
 
-UI 层统一，两条通道共享同一套前端组件：
-*   Settings 面板切换 CLI / API 模式 (`ai_mode` signal)
-*   移动端折叠 Chat Sheet
-*   Markdown 渲染 + 代码块横向滚动
-*   错误捕获：CLI 非 0 退出码 / API 网络错误 → 前端展示重试态
+UI 层共享同一套 Chat surface，但必须明确区分：
 
-## 6. 资源开销汇总
+*   `native` backend：第一方 Native AI Chat。
+*   `trusted-cli` backend：显式启用的外部 CLI Agent。
+*   `PLAN / BUILD`：Native AI Chat 的会话模式，不等于 backend。
 
-| 组件 | 代码量 | 常驻内存 | 按需内存 |
-|------|--------|---------|----------|
-| agent_bridge.rs | 167 行 Rust | 0 MB | pipe buffer ~64 KB |
-| plugin handler | 85 行 Rust | 0 MB | — |
-| ai-chat Rhai 脚本 | 轻量 Rhai | 0 MB (未加载时) | Rhai Engine ~2-4 MB |
-| opencode (外部) | — | 0 MB | ~50-100 MB/次 |
-| zeroclaw (外部) | — | 0 MB | ~15-30 MB/次 |
+错误捕获必须区分 external CLI 非零退出、provider 网络错误、policy denied、Unauthorized 与 Disconnected，不得合并为同一 loading/retry 状态。

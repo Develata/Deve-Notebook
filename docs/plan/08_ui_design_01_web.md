@@ -6,7 +6,6 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
-- `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
 
 本节定义了 Web 端作为 **Server Dashboard + WebLightPeer Thin Client** 的特有功能与部署架构。
 

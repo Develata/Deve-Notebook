@@ -6,13 +6,12 @@
 - `Status`: `Deferred`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
-- `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
 - `Related Design Notes`: [`docs/ai-chat-streaming.md`](../ai-chat-streaming.md) (streaming bridge design), [`docs/plan/plugins/agent_bridge/01_agent_bridge.md`](./plugins/agent_bridge/01_agent_bridge.md) (dual-channel architecture)
 
 > AI 能力是 Deve-Notebook 的**第一方原生产品层**，不再归入插件章节。
-> 当前主线是**最小原生 AI Chat**；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
-> 若无法建立明确的安全边界，外部 CLI Agent **MUST NOT** 默认启用，且当前 release **MAY** 完全不提供该能力。
-> MCP 不进入 Deve-Notebook 产品实现路线；当前判断是由 Skills + 受控 CLI 工具调用替代，不再规划 MCP runtime，代码层也不得保留 MCP runtime / manager / host tool 入口。
+> 默认目标是**最小原生 AI Chat**；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
+> 若无法建立明确的安全边界，外部 CLI Agent **MUST NOT** 默认启用；对应 release **MAY** 完全不提供该能力。
+> MCP 不进入 Deve-Notebook 产品实现路线；相关扩展需求应由 Skills + 受控 CLI 工具调用替代，不再规划 MCP runtime，代码层也不得保留 MCP runtime / manager / host tool 入口。
 
 ## 1. Scope (目标与范围)
 
@@ -22,14 +21,14 @@
     - **Native Modes**：原生支持 `PLAN` / `BUILD` 两种聊天模式。
     - **Trusted External Agent Bridge**：仅作为高级可选模式预留，不视为当前发布主线。
 *   **明确不在当前范围内（Out of Scope for Now）**：
-    - 原生 MCP 集成；该方向已废弃，当前由 Skills / 受控 CLI 工具调用替代这类扩展需求
+    - 原生 MCP 集成；该方向由 Skills / 受控 CLI 工具调用替代
     - 原生 Skills 装载
     - 原生复杂 Agent 自治状态机（多代理协作、长链自主规划、无限工具循环）
     - 原生 Source Control 写入自动化
 
 ### MCP Retired Direction
 
-MCP 当前不是 Deve-Notebook 的实现趋势，也不进入 Native AI Chat 或 Trusted Agent 的 roadmap。原因是它会扩大 host/tool 边界，而当前更可控的方向是：
+MCP 不进入 Deve-Notebook 的实现路线，也不进入 Native AI Chat 或 Trusted Agent 的 roadmap。原因是它会扩大 host/tool 边界，更可控的方向是：
 
 1. Native AI Chat 保持 read-first、最小可用。
 2. 若需要外部能力，通过用户显式启用的 Trusted CLI path，或未来 Skills 调用受控 CLI 工具完成。
@@ -37,7 +36,7 @@ MCP 当前不是 Deve-Notebook 的实现趋势，也不进入 Native AI Chat 或
 
 ## 2. Native AI Chat {#native-ai-chat-runtime}
 
-Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建能力。
+Native AI Chat 是默认第一方 AI 形态，属于内建能力。
 
 ### 功能边界
 
@@ -57,16 +56,16 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 ### 设计原则
 
 *   **Fail-closed**：拿不到上下文就降级为纯 chat，不得隐式扩大读取范围。
-*   **Read-first**：当前阶段优先保证“读 markdown + chat”稳定，不追求工具丰富度。
+*   **Read-first**：Baseline 阶段优先保证“读 markdown + chat”稳定，不追求工具丰富度。
 *   **Low-memory**：常驻成本应保持在轻量级，适合低配环境。
 
-### 运行时实现合同
+### 运行时合同
 
-*   Server runtime 归属 `apps/cli/src/server/ai_chat/`。
-*   Web chat UI 归属 `apps/web/src/components/chat/`；backend capability probing 归属 `apps/web/src/api/ai_backend.rs`。
-*   在既有 Rhai host 仍保留时，`crates/core/src/plugin/runtime/chat_stream.rs` 与 `provider.rs` **MAY** 提供 transport-agnostic bridge；该 bridge **MUST NOT** 把 Native AI Chat 升格为通用插件主线。
+*   Server runtime 负责 provider 选择、流式响应、错误收敛、资源上限与 trusted-policy enforcement。
+*   Web chat UI 负责能力探测、模式展示、请求构造、streaming 展示与 retry/error 状态。
+*   若保留 Rhai/plugin-host 兼容 bridge，该 bridge **MAY** 提供 transport-agnostic chat stream，但 **MUST NOT** 把 Native AI Chat 升格为通用插件主线。
 *   Native AI Chat **MUST** 保持本节 read-first 边界：provider 可流式返回结果，但 **MUST NOT** 静默获得任意 source-control 或 workspace 写权限。
-*   bundled `plugins/ai-chat` 兼容插件 **MUST NOT** 授予广泛文件读取或默认工具执行；当前 Markdown 与用户显式选择的上下文只能由 chat request 传入，不得通过无限制 plugin file read 反向恢复。
+*   兼容 AI chat 插件 **MUST NOT** 授予广泛文件读取或默认工具执行；当前 Markdown 与用户显式选择的上下文只能由 chat request 传入，不得通过无限制 plugin file read 反向恢复。
 *   public `PluginCall` surface **MUST** 限定为 `chat`；helper/config/tool 函数属于内部实现细节，被外部调用时必须 fail-closed。
 *   产品后端名称是 `native` / `trusted-cli`；`ai-chat` / `agent-bridge` 这类兼容 plugin id 只是内部 routing detail，必须经过显式转换层。
 *   同步 `PluginResponse` text 或 error **MUST** 完成对应 chat request；缺 API key、Trusted CLI 被禁用或 policy error **MUST NOT** 让 UI 无限 streaming/loading。
@@ -82,7 +81,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
     - **MAY** 直接修改当前 Markdown。
     - **MAY** 通过受控的程序执行路径完成 Markdown 修改或转换。
     - 上述执行路径 **MUST** 是受限的宿主能力，不得等价于开放式 shell / MCP / Skills。
-    - 当前阶段默认只针对 Markdown 工作流，不自动扩展到任意工程文件。
+    - Baseline 默认只针对 Markdown 工作流，不自动扩展到任意工程文件。
 *   **`/agents` 模式切换**：
     - 仅在原生 `PLAN ↔ BUILD` 间顺序切换。
     - **MUST NOT** 用作后端切换命令。
@@ -135,9 +134,9 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 
 ## 5. Resource Budget (资源开销)
 
-| 能力 | 常驻内存 | 按需内存 | 当前定位 |
+| 能力 | 常驻内存 | 按需内存 | 定位 |
 |------|---------|----------|----------|
-| Native AI Chat | 轻量级 | SSE / provider response buffer | 默认 shipped |
+| Native AI Chat | 轻量级 | SSE / provider response buffer | 默认第一方基线 |
 | Trusted CLI Agent | 0 MB | 取决于外部 CLI | 可选，默认关闭 |
 
 ## 6. Related Configuration (本章相关配置)

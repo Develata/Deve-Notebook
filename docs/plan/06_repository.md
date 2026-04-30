@@ -6,7 +6,6 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch_*.rs`
 
 ## 1. Scope
 
@@ -309,13 +308,9 @@ ReadonlyDegraded
 - 让 UI 直接根据名字推断 repo identity。
 - 把 remote readonly repo 误暴露为可写 source。
 
-## 9. Module Boundary
+## 9. Runtime Boundary
 
 ### 9.1 Authority Layer
-
-- `crates/core/src/ledger`
-- `crates/core/src/ledger/append_validate.rs`
-- `crates/core/src/ledger/manager/ops_structure.rs`
 
 职责：
 
@@ -324,11 +319,6 @@ ReadonlyDegraded
 - append validation
 
 ### 9.2 Projection / Repair Layer
-
-- `crates/core/src/tree/`
-- `crates/core/src/ledger/manager/structure_projection.rs`
-- `crates/core/src/ledger/manager/structure_projection_support.rs`
-- `crates/core/src/sync/materialize.rs`
 
 职责：
 
@@ -339,12 +329,6 @@ ReadonlyDegraded
 
 ### 9.3 Scope Runtime Layer {#repo-scope-runtime}
 
-- `apps/cli/src/server/repo_scope*.rs`
-- `apps/cli/src/server/session*.rs`
-- `apps/cli/src/server/handlers/switcher*.rs`
-- `apps/web/src/hooks/use_core/callbacks_switch_*.rs`
-- `apps/web/src/hooks/use_core/effects/message_repo_scope*.rs`
-
 职责：
 
 - scope binding
@@ -354,59 +338,12 @@ ReadonlyDegraded
 
 ### 9.4 View Layer
 
-- `apps/web/src/components/sidebar/repo_switcher.rs`
-- `apps/web/src/components/branch_switcher/`
-- `apps/web/src/components/sidebar/source_control/repositories.rs`
-
 职责：
 
 - 仅展示与发出切换意图
 - 不得自行推断 repo authority
 
-## 10. Code Mapping
-
-- repo selector / resolution:
-  - `apps/cli/src/server/handlers/switcher_selector.rs`
-  - `apps/cli/src/server/handlers/switcher_requested_repo.rs`
-  - `apps/cli/src/server/repo_scope_lookup.rs`
-  - `crates/core/src/ledger/manager/locator.rs`
-  - `crates/core/src/ledger/manager/repo_lookup.rs`
-  - `crates/core/src/ledger/manager/remote_repo_select.rs`
-- repo catalog / repair:
-  - `crates/core/src/ledger/manager/repo_catalog_entries.rs`
-  - `crates/core/src/ledger/manager/local_repo_metadata_repair.rs`
-  - `crates/core/src/ledger/manager/remote_repo_scan.rs`
-  - `crates/core/src/ledger/manager/remote_repo_scan_helpers.rs`
-- branch / repo switching:
-  - `apps/cli/src/server/handlers/switcher_branch.rs`
-  - `apps/cli/src/server/handlers/switcher_repo.rs`
-  - `apps/web/src/hooks/use_core/callbacks_switch_repo.rs`
-  - `apps/web/src/hooks/use_core/callbacks_switch_branch.rs`
-- session scope:
-  - `apps/cli/src/server/session.rs`
-  - `apps/cli/src/server/session_repo.rs`
-  - `apps/cli/src/server/session_scope.rs`
-- tree projection:
-  - `crates/core/src/tree/manager.rs`
-  - `crates/core/src/tree/delta.rs`
-  - `crates/core/src/tree/from_docs.rs`
-- repo repair:
-  - `crates/core/src/ledger/manager/local_repo_metadata_repair.rs`
-  - `crates/core/src/ledger/manager/local_repo_source_control_repair.rs`
-  - `crates/core/src/ledger/manager/core_docs_fallback.rs`
-  - `crates/core/src/sync/materialize.rs`
-
-额外映射：
-
-- tree state:
-  - `crates/core/src/tree/manager.rs`
-  - `crates/core/src/tree/delta.rs`
-  - `crates/core/src/tree/from_docs.rs`
-- scope recovery:
-  - `apps/web/src/hooks/use_core/effects/message_protocol_control.rs`
-  - `apps/web/src/hooks/use_core/effects/message_dispatch_protocol.rs`
-
-## 11. Refactor Target
+## 10. Refactor Target
 
 长期应将 repo 逻辑显式收敛成三个独立 runtime：
 

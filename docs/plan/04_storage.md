@@ -6,7 +6,6 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
 
 ## 1. Scope
 
@@ -361,8 +360,6 @@ FsEvent
 
 ## 7. Projection and Persistence Contract {#projection-contract}
 
-> **Code Refs**: `crates/core/src/sync/drift_detect/` (mod, enumerate, walk, explain), `crates/core/tests/drift_detect_test.rs`
-
 - 所有系统写盘都必须满足：
 
 ```text
@@ -387,8 +384,6 @@ Intent -> Ledger Facts -> Projection -> Vault
 - `PersistGuard` / `WriteSuppressor` 必须在 projection writeback 前后成对生效，防止 watcher storm
 
 ## 8. Watcher Contract {#watcher-contract}
-
-> **Code Refs**: `crates/core/src/watcher.rs`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/sync/scan.rs`, `crates/core/src/sync/watcher/` (mod, filter, dispatch, registry, suppressor, backend/*), `crates/core/src/source_control/pending_fs.rs`, `crates/core/tests/watcher_*.rs`
 
 ### 8.1 Backend Abstraction
 
@@ -451,8 +446,6 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 ### 9.4 Backup / Export {#backup-export}
 
-> **Code Refs**: `apps/cli/src/commands/export.rs`, `apps/cli/src/export_entries.rs`
-
 - repo **MAY** 定期生成只读 backup snapshot。
 - 系统 **MUST** 支持将 ledger 导出为 JSON Lines。
 
@@ -483,57 +476,29 @@ Intent -> Ledger Facts -> Projection -> Vault
 - 让 Vault 作为真值源。
 - 让 side table 或 snapshot 成为删除真源。
 
-## 11. Module Boundary
+## 11. Runtime Boundary
 
 ### 11.1 Authority Layer
 
-- `crates/core/src/ledger/`
-- `crates/core/src/ledger/append_validate.rs`
-- `crates/core/src/ledger/runtime_tables.rs`
+- 负责 ledger append validation、runtime side table 归类、authority table 读写边界。
+- 不得读取 UI 状态、watcher 原始事件或未归一化路径作为业务真相。
 
 ### 11.2 Projection / Workspace Layer
 
-- `crates/core/src/ledger/manager/structure_projection.rs`
-- `crates/core/src/ledger/manager/workspace.rs`
-- `crates/core/src/ledger/manager/projection_cleanup.rs`
-- `crates/core/src/sync/materialize.rs`
+- 负责由 ledger fold 派生 projection、workspace writeback、projection cleanup 与 drift 解释。
+- projection 失败不得伪装成 authority 成功。
 
 ### 11.3 Watcher Layer
 
-- `crates/core/src/sync/watcher/`
-- `crates/core/src/watcher.rs`
-- `crates/core/src/watcher_ignore.rs`
+- 负责外部文件事件归一化、忽略规则、debounce、self-write suppression 与 overflow reconcile。
+- watcher 只能生成 pending candidate，不得直接写 ledger。
 
 ### 11.4 Repo Runtime Integration
 
-- `crates/core/src/ledger/manager/core.rs`
-- `crates/core/src/ledger/manager/repository.rs`
-- `crates/core/src/ledger/manager/core_mount.rs`
-- `crates/core/src/ledger/manager/core_dirs.rs`
+- 负责 repo open/close、runtime directory bootstrap、catalog repair 与各层生命周期编排。
+- 该层只能编排 authority/projection/watcher/repair，不得把 side table 升格为 authority。
 
-## 12. Code Mapping
-
-- authority tables and append:
-  - `crates/core/src/ledger/runtime_tables.rs`
-  - `crates/core/src/ledger/append_validate.rs`
-- repo manager & workspace:
-  - `crates/core/src/ledger/manager/repository.rs`
-  - `crates/core/src/ledger/manager/workspace.rs`
-  - `crates/core/src/ledger/manager/metadata_ops.rs`
-  - `crates/core/src/ledger/manager/ops_ops.rs`
-  - `crates/core/src/ledger/manager/ops_structure.rs`
-- projection:
-  - `crates/core/src/ledger/manager/structure_projection.rs`
-  - `crates/core/src/ledger/manager/structure_projection_support.rs`
-  - `crates/core/src/tree/`
-  - `crates/core/src/sync/materialize.rs`
-- watcher:
-  - `crates/core/src/sync/watcher/backend/notify_impl.rs`
-  - `crates/core/src/sync/watcher/dispatch.rs`
-  - `crates/core/src/sync/watcher/suppressor.rs`
-  - `crates/core/src/sync/watcher/registry.rs`
-
-## 13. Refactor Target
+## 12. Refactor Target
 
 长期应显式形成四个 infra 子系统：
 
@@ -542,7 +507,7 @@ Intent -> Ledger Facts -> Projection -> Vault
 - `watcher_runtime`
 - `repair_runtime`
 
-当前这些能力仍然分散在 `RepoManager` 与多个 manager/helper 模块中。未来重构必须按这四层收敛。
+实现必须按这四层收敛；任何 manager/helper 只能作为其中一层的内部细节，不得跨层持有隐式 authority。
 
 ## 本章相关命令
 

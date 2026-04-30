@@ -6,7 +6,6 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
-- `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
 
 ## 1. Scope
 
@@ -48,7 +47,7 @@
 补充：
 
 - `repo_name` 只能作为兼容提示或 selector 输入，进入同步链后必须解析成 `repo_id`。
-- relay / proxy / browser runtime 不得依赖“当前默认 repo”这样的隐式全局状态。
+- relay / proxy / browser runtime 不得依赖“隐式默认 repo”这样的全局状态。
 
 ## 3. Topology Contract
 
@@ -387,55 +386,29 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 让 Proxy 伪装自己拥有 ledger authority。
 - 使用空 repo 占位符完成 snapshot / sync 路由。
 
-## 12. Module Boundary
+## 12. Runtime Boundary
 
 ### 12.1 Protocol Layer
 
-- `crates/core/src/protocol/client.rs`
-- `crates/core/src/protocol/server.rs`
+- 定义 client/server message schema、frame serialization、structured protocol errors 与 version compatibility window。
+- 不得依赖 UI 组件状态或隐式默认 repo。
 
 ### 12.2 Sync Engine Layer
 
-- `crates/core/src/sync/engine/handshake.rs`
-- `crates/core/src/sync/materialize.rs`
+- 负责 vector diff、snapshot fallback、materialize 与 trust boundary enforcement。
+- 所有 repo-scoped sync 输入必须先完成 `repo_id` / `branch` / `scope_nonce` 验证。
 
 ### 12.3 Server WS Runtime {#server-ws-runtime}
 
-- `apps/cli/src/server/ws/`
-- `apps/cli/src/server/handlers/sync/`
-- `apps/cli/src/server/repo_scope*.rs`
+- 负责 ws upgrade、session gate、scope guard、server outbound fanout 与 sync handler 编排。
+- unauthorized、protocol error、stale scope 与 disconnected 必须走不同结构化错误路径。
 
 ### 12.4 Web Runtime {#web-ws-runtime}
 
-- `apps/web/src/hooks/use_core/effects/handshake*.rs`
-- `apps/web/src/hooks/use_core/effects/message_sync*.rs`
-- `apps/web/src/hooks/use_core/storage_runtime*.rs`
+- 负责 browser peer identity、repo-scoped handshake、client-side durable state probe 与 stale message discard。
+- Web runtime 不得在 disconnected、unauthorized 或 peer identity 缺失时保持可写。
 
-## 13. Code Mapping
-
-- message protocol:
-  - `crates/core/src/protocol/client.rs`
-  - `crates/core/src/protocol/server.rs`
-- sync engine:
-  - `crates/core/src/sync/engine/handshake.rs`
-  - `crates/core/src/sync/materialize.rs`
-- server ws:
-  - `apps/cli/src/server/ws/mod.rs`
-  - `apps/cli/src/server/ws/route/core.rs`
-  - `apps/cli/src/server/ws/route/docs.rs`
-  - `apps/cli/src/server/ws/route/source_control.rs`
-  - `apps/cli/src/server/ws/route/scope_guard.rs`
-  - `apps/cli/src/server/handlers/sync/hello.rs`
-  - `apps/cli/src/server/handlers/sync/hello_scope.rs`
-- browser runtime:
-  - `apps/web/src/hooks/use_core/effects/handshake.rs`
-  - `apps/web/src/hooks/use_core/effects/handshake_bootstrap.rs`
-  - `apps/web/src/hooks/use_core/effects/handshake_send.rs`
-  - `apps/web/src/hooks/use_core/effects/message_sync.rs`
-  - `apps/web/src/hooks/use_core/storage_runtime.rs`
-  - `apps/web/src/hooks/use_core/storage_runtime_bootstrap.rs`
-
-## 14. Refactor Target
+## 13. Refactor Target
 
 长期应显式收敛成：
 
@@ -444,7 +417,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - `browser_peer_runtime`
 - `relay_proxy_runtime`
 
-当前网络实现仍散在 ws route、sync handlers、repo scope cleanup 和前端 handshake effects 中。未来重构必须围绕这四个 runtime 收束。
+实现必须围绕这四个 runtime 收束；ws route、sync handler、scope cleanup 与前端 handshake 只能作为对应 runtime 的内部实现细节。
 
 ## 本章相关命令
 

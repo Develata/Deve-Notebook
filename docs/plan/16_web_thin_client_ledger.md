@@ -6,7 +6,6 @@
 - `Status`: `Approved Runtime Architecture`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
-- `Primary Code Areas`: `apps/web/src/hooks/use_core/pending*.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `crates/core/src/protocol/`
 
 ## 1. Scope
 
@@ -321,48 +320,24 @@ overlay state row 至少需要：
 - 让 pending_fs_ops / metadata / snapshot 充当删除真源
 - 让 ws 和 http 走两套不同 commit 语义
 
-## 11. Module Boundary
+## 11. Runtime Boundary
 
 ### 11.1 Protocol Layer
 
-- `crates/core/src/protocol/client.rs`
-- `crates/core/src/protocol/server.rs`
+- 负责 write intent、ack/reject、scope-stamped server messages 与结构化错误 schema。
+- 不得把 UI 展示状态编码成协议 authority。
 
 ### 11.2 Server Write Layer
 
-- `apps/cli/src/server/handlers/document/edit.rs`
-- `apps/cli/src/server/handlers/document/open.rs`
-- `apps/cli/src/server/handlers/document/snapshot.rs`
+- 负责 document open/snapshot/edit 的服务端权威提交与拒绝。
+- 所有写入必须经过 repo scope、writer identity、readiness 与 ledger append 校验。
 
 ### 11.3 Web Runtime Layer
 
-- `apps/web/src/editor/`
-- `apps/web/src/hooks/use_core/pending*.rs`
-- `apps/web/src/hooks/use_core/effects/message_dispatch_write.rs`
-- `apps/web/src/hooks/use_core/effects/message_dispatch_protocol.rs`
-- `apps/web/src/hooks/use_core/navigation.rs`
+- 负责 pending overlay、client op id、late ack discard、navigation guard 与 reconnect recovery。
+- 不得把 DOM buffer、localStorage 或 stale scope message 当成已确认事实。
 
-## 12. Code Mapping
-
-- protocol:
-  - `crates/core/src/protocol/client.rs`
-  - `crates/core/src/protocol/server.rs`
-- server write path:
-  - `apps/cli/src/server/handlers/document/edit.rs`
-  - `apps/cli/src/server/handlers/document/open.rs`
-  - `apps/cli/src/server/handlers/document/snapshot.rs`
-- web editor/runtime:
-  - `apps/web/src/editor/mod.rs`
-  - `apps/web/src/editor/sync/snapshot.rs`
-  - `apps/web/src/editor/sync/history.rs`
-  - `apps/web/src/editor/sync/live.rs`
-  - `apps/web/src/hooks/use_core/pending.rs`
-  - `apps/web/src/hooks/use_core/pending_ops.rs`
-  - `apps/web/src/hooks/use_core/effects/message_dispatch_write.rs`
-  - `apps/web/src/hooks/use_core/effects/message_dispatch_protocol.rs`
-  - `apps/web/src/hooks/use_core/navigation.rs`
-
-## 13. Refactor Target
+## 12. Refactor Target
 
 长期应显式形成：
 
@@ -370,7 +345,7 @@ overlay state row 至少需要：
 - `pending_overlay_runtime`
 - `write_confirmation_runtime`
 
-当前逻辑已经分散在 editor sync、`use_core` pending、message dispatch 与 navigation guard 中。未来重构必须把这三条链拉成稳定 runtime，而不是继续靠 scattered effects 协调。
+实现必须把 editor sync、pending overlay、message dispatch 与 navigation guard 收敛到稳定 runtime 链路，不得依赖无边界 effects 协调写入确认。
 
 ## 14. Success Criteria
 

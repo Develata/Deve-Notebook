@@ -6,7 +6,6 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
-- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
 
 > **Modules**: [Web](./08_ui_design_01_web.md) | [Desktop](./08_ui_design_02_desktop.md) | [Mobile](./08_ui_design_03_mobile.md)
 
@@ -374,67 +373,29 @@ PinnedSetChanged
 - 让 shell 组件自行猜测 repo writable / readonly 状态。
 - 用普通 `div` 冒充需要 button semantics 的交互控件。
 
-## 10. Module Boundary
+## 10. Runtime Boundary
 
 ### 10.1 View / Shell Layer
 
-- `apps/web/src/components/activity_bar/`
-- `apps/web/src/components/sidebar/`
-- `apps/web/src/components/mobile_layout/`
-- `apps/web/src/components/diff_view/`
-- `apps/web/src/components/chat/`
+- 负责可见 shell、panel、drawer、overlay、diff/chat surface 与可访问性交互。
+- 只能消费 runtime state 并发出 typed intent。
 
 ### 10.2 Application Control Layer
 
-- `apps/web/src/hooks/use_core/callbacks*.rs`
-- `apps/web/src/hooks/use_core/navigation.rs`
-- `apps/web/src/hooks/use_core/write_gate*.rs`
+- 负责 command dispatch、navigation guard、write gate、repo/document/source-control intent 编排。
+- 不得持有 authority state 的私有副本。
 
 ### 10.3 Feature Runtime Layer
 
-- `apps/web/src/hooks/use_core/effects/`
-- `apps/web/src/hooks/use_core/state_init/`
-- `apps/web/src/hooks/use_core/pending*.rs`
-- `apps/web/src/hooks/use_core/diff_session.rs`
+- 负责 feature-specific state machine、server message dispatch、pending overlay、diff session lifecycle。
+- runtime 间交互必须通过稳定 command/control surface，不得互相篡改内部状态。
 
 ### 10.4 Shared Layout Infrastructure
 
-- `apps/web/src/hooks/use_layout*.rs`
-- `apps/web/src/components/main_layout_overlays.rs`
+- 负责 layout prefs、panel dimensions、overlay host 与跨 surface focus/stacking 管理。
+- 不得保存 repo authority、session secret、peer private key 或业务事实。
 
-## 11. Code Mapping
-
-- shell & overlays:
-  - `apps/web/src/components/main_layout_overlays.rs`
-  - `apps/web/src/components/desktop_layout_content.rs`
-- activity bar:
-  - `apps/web/src/components/activity_bar/mod.rs`
-  - `apps/web/src/components/activity_bar/popup_menu.rs`
-- sidebar & repo switcher:
-  - `apps/web/src/components/sidebar/mod.rs`
-  - `apps/web/src/components/sidebar/repo_switcher.rs`
-  - `apps/web/src/components/sidebar/source_control/`
-- mobile shell:
-  - `apps/web/src/components/mobile_layout/mod.rs`
-  - `apps/web/src/components/mobile_layout/gesture.rs`
-  - `apps/web/src/components/mobile_layout/drawers/`
-- control / runtime glue:
-  - `apps/web/src/hooks/use_core/callbacks_switch_repo.rs`
-  - `apps/web/src/hooks/use_core/callbacks_switch_branch.rs`
-  - `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
-  - `apps/web/src/hooks/use_core/navigation.rs`
-  - `apps/web/src/hooks/use_core/effects/message_*.rs`
-
-补充映射：
-
-- layout infra:
-  - `apps/web/src/hooks/use_layout*.rs`
-  - `apps/web/src/components/main_layout_overlays.rs`
-- settings-backed ui prefs:
-  - `apps/web/src/components/settings.rs`
-  - `apps/web/src/components/settings_sections.rs`
-
-## 12. Refactor Target
+## 11. Refactor Target
 
 长期应显式形成三层前端结构：
 
@@ -442,7 +403,7 @@ PinnedSetChanged
 - `application_control`
 - `feature_runtime`
 
-当前 `use_core` 仍然过厚，许多 callback/effect 文件只是切碎总控逻辑。未来重构目标不是继续加更多 effect，而是把 command/control/runtime 的边界固定下来。
+目标不是继续增加无边界 effect，而是固定 command/control/runtime 的依赖方向：view 发 intent，control 做编排，runtime 持有本功能状态机。
 
 ## 本章相关命令
 

@@ -6,12 +6,11 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
-- `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
 
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 
-> **原生边界**：Mobile native 是壳层、生命周期与本机 service 绑定层，不拥有业务 authority。
-> **目标**：Mobile 端目标采用 **Tauri v2 Mobile** 外壳，前端代码与 Web 端共享。
+> **Current Native Boundary**：Mobile native 是壳层、生命周期与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
+> **Post-Gate Target**：Mobile 端目标采用 **Tauri v2 Mobile packaging** 外壳，前端代码与 Web 端共享。
 > **离线目标**：Mobile 端目标是在无公网环境下保持本地读写可用；完整 offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
 
 > **Web 映射**：当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
@@ -129,7 +128,7 @@ Mobile 比 Desktop 更需要推迟真实 child-process runtime：
 *   `packaging_gate_required = true`
 *   `authority_writes_allowed = false`
 
-后续若打开真实 mobile process adapter，必须位于 `apps/mobile` 的 `native-packaging`
+后续若打开真实 mobile process adapter，必须位于 Mobile native adapter 的 `native-packaging`
 feature 后，并且只做受控 spawn/probe/session/restart wiring；不得绕过 foreground
 reprobe、writer-ready 或 repo scope gate。
 

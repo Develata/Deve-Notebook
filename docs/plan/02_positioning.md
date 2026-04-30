@@ -6,12 +6,10 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/02_positioning.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
-- `Primary Code Areas`: `apps/cli/src/commands/`, `crates/core/src/ledger/manager/`
 
 ## 1. Meta (版本与状态)
 
 **版本**: 0.0.1
-**状态**: 后端逻辑闭环 + 前端交互定义完整 + 数据/安全强化落地。
 **核心理念**: 账本为真源 + **三位一体隔离 (Trinity Isolation)** + **Git-Flow 数据主权** + 工业级内核。
 
 ## 2. Positioning (项目定位)

@@ -6,12 +6,11 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
-- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
 
 本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。
 
-> **原生边界**：Desktop native 是壳层与本机 service 绑定层，不拥有业务 authority。
-> **目标**：Desktop 端目标采用 **Tauri v2** 外壳，前端代码与 Web 端共享。
+> **Current Native Boundary**：Desktop native 是壳层与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
+> **Post-Gate Target**：Desktop 端目标采用 **Tauri v2 native packaging** 外壳，前端代码与 Web 端共享。
 > **离线目标**：Desktop 端目标是在无公网环境下保持本地编辑可用；完整 offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
 
 > **Web 映射**：当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
@@ -40,7 +39,7 @@ Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate
 
 Desktop packaging scaffold 只描述首个桌面壳层批次，不等价于 packaging gate 已打开：
 
-*   dependency batch: `tauri` + `tauri-build`，只能落在 `apps/desktop`。
+*   dependency batch: `tauri` + `tauri-build`，只能落在 Desktop native adapter 的 feature scope。
 *   capabilities: window shell、menu bar、system tray、installer、auto-update。
 *   forbidden authorities: ledger、vault、source-control、search index、`.git` mirror、
     `.notegit`。
@@ -75,7 +74,7 @@ dependency 推迟到独立运行时批次处理。
     scaffold 不是 dependency gate 已打开的证明。
 
 后续若打开 gate，必须先更新 `scripts/check-native-track-boundary.sh` 的允许规则，并保持：
-默认构建 no-Tauri、依赖只在 `apps/desktop` feature 后、packaging 不获得
+默认构建 no-Tauri、依赖只在 Desktop native adapter feature 后、packaging 不获得
 ledger/vault/source-control/search/`.git`/`.notegit` authority。
 
 ### 0.3 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
@@ -181,7 +180,7 @@ NativeColdStart
 
 后续若打开真实 process adapter，必须满足：
 
-*   仍只落在 `apps/desktop` 的 `native-packaging` feature 后，不得进入 workspace
+*   仍只落在 Desktop native adapter 的 `native-packaging` feature 后，不得进入 workspace
     root、core、cli 或 web 默认构建。
 *   只允许做受控 child-process spawn、health-probe、session-handoff、restart-budget
     wiring；不得直接写 ledger/vault/source-control/search/`.git`/`.notegit`。

@@ -6,18 +6,17 @@
 - `Status`: `Deferred`
 - `Counterpart Feature`: `docs/features/17_plugins.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
-- `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
 
-> 本章当前**不要求新增完整插件平台**。
+> 本章**不要求新增完整插件平台**。
 > AI Chat 已提升为第 10 章的原生产品能力，不再视为插件主线。
-> 仓库中已存在的 Rhai/plugin-host 代码是外围兼容运行时，必须按本章边界约束；它不代表插件安装器、插件市场或默认启用的扩展主线已经成立。
+> Rhai/plugin-host 若保留，只能作为外围兼容运行时，并必须按本章边界约束；它不代表插件安装器、插件市场或默认启用的扩展主线成立。
 > 本章保留两类未来扩展：**Trusted External Agent Runtime** 与 **Calculation Runtime**。
-> MCP 不作为 Deve-Notebook 插件/运行时方向；当前由 Skills + 受控 CLI 工具调用替代，不再规划也不保留 MCP runtime。
+> MCP 不作为 Deve-Notebook 插件/运行时方向；相关扩展需求由 Skills + 受控 CLI 工具调用替代，不再规划也不保留 MCP runtime。
 
 ## 1. 章节状态
 
-*   **当前要求**：定义边界、配置位、错误契约与安全前提。
-*   **当前不要求**：
+*   **要求**：定义边界、配置位、错误契约与安全前提。
+*   **不要求**：
     - 插件安装器
     - 插件市场
     - 新增完整插件平台运行时代码
@@ -32,10 +31,9 @@ MCP 相关文字只作为“为什么不做”的历史记录保留。扩展路�
 
 允许保留轻量 Rhai runtime、manifest/capability 模型和 plugin-host / `PluginCall` 兼容边界，但这些能力属于外围系统。
 
-### 当前允许的实现范围
+### 兼容实现范围
 
-*   `crates/core/src/plugin/` 可保留 manifest、capability、Rhai runtime、host API 与 loader。
-*   `apps/cli/src/server/handlers/plugin.rs`、`plugin_host*.rs`、`plugin_response.rs` 可保留 `PluginCall` / `PluginResponse` 处理。
+*   兼容 plugin host **MAY** 保留 manifest、capability、Rhai runtime、host API、loader 与 `PluginCall` / `PluginResponse` 处理。
 *   plugin-host 只能暴露外围调用入口，不得成为核心 notebook authority、repo scope 或 write pipeline 的替代入口。
 
 ### 必须保持的边界
@@ -68,11 +66,11 @@ MCP 相关文字只作为“为什么不做”的历史记录保留。扩展路�
 *   环境变量白名单。
 *   超时 / 输出上限 / 并发上限。
 *   默认只读上下文，不得直接获得 Ledger 管理对象写权限。
-*   无法满足这些条件时，当前 release **MAY** 完全不提供此能力。
+*   无法满足这些条件时，对应 release **MAY** 完全不提供此能力。
 
 ## 4. Calculation Runtime
 
-Calculation Runtime 仍然是长期能力，但当前**不要求代码实现**。
+Calculation Runtime 仍然是长期能力，但本章**不要求代码实现**。
 
 ### 目标用途
 
@@ -85,7 +83,7 @@ Calculation Runtime 仍然是长期能力，但当前**不要求代码实现**�
 *   **No Net**（除非用户显式授权）
 *   **Ephemeral**（用完即焚）
 
-### 当前阶段要求
+### 接口阶段要求
 
 *   只预留接口与配置位。
 *   不要求实际执行器、调度器、镜像管理或 UI 面板落地。
@@ -104,7 +102,7 @@ Calculation Runtime 仍然是长期能力，但当前**不要求代码实现**�
 
 ## 6. Related Commands
 
-*   当前无必须实现的命令。
+*   无必须实现的命令。
 
 ## 7. Related Configuration
 

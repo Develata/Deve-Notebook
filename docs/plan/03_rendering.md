@@ -6,7 +6,6 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
-- `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
 
 ## 1. Scope
 
@@ -20,12 +19,12 @@
 
 按钮入口、用户主观体验与 Chrome MCP 路径属于 `docs/features/03_rendering.md`。
 
-## 1.1 当前阶段边界 {#current-rendering-split}
+## 1.1 Rendering Capability Boundary {#current-rendering-split}
 
-本章按两层理解：
+本章按两层目标理解：
 
-- **当前验收边界**：只覆盖测试、验收脚本或可复现手工验收能证明的行为。
-- **规划目标边界**：可保留为后续工程目标，但不得被描述成当前已完成能力，也不得作为当前发布阻塞项。
+- **Baseline contract**：进入主线验收前必须具备稳定测试、验收脚本或可复现手工路径。
+- **Extended target**：作为后续工程目标保留；未绑定验收前不得作为发布阻塞项。
 
 当前主编辑路径必须保持三层分工：
 
@@ -33,13 +32,13 @@
 - **Rust/WASM editor runtime**：只负责 snapshot、history、live op、pending overlay、read-only gate 与批量调度；不得把 projection 当作 ledger authority 写回。
 - **辅助 Markdown-to-HTML 渲染器**：只服务聊天、只读摘要或辅助 HTML 区域；不得被视为主编辑器 hybrid engine。
 
-以下能力在对应代码、测试与验收补齐前均属于规划目标：
+以下能力属于 extended target；只有在对应实现、测试与验收同步补齐后，才可进入 baseline contract：
 
 - 独立 Preview Projection / Live Preview / Milkdown。
 - 通用富文本编辑或所见即所得 authority。
 - 任意 HTML、`==highlight==`、emoji shortcode、footnote、wikilink 的完整语义支持。
-- 真正跨超大文档的完整 virtual rendering；现有 `prefetch.rs` 是批量应用/渐进调度基础设施，不等价于完整虚拟渲染引擎。
-- rendering settings 的完整 GUI 持久化；当前只能作为接口合同或 future。
+- 真正跨超大文档的完整 virtual rendering；批量应用/渐进调度基础设施不得被等同于完整虚拟渲染引擎。
+- rendering settings 的完整 GUI 持久化。
 
 ## 2. Authoritative Entities
 
@@ -373,12 +372,9 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - 让 outline 渲染不受支持语法并假装是规范能力。
 - 通过任意 HTML 绕开 whitelist。
 
-## 12. Module Boundary
+## 12. Runtime Boundary
 
 ### 12.1 Editor Runtime
-
-- `apps/web/src/editor/`
-- `apps/web/src/editor/sync/`
 
 职责：
 
@@ -389,9 +385,6 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 
 ### 12.2 JS Adapter / Widget Projection
 
-- `apps/web/js/editor_adapter.js`
-- `apps/web/js/extensions/`
-
 职责：
 
 - CodeMirror adapter
@@ -401,8 +394,6 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 
 ### 12.3 Outline Runtime
 
-- `apps/web/src/components/outline_render/`
-
 职责：
 
 - outline parsing
@@ -411,40 +402,11 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 
 ### 12.4 Authority Bridge {#document-authority-bridge}
 
-- `apps/cli/src/server/handlers/document/open.rs`
-- `apps/cli/src/server/handlers/document/snapshot.rs`
-- `apps/cli/src/server/handlers/document/edit.rs`
-- `crates/core/src/protocol/server.rs`
-
 职责：
 
 - snapshot / history / ack / reject contract
 
-## 13. Code Mapping
-
-- editor runtime:
-  - `apps/web/src/editor/mod.rs`
-  - `apps/web/src/editor/delta_input.rs`
-  - `apps/web/src/editor/sync/snapshot.rs`
-  - `apps/web/src/editor/sync/history.rs`
-  - `apps/web/src/editor/sync/live.rs`
-- JS adapter:
-  - `apps/web/js/editor_adapter.js`
-  - `apps/web/js/extensions/hybrid.js`
-  - `apps/web/js/extensions/math.js`
-  - `apps/web/js/extensions/mermaid.js`
-  - `apps/web/js/extensions/frontmatter_parser.js`
-  - `apps/web/js/extensions/code_toolbar.js`
-- outline:
-  - `apps/web/src/components/outline_render/mod.rs`
-  - `apps/web/src/components/outline_render/parse.rs`
-  - `apps/web/src/components/outline_render/scan.rs`
-- transport:
-  - `apps/cli/src/server/handlers/document/open.rs`
-  - `apps/cli/src/server/handlers/document/snapshot.rs`
-  - `apps/cli/src/server/handlers/document/edit.rs`
-
-## 14. Refactor Target
+## 13. Refactor Target
 
 长期应显式拆成四个子系统：
 

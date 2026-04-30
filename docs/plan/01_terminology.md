@@ -6,7 +6,6 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
-- `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
 
 为避免“想法正确但实现含糊”，本白皮书对关键术语给出**定义**，并使用以下规范性用语。
 

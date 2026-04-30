@@ -6,7 +6,6 @@
 - `Status`: `Reference`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
-- `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`
 
 本章定义 `Deve-Note` 的软件发布策略、版本管理规范以及 CI/CD 自动化流程。
 
@@ -34,7 +33,7 @@
 基于 GitHub Actions 实现全自动构建。
 
 > [!NOTE]
-> 发布基线只要求 `.github/workflows/release.yml`。`nightly.yml` 与 `speckit-sync-check.yml` 不属于当前 release / CI 要求，不构成总蓝图 drift。
+> 发布基线只要求 `.github/workflows/release.yml`。`nightly.yml` 与 `speckit-sync-check.yml` 不属于权威 release / CI 要求，不构成总蓝图 drift。
 
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).

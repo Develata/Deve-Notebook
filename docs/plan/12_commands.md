@@ -6,7 +6,6 @@
 - `Status`: `Planned / Optional`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
-- `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/components/command_palette/`
 
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
@@ -47,7 +46,7 @@
 *   **Source Control / Git-like Workflow**:
     *   `Source Control: Sync`: 同步 Deve repo-scoped changes.
     *   `Source Control: Commit`: 提交 staged changes 到 ledger-backed commit anchor.
-    *   `Source Control: Push`: 推送 Deve source-control state；当前不得被解释为 Web 直接执行 Git mirror push；Git mirror publish 只由显式 `deve git push` surface 承担。
+    *   `Source Control: Push`: 推送 Deve source-control state；不得被解释为 Web 直接执行 Git mirror push；Git mirror publish 只由显式 `deve git push` surface 承担。
     *   `Git: Status`: 只读查看 `.git` mirror readiness、repo-local `.gitignore` 是否保护 `.notegit/`，以及 `GitMirrorQueued / Committed / OutOfSync` 队列状态。
     *   `Git: Mirror`: 显式执行 queued Git mirror commit；执行面 **MUST** 复用第 7 章 Git mirror preflight 与 out-of-sync 边界。
     *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射。
@@ -61,7 +60,7 @@
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
     *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
 
-*   **实现状态边界**:
+*   **命令验收边界**:
     *   Command Palette 是否真正执行命令必须以 acceptance case 绑定为准；本章列名不等于功能已完成。
     *   CLI-only notice 只能作为可发现性入口，不得被解释为 Web 已能直接执行 Git import/push/repair。
     *   Git repair 的可点击 UI、完整 conflict UI 与后台自动 repair 都必须另行设计，不能从 notice 或只读 review surface 隐式升级。

@@ -6,7 +6,6 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
-- `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app_auth_monitor.rs`
 
 ## 1. Scope
 
@@ -184,8 +183,6 @@ WsConnecting
 
 ### 5.5 Password Hashing {#password-hashing}
 
-> **Code Refs**: `crates/core/src/security/auth/password.rs`
-
 - `AUTH_PASS` **MUST** 存储为 Argon2 PHC string。
 - 登录验证 **MUST** 将用户输入与配置中的 Argon2 hash 比较。
 - 明文密码 **MUST NOT** 存储在 config、ledger、cookie、JWT 或 logs 中。
@@ -224,8 +221,6 @@ WsConnecting
   - `200 msg/min/connection`
 
 ### 6.5 Security Headers {#security-headers}
-
-> **Code Refs**: `apps/cli/src/server/auth/headers.rs`
 
 所有 HTTP 响应必须包含：
 
@@ -333,11 +328,9 @@ WsConnecting
 - 在生产默认放开 CORS Any。
 - 用裸字符串错误代替稳定 auth error contract。
 
-## 11. Module Boundary
+## 11. Runtime Boundary
 
 ### 11.1 Core Security Layer
-
-- `crates/core/src/security/auth/`
 
 职责：
 
@@ -346,9 +339,6 @@ WsConnecting
 - password hashing
 
 ### 11.2 Server Auth Layer
-
-- `apps/cli/src/server/auth/`
-- `apps/cli/src/server/auth/handlers/`
 
 职责：
 
@@ -360,35 +350,13 @@ WsConnecting
 
 ### 11.3 Browser Auth Layer
 
-- `apps/web/src/api/auth_probe.rs`
-- `apps/web/src/app_auth_monitor.rs`
-- `apps/web/src/components/login/`
-
 职责：
 
 - session probe
 - login page
 - unauthorized surface
 
-## 12. Code Mapping
-
-- core auth:
-  - `crates/core/src/security/auth/jwt.rs`
-  - `crates/core/src/security/auth/password.rs`
-  - `crates/core/src/security/auth/config.rs`
-- server auth:
-  - `apps/cli/src/server/auth/middleware.rs`
-  - `apps/cli/src/server/auth/cookie.rs`
-  - `apps/cli/src/server/auth/brute_force.rs`
-  - `apps/cli/src/server/auth/headers.rs`
-  - `apps/cli/src/server/auth/handlers/login.rs`
-  - `apps/cli/src/server/auth/handlers/session.rs`
-- browser auth:
-  - `apps/web/src/api/auth_probe.rs`
-  - `apps/web/src/app_auth_monitor.rs`
-  - `apps/web/src/components/login/`
-
-## 13. Refactor Target
+## 12. Refactor Target
 
 长期应显式形成：
 
@@ -403,8 +371,6 @@ WsConnecting
 - 无
 
 ## 本章相关配置 {#auth-config}
-
-> **Code Refs**: `crates/core/src/security/auth/config.rs`
 
 - `AUTH_SECRET`
 - `AUTH_USER`

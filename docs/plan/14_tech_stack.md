@@ -6,27 +6,26 @@
 - `Status`: `Reference`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
-- `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
 
 ## 1. Technology Stack
 
-| **Layer**    | **Technology**           | **Status**        | **Selection Reasoning**             |
+| **Layer**    | **Technology**           | **Decision**      | **Selection Reasoning**             |
 | :----------- | :----------------------- | :---------------- | :---------------------------------- |
-| **Language** | Rust 1.92 / Edition 2024 | Verified          | 与当前 `Cargo.lock` MSRV 对齐，全栈统一。 |
-| **Frontend** | **Leptos v0.7**          | Verified          | 信号驱动 (Signals)，性能极致。      |
-| **UI**       | **Tailwind CSS**         | Verified          | 原子化 CSS。                        |
-| **Router**   | **leptos_router**        | Verified          | 前端路由管理。                      |
-| **I18n**     | **自研 `Locale + t::*`** | Verified          | 轻量、零代码生成、调用面稳定。      |
-| **Editor**   | **CodeMirror 6**         | Verified          | 核心编辑器，Headless 模式。         |
-| **Icons**    | **Lucide Icons**         | Verified          | 统一 SVG 图标集。                   |
-| **Storage**  | **Redb** (Native)        | Verified          | 嵌入式 KV 数据库 (Zero-copy).       |
-| **Auth**     | **Argon2 + Ed25519**     | Verified          | 身份认证与节点签名。                |
-| **Diff**     | **Dissimilar**           | Verified          | 文本差异计算算法 (Myers)。              |
-|              | **similar**              | Verified          | 辅助 Diff 计算。                        |
-|              | ~~Loro~~                 | TBD (远期预研)    | CRDT 框架，当前不依赖。                |
-| **CLI**      | **Clap v4**              | Verified          | 命令行解析。                        |
-| **Async**    | **Tokio v1**             | Verified          | 异步运行时。                        |
-| **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
+| **Language** | Rust 1.92 / Edition 2024 | Selected          | 与 workspace MSRV 对齐，全栈统一。 |
+| **Frontend** | **Leptos v0.7**          | Selected          | 信号驱动 (Signals)，性能极致。      |
+| **UI**       | **Tailwind CSS**         | Selected          | 原子化 CSS。                        |
+| **Router**   | **leptos_router**        | Selected          | 前端路由管理。                      |
+| **I18n**     | **自研 `Locale + t::*`** | Selected          | 轻量、零代码生成、调用面稳定。      |
+| **Editor**   | **CodeMirror 6**         | Selected          | 核心编辑器，Headless 模式。         |
+| **Icons**    | **Lucide Icons**         | Selected          | 统一 SVG 图标集。                   |
+| **Storage**  | **Redb** (Native)        | Selected          | 嵌入式 KV 数据库 (Zero-copy).       |
+| **Auth**     | **Argon2 + Ed25519**     | Selected          | 身份认证与节点签名。                |
+| **Diff**     | **Dissimilar**           | Selected          | 文本差异计算算法 (Myers)。              |
+|              | **similar**              | Selected          | 辅助 Diff 计算。                        |
+|              | ~~Loro~~                 | Research          | CRDT 框架，baseline 不依赖。                |
+| **CLI**      | **Clap v4**              | Selected          | 命令行解析。                        |
+| **Async**    | **Tokio v1**             | Selected          | 异步运行时。                        |
+| **Logs**     | **Tracing**              | Selected          | 结构化日志。                        |
 | **AI Chat**  | **OpenAI-compatible SSE** | Native Baseline | 第一方最小 chat 路径；必须保持 read-first、低常驻成本与 PLAN/BUILD 模式边界。 |
 | **Trusted External Agent** | **External CLI Bridge** | Optional Trusted Path | 外部 CLI Agent 仅作为显式启用的受信任路径；默认关闭，不属于通用插件市场能力。 |
 | **MCP**      | **No runtime**   | Retired | 不规划、不保留 MCP runtime；相关需求由 Skills 调用受控 CLI 工具或 Trusted CLI path 承载。 |
@@ -83,12 +82,12 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 
 ### 1.4 原生打包依赖门禁 {#native-packaging-dependency-gate}
 
-Native track 的默认构建必须保持无 packaging runtime 依赖。`apps/desktop`
-与 `apps/mobile` 的职责是固定 endpoint/session/bootstrap/lifecycle contract；真实
+Native track 的默认构建必须保持无 packaging runtime 依赖。Desktop/Mobile native adapter
+的职责是固定 endpoint/session/bootstrap/lifecycle contract；真实
 packaging runtime 只能在后续批次引入，并必须满足以下门禁：
 
-- 依赖只允许落在 `apps/desktop` 或 `apps/mobile`，不得进入 workspace root
-  dependency、`deve_core`、`deve_cli` 或 `deve_web`。
+- 依赖只允许落在对应 Desktop/Mobile native adapter crate，不得进入 workspace root
+  dependency、authority core、server runtime 或 web runtime。
 - 依赖必须挂在对应 crate 的 `native-packaging` feature 后；默认 feature set
   仍编译 no-packaging skeleton。
 - `native-packaging` 不得授予 ledger/vault/source-control/search/`.git`/`.notegit`
@@ -102,7 +101,7 @@ packaging runtime 只能在后续批次引入，并必须满足以下门禁：
 Desktop packaging scaffold 只能作为 feature-gated 规划面：允许声明 `tauri` /
 `tauri-build` dependency batch 与 window/menu/tray/installer/auto-update acceptance，
 但不得引入实际 Tauri dependency。该 scaffold 只能作为下一批 dependency decision 的输入，
-不得被解释为已经具备 native packaging。
+不得被解释为具备 native packaging。
 
 Mobile packaging scaffold 只能作为 feature-gated 规划面：允许声明 `tauri` /
 `tauri-build` dependency batch 与 WebView shell/permission bridge/share sheet/deeplink/
@@ -110,15 +109,15 @@ file picker/push notification/store package acceptance，但不得引入实际 T
 dependency。移动端 foreground/background lifecycle reprobe、session/readiness correctness
 继续由 no-packaging skeleton tests 保证，packaging 不得取得业务 authority。
 
-Native embedded service supervision 按 no-runtime contract 处理：`deve_core::native_adapter`
+Native embedded service supervision 按 no-runtime contract 处理：core native adapter contract
 定义 `NativeServiceSupervisor`、health probe、retry budget 与 session handoff failure
-分类；`apps/desktop`、`apps/mobile` 与 native loopback launch surface 复用该 contract。
+分类；Desktop/Mobile native adapter 与 native loopback launch surface 复用该 contract。
 该 contract 不启动真实子进程，不引入 Tauri dependency，也不授予 native shell 任何 core authority。
 
 Native packaging dependency gate 默认关闭：
 `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为
 `DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 不允许进入默认
-workspace 构建。`apps/desktop` 与 `apps/mobile` 的 packaging scaffold 只记录 planned
+workspace 构建。Desktop/Mobile packaging scaffold 只记录 planned
 capabilities 与 forbidden authorities；它不是 gate 已打开的证明。
 
 真实 native process adapter 必须推迟到 packaging gate 之后：
