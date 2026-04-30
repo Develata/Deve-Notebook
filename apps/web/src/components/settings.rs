@@ -89,6 +89,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                         <div
                             class=move || reserved_state.get().class
                             data-deve-setting-disabled=move || reserved_state.get().disabled_attr
+                            aria-disabled=move || reserved_state.get().aria_disabled
                             title=move || reserved_state.get().reason
                         >
                              <div class="flex items-center justify-between">

@@ -9,8 +9,8 @@ and an explicit current-release-unavailable reason.
 ## Implemented
 
 - Added `reserved_setting_state(Locale)` to the Settings section policy module.
-- Hybrid Editing placeholder now derives class, disabled marker, title, and
-  visible reason from that policy.
+- Hybrid Editing placeholder now derives class, disabled marker, `aria-disabled`,
+  title, and visible reason from that policy.
 - Replaced the stale `Phase 6` copy with current-boundary wording:
   `Future setting: not available in the current release`.
 - Added policy and i18n tests for the reserved setting disabled reason.

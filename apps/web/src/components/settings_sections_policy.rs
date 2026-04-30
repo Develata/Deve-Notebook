@@ -43,13 +43,15 @@ pub(super) fn language_button_state(locale: Locale) -> LanguageButtonState {
 pub(super) struct ReservedSettingState {
     pub class: &'static str,
     pub disabled_attr: &'static str,
+    pub aria_disabled: &'static str,
     pub reason: String,
 }
 
 pub(super) fn reserved_setting_state(locale: Locale) -> ReservedSettingState {
     ReservedSettingState {
-        class: "opacity-50 pointer-events-none grayscale",
+        class: "opacity-50 grayscale cursor-not-allowed select-none",
         disabled_attr: "true",
+        aria_disabled: "true",
         reason: t::settings::coming_soon(locale).to_string(),
     }
 }
@@ -165,8 +167,12 @@ mod tests {
     #[test]
     fn reserved_setting_state_exposes_disabled_reason() {
         let state = reserved_setting_state(Locale::En);
-        assert_eq!(state.class, "opacity-50 pointer-events-none grayscale");
+        assert_eq!(
+            state.class,
+            "opacity-50 grayscale cursor-not-allowed select-none"
+        );
         assert_eq!(state.disabled_attr, "true");
+        assert_eq!(state.aria_disabled, "true");
         assert!(state.reason.contains("Future setting"));
         assert!(state.reason.contains("current release"));
     }
