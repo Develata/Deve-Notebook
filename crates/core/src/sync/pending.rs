@@ -39,7 +39,7 @@ pub(super) fn upsert(
     status: ChangeStatus,
     doc_id_hint: Option<DocId>,
     renamed_from: Option<&str>,
-) -> Result<()> {
+) -> Result<bool> {
     let hash = if status == ChangeStatus::Deleted {
         String::new()
     } else {
@@ -66,7 +66,9 @@ pub(super) fn upsert(
         detected_at: chrono::Utc::now().timestamp_millis(),
         has_conflict,
     };
-    repo.run_on_local_repo(repo_name, |db| pending_fs::upsert(db, &entry))
+    repo.run_on_local_repo(repo_name, |db| {
+        Ok(pending_fs::upsert_many(db, std::slice::from_ref(&entry))? > 0)
+    })
 }
 
 pub(super) fn message(

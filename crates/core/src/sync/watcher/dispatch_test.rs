@@ -10,7 +10,7 @@ use notify_debouncer_full::{
         event::{ModifyKind, RenameMode},
     },
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 type SyncFixture = (
@@ -160,6 +160,59 @@ fn dispatch_batch_allows_deveignore_non_matching_markdown() -> anyhow::Result<()
             .iter()
             .any(|entry| { entry.path == "notes/keep.md" && entry.status == ChangeStatus::Added })
     );
+    Ok(())
+}
+
+#[test]
+fn dispatch_batch_suppresses_duplicate_external_added_message() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    let added = repo_root.join("notes").join("external.md");
+    std::fs::create_dir_all(added.parent().expect("parent"))?;
+    std::fs::write(&added, "external")?;
+
+    let messages = Arc::new(Mutex::new(Vec::new()));
+    let callback_messages = messages.clone();
+    let callback: super::WatcherCallback = Arc::new(move |msg| {
+        callback_messages.lock().expect("messages lock").push(msg);
+    });
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![event_for(added.clone())],
+        Some(&callback),
+    )?;
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![event_for(added)],
+        Some(&callback),
+    )?;
+
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].path, "notes/external.md");
+    assert_eq!(pending[0].status, ChangeStatus::Added);
+
+    let messages = messages.lock().expect("messages lock");
+    assert_eq!(
+        messages.len(),
+        1,
+        "duplicate watcher signal should not emit a second refresh"
+    );
+    match &messages[0] {
+        crate::protocol::ServerMessage::FsChangeDetected {
+            path, change_type, ..
+        } => {
+            assert_eq!(path, "notes/external.md");
+            assert_eq!(change_type, "added");
+        }
+        other => panic!("unexpected message: {other:?}"),
+    }
     Ok(())
 }
 

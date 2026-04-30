@@ -36,5 +36,6 @@ pub(super) fn upsert_external_rename(
         ChangeStatus::Added,
         Some(doc_id),
         Some(old_path),
-    )
+    )?;
+    Ok(())
 }

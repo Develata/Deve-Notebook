@@ -81,8 +81,7 @@ impl<'a> FsEventHandler<'a> {
             };
         }
 
-        info!("Handler: New file detected: {}", repo_path);
-        super::pending::upsert(
+        let changed = super::pending::upsert(
             self.repo,
             self.repo_name,
             repo_path,
@@ -90,6 +89,10 @@ impl<'a> FsEventHandler<'a> {
             None,
             None,
         )?;
+        if !changed {
+            return Ok(vec![]);
+        }
+        info!("Handler: New file detected: {}", repo_path);
         Ok(vec![super::pending::message(
             self.repo,
             self.repo_name,
@@ -115,11 +118,7 @@ impl<'a> FsEventHandler<'a> {
             return self.modified_refresh(repo_path);
         }
 
-        warn!(
-            "Handler: File gone: {}. Recording as pending delete.",
-            repo_path
-        );
-        super::pending::upsert(
+        let changed = super::pending::upsert(
             self.repo,
             self.repo_name,
             repo_path,
@@ -127,6 +126,13 @@ impl<'a> FsEventHandler<'a> {
             tracked_doc_id,
             None,
         )?;
+        if !changed {
+            return Ok(vec![]);
+        }
+        warn!(
+            "Handler: File gone: {}. Recording as pending delete.",
+            repo_path
+        );
         Ok(vec![super::pending::message(
             self.repo,
             self.repo_name,
