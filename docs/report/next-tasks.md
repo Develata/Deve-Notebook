@@ -9,10 +9,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Mobile editor 16px viewport smoke | P3-10 | Web mobile shell, editor CSS, Chrome MCP smoke | Launch Web shell in mobile viewport and assert computed `.cm-content` font size is `16px`, confirming the static `MOB-SHOULD-003` guard in runtime |
+| 1 | Post-mobile-baseline priority reselection | P2 | docs/plan, docs/report, current code baselines | Re-read current plan/report queue after closing `MOB-SHOULD-003`, identify the next implementation domain, and avoid reopening native packaging or Git mirror work unless a new blocker appears |
 
 ## 最近完成基线
 
+- P3-10 Mobile editor 16px viewport smoke 已关闭：Chrome MCP 375x812 验证真实 Web shell 中 `.cm-content` computed font-size 为 `16px`，focus 后仍为 `16px`，`visualViewport.scale=1`，详见 `mobile-editor-font-size-viewport-smoke-2026-05-01.md`。
 - P3-10 Mobile editor font-size baseline 已关闭：`MOB-SHOULD-003` 从部分实现改为已实现，`.cm-content { font-size: 16px; }` 由 `scripts/check-mobile-baseline.sh` 守住，并绑定到 UI acceptance，详见 `mobile-editor-font-size-baseline-2026-05-01.md`。
 - P2 Post-Git-mirror priority reselection 已关闭：Git mirror import/export/push 已进入当前计划的干净停靠点；未重新打开 P0/P1 blocker，下一窄批次选定 mobile Web polish 的 `MOB-SHOULD-003`，详见 `post-git-priority-reselection-2026-05-01.md`。
 - P2 Git mirror command smoke cohesion review 已关闭：拆分 `git_import_smoke_test.rs` helper 到 `git_import_smoke_support.rs`，增强 command-layer push blocker 结构化断言，并把 Git mirror acceptance gate 改为 CLI assertion，详见 `git-mirror-command-smoke-cohesion-2026-05-01.md`。

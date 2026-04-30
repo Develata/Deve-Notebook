@@ -48,6 +48,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest native plan post-gate wording split: `native-plan-post-gate-wording-split-2026-04-30.md`
 - Latest native packaging gate recheck: `native-packaging-gate-recheck-2026-04-30.md`
 - Latest mobile editor font-size baseline: `mobile-editor-font-size-baseline-2026-05-01.md`
+- Latest mobile editor font-size viewport smoke: `mobile-editor-font-size-viewport-smoke-2026-05-01.md`
 - Latest graph blocked/degraded acceptance polish: `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
 - Latest graph structured degraded error: `graph-structured-degraded-error-2026-04-30.md`
 - Latest rendering current boundary baseline: `rendering-current-boundary-baseline-2026-04-30.md`
