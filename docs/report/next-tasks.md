@@ -9,7 +9,8 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| - | 当前短队列已清空 | - | - | 下一轮先重新审阅 `docs/report/post-p2-plan-code-drift-rescan-2026-04-30.md`、`docs/plan/14_tech_stack.md` 与最新代码状态后再排新队列。 |
+| 1 | Git mirror future/partial wording audit | P2 | `docs/plan/14_tech_stack.md`, `docs/features/07_diff_logic.md`, `docs/report/git-mirror-bridge-status-2026-04-29.md` | Confirm background Git writer / executable Web repair UI remain explicitly future; no Web Git writer code added |
+| 2 | Native packaging gate recheck | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, `apps/desktop`, `apps/mobile` | `scripts/check-native-track-boundary.sh`; keep no-Tauri default build and no process adapter |
 
 ## 最近完成基线
 
@@ -39,6 +40,7 @@
 - P2 Git mirror repair review UI multi-record/error polish 已关闭：repair review copy 拆分为独立模块，UI 支持多条 out-of-sync record、loading、load failed 与 empty fallback 状态，详见 `git-mirror-repair-review-ui-polish-2026-04-29.md`。
 - P2 Git mirror executable repair UI decision 已关闭：当前批次明确不进入 Web 可执行 repair UI，不新增 Web Git writer；Web 保持只读 review / CLI-only notice，Git 写操作继续由显式 CLI surface 承担，详见 `git-mirror-executable-repair-ui-decision-2026-04-29.md`。
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
+- P1/P2 Rendering current/future boundary guard 已关闭：新增 `scripts/check-rendering-baseline.sh` 守住 lightweight renderer 不是 hybrid engine、full preview/virtual rendering/settings GUI 仍属 future、BUILD Apply 仍走受控 edit gate，详见 `rendering-current-boundary-baseline-2026-04-30.md`。
 - P1 Search/settings current-boundary audit 已关闭：Search 当前固定为 `search` feature + non-low-spec 下的 repo-scoped baseline scan，Tantivy 常驻索引仍属 future；server route 补齐 stale search scope 回归，Settings 当前保持 `config.toml` + `deve config print/set`，server-backed Settings API/统一 GUI 持久化仍属 future，详见 `search-settings-boundary-audit-2026-04-29.md`。
 - P1 Native AI Chat minimum boundary audit 已关闭：同步 `PluginResponse` completion、backend 产品名与 runtime plugin id 转换层、bounded multi-turn history、provider `tool_calls` 先 fail-closed 后不发送成功 finish、Trusted CLI 文案与 fail-closed 注释均已收口，详见 `native-ai-chat-boundary-audit-2026-04-30.md`。
 - P0 AI effective config boundary 已关闭：`ai.mode` / `ai.native_enabled` 现在驱动 server provider/RPC、Trusted CLI policy、capabilities endpoint 与 Web fallback/disabled UI，详见 `ai-effective-config-boundary-status-2026-04-30.md`。

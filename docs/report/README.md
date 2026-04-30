@@ -45,6 +45,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest native plan post-gate wording split: `native-plan-post-gate-wording-split-2026-04-30.md`
 - Latest graph blocked/degraded acceptance polish: `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
 - Latest graph structured degraded error: `graph-structured-degraded-error-2026-04-30.md`
+- Latest rendering current boundary baseline: `rendering-current-boundary-baseline-2026-04-30.md`
 - Latest AgentBridge env alias plan sync: `agent-bridge-env-alias-plan-sync-2026-04-30.md`
 - Latest AI Settings UI acceptance depth: `ai-settings-ui-acceptance-depth-2026-04-30.md`
 - Latest Settings sync UI acceptance depth: `settings-sync-ui-acceptance-depth-2026-04-30.md`
