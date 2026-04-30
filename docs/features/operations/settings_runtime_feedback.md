@@ -22,10 +22,12 @@
 
 - `Name`: `Observe Disabled Reserved Setting`
 - `Surface`: `settings-modal`
-- `Trigger`: view future or unavailable setting such as Trusted CLI
+- `Trigger`: view future or unavailable setting such as Trusted CLI or Hybrid Editing
 - `Preconditions`: capability gate is not satisfied
-- `Immediate Result`: disabled control shows explicit reason instead of silently failing
-- `Application Entry`: `apps/web/src/components/settings_sections.rs`
+- `Immediate Result`: disabled control shows explicit reason instead of silently failing,
+  and reserved controls expose `aria-disabled` plus a disabled marker
+- `Application Entry`: `apps/web/src/components/settings_sections.rs`,
+  `apps/web/src/components/settings_sections_policy.rs`
 
 ### `op.settings.feedback.inspect-runtime`
 
@@ -47,3 +49,5 @@
 
 - Feedback operations prevent “changed but invisible” settings drift.
 - Main objects: `settings::feedback`, `runtime::profile`, `ui::preference`.
+- Reserved UI feedback is still non-authoritative: it may communicate a future
+  boundary, but it must not enable persistence or runtime writes.

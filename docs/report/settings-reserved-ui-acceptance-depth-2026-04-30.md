@@ -14,6 +14,8 @@ and an explicit current-release-unavailable reason.
 - Replaced the stale `Phase 6` copy with current-boundary wording:
   `Future setting: not available in the current release`.
 - Added policy and i18n tests for the reserved setting disabled reason.
+- Bound SET-006 acceptance text and operation flows to the current disabled
+  marker / `aria-disabled` contract.
 
 ## Boundary
 
@@ -25,3 +27,4 @@ editing persistence, a Settings API, or authority mutation from Settings.
 - `cargo test -p deve_web settings -- --nocapture`
 - `scripts/check-cli-settings-baseline.sh`
 - `cargo fmt --check`
+- `scripts/check-acceptance-bindings.sh`

@@ -44,14 +44,20 @@
     - ui_assert: ai_backend_eq "native"
 
 - case_id: SET-006
-  goal: Settings 中不可用或预留能力必须显示明确反馈。
+  goal: Settings 中不可用或预留能力必须显示明确、可访问的反馈。
   preconditions:
     - Trusted CLI 条件未满足
     - Settings 已打开
   steps:
     - ui_query: "Trusted CLI"
     - ui_hover: "Trusted CLI"
+    - ui_query: "Hybrid Editing"
+    - run: cargo test -p deve_web settings -- --nocapture
+    - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - ui_assert: setting_disabled true
     - ui_assert: disabled_reason_visible true
+    - ui_assert: reserved_setting_has_marker "data-deve-setting-disabled"
+    - ui_assert: reserved_setting_has_aria_disabled true
+    - ui_assert: reserved_setting_copy_contains "current release"
 ```

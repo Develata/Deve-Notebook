@@ -24,8 +24,10 @@
 - `Surface`: `settings-modal`
 - `Trigger`: user views future or unavailable setting
 - `Preconditions`: capability gate is not satisfied
-- `Immediate Result`: disabled control shows explicit reason
-- `Application Entry`: `apps/web/src/components/settings_sections.rs`
+- `Immediate Result`: disabled or reserved control shows explicit reason and
+  exposes a machine-checkable disabled marker
+- `Application Entry`: `apps/web/src/components/settings_sections.rs`,
+  `apps/web/src/components/settings_sections_policy.rs`
 
 ### `op.settings.feedback.render-runtime`
 
@@ -47,3 +49,6 @@
 
 - Feedback/render is the observable end of a settings change, not the mutation itself.
 - Main objects: `settings::feedback`, `ui::preference`, `runtime::profile`.
+- Reserved future settings must expose both visible copy and an accessibility
+  signal such as `aria-disabled`; hiding a tooltip behind `pointer-events: none`
+  is not an acceptable feedback contract.

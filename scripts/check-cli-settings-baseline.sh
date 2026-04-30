@@ -87,5 +87,10 @@ check_absent apps/web/src/components/settings_sections_policy.rs "pointer-events
 check_contains apps/web/src/components/settings_sections.rs "sync_mode_button_state"
 check_contains apps/web/src/components/settings_sections_policy.rs "sync_mode_buttons_reflect_current_mode"
 check_contains apps/web/src/components/settings_sections_policy.rs "sync_mode_buttons_treat_unknown_mode_as_auto_safe_default"
+check_contains docs/acceptance-cases/15_settings_operation_refs.md "reserved_setting_has_marker"
+check_contains docs/acceptance-cases/15_settings_operation_refs.md "reserved_setting_has_aria_disabled true"
+check_contains docs/acceptance-cases/15_settings_operation_refs.md "cargo test -p deve_web settings -- --nocapture"
+check_contains docs/features/operations/settings_feedback_render.md "aria-disabled"
+check_contains docs/features/operations/settings_runtime_feedback.md "aria-disabled"
 
 echo "cli-settings-baseline-check: ok"
