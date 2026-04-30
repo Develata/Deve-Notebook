@@ -28,8 +28,14 @@ As of later 2026-04-30 batches, the P0/P1 gaps above have been closed by:
 - `native-plan-post-gate-wording-split-2026-04-30.md`
 - `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
 - `agent-bridge-env-alias-plan-sync-2026-04-30.md`
+- `ai-settings-ui-acceptance-depth-2026-04-30.md`
+- `settings-sync-ui-acceptance-depth-2026-04-30.md`
+- `settings-language-ui-acceptance-depth-2026-04-30.md`
+- `settings-reserved-ui-acceptance-depth-2026-04-30.md`
 
-The remaining item from this scan is P2 UI/E2E acceptance depth for AI/settings.
+No active item remains from this scan. Further AI/settings UI/E2E work should be
+opened as a new batch with a concrete acceptance target instead of inheriting
+this closed rescan.
 
 ## Verification
 

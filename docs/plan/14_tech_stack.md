@@ -27,15 +27,15 @@
 | **CLI**      | **Clap v4**              | Verified          | 命令行解析。                        |
 | **Async**    | **Tokio v1**             | Verified          | 异步运行时。                        |
 | **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
-| **AI Chat**  | **OpenAI-compatible SSE** | Planned (Native) | 第一方最小 chat 能力，读取 Markdown + 对话。 |
-| **Trusted External Agent** | **External CLI Bridge** | Planned (Trusted Only) | 外部 CLI Agent 桥接，可选、默认关闭。 |
+| **AI Chat**  | **OpenAI-compatible SSE** | Verified (Minimum Native) | 第一方最小 chat 能力已落地：读取 Markdown + 对话、PLAN/BUILD 本地模式、受控 Markdown Apply、tools/tool_calls fail-closed、`ai.native_enabled` effective config boundary。 |
+| **Trusted External Agent** | **External CLI Bridge** | Partial (Trusted CLI Policy-Gated) | 外部 CLI Agent 桥接保留为可选 Trusted path：默认关闭、显式配置、绝对可执行路径与 policy gate；不属于默认 Native Chat 或通用插件市场能力。 |
 | **MCP**      | **No runtime**   | Retired | 不规划、不保留 MCP runtime；相关需求由 Skills 调用受控 CLI 工具或 Trusted CLI path 承载。 |
 | **Graph**    | **Core read-only projection + CLI JSON surface + protected HTTP projection + deferred renderer gate** | Verified (Projection Data Surface / Renderer Gate Closed) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；`deve graph` 与 `/api/repo/graph` 只读导出 projection JSON；Web 只保留 summary panel，高性能 Canvas/d3-force/Pixi renderer gate 当前关闭。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
 | **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
 | **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Import/Push CLI + Web CLI Notices) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay、queued export、import apply、push CLI surface 与 Web import/push/repair CLI-only notices；自动后台执行与完整 UI 仍属 P1/P2 后续。 |
 | **Build**    | **Tauri v2**             | Partial Skeleton / Planned Packaging | `apps/desktop` 与 `apps/mobile` 已有无 Tauri 依赖的 native shell skeleton，用于固定 adapter/bootstrap/offline/lifecycle 边界；真实 Tauri v2 packaging、菜单、托盘、移动权限、安装包与 auto-update 仍是 future。 |
-| **Plugins**  | **Interface Reserved**   | Planned           | 当前只保留 Trusted External Agent Runtime / Calculation Runtime 接口，不要求实现。 |
+| **Plugins**  | **Compatibility Host + Interface Reserved** | Boundary Reserved / Compatibility Host | 当前保留 Rhai/plugin-host 兼容边界与 Trusted CLI/Calculation future 接口；不要求插件市场或完整扩展平台，MCP runtime 退役。 |
 
 ### 1.1 Graph Visualization {#graph-visualization}
 

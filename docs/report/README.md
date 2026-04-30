@@ -46,6 +46,9 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest graph blocked/degraded acceptance polish: `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
 - Latest graph structured degraded error: `graph-structured-degraded-error-2026-04-30.md`
 - Latest AgentBridge env alias plan sync: `agent-bridge-env-alias-plan-sync-2026-04-30.md`
+- Latest AI Settings UI acceptance depth: `ai-settings-ui-acceptance-depth-2026-04-30.md`
+- Latest Settings sync UI acceptance depth: `settings-sync-ui-acceptance-depth-2026-04-30.md`
+- Latest Settings language UI acceptance depth: `settings-language-ui-acceptance-depth-2026-04-30.md`
 - Latest Settings reserved UI acceptance depth: `settings-reserved-ui-acceptance-depth-2026-04-30.md`
 - Latest architecture registry operation ID sync: `architecture-registry-operation-id-sync-2026-04-30.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`

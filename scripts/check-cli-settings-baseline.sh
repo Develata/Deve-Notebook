@@ -92,5 +92,6 @@ check_contains docs/acceptance-cases/15_settings_operation_refs.md "reserved_set
 check_contains docs/acceptance-cases/15_settings_operation_refs.md "cargo test -p deve_web settings -- --nocapture"
 check_contains docs/features/operations/settings_feedback_render.md "aria-disabled"
 check_contains docs/features/operations/settings_runtime_feedback.md "aria-disabled"
+check_contains docs/report/post-p2-plan-code-drift-rescan-2026-04-30.md "No active item remains from this scan"
 
 echo "cli-settings-baseline-check: ok"
