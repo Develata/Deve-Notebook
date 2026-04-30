@@ -4,9 +4,11 @@
 //!
 //! Minimal read-only graph projection summary. Renderer work remains future.
 
-use crate::api::fetch_graph_projection;
+use super::status_notice::{blocked_hint, blocked_title};
+use crate::api::{GraphProjectionFetchError, fetch_graph_projection};
 use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::SourceControlContext;
+use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, t};
 use deve_core::graph::GraphProjection;
 use leptos::prelude::*;
@@ -17,8 +19,10 @@ enum GraphProjectionFetchState {
     Idle,
     Loading,
     Loaded(GraphProjection),
-    Failed,
-    Blocked,
+    Error,
+    Blocked(RepoWriteBlock),
+    LocalOnly,
+    Degraded,
 }
 
 #[component]
@@ -37,8 +41,12 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
             fetch_state.set(GraphProjectionFetchState::Idle);
             return;
         }
-        if core.active_branch.get().is_some() || core.read_block.get().is_some() {
-            fetch_state.set(GraphProjectionFetchState::Blocked);
+        if core.active_branch.get().is_some() {
+            fetch_state.set(GraphProjectionFetchState::LocalOnly);
+            return;
+        }
+        if let Some(block) = core.read_block.get() {
+            fetch_state.set(GraphProjectionFetchState::Blocked(block));
             return;
         }
 
@@ -52,7 +60,12 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
             if still_current {
                 fetch_state.set(match fetched {
                     Ok(projection) => GraphProjectionFetchState::Loaded(projection),
-                    Err(_) => GraphProjectionFetchState::Failed,
+                    Err(GraphProjectionFetchError::DegradedProjectionRequired) => {
+                        GraphProjectionFetchState::Degraded
+                    }
+                    Err(GraphProjectionFetchError::RequestFailed) => {
+                        GraphProjectionFetchState::Error
+                    }
                 });
             }
         });
@@ -94,14 +107,24 @@ fn graph_panel_body(locale: Locale, state: &GraphProjectionFetchState) -> AnyVie
             t::source_control::loading_graph(locale),
             t::source_control::graph_readonly_note(locale),
         ),
-        GraphProjectionFetchState::Failed => graph_message(
-            "failed",
+        GraphProjectionFetchState::Error => graph_message(
+            "error",
             t::source_control::graph_projection_unavailable(locale),
             t::source_control::graph_readonly_note(locale),
         ),
-        GraphProjectionFetchState::Blocked => graph_message(
+        GraphProjectionFetchState::Blocked(block) => graph_message(
             "blocked",
+            t::source_control::graph_projection_blocked(locale),
+            graph_blocked_note(locale, *block),
+        ),
+        GraphProjectionFetchState::LocalOnly => graph_message(
+            "local-only",
             t::source_control::graph_projection_local_only(locale),
+            t::source_control::graph_readonly_note(locale),
+        ),
+        GraphProjectionFetchState::Degraded => graph_message(
+            "degraded",
+            t::source_control::graph_projection_degraded(locale),
             t::source_control::graph_readonly_note(locale),
         ),
         GraphProjectionFetchState::Loaded(projection) => {
@@ -110,7 +133,41 @@ fn graph_panel_body(locale: Locale, state: &GraphProjectionFetchState) -> AnyVie
     }
 }
 
-fn graph_message(state: &'static str, message: &'static str, note: &'static str) -> AnyView {
+fn graph_blocked_note(locale: Locale, block: RepoWriteBlock) -> String {
+    format!(
+        "{}: {}",
+        blocked_title(locale, block),
+        blocked_hint(locale, block)
+    )
+}
+
+fn graph_state_attr(state: &GraphProjectionFetchState) -> &'static str {
+    match state {
+        GraphProjectionFetchState::Idle => "idle",
+        GraphProjectionFetchState::Loading => "loading",
+        GraphProjectionFetchState::Loaded(projection) => graph_loaded_state_attr(projection),
+        GraphProjectionFetchState::Error => "error",
+        GraphProjectionFetchState::Blocked(_) => "blocked",
+        GraphProjectionFetchState::LocalOnly => "local-only",
+        GraphProjectionFetchState::Degraded => "degraded",
+    }
+}
+
+fn graph_loaded_state_attr(projection: &GraphProjection) -> &'static str {
+    if projection.nodes.is_empty() {
+        "empty"
+    } else {
+        "loaded"
+    }
+}
+
+fn graph_message(
+    state: &'static str,
+    message: impl Into<String>,
+    note: impl Into<String>,
+) -> AnyView {
+    let message = message.into();
+    let note = note.into();
     view! {
         <div data-deve-graph-state=state>
             <p class="text-[12px] text-muted">{message}</p>
@@ -124,7 +181,7 @@ fn graph_projection_summary(locale: Locale, projection: &GraphProjection) -> Any
     let nodes = projection.nodes.len();
     let edges = projection.edges.len();
     let unresolved = projection.unresolved_links.len();
-    let state = if nodes == 0 { "empty" } else { "loaded" };
+    let state = graph_loaded_state_attr(projection);
     view! {
         <div data-deve-graph-state=state>
             <div class="grid grid-cols-3 gap-2">
@@ -167,7 +224,10 @@ fn GraphStat(label: &'static str, value: usize, attr: &'static str) -> impl Into
 
 #[cfg(test)]
 mod tests {
-    use super::{GraphProjectionFetchState, graph_panel_body};
+    use super::{
+        GraphProjectionFetchState, graph_blocked_note, graph_panel_body, graph_state_attr,
+    };
+    use crate::hooks::use_core::write_gate::RepoWriteBlock;
     use crate::i18n::Locale;
     use deve_core::graph::GraphProjection;
 
@@ -176,8 +236,10 @@ mod tests {
         for state in [
             GraphProjectionFetchState::Idle,
             GraphProjectionFetchState::Loading,
-            GraphProjectionFetchState::Failed,
-            GraphProjectionFetchState::Blocked,
+            GraphProjectionFetchState::Error,
+            GraphProjectionFetchState::Blocked(RepoWriteBlock::Offline),
+            GraphProjectionFetchState::LocalOnly,
+            GraphProjectionFetchState::Degraded,
         ] {
             let _ = graph_panel_body(Locale::En, &state);
         }
@@ -191,5 +253,32 @@ mod tests {
             unresolved_links: vec![],
         };
         let _ = graph_panel_body(Locale::Zh, &GraphProjectionFetchState::Loaded(projection));
+    }
+
+    #[test]
+    fn graph_panel_state_attrs_are_acceptance_stable() {
+        assert_eq!(graph_state_attr(&GraphProjectionFetchState::Idle), "idle");
+        assert_eq!(
+            graph_state_attr(&GraphProjectionFetchState::Blocked(
+                RepoWriteBlock::Reconnecting
+            )),
+            "blocked"
+        );
+        assert_eq!(
+            graph_state_attr(&GraphProjectionFetchState::LocalOnly),
+            "local-only"
+        );
+        assert_eq!(
+            graph_state_attr(&GraphProjectionFetchState::Degraded),
+            "degraded"
+        );
+        assert_eq!(graph_state_attr(&GraphProjectionFetchState::Error), "error");
+    }
+
+    #[test]
+    fn graph_panel_blocked_note_includes_gate_reason() {
+        let note = graph_blocked_note(Locale::En, RepoWriteBlock::Offline);
+        assert!(note.contains("Offline"));
+        assert!(note.contains(": "));
     }
 }

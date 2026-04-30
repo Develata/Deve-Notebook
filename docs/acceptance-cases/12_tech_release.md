@@ -89,6 +89,11 @@
     - ui_assert: graph_projection_panel_summary_counts_available true
     - ui_assert: graph_projection_panel_renderer_future_only true
     - ui_assert: graph_renderer_gate_closed_current_batch true
+    - ui_assert: graph_projection_panel_local_only_state_available true
+    - ui_assert: graph_projection_panel_blocked_state_available true
+    - ui_assert: graph_projection_panel_degraded_state_available true
+    - ui_assert: graph_projection_panel_empty_state_available true
+    - ui_assert: graph_projection_panel_error_state_available true
     - dependency_assert: graph_renderer_dependency_not_declared_for_current_ui true
 
 - case_id: REL-006

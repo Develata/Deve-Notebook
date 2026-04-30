@@ -15,8 +15,8 @@ pub fn loading_graph(locale: Locale) -> &'static str {
 
 pub fn graph_projection_unavailable(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Graph projection is unavailable. Use `deve graph` for CLI diagnostics.",
-        Locale::Zh => "图谱投影暂不可用。可使用 `deve graph` 进行 CLI 诊断。",
+        Locale::En => "Graph projection request failed. Use `deve graph` for CLI diagnostics.",
+        Locale::Zh => "图谱投影请求失败。可使用 `deve graph` 进行 CLI 诊断。",
     }
 }
 
@@ -24,6 +24,22 @@ pub fn graph_projection_local_only(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Graph projection is currently available for local repo scope only.",
         Locale::Zh => "当前图谱投影只支持本地仓库作用域。",
+    }
+}
+
+pub fn graph_projection_blocked(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Graph projection is blocked until Source Control read scope is ready.",
+        Locale::Zh => "Source Control 读取作用域就绪前，图谱投影会被阻断。",
+    }
+}
+
+pub fn graph_projection_degraded(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Graph projection is degraded; CLI export requires explicit `--allow-degraded-projection`."
+        }
+        Locale::Zh => "图谱投影处于降级状态；CLI 导出必须显式使用 `--allow-degraded-projection`。",
     }
 }
 
@@ -64,7 +80,10 @@ pub fn graph_readonly_note(locale: Locale) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{graph_edges, graph_nodes, graph_readonly_note, graph_unresolved_links};
+    use super::{
+        graph_edges, graph_nodes, graph_projection_blocked, graph_projection_degraded,
+        graph_readonly_note, graph_unresolved_links,
+    };
     use crate::i18n::Locale;
 
     #[test]
@@ -73,5 +92,7 @@ mod tests {
         assert_eq!(graph_edges(Locale::Zh), "边");
         assert_eq!(graph_unresolved_links(Locale::En), "Unresolved");
         assert!(graph_readonly_note(Locale::Zh).contains("只读"));
+        assert!(graph_projection_blocked(Locale::En).contains("blocked"));
+        assert!(graph_projection_degraded(Locale::Zh).contains("降级"));
     }
 }
