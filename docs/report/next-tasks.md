@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Native packaging gate recheck | P3-10 | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, `apps/desktop`, `apps/mobile` | `scripts/check-native-track-boundary.sh`; keep no-Tauri default build and no process adapter |
+| 1 | Post-queue plan/code drift rescan | P1/P2/P3 | `docs/plan/`, `docs/features/`, `docs/report/`, current code | Identify the next concrete implementation batch; do not reopen closed future/deferred gates without new plan decision |
 
 ## 最近完成基线
 
@@ -60,6 +60,7 @@
 - P3-10 Native process adapter decision 已关闭：真实 child-process runtime 当前不进入默认 no-Tauri skeleton；`CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定为 `DeferredUntilPackagingGate`，desktop/mobile 默认构建不 spawn、不持有、不重启后端进程且不写 core authority，详见 `native-process-adapter-decision-2026-04-29.md`。
 - P3-10 Native packaging dependency gate decision 已关闭：真实 `tauri` / `tauri-build` dependency 当前不进入 workspace；`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为 `DeferredUntilRuntimeBatch`，默认构建保持 no-Tauri，packaging scaffold 继续仅作为 planned future input，详见 `native-packaging-dependency-gate-decision-2026-04-29.md`。
 - P3-10 Native plan post-gate wording split 已关闭：desktop/mobile plan 已把当前 no-Tauri skeleton/no-process gate 与 post-gate Tauri/embedded-service/offline-first target 分开，详见 `native-plan-post-gate-wording-split-2026-04-30.md`。
+- P3-10 Native packaging gate recheck 已关闭：`check-native-track-boundary.sh` 现在同时守住 no-Tauri dependency/import、no process runtime leak、desktop/mobile shell tests 与 core policy；真实 packaging/process adapter 仍是 post-gate future，详见 `native-packaging-gate-recheck-2026-04-30.md`。
 - P3-13 Graph blocked/degraded acceptance polish 已关闭：Graph summary panel 已显式区分 local-only、blocked、degraded、empty 与 error 状态，degraded projection 继续要求显式 `--allow-degraded-projection`，详见 `graph-blocked-degraded-acceptance-polish-2026-04-30.md`。
 - P3-13 Graph structured degraded error 已关闭：HTTP graph degraded projection 现在返回 `GRAPH_DEGRADED_PROJECTION_REQUIRED`，Web 不再解析 CLI/user-facing 文案，详见 `graph-structured-degraded-error-2026-04-30.md`。
 - P1 AgentBridge env alias plan sync 已关闭：`DEVE_AI_AGENT_BRIDGE_ENABLED` / `DEVE_AI_AGENT_BRIDGE_TRUSTED` 已在 AI plan 与 agent_bridge 历史设计注中显式绑定为 Trusted CLI policy 兼容输入，详见 `agent-bridge-env-alias-plan-sync-2026-04-30.md`。

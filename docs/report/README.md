@@ -44,6 +44,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest browser UI prefs boundary status: `browser-ui-prefs-boundary-status-2026-04-30.md`
 - Latest post-P2 plan/code drift rescan: `post-p2-plan-code-drift-rescan-2026-04-30.md`
 - Latest native plan post-gate wording split: `native-plan-post-gate-wording-split-2026-04-30.md`
+- Latest native packaging gate recheck: `native-packaging-gate-recheck-2026-04-30.md`
 - Latest graph blocked/degraded acceptance polish: `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
 - Latest graph structured degraded error: `graph-structured-degraded-error-2026-04-30.md`
 - Latest rendering current boundary baseline: `rendering-current-boundary-baseline-2026-04-30.md`

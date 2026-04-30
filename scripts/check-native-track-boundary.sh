@@ -36,6 +36,13 @@ check_no_packaging_dependency_leak() {
   fi
 }
 
+check_no_process_runtime_leak() {
+  if rg -n '(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()' \
+    "$ROOT_DIR/apps/desktop/src" "$ROOT_DIR/apps/mobile/src" >/dev/null; then
+    fail "native process runtime must stay absent from desktop/mobile skeletons until the process adapter gate opens"
+  fi
+}
+
 check_contains Cargo.toml '"apps/desktop"'
 check_contains Cargo.toml '"apps/mobile"'
 
@@ -48,6 +55,7 @@ check_contains apps/desktop/src/packaging.rs "status: \"planned\""
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingCapability::Installer"
 check_contains apps/desktop/src/shell_test.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
+check_contains apps/desktop/src/shell_test.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains apps/mobile/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/mobile/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/mobile/src/packaging.rs "build_crate: \"tauri-build\""
@@ -56,9 +64,13 @@ check_contains apps/mobile/src/packaging.rs "MobilePackagingAuthority::Ledger"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::PermissionBridge"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::StorePackage"
 check_contains apps/mobile/src/shell_test.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
+check_contains apps/mobile/src/shell_test.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains crates/core/src/native_adapter/packaging.rs "DeferredUntilRuntimeBatch"
 check_contains crates/core/src/native_adapter/packaging.rs "real_tauri_dependencies_allowed: false"
+check_contains crates/core/src/native_adapter/process.rs "DeferredUntilPackagingGate"
+check_contains crates/core/src/native_adapter/process.rs "child_process_runtime_enabled: false"
 check_no_packaging_dependency_leak
+check_no_process_runtime_leak
 
 check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-current-native-boundary}"
 check_contains docs/plan/08_ui_design_02_desktop.md "**Current Native Boundary**"
