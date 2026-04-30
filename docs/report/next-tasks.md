@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Post-queue plan/code drift rescan | P1/P2/P3 | `docs/plan/`, `docs/features/`, `docs/report/`, current code | Identify the next concrete implementation batch; do not reopen closed future/deferred gates without new plan decision |
+| 1 | Mobile AI Chat viewport smoke | P2 | `apps/web/src/components/mobile_layout/`, `apps/web/src/components/chat/`, Chrome MCP | 375x812 viewport: expanded chat remains visible with keyboard/input focus, drawer/diff still hide chat, close returns to editor |
 
 ## 最近完成基线
 
@@ -69,6 +69,7 @@
 - P2 Settings Language UI acceptance depth 已关闭：Settings 语言按钮视觉状态现在由 `language_button_state(Locale)` 统一派生，并由代码级测试覆盖；locale 持久化与 signal 更新回调不变，详见 `settings-language-ui-acceptance-depth-2026-04-30.md`。
 - P2 Settings Reserved UI acceptance depth 已关闭：Hybrid Editing 预留项现在由 `reserved_setting_state(Locale)` 提供 disabled marker、`aria-disabled`、title 与可见原因；SET-006 与 operation flows 已绑定该验收口径，旧 `Phase 6` 文案已替换为 current-release-unavailable 边界文案，详见 `settings-reserved-ui-acceptance-depth-2026-04-30.md`。
 - Architecture registry operation ID sync 已关闭：overview lisp 已同步 i18n locale fallback、Native AI Chat mode/apply/tool-rejection 与 release Web WASM quality gate operation IDs，`check-architecture-registry.sh` 恢复通过，详见 `architecture-registry-operation-id-sync-2026-04-30.md`。
+- P2 Mobile AI Chat keyboard regression 已关闭：`MobileChatSheet` 展开态在 `keyboard_offset > 0` 时保持可见并设置 bottom offset；折叠 chip 在键盘态隐藏，drawer/diff 层级继续优先，详见 `mobile-ai-chat-keyboard-regression-status-2026-04-30.md`。
 - P3-10 Desktop runtime readiness / foreground reprobe 已关闭：desktop shell snapshot 现包含 `NativeRuntimeReadiness`，`RuntimeReady` 要求 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足，`Foreground` / `Resumed` 会进入 `ForegroundReprobe` 且 stale `scope_nonce` 不恢复写态，详见 `desktop-runtime-readiness-status-2026-04-29.md`。
 - P3-10 Native shell parity review 已关闭：mobile foreground/resume reprobe 现在也清空 `node_role_readable`，desktop/mobile/Web 对 native readiness、`foreground_reprobe` recovery bootstrap 与 write gate 的当前 no-Tauri contract 已对齐；native track 进入干净停靠点，详见 `native-shell-parity-review-2026-04-29.md`。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。
