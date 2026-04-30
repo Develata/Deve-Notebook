@@ -20,12 +20,12 @@
 
 ### `op.tech.platform.verify-native-process-adapter`
 
-- `Name`: `Verify Native Process Adapter Gate`
+- `Name`: `Verify Native Adapter Boundary`
 - `Surface`: `cli-or-ci`
 - `Trigger`: maintainer validates desktop/mobile native shell progress
-- `Preconditions`: native process adapter gate remains explicit and default build is unchanged
-- `Immediate Result`: native shell progress is visible without advertising Tauri packaging or child-process runtime as default capability
-- `Application Entry`: `scripts/check-native-track-boundary.sh`
+- `Preconditions`: native process, supervisor, recovery bootstrap, and lifecycle gates remain explicit and default build is unchanged
+- `Immediate Result`: native shell progress is visible without advertising Tauri packaging, child-process runtime, or business authority as default capability
+- `Application Entry`: `scripts/check-native-track-boundary.sh`, `apps/{desktop,mobile}/src/shell.rs`, `crates/core/src/native_adapter/`
 
 ### `op.tech.platform.verify-release-channel`
 
@@ -55,4 +55,4 @@
 ## Notes
 
 - This flow separates current delivery surfaces from future client plans.
-- Main objects: `platform::maturity`, `native::process_adapter_gate`, `release::channel`, `release::artifact`.
+- Main objects: `platform::maturity`, `native::adapter_boundary`, `native::service_recovery`, `release::channel`, `release::artifact`.

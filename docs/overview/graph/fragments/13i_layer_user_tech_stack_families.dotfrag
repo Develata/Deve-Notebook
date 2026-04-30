@@ -27,7 +27,7 @@
                 color="#d97706";
 
                 op_tech_platform_matrix [label="Inspect Platform Matrix", fillcolor="#fef9c3"];
-                op_tech_platform_native_process [label="Verify Native Process Adapter Gate", fillcolor="#fef9c3"];
+                op_tech_platform_native_process [label="Verify Native Adapter Boundary", fillcolor="#fef9c3"];
                 op_tech_platform_channel [label="Verify Release Channel", fillcolor="#fde68a"];
                 op_tech_platform_container [label="Verify Container Delivery", fillcolor="#fef9c3"];
             }

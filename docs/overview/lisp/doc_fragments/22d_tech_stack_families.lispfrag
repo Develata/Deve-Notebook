@@ -8,6 +8,6 @@
 (application :id app.tech.budget.check :label "runtime::budget_check" :kind check :chapter 14_tech_stack :calls (mod_runtime_budget_guard mod_ci_release))
 (application :id app.tech.budget.gate :label "runtime::heavy_feature_gate" :kind review-gate :chapter 14_tech_stack :calls (mod_runtime_budget_guard mod_dependency_policy))
 (application :id app.tech.platform.matrix :label "platform::support_matrix" :kind repo-inspection :chapter 14_tech_stack :calls (mod_platform_matrix mod_release_channel))
-(application :id app.tech.platform.native-process-adapter :label "native::process_adapter_gate" :kind check :chapter 08_ui_design_02_desktop#desktop-process-adapter-decision :calls (mod_native_process_adapter mod_platform_matrix))
+(application :id app.tech.platform.native-process-adapter :label "native::adapter_boundary" :kind check :chapter 08_ui_design_02_desktop#desktop-native-adapter-contract :calls (mod_native_process_adapter mod_native_service_supervisor mod_platform_matrix))
 (application :id app.tech.platform.channel :label "release::channel_verify" :kind release-check :chapter 15_release :calls (mod_release_channel mod_ci_release))
 (application :id app.tech.platform.container :label "release::container_verify" :kind release-check :chapter 15_release :calls (mod_release_container mod_release_channel))

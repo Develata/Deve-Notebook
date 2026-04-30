@@ -11,7 +11,7 @@
             app_tech_budget_check [label="budget::runtime_check", fillcolor="#bfdbfe"];
             app_tech_budget_gate [label="budget::heavy_feature_gate", fillcolor="#eff6ff"];
             app_tech_platform_matrix [label="platform::support_matrix", fillcolor="#eff6ff"];
-            app_tech_platform_native_process [label="native::process_adapter_gate", fillcolor="#eff6ff"];
+            app_tech_platform_native_process [label="native::adapter_boundary", fillcolor="#eff6ff"];
             app_tech_platform_channel [label="release::channel_verify", fillcolor="#bfdbfe"];
             app_tech_platform_container [label="release::container_verify", fillcolor="#eff6ff"];
         }
