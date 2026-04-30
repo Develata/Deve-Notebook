@@ -6,8 +6,9 @@ Closed the P0 drift where `ai.mode` / `ai.native_enabled` existed in `config.tom
 
 ## Implemented Boundary
 
-- `Config::load_checked()` now applies the existing `DEVE_AI_AGENT_BRIDGE_ENABLED` / `DEVE_AI_AGENT_BRIDGE_TRUSTED` env aliases before computing the effective AI mode.
-- `ai.mode = "trusted-cli"` now falls back unless the bridge is enabled, trusted, and `AGENT_CLI_PATH` is absolute, present, and executable.
+- `Config::load_checked()` now applies the existing `DEVE_AI_AGENT_BRIDGE_ENABLED` / `DEVE_AI_AGENT_BRIDGE_TRUSTED` env aliases while preserving the requested `ai.mode`.
+- `ai.mode = "trusted-cli"` now yields an effective backend fallback unless the bridge is enabled, trusted, and `AGENT_CLI_PATH` is absolute, present, and executable; the fallback reason is exposed through backend capabilities.
+- Trusted CLI is never selected as the effective backend unless `ai.mode = "trusted-cli"` explicitly requests it.
 - `ai.native_enabled = false` disables Native AI provider registration and blocks public `ai-chat` RPC with a completed error response instead of leaving chat loading.
 - `/api/ai/backend-capabilities` now exposes `native_available`, `trusted_cli_available`, and `effective_backend` so Web does not infer backend availability from defaults.
 - Settings / Extensions backend buttons now disable unavailable native or trusted backends, and the Web guard switches away from unavailable backends with a visible reason.

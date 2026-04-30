@@ -19,9 +19,6 @@
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-use std::path::Path;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,7 +289,6 @@ impl Config {
             .try_deserialize::<Self>()
             .context("Failed to parse configuration")?;
         config.apply_ai_env_aliases();
-        config.apply_ai_mode_fallback();
         Ok(config)
     }
 
@@ -314,35 +310,6 @@ impl Config {
         })
     }
 
-    fn apply_ai_mode_fallback(&mut self) {
-        if self.ai.mode != "trusted-cli" {
-            return;
-        }
-        if !self.ai.agent_bridge.enabled || !self.ai.agent_bridge.trusted {
-            tracing::warn!("ai.mode=trusted-cli unavailable; falling back to native");
-            self.ai.mode = default_ai_mode();
-            return;
-        }
-        let Ok(path) = std::env::var("AGENT_CLI_PATH") else {
-            tracing::warn!("ai.mode=trusted-cli requires AGENT_CLI_PATH; falling back to native");
-            self.ai.mode = default_ai_mode();
-            return;
-        };
-        if path.trim().is_empty() || !Path::new(path.trim()).is_absolute() {
-            tracing::warn!(
-                "ai.mode=trusted-cli requires absolute AGENT_CLI_PATH; falling back to native"
-            );
-            self.ai.mode = default_ai_mode();
-            return;
-        }
-        if !is_executable_file(Path::new(path.trim())) {
-            tracing::warn!(
-                "ai.mode=trusted-cli requires executable AGENT_CLI_PATH; falling back to native"
-            );
-            self.ai.mode = default_ai_mode();
-        }
-    }
-
     fn apply_ai_env_aliases(&mut self) {
         if let Some(value) = env_bool("DEVE_AI_AGENT_BRIDGE_ENABLED") {
             self.ai.agent_bridge.enabled = value;
@@ -360,23 +327,6 @@ fn env_bool(key: &str) -> Option<bool> {
             "1" | "true" | "yes" | "on"
         )
     })
-}
-
-fn is_executable_file(path: &Path) -> bool {
-    let Ok(metadata) = std::fs::metadata(path) else {
-        return false;
-    };
-    if !metadata.is_file() {
-        return false;
-    }
-    #[cfg(unix)]
-    {
-        metadata.permissions().mode() & 0o111 != 0
-    }
-    #[cfg(not(unix))]
-    {
-        true
-    }
 }
 
 #[cfg(test)]

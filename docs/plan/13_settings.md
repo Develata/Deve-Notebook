@@ -96,7 +96,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
     - `ai.agent_bridge.enabled = true`
     - `ai.agent_bridge.trusted = true`
     - `AGENT_CLI_PATH` 已设置为绝对路径，且目标存在并可执行
-*   任一条件不满足时，系统 **MUST** 自动退回 `ai.mode = native`，并向用户显示明确原因。
+*   任一条件不满足时，系统 **MUST** 将 effective backend 自动退回 `native`，并向用户显示明确原因；`config.toml` 中用户请求的 `ai.mode` 不应被静默改写。
 *   `ai.native_enabled = false` 时，Native AI Chat **MUST NOT** 注册 provider 或接受 `ai-chat` RPC；前端能力探测必须把 Native backend 标为不可用。
 *   `PLAN / BUILD` 是 Native AI Chat 的会话模式，不是单独的配置后端键。
 *   Settings 中的后端切换与 Chat 内的 `/plan /build /agents` 必须明确分离，避免混淆“后端”与“模式”。

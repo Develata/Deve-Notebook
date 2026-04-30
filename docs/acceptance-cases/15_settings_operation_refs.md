@@ -4,16 +4,18 @@
 
 ```markdown
 - case_id: SET-003
-  goal: `ai.mode=trusted-cli` 条件不满足时 effective config 回退到 `native`。
+  goal: `ai.mode=trusted-cli` 条件不满足时 effective backend 回退到 `native`，但保留用户请求配置。
   preconditions:
     - config.toml 中设置 `ai.mode = "trusted-cli"`
     - `ai.agent_bridge.enabled = true`
     - `ai.agent_bridge.trusted = false` 或未设置绝对路径 `AGENT_CLI_PATH`
   steps:
     - run: deve config print
+    - http_get: "/api/ai/backend-capabilities"
   assertions:
-    - stdout_contains: "mode = 'native'"
-    - stdout_not_contains: "mode = 'trusted-cli'"
+    - stdout_contains: "mode = 'trusted-cli'"
+    - http_assert: effective_backend_eq "native"
+    - http_assert: effective_backend_reason_visible true
 
 - case_id: SET-004
   goal: config.toml 文件配置在重启后生效。

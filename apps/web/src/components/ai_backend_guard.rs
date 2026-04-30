@@ -76,7 +76,7 @@ fn select_backend_fallback(
             .clone()
             .or_else(|| cap.effective_backend_reason.clone())
             .unwrap_or_else(|| "native AI disabled by config".to_string());
-        if cap.trusted_cli_available {
+        if cap.effective_backend == AI_BACKEND_TRUSTED_CLI && cap.trusted_cli_available {
             return BackendFallback::Switch {
                 backend: AI_BACKEND_TRUSTED_CLI,
                 reason,
@@ -137,11 +137,31 @@ mod tests {
     }
 
     #[test]
-    fn native_falls_back_to_trusted_cli_when_native_is_disabled_and_trusted_is_available() {
+    fn native_does_not_auto_promote_to_trusted_cli_when_native_is_disabled() {
         let cap = AiBackendCapabilities {
             native_available: false,
             native_reason: Some("native AI disabled by config".to_string()),
             trusted_cli_available: true,
+            effective_backend: "none".to_string(),
+            ..AiBackendCapabilities::default()
+        };
+
+        assert_eq!(
+            select_backend_fallback(AI_BACKEND_NATIVE, &cap, Locale::En),
+            BackendFallback::Blocked {
+                reason: "native AI disabled by config".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn native_switches_to_trusted_cli_only_when_server_effective_backend_requests_it() {
+        let cap = AiBackendCapabilities {
+            native_available: false,
+            native_reason: Some("native AI disabled by config".to_string()),
+            trusted_cli_available: true,
+            effective_backend: AI_BACKEND_TRUSTED_CLI.to_string(),
+            effective_backend_reason: Some("trusted-cli explicitly requested".to_string()),
             ..AiBackendCapabilities::default()
         };
 

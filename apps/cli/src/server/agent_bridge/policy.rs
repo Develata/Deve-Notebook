@@ -70,15 +70,10 @@ impl AgentBridgePolicy {
             }
         } else if self.native_enabled {
             ("native".to_string(), None)
-        } else if trusted_cli_available {
-            (
-                "trusted-cli".to_string(),
-                Some("native AI disabled by config".to_string()),
-            )
         } else {
             (
                 "none".to_string(),
-                Some("no AI backend available".to_string()),
+                Some("native AI disabled by config".to_string()),
             )
         };
 

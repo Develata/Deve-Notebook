@@ -66,7 +66,7 @@ fn env_overrides_flat_underscore_keys() {
 }
 
 #[test]
-fn trusted_cli_mode_falls_back_when_policy_conditions_are_missing() {
+fn trusted_cli_requested_mode_is_preserved_when_policy_conditions_are_missing() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[
         ("AGENT_CLI_PATH", None),
@@ -92,11 +92,11 @@ trusted = false
     let config = Config::load_checked().expect("load config");
 
     std::env::set_current_dir(old_cwd).expect("restore cwd");
-    assert_eq!(config.ai.mode, "native");
+    assert_eq!(config.ai.mode, "trusted-cli");
 }
 
 #[test]
-fn trusted_cli_mode_falls_back_when_agent_cli_path_is_missing() {
+fn trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_missing() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[
         ("AGENT_CLI_PATH", None),
@@ -122,11 +122,11 @@ trusted = true
     let config = Config::load_checked().expect("load config");
 
     std::env::set_current_dir(old_cwd).expect("restore cwd");
-    assert_eq!(config.ai.mode, "native");
+    assert_eq!(config.ai.mode, "trusted-cli");
 }
 
 #[test]
-fn trusted_cli_mode_falls_back_when_agent_cli_path_is_relative() {
+fn trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_relative() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[
         ("AGENT_CLI_PATH", Some("agent")),
@@ -152,11 +152,11 @@ trusted = true
     let config = Config::load_checked().expect("load config");
 
     std::env::set_current_dir(old_cwd).expect("restore cwd");
-    assert_eq!(config.ai.mode, "native");
+    assert_eq!(config.ai.mode, "trusted-cli");
 }
 
 #[test]
-fn trusted_cli_mode_falls_back_when_agent_cli_path_is_not_executable() {
+fn trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_not_executable() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let dir = tempfile::tempdir().expect("tempdir");
     let cli_path = dir.path().join("agent.txt");
@@ -185,7 +185,7 @@ trusted = true
     let config = Config::load_checked().expect("load config");
 
     std::env::set_current_dir(old_cwd).expect("restore cwd");
-    assert_eq!(config.ai.mode, "native");
+    assert_eq!(config.ai.mode, "trusted-cli");
 }
 
 #[test]
