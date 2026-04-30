@@ -56,7 +56,7 @@
 
 前置条件：
 
-- 首选路径：先运行 `NO_COLOR=true trunk build --release`，再构建并启动 `deve serve --dev --port 3001`，打开 `http://127.0.0.1:3001/`；若 Web 源码变更后未重建 dist，embedded CLI 可能仍服务旧 WASM。
+- 首选路径：先运行 `scripts/smoke-web-release-build.sh`，再构建并启动 `deve serve --dev --port 3001`，打开 `http://127.0.0.1:3001/`；若 Web 源码变更后未重建 dist，embedded CLI 可能仍服务旧 WASM。
 - 开发 fallback：后端 `deve serve --dev --port 3001`，前端从 `apps/web` 运行 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080`，打开 `http://127.0.0.1:8080/`。
 
 步骤：

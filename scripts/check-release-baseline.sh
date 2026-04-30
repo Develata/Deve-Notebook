@@ -18,6 +18,14 @@ contains() {
     || fail "missing '$text' in $file"
 }
 
+not_contains() {
+  local file="$1"
+  local text="$2"
+  if rg --fixed-strings --quiet "$text" "$ROOT_DIR/$file"; then
+    fail "unexpected '$text' in $file"
+  fi
+}
+
 line_no() {
   local file="$1"
   local text="$2"
@@ -76,10 +84,14 @@ contains "docs/plan/15_release.md" 'runtime image ships a single `deve_cli` bina
 contains "docs/plan/15_release.md" "aggregated repo health counts"
 contains "docs/plan/15_release.md" "native/graph boundary scripts"
 contains "docs/features/15_release.md" 'Docker/Server 当前主通道是单个 `deve_cli` 二进制'
+contains "docs/features/12_commands.md" "scripts/smoke-web-release-build.sh"
 contains "docs/dev-runbook.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
 contains "docs/dev-runbook.md" "DEVE_DOCKER_BIN=/path/to/docker"
 contains "docs/dev-runbook.md" "scripts/check-native-track-boundary.sh"
 contains "docs/dev-runbook.md" "scripts/check-graph-baseline.sh"
+contains "docs/acceptance-cases/11_commands_settings.md" "scripts/smoke-web-release-build.sh"
+not_contains "docs/features/12_commands.md" "NO_COLOR=true trunk build --release"
+not_contains "docs/acceptance-cases/11_commands_settings.md" "NO_COLOR=true trunk build --release"
 contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_SMOKE_REQUIRED"
 contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_BIN"
 contains "scripts/smoke-docker-release.sh" "docker_cmd build -t"

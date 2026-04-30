@@ -93,7 +93,7 @@
 - case_id: CMD-007A
   goal: Embedded browser runtime is available from the CLI server.
   preconditions:
-    - 已运行 `NO_COLOR=true trunk build --release`
+    - 已运行 `scripts/smoke-web-release-build.sh`
     - 已重新构建 CLI，使 `apps/web/dist` 被编译进二进制
     - 后端通过 `deve serve --dev --port 3001` 运行，且未设置 `DEVE_STATIC_DIR`
   steps:
