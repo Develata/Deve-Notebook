@@ -35,7 +35,10 @@ impl Error for GraphProjectionError {}
 pub(crate) fn is_degraded_projection_required(error: &anyhow::Error) -> bool {
     error
         .chain()
-        .any(|cause| cause.is::<GraphProjectionError>())
+        .any(|cause| match cause.downcast_ref::<GraphProjectionError>() {
+            Some(GraphProjectionError::DegradedProjectionRequired { .. }) => true,
+            None => false,
+        })
 }
 
 pub(crate) fn project_repo_graph(
@@ -98,7 +101,7 @@ fn guard_graph_projection(
 #[cfg(test)]
 mod tests {
     use super::{GraphProjectionError, is_degraded_projection_required, project_repo_graph};
-    use anyhow::anyhow;
+    use anyhow::{Context as _, anyhow};
     use deve_core::ledger::RepoManager;
     use deve_core::ledger::traits::RepoSelector;
     use deve_core::models::{LedgerEntry, Op, PeerId};
@@ -160,5 +163,13 @@ mod tests {
         assert!(!is_degraded_projection_required(&anyhow!(
             "other graph error"
         )));
+
+        let wrapped_error = Err::<(), _>(GraphProjectionError::DegradedProjectionRequired {
+            repo_name: "default".into(),
+            detail: "missing_parent: orphan".into(),
+        })
+        .context("HTTP graph projection failed")
+        .expect_err("wrapped graph projection error");
+        assert!(is_degraded_projection_required(&wrapped_error));
     }
 }
