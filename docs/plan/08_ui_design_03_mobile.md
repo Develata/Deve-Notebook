@@ -10,8 +10,12 @@
 
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 
-> **Tauri-Based**: Mobile 端采用 **Tauri v2 Mobile** 外壳，前端代码与 Web 端共享。
-> **Offline-First**: Mobile 端 **MUST** 在无网络环境下保持完整可用。
+> **Current Native Boundary**: 当前 Mobile native 代码是 no-Tauri Mobile skeleton，只验收
+> lifecycle/session/readiness/foreground-reprobe/recovery contract；真实 Tauri Mobile packaging
+> 与 embedded child process runtime 仍是 post-gate work。
+> **Post-Gate Target**: Mobile 端目标采用 **Tauri v2 Mobile** 外壳，前端代码与 Web 端共享。
+> **Post-Gate Offline Target**: Mobile 端目标是在无公网环境下保持本地读写可用；完整
+> offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
 
 > **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
@@ -316,15 +320,20 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 ## 9. Implementation Strategy
 
 ### 4.1 移动端 UI 方案
-*   **Rule**: Mobile 采用 **Tauri v2 Mobile** 作为外壳（WKWebView / Android WebView），前端代码与 Web 端共享，配合原生层访问摄像头/文件系统/推送等系统 API。
+
+本节是 **post-gate normative target**：只有当 `native-packaging` 与 process adapter gate
+被显式打开后，以下 Tauri Mobile/embedded-service 规则才进入当前验收；默认 no-Tauri
+Mobile skeleton 仍以 §0 的 current boundary 为准。
+
+*   **Rule**: Mobile post-gate 采用 **Tauri v2 Mobile** 作为外壳（WKWebView / Android WebView），前端代码与 Web 端共享，配合原生层访问摄像头/文件系统/推送等系统 API。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致，行为不以 Web 端为准。
 
 ### 7.2 内嵌服务 (Embedded Service)
-*   **Rule**: 后端服务 **MUST** 内嵌到安装包中，应用启动时自动拉起。
+*   **Rule**: post-gate 后端服务 **MUST** 内嵌到安装包中，应用启动时自动拉起。
 *   **Local API**: 前端通过本机回环接口访问内嵌服务，禁止依赖公网。
 
 ### 7.2.1 服务启动流程 (Service Boot)
-*   **Rule**: App 启动 **MUST** 先拉起内嵌服务，再启动 UI。
+*   **Rule**: post-gate App 启动 **MUST** 先拉起内嵌服务，再启动 UI。
 *   **Port**: 端口 **MUST** 使用本机随机可用端口并保存在运行时内存中。
 *   **Lifecycle**: App 进入后台时 **SHOULD** 降低服务资源占用；恢复前台时自动唤醒。
 *   **Port Conflict**: 若端口占用，**MUST** 自动回退到新的可用端口并重新绑定。
@@ -340,7 +349,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   **Firewall**: **SHOULD** 显式阻断非回环访问。
 
 ### 7.3 离线优先 (Offline-First)
-*   **Rule**: 无网络时 **MUST** 提供完整读写能力。
+*   **Rule**: post-gate 无公网时 **MUST** 提供本地读写能力；完整后台/索引/同步能力仍受平台 lifecycle、profile、feature 与资源预算约束。
 *   **Sync**: 网络恢复后执行增量同步，失败时不影响本地编辑。
 
 ### 7.3.1 数据持久化 (Persistence)

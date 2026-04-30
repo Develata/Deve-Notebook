@@ -9,8 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Native plan post-gate wording split | P0 / Docs | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, `docs/plan/14_tech_stack.md`, `scripts/check-native-track-boundary.sh` | 保留当前 no-Tauri/no-process gate，把后部 Tauri/embedded-service/offline-first MUST 标成 post-gate normative，避免 plan 内部新旧目标冲突。 |
-| 2 | Graph blocked/degraded acceptance polish | P1 / Tests+Docs | `apps/web/src/components/sidebar/source_control/graph_panel.rs`, `docs/acceptance-cases/12_tech_release.md`, `scripts/check-graph-baseline.sh` | 不打开 renderer dependency；先补 Graph summary panel 的 local-only/blocked/degraded/empty/error 验收边界。 |
+| 1 | Graph blocked/degraded acceptance polish | P1 / Tests+Docs | `apps/web/src/components/sidebar/source_control/graph_panel.rs`, `docs/acceptance-cases/12_tech_release.md`, `scripts/check-graph-baseline.sh` | 不打开 renderer dependency；先补 Graph summary panel 的 local-only/blocked/degraded/empty/error 验收边界。 |
 
 ## 最近完成基线
 
@@ -58,6 +57,7 @@
 - P3-10 Native service supervisor contract 已关闭：`deve_core::native_adapter::NativeServiceSupervisor` 固定 Starting/EndpointHealthy/SessionHandoffReady/Restarting/Offline 状态、health probe、retry budget 与 session handoff fail-closed；desktop/mobile shell 与 native loopback launch surface 已接入，详见 `native-service-supervisor-status-2026-04-29.md`。
 - P3-10 Native process adapter decision 已关闭：真实 child-process runtime 当前不进入默认 no-Tauri skeleton；`CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定为 `DeferredUntilPackagingGate`，desktop/mobile 默认构建不 spawn、不持有、不重启后端进程且不写 core authority，详见 `native-process-adapter-decision-2026-04-29.md`。
 - P3-10 Native packaging dependency gate decision 已关闭：真实 `tauri` / `tauri-build` dependency 当前不进入 workspace；`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为 `DeferredUntilRuntimeBatch`，默认构建保持 no-Tauri，packaging scaffold 继续仅作为 planned future input，详见 `native-packaging-dependency-gate-decision-2026-04-29.md`。
+- P3-10 Native plan post-gate wording split 已关闭：desktop/mobile plan 已把当前 no-Tauri skeleton/no-process gate 与 post-gate Tauri/embedded-service/offline-first target 分开，详见 `native-plan-post-gate-wording-split-2026-04-30.md`。
 - P3-10 Desktop runtime readiness / foreground reprobe 已关闭：desktop shell snapshot 现包含 `NativeRuntimeReadiness`，`RuntimeReady` 要求 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足，`Foreground` / `Resumed` 会进入 `ForegroundReprobe` 且 stale `scope_nonce` 不恢复写态，详见 `desktop-runtime-readiness-status-2026-04-29.md`。
 - P3-10 Native shell parity review 已关闭：mobile foreground/resume reprobe 现在也清空 `node_role_readable`，desktop/mobile/Web 对 native readiness、`foreground_reprobe` recovery bootstrap 与 write gate 的当前 no-Tauri contract 已对齐；native track 进入干净停靠点，详见 `native-shell-parity-review-2026-04-29.md`。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。

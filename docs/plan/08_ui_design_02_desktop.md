@@ -10,8 +10,12 @@
 
 本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。
 
-> **Tauri-Based**: Desktop 端采用 **Tauri v2** 外壳，前端代码与 Web 端共享。
-> **Offline-First**: Desktop 端 **MUST** 在无网络环境下保持完整可用。
+> **Current Native Boundary**: 当前 Desktop native 代码是 no-Tauri skeleton，只验收
+> adapter/session/readiness/recovery contract；真实 Tauri packaging 与 embedded child
+> process runtime 仍是 post-gate work。
+> **Post-Gate Target**: Desktop 端目标采用 **Tauri v2** 外壳，前端代码与 Web 端共享。
+> **Post-Gate Offline Target**: Desktop 端目标是在无公网环境下保持本地编辑可用；完整
+> offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
 
 > **Web Mapping**: 当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
@@ -278,16 +282,21 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 ## 6. Implementation Strategy
 
 ### 4.1 跨平台 UI 方案
-*   **Rule**: Desktop 采用 **Tauri v2 (WebView)** 作为跨平台外壳，前端代码与 Web 端共享。
+
+本节是 **post-gate normative target**：只有当 `native-packaging` 与 process adapter gate
+被显式打开后，以下 Tauri/embedded-service 规则才进入当前验收；默认 no-Tauri skeleton
+仍以 §0 的 current boundary 为准。
+
+*   **Rule**: Desktop post-gate 采用 **Tauri v2 (WebView)** 作为跨平台外壳，前端代码与 Web 端共享。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致。
 *   **Note**: "原生 UI" 在此指用户体验层面（窗口管理、菜单栏、系统托盘等），而非技术实现层面。
 
 ### 4.2 内嵌服务 (Embedded Service)
-*   **Rule**: 后端服务 **MUST** 内嵌并由桌面端进程拉起。
+*   **Rule**: post-gate 后端服务 **MUST** 内嵌并由桌面端进程拉起。
 *   **Local API**: 前端与服务通信 **MUST** 走本机回环或进程内通道。
 
 ### 4.2.1 服务启动流程 (Service Boot)
-*   **Rule**: Desktop App 启动 **MUST** 先拉起内嵌服务，再启动 UI。
+*   **Rule**: post-gate Desktop App 启动 **MUST** 先拉起内嵌服务，再启动 UI。
 *   **Port**: 端口 **MUST** 使用本机随机可用端口并保存在运行时内存中。
 *   **Lifecycle**: 关闭主窗口 **SHOULD** 提供安全退出或后台驻留选项。
 *   **Port Conflict**: 若端口占用，**MUST** 自动回退到新的可用端口并重新绑定。
@@ -303,7 +312,7 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 *   **Firewall**: **SHOULD** 显式阻断非回环访问。
 
 ### 4.3 离线优先 (Offline-First)
-*   **Rule**: 无网络时 **MUST** 保证完整编辑与索引能力。
+*   **Rule**: post-gate 无公网时 **MUST** 保证本地编辑能力；完整本地索引能力仍受 profile、search feature 与资源预算约束。
 *   **Sync**: 恢复网络后增量同步，冲突策略以本地优先。
 
 ### 4.3.1 数据持久化 (Persistence)

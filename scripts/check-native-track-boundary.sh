@@ -61,6 +61,9 @@ check_contains crates/core/src/native_adapter/packaging.rs "real_tauri_dependenc
 check_no_packaging_dependency_leak
 
 check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-current-native-boundary}"
+check_contains docs/plan/08_ui_design_02_desktop.md "**Current Native Boundary**"
+check_contains docs/plan/08_ui_design_02_desktop.md "**Post-Gate Target**"
+check_contains docs/plan/08_ui_design_02_desktop.md "post-gate normative target"
 check_contains docs/plan/08_ui_design_02_desktop.md "Tauri v2 native packaging"
 check_contains docs/plan/08_ui_design_02_desktop.md "native-packaging"
 check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-packaging-scaffold}"
@@ -75,6 +78,9 @@ check_contains docs/plan/08_ui_design_02_desktop.md "09_auth.md#unauthorized-dis
 check_contains docs/plan/08_ui_design_02_desktop.md "native 层不得直接写 ledger/vault/source-control/search index"
 
 check_contains docs/plan/08_ui_design_03_mobile.md "{#mobile-current-native-boundary}"
+check_contains docs/plan/08_ui_design_03_mobile.md "**Current Native Boundary**"
+check_contains docs/plan/08_ui_design_03_mobile.md "**Post-Gate Target**"
+check_contains docs/plan/08_ui_design_03_mobile.md "post-gate normative target"
 check_contains docs/plan/08_ui_design_03_mobile.md "Tauri v2 Mobile packaging"
 check_contains docs/plan/08_ui_design_03_mobile.md "native-packaging"
 check_contains docs/plan/08_ui_design_03_mobile.md "{#mobile-packaging-scaffold}"
