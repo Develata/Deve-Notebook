@@ -71,6 +71,10 @@ check_contains apps/cli/src/server/ai_chat/stream.rs "provider_tool_call_rejecti
 
 # Trusted CLI is default-off and policy-gated at both server and UI boundaries.
 check_contains docs/plan/10_ai_agent.md "default-off、policy-gated 的 Trusted CLI path"
+check_contains docs/plan/10_ai_agent.md "DEVE_AI_AGENT_BRIDGE_ENABLED"
+check_contains docs/plan/10_ai_agent.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
+check_contains docs/plan/plugins/agent_bridge/01_agent_bridge.md "DEVE_AI_AGENT_BRIDGE_ENABLED"
+check_contains docs/plan/plugins/agent_bridge/01_agent_bridge.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains apps/cli/src/server/agent_bridge/policy.rs "external agent disabled"
 check_contains apps/cli/src/server/agent_bridge/policy.rs "trusted mode required"
 check_contains apps/cli/src/server/agent_bridge/policy.rs "AGENT_CLI_PATH required"

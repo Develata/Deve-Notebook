@@ -114,6 +114,9 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   在这种情况下，用户可以自行在外部终端运行独立 CLI Agent；Deve-Notebook 不负责原生托管它。
 *   当前代码若保留 `agent-bridge`，它只能是 default-off、policy-gated 的 Trusted CLI path；它不得被描述成通用插件市场能力，也不得绕过 `AGENT_CLI_PATH` / trusted-mode gating。
 *   `AGENT_CLI_PATH` 必须解析为显式绝对路径；子进程必须清空默认环境、设置超时、输出上限和并发上限，避免退化成开放式 shell/agent runner。
+*   `DEVE_AI_AGENT_BRIDGE_ENABLED` 与 `DEVE_AI_AGENT_BRIDGE_TRUSTED` 是
+    `ai.agent_bridge.enabled` / `ai.agent_bridge.trusted` 的兼容环境变量别名；它们只改变
+    Trusted CLI policy 输入，不授予额外能力，也不得绕过 `AGENT_CLI_PATH` 的绝对路径与可执行文件检查。
 
 ## 4. Unified Frontend Interaction (统一前端交互)
 
@@ -144,6 +147,8 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   `AI_MODEL`: Native AI Chat 模型名。
 *   `AI_MAX_TOKENS`: Native AI Chat 最大 token 数。
 *   `AGENT_CLI_PATH`: Trusted CLI Agent 可执行文件路径（仅在显式启用时读取）。
+*   `DEVE_AI_AGENT_BRIDGE_ENABLED`: `ai.agent_bridge.enabled` 的兼容环境变量别名。
+*   `DEVE_AI_AGENT_BRIDGE_TRUSTED`: `ai.agent_bridge.trusted` 的兼容环境变量别名。
 
 ## 7. Related Chapters (相关章节)
 

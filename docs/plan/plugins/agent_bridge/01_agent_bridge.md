@@ -23,6 +23,9 @@
 2. **WebSocket**: 指令发送至 Rust 后盾。
 3. **Subprocess (`tokio::process::Command`)**:
    - 后端只能在 trusted policy 通过后读取显式 `AGENT_CLI_PATH`。
+   - trusted policy 输入来自 `ai.agent_bridge.enabled` / `ai.agent_bridge.trusted`，
+     或兼容环境变量别名 `DEVE_AI_AGENT_BRIDGE_ENABLED` /
+     `DEVE_AI_AGENT_BRIDGE_TRUSTED`。
    - `AGENT_CLI_PATH` 必须是受控路径；不得退化为任意 PATH 搜索。
 4. **Streaming**: 将子进程的 `stdout` 和 `stderr` 通过 WebSocket 实时 Push 给前端，实现字级的打字机效果。
 
@@ -52,7 +55,10 @@ Native AI Chat 可暂由内置 Rhai 插件 (`plugins/ai-chat/`) 承载实现，�
     - 不做历史持久化、不做复杂 Agent 状态机
     - 不做 Token 滑动窗口优化
 *   **资源开销**：Rhai Engine ~2-4 MB，脚本轻量，零额外 crate 依赖
-*   **配置**：环境变量 `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`
+*   **配置**：环境变量 `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`；
+    Trusted CLI 额外需要 `AGENT_CLI_PATH`，并可通过
+    `DEVE_AI_AGENT_BRIDGE_ENABLED` / `DEVE_AI_AGENT_BRIDGE_TRUSTED`
+    覆盖兼容开关。
 
 ## 5. 交互与 UI
 

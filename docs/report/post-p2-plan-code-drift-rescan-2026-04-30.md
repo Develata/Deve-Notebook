@@ -20,6 +20,17 @@ Rescanned current plan/code alignment after Native AI Chat and Browser UI prefs 
 - P1: `AgentBridgePolicy` still documents env override aliases through code rather than the settings plan table; if those env vars remain supported, they should be named explicitly in plan.
 - P2: UI/E2E acceptance for AI/settings remains mostly static-script based.
 
+## Follow-up Status
+
+As of later 2026-04-30 batches, the P0/P1 gaps above have been closed by:
+
+- `ai-effective-config-boundary-status-2026-04-30.md`
+- `native-plan-post-gate-wording-split-2026-04-30.md`
+- `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
+- `agent-bridge-env-alias-plan-sync-2026-04-30.md`
+
+The remaining item from this scan is P2 UI/E2E acceptance depth for AI/settings.
+
 ## Verification
 
 - `scripts/check-source-control-baseline.sh`
@@ -31,4 +42,3 @@ Rescanned current plan/code alignment after Native AI Chat and Browser UI prefs 
 - `scripts/check-graph-baseline.sh`
 - `scripts/check-release-baseline.sh`
 - `cargo fmt --check`
-
