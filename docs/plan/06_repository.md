@@ -25,7 +25,7 @@
 
 - `RepoId` 是仓库权威身份，UUID-first。
 - `RepoName`、`URL`、`Selector` 只允许作为输入别名或恢复线索。
-- 任何进入业务算子的 repo 输入，在执行前 MUST 解析为 `RepoId`。
+- 任何进入业务算子的 repo 输入，在执行前 **MUST** 解析为 `RepoId`。
 
 ### 2.2 Branch Identity
 
@@ -41,7 +41,7 @@
 
 ### 2.4 Repo Health
 
-每个 repo instance MUST 显式落入以下健康状态之一：
+每个 repo instance **MUST** 显式落入以下健康状态之一：
 
 - `Healthy`
 - `DegradedProjection`
@@ -58,15 +58,15 @@
 ### 2.5 Selector Inputs and Logical Identity {#repo-selector-resolution-contract}
 
 - repo 的逻辑身份基于 `RepoId`；`URL` 或其他 characteristic parameter 仅作为辅助识别线索。
-- `RepoName` 相同但 `URL/RepoId` 不同的实例 MUST 视为完全不同的 repo。
-- 后端接口 MAY 接受：
+- `RepoName` 相同但 `URL/RepoId` 不同的实例 **MUST** 视为完全不同的 repo。
+- 后端接口 **MAY** 接受：
   - `RepoId`
   - `RepoName`
   - `URL`
   - `CurrentScopeFallback`
 - 但进入任何底层 repo/document/source-control 算子前，必须解析成唯一 `RepoId`。
 - selector 解析必须 UUID-first；`RepoName` 与 `URL` 只能辅助定位，不得覆盖已解析的 `RepoId`。
-- selector 解析出现缺失、重复、metadata drift、URL 歧义时 MUST fail-closed。
+- selector 解析出现缺失、重复、metadata drift、URL 歧义时 **MUST** fail-closed。
 
 逻辑 repo 归类规则：
 
@@ -91,13 +91,13 @@
 
 ### 3.2 Collision Rule
 
-- 同一 branch 下，如果 `RepoName` 相同但 `RepoId/URL` 不同，系统 MUST 自动分配新的物理文件名。
+- 同一 branch 下，如果 `RepoName` 相同但 `RepoId/URL` 不同，系统 **MUST** 自动分配新的物理文件名。
 - 物理文件名冲突的处理不得改变逻辑 repo identity。
 
 ### 3.3 Catalog Rule {#repo-catalog-contract}
 
 - local repo catalog 与 remote repo catalog 是 selector / listing / switcher 的输入层，不是业务真值层。
-- catalog 损坏时 MUST 进入 repair 或 fail-closed，不得静默把错误 repo 绑定到当前 scope。
+- catalog 损坏时 **MUST** 进入 repair 或 fail-closed，不得静默把错误 repo 绑定到当前 scope。
 - catalog entry 必须是可读 repo DB 文件，且 repo metadata 的 `RepoId / RepoName / URL` 不得相互漂移或重复。
 - remote catalog 文件名冲突只能通过安全重命名或受控 repair 处理，不得合并不同 logical identity。
 
@@ -204,7 +204,7 @@ ReadonlyDegraded
 ### 5.3 Fallback Rule
 
 - docs-only fallback 只能作为受控降级手段。
-- fallback 生效时 repo health MUST 标记为 `DegradedProjection`。
+- fallback 生效时 repo health **MUST** 标记为 `DegradedProjection`。
 - fallback 不得被长期视为正常最终状态。
 
 ### 5.4 TreeDelta Contract
@@ -219,7 +219,7 @@ ReadonlyDegraded
 
 ### 5.5 Sorting Contract
 
-- 树视图构建时 MUST 遵循：
+- 树视图构建时 **MUST** 遵循：
   - Folder First
   - Alphabetical
   - Case-Insensitive
@@ -260,19 +260,19 @@ ReadonlyDegraded
   - 输入：`PeerId + RepoSelector`
   - 输出：remote repo bound in readonly mode
 - `Remote -> Local`
-  - SHOULD 优先恢复最近稳定本地 repo
-  - 恢复失败时 MUST 回到 UUID-first 解析
+  - **SHOULD** 优先恢复最近稳定本地 repo
+  - 恢复失败时 **MUST** 回到 UUID-first 解析
 - `Broken Persisted Scope -> Startup`
-  - MUST 清理 stale last scope
-  - MUST 重新 bootstrap 健康 repo 列表
+  - **MUST** 清理 stale last scope
+  - **MUST** 重新 bootstrap 健康 repo 列表
 
 ## 7. Recovery / Repair Contract
 
 ### 7.1 Selector Recovery
 
-- 如果用户提供 `RepoName`，系统 MAY 做别名解析。
-- 如果解析结果不唯一或不一致，系统 MUST fail-closed。
-- 从 `Remote -> Local` 返回时，系统 SHOULD 优先恢复最近一次稳定本地 repo。
+- 如果用户提供 `RepoName`，系统 **MAY** 做别名解析。
+- 如果解析结果不唯一或不一致，系统 **MUST** fail-closed。
+- 从 `Remote -> Local` 返回时，系统 **SHOULD** 优先恢复最近一次稳定本地 repo。
 - 最近本地 repo 不可解析时，必须回到严格 UUID-first 路径，而不是绑定任意本地 repo。
 
 ### 7.2 Catalog Repair {#repo-catalog-repair-contract}
@@ -286,8 +286,8 @@ ReadonlyDegraded
 
 - structure projection 缺 parent、断链、脏 path cache 时，必须通过 rebuild / repair 处理。
 - rebuild / repair 只允许重建 projection tables 与 workspace projection，不得修改 Structure Facts authority。
-- 若 Structure Facts authority 本身引用缺失 parent / missing node / cycle / doc identity mismatch，repair MUST 输出结构化诊断并 fail-closed；该 repo 必须保持 `DegradedProjection` 或进入 quarantine，直到用户通过导出、重建 repo 或明确的 authority-level 迁移处理。
-- repair 失败时 repo MUST 退出正常 mounted write path。
+- 若 Structure Facts authority 本身引用缺失 parent / missing node / cycle / doc identity mismatch，repair **MUST** 输出结构化诊断并 fail-closed；该 repo 必须保持 `DegradedProjection` 或进入 quarantine，直到用户通过导出、重建 repo 或明确的 authority-level 迁移处理。
+- repair 失败时 repo **MUST** 退出正常 mounted write path。
 
 ### 7.4 Catalog Conflict Repair
 

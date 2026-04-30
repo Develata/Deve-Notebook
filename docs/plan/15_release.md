@@ -27,31 +27,31 @@
 
 ### 1.2 Release Channels (发布通道)
 1.  **Stable (稳定版)**: tag `v1.0.0`，仅在 Milestone 完成且测试通过后发布；产物包括二进制与 Docker Image (`latest`, `v1.0.0`)；适用于生产环境。
-2.  **Pre-release / Experimental (预发布 / 实验构建)**: tag `vX.Y.Z-rc.N` 或人工测试构建标识；按里程碑需要手动触发或本地构建；当前基线不要求独立 `nightly.yml` 工作流。
+2.  **Pre-release / Experimental (预发布 / 实验构建)**: tag `vX.Y.Z-rc.N` 或人工测试构建标识；按里程碑需要手动触发或本地构建；发布基线不要求独立 `nightly.yml` 工作流。
 
 ## 2. CI/CD Pipelines (自动化流程)
 
 基于 GitHub Actions 实现全自动构建。
 
 > [!NOTE]
-> **Status (状态)**: 当前权威基线只要求 `.github/workflows/release.yml`。`nightly.yml` 与 `speckit-sync-check.yml` 已从当前 release / CI 要求中移除，不再构成总蓝图 drift。
+> 发布基线只要求 `.github/workflows/release.yml`。`nightly.yml` 与 `speckit-sync-check.yml` 不属于当前 release / CI 要求，不构成总蓝图 drift。
 
 ### 2.1 Workflow: `release.yml`
 *   **Trigger**: Push to tag `v*` (e.g., `v1.2.3`).
 *   **Steps**:
     1.  **Quality Gates**: `cargo clippy --locked --all-targets -- -D warnings`, `scripts/plan-coverage.sh --write-report`, `scripts/check-architecture-registry.sh`, native/graph boundary scripts, `cargo test --locked`.
-    2.  **Docker Build**: Dockerfile frontend stage runs `npm run build` for editor assets and `trunk build --release` for Leptos/WASM output.
-    3.  **Embed Frontend**: Dockerfile backend stage copies `apps/web/dist` before `cargo build --release --package deve_cli`, so the CLI build script embeds frontend assets into the binary.
+    2.  **Docker Build**: Dockerfile frontend stage 先运行 `npm run build` 产出 editor assets，再运行 `trunk build --release` 产出 Leptos/WASM。
+    3.  **Embed Frontend**: Dockerfile backend stage 在 `cargo build --release --package deve_cli` 前复制 `apps/web/dist`，使 CLI build script 将前端静态资源嵌入二进制。
     4.  **Docker Push**: 使用 GitHub Actions 自动构建并发布容器镜像。
         *   **Registry**: GHCR (`ghcr.io`).
-        *   **Platforms**: 当前 baseline 为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
+        *   **Platforms**: 发布基线为 `linux/amd64`；`linux/arm64` 需要独立验证后再加入。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
-Native Tauri bundling, OS signing, and GitHub Release binary uploads are deferred delivery work. They must not be treated as current `release.yml` baseline until the workflow is added.
+Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续 delivery work；在对应 workflow 增加前，**MUST NOT** 被视为 `release.yml` 发布基线。
 
-### 2.2 Deferred Workflows (非当前基线)
+### 2.2 Deferred Workflows (推迟的工作流)
 
-以下 workflow 当前不属于权威 release / CI 基线：
+以下 workflow 不属于权威 release / CI 基线：
 
 - `nightly.yml`: 不再要求每日构建；如未来重新需要，应先更新本章再新增 workflow。
 - `speckit-sync-check.yml`: 不再作为 release / CI 的必需校验面；规格同步检查应由后续独立治理流程重新定义。
@@ -119,19 +119,17 @@ services:
 
 ### 5.3 Build Strategy
 *   **Base Image**: `debian:bookworm-slim` 或 `gcr.io/distroless/cc-debian12` (Runtime).
-*   **Builder**: `rust:1.92-bookworm` (Multi-stage build), with Node.js, pinned Cargo-installed tools (`cargo-chef`, `trunk`), and `wasm32-unknown-unknown`.
+*   **Builder**: `rust:1.92-bookworm` (Multi-stage build)，包含 Node.js、固定版本的 Cargo-installed tools（`cargo-chef`, `trunk`）与 `wasm32-unknown-unknown` target。
 *   **Optimization**: 使用 `cargo-chef` 缓存依赖构建层。
-*   **Frontend Delivery**: runtime image ships a single `deve_cli` binary with embedded frontend static assets; runtime no longer requires `/app/static` or `DEVE_STATIC_DIR` for normal Docker deployment.
-*   **Local Smoke Diagnostics**: `scripts/smoke-docker-release.sh` MUST support `DEVE_DOCKER_BIN` for non-default Docker CLI paths and print Docker binary/context diagnostics when Docker is missing or unreachable.
+*   **Frontend Delivery**: runtime image 只交付单个嵌入前端静态资源的 `deve_cli` 二进制；正常 Docker 部署 **MUST NOT** 依赖 `/app/static` 或 `DEVE_STATIC_DIR`。
+*   **Local Smoke Diagnostics**: `scripts/smoke-docker-release.sh` **MUST** 支持 `DEVE_DOCKER_BIN` 以覆盖非默认 Docker CLI 路径，并在 Docker 缺失或不可达时输出 Docker binary/context 诊断。
 
 ### 5.4 Runtime Observability {#runtime-observability}
 
-The public `/api/node/role` endpoint is the lightweight release/runtime shape
-surface for smoke tests and operators. It must expose version, profile,
-delivery shape, environment, ports, and aggregated repo health counts. Degraded
-repo details remain behind CLI/admin diagnostics; the public endpoint reports
-only aggregate counts so operators can see degraded startup without leaking repo
-names or corruption details.
+公开 `/api/node/role` endpoint 是面向 smoke test 与运维的轻量 release/runtime shape
+观测面。它 **MUST** 暴露 version、profile、delivery shape、environment、ports 与聚合 repo
+health counts。degraded repo 的细节仍只属于 CLI/admin diagnostics；公开 endpoint 只能返回
+聚合计数，以便运维发现 degraded startup，同时避免泄漏 repo name 或 corruption detail。
 
 ## 6. Checklist for Release (发布清单)
 

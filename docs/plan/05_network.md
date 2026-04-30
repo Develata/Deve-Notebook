@@ -67,13 +67,13 @@
 移动端额外合同：
 
 - `Write Boundary`
-  - background / suspended 状态 MUST 禁止长时 merge、全量 replay、批量 writeback。
+  - background / suspended 状态 **MUST** 禁止长时 merge、全量 replay、批量 writeback。
   - 仅允许必要心跳、session 保活与唤醒后增量恢复准备。
 - `Durability Guarantee`
-  - 后台窗口产生的跨端更新 MUST 由 server relay 托管。
+  - 后台窗口产生的跨端更新 **MUST** 由 server relay 托管。
   - 移动端恢复前台后再通过 vector 对齐增量拉取。
 - `Power Policy`
-  - 在低电量/弱网场景下，移动端 MAY 延迟非关键同步任务。
+  - 在低电量/弱网场景下，移动端 **MAY** 延迟非关键同步任务。
   - 但不得破坏 vector monotonicity、repo route correctness、scope gate correctness。
 
 ### 3.3 WebLightPeer
@@ -108,13 +108,13 @@
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF3` magic header、`protocol_version` 与 bincode payload。
-- 当前 `protocol_version = 3`；任何破坏兼容的 schema 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
+- `protocol_version` 当前固定为 `3`；任何破坏兼容的 schema 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
 - 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned bincode frame。
 - 浏览器客户端到服务端 **SHOULD** 优先使用 versioned bincode frame；text-frame versioned JSON 只能作为调试入口保留。
-- 旧式 JSON text frame **MAY** 在显式 development/debug 兼容开关下解析，**MUST NOT** 成为生产默认 runtime 合同。
+- 旧式 JSON text frame **MAY** 在显式 development/debug 兼容开关下解析，**MUST NOT** 成为生产默认运行时合同。
 - 旧式 JSON debug frame 缺少 `known_vector` / `server_vector` 时，只能按空向量兼容解析；新发送的 sync frame **MUST** 显式携带这些字段。
-- 旧式 raw bincode / binary JSON 不属于兼容合同；runtime **MUST** 拒绝缺失 `DEVEWSF3` magic 的二进制帧。
-- runtime **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
+- 旧式 raw bincode / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF3` magic 的二进制帧。
+- 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
 ### 4.3 Core Message Families
 
@@ -139,45 +139,45 @@
 
 ### 4.4 Routing Rule
 
-- 进入同步路径的消息 MUST 带 `repo_id`。
+- 进入同步路径的消息 **MUST** 带 `repo_id`。
 - 跨 repo 复用 connection-local 默认值是禁止的。
 
 ### 4.5 Message Field Matrix
 
 - `SyncHello`
-  - required:
+  - 必填:
     - `repo_id`
     - `peer_pubkey`
     - `vector`
     - `session_proof`
-  - optional:
+  - 可选:
     - `peer_label`
     - `client_capabilities`
 - `SyncRequest`
-  - required:
+  - 必填:
     - `repo_id`
     - `known_vector`
     - `requests`
 - `SyncPush`
-  - required:
+  - 必填:
     - `repo_id`
     - `source_peer_id`
     - `header`
     - `encrypted_payload`
 - `SyncSnapshotRequest`
-  - required:
+  - 必填:
     - `source_peer_id`
     - `repo_id`
     - `known_vector`
-  - optional:
+  - 可选:
     - `reason`
 - `SyncPushSnapshot`
-  - required:
+  - 必填:
     - `repo_id`
     - `source_peer_id`
     - `server_vector`
     - `payload`
-  - optional:
+  - 可选:
     - `snapshot_kind`
 - 所有 sync message 的 `repo_id` 都是 routing 主键；缺失时必须结构化拒绝。
 
@@ -260,7 +260,7 @@ VectorCompared
 4. 镜像端仅把收到的远端事实写入 remote branch。
 5. 成功后更新该 repo 的 vector。
 
-Vector authority:
+Vector authority 规则：
 
 - `SyncHello.vector` 必须由当前 `repo_id` 的 ledger heads 重建或刷新，不得只信任进程内缓存。
 - local branch 水位来自本地 repo ledger head；remote branch 水位来自对应 `ledger/remotes/<peer>/<repo>` shadow ledger head。
@@ -311,7 +311,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 
 - backoff 序列：
   - `1s -> 2s -> 4s -> 8s -> 16s -> 30s(cap)`
-- 每次重连尝试 SHOULD 记录结构化日志和 UI retry counter。
+- 每次重连尝试 **SHOULD** 记录结构化日志和 UI retry counter。
 - `Unauthorized`、`repo route mismatch`、`malformed session proof` 不得继续普通无限重连。
 
 ## 9. Failure Modes

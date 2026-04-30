@@ -72,7 +72,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 - 删除代码前 MUST 核对其 `plan_ref` 对应条款是否已从 plan 中移除或重新分配。
 - 新增 plan_ref 时 MUST 在 plan 章节相应节加上 `{#anchor-id}`；若无 anchor，MUST 先补 anchor 再写代码引用。
 
-**当前已声明的稳定 plan anchor registry**（2026-04-25）：
+**稳定 plan anchor registry**：
 
 本表记录 `docs/plan/` 中可被代码 `plan_ref` 引用的稳定锚点。锚点出现在本表不代表当前必须已有代码引用；是否已被实现覆盖以 `scripts/plan-coverage.sh` 的反向覆盖矩阵为准。
 

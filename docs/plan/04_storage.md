@@ -69,16 +69,16 @@ Workspace_r = P_r ⊕ D_r
 - `path_cache`
 - `NodeMeta projection`
 
-这些都是 workflow state、projection state 或 performance state，MUST NOT 升格为 authority。
+这些都是 workflow state、projection state 或 performance state，**MUST NOT** 升格为 authority。
 
 ### 2.5 Clean File Policy
 
 - `Zero Injection`
-  - 系统 MUST NOT 向用户 Markdown 文件注入系统元数据。
+  - 系统 **MUST NOT** 向用户 Markdown 文件注入系统元数据。
   - 严禁把 `DocId`、`NodeId`、creation time、repo id、peer metadata 写进 YAML Frontmatter、HTML comment 或隐藏 sidecar markdown。
 - `Metadata Source`
   - 用户手写 Frontmatter 只能被视为文档 payload。
-  - Frontmatter 的存在、缺失、修改都 MUST NOT 反向改变 ledger/system metadata。
+  - Frontmatter 的存在、缺失、修改都 **MUST NOT** 反向改变 ledger/system metadata。
 - `No Hidden Shadow Files`
   - authority 恢复不得依赖同目录的额外 markdown metadata 文件。
   - repo runtime 元数据只能进入 `.notegit/` 或 runtime side tables。
@@ -102,8 +102,8 @@ Workspace_r = P_r ⊕ D_r
 
 约束：
 
-- `.notegit/` MUST 被 watcher 忽略。
-- `.notegit/` 可以随 repo 备份，但 MUST NOT 被跨 repo 复用。
+- `.notegit/` **MUST** 被 watcher 忽略。
+- `.notegit/` 可以随 repo 备份，但 **MUST NOT** 被跨 repo 复用。
 - `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
 
 ### 3.2.1 Git 镜像边界 {#git-ecosystem-coexistence}
@@ -130,7 +130,7 @@ Git mirror 是一等生态桥接层，而不是 authority 替代品：
 
 ### 3.3 Collision Rules
 
-- 同一 branch 下，同名但不同 repo identity 的 `.redb` 文件 MUST 自动重命名。
+- 同一 branch 下，同名但不同 repo identity 的 `.redb` 文件 **MUST** 自动重命名。
 - 物理文件名冲突不得改变逻辑 repo identity。
 
 ### 3.4 Browser Storage Layering {#browser-storage-layering}
@@ -163,18 +163,18 @@ Git mirror 是一等生态桥接层，而不是 authority 替代品：
   - 正常进入 repo-scoped sync/runtime。
 - `Cookie 可用，但 IndexedDB 不可用`
   - 进入 `DegradedSyncMode`。
-  - UI MUST 只读。
+  - UI **MUST** 只读。
   - 禁止 `RegisterWriter`、`SyncPush`、pending write enqueue、repo-scoped durable cache。
 - `Cookie 可用，IndexedDB 可用，但 WebCrypto key 缺失`
   - 必须重新生成 repo-scoped key 并重新注册 browser peer。
-  - 旧 browser peer identity 与旧 cache MUST 视为不可恢复。
+  - 旧 browser peer identity 与旧 cache **MUST** 视为不可恢复。
 - 站点数据被清理
-  - 浏览器 MUST 视为新 light peer。
+  - 浏览器 **MUST** 视为新 light peer。
   - 任何旧的 peer metadata、pending browser cache、repo-scoped trust state 都不得被猜测恢复。
 
 ### 3.5 Internal Path Normalization {#internal-path-normalization}
 
-- 所有持久化到 ledger、projection table、side table、sync payload 的路径字符串 MUST 统一为 forward slash。
+- 所有持久化到 ledger、projection table、side table、sync payload 的路径字符串 **MUST** 统一为 forward slash。
 - 规范化边界：
   - 进入系统：watcher、file dialog、CLI path 参数进入 authority/runtime 前，必须调用 `to_forward_slash`。
   - 离开系统：仅在直接调用 OS 文件系统 API 的瞬间，才允许转换回 native separator。
@@ -225,7 +225,7 @@ Git mirror 是一等生态桥接层，而不是 authority 替代品：
     - value: last_projection_seq, last_projection_hash, degraded flag, repair marker
   - `watcher_runtime`
     - value: suppressor fingerprints, overflow marker, last_full_scan_at
-- 这些 side tables MUST 明确标记为 workflow/runtime state，不得被上层误当成 authority state。
+- 这些 side tables **MUST** 明确标记为 workflow/runtime state，不得被上层误当成 authority state。
 
 ### 4.4 Snapshot Storage Contract
 
@@ -236,7 +236,7 @@ Git mirror 是一等生态桥接层，而不是 authority 替代品：
     - `SeqNo -> ContentBlob`
 - 规则：
   - snapshot 永远锚定到已确认 `GlobalSeq`
-  - snapshot pruning MUST 只删除已被 `SNAPSHOT_INDEX` 脱链的旧快照
+  - snapshot pruning **MUST** 只删除已被 `SNAPSHOT_INDEX` 脱链的旧快照
   - pruning 不得删除当前 head、最近检查点和正在被 restore 使用的快照
 
 ## 5. State Machines
@@ -255,7 +255,7 @@ RepoDiscovered
 约束：
 
 - `WatcherReady` 是打开 repo 的最后一步。
-- watcher 初始化失败 MUST fail-closed。
+- watcher 初始化失败 **MUST** fail-closed。
 
 ### 5.2 Write Lifecycle
 
@@ -328,7 +328,7 @@ FsEvent
 
 规则：
 
-- MUST NOT 先改 Vault 再补 ledger。
+- **MUST NOT** 先改 Vault 再补 ledger。
 
 ### 6.2 Path B: Watcher / External Edit Ingestion
 
@@ -339,9 +339,9 @@ FsEvent
 
 规则：
 
-- watcher 事件 MUST NOT 直接写 ledger。
+- watcher 事件 **MUST NOT** 直接写 ledger。
 - delete / rename / move 必须先成为候选，再经 Stage / Commit 进入结构事实。
-- ignored path MUST NOT 通过 watcher/scan 反向摄入到 `pending_fs_ops`、tree projection 或 ledger。
+- 被忽略路径 **MUST NOT** 通过 watcher/scan 反向摄入到 `pending_fs_ops`、tree projection 或 ledger。
 
 ### 6.3 Path C: Stage -> Commit
 
@@ -356,7 +356,7 @@ FsEvent
 额外约束：
 
 - stage 是真实迁移，不是 UI 布尔标记。
-- commit 生成 diff 时 base MUST 是当前 confirmed projection，而不是当前 vault 内容快照。
+- commit 生成 diff 时 base **MUST** 是当前 confirmed projection，而不是当前 vault 内容快照。
 - discard 的语义只能是“恢复 vault 到 projection + 清理 pending/staging”，不得触碰 ledger history。
 
 ## 7. Projection and Persistence Contract {#projection-contract}
@@ -371,7 +371,7 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 - `metadata`、`path mapping`、`tree cache`、`NodeMeta` 只能由 projection builder 写入。
 - handler、component、source control action 不得把这些表当成主写路径。
-- ledger append 成功而 projection 失败时，系统 MUST 标记 recoverable fault，并支持从 ledger 重建。
+- ledger append 成功而 projection 失败时，系统 **MUST** 标记 recoverable fault，并支持从 ledger 重建。
 
 具体要求：
 
@@ -381,7 +381,7 @@ Intent -> Ledger Facts -> Projection -> Vault
   - doc projection
   - tree projection
   - snapshot checkpoints
-- projection writeback MUST 具备 repo-scoped 原子感知：
+- projection writeback **MUST** 具备 repo-scoped 原子感知：
   - 同一 repo 的 projection rebuild 与 workspace persist 不能并发乱序覆盖
   - 不同 repo 之间必须隔离
 - `PersistGuard` / `WriteSuppressor` 必须在 projection writeback 前后成对生效，防止 watcher storm
@@ -399,12 +399,12 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 - watcher_start 是 repo open 的最后一步。
 - 启动前必须执行一次全量 scan。
-- startup scan **MUST** 读取 vault 根目录 `.deveignore`，并在创建 pending candidate 前跳过被忽略的 Markdown。
+- 启动扫描 **MUST** 读取 vault 根目录 `.deveignore`，并在创建 pending candidate 前跳过被忽略的 Markdown。
 - scan 与 watcher 首批事件之间的去重必须由 side table 幂等性保证。
 
 ### 8.3 忽略与路径过滤
 
-- `.deveignore` 位于 vault 根目录；直接 watcher 事件、目录重扫与 startup scan **MUST** 使用同一套匹配语义。
+- `.deveignore` 位于 vault 根目录；直接 watcher 事件、目录重扫与启动扫描 **MUST** 使用同一套匹配语义。
 - 忽略匹配 **MUST** 同时接受 vault-relative path（`<repo>/<path>`）与 repo-relative path（`<path>`），保证 repo-local 与 vault-wide 规则语义稳定。
 - `.notegit/` 与其它 repo 内部目录 **MUST** 按路径段语义忽略；`.notegit-backup` 这类同名前缀兄弟路径 **MUST NOT** 被误判为内部目录。
 - 被忽略 Markdown **MUST NOT** 通过 watcher/scan 生成 `Added`、`Modified`、`Deleted` 或 rename pending entry，也 **MUST NOT** 在 scan 中被当作 tracked doc 缺失处理。
@@ -417,18 +417,18 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 ### 8.5 Overflow Recovery
 
-- queue overflow / dropped events 时，watcher MUST 触发全量 reconcile。
-- reconcile 完成前 MUST 暂停继续消费增量事件。
+- queue overflow / dropped events 时，watcher **MUST** 触发全量 reconcile。
+- reconcile 完成前 **MUST** 暂停继续消费增量事件。
 
 ### 8.6 Lifecycle
 
-- repo close / switch MUST 停止对应 watcher 并 drain 事件。
-- 同一 repo MUST NOT 同时存在多个 watcher。
+- repo close / switch **MUST** 停止对应 watcher 并 drain 事件。
+- 同一 repo **MUST NOT** 同时存在多个 watcher。
 
 ### 8.7 Debounce and Atomic Write Semantics
 
-- debounce window SHOULD 为 `50ms-200ms`
-- debounce window MUST NOT 为 `0`
+- debounce window **SHOULD** 为 `50ms-200ms`
+- debounce window **MUST NOT** 为 `0`
 - atomic write / temp-file replace 必须统一收敛成单次 pending modify / rename candidate
 - rename pair 识别失败时，宁可退化为 pending delete + pending create，也不得伪造 authority rename
 
@@ -453,8 +453,8 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 > **Code Refs**: `apps/cli/src/commands/export.rs`, `apps/cli/src/export_entries.rs`
 
-- repo MAY 定期生成只读 backup snapshot。
-- 系统 MUST 支持将 ledger 导出为 JSON Lines。
+- repo **MAY** 定期生成只读 backup snapshot。
+- 系统 **MUST** 支持将 ledger 导出为 JSON Lines。
 
 ### 9.5 Hard Failure vs Degraded Mode
 
@@ -463,7 +463,7 @@ Intent -> Ledger Facts -> Projection -> Vault
   - watcher overflow 待 reconcile
   - workspace writeback 失败但 ledger 已提交
   - 浏览器 light peer 的 durable storage 缺失，但 session 仍可用
-- 以下情况 MUST hard fail / quarantine：
+- 以下情况 **MUST** hard fail / quarantine：
   - authority table 损坏且无法验证 append order
   - repo identity / catalog 冲突无法唯一解析
   - repair 过程检测到 history 自相矛盾

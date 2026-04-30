@@ -122,8 +122,8 @@ WsConnecting
 
 要求：
 
-- 所有 auth endpoint MUST 返回稳定结构，不得以裸文本替代。
-- ws upgrade 的 unauthorized 结果 MUST 与 http `401/403` 共享同一错误目录。
+- 所有 auth endpoint **MUST** 返回稳定结构，不得以裸文本替代。
+- ws upgrade 的 unauthorized 结果 **MUST** 与 http `401/403` 共享同一错误目录。
 
 ### 4.5 Bootstrapping Contract
 
@@ -131,7 +131,7 @@ WsConnecting
   - 首次启动不得依赖“初始化向导”创建认证基础设施。
   - auth 配置、secret、默认账号等必须通过环境变量或配置文件在启动前就绪。
 - 若启动所需 auth material 缺失：
-  - server MUST fail-closed
+  - server **MUST** fail-closed
   - 不得自动进入匿名生产模式
   - 不得临时生成弱默认凭证继续启动
 
@@ -186,9 +186,9 @@ WsConnecting
 
 > **Code Refs**: `crates/core/src/security/auth/password.rs`
 
-- `AUTH_PASS` MUST be stored as an Argon2 PHC string.
-- Login verification MUST compare user input against the configured Argon2 hash.
-- Raw passwords MUST NOT be stored in config, ledger, cookie, JWT, or logs.
+- `AUTH_PASS` **MUST** 存储为 Argon2 PHC string。
+- 登录验证 **MUST** 将用户输入与配置中的 Argon2 hash 比较。
+- 明文密码 **MUST NOT** 存储在 config、ledger、cookie、JWT 或 logs 中。
 
 ## 6. Access Control and Security Policies
 
@@ -232,7 +232,7 @@ WsConnecting
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'`
-  - `script-src 'unsafe-inline'` is a current compatibility allowance for Trunk/WASM bootstrapping and local boot glue only; remote script origins remain forbidden.
+  - `script-src 'unsafe-inline'` 只是 Trunk/WASM bootstrapping 与本地 boot glue 的兼容例外；远程 script origin 仍然禁止。
 
 ### 6.6 Audit {#audit}
 
@@ -245,14 +245,14 @@ WsConnecting
 
 ### 6.7 Key and File Permissions {#key-and-file-permissions}
 
-- 宿主机上的 `identity.key` / auth secret material 文件权限 MUST 为 owner-only。
+- 宿主机上的 `identity.key` / auth secret material 文件权限 **MUST** 为 owner-only。
 - 浏览器端不得导出 peer private key 或 session material 到 localStorage / URL / logs。
 
 ### 6.8 Localhost / Dev Policy {#localhost-dev-policy}
 
 - `AUTH_ALLOW_ANONYMOUS_LOCALHOST` 只能显式开启。
 - 仅允许 `localhost` / `127.0.0.1` 的本地开发场景使用。
-- 开启时 MUST 在日志中显著标记 dev-only auth bypass。
+- 开启时 **MUST** 在日志中显著标记 dev-only auth bypass。
 
 ### 6.9 TLS Deployment Contract
 
@@ -396,7 +396,7 @@ WsConnecting
 - `auth_gateway`
 - `browser_auth_runtime`
 
-当前实现已经有模块分层，但 unauthorized/disconnected/session-probe 语义仍然部分分散在前端 runtime 与 ws 路径中。未来重构应围绕这三层进一步收紧。
+后续重构应围绕这三层收紧 unauthorized / disconnected / session-probe 语义，避免前端 runtime 与 ws 路径形成隐式分叉。
 
 ## 本章相关命令
 

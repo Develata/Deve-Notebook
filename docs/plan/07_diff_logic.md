@@ -28,11 +28,11 @@ authority 仍是 ledger facts 与 commit anchors。
 
 - 本章定义的 diff / merge 仅适用于同一逻辑 repo。
 - `RepoId` 不一致时，任何自动 merge 都必须视为 undefined behavior 并 fail-closed。
-- Core Source Control MUST NOT 通过 Git CLI、`.git/objects`、Git index 或 Git refs
+- Core Source Control **MUST NOT** 通过 Git CLI、`.git/objects`、Git index 或 Git refs
   判定 Deve commit 是否成立。
 - Git mirror 是一等生态桥接层，但只能作为 projection export/import/publish 适配层；
   导入必须生成 Deve ledger facts，导出不得反向改写 ledger authority。
-- Git index 只允许在 mirror update 的最后提交阶段使用，MUST NOT 替代 Deve staging。
+- Git index 只允许在 mirror update 的最后提交阶段使用，**MUST NOT** 替代 Deve staging。
 
 ## 2. Authoritative Entities
 
@@ -123,16 +123,16 @@ Staged -> Unstaged
 
 约束：
 
-- Watcher 检测到的变更 MUST NOT 直接写入 ledger。
+- Watcher 检测到的变更 **MUST NOT** 直接写入 ledger。
 - `Stage` 是 repo-scoped side-table 迁移，不是 UI 样式变化。
 - `Discard` 的语义是恢复 workspace 到当前规范 projection。
 
 补充：
 
-- watcher MUST 忽略 `.notegit/`
-- watcher、startup scan、directory rescan MUST 统一应用 `.deveignore`；ignored path 不得生成 pending / staged / ledger diff。
-- `pending_fs_ops` MUST 表示 Working Directory Domain
-- `staging` MUST 表示用户确认后的过渡域，而非已提交历史
+- watcher **MUST** 忽略 `.notegit/`
+- watcher、启动扫描、目录重扫 **MUST** 统一应用 `.deveignore`；被忽略路径不得生成 pending / staged / ledger diff。
+- `pending_fs_ops` **MUST** 表示 Working Directory Domain
+- `staging` **MUST** 表示用户确认后的过渡域，而非已提交历史
 
 ### 3.2 Commit Diff Lifecycle
 
@@ -171,14 +171,14 @@ MergeRequested
 约束：
 
 - merge 只允许发生在同一逻辑 repo 内。
-- cross-repo merge MUST fail-closed。
+- cross-repo merge **MUST** fail-closed。
 
 冲突检测原则：
 
 - `Diff_local = Base -> Local`
 - `Diff_remote = Base -> Remote`
-- 修改区域不重叠时 MAY auto-merge
-- 修改区域重叠时 MUST 进入 explicit conflict state
+- 修改区域不重叠时 **MAY** auto-merge
+- 修改区域重叠时 **MUST** 进入 explicit conflict state
 
 ## 4. Commands / Inputs / Outputs
 
@@ -213,10 +213,10 @@ MergeRequested
 
 ### 4.3 Input Safety
 
-- 所有 source control 请求 MUST 带 `scope_nonce`。
-- 所有 remote branch source control 请求 MUST 经过 readonly gate。
+- 所有 source control 请求 **MUST** 带 `scope_nonce`。
+- 所有 remote branch source control 请求 **MUST** 经过 readonly gate。
 - path-only target 仅允许作为 selector 输入，落到算子前必须解析为文档/节点 identity。
-- 唯一兼容例外是 legacy `Deleted + doc_id=None` 的 exact delete selector：stage/discard wrapper 可保持 path-only，但 commit delete planning MUST 再通过当前 node projection 解析目标 identity；非 delete 的 docless tracked entry 不得使用该例外。
+- 唯一兼容例外是 legacy `Deleted + doc_id=None` 的 exact delete selector：stage/discard wrapper 可保持 path-only，但 commit delete planning **MUST** 再通过当前 node projection 解析目标 identity；非 delete 的 docless tracked entry 不得使用该例外。
 
 ### 4.4 Output Payload Minimums
 
@@ -243,8 +243,8 @@ MergeRequested
   - `current_content`
   - `incoming_content`
   - `result_content`
-  - available resolution actions
-  - structured conflict hunks
+  - 可用 resolution actions
+  - 结构化 conflict hunks
 
 ### 4.5 Diff View Output Contract
 
@@ -263,12 +263,12 @@ MergeRequested
 ### 5.1 Text Diff Contract
 
 - 使用 Myers / patience / fallback 组合是实现选择，不是权威来源。
-- 所有 text diff 的位置语义 MUST 与编辑器链保持一致；当前以 UTF-16 code unit 为统一索引标准。
+- 所有 text diff 的位置语义 **MUST** 与编辑器链保持一致；当前以 UTF-16 code unit 为统一索引标准。
 - text diff 只能表达 `Content Facts`，不得承担结构变更语义。
 
 补充：
 
-- `ContentOp::Insert` / `ContentOp::Delete` 的索引空间 MUST 与 JS/CodeMirror 完全一致。
+- `ContentOp::Insert` / `ContentOp::Delete` 的索引空间 **MUST** 与 JS/CodeMirror 完全一致。
 - 任何 byte-based diff 结果在进入协议前都必须转换到 UTF-16 index space。
 
 ### 5.2 Structure Diff Contract
@@ -283,7 +283,7 @@ MergeRequested
 
 ### 5.3 Commit Contract
 
-`CommitStaged` MUST 以如下路径完成：
+`CommitStaged` **MUST** 以如下路径完成：
 
 1. 读取当前 repo 的 confirmed projection。
 2. 对 staged entries 计算内容与结构差异。
@@ -340,18 +340,18 @@ MergeRequested
   - `AcceptIncoming`
   - `AcceptBoth`
 - 这些是 resolution runtime 的 typed outputs，不是 view 文案常量。
-- 默认冲突展示 SHOULD 支持 side-by-side 视图。
+- 默认冲突展示 **SHOULD** 支持 side-by-side 视图。
 - inline resolution 仅作为同一 conflict model 的另一种展示，不得形成第二套 conflict authority。
-- Runtime protocol uses `ServerMessage::MergeConflict` as the typed conflict model.
-- Runtime confirmation uses `ClientMessage::ResolveMergeConflict`; it is distinct from source-control `ResolveConflict`.
-- `DocDiff` MAY still be emitted as a compatibility fallback, but it MUST NOT be the conflict authority.
+- 运行时协议使用 `ServerMessage::MergeConflict` 作为 typed conflict model。
+- 运行时确认使用 `ClientMessage::ResolveMergeConflict`；它不同于 source-control `ResolveConflict`。
+- `DocDiff` **MAY** 作为兼容 fallback 继续输出，但 **MUST NOT** 成为 conflict authority。
 
 ## 7. Recovery / Repair
 
 ### 7.1 Working Directory Recovery
 
-- `Discard` MUST recover from current projection, not from stale UI buffer.
-- watcher overflow MUST trigger reconcile scan before继续处理增量事件。
+- `Discard` **MUST** 从当前 projection 恢复，不得从 stale UI buffer 恢复。
+- watcher overflow **MUST** 先触发 reconcile scan，再继续处理增量事件。
 
 ### 7.2 Source Control Table Repair
 
@@ -360,12 +360,12 @@ MergeRequested
 
 ### 7.3 Commit Diff Recovery
 
-- path target 解析失败时，系统 MUST 返回结构化错误，不得静默降级到错误文档。
+- path target 解析失败时，系统 **MUST** 返回结构化错误，不得静默降级到错误文档。
 - 如果 commit diff 结果不可用，UI 只能进入明确的 unavailable state，不得显示伪 diff。
 
 ### 7.4 Watcher Overflow Recovery
 
-- overflow 后 MUST 先进行 reconcile scan，再恢复增量处理。
+- overflow 后 **MUST** 先进行 reconcile scan，再恢复增量处理。
 - reconcile 期间不得继续基于旧 pending 集合生成 commit diff。
 
 ## 8. Forbidden Patterns

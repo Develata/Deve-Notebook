@@ -150,7 +150,7 @@ Mobile packaging scaffold 只用于固定下一批 packaging dependency decision
 ### 0.2.1 Mobile Packaging Dependency Gate Decision {#mobile-packaging-dependency-gate-decision}
 
 默认决策：Mobile packaging dependency gate **不打开**；真实 Tauri Mobile runtime
-dependency 继续 deferred 到独立 runtime batch。
+dependency 推迟到独立运行时批次处理。
 
 策略锚点：
 

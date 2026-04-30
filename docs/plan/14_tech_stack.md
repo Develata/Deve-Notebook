@@ -97,35 +97,34 @@ packaging runtime 只能在后续批次引入，并必须满足以下门禁：
   bridge 等壳层能力；adapter/session/readiness correctness 继续由 no-packaging
   skeleton unit tests 保证。
 - 每次引入或升级 packaging dependency 都必须更新
-  `scripts/check-native-track-boundary.sh`、Desktop/Mobile plan 与 dated report。
+  `scripts/check-native-track-boundary.sh`、Desktop/Mobile plan 与对应评审报告。
 
-Desktop packaging scaffold 当前已作为 `apps/desktop` 的 feature-gated code surface
-存在：它声明 planned `tauri` / `tauri-build` dependency batch 与 window/menu/tray/
-installer/auto-update acceptance，但仍不引入实际 Tauri dependency。该 scaffold
-只能作为下一批 dependency decision 的输入，不得被解释为当前已具备 native packaging。
+Desktop packaging scaffold 只能作为 feature-gated 规划面：允许声明 `tauri` /
+`tauri-build` dependency batch 与 window/menu/tray/installer/auto-update acceptance，
+但不得引入实际 Tauri dependency。该 scaffold 只能作为下一批 dependency decision 的输入，
+不得被解释为已经具备 native packaging。
 
-Mobile packaging scaffold 当前已作为 `apps/mobile` 的 feature-gated code surface
-存在：它声明 planned `tauri` / `tauri-build` dependency batch 与 WebView shell/
-permission bridge/share sheet/deeplink/file picker/push notification/store package
-acceptance，但仍不引入实际 Tauri Mobile dependency。移动端 foreground/background
-lifecycle reprobe、session/readiness correctness 继续由 no-packaging skeleton tests
-保证，packaging 不得取得业务 authority。
+Mobile packaging scaffold 只能作为 feature-gated 规划面：允许声明 `tauri` /
+`tauri-build` dependency batch 与 WebView shell/permission bridge/share sheet/deeplink/
+file picker/push notification/store package acceptance，但不得引入实际 Tauri Mobile
+dependency。移动端 foreground/background lifecycle reprobe、session/readiness correctness
+继续由 no-packaging skeleton tests 保证，packaging 不得取得业务 authority。
 
-Native embedded service supervision 当前是 no-runtime contract：`deve_core::native_adapter`
-提供 `NativeServiceSupervisor`、health probe、retry budget 与 session handoff failure
+Native embedded service supervision 按 no-runtime contract 处理：`deve_core::native_adapter`
+定义 `NativeServiceSupervisor`、health probe、retry budget 与 session handoff failure
 分类；`apps/desktop`、`apps/mobile` 与 native loopback launch surface 复用该 contract。
-它不启动真实子进程，不引入 Tauri dependency，也不授予 native shell 任何 core authority。
+该 contract 不启动真实子进程，不引入 Tauri dependency，也不授予 native shell 任何 core authority。
 
-Native packaging dependency gate 当前仍是 closed/deferred：
+Native packaging dependency gate 默认关闭：
 `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为
-`DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 不允许进入当前
+`DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 不允许进入默认
 workspace 构建。`apps/desktop` 与 `apps/mobile` 的 packaging scaffold 只记录 planned
 capabilities 与 forbidden authorities；它不是 gate 已打开的证明。
 
-真实 native process adapter 当前被显式推迟到 packaging gate 之后：
+真实 native process adapter 必须推迟到 packaging gate 之后：
 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定为 `DeferredUntilPackagingGate`，
 `child_process_runtime_enabled = false`、`packaging_gate_required = true`、
-`authority_writes_allowed = false`。这表示默认 desktop/mobile skeleton 只验证
+`authority_writes_allowed = false`。默认 desktop/mobile skeleton 只验证
 adapter/session/bootstrap/readiness contract；后续如需真实 child-process runtime，
 必须在对应 native crate 的 `native-packaging` feature 后实现，并继续禁止 core
 authority writes。

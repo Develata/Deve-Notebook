@@ -53,7 +53,7 @@ Cargo dependency/import 泄漏。
 ### 0.2.1 Desktop Packaging Dependency Gate Decision {#desktop-packaging-dependency-gate-decision}
 
 默认决策：Desktop packaging dependency gate **不打开**；真实 `tauri` / `tauri-build`
-dependency 继续 deferred 到独立 runtime batch。
+dependency 推迟到独立运行时批次处理。
 
 策略锚点：
 

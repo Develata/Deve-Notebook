@@ -1,6 +1,6 @@
 # AI 双通道架构 (Dual-Channel AI)
 
-> **Status (2026-04-25)**: 本文是历史设计注，当前权威边界以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
+> 本文是历史设计注；权威边界以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
 > Native AI Chat 是当前默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
 > 仓库中保留的 Rhai `ai-chat` 与 `PluginCall` 路径是兼容实现细节，不代表插件平台或外部 Agent 默认启用。
 
@@ -38,7 +38,7 @@
 
 *   **历史管理**：内置 sqlite/json 历史状态机，支持 `/plan` 和 `/build` 等模式。
 *   **工具支持 (Skills + controlled CLI)**：只适用于用户明确信任外部 CLI 的部署，不是 Native AI 的默认能力；MCP 不再作为产品运行时方向。
-*   **Skills (自定义技能)**：只能由外部 CLI 自己管理，Deve-Notebook 当前不内建 Skills 装载。
+*   **Skills (自定义技能)**：只能由外部 CLI 自己管理，Deve-Notebook 不内建 Skills 装载。
 *   **Token 优化**：滑动窗口和上下文合并已经做到极致。
 *   **外部 CLI 内存参考**：opencode ~50-100 MB/次，zeroclaw ~15-30 MB/次，均为按需启动。
 

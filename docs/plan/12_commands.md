@@ -11,8 +11,8 @@
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
 权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约，不能反向覆盖
-`01/02/04/05/06/07/09/11` 的 Current MUST。命令实现状态由 acceptance case 与 report
-跟踪；未绑定验收的命令只能视为规划目标，不能作为当前发布阻塞项。
+`01/02/04/05/06/07/09/11` 的硬约束章节。命令是否可验收以 acceptance case 绑定为准；
+未绑定验收的命令只能视为规划目标，不能作为当前发布阻塞项。
 
 ## 1. CLI Commands {#cli-commands}
 
@@ -54,7 +54,7 @@
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve stage/commit；该命令不得直接生成 ledger commit。
     *   `Git: Push Mirror`: 将已映射的 `.git` mirror HEAD 推送到远端；不得绕过 Deve authority。
     *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于第 7 章定义的 blocker。
-    *   `Git:*` 文案 MAY 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
+    *   `Git:*` 文案 **MAY** 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:
     *   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支.

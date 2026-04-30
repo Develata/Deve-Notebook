@@ -28,11 +28,11 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 | `LOG_LEVEL`                      | `info`           | 日志级别: `trace`, `debug`, `info`, `warn`, `error`.                |
 | `MEM_CACHE_MB`                   | `128`            | 内存缓存上限 (MB).                                                  |
 | **Network & Security**           |                  |                                                                     |
-| `AUTH_SECRET`                    | *(Random)*       | Session/JWT 签名密钥. **生产环境 MUST 设置**.                       |
+| `AUTH_SECRET`                    | *(Random)*       | Session/JWT 签名密钥。生产环境 **MUST** 设置。                       |
 | `AUTH_USER`                      | `admin`          | 默认超管用户名.                                                     |
-| `AUTH_PASS`                      | *(none)*         | Argon2 哈希后的管理员密码（PHC 格式）。生产环境 MUST 设置。          |
+| `AUTH_PASS`                      | *(none)*         | Argon2 哈希后的管理员密码（PHC 格式）。生产环境 **MUST** 设置。          |
 | `AUTH_ALLOW_ANONYMOUS_LOCALHOST` | `false`          | 是否允许 Localhost / LAN 免密访问 (`true` / `false`).               |
-| `ALLOWED_ORIGINS`                | *(none)*         | 允许的 CORS Origin 列表 (逗号分隔). 生产环境 MUST 显式设置。        |
+| `ALLOWED_ORIGINS`                | *(none)*         | 允许的 CORS Origin 列表 (逗号分隔)。生产环境 **MUST** 显式设置。        |
 | **AI**                           |                  |                                                                     |
 | `AI_API_KEY`                     | *(none)*         | Native AI Chat 的服务密钥。                                         |
 | `AI_BASE_URL`                    | `https://api.openai.com/v1` | Native AI Chat API 端点。                               |
@@ -87,7 +87,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 | `ai.mode`                  | String | `native`     | `native` = Native AI Chat；`trusted-cli` = 受信任外部 CLI（仅在显式启用时可选）。 |
 | `ai.native_enabled`        | Bool   | `true`       | 是否启用 Native AI Chat。 |
 | `ai.agent_bridge.enabled`  | Bool   | `false`      | 是否启用 Trusted External Agent。默认关闭。 |
-| `ai.agent_bridge.trusted`  | Bool   | `false`      | 是否确认当前部署为受信任本地环境。未确认时 MUST NOT 起 CLI。 |
+| `ai.agent_bridge.trusted`  | Bool   | `false`      | 是否确认当前部署为受信任本地环境。未确认时 **MUST NOT** 起 CLI。 |
 | `ai.agent_bridge.timeout_ms` | Number | `30000`    | 外部 CLI 单次请求超时。 |
 
 补充约束：
@@ -120,7 +120,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 浏览器本地 UI 偏好仅保存主题、布局、语言、最近命令等无害状态。`localStorage` 不可用时可以退回内存态，
 但不得把 repo authority、session secret、peer private key 或业务事实写入该层。
 
-当前实现要求所有前端 UI 偏好通过 `apps/web/src/storage/prefs.rs` 进入浏览器存储 fallback 层。
+所有前端 UI 偏好必须通过 `apps/web/src/storage/prefs.rs` 进入浏览器存储 fallback 层。
 除 `storage/prefs.rs` 本身与 `storage/js_bridge.rs` 能力探测外，不得在功能模块中直接调用
 `window.localStorage` / `sessionStorage`。布局宽度、Outline 可见性、语言偏好、快捷键覆盖等均属于
 无害 UI prefs；repo identity、sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。
