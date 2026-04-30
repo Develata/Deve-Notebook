@@ -10,9 +10,9 @@
 
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
-当前权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约，不能反向覆盖
-`01/02/04/05/06/07/09/11` 的 Current MUST。已实现命令应在本章保持可追踪；未实现命令
-必须被视为 future work，不能作为当前验收阻塞项。
+权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约，不能反向覆盖
+`01/02/04/05/06/07/09/11` 的 Current MUST。命令实现状态由 acceptance case 与 report
+跟踪；未绑定验收的命令只能视为规划目标，不能作为当前发布阻塞项。
 
 ## 1. CLI Commands {#cli-commands}
 
@@ -48,13 +48,12 @@
     *   `Source Control: Sync`: 同步 Deve repo-scoped changes.
     *   `Source Control: Commit`: 提交 staged changes 到 ledger-backed commit anchor.
     *   `Source Control: Push`: 推送 Deve source-control state；当前不得被解释为 Web 直接执行 Git mirror push；Git mirror publish 只由显式 `deve git push` surface 承担。
-    *   `Git: Status`: 查看 `.git` mirror 是否存在、repo-local `.gitignore` 是否保护 `.notegit/`，并以独立 `queue_state` 显示 `GitMirrorQueued / Committed / OutOfSync` side-table summary；CLI 当前还会列出具体 lagging records、`queued_lag_ms` / `updated_lag_ms`、失败位置与 mirror/retry 命令提示。
-    *   `Git: Mirror`: 显式执行 queued Git mirror commit；单个待处理 record 走 worktree/preflight 后的 `git add -A` / `git commit`，多个积压 records 走临时 Git index 的 projection replay，按 Deve commit diff 生成逐 commit Git history；路径越界、父映射缺失或 Git 命令失败进入 `GitMirrorOutOfSync`，CLI 输出 repair/retry hint。
-    *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射；当前 CLI surface 为 `deve git export`，同时支持空 Git history 下的首次 snapshot bootstrap。
-    *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve ledger commit；当前 CLI surface 为 `deve git import` dry-run 与 `deve git import --apply` 显式 pending/import 写入，不直接生成 ledger commit。
-    *   `Git: Push Mirror`: 将 Git mirror 推送到远端；当前 CLI surface 为 `deve git push`，只发布已映射的 `.git` mirror HEAD，不得绕过 Deve authority。
-    *   `Git: Repair Mirror`: 当前 Web Command Palette 仅提供 CLI-only repair/retry notice，引导用户通过 `deve_cli git status --repo <repo>` 查看 `repair_action[...]`，修复 blocker 后再运行 `deve_cli git export --repo <repo> --retry-out-of-sync`；不得自动执行 Git repair。
-    *   Future clickable repair UI: MAY 进入只读 review flow 并展示 `repair_action[...]` / `repair_guidance[...]`、subject、next step 与 retry command；MUST 要求 manual confirmation 后才允许任何 Git write；MUST NOT 从 Command Palette 或后台任务直接执行 Git repair。
+    *   `Git: Status`: 只读查看 `.git` mirror readiness、repo-local `.gitignore` 是否保护 `.notegit/`，以及 `GitMirrorQueued / Committed / OutOfSync` 队列状态。
+    *   `Git: Mirror`: 显式执行 queued Git mirror commit；执行面 **MUST** 复用第 7 章 Git mirror preflight 与 out-of-sync 边界。
+    *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射。
+    *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve stage/commit；该命令不得直接生成 ledger commit。
+    *   `Git: Push Mirror`: 将已映射的 `.git` mirror HEAD 推送到远端；不得绕过 Deve authority。
+    *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于第 7 章定义的 blocker。
     *   `Git:*` 文案 MAY 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:
@@ -62,18 +61,10 @@
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
     *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
 
-*   **Current implemented subset**:
-    *   Command Palette 当前覆盖 Open / Settings / Toggle Language / Switch Peer /
-        Establish Branch / Merge Peer / Git Import Changes（CLI-only notice）/
-        Git Push Mirror（CLI-only notice）/ Git Repair Mirror（CLI-only notice）/
-        Toggle AI Chat（条件可见）。
-    *   Source Control Sync / Commit / Push、Command Palette Git mirror executor/export/status 与 AI Retry / Backend /
-        PLAN / BUILD 面板命令仍属于 Planned / Optional，除非后续验收用例绑定到具体实现。
-    *   Git import 当前只实现 CLI dry-run 与 pending/import apply；Git push 当前只实现 CLI mirror publish。
-        Command Palette 只提供可发现的 CLI-only notice，不得被解释为 Web 已能直接执行 Git import/push；
-        Git push notice 已覆盖 remote/upstream、export/repair、dirty Git worktree 与 dirty Deve Source Control blocker 提示；
-        Git repair notice 当前只解释 `repair_action[...]`、blocker 修复与 `--retry-out-of-sync` 重试路径。
-        blocker repair 的可点击 UI 与完整 conflict UI 仍属 future；后台自动 Git repair 不属于当前或下一阶段默认能力。
+*   **实现状态边界**:
+    *   Command Palette 是否真正执行命令必须以 acceptance case 绑定为准；本章列名不等于功能已完成。
+    *   CLI-only notice 只能作为可发现性入口，不得被解释为 Web 已能直接执行 Git import/push/repair。
+    *   Git repair 的可点击 UI、完整 conflict UI 与后台自动 repair 都必须另行设计，不能从 notice 或只读 review surface 隐式升级。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

@@ -10,9 +10,9 @@
 
 本章汇总系统所有配置项，包括环境变量、运行时配置文件 (`config.toml`) 以及快捷键映射。
 
-当前权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约。当前已实现边界是
+权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约。当前验收边界只覆盖
 CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settings API 与统一 GUI
-持久化状态仍是 future work，不得在验收中伪装成已完成能力。
+持久化仍是规划目标，不得在验收中伪装成已完成能力。
 
 ## 1. Environment Variables (环境变量)
 

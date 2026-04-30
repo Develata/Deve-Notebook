@@ -63,7 +63,7 @@
 *   **No Heavyweight Defaults (无默认重能力)**: 核心 **MUST NOT** 内置以下能力作为必选路径：AI 推理、Full-Text Search (全文索引)、Code Execution (代码块执行)、Batch Pipeline (批量管线)、Image Processing (图像处理)、Advanced Layout (复杂排版)。
 *   **Non-Blocking Interaction (非阻塞交互)**: 核心 UI 线程 **MUST** 保持轻量。耗时操作 (Heavy Tasks) **MUST** 提交至 Job Queue，并支持 Cancel/Degrade (取消/降级)。
 *   **No Proprietary Format (无私有格式)**: Projection 层（用户对于 Vault 的可见视图）**MUST NOT** 引入破坏标准 Markdown 语义的私有语法。
-* **Ignored Files Strategy (忽略策略)**：对于 Vault 中无法解析、被用户规则忽略或过大的非目标文件（如编译产物、系统临时文件），核心 **MUST** 在外部摄入路径依据 `.deveignore` 或内置规则直接忽略。该语义 **MUST** 同时覆盖 watcher 增量事件、目录事件触发的 scan、startup scan；ignored path **MUST NOT** 通过 watcher/scan 反向摄入到 Ledger、tree projection 或 `pending_fs_ops`。受控应用内创建仍属于显式 authority 写入，不由 `.deveignore` 隐式拦截。
+*   **Ignored Files Strategy (忽略策略)**：核心在外部文件摄入边界 **MUST** 先应用 `.deveignore` 与内置忽略规则；被忽略路径 **MUST NOT** 经 watcher、目录重扫或启动扫描进入 Ledger、tree projection 或 `pending_fs_ops`。受控应用内创建属于显式 authority 写入，**MUST NOT** 被 `.deveignore` 隐式拦截。
 
 ### Plugin MAY（插件可选）
 

@@ -17,7 +17,7 @@
 ## 1. Scope (目标与范围)
 
 *   **目标**：在 768 MB 约束下提供一个可用、可控、可解释的 AI 入口。
-*   **当前主线（Current Track）**：
+*   **主线能力**：
     - **Native AI Chat**：最小原生聊天能力，支持读取当前 Markdown/上下文并回答。
     - **Native Modes**：原生支持 `PLAN` / `BUILD` 两种聊天模式。
     - **Trusted External Agent Bridge**：仅作为高级可选模式预留，不视为当前发布主线。
@@ -60,17 +60,17 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   **Read-first**：当前阶段优先保证“读 markdown + chat”稳定，不追求工具丰富度。
 *   **Low-memory**：常驻成本应保持在轻量级，适合低配环境。
 
-### Runtime Implementation Contract
+### 运行时实现合同
 
-*   Server runtime belongs to `apps/cli/src/server/ai_chat/`.
-*   Web chat UI belongs to `apps/web/src/components/chat/`; backend capability probing belongs to `apps/web/src/api/ai_backend.rs`.
-*   `crates/core/src/plugin/runtime/chat_stream.rs` and `provider.rs` may provide a transport-agnostic bridge while the existing Rhai host remains in the repo, but this bridge does **not** make Native AI Chat part of the generic plugin mainline.
-*   Native AI Chat must keep the read-first boundary from this section: provider calls may stream responses, but must not silently gain arbitrary source-control or workspace write authority.
-*   The bundled `plugins/ai-chat` compatibility plugin must not grant broad filesystem reads or expose default tool execution. Current Markdown / explicit selection context is passed through the chat request, not recovered by unrestricted plugin file reads.
-*   Its public PluginCall surface must be limited to `chat`; helper/config/tool functions are internal implementation details and must fail closed when called externally.
-*   Product backend names are `native` / `trusted-cli`. Compatibility plugin ids such as `ai-chat` / `agent-bridge` are internal runtime routing details and require an explicit conversion layer.
-*   Synchronous `PluginResponse` text or error must complete the matching chat request. Missing API keys, disabled Trusted CLI, or policy errors must never leave the UI in an infinite streaming/loading state.
-*   `ai.native_enabled = false` disables Native AI Chat at both server provider registration and public `ai-chat` RPC boundaries. The backend capabilities endpoint must expose this state so Web UI can disable or fallback from the Native backend.
+*   Server runtime 归属 `apps/cli/src/server/ai_chat/`。
+*   Web chat UI 归属 `apps/web/src/components/chat/`；backend capability probing 归属 `apps/web/src/api/ai_backend.rs`。
+*   在既有 Rhai host 仍保留时，`crates/core/src/plugin/runtime/chat_stream.rs` 与 `provider.rs` **MAY** 提供 transport-agnostic bridge；该 bridge **MUST NOT** 把 Native AI Chat 升格为通用插件主线。
+*   Native AI Chat **MUST** 保持本节 read-first 边界：provider 可流式返回结果，但 **MUST NOT** 静默获得任意 source-control 或 workspace 写权限。
+*   bundled `plugins/ai-chat` 兼容插件 **MUST NOT** 授予广泛文件读取或默认工具执行；当前 Markdown 与用户显式选择的上下文只能由 chat request 传入，不得通过无限制 plugin file read 反向恢复。
+*   public `PluginCall` surface **MUST** 限定为 `chat`；helper/config/tool 函数属于内部实现细节，被外部调用时必须 fail-closed。
+*   产品后端名称是 `native` / `trusted-cli`；`ai-chat` / `agent-bridge` 这类兼容 plugin id 只是内部 routing detail，必须经过显式转换层。
+*   同步 `PluginResponse` text 或 error **MUST** 完成对应 chat request；缺 API key、Trusted CLI 被禁用或 policy error **MUST NOT** 让 UI 无限 streaming/loading。
+*   `ai.native_enabled = false` **MUST** 同时禁用 server provider registration 与 public `ai-chat` RPC；backend capabilities endpoint **MUST** 暴露该状态，让 Web UI 禁用或回退 Native backend。
 
 ### 原生模式定义
 
@@ -112,7 +112,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 
 *   如果上述边界在目标部署形态下无法成立，则 Deve-Notebook **SHOULD** 不内建 CLI Agent。
 *   在这种情况下，用户可以自行在外部终端运行独立 CLI Agent；Deve-Notebook 不负责原生托管它。
-*   当前代码若保留 `agent-bridge`，它只能是 default-off、policy-gated 的 Trusted CLI path；它不得被描述成通用插件市场能力，也不得绕过 `AGENT_CLI_PATH` / trusted-mode gating。
+*   若保留 `agent-bridge`，它只能是 default-off、policy-gated 的 Trusted CLI path；它不得被描述成通用插件市场能力，也不得绕过 `AGENT_CLI_PATH` / trusted-mode gating。
 *   `AGENT_CLI_PATH` 必须解析为显式绝对路径；子进程必须清空默认环境、设置超时、输出上限和并发上限，避免退化成开放式 shell/agent runner。
 *   `DEVE_AI_AGENT_BRIDGE_ENABLED` 与 `DEVE_AI_AGENT_BRIDGE_TRUSTED` 是
     `ai.agent_bridge.enabled` / `ai.agent_bridge.trusted` 的兼容环境变量别名；它们只改变

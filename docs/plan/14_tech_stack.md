@@ -27,29 +27,24 @@
 | **CLI**      | **Clap v4**              | Verified          | 命令行解析。                        |
 | **Async**    | **Tokio v1**             | Verified          | 异步运行时。                        |
 | **Logs**     | **Tracing**              | Verified          | 结构化日志。                        |
-| **AI Chat**  | **OpenAI-compatible SSE** | Verified (Minimum Native) | 第一方最小 chat 能力已落地：读取 Markdown + 对话、PLAN/BUILD 本地模式、受控 Markdown Apply、tools/tool_calls fail-closed、`ai.native_enabled` effective config boundary。 |
-| **Trusted External Agent** | **External CLI Bridge** | Partial (Trusted CLI Policy-Gated) | 外部 CLI Agent 桥接保留为可选 Trusted path：默认关闭、显式配置、绝对可执行路径与 policy gate；不属于默认 Native Chat 或通用插件市场能力。 |
+| **AI Chat**  | **OpenAI-compatible SSE** | Native Baseline | 第一方最小 chat 路径；必须保持 read-first、低常驻成本与 PLAN/BUILD 模式边界。 |
+| **Trusted External Agent** | **External CLI Bridge** | Optional Trusted Path | 外部 CLI Agent 仅作为显式启用的受信任路径；默认关闭，不属于通用插件市场能力。 |
 | **MCP**      | **No runtime**   | Retired | 不规划、不保留 MCP runtime；相关需求由 Skills 调用受控 CLI 工具或 Trusted CLI path 承载。 |
-| **Graph**    | **Core read-only projection + CLI JSON surface + protected HTTP projection + deferred renderer gate** | Verified (Projection Data Surface / Renderer Gate Closed) | `deve_core::graph` 只从 repo docs 派生节点/边，不写 ledger authority；`deve graph` 与 `/api/repo/graph` 只读导出 projection JSON；Web 只保留 summary panel，高性能 Canvas/d3-force/Pixi renderer gate 当前关闭。 |
-| **Search**   | **Repo-scoped baseline scan; Tantivy planned** | Verified (Baseline) | Standard + `search` feature 下按当前 repo scope 扫描文档内容；Tantivy 增量索引仍是后续优化。 |
-| **Sync**     | **Axum + Tower**         | Verified (Partial) | HTTP 路由成熟；WS 仍持续收紧广播粒度。 |
-| **Git Ecosystem** | **First-class mirror bridge** | Partial (Explicit Mirror Replay + Import/Push CLI + Web CLI Notices) | `.notegit/` 保持 authority；`.git/` 作为生态镜像层。当前已落地共存/忽略/status、lazy `git_mirror_commits` side table、结构化 failure stage、显式单-record executor、多-record projection replay、queued export、import apply、push CLI surface 与 Web import/push/repair CLI-only notices；自动后台执行与完整 UI 仍属 P1/P2 后续。 |
-| **Build**    | **Tauri v2**             | Partial Skeleton / Planned Packaging | `apps/desktop` 与 `apps/mobile` 已有无 Tauri 依赖的 native shell skeleton，用于固定 adapter/bootstrap/offline/lifecycle 边界；真实 Tauri v2 packaging、菜单、托盘、移动权限、安装包与 auto-update 仍是 future。 |
-| **Plugins**  | **Compatibility Host + Interface Reserved** | Boundary Reserved / Compatibility Host | 当前保留 Rhai/plugin-host 兼容边界与 Trusted CLI/Calculation future 接口；不要求插件市场或完整扩展平台，MCP runtime 退役。 |
+| **Graph**    | **Read-only projection + optional renderer gate** | Deferred Renderer | Core 只读派生 graph projection；高内存 renderer 必须作为独立性能批次启用。 |
+| **Search**   | **Repo-scoped baseline scan; Tantivy optional** | Baseline + Optional Index | 低配默认不得依赖常驻重型索引；Tantivy 仅作为 feature-gated 优化路径。 |
+| **Sync**     | **Axum + Tower**         | Core Runtime | HTTP/WS runtime 必须遵守第 5 章协议、repo scope 与结构化错误合同。 |
+| **Git Ecosystem** | **First-class mirror bridge** | Mirror Bridge | `.notegit/` 保持 authority；`.git/` 只作为生态镜像层，详见第 4 与第 7 章。 |
+| **Build**    | **Tauri v2**             | Native Target / Deferred Packaging | Desktop/Mobile 目标采用 Tauri v2；真实 packaging 依赖必须经过 native-packaging gate。 |
+| **Plugins**  | **Compatibility Host + Interface Reserved** | Boundary Reserved | 保留 Rhai/plugin-host 兼容边界与 Trusted CLI/Calculation future 接口；不要求插件市场或完整扩展平台。 |
 
-### 1.1 Graph Visualization {#graph-visualization}
+### 1.1 图谱可视化 {#graph-visualization}
 
-当前已实现部分包括 `deve_core::graph` 的只读 projection baseline、`deve graph`
-CLI JSON surface、受保护 HTTP 只读 query `GET /api/repo/graph` 与 Web Source Control
-summary panel：core graph 从当前 repo docs 派生节点、已解析边与未解析链接，不读取或写入
-ledger authority、workspace、search index 或 source-control runtime；CLI/HTTP adapter 只负责从
-当前 repo 的文档 projection 重建 `GraphDocument`，调用 `project_documents` 并输出 JSON。
+Graph 技术路线分为只读 projection 与可选 renderer 两层：
 
-Current decision (2026-04-29)：Graph Web renderer gate 当前关闭。Web 只保留只读 summary
-panel，不实现 force simulation、Canvas layout、d3-force/Pixi renderer 或 graph interaction
-state，也不新增 renderer dependency。`apps/web/package-lock.json` 中由 Mermaid 等前端包带来的
-历史/间接 d3 依赖不构成 Graph renderer gate 已打开的证据；当前 graph surface 的可验收能力只包括
-projection data、protected HTTP query、CLI JSON 与 summary counts。
+- Core graph projection 只能从当前 repo 的 Markdown projection 派生节点、已解析边与未解析链接。
+- CLI/HTTP adapter 只能导出只读 graph projection JSON，不得写 ledger、workspace、search index、source-control state 或 `.git/.notegit`。
+- Web renderer gate 默认关闭；summary、count 或只读 review UI 不等价于高性能图渲染器。
+- 间接前端依赖（例如由 Mermaid 带来的 d3 包）不得被解释为 Graph renderer gate 已打开。
 
 未来若重新打开 Graph renderer gate，必须作为独立 dependency/performance batch 处理，并满足：
 
@@ -60,47 +55,21 @@ projection data、protected HTTP query、CLI JSON 与 summary counts。
 - 交互状态必须 repo-scoped，并 fail-closed 于 stale `repo_id`、`branch` 或 `scope_nonce`。
 - 验收必须包含大图降级策略、加载失败 fallback 与无 renderer 环境 fallback。
 
-### 1.2 Search Baseline {#search-baseline}
+### 1.2 搜索基线 {#search-baseline}
 
-当前 repo-scoped baseline search 必须保持可禁用、可降级。`search` feature 下允许保留 Tantivy service
-作为 Standard profile 的可选索引实现；低配模式不得依赖常驻重型索引，后续增量索引优化不得反向污染
-ledger authority 或 repo scope gate。
+Search 技术路线必须可禁用、可降级：
 
-Current decision (2026-04-29)：当前可验收 Search 是 WebSocket repo-scoped baseline scan，
-不是 Tantivy 常驻索引服务。`deve_cli --features search` 且 profile 非 `low-spec` 时，server
-按当前 `repo_id/branch/scope_nonce` 从 ledger docs 重建内容并返回 `(doc_id, path, score)`；
-未编译 `search` feature、`low-spec` profile、缺失或过期 browser `scope_nonce` 都必须 fail-closed
-为结构化 `ProtocolError`。前端只接受 request id、repo、branch 与 scope nonce 同时匹配的
-`SearchResults`，并在 search 不可用时清 pending request 与结果。
+- Baseline search **MUST** 绑定当前 `repo_id/branch/scope_nonce`，不得跨 repo 复用结果。
+- 未启用 `search` feature、低配 profile、缺失或过期 scope nonce 时，search **MUST** fail-closed 为结构化错误。
+- 前端只接受 request id、repo、branch 与 scope nonce 同时匹配的结果；不匹配结果 **MUST** 丢弃。
+- Tantivy 只能作为 feature-gated 优化路径；低配默认 **MUST NOT** 依赖常驻重型索引。
+- Search index **MUST NOT** 成为 ledger、source-control 或 repo scope authority。
 
-Tantivy `SearchService` 仍是 feature-gated library capability / future optimization input：
-当前 CLI server baseline 启动路径不得初始化 Tantivy service、不得要求持久 search index，也不得让
-索引状态成为 ledger/source-control authority。
-
-### 1.3 Git Ecosystem Mirror Bridge {#git-ecosystem-bridge}
+### 1.3 Git 生态镜像桥 {#git-ecosystem-bridge}
 
 Deve 的核心版本管理是 ledger-backed Source Control，不复用 Git object store、Git
 index、Git refs 或 `.git/` 目录作为 authority。Git 生态作为 first-class mirror
 bridge：projection export、受控 import、backup/publish、远程托管与 release 交付。
-
-当前已实现的 bridge foundation：
-
-- `.git/` 与 `.notegit/` 作为 repo internal path segments 被 watcher / scan / sync / rebuild projection 忽略。
-- `materialize` / `rebuild_projection` / `init` / `serve` 会确保 repo-local `.gitignore` 忽略 `.notegit/`。
-- `deve_cli git status` 提供只读 mirror 状态骨架：`.git` 是否存在、`.notegit` 是否存在、`.gitignore` 是否保护 `.notegit/`。
-- Lazy-created `git_mirror_commits` side table 记录 `DeveCommit -> GitMirrorQueued / GitMirrorCommitted / GitMirrorOutOfSync`，并为 out-of-sync 记录持久化结构化 `failure_stage`（旧记录缺字段时 CLI 只作兼容性 fallback）；`deve_cli git status` 输出 mirror readiness `state`、独立 `queue_state`/queued/committed/out_of_sync summary、per-commit lagging records、`queued_lag_ms` / `updated_lag_ms`、失败位置与 retry command hint。
-- `deve_cli git mirror` 可显式执行 queued/out_of_sync records；单个 record 走 worktree preflight 后的 `git add -A` / `git commit`，多个 records 走临时 Git index 的 projection replay，用 `commit-tree` / `update-ref` 按 Deve commit diff 生成逐 commit Git history，并写回 Git commit hash；执行报告会输出 per-record outcome、失败位置与 repair/retry hint。
-- `GitMirrorOutOfSync` 当前暴露 CLI-only `GitMirrorRepairAction` schema，把 failure stage / legacy error 映射为 repair action code、subject 与 retryable-after-fix 标记；CLI record 明细同时输出 `repair_guidance[...]`，给出 `manual_only=yes`、具体 next step 与 retry command。该 schema 只用于诊断与显式 CLI retry 指引，不自动执行 Git。
-- `deve_cli git export` 复用该 executor 作为 queued projection export surface，输出 `git_export[...]` 报告与 export/retry hint；side table 为空且 Git history 为空时，会从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit，只把最新 Deve commit 映射到该 Git commit，后续增量 commit 再以该映射为 parent replay。
-- `deve_cli git import` 当前提供只读 dry-run planning：解析 Git tracked/untracked worktree changes 为 change/blocker；`deve_cli git import --apply` 在无 blocker 时把安全 changes 原子写入 `pending_fs_ops`，并通过 `has_conflict` 保留冲突标记。该 surface 不得被解释为 ledger commit 已完成。
-- resolved import 的当前验收链路是：`deve_cli git import --apply` 写 pending/import，Source Control resolved stage/commit 生成 Deve commit，`deve_cli git export` 建立 Git mirror mapping，`deve_cli git push` 发布已映射 Git HEAD。未导出的 queued record 与 dirty Git worktree 必须 fail-closed，且不得创建或更新远端分支。
-- `deve_cli git push` 当前提供显式 mirror publish surface：只在 `.git` mirror ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record 且当前 Git HEAD 映射到最新 `GitMirrorCommitted` record 时执行远端 push；失败以 blocker 输出，不回滚 ledger，也不写 `.notegit`。
-- Web Command Palette 当前只提供 Git import / push / repair 的 CLI-only notices：repair notice 指向 `deve_cli git status --repo <repo>` 的 `repair_action[...]` 与 `deve_cli git export --repo <repo> --retry-out-of-sync`，不直接调用 Web 后端执行 Git。
-- Git mirror repair review 的真实 record-level 数据源固定为受保护 HTTP 只读 query：`GET /api/sc/git-mirror/repair-review` 读取 server-side `git_mirror_commits` 与 core `GitMirrorRepairAction` schema，返回 action code、subject、manual-only next step、retry command 与 `.notegit` authority 提醒；该 endpoint 不运行 Git、不写 `.git`/`.notegit`、不解析 CLI 文本，也不提供后台 executor。
-- Web Source Control repair notice 当前会消费该只读 review 数据替代静态 copy；支持多条 out-of-sync record，并显式展示 loading、load failed 与 empty fallback 状态；请求失败或无 record 时回退 CLI-only notice/retry command，不执行 Git。
-- Current decision (2026-04-29)：本阶段不进入 executable Web repair UI；Web 继续保持 read-only review / CLI-only notice，Git writer 只保留在显式 CLI surface。未来若重新打开 Web 执行入口，必须作为独立 plan batch，而不是复用当前只读 endpoint 扩权。
-- Future executable repair UI 必须另行进入 manual confirmation；任何 Git write 都必须经过确认，并 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` tracking leak 与 stale scope nonce。
-- 自动后台执行、完整 repair UI 与 Web 后端直接执行 Git import/push/repair 仍是 future，不得被当前 executor、import apply、push surface、只读 review endpoint 或 CLI-only notices 替代。
 
 该 bridge 的工程边界：
 
@@ -108,11 +77,13 @@ bridge：projection export、受控 import、backup/publish、远程托管与 re
 - `.git/` 可以与 `.notegit/` 共存，repo-local `.gitignore` 必须忽略 `.notegit/`。
 - Git mirror 以 Deve commit/projection 为粒度同步，不镜像 `.notegit/` 的内部 side-table 操作。
 - Git mirror failure 只产生 `GitMirrorOutOfSync` 与 retry/repair 需求，不回滚 Deve commit。
-- 任何 Git import 都必须生成 Deve ledger facts；任何 Git export 都不得反向改写 ledger authority。
+- Git import 只能进入 pending/import；只有后续 Deve stage/commit 才能生成 ledger facts。
+- Git export 与 Git push 不得反向改写 ledger authority。
+- Web/后台不得从只读 status/review surface 隐式升级为 Git writer；任何可执行 Git repair UI 都必须另立设计批次，并要求人工确认。
 
-### 1.4 Native Packaging Dependency Gate {#native-packaging-dependency-gate}
+### 1.4 原生打包依赖门禁 {#native-packaging-dependency-gate}
 
-当前 native track 的默认构建必须保持无 packaging runtime 依赖。`apps/desktop`
+Native track 的默认构建必须保持无 packaging runtime 依赖。`apps/desktop`
 与 `apps/mobile` 的职责是固定 endpoint/session/bootstrap/lifecycle contract；真实
 packaging runtime 只能在后续批次引入，并必须满足以下门禁：
 

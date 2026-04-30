@@ -106,36 +106,27 @@ Workspace_r = P_r ⊕ D_r
 - `.notegit/` 可以随 repo 备份，但 MUST NOT 被跨 repo 复用。
 - `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
 
-### 3.2.1 Git Mirror Boundary {#git-ecosystem-coexistence}
+### 3.2.1 Git 镜像边界 {#git-ecosystem-coexistence}
 
-Deve 支持 `.notegit/` 与 `.git/` 在同一个 repo 工作区中共存：
+Deve 支持 `.notegit/` 与 `.git/` 在同一个 repo 工作区中共存，但二者职责必须分离：
 
-- `.notegit/` 是 Deve-owned authority/runtime 目录，保存 ledger-aware workflow state。
-- `.git/` 是 Git ecosystem mirror 目录，用于复用 Git 工具链、远程托管、审计、备份与发布生态。
-- repo-local `.gitignore` MUST 忽略 `.notegit/`，避免 Git mirror 泄漏 Deve runtime state。
-- watcher / scan / sync MUST 忽略 `.notegit/` 与 `.git/` 的内部路径。
-- Deve core MUST NOT 使用 `.git/` 作为 repo authority、runtime side table 或 hidden metadata 目录。
+- `.notegit/` 是 Deve-owned runtime 目录，保存 ledger-aware workflow state 与必要 side table。
+- `.git/` 是 Git ecosystem mirror 目录，只用于复用 Git 工具链、远程托管、审计、备份与发布生态。
+- repo-local `.gitignore` **MUST** 忽略 `.notegit/`，避免 Git mirror 泄漏 Deve runtime state。
+- watcher、scan、sync 与 projection rebuild **MUST** 按路径段语义忽略 `.notegit/` 与 `.git/` 内部路径。
+- Deve core **MUST NOT** 使用 `.git/` 作为 repo authority、runtime side table 或 hidden metadata 目录。
 - `.git/` 不得参与 ledger fold、repo scope 解析、stage/commit authority 或 repair。
 
-当前实现状态：
+Git mirror 是一等生态桥接层，而不是 authority 替代品：
 
-- 已实现 `.git/` / `.notegit/` segment-level internal path 过滤，覆盖 watcher、scan、projection rebuild 与 drift enumeration。
-- 已实现 repo-local `.gitignore` 自动保护 `.notegit/` 的 idempotent helper。
-- 已实现只读 Git mirror status 骨架与 lazy-created `git_mirror_commits` side table；当 `.git` mirror 已存在且 repo-local `.gitignore` 保护 `.notegit/` 时，Deve commit 成功后会写入 `GitMirrorQueued`。
-- 已实现 `GitMirrorCommitted` / `GitMirrorOutOfSync` 的持久化状态更新 API 与 `deve_cli git status` 的独立 `queue_state` summary 观测。
-- 已实现显式 `deve_cli git mirror [--retry-out-of-sync]` executor 与 `deve_cli git export [--retry-out-of-sync]` export surface：单个 queued record 在 Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git changed paths 均通过 preflight 后，执行 `git add -A` / `git commit` 并写回 Git commit hash；多个积压 records 通过临时 Git index 从 Deve commit diff projection replay 出逐 commit Git history，使用 `commit-tree` / `update-ref` 建立映射；当 side table 为空且 Git history 为空时，`git export` 可从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit。失败只写入 `GitMirrorOutOfSync`。
-- 已实现 CLI-only `GitMirrorRepairAction` 诊断 schema：`GitMirrorOutOfSync` 可根据 `failure_stage` / legacy `last_error` 派生 repair action code、subject 与 retryable-after-fix 标记；该 schema 只用于 status/report 指引，不自动执行 Git，也不授权 Web/后台直接写 Git。
-- 已实现 `deve_cli git import` dry-run planning：检查 mirror readiness、Git worktree、`.notegit` tracked 泄漏与 Git HEAD，解析 tracked/untracked worktree changes 为 `GitImportPlan` change/blocker；默认不写 ledger、pending_fs、staging 或 `.notegit`。
-- 已实现 `deve_cli git import --apply` 显式 pending/import 写入：无 blocker 时把安全 Git changes 原子写入 `pending_fs_ops`，并通过 `has_conflict` 标记 FS vs ledger 冲突；它不写 ledger facts、`StagedEntry` 或 `.notegit`，后续仍必须走 Deve stage/commit。
-- 已实现 `deve_cli git push [--remote <remote>] [--branch <branch>]` 显式发布 surface：只在 `.git` mirror ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record 且当前 Git HEAD 映射到最新 `GitMirrorCommitted` record 时执行 `git push`；失败只输出 blocker，不回滚 ledger，也不改写 `.notegit`。
-
-Git mirror 是 first-class bridge，而不是 authority 替代品：
-
-- Deve ledger commit 成功并持久化 projection 后，系统 MAY queue Git mirror update。
-- Git mirror update MAY 执行 `git add -A` 与 Git commit，并在 commit message / notes / trailer 中记录 `Deve-Commit-Id`、`ledger_seq`、`repo_id` 等映射。
-- Git mirror 失败 MUST NOT rollback 已成功的 Deve ledger commit；系统必须标记 `GitMirrorOutOfSync`，并提供 retry / repair / status 可观测路径。
-- 外部 `git checkout/reset/pull/rebase` 造成的工作区变化只能进入 pending/import 路径，MUST NOT 自动反向改写 ledger authority。
-- Git import 只能进入 pending/import；只有后续 Deve stage/commit 才能生成 ledger facts。Git export/push 不得反向改写 ledger authority。
+- Deve ledger commit 成功并持久化 projection 后，系统 **MAY** 追加 `GitMirrorQueued`。
+- Git mirror update **MAY** 以 Deve commit/projection 为输入生成 Git commit，并记录 `Deve-Commit-Id`、`ledger_seq`、`repo_id` 等映射。
+- Git mirror 失败 **MUST NOT** 回滚已成功的 Deve ledger commit；系统 **MUST** 标记 `GitMirrorOutOfSync`，并提供 retry / repair / status 可观测路径。
+- 外部 `git checkout/reset/pull/rebase` 造成的工作区变化只能进入 pending/import 路径，**MUST NOT** 自动反向改写 ledger authority。
+- Git import **MUST** 只进入 pending/import；只有后续 Deve stage/commit 才能生成 ledger facts。
+- Git export 与 Git push **MUST NOT** 反向改写 ledger authority、`StagedEntry` 或 `.notegit/`。
+- Git push **MUST** fail-closed 于脏 Deve Source Control、脏 Git worktree、未导出 mirror record、out-of-sync mirror record、`.notegit` 泄漏或 Git HEAD 未映射到最新 Deve commit。
+- Web 或后台任务 **MUST NOT** 隐式执行 Git 写操作；任何 Git 写入都必须来自显式命令或后续单独设计的确认式执行面。
 
 ### 3.3 Collision Rules
 
@@ -408,15 +399,15 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 - watcher_start 是 repo open 的最后一步。
 - 启动前必须执行一次全量 scan。
-- startup scan MUST load vault-root `.deveignore` and skip ignored markdown before creating pending candidates.
+- startup scan **MUST** 读取 vault 根目录 `.deveignore`，并在创建 pending candidate 前跳过被忽略的 Markdown。
 - scan 与 watcher 首批事件之间的去重必须由 side table 幂等性保证。
 
-### 8.3 Ignore and Path Filtering
+### 8.3 忽略与路径过滤
 
-- `.deveignore` lives at vault root and MUST be evaluated consistently for direct watcher events, directory-change rescans, and startup scans.
-- Ignore matching MUST accept both vault-relative path (`<repo>/<path>`) and repo-relative path (`<path>`) so repo-local and vault-wide patterns behave predictably.
-- `.notegit/` and other internal repo path segments MUST be ignored by segment semantics; sibling names such as `.notegit-backup` MUST NOT be rejected by prefix accident.
-- Ignored markdown MUST NOT create `Added`, `Modified`, `Deleted`, or rename pending entries through watcher/scan, and MUST NOT be treated as a missing tracked doc during scan.
+- `.deveignore` 位于 vault 根目录；直接 watcher 事件、目录重扫与 startup scan **MUST** 使用同一套匹配语义。
+- 忽略匹配 **MUST** 同时接受 vault-relative path（`<repo>/<path>`）与 repo-relative path（`<path>`），保证 repo-local 与 vault-wide 规则语义稳定。
+- `.notegit/` 与其它 repo 内部目录 **MUST** 按路径段语义忽略；`.notegit-backup` 这类同名前缀兄弟路径 **MUST NOT** 被误判为内部目录。
+- 被忽略 Markdown **MUST NOT** 通过 watcher/scan 生成 `Added`、`Modified`、`Deleted` 或 rename pending entry，也 **MUST NOT** 在 scan 中被当作 tracked doc 缺失处理。
 
 ### 8.4 Self-Write Suppression
 

@@ -408,13 +408,13 @@ ReadonlyDegraded
 
 ## 11. Refactor Target
 
-长期应将当前 repo 逻辑显式收敛成三个独立 runtime：
+长期应将 repo 逻辑显式收敛成三个独立 runtime：
 
 - `repo_catalog_runtime`
 - `repo_scope_runtime`
 - `projection_repair_runtime`
 
-当前代码已经有模块雏形，但仍然分散在 `RepoManager`、CLI switcher handlers 和 `use_core` 多个 effects 中。未来重构 MUST 朝这三个 runtime 收敛。
+未来重构 **MUST** 朝这三个 runtime 收敛，避免让 `RepoManager`、CLI switcher handlers 与 `use_core` effects 继续共享隐式 repo scope 状态。
 
 ## 本章相关命令
 

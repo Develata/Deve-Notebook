@@ -81,39 +81,15 @@ DeveStaged
 - 外部 Git 操作造成的工作区变化进入 `pending_fs_ops` 或显式 `GitImportRequested`，
   不得直接修改 `CommitAnchor`、`StagedEntry` 或 ledger facts。
 
-当前实现状态：已落地 `.git` mirror internal path 隔离、repo-local `.gitignore`
-保护、只读 `git status` 骨架与 lazy-created `git_mirror_commits` side table。当前在 `.git`
-mirror ready 时会将成功的 Deve commit 记录为 `GitMirrorQueued`，并提供
-`GitMirrorCommitted` / `GitMirrorOutOfSync` 的持久化更新 API 与独立 `queue_state`
-summary；`deve_cli git status` 当前会列出 queued/out_of_sync 的 per-commit lagging
-records、`queued_lag_ms` / `updated_lag_ms`、结构化 `failure_stage` 与 retry 命令提示。
-`GitMirrorOutOfSync` 当前还会暴露 CLI-only `GitMirrorRepairAction` 诊断 schema，
-用于把失败位置映射为 repair action code、subject 与 retryable-after-fix 标记；该
-schema 只用于 status/report，不自动执行 Git，也不授权 Web/后台直接写 Git。
-`deve_cli git mirror` 已提供显式 executor：单个待处理 mirror record 仍走
-worktree preflight 后的 `git add -A` / `git commit` 路径；多个积压 records 会先检查
-Git worktree、`.notegit` tracked 泄漏、Source Control pending/staged 清洁度与当前 Git
-changed paths 是否落在这些 Deve commits 的 diff 范围内，然后用临时 Git index 基于
-`compare_commits(parent, commit)` 的 projection diff 逐个 `commit-tree` / `update-ref`，
-生成逐 commit Git history 并写回 `GitMirrorCommitted`。失败只会把剩余 records 写入
-`GitMirrorOutOfSync`，不会回滚 Deve ledger commit；CLI mirror/export report 会输出
-per-record outcome、失败位置与 repair/retry hint。`deve_cli git export` 当前复用该
-executor 作为 queued projection export surface；若 side table 为空、Git history 为空且
-当前 projection 干净，则可从最新 Deve commit 的完整 projection 建立首个 snapshot Git
-commit，并只把最新 Deve commit 映射到该 Git commit。`deve_cli git import` 当前提供
-dry-run planning：把 Git tracked/untracked worktree changes 解析为 `GitImportPlan`
-change/blocker，并 fail-closed 于 mirror 未 ready、缺 Git HEAD、`.notegit` tracked
-泄漏或不安全路径；默认不写 `pending_fs_ops`、`StagedEntry`、`CommitAnchor` 或 ledger
-facts。`deve_cli git import --apply` 当前只在无 blocker 时把安全 changes 写入
-`pending_fs_ops`，并保留 `has_conflict` 标记；它仍不写 `StagedEntry`、`CommitAnchor`
-或 ledger facts。`deve_cli git push` 当前只发布已导出的 `.git` mirror：它要求 mirror
-ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record，且当前
-Git HEAD 映射到最新 `GitMirrorCommitted` record；远端推送失败只作为 blocker 输出，不写
-ledger facts 或 `.notegit`。resolved Git import 当前已有命令层验收链路：
-`deve_cli git import --apply` 写入 pending/import，Source Control resolved stage/commit 生成新的
-Deve commit，`deve_cli git export` 建立 Git mirror mapping，`deve_cli git push` 才能发布该
-已映射 Git HEAD；未导出的 queued record 与 dirty Git worktree 都必须 fail-closed 且不得创建
-或更新远端分支。自动后台执行、完整 repair UI 与 Command Palette import/push UI 仍是后续实现。
+Git mirror 命令面必须遵守以下边界：
+
+- `git status` 只能观测 mirror readiness、queue state 与 out-of-sync 诊断，**MUST NOT** 写 `.git/`、`.notegit/` 或 ledger。
+- `git mirror` / `git export` **MAY** 把已完成的 Deve commit projection 导出为 Git commit；导出失败只能产生 `GitMirrorOutOfSync`，**MUST NOT** 回滚 Deve commit。
+- `git import` dry-run 只能生成 change/blocker plan；默认 **MUST NOT** 写 ledger、`pending_fs_ops`、`StagedEntry`、`CommitAnchor` 或 `.notegit/`。
+- `git import --apply` 只能把安全 changes 写入 pending/import，并保留冲突标记；后续 **MUST** 通过 Deve stage/commit 生成 ledger facts。
+- `git push` 只能发布已映射的 `.git` mirror HEAD；它 **MUST** fail-closed 于 mirror 未 ready、Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit` tracked 泄漏或 Git HEAD 未映射到最新 Deve commit。
+- repair action schema 只能用于诊断、人工修复指引和显式 retry；**MUST NOT** 被 Web、后台任务或 Command Palette 解释为自动 Git 写入授权。
+- 自动后台执行、可点击 repair UI 与 Web 后端直接执行 Git 写入 **MUST** 作为独立设计批次处理，不能从只读 status/review surface 隐式升级。
 
 ### 2.4 Diff Identity Model
 
@@ -509,7 +485,7 @@ MergeRequested
 - `diff_session_runtime`
 - `merge_runtime`
 
-当前代码已经有模块雏形，但状态机仍然分散在 core manager、CLI proxy 与 `use_core` 回调中。未来重构必须把“工作区差异”和“已确认 ledger diff”两个域彻底分开。
+未来重构必须把“工作区差异”和“已确认 ledger diff”两个域彻底分开，避免让 core manager、CLI proxy 与 `use_core` 回调共享隐式 source-control 状态。
 
 ## 本章相关命令
 

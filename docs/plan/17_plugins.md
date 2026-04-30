@@ -30,7 +30,7 @@ MCP 相关文字当前只作为“为什么不做”的历史记录保留。当�
 
 ## 2. Existing Rhai Plugin Host Boundary {#plugin-runtime-boundary}
 
-当前代码中允许保留轻量 Rhai runtime、manifest/capability 模型和 plugin-host / `PluginCall` 兼容边界，但这些能力属于外围系统。
+允许保留轻量 Rhai runtime、manifest/capability 模型和 plugin-host / `PluginCall` 兼容边界，但这些能力属于外围系统。
 
 ### 当前允许的实现范围
 

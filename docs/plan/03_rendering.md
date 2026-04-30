@@ -3,7 +3,7 @@
 ## Metadata
 
 - `Layer`: `Application / UI Shell`
-- `Status`: `Current/Future Split Contract`
+- `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -20,20 +20,20 @@
 
 按钮入口、用户主观体验与 Chrome MCP 路径属于 `docs/features/03_rendering.md`。
 
-## 1.1 Current Implementation Split {#current-rendering-split}
+## 1.1 当前阶段边界 {#current-rendering-split}
 
-截至 2026-04-29，本章必须按两层理解：
+本章按两层理解：
 
-- 当前可验收能力：已有代码路径、已有单元测试或可通过 Chrome MCP 手工验证的行为。
-- Future / Planned 能力：蓝图保留但不能作为当前 release 阻塞项，也不能在 feature 文档里描述成已完成能力。
+- **当前验收边界**：只覆盖测试、验收脚本或可复现手工验收能证明的行为。
+- **规划目标边界**：可保留为后续工程目标，但不得被描述成当前已完成能力，也不得作为当前发布阻塞项。
 
-当前代码支持的 rendering 路径分为三类：
+当前主编辑路径必须保持三层分工：
 
-- `apps/web/js/editor_adapter.js` + `apps/web/js/extensions/`：CodeMirror source-first 主编辑器与 widget/decorations adapter。已接入 hybrid syntax hiding、math widget、Mermaid widget、frontmatter parser/styling、task checkbox writeback、image/table/list/blockquote/code-toolbar、Ctrl/Cmd link activation 与 gutter diff。
-- `apps/web/src/editor/`：Rust/WASM editor runtime，负责 snapshot/history/live op、pending overlay、read-only gate 与批量 prefetch，不负责把 projection 写回 ledger authority。
-- `apps/web/src/utils/markdown.rs`：轻量 Markdown-to-HTML 渲染器，主要服务聊天/辅助 HTML 区域；它不是主编辑器 hybrid engine。当前白名单包含 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` HTML allowlist、安全链接属性与 unsafe scheme 降级。
+- **Source-first 主编辑器**：以 CodeMirror 编辑源文本，并通过 decoration/widget 提供局部增强；widget 不得成为第二真值。
+- **Rust/WASM editor runtime**：只负责 snapshot、history、live op、pending overlay、read-only gate 与批量调度；不得把 projection 当作 ledger authority 写回。
+- **辅助 Markdown-to-HTML 渲染器**：只服务聊天、只读摘要或辅助 HTML 区域；不得被视为主编辑器 hybrid engine。
 
-当前仍不得宣称 complete 的能力：
+以下能力在对应代码、测试与验收补齐前均属于规划目标：
 
 - 独立 Preview Projection / Live Preview / Milkdown。
 - 通用富文本编辑或所见即所得 authority。
@@ -189,7 +189,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - footnote refs
 - escaping
 
-当前实现只允许按 `1.1 Current Implementation Split` 的代码-backed 范围验收。目标集合中的 footnote、wikilink、emoji shortcode、完整 preview projection 等条目在当前阶段属于 planned capability，除非对应代码路径、测试和 feature 验收同步补齐。
+验收只能覆盖 `1.1 当前阶段边界` 中定义的可证明范围。目标集合中的 footnote、wikilink、emoji shortcode、完整 preview projection 等条目在实现、测试与 feature 验收同步补齐前，均属于规划目标。
 
 ## 5. Source-First Contract
 
@@ -453,7 +453,7 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - `widget_bridge_runtime`
 - `outline_projection_runtime`
 
-当前代码已经有雏形，但 editor Rust runtime、JS adapter 与 outline projection 之间的边界还没有完全显式化。未来重构必须围绕这四层收敛，而不是继续把行为塞进单个 editor hook 或任意 widget 文件。
+重构必须围绕这四层收敛，避免把 editor runtime、JS adapter 与 outline projection 行为继续塞进单个 editor hook 或任意 widget 文件。
 
 ## 本章相关命令
 

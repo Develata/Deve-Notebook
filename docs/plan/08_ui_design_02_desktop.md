@@ -10,28 +10,21 @@
 
 本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。
 
-> **Current Native Boundary**: 当前 Desktop native 代码是 no-Tauri skeleton，只验收
-> adapter/session/readiness/recovery contract；真实 Tauri packaging 与 embedded child
-> process runtime 仍是 post-gate work。
-> **Post-Gate Target**: Desktop 端目标采用 **Tauri v2** 外壳，前端代码与 Web 端共享。
-> **Post-Gate Offline Target**: Desktop 端目标是在无公网环境下保持本地编辑可用；完整
-> offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
+> **原生边界**：Desktop native 是壳层与本机 service 绑定层，不拥有业务 authority。
+> **目标**：Desktop 端目标采用 **Tauri v2** 外壳，前端代码与 Web 端共享。
+> **离线目标**：Desktop 端目标是在无公网环境下保持本地编辑可用；完整 offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
 
-> **Web Mapping**: 当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
+> **Web 映射**：当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
-## 0. Current Native Boundary (2026-04-29) {#desktop-current-native-boundary}
+## 0. 原生适配器边界 {#desktop-current-native-boundary}
 
-当前代码状态：
+Desktop native adapter 的边界如下：
 
-*   Web 端 Desktop responsive shell 已存在，并作为 Desktop 交互规范的当前可验收映射。
-*   `apps/desktop` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入、runtime readiness、foreground/resume reprobe 与 offline/session-invalid recovery 状态机。它不是完整 Tauri 应用。
-*   Tauri v2 native packaging、原生菜单栏、系统托盘、安装包与自动更新仍是 future work；当前仓库不得把这些视为已实现能力。
-*   packaging dependency gate 当前明确 closed/deferred：`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为 `DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 仍不得进入当前构建。
-*   packaging runtime 后续只能在 `apps/desktop` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri skeleton，以便快速验证 adapter/session/readiness contract。
-*   Native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发有限平台事件。
-*   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；desktop shell 只消费该 contract，不拥有业务 authority。
-*   真实 child-process adapter 当前明确 deferred：默认 no-Tauri skeleton 不启动、不持有、不重启后端子进程；`deve_core::native_adapter::CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定该决策，直到 packaging gate 被显式打开。
-*   Web 已支持 native recovery bootstrap：`service_offline` 显示原生服务离线恢复状态，`foreground_reprobe` 显示重新探测状态，`session_invalid` 进入 `Unauthorized`，无效 endpoint/session-pending 不得回退端口扫描。
+*   Web 端大屏视口 **MUST** 映射到 Desktop 交互规范。
+*   Native adapter 第一阶段只允许承担：拉起受控内嵌服务、注入本机 service endpoint/session、报告 readiness/offline 状态、转发有限平台事件。
+*   默认构建 **MUST** 保持 no-Tauri skeleton；真实 `tauri` / `tauri-build` dependency 只能在 `native-packaging` feature 与独立 gate 打开后引入。
+*   child-process adapter **MUST** 等 process adapter gate 显式打开后才能启动、持有或重启后端子进程。
+*   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；无效 endpoint 或 session-pending **MUST NOT** 退化为端口扫描。
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
 
@@ -45,12 +38,11 @@ Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate
 
 ### 0.2 Desktop Packaging Scaffold {#desktop-packaging-scaffold}
 
-当前 `apps/desktop` 已在 `native-packaging` feature 后提供 packaging scaffold，
-但仍不引入 Tauri runtime dependency。该 scaffold 只描述首个桌面壳层批次：
+Desktop packaging scaffold 只描述首个桌面壳层批次，不等价于 packaging gate 已打开：
 
-*   Planned dependency batch: `tauri` + `tauri-build`，只能落在 `apps/desktop`。
-*   Planned capabilities: window shell、menu bar、system tray、installer、auto-update。
-*   Forbidden authorities: ledger、vault、source-control、search index、`.git` mirror、
+*   dependency batch: `tauri` + `tauri-build`，只能落在 `apps/desktop`。
+*   capabilities: window shell、menu bar、system tray、installer、auto-update。
+*   forbidden authorities: ledger、vault、source-control、search index、`.git` mirror、
     `.notegit`。
 *   no-packaging skeleton tests 仍是 endpoint/session/bootstrap/readiness correctness 的
     authority；packaging acceptance 不得替代这些测试。
@@ -60,10 +52,10 @@ Cargo dependency/import 泄漏。
 
 ### 0.2.1 Desktop Packaging Dependency Gate Decision {#desktop-packaging-dependency-gate-decision}
 
-当前决策：Desktop packaging dependency gate **不打开**；真实 `tauri` / `tauri-build`
+默认决策：Desktop packaging dependency gate **不打开**；真实 `tauri` / `tauri-build`
 dependency 继续 deferred 到独立 runtime batch。
 
-当前代码锚点：
+策略锚点：
 
 *   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
     DeferredUntilRuntimeBatch`
@@ -77,9 +69,9 @@ dependency 继续 deferred 到独立 runtime batch。
 *   Desktop shell、supervisor、process-adapter decision 都仍处于 contract/skeleton 层；
     现在打开 Tauri dependency 会把窗口 runtime、菜单/托盘、安装包、auto-update 与
     service supervision 一次性耦合，回归面过大。
-*   当前仓库仍需要保持低成本 `cargo test -p deve_desktop` default build；真实 Tauri
+*   仓库仍需要保持低成本 `cargo test -p deve_desktop` default build；真实 Tauri
     dependency 应作为单独批次接受更重的平台构建、安装包与签名验收。
-*   packaging scaffold 继续保留 planned dependency batch，作为后续打开 gate 的输入；
+*   packaging scaffold 继续保留 dependency batch 规划，作为后续打开 gate 的输入；
     scaffold 不是 dependency gate 已打开的证明。
 
 后续若打开 gate，必须先更新 `scripts/check-native-track-boundary.sh` 的允许规则，并保持：
@@ -88,8 +80,7 @@ ledger/vault/source-control/search/`.git`/`.notegit` authority。
 
 ### 0.3 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 
-当前 desktop native skeleton 已接入共享 `NativeServiceSupervisor`，但仍不启动真实子进程。
-该 contract 只固定 supervisor 状态机与 failure 分类，避免后续 Tauri/process integration
+Desktop native supervisor contract 只固定 supervisor 状态机与 failure 分类，避免后续 Tauri/process integration
 把 service readiness 与业务写权限混在一起：
 
 ```text
@@ -151,7 +142,7 @@ NativeColdStart
 *   `NetworkOffline` 只表示公网不可用；如果 embedded service、session 与 writer gate 仍 ready，Desktop 本地编辑仍可继续。
 *   `ServiceOffline` 表示本机后端不可达；UI 必须进入恢复/只读状态，不得假装仍有本地 authority。
 *   App 从后台/驻留状态恢复时必须重新 probe `/api/auth/status`、`/api/node/role`，并重新确认 ws repo handshake；旧 `scope_nonce` 不得自动恢复写态。
-*   当前 desktop skeleton 已接入 `NativeRuntimeReadiness`：`RuntimeReady` 只有在 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足时成立；`Foreground` 或 `Resumed` 事件会进入 `ForegroundReprobe`，直到 fresh readiness 完整通过。
+*   `RuntimeReady` 只有在 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足时成立；`Foreground` 或 `Resumed` 事件会进入 `ForegroundReprobe`，直到 fresh readiness 完整通过。
 
 **Forbidden native shortcuts**:
 
@@ -168,19 +159,19 @@ NativeColdStart
 
 ### 0.4 Process Adapter Decision {#desktop-process-adapter-decision}
 
-当前决策：真实 desktop process adapter **不进入** 默认 no-Tauri skeleton。
+默认决策：真实 desktop process adapter **不进入** 默认 no-Tauri skeleton。
 
 原因：
 
-*   supervisor contract 已能固定 readiness/failure/session handoff 语义；现在加入真实
+*   supervisor contract 必须先固定 readiness/failure/session handoff 语义；过早加入真实
     child-process runtime 会把 process lifecycle、packaging runtime、platform
     permission 与 service authority 过早耦合。
 *   默认 skeleton 的工程价值是快速验证 endpoint/session/bootstrap/write-gate 边界；
     若在该层启动真实后端进程，单元测试会变成集成进程测试，失去低成本回归能力。
 *   子进程 stdout/stderr、crash、signal、port reuse、profile/config/vault/ledger 参数选择
-    都需要 packaging/runtime 批次统一处理；不能由当前 shell skeleton 临时实现。
+    都需要 packaging/runtime 批次统一处理；不能由 shell skeleton 临时实现。
 
-当前代码锚点：
+策略锚点：
 
 *   `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
     DeferredUntilPackagingGate`
@@ -284,8 +275,8 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 ### 4.1 跨平台 UI 方案
 
 本节是 **post-gate normative target**：只有当 `native-packaging` 与 process adapter gate
-被显式打开后，以下 Tauri/embedded-service 规则才进入当前验收；默认 no-Tauri skeleton
-仍以 §0 的 current boundary 为准。
+被显式打开后，以下 Tauri/embedded-service 规则才进入验收；默认 no-Tauri skeleton
+仍以 §0 的原生适配器边界为准。
 
 *   **Rule**: Desktop post-gate 采用 **Tauri v2 (WebView)** 作为跨平台外壳，前端代码与 Web 端共享。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致。

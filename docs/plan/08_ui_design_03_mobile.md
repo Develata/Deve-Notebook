@@ -10,28 +10,21 @@
 
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 
-> **Current Native Boundary**: 当前 Mobile native 代码是 no-Tauri Mobile skeleton，只验收
-> lifecycle/session/readiness/foreground-reprobe/recovery contract；真实 Tauri Mobile packaging
-> 与 embedded child process runtime 仍是 post-gate work。
-> **Post-Gate Target**: Mobile 端目标采用 **Tauri v2 Mobile** 外壳，前端代码与 Web 端共享。
-> **Post-Gate Offline Target**: Mobile 端目标是在无公网环境下保持本地读写可用；完整
-> offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
+> **原生边界**：Mobile native 是壳层、生命周期与本机 service 绑定层，不拥有业务 authority。
+> **目标**：Mobile 端目标采用 **Tauri v2 Mobile** 外壳，前端代码与 Web 端共享。
+> **离线目标**：Mobile 端目标是在无公网环境下保持本地读写可用；完整 offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
 
-> **Web Mapping**: 当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
+> **Web 映射**：当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
-## 0. Current Native Boundary (2026-04-29) {#mobile-current-native-boundary}
+## 0. 原生适配器边界 {#mobile-current-native-boundary}
 
-当前代码状态：
+Mobile native adapter 的边界如下：
 
-*   Web 端 Mobile responsive shell 已存在，并作为 Mobile 交互规范的当前可验收映射。
-*   `apps/mobile` 已提供最小 native shell skeleton：受控 loopback endpoint、session 绑定、Web bootstrap 注入、background/suspended/resumed/foreground reprobe、service offline 与 session invalid recovery 状态机。它不是完整 Tauri Mobile 应用。
-*   Tauri v2 Mobile packaging、系统权限桥接、推送、原生文件选择器与应用商店分发仍是 future work；当前仓库不得把这些视为已实现能力。
-*   packaging dependency gate 当前明确 closed/deferred：`CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为 `DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 仍不得进入当前构建。
-*   packaging runtime 后续只能在 `apps/mobile` 的 `native-packaging` feature 后引入；默认构建必须保持 no-Tauri Mobile skeleton，以便快速验证 lifecycle/session/readiness contract。
-*   Mobile native adapter 的第一阶段职责只允许是：拉起受控内嵌服务、注入本机服务 endpoint/session、报告 service readiness/offline 状态、转发前后台与安全区域等有限平台事件。
-*   `deve_core::native_adapter::NativeServiceSupervisor` 已提供 no-Tauri supervisor contract：service start、health probe、session handoff、retry budget 与 offline classification；mobile shell 在此基础上继续保留 background/resume fresh reprobe 规则。
-*   真实 mobile process adapter 当前明确 deferred：默认 no-Tauri Mobile skeleton 不启动、不持有、不重启后端子进程；`deve_core::native_adapter::CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定该决策，直到 packaging gate 被显式打开。
-*   Web 已支持 mobile/native recovery bootstrap：`service_offline`、`foreground_reprobe` 与 `session_invalid` 会映射到明确 UI/写入门禁状态，而不是普通断网。
+*   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
+*   Mobile native adapter 第一阶段只允许承担：拉起受控内嵌服务、注入本机 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件。
+*   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；真实 `tauri` / `tauri-build` dependency 只能在 `native-packaging` feature 与独立 gate 打开后引入。
+*   mobile process adapter **MUST** 等 process adapter gate 显式打开后才能启动、持有或重启后端子进程。
+*   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；后台恢复失败 **MUST NOT** 被伪装成普通断网。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
 
@@ -88,7 +81,7 @@ MobileColdStart
 
 *   `NetworkOffline` 只表示公网不可用；如果 embedded service、session 与 writer gate 仍 ready，本地编辑仍可继续。
 *   `BackgroundSuspended` 只允许降低资源占用或暂停远端同步，不得丢弃未 ack 的本地 pending overlay。
-*   `ForegroundReprobe` 必须重新执行 `/api/auth/status`、`/api/node/role` 与 repo handshake；旧 `scope_nonce` 不得自动恢复写态。当前 mobile shell 会同时清空 auth、node-role、repo-handshake、writer-ready 与 scope freshness，直到 fresh readiness 完整通过。
+*   `ForegroundReprobe` 必须重新执行 `/api/auth/status`、`/api/node/role` 与 repo handshake；旧 `scope_nonce` 不得自动恢复写态。进入 reprobe 时应清空 auth、node-role、repo-handshake、writer-ready 与 scope freshness，直到 fresh readiness 完整通过。
 *   `ServiceOffline` 表示本机后端不可达；UI 必须进入恢复/只读状态，不得声称 offline-first 仍可写。
 
 **Forbidden native shortcuts**:
@@ -117,18 +110,18 @@ Mobile 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-service-supervisor
 
 ### 0.1.2 Process Adapter Decision {#mobile-process-adapter-decision}
 
-当前决策：真实 mobile process adapter **不进入** 默认 no-Tauri Mobile skeleton。
+默认决策：真实 mobile process adapter **不进入** 默认 no-Tauri Mobile skeleton。
 
 Mobile 比 Desktop 更需要推迟真实 child-process runtime：
 
 *   iOS/Android 后台限制、进程保活、系统杀进程、权限弹窗、WebView 恢复与应用商店
-    package policy 都属于 packaging/runtime 层，不能在当前无 runtime skeleton 中伪造。
+    package policy 都属于 packaging/runtime 层，不能在 no-runtime skeleton 中伪造。
 *   mobile foreground/resume 后必须 fresh reprobe auth、node role、WS repo handshake 与
     current `scope_nonce`；真实进程存活不能替代这些 application readiness 条件。
 *   网络 online/offline、safe-area、keyboard、background/suspended 仍只是 shell/lifecycle
     hint，不得触发 core authority write。
 
-当前代码锚点与 Desktop 一致：
+策略锚点与 Desktop 一致：
 
 *   `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
     DeferredUntilPackagingGate`
@@ -142,11 +135,9 @@ reprobe、writer-ready 或 repo scope gate。
 
 ### 0.2 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
 
-`apps/mobile` 当前提供 `native-packaging` feature 后的 packaging scaffold，但仍不引入
-真实 Tauri Mobile runtime dependency。该 scaffold 只用于固定下一批 packaging dependency
-decision 的验收输入：
+Mobile packaging scaffold 只用于固定下一批 packaging dependency decision 的验收输入，不等价于 packaging gate 已打开：
 
-*   planned dependency batch: `tauri` runtime crate + `tauri-build` build crate，状态仍为 `planned`。
+*   dependency batch: `tauri` runtime crate + `tauri-build` build crate。
 *   packaging capability 只覆盖移动壳层能力：WebView shell、permission bridge、share sheet、
     deeplink、file picker、push notification、store package。
 *   packaging scaffold 不得获得 ledger/vault/source-control/search index/`.git`/`.notegit`
@@ -158,10 +149,10 @@ decision 的验收输入：
 
 ### 0.2.1 Mobile Packaging Dependency Gate Decision {#mobile-packaging-dependency-gate-decision}
 
-当前决策：Mobile packaging dependency gate **不打开**；真实 Tauri Mobile runtime
+默认决策：Mobile packaging dependency gate **不打开**；真实 Tauri Mobile runtime
 dependency 继续 deferred 到独立 runtime batch。
 
-当前代码锚点：
+策略锚点：
 
 *   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
     DeferredUntilRuntimeBatch`
@@ -174,9 +165,9 @@ dependency 继续 deferred 到独立 runtime batch。
 
 *   Mobile packaging 不只是添加 dependency；它包含 Android/iOS WebView、permission
     bridge、后台恢复、系统杀进程、分享/文件选择、push 与 store package 验收。
-*   当前 no-runtime skeleton 的核心价值是验证 lifecycle/session/readiness/foreground
+*   no-runtime skeleton 的核心价值是验证 lifecycle/session/readiness/foreground
     reprobe 边界；真实 Tauri Mobile dependency 应作为独立平台批次处理。
-*   Packaging scaffold 保留 planned dependency batch，但不得被解释为当前可运行原生移动端。
+*   Packaging scaffold 保留 dependency batch 规划，但不得被解释为可运行原生移动端。
 
 后续若打开 gate，必须先更新边界脚本，并继续保证 foreground reprobe、writer-ready 与
 repo scope gate 不被 native runtime 绕过。
@@ -322,8 +313,8 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 ### 4.1 移动端 UI 方案
 
 本节是 **post-gate normative target**：只有当 `native-packaging` 与 process adapter gate
-被显式打开后，以下 Tauri Mobile/embedded-service 规则才进入当前验收；默认 no-Tauri
-Mobile skeleton 仍以 §0 的 current boundary 为准。
+被显式打开后，以下 Tauri Mobile/embedded-service 规则才进入验收；默认 no-Tauri
+Mobile skeleton 仍以 §0 的原生适配器边界为准。
 
 *   **Rule**: Mobile post-gate 采用 **Tauri v2 Mobile** 作为外壳（WKWebView / Android WebView），前端代码与 Web 端共享，配合原生层访问摄像头/文件系统/推送等系统 API。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致，行为不以 Web 端为准。
@@ -379,75 +370,30 @@ Mobile skeleton 仍以 §0 的 current boundary 为准。
 *   **Size**: 体积 **MUST** 可控，避免引入重型依赖。
 *   **Perf**: 输入延迟与滚动流畅性必须优先保障。
 
-## 10. Web Mobile Alignment Checklist
+## 10. Web Mobile Alignment Contract
 
-> 目标：在 `W_view <= 768px` 的 Web 视口中，持续对齐本章 Mobile 规范。
+在 `W_view <= 768px` 的 Web 视口中，Web shell **MUST** 按本章 Mobile 规范降级，而不是继续套用 Desktop 交互。
 
-### 8.1 当前已完成
-*   移动布局模块化拆分（`mobile_layout/{mod,header,content,footer,effects,gesture}`）。
-*   Drawer 模块化拆分（`mobile_layout/drawers/{mod,left,right}`）。
-*   左右抽屉、边缘滑动开关、抽屉互斥、抽屉打开时 body 锁滚。
-*   Safe-area 适配、Bottom Sheet 搜索面板、空态与 CTA、基础触控反馈。
-*   边缘滑动与靠边交互控件冲突隔离，避免误吞 `File tree / Toggle Outline` 点击。
-*   `More(...)` 菜单项点击与 `Pin/Unpin` 语义分离，并在点击后正确收起。
+必须保持的对齐点：
 
-### 8.2 本轮优先对齐项
-*   **Bottom Sheet 手势关闭**：
-    *   **MUST** 具备下拉关闭阈值（避免轻微位移误关闭）。
-    *   **MUST** 增加误触防抖（短时微位移不触发关闭）。
-    *   **MUST** 处理与滚动冲突：仅在列表位于顶部且判定为下拉意图时才允许关闭。
-*   **Drawer 可达性一致性**：
-    *   **MUST** 统一标题栏与关闭按钮交互语义。
-    *   **SHOULD** 保障触控命中高度不低于 `44px`。
-*   **列表触控反馈一致性**：
-    *   Sidebar / Outline / Search Result 的 `selected`、`hover`、`active` 语义 **MUST** 保持一致。
+*   移动端 **MUST NOT** 显示桌面左右拉伸手柄或外边距拖拽入口。
+*   主编辑区默认字号 **SHOULD** 不低于 `16px`，避免 iOS 输入焦点自动缩放。
+*   左右 Drawer、Top Sheet、Bottom Sheet、Outline、Search Result 与 Source Control 面板 **MUST** 遵守同一套 touch target、focus 与 selected/active 语义。
+*   Bottom Sheet 手势关闭 **MUST** 具备阈值、防抖与滚动冲突判定；轻微位移不得误关闭。
+*   边缘滑动 **MUST NOT** 抢占靠边真实控件点击。
+*   `More(...)` 菜单 **MUST** 复用桌面端语义：整行点击切换视图，`Pin/Unpin` 只改变固定状态。
+*   移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。
+*   移动端 AI Chat **SHOULD** 以页面级或全屏交互呈现，避免半屏手势与编辑器/键盘层级冲突。
 
-### 8.3 执行与验证
-*   小步迭代，每轮改动后执行：`cargo clippy --all-targets --all-features -- -D warnings`。
-*   保持低复杂度与模块化；超过 250 行需复查职责内聚，超过 500 行需拆分或说明例外。
+## 11. Mobile SHOULD Boundary
 
-### 8.4 本轮落地记录 (Web, 2026-02)
-*   Top Sheet 关闭策略完成：阈值 `72px`、防抖 `<=90ms & <=20px`、以顶部把手/头部区域上滑关闭为主，避免与结果列表滚动冲突。
-*   Drawer 与触控反馈完成一致化：标题栏/关闭按钮命中区 `44px+`，Sidebar/Outline/Search Result 的 `hover/active/selected` 语义对齐。
-*   视口与阅读态完成：`meta viewport` 补齐、移动端 `Read-Only Mode` 24px 横幅、Diff 强制 Unified。
-*   顶部与底部导航完成对齐：Top Bar 右侧改为 Home/Open/Command；Bottom Bar 对齐 Desktop 的 branch、状态、历史、统计（移动端多行布局）。
-*   Outline 入口完成统一：取消 Top Bar 入口，改为内容区 `Toggle Outline` 浮动图标（开时位于右抽屉左上角，关时位于内容区右上角）。
-*   输入态冲突完成收敛：Accessory Toolbar 仅在软键盘出现时显示，键盘出现时隐藏底部状态栏；`<=360px` 极窄屏启用专用排版（历史控制拆分为两行，统计标签压缩）。
-*   视觉一致性微调：Top Sheet 增加轻量遮罩与模糊背景，Outline 浮动开关位置与动画节律对齐，Bottom Bar 信息胶囊统一浅浮雕层次。
-*   Bottom Bar 交互升级：新增折叠/展开箭头，折叠态固定单行展示 `Branch/Ready/Words/Lines/Col`，展开态显示加载信息与历史控制；点击栏外区域自动收起。
-*   动效节律对齐：Drawer、Top Sheet、Outline Toggle、按钮反馈统一为 `duration-200 + ease-out`。
-*   I18n 对齐：移动端新增文案 `File tree`、`Close file tree`、`Toggle status details`、`Files`、`Outline`、`Outline unavailable`、`No headings found` 已接入 i18n key，移除对应硬编码。
-*   复杂度治理：`search_box/logic.rs` 已拆分为 `logic/{providers,selection,actions,execute}.rs`，降低单文件复杂度并便于后续移动端交互迭代。
-*   交互丝滑度增强：Top Sheet 新增手势跟手位移（上滑拖拽过程实时反馈），未达到关闭阈值时平滑回弹。
-*   AI Chat 移动端接入：新增可折叠入口（`AI` 胶囊按钮），点击后进入同页全屏 Chat 页面（非浏览器新窗口），右上角关闭后返回原编辑页面。
-*   AI Chat 输入与层级收敛：Chat Sheet 展开时自动让位 Bottom Bar 与移动辅助键盘栏，键盘弹起时以 `visualViewport` 偏移贴合，保证发送按钮可达。
-*   AI Chat 消息可读性增强：移动端气泡宽度与边距重排、长文本强制换行、代码块横向滚动、消息时间戳展示；流式状态、加载态、错误态、重试态在移动端统一可见。
-*   AI Chat i18n 收口：聊天面板标题、角色名、输入占位、发送/失败/重试、空态提示、`Apply` 代码按钮与移动端切换文案均接入 `t::chat::*`，组件不再新增硬编码文案。
-*   AI Chat 全屏交互收敛：移除半屏抓手关闭手势，统一采用顶部关闭按钮返回，减少误触并对齐移动端“页面级”交互预期。
-*   Mobile Drawer 与桌面对齐：左抽屉新增图标化视图栏（Explorer/Search/Source Control/Extensions）+ `More(...)` 入口，支持固定项（Pin/Unpin）管理并复用桌面端 `pinned_views` 状态。
-*   More 菜单交互收敛：点击菜单项后立即关闭；点击外部与 `Esc` 均可关闭；抽屉关闭时菜单强制收口，避免状态残留。
-*   Diff 场景冲突治理：移动端打开 Diff 时隐藏 AI Chat 入口与移动辅助键盘栏，减少层级遮挡和误触。
-*   Diff 可回归钩子补齐：移动端 Diff 根节点与关闭按钮补充稳定选择器（`.diff-view-mobile` / `.diff-close-button`），用于验收脚本可靠定位。
-*   细节识别优化：Bottom Bar 紧凑分支名采用前后保留压缩（如 `feature...23ab`），提升分支辨识度。
-*   手势物理感增强：Top Sheet 新增快甩关闭判定（速度阈值）与阻尼位移（越拉越难）。
+以下 SHOULD 不直接作为 Web 映射的“实现状态表”，只定义责任边界：
 
-## 11. SHOULD Mapping Matrix (Web Mobile)
-
-| 条目 | 规范原文 (SHOULD) | 代码路径 | 状态 | 备注 |
-| :--- | :--- | :--- | :--- | :--- |
-| MOB-SHOULD-001 | Resizable Handles: 移动端 SHOULD NOT 显示左右拉伸手柄 | `apps/web/src/components/main_layout.rs` | 已实现 | `is_mobile` 分支渲染 `MobileLayout`，不挂载桌面拖拽手柄 UI。 |
-| MOB-SHOULD-002 | Outer Gutter: 移动端 SHOULD NOT 提供外边距拖拽 | `apps/web/src/components/main_layout.rs` | 已实现 | 外边距拖拽仅在 `DesktopLayout` 生效。 |
-| MOB-SHOULD-003 | Font Size: 默认字号 SHOULD 设为 16px | `apps/web/style/_base.css` | 已实现 | `.cm-content` 已固定 `font-size: 16px`，并由 `scripts/check-mobile-baseline.sh` 守住。 |
-| MOB-SHOULD-004 | App 后台时服务 SHOULD 降低资源占用 | N/A (Web Scope) | 不适用 | 属于原生 Mobile App 进程生命周期，不在 Web 映射实现范围。 |
-| MOB-SHOULD-005 | Firewall SHOULD 显式阻断非回环访问 | N/A (Embedded Service) | 不适用 | 属于移动端内嵌服务与系统防火墙策略。 |
-| MOB-SHOULD-006 | Export SHOULD 支持单文档/全量导出 | N/A (Mobile Native Service) | 不适用 | 属于原生端导出与存储能力。 |
-| MOB-SHOULD-007 | Audit SHOULD 记录关键操作日志 | N/A (Core/Service) | 不适用 | 属于后端审计链路，不在 Web UI 直接实现。 |
-| MOB-SHOULD-008 | Recovery Drill SHOULD 提供恢复演练流程 | N/A (Release/Ops) | 不适用 | 属于发布与运维流程规范。 |
-
-### 9.1 与本轮实现直接相关的 SHOULD 细化
-
-| 条目 | 代码路径 | 状态 | 备注 |
-| :--- | :--- | :--- | :--- |
-| MOB-UX-SHOULD-001 | `apps/web/src/components/mobile_layout/drawers/left.rs`, `apps/web/src/components/mobile_layout/drawers/right.rs`, `apps/web/src/components/mobile_layout/header.rs` | 已实现 | 触控命中区统一到 `44px+`，标题栏/关闭按钮语义一致。 |
-| MOB-UX-SHOULD-002 | `apps/web/src/components/search_box/ui.rs`, `apps/web/src/components/search_box/sheet_gesture.rs` | 已实现 | Bottom Sheet 手势关闭已做阈值/防抖/滚动冲突判定。 |
-| MOB-UX-SHOULD-003 | `apps/web/src/components/sidebar/item.rs`, `apps/web/src/components/outline.rs`, `apps/web/src/components/search_box/result_item.rs` | 已实现 | 列表项 `hover/active/selected` 语义对齐，移动端优先 `active`。 |
+*   Resizable Handles：移动端 **SHOULD NOT** 显示左右拉伸手柄。
+*   Outer Gutter：移动端 **SHOULD NOT** 提供外边距拖拽。
+*   Font Size：移动端编辑器默认字号 **SHOULD** 设为 `16px` 或更高。
+*   Background Resource：原生 Mobile App 后台时服务 **SHOULD** 降低资源占用；Web 映射只能表达前台视口行为。
+*   Firewall：移动端内嵌服务 **SHOULD** 显式阻断非回环访问。
+*   Export：单文档/全量导出属于原生端或后端服务能力，**SHOULD** 由对应章节定义实现路径。
+*   Audit：关键操作日志属于 core/service 审计链路，**SHOULD** 避免塞入移动 UI 层。
+*   Recovery Drill：恢复演练属于 release/ops 能力，**SHOULD** 由发布与运维流程承接。

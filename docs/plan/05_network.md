@@ -107,14 +107,14 @@
 
 ### 4.2 Serialization
 
-- WebSocket 二进制帧必须使用 `DEVEWSF3` magic header + `protocol_version` + bincode payload。
-- 当前 `protocol_version = 3`；任何 breaking schema change 必须 bump 该版本，并同步更新收发端兼容窗口。
-- server-to-server 与 server-to-client 默认 versioned bincode frame。
-- browser client-to-server 优先 versioned bincode frame，保留 text-frame versioned JSON 调试入口。
-- legacy JSON text 仅允许显式 development/debug 兼容开关，不属于生产默认 runtime 合同。
-- legacy JSON debug frame 缺少 `known_vector` / `server_vector` 时只能按空向量兼容解析；新发送的 sync frame 必须显式携带这些字段。
-- legacy raw bincode / binary JSON 不属于当前兼容合同，runtime 必须拒绝缺失 `DEVEWSF3` magic 的二进制帧。
-- runtime 必须能拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
+- WebSocket 二进制帧 **MUST** 使用 `DEVEWSF3` magic header、`protocol_version` 与 bincode payload。
+- 当前 `protocol_version = 3`；任何破坏兼容的 schema 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
+- 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned bincode frame。
+- 浏览器客户端到服务端 **SHOULD** 优先使用 versioned bincode frame；text-frame versioned JSON 只能作为调试入口保留。
+- 旧式 JSON text frame **MAY** 在显式 development/debug 兼容开关下解析，**MUST NOT** 成为生产默认 runtime 合同。
+- 旧式 JSON debug frame 缺少 `known_vector` / `server_vector` 时，只能按空向量兼容解析；新发送的 sync frame **MUST** 显式携带这些字段。
+- 旧式 raw bincode / binary JSON 不属于兼容合同；runtime **MUST** 拒绝缺失 `DEVEWSF3` magic 的二进制帧。
+- runtime **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
 ### 4.3 Core Message Families
 
