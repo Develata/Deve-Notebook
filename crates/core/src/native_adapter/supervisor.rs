@@ -137,6 +137,15 @@ impl NativeServiceSupervisor {
         offline
     }
 
+    pub fn record_service_offline(&mut self, offline: NativeServiceOffline) {
+        self.state = if offline.retryable {
+            NativeServiceSupervisorState::Restarting
+        } else {
+            NativeServiceSupervisorState::Offline
+        };
+        self.offline = Some(offline);
+    }
+
     pub fn snapshot(&self) -> NativeServiceSupervisorSnapshot {
         NativeServiceSupervisorSnapshot {
             state: self.state,
@@ -217,6 +226,31 @@ mod tests {
         assert_eq!(
             supervisor.snapshot().state,
             NativeServiceSupervisorState::Offline
+        );
+    }
+
+    #[test]
+    fn records_external_offline_state_without_losing_reason() {
+        let mut supervisor = NativeServiceSupervisor::new(2);
+        supervisor.start();
+        supervisor
+            .record_health_probe(service_probe())
+            .expect("probe");
+        supervisor.record_session_handoff(true).expect("session");
+
+        supervisor.record_service_offline(NativeServiceOffline {
+            reason: "service_dead".to_string(),
+            retryable: true,
+        });
+
+        let snapshot = supervisor.snapshot();
+        assert_eq!(snapshot.state, NativeServiceSupervisorState::Restarting);
+        assert_eq!(
+            snapshot.offline,
+            Some(NativeServiceOffline {
+                reason: "service_dead".to_string(),
+                retryable: true,
+            })
         );
     }
 }

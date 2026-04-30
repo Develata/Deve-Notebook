@@ -166,13 +166,13 @@ impl MobileShell {
 
     pub fn mark_service_offline(&mut self, reason: impl Into<String>, retryable: bool) {
         self.state = MobileServiceState::ServiceOffline;
-        self.offline = Some(NativeServiceOffline {
+        let offline = NativeServiceOffline {
             reason: reason.into(),
             retryable,
-        });
-        self.readiness.endpoint_reachable = false;
-        self.process_adapter.record_process_stopped();
-        self.endpoint = None;
+        };
+        self.supervisor.record_service_offline(offline.clone());
+        self.offline = Some(offline);
+        self.clear_runtime_binding();
     }
 
     pub fn mark_supervisor_failure(
@@ -183,9 +183,7 @@ impl MobileShell {
         let offline = self.supervisor.record_failure(kind, reason);
         self.state = MobileServiceState::ServiceOffline;
         self.offline = Some(offline);
-        self.readiness.endpoint_reachable = false;
-        self.process_adapter.record_process_stopped();
-        self.endpoint = None;
+        self.clear_runtime_binding();
     }
 
     pub fn invalidate_session(&mut self) {
@@ -216,6 +214,12 @@ impl MobileShell {
         self.readiness.repo_handshake_complete = false;
         self.readiness.writer_ready = false;
         self.readiness.scope_nonce_current = false;
+    }
+
+    fn clear_runtime_binding(&mut self) {
+        self.readiness = NativeRuntimeReadiness::default();
+        self.process_adapter.record_process_stopped();
+        self.endpoint = None;
     }
 
     fn blocking_state_error(&self) -> Result<(), MobileShellError> {

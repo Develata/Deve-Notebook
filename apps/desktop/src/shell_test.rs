@@ -121,7 +121,7 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
     ));
     let snapshot = shell.snapshot();
     assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
-    assert!(!snapshot.readiness.endpoint_reachable);
+    assert_eq!(snapshot.readiness, NativeRuntimeReadiness::default());
     assert_eq!(
         snapshot.offline,
         Some(NativeServiceOffline {
@@ -129,6 +129,11 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
             retryable: true,
         })
     );
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Restarting
+    );
+    assert_eq!(snapshot.supervisor.offline, snapshot.offline);
     assert!(snapshot.endpoint.is_none());
     assert!(snapshot.process_adapter.endpoint.is_none());
     assert_eq!(
@@ -241,12 +246,13 @@ fn desktop_network_events_are_hints_not_write_grants() {
 
 #[test]
 fn desktop_supervisor_classifies_retryable_service_failures() {
-    let mut shell = DesktopShell::new();
-    shell.start_service();
+    let mut shell = bound_shell();
+    assert!(shell.mark_runtime_ready(ready_probe()));
     shell.mark_supervisor_failure(NativeServiceFailureKind::BindFailed, "port_busy");
 
     let snapshot = shell.snapshot();
     assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert_eq!(snapshot.readiness, NativeRuntimeReadiness::default());
     assert!(snapshot.endpoint.is_none());
     assert!(snapshot.process_adapter.endpoint.is_none());
     assert_eq!(

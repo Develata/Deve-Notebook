@@ -259,13 +259,13 @@ impl DesktopShell {
 
     pub fn mark_service_offline(&mut self, reason: impl Into<String>, retryable: bool) {
         self.state = DesktopServiceState::ServiceOffline;
-        self.offline = Some(NativeServiceOffline {
+        let offline = NativeServiceOffline {
             reason: reason.into(),
             retryable,
-        });
-        self.readiness.endpoint_reachable = false;
-        self.process_adapter.record_process_stopped();
-        self.endpoint = None;
+        };
+        self.supervisor.record_service_offline(offline.clone());
+        self.offline = Some(offline);
+        self.clear_runtime_binding();
     }
 
     pub fn mark_supervisor_failure(
@@ -276,9 +276,7 @@ impl DesktopShell {
         let offline = self.supervisor.record_failure(kind, reason);
         self.state = DesktopServiceState::ServiceOffline;
         self.offline = Some(offline);
-        self.readiness.endpoint_reachable = false;
-        self.process_adapter.record_process_stopped();
-        self.endpoint = None;
+        self.clear_runtime_binding();
     }
 
     pub fn invalidate_session(&mut self) {
@@ -308,6 +306,12 @@ impl DesktopShell {
         self.readiness.repo_handshake_complete = false;
         self.readiness.writer_ready = false;
         self.readiness.scope_nonce_current = false;
+    }
+
+    fn clear_runtime_binding(&mut self) {
+        self.readiness = NativeRuntimeReadiness::default();
+        self.process_adapter.record_process_stopped();
+        self.endpoint = None;
     }
 
     fn map_process_adapter_error(error: NativeProcessAdapterError) -> DesktopShellError {
