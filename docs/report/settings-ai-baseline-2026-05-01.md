@@ -17,6 +17,11 @@
 - Settings sync mode、language、reserved/future control、AI backend button policy helpers 与代码级测试。
 - Browser UI prefs fallback 层：layout width、Outline visibility、locale preference、shortcut overrides。
 - `scripts/check-cli-settings-baseline.sh`。
+- Trusted CLI 只有在 `ai.mode = "trusted-cli"` 且 bridge enabled、trusted、`AGENT_CLI_PATH` 为绝对路径且存在可执行时才有效。
+- `ai.native_enabled = false` 会禁用 Native AI provider registration，并让 public `ai-chat` RPC 返回已完成错误，而不是让 chat 持续 loading。
+- `/api/ai/backend-capabilities` 暴露 `native_available`、`trusted_cli_available`、`effective_backend`；Web 不得从默认值推断 backend availability。
+- `deve.ui.last_scope` 只能保存最后 repo display-name alias；不得持久化 `repo_id`、remote branch、peer id、`scope_nonce`、auth secrets、writer readiness、sync vector 或 business facts。
+- 证据命令包括 `cargo test -p deve_core config -- --nocapture`、`cargo test -p deve_cli agent_bridge -- --nocapture`、`cargo test -p deve_web ai_backend -- --nocapture`、`scripts/check-browser-prefs-boundary.sh`，以及 typed prefs / shortcut / locale / scope preference targeted tests。
 
 ## Retired Source Reports
 

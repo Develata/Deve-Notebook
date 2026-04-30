@@ -16,6 +16,9 @@
 - Isolated `serve --dev` + Chrome MCP external new-file smoke。
 - Isolated `serve --dev` + Chrome MCP rename-pair smoke。
 - Source Control conflict resolution runtime tests。
+- Non-conflict `ResolveConflict` 请求必须以结构化 `SC_CONFLICT_TARGET_MISSING` 拒绝；拒绝不得 stage entry，也不得 discard workspace content。
+- Conflict target resolution 使用精确 resolved pending entry，不信任 client-selected path。
+- 证据测试包括 `resolve_conflict_rejects_non_conflict_pending_entry` 与 `source_control_git_import_conflict_test`。
 
 ## Retired Source Reports
 

@@ -38,7 +38,7 @@
 
 - `baseline-2026-04-08.md` 与 `gap-*-2026-04-08.md` 是 raw historical scans，只作 forensic input。
 - 已知过时断言包括：Watcher backend 缺失、WS Unauthorized 为 plain text、Agent Bridge 默认拉起 CLI、locale detection 缺失、`server/mod.rs` 过大，以及 MCP 可作为产品 runtime 方向。
-- 旧 acceptance checklist 已删除；权威入口是 `docs/acceptance-cases/00_index.md`。
+- `legacy-acceptance-checklist-2026-05-01.md` 已删除；权威入口是 `docs/acceptance-cases/00_index.md`。
 
 ## Retired Cleanup Policy
 

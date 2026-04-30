@@ -16,6 +16,9 @@
 - Chrome MCP 375x812 Diff fixture smoke：AI Chat/辅助键盘栏隐藏、关闭按钮视口内可用、关闭返回 editor。
 - Chrome MCP 375x812 editor font-size smoke：focus 前后 `.cm-content` computed font-size 为 16px，`visualViewport.scale=1`。
 - `scripts/check-mobile-baseline.sh` 守住 mobile editor 16px baseline。
+- Font-size smoke 使用 `http://127.0.0.1:8080/`、`375x812` viewport、`isMobile=true`、`hasTouch=true`、`deviceScaleFactor=2`、隔离 `/tmp/deve-mobile-font-smoke` 数据根与 dev auth。
+- Font-size 证据：`.cm-content` 与 `.cm-editor` 已挂载；focus element 为 `DIV.cm-content.cm-lineWrapping`；`.cm-editor` rect 保持在 375px 视口内。
+- Mobile font-size smoke 未观察到 browser console warning/error。
 
 ## Retired Source Reports
 

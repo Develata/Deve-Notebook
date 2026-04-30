@@ -19,6 +19,11 @@
 - Dry-run import、`--apply` pending/import 写入、conflict resolution 后 stage/commit/export。
 - Push blocker：未导出 mirror record、dirty Git worktree、dirty Source Control、未映射 Git HEAD、remote/branch 配置错误。
 - Command-layer smoke 覆盖 import/export/push resolved publish path 与 push blocker。
+- Resolved import publish chain：`git import --apply` -> Source Control resolved stage/commit -> `git export` -> `git push`。
+- Export 前 push 不得创建 remote branch；export 后 Git worktree 变脏必须阻塞 publish，直到脏文件被清理。
+- 最终 remote branch 必须指向 resolved imported Deve commit 对应 `git_mirror_commits` 记录中的 Git commit id。
+- 证据测试包括 `git_import_export_push_resolved_publish_roundtrip`、`git_import_apply_resolved_commit_exports_roundtrip`、`resolved_import_keep_fs_commits_and_exports_to_git`、`push_mirror_refuses_unexported_queue_without_touching_remote`、`push_mirror_pushes_exported_head_to_remote`。
+- Git drift rescan 已关闭“import 必须生成 ledger facts”的过时表述；import 在 Deve stage/commit 前只能停留在 pending/import。
 
 ## Retired Source Reports
 

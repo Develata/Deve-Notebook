@@ -17,6 +17,10 @@
 - Rendering current/future boundary guard。
 - Architecture registry check。
 - Post-verification plan/code drift rescan。
+- Rendering guard 保留主编辑器视觉投影、聊天/辅助 HTML 轻量 Markdown 渲染、大文档批量调度三条边界。
+- Chat BUILD Apply 仍由 BUILD mode 门禁控制，并通过带当前 scope nonce 的 `ClientMessage::Edit` 写入。
+- Lightweight renderer 测试覆盖 code-block apply affordance、`<br>` allowlist、安全外链、unsafe scheme 降级，以及 unsupported highlight 保持普通文本。
+- Architecture registry sync 保留 `op.i18n.locale.fallback-unsupported`、Native AI Chat operation IDs 与 release Web WASM quality gate operation。
 
 ## Retired Source Reports
 
