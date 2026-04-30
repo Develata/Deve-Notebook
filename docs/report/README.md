@@ -34,6 +34,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest Git mirror repair review Web consumption status: `git-mirror-repair-review-web-consumption-2026-04-29.md`
 - Latest Git mirror repair review UI polish status: `git-mirror-repair-review-ui-polish-2026-04-29.md`
 - Latest Git mirror executable repair UI decision: `git-mirror-executable-repair-ui-decision-2026-04-29.md`
+- Latest Git mirror future boundary audit: `git-mirror-future-boundary-audit-2026-04-30.md`
 - Latest graph HTTP projection status: `graph-http-projection-status-2026-04-29.md`
 - Latest graph Web projection panel status: `graph-web-projection-panel-status-2026-04-29.md`
 - Latest graph renderer gate decision: `graph-renderer-gate-decision-2026-04-29.md`

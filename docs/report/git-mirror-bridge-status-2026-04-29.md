@@ -25,7 +25,9 @@
 - Command Palette 新增 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror` 可发现入口；当前只在 Source Control 面板显示 CLI-only notice，不直接执行 Web 后端 Git import/push/repair。repair notice 会引导用户查看 `repair_action[...]`，修复 blocker 后用 `deve_cli git export --repo <repo> --retry-out-of-sync` 重试。Source Control conflict 条目会提示 import 后需在暂存前选择保留文件系统或账本版本。
 - Git push CLI 输出与 Web CLI-only notice 已补充 blocker/remote polish：`git_remote` 指向 upstream/origin 或显式 `--remote/--branch`，`git_history_mapping` 指向 export/repair，`git_worktree` 指向 clean/import，`deve_source_control` 指向 stage/commit/discard。
 
-## 仍未实现
+## Future / Deferred
+
+以下项目不属于当前 active queue，仍保持 future/deferred。当前边界是：Git 写操作只允许通过显式 CLI surface；Web 只提供 CLI-only notice 与只读 repair review，不直接执行 Web 后端 Git import/push/repair。
 
 - 自动后台 Git mirror executor 与更完整的 retry / repair UI。
 - 可点击 blocker repair UI；当前 repair action schema 与 Web repair notice 已可观测，但仍保持 CLI-only，不自动生成或执行写 Git 的修复操作。

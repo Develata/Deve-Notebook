@@ -34,6 +34,19 @@ check_absent apps/web/src/i18n/command_palette.rs "Git: Sync"
 check_absent apps/web/src/i18n/command_palette.rs "Git: Commit"
 check_contains apps/web/src/i18n/command_palette.rs "Git: Push Mirror"
 
+# Git mirror Web surfaces are intentionally read-only / CLI-only for this
+# stage. Do not let repair review, Command Palette notices, import apply, or
+# push CLI be re-described as a Web Git writer or a background executor.
+check_contains docs/features/07_diff_logic.md "当前批次不实现 executable Web repair UI，也不新增 Web 后端 Git writer"
+check_contains docs/features/07_diff_logic.md "当前阶段不实现 Web 后端直接 Git import/push/repair，也不实现后台自动 Git mirror repair"
+check_contains docs/plan/14_tech_stack.md "本阶段不进入 executable Web repair UI；Web 继续保持 read-only review / CLI-only notice"
+check_contains docs/plan/14_tech_stack.md "自动后台执行、完整 repair UI 与 Web 后端直接执行 Git import/push/repair 仍是 future"
+check_contains docs/report/git-mirror-bridge-status-2026-04-29.md "不直接执行 Web 后端 Git import/push/repair"
+check_contains docs/report/git-mirror-bridge-status-2026-04-29.md "仍保持 future/deferred"
+check_contains apps/cli/src/server/router.rs '"/api/sc/git-mirror/repair-review"'
+check_contains apps/web/src/components/sidebar/source_control/error_notice.rs 'data-deve-git-repair-review="readonly"'
+check_contains apps/web/src/i18n/source_control_git.rs "Git mirror repair is CLI-only"
+
 # Current Source Control panel operations are explicit and repo-scoped.
 check_contains docs/plan/07_diff_logic.md "CommitStaged"
 check_contains docs/features/operations/sc_commit.md 'ClientMessage::Commit { scope_nonce }'
