@@ -19,7 +19,7 @@ item.
 
 ## Cohesion Status
 
-- `git_import_smoke_test.rs`: 198 lines.
+- `git_import_smoke_test.rs`: 195 lines.
 - `git_import_smoke_support.rs`: 240 lines.
 - Both files are below the current soft 250-line cohesion warning threshold.
 - Further Git mirror smoke growth should add a new scenario file rather than

@@ -437,7 +437,7 @@ Mobile skeleton 仍以 §0 的 current boundary 为准。
 | :--- | :--- | :--- | :--- | :--- |
 | MOB-SHOULD-001 | Resizable Handles: 移动端 SHOULD NOT 显示左右拉伸手柄 | `apps/web/src/components/main_layout.rs` | 已实现 | `is_mobile` 分支渲染 `MobileLayout`，不挂载桌面拖拽手柄 UI。 |
 | MOB-SHOULD-002 | Outer Gutter: 移动端 SHOULD NOT 提供外边距拖拽 | `apps/web/src/components/main_layout.rs` | 已实现 | 外边距拖拽仅在 `DesktopLayout` 生效。 |
-| MOB-SHOULD-003 | Font Size: 默认字号 SHOULD 设为 16px | `apps/web/src/editor/mod.rs` | 部分实现 | 编辑器基础字号尚未统一锁定为 16px（后续可在编辑器容器样式或主题变量中强制）。 |
+| MOB-SHOULD-003 | Font Size: 默认字号 SHOULD 设为 16px | `apps/web/style/_base.css` | 已实现 | `.cm-content` 已固定 `font-size: 16px`，并由 `scripts/check-mobile-baseline.sh` 守住。 |
 | MOB-SHOULD-004 | App 后台时服务 SHOULD 降低资源占用 | N/A (Web Scope) | 不适用 | 属于原生 Mobile App 进程生命周期，不在 Web 映射实现范围。 |
 | MOB-SHOULD-005 | Firewall SHOULD 显式阻断非回环访问 | N/A (Embedded Service) | 不适用 | 属于移动端内嵌服务与系统防火墙策略。 |
 | MOB-SHOULD-006 | Export SHOULD 支持单文档/全量导出 | N/A (Mobile Native Service) | 不适用 | 属于原生端导出与存储能力。 |

@@ -36,6 +36,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest Git mirror executable repair UI decision: `git-mirror-executable-repair-ui-decision-2026-04-29.md`
 - Latest Git mirror future boundary audit: `git-mirror-future-boundary-audit-2026-04-30.md`
 - Latest Git mirror command smoke cohesion status: `git-mirror-command-smoke-cohesion-2026-05-01.md`
+- Latest post-Git priority reselection: `post-git-priority-reselection-2026-05-01.md`
 - Latest graph HTTP projection status: `graph-http-projection-status-2026-04-29.md`
 - Latest graph Web projection panel status: `graph-web-projection-panel-status-2026-04-29.md`
 - Latest graph renderer gate decision: `graph-renderer-gate-decision-2026-04-29.md`
@@ -46,6 +47,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest post-P2 plan/code drift rescan: `post-p2-plan-code-drift-rescan-2026-04-30.md`
 - Latest native plan post-gate wording split: `native-plan-post-gate-wording-split-2026-04-30.md`
 - Latest native packaging gate recheck: `native-packaging-gate-recheck-2026-04-30.md`
+- Latest mobile editor font-size baseline: `mobile-editor-font-size-baseline-2026-05-01.md`
 - Latest graph blocked/degraded acceptance polish: `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
 - Latest graph structured degraded error: `graph-structured-degraded-error-2026-04-30.md`
 - Latest rendering current boundary baseline: `rendering-current-boundary-baseline-2026-04-30.md`
