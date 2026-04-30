@@ -78,7 +78,13 @@ pub fn DiffHeader(
                         {move || if cache_hit.get() { t::diff::cache_hit(locale.get()) } else { t::diff::cache_miss(locale.get()) }}
                     </span>
                     <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                        {move || t::diff::cache_ratio(locale.get(), cache_hit_ratio.get())}
+                    </span>
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
                         {move || t::diff::algorithm(locale.get(), &algorithm.get())}
+                    </span>
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                        {move || t::diff::compute_ms(locale.get(), compute_ms.get())}
                     </span>
                     <Show when=move || has_hunks.get()>
                         <button
