@@ -9,10 +9,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Docker cargo-chef skeleton warning cleanup | P3 | Dockerfile, cargo-chef recipe/skeleton warning path, release smoke logs | Decide whether to remove, narrowly suppress, or document the Docker-only `unused manifest key: ... plugin` warnings without rewriting checked-in Cargo manifests; rerun Docker release smoke |
+| 1 | Post-verification plan/code drift rescan | P2 | docs/plan, docs/features, docs/acceptance-cases, current code, dated reports | Re-read current authoritative plan/code after full verification and Docker cleanup; identify the next narrow implementation batch without reopening future-only work |
 
 ## 最近完成基线
 
+- P3 Docker cargo-chef skeleton warning cleanup 已关闭：warning 来自 cargo-chef 0.1.72 生成的 recipe/skeleton manifest 中的 `plugin = false`，不是 checked-in manifests；Dockerfile 只清理生成的 recipe 噪声，`docker build --target deps` 与完整 Docker release smoke 均通过，详见 `cargo-chef-skeleton-warning-cleanup-2026-04-30.md`。
 - P2 Full workspace verification pass 已关闭：docs/code guard、plan coverage、Web release build、fmt、全特性 clippy、完整 `cargo test`、runtime smoke 与 Docker release smoke 均通过；同时修复 WS structured-error guard 字段匹配误报与 `serve` clippy needless borrow，详见 `full-workspace-verification-pass-2026-04-30.md`。
 - P0 sync vector wire contract 与 browser storage/degraded write boundary 已关闭：`DEVEWSF3`、显式 `known_vector/server_vector`、Web degraded read-only/write gate 均已测试。
 - P1 security hardening small batch 已关闭：`identity.key` owner-only、login audit `timestamp/user_agent`、CORS wildcard fail-closed、dev-only auth/CORS warnings 均已测试。

@@ -51,6 +51,7 @@ Runtime smoke used isolated data roots under `/tmp/deve-runtime-smoke-*`.
 
 ## Remaining Follow-Up
 
-- P3: decide whether to remove, suppress, or document the cargo-chef skeleton
-  `plugin` manifest warnings. The warning is reproducible in Docker but absent
-  from `cargo metadata --no-deps --format-version 1` on checked-in manifests.
+Closed by `cargo-chef-skeleton-warning-cleanup-2026-04-30.md`. The Dockerfile
+now strips only cargo-chef generated `\nplugin = false` recipe noise before
+`cargo chef cook`, and Docker release smoke completed with
+`docker-release-smoke: ok`.

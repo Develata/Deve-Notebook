@@ -19,7 +19,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 # 阶段 3: deps — 编译后端依赖（缓存层）
 FROM chef AS deps
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --locked --recipe-path recipe.json --package deve_cli --package deve_core
+# cargo-chef 0.1.72 writes target `plugin = false` into skeleton manifests;
+# Cargo treats it as an unknown key. Strip only the generated recipe noise.
+RUN sed -i 's/\\nplugin = false//g' recipe.json && \
+    cargo chef cook --release --locked --recipe-path recipe.json --package deve_cli --package deve_core
 
 # 阶段 4: frontend — 编译前端资源
 FROM chef AS frontend

@@ -30,6 +30,17 @@ Treat the 2026-04-29 "not currently actionable" conclusion as historical. The
 current follow-up is to inspect or suppress the cargo-chef recipe/skeleton
 warning path without rewriting checked-in Cargo manifests.
 
+## 2026-04-30 Cleanup
+
+The follow-up is now closed by
+`cargo-chef-skeleton-warning-cleanup-2026-04-30.md`.
+
+Inspection of the generated `/app/recipe.json` confirmed cargo-chef 0.1.72
+injects target-level `plugin = false` lines into synthetic manifests. The
+Dockerfile strips only that generated recipe noise before `cargo chef cook`;
+checked-in workspace manifests remain unchanged. A full Docker release smoke
+then completed with `docker-release-smoke: ok`.
+
 ## Commands
 
 ```bash
@@ -47,8 +58,5 @@ fresh Docker build context.
 
 ## Follow-Up
 
-- Re-run Docker release smoke from a stable Linux Docker context.
-- If the warning persists with a fresh build cache, inspect the generated
-  `/app/recipe.json` and cargo-chef skeleton manifests inside the builder stage.
-- If the warning disappears, remove it from release follow-up as stale Docker
-  cache noise.
+Closed. Reopen only if a future cargo-chef upgrade changes the generated recipe
+shape or the Docker release smoke reproduces a new warning family.
