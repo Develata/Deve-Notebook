@@ -8,6 +8,8 @@ pub mod config;
 pub mod dump;
 pub mod export;
 pub mod git;
+#[cfg(test)]
+mod git_import_smoke_test;
 mod git_output;
 pub mod graph;
 pub mod init;

@@ -244,6 +244,7 @@ fn change_status_label(status: ChangeStatus) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::apply_import;
+    use crate::git_bridge::plan_import;
     use crate::ledger::RepoManager;
     use crate::source_control::ChangeStatus;
     use crate::source_control::pending_fs::{self, PendingFsEntry};
@@ -353,6 +354,24 @@ mod tests {
     }
 
     #[test]
+    fn plan_import_dry_run_does_not_write_pending_entries() {
+        let (dir, repo, repo_root) = new_repo();
+        commit_deve_file(&dir, &repo, "note.md", "hello\n");
+        commit_git_baseline(&repo_root);
+        write_workspace_file(&dir, "note.md", "hello import\n");
+        write_workspace_file(&dir, "new.md", "new file\n");
+
+        let plan = plan_import(&repo_root).expect("plan import");
+
+        assert_eq!(plan.entries.len(), 2);
+        assert!(plan.blockers.is_empty(), "{:?}", plan.blockers);
+        let pending = repo
+            .run_on_local_repo(repo.local_repo_name(), pending_fs::list_all)
+            .expect("pending");
+        assert!(pending.is_empty(), "{pending:?}");
+    }
+
+    #[test]
     fn apply_import_writes_renamed_pending_entry() {
         let (dir, repo, repo_root) = new_repo();
         commit_deve_file(&dir, &repo, "note.md", "hello\n");
@@ -409,5 +428,48 @@ mod tests {
             .run_on_local_repo(repo.local_repo_name(), pending_fs::list_all)
             .expect("pending");
         assert!(pending.is_empty(), "{pending:?}");
+    }
+
+    #[test]
+    fn apply_import_existing_pending_blocker_prevents_partial_writes() {
+        let (dir, repo, repo_root) = new_repo();
+        commit_deve_file(&dir, &repo, "note.md", "hello\n");
+        commit_git_baseline(&repo_root);
+        write_workspace_file(&dir, "note.md", "hello import\n");
+        write_workspace_file(&dir, "new.md", "new file\n");
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            pending_fs::upsert(
+                db,
+                &PendingFsEntry {
+                    path: "note.md".into(),
+                    renamed_from: None,
+                    doc_id: repo.get_docid("note.md").expect("lookup doc"),
+                    change_type: ChangeStatus::Modified,
+                    content_hash: pending_fs::content_hash("different pending"),
+                    detected_at: 1,
+                    has_conflict: false,
+                },
+            )
+        })
+        .expect("seed existing pending");
+
+        let report = apply_import(&repo, repo.local_repo_name(), &repo_root).expect("apply import");
+
+        assert_eq!(report.applied, 0);
+        assert_eq!(report.skipped, 0);
+        assert!(
+            report
+                .blockers
+                .iter()
+                .any(|blocker| blocker.reason.contains("existing pending entry")),
+            "{:?}",
+            report.blockers
+        );
+        let pending = repo
+            .run_on_local_repo(repo.local_repo_name(), pending_fs::list_all)
+            .expect("pending");
+        assert_eq!(pending.len(), 1, "{pending:?}");
+        assert_eq!(pending[0].path, "note.md");
+        assert!(!pending.iter().any(|entry| entry.path == "new.md"));
     }
 }

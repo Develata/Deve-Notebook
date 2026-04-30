@@ -9,10 +9,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git import apply CLI/runtime smoke | P2 | `deve_cli git import`, isolated repo fixture, Source Control pending/import state, output copy | Verify dry-run remains read-only, `--apply` writes safe Git changes into pending/import, blockers fail closed without partial writes, and CLI output points back to Deve stage/commit |
+| 1 | Git import conflict resolution runtime smoke | P2 | imported pending conflict entries, Source Control resolve path, stage/commit boundary | Verify `git import --apply` conflict entries keep `has_conflict`, Source Control exposes resolve choices, resolving clears conflict without bypassing normal Deve stage/commit authority |
 
 ## 最近完成基线
 
+- P2 Git import apply CLI/runtime smoke 已关闭：新增 core runtime 与 CLI command-layer 隔离测试，验证 dry-run 不写 pending、`--apply` 写入 pending/import、已有 pending blocker 阻止同批次部分写入，CLI 输出仍回指 Deve stage/commit；详见 `git-import-apply-cli-runtime-smoke-2026-04-30.md`。
 - P2 Post-verification plan/code drift rescan 已关闭：排除 future-only work 后发现 `deve_cli git import` dry-run 仍把 apply 描述成后续路径；CLI 输出、单元测试与 `docs/plan/12_commands.md` 已同步到当前 `--apply` 语义，详见 `post-verification-plan-code-drift-rescan-2026-04-30.md`。
 - P3 Docker cargo-chef skeleton warning cleanup 已关闭：warning 来自 cargo-chef 0.1.72 生成的 recipe/skeleton manifest 中的 `plugin = false`，不是 checked-in manifests；Dockerfile 只清理生成的 recipe 噪声，`docker build --target deps` 与完整 Docker release smoke 均通过，详见 `cargo-chef-skeleton-warning-cleanup-2026-04-30.md`。
 - P2 Full workspace verification pass 已关闭：docs/code guard、plan coverage、Web release build、fmt、全特性 clippy、完整 `cargo test`、runtime smoke 与 Docker release smoke 均通过；同时修复 WS structured-error guard 字段匹配误报与 `serve` clippy needless borrow，详见 `full-workspace-verification-pass-2026-04-30.md`。
