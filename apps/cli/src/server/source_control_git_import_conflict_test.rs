@@ -3,336 +3,24 @@
 //!   - 12_commands#cli-commands
 
 use crate::server::{
-    AppState,
     channel::DualChannel,
-    handlers::source_control::{handle_commit, handle_resolve_conflict},
+    handlers::source_control::handle_resolve_conflict,
     session::WsSession,
 };
-use deve_core::git_bridge::{
-    GitMirrorCommitState, GitMirrorRunOptions, apply_import, export_mirror, get_record,
-};
-use deve_core::models::DocId;
+use deve_core::git_bridge::apply_import;
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeStatus, ConflictResolution};
-use std::path::Path;
-use std::path::PathBuf;
-use std::process::Command;
-use std::sync::Arc;
-use tempfile::TempDir;
 use tokio::sync::mpsc;
 
 #[allow(dead_code)]
-#[path = "source_control_scope_test_support.rs"]
+#[path = "source_control_git_import_test_support.rs"]
 mod support;
 
-use support::{build_state, write_workspace_file};
-
-fn git(path: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(path)
-        .args(args)
-        .output()
-        .expect("run git");
-    assert!(
-        output.status.success(),
-        "git {:?} failed: {}",
-        args,
-        String::from_utf8_lossy(&output.stderr)
-    );
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
-
-fn init_git_repo(path: &Path) {
-    std::fs::create_dir_all(path).expect("repo dir");
-    git(path, &["init"]);
-    git(path, &["config", "user.email", "deve@example.invalid"]);
-    git(path, &["config", "user.name", "Deve Test"]);
-    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(path).expect("gitignore");
-}
-
-struct ImportedConflictFixture {
-    _dir: TempDir,
-    state: Arc<AppState>,
-    repo_id: uuid::Uuid,
-    repo_name: String,
-    repo_root: PathBuf,
-    doc_id: DocId,
-    before_commit_count: usize,
-}
-
-fn create_imported_conflict_fixture() -> anyhow::Result<ImportedConflictFixture> {
-    let (dir, state, repo_id, _test_id) = build_state()?;
-    let repo_name = state.repo.local_repo_name().to_string();
-    let repo_root = state.repo.local_repo_workspace_root(&repo_name)?;
-    init_git_repo(&repo_root);
-    write_workspace_file(&dir, &repo_name, "note.md", "hello\n");
-    state.repo.run_on_local_repo(&repo_name, |db| {
-        pending_fs::upsert(
-            db,
-            &PendingFsEntry {
-                path: "note.md".into(),
-                renamed_from: None,
-                doc_id: None,
-                change_type: ChangeStatus::Added,
-                content_hash: pending_fs::content_hash("hello\n"),
-                detected_at: 1,
-                has_conflict: false,
-            },
-        )
-    })?;
-    state
-        .repo
-        .stage_pending_in_local_repo(&repo_name, "note.md")?;
-    state
-        .repo
-        .commit_staged_in_local_repo(&repo_name, "baseline")?;
-    git(&repo_root, &["add", "."]);
-    git(&repo_root, &["commit", "--no-gpg-sign", "-m", "baseline"]);
-    let doc_id = state
-        .repo
-        .get_tracked_docid_in_local_repo(&repo_name, "note.md")?
-        .expect("doc id");
-    state.repo.append_generated_op_in_local_repo(
-        &repo_name,
-        doc_id,
-        PeerId::new("local"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 6,
-                    content: "ledger\n".into(),
-                },
-                2,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
-    write_workspace_file(&dir, &repo_name, "note.md", "git import\n");
-
-    let report = apply_import(&state.repo, &repo_name, &repo_root)?;
-
-    assert_eq!(report.applied, 1);
-    let pending = state.repo.list_pending_fs_in_local_repo(&repo_name)?;
-    assert_eq!(pending.len(), 1, "{pending:?}");
-    assert!(pending[0].has_conflict, "{pending:?}");
-    let before_commit_count = state.repo.list_commits_in_local_repo(&repo_name, 10)?.len();
-
-    Ok(ImportedConflictFixture {
-        _dir: dir,
-        state,
-        repo_id,
-        repo_name,
-        repo_root,
-        doc_id,
-        before_commit_count,
-    })
-}
-
-fn create_mapped_imported_conflict_fixture() -> anyhow::Result<ImportedConflictFixture> {
-    let (dir, state, repo_id, _test_id) = build_state()?;
-    let repo_name = state.repo.local_repo_name().to_string();
-    let repo_root = state.repo.local_repo_workspace_root(&repo_name)?;
-    init_git_repo(&repo_root);
-    write_workspace_file(&dir, &repo_name, "note.md", "hello\n");
-    state.repo.run_on_local_repo(&repo_name, |db| {
-        pending_fs::upsert(
-            db,
-            &PendingFsEntry {
-                path: "note.md".into(),
-                renamed_from: None,
-                doc_id: None,
-                change_type: ChangeStatus::Added,
-                content_hash: pending_fs::content_hash("hello\n"),
-                detected_at: 1,
-                has_conflict: false,
-            },
-        )
-    })?;
-    state
-        .repo
-        .stage_pending_in_local_repo(&repo_name, "note.md")?;
-    let baseline_commit = state
-        .repo
-        .commit_staged_in_local_repo(&repo_name, "baseline")?;
-    let baseline_report = state.repo.run_on_local_repo(&repo_name, |db| {
-        export_mirror(db, &repo_root, repo_id, GitMirrorRunOptions::default())
-    })?;
-    assert_eq!(baseline_report.attempted, 1, "{baseline_report:?}");
-    assert_eq!(baseline_report.committed, 1, "{baseline_report:?}");
-    state.repo.run_on_local_repo(&repo_name, |db| {
-        let record = get_record(db, &baseline_commit.id)?.expect("baseline mirror record");
-        assert_eq!(record.state, GitMirrorCommitState::Committed);
-        assert!(record.git_commit_id.is_some(), "{record:?}");
-        Ok::<_, anyhow::Error>(())
-    })?;
-    assert!(git(&repo_root, &["status", "--porcelain"]).is_empty());
-
-    let doc_id = state
-        .repo
-        .get_tracked_docid_in_local_repo(&repo_name, "note.md")?
-        .expect("doc id");
-    state.repo.append_generated_op_in_local_repo(
-        &repo_name,
-        doc_id,
-        PeerId::new("local"),
-        |seq| {
-            LedgerEntry::new_content(
-                doc_id,
-                Op::Insert {
-                    pos: 6,
-                    content: "ledger\n".into(),
-                },
-                2,
-                PeerId::new("local"),
-                seq,
-                None,
-                None,
-            )
-        },
-    )?;
-    write_workspace_file(&dir, &repo_name, "note.md", "git import\n");
-
-    let report = apply_import(&state.repo, &repo_name, &repo_root)?;
-
-    assert_eq!(report.applied, 1);
-    let pending = state.repo.list_pending_fs_in_local_repo(&repo_name)?;
-    assert_eq!(pending.len(), 1, "{pending:?}");
-    assert!(pending[0].has_conflict, "{pending:?}");
-    let before_commit_count = state.repo.list_commits_in_local_repo(&repo_name, 10)?.len();
-
-    Ok(ImportedConflictFixture {
-        _dir: dir,
-        state,
-        repo_id,
-        repo_name,
-        repo_root,
-        doc_id,
-        before_commit_count,
-    })
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn resolved_import_keep_fs_commits_and_exports_to_git() -> anyhow::Result<()> {
-    let fixture = create_mapped_imported_conflict_fixture()?;
-
-    let (uni_tx, mut uni_rx) = mpsc::channel(8);
-    let ch = DualChannel::new(fixture.state.tx.clone(), uni_tx);
-    let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.switch_repo(fixture.repo_name.clone(), None);
-    session.set_scope_nonce(Some(36));
-
-    handle_resolve_conflict(
-        &fixture.state,
-        &ch,
-        &mut session,
-        ScPathTarget {
-            path: "note.md".into(),
-            doc_id: Some(fixture.doc_id),
-        },
-        ConflictResolution::KeepFs,
-    )
-    .await;
-
-    match uni_rx.recv().await.expect("conflict resolved") {
-        ServerMessage::ConflictResolved {
-            repo_id,
-            scope_nonce,
-            path,
-            resolution,
-            ..
-        } => {
-            assert_eq!(repo_id, Some(fixture.repo_id));
-            assert_eq!(scope_nonce, Some(36));
-            assert_eq!(path, "note.md");
-            assert_eq!(resolution, "KeepFs");
-        }
-        other => panic!("expected ConflictResolved, got {other:?}"),
-    }
-    let mut broadcast_rx = fixture.state.tx.subscribe();
-    handle_commit(
-        &fixture.state,
-        &ch,
-        &mut session,
-        "accept imported git content".into(),
-    )
-    .await;
-
-    let committed_id = match broadcast_rx.recv().await.expect("commit ack") {
-        ServerMessage::CommitAck {
-            repo_id,
-            scope_nonce,
-            commit_id,
-            ..
-        } => {
-            assert_eq!(repo_id, Some(fixture.repo_id));
-            assert_eq!(scope_nonce, Some(36));
-            commit_id
-        }
-        other => panic!("expected CommitAck, got {other:?}"),
-    };
-    assert_eq!(
-        fixture
-            .state
-            .repo
-            .list_commits_in_local_repo(&fixture.repo_name, 10)?
-            .len(),
-        fixture.before_commit_count + 1
-    );
-    assert!(
-        fixture
-            .state
-            .repo
-            .list_pending_fs_in_local_repo(&fixture.repo_name)?
-            .is_empty()
-    );
-    assert!(
-        fixture
-            .state
-            .repo
-            .list_staged_in_local_repo(&fixture.repo_name)?
-            .is_empty()
-    );
-    fixture.state.repo.run_on_local_repo(&fixture.repo_name, |db| {
-        let record = get_record(db, &committed_id)?.expect("queued imported commit");
-        assert_eq!(record.state, GitMirrorCommitState::Queued);
-        Ok::<_, anyhow::Error>(())
-    })?;
-
-    let export_report = fixture.state.repo.run_on_local_repo(&fixture.repo_name, |db| {
-        export_mirror(
-            db,
-            &fixture.repo_root,
-            fixture.repo_id,
-            GitMirrorRunOptions::default(),
-        )
-    })?;
-
-    assert_eq!(export_report.attempted, 1, "{export_report:?}");
-    assert_eq!(export_report.committed, 1, "{export_report:?}");
-    assert_eq!(export_report.out_of_sync, 0, "{export_report:?}");
-    fixture.state.repo.run_on_local_repo(&fixture.repo_name, |db| {
-        let record = get_record(db, &committed_id)?.expect("committed imported mirror record");
-        assert_eq!(record.state, GitMirrorCommitState::Committed);
-        assert!(record.git_commit_id.is_some(), "{record:?}");
-        Ok::<_, anyhow::Error>(())
-    })?;
-    assert!(git(&fixture.repo_root, &["status", "--porcelain"]).is_empty());
-    assert_eq!(
-        git(&fixture.repo_root, &["show", "HEAD:note.md"]),
-        "git import\n"
-    );
-    let head_body = git(&fixture.repo_root, &["log", "-1", "--format=%B"]);
-    assert!(head_body.contains(&committed_id), "{head_body}");
-    Ok(())
-}
+use support::{
+    build_state, create_imported_conflict_fixture, git, init_git_repo, write_workspace_file,
+};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn imported_conflict_keep_fs_resolves_to_clean_staged_entry() -> anyhow::Result<()> {
@@ -360,12 +48,14 @@ async fn imported_conflict_keep_fs_resolves_to_clean_staged_entry() -> anyhow::R
     match uni_rx.recv().await.expect("conflict resolved") {
         ServerMessage::ConflictResolved {
             repo_id: actual_repo_id,
+            branch,
             scope_nonce,
             path,
             resolution,
             ..
         } => {
             assert_eq!(actual_repo_id, Some(fixture.repo_id));
+            assert_eq!(branch, None);
             assert_eq!(scope_nonce, Some(31));
             assert_eq!(path, "note.md");
             assert_eq!(resolution, "KeepFs");
@@ -418,12 +108,14 @@ async fn imported_conflict_keep_ledger_discards_import_without_staging() -> anyh
     match uni_rx.recv().await.expect("conflict resolved") {
         ServerMessage::ConflictResolved {
             repo_id: actual_repo_id,
+            branch,
             scope_nonce,
             path,
             resolution,
             ..
         } => {
             assert_eq!(actual_repo_id, Some(fixture.repo_id));
+            assert_eq!(branch, None);
             assert_eq!(scope_nonce, Some(32));
             assert_eq!(path, "note.md");
             assert_eq!(resolution, "KeepLedger");
@@ -595,12 +287,14 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
     match uni_rx.recv().await.expect("conflict resolved") {
         ServerMessage::ConflictResolved {
             repo_id: actual_repo_id,
+            branch,
             scope_nonce,
             path,
             resolution,
             ..
         } => {
             assert_eq!(actual_repo_id, Some(repo_id));
+            assert_eq!(branch, None);
             assert_eq!(scope_nonce, Some(34));
             assert_eq!(path, "renamed.md");
             assert_eq!(resolution, "KeepFs");
@@ -699,12 +393,14 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
     match uni_rx.recv().await.expect("conflict resolved") {
         ServerMessage::ConflictResolved {
             repo_id: actual_repo_id,
+            branch,
             scope_nonce,
             path,
             resolution,
             ..
         } => {
             assert_eq!(actual_repo_id, Some(repo_id));
+            assert_eq!(branch, None);
             assert_eq!(scope_nonce, Some(33));
             assert_eq!(path, "notes/b.md");
             assert_eq!(resolution, "KeepFs");

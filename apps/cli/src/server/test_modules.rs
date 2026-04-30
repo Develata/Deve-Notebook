@@ -42,6 +42,7 @@ mod source_control_changes_identity_test;
 mod source_control_commit_diff_test;
 mod source_control_http_test;
 mod source_control_git_import_conflict_test;
+mod source_control_git_import_roundtrip_test;
 mod source_control_local_commit_scope_test;
 mod source_control_local_scope_test;
 mod source_control_remote_scope_test;

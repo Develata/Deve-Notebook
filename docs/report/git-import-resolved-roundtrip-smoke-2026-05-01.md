@@ -18,8 +18,10 @@ active queue item.
 
 ## Code Coverage Added
 
-- `apps/cli/src/server/source_control_git_import_conflict_test.rs`
+- `apps/cli/src/server/source_control_git_import_roundtrip_test.rs`
   - `resolved_import_keep_fs_commits_and_exports_to_git`
+- `apps/cli/src/server/source_control_git_import_test_support.rs`
+  - Shared mapped/unmapped imported-conflict fixtures and Git helpers.
 
 The new smoke fixture first exports the baseline Deve commit into Git so the
 Git mirror mapping is real before import. It then creates ledger-only
@@ -33,6 +35,8 @@ server Source Control commit handler, and finally runs `export_mirror`.
 cargo fmt --check
 cargo test -p deve_cli resolved_import_keep_fs_commits_and_exports_to_git -- --nocapture
 cargo test -p deve_cli source_control_git_import_conflict_test -- --nocapture
+cargo test -p deve_cli source_control_git_import_roundtrip_test -- --nocapture
+cargo test -p deve_cli git_import -- --nocapture
 ```
 
 ## Next Narrow Batch
