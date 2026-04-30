@@ -7,7 +7,9 @@ use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use rhai::Dynamic;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{Mutex, broadcast, mpsc};
+
+static AI_CONFIG_LOCK: Mutex<()> = Mutex::const_new(());
 
 struct ProbePlugin {
     called: Arc<AtomicBool>,
@@ -94,4 +96,68 @@ async fn bundled_ai_handler_rejects_internal_rpc_before_runtime_call() {
         }
         other => panic!("unexpected message: {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn native_ai_disabled_blocks_ai_chat_rpc_and_finishes_chat() {
+    let _guard = AI_CONFIG_LOCK.lock().await;
+    let called = Arc::new(AtomicBool::new(false));
+    let plugins: Vec<Box<dyn PluginRuntime>> =
+        vec![Box::new(ProbePlugin::new("ai-chat", called.clone()))];
+    let (tx, _) = broadcast::channel(4);
+    let (uni_tx, mut uni_rx) = mpsc::channel(4);
+    let ch = DualChannel::new(tx, uni_tx);
+    let mut config = deve_core::config::Config::load();
+    config.ai.native_enabled = false;
+    crate::server::ai_chat::init_from_config(&config);
+
+    handle_plugin_call_with_plugins(
+        &plugins,
+        &ch,
+        "req-disabled".to_string(),
+        "ai-chat".to_string(),
+        "chat".to_string(),
+        vec![],
+    )
+    .await;
+
+    config.ai.native_enabled = true;
+    crate::server::ai_chat::init_from_config(&config);
+    assert!(!called.load(Ordering::SeqCst));
+
+    let mut saw_error = false;
+    let mut saw_finish = false;
+    for _ in 0..2 {
+        match uni_rx.recv().await.expect("server message") {
+            ServerMessage::PluginResponse {
+                req_id,
+                result,
+                error,
+            } => {
+                assert_eq!(req_id, "req-disabled");
+                assert!(result.is_none());
+                assert!(
+                    error
+                        .expect("plugin error")
+                        .detail
+                        .unwrap_or_default()
+                        .contains(crate::server::ai_chat::NATIVE_AI_DISABLED_ERROR)
+                );
+                saw_error = true;
+            }
+            ServerMessage::ChatChunk {
+                req_id,
+                delta,
+                finish_reason,
+            } => {
+                assert_eq!(req_id, "req-disabled");
+                assert!(delta.is_none());
+                assert_eq!(finish_reason.as_deref(), Some("stop"));
+                saw_finish = true;
+            }
+            other => panic!("unexpected message: {other:?}"),
+        }
+    }
+    assert!(saw_error);
+    assert!(saw_finish);
 }

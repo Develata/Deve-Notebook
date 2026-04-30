@@ -28,14 +28,32 @@ use deve_core::plugin::runtime::chat_stream::{
 };
 use deve_core::plugin::runtime::provider::register_provider;
 use serde_json::{Value, json};
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 use stream::execute_stream;
 
 const NATIVE_AI_TOOLS_DISABLED_ERROR: &str = "Native AI Chat tools are disabled by default";
+pub const NATIVE_AI_DISABLED_ERROR: &str = "Native AI Chat disabled by config";
+
+static NATIVE_AI_ENABLED: AtomicBool = AtomicBool::new(true);
+
+pub fn init_from_config(config: &deve_core::config::Config) {
+    NATIVE_AI_ENABLED.store(config.ai.native_enabled, Ordering::Relaxed);
+}
 
 pub fn init_chat_stream_handler() -> Result<()> {
+    if !is_native_ai_enabled() {
+        tracing::warn!("{}", NATIVE_AI_DISABLED_ERROR);
+        return Ok(());
+    }
     let handler = Arc::new(AiChatStreamHandler);
     register_provider(handler)
+}
+
+pub fn is_native_ai_enabled() -> bool {
+    NATIVE_AI_ENABLED.load(Ordering::Relaxed)
 }
 
 struct AiChatStreamHandler;

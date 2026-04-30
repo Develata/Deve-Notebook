@@ -71,8 +71,15 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             });
         });
         let is_native = Signal::derive(move || chat.ai_mode.get() == AI_BACKEND_NATIVE);
+        let native_available = Signal::derive(move || trusted_cap.get().native_available);
         let trusted_available = Signal::derive(move || trusted_cap.get().trusted_cli_available);
         attach_trusted_cli_fallback(chat.clone(), trusted_cap, locale);
+        let native_reason = move || {
+            trusted_cap
+                .get()
+                .native_reason
+                .unwrap_or_else(|| "Native AI disabled by config".to_string())
+        };
         let trusted_reason = move || {
             trusted_cap
                 .get()
@@ -87,12 +94,20 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 </div>
                 <div class="flex gap-2">
                     <button
-                        class=move || if is_native.get() {
+                        class=move || if !native_available.get() {
+                            "px-3 py-1 text-xs font-medium text-muted rounded opacity-50 cursor-not-allowed"
+                        } else if is_native.get() {
                             "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors"
                         } else {
                             "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
                         }
-                        on:click=move |_| chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string())
+                        disabled=move || !native_available.get()
+                        title=native_reason
+                        on:click=move |_| {
+                            if native_available.get_untracked() {
+                                chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string());
+                            }
+                        }
                     >
                         {move || t::settings::native_backend(locale.get())}
                     </button>

@@ -94,8 +94,12 @@ fn capabilities() -> policy::AgentBridgeCapabilities {
         .read()
         .map(|policy| policy.capabilities())
         .unwrap_or(policy::AgentBridgeCapabilities {
+            native_available: false,
+            native_reason: Some("AI backend policy unavailable".to_string()),
             trusted_cli_available: false,
             trusted_cli_reason: Some("external agent disabled".to_string()),
+            effective_backend: "none".to_string(),
+            effective_backend_reason: Some("AI backend policy unavailable".to_string()),
         })
 }
 

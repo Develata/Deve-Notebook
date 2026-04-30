@@ -212,6 +212,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize configuration from Env
     let config = deve_core::config::Config::load_checked()?;
+    server::ai_chat::init_from_config(&config);
     server::agent_bridge::init_from_config(&config);
 
     // Use config values

@@ -128,6 +128,26 @@
     - stdout_contains_any: ["trusted mode required", "external agent disabled"]
     - log_not_contains: "spawn subprocess"
 
+- case_id: AI-007
+  goal: AI backend 能力必须反映 `ai.mode` / `ai.native_enabled` 的有效运行时决策。
+  preconditions:
+    - `ai.native_enabled = false` 或 `ai.mode = trusted-cli` 但 trusted 条件不满足
+  steps:
+    - http_get: "/api/ai/backend-capabilities"
+    - ui_open: settings
+    - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_core config -- --nocapture
+    - run: cargo test -p deve_cli agent_bridge -- --nocapture
+    - run: cargo test -p deve_web ai_backend -- --nocapture
+  assertions:
+    - http_assert: native_available_matches_config true
+    - http_assert: trusted_cli_available_matches_policy true
+    - http_assert: effective_backend_in ["native", "trusted-cli", "none"]
+    - ui_assert: unavailable_backend_disabled true
+    - server_assert: native_disabled_blocks_ai_chat_rpc true
+    - ui_assert: backend_fallback_reason_visible true
+    - ui_assert: chat_streaming_stopped_after_plugin_error true
+
 - case_id: PLUG-001
   goal: Trusted External Agent 仅保留接口位，不要求当前 release 完整实现。
   preconditions:

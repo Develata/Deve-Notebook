@@ -5,6 +5,8 @@ fn disabled_policy_fails_closed() {
     let policy = AgentBridgePolicy {
         enabled: false,
         trusted: false,
+        native_enabled: true,
+        requested_mode: "native".to_string(),
         cli_path: Some("agent".to_string()),
         timeout_ms: 30_000,
     };
@@ -19,6 +21,8 @@ fn untrusted_policy_requires_trusted_mode() {
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: false,
+        native_enabled: true,
+        requested_mode: "native".to_string(),
         cli_path: Some("agent".to_string()),
         timeout_ms: 30_000,
     };
@@ -33,6 +37,8 @@ fn trusted_policy_requires_explicit_cli_path() {
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: true,
+        native_enabled: true,
+        requested_mode: "trusted-cli".to_string(),
         cli_path: None,
         timeout_ms: 30_000,
     };
@@ -47,6 +53,8 @@ fn trusted_policy_requires_absolute_cli_path() {
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: true,
+        native_enabled: true,
+        requested_mode: "trusted-cli".to_string(),
         cli_path: Some("agent".to_string()),
         timeout_ms: 30_000,
     };
@@ -61,6 +69,8 @@ fn trusted_policy_requires_existing_executable_cli_path() {
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: true,
+        native_enabled: true,
+        requested_mode: "trusted-cli".to_string(),
         cli_path: Some("/definitely/missing/agent".to_string()),
         timeout_ms: 30_000,
     };
@@ -79,10 +89,56 @@ fn trusted_policy_exposes_run_config() {
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: true,
+        native_enabled: true,
+        requested_mode: "trusted-cli".to_string(),
         cli_path: Some(cli_path.clone()),
         timeout_ms: 0,
     };
     let config = policy.run_config().expect("config");
     assert_eq!(config.cli_path, cli_path);
     assert_eq!(config.timeout_ms, 1);
+}
+
+#[test]
+fn capabilities_fall_back_to_native_when_trusted_cli_is_unavailable() {
+    let policy = AgentBridgePolicy {
+        enabled: false,
+        trusted: false,
+        native_enabled: true,
+        requested_mode: "trusted-cli".to_string(),
+        cli_path: None,
+        timeout_ms: 30_000,
+    };
+
+    let capabilities = policy.capabilities();
+
+    assert!(capabilities.native_available);
+    assert!(!capabilities.trusted_cli_available);
+    assert_eq!(capabilities.effective_backend, "native");
+    assert_eq!(
+        capabilities.effective_backend_reason.as_deref(),
+        Some("external agent disabled")
+    );
+}
+
+#[test]
+fn capabilities_report_no_backend_when_native_and_trusted_cli_are_unavailable() {
+    let policy = AgentBridgePolicy {
+        enabled: false,
+        trusted: false,
+        native_enabled: false,
+        requested_mode: "native".to_string(),
+        cli_path: None,
+        timeout_ms: 30_000,
+    };
+
+    let capabilities = policy.capabilities();
+
+    assert!(!capabilities.native_available);
+    assert!(!capabilities.trusted_cli_available);
+    assert_eq!(capabilities.effective_backend, "none");
+    assert_eq!(
+        capabilities.native_reason.as_deref(),
+        Some("native AI disabled by config")
+    );
 }

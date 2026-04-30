@@ -39,6 +39,8 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 | `AI_MODEL`                       | `gpt-4o-mini`    | Native AI Chat 默认模型。                                           |
 | `AI_MAX_TOKENS`                  | `4096`           | Native AI Chat 输出上限。                                           |
 | `AGENT_CLI_PATH`                 | *(none)*         | Trusted External Agent 可执行路径。未显式启用时不得读取。           |
+| `DEVE_AI_AGENT_BRIDGE_ENABLED`   | `false`          | `ai.agent_bridge.enabled` 的兼容环境变量别名。                      |
+| `DEVE_AI_AGENT_BRIDGE_TRUSTED`   | `false`          | `ai.agent_bridge.trusted` 的兼容环境变量别名。                      |
 | **TLS (可选)**                   |                  |                                                                     |
 | `TLS_CERT_PATH`                  | *(none)*         | PEM 证书路径. 设置后启用 HTTPS.                                     |
 | `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
@@ -95,6 +97,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
     - `ai.agent_bridge.trusted = true`
     - `AGENT_CLI_PATH` 已设置为绝对路径，且目标存在并可执行
 *   任一条件不满足时，系统 **MUST** 自动退回 `ai.mode = native`，并向用户显示明确原因。
+*   `ai.native_enabled = false` 时，Native AI Chat **MUST NOT** 注册 provider 或接受 `ai-chat` RPC；前端能力探测必须把 Native backend 标为不可用。
 *   `PLAN / BUILD` 是 Native AI Chat 的会话模式，不是单独的配置后端键。
 *   Settings 中的后端切换与 Chat 内的 `/plan /build /agents` 必须明确分离，避免混淆“后端”与“模式”。
 

@@ -9,9 +9,8 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | AI effective config boundary | P0 / Implementation | `crates/core/src/config.rs`, `apps/cli/src/server/ai_chat`, `apps/cli/src/server/agent_bridge`, `apps/web/src/api/ai_backend.rs`, `apps/web/src/components/settings_sections.rs`, `docs/plan/10_ai_agent.md`, `docs/plan/13_settings.md` | Post-P2 rescan 已确认 `ai.mode` / `ai.native_enabled` 是最大 remaining drift；下一步要么让 effective AI config hydrate Web/backend 并使 `native_enabled=false` fail-closed，要么明确降级为 future/requested key。 |
-| 2 | Native plan post-gate wording split | P0 / Docs | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, `docs/plan/14_tech_stack.md`, `scripts/check-native-track-boundary.sh` | 保留当前 no-Tauri/no-process gate，把后部 Tauri/embedded-service/offline-first MUST 标成 post-gate normative，避免 plan 内部新旧目标冲突。 |
-| 3 | Graph blocked/degraded acceptance polish | P1 / Tests+Docs | `apps/web/src/components/sidebar/source_control/graph_panel.rs`, `docs/acceptance-cases/12_tech_release.md`, `scripts/check-graph-baseline.sh` | 不打开 renderer dependency；先补 Graph summary panel 的 local-only/blocked/degraded/empty/error 验收边界。 |
+| 1 | Native plan post-gate wording split | P0 / Docs | `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, `docs/plan/14_tech_stack.md`, `scripts/check-native-track-boundary.sh` | 保留当前 no-Tauri/no-process gate，把后部 Tauri/embedded-service/offline-first MUST 标成 post-gate normative，避免 plan 内部新旧目标冲突。 |
+| 2 | Graph blocked/degraded acceptance polish | P1 / Tests+Docs | `apps/web/src/components/sidebar/source_control/graph_panel.rs`, `docs/acceptance-cases/12_tech_release.md`, `scripts/check-graph-baseline.sh` | 不打开 renderer dependency；先补 Graph summary panel 的 local-only/blocked/degraded/empty/error 验收边界。 |
 
 ## 最近完成基线
 
@@ -43,6 +42,7 @@
 - P1/P2 Rendering current/future split 已关闭：`03_rendering` plan/features 已区分当前 editor adapter、lightweight Markdown renderer、大文档批量调度基础设施与 future preview/virtual-render/settings；`render_markdown` 补充 HTML allowlist、secure link 与 unsupported syntax 测试。
 - P1 Search/settings current-boundary audit 已关闭：Search 当前固定为 `search` feature + non-low-spec 下的 repo-scoped baseline scan，Tantivy 常驻索引仍属 future；server route 补齐 stale search scope 回归，Settings 当前保持 `config.toml` + `deve config print/set`，server-backed Settings API/统一 GUI 持久化仍属 future，详见 `search-settings-boundary-audit-2026-04-29.md`。
 - P1 Native AI Chat minimum boundary audit 已关闭：同步 `PluginResponse` completion、backend 产品名与 runtime plugin id 转换层、bounded multi-turn history、provider `tool_calls` 先 fail-closed 后不发送成功 finish、Trusted CLI 文案与 fail-closed 注释均已收口，详见 `native-ai-chat-boundary-audit-2026-04-30.md`。
+- P0 AI effective config boundary 已关闭：`ai.mode` / `ai.native_enabled` 现在驱动 server provider/RPC、Trusted CLI policy、capabilities endpoint 与 Web fallback/disabled UI，详见 `ai-effective-config-boundary-status-2026-04-30.md`。
 - P2 Browser UI prefs storage consolidation 已关闭：layout width、Outline visibility、locale preference、shortcut overrides 均已统一走 `storage/prefs.rs` fallback 层；除 prefs 实现与能力探测外，功能模块不再直接调用 browser storage，详见 `browser-ui-prefs-boundary-status-2026-04-30.md`。
 - P2 Post-plan/code drift rescan 已关闭：修正 Source Control baseline 脚本文案漂移、收紧 `deve.ui.last_scope` 为 repo name alias-only、同步 `deve init` config 模板、硬化 Trusted CLI executable/exit-status fail-closed，并排出下一轮 P0/P1，详见 `post-p2-plan-code-drift-rescan-2026-04-30.md`。
 - P3-10 Desktop/Mobile native adapter core contract 已关闭：`08_ui_design_02_desktop` 与 `08_ui_design_03_mobile` 已明确 minimal adapter contract，`deve_core::native_adapter` 已落地平台无关状态/事件/endpoint/session/readiness 合同与定向测试；Tauri desktop/mobile shell、embedded service launcher 与 Web bootstrap 消费仍属后续实现。

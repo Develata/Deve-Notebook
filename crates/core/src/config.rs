@@ -19,6 +19,8 @@
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -289,6 +291,7 @@ impl Config {
         let mut config = settings
             .try_deserialize::<Self>()
             .context("Failed to parse configuration")?;
+        config.apply_ai_env_aliases();
         config.apply_ai_mode_fallback();
         Ok(config)
     }
@@ -330,7 +333,49 @@ impl Config {
                 "ai.mode=trusted-cli requires absolute AGENT_CLI_PATH; falling back to native"
             );
             self.ai.mode = default_ai_mode();
+            return;
         }
+        if !is_executable_file(Path::new(path.trim())) {
+            tracing::warn!(
+                "ai.mode=trusted-cli requires executable AGENT_CLI_PATH; falling back to native"
+            );
+            self.ai.mode = default_ai_mode();
+        }
+    }
+
+    fn apply_ai_env_aliases(&mut self) {
+        if let Some(value) = env_bool("DEVE_AI_AGENT_BRIDGE_ENABLED") {
+            self.ai.agent_bridge.enabled = value;
+        }
+        if let Some(value) = env_bool("DEVE_AI_AGENT_BRIDGE_TRUSTED") {
+            self.ai.agent_bridge.trusted = value;
+        }
+    }
+}
+
+fn env_bool(key: &str) -> Option<bool> {
+    std::env::var(key).ok().map(|value| {
+        matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    })
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    let Ok(metadata) = std::fs::metadata(path) else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        metadata.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
     }
 }
 

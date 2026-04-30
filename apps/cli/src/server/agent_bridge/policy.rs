@@ -11,14 +11,20 @@ use std::path::Path;
 pub struct AgentBridgePolicy {
     enabled: bool,
     trusted: bool,
+    native_enabled: bool,
+    requested_mode: String,
     cli_path: Option<String>,
     timeout_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct AgentBridgeCapabilities {
+    pub native_available: bool,
+    pub native_reason: Option<String>,
     pub trusted_cli_available: bool,
     pub trusted_cli_reason: Option<String>,
+    pub effective_backend: String,
+    pub effective_backend_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,15 +40,55 @@ impl AgentBridgePolicy {
                 .unwrap_or(config.ai.agent_bridge.enabled),
             trusted: env_bool("DEVE_AI_AGENT_BRIDGE_TRUSTED")
                 .unwrap_or(config.ai.agent_bridge.trusted),
+            native_enabled: config.ai.native_enabled,
+            requested_mode: config.ai.mode.clone(),
             cli_path: std::env::var("AGENT_CLI_PATH").ok().and_then(non_empty),
             timeout_ms: config.ai.agent_bridge.timeout_ms,
         }
     }
 
     pub fn capabilities(&self) -> AgentBridgeCapabilities {
+        let trusted_cli_reason = self.spawn_path().err();
+        let trusted_cli_available = trusted_cli_reason.is_none();
+        let native_reason =
+            (!self.native_enabled).then(|| "native AI disabled by config".to_string());
+        let (effective_backend, effective_backend_reason) = if self.requested_mode == "trusted-cli"
+        {
+            if trusted_cli_available {
+                ("trusted-cli".to_string(), None)
+            } else if self.native_enabled {
+                ("native".to_string(), trusted_cli_reason.clone())
+            } else {
+                (
+                    "none".to_string(),
+                    Some(
+                        trusted_cli_reason
+                            .clone()
+                            .unwrap_or_else(|| "no AI backend available".to_string()),
+                    ),
+                )
+            }
+        } else if self.native_enabled {
+            ("native".to_string(), None)
+        } else if trusted_cli_available {
+            (
+                "trusted-cli".to_string(),
+                Some("native AI disabled by config".to_string()),
+            )
+        } else {
+            (
+                "none".to_string(),
+                Some("no AI backend available".to_string()),
+            )
+        };
+
         AgentBridgeCapabilities {
-            trusted_cli_available: self.spawn_path().is_ok(),
-            trusted_cli_reason: self.spawn_path().err(),
+            native_available: self.native_enabled,
+            native_reason,
+            trusted_cli_available,
+            trusted_cli_reason,
+            effective_backend,
+            effective_backend_reason,
         }
     }
 

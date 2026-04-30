@@ -24,7 +24,14 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
     });
 
     let trusted_available = Signal::derive(move || trusted_cap.get().trusted_cli_available);
+    let native_available = Signal::derive(move || trusted_cap.get().native_available);
     attach_trusted_cli_fallback(chat.clone(), trusted_cap, locale);
+    let native_reason = move || {
+        trusted_cap
+            .get()
+            .native_reason
+            .unwrap_or_else(|| "Native AI disabled by config".to_string())
+    };
     let trusted_reason = move || {
         trusted_cap
             .get()
@@ -35,12 +42,20 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
     view! {
         <div class="space-y-3">
             <button
-                class=move || if chat.ai_mode.get() == AI_BACKEND_NATIVE {
+                class=move || if !native_available.get() {
+                    "w-full rounded-xl border border-default bg-panel p-4 text-left opacity-50 cursor-not-allowed"
+                } else if chat.ai_mode.get() == AI_BACKEND_NATIVE {
                     "w-full rounded-xl border border-accent bg-accent/10 p-4 text-left"
                 } else {
                     "w-full rounded-xl border border-default bg-panel hover:bg-active p-4 text-left transition-colors"
                 }
-                on:click=move |_| chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string())
+                disabled=move || !native_available.get()
+                title=native_reason
+                on:click=move |_| {
+                    if native_available.get_untracked() {
+                        chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string());
+                    }
+                }
             >
                 <div class="flex items-start justify-between gap-3">
                     <div class="flex gap-3">

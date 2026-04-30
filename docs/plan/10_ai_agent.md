@@ -70,6 +70,7 @@ Native AI Chat 是当前**默认 shipped** 的 AI 形态，属于第一方内建
 *   Its public PluginCall surface must be limited to `chat`; helper/config/tool functions are internal implementation details and must fail closed when called externally.
 *   Product backend names are `native` / `trusted-cli`. Compatibility plugin ids such as `ai-chat` / `agent-bridge` are internal runtime routing details and require an explicit conversion layer.
 *   Synchronous `PluginResponse` text or error must complete the matching chat request. Missing API keys, disabled Trusted CLI, or policy errors must never leave the UI in an infinite streaming/loading state.
+*   `ai.native_enabled = false` disables Native AI Chat at both server provider registration and public `ai-chat` RPC boundaries. The backend capabilities endpoint must expose this state so Web UI can disable or fallback from the Native backend.
 
 ### 原生模式定义
 

@@ -156,10 +156,47 @@ trusted = true
 }
 
 #[test]
+fn trusted_cli_mode_falls_back_when_agent_cli_path_is_not_executable() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cli_path = dir.path().join("agent.txt");
+    std::fs::write(&cli_path, "not executable").expect("write fake agent");
+    let cli_path = cli_path.to_string_lossy().into_owned();
+    let _env = EnvGuard::set_optional(&[
+        ("AGENT_CLI_PATH", Some(cli_path.as_str())),
+        ("DEVE_AI__AGENT_BRIDGE__ENABLED", None),
+        ("DEVE_AI__AGENT_BRIDGE__TRUSTED", None),
+    ]);
+    let old_cwd = std::env::current_dir().expect("cwd");
+    std::env::set_current_dir(dir.path()).expect("set cwd");
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[ai]
+mode = "trusted-cli"
+
+[ai.agent_bridge]
+enabled = true
+trusted = true
+"#,
+    )
+    .expect("write config");
+
+    let config = Config::load_checked().expect("load config");
+
+    std::env::set_current_dir(old_cwd).expect("restore cwd");
+    assert_eq!(config.ai.mode, "native");
+}
+
+#[test]
 fn trusted_cli_mode_is_kept_when_policy_conditions_are_satisfied() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let cli_path = std::env::current_exe()
+        .expect("current exe")
+        .to_string_lossy()
+        .into_owned();
     let _env = EnvGuard::set_optional(&[
-        ("AGENT_CLI_PATH", Some("/usr/bin/agent")),
+        ("AGENT_CLI_PATH", Some(cli_path.as_str())),
         ("DEVE_AI__AGENT_BRIDGE__ENABLED", None),
         ("DEVE_AI__AGENT_BRIDGE__TRUSTED", None),
     ]);
@@ -185,6 +222,40 @@ trusted = true
     assert_eq!(config.ai.mode, "trusted-cli");
 }
 
+#[test]
+fn trusted_cli_mode_honors_agent_bridge_env_aliases() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let cli_path = std::env::current_exe()
+        .expect("current exe")
+        .to_string_lossy()
+        .into_owned();
+    let _env = EnvGuard::set_optional(&[
+        ("AGENT_CLI_PATH", Some(cli_path.as_str())),
+        ("DEVE_AI_AGENT_BRIDGE_ENABLED", Some("true")),
+        ("DEVE_AI_AGENT_BRIDGE_TRUSTED", Some("true")),
+        ("DEVE_AI__AGENT_BRIDGE__ENABLED", None),
+        ("DEVE_AI__AGENT_BRIDGE__TRUSTED", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let old_cwd = std::env::current_dir().expect("cwd");
+    std::env::set_current_dir(dir.path()).expect("set cwd");
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[ai]
+mode = "trusted-cli"
+"#,
+    )
+    .expect("write config");
+
+    let config = Config::load_checked().expect("load config");
+
+    std::env::set_current_dir(old_cwd).expect("restore cwd");
+    assert_eq!(config.ai.mode, "trusted-cli");
+    assert!(config.ai.agent_bridge.enabled);
+    assert!(config.ai.agent_bridge.trusted);
+}
+
 struct EnvGuard {
     previous: Vec<(&'static str, Option<OsString>)>,
 }
@@ -204,7 +275,7 @@ impl EnvGuard {
         Self { previous }
     }
 
-    fn set_optional(entries: &[(&'static str, Option<&'static str>)]) -> Self {
+    fn set_optional(entries: &[(&'static str, Option<&str>)]) -> Self {
         let previous = entries
             .iter()
             .map(|(key, value)| {

@@ -83,4 +83,6 @@
 - Native AI 默认拒绝请求侧 `tools` payload 和响应侧 `tool_calls`，避免 BUILD 模式退化成通用工具循环。
 - 非流式 `PluginResponse` 仍属于 chat request 的完成路径：缺 API key、policy fail-closed 或同步文本结果必须结束 loading；若 assistant placeholder 为空，显示同步文本或明确错误。
 - 产品 backend 名称是 `native` / `trusted-cli`；当前兼容层的 runtime plugin id 是 `ai-chat` / `agent-bridge`，两者必须通过显式转换层连接，不得把 plugin id 当作 Settings 或产品文案语义。
+- `/api/ai/backend-capabilities` 是前端切换 backend 的有效配置入口；`native_available`、`trusted_cli_available` 与 `effective_backend` 必须来自 server policy，而不是 Web 默认值。
+- `ai.native_enabled=false` 时，server 不注册 Native AI provider 且 `ai-chat` RPC 必须 fail-closed 并结束 loading。
 - 多轮上下文只携带前端已显示的 bounded user/assistant history；不得由插件自行扩大读取范围或扫描 workspace。
