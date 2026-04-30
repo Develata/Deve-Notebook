@@ -94,7 +94,7 @@ pub async fn graph_projection(
         q.allow_degraded_projection,
     ) {
         Ok(projection) => Json::<GraphProjection>(projection).into_response(),
-        Err(e) => repo_error_response(e),
+        Err(e) => graph_projection_error_response(e),
     }
 }
 
@@ -139,6 +139,25 @@ fn repo_error_response(error: impl ToString) -> axum::response::Response {
     let detail = error.to_string();
     let (status, code) = classify_repo_error(&detail);
     http_error(status, code, detail)
+}
+
+fn graph_projection_error_response(error: anyhow::Error) -> axum::response::Response {
+    let detail = error.to_string();
+    let (status, code) = classify_graph_projection_error(&error, &detail);
+    http_error(status, code, detail)
+}
+
+fn classify_graph_projection_error(
+    error: &anyhow::Error,
+    detail: &str,
+) -> (StatusCode, ServerErrorCode) {
+    if crate::graph_projection::is_degraded_projection_required(error) {
+        return (
+            StatusCode::CONFLICT,
+            ServerErrorCode::GraphDegradedProjectionRequired,
+        );
+    }
+    classify_repo_error(detail)
 }
 
 fn plugin_host_error_response(error: impl ToString) -> axum::response::Response {

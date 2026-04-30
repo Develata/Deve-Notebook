@@ -12,7 +12,9 @@ Implemented:
   failures are treated as `blocked` and include the gate reason.
 - HTTP graph projection failures that require explicit
   `--allow-degraded-projection` are classified as `degraded` instead of generic
-  request failure.
+  request failure. Follow-up hardening now uses structured
+  `GRAPH_DEGRADED_PROJECTION_REQUIRED` instead of parsing human-readable error
+  detail.
 - The panel remains read-only and still does not introduce Canvas, d3-force,
   Pixi, layout worker, interaction state, or renderer dependencies.
 

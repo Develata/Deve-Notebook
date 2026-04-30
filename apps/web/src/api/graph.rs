@@ -5,7 +5,7 @@
 //! Read-only repo graph projection API.
 
 use deve_core::graph::GraphProjection;
-use deve_core::protocol::ServerError;
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use gloo_net::http::Request;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -34,17 +34,18 @@ async fn classify_graph_projection_error(
     response: gloo_net::http::Response,
 ) -> GraphProjectionFetchError {
     match response.json::<ServerError>().await {
-        Ok(error) if graph_projection_requires_degraded_flag(error.detail.as_deref()) => {
-            GraphProjectionFetchError::DegradedProjectionRequired
-        }
+        Ok(error) => graph_projection_error_from_server_error(&error),
         _ => GraphProjectionFetchError::RequestFailed,
     }
 }
 
-fn graph_projection_requires_degraded_flag(detail: Option<&str>) -> bool {
-    detail
-        .map(|detail| detail.contains("--allow-degraded-projection"))
-        .unwrap_or(false)
+fn graph_projection_error_from_server_error(error: &ServerError) -> GraphProjectionFetchError {
+    match error.code {
+        ServerErrorCode::GraphDegradedProjectionRequired => {
+            GraphProjectionFetchError::DegradedProjectionRequired
+        }
+        _ => GraphProjectionFetchError::RequestFailed,
+    }
 }
 
 fn graph_projection_url(repo_id: Option<&str>, allow_degraded_projection: bool) -> String {
@@ -65,7 +66,10 @@ fn graph_projection_url(repo_id: Option<&str>, allow_degraded_projection: bool) 
 
 #[cfg(test)]
 mod tests {
-    use super::{graph_projection_requires_degraded_flag, graph_projection_url};
+    use super::{
+        GraphProjectionFetchError, graph_projection_error_from_server_error, graph_projection_url,
+    };
+    use deve_core::protocol::{ServerError, ServerErrorCode};
 
     #[test]
     fn graph_projection_url_uses_repo_id_when_available() {
@@ -81,13 +85,19 @@ mod tests {
     }
 
     #[test]
-    fn graph_projection_error_detects_degraded_projection_gate() {
-        assert!(graph_projection_requires_degraded_flag(Some(
-            "Use --allow-degraded-projection to export from metadata fallback."
-        )));
-        assert!(!graph_projection_requires_degraded_flag(Some(
-            "repo context invalid"
-        )));
-        assert!(!graph_projection_requires_degraded_flag(None));
+    fn graph_projection_error_detects_structured_degraded_projection_code() {
+        assert_eq!(
+            graph_projection_error_from_server_error(&ServerError::new(
+                ServerErrorCode::GraphDegradedProjectionRequired
+            )),
+            GraphProjectionFetchError::DegradedProjectionRequired
+        );
+        assert_eq!(
+            graph_projection_error_from_server_error(&ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                "Use --allow-degraded-projection to export from metadata fallback."
+            )),
+            GraphProjectionFetchError::RequestFailed
+        );
     }
 }

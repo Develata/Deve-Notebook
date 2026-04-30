@@ -53,6 +53,8 @@ pub enum ServerErrorCode {
     PluginUnsupportedMessage,
     #[serde(rename = "SC_COMMIT_DIFF_UNPROJECTABLE")]
     ScCommitDiffUnprojectable,
+    #[serde(rename = "GRAPH_DEGRADED_PROJECTION_REQUIRED")]
+    GraphDegradedProjectionRequired,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -99,5 +101,14 @@ mod tests {
         let decoded: ServerError = bincode::deserialize(&encoded).unwrap();
         assert_eq!(decoded.code, ServerErrorCode::ScDocNotFound);
         assert_eq!(decoded.detail.as_deref(), Some("missing doc"));
+    }
+
+    #[test]
+    fn serde_name_for_graph_degraded_projection_required_is_stable() {
+        let encoded = serde_json::to_string(&ServerError::new(
+            ServerErrorCode::GraphDegradedProjectionRequired,
+        ))
+        .unwrap();
+        assert!(encoded.contains("GRAPH_DEGRADED_PROJECTION_REQUIRED"));
     }
 }

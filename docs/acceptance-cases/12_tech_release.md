@@ -85,6 +85,7 @@
   assertions:
     - exit_code_eq: 0
     - api_assert: graph_projection_http_endpoint_protected_readonly true
+    - api_assert: graph_projection_degraded_failure_code_eq "GRAPH_DEGRADED_PROJECTION_REQUIRED"
     - cli_assert: graph_projection_cli_and_http_share_adapter true
     - ui_assert: graph_projection_panel_summary_counts_available true
     - ui_assert: graph_projection_panel_renderer_future_only true

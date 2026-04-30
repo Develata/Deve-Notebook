@@ -44,6 +44,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest post-P2 plan/code drift rescan: `post-p2-plan-code-drift-rescan-2026-04-30.md`
 - Latest native plan post-gate wording split: `native-plan-post-gate-wording-split-2026-04-30.md`
 - Latest graph blocked/degraded acceptance polish: `graph-blocked-degraded-acceptance-polish-2026-04-30.md`
+- Latest graph structured degraded error: `graph-structured-degraded-error-2026-04-30.md`
 - Latest AgentBridge env alias plan sync: `agent-bridge-env-alias-plan-sync-2026-04-30.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.

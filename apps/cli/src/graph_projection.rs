@@ -4,12 +4,39 @@
 //!
 //! Shared read-only graph projection adapter for CLI and protected HTTP.
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use deve_core::graph::{GraphDocument, GraphProjection, project_documents};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::metadata;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::sync::{ProjectionDiagnosticStatus, diagnose_projection_local_repo, rebuild};
+use std::error::Error;
+use std::fmt;
+
+#[derive(Debug)]
+pub(crate) enum GraphProjectionError {
+    DegradedProjectionRequired { repo_name: String, detail: String },
+}
+
+impl fmt::Display for GraphProjectionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            GraphProjectionError::DegradedProjectionRequired { repo_name, detail } => write!(
+                f,
+                "Graph projection for repo {repo_name} requires healthy Structure Facts authority; \
+                 detected {detail}. Use --allow-degraded-projection to export from metadata fallback."
+            ),
+        }
+    }
+}
+
+impl Error for GraphProjectionError {}
+
+pub(crate) fn is_degraded_projection_required(error: &anyhow::Error) -> bool {
+    error
+        .chain()
+        .any(|cause| cause.is::<GraphProjectionError>())
+}
 
 pub(crate) fn project_repo_graph(
     repo: &RepoManager,
@@ -56,10 +83,11 @@ fn guard_graph_projection(
         .map(|issue| format!("{}: {}", issue.code, issue.detail))
         .unwrap_or_else(|| "unknown Structure Facts authority corruption".to_string());
     if !allow_degraded_projection {
-        bail!(
-            "Graph projection for repo {repo_name} requires healthy Structure Facts authority; \
-             detected {detail}. Use --allow-degraded-projection to export from metadata fallback."
-        );
+        return Err(GraphProjectionError::DegradedProjectionRequired {
+            repo_name: repo_name.to_string(),
+            detail,
+        }
+        .into());
     }
     eprintln!(
         "warning: exporting graph for repo {repo_name} from degraded metadata projection fallback: {detail}"
@@ -69,7 +97,8 @@ fn guard_graph_projection(
 
 #[cfg(test)]
 mod tests {
-    use super::project_repo_graph;
+    use super::{GraphProjectionError, is_degraded_projection_required, project_repo_graph};
+    use anyhow::anyhow;
     use deve_core::ledger::RepoManager;
     use deve_core::ledger::traits::RepoSelector;
     use deve_core::models::{LedgerEntry, Op, PeerId};
@@ -116,5 +145,20 @@ mod tests {
         assert_eq!(graph.edges.len(), 1);
         assert_eq!(graph.edges[0].to_doc_id, target);
         assert!(graph.unresolved_links.is_empty());
+    }
+
+    #[test]
+    fn degraded_projection_error_is_structurally_detectable() {
+        let error: anyhow::Error = GraphProjectionError::DegradedProjectionRequired {
+            repo_name: "default".into(),
+            detail: "missing_parent: orphan".into(),
+        }
+        .into();
+
+        assert!(is_degraded_projection_required(&error));
+        assert!(error.to_string().contains("--allow-degraded-projection"));
+        assert!(!is_degraded_projection_required(&anyhow!(
+            "other graph error"
+        )));
     }
 }

@@ -57,5 +57,11 @@ pub fn message(locale: Locale, code: ServerErrorCode) -> &'static str {
             "Unsupported plugin host message"
         }
         (Locale::Zh, ServerErrorCode::PluginUnsupportedMessage) => "插件宿主不支持该消息",
+        (Locale::En, ServerErrorCode::GraphDegradedProjectionRequired) => {
+            "Graph projection requires explicit degraded export"
+        }
+        (Locale::Zh, ServerErrorCode::GraphDegradedProjectionRequired) => {
+            "图谱投影需要显式降级导出"
+        }
     }
 }

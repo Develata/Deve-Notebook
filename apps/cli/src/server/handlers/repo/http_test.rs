@@ -1,4 +1,6 @@
-use super::{classify_repo_error, parse_doc_id, plugin_host_error_response};
+use super::{
+    classify_graph_projection_error, classify_repo_error, parse_doc_id, plugin_host_error_response,
+};
 use axum::http::StatusCode;
 use deve_core::protocol::ServerErrorCode;
 
@@ -70,6 +72,24 @@ fn classifies_missing_local_repo_name_as_not_found() {
     assert_eq!(
         classify_repo_error("Local repo not found for name wiki"),
         (StatusCode::NOT_FOUND, ServerErrorCode::StorageNotFound)
+    );
+}
+
+#[test]
+fn graph_projection_degraded_error_maps_to_structured_code() {
+    let error: anyhow::Error =
+        crate::graph_projection::GraphProjectionError::DegradedProjectionRequired {
+            repo_name: "default".into(),
+            detail: "missing_parent: orphan".into(),
+        }
+        .into();
+
+    assert_eq!(
+        classify_graph_projection_error(&error, &error.to_string()),
+        (
+            StatusCode::CONFLICT,
+            ServerErrorCode::GraphDegradedProjectionRequired
+        )
     );
 }
 
