@@ -13,7 +13,7 @@
 
 ## 最近完成基线
 
-- P2 Git import conflict resolution runtime smoke 已关闭：新增 server handler runtime-style 测试，覆盖 imported conflict 的 `KeepFs` 与 `KeepLedger` 两条解决路径；`KeepFs` staging 前清除 pending-only conflict marker，`KeepLedger` 恢复 ledger projection 且不产生 staged，详见 `git-import-conflict-resolution-runtime-smoke-2026-04-30.md`。
+- P2 Git import conflict resolution runtime smoke 已关闭：新增 server handler runtime-style 测试，覆盖 imported conflict 的 `KeepFs` / `KeepLedger` 与 tracked rename pair follow-up；`KeepFs` staging 前清除 pending-only conflict marker，并保持 related-target staging 语义，`KeepLedger` 恢复 ledger projection 且不产生 staged，详见 `git-import-conflict-resolution-runtime-smoke-2026-04-30.md`。
 - P2 Git import apply CLI/runtime smoke 已关闭：新增 core runtime 与 CLI command-layer 隔离测试，验证 dry-run 不写 pending、`--apply` 写入 pending/import、已有 pending blocker 阻止同批次部分写入，CLI 输出仍回指 Deve stage/commit；详见 `git-import-apply-cli-runtime-smoke-2026-04-30.md`。
 - P2 Post-verification plan/code drift rescan 已关闭：排除 future-only work 后发现 `deve_cli git import` dry-run 仍把 apply 描述成后续路径；CLI 输出、单元测试与 `docs/plan/12_commands.md` 已同步到当前 `--apply` 语义，详见 `post-verification-plan-code-drift-rescan-2026-04-30.md`。
 - P3 Docker cargo-chef skeleton warning cleanup 已关闭：warning 来自 cargo-chef 0.1.72 生成的 recipe/skeleton manifest 中的 `plugin = false`，不是 checked-in manifests；Dockerfile 只清理生成的 recipe 噪声，`docker build --target deps` 与完整 Docker release smoke 均通过，详见 `cargo-chef-skeleton-warning-cleanup-2026-04-30.md`。

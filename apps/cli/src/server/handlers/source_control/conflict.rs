@@ -14,7 +14,7 @@ use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::{ScPathTarget, ServerMessage};
-use deve_core::source_control::ConflictResolution;
+use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use std::sync::Arc;
 
 /// 处理冲突解决请求
@@ -44,7 +44,7 @@ pub async fn handle_resolve_conflict(
     };
     let normalized = resolved.path.clone();
     let result = match resolution {
-        ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &resolved),
+        ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &pending, &resolved),
         ConflictResolution::KeepLedger => resolve_keep_ledger(state, &selector, &resolved),
     };
 
@@ -75,6 +75,7 @@ pub async fn handle_resolve_conflict(
 fn resolve_keep_fs(
     state: &Arc<AppState>,
     selector: &RepoSelector,
+    pending: &[ChangeEntry],
     target: &ScPathTarget,
 ) -> Result<(), deve_core::protocol::ServerError> {
     let repo_name = selector.repo_name.as_deref().ok_or_else(|| {
@@ -83,9 +84,10 @@ fn resolve_keep_fs(
             "Missing local repo selector for conflict resolution",
         )
     })?;
+    let related_targets = super::service::related_targets(pending, target)?;
     state
         .repo
-        .stage_resolved_pending_target_in_local_repo(repo_name, target)
+        .stage_resolved_pending_targets_in_local_repo(repo_name, &related_targets)
         .map_err(|e| {
             super::errors::map_repo_error(super::errors::ScOp::StagePending(target.path.clone()), e)
         })

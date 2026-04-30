@@ -7,6 +7,7 @@ use crate::protocol::ScPathTarget;
 use crate::source_control::diff;
 use crate::source_control::{pending_fs, staging};
 use anyhow::Result;
+use std::collections::HashSet;
 
 impl RepoManager {
     pub fn stage_pending_target_in_local_repo(
@@ -29,14 +30,31 @@ impl RepoManager {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<()> {
+        self.stage_resolved_pending_targets_in_local_repo(repo_name, std::slice::from_ref(target))
+    }
+
+    pub fn stage_resolved_pending_targets_in_local_repo(
+        &self,
+        repo_name: &str,
+        targets: &[ScPathTarget],
+    ) -> Result<()> {
         self.run_on_local_repo(repo_name, |db| {
-            let mut entry = if let Some(entry) = pending_fs::take_for_target(db, target)? {
-                entry
-            } else {
-                anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
-            };
-            entry.has_conflict = false;
-            crate::ledger::source_control::stage_pending_entry(db, &entry)
+            let mut selected = Vec::new();
+            let mut seen_paths = HashSet::new();
+            for target in targets {
+                let entry = pending_fs::get_for_target(db, target)?.ok_or_else(|| {
+                    anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path)
+                })?;
+                if seen_paths.insert(entry.path.clone()) {
+                    selected.push(entry);
+                }
+            }
+            for mut entry in selected {
+                pending_fs::remove(db, &entry.path)?;
+                entry.has_conflict = false;
+                crate::ledger::source_control::stage_pending_entry(db, &entry)?;
+            }
+            Ok(())
         })
     }
 

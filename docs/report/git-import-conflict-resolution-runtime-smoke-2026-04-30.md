@@ -10,6 +10,9 @@ queue item.
   while they are still pending.
 - Source Control conflict resolution now clears the conflict marker when
   `KeepFs` moves an imported pending entry into staged state.
+- `KeepFs` keeps the existing related-target semantics: tracked rename
+  delete/add pairs are staged together, while single-entry imported rename
+  targets are de-duplicated by actual pending path before staging.
 - `KeepLedger` discards the imported pending entry, restores the workspace from
   the current Ledger projection, and does not create staged changes.
 - Both resolution paths emit scoped `ConflictResolved` messages with `repo_id`
@@ -20,9 +23,14 @@ queue item.
 - `apps/cli/src/server/source_control_git_import_conflict_test.rs`
   - `imported_conflict_keep_fs_resolves_to_clean_staged_entry`
   - `imported_conflict_keep_ledger_discards_import_without_staging`
+  - `imported_rename_conflict_keep_fs_stages_single_clean_entry`
+  - `keep_fs_resolves_rename_pair_by_staging_all_related_entries`
 - `crates/core/src/ledger/manager/source_control_target.rs`
   - Added `stage_resolved_pending_target_in_local_repo` so conflict resolution
     can clear pending-only conflict metadata before staging.
+  - Added `stage_resolved_pending_targets_in_local_repo` so conflict resolution
+    can stage all related actual pending entries and avoid double-staging a
+    single imported rename entry matched by both old and new paths.
 
 The tests initialize an isolated Deve repo and Git repo, commit a shared
 baseline, create ledger-only divergence, apply a conflicting Git worktree
@@ -34,6 +42,8 @@ used by WebSocket Source Control messages.
 ```bash
 cargo fmt --check
 cargo test -p deve_cli imported_conflict
+cargo test -p deve_cli imported_rename_conflict_keep_fs_stages_single_clean_entry
+cargo test -p deve_cli keep_fs_resolves_rename_pair_by_staging_all_related_entries
 cargo test -p deve_cli git_import_command
 cargo test -p deve_core git_bridge
 ```
