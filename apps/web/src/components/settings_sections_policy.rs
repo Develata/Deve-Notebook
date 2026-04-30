@@ -11,12 +11,33 @@ pub(super) const BUTTON_CLASS_DISABLED: &str =
     "px-3 py-1 text-xs font-medium text-muted rounded opacity-50 cursor-not-allowed";
 pub(super) const BUTTON_CLASS_IDLE: &str =
     "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors";
-const AI_BACKEND_CLASS_ACTIVE: &str =
+const BUTTON_CLASS_ACCENT_ACTIVE: &str =
     "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors";
 const SYNC_AUTO_CLASS_ACTIVE: &str =
     "px-3 py-1 text-xs font-bold bg-green-500 text-white rounded transition-colors";
 const SYNC_MANUAL_CLASS_ACTIVE: &str =
     "px-3 py-1 text-xs font-bold bg-yellow-500 text-white rounded transition-colors";
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct LanguageButtonState {
+    pub english_class: &'static str,
+    pub chinese_class: &'static str,
+}
+
+pub(super) fn language_button_state(locale: Locale) -> LanguageButtonState {
+    LanguageButtonState {
+        english_class: if locale == Locale::En {
+            BUTTON_CLASS_ACCENT_ACTIVE
+        } else {
+            BUTTON_CLASS_IDLE
+        },
+        chinese_class: if locale == Locale::Zh {
+            BUTTON_CLASS_ACCENT_ACTIVE
+        } else {
+            BUTTON_CLASS_IDLE
+        },
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct SyncModeButtonState {
@@ -88,7 +109,7 @@ fn ai_backend_button_class(disabled: bool, selected: bool) -> &'static str {
     if disabled {
         BUTTON_CLASS_DISABLED
     } else if selected {
-        AI_BACKEND_CLASS_ACTIVE
+        BUTTON_CLASS_ACCENT_ACTIVE
     } else {
         BUTTON_CLASS_IDLE
     }
@@ -97,11 +118,23 @@ fn ai_backend_button_class(disabled: bool, selected: bool) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        AI_BACKEND_CLASS_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE, SYNC_AUTO_CLASS_ACTIVE,
-        SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, sync_mode_button_state,
+        BUTTON_CLASS_ACCENT_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE,
+        SYNC_AUTO_CLASS_ACTIVE, SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state,
+        language_button_state, sync_mode_button_state,
     };
     use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
     use crate::i18n::Locale;
+
+    #[test]
+    fn language_buttons_reflect_current_locale() {
+        let english = language_button_state(Locale::En);
+        assert_eq!(english.english_class, BUTTON_CLASS_ACCENT_ACTIVE);
+        assert_eq!(english.chinese_class, BUTTON_CLASS_IDLE);
+
+        let chinese = language_button_state(Locale::Zh);
+        assert_eq!(chinese.english_class, BUTTON_CLASS_IDLE);
+        assert_eq!(chinese.chinese_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    }
 
     #[test]
     fn sync_mode_buttons_reflect_current_mode() {
@@ -134,7 +167,7 @@ mod tests {
             Locale::En,
         );
 
-        assert_eq!(state.native_class, AI_BACKEND_CLASS_ACTIVE);
+        assert_eq!(state.native_class, BUTTON_CLASS_ACCENT_ACTIVE);
         assert!(!state.native_disabled);
         assert!(state.native_title.is_empty());
         assert_eq!(state.trusted_class, BUTTON_CLASS_DISABLED);
@@ -177,7 +210,7 @@ mod tests {
 
         assert_eq!(state.native_class, BUTTON_CLASS_IDLE);
         assert!(!state.native_disabled);
-        assert_eq!(state.trusted_class, AI_BACKEND_CLASS_ACTIVE);
+        assert_eq!(state.trusted_class, BUTTON_CLASS_ACCENT_ACTIVE);
         assert!(!state.trusted_disabled);
         assert!(state.native_title.is_empty());
         assert!(state.trusted_title.is_empty());

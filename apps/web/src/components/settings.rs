@@ -10,12 +10,14 @@
 
 use crate::components::icons::X;
 use crate::components::settings_sections::{AiBackendSection, SyncModeSection};
+use crate::components::settings_sections_policy::language_button_state;
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let language_state = Signal::derive(move || language_button_state(locale.get()));
 
     view! {
         <Show when=move || show.get()>
@@ -46,13 +48,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                             <span class="font-medium text-primary">{move || t::settings::language(locale.get())}</span>
                             <div class="flex gap-2">
                                 <button
-                                    class=move || {
-                                        if locale.get() == Locale::En {
-                                            "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors"
-                                        } else {
-                                            "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
-                                        }
-                                    }
+                                    class=move || language_state.get().english_class
                                     on:click=move |_| {
                                         persist_locale_preference(Locale::En);
                                         locale.set(Locale::En);
@@ -61,13 +57,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                     {t::settings::english_language_label()}
                                 </button>
                                 <button
-                                    class=move || {
-                                        if locale.get() == Locale::Zh {
-                                            "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors"
-                                        } else {
-                                            "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors"
-                                        }
-                                    }
+                                    class=move || language_state.get().chinese_class
                                     on:click=move |_| {
                                         persist_locale_preference(Locale::Zh);
                                         locale.set(Locale::Zh);
