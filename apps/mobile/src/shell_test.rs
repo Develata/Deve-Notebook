@@ -9,7 +9,8 @@ use deve_core::native_adapter::{
     CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY, CURRENT_NATIVE_PROCESS_ADAPTER_POLICY,
     NativeEndpointReady, NativePackagingDependencyGateDecision, NativePlatformEventKind,
     NativeProcessAdapterDecision, NativeProcessAdapterState, NativeRuntimeReadiness,
-    NativeServiceFailureKind, NativeServiceOffline, NativeServiceSupervisorState,
+    NativeServiceFailureKind, NativeServiceOffline, NativeServiceRestarting,
+    NativeServiceSupervisorState,
 };
 
 fn endpoint() -> NativeEndpointReady {
@@ -187,6 +188,14 @@ fn mobile_shell_offline_and_session_invalid_block_bootstrap() {
     assert!(!offline_script.contains("service_dead"));
     let offline_snapshot = offline.snapshot();
     assert_eq!(
+        offline_snapshot.state,
+        MobileServiceState::ServiceRestarting
+    );
+    assert_eq!(
+        offline_snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 0 })
+    );
+    assert_eq!(
         offline_snapshot.readiness,
         NativeRuntimeReadiness::default()
     );
@@ -230,6 +239,11 @@ fn mobile_service_offline_observation_does_not_consume_supervisor_budget() {
     shell.mark_service_offline("third", true);
 
     let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, MobileServiceState::ServiceRestarting);
+    assert_eq!(
+        snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 0 })
+    );
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Restarting
@@ -254,6 +268,8 @@ fn mobile_service_offline_retryability_is_clamped_after_failure_budget() {
     shell.mark_service_offline("third", true);
 
     let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, MobileServiceState::ServiceOffline);
+    assert_eq!(snapshot.restarting, None);
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Offline
@@ -276,8 +292,12 @@ fn mobile_supervisor_failure_blocks_endpoint_and_reports_retryability() {
     shell.mark_supervisor_failure(NativeServiceFailureKind::HealthProbeFailed, "probe_failed");
 
     let snapshot = shell.snapshot();
-    assert_eq!(snapshot.state, MobileServiceState::ServiceOffline);
+    assert_eq!(snapshot.state, MobileServiceState::ServiceRestarting);
     assert_eq!(snapshot.readiness, NativeRuntimeReadiness::default());
+    assert_eq!(
+        snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 1 })
+    );
     assert!(snapshot.endpoint.is_none());
     assert!(snapshot.process_adapter.endpoint.is_none());
     assert_eq!(
@@ -313,6 +333,8 @@ fn mobile_supervisor_session_handoff_failure_is_not_retryable() {
     shell.mark_supervisor_failure(NativeServiceFailureKind::ProcessExited, "process_exited");
 
     let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, MobileServiceState::ServiceOffline);
+    assert_eq!(snapshot.restarting, None);
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Offline

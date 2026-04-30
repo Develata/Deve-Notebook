@@ -4,7 +4,8 @@
 use deve_core::native_adapter::{
     NativeEndpointReady, NativePlatformEventKind, NativeProcessAdapterError,
     NativeProcessAdapterSnapshot, NativeRuntimeReadiness, NativeServiceOffline,
-    NativeServiceSupervisorError, NativeServiceSupervisorSnapshot, NativeServiceSuspended,
+    NativeServiceRestarting, NativeServiceSupervisorError, NativeServiceSupervisorSnapshot,
+    NativeServiceSuspended,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -17,6 +18,7 @@ pub enum MobileServiceState {
     SessionBound,
     WebShellLoading,
     RuntimeReady,
+    ServiceRestarting,
     BackgroundSuspended,
     ForegroundReprobe,
     ServiceOffline,
@@ -56,6 +58,7 @@ pub struct MobileShellSnapshot {
     pub endpoint: Option<NativeEndpointReady>,
     pub readiness: NativeRuntimeReadiness,
     pub offline: Option<NativeServiceOffline>,
+    pub restarting: Option<NativeServiceRestarting>,
     pub suspended: Option<NativeServiceSuspended>,
     pub supervisor: NativeServiceSupervisorSnapshot,
     pub process_adapter: NativeProcessAdapterSnapshot,

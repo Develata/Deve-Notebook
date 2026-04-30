@@ -9,7 +9,7 @@ use deve_core::native_adapter::{
     NativeEndpointReady, NativePackagingDependencyGateDecision, NativePlatformEventEffect,
     NativePlatformEventKind, NativeProcessAdapterDecision, NativeProcessAdapterState,
     NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
-    NativeServiceSupervisorState,
+    NativeServiceRestarting, NativeServiceSupervisorState,
 };
 
 fn endpoint() -> NativeEndpointReady {
@@ -120,8 +120,12 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
         Err(DesktopShellError::ServiceOffline { reason }) if reason == "bind_failed"
     ));
     let snapshot = shell.snapshot();
-    assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert_eq!(snapshot.state, DesktopServiceState::ServiceRestarting);
     assert_eq!(snapshot.readiness, NativeRuntimeReadiness::default());
+    assert_eq!(
+        snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 0 })
+    );
     assert_eq!(
         snapshot.offline,
         Some(NativeServiceOffline {
@@ -158,6 +162,11 @@ fn desktop_service_offline_observation_does_not_consume_supervisor_budget() {
     shell.mark_service_offline("third", true);
 
     let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, DesktopServiceState::ServiceRestarting);
+    assert_eq!(
+        snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 0 })
+    );
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Restarting
@@ -182,6 +191,8 @@ fn desktop_service_offline_retryability_is_clamped_after_failure_budget() {
     shell.mark_service_offline("third", true);
 
     let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert_eq!(snapshot.restarting, None);
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Offline
@@ -299,8 +310,12 @@ fn desktop_supervisor_classifies_retryable_service_failures() {
     shell.mark_supervisor_failure(NativeServiceFailureKind::BindFailed, "port_busy");
 
     let snapshot = shell.snapshot();
-    assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert_eq!(snapshot.state, DesktopServiceState::ServiceRestarting);
     assert_eq!(snapshot.readiness, NativeRuntimeReadiness::default());
+    assert_eq!(
+        snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 1 })
+    );
     assert!(snapshot.endpoint.is_none());
     assert!(snapshot.process_adapter.endpoint.is_none());
     assert_eq!(
@@ -332,6 +347,8 @@ fn desktop_supervisor_keeps_session_handoff_failure_fatal() {
     shell.mark_supervisor_failure(NativeServiceFailureKind::ProcessExited, "process_exited");
 
     let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert_eq!(snapshot.restarting, None);
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Offline

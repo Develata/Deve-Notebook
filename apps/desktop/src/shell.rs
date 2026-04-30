@@ -5,8 +5,9 @@ use deve_core::native_adapter::{
     NativeAdapterPlatform, NativeEndpointReady, NativePlatformEventEffect, NativePlatformEventKind,
     NativeProcessAdapter, NativeProcessAdapterError, NativeProcessAdapterSnapshot,
     NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
-    NativeServiceSupervisor, NativeServiceSupervisorError, NativeServiceSupervisorSnapshot,
-    classify_native_platform_event, validate_native_endpoint_ready,
+    NativeServiceRestarting, NativeServiceSupervisor, NativeServiceSupervisorError,
+    NativeServiceSupervisorSnapshot, classify_native_platform_event,
+    validate_native_endpoint_ready,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -19,6 +20,7 @@ pub enum DesktopServiceState {
     SessionBound,
     WebShellLoading,
     RuntimeReady,
+    ServiceRestarting,
     ServiceOffline,
     SessionInvalid,
     ForegroundReprobe,
@@ -30,6 +32,7 @@ pub struct DesktopShellSnapshot {
     pub endpoint: Option<NativeEndpointReady>,
     pub readiness: NativeRuntimeReadiness,
     pub offline: Option<NativeServiceOffline>,
+    pub restarting: Option<NativeServiceRestarting>,
     pub supervisor: NativeServiceSupervisorSnapshot,
     pub process_adapter: NativeProcessAdapterSnapshot,
 }
@@ -106,6 +109,7 @@ pub struct DesktopShell {
     endpoint: Option<NativeEndpointReady>,
     readiness: NativeRuntimeReadiness,
     offline: Option<NativeServiceOffline>,
+    restarting: Option<NativeServiceRestarting>,
     supervisor: NativeServiceSupervisor,
     process_adapter: NativeProcessAdapter,
 }
@@ -123,6 +127,7 @@ impl DesktopShell {
             endpoint: None,
             readiness: NativeRuntimeReadiness::default(),
             offline: None,
+            restarting: None,
             supervisor: NativeServiceSupervisor::new(2),
             process_adapter: NativeProcessAdapter::default(),
         }
@@ -131,6 +136,7 @@ impl DesktopShell {
     pub fn start_service(&mut self) {
         self.state = DesktopServiceState::ServiceStarting;
         self.offline = None;
+        self.restarting = None;
         self.supervisor.start();
     }
 
@@ -149,6 +155,7 @@ impl DesktopShell {
         self.endpoint = process_snapshot.endpoint;
         self.state = DesktopServiceState::EndpointBound;
         self.offline = None;
+        self.restarting = None;
         Ok(())
     }
 
@@ -183,13 +190,15 @@ impl DesktopShell {
         self.readiness = readiness;
         if ready {
             self.state = DesktopServiceState::RuntimeReady;
+            self.offline = None;
+            self.restarting = None;
         }
         ready
     }
 
     pub fn bootstrap_for_web(&mut self) -> Result<DesktopBootstrap, DesktopShellError> {
         match &self.state {
-            DesktopServiceState::ServiceOffline => {
+            DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline => {
                 let reason = self
                     .offline
                     .as_ref()
@@ -221,9 +230,11 @@ impl DesktopShell {
 
     pub fn recovery_bootstrap_for_web(&self) -> Option<DesktopRecoveryBootstrap> {
         match self.state {
-            DesktopServiceState::ServiceOffline => Some(DesktopRecoveryBootstrap {
-                service_state: "service_offline",
-            }),
+            DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline => {
+                Some(DesktopRecoveryBootstrap {
+                    service_state: "service_offline",
+                })
+            }
             DesktopServiceState::SessionInvalid => Some(DesktopRecoveryBootstrap {
                 service_state: "session_invalid",
             }),
@@ -258,13 +269,12 @@ impl DesktopShell {
     }
 
     pub fn mark_service_offline(&mut self, reason: impl Into<String>, retryable: bool) {
-        self.state = DesktopServiceState::ServiceOffline;
         let offline = NativeServiceOffline {
             reason: reason.into(),
             retryable,
         };
         let offline = self.supervisor.record_service_offline(offline);
-        self.offline = Some(offline);
+        self.record_offline_snapshot(offline);
         self.clear_runtime_binding();
     }
 
@@ -274,8 +284,7 @@ impl DesktopShell {
         reason: impl Into<String>,
     ) {
         let offline = self.supervisor.record_failure(kind, reason);
-        self.state = DesktopServiceState::ServiceOffline;
-        self.offline = Some(offline);
+        self.record_offline_snapshot(offline);
         self.clear_runtime_binding();
     }
 
@@ -294,6 +303,7 @@ impl DesktopShell {
             endpoint: self.endpoint.clone(),
             readiness: self.readiness,
             offline: self.offline.clone(),
+            restarting: self.restarting.clone(),
             supervisor: self.supervisor.snapshot(),
             process_adapter: self.process_adapter.snapshot(),
         }
@@ -312,6 +322,19 @@ impl DesktopShell {
         self.readiness = NativeRuntimeReadiness::default();
         self.process_adapter.record_process_stopped();
         self.endpoint = None;
+    }
+
+    fn record_offline_snapshot(&mut self, offline: NativeServiceOffline) {
+        let supervisor = self.supervisor.snapshot();
+        self.restarting = offline.retryable.then_some(NativeServiceRestarting {
+            attempt: supervisor.restart_attempt,
+        });
+        self.state = if offline.retryable {
+            DesktopServiceState::ServiceRestarting
+        } else {
+            DesktopServiceState::ServiceOffline
+        };
+        self.offline = Some(offline);
     }
 
     fn map_process_adapter_error(error: NativeProcessAdapterError) -> DesktopShellError {

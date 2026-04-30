@@ -4,7 +4,8 @@
 use deve_core::native_adapter::{
     NativeEndpointReady, NativePlatformEventKind, NativeProcessAdapter, NativeProcessAdapterError,
     NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
-    NativeServiceSupervisor, NativeServiceSuspended, validate_native_endpoint_ready,
+    NativeServiceRestarting, NativeServiceSupervisor, NativeServiceSuspended,
+    validate_native_endpoint_ready,
 };
 
 use crate::types::{
@@ -18,6 +19,7 @@ pub struct MobileShell {
     endpoint: Option<NativeEndpointReady>,
     readiness: NativeRuntimeReadiness,
     offline: Option<NativeServiceOffline>,
+    restarting: Option<NativeServiceRestarting>,
     suspended: Option<NativeServiceSuspended>,
     supervisor: NativeServiceSupervisor,
     process_adapter: NativeProcessAdapter,
@@ -36,6 +38,7 @@ impl MobileShell {
             endpoint: None,
             readiness: NativeRuntimeReadiness::default(),
             offline: None,
+            restarting: None,
             suspended: None,
             supervisor: NativeServiceSupervisor::new(2),
             process_adapter: NativeProcessAdapter::default(),
@@ -45,6 +48,7 @@ impl MobileShell {
     pub fn start_service(&mut self) {
         self.state = MobileServiceState::ServiceStarting;
         self.offline = None;
+        self.restarting = None;
         self.suspended = None;
         self.supervisor.start();
     }
@@ -60,6 +64,8 @@ impl MobileShell {
         self.readiness.node_role_readable = process_snapshot.health_probe.node_role_readable;
         self.endpoint = process_snapshot.endpoint;
         self.state = MobileServiceState::EndpointBound;
+        self.offline = None;
+        self.restarting = None;
         Ok(())
     }
 
@@ -92,6 +98,8 @@ impl MobileShell {
         self.readiness = readiness;
         if ready {
             self.state = MobileServiceState::RuntimeReady;
+            self.offline = None;
+            self.restarting = None;
         }
         ready
     }
@@ -114,9 +122,11 @@ impl MobileShell {
 
     pub fn recovery_bootstrap_for_web(&self) -> Option<MobileRecoveryBootstrap> {
         match self.state {
-            MobileServiceState::ServiceOffline => Some(MobileRecoveryBootstrap {
-                service_state: "service_offline",
-            }),
+            MobileServiceState::ServiceRestarting | MobileServiceState::ServiceOffline => {
+                Some(MobileRecoveryBootstrap {
+                    service_state: "service_offline",
+                })
+            }
             MobileServiceState::SessionInvalid => Some(MobileRecoveryBootstrap {
                 service_state: "session_invalid",
             }),
@@ -165,13 +175,12 @@ impl MobileShell {
     }
 
     pub fn mark_service_offline(&mut self, reason: impl Into<String>, retryable: bool) {
-        self.state = MobileServiceState::ServiceOffline;
         let offline = NativeServiceOffline {
             reason: reason.into(),
             retryable,
         };
         let offline = self.supervisor.record_service_offline(offline);
-        self.offline = Some(offline);
+        self.record_offline_snapshot(offline);
         self.clear_runtime_binding();
     }
 
@@ -181,8 +190,7 @@ impl MobileShell {
         reason: impl Into<String>,
     ) {
         let offline = self.supervisor.record_failure(kind, reason);
-        self.state = MobileServiceState::ServiceOffline;
-        self.offline = Some(offline);
+        self.record_offline_snapshot(offline);
         self.clear_runtime_binding();
     }
 
@@ -201,6 +209,7 @@ impl MobileShell {
             endpoint: self.endpoint.clone(),
             readiness: self.readiness,
             offline: self.offline.clone(),
+            restarting: self.restarting.clone(),
             suspended: self.suspended.clone(),
             supervisor: self.supervisor.snapshot(),
             process_adapter: self.process_adapter.snapshot(),
@@ -224,13 +233,15 @@ impl MobileShell {
 
     fn blocking_state_error(&self) -> Result<(), MobileShellError> {
         match self.state {
-            MobileServiceState::ServiceOffline => Err(MobileShellError::ServiceOffline {
-                reason: self
-                    .offline
-                    .as_ref()
-                    .map(|offline| offline.reason.clone())
-                    .unwrap_or_else(|| "unknown".to_string()),
-            }),
+            MobileServiceState::ServiceRestarting | MobileServiceState::ServiceOffline => {
+                Err(MobileShellError::ServiceOffline {
+                    reason: self
+                        .offline
+                        .as_ref()
+                        .map(|offline| offline.reason.clone())
+                        .unwrap_or_else(|| "unknown".to_string()),
+                })
+            }
             MobileServiceState::SessionInvalid => Err(MobileShellError::SessionInvalid),
             MobileServiceState::ForegroundReprobe | MobileServiceState::BackgroundSuspended => {
                 Err(MobileShellError::ForegroundReprobeRequired)
@@ -250,5 +261,18 @@ impl MobileShell {
                 MobileShellError::ProcessAdapter(error)
             }
         }
+    }
+
+    fn record_offline_snapshot(&mut self, offline: NativeServiceOffline) {
+        let supervisor = self.supervisor.snapshot();
+        self.restarting = offline.retryable.then_some(NativeServiceRestarting {
+            attempt: supervisor.restart_attempt,
+        });
+        self.state = if offline.retryable {
+            MobileServiceState::ServiceRestarting
+        } else {
+            MobileServiceState::ServiceOffline
+        };
+        self.offline = Some(offline);
     }
 }
