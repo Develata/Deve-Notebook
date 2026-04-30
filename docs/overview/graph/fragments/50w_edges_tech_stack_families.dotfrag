@@ -5,6 +5,7 @@
     op_tech_budget_check -> app_tech_budget_check;
     op_tech_budget_gate -> app_tech_budget_gate;
     op_tech_platform_matrix -> app_tech_platform_matrix;
+    op_tech_platform_native_process -> app_tech_platform_native_process;
     op_tech_platform_channel -> app_tech_platform_channel;
     op_tech_platform_container -> app_tech_platform_container;
 
@@ -23,6 +24,8 @@
     app_tech_budget_gate -> mod_runtime_budget;
     app_tech_platform_matrix -> mod_platform_matrix;
     app_tech_platform_matrix -> mod_release_channel;
+    app_tech_platform_native_process -> mod_native_process_adapter;
+    app_tech_platform_native_process -> mod_platform_matrix;
     app_tech_platform_channel -> mod_release_channel;
     app_tech_platform_channel -> mod_ci_release;
     app_tech_platform_container -> mod_container_delivery;
@@ -33,5 +36,6 @@
     mod_tech_policy_review -> core_tech_stack;
     mod_runtime_profile_gate -> core_tech_stack;
     mod_heavy_feature_gate -> core_tech_stack;
+    mod_native_process_adapter -> core_tech_stack;
     mod_release_channel -> core_release;
     mod_container_delivery -> core_release;

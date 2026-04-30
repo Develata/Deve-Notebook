@@ -19,7 +19,9 @@ pub use packaging::{
     NativePackagingDependencyGatePolicy,
 };
 pub use process::{
-    CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeProcessAdapterDecision, NativeProcessAdapterPolicy,
+    CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeProcessAdapter, NativeProcessAdapterDecision,
+    NativeProcessAdapterError, NativeProcessAdapterPolicy, NativeProcessAdapterSnapshot,
+    NativeProcessAdapterState,
 };
 pub use supervisor::{
     NativeServiceFailureKind, NativeServiceHealthProbe, NativeServiceSupervisor,
@@ -38,3 +40,5 @@ pub use validation::{
 
 #[cfg(test)]
 mod contract_test;
+#[cfg(test)]
+mod process_test;

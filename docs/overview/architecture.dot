@@ -616,6 +616,7 @@ digraph DeveNoteArchitecture {
                 color="#d97706";
 
                 op_tech_platform_matrix [label="Inspect Platform Matrix", fillcolor="#fef9c3"];
+                op_tech_platform_native_process [label="Verify Native Process Adapter Gate", fillcolor="#fef9c3"];
                 op_tech_platform_channel [label="Verify Release Channel", fillcolor="#fde68a"];
                 op_tech_platform_container [label="Verify Container Delivery", fillcolor="#fef9c3"];
             }
@@ -1351,6 +1352,7 @@ digraph DeveNoteArchitecture {
             app_tech_budget_check [label="budget::runtime_check", fillcolor="#bfdbfe"];
             app_tech_budget_gate [label="budget::heavy_feature_gate", fillcolor="#eff6ff"];
             app_tech_platform_matrix [label="platform::support_matrix", fillcolor="#eff6ff"];
+            app_tech_platform_native_process [label="native::process_adapter_gate", fillcolor="#eff6ff"];
             app_tech_platform_channel [label="release::channel_verify", fillcolor="#bfdbfe"];
             app_tech_platform_container [label="release::container_verify", fillcolor="#eff6ff"];
         }
@@ -1888,6 +1890,7 @@ digraph DeveNoteArchitecture {
             mod_tech_policy_review [label="tech::policy_review", fillcolor="#f0fdf4"];
             mod_runtime_profile_gate [label="runtime::profile_gate", fillcolor="#f0fdf4"];
             mod_heavy_feature_gate [label="runtime::heavy_feature_gate", fillcolor="#f0fdf4"];
+            mod_native_process_adapter [label="native::process_adapter", fillcolor="#f0fdf4"];
             mod_release_channel [label="release::channel", fillcolor="#f0fdf4"];
             mod_container_delivery [label="release::container_delivery", fillcolor="#f0fdf4"];
         }
@@ -3106,6 +3109,7 @@ digraph DeveNoteArchitecture {
     op_tech_budget_check -> app_tech_budget_check;
     op_tech_budget_gate -> app_tech_budget_gate;
     op_tech_platform_matrix -> app_tech_platform_matrix;
+    op_tech_platform_native_process -> app_tech_platform_native_process;
     op_tech_platform_channel -> app_tech_platform_channel;
     op_tech_platform_container -> app_tech_platform_container;
 
@@ -3124,6 +3128,8 @@ digraph DeveNoteArchitecture {
     app_tech_budget_gate -> mod_runtime_budget;
     app_tech_platform_matrix -> mod_platform_matrix;
     app_tech_platform_matrix -> mod_release_channel;
+    app_tech_platform_native_process -> mod_native_process_adapter;
+    app_tech_platform_native_process -> mod_platform_matrix;
     app_tech_platform_channel -> mod_release_channel;
     app_tech_platform_channel -> mod_ci_release;
     app_tech_platform_container -> mod_container_delivery;
@@ -3134,6 +3140,7 @@ digraph DeveNoteArchitecture {
     mod_tech_policy_review -> core_tech_stack;
     mod_runtime_profile_gate -> core_tech_stack;
     mod_heavy_feature_gate -> core_tech_stack;
+    mod_native_process_adapter -> core_tech_stack;
     mod_release_channel -> core_release;
     mod_container_delivery -> core_release;
 

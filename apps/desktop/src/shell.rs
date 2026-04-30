@@ -3,10 +3,10 @@
 
 use deve_core::native_adapter::{
     NativeAdapterPlatform, NativeEndpointReady, NativePlatformEventEffect, NativePlatformEventKind,
-    NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceHealthProbe,
-    NativeServiceOffline, NativeServiceSupervisor, NativeServiceSupervisorError,
-    NativeServiceSupervisorSnapshot, classify_native_platform_event,
-    validate_native_endpoint_bases, validate_native_endpoint_ready,
+    NativeProcessAdapter, NativeProcessAdapterError, NativeProcessAdapterSnapshot,
+    NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
+    NativeServiceSupervisor, NativeServiceSupervisorError, NativeServiceSupervisorSnapshot,
+    classify_native_platform_event, validate_native_endpoint_ready,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -31,6 +31,7 @@ pub struct DesktopShellSnapshot {
     pub readiness: NativeRuntimeReadiness,
     pub offline: Option<NativeServiceOffline>,
     pub supervisor: NativeServiceSupervisorSnapshot,
+    pub process_adapter: NativeProcessAdapterSnapshot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,6 +94,8 @@ pub enum DesktopShellError {
     ForegroundReprobeRequired,
     #[error("desktop service supervisor rejected transition: {0}")]
     Supervisor(#[from] NativeServiceSupervisorError),
+    #[error("desktop process adapter rejected transition: {0}")]
+    ProcessAdapter(#[from] NativeProcessAdapterError),
     #[error("failed to serialize desktop bootstrap: {0}")]
     BootstrapSerialize(#[from] serde_json::Error),
 }
@@ -104,6 +107,7 @@ pub struct DesktopShell {
     readiness: NativeRuntimeReadiness,
     offline: Option<NativeServiceOffline>,
     supervisor: NativeServiceSupervisor,
+    process_adapter: NativeProcessAdapter,
 }
 
 impl Default for DesktopShell {
@@ -120,6 +124,7 @@ impl DesktopShell {
             readiness: NativeRuntimeReadiness::default(),
             offline: None,
             supervisor: NativeServiceSupervisor::new(2),
+            process_adapter: NativeProcessAdapter::default(),
         }
     }
 
@@ -131,18 +136,17 @@ impl DesktopShell {
 
     pub fn bind_endpoint(
         &mut self,
-        mut endpoint: NativeEndpointReady,
+        endpoint: NativeEndpointReady,
     ) -> Result<(), DesktopShellError> {
-        endpoint.session_bound = false;
-        validate_native_endpoint_bases(&endpoint)?;
+        let process_snapshot = self
+            .process_adapter
+            .bind_existing_endpoint(endpoint)
+            .map_err(Self::map_process_adapter_error)?;
         self.supervisor
-            .record_health_probe(NativeServiceHealthProbe {
-                endpoint_reachable: true,
-                node_role_readable: true,
-            })?;
-        self.readiness.endpoint_reachable = true;
-        self.readiness.node_role_readable = true;
-        self.endpoint = Some(endpoint);
+            .record_health_probe(process_snapshot.health_probe)?;
+        self.readiness.endpoint_reachable = process_snapshot.health_probe.endpoint_reachable;
+        self.readiness.node_role_readable = process_snapshot.health_probe.node_role_readable;
+        self.endpoint = process_snapshot.endpoint;
         self.state = DesktopServiceState::EndpointBound;
         self.offline = None;
         Ok(())
@@ -160,7 +164,14 @@ impl DesktopShell {
             .as_mut()
             .ok_or(DesktopShellError::SessionNotBound)?;
         self.supervisor.record_session_handoff(session.bound)?;
-        endpoint.session_bound = true;
+        let process_snapshot = self
+            .process_adapter
+            .bind_session(session.bound)
+            .map_err(Self::map_process_adapter_error)?;
+        let process_endpoint = process_snapshot
+            .endpoint
+            .ok_or(DesktopShellError::SessionNotBound)?;
+        *endpoint = process_endpoint;
         validate_native_endpoint_ready(endpoint)?;
         self.readiness.auth_status_valid = true;
         self.state = DesktopServiceState::SessionBound;
@@ -253,6 +264,7 @@ impl DesktopShell {
             retryable,
         });
         self.readiness.endpoint_reachable = false;
+        self.process_adapter.record_process_stopped();
     }
 
     pub fn mark_supervisor_failure(
@@ -264,11 +276,13 @@ impl DesktopShell {
         self.state = DesktopServiceState::ServiceOffline;
         self.offline = Some(offline);
         self.readiness.endpoint_reachable = false;
+        self.process_adapter.record_process_stopped();
     }
 
     pub fn invalidate_session(&mut self) {
         self.state = DesktopServiceState::SessionInvalid;
         self.readiness.auth_status_valid = false;
+        self.process_adapter.clear_session();
         if let Some(endpoint) = self.endpoint.as_mut() {
             endpoint.session_bound = false;
         }
@@ -281,6 +295,7 @@ impl DesktopShell {
             readiness: self.readiness,
             offline: self.offline.clone(),
             supervisor: self.supervisor.snapshot(),
+            process_adapter: self.process_adapter.snapshot(),
         }
     }
 
@@ -291,5 +306,18 @@ impl DesktopShell {
         self.readiness.repo_handshake_complete = false;
         self.readiness.writer_ready = false;
         self.readiness.scope_nonce_current = false;
+    }
+
+    fn map_process_adapter_error(error: NativeProcessAdapterError) -> DesktopShellError {
+        match error {
+            NativeProcessAdapterError::InvalidEndpoint(error) => {
+                DesktopShellError::InvalidEndpoint(error)
+            }
+            NativeProcessAdapterError::EndpointNotBound
+            | NativeProcessAdapterError::SessionNotBound => DesktopShellError::SessionNotBound,
+            NativeProcessAdapterError::ChildProcessRuntimeDisabled => {
+                DesktopShellError::ProcessAdapter(error)
+            }
+        }
     }
 }

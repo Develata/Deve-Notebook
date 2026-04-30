@@ -2,7 +2,8 @@
 //!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness, NativeServiceOffline,
+    NativeEndpointReady, NativePlatformEventKind, NativeProcessAdapterError,
+    NativeProcessAdapterSnapshot, NativeRuntimeReadiness, NativeServiceOffline,
     NativeServiceSupervisorError, NativeServiceSupervisorSnapshot, NativeServiceSuspended,
 };
 use serde::Serialize;
@@ -57,6 +58,7 @@ pub struct MobileShellSnapshot {
     pub offline: Option<NativeServiceOffline>,
     pub suspended: Option<NativeServiceSuspended>,
     pub supervisor: NativeServiceSupervisorSnapshot,
+    pub process_adapter: NativeProcessAdapterSnapshot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,6 +121,8 @@ pub enum MobileShellError {
     SessionInvalid,
     #[error("mobile service supervisor rejected transition: {0}")]
     Supervisor(#[from] NativeServiceSupervisorError),
+    #[error("mobile process adapter rejected transition: {0}")]
+    ProcessAdapter(#[from] NativeProcessAdapterError),
     #[error("failed to serialize mobile bootstrap: {0}")]
     BootstrapSerialize(#[from] serde_json::Error),
 }

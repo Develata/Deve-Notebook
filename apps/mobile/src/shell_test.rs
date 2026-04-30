@@ -8,8 +8,8 @@ use crate::{
 use deve_core::native_adapter::{
     CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY, CURRENT_NATIVE_PROCESS_ADAPTER_POLICY,
     NativeEndpointReady, NativePackagingDependencyGateDecision, NativePlatformEventKind,
-    NativeProcessAdapterDecision, NativeRuntimeReadiness, NativeServiceFailureKind,
-    NativeServiceOffline, NativeServiceSupervisorState,
+    NativeProcessAdapterDecision, NativeProcessAdapterState, NativeRuntimeReadiness,
+    NativeServiceFailureKind, NativeServiceOffline, NativeServiceSupervisorState,
 };
 
 fn endpoint() -> NativeEndpointReady {
@@ -68,6 +68,11 @@ fn mobile_shell_injects_bootstrap_only_after_session_binding() {
         shell.snapshot().supervisor.state,
         NativeServiceSupervisorState::SessionHandoffReady
     );
+    assert_eq!(
+        shell.snapshot().process_adapter.state,
+        NativeProcessAdapterState::SessionHandoffReady
+    );
+    assert!(shell.snapshot().process_adapter.is_default_safe_boundary());
 }
 
 #[test]
@@ -195,6 +200,10 @@ fn mobile_shell_offline_and_session_invalid_block_bootstrap() {
             .service_state,
         "session_invalid"
     );
+    assert_eq!(
+        invalid.snapshot().process_adapter.state,
+        NativeProcessAdapterState::ExistingEndpointBound
+    );
 }
 
 #[test]
@@ -215,6 +224,10 @@ fn mobile_supervisor_failure_blocks_endpoint_and_reports_retryability() {
             reason: "probe_failed".to_string(),
             retryable: true,
         })
+    );
+    assert_eq!(
+        snapshot.process_adapter.state,
+        NativeProcessAdapterState::Stopped
     );
     assert!(matches!(
         shell.bootstrap_for_web(),

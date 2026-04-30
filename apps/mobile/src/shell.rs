@@ -2,9 +2,9 @@
 //!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativePlatformEventKind, NativeRuntimeReadiness, NativeServiceFailureKind,
-    NativeServiceHealthProbe, NativeServiceOffline, NativeServiceSupervisor,
-    NativeServiceSuspended, validate_native_endpoint_bases, validate_native_endpoint_ready,
+    NativeEndpointReady, NativePlatformEventKind, NativeProcessAdapter, NativeProcessAdapterError,
+    NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
+    NativeServiceSupervisor, NativeServiceSuspended, validate_native_endpoint_ready,
 };
 
 use crate::types::{
@@ -20,6 +20,7 @@ pub struct MobileShell {
     offline: Option<NativeServiceOffline>,
     suspended: Option<NativeServiceSuspended>,
     supervisor: NativeServiceSupervisor,
+    process_adapter: NativeProcessAdapter,
 }
 
 impl Default for MobileShell {
@@ -37,6 +38,7 @@ impl MobileShell {
             offline: None,
             suspended: None,
             supervisor: NativeServiceSupervisor::new(2),
+            process_adapter: NativeProcessAdapter::default(),
         }
     }
 
@@ -47,19 +49,16 @@ impl MobileShell {
         self.supervisor.start();
     }
 
-    pub fn bind_endpoint(
-        &mut self,
-        mut endpoint: NativeEndpointReady,
-    ) -> Result<(), MobileShellError> {
-        endpoint.session_bound = false;
-        validate_native_endpoint_bases(&endpoint)?;
+    pub fn bind_endpoint(&mut self, endpoint: NativeEndpointReady) -> Result<(), MobileShellError> {
+        let process_snapshot = self
+            .process_adapter
+            .bind_existing_endpoint(endpoint)
+            .map_err(Self::map_process_adapter_error)?;
         self.supervisor
-            .record_health_probe(NativeServiceHealthProbe {
-                endpoint_reachable: true,
-                node_role_readable: true,
-            })?;
-        self.readiness.endpoint_reachable = true;
-        self.endpoint = Some(endpoint);
+            .record_health_probe(process_snapshot.health_probe)?;
+        self.readiness.endpoint_reachable = process_snapshot.health_probe.endpoint_reachable;
+        self.readiness.node_role_readable = process_snapshot.health_probe.node_role_readable;
+        self.endpoint = process_snapshot.endpoint;
         self.state = MobileServiceState::EndpointBound;
         Ok(())
     }
@@ -73,7 +72,14 @@ impl MobileShell {
             .as_mut()
             .ok_or(MobileShellError::SessionNotBound)?;
         self.supervisor.record_session_handoff(session.bound)?;
-        endpoint.session_bound = true;
+        let process_snapshot = self
+            .process_adapter
+            .bind_session(session.bound)
+            .map_err(Self::map_process_adapter_error)?;
+        let process_endpoint = process_snapshot
+            .endpoint
+            .ok_or(MobileShellError::SessionNotBound)?;
+        *endpoint = process_endpoint;
         validate_native_endpoint_ready(endpoint)?;
         self.readiness.auth_status_valid = true;
         self.readiness.node_role_readable = true;
@@ -165,6 +171,7 @@ impl MobileShell {
             retryable,
         });
         self.readiness.endpoint_reachable = false;
+        self.process_adapter.record_process_stopped();
     }
 
     pub fn mark_supervisor_failure(
@@ -176,11 +183,13 @@ impl MobileShell {
         self.state = MobileServiceState::ServiceOffline;
         self.offline = Some(offline);
         self.readiness.endpoint_reachable = false;
+        self.process_adapter.record_process_stopped();
     }
 
     pub fn invalidate_session(&mut self) {
         self.state = MobileServiceState::SessionInvalid;
         self.readiness.auth_status_valid = false;
+        self.process_adapter.clear_session();
         if let Some(endpoint) = self.endpoint.as_mut() {
             endpoint.session_bound = false;
         }
@@ -194,6 +203,7 @@ impl MobileShell {
             offline: self.offline.clone(),
             suspended: self.suspended.clone(),
             supervisor: self.supervisor.snapshot(),
+            process_adapter: self.process_adapter.snapshot(),
         }
     }
 
@@ -220,6 +230,19 @@ impl MobileShell {
                 Err(MobileShellError::ForegroundReprobeRequired)
             }
             _ => Ok(()),
+        }
+    }
+
+    fn map_process_adapter_error(error: NativeProcessAdapterError) -> MobileShellError {
+        match error {
+            NativeProcessAdapterError::InvalidEndpoint(error) => {
+                MobileShellError::InvalidEndpoint(error)
+            }
+            NativeProcessAdapterError::EndpointNotBound
+            | NativeProcessAdapterError::SessionNotBound => MobileShellError::SessionNotBound,
+            NativeProcessAdapterError::ChildProcessRuntimeDisabled => {
+                MobileShellError::ProcessAdapter(error)
+            }
         }
     }
 }

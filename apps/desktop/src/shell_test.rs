@@ -7,8 +7,9 @@ use crate::{
 use deve_core::native_adapter::{
     CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY, CURRENT_NATIVE_PROCESS_ADAPTER_POLICY,
     NativeEndpointReady, NativePackagingDependencyGateDecision, NativePlatformEventEffect,
-    NativePlatformEventKind, NativeProcessAdapterDecision, NativeRuntimeReadiness,
-    NativeServiceFailureKind, NativeServiceOffline, NativeServiceSupervisorState,
+    NativePlatformEventKind, NativeProcessAdapterDecision, NativeProcessAdapterState,
+    NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
+    NativeServiceSupervisorState,
 };
 
 fn endpoint() -> NativeEndpointReady {
@@ -67,6 +68,11 @@ fn desktop_shell_injects_bootstrap_only_after_session_binding() {
         shell.snapshot().supervisor.state,
         NativeServiceSupervisorState::SessionHandoffReady
     );
+    assert_eq!(
+        shell.snapshot().process_adapter.state,
+        NativeProcessAdapterState::SessionHandoffReady
+    );
+    assert!(shell.snapshot().process_adapter.is_default_safe_boundary());
     assert!(shell.snapshot().readiness.endpoint_reachable);
     assert!(shell.snapshot().readiness.auth_status_valid);
     assert!(shell.snapshot().readiness.node_role_readable);
@@ -123,6 +129,10 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
             retryable: true,
         })
     );
+    assert_eq!(
+        snapshot.process_adapter.state,
+        NativeProcessAdapterState::Stopped
+    );
     let recovery = shell
         .recovery_bootstrap_for_web()
         .expect("recovery bootstrap");
@@ -143,6 +153,10 @@ fn desktop_shell_session_invalid_blocks_bootstrap() {
     ));
     assert_eq!(shell.snapshot().state, DesktopServiceState::SessionInvalid);
     assert!(!shell.snapshot().readiness.auth_status_valid);
+    assert_eq!(
+        shell.snapshot().process_adapter.state,
+        NativeProcessAdapterState::ExistingEndpointBound
+    );
     assert_eq!(
         shell
             .recovery_bootstrap_for_web()

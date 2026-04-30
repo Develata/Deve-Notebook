@@ -9,6 +9,7 @@
             mod_tech_policy_review [label="tech::policy_review", fillcolor="#f0fdf4"];
             mod_runtime_profile_gate [label="runtime::profile_gate", fillcolor="#f0fdf4"];
             mod_heavy_feature_gate [label="runtime::heavy_feature_gate", fillcolor="#f0fdf4"];
+            mod_native_process_adapter [label="native::process_adapter", fillcolor="#f0fdf4"];
             mod_release_channel [label="release::channel", fillcolor="#f0fdf4"];
             mod_container_delivery [label="release::container_delivery", fillcolor="#f0fdf4"];
         }
