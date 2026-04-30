@@ -142,9 +142,6 @@ impl NativeServiceSupervisor {
         offline: NativeServiceOffline,
     ) -> NativeServiceOffline {
         let retryable = offline.retryable && self.restart_attempt < self.max_restart_attempts;
-        if retryable {
-            self.restart_attempt += 1;
-        }
         let recorded = NativeServiceOffline {
             reason: offline.reason,
             retryable,
@@ -257,7 +254,7 @@ mod tests {
 
         let snapshot = supervisor.snapshot();
         assert_eq!(snapshot.state, NativeServiceSupervisorState::Restarting);
-        assert_eq!(snapshot.restart_attempt, 1);
+        assert_eq!(snapshot.restart_attempt, 0);
         assert_eq!(
             snapshot.offline,
             Some(NativeServiceOffline {
@@ -268,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn external_offline_retryability_respects_restart_budget() {
+    fn external_offline_observation_does_not_consume_restart_budget() {
         let mut supervisor = NativeServiceSupervisor::new(1);
 
         let first = supervisor.record_service_offline(NativeServiceOffline {
@@ -281,7 +278,31 @@ mod tests {
         });
 
         assert!(first.retryable);
-        assert!(!second.retryable);
+        assert!(second.retryable);
+        let snapshot = supervisor.snapshot();
+        assert_eq!(snapshot.state, NativeServiceSupervisorState::Restarting);
+        assert_eq!(snapshot.restart_attempt, 0);
+        assert_eq!(
+            snapshot.offline,
+            Some(NativeServiceOffline {
+                reason: "still_dead".to_string(),
+                retryable: true,
+            })
+        );
+    }
+
+    #[test]
+    fn external_offline_retryability_is_clamped_after_failure_budget_is_exhausted() {
+        let mut supervisor = NativeServiceSupervisor::new(1);
+        let failure = supervisor.record_failure(NativeServiceFailureKind::BindFailed, "port_busy");
+        assert!(failure.retryable);
+
+        let observed = supervisor.record_service_offline(NativeServiceOffline {
+            reason: "still_dead".to_string(),
+            retryable: true,
+        });
+
+        assert!(!observed.retryable);
         let snapshot = supervisor.snapshot();
         assert_eq!(snapshot.state, NativeServiceSupervisorState::Offline);
         assert_eq!(snapshot.restart_attempt, 1);

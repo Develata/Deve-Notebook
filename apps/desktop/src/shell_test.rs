@@ -150,11 +150,35 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
 }
 
 #[test]
-fn desktop_service_offline_retryability_respects_supervisor_budget() {
+fn desktop_service_offline_observation_does_not_consume_supervisor_budget() {
     let mut shell = bound_shell();
 
     shell.mark_service_offline("first", true);
     shell.mark_service_offline("second", true);
+    shell.mark_service_offline("third", true);
+
+    let snapshot = shell.snapshot();
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Restarting
+    );
+    assert_eq!(snapshot.supervisor.restart_attempt, 0);
+    assert_eq!(
+        snapshot.offline,
+        Some(NativeServiceOffline {
+            reason: "third".to_string(),
+            retryable: true,
+        })
+    );
+    assert_eq!(snapshot.supervisor.offline, snapshot.offline);
+}
+
+#[test]
+fn desktop_service_offline_retryability_is_clamped_after_failure_budget() {
+    let mut shell = bound_shell();
+
+    shell.mark_supervisor_failure(NativeServiceFailureKind::BindFailed, "first");
+    shell.mark_supervisor_failure(NativeServiceFailureKind::ProcessExited, "second");
     shell.mark_service_offline("third", true);
 
     let snapshot = shell.snapshot();
