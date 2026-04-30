@@ -185,6 +185,9 @@ fn mobile_shell_offline_and_session_invalid_block_bootstrap() {
         .expect("recovery script");
     assert!(offline_script.contains("\"service_state\":\"service_offline\""));
     assert!(!offline_script.contains("service_dead"));
+    let offline_snapshot = offline.snapshot();
+    assert!(offline_snapshot.endpoint.is_none());
+    assert!(offline_snapshot.process_adapter.endpoint.is_none());
 
     let mut invalid = bound_shell();
     invalid.invalidate_session();
@@ -214,6 +217,8 @@ fn mobile_supervisor_failure_blocks_endpoint_and_reports_retryability() {
     let snapshot = shell.snapshot();
     assert_eq!(snapshot.state, MobileServiceState::ServiceOffline);
     assert!(!snapshot.readiness.endpoint_reachable);
+    assert!(snapshot.endpoint.is_none());
+    assert!(snapshot.process_adapter.endpoint.is_none());
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Restarting

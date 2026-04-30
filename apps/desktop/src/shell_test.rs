@@ -129,6 +129,8 @@ fn desktop_shell_offline_state_blocks_bootstrap_and_reports_recovery() {
             retryable: true,
         })
     );
+    assert!(snapshot.endpoint.is_none());
+    assert!(snapshot.process_adapter.endpoint.is_none());
     assert_eq!(
         snapshot.process_adapter.state,
         NativeProcessAdapterState::Stopped
@@ -245,6 +247,8 @@ fn desktop_supervisor_classifies_retryable_service_failures() {
 
     let snapshot = shell.snapshot();
     assert_eq!(snapshot.state, DesktopServiceState::ServiceOffline);
+    assert!(snapshot.endpoint.is_none());
+    assert!(snapshot.process_adapter.endpoint.is_none());
     assert_eq!(
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Restarting

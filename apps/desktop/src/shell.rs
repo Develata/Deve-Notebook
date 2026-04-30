@@ -265,6 +265,7 @@ impl DesktopShell {
         });
         self.readiness.endpoint_reachable = false;
         self.process_adapter.record_process_stopped();
+        self.endpoint = None;
     }
 
     pub fn mark_supervisor_failure(
@@ -277,6 +278,7 @@ impl DesktopShell {
         self.offline = Some(offline);
         self.readiness.endpoint_reachable = false;
         self.process_adapter.record_process_stopped();
+        self.endpoint = None;
     }
 
     pub fn invalidate_session(&mut self) {

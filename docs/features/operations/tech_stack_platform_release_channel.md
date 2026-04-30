@@ -18,6 +18,15 @@
 - `Immediate Result`: unfinished platforms are not presented as stable targets
 - `Application Entry`: `docs/features/14_tech_stack.md`, `docs/features/15_release.md`
 
+### `op.tech.platform.verify-native-process-adapter`
+
+- `Name`: `Verify Native Process Adapter Gate`
+- `Surface`: `cli-or-ci`
+- `Trigger`: maintainer validates desktop/mobile native shell progress
+- `Preconditions`: native process adapter gate remains explicit and default build is unchanged
+- `Immediate Result`: native shell progress is visible without advertising Tauri packaging or child-process runtime as default capability
+- `Application Entry`: `scripts/check-native-track-boundary.sh`
+
 ### `op.tech.platform.verify-release-channel`
 
 - `Name`: `Verify Release Channel`
@@ -39,11 +48,11 @@
 ## Response Flow
 
 1. Maintainer or deployer checks platform status or release channel.
-2. Instruction interface is documentation, CI metadata, or Docker invocation.
+2. Instruction interface is documentation, native boundary check, CI metadata, or Docker invocation.
 3. Flow coordination prevents future platforms from being advertised as stable.
-4. Execution domains are platform matrix and release automation.
+4. Execution domains are platform matrix, native gate status, and release automation.
 
 ## Notes
 
 - This flow separates current delivery surfaces from future client plans.
-- Main objects: `platform::maturity`, `release::channel`, `release::artifact`.
+- Main objects: `platform::maturity`, `native::process_adapter_gate`, `release::channel`, `release::artifact`.
