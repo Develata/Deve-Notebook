@@ -1,6 +1,6 @@
 # Legacy Acceptance Checklist Snapshot
 
-> 本文件从 `docs/plan/验收清单.md` 迁出，作为历史快照保留。权威验收入口是 `docs/acceptance-cases/00_index.md`。
+> 本文件从 plan 目录迁出，作为历史快照保留。权威验收入口是 `docs/acceptance-cases/00_index.md`。
 
 ## 说明
 - 本清单已细化为可直接转化为测试用例的条目。

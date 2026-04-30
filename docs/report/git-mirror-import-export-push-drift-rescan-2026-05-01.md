@@ -33,7 +33,7 @@ active queue item.
 - `docs/plan/07_diff_logic.md`
 - `docs/plan/12_commands.md`
 - `docs/plan/14_tech_stack.md`
-- `docs/plan/验收清单.md`
+- `docs/report/legacy-acceptance-checklist-2026-05-01.md`
 - `docs/features/12_commands.md`
 - `docs/acceptance-cases/04_diff.md`
 
