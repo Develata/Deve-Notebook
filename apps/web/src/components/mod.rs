@@ -43,3 +43,4 @@ pub mod diff_view;
 pub mod main_layout_runtime;
 pub mod mobile_layout;
 pub mod settings_sections;
+mod settings_sections_policy;
