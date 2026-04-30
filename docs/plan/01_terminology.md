@@ -24,16 +24,16 @@
 
 ## 2. Core Definitions (核心术语定义)
 
-*   **Ledger (账本)**：系统唯一真值源；不可变账本事实序列 $L = [Fact_1, Fact_2, ..., Fact_n]$。
+*   **Ledger (账本)**：系统唯一真值源（Source of Truth）；只追加、不可就地修改的账本事实序列 $L = [Fact_1, Fact_2, ..., Fact_n]$。
     *   任何状态变更 $S_{t+1} = Apply(S_t, Fact_{t+1})$ 必须且只能由 Ledger 确定性推导。
     *   **Fact Partition**：账本事实至少可分为 `Content Facts` 与 `Structure Facts`；前者描述文本变化，后者描述节点/路径结构变化。
 *   **Snapshot (快照)**：Ledger 在特定账本事实序列位置的状态压缩 $S_t$。
-    *   $Snapshot(t) \equiv Fold(Fact_1...Fact_t)$，用于启动与数据校正。
+    *   $Snapshot(t) \equiv Fold(Fact_1...Fact_t)$，用于启动、校正与加速 fold；Snapshot 可重建，不是独立真值源。
 *   **Projection (投影)**：从 Ledger 派生的、面向用户的可读/可编辑形式（如 Markdown 文件）。
-    *   $P = Project(S_{ledger})$。投影不承载权威状态；外部修改必须经 Reconciliation 转为 Ledger Facts。
+    *   $P = Project(S_{ledger})$。投影不承载权威状态；对投影的外部修改必须先转为差异，再经 Reconciliation 生成 Ledger Facts。
 *   **Vault (投影仓)**：宿主文件系统上的一个具体目录路径 `$ROOT/data/vault`。
     *   是 Projection 的物理容器。
-    *   **External Edit**：发生在 Vault 内但未经 Deve-Note 产生的修改；必须经 Reconstruction 回到 Ledger。
+    *   **External Edit**：发生在 Vault 内但未经 Deve authority 写路径产生的修改；不得直接成为权威状态。
 *   **Tree State (树状态)**:
     *   内存文件树缓存 $T_{mem}$，由 `TreeManager` 管理。
     *   用于目录树 UI、减少 IO 扫描并生成 `TreeDelta`。
@@ -60,6 +60,8 @@
 *   **Asset (资产)**：由 DocId 标识的二进制字节序列。
     *   运行时引用形式：`asset://<uuid>`。
     *   物理存储形式：Content Addressable Storage (CAS) 或由 Ledger 管理的 Blob。
+*   **Reconstruction (重建/反推)**：从 Vault 外部突变提取 $\Delta_{fs}$ 的过程。
+    *   Reconstruction 只产生候选差异；它本身不得写 authority。
 *   **Reconciliation (和解/协调)**：将外部突变合并回权威 Ledger 的过程。
     *   $Merge(L_{current}, \Delta_{fs}) \to L_{next}$。
 *   **Peer (节点)**：P2P 网络拓扑图 $G=(V, E)$ 中的顶点 $v \in V$。
@@ -67,6 +69,7 @@
 *   **Relay (中继)**：具有 $Attr_{always\_on}$ 的 Peer，只做加密数据 blind storage 与流量转发，不解密业务数据。
 *   **LedgerSeq (账本序列数)**：Peer 维度的单调递增计数器。
     *   $Seq(P, i) \in \mathbb{N}$（实现为 `u64`），表示 Peer $P$ 产生的第 $i$ 条账本事实。
+    *   `(PeerId, LedgerSeq)` 用于因果定位；repo 落盘全序由 `GlobalSeq` / `LEDGER_OPS` 主键决定。
 *   **Vector Clock (向量时钟)**：因果历史的数学表达。
     *   $VC = \{ (PeerID_1, Seq_1), (PeerID_2, Seq_2), ... \}$，用于 diff 与并发冲突检测。
 
@@ -83,9 +86,11 @@
         *   $\forall B \in \Sigma_{remote}, ReadOnly(B)$（Editor View），但 Gossip Protocol 可写入同步数据。
     *   **Branch (分支)**：以节点为单位的数据集合 $B_{peer}$。
         *   1 Branch $\leftrightarrow$ 1 OS Folder（如 `ledger/local` 或 `ledger/remotes/ipad`）。
-        *   代表一个 Writer Identity；Local Branch 与 Remote Branch 数据结构同构。
+        *   代表一个 Writer Identity 作用域；它不是 git-style feature branch。
+        *   Local Branch 与 Remote Branch 数据结构同构；写权限由 branch role 决定。
     *   **Repo (仓库)**：逻辑聚合体 $U_{logical}$。
         *   由 Characteristic Parameter（默认 URL）唯一标识；一个 Logical Repo 可对应多个 Branch 下的 Repo Instances。
+        *   Repo 表示逻辑集合，Branch 表示 writer identity 作用域；二者 **MUST NOT** 混用。
     *   **Repo Instance (仓库实例)**：物理存储单元 $U_{physical}$。
         *   每个实例拥有独立 `InstanceUUID`（存于 file header）。
         *   物理文件名 **MUST** 采用 `repo_name.redb`；路径为 `ledger/<branch_path>/<repo_name>.redb`。
