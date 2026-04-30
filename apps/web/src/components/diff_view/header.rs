@@ -26,18 +26,88 @@ pub fn DiffHeader(
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
+    if mobile {
+        let close_filename = filename.clone();
+        return view! {
+            <div
+                class="flex-none border-b border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-3 pb-2"
+                style="padding-top: env(safe-area-inset-top);"
+            >
+                <div class="flex h-11 items-center justify-between gap-2">
+                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                        <span class="shrink-0 font-semibold text-[var(--diff-fg)]">
+                            {move || format!("{}:", t::diff::title(locale.get()))}
+                        </span>
+                        <span
+                            class="min-w-0 flex-1 truncate text-[var(--diff-filename)]"
+                            title=close_filename
+                        >
+                            {filename.clone()}
+                        </span>
+                        <Show when=move || is_readonly>
+                            <span class="shrink-0 rounded bg-[var(--diff-pill-bg)] px-2 py-0.5 text-xs text-[var(--diff-pill-fg)]">
+                                {move || t::diff::read_only(locale.get())}
+                            </span>
+                        </Show>
+                    </div>
+                    <button
+                        class="diff-close-button h-11 min-w-[44px] rounded p-2 text-[var(--diff-muted)] active:bg-[var(--diff-btn-hover)]"
+                        on:click=move |_| on_close.run(())
+                        title=move || t::diff::close_diff_view(locale.get())
+                    >
+                        <X class="w-5 h-5"/>
+                    </button>
+                </div>
+
+                <div class="mt-1 flex h-10 items-center gap-2 overflow-x-auto pb-1">
+                    <span class="shrink-0 rounded bg-[var(--diff-line-add)] px-1.5 py-0.5 text-[11px] text-[var(--diff-fg)]" title=move || t::diff::added(locale.get())>
+                        {move || format!("+{}", added_count.get())}
+                    </span>
+                    <span class="shrink-0 rounded bg-[var(--diff-line-del)] px-1.5 py-0.5 text-[11px] text-[var(--diff-fg)]" title=move || t::diff::deleted(locale.get())>
+                        {move || format!("-{}", deleted_count.get())}
+                    </span>
+                    <Show when=move || !is_readonly>
+                        <button
+                            class="diff-edit-toggle h-9 shrink-0 rounded border border-[var(--diff-border)] px-3 text-xs text-[var(--diff-fg)] active:bg-[var(--diff-btn-hover)]"
+                            on:click=move |_| toggle_edit.run(())
+                        >
+                            {move || if is_editing.get() { t::diff::preview_diff(locale.get()) } else { t::diff::edit(locale.get()) }}
+                        </button>
+                    </Show>
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                        {move || if cache_hit.get() { t::diff::cache_hit(locale.get()) } else { t::diff::cache_miss(locale.get()) }}
+                    </span>
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                        {move || t::diff::algorithm(locale.get(), &algorithm.get())}
+                    </span>
+                    <Show when=move || has_hunks.get()>
+                        <button
+                            class="diff-prev-hunk h-9 min-w-[40px] rounded border border-[var(--diff-border)] px-2 text-xs text-[var(--diff-fg)] active:bg-[var(--diff-btn-hover)]"
+                            aria-label=move || t::diff::prev_change(locale.get())
+                            title=move || t::diff::prev_change_hint(locale.get())
+                            on:click=move |_| on_prev_hunk.run(())
+                        >
+                            "↑"
+                        </button>
+                        <span class="shrink-0 min-w-12 text-center text-[11px] text-[var(--diff-muted)]">{move || hunk_index_text.get()}</span>
+                        <button
+                            class="diff-next-hunk h-9 min-w-[40px] rounded border border-[var(--diff-border)] px-2 text-xs text-[var(--diff-fg)] active:bg-[var(--diff-btn-hover)]"
+                            aria-label=move || t::diff::next_change(locale.get())
+                            title=move || t::diff::next_change_hint(locale.get())
+                            on:click=move |_| on_next_hunk.run(())
+                        >
+                            "↓"
+                        </button>
+                    </Show>
+                </div>
+            </div>
+        }
+        .into_any();
+    }
+
     view! {
         <div
-            class=move || if mobile {
-                "flex-none border-b border-[var(--diff-border)] flex items-center justify-between px-3 bg-[var(--diff-header-bg)]"
-            } else {
-                "flex-none h-10 border-b border-[var(--diff-border)] flex items-center justify-between px-4 bg-[var(--diff-header-bg)]"
-            }
-            style=move || if mobile {
-                "padding-top: env(safe-area-inset-top); height: calc(48px + env(safe-area-inset-top));"
-            } else {
-                ""
-            }
+            class="flex-none h-10 border-b border-[var(--diff-border)] flex items-center justify-between px-4 bg-[var(--diff-header-bg)]"
         >
             <div class="flex items-center gap-2 min-w-0">
                 <span class="font-semibold text-[var(--diff-fg)]">{move || format!("{}:", t::diff::title(locale.get()))}</span>
@@ -99,11 +169,7 @@ pub fn DiffHeader(
                     </button>
                 </Show>
                 <button
-                    class=move || if mobile {
-                        "diff-close-button h-11 min-w-11 p-2 active:bg-[var(--diff-btn-hover)] rounded text-[var(--diff-muted)]"
-                    } else {
-                        "p-1 hover:bg-[var(--diff-btn-hover)] rounded text-[var(--diff-muted)]"
-                    }
+                    class="p-1 hover:bg-[var(--diff-btn-hover)] rounded text-[var(--diff-muted)]"
                     on:click=move |_| on_close.run(())
                     title=move || t::diff::close_diff_view(locale.get())
                 >
@@ -112,4 +178,5 @@ pub fn DiffHeader(
             </div>
         </div>
     }
+    .into_any()
 }

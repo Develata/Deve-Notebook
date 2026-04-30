@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Mobile Diff fixture viewport smoke | P2 | `apps/web/src/components/mobile_layout/`, `apps/web/src/components/diff*`, Chrome MCP | Prepare or locate a stable diff fixture; verify `.diff-view-mobile` hides AI Chat entry/toolbar and close returns to editor |
+| 1 | Watcher external new-file pending debounce hardening | P1/P2 | `crates/core/src/sync/`, source-control pending FS, server WS refresh path | External markdown added under an active vault becomes one stable pending change or a clear fail-closed notice; it must not emit unbounded `New file detected` loops or trigger WS rate limit during Source Control refresh |
 
 ## 最近完成基线
 
@@ -71,6 +71,7 @@
 - Architecture registry operation ID sync 已关闭：overview lisp 已同步 i18n locale fallback、Native AI Chat mode/apply/tool-rejection 与 release Web WASM quality gate operation IDs，`check-architecture-registry.sh` 恢复通过，详见 `architecture-registry-operation-id-sync-2026-04-30.md`。
 - P2 Mobile AI Chat keyboard regression 已关闭：`MobileChatSheet` 展开态在 `keyboard_offset > 0` 时保持可见并设置 bottom offset；折叠 chip 在键盘态隐藏，drawer/diff 层级继续优先，详见 `mobile-ai-chat-keyboard-regression-status-2026-04-30.md`。
 - P2 Mobile AI Chat viewport smoke 已关闭：Chrome MCP 375x812 验证展开、输入聚焦、44x44 发送按钮、关闭返回与 drawer 隐藏 chat；同时修复 Web WASM 引用后端-only Git bridge DTO 的 build break，详见 `mobile-ai-chat-viewport-smoke-2026-04-30.md`。
+- P2 Mobile Diff fixture viewport smoke 已关闭：Chrome MCP 375x812 验证 `.diff-view-mobile`、隐藏 AI Chat/移动辅助键盘栏、close/edit 视口内可用与关闭返回 editor；移动端 Diff header 改为两行布局，详见 `mobile-diff-fixture-viewport-smoke-2026-04-30.md`。
 - P3-10 Desktop runtime readiness / foreground reprobe 已关闭：desktop shell snapshot 现包含 `NativeRuntimeReadiness`，`RuntimeReady` 要求 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足，`Foreground` / `Resumed` 会进入 `ForegroundReprobe` 且 stale `scope_nonce` 不恢复写态，详见 `desktop-runtime-readiness-status-2026-04-29.md`。
 - P3-10 Native shell parity review 已关闭：mobile foreground/resume reprobe 现在也清空 `node_role_readable`，desktop/mobile/Web 对 native readiness、`foreground_reprobe` recovery bootstrap 与 write gate 的当前 no-Tauri contract 已对齐；native track 进入干净停靠点，详见 `native-shell-parity-review-2026-04-29.md`。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。

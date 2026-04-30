@@ -95,7 +95,10 @@ mod tests {
         }))
         .expect("server repair-review JSON shape should decode in Web");
 
-        assert_eq!(review.records[0].failure_exit_status.as_deref(), Some("128"));
+        assert_eq!(
+            review.records[0].failure_exit_status.as_deref(),
+            Some("128")
+        );
         assert_eq!(
             review.records[0].failure_command.as_deref(),
             Some("git commit")

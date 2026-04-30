@@ -107,7 +107,9 @@ mod tests {
 
     #[test]
     fn collapsed_chip_hides_when_keyboard_is_open() {
-        assert!(!should_show_mobile_chat_sheet(true, false, false, false, 280));
+        assert!(!should_show_mobile_chat_sheet(
+            true, false, false, false, 280
+        ));
     }
 
     #[test]
