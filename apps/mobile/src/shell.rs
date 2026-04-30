@@ -170,7 +170,7 @@ impl MobileShell {
             reason: reason.into(),
             retryable,
         };
-        self.supervisor.record_service_offline(offline.clone());
+        let offline = self.supervisor.record_service_offline(offline);
         self.offline = Some(offline);
         self.clear_runtime_binding();
     }
