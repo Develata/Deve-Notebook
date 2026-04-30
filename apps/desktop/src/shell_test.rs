@@ -329,6 +329,7 @@ fn desktop_supervisor_keeps_session_handoff_failure_fatal() {
     shell.start_service();
     shell.mark_supervisor_failure(NativeServiceFailureKind::SessionHandoffFailed, "missing");
     shell.mark_service_offline("service_dead", true);
+    shell.mark_supervisor_failure(NativeServiceFailureKind::ProcessExited, "process_exited");
 
     let snapshot = shell.snapshot();
     assert_eq!(

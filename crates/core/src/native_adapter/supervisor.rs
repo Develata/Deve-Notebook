@@ -121,6 +121,9 @@ impl NativeServiceSupervisor {
         kind: NativeServiceFailureKind,
         reason: impl Into<String>,
     ) -> NativeServiceOffline {
+        if let Some(current) = self.terminal_offline() {
+            return current;
+        }
         let retryable =
             kind.retryable_by_default() && self.restart_attempt < self.max_restart_attempts;
         if retryable {
@@ -141,10 +144,8 @@ impl NativeServiceSupervisor {
         &mut self,
         offline: NativeServiceOffline,
     ) -> NativeServiceOffline {
-        if self.state == NativeServiceSupervisorState::Offline {
-            if let Some(current) = self.offline.as_ref().filter(|offline| !offline.retryable) {
-                return current.clone();
-            }
+        if let Some(current) = self.terminal_offline() {
+            return current;
         }
         let retryable = offline.retryable && self.restart_attempt < self.max_restart_attempts;
         let recorded = NativeServiceOffline {
@@ -167,6 +168,16 @@ impl NativeServiceSupervisor {
             max_restart_attempts: self.max_restart_attempts,
             offline: self.offline.clone(),
         }
+    }
+
+    fn terminal_offline(&self) -> Option<NativeServiceOffline> {
+        if self.state != NativeServiceSupervisorState::Offline {
+            return None;
+        }
+        self.offline
+            .as_ref()
+            .filter(|offline| !offline.retryable)
+            .cloned()
     }
 }
 
@@ -237,9 +248,19 @@ mod tests {
         );
 
         assert!(!offline.retryable);
+        let retryable_failure =
+            supervisor.record_failure(NativeServiceFailureKind::ProcessExited, "process_exited");
+        assert!(!retryable_failure.retryable);
         assert_eq!(
             supervisor.snapshot().state,
             NativeServiceSupervisorState::Offline
+        );
+        assert_eq!(
+            supervisor.snapshot().offline,
+            Some(NativeServiceOffline {
+                reason: "session_missing".to_string(),
+                retryable: false,
+            })
         );
     }
 
