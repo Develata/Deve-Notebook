@@ -256,8 +256,11 @@ impl DesktopShell {
     ) -> NativePlatformEventEffect {
         let effect = classify_native_platform_event(NativeAdapterPlatform::Desktop, event);
         if effect == NativePlatformEventEffect::RequireForegroundReprobe
-            && !self.is_service_recovery_state()
+            && self.is_service_recovery_state()
         {
+            return NativePlatformEventEffect::NoBusinessStateChange;
+        }
+        if effect == NativePlatformEventEffect::RequireForegroundReprobe {
             self.require_foreground_reprobe();
         }
         effect

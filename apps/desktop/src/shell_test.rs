@@ -215,7 +215,7 @@ fn desktop_service_recovery_state_survives_foreground_events() {
 
     let effect = restarting.handle_platform_event(NativePlatformEventKind::Foreground);
 
-    assert_eq!(effect, NativePlatformEventEffect::RequireForegroundReprobe);
+    assert_eq!(effect, NativePlatformEventEffect::NoBusinessStateChange);
     let restarting_snapshot = restarting.snapshot();
     assert_eq!(
         restarting_snapshot.state,
@@ -239,7 +239,7 @@ fn desktop_service_recovery_state_survives_foreground_events() {
 
     let effect = offline.handle_platform_event(NativePlatformEventKind::Resumed);
 
-    assert_eq!(effect, NativePlatformEventEffect::RequireForegroundReprobe);
+    assert_eq!(effect, NativePlatformEventEffect::NoBusinessStateChange);
     let offline_snapshot = offline.snapshot();
     assert_eq!(offline_snapshot.state, DesktopServiceState::ServiceOffline);
     assert_eq!(offline_snapshot.restarting, None);

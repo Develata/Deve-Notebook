@@ -288,6 +288,8 @@ fn mobile_service_offline_retryability_is_clamped_after_failure_budget() {
 #[test]
 fn mobile_service_recovery_state_survives_lifecycle_events() {
     let mut restarting = bound_shell();
+    restarting.handle_lifecycle_event(MobileLifecycleEvent::Background);
+    assert!(restarting.snapshot().suspended.is_some());
     restarting.mark_service_offline("service_dead", true);
 
     assert_eq!(
@@ -307,6 +309,7 @@ fn mobile_service_recovery_state_survives_lifecycle_events() {
         restarting_snapshot.restarting,
         Some(NativeServiceRestarting { attempt: 0 })
     );
+    assert_eq!(restarting_snapshot.suspended, None);
     assert_eq!(
         restarting
             .recovery_bootstrap_for_web()
@@ -333,6 +336,7 @@ fn mobile_service_recovery_state_survives_lifecycle_events() {
     let offline_snapshot = offline.snapshot();
     assert_eq!(offline_snapshot.state, MobileServiceState::ServiceOffline);
     assert_eq!(offline_snapshot.restarting, None);
+    assert_eq!(offline_snapshot.suspended, None);
     assert_eq!(
         offline
             .recovery_bootstrap_for_web()

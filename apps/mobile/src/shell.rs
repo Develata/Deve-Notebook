@@ -100,6 +100,7 @@ impl MobileShell {
             self.state = MobileServiceState::RuntimeReady;
             self.offline = None;
             self.restarting = None;
+            self.suspended = None;
         }
         ready
     }
@@ -221,6 +222,7 @@ impl MobileShell {
 
     fn require_foreground_reprobe(&mut self) {
         self.state = MobileServiceState::ForegroundReprobe;
+        self.suspended = None;
         self.readiness.auth_status_valid = false;
         self.readiness.node_role_readable = false;
         self.readiness.repo_handshake_complete = false;
@@ -284,5 +286,6 @@ impl MobileShell {
             MobileServiceState::ServiceOffline
         };
         self.offline = Some(offline);
+        self.suspended = None;
     }
 }
