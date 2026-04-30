@@ -43,8 +43,10 @@ pub(super) fn sync_mode_button_state(sync_mode: &str) -> SyncModeButtonState {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AiBackendButtonState {
     pub native_class: &'static str,
+    pub native_disabled: bool,
     pub native_title: String,
     pub trusted_class: &'static str,
+    pub trusted_disabled: bool,
     pub trusted_title: String,
 }
 
@@ -60,6 +62,7 @@ pub(super) fn ai_backend_button_state(
 
     AiBackendButtonState {
         native_class: ai_backend_button_class(native_disabled, native_selected),
+        native_disabled,
         native_title: if native_disabled {
             capabilities
                 .native_reason
@@ -69,6 +72,7 @@ pub(super) fn ai_backend_button_state(
             String::new()
         },
         trusted_class: ai_backend_button_class(trusted_disabled, trusted_selected),
+        trusted_disabled,
         trusted_title: if trusted_disabled {
             capabilities
                 .trusted_cli_reason
@@ -131,8 +135,10 @@ mod tests {
         );
 
         assert_eq!(state.native_class, AI_BACKEND_CLASS_ACTIVE);
+        assert!(!state.native_disabled);
         assert!(state.native_title.is_empty());
         assert_eq!(state.trusted_class, BUTTON_CLASS_DISABLED);
+        assert!(state.trusted_disabled);
         assert_eq!(state.trusted_title, "external agent disabled");
     }
 
@@ -150,8 +156,10 @@ mod tests {
         );
 
         assert_eq!(state.native_class, BUTTON_CLASS_DISABLED);
+        assert!(state.native_disabled);
         assert_eq!(state.native_title, "native AI disabled by config");
         assert_eq!(state.trusted_class, BUTTON_CLASS_IDLE);
+        assert!(!state.trusted_disabled);
         assert!(state.trusted_title.is_empty());
     }
 
@@ -168,7 +176,9 @@ mod tests {
         );
 
         assert_eq!(state.native_class, BUTTON_CLASS_IDLE);
+        assert!(!state.native_disabled);
         assert_eq!(state.trusted_class, AI_BACKEND_CLASS_ACTIVE);
+        assert!(!state.trusted_disabled);
         assert!(state.native_title.is_empty());
         assert!(state.trusted_title.is_empty());
     }

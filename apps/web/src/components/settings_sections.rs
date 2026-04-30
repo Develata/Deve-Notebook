@@ -62,8 +62,6 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 set_trusted_cap.set(fetch_ai_backend_capabilities().await);
             });
         });
-        let native_available = Signal::derive(move || trusted_cap.get().native_available);
-        let trusted_available = Signal::derive(move || trusted_cap.get().trusted_cli_available);
         attach_trusted_cli_fallback(chat.clone(), trusted_cap, locale);
         let button_state = Signal::derive(move || {
             ai_backend_button_state(
@@ -81,10 +79,10 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 <div class="flex gap-2">
                     <button
                         class=move || button_state.get().native_class
-                        disabled=move || !native_available.get()
+                        disabled=move || button_state.get().native_disabled
                         title=move || button_state.get().native_title
                         on:click=move |_| {
-                            if native_available.get_untracked() {
+                            if !button_state.get_untracked().native_disabled {
                                 chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string());
                             }
                         }
@@ -93,10 +91,10 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                     </button>
                     <button
                         class=move || button_state.get().trusted_class
-                        disabled=move || !trusted_available.get()
+                        disabled=move || button_state.get().trusted_disabled
                         title=move || button_state.get().trusted_title
                         on:click=move |_| {
-                            if trusted_available.get_untracked() {
+                            if !button_state.get_untracked().trusted_disabled {
                                 chat.set_ai_mode.set(AI_BACKEND_TRUSTED_CLI.to_string());
                             }
                         }

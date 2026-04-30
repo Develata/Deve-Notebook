@@ -12,6 +12,8 @@ static baseline string checks.
 - Native and Trusted CLI buttons now expose disabled reasons only when that
   backend is unavailable.
 - Available backend buttons no longer carry misleading disabled fallback titles.
+- Class, disabled state, title, and click gate now derive from the same
+  `AiBackendButtonState`, avoiding split UI policy sources.
 - Tests cover native selected, trusted-cli unavailable, native disabled, and
   trusted-cli selected states.
 
