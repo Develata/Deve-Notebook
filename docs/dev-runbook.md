@@ -205,6 +205,7 @@ scripts/check-network-baseline.sh
 scripts/check-cli-settings-baseline.sh
 scripts/check-browser-prefs-boundary.sh
 scripts/check-search-baseline.sh
+scripts/check-rendering-baseline.sh
 scripts/check-ai-baseline.sh
 scripts/check-source-control-baseline.sh
 scripts/check-source-control-smoke-hygiene.sh
