@@ -10,13 +10,11 @@
 
 本节定义了 Web 端作为 **Server Dashboard + WebLightPeer Thin Client** 的特有功能与部署架构。
 
-> **Scope Boundary**: Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，但不承担 Native 端完整离线能力。移动端/桌面端 **MUST** 采用 **Tauri v2 (原生外壳 + 内嵌 WebView)** 方案，提供原生级体验 (Native-feel)。详见 `08_ui_design_02_desktop.md` §4.1 和 `08_ui_design_03_mobile.md` §7.1。
+本章规范性用语统一继承 `01_terminology.md`，不得在子章内重新定义。
 
-## 1. Normative Language (规范性用语)
-*   **MUST**: 绝对要求。
-*   **SHOULD**: 强烈建议。
+> **Scope Boundary**: Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，但不承担 Native 端完整离线能力。移动端/桌面端 **MUST** 采用 **Tauri v2 (原生外壳 + 内嵌 WebView)** 方案，提供原生级体验 (Native-feel)。详见 `08_ui_design_02_desktop.md` §6.1 和 `08_ui_design_03_mobile.md` §9.1。
 
-## 2. Single Binary Distribution (部署架构) {#single-binary-distribution}
+## 1. Single Binary Distribution (部署架构) {#single-binary-distribution}
 
 为了实现“零依赖部署”，CLI 二进制文件 **MUST** 内嵌前端静态资源。
 
@@ -38,7 +36,7 @@ origin。
 $$ \forall path \notin API, Serve(path) \to index.html $$
 这确保了前端路由刷新时不会 404。
 
-### 2.1 Viewport Mapping (视口适配策略)
+## 2. Viewport Mapping (视口适配策略)
 
 *   **Rule**: Web 端 **MUST** 根据视口宽度映射到 Mobile / Desktop 规范。
 *   **Mobile View**: $W_{view} \le 768px$ 时，Web UI **MUST** 与 Mobile UI 规范一致。
@@ -46,7 +44,7 @@ $$ \forall path \notin API, Serve(path) \to index.html $$
 
 ## 3. Server Dashboard
 
-### 2.1 仪表盘布局 (Dashboard Layout)
+### 3.1 仪表盘布局 (Dashboard Layout)
 当访问根路径 `/` 且无特定文档 ID 时，显示系统概览。
 
 **Metrics Visualization**:
@@ -58,7 +56,7 @@ $$ \forall path \notin API, Serve(path) \to index.html $$
 | **Storage Stats** | DB Size, Document Count | On Load |
 | **Actions** | `[New Doc]` `[Sync Now]` | Interactive |
 
-### 2.2 数据协议 (Data Protocol)
+### 3.2 数据协议 (Data Protocol)
 前端与后端通过 WebSocket 交换 `SystemMetrics` 结构体：
 
 ```rust
@@ -70,12 +68,12 @@ struct SystemMetrics {
 }
 ```
 
-### 2.3 安全约束 (Safety Constraints)
+### 3.3 安全约束 (Safety Constraints)
 *   **Disconnect Lockdown**: 当网络断连时，UI **MUST** 立即被遮罩层锁定，禁止任何写操作，并显示重连状态。
 *   **Session Expiry Split**: 当 user session 失效或鉴权被拒绝时，UI **MUST NOT** 继续显示无限重连遮罩；必须切换到明确的登录失效 / 未认证状态。
 *   **RAM-Only**: Dashboard 数据 **MUST NOT** 持久化到 IndexedDB。
 
-### 2.4 Dashboard 路由与权限
+### 3.4 Dashboard 路由与权限
 *   **Route**: `/` (根路径，无 DocId 参数时)。
 *   **Auth**: Dashboard **MUST** 要求已认证身份。未认证访问跳转 Login。
 *   **Data Channel**: 通过现有 WebSocket 连接推送 `ServerMessage::SystemMetrics`。

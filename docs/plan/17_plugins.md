@@ -9,7 +9,7 @@
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
 
 > 本章**不要求新增完整插件平台**。
-> AI Chat 已提升为第 10 章的原生产品能力，不再视为插件主线。
+> AI Chat 归属第 10 章的原生产品能力，不属于插件主线。
 > Rhai/plugin-host 若保留，只能作为外围兼容运行时，并必须按本章边界约束；它不代表插件安装器、插件市场或默认启用的扩展主线成立。
 > 本章保留两类未来扩展：**Trusted External Agent Runtime** 与 **Calculation Runtime**。
 > MCP 不作为 Deve-Notebook 插件/运行时方向；相关扩展需求由 Skills + 受控 CLI 工具调用替代，不再规划也不保留 MCP runtime。

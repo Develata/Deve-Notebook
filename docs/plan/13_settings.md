@@ -10,9 +10,13 @@
 
 本章汇总系统所有配置项，包括环境变量、运行时配置文件 (`config.toml`) 以及快捷键映射。
 
-权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约。基线验收边界只覆盖
-CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settings API 与统一 GUI
-持久化仍是规划目标，不得在验收中伪装成已完成能力。
+权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约。
+
+配置面分为三类：
+
+*   **Runtime Config Contract**：`config.toml` 与环境变量共同决定服务端运行时配置；受支持键 **MUST** 可由 CLI/runtime 读取，写入入口 **MUST** 校验 key、type 与敏感字段边界。
+*   **Browser Preference Contract**：主题、布局、语言、最近命令等 UI 偏好 **MAY** 存入浏览器本地存储，但 **MUST NOT** 承载 repo authority、session secret、peer private key 或业务事实。
+*   **Future Settings Surface**：server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计；启用前 **MUST** 更新本章、feature spec 与 acceptance case。
 
 ## 1. Environment Variables (环境变量)
 
@@ -52,8 +56,8 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 ## 2. Configuration Settings (config.toml) {#configuration-settings}
 
 用户可配置的运行时选项存储在 `config.toml`，并可通过 `deve config print/set` 查看或更新。
-浏览器本地 UI 偏好属于前端本地状态/`localStorage` 管理边界；后续如引入独立设置文件
-或 server-backed Settings API，必须先更新本章和验收用例。
+浏览器本地 UI 偏好属于前端本地状态/`localStorage` 管理边界；若引入独立设置文件
+或 server-backed Settings API，**MUST** 先更新本章和验收用例。
 
 ### 2.1 UI Appearance (界面)
 | Key                        | Type   | Default | Description                                         |

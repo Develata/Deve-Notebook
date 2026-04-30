@@ -303,15 +303,9 @@ overlay state row 至少需要：
 - 当 persisted last scope 指向失效 repo 时，前端必须清理旧 scope 并重新 bootstrap。
 - 不得卡在 `Repository context is invalid` 或 `scope mismatch` 的无限错误态。
 
-## 9. Required Migration Order
+## 9. Implementation Blueprint Reference
 
-1. 所有编辑操作引入稳定 `client_op_id`
-2. `Ack` 回显 `client_op_id`
-3. `EditRejected` 回显 `doc_id + client_op_id`
-4. repo-scoped handshake 显式化
-5. pending set 与 navigation guard 精确绑定
-6. `History / NewOp / Snapshot delta` 补齐 origin metadata
-7. ws/http/sc 写入口统一回到同一 ledger authority
+迁移顺序属于实施蓝图，不属于本章稳定权威合同。实施批次 **SHOULD** 参考 `docs/tasks/20_web_thin_client_ledger_migration.md`，但任何迁移步骤 **MUST** 继续满足本章的 protocol、pending overlay、scope gate 与 structured error 合同。
 
 ## 10. Forbidden Patterns
 
@@ -348,7 +342,7 @@ overlay state row 至少需要：
 
 实现必须把 editor sync、pending overlay、message dispatch 与 navigation guard 收敛到稳定 runtime 链路，不得依赖无边界 effects 协调写入确认。
 
-## 14. Success Criteria
+## 13. Target Verification Criteria
 
 1. Web 切文件不再出现“改动消失但无提示”
 2. reject 后不再留下假 pending

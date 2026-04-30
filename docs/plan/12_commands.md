@@ -11,8 +11,13 @@
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
 权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约，不能反向覆盖
-`01/02/04/05/06/07/09/11` 的硬约束章节。命令是否可验收以 acceptance case 绑定为准；
-未绑定验收的命令只能视为规划目标，不能作为当前发布阻塞项。
+`01/02/04/05/06/07/09/11` 的硬约束章节。
+
+命令面分为三类：
+
+*   **Baseline CLI Contract**：与 core authority、配置读取、诊断和修复直接相关的 CLI surface；启用时 **MUST** fail-closed 并返回结构化错误。
+*   **Optional Bridge Contract**：Git mirror、AI backend、Trusted CLI 等外围能力；启用时 **MUST** 服从对应章节的 authority 边界。
+*   **Future UI Surface**：Command Palette 中未绑定后端能力的入口 **MAY** 以 disabled/unavailable 状态出现，但 **MUST NOT** 伪装成可执行能力。
 
 ## 1. CLI Commands {#cli-commands}
 
@@ -61,10 +66,10 @@
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
     *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
 
-*   **命令验收边界**:
-    *   Command Palette 是否真正执行命令必须以 acceptance case 绑定为准；本章列名不等于功能已完成。
-    *   CLI-only notice 只能作为可发现性入口，不得被解释为 Web 已能直接执行 Git import/push/repair。
-    *   Git repair 的可点击 UI、完整 conflict UI 与后台自动 repair 都必须另行设计，不能从 notice 或只读 review surface 隐式升级。
+*   **命令执行边界**:
+    *   Command Palette 入口启用时 **MUST** 调用明确 backend contract；未启用时 **MUST** 显示 disabled/unavailable 状态。
+    *   CLI-only notice 只能作为可发现性入口，**MUST NOT** 被解释为 Web 已能直接执行 Git import/push/repair。
+    *   Git repair 的可点击 UI、完整 conflict UI 与后台自动 repair **MAY** 作为 future UI surface 另行设计；只读 notice 或 review surface **MUST NOT** 隐式升级为 Git writer。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

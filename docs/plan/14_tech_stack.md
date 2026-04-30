@@ -44,7 +44,7 @@ Graph 技术路线分为只读 projection 与可选 renderer 两层：
 - Core graph projection 只能从当前 repo 的 Markdown projection 派生节点、已解析边与未解析链接。
 - CLI/HTTP adapter 只能导出只读 graph projection JSON，不得写 ledger、workspace、search index、source-control state 或 `.git/.notegit`。
 - Web renderer gate 默认关闭；summary、count 或只读 review UI 不等价于高性能图渲染器。
-- 间接前端依赖（例如由 Mermaid 带来的 d3 包）不得被解释为 Graph renderer gate 已打开。
+- 间接前端依赖（例如由 Mermaid 带来的 d3 包）不得被解释为 Graph renderer gate 已显式启用。
 
 未来若重新打开 Graph renderer gate，必须作为独立 dependency/performance batch 处理，并满足：
 
@@ -119,7 +119,7 @@ Native packaging dependency gate 默认关闭：
 `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY` 固定为
 `DeferredUntilRuntimeBatch`，真实 `tauri` / `tauri-build` dependency 不允许进入默认
 workspace 构建。Desktop/Mobile packaging scaffold 只记录 planned
-capabilities 与 forbidden authorities；它不是 gate 已打开的证明。
+capabilities 与 forbidden authorities；它不是 gate 已显式启用的证明。
 
 真实 native process adapter 必须推迟到 packaging gate 之后：
 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY` 固定为 `DeferredUntilPackagingGate`，

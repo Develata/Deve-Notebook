@@ -1,7 +1,14 @@
 # AI 双通道边界 (Dual-Channel AI Boundary)
 
-> 本文只定义 Native AI Chat 与 Trusted External Agent Bridge 的目标边界；权威约束以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
-> Native AI Chat 是默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
+## Metadata
+
+- `Layer`: `Peripheral / Design Note`
+- `Status`: `Non-Authoritative Design Note`
+- `Counterpart Plan`: `docs/plan/10_ai_agent.md`, `docs/plan/17_plugins.md`
+- `Primary Code Areas`: `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`
+
+> 本文只汇总 Native AI Chat 与 Trusted External Agent Bridge 的目标边界，**MUST NOT** 引入独立规范；权威约束以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
+> 启用 AI 功能时，Native AI Chat 是默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
 
 | 通道 | 定位 | 运行时开销目标 | 适用场景 |
 |------|------|---------------|----------|

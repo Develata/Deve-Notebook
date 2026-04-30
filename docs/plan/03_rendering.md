@@ -160,36 +160,43 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - `==highlight==` 不进入受支持语义集合
 - 任意 HTML 不得当成通用渲染通道
 
-### 4.4 Target Syntax Whitelist
+### 4.4 Baseline Syntax Whitelist
 
-目标块级支持集合：
+Baseline contract 的块级支持集合：
 
 - headings
 - paragraphs
 - blockquotes
-- callouts / admonitions（`> [!NOTE]` 等）
 - lists
 - fenced code
-- indented code
 - tables
 - horizontal rules
 - math blocks
 - mermaid fenced blocks
-- footnote definitions
 - limited HTML block allowlist（如 `<br>`）
 
-目标行内支持集合：
+Baseline contract 的行内支持集合：
 
 - code span
 - math
-- links / autolinks / wikilinks
+- links / autolinks
 - images
 - emphasis / italic / strikethrough
-- emoji shortcode
-- footnote refs
 - escaping
 
-验收只能覆盖 `1.1 当前阶段边界` 中定义的可证明范围。目标集合中的 footnote、wikilink、emoji shortcode、完整 preview projection 等条目在实现、测试与 feature 验收同步补齐前，均属于规划目标。
+### 4.5 Extended Syntax Target
+
+以下语法属于 extended target，未绑定测试与验收前 **MAY** 保留在蓝图中，但 **MUST NOT** 作为 baseline contract 或发布阻塞项：
+
+- callouts / admonitions（`> [!NOTE]` 等）
+- indented code
+- footnote definitions / refs
+- wikilinks
+- emoji shortcode
+- `==highlight==`
+- 完整 preview projection / Live Preview / Milkdown
+
+验收只能覆盖 `1.1 Rendering Capability Boundary` 中定义的可证明范围。extended target 进入 baseline 前，必须同步补齐实现、测试、feature 行为说明与 acceptance case。
 
 ## 5. Source-First Contract
 

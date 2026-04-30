@@ -3,24 +3,24 @@
 ## Metadata
 
 - `Layer`: `Peripheral / Deferred`
-- `Status`: `Deferred`
+- `Status`: `Optional Product Layer`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
 - `Related Design Notes`: [`docs/ai-chat-streaming.md`](../ai-chat-streaming.md) (streaming bridge design), [`docs/plan/plugins/agent_bridge/01_agent_bridge.md`](./plugins/agent_bridge/01_agent_bridge.md) (dual-channel architecture)
 
-> AI 能力是 Deve-Notebook 的**第一方原生产品层**，不再归入插件章节。
-> 默认目标是**最小原生 AI Chat**；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
+> AI 能力是 Deve-Notebook 的**可选第一方产品层**，不再归入插件章节。
+> 当 AI 功能启用时，默认后端 **MUST** 是最小原生 AI Chat；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
 > 若无法建立明确的安全边界，外部 CLI Agent **MUST NOT** 默认启用；对应 release **MAY** 完全不提供该能力。
 > MCP 不进入 Deve-Notebook 产品实现路线；相关扩展需求应由 Skills + 受控 CLI 工具调用替代，不再规划 MCP runtime，代码层也不得保留 MCP runtime / manager / host tool 入口。
 
 ## 1. Scope (目标与范围)
 
-*   **目标**：在 768 MB 约束下提供一个可用、可控、可解释的 AI 入口。
+*   **目标**：在 768 MB 约束下提供一个可用、可控、可解释的可选 AI 入口。
 *   **主线能力**：
-    - **Native AI Chat**：最小原生聊天能力，支持读取当前 Markdown/上下文并回答。
+    - **Native AI Chat**：启用 AI 功能时的最小原生聊天能力，支持读取当前 Markdown/上下文并回答。
     - **Native Modes**：原生支持 `PLAN` / `BUILD` 两种聊天模式。
-    - **Trusted External Agent Bridge**：仅作为高级可选模式预留，不视为当前发布主线。
+    - **Trusted External Agent Bridge**：仅作为高级可选模式预留，不视为核心主线。
 *   **明确不在当前范围内（Out of Scope for Now）**：
     - 原生 MCP 集成；该方向由 Skills / 受控 CLI 工具调用替代
     - 原生 Skills 装载
@@ -37,11 +37,11 @@ MCP 不进入 Deve-Notebook 的实现路线，也不进入 Native AI Chat 或 Tr
 
 ## 2. Native AI Chat {#native-ai-chat-runtime}
 
-Native AI Chat 是默认第一方 AI 形态，属于内建能力。
+Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建可选能力。
 
 ### 功能边界
 
-*   **MUST** 支持：
+*   启用 Native AI Chat 的 release **MUST** 支持：
     - 单轮/多轮 chat
     - 读取当前打开的 Markdown 文档
     - 读取必要的只读上下文（当前 repo、当前文件、用户显式附加的片段）
@@ -122,7 +122,7 @@ Native AI Chat 是默认第一方 AI 形态，属于内建能力。
 
 前端仍共享同一套 Chat UI，但产品语义要清楚区分：
 
-*   **Native AI Chat**：安全基线，默认模式。
+*   **Native AI Chat**：启用 AI 功能时的安全基线与默认模式。
 *   **Trusted CLI Agent**：高级模式，明确标记为外部受信任代理。
 *   **Native PLAN / BUILD**：属于 Native AI Chat 内部的交互模式，不等于外部 Agent Runtime。
 
@@ -137,7 +137,7 @@ Native AI Chat 是默认第一方 AI 形态，属于内建能力。
 
 | 能力 | 常驻内存 | 按需内存 | 定位 |
 |------|---------|----------|----------|
-| Native AI Chat | 轻量级 | SSE / provider response buffer | 默认第一方基线 |
+| Native AI Chat | 轻量级 | SSE / provider response buffer | 启用 AI 功能时的第一方基线 |
 | Trusted CLI Agent | 0 MB | 取决于外部 CLI | 可选，默认关闭 |
 
 ## 6. Related Configuration (本章相关配置)

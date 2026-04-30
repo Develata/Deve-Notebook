@@ -13,7 +13,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `coverage-matrix.md`: stable chapter mapping across the three layers
 - `overview/`: cross-layer architecture view (doc-derived + code-derived lisp + diff + SVG)
 - `report/`: time-stamped gap analyses, audits, and progress snapshots (non-authoritative)
-- `tasks/`: implementation blueprints for infra-first restructuring (18, 19)
+- `tasks/`: implementation blueprints for infra-first restructuring and migration batches
 
 ## Key Files
 

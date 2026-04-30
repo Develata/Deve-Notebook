@@ -47,7 +47,7 @@
     *   **Input Handling**: 非 Linux 平台接收到的任何路径输入 **MUST** 在第一时间转换为 Linux 风格路径（Forward Slash `/`）。
     *   **Execution**: 内部逻辑与命令执行 **MUST** 仅针对 Linux 路径格式编写。
     *   **Adapter**: 仅在最终调用 OS API 时，通过 Adapter 还原为平台原生格式。
-*   **Code Modularity & Documentation (模块化与文档铁律)**：所有代码文件 **MUST** 保持高度模块化（单一职责）；文件头部 **MUST** 包含中文注释块，明确说明：(1) 本文件的架构作用；(2) 核心功能清单；(3) 是否属于核心必选路径 (Core MUST) 或可选扩展 (Optional)。
+*   **Code Modularity & Documentation (模块化与文档铁律)**：代码文件 **MUST** 按职责边界、API 边界或重复基础设施保持内聚；核心模块 **SHOULD** 包含中文文档注释，说明架构作用、核心职责与所属能力层级。实现 plan 条款的 Rust 模块 **MUST** 遵守 `docs/plan/AGENTS.md` 的 `plan_ref` 注解规则。
 *   **UUID-First Retrieval (UUID 优先核心约束)**:
     *   **Rule**: 后端对于任意 File/Folder/Repo 的操作，**MUST** 仅通过 UUID 完成，严禁直接使用 File Path 作为主键。
     *   **Resolution Flow**: 前端传递 `Name` -> 后端查询映射表 (`Name` -> `UUID`) -> 执行业务逻辑。

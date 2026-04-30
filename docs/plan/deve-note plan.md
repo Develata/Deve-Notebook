@@ -45,6 +45,7 @@
 ### F. Implementation Blueprints
 - **[../tasks/18_infra_runtime.md](../tasks/18_infra_runtime.md)**: infra-first 模块拆分与运行时边界收敛蓝图。
 - **[../tasks/19_repo_refactor_blueprint.md](../tasks/19_repo_refactor_blueprint.md)**: 仓库重构迁移顺序与目录调整蓝图。
+- **[../tasks/20_web_thin_client_ledger_migration.md](../tasks/20_web_thin_client_ledger_migration.md)**: Web thin-client ledger 写入链路迁移顺序。
 
 ---
 
@@ -55,7 +56,8 @@
 *   **Current MUST（当前硬约束）**：`01`、`02`、`04`、`05`、`06`、`07`、`09`、`11`。这些章节定义当前实现必须满足的不变量、协议约束与错误契约。
 *   **Current UI Contract（当前界面契约）**：`03`、`08`。这些章节定义当前交互与可见行为的工程实现，但不得改写 Ledger / Auth / Network 的权威规则。
 *   **Approved Runtime Architecture（已批准运行时架构）**：`16`，以及 `04/06/07` 中的 Node/Path Ledger Facts 收敛路线。当 `04/05/07/09/11` 在 Web 写路径上存在交叉时，以 `16` 的 Web 收敛规则为准；当路径、树结构与 Source Control commit 存在交叉时，以 `04/06/07` 的 Node-first 约束为准。
-*   **Planned / Optional（规划或扩展）**：`10`、`12`、`13`、`14`、`15`、`17`。这些章节可指导实现，但不得反向推翻 Current MUST。
+*   **Optional Product Layer（可选产品层）**：`10` 定义 Native AI Chat 的启用后合同，以及 Trusted CLI Agent 的显式 opt-in 边界；它不得反向推翻 Current MUST，也不得成为核心数据路径的隐式依赖。
+*   **Planned / Optional（规划或扩展）**：`12`、`13`、`14`、`15`、`17`。这些章节可指导实现，但不得反向推翻 Current MUST。
 
 ### 文档分层
 

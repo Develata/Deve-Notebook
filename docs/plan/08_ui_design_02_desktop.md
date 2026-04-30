@@ -8,15 +8,15 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
 
-本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。
+本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。规范性用语统一继承 `01_terminology.md`，不得在子章内重新定义。
 
-> **Current Native Boundary**：Desktop native 是壳层与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
+> **Current Native Boundary**（当前原生边界）：Desktop native 是壳层与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
 > **Post-Gate Target**：Desktop 端目标采用 **Tauri v2 native packaging** 外壳，前端代码与 Web 端共享。
 > **离线目标**：Desktop 端目标是在无公网环境下保持本地编辑可用；完整 offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
 
 > **Web 映射**：当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
-## 0. 原生适配器边界 {#desktop-current-native-boundary}
+## 1. 原生适配器边界 {#desktop-current-native-boundary}
 
 Desktop native adapter 的边界如下：
 
@@ -28,7 +28,7 @@ Desktop native adapter 的边界如下：
 *   Native adapter **MUST NOT** 重新定义 Ledger/Vault authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。
 *   UI readiness **MUST** 等待内嵌服务完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
 
-### 0.1 Minimal Native Adapter Contract {#desktop-native-adapter-contract}
+### 1.1 Minimal Native Adapter Contract {#desktop-native-adapter-contract}
 
 Desktop native adapter 是进程与平台壳层，不是业务 authority。第一阶段只允许把现有
 Web shell 绑定到本机受控 service，并把 runtime 状态结构化交给 Web/application
@@ -36,9 +36,9 @@ control。
 
 Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
 
-### 0.2 Desktop Packaging Scaffold {#desktop-packaging-scaffold}
+### 1.2 Desktop Packaging Scaffold {#desktop-packaging-scaffold}
 
-Desktop packaging scaffold 只描述首个桌面壳层批次，不等价于 packaging gate 已打开：
+Desktop packaging scaffold 只描述桌面壳层的 post-gate 目标能力，**MUST NOT** 被解释为 packaging gate 已显式启用：
 
 *   dependency batch: `tauri` + `tauri-build`，只能落在 Desktop native adapter 的 feature scope。
 *   capabilities: window shell、menu bar、system tray、installer、auto-update。
@@ -50,12 +50,12 @@ Desktop packaging scaffold 只描述首个桌面壳层批次，不等价于 pack
 在真正添加 Tauri dependency 前，`scripts/check-native-track-boundary.sh` 必须继续阻止
 Cargo dependency/import 泄漏。
 
-### 0.2.1 Desktop Packaging Dependency Gate Decision {#desktop-packaging-dependency-gate-decision}
+### 1.3 Desktop Packaging Dependency Gate {#desktop-packaging-dependency-gate-decision}
 
-默认决策：Desktop packaging dependency gate **不打开**；真实 `tauri` / `tauri-build`
-dependency 推迟到独立运行时批次处理。
+Desktop packaging dependency gate 默认关闭；在 gate 未经单独设计、评审与验收前，真实 `tauri` / `tauri-build`
+dependency **MUST NOT** 进入默认 workspace 构建。
 
-策略锚点：
+Gate policy 必须满足：
 
 *   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
     DeferredUntilRuntimeBatch`
@@ -64,21 +64,9 @@ dependency 推迟到独立运行时批次处理。
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-原因：
+Gate 打开时 **MUST** 先更新 `scripts/check-native-track-boundary.sh` 的允许规则，并保持默认构建 no-Tauri、依赖只在 Desktop native adapter feature 后、packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority。
 
-*   Desktop shell、supervisor、process-adapter decision 都仍处于 contract/skeleton 层；
-    现在打开 Tauri dependency 会把窗口 runtime、菜单/托盘、安装包、auto-update 与
-    service supervision 一次性耦合，回归面过大。
-*   仓库仍需要保持低成本 `cargo test -p deve_desktop` default build；真实 Tauri
-    dependency 应作为单独批次接受更重的平台构建、安装包与签名验收。
-*   packaging scaffold 继续保留 dependency batch 规划，作为后续打开 gate 的输入；
-    scaffold 不是 dependency gate 已打开的证明。
-
-后续若打开 gate，必须先更新 `scripts/check-native-track-boundary.sh` 的允许规则，并保持：
-默认构建 no-Tauri、依赖只在 Desktop native adapter feature 后、packaging 不获得
-ledger/vault/source-control/search/`.git`/`.notegit` authority。
-
-### 0.3 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
+### 1.4 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 
 Desktop native supervisor contract 只固定 supervisor 状态机与 failure 分类，避免后续 Tauri/process integration
 把 service readiness 与业务写权限混在一起：
@@ -150,28 +138,18 @@ NativeColdStart
 *   native 层不得直接操作 `.notegit/` 或 `.git/` 来伪造 source-control 成功。
 *   native 层不得把平台 online/offline、窗口焦点或 Tauri lifecycle 事件解释成业务可写状态。
 
-**Acceptance before native implementation**:
+**Pre-Gate Acceptance Contract**:
 
 *   service bind 失败时显示恢复入口，不进入半可写 UI。
 *   session invalid 时进入 `Unauthorized` 并停止普通重连。
 *   network offline 但 service/session/writer ready 时，本地编辑继续可用。
 *   resume/restart 后必须重新握手，stale `scope_nonce` 写入被拒绝。
 
-### 0.4 Process Adapter Decision {#desktop-process-adapter-decision}
+### 1.5 Process Adapter Gate {#desktop-process-adapter-decision}
 
-默认决策：真实 desktop process adapter **不进入** 默认 no-Tauri skeleton。
+Desktop process adapter gate 默认关闭；在 gate 未经单独设计、评审与验收前，真实 desktop child-process runtime **MUST NOT** 进入默认 no-Tauri skeleton。
 
-原因：
-
-*   supervisor contract 必须先固定 readiness/failure/session handoff 语义；过早加入真实
-    child-process runtime 会把 process lifecycle、packaging runtime、platform
-    permission 与 service authority 过早耦合。
-*   默认 skeleton 的工程价值是快速验证 endpoint/session/bootstrap/write-gate 边界；
-    若在该层启动真实后端进程，单元测试会变成集成进程测试，失去低成本回归能力。
-*   子进程 stdout/stderr、crash、signal、port reuse、profile/config/vault/ledger 参数选择
-    都需要 packaging/runtime 批次统一处理；不能由 shell skeleton 临时实现。
-
-策略锚点：
+Gate policy 必须满足：
 
 *   `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
     DeferredUntilPackagingGate`
@@ -179,7 +157,7 @@ NativeColdStart
 *   `packaging_gate_required = true`
 *   `authority_writes_allowed = false`
 
-后续若打开真实 process adapter，必须满足：
+真实 process adapter 打开时必须满足：
 
 *   仍只落在 Desktop native adapter 的 `native-packaging` feature 后，不得进入 workspace
     root、core、cli 或 web 默认构建。
@@ -187,10 +165,6 @@ NativeColdStart
     wiring；不得直接写 ledger/vault/source-control/search/`.git`/`.notegit`。
 *   所有可写 UI 仍由 server/core 的 repo scope、writer-ready 与 `scope_nonce` 决定；
     process running 不等于 writable。
-
-## 1. Normative Language (规范性用语)
-*   **MUST**: 绝对要求。
-*   **SHOULD**: 强烈建议。
 
 ## 2. The Cockpit Concept (布局哲学)
 
@@ -203,7 +177,7 @@ NativeColdStart
 
 ## 3. Dynamic Grid System
 
-### 2.1 布局定义 (Layout Definition)
+### 3.1 布局定义 (Layout Definition)
 系统采用 5 列动态网格布局。形式化定义如下：
 
 $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{chat}] $$
@@ -215,7 +189,7 @@ $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{cha
     grid-template-columns: var(--w-sidebar) var(--w-diff) 1fr var(--w-outline) var(--w-chat);
     ```
 
-### 2.2 布局可视化 (Visualization)
+### 3.2 布局可视化 (Visualization)
 
 **Main Workbench Structure**:
 
@@ -225,7 +199,7 @@ $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{cha
 | **Body**   | File Tree         | Read-Only     | Writable     | H1..H6        | Chat Log          |
 | **Resize** | `[||]` Handle     | -             | -            | -             | `[||]` Handle     |
 
-### 2.3 组件规范 (Component Specs)
+### 3.3 组件规范 (Component Specs)
 
 *   **Primary Sidebar (Col 1)**:
     *   **Behavior**: **MUST** 支持拖拽调整宽度 (`180px` ~ `500px`)。
@@ -250,14 +224,14 @@ $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{cha
 
 ## 4. Source Control UI
 
-### 3.1 视图结构 (View Structure)
+### 4.1 视图结构 (View Structure)
 定义源代码管理视图 $V_{sc}$ 为三个集合的并集：
 $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 
 *   **Staged ($S_{staged}$)**: 已暂存的文件集合。支持 `Unstage All`。
 *   **Unstaged ($S_{unstaged}$)**: 工作区的脏文件集合。支持 `Stage All` / `Discard All`。
 
-### 3.2 变更状态可视化
+### 4.2 变更状态可视化
 每个变更项 $Item \in V_{sc}$ **MUST** 使用语义化颜色标记状态：
 
 *   **Modified ($M$)**: Orange (`var(--color-modified)`).
@@ -270,65 +244,64 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 *   `view.layout.toggle_diff`: 切换 Diff/Editor 模式。
 *   `git.stage_all`: 暂存所有更改。
 
-## 6. Implementation Strategy
+## 6. Post-Gate Implementation Target
 
-### 4.1 跨平台 UI 方案
+### 6.1 跨平台 UI 方案
 
-本节是 **post-gate normative target**：只有当 `native-packaging` 与 process adapter gate
-被显式打开后，以下 Tauri/embedded-service 规则才进入验收；默认 no-Tauri skeleton
-仍以 §0 的原生适配器边界为准。
+本节是 post-gate normative target：只有当 `native-packaging` 与 process adapter gate
+被显式打开后，以下 Tauri/embedded-service 规则才进入验收；pre-gate 边界以 §1 为准。
 
 *   **Rule**: Desktop post-gate 采用 **Tauri v2 (WebView)** 作为跨平台外壳，前端代码与 Web 端共享。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致。
 *   **Note**: "原生 UI" 在此指用户体验层面（窗口管理、菜单栏、系统托盘等），而非技术实现层面。
 
-### 4.2 内嵌服务 (Embedded Service)
+### 6.2 内嵌服务 (Embedded Service)
 *   **Rule**: post-gate 后端服务 **MUST** 内嵌并由桌面端进程拉起。
 *   **Local API**: 前端与服务通信 **MUST** 走本机回环或进程内通道。
 
-### 4.2.1 服务启动流程 (Service Boot)
+### 6.2.1 服务启动流程 (Service Boot)
 *   **Rule**: post-gate Desktop App 启动 **MUST** 先拉起内嵌服务，再启动 UI。
 *   **Port**: 端口 **MUST** 使用本机随机可用端口并保存在运行时内存中。
 *   **Lifecycle**: 关闭主窗口 **SHOULD** 提供安全退出或后台驻留选项。
 *   **Port Conflict**: 若端口占用，**MUST** 自动回退到新的可用端口并重新绑定。
 
-### 4.2.2 本地通信策略 (Local IPC)
+### 6.2.2 本地通信策略 (Local IPC)
 *   **Default**: 本机回环 HTTP/WS（`127.0.0.1`）优先。
 *   **Fallback**: 若平台限制端口访问，**MUST** 提供进程内通道 (IPC) 替代方案。
 *   **Security**: 本地通信 **MUST** 禁止跨进程未授权访问。
 *   **Auth**: IPC **MUST** 具备进程级鉴权与会话绑定。
 
-### 4.2.3 端口绑定安全 (Port Binding Security)
+### 6.2.3 端口绑定安全 (Port Binding Security)
 *   **Rule**: 服务端 **MUST** 仅监听 `127.0.0.1`。
 *   **Firewall**: **SHOULD** 显式阻断非回环访问。
 
-### 4.3 离线优先 (Offline-First)
+### 6.3 离线优先 (Offline-First)
 *   **Rule**: post-gate 无公网时 **MUST** 保证本地编辑能力；完整本地索引能力仍受 profile、search feature 与资源预算约束。
 *   **Sync**: 恢复网络后增量同步，冲突策略以本地优先。
 
-### 4.3.1 数据持久化 (Persistence)
+### 6.3.1 数据持久化 (Persistence)
 *   **Rule**: 所有内容 **MUST** 落盘到本地数据库与 Vault。
 *   **Crash Safety**: 崩溃后 **MUST** 可恢复到最后一次持久化状态。
 *   **Migration Boundary**: 桌面端 UI **MUST NOT** 自行定义存储迁移语义；涉及 Ledger / Vault Schema 的升级必须遵循 `04_storage.md` 的 `Copy & Rebuild` 策略，失败时进入显式恢复流程而不是静默自动回滚。
 
-### 4.3.2 加密策略 (Encryption)
+### 6.3.2 加密策略 (Encryption)
 *   **At-Rest**: 本地存储 **MUST** 支持加密（密钥绑定设备安全模块）。
 *   **In-Memory**: 解密后的明文 **SHOULD** 尽量短时保留。
 *   **Key Rotation**: **MUST** 支持密钥轮换与失效，轮换过程不得破坏现有数据。
 *   **Recovery**: **MUST** 提供密钥恢复策略，避免单点损坏。
 
-### 4.3.3 备份与导出 (Backup & Export)
+### 6.3.3 备份与导出 (Backup & Export)
 *   **Backup**: **MUST** 支持本地加密备份。
 *   **Export**: **SHOULD** 支持单文档/全量导出。
 
-### 4.3.4 权限与审计 (Permissions & Audit)
+### 6.3.4 权限与审计 (Permissions & Audit)
 *   **Rule**: 本地操作 **MUST** 具备最小权限原则。
 *   **Audit**: **SHOULD** 记录关键操作日志（创建/删除/导出/恢复）。
 
-### 4.3.5 恢复演练 (Recovery Drill)
+### 6.3.5 恢复演练 (Recovery Drill)
 *   **Rule**: 版本升级 **SHOULD** 提供可执行的恢复演练流程。
 *   **Goal**: 发生故障时可快速回退到稳定版本。
 
-### 4.4 体积与性能约束 (Size & Performance)
+### 6.4 体积与性能约束 (Size & Performance)
 *   **Size**: 体积 **MUST** 控制在可接受范围，避免 UI 框架臃肿。
 *   **Perf**: 启动速度与输入延迟优先于视觉特效。
