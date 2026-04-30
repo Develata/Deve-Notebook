@@ -72,6 +72,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest Git import resolved roundtrip smoke: `git-import-resolved-roundtrip-smoke-2026-05-01.md`
 - Latest Git import resolved CLI roundtrip smoke: `git-import-resolved-cli-roundtrip-smoke-2026-05-01.md`
 - Latest Git import/export/push publish smoke: `git-import-export-push-publish-smoke-2026-05-01.md`
+- Latest Git mirror import/export/push drift rescan: `git-mirror-import-export-push-drift-rescan-2026-05-01.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 
 ## Archive Contents

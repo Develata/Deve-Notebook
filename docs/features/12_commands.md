@@ -44,6 +44,12 @@
 - 下一阶段若加入可点击 repair UI，Command Palette 只能进入 repair review flow，不能绕过 Source Control gate 直接写 Git。
 - 可执行 repair 必须要求 manual confirmation；confirmation 前只能展示诊断、subject、next step 与 copyable retry command。
 
+### 5. Git Mirror Import/Export/Push Command Chain
+
+- 当前 resolved import 发布链路必须通过 CLI 显式执行：`deve_cli git import --apply` 只写 pending/import；Source Control resolved stage/commit 生成 Deve commit；`deve_cli git export` 建立 Git mirror mapping；`deve_cli git push` 发布已映射 Git HEAD。
+- `deve_cli git push` 必须 fail-closed 于未导出的 queued/out_of_sync mirror record、dirty Git worktree、dirty Deve Source Control、未映射 Git HEAD 或 remote/branch 配置错误。
+- Web Command Palette 只能显示 Git import / push / repair 的 CLI-only notice，不得直接触发 Git writer。
+
 ## 非目标
 
 - 当前阶段不允许只有显示层按钮能做、命令层做不到的核心能力。

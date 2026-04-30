@@ -98,11 +98,16 @@
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_guidance_for_all_repair_actions -- --nocapture
     - run: cargo test -p deve_cli test_git_mirror_repair_review_is_readonly_record_source -- --nocapture
+    - run: cargo test -p deve_cli git_import_apply_resolved_commit_exports_roundtrip -- --nocapture
+    - run: cargo test -p deve_cli git_import_export_push_resolved_publish_roundtrip -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
   assertions:
     - ui_assert: source_control_commit_available true
     - ui_assert: source_control_commit_and_push_available true
     - ui_assert: command_palette_git_sync_absent true
+    - ui_assert: git_import_apply_pending_only true
+    - ui_assert: git_push_dirty_worktree_blocker true
+    - ui_assert: git_push_unexported_queue_blocker true
     - ui_assert: command_palette_git_commit_absent true
     - ui_assert: command_palette_git_import_cli_notice_available true
     - ui_assert: command_palette_git_push_cli_notice_available true

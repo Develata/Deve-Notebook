@@ -135,7 +135,7 @@ Git mirror 是 first-class bridge，而不是 authority 替代品：
 - Git mirror update MAY 执行 `git add -A` 与 Git commit，并在 commit message / notes / trailer 中记录 `Deve-Commit-Id`、`ledger_seq`、`repo_id` 等映射。
 - Git mirror 失败 MUST NOT rollback 已成功的 Deve ledger commit；系统必须标记 `GitMirrorOutOfSync`，并提供 retry / repair / status 可观测路径。
 - 外部 `git checkout/reset/pull/rebase` 造成的工作区变化只能进入 pending/import 路径，MUST NOT 自动反向改写 ledger authority。
-- Git import 必须生成 Deve ledger facts；Git export 不得反向改写 ledger authority。
+- Git import 只能进入 pending/import；只有后续 Deve stage/commit 才能生成 ledger facts。Git export/push 不得反向改写 ledger authority。
 
 ### 3.3 Collision Rules
 

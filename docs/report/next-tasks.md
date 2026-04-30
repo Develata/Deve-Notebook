@@ -9,10 +9,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git mirror import/export/push docs-code drift rescan | P2 | `docs/plan`, feature/acceptance docs, command-layer Git mirror smoke coverage | Verify plan and report wording matches the current resolved import/export/push chain, including CLI-only Git writer boundaries, dirty-worktree blocker, unexported queue blocker, and `.notegit` authority |
+| 1 | Git mirror command smoke cohesion review | P2 | command-layer Git mirror smoke files and docs baseline | Review `git_import_smoke_test.rs` cohesion after import/export/push additions, verify hard-fuse margin, and decide whether to split helpers before selecting the next implementation domain |
 
 ## 最近完成基线
 
+- P2 Git mirror import/export/push docs-code drift rescan 已关闭：修正 `Git import 必须生成 ledger facts` 的过时表述，并把 resolved import/export/push 链路、未导出 queue blocker、dirty Git worktree blocker 同步到 plan/features/acceptance，详见 `git-mirror-import-export-push-drift-rescan-2026-05-01.md`。
 - P2 Git import/export/push resolved publish smoke 已关闭：新增命令层 publish smoke，覆盖 resolved import 后未 export push blocker、export 后 dirty worktree push blocker、清理后 push 到 bare remote 且 remote ref 匹配 mirror record，详见 `git-import-export-push-publish-smoke-2026-05-01.md`。
 - P2 Git import resolved CLI roundtrip smoke 已关闭：新增命令层 smoke，覆盖 `git import --apply` imported conflict、Source Control resolved stage/commit、`git export` mirror mapping 与 clean Git HEAD，详见 `git-import-resolved-cli-roundtrip-smoke-2026-05-01.md`。
 - P2 Git import resolved commit/export roundtrip smoke 已关闭：新增 server/runtime smoke，覆盖 mapped baseline 下 imported conflict `KeepFs` 解决、Source Control commit handler、Git export mapping 与 clean Git HEAD；pending/staged/import conflict metadata 均无残留，详见 `git-import-resolved-roundtrip-smoke-2026-05-01.md`。

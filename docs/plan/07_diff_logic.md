@@ -109,8 +109,11 @@ facts。`deve_cli git import --apply` 当前只在无 blocker 时把安全 chang
 或 ledger facts。`deve_cli git push` 当前只发布已导出的 `.git` mirror：它要求 mirror
 ready、Source Control clean、Git worktree clean、无 queued/out_of_sync mirror record，且当前
 Git HEAD 映射到最新 `GitMirrorCommitted` record；远端推送失败只作为 blocker 输出，不写
-ledger facts 或 `.notegit`。自动后台执行、完整 repair UI 与 Command Palette import/push UI
-仍是后续实现。
+ledger facts 或 `.notegit`。resolved Git import 当前已有命令层验收链路：
+`deve_cli git import --apply` 写入 pending/import，Source Control resolved stage/commit 生成新的
+Deve commit，`deve_cli git export` 建立 Git mirror mapping，`deve_cli git push` 才能发布该
+已映射 Git HEAD；未导出的 queued record 与 dirty Git worktree 都必须 fail-closed 且不得创建
+或更新远端分支。自动后台执行、完整 repair UI 与 Command Palette import/push UI 仍是后续实现。
 
 ### 2.4 Diff Identity Model
 
