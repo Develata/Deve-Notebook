@@ -50,11 +50,36 @@ vault_path = "vault"
 # P2P Sync Mode (auto | manual)
 sync_mode = "auto"
 
+# Merge Strategy (manual | auto)
+merge_strategy = "manual"
+
 # Performance Tuning
 # Number of changes to keep in history
 snapshot_depth = 100
 # Background compression concurrency
 concurrency = 4
+
+[ui]
+locale = "auto"
+theme = "auto"
+sidebar_visible = true
+statusbar_visible = true
+outline_visible = true
+outline_width = 260
+sidebar_width = 250
+right_panel_width = 350
+outer_gutter = 16
+recent_commands_count = 3
+recent_docs_count = 10
+
+[ai]
+mode = "native"
+native_enabled = true
+
+[ai.agent_bridge]
+enabled = false
+trusted = false
+timeout_ms = 30000
 "#;
         std::fs::write(config_path, default_config)?;
         println!("Created default 'config.toml'");
@@ -70,6 +95,10 @@ concurrency = 4
 # DEVE_LEDGER_DIR=ledger
 # DEVE_VAULT_PATH=vault
 # DEVE_SYNC_MODE=auto
+# AI_API_KEY=
+# AI_BASE_URL=https://api.openai.com/v1
+# AI_MODEL=gpt-4o-mini
+# AGENT_CLI_PATH=
 "#;
         std::fs::write(env_path, default_env)?;
         println!("Created default '.env'");
@@ -87,6 +116,29 @@ fn checked_exists(path: &Path, context: &str) -> anyhow::Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::run;
+
+    #[test]
+    fn init_config_template_matches_current_settings_schema() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+
+        run(
+            &root.join("ledger"),
+            &root.join("vault"),
+            root.to_path_buf(),
+            8,
+        )
+        .expect("init");
+
+        let config = std::fs::read_to_string(root.join("config.toml")).expect("config");
+        assert!(config.contains("merge_strategy = \"manual\""));
+        assert!(config.contains("[ui]"));
+        assert!(config.contains("recent_docs_count = 10"));
+        assert!(config.contains("[ai]"));
+        assert!(config.contains("mode = \"native\""));
+        assert!(config.contains("[ai.agent_bridge]"));
+        assert!(config.contains("timeout_ms = 30000"));
+    }
 
     #[cfg(unix)]
     #[test]

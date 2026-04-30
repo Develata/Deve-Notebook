@@ -93,7 +93,7 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 *   `ai.mode = trusted-cli` 仅在以下条件全部满足时才有效：
     - `ai.agent_bridge.enabled = true`
     - `ai.agent_bridge.trusted = true`
-    - `AGENT_CLI_PATH` 已设置
+    - `AGENT_CLI_PATH` 已设置为绝对路径，且目标存在并可执行
 *   任一条件不满足时，系统 **MUST** 自动退回 `ai.mode = native`，并向用户显示明确原因。
 *   `PLAN / BUILD` 是 Native AI Chat 的会话模式，不是单独的配置后端键。
 *   Settings 中的后端切换与 Chat 内的 `/plan /build /agents` 必须明确分离，避免混淆“后端”与“模式”。
@@ -121,3 +121,5 @@ CLI/runtime 读取与写入 `config.toml` 的受支持键；server-backed Settin
 除 `storage/prefs.rs` 本身与 `storage/js_bridge.rs` 能力探测外，不得在功能模块中直接调用
 `window.localStorage` / `sessionStorage`。布局宽度、Outline 可见性、语言偏好、快捷键覆盖等均属于
 无害 UI prefs；repo identity、sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。
+`deve.ui.last_scope` 只允许保存最后打开的 `repo_name` 显示别名，用于请求 server 重新解析；不得保存
+`repo_id`、remote branch / peer id、`scope_nonce` 或任何可被当作 repo authority 的身份字段。

@@ -73,6 +73,8 @@ check_contains apps/cli/src/server/agent_bridge/policy.rs "external agent disabl
 check_contains apps/cli/src/server/agent_bridge/policy.rs "trusted mode required"
 check_contains apps/cli/src/server/agent_bridge/policy.rs "AGENT_CLI_PATH required"
 check_contains apps/cli/src/server/agent_bridge/policy.rs "AGENT_CLI_PATH must be absolute"
+check_contains apps/cli/src/server/agent_bridge/policy.rs "AGENT_CLI_PATH must point to an executable file"
+check_contains apps/cli/src/server/agent_bridge/stream.rs "Agent CLI exited with status"
 check_contains apps/cli/src/server/agent_bridge/stream.rs "Check AGENT_CLI_PATH points to an existing absolute executable path"
 check_contains apps/cli/src/server/agent_bridge/AGENTS.md "default-off"
 check_contains crates/core/src/plugin/runtime/chat_stream.rs "Native AI Chat currently rejects"

@@ -57,14 +57,32 @@ fn trusted_policy_requires_absolute_cli_path() {
 }
 
 #[test]
-fn trusted_policy_exposes_run_config() {
+fn trusted_policy_requires_existing_executable_cli_path() {
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: true,
-        cli_path: Some("/usr/bin/agent".to_string()),
+        cli_path: Some("/definitely/missing/agent".to_string()),
+        timeout_ms: 30_000,
+    };
+    assert_eq!(
+        policy.spawn_path().expect_err("must fail"),
+        "AGENT_CLI_PATH must point to an executable file"
+    );
+}
+
+#[test]
+fn trusted_policy_exposes_run_config() {
+    let cli_path = std::env::current_exe()
+        .expect("current exe")
+        .to_string_lossy()
+        .into_owned();
+    let policy = AgentBridgePolicy {
+        enabled: true,
+        trusted: true,
+        cli_path: Some(cli_path.clone()),
         timeout_ms: 0,
     };
     let config = policy.run_config().expect("config");
-    assert_eq!(config.cli_path, "/usr/bin/agent");
+    assert_eq!(config.cli_path, cli_path);
     assert_eq!(config.timeout_ms, 1);
 }

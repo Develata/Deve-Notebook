@@ -76,16 +76,16 @@ pub(super) async fn spawn_and_stream(
         }
     }
 
+    let status = child.wait().await?;
+    if !status.success() {
+        return Err(anyhow::anyhow!("Agent CLI exited with status: {}", status));
+    }
+
     ch.unicast(ServerMessage::ChatChunk {
         req_id: req_id.to_string(),
         delta: None,
         finish_reason: Some("stop".to_string()),
     });
-
-    let status = child.wait().await?;
-    if !status.success() {
-        tracing::warn!("Agent CLI exited with status: {}", status);
-    }
     Ok(())
 }
 

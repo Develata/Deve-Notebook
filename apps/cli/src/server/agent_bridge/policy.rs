@@ -3,6 +3,8 @@
 //!
 use deve_core::config::Config;
 use serde::Serialize;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
@@ -58,6 +60,9 @@ impl AgentBridgePolicy {
         if !Path::new(&path).is_absolute() {
             return Err("AGENT_CLI_PATH must be absolute".to_string());
         }
+        if !is_executable_file(Path::new(&path)) {
+            return Err("AGENT_CLI_PATH must point to an executable file".to_string());
+        }
         Ok(path)
     }
 
@@ -81,6 +86,23 @@ fn env_bool(key: &str) -> Option<bool> {
 fn non_empty(value: String) -> Option<String> {
     let trimmed = value.trim();
     (!trimmed.is_empty()).then(|| trimmed.to_string())
+}
+
+fn is_executable_file(path: &Path) -> bool {
+    let Ok(metadata) = std::fs::metadata(path) else {
+        return false;
+    };
+    if !metadata.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        metadata.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
 }
 
 #[cfg(test)]

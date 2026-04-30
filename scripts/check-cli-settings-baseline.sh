@@ -44,6 +44,8 @@ check_contains apps/cli/src/commands/config.rs "const CONFIG_FILE: &str = \"conf
 check_contains apps/cli/src/commands/config.rs "toml::to_string_pretty(config)"
 check_contains apps/cli/src/commands/config.rs "parse_whitelisted_value"
 check_contains apps/cli/src/commands/config.rs "supported_config_keys_match_settings_plan_tables"
+check_contains apps/cli/src/commands/init.rs "init_config_template_matches_current_settings_schema"
+check_contains apps/cli/src/commands/init.rs "[ai.agent_bridge]"
 check_contains apps/cli/src/commands/config.rs "\"ui.sidebar_width\""
 check_contains apps/cli/src/commands/config.rs "\"ai.mode\""
 check_contains apps/cli/src/commands/config.rs "Updated config.toml is not compatible with runtime config"
