@@ -9,10 +9,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Post-verification plan/code drift rescan | P2 | docs/plan, docs/features, docs/acceptance-cases, current code, dated reports | Re-read current authoritative plan/code after full verification and Docker cleanup; identify the next narrow implementation batch without reopening future-only work |
+| 1 | Git import apply CLI/runtime smoke | P2 | `deve_cli git import`, isolated repo fixture, Source Control pending/import state, output copy | Verify dry-run remains read-only, `--apply` writes safe Git changes into pending/import, blockers fail closed without partial writes, and CLI output points back to Deve stage/commit |
 
 ## 最近完成基线
 
+- P2 Post-verification plan/code drift rescan 已关闭：排除 future-only work 后发现 `deve_cli git import` dry-run 仍把 apply 描述成后续路径；CLI 输出、单元测试与 `docs/plan/12_commands.md` 已同步到当前 `--apply` 语义，详见 `post-verification-plan-code-drift-rescan-2026-04-30.md`。
 - P3 Docker cargo-chef skeleton warning cleanup 已关闭：warning 来自 cargo-chef 0.1.72 生成的 recipe/skeleton manifest 中的 `plugin = false`，不是 checked-in manifests；Dockerfile 只清理生成的 recipe 噪声，`docker build --target deps` 与完整 Docker release smoke 均通过，详见 `cargo-chef-skeleton-warning-cleanup-2026-04-30.md`。
 - P2 Full workspace verification pass 已关闭：docs/code guard、plan coverage、Web release build、fmt、全特性 clippy、完整 `cargo test`、runtime smoke 与 Docker release smoke 均通过；同时修复 WS structured-error guard 字段匹配误报与 `serve` clippy needless borrow，详见 `full-workspace-verification-pass-2026-04-30.md`。
 - P0 sync vector wire contract 与 browser storage/degraded write boundary 已关闭：`DEVEWSF3`、显式 `known_vector/server_vector`、Web degraded read-only/write gate 均已测试。

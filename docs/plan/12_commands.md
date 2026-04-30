@@ -33,7 +33,7 @@
 *   `deve git status`: 检查 Git mirror readiness 与 `GitMirrorQueued / Committed / OutOfSync` side-table summary。
 *   `deve git mirror`: 显式执行 queued/out_of_sync Git mirror records；偏 executor / repair 语义。
 *   `deve git export`: 将 queued Deve commits 导出到 Git mirror，并写回 Deve commit 到 Git commit 的映射；side table 为空且 Git history 为空时，可从最新 Deve commit 的完整 projection 建立首个 snapshot Git commit。
-*   `deve git import`: 只读 dry-run 规划外部 Git/worktree changes，输出将来可进入 pending/import 的 change/blocker；默认不写 ledger、pending_fs、staging 或 `.notegit`。
+*   `deve git import`: 只读 dry-run 规划外部 Git/worktree changes，输出可通过 `--apply` 进入 pending/import 的 change/blocker；默认不写 ledger、pending_fs、staging 或 `.notegit`。
 *   `deve git import --apply`: 显式把安全 Git worktree changes 写入 Source Control pending/import；仍不得直接写 ledger、`StagedEntry` 或 `.notegit`，后续必须走 Deve stage/commit。
 *   `deve git push`: 将已导出的 `.git` mirror 推送到远端；默认 remote 取当前 branch upstream，否则 fallback 到 `origin`，可用 `--remote` / `--branch` 显式指定。该命令不得写 ledger、`StagedEntry` 或 `.notegit`，且必须在未导出/失败 mirror record、脏 Git worktree 或未映射 Git HEAD 时 fail-closed。
 

@@ -376,7 +376,7 @@ fn import_plan_lines_are_explicitly_dry_run_and_non_authoritative() {
     assert!(
         clean
             .iter()
-            .any(|line| line.contains("future apply will write pending/import, not ledger"))
+            .any(|line| line.contains("rerun with --apply to write pending/import, not ledger"))
     );
 
     let blocked = import_plan_lines(
@@ -394,7 +394,7 @@ fn import_plan_lines_are_explicitly_dry_run_and_non_authoritative() {
     assert!(
         blocked
             .iter()
-            .any(|line| line.contains("fix blockers before future import apply"))
+            .any(|line| line.contains("fix blockers before rerunning with --apply"))
     );
 }
 

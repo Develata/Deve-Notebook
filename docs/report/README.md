@@ -65,6 +65,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest Web release Browserslist warning triage: `web-release-browserslist-triage-2026-04-30.md`
 - Latest full workspace verification pass: `full-workspace-verification-pass-2026-04-30.md`
 - Latest cargo-chef warning cleanup: `cargo-chef-skeleton-warning-cleanup-2026-04-30.md`
+- Latest post-verification plan/code drift rescan: `post-verification-plan-code-drift-rescan-2026-04-30.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 
 ## Archive Contents

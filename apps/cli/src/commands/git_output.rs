@@ -188,11 +188,11 @@ fn import_plan_lines(repo_name: &str, plan: &GitImportPlan) -> Vec<String> {
         lines.push("  import_hint: no Git worktree changes to import".to_string());
     } else if plan.blockers.is_empty() {
         lines.push(
-            "  import_hint: dry-run only; future apply will write pending/import, not ledger"
+            "  import_hint: dry-run only; rerun with --apply to write pending/import, not ledger"
                 .to_string(),
         );
     } else {
-        lines.push("  import_hint: fix blockers before future import apply".to_string());
+        lines.push("  import_hint: fix blockers before rerunning with --apply".to_string());
     }
     lines
 }
