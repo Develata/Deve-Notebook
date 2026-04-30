@@ -1,6 +1,6 @@
 # Deve-Note Architecture Overview
 
-One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. The current modeled slice is aligned across plan and code, with no active drift markers.
+One-page architecture map with plan-first verification: the blueprint view is derived from `docs/plan/` and related feature/acceptance documents, while the code view is a lagging implementation view that must eventually converge to the plan. Drift status is recorded in [`architecture-diff.md`](./architecture-diff.md).
 
 Primary files: [`architecture-doc.lisp`](./architecture-doc.lisp), [`architecture-code.lisp`](./architecture-code.lisp), [`architecture-diff.md`](./architecture-diff.md), [`architecture.dot`](./architecture.dot), and [`architecture.svg`](./architecture.svg).
 The `.dot` and `.lisp` files are assembled from fragments by `scripts/generate-architecture-dot.sh` and `scripts/generate-architecture-lisp.sh`.
@@ -49,14 +49,12 @@ The current graph also carries three extra architecture cues:
 
 When reading the current generated SVG, treat the visible fourth layer as the current rendering of `execution domains`, not as a competing fifth call layer. The object plane is rendered as a sidecar cluster with dotted edges from execution domains; it is not part of the main downward call cascade.
 
-## Current Refactor Status
+## Artifact Roles
 
-- `architecture-doc.lisp` has been refactored to an operation-first baseline and is now emitted from ordered doc fragments.
-- `architecture-code.lisp` has also been uplifted to the same operation-first layer model and is now emitted from ordered code fragments, though it is still a hand-curated implementation baseline rather than a generated truth source.
-- `architecture.dot` should now be read as the plan-side blueprint graph for the four-layer canonical call architecture.
-- The currently modeled high-value flows are `login`, `session-expired / unauthorized`, `command-palette`, `command surface mode routing`, `command surface action routing`, `repo-scoped sync handshake`, `repo-scoped key exchange`, `repo-scoped sync transfer`, `branch-switch`, `repo file-op shell routing`, `repo-switch`, `stage / unstage`, `discard file`, `discard pending`, `resolve conflict`, `source-control commit`, `history / commit diff`, `commit-and-push`, `merge peer`, `merge runtime`, `native ai-chat`, `trusted external agent boundary`, `plugin-host / plugin-call boundary`, `search/query`, `repo file operations`, `document edit / confirmed op`, `leave document / pending edit guard`, `open-doc`, `release / CI`, `release tag dispatch`, `release quality gates`, `release artifact publish`, `release delivery verification`, `CLI control commands`, `CLI parse command`, `CLI help surface`, `CLI empty-command guidance`, `CLI runtime handoff`, `CLI vault indexing`, `CLI server runtime`, `CLI export / inspect`, `CLI repair / admin`, `settings update`, `settings surface open`, `settings env defaults`, `settings file config`, `settings persistence / apply`, `settings value mutation`, `settings feedback / render`, `settings UI preferences`, `settings runtime feedback`, `rendering cursor reveal`, `rendering checkbox writeback`, `rendering math / mermaid`, `rendering inline source reveal`, `rendering link activation gate`, `rendering large-doc prefetch`, `rendering large-doc search gate`, `rendering projection refresh`, `rendering math source projection`, `rendering mermaid source projection`, `rendering outline navigation`, `i18n locale / error`, `locale surface switch`, `i18n locale selection`, `i18n error mapping`, `i18n localized formatting`, `i18n hardcoded audit`, `tech-stack runtime budget`, `tech-stack dependency policy`, `tech-stack runtime budget check`, and `tech-stack platform / release channel`.
-- `architecture-diff.md` has been rebuilt into an operation-level comparison pass and currently records no active structural mismatch inside the modeled slice.
-- The current SVG should be read as the shared baseline; future explicit drift markers are still driven by `architecture-diff.md`.
+- `architecture-doc.lisp`: doc-derived operation-first blueprint view, emitted from ordered doc fragments.
+- `architecture-code.lisp`: hand-curated implementation view, emitted from ordered code fragments.
+- `architecture.dot` / `architecture.svg`: generated visual graph for the four-layer canonical call architecture.
+- `architecture-diff.md`: operation-level comparison and drift registry.
 
 ## Lisp Conventions
 
@@ -98,7 +96,7 @@ The current generated artifacts keep the stable internal IDs `application`, `mod
 
 A node gains a `*` marker when **plan-side blueprint and code-side implementation don't agree**.
 
-At this moment, the plan-side and code-side Lisp views both use the new layer semantics, and the diff report has been rebuilt at the operation level. The currently modeled slice has no active drift. If future drift appears, update the registry in [`architecture-diff.md`](./architecture-diff.md) and regenerate the graph.
+`architecture-diff.md` is the source for current drift state. When future drift appears, update that registry and regenerate the graph.
 
 When divergence markers are enabled:
 
@@ -106,11 +104,11 @@ When divergence markers are enabled:
 - **In plan, not in code** → plan promises behavior that has no corresponding implementation yet.
 - **Both exist but with different shape** → e.g. plan says one response flow, code has a different handler/module split.
 
-**Current divergences**: see [`architecture-diff.md`](./architecture-diff.md). For the currently modeled operation slice, there are no active mismatches.
+**Current divergences**: see [`architecture-diff.md`](./architecture-diff.md).
 
 ## Regenerating This View
 
-This baseline was built by hand. The intent is for future iterations to automate:
+The fragment sources are hand-curated. The automation target is:
 
 1. `architecture-doc.lisp` — generated from `docs/plan/*.md` plus `docs/features/operations/*.md`, with plan as the authority source.
 2. `architecture-code.lisp` — generated by tracing implementation flows across `apps/web/src/` user actions and callbacks, `apps/cli/src/server/` handlers, and leaf modules in `crates/core/src/`.

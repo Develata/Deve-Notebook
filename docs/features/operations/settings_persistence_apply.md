@@ -48,5 +48,5 @@
 - Persistence/apply is the boundary where settings become authoritative runtime input.
 - `ai.mode = "trusted-cli"` is persisted as a requested value, but the effective runtime mode falls
   back to `native` unless trusted-cli policy conditions are satisfied.
-- Current runtime persistence is `config.toml` only; any separate settings-backed file or server-backed Settings API is future work.
+- Runtime persistence uses `config.toml`; a separate settings-backed file or server-backed Settings API is outside this operation.
 - Main objects: `settings::file`, `config::apply`, `runtime::profile`.

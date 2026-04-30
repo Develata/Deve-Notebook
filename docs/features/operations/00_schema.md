@@ -6,8 +6,8 @@
 
 - `docs/plan/` 是系统蓝图的权威源。
 - `docs/features/operations/` 必须与 plan 最终构成严格双射。
-- 代码实现也必须与 plan 最终构成严格双射；若当前代码落后，以 plan 为准。
-- operation 文档的职责是把 plan 中的能力拆成可观察、可追踪的原子用户动作，而不是用当前代码反推需求。
+- 实现也必须与 plan 最终构成严格双射；若实现落后，以 plan 为准。
+- operation 文档的职责是把 plan 中的能力拆成可观察、可追踪的原子用户动作，而不是用实现反推需求。
 
 ## 1. 建模单位
 
@@ -98,7 +98,7 @@
 - 每个 operation flow 必须能追溯到至少一个明确的 plan chapter。
 - 每个 plan 中声明的用户可见操作，最终都必须能在 operation 文档中找到唯一对应流。
 - 不允许长期存在“plan 有、operation 没有”或“operation 有、plan 没有”的状态。
-- 若当前代码缺失某条 operation 的实现，文档应保留该 operation，并在 overview / diff 中显式标记未实现，而不是删除 blueprint。
+- 若某条 operation 尚未落地，文档应保留该 operation，并在 overview / diff 中显式标记缺口，而不是删除 blueprint。
 
 ## 8. 对象与归属
 

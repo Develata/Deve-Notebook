@@ -52,46 +52,36 @@
 3. 当查询以 `?` 开头且 debounce 后有非空全文查询时，前端检查 loading、branch/repo switch 和 `scope_nonce`。
 4. 前端发送 `ClientMessage::Search { request_id, query, limit, scope_nonce }`。
 5. CLI server 校验 browser scope nonce，并进入 search handler。
-6. Standard profile + `search` feature 下进入 repo-scoped baseline search；当前实现按当前
-   `repo_id/branch/scope_nonce` 扫描已登记文档内容，完整 Tantivy 增量索引仍是后续优化路径。
+6. Standard profile + `search` feature 下进入 repo-scoped search；搜索结果必须绑定当前 `repo_id/branch/scope_nonce`。
 7. LowSpec、未启用 `search` feature、或当前 repo scope 无效时必须 fail closed 并返回结构化错误。
 8. 前端只接受 request id、`repo_id`、`branch` 与当前 `scope_nonce` 同时匹配的 `SearchResults`。
 
 ## Notes
 
 - `search/query` 是全文搜索链，不替代 Quick Open 的本地文件候选过滤。
-- `search_available` 是当前 CLI runtime 的轻量能力 gate；当前可验收能力不依赖完整
-  Tantivy 索引已完成，也不在启动路径初始化 Tantivy 索引。
+- `search_available` 是 CLI runtime 的轻量能力 gate；本验收不依赖常驻重型索引，也不要求启动路径初始化索引服务。
 - 搜索结果必须保持 repo scope 绑定，不能接受过期 request、旧 repo、旧 branch 或旧 scope 返回。
 - 搜索读取 ledger 重建内容，而不是直接读取当前磁盘文件文本；当 workspace 文件与 ledger
   存在漂移时，搜索结果以当前 repo ledger projection 为准。
-- 当前 `SearchResults` wire payload 只承诺返回 `(doc_id, path, score)`；UI baseline 显示
-  文档路径与本地化匹配状态，不承诺正文 snippet 或 query highlight。
-- 正文 snippet、命中词高亮和 richer ranking 属于后续协议/UI 扩展，不能作为当前
-  `SEARCH-001` 阻塞验收项。
+- UI baseline 显示文档路径与本地化匹配状态，不承诺正文 snippet 或 query highlight。
+- 正文 snippet、命中词高亮和 richer ranking 属于后续协议/UI 扩展，不能作为 `SEARCH-001` 阻塞验收项。
 
 ## Chrome MCP Smoke
 
-本 smoke 用于手工验证 `SEARCH-001` 的浏览器路径，不替代单元测试中的 stale
-scope / disabled feature 覆盖。
+本 smoke 用于手工验证 `SEARCH-001` 的浏览器路径，不替代 stale scope / disabled feature 的自动化覆盖。启动命令、默认开发账号和端口以 `docs/dev-runbook.md` 为准。
 
 前置条件：
 
-- 本地已安装 `trunk` 与 `wasm32-unknown-unknown` target。
-- 默认开发账号为 `admin` / `admin`，仅限 `--dev` 或 `DEVE_ENV=development`。
 - 当前 repo 中存在一个可命中的 ledger 文档；默认开发数据可用 `?note` 命中文件名。
 
 步骤：
 
-1. 启动后端：
-   `cargo run -p deve_cli --features search --bin deve_cli -- serve --dev --port 3001`
-2. 启动前端：
-   `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080`（工作目录为 `apps/web`）
-3. 用 Chrome MCP 打开 `http://127.0.0.1:8080/`。
-4. 登录 `admin` / `admin`，等待页面显示 `Ready`，并确认 console 出现 WebSocket connected 日志。
-5. 点击 Search 入口，输入 `?note`。
-6. 等待 debounce 自动触发搜索，并显示 `note.md Full-text match`。
-7. 点击结果或按 Enter，确认 Search surface 关闭并打开对应文档。
+1. 按 `docs/dev-runbook.md` 启动带 `search` feature 的后端与前端。
+2. 用 Chrome MCP 打开对应本地地址。
+3. 登录开发账号，等待页面显示 `Ready`。
+4. 点击 Search 入口，输入 `?note`。
+5. 等待 debounce 自动触发搜索，并显示 `note.md Full-text match`。
+6. 点击结果或按 Enter，确认 Search surface 关闭并打开对应文档。
 
 期望结果：
 

@@ -24,7 +24,7 @@
 - `Name`: `Change Setting Value`
 - `Surface`: `settings-panel-or-cli`
 - `Trigger`: select theme, language, panel state, or config value
-- `Preconditions`: target setting is implemented and not marked future-only
+- `Preconditions`: target setting is available and not reserved
 - `Immediate Result`: runtime state or config draft updates
 - `Application Entry`: `apps/web/src/components/settings_sections.rs`, `apps/cli/src/dispatch.rs`
 

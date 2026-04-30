@@ -17,8 +17,8 @@ future。
 - mobile native、desktop native packaging、graph visualization rendering、relay trust boundary 与若干 rendering 细节仍属于 future/partial。
 - `baseline-2026-04-08.md` 与 `gap-*-2026-04-08.md` 存在大量过时断言，不能继续作为 active TODO 使用。
 
-本次审查为 targeted code/docs inspection，没有重新跑全量测试；最新通过的质量门槛以
-`release-smoke-status-2026-04-28.md` 为准。
+本次审查为 targeted code/docs inspection，没有重新跑全量测试；后续 release gate 以
+`release-verification-baseline-2026-05-01.md` 为准。
 
 ## 模块审查
 
@@ -89,7 +89,7 @@ future。
 已实现 / 对齐：
 
 - `docs/report/README.md` 已声明 report 是历史证据而非 live contract。
-- `release-smoke-status-2026-04-28.md` 正确区分 code gate 与 Docker daemon blocker。
+- release baseline 正确区分 code gate 与 Docker daemon blocker。
 - `soft-size-audit-2026-04-27.md` 已记录放宽后的文件长度策略，避免机械拆分导致碎片化。
 
 当前缺口 / 风险：
@@ -114,10 +114,8 @@ future。
 
 ## 下一优先级
 
-1. P1：补小安全批次。覆盖 key-file permissions、login audit fields、production CORS origin、dev CORS warning wording。
-   状态：已完成，详见 `p1-security-hardening-status-2026-04-28.md`。
-2. P1：清理 path normalization 偏离。优先 core/server/web boundary wrappers，不改变已存储路径语义。
-   状态：已完成，详见 `p1-path-normalization-status-2026-04-28.md`。
+1. P1：补小安全批次。覆盖 key-file permissions、login audit fields、production CORS origin、dev CORS warning wording；已并入 `core-hardening-baseline-2026-05-01.md`。
+2. P1：清理 path normalization 偏离。优先 core/server/web boundary wrappers，不改变已存储路径语义；已并入 `core-hardening-baseline-2026-05-01.md`。
 3. P1/P2：推进 Git ecosystem mirror bridge plan-to-code。
 4. P1/P2：把 rendering plan 拆成 current acceptance 与 future editor hybrid-rendering。
 5. P3-10：把 Desktop/Mobile native adapter 从文档边界推进到 decision-complete 的实现计划。

@@ -126,10 +126,10 @@ closed at the application layer. Code matches the plan contract:
 
 The closing implementation is represented by:
 
-- [settings_sections.rs](/home/develata/gitclone/Deve-Notebook/apps/web/src/components/settings_sections.rs)
-- [extensions_channels.rs](/home/develata/gitclone/Deve-Notebook/apps/web/src/components/sidebar/extensions_channels.rs)
-- [agent_bridge.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge.rs)
-- [policy.rs](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server/agent_bridge/policy.rs)
+- [settings_sections.rs](apps/web/src/components/settings_sections.rs)
+- [extensions_channels.rs](apps/web/src/components/sidebar/extensions_channels.rs)
+- [agent_bridge.rs](apps/cli/src/server/agent_bridge.rs)
+- [policy.rs](apps/cli/src/server/agent_bridge/policy.rs)
 
 The previous `release / CI` drift is closed. The plan and `.github`
 metadata now treat `.github/workflows/release.yml` as the only required

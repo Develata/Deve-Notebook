@@ -21,7 +21,9 @@
 * **Repair Is First-Class**：repair / degraded / quarantine / stale-scope recovery 是正式基础设施能力，不是临时补丁。
 * **UI Is Not Truth**：组件与页面只负责展示与意图发射，不负责保存业务真相。
 
-## 3. 运行时分层 (Runtime Layering)
+## 3. 运行时责任带 (Runtime Responsibility Bands)
+
+本节描述实现责任轴，不是第二套调用层级。调用顺序仍以 `docs/plan/00_engineering_constitution.md` 的四层 canonical call architecture 为准；下列责任带主要落在 Flow Coordination 与 Execution Domain 内部。
 
 ### 3.1 Authority Core
 

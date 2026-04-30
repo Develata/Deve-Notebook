@@ -15,7 +15,7 @@
 
 ### 2.1 Web：文件很多，但主干状态机仍不清晰
 
-当前 [apps/web/src/hooks/use_core](/home/develata/gitclone/Deve-Notebook/apps/web/src/hooks/use_core) 已拆成大量 `callbacks_* / effects_* / state_*` 文件，但仍然围绕一个总控 hook 运转。
+当前 `apps/web/src/hooks/use_core` 已拆成大量 `callbacks_* / effects_* / state_*` 文件，但仍然围绕一个总控 hook 运转。
 
 表现：
 
@@ -25,7 +25,7 @@
 
 ### 2.2 Server：handler 和 runtime 装配边界不够显式
 
-[apps/cli/src/server](/home/develata/gitclone/Deve-Notebook/apps/cli/src/server) 已经有很多 helper / support / selector 文件，但：
+`apps/cli/src/server` 已经有很多 helper / support / selector 文件，但：
 
 * server runtime assembly 仍然过厚
 * projection / repair / scope recovery 分散在 startup、handler 与 support helpers 中
@@ -33,7 +33,7 @@
 
 ### 2.3 Core：Authority 与 Projection 的目录边界还不够显式
 
-[crates/core/src](/home/develata/gitclone/Deve-Notebook/crates/core/src) 当前主要以 `ledger / sync / tree / source_control` 组织。方向基本正确，但：
+`crates/core/src` 当前主要以 `ledger / sync / tree / source_control` 组织。方向基本正确，但：
 
 * projection / repair 没有独立一级归属
 * runtime 恢复路径经常要在 `sync + tree + server` 三处拼起来看
