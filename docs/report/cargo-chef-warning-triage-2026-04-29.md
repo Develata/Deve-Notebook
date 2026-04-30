@@ -18,6 +18,18 @@ unused manifest key: lib.plugin
   cleanup. It should be rechecked inside a stable Docker context with
   `cargo-chef` 0.1.72 and a fresh build cache.
 
+## 2026-04-30 Recheck
+
+`DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102
+scripts/smoke-docker-release.sh` reproduced the warning during the Docker
+`cargo chef cook --release --locked --recipe-path recipe.json` layer while the
+same checked-in manifests still contain no `plugin = ...` keys and local
+`cargo metadata --no-deps --format-version 1` remains clean.
+
+Treat the 2026-04-29 "not currently actionable" conclusion as historical. The
+current follow-up is to inspect or suppress the cargo-chef recipe/skeleton
+warning path without rewriting checked-in Cargo manifests.
+
 ## Commands
 
 ```bash

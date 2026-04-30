@@ -75,7 +75,7 @@ pub async fn run(
         server::ServerLaunchOptions::release(port)
     };
     let bind_addr = launch.bind_addr();
-    if let Err(err) = TcpListener::bind(&bind_addr) {
+    if let Err(err) = TcpListener::bind(bind_addr) {
         if err.kind() == std::io::ErrorKind::AddrInUse {
             if native_loopback {
                 anyhow::bail!(

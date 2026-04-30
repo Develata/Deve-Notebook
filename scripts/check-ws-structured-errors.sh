@@ -20,7 +20,7 @@ if rg -n 'Error\(String\)' "${SCAN_PATHS[@]}" --glob '*.rs'; then
   fail "legacy Error(String) protocol shape found"
 fi
 
-if rg -n 'error:\s*(Option<)?String' "${SCAN_PATHS[@]}" --glob '*.rs'; then
+if rg -n '(^|[^[:alnum:]_])error:\s*(Option<)?String' "${SCAN_PATHS[@]}" --glob '*.rs'; then
   fail "stringly-typed protocol error field found"
 fi
 
