@@ -209,6 +209,50 @@ fn desktop_service_offline_retryability_is_clamped_after_failure_budget() {
 }
 
 #[test]
+fn desktop_service_recovery_state_survives_foreground_events() {
+    let mut restarting = bound_shell();
+    restarting.mark_service_offline("service_dead", true);
+
+    let effect = restarting.handle_platform_event(NativePlatformEventKind::Foreground);
+
+    assert_eq!(effect, NativePlatformEventEffect::RequireForegroundReprobe);
+    let restarting_snapshot = restarting.snapshot();
+    assert_eq!(
+        restarting_snapshot.state,
+        DesktopServiceState::ServiceRestarting
+    );
+    assert_eq!(
+        restarting_snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 0 })
+    );
+    assert_eq!(
+        restarting
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "service_offline"
+    );
+
+    let mut offline = DesktopShell::new();
+    offline.start_service();
+    offline.mark_supervisor_failure(NativeServiceFailureKind::SessionHandoffFailed, "missing");
+
+    let effect = offline.handle_platform_event(NativePlatformEventKind::Resumed);
+
+    assert_eq!(effect, NativePlatformEventEffect::RequireForegroundReprobe);
+    let offline_snapshot = offline.snapshot();
+    assert_eq!(offline_snapshot.state, DesktopServiceState::ServiceOffline);
+    assert_eq!(offline_snapshot.restarting, None);
+    assert_eq!(
+        offline
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "service_offline"
+    );
+}
+
+#[test]
 fn desktop_shell_session_invalid_blocks_bootstrap() {
     let mut shell = bound_shell();
     shell.invalidate_session();

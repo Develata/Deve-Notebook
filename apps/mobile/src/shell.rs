@@ -149,6 +149,9 @@ impl MobileShell {
         event: MobileLifecycleEvent,
     ) -> NativePlatformEventKind {
         let kind = event.to_native_kind();
+        if self.is_service_recovery_state() {
+            return kind;
+        }
         match event {
             MobileLifecycleEvent::Background | MobileLifecycleEvent::Suspended => {
                 self.state = MobileServiceState::BackgroundSuspended;
@@ -229,6 +232,13 @@ impl MobileShell {
         self.readiness = NativeRuntimeReadiness::default();
         self.process_adapter.record_process_stopped();
         self.endpoint = None;
+    }
+
+    fn is_service_recovery_state(&self) -> bool {
+        matches!(
+            self.state,
+            MobileServiceState::ServiceRestarting | MobileServiceState::ServiceOffline
+        )
     }
 
     fn blocking_state_error(&self) -> Result<(), MobileShellError> {

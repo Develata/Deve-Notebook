@@ -255,7 +255,9 @@ impl DesktopShell {
         event: NativePlatformEventKind,
     ) -> NativePlatformEventEffect {
         let effect = classify_native_platform_event(NativeAdapterPlatform::Desktop, event);
-        if effect == NativePlatformEventEffect::RequireForegroundReprobe {
+        if effect == NativePlatformEventEffect::RequireForegroundReprobe
+            && !self.is_service_recovery_state()
+        {
             self.require_foreground_reprobe();
         }
         effect
@@ -322,6 +324,13 @@ impl DesktopShell {
         self.readiness = NativeRuntimeReadiness::default();
         self.process_adapter.record_process_stopped();
         self.endpoint = None;
+    }
+
+    fn is_service_recovery_state(&self) -> bool {
+        matches!(
+            self.state,
+            DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline
+        )
     }
 
     fn record_offline_snapshot(&mut self, offline: NativeServiceOffline) {

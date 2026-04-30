@@ -286,6 +286,63 @@ fn mobile_service_offline_retryability_is_clamped_after_failure_budget() {
 }
 
 #[test]
+fn mobile_service_recovery_state_survives_lifecycle_events() {
+    let mut restarting = bound_shell();
+    restarting.mark_service_offline("service_dead", true);
+
+    assert_eq!(
+        restarting.handle_lifecycle_event(MobileLifecycleEvent::Background),
+        NativePlatformEventKind::Background
+    );
+    assert_eq!(
+        restarting.handle_lifecycle_event(MobileLifecycleEvent::Resumed),
+        NativePlatformEventKind::Resumed
+    );
+    let restarting_snapshot = restarting.snapshot();
+    assert_eq!(
+        restarting_snapshot.state,
+        MobileServiceState::ServiceRestarting
+    );
+    assert_eq!(
+        restarting_snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 0 })
+    );
+    assert_eq!(
+        restarting
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "service_offline"
+    );
+
+    let mut offline = MobileShell::new();
+    offline.start_service();
+    offline.mark_supervisor_failure(
+        NativeServiceFailureKind::SessionHandoffFailed,
+        "session_dead",
+    );
+
+    assert_eq!(
+        offline.handle_lifecycle_event(MobileLifecycleEvent::Suspended),
+        NativePlatformEventKind::Suspended
+    );
+    assert_eq!(
+        offline.handle_lifecycle_event(MobileLifecycleEvent::Foreground),
+        NativePlatformEventKind::Foreground
+    );
+    let offline_snapshot = offline.snapshot();
+    assert_eq!(offline_snapshot.state, MobileServiceState::ServiceOffline);
+    assert_eq!(offline_snapshot.restarting, None);
+    assert_eq!(
+        offline
+            .recovery_bootstrap_for_web()
+            .expect("recovery bootstrap")
+            .service_state,
+        "service_offline"
+    );
+}
+
+#[test]
 fn mobile_supervisor_failure_blocks_endpoint_and_reports_retryability() {
     let mut shell = bound_shell();
     assert!(shell.mark_runtime_ready(ready_probe()));
