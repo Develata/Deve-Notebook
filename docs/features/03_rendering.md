@@ -14,12 +14,12 @@
 
 本功能篇只把下列用户可见行为纳入验收：
 
-- CodeMirror 主编辑器默认 source-first，增强渲染只作为 decoration/widget projection 存在。
-- Hybrid adapter 已接入标题/强调/引用/链接/frontmatter 等语法标记的隐藏与光标 reveal。
+- 主编辑器默认 source-first；增强渲染只能作为源码之上的视觉投影存在。
+- 标题、强调、引用、链接、frontmatter 等语法标记可以在非编辑焦点下隐藏或美化，但光标进入时必须显示真实源码。
 - Math、Mermaid、task checkbox、frontmatter styling、table/image/list/blockquote/code toolbar、Ctrl/Cmd link activation 必须通过 Chrome MCP 手工走查确认具体浏览器行为。
-- Outline 当前支持标题扫描、点击跳转、inline code/math/strong/em/del 的轻量渲染，并把不支持语法按普通文本保留。
-- 辅助 HTML 区域使用 lightweight Markdown renderer，只支持 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` allowlist 与安全链接降级；它不是主编辑器 hybrid engine。
-- 大文档当前有批量应用与渐进调度基础设施，但不等价于完整 virtual rendering。
+- Outline 必须支持标题扫描、点击跳转、inline code/math/strong/em/del 的轻量显示，并把不支持语法按普通文本保留。
+- 辅助 HTML 区域只承担轻量 Markdown 展示与操作入口职责；支持 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` allowlist 与安全链接降级；不承担主编辑器职责。
+- 长文档体验只验收首屏响应、批量应用、渐进调度与重操作 gating；不宣称完整 virtual rendering。
 
 下列能力不得作为本功能篇的已完成验收目标：
 

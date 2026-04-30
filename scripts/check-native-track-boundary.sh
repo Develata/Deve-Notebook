@@ -114,10 +114,9 @@ check_contains docs/plan/14_tech_stack.md "不得进入 workspace root"
 check_contains docs/plan/14_tech_stack.md "Desktop packaging scaffold"
 check_contains docs/plan/14_tech_stack.md "Mobile packaging scaffold"
 
-check_contains docs/report/native-shell-baseline-2026-05-01.md "desktop-packaging-scaffold-status-2026-04-29.md"
-check_contains docs/report/native-shell-baseline-2026-05-01.md "mobile-packaging-scaffold-status-2026-04-29.md"
-check_contains docs/report/native-shell-baseline-2026-05-01.md "native-packaging"
-check_contains docs/report/native-shell-baseline-2026-05-01.md "Desktop/mobile shell skeleton"
+check_contains docs/report/README.md "## Current Baselines"
+check_contains docs/report/README.md "| Native shell |"
+check_contains docs/report/README.md "native-shell-baseline-"
 check_not_contains docs/report/next-tasks.md "Desktop / Mobile native adapter plan | P3-10"
 
 echo "native-track-boundary-check: ok"
