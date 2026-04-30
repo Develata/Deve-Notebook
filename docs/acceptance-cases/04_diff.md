@@ -105,9 +105,9 @@
     - ui_assert: source_control_commit_available true
     - ui_assert: source_control_commit_and_push_available true
     - ui_assert: command_palette_git_sync_absent true
-    - ui_assert: git_import_apply_pending_only true
-    - ui_assert: git_push_dirty_worktree_blocker true
-    - ui_assert: git_push_unexported_queue_blocker true
+    - cli_assert: git_import_apply_pending_only true
+    - cli_assert: git_push_dirty_worktree_blocker true
+    - cli_assert: git_push_unexported_queue_blocker true
     - ui_assert: command_palette_git_commit_absent true
     - ui_assert: command_palette_git_import_cli_notice_available true
     - ui_assert: command_palette_git_push_cli_notice_available true
