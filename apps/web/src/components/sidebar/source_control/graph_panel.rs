@@ -141,18 +141,6 @@ fn graph_blocked_note(locale: Locale, block: RepoWriteBlock) -> String {
     )
 }
 
-fn graph_state_attr(state: &GraphProjectionFetchState) -> &'static str {
-    match state {
-        GraphProjectionFetchState::Idle => "idle",
-        GraphProjectionFetchState::Loading => "loading",
-        GraphProjectionFetchState::Loaded(projection) => graph_loaded_state_attr(projection),
-        GraphProjectionFetchState::Error => "error",
-        GraphProjectionFetchState::Blocked(_) => "blocked",
-        GraphProjectionFetchState::LocalOnly => "local-only",
-        GraphProjectionFetchState::Degraded => "degraded",
-    }
-}
-
 fn graph_loaded_state_attr(projection: &GraphProjection) -> &'static str {
     if projection.nodes.is_empty() {
         "empty"
@@ -225,11 +213,12 @@ fn GraphStat(label: &'static str, value: usize, attr: &'static str) -> impl Into
 #[cfg(test)]
 mod tests {
     use super::{
-        GraphProjectionFetchState, graph_blocked_note, graph_panel_body, graph_state_attr,
+        GraphProjectionFetchState, graph_blocked_note, graph_loaded_state_attr, graph_panel_body,
     };
     use crate::hooks::use_core::write_gate::RepoWriteBlock;
     use crate::i18n::Locale;
-    use deve_core::graph::GraphProjection;
+    use deve_core::graph::{GraphNode, GraphProjection};
+    use deve_core::models::DocId;
 
     #[test]
     fn graph_panel_copy_handles_all_fetch_states() {
@@ -257,22 +246,23 @@ mod tests {
 
     #[test]
     fn graph_panel_state_attrs_are_acceptance_stable() {
-        assert_eq!(graph_state_attr(&GraphProjectionFetchState::Idle), "idle");
-        assert_eq!(
-            graph_state_attr(&GraphProjectionFetchState::Blocked(
-                RepoWriteBlock::Reconnecting
-            )),
-            "blocked"
-        );
-        assert_eq!(
-            graph_state_attr(&GraphProjectionFetchState::LocalOnly),
-            "local-only"
-        );
-        assert_eq!(
-            graph_state_attr(&GraphProjectionFetchState::Degraded),
-            "degraded"
-        );
-        assert_eq!(graph_state_attr(&GraphProjectionFetchState::Error), "error");
+        let empty = GraphProjection {
+            nodes: vec![],
+            edges: vec![],
+            unresolved_links: vec![],
+        };
+        let non_empty = GraphProjection {
+            nodes: vec![GraphNode {
+                doc_id: DocId::from_u128(1),
+                path: "notes/a.md".into(),
+                title: "a".into(),
+            }],
+            edges: vec![],
+            unresolved_links: vec![],
+        };
+
+        assert_eq!(graph_loaded_state_attr(&empty), "empty");
+        assert_eq!(graph_loaded_state_attr(&non_empty), "loaded");
     }
 
     #[test]
