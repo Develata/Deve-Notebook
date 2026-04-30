@@ -9,7 +9,7 @@ use crate::server::{
 use deve_core::git_bridge::apply_import;
 use deve_core::models::DocId;
 use deve_core::models::{LedgerEntry, Op, PeerId};
-use deve_core::protocol::{ScPathTarget, ServerMessage};
+use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeStatus, ConflictResolution};
 use std::path::Path;
@@ -243,6 +243,63 @@ async fn imported_conflict_keep_ledger_discards_import_without_staging() -> anyh
         .repo
         .list_commits_in_local_repo(&fixture.repo_name, 10)?;
     assert_eq!(after_commits.len(), fixture.before_commit_count);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resolve_conflict_rejects_non_conflict_pending_entry() -> anyhow::Result<()> {
+    let (dir, state, _repo_id, _test_id) = build_state()?;
+    let repo_name = state.repo.local_repo_name().to_string();
+    write_workspace_file(&dir, &repo_name, "note.md", "plain pending\n");
+    state.repo.run_on_local_repo(&repo_name, |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "note.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("plain pending\n"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo(repo_name.clone(), None);
+    session.set_scope_nonce(Some(35));
+
+    handle_resolve_conflict(
+        &state,
+        &ch,
+        &mut session,
+        ScPathTarget {
+            path: "note.md".into(),
+            doc_id: None,
+        },
+        ConflictResolution::KeepFs,
+    )
+    .await;
+
+    match uni_rx.recv().await.expect("protocol error") {
+        ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        } => {
+            assert_eq!(error.code, ServerErrorCode::ScConflictTargetMissing);
+            assert_eq!(error.detail.as_deref(), Some("Source control target is not a conflict: note.md"));
+            assert_eq!(scope_nonce, Some(35));
+        }
+        other => panic!("expected ProtocolError, got {other:?}"),
+    }
+    let pending = state.repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert_eq!(pending.len(), 1, "{pending:?}");
+    assert_eq!(pending[0].path, "note.md");
+    let staged = state.repo.list_staged_in_local_repo(&repo_name)?;
+    assert!(staged.is_empty(), "{staged:?}");
     Ok(())
 }
 

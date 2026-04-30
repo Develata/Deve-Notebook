@@ -42,6 +42,20 @@ pub async fn handle_resolve_conflict(
         Ok(resolved) => resolved,
         Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
+    let resolved_entry = match super::service::resolved_target_entry(&pending, &resolved) {
+        Ok(entry) => entry,
+        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
+    };
+    if !resolved_entry.has_conflict {
+        return super::errors::send_ws_scoped(
+            ch,
+            deve_core::protocol::ServerError::with_detail(
+                deve_core::protocol::ServerErrorCode::ScConflictTargetMissing,
+                format!("Source control target is not a conflict: {}", resolved.path),
+            ),
+            scope_nonce,
+        );
+    }
     let normalized = resolved.path.clone();
     let result = match resolution {
         ConflictResolution::KeepFs => resolve_keep_fs(state, &selector, &pending, &resolved),

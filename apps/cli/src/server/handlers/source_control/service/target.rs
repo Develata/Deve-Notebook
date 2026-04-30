@@ -93,6 +93,13 @@ pub fn resolve_target(
     ))
 }
 
+pub fn resolved_target_entry<'a>(
+    entries: &'a [ChangeEntry],
+    resolved: &ScPathTarget,
+) -> super::ScResult<&'a ChangeEntry> {
+    current_entry(entries, resolved)
+}
+
 pub fn resolve_targets(
     entries: &[ChangeEntry],
     targets: Vec<ScPathTarget>,
