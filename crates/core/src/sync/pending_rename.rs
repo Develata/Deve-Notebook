@@ -20,8 +20,8 @@ pub(super) fn upsert_external_rename(
     old_path: &str,
     new_path: &str,
     doc_id: DocId,
-) -> Result<()> {
-    pending::upsert(
+) -> Result<bool> {
+    let deleted_changed = pending::upsert(
         repo,
         repo_name,
         old_path,
@@ -29,7 +29,7 @@ pub(super) fn upsert_external_rename(
         Some(doc_id),
         None,
     )?;
-    pending::upsert(
+    let added_changed = pending::upsert(
         repo,
         repo_name,
         new_path,
@@ -37,5 +37,5 @@ pub(super) fn upsert_external_rename(
         Some(doc_id),
         Some(old_path),
     )?;
-    Ok(())
+    Ok(deleted_changed || added_changed)
 }

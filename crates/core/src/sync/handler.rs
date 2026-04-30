@@ -186,13 +186,16 @@ impl<'a> FsEventHandler<'a> {
         new_path: &str,
         doc_id: crate::models::DocId,
     ) -> Result<Vec<ServerMessage>> {
-        super::pending_rename::upsert_external_rename(
+        let changed = super::pending_rename::upsert_external_rename(
             self.repo,
             self.repo_name,
             old_path,
             new_path,
             doc_id,
         )?;
+        if !changed {
+            return Ok(vec![]);
+        }
         Ok(vec![
             super::pending::message(self.repo, self.repo_name, self.repo_id, old_path, "deleted")?,
             super::pending::message(self.repo, self.repo_name, self.repo_id, new_path, "added")?,

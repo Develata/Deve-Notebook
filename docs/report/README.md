@@ -59,6 +59,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest mobile Diff fixture viewport smoke: `mobile-diff-fixture-viewport-smoke-2026-04-30.md`
 - Latest watcher external new-file debounce status: `watcher-external-new-file-debounce-status-2026-04-30.md`
 - Latest Source Control external new-file runtime smoke: `source-control-external-new-file-runtime-smoke-2026-04-30.md`
+- Latest watcher rename-pair debounce status: `watcher-rename-pair-debounce-status-2026-04-30.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 

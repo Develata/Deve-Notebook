@@ -90,9 +90,12 @@ fn dispatch_rename(
             .flatten()
     });
     if let Some(doc_id) = doc_id {
-        pending_rename::upsert_external_rename(
+        let changed = pending_rename::upsert_external_rename(
             &sync.repo, repo_name, &old_path, &new_path, doc_id,
         )?;
+        if !changed {
+            return Ok(());
+        }
         if let Some(cb) = callback {
             cb(pending::message(
                 &sync.repo, repo_name, repo_id, &old_path, "deleted",

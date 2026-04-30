@@ -1,6 +1,7 @@
 use super::dispatch::dispatch_batch;
 use crate::ledger::REPO_METADATA;
 use crate::ledger::RepoManager;
+use crate::models::{LedgerEntry, PeerId};
 use crate::source_control::ChangeStatus;
 use crate::sync::SyncManager;
 use notify_debouncer_full::{
@@ -217,6 +218,62 @@ fn dispatch_batch_suppresses_duplicate_external_added_message() -> anyhow::Resul
 }
 
 #[test]
+fn dispatch_batch_suppresses_duplicate_rename_pair_messages() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    let doc_id = commit_doc(&repo, &sync, &repo_name, "notes/a.md", "base")?;
+    let old = repo_root.join("notes").join("a.md");
+    let new = repo_root.join("notes").join("b.md");
+    std::fs::rename(&old, &new)?;
+
+    let messages = Arc::new(Mutex::new(Vec::new()));
+    let callback_messages = messages.clone();
+    let callback: super::WatcherCallback = Arc::new(move |msg| {
+        callback_messages.lock().expect("messages lock").push(msg);
+    });
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![rename_event(old.clone(), new.clone())],
+        Some(&callback),
+    )?;
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![rename_event(old, new)],
+        Some(&callback),
+    )?;
+
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert_eq!(pending.len(), 2);
+    assert!(pending.iter().any(|entry| {
+        entry.path == "notes/a.md"
+            && entry.status == ChangeStatus::Deleted
+            && entry.doc_id == Some(doc_id)
+    }));
+    assert!(pending.iter().any(|entry| {
+        entry.path == "notes/b.md"
+            && entry.status == ChangeStatus::Added
+            && entry.renamed_from.as_deref() == Some("notes/a.md")
+            && entry.doc_id == Some(doc_id)
+    }));
+
+    let messages = messages.lock().expect("messages lock");
+    assert_eq!(
+        messages.len(),
+        2,
+        "duplicate rename-pair signal should not emit another delete/add refresh pair"
+    );
+    assert_fs_message(&messages[0], "notes/a.md", "deleted");
+    assert_fs_message(&messages[1], "notes/b.md", "added");
+    Ok(())
+}
+
+#[test]
 fn dispatch_batch_fails_closed_on_dir_change_resolution_error() -> anyhow::Result<()> {
     let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
     let docs = repo_root.join("docs");
@@ -286,4 +343,55 @@ fn event_for(path: std::path::PathBuf) -> DebouncedEvent {
         },
         Instant::now(),
     )
+}
+
+fn rename_event(old: std::path::PathBuf, new: std::path::PathBuf) -> DebouncedEvent {
+    DebouncedEvent::new(
+        Event {
+            kind: EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
+            paths: vec![old, new],
+            attrs: Default::default(),
+        },
+        Instant::now(),
+    )
+}
+
+fn commit_doc(
+    repo: &Arc<RepoManager>,
+    sync: &Arc<SyncManager>,
+    repo_name: &str,
+    path: &str,
+    content: &str,
+) -> anyhow::Result<crate::models::DocId> {
+    let (doc_id, _) = repo.apply_file_structure_in_local_repo(repo_name, path, None, "test")?;
+    repo.append_generated_op_in_local_repo(repo_name, doc_id, PeerId::new("local"), |seq| {
+        LedgerEntry::new_content(
+            doc_id,
+            crate::models::Op::Insert {
+                pos: 0,
+                content: content.into(),
+            },
+            1,
+            PeerId::new("local"),
+            seq,
+            None,
+            None,
+        )
+    })?;
+    sync.persist_doc_in_local_repo(repo_name, doc_id)?;
+    Ok(doc_id)
+}
+
+fn assert_fs_message(message: &crate::protocol::ServerMessage, path: &str, change_type: &str) {
+    match message {
+        crate::protocol::ServerMessage::FsChangeDetected {
+            path: actual_path,
+            change_type: actual_change_type,
+            ..
+        } => {
+            assert_eq!(actual_path, path);
+            assert_eq!(actual_change_type, change_type);
+        }
+        other => panic!("unexpected message: {other:?}"),
+    }
 }
