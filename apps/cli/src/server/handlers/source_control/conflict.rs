@@ -77,7 +77,18 @@ fn resolve_keep_fs(
     selector: &RepoSelector,
     target: &ScPathTarget,
 ) -> Result<(), deve_core::protocol::ServerError> {
-    super::service::stage_pending(state.repo.as_ref(), selector, target).map(|_| ())
+    let repo_name = selector.repo_name.as_deref().ok_or_else(|| {
+        deve_core::protocol::ServerError::with_detail(
+            deve_core::protocol::ServerErrorCode::ScRepoContextInvalid,
+            "Missing local repo selector for conflict resolution",
+        )
+    })?;
+    state
+        .repo
+        .stage_resolved_pending_target_in_local_repo(repo_name, target)
+        .map_err(|e| {
+            super::errors::map_repo_error(super::errors::ScOp::StagePending(target.path.clone()), e)
+        })
 }
 
 fn resolve_keep_ledger(

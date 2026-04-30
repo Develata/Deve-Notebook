@@ -1,0 +1,247 @@
+//! plan_ref:
+//!   - 07_diff_logic#source-control-runtime
+//!   - 12_commands#cli-commands
+
+use crate::server::{
+    AppState, channel::DualChannel, handlers::source_control::handle_resolve_conflict,
+    session::WsSession,
+};
+use deve_core::git_bridge::apply_import;
+use deve_core::models::DocId;
+use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::protocol::{ScPathTarget, ServerMessage};
+use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::{ChangeStatus, ConflictResolution};
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command;
+use std::sync::Arc;
+use tempfile::TempDir;
+use tokio::sync::mpsc;
+
+#[allow(dead_code)]
+#[path = "source_control_scope_test_support.rs"]
+mod support;
+
+use support::{build_state, write_workspace_file};
+
+fn git(path: &Path, args: &[&str]) {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(path)
+        .args(args)
+        .output()
+        .expect("run git");
+    assert!(
+        output.status.success(),
+        "git {:?} failed: {}",
+        args,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+fn init_git_repo(path: &Path) {
+    std::fs::create_dir_all(path).expect("repo dir");
+    git(path, &["init"]);
+    git(path, &["config", "user.email", "deve@example.invalid"]);
+    git(path, &["config", "user.name", "Deve Test"]);
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(path).expect("gitignore");
+}
+
+struct ImportedConflictFixture {
+    _dir: TempDir,
+    state: Arc<AppState>,
+    repo_id: uuid::Uuid,
+    repo_name: String,
+    repo_root: PathBuf,
+    doc_id: DocId,
+    before_commit_count: usize,
+}
+
+fn create_imported_conflict_fixture() -> anyhow::Result<ImportedConflictFixture> {
+    let (dir, state, repo_id, _test_id) = build_state()?;
+    let repo_name = state.repo.local_repo_name().to_string();
+    let repo_root = state.repo.local_repo_workspace_root(&repo_name)?;
+    init_git_repo(&repo_root);
+    write_workspace_file(&dir, &repo_name, "note.md", "hello\n");
+    state.repo.run_on_local_repo(&repo_name, |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "note.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("hello\n"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })?;
+    state
+        .repo
+        .stage_pending_in_local_repo(&repo_name, "note.md")?;
+    state
+        .repo
+        .commit_staged_in_local_repo(&repo_name, "baseline")?;
+    git(&repo_root, &["add", "."]);
+    git(&repo_root, &["commit", "--no-gpg-sign", "-m", "baseline"]);
+    let doc_id = state
+        .repo
+        .get_tracked_docid_in_local_repo(&repo_name, "note.md")?
+        .expect("doc id");
+    state.repo.append_generated_op_in_local_repo(
+        &repo_name,
+        doc_id,
+        PeerId::new("local"),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 6,
+                    content: "ledger\n".into(),
+                },
+                2,
+                PeerId::new("local"),
+                seq,
+                None,
+                None,
+            )
+        },
+    )?;
+    write_workspace_file(&dir, &repo_name, "note.md", "git import\n");
+
+    let report = apply_import(&state.repo, &repo_name, &repo_root)?;
+
+    assert_eq!(report.applied, 1);
+    let pending = state.repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert_eq!(pending.len(), 1, "{pending:?}");
+    assert!(pending[0].has_conflict, "{pending:?}");
+    let before_commit_count = state.repo.list_commits_in_local_repo(&repo_name, 10)?.len();
+
+    Ok(ImportedConflictFixture {
+        _dir: dir,
+        state,
+        repo_id,
+        repo_name,
+        repo_root,
+        doc_id,
+        before_commit_count,
+    })
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn imported_conflict_keep_fs_resolves_to_clean_staged_entry() -> anyhow::Result<()> {
+    let fixture = create_imported_conflict_fixture()?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(fixture.state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo(fixture.repo_name.clone(), None);
+    session.set_scope_nonce(Some(31));
+
+    handle_resolve_conflict(
+        &fixture.state,
+        &ch,
+        &mut session,
+        ScPathTarget {
+            path: "note.md".into(),
+            doc_id: Some(fixture.doc_id),
+        },
+        ConflictResolution::KeepFs,
+    )
+    .await;
+
+    match uni_rx.recv().await.expect("conflict resolved") {
+        ServerMessage::ConflictResolved {
+            repo_id: actual_repo_id,
+            scope_nonce,
+            path,
+            resolution,
+            ..
+        } => {
+            assert_eq!(actual_repo_id, Some(fixture.repo_id));
+            assert_eq!(scope_nonce, Some(31));
+            assert_eq!(path, "note.md");
+            assert_eq!(resolution, "KeepFs");
+        }
+        other => panic!("expected ConflictResolved, got {other:?}"),
+    }
+    let pending = fixture
+        .state
+        .repo
+        .list_pending_fs_in_local_repo(&fixture.repo_name)?;
+    assert!(pending.is_empty(), "{pending:?}");
+    let staged = fixture
+        .state
+        .repo
+        .list_staged_in_local_repo(&fixture.repo_name)?;
+    assert_eq!(staged.len(), 1, "{staged:?}");
+    assert_eq!(staged[0].path, "note.md");
+    assert!(!staged[0].has_conflict, "{staged:?}");
+    let after_commits = fixture
+        .state
+        .repo
+        .list_commits_in_local_repo(&fixture.repo_name, 10)?;
+    assert_eq!(after_commits.len(), fixture.before_commit_count);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn imported_conflict_keep_ledger_discards_import_without_staging() -> anyhow::Result<()> {
+    let fixture = create_imported_conflict_fixture()?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(fixture.state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo(fixture.repo_name.clone(), None);
+    session.set_scope_nonce(Some(32));
+
+    handle_resolve_conflict(
+        &fixture.state,
+        &ch,
+        &mut session,
+        ScPathTarget {
+            path: "note.md".into(),
+            doc_id: Some(fixture.doc_id),
+        },
+        ConflictResolution::KeepLedger,
+    )
+    .await;
+
+    match uni_rx.recv().await.expect("conflict resolved") {
+        ServerMessage::ConflictResolved {
+            repo_id: actual_repo_id,
+            scope_nonce,
+            path,
+            resolution,
+            ..
+        } => {
+            assert_eq!(actual_repo_id, Some(fixture.repo_id));
+            assert_eq!(scope_nonce, Some(32));
+            assert_eq!(path, "note.md");
+            assert_eq!(resolution, "KeepLedger");
+        }
+        other => panic!("expected ConflictResolved, got {other:?}"),
+    }
+    let pending = fixture
+        .state
+        .repo
+        .list_pending_fs_in_local_repo(&fixture.repo_name)?;
+    assert!(pending.is_empty(), "{pending:?}");
+    let staged = fixture
+        .state
+        .repo
+        .list_staged_in_local_repo(&fixture.repo_name)?;
+    assert!(staged.is_empty(), "{staged:?}");
+    let restored = std::fs::read_to_string(fixture.repo_root.join("note.md"))?;
+    assert_eq!(restored, "hello\nledger\n");
+    let after_commits = fixture
+        .state
+        .repo
+        .list_commits_in_local_repo(&fixture.repo_name, 10)?;
+    assert_eq!(after_commits.len(), fixture.before_commit_count);
+    Ok(())
+}

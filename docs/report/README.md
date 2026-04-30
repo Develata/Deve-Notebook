@@ -67,6 +67,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest cargo-chef warning cleanup: `cargo-chef-skeleton-warning-cleanup-2026-04-30.md`
 - Latest post-verification plan/code drift rescan: `post-verification-plan-code-drift-rescan-2026-04-30.md`
 - Latest Git import apply CLI runtime smoke: `git-import-apply-cli-runtime-smoke-2026-04-30.md`
+- Latest Git import conflict resolution runtime smoke: `git-import-conflict-resolution-runtime-smoke-2026-04-30.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 
 ## Archive Contents
