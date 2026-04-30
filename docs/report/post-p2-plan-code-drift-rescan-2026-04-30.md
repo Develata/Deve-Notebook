@@ -12,7 +12,10 @@ Rescanned current plan/code alignment after Native AI Chat and Browser UI prefs 
 - Trusted CLI policy now requires `AGENT_CLI_PATH` to point to an existing executable file, and non-zero CLI exit is treated as request failure.
 - Dev runbook and scripts registry now include `scripts/check-browser-prefs-boundary.sh`.
 
-## Remaining Priority Gaps
+## Original Priority Gaps
+
+These were the gaps found by the original rescan. They are retained as
+historical context only; current status is recorded in the follow-up section.
 
 - P0: `ai.mode` / `ai.native_enabled` need an effective runtime decision. Config parses them, but Web currently initializes Native mode directly and `ai.native_enabled=false` does not disable the Native path.
 - P0: Desktop/Mobile plan chapters still contain post-gate Tauri/embedded-service/offline-first MUST language after current-boundary sections that explicitly say no Tauri/process runtime is active.
