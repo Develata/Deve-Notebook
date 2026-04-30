@@ -88,7 +88,7 @@
 - P3-13 Graph Web projection panel scaffold 已关闭：Source Control Graph 区域新增只读 summary panel，读取 `/api/repo/graph` 并展示 nodes/edges/unresolved counts 与 loading/failed/empty/local-only fallback；不引入 d3/Pixi、不写 authority，详见 `graph-web-projection-panel-status-2026-04-29.md`。
 - P3-13 Graph Web renderer gate decision 已关闭：当前批次不打开 Canvas/d3-force/Pixi renderer gate，不新增 Graph renderer dependency；Web 继续只保留 summary panel 和 HTTP projection 数据面，详见 `graph-renderer-gate-decision-2026-04-29.md`。
 - P2 Docker release smoke 已关闭：Docker Desktop WSL integration 恢复后，`DEVE_DOCKER_SMOKE_REQUIRED=1 DEVE_DOCKER_SMOKE_PORT=3102 scripts/smoke-docker-release.sh` 完整通过，镜像 build、容器启动与宿主 `/api/node/role` endpoint probe 均已验证；脚本同时补充 local proxy bypass 与容器 health 诊断，详见 `release-smoke-status-2026-04-29.md`。
-- P3 Cargo-chef manifest warning triage 已关闭：当前 repo manifests 无 `plugin = ...` 键，`cargo metadata --no-deps --format-version 1` 无 warning；该 warning 需在稳定 Docker context 内复现后再判断是否为 cargo-chef skeleton 或旧缓存噪音，详见 `cargo-chef-warning-triage-2026-04-29.md`。
+- P3 Cargo-chef manifest warning triage 已关闭：当前 repo manifests 无 `plugin = ...` 键，`cargo metadata --no-deps --format-version 1` 无 warning；后续 Docker context 复现确认 warning 来自 cargo-chef skeleton recipe，并已由 `cargo-chef-skeleton-warning-cleanup-2026-04-30.md` 收口。
 - P0 repo health、`repair --check`、WS structured errors、writer-ready `repo_id + scope_nonce`、Source Control doc identity hardening 已记录在 `code-review-2026-04-28.md`。
 - P1 search、settings current boundary、Native AI Chat minimum、graph projection、i18n cleanup、plan_ref sweeps 已记录在 `code-review-2026-04-28.md`。
 - Release/runtime smoke 与 Docker daemon blocker 已记录在 `release-smoke-status-2026-04-28.md`。
