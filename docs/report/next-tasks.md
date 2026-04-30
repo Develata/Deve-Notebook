@@ -1,6 +1,6 @@
 # 当前下一步任务
 
-> 更新日期：2026-04-30
+> 更新日期：2026-05-01
 >
 > 本文件只记录 active execution queue。已完成的实现历史应进入 dated reports，例如
 > `code-review-2026-04-28.md` 与 `release-smoke-status-2026-04-28.md`。
@@ -9,10 +9,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git import resolved commit/export roundtrip smoke | P2 | imported conflict `KeepFs` resolution, Deve commit, Git export mapping | Verify a resolved imported conflict stages without conflict metadata, commits only through normal Deve Source Control, and exports back to Git without leaving stale pending/import/conflict state |
+| 1 | Git import resolved CLI roundtrip smoke | P2 | `deve_cli git import --apply`, Source Control commit, `deve_cli git export` | Verify the public command-layer surface reports the same resolved-import state transitions as the core/server smoke and preserves user guidance around staging, commit, export, and stale conflict cleanup |
 
 ## 最近完成基线
 
+- P2 Git import resolved commit/export roundtrip smoke 已关闭：新增 server/runtime smoke，覆盖 mapped baseline 下 imported conflict `KeepFs` 解决、Source Control commit handler、Git export mapping 与 clean Git HEAD；pending/staged/import conflict metadata 均无残留，详见 `git-import-resolved-roundtrip-smoke-2026-05-01.md`。
 - P2 Source Control conflict precondition guard 已关闭：`ResolveConflict` 现在服务端强制要求 resolved pending entry `has_conflict=true`，非 conflict pending 返回 scoped structured error 且不改 pending/staged，详见 `source-control-conflict-precondition-guard-2026-05-01.md`。
 - P2 Git import conflict resolution runtime smoke 已关闭：新增 server handler runtime-style 测试，覆盖 imported conflict 的 `KeepFs` / `KeepLedger` 与 tracked rename pair follow-up；`KeepFs` staging 前清除 pending-only conflict marker，并保持 related-target staging 语义，`KeepLedger` 恢复 ledger projection 且不产生 staged，详见 `git-import-conflict-resolution-runtime-smoke-2026-04-30.md`。
 - P2 Git import apply CLI/runtime smoke 已关闭：新增 core runtime 与 CLI command-layer 隔离测试，验证 dry-run 不写 pending、`--apply` 写入 pending/import、已有 pending blocker 阻止同批次部分写入，CLI 输出仍回指 Deve stage/commit；详见 `git-import-apply-cli-runtime-smoke-2026-04-30.md`。
