@@ -9,10 +9,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git import resolved CLI roundtrip smoke | P2 | `deve_cli git import --apply`, Source Control commit, `deve_cli git export` | Verify the public command-layer surface reports the same resolved-import state transitions as the core/server smoke and preserves user guidance around staging, commit, export, and stale conflict cleanup |
+| 1 | Git import/export/push resolved publish smoke | P2 | `deve_cli git import --apply`, Source Control commit, `deve_cli git export`, `deve_cli git push` | Verify a resolved imported commit can be exported and published through the existing Git mirror push surface, while fail-closed blockers remain intact for unexported or dirty mirror state |
 
 ## 最近完成基线
 
+- P2 Git import resolved CLI roundtrip smoke 已关闭：新增命令层 smoke，覆盖 `git import --apply` imported conflict、Source Control resolved stage/commit、`git export` mirror mapping 与 clean Git HEAD，详见 `git-import-resolved-cli-roundtrip-smoke-2026-05-01.md`。
 - P2 Git import resolved commit/export roundtrip smoke 已关闭：新增 server/runtime smoke，覆盖 mapped baseline 下 imported conflict `KeepFs` 解决、Source Control commit handler、Git export mapping 与 clean Git HEAD；pending/staged/import conflict metadata 均无残留，详见 `git-import-resolved-roundtrip-smoke-2026-05-01.md`。
 - P2 Source Control conflict precondition guard 已关闭：`ResolveConflict` 现在服务端强制要求 resolved pending entry `has_conflict=true`，非 conflict pending 返回 scoped structured error 且不改 pending/staged，详见 `source-control-conflict-precondition-guard-2026-05-01.md`。
 - P2 Git import conflict resolution runtime smoke 已关闭：新增 server handler runtime-style 测试，覆盖 imported conflict 的 `KeepFs` / `KeepLedger` 与 tracked rename pair follow-up；`KeepFs` staging 前清除 pending-only conflict marker，并保持 related-target staging 语义，`KeepLedger` 恢复 ledger projection 且不产生 staged，详见 `git-import-conflict-resolution-runtime-smoke-2026-04-30.md`。
