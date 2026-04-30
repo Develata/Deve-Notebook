@@ -31,6 +31,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-graph-baseline.sh` | Verifies Graph remains a read-only derived projection and does not become a ledger/workspace authority path |
 | `check-dev-runbook-baseline.sh` | Verifies current startup, auth, frontend, Chrome MCP, search, and verification runbook boundaries |
 | `check-release-baseline.sh` | Verifies Docker, compose, and release workflow surfaces match the embedded-frontend release baseline |
+| `smoke-web-release-build.sh` | Builds the Web release assets with normalized Trunk/Browserslist environment |
 | `smoke-docker-release.sh` | Builds and runs the Docker release image smoke test when Docker is available |
 | `smoke-runtime-release-info.sh` | Checks a running server's `/api/node/role` runtime release info fields |
 

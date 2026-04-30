@@ -31,15 +31,15 @@ unavailable error.
 Preferred embedded path:
 
 ```bash
-cd apps/web
-NO_COLOR=true trunk build --release
-cd ../..
+scripts/smoke-web-release-build.sh
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
 
 Open `http://127.0.0.1:3001/`. The CLI embeds `apps/web/dist` at build time, so
 after Web source changes you must rebuild `apps/web/dist` before rebuilding or
 running the CLI. Otherwise the embedded server can serve stale WASM.
+The wrapper normalizes Trunk's `NO_COLOR` parsing and suppresses non-actionable
+Browserslist database freshness noise from the Trunk Tailwind pipeline.
 
 Fallback two-process path:
 
@@ -217,6 +217,7 @@ scripts/check-ws-structured-errors.sh
 scripts/check-release-baseline.sh
 scripts/check-architecture-registry.sh
 scripts/plan-coverage.sh
+scripts/smoke-web-release-build.sh
 scripts/smoke-runtime-release-info.sh
 scripts/smoke-docker-release.sh
 ```

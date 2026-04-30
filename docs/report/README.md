@@ -62,6 +62,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest watcher rename-pair debounce status: `watcher-rename-pair-debounce-status-2026-04-30.md`
 - Latest Source Control rename-pair runtime smoke: `source-control-rename-pair-runtime-smoke-2026-04-30.md`
 - Latest Web release graph warning cleanup: `web-release-graph-warning-cleanup-2026-04-30.md`
+- Latest Web release Browserslist warning triage: `web-release-browserslist-triage-2026-04-30.md`
 - Latest cargo-chef warning triage: `cargo-chef-warning-triage-2026-04-29.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 

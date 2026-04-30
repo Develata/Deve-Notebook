@@ -9,7 +9,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Web release Browserslist warning triage | P3 | `apps/web/package.json`, `apps/web/package-lock.json`, release build tooling | Decide whether the `caniuse-lite is outdated` prompt is repo-lock actionable or environment/tooling freshness; either update the frontend lock safely or document it as non-blocking release noise with a reproducible check |
+| 1 | Full workspace verification pass | P2 | root workspace verification, release baseline scripts, Web release wrapper | Run the current broad local verification set after the Source Control/Web release cleanup batches and record any remaining blockers without expanding product scope |
 
 ## 最近完成基线
 
@@ -77,6 +77,7 @@
 - P2 Watcher rename-pair duplicate refresh hardening 已关闭：pending rename helper 返回语义变化信号，dispatch/handler 对重复 rename-pair 事件不再重复广播 deleted/added 刷新；`deve_core` 全包测试通过，详见 `watcher-rename-pair-debounce-status-2026-04-30.md`。
 - P2 Source Control rename-pair runtime smoke 已关闭：隔离 `serve --dev` + Chrome MCP 路径验证外部 rename 在 Web 中显示稳定单条 R 行，保留 `doc_id` / `renamed_from`，无 rate-limit UI、无 console warning/error；重复语义 handler 日志刷屏已修复并补 plain file event 回归测试，详见 `source-control-rename-pair-runtime-smoke-2026-04-30.md`。
 - P2 Web release graph warning cleanup 已关闭：删除未使用的 `graph_state_attr` helper，保留真实 loaded/empty state helper；`env NO_COLOR=true trunk build --release` 不再输出该 Rust warning，详见 `web-release-graph-warning-cleanup-2026-04-30.md`。
+- P3 Web release Browserslist warning triage 已关闭：确认 `caniuse-lite is outdated` 来自 Trunk Tailwind pipeline 而非 Web npm lockfile；新增 `scripts/smoke-web-release-build.sh` 并同步 Dockerfile/runbook/baseline，以稳定 `NO_COLOR` 与 Browserslist freshness 噪音，详见 `web-release-browserslist-triage-2026-04-30.md`。
 - P3-10 Desktop runtime readiness / foreground reprobe 已关闭：desktop shell snapshot 现包含 `NativeRuntimeReadiness`，`RuntimeReady` 要求 endpoint/auth/node-role/repo-handshake/writer-ready/current-scope 全部满足，`Foreground` / `Resumed` 会进入 `ForegroundReprobe` 且 stale `scope_nonce` 不恢复写态，详见 `desktop-runtime-readiness-status-2026-04-29.md`。
 - P3-10 Native shell parity review 已关闭：mobile foreground/resume reprobe 现在也清空 `node_role_readable`，desktop/mobile/Web 对 native readiness、`foreground_reprobe` recovery bootstrap 与 write gate 的当前 no-Tauri contract 已对齐；native track 进入干净停靠点，详见 `native-shell-parity-review-2026-04-29.md`。
 - P3-13 Graph visualization read-only CLI projection surface 已关闭：`deve_core::graph` 保持 authority-free projection helper，`deve graph` 只读导出 repo-scoped `GraphProjection` JSON，默认 fail-closed 于损坏 Structure Facts authority；Web Canvas/d3-force/Pixi renderer 仍属 future implementation。

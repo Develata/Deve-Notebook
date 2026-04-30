@@ -21,7 +21,8 @@ contains() {
 
 contains "$RUNBOOK" 'cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001'
 contains "$RUNBOOK" 'cargo run -p deve_cli --features search --bin deve_cli -- serve --dev --port 3001'
-contains "$RUNBOOK" 'NO_COLOR=true trunk build --release'
+contains "$RUNBOOK" 'scripts/smoke-web-release-build.sh'
+contains "$RUNBOOK" "The wrapper normalizes Trunk's \`NO_COLOR\` parsing"
 contains "$RUNBOOK" 'NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080'
 contains "$RUNBOOK" 'AUTH_SECRET'
 contains "$RUNBOOK" 'AUTH_PASS'
@@ -42,6 +43,7 @@ contains "$RUNBOOK" 'scripts/check-native-track-boundary.sh'
 contains "$RUNBOOK" 'scripts/check-graph-baseline.sh'
 contains "$RUNBOOK" 'scripts/check-architecture-registry.sh'
 contains "$RUNBOOK" 'scripts/plan-coverage.sh'
+contains "$RUNBOOK" 'scripts/smoke-web-release-build.sh'
 contains "$RUNBOOK" 'DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh'
 contains "$RUNBOOK" 'scripts/smoke-runtime-release-info.sh'
 contains "$RUNBOOK" 'repo_health.status=degraded'

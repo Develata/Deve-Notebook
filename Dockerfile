@@ -28,7 +28,7 @@ WORKDIR /app/apps/web
 # npm 构建：编译 editor.bundle.js，复制 KaTeX 到 public/
 RUN npm ci --ignore-scripts && npm run build
 # Trunk 构建：生成 Leptos WASM（输出到 apps/web/dist/）
-RUN trunk build --release
+RUN NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk build --release
 
 # 阶段 5: backend — 编译后端二进制
 FROM deps AS backend
