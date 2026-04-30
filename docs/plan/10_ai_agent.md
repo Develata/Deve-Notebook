@@ -9,10 +9,7 @@
 - `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
 - `Related Design Notes`: [`docs/ai-chat-streaming.md`](../ai-chat-streaming.md) (streaming bridge design), [`docs/plan/plugins/agent_bridge/01_agent_bridge.md`](./plugins/agent_bridge/01_agent_bridge.md) (dual-channel architecture)
 
-> AI 能力是 Deve-Notebook 的**可选第一方产品层**，不再归入插件章节。
-> 当 AI 功能启用时，默认后端 **MUST** 是最小原生 AI Chat；外部 CLI Agent 仅作为可选的 Trusted 模式预留。
-> 若无法建立明确的安全边界，外部 CLI Agent **MUST NOT** 默认启用；对应 release **MAY** 完全不提供该能力。
-> MCP 不进入 Deve-Notebook 产品实现路线；相关扩展需求应由 Skills + 受控 CLI 工具调用替代，不再规划 MCP runtime，代码层也不得保留 MCP runtime / manager / host tool 入口。
+> AI 是可选第一方产品层。启用 AI 时，默认后端 **MUST** 是最小 Native AI Chat；Trusted CLI Agent 仅作显式 opt-in。MCP 不进入产品路线，代码层不得保留 MCP runtime / manager / host tool 入口。
 
 ## 1. Scope (目标与范围)
 
@@ -29,11 +26,11 @@
 
 ### MCP Retired Direction
 
-MCP 不进入 Deve-Notebook 的实现路线，也不进入 Native AI Chat 或 Trusted Agent 的 roadmap。原因是它会扩大 host/tool 边界，更可控的方向是：
+MCP 不进入 Native AI Chat 或 Trusted Agent roadmap。替代方向：
 
 1. Native AI Chat 保持 read-first、最小可用。
 2. 若需要外部能力，通过用户显式启用的 Trusted CLI path，或未来 Skills 调用受控 CLI 工具完成。
-3. MCP 相关文字只作为“为什么不做”的历史记录保留；不得新增或保留 MCP runtime、MCP server 管理或 MCP tool loop。
+3. MCP 相关文字只作为历史决策保留；不得新增或保留 MCP runtime、MCP server 管理或 MCP tool loop。
 
 ## 2. Native AI Chat {#native-ai-chat-runtime}
 
@@ -57,7 +54,7 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 ### 设计原则
 
 *   **Fail-closed**：拿不到上下文就降级为纯 chat，不得隐式扩大读取范围。
-*   **Read-first**：Baseline 阶段优先保证“读 markdown + chat”稳定，不追求工具丰富度。
+*   **Read-first**：Baseline 优先保证“读 Markdown + chat”稳定。
 *   **Low-memory**：常驻成本应保持在轻量级，适合低配环境。
 
 ### 运行时合同
@@ -66,7 +63,7 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 *   Web chat UI 负责能力探测、模式展示、请求构造、streaming 展示与 retry/error 状态。
 *   若保留 Rhai/plugin-host 兼容 bridge，该 bridge **MAY** 提供 transport-agnostic chat stream，但 **MUST NOT** 把 Native AI Chat 升格为通用插件主线。
 *   Native AI Chat **MUST** 保持本节 read-first 边界：provider 可流式返回结果，但 **MUST NOT** 静默获得任意 source-control 或 workspace 写权限。
-*   兼容 AI chat 插件 **MUST NOT** 授予广泛文件读取或默认工具执行；当前 Markdown 与用户显式选择的上下文只能由 chat request 传入，不得通过无限制 plugin file read 反向恢复。
+*   兼容 AI chat 插件 **MUST NOT** 授予广泛文件读取或默认工具执行；上下文只能由 chat request 显式传入。
 *   public `PluginCall` surface **MUST** 限定为 `chat`；helper/config/tool 函数属于内部实现细节，被外部调用时必须 fail-closed。
 *   产品后端名称是 `native` / `trusted-cli`；`ai-chat` / `agent-bridge` 这类兼容 plugin id 只是内部 routing detail，必须经过显式转换层。
 *   同步 `PluginResponse` text 或 error **MUST** 完成对应 chat request；缺 API key、Trusted CLI 被禁用或 policy error **MUST NOT** 让 UI 无限 streaming/loading。
@@ -105,13 +102,12 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 2. **可执行路径受控**：不得随意从 PATH 搜索任意命令；应有 allowlist 或固定路径，且路径必须存在并指向可执行文件。
 3. **环境变量白名单**：子进程不得继承宿主全部环境。
 4. **资源约束**：超时、输出上限、并发上限必须可控。
-5. **读取边界清晰**：默认只给只读 Markdown / 明确导出的上下文，不直接暴露整个 live workspace。
+5. **读取边界清晰**：默认只提供只读 Markdown / 显式上下文，不暴露整个 live workspace。
 6. **失败可退化**：安全壳不可用时，系统必须退回 Native AI Chat，而不是静默放开权限。
 
 ### 关键结论
 
-*   如果上述边界在目标部署形态下无法成立，则 Deve-Notebook **SHOULD** 不内建 CLI Agent。
-*   在这种情况下，用户可以自行在外部终端运行独立 CLI Agent；Deve-Notebook 不负责原生托管它。
+*   如果上述边界无法成立，Deve-Notebook **SHOULD** 不内建 CLI Agent；用户可在外部终端自行运行。
 *   若保留 `agent-bridge`，它只能是 default-off、policy-gated 的 Trusted CLI path；它不得被描述成通用插件市场能力，也不得绕过 `AGENT_CLI_PATH` / trusted-mode gating。
 *   `AGENT_CLI_PATH` 必须解析为显式绝对路径；子进程必须清空默认环境、设置超时、输出上限和并发上限，避免退化成开放式 shell/agent runner。
 *   `DEVE_AI_AGENT_BRIDGE_ENABLED` 与 `DEVE_AI_AGENT_BRIDGE_TRUSTED` 是

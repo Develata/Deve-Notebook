@@ -8,17 +8,14 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
 
-本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。规范性用语统一继承 `01_terminology.md`，不得在子章内重新定义。
+本章定义 Mobile content-first 适配策略。规范性用语继承 `01_terminology.md`。
 
-> **Current Native Boundary**（当前原生边界）：Mobile native 是壳层、生命周期与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
-> **Post-Gate Target**：Mobile 端目标采用 **Tauri v2 Mobile packaging** 外壳，前端代码与 Web 端共享。
-> **离线目标**：Mobile 端目标是在无公网环境下保持本地读写可用；完整 offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
+> **Current Native Boundary**：Mobile native 是壳层、生命周期与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
+> **Post-Gate Target**：Mobile 端目标采用 **Tauri v2 Mobile packaging** 外壳，共享 Web 前端；完整离线 packaging/readiness 必须等 native-packaging 与 process adapter gate 打开后验收。
 
 > **Web 映射**：当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
 ## 1. 原生适配器边界 {#mobile-current-native-boundary}
-
-Mobile native adapter 的边界如下：
 
 *   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
 *   Mobile native adapter 第一阶段只允许承担：拉起受控内嵌服务、注入本机 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件。
@@ -30,9 +27,7 @@ Mobile native adapter 的边界如下：
 
 ### 1.1 Minimal Native Adapter Contract {#mobile-native-adapter-contract}
 
-Mobile native adapter 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-native-adapter-contract`
-的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有
-ledger/vault/source-control/search 的业务真相。
+Mobile native adapter 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-native-adapter-contract` 的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有 ledger/vault/source-control/search 的业务真相。
 
 Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
 
@@ -65,15 +60,12 @@ MobileColdStart
   -> RuntimeReady | ServiceOffline | SessionInvalid
 ```
 
-`RuntimeReady` 的最小条件与 Desktop 一致：本机 endpoint 可达、`/api/auth/status`
-有效、`/api/node/role` 可读取、当前 repo 已完成 ws handshake，且写入路径满足
-`writer_ready(repo_id, scope_nonce)`。`SessionInvalid` 必须进入 `Unauthorized`；
-移动端后台恢复失败不得被伪装成普通断网。
+`RuntimeReady` 的最小条件与 Desktop 一致：endpoint 可达、`/api/auth/status` 有效、`/api/node/role` 可读、当前 repo 已完成 ws handshake、写入路径满足 `writer_ready(repo_id, scope_nonce)`。`SessionInvalid` 必须进入 `Unauthorized`；后台恢复失败不得伪装成普通断网。
 
 **Endpoint/session injection rules**:
 
 *   Native 壳必须在 Web connection manager 启动前注入 `http_base/ws_base` 与 session 绑定状态；优先使用内存 bridge 或初始 HTML bootstrap。
-*   Native 壳也可以注入只含 `service_state` 的 recovery bootstrap；该 payload 只能表达 `service_offline`、`foreground_reprobe` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
+*   Native 壳可注入只含 `service_state` 的 recovery bootstrap；payload 只能表达 `service_offline`、`foreground_reprobe` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
 *   `?ws_port=` 只能作为开发期 fallback。mobile production 不得让 Web 端枚举、猜测或扫描本机端口。
 *   session 绑定完成前不得打开可写主界面；后台恢复后必须重新 probe session、node role 与 ws repo handshake。
 
@@ -120,9 +112,7 @@ Gate policy 必须满足：
 *   `packaging_gate_required = true`
 *   `authority_writes_allowed = false`
 
-真实 mobile process adapter 打开时必须位于 Mobile native adapter 的 `native-packaging`
-feature 后，并且只做受控 spawn/probe/session/restart wiring；不得绕过 foreground
-reprobe、writer-ready 或 repo scope gate。
+真实 mobile process adapter 必须位于 Mobile native adapter 的 `native-packaging` feature 后，只做受控 spawn/probe/session/restart wiring；不得绕过 foreground reprobe、writer-ready 或 repo scope gate。
 
 ### 1.4 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
 
@@ -164,7 +154,7 @@ repo scope gate 不被 native runtime 绕过。
 *   **Mobile State**: $W_{view} \le 768px \implies$ Stack Layout.
 
 ### 2.2 视口配置 (Viewport Configuration)
-为了适配刘海屏 (Notch) 并防止 iOS 自动缩放，HTML Header **MUST** 包含：
+HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 
 ```html
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -192,7 +182,7 @@ repo scope gate 不被 native runtime 绕过。
 *   **Outer Gutter**: 移动端 **SHOULD NOT** 提供外边距拖拽。
 
 ### 3.3 虚拟辅助键盘栏 (Mobile Toolbar)
-为了解决移动端输入 Markdown 符号的痛点，系统 **MUST** 在软键盘上方渲染 Accessory View。
+系统 **MUST** 在软键盘上方渲染 Markdown Accessory View。
 
 **Key Layout (Visual Representation)**:
 
@@ -291,9 +281,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 
 ### 9.1 移动端 UI 方案
 
-本节是 **post-gate normative target**：只有当 `native-packaging` 与 process adapter gate
-被显式打开后，以下 Tauri Mobile/embedded-service 规则才进入验收；默认 no-Tauri
-Mobile skeleton 仍以 §1 的原生适配器边界为准。
+本节是 post-gate normative target：只有 `native-packaging` 与 process adapter gate 显式打开后，以下规则才进入验收；默认 no-Tauri Mobile skeleton 仍以 §1 为准。
 
 *   **Rule**: Mobile post-gate 采用 **Tauri v2 Mobile** 作为外壳（WKWebView / Android WebView），前端代码与 Web 端共享，配合原生层访问摄像头/文件系统/推送等系统 API。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致，行为不以 Web 端为准。

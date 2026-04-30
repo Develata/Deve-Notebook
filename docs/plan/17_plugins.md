@@ -8,11 +8,7 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
 
-> 本章**不要求新增完整插件平台**。
-> AI Chat 归属第 10 章的原生产品能力，不属于插件主线。
-> Rhai/plugin-host 若保留，只能作为外围兼容运行时，并必须按本章边界约束；它不代表插件安装器、插件市场或默认启用的扩展主线成立。
-> 本章保留两类未来扩展：**Trusted External Agent Runtime** 与 **Calculation Runtime**。
-> MCP 不作为 Deve-Notebook 插件/运行时方向；相关扩展需求由 Skills + 受控 CLI 工具调用替代，不再规划也不保留 MCP runtime。
+> 本章不要求新增完整插件平台。AI Chat 归第 10 章；Rhai/plugin-host 只能作为外围兼容运行时。未来扩展仅保留 Trusted External Agent Runtime 与 Calculation Runtime。MCP 不作为插件/运行时方向。
 
 ## 1. 章节状态
 
@@ -26,7 +22,7 @@
 
 ### MCP Retirement Boundary {#skills-cli-extension-boundary}
 
-MCP 相关文字只作为“为什么不做”的历史记录保留。扩展路线是 Skills 调用受控 CLI 工具，或第 10 章定义的 Trusted CLI path；这两者都必须保持显式启用、资源约束、默认只读与 fail-closed。任何 MCP 企划不得复用 Rhai/plugin-host 边界落地，也不得绕过 Native AI Chat 的 read-first 默认策略。
+MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受控 CLI 工具，或第 10 章定义的 Trusted CLI path；两者都必须显式启用、资源受限、默认只读并 fail-closed。MCP 企划不得复用 Rhai/plugin-host 边界，也不得绕过 Native AI Chat 的 read-first 默认策略。
 
 ## 2. Existing Rhai Plugin Host Boundary {#plugin-runtime-boundary}
 
@@ -47,7 +43,7 @@ MCP 相关文字只作为“为什么不做”的历史记录保留。扩展路�
 
 ## 3. Trusted External Agent Runtime
 
-此能力对应“外部 CLI Agent 接入”的未来接口位，而不是默认产品能力。
+此能力是外部 CLI Agent 的未来接口位，不是默认产品能力。
 
 ### 基本原则
 
@@ -57,7 +53,7 @@ MCP 相关文字只作为“为什么不做”的历史记录保留。扩展路�
 
 ### 预留边界
 
-*   **Frontend**：只负责统一 chat UI、上下文展示与结果流式渲染。
+*   **Frontend**：统一 chat UI、上下文展示与结果流式渲染。
 *   **Backend**：如未来启用，负责 CLI lifecycle、stdout streaming、资源约束与错误收敛。
 *   **Trusted External Agent** **MUST NOT** 被视为通用插件市场能力；它是高级部署选项。
 

@@ -429,7 +429,7 @@ MergeRequested
 - `diff_session_runtime`
 - `merge_runtime`
 
-未来重构必须把“工作区差异”和“已确认 ledger diff”两个域彻底分开，避免让 core manager、CLI proxy 与 `use_core` 回调共享隐式 source-control 状态。
+未来重构必须分离 workspace diff 与 confirmed ledger diff；core manager、CLI proxy 与 `use_core` 回调不得共享隐式 source-control 状态。
 
 ## 本章相关命令
 

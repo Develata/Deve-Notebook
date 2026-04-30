@@ -8,15 +8,15 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
 
-本节定义了 Web 端作为 **Server Dashboard + WebLightPeer Thin Client** 的特有功能与部署架构。
+本章定义 Web 端的 **Server Dashboard + WebLightPeer Thin Client** 部署与交互边界。
 
-本章规范性用语统一继承 `01_terminology.md`，不得在子章内重新定义。
+规范性用语继承 `01_terminology.md`。
 
-> **Scope Boundary**: Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，但不承担 Native 端完整离线能力。移动端/桌面端 **MUST** 采用 **Tauri v2 (原生外壳 + 内嵌 WebView)** 方案，提供原生级体验 (Native-feel)。详见 `08_ui_design_02_desktop.md` §6.1 和 `08_ui_design_03_mobile.md` §9.1。
+> Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，不承担 Native 完整离线能力。移动端/桌面端 **MUST** 采用 Tauri v2 原生外壳 + 内嵌 WebView；详见 `08_ui_design_02_desktop.md` §6.1 和 `08_ui_design_03_mobile.md` §9.1。
 
 ## 1. Single Binary Distribution (部署架构) {#single-binary-distribution}
 
-为了实现“零依赖部署”，CLI 二进制文件 **MUST** 内嵌前端静态资源。
+CLI 二进制文件 **MUST** 内嵌前端静态资源，以支持零依赖部署。
 
 ### 1.1 构建流水线 (Build Pipeline)
 定义构建依赖链 $Build_{full} = Build_{web} \to Embed \to Build_{cli}$：

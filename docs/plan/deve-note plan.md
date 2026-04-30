@@ -51,17 +51,17 @@
 
 ## 文档状态与职责边界
 
-为避免“实现做到一半才发现文档分层混乱”，本目录按以下方式解释：
+本目录按以下状态解释：
 
-*   **Current MUST（当前硬约束）**：`01`、`02`、`04`、`05`、`06`、`07`、`09`、`11`。这些章节定义当前实现必须满足的不变量、协议约束与错误契约。
-*   **Current UI Contract（当前界面契约）**：`03`、`08`。这些章节定义当前交互与可见行为的工程实现，但不得改写 Ledger / Auth / Network 的权威规则。
+*   **Current MUST（当前硬约束）**：`01`、`02`、`04`、`05`、`06`、`07`、`09`、`11`。定义必须满足的不变量、协议约束与错误契约。
+*   **Current UI Contract（当前界面契约）**：`03`、`08`。定义交互与可见行为，但不得改写 Ledger / Auth / Network 权威规则。
 *   **Approved Runtime Architecture（已批准运行时架构）**：`16`，以及 `04/06/07` 中的 Node/Path Ledger Facts 收敛路线。当 `04/05/07/09/11` 在 Web 写路径上存在交叉时，以 `16` 的 Web 收敛规则为准；当路径、树结构与 Source Control commit 存在交叉时，以 `04/06/07` 的 Node-first 约束为准。
 *   **Optional Product Layer（可选产品层）**：`10` 定义 Native AI Chat 的启用后合同，以及 Trusted CLI Agent 的显式 opt-in 边界；它不得反向推翻 Current MUST，也不得成为核心数据路径的隐式依赖。
-*   **Planned / Optional（规划或扩展）**：`12`、`13`、`14`、`15`、`17`。这些章节可指导实现，但不得反向推翻 Current MUST。
+*   **Planned / Optional（规划或扩展）**：`12`、`13`、`14`、`15`、`17`。可指导实现，但不得推翻 Current MUST。
 
 ### 文档分层
 
-*   `docs/plan/`：工程蓝图，回答 how it is engineered。`00_engineering_constitution.md` 是跨章节骨架治理规则；普通章节不得与其冲突。
+*   `docs/plan/`：工程蓝图，回答 how it is engineered；`00_engineering_constitution.md` 是跨章节治理规则。
 *   `docs/features/`：功能说明，回答 what the product does。
 *   `docs/acceptance-cases/`：自动化验收，回答 automation proves it。
 *   `docs/coverage-matrix.md`：`plan / features / acceptance-cases` 的章节映射表。
@@ -113,9 +113,7 @@
 
 ### Global: Code Standards (代码规范)
 
-*   **单文件内聚检查**: 拆分依据是职责边界、API 边界与重复基础设施，不以行数机械拆分；超过 250 行为软架构警告，超过 500 行才是熔断阈值。详见 `AGENTS.md`。
-    *   **例外 — 测试 / JS Bridge**: 测试、test support 与 `apps/web/js/` 下的 JavaScript Bridge 文件可在保持上下文更清晰时超过软阈值，但仍需避免无边界聚合。
-    *   **豁免 — 构建产物**: `*.bundle.js`、`dist/`、`target/` 等构建产物不受行数限制约束。此规则仅针对 **源文件 (Source Files)**。
+*   **单文件内聚检查**: 按职责/API/基础设施边界拆分，不按行数机械拆分；超过 250 行为软架构警告，超过 500 行为熔断阈值。测试、test support 与 `apps/web/js/` bridge 可因上下文内聚超过软阈值；构建产物不受此规则约束。
 *   **中文注释**: 每个模块/组件 SHOULD 包含中文文档注释。
 *   **I18n 支持**: 所有用户可见文本 MUST 通过 `crate::i18n::t::xxx::yyy()` facade 获取，禁止直接把自然语言写进组件协议层。
 *   **错误码**: 后端 MUST 返回结构化错误码 (e.g. `AUTH_INVALID_PASSWORD`)，前端据此映射到 `t::...` 文案；自然语言错误不得作为稳定协议契约。

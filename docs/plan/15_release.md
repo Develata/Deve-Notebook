@@ -8,11 +8,11 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`
 
-本章定义 `Deve-Note` 的软件发布策略、版本管理规范以及 CI/CD 自动化流程。
+本章定义发布策略、版本规范与 CI/CD。
 
 ## 1. Distribution Strategy (分发策略)
 
-我们采用多渠道分发以覆盖所有目标平台。
+分发渠道：
 
 ### 1.1 Support Matrix (支持矩阵)
 | Platform    | Artifact Format             | Architecture         | Signing                  |
@@ -31,7 +31,7 @@
 
 ## 2. CI/CD Pipelines (自动化流程)
 
-基于 GitHub Actions 实现全自动构建。
+CI/CD 基于 GitHub Actions。
 
 > [!NOTE]
 > 发布基线只要求 `.github/workflows/release.yml`。`nightly.yml` 与 `speckit-sync-check.yml` 不属于权威 release / CI 要求，不构成总蓝图 drift。
@@ -74,9 +74,7 @@ Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续
 
 ## 4. Open Source License (开源协议)
 
-作为个人开发者项目，采用最宽松且通用的协议：
-
-*   **MIT License**: 允许任何人免费使用、修改、分发甚至闭源商用，仅需在副本中包含原作者的版权声明。
+采用 MIT License；再分发副本必须保留版权声明。
 
 ## 5. Docker Deployment (容器化部署)
 

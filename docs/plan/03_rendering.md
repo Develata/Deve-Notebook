@@ -423,7 +423,7 @@ Baseline contract 的行内支持集合：
 - `widget_bridge_runtime`
 - `outline_projection_runtime`
 
-重构必须围绕这四层收敛，避免把 editor runtime、JS adapter 与 outline projection 行为继续塞进单个 editor hook 或任意 widget 文件。
+上述四层必须分离；editor hook / widget 文件不得继续聚合 runtime、adapter 与 outline projection 行为。
 
 ## 本章相关命令
 

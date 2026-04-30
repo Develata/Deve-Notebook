@@ -7,8 +7,7 @@
 - `Counterpart Plan`: `docs/plan/10_ai_agent.md`, `docs/plan/17_plugins.md`
 - `Primary Code Areas`: `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`
 
-> 本文只汇总 Native AI Chat 与 Trusted External Agent Bridge 的目标边界，不引入独立规范；权威约束以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。
-> 启用 AI 功能时，Native AI Chat 是默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
+> 本文只汇总 Native AI Chat 与 Trusted External Agent Bridge 边界；权威约束以 `docs/plan/10_ai_agent.md` 与 `docs/plan/17_plugins.md` 为准。Native AI Chat 是默认第一方能力；Trusted External Agent Bridge 是 default-off / trusted-only 高级部署位。
 
 | 通道 | 定位 | 运行时开销目标 | 适用场景 |
 |------|------|---------------|----------|
@@ -17,7 +16,7 @@
 
 ## 1. 目标与范围
 
-*   **目标**：在低资源环境中提供可控 AI 助手，同时避免默认扩大工具权限。
+*   **目标**：在低资源环境中提供可控 AI 助手，且默认不扩大工具权限。
 *   **范围**：
     - **Native AI Chat**：Deve-Notebook 提供第一方聊天 UI 与 OpenAI-compatible streaming runtime。
     - **Trusted Agent Bridge**：只在 enabled + trusted + explicit executable path 条件满足时桥接受信任外部 CLI。
@@ -35,9 +34,9 @@ Trusted Agent Bridge 的边界摘要：
 
 ## 3. 为什么保留 Trusted Agent Bridge 接口位？
 
-*   外部 CLI 可以自行管理历史、Skills 与复杂 agent 状态机。
-*   Deve-Notebook 只负责最小桥接、安全前提、streaming 收敛与错误边界。
-*   MCP 不作为产品运行时方向；相关需求由外部 CLI 自己管理，或由未来 Skills 调用受控 CLI 工具承载。
+*   外部 CLI 自行管理历史、Skills 与复杂 agent 状态机。
+*   Deve-Notebook 只负责桥接、安全前提、streaming 与错误边界。
+*   MCP 不作为产品运行时方向；相关需求由外部 CLI 或未来 Skills + 受控 CLI 承载。
 
 ## 4. Native AI Chat 默认方案
 
@@ -58,4 +57,4 @@ UI 层共享同一套 Chat surface，并区分：
 *   `trusted-cli` backend：显式启用的外部 CLI Agent。
 *   `PLAN / BUILD`：Native AI Chat 的会话模式，不等于 backend。
 
-错误捕获区分 external CLI 非零退出、provider 网络错误、policy denied、Unauthorized 与 Disconnected，避免合并为同一 loading/retry 状态。
+错误捕获区分 external CLI 非零退出、provider 网络错误、policy denied、Unauthorized 与 Disconnected，不合并为同一 loading/retry 状态。

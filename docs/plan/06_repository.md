@@ -352,7 +352,7 @@ ReadonlyDegraded
 - `repo_scope_runtime`
 - `projection_repair_runtime`
 
-未来重构 **MUST** 朝这三个 runtime 收敛，避免让 `RepoManager`、CLI switcher handlers 与 `use_core` effects 继续共享隐式 repo scope 状态。
+未来重构 **MUST** 收敛到这三个 runtime；`RepoManager`、CLI switcher handlers 与 `use_core` effects 不得共享隐式 repo scope 状态。
 
 ## 本章相关命令
 

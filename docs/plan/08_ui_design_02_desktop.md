@@ -8,17 +8,14 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
 
-本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。规范性用语统一继承 `01_terminology.md`，不得在子章内重新定义。
+本章定义 Desktop 布局与交互。规范性用语继承 `01_terminology.md`。
 
-> **Current Native Boundary**（当前原生边界）：Desktop native 是壳层与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
-> **Post-Gate Target**：Desktop 端目标采用 **Tauri v2 native packaging** 外壳，前端代码与 Web 端共享。
-> **离线目标**：Desktop 端目标是在无公网环境下保持本地编辑可用；完整 offline-first packaging/readiness 能力必须等 native-packaging 与 process adapter gate 打开后验收。
+> **Current Native Boundary**：Desktop native 是壳层与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
+> **Post-Gate Target**：Desktop 端目标采用 **Tauri v2 native packaging** 外壳，共享 Web 前端；完整离线 packaging/readiness 必须等 native-packaging 与 process adapter gate 打开后验收。
 
 > **Web 映射**：当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
 ## 1. 原生适配器边界 {#desktop-current-native-boundary}
-
-Desktop native adapter 的边界如下：
 
 *   Web 端大屏视口 **MUST** 映射到 Desktop 交互规范。
 *   Native adapter 第一阶段只允许承担：拉起受控内嵌服务、注入本机 service endpoint/session、报告 readiness/offline 状态、转发有限平台事件。
@@ -30,9 +27,7 @@ Desktop native adapter 的边界如下：
 
 ### 1.1 Minimal Native Adapter Contract {#desktop-native-adapter-contract}
 
-Desktop native adapter 是进程与平台壳层，不是业务 authority。第一阶段只允许把现有
-Web shell 绑定到本机受控 service，并把 runtime 状态结构化交给 Web/application
-control。
+Desktop native adapter 是进程与平台壳层，不是业务 authority；第一阶段只把 Web shell 绑定到本机受控 service，并向 Web/application control 交付结构化 runtime 状态。
 
 Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
 
@@ -64,12 +59,11 @@ Gate policy 必须满足：
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-Gate 打开时 **MUST** 先更新 `scripts/check-native-track-boundary.sh` 的允许规则，并保持默认构建 no-Tauri、依赖只在 Desktop native adapter feature 后、packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority。
+Gate 打开时 **MUST** 先更新 `scripts/check-native-track-boundary.sh`；默认构建仍 no-Tauri，依赖只在 Desktop native adapter feature 后，packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority。
 
 ### 1.4 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 
-Desktop native supervisor contract 只固定 supervisor 状态机与 failure 分类，避免后续 Tauri/process integration
-把 service readiness 与业务写权限混在一起：
+Desktop native supervisor contract 固定 supervisor 状态机与 failure 分类，防止 service readiness 与业务写权限混用：
 
 ```text
 Idle
@@ -113,15 +107,12 @@ NativeColdStart
   -> ServiceRestarting | ServiceOffline | SessionInvalid
 ```
 
-`RuntimeReady` 的最小条件是：本机 endpoint 可达、`/api/auth/status` 有效、`/api/node/role`
-可读取、当前 repo 已完成 ws handshake，且写入路径满足
-`writer_ready(repo_id, scope_nonce)`。只要 `SessionInvalid` 出现，UI 必须进入
-`Unauthorized`，不得包装成普通 `Disconnected`。
+`RuntimeReady` 的最小条件：endpoint 可达、`/api/auth/status` 有效、`/api/node/role` 可读、当前 repo 已完成 ws handshake、写入路径满足 `writer_ready(repo_id, scope_nonce)`。`SessionInvalid` 必须进入 `Unauthorized`，不得包装成普通 `Disconnected`。
 
 **Endpoint/session injection rules**:
 
 *   Native 壳必须在 Web connection manager 启动前注入 `http_base/ws_base` 与 session 绑定状态；优先使用内存 bridge 或初始 HTML bootstrap。
-*   Native 壳也可以注入只含 `service_state` 的 recovery bootstrap；该 payload 只能表达 `service_offline`、`foreground_reprobe` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
+*   Native 壳可注入只含 `service_state` 的 recovery bootstrap；payload 只能表达 `service_offline`、`foreground_reprobe` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
 *   `?ws_port=` 只能作为开发期 fallback。native production 不得让 Web 端枚举、猜测或扫描本机端口。
 *   session 绑定完成前 Web shell 不得显示可写主界面；过期 session 必须走 `09_auth.md#unauthorized-disconnected-ui`。
 
@@ -248,8 +239,7 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 
 ### 6.1 跨平台 UI 方案
 
-本节是 post-gate normative target：只有当 `native-packaging` 与 process adapter gate
-被显式打开后，以下 Tauri/embedded-service 规则才进入验收；pre-gate 边界以 §1 为准。
+本节是 post-gate normative target：只有 `native-packaging` 与 process adapter gate 显式打开后，以下规则才进入验收；pre-gate 边界以 §1 为准。
 
 *   **Rule**: Desktop post-gate 采用 **Tauri v2 (WebView)** 作为跨平台外壳，前端代码与 Web 端共享。
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致。

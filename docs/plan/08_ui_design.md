@@ -404,7 +404,7 @@ PinnedSetChanged
 - `application_control`
 - `feature_runtime`
 
-目标不是继续增加无边界 effect，而是固定 command/control/runtime 的依赖方向：view 发 intent，control 做编排，runtime 持有本功能状态机。
+目标依赖方向：view 发 intent，control 编排，runtime 持有本功能状态机。
 
 ## 本章相关命令
 
