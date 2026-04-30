@@ -1,6 +1,6 @@
 # Plan Code Mapping Extraction - 2026-05-01
 
-本报告记录一次文档分层清理：`docs/plan/` 是最终工程蓝图，不再保存当前代码路径、`Primary Code Areas`、`Code Mapping` 或 `Code Refs`。
+本报告记录一次文档分层清理：`docs/plan/` 是最终工程蓝图；章节 metadata 可以保留高层 `Primary Code Areas` 入口索引，但 plan 正文不保存当前代码路径清单、`Code Mapping` 或 `Code Refs`。
 
 ## 迁出原则
 
@@ -13,7 +13,6 @@
 
 本批次从 plan 章节中移除了以下类型信息：
 
-- Metadata 中的 `Primary Code Areas`。
 - 正文中的 `Code Refs`。
 - 以当前源文件路径为主体的 `Module Boundary`。
 - 独立 `Code Mapping` 章节。

@@ -6,6 +6,7 @@
 - `Status`: `Deferred`
 - `Counterpart Feature`: `docs/features/17_plugins.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
+- `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
 
 > 本章**不要求新增完整插件平台**。
 > AI Chat 已提升为第 10 章的原生产品能力，不再视为插件主线。

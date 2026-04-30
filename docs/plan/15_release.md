@@ -6,6 +6,7 @@
 - `Status`: `Reference`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
+- `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`
 
 本章定义 `Deve-Note` 的软件发布策略、版本管理规范以及 CI/CD 自动化流程。
 

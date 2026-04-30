@@ -6,6 +6,7 @@
 - `Status`: `Current MUST`
 - `Counterpart Feature`: `docs/features/02_positioning.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
+- `Primary Code Areas`: `apps/cli/src/commands/`, `crates/core/src/ledger/manager/`
 
 ## 1. Meta (版本与状态)
 

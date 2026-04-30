@@ -6,6 +6,7 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
+- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
 
 本节定义了 Desktop 端的”驾驶舱”布局规范与交互逻辑。
 

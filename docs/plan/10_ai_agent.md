@@ -6,6 +6,7 @@
 - `Status`: `Deferred`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
+- `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
 - `Related Design Notes`: [`docs/ai-chat-streaming.md`](../ai-chat-streaming.md) (streaming bridge design), [`docs/plan/plugins/agent_bridge/01_agent_bridge.md`](./plugins/agent_bridge/01_agent_bridge.md) (dual-channel architecture)
 
 > AI 能力是 Deve-Notebook 的**第一方原生产品层**，不再归入插件章节。

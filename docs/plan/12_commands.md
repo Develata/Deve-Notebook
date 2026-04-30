@@ -6,6 +6,7 @@
 - `Status`: `Planned / Optional`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
+- `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/components/command_palette/`
 
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 

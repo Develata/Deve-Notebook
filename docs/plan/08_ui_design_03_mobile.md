@@ -6,6 +6,7 @@
 - `Status`: `Current UI Contract`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
+- `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
 
 本节定义了 Mobile 端基于 **Content-First** 哲学的适配策略。
 

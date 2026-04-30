@@ -6,6 +6,7 @@
 - `Status`: `Planned / Optional`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
+- `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
 
 本章汇总系统所有配置项，包括环境变量、运行时配置文件 (`config.toml`) 以及快捷键映射。
 
