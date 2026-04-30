@@ -71,6 +71,7 @@ Most files here are **non-authoritative**. They record what an audit believed at
 - Latest Source Control conflict precondition guard: `source-control-conflict-precondition-guard-2026-05-01.md`
 - Latest Git import resolved roundtrip smoke: `git-import-resolved-roundtrip-smoke-2026-05-01.md`
 - Latest Git import resolved CLI roundtrip smoke: `git-import-resolved-cli-roundtrip-smoke-2026-05-01.md`
+- Latest Git import/export/push publish smoke: `git-import-export-push-publish-smoke-2026-05-01.md`
 - If a report conflicts with the operation-level architecture view, treat the report as stale until re-audited.
 
 ## Archive Contents
