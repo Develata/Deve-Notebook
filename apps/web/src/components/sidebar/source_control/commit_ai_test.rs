@@ -34,6 +34,23 @@ fn source_control_commit_ai_switches_backend_with_visible_reason() {
 }
 
 #[test]
+fn source_control_commit_ai_switches_trusted_cli_to_agent_bridge() {
+    let plan = plan_commit_ai_backend_call(BackendSendDecision::Switch {
+        backend: AI_BACKEND_TRUSTED_CLI,
+        reason: "trusted-cli explicitly requested".to_string(),
+    });
+
+    assert_eq!(
+        plan,
+        CommitAiBackendPlan::Switch {
+            backend: AI_BACKEND_TRUSTED_CLI,
+            plugin_id: AI_PLUGIN_TRUSTED_CLI,
+            notice: "trusted-cli explicitly requested".to_string()
+        }
+    );
+}
+
+#[test]
 fn source_control_commit_ai_blocks_without_plugin_call() {
     let plan = plan_commit_ai_backend_call(BackendSendDecision::Block {
         reason: "native AI disabled by config".to_string(),
