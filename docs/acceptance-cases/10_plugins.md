@@ -141,6 +141,7 @@
     - run: cargo test -p deve_core config -- --nocapture
     - run: cargo test -p deve_cli agent_bridge -- --nocapture
     - run: cargo test -p deve_cli backend_capabilities_http -- --nocapture
+    - run: cargo test -p deve_cli native_ai_disabled_blocks_ai_chat_rpc -- --nocapture
     - run: cargo test -p deve_web ai_backend -- --nocapture
     - run: cargo test -p deve_web backend_for_send -- --nocapture
     - run: cargo test -p deve_web chat_send -- --nocapture
