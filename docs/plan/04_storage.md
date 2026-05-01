@@ -106,9 +106,9 @@ Workspace_r = P_r ⊕ D_r
 - `.notegit/` 可以随 repo 备份，但 **MUST NOT** 被跨 repo 复用。
 - `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
 
-### 3.2.1 Git 镜像边界 {#git-ecosystem-coexistence}
+### 3.2.1 Git Mirror Storage Boundary {#git-ecosystem-coexistence}
 
-Deve 支持 `.notegit/` 与 `.git/` 在同一个 repo 工作区中共存，但二者职责必须分离：
+Git mirror 的生命周期、命令面与失败语义以 `07_diff_logic.md#git-mirror-lifecycle` 为唯一权威。本章只定义存储边界：
 
 - `.notegit/` 是 Deve-owned runtime 目录，保存 ledger-aware workflow state 与必要 side table。
 - `.git/` 是 Git ecosystem mirror 目录，只用于复用 Git 工具链、远程托管、审计、备份与发布生态。
@@ -116,17 +116,6 @@ Deve 支持 `.notegit/` 与 `.git/` 在同一个 repo 工作区中共存，但�
 - watcher、scan、sync 与 projection rebuild **MUST** 按路径段语义忽略 `.notegit/` 与 `.git/` 内部路径。
 - Deve core **MUST NOT** 使用 `.git/` 作为 repo authority、runtime side table 或 hidden metadata 目录。
 - `.git/` 不得参与 ledger fold、repo scope 解析、stage/commit authority 或 repair。
-
-Git mirror 是一等生态桥接层，而不是 authority 替代品：
-
-- Deve ledger commit 成功并持久化 projection 后，系统 **MAY** 追加 `GitMirrorQueued`。
-- Git mirror update **MAY** 以 Deve commit/projection 为输入生成 Git commit，并记录 `Deve-Commit-Id`、`ledger_seq`、`repo_id` 等映射。
-- Git mirror 失败 **MUST NOT** 回滚已成功的 Deve ledger commit；系统 **MUST** 标记 `GitMirrorOutOfSync`，并提供 retry / repair / status 可观测路径。
-- 外部 `git checkout/reset/pull/rebase` 造成的工作区变化只能进入 pending/import 路径，**MUST NOT** 自动反向改写 ledger authority。
-- Git import **MUST** 只进入 pending/import；只有后续 Deve stage/commit 才能生成 ledger facts。
-- Git export 与 Git push **MUST NOT** 反向改写 ledger authority、`StagedEntry` 或 `.notegit/`。
-- Git push **MUST** fail-closed 于脏 Deve Source Control、脏 Git worktree、未导出 mirror record、out-of-sync mirror record、`.notegit` 泄漏或 Git HEAD 未映射到最新 Deve commit。
-- Web 或后台任务 **MUST NOT** 隐式执行 Git 写操作；任何 Git 写入都必须来自显式命令或后续单独设计的确认式执行面。
 
 ### 3.3 Collision Rules
 
@@ -215,6 +204,8 @@ Git mirror 是一等生态桥接层，而不是 authority 替代品：
   - `pending_fs_ops`
     - key: stable pending op id
     - value: normalized path, op kind, inode/file id, content hash/base hash, detected_at
+    - source: watcher / startup scan / directory rescan / explicit import
+    - non-source: Web pending overlay
   - `staging`
     - key: staged entry id
     - value: pending source ref, staged_at, stage actor, repo head anchor
@@ -226,6 +217,7 @@ Git mirror 是一等生态桥接层，而不是 authority 替代品：
   - `watcher_runtime`
     - value: suppressor fingerprints, overflow marker, last_full_scan_at
 - 这些 side tables **MUST** 明确标记为 workflow/runtime state，不得被上层误当成 authority state。
+- `pending_fs_ops` 与 pending overlay **MUST** 分属不同状态域；二者不得复用同一 row、key space 或清理规则。
 
 ### 4.4 Snapshot Storage Contract
 

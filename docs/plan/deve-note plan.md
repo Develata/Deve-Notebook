@@ -111,6 +111,22 @@
 *   修复逻辑（repair / degraded / quarantine / stale scope recovery）**MUST** 视为第一类基础设施能力，而不是散落在 handler / effect / component 内的临时补丁。
 *   plugin / AI / external runtime **MUST** 视为外围系统；在核心功能未稳定前，不得要求它们反向主导 authority、scope 或 pending write 的主链设计。
 
+### Runtime Skeleton Registry
+
+*   `authority_storage_runtime` **MUST** 拥有 ledger append validation 与 authority table 边界。
+*   `projection_persistence_runtime` **MUST** 从 ledger fold 派生 projection / workspace writeback / drift explanation。
+*   `watcher_runtime` **MUST** 只把外部文件事件归一化为 `pending_fs_ops`。
+*   `repo_catalog_runtime` / `repo_scope_runtime` **MUST** 统一 repo identity、branch、`scope_nonce` 与 writable state。
+*   `session_runtime` / `browser_auth_runtime` **MUST** 统一认证状态、cookie/JWT/session refresh 与 unauthorized recovery。
+*   `transport_runtime` / `repo_scope_sync_runtime` / `browser_peer_runtime` **MUST** 统一 WebLightPeer handshake、stale message discard 与 repo-scoped protocol gate。
+*   `browser_peer_runtime -> browser_document_runtime -> pending_overlay_runtime -> write_confirmation_runtime` **MUST** 是 Web write confirmation 主链。
+*   `pending_overlay_runtime` **MUST NOT** 写入 `pending_fs_ops`。
+*   `source_control_runtime` **MUST** 消费 `pending_fs_ops` / `GitImportRequested` 并生成 Deve stage/commit intent。
+*   `diff_session_runtime` / `merge_runtime` **MUST** 只通过 `source_control_runtime` 进入 ledger commit。
+*   `source_control_runtime -> Git mirror bridge` **MUST** 只在 Deve commit confirmed 后执行 export/import/push bridge。
+*   `document_runtime -> render_projection_runtime -> widget_bridge_runtime / outline_projection_runtime` **MUST** 保持 projection-only 边界。
+*   `ui_shell -> application_control -> feature_runtime` **MUST** 维持 view intent、control 编排与 feature state machine 的单向依赖。
+
 ### Global: Code Standards (代码规范)
 
 *   **单文件内聚检查**: 按职责/API/基础设施边界拆分，不按行数机械拆分；超过 250 行为软架构警告，超过 500 行为熔断阈值。测试、test support 与 `apps/web/js/` bridge 可因上下文内聚超过软阈值；构建产物不受此规则约束。

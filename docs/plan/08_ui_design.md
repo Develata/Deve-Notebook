@@ -365,6 +365,25 @@ PinnedSetChanged
 - Desktop / Mobile native 可在本地 authority 上继续运行：
   - 但 view 层仍不能绕过 application control 直接写业务状态
 
+### 8.5 Native Adapter Gate Registry {#native-adapter-gate-registry}
+
+- `native_adapter/` 是 shell adapter 层，不是 authority core。
+- Desktop / Mobile 子章 **MAY** 定义平台 endpoint、session handoff、lifecycle、foreground reprobe 与 process adapter 差异。
+- Desktop / Mobile 子章 **MUST NOT** 引入新的 ledger、vault、source-control、sync、search 或 settings authority。
+- native adapter 通过 gate 前 **MUST** 保持 no-packaging-runtime 默认构建。
+- native adapter 通过 gate 后 **MUST** 继续服从 writer gate、repo scope gate 与本章 control/runtime 分层。
+
+### 8.6 Native Post-Gate Common Contract {#native-post-gate-common-contract}
+
+- post-gate native shell **MUST** 先拉起受控本机 service，再启动 UI。
+- 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。
+- 本机 service **MUST NOT** 监听非回环地址。
+- 无公网时，本地读写能力 **MUST** 仍由 core/server authority 与 writer gate 决定。
+- 本地持久化、schema migration、repair 与 projection writeback **MUST** 服从 `04_storage.md`。
+- 本地存储加密、密钥轮换、备份、导出、审计与恢复演练 **MUST** 作为 post-gate 能力设计，不得落入 UI view 层。
+- native packaging 依赖 **MUST** 只落在对应 adapter feature scope。
+- 启动速度、输入延迟与内存预算 **MUST** 优先于视觉特效。
+
 ## 9. Forbidden Patterns
 
 - 组件直接写 `use_core` 内部信号以跳过 control 层。

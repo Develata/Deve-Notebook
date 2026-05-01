@@ -33,6 +33,15 @@
     *   $P = Project(S_{ledger})$。投影不承载权威状态；对投影的外部修改必须先转为差异，再经 Reconciliation 生成 Ledger Facts。
 *   **Deve-authorized Write Path (Deve 授权写路径)**：由 Deve runtime 明确发起、绑定 repo scope / writer gate，并通过 ledger append、projection writeback、source-control import 或 repair 命令产生可审计副作用的写路径。
     *   裸文件写入、外部编辑器保存、外部 `git checkout/reset/pull/rebase` 造成的 Vault 变化不属于该路径。
+*   **Writer Identity (写入身份)**：能够产生 ledger facts 或 pending authority intent 的受控身份。
+    *   Branch 表达持久 writer identity 作用域；browser tab / native shell 只能获得 repo-scoped transient writer identity。
+*   **Writer Gate (写入闸门)**：把 auth session、repo scope、branch role、`scope_nonce` 与 writer registration 合并后的写入许可。
+    *   未通过 writer gate 的请求 **MUST NOT** append ledger、写入 staging、写入 pending/import 或确认 pending overlay。
+*   **Pending Overlay (待确认叠层)**：Web thin-client session 内的未确认本地编辑集合 $O_{session}$。
+    *   Pending overlay 是 session runtime state，不是 `pending_fs_ops` side table 条目。
+    *   Pending overlay 只能由 `Ack` / `Reject` / stale-scope recovery 清理，不得由 watcher 或 scan 清理。
+*   **pending_fs_ops (文件系统待处理队列)**：外部文件系统变化或显式 import 进入 Source Control 前的 repo runtime side table。
+    *   `pending_fs_ops` 不承载 Web pending overlay，不是 ledger authority。
 *   **Vault (投影仓)**：宿主文件系统上的一个具体目录路径 `$ROOT/data/vault`。
     *   是 Projection 的物理容器。
     *   **External Edit**：发生在 Vault 内但未经 Deve-authorized Write Path 产生的修改；不得直接成为权威状态。
@@ -68,12 +77,18 @@
     *   $Merge(L_{current}, \Delta_{fs}) \to L_{next}$。
 *   **Peer (节点)**：P2P 网络拓扑图 $G=(V, E)$ 中的顶点 $v \in V$。
     *   所有 Peer 在协议层完全对等，拥有全量或子集 Ledger 副本。
+*   **WebLightPeer (Web 轻节点)**：浏览器端 thin-client peer。
+    *   WebLightPeer 只持有 session、snapshot、pending overlay 与 repo-scoped protocol state，不持有本地 ledger authority。
 *   **Relay (中继)**：具有 $Attr_{always\_on}$ 的 Peer，只做加密数据 blind storage 与流量转发，不解密业务数据。
 *   **LedgerSeq (账本序列数)**：Peer 维度的单调递增计数器。
     *   $Seq(P, i) \in \mathbb{N}$（实现为 `u64`），表示 Peer $P$ 产生的第 $i$ 条账本事实。
     *   `(PeerId, LedgerSeq)` 用于因果定位；repo 落盘全序由 `GlobalSeq` / `LEDGER_OPS` 主键决定。
 *   **Vector Clock (向量时钟)**：因果历史的数学表达。
     *   $VC = \{ (PeerID_1, Seq_1), (PeerID_2, Seq_2), ... \}$，用于 diff 与并发冲突检测。
+*   **scope_nonce (作用域版本)**：当前已确认 repo / branch scope 的连接内单调版本。
+    *   所有 repo-scoped server message、write intent 与 UI writable state **MUST** 绑定当前 `scope_nonce`。
+*   **switch_nonce (切换版本)**：客户端发起 repo / branch switch 时声明的候选 scope 版本。
+    *   `switch_nonce` **MUST** 严格大于当前 `scope_nonce`；stale switch 必须 fail-closed。
 
 ## 3. Data Structure Terms (数据结构术语)
 

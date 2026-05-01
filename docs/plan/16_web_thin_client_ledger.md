@@ -28,6 +28,8 @@
   - 服务端已确认并落 ledger 的状态
 - `O_session`
   - 当前浏览器会话未确认 overlay
+  - 不写入 `pending_fs_ops`
+  - 不由 watcher / scan 产生或清理
 - `V_web`
   - 当前页面展示结果
 
@@ -158,10 +160,10 @@ State_auth = L_confirmed
 
 ### 4.5 Structured Error Contract
 
-- ws 与 http 必须共享同一错误码目录
-- ws 必须使用结构化 `ProtocolError`
-- source control 用户态错误必须走 `SC_*`
-- 持久化失败才能进入 `STORAGE_*`
+- ws 与 http **MUST** 共享 `11_i18n.md#i18n-error-code-catalog` 的错误码目录。
+- ws **MUST** 使用结构化 `ProtocolError`。
+- source control 用户态错误 **MUST** 走 `SC_*`。
+- 持久化失败才能进入 `STORAGE_*`。
 
 ## 5. Frontend State Machine
 
@@ -275,8 +277,7 @@ overlay state row 至少需要：
 
 - 如果 ledger 已提交但 workspace 写回失败，系统不得把该操作继续当成“等待 Ack”。
 - 这类错误属于 projection / writeback fault，不属于 pending confirmation fault。
-
-因此：
+- 这类错误 **MUST NOT** 回滚 ledger append、重开 pending overlay 或写入 `pending_fs_ops`。
 
 - 前端可以显示 warning / degraded notice
 - 但必须把该 op 视为 confirmed，而不是无限 pending

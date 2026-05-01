@@ -309,6 +309,8 @@ MergeRequested
 
 ## 6. Failure Modes
 
+错误码清单以 `11_i18n.md#i18n-error-code-catalog` 为唯一权威；本节只列失败域。
+
 ### 6.1 Pending / Staging Failures
 
 - watcher overflow

@@ -123,7 +123,7 @@ WsConnecting
 要求：
 
 - 所有 auth endpoint **MUST** 返回稳定结构，不得以裸文本替代。
-- ws upgrade 的 unauthorized 结果 **MUST** 与 http `401/403` 共享同一错误目录。
+- ws upgrade 的 unauthorized 结果 **MUST** 使用 `11_i18n.md#i18n-error-code-catalog` 的错误码目录。
 
 ### 4.5 Bootstrapping Contract
 
@@ -280,16 +280,7 @@ WsConnecting
 - malformed origin / cors reject
 - ws handshake unauthorized
 
-错误目录建议：
-
-- `AUTH_INVALID_CREDENTIALS`
-- `AUTH_TOKEN_MISSING`
-- `AUTH_TOKEN_EXPIRED`
-- `AUTH_TOKEN_REVOKED`
-- `AUTH_CSRF_REJECTED`
-- `AUTH_ORIGIN_REJECTED`
-- `AUTH_RATE_LIMITED`
-- `AUTH_WS_REJECTED`
+错误码清单以 `11_i18n.md#i18n-error-code-catalog` 为唯一权威。
 
 ## 9. Recovery / Safety
 

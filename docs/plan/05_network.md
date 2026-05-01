@@ -366,6 +366,8 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 增量 payload 的 ledger append 与 tree projection 必须在同一个 shadow repo 写事务内完成；中途校验或 projection 失败时不得留下前序 op。
 - Snapshot fallback 的 shadow reset 与 replay 必须在同一个 shadow repo 写事务内完成；replay 失败时旧 shadow 内容必须保留。
 - Manual 模式确认合并时，同一次确认只允许一个 `peer_id + repo_id` 目标以保持原子性；混合目标必须 fail-closed 并保留 pending payload。
+- Shadow apply 失败域 **MUST NOT** 回滚 local branch 已确认 ledger write。
+- Local write 的 projection / workspace writeback fault **MUST NOT** 改写 remote shadow apply 事务结果。
 
 ### 10.5 Indirect Sync and Attribution
 

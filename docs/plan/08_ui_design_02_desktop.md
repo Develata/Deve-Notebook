@@ -245,53 +245,13 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 *   **Consistency**: 交互与布局规则 **MUST** 与本章一致。
 *   **Note**: "原生 UI" 在此指用户体验层面（窗口管理、菜单栏、系统托盘等），而非技术实现层面。
 
-### 6.2 内嵌服务 (Embedded Service)
-*   **Rule**: post-gate 后端服务 **MUST** 内嵌并由桌面端进程拉起。
-*   **Local API**: 前端与服务通信 **MUST** 走本机回环或进程内通道。
+### 6.2 Common Post-Gate Contract
 
-### 6.2.1 服务启动流程 (Service Boot)
-*   **Rule**: post-gate Desktop App 启动 **MUST** 先拉起内嵌服务，再启动 UI。
-*   **Port**: 端口 **MUST** 使用本机随机可用端口并保存在运行时内存中。
-*   **Lifecycle**: 关闭主窗口 **SHOULD** 提供安全退出或后台驻留选项。
-*   **Port Conflict**: 若端口占用，**MUST** 自动回退到新的可用端口并重新绑定。
+Desktop post-gate **MUST** 服从 `08_ui_design.md#native-post-gate-common-contract`。
 
-### 6.2.2 本地通信策略 (Local IPC)
-*   **Default**: 本机回环 HTTP/WS（`127.0.0.1`）优先。
-*   **Fallback**: 若平台限制端口访问，**MUST** 提供进程内通道 (IPC) 替代方案。
-*   **Security**: 本地通信 **MUST** 禁止跨进程未授权访问。
-*   **Auth**: IPC **MUST** 具备进程级鉴权与会话绑定。
+### 6.3 Desktop Deltas
 
-### 6.2.3 端口绑定安全 (Port Binding Security)
-*   **Rule**: 服务端 **MUST** 仅监听 `127.0.0.1`。
-*   **Firewall**: **SHOULD** 显式阻断非回环访问。
-
-### 6.3 离线优先 (Offline-First)
-*   **Rule**: post-gate 无公网时 **MUST** 保证本地编辑能力；完整本地索引能力仍受 profile、search feature 与资源预算约束。
-*   **Sync**: 恢复网络后增量同步，冲突策略以本地优先。
-
-### 6.3.1 数据持久化 (Persistence)
-*   **Rule**: 所有内容 **MUST** 落盘到本地数据库与 Vault。
-*   **Crash Safety**: 崩溃后 **MUST** 可恢复到最后一次持久化状态。
-*   **Migration Boundary**: 桌面端 UI **MUST NOT** 自行定义存储迁移语义；涉及 Ledger / Vault Schema 的升级必须遵循 `04_storage.md` 的 `Copy & Rebuild` 策略，失败时进入显式恢复流程而不是静默自动回滚。
-
-### 6.3.2 加密策略 (Encryption)
-*   **At-Rest**: 本地存储 **MUST** 支持加密（密钥绑定设备安全模块）。
-*   **In-Memory**: 解密后的明文 **SHOULD** 尽量短时保留。
-*   **Key Rotation**: **MUST** 支持密钥轮换与失效，轮换过程不得破坏现有数据。
-*   **Recovery**: **MUST** 提供密钥恢复策略，避免单点损坏。
-
-### 6.3.3 备份与导出 (Backup & Export)
-*   **Backup**: **MUST** 支持本地加密备份。
-*   **Export**: **SHOULD** 支持单文档/全量导出。
-
-### 6.3.4 权限与审计 (Permissions & Audit)
-*   **Rule**: 本地操作 **MUST** 具备最小权限原则。
-*   **Audit**: **SHOULD** 记录关键操作日志（创建/删除/导出/恢复）。
-
-### 6.3.5 恢复演练 (Recovery Drill)
-*   **Rule**: 版本升级 **SHOULD** 提供可执行的恢复演练流程。
-*   **Goal**: 发生故障时可快速回退到稳定版本。
-
-### 6.4 体积与性能约束 (Size & Performance)
-*   **Size**: 体积 **MUST** 控制在可接受范围，避免 UI 框架臃肿。
-*   **Perf**: 启动速度与输入延迟优先于视觉特效。
+*   关闭主窗口 **SHOULD** 提供安全退出或后台驻留选项。
+*   post-gate 无公网时 **MUST** 保证本地编辑能力；完整本地索引能力仍受 profile、search feature 与资源预算约束。
+*   恢复网络后 **SHOULD** 增量同步；冲突策略以本地优先。
+*   体积 **MUST** 控制在可接受范围，避免 UI 框架臃肿。
