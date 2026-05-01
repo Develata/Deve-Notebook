@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!
-use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
+use crate::api::{AiBackendCapabilities, BackendSendDecision, resolve_backend_for_effective_state};
 use crate::hooks::use_core::{ChatContext, ChatMessage};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -54,62 +54,15 @@ pub fn attach_trusted_cli_fallback(
 fn select_backend_fallback(
     current_backend: &str,
     cap: &AiBackendCapabilities,
-    locale: Locale,
+    _locale: Locale,
 ) -> BackendFallback {
-    if current_backend == AI_BACKEND_TRUSTED_CLI && !cap.trusted_cli_available {
-        let reason = cap
-            .trusted_cli_reason
-            .clone()
-            .unwrap_or_else(|| t::extensions::trusted_cli_unavailable(locale).to_string());
-        if cap.native_available {
-            return BackendFallback::Switch {
-                backend: AI_BACKEND_NATIVE,
-                reason,
-            };
+    match resolve_backend_for_effective_state(current_backend, cap) {
+        BackendSendDecision::Use(_) => BackendFallback::Keep,
+        BackendSendDecision::Switch { backend, reason } => {
+            BackendFallback::Switch { backend, reason }
         }
-        return BackendFallback::Blocked { reason };
+        BackendSendDecision::Block { reason } => BackendFallback::Blocked { reason },
     }
-
-    if current_backend == AI_BACKEND_NATIVE && !cap.native_available {
-        let reason = cap
-            .native_reason
-            .clone()
-            .or_else(|| cap.effective_backend_reason.clone())
-            .unwrap_or_else(|| "native AI disabled by config".to_string());
-        if cap.effective_backend == AI_BACKEND_TRUSTED_CLI && cap.trusted_cli_available {
-            return BackendFallback::Switch {
-                backend: AI_BACKEND_TRUSTED_CLI,
-                reason,
-            };
-        }
-        return BackendFallback::Blocked { reason };
-    }
-
-    if current_backend != cap.effective_backend {
-        match cap.effective_backend.as_str() {
-            AI_BACKEND_NATIVE if cap.native_available => {
-                return BackendFallback::Switch {
-                    backend: AI_BACKEND_NATIVE,
-                    reason: cap
-                        .effective_backend_reason
-                        .clone()
-                        .unwrap_or_else(|| "effective backend is native".to_string()),
-                };
-            }
-            AI_BACKEND_TRUSTED_CLI if cap.trusted_cli_available => {
-                return BackendFallback::Switch {
-                    backend: AI_BACKEND_TRUSTED_CLI,
-                    reason: cap
-                        .effective_backend_reason
-                        .clone()
-                        .unwrap_or_else(|| "effective backend is trusted-cli".to_string()),
-                };
-            }
-            _ => {}
-        }
-    }
-
-    BackendFallback::Keep
 }
 
 #[cfg(test)]

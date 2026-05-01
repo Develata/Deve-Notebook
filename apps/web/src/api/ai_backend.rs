@@ -107,6 +107,56 @@ pub fn resolve_backend_for_send(
     }
 }
 
+pub fn resolve_backend_for_effective_state(
+    current_backend: &str,
+    cap: &AiBackendCapabilities,
+) -> BackendSendDecision {
+    match resolve_backend_for_send(current_backend, cap) {
+        BackendSendDecision::Use(backend) if backend == current_backend => {
+            resolve_effective_override(current_backend, cap)
+        }
+        BackendSendDecision::Use(backend) => BackendSendDecision::Switch {
+            backend,
+            reason: effective_backend_reason(backend, cap),
+        },
+        other => other,
+    }
+}
+
+fn resolve_effective_override(
+    current_backend: &str,
+    cap: &AiBackendCapabilities,
+) -> BackendSendDecision {
+    if current_backend == cap.effective_backend {
+        return BackendSendDecision::Use(current_backend_static(current_backend));
+    }
+
+    match cap.effective_backend.as_str() {
+        AI_BACKEND_NATIVE if cap.native_available => BackendSendDecision::Switch {
+            backend: AI_BACKEND_NATIVE,
+            reason: effective_backend_reason(AI_BACKEND_NATIVE, cap),
+        },
+        AI_BACKEND_TRUSTED_CLI if cap.trusted_cli_available => BackendSendDecision::Switch {
+            backend: AI_BACKEND_TRUSTED_CLI,
+            reason: effective_backend_reason(AI_BACKEND_TRUSTED_CLI, cap),
+        },
+        _ => BackendSendDecision::Use(current_backend_static(current_backend)),
+    }
+}
+
+fn current_backend_static(current_backend: &str) -> &'static str {
+    match current_backend {
+        AI_BACKEND_TRUSTED_CLI => AI_BACKEND_TRUSTED_CLI,
+        _ => AI_BACKEND_NATIVE,
+    }
+}
+
+fn effective_backend_reason(backend: &'static str, cap: &AiBackendCapabilities) -> String {
+    cap.effective_backend_reason
+        .clone()
+        .unwrap_or_else(|| format!("effective backend is {backend}"))
+}
+
 fn resolve_trusted_cli(cap: &AiBackendCapabilities) -> BackendSendDecision {
     if cap.trusted_cli_available {
         return BackendSendDecision::Use(AI_BACKEND_TRUSTED_CLI);
@@ -163,76 +213,5 @@ fn resolve_effective(cap: &AiBackendCapabilities) -> BackendSendDecision {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn maps_product_backend_names_to_runtime_plugin_ids() {
-        assert_eq!(ai_backend_to_plugin_id(AI_BACKEND_NATIVE), AI_PLUGIN_NATIVE);
-        assert_eq!(
-            ai_backend_to_plugin_id(AI_BACKEND_TRUSTED_CLI),
-            AI_PLUGIN_TRUSTED_CLI
-        );
-        assert_eq!(ai_backend_to_plugin_id("unknown"), AI_PLUGIN_NATIVE);
-    }
-
-    #[test]
-    fn backend_for_send_uses_native_when_native_is_available() {
-        assert_eq!(
-            resolve_backend_for_send(AI_BACKEND_NATIVE, &AiBackendCapabilities::default()),
-            BackendSendDecision::Use(AI_BACKEND_NATIVE)
-        );
-    }
-
-    #[test]
-    fn backend_for_send_falls_back_to_native_when_trusted_cli_is_blocked() {
-        let cap = AiBackendCapabilities {
-            native_available: true,
-            trusted_cli_available: false,
-            trusted_cli_reason: Some("trusted mode required".to_string()),
-            effective_backend: AI_BACKEND_NATIVE.to_string(),
-            effective_backend_reason: Some("trusted mode required".to_string()),
-            ..AiBackendCapabilities::default()
-        };
-
-        assert_eq!(
-            resolve_backend_for_send(AI_BACKEND_TRUSTED_CLI, &cap),
-            BackendSendDecision::Switch {
-                backend: AI_BACKEND_NATIVE,
-                reason: "trusted mode required".to_string()
-            }
-        );
-    }
-
-    #[test]
-    fn backend_for_send_blocks_when_no_backend_is_available() {
-        let cap = AiBackendCapabilities::unavailable("native AI disabled by config");
-
-        assert_eq!(
-            resolve_backend_for_send(AI_BACKEND_NATIVE, &cap),
-            BackendSendDecision::Block {
-                reason: "native AI disabled by config".to_string()
-            }
-        );
-    }
-
-    #[test]
-    fn backend_for_send_switches_to_trusted_cli_when_server_effective_backend_allows_it() {
-        let cap = AiBackendCapabilities {
-            native_available: false,
-            native_reason: Some("native AI disabled by config".to_string()),
-            trusted_cli_available: true,
-            effective_backend: AI_BACKEND_TRUSTED_CLI.to_string(),
-            effective_backend_reason: Some("trusted-cli explicitly requested".to_string()),
-            ..AiBackendCapabilities::default()
-        };
-
-        assert_eq!(
-            resolve_backend_for_send(AI_BACKEND_NATIVE, &cap),
-            BackendSendDecision::Switch {
-                backend: AI_BACKEND_TRUSTED_CLI,
-                reason: "native AI disabled by config".to_string()
-            }
-        );
-    }
-}
+#[path = "ai_backend_test.rs"]
+mod tests;
