@@ -11,6 +11,21 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
+#[derive(Debug, PartialEq, Eq)]
+enum CommitAiBackendPlan {
+    Call {
+        plugin_id: &'static str,
+    },
+    Switch {
+        backend: &'static str,
+        plugin_id: &'static str,
+        notice: String,
+    },
+    Block {
+        reason: String,
+    },
+}
+
 pub fn build_generate_callback(
     core: SourceControlContext,
     chat_ctx: ChatContext,
@@ -49,13 +64,26 @@ pub fn build_generate_callback(
             let cap = fetch_ai_backend_capabilities().await;
             let decision =
                 resolve_backend_for_send(chat_ctx_for_send.ai_mode.get_untracked().as_str(), &cap);
-            let (backend, fallback_notice) = match decision {
-                BackendSendDecision::Use(backend) => (backend, None),
-                BackendSendDecision::Switch { backend, reason } => {
+            let plan = plan_commit_ai_backend_call(decision);
+            let plugin_id = match plan {
+                CommitAiBackendPlan::Call { plugin_id } => plugin_id,
+                CommitAiBackendPlan::Switch {
+                    backend,
+                    plugin_id,
+                    notice,
+                } => {
                     chat_ctx_for_send.set_ai_mode.set(backend.to_string());
-                    (backend, Some(reason))
+                    chat_ctx_for_send.set_messages.update(|messages| {
+                        messages.push(ChatMessage {
+                            role: "assistant".into(),
+                            content: notice,
+                            req_id: None,
+                            ts_ms: js_sys::Date::now() as u64,
+                        });
+                    });
+                    plugin_id
                 }
-                BackendSendDecision::Block { reason } => {
+                CommitAiBackendPlan::Block { reason } => {
                     chat_ctx_for_send.set_messages.update(|messages| {
                         messages.push(ChatMessage {
                             role: "assistant".into(),
@@ -70,16 +98,6 @@ pub fn build_generate_callback(
                     return;
                 }
             };
-            if let Some(reason) = fallback_notice {
-                chat_ctx_for_send.set_messages.update(|messages| {
-                    messages.push(ChatMessage {
-                        role: "assistant".into(),
-                        content: reason,
-                        req_id: None,
-                        ts_ms: js_sys::Date::now() as u64,
-                    });
-                });
-            }
             active_req_id.set(Some(req_id.clone()));
             chat_ctx_for_send.set_messages.update(|messages| {
                 messages.push(ChatMessage {
@@ -91,12 +109,26 @@ pub fn build_generate_callback(
             });
             chat_ctx_for_send.on_plugin_call.run((
                 req_id,
-                ai_backend_to_plugin_id(backend).to_string(),
+                plugin_id.to_string(),
                 "chat".to_string(),
                 args,
             ));
         });
     })
+}
+
+fn plan_commit_ai_backend_call(decision: BackendSendDecision) -> CommitAiBackendPlan {
+    match decision {
+        BackendSendDecision::Use(backend) => CommitAiBackendPlan::Call {
+            plugin_id: ai_backend_to_plugin_id(backend),
+        },
+        BackendSendDecision::Switch { backend, reason } => CommitAiBackendPlan::Switch {
+            backend,
+            plugin_id: ai_backend_to_plugin_id(backend),
+            notice: reason,
+        },
+        BackendSendDecision::Block { reason } => CommitAiBackendPlan::Block { reason },
+    }
 }
 
 pub fn sync_generated_commit_message(
@@ -131,3 +163,7 @@ pub fn sync_generated_commit_message(
         }
     });
 }
+
+#[cfg(test)]
+#[path = "commit_ai_test.rs"]
+mod tests;
