@@ -119,7 +119,7 @@
 *   `watcher_runtime` **MUST** 只把外部文件事件归一化为 `pending_fs_ops`。
 *   `repair_runtime` / `projection_repair_runtime` **MUST** 统一 degraded、quarantine、projection rebuild 与 repair action 边界。
 *   `repo_catalog_runtime` / `repo_scope_runtime` **MUST** 统一 repo identity、branch、`scope_nonce` 与 writable state。
-*   `session_runtime` / `browser_auth_runtime` **MUST** 统一认证状态、cookie/JWT/session refresh 与 unauthorized recovery。
+*   `session_runtime` / `auth_gateway` / `browser_auth_runtime` **MUST** 统一认证状态、HTTP/WS 入口鉴权、cookie/JWT/session refresh、unauthorized recovery 与 cross-cutting security header。
 *   `transport_runtime` / `repo_scope_sync_runtime` / `browser_peer_runtime` **MUST** 统一 WebLightPeer handshake、stale message discard 与 repo-scoped protocol gate。
 *   `relay_proxy_runtime` **MUST** 只负责 relay/proxy routing，不得改写 payload source attribution。
 *   `browser_peer_runtime -> browser_document_runtime -> pending_overlay_runtime -> write_confirmation_runtime` **MUST** 是 Web write confirmation 主链。
