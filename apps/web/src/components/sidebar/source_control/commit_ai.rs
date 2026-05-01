@@ -2,10 +2,14 @@
 //!   - 07_diff_logic#source-control-runtime
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!
-use crate::api::ai_backend_to_plugin_id;
+use crate::api::{
+    BackendSendDecision, ai_backend_to_plugin_id, fetch_ai_backend_capabilities,
+    resolve_backend_for_send,
+};
 use crate::hooks::use_core::{ChatContext, ChatMessage, SourceControlContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 pub fn build_generate_callback(
     core: SourceControlContext,
@@ -37,24 +41,61 @@ pub fn build_generate_callback(
             serde_json::json!(prompt),
             serde_json::json!(""),
         ];
-        active_req_id.set(Some(req_id.clone()));
         saw_streaming.set(false);
         set_is_generating.set(true);
-        chat_ctx.set_messages.update(|messages| {
-            messages.push(ChatMessage {
-                role: "assistant".into(),
-                content: String::new(),
-                req_id: Some(req_id.clone()),
-                ts_ms: js_sys::Date::now() as u64,
-            });
-        });
         chat_ctx.set_is_streaming.set(true);
-        chat_ctx.on_plugin_call.run((
-            req_id,
-            ai_backend_to_plugin_id(chat_ctx.ai_mode.get_untracked().as_str()).to_string(),
-            "chat".to_string(),
-            args,
-        ));
+        let chat_ctx_for_send = chat_ctx.clone();
+        spawn_local(async move {
+            let cap = fetch_ai_backend_capabilities().await;
+            let decision =
+                resolve_backend_for_send(chat_ctx_for_send.ai_mode.get_untracked().as_str(), &cap);
+            let (backend, fallback_notice) = match decision {
+                BackendSendDecision::Use(backend) => (backend, None),
+                BackendSendDecision::Switch { backend, reason } => {
+                    chat_ctx_for_send.set_ai_mode.set(backend.to_string());
+                    (backend, Some(reason))
+                }
+                BackendSendDecision::Block { reason } => {
+                    chat_ctx_for_send.set_messages.update(|messages| {
+                        messages.push(ChatMessage {
+                            role: "assistant".into(),
+                            content: reason,
+                            req_id: None,
+                            ts_ms: js_sys::Date::now() as u64,
+                        });
+                    });
+                    chat_ctx_for_send.set_is_streaming.set(false);
+                    set_is_generating.set(false);
+                    active_req_id.set(None);
+                    return;
+                }
+            };
+            if let Some(reason) = fallback_notice {
+                chat_ctx_for_send.set_messages.update(|messages| {
+                    messages.push(ChatMessage {
+                        role: "assistant".into(),
+                        content: reason,
+                        req_id: None,
+                        ts_ms: js_sys::Date::now() as u64,
+                    });
+                });
+            }
+            active_req_id.set(Some(req_id.clone()));
+            chat_ctx_for_send.set_messages.update(|messages| {
+                messages.push(ChatMessage {
+                    role: "assistant".into(),
+                    content: String::new(),
+                    req_id: Some(req_id.clone()),
+                    ts_ms: js_sys::Date::now() as u64,
+                });
+            });
+            chat_ctx_for_send.on_plugin_call.run((
+                req_id,
+                ai_backend_to_plugin_id(backend).to_string(),
+                "chat".to_string(),
+                args,
+            ));
+        });
     })
 }
 

@@ -4,8 +4,8 @@
 
 - `Flow ID`: `flow.sc.commit`
 - `Domain`: `source-control`
-- `Related Feature Chapters`: `docs/features/07_diff_logic.md`
-- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-03`
+- `Related Feature Chapters`: `docs/features/07_diff_logic.md`, `docs/features/10_ai_agent.md`
+- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-03`, `AI-007`
 
 ## Operations
 
@@ -35,6 +35,15 @@
 - `Preconditions`: staged changes 非空，message 非空，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::Commit { scope_nonce }`
 - `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
+
+### `op.sc.commit.generate-message`
+
+- `Name`: `Generate Commit Message`
+- `Surface`: `source-control-panel`
+- `Trigger`: 点击 commit message 区域的 generate 按钮
+- `Preconditions`: staged changes 非空，write gate 未阻塞
+- `Immediate Result`: 按 server AI backend capability gate 选择可用后端；不可用时显示原因并停止 generating/loading，不发起 plugin call
+- `Application Entry`: `apps/web/src/components/sidebar/source_control/commit_ai.rs`, `apps/cli/src/server/handlers/plugin.rs`
 
 ### `op.sc.commit.receive-result`
 
@@ -80,6 +89,18 @@
    - `ledger`
    - `protocol`
 
+### `op.sc.commit.generate-message`
+
+1. `User Operation`: 用户请求生成提交说明。
+2. `Application Response`: 先执行 AI backend capability gate；可用时复用 chat plugin stream，失败时只显示原因，不写入 commit message。
+3. `Concrete Modules`:
+   - `apps/web/src/components/sidebar/source_control/commit_ai.rs`
+   - `apps/web/src/api/ai_backend.rs`
+   - `apps/cli/src/server/handlers/plugin.rs`
+4. `Core Subsystems`:
+   - `source_control`
+   - `ai`
+
 ### `op.sc.commit.receive-result`
 
 1. `User Operation`: 用户观察 commit 返回结果。
@@ -97,4 +118,5 @@
 
 - 这条 flow 只描述 commit，不重复 stage / unstage。
 - commit 的关键 gate 不是按钮本身，而是 `write gate + scope_nonce + repo-scoped authority`。
+- AI 生成提交说明只是辅助输入，不得绕过 AI backend capability gate，也不得在失败时写入 commit message。
 - 成功 commit 的最终成立条件仍是 ledger append 与 commit anchor，而不是 UI 列表刷新。

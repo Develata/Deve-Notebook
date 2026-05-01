@@ -147,6 +147,7 @@
     - http_assert: trusted_cli_available_matches_policy true
     - http_assert: effective_backend_in ["native", "trusted-cli", "none"]
     - ui_assert: unavailable_backend_disabled true
+    - ui_assert: source_control_commit_ai_uses_backend_gate true
     - server_assert: native_disabled_blocks_ai_chat_rpc true
     - ui_assert: backend_fallback_reason_visible true
     - ui_assert: chat_streaming_stopped_after_plugin_error true

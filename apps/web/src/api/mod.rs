@@ -24,7 +24,8 @@ mod writer_id;
 
 pub use self::ai_backend::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
-    AiBackendCapabilities, ai_backend_to_plugin_id, fetch_ai_backend_capabilities,
+    AiBackendCapabilities, BackendSendDecision, ai_backend_to_plugin_id,
+    fetch_ai_backend_capabilities, resolve_backend_for_send,
 };
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
 #[cfg(test)]
