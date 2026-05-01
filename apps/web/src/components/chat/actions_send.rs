@@ -2,10 +2,10 @@
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!   - 03_rendering#document-authority-bridge
 //!
-use crate::api::{
-    BackendSendDecision, ai_backend_to_plugin_id, fetch_ai_backend_capabilities,
-    resolve_backend_for_send,
+use super::send_backend::{
+    ChatBackendSendPlan, ChatMessagePlan, plan_chat_backend_send, plan_chat_messages,
 };
+use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::{ChatMessage, CoreState};
 use leptos::prelude::*;
@@ -49,36 +49,30 @@ pub fn make_send_text(
             let cap = fetch_ai_backend_capabilities().await;
             let decision =
                 resolve_backend_for_send(core_for_send.ai_mode.get_untracked().as_str(), &cap);
-            let (backend, fallback_notice) = match decision {
-                BackendSendDecision::Use(backend) => (backend, None),
-                BackendSendDecision::Switch { backend, reason } => {
+            let plan = plan_chat_backend_send(decision);
+            let plugin_id = match &plan {
+                ChatBackendSendPlan::Call { plugin_id } => Some(*plugin_id),
+                ChatBackendSendPlan::Switch {
+                    backend, plugin_id, ..
+                } => {
                     core_for_send.set_ai_mode.set(backend.to_string());
-                    (backend, Some(reason))
+                    Some(*plugin_id)
                 }
-                BackendSendDecision::Block { reason } => {
-                    core_for_send.append_chat_message("user", &msg, None);
-                    core_for_send.append_chat_message("assistant", &reason, Some(req_id.clone()));
-                    core_for_send.set_is_chat_streaming.set(false);
-                    if let Some(cb) = on_user_text.as_ref() {
-                        cb.run(msg);
-                    }
-                    if let Some(cb) = on_req_id.as_ref() {
-                        cb.run(req_id);
-                    }
-                    return;
-                }
+                ChatBackendSendPlan::Block { .. } => None,
             };
-            core_for_send.append_chat_message("user", &msg, None);
-            if let Some(reason) = fallback_notice {
-                core_for_send.append_chat_message("assistant", &reason, None);
+            for message in plan_chat_messages(&plan) {
+                append_planned_chat_message(&core_for_send, &msg, &req_id, message);
             }
-            core_for_send.append_chat_message("assistant", "", Some(req_id.clone()));
             if let Some(cb) = on_user_text.as_ref() {
                 cb.run(msg.clone());
             }
             if let Some(cb) = on_req_id.as_ref() {
                 cb.run(req_id.clone());
             }
+            let Some(plugin_id) = plugin_id else {
+                core_for_send.set_is_chat_streaming.set(false);
+                return;
+            };
             let current_doc_path = core_for_send
                 .current_doc
                 .get_untracked()
@@ -110,12 +104,34 @@ pub fn make_send_text(
                 context,
                 serde_json::json!(history),
             ];
-            let plugin_id = ai_backend_to_plugin_id(backend).to_string();
-            core_for_send
-                .on_plugin_call
-                .run((req_id, plugin_id, "chat".to_string(), args));
+            core_for_send.on_plugin_call.run((
+                req_id,
+                plugin_id.to_string(),
+                "chat".to_string(),
+                args,
+            ));
         });
     })
+}
+
+fn append_planned_chat_message(
+    core: &CoreState,
+    msg: &str,
+    req_id: &str,
+    message: ChatMessagePlan,
+) {
+    match message {
+        ChatMessagePlan::UserInput => core.append_chat_message("user", msg, None),
+        ChatMessagePlan::AssistantNotice(notice) => {
+            core.append_chat_message("assistant", &notice, None);
+        }
+        ChatMessagePlan::AssistantPlaceholder => {
+            core.append_chat_message("assistant", "", Some(req_id.to_string()));
+        }
+        ChatMessagePlan::AssistantError(reason) => {
+            core.append_chat_message("assistant", &reason, Some(req_id.to_string()));
+        }
+    }
 }
 
 fn truncate_markdown_context(content: String) -> String {
