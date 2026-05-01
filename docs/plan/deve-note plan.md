@@ -113,6 +113,7 @@
 
 ### Runtime Skeleton Registry
 
+*   本表是 runtime 名称与边界的权威登记；各章 `Refactor Target` 与本表冲突时，以本表为准。
 *   `authority_storage_runtime` **MUST** 拥有 ledger append validation 与 authority table 边界。
 *   `projection_persistence_runtime` **MUST** 从 ledger fold 派生 projection / workspace writeback / drift explanation。
 *   `watcher_runtime` **MUST** 只把外部文件事件归一化为 `pending_fs_ops`。

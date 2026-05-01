@@ -381,12 +381,9 @@ PinnedSetChanged
 - 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。
 - 本机 service **MUST NOT** 监听非回环地址。
 - 无公网时，本地读写能力 **MUST** 仍由 core/server authority 与 writer gate 决定。
-- 本地持久化、schema migration、repair 与 projection writeback **MUST** 服从 `04_storage.md`。
-- post-gate 本地内容 **MUST** 落盘到本地数据库与 Vault。
-- crash recovery **MUST** 能恢复到最后一次持久化状态。
-- at-rest encryption、key rotation 与 key recovery **MUST** 进入本地存储安全合同。
-- 本地加密备份 **MUST** 进入 post-gate 能力合同。
-- 单文档/全量导出、关键操作审计与恢复演练 **SHOULD** 进入 post-gate 能力合同。
+- 本地持久化、schema migration、repair、projection writeback、crash recovery 与本地内容落盘 **MUST** 服从 `04_storage.md`。
+- at-rest encryption、key rotation、key recovery 与进程级鉴权 **MUST** 服从 `09_auth.md`。
+- 备份、导出、关键操作审计与恢复演练 **MUST** 服从 `15_release.md`。
 - 本地存储安全、备份、导出、审计与恢复演练 **MUST NOT** 落入 UI view 层。
 - native packaging 依赖 **MUST** 只落在对应 adapter feature scope。
 - 启动速度、输入延迟与内存预算 **MUST** 优先于视觉特效。
