@@ -141,6 +141,7 @@
     - run: cargo test -p deve_core config -- --nocapture
     - run: cargo test -p deve_cli agent_bridge -- --nocapture
     - run: cargo test -p deve_web ai_backend -- --nocapture
+    - run: cargo test -p deve_web backend_for_send -- --nocapture
   assertions:
     - http_assert: native_available_matches_config true
     - http_assert: trusted_cli_available_matches_policy true

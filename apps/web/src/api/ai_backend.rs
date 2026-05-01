@@ -38,6 +38,20 @@ impl Default for AiBackendCapabilities {
     }
 }
 
+impl AiBackendCapabilities {
+    pub fn unavailable(reason: impl Into<String>) -> Self {
+        let reason = reason.into();
+        Self {
+            native_available: false,
+            native_reason: Some(reason.clone()),
+            trusted_cli_available: false,
+            trusted_cli_reason: Some(reason.clone()),
+            effective_backend: "none".to_string(),
+            effective_backend_reason: Some(reason),
+        }
+    }
+}
+
 fn default_native_available() -> bool {
     true
 }
@@ -52,8 +66,14 @@ pub async fn fetch_ai_backend_capabilities() -> AiBackendCapabilities {
         Ok(resp) if resp.ok() => resp
             .json::<AiBackendCapabilities>()
             .await
-            .unwrap_or_default(),
-        _ => AiBackendCapabilities::default(),
+            .unwrap_or_else(|_| {
+                AiBackendCapabilities::unavailable("AI backend capability response is invalid")
+            }),
+        Ok(resp) => AiBackendCapabilities::unavailable(format!(
+            "AI backend capability probe failed: HTTP {}",
+            resp.status()
+        )),
+        Err(_) => AiBackendCapabilities::unavailable("AI backend capability probe failed"),
     }
 }
 

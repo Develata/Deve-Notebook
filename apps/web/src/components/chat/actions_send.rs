@@ -2,10 +2,12 @@
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!   - 03_rendering#document-authority-bridge
 //!
-use crate::api::ai_backend_to_plugin_id;
+use super::backend::{BackendSendDecision, resolve_backend_for_send};
+use crate::api::{ai_backend_to_plugin_id, fetch_ai_backend_capabilities};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::{ChatMessage, CoreState};
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 use crate::components::chat::slash_commands::{ChatSessionMode, consume_slash_command};
 
@@ -35,50 +37,82 @@ pub fn make_send_text(
             }
             return;
         }
+        core.set_is_chat_streaming.set(true);
         let req_id = uuid::Uuid::new_v4().to_string();
         let history = bounded_chat_history(core.chat_messages.get_untracked());
-        core.append_chat_message("user", &msg, None);
-        core.append_chat_message("assistant", "", Some(req_id.clone()));
-        core.set_is_chat_streaming.set(true);
-        if let Some(cb) = on_user_text.as_ref() {
-            cb.run(msg.clone());
-        }
-        if let Some(cb) = on_req_id.as_ref() {
-            cb.run(req_id.clone());
-        }
-        let current_doc_path = core
-            .current_doc
-            .get_untracked()
-            .and_then(|doc_id| {
-                core.docs
-                    .get_untracked()
-                    .iter()
-                    .find(|(id, _)| *id == doc_id)
-                    .map(|(_, path)| path.clone())
-            })
-            .unwrap_or_default();
-        let current_markdown = if current_doc_path.is_empty() {
-            String::new()
-        } else {
-            truncate_markdown_context(getEditorContent())
-        };
-        let sel_json = try_get_editor_selection().unwrap_or_else(|| "null".to_string());
-        let selection = serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);
-        let context = serde_json::json!({
-            "current_file": current_doc_path,
-            "current_markdown": current_markdown,
-            "selection": selection,
-            "chat_mode": session_mode.get_untracked().as_str(),
+        let core_for_send = core.clone();
+        let on_user_text = on_user_text.clone();
+        let on_req_id = on_req_id.clone();
+        spawn_local(async move {
+            let cap = fetch_ai_backend_capabilities().await;
+            let decision =
+                resolve_backend_for_send(core_for_send.ai_mode.get_untracked().as_str(), &cap);
+            let (backend, fallback_notice) = match decision {
+                BackendSendDecision::Use(backend) => (backend, None),
+                BackendSendDecision::Switch { backend, reason } => {
+                    core_for_send.set_ai_mode.set(backend.to_string());
+                    (backend, Some(reason))
+                }
+                BackendSendDecision::Block { reason } => {
+                    core_for_send.append_chat_message("user", &msg, None);
+                    core_for_send.append_chat_message("assistant", &reason, Some(req_id.clone()));
+                    core_for_send.set_is_chat_streaming.set(false);
+                    if let Some(cb) = on_user_text.as_ref() {
+                        cb.run(msg);
+                    }
+                    if let Some(cb) = on_req_id.as_ref() {
+                        cb.run(req_id);
+                    }
+                    return;
+                }
+            };
+            core_for_send.append_chat_message("user", &msg, None);
+            if let Some(reason) = fallback_notice {
+                core_for_send.append_chat_message("assistant", &reason, None);
+            }
+            core_for_send.append_chat_message("assistant", "", Some(req_id.clone()));
+            if let Some(cb) = on_user_text.as_ref() {
+                cb.run(msg.clone());
+            }
+            if let Some(cb) = on_req_id.as_ref() {
+                cb.run(req_id.clone());
+            }
+            let current_doc_path = core_for_send
+                .current_doc
+                .get_untracked()
+                .and_then(|doc_id| {
+                    core_for_send
+                        .docs
+                        .get_untracked()
+                        .iter()
+                        .find(|(id, _)| *id == doc_id)
+                        .map(|(_, path)| path.clone())
+                })
+                .unwrap_or_default();
+            let current_markdown = if current_doc_path.is_empty() {
+                String::new()
+            } else {
+                truncate_markdown_context(getEditorContent())
+            };
+            let sel_json = try_get_editor_selection().unwrap_or_else(|| "null".to_string());
+            let selection = serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);
+            let context = serde_json::json!({
+                "current_file": current_doc_path,
+                "current_markdown": current_markdown,
+                "selection": selection,
+                "chat_mode": session_mode.get_untracked().as_str(),
+            });
+            let args = vec![
+                serde_json::json!(req_id),
+                serde_json::json!(msg),
+                context,
+                serde_json::json!(history),
+            ];
+            let plugin_id = ai_backend_to_plugin_id(backend).to_string();
+            core_for_send
+                .on_plugin_call
+                .run((req_id, plugin_id, "chat".to_string(), args));
         });
-        let args = vec![
-            serde_json::json!(req_id),
-            serde_json::json!(msg),
-            context,
-            serde_json::json!(history),
-        ];
-        let plugin_id = ai_backend_to_plugin_id(core.ai_mode.get_untracked().as_str()).to_string();
-        core.on_plugin_call
-            .run((req_id, plugin_id, "chat".to_string(), args));
     })
 }
 
