@@ -72,6 +72,8 @@
   assertions:
     - server_assert: request_tools_rejected_before_provider_call true
     - server_assert: provider_tool_calls_rejected true
+    - ui_assert: partial_stream_error_detail_visible true
+    - ui_assert: chat_streaming_stopped_after_plugin_error true
     - log_not_contains_any: ["mcp", "skill", "spawn subprocess", "shell"]
 
 - case_id: AI-004

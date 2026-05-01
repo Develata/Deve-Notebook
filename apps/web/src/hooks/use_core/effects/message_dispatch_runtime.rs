@@ -47,15 +47,27 @@ fn finish_chat_request_from_plugin_response(
             return;
         };
         matched_chat_message = true;
-        if message.content.is_empty()
-            && let Some(text) = response_text.or(error_text)
-        {
-            message.content.push_str(text);
+        if let Some(text) = response_text {
+            if message.content.is_empty() {
+                message.content.push_str(text);
+            }
+        } else if let Some(text) = error_text {
+            append_plugin_error_text(&mut message.content, text);
         }
     });
     if matched_chat_message {
         signals.set_is_chat_streaming.set(false);
     }
+}
+
+fn append_plugin_error_text(content: &mut String, detail: &str) {
+    if detail.is_empty() || content.contains(detail) {
+        return;
+    }
+    if !content.is_empty() {
+        content.push_str("\n\n");
+    }
+    content.push_str(detail);
 }
 
 fn plugin_response_text(result: Option<&serde_json::Value>) -> Option<&str> {
@@ -92,3 +104,7 @@ pub fn handle_search_results_message(
     signals.set_search_request_id.set(None);
     signals.set_search_results.set(results);
 }
+
+#[cfg(test)]
+#[path = "message_dispatch_runtime_test.rs"]
+mod tests;
