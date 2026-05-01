@@ -140,6 +140,7 @@
     - run: scripts/check-ai-baseline.sh
     - run: cargo test -p deve_core config -- --nocapture
     - run: cargo test -p deve_cli agent_bridge -- --nocapture
+    - run: cargo test -p deve_cli backend_capabilities_http -- --nocapture
     - run: cargo test -p deve_web ai_backend -- --nocapture
     - run: cargo test -p deve_web backend_for_send -- --nocapture
   assertions:

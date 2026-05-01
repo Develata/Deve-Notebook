@@ -109,3 +109,7 @@ fn run_config() -> Result<policy::AgentBridgeRunConfig, String> {
         .map_err(|_| "external agent disabled".to_string())?
         .run_config()
 }
+
+#[cfg(test)]
+#[path = "agent_bridge/http_test.rs"]
+mod http_test;
