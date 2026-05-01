@@ -69,6 +69,7 @@
     - server_receive: provider_tool_call_delta
     - run: scripts/check-ai-baseline.sh
     - run: cargo test -p deve_cli ai_chat -- --nocapture
+    - run: cargo test -p deve_web message_dispatch_runtime -- --nocapture
   assertions:
     - server_assert: request_tools_rejected_before_provider_call true
     - server_assert: provider_tool_calls_rejected true

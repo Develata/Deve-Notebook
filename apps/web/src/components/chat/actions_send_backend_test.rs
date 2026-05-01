@@ -63,6 +63,14 @@ fn chat_send_switches_trusted_cli_to_agent_bridge() {
             notice: "trusted-cli explicitly requested".to_string()
         }
     );
+    assert_eq!(
+        plan_chat_messages(&plan),
+        vec![
+            ChatMessagePlan::UserInput,
+            ChatMessagePlan::AssistantNotice("trusted-cli explicitly requested".to_string()),
+            ChatMessagePlan::AssistantPlaceholder,
+        ]
+    );
 }
 
 #[test]
@@ -95,5 +103,12 @@ fn chat_send_maps_trusted_cli_to_agent_bridge() {
         ChatBackendSendPlan::Call {
             plugin_id: AI_PLUGIN_TRUSTED_CLI
         }
+    );
+    assert_eq!(
+        plan_chat_messages(&plan),
+        vec![
+            ChatMessagePlan::UserInput,
+            ChatMessagePlan::AssistantPlaceholder,
+        ]
     );
 }
