@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-03-22 | Updated: 2026-04-24 -->
+<!-- Generated: 2026-03-22 | Updated: 2026-05-01 -->
 
 # deve-note plan
 
@@ -12,25 +12,25 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | File | Description |
 |------|-------------|
 | `deve-note plan.md` | Master plan overview and table of contents |
-| `01_terminology.md` | Core terms: note, vault, ledger, actor, fact, projection |
+| `01_terminology.md` | Core terms: ledger, projection, writer gate, pending overlay, WebLightPeer, scope nonce |
 | `02_positioning.md` | Product positioning and target audience |
 | `03_rendering.md` | Markdown rendering pipeline and extensions |
 | `04_storage.md` | Ledger-first storage, node-first model, projection system |
 | `05_network.md` | P2P sync protocol, WebSocket transport, transfer engine |
 | `06_repository.md` | UUID-first repo identity, multi-repo catalog, shadow branches |
 | `07_diff_logic.md` | Source control diff, rename tracking, target resolution |
-| `08_ui_design.md` | UI design overview |
+| `08_ui_design.md` | Shared UI shell/control/runtime topology and native adapter gate registry |
 | `08_ui_design_01_web.md` | Web UI — layout, components, responsive design |
 | `08_ui_design_02_desktop.md` | Desktop UI — native integration |
 | `08_ui_design_03_mobile.md` | Mobile UI — touch gestures, drawers |
 | `09_auth.md` | Authentication, E2E encryption, key exchange |
 | `10_ai_agent.md` | Native AI chat baseline and trusted external agent boundary |
-| `11_i18n.md` | Internationalization strategy |
+| `11_i18n.md` | Internationalization strategy and authoritative error code catalog |
 | `12_commands.md` | Command palette and keyboard shortcuts |
 | `13_settings.md` | Settings system and persistence |
 | `14_tech_stack.md` | Technology choices and rationale |
 | `15_release.md` | Build, packaging, and deployment |
-| `16_web_thin_client_ledger.md` | Web thin client, repo-scoped state machine, scope gates |
+| `16_web_thin_client_ledger.md` | Web thin client, pending overlay, repo-scoped writer gate, ack/reject contract |
 | `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
 
 ## Subdirectories
@@ -49,6 +49,11 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 - `docs/features/` contains Chrome MCP manual walkthroughs for user-visible behavior; do not move that content back into plan chapters.
 - `docs/acceptance-cases/` contains automation-oriented cases; keep those scripts and control-surface checks separate from plan prose.
 - Do not modify plan files unless asked — they are reference documents.
+- `11_i18n.md#i18n-error-code-catalog` is the only authoritative error-code catalog; other chapters may classify failure domains but must not define parallel error-code lists.
+- `07_diff_logic.md#git-mirror-lifecycle` is the authoritative Git mirror lifecycle and command-boundary contract; storage and command chapters should reference it instead of duplicating preflight/import/export/push rules.
+- `pending overlay` is Web thin-client session runtime state; it must not be modeled as `pending_fs_ops` or cleared by watcher/scan semantics.
+- `08_ui_design.md#native-post-gate-common-contract` owns shared Desktop/Mobile post-gate native shell requirements; Desktop/Mobile subchapters should contain only platform deltas.
+- `deve-note plan.md` owns the Runtime Skeleton Registry; new refactor targets should be added there or explicitly marked as local-only before appearing in chapter tails.
 
 ## Plan-Code Bijection Enforcement (双射执行机制)
 
@@ -95,6 +100,8 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
 | `06_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
 | `07_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
+| `08_ui_design#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
+| `08_ui_design#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、持久化、安全、备份与性能合同 |
 | `08_ui_design_01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
 | `09_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/status/me HTTP endpoint 合同 |
 | `09_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
