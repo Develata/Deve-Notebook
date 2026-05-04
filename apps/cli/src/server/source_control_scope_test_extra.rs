@@ -8,7 +8,7 @@ use super::*;
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::{DocId, LedgerEntry, NodeId, Op, PeerId, RepoId, StructureOp};
 use deve_core::protocol::ServerMessage;
-use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::{ChangeStatus, CommitInfo};
 use deve_core::source_control::commits::{self, COMMITS_ORDER_TABLE};
 
 fn ensure_shadow_repo(repo: &RepoManager, repo_id: RepoId) -> anyhow::Result<PeerId> {
@@ -22,6 +22,66 @@ fn ensure_shadow_repo(repo: &RepoManager, repo_id: RepoId) -> anyhow::Result<Pee
         },
     )?;
     Ok(peer_id)
+}
+
+fn shadow_create_file(peer_id: &PeerId, doc_id: DocId, name: &str, timestamp: i64) -> LedgerEntry {
+    LedgerEntry::new_structure(
+        StructureOp::CreateFile {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id,
+            parent_id: None,
+            name: name.into(),
+        },
+        timestamp,
+        peer_id.clone(),
+        timestamp as u64,
+    )
+}
+
+fn shadow_insert(
+    peer_id: &PeerId,
+    doc_id: DocId,
+    pos: u32,
+    content: &str,
+    timestamp: i64,
+) -> LedgerEntry {
+    LedgerEntry::new_content(
+        doc_id,
+        Op::Insert {
+            pos,
+            content: content.into(),
+        },
+        timestamp,
+        peer_id.clone(),
+        timestamp as u64,
+        None,
+        None,
+    )
+}
+
+fn shadow_rename(peer_id: &PeerId, doc_id: DocId, new_name: &str, timestamp: i64) -> LedgerEntry {
+    LedgerEntry::new_structure(
+        StructureOp::RenameNode {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id: Some(doc_id),
+            new_name: new_name.into(),
+        },
+        timestamp,
+        peer_id.clone(),
+        timestamp as u64,
+    )
+}
+
+fn create_shadow_commit(
+    repo: &RepoManager,
+    peer_id: &PeerId,
+    repo_id: &RepoId,
+    message: &str,
+    ledger_seq: u64,
+) -> anyhow::Result<CommitInfo> {
+    repo.run_on_shadow_repo_by_id(peer_id, repo_id, |db| {
+        commits::create(db, message, 1, ledger_seq)
+    })
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -47,60 +107,18 @@ async fn readonly_remote_commit_diff_is_allowed() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
     let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
     let doc_id = DocId::new();
-    let create_file = LedgerEntry::new_structure(
-        StructureOp::CreateFile {
-            node_id: NodeId::from_doc_id(doc_id),
-            doc_id,
-            parent_id: None,
-            name: "note.md".into(),
-        },
-        1,
-        peer_id.clone(),
-        1,
-    );
     state
         .repo
-        .append_remote_op(&peer_id, &test_id, &create_file)?;
-    let first_content = LedgerEntry::new_content(
-        doc_id,
-        Op::Insert {
-            pos: 0,
-            content: "hello".into(),
-        },
-        2,
-        peer_id.clone(),
-        2,
-        None,
-        None,
-    );
+        .append_remote_op(&peer_id, &test_id, &shadow_create_file(&peer_id, doc_id, "note.md", 1))?;
     let first_ledger_seq = state
         .repo
-        .append_remote_op(&peer_id, &test_id, &first_content)?;
-    let first = state
-        .repo
-        .run_on_shadow_repo_by_id(&peer_id, &test_id, |db| {
-            commits::create(db, "first", 1, first_ledger_seq)
-        })?;
-    let second_content = LedgerEntry::new_content(
-        doc_id,
-        Op::Insert {
-            pos: 5,
-            content: " remote".into(),
-        },
-        3,
-        peer_id.clone(),
-        3,
-        None,
-        None,
-    );
+        .append_remote_op(&peer_id, &test_id, &shadow_insert(&peer_id, doc_id, 0, "hello", 2))?;
+    let first = create_shadow_commit(state.repo.as_ref(), &peer_id, &test_id, "first", first_ledger_seq)?;
     let second_ledger_seq = state
         .repo
-        .append_remote_op(&peer_id, &test_id, &second_content)?;
-    let second = state
-        .repo
-        .run_on_shadow_repo_by_id(&peer_id, &test_id, |db| {
-            commits::create(db, "second", 1, second_ledger_seq)
-        })?;
+        .append_remote_op(&peer_id, &test_id, &shadow_insert(&peer_id, doc_id, 5, " remote", 3))?;
+    let second =
+        create_shadow_commit(state.repo.as_ref(), &peer_id, &test_id, "second", second_ledger_seq)?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -129,6 +147,55 @@ async fn readonly_remote_commit_diff_is_allowed() -> anyhow::Result<()> {
     assert_eq!(diffs[0].status, ChangeStatus::Modified);
     assert_eq!(diffs[0].old_content, "hello");
     assert_eq!(diffs[0].new_content, "hello remote");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn readonly_remote_commit_diff_reports_rename_projection() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
+    let doc_id = DocId::new();
+    state
+        .repo
+        .append_remote_op(&peer_id, &test_id, &shadow_create_file(&peer_id, doc_id, "note.md", 1))?;
+    let first_ledger_seq = state
+        .repo
+        .append_remote_op(&peer_id, &test_id, &shadow_insert(&peer_id, doc_id, 0, "hello", 2))?;
+    let first = create_shadow_commit(state.repo.as_ref(), &peer_id, &test_id, "first", first_ledger_seq)?;
+    let second_ledger_seq = state
+        .repo
+        .append_remote_op(&peer_id, &test_id, &shadow_rename(&peer_id, doc_id, "renamed.md", 3))?;
+    let second =
+        create_shadow_commit(state.repo.as_ref(), &peer_id, &test_id, "rename", second_ledger_seq)?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo("shadow-notes".into(), Some(test_id));
+    session.set_scope_nonce(Some(19));
+
+    handle_get_commit_diff(
+        &state,
+        &ch,
+        &mut session,
+        "req-rename".into(),
+        Some(first.id),
+        second.id,
+    )
+    .await;
+    let (repo_id, branch, scope_nonce, diffs) = recv_commit_diff(&mut uni_rx).await;
+    assert_eq!(repo_id, Some(test_id));
+    assert_eq!(branch, Some(peer_id));
+    assert_eq!(scope_nonce, Some(19));
+    assert_eq!(diffs.len(), 1);
+    assert_eq!(diffs[0].doc_id, Some(doc_id));
+    assert_eq!(diffs[0].previous_path.as_deref(), Some("note.md"));
+    assert_eq!(diffs[0].path, "renamed.md");
+    assert_eq!(diffs[0].status, ChangeStatus::Renamed);
+    assert_eq!(diffs[0].old_content, "hello");
+    assert_eq!(diffs[0].new_content, "hello");
     Ok(())
 }
 
