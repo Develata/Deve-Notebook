@@ -25,6 +25,13 @@ fn trusted_cli_default_off_capabilities_default_to_native_backend() {
 }
 
 #[test]
+fn capabilities_json_missing_required_fields_is_invalid() {
+    let parsed = serde_json::from_value::<AiBackendCapabilities>(serde_json::json!({}));
+
+    assert!(parsed.is_err());
+}
+
+#[test]
 fn backend_for_send_uses_native_when_native_is_available() {
     assert_eq!(
         resolve_backend_for_send(AI_BACKEND_NATIVE, &AiBackendCapabilities::default()),

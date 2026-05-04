@@ -70,6 +70,32 @@ async fn backend_capabilities_http_reports_none_when_native_is_disabled() {
     assert_eq!(json["native_reason"], "native AI disabled by config");
 }
 
+#[tokio::test]
+async fn backend_capabilities_http_does_not_promote_native_mode_to_trusted_cli() {
+    let _guard = POLICY_TEST_LOCK.lock().await;
+    let cli_path = std::env::current_exe()
+        .expect("current exe")
+        .to_string_lossy()
+        .into_owned();
+    let _env = EnvVarGuard::set("AGENT_CLI_PATH", cli_path);
+    let mut config = deve_core::config::Config::load();
+    config.ai.mode = "native".to_string();
+    config.ai.native_enabled = false;
+    config.ai.agent_bridge.enabled = true;
+    config.ai.agent_bridge.trusted = true;
+    init_from_config(&config);
+
+    let json = get_capabilities_json().await;
+
+    assert_eq!(json["native_available"], false);
+    assert_eq!(json["trusted_cli_available"], true);
+    assert_eq!(json["effective_backend"], "none");
+    assert_eq!(
+        json["effective_backend_reason"],
+        "native AI disabled by config"
+    );
+}
+
 async fn get_capabilities_json() -> Value {
     let app = Router::new().route(
         "/api/ai/backend-capabilities",

@@ -1,4 +1,7 @@
-use super::{ChatBackendSendPlan, ChatMessagePlan, plan_chat_backend_send, plan_chat_messages};
+use super::{
+    ChatBackendSendPlan, ChatMessagePlan, plan_chat_backend_send, plan_chat_messages,
+    plan_chat_plugin_id, plan_chat_switch_backend,
+};
 use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
     BackendSendDecision,
@@ -21,6 +24,8 @@ fn chat_send_uses_native_backend_without_notice() {
             ChatMessagePlan::AssistantPlaceholder,
         ]
     );
+    assert_eq!(plan_chat_plugin_id(&plan), Some(AI_PLUGIN_NATIVE));
+    assert_eq!(plan_chat_switch_backend(&plan), None);
 }
 
 #[test]
@@ -46,6 +51,8 @@ fn chat_send_switches_backend_after_user_message() {
             ChatMessagePlan::AssistantPlaceholder,
         ]
     );
+    assert_eq!(plan_chat_plugin_id(&plan), Some(AI_PLUGIN_NATIVE));
+    assert_eq!(plan_chat_switch_backend(&plan), Some(AI_BACKEND_NATIVE));
 }
 
 #[test]
@@ -125,6 +132,8 @@ fn chat_send_blocks_without_plugin_placeholder() {
             ChatMessagePlan::AssistantError("native AI disabled by config".to_string()),
         ]
     );
+    assert_eq!(plan_chat_plugin_id(&plan), None);
+    assert_eq!(plan_chat_switch_backend(&plan), None);
 }
 
 #[test]

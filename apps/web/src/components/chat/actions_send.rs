@@ -3,7 +3,8 @@
 //!   - 03_rendering#document-authority-bridge
 //!
 use super::send_backend::{
-    ChatBackendSendPlan, ChatMessagePlan, plan_chat_backend_send, plan_chat_messages,
+    ChatMessagePlan, plan_chat_backend_send, plan_chat_messages, plan_chat_plugin_id,
+    plan_chat_switch_backend,
 };
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
@@ -51,29 +52,23 @@ pub fn make_send_text(
             let decision =
                 resolve_backend_for_send(core_for_send.ai_mode.get_untracked().as_str(), &cap);
             let plan = plan_chat_backend_send(decision);
-            let plugin_id = match &plan {
-                ChatBackendSendPlan::Call { plugin_id } => Some(*plugin_id),
-                ChatBackendSendPlan::Switch {
-                    backend, plugin_id, ..
-                } => {
-                    core_for_send.set_ai_mode.set(backend.to_string());
-                    Some(*plugin_id)
-                }
-                ChatBackendSendPlan::Block { .. } => None,
-            };
+            if let Some(backend) = plan_chat_switch_backend(&plan) {
+                core_for_send.set_ai_mode.set(backend.to_string());
+            }
+            let plugin_id = plan_chat_plugin_id(&plan);
             for message in plan_chat_messages(&plan) {
                 append_planned_chat_message(&core_for_send, &msg, &req_id, message);
             }
             if let Some(cb) = on_user_text.as_ref() {
                 cb.run(msg.clone());
             }
-            if let Some(cb) = on_req_id.as_ref() {
-                cb.run(req_id.clone());
-            }
             let Some(plugin_id) = plugin_id else {
                 core_for_send.set_is_chat_streaming.set(false);
                 return;
             };
+            if let Some(cb) = on_req_id.as_ref() {
+                cb.run(req_id.clone());
+            }
             let current_doc_path = core_for_send
                 .current_doc
                 .get_untracked()
@@ -130,7 +125,7 @@ fn append_planned_chat_message(
             core.append_chat_message("assistant", "", Some(req_id.to_string()));
         }
         ChatMessagePlan::AssistantError(reason) => {
-            core.append_chat_message("assistant", &reason, Some(req_id.to_string()));
+            core.append_chat_message("assistant", &reason, None);
         }
     }
 }

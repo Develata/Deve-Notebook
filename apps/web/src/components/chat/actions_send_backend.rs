@@ -40,6 +40,22 @@ pub(super) fn plan_chat_backend_send(decision: BackendSendDecision) -> ChatBacke
     }
 }
 
+pub(super) fn plan_chat_plugin_id(plan: &ChatBackendSendPlan) -> Option<&'static str> {
+    match plan {
+        ChatBackendSendPlan::Call { plugin_id } | ChatBackendSendPlan::Switch { plugin_id, .. } => {
+            Some(*plugin_id)
+        }
+        ChatBackendSendPlan::Block { .. } => None,
+    }
+}
+
+pub(super) fn plan_chat_switch_backend(plan: &ChatBackendSendPlan) -> Option<&'static str> {
+    match plan {
+        ChatBackendSendPlan::Switch { backend, .. } => Some(*backend),
+        ChatBackendSendPlan::Call { .. } | ChatBackendSendPlan::Block { .. } => None,
+    }
+}
+
 pub(super) fn plan_chat_messages(plan: &ChatBackendSendPlan) -> Vec<ChatMessagePlan> {
     match plan {
         ChatBackendSendPlan::Call { .. } => {
