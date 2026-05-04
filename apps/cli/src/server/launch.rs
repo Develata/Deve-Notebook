@@ -6,7 +6,7 @@
 use deve_core::native_adapter::NativeEndpointReady;
 #[cfg(test)]
 use deve_core::native_adapter::{
-    NativeServiceHealthProbe, NativeServiceSupervisor, NativeServiceSupervisorSnapshot,
+    NativeProcessAdapter, NativeServiceSupervisor, NativeServiceSupervisorSnapshot,
 };
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
@@ -66,12 +66,7 @@ impl ServerLaunchOptions {
 
     pub fn native_service_summary(&self) -> Option<NativeServiceSummary> {
         let native = self.native.as_ref()?;
-        let endpoint = NativeEndpointReady {
-            http_base: format!("http://{}:{}", self.advertised_host, self.port),
-            ws_base: self.ws_display_base(),
-            node_role: self.node_role_label().to_string(),
-            session_bound: native.session_bound,
-        };
+        let endpoint = self.native_endpoint(native.session_bound);
         Some(NativeServiceSummary {
             state: if native.session_bound {
                 "endpoint_ready".into()
@@ -83,19 +78,28 @@ impl ServerLaunchOptions {
         })
     }
 
+    fn native_endpoint(&self, session_bound: bool) -> NativeEndpointReady {
+        NativeEndpointReady {
+            http_base: format!("http://{}:{}", self.advertised_host, self.port),
+            ws_base: self.ws_display_base(),
+            node_role: self.node_role_label().to_string(),
+            session_bound,
+        }
+    }
+
     #[cfg(test)]
     fn native_supervisor_snapshot(&self) -> Option<NativeServiceSupervisorSnapshot> {
         let native = self.native.as_ref()?;
+        let mut process = NativeProcessAdapter::default();
         let mut supervisor = NativeServiceSupervisor::new(2);
         supervisor.start();
-        supervisor
-            .record_health_probe(NativeServiceHealthProbe {
-                endpoint_reachable: true,
-                node_role_readable: true,
-            })
+        let endpoint_snapshot = process
+            .bind_existing_endpoint(self.native_endpoint(false))
             .ok()?;
+        supervisor.record_process_snapshot(&endpoint_snapshot);
         if native.session_bound {
-            supervisor.record_session_handoff(true).ok()?;
+            let session_snapshot = process.bind_session(true).ok()?;
+            supervisor.record_process_snapshot(&session_snapshot);
         }
         Some(supervisor.snapshot())
     }
