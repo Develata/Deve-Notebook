@@ -1,6 +1,7 @@
 use super::{
-    CommitAiBackendPlan, CommitAiRuntimeEffect, CommitAiRuntimePlan, plan_commit_ai_backend_call,
-    plan_commit_ai_effects, plan_commit_ai_runtime,
+    CommitAiBackendPlan, CommitAiEffectRunner, CommitAiRuntimeEffect, CommitAiRuntimePlan,
+    plan_commit_ai_backend_call, plan_commit_ai_effects, plan_commit_ai_runtime,
+    run_commit_ai_effects,
 };
 use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
@@ -207,4 +208,104 @@ fn source_control_commit_ai_block_runtime_maps_block_reason() {
             reason: "native AI disabled by config".to_string(),
         }
     );
+}
+
+#[test]
+fn source_control_commit_ai_effect_runner_dispatches_in_order() {
+    let plan = plan_commit_ai_runtime(BackendSendDecision::Switch {
+        backend: AI_BACKEND_TRUSTED_CLI,
+        reason: "trusted-cli explicitly requested".to_string(),
+    });
+    let mut runner = RecordingCommitAiEffectRunner::default();
+
+    run_commit_ai_effects(plan_commit_ai_effects(&plan), &mut runner);
+
+    assert_eq!(
+        runner.events,
+        vec![
+            CommitAiRunEvent::SwitchBackend(AI_BACKEND_TRUSTED_CLI),
+            CommitAiRunEvent::AppendNotice("trusted-cli explicitly requested".to_string()),
+            CommitAiRunEvent::RegisterActiveRequest,
+            CommitAiRunEvent::AppendPlaceholder,
+            CommitAiRunEvent::DispatchPlugin(AI_PLUGIN_TRUSTED_CLI),
+        ]
+    );
+}
+
+#[test]
+fn source_control_commit_ai_effect_runner_blocks_in_order() {
+    let plan = plan_commit_ai_runtime(BackendSendDecision::Block {
+        reason: "native AI disabled by config".to_string(),
+    });
+    let mut runner = RecordingCommitAiEffectRunner::default();
+
+    run_commit_ai_effects(plan_commit_ai_effects(&plan), &mut runner);
+
+    assert_eq!(
+        runner.events,
+        vec![
+            CommitAiRunEvent::AppendBlockReason("native AI disabled by config".to_string()),
+            CommitAiRunEvent::StopStreaming,
+            CommitAiRunEvent::StopGenerating,
+            CommitAiRunEvent::ClearActiveRequest,
+        ]
+    );
+}
+
+#[derive(Default)]
+struct RecordingCommitAiEffectRunner {
+    events: Vec<CommitAiRunEvent>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum CommitAiRunEvent {
+    SwitchBackend(&'static str),
+    AppendNotice(String),
+    RegisterActiveRequest,
+    AppendPlaceholder,
+    DispatchPlugin(&'static str),
+    AppendBlockReason(String),
+    StopStreaming,
+    StopGenerating,
+    ClearActiveRequest,
+}
+
+impl CommitAiEffectRunner for RecordingCommitAiEffectRunner {
+    fn switch_backend(&mut self, backend: &'static str) {
+        self.events.push(CommitAiRunEvent::SwitchBackend(backend));
+    }
+
+    fn append_notice(&mut self, notice: String) {
+        self.events.push(CommitAiRunEvent::AppendNotice(notice));
+    }
+
+    fn register_active_request(&mut self) {
+        self.events.push(CommitAiRunEvent::RegisterActiveRequest);
+    }
+
+    fn append_placeholder(&mut self) {
+        self.events.push(CommitAiRunEvent::AppendPlaceholder);
+    }
+
+    fn dispatch_plugin(&mut self, plugin_id: &'static str) {
+        self.events
+            .push(CommitAiRunEvent::DispatchPlugin(plugin_id));
+    }
+
+    fn append_block_reason(&mut self, reason: String) {
+        self.events
+            .push(CommitAiRunEvent::AppendBlockReason(reason));
+    }
+
+    fn stop_streaming(&mut self) {
+        self.events.push(CommitAiRunEvent::StopStreaming);
+    }
+
+    fn stop_generating(&mut self) {
+        self.events.push(CommitAiRunEvent::StopGenerating);
+    }
+
+    fn clear_active_request(&mut self) {
+        self.events.push(CommitAiRunEvent::ClearActiveRequest);
+    }
 }

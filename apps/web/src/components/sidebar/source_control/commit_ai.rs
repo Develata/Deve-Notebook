@@ -51,6 +51,18 @@ enum CommitAiRuntimeEffect {
     ClearActiveRequest,
 }
 
+trait CommitAiEffectRunner {
+    fn switch_backend(&mut self, backend: &'static str);
+    fn append_notice(&mut self, notice: String);
+    fn register_active_request(&mut self);
+    fn append_placeholder(&mut self);
+    fn dispatch_plugin(&mut self, plugin_id: &'static str);
+    fn append_block_reason(&mut self, reason: String);
+    fn stop_streaming(&mut self);
+    fn stop_generating(&mut self);
+    fn clear_active_request(&mut self);
+}
+
 pub fn build_generate_callback(
     core: SourceControlContext,
     chat_ctx: ChatContext,
@@ -90,48 +102,67 @@ pub fn build_generate_callback(
             let decision =
                 resolve_backend_for_send(chat_ctx_for_send.ai_mode.get_untracked().as_str(), &cap);
             let plan = plan_commit_ai_runtime(decision);
-            for effect in plan_commit_ai_effects(&plan) {
-                match effect {
-                    CommitAiRuntimeEffect::SwitchBackend(backend) => {
-                        chat_ctx_for_send.set_ai_mode.set(backend.to_string());
-                    }
-                    CommitAiRuntimeEffect::AppendNotice(notice) => {
-                        append_commit_ai_message(&chat_ctx_for_send, notice, None);
-                    }
-                    CommitAiRuntimeEffect::RegisterActiveRequest => {
-                        active_req_id.set(Some(req_id.clone()));
-                    }
-                    CommitAiRuntimeEffect::AppendPlaceholder => {
-                        append_commit_ai_message(
-                            &chat_ctx_for_send,
-                            String::new(),
-                            Some(req_id.clone()),
-                        );
-                    }
-                    CommitAiRuntimeEffect::DispatchPlugin { plugin_id } => {
-                        chat_ctx_for_send.on_plugin_call.run((
-                            req_id.clone(),
-                            plugin_id.to_string(),
-                            "chat".to_string(),
-                            args.clone(),
-                        ));
-                    }
-                    CommitAiRuntimeEffect::AppendBlockReason(reason) => {
-                        append_commit_ai_message(&chat_ctx_for_send, reason, None);
-                    }
-                    CommitAiRuntimeEffect::StopStreaming => {
-                        chat_ctx_for_send.set_is_streaming.set(false);
-                    }
-                    CommitAiRuntimeEffect::StopGenerating => {
-                        set_is_generating.set(false);
-                    }
-                    CommitAiRuntimeEffect::ClearActiveRequest => {
-                        active_req_id.set(None);
-                    }
-                }
-            }
+            let mut runner = CommitAiSignalEffectRunner {
+                chat_ctx: chat_ctx_for_send,
+                active_req_id,
+                set_is_generating,
+                req_id,
+                args,
+            };
+            run_commit_ai_effects(plan_commit_ai_effects(&plan), &mut runner);
         });
     })
+}
+
+struct CommitAiSignalEffectRunner {
+    chat_ctx: ChatContext,
+    active_req_id: RwSignal<Option<String>>,
+    set_is_generating: WriteSignal<bool>,
+    req_id: String,
+    args: Vec<serde_json::Value>,
+}
+
+impl CommitAiEffectRunner for CommitAiSignalEffectRunner {
+    fn switch_backend(&mut self, backend: &'static str) {
+        self.chat_ctx.set_ai_mode.set(backend.to_string());
+    }
+
+    fn append_notice(&mut self, notice: String) {
+        append_commit_ai_message(&self.chat_ctx, notice, None);
+    }
+
+    fn register_active_request(&mut self) {
+        self.active_req_id.set(Some(self.req_id.clone()));
+    }
+
+    fn append_placeholder(&mut self) {
+        append_commit_ai_message(&self.chat_ctx, String::new(), Some(self.req_id.clone()));
+    }
+
+    fn dispatch_plugin(&mut self, plugin_id: &'static str) {
+        self.chat_ctx.on_plugin_call.run((
+            self.req_id.clone(),
+            plugin_id.to_string(),
+            "chat".to_string(),
+            self.args.clone(),
+        ));
+    }
+
+    fn append_block_reason(&mut self, reason: String) {
+        append_commit_ai_message(&self.chat_ctx, reason, None);
+    }
+
+    fn stop_streaming(&mut self) {
+        self.chat_ctx.set_is_streaming.set(false);
+    }
+
+    fn stop_generating(&mut self) {
+        self.set_is_generating.set(false);
+    }
+
+    fn clear_active_request(&mut self) {
+        self.active_req_id.set(None);
+    }
 }
 
 fn append_commit_ai_message(chat_ctx: &ChatContext, content: String, req_id: Option<String>) {
@@ -188,16 +219,14 @@ fn plan_commit_ai_effects(plan: &CommitAiRuntimePlan) -> Vec<CommitAiRuntimeEffe
         } => {
             let mut effects = Vec::new();
             if let Some(backend) = switch_backend {
-                effects.push(CommitAiRuntimeEffect::SwitchBackend(*backend));
+                effects.push(CommitAiRuntimeEffect::SwitchBackend(backend));
             }
             if let Some(notice) = notice {
                 effects.push(CommitAiRuntimeEffect::AppendNotice(notice.clone()));
             }
             effects.push(CommitAiRuntimeEffect::RegisterActiveRequest);
             effects.push(CommitAiRuntimeEffect::AppendPlaceholder);
-            effects.push(CommitAiRuntimeEffect::DispatchPlugin {
-                plugin_id: *plugin_id,
-            });
+            effects.push(CommitAiRuntimeEffect::DispatchPlugin { plugin_id });
             effects
         }
         CommitAiRuntimePlan::Block { reason } => vec![
@@ -206,6 +235,27 @@ fn plan_commit_ai_effects(plan: &CommitAiRuntimePlan) -> Vec<CommitAiRuntimeEffe
             CommitAiRuntimeEffect::StopGenerating,
             CommitAiRuntimeEffect::ClearActiveRequest,
         ],
+    }
+}
+
+fn run_commit_ai_effects(
+    effects: Vec<CommitAiRuntimeEffect>,
+    runner: &mut impl CommitAiEffectRunner,
+) {
+    for effect in effects {
+        match effect {
+            CommitAiRuntimeEffect::SwitchBackend(backend) => runner.switch_backend(backend),
+            CommitAiRuntimeEffect::AppendNotice(notice) => runner.append_notice(notice),
+            CommitAiRuntimeEffect::RegisterActiveRequest => runner.register_active_request(),
+            CommitAiRuntimeEffect::AppendPlaceholder => runner.append_placeholder(),
+            CommitAiRuntimeEffect::DispatchPlugin { plugin_id } => {
+                runner.dispatch_plugin(plugin_id)
+            }
+            CommitAiRuntimeEffect::AppendBlockReason(reason) => runner.append_block_reason(reason),
+            CommitAiRuntimeEffect::StopStreaming => runner.stop_streaming(),
+            CommitAiRuntimeEffect::StopGenerating => runner.stop_generating(),
+            CommitAiRuntimeEffect::ClearActiveRequest => runner.clear_active_request(),
+        }
     }
 }
 

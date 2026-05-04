@@ -68,10 +68,8 @@ pub fn make_send_text(
                 core_for_send.set_is_chat_streaming.set(false);
                 return;
             };
-            if register_pending_req {
-                if let Some(cb) = on_req_id.as_ref() {
-                    cb.run(req_id.clone());
-                }
+            if register_pending_req && let Some(cb) = on_req_id.as_ref() {
+                cb.run(req_id.clone());
             }
             let Some(plugin_id) = plugin_id else {
                 return;
