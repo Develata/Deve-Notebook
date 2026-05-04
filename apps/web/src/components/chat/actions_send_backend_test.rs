@@ -49,6 +49,39 @@ fn chat_send_switches_backend_after_user_message() {
 }
 
 #[test]
+fn trusted_cli_untrusted_send_uses_native_plugin_and_visible_notice() {
+    let plan = plan_chat_backend_send(BackendSendDecision::Switch {
+        backend: AI_BACKEND_NATIVE,
+        reason: "trusted mode required".to_string(),
+    });
+
+    assert_eq!(
+        plan,
+        ChatBackendSendPlan::Switch {
+            backend: AI_BACKEND_NATIVE,
+            plugin_id: AI_PLUGIN_NATIVE,
+            notice: "trusted mode required".to_string()
+        }
+    );
+    assert_ne!(
+        plan,
+        ChatBackendSendPlan::Switch {
+            backend: AI_BACKEND_NATIVE,
+            plugin_id: AI_PLUGIN_TRUSTED_CLI,
+            notice: "trusted mode required".to_string()
+        }
+    );
+    assert_eq!(
+        plan_chat_messages(&plan),
+        vec![
+            ChatMessagePlan::UserInput,
+            ChatMessagePlan::AssistantNotice("trusted mode required".to_string()),
+            ChatMessagePlan::AssistantPlaceholder,
+        ]
+    );
+}
+
+#[test]
 fn chat_send_switches_trusted_cli_to_agent_bridge() {
     let plan = plan_chat_backend_send(BackendSendDecision::Switch {
         backend: AI_BACKEND_TRUSTED_CLI,

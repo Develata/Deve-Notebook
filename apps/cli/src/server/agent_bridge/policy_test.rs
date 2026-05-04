@@ -33,6 +33,46 @@ fn untrusted_policy_requires_trusted_mode() {
 }
 
 #[test]
+fn trusted_cli_untrusted_policy_falls_back_to_native_without_spawn_path() {
+    let cli_path = std::env::current_exe()
+        .expect("current exe")
+        .to_string_lossy()
+        .into_owned();
+    let policy = AgentBridgePolicy {
+        enabled: true,
+        trusted: false,
+        native_enabled: true,
+        requested_mode: "trusted-cli".to_string(),
+        cli_path: Some(cli_path),
+        timeout_ms: 30_000,
+    };
+
+    assert_eq!(
+        policy.spawn_path().expect_err("must fail before spawn"),
+        "trusted mode required"
+    );
+    assert_eq!(
+        policy
+            .run_config()
+            .expect_err("must fail before run config"),
+        "trusted mode required"
+    );
+
+    let capabilities = policy.capabilities();
+    assert!(capabilities.native_available);
+    assert!(!capabilities.trusted_cli_available);
+    assert_eq!(
+        capabilities.trusted_cli_reason.as_deref(),
+        Some("trusted mode required")
+    );
+    assert_eq!(capabilities.effective_backend, "native");
+    assert_eq!(
+        capabilities.effective_backend_reason.as_deref(),
+        Some("trusted mode required")
+    );
+}
+
+#[test]
 fn trusted_policy_requires_explicit_cli_path() {
     let policy = AgentBridgePolicy {
         enabled: true,

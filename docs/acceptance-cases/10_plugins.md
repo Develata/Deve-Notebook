@@ -128,6 +128,8 @@
     - ui_type: "hello"
     - ui_submit: true
     - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_web trusted_cli_untrusted -- --nocapture
+    - run: cargo test -p deve_cli trusted_cli_untrusted -- --nocapture
     - run: cargo test -p deve_cli agent_bridge -- --nocapture
   assertions:
     - ui_assert: chat_error_visible true
