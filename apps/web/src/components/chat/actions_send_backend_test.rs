@@ -177,6 +177,29 @@ fn chat_send_call_runtime_registers_pending_request() {
 }
 
 #[test]
+fn chat_send_switch_runtime_switches_backend_and_registers_pending_request() {
+    let runtime = plan_chat_send_runtime(BackendSendDecision::Switch {
+        backend: AI_BACKEND_NATIVE,
+        reason: "trusted mode required".to_string(),
+    });
+
+    assert_eq!(
+        runtime,
+        ChatSendRuntimePlan {
+            plugin_id: Some(AI_PLUGIN_NATIVE),
+            switch_backend: Some(AI_BACKEND_NATIVE),
+            messages: vec![
+                ChatMessagePlan::UserInput,
+                ChatMessagePlan::AssistantNotice("trusted mode required".to_string()),
+                ChatMessagePlan::AssistantPlaceholder,
+            ],
+            register_pending_req: true,
+            stop_streaming: false,
+        }
+    );
+}
+
+#[test]
 fn chat_send_maps_trusted_cli_to_agent_bridge() {
     let plan = plan_chat_backend_send(BackendSendDecision::Use(AI_BACKEND_TRUSTED_CLI));
 
