@@ -11,6 +11,7 @@
     - ui_type: "Summarize this markdown file"
     - ui_submit: true
     - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_web chat_context -- --nocapture
   assertions:
     - ui_assert: chat_response_visible true
     - ui_assert: chat_response_mentions_current_doc true

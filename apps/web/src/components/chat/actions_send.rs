@@ -92,12 +92,12 @@ pub fn make_send_text(
             };
             let sel_json = try_get_editor_selection().unwrap_or_else(|| "null".to_string());
             let selection = serde_json::from_str(&sel_json).unwrap_or(serde_json::Value::Null);
-            let context = serde_json::json!({
-                "current_file": current_doc_path,
-                "current_markdown": current_markdown,
-                "selection": selection,
-                "chat_mode": session_mode.get_untracked().as_str(),
-            });
+            let context = build_chat_context(
+                current_doc_path,
+                current_markdown,
+                selection,
+                session_mode.get_untracked(),
+            );
             let args = vec![
                 serde_json::json!(req_id),
                 serde_json::json!(msg),
@@ -139,6 +139,20 @@ fn truncate_markdown_context(content: String) -> String {
         return content;
     };
     content[..end].to_string()
+}
+
+fn build_chat_context(
+    current_doc_path: String,
+    current_markdown: String,
+    selection: serde_json::Value,
+    session_mode: ChatSessionMode,
+) -> serde_json::Value {
+    serde_json::json!({
+        "current_file": current_doc_path,
+        "current_markdown": current_markdown,
+        "selection": selection,
+        "chat_mode": session_mode.as_str(),
+    })
 }
 
 fn bounded_chat_history(messages: Vec<ChatMessage>) -> Vec<serde_json::Value> {
