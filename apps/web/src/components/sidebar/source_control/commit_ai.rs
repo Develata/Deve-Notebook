@@ -38,6 +38,19 @@ enum CommitAiRuntimePlan {
     },
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum CommitAiRuntimeEffect {
+    SwitchBackend(&'static str),
+    AppendNotice(String),
+    RegisterActiveRequest,
+    AppendPlaceholder,
+    DispatchPlugin { plugin_id: &'static str },
+    AppendBlockReason(String),
+    StopStreaming,
+    StopGenerating,
+    ClearActiveRequest,
+}
+
 pub fn build_generate_callback(
     core: SourceControlContext,
     chat_ctx: ChatContext,
@@ -76,36 +89,45 @@ pub fn build_generate_callback(
             let cap = fetch_ai_backend_capabilities().await;
             let decision =
                 resolve_backend_for_send(chat_ctx_for_send.ai_mode.get_untracked().as_str(), &cap);
-            match plan_commit_ai_runtime(decision) {
-                CommitAiRuntimePlan::Dispatch {
-                    plugin_id,
-                    switch_backend,
-                    notice,
-                } => {
-                    if let Some(backend) = switch_backend {
+            let plan = plan_commit_ai_runtime(decision);
+            for effect in plan_commit_ai_effects(&plan) {
+                match effect {
+                    CommitAiRuntimeEffect::SwitchBackend(backend) => {
                         chat_ctx_for_send.set_ai_mode.set(backend.to_string());
                     }
-                    if let Some(notice) = notice {
+                    CommitAiRuntimeEffect::AppendNotice(notice) => {
                         append_commit_ai_message(&chat_ctx_for_send, notice, None);
                     }
-                    active_req_id.set(Some(req_id.clone()));
-                    append_commit_ai_message(
-                        &chat_ctx_for_send,
-                        String::new(),
-                        Some(req_id.clone()),
-                    );
-                    chat_ctx_for_send.on_plugin_call.run((
-                        req_id,
-                        plugin_id.to_string(),
-                        "chat".to_string(),
-                        args,
-                    ));
-                }
-                CommitAiRuntimePlan::Block { reason } => {
-                    append_commit_ai_message(&chat_ctx_for_send, reason, None);
-                    chat_ctx_for_send.set_is_streaming.set(false);
-                    set_is_generating.set(false);
-                    active_req_id.set(None);
+                    CommitAiRuntimeEffect::RegisterActiveRequest => {
+                        active_req_id.set(Some(req_id.clone()));
+                    }
+                    CommitAiRuntimeEffect::AppendPlaceholder => {
+                        append_commit_ai_message(
+                            &chat_ctx_for_send,
+                            String::new(),
+                            Some(req_id.clone()),
+                        );
+                    }
+                    CommitAiRuntimeEffect::DispatchPlugin { plugin_id } => {
+                        chat_ctx_for_send.on_plugin_call.run((
+                            req_id.clone(),
+                            plugin_id.to_string(),
+                            "chat".to_string(),
+                            args.clone(),
+                        ));
+                    }
+                    CommitAiRuntimeEffect::AppendBlockReason(reason) => {
+                        append_commit_ai_message(&chat_ctx_for_send, reason, None);
+                    }
+                    CommitAiRuntimeEffect::StopStreaming => {
+                        chat_ctx_for_send.set_is_streaming.set(false);
+                    }
+                    CommitAiRuntimeEffect::StopGenerating => {
+                        set_is_generating.set(false);
+                    }
+                    CommitAiRuntimeEffect::ClearActiveRequest => {
+                        active_req_id.set(None);
+                    }
                 }
             }
         });
@@ -154,6 +176,36 @@ fn plan_commit_ai_runtime(decision: BackendSendDecision) -> CommitAiRuntimePlan 
             notice: Some(notice),
         },
         CommitAiBackendPlan::Block { reason } => CommitAiRuntimePlan::Block { reason },
+    }
+}
+
+fn plan_commit_ai_effects(plan: &CommitAiRuntimePlan) -> Vec<CommitAiRuntimeEffect> {
+    match plan {
+        CommitAiRuntimePlan::Dispatch {
+            plugin_id,
+            switch_backend,
+            notice,
+        } => {
+            let mut effects = Vec::new();
+            if let Some(backend) = switch_backend {
+                effects.push(CommitAiRuntimeEffect::SwitchBackend(*backend));
+            }
+            if let Some(notice) = notice {
+                effects.push(CommitAiRuntimeEffect::AppendNotice(notice.clone()));
+            }
+            effects.push(CommitAiRuntimeEffect::RegisterActiveRequest);
+            effects.push(CommitAiRuntimeEffect::AppendPlaceholder);
+            effects.push(CommitAiRuntimeEffect::DispatchPlugin {
+                plugin_id: *plugin_id,
+            });
+            effects
+        }
+        CommitAiRuntimePlan::Block { reason } => vec![
+            CommitAiRuntimeEffect::AppendBlockReason(reason.clone()),
+            CommitAiRuntimeEffect::StopStreaming,
+            CommitAiRuntimeEffect::StopGenerating,
+            CommitAiRuntimeEffect::ClearActiveRequest,
+        ],
     }
 }
 

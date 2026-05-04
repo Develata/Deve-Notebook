@@ -1,5 +1,6 @@
 use super::{
-    CommitAiBackendPlan, CommitAiRuntimePlan, plan_commit_ai_backend_call, plan_commit_ai_runtime,
+    CommitAiBackendPlan, CommitAiRuntimeEffect, CommitAiRuntimePlan, plan_commit_ai_backend_call,
+    plan_commit_ai_effects, plan_commit_ai_runtime,
 };
 use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
@@ -79,7 +80,7 @@ fn source_control_commit_ai_maps_trusted_cli_to_agent_bridge() {
 }
 
 #[test]
-fn source_control_commit_ai_call_runtime_registers_active_request() {
+fn source_control_commit_ai_call_runtime_maps_native_dispatch() {
     let plan = plan_commit_ai_runtime(BackendSendDecision::Use(AI_BACKEND_NATIVE));
 
     assert_eq!(
@@ -107,7 +108,7 @@ fn source_control_commit_ai_trusted_cli_call_runtime_uses_agent_bridge() {
 }
 
 #[test]
-fn source_control_commit_ai_switch_runtime_preserves_notice_and_placeholder() {
+fn source_control_commit_ai_switch_runtime_preserves_notice() {
     let plan = plan_commit_ai_runtime(BackendSendDecision::Switch {
         backend: AI_BACKEND_NATIVE,
         reason: "trusted mode required".to_string(),
@@ -120,6 +121,60 @@ fn source_control_commit_ai_switch_runtime_preserves_notice_and_placeholder() {
             switch_backend: Some(AI_BACKEND_NATIVE),
             notice: Some("trusted mode required".to_string()),
         }
+    );
+}
+
+#[test]
+fn source_control_commit_ai_call_effects_register_placeholder_before_dispatch() {
+    let plan = plan_commit_ai_runtime(BackendSendDecision::Use(AI_BACKEND_NATIVE));
+
+    assert_eq!(
+        plan_commit_ai_effects(&plan),
+        vec![
+            CommitAiRuntimeEffect::RegisterActiveRequest,
+            CommitAiRuntimeEffect::AppendPlaceholder,
+            CommitAiRuntimeEffect::DispatchPlugin {
+                plugin_id: AI_PLUGIN_NATIVE,
+            },
+        ]
+    );
+}
+
+#[test]
+fn source_control_commit_ai_switch_effects_keep_notice_before_placeholder() {
+    let plan = plan_commit_ai_runtime(BackendSendDecision::Switch {
+        backend: AI_BACKEND_TRUSTED_CLI,
+        reason: "trusted-cli explicitly requested".to_string(),
+    });
+
+    assert_eq!(
+        plan_commit_ai_effects(&plan),
+        vec![
+            CommitAiRuntimeEffect::SwitchBackend(AI_BACKEND_TRUSTED_CLI),
+            CommitAiRuntimeEffect::AppendNotice("trusted-cli explicitly requested".to_string()),
+            CommitAiRuntimeEffect::RegisterActiveRequest,
+            CommitAiRuntimeEffect::AppendPlaceholder,
+            CommitAiRuntimeEffect::DispatchPlugin {
+                plugin_id: AI_PLUGIN_TRUSTED_CLI,
+            },
+        ]
+    );
+}
+
+#[test]
+fn source_control_commit_ai_block_effects_stop_without_dispatch() {
+    let plan = plan_commit_ai_runtime(BackendSendDecision::Block {
+        reason: "native AI disabled by config".to_string(),
+    });
+
+    assert_eq!(
+        plan_commit_ai_effects(&plan),
+        vec![
+            CommitAiRuntimeEffect::AppendBlockReason("native AI disabled by config".to_string()),
+            CommitAiRuntimeEffect::StopStreaming,
+            CommitAiRuntimeEffect::StopGenerating,
+            CommitAiRuntimeEffect::ClearActiveRequest,
+        ]
     );
 }
 
@@ -141,7 +196,7 @@ fn source_control_commit_ai_trusted_cli_switch_runtime_uses_agent_bridge() {
 }
 
 #[test]
-fn source_control_commit_ai_block_runtime_stops_without_active_request() {
+fn source_control_commit_ai_block_runtime_maps_block_reason() {
     let plan = plan_commit_ai_runtime(BackendSendDecision::Block {
         reason: "native AI disabled by config".to_string(),
     });
