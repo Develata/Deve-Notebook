@@ -13,7 +13,14 @@ use leptos::prelude::*;
 use super::effects_sc_feedback::show_file_op_feedback;
 
 pub(super) struct FsRefreshSignals {
-    pub current_scope_nonce: u64,
+    pub expected_scope_nonce: u64,
+    pub current_scope_nonce: ReadSignal<u64>,
+    pub current_repo_id: ReadSignal<Option<String>>,
+    pub load_state: ReadSignal<String>,
+    pub is_spectator: Signal<bool>,
+    pub handshake_ready: ReadSignal<bool>,
+    pub pending_branch_switch: ReadSignal<Option<super::types::PendingBranchTarget>>,
+    pub pending_repo_switch: ReadSignal<Option<String>>,
     pub degraded_sync_mode: ReadSignal<Option<DegradedSyncMode>>,
     pub sync_banner: ReadSignal<Option<String>>,
     pub set_sync_banner: WriteSignal<Option<String>>,
@@ -80,6 +87,27 @@ pub(super) fn refresh_after_fs_change(
         signals.sync_banner,
         signals.set_sync_banner,
     );
+    let current_scope_nonce = signals.current_scope_nonce.get_untracked();
+    let repo_id = signals.current_repo_id.get_untracked();
+    let load_state = signals.load_state.get_untracked();
+    let pending_branch_switch = signals.pending_branch_switch.get_untracked();
+    let pending_repo_switch = signals.pending_repo_switch.get_untracked();
+    if !source_control_refresh_allowed(
+        signals.expected_scope_nonce,
+        current_scope_nonce,
+        RepoWriteGateState {
+            connection_status: ws.status.get_untracked(),
+            load_state: &load_state,
+            is_read_only: signals.is_spectator.get_untracked(),
+            handshake_ready: signals.handshake_ready.get_untracked(),
+            writer_ready: ws.writer_ready_for(repo_id.as_deref(), Some(current_scope_nonce)),
+            has_repo: repo_id.is_some(),
+            pending_branch_switch: pending_branch_switch.is_some(),
+            pending_repo_switch: pending_repo_switch.is_some(),
+        },
+    ) {
+        return;
+    }
     schedule_refresh();
     let request_id = uuid::Uuid::new_v4().to_string();
     signals
@@ -88,7 +116,7 @@ pub(super) fn refresh_after_fs_change(
     signals.set_tree_request_id.set(Some(request_id.clone()));
     ws.send(deve_core::protocol::ClientMessage::ListDocs {
         request_id,
-        scope_nonce: Some(signals.current_scope_nonce),
+        scope_nonce: Some(current_scope_nonce),
     });
 }
 
@@ -99,7 +127,7 @@ pub(super) fn refresh_after_commit(commit_id: &str, signals: CommitRefreshSignal
     let load_state = signals.load_state.get_untracked();
     let pending_branch_switch = signals.pending_branch_switch.get_untracked();
     let pending_repo_switch = signals.pending_repo_switch.get_untracked();
-    if !commit_refresh_allowed(
+    if !source_control_refresh_allowed(
         signals.expected_scope_nonce,
         current_scope_nonce,
         RepoWriteGateState {
@@ -134,7 +162,7 @@ pub(super) fn refresh_after_commit(commit_id: &str, signals: CommitRefreshSignal
     });
 }
 
-fn commit_refresh_allowed(
+fn source_control_refresh_allowed(
     expected_scope_nonce: u64,
     current_scope_nonce: u64,
     gate_state: RepoWriteGateState<'_>,
@@ -145,11 +173,15 @@ fn commit_refresh_allowed(
 
 #[cfg(test)]
 mod tests {
-    use super::{apply_doc_diff, commit_refresh_allowed};
-    use crate::api::ConnectionStatus;
+    use super::{
+        FsRefreshSignals, apply_doc_diff, refresh_after_fs_change, source_control_refresh_allowed,
+    };
+    use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::write_gate::RepoWriteGateState;
     use deve_core::models::DocId;
+    use deve_core::protocol::ClientMessage;
     use leptos::prelude::{GetUntracked, signal};
+    use std::cell::Cell;
 
     fn gate_state(
         connection_status: ConnectionStatus,
@@ -182,7 +214,7 @@ mod tests {
 
     #[test]
     fn commit_refresh_requires_current_scope_nonce() {
-        assert!(!commit_refresh_allowed(
+        assert!(!source_control_refresh_allowed(
             7,
             8,
             gate_state(ConnectionStatus::Connected, true, true),
@@ -191,7 +223,7 @@ mod tests {
 
     #[test]
     fn commit_refresh_blocks_native_recovery_state() {
-        assert!(!commit_refresh_allowed(
+        assert!(!source_control_refresh_allowed(
             7,
             7,
             gate_state(ConnectionStatus::NativeReprobeRequired, true, true),
@@ -200,7 +232,7 @@ mod tests {
 
     #[test]
     fn commit_refresh_requires_writer_ready() {
-        assert!(!commit_refresh_allowed(
+        assert!(!source_control_refresh_allowed(
             7,
             7,
             gate_state(ConnectionStatus::Connected, true, false),
@@ -209,10 +241,98 @@ mod tests {
 
     #[test]
     fn commit_refresh_allows_ready_local_scope() {
-        assert!(commit_refresh_allowed(
+        assert!(source_control_refresh_allowed(
             7,
             7,
             gate_state(ConnectionStatus::Connected, true, true),
         ));
+    }
+
+    fn run_fs_refresh(
+        status: ConnectionStatus,
+        writer_ready: bool,
+    ) -> (bool, Option<String>, Option<String>, Vec<ClientMessage>) {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(status);
+        if writer_ready {
+            ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+        }
+        let (current_scope_nonce, _set_current_scope_nonce) = signal(7u64);
+        let (current_repo_id, _set_current_repo_id) = signal(Some("repo-a".to_string()));
+        let (load_state, _set_load_state) = signal("ready".to_string());
+        let (is_spectator, _set_is_spectator) = signal(false);
+        let (handshake_ready, _set_handshake_ready) = signal(true);
+        let (pending_branch_switch, _set_pending_branch_switch) =
+            signal(None::<super::super::types::PendingBranchTarget>);
+        let (pending_repo_switch, _set_pending_repo_switch) = signal(None::<String>);
+        let (degraded_sync_mode, _set_degraded_sync_mode) = signal(None);
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+        let (doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
+        let (tree_request_id, set_tree_request_id) = signal(None::<String>);
+        let scheduled = Cell::new(false);
+        let schedule_refresh = || scheduled.set(true);
+
+        refresh_after_fs_change(
+            "notes/a.md",
+            "modified",
+            false,
+            FsRefreshSignals {
+                expected_scope_nonce: 7,
+                current_scope_nonce,
+                current_repo_id,
+                load_state,
+                is_spectator: is_spectator.into(),
+                handshake_ready,
+                pending_branch_switch,
+                pending_repo_switch,
+                degraded_sync_mode,
+                sync_banner,
+                set_sync_banner,
+                set_doc_list_request_id,
+                set_tree_request_id,
+            },
+            &schedule_refresh,
+            &ws,
+        );
+
+        (
+            scheduled.get(),
+            doc_list_request_id.get_untracked(),
+            tree_request_id.get_untracked(),
+            ws.drain_sent_for_test(),
+        )
+    }
+
+    #[test]
+    fn fs_refresh_blocks_native_recovery_state() {
+        let (scheduled, doc_list_request_id, tree_request_id, sent) =
+            run_fs_refresh(ConnectionStatus::NativeReprobeRequired, true);
+
+        assert!(!scheduled);
+        assert_eq!(doc_list_request_id, None);
+        assert_eq!(tree_request_id, None);
+        assert!(sent.is_empty());
+    }
+
+    #[test]
+    fn fs_refresh_sends_doc_list_when_read_gate_is_ready() {
+        let (scheduled, doc_list_request_id, tree_request_id, sent) =
+            run_fs_refresh(ConnectionStatus::Connected, true);
+
+        assert!(scheduled);
+        let request_id = doc_list_request_id.expect("doc list request");
+        assert_eq!(tree_request_id.as_deref(), Some(request_id.as_str()));
+        assert_eq!(sent.len(), 1);
+        match &sent[0] {
+            ClientMessage::ListDocs {
+                request_id: sent_request_id,
+                scope_nonce,
+            } => {
+                assert_eq!(sent_request_id, &request_id);
+                assert_eq!(*scope_nonce, Some(7));
+            }
+            other => panic!("expected ListDocs, got {other:?}"),
+        }
     }
 }

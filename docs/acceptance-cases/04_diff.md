@@ -96,6 +96,7 @@
     - run: cargo test -p deve_web commit_write_block -- --nocapture
     - run: cargo test -p deve_web commit_refresh -- --nocapture
     - run: cargo test -p deve_web commit_ack_dispatch -- --nocapture
+    - run: cargo test -p deve_web fs_refresh -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_guidance_for_all_repair_actions -- --nocapture
