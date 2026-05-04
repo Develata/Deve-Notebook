@@ -6,7 +6,7 @@
 use leptos::prelude::Set;
 
 use super::super::effects_sc_apply::{
-    FsRefreshSignals, refresh_after_commit, refresh_after_fs_change,
+    CommitRefreshSignals, FsRefreshSignals, refresh_after_commit, refresh_after_fs_change,
 };
 use super::super::effects_sc_feedback::{
     commit_ack_message, show_sc_ack_feedback, source_control_ack_message,
@@ -34,9 +34,18 @@ pub(super) fn handle_commit_ack(
     show_ack_feedback(ctx, commit_ack_message(commit_id));
     refresh_after_commit(
         commit_id,
-        active_scope_nonce,
-        ctx.set_changes_request_id,
-        ctx.set_commit_history_request_id,
+        CommitRefreshSignals {
+            expected_scope_nonce: active_scope_nonce,
+            current_scope_nonce: ctx.current_scope_nonce,
+            current_repo_id: ctx.current_repo_id,
+            load_state: ctx.load_state,
+            is_spectator: ctx.is_spectator,
+            handshake_ready: ctx.handshake_ready,
+            pending_branch_switch: ctx.pending_branch_switch,
+            pending_repo_switch: ctx.pending_repo_switch,
+            set_changes_request_id: ctx.set_changes_request_id,
+            set_commit_history_request_id: ctx.set_commit_history_request_id,
+        },
         ctx.ws,
     );
 }
