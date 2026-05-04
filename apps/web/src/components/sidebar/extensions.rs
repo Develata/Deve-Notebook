@@ -71,6 +71,25 @@ pub fn ExtensionsView() -> impl IntoView {
                             </span>
                         </div>
                     </div>
+                    <div class="rounded-xl border border-dashed border-default bg-panel p-4 opacity-75">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex gap-3">
+                                <div class="rounded-lg bg-active p-2 text-primary"><Puzzle class="w-5 h-5" /></div>
+                                <div>
+                                    <div class="text-sm font-semibold text-primary">{move || t::extensions::calculation_runtime_title(locale.get())}</div>
+                                    <p class="mt-1 text-xs text-muted">{move || t::extensions::calculation_runtime_desc(locale.get())}</p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-2">
+                                <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-secondary">
+                                    {move || t::extensions::planned_label(locale.get())}
+                                </span>
+                                <span class="rounded-full border border-default px-2 py-1 text-[10px] font-medium text-muted">
+                                    {move || t::extensions::code_execution_disabled(locale.get())}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="rounded-xl border border-dashed border-default bg-panel p-4">
                     <div class="flex items-start gap-3">

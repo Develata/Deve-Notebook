@@ -8,10 +8,8 @@ use super::Locale;
 
 pub fn channel_desc(locale: Locale, mode: &str) -> &'static str {
     match (locale, mode) {
-        (Locale::En, "agent-bridge") => {
-            "Trusted external CLI bridge. Advanced mode and not enabled by default."
-        }
-        (Locale::Zh, "agent-bridge") => "受信任的外部 CLI 桥接。属于高级模式，默认不启用。",
+        (Locale::En, "agent-bridge") => "Trusted external CLI bridge. Advanced mode, default off.",
+        (Locale::Zh, "agent-bridge") => "受信任的外部 CLI 桥接。属于高级模式，默认关闭。",
         (Locale::En, _) => "Built-in native chat for lightweight markdown-first workflows.",
         (Locale::Zh, _) => "内置原生聊天，优先服务轻量、Markdown 优先的工作流。",
     }
@@ -98,5 +96,55 @@ pub fn mhchem_desc(locale: Locale) -> &'static str {
             "Optional chemistry rendering planned behind config.tex_extensions = [\"mhchem\"]."
         }
         Locale::Zh => "化学公式扩展计划通过 config.tex_extensions = [\"mhchem\"] 按需启用。",
+    }
+}
+
+pub fn calculation_runtime_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Calculation Runtime",
+        Locale::Zh => "计算运行时",
+    }
+}
+
+pub fn calculation_runtime_desc(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Reserved calculation sandbox; code execution entry is disabled in current release."
+        }
+        Locale::Zh => "预留计算沙箱；当前版本禁用代码执行入口。",
+    }
+}
+
+pub fn code_execution_disabled(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Code execution disabled",
+        Locale::Zh => "代码执行已禁用",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        calculation_runtime_desc, calculation_runtime_title, channel_desc, code_execution_disabled,
+        planned_label,
+    };
+    use crate::i18n::Locale;
+
+    #[test]
+    fn trusted_cli_copy_exposes_default_off_boundary() {
+        let desc = channel_desc(Locale::En, "agent-bridge");
+        assert!(desc.contains("Trusted"));
+        assert!(desc.contains("default off"));
+    }
+
+    #[test]
+    fn calculation_runtime_copy_is_reserved_and_disabled() {
+        assert_eq!(calculation_runtime_title(Locale::En), "Calculation Runtime");
+        assert_eq!(planned_label(Locale::En), "Planned");
+        assert!(calculation_runtime_desc(Locale::En).contains("disabled"));
+        assert_eq!(
+            code_execution_disabled(Locale::En),
+            "Code execution disabled"
+        );
     }
 }
