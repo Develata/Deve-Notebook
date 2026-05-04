@@ -26,6 +26,18 @@ enum CommitAiBackendPlan {
     },
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct CommitAiRuntimePlan {
+    plugin_id: Option<&'static str>,
+    switch_backend: Option<&'static str>,
+    notice: Option<String>,
+    block_reason: Option<String>,
+    register_active_req: bool,
+    append_placeholder: bool,
+    stop_streaming: bool,
+    stop_generating: bool,
+}
+
 pub fn build_generate_callback(
     core: SourceControlContext,
     chat_ctx: ChatContext,
@@ -64,49 +76,41 @@ pub fn build_generate_callback(
             let cap = fetch_ai_backend_capabilities().await;
             let decision =
                 resolve_backend_for_send(chat_ctx_for_send.ai_mode.get_untracked().as_str(), &cap);
-            let plan = plan_commit_ai_backend_call(decision);
-            let plugin_id = match plan {
-                CommitAiBackendPlan::Call { plugin_id } => plugin_id,
-                CommitAiBackendPlan::Switch {
-                    backend,
-                    plugin_id,
-                    notice,
-                } => {
-                    chat_ctx_for_send.set_ai_mode.set(backend.to_string());
-                    chat_ctx_for_send.set_messages.update(|messages| {
-                        messages.push(ChatMessage {
-                            role: "assistant".into(),
-                            content: notice,
-                            req_id: None,
-                            ts_ms: js_sys::Date::now() as u64,
-                        });
-                    });
-                    plugin_id
-                }
-                CommitAiBackendPlan::Block { reason } => {
-                    chat_ctx_for_send.set_messages.update(|messages| {
-                        messages.push(ChatMessage {
-                            role: "assistant".into(),
-                            content: reason,
-                            req_id: None,
-                            ts_ms: js_sys::Date::now() as u64,
-                        });
-                    });
-                    chat_ctx_for_send.set_is_streaming.set(false);
-                    set_is_generating.set(false);
-                    active_req_id.set(None);
-                    return;
-                }
+            let CommitAiRuntimePlan {
+                plugin_id,
+                switch_backend,
+                notice,
+                block_reason,
+                register_active_req,
+                append_placeholder,
+                stop_streaming,
+                stop_generating,
+            } = plan_commit_ai_runtime(decision);
+            if let Some(backend) = switch_backend {
+                chat_ctx_for_send.set_ai_mode.set(backend.to_string());
+            }
+            if let Some(notice) = notice {
+                append_commit_ai_message(&chat_ctx_for_send, notice, None);
+            }
+            if let Some(reason) = block_reason {
+                append_commit_ai_message(&chat_ctx_for_send, reason, None);
+            }
+            if stop_streaming {
+                chat_ctx_for_send.set_is_streaming.set(false);
+            }
+            if stop_generating {
+                set_is_generating.set(false);
+            }
+            let Some(plugin_id) = plugin_id else {
+                active_req_id.set(None);
+                return;
             };
-            active_req_id.set(Some(req_id.clone()));
-            chat_ctx_for_send.set_messages.update(|messages| {
-                messages.push(ChatMessage {
-                    role: "assistant".into(),
-                    content: String::new(),
-                    req_id: Some(req_id.clone()),
-                    ts_ms: js_sys::Date::now() as u64,
-                });
-            });
+            if register_active_req {
+                active_req_id.set(Some(req_id.clone()));
+            }
+            if append_placeholder {
+                append_commit_ai_message(&chat_ctx_for_send, String::new(), Some(req_id.clone()));
+            }
             chat_ctx_for_send.on_plugin_call.run((
                 req_id,
                 plugin_id.to_string(),
@@ -115,6 +119,17 @@ pub fn build_generate_callback(
             ));
         });
     })
+}
+
+fn append_commit_ai_message(chat_ctx: &ChatContext, content: String, req_id: Option<String>) {
+    chat_ctx.set_messages.update(|messages| {
+        messages.push(ChatMessage {
+            role: "assistant".into(),
+            content,
+            req_id,
+            ts_ms: js_sys::Date::now() as u64,
+        });
+    });
 }
 
 fn plan_commit_ai_backend_call(decision: BackendSendDecision) -> CommitAiBackendPlan {
@@ -128,6 +143,45 @@ fn plan_commit_ai_backend_call(decision: BackendSendDecision) -> CommitAiBackend
             notice: reason,
         },
         BackendSendDecision::Block { reason } => CommitAiBackendPlan::Block { reason },
+    }
+}
+
+fn plan_commit_ai_runtime(decision: BackendSendDecision) -> CommitAiRuntimePlan {
+    match plan_commit_ai_backend_call(decision) {
+        CommitAiBackendPlan::Call { plugin_id } => CommitAiRuntimePlan {
+            plugin_id: Some(plugin_id),
+            switch_backend: None,
+            notice: None,
+            block_reason: None,
+            register_active_req: true,
+            append_placeholder: true,
+            stop_streaming: false,
+            stop_generating: false,
+        },
+        CommitAiBackendPlan::Switch {
+            backend,
+            plugin_id,
+            notice,
+        } => CommitAiRuntimePlan {
+            plugin_id: Some(plugin_id),
+            switch_backend: Some(backend),
+            notice: Some(notice),
+            block_reason: None,
+            register_active_req: true,
+            append_placeholder: true,
+            stop_streaming: false,
+            stop_generating: false,
+        },
+        CommitAiBackendPlan::Block { reason } => CommitAiRuntimePlan {
+            plugin_id: None,
+            switch_backend: None,
+            notice: None,
+            block_reason: Some(reason),
+            register_active_req: false,
+            append_placeholder: false,
+            stop_streaming: true,
+            stop_generating: true,
+        },
     }
 }
 
