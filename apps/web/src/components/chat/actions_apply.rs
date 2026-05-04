@@ -128,7 +128,7 @@ mod tests {
     use deve_core::protocol::ClientMessage;
 
     #[test]
-    fn append_markdown_op_uses_utf16_end_position() {
+    fn chat_apply_append_markdown_op_uses_utf16_end_position() {
         assert_eq!(
             build_append_markdown_op("a🙂", " patch".to_string()),
             Ok(Op::Insert {
@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn append_markdown_op_fails_closed_when_position_overflows() {
+    fn chat_apply_append_markdown_op_fails_closed_when_position_overflows() {
         assert_eq!(
             build_append_markdown_op_at_utf16_len(u32::MAX as usize + 1, " patch".to_string()),
             Err(ApplyEditPlanError::DocumentTooLarge)
@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_edit_message_carries_current_scope_nonce() {
+    fn chat_apply_edit_message_carries_current_scope_nonce() {
         let doc_id = DocId::from_u128(7);
         let op = Op::Insert {
             pos: 3,

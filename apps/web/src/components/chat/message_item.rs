@@ -102,7 +102,7 @@ mod tests {
     use crate::components::chat::slash_commands::ChatSessionMode;
 
     #[test]
-    fn apply_label_is_build_only_for_assistant_messages() {
+    fn chat_apply_label_is_build_only_for_assistant_messages() {
         assert!(!should_show_apply_label(false, ChatSessionMode::Plan));
         assert!(should_show_apply_label(false, ChatSessionMode::Build));
         assert!(!should_show_apply_label(true, ChatSessionMode::Build));

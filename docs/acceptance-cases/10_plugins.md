@@ -29,6 +29,7 @@
     - ui_submit: true
     - run: scripts/check-ai-baseline.sh
     - run: cargo test -p deve_web slash_commands -- --nocapture
+    - run: cargo test -p deve_web chat_apply -- --nocapture
     - run: cargo test -p deve_cli ai_chat -- --nocapture
   assertions:
     - ui_assert: ai_mode_eq "plan"
@@ -49,6 +50,7 @@
     - assistant_message_contains_code_block: true
     - ui_click: "Apply"
     - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_web chat_apply -- --nocapture
     - run: cargo test -p deve_cli ai_chat -- --nocapture
   assertions:
     - ui_assert: ai_mode_eq "build"

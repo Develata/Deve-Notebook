@@ -104,7 +104,7 @@ mod tests {
     use crate::components::chat::slash_commands::ChatSessionMode;
 
     #[test]
-    fn apply_click_is_consumed_only_in_build_mode() {
+    fn chat_apply_click_is_consumed_only_in_build_mode() {
         assert!(!should_consume_apply_click(ChatSessionMode::Plan));
         assert!(should_consume_apply_click(ChatSessionMode::Build));
     }
