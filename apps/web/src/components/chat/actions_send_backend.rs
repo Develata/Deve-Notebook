@@ -26,6 +26,15 @@ pub(super) enum ChatMessagePlan {
     AssistantError(String),
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub(super) struct ChatSendRuntimePlan {
+    pub(super) plugin_id: Option<&'static str>,
+    pub(super) switch_backend: Option<&'static str>,
+    pub(super) messages: Vec<ChatMessagePlan>,
+    pub(super) register_pending_req: bool,
+    pub(super) stop_streaming: bool,
+}
+
 pub(super) fn plan_chat_backend_send(decision: BackendSendDecision) -> ChatBackendSendPlan {
     match decision {
         BackendSendDecision::Use(backend) => ChatBackendSendPlan::Call {
@@ -37,6 +46,18 @@ pub(super) fn plan_chat_backend_send(decision: BackendSendDecision) -> ChatBacke
             notice: reason,
         },
         BackendSendDecision::Block { reason } => ChatBackendSendPlan::Block { reason },
+    }
+}
+
+pub(super) fn plan_chat_send_runtime(decision: BackendSendDecision) -> ChatSendRuntimePlan {
+    let plan = plan_chat_backend_send(decision);
+    let plugin_id = plan_chat_plugin_id(&plan);
+    ChatSendRuntimePlan {
+        plugin_id,
+        switch_backend: plan_chat_switch_backend(&plan),
+        messages: plan_chat_messages(&plan),
+        register_pending_req: plugin_id.is_some(),
+        stop_streaming: plugin_id.is_none(),
     }
 }
 

@@ -2,10 +2,7 @@
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!   - 03_rendering#document-authority-bridge
 //!
-use super::send_backend::{
-    ChatMessagePlan, plan_chat_backend_send, plan_chat_messages, plan_chat_plugin_id,
-    plan_chat_switch_backend,
-};
+use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_runtime};
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::{ChatMessage, CoreState};
@@ -51,24 +48,34 @@ pub fn make_send_text(
             let cap = fetch_ai_backend_capabilities().await;
             let decision =
                 resolve_backend_for_send(core_for_send.ai_mode.get_untracked().as_str(), &cap);
-            let plan = plan_chat_backend_send(decision);
-            if let Some(backend) = plan_chat_switch_backend(&plan) {
+            let ChatSendRuntimePlan {
+                plugin_id,
+                switch_backend,
+                messages,
+                register_pending_req,
+                stop_streaming,
+            } = plan_chat_send_runtime(decision);
+            if let Some(backend) = switch_backend {
                 core_for_send.set_ai_mode.set(backend.to_string());
             }
-            let plugin_id = plan_chat_plugin_id(&plan);
-            for message in plan_chat_messages(&plan) {
+            for message in messages {
                 append_planned_chat_message(&core_for_send, &msg, &req_id, message);
             }
             if let Some(cb) = on_user_text.as_ref() {
                 cb.run(msg.clone());
             }
-            let Some(plugin_id) = plugin_id else {
+            if stop_streaming {
                 core_for_send.set_is_chat_streaming.set(false);
                 return;
             };
-            if let Some(cb) = on_req_id.as_ref() {
-                cb.run(req_id.clone());
+            if register_pending_req {
+                if let Some(cb) = on_req_id.as_ref() {
+                    cb.run(req_id.clone());
+                }
             }
+            let Some(plugin_id) = plugin_id else {
+                return;
+            };
             let current_doc_path = core_for_send
                 .current_doc
                 .get_untracked()

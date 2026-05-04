@@ -1,6 +1,6 @@
 use super::{
-    ChatBackendSendPlan, ChatMessagePlan, plan_chat_backend_send, plan_chat_messages,
-    plan_chat_plugin_id, plan_chat_switch_backend,
+    ChatBackendSendPlan, ChatMessagePlan, ChatSendRuntimePlan, plan_chat_backend_send,
+    plan_chat_messages, plan_chat_plugin_id, plan_chat_send_runtime, plan_chat_switch_backend,
 };
 use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
@@ -134,6 +134,46 @@ fn chat_send_blocks_without_plugin_placeholder() {
     );
     assert_eq!(plan_chat_plugin_id(&plan), None);
     assert_eq!(plan_chat_switch_backend(&plan), None);
+}
+
+#[test]
+fn chat_send_block_runtime_does_not_register_pending_request() {
+    let runtime = plan_chat_send_runtime(BackendSendDecision::Block {
+        reason: "native AI disabled by config".to_string(),
+    });
+
+    assert_eq!(
+        runtime,
+        ChatSendRuntimePlan {
+            plugin_id: None,
+            switch_backend: None,
+            messages: vec![
+                ChatMessagePlan::UserInput,
+                ChatMessagePlan::AssistantError("native AI disabled by config".to_string()),
+            ],
+            register_pending_req: false,
+            stop_streaming: true,
+        }
+    );
+}
+
+#[test]
+fn chat_send_call_runtime_registers_pending_request() {
+    let runtime = plan_chat_send_runtime(BackendSendDecision::Use(AI_BACKEND_NATIVE));
+
+    assert_eq!(
+        runtime,
+        ChatSendRuntimePlan {
+            plugin_id: Some(AI_PLUGIN_NATIVE),
+            switch_backend: None,
+            messages: vec![
+                ChatMessagePlan::UserInput,
+                ChatMessagePlan::AssistantPlaceholder,
+            ],
+            register_pending_req: true,
+            stop_streaming: false,
+        }
+    );
 }
 
 #[test]
