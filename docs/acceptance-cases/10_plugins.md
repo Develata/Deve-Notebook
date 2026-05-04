@@ -12,6 +12,7 @@
     - ui_submit: true
     - run: scripts/check-ai-baseline.sh
     - run: cargo test -p deve_web chat_context -- --nocapture
+    - run: cargo test -p deve_web plugin_text_response -- --nocapture
   assertions:
     - ui_assert: chat_response_visible true
     - ui_assert: chat_response_mentions_current_doc true
@@ -111,7 +112,6 @@
     - run: scripts/check-ai-baseline.sh
     - run: cargo test -p deve_web trusted_cli_default_off -- --nocapture
     - run: cargo test -p deve_cli trusted_cli_default_off -- --nocapture
-    - run: cargo test -p deve_web plugin_text_response -- --nocapture
     - run: cargo test -p deve_cli agent_bridge -- --nocapture
   assertions:
     - ui_assert: ai_backend_option_visible "native"
@@ -154,6 +154,7 @@
     - run: cargo test -p deve_web ai_backend -- --nocapture
     - run: cargo test -p deve_web backend_for_send -- --nocapture
     - run: cargo test -p deve_web chat_send -- --nocapture
+    - run: cargo test -p deve_web message_dispatch_runtime -- --nocapture
     - run: cargo test -p deve_web source_control_commit_ai -- --nocapture
   assertions:
     - http_assert: native_available_matches_config true
