@@ -58,8 +58,9 @@ check_contains docs/plan/13_settings.md "DEVE_AI_AGENT_BRIDGE_ENABLED"
 check_contains docs/plan/13_settings.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/13_settings.md '运行模式预设: `standard` (默认), `low-spec` (低配).'
 check_absent docs/plan/13_settings.md '`debug` (调试)'
-check_contains docs/plan/13_settings.md "server-backed Settings API 与统一 GUI"
-check_contains docs/plan/13_settings.md "仍是 future work"
+check_contains docs/plan/13_settings.md "**Future Settings Surface**"
+check_contains docs/plan/13_settings.md "server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计"
+check_contains docs/plan/13_settings.md "启用前 **MUST** 更新本章、feature spec 与 acceptance case"
 check_absent apps/cli/src/server/router.rs "/api/settings"
 
 # UI command surfaces remain reachable through the shortcut layer.
@@ -92,6 +93,7 @@ check_contains docs/acceptance-cases/15_settings_operation_refs.md "reserved_set
 check_contains docs/acceptance-cases/15_settings_operation_refs.md "cargo test -p deve_web settings -- --nocapture"
 check_contains docs/features/operations/settings_feedback_render.md "aria-disabled"
 check_contains docs/features/operations/settings_runtime_feedback.md "aria-disabled"
-check_contains docs/report/post-p2-plan-code-drift-rescan-2026-04-30.md "No active item remains from this scan"
+check_contains docs/overview/architecture-diff.md 'Active drift count: `0`'
+check_contains docs/overview/architecture-diff.md "no active drift markers"
 
 echo "cli-settings-baseline-check: ok"
