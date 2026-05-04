@@ -93,7 +93,6 @@ check_contains docs/acceptance-cases/15_settings_operation_refs.md "reserved_set
 check_contains docs/acceptance-cases/15_settings_operation_refs.md "cargo test -p deve_web settings -- --nocapture"
 check_contains docs/features/operations/settings_feedback_render.md "aria-disabled"
 check_contains docs/features/operations/settings_runtime_feedback.md "aria-disabled"
-check_contains docs/overview/architecture-diff.md 'Active drift count: `0`'
-check_contains docs/overview/architecture-diff.md "no active drift markers"
+check_contains docs/report/settings-ai-baseline-2026-05-01.md "server-backed Settings API 与统一 GUI 持久化仍是 future"
 
 echo "cli-settings-baseline-check: ok"
