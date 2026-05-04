@@ -171,9 +171,19 @@ fn append_commit_ai_message(chat_ctx: &ChatContext, content: String, req_id: Opt
             role: "assistant".into(),
             content,
             req_id,
-            ts_ms: js_sys::Date::now() as u64,
+            ts_ms: current_ts_ms(),
         });
     });
+}
+
+#[cfg(target_arch = "wasm32")]
+fn current_ts_ms() -> u64 {
+    js_sys::Date::now() as u64
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn current_ts_ms() -> u64 {
+    0
 }
 
 fn plan_commit_ai_backend_call(decision: BackendSendDecision) -> CommitAiBackendPlan {

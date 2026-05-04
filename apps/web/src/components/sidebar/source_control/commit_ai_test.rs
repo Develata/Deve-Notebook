@@ -1,12 +1,18 @@
 use super::{
     CommitAiBackendPlan, CommitAiEffectRunner, CommitAiRuntimeEffect, CommitAiRuntimePlan,
-    plan_commit_ai_backend_call, plan_commit_ai_effects, plan_commit_ai_runtime,
-    run_commit_ai_effects,
+    CommitAiSignalEffectRunner, plan_commit_ai_backend_call, plan_commit_ai_effects,
+    plan_commit_ai_runtime, run_commit_ai_effects,
 };
 use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
     BackendSendDecision,
 };
+use crate::hooks::use_core::state::PluginResponse;
+use crate::hooks::use_core::{ChatContext, ChatMessage};
+use leptos::prelude::*;
+use leptos::reactive::owner::Owner;
+
+type PluginCall = (String, String, String, Vec<serde_json::Value>);
 
 #[test]
 fn source_control_commit_ai_uses_native_backend_without_notice() {
@@ -249,6 +255,71 @@ fn source_control_commit_ai_effect_runner_blocks_in_order() {
             CommitAiRunEvent::StopGenerating,
             CommitAiRunEvent::ClearActiveRequest,
         ]
+    );
+}
+
+#[test]
+fn source_control_commit_ai_signal_runner_dispatches_full_plugin_call_tuple() {
+    let _runtime = Owner::new();
+    _runtime.set();
+    let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
+    let (is_streaming, set_is_streaming) = signal(true);
+    let (ai_mode, set_ai_mode) = signal(AI_BACKEND_NATIVE.to_string());
+    let (plugin_last_response, _) = signal(PluginResponse::default());
+    let (plugin_calls, set_plugin_calls) = signal(Vec::<PluginCall>::new());
+    let active_req_id = RwSignal::new(None::<String>);
+    let (_, set_is_generating) = signal(false);
+    let on_plugin_call = Callback::new(move |call: PluginCall| {
+        set_plugin_calls.update(|calls| calls.push(call));
+    });
+    let chat_ctx = ChatContext {
+        messages,
+        set_messages,
+        is_streaming,
+        set_is_streaming,
+        ai_mode,
+        set_ai_mode,
+        plugin_last_response,
+        on_plugin_call,
+    };
+    let args = vec![
+        serde_json::json!("req-42"),
+        serde_json::json!("commit prompt"),
+        serde_json::json!(""),
+    ];
+    let mut runner = CommitAiSignalEffectRunner {
+        chat_ctx,
+        active_req_id,
+        set_is_generating,
+        req_id: "req-42".to_string(),
+        args: args.clone(),
+    };
+
+    run_commit_ai_effects(
+        vec![
+            CommitAiRuntimeEffect::RegisterActiveRequest,
+            CommitAiRuntimeEffect::AppendPlaceholder,
+            CommitAiRuntimeEffect::DispatchPlugin {
+                plugin_id: AI_PLUGIN_TRUSTED_CLI,
+            },
+        ],
+        &mut runner,
+    );
+
+    assert_eq!(active_req_id.get_untracked().as_deref(), Some("req-42"));
+    let messages = messages.get_untracked();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].role, "assistant");
+    assert_eq!(messages[0].content, "");
+    assert_eq!(messages[0].req_id.as_deref(), Some("req-42"));
+    assert_eq!(
+        plugin_calls.get_untracked(),
+        vec![(
+            "req-42".to_string(),
+            AI_PLUGIN_TRUSTED_CLI.to_string(),
+            "chat".to_string(),
+            args
+        )]
     );
 }
 
