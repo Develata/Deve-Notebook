@@ -99,6 +99,7 @@
     - run: cargo test -p deve_web fs_refresh -- --nocapture
     - run: cargo test -p deve_web doc_diff_read_gate -- --nocapture
     - run: cargo test -p deve_web commit_diff_read_gate -- --nocapture
+    - run: cargo test -p deve_web commit_diff_dispatch -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_is_allowed -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_reports_rename_projection -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
