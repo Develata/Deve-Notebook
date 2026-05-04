@@ -5,8 +5,8 @@ use deve_core::native_adapter::{
     NativeEndpointReady, NativePlatformEventKind, NativeProcessAdapter, NativeProcessAdapterError,
     NativeProcessAdapterSnapshot, NativeRuntimeReadiness, NativeServiceFailureKind,
     NativeServiceOffline, NativeServiceRestarting, NativeServiceSupervisor,
-    NativeServiceSupervisorError, NativeServiceSupervisorObservation, NativeServiceSuspended,
-    validate_native_endpoint_ready,
+    NativeServiceSupervisorError, NativeServiceSupervisorObservation, NativeServiceSupervisorState,
+    NativeServiceSuspended, validate_native_endpoint_ready,
 };
 
 use crate::types::{
@@ -55,6 +55,7 @@ impl MobileShell {
     }
 
     pub fn bind_endpoint(&mut self, endpoint: NativeEndpointReady) -> Result<(), MobileShellError> {
+        self.ensure_not_terminal_offline()?;
         let process_snapshot = self
             .process_adapter
             .bind_existing_endpoint(endpoint)
@@ -73,6 +74,9 @@ impl MobileShell {
         if !session.bound {
             return Err(MobileShellError::SessionNotBound);
         }
+        self.endpoint
+            .as_ref()
+            .ok_or(MobileShellError::SessionNotBound)?;
         let process_snapshot = self
             .process_adapter
             .bind_session(session.bound)
@@ -104,6 +108,9 @@ impl MobileShell {
     }
 
     pub fn mark_runtime_ready(&mut self, readiness: NativeRuntimeReadiness) -> bool {
+        if self.terminal_offline_reason().is_some() {
+            return false;
+        }
         let ready = readiness.is_runtime_ready();
         self.readiness = readiness;
         if ready {
@@ -256,6 +263,24 @@ impl MobileShell {
             self.state,
             MobileServiceState::ServiceRestarting | MobileServiceState::ServiceOffline
         )
+    }
+
+    fn ensure_not_terminal_offline(&self) -> Result<(), MobileShellError> {
+        let Some(reason) = self.terminal_offline_reason() else {
+            return Ok(());
+        };
+        Err(MobileShellError::ServiceOffline { reason })
+    }
+
+    fn terminal_offline_reason(&self) -> Option<String> {
+        let supervisor = self.supervisor.snapshot();
+        if supervisor.state != NativeServiceSupervisorState::Offline {
+            return None;
+        }
+        supervisor
+            .offline
+            .filter(|offline| !offline.retryable)
+            .map(|offline| offline.reason)
     }
 
     fn blocking_state_error(&self) -> Result<(), MobileShellError> {

@@ -316,6 +316,48 @@ fn mobile_probe_timeout_observation_uses_process_snapshot() {
 }
 
 #[test]
+fn mobile_probe_timeout_requires_endpoint_rebind_before_session_handoff() {
+    let mut shell = bound_shell();
+    assert!(shell.mark_runtime_ready(ready_probe()));
+
+    assert!(matches!(
+        shell.mark_probe_timeout(),
+        Err(MobileShellError::ServiceOffline { reason }) if reason == "probe_failed"
+    ));
+    let before_failed_session = shell.snapshot();
+    assert!(matches!(
+        shell.bind_session(MobileSessionMaterial::bound()),
+        Err(MobileShellError::SessionNotBound)
+    ));
+    let after_failed_session = shell.snapshot();
+    assert_eq!(
+        after_failed_session.process_adapter,
+        before_failed_session.process_adapter
+    );
+    assert_eq!(
+        after_failed_session.supervisor,
+        before_failed_session.supervisor
+    );
+    let blocked = shell.snapshot();
+    assert_eq!(blocked.state, MobileServiceState::ServiceRestarting);
+    assert_eq!(blocked.supervisor.restart_attempt, 1);
+    assert!(blocked.endpoint.is_none());
+
+    shell.bind_endpoint(endpoint()).expect("rebind endpoint");
+    shell
+        .bind_session(MobileSessionMaterial::bound())
+        .expect("bind session after endpoint rebind");
+
+    let recovered = shell.snapshot();
+    assert_eq!(recovered.state, MobileServiceState::SessionBound);
+    assert_eq!(
+        recovered.supervisor.state,
+        NativeServiceSupervisorState::SessionHandoffReady
+    );
+    assert!(recovered.endpoint.expect("endpoint").session_bound);
+}
+
+#[test]
 fn mobile_process_shutdown_observation_uses_process_snapshot() {
     let mut shell = bound_shell();
     assert!(shell.mark_runtime_ready(ready_probe()));
@@ -341,6 +383,28 @@ fn mobile_process_shutdown_observation_uses_process_snapshot() {
         snapshot.supervisor.state,
         NativeServiceSupervisorState::Restarting
     );
+}
+
+#[test]
+fn mobile_terminal_offline_rejects_endpoint_without_mutating_process_adapter() {
+    let mut shell = bound_shell();
+    shell.mark_supervisor_failure(
+        NativeServiceFailureKind::SessionHandoffFailed,
+        "session_dead",
+    );
+    assert!(!shell.mark_runtime_ready(ready_probe()));
+    let before = shell.snapshot();
+
+    assert!(matches!(
+        shell.bind_endpoint(endpoint()),
+        Err(MobileShellError::ServiceOffline { reason }) if reason == "session_dead"
+    ));
+
+    let after = shell.snapshot();
+    assert_eq!(after.state, MobileServiceState::ServiceOffline);
+    assert_eq!(after.process_adapter, before.process_adapter);
+    assert_eq!(after.supervisor, before.supervisor);
+    assert!(after.endpoint.is_none());
 }
 
 #[test]

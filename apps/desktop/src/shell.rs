@@ -7,7 +7,7 @@ use deve_core::native_adapter::{
     NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
     NativeServiceRestarting, NativeServiceSupervisor, NativeServiceSupervisorError,
     NativeServiceSupervisorObservation, NativeServiceSupervisorSnapshot,
-    classify_native_platform_event, validate_native_endpoint_ready,
+    NativeServiceSupervisorState, classify_native_platform_event, validate_native_endpoint_ready,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -144,6 +144,7 @@ impl DesktopShell {
         &mut self,
         endpoint: NativeEndpointReady,
     ) -> Result<(), DesktopShellError> {
+        self.ensure_not_terminal_offline()?;
         let process_snapshot = self
             .process_adapter
             .bind_existing_endpoint(endpoint)
@@ -165,6 +166,9 @@ impl DesktopShell {
         if !session.bound {
             return Err(DesktopShellError::SessionNotBound);
         }
+        self.endpoint
+            .as_ref()
+            .ok_or(DesktopShellError::SessionNotBound)?;
         let process_snapshot = self
             .process_adapter
             .bind_session(session.bound)
@@ -195,6 +199,9 @@ impl DesktopShell {
     }
 
     pub fn mark_runtime_ready(&mut self, readiness: NativeRuntimeReadiness) -> bool {
+        if self.terminal_offline_reason().is_some() {
+            return false;
+        }
         let ready = readiness.is_runtime_ready();
         self.readiness = readiness;
         if ready {
@@ -348,6 +355,24 @@ impl DesktopShell {
             self.state,
             DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline
         )
+    }
+
+    fn ensure_not_terminal_offline(&self) -> Result<(), DesktopShellError> {
+        let Some(reason) = self.terminal_offline_reason() else {
+            return Ok(());
+        };
+        Err(DesktopShellError::ServiceOffline { reason })
+    }
+
+    fn terminal_offline_reason(&self) -> Option<String> {
+        let supervisor = self.supervisor.snapshot();
+        if supervisor.state != NativeServiceSupervisorState::Offline {
+            return None;
+        }
+        supervisor
+            .offline
+            .filter(|offline| !offline.retryable)
+            .map(|offline| offline.reason)
     }
 
     fn record_offline_snapshot(&mut self, offline: NativeServiceOffline) {
