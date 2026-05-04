@@ -8,6 +8,8 @@ use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use leptos::prelude::*;
 
+#[path = "effects_sc_test_ack.rs"]
+mod ack;
 #[path = "effects_sc_test_request.rs"]
 mod request;
 #[path = "effects_sc_test_reset.rs"]

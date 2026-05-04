@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 05_network#web-ws-runtime
 //!
+#[cfg(not(all(test, not(target_arch = "wasm32"))))]
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
 
@@ -19,12 +20,17 @@ pub(crate) fn show_temporary_sync_banner(
     message: String,
 ) {
     set_sync_banner.set(Some(message.clone()));
-    Timeout::new(1800, move || {
-        if sync_banner.get_untracked().as_deref() == Some(message.as_str()) {
-            set_sync_banner.set(None);
-        }
-    })
-    .forget();
+    #[cfg(not(all(test, not(target_arch = "wasm32"))))]
+    {
+        Timeout::new(1800, move || {
+            if sync_banner.get_untracked().as_deref() == Some(message.as_str()) {
+                set_sync_banner.set(None);
+            }
+        })
+        .forget();
+    }
+    #[cfg(all(test, not(target_arch = "wasm32")))]
+    let _ = sync_banner;
 }
 
 #[cfg(test)]

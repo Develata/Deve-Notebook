@@ -4,9 +4,13 @@
 //!
 
 use deve_core::protocol::{ClientMessage, ServerMessage};
+#[cfg(test)]
+use futures::channel::mpsc::UnboundedReceiver;
 use futures::channel::mpsc::{UnboundedSender, unbounded};
 use leptos::prelude::*;
 use std::collections::VecDeque;
+#[cfg(test)]
+use std::sync::{Arc, Mutex};
 
 use self::service_ping::spawn_ping_loop;
 use super::connection::spawn_connection_manager;
@@ -31,6 +35,8 @@ pub struct WsService {
     pub msg_seq: ReadSignal<u64>,
     msg_queue: ReadSignal<VecDeque<(u64, ServerMessage)>>,
     tx: UnboundedSender<ClientMessage>,
+    #[cfg(test)]
+    test_rx: Option<Arc<Mutex<UnboundedReceiver<ClientMessage>>>>,
 }
 
 impl WsService {
@@ -70,6 +76,38 @@ impl WsService {
             msg_seq,
             msg_queue,
             tx,
+            #[cfg(test)]
+            test_rx: None,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_for_test(status: ConnectionStatus) -> Self {
+        let (status, set_status) = signal(status);
+        let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(None::<String>);
+        let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(None::<u64>);
+        let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
+        let (msg_seq, _set_msg_seq) = signal(0u64);
+        let (msg_queue, _set_msg_queue) = signal(VecDeque::<(u64, ServerMessage)>::new());
+        let (endpoint, _set_endpoint) = signal(String::new());
+        let (node_role, _set_node_role) = signal(String::new());
+        let (tx, rx) = unbounded::<ClientMessage>();
+
+        Self {
+            status,
+            set_status,
+            writer_ready_repo_id,
+            set_writer_ready_repo_id,
+            writer_ready_scope_nonce,
+            set_writer_ready_scope_nonce,
+            writer_client_id,
+            set_writer_client_id,
+            endpoint,
+            node_role,
+            msg_seq,
+            msg_queue,
+            tx,
+            test_rx: Some(Arc::new(Mutex::new(rx))),
         }
     }
 
@@ -127,6 +165,19 @@ impl WsService {
             .into_iter()
             .filter(|(seq, _)| *seq > after_seq)
             .collect()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn drain_sent_for_test(&self) -> Vec<ClientMessage> {
+        let Some(test_rx) = &self.test_rx else {
+            return Vec::new();
+        };
+        let mut rx = test_rx.lock().expect("test receiver lock");
+        let mut messages = Vec::new();
+        while let Ok(message) = rx.try_recv() {
+            messages.push(message);
+        }
+        messages
     }
 }
 
