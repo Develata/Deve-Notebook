@@ -67,23 +67,53 @@ fn repo_write_gate_blocks_native_session_pending() {
 }
 
 #[test]
-fn repo_write_gate_blocks_native_reprobe_required() {
-    assert_eq!(
-        repo_write_block(gate_state_with_status(
-            ConnectionStatus::NativeReprobeRequired
-        )),
-        Some(RepoWriteBlock::NativeReprobeRequired)
-    );
+fn repo_write_gate_blocks_native_recovery_states() {
+    for (status, block) in [
+        (
+            ConnectionStatus::NativeBootstrapInvalid,
+            RepoWriteBlock::NativeBootstrapInvalid,
+        ),
+        (
+            ConnectionStatus::NativeServiceOffline,
+            RepoWriteBlock::NativeServiceOffline,
+        ),
+        (
+            ConnectionStatus::NativeReprobeRequired,
+            RepoWriteBlock::NativeReprobeRequired,
+        ),
+    ] {
+        assert_eq!(
+            repo_write_block(gate_state_with_status(status)),
+            Some(block)
+        );
+    }
 }
 
 #[test]
 fn repo_source_control_read_gate_blocks_native_recovery_states() {
-    assert_eq!(
-        repo_source_control_read_block(gate_state_with_status(
-            ConnectionStatus::NativeServiceOffline
-        )),
-        Some(RepoWriteBlock::NativeServiceOffline)
-    );
+    for (status, block) in [
+        (
+            ConnectionStatus::NativeBootstrapInvalid,
+            RepoWriteBlock::NativeBootstrapInvalid,
+        ),
+        (
+            ConnectionStatus::NativeSessionPending,
+            RepoWriteBlock::NativeSessionPending,
+        ),
+        (
+            ConnectionStatus::NativeServiceOffline,
+            RepoWriteBlock::NativeServiceOffline,
+        ),
+        (
+            ConnectionStatus::NativeReprobeRequired,
+            RepoWriteBlock::NativeReprobeRequired,
+        ),
+    ] {
+        assert_eq!(
+            repo_source_control_read_block(gate_state_with_status(status)),
+            Some(block)
+        );
+    }
 }
 
 #[test]

@@ -16,10 +16,15 @@ use super::{SourceControlScopeSignals, log_blocked_sc_read};
 pub(super) fn create_get_changes_callback(
     ws: &WsService,
     scope: SourceControlScopeSignals,
+    read_gate: RepoWriteSignals,
     set_request_id: WriteSignal<Option<String>>,
 ) -> Callback<()> {
     let ws = ws.clone();
     Callback::new(move |_: ()| {
+        if let Some(block) = repo_source_control_read_block_untracked(&ws, read_gate) {
+            log_blocked_sc_read("GetChanges", "working tree", block);
+            return;
+        }
         let Some(scope_nonce) = source_control_read_scope_nonce(scope) else {
             return;
         };

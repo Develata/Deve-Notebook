@@ -48,7 +48,7 @@ pub(super) fn create_read_callbacks(
     set_diff_content: WriteSignal<Option<DiffSessionWire>>,
 ) -> SourceControlReadCallbacks {
     (
-        create_get_changes_callback(ws, scope, request.set_changes_request_id),
+        create_get_changes_callback(ws, scope, read_gate, request.set_changes_request_id),
         create_get_history_callback(ws, scope, read_gate, request.set_commit_history_request_id),
         create_get_doc_diff_callback(
             ws,
