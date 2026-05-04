@@ -27,6 +27,7 @@ pub enum SlashCommand {
 pub struct ConsumedSlashCommand {
     pub next_mode: ChatSessionMode,
     pub send_plugin_call: bool,
+    pub change_backend: bool,
 }
 
 pub fn parse_slash_command(input: &str) -> Option<SlashCommand> {
@@ -57,6 +58,7 @@ pub fn consume_slash_command(
     Some(ConsumedSlashCommand {
         next_mode: apply_slash_command(current, command),
         send_plugin_call: false,
+        change_backend: false,
     })
 }
 
@@ -94,6 +96,7 @@ mod tests {
             Some(ConsumedSlashCommand {
                 next_mode: ChatSessionMode::Plan,
                 send_plugin_call: false,
+                change_backend: false,
             })
         );
         assert_eq!(
@@ -101,11 +104,25 @@ mod tests {
             Some(ConsumedSlashCommand {
                 next_mode: ChatSessionMode::Build,
                 send_plugin_call: false,
+                change_backend: false,
             })
         );
         assert_eq!(
             consume_slash_command("/unknown", ChatSessionMode::Plan),
             None
         );
+    }
+
+    #[test]
+    fn slash_commands_preserve_backend_mode() {
+        let first = consume_slash_command("/agents", ChatSessionMode::Plan).unwrap();
+        assert_eq!(first.next_mode, ChatSessionMode::Build);
+        assert!(!first.send_plugin_call);
+        assert!(!first.change_backend);
+
+        let second = consume_slash_command("/agents", first.next_mode).unwrap();
+        assert_eq!(second.next_mode, ChatSessionMode::Plan);
+        assert!(!second.send_plugin_call);
+        assert!(!second.change_backend);
     }
 }

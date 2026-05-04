@@ -93,6 +93,7 @@
     - ui_submit: true
     - run: scripts/check-ai-baseline.sh
     - run: cargo test -p deve_web slash_commands -- --nocapture
+    - run: cargo test -p deve_web slash_commands_preserve_backend_mode -- --nocapture
   assertions:
     - ui_assert_sequence:
         - ai_mode_eq "plan"

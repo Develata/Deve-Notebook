@@ -33,6 +33,7 @@ pub fn make_send_text(
         }
         if let Some(command) = consume_slash_command(&msg, session_mode.get_untracked()) {
             debug_assert!(!command.send_plugin_call);
+            debug_assert!(!command.change_backend);
             set_session_mode.set(command.next_mode);
             if let Some(cb) = on_mode_change.as_ref() {
                 cb.run(command.next_mode);

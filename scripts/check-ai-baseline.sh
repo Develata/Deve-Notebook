@@ -41,6 +41,8 @@ check_contains apps/web/src/components/chat/slash_commands.rs "\"/build\" => Som
 check_contains apps/web/src/components/chat/slash_commands.rs "\"/agents\" => Some(SlashCommand::Agents)"
 check_contains apps/web/src/components/chat/slash_commands.rs "agents_toggles_only_native_session_modes"
 check_contains apps/web/src/components/chat/slash_commands.rs "slash_commands_are_consumed_without_plugin_call"
+check_contains apps/web/src/components/chat/slash_commands.rs "slash_commands_preserve_backend_mode"
+check_contains apps/web/src/components/chat/slash_commands.rs "change_backend: false"
 check_absent apps/web/src/components/chat/slash_commands.rs "agent-bridge"
 check_absent apps/web/src/components/chat/slash_commands.rs "trusted-cli"
 check_contains apps/web/src/api/ai_backend.rs "AI_BACKEND_NATIVE"
