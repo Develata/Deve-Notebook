@@ -1,4 +1,6 @@
-use super::handlers::source_control::{handle_get_changes, handle_get_commit_history};
+use super::handlers::source_control::{
+    handle_get_changes, handle_get_commit_diff, handle_get_commit_history,
+};
 use super::{channel::DualChannel, session::WsSession};
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::protocol::{ScPathTarget, ServerMessage};
@@ -7,7 +9,7 @@ use tokio::sync::mpsc;
 #[path = "source_control_scope_test_support.rs"]
 mod support;
 
-use support::{build_state, recv_history, seed_pending, write_workspace_file};
+use support::{build_state, recv_commit_diff, recv_history, seed_pending, write_workspace_file};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn get_changes_rejects_stale_local_selector() -> anyhow::Result<()> {

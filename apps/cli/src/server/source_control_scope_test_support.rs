@@ -86,6 +86,13 @@ pub(super) async fn recv_history(
     }
 }
 
+pub(super) async fn recv_commit_diff(rx: &mut mpsc::Receiver<ServerMessage>) -> Option<uuid::Uuid> {
+    match rx.recv().await {
+        Some(ServerMessage::CommitDiffResult { repo_id, .. }) => repo_id,
+        other => panic!("expected CommitDiffResult, got {:?}", other),
+    }
+}
+
 pub(super) async fn recv_changes(
     rx: &mut mpsc::Receiver<ServerMessage>,
 ) -> (Option<uuid::Uuid>, Vec<String>) {

@@ -4,9 +4,7 @@
 //!   - 06_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::callbacks_sc_scope::{
-    source_control_read_scope_nonce, source_control_scope_nonce,
-};
+use crate::hooks::use_core::callbacks_sc_scope::source_control_read_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::{
@@ -86,7 +84,7 @@ pub(super) fn create_get_commit_diff_callback(
             log_blocked_sc_read("GetCommitDiff", &detail, block);
             return;
         }
-        let Some(scope_nonce) = source_control_scope_nonce(scope) else {
+        let Some(scope_nonce) = source_control_read_scope_nonce(scope) else {
             return;
         };
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -102,7 +100,10 @@ pub(super) fn create_get_commit_diff_callback(
 
 #[cfg(test)]
 mod tests {
-    use super::{clear_stale_doc_diff, create_get_doc_diff_callback, unavailable_doc_diff_notice};
+    use super::{
+        clear_stale_doc_diff, create_get_commit_diff_callback, create_get_doc_diff_callback,
+        unavailable_doc_diff_notice,
+    };
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::PendingBranchTarget;
     use crate::hooks::use_core::callbacks_sc::SourceControlScopeSignals;
@@ -229,6 +230,64 @@ mod tests {
                 assert_eq!(*scope_nonce, Some(11));
             }
             other => panic!("expected GetDocDiff, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn commit_diff_read_gate_allows_remote_branch_spectator_reads() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let (current_repo_id, _) = signal(Some("repo-a".to_string()));
+        let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
+        let (current_scope_nonce, _) = signal(13u64);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_repo_switch, _) = signal(None::<String>);
+        let (load_state, _) = signal("ready".to_string());
+        let (is_spectator, _) = signal(true);
+        let (handshake_ready, _) = signal(false);
+        let (request_id, set_request_id) = signal(None::<String>);
+
+        let callback = create_get_commit_diff_callback(
+            &ws,
+            SourceControlScopeSignals {
+                current_repo_id,
+                active_branch,
+                current_scope_nonce,
+                pending_branch_switch,
+                pending_repo_switch,
+            },
+            RepoWriteSignals {
+                load_state,
+                is_spectator: is_spectator.into(),
+                handshake_ready,
+                current_repo_id,
+                current_scope_nonce,
+                active_branch,
+                pending_branch_switch,
+                pending_repo_switch,
+            },
+            set_request_id,
+        );
+
+        callback.run((Some("base".to_string()), "head".to_string()));
+
+        let request_id = request_id.get_untracked().expect("commit diff request");
+        let sent = ws.drain_sent_for_test();
+        assert_eq!(sent.len(), 1);
+        match &sent[0] {
+            ClientMessage::GetCommitDiff {
+                request_id: sent_request_id,
+                commit_a,
+                commit_b,
+                scope_nonce,
+            } => {
+                assert_eq!(sent_request_id, &request_id);
+                assert_eq!(commit_a.as_deref(), Some("base"));
+                assert_eq!(commit_b, "head");
+                assert_eq!(*scope_nonce, Some(13));
+            }
+            other => panic!("expected GetCommitDiff, got {other:?}"),
         }
     }
 }

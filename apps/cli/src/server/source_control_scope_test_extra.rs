@@ -42,6 +42,38 @@ async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn readonly_remote_commit_diff_is_allowed() -> anyhow::Result<()> {
+    let (_dir, state, _default_id, test_id) = build_state()?;
+    let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
+    let (first, second) = state
+        .repo
+        .run_on_shadow_repo_by_id(&peer_id, &test_id, |db| {
+            let first = commits::create(db, "first", 1, 1)?;
+            let second = commits::create(db, "second", 1, 2)?;
+            Ok::<_, anyhow::Error>((first, second))
+        })?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_branch(Some(peer_id.to_string()));
+    session.switch_repo("shadow-notes".into(), Some(test_id));
+
+    handle_get_commit_diff(
+        &state,
+        &ch,
+        &mut session,
+        "req-1".into(),
+        Some(first.id),
+        second.id,
+    )
+    .await;
+    let repo_id = recv_commit_diff(&mut uni_rx).await;
+    assert_eq!(repo_id, Some(test_id));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn readonly_remote_history_repairs_legacy_missing_order_table() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
     let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
