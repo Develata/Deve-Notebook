@@ -206,6 +206,13 @@ fn desktop_service_offline_retryability_is_clamped_after_failure_budget() {
         })
     );
     assert_eq!(snapshot.supervisor.offline, snapshot.offline);
+
+    let terminal = shell.snapshot();
+    shell.start_service();
+    assert_eq!(shell.snapshot().state, DesktopServiceState::ServiceOffline);
+    assert_eq!(shell.snapshot().offline, terminal.offline);
+    assert_eq!(shell.snapshot().supervisor, terminal.supervisor);
+    assert_eq!(shell.snapshot().process_adapter, terminal.process_adapter);
 }
 
 #[test]
