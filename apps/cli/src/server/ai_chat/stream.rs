@@ -6,7 +6,7 @@
 //!
 //! **功能**: 执行 OpenAI 兼容的 SSE 流式 HTTP 请求。
 
-use super::sse_parser::{ToolCallBuilder, parse_sse_message};
+use super::sse_parser::parse_sse_message;
 use super::types::ParsedSseEvent;
 use anyhow::{Result, anyhow};
 use deve_core::plugin::runtime::chat_stream::{ChatStreamResponse, ChatStreamSink};
@@ -50,7 +50,6 @@ pub async fn execute_stream(
         EventSource::new(req).map_err(|e| anyhow!("Failed to create SSE stream: {}", e))?;
 
     let mut output = String::new();
-    let mut tool_builder = ToolCallBuilder::new();
     let mut finish_reason: Option<String> = None;
 
     while let Some(event) = stream.next().await {
@@ -62,24 +61,15 @@ pub async fn execute_stream(
                     break;
                 }
 
-                match parse_sse_message(&message.data).map_err(|e| anyhow!("{}", e))? {
-                    ParsedSseEvent::ContentDelta(content) => {
-                        output.push_str(&content);
-                        sink.send_chunk(req_id, Some(content), None);
-                    }
-                    ParsedSseEvent::ToolCallDelta {
-                        index,
-                        id,
-                        name,
-                        arguments,
-                    } => {
-                        tool_builder.process_delta(index, id, name, arguments);
-                    }
-                    ParsedSseEvent::Finished(reason) => {
-                        finish_reason = Some(reason);
-                        break;
-                    }
-                    ParsedSseEvent::Empty => {}
+                if apply_sse_event(
+                    req_id,
+                    parse_sse_message(&message.data).map_err(|e| anyhow!("{}", e))?,
+                    &mut output,
+                    &mut finish_reason,
+                    sink,
+                )? == StreamStep::Break
+                {
+                    break;
                 }
             }
             Err(EventSourceError::StreamEnded) => break,
@@ -87,7 +77,35 @@ pub async fn execute_stream(
         }
     }
 
-    finish_stream_response(req_id, output, tool_builder.build(), finish_reason, sink)
+    finish_stream_response(req_id, output, Vec::new(), finish_reason, sink)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum StreamStep {
+    Continue,
+    Break,
+}
+
+fn apply_sse_event(
+    req_id: &str,
+    event: ParsedSseEvent,
+    output: &mut String,
+    finish_reason: &mut Option<String>,
+    sink: &ChatStreamSink,
+) -> Result<StreamStep> {
+    match event {
+        ParsedSseEvent::ContentDelta(content) => {
+            output.push_str(&content);
+            sink.send_chunk(req_id, Some(content), None);
+            Ok(StreamStep::Continue)
+        }
+        ParsedSseEvent::ToolCallDelta => Err(anyhow!(NATIVE_AI_TOOL_CALLS_DISABLED_ERROR)),
+        ParsedSseEvent::Finished(reason) => {
+            *finish_reason = Some(reason);
+            Ok(StreamStep::Break)
+        }
+        ParsedSseEvent::Empty => Ok(StreamStep::Continue),
+    }
 }
 
 fn finish_stream_response(
@@ -170,6 +188,54 @@ mod tests {
         .expect_err("native AI must reject provider tool calls before finish");
 
         assert_eq!(err.to_string(), NATIVE_AI_TOOL_CALLS_DISABLED_ERROR);
+        assert!(sent.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn provider_tool_call_delta_is_rejected_immediately() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let sent_for_sink = sent.clone();
+        let sink = ChatStreamSink::new(move |msg| {
+            sent_for_sink.lock().unwrap().push(msg);
+        });
+        let mut output = "partial".to_string();
+        let mut finish_reason = None;
+
+        let err = apply_sse_event(
+            "req-1",
+            ParsedSseEvent::ToolCallDelta,
+            &mut output,
+            &mut finish_reason,
+            &sink,
+        )
+        .expect_err("native AI must reject provider tool call deltas immediately");
+
+        assert_eq!(err.to_string(), NATIVE_AI_TOOL_CALLS_DISABLED_ERROR);
+        assert_eq!(output, "partial");
+        assert_eq!(finish_reason, None);
+        assert!(sent.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn provider_tool_call_payload_is_rejected_before_content_chunk() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let sent_for_sink = sent.clone();
+        let sink = ChatStreamSink::new(move |msg| {
+            sent_for_sink.lock().unwrap().push(msg);
+        });
+        let event = parse_sse_message(
+            r#"{"choices":[{"delta":{"content":"unsafe partial","tool_calls":[{"index":0}]}}]}"#,
+        )
+        .expect("tool call payload should parse");
+        let mut output = String::new();
+        let mut finish_reason = None;
+
+        let err = apply_sse_event("req-1", event, &mut output, &mut finish_reason, &sink)
+            .expect_err("native AI must reject tool call payload before forwarding content");
+
+        assert_eq!(err.to_string(), NATIVE_AI_TOOL_CALLS_DISABLED_ERROR);
+        assert_eq!(output, "");
+        assert_eq!(finish_reason, None);
         assert!(sent.lock().unwrap().is_empty());
     }
 

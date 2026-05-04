@@ -72,6 +72,8 @@ check_contains apps/cli/src/server/ai_chat/mod.rs "native_ai_rejects_request_too
 check_contains apps/cli/src/server/ai_chat/stream.rs "Native AI Chat provider tool calls are disabled by default"
 check_contains apps/cli/src/server/ai_chat/stream.rs "finalize_stream_response_rejects_provider_tool_calls"
 check_contains apps/cli/src/server/ai_chat/stream.rs "provider_tool_call_rejection_does_not_send_finish_chunk"
+check_contains apps/cli/src/server/ai_chat/stream.rs "provider_tool_call_delta_is_rejected_immediately"
+check_contains apps/cli/src/server/ai_chat/stream.rs "provider_tool_call_payload_is_rejected_before_content_chunk"
 
 # Trusted CLI is default-off and policy-gated at both server and UI boundaries.
 check_contains docs/plan/10_ai_agent.md "default-off、policy-gated 的 Trusted CLI path"

@@ -23,20 +23,7 @@ pub struct SseChoice {
 #[derive(Debug, Deserialize)]
 pub struct SseDelta {
     pub content: Option<String>,
-    pub tool_calls: Option<Vec<SseToolCallDelta>>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SseToolCallDelta {
-    pub index: Option<usize>,
-    pub id: Option<String>,
-    pub function: Option<SseFunctionDelta>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SseFunctionDelta {
-    pub name: Option<String>,
-    pub arguments: Option<String>,
+    pub tool_calls: Option<Vec<serde_json::Value>>,
 }
 
 /// 解析后的 SSE 事件
@@ -44,13 +31,8 @@ pub struct SseFunctionDelta {
 pub enum ParsedSseEvent {
     /// 文本内容增量
     ContentDelta(String),
-    /// 工具调用增量
-    ToolCallDelta {
-        index: usize,
-        id: Option<String>,
-        name: Option<String>,
-        arguments: Option<String>,
-    },
+    /// 工具调用增量。Native AI Chat 只需要检测并拒绝，不保留工具元数据。
+    ToolCallDelta,
     /// 流结束
     Finished(String),
     /// 无有效内容
