@@ -20,6 +20,22 @@ fn dispatch_commit_diff(
     message_branch: Option<PeerId>,
     message_scope_nonce: Option<u64>,
 ) -> CommitDiffDispatchResult {
+    dispatch_commit_diff_from_repo(
+        current_repo_id_value,
+        current_repo_id_value,
+        active_branch_value,
+        message_branch,
+        message_scope_nonce,
+    )
+}
+
+fn dispatch_commit_diff_from_repo(
+    current_repo_id_value: uuid::Uuid,
+    message_repo_id_value: uuid::Uuid,
+    active_branch_value: Option<PeerId>,
+    message_branch: Option<PeerId>,
+    message_scope_nonce: Option<u64>,
+) -> CommitDiffDispatchResult {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
     let ws = WsService::new_for_test(ConnectionStatus::Connected);
@@ -84,7 +100,7 @@ fn dispatch_commit_diff(
     let handled = handle_sc_message(
         &ServerMessage::CommitDiffResult {
             request_id: Some("req-1".into()),
-            repo_id: Some(current_repo_id_value),
+            repo_id: Some(message_repo_id_value),
             branch: message_branch,
             scope_nonce: message_scope_nonce,
             diffs: vec![CommitFileDiff {
@@ -146,6 +162,25 @@ fn commit_diff_dispatch_rejects_other_branch() {
         repo_id,
         Some(PeerId::new("peer-a")),
         Some(PeerId::new("peer-b")),
+        Some(17),
+    );
+
+    assert!(result.handled);
+    assert_eq!(result.request_id.as_deref(), Some("req-1"));
+    assert!(result.diffs.is_empty());
+    assert!(result.notice.is_some());
+}
+
+#[test]
+fn commit_diff_dispatch_rejects_other_repo() {
+    let current_repo_id = uuid::Uuid::new_v4();
+    let message_repo_id = uuid::Uuid::new_v4();
+    let branch = PeerId::new("peer-a");
+    let result = dispatch_commit_diff_from_repo(
+        current_repo_id,
+        message_repo_id,
+        Some(branch.clone()),
+        Some(branch),
         Some(17),
     );
 
