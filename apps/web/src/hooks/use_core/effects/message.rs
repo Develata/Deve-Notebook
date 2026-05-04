@@ -10,8 +10,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::super::state::CoreSignals;
+use super::super::write_gate::RepoWriteGateState;
 use super::message_dispatch;
-use super::message_refresh::{capture_refresh_scope, should_send_refresh};
+use super::message_refresh::{capture_refresh_scope, should_send_refresh_through_read_gate};
 
 /// 设置消息处理 Effect。
 pub fn setup(ws: &WsService, signals: &CoreSignals) {
@@ -55,13 +56,30 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                 let pending_branch_switch = signals.pending_branch_switch;
                 let pending_repo_switch = signals.pending_repo_switch;
                 let timer = Timeout::new(120, move || {
-                    if !should_send_refresh(
+                    let repo_id = current_repo_id.get_untracked();
+                    let branch = active_branch.get_untracked();
+                    let pending_branch = pending_branch_switch.get_untracked();
+                    let pending_repo = pending_repo_switch.get_untracked();
+                    let scope_nonce = signals.current_scope_nonce.get_untracked();
+                    let load_state = signals.load_state.get_untracked();
+                    if !should_send_refresh_through_read_gate(
                         &refresh_scope,
-                        current_repo_id.get_untracked(),
-                        active_branch.get_untracked(),
-                        pending_branch_switch.get_untracked(),
-                        pending_repo_switch.get_untracked(),
-                        signals.current_scope_nonce.get_untracked(),
+                        repo_id.clone(),
+                        branch,
+                        pending_branch.clone(),
+                        pending_repo.clone(),
+                        scope_nonce,
+                        RepoWriteGateState {
+                            connection_status: ws_for_timer.status.get_untracked(),
+                            load_state: &load_state,
+                            is_read_only: signals.is_spectator.get_untracked(),
+                            handshake_ready: signals.handshake_ready.get_untracked(),
+                            writer_ready: ws_for_timer
+                                .writer_ready_for(repo_id.as_deref(), Some(scope_nonce)),
+                            has_repo: repo_id.is_some(),
+                            pending_branch_switch: pending_branch.is_some(),
+                            pending_repo_switch: pending_repo.is_some(),
+                        },
                     ) {
                         return;
                     }
@@ -69,7 +87,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     set_changes_request_id.set(Some(request_id.clone()));
                     ws_for_timer.send(ClientMessage::GetChanges {
                         request_id,
-                        scope_nonce: Some(signals.current_scope_nonce.get_untracked()),
+                        scope_nonce: Some(scope_nonce),
                     });
                 });
                 *changes_refresh.borrow_mut() = Some(timer);

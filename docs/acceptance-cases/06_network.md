@@ -9,6 +9,7 @@
     - net_block_ws: true
     - run: scripts/check-network-baseline.sh
     - run: cargo test -p deve_web write_gate -- --nocapture
+    - run: cargo test -p deve_web message_refresh -- --nocapture
   assertions:
     - ui_assert: overlay_text "Reconnecting..."
     - ui_assert: editing_disabled true

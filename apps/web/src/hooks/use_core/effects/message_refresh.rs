@@ -3,6 +3,7 @@
 //!   - 06_repository#repo-scope-runtime
 //!
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::write_gate::{RepoWriteGateState, repo_source_control_read_block};
 use deve_core::models::PeerId;
 
 #[cfg(test)]
@@ -46,4 +47,23 @@ pub fn should_send_refresh(
         && scope.repo_id == repo_id
         && scope.branch == branch
         && scope.scope_nonce == scope_nonce
+}
+
+pub fn should_send_refresh_through_read_gate(
+    scope: &RefreshScope,
+    repo_id: Option<String>,
+    branch: Option<PeerId>,
+    pending_branch_switch: Option<PendingBranchTarget>,
+    pending_repo_switch: Option<String>,
+    scope_nonce: u64,
+    gate_state: RepoWriteGateState<'_>,
+) -> bool {
+    should_send_refresh(
+        scope,
+        repo_id,
+        branch,
+        pending_branch_switch,
+        pending_repo_switch,
+        scope_nonce,
+    ) && repo_source_control_read_block(gate_state).is_none()
 }
