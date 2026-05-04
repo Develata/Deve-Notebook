@@ -84,15 +84,10 @@ fn source_control_commit_ai_call_runtime_registers_active_request() {
 
     assert_eq!(
         plan,
-        CommitAiRuntimePlan {
-            plugin_id: Some(AI_PLUGIN_NATIVE),
+        CommitAiRuntimePlan::Dispatch {
+            plugin_id: AI_PLUGIN_NATIVE,
             switch_backend: None,
             notice: None,
-            block_reason: None,
-            register_active_req: true,
-            append_placeholder: true,
-            stop_streaming: false,
-            stop_generating: false,
         }
     );
 }
@@ -103,15 +98,10 @@ fn source_control_commit_ai_trusted_cli_call_runtime_uses_agent_bridge() {
 
     assert_eq!(
         plan,
-        CommitAiRuntimePlan {
-            plugin_id: Some(AI_PLUGIN_TRUSTED_CLI),
+        CommitAiRuntimePlan::Dispatch {
+            plugin_id: AI_PLUGIN_TRUSTED_CLI,
             switch_backend: None,
             notice: None,
-            block_reason: None,
-            register_active_req: true,
-            append_placeholder: true,
-            stop_streaming: false,
-            stop_generating: false,
         }
     );
 }
@@ -125,15 +115,10 @@ fn source_control_commit_ai_switch_runtime_preserves_notice_and_placeholder() {
 
     assert_eq!(
         plan,
-        CommitAiRuntimePlan {
-            plugin_id: Some(AI_PLUGIN_NATIVE),
+        CommitAiRuntimePlan::Dispatch {
+            plugin_id: AI_PLUGIN_NATIVE,
             switch_backend: Some(AI_BACKEND_NATIVE),
             notice: Some("trusted mode required".to_string()),
-            block_reason: None,
-            register_active_req: true,
-            append_placeholder: true,
-            stop_streaming: false,
-            stop_generating: false,
         }
     );
 }
@@ -147,15 +132,10 @@ fn source_control_commit_ai_trusted_cli_switch_runtime_uses_agent_bridge() {
 
     assert_eq!(
         plan,
-        CommitAiRuntimePlan {
-            plugin_id: Some(AI_PLUGIN_TRUSTED_CLI),
+        CommitAiRuntimePlan::Dispatch {
+            plugin_id: AI_PLUGIN_TRUSTED_CLI,
             switch_backend: Some(AI_BACKEND_TRUSTED_CLI),
             notice: Some("trusted-cli explicitly requested".to_string()),
-            block_reason: None,
-            register_active_req: true,
-            append_placeholder: true,
-            stop_streaming: false,
-            stop_generating: false,
         }
     );
 }
@@ -168,15 +148,8 @@ fn source_control_commit_ai_block_runtime_stops_without_active_request() {
 
     assert_eq!(
         plan,
-        CommitAiRuntimePlan {
-            plugin_id: None,
-            switch_backend: None,
-            notice: None,
-            block_reason: Some("native AI disabled by config".to_string()),
-            register_active_req: false,
-            append_placeholder: false,
-            stop_streaming: true,
-            stop_generating: true,
+        CommitAiRuntimePlan::Block {
+            reason: "native AI disabled by config".to_string(),
         }
     );
 }
