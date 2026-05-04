@@ -4,14 +4,16 @@
 //!   - 06_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
+use crate::hooks::use_core::callbacks_sc_scope::{
+    source_control_read_scope_nonce, source_control_scope_nonce,
+};
 use crate::hooks::use_core::callbacks_sc_target::{can_request_doc_diff, to_target};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::{
     DELETED_NO_DOC_ID_NOTICE_PREFIX, SourceControlNotice,
 };
 use crate::hooks::use_core::write_gate::{
-    RepoWriteSignals, repo_source_control_read_block_untracked, repo_write_block_untracked,
+    RepoWriteSignals, repo_source_control_read_block_untracked,
 };
 use deve_core::protocol::{ClientMessage, ServerErrorCode};
 use deve_core::source_control::ChangeEntry;
@@ -51,11 +53,11 @@ pub(super) fn create_get_doc_diff_callback(
             clear_stale_doc_diff(set_request_id, set_notice, set_diff_content, notice);
             return;
         }
-        if let Some(block) = repo_write_block_untracked(&ws, read_gate) {
+        if let Some(block) = repo_source_control_read_block_untracked(&ws, read_gate) {
             log_blocked_sc_read("GetDocDiff", &entry.path, block);
             return;
         }
-        let Some(scope_nonce) = source_control_scope_nonce(scope) else {
+        let Some(scope_nonce) = source_control_read_scope_nonce(scope) else {
             return;
         };
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -100,12 +102,17 @@ pub(super) fn create_get_commit_diff_callback(
 
 #[cfg(test)]
 mod tests {
-    use super::{clear_stale_doc_diff, unavailable_doc_diff_notice};
+    use super::{clear_stale_doc_diff, create_get_doc_diff_callback, unavailable_doc_diff_notice};
+    use crate::api::{ConnectionStatus, WsService};
+    use crate::hooks::use_core::PendingBranchTarget;
+    use crate::hooks::use_core::callbacks_sc::SourceControlScopeSignals;
     use crate::hooks::use_core::diff_session::DiffSessionWire;
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
-    use deve_core::protocol::ServerErrorCode;
+    use crate::hooks::use_core::write_gate::RepoWriteSignals;
+    use deve_core::models::{DocId, PeerId};
+    use deve_core::protocol::{ClientMessage, ServerErrorCode};
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
-    use leptos::prelude::{GetUntracked, signal};
+    use leptos::prelude::{Callable, GetUntracked, signal};
 
     #[test]
     fn deleted_docless_entry_reports_unavailable_diff_notice() {
@@ -155,5 +162,73 @@ mod tests {
             notice.get_untracked().map(|notice| notice.code),
             Some(ServerErrorCode::ScDocNotFound)
         );
+    }
+
+    #[test]
+    fn doc_diff_read_gate_allows_remote_branch_spectator_reads() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let (current_repo_id, _) = signal(Some("repo-a".to_string()));
+        let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
+        let (current_scope_nonce, _) = signal(11u64);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_repo_switch, _) = signal(None::<String>);
+        let (load_state, _) = signal("ready".to_string());
+        let (is_spectator, _) = signal(true);
+        let (handshake_ready, _) = signal(false);
+        let (request_id, set_request_id) = signal(None::<String>);
+        let (_notice, set_notice) = signal(None::<SourceControlNotice>);
+        let (_diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
+        let doc_id = DocId::new();
+
+        let callback = create_get_doc_diff_callback(
+            &ws,
+            SourceControlScopeSignals {
+                current_repo_id,
+                active_branch,
+                current_scope_nonce,
+                pending_branch_switch,
+                pending_repo_switch,
+            },
+            RepoWriteSignals {
+                load_state,
+                is_spectator: is_spectator.into(),
+                handshake_ready,
+                current_repo_id,
+                current_scope_nonce,
+                active_branch,
+                pending_branch_switch,
+                pending_repo_switch,
+            },
+            set_request_id,
+            set_notice,
+            set_diff_content,
+        );
+
+        callback.run(ChangeEntry {
+            path: "notes/a.md".into(),
+            renamed_from: None,
+            doc_id: Some(doc_id),
+            status: ChangeStatus::Modified,
+            has_conflict: false,
+        });
+
+        let request_id = request_id.get_untracked().expect("doc diff request");
+        let sent = ws.drain_sent_for_test();
+        assert_eq!(sent.len(), 1);
+        match &sent[0] {
+            ClientMessage::GetDocDiff {
+                request_id: sent_request_id,
+                target,
+                scope_nonce,
+            } => {
+                assert_eq!(sent_request_id, &request_id);
+                assert_eq!(target.doc_id, Some(doc_id));
+                assert_eq!(target.path, "notes/a.md");
+                assert_eq!(*scope_nonce, Some(11));
+            }
+            other => panic!("expected GetDocDiff, got {other:?}"),
+        }
     }
 }
