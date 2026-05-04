@@ -6,8 +6,8 @@ use deve_core::native_adapter::{
     NativeProcessAdapter, NativeProcessAdapterError, NativeProcessAdapterSnapshot,
     NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
     NativeServiceRestarting, NativeServiceSupervisor, NativeServiceSupervisorError,
-    NativeServiceSupervisorSnapshot, classify_native_platform_event,
-    validate_native_endpoint_ready,
+    NativeServiceSupervisorObservation, NativeServiceSupervisorSnapshot,
+    classify_native_platform_event, validate_native_endpoint_ready,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -148,8 +148,7 @@ impl DesktopShell {
             .process_adapter
             .bind_existing_endpoint(endpoint)
             .map_err(Self::map_process_adapter_error)?;
-        self.supervisor
-            .record_health_probe(process_snapshot.health_probe)?;
+        self.observe_process_snapshot(&process_snapshot)?;
         self.readiness.endpoint_reachable = process_snapshot.health_probe.endpoint_reachable;
         self.readiness.node_role_readable = process_snapshot.health_probe.node_role_readable;
         self.endpoint = process_snapshot.endpoint;
@@ -166,23 +165,33 @@ impl DesktopShell {
         if !session.bound {
             return Err(DesktopShellError::SessionNotBound);
         }
-        let endpoint = self
-            .endpoint
-            .as_mut()
-            .ok_or(DesktopShellError::SessionNotBound)?;
-        self.supervisor.record_session_handoff(session.bound)?;
         let process_snapshot = self
             .process_adapter
             .bind_session(session.bound)
             .map_err(Self::map_process_adapter_error)?;
+        self.observe_process_snapshot(&process_snapshot)?;
         let process_endpoint = process_snapshot
             .endpoint
             .ok_or(DesktopShellError::SessionNotBound)?;
-        *endpoint = process_endpoint;
-        validate_native_endpoint_ready(endpoint)?;
+        validate_native_endpoint_ready(&process_endpoint)?;
+        self.endpoint = Some(process_endpoint);
         self.readiness.auth_status_valid = true;
         self.state = DesktopServiceState::SessionBound;
         Ok(())
+    }
+
+    pub fn mark_probe_timeout(&mut self) -> Result<(), DesktopShellError> {
+        let process_snapshot = self.process_adapter.record_probe_timeout();
+        let result = self.observe_process_snapshot(&process_snapshot);
+        self.clear_shell_runtime_binding();
+        result
+    }
+
+    pub fn mark_process_shutdown(&mut self) -> Result<(), DesktopShellError> {
+        let process_snapshot = self.process_adapter.record_process_stopped();
+        let result = self.observe_process_snapshot(&process_snapshot);
+        self.clear_shell_runtime_binding();
+        result
     }
 
     pub fn mark_runtime_ready(&mut self, readiness: NativeRuntimeReadiness) -> bool {
@@ -329,6 +338,11 @@ impl DesktopShell {
         self.endpoint = None;
     }
 
+    fn clear_shell_runtime_binding(&mut self) {
+        self.readiness = NativeRuntimeReadiness::default();
+        self.endpoint = None;
+    }
+
     fn is_service_recovery_state(&self) -> bool {
         matches!(
             self.state,
@@ -347,6 +361,32 @@ impl DesktopShell {
             DesktopServiceState::ServiceOffline
         };
         self.offline = Some(offline);
+    }
+
+    fn observe_process_snapshot(
+        &mut self,
+        process_snapshot: &NativeProcessAdapterSnapshot,
+    ) -> Result<(), DesktopShellError> {
+        let observation = self.supervisor.record_process_snapshot(process_snapshot);
+        self.apply_supervisor_observation(observation)
+    }
+
+    fn apply_supervisor_observation(
+        &mut self,
+        observation: NativeServiceSupervisorObservation,
+    ) -> Result<(), DesktopShellError> {
+        match observation {
+            NativeServiceSupervisorObservation::EndpointHealthy
+            | NativeServiceSupervisorObservation::SessionHandoffReady => Ok(()),
+            NativeServiceSupervisorObservation::Offline(offline) => {
+                let reason = offline.reason.clone();
+                self.record_offline_snapshot(offline);
+                Err(DesktopShellError::ServiceOffline { reason })
+            }
+            NativeServiceSupervisorObservation::Idle => Err(DesktopShellError::Supervisor(
+                NativeServiceSupervisorError::EndpointNotHealthy,
+            )),
+        }
     }
 
     fn map_process_adapter_error(error: NativeProcessAdapterError) -> DesktopShellError {

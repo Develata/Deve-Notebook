@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use super::NativeServiceOffline;
+use super::{NativeProcessAdapterSnapshot, NativeProcessAdapterState, NativeServiceOffline};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -57,6 +57,14 @@ pub struct NativeServiceSupervisorSnapshot {
     pub offline: Option<NativeServiceOffline>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NativeServiceSupervisorObservation {
+    Idle,
+    EndpointHealthy,
+    SessionHandoffReady,
+    Offline(NativeServiceOffline),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum NativeServiceSupervisorError {
     #[error("native service health probe failed")]
@@ -90,30 +98,26 @@ impl NativeServiceSupervisor {
         self.offline = None;
     }
 
-    pub fn record_health_probe(
+    pub fn record_process_snapshot(
         &mut self,
-        probe: NativeServiceHealthProbe,
-    ) -> Result<(), NativeServiceSupervisorError> {
-        if !probe.is_healthy() {
-            return Err(NativeServiceSupervisorError::HealthProbeFailed);
+        snapshot: &NativeProcessAdapterSnapshot,
+    ) -> NativeServiceSupervisorObservation {
+        if let Some(current) = self.terminal_offline() {
+            return NativeServiceSupervisorObservation::Offline(current);
         }
-        self.state = NativeServiceSupervisorState::EndpointHealthy;
-        self.offline = None;
-        Ok(())
-    }
 
-    pub fn record_session_handoff(
-        &mut self,
-        session_bound: bool,
-    ) -> Result<(), NativeServiceSupervisorError> {
-        if self.state != NativeServiceSupervisorState::EndpointHealthy {
-            return Err(NativeServiceSupervisorError::EndpointNotHealthy);
+        match snapshot.state {
+            NativeProcessAdapterState::Deferred => NativeServiceSupervisorObservation::Idle,
+            NativeProcessAdapterState::ExistingEndpointBound => {
+                self.record_endpoint_health_snapshot(snapshot)
+            }
+            NativeProcessAdapterState::SessionHandoffReady => {
+                self.record_session_snapshot(snapshot)
+            }
+            NativeProcessAdapterState::Stopped => NativeServiceSupervisorObservation::Offline(
+                self.record_failure(NativeServiceFailureKind::ProcessExited, "process_stopped"),
+            ),
         }
-        if !session_bound {
-            return Err(NativeServiceSupervisorError::SessionNotBound);
-        }
-        self.state = NativeServiceSupervisorState::SessionHandoffReady;
-        Ok(())
     }
 
     pub fn record_failure(
@@ -179,6 +183,47 @@ impl NativeServiceSupervisor {
             .filter(|offline| !offline.retryable)
             .cloned()
     }
+
+    fn record_endpoint_health_snapshot(
+        &mut self,
+        snapshot: &NativeProcessAdapterSnapshot,
+    ) -> NativeServiceSupervisorObservation {
+        if !snapshot.health_probe.is_healthy() || snapshot.endpoint.is_none() {
+            return NativeServiceSupervisorObservation::Offline(
+                self.record_failure(NativeServiceFailureKind::HealthProbeFailed, "probe_failed"),
+            );
+        }
+
+        self.state = NativeServiceSupervisorState::EndpointHealthy;
+        self.offline = None;
+        NativeServiceSupervisorObservation::EndpointHealthy
+    }
+
+    fn record_session_snapshot(
+        &mut self,
+        snapshot: &NativeProcessAdapterSnapshot,
+    ) -> NativeServiceSupervisorObservation {
+        if !snapshot.health_probe.is_healthy() {
+            return NativeServiceSupervisorObservation::Offline(
+                self.record_failure(NativeServiceFailureKind::HealthProbeFailed, "probe_failed"),
+            );
+        }
+        let session_bound = snapshot
+            .endpoint
+            .as_ref()
+            .map(|endpoint| endpoint.session_bound)
+            .unwrap_or(false);
+        if !session_bound {
+            return NativeServiceSupervisorObservation::Offline(self.record_failure(
+                NativeServiceFailureKind::SessionHandoffFailed,
+                "session_not_bound",
+            ));
+        }
+
+        self.state = NativeServiceSupervisorState::SessionHandoffReady;
+        self.offline = None;
+        NativeServiceSupervisorObservation::SessionHandoffReady
+    }
 }
 
 #[cfg(test)]
@@ -192,29 +237,21 @@ mod tests {
         }
     }
 
-    #[test]
-    fn requires_health_before_session_handoff() {
-        let mut supervisor = NativeServiceSupervisor::new(2);
-        supervisor.start();
+    fn service_endpoint() -> super::super::NativeEndpointReady {
+        super::super::NativeEndpointReady {
+            http_base: "http://127.0.0.1:3001".to_string(),
+            ws_base: "ws://127.0.0.1:3001".to_string(),
+            node_role: "native-main".to_string(),
+            session_bound: false,
+        }
+    }
 
-        assert_eq!(
-            supervisor.record_session_handoff(true),
-            Err(NativeServiceSupervisorError::EndpointNotHealthy)
-        );
-        assert_eq!(supervisor.record_health_probe(service_probe()), Ok(()));
-        assert_eq!(
-            supervisor.snapshot().state,
-            NativeServiceSupervisorState::EndpointHealthy
-        );
-        assert_eq!(
-            supervisor.record_session_handoff(false),
-            Err(NativeServiceSupervisorError::SessionNotBound)
-        );
-        assert_eq!(supervisor.record_session_handoff(true), Ok(()));
-        assert_eq!(
-            supervisor.snapshot().state,
-            NativeServiceSupervisorState::SessionHandoffReady
-        );
+    fn ready_process_snapshot() -> NativeProcessAdapterSnapshot {
+        let mut process = super::super::NativeProcessAdapter::default();
+        process
+            .bind_existing_endpoint(service_endpoint())
+            .expect("endpoint");
+        process.bind_session(true).expect("session")
     }
 
     #[test]
@@ -268,10 +305,10 @@ mod tests {
     fn records_external_offline_state_without_losing_reason() {
         let mut supervisor = NativeServiceSupervisor::new(2);
         supervisor.start();
-        supervisor
-            .record_health_probe(service_probe())
-            .expect("probe");
-        supervisor.record_session_handoff(true).expect("session");
+        assert_eq!(
+            supervisor.record_process_snapshot(&ready_process_snapshot()),
+            NativeServiceSupervisorObservation::SessionHandoffReady
+        );
 
         supervisor.record_service_offline(NativeServiceOffline {
             reason: "service_dead".to_string(),
@@ -287,6 +324,141 @@ mod tests {
                 reason: "service_dead".to_string(),
                 retryable: true,
             })
+        );
+    }
+
+    #[test]
+    fn process_snapshot_drives_health_and_session_handoff() {
+        let mut supervisor = NativeServiceSupervisor::new(2);
+        supervisor.start();
+        let mut process = super::super::NativeProcessAdapter::default();
+        let endpoint = super::super::NativeEndpointReady {
+            http_base: "http://127.0.0.1:3001".to_string(),
+            ws_base: "ws://127.0.0.1:3001".to_string(),
+            node_role: "native-main".to_string(),
+            session_bound: false,
+        };
+
+        let endpoint_snapshot = process.bind_existing_endpoint(endpoint).expect("endpoint");
+        assert_eq!(
+            supervisor.record_process_snapshot(&endpoint_snapshot),
+            NativeServiceSupervisorObservation::EndpointHealthy
+        );
+        assert_eq!(
+            supervisor.snapshot().state,
+            NativeServiceSupervisorState::EndpointHealthy
+        );
+
+        let session_snapshot = process.bind_session(true).expect("session");
+        assert_eq!(
+            supervisor.record_process_snapshot(&session_snapshot),
+            NativeServiceSupervisorObservation::SessionHandoffReady
+        );
+        assert_eq!(
+            supervisor.snapshot().state,
+            NativeServiceSupervisorState::SessionHandoffReady
+        );
+    }
+
+    #[test]
+    fn process_probe_timeout_snapshot_consumes_retry_budget() {
+        let mut supervisor = NativeServiceSupervisor::new(1);
+        supervisor.start();
+        let mut process = super::super::NativeProcessAdapter::default();
+        process
+            .bind_existing_endpoint(super::super::NativeEndpointReady {
+                http_base: "http://127.0.0.1:3001".to_string(),
+                ws_base: "ws://127.0.0.1:3001".to_string(),
+                node_role: "native-main".to_string(),
+                session_bound: false,
+            })
+            .expect("endpoint");
+
+        let first_timeout = process.record_probe_timeout();
+        assert_eq!(
+            supervisor.record_process_snapshot(&first_timeout),
+            NativeServiceSupervisorObservation::Offline(NativeServiceOffline {
+                reason: "probe_failed".to_string(),
+                retryable: true,
+            })
+        );
+        assert_eq!(
+            supervisor.snapshot().state,
+            NativeServiceSupervisorState::Restarting
+        );
+        assert_eq!(supervisor.snapshot().restart_attempt, 1);
+
+        let second_timeout = process.record_probe_timeout();
+        assert_eq!(
+            supervisor.record_process_snapshot(&second_timeout),
+            NativeServiceSupervisorObservation::Offline(NativeServiceOffline {
+                reason: "probe_failed".to_string(),
+                retryable: false,
+            })
+        );
+        assert_eq!(
+            supervisor.snapshot().state,
+            NativeServiceSupervisorState::Offline
+        );
+    }
+
+    #[test]
+    fn process_shutdown_snapshot_enters_restart_path() {
+        let mut supervisor = NativeServiceSupervisor::new(2);
+        supervisor.start();
+        let mut process = super::super::NativeProcessAdapter::default();
+        process
+            .bind_existing_endpoint(super::super::NativeEndpointReady {
+                http_base: "http://127.0.0.1:3001".to_string(),
+                ws_base: "ws://127.0.0.1:3001".to_string(),
+                node_role: "native-main".to_string(),
+                session_bound: false,
+            })
+            .expect("endpoint");
+
+        let stopped = process.record_process_stopped();
+
+        assert_eq!(
+            supervisor.record_process_snapshot(&stopped),
+            NativeServiceSupervisorObservation::Offline(NativeServiceOffline {
+                reason: "process_stopped".to_string(),
+                retryable: true,
+            })
+        );
+        assert_eq!(
+            supervisor.snapshot().state,
+            NativeServiceSupervisorState::Restarting
+        );
+    }
+
+    #[test]
+    fn malformed_session_snapshot_is_fatal_offline() {
+        let mut supervisor = NativeServiceSupervisor::new(2);
+        supervisor.start();
+        let snapshot = NativeProcessAdapterSnapshot {
+            state: NativeProcessAdapterState::SessionHandoffReady,
+            endpoint: Some(super::super::NativeEndpointReady {
+                http_base: "http://127.0.0.1:3001".to_string(),
+                ws_base: "ws://127.0.0.1:3001".to_string(),
+                node_role: "native-main".to_string(),
+                session_bound: false,
+            }),
+            health_probe: service_probe(),
+            child_process_runtime_enabled: false,
+            child_process_running: false,
+            authority_writes_allowed: false,
+        };
+
+        assert_eq!(
+            supervisor.record_process_snapshot(&snapshot),
+            NativeServiceSupervisorObservation::Offline(NativeServiceOffline {
+                reason: "session_not_bound".to_string(),
+                retryable: false,
+            })
+        );
+        assert_eq!(
+            supervisor.snapshot().state,
+            NativeServiceSupervisorState::Offline
         );
     }
 

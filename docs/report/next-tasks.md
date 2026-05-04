@@ -1,6 +1,6 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-01
+> 更新日期：2026-05-05
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
@@ -8,9 +8,8 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Native runtime batch 2: supervisor adapter wiring | P1 | `crates/core/src/native_adapter/`, `apps/desktop/`, `apps/mobile/` | service supervisor 必须由 process adapter snapshot 驱动 probe/session/offline/restart 观测；补 timeout/retry/shutdown 测试；默认构建仍 no-Tauri、no child-process spawn |
-| 2 | Native runtime batch 3: Web/native readiness loop | P1 | `apps/web/src/`, `apps/desktop/`, `apps/mobile/` | endpoint/session 注入、foreground reprobe、scope nonce、writer-ready 与 Source Control write gate 在 native loopback 下保持 fail-closed |
-| 3 | Native packaging gate scaffold | P2 | `apps/desktop/`, `apps/mobile/`, `scripts/` | 只补 gated scaffold 与边界检查；真实 `tauri` / `tauri-build` 仍不得进入默认 workspace build |
+| 1 | Native runtime batch 3: Web/native readiness loop | P1 | `apps/web/src/`, `apps/desktop/`, `apps/mobile/` | endpoint/session 注入、foreground reprobe、scope nonce、writer-ready 与 Source Control write gate 在 native loopback 下保持 fail-closed |
+| 2 | Native packaging gate scaffold | P2 | `apps/desktop/`, `apps/mobile/`, `scripts/` | 只补 gated scaffold 与边界检查；真实 `tauri` / `tauri-build` 仍不得进入默认 workspace build |
 
 ## 当前基线
 

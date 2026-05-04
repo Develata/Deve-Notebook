@@ -15,6 +15,7 @@
 ## Verified Surfaces
 
 - Core native adapter 状态、事件、endpoint、session、readiness contract。
+- Native service supervisor 由 process adapter snapshot 驱动 endpoint health、session handoff、probe timeout 与 shutdown observation；retry budget 仍由 supervisor 单独裁决。
 - Hidden `serve --native-loopback` native-safe launch surface。
 - Desktop/mobile shell skeleton 的 recovery bootstrap 与 foreground/resume reprobe。
 - Web header、bottom bar、mobile footer、overlay、Source Control gate 的 native recovery 状态。

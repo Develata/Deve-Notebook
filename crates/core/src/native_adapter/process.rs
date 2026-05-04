@@ -147,6 +147,18 @@ impl NativeProcessAdapter {
         Ok(self.snapshot())
     }
 
+    pub fn record_health_probe(
+        &mut self,
+        probe: NativeServiceHealthProbe,
+    ) -> NativeProcessAdapterSnapshot {
+        self.health_probe = probe;
+        self.snapshot()
+    }
+
+    pub fn record_probe_timeout(&mut self) -> NativeProcessAdapterSnapshot {
+        self.record_health_probe(NativeServiceHealthProbe::default())
+    }
+
     pub fn clear_session(&mut self) {
         if let Some(endpoint) = self.endpoint.as_mut() {
             endpoint.session_bound = false;
@@ -156,11 +168,12 @@ impl NativeProcessAdapter {
         }
     }
 
-    pub fn record_process_stopped(&mut self) {
+    pub fn record_process_stopped(&mut self) -> NativeProcessAdapterSnapshot {
         self.state = NativeProcessAdapterState::Stopped;
         self.endpoint = None;
         self.health_probe = NativeServiceHealthProbe::default();
         self.child_process_running = false;
+        self.snapshot()
     }
 
     pub fn snapshot(&self) -> NativeProcessAdapterSnapshot {

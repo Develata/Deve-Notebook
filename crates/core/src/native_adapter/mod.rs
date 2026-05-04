@@ -25,7 +25,8 @@ pub use process::{
 };
 pub use supervisor::{
     NativeServiceFailureKind, NativeServiceHealthProbe, NativeServiceSupervisor,
-    NativeServiceSupervisorError, NativeServiceSupervisorSnapshot, NativeServiceSupervisorState,
+    NativeServiceSupervisorError, NativeServiceSupervisorObservation,
+    NativeServiceSupervisorSnapshot, NativeServiceSupervisorState,
 };
 pub use types::{
     NativeAdapterPlatform, NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady,

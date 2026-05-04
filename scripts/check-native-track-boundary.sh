@@ -69,6 +69,18 @@ check_contains crates/core/src/native_adapter/packaging.rs "DeferredUntilRuntime
 check_contains crates/core/src/native_adapter/packaging.rs "real_tauri_dependencies_allowed: false"
 check_contains crates/core/src/native_adapter/process.rs "DeferredUntilPackagingGate"
 check_contains crates/core/src/native_adapter/process.rs "child_process_runtime_enabled: false"
+check_contains crates/core/src/native_adapter/process.rs "record_probe_timeout"
+check_contains crates/core/src/native_adapter/process.rs "record_process_stopped"
+check_contains crates/core/src/native_adapter/supervisor.rs "record_process_snapshot"
+check_contains crates/core/src/native_adapter/supervisor.rs "process_snapshot_drives_health_and_session_handoff"
+check_contains crates/core/src/native_adapter/supervisor.rs "process_probe_timeout_snapshot_consumes_retry_budget"
+check_contains crates/core/src/native_adapter/supervisor.rs "process_shutdown_snapshot_enters_restart_path"
+check_contains apps/desktop/src/shell.rs "record_process_snapshot"
+check_contains apps/desktop/src/shell_test.rs "desktop_probe_timeout_observation_uses_process_snapshot"
+check_contains apps/desktop/src/shell_test.rs "desktop_process_shutdown_observation_uses_process_snapshot"
+check_contains apps/mobile/src/shell.rs "record_process_snapshot"
+check_contains apps/mobile/src/shell_test.rs "mobile_probe_timeout_observation_uses_process_snapshot"
+check_contains apps/mobile/src/shell_test.rs "mobile_process_shutdown_observation_uses_process_snapshot"
 check_no_packaging_dependency_leak
 check_no_process_runtime_leak
 

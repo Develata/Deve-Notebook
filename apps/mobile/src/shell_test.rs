@@ -286,6 +286,64 @@ fn mobile_service_offline_retryability_is_clamped_after_failure_budget() {
 }
 
 #[test]
+fn mobile_probe_timeout_observation_uses_process_snapshot() {
+    let mut shell = bound_shell();
+    assert!(shell.mark_runtime_ready(ready_probe()));
+
+    assert!(matches!(
+        shell.mark_probe_timeout(),
+        Err(MobileShellError::ServiceOffline { reason }) if reason == "probe_failed"
+    ));
+
+    let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, MobileServiceState::ServiceRestarting);
+    assert_eq!(snapshot.readiness, NativeRuntimeReadiness::default());
+    assert_eq!(
+        snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 1 })
+    );
+    assert!(snapshot.endpoint.is_none());
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Restarting
+    );
+    assert_eq!(snapshot.supervisor.restart_attempt, 1);
+    assert!(!snapshot.process_adapter.health_probe.is_healthy());
+    assert_eq!(
+        snapshot.process_adapter.state,
+        NativeProcessAdapterState::SessionHandoffReady
+    );
+}
+
+#[test]
+fn mobile_process_shutdown_observation_uses_process_snapshot() {
+    let mut shell = bound_shell();
+    assert!(shell.mark_runtime_ready(ready_probe()));
+
+    assert!(matches!(
+        shell.mark_process_shutdown(),
+        Err(MobileShellError::ServiceOffline { reason }) if reason == "process_stopped"
+    ));
+
+    let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, MobileServiceState::ServiceRestarting);
+    assert_eq!(
+        snapshot.restarting,
+        Some(NativeServiceRestarting { attempt: 1 })
+    );
+    assert!(snapshot.endpoint.is_none());
+    assert_eq!(
+        snapshot.process_adapter.state,
+        NativeProcessAdapterState::Stopped
+    );
+    assert!(snapshot.process_adapter.endpoint.is_none());
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Restarting
+    );
+}
+
+#[test]
 fn mobile_service_recovery_state_survives_lifecycle_events() {
     let mut restarting = bound_shell();
     restarting.handle_lifecycle_event(MobileLifecycleEvent::Background);
