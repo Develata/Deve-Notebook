@@ -1,10 +1,10 @@
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::models::PeerId;
+use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::ServerMessage;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
-use deve_core::source_control::{ChangeStatus, CommitInfo};
+use deve_core::source_control::{ChangeStatus, CommitFileDiff, CommitInfo};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -86,9 +86,17 @@ pub(super) async fn recv_history(
     }
 }
 
-pub(super) async fn recv_commit_diff(rx: &mut mpsc::Receiver<ServerMessage>) -> Option<uuid::Uuid> {
+pub(super) async fn recv_commit_diff(
+    rx: &mut mpsc::Receiver<ServerMessage>,
+) -> (Option<RepoId>, Option<PeerId>, Option<u64>, Vec<CommitFileDiff>) {
     match rx.recv().await {
-        Some(ServerMessage::CommitDiffResult { repo_id, .. }) => repo_id,
+        Some(ServerMessage::CommitDiffResult {
+            repo_id,
+            branch,
+            scope_nonce,
+            diffs,
+            ..
+        }) => (repo_id, branch, scope_nonce, diffs),
         other => panic!("expected CommitDiffResult, got {:?}", other),
     }
 }

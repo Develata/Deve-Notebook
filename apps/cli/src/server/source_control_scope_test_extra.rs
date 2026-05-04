@@ -6,8 +6,9 @@
 use super::support::recv_changes;
 use super::*;
 use deve_core::ledger::{RepoInfo, RepoManager};
-use deve_core::models::{PeerId, RepoId};
+use deve_core::models::{DocId, LedgerEntry, NodeId, Op, PeerId, RepoId, StructureOp};
 use deve_core::protocol::ServerMessage;
+use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::commits::{self, COMMITS_ORDER_TABLE};
 
 fn ensure_shadow_repo(repo: &RepoManager, repo_id: RepoId) -> anyhow::Result<PeerId> {
@@ -45,19 +46,69 @@ async fn readonly_remote_commit_history_is_allowed() -> anyhow::Result<()> {
 async fn readonly_remote_commit_diff_is_allowed() -> anyhow::Result<()> {
     let (_dir, state, _default_id, test_id) = build_state()?;
     let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
-    let (first, second) = state
+    let doc_id = DocId::new();
+    let create_file = LedgerEntry::new_structure(
+        StructureOp::CreateFile {
+            node_id: NodeId::from_doc_id(doc_id),
+            doc_id,
+            parent_id: None,
+            name: "note.md".into(),
+        },
+        1,
+        peer_id.clone(),
+        1,
+    );
+    state
+        .repo
+        .append_remote_op(&peer_id, &test_id, &create_file)?;
+    let first_content = LedgerEntry::new_content(
+        doc_id,
+        Op::Insert {
+            pos: 0,
+            content: "hello".into(),
+        },
+        2,
+        peer_id.clone(),
+        2,
+        None,
+        None,
+    );
+    let first_ledger_seq = state
+        .repo
+        .append_remote_op(&peer_id, &test_id, &first_content)?;
+    let first = state
         .repo
         .run_on_shadow_repo_by_id(&peer_id, &test_id, |db| {
-            let first = commits::create(db, "first", 1, 1)?;
-            let second = commits::create(db, "second", 1, 2)?;
-            Ok::<_, anyhow::Error>((first, second))
+            commits::create(db, "first", 1, first_ledger_seq)
+        })?;
+    let second_content = LedgerEntry::new_content(
+        doc_id,
+        Op::Insert {
+            pos: 5,
+            content: " remote".into(),
+        },
+        3,
+        peer_id.clone(),
+        3,
+        None,
+        None,
+    );
+    let second_ledger_seq = state
+        .repo
+        .append_remote_op(&peer_id, &test_id, &second_content)?;
+    let second = state
+        .repo
+        .run_on_shadow_repo_by_id(&peer_id, &test_id, |db| {
+            commits::create(db, "second", 1, second_ledger_seq)
         })?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
+    session.mark_browser_session();
     session.switch_branch(Some(peer_id.to_string()));
     session.switch_repo("shadow-notes".into(), Some(test_id));
+    session.set_scope_nonce(Some(17));
 
     handle_get_commit_diff(
         &state,
@@ -68,8 +119,16 @@ async fn readonly_remote_commit_diff_is_allowed() -> anyhow::Result<()> {
         second.id,
     )
     .await;
-    let repo_id = recv_commit_diff(&mut uni_rx).await;
+    let (repo_id, branch, scope_nonce, diffs) = recv_commit_diff(&mut uni_rx).await;
     assert_eq!(repo_id, Some(test_id));
+    assert_eq!(branch, Some(peer_id));
+    assert_eq!(scope_nonce, Some(17));
+    assert_eq!(diffs.len(), 1);
+    assert_eq!(diffs[0].doc_id, Some(doc_id));
+    assert_eq!(diffs[0].path, "note.md");
+    assert_eq!(diffs[0].status, ChangeStatus::Modified);
+    assert_eq!(diffs[0].old_content, "hello");
+    assert_eq!(diffs[0].new_content, "hello remote");
     Ok(())
 }
 
