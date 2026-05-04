@@ -47,6 +47,9 @@ impl MobileShell {
     }
 
     pub fn start_service(&mut self) {
+        if self.terminal_offline_reason().is_some() {
+            return;
+        }
         self.state = MobileServiceState::ServiceStarting;
         self.offline = None;
         self.restarting = None;

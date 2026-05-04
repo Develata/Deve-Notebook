@@ -134,6 +134,9 @@ impl DesktopShell {
     }
 
     pub fn start_service(&mut self) {
+        if self.terminal_offline_reason().is_some() {
+            return;
+        }
         self.state = DesktopServiceState::ServiceStarting;
         self.offline = None;
         self.restarting = None;

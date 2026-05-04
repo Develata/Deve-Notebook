@@ -469,6 +469,25 @@ fn mobile_service_recovery_state_survives_lifecycle_events() {
 }
 
 #[test]
+fn mobile_retryable_offline_can_restart_service() {
+    let mut shell = bound_shell();
+    shell.mark_service_offline("probe_failed", true);
+
+    shell.start_service();
+
+    let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, MobileServiceState::ServiceStarting);
+    assert_eq!(snapshot.offline, None);
+    assert_eq!(snapshot.restarting, None);
+    assert_eq!(snapshot.suspended, None);
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Starting
+    );
+    assert_eq!(snapshot.supervisor.offline, None);
+}
+
+#[test]
 fn mobile_supervisor_failure_blocks_endpoint_and_reports_retryability() {
     let mut shell = bound_shell();
     assert!(shell.mark_runtime_ready(ready_probe()));
@@ -512,6 +531,12 @@ fn mobile_supervisor_session_handoff_failure_is_not_retryable() {
         NativeServiceFailureKind::SessionHandoffFailed,
         "session_dead",
     );
+    let terminal = shell.snapshot();
+    shell.start_service();
+    assert_eq!(shell.snapshot().state, MobileServiceState::ServiceOffline);
+    assert_eq!(shell.snapshot().offline, terminal.offline);
+    assert_eq!(shell.snapshot().supervisor, terminal.supervisor);
+    assert_eq!(shell.snapshot().process_adapter, terminal.process_adapter);
     shell.mark_service_offline("service_dead", true);
     shell.mark_supervisor_failure(NativeServiceFailureKind::ProcessExited, "process_exited");
 

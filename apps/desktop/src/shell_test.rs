@@ -372,6 +372,24 @@ fn desktop_service_recovery_state_survives_foreground_events() {
 }
 
 #[test]
+fn desktop_retryable_offline_can_restart_service() {
+    let mut shell = bound_shell();
+    shell.mark_service_offline("probe_failed", true);
+
+    shell.start_service();
+
+    let snapshot = shell.snapshot();
+    assert_eq!(snapshot.state, DesktopServiceState::ServiceStarting);
+    assert_eq!(snapshot.offline, None);
+    assert_eq!(snapshot.restarting, None);
+    assert_eq!(
+        snapshot.supervisor.state,
+        NativeServiceSupervisorState::Starting
+    );
+    assert_eq!(snapshot.supervisor.offline, None);
+}
+
+#[test]
 fn desktop_shell_session_invalid_blocks_bootstrap() {
     let mut shell = bound_shell();
     shell.invalidate_session();
@@ -506,6 +524,12 @@ fn desktop_supervisor_keeps_session_handoff_failure_fatal() {
     let mut shell = DesktopShell::new();
     shell.start_service();
     shell.mark_supervisor_failure(NativeServiceFailureKind::SessionHandoffFailed, "missing");
+    let terminal = shell.snapshot();
+    shell.start_service();
+    assert_eq!(shell.snapshot().state, DesktopServiceState::ServiceOffline);
+    assert_eq!(shell.snapshot().offline, terminal.offline);
+    assert_eq!(shell.snapshot().supervisor, terminal.supervisor);
+    assert_eq!(shell.snapshot().process_adapter, terminal.process_adapter);
     shell.mark_service_offline("service_dead", true);
     shell.mark_supervisor_failure(NativeServiceFailureKind::ProcessExited, "process_exited");
 
