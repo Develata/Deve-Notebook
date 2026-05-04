@@ -11,6 +11,20 @@ fn maps_product_backend_names_to_runtime_plugin_ids() {
 }
 
 #[test]
+fn trusted_cli_default_off_capabilities_default_to_native_backend() {
+    let cap = AiBackendCapabilities::default();
+
+    assert!(cap.native_available);
+    assert!(!cap.trusted_cli_available);
+    assert_eq!(
+        cap.trusted_cli_reason.as_deref(),
+        Some("external agent disabled")
+    );
+    assert_eq!(cap.effective_backend, AI_BACKEND_NATIVE);
+    assert!(cap.effective_backend_reason.is_none());
+}
+
+#[test]
 fn backend_for_send_uses_native_when_native_is_available() {
     assert_eq!(
         resolve_backend_for_send(AI_BACKEND_NATIVE, &AiBackendCapabilities::default()),

@@ -206,6 +206,22 @@ mod tests {
     }
 
     #[test]
+    fn trusted_cli_default_off_keeps_native_visible_and_disables_trusted_backend() {
+        let state = ai_backend_button_state(
+            AI_BACKEND_NATIVE,
+            &AiBackendCapabilities::default(),
+            Locale::En,
+        );
+
+        assert_eq!(state.native_class, BUTTON_CLASS_ACCENT_ACTIVE);
+        assert!(!state.native_disabled);
+        assert!(state.native_title.is_empty());
+        assert_eq!(state.trusted_class, BUTTON_CLASS_DISABLED);
+        assert!(state.trusted_disabled);
+        assert_eq!(state.trusted_title, "external agent disabled");
+    }
+
+    #[test]
     fn ai_backend_buttons_show_disabled_reason_only_for_disabled_native() {
         let state = ai_backend_button_state(
             AI_BACKEND_NATIVE,

@@ -109,6 +109,8 @@
   steps:
     - ui_open: settings
     - run: scripts/check-ai-baseline.sh
+    - run: cargo test -p deve_web trusted_cli_default_off -- --nocapture
+    - run: cargo test -p deve_cli trusted_cli_default_off -- --nocapture
     - run: cargo test -p deve_web plugin_text_response -- --nocapture
     - run: cargo test -p deve_cli agent_bridge -- --nocapture
   assertions:

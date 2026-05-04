@@ -1,7 +1,7 @@
 use super::AgentBridgePolicy;
 
 #[test]
-fn disabled_policy_fails_closed() {
+fn trusted_cli_default_off_policy_fails_closed() {
     let policy = AgentBridgePolicy {
         enabled: false,
         trusted: false,
