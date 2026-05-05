@@ -147,6 +147,15 @@ The Source Control read path is aligned for the current modeled slice:
 - remote `DocDiff` target-missing and identity-mismatch failures return
   structured `ProtocolError` with browser `scope_nonce`
 
+The WebSocket route scope gate is aligned for the modeled browser routes:
+
+- `core_scoped`, `docs`, `merge`, and `source_control` routes validate
+  browser `scope_nonce` before dispatching to handlers
+- missing and stale scope nonce paths return structured `ProtocolError`
+  with the browser response scope
+- route-level tests cover every currently routed scoped input in those
+  four layers
+
 ## Current State
 
 Within the currently modeled operation slice:
