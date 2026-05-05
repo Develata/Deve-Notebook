@@ -32,6 +32,7 @@
     - Local 与 Remote 修改同一段落
   steps:
     - run: deve merge --peer <peer_id>
+    - run: cargo test -p deve_cli resolve_merge_conflict -- --nocapture
   assertions:
     - ws_message: "MergeConflict"
     - ws_field_contains: "actions AcceptCurrent AcceptIncoming AcceptBoth"
