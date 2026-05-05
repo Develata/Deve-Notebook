@@ -58,15 +58,14 @@
     - api_assert: resolve_merge_conflict_accept_both_result_local_only true
 
 - case_id: DIFF-005
-  goal: 合并中断可续。
+  goal: 合并 state 重开可重放。
   preconditions:
-    - 合并进行中
+    - Peer merge conflict 已产生但未确认
   steps:
-    - run: taskkill /F /IM deve_cli.exe
-    - run: deve merge --peer <peer_id>
+    - run: cargo test -p deve_cli merge_peer_conflict_replays_after_state_reopen -- --nocapture
   assertions:
-    - log_contains: "resume"
-    - ledger_ops_not_lost true
+    - api_assert: merge_peer_local_remote_ledger_entries_unchanged_after_state_reopen true
+    - api_assert: merge_peer_conflict_replay_after_state_reopen true
 
 - case_id: DIFF-006
   goal: Watcher 防抖与 Hash 校验。
