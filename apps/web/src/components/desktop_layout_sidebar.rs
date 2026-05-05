@@ -17,6 +17,7 @@ pub fn DesktopSidebar(
 ) -> impl IntoView {
     view! {
         <aside
+            data-deve-desktop-col="1-sidebar"
             class="flex-none bg-panel rounded-lg shadow-sm border border-default flex flex-col z-[var(--z-panels)]"
             style=move || format!("width: {}px", sidebar_width.get())
         >

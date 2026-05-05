@@ -87,7 +87,10 @@ pub fn Editor(
     view! {
         <div class="relative w-full h-full flex flex-col overflow-hidden">
             <div class="flex-1 flex overflow-hidden relative">
-                <div class="flex-1 relative border-r border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div
+                    data-deve-desktop-col="3-editor"
+                    class="flex-1 relative border-r border-gray-200 bg-white shadow-sm overflow-hidden"
+                >
                     <div
                         node_ref=editor_ref
                         class="absolute inset-0"
@@ -119,6 +122,7 @@ pub fn Editor(
                 {if !embedded {
                     view! {
                         <div
+                            data-deve-desktop-col="4-outline"
                             class="bg-[var(--bg-sidebar)] border-l border-gray-200 transition-all duration-300 ease-in-out overflow-hidden"
                             style=move || if show_outline.get() { "width: 250px; opacity: 1;" } else { "width: 0px; opacity: 0;" }
                         >

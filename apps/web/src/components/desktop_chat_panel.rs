@@ -37,6 +37,7 @@ pub fn DesktopChatPanel(
                     <div class="w-[1px] h-8 bg-active group-hover:bg-accent transition-colors"></div>
                 </div>
                 <div
+                    data-deve-desktop-col="5-chat"
                     class="flex-none bg-panel shadow-sm border border-default rounded-lg overflow-hidden flex flex-col"
                     style=move || format!("width: {}px", right_width.get())
                 >
