@@ -1,5 +1,5 @@
 use super::handlers::source_control::{
-    handle_get_changes, handle_get_commit_diff, handle_get_commit_history,
+    handle_get_changes, handle_get_commit_diff, handle_get_commit_history, handle_get_doc_diff,
 };
 use super::{channel::DualChannel, session::WsSession};
 use deve_core::ledger::traits::{RepoSelector, Repository};
