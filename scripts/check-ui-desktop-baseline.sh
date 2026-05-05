@@ -15,11 +15,11 @@ contains() {
     || fail "missing '$pattern' in $file"
 }
 
-# UI-DESK-001: desktop workbench exposes five canonical columns and ratio-based split diff scroll sync.
+# UI-DESK-001: desktop workbench exposes canonical column markers and ratio-based split diff scroll sync.
 contains docs/acceptance-cases/05_ui.md "case_id: UI-DESK-001"
 contains docs/acceptance-cases/05_ui.md "run: scripts/check-ui-desktop-baseline.sh"
 contains docs/acceptance-cases/05_ui.md "run: cargo test -p deve_web desktop_diff_scroll -- --nocapture"
-contains docs/acceptance-cases/05_ui.md "cli_assert: desktop_five_column_slots_bound true"
+contains docs/acceptance-cases/05_ui.md "cli_assert: desktop_canonical_column_markers_bound true"
 contains docs/acceptance-cases/05_ui.md "cli_assert: desktop_diff_scroll_sync_ratio_bound true"
 
 contains apps/web/src/components/desktop_layout_sidebar.rs "data-deve-desktop-col=\"1-sidebar\""
