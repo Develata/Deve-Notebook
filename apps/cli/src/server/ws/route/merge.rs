@@ -238,4 +238,99 @@ mod tests {
         assert_eq!(pending.scope_nonce, Some(17));
         Ok(())
     }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn merge_scope_nonce_gate_rejects_missing_scope_before_handler() -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = browser_session(17);
+
+        for msg in merge_messages_with_scope(None) {
+            route_merge(&state, &ch, &mut session, msg).await;
+            assert_scope_guard_error(
+                recv_protocol_error(&mut uni_rx).await?,
+                Some(17),
+                "merge control scope nonce missing",
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn merge_scope_nonce_gate_rejects_stale_scope_before_handler() -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = browser_session(17);
+
+        for msg in merge_messages_with_scope(Some(16)) {
+            route_merge(&state, &ch, &mut session, msg).await;
+            assert_scope_guard_error(
+                recv_protocol_error(&mut uni_rx).await?,
+                Some(16),
+                "merge control scope nonce is stale",
+            );
+        }
+        Ok(())
+    }
+
+    fn browser_session(scope_nonce: u64) -> crate::server::session::WsSession {
+        let mut session = crate::server::session::WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(scope_nonce));
+        session
+    }
+
+    fn merge_messages_with_scope(scope_nonce: Option<u64>) -> Vec<ClientMessage> {
+        let doc_id = DocId::new();
+        vec![
+            ClientMessage::GetSyncMode {
+                request_id: "sync-mode".into(),
+                scope_nonce,
+            },
+            ClientMessage::SetSyncMode {
+                mode: "manual".into(),
+                scope_nonce,
+            },
+            ClientMessage::GetPendingOps {
+                request_id: "pending".into(),
+                scope_nonce,
+            },
+            ClientMessage::ConfirmMerge { scope_nonce },
+            ClientMessage::ResolveMergeConflict {
+                doc_id,
+                action: MergeConflictAction::AcceptIncoming,
+                result_content: None,
+                scope_nonce,
+            },
+            ClientMessage::DiscardPending { scope_nonce },
+            ClientMessage::MergePeer {
+                peer_id: "remote-a".into(),
+                doc_id,
+                scope_nonce,
+            },
+        ]
+    }
+
+    async fn recv_protocol_error(
+        uni_rx: &mut tokio::sync::mpsc::Receiver<ServerMessage>,
+    ) -> anyhow::Result<ServerMessage> {
+        Ok(timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("protocol error"))
+    }
+
+    fn assert_scope_guard_error(message: ServerMessage, scope_nonce: Option<u64>, detail: &str) {
+        match message {
+            ServerMessage::ProtocolError {
+                error,
+                scope_nonce: actual_scope_nonce,
+                ..
+            } => {
+                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(actual_scope_nonce, scope_nonce);
+                assert!(error.detail.as_deref().expect("detail").contains(detail));
+            }
+            other => panic!("expected ProtocolError, got {other:?}"),
+        }
+    }
 }

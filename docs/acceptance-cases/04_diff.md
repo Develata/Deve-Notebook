@@ -18,6 +18,7 @@
     - Local 与 Remote 均基于同一 Base 修改
   steps:
     - run: deve merge --peer <peer_id>
+    - run: cargo test -p deve_cli merge_scope_nonce_gate -- --nocapture
   assertions:
     - log_contains: "LCA"
 
