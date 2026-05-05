@@ -3,6 +3,7 @@
 //!   - 14_tech_stack#search-baseline
 //!   - 08_ui_design_01_web#web-layout-persistence
 //!
+use crate::components::focus_scope;
 use crate::components::search_box::SearchUiMode;
 use crate::components::search_box::types::SearchResult;
 use crate::components::search_box::ui_footer::footer;
@@ -35,6 +36,7 @@ pub fn render_overlay(
     let handle_keydown_closure = handle_keydown.clone();
     let active_index_closure = active_index.clone();
     let results_ref = NodeRef::<leptos::html::Div>::new();
+    let panel_ref = NodeRef::<leptos::html::Div>::new();
     let (touch_start_x, set_touch_start_x) = signal(0i32);
     let (touch_start_y, set_touch_start_y) = signal(0i32);
     let (touch_start_at, set_touch_start_at) = signal(0.0f64);
@@ -49,6 +51,10 @@ pub fn render_overlay(
                 on:click=move |_| set_show.set(false)
             >
                 <div
+                    node_ref=panel_ref
+                    role="dialog"
+                    aria-modal="true"
+                    tabindex="-1"
                     class=move || ui_sheet::panel_class(ui_mode.get())
                     style=move || ui_sheet::panel_style(
                         ui_mode.get(),
@@ -98,7 +104,12 @@ pub fn render_overlay(
                     )
                     on:keydown={
                         let handle_keydown_closure = handle_keydown_closure.clone();
-                        move |ev| handle_keydown_closure(ev)
+                        move |ev| {
+                            if focus_scope::handle_focus_trap_keydown(&ev, panel_ref) {
+                                return;
+                            }
+                            handle_keydown_closure(ev);
+                        }
                     }
                 >
                     {move || ui_sheet::drag_handle(ui_mode.get()).into_any()}

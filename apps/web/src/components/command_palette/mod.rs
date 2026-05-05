@@ -30,8 +30,10 @@ pub fn CommandPalette(
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (query, set_query) = signal(String::new());
     let (selected_index, set_selected_index) = signal(0);
+    let input_ref = NodeRef::<leptos::html::Input>::new();
 
     logic::attach_reset_effect(show, set_query, set_selected_index);
+    logic::attach_focus_restore_effect(show, input_ref);
 
     let filtered_commands =
         logic::create_filtered_commands_memo(query.into(), locale, on_settings, on_open, set_show);
@@ -57,5 +59,6 @@ pub fn CommandPalette(
         selected_index.into(),
         set_selected_index,
         handle_keydown,
+        input_ref,
     )
 }

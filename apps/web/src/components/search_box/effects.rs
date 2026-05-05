@@ -3,8 +3,8 @@
 //!   - 14_tech_stack#search-baseline
 //!   - 08_ui_design_01_web#web-layout-persistence
 //!
+use crate::components::focus_scope;
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
 
 /// 管理输入框与编辑器的焦点切换。
 pub fn attach_focus_effect(
@@ -14,8 +14,15 @@ pub fn attach_focus_effect(
     set_selected_index: WriteSignal<usize>,
     input_ref: NodeRef<leptos::html::Input>,
 ) {
+    let last_show = StoredValue::new_local(show.get_untracked());
+    let previous_focus = StoredValue::new_local(None::<web_sys::Element>);
+
     Effect::new(move |_| {
-        if show.get() {
+        let open = show.get();
+        let was_open = last_show.get_value();
+        last_show.set_value(open);
+
+        if open {
             // 打开时重置查询并聚焦搜索框。
             let raw = mode_signal.get();
             let cursor_pos = raw.chars().take_while(|c| *c != '|').count();
@@ -24,6 +31,9 @@ pub fn attach_focus_effect(
             set_query.set(cleaned);
             set_selected_index.set(0);
 
+            if !was_open {
+                previous_focus.set_value(focus_scope::active_element());
+            }
             request_animation_frame(move || {
                 if let Some(el) = input_ref.get_untracked() {
                     let _ = el.focus();
@@ -32,20 +42,10 @@ pub fn attach_focus_effect(
                     }
                 }
             });
-        } else {
-            // Delay editor refocus by one extra frame so the closing Enter/Click
-            // does not fall through into CodeMirror as a fresh edit.
-            request_animation_frame(move || {
-                request_animation_frame(move || {
-                    if let Some(window) = web_sys::window()
-                        && let Some(document) = window.document()
-                        && let Ok(Some(el)) = document.query_selector(".cm-content")
-                        && let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>()
-                    {
-                        let _ = html_el.focus();
-                    }
-                });
-            });
+        } else if was_open {
+            let previous = previous_focus.get_value();
+            previous_focus.set_value(None);
+            focus_scope::restore_focus_next_frame(previous);
         }
     });
 }

@@ -3,6 +3,7 @@
 //!   - 08_ui_design_01_web#web-layout-persistence
 //!
 use super::types::Command;
+use crate::components::focus_scope;
 use crate::components::icons::{ArrowRight, Search, Zap};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -20,7 +21,10 @@ pub(super) fn render_overlay(
     selected_index: Signal<usize>,
     set_selected_index: WriteSignal<usize>,
     handle_keydown: Arc<dyn Fn(KeyboardEvent) + Send + Sync>,
+    input_ref: NodeRef<leptos::html::Input>,
 ) -> impl IntoView {
+    let panel_ref = NodeRef::<leptos::html::Div>::new();
+
     view! {
         <Show when=move || show.get()>
             <div
@@ -28,16 +32,26 @@ pub(super) fn render_overlay(
                 on:click=move |_| set_show.set(false)
             >
                 <div
+                    node_ref=panel_ref
+                    role="dialog"
+                    aria-modal="true"
+                    tabindex="-1"
                     class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-panel rounded-lg shadow-xl border border-default overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
                     on:keydown={
                         let handle_keydown = handle_keydown.clone();
-                        move |ev| handle_keydown(ev)
+                        move |ev| {
+                            if focus_scope::handle_focus_trap_keydown(&ev, panel_ref) {
+                                return;
+                            }
+                            handle_keydown(ev);
+                        }
                     }
                 >
                     <div class="p-3 border-b border-default flex items-center gap-3 bg-sidebar">
                         <Search class="w-4 h-4 text-muted"/>
                         <input
+                            node_ref=input_ref
                             name="command-palette-query"
                             type="text"
                             class="flex-1 outline-none text-base bg-transparent text-primary placeholder:text-muted"

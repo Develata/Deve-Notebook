@@ -4,6 +4,7 @@
 //!
 use super::registry::{create_static_commands, filter_commands};
 use super::types::Command;
+use crate::components::focus_scope;
 use crate::i18n::Locale;
 use leptos::prelude::*;
 use std::sync::Arc;
@@ -18,6 +19,29 @@ pub(super) fn attach_reset_effect(
         if show.get() {
             set_query.set(String::new());
             set_selected_index.set(0);
+        }
+    });
+}
+
+pub(super) fn attach_focus_restore_effect(
+    show: Signal<bool>,
+    input_ref: NodeRef<leptos::html::Input>,
+) {
+    let last_show = StoredValue::new_local(show.get_untracked());
+    let previous_focus = StoredValue::new_local(None::<web_sys::Element>);
+
+    Effect::new(move |_| {
+        let open = show.get();
+        let was_open = last_show.get_value();
+        last_show.set_value(open);
+
+        if open && !was_open {
+            previous_focus.set_value(focus_scope::active_element());
+            focus_scope::focus_input_next_frame(input_ref);
+        } else if !open && was_open {
+            let previous = previous_focus.get_value();
+            previous_focus.set_value(None);
+            focus_scope::restore_focus_next_frame(previous);
         }
     });
 }

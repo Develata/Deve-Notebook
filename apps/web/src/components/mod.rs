@@ -26,6 +26,7 @@ pub mod branch_label;
 pub mod branch_switcher;
 pub mod chat; // [NEW] AI Chat
 pub mod disconnect_overlay;
+pub(crate) mod focus_scope;
 pub mod login;
 pub mod main_layout;
 pub mod merge_modal;
