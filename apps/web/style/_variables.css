@@ -1,8 +1,8 @@
 /**
  * _variables.css — Design Tokens (Light Theme)
  *
- * 遵循 08_ui_design.md §2.1: 严禁硬编码 Hex 值,
- * 所有组件 MUST 通过 CSS 变量引用颜色。
+ * 遵循 08_ui_design.md §3.4: 颜色字面量只允许在 token 文件定义,
+ * 其它样式与组件 MUST 通过 CSS 变量引用颜色。
  *
  * 变量命名约定:
  *   --bg-*   背景色 (background)

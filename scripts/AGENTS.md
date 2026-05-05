@@ -21,6 +21,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-network-baseline.sh` | Verifies NET-001..NET-004 reconnect, `/ws`, node role, and WS frame baseline contracts |
 | `check-search-baseline.sh` | Verifies current Search scope, feature-gate, stale-result, and future-index boundaries |
 | `check-rendering-baseline.sh` | Verifies Markdown rendering current/future split, lightweight renderer subset, and controlled apply boundaries |
+| `check-ui-token-baseline.sh` | Verifies style color literals stay confined to design-token files |
 | `check-cli-settings-baseline.sh` | Verifies CLI command surface, `config.toml` settings mutation, and shortcut entry contracts |
 | `check-browser-prefs-boundary.sh` | Verifies harmless Web UI prefs are the only functional localStorage users and go through the fallback layer |
 | `check-diff-color-baseline.sh` | Verifies diff gutter colors use canonical source-control semantic tokens |
