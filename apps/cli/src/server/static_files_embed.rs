@@ -23,10 +23,24 @@ pub(super) fn has_index_asset() -> bool {
 }
 
 async fn serve_asset(req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    let response = asset_for_path(req.uri().path())
+    let response = asset_for_request_path(req.uri().path())
         .map(asset_response)
         .unwrap_or_else(not_found_response);
     Ok(response)
+}
+
+fn asset_for_request_path(path: &str) -> Option<&'static embedded::EmbeddedAsset> {
+    asset_for_request_path_in(path, embedded::EMBEDDED_ASSETS)
+}
+
+fn asset_for_request_path_in<'a>(
+    path: &str,
+    assets: &'a [embedded::EmbeddedAsset],
+) -> Option<&'a embedded::EmbeddedAsset> {
+    if !super::static_files::is_spa_fallback_path(path) {
+        return None;
+    }
+    asset_for_path_in(path, assets)
 }
 
 fn asset_for_path(path: &str) -> Option<&'static embedded::EmbeddedAsset> {
@@ -126,6 +140,30 @@ mod tests {
         let found = asset_for_path_in("/docs/123", &assets).expect("spa fallback");
 
         assert_eq!(found.path, "index.html");
+    }
+
+    #[test]
+    fn embedded_lookup_rejects_api_route_before_spa_fallback() {
+        let assets = [embedded::EmbeddedAsset {
+            path: "index.html",
+            bytes: b"index",
+        }];
+
+        let found = asset_for_request_path_in("/api/missing", &assets);
+
+        assert!(found.is_none());
+    }
+
+    #[test]
+    fn embedded_lookup_rejects_ws_route_before_spa_fallback() {
+        let assets = [embedded::EmbeddedAsset {
+            path: "index.html",
+            bytes: b"index",
+        }];
+
+        let found = asset_for_request_path_in("/ws/missing", &assets);
+
+        assert!(found.is_none());
     }
 
     #[test]

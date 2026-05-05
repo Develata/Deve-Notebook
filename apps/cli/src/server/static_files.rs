@@ -18,8 +18,12 @@
 
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
+use axum::body::Body;
+use axum::http::{Request, Response, StatusCode, header};
+use std::convert::Infallible;
 use std::path::PathBuf;
-use tower_http::services::{ServeDir, ServeFile};
+use tower::service_fn;
+use tower_http::services::ServeDir;
 
 /// 环境变量名: 静态文件目录
 const ENV_STATIC_DIR: &str = "DEVE_STATIC_DIR";
@@ -92,7 +96,10 @@ fn validate_static_root(dir: &std::path::Path) -> Result<()> {
 /// - 不存在的路径返回 `index.html`（SPA 客户端路由）
 pub fn static_fallback<S: Clone + Send + Sync + 'static>() -> Router<S> {
     let dir = resolve_static_dir();
+    static_fallback_from_dir(dir)
+}
 
+fn static_fallback_from_dir<S: Clone + Send + Sync + 'static>(dir: PathBuf) -> Router<S> {
     if let Err(err) = validate_static_root(&dir) {
         if let Some(router) = super::static_files_embed::fallback() {
             return router;
@@ -111,16 +118,58 @@ pub fn static_fallback<S: Clone + Send + Sync + 'static>() -> Router<S> {
     let index = dir.join("index.html");
     tracing::info!("Serving static files from {:?}", dir);
 
-    // ServeDir + fallback 到 index.html 实现 SPA 路由
-    let serve = ServeDir::new(&dir).not_found_service(ServeFile::new(index));
+    let fallback = service_fn(move |req| serve_spa_fallback(req, index.clone()));
+    let serve = ServeDir::new(&dir).fallback(fallback);
 
     Router::new().fallback_service(serve)
+}
+
+pub(super) fn is_spa_fallback_path(path: &str) -> bool {
+    !is_reserved_runtime_path(path)
+}
+
+fn is_reserved_runtime_path(path: &str) -> bool {
+    path == "/api" || path.starts_with("/api/") || path == "/ws" || path.starts_with("/ws/")
+}
+
+async fn serve_spa_fallback<B>(
+    req: Request<B>,
+    index: PathBuf,
+) -> Result<Response<Body>, Infallible> {
+    if !is_spa_fallback_path(req.uri().path()) {
+        return Ok(not_found_response());
+    }
+
+    let response = match tokio::fs::read(&index).await {
+        Ok(bytes) => Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+            .body(Body::from(bytes))
+            .expect("spa index response"),
+        Err(err) => {
+            tracing::error!(error = %err, path = ?index, "Failed to read SPA index fallback");
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .expect("spa fallback error response")
+        }
+    };
+    Ok(response)
+}
+
+fn not_found_response() -> Response<Body> {
+    Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(Body::empty())
+        .expect("not found response")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body;
     use std::sync::{Mutex, OnceLock};
+    use tower::ServiceExt;
 
     fn env_guard() -> std::sync::MutexGuard<'static, ()> {
         static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -190,5 +239,132 @@ mod tests {
         assert_eq!(delivery_shape(), "static-dir-override");
 
         unsafe { std::env::remove_var(ENV_STATIC_DIR) };
+    }
+
+    #[tokio::test]
+    async fn static_dir_spa_route_returns_index_with_ok_status() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("index.html"),
+            "<html><body>deve-spa</body></html>",
+        )
+        .expect("write index");
+        let app = static_fallback_from_dir::<()>(dir.path().to_path_buf());
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/any/path")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or_default();
+        assert!(content_type.starts_with("text/html"));
+        let body = body::to_bytes(response.into_body(), 4096)
+            .await
+            .expect("body");
+        assert!(String::from_utf8_lossy(&body).contains("deve-spa"));
+    }
+
+    #[tokio::test]
+    async fn static_dir_unknown_api_route_does_not_fallback_to_index() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("index.html"),
+            "<html><body>deve-spa</body></html>",
+        )
+        .expect("write index");
+        let app = static_fallback_from_dir::<()>(dir.path().to_path_buf());
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/missing")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let body = body::to_bytes(response.into_body(), 4096)
+            .await
+            .expect("body");
+        assert!(body.is_empty());
+    }
+
+    #[tokio::test]
+    async fn static_dir_unknown_ws_route_does_not_fallback_to_index() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("index.html"),
+            "<html><body>deve-spa</body></html>",
+        )
+        .expect("write index");
+        let app = static_fallback_from_dir::<()>(dir.path().to_path_buf());
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/ws/missing")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let body = body::to_bytes(response.into_body(), 4096)
+            .await
+            .expect("body");
+        assert!(body.is_empty());
+    }
+
+    #[tokio::test]
+    async fn static_dir_serves_existing_asset_without_spa_fallback() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("index.html"),
+            "<html><body>deve-spa</body></html>",
+        )
+        .expect("write index");
+        let assets = dir.path().join("assets");
+        std::fs::create_dir_all(&assets).expect("mkdir assets");
+        std::fs::write(assets.join("app.js"), "console.log('deve');").expect("write js");
+        let app = static_fallback_from_dir::<()>(dir.path().to_path_buf());
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/assets/app.js")
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("response");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body::to_bytes(response.into_body(), 4096)
+            .await
+            .expect("body");
+        assert!(String::from_utf8_lossy(&body).contains("console.log"));
+    }
+
+    #[test]
+    fn spa_fallback_path_excludes_api_and_ws_runtime_paths() {
+        assert!(is_spa_fallback_path("/any/path"));
+        assert!(is_spa_fallback_path("/"));
+        assert!(!is_spa_fallback_path("/api"));
+        assert!(!is_spa_fallback_path("/api/missing"));
+        assert!(!is_spa_fallback_path("/ws"));
+        assert!(!is_spa_fallback_path("/ws/extra"));
     }
 }
