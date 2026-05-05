@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.repo.file-operations`
 - `Domain`: `repository`
 - `Related Feature Chapters`: `docs/features/06_repository.md`, `docs/features/08_ui_design.md`
-- `Related Acceptance Cases`: `REPO-FEAT-01`, `UI-DESK-003`
+- `Related Acceptance Cases`: `REPO-FEAT-01`, `UI-DESK-003`, `STORE-012`
 
 ## Operations
 
