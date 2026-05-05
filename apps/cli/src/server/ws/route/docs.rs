@@ -146,4 +146,96 @@ mod tests {
         }
         Ok(())
     }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn docs_scope_nonce_gate_rejects_missing_scope_before_handler() -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = browser_session(17);
+
+        for msg in doc_messages_with_scope(None) {
+            route_docs(&state, &ch, &mut session, msg).await;
+            assert_scope_guard_error(
+                recv_protocol_error(&mut uni_rx).await?,
+                Some(17),
+                "document scope nonce missing",
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn docs_scope_nonce_gate_rejects_stale_scope_before_handler() -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = browser_session(17);
+
+        for msg in doc_messages_with_scope(Some(16)) {
+            route_docs(&state, &ch, &mut session, msg).await;
+            assert_scope_guard_error(
+                recv_protocol_error(&mut uni_rx).await?,
+                Some(16),
+                "document scope nonce is stale",
+            );
+        }
+        Ok(())
+    }
+
+    fn browser_session(scope_nonce: u64) -> crate::server::session::WsSession {
+        let mut session = crate::server::session::WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(scope_nonce));
+        session
+    }
+
+    fn doc_messages_with_scope(scope_nonce: Option<u64>) -> Vec<ClientMessage> {
+        vec![
+            ClientMessage::CreateDoc {
+                name: "notes/a.md".into(),
+                scope_nonce,
+            },
+            ClientMessage::RenameDoc {
+                old_path: "notes/a.md".into(),
+                new_path: "notes/b.md".into(),
+                scope_nonce,
+            },
+            ClientMessage::DeleteDoc {
+                path: "notes/a.md".into(),
+                scope_nonce,
+            },
+            ClientMessage::CopyDoc {
+                src_path: "notes/a.md".into(),
+                dest_path: "notes/c.md".into(),
+                scope_nonce,
+            },
+            ClientMessage::MoveDoc {
+                src_path: "notes/a.md".into(),
+                dest_path: "notes/d.md".into(),
+                scope_nonce,
+            },
+        ]
+    }
+
+    async fn recv_protocol_error(
+        uni_rx: &mut tokio::sync::mpsc::Receiver<ServerMessage>,
+    ) -> anyhow::Result<ServerMessage> {
+        Ok(timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("protocol error"))
+    }
+
+    fn assert_scope_guard_error(message: ServerMessage, scope_nonce: Option<u64>, detail: &str) {
+        match message {
+            ServerMessage::ProtocolError {
+                error,
+                scope_nonce: actual_scope_nonce,
+                ..
+            } => {
+                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(actual_scope_nonce, scope_nonce);
+                assert!(error.detail.as_deref().expect("detail").contains(detail));
+            }
+            other => panic!("expected ProtocolError, got {other:?}"),
+        }
+    }
 }

@@ -135,4 +135,14 @@
     - ui_prefs_last_scope_stores_repo_name_alias_only: true
     - degraded_mode_blocks_RegisterWriter_and_SyncPush: true
     - degraded_mode_allows_read_and_snapshot_pull: true
+
+- case_id: STORE-012
+  goal: Document structure WS scope gate。
+  preconditions:
+    - Browser session has current `scope_nonce`
+  steps:
+    - run: cargo test -p deve_cli docs_scope_nonce_gate -- --nocapture
+  assertions:
+    - missing_scope_nonce_rejected_before_handler true
+    - stale_scope_nonce_rejected_before_handler true
 ```
