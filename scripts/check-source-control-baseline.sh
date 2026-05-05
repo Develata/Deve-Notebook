@@ -27,6 +27,8 @@ check_absent() {
 # owns the current stage/commit/publish entry points.
 check_contains docs/plan/12_commands.md "Source Control / Git-like Workflow"
 check_contains docs/plan/12_commands.md 'AI: Switch to PLAN Mode'
+check_contains docs/plan/12_commands.md 'AI: Switch to BUILD Mode'
+check_contains docs/plan/12_commands.md '不负责切换 `native / trusted-cli` 后端'
 check_contains apps/web/src/components/command_palette/registry.rs "merge_peer_command"
 check_absent apps/web/src/components/command_palette/registry.rs "Git: Sync"
 check_absent apps/web/src/components/command_palette/registry.rs "Git: Commit"
