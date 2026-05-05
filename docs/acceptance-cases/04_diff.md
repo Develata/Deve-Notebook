@@ -85,6 +85,7 @@
     - 文档包含新增/修改/删除
   steps:
     - ui_open_diff: true
+    - run: scripts/check-diff-color-baseline.sh
   assertions:
     - ui_assert: gutter_color_added "var(--color-added)"
     - ui_assert: gutter_color_modified "var(--color-modified)"

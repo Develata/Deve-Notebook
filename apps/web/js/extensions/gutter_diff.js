@@ -19,22 +19,34 @@ const gutterRangesField = StateField.define({
 });
 
 class DiffMarker extends GutterMarker {
-  constructor(color) {
+  constructor(kind) {
     super();
-    this.color = color;
+    this.kind = kind;
+    this.color = gutterDiffColorForKind(kind);
   }
   toDOM() {
     const el = document.createElement("div");
+    el.dataset.deveGutterDiffKind = this.kind;
     el.style.width = "4px";
     el.style.height = "100%";
-    el.style.background = this.color;
+    el.style.backgroundColor = this.color;
     return el;
   }
 }
 
-const addedMarker = new DiffMarker("#81b88b");
-const deletedMarker = new DiffMarker("#e06c75");
-const modifiedMarker = new DiffMarker("#e2c08d");
+export const gutterDiffColorTokens = Object.freeze({
+  added: "var(--color-added)",
+  deleted: "var(--color-deleted)",
+  modified: "var(--color-modified)",
+});
+
+export function gutterDiffColorForKind(kind) {
+  return gutterDiffColorTokens[kind] ?? null;
+}
+
+const addedMarker = new DiffMarker("added");
+const deletedMarker = new DiffMarker("deleted");
+const modifiedMarker = new DiffMarker("modified");
 
 function markerForKind(kind) {
   if (kind === "added") return addedMarker;

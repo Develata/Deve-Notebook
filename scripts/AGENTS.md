@@ -23,6 +23,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-rendering-baseline.sh` | Verifies Markdown rendering current/future split, lightweight renderer subset, and controlled apply boundaries |
 | `check-cli-settings-baseline.sh` | Verifies CLI command surface, `config.toml` settings mutation, and shortcut entry contracts |
 | `check-browser-prefs-boundary.sh` | Verifies harmless Web UI prefs are the only functional localStorage users and go through the fallback layer |
+| `check-diff-color-baseline.sh` | Verifies diff gutter colors use canonical source-control semantic tokens |
 | `check-ai-baseline.sh` | Verifies Native AI slash modes, planned palette command boundaries, and trusted-cli default-off gates |
 | `check-source-control-baseline.sh` | Verifies Source Control panel commit/publish boundaries and planned Git palette commands |
 | `check-source-control-smoke-hygiene.sh` | Verifies Source Control smoke tests use read-only `sc-status` and do not assume Git-clean app state |
