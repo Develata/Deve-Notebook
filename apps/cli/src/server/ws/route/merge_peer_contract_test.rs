@@ -49,15 +49,60 @@ async fn merge_peer_local_branch_contract_writes_local_only() -> anyhow::Result<
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn resolve_merge_conflict_local_branch_contract_writes_local_only() -> anyhow::Result<()> {
+    assert_resolve_merge_conflict_strategy(ResolveStrategyCase {
+        action: MergeConflictAction::AcceptIncoming,
+        result_content: None,
+        expected_content: "remote",
+        expected_merged_count: 1,
+        scope_nonce: 43,
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resolve_merge_conflict_accept_current_keeps_local_branch_without_write()
+-> anyhow::Result<()> {
+    assert_resolve_merge_conflict_strategy(ResolveStrategyCase {
+        action: MergeConflictAction::AcceptCurrent,
+        result_content: None,
+        expected_content: "local",
+        expected_merged_count: 0,
+        scope_nonce: 47,
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resolve_merge_conflict_accept_both_writes_result_to_local_branch() -> anyhow::Result<()> {
+    assert_resolve_merge_conflict_strategy(ResolveStrategyCase {
+        action: MergeConflictAction::AcceptBoth,
+        result_content: Some("local\nremote\nmanual".into()),
+        expected_content: "local\nremote\nmanual",
+        expected_merged_count: 1,
+        scope_nonce: 53,
+    })
+    .await
+}
+
+struct ResolveStrategyCase {
+    action: MergeConflictAction,
+    result_content: Option<String>,
+    expected_content: &'static str,
+    expected_merged_count: u32,
+    scope_nonce: u64,
+}
+
+async fn assert_resolve_merge_conflict_strategy(case: ResolveStrategyCase) -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let peer_id = ensure_remote_repo(&state, repo_id)?;
     let doc_id = seed_local_doc(&state, "notes/conflict.md")?;
     seed_local_insert(&state, doc_id, "local")?;
     seed_remote_insert(&state, &peer_id, repo_id, doc_id, "remote")?;
     let remote_before = doc_content(&state, RepoType::Remote(peer_id.clone(), repo_id), doc_id)?;
+    let local_before = local_doc_content(&state, doc_id)?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut broadcast_rx = state.tx.subscribe();
-    let mut session = browser_remote_session(&peer_id, repo_id, 43);
+    let mut session = browser_remote_session(&peer_id, repo_id, case.scope_nonce);
 
     route_merge(
         &state,
@@ -66,11 +111,11 @@ async fn resolve_merge_conflict_local_branch_contract_writes_local_only() -> any
         ClientMessage::MergePeer {
             peer_id: peer_id.to_string(),
             doc_id,
-            scope_nonce: Some(43),
+            scope_nonce: Some(case.scope_nonce),
         },
     )
     .await;
-    expect_merge_conflict(&mut uni_rx, repo_id, None, Some(43), doc_id).await?;
+    expect_merge_conflict(&mut uni_rx, repo_id, None, Some(case.scope_nonce), doc_id).await?;
     drain_unicast(&mut uni_rx);
     assert_eq!(
         session
@@ -86,16 +131,32 @@ async fn resolve_merge_conflict_local_branch_contract_writes_local_only() -> any
         &mut session,
         ClientMessage::ResolveMergeConflict {
             doc_id,
-            action: MergeConflictAction::AcceptIncoming,
-            result_content: None,
-            scope_nonce: Some(43),
+            action: case.action,
+            result_content: case.result_content,
+            scope_nonce: Some(case.scope_nonce),
         },
     )
     .await;
 
-    expect_merge_complete(&mut broadcast_rx, repo_id, None, Some(43), 1).await?;
+    expect_merge_complete(
+        &mut broadcast_rx,
+        repo_id,
+        None,
+        Some(case.scope_nonce),
+        case.expected_merged_count,
+    )
+    .await?;
     assert!(session.pending_merge_conflict.is_none());
-    assert_eq!(local_doc_content(&state, doc_id)?.1, "remote");
+    let local_after = local_doc_content(&state, doc_id)?;
+    assert_eq!(local_after.1, case.expected_content);
+    if case.expected_merged_count == 0 {
+        assert_eq!(local_after, local_before);
+    } else {
+        assert!(
+            local_after.0 > local_before.0,
+            "resolved merge should append a local op"
+        );
+    }
     assert_eq!(
         doc_content(&state, RepoType::Remote(peer_id, repo_id), doc_id)?,
         remote_before

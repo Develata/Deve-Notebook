@@ -45,12 +45,16 @@
     - ui_click: "[data-deve-merge-action='accept-current']"
     - ui_click: "[data-deve-merge-action='accept-incoming']"
     - ui_click: "[data-deve-merge-action='accept-both']"
+    - run: cargo test -p deve_cli resolve_merge_conflict_accept_current -- --nocapture
     - run: cargo test -p deve_cli resolve_merge_conflict_local_branch_contract -- --nocapture
+    - run: cargo test -p deve_cli resolve_merge_conflict_accept_both -- --nocapture
   assertions:
     - ws_message: "ResolveMergeConflict"
     - ws_field_contains: "doc_id action result_content scope_nonce"
     - ui_assert: result_matches_strategy true
+    - api_assert: resolve_merge_conflict_accept_current_local_only true
     - api_assert: resolve_merge_conflict_writes_local_branch_only true
+    - api_assert: resolve_merge_conflict_accept_both_result_local_only true
 
 - case_id: DIFF-005
   goal: 合并中断可续。
