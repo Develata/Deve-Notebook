@@ -1,46 +1,10 @@
 use super::dispatch::dispatch_batch;
-use crate::ledger::REPO_METADATA;
-use crate::ledger::RepoManager;
-use crate::models::{LedgerEntry, PeerId};
-use crate::source_control::ChangeStatus;
-use crate::sync::SyncManager;
-use notify_debouncer_full::{
-    DebouncedEvent,
-    notify::{
-        Event, EventKind,
-        event::{ModifyKind, RenameMode},
-    },
+use super::dispatch_test_support::{
+    assert_fs_message, commit_doc, event_for, new_sync, rename_event,
 };
+use crate::ledger::REPO_METADATA;
+use crate::source_control::ChangeStatus;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
-
-type SyncFixture = (
-    tempfile::TempDir,
-    Arc<RepoManager>,
-    Arc<SyncManager>,
-    String,
-    crate::models::RepoId,
-    std::path::PathBuf,
-);
-
-fn new_sync() -> anyhow::Result<SyncFixture> {
-    let dir = tempfile::tempdir()?;
-    let ledger = dir.path().join("ledger");
-    let vault = dir.path().join("vault");
-    std::fs::create_dir_all(&vault)?;
-    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_vault_root_checked(&vault)?;
-    let repo = Arc::new(repo);
-    let sync = Arc::new(SyncManager::new_checked(repo.clone(), vault)?);
-    let repo_name = repo.local_repo_name().to_string();
-    let repo_id = repo
-        .get_repo_info_for(None, Some(&repo_name))?
-        .expect("repo info")
-        .uuid;
-    let repo_root = repo.local_repo_workspace_root(&repo_name)?;
-    std::fs::create_dir_all(&repo_root)?;
-    Ok((dir, repo, sync, repo_name, repo_id, repo_root))
-}
 
 #[test]
 fn dispatch_batch_ignores_event_paths_outside_repo_root() -> anyhow::Result<()> {
@@ -52,14 +16,7 @@ fn dispatch_batch_ignores_event_paths_outside_repo_root() -> anyhow::Result<()> 
         &repo_name,
         repo_id,
         &repo_root,
-        vec![DebouncedEvent::new(
-            Event {
-                kind: EventKind::Any,
-                paths: vec![outside],
-                attrs: Default::default(),
-            },
-            Instant::now(),
-        )],
+        vec![event_for(outside)],
         None,
     )?;
 
@@ -78,14 +35,7 @@ fn dispatch_batch_ignores_rename_pairs_that_leave_repo_root() -> anyhow::Result<
         &repo_name,
         repo_id,
         &repo_root,
-        vec![DebouncedEvent::new(
-            Event {
-                kind: EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
-                paths: vec![inside, outside],
-                attrs: Default::default(),
-            },
-            Instant::now(),
-        )],
+        vec![rename_event(inside, outside)],
         None,
     )?;
 
@@ -388,66 +338,4 @@ fn dispatch_batch_fails_closed_on_unstatable_dir_event() -> anyhow::Result<()> {
         "unexpected error: {detail}"
     );
     Ok(())
-}
-
-fn event_for(path: std::path::PathBuf) -> DebouncedEvent {
-    DebouncedEvent::new(
-        Event {
-            kind: EventKind::Any,
-            paths: vec![path],
-            attrs: Default::default(),
-        },
-        Instant::now(),
-    )
-}
-
-fn rename_event(old: std::path::PathBuf, new: std::path::PathBuf) -> DebouncedEvent {
-    DebouncedEvent::new(
-        Event {
-            kind: EventKind::Modify(ModifyKind::Name(RenameMode::Both)),
-            paths: vec![old, new],
-            attrs: Default::default(),
-        },
-        Instant::now(),
-    )
-}
-
-fn commit_doc(
-    repo: &Arc<RepoManager>,
-    sync: &Arc<SyncManager>,
-    repo_name: &str,
-    path: &str,
-    content: &str,
-) -> anyhow::Result<crate::models::DocId> {
-    let (doc_id, _) = repo.apply_file_structure_in_local_repo(repo_name, path, None, "test")?;
-    repo.append_generated_op_in_local_repo(repo_name, doc_id, PeerId::new("local"), |seq| {
-        LedgerEntry::new_content(
-            doc_id,
-            crate::models::Op::Insert {
-                pos: 0,
-                content: content.into(),
-            },
-            1,
-            PeerId::new("local"),
-            seq,
-            None,
-            None,
-        )
-    })?;
-    sync.persist_doc_in_local_repo(repo_name, doc_id)?;
-    Ok(doc_id)
-}
-
-fn assert_fs_message(message: &crate::protocol::ServerMessage, path: &str, change_type: &str) {
-    match message {
-        crate::protocol::ServerMessage::FsChangeDetected {
-            path: actual_path,
-            change_type: actual_change_type,
-            ..
-        } => {
-            assert_eq!(actual_path, path);
-            assert_eq!(actual_change_type, change_type);
-        }
-        other => panic!("unexpected message: {other:?}"),
-    }
 }

@@ -73,8 +73,11 @@
     - `deve watch` 运行中
   steps:
     - run: powershell -Command "1..5 | % { 'x' | Add-Content ${DEVE_DATA_DIR}/vault/debounce.md }"
+    - run: cargo test -p deve_core dispatch_batch_collapses_modified_burst_by_content_hash -- --nocapture
   assertions:
-    - ledger_op_count_increases_by: 1
+    - api_assert: watcher_burst_pending_fs_ops_single_entry true
+    - api_assert: watcher_burst_pending_hash_matches_final_content true
+    - api_assert: watcher_burst_does_not_append_ledger_ops true
 
 - case_id: DIFF-007
   goal: Diff 颜色语义。

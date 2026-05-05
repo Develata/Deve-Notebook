@@ -4,7 +4,11 @@
 pub(crate) mod backend;
 mod dispatch;
 #[cfg(test)]
+mod dispatch_burst_test;
+#[cfg(test)]
 mod dispatch_test;
+#[cfg(test)]
+mod dispatch_test_support;
 mod filter;
 mod registry;
 pub(crate) mod suppressor;
