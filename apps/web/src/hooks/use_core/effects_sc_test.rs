@@ -14,6 +14,8 @@ mod ack;
 mod commit_diff;
 #[path = "effects_sc_test_doc_diff.rs"]
 mod doc_diff;
+#[path = "effects_sc_test_read_lists.rs"]
+mod read_lists;
 #[path = "effects_sc_test_request.rs"]
 mod request;
 #[path = "effects_sc_test_reset.rs"]

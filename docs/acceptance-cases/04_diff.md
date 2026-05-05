@@ -97,6 +97,7 @@
     - run: cargo test -p deve_web commit_refresh -- --nocapture
     - run: cargo test -p deve_web commit_ack_dispatch -- --nocapture
     - run: cargo test -p deve_web fs_refresh -- --nocapture
+    - run: cargo test -p deve_web read_list_dispatch -- --nocapture
     - run: cargo test -p deve_web doc_diff_read_gate -- --nocapture
     - run: cargo test -p deve_web doc_diff_dispatch -- --nocapture
     - run: cargo test -p deve_web commit_diff_read_gate -- --nocapture
