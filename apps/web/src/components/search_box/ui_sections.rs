@@ -11,6 +11,8 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use std::sync::Arc;
 
+use super::logic::search_surface_mode;
+
 pub fn header(
     query: Signal<String>,
     set_query: WriteSignal<String>,
@@ -26,7 +28,11 @@ pub fn header(
         SearchUiMode::Overlay => "p-3 border-b border-default flex items-center gap-2 bg-sidebar",
     };
     view! {
-        <div data-sheet-drag-handle="1" class=header_class>
+        <div
+            data-sheet-drag-handle="1"
+            data-deve-search-mode=move || search_surface_mode(&query.get()).as_str()
+            class=header_class
+        >
             <div class="w-4 h-4 text-muted">
                 {search_icon(query)}
             </div>
