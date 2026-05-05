@@ -136,6 +136,17 @@ metadata now treat `.github/workflows/release.yml` as the only required
 release workflow surface. `nightly.yml` and `speckit-sync-check.yml` are
 intentionally outside the current baseline.
 
+The Source Control read path is aligned for the current modeled slice:
+
+- browser read requests are gated by repo scope and `scope_nonce`
+- `ChangesList`, `CommitHistory`, `DocDiff`, and `CommitDiffResult`
+  dispatch reject stale repo, branch, or `scope_nonce` without mutating
+  active UI state
+- remote `DocDiff` and `CommitDiffResult` handlers cover shadow ledger
+  projection success paths
+- remote `DocDiff` target-missing and identity-mismatch failures return
+  structured `ProtocolError` with browser `scope_nonce`
+
 ## Current State
 
 Within the currently modeled operation slice:

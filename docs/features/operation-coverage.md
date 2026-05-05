@@ -54,7 +54,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.repo.file-operations` | [`repo_file_operations.md`](./operations/repo_file_operations.md) | `REPO-FEAT-01`, `UI-DESK-003` |
 | `flow.repo.open-doc` | [`repo_open_doc.md`](./operations/repo_open_doc.md) | `CMD-003`, `REPO-FEAT-01`, `STORE-009` |
 | `flow.repo.switch` | [`repo_switch.md`](./operations/repo_switch.md) | `REPO-FEAT-01`, `REPO-FEAT-03` |
-| `flow.sc.commit` | [`sc_commit.md`](./operations/sc_commit.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |
+| `flow.sc.commit` | [`sc_commit.md`](./operations/sc_commit.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03`, `AI-007` |
 | `flow.sc.commit-and-push` | [`sc_commit_and_push.md`](./operations/sc_commit_and_push.md) | `DIFF-FEAT-02` |
 | `flow.sc.discard-file` | [`sc_discard_file.md`](./operations/sc_discard_file.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03` |
 | `flow.sc.discard-pending` | [`sc_discard_pending.md`](./operations/sc_discard_pending.md) | `DIFF-FEAT-03` |
