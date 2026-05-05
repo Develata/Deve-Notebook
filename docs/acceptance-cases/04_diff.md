@@ -102,6 +102,8 @@
     - run: cargo test -p deve_web commit_diff_read_gate -- --nocapture
     - run: cargo test -p deve_web commit_diff_dispatch -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_uses_shadow_projection -- --nocapture
+    - run: cargo test -p deve_cli readonly_remote_doc_diff_missing_target -- --nocapture
+    - run: cargo test -p deve_cli readonly_remote_doc_diff_path_mismatch -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_is_allowed -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_reports_rename_projection -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
