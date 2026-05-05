@@ -9,6 +9,7 @@ use leptos::prelude::*;
 /// - 仅存于 RAM 信号中, 不持久化到 IndexedDB。
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SystemMetricsData {
+    pub sample_seq: u64,
     pub cpu_usage_percent: f32,
     pub memory_used_mb: u64,
     pub active_connections: u32,
@@ -22,4 +23,5 @@ pub struct SystemMetricsData {
 #[derive(Clone)]
 pub struct DashboardContext {
     pub metrics: ReadSignal<Option<SystemMetricsData>>,
+    pub metrics_live: ReadSignal<bool>,
 }

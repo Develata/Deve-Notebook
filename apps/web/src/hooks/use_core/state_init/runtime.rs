@@ -65,6 +65,8 @@ pub(super) struct RuntimeSignals {
     pub set_pending_ops_request_id: WriteSignal<Option<String>>,
     pub system_metrics: ReadSignal<Option<SystemMetricsData>>,
     pub set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
+    pub system_metrics_live: ReadSignal<bool>,
+    pub set_system_metrics_live: WriteSignal<bool>,
     pub set_explicit_home: WriteSignal<bool>,
 }
 
@@ -116,6 +118,8 @@ pub(super) fn init_runtime_signals() -> RuntimeSignals {
         set_pending_ops_request_id: sync.set_pending_ops_request_id,
         system_metrics: sync.system_metrics,
         set_system_metrics: sync.set_system_metrics,
+        system_metrics_live: sync.system_metrics_live,
+        set_system_metrics_live: sync.set_system_metrics_live,
         set_explicit_home: sync.set_explicit_home,
     }
 }

@@ -49,7 +49,7 @@ pub(crate) use callbacks_sc_target::can_request_doc_diff;
 pub use contexts::*;
 pub use types::*;
 
-use crate::api::WsService;
+use crate::api::{ConnectionStatus, WsService};
 use leptos::prelude::*;
 
 use self::callbacks_build::build_callbacks;
@@ -64,6 +64,7 @@ pub fn use_core() -> CoreState {
     provide_context(ws.clone());
 
     let signals = state::init_signals(ws.status);
+    reset_dashboard_metrics_live_on_disconnect(ws.status, signals.set_system_metrics_live);
     restore_scope_pref(&signals);
     setup_scope_pref_effect(&signals);
     let status_text = build_status_text(&ws, &signals);
@@ -106,6 +107,44 @@ pub fn use_core() -> CoreState {
     provide::provide_sub_contexts(&state);
     provide_context(contexts::DashboardContext {
         metrics: signals.system_metrics,
+        metrics_live: signals.system_metrics_live,
     });
     state
+}
+
+fn reset_dashboard_metrics_live_on_disconnect(
+    status: ReadSignal<ConnectionStatus>,
+    set_metrics_live: WriteSignal<bool>,
+) {
+    Effect::new(move |_| {
+        if should_reset_dashboard_metrics_live(status.get()) {
+            set_metrics_live.set(false);
+        }
+    });
+}
+
+fn should_reset_dashboard_metrics_live(status: ConnectionStatus) -> bool {
+    status != ConnectionStatus::Connected
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_reset_dashboard_metrics_live;
+    use crate::api::ConnectionStatus;
+
+    #[test]
+    fn dashboard_metrics_live_resets_on_disconnect_states() {
+        assert!(!should_reset_dashboard_metrics_live(
+            ConnectionStatus::Connected
+        ));
+        assert!(should_reset_dashboard_metrics_live(
+            ConnectionStatus::Disconnected
+        ));
+        assert!(should_reset_dashboard_metrics_live(
+            ConnectionStatus::Connecting
+        ));
+        assert!(should_reset_dashboard_metrics_live(
+            ConnectionStatus::Unauthorized
+        ));
+    }
 }

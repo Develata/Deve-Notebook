@@ -123,6 +123,8 @@ pub(super) fn assemble_core_signals_with_spectator(
         set_tree_nodes: repo.set_tree_nodes,
         system_metrics: runtime.system_metrics,
         set_system_metrics: runtime.set_system_metrics,
+        system_metrics_live: runtime.system_metrics_live,
+        set_system_metrics_live: runtime.set_system_metrics_live,
         degraded_sync_mode: repo.degraded_sync_mode,
         set_degraded_sync_mode: repo.set_degraded_sync_mode,
         sync_banner: repo.sync_banner,

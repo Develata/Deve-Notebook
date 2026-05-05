@@ -21,6 +21,20 @@ pub fn waiting_metrics(locale: Locale) -> &'static str {
     }
 }
 
+pub fn metrics_live(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Metrics live via WebSocket.",
+        Locale::Zh => "指标正通过 WebSocket 实时更新。",
+    }
+}
+
+pub fn metrics_disconnected(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Disconnected; showing last metrics snapshot.",
+        Locale::Zh => "已断开连接；显示最后一次指标快照。",
+    }
+}
+
 pub fn no_repo_selected(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "No repo selected",

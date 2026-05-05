@@ -26,6 +26,8 @@ pub(super) struct SyncRuntimeSignals {
     pub set_pending_ops_request_id: WriteSignal<Option<String>>,
     pub system_metrics: ReadSignal<Option<SystemMetricsData>>,
     pub set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
+    pub system_metrics_live: ReadSignal<bool>,
+    pub set_system_metrics_live: WriteSignal<bool>,
     pub set_explicit_home: WriteSignal<bool>,
 }
 
@@ -39,6 +41,7 @@ pub(super) fn init_sync_runtime_signals() -> SyncRuntimeSignals {
     let (pending_ops_previews, set_pending_ops_previews) = signal(Vec::new());
     let (pending_ops_request_id, set_pending_ops_request_id) = signal(None::<String>);
     let (system_metrics, set_system_metrics) = signal(None::<SystemMetricsData>);
+    let (system_metrics_live, set_system_metrics_live) = signal(false);
     let (_, set_explicit_home) = signal(false);
 
     SyncRuntimeSignals {
@@ -60,6 +63,8 @@ pub(super) fn init_sync_runtime_signals() -> SyncRuntimeSignals {
         set_pending_ops_request_id,
         system_metrics,
         set_system_metrics,
+        system_metrics_live,
+        set_system_metrics_live,
         set_explicit_home,
     }
 }

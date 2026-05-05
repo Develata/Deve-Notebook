@@ -125,6 +125,8 @@ pub struct CoreSignals {
     pub set_tree_nodes: WriteSignal<Vec<FileNode>>,
     pub system_metrics: ReadSignal<Option<SystemMetricsData>>,
     pub set_system_metrics: WriteSignal<Option<SystemMetricsData>>,
+    pub system_metrics_live: ReadSignal<bool>,
+    pub set_system_metrics_live: WriteSignal<bool>,
     pub degraded_sync_mode: ReadSignal<Option<DegradedSyncMode>>,
     pub set_degraded_sync_mode: WriteSignal<Option<DegradedSyncMode>>,
     pub sync_banner: ReadSignal<Option<String>>,

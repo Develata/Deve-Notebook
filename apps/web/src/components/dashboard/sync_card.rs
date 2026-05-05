@@ -16,7 +16,13 @@ pub fn SyncCard(metrics: SystemMetricsData) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     view! {
-        <div class="bg-panel rounded-lg border border-default p-4">
+        <div
+            class="bg-panel rounded-lg border border-default p-4"
+            data-deve-dashboard-card="sync-status"
+            data-deve-dashboard-sync-source="ws-system-metrics"
+            data-deve-dashboard-sync-sample=metrics.sample_seq.to_string()
+            data-deve-dashboard-active-connections=metrics.active_connections.to_string()
+        >
             <h3 class="text-sm font-semibold text-secondary mb-3">{move || t::dashboard::sync_status(locale.get())}</h3>
             <div class="space-y-2">
                 <div class="flex justify-between items-center">

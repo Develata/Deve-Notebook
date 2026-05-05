@@ -26,6 +26,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-ui-focus-baseline.sh` | Verifies modal focus trap and restore bindings for Command Palette surfaces |
 | `check-ui-spa-routing-baseline.sh` | Verifies SPA route fallback stays 200 while API/WS paths do not fall back to index |
 | `check-ui-disconnect-baseline.sh` | Verifies disconnect lockdown overlay copy and edit-disabled bindings |
+| `check-ui-dashboard-refresh-baseline.sh` | Verifies Dashboard SystemMetrics refresh and WS-backed sync status bindings |
 | `check-cli-settings-baseline.sh` | Verifies CLI command surface, `config.toml` settings mutation, and shortcut entry contracts |
 | `check-browser-prefs-boundary.sh` | Verifies harmless Web UI prefs are the only functional localStorage users and go through the fallback layer |
 | `check-diff-color-baseline.sh` | Verifies diff gutter colors use canonical source-control semantic tokens |

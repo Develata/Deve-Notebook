@@ -37,7 +37,13 @@ pub fn HealthCard(metrics: SystemMetricsData) -> impl IntoView {
     };
 
     view! {
-        <div class="bg-panel rounded-lg border border-default p-4">
+        <div
+            class="bg-panel rounded-lg border border-default p-4"
+            data-deve-dashboard-card="system-health"
+            data-deve-dashboard-health-source="ws-system-metrics"
+            data-deve-dashboard-health-sample=metrics.sample_seq.to_string()
+            data-deve-dashboard-health-uptime-secs=metrics.uptime_secs.to_string()
+        >
             <h3 class="text-sm font-semibold text-secondary mb-3">{move || t::dashboard::server_health(locale.get())}</h3>
             <div class="space-y-2">
                 <div class="flex justify-between items-center">
