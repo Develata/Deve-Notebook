@@ -211,4 +211,129 @@ mod tests {
         }
         Ok(())
     }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn source_control_scope_nonce_gate_rejects_missing_scope_before_handler()
+    -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = browser_session(17);
+
+        for msg in source_control_messages_with_scope(None) {
+            route_source_control(&state, &ch, &mut session, msg).await;
+            assert_scope_guard_error(
+                recv_protocol_error(&mut uni_rx).await?,
+                Some(17),
+                "source control scope nonce missing",
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn source_control_scope_nonce_gate_rejects_stale_scope_before_handler()
+    -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = browser_session(17);
+
+        for msg in source_control_messages_with_scope(Some(16)) {
+            route_source_control(&state, &ch, &mut session, msg).await;
+            assert_scope_guard_error(
+                recv_protocol_error(&mut uni_rx).await?,
+                Some(16),
+                "source control scope nonce is stale",
+            );
+        }
+        Ok(())
+    }
+
+    fn browser_session(scope_nonce: u64) -> crate::server::session::WsSession {
+        let mut session = crate::server::session::WsSession::new();
+        session.mark_browser_session();
+        session.set_scope_nonce(Some(scope_nonce));
+        session
+    }
+
+    fn source_control_messages_with_scope(scope_nonce: Option<u64>) -> Vec<ClientMessage> {
+        let target = ScPathTarget::from_path("notes/a.md");
+        vec![
+            ClientMessage::GetChanges {
+                request_id: "changes".into(),
+                scope_nonce,
+            },
+            ClientMessage::StageFile {
+                target: target.clone(),
+                scope_nonce,
+            },
+            ClientMessage::StageFiles {
+                targets: vec![target.clone()],
+                scope_nonce,
+            },
+            ClientMessage::UnstageFile {
+                target: target.clone(),
+                scope_nonce,
+            },
+            ClientMessage::UnstageFiles {
+                targets: vec![target.clone()],
+                scope_nonce,
+            },
+            ClientMessage::DiscardFile {
+                target: target.clone(),
+                scope_nonce,
+            },
+            ClientMessage::Commit {
+                message: "msg".into(),
+                scope_nonce,
+            },
+            ClientMessage::GetCommitHistory {
+                request_id: "history".into(),
+                limit: 10,
+                scope_nonce,
+            },
+            ClientMessage::GetDocDiff {
+                request_id: "doc-diff".into(),
+                target: target.clone(),
+                scope_nonce,
+            },
+            ClientMessage::GetCommitDiff {
+                request_id: "commit-diff".into(),
+                commit_a: None,
+                commit_b: "head".into(),
+                scope_nonce,
+            },
+            ClientMessage::ResolveConflict {
+                target,
+                resolution: ConflictResolution::KeepLedger,
+                scope_nonce,
+            },
+            ClientMessage::CommitAndPush {
+                message: "msg".into(),
+                scope_nonce,
+            },
+        ]
+    }
+
+    async fn recv_protocol_error(
+        uni_rx: &mut tokio::sync::mpsc::Receiver<ServerMessage>,
+    ) -> anyhow::Result<ServerMessage> {
+        Ok(timeout(Duration::from_secs(2), uni_rx.recv())
+            .await?
+            .expect("protocol error"))
+    }
+
+    fn assert_scope_guard_error(message: ServerMessage, scope_nonce: Option<u64>, detail: &str) {
+        match message {
+            ServerMessage::ProtocolError {
+                error,
+                scope_nonce: actual_scope_nonce,
+                ..
+            } => {
+                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(actual_scope_nonce, scope_nonce);
+                assert!(error.detail.as_deref().expect("detail").contains(detail));
+            }
+            other => panic!("expected ProtocolError, got {other:?}"),
+        }
+    }
 }

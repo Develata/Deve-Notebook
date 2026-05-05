@@ -102,6 +102,7 @@
     - run: cargo test -p deve_web doc_diff_dispatch -- --nocapture
     - run: cargo test -p deve_web commit_diff_read_gate -- --nocapture
     - run: cargo test -p deve_web commit_diff_dispatch -- --nocapture
+    - run: cargo test -p deve_cli source_control_scope_nonce_gate -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_uses_shadow_projection -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_missing_target -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_path_mismatch -- --nocapture
