@@ -95,22 +95,91 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
         };
 
         let _ = ws_rx.msg_seq.get();
-        for (seq, connection_epoch, msg) in ws_rx.messages_since(last_msg_seq.get_untracked()) {
-            if !is_current_connection_message(
-                connection_epoch,
-                ws_rx.connection_epoch.get_untracked(),
-            ) {
-                set_last_msg_seq.set(seq);
-                continue;
-            }
-            message_dispatch::handle_message(
-                msg,
-                &ws_rx,
-                signals,
-                locale.get_untracked(),
-                &schedule_refresh,
-            );
-            set_last_msg_seq.set(seq);
-        }
+        process_available_messages(
+            &ws_rx,
+            signals,
+            locale.get_untracked(),
+            last_msg_seq,
+            set_last_msg_seq,
+            &schedule_refresh,
+        );
     });
+}
+
+fn process_available_messages<F>(
+    ws_rx: &WsService,
+    signals: CoreSignals,
+    locale: Locale,
+    last_msg_seq: ReadSignal<u64>,
+    set_last_msg_seq: WriteSignal<u64>,
+    schedule_refresh: &F,
+) where
+    F: Fn(),
+{
+    for (seq, connection_epoch, msg) in ws_rx.messages_since(last_msg_seq.get_untracked()) {
+        let current_connection_epoch = ws_rx.connection_epoch.get_untracked();
+        if !is_current_connection_message(connection_epoch, current_connection_epoch) {
+            set_last_msg_seq.set(seq);
+            continue;
+        }
+        message_dispatch::handle_message(msg, ws_rx, signals, locale, schedule_refresh);
+        set_last_msg_seq.set(seq);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::process_available_messages;
+    use crate::api::{ConnectionStatus, WsService};
+    use crate::hooks::use_core::state::init_signals;
+    use deve_core::protocol::ServerMessage;
+    use leptos::prelude::*;
+    use leptos::reactive::owner::Owner;
+    use std::collections::VecDeque;
+
+    fn metrics_message(uptime_secs: u64, active_connections: u32) -> ServerMessage {
+        ServerMessage::SystemMetrics {
+            cpu_usage_percent: 12.5,
+            memory_used_mb: 128,
+            active_connections,
+            ops_processed: uptime_secs.saturating_mul(2),
+            uptime_secs,
+            db_size_bytes: 4096,
+            doc_count: 7,
+        }
+    }
+
+    #[test]
+    fn dashboard_metrics_stale_connection_epoch_is_skipped_by_message_effect() {
+        let runtime = Owner::new();
+        runtime.set();
+        let ws = WsService::new_with_incoming_for_test(
+            ConnectionStatus::Connected,
+            2,
+            VecDeque::from([
+                (1, 1, metrics_message(10, 1)),
+                (2, 2, metrics_message(20, 2)),
+            ]),
+        );
+        let signals = init_signals(ws.status);
+        let (last_msg_seq, set_last_msg_seq) = signal(0u64);
+
+        process_available_messages(
+            &ws,
+            signals,
+            crate::i18n::Locale::En,
+            last_msg_seq,
+            set_last_msg_seq,
+            &|| {},
+        );
+
+        let metrics = signals
+            .system_metrics
+            .get_untracked()
+            .expect("current epoch metrics should be processed");
+        assert_eq!(metrics.sample_seq, 1);
+        assert_eq!(metrics.uptime_secs, 20);
+        assert_eq!(metrics.active_connections, 2);
+        assert!(signals.system_metrics_live.get_untracked());
+    }
 }

@@ -87,13 +87,23 @@ impl WsService {
 
     #[cfg(test)]
     pub(crate) fn new_for_test(status: ConnectionStatus) -> Self {
+        Self::new_with_incoming_for_test(status, 0, VecDeque::new())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_with_incoming_for_test(
+        status: ConnectionStatus,
+        current_connection_epoch: u64,
+        messages: VecDeque<(u64, u64, ServerMessage)>,
+    ) -> Self {
         let (status, set_status) = signal(status);
         let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(None::<String>);
         let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(None::<u64>);
         let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
-        let (msg_seq, _set_msg_seq) = signal(0u64);
-        let (connection_epoch, _set_connection_epoch) = signal(0u64);
-        let (msg_queue, _set_msg_queue) = signal(VecDeque::<(u64, u64, ServerMessage)>::new());
+        let msg_seq_value = messages.back().map_or(0, |(seq, _, _)| *seq);
+        let (msg_seq, _set_msg_seq) = signal(msg_seq_value);
+        let (connection_epoch, _set_connection_epoch) = signal(current_connection_epoch);
+        let (msg_queue, _set_msg_queue) = signal(messages);
         let (endpoint, _set_endpoint) = signal(String::new());
         let (node_role, _set_node_role) = signal(String::new());
         let (tx, rx) = unbounded::<ClientMessage>();
