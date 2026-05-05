@@ -168,8 +168,10 @@
     - 触发 source control 错误（如暂存不存在的 pending）
   steps:
     - run: scripts/check-ws-structured-errors.sh
+    - run: cargo test -p deve_cli core_scoped_scope_nonce_gate -- --nocapture
   assertions:
     - stdout_contains: "ws-structured-errors-check: ok"
+    - core_scoped_missing_or_stale_scope_returns_protocol_error: true
 
 - case_id: NET-013
   goal: 认证失效必须进入 Unauthorized，而不是普通重连。
