@@ -25,6 +25,7 @@ check_absent() {
 
 # DIFF-007: editor gutter diff colors use canonical semantic tokens.
 check_contains docs/acceptance-cases/04_diff.md "case_id: DIFF-007"
+check_contains docs/acceptance-cases/04_diff.md "scripts/check-diff-color-baseline.sh"
 check_contains docs/acceptance-cases/04_diff.md 'gutter_color_added "var(--color-added)"'
 check_contains docs/acceptance-cases/04_diff.md 'gutter_color_modified "var(--color-modified)"'
 check_contains docs/acceptance-cases/04_diff.md 'gutter_color_deleted "var(--color-deleted)"'
