@@ -55,7 +55,8 @@ export function showMenu(anchor, context) {
     const actions = getActions();
     const menu = document.createElement("div");
     menu.id = "deve-code-menu";
-    menu.className = "absolute top-full right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded py-1 text-xs z-50 min-w-[120px] flex flex-col";
+    menu.className = "absolute top-full right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded py-1 text-xs min-w-[120px] flex flex-col";
+    menu.style.zIndex = "var(--z-floating)";
     
     if (actions.length === 0) {
         const empty = document.createElement("div");

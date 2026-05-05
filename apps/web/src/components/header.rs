@@ -21,7 +21,7 @@ pub fn Header(
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
     view! {
-        <header class="w-full h-12 bg-panel border-b border-default flex items-center justify-between px-4 shadow-sm z-50">
+        <header class="w-full h-12 bg-panel border-b border-default flex items-center justify-between px-4 shadow-sm z-[var(--z-chrome)]">
             // 左侧: 标题与状态
             <div class="flex items-center gap-2">
                 <span class="font-bold text-primary text-lg">{move || t::app_title(locale.get())}</span>

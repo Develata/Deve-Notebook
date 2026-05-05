@@ -22,7 +22,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
 
     view! {
         <Show when=move || show.get()>
-            <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+            <div class="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
                 <div class="bg-panel rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 opacity-100">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-xl font-bold text-primary">{move || t::settings::title(locale.get())}</h2>

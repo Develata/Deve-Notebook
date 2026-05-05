@@ -22,9 +22,9 @@ pub fn OutlineToggleButton(
         <button
             class=move || {
                 if show_outline.get() {
-                    "fixed z-[60] h-11 w-11 p-1.5 rounded-md active:bg-accent-subtle transition-all duration-200 ease-out flex items-center justify-center"
+                    "fixed z-[var(--z-floating)] h-11 w-11 p-1.5 rounded-md active:bg-accent-subtle transition-all duration-200 ease-out flex items-center justify-center"
                 } else {
-                    "fixed z-[60] h-11 w-11 p-1.5 rounded-md active:bg-hover transition-all duration-200 ease-out flex items-center justify-center"
+                    "fixed z-[var(--z-floating)] h-11 w-11 p-1.5 rounded-md active:bg-hover transition-all duration-200 ease-out flex items-center justify-center"
                 }
             }
             style=move || {

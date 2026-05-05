@@ -21,7 +21,7 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
                 let current_locale = locale.get();
                 let (title, body) = overlay_copy(current_locale, status);
                 view! {
-                    <div class="fixed inset-0 z-[9999] bg-panel/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                    <div class="fixed inset-0 z-[var(--z-toast)] bg-panel/80 backdrop-blur-sm flex flex-col items-center justify-center">
                         <div class="bg-panel p-8 rounded-xl shadow-lg border border-default text-center">
                             <div class="text-4xl mb-4">"🔒"</div>
                             <h1 class="text-2xl font-bold text-primary mb-2">{title}</h1>

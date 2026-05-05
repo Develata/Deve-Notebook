@@ -128,6 +128,15 @@
   --bg-modal: #ffffff;             /* 模态框/搜索面板背景 */
   --shadow-modal: rgba(0, 0, 0, 0.3); /* 模态框阴影 */
 
+  /* ==================== Shell Z-Index Registry ==================== */
+  --z-editor: 0;
+  --z-chrome: 40;
+  --z-panels: 50;
+  --z-floating: 60;
+  --z-overlay: 80;
+  --z-modal: 100;
+  --z-toast: 120;
+
   /* ==================== Inline Code & Frontmatter ==================== */
   --code-inline-bg: #f1f5f9;      /* 行内代码背景 (slate-100) */
   --bg-frontmatter: #f8f9fa;      /* Frontmatter 块背景 */

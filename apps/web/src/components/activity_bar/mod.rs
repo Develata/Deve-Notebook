@@ -30,7 +30,7 @@ pub fn ActivityBar(
     let backdrop = move || {
         if show_more.get() {
             view! {
-                <div class="fixed inset-0 z-30" on:click=move |_| set_show_more.set(false)></div>
+                <div class="fixed inset-0 z-[var(--z-floating)]" on:click=move |_| set_show_more.set(false)></div>
             }
             .into_any()
         } else {
@@ -101,7 +101,7 @@ pub fn ActivityBar(
 
                 {move || if show_more.get() {
                     view! {
-                        <div class="absolute right-0 top-full mt-1 w-48 bg-panel shadow-xl rounded-lg border border-default py-1 z-50">
+                        <div class="absolute right-0 top-full mt-1 w-48 bg-panel shadow-xl rounded-lg border border-default py-1 z-[calc(var(--z-floating)_+_1)]">
                             <ViewPopupMenu
                                 active_view=active_view
                                 pinned_views=pinned_views

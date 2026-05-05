@@ -45,7 +45,7 @@ pub fn MobileAccessoryToolbar(
     view! {
         <Show when=move || visible.get()>
             <div
-                class="fixed left-0 right-0 z-50 bg-panel/95 backdrop-blur border-t border-default px-2 py-2"
+                class="fixed left-0 right-0 z-[var(--z-floating)] bg-panel/95 backdrop-blur border-t border-default px-2 py-2"
                 style=move || {
                     format!(
                         "bottom: calc({}px + {}px + env(safe-area-inset-bottom));",

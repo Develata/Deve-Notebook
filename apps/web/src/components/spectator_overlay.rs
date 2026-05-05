@@ -24,7 +24,7 @@ pub fn SpectatorOverlay() -> impl IntoView {
     view! {
         <Show when=move || core.is_spectator.get()>
             // 全屏半透明覆盖层
-            <div class="fixed inset-0 z-[40] pointer-events-none select-none">
+            <div class="fixed inset-0 z-[var(--z-chrome)] pointer-events-none select-none">
                 // 斜纹水印背景
                 <div
                     class="absolute inset-0 bg-gray-900/5"
@@ -47,7 +47,7 @@ pub fn SpectatorOverlay() -> impl IntoView {
 
             // 底部状态栏指示器 (需要 pointer-events 以允许交互)
             // 固定高度 h-8 (32px) 以避免遮挡不确定区域
-            <div class="fixed bottom-0 left-0 right-0 z-[50] bg-amber-500 text-white h-8 flex items-center justify-center pointer-events-auto text-sm font-semibold">
+            <div class="fixed bottom-0 left-0 right-0 z-[var(--z-panels)] bg-amber-500 text-white h-8 flex items-center justify-center pointer-events-auto text-sm font-semibold">
                 <span class="flex items-center gap-2">
                     <Lock class="w-4 h-4"/>
                     {move || t::common::spectator_status(locale.get())}

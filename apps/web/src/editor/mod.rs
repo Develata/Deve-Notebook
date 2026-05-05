@@ -89,7 +89,7 @@ pub fn Editor(
                     ></div>
                     {move || if !embedded && playback_version.get() < doc_version.get() {
                         view! {
-                            <div class="absolute top-2 left-1/2 -translate-x-1/2 z-50 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">
+                            <div class="absolute top-2 left-1/2 -translate-x-1/2 z-[var(--z-floating)] px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full shadow-sm border border-yellow-200 pointer-events-none opacity-80 backdrop-blur-sm">
                                 {move || t::common::spectator_status(locale.get())}
                             </div>
                         }.into_any()
@@ -100,7 +100,7 @@ pub fn Editor(
                          view! {
                              <button
                                 on:click=move |_| on_toggle_outline.run(())
-                                class="absolute top-2 right-4 z-50 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white/90 border border-gray-200 rounded shadow-sm transition-all"
+                                class="absolute top-2 right-4 z-[var(--z-floating)] p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white/90 border border-gray-200 rounded shadow-sm transition-all"
                                 title=move || t::header::toggle_outline(locale.get())
                              >
                                 <PanelLeft class="w-5 h-5"/>

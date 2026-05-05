@@ -17,7 +17,7 @@ pub fn DesktopSidebar(
 ) -> impl IntoView {
     view! {
         <aside
-            class="flex-none bg-panel rounded-lg shadow-sm border border-default flex flex-col z-20"
+            class="flex-none bg-panel rounded-lg shadow-sm border border-default flex flex-col z-[var(--z-panels)]"
             style=move || format!("width: {}px", sidebar_width.get())
         >
             <ActivityBar

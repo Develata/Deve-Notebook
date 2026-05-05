@@ -25,7 +25,8 @@ class CodeToolbarWidget extends WidgetType {
 
     toDOM(view) {
         const container = document.createElement("div");
-        container.className = "cm-code-toolbar flex items-center gap-1 absolute right-2 top-2 z-20 p-0.5 rounded bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-sm";
+        container.className = "cm-code-toolbar flex items-center gap-1 absolute right-2 top-2 p-0.5 rounded bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-sm";
+        container.style.zIndex = "calc(var(--z-editor) + 1)";
         container.style.userSelect = "none";
 
         // Copy Button

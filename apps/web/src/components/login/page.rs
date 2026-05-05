@@ -54,7 +54,7 @@ pub fn LoginPage(
     };
 
     view! {
-        <div class="fixed inset-0 bg-bg flex items-center justify-center z-50">
+        <div class="fixed inset-0 bg-bg flex items-center justify-center z-[var(--z-modal)]">
             <div class="w-full max-w-sm p-8 bg-bg-panel rounded-lg shadow-lg border border-border">
                 <h1 class="text-2xl font-bold text-center text-primary mb-2">
                     {move || login_i18n::app_name(locale.get())}

@@ -66,9 +66,9 @@ pub fn MobileChatSheet(
         }>
             <div
                 class=move || if expanded.get() {
-                    "fixed inset-0 z-[80] bg-panel transition-opacity duration-200 ease-out"
+                    "fixed inset-0 z-[var(--z-overlay)] bg-panel transition-opacity duration-200 ease-out"
                 } else {
-                    "fixed right-2 z-[55]"
+                    "fixed right-2 z-[var(--z-floating)]"
                 }
                 style=move || mobile_chat_sheet_style(expanded.get(), keyboard_offset.get())
                 data-deve-mobile-chat=move || if expanded.get() { "expanded" } else { "collapsed" }

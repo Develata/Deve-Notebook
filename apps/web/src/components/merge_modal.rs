@@ -29,7 +29,7 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
 
     view! {
         <Show when=move || show.get()>
-            <div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/50 backdrop-blur-sm">
                 <div class="bg-panel rounded-xl shadow-2xl w-full max-w-lg p-6 flex flex-col max-h-[80vh]">
                     <div class="flex items-center justify-between mb-4 flex-none">
                         <h2 class="text-xl font-bold text-primary">{move || t::merge::pending_merges(locale.get())}</h2>

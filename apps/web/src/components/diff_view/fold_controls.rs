@@ -10,7 +10,7 @@ use leptos::prelude::*;
 pub fn FoldControls(fold_state: FoldState) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     view! {
-        <div class="absolute top-2 left-2 z-10 flex items-center gap-2">
+        <div class="absolute top-2 left-2 z-[calc(var(--z-editor)_+_1)] flex items-center gap-2">
             <button
                 class="diff-fold-toggle rounded border border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-2 py-1 text-[11px] text-[var(--diff-muted)] hover:bg-[var(--diff-btn-hover)]"
                 on:click=move |_| fold_state.toggle_folding.run(())

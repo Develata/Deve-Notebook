@@ -6,7 +6,7 @@ pub fn MobileDrawerBackdrop(drawer_open: Signal<bool>, on_close: Callback<()>) -
         if drawer_open.get() {
             view! {
                 <div
-                    class="fixed inset-0 bg-black/40 z-40 transition-opacity duration-200 ease-out"
+                    class="fixed inset-0 bg-black/40 z-[var(--z-overlay)] transition-opacity duration-200 ease-out"
                     on:click=move |_| on_close.run(())
                 ></div>
             }

@@ -36,7 +36,7 @@ pub fn DiffBody(deps: DiffBodyDeps) -> impl IntoView {
     view! {
         <div class="flex-1 overflow-hidden flex relative">
             <Show when=move || deps.compute.compute_state.get() != ComputePhase::Ready>
-                <div class="diff-compute-indicator absolute top-2 right-2 z-10 rounded border border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-2 py-1 text-[11px] text-[var(--diff-muted)] shadow-sm">
+                <div class="diff-compute-indicator absolute top-2 right-2 z-[calc(var(--z-editor)_+_1)] rounded border border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-2 py-1 text-[11px] text-[var(--diff-muted)] shadow-sm">
                     {move || t::diff::computing(deps.locale.get())}
                 </div>
             </Show>

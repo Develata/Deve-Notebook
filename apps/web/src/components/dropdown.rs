@@ -83,7 +83,7 @@ pub fn Dropdown(
     view! {
         <>
             <div
-                class="fixed inset-0 z-40"
+                class="fixed inset-0 z-[var(--z-floating)]"
                 on:click=move |ev| {
                     ev.stop_propagation();
                     on_close.run(());
@@ -91,7 +91,7 @@ pub fn Dropdown(
             ></div>
             <div
                 node_ref=panel_ref
-                class="fixed z-50"
+                class="fixed z-[calc(var(--z-floating)_+_1)]"
                 style=move || panel_style.get()
                 on:click=move |ev| ev.stop_propagation()
             >

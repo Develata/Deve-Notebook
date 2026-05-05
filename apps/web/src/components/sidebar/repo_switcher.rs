@@ -35,11 +35,11 @@ pub fn RepoSwitcher() -> impl IntoView {
              {move || if show_menu.get() {
                  view! {
                      <div
-                        class="fixed inset-0 z-40"
+                        class="fixed inset-0 z-[var(--z-floating)]"
                         on:click=move |_| set_show_menu.set(false)
                      ></div>
                      <div
-                        class="absolute left-0 top-full mt-1 w-48 bg-panel border border-default shadow-lg rounded-md z-50 py-1"
+                        class="absolute left-0 top-full mt-1 w-48 bg-panel border border-default shadow-lg rounded-md z-[calc(var(--z-floating)_+_1)] py-1"
                         on:click=move |e| e.stop_propagation()
                      >
                          <div class="px-3 py-2 text-xs font-semibold text-secondary border-b border-default">

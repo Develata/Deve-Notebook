@@ -23,7 +23,7 @@ pub fn PendingNavigationModal(
 
     view! {
         <Show when=move || pending.get().is_some()>
-            <div class="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/50 backdrop-blur-sm">
                 <div class="w-full max-w-md rounded-xl border border-default bg-panel p-6 shadow-2xl">
                     <h2 class="text-xl font-semibold text-primary">
                         {move || t::common::pending_navigation_title(locale.get())}

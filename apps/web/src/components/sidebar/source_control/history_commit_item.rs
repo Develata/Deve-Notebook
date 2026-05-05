@@ -44,7 +44,7 @@ pub fn HistoryCommitItem(
 
     view! {
         <div class="relative mb-3 group">
-            <div class="absolute -left-[19px] top-[3px] w-2.5 h-2.5 rounded-full border-2 border-white bg-accent shadow-sm z-10"></div>
+            <div class="absolute -left-[19px] top-[3px] w-2.5 h-2.5 rounded-full border-2 border-white bg-accent shadow-sm z-[calc(var(--z-editor)_+_1)]"></div>
             <div
                 class=move || history_commit_row_class(visual_state.get(), read_blocked.get())
                 on:click=move |_| {

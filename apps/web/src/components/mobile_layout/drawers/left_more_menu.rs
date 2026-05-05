@@ -34,9 +34,9 @@ pub(super) fn LeftDrawerMoreMenu(
     view! {
         {move || if show_more.get() {
             view! {
-                <div class="mobile-more-backdrop fixed inset-0 z-[51]" on:click=move |_| set_show_more.set(false)></div>
+                <div class="mobile-more-backdrop fixed inset-0 z-[var(--z-floating)]" on:click=move |_| set_show_more.set(false)></div>
                 <div
-                    class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-panel shadow-xl rounded-lg border border-default py-1 z-[52]"
+                    class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-panel shadow-xl rounded-lg border border-default py-1 z-[calc(var(--z-floating)_+_1)]"
                     node_ref=more_menu_ref
                     tabindex="-1"
                     role="menu"

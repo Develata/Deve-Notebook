@@ -24,7 +24,7 @@ pub(super) fn render_overlay(
     view! {
         <Show when=move || show.get()>
             <div
-                class="fixed inset-0 z-[60] font-sans"
+                class="fixed inset-0 z-[var(--z-modal)] font-sans"
                 on:click=move |_| set_show.set(false)
             >
                 <div

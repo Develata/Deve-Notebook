@@ -50,7 +50,7 @@
         }
         panel.style.display = "block";
         panel.className =
-          "fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-red-400 bg-red-50 px-4 py-3 text-red-900 shadow-lg";
+          "fixed top-4 left-4 z-[var(--z-toast)] max-w-lg rounded-xl border border-red-400 bg-red-50 px-4 py-3 text-red-900 shadow-lg";
         titleEl.textContent = title;
         detailEl.textContent = detail;
       };
@@ -401,7 +401,7 @@
   <body>
     <div
       id="boot-panel"
-      class="fixed top-4 left-4 z-[10000] max-w-lg rounded-xl border border-sky-400 bg-sky-50 px-4 py-3 text-sky-950 shadow-lg"
+      class="fixed top-4 left-4 z-[var(--z-toast)] max-w-lg rounded-xl border border-sky-400 bg-sky-50 px-4 py-3 text-sky-950 shadow-lg"
       style="display: none; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;"
     >
       <div id="boot-panel-title" style="font-weight: 700; margin-bottom: 4px;">

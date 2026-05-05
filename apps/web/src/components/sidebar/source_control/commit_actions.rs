@@ -59,7 +59,7 @@ pub fn CommitActions(
             </Show>
             {move || if show_write_actions.get() && dropdown_open.get() {
                 view! {
-                    <div class="absolute top-full left-0 right-0 mt-1 bg-dropdown border border-default rounded shadow-lg z-20 text-[13px]">
+                    <div class="absolute top-full left-0 right-0 mt-1 bg-dropdown border border-default rounded shadow-lg z-[var(--z-floating)] text-[13px]">
                         <button
                             class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2"
                             disabled=move || !can_commit_now.get()

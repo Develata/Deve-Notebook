@@ -39,8 +39,10 @@ pub(super) fn panel_style(
 
 pub(super) fn backdrop_class(mode: SearchUiMode) -> &'static str {
     match mode {
-        SearchUiMode::Sheet => "fixed inset-0 z-[100] font-sans bg-black/20 backdrop-blur-[1px]",
-        SearchUiMode::Overlay => "fixed inset-0 z-[100] font-sans",
+        SearchUiMode::Sheet => {
+            "fixed inset-0 z-[var(--z-overlay)] font-sans bg-black/20 backdrop-blur-[1px]"
+        }
+        SearchUiMode::Overlay => "fixed inset-0 z-[var(--z-overlay)] font-sans",
     }
 }
 

@@ -27,14 +27,14 @@ pub fn SectionMenu(
         view! {
             <>
                 <div
-                    class="fixed inset-0 z-40"
+                    class="fixed inset-0 z-[var(--z-floating)]"
                     on:click=move |e: MouseEvent| {
                         e.stop_propagation();
                         show_menu.set(false);
                     }
                 ></div>
                 <div
-                    class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-50 text-[12px] py-1"
+                    class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-[calc(var(--z-floating)_+_1)] text-[12px] py-1"
                     on:click=move |e: MouseEvent| e.stop_propagation()
                 >
                     <MenuItem

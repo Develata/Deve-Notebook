@@ -70,13 +70,21 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
     });
     let on_to_end = Callback::new(move |_| set_ver.set(max_ver.get_untracked()));
 
+    let footer_class = move || {
+        if expanded.get() {
+            "relative z-[calc(var(--z-overlay)_+_1)] bg-panel border-t border-default px-2 py-1.5 flex flex-col gap-1.5"
+        } else {
+            "relative z-[var(--z-panels)] bg-panel border-t border-default px-2 py-1.5 flex flex-col gap-1.5"
+        }
+    };
+
     view! {
         <Show when=move || expanded.get()>
-            <div class="fixed inset-0 z-40" on:click=move |_| set_expanded.set(false)></div>
+            <div class="fixed inset-0 z-[var(--z-overlay)]" on:click=move |_| set_expanded.set(false)></div>
         </Show>
 
         <footer
-            class="relative z-50 bg-panel border-t border-default px-2 py-1.5 flex flex-col gap-1.5"
+            class=footer_class
             style="padding-bottom: env(safe-area-inset-bottom);"
         >
             <FooterSummaryRow

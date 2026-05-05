@@ -26,7 +26,7 @@ pub fn PlaybackController(
     };
 
     view! {
-        <div class="absolute bottom-0 left-0 right-0 bg-panel border-t border-default p-4 shadow-lg flex items-center gap-4 z-40">
+        <div class="absolute bottom-0 left-0 right-0 bg-panel border-t border-default p-4 shadow-lg flex items-center gap-4 z-[var(--z-panels)]">
             <span class="text-xs font-mono text-muted">{move || t::playback::label(locale.get())}</span>
 
             <input
