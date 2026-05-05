@@ -30,11 +30,15 @@ check_contains docs/plan/12_commands.md 'AI: Switch to PLAN Mode'
 check_contains docs/plan/12_commands.md 'AI: Switch to BUILD Mode'
 check_contains docs/plan/12_commands.md '不负责切换 `native / trusted-cli` 后端'
 check_contains apps/web/src/components/command_palette/registry.rs "merge_peer_command"
+check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_web command_sets_cli_only_notice -- --nocapture"
 check_absent apps/web/src/components/command_palette/registry.rs "Git: Sync"
 check_absent apps/web/src/components/command_palette/registry.rs "Git: Commit"
 check_absent apps/web/src/i18n/command_palette.rs "Git: Sync"
 check_absent apps/web/src/i18n/command_palette.rs "Git: Commit"
 check_contains apps/web/src/i18n/command_palette.rs "Git: Push Mirror"
+check_contains apps/web/src/components/command_palette/registry_git.rs "git_import_command_sets_cli_only_notice"
+check_contains apps/web/src/components/command_palette/registry_git.rs "git_push_command_sets_cli_only_notice"
+check_contains apps/web/src/components/command_palette/registry_git.rs "git_repair_command_sets_cli_only_notice"
 
 # Git mirror Web surfaces are intentionally read-only / CLI-only for this
 # stage. Do not let repair review, Command Palette notices, import apply, or

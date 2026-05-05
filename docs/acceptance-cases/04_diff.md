@@ -132,6 +132,7 @@
     - run: cargo test -p deve_cli test_git_mirror_repair_review_is_readonly_record_source -- --nocapture
     - run: cargo test -p deve_cli git_import_apply_resolved_commit_exports_roundtrip -- --nocapture
     - run: cargo test -p deve_cli git_import_export_push_resolved_publish_roundtrip -- --nocapture
+    - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
   assertions:
     - ui_assert: source_control_commit_available true
