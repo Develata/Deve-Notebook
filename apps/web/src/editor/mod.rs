@@ -69,8 +69,14 @@ pub fn Editor(
             core.current_repo_id.get().as_deref(),
             Some(core.current_scope_nonce.get()),
         );
-        let should_readonly =
-            spectator || is_pb || loading || switching || !handshake_ready || !writer_ready;
+        let should_readonly = should_editor_be_read_only(
+            spectator,
+            is_pb,
+            loading,
+            switching,
+            handshake_ready,
+            writer_ready,
+        );
         ffi::set_read_only(should_readonly);
     });
     let (outline_pref, set_outline_pref) = use_outline();
@@ -127,5 +133,35 @@ pub fn Editor(
                 }}
             </div>
         </div>
+    }
+}
+
+fn should_editor_be_read_only(
+    spectator: bool,
+    is_playback: bool,
+    loading: bool,
+    switching: bool,
+    handshake_ready: bool,
+    writer_ready: bool,
+) -> bool {
+    spectator || is_playback || loading || switching || !handshake_ready || !writer_ready
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_editor_be_read_only;
+
+    #[test]
+    fn disconnected_lockdown_spectator_state_forces_editor_read_only() {
+        assert!(should_editor_be_read_only(
+            true, false, false, false, true, true
+        ));
+    }
+
+    #[test]
+    fn editor_read_only_gate_allows_ready_writable_document() {
+        assert!(!should_editor_be_read_only(
+            false, false, false, false, true, true
+        ));
     }
 }

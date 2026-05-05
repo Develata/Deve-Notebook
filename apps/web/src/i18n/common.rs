@@ -124,8 +124,8 @@ pub fn disconnected(locale: Locale) -> &'static str {
 
 pub fn reconnecting(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Reconnecting to server... please wait.",
-        Locale::Zh => "正在重连服务器...请稍候。",
+        Locale::En => "Reconnecting...",
+        Locale::Zh => "正在重连...",
     }
 }
 

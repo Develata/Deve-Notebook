@@ -31,3 +31,37 @@ pub fn init_signals(connection_status: ReadSignal<ConnectionStatus>) -> CoreSign
     let source_control = source_control::init_source_control_signals();
     build::assemble_core_signals(connection_status, docs, repo, runtime, source_control)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::init_signals;
+    use crate::api::ConnectionStatus;
+    use leptos::prelude::*;
+    use leptos::reactive::owner::Owner;
+
+    #[test]
+    fn disconnected_lockdown_marks_core_as_spectator() {
+        let runtime = Owner::new();
+        runtime.set();
+        let (connection_status, set_connection_status) = signal(ConnectionStatus::Disconnected);
+        let signals = init_signals(connection_status);
+
+        assert!(signals.is_spectator.get_untracked());
+
+        set_connection_status.set(ConnectionStatus::Connecting);
+        assert!(signals.is_spectator.get_untracked());
+    }
+
+    #[test]
+    fn disconnected_lockdown_releases_when_connection_is_ready() {
+        let runtime = Owner::new();
+        runtime.set();
+        let (connection_status, set_connection_status) = signal(ConnectionStatus::Disconnected);
+        let signals = init_signals(connection_status);
+
+        assert!(signals.is_spectator.get_untracked());
+
+        set_connection_status.set(ConnectionStatus::Connected);
+        assert!(!signals.is_spectator.get_untracked());
+    }
+}

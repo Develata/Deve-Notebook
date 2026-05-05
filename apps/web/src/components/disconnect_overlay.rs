@@ -15,13 +15,16 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
     view! {
         {move || {
             let status = status.get();
-            if matches!(status, ConnectionStatus::Connected | ConnectionStatus::Unauthorized) {
-                view! {}.into_any()
-            } else {
-                let current_locale = locale.get();
-                let (title, body) = overlay_copy(current_locale, status);
+            let current_locale = locale.get();
+            if let Some((title, body)) = overlay_copy(current_locale, status) {
                 view! {
-                    <div class="fixed inset-0 z-[var(--z-toast)] bg-panel/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                    <div
+                        class="fixed inset-0 z-[var(--z-toast)] bg-panel/80 backdrop-blur-sm flex flex-col items-center justify-center"
+                        role="alertdialog"
+                        aria-live="assertive"
+                        data-deve-disconnect-overlay="lockdown"
+                        data-deve-editing-disabled="true"
+                    >
                         <div class="bg-panel p-8 rounded-xl shadow-lg border border-default text-center">
                             <div class="text-4xl mb-4">"🔒"</div>
                             <h1 class="text-2xl font-bold text-primary mb-2">{title}</h1>
@@ -35,35 +38,61 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
                         </div>
                     </div>
                 }.into_any()
+            } else {
+                view! {}.into_any()
             }
         }}
     }
 }
 
-fn overlay_copy(locale: Locale, status: ConnectionStatus) -> (&'static str, &'static str) {
+fn overlay_copy(locale: Locale, status: ConnectionStatus) -> Option<(&'static str, &'static str)> {
     match status {
-        ConnectionStatus::NativeBootstrapInvalid => (
+        ConnectionStatus::NativeBootstrapInvalid => Some((
             t::common::native_bootstrap_invalid_title(locale),
             t::common::native_bootstrap_invalid_body(locale),
-        ),
-        ConnectionStatus::NativeSessionPending => (
+        )),
+        ConnectionStatus::NativeSessionPending => Some((
             t::common::native_session_pending_title(locale),
             t::common::native_session_pending_body(locale),
-        ),
-        ConnectionStatus::NativeServiceOffline => (
+        )),
+        ConnectionStatus::NativeServiceOffline => Some((
             t::common::native_service_offline_title(locale),
             t::common::native_service_offline_body(locale),
-        ),
-        ConnectionStatus::NativeReprobeRequired => (
+        )),
+        ConnectionStatus::NativeReprobeRequired => Some((
             t::common::native_reprobe_required_title(locale),
             t::common::native_reprobe_required_body(locale),
-        ),
-        ConnectionStatus::Disconnected
-        | ConnectionStatus::Connecting
-        | ConnectionStatus::Unauthorized
-        | ConnectionStatus::Connected => (
+        )),
+        ConnectionStatus::Disconnected | ConnectionStatus::Connecting => Some((
             t::common::disconnected(locale),
             t::common::reconnecting(locale),
-        ),
+        )),
+        ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::overlay_copy;
+    use crate::api::ConnectionStatus;
+    use crate::i18n::Locale;
+
+    #[test]
+    fn disconnected_lockdown_overlay_shows_reconnecting_text() {
+        for status in [ConnectionStatus::Disconnected, ConnectionStatus::Connecting] {
+            assert_eq!(
+                overlay_copy(Locale::En, status).map(|(_, body)| body),
+                Some("Reconnecting...")
+            );
+        }
+    }
+
+    #[test]
+    fn disconnected_lockdown_overlay_hidden_for_connected_and_unauthorized() {
+        assert_eq!(overlay_copy(Locale::En, ConnectionStatus::Connected), None);
+        assert_eq!(
+            overlay_copy(Locale::En, ConnectionStatus::Unauthorized),
+            None
+        );
     }
 }
