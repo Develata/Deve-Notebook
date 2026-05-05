@@ -98,6 +98,7 @@
     - run: cargo test -p deve_web commit_ack_dispatch -- --nocapture
     - run: cargo test -p deve_web fs_refresh -- --nocapture
     - run: cargo test -p deve_web doc_diff_read_gate -- --nocapture
+    - run: cargo test -p deve_web doc_diff_dispatch -- --nocapture
     - run: cargo test -p deve_web commit_diff_read_gate -- --nocapture
     - run: cargo test -p deve_web commit_diff_dispatch -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_is_allowed -- --nocapture

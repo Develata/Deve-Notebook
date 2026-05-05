@@ -12,6 +12,8 @@ use leptos::prelude::*;
 mod ack;
 #[path = "effects_sc_test_commit_diff.rs"]
 mod commit_diff;
+#[path = "effects_sc_test_doc_diff.rs"]
+mod doc_diff;
 #[path = "effects_sc_test_request.rs"]
 mod request;
 #[path = "effects_sc_test_reset.rs"]
