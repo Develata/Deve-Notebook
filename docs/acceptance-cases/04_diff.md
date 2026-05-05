@@ -97,6 +97,8 @@
     - 文档含快照与大量 Ops
   steps:
     - ui_open_doc: "large.md"
+    - run: scripts/check-large-doc-baseline.sh
+    - run: cargo test -p deve_web large_doc_search_gate -- --nocapture
   assertions:
     - ui_assert: snapshot_first true
     - ui_assert: search_disabled_until_prefetch_complete true

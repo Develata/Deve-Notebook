@@ -91,3 +91,7 @@ fn show_search_block(set_sync_banner: WriteSignal<Option<String>>, reason: &str)
     let message = cannot_action("search", reason);
     warn_sync_banner(set_sync_banner, message);
 }
+
+#[cfg(test)]
+#[path = "callbacks_misc_test.rs"]
+mod tests;
