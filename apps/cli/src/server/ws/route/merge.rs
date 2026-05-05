@@ -80,6 +80,10 @@ fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
 }
 
 #[cfg(test)]
+#[path = "merge_readonly_test.rs"]
+mod readonly_tests;
+
+#[cfg(test)]
 mod tests {
     use super::{requested_scope_nonce, route_merge};
     use crate::server::session::PendingMergeConflict;

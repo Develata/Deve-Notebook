@@ -19,8 +19,10 @@
   steps:
     - run: deve merge --peer <peer_id>
     - run: cargo test -p deve_cli merge_scope_nonce_gate -- --nocapture
+    - run: cargo test -p deve_cli merge_manual_write_readonly_gate -- --nocapture
   assertions:
     - log_contains: "LCA"
+    - api_assert: merge_manual_writes_reject_remote_readonly true
 
 - case_id: DIFF-003
   goal: 冲突检测按 Hunk 触发。
