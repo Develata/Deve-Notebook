@@ -63,6 +63,19 @@ fn graph_accepts_repo_and_out_alias_for_projection_output() {
 }
 
 #[test]
+fn sc_status_accepts_repo_selector() {
+    let args =
+        Args::try_parse_from(["deve", "sc-status", "--repo", "default"]).expect("parse args");
+
+    match args.command {
+        Some(Commands::ScStatus { repo }) => {
+            assert_eq!(repo.as_deref(), Some("default"));
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
+
+#[test]
 fn config_set_runs_before_loading_runtime_config() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let dir = tempfile::tempdir().expect("tempdir");
