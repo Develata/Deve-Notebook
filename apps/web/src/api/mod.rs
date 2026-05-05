@@ -33,4 +33,5 @@ pub use self::git_mirror::GitMirrorRepairReviewRecord;
 pub use self::git_mirror::{GitMirrorRepairReview, fetch_git_mirror_repair_review};
 pub use self::graph::{GraphProjectionFetchError, fetch_graph_projection};
 pub use self::service::WsService;
+pub(crate) use self::service::is_current_connection_message;
 pub use self::status::ConnectionStatus;

@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 05_network#web-ws-runtime
 //!
-use crate::api::WsService;
+use crate::api::{WsService, is_current_connection_message};
 use crate::i18n::Locale;
 use deve_core::protocol::ClientMessage;
 use gloo_timers::callback::Timeout;
@@ -95,7 +95,14 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
         };
 
         let _ = ws_rx.msg_seq.get();
-        for (seq, msg) in ws_rx.messages_since(last_msg_seq.get_untracked()) {
+        for (seq, connection_epoch, msg) in ws_rx.messages_since(last_msg_seq.get_untracked()) {
+            if !is_current_connection_message(
+                connection_epoch,
+                ws_rx.connection_epoch.get_untracked(),
+            ) {
+                set_last_msg_seq.set(seq);
+                continue;
+            }
             message_dispatch::handle_message(
                 msg,
                 &ws_rx,

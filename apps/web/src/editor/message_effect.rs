@@ -60,7 +60,14 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
 
     Effect::new(move |_| {
         let _ = ws.msg_seq.get();
-        for (seq, msg) in ws.messages_since(last_msg_seq.get_untracked()) {
+        for (seq, connection_epoch, msg) in ws.messages_since(last_msg_seq.get_untracked()) {
+            if !crate::api::is_current_connection_message(
+                connection_epoch,
+                ws.connection_epoch.get_untracked(),
+            ) {
+                set_last_msg_seq.set(seq);
+                continue;
+            }
             let ctx = sync::context::SyncContext {
                 doc_id,
                 client_id: ws.writer_client_id_for(

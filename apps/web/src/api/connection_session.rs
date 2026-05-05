@@ -21,7 +21,8 @@ pub(super) async fn run_connected_session(
     queue: &mut VecDeque<deve_core::protocol::ClientMessage>,
     set_status: WriteSignal<ConnectionStatus>,
     set_msg_seq: WriteSignal<u64>,
-    set_msg_queue: WriteSignal<VecDeque<(u64, deve_core::protocol::ServerMessage)>>,
+    set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
+    connection_epoch: u64,
 ) {
     let mut confirmed_connected = false;
     let mut announced_open = false;
@@ -65,6 +66,7 @@ pub(super) async fn run_connected_session(
                         set_msg_seq,
                         set_msg_queue,
                         set_status,
+                        connection_epoch,
                     ) {
                         return;
                     }

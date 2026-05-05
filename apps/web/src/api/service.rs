@@ -33,7 +33,8 @@ pub struct WsService {
     pub endpoint: ReadSignal<String>,
     pub node_role: ReadSignal<String>,
     pub msg_seq: ReadSignal<u64>,
-    msg_queue: ReadSignal<VecDeque<(u64, ServerMessage)>>,
+    pub connection_epoch: ReadSignal<u64>,
+    msg_queue: ReadSignal<VecDeque<(u64, u64, ServerMessage)>>,
     tx: UnboundedSender<ClientMessage>,
     #[cfg(test)]
     test_rx: Option<Arc<Mutex<UnboundedReceiver<ClientMessage>>>>,
@@ -46,7 +47,8 @@ impl WsService {
         let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(None::<u64>);
         let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
         let (msg_seq, set_msg_seq) = signal(0u64);
-        let (msg_queue, set_msg_queue) = signal(VecDeque::<(u64, ServerMessage)>::new());
+        let (connection_epoch, set_connection_epoch) = signal(0u64);
+        let (msg_queue, set_msg_queue) = signal(VecDeque::<(u64, u64, ServerMessage)>::new());
         let (endpoint, set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
         let (tx, rx) = unbounded::<ClientMessage>();
@@ -56,6 +58,7 @@ impl WsService {
             set_status,
             set_msg_seq,
             set_msg_queue,
+            set_connection_epoch,
             set_endpoint,
             set_node_role,
         );
@@ -74,6 +77,7 @@ impl WsService {
             endpoint,
             node_role,
             msg_seq,
+            connection_epoch,
             msg_queue,
             tx,
             #[cfg(test)]
@@ -88,7 +92,8 @@ impl WsService {
         let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(None::<u64>);
         let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
         let (msg_seq, _set_msg_seq) = signal(0u64);
-        let (msg_queue, _set_msg_queue) = signal(VecDeque::<(u64, ServerMessage)>::new());
+        let (connection_epoch, _set_connection_epoch) = signal(0u64);
+        let (msg_queue, _set_msg_queue) = signal(VecDeque::<(u64, u64, ServerMessage)>::new());
         let (endpoint, _set_endpoint) = signal(String::new());
         let (node_role, _set_node_role) = signal(String::new());
         let (tx, rx) = unbounded::<ClientMessage>();
@@ -105,6 +110,7 @@ impl WsService {
             endpoint,
             node_role,
             msg_seq,
+            connection_epoch,
             msg_queue,
             tx,
             test_rx: Some(Arc::new(Mutex::new(rx))),
@@ -159,11 +165,11 @@ impl WsService {
         }
     }
 
-    pub fn messages_since(&self, after_seq: u64) -> Vec<(u64, ServerMessage)> {
+    pub fn messages_since(&self, after_seq: u64) -> Vec<(u64, u64, ServerMessage)> {
         self.msg_queue
             .get_untracked()
             .into_iter()
-            .filter(|(seq, _)| *seq > after_seq)
+            .filter(|(seq, _, _)| *seq > after_seq)
             .collect()
     }
 
@@ -179,6 +185,10 @@ impl WsService {
         }
         messages
     }
+}
+
+pub(crate) fn is_current_connection_message(message_epoch: u64, current_epoch: u64) -> bool {
+    message_epoch == current_epoch
 }
 
 fn writer_ready_matches(
@@ -197,7 +207,13 @@ fn writer_ready_matches(
 
 #[cfg(test)]
 mod tests {
-    use super::writer_ready_matches;
+    use super::{is_current_connection_message, writer_ready_matches};
+
+    #[test]
+    fn dashboard_metrics_stale_connection_epoch_is_not_current() {
+        assert!(is_current_connection_message(3, 3));
+        assert!(!is_current_connection_message(2, 3));
+    }
 
     #[test]
     fn writer_ready_requires_matching_repo_and_scope_nonce() {

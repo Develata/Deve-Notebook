@@ -12,12 +12,13 @@ use std::collections::VecDeque;
 fn incoming_queue_keeps_latest_messages_in_order() {
     let mut queue = VecDeque::new();
     for seq in 1..=300 {
-        push_server_message(&mut queue, seq, ServerMessage::Pong);
+        push_server_message(&mut queue, seq, 7, ServerMessage::Pong);
     }
 
     assert_eq!(queue.len(), 256);
-    assert_eq!(queue.front().map(|(seq, _)| *seq), Some(45));
-    assert_eq!(queue.back().map(|(seq, _)| *seq), Some(300));
+    assert_eq!(queue.front().map(|(seq, _, _)| *seq), Some(45));
+    assert_eq!(queue.back().map(|(seq, _, _)| *seq), Some(300));
+    assert_eq!(queue.front().map(|(_, epoch, _)| *epoch), Some(7));
 }
 
 #[test]

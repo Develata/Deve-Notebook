@@ -39,7 +39,8 @@ pub fn spawn_connection_manager(
     mut rx: UnboundedReceiver<deve_core::protocol::ClientMessage>,
     set_status: WriteSignal<ConnectionStatus>,
     set_msg_seq: WriteSignal<u64>,
-    set_msg_queue: WriteSignal<VecDeque<(u64, deve_core::protocol::ServerMessage)>>,
+    set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
+    set_connection_epoch: WriteSignal<u64>,
     set_endpoint: WriteSignal<String>,
     set_node_role: WriteSignal<String>,
 ) {
@@ -56,12 +57,15 @@ pub fn spawn_connection_manager(
         let mut url_idx = 0usize;
         let mut backoff = BackoffStrategy::new();
         let mut queue = VecDeque::new();
+        let mut connection_epoch = 0u64;
 
         loop {
             let url = urls
                 .get(url_idx)
                 .cloned()
                 .unwrap_or_else(build_same_origin_ws_url);
+            connection_epoch = connection_epoch.saturating_add(1);
+            set_connection_epoch.set(connection_epoch);
             set_status.set(ConnectionStatus::Connecting);
             leptos::logging::log!("WS: Connecting to {}...", url);
 
@@ -83,6 +87,7 @@ pub fn spawn_connection_manager(
                         set_status,
                         set_msg_seq,
                         set_msg_queue,
+                        connection_epoch,
                     )
                     .await;
 
