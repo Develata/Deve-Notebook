@@ -24,15 +24,20 @@ rejects() {
 }
 
 contains_case_block() {
-  local case_id="$1"
-  local pattern="$2"
+  contains_case_block_in_file "docs/acceptance-cases/05_ui.md" "$1" "$2"
+}
+
+contains_case_block_in_file() {
+  local file="$1"
+  local case_id="$2"
+  local pattern="$3"
   awk -v case_id="$case_id" -v pattern="$pattern" '
     $0 == "- case_id: " case_id { in_case = 1; next }
     in_case && $0 ~ /^- case_id: / { in_case = 0 }
     in_case && index($0, pattern) { found = 1 }
     END { exit found ? 0 : 1 }
-  ' "$ROOT_DIR/docs/acceptance-cases/05_ui.md" \
-    || fail "missing '$pattern' in acceptance case $case_id"
+  ' "$ROOT_DIR/$file" \
+    || fail "missing '$pattern' in $file acceptance case $case_id"
 }
 
 # UI-MOB-001: narrow Web viewport maps to Mobile shell.
@@ -266,6 +271,18 @@ contains_case_block UI-MOB-011 "cli_assert: mobile_chat_fullscreen_marker_bound 
 contains_case_block UI-MOB-011 "cli_assert: mobile_chat_page_state_transition_bound true"
 contains_case_block UI-MOB-011 "ui_assert: chat_page_fullscreen false"
 contains_case_block UI-MOB-011 "ui_assert: editor_visible true"
+contains docs/acceptance-cases/13_ui_mobile_chat_regression.md "case_id: UI-MOB-CHAT-REG-001"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "run: scripts/check-mobile-baseline.sh"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "run: cargo test -p deve_web mobile_chat_page -- --nocapture"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "ui_click: \"mobile_chat_chip\""
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "ui_assert: chat_page_fullscreen true"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "ui_click: \"chat_close_button\""
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "cli_assert: mobile_chat_chip_marker_bound true"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "cli_assert: mobile_chat_close_marker_bound true"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "cli_assert: mobile_chat_fullscreen_marker_bound true"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "cli_assert: mobile_chat_page_state_transition_bound true"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "ui_assert: chat_page_fullscreen false"
+contains_case_block_in_file docs/acceptance-cases/13_ui_mobile_chat_regression.md UI-MOB-CHAT-REG-001 "ui_assert: editor_visible true"
 contains apps/web/src/components/mobile_layout/chat_sheet.rs "data-deve-mobile-chat-action=\"mobile_chat_chip\""
 contains apps/web/src/components/mobile_layout/chat_sheet.rs "data-deve-mobile-chat-page=move || mobile_chat_page_mode(expanded.get())"
 contains apps/web/src/components/mobile_layout/chat_sheet.rs "data-deve-mobile-chat-fullscreen=move || expanded.get().to_string()"

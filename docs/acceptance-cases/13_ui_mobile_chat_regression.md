@@ -7,10 +7,16 @@
     - trunk serve 已启动
     - 浏览器视口 375x812
   steps:
+    - run: scripts/check-mobile-baseline.sh
+    - run: cargo test -p deve_web mobile_chat_page -- --nocapture
     - ui_click: "mobile_chat_chip"
     - ui_assert: chat_page_fullscreen true
     - ui_click: "chat_close_button"
   assertions:
+    - cli_assert: mobile_chat_chip_marker_bound true
+    - cli_assert: mobile_chat_close_marker_bound true
+    - cli_assert: mobile_chat_fullscreen_marker_bound true
+    - cli_assert: mobile_chat_page_state_transition_bound true
     - ui_assert: chat_page_fullscreen false
     - ui_assert: editor_visible true
 
