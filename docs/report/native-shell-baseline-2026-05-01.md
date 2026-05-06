@@ -23,7 +23,8 @@
 - Recovery bootstrap 接受可选 `service_state`：`service_offline` 映射为 `NativeServiceOffline`，`foreground_reprobe` 映射为 `NativeReprobeRequired`，`session_invalid` 映射为 `Unauthorized`。
 - Desktop/mobile shell skeleton 可以发出不含 endpoint secrets、session material、service failure reasons 的 recovery bootstrap payload。
 - `ForegroundReprobe` 在 auth、node role、repo handshake、writer readiness 与当前 `scope_nonce` 重新校验前不可写。
-- Native recovery 验证覆盖 `cargo test -p deve_desktop`、`cargo test -p deve_mobile`、`cargo test -p deve_web native_bootstrap -- --nocapture`、`cargo test -p deve_web status_summary -- --nocapture`、`cargo test -p deve_web write_gate -- --nocapture`、`cargo test -p deve_web connection_urls -- --nocapture`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`。
+- Web `WsService` 派生统一 `NativeRuntimeReadiness`，Source Control refresh、write gate、bottom bar 与 mobile footer 共用同一 readiness 口径。
+- Native recovery 验证覆盖 `cargo test -p deve_desktop`、`cargo test -p deve_mobile`、`cargo test -p deve_web native_runtime_readiness -- --nocapture`、`cargo test -p deve_web status_summary -- --nocapture`、`cargo test -p deve_web write_gate -- --nocapture`、`cargo test -p deve_web refresh -- --nocapture`、`cargo test -p deve_web connection_urls -- --nocapture`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`。
 
 ## Retired Source Reports
 

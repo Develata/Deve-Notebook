@@ -3,6 +3,7 @@
 //!   - 09_auth#unauthorized-disconnected-ui
 //!
 
+use deve_core::native_adapter::NativeRuntimeReadiness;
 use deve_core::protocol::{ClientMessage, ServerMessage};
 #[cfg(test)]
 use futures::channel::mpsc::UnboundedReceiver;
@@ -32,6 +33,7 @@ pub struct WsService {
     set_writer_client_id: WriteSignal<Option<u64>>,
     pub endpoint: ReadSignal<String>,
     pub node_role: ReadSignal<String>,
+    set_node_role: WriteSignal<String>,
     pub msg_seq: ReadSignal<u64>,
     pub connection_epoch: ReadSignal<u64>,
     msg_queue: ReadSignal<VecDeque<(u64, u64, ServerMessage)>>,
@@ -76,6 +78,7 @@ impl WsService {
             set_writer_client_id,
             endpoint,
             node_role,
+            set_node_role,
             msg_seq,
             connection_epoch,
             msg_queue,
@@ -105,7 +108,7 @@ impl WsService {
         let (connection_epoch, _set_connection_epoch) = signal(current_connection_epoch);
         let (msg_queue, _set_msg_queue) = signal(messages);
         let (endpoint, _set_endpoint) = signal(String::new());
-        let (node_role, _set_node_role) = signal(String::new());
+        let (node_role, set_node_role) = signal(String::new());
         let (tx, rx) = unbounded::<ClientMessage>();
 
         Self {
@@ -119,6 +122,7 @@ impl WsService {
             set_writer_client_id,
             endpoint,
             node_role,
+            set_node_role,
             msg_seq,
             connection_epoch,
             msg_queue,
@@ -151,12 +155,51 @@ impl WsService {
         self.set_writer_client_id.set(None);
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_node_role_for_test(&self, node_role: impl Into<String>) {
+        self.set_node_role.set(node_role.into());
+    }
+
     pub fn writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>) -> bool {
         writer_ready_matches(
             self.writer_ready_repo_id.get_untracked(),
             self.writer_ready_scope_nonce.get_untracked(),
             repo_id,
             scope_nonce,
+        )
+    }
+
+    pub fn native_runtime_readiness_for(
+        &self,
+        repo_id: Option<&str>,
+        scope_nonce: Option<u64>,
+        handshake_ready: bool,
+    ) -> NativeRuntimeReadiness {
+        native_runtime_readiness_from_parts(
+            self.status.get(),
+            self.node_role.get(),
+            self.writer_ready_repo_id.get(),
+            self.writer_ready_scope_nonce.get(),
+            repo_id,
+            scope_nonce,
+            handshake_ready,
+        )
+    }
+
+    pub fn native_runtime_readiness_for_untracked(
+        &self,
+        repo_id: Option<&str>,
+        scope_nonce: Option<u64>,
+        handshake_ready: bool,
+    ) -> NativeRuntimeReadiness {
+        native_runtime_readiness_from_parts(
+            self.status.get_untracked(),
+            self.node_role.get_untracked(),
+            self.writer_ready_repo_id.get_untracked(),
+            self.writer_ready_scope_nonce.get_untracked(),
+            repo_id,
+            scope_nonce,
+            handshake_ready,
         )
     }
 
@@ -215,9 +258,36 @@ fn writer_ready_matches(
     }
 }
 
+fn native_runtime_readiness_from_parts(
+    status: ConnectionStatus,
+    node_role: String,
+    ready_repo_id: Option<String>,
+    ready_scope_nonce: Option<u64>,
+    repo_id: Option<&str>,
+    scope_nonce: Option<u64>,
+    handshake_ready: bool,
+) -> NativeRuntimeReadiness {
+    NativeRuntimeReadiness {
+        endpoint_reachable: status == ConnectionStatus::Connected,
+        auth_status_valid: !matches!(
+            status,
+            ConnectionStatus::Unauthorized
+                | ConnectionStatus::NativeBootstrapInvalid
+                | ConnectionStatus::NativeSessionPending
+        ),
+        node_role_readable: !node_role.trim().is_empty(),
+        repo_handshake_complete: handshake_ready,
+        writer_ready: writer_ready_matches(ready_repo_id, ready_scope_nonce, repo_id, scope_nonce),
+        scope_nonce_current: matches!(
+            (ready_scope_nonce, scope_nonce),
+            (Some(ready_scope_nonce), Some(scope_nonce)) if ready_scope_nonce == scope_nonce
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{is_current_connection_message, writer_ready_matches};
+    use super::{ConnectionStatus, WsService, is_current_connection_message, writer_ready_matches};
 
     #[test]
     fn dashboard_metrics_stale_connection_epoch_is_not_current() {
@@ -251,5 +321,31 @@ mod tests {
             Some("repo-a"),
             None,
         ));
+    }
+
+    #[test]
+    fn native_runtime_readiness_requires_node_role_writer_and_current_scope() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+
+        let missing_node_role =
+            ws.native_runtime_readiness_for_untracked(Some("repo-a"), Some(7), true);
+        assert!(!missing_node_role.node_role_readable);
+        assert!(!missing_node_role.is_runtime_ready());
+
+        ws.set_node_role_for_test("main");
+        ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+        let ready = ws.native_runtime_readiness_for_untracked(Some("repo-a"), Some(7), true);
+        assert!(ready.is_runtime_ready());
+
+        let wrong_repo = ws.native_runtime_readiness_for_untracked(Some("repo-b"), Some(7), true);
+        assert!(!wrong_repo.writer_ready);
+        assert!(!wrong_repo.is_runtime_ready());
+
+        let stale_scope = ws.native_runtime_readiness_for_untracked(Some("repo-a"), Some(8), true);
+        assert!(!stale_scope.scope_nonce_current);
+        assert!(!stale_scope.writer_ready);
+        assert!(!stale_scope.is_runtime_ready());
     }
 }

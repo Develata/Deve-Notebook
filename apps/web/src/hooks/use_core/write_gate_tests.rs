@@ -14,6 +14,7 @@ fn gate_state(
         connection_status: ConnectionStatus::Connected,
         load_state: "ready",
         is_read_only,
+        node_role_readable: true,
         handshake_ready,
         writer_ready,
         has_repo: true,
@@ -27,6 +28,7 @@ fn gate_state_with_status(connection_status: ConnectionStatus) -> RepoWriteGateS
         connection_status,
         load_state: "ready",
         is_read_only: false,
+        node_role_readable: true,
         handshake_ready: true,
         writer_ready: true,
         has_repo: true,
@@ -39,6 +41,17 @@ fn gate_state_with_status(connection_status: ConnectionStatus) -> RepoWriteGateS
 fn repo_write_gate_requires_writer_ready() {
     assert_eq!(
         repo_write_block(gate_state(false, true, false)),
+        Some(RepoWriteBlock::HandshakingRepo)
+    );
+}
+
+#[test]
+fn repo_write_gate_requires_node_role_readable() {
+    assert_eq!(
+        repo_write_block(RepoWriteGateState {
+            node_role_readable: false,
+            ..gate_state(false, true, true)
+        }),
         Some(RepoWriteBlock::HandshakingRepo)
     );
 }
@@ -129,5 +142,16 @@ fn repo_source_control_read_gate_allows_remote_branch_reads_without_writer_hands
     assert_eq!(
         repo_source_control_read_block(gate_state(true, false, false)),
         None
+    );
+}
+
+#[test]
+fn repo_source_control_read_gate_requires_node_role_for_local_refresh() {
+    assert_eq!(
+        repo_source_control_read_block(RepoWriteGateState {
+            node_role_readable: false,
+            ..gate_state(false, true, true)
+        }),
+        Some(RepoWriteBlock::HandshakingRepo)
     );
 }

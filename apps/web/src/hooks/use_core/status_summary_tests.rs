@@ -13,6 +13,7 @@ fn reports_session_expired_for_unauthorized_status() {
         false,
         true,
         true,
+        true,
         Some("repo-id"),
         Some("default"),
         None,
@@ -32,6 +33,7 @@ fn reports_native_session_pending_before_snapshot_state() {
         false,
         true,
         true,
+        true,
         Some("repo-id"),
         Some("default"),
         None,
@@ -47,6 +49,7 @@ fn reports_native_service_offline_as_specific_recovery_state() {
     let summary = derive_sync_status(
         ConnectionStatus::NativeServiceOffline,
         "loading",
+        false,
         false,
         false,
         false,
@@ -70,6 +73,7 @@ fn prefers_loading_state_while_snapshot_is_inflight() {
         false,
         false,
         false,
+        false,
         Some("repo-id"),
         Some("default"),
         None,
@@ -86,6 +90,7 @@ fn reports_read_only_for_remote_branch_views() {
         "ready",
         true,
         false,
+        true,
         false,
         false,
         Some("repo-id"),
@@ -105,7 +110,27 @@ fn reports_repo_handshake_until_writer_is_ready() {
         false,
         false,
         true,
+        true,
         false,
+        Some("repo-id"),
+        Some("default"),
+        None,
+        false,
+        0,
+    );
+    assert_eq!(summary.kind, SyncStatusKind::HandshakingRepo);
+}
+
+#[test]
+fn reports_repo_handshake_until_node_role_is_readable() {
+    let summary = derive_sync_status(
+        ConnectionStatus::Connected,
+        "ready",
+        false,
+        false,
+        false,
+        true,
+        true,
         Some("repo-id"),
         Some("default"),
         None,
@@ -122,6 +147,7 @@ fn reports_pending_ack_after_handshake_is_confirmed() {
         "ready",
         false,
         false,
+        true,
         true,
         true,
         Some("repo-id"),

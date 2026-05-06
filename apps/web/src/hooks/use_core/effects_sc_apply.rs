@@ -92,6 +92,11 @@ pub(super) fn refresh_after_fs_change(
     let load_state = signals.load_state.get_untracked();
     let pending_branch_switch = signals.pending_branch_switch.get_untracked();
     let pending_repo_switch = signals.pending_repo_switch.get_untracked();
+    let readiness = ws.native_runtime_readiness_for_untracked(
+        repo_id.as_deref(),
+        Some(current_scope_nonce),
+        signals.handshake_ready.get_untracked(),
+    );
     if !source_control_refresh_allowed(
         signals.expected_scope_nonce,
         current_scope_nonce,
@@ -99,8 +104,9 @@ pub(super) fn refresh_after_fs_change(
             connection_status: ws.status.get_untracked(),
             load_state: &load_state,
             is_read_only: signals.is_spectator.get_untracked(),
-            handshake_ready: signals.handshake_ready.get_untracked(),
-            writer_ready: ws.writer_ready_for(repo_id.as_deref(), Some(current_scope_nonce)),
+            node_role_readable: readiness.node_role_readable,
+            handshake_ready: readiness.repo_handshake_complete,
+            writer_ready: readiness.writer_ready,
             has_repo: repo_id.is_some(),
             pending_branch_switch: pending_branch_switch.is_some(),
             pending_repo_switch: pending_repo_switch.is_some(),
@@ -127,6 +133,11 @@ pub(super) fn refresh_after_commit(commit_id: &str, signals: CommitRefreshSignal
     let load_state = signals.load_state.get_untracked();
     let pending_branch_switch = signals.pending_branch_switch.get_untracked();
     let pending_repo_switch = signals.pending_repo_switch.get_untracked();
+    let readiness = ws.native_runtime_readiness_for_untracked(
+        repo_id.as_deref(),
+        Some(current_scope_nonce),
+        signals.handshake_ready.get_untracked(),
+    );
     if !source_control_refresh_allowed(
         signals.expected_scope_nonce,
         current_scope_nonce,
@@ -134,8 +145,9 @@ pub(super) fn refresh_after_commit(commit_id: &str, signals: CommitRefreshSignal
             connection_status: ws.status.get_untracked(),
             load_state: &load_state,
             is_read_only: signals.is_spectator.get_untracked(),
-            handshake_ready: signals.handshake_ready.get_untracked(),
-            writer_ready: ws.writer_ready_for(repo_id.as_deref(), Some(current_scope_nonce)),
+            node_role_readable: readiness.node_role_readable,
+            handshake_ready: readiness.repo_handshake_complete,
+            writer_ready: readiness.writer_ready,
             has_repo: repo_id.is_some(),
             pending_branch_switch: pending_branch_switch.is_some(),
             pending_repo_switch: pending_repo_switch.is_some(),
@@ -192,6 +204,7 @@ mod tests {
             connection_status,
             load_state: "ready",
             is_read_only: false,
+            node_role_readable: true,
             handshake_ready,
             writer_ready,
             has_repo: true,
@@ -255,6 +268,7 @@ mod tests {
         let runtime = leptos::reactive::owner::Owner::new();
         runtime.set();
         let ws = WsService::new_for_test(status);
+        ws.set_node_role_for_test("main");
         if writer_ready {
             ws.mark_writer_ready("repo-a", 7, "web-light-peer");
         }

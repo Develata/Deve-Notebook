@@ -146,6 +146,26 @@ fn mobile_background_resume_requires_fresh_reprobe_before_write() {
 fn mobile_reprobe_does_not_restore_write_without_current_scope_nonce() {
     let mut shell = bound_shell();
     shell.handle_lifecycle_event(MobileLifecycleEvent::Resumed);
+    let missing_node_role = NativeRuntimeReadiness {
+        node_role_readable: false,
+        ..ready_probe()
+    };
+    assert!(!shell.complete_foreground_reprobe(missing_node_role));
+    assert_eq!(
+        shell.snapshot().state,
+        MobileServiceState::ForegroundReprobe
+    );
+
+    let missing_writer = NativeRuntimeReadiness {
+        writer_ready: false,
+        ..ready_probe()
+    };
+    assert!(!shell.complete_foreground_reprobe(missing_writer));
+    assert_eq!(
+        shell.snapshot().state,
+        MobileServiceState::ForegroundReprobe
+    );
+
     let ready_without_scope = NativeRuntimeReadiness {
         scope_nonce_current: false,
         ..ready_probe()

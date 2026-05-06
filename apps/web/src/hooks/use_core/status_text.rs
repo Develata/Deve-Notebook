@@ -23,6 +23,14 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
     let pending_edits_for_text = signals.pending_local_edits;
     let ws_for_text = ws.clone();
     Signal::derive(move || {
+        let current_repo_id = current_repo_id_for_text.get();
+        let current_scope_nonce = current_scope_nonce_for_text.get();
+        let handshake_ready = handshake_ready_for_text.get();
+        let readiness = ws_for_text.native_runtime_readiness_for(
+            current_repo_id.as_deref(),
+            Some(current_scope_nonce),
+            handshake_ready,
+        );
         let current_doc = current_doc_for_text.get();
         let pending_ack_count = current_doc
             .and_then(|doc_id| pending_edits_for_text.get().get(&doc_id).map(Vec::len))
@@ -32,12 +40,10 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
             &load_state_for_text.get(),
             active_branch_for_text.get().is_some(),
             degraded_for_text.get().is_some(),
-            handshake_ready_for_text.get(),
-            ws_for_text.writer_ready_for(
-                current_repo_id_for_text.get().as_deref(),
-                Some(current_scope_nonce_for_text.get()),
-            ),
-            current_repo_id_for_text.get().as_deref(),
+            readiness.node_role_readable,
+            readiness.repo_handshake_complete,
+            readiness.writer_ready,
+            current_repo_id.as_deref(),
             current_repo_for_text.get().as_deref(),
             pending_repo_switch_for_text.get().as_deref(),
             pending_branch_switch_for_text.get().is_some(),

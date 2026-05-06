@@ -18,17 +18,23 @@ pub fn StatusView(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
         let pending_ack_count = current_doc
             .and_then(|doc_id| core.pending_local_edits.get().get(&doc_id).map(Vec::len))
             .unwrap_or_default();
+        let current_repo_id = core.current_repo_id.get();
+        let current_scope_nonce = core.current_scope_nonce.get();
+        let handshake_ready = core.handshake_ready.get();
+        let readiness = core.ws.native_runtime_readiness_for(
+            current_repo_id.as_deref(),
+            Some(current_scope_nonce),
+            handshake_ready,
+        );
         let summary = derive_sync_status(
             core.ws.status.get(),
             &core.load_state.get(),
             core.active_branch.get().is_some(),
             core.is_spectator.get() && core.active_branch.get().is_none(),
-            core.handshake_ready.get(),
-            core.ws.writer_ready_for(
-                core.current_repo_id.get().as_deref(),
-                Some(core.current_scope_nonce.get()),
-            ),
-            core.current_repo_id.get().as_deref(),
+            readiness.node_role_readable,
+            readiness.repo_handshake_complete,
+            readiness.writer_ready,
+            current_repo_id.as_deref(),
             core.current_repo.get().as_deref(),
             core.pending_repo_switch.get().as_deref(),
             core.pending_branch_switch.get().is_some(),

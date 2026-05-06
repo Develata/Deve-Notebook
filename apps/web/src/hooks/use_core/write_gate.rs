@@ -33,16 +33,20 @@ pub(crate) fn repo_write_block_untracked(
 ) -> Option<RepoWriteBlock> {
     let repo_id = signals.current_repo_id.get_untracked();
     let load_state = signals.load_state.get_untracked();
+    let scope_nonce = signals.current_scope_nonce.get_untracked();
+    let readiness = ws.native_runtime_readiness_for_untracked(
+        repo_id.as_deref(),
+        Some(scope_nonce),
+        signals.handshake_ready.get_untracked(),
+    );
     repo_write_block(RepoWriteGateState {
         connection_status: ws.status.get_untracked(),
         load_state: &load_state,
         is_read_only: signals.is_spectator.get_untracked()
             || signals.active_branch.get_untracked().is_some(),
-        handshake_ready: signals.handshake_ready.get_untracked(),
-        writer_ready: ws.writer_ready_for(
-            repo_id.as_deref(),
-            Some(signals.current_scope_nonce.get_untracked()),
-        ),
+        node_role_readable: readiness.node_role_readable,
+        handshake_ready: readiness.repo_handshake_complete,
+        writer_ready: readiness.writer_ready,
         has_repo: repo_id.is_some(),
         pending_branch_switch: signals.pending_branch_switch.get_untracked().is_some(),
         pending_repo_switch: signals.pending_repo_switch.get_untracked().is_some(),
@@ -55,13 +59,19 @@ pub(crate) fn repo_write_block_tracked(
 ) -> Option<RepoWriteBlock> {
     let repo_id = signals.current_repo_id.get();
     let load_state = signals.load_state.get();
+    let scope_nonce = signals.current_scope_nonce.get();
+    let readiness = ws.native_runtime_readiness_for(
+        repo_id.as_deref(),
+        Some(scope_nonce),
+        signals.handshake_ready.get(),
+    );
     repo_write_block(RepoWriteGateState {
         connection_status: ws.status.get(),
         load_state: &load_state,
         is_read_only: signals.is_spectator.get() || signals.active_branch.get().is_some(),
-        handshake_ready: signals.handshake_ready.get(),
-        writer_ready: ws
-            .writer_ready_for(repo_id.as_deref(), Some(signals.current_scope_nonce.get())),
+        node_role_readable: readiness.node_role_readable,
+        handshake_ready: readiness.repo_handshake_complete,
+        writer_ready: readiness.writer_ready,
         has_repo: repo_id.is_some(),
         pending_branch_switch: signals.pending_branch_switch.get().is_some(),
         pending_repo_switch: signals.pending_repo_switch.get().is_some(),
@@ -74,15 +84,19 @@ pub(crate) fn repo_source_control_read_block_untracked(
 ) -> Option<RepoWriteBlock> {
     let repo_id = signals.current_repo_id.get_untracked();
     let load_state = signals.load_state.get_untracked();
+    let scope_nonce = signals.current_scope_nonce.get_untracked();
+    let readiness = ws.native_runtime_readiness_for_untracked(
+        repo_id.as_deref(),
+        Some(scope_nonce),
+        signals.handshake_ready.get_untracked(),
+    );
     repo_source_control_read_block(RepoWriteGateState {
         connection_status: ws.status.get_untracked(),
         load_state: &load_state,
         is_read_only: signals.is_spectator.get_untracked(),
-        handshake_ready: signals.handshake_ready.get_untracked(),
-        writer_ready: ws.writer_ready_for(
-            repo_id.as_deref(),
-            Some(signals.current_scope_nonce.get_untracked()),
-        ),
+        node_role_readable: readiness.node_role_readable,
+        handshake_ready: readiness.repo_handshake_complete,
+        writer_ready: readiness.writer_ready,
         has_repo: repo_id.is_some(),
         pending_branch_switch: signals.pending_branch_switch.get_untracked().is_some(),
         pending_repo_switch: signals.pending_repo_switch.get_untracked().is_some(),
@@ -95,13 +109,19 @@ pub(crate) fn repo_source_control_read_block_tracked(
 ) -> Option<RepoWriteBlock> {
     let repo_id = signals.current_repo_id.get();
     let load_state = signals.load_state.get();
+    let scope_nonce = signals.current_scope_nonce.get();
+    let readiness = ws.native_runtime_readiness_for(
+        repo_id.as_deref(),
+        Some(scope_nonce),
+        signals.handshake_ready.get(),
+    );
     repo_source_control_read_block(RepoWriteGateState {
         connection_status: ws.status.get(),
         load_state: &load_state,
         is_read_only: signals.is_spectator.get(),
-        handshake_ready: signals.handshake_ready.get(),
-        writer_ready: ws
-            .writer_ready_for(repo_id.as_deref(), Some(signals.current_scope_nonce.get())),
+        node_role_readable: readiness.node_role_readable,
+        handshake_ready: readiness.repo_handshake_complete,
+        writer_ready: readiness.writer_ready,
         has_repo: repo_id.is_some(),
         pending_branch_switch: signals.pending_branch_switch.get().is_some(),
         pending_repo_switch: signals.pending_repo_switch.get().is_some(),

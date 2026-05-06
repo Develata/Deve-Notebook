@@ -107,6 +107,32 @@ fn writable_shell_requires_runtime_ready_writer_and_current_scope() {
 }
 
 #[test]
+fn native_reprobe_before_write_requires_full_runtime_readiness() {
+    assert!(!ready_probe().needs_reprobe_before_write());
+
+    for readiness in [
+        NativeRuntimeReadiness {
+            endpoint_reachable: false,
+            ..ready_probe()
+        },
+        NativeRuntimeReadiness {
+            node_role_readable: false,
+            ..ready_probe()
+        },
+        NativeRuntimeReadiness {
+            writer_ready: false,
+            ..ready_probe()
+        },
+        NativeRuntimeReadiness {
+            scope_nonce_current: false,
+            ..ready_probe()
+        },
+    ] {
+        assert!(readiness.needs_reprobe_before_write());
+    }
+}
+
+#[test]
 fn writable_shell_revalidates_injected_endpoint() {
     let snapshot = NativeAdapterSnapshot {
         platform: NativeAdapterPlatform::Desktop,

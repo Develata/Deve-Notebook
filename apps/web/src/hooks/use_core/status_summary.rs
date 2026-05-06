@@ -54,6 +54,7 @@ pub(crate) fn derive_sync_status(
     load_state: &str,
     remote_branch_active: bool,
     degraded_storage: bool,
+    node_role_readable: bool,
     handshake_ready: bool,
     writer_ready: bool,
     current_repo_id: Option<&str>,
@@ -81,6 +82,7 @@ pub(crate) fn derive_sync_status(
             if pending_repo_switch.is_some()
                 || pending_branch_switch
                 || current_repo_id.is_none()
+                || !node_role_readable
                 || !handshake_ready
                 || !writer_ready =>
         {

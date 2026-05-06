@@ -11,6 +11,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     runtime.set();
     let repo_id = uuid::Uuid::new_v4();
     let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.set_node_role_for_test("main");
     ws.mark_writer_ready(repo_id.to_string(), 7, "web-light-peer");
 
     let (staged, set_staged) = signal(Vec::<ChangeEntry>::new());

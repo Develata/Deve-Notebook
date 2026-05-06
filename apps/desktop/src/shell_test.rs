@@ -424,6 +424,20 @@ fn desktop_shell_session_invalid_blocks_bootstrap() {
 fn desktop_runtime_ready_requires_writer_and_current_scope() {
     let mut shell = bound_shell();
 
+    let missing_node_role = NativeRuntimeReadiness {
+        node_role_readable: false,
+        ..ready_probe()
+    };
+    assert!(!shell.mark_runtime_ready(missing_node_role));
+    assert_eq!(shell.snapshot().state, DesktopServiceState::SessionBound);
+
+    let missing_writer = NativeRuntimeReadiness {
+        writer_ready: false,
+        ..ready_probe()
+    };
+    assert!(!shell.mark_runtime_ready(missing_writer));
+    assert_eq!(shell.snapshot().state, DesktopServiceState::SessionBound);
+
     let stale_scope = NativeRuntimeReadiness {
         scope_nonce_current: false,
         ..ready_probe()

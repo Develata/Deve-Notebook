@@ -135,7 +135,7 @@ impl NativeRuntimeReadiness {
     }
 
     pub fn needs_reprobe_before_write(self) -> bool {
-        !self.auth_status_valid || !self.repo_handshake_complete || !self.scope_nonce_current
+        !self.is_runtime_ready()
     }
 }
 

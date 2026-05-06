@@ -16,6 +16,7 @@ fn gate_state(
         connection_status,
         load_state: "ready",
         is_read_only,
+        node_role_readable: true,
         handshake_ready,
         writer_ready,
         has_repo: true,

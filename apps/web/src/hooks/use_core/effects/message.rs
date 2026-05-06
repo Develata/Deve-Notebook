@@ -62,6 +62,11 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     let pending_repo = pending_repo_switch.get_untracked();
                     let scope_nonce = signals.current_scope_nonce.get_untracked();
                     let load_state = signals.load_state.get_untracked();
+                    let readiness = ws_for_timer.native_runtime_readiness_for_untracked(
+                        repo_id.as_deref(),
+                        Some(scope_nonce),
+                        signals.handshake_ready.get_untracked(),
+                    );
                     if !should_send_refresh_through_read_gate(
                         &refresh_scope,
                         repo_id.clone(),
@@ -73,9 +78,9 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                             connection_status: ws_for_timer.status.get_untracked(),
                             load_state: &load_state,
                             is_read_only: signals.is_spectator.get_untracked(),
-                            handshake_ready: signals.handshake_ready.get_untracked(),
-                            writer_ready: ws_for_timer
-                                .writer_ready_for(repo_id.as_deref(), Some(scope_nonce)),
+                            node_role_readable: readiness.node_role_readable,
+                            handshake_ready: readiness.repo_handshake_complete,
+                            writer_ready: readiness.writer_ready,
                             has_repo: repo_id.is_some(),
                             pending_branch_switch: pending_branch.is_some(),
                             pending_repo_switch: pending_repo.is_some(),

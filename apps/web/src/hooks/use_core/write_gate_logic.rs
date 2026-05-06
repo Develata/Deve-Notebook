@@ -47,6 +47,7 @@ pub(crate) struct RepoWriteGateState<'a> {
     pub connection_status: ConnectionStatus,
     pub load_state: &'a str,
     pub is_read_only: bool,
+    pub node_role_readable: bool,
     pub handshake_ready: bool,
     pub writer_ready: bool,
     pub has_repo: bool,
@@ -71,7 +72,9 @@ pub(crate) fn repo_write_block(state: RepoWriteGateState<'_>) -> Option<RepoWrit
             Some(RepoWriteBlock::ScopeSwitching)
         }
         ConnectionStatus::Connected if !state.has_repo => Some(RepoWriteBlock::NoRepo),
-        ConnectionStatus::Connected if !state.handshake_ready || !state.writer_ready => {
+        ConnectionStatus::Connected
+            if !state.node_role_readable || !state.handshake_ready || !state.writer_ready =>
+        {
             Some(RepoWriteBlock::HandshakingRepo)
         }
         ConnectionStatus::Connected => None,
@@ -101,6 +104,9 @@ pub(crate) fn repo_source_control_read_block(
                 Some(RepoWriteBlock::ScopeSwitching)
             }
             ConnectionStatus::Connected if !state.has_repo => Some(RepoWriteBlock::NoRepo),
+            ConnectionStatus::Connected if !state.node_role_readable => {
+                Some(RepoWriteBlock::HandshakingRepo)
+            }
             ConnectionStatus::Connected => None,
         };
     }
