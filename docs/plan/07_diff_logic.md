@@ -157,7 +157,7 @@ CommitSelected
   - counterpart path / successor path
 - 不得把 `"old -> new"` 这样的 display label 回灌为 canonical identity
 
-### 3.3 Merge Lifecycle
+### 3.3 Merge Lifecycle {#merge-contract}
 
 ```text
 MergeRequested

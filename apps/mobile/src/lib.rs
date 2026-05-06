@@ -14,6 +14,8 @@ mod packaging;
 mod packaging_test;
 mod shell;
 #[cfg(test)]
+mod shell_recovery_test;
+#[cfg(test)]
 mod shell_test;
 mod types;
 

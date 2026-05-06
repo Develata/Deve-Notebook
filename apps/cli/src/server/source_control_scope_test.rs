@@ -71,3 +71,5 @@ async fn commit_history_rejects_stale_local_selector() -> anyhow::Result<()> {
 
 #[path = "source_control_scope_test_extra.rs"]
 mod extra;
+#[path = "source_control_scope_write_test.rs"]
+mod write_extra;

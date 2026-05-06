@@ -43,3 +43,5 @@ pub use validation::{
 mod contract_test;
 #[cfg(test)]
 mod process_test;
+#[cfg(test)]
+mod supervisor_test;

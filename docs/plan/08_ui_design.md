@@ -229,7 +229,7 @@ Booting
 - `Dashboard` 与 `RepoScopedShell` 是两个不同的 shell state。
 - overlay 打开时必须显式记录 `FocusedSurface` 与返回目标。
 
-### 5.2 Focus State
+### 5.2 Focus State {#layout-navigation-and-focus}
 
 ```text
 Editor
