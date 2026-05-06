@@ -11,10 +11,24 @@ use super::super::super::unified::DIFF_VIEWPORT_CHUNK_SIZE;
 pub const INITIAL_DIFF_PREVIEW_LINES: usize = DIFF_VIEWPORT_CHUNK_SIZE * 2;
 
 pub struct InitialDiff {
-    pub key: String,
+    pub key: Option<String>,
     pub cache_hit: bool,
     pub complete: bool,
     pub value: (DiffLines, DiffAlgorithm),
+}
+
+pub fn initial_diff_key_policy(old_content: &str, new_content: &str) -> InitialKeyPolicy {
+    if exceeds_preview_window(old_content) || exceeds_preview_window(new_content) {
+        InitialKeyPolicy::DeferUntilFullCompute
+    } else {
+        InitialKeyPolicy::BuildSynchronously
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InitialKeyPolicy {
+    BuildSynchronously,
+    DeferUntilFullCompute,
 }
 
 pub fn algo_label(algo: DiffAlgorithm) -> &'static str {
@@ -32,6 +46,17 @@ pub fn initial_cached_or_preview(
     mode: &str,
     context_lines: usize,
 ) -> InitialDiff {
+    let preview = preview_diff(old_content, new_content);
+    if initial_diff_key_policy(old_content, new_content) == InitialKeyPolicy::DeferUntilFullCompute
+    {
+        return InitialDiff {
+            key: None,
+            cache_hit: false,
+            complete: false,
+            value: preview,
+        };
+    }
+
     let key = build_key(
         repo_scope,
         path,
@@ -42,24 +67,27 @@ pub fn initial_cached_or_preview(
     );
     if let Some(cached) = cache_get(&key) {
         return InitialDiff {
-            key,
+            key: Some(key),
             cache_hit: true,
             complete: true,
             value: cached,
         };
     }
-    let preview =
-        compute_diff_preview_with_meta(old_content, new_content, INITIAL_DIFF_PREVIEW_LINES);
+    cache_put(key.clone(), preview.clone());
     InitialDiff {
-        key,
+        key: Some(key),
         cache_hit: false,
-        complete: false,
+        complete: true,
         value: preview,
     }
 }
 
 pub fn preview_diff(old_content: &str, new_content: &str) -> (DiffLines, DiffAlgorithm) {
     compute_diff_preview_with_meta(old_content, new_content, INITIAL_DIFF_PREVIEW_LINES)
+}
+
+fn exceeds_preview_window(content: &str) -> bool {
+    content.lines().nth(INITIAL_DIFF_PREVIEW_LINES).is_some()
 }
 
 #[cfg(test)]
@@ -95,7 +123,10 @@ pub fn cache_completed_diff(key: String, value: (DiffLines, DiffAlgorithm)) {
 
 #[cfg(test)]
 mod tests {
-    use super::{INITIAL_DIFF_PREVIEW_LINES, initial_cached_or_preview, recompute_with_cache};
+    use super::{
+        INITIAL_DIFF_PREVIEW_LINES, InitialKeyPolicy, initial_cached_or_preview,
+        initial_diff_key_policy, recompute_with_cache,
+    };
 
     fn long_lines(prefix: &str) -> String {
         (0..3_000)
@@ -119,13 +150,33 @@ mod tests {
 
         assert!(!initial.cache_hit);
         assert!(!initial.complete);
+        assert!(initial.key.is_none());
         assert!(initial.value.0.0.len() <= INITIAL_DIFF_PREVIEW_LINES * 2);
     }
 
     #[test]
-    fn diff_first_viewport_initial_cache_hit_is_complete() {
-        let old_content = long_lines("old-preview-hit");
-        let new_content = long_lines("new-preview-hit");
+    fn diff_first_viewport_long_initial_defers_cache_key() {
+        let old_content = long_lines("old-key-policy");
+        let new_content = long_lines("new-key-policy");
+
+        assert_eq!(
+            initial_diff_key_policy(&old_content, &new_content),
+            InitialKeyPolicy::DeferUntilFullCompute
+        );
+    }
+
+    #[test]
+    fn diff_first_viewport_short_initial_builds_cache_key() {
+        assert_eq!(
+            initial_diff_key_policy("a\nb\nc", "a\nb2\nc"),
+            InitialKeyPolicy::BuildSynchronously
+        );
+    }
+
+    #[test]
+    fn diff_first_viewport_initial_short_cache_hit_is_complete() {
+        let old_content = "a\nb\nc".to_string();
+        let new_content = "a\nb2\nc".to_string();
         let _ = recompute_with_cache(
             "repo-preview-hit",
             "path.md",
@@ -145,6 +196,22 @@ mod tests {
 
         assert!(initial.cache_hit);
         assert!(initial.complete);
-        assert!(initial.value.0.0.len() > INITIAL_DIFF_PREVIEW_LINES * 2);
+        assert!(initial.key.is_some());
+    }
+
+    #[test]
+    fn diff_first_viewport_initial_short_cache_miss_is_complete() {
+        let initial = initial_cached_or_preview(
+            "repo-preview-short-miss",
+            "path.md",
+            "a\nb\nc",
+            "a\nb2\nc",
+            "unified",
+            3,
+        );
+
+        assert!(!initial.cache_hit);
+        assert!(initial.complete);
+        assert!(initial.key.is_some());
     }
 }

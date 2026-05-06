@@ -25,6 +25,22 @@ struct ChunkedDiffRequest {
     metrics: super::super::metrics::DiffMetricsState,
 }
 
+struct ChunkedDiffStart {
+    key: Option<String>,
+    repo_scope: String,
+    path: String,
+    mode: &'static str,
+    context_lines: usize,
+    old_content: String,
+    new_content: String,
+    token: u64,
+    started_at: u64,
+    latest: ReadSignal<u64>,
+    set_result: WriteSignal<DiffLines>,
+    set_phase: WriteSignal<ComputePhase>,
+    metrics: super::super::metrics::DiffMetricsState,
+}
+
 fn schedule_chunked_diff(
     delay_ms: u32,
     job: Rc<RefCell<Option<DiffChunkJob>>>,
@@ -75,7 +91,11 @@ fn schedule_chunked_diff(
 }
 
 fn start_chunked_diff(
-    key: String,
+    key: Option<String>,
+    repo_scope: String,
+    path: String,
+    mode: &'static str,
+    context_lines: usize,
     old_content: String,
     new_content: String,
     token: u64,
@@ -86,19 +106,65 @@ fn start_chunked_diff(
     set_phase: WriteSignal<ComputePhase>,
     metrics: super::super::metrics::DiffMetricsState,
 ) {
-    let job = Rc::new(RefCell::new(Some(
-        super::super::model::create_diff_chunk_job(old_content, new_content),
-    )));
-    let request = Rc::new(ChunkedDiffRequest {
+    let start = ChunkedDiffStart {
         key,
+        repo_scope,
+        path,
+        mode,
+        context_lines,
+        old_content,
+        new_content,
         token,
         started_at: now_ms(),
         latest,
         set_result,
         set_phase,
         metrics,
+    };
+    let timer_ref = compute_timer.clone();
+    let timer = Timeout::new(delay_ms, move || {
+        if start.latest.get_untracked() != start.token {
+            return;
+        }
+        let key = start.key.unwrap_or_else(|| {
+            crate::components::diff_view::cache::build_key(
+                &start.repo_scope,
+                &start.path,
+                &start.old_content,
+                &start.new_content,
+                start.mode,
+                start.context_lines,
+            )
+        });
+        if let Some((computed, algo)) = crate::components::diff_view::cache::cache_get(&key) {
+            if start.latest.get_untracked() == start.token {
+                record_cache_sample(&start.metrics, true);
+                start
+                    .metrics
+                    .set_algorithm
+                    .set(algo_label(algo).to_string());
+                start.metrics.set_last_compute_ms.set(0);
+                start.set_result.set(computed);
+                start.set_phase.set(ComputePhase::Ready);
+            }
+            return;
+        }
+
+        let job = Rc::new(RefCell::new(Some(
+            super::super::model::create_diff_chunk_job(start.old_content, start.new_content),
+        )));
+        let request = Rc::new(ChunkedDiffRequest {
+            key,
+            token: start.token,
+            started_at: start.started_at,
+            latest: start.latest,
+            set_result: start.set_result,
+            set_phase: start.set_phase,
+            metrics: start.metrics,
+        });
+        schedule_chunked_diff(0, job, timer_ref, request);
     });
-    schedule_chunked_diff(delay_ms, job, compute_timer, request);
+    *compute_timer.borrow_mut() = Some(timer);
 }
 
 pub fn create_compute_state(
@@ -149,6 +215,10 @@ pub fn create_compute_state(
     if should_complete_initial {
         start_chunked_diff(
             initial_key,
+            repo_scope.clone(),
+            path.clone(),
+            mode,
+            context_lines,
             old_content.as_str().to_string(),
             new_content.clone(),
             initial_token,
@@ -199,25 +269,6 @@ pub fn create_compute_state(
                 }
                 set_phase.set(ComputePhase::PartialReady);
 
-                let key = crate::components::diff_view::cache::build_key(
-                    &repo_scope,
-                    &path,
-                    old_content_ref.as_str(),
-                    &text,
-                    mode,
-                    context_lines,
-                );
-                if let Some((computed, algo)) = crate::components::diff_view::cache::cache_get(&key)
-                {
-                    if latest.get_untracked() == next_token {
-                        record_cache_sample(&metrics, true);
-                        metrics.set_algorithm.set(algo_label(algo).to_string());
-                        metrics.set_last_compute_ms.set(0);
-                        set_result.set(computed);
-                        set_phase.set(ComputePhase::Ready);
-                    }
-                    return;
-                }
                 let (preview, preview_algo) = preview_diff(old_content_ref.as_str(), &text);
                 if latest.get_untracked() != next_token {
                     return;
@@ -228,7 +279,11 @@ pub fn create_compute_state(
                 set_result.set(preview);
                 set_phase.set(ComputePhase::PartialReady);
                 start_chunked_diff(
-                    key,
+                    None,
+                    repo_scope,
+                    path,
+                    mode,
+                    context_lines,
                     old_content_ref.as_str().to_string(),
                     text,
                     next_token,
