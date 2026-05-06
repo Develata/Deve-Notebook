@@ -36,6 +36,7 @@
 mod append_validate;
 pub mod database;
 mod database_cache;
+mod database_open;
 pub mod doc_lookup;
 pub mod init;
 mod init_reuse;
