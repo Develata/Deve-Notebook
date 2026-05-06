@@ -79,6 +79,7 @@ check_contains crates/core/src/native_adapter/contract_test.rs "native_reprobe_b
 check_contains apps/web/src/api/service.rs "native_runtime_readiness_requires_node_role_writer_and_current_scope"
 check_contains apps/web/src/api/service.rs "native_runtime_readiness_for_untracked"
 check_contains apps/web/src/api/connection_role.rs "NODE_ROLE_PROBE_RETRIES"
+check_contains apps/web/src/api/connection_role.rs "NODE_ROLE_PROBE_TIMEOUT_MS"
 check_contains apps/web/src/api/connection_role.rs "stale_node_role_probe_results_do_not_mutate_current_connection"
 check_contains apps/desktop/src/shell.rs "record_process_snapshot"
 check_contains apps/desktop/src/shell_test.rs "desktop_probe_timeout_observation_uses_process_snapshot"

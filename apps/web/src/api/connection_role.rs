@@ -2,12 +2,14 @@
 //!   - 15_release#runtime-observability
 //!
 
+use futures::FutureExt;
 use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 
 const NODE_ROLE_PROBE_RETRIES: usize = 3;
 const NODE_ROLE_PROBE_RETRY_DELAY_MS: u32 = 150;
+const NODE_ROLE_PROBE_TIMEOUT_MS: u32 = 1_500;
 
 pub(super) async fn fetch_node_role(
     ws_url: String,
@@ -37,11 +39,7 @@ pub(super) async fn fetch_node_role_for_http_base(
     let url = format!("{}/api/node/role", http_url);
 
     for attempt in 0..NODE_ROLE_PROBE_RETRIES {
-        let res = Request::get(&url).send().await;
-        if let Ok(resp) = res
-            && resp.ok()
-            && let Ok(json) = resp.json::<serde_json::Value>().await
-        {
+        if let Some(json) = fetch_node_role_json_with_timeout(&url).await {
             apply_node_role_probe_success(
                 set_node_role,
                 set_node_role_probe_failed,
@@ -64,6 +62,24 @@ pub(super) async fn fetch_node_role_for_http_base(
         current_connection_epoch,
         probe_connection_epoch,
     );
+}
+
+async fn fetch_node_role_json_with_timeout(url: &str) -> Option<serde_json::Value> {
+    let request = async {
+        let resp = Request::get(url).send().await.ok()?;
+        if !resp.ok() {
+            return None;
+        }
+        resp.json::<serde_json::Value>().await.ok()
+    }
+    .fuse();
+    let timeout = TimeoutFuture::new(NODE_ROLE_PROBE_TIMEOUT_MS).fuse();
+    futures::pin_mut!(request, timeout);
+
+    futures::select! {
+        result = request => result,
+        _ = timeout => None,
+    }
 }
 
 fn apply_node_role_probe_success(

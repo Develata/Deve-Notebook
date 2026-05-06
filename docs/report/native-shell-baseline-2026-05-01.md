@@ -24,7 +24,7 @@
 - Desktop/mobile shell skeleton 可以发出不含 endpoint secrets、session material、service failure reasons 的 recovery bootstrap payload。
 - `ForegroundReprobe` 在 auth、node role、repo handshake、writer readiness 与当前 `scope_nonce` 重新校验前不可写。
 - Web `WsService` 派生统一 `NativeRuntimeReadiness`，Source Control refresh、write gate、bottom bar 与 mobile footer 共用同一 readiness 口径。
-- Node role probe 失败会有限重试；重试耗尽后保持不可写，并在 UI 状态中进入 `NativeReprobeRequired`。
+- Node role probe 单次请求有超时上限；失败会有限重试，重试耗尽后保持不可写，并在 UI 状态中进入 `NativeReprobeRequired`。
 - Native recovery 验证覆盖 `cargo test -p deve_desktop`、`cargo test -p deve_mobile`、`cargo test -p deve_web native_runtime_readiness -- --nocapture`、`cargo test -p deve_web status_summary -- --nocapture`、`cargo test -p deve_web write_gate -- --nocapture`、`cargo test -p deve_web refresh -- --nocapture`、`cargo test -p deve_web connection_urls -- --nocapture`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`。
 
 ## Retired Source Reports
