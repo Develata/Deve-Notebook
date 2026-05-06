@@ -54,17 +54,28 @@ pub(crate) fn search_surface_mode(query: &str) -> SearchSurfaceMode {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn create_results_memo(
-    show: Signal<bool>,
-    query: Signal<String>,
-    locale: RwSignal<Locale>,
-    core: CoreState,
-    recent_move_dirs: Signal<Vec<String>>,
-    on_settings: Callback<()>,
-    on_open: Callback<()>,
-    set_show: WriteSignal<bool>,
-) -> Memo<Vec<SearchResult>> {
+pub struct SearchResultsMemoInput {
+    pub show: Signal<bool>,
+    pub query: Signal<String>,
+    pub locale: RwSignal<Locale>,
+    pub core: CoreState,
+    pub recent_move_dirs: Signal<Vec<String>>,
+    pub on_settings: Callback<()>,
+    pub on_open: Callback<()>,
+    pub set_show: WriteSignal<bool>,
+}
+
+pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResult>> {
+    let SearchResultsMemoInput {
+        show,
+        query,
+        locale,
+        core,
+        recent_move_dirs,
+        on_settings,
+        on_open,
+        set_show,
+    } = input;
     Memo::new(move |_| {
         if !show.get() {
             return Vec::new();

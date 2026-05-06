@@ -11,19 +11,34 @@ use web_sys::KeyboardEvent;
 use super::execute::execute_action;
 use super::selection::next_selectable_index;
 
-#[allow(clippy::too_many_arguments)]
+pub struct SearchKeydownHandlerInput {
+    pub show: Signal<bool>,
+    pub query: Signal<String>,
+    pub set_query: WriteSignal<String>,
+    pub set_selected_index: WriteSignal<usize>,
+    pub providers_results: Memo<Vec<SearchResult>>,
+    pub active_index: Arc<dyn Fn() -> usize + Send + Sync>,
+    pub input_ref: NodeRef<leptos::html::Input>,
+    pub set_show: WriteSignal<bool>,
+    pub core: CoreState,
+    pub set_recent_move_dirs: WriteSignal<Vec<String>>,
+}
+
 pub fn build_keydown_handler(
-    show: Signal<bool>,
-    query: Signal<String>,
-    set_query: WriteSignal<String>,
-    set_selected_index: WriteSignal<usize>,
-    providers_results: Memo<Vec<SearchResult>>,
-    active_index: Arc<dyn Fn() -> usize + Send + Sync>,
-    input_ref: NodeRef<leptos::html::Input>,
-    set_show: WriteSignal<bool>,
-    core: CoreState,
-    set_recent_move_dirs: WriteSignal<Vec<String>>,
+    input: SearchKeydownHandlerInput,
 ) -> impl Fn(KeyboardEvent) + Send + Sync + 'static {
+    let SearchKeydownHandlerInput {
+        show,
+        query,
+        set_query,
+        set_selected_index,
+        providers_results,
+        active_index,
+        input_ref,
+        set_show,
+        core,
+        set_recent_move_dirs,
+    } = input;
     move |ev: KeyboardEvent| {
         let key = ev.key();
         ev.stop_propagation();

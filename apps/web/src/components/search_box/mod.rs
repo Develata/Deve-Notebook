@@ -102,16 +102,16 @@ pub fn UnifiedSearch(
     }
 
     // 按查询类型动态选择 Provider 并生成结果列表。
-    let providers_results = logic::create_results_memo(
+    let providers_results = logic::create_results_memo(logic::SearchResultsMemoInput {
         show,
-        debounced_query.into(),
+        query: debounced_query.into(),
         locale,
-        core.clone(),
-        recent_move_dirs.into(),
+        core: core.clone(),
+        recent_move_dirs: recent_move_dirs.into(),
         on_settings,
         on_open,
         set_show,
-    );
+    });
 
     let active_index = Arc::new(logic::make_active_index(
         selected_index.into(),
@@ -120,16 +120,18 @@ pub fn UnifiedSearch(
 
     // 键盘导航与执行逻辑。
     let handle_keydown = Arc::new(logic::build_keydown_handler(
-        show,
-        query.into(),
-        set_query,
-        set_selected_index,
-        providers_results,
-        active_index.clone(),
-        input_ref,
-        set_show,
-        core.clone(),
-        set_recent_move_dirs,
+        logic::SearchKeydownHandlerInput {
+            show,
+            query: query.into(),
+            set_query,
+            set_selected_index,
+            providers_results,
+            active_index: active_index.clone(),
+            input_ref,
+            set_show,
+            core: core.clone(),
+            set_recent_move_dirs,
+        },
     ));
 
     let placeholder_text = logic::create_placeholder_memo(query.into(), locale);
