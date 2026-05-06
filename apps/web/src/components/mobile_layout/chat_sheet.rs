@@ -36,6 +36,26 @@ pub(crate) fn mobile_chat_sheet_style(expanded: bool, keyboard_offset: i32) -> S
     }
 }
 
+pub(crate) fn mobile_chat_sheet_class(expanded: bool) -> &'static str {
+    if expanded {
+        "fixed inset-0 z-[var(--z-overlay)] bg-panel transition-opacity duration-200 ease-out"
+    } else {
+        "fixed right-2 z-[var(--z-floating)]"
+    }
+}
+
+pub(crate) fn mobile_chat_page_mode(expanded: bool) -> &'static str {
+    if expanded { "fullscreen" } else { "chip" }
+}
+
+pub(crate) fn mobile_chat_after_open() -> bool {
+    true
+}
+
+pub(crate) fn mobile_chat_after_close() -> bool {
+    false
+}
+
 #[component]
 pub fn MobileChatSheet(
     keyboard_offset: ReadSignal<i32>,
@@ -52,7 +72,7 @@ pub fn MobileChatSheet(
             .map(|c| c.chat_visible.get())
             .unwrap_or(true)
     });
-    let close_chat = Callback::new(move |_| set_expanded.set(false));
+    let close_chat = Callback::new(move |_| set_expanded.set(mobile_chat_after_close()));
 
     view! {
         <Show when=move || {
@@ -65,23 +85,22 @@ pub fn MobileChatSheet(
             )
         }>
             <div
-                class=move || if expanded.get() {
-                    "fixed inset-0 z-[var(--z-overlay)] bg-panel transition-opacity duration-200 ease-out"
-                } else {
-                    "fixed right-2 z-[var(--z-floating)]"
-                }
+                class=move || mobile_chat_sheet_class(expanded.get())
                 style=move || mobile_chat_sheet_style(expanded.get(), keyboard_offset.get())
                 data-deve-mobile-chat=move || if expanded.get() { "expanded" } else { "collapsed" }
+                data-deve-mobile-chat-page=move || mobile_chat_page_mode(expanded.get())
+                data-deve-mobile-chat-fullscreen=move || expanded.get().to_string()
             >
                 <Show
                     when=move || expanded.get()
                     fallback=move || {
                         view! {
                             <button
+                                data-deve-mobile-chat-action="mobile_chat_chip"
                                 class="mobile-chat-chip h-11 min-w-[44px] px-3 rounded-full bg-panel border border-default shadow-sm text-sm font-medium text-primary active:bg-hover"
                                 title=move || t::chat::toggle_mobile_chat(locale.get())
                                 aria-label=move || t::chat::toggle_mobile_chat(locale.get())
-                                on:click=move |_| set_expanded.set(true)
+                                on:click=move |_| set_expanded.set(mobile_chat_after_open())
                             >
                                 {move || t::chat::mobile_chip(locale.get())}
                             </button>
@@ -97,7 +116,10 @@ pub fn MobileChatSheet(
 
 #[cfg(test)]
 mod tests {
-    use super::{mobile_chat_sheet_style, should_show_mobile_chat_sheet};
+    use super::{
+        mobile_chat_after_close, mobile_chat_after_open, mobile_chat_page_mode,
+        mobile_chat_sheet_class, mobile_chat_sheet_style, should_show_mobile_chat_sheet,
+    };
 
     #[test]
     fn expanded_chat_stays_visible_when_keyboard_is_open() {
@@ -125,5 +147,20 @@ mod tests {
             mobile_chat_sheet_style(false, 0),
             "bottom: calc(58px + env(safe-area-inset-bottom));"
         );
+    }
+
+    #[test]
+    fn mobile_chat_page_expands_to_fullscreen() {
+        assert_eq!(mobile_chat_page_mode(true), "fullscreen");
+        assert!(mobile_chat_sheet_class(true).contains("fixed inset-0"));
+        assert!(mobile_chat_sheet_class(true).contains("z-[var(--z-overlay)]"));
+    }
+
+    #[test]
+    fn mobile_chat_page_close_returns_to_editor_surface() {
+        assert_eq!(mobile_chat_page_mode(false), "chip");
+        assert!(mobile_chat_sheet_class(false).contains("z-[var(--z-floating)]"));
+        assert!(mobile_chat_after_open());
+        assert!(!mobile_chat_after_close());
     }
 }

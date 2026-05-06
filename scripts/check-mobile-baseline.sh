@@ -252,6 +252,29 @@ rejects apps/web/src/components/mobile_layout "\"Toggle status details\""
 rejects apps/web/src/components/mobile_layout "\"Outline unavailable\""
 rejects apps/web/src/components/mobile_layout "\"No headings found\""
 
+# UI-MOB-011: mobile AI Chat opens as a same-page fullscreen surface and closes
+# back to the editor surface.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-011"
+contains_case_block UI-MOB-011 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-011 "run: cargo test -p deve_web mobile_chat_page -- --nocapture"
+contains_case_block UI-MOB-011 "ui_click: \"mobile_chat_chip\""
+contains_case_block UI-MOB-011 "ui_assert: chat_page_fullscreen true"
+contains_case_block UI-MOB-011 "ui_click: \"chat_close_button\""
+contains_case_block UI-MOB-011 "cli_assert: mobile_chat_chip_marker_bound true"
+contains_case_block UI-MOB-011 "cli_assert: mobile_chat_close_marker_bound true"
+contains_case_block UI-MOB-011 "cli_assert: mobile_chat_fullscreen_marker_bound true"
+contains_case_block UI-MOB-011 "cli_assert: mobile_chat_page_state_transition_bound true"
+contains_case_block UI-MOB-011 "ui_assert: chat_page_fullscreen false"
+contains_case_block UI-MOB-011 "ui_assert: editor_visible true"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "data-deve-mobile-chat-action=\"mobile_chat_chip\""
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "data-deve-mobile-chat-page=move || mobile_chat_page_mode(expanded.get())"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "data-deve-mobile-chat-fullscreen=move || expanded.get().to_string()"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "set_expanded.set(mobile_chat_after_open())"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "set_expanded.set(mobile_chat_after_close())"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "fn mobile_chat_page_expands_to_fullscreen()"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "fn mobile_chat_page_close_returns_to_editor_surface()"
+contains apps/web/src/components/chat/header.rs "data-deve-mobile-chat-action=\"chat_close_button\""
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"
