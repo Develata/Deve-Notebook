@@ -13,20 +13,16 @@ use leptos::prelude::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum MobileContentSurface {
-    Diff,
     Editor,
     Dashboard,
 }
 
-pub(crate) fn mobile_content_surface(
-    diff_open: bool,
+pub(crate) fn mobile_content_surface_after_diff_close(
     has_current_doc: bool,
     pending_branch_switch: bool,
     pending_repo_switch: bool,
 ) -> MobileContentSurface {
-    if diff_open {
-        MobileContentSurface::Diff
-    } else if has_current_doc && !pending_branch_switch && !pending_repo_switch {
+    if has_current_doc && !pending_branch_switch && !pending_repo_switch {
         MobileContentSurface::Editor
     } else {
         MobileContentSurface::Dashboard
@@ -48,14 +44,13 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
     let editor_doc_core = core.clone();
     let current_editor_doc = Signal::derive(move || {
         let current_doc = editor_doc_core.current_doc.get();
-        match mobile_content_surface(
-            false,
+        match mobile_content_surface_after_diff_close(
             current_doc.is_some(),
             editor_doc_core.pending_branch_switch.get().is_some(),
             editor_doc_core.pending_repo_switch.get().is_some(),
         ) {
             MobileContentSurface::Editor => current_doc,
-            MobileContentSurface::Diff | MobileContentSurface::Dashboard => None,
+            MobileContentSurface::Dashboard => None,
         }
     });
     view! {
@@ -118,16 +113,12 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
 
 #[cfg(test)]
 mod tests {
-    use super::{MobileContentSurface, mobile_content_surface};
+    use super::{MobileContentSurface, mobile_content_surface_after_diff_close};
 
     #[test]
     fn mobile_diff_close_returns_to_editor_surface() {
         assert_eq!(
-            mobile_content_surface(true, true, false, false),
-            MobileContentSurface::Diff
-        );
-        assert_eq!(
-            mobile_content_surface(false, true, false, false),
+            mobile_content_surface_after_diff_close(true, false, false),
             MobileContentSurface::Editor
         );
     }
@@ -135,7 +126,7 @@ mod tests {
     #[test]
     fn mobile_diff_close_without_current_doc_returns_dashboard() {
         assert_eq!(
-            mobile_content_surface(false, false, false, false),
+            mobile_content_surface_after_diff_close(false, false, false),
             MobileContentSurface::Dashboard
         );
     }
@@ -143,11 +134,11 @@ mod tests {
     #[test]
     fn mobile_diff_close_respects_pending_switch_gates() {
         assert_eq!(
-            mobile_content_surface(false, true, true, false),
+            mobile_content_surface_after_diff_close(true, true, false),
             MobileContentSurface::Dashboard
         );
         assert_eq!(
-            mobile_content_surface(false, true, false, true),
+            mobile_content_surface_after_diff_close(true, false, true),
             MobileContentSurface::Dashboard
         );
     }

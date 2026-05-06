@@ -500,7 +500,7 @@ contains apps/web/src/components/diff_view/header.rs "data-deve-mobile-diff-acti
 contains apps/web/src/components/diff_view/header.rs "fn mobile_diff_close_button_marker_is_stable()"
 contains apps/web/src/components/diff_view/header.rs "fn mobile_diff_close_button_is_touch_safe()"
 contains apps/web/src/components/mobile_layout/content.rs "pub(crate) enum MobileContentSurface"
-contains apps/web/src/components/mobile_layout/content.rs "pub(crate) fn mobile_content_surface("
+contains apps/web/src/components/mobile_layout/content.rs "pub(crate) fn mobile_content_surface_after_diff_close("
 contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_returns_to_editor_surface()"
 contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_without_current_doc_returns_dashboard()"
 contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_respects_pending_switch_gates()"
