@@ -19,6 +19,7 @@ Internationalization strings organized by UI feature. Provides localized text fo
 | `login.rs` | Login page strings |
 | `dashboard.rs` | Dashboard strings |
 | `source_control.rs` | Source control strings |
+| `source_control_history.rs` | Source control history strings |
 | `diff.rs` | Diff view strings |
 | `search.rs` | Search strings |
 | `chat.rs` | Chat strings |

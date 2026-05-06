@@ -19,6 +19,7 @@
 //! - `command_palette`: 命令面板翻译
 //! - `search`: 搜索框翻译
 //! - `source_control`: 版本控制面板翻译
+//! - `source_control_history`: 版本控制历史面板翻译
 //! - `time`: 时间与相对时间翻译
 
 pub mod bottom_bar;
@@ -40,6 +41,7 @@ pub mod sidebar;
 pub mod source_control;
 pub mod source_control_git;
 pub mod source_control_graph;
+pub mod source_control_history;
 pub mod source_control_native;
 pub mod time;
 
