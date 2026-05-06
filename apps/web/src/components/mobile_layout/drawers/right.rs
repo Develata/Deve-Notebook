@@ -19,7 +19,11 @@ pub fn RightDrawer(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     view! {
-        <div class=move || drawer_class("right", open.get())>
+        <div
+            data-deve-mobile-drawer="right"
+            data-deve-mobile-drawer-open=move || open.get().to_string()
+            class=move || drawer_class("right", open.get())
+        >
             <div class="flex flex-col h-full">
                 <div
                     class="h-12 px-3 flex items-center justify-between border-b border-default text-sm font-semibold"

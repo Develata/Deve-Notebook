@@ -39,6 +39,24 @@ contains apps/web/src/components/main_layout_contexts.rs "pub(crate) fn viewport
 contains apps/web/src/components/main_layout_contexts.rs "fn mobile_viewport_mapping_uses_inclusive_768px_boundary()"
 contains apps/web/src/components/mobile_layout/layout_frame.rs "data-deve-layout-mode=\"mobile\""
 
+# UI-MOB-002: edge swipes open mobile side drawers and expose stable drawer markers.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-002"
+contains_case_block UI-MOB-002 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-002 "run: cargo test -p deve_web mobile_drawer_edge_swipe -- --nocapture"
+contains_case_block UI-MOB-002 "cli_assert: mobile_drawer_edge_swipe_threshold_bound true"
+contains_case_block UI-MOB-002 "cli_assert: mobile_drawer_dom_marker_bound true"
+contains_case_block UI-MOB-002 "ui_assert: left_drawer_open true"
+contains_case_block UI-MOB-002 "ui_assert: right_drawer_open true"
+contains apps/web/src/components/mobile_layout/gesture.rs "pub(super) fn resolve_swipe_outcome("
+contains apps/web/src/components/mobile_layout/gesture_test.rs "fn mobile_drawer_edge_swipe_opens_left_from_left_edge()"
+contains apps/web/src/components/mobile_layout/gesture_test.rs "fn mobile_drawer_edge_swipe_opens_right_from_right_edge()"
+contains apps/web/src/components/mobile_layout/gesture_test.rs "fn mobile_drawer_edge_swipe_closes_open_drawers()"
+contains apps/web/src/components/mobile_layout/gesture_test.rs "fn mobile_drawer_edge_swipe_ignores_short_drags()"
+contains apps/web/src/components/mobile_layout/drawers/left.rs "data-deve-mobile-drawer=\"left\""
+contains apps/web/src/components/mobile_layout/drawers/right.rs "data-deve-mobile-drawer=\"right\""
+contains apps/web/src/components/mobile_layout/drawers/left.rs "data-deve-mobile-drawer-open=move || open.get().to_string()"
+contains apps/web/src/components/mobile_layout/drawers/right.rs "data-deve-mobile-drawer-open=move || open.get().to_string()"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

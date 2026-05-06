@@ -42,7 +42,11 @@ pub fn LeftDrawer(
     });
 
     view! {
-        <div class=move || drawer_class("left", open.get())>
+        <div
+            data-deve-mobile-drawer="left"
+            data-deve-mobile-drawer-open=move || open.get().to_string()
+            class=move || drawer_class("left", open.get())
+        >
             <div class="flex flex-col h-full">
                 <LeftDrawerHeader locale title on_close />
 

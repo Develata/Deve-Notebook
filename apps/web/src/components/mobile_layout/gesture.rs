@@ -18,6 +18,14 @@ pub enum SwipeTarget {
     CloseRight,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum SwipeOutcome {
+    OpenLeft,
+    OpenRight,
+    CloseDrawers,
+    None,
+}
+
 pub fn build_touch_start(
     show_sidebar: ReadSignal<bool>,
     show_outline: ReadSignal<bool>,
@@ -58,18 +66,17 @@ pub fn build_touch_end(
             None => return,
         };
         let delta = end_x - start_x;
-        match target {
-            Some(SwipeTarget::OpenLeft) if delta >= SWIPE_THRESHOLD => {
+        match resolve_swipe_outcome(target, delta) {
+            SwipeOutcome::OpenLeft => {
                 set_show_sidebar.set(true);
                 set_show_outline.set(false);
             }
-            Some(SwipeTarget::OpenRight) if delta <= -SWIPE_THRESHOLD => {
+            SwipeOutcome::OpenRight => {
                 set_show_outline.set(true);
                 set_show_sidebar.set(false);
             }
-            Some(SwipeTarget::CloseLeft) if delta <= -SWIPE_THRESHOLD => close_drawers.run(()),
-            Some(SwipeTarget::CloseRight) if delta >= SWIPE_THRESHOLD => close_drawers.run(()),
-            _ => {}
+            SwipeOutcome::CloseDrawers => close_drawers.run(()),
+            SwipeOutcome::None => {}
         }
         set_swipe_target.set(None);
     })
@@ -101,6 +108,16 @@ pub(super) fn resolve_swipe_target(
         Some(SwipeTarget::OpenRight)
     } else {
         None
+    }
+}
+
+pub(super) fn resolve_swipe_outcome(target: Option<SwipeTarget>, delta: i32) -> SwipeOutcome {
+    match target {
+        Some(SwipeTarget::OpenLeft) if delta >= SWIPE_THRESHOLD => SwipeOutcome::OpenLeft,
+        Some(SwipeTarget::OpenRight) if delta <= -SWIPE_THRESHOLD => SwipeOutcome::OpenRight,
+        Some(SwipeTarget::CloseLeft) if delta <= -SWIPE_THRESHOLD => SwipeOutcome::CloseDrawers,
+        Some(SwipeTarget::CloseRight) if delta >= SWIPE_THRESHOLD => SwipeOutcome::CloseDrawers,
+        _ => SwipeOutcome::None,
     }
 }
 
