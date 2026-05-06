@@ -200,7 +200,9 @@ cargo test -p deve_web <filter> -- --nocapture
 Current docs/code guard scripts:
 
 ```bash
+scripts/check-acceptance-bindings.sh
 scripts/check-auth-baseline.sh
+scripts/check-auth-unauthorized-state.sh
 scripts/check-network-baseline.sh
 scripts/check-cli-settings-baseline.sh
 scripts/check-browser-prefs-boundary.sh
@@ -213,6 +215,16 @@ scripts/check-dev-data-health-baseline.sh
 scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
 scripts/check-graph-baseline.sh
+scripts/check-diff-color-baseline.sh
+scripts/check-large-doc-baseline.sh
+scripts/check-mobile-baseline.sh
+scripts/check-ui-dashboard-refresh-baseline.sh
+scripts/check-ui-desktop-baseline.sh
+scripts/check-ui-disconnect-baseline.sh
+scripts/check-ui-focus-baseline.sh
+scripts/check-ui-spa-routing-baseline.sh
+scripts/check-ui-token-baseline.sh
+scripts/check-ui-z-index-baseline.sh
 scripts/check-dev-runbook-baseline.sh
 scripts/check-ws-structured-errors.sh
 scripts/check-release-baseline.sh
