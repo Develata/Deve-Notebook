@@ -6,7 +6,8 @@ set -euo pipefail
 # quietly becoming a ledger/workspace authority path.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GRAPH="$ROOT_DIR/crates/core/src/graph/mod.rs"
+GRAPH_DIR="$ROOT_DIR/crates/core/src/graph"
+GRAPH="$GRAPH_DIR/mod.rs"
 GRAPH_LINKS="$ROOT_DIR/crates/core/src/graph/links.rs"
 CLI_GRAPH="$ROOT_DIR/apps/cli/src/graph_projection.rs"
 WEB_GRAPH_API="$ROOT_DIR/apps/web/src/api/graph.rs"
@@ -69,10 +70,10 @@ contains "$WEB_GRAPH_I18N" "graph_projection_blocked"
 contains "$WEB_GRAPH_I18N" "graph_projection_degraded"
 contains "$ROOT_DIR/docs/report/graph-baseline-2026-05-01.md" "Graph 当前停靠在只读 projection data surface"
 
-absent "$GRAPH" "crate::ledger"
-absent "$GRAPH" "std::fs"
-absent "$GRAPH" "redb"
-absent "$GRAPH" "source_control"
-absent "$GRAPH" "search::"
+absent "$GRAPH_DIR" "crate::ledger"
+absent "$GRAPH_DIR" "std::fs"
+absent "$GRAPH_DIR" "redb"
+absent "$GRAPH_DIR" "source_control"
+absent "$GRAPH_DIR" "search::"
 
 echo "graph-baseline-check: ok"
