@@ -211,6 +211,7 @@ scripts/check-source-control-baseline.sh
 scripts/check-source-control-smoke-hygiene.sh
 scripts/check-dev-data-health-baseline.sh
 scripts/check-native-track-boundary.sh
+scripts/check-native-packaging-gate.sh
 scripts/check-graph-baseline.sh
 scripts/check-dev-runbook-baseline.sh
 scripts/check-ws-structured-errors.sh

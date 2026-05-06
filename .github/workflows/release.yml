@@ -45,6 +45,7 @@ jobs:
       - name: Check native and graph baselines
         run: |
           scripts/check-native-track-boundary.sh
+          scripts/check-native-packaging-gate.sh
           scripts/check-graph-baseline.sh
       
       - name: Run tests

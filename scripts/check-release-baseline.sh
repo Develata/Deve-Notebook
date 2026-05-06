@@ -51,6 +51,7 @@ contains ".github/workflows/release.yml" "cargo check --locked -p deve_web --tar
 contains ".github/workflows/release.yml" "scripts/plan-coverage.sh --write-report"
 contains ".github/workflows/release.yml" "scripts/check-architecture-registry.sh"
 contains ".github/workflows/release.yml" "scripts/check-native-track-boundary.sh"
+contains ".github/workflows/release.yml" "scripts/check-native-packaging-gate.sh"
 contains ".github/workflows/release.yml" "scripts/check-graph-baseline.sh"
 contains ".github/workflows/release.yml" "cargo test --locked"
 contains ".github/workflows/release.yml" "docker/build-push-action@v6"
@@ -82,15 +83,16 @@ contains "docker-compose.yml" "mem_limit: 512m"
 contains "docker-compose.yml" "http://localhost:3001/api/node/role"
 
 contains ".env.example" "AUTH_SECRET=replace-with-at-least-32-random-bytes"
-contains ".env.example" 'AUTH_PASS=$argon2id$v=19$m=65536,t=3,p=1$...'
-contains "docs/plan/15_release.md" 'runtime image ships a single `deve_cli` binary with embedded frontend static assets'
-contains "docs/plan/15_release.md" "aggregated repo health counts"
+contains ".env.example" "AUTH_PASS=\$argon2id\$v=19\$m=65536,t=3,p=1\$..."
+contains "docs/plan/15_release.md" "runtime image 只交付单个嵌入前端静态资源的 \`deve_cli\` 二进制"
+contains "docs/plan/15_release.md" "delivery shape、environment、ports 与聚合 repo"
+contains "docs/plan/15_release.md" "health counts。degraded repo"
 contains "docs/plan/15_release.md" "native/graph boundary scripts"
-contains "docs/features/15_release.md" 'Docker/Server 当前主通道是单个 `deve_cli` 二进制'
-contains "docs/features/12_commands.md" "scripts/smoke-web-release-build.sh"
+contains "docs/features/15_release.md" "Docker/Server 当前主通道是单个 \`deve_cli\` 二进制"
 contains "docs/dev-runbook.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
 contains "docs/dev-runbook.md" "DEVE_DOCKER_BIN=/path/to/docker"
 contains "docs/dev-runbook.md" "scripts/check-native-track-boundary.sh"
+contains "docs/dev-runbook.md" "scripts/check-native-packaging-gate.sh"
 contains "docs/dev-runbook.md" "scripts/check-graph-baseline.sh"
 contains "docs/acceptance-cases/11_commands_settings.md" "scripts/smoke-web-release-build.sh"
 not_contains "docs/features/12_commands.md" "NO_COLOR=true trunk build --release"
@@ -107,6 +109,7 @@ contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_BIN=/path/to/do
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-graph-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["version", "profile", "delivery", "environment"]'
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]'
