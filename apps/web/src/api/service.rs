@@ -13,12 +13,16 @@ use std::collections::VecDeque;
 #[cfg(test)]
 use std::sync::{Arc, Mutex};
 
+use self::readiness::{native_runtime_readiness_from_parts, writer_ready_matches};
 use self::service_ping::spawn_ping_loop;
 use super::connection::spawn_connection_manager;
 use super::status::ConnectionStatus;
 use super::writer_id::derive_writer_client_id;
 
+mod readiness;
 mod service_ping;
+#[cfg(test)]
+mod test_support;
 
 #[allow(dead_code)]
 #[derive(Clone)]
@@ -95,52 +99,6 @@ impl WsService {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn new_for_test(status: ConnectionStatus) -> Self {
-        Self::new_with_incoming_for_test(status, 0, VecDeque::new())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn new_with_incoming_for_test(
-        status: ConnectionStatus,
-        current_connection_epoch: u64,
-        messages: VecDeque<(u64, u64, ServerMessage)>,
-    ) -> Self {
-        let (status, set_status) = signal(status);
-        let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(None::<String>);
-        let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(None::<u64>);
-        let (writer_client_id, set_writer_client_id) = signal(None::<u64>);
-        let msg_seq_value = messages.back().map_or(0, |(seq, _, _)| *seq);
-        let (msg_seq, _set_msg_seq) = signal(msg_seq_value);
-        let (connection_epoch, _set_connection_epoch) = signal(current_connection_epoch);
-        let (msg_queue, _set_msg_queue) = signal(messages);
-        let (endpoint, _set_endpoint) = signal(String::new());
-        let (node_role, set_node_role) = signal(String::new());
-        let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
-        let (tx, rx) = unbounded::<ClientMessage>();
-
-        Self {
-            status,
-            set_status,
-            writer_ready_repo_id,
-            set_writer_ready_repo_id,
-            writer_ready_scope_nonce,
-            set_writer_ready_scope_nonce,
-            writer_client_id,
-            set_writer_client_id,
-            endpoint,
-            node_role,
-            set_node_role,
-            node_role_probe_failed,
-            set_node_role_probe_failed,
-            msg_seq,
-            connection_epoch,
-            msg_queue,
-            tx,
-            test_rx: Some(Arc::new(Mutex::new(rx))),
-        }
-    }
-
     pub fn send(&self, msg: ClientMessage) {
         if let Err(e) = self.tx.unbounded_send(msg) {
             leptos::logging::error!("消息入队失败: {:?}", e);
@@ -163,18 +121,6 @@ impl WsService {
         self.set_writer_ready_repo_id.set(None);
         self.set_writer_ready_scope_nonce.set(None);
         self.set_writer_client_id.set(None);
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_node_role_for_test(&self, node_role: impl Into<String>) {
-        self.set_node_role.set(node_role.into());
-        self.set_node_role_probe_failed.set(false);
-    }
-
-    #[cfg(test)]
-    pub(crate) fn set_node_role_probe_failed_for_test(&self) {
-        self.set_node_role.set(String::new());
-        self.set_node_role_probe_failed.set(true);
     }
 
     pub fn writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>) -> bool {
@@ -244,134 +190,9 @@ impl WsService {
             .filter(|(seq, _, _)| *seq > after_seq)
             .collect()
     }
-
-    #[cfg(test)]
-    pub(crate) fn drain_sent_for_test(&self) -> Vec<ClientMessage> {
-        let Some(test_rx) = &self.test_rx else {
-            return Vec::new();
-        };
-        let mut rx = test_rx.lock().expect("test receiver lock");
-        let mut messages = Vec::new();
-        while let Ok(message) = rx.try_recv() {
-            messages.push(message);
-        }
-        messages
-    }
 }
 
-pub(crate) fn is_current_connection_message(message_epoch: u64, current_epoch: u64) -> bool {
-    message_epoch == current_epoch
-}
-
-fn writer_ready_matches(
-    ready_repo_id: Option<String>,
-    ready_scope_nonce: Option<u64>,
-    repo_id: Option<&str>,
-    scope_nonce: Option<u64>,
-) -> bool {
-    match (ready_repo_id, ready_scope_nonce, repo_id, scope_nonce) {
-        (Some(ready_repo_id), Some(ready_scope_nonce), Some(repo_id), Some(scope_nonce)) => {
-            ready_repo_id == repo_id && ready_scope_nonce == scope_nonce
-        }
-        _ => false,
-    }
-}
-
-fn native_runtime_readiness_from_parts(
-    status: ConnectionStatus,
-    node_role: String,
-    node_role_probe_failed: bool,
-    ready_repo_id: Option<String>,
-    ready_scope_nonce: Option<u64>,
-    repo_id: Option<&str>,
-    scope_nonce: Option<u64>,
-    handshake_ready: bool,
-) -> NativeRuntimeReadiness {
-    NativeRuntimeReadiness {
-        endpoint_reachable: status == ConnectionStatus::Connected,
-        auth_status_valid: !matches!(
-            status,
-            ConnectionStatus::Unauthorized
-                | ConnectionStatus::NativeBootstrapInvalid
-                | ConnectionStatus::NativeSessionPending
-        ),
-        node_role_readable: !node_role_probe_failed && !node_role.trim().is_empty(),
-        repo_handshake_complete: handshake_ready,
-        writer_ready: writer_ready_matches(ready_repo_id, ready_scope_nonce, repo_id, scope_nonce),
-        scope_nonce_current: matches!(
-            (ready_scope_nonce, scope_nonce),
-            (Some(ready_scope_nonce), Some(scope_nonce)) if ready_scope_nonce == scope_nonce
-        ),
-    }
-}
+pub(crate) use self::readiness::is_current_connection_message;
 
 #[cfg(test)]
-mod tests {
-    use super::{ConnectionStatus, WsService, is_current_connection_message, writer_ready_matches};
-
-    #[test]
-    fn dashboard_metrics_stale_connection_epoch_is_not_current() {
-        assert!(is_current_connection_message(3, 3));
-        assert!(!is_current_connection_message(2, 3));
-    }
-
-    #[test]
-    fn writer_ready_requires_matching_repo_and_scope_nonce() {
-        assert!(writer_ready_matches(
-            Some("repo-a".into()),
-            Some(7),
-            Some("repo-a"),
-            Some(7),
-        ));
-        assert!(!writer_ready_matches(
-            Some("repo-a".into()),
-            Some(7),
-            Some("repo-a"),
-            Some(8),
-        ));
-        assert!(!writer_ready_matches(
-            Some("repo-a".into()),
-            Some(7),
-            Some("repo-b"),
-            Some(7),
-        ));
-        assert!(!writer_ready_matches(
-            Some("repo-a".into()),
-            Some(7),
-            Some("repo-a"),
-            None,
-        ));
-    }
-
-    #[test]
-    fn native_runtime_readiness_requires_node_role_writer_and_current_scope() {
-        let runtime = leptos::reactive::owner::Owner::new();
-        runtime.set();
-        let ws = WsService::new_for_test(ConnectionStatus::Connected);
-
-        let missing_node_role =
-            ws.native_runtime_readiness_for_untracked(Some("repo-a"), Some(7), true);
-        assert!(!missing_node_role.node_role_readable);
-        assert!(!missing_node_role.is_runtime_ready());
-
-        ws.set_node_role_for_test("main");
-        ws.mark_writer_ready("repo-a", 7, "web-light-peer");
-        let ready = ws.native_runtime_readiness_for_untracked(Some("repo-a"), Some(7), true);
-        assert!(ready.is_runtime_ready());
-
-        ws.set_node_role_probe_failed_for_test();
-        let failed_probe = ws.native_runtime_readiness_for_untracked(Some("repo-a"), Some(7), true);
-        assert!(!failed_probe.node_role_readable);
-        assert!(!failed_probe.is_runtime_ready());
-        ws.set_node_role_for_test("main");
-
-        let wrong_repo = ws.native_runtime_readiness_for_untracked(Some("repo-b"), Some(7), true);
-        assert!(!wrong_repo.writer_ready);
-        assert!(!wrong_repo.is_runtime_ready());
-
-        let stale_scope = ws.native_runtime_readiness_for_untracked(Some("repo-a"), Some(8), true);
-        assert!(!stale_scope.scope_nonce_current);
-        assert!(!stale_scope.writer_ready);
-        assert!(!stale_scope.is_runtime_ready());
-    }
-}
+mod tests;
