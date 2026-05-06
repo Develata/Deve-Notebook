@@ -324,6 +324,54 @@ fn source_control_commit_ai_signal_runner_dispatches_full_plugin_call_tuple() {
     );
 }
 
+#[test]
+fn source_control_commit_ai_signal_runner_block_stops_active_request() {
+    let _runtime = Owner::new();
+    _runtime.set();
+    let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
+    let (is_streaming, set_is_streaming) = signal(true);
+    let (ai_mode, set_ai_mode) = signal(AI_BACKEND_NATIVE.to_string());
+    let (plugin_last_response, _) = signal(PluginResponse::default());
+    let (plugin_calls, set_plugin_calls) = signal(Vec::<PluginCall>::new());
+    let active_req_id = RwSignal::new(Some("req-42".to_string()));
+    let (is_generating, set_is_generating) = signal(true);
+    let on_plugin_call = Callback::new(move |call: PluginCall| {
+        set_plugin_calls.update(|calls| calls.push(call));
+    });
+    let chat_ctx = ChatContext {
+        messages,
+        set_messages,
+        is_streaming,
+        set_is_streaming,
+        ai_mode,
+        set_ai_mode,
+        plugin_last_response,
+        on_plugin_call,
+    };
+    let mut runner = CommitAiSignalEffectRunner {
+        chat_ctx,
+        active_req_id,
+        set_is_generating,
+        req_id: "req-42".to_string(),
+        args: Vec::new(),
+    };
+    let plan = plan_commit_ai_runtime(BackendSendDecision::Block {
+        reason: "native AI disabled by config".to_string(),
+    });
+
+    run_commit_ai_effects(plan_commit_ai_effects(&plan), &mut runner);
+
+    let messages = messages.get_untracked();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].role, "assistant");
+    assert_eq!(messages[0].content, "native AI disabled by config");
+    assert_eq!(messages[0].req_id, None);
+    assert!(!is_streaming.get_untracked());
+    assert!(!is_generating.get_untracked());
+    assert_eq!(active_req_id.get_untracked(), None);
+    assert!(plugin_calls.get_untracked().is_empty());
+}
+
 #[derive(Default)]
 struct RecordingCommitAiEffectRunner {
     events: Vec<CommitAiRunEvent>,
