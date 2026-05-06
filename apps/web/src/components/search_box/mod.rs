@@ -135,21 +135,21 @@ pub fn UnifiedSearch(
     let placeholder_text = logic::create_placeholder_memo(query.into(), locale);
 
     // 视图层拆分到 ui 模块，保证组件主体精简。
-    ui::render_overlay(
+    ui::render_overlay(ui::SearchOverlayView {
         show,
         set_show,
-        query.into(),
+        query: query.into(),
         set_query,
         placeholder_text,
-        handle_keydown.clone(),
+        handle_keydown: handle_keydown.clone(),
         providers_results,
-        selected_index.into(),
+        selected_index: selected_index.into(),
         set_selected_index,
-        active_index.clone(),
+        active_index: active_index.clone(),
         input_ref,
         core,
         locale,
         set_recent_move_dirs,
         ui_mode,
-    )
+    })
 }

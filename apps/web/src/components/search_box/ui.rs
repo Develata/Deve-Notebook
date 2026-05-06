@@ -14,25 +14,44 @@ use crate::i18n::Locale;
 use leptos::prelude::*;
 use std::sync::Arc;
 use web_sys::{KeyboardEvent, MouseEvent, TouchEvent};
+
+pub struct SearchOverlayView {
+    pub show: Signal<bool>,
+    pub set_show: WriteSignal<bool>,
+    pub query: Signal<String>,
+    pub set_query: WriteSignal<String>,
+    pub placeholder_text: Memo<String>,
+    pub handle_keydown: Arc<dyn Fn(KeyboardEvent) + Send + Sync>,
+    pub providers_results: Memo<Vec<SearchResult>>,
+    pub selected_index: Signal<usize>,
+    pub set_selected_index: WriteSignal<usize>,
+    pub active_index: Arc<dyn Fn() -> usize + Send + Sync>,
+    pub input_ref: NodeRef<leptos::html::Input>,
+    pub core: CoreState,
+    pub locale: RwSignal<Locale>,
+    pub set_recent_move_dirs: WriteSignal<Vec<String>>,
+    pub ui_mode: Signal<SearchUiMode>,
+}
+
 /// 负责渲染整体遮罩与内部布局。
-#[allow(clippy::too_many_arguments)]
-pub fn render_overlay(
-    show: Signal<bool>,
-    set_show: WriteSignal<bool>,
-    query: Signal<String>,
-    set_query: WriteSignal<String>,
-    placeholder_text: Memo<String>,
-    handle_keydown: Arc<dyn Fn(KeyboardEvent) + Send + Sync>,
-    providers_results: Memo<Vec<SearchResult>>,
-    selected_index: Signal<usize>,
-    set_selected_index: WriteSignal<usize>,
-    active_index: Arc<dyn Fn() -> usize + Send + Sync>,
-    input_ref: NodeRef<leptos::html::Input>,
-    core: CoreState,
-    locale: RwSignal<Locale>,
-    set_recent_move_dirs: WriteSignal<Vec<String>>,
-    ui_mode: Signal<SearchUiMode>,
-) -> impl IntoView {
+pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
+    let SearchOverlayView {
+        show,
+        set_show,
+        query,
+        set_query,
+        placeholder_text,
+        handle_keydown,
+        providers_results,
+        selected_index,
+        set_selected_index,
+        active_index,
+        input_ref,
+        core,
+        locale,
+        set_recent_move_dirs,
+        ui_mode,
+    } = view;
     let handle_keydown_closure = handle_keydown.clone();
     let active_index_closure = active_index.clone();
     let results_ref = NodeRef::<leptos::html::Div>::new();
