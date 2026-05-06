@@ -34,8 +34,44 @@ pub fn handle_sync_push_message(
     }
 }
 
+pub fn handle_key_provide_message(
+    ctx: &SyncContext,
+    repo_id: deve_core::models::RepoId,
+    branch: Option<deve_core::models::PeerId>,
+    scope_nonce: u64,
+    repo_key: &[u8],
+) {
+    if matches_scoped_message(
+        super::current_scoped_message_scope(ctx),
+        Some(repo_id),
+        branch,
+        Some(scope_nonce),
+    ) {
+        handle_key_provide(ctx, repo_key);
+    }
+}
+
+pub fn handle_key_denied_message(
+    ctx: &SyncContext,
+    repo_id: Option<deve_core::models::RepoId>,
+    branch: Option<deve_core::models::PeerId>,
+    scope_nonce: u64,
+    error: &ServerError,
+) {
+    if matches_scoped_message(
+        super::current_scoped_message_scope(ctx),
+        repo_id,
+        branch,
+        Some(scope_nonce),
+    ) {
+        ctx.set_repo_key.set(None);
+        leptos::logging::warn!("KeyDenied: code={:?} detail={:?}", error.code, error.detail);
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::super::context::SyncContext;
     use super::handle_write_ready_message;
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::PendingBranchTarget;
@@ -46,8 +82,6 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::atomic::AtomicU64;
     use std::sync::{Arc, Mutex};
-
-    use super::super::context::SyncContext;
 
     fn write_ready_ctx<'a>(
         ws: &'a WsService,
@@ -176,40 +210,5 @@ mod tests {
                 .map(Vec::len),
             Some(1)
         );
-    }
-}
-
-pub fn handle_key_provide_message(
-    ctx: &SyncContext,
-    repo_id: deve_core::models::RepoId,
-    branch: Option<deve_core::models::PeerId>,
-    scope_nonce: u64,
-    repo_key: &[u8],
-) {
-    if matches_scoped_message(
-        super::current_scoped_message_scope(ctx),
-        Some(repo_id),
-        branch,
-        Some(scope_nonce),
-    ) {
-        handle_key_provide(ctx, repo_key);
-    }
-}
-
-pub fn handle_key_denied_message(
-    ctx: &SyncContext,
-    repo_id: Option<deve_core::models::RepoId>,
-    branch: Option<deve_core::models::PeerId>,
-    scope_nonce: u64,
-    error: &ServerError,
-) {
-    if matches_scoped_message(
-        super::current_scoped_message_scope(ctx),
-        repo_id,
-        branch,
-        Some(scope_nonce),
-    ) {
-        ctx.set_repo_key.set(None);
-        leptos::logging::warn!("KeyDenied: code={:?} detail={:?}", error.code, error.detail);
     }
 }

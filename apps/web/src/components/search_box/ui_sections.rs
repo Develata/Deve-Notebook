@@ -126,6 +126,18 @@ pub(super) fn search_results_scroll_marker(mode: SearchUiMode) -> Option<&'stati
     }
 }
 
+fn search_icon(query: Signal<String>) -> impl IntoView {
+    move || {
+        if query.get().starts_with('>') {
+            view! { <Terminal class="w-4 h-4"/> }.into_any()
+        } else if query.get().starts_with('@') {
+            view! { <GitBranch class="w-4 h-4"/> }.into_any()
+        } else {
+            view! { <Search class="w-4 h-4"/> }.into_any()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::search_results_scroll_marker;
@@ -138,17 +150,5 @@ mod tests {
             Some("isolated")
         );
         assert_eq!(search_results_scroll_marker(SearchUiMode::Overlay), None);
-    }
-}
-
-fn search_icon(query: Signal<String>) -> impl IntoView {
-    move || {
-        if query.get().starts_with('>') {
-            view! { <Terminal class="w-4 h-4"/> }.into_any()
-        } else if query.get().starts_with('@') {
-            view! { <GitBranch class="w-4 h-4"/> }.into_any()
-        } else {
-            view! { <Search class="w-4 h-4"/> }.into_any()
-        }
     }
 }
