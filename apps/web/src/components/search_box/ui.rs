@@ -134,6 +134,7 @@ pub fn render_overlay(
                         locale,
                         set_recent_move_dirs,
                         results_ref,
+                        ui_mode,
                     )}
                     {footer(ui_mode)}
                 </div>

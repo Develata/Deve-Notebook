@@ -112,6 +112,24 @@ contains apps/web/src/components/search_box/ui_sheet_style.rs "fn mobile_search_
 contains apps/web/src/components/search_box/sheet_gesture.rs "pub(super) fn should_close_by_drag("
 contains apps/web/src/components/search_box/sheet_gesture.rs "fn mobile_search_sheet_upward_handle_swipe_closes()"
 
+# UI-MOB-006: search results scroll must not trigger top sheet dismissal.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-006"
+contains_case_block UI-MOB-006 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-006 "run: cargo test -p deve_web mobile_search_results_scroll -- --nocapture"
+contains_case_block UI-MOB-006 "cli_assert: mobile_search_results_scroll_isolated_bound true"
+contains_case_block UI-MOB-006 "cli_assert: mobile_search_results_swipe_does_not_close_bound true"
+contains_case_block UI-MOB-006 "ui_scroll: \"search_results\" (delta: 200)"
+contains_case_block UI-MOB-006 "ui_swipe: \"search_results\" (direction: \"up\", distance: 80)"
+contains_case_block UI-MOB-006 "ui_assert: search_sheet_closed false"
+contains docs/plan/08_ui_design_03_mobile.md "避免与结果列表滚动冲突"
+contains apps/web/src/components/search_box/ui_sections.rs "data-deve-search-results-scroll=move || search_results_scroll_marker(ui_mode.get())"
+contains apps/web/src/components/search_box/ui_sections.rs "SearchUiMode::Sheet => Some(\"isolated\")"
+contains apps/web/src/components/search_box/ui_sections.rs "SearchUiMode::Overlay => None"
+contains apps/web/src/components/search_box/ui_sections.rs "fn mobile_search_results_scroll_marker_is_sheet_only()"
+contains apps/web/src/components/search_box/sheet_gesture.rs "pub(super) fn can_start_dismiss_by_zone("
+contains apps/web/src/components/search_box/sheet_gesture.rs "fn mobile_search_results_scroll_does_not_start_dismiss()"
+contains apps/web/src/components/search_box/sheet_gesture.rs "fn mobile_search_results_scroll_swipe_cannot_close_sheet()"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

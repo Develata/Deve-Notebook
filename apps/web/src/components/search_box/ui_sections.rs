@@ -65,9 +65,15 @@ pub fn results_panel(
     locale: RwSignal<Locale>,
     set_recent_move_dirs: WriteSignal<Vec<String>>,
     results_ref: NodeRef<leptos::html::Div>,
+    ui_mode: Signal<SearchUiMode>,
 ) -> impl IntoView {
     view! {
-        <div node_ref=results_ref data-sheet-results="1" class="overflow-y-auto p-2">
+        <div
+            node_ref=results_ref
+            data-sheet-results="1"
+            data-deve-search-results-scroll=move || search_results_scroll_marker(ui_mode.get())
+            class="overflow-y-auto p-2"
+        >
             {
                 let core = core.clone();
                 move || {
@@ -110,6 +116,28 @@ pub fn results_panel(
                 }
             }
         </div>
+    }
+}
+
+pub(super) fn search_results_scroll_marker(mode: SearchUiMode) -> Option<&'static str> {
+    match mode {
+        SearchUiMode::Sheet => Some("isolated"),
+        SearchUiMode::Overlay => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::search_results_scroll_marker;
+    use crate::components::search_box::SearchUiMode;
+
+    #[test]
+    fn mobile_search_results_scroll_marker_is_sheet_only() {
+        assert_eq!(
+            search_results_scroll_marker(SearchUiMode::Sheet),
+            Some("isolated")
+        );
+        assert_eq!(search_results_scroll_marker(SearchUiMode::Overlay), None);
     }
 }
 

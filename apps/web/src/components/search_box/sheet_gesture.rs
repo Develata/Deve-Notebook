@@ -110,14 +110,16 @@ fn can_start_dismiss(ev: &TouchEvent, results_ref: &NodeRef<leptos::html::Div>) 
         .ok()
         .flatten()
         .is_some();
-    if inside_results {
-        return false;
-    }
-    target_element
+    let on_drag_handle = target_element
         .closest("[data-sheet-drag-handle='1']")
         .ok()
         .flatten()
-        .is_some()
+        .is_some();
+    can_start_dismiss_by_zone(inside_results, on_drag_handle)
+}
+
+pub(super) fn can_start_dismiss_by_zone(inside_results: bool, on_drag_handle: bool) -> bool {
+    !inside_results && on_drag_handle
 }
 
 fn first_touch_xy(ev: &TouchEvent) -> Option<(i32, i32)> {
@@ -134,7 +136,7 @@ fn now_ms() -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{damped_offset, should_close_by_drag};
+    use super::{can_start_dismiss_by_zone, damped_offset, should_close_by_drag};
 
     #[test]
     fn mobile_search_sheet_upward_handle_swipe_closes() {
@@ -152,6 +154,21 @@ mod tests {
     #[test]
     fn mobile_search_sheet_requires_dismiss_origin() {
         assert!(!should_close_by_drag(false, 0, -90, 180.0));
+    }
+
+    #[test]
+    fn mobile_search_results_scroll_does_not_start_dismiss() {
+        assert!(!can_start_dismiss_by_zone(true, true));
+        assert!(!can_start_dismiss_by_zone(true, false));
+        assert!(can_start_dismiss_by_zone(false, true));
+        assert!(!can_start_dismiss_by_zone(false, false));
+    }
+
+    #[test]
+    fn mobile_search_results_scroll_swipe_cannot_close_sheet() {
+        let can_dismiss = can_start_dismiss_by_zone(true, true);
+        assert!(!should_close_by_drag(can_dismiss, 0, -90, 180.0));
+        assert_eq!(damped_offset(200, 110, can_dismiss), 0);
     }
 
     #[test]
