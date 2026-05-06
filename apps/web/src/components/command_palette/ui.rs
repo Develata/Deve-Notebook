@@ -10,20 +10,33 @@ use leptos::prelude::*;
 use std::sync::Arc;
 use web_sys::{KeyboardEvent, MouseEvent};
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn render_overlay(
-    show: Signal<bool>,
-    set_show: WriteSignal<bool>,
-    query: Signal<String>,
-    set_query: WriteSignal<String>,
-    locale: RwSignal<Locale>,
-    filtered_commands: Memo<Vec<Command>>,
-    selected_index: Signal<usize>,
-    set_selected_index: WriteSignal<usize>,
-    handle_keydown: Arc<dyn Fn(KeyboardEvent) + Send + Sync>,
-    input_ref: NodeRef<leptos::html::Input>,
-) -> impl IntoView {
+pub(super) struct CommandPaletteOverlay {
+    pub show: Signal<bool>,
+    pub set_show: WriteSignal<bool>,
+    pub query: Signal<String>,
+    pub set_query: WriteSignal<String>,
+    pub locale: RwSignal<Locale>,
+    pub filtered_commands: Memo<Vec<Command>>,
+    pub selected_index: Signal<usize>,
+    pub set_selected_index: WriteSignal<usize>,
+    pub handle_keydown: Arc<dyn Fn(KeyboardEvent) + Send + Sync>,
+    pub input_ref: NodeRef<leptos::html::Input>,
+}
+
+pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
     let panel_ref = NodeRef::<leptos::html::Div>::new();
+    let CommandPaletteOverlay {
+        show,
+        set_show,
+        query,
+        set_query,
+        locale,
+        filtered_commands,
+        selected_index,
+        set_selected_index,
+        handle_keydown,
+        input_ref,
+    } = overlay;
 
     view! {
         <Show when=move || show.get()>

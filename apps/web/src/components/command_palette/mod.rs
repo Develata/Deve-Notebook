@@ -49,16 +49,16 @@ pub fn CommandPalette(
         active_index.clone(),
     ));
 
-    ui::render_overlay(
+    ui::render_overlay(ui::CommandPaletteOverlay {
         show,
         set_show,
-        query.into(),
+        query: query.into(),
         set_query,
         locale,
         filtered_commands,
-        selected_index.into(),
+        selected_index: selected_index.into(),
         set_selected_index,
         handle_keydown,
         input_ref,
-    )
+    })
 }
