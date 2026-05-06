@@ -10,25 +10,25 @@ fn dashboard_metrics_stale_connection_epoch_is_not_current() {
 #[test]
 fn writer_ready_requires_matching_repo_and_scope_nonce() {
     assert!(writer_ready_matches(
-        Some("repo-a".into()),
+        Some("repo-a"),
         Some(7),
         Some("repo-a"),
         Some(7),
     ));
     assert!(!writer_ready_matches(
-        Some("repo-a".into()),
+        Some("repo-a"),
         Some(7),
         Some("repo-a"),
         Some(8),
     ));
     assert!(!writer_ready_matches(
-        Some("repo-a".into()),
+        Some("repo-a"),
         Some(7),
         Some("repo-b"),
         Some(7),
     ));
     assert!(!writer_ready_matches(
-        Some("repo-a".into()),
+        Some("repo-a"),
         Some(7),
         Some("repo-a"),
         None,

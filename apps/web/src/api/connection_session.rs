@@ -14,15 +14,20 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use std::collections::VecDeque;
 
+#[derive(Clone, Copy)]
+pub(super) struct ConnectedSessionSignals {
+    pub set_status: WriteSignal<ConnectionStatus>,
+    pub set_msg_seq: WriteSignal<u64>,
+    pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
+    pub connection_epoch: u64,
+}
+
 pub(super) async fn run_connected_session(
     socket: BrowserSocket,
     mut events: UnboundedReceiver<SocketEvent>,
     rx: &mut UnboundedReceiver<deve_core::protocol::ClientMessage>,
     queue: &mut VecDeque<deve_core::protocol::ClientMessage>,
-    set_status: WriteSignal<ConnectionStatus>,
-    set_msg_seq: WriteSignal<u64>,
-    set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
-    connection_epoch: u64,
+    signals: ConnectedSessionSignals,
 ) {
     let mut confirmed_connected = false;
     let mut announced_open = false;
@@ -63,10 +68,10 @@ pub(super) async fn run_connected_session(
                     if !handle_socket_event(
                         event,
                         &mut confirmed_connected,
-                        set_msg_seq,
-                        set_msg_queue,
-                        set_status,
-                        connection_epoch,
+                        signals.set_msg_seq,
+                        signals.set_msg_queue,
+                        signals.set_status,
+                        signals.connection_epoch,
                     ) {
                         return;
                     }

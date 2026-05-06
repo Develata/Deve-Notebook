@@ -22,6 +22,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
+use self::session::ConnectedSessionSignals;
 use super::ConnectionStatus;
 use super::auth_probe::{AuthProbe, probe_auth_status_with_http_base};
 use super::backoff::BackoffStrategy;
@@ -34,24 +35,29 @@ use super::socket::BrowserSocket;
 /// 本地开发后端默认端口；仅在 debug 构建中作为兜底候选。
 pub(super) const DEV_WS_PORT: u16 = 3001;
 
+#[derive(Clone, Copy)]
+pub(super) struct ConnectionManagerSignals {
+    pub set_status: WriteSignal<ConnectionStatus>,
+    pub set_msg_seq: WriteSignal<u64>,
+    pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
+    pub current_connection_epoch: ReadSignal<u64>,
+    pub set_connection_epoch: WriteSignal<u64>,
+    pub set_endpoint: WriteSignal<String>,
+    pub set_node_role: WriteSignal<String>,
+    pub set_node_role_probe_failed: WriteSignal<bool>,
+}
+
 /// 启动连接管理器任务
 pub fn spawn_connection_manager(
     mut rx: UnboundedReceiver<deve_core::protocol::ClientMessage>,
-    set_status: WriteSignal<ConnectionStatus>,
-    set_msg_seq: WriteSignal<u64>,
-    set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
-    current_connection_epoch: ReadSignal<u64>,
-    set_connection_epoch: WriteSignal<u64>,
-    set_endpoint: WriteSignal<String>,
-    set_node_role: WriteSignal<String>,
-    set_node_role_probe_failed: WriteSignal<bool>,
+    signals: ConnectionManagerSignals,
 ) {
     spawn_local(async move {
         let native_bootstrap = read_native_bootstrap();
         let auth_http_base = native_bootstrap.http_base().map(str::to_string);
         if let Some(blocked_status) = native_bootstrap.blocked_status() {
             leptos::logging::error!("Native bootstrap is present but not ready; refusing fallback");
-            set_status.set(blocked_status);
+            signals.set_status.set(blocked_status);
             return;
         }
 
@@ -67,29 +73,29 @@ pub fn spawn_connection_manager(
                 .cloned()
                 .unwrap_or_else(build_same_origin_ws_url);
             connection_epoch = connection_epoch.saturating_add(1);
-            set_connection_epoch.set(connection_epoch);
-            set_status.set(ConnectionStatus::Connecting);
+            signals.set_connection_epoch.set(connection_epoch);
+            signals.set_status.set(ConnectionStatus::Connecting);
             leptos::logging::log!("WS: Connecting to {}...", url);
 
             match BrowserSocket::connect(&url) {
                 Ok((socket, events)) => {
-                    set_endpoint.set(url.clone());
-                    set_node_role.set(String::new());
-                    set_node_role_probe_failed.set(false);
+                    signals.set_endpoint.set(url.clone());
+                    signals.set_node_role.set(String::new());
+                    signals.set_node_role_probe_failed.set(false);
                     if let Some(http_base) = auth_http_base.clone() {
                         spawn_local(fetch_node_role_for_http_base(
                             http_base,
-                            set_node_role,
-                            set_node_role_probe_failed,
-                            current_connection_epoch,
+                            signals.set_node_role,
+                            signals.set_node_role_probe_failed,
+                            signals.current_connection_epoch,
                             connection_epoch,
                         ));
                     } else {
                         spawn_local(fetch_node_role(
                             url.clone(),
-                            set_node_role,
-                            set_node_role_probe_failed,
-                            current_connection_epoch,
+                            signals.set_node_role,
+                            signals.set_node_role_probe_failed,
+                            signals.current_connection_epoch,
                             connection_epoch,
                         ));
                     }
@@ -100,10 +106,12 @@ pub fn spawn_connection_manager(
                         events,
                         &mut rx,
                         &mut queue,
-                        set_status,
-                        set_msg_seq,
-                        set_msg_queue,
-                        connection_epoch,
+                        ConnectedSessionSignals {
+                            set_status: signals.set_status,
+                            set_msg_seq: signals.set_msg_seq,
+                            set_msg_queue: signals.set_msg_queue,
+                            connection_epoch,
+                        },
                     )
                     .await;
 
@@ -113,7 +121,7 @@ pub fn spawn_connection_manager(
                         probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
                         AuthProbe::Invalid
                     ) {
-                        set_status.set(ConnectionStatus::Unauthorized);
+                        signals.set_status.set(ConnectionStatus::Unauthorized);
                         return;
                     }
                 }
@@ -123,7 +131,7 @@ pub fn spawn_connection_manager(
                         probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
                         AuthProbe::Invalid
                     ) {
-                        set_status.set(ConnectionStatus::Unauthorized);
+                        signals.set_status.set(ConnectionStatus::Unauthorized);
                         return;
                     }
                     if url_idx + 1 < urls.len() {
@@ -137,10 +145,10 @@ pub fn spawn_connection_manager(
                 probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
                 AuthProbe::Invalid
             ) {
-                set_status.set(ConnectionStatus::Unauthorized);
+                signals.set_status.set(ConnectionStatus::Unauthorized);
                 return;
             }
-            set_status.set(ConnectionStatus::Disconnected);
+            signals.set_status.set(ConnectionStatus::Disconnected);
             backoff.wait().await;
             url_idx = 0;
         }

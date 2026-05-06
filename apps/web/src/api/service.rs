@@ -13,9 +13,12 @@ use std::collections::VecDeque;
 #[cfg(test)]
 use std::sync::{Arc, Mutex};
 
-use self::readiness::{native_runtime_readiness_from_parts, writer_ready_matches};
+use self::readiness::{
+    NativeRuntimeConnectionState, NativeRuntimeReadinessTarget,
+    native_runtime_readiness_from_parts, writer_ready_matches,
+};
 use self::service_ping::spawn_ping_loop;
-use super::connection::spawn_connection_manager;
+use super::connection::{ConnectionManagerSignals, spawn_connection_manager};
 use super::status::ConnectionStatus;
 use super::writer_id::derive_writer_client_id;
 
@@ -64,14 +67,16 @@ impl WsService {
 
         spawn_connection_manager(
             rx,
-            set_status,
-            set_msg_seq,
-            set_msg_queue,
-            connection_epoch,
-            set_connection_epoch,
-            set_endpoint,
-            set_node_role,
-            set_node_role_probe_failed,
+            ConnectionManagerSignals {
+                set_status,
+                set_msg_seq,
+                set_msg_queue,
+                current_connection_epoch: connection_epoch,
+                set_connection_epoch,
+                set_endpoint,
+                set_node_role,
+                set_node_role_probe_failed,
+            },
         );
 
         spawn_ping_loop(status, tx.clone());
@@ -124,8 +129,9 @@ impl WsService {
     }
 
     pub fn writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>) -> bool {
+        let ready_repo_id = self.writer_ready_repo_id.get_untracked();
         writer_ready_matches(
-            self.writer_ready_repo_id.get_untracked(),
+            ready_repo_id.as_deref(),
             self.writer_ready_scope_nonce.get_untracked(),
             repo_id,
             scope_nonce,
@@ -139,14 +145,18 @@ impl WsService {
         handshake_ready: bool,
     ) -> NativeRuntimeReadiness {
         native_runtime_readiness_from_parts(
-            self.status.get(),
-            self.node_role.get(),
-            self.node_role_probe_failed.get(),
-            self.writer_ready_repo_id.get(),
-            self.writer_ready_scope_nonce.get(),
-            repo_id,
-            scope_nonce,
-            handshake_ready,
+            NativeRuntimeConnectionState {
+                status: self.status.get(),
+                node_role: self.node_role.get(),
+                node_role_probe_failed: self.node_role_probe_failed.get(),
+                ready_repo_id: self.writer_ready_repo_id.get(),
+                ready_scope_nonce: self.writer_ready_scope_nonce.get(),
+            },
+            NativeRuntimeReadinessTarget {
+                repo_id,
+                scope_nonce,
+                handshake_ready,
+            },
         )
     }
 
@@ -157,14 +167,18 @@ impl WsService {
         handshake_ready: bool,
     ) -> NativeRuntimeReadiness {
         native_runtime_readiness_from_parts(
-            self.status.get_untracked(),
-            self.node_role.get_untracked(),
-            self.node_role_probe_failed.get_untracked(),
-            self.writer_ready_repo_id.get_untracked(),
-            self.writer_ready_scope_nonce.get_untracked(),
-            repo_id,
-            scope_nonce,
-            handshake_ready,
+            NativeRuntimeConnectionState {
+                status: self.status.get_untracked(),
+                node_role: self.node_role.get_untracked(),
+                node_role_probe_failed: self.node_role_probe_failed.get_untracked(),
+                ready_repo_id: self.writer_ready_repo_id.get_untracked(),
+                ready_scope_nonce: self.writer_ready_scope_nonce.get_untracked(),
+            },
+            NativeRuntimeReadinessTarget {
+                repo_id,
+                scope_nonce,
+                handshake_ready,
+            },
         )
     }
 
