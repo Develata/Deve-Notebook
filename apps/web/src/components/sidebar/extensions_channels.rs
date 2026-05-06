@@ -4,28 +4,18 @@
 //!
 use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,
-    AiBackendCapabilities, fetch_ai_backend_capabilities,
 };
-use crate::components::ai_backend_guard::attach_trusted_cli_fallback;
 use crate::components::icons::{Terminal, Zap};
+use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
 use crate::hooks::use_core::ChatContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 
 #[component]
 pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoView {
-    let (trusted_cap, set_trusted_cap) = signal(AiBackendCapabilities::default());
-    Effect::new(move |_| {
-        let set_trusted_cap = set_trusted_cap;
-        spawn_local(async move {
-            set_trusted_cap.set(fetch_ai_backend_capabilities().await);
-        });
-    });
-
+    let trusted_cap = use_ai_backend_capabilities_with_fallback(chat.clone(), locale);
     let trusted_available = Signal::derive(move || trusted_cap.get().trusted_cli_available);
     let native_available = Signal::derive(move || trusted_cap.get().native_available);
-    attach_trusted_cli_fallback(chat.clone(), trusted_cap, locale);
     let native_reason = move || {
         trusted_cap
             .get()

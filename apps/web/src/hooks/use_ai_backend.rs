@@ -1,10 +1,17 @@
 //! plan_ref:
 //!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 10_ai_agent#trusted-agent-bridge
 //!
-use crate::api::{AiBackendCapabilities, BackendSendDecision, resolve_backend_for_effective_state};
+//! Reactive AI backend capability state and fallback effects.
+
+use crate::api::{
+    AiBackendCapabilities, BackendSendDecision, fetch_ai_backend_capabilities,
+    resolve_backend_for_effective_state,
+};
 use crate::hooks::use_core::{ChatContext, ChatMessage};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 #[derive(Debug, PartialEq, Eq)]
 enum BackendFallback {
@@ -18,7 +25,26 @@ enum BackendFallback {
     Keep,
 }
 
-pub fn attach_trusted_cli_fallback(
+pub fn use_ai_backend_capabilities_with_fallback(
+    chat: ChatContext,
+    locale: RwSignal<Locale>,
+) -> ReadSignal<AiBackendCapabilities> {
+    let capabilities = use_ai_backend_capabilities();
+    attach_trusted_cli_fallback(chat, capabilities, locale);
+    capabilities
+}
+
+fn use_ai_backend_capabilities() -> ReadSignal<AiBackendCapabilities> {
+    let (capabilities, set_capabilities) = signal(AiBackendCapabilities::default());
+    Effect::new(move |_| {
+        spawn_local(async move {
+            set_capabilities.set(fetch_ai_backend_capabilities().await);
+        });
+    });
+    capabilities
+}
+
+fn attach_trusted_cli_fallback(
     chat: ChatContext,
     capabilities: ReadSignal<AiBackendCapabilities>,
     locale: RwSignal<Locale>,
@@ -26,7 +52,7 @@ pub fn attach_trusted_cli_fallback(
     let last_notice = RwSignal::new(None::<String>);
     Effect::new(move |_| {
         let cap = capabilities.get();
-        let fallback = select_backend_fallback(chat.ai_mode.get().as_str(), &cap, locale.get());
+        let fallback = select_backend_fallback(chat.ai_mode.get().as_str(), &cap);
         let reason = match fallback {
             BackendFallback::Switch { backend, reason } => {
                 chat.set_ai_mode.set(backend.to_string());
@@ -51,11 +77,7 @@ pub fn attach_trusted_cli_fallback(
     });
 }
 
-fn select_backend_fallback(
-    current_backend: &str,
-    cap: &AiBackendCapabilities,
-    _locale: Locale,
-) -> BackendFallback {
+fn select_backend_fallback(current_backend: &str, cap: &AiBackendCapabilities) -> BackendFallback {
     match resolve_backend_for_effective_state(current_backend, cap) {
         BackendSendDecision::Use(_) => BackendFallback::Keep,
         BackendSendDecision::Switch { backend, reason } => {
@@ -69,7 +91,6 @@ fn select_backend_fallback(
 mod tests {
     use super::{BackendFallback, select_backend_fallback};
     use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
-    use crate::i18n::Locale;
 
     #[test]
     fn trusted_cli_falls_back_to_native_when_policy_blocks_it() {
@@ -81,7 +102,7 @@ mod tests {
         };
 
         assert_eq!(
-            select_backend_fallback(AI_BACKEND_TRUSTED_CLI, &cap, Locale::En),
+            select_backend_fallback(AI_BACKEND_TRUSTED_CLI, &cap),
             BackendFallback::Switch {
                 backend: AI_BACKEND_NATIVE,
                 reason: "external agent disabled".to_string()
@@ -100,7 +121,7 @@ mod tests {
         };
 
         assert_eq!(
-            select_backend_fallback(AI_BACKEND_NATIVE, &cap, Locale::En),
+            select_backend_fallback(AI_BACKEND_NATIVE, &cap),
             BackendFallback::Blocked {
                 reason: "native AI disabled by config".to_string()
             }
@@ -119,7 +140,7 @@ mod tests {
         };
 
         assert_eq!(
-            select_backend_fallback(AI_BACKEND_NATIVE, &cap, Locale::En),
+            select_backend_fallback(AI_BACKEND_NATIVE, &cap),
             BackendFallback::Switch {
                 backend: AI_BACKEND_TRUSTED_CLI,
                 reason: "native AI disabled by config".to_string()
@@ -139,7 +160,7 @@ mod tests {
         };
 
         assert_eq!(
-            select_backend_fallback(AI_BACKEND_NATIVE, &cap, Locale::En),
+            select_backend_fallback(AI_BACKEND_NATIVE, &cap),
             BackendFallback::Blocked {
                 reason: "native AI disabled by config".to_string()
             }

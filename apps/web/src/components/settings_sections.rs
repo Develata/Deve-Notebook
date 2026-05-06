@@ -7,16 +7,13 @@
 //!
 //! Extracted sub-sections: Sync Mode, AI Backend.
 
-use crate::api::{
-    AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities, fetch_ai_backend_capabilities,
-};
-use crate::components::ai_backend_guard::attach_trusted_cli_fallback;
+use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI};
 use crate::components::settings_sections_policy::{
     ai_backend_button_state, sync_mode_button_state,
 };
+use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 
 /// Sync mode toggle (auto / manual).
 #[component]
@@ -55,14 +52,7 @@ pub fn SyncModeSection(locale: RwSignal<Locale>) -> impl IntoView {
 pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
     move || {
         let chat = expect_context::<crate::hooks::use_core::ChatContext>();
-        let (trusted_cap, set_trusted_cap) = signal(AiBackendCapabilities::default());
-        Effect::new(move |_| {
-            let set_trusted_cap = set_trusted_cap;
-            spawn_local(async move {
-                set_trusted_cap.set(fetch_ai_backend_capabilities().await);
-            });
-        });
-        attach_trusted_cli_fallback(chat.clone(), trusted_cap, locale);
+        let trusted_cap = use_ai_backend_capabilities_with_fallback(chat.clone(), locale);
         let button_state = Signal::derive(move || {
             ai_backend_button_state(
                 chat.ai_mode.get().as_str(),
