@@ -96,24 +96,25 @@ pub(crate) fn sync_manager() -> Result<Arc<SyncManager>, anyhow::Error> {
         .ok_or_else(|| anyhow::anyhow!("SyncManager not configured"))
 }
 
-/// 注册核心 API 到 Rhai 引擎
-#[allow(unused_variables)]
+/// 注册核心 API 到 Rhai 引擎。
+#[cfg(not(target_arch = "wasm32"))]
 pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        use std::sync::Arc;
-        let caps = Arc::new(manifest.capabilities.clone());
+    use std::sync::Arc;
+    let caps = Arc::new(manifest.capabilities.clone());
 
-        // 注册各领域 API (仅非 WASM 环境)
-        fs::register_fs_api(engine, caps.clone());
-        note::register_note_api(engine, caps.clone());
-        git::register_git_api(engine, caps.clone());
-        chat::register_chat_api(engine, caps.clone());
-        util::register_util_api(engine, caps.clone());
-        skill::register_skill_api(engine, caps.clone());
-        search::register_search_api(engine, caps.clone());
-    }
+    fs::register_fs_api(engine, caps.clone());
+    note::register_note_api(engine, caps.clone());
+    git::register_git_api(engine, caps.clone());
+    chat::register_chat_api(engine, caps.clone());
+    util::register_util_api(engine, caps.clone());
+    skill::register_skill_api(engine, caps.clone());
+    search::register_search_api(engine, caps.clone());
 
     // 通用 API (跨平台)
+    util::register_log_api(engine);
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn register_core_api(engine: &mut Engine, _manifest: &PluginManifest) {
     util::register_log_api(engine);
 }
