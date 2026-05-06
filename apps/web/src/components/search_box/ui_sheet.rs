@@ -27,6 +27,10 @@ pub(super) fn backdrop_class(mode: SearchUiMode) -> &'static str {
     ui_sheet_style::backdrop_class(mode)
 }
 
+pub(super) fn sheet_position(mode: SearchUiMode) -> Option<&'static str> {
+    ui_sheet_style::sheet_position(mode)
+}
+
 pub(super) fn drag_handle(mode: SearchUiMode) -> impl IntoView {
     ui_sheet_style::drag_handle(mode)
 }

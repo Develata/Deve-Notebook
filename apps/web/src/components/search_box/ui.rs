@@ -55,6 +55,7 @@ pub fn render_overlay(
                     role="dialog"
                     aria-modal="true"
                     tabindex="-1"
+                    data-deve-search-sheet-position=move || ui_sheet::sheet_position(ui_mode.get())
                     class=move || ui_sheet::panel_class(ui_mode.get())
                     style=move || ui_sheet::panel_style(
                         ui_mode.get(),

@@ -91,6 +91,27 @@ contains apps/web/src/components/mobile_layout/toolbar.rs "data-deve-mobile-tool
 contains apps/web/src/components/mobile_layout/toolbar.rs "data-deve-keyboard-offset=move || keyboard_offset.get().to_string()"
 contains apps/web/src/components/mobile_layout/toolbar.rs "fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard()"
 
+# UI-MOB-005: mobile search opens as a top sheet and closes from handle upward swipe.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-005"
+contains_case_block UI-MOB-005 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-005 "run: cargo test -p deve_web mobile_search_sheet -- --nocapture"
+contains_case_block UI-MOB-005 "cli_assert: mobile_search_top_sheet_bound true"
+contains_case_block UI-MOB-005 "cli_assert: mobile_search_sheet_swipe_close_bound true"
+contains_case_block UI-MOB-005 "cli_assert: mobile_search_sheet_handle_marker_bound true"
+contains_case_block UI-MOB-005 "ui_assert: search_sheet_position \"top\""
+contains_case_block UI-MOB-005 "ui_swipe: \"search_sheet_handle\" (direction: \"up\", distance: 90)"
+contains_case_block UI-MOB-005 "ui_assert: search_sheet_closed true"
+contains docs/plan/08_ui_design_03_mobile.md "点击 Search -> Top Sheet 自上而下展开。"
+contains docs/plan/08_ui_design_03_mobile.md "关闭手势以顶部拖拽上滑为主"
+contains apps/web/src/components/main_layout_overlays.rs "SearchUiMode::Sheet"
+contains apps/web/src/components/search_box/ui.rs "data-deve-search-sheet-position=move || ui_sheet::sheet_position(ui_mode.get())"
+rejects apps/web/src/components/search_box/ui.rs "data-deve-search-sheet-open"
+contains apps/web/src/components/search_box/ui_sheet_style.rs "data-deve-search-sheet-handle=\"top\""
+contains apps/web/src/components/search_box/ui_sheet_style.rs "SearchUiMode::Overlay => None"
+contains apps/web/src/components/search_box/ui_sheet_style.rs "fn mobile_search_sheet_is_positioned_at_top()"
+contains apps/web/src/components/search_box/sheet_gesture.rs "pub(super) fn should_close_by_drag("
+contains apps/web/src/components/search_box/sheet_gesture.rs "fn mobile_search_sheet_upward_handle_swipe_closes()"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

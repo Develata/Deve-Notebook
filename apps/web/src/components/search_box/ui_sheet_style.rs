@@ -37,6 +37,13 @@ pub(super) fn panel_style(
     }
 }
 
+pub(super) fn sheet_position(mode: SearchUiMode) -> Option<&'static str> {
+    match mode {
+        SearchUiMode::Sheet => Some("top"),
+        SearchUiMode::Overlay => None,
+    }
+}
+
 pub(super) fn backdrop_class(mode: SearchUiMode) -> &'static str {
     match mode {
         SearchUiMode::Sheet => {
@@ -49,11 +56,39 @@ pub(super) fn backdrop_class(mode: SearchUiMode) -> &'static str {
 pub(super) fn drag_handle(mode: SearchUiMode) -> impl IntoView {
     match mode {
         SearchUiMode::Sheet => view! {
-            <div data-sheet-drag-handle="1" class="flex justify-center py-2">
+            <div
+                data-sheet-drag-handle="1"
+                data-deve-search-sheet-handle="top"
+                class="flex justify-center py-2"
+            >
                 <div class="w-10 h-1.5 rounded-full bg-active"></div>
             </div>
         }
         .into_any(),
         SearchUiMode::Overlay => view! {}.into_any(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{panel_class, panel_style, sheet_position};
+    use crate::components::search_box::SearchUiMode;
+
+    #[test]
+    fn mobile_search_sheet_is_positioned_at_top() {
+        let class = panel_class(SearchUiMode::Sheet);
+        assert!(class.contains("top-0"));
+        assert!(!class.contains("bottom-0"));
+        assert_eq!(sheet_position(SearchUiMode::Sheet), Some("top"));
+        assert_eq!(sheet_position(SearchUiMode::Overlay), None);
+    }
+
+    #[test]
+    fn mobile_search_sheet_drag_style_moves_upward() {
+        assert_eq!(
+            panel_style(SearchUiMode::Sheet, -64, true),
+            "padding-top: env(safe-area-inset-top); transform: translateY(-64px); transition: none;"
+        );
+        assert!(panel_style(SearchUiMode::Overlay, -64, true).is_empty());
     }
 }

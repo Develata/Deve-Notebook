@@ -38,15 +38,26 @@ pub fn should_close(
     touch_start_at: ReadSignal<f64>,
     can_dismiss: ReadSignal<bool>,
 ) -> bool {
-    if !can_dismiss.get_untracked() {
-        return false;
-    }
     let (end_x, end_y) = match first_touch_xy(ev) {
         Some(v) => v,
         None => return false,
     };
-    let delta_x = (end_x - touch_start_x.get_untracked()).abs();
+    let delta_x = end_x - touch_start_x.get_untracked();
     let delta_y = end_y - touch_start_y.get_untracked();
+    let elapsed = now_ms() - touch_start_at.get_untracked();
+    should_close_by_drag(can_dismiss.get_untracked(), delta_x, delta_y, elapsed)
+}
+
+pub(super) fn should_close_by_drag(
+    can_dismiss: bool,
+    delta_x: i32,
+    delta_y: i32,
+    elapsed_ms: f64,
+) -> bool {
+    if !can_dismiss {
+        return false;
+    }
+    let delta_x = delta_x.abs();
     let upward_drag = -delta_y;
     if upward_drag <= MIN_DRAG_PX {
         return false;
@@ -54,13 +65,12 @@ pub fn should_close(
     if delta_x > upward_drag {
         return false;
     }
-    let elapsed = now_ms() - touch_start_at.get_untracked();
-    if elapsed <= QUICK_TAP_MS && upward_drag <= QUICK_TAP_MAX_DRAG_PX {
+    if elapsed_ms <= QUICK_TAP_MS && upward_drag <= QUICK_TAP_MAX_DRAG_PX {
         return false;
     }
-    if elapsed > 0.0
+    if elapsed_ms > 0.0
         && upward_drag >= FAST_FLICK_MIN_DRAG_PX
-        && (upward_drag as f64 / elapsed) >= FAST_FLICK_PX_PER_MS
+        && (upward_drag as f64 / elapsed_ms) >= FAST_FLICK_PX_PER_MS
     {
         return true;
     }
@@ -120,4 +130,34 @@ fn now_ms() -> f64 {
         .and_then(|w| w.performance())
         .map(|p| p.now())
         .unwrap_or(0.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{damped_offset, should_close_by_drag};
+
+    #[test]
+    fn mobile_search_sheet_upward_handle_swipe_closes() {
+        assert!(should_close_by_drag(true, 0, -90, 180.0));
+        assert!(should_close_by_drag(true, 4, -30, 20.0));
+    }
+
+    #[test]
+    fn mobile_search_sheet_short_or_horizontal_swipe_stays_open() {
+        assert!(!should_close_by_drag(true, 0, -12, 180.0));
+        assert!(!should_close_by_drag(true, 100, -90, 180.0));
+        assert!(!should_close_by_drag(true, 0, 90, 180.0));
+    }
+
+    #[test]
+    fn mobile_search_sheet_requires_dismiss_origin() {
+        assert!(!should_close_by_drag(false, 0, -90, 180.0));
+    }
+
+    #[test]
+    fn mobile_search_sheet_drag_offset_moves_upward_only() {
+        assert!(damped_offset(200, 110, true) < 0);
+        assert_eq!(damped_offset(200, 110, false), 0);
+        assert_eq!(damped_offset(100, 150, true), 0);
+    }
 }
