@@ -22,6 +22,7 @@ pub fn MainLayoutBody(
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
+    on_logout: Callback<()>,
 ) -> impl IntoView {
     let core_for_layout = core.clone();
     let bottom_bar_core = core.clone();
@@ -38,6 +39,7 @@ pub fn MainLayoutBody(
                     on_home=on_home
                     on_open=on_open
                     on_command=on_command
+                    on_logout=on_logout
                 />
             }
             .into_any()
@@ -53,6 +55,7 @@ pub fn MainLayoutBody(
                     on_home=on_home
                     on_open=on_open
                     on_command=on_command
+                    on_logout=on_logout
                     chat_visible=chat_visible
                 />
             }

@@ -17,6 +17,7 @@ pub fn Header(
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
+    on_logout: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
 
@@ -55,6 +56,14 @@ pub fn Header(
                     on:click=move |_| on_command.run(())
                 >
                     <Terminal class="w-[18px] h-[18px]"/>
+                </button>
+
+                <button
+                    class="px-2 py-1 text-xs text-secondary hover:bg-hover rounded transition-colors"
+                    title=move || t::header::logout(locale.get())
+                    on:click=move |_| on_logout.run(())
+                >
+                    {move || t::header::logout(locale.get())}
                 </button>
             </div>
         </header>

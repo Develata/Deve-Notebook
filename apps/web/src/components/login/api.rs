@@ -51,7 +51,6 @@ pub(super) async fn attempt_login(
     }
 }
 
-#[allow(dead_code)]
 pub async fn logout() -> Result<(), String> {
     let response = Request::post("/api/auth/logout")
         .send()

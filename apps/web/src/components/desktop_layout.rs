@@ -35,6 +35,7 @@ pub fn DesktopLayout(
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
+    on_logout: Callback<()>,
     chat_visible: ReadSignal<bool>,
 ) -> impl IntoView {
     let (
@@ -56,6 +57,7 @@ pub fn DesktopLayout(
             on_home=on_home
             on_open=on_open
             on_command=on_command
+            on_logout=on_logout
         />
         <DesktopSyncBanner sync_banner=core.sync_banner />
         <main

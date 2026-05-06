@@ -51,6 +51,7 @@ pub fn MobileLayoutFrame(
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
+    on_logout: Callback<()>,
     on_doc_select: Callback<deve_core::models::DocId>,
     on_close_drawers: Callback<()>,
     banner_toggle: CoreState,
@@ -81,6 +82,7 @@ pub fn MobileLayoutFrame(
                 on_home=on_home
                 on_open=on_open
                 on_command=on_command
+                on_logout=on_logout
             />
 
             <MobileSyncBanner banner_toggle=banner_toggle banner_text=banner_text />

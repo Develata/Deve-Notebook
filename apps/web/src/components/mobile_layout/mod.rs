@@ -46,6 +46,7 @@ pub fn MobileLayout(
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
+    on_logout: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let (show_sidebar, set_show_sidebar) = signal(false);
@@ -112,6 +113,7 @@ pub fn MobileLayout(
             on_home=on_home
             on_open=on_open
             on_command=on_command
+            on_logout=on_logout
             on_doc_select=on_doc_select
             on_close_drawers=close_drawers
             banner_toggle=banner_toggle

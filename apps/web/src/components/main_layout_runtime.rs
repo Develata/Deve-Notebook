@@ -38,6 +38,7 @@ pub fn MainLayoutRuntime(
     on_open: Callback<()>,
     on_command: Callback<()>,
     on_settings: Callback<()>,
+    on_logout: Callback<()>,
 ) -> impl IntoView {
     view! {
         <div
@@ -73,6 +74,7 @@ pub fn MainLayoutRuntime(
                 on_home=on_home
                 on_open=on_open
                 on_command=on_command
+                on_logout=on_logout
             />
             <DisconnectedOverlay status=core.ws.status.into() />
         </div>

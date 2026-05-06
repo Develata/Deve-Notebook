@@ -28,7 +28,7 @@ mod main_layout_contexts;
 mod main_layout_setup;
 
 #[component]
-pub fn MainLayout(on_session_expired: Callback<()>) -> AnyView {
+pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> AnyView {
     let _locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let core = use_core();
     watch_session_expired(core.ws.status, on_session_expired);
@@ -110,6 +110,7 @@ pub fn MainLayout(on_session_expired: Callback<()>) -> AnyView {
             on_open=on_open
             on_command=on_command
             on_settings=on_settings
+            on_logout=on_logout
         />
     }
     .into_any()

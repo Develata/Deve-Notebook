@@ -20,6 +20,7 @@ pub fn MobileHeader(
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
+    on_logout: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     view! {
@@ -66,6 +67,15 @@ pub fn MobileHeader(
                     on:click=move |_| on_command.run(())
                 >
                     <Terminal class="w-[18px] h-[18px]"/>
+                </button>
+                <button
+                    data-deve-mobile-touch-target="topbar_buttons"
+                    class=topbar_button_class()
+                    title=move || t::header::logout(locale.get())
+                    aria-label=move || t::header::logout(locale.get())
+                    on:click=move |_| on_logout.run(())
+                >
+                    {move || t::header::logout(locale.get())}
                 </button>
             </div>
         </div>

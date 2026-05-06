@@ -38,6 +38,13 @@ pub fn command(locale: Locale) -> &'static str {
     }
 }
 
+pub fn logout(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Sign out",
+        Locale::Zh => "退出登录",
+    }
+}
+
 pub fn file_tree(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "File tree",
@@ -54,7 +61,7 @@ pub fn toggle_outline(locale: Locale) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{command, file_tree, home, open, toggle_outline};
+    use super::{command, file_tree, home, logout, open, toggle_outline};
     use crate::i18n::Locale;
 
     #[test]
@@ -63,6 +70,7 @@ mod tests {
         assert_eq!(home(Locale::En), "Home");
         assert_eq!(open(Locale::En), "Open Index");
         assert_eq!(command(Locale::En), "Command Palette");
+        assert_eq!(logout(Locale::En), "Sign out");
         assert_eq!(toggle_outline(Locale::En), "Toggle Outline");
     }
 }

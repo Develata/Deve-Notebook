@@ -17,7 +17,7 @@ use self::app_auth_monitor::{
     current_page_active, mount_visibility_listener, should_run_session_probe,
 };
 use crate::api::{AuthProbe, probe_auth_status};
-use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage};
+use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage, logout};
 use crate::components::main_layout::MainLayout;
 use crate::i18n::initial_locale;
 use gloo_timers::future::TimeoutFuture;
@@ -109,6 +109,12 @@ pub fn App() -> impl IntoView {
             AuthState::Authenticated => view! {
                 <MainLayout
                     on_session_expired=Callback::new(move |_| set_auth_state.set(AuthState::Unauthenticated))
+                    on_logout=Callback::new(move |_| {
+                        spawn_local(async move {
+                            let _ = logout().await;
+                            set_auth_state.set(AuthState::Unauthenticated);
+                        });
+                    })
                 />
             }.into_any(),
             AuthState::Checking | AuthState::Unavailable => view! {
