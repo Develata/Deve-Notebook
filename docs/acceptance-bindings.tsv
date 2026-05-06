@@ -83,7 +83,7 @@ UI-MOB-013|manual-chrome|docs/features/10_ai_agent.md|mobile chat readability wo
 UI-MOB-014|manual-chrome|docs/features/10_ai_agent.md|mobile chat error recovery workflow
 UI-MOB-015|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile sidebar more workflow
 UI-MOB-016|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile more menu pin workflow
-UI-MOB-017|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile accessibility workflow
+UI-MOB-017|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff overlay workflow
 UI-MOB-018|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile regression workflow
 UI-MOB-CHAT-REG-001|manual-chrome|docs/features/10_ai_agent.md|mobile chat regression
 UI-MOB-CHAT-REG-002|manual-chrome|docs/features/10_ai_agent.md|mobile chat streaming regression

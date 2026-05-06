@@ -465,6 +465,27 @@ contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mob
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_pin_toggle_removes_pinned_view_when_not_last()"
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_pin_toggle_keeps_last_view_pinned()"
 
+# UI-MOB-017: mobile Diff owns the viewport and must not be covered by AI Chat
+# or the editor accessory toolbar.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-017"
+contains_case_block UI-MOB-017 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-017 "run: cargo test -p deve_web mobile_diff -- --nocapture"
+contains_case_block UI-MOB-017 "ui_assert: element_visible \".diff-view-mobile\""
+contains_case_block UI-MOB-017 "cli_assert: mobile_diff_view_marker_bound true"
+contains_case_block UI-MOB-017 "cli_assert: mobile_diff_hides_chat_chip_bound true"
+contains_case_block UI-MOB-017 "cli_assert: mobile_diff_hides_accessory_toolbar_bound true"
+contains_case_block UI-MOB-017 "ui_assert: mobile_chat_chip_visible false"
+contains_case_block UI-MOB-017 "ui_assert: mobile_accessory_toolbar_visible false"
+contains docs/acceptance-bindings.tsv "UI-MOB-017|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff overlay workflow"
+contains docs/plan/08_ui_design_03_mobile.md "移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。"
+contains apps/web/src/components/diff_view/mod.rs "pub(crate) fn diff_view_class(mobile: bool) -> &'static str"
+contains apps/web/src/components/diff_view/mod.rs "fn mobile_diff_uses_mobile_dom_marker()"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "fn mobile_diff_hides_chat_chip_and_expanded_chat()"
+contains apps/web/src/components/mobile_layout/layout_frame.rs "pub(crate) fn mobile_accessory_toolbar_visible("
+contains apps/web/src/components/mobile_layout/layout_frame.rs "mobile_accessory_toolbar_visible("
+contains apps/web/src/components/mobile_layout/layout_frame.rs "fn mobile_diff_hides_accessory_toolbar()"
+contains apps/web/src/components/mobile_layout/layout_frame.rs "fn mobile_diff_keeps_accessory_toolbar_gate_strict()"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

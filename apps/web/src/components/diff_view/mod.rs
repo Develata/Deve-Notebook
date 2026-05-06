@@ -38,6 +38,14 @@ use fold::create_fold_state;
 use leptos::html;
 use leptos::prelude::*;
 
+pub(crate) fn diff_view_class(mobile: bool) -> &'static str {
+    if mobile {
+        "diff-view-mobile h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]"
+    } else {
+        "h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]"
+    }
+}
+
 #[component]
 pub fn DiffView(
     repo_scope: String,
@@ -116,7 +124,7 @@ pub fn DiffView(
     let resolved_content = Signal::derive(move || content_signal.get());
 
     view! {
-        <div class=move || if mobile { "diff-view-mobile h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]" } else { "h-full w-full bg-[var(--diff-bg)] flex flex-col font-mono text-[13px]" }>
+        <div class=move || diff_view_class(mobile)>
             <DiffHeader mobile=mobile filename=filename is_readonly=is_readonly is_editing=compute.is_editing hunk_index_text=nav.hunk_index_text has_hunks=nav.has_hunks added_count=nav.added_count deleted_count=nav.deleted_count cache_hit=cache_hit cache_hit_ratio=cache_hit_ratio compute_ms=compute_ms algorithm=algorithm on_prev_hunk=nav.on_prev_hunk on_next_hunk=nav.on_next_hunk toggle_edit=Callback::new(move |_| compute.set_is_editing.update(|v| *v = !*v)) on_close=on_close />
             {merge_conflict.and_then(|conflict| {
                 on_resolve_merge_conflict.map(|on_resolve| view! {
@@ -145,5 +153,16 @@ pub fn DiffView(
                 set_syncing_right,
             } />
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::diff_view_class;
+
+    #[test]
+    fn mobile_diff_uses_mobile_dom_marker() {
+        assert!(diff_view_class(true).contains("diff-view-mobile"));
+        assert!(!diff_view_class(false).contains("diff-view-mobile"));
     }
 }

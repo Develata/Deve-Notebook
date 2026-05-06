@@ -148,6 +148,12 @@ mod tests {
     }
 
     #[test]
+    fn mobile_diff_hides_chat_chip_and_expanded_chat() {
+        assert!(!should_show_mobile_chat_sheet(true, false, true, false, 0));
+        assert!(!should_show_mobile_chat_sheet(true, false, true, true, 0));
+    }
+
+    #[test]
     fn collapsed_chip_uses_footer_offset_when_keyboard_is_closed() {
         assert!(should_show_mobile_chat_sheet(true, false, false, false, 0));
         assert_eq!(

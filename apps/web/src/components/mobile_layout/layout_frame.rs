@@ -21,6 +21,16 @@ pub(crate) fn mobile_bottom_bar_visible(keyboard_offset: i32, chat_expanded: boo
     keyboard_offset <= 0 && !chat_expanded
 }
 
+pub(crate) fn mobile_accessory_toolbar_visible(
+    has_doc: bool,
+    diff_open: bool,
+    drawer_open: bool,
+    keyboard_offset: i32,
+    chat_expanded: bool,
+) -> bool {
+    has_doc && !diff_open && !drawer_open && keyboard_offset > 0 && !chat_expanded
+}
+
 #[component]
 pub fn MobileLayoutFrame(
     core: CoreState,
@@ -105,11 +115,13 @@ pub fn MobileLayoutFrame(
                 keyboard_offset=keyboard_offset
                 readonly=core.is_spectator
                 visible=Signal::derive(move || {
-                    current_doc.get().is_some()
-                        && diff_content.get().is_none()
-                        && !drawer_open.get()
-                        && keyboard_offset.get() > 0
-                        && !chat_expanded.get()
+                    mobile_accessory_toolbar_visible(
+                        current_doc.get().is_some(),
+                        diff_content.get().is_some(),
+                        drawer_open.get(),
+                        keyboard_offset.get(),
+                        chat_expanded.get(),
+                    )
                 })
             />
 
@@ -130,7 +142,7 @@ pub fn MobileLayoutFrame(
 
 #[cfg(test)]
 mod tests {
-    use super::mobile_bottom_bar_visible;
+    use super::{mobile_accessory_toolbar_visible, mobile_bottom_bar_visible};
 
     #[test]
     fn mobile_chat_keyboard_hides_bottom_bar() {
@@ -138,5 +150,31 @@ mod tests {
         assert!(!mobile_bottom_bar_visible(280, false));
         assert!(!mobile_bottom_bar_visible(0, true));
         assert!(mobile_bottom_bar_visible(0, false));
+    }
+
+    #[test]
+    fn mobile_diff_hides_accessory_toolbar() {
+        assert!(mobile_accessory_toolbar_visible(
+            true, false, false, 280, false
+        ));
+        assert!(!mobile_accessory_toolbar_visible(
+            true, true, false, 280, false
+        ));
+    }
+
+    #[test]
+    fn mobile_diff_keeps_accessory_toolbar_gate_strict() {
+        assert!(!mobile_accessory_toolbar_visible(
+            false, false, false, 280, false
+        ));
+        assert!(!mobile_accessory_toolbar_visible(
+            true, false, true, 280, false
+        ));
+        assert!(!mobile_accessory_toolbar_visible(
+            true, false, false, 0, false
+        ));
+        assert!(!mobile_accessory_toolbar_visible(
+            true, false, false, 280, true
+        ));
     }
 }
