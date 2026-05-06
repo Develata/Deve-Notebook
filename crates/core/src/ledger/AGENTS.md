@@ -14,6 +14,7 @@ The core ledger storage system — the heart of Deve-Notebook. Implements Conten
 | `mod.rs` | Module declarations and re-exports |
 | `database.rs` | Redb database initialization and table definitions |
 | `database_cache.rs` | Database query cache layer |
+| `database_open.rs` | Database open/create cache helpers |
 | `schema.rs` | Redb table schema definitions |
 | `init.rs` | Ledger initialization — opens/creates database |
 | `init_reuse.rs` | Database reuse logic for existing ledgers |
@@ -27,6 +28,7 @@ The core ledger storage system — the heart of Deve-Notebook. Implements Conten
 | `listing.rs` | Document and repo listing |
 | `inode_index.rs` | Inode-to-node mapping index |
 | `metadata.rs` | Document metadata management |
+| `metadata_tree.rs` | Folder metadata mutation transactions |
 | `snapshot.rs` | Content snapshot system |
 | `source_control.rs` | Source control integration with ledger |
 | `range.rs` | Op range queries |
