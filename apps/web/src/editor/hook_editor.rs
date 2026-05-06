@@ -41,6 +41,8 @@ pub fn setup_editor_mount_effect(ctx: EditorMountEffectCtx) {
             active_branch: ctx.core.active_branch,
             pending_branch_switch: ctx.core.pending_branch_switch,
             pending_repo_switch: ctx.core.pending_repo_switch,
+            load_state: ctx.core.load_state,
+            is_spectator: ctx.core.is_spectator,
             handshake_ready: ctx.core.handshake_ready,
             is_playback: ctx.is_playback,
             set_pending_local_edits: ctx.core.set_pending_local_edits,

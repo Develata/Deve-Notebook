@@ -5,6 +5,7 @@
 use super::playback;
 use crate::api::WsService;
 use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use deve_core::models::{DocId, Op};
 use leptos::prelude::*;
 
@@ -29,35 +30,44 @@ pub fn setup_playback_effect(ctx: PlaybackEffectCtx) {
             ctx.history,
             ctx.set_is_playback,
         );
-        super::ffi::set_read_only(should_be_read_only(
-            version < local_version,
-            ctx.core.is_spectator.get_untracked(),
-            ctx.core.load_state.get_untracked() != "ready",
-            ctx.core.handshake_ready.get_untracked(),
-            ctx.core.pending_branch_switch.get_untracked().is_some(),
-            ctx.core.pending_repo_switch.get_untracked().is_some(),
-            ctx.ws.writer_ready_for(
-                ctx.core.current_repo_id.get_untracked().as_deref(),
-                Some(ctx.core.current_scope_nonce.get_untracked()),
-            ),
-        ));
+        let write_blocked = repo_write_block_untracked(
+            &ctx.ws,
+            RepoWriteSignals {
+                load_state: ctx.core.load_state,
+                is_spectator: ctx.core.is_spectator,
+                handshake_ready: ctx.core.handshake_ready,
+                current_repo_id: ctx.core.current_repo_id,
+                current_scope_nonce: ctx.core.current_scope_nonce,
+                active_branch: ctx.core.active_branch,
+                pending_branch_switch: ctx.core.pending_branch_switch,
+                pending_repo_switch: ctx.core.pending_repo_switch,
+            },
+        )
+        .is_some();
+        super::ffi::set_read_only(should_be_read_only(version < local_version, write_blocked));
     });
 }
 
-fn should_be_read_only(
-    is_playback: bool,
-    spectator: bool,
-    loading: bool,
-    handshake_ready: bool,
-    branch_switching: bool,
-    repo_switching: bool,
-    writer_ready: bool,
-) -> bool {
-    is_playback
-        || spectator
-        || loading
-        || branch_switching
-        || repo_switching
-        || !handshake_ready
-        || !writer_ready
+fn should_be_read_only(is_playback: bool, write_blocked: bool) -> bool {
+    is_playback || write_blocked
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_be_read_only;
+
+    #[test]
+    fn playback_read_only_gate_blocks_native_runtime_write_gate() {
+        assert!(should_be_read_only(false, true));
+    }
+
+    #[test]
+    fn playback_read_only_gate_blocks_playback() {
+        assert!(should_be_read_only(true, false));
+    }
+
+    #[test]
+    fn playback_read_only_gate_allows_ready_document() {
+        assert!(!should_be_read_only(false, false));
+    }
 }

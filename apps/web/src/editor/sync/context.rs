@@ -36,6 +36,9 @@ pub struct SyncContext<'a> {
     pub current_scope_nonce: ReadSignal<u64>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
+    pub load_state: ReadSignal<String>,
+    pub is_spectator: Signal<bool>,
+    pub handshake_ready: ReadSignal<bool>,
     pub open_request_id: ReadSignal<u64>,
     pub ws: &'a WsService,
     // 内容信号

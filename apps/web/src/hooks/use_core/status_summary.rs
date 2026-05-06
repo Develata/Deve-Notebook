@@ -75,10 +75,10 @@ pub(crate) fn derive_sync_status(
         ConnectionStatus::NativeReprobeRequired => SyncStatusKind::NativeReprobeRequired,
         ConnectionStatus::Disconnected => SyncStatusKind::Offline,
         ConnectionStatus::Connecting => SyncStatusKind::Reconnecting,
-        ConnectionStatus::Connected if load_state != "ready" => SyncStatusKind::SnapshotLoading,
         ConnectionStatus::Connected if node_role_probe_failed => {
             SyncStatusKind::NativeReprobeRequired
         }
+        ConnectionStatus::Connected if load_state != "ready" => SyncStatusKind::SnapshotLoading,
         ConnectionStatus::Connected
             if pending_repo_switch.is_some()
                 || pending_branch_switch

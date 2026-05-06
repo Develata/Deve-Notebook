@@ -88,6 +88,26 @@ fn prefers_loading_state_while_snapshot_is_inflight() {
 }
 
 #[test]
+fn reports_native_reprobe_before_snapshot_loading_when_node_role_probe_failed() {
+    let summary = derive_sync_status(
+        ConnectionStatus::Connected,
+        "loading",
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        Some("repo-id"),
+        Some("default"),
+        None,
+        false,
+        0,
+    );
+    assert_eq!(summary.kind, SyncStatusKind::NativeReprobeRequired);
+}
+
+#[test]
 fn reports_read_only_for_remote_branch_views() {
     let summary = derive_sync_status(
         ConnectionStatus::Connected,

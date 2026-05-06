@@ -6,11 +6,11 @@ use crate::editor::ffi::getEditorContent;
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_action;
 use crate::hooks::use_core::{CoreState, pending};
-use crate::i18n::{Locale, t};
 use deve_core::models::Op;
-use deve_core::protocol::{ClientMessage, ServerErrorCode};
+use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -19,21 +19,25 @@ enum ApplyEditPlanError {
 }
 
 pub fn make_on_apply(core: CoreState) -> Callback<String> {
-    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     Callback::new(move |code: String| {
         let Some(doc_id) = core.current_doc.get_untracked() else {
             show_apply_block(&core, "no active document");
             return;
         };
-        if !core.ws.writer_ready_for(
-            core.current_repo_id.get_untracked().as_deref(),
-            Some(core.current_scope_nonce.get_untracked()),
+        if let Some(block) = repo_write_block_untracked(
+            &core.ws,
+            RepoWriteSignals {
+                load_state: core.load_state,
+                is_spectator: core.is_spectator,
+                handshake_ready: core.handshake_ready,
+                current_repo_id: core.current_repo_id,
+                current_scope_nonce: core.current_scope_nonce,
+                active_branch: core.active_branch,
+                pending_branch_switch: core.pending_branch_switch,
+                pending_repo_switch: core.pending_repo_switch,
+            },
         ) {
-            let message = t::server_error::message(
-                locale.get_untracked(),
-                ServerErrorCode::SyncPeerUnauthenticated,
-            );
-            let _ = web_sys::window().and_then(|window| window.alert_with_message(message).ok());
+            show_apply_block(&core, block.label());
             return;
         }
         let op = match build_append_markdown_op(&getEditorContent(), code) {

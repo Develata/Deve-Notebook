@@ -2,18 +2,8 @@
 //!   - 05_network#web-ws-runtime
 //!   - 16_web_thin_client_ledger#web-edit-intent
 //!
-pub(super) fn can_send_delta(
-    is_playback: bool,
-    branch_switch_pending: bool,
-    repo_switch_pending: bool,
-    handshake_ready: bool,
-    writer_ready: bool,
-) -> bool {
-    !is_playback
-        && !branch_switch_pending
-        && !repo_switch_pending
-        && handshake_ready
-        && writer_ready
+pub(super) fn can_send_delta(is_playback: bool, write_allowed: bool) -> bool {
+    !is_playback && write_allowed
 }
 
 #[cfg(test)]
@@ -21,19 +11,17 @@ mod tests {
     use super::can_send_delta;
 
     #[test]
-    fn blocks_delta_while_scope_switch_is_pending() {
-        assert!(!can_send_delta(false, true, false, true, true));
-        assert!(!can_send_delta(false, false, true, true, true));
+    fn blocks_delta_while_playback_is_active() {
+        assert!(!can_send_delta(true, true));
     }
 
     #[test]
-    fn blocks_delta_before_handshake_is_ready() {
-        assert!(!can_send_delta(false, false, false, false, true));
+    fn blocks_delta_when_runtime_write_gate_blocks() {
+        assert!(!can_send_delta(false, false));
     }
 
     #[test]
-    fn allows_delta_only_in_stable_writable_scope() {
-        assert!(can_send_delta(false, false, false, true, true));
-        assert!(!can_send_delta(false, false, false, true, false));
+    fn allows_delta_only_when_playback_is_inactive_and_write_gate_allows() {
+        assert!(can_send_delta(false, true));
     }
 }

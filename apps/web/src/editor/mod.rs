@@ -8,6 +8,7 @@ use crate::api::WsService;
 use crate::components::icons::PanelLeft;
 use crate::components::layout_context::EditorContentContext;
 use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::hooks::use_outline::use_outline;
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
@@ -59,24 +60,22 @@ pub fn Editor(
     let ws = use_context::<WsService>().expect("WsService should be provided");
     provide_context(EditorContentContext { content });
     Effect::new(move |_| {
-        let spectator = core.is_spectator.get();
         let is_pb = playback_version.get() < doc_version.get();
-        let loading = core.load_state.get() != "ready";
-        let switching =
-            core.pending_branch_switch.get().is_some() || core.pending_repo_switch.get().is_some();
-        let handshake_ready = core.handshake_ready.get();
-        let writer_ready = ws.writer_ready_for(
-            core.current_repo_id.get().as_deref(),
-            Some(core.current_scope_nonce.get()),
-        );
-        let should_readonly = should_editor_be_read_only(
-            spectator,
-            is_pb,
-            loading,
-            switching,
-            handshake_ready,
-            writer_ready,
-        );
+        let write_blocked = repo_write_block_tracked(
+            &ws,
+            RepoWriteSignals {
+                load_state: core.load_state,
+                is_spectator: core.is_spectator,
+                handshake_ready: core.handshake_ready,
+                current_repo_id: core.current_repo_id,
+                current_scope_nonce: core.current_scope_nonce,
+                active_branch: core.active_branch,
+                pending_branch_switch: core.pending_branch_switch,
+                pending_repo_switch: core.pending_repo_switch,
+            },
+        )
+        .is_some();
+        let should_readonly = should_editor_be_read_only(is_pb, write_blocked);
         ffi::set_read_only(should_readonly);
     });
     let (outline_pref, set_outline_pref) = use_outline();
@@ -140,15 +139,8 @@ pub fn Editor(
     }
 }
 
-fn should_editor_be_read_only(
-    spectator: bool,
-    is_playback: bool,
-    loading: bool,
-    switching: bool,
-    handshake_ready: bool,
-    writer_ready: bool,
-) -> bool {
-    spectator || is_playback || loading || switching || !handshake_ready || !writer_ready
+fn should_editor_be_read_only(is_playback: bool, write_blocked: bool) -> bool {
+    is_playback || write_blocked
 }
 
 #[cfg(test)]
@@ -156,16 +148,17 @@ mod tests {
     use super::should_editor_be_read_only;
 
     #[test]
-    fn disconnected_lockdown_spectator_state_forces_editor_read_only() {
-        assert!(should_editor_be_read_only(
-            true, false, false, false, true, true
-        ));
+    fn editor_read_only_gate_blocks_native_runtime_write_gate() {
+        assert!(should_editor_be_read_only(false, true));
     }
 
     #[test]
     fn editor_read_only_gate_allows_ready_writable_document() {
-        assert!(!should_editor_be_read_only(
-            false, false, false, false, true, true
-        ));
+        assert!(!should_editor_be_read_only(false, false));
+    }
+
+    #[test]
+    fn editor_read_only_gate_blocks_playback() {
+        assert!(should_editor_be_read_only(true, false));
     }
 }

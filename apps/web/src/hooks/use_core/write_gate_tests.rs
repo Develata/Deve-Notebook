@@ -71,6 +71,19 @@ fn repo_write_gate_reports_node_role_probe_failure() {
 }
 
 #[test]
+fn repo_write_gate_reports_node_role_probe_failure_before_snapshot_loading() {
+    assert_eq!(
+        repo_write_block(RepoWriteGateState {
+            load_state: "loading",
+            node_role_probe_failed: true,
+            node_role_readable: false,
+            ..gate_state(false, true, true)
+        }),
+        Some(RepoWriteBlock::NativeReprobeRequired)
+    );
+}
+
+#[test]
 fn repo_write_gate_blocks_remote_branches_as_read_only() {
     assert_eq!(
         repo_write_block(gate_state(true, true, true)),
@@ -160,6 +173,17 @@ fn repo_source_control_read_gate_allows_remote_branch_reads_without_writer_hands
 }
 
 #[test]
+fn repo_source_control_read_gate_allows_remote_branch_reads_without_node_role() {
+    assert_eq!(
+        repo_source_control_read_block(RepoWriteGateState {
+            node_role_readable: false,
+            ..gate_state(true, false, false)
+        }),
+        None
+    );
+}
+
+#[test]
 fn repo_source_control_read_gate_requires_node_role_for_local_refresh() {
     assert_eq!(
         repo_source_control_read_block(RepoWriteGateState {
@@ -175,6 +199,19 @@ fn repo_source_control_read_gate_reports_node_role_probe_failure_before_read_onl
     assert_eq!(
         repo_source_control_read_block(RepoWriteGateState {
             is_read_only: true,
+            node_role_probe_failed: true,
+            node_role_readable: false,
+            ..gate_state(false, true, true)
+        }),
+        Some(RepoWriteBlock::NativeReprobeRequired)
+    );
+}
+
+#[test]
+fn repo_source_control_read_gate_reports_node_role_probe_failure_before_snapshot_loading() {
+    assert_eq!(
+        repo_source_control_read_block(RepoWriteGateState {
+            load_state: "loading",
             node_role_probe_failed: true,
             node_role_readable: false,
             ..gate_state(false, true, true)

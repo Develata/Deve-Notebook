@@ -93,8 +93,18 @@ check_contains apps/web/src/hooks/use_core/write_gate_logic.rs "node_role_readab
 check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_write_gate_requires_node_role_readable"
 check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_source_control_read_gate_reports_node_role_probe_failure_before_read_only"
 check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_source_control_read_gate_requires_node_role_for_local_refresh"
+check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_source_control_read_gate_allows_remote_branch_reads_without_node_role"
+check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_write_gate_reports_node_role_probe_failure_before_snapshot_loading"
 check_contains apps/web/src/hooks/use_core/status_summary_tests.rs "reports_repo_handshake_until_node_role_is_readable"
 check_contains apps/web/src/hooks/use_core/status_summary_tests.rs "reports_native_reprobe_when_node_role_probe_failed"
+check_contains apps/web/src/hooks/use_core/status_summary_tests.rs "reports_native_reprobe_before_snapshot_loading_when_node_role_probe_failed"
+check_contains apps/web/src/editor/delta_input_gate.rs "blocks_delta_when_runtime_write_gate_blocks"
+check_contains apps/web/src/editor/mod.rs "editor_read_only_gate_blocks_native_runtime_write_gate"
+check_contains apps/web/src/editor/hook_playback.rs "playback_read_only_gate_blocks_native_runtime_write_gate"
+check_contains apps/web/src/editor/delta_input.rs "repo_write_block_untracked"
+check_contains apps/web/src/editor/sync/history_resend.rs "repo_write_block_untracked"
+check_contains apps/web/src/editor/sync/dispatch_payload.rs "write_ready_resend_blocks_when_native_runtime_readiness_fails"
+check_contains apps/web/src/components/chat/actions_apply.rs "repo_write_block_untracked"
 check_no_packaging_dependency_leak
 check_no_process_runtime_leak
 

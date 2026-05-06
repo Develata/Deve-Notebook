@@ -65,11 +65,11 @@ pub(crate) fn repo_write_block(state: RepoWriteGateState<'_>) -> Option<RepoWrit
         ConnectionStatus::NativeReprobeRequired => Some(RepoWriteBlock::NativeReprobeRequired),
         ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline),
         ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting),
-        ConnectionStatus::Connected if state.load_state != "ready" => {
-            Some(RepoWriteBlock::SnapshotLoading)
-        }
         ConnectionStatus::Connected if state.node_role_probe_failed => {
             Some(RepoWriteBlock::NativeReprobeRequired)
+        }
+        ConnectionStatus::Connected if state.load_state != "ready" => {
+            Some(RepoWriteBlock::SnapshotLoading)
         }
         ConnectionStatus::Connected if state.is_read_only => Some(RepoWriteBlock::ReadOnly),
         ConnectionStatus::Connected if state.pending_branch_switch || state.pending_repo_switch => {
@@ -99,11 +99,11 @@ pub(crate) fn repo_source_control_read_block(
             ConnectionStatus::NativeReprobeRequired => Some(RepoWriteBlock::NativeReprobeRequired),
             ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline),
             ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting),
-            ConnectionStatus::Connected if state.load_state != "ready" => {
-                Some(RepoWriteBlock::SnapshotLoading)
-            }
             ConnectionStatus::Connected if state.node_role_probe_failed => {
                 Some(RepoWriteBlock::NativeReprobeRequired)
+            }
+            ConnectionStatus::Connected if state.load_state != "ready" => {
+                Some(RepoWriteBlock::SnapshotLoading)
             }
             ConnectionStatus::Connected
                 if state.pending_branch_switch || state.pending_repo_switch =>
@@ -111,9 +111,6 @@ pub(crate) fn repo_source_control_read_block(
                 Some(RepoWriteBlock::ScopeSwitching)
             }
             ConnectionStatus::Connected if !state.has_repo => Some(RepoWriteBlock::NoRepo),
-            ConnectionStatus::Connected if !state.node_role_readable => {
-                Some(RepoWriteBlock::HandshakingRepo)
-            }
             ConnectionStatus::Connected => None,
         };
     }
