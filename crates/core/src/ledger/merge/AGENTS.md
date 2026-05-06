@@ -13,6 +13,7 @@ Merge engine: computes diffs between branches, resolves conflicts using CRDT sem
 |------|-------------|
 | `engine.rs` | Merge engine — orchestrates diff, conflict detection, resolution |
 | `diff.rs` | Branch diff computation |
+| `region.rs` | Merge region coalescing and conflict hunk construction |
 | `types.rs` | Merge types (MergeResult, ConflictInfo) |
 | `tests.rs` | Merge engine tests |
 

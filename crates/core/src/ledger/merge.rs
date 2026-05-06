@@ -13,6 +13,8 @@
 mod diff;
 #[path = "merge/engine.rs"]
 mod engine;
+#[path = "merge/region.rs"]
+mod region;
 #[path = "merge/types.rs"]
 mod types;
 
