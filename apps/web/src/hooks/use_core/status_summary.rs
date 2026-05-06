@@ -29,6 +29,22 @@ pub(crate) struct SyncStatusSummary {
     pub pending_ack_count: usize,
 }
 
+pub(crate) struct SyncStatusInput<'a> {
+    pub connection_status: ConnectionStatus,
+    pub load_state: &'a str,
+    pub remote_branch_active: bool,
+    pub degraded_storage: bool,
+    pub node_role_probe_failed: bool,
+    pub node_role_readable: bool,
+    pub handshake_ready: bool,
+    pub writer_ready: bool,
+    pub current_repo_id: Option<&'a str>,
+    pub current_repo_name: Option<&'a str>,
+    pub pending_repo_switch: Option<&'a str>,
+    pub pending_branch_switch: bool,
+    pub pending_ack_count: usize,
+}
+
 impl SyncStatusSummary {
     pub fn header_text(&self) -> &'static str {
         match self.kind {
@@ -48,26 +64,12 @@ impl SyncStatusSummary {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn derive_sync_status(
-    connection_status: ConnectionStatus,
-    load_state: &str,
-    remote_branch_active: bool,
-    degraded_storage: bool,
-    node_role_probe_failed: bool,
-    node_role_readable: bool,
-    handshake_ready: bool,
-    writer_ready: bool,
-    current_repo_id: Option<&str>,
-    current_repo_name: Option<&str>,
-    pending_repo_switch: Option<&str>,
-    pending_branch_switch: bool,
-    pending_ack_count: usize,
-) -> SyncStatusSummary {
-    let repo_name = pending_repo_switch
-        .or(current_repo_name)
+pub(crate) fn derive_sync_status(input: SyncStatusInput<'_>) -> SyncStatusSummary {
+    let repo_name = input
+        .pending_repo_switch
+        .or(input.current_repo_name)
         .map(ToOwned::to_owned);
-    let kind = match connection_status {
+    let kind = match input.connection_status {
         ConnectionStatus::Unauthorized => SyncStatusKind::SessionExpired,
         ConnectionStatus::NativeBootstrapInvalid => SyncStatusKind::NativeBootstrapInvalid,
         ConnectionStatus::NativeSessionPending => SyncStatusKind::NativeSessionPending,
@@ -75,32 +77,34 @@ pub(crate) fn derive_sync_status(
         ConnectionStatus::NativeReprobeRequired => SyncStatusKind::NativeReprobeRequired,
         ConnectionStatus::Disconnected => SyncStatusKind::Offline,
         ConnectionStatus::Connecting => SyncStatusKind::Reconnecting,
-        ConnectionStatus::Connected if node_role_probe_failed => {
+        ConnectionStatus::Connected if input.node_role_probe_failed => {
             SyncStatusKind::NativeReprobeRequired
         }
-        ConnectionStatus::Connected if load_state != "ready" => SyncStatusKind::SnapshotLoading,
+        ConnectionStatus::Connected if input.load_state != "ready" => {
+            SyncStatusKind::SnapshotLoading
+        }
         ConnectionStatus::Connected
-            if pending_repo_switch.is_some()
-                || pending_branch_switch
-                || current_repo_id.is_none()
-                || !node_role_readable =>
+            if input.pending_repo_switch.is_some()
+                || input.pending_branch_switch
+                || input.current_repo_id.is_none()
+                || !input.node_role_readable =>
         {
             SyncStatusKind::HandshakingRepo
         }
-        ConnectionStatus::Connected if remote_branch_active || degraded_storage => {
+        ConnectionStatus::Connected if input.remote_branch_active || input.degraded_storage => {
             SyncStatusKind::ReadOnly
         }
-        ConnectionStatus::Connected if !handshake_ready || !writer_ready => {
+        ConnectionStatus::Connected if !input.handshake_ready || !input.writer_ready => {
             SyncStatusKind::HandshakingRepo
         }
-        ConnectionStatus::Connected if pending_ack_count > 0 => SyncStatusKind::PendingAck,
+        ConnectionStatus::Connected if input.pending_ack_count > 0 => SyncStatusKind::PendingAck,
         ConnectionStatus::Connected => SyncStatusKind::Ready,
     };
 
     SyncStatusSummary {
         kind,
         repo_name,
-        pending_ack_count,
+        pending_ack_count: input.pending_ack_count,
     }
 }
 

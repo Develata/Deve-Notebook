@@ -5,7 +5,7 @@
 //!   - 15_release#runtime-observability
 //!
 use crate::hooks::use_core::CoreState;
-use crate::hooks::use_core::status_summary::{SyncStatusKind, derive_sync_status};
+use crate::hooks::use_core::status_summary::{SyncStatusInput, SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -24,21 +24,21 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
             Some(current_scope_nonce),
             handshake_ready,
         );
-        derive_sync_status(
-            core.ws.status.get(),
-            &core.load_state.get(),
-            core.active_branch.get().is_some(),
-            core.is_spectator.get() && core.active_branch.get().is_none(),
-            core.ws.node_role_probe_failed.get(),
-            readiness.node_role_readable,
-            readiness.repo_handshake_complete,
-            readiness.writer_ready,
-            current_repo_id.as_deref(),
-            core.current_repo.get().as_deref(),
-            core.pending_repo_switch.get().as_deref(),
-            core.pending_branch_switch.get().is_some(),
+        derive_sync_status(SyncStatusInput {
+            connection_status: core.ws.status.get(),
+            load_state: &core.load_state.get(),
+            remote_branch_active: core.active_branch.get().is_some(),
+            degraded_storage: core.is_spectator.get() && core.active_branch.get().is_none(),
+            node_role_probe_failed: core.ws.node_role_probe_failed.get(),
+            node_role_readable: readiness.node_role_readable,
+            handshake_ready: readiness.repo_handshake_complete,
+            writer_ready: readiness.writer_ready,
+            current_repo_id: current_repo_id.as_deref(),
+            current_repo_name: core.current_repo.get().as_deref(),
+            pending_repo_switch: core.pending_repo_switch.get().as_deref(),
+            pending_branch_switch: core.pending_branch_switch.get().is_some(),
             pending_ack_count,
-        )
+        })
     });
 
     let repo_label = move || {
