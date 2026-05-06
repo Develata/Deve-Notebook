@@ -8,7 +8,9 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | 下一轮 gap scan | P2 | `docs/report/`, current code | 重新读取 plan/features/acceptance 与最新 baseline，选出下一批 active execution queue |
+| 1 | `plan_ref` soft gap triage | P2 | `apps/cli/src/commands`, `crates/core/src/git_bridge` | `scripts/plan-coverage.sh --summary-missing-plan-ref` 仍保持 0 blocking；4 个 soft missing plan_ref 被补齐、豁免或记录为有效剩余项 |
+| 2 | Near-fuse cohesion triage | P2 | `scripts/plan-coverage.sh` soft file list | 只按职责边界拆分或保留说明，不做纯行数拆分；hard fuse 继续保持 0 |
+| 3 | Mainline implementation gap scan | P2 | plan/features/acceptance/current code | 基于最新 baseline 选择下一批会影响用户验收的代码实现项 |
 
 ## 当前基线
 
