@@ -3,8 +3,9 @@
 //!   - 15_release#runtime-observability
 //!
 use super::super::metrics::{create_metrics_state, elapsed_ms, now_ms, record_cache_sample};
-use super::super::model::to_unified;
+use super::super::model::{DiffChunkJob, to_unified};
 use super::{ComputePhase, DiffComputeState};
+use crate::components::diff_view::cache::DiffLines;
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
 use std::cell::RefCell;
@@ -12,7 +13,93 @@ use std::rc::Rc;
 
 #[path = "state_compute_helpers.rs"]
 mod helpers;
-use helpers::{algo_label, initial_with_cache, recompute_with_cache};
+use helpers::{algo_label, cache_completed_diff, initial_cached_or_preview, preview_diff};
+
+struct ChunkedDiffRequest {
+    key: String,
+    token: u64,
+    started_at: u64,
+    latest: ReadSignal<u64>,
+    set_result: WriteSignal<DiffLines>,
+    set_phase: WriteSignal<ComputePhase>,
+    metrics: super::super::metrics::DiffMetricsState,
+}
+
+fn schedule_chunked_diff(
+    delay_ms: u32,
+    job: Rc<RefCell<Option<DiffChunkJob>>>,
+    timer_ref: Rc<RefCell<Option<Timeout>>>,
+    request: Rc<ChunkedDiffRequest>,
+) {
+    let next_job = job.clone();
+    let next_timer_ref = timer_ref.clone();
+    let next_request = request.clone();
+    let timer = Timeout::new(delay_ms, move || {
+        if request.latest.get_untracked() != request.token {
+            return;
+        }
+        let done = {
+            let mut job_ref = job.borrow_mut();
+            let Some(job) = job_ref.as_mut() else {
+                return;
+            };
+            job.step()
+        };
+
+        if done {
+            let Some(job) = job.borrow_mut().take() else {
+                return;
+            };
+            let value = job.finish();
+            if request.latest.get_untracked() == request.token {
+                let algo = value.1;
+                cache_completed_diff(request.key.clone(), value.clone());
+                record_cache_sample(&request.metrics, false);
+                request
+                    .metrics
+                    .set_algorithm
+                    .set(algo_label(algo).to_string());
+                request
+                    .metrics
+                    .set_last_compute_ms
+                    .set(elapsed_ms(request.started_at, now_ms()));
+                request.set_result.set(value.0);
+                request.set_phase.set(ComputePhase::Ready);
+            }
+            return;
+        }
+
+        schedule_chunked_diff(0, next_job, next_timer_ref, next_request);
+    });
+    *timer_ref.borrow_mut() = Some(timer);
+}
+
+fn start_chunked_diff(
+    key: String,
+    old_content: String,
+    new_content: String,
+    token: u64,
+    delay_ms: u32,
+    compute_timer: Rc<RefCell<Option<Timeout>>>,
+    latest: ReadSignal<u64>,
+    set_result: WriteSignal<DiffLines>,
+    set_phase: WriteSignal<ComputePhase>,
+    metrics: super::super::metrics::DiffMetricsState,
+) {
+    let job = Rc::new(RefCell::new(Some(
+        super::super::model::create_diff_chunk_job(old_content, new_content),
+    )));
+    let request = Rc::new(ChunkedDiffRequest {
+        key,
+        token,
+        started_at: now_ms(),
+        latest,
+        set_result,
+        set_phase,
+        metrics,
+    });
+    schedule_chunked_diff(delay_ms, job, compute_timer, request);
+}
 
 pub fn create_compute_state(
     repo_scope: String,
@@ -27,7 +114,7 @@ pub fn create_compute_state(
     let metrics = create_metrics_state();
     let old_content = Rc::new(old_content);
 
-    let (hit, (initial, initial_algo)) = initial_with_cache(
+    let initial = initial_cached_or_preview(
         &repo_scope,
         &path,
         old_content.as_str(),
@@ -35,25 +122,59 @@ pub fn create_compute_state(
         mode,
         context_lines,
     );
-    record_cache_sample(&metrics, hit);
+    if initial.complete {
+        record_cache_sample(&metrics, initial.cache_hit);
+    }
     metrics
         .set_algorithm
-        .set(algo_label(initial_algo).to_string());
+        .set(algo_label(initial.value.1).to_string());
 
-    let (diff_result_raw, set_diff_result_raw) = signal(initial);
+    let initial_phase = if initial.complete {
+        ComputePhase::Ready
+    } else {
+        ComputePhase::PartialReady
+    };
+    let initial_key = initial.key.clone();
+    let should_complete_initial = !initial.complete;
+    let (diff_result_raw, set_diff_result_raw) = signal(initial.value.0);
     let diff_result = Memo::new(move |_| diff_result_raw.get());
-    let (compute_state, set_compute_state) = signal(ComputePhase::Ready);
-    let (active_token, set_active_token) = signal(0u64);
+    let (compute_state, set_compute_state) = signal(initial_phase);
+    let initial_token = u64::from(should_complete_initial);
+    let (active_token, set_active_token) = signal(initial_token);
     let debounce_timer: Rc<RefCell<Option<Timeout>>> = Rc::new(RefCell::new(None));
     let compute_timer: Rc<RefCell<Option<Timeout>>> = Rc::new(RefCell::new(None));
     let metrics_for_effect = metrics.clone();
+    let seen_content_effect = Rc::new(RefCell::new(false));
+
+    if should_complete_initial {
+        start_chunked_diff(
+            initial_key,
+            old_content.as_str().to_string(),
+            new_content.clone(),
+            initial_token,
+            32,
+            compute_timer.clone(),
+            active_token,
+            set_diff_result_raw,
+            set_compute_state,
+            metrics.clone(),
+        );
+    }
 
     Effect::new({
         let debounce_timer = debounce_timer.clone();
         let compute_timer = compute_timer.clone();
         let old_content = old_content.clone();
+        let seen_content_effect = seen_content_effect.clone();
         move |_| {
             let text = content.get();
+            {
+                let mut seen = seen_content_effect.borrow_mut();
+                if !*seen {
+                    *seen = true;
+                    return;
+                }
+            }
             set_compute_state.set(ComputePhase::Computing);
             let next_token = active_token.get_untracked().wrapping_add(1);
             set_active_token.set(next_token);
@@ -78,39 +199,46 @@ pub fn create_compute_state(
                 }
                 set_phase.set(ComputePhase::PartialReady);
 
-                let latest_inner = latest;
-                let set_phase_inner = set_phase;
-                let set_result_inner = set_result;
-                let old_inner = old_content_ref.clone();
-                let text_inner = text.clone();
-                let metrics_inner = metrics.clone();
-                let cache_path = path.clone();
-                let compute_job = Timeout::new(0, move || {
-                    if latest_inner.get_untracked() != next_token {
-                        return;
+                let key = crate::components::diff_view::cache::build_key(
+                    &repo_scope,
+                    &path,
+                    old_content_ref.as_str(),
+                    &text,
+                    mode,
+                    context_lines,
+                );
+                if let Some((computed, algo)) = crate::components::diff_view::cache::cache_get(&key)
+                {
+                    if latest.get_untracked() == next_token {
+                        record_cache_sample(&metrics, true);
+                        metrics.set_algorithm.set(algo_label(algo).to_string());
+                        metrics.set_last_compute_ms.set(0);
+                        set_result.set(computed);
+                        set_phase.set(ComputePhase::Ready);
                     }
-                    let start = now_ms();
-                    let (hit, (computed, algo)) = recompute_with_cache(
-                        &repo_scope,
-                        &cache_path,
-                        old_inner.as_str(),
-                        &text_inner,
-                        mode,
-                        context_lines,
-                    );
-                    if latest_inner.get_untracked() == next_token {
-                        record_cache_sample(&metrics_inner, hit);
-                        metrics_inner
-                            .set_algorithm
-                            .set(algo_label(algo).to_string());
-                        metrics_inner
-                            .set_last_compute_ms
-                            .set(elapsed_ms(start, now_ms()));
-                        set_result_inner.set(computed);
-                        set_phase_inner.set(ComputePhase::Ready);
-                    }
-                });
-                *compute_timer_ref.borrow_mut() = Some(compute_job);
+                    return;
+                }
+                let (preview, preview_algo) = preview_diff(old_content_ref.as_str(), &text);
+                if latest.get_untracked() != next_token {
+                    return;
+                }
+                metrics
+                    .set_algorithm
+                    .set(algo_label(preview_algo).to_string());
+                set_result.set(preview);
+                set_phase.set(ComputePhase::PartialReady);
+                start_chunked_diff(
+                    key,
+                    old_content_ref.as_str().to_string(),
+                    text,
+                    next_token,
+                    0,
+                    compute_timer_ref.clone(),
+                    latest,
+                    set_result,
+                    set_phase,
+                    metrics.clone(),
+                );
             });
             *debounce_timer.borrow_mut() = Some(debounce);
         }

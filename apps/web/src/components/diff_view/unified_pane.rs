@@ -14,8 +14,13 @@ pub(crate) fn first_viewport_rendered_marker(
     compute_state: ComputePhase,
     visible_rows: usize,
 ) -> Option<&'static str> {
-    (compute_state == ComputePhase::Ready && visible_rows > 0)
-        .then_some("diff-first-viewport-rendered")
+    matches!(
+        compute_state,
+        ComputePhase::PartialReady | ComputePhase::Ready
+    )
+    .then_some(visible_rows)
+    .filter(|rows| *rows > 0)
+    .map(|_| "diff-first-viewport-rendered")
 }
 
 #[component]
@@ -122,7 +127,7 @@ mod tests {
         assert_eq!(first_viewport_rendered_marker(ComputePhase::Ready, 0), None);
         assert_eq!(
             first_viewport_rendered_marker(ComputePhase::PartialReady, 1),
-            None
+            Some("diff-first-viewport-rendered")
         );
         assert_eq!(
             first_viewport_rendered_marker(ComputePhase::Computing, 1),

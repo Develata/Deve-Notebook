@@ -10,6 +10,8 @@ mod replace_word;
 mod segment;
 pub mod split_fold;
 
+pub use model_chunk::DiffChunkJob;
+
 pub const CHUNK_SIZE: usize = 300;
 pub const LINE_HEIGHT_PX: i32 = 20;
 
@@ -57,11 +59,16 @@ impl LineView {
     }
 }
 
-pub fn compute_diff_with_meta(
+pub fn compute_diff_preview_with_meta(
     old_content: &str,
     new_content: &str,
+    max_lines: usize,
 ) -> ((Vec<LineView>, Vec<LineView>), DiffAlgorithm) {
-    model_chunk::compute_diff_chunked_inner(old_content, new_content, CHUNK_SIZE)
+    model_chunk::compute_diff_preview_inner(old_content, new_content, max_lines)
+}
+
+pub fn create_diff_chunk_job(old_content: String, new_content: String) -> DiffChunkJob {
+    model_chunk::DiffChunkJob::new(old_content, new_content, CHUNK_SIZE)
 }
 
 pub fn to_unified(left: &[LineView], right: &[LineView]) -> Vec<UnifiedLine> {
