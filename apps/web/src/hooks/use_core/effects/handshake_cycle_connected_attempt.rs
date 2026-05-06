@@ -15,52 +15,53 @@ use super::super::super::handshake_reset::reset_scope_mismatch;
 use super::super::super::handshake_send::{HandshakeAttemptCtx, spawn_handshake_attempt};
 use super::super::super::handshake_state::set_handshake_scope_nonce_if_changed;
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn start_connected_handshake_attempt(
-    ws: &WsService,
-    signals: HandshakeSignals,
-    last_mode: &Rc<RefCell<Option<String>>>,
-    handshake_attempt: &Rc<Cell<u64>>,
-    maybe_mode: Option<DegradedSyncMode>,
-    maybe_identity: Option<StoredPeerIdentity>,
-    vector: VersionVector,
-    repo_name: Option<String>,
-    active_repo_id: Option<String>,
-    branch: Option<PeerId>,
-    current_scope_nonce: u64,
-    should_restore: bool,
-) {
-    ws.clear_writer_ready();
-    signals.set_handshake_ready.set(false);
-    set_handshake_scope_nonce_if_changed(signals, None);
-    if let Some(identity) = maybe_identity.as_ref()
-        && maybe_mode.is_none()
-        && active_repo_id.as_deref() != Some(identity.repo_id.as_str())
+pub(super) struct ConnectedHandshakeAttemptInput<'a> {
+    pub ws: &'a WsService,
+    pub signals: HandshakeSignals,
+    pub last_mode: &'a Rc<RefCell<Option<String>>>,
+    pub handshake_attempt: &'a Rc<Cell<u64>>,
+    pub maybe_mode: Option<DegradedSyncMode>,
+    pub maybe_identity: Option<StoredPeerIdentity>,
+    pub vector: VersionVector,
+    pub repo_name: Option<String>,
+    pub active_repo_id: Option<String>,
+    pub branch: Option<PeerId>,
+    pub current_scope_nonce: u64,
+    pub should_restore: bool,
+}
+
+pub(super) fn start_connected_handshake_attempt(input: ConnectedHandshakeAttemptInput<'_>) {
+    input.ws.clear_writer_ready();
+    input.signals.set_handshake_ready.set(false);
+    set_handshake_scope_nonce_if_changed(input.signals, None);
+    if let Some(identity) = input.maybe_identity.as_ref()
+        && input.maybe_mode.is_none()
+        && input.active_repo_id.as_deref() != Some(identity.repo_id.as_str())
     {
         reset_scope_mismatch(
-            last_mode,
-            ws,
-            signals,
-            should_restore,
-            repo_name.clone(),
-            active_repo_id.clone(),
-            branch.clone(),
+            input.last_mode,
+            input.ws,
+            input.signals,
+            input.should_restore,
+            input.repo_name.clone(),
+            input.active_repo_id.clone(),
+            input.branch.clone(),
         );
         return;
     }
-    set_handshake_scope_nonce_if_changed(signals, Some(current_scope_nonce));
+    set_handshake_scope_nonce_if_changed(input.signals, Some(input.current_scope_nonce));
     spawn_handshake_attempt(HandshakeAttemptCtx {
-        ws: ws.clone(),
-        signals,
-        maybe_mode,
-        maybe_identity,
-        vector,
-        repo_name,
-        active_repo_id,
-        branch,
-        current_scope_nonce,
-        should_restore,
-        handshake_attempt: handshake_attempt.clone(),
-        failure_last_mode: last_mode.clone(),
+        ws: input.ws.clone(),
+        signals: input.signals,
+        maybe_mode: input.maybe_mode,
+        maybe_identity: input.maybe_identity,
+        vector: input.vector,
+        repo_name: input.repo_name,
+        active_repo_id: input.active_repo_id,
+        branch: input.branch,
+        current_scope_nonce: input.current_scope_nonce,
+        should_restore: input.should_restore,
+        handshake_attempt: input.handshake_attempt.clone(),
+        failure_last_mode: input.last_mode.clone(),
     });
 }

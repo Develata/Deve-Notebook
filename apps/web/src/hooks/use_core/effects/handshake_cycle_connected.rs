@@ -89,7 +89,7 @@ pub(super) fn run_connected_handshake_cycle(
         return;
     }
     *last_mode.borrow_mut() = Some(mode_key);
-    attempt::start_connected_handshake_attempt(
+    attempt::start_connected_handshake_attempt(attempt::ConnectedHandshakeAttemptInput {
         ws,
         signals,
         last_mode,
@@ -102,5 +102,5 @@ pub(super) fn run_connected_handshake_cycle(
         branch,
         current_scope_nonce,
         should_restore,
-    );
+    });
 }
