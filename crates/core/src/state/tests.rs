@@ -100,3 +100,93 @@ fn find_invalid_content_op_detects_out_of_bounds_insert_after_delete() {
         "insert beyond end at seq 0: pos=4 current_utf16_len=2"
     );
 }
+
+#[test]
+fn content_op_validator_accepts_exact_end_and_utf16_boundary() {
+    let doc_id = DocId::new();
+    let peer_id = PeerId::new("test");
+    let mut validator = crate::state::ContentOpValidator::default();
+
+    let ops = [
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "A😀".into(),
+            },
+            0,
+            peer_id.clone(),
+            1,
+            None,
+            None,
+        ),
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 3,
+                content: "B".into(),
+            },
+            0,
+            peer_id.clone(),
+            2,
+            None,
+            None,
+        ),
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Delete { pos: 1, len: 2 },
+            0,
+            peer_id,
+            3,
+            None,
+            None,
+        ),
+    ];
+
+    for op in ops {
+        assert_eq!(validator.push_entry(&op), None);
+    }
+}
+
+#[test]
+fn content_op_validator_reports_candidate_seq_after_history() {
+    let doc_id = DocId::new();
+    let peer_id = PeerId::new("test");
+    let mut validator = crate::state::ContentOpValidator::default();
+
+    assert_eq!(
+        validator.push_entry(&LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "abc".into(),
+            },
+            0,
+            peer_id.clone(),
+            10,
+            None,
+            None,
+        )),
+        None
+    );
+
+    let issue = validator
+        .push_entry(&LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 4,
+                content: "x".into(),
+            },
+            0,
+            peer_id,
+            99,
+            None,
+            None,
+        ))
+        .expect("candidate issue");
+
+    assert_eq!(
+        crate::state::describe_invalid_content_op(&issue),
+        "insert beyond end at seq 99: pos=4 current_utf16_len=3"
+    );
+}

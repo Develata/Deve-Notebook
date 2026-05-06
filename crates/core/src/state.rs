@@ -21,6 +21,7 @@ mod utf16;
 mod validate;
 
 pub use diff::compute_diff;
+pub(crate) use validate::ContentOpValidator;
 pub use validate::{InvalidContentOp, describe_invalid_content_op, find_invalid_content_op};
 
 /// 从操作序列重建文档内容

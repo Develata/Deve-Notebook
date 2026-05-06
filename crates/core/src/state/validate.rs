@@ -23,45 +23,62 @@ pub enum InvalidContentOp {
     },
 }
 
-pub fn find_invalid_content_op(ops: &[LedgerEntry]) -> Option<InvalidContentOp> {
-    let mut current_utf16_len = 0u32;
+/// 增量校验 content ops 的 UTF-16 长度边界。
+///
+/// append validation 使用它在扫描既有历史后直接推进候选 entry，
+/// 避免 clone 候选 entry 并第二次全量重扫。
+#[derive(Default)]
+pub(crate) struct ContentOpValidator {
+    current_utf16_len: u32,
+}
 
-    for entry in ops {
-        let Some(op) = entry.content_op() else {
-            continue;
-        };
+impl ContentOpValidator {
+    pub fn push_entry(&mut self, entry: &LedgerEntry) -> Option<InvalidContentOp> {
+        let op = entry.content_op()?;
 
         match op {
             Op::Insert { pos, content } => {
-                if *pos > current_utf16_len {
+                if *pos > self.current_utf16_len {
                     return Some(InvalidContentOp::InsertBeyondEnd {
                         seq: entry.seq,
                         pos: *pos,
-                        current_utf16_len,
+                        current_utf16_len: self.current_utf16_len,
                     });
                 }
                 let Some(delta) = utf16_len(content) else {
                     return Some(InvalidContentOp::LengthOverflow { seq: entry.seq });
                 };
-                let Some(next_len) = current_utf16_len.checked_add(delta) else {
+                let Some(next_len) = self.current_utf16_len.checked_add(delta) else {
                     return Some(InvalidContentOp::LengthOverflow { seq: entry.seq });
                 };
-                current_utf16_len = next_len;
+                self.current_utf16_len = next_len;
             }
             Op::Delete { pos, len } => {
                 let Some(end) = pos.checked_add(*len) else {
                     return Some(InvalidContentOp::LengthOverflow { seq: entry.seq });
                 };
-                if *pos > current_utf16_len || end > current_utf16_len {
+                if *pos > self.current_utf16_len || end > self.current_utf16_len {
                     return Some(InvalidContentOp::DeleteBeyondEnd {
                         seq: entry.seq,
                         pos: *pos,
                         len: *len,
-                        current_utf16_len,
+                        current_utf16_len: self.current_utf16_len,
                     });
                 }
-                current_utf16_len -= *len;
+                self.current_utf16_len -= *len;
             }
+        }
+
+        None
+    }
+}
+
+pub fn find_invalid_content_op(ops: &[LedgerEntry]) -> Option<InvalidContentOp> {
+    let mut validator = ContentOpValidator::default();
+
+    for entry in ops {
+        if let Some(issue) = validator.push_entry(entry) {
+            return Some(issue);
         }
     }
 
