@@ -9,7 +9,8 @@ use super::preflight::{
     ensure_git_changes_match_deve_commit, ensure_git_worktree, ensure_notegit_is_not_tracked,
     ensure_source_control_clean,
 };
-use super::replay::{run_projection_replay, run_snapshot_bootstrap};
+use super::replay::run_projection_replay;
+use super::replay_snapshot::run_snapshot_bootstrap;
 use super::status::{GitMirrorState, inspect_repo_root};
 use super::store::{
     GitMirrorCommitState, GitMirrorRecord, list_records, mark_committed, mark_out_of_sync,
