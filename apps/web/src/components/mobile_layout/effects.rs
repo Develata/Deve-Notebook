@@ -25,6 +25,19 @@ pub fn apply_body_scroll_lock(drawer_open: Signal<bool>) {
     });
 }
 
+pub(super) fn visual_viewport_keyboard_offset(
+    inner_height: f64,
+    viewport_height: f64,
+    offset_top: f64,
+) -> i32 {
+    if viewport_height <= 0.0 || inner_height <= 0.0 {
+        return 0;
+    }
+    (inner_height - (viewport_height + offset_top))
+        .max(0.0)
+        .round() as i32
+}
+
 pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
     let update_offset: std::rc::Rc<dyn Fn()> = std::rc::Rc::new(move || {
         let Some(window) = web_sys::window() else {
@@ -55,8 +68,7 @@ pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
             .ok()
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
-        let overlap = (inner_h - (height + offset_top)).max(0.0);
-        set_keyboard_offset.set(overlap.round() as i32);
+        set_keyboard_offset.set(visual_viewport_keyboard_offset(inner_h, height, offset_top));
     });
 
     update_offset();
@@ -129,5 +141,23 @@ pub fn apply_visual_viewport_offset(set_keyboard_offset: WriteSignal<i32>) {
             let _ = scroll_stored;
             let _ = viewport_stored;
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::visual_viewport_keyboard_offset;
+
+    #[test]
+    fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap() {
+        assert_eq!(visual_viewport_keyboard_offset(812.0, 500.0, 0.0), 312);
+        assert_eq!(visual_viewport_keyboard_offset(812.0, 500.0, 12.4), 300);
+    }
+
+    #[test]
+    fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap() {
+        assert_eq!(visual_viewport_keyboard_offset(812.0, 812.0, 0.0), 0);
+        assert_eq!(visual_viewport_keyboard_offset(812.0, 900.0, 0.0), 0);
+        assert_eq!(visual_viewport_keyboard_offset(812.0, 0.0, 0.0), 0);
     }
 }

@@ -75,6 +75,22 @@ contains apps/web/src/components/desktop_layout_handles.rs "class=\"resizer-hand
 contains apps/web/src/components/desktop_chat_panel.rs "class=\"resizer-handle"
 rejects apps/web/src/components/mobile_layout "resizer-handle"
 
+# UI-MOB-004: visualViewport keyboard offset keeps the accessory toolbar above keyboard.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-004"
+contains_case_block UI-MOB-004 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-004 "run: cargo test -p deve_web mobile_toolbar_keyboard -- --nocapture"
+contains_case_block UI-MOB-004 "cli_assert: mobile_toolbar_visual_viewport_offset_bound true"
+contains_case_block UI-MOB-004 "cli_assert: mobile_toolbar_dom_marker_bound true"
+contains_case_block UI-MOB-004 "ui_assert: toolbar_visible true"
+contains_case_block UI-MOB-004 "ui_assert: toolbar_not_overlapped_by_keyboard true"
+contains docs/plan/08_ui_design_03_mobile.md '必须使用 `visualViewport` API 监听键盘高度变化'
+contains apps/web/src/components/mobile_layout/effects.rs "visual_viewport_keyboard_offset("
+contains apps/web/src/components/mobile_layout/effects.rs "fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap()"
+contains apps/web/src/components/mobile_layout/effects.rs "fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap()"
+contains apps/web/src/components/mobile_layout/toolbar.rs "data-deve-mobile-toolbar=\"accessory\""
+contains apps/web/src/components/mobile_layout/toolbar.rs "data-deve-keyboard-offset=move || keyboard_offset.get().to_string()"
+contains apps/web/src/components/mobile_layout/toolbar.rs "fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard()"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

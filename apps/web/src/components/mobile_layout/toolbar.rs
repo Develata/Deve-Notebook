@@ -6,6 +6,15 @@ use crate::editor::ffi;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+const FOOTER_HEIGHT_PX: i32 = 0;
+
+pub(super) fn mobile_toolbar_style(keyboard_offset: i32) -> String {
+    format!(
+        "bottom: calc({}px + {}px + env(safe-area-inset-bottom));",
+        keyboard_offset, FOOTER_HEIGHT_PX
+    )
+}
+
 #[component]
 pub fn MobileAccessoryToolbar(
     keyboard_offset: ReadSignal<i32>,
@@ -13,7 +22,6 @@ pub fn MobileAccessoryToolbar(
     visible: Signal<bool>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    const FOOTER_HEIGHT_PX: i32 = 0;
     let on_tab = Callback::new(move |_| {
         ffi::mobile_insert_text("\t");
     });
@@ -45,14 +53,10 @@ pub fn MobileAccessoryToolbar(
     view! {
         <Show when=move || visible.get()>
             <div
+                data-deve-mobile-toolbar="accessory"
+                data-deve-keyboard-offset=move || keyboard_offset.get().to_string()
                 class="fixed left-0 right-0 z-[var(--z-floating)] bg-panel/95 backdrop-blur border-t border-default px-2 py-2"
-                style=move || {
-                    format!(
-                        "bottom: calc({}px + {}px + env(safe-area-inset-bottom));",
-                        keyboard_offset.get(),
-                        FOOTER_HEIGHT_PX
-                    )
-                }
+                style=move || mobile_toolbar_style(keyboard_offset.get())
             >
                 <div class="flex items-center gap-1 overflow-x-auto">
                     <button class=base on:click=move |_| on_tab.run(()) disabled=disabled title=move || t::common::tab(locale.get())>"⇥"</button>
@@ -66,5 +70,18 @@ pub fn MobileAccessoryToolbar(
                 </div>
             </div>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mobile_toolbar_style;
+
+    #[test]
+    fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard() {
+        assert_eq!(
+            mobile_toolbar_style(312),
+            "bottom: calc(312px + 0px + env(safe-area-inset-bottom));"
+        );
     }
 }
