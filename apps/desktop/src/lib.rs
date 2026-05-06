@@ -17,13 +17,15 @@ mod shell;
 mod shell_recovery_test;
 #[cfg(test)]
 mod shell_test;
+mod types;
 
 #[cfg(feature = "native-packaging")]
 pub use packaging::{
     DesktopPackagingAcceptance, DesktopPackagingAuthority, DesktopPackagingCapability,
     DesktopPackagingDependencyBatch, DesktopPackagingScaffold, desktop_packaging_scaffold,
 };
-pub use shell::{
+pub use shell::DesktopShell;
+pub use types::{
     DesktopBootstrap, DesktopRecoveryBootstrap, DesktopServiceState, DesktopSessionMaterial,
-    DesktopShell, DesktopShellError, DesktopShellSnapshot,
+    DesktopShellError, DesktopShellSnapshot,
 };
