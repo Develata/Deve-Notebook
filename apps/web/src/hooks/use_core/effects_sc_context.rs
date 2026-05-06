@@ -12,6 +12,7 @@ use super::super::diff_session::DiffSessionWire;
 use super::super::effects_sc_scope::matches_current_scope;
 use super::super::effects_sc_state::scoped_ack_matches;
 use super::super::source_control_notice::SourceControlNotice;
+use super::super::state::CoreSignals;
 use super::super::types::PendingBranchTarget;
 
 pub(crate) struct ScMessageContext<'a> {
@@ -47,6 +48,44 @@ pub(crate) struct ScMessageContext<'a> {
 }
 
 impl ScMessageContext<'_> {
+    pub(crate) fn from_core_signals<'a>(
+        signals: CoreSignals,
+        schedule_refresh: &'a dyn Fn(),
+        ws: &'a WsService,
+    ) -> ScMessageContext<'a> {
+        ScMessageContext {
+            set_staged: signals.set_staged_changes,
+            set_unstaged: signals.set_unstaged_changes,
+            changes_request_id: signals.changes_request_id,
+            set_changes_request_id: signals.set_changes_request_id,
+            set_history: signals.set_commit_history,
+            commit_history_request_id: signals.commit_history_request_id,
+            set_commit_history_request_id: signals.set_commit_history_request_id,
+            set_doc_list_request_id: signals.set_doc_list_request_id,
+            set_tree_request_id: signals.set_tree_request_id,
+            degraded_sync_mode: signals.degraded_sync_mode,
+            sync_banner: signals.sync_banner,
+            set_sync_banner: signals.set_sync_banner,
+            doc_diff_request_id: signals.doc_diff_request_id,
+            set_doc_diff_request_id: signals.set_doc_diff_request_id,
+            set_diff: signals.set_diff_content,
+            commit_diff_request_id: signals.commit_diff_request_id,
+            set_commit_diff_request_id: signals.set_commit_diff_request_id,
+            set_commit_diff: signals.set_commit_diff_result,
+            set_notice: signals.set_source_control_notice,
+            current_repo_id: signals.current_repo_id,
+            load_state: signals.load_state,
+            is_spectator: signals.is_spectator.into(),
+            handshake_ready: signals.handshake_ready,
+            active_branch: signals.active_branch,
+            pending_branch_switch: signals.pending_branch_switch,
+            pending_repo_switch: signals.pending_repo_switch,
+            current_scope_nonce: signals.current_scope_nonce,
+            schedule_refresh,
+            ws,
+        }
+    }
+
     pub(crate) fn active_scope_nonce(&self) -> u64 {
         self.current_scope_nonce.get_untracked()
     }

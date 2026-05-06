@@ -1,6 +1,6 @@
 use super::*;
 use crate::api::{ConnectionStatus, WsService};
-use crate::hooks::use_core::effects_sc::{handle_sc_message, sc_message_context};
+use crate::hooks::use_core::effects_sc::{ScMessageContext, handle_sc_message};
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::storage::DegradedSyncMode;
 use deve_core::protocol::{ClientMessage, ServerMessage};
@@ -38,17 +38,17 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     let (current_scope_nonce, _) = signal(7u64);
     let schedule_refresh = || {};
 
-    let ctx = sc_message_context(
+    let ctx = ScMessageContext {
         set_staged,
         set_unstaged,
         changes_request_id,
         set_changes_request_id,
         set_history,
-        history_request_id,
-        set_history_request_id,
+        commit_history_request_id: history_request_id,
+        set_commit_history_request_id: set_history_request_id,
         set_doc_list_request_id,
         set_tree_request_id,
-        degraded,
+        degraded_sync_mode: degraded,
         sync_banner,
         set_sync_banner,
         doc_diff_request_id,
@@ -60,15 +60,15 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
         set_notice,
         current_repo_id,
         load_state,
-        is_spectator.into(),
+        is_spectator: is_spectator.into(),
         handshake_ready,
         active_branch,
         pending_branch_switch,
         pending_repo_switch,
         current_scope_nonce,
-        &schedule_refresh,
-        &ws,
-    );
+        schedule_refresh: &schedule_refresh,
+        ws: &ws,
+    };
 
     assert!(handle_sc_message(
         &ServerMessage::CommitAck {

@@ -17,37 +17,7 @@ pub fn handle_sc_or_remaining<F>(
 ) where
     F: Fn(),
 {
-    let ctx = effects_sc::sc_message_context(
-        signals.set_staged_changes,
-        signals.set_unstaged_changes,
-        signals.changes_request_id,
-        signals.set_changes_request_id,
-        signals.set_commit_history,
-        signals.commit_history_request_id,
-        signals.set_commit_history_request_id,
-        signals.set_doc_list_request_id,
-        signals.set_tree_request_id,
-        signals.degraded_sync_mode,
-        signals.sync_banner,
-        signals.set_sync_banner,
-        signals.doc_diff_request_id,
-        signals.set_doc_diff_request_id,
-        signals.set_diff_content,
-        signals.commit_diff_request_id,
-        signals.set_commit_diff_request_id,
-        signals.set_commit_diff_result,
-        signals.set_source_control_notice,
-        signals.current_repo_id,
-        signals.load_state,
-        signals.is_spectator.into(),
-        signals.handshake_ready,
-        signals.active_branch,
-        signals.pending_branch_switch,
-        signals.pending_repo_switch,
-        signals.current_scope_nonce,
-        schedule_refresh,
-        ws,
-    );
+    let ctx = effects_sc::ScMessageContext::from_core_signals(signals, schedule_refresh, ws);
     if !effects_sc::handle_sc_message(&msg, &ctx) {
         handle_remaining(msg, signals);
     }
