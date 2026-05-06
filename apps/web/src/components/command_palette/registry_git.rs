@@ -79,10 +79,7 @@ mod tests {
         let (pending_repo_switch, _) = signal(None::<String>);
         let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
         let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
-        let clear_notice = Callback::new({
-            let set_notice = set_notice;
-            move |_| set_notice.set(None)
-        });
+        let clear_notice = Callback::new(move |_| set_notice.set(None));
 
         provide_context(SourceControlContext {
             staged_changes,
