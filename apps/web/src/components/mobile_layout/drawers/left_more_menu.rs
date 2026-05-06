@@ -97,9 +97,9 @@ pub(super) fn LeftDrawerMoreMenu(
                                     "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-primary active:bg-hover flex items-center justify-between",
                                     more_item_class(item)
                                 )
-                                data-deve-mobile-more-item=mobile_more_item_marker(item)
                             >
                                 <button
+                                    data-deve-mobile-more-item=mobile_more_item_marker(item)
                                     class="flex-1 h-full text-left"
                                     role="menuitem"
                                     on:click=move |_| {
