@@ -52,21 +52,36 @@ pub fn header(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn results_panel(
-    providers_results: Memo<Vec<SearchResult>>,
-    selected_index: Signal<usize>,
-    set_selected_index: WriteSignal<usize>,
-    active_index: Arc<dyn Fn() -> usize + Send + Sync>,
-    set_show: WriteSignal<bool>,
-    set_query: WriteSignal<String>,
-    input_ref: NodeRef<leptos::html::Input>,
-    core: CoreState,
-    locale: RwSignal<Locale>,
-    set_recent_move_dirs: WriteSignal<Vec<String>>,
-    results_ref: NodeRef<leptos::html::Div>,
-    ui_mode: Signal<SearchUiMode>,
-) -> impl IntoView {
+pub struct SearchResultsPanelView {
+    pub providers_results: Memo<Vec<SearchResult>>,
+    pub selected_index: Signal<usize>,
+    pub set_selected_index: WriteSignal<usize>,
+    pub active_index: Arc<dyn Fn() -> usize + Send + Sync>,
+    pub set_show: WriteSignal<bool>,
+    pub set_query: WriteSignal<String>,
+    pub input_ref: NodeRef<leptos::html::Input>,
+    pub core: CoreState,
+    pub locale: RwSignal<Locale>,
+    pub set_recent_move_dirs: WriteSignal<Vec<String>>,
+    pub results_ref: NodeRef<leptos::html::Div>,
+    pub ui_mode: Signal<SearchUiMode>,
+}
+
+pub fn results_panel(view: SearchResultsPanelView) -> impl IntoView {
+    let SearchResultsPanelView {
+        providers_results,
+        selected_index,
+        set_selected_index,
+        active_index,
+        set_show,
+        set_query,
+        input_ref,
+        core,
+        locale,
+        set_recent_move_dirs,
+        results_ref,
+        ui_mode,
+    } = view;
     view! {
         <div
             node_ref=results_ref

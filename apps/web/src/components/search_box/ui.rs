@@ -122,20 +122,20 @@ pub fn render_overlay(
                         input_ref,
                         ui_mode,
                     )}
-                    {ui_sections::results_panel(
+                    {ui_sections::results_panel(ui_sections::SearchResultsPanelView {
                         providers_results,
                         selected_index,
                         set_selected_index,
-                        active_index_closure.clone(),
+                        active_index: active_index_closure.clone(),
                         set_show,
                         set_query,
                         input_ref,
-                        core.clone(),
+                        core: core.clone(),
                         locale,
                         set_recent_move_dirs,
                         results_ref,
                         ui_mode,
-                    )}
+                    })}
                     {footer(ui_mode)}
                 </div>
             </div>
