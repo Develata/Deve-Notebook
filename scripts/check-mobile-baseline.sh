@@ -15,6 +15,14 @@ contains() {
     || fail "missing '$pattern' in $file"
 }
 
+rejects() {
+  local path="$1"
+  local pattern="$2"
+  if rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$path"; then
+    fail "unexpected '$pattern' in $path"
+  fi
+}
+
 contains_case_block() {
   local case_id="$1"
   local pattern="$2"
@@ -56,6 +64,16 @@ contains apps/web/src/components/mobile_layout/drawers/left.rs "data-deve-mobile
 contains apps/web/src/components/mobile_layout/drawers/right.rs "data-deve-mobile-drawer=\"right\""
 contains apps/web/src/components/mobile_layout/drawers/left.rs "data-deve-mobile-drawer-open=move || open.get().to_string()"
 contains apps/web/src/components/mobile_layout/drawers/right.rs "data-deve-mobile-drawer-open=move || open.get().to_string()"
+
+# UI-MOB-003: Mobile shell must not render desktop resize handles.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-003"
+contains_case_block UI-MOB-003 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-003 "ui_query_dom: \".resizer-handle\""
+contains_case_block UI-MOB-003 "cli_assert: mobile_resizer_handles_absent true"
+contains_case_block UI-MOB-003 "ui_dom_count_eq: 0"
+contains apps/web/src/components/desktop_layout_handles.rs "class=\"resizer-handle"
+contains apps/web/src/components/desktop_chat_panel.rs "class=\"resizer-handle"
+rejects apps/web/src/components/mobile_layout "resizer-handle"
 
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.

@@ -26,7 +26,7 @@ pub fn DesktopOuterResizeHandle(
 
     view! {
         <div
-            class="absolute top-0 h-full w-3 cursor-col-resize touch-none"
+            class="resizer-handle absolute top-0 h-full w-3 cursor-col-resize touch-none"
             style=move || {
                 format!(
                     "{side}: {}px; transform: {transform};",
@@ -45,7 +45,7 @@ pub fn DesktopOuterResizeHandle(
 pub fn DesktopInnerResizeHandle(on_resize: Callback<web_sys::PointerEvent>) -> impl IntoView {
     view! {
         <div
-            class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
+            class="resizer-handle w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
             on:pointerdown=move |ev| {
                 capture_pointer(&ev);
                 on_resize.run(ev);

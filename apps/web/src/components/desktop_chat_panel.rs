@@ -24,7 +24,7 @@ pub fn DesktopChatPanel(
         view! {
             <div class="flex items-stretch ml-4">
                 <div
-                    class="w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
+                    class="resizer-handle w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
                     on:pointerdown=move |ev| {
                         if let Some(target) = ev.target()
                             && let Ok(el) = target.dyn_into::<web_sys::Element>()
