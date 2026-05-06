@@ -486,6 +486,25 @@ contains apps/web/src/components/mobile_layout/layout_frame.rs "mobile_accessory
 contains apps/web/src/components/mobile_layout/layout_frame.rs "fn mobile_diff_hides_accessory_toolbar()"
 contains apps/web/src/components/mobile_layout/layout_frame.rs "fn mobile_diff_keeps_accessory_toolbar_gate_strict()"
 
+# UI-MOB-018: mobile Diff close returns to the editor surface.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-018"
+contains_case_block UI-MOB-018 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-018 "run: cargo test -p deve_web mobile_diff_close -- --nocapture"
+contains_case_block UI-MOB-018 "ui_click: \".diff-close-button\""
+contains_case_block UI-MOB-018 "cli_assert: mobile_diff_close_button_marker_bound true"
+contains_case_block UI-MOB-018 "cli_assert: mobile_diff_close_returns_editor_bound true"
+contains_case_block UI-MOB-018 "ui_assert: element_visible \".diff-view-mobile\" false"
+contains_case_block UI-MOB-018 "ui_assert: editor_visible true"
+contains docs/acceptance-bindings.tsv "UI-MOB-018|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff close workflow"
+contains apps/web/src/components/diff_view/header.rs "data-deve-mobile-diff-action=mobile_diff_close_button_marker()"
+contains apps/web/src/components/diff_view/header.rs "fn mobile_diff_close_button_marker_is_stable()"
+contains apps/web/src/components/diff_view/header.rs "fn mobile_diff_close_button_is_touch_safe()"
+contains apps/web/src/components/mobile_layout/content.rs "pub(crate) enum MobileContentSurface"
+contains apps/web/src/components/mobile_layout/content.rs "pub(crate) fn mobile_content_surface("
+contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_returns_to_editor_surface()"
+contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_without_current_doc_returns_dashboard()"
+contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_respects_pending_switch_gates()"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

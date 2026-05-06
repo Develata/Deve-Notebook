@@ -11,6 +11,28 @@ use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum MobileContentSurface {
+    Diff,
+    Editor,
+    Dashboard,
+}
+
+pub(crate) fn mobile_content_surface(
+    diff_open: bool,
+    has_current_doc: bool,
+    pending_branch_switch: bool,
+    pending_repo_switch: bool,
+) -> MobileContentSurface {
+    if diff_open {
+        MobileContentSurface::Diff
+    } else if has_current_doc && !pending_branch_switch && !pending_repo_switch {
+        MobileContentSurface::Editor
+    } else {
+        MobileContentSurface::Dashboard
+    }
+}
+
 #[component]
 pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
@@ -25,12 +47,15 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
     let ws = core.ws.clone();
     let editor_doc_core = core.clone();
     let current_editor_doc = Signal::derive(move || {
-        if editor_doc_core.pending_branch_switch.get().is_some()
-            || editor_doc_core.pending_repo_switch.get().is_some()
-        {
-            None
-        } else {
-            editor_doc_core.current_doc.get()
+        let current_doc = editor_doc_core.current_doc.get();
+        match mobile_content_surface(
+            false,
+            current_doc.is_some(),
+            editor_doc_core.pending_branch_switch.get().is_some(),
+            editor_doc_core.pending_repo_switch.get().is_some(),
+        ) {
+            MobileContentSurface::Editor => current_doc,
+            MobileContentSurface::Diff | MobileContentSurface::Dashboard => None,
         }
     });
     view! {
@@ -88,5 +113,42 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
                 }}
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MobileContentSurface, mobile_content_surface};
+
+    #[test]
+    fn mobile_diff_close_returns_to_editor_surface() {
+        assert_eq!(
+            mobile_content_surface(true, true, false, false),
+            MobileContentSurface::Diff
+        );
+        assert_eq!(
+            mobile_content_surface(false, true, false, false),
+            MobileContentSurface::Editor
+        );
+    }
+
+    #[test]
+    fn mobile_diff_close_without_current_doc_returns_dashboard() {
+        assert_eq!(
+            mobile_content_surface(false, false, false, false),
+            MobileContentSurface::Dashboard
+        );
+    }
+
+    #[test]
+    fn mobile_diff_close_respects_pending_switch_gates() {
+        assert_eq!(
+            mobile_content_surface(false, true, true, false),
+            MobileContentSurface::Dashboard
+        );
+        assert_eq!(
+            mobile_content_surface(false, true, false, true),
+            MobileContentSurface::Dashboard
+        );
     }
 }

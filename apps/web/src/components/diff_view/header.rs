@@ -6,6 +6,14 @@ use crate::components::icons::X;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+pub(crate) fn mobile_diff_close_button_marker() -> &'static str {
+    "diff-close-button"
+}
+
+pub(crate) fn mobile_diff_close_button_class() -> &'static str {
+    "diff-close-button h-11 min-w-[44px] rounded p-2 text-[var(--diff-muted)] active:bg-[var(--diff-btn-hover)]"
+}
+
 #[component]
 pub fn DiffHeader(
     mobile: bool,
@@ -51,7 +59,8 @@ pub fn DiffHeader(
                         </Show>
                     </div>
                     <button
-                        class="diff-close-button h-11 min-w-[44px] rounded p-2 text-[var(--diff-muted)] active:bg-[var(--diff-btn-hover)]"
+                        data-deve-mobile-diff-action=mobile_diff_close_button_marker()
+                        class=mobile_diff_close_button_class()
                         on:click=move |_| on_close.run(())
                         title=move || t::diff::close_diff_view(locale.get())
                     >
@@ -185,4 +194,23 @@ pub fn DiffHeader(
         </div>
     }
     .into_any()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{mobile_diff_close_button_class, mobile_diff_close_button_marker};
+
+    #[test]
+    fn mobile_diff_close_button_marker_is_stable() {
+        assert_eq!(mobile_diff_close_button_marker(), "diff-close-button");
+        assert!(mobile_diff_close_button_class().contains("diff-close-button"));
+    }
+
+    #[test]
+    fn mobile_diff_close_button_is_touch_safe() {
+        let class = mobile_diff_close_button_class();
+
+        assert!(class.contains("h-11"));
+        assert!(class.contains("min-w-[44px]"));
+    }
 }
