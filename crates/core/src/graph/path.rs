@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 14_tech_stack#graph-visualization
+
 use crate::utils::path::to_forward_slash;
 
 pub(super) fn normalize_doc_path(path: &str) -> String {

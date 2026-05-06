@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 14_tech_stack#graph-visualization
+
 use super::GraphLinkKind;
 use super::path::{normalize_relative_target, strip_anchor};
 

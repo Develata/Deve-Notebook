@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 14_tech_stack#search-baseline
+
 use std::cmp::Ordering;
 
 pub(super) fn score_desc(left: f32, right: f32) -> Ordering {
