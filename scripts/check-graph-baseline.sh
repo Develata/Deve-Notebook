@@ -7,6 +7,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GRAPH="$ROOT_DIR/crates/core/src/graph/mod.rs"
+GRAPH_LINKS="$ROOT_DIR/crates/core/src/graph/links.rs"
 CLI_GRAPH="$ROOT_DIR/apps/cli/src/graph_projection.rs"
 WEB_GRAPH_API="$ROOT_DIR/apps/web/src/api/graph.rs"
 WEB_GRAPH_PANEL="$ROOT_DIR/apps/web/src/components/sidebar/source_control/graph_panel.rs"
@@ -34,8 +35,8 @@ absent() {
 contains "$GRAPH" "pub struct GraphDocument"
 contains "$GRAPH" "pub struct GraphProjection"
 contains "$GRAPH" "pub fn project_documents"
-contains "$GRAPH" "GraphLinkKind::Wiki"
-contains "$GRAPH" "GraphLinkKind::Markdown"
+contains "$GRAPH_LINKS" "GraphLinkKind::Wiki"
+contains "$GRAPH_LINKS" "GraphLinkKind::Markdown"
 contains "$ROOT_DIR/crates/core/src/lib.rs" "pub mod graph;"
 contains "$ROOT_DIR/docs/plan/14_tech_stack.md" "Core graph projection"
 contains "$ROOT_DIR/docs/plan/14_tech_stack.md" "CLI/HTTP adapter"
