@@ -30,15 +30,13 @@ fn push_report_lines_keep_git_as_mirror_only() {
         },
     );
 
-    assert!(
-        pushed
-            .iter()
-            .any(|line| line.contains("git_push[default]: pushed=true remote=origin branch=main"))
-    );
-    assert!(
-        pushed
-            .iter()
-            .any(|line| line.contains("Deve ledger remains authority"))
+    assert_eq!(
+        pushed,
+        vec![
+            "git_push[default]: pushed=true remote=origin branch=main head=abc123 blockers=0",
+            "  remote_url: git@example.invalid:repo.git",
+            "  push_hint: Git mirror HEAD was pushed; Deve ledger remains authority",
+        ]
     );
 
     let blocked = push_report_lines(
@@ -56,20 +54,14 @@ fn push_report_lines_keep_git_as_mirror_only() {
         },
     );
 
-    assert!(
-        blocked
-            .iter()
-            .any(|line| line.contains("no remote push was performed"))
-    );
-    assert!(
-        blocked
-            .iter()
-            .any(|line| line.contains("location=git_history_mapping"))
-    );
-    assert!(
-        blocked
-            .iter()
-            .any(|line| line.contains("deve_cli git export --repo default"))
+    assert_eq!(
+        blocked,
+        vec![
+            "git_push[default]: pushed=false remote=origin branch=main head=abc123 blockers=1",
+            "  blocker[1]: location=git_history_mapping reason=unpublished mirror records",
+            "    hint: run `deve_cli git export --repo default` or `deve_cli git export --repo default --retry-out-of-sync` so Git HEAD maps to latest Deve commit",
+            "  push_hint: no remote push was performed; fix the blocker hint(s) above first",
+        ]
     );
 }
 
@@ -96,14 +88,15 @@ fn push_report_lines_explain_remote_and_worktree_blockers() {
         },
     );
 
-    assert!(
-        lines
-            .iter()
-            .any(|line| line.contains("--remote <remote> --branch <branch>"))
-    );
-    assert!(
-        lines
-            .iter()
-            .any(|line| line.contains("deve_cli git import --apply --repo default"))
+    assert_eq!(
+        lines,
+        vec![
+            "git_push[default]: pushed=false remote=- branch=main head=abc123 blockers=2",
+            "  blocker[1]: location=git_remote reason=remote origin not configured",
+            "    hint: configure branch upstream/origin, or pass `--remote <remote> --branch <branch>`",
+            "  blocker[2]: location=git_worktree reason=worktree has changes",
+            "    hint: clean Git worktree or run `deve_cli git import --apply --repo default` before pushing",
+            "  push_hint: no remote push was performed; fix the blocker hint(s) above first",
+        ]
     );
 }

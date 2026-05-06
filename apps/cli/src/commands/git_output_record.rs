@@ -4,7 +4,9 @@
 //!
 //! Per-record Git mirror diagnostics rendering.
 
-use deve_core::git_bridge::{GitMirrorRecord, GitMirrorRepairAction, GitMirrorRepairActionCode};
+use deve_core::git_bridge::{
+    GitMirrorFailureStage, GitMirrorRecord, GitMirrorRepairAction, GitMirrorRepairActionCode,
+};
 
 pub(super) fn record_detail_lines(
     prefix: &str,
@@ -38,7 +40,7 @@ pub(super) fn record_detail_lines(
         let location = record
             .failure_stage
             .map(|stage| stage.as_str())
-            .unwrap_or_else(|| failure_location(error));
+            .unwrap_or_else(|| GitMirrorFailureStage::classify(error).as_str());
         lines.push(format!(
             "  failure[{index}]: location={} error={}",
             location, error
@@ -86,39 +88,6 @@ fn repair_retry_command(action: &GitMirrorRepairAction, retry_command: Option<&s
 
 fn lag_ms(now_ms: i64, timestamp_ms: i64) -> i64 {
     now_ms.saturating_sub(timestamp_ms).max(0)
-}
-
-fn failure_location(error: &str) -> &'static str {
-    let normalized = error.to_ascii_lowercase();
-    if normalized.contains("pending source-control")
-        || normalized.contains("staged source-control")
-        || normalized.contains("pending_fs")
-        || normalized.contains("staging")
-    {
-        return "deve_source_control";
-    }
-    if normalized.contains(".notegit") || normalized.contains("tracked by git") {
-        return "notegit_protection";
-    }
-    if normalized.contains("outside queued deve commit")
-        || normalized.contains("unsafe projection path")
-        || normalized.contains("projection diff")
-    {
-        return "projection_scope";
-    }
-    if normalized.contains("parent")
-        || normalized.contains("git head does not match")
-        || normalized.contains("not mirrored")
-    {
-        return "git_history_mapping";
-    }
-    if normalized.contains("worktree") || normalized.contains("rev-parse") {
-        return "git_worktree";
-    }
-    if normalized.contains("git ") {
-        return "git_command";
-    }
-    "mirror_executor"
 }
 
 fn yes_no(value: bool) -> &'static str {

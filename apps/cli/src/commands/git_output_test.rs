@@ -235,6 +235,44 @@ fn status_lines_fallback_classifies_legacy_records_without_failure_stage() {
 }
 
 #[test]
+fn status_lines_legacy_fallback_uses_core_failure_stage_classifier() {
+    let lines = status_lines_at(
+        "default",
+        &GitMirrorStatus {
+            repo_root: std::path::PathBuf::from("vault/default"),
+            notegit_present: true,
+            git_metadata_kind: GitMetadataKind::Directory,
+            gitignore_protects_notegit: true,
+            state: GitMirrorState::Ready,
+            reason: None,
+        },
+        &GitMirrorSummary {
+            queued: 0,
+            committed: 0,
+            out_of_sync: 1,
+        },
+        &[GitMirrorRecord {
+            failure_stage: None,
+            ..record(
+                "deve-legacy",
+                GitMirrorCommitState::OutOfSync,
+                9,
+                Some(
+                    "Git mirror refuses to include path(s) outside queued Deve commit: outside.md, .notegit/state",
+                ),
+            )
+        }],
+        11,
+    );
+
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("failure[1]: location=projection_scope"))
+    );
+}
+
+#[test]
 fn print_git_mirror_report_handles_committed_record() {
     print_mirror_report(
         "default",
@@ -376,15 +414,12 @@ fn mirror_report_lines_keep_ordered_success_contract() {
 #[test]
 fn export_report_lines_use_export_semantics_and_retry_command() {
     let empty = export_report_lines("default", &GitMirrorRunReport::default());
-    assert!(
-        empty
-            .iter()
-            .any(|line| line.contains("git_export[default]"))
-    );
-    assert!(
-        empty
-            .iter()
-            .any(|line| line.contains("no queued Git mirror records to export"))
+    assert_eq!(
+        empty,
+        vec![
+            "git_export[default]: attempted=0 committed=0 out_of_sync=0 skipped=0",
+            "  export_hint: no queued Git mirror records to export",
+        ]
     );
 
     let failed = export_report_lines(
@@ -403,9 +438,15 @@ fn export_report_lines_use_export_semantics_and_retry_command() {
         },
     );
 
-    assert!(
-        failed
-            .iter()
-            .any(|line| line.contains("deve_cli git export --repo default --retry-out-of-sync"))
+    assert_eq!(
+        failed,
+        vec![
+            "git_export[default]: attempted=1 committed=0 out_of_sync=1 skipped=0",
+            "  record[1]: deve_commit=deve-1 state=out_of_sync ledger_seq=7 attempts=1 git_commit=- queued_at_ms=1 updated_at_ms=2",
+            "  failure[1]: location=deve_source_control error=Git mirror refuses to run with 1 pending source-control change(s)",
+            "  repair_action[1]: code=clean_deve_source_control retryable_after_fix=yes subject=deve_source_control",
+            "  repair_guidance[1]: manual_only=yes next=stage_commit_or_discard_deve_source_control_changes retry_command=`deve_cli git export --repo default --retry-out-of-sync`",
+            "  repair_hint: fix the reported failure_location/error; retry with `deve_cli git export --repo default --retry-out-of-sync`",
+        ]
     );
 }
