@@ -27,6 +27,7 @@ Git-like source control logic: change detection, staging/unstaging, commit diff,
 | `types.rs` | Source control type definitions |
 | `pending_fs.rs` | Pending filesystem state |
 | `pending_fs_index.rs` | Pending FS index |
+| `pending_fs_mutation.rs` | Pending FS mutation transactions |
 | `pending_fs_query.rs` | Pending FS queries |
 | `pending_fs_target.rs` | Pending FS target resolution |
 
