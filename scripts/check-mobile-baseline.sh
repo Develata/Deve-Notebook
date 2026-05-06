@@ -163,6 +163,28 @@ contains apps/web/src/components/mobile_layout/footer_summary.rs "fn mobile_bott
 contains apps/web/src/i18n/bottom_bar.rs "pub fn branch(locale: Locale) -> &'static str"
 contains apps/web/src/i18n/bottom_bar.rs "pub fn col(locale: Locale) -> &'static str"
 
+# UI-MOB-008: mobile bottom bar expands, collapses by toggle, and dismisses by
+# outside overlay click.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-008"
+contains_case_block UI-MOB-008 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-008 "run: cargo test -p deve_web mobile_bottom_bar_expand -- --nocapture"
+contains_case_block UI-MOB-008 "ui_click: \"bottom_bar_toggle\""
+contains_case_block UI-MOB-008 "ui_assert: bottom_bar_expanded true"
+contains_case_block UI-MOB-008 "ui_click: \"outside_bottom_bar\""
+contains_case_block UI-MOB-008 "cli_assert: mobile_bottom_bar_toggle_marker_bound true"
+contains_case_block UI-MOB-008 "cli_assert: mobile_bottom_bar_outside_dismiss_marker_bound true"
+contains_case_block UI-MOB-008 "cli_assert: mobile_bottom_bar_details_marker_bound true"
+contains_case_block UI-MOB-008 "cli_assert: mobile_bottom_bar_expand_state_transition_bound true"
+contains_case_block UI-MOB-008 "ui_assert: bottom_bar_collapsed true"
+contains docs/plan/08_ui_design_03_mobile.md "通过右侧箭头按钮展开详情；再次点击或点击状态栏外区域自动收起。"
+contains apps/web/src/components/mobile_layout/footer.rs "data-deve-mobile-bottom-bar-dismiss=\"outside_bottom_bar\""
+contains apps/web/src/components/mobile_layout/footer.rs "pub(super) fn bottom_bar_after_outside_click("
+contains apps/web/src/components/mobile_layout/footer.rs "fn mobile_bottom_bar_expand_outside_click_collapses()"
+contains apps/web/src/components/mobile_layout/footer_summary.rs "data-deve-mobile-bottom-bar-toggle=\"bottom_bar_toggle\""
+contains apps/web/src/components/mobile_layout/footer_summary.rs "pub(super) fn bottom_bar_after_toggle("
+contains apps/web/src/components/mobile_layout/footer_summary.rs "fn mobile_bottom_bar_expand_toggle_flips_state()"
+contains apps/web/src/components/mobile_layout/footer_details.rs "data-deve-mobile-bottom-bar-details=\"expanded\""
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

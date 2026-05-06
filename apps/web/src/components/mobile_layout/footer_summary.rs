@@ -24,6 +24,10 @@ pub(super) fn mobile_summary_stat_label(
     full
 }
 
+pub(super) fn bottom_bar_after_toggle(expanded: bool) -> bool {
+    !expanded
+}
+
 #[cfg(test)]
 pub(super) fn collapsed_summary_fields(is_narrow: bool, locale: Locale) -> Vec<&'static str> {
     vec![
@@ -85,10 +89,11 @@ pub fn FooterSummaryRow(
             </div>
 
             <button
+                data-deve-mobile-bottom-bar-toggle="bottom_bar_toggle"
                 class="h-11 min-w-[44px] p-1.5 rounded-md active:bg-hover flex items-center justify-center"
                 title=move || t::bottom_bar::toggle_status_details(locale.get())
                 aria-label=move || t::bottom_bar::toggle_status_details(locale.get())
-                on:click=move |_| set_expanded.update(|v| *v = !*v)
+                on:click=move |_| set_expanded.update(|v| *v = bottom_bar_after_toggle(*v))
             >
                 {move || if expanded.get() {
                     view! {
@@ -110,7 +115,10 @@ pub fn FooterSummaryRow(
 
 #[cfg(test)]
 mod tests {
-    use super::{collapsed_summary_fields, mobile_summary_stat_label, summary_fields_class};
+    use super::{
+        bottom_bar_after_toggle, collapsed_summary_fields, mobile_summary_stat_label,
+        summary_fields_class,
+    };
     use crate::i18n::Locale;
 
     #[test]
@@ -133,5 +141,11 @@ mod tests {
         assert!(class.contains("whitespace-nowrap"));
         assert!(class.contains("overflow-x-auto"));
         assert!(!class.contains("overflow-hidden"));
+    }
+
+    #[test]
+    fn mobile_bottom_bar_expand_toggle_flips_state() {
+        assert!(bottom_bar_after_toggle(false));
+        assert!(!bottom_bar_after_toggle(true));
     }
 }

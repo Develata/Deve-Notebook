@@ -24,6 +24,10 @@ pub(super) fn bottom_bar_state_attrs(expanded: bool) -> (&'static str, &'static 
     }
 }
 
+pub(super) fn bottom_bar_after_outside_click(_expanded: bool) -> bool {
+    false
+}
+
 #[component]
 pub fn MobileFooter(core: CoreState) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
@@ -88,7 +92,11 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
 
     view! {
         <Show when=move || expanded.get()>
-            <div class="fixed inset-0 z-[var(--z-overlay)]" on:click=move |_| set_expanded.set(false)></div>
+            <div
+                data-deve-mobile-bottom-bar-dismiss="outside_bottom_bar"
+                class="fixed inset-0 z-[var(--z-overlay)]"
+                on:click=move |_| set_expanded.set(bottom_bar_after_outside_click(expanded.get_untracked()))
+            ></div>
         </Show>
 
         <footer
@@ -128,11 +136,17 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
-    use super::bottom_bar_state_attrs;
+    use super::{bottom_bar_after_outside_click, bottom_bar_state_attrs};
 
     #[test]
     fn mobile_bottom_bar_collapsed_state_is_single_line() {
         assert_eq!(bottom_bar_state_attrs(false), ("collapsed", "single"));
         assert_eq!(bottom_bar_state_attrs(true), ("expanded", "multi"));
+    }
+
+    #[test]
+    fn mobile_bottom_bar_expand_outside_click_collapses() {
+        assert!(!bottom_bar_after_outside_click(true));
+        assert!(!bottom_bar_after_outside_click(false));
     }
 }

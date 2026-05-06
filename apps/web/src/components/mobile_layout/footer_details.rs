@@ -23,7 +23,10 @@ pub fn FooterDetails(
     set_ver: WriteSignal<u64>,
 ) -> impl IntoView {
     view! {
-        <div class="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+        <div
+            data-deve-mobile-bottom-bar-details="expanded"
+            class="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none"
+        >
             <Show when=move || load_state.get() != "ready">
                 <div class="shrink-0 px-2 h-7 rounded-md bg-sidebar border border-default flex items-center">
                     <LoadStatus
