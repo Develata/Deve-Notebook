@@ -51,6 +51,7 @@ pub fn MobileLayoutFrame(
 
     view! {
         <div
+            data-deve-layout-mode="mobile"
             class="flex flex-col flex-1 overflow-hidden bg-sidebar"
             style="touch-action: pan-y;"
             on:touchstart=move |ev| on_touch_start.run(ev)
