@@ -32,7 +32,6 @@ pub mod merge_modal;
 pub mod merge_modal_slot;
 pub mod merge_panel;
 pub mod pending_navigation_modal;
-pub mod quick_open;
 pub mod search_box;
 pub mod spectator_overlay;
 

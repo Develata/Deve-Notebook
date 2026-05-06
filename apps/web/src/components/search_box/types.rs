@@ -4,8 +4,6 @@
 //!   - 12_commands#command-palette-shortcuts
 //!
 
-#![allow(dead_code)] // SearchProvider trait 为插件式搜索预留
-
 use crate::components::command_palette::Command;
 use deve_core::models::DocId;
 
@@ -50,7 +48,5 @@ pub struct SearchResult {
 }
 
 pub trait SearchProvider {
-    fn trigger_char(&self) -> Option<char>;
     fn search(&self, query: &str) -> Vec<SearchResult>;
-    fn execute(&self, action: &SearchAction);
 }

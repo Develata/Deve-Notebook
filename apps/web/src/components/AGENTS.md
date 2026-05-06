@@ -41,7 +41,6 @@ All UI components organized by feature area. Each subdirectory is a self-contain
 | `login/` | Login page and auth state |
 | `mobile_layout/` | Mobile-responsive layout with drawers |
 | `outline_render/` | Markdown outline and KaTeX rendering |
-| `quick_open/` | Quick file open dialog |
 | `search_box/` | Search with file operations |
 | `sidebar/` | File explorer and source control panel |
 

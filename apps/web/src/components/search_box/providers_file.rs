@@ -3,6 +3,7 @@
 //!   - 04_storage#internal-path-normalization
 //!
 use crate::components::search_box::file_ops::validate_doc_shell_path;
+use crate::components::search_box::score::score_desc;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use deve_core::models::DocId;
 
@@ -21,10 +22,6 @@ impl FileProvider {
 }
 
 impl SearchProvider for FileProvider {
-    fn trigger_char(&self) -> Option<char> {
-        None
-    }
-
     fn search(&self, query: &str) -> Vec<SearchResult> {
         let mut seen_paths = std::collections::HashSet::new();
 
@@ -64,7 +61,7 @@ impl SearchProvider for FileProvider {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+        results.sort_by(|a, b| score_desc(a.score, b.score));
         results.truncate(20);
 
         let create_query = query.trim();
@@ -82,6 +79,4 @@ impl SearchProvider for FileProvider {
 
         results
     }
-
-    fn execute(&self, _action: &SearchAction) {}
 }

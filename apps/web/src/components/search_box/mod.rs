@@ -11,6 +11,7 @@ pub mod types;
 mod effects;
 mod file_ops;
 mod logic;
+mod score;
 mod sheet_gesture;
 mod ui;
 mod ui_footer;

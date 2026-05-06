@@ -3,6 +3,7 @@
 //!   - 12_commands#command-palette-shortcuts
 //!
 use crate::components::command_palette::Command;
+use crate::components::search_box::score::score_desc;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 
 pub struct CommandProvider {
@@ -16,10 +17,6 @@ impl CommandProvider {
 }
 
 impl SearchProvider for CommandProvider {
-    fn trigger_char(&self) -> Option<char> {
-        Some('>')
-    }
-
     fn search(&self, query: &str) -> Vec<SearchResult> {
         let clean_query = query.strip_prefix('>').unwrap_or(query).trim();
 
@@ -57,10 +54,8 @@ impl SearchProvider for CommandProvider {
             })
             .collect();
 
-        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+        results.sort_by(|a, b| score_desc(a.score, b.score));
         results.truncate(20);
         results
     }
-
-    fn execute(&self, _action: &SearchAction) {}
 }

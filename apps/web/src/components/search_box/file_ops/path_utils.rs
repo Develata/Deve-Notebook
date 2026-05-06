@@ -10,6 +10,8 @@ use deve_core::utils::path::{path_to_forward_slash, to_forward_slash};
 use std::collections::HashSet;
 use std::path::Path;
 
+use crate::components::search_box::score::score_desc;
+
 const MAX_DEPTH: usize = 10;
 
 pub fn normalize_doc_path(raw: &str) -> String {
@@ -106,7 +108,7 @@ pub(super) fn filter_dirs(dirs: &[String], query: &str) -> Vec<(String, f32)> {
         })
         .filter(|(_, score)| *score > 0.0)
         .collect();
-    results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    results.sort_by(|a, b| score_desc(a.1, b.1));
     results
 }
 
