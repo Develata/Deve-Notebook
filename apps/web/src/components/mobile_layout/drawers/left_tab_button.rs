@@ -5,6 +5,15 @@ use crate::components::activity_bar::SidebarView;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+pub(super) fn sidebar_tab_marker(view: SidebarView) -> &'static str {
+    match view {
+        SidebarView::Explorer => "explorer",
+        SidebarView::Search => "search",
+        SidebarView::SourceControl => "source_control",
+        SidebarView::Extensions => "extensions",
+    }
+}
+
 #[component]
 pub(super) fn LeftDrawerTabButton(
     locale: RwSignal<Locale>,
@@ -22,6 +31,8 @@ pub(super) fn LeftDrawerTabButton(
 
     view! {
         <button
+            data-deve-mobile-sidebar-tab=sidebar_tab_marker(view)
+            data-deve-mobile-sidebar-tab-active=move || (active_view.get() == view).to_string()
             class=move || {
                 let state = if active_view.get() == view {
                     "bg-accent-subtle border border-b-accent text-accent"
@@ -46,11 +57,45 @@ pub(super) fn LeftDrawerTabButton(
     }
 }
 
-fn sidebar_tab_class(view: SidebarView) -> &'static str {
+pub(super) fn sidebar_tab_class(view: SidebarView) -> &'static str {
     match view {
         SidebarView::Explorer => "mobile-tab-explorer",
         SidebarView::Search => "mobile-tab-search",
         SidebarView::SourceControl => "mobile-tab-source-control",
         SidebarView::Extensions => "mobile-tab-extensions",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{sidebar_tab_class, sidebar_tab_marker};
+    use crate::components::activity_bar::SidebarView;
+
+    #[test]
+    fn mobile_sidebar_icon_tab_markers_cover_sidebar_entries() {
+        assert_eq!(sidebar_tab_marker(SidebarView::Explorer), "explorer");
+        assert_eq!(sidebar_tab_marker(SidebarView::Search), "search");
+        assert_eq!(
+            sidebar_tab_marker(SidebarView::SourceControl),
+            "source_control"
+        );
+        assert_eq!(sidebar_tab_marker(SidebarView::Extensions), "extensions");
+    }
+
+    #[test]
+    fn mobile_sidebar_icon_tab_classes_cover_sidebar_entries() {
+        assert_eq!(
+            sidebar_tab_class(SidebarView::Explorer),
+            "mobile-tab-explorer"
+        );
+        assert_eq!(sidebar_tab_class(SidebarView::Search), "mobile-tab-search");
+        assert_eq!(
+            sidebar_tab_class(SidebarView::SourceControl),
+            "mobile-tab-source-control"
+        );
+        assert_eq!(
+            sidebar_tab_class(SidebarView::Extensions),
+            "mobile-tab-extensions"
+        );
     }
 }

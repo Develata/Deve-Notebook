@@ -8,6 +8,19 @@ use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
 
+pub(super) fn mobile_more_menu_marker(open: bool) -> Option<&'static str> {
+    open.then_some("visible")
+}
+
+pub(super) fn mobile_more_item_marker(view: SidebarView) -> &'static str {
+    match view {
+        SidebarView::Explorer => "more_menu_item_explorer",
+        SidebarView::Search => "more_menu_item_search",
+        SidebarView::SourceControl => "more_menu_item_source_control",
+        SidebarView::Extensions => "more_menu_item_extensions",
+    }
+}
+
 #[component]
 pub(super) fn LeftDrawerMoreMenu(
     locale: RwSignal<Locale>,
@@ -37,6 +50,7 @@ pub(super) fn LeftDrawerMoreMenu(
                 <div class="mobile-more-backdrop fixed inset-0 z-[var(--z-floating)]" on:click=move |_| set_show_more.set(false)></div>
                 <div
                     class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-panel shadow-xl rounded-lg border border-default py-1 z-[calc(var(--z-floating)_+_1)]"
+                    data-deve-mobile-more-menu=move || mobile_more_menu_marker(show_more.get())
                     node_ref=more_menu_ref
                     tabindex="-1"
                     role="menu"
@@ -55,6 +69,7 @@ pub(super) fn LeftDrawerMoreMenu(
                                     "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-primary active:bg-hover flex items-center justify-between",
                                     more_item_class(item)
                                 )
+                                data-deve-mobile-more-item=mobile_more_item_marker(item)
                             >
                                 <button
                                     class="flex-1 h-full text-left"
@@ -67,6 +82,7 @@ pub(super) fn LeftDrawerMoreMenu(
                                     <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title(locale.get())}</span>
                                 </button>
                                 <button
+                                    data-deve-mobile-more-pin-action=mobile_more_item_marker(item)
                                     class=move || format!(
                                         "rounded-md p-1.5 {}",
                                         if pinned.get() {
@@ -101,10 +117,44 @@ pub(super) fn LeftDrawerMoreMenu(
 }
 
 fn more_item_class(view: SidebarView) -> &'static str {
-    match view {
-        SidebarView::Explorer => "more_menu_item_explorer",
-        SidebarView::Search => "more_menu_item_search",
-        SidebarView::SourceControl => "more_menu_item_source_control",
-        SidebarView::Extensions => "more_menu_item_extensions",
+    mobile_more_item_marker(view)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{mobile_more_item_marker, mobile_more_menu_marker, more_item_class};
+    use crate::components::activity_bar::SidebarView;
+
+    #[test]
+    fn mobile_sidebar_more_menu_marker_is_visible_when_open() {
+        assert_eq!(mobile_more_menu_marker(true), Some("visible"));
+        assert_eq!(mobile_more_menu_marker(false), None);
+    }
+
+    #[test]
+    fn mobile_sidebar_more_menu_items_cover_sidebar_entries() {
+        assert_eq!(
+            mobile_more_item_marker(SidebarView::Explorer),
+            "more_menu_item_explorer"
+        );
+        assert_eq!(
+            mobile_more_item_marker(SidebarView::Search),
+            "more_menu_item_search"
+        );
+        assert_eq!(
+            mobile_more_item_marker(SidebarView::SourceControl),
+            "more_menu_item_source_control"
+        );
+        assert_eq!(
+            mobile_more_item_marker(SidebarView::Extensions),
+            "more_menu_item_extensions"
+        );
+    }
+
+    #[test]
+    fn mobile_sidebar_more_menu_reuses_desktop_entry_classes() {
+        for view in SidebarView::all() {
+            assert_eq!(more_item_class(view), mobile_more_item_marker(view));
+        }
     }
 }
