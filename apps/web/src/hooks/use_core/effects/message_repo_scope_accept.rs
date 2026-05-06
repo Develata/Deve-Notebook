@@ -10,24 +10,29 @@ use leptos::prelude::GetUntracked;
 use super::super::message_scope::peer_branch_matches_scope;
 use super::logic;
 
-#[allow(clippy::too_many_arguments)]
-pub fn accepts_write_ready(
-    repo_id: &str,
-    branch: &Option<PeerId>,
-    scope_nonce: u64,
-    current_repo_id: Option<String>,
-    active_branch: Option<PeerId>,
-    pending_branch_switch: Option<PendingBranchTarget>,
-    pending_repo_switch: Option<String>,
-    handshake_scope_nonce: Option<u64>,
-) -> bool {
+pub struct WriteReadyScopeInput<'a> {
+    pub repo_id: &'a str,
+    pub branch: Option<PeerId>,
+    pub scope_nonce: u64,
+    pub current_repo_id: Option<String>,
+    pub active_branch: Option<PeerId>,
+    pub pending_branch_switch: Option<PendingBranchTarget>,
+    pub pending_repo_switch: Option<String>,
+    pub handshake_scope_nonce: Option<u64>,
+}
+
+pub fn accepts_write_ready(input: WriteReadyScopeInput<'_>) -> bool {
     logic::switches_are_idle(
-        pending_branch_switch.as_ref(),
-        pending_repo_switch.as_deref(),
-    ) && handshake_scope_nonce == Some(scope_nonce)
-        && peer_branch_matches_scope(branch, active_branch.clone(), pending_branch_switch)
-        && active_branch.is_none()
-        && current_repo_id.as_deref() == Some(repo_id)
+        input.pending_branch_switch.as_ref(),
+        input.pending_repo_switch.as_deref(),
+    ) && input.handshake_scope_nonce == Some(input.scope_nonce)
+        && peer_branch_matches_scope(
+            &input.branch,
+            input.active_branch.clone(),
+            input.pending_branch_switch,
+        )
+        && input.active_branch.is_none()
+        && input.current_repo_id.as_deref() == Some(input.repo_id)
 }
 
 pub fn accepts_write_ready_message(
@@ -36,16 +41,16 @@ pub fn accepts_write_ready_message(
     scope_nonce: u64,
     signals: CoreSignals,
 ) -> bool {
-    accepts_write_ready(
+    accepts_write_ready(WriteReadyScopeInput {
         repo_id,
-        branch,
+        branch: branch.clone(),
         scope_nonce,
-        signals.current_repo_id.get_untracked(),
-        signals.active_branch.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
-        signals.pending_repo_switch.get_untracked(),
-        signals.handshake_scope_nonce.get_untracked(),
-    )
+        current_repo_id: signals.current_repo_id.get_untracked(),
+        active_branch: signals.active_branch.get_untracked(),
+        pending_branch_switch: signals.pending_branch_switch.get_untracked(),
+        pending_repo_switch: signals.pending_repo_switch.get_untracked(),
+        handshake_scope_nonce: signals.handshake_scope_nonce.get_untracked(),
+    })
 }
 
 pub fn accepts_edit_rejected_message(scope_nonce: Option<u64>, signals: CoreSignals) -> bool {
