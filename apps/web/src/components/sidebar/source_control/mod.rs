@@ -14,6 +14,7 @@ pub mod changes_panel;
 pub mod commit;
 pub mod commit_actions;
 pub mod commit_ai;
+mod commit_ai_runtime;
 pub mod commit_controller;
 pub mod commit_message_box;
 pub mod context_menu;
