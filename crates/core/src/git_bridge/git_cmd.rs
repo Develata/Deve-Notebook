@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_storage#git-ecosystem-coexistence
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!
 //! Small Git command wrapper for the mirror bridge.
 
 use crate::utils::path::to_forward_slash;

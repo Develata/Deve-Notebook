@@ -15,6 +15,7 @@ mod push;
 mod repair_action;
 mod repair_review;
 mod replay;
+mod replay_git;
 mod status;
 mod store;
 

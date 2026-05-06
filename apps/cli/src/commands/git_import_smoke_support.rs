@@ -1,3 +1,10 @@
+//! plan_ref:
+//!   - 04_storage#git-ecosystem-coexistence
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 12_commands#cli-commands
+//!
+//! Test support for the explicit Git mirror import/export/push command surface.
+
 use super::git;
 use anyhow::Result;
 use deve_core::git_bridge::{
