@@ -25,10 +25,16 @@
   preconditions:
     - AI Chat 已展开
   steps:
+    - run: scripts/check-mobile-baseline.sh
+    - run: cargo test -p deve_web mobile_chat_keyboard -- --nocapture
     - ui_focus: "chat_input"
     - ui_wait_keyboard: true
     - ui_measure: "chat_send_button"
   assertions:
+    - cli_assert: mobile_chat_input_marker_bound true
+    - cli_assert: mobile_chat_send_button_marker_bound true
+    - cli_assert: mobile_chat_keyboard_offset_bound true
+    - cli_assert: mobile_chat_bottom_bar_hidden_bound true
     - ui_assert: chat_input_not_overlapped_by_keyboard true
     - ui_assert: min_target_size "44x44"
     - ui_assert: bottom_bar_hidden true

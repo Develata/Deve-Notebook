@@ -90,6 +90,7 @@ pub fn MobileChatSheet(
                 data-deve-mobile-chat=move || if expanded.get() { "expanded" } else { "collapsed" }
                 data-deve-mobile-chat-page=move || mobile_chat_page_mode(expanded.get())
                 data-deve-mobile-chat-fullscreen=move || expanded.get().to_string()
+                data-deve-mobile-chat-keyboard-offset=move || keyboard_offset.get().to_string()
             >
                 <Show
                     when=move || expanded.get()
@@ -125,6 +126,12 @@ mod tests {
     fn expanded_chat_stays_visible_when_keyboard_is_open() {
         assert!(should_show_mobile_chat_sheet(true, false, false, true, 280));
         assert_eq!(mobile_chat_sheet_style(true, 280), "bottom: 280px;");
+    }
+
+    #[test]
+    fn mobile_chat_keyboard_sheet_stays_above_keyboard() {
+        assert!(should_show_mobile_chat_sheet(true, false, false, true, 320));
+        assert_eq!(mobile_chat_sheet_style(true, 320), "bottom: 320px;");
     }
 
     #[test]

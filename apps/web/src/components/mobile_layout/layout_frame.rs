@@ -17,6 +17,10 @@ use crate::i18n::Locale;
 use leptos::ev::TouchEvent;
 use leptos::prelude::*;
 
+pub(crate) fn mobile_bottom_bar_visible(keyboard_offset: i32, chat_expanded: bool) -> bool {
+    keyboard_offset <= 0 && !chat_expanded
+}
+
 #[component]
 pub fn MobileLayoutFrame(
     core: CoreState,
@@ -117,9 +121,22 @@ pub fn MobileLayoutFrame(
                 set_expanded=set_chat_expanded
             />
 
-            <Show when=move || keyboard_offset.get() <= 0 && !chat_expanded.get()>
+            <Show when=move || mobile_bottom_bar_visible(keyboard_offset.get(), chat_expanded.get())>
                 <MobileFooter core=core.clone() />
             </Show>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mobile_bottom_bar_visible;
+
+    #[test]
+    fn mobile_chat_keyboard_hides_bottom_bar() {
+        assert!(!mobile_bottom_bar_visible(280, true));
+        assert!(!mobile_bottom_bar_visible(280, false));
+        assert!(!mobile_bottom_bar_visible(0, true));
+        assert!(mobile_bottom_bar_visible(0, false));
     }
 }
