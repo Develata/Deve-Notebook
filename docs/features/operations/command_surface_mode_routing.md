@@ -16,7 +16,7 @@
 - `Trigger`: open command palette, quick open, or unified search surface
 - `Preconditions`: workspace shell is loaded
 - `Immediate Result`: a shared query input becomes active
-- `Application Entry`: `apps/web/src/components/command_palette/`, `apps/web/src/components/search_box/`, `apps/web/src/components/quick_open/`
+- `Application Entry`: `apps/web/src/components/command_palette/`, `apps/web/src/components/search_box/`
 
 ### `op.commands.surface.type-mode-prefix`
 

@@ -94,7 +94,7 @@
 ## Notes
 
 - `Quick Open` 是入口容器，不是第一层节点；第一层应是 `open-quick-open`、`type-query`、`choose-doc`、`request-open`、`receive-content`。
-- 当前 Quick Open 的真实入口复用 `UnifiedSearch` 空模式与 `FileProvider`；`apps/web/src/components/quick_open/mod.rs` 是预留 provider，不是 current user path。
+- 当前 Quick Open 是用户概念；真实入口是 `UnifiedSearch` 空模式与 `FileProvider`，代码位于 `apps/web/src/components/search_box/`。
 - 文档列表与正文读取不是同一操作：列表更接近 `list docs`，正文读取更接近 `OpenDoc`。
 - Quick Open 进入哪一类 provider、以及结果如何先被统一 `SearchAction` 路由，已单独建模在 `command_surface_mode_routing.md` 与 `command_surface_action_routing.md`。
 - `/api/repo/docs` 适合支撑候选列表；真正的文档打开主链路以 WS `OpenDoc` 为中心。

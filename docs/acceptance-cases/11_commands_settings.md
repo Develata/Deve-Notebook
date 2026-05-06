@@ -37,7 +37,8 @@
     - ui_keypress: "Ctrl+P"
     - run: scripts/check-cli-settings-baseline.sh
   assertions:
-    - ui_assert: quick_open_visible true
+    - ui_assert: unified_search_visible true
+    - ui_assert: mode_eq "file"
 
 - case_id: CMD-004
   goal: Branch Switcher 快捷键。

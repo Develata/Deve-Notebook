@@ -42,7 +42,7 @@
 (user-operation :id op.doc.nav.choose-stay :label "Choose Stay" :kind cancel :surface pending-navigation-modal :code "apps/web/src/components/pending_navigation_modal.rs" :calls (app.doc.nav.stay))
 (user-operation :id op.doc.nav.confirm-leave :label "Confirm Leave" :kind confirm :surface pending-navigation-modal :code "apps/web/src/components/pending_navigation_modal.rs" :calls (app.doc.nav.continue))
 (user-operation :id op.doc.nav.clear-on-confirmed :label "Clear Guard On Confirmed Edit" :kind async-result :surface runtime-status :code "apps/web/src/hooks/use_core/effects/{message_dispatch_write.rs,message_dispatch_protocol.rs}" :calls (app.doc.nav.clear-on-confirmed))
-(user-operation :id op.repo.open-doc.open-quick-open :label "Open Quick Open" :kind open :surface search-box :code "apps/web/src/{components/search_box/mod.rs,components/quick_open/mod.rs}" :calls (app.repo.quick-open.open))
+(user-operation :id op.repo.open-doc.open-quick-open :label "Open Quick Open" :kind open :surface search-box :code "apps/web/src/components/search_box/mod.rs" :calls (app.repo.quick-open.open))
 (user-operation :id op.repo.open-doc.type-query :label "Type File Query" :kind text-input :surface search-box :code "apps/web/src/components/search_box/logic/providers.rs" :calls (app.repo.quick-open.query))
 (user-operation :id op.repo.open-doc.choose-doc :label "Choose Document Result" :kind select :surface search-box :code "apps/web/src/{components/search_box/logic/execute.rs,hooks/use_core/callbacks_doc_select.rs}" :calls (app.repo.quick-open.select-doc))
 (user-operation :id op.repo.open-doc.request-open :label "Request OpenDoc" :kind request :surface editor-state :code "apps/web/src/editor/hook_open.rs" :calls (app.repo.doc.open))

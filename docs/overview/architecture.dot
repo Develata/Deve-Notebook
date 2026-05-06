@@ -1511,8 +1511,8 @@ digraph DeveNoteArchitecture {
             fillcolor="#edf5ff";
             color="#2563eb";
 
-            app_quick_open [label="quick_open::open / query", fillcolor="#eff6ff"];
-            app_doc_select [label="quick_open::select_doc", fillcolor="#eff6ff"];
+            app_quick_open [label="search_box::quick_open_open / query", fillcolor="#eff6ff"];
+            app_doc_select [label="search_box::quick_open_select_doc", fillcolor="#eff6ff"];
             app_doc_open [label="editor::open_doc", fillcolor="#bfdbfe"];
             app_doc_receive [label="editor::receive_doc", fillcolor="#eff6ff"];
         }

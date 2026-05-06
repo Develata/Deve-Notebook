@@ -44,7 +44,7 @@
 (application :id app.doc.nav.stay :label "PendingNavigation::cancel" :kind ui-effect :code "apps/web/src/components/pending_navigation_modal.rs" :calls (mod_pending_navigation))
 (application :id app.doc.nav.continue :label "PendingNavigation::continue" :kind ui-effect :code "apps/web/src/components/pending_navigation_modal.rs" :calls (mod_pending_navigation mod_nav_guard))
 (application :id app.doc.nav.clear-on-confirmed :label "Ack/EditRejected clears guard" :kind async-result :code "apps/web/src/hooks/use_core/effects/{message_dispatch_write.rs,message_dispatch_protocol.rs}" :calls (mod_pending_navigation mod_proto_ws))
-(application :id app.repo.quick-open.open :label "SearchBox/QuickOpen::show" :kind ui-shell :code "apps/web/src/{components/search_box/mod.rs,components/quick_open/mod.rs}" :calls ())
+(application :id app.repo.quick-open.open :label "SearchBox::show_quick_open" :kind ui-shell :code "apps/web/src/components/search_box/mod.rs" :calls ())
 (application :id app.repo.quick-open.query :label "FileProvider::search" :kind ui-shell :code "apps/web/src/components/search_box/logic/providers.rs" :calls ())
 (application :id app.repo.quick-open.select-doc :label "on_doc_select" :kind ui-shell :code "apps/web/src/hooks/use_core/callbacks_doc_select.rs" :calls (app.repo.doc.open))
 (application :id app.repo.doc.open :label "ClientMessage::OpenDoc" :kind ws-handler :code "apps/web/src/editor/hook_open.rs | apps/cli/src/server/handlers/document/open.rs" :calls (mod_proto_ws mod_tree_structure mod_ledger_manager))
