@@ -23,16 +23,12 @@ use deve_core::models::DocId;
 use leptos::html::Div;
 use leptos::prelude::*;
 
-#[allow(dead_code)] // 为回放功能预留的字段
-pub struct EditorState {
+pub(super) struct EditorState {
     pub content: ReadSignal<String>,
-    pub is_playback: ReadSignal<bool>,
     pub playback_version: ReadSignal<u64>,
-    pub local_version: ReadSignal<u64>,
-    pub on_playback_change: Box<dyn Fn(u64) + Send + Sync>,
 }
 
-pub fn use_editor(
+pub(super) fn use_editor(
     doc_id: DocId,
     editor_ref: NodeRef<Div>,
     on_stats: Option<Callback<EditorStats>>,
@@ -50,15 +46,8 @@ pub fn use_editor(
         on_stats.clone(),
     );
 
-    let on_playback_change = Box::new(move |ver: u64| {
-        runtime.set_playback_version.set(ver);
-    });
-
     EditorState {
         content: runtime.content,
-        is_playback: runtime.is_playback,
         playback_version: runtime.playback_version,
-        local_version: runtime.local_version,
-        on_playback_change,
     }
 }

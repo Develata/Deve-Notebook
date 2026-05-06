@@ -27,7 +27,6 @@ mod service_ping;
 #[cfg(test)]
 mod test_support;
 
-#[allow(dead_code)]
 #[derive(Clone)]
 pub struct WsService {
     pub status: ReadSignal<ConnectionStatus>,
@@ -40,8 +39,10 @@ pub struct WsService {
     set_writer_client_id: WriteSignal<Option<u64>>,
     pub endpoint: ReadSignal<String>,
     pub node_role: ReadSignal<String>,
+    #[cfg(test)]
     set_node_role: WriteSignal<String>,
     pub node_role_probe_failed: ReadSignal<bool>,
+    #[cfg(test)]
     set_node_role_probe_failed: WriteSignal<bool>,
     pub msg_seq: ReadSignal<u64>,
     pub connection_epoch: ReadSignal<u64>,
@@ -92,8 +93,10 @@ impl WsService {
             set_writer_client_id,
             endpoint,
             node_role,
+            #[cfg(test)]
             set_node_role,
             node_role_probe_failed,
+            #[cfg(test)]
             set_node_role_probe_failed,
             msg_seq,
             connection_epoch,

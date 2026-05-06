@@ -23,7 +23,7 @@ mod delta_input_gate;
 mod delta_input_state;
 pub mod ffi;
 mod handshake_reset;
-pub mod hook;
+mod hook;
 mod hook_editor;
 mod hook_effects;
 mod hook_open;

@@ -16,29 +16,6 @@ pub struct Delta {
 }
 
 impl Delta {
-    /// 将 Delta 转换为单个 Op (⚠️ Replace 时仅返回 Delete，丢弃 Insert)
-    ///
-    /// **已废弃**: 请使用 `to_ops()` 代替，它能正确处理 Replace = Delete + Insert
-    #[allow(dead_code)]
-    #[deprecated(note = "Replace 场景会丢弃 Insert，请改用 to_ops()")]
-    pub fn to_op(&self) -> Option<Op> {
-        let delete_len = self.to.saturating_sub(self.from);
-        let has_delete = delete_len > 0;
-        let has_insert = !self.insert.is_empty();
-        let pos = to_u32(self.from)?;
-        let len = if has_delete { to_u32(delete_len)? } else { 0 };
-
-        match (has_delete, has_insert) {
-            (true, true) => Some(Op::Delete { pos, len }),
-            (true, false) => Some(Op::Delete { pos, len }),
-            (false, true) => Some(Op::Insert {
-                pos,
-                content: self.insert.clone().into(),
-            }),
-            (false, false) => None,
-        }
-    }
-
     /// 将 Delta 转换为 Op 列表 (处理 Replace 情况)
     pub fn to_ops(&self) -> Vec<Op> {
         let delete_len = self.to.saturating_sub(self.from);
