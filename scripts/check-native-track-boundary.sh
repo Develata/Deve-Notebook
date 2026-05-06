@@ -24,9 +24,10 @@ check_not_contains() {
 
 check_no_packaging_dependency_leak() {
   local cargo_file
+  local tauri_manifest_pattern="(^[[:space:]]*[\"']?(tauri|tauri-build)[\"']?[[:space:]]*=|package[[:space:]]*=[[:space:]]*[\"'](tauri|tauri-build)[\"']|^[[:space:]]*\[[^]]*(dependencies|dev-dependencies|build-dependencies)\.[\"']?(tauri|tauri-build)[\"']?[[:space:]]*\])"
   while IFS= read -r cargo_file; do
-    if rg -iq '^[[:space:]]*(tauri|tauri-build)[[:space:]]*=' "$cargo_file"; then
-      fail "native packaging dependency is not allowed yet: ${cargo_file#$ROOT_DIR/}"
+    if rg -iq "$tauri_manifest_pattern" "$cargo_file"; then
+      fail "native packaging dependency is not allowed yet: ${cargo_file#"$ROOT_DIR"/}"
     fi
   done < <(find "$ROOT_DIR" -path "$ROOT_DIR/target" -prune -o -name Cargo.toml -type f -print)
 
@@ -54,6 +55,7 @@ check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
 check_contains apps/desktop/src/packaging.rs "status: \"planned\""
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingCapability::Installer"
+check_contains apps/desktop/src/packaging_test.rs "desktop_packaging_scaffold_is_feature_gated_and_planned"
 check_contains apps/desktop/src/shell_test.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/desktop/src/shell_test.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains apps/mobile/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
@@ -63,6 +65,7 @@ check_contains apps/mobile/src/packaging.rs "status: \"planned\""
 check_contains apps/mobile/src/packaging.rs "MobilePackagingAuthority::Ledger"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::PermissionBridge"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::StorePackage"
+check_contains apps/mobile/src/packaging_test.rs "mobile_packaging_scaffold_is_feature_gated_and_planned"
 check_contains apps/mobile/src/shell_test.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/mobile/src/shell_test.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains crates/core/src/native_adapter/packaging.rs "DeferredUntilRuntimeBatch"

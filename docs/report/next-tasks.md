@@ -8,7 +8,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Native packaging gate scaffold | P2 | `apps/desktop/`, `apps/mobile/`, `scripts/` | 只补 gated scaffold 与边界检查；真实 `tauri` / `tauri-build` 仍不得进入默认 workspace build |
+| 1 | 下一轮 gap scan | P2 | `docs/report/`, current code | 重新读取 plan/features/acceptance 与最新 baseline，选出下一批 active execution queue |
 
 ## 当前基线
 

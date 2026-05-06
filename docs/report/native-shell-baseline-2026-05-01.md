@@ -26,6 +26,7 @@
 - Web `WsService` 派生统一 `NativeRuntimeReadiness`，Source Control refresh、write gate、bottom bar 与 mobile footer 共用同一 readiness 口径。
 - Editor delta、playback read-only、pending resend 与 AI apply 写入路径共用 write gate，不再绕过 node role readiness。
 - Node role probe 单次请求有超时上限；失败会有限重试，重试耗尽后保持不可写，并在 UI 状态中进入 `NativeReprobeRequired`。
+- Native packaging gate 验证入口为 `scripts/check-native-packaging-gate.sh`：先跑 native boundary，再确认 Cargo.lock 无真实 Tauri crate，并执行 desktop/mobile `native-packaging` scaffold tests。
 - Native recovery 验证覆盖 `cargo test -p deve_desktop`、`cargo test -p deve_mobile`、`cargo test -p deve_web native_runtime_readiness -- --nocapture`、`cargo test -p deve_web status_summary -- --nocapture`、`cargo test -p deve_web write_gate -- --nocapture`、`cargo test -p deve_web refresh -- --nocapture`、`cargo test -p deve_web connection_urls -- --nocapture`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`。
 
 ## Retired Source Reports

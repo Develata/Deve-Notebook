@@ -25,7 +25,7 @@
 - `Trigger`: maintainer validates desktop/mobile native shell progress
 - `Preconditions`: native process, supervisor, recovery bootstrap, and lifecycle gates remain explicit and default build is unchanged
 - `Immediate Result`: native shell progress is visible without advertising Tauri packaging, child-process runtime, or business authority as default capability
-- `Application Entry`: `scripts/check-native-track-boundary.sh`, `apps/{desktop,mobile}/src/shell.rs`, `crates/core/src/native_adapter/`
+- `Application Entry`: `scripts/check-native-track-boundary.sh`, `scripts/check-native-packaging-gate.sh`, `apps/{desktop,mobile}/src/shell.rs`, `crates/core/src/native_adapter/`
 
 ### `op.tech.platform.verify-release-channel`
 
