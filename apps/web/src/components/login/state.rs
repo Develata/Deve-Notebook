@@ -2,7 +2,7 @@
 //!   - 09_auth#unauthorized-disconnected-ui
 //!
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AuthState {
     Checking,
     Unavailable,

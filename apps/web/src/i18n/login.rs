@@ -97,6 +97,13 @@ pub fn network_error(locale: Locale) -> &'static str {
     }
 }
 
+pub fn logout_error(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Sign out failed",
+        Locale::Zh => "退出登录失败",
+    }
+}
+
 pub fn auth_unavailable_hint(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Unable to reach the auth service. We'll retry automatically.",

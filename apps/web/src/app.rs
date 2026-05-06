@@ -19,7 +19,8 @@ use self::app_auth_monitor::{
 use crate::api::{AuthProbe, probe_auth_status};
 use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage, logout};
 use crate::components::main_layout::MainLayout;
-use crate::i18n::initial_locale;
+use crate::i18n::login as login_i18n;
+use crate::i18n::{Locale, initial_locale};
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -111,8 +112,8 @@ pub fn App() -> impl IntoView {
                     on_session_expired=Callback::new(move |_| set_auth_state.set(AuthState::Unauthenticated))
                     on_logout=Callback::new(move |_| {
                         spawn_local(async move {
-                            let _ = logout().await;
-                            set_auth_state.set(AuthState::Unauthenticated);
+                            let locale_value = locale.get_untracked();
+                            set_auth_state.set(auth_state_after_logout(locale_value, logout().await));
                         });
                     })
                 />
@@ -124,5 +125,40 @@ pub fn App() -> impl IntoView {
                 <LoginPage auth_state=auth_state set_auth_state=set_auth_state/>
             }.into_any(),
         }}
+    }
+}
+
+fn auth_state_after_logout(locale: Locale, result: Result<(), String>) -> AuthState {
+    match result {
+        Ok(()) => AuthState::Unauthenticated,
+        Err(message) => {
+            AuthState::Failed(format!("{}: {}", login_i18n::logout_error(locale), message))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::auth_state_after_logout;
+    use crate::components::login::AuthState;
+    use crate::i18n::Locale;
+
+    #[test]
+    fn logout_success_enters_unauthenticated_state() {
+        assert!(matches!(
+            auth_state_after_logout(Locale::En, Ok(())),
+            AuthState::Unauthenticated
+        ));
+    }
+
+    #[test]
+    fn logout_failure_reports_failure_without_claiming_success() {
+        match auth_state_after_logout(Locale::En, Err("HTTP 500".to_string())) {
+            AuthState::Failed(message) => {
+                assert!(message.contains("Sign out failed"));
+                assert!(message.contains("HTTP 500"));
+            }
+            other => panic!("expected logout failure state, got {other:?}"),
+        }
     }
 }
