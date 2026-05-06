@@ -10,6 +10,31 @@ use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+const COL_PLACEHOLDER: &str = "-";
+
+pub(super) fn summary_fields_class() -> &'static str {
+    "flex-1 min-w-0 flex items-center gap-1 whitespace-nowrap overflow-x-auto scrollbar-none"
+}
+
+pub(super) fn mobile_summary_stat_label(
+    _is_narrow: bool,
+    _compact: &'static str,
+    full: &'static str,
+) -> &'static str {
+    full
+}
+
+#[cfg(test)]
+pub(super) fn collapsed_summary_fields(is_narrow: bool, locale: Locale) -> Vec<&'static str> {
+    vec![
+        t::bottom_bar::branch(locale),
+        t::bottom_bar::ready(locale),
+        mobile_summary_stat_label(is_narrow, "W", t::bottom_bar::words(locale)),
+        mobile_summary_stat_label(is_narrow, "L", t::bottom_bar::lines(locale)),
+        mobile_summary_stat_label(is_narrow, "C", t::bottom_bar::col(locale)),
+    ]
+}
+
 #[component]
 pub fn FooterSummaryRow(
     core: CoreState,
@@ -21,33 +46,41 @@ pub fn FooterSummaryRow(
 ) -> impl IntoView {
     let stat_label = move |compact: &'static str, full: fn(Locale) -> &'static str| {
         let locale = locale;
-        move || {
-            if is_narrow.get() {
-                compact.to_string()
-            } else {
-                full(locale.get()).to_string()
-            }
-        }
+        move || mobile_summary_stat_label(is_narrow.get(), compact, full(locale.get())).to_string()
     };
 
     view! {
-        <div class="flex items-center gap-1.5">
-            <div class="flex-1 min-w-0 flex items-center gap-1 whitespace-nowrap overflow-hidden">
-                <div class="shrink-0"><BranchSwitcher compact=true /></div>
-                <div class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
+        <div
+            data-deve-mobile-bottom-bar-row="summary"
+            data-deve-mobile-bottom-bar-single-line="true"
+            class="flex items-center gap-1.5 whitespace-nowrap overflow-hidden"
+        >
+            <div
+                data-deve-mobile-bottom-bar-fields-overflow="scroll-x"
+                class=summary_fields_class()
+            >
+                <div data-deve-mobile-bottom-bar-field="branch" class="shrink-0 flex items-center gap-1">
+                    <span class="text-[10px] text-muted">{move || t::bottom_bar::branch(locale.get())}</span>
+                    <BranchSwitcher compact=true />
+                </div>
+                <div data-deve-mobile-bottom-bar-field="status" class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
                     {move || view! { <StatusView core=core.clone() locale=locale /> }}
                 </div>
-                <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
+                <div data-deve-mobile-bottom-bar-field="words" class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                     <span>{stat_label("W", t::bottom_bar::words)}</span>
                     <span class="font-mono text-primary">{move || displayed_stats.get().words}</span>
                 </div>
-                <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
+                <div data-deve-mobile-bottom-bar-field="lines" class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                     <span>{stat_label("L", t::bottom_bar::lines)}</span>
                     <span class="font-mono text-primary">{move || displayed_stats.get().lines}</span>
                 </div>
-                <div class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
-                    <span>{stat_label("Ch", t::bottom_bar::chars)}</span>
-                    <span class="font-mono text-primary">{move || displayed_stats.get().chars}</span>
+                <div
+                    data-deve-mobile-bottom-bar-field="col"
+                    data-deve-mobile-bottom-bar-col-source="placeholder"
+                    class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted"
+                >
+                    <span>{stat_label("C", t::bottom_bar::col)}</span>
+                    <span class="font-mono text-primary">{COL_PLACEHOLDER}</span>
                 </div>
             </div>
 
@@ -72,5 +105,33 @@ pub fn FooterSummaryRow(
                 }}
             </button>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{collapsed_summary_fields, mobile_summary_stat_label, summary_fields_class};
+    use crate::i18n::Locale;
+
+    #[test]
+    fn mobile_bottom_bar_collapsed_summary_exposes_required_fields() {
+        assert_eq!(
+            collapsed_summary_fields(false, Locale::En),
+            vec!["Branch", "Ready", "Words", "Lines", "Col"]
+        );
+    }
+
+    #[test]
+    fn mobile_bottom_bar_narrow_summary_keeps_single_line_labels() {
+        assert_eq!(mobile_summary_stat_label(true, "W", "Words"), "Words");
+        assert_eq!(mobile_summary_stat_label(false, "W", "Words"), "Words");
+    }
+
+    #[test]
+    fn mobile_bottom_bar_collapsed_fields_scroll_horizontally_without_wrapping() {
+        let class = summary_fields_class();
+        assert!(class.contains("whitespace-nowrap"));
+        assert!(class.contains("overflow-x-auto"));
+        assert!(!class.contains("overflow-hidden"));
     }
 }

@@ -16,6 +16,14 @@ use crate::i18n::Locale;
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
+pub(super) fn bottom_bar_state_attrs(expanded: bool) -> (&'static str, &'static str) {
+    if expanded {
+        ("expanded", "multi")
+    } else {
+        ("collapsed", "single")
+    }
+}
+
 #[component]
 pub fn MobileFooter(core: CoreState) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
@@ -84,6 +92,8 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
         </Show>
 
         <footer
+            data-deve-mobile-bottom-bar=move || bottom_bar_state_attrs(expanded.get()).0
+            data-deve-mobile-bottom-bar-lines=move || bottom_bar_state_attrs(expanded.get()).1
             class=footer_class
             style="padding-bottom: env(safe-area-inset-bottom);"
         >
@@ -113,5 +123,16 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
                 />
             </Show>
         </footer>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::bottom_bar_state_attrs;
+
+    #[test]
+    fn mobile_bottom_bar_collapsed_state_is_single_line() {
+        assert_eq!(bottom_bar_state_attrs(false), ("collapsed", "single"));
+        assert_eq!(bottom_bar_state_attrs(true), ("expanded", "multi"));
     }
 }

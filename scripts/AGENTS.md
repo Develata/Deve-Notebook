@@ -38,7 +38,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-dev-data-health-baseline.sh` | Verifies projection health diagnostics expose repair hints and fail-closed authority corruption boundaries |
 | `check-native-track-boundary.sh` | Verifies Desktop/Mobile native adapter boundaries remain future-safe and do not redefine core authority |
 | `check-graph-baseline.sh` | Verifies Graph remains a read-only derived projection and does not become a ledger/workspace authority path |
-| `check-mobile-baseline.sh` | Verifies Mobile Web shell viewport mapping, drawer gestures, resize-handle exclusion, keyboard toolbar, search top sheet/results scrolling, and editor font-size baseline contracts |
+| `check-mobile-baseline.sh` | Verifies Mobile Web shell viewport mapping, drawer gestures, resize-handle exclusion, keyboard toolbar, search top sheet/results scrolling, bottom bar, and editor font-size baseline contracts |
 | `check-dev-runbook-baseline.sh` | Verifies current startup, auth, frontend, Chrome MCP, search, and verification runbook boundaries |
 | `check-release-baseline.sh` | Verifies Docker, compose, and release workflow surfaces match the embedded-frontend release baseline |
 | `smoke-web-release-build.sh` | Builds the Web release assets with normalized Trunk/Browserslist environment |

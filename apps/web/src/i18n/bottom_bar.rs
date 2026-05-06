@@ -6,6 +6,13 @@
 
 use super::Locale;
 
+pub fn branch(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Branch",
+        Locale::Zh => "分支",
+    }
+}
+
 pub fn words(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Words",
@@ -17,6 +24,13 @@ pub fn lines(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Lines",
         Locale::Zh => "行数",
+    }
+}
+
+pub fn col(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Col",
+        Locale::Zh => "列",
     }
 }
 
