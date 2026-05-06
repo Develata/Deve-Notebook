@@ -54,6 +54,7 @@ pub(crate) fn derive_sync_status(
     load_state: &str,
     remote_branch_active: bool,
     degraded_storage: bool,
+    node_role_probe_failed: bool,
     node_role_readable: bool,
     handshake_ready: bool,
     writer_ready: bool,
@@ -75,17 +76,21 @@ pub(crate) fn derive_sync_status(
         ConnectionStatus::Disconnected => SyncStatusKind::Offline,
         ConnectionStatus::Connecting => SyncStatusKind::Reconnecting,
         ConnectionStatus::Connected if load_state != "ready" => SyncStatusKind::SnapshotLoading,
-        ConnectionStatus::Connected if remote_branch_active || degraded_storage => {
-            SyncStatusKind::ReadOnly
+        ConnectionStatus::Connected if node_role_probe_failed => {
+            SyncStatusKind::NativeReprobeRequired
         }
         ConnectionStatus::Connected
             if pending_repo_switch.is_some()
                 || pending_branch_switch
                 || current_repo_id.is_none()
-                || !node_role_readable
-                || !handshake_ready
-                || !writer_ready =>
+                || !node_role_readable =>
         {
+            SyncStatusKind::HandshakingRepo
+        }
+        ConnectionStatus::Connected if remote_branch_active || degraded_storage => {
+            SyncStatusKind::ReadOnly
+        }
+        ConnectionStatus::Connected if !handshake_ready || !writer_ready => {
             SyncStatusKind::HandshakingRepo
         }
         ConnectionStatus::Connected if pending_ack_count > 0 => SyncStatusKind::PendingAck,

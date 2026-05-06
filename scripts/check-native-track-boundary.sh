@@ -78,6 +78,8 @@ check_contains crates/core/src/native_adapter/supervisor.rs "process_shutdown_sn
 check_contains crates/core/src/native_adapter/contract_test.rs "native_reprobe_before_write_requires_full_runtime_readiness"
 check_contains apps/web/src/api/service.rs "native_runtime_readiness_requires_node_role_writer_and_current_scope"
 check_contains apps/web/src/api/service.rs "native_runtime_readiness_for_untracked"
+check_contains apps/web/src/api/connection_role.rs "NODE_ROLE_PROBE_RETRIES"
+check_contains apps/web/src/api/connection_role.rs "stale_node_role_probe_results_do_not_mutate_current_connection"
 check_contains apps/desktop/src/shell.rs "record_process_snapshot"
 check_contains apps/desktop/src/shell_test.rs "desktop_probe_timeout_observation_uses_process_snapshot"
 check_contains apps/desktop/src/shell_test.rs "desktop_process_shutdown_observation_uses_process_snapshot"
@@ -88,8 +90,10 @@ check_contains apps/mobile/src/shell_test.rs "mobile_process_shutdown_observatio
 check_contains apps/mobile/src/shell_test.rs "missing_node_role"
 check_contains apps/web/src/hooks/use_core/write_gate_logic.rs "node_role_readable"
 check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_write_gate_requires_node_role_readable"
+check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_source_control_read_gate_reports_node_role_probe_failure_before_read_only"
 check_contains apps/web/src/hooks/use_core/write_gate_tests.rs "repo_source_control_read_gate_requires_node_role_for_local_refresh"
 check_contains apps/web/src/hooks/use_core/status_summary_tests.rs "reports_repo_handshake_until_node_role_is_readable"
+check_contains apps/web/src/hooks/use_core/status_summary_tests.rs "reports_native_reprobe_when_node_role_probe_failed"
 check_no_packaging_dependency_leak
 check_no_process_runtime_leak
 

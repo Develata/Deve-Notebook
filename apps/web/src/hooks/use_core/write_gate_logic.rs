@@ -47,6 +47,7 @@ pub(crate) struct RepoWriteGateState<'a> {
     pub connection_status: ConnectionStatus,
     pub load_state: &'a str,
     pub is_read_only: bool,
+    pub node_role_probe_failed: bool,
     pub node_role_readable: bool,
     pub handshake_ready: bool,
     pub writer_ready: bool,
@@ -66,6 +67,9 @@ pub(crate) fn repo_write_block(state: RepoWriteGateState<'_>) -> Option<RepoWrit
         ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting),
         ConnectionStatus::Connected if state.load_state != "ready" => {
             Some(RepoWriteBlock::SnapshotLoading)
+        }
+        ConnectionStatus::Connected if state.node_role_probe_failed => {
+            Some(RepoWriteBlock::NativeReprobeRequired)
         }
         ConnectionStatus::Connected if state.is_read_only => Some(RepoWriteBlock::ReadOnly),
         ConnectionStatus::Connected if state.pending_branch_switch || state.pending_repo_switch => {
@@ -97,6 +101,9 @@ pub(crate) fn repo_source_control_read_block(
             ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting),
             ConnectionStatus::Connected if state.load_state != "ready" => {
                 Some(RepoWriteBlock::SnapshotLoading)
+            }
+            ConnectionStatus::Connected if state.node_role_probe_failed => {
+                Some(RepoWriteBlock::NativeReprobeRequired)
             }
             ConnectionStatus::Connected
                 if state.pending_branch_switch || state.pending_repo_switch =>

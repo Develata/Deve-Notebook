@@ -31,6 +31,7 @@ pub fn StatusView(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
             &core.load_state.get(),
             core.active_branch.get().is_some(),
             core.is_spectator.get() && core.active_branch.get().is_none(),
+            core.ws.node_role_probe_failed.get(),
             readiness.node_role_readable,
             readiness.repo_handshake_complete,
             readiness.writer_ready,

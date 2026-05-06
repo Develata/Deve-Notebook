@@ -78,6 +78,9 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                             connection_status: ws_for_timer.status.get_untracked(),
                             load_state: &load_state,
                             is_read_only: signals.is_spectator.get_untracked(),
+                            node_role_probe_failed: ws_for_timer
+                                .node_role_probe_failed
+                                .get_untracked(),
                             node_role_readable: readiness.node_role_readable,
                             handshake_ready: readiness.repo_handshake_complete,
                             writer_ready: readiness.writer_ready,

@@ -3,24 +3,96 @@
 //!
 
 use gloo_net::http::Request;
+use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 
-pub(super) async fn fetch_node_role(ws_url: String, set_node_role: WriteSignal<String>) {
-    fetch_node_role_for_http_base(http_base_from_ws_url(&ws_url), set_node_role).await;
+const NODE_ROLE_PROBE_RETRIES: usize = 3;
+const NODE_ROLE_PROBE_RETRY_DELAY_MS: u32 = 150;
+
+pub(super) async fn fetch_node_role(
+    ws_url: String,
+    set_node_role: WriteSignal<String>,
+    set_node_role_probe_failed: WriteSignal<bool>,
+    current_connection_epoch: ReadSignal<u64>,
+    probe_connection_epoch: u64,
+) {
+    fetch_node_role_for_http_base(
+        http_base_from_ws_url(&ws_url),
+        set_node_role,
+        set_node_role_probe_failed,
+        current_connection_epoch,
+        probe_connection_epoch,
+    )
+    .await;
 }
 
 pub(super) async fn fetch_node_role_for_http_base(
     http_base: String,
     set_node_role: WriteSignal<String>,
+    set_node_role_probe_failed: WriteSignal<bool>,
+    current_connection_epoch: ReadSignal<u64>,
+    probe_connection_epoch: u64,
 ) {
     let http_url = http_base.trim_end_matches('/');
     let url = format!("{}/api/node/role", http_url);
-    let res = Request::get(&url).send().await;
-    if let Ok(resp) = res
-        && let Ok(json) = resp.json::<serde_json::Value>().await
-    {
-        set_node_role.set(format_node_role_summary(&json));
+
+    for attempt in 0..NODE_ROLE_PROBE_RETRIES {
+        let res = Request::get(&url).send().await;
+        if let Ok(resp) = res
+            && resp.ok()
+            && let Ok(json) = resp.json::<serde_json::Value>().await
+        {
+            apply_node_role_probe_success(
+                set_node_role,
+                set_node_role_probe_failed,
+                current_connection_epoch,
+                probe_connection_epoch,
+                format_node_role_summary(&json),
+            );
+            return;
+        }
+
+        if attempt + 1 < NODE_ROLE_PROBE_RETRIES {
+            TimeoutFuture::new(NODE_ROLE_PROBE_RETRY_DELAY_MS).await;
+        }
     }
+
+    leptos::logging::error!("Node role probe failed after retries: {}", url);
+    apply_node_role_probe_failure(
+        set_node_role,
+        set_node_role_probe_failed,
+        current_connection_epoch,
+        probe_connection_epoch,
+    );
+}
+
+fn apply_node_role_probe_success(
+    set_node_role: WriteSignal<String>,
+    set_node_role_probe_failed: WriteSignal<bool>,
+    current_connection_epoch: ReadSignal<u64>,
+    probe_connection_epoch: u64,
+    summary: String,
+) -> bool {
+    if current_connection_epoch.get_untracked() != probe_connection_epoch {
+        return false;
+    }
+    set_node_role.set(summary);
+    set_node_role_probe_failed.set(false);
+    true
+}
+
+fn apply_node_role_probe_failure(
+    set_node_role: WriteSignal<String>,
+    set_node_role_probe_failed: WriteSignal<bool>,
+    current_connection_epoch: ReadSignal<u64>,
+    probe_connection_epoch: u64,
+) -> bool {
+    if current_connection_epoch.get_untracked() != probe_connection_epoch {
+        return false;
+    }
+    set_node_role.set(String::new());
+    set_node_role_probe_failed.set(true);
+    true
 }
 
 pub(super) fn http_base_from_ws_url(ws_url: &str) -> String {
@@ -152,5 +224,43 @@ mod tests {
             http_base_from_ws_url("wss://example.test/ws"),
             "https://example.test"
         );
+    }
+
+    #[test]
+    fn stale_node_role_probe_results_do_not_mutate_current_connection() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (node_role, set_node_role) = signal("main".to_string());
+        let (probe_failed, set_probe_failed) = signal(false);
+        let (connection_epoch, set_connection_epoch) = signal(2u64);
+
+        assert!(!apply_node_role_probe_failure(
+            set_node_role,
+            set_probe_failed,
+            connection_epoch,
+            1,
+        ));
+        assert_eq!(node_role.get_untracked(), "main");
+        assert!(!probe_failed.get_untracked());
+
+        assert!(apply_node_role_probe_failure(
+            set_node_role,
+            set_probe_failed,
+            connection_epoch,
+            2,
+        ));
+        assert_eq!(node_role.get_untracked(), "");
+        assert!(probe_failed.get_untracked());
+
+        set_connection_epoch.set(3);
+        assert!(!apply_node_role_probe_success(
+            set_node_role,
+            set_probe_failed,
+            connection_epoch,
+            2,
+            "proxy".to_string(),
+        ));
+        assert_eq!(node_role.get_untracked(), "");
+        assert!(probe_failed.get_untracked());
     }
 }

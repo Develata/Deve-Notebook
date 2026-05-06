@@ -40,9 +40,11 @@ pub fn spawn_connection_manager(
     set_status: WriteSignal<ConnectionStatus>,
     set_msg_seq: WriteSignal<u64>,
     set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
+    current_connection_epoch: ReadSignal<u64>,
     set_connection_epoch: WriteSignal<u64>,
     set_endpoint: WriteSignal<String>,
     set_node_role: WriteSignal<String>,
+    set_node_role_probe_failed: WriteSignal<bool>,
 ) {
     spawn_local(async move {
         let native_bootstrap = read_native_bootstrap();
@@ -72,10 +74,24 @@ pub fn spawn_connection_manager(
             match BrowserSocket::connect(&url) {
                 Ok((socket, events)) => {
                     set_endpoint.set(url.clone());
+                    set_node_role.set(String::new());
+                    set_node_role_probe_failed.set(false);
                     if let Some(http_base) = auth_http_base.clone() {
-                        spawn_local(fetch_node_role_for_http_base(http_base, set_node_role));
+                        spawn_local(fetch_node_role_for_http_base(
+                            http_base,
+                            set_node_role,
+                            set_node_role_probe_failed,
+                            current_connection_epoch,
+                            connection_epoch,
+                        ));
                     } else {
-                        spawn_local(fetch_node_role(url.clone(), set_node_role));
+                        spawn_local(fetch_node_role(
+                            url.clone(),
+                            set_node_role,
+                            set_node_role_probe_failed,
+                            current_connection_epoch,
+                            connection_epoch,
+                        ));
                     }
                     backoff.reset();
                     prepare_queue_for_new_connection(&mut queue);

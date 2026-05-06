@@ -40,6 +40,7 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
             &load_state_for_text.get(),
             active_branch_for_text.get().is_some(),
             degraded_for_text.get().is_some(),
+            ws_for_text.node_role_probe_failed.get(),
             readiness.node_role_readable,
             readiness.repo_handshake_complete,
             readiness.writer_ready,
