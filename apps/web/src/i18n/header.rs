@@ -51,3 +51,18 @@ pub fn toggle_outline(locale: Locale) -> &'static str {
         Locale::Zh => "切换大纲",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{command, file_tree, home, open, toggle_outline};
+    use crate::i18n::Locale;
+
+    #[test]
+    fn mobile_i18n_header_action_copy_has_facade_keys() {
+        assert_eq!(file_tree(Locale::En), "File tree");
+        assert_eq!(home(Locale::En), "Home");
+        assert_eq!(open(Locale::En), "Open Index");
+        assert_eq!(command(Locale::En), "Command Palette");
+        assert_eq!(toggle_outline(Locale::En), "Toggle Outline");
+    }
+}

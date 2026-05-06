@@ -138,3 +138,17 @@ pub fn read_badge(locale: Locale) -> &'static str {
         Locale::Zh => "只读",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{close_file_tree, close_outline, no_headings_found, outline_unavailable};
+    use crate::i18n::Locale;
+
+    #[test]
+    fn mobile_i18n_sidebar_drawer_copy_has_facade_keys() {
+        assert_eq!(close_file_tree(Locale::En), "Close file tree");
+        assert_eq!(close_outline(Locale::En), "Close outline");
+        assert_eq!(outline_unavailable(Locale::En), "Outline unavailable");
+        assert_eq!(no_headings_found(Locale::En), "No headings found");
+    }
+}

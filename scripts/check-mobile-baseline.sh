@@ -221,6 +221,27 @@ contains apps/web/src/components/mobile_layout/toolbar.rs "fn mobile_touch_targe
 contains apps/web/src/components/mobile_layout/footer_playback.rs "data-deve-mobile-touch-target=\"bottom_bar_playback_buttons\""
 contains apps/web/src/components/mobile_layout/footer_playback.rs "fn mobile_touch_targets_bottom_bar_playback_buttons_are_at_least_44px()"
 
+# UI-MOB-010: mobile-visible copy must come from the i18n facade, not direct
+# component string literals.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-010"
+contains_case_block UI-MOB-010 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-010 "run: cargo test -p deve_web mobile_i18n -- --nocapture"
+contains_case_block UI-MOB-010 "cli_assert: mobile_i18n_facade_keys_bound true"
+contains_case_block UI-MOB-010 "cli_assert: mobile_layout_hardcoded_copy_absent true"
+contains apps/web/src/i18n/header.rs "fn mobile_i18n_header_action_copy_has_facade_keys()"
+contains apps/web/src/i18n/sidebar.rs "fn mobile_i18n_sidebar_drawer_copy_has_facade_keys()"
+contains apps/web/src/i18n/bottom_bar.rs "fn mobile_i18n_bottom_bar_toggle_copy_has_facade_key()"
+contains apps/web/src/components/mobile_layout/header.rs "t::header::file_tree(locale.get())"
+contains apps/web/src/components/mobile_layout/drawers/left_header.rs "t::sidebar::close_file_tree(locale.get())"
+contains apps/web/src/components/mobile_layout/footer_summary.rs "t::bottom_bar::toggle_status_details(locale.get())"
+contains apps/web/src/components/mobile_layout/drawers/right.rs "t::sidebar::outline_unavailable(locale.get())"
+contains apps/web/src/components/mobile_layout/drawers/right.rs "t::sidebar::no_headings_found(locale.get())"
+rejects apps/web/src/components/mobile_layout "File tree"
+rejects apps/web/src/components/mobile_layout "Close file tree"
+rejects apps/web/src/components/mobile_layout "Toggle status details"
+rejects apps/web/src/components/mobile_layout "Outline unavailable"
+rejects apps/web/src/components/mobile_layout "No headings found"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

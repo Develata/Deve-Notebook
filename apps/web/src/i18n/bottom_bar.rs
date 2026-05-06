@@ -192,3 +192,14 @@ pub fn loading_progress(locale: Locale, done: usize, total: usize, eta_ms: u64) 
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::toggle_status_details;
+    use crate::i18n::Locale;
+
+    #[test]
+    fn mobile_i18n_bottom_bar_toggle_copy_has_facade_key() {
+        assert_eq!(toggle_status_details(Locale::En), "Toggle status details");
+    }
+}
