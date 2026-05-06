@@ -6,9 +6,7 @@ use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::protocol::{ScPathTarget, ServerMessage};
 use tokio::sync::mpsc;
 
-#[path = "source_control_scope_test_support.rs"]
-mod support;
-
+use super::source_control_scope_test_support as support;
 use support::{build_state, recv_commit_diff, recv_history, seed_pending, write_workspace_file};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

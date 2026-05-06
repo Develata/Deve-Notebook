@@ -14,10 +14,7 @@ use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeStatus, ConflictResolution};
 use tokio::sync::mpsc;
 
-#[allow(dead_code)]
-#[path = "source_control_git_import_test_support.rs"]
-mod support;
-
+use super::source_control_git_import_test_support as support;
 use support::{
     build_state, create_imported_conflict_fixture, git, init_git_repo, write_workspace_file,
 };

@@ -13,8 +13,7 @@ use std::process::Command;
 use std::sync::Arc;
 use tempfile::TempDir;
 
-#[path = "source_control_scope_test_support.rs"]
-mod scope_support;
+use super::source_control_scope_test_support as scope_support;
 
 pub(super) struct ImportedConflictFixture {
     pub(super) _dir: TempDir,

@@ -13,10 +13,7 @@ use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::ConflictResolution;
 use tokio::sync::mpsc;
 
-#[allow(dead_code)]
-#[path = "source_control_git_import_test_support.rs"]
-mod support;
-
+use super::source_control_git_import_test_support as support;
 use support::{create_mapped_imported_conflict_fixture, git};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
