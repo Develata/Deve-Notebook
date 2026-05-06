@@ -34,7 +34,8 @@ struct ChunkedDiffStart {
     old_content: String,
     new_content: String,
     token: u64,
-    started_at: u64,
+    delay_ms: u32,
+    compute_timer: Rc<RefCell<Option<Timeout>>>,
     latest: ReadSignal<u64>,
     set_result: WriteSignal<DiffLines>,
     set_phase: WriteSignal<ComputePhase>,
@@ -90,38 +91,11 @@ fn schedule_chunked_diff(
     *timer_ref.borrow_mut() = Some(timer);
 }
 
-fn start_chunked_diff(
-    key: Option<String>,
-    repo_scope: String,
-    path: String,
-    mode: &'static str,
-    context_lines: usize,
-    old_content: String,
-    new_content: String,
-    token: u64,
-    delay_ms: u32,
-    compute_timer: Rc<RefCell<Option<Timeout>>>,
-    latest: ReadSignal<u64>,
-    set_result: WriteSignal<DiffLines>,
-    set_phase: WriteSignal<ComputePhase>,
-    metrics: super::super::metrics::DiffMetricsState,
-) {
-    let start = ChunkedDiffStart {
-        key,
-        repo_scope,
-        path,
-        mode,
-        context_lines,
-        old_content,
-        new_content,
-        token,
-        started_at: now_ms(),
-        latest,
-        set_result,
-        set_phase,
-        metrics,
-    };
-    let timer_ref = compute_timer.clone();
+fn start_chunked_diff(start: ChunkedDiffStart) {
+    let started_at = now_ms();
+    let delay_ms = start.delay_ms;
+    let compute_timer = start.compute_timer.clone();
+    let timer_ref = start.compute_timer.clone();
     let timer = Timeout::new(delay_ms, move || {
         if start.latest.get_untracked() != start.token {
             return;
@@ -156,7 +130,7 @@ fn start_chunked_diff(
         let request = Rc::new(ChunkedDiffRequest {
             key,
             token: start.token,
-            started_at: start.started_at,
+            started_at,
             latest: start.latest,
             set_result: start.set_result,
             set_phase: start.set_phase,
@@ -213,22 +187,22 @@ pub fn create_compute_state(
     let seen_content_effect = Rc::new(RefCell::new(false));
 
     if should_complete_initial {
-        start_chunked_diff(
-            initial_key,
-            repo_scope.clone(),
-            path.clone(),
+        start_chunked_diff(ChunkedDiffStart {
+            key: initial_key,
+            repo_scope: repo_scope.clone(),
+            path: path.clone(),
             mode,
             context_lines,
-            old_content.as_str().to_string(),
-            new_content.clone(),
-            initial_token,
-            32,
-            compute_timer.clone(),
-            active_token,
-            set_diff_result_raw,
-            set_compute_state,
-            metrics.clone(),
-        );
+            old_content: old_content.as_str().to_string(),
+            new_content: new_content.clone(),
+            token: initial_token,
+            delay_ms: 32,
+            compute_timer: compute_timer.clone(),
+            latest: active_token,
+            set_result: set_diff_result_raw,
+            set_phase: set_compute_state,
+            metrics: metrics.clone(),
+        });
     }
 
     Effect::new({
@@ -278,22 +252,22 @@ pub fn create_compute_state(
                     .set(algo_label(preview_algo).to_string());
                 set_result.set(preview);
                 set_phase.set(ComputePhase::PartialReady);
-                start_chunked_diff(
-                    None,
+                start_chunked_diff(ChunkedDiffStart {
+                    key: None,
                     repo_scope,
                     path,
                     mode,
                     context_lines,
-                    old_content_ref.as_str().to_string(),
-                    text,
-                    next_token,
-                    0,
-                    compute_timer_ref.clone(),
+                    old_content: old_content_ref.as_str().to_string(),
+                    new_content: text,
+                    token: next_token,
+                    delay_ms: 0,
+                    compute_timer: compute_timer_ref.clone(),
                     latest,
                     set_result,
                     set_phase,
-                    metrics.clone(),
-                );
+                    metrics: metrics.clone(),
+                });
             });
             *debounce_timer.borrow_mut() = Some(debounce);
         }
