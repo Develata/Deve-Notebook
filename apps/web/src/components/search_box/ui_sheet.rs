@@ -35,17 +35,28 @@ pub(super) fn drag_handle(mode: SearchUiMode) -> impl IntoView {
     ui_sheet_style::drag_handle(mode)
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn handle_touch_start(
-    ev: TouchEvent,
-    ui_mode: Signal<SearchUiMode>,
-    results_ref: &NodeRef<html::Div>,
-    set_touch_start_x: WriteSignal<i32>,
-    set_touch_start_y: WriteSignal<i32>,
-    set_touch_start_at: WriteSignal<f64>,
-    set_can_dismiss_sheet: WriteSignal<bool>,
-    set_sheet_dragging: WriteSignal<bool>,
-) {
+pub(super) struct SheetTouchStart<'a> {
+    pub ev: TouchEvent,
+    pub ui_mode: Signal<SearchUiMode>,
+    pub results_ref: &'a NodeRef<html::Div>,
+    pub set_touch_start_x: WriteSignal<i32>,
+    pub set_touch_start_y: WriteSignal<i32>,
+    pub set_touch_start_at: WriteSignal<f64>,
+    pub set_can_dismiss_sheet: WriteSignal<bool>,
+    pub set_sheet_dragging: WriteSignal<bool>,
+}
+
+pub(super) fn handle_touch_start(input: SheetTouchStart<'_>) {
+    let SheetTouchStart {
+        ev,
+        ui_mode,
+        results_ref,
+        set_touch_start_x,
+        set_touch_start_y,
+        set_touch_start_at,
+        set_can_dismiss_sheet,
+        set_sheet_dragging,
+    } = input;
     if ui_mode.get_untracked() == SearchUiMode::Sheet {
         sheet_gesture::on_start(
             &ev,
@@ -79,19 +90,32 @@ pub(super) fn handle_touch_move(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn handle_touch_end(
-    ev: TouchEvent,
-    ui_mode: Signal<SearchUiMode>,
-    touch_start_x: ReadSignal<i32>,
-    touch_start_y: ReadSignal<i32>,
-    touch_start_at: ReadSignal<f64>,
-    can_dismiss_sheet: ReadSignal<bool>,
-    set_show: WriteSignal<bool>,
-    set_sheet_dragging: WriteSignal<bool>,
-    set_sheet_drag_offset: WriteSignal<i32>,
-    set_can_dismiss_sheet: WriteSignal<bool>,
-) {
+pub(super) struct SheetTouchEnd {
+    pub ev: TouchEvent,
+    pub ui_mode: Signal<SearchUiMode>,
+    pub touch_start_x: ReadSignal<i32>,
+    pub touch_start_y: ReadSignal<i32>,
+    pub touch_start_at: ReadSignal<f64>,
+    pub can_dismiss_sheet: ReadSignal<bool>,
+    pub set_show: WriteSignal<bool>,
+    pub set_sheet_dragging: WriteSignal<bool>,
+    pub set_sheet_drag_offset: WriteSignal<i32>,
+    pub set_can_dismiss_sheet: WriteSignal<bool>,
+}
+
+pub(super) fn handle_touch_end(input: SheetTouchEnd) {
+    let SheetTouchEnd {
+        ev,
+        ui_mode,
+        touch_start_x,
+        touch_start_y,
+        touch_start_at,
+        can_dismiss_sheet,
+        set_show,
+        set_sheet_dragging,
+        set_sheet_drag_offset,
+        set_can_dismiss_sheet,
+    } = input;
     if ui_mode.get_untracked() == SearchUiMode::Sheet {
         if sheet_gesture::should_close(
             &ev,

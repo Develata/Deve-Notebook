@@ -83,16 +83,16 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                     )
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
                     on:touchstart=move |ev: TouchEvent| {
-                        ui_sheet::handle_touch_start(
+                        ui_sheet::handle_touch_start(ui_sheet::SheetTouchStart {
                             ev,
                             ui_mode,
-                            &results_ref,
+                            results_ref: &results_ref,
                             set_touch_start_x,
                             set_touch_start_y,
                             set_touch_start_at,
                             set_can_dismiss_sheet,
                             set_sheet_dragging,
-                        );
+                        });
                     }
                     on:touchmove=move |ev: TouchEvent| {
                         ui_sheet::handle_touch_move(
@@ -104,7 +104,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                         );
                     }
                     on:touchend=move |ev: TouchEvent| {
-                        ui_sheet::handle_touch_end(
+                        ui_sheet::handle_touch_end(ui_sheet::SheetTouchEnd {
                             ev,
                             ui_mode,
                             touch_start_x,
@@ -115,7 +115,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                             set_sheet_dragging,
                             set_sheet_drag_offset,
                             set_can_dismiss_sheet,
-                        );
+                        });
                     }
                     on:touchcancel=move |_| ui_sheet::handle_touch_cancel(
                         set_sheet_dragging,
