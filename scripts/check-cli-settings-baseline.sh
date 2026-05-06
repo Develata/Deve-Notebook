@@ -41,13 +41,15 @@ check_contains apps/cli/src/dispatch.rs "ConfigAction::Set { key, value } => com
 
 # config.toml remains the current authoritative runtime settings file.
 check_contains apps/cli/src/commands/config.rs "const CONFIG_FILE: &str = \"config.toml\";"
+check_contains apps/cli/src/commands/config.rs "#[path = \"config_test.rs\"]"
 check_contains apps/cli/src/commands/config.rs "toml::to_string_pretty(config)"
 check_contains apps/cli/src/commands/config.rs "parse_whitelisted_value"
-check_contains apps/cli/src/commands/config.rs "supported_config_keys_match_settings_plan_tables"
+check_contains apps/cli/src/commands/config_test.rs "supported_config_keys_match_settings_plan_tables"
+check_contains apps/cli/src/commands/config_test.rs "supported_config_schema_matches_settings_plan_type_and_choices"
 check_contains apps/cli/src/commands/init.rs "init_config_template_matches_current_settings_schema"
 check_contains apps/cli/src/commands/init.rs "[ai.agent_bridge]"
-check_contains apps/cli/src/commands/config.rs "\"ui.sidebar_width\""
-check_contains apps/cli/src/commands/config.rs "\"ai.mode\""
+check_contains apps/cli/src/commands/config_schema.rs "\"ui.sidebar_width\""
+check_contains apps/cli/src/commands/config_schema.rs "\"ai.mode\""
 check_contains apps/cli/src/commands/config.rs "Updated config.toml is not compatible with runtime config"
 check_contains crates/core/src/config_test.rs "trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_missing"
 check_contains crates/core/src/config_test.rs "trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_relative"
