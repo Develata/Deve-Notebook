@@ -53,17 +53,28 @@ pub(super) fn writer_peer_id(
         })
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn confirm_existing_client_op(
-    state: &Arc<AppState>,
-    scope: &ResolvedRepo,
-    ch: &DualChannel,
-    scope_nonce: Option<u64>,
-    doc_id: DocId,
-    op: &Op,
-    client_id: u64,
-    client_op_id: u64,
-) -> bool {
+pub(super) struct ExistingClientOpCheck<'a> {
+    pub(super) state: &'a Arc<AppState>,
+    pub(super) scope: &'a ResolvedRepo,
+    pub(super) ch: &'a DualChannel,
+    pub(super) scope_nonce: Option<u64>,
+    pub(super) doc_id: DocId,
+    pub(super) op: &'a Op,
+    pub(super) client_id: u64,
+    pub(super) client_op_id: u64,
+}
+
+pub(super) fn confirm_existing_client_op(input: ExistingClientOpCheck<'_>) -> bool {
+    let ExistingClientOpCheck {
+        state,
+        scope,
+        ch,
+        scope_nonce,
+        doc_id,
+        op,
+        client_id,
+        client_op_id,
+    } = input;
     match state
         .repo
         .find_client_op_in_local_repo(&scope.repo_name, doc_id, client_id, client_op_id)

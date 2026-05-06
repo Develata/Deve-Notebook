@@ -8,8 +8,10 @@ use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
 use super::EditRequest;
-use super::edit_apply::append_client_edit;
-use super::edit_checks::{confirm_existing_client_op, reject_missing_doc, writer_peer_id};
+use super::edit_apply::{ClientEditAppend, append_client_edit};
+use super::edit_checks::{
+    ExistingClientOpCheck, confirm_existing_client_op, reject_missing_doc, writer_peer_id,
+};
 use super::edit_support::{reject_edit, resolve_edit_scope};
 
 pub(super) async fn handle_edit(
@@ -54,21 +56,21 @@ pub(super) async fn handle_edit(
     ) else {
         return;
     };
-    if confirm_existing_client_op(
+    if confirm_existing_client_op(ExistingClientOpCheck {
         state,
-        &scope,
+        scope: &scope,
         ch,
         scope_nonce,
         doc_id,
-        &op,
+        op: &op,
         client_id,
         client_op_id,
-    ) {
+    }) {
         return;
     }
-    append_client_edit(
+    append_client_edit(ClientEditAppend {
         state,
-        &scope,
+        scope: &scope,
         ch,
         scope_nonce,
         doc_id,
@@ -76,5 +78,5 @@ pub(super) async fn handle_edit(
         local_peer_id,
         client_id,
         client_op_id,
-    );
+    });
 }

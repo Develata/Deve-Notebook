@@ -10,18 +10,30 @@ use std::sync::Arc;
 
 use super::edit_support::{CommittedEdit, broadcast_and_ack_committed_edit, reject_edit};
 
-#[allow(clippy::too_many_arguments)]
-pub(super) fn append_client_edit(
-    state: &Arc<AppState>,
-    scope: &ResolvedRepo,
-    ch: &DualChannel,
-    scope_nonce: Option<u64>,
-    doc_id: DocId,
-    op: Op,
-    local_peer_id: PeerId,
-    client_id: u64,
-    client_op_id: u64,
-) {
+pub(super) struct ClientEditAppend<'a> {
+    pub(super) state: &'a Arc<AppState>,
+    pub(super) scope: &'a ResolvedRepo,
+    pub(super) ch: &'a DualChannel,
+    pub(super) scope_nonce: Option<u64>,
+    pub(super) doc_id: DocId,
+    pub(super) op: Op,
+    pub(super) local_peer_id: PeerId,
+    pub(super) client_id: u64,
+    pub(super) client_op_id: u64,
+}
+
+pub(super) fn append_client_edit(input: ClientEditAppend<'_>) {
+    let ClientEditAppend {
+        state,
+        scope,
+        ch,
+        scope_nonce,
+        doc_id,
+        op,
+        local_peer_id,
+        client_id,
+        client_op_id,
+    } = input;
     let op_clone = op.clone();
     let peer_id_clone = local_peer_id.clone();
     match state.repo.append_generated_client_op_in_local_repo(
