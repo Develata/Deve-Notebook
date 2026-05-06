@@ -56,6 +56,11 @@ check_contains crates/core/src/config_test.rs "trusted_cli_requested_mode_is_pre
 check_contains crates/core/src/config_test.rs "trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_not_executable"
 check_contains crates/core/src/config_test.rs "trusted_cli_mode_is_kept_when_policy_conditions_are_satisfied"
 check_contains crates/core/src/config_test.rs "trusted_cli_mode_honors_agent_bridge_env_aliases"
+check_contains crates/core/src/config_test.rs "load_checked_fails_closed_on_invalid_agent_bridge_alias_bool"
+check_contains crates/core/src/config_test.rs "load_checked_fails_closed_on_invalid_runtime_enum_value"
+check_contains crates/core/src/config_test.rs "runtime_config_value_parsers_reject_unknown_values"
+check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_ENABLED"
+check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/13_settings.md "DEVE_AI_AGENT_BRIDGE_ENABLED"
 check_contains docs/plan/13_settings.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/13_settings.md '运行模式预设: `standard` (默认), `low-spec` (低配).'

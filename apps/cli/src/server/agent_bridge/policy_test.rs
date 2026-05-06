@@ -1,4 +1,21 @@
 use super::AgentBridgePolicy;
+use deve_core::config::Config;
+
+#[test]
+fn policy_uses_resolved_config_values_as_single_authority() {
+    let mut config = Config::default();
+    config.ai.mode = "trusted-cli".to_string();
+    config.ai.native_enabled = false;
+    config.ai.agent_bridge.enabled = true;
+    config.ai.agent_bridge.trusted = false;
+    config.ai.agent_bridge.timeout_ms = 42;
+
+    let policy = AgentBridgePolicy::from_config(&config);
+
+    assert!(policy.enabled && !policy.trusted && !policy.native_enabled);
+    assert_eq!(policy.requested_mode, "trusted-cli");
+    assert_eq!(policy.timeout_ms, 42);
+}
 
 #[test]
 fn trusted_cli_default_off_policy_fails_closed() {

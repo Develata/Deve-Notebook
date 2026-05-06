@@ -36,10 +36,8 @@ pub struct AgentBridgeRunConfig {
 impl AgentBridgePolicy {
     pub fn from_config(config: &Config) -> Self {
         Self {
-            enabled: env_bool("DEVE_AI_AGENT_BRIDGE_ENABLED")
-                .unwrap_or(config.ai.agent_bridge.enabled),
-            trusted: env_bool("DEVE_AI_AGENT_BRIDGE_TRUSTED")
-                .unwrap_or(config.ai.agent_bridge.trusted),
+            enabled: config.ai.agent_bridge.enabled,
+            trusted: config.ai.agent_bridge.trusted,
             native_enabled: config.ai.native_enabled,
             requested_mode: config.ai.mode.clone(),
             cli_path: std::env::var("AGENT_CLI_PATH").ok().and_then(non_empty),
@@ -113,15 +111,6 @@ impl AgentBridgePolicy {
             timeout_ms: self.timeout_ms.max(1),
         })
     }
-}
-
-fn env_bool(key: &str) -> Option<bool> {
-    std::env::var(key).ok().map(|value| {
-        matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        )
-    })
 }
 
 fn non_empty(value: String) -> Option<String> {

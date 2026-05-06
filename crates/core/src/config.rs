@@ -21,13 +21,18 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+#[path = "config/defaults.rs"]
+mod defaults;
+#[path = "config/env_alias.rs"]
+mod env_alias;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentBridgeConfig {
     #[serde(default)]
     pub enabled: bool,
     #[serde(default)]
     pub trusted: bool,
-    #[serde(default = "default_agent_bridge_timeout_ms")]
+    #[serde(default = "defaults::agent_bridge_timeout_ms")]
     pub timeout_ms: u64,
 }
 
@@ -36,16 +41,16 @@ impl Default for AgentBridgeConfig {
         Self {
             enabled: false,
             trusted: false,
-            timeout_ms: default_agent_bridge_timeout_ms(),
+            timeout_ms: defaults::agent_bridge_timeout_ms(),
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiConfig {
-    #[serde(default = "default_ai_mode")]
+    #[serde(default = "defaults::ai_mode")]
     pub mode: String,
-    #[serde(default = "default_ai_native_enabled")]
+    #[serde(default = "defaults::ai_native_enabled")]
     pub native_enabled: bool,
     #[serde(default)]
     pub agent_bridge: AgentBridgeConfig,
@@ -54,8 +59,8 @@ pub struct AiConfig {
 impl Default for AiConfig {
     fn default() -> Self {
         Self {
-            mode: default_ai_mode(),
-            native_enabled: default_ai_native_enabled(),
+            mode: defaults::ai_mode(),
+            native_enabled: defaults::ai_native_enabled(),
             agent_bridge: AgentBridgeConfig::default(),
         }
     }
@@ -63,44 +68,44 @@ impl Default for AiConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiConfig {
-    #[serde(default = "default_ui_locale")]
+    #[serde(default = "defaults::ui_locale")]
     pub locale: String,
-    #[serde(default = "default_ui_theme")]
+    #[serde(default = "defaults::ui_theme")]
     pub theme: String,
-    #[serde(default = "default_true")]
+    #[serde(default = "defaults::true_value")]
     pub sidebar_visible: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "defaults::true_value")]
     pub statusbar_visible: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "defaults::true_value")]
     pub outline_visible: bool,
-    #[serde(default = "default_outline_width")]
+    #[serde(default = "defaults::outline_width")]
     pub outline_width: usize,
-    #[serde(default = "default_sidebar_width")]
+    #[serde(default = "defaults::sidebar_width")]
     pub sidebar_width: usize,
-    #[serde(default = "default_right_panel_width")]
+    #[serde(default = "defaults::right_panel_width")]
     pub right_panel_width: usize,
-    #[serde(default = "default_outer_gutter")]
+    #[serde(default = "defaults::outer_gutter")]
     pub outer_gutter: usize,
-    #[serde(default = "default_recent_commands_count")]
+    #[serde(default = "defaults::recent_commands_count")]
     pub recent_commands_count: usize,
-    #[serde(default = "default_recent_docs_count")]
+    #[serde(default = "defaults::recent_docs_count")]
     pub recent_docs_count: usize,
 }
 
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            locale: default_ui_locale(),
-            theme: default_ui_theme(),
-            sidebar_visible: true,
-            statusbar_visible: true,
-            outline_visible: true,
-            outline_width: default_outline_width(),
-            sidebar_width: default_sidebar_width(),
-            right_panel_width: default_right_panel_width(),
-            outer_gutter: default_outer_gutter(),
-            recent_commands_count: default_recent_commands_count(),
-            recent_docs_count: default_recent_docs_count(),
+            locale: defaults::ui_locale(),
+            theme: defaults::ui_theme(),
+            sidebar_visible: defaults::true_value(),
+            statusbar_visible: defaults::true_value(),
+            outline_visible: defaults::true_value(),
+            outline_width: defaults::outline_width(),
+            sidebar_width: defaults::sidebar_width(),
+            right_panel_width: defaults::right_panel_width(),
+            outer_gutter: defaults::outer_gutter(),
+            recent_commands_count: defaults::recent_commands_count(),
+            recent_docs_count: defaults::recent_docs_count(),
         }
     }
 }
@@ -118,12 +123,15 @@ pub enum SyncMode {
 }
 
 impl FromStr for SyncMode {
-    type Err = ();
+    type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "manual" | "strict" | "strictmode" => Ok(SyncMode::Manual),
-            _ => Ok(SyncMode::Auto), // Default to Auto
+        if s.eq_ignore_ascii_case("auto") {
+            Ok(SyncMode::Auto)
+        } else if s.eq_ignore_ascii_case("manual") {
+            Ok(SyncMode::Manual)
+        } else {
+            Err("invalid sync mode")
         }
     }
 }
@@ -139,12 +147,15 @@ pub enum AppProfile {
 }
 
 impl FromStr for AppProfile {
-    type Err = ();
+    type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "low-spec" | "lowspec" | "low" => Ok(AppProfile::LowSpec),
-            _ => Ok(AppProfile::Standard), // Default to Standard for any other value
+        if s.eq_ignore_ascii_case("standard") {
+            Ok(AppProfile::Standard)
+        } else if s.eq_ignore_ascii_case("low-spec") {
+            Ok(AppProfile::LowSpec)
+        } else {
+            Err("invalid application profile")
         }
     }
 }
@@ -162,12 +173,15 @@ pub enum MergeStrategy {
 }
 
 impl FromStr for MergeStrategy {
-    type Err = ();
+    type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "auto" | "crdt" => Ok(MergeStrategy::Auto),
-            _ => Ok(MergeStrategy::Manual), // Default to Manual (safer)
+        if s.eq_ignore_ascii_case("manual") {
+            Ok(MergeStrategy::Manual)
+        } else if s.eq_ignore_ascii_case("auto") {
+            Ok(MergeStrategy::Auto)
+        } else {
+            Err("invalid merge strategy")
         }
     }
 }
@@ -176,15 +190,15 @@ impl FromStr for MergeStrategy {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// 当前运行模式
-    #[serde(default = "default_profile")]
+    #[serde(default = "defaults::profile")]
     pub profile: AppProfile,
 
     // --- 路径配置 ---
     /// 账本目录路径 (Default: "ledger")
-    #[serde(default = "default_ledger")]
+    #[serde(default = "defaults::ledger")]
     pub ledger_dir: String,
     /// Vault 根目录 (Default: "vault")
-    #[serde(default = "default_vault")]
+    #[serde(default = "defaults::vault")]
     pub vault_path: String,
 
     // --- P2P 同步配置 ---
@@ -199,10 +213,10 @@ pub struct Config {
 
     // --- 性能调优 ---
     /// 快照保留深度
-    #[serde(default = "default_snapshot_depth")]
+    #[serde(default = "defaults::snapshot_depth")]
     pub snapshot_depth: usize,
     /// 后台压缩并发度
-    #[serde(default = "default_concurrency")]
+    #[serde(default = "defaults::concurrency")]
     pub concurrency: usize,
     /// UI defaults and harmless browser preference seeds.
     #[serde(default)]
@@ -212,56 +226,20 @@ pub struct Config {
     pub ai: AiConfig,
 }
 
-fn default_profile() -> AppProfile {
-    AppProfile::Standard
-}
-fn default_ledger() -> String {
-    "ledger".to_string()
-}
-fn default_vault() -> String {
-    "vault".to_string()
-}
-fn default_snapshot_depth() -> usize {
-    100
-}
-fn default_concurrency() -> usize {
-    4
-}
-fn default_ui_locale() -> String {
-    "auto".to_string()
-}
-fn default_ui_theme() -> String {
-    "auto".to_string()
-}
-fn default_true() -> bool {
-    true
-}
-fn default_outline_width() -> usize {
-    260
-}
-fn default_sidebar_width() -> usize {
-    250
-}
-fn default_right_panel_width() -> usize {
-    350
-}
-fn default_outer_gutter() -> usize {
-    16
-}
-fn default_recent_commands_count() -> usize {
-    3
-}
-fn default_recent_docs_count() -> usize {
-    10
-}
-fn default_ai_mode() -> String {
-    "native".to_string()
-}
-fn default_ai_native_enabled() -> bool {
-    true
-}
-fn default_agent_bridge_timeout_ms() -> u64 {
-    30_000
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            profile: defaults::profile(),
+            ledger_dir: defaults::ledger(),
+            vault_path: defaults::vault(),
+            sync_mode: SyncMode::default(),
+            merge_strategy: MergeStrategy::default(),
+            snapshot_depth: defaults::snapshot_depth(),
+            concurrency: defaults::concurrency(),
+            ui: UiConfig::default(),
+            ai: AiConfig::default(),
+        }
+    }
 }
 
 impl Config {
@@ -288,7 +266,7 @@ impl Config {
         let mut config = settings
             .try_deserialize::<Self>()
             .context("Failed to parse configuration")?;
-        config.apply_ai_env_aliases();
+        env_alias::apply_ai_aliases(&mut config)?;
         Ok(config)
     }
 
@@ -296,37 +274,9 @@ impl Config {
     pub fn load() -> Self {
         Self::load_checked().unwrap_or_else(|e| {
             tracing::warn!("Failed to parse config, using defaults: {}", e);
-            Config {
-                profile: default_profile(),
-                ledger_dir: default_ledger(),
-                vault_path: default_vault(),
-                sync_mode: SyncMode::default(),
-                merge_strategy: MergeStrategy::default(),
-                snapshot_depth: default_snapshot_depth(),
-                concurrency: default_concurrency(),
-                ui: UiConfig::default(),
-                ai: AiConfig::default(),
-            }
+            Config::default()
         })
     }
-
-    fn apply_ai_env_aliases(&mut self) {
-        if let Some(value) = env_bool("DEVE_AI_AGENT_BRIDGE_ENABLED") {
-            self.ai.agent_bridge.enabled = value;
-        }
-        if let Some(value) = env_bool("DEVE_AI_AGENT_BRIDGE_TRUSTED") {
-            self.ai.agent_bridge.trusted = value;
-        }
-    }
-}
-
-fn env_bool(key: &str) -> Option<bool> {
-    std::env::var(key).ok().map(|value| {
-        matches!(
-            value.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        )
-    })
 }
 
 #[cfg(test)]
