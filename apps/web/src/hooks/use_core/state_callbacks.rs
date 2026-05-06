@@ -2,9 +2,10 @@
 //!   - 05_network#web-ws-runtime
 //!   - 06_repository#repo-scope-runtime
 //!
-use super::callbacks::{
-    DocCallbacks, MiscCallbacks, SourceControlCallbacks, SwitchCallbacks, SyncCallbacks,
-};
+use super::callbacks::{DocCallbacks, MiscCallbacks};
+use super::callbacks_sc::SourceControlCallbacks;
+use super::callbacks_switch::SwitchCallbacks;
+use super::callbacks_sync::SyncCallbacks;
 
 pub(super) struct CoreStateCallbacks {
     pub(super) doc: DocCallbacks,

@@ -5,7 +5,7 @@
 use crate::api::WsService;
 
 use super::super::CoreState;
-use super::super::callbacks::SwitchCallbacks;
+use super::super::callbacks_switch::SwitchCallbacks;
 use super::doc::DocStateSection;
 use super::runtime::RuntimeStateSection;
 use super::source_control::SourceControlStateSection;

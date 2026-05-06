@@ -5,10 +5,11 @@
 use crate::api::WsService;
 
 use super::super::callbacks::{
-    DocCallbackSignals, DocCallbacks, MiscCallbacks, SourceControlCallbacks, SwitchCallbacks,
-    SyncCallbackSignals, SyncCallbacks, create_doc_callbacks, create_misc_callbacks,
-    create_source_control_callbacks, create_switch_callbacks, create_sync_callbacks,
+    DocCallbackSignals, DocCallbacks, MiscCallbacks, create_doc_callbacks, create_misc_callbacks,
 };
+use super::super::callbacks_sc::{SourceControlCallbacks, create_source_control_callbacks};
+use super::super::callbacks_switch::{SwitchCallbacks, create_switch_callbacks};
+use super::super::callbacks_sync::{SyncCallbackSignals, SyncCallbacks, create_sync_callbacks};
 use super::super::state::CoreSignals;
 use super::scope;
 

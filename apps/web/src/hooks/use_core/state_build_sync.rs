@@ -6,7 +6,8 @@ use deve_core::models::PeerId;
 use leptos::prelude::*;
 use std::collections::HashMap;
 
-use super::super::callbacks::{SwitchCallbacks, SyncCallbacks};
+use super::super::callbacks_switch::SwitchCallbacks;
+use super::super::callbacks_sync::SyncCallbacks;
 use super::super::state::CoreSignals;
 use super::super::types::{PeerSession, PendingBranchTarget};
 
