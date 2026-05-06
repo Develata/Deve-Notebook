@@ -7,7 +7,7 @@ use crate::api::WsService;
 use deve_core::models::PeerId;
 use leptos::prelude::Set;
 
-use super::super::effects_sc;
+use super::super::effects_sc_state::{self, clear_repo_scoped_state};
 use super::super::state::CoreSignals;
 #[path = "message_control_runtime_repo_requests.rs"]
 mod requests;
@@ -40,7 +40,7 @@ pub(super) fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_doc_diff_request_id.set(None);
     signals.set_commit_diff_request_id.set(None);
     signals.set_search_results.set(Vec::new());
-    effects_sc::clear_repo_scoped_state(super::super::effects_sc_state::ScStateResetSignals {
+    clear_repo_scoped_state(effects_sc_state::ScStateResetSignals {
         set_staged: signals.set_staged_changes,
         set_unstaged: signals.set_unstaged_changes,
         set_changes_request_id: signals.set_changes_request_id,
