@@ -23,6 +23,19 @@ check_absent() {
   fi
 }
 
+check_case_block() {
+  local file="$1"
+  local case_id="$2"
+  local pattern="$3"
+  awk -v case_id="$case_id" -v pattern="$pattern" '
+    $0 == "- case_id: " case_id { in_case = 1; next }
+    in_case && $0 ~ /^- case_id: / { in_case = 0 }
+    in_case && index($0, pattern) { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$ROOT_DIR/$file" \
+    || fail "missing '$pattern' in $file acceptance case $case_id"
+}
+
 # DIFF-009: Command Palette Git actions remain Planned / Optional. Source Control panel
 # owns the current stage/commit/publish entry points.
 check_contains docs/plan/12_commands.md "Source Control / Git-like Workflow"
@@ -64,6 +77,24 @@ check_contains apps/cli/src/server/ws/route/source_control.rs "source_control::h
 check_contains apps/cli/src/server/ws/route/source_control.rs "source_control_scope_nonce_gate_rejects_missing_scope_before_handler"
 check_contains apps/web/src/components/sidebar/source_control/commit_actions.rs "on_commit_and_push.run(())"
 check_contains apps/web/src/i18n/source_control.rs "Commit & Push"
+
+# UI-DIFF-001: long Diff renders a bounded first viewport before mounting the
+# full document surface.
+check_contains docs/acceptance-cases/05_ui.md "case_id: UI-DIFF-001"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-001 "run: scripts/check-source-control-baseline.sh"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-001 "run: cargo test -p deve_web diff_first_viewport -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-001 "cli_assert: diff_first_viewport_window_bound true"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-001 "cli_assert: diff_first_viewport_spacer_bound true"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-001 "cli_assert: diff_first_viewport_marker_bound true"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-001|manual-chrome|docs/features/07_diff_logic.md|diff first viewport workflow"
+check_contains apps/web/src/components/diff_view/unified.rs "pub const DIFF_VIEWPORT_CHUNK_SIZE: usize = 80;"
+check_contains apps/web/src/components/diff_view/unified.rs "fn diff_first_viewport_initial_window_is_bounded_for_long_doc()"
+check_contains apps/web/src/components/diff_view/unified.rs "fn diff_first_viewport_spacers_preserve_scroll_extent()"
+check_contains apps/web/src/components/diff_view/unified.rs "fn diff_first_viewport_clamps_stale_scroll_after_shorter_doc()"
+check_contains apps/web/src/components/diff_view/viewport.rs "pub const DEFAULT_DIFF_VIEWPORT_HEIGHT_PX: i32 = 600;"
+check_contains apps/web/src/components/diff_view/viewport.rs "fn diff_first_viewport_default_height_is_stable()"
+check_contains apps/web/src/components/diff_view/unified_pane.rs "data-deve-diff-first-viewport=move ||"
+check_contains apps/web/src/components/diff_view/unified_pane.rs "fn diff_first_viewport_marker_requires_ready_visible_rows()"
 
 # CommitAndPush is a publish entry point that currently completes as CommitAck,
 # not a separate user-visible SyncPush result flow.

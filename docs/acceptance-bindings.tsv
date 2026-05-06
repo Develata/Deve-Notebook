@@ -49,7 +49,7 @@ TERM-002|manual-doc|docs/features/01_terminology.md|normative language review
 TERM-003|manual-doc|docs/features/01_terminology.md|forbidden term review
 UI-DESK-001|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop shell workflow
 UI-DESK-002|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop window workflow
-UI-DIFF-001|manual-chrome|docs/features/07_diff_logic.md|source-control UI workflow
+UI-DIFF-001|manual-chrome|docs/features/07_diff_logic.md|diff first viewport workflow
 UI-DIFF-002|manual-chrome|docs/features/07_diff_logic.md|stage/unstage UI workflow
 UI-DIFF-003|manual-chrome|docs/features/07_diff_logic.md|commit UI workflow
 UI-DIFF-004|manual-chrome|docs/features/07_diff_logic.md|discard UI workflow

@@ -10,6 +10,14 @@ use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
 
+pub(crate) fn first_viewport_rendered_marker(
+    compute_state: ComputePhase,
+    visible_rows: usize,
+) -> Option<&'static str> {
+    (compute_state == ComputePhase::Ready && visible_rows > 0)
+        .then_some("diff-first-viewport-rendered")
+}
+
 #[component]
 pub fn UnifiedPane(
     lines: Memo<Vec<UnifiedRow>>,
@@ -85,10 +93,40 @@ pub fn UnifiedPane(
                         format!("height: {}px", window.get().spacer_after_px(total))
                     }
                 ></div>
-                <Show when=move || compute_state.get() == ComputePhase::Ready && !visible_lines.get().is_empty()>
-                    <div class="diff-first-viewport-rendered hidden"></div>
+                <Show when=move || {
+                    first_viewport_rendered_marker(compute_state.get(), visible_lines.get().len()).is_some()
+                }>
+                    <div
+                        class="diff-first-viewport-rendered hidden"
+                        data-deve-diff-first-viewport=move || {
+                            first_viewport_rendered_marker(compute_state.get(), visible_lines.get().len()).unwrap_or("")
+                        }
+                    ></div>
                 </Show>
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::first_viewport_rendered_marker;
+    use crate::components::diff_view::state::ComputePhase;
+
+    #[test]
+    fn diff_first_viewport_marker_requires_ready_visible_rows() {
+        assert_eq!(
+            first_viewport_rendered_marker(ComputePhase::Ready, 1),
+            Some("diff-first-viewport-rendered")
+        );
+        assert_eq!(first_viewport_rendered_marker(ComputePhase::Ready, 0), None);
+        assert_eq!(
+            first_viewport_rendered_marker(ComputePhase::PartialReady, 1),
+            None
+        );
+        assert_eq!(
+            first_viewport_rendered_marker(ComputePhase::Computing, 1),
+            None
+        );
     }
 }

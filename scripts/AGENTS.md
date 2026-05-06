@@ -33,7 +33,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-diff-color-baseline.sh` | Verifies diff gutter colors use canonical source-control semantic tokens |
 | `check-large-doc-baseline.sh` | Verifies large-document snapshot-first, batch replay, and search gate contracts |
 | `check-ai-baseline.sh` | Verifies Native AI slash modes, planned palette command boundaries, and trusted-cli default-off gates |
-| `check-source-control-baseline.sh` | Verifies Source Control panel commit/publish boundaries and planned Git palette commands |
+| `check-source-control-baseline.sh` | Verifies Source Control panel commit/publish boundaries, diff first-viewport rendering, and planned Git palette commands |
 | `check-source-control-smoke-hygiene.sh` | Verifies Source Control smoke tests use read-only `sc-status` and do not assume Git-clean app state |
 | `check-dev-data-health-baseline.sh` | Verifies projection health diagnostics expose repair hints and fail-closed authority corruption boundaries |
 | `check-native-track-boundary.sh` | Verifies Desktop/Mobile native adapter boundaries remain future-safe and do not redefine core authority |
