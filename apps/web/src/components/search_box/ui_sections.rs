@@ -4,7 +4,7 @@
 //!
 use crate::components::icons::{GitBranch, Search, Terminal};
 use crate::components::search_box::SearchUiMode;
-use crate::components::search_box::result_item::result_item;
+use crate::components::search_box::result_item::{SearchResultItemView, result_item};
 use crate::components::search_box::types::SearchResult;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
@@ -95,7 +95,7 @@ pub fn results_panel(
                                     key=|(idx, r)| format!("{}-{}", idx, r.id)
                                     children=move |(idx, item)| {
                                         let is_sel = idx == idx_sel;
-                                        result_item(
+                                        result_item(SearchResultItemView {
                                             idx,
                                             item,
                                             is_sel,
@@ -104,9 +104,9 @@ pub fn results_panel(
                                             set_show,
                                             set_query,
                                             input_ref,
-                                            core.clone(),
+                                            core: core.clone(),
                                             set_recent_move_dirs,
-                                        )
+                                        })
                                     }
                                 />
                             </div>

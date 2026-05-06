@@ -20,20 +20,33 @@ mod result_item_sections;
 #[path = "result_item_state.rs"]
 mod result_item_state;
 
+pub struct SearchResultItemView {
+    pub idx: usize,
+    pub item: SearchResult,
+    pub is_sel: bool,
+    pub selected_index: Signal<usize>,
+    pub set_selected_index: WriteSignal<usize>,
+    pub set_show: WriteSignal<bool>,
+    pub set_query: WriteSignal<String>,
+    pub input_ref: NodeRef<leptos::html::Input>,
+    pub core: CoreState,
+    pub set_recent_move_dirs: WriteSignal<Vec<String>>,
+}
+
 /// 单条结果项，支持鼠标与键盘操作。
-#[allow(clippy::too_many_arguments)]
-pub fn result_item(
-    idx: usize,
-    item: SearchResult,
-    is_sel: bool,
-    selected_index: Signal<usize>,
-    set_selected_index: WriteSignal<usize>,
-    set_show: WriteSignal<bool>,
-    set_query: WriteSignal<String>,
-    input_ref: NodeRef<leptos::html::Input>,
-    core: CoreState,
-    set_recent_move_dirs: WriteSignal<Vec<String>>,
-) -> impl IntoView {
+pub fn result_item(view: SearchResultItemView) -> impl IntoView {
+    let SearchResultItemView {
+        idx,
+        item,
+        is_sel,
+        selected_index,
+        set_selected_index,
+        set_show,
+        set_query,
+        input_ref,
+        core,
+        set_recent_move_dirs,
+    } = view;
     let is_mobile = result_item_state::is_mobile();
     let detail_text = item.detail.clone();
     let detail_text_cond = detail_text.clone();
