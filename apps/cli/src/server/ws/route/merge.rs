@@ -16,13 +16,13 @@ pub(super) async fn route_merge(
     msg: ClientMessage,
 ) {
     if let Some(scope_nonce) = requested_scope_nonce(&msg)
-        && let Err(error) =
-            super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "merge control")
+        && super::scope_guard::reject_invalid_browser_scope_nonce(
+            ch,
+            session,
+            scope_nonce,
+            "merge control",
+        )
     {
-        ch.send_protocol_error_with_scope_nonce(
-            error,
-            super::scope_guard::response_scope_nonce(session, scope_nonce),
-        );
         return;
     }
     match msg {

@@ -16,13 +16,13 @@ pub(super) async fn route_docs(
     msg: ClientMessage,
 ) {
     if let Some(scope_nonce) = requested_scope_nonce(&msg)
-        && let Err(error) =
-            super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, "document")
+        && super::scope_guard::reject_invalid_browser_scope_nonce(
+            ch,
+            session,
+            scope_nonce,
+            "document",
+        )
     {
-        ch.send_protocol_error_with_scope_nonce(
-            error,
-            super::scope_guard::response_scope_nonce(session, scope_nonce),
-        );
         return;
     }
     match msg {
@@ -156,7 +156,7 @@ mod tests {
         for msg in doc_messages_with_scope(None) {
             route_docs(&state, &ch, &mut session, msg).await;
             assert_scope_guard_error(
-                recv_protocol_error(&mut uni_rx).await?,
+                recv_unicast_message(&mut uni_rx).await?,
                 Some(17),
                 "document scope nonce missing",
             );
@@ -173,10 +173,25 @@ mod tests {
         for msg in doc_messages_with_scope(Some(16)) {
             route_docs(&state, &ch, &mut session, msg).await;
             assert_scope_guard_error(
-                recv_protocol_error(&mut uni_rx).await?,
+                recv_unicast_message(&mut uni_rx).await?,
                 Some(16),
                 "document scope nonce is stale",
             );
+        }
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn non_doc_message_falls_through_to_core_route() -> anyhow::Result<()> {
+        let (_dir, state, _repo_id) = build_state()?;
+        let (ch, mut uni_rx) = unicast_channel(&state);
+        let mut session = browser_session(17);
+
+        route_docs(&state, &ch, &mut session, ClientMessage::Ping).await;
+
+        match recv_unicast_message(&mut uni_rx).await? {
+            ServerMessage::Pong => {}
+            other => panic!("expected Pong, got {other:?}"),
         }
         Ok(())
     }
@@ -216,7 +231,7 @@ mod tests {
         ]
     }
 
-    async fn recv_protocol_error(
+    async fn recv_unicast_message(
         uni_rx: &mut tokio::sync::mpsc::Receiver<ServerMessage>,
     ) -> anyhow::Result<ServerMessage> {
         Ok(timeout(Duration::from_secs(2), uni_rx.recv())

@@ -18,8 +18,7 @@ mod source_control;
 
 /// WebSocket 消息路由入口。
 ///
-/// 通过分层路由将大 match 拆分为多个小模块，
-/// 以满足单文件行数限制并降低认知负担。
+/// 通过分层路由把协议消息收敛到对应业务域，避免 route 层拥有 handler 语义。
 pub(crate) async fn route_message(
     state: &Arc<AppState>,
     ch: &DualChannel,

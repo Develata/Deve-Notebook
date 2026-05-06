@@ -17,13 +17,8 @@ pub(super) async fn route_scoped_core(
     let Some((scope_nonce, scope_name)) = requested_scope_nonce(&msg) else {
         return Some(msg);
     };
-    if let Err(error) =
-        super::scope_guard::validate_browser_scope_nonce(session, scope_nonce, scope_name)
+    if super::scope_guard::reject_invalid_browser_scope_nonce(ch, session, scope_nonce, scope_name)
     {
-        ch.send_protocol_error_with_scope_nonce(
-            error,
-            super::scope_guard::response_scope_nonce(session, scope_nonce),
-        );
         return None;
     }
     match msg {
