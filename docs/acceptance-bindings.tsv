@@ -88,6 +88,7 @@ UI-MOB-018|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile regressi
 UI-MOB-CHAT-REG-001|manual-chrome|docs/features/10_ai_agent.md|mobile chat regression
 UI-MOB-CHAT-REG-002|manual-chrome|docs/features/10_ai_agent.md|mobile chat streaming regression
 UI-MOB-CHAT-REG-003|manual-chrome|docs/features/10_ai_agent.md|mobile chat recovery regression
+UI-MOB-CHAT-REG-004|manual-chrome|docs/features/10_ai_agent.md|mobile chat readability regression
 UI-WEB-001|manual-chrome|docs/features/08_ui_design_01_web.md|web shell workflow
 UI-WEB-002|manual-chrome|docs/features/08_ui_design_01_web.md|web layout workflow
 UI-WEB-003|manual-chrome|docs/features/08_ui_design_01_web.md|web reconnect workflow

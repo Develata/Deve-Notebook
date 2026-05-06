@@ -16,6 +16,44 @@ pub(crate) fn should_show_apply_label(
     !is_user_message && session_mode == ChatSessionMode::Build
 }
 
+pub(crate) fn chat_message_bubble_class(is_user: bool, mobile: bool) -> String {
+    format!(
+        "rounded px-3 py-2 text-sm leading-relaxed {} {}",
+        if mobile { "max-w-[96%]" } else { "max-w-[90%]" },
+        if is_user {
+            if mobile {
+                "bg-chat-user text-primary self-end ml-3"
+            } else {
+                "bg-chat-user text-primary self-end ml-8"
+            }
+        } else if mobile {
+            "bg-panel text-primary border border-default self-start mr-3"
+        } else {
+            "bg-panel text-primary border border-default self-start mr-8"
+        }
+    )
+}
+
+pub(crate) fn chat_markdown_body_class(_mobile: bool) -> &'static str {
+    "markdown-body break-words overflow-x-auto"
+}
+
+pub(crate) fn mobile_chat_message_marker(mobile: bool) -> Option<&'static str> {
+    mobile.then_some("readable")
+}
+
+pub(crate) fn mobile_chat_wrap_marker(mobile: bool) -> Option<&'static str> {
+    mobile.then_some("break-words")
+}
+
+pub(crate) fn mobile_chat_code_scroll_marker(mobile: bool) -> Option<&'static str> {
+    mobile.then_some("horizontal")
+}
+
+pub(crate) fn mobile_chat_timestamp_marker(mobile: bool) -> Option<&'static str> {
+    mobile.then_some("visible")
+}
+
 /// Handles click events on markdown content.
 /// Prevents link navigation unless Ctrl/Meta key is pressed.
 fn handle_link_click(ev: web_sys::MouseEvent) {
@@ -71,26 +109,23 @@ pub fn MessageItem(
                 <span class="text-xs text-muted">{sender_text}</span>
             </div>
 
-            <div class={format!("rounded px-3 py-2 text-sm leading-relaxed {} {}",
-                if mobile { "max-w-[96%]" } else { "max-w-[90%]" },
-                if is_user {
-                    if mobile {
-                        "bg-chat-user text-primary self-end ml-3"
-                    } else {
-                        "bg-chat-user text-primary self-end ml-8"
-                    }
-                } else if mobile {
-                    "bg-panel text-primary border border-default self-start mr-3"
-                } else {
-                    "bg-panel text-primary border border-default self-start mr-8"
-                }
-            )}>
+            <div
+                class=chat_message_bubble_class(is_user, mobile)
+                data-deve-mobile-chat-message=move || mobile_chat_message_marker(mobile)
+            >
                 <div
-                    class="markdown-body break-words overflow-x-auto"
+                    class=move || chat_markdown_body_class(mobile)
+                    data-deve-mobile-chat-wrap=move || mobile_chat_wrap_marker(mobile)
+                    data-deve-mobile-chat-code-scroll=move || mobile_chat_code_scroll_marker(mobile)
                     inner_html=content_html
                     on:click=handle_link_click
                 ></div>
-                <div class="mt-1 text-[10px] text-muted text-right">{ts_text}</div>
+                <div
+                    class="mt-1 text-[10px] text-muted text-right"
+                    data-deve-mobile-chat-timestamp=move || mobile_chat_timestamp_marker(mobile)
+                >
+                    {ts_text}
+                </div>
             </div>
         </div>
     }
@@ -98,7 +133,11 @@ pub fn MessageItem(
 
 #[cfg(test)]
 mod tests {
-    use super::should_show_apply_label;
+    use super::{
+        chat_markdown_body_class, chat_message_bubble_class, mobile_chat_code_scroll_marker,
+        mobile_chat_message_marker, mobile_chat_timestamp_marker, mobile_chat_wrap_marker,
+        should_show_apply_label,
+    };
     use crate::components::chat::slash_commands::ChatSessionMode;
 
     #[test]
@@ -106,5 +145,36 @@ mod tests {
         assert!(!should_show_apply_label(false, ChatSessionMode::Plan));
         assert!(should_show_apply_label(false, ChatSessionMode::Build));
         assert!(!should_show_apply_label(true, ChatSessionMode::Build));
+    }
+
+    #[test]
+    fn mobile_chat_readability_bubble_keeps_wide_wrap_surface() {
+        let assistant = chat_message_bubble_class(false, true);
+        let user = chat_message_bubble_class(true, true);
+
+        assert!(assistant.contains("max-w-[96%]"));
+        assert!(assistant.contains("self-start"));
+        assert!(user.contains("max-w-[96%]"));
+        assert!(user.contains("self-end"));
+    }
+
+    #[test]
+    fn mobile_chat_readability_markdown_wrap_and_code_scroll_are_bound() {
+        let class = chat_markdown_body_class(true);
+
+        assert!(class.contains("break-words"));
+        assert!(class.contains("overflow-x-auto"));
+        assert_eq!(mobile_chat_wrap_marker(true), Some("break-words"));
+        assert_eq!(mobile_chat_code_scroll_marker(true), Some("horizontal"));
+    }
+
+    #[test]
+    fn mobile_chat_readability_markers_are_mobile_only() {
+        assert_eq!(mobile_chat_message_marker(true), Some("readable"));
+        assert_eq!(mobile_chat_timestamp_marker(true), Some("visible"));
+        assert_eq!(mobile_chat_message_marker(false), None);
+        assert_eq!(mobile_chat_wrap_marker(false), None);
+        assert_eq!(mobile_chat_code_scroll_marker(false), None);
+        assert_eq!(mobile_chat_timestamp_marker(false), None);
     }
 }
