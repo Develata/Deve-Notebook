@@ -131,6 +131,39 @@ fn status_lines_include_per_commit_lag_and_retry_hint() {
 }
 
 #[test]
+fn status_lines_keep_ordered_lagging_output_contract() {
+    let lines = status_lines_at(
+        "default",
+        &GitMirrorStatus {
+            repo_root: std::path::PathBuf::from("vault/default"),
+            notegit_present: true,
+            git_metadata_kind: GitMetadataKind::Directory,
+            gitignore_protects_notegit: true,
+            state: GitMirrorState::Ready,
+            reason: None,
+        },
+        &GitMirrorSummary {
+            queued: 1,
+            committed: 0,
+            out_of_sync: 0,
+        },
+        &[record("deve-1", GitMirrorCommitState::Queued, 7, None)],
+        11,
+    );
+
+    assert_eq!(
+        lines,
+        vec![
+            "git_status[default]: state=ready queue_state=queued git=directory notegit=present gitignore_notegit=protected queued=1 committed=0 out_of_sync=0",
+            "  repo_root: vault/default",
+            "  lagging_records=1",
+            "  lag[1]: deve_commit=deve-1 state=queued ledger_seq=7 attempts=1 git_commit=- queued_lag_ms=10 updated_lag_ms=9 queued_at_ms=1 updated_at_ms=2",
+            "  next_action: run `deve_cli git mirror --repo default` to mirror queued Deve commit(s)",
+        ]
+    );
+}
+
+#[test]
 fn status_lines_include_git_mirror_failure_metadata() {
     let mut failed = record(
         "deve-1",
@@ -311,6 +344,32 @@ fn mirror_report_lines_include_noop_and_repair_semantics() {
         failed
             .iter()
             .any(|line| line.contains("--retry-out-of-sync"))
+    );
+}
+
+#[test]
+fn mirror_report_lines_keep_ordered_success_contract() {
+    let lines = mirror_report_lines(
+        "default",
+        &GitMirrorRunReport {
+            attempted: 1,
+            committed: 1,
+            out_of_sync: 0,
+            skipped: 0,
+            records: vec![GitMirrorRecord {
+                git_commit_id: Some("abc123".into()),
+                ..record("deve-1", GitMirrorCommitState::Committed, 7, None)
+            }],
+        },
+    );
+
+    assert_eq!(
+        lines,
+        vec![
+            "git_mirror[default]: attempted=1 committed=1 out_of_sync=0 skipped=0",
+            "  record[1]: deve_commit=deve-1 state=committed ledger_seq=7 attempts=1 git_commit=abc123 queued_at_ms=1 updated_at_ms=2",
+            "  mirror_hint: attempted records are mirrored",
+        ]
     );
 }
 

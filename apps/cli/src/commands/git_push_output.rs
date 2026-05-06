@@ -7,7 +7,7 @@
 
 use deve_core::git_bridge::GitMirrorPushReport;
 
-use super::{git_command, shell_quote};
+use super::command::{git_command, shell_quote};
 
 pub(crate) fn print_push_report(repo_name: &str, report: &GitMirrorPushReport) {
     for line in push_report_lines(repo_name, report) {
