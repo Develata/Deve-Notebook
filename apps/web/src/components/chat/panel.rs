@@ -25,6 +25,11 @@ mod panel_status;
 use self::panel_effects::{attach_plugin_response_effect, attach_scope_reset_effect};
 use self::panel_status::{error_notice, loading_notice};
 
+pub(crate) fn chat_retry_prompt(last_prompt: &str) -> Option<String> {
+    let prompt = last_prompt.trim();
+    (!prompt.is_empty()).then(|| prompt.to_string())
+}
+
 #[component]
 pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl IntoView {
     let core = expect_context::<CoreState>();
@@ -70,8 +75,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     let send_example = make_send_example(send_text.clone(), set_input);
     let on_apply = make_on_apply(core.clone());
     let retry = Callback::new(move |_| {
-        let prompt = last_prompt.get_untracked();
-        if !prompt.is_empty() {
+        if let Some(prompt) = chat_retry_prompt(&last_prompt.get_untracked()) {
             send_text.run(prompt);
         }
     });
@@ -117,5 +121,24 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
                 mobile=mobile
             />
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::chat_retry_prompt;
+
+    #[test]
+    fn mobile_chat_error_retry_uses_last_prompt() {
+        assert_eq!(
+            chat_retry_prompt("trigger_error"),
+            Some("trigger_error".to_string())
+        );
+    }
+
+    #[test]
+    fn mobile_chat_error_retry_ignores_empty_prompt() {
+        assert_eq!(chat_retry_prompt(""), None);
+        assert_eq!(chat_retry_prompt("   "), None);
     }
 }
