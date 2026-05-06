@@ -8,6 +8,10 @@ use leptos::prelude::*;
 
 const FOOTER_HEIGHT_PX: i32 = 0;
 
+pub(super) fn toolbar_button_class() -> &'static str {
+    "h-11 min-w-[44px] px-2 rounded-md border border-default bg-panel text-primary active:bg-hover text-xs font-medium"
+}
+
 pub(super) fn mobile_toolbar_style(keyboard_offset: i32) -> String {
     format!(
         "bottom: calc({}px + {}px + env(safe-area-inset-bottom));",
@@ -47,7 +51,7 @@ pub fn MobileAccessoryToolbar(
         ffi::mobile_undo();
     });
 
-    let base = "h-9 min-w-9 px-2 rounded-md border border-default bg-panel text-primary active:bg-hover text-xs font-medium";
+    let base = toolbar_button_class();
     let disabled = move || readonly.get();
 
     view! {
@@ -59,14 +63,14 @@ pub fn MobileAccessoryToolbar(
                 style=move || mobile_toolbar_style(keyboard_offset.get())
             >
                 <div class="flex items-center gap-1 overflow-x-auto">
-                    <button class=base on:click=move |_| on_tab.run(()) disabled=disabled title=move || t::common::tab(locale.get())>"⇥"</button>
-                    <button class=base on:click=move |_| on_h1.run(()) disabled=disabled title=move || t::common::heading(locale.get())>"H"</button>
-                    <button class=base on:click=move |_| on_list.run(()) disabled=disabled title=move || t::common::list(locale.get())>"•"</button>
-                    <button class=base on:click=move |_| on_task.run(()) disabled=disabled title=move || t::common::task(locale.get())>"☑"</button>
-                    <button class=base on:click=move |_| on_bold.run(()) disabled=disabled title=move || t::common::bold(locale.get())>"B"</button>
-                    <button class=base on:click=move |_| on_italic.run(()) disabled=disabled title=move || t::common::italic(locale.get())>"I"</button>
-                    <button class=base on:click=move |_| on_code.run(()) disabled=disabled title=move || t::common::code(locale.get())>"<>"</button>
-                    <button class=base on:click=move |_| on_undo.run(()) title=move || t::common::undo(locale.get())>"↩"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_tab.run(()) disabled=disabled title=move || t::common::tab(locale.get())>"⇥"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_h1.run(()) disabled=disabled title=move || t::common::heading(locale.get())>"H"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_list.run(()) disabled=disabled title=move || t::common::list(locale.get())>"•"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_task.run(()) disabled=disabled title=move || t::common::task(locale.get())>"☑"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_bold.run(()) disabled=disabled title=move || t::common::bold(locale.get())>"B"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_italic.run(()) disabled=disabled title=move || t::common::italic(locale.get())>"I"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_code.run(()) disabled=disabled title=move || t::common::code(locale.get())>"<>"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_undo.run(()) title=move || t::common::undo(locale.get())>"↩"</button>
                 </div>
             </div>
         </Show>
@@ -75,7 +79,7 @@ pub fn MobileAccessoryToolbar(
 
 #[cfg(test)]
 mod tests {
-    use super::mobile_toolbar_style;
+    use super::{mobile_toolbar_style, toolbar_button_class};
 
     #[test]
     fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard() {
@@ -83,5 +87,12 @@ mod tests {
             mobile_toolbar_style(312),
             "bottom: calc(312px + 0px + env(safe-area-inset-bottom));"
         );
+    }
+
+    #[test]
+    fn mobile_touch_targets_accessory_toolbar_buttons_are_at_least_44px() {
+        let class = toolbar_button_class();
+        assert!(class.contains("h-11"));
+        assert!(class.contains("min-w-[44px]"));
     }
 }

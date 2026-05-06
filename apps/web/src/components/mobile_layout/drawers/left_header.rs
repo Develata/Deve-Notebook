@@ -6,6 +6,10 @@ use crate::components::icons::X;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+pub(super) fn drawer_close_button_class() -> &'static str {
+    "h-11 min-w-[44px] px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
+}
+
 #[component]
 pub(super) fn LeftDrawerHeader(
     locale: RwSignal<Locale>,
@@ -19,7 +23,8 @@ pub(super) fn LeftDrawerHeader(
         >
             <span class="text-primary flex items-center gap-1">{move || title.get()}</span>
             <button
-                class="h-11 min-w-[44px] px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
+                data-deve-mobile-touch-target="drawer_close_buttons"
+                class=drawer_close_button_class()
                 title=move || t::sidebar::close_file_tree(locale.get())
                 aria-label=move || t::sidebar::close_file_tree(locale.get())
                 on:click=move |_| on_close.run(())
@@ -27,5 +32,17 @@ pub(super) fn LeftDrawerHeader(
                 <X class="w-4 h-4 mx-auto"/>
             </button>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::drawer_close_button_class;
+
+    #[test]
+    fn mobile_touch_targets_left_drawer_close_button_is_at_least_44px() {
+        let class = drawer_close_button_class();
+        assert!(class.contains("h-11"));
+        assert!(class.contains("min-w-[44px]"));
     }
 }
