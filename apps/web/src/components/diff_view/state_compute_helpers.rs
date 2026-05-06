@@ -9,6 +9,7 @@ use super::super::super::model::{DiffAlgorithm, compute_diff_preview_with_meta};
 use super::super::super::unified::DIFF_VIEWPORT_CHUNK_SIZE;
 
 pub const INITIAL_DIFF_PREVIEW_LINES: usize = DIFF_VIEWPORT_CHUNK_SIZE * 2;
+pub const INITIAL_DIFF_PREVIEW_BYTES: usize = 64 * 1024;
 
 pub struct InitialDiff {
     pub key: Option<String>,
@@ -83,11 +84,37 @@ pub fn initial_cached_or_preview(
 }
 
 pub fn preview_diff(old_content: &str, new_content: &str) -> (DiffLines, DiffAlgorithm) {
-    compute_diff_preview_with_meta(old_content, new_content, INITIAL_DIFF_PREVIEW_LINES)
+    let old_preview = preview_input(old_content);
+    let new_preview = preview_input(new_content);
+    compute_diff_preview_with_meta(old_preview, new_preview, INITIAL_DIFF_PREVIEW_LINES)
 }
 
 fn exceeds_preview_window(content: &str) -> bool {
-    content.lines().nth(INITIAL_DIFF_PREVIEW_LINES).is_some()
+    content.len() > INITIAL_DIFF_PREVIEW_BYTES
+        || content.lines().nth(INITIAL_DIFF_PREVIEW_LINES).is_some()
+}
+
+fn preview_input(content: &str) -> &str {
+    let mut end = 0;
+    let mut newline_count = 0;
+    for (idx, ch) in content.char_indices() {
+        let next_end = idx + ch.len_utf8();
+        if next_end > INITIAL_DIFF_PREVIEW_BYTES {
+            break;
+        }
+        end = next_end;
+        if ch == '\n' {
+            newline_count += 1;
+            if newline_count >= INITIAL_DIFF_PREVIEW_LINES {
+                break;
+            }
+        }
+    }
+    if end == content.len() {
+        content
+    } else {
+        &content[..end]
+    }
 }
 
 #[cfg(test)]
@@ -124,8 +151,8 @@ pub fn cache_completed_diff(key: String, value: (DiffLines, DiffAlgorithm)) {
 #[cfg(test)]
 mod tests {
     use super::{
-        INITIAL_DIFF_PREVIEW_LINES, InitialKeyPolicy, initial_cached_or_preview,
-        initial_diff_key_policy, recompute_with_cache,
+        INITIAL_DIFF_PREVIEW_BYTES, INITIAL_DIFF_PREVIEW_LINES, InitialKeyPolicy,
+        initial_cached_or_preview, initial_diff_key_policy, preview_input, recompute_with_cache,
     };
 
     fn long_lines(prefix: &str) -> String {
@@ -171,6 +198,61 @@ mod tests {
             initial_diff_key_policy("a\nb\nc", "a\nb2\nc"),
             InitialKeyPolicy::BuildSynchronously
         );
+    }
+
+    #[test]
+    fn diff_first_viewport_large_single_line_defers_cache_key() {
+        let old_content = "a".repeat(INITIAL_DIFF_PREVIEW_BYTES + 1);
+        let new_content = "b".repeat(INITIAL_DIFF_PREVIEW_BYTES + 1);
+
+        assert_eq!(
+            initial_diff_key_policy(&old_content, &new_content),
+            InitialKeyPolicy::DeferUntilFullCompute
+        );
+    }
+
+    #[test]
+    fn diff_first_viewport_large_single_line_preview_is_byte_bounded() {
+        let old_content = "a".repeat(INITIAL_DIFF_PREVIEW_BYTES + 1);
+        let new_content = "b".repeat(INITIAL_DIFF_PREVIEW_BYTES + 1);
+        let initial = initial_cached_or_preview(
+            "repo-preview-large-line",
+            "path.md",
+            &old_content,
+            &new_content,
+            "unified",
+            3,
+        );
+        let max_left = initial
+            .value
+            .0
+            .0
+            .iter()
+            .map(|line| line.content.len())
+            .max()
+            .unwrap_or(0);
+        let max_right = initial
+            .value
+            .0
+            .1
+            .iter()
+            .map(|line| line.content.len())
+            .max()
+            .unwrap_or(0);
+
+        assert!(!initial.complete);
+        assert!(initial.key.is_none());
+        assert!(max_left <= INITIAL_DIFF_PREVIEW_BYTES);
+        assert!(max_right <= INITIAL_DIFF_PREVIEW_BYTES);
+    }
+
+    #[test]
+    fn diff_first_viewport_preview_respects_utf8_byte_boundary() {
+        let content = "€".repeat((INITIAL_DIFF_PREVIEW_BYTES / "€".len()) + 2);
+        let preview = preview_input(&content);
+
+        assert!(preview.len() <= INITIAL_DIFF_PREVIEW_BYTES);
+        assert!(content.starts_with(preview));
     }
 
     #[test]
