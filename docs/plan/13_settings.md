@@ -85,6 +85,8 @@
 | `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
 | `merge_strategy`        | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `07_diff_logic.md §Conflict Resolution`。 |
 
+`profile` 只提供默认预设。显式 `config.toml` 或环境变量 **MUST** 覆盖 profile preset；未显式设置时，`low-spec` **MUST** 使用 `snapshot_depth = 10`、`MEM_CACHE_MB = 32`，`standard` **MUST** 使用 `snapshot_depth = 100`、`MEM_CACHE_MB = 128`。
+
 ### 2.3 AI (人工智能)
 | Key                        | Type   | Default      | Description |
 | :------------------------- | :----- | :----------- | :---------- |

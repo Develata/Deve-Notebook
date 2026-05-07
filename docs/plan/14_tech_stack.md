@@ -117,7 +117,7 @@ Scaffold 规则：
 
 ### High/Low Profile
 *   **Low-Spec (≤768MB)**: CSR Only, No Search Index, Snapshot Pruning.
-*   **Standard (≥1GB)**: SSR, Search, Graph.
+*   **Standard (≥1GB)**: SSR, Search, Graph projection.
 
 ### Profile → Feature Matrix
 
@@ -126,10 +126,12 @@ Scaffold 规则：
 | CSR | ✅ | ✅ |
 | SSR | ❌ | ✅ |
 | Full-Text Search (Tantivy) | ❌ | ✅ |
-| Graph Visualization | ❌ | ✅ |
+| Read-only Graph Projection | ✅ | ✅ |
+| High-performance Graph Renderer | ❌ | Default off / feature-gated |
 | Snapshot Depth default | 10 | 100 |
 | MEM_CACHE_MB default | 32 | 128 |
-| Trusted External Agent Runtime / Calculation Runtime | ❌ | ✅ (Future, interface-only) |
+| Trusted External Agent Bridge | ❌ | Interface reserved / default off |
+| Calculation Runtime | ❌ | Interface reserved / no runtime |
 
 ## 4. WASM Memory Constraints
 
