@@ -2,33 +2,50 @@
 //!   - 03_rendering#document-authority-bridge
 //!   - 16_web_thin_client_ledger#web-edit-intent
 //!
-use deve_core::models::{DocId, Op};
+use deve_core::models::{DocId, Op, RepoId};
 
 use super::{PendingLocalEdit, PendingLocalEdits};
 
 pub fn push_pending_edit(
     pending: &mut PendingLocalEdits,
+    repo_id: RepoId,
     doc_id: DocId,
+    scope_nonce: u64,
     client_id: u64,
     client_op_id: u64,
     base_version: u64,
     op: Op,
 ) {
     pending.entry(doc_id).or_default().push(PendingLocalEdit {
+        repo_id,
         client_id,
+        doc_id,
+        scope_nonce,
         client_op_id,
+        created_at_ms: now_millis(),
         base_version,
+        op_marker: op_marker(&op),
         op,
     });
 }
 
-fn ack_pending_edit(pending: &mut PendingLocalEdits, doc_id: DocId, client_op_id: u64) -> bool {
+fn ack_pending_edit(
+    pending: &mut PendingLocalEdits,
+    repo_id: Option<RepoId>,
+    scope_nonce: Option<u64>,
+    doc_id: DocId,
+    client_op_id: u64,
+) -> bool {
     let (changed, empty) = {
         let Some(edits) = pending.get_mut(&doc_id) else {
             return false;
         };
         let before = edits.len();
-        edits.retain(|edit| edit.client_op_id != client_op_id);
+        edits.retain(|edit| {
+            edit.client_op_id != client_op_id
+                || repo_id.is_some_and(|repo_id| edit.repo_id != repo_id)
+                || scope_nonce.is_some_and(|scope_nonce| edit.scope_nonce != scope_nonce)
+        });
         (edits.len() != before, edits.is_empty())
     };
     if empty {
@@ -40,10 +57,12 @@ fn ack_pending_edit(pending: &mut PendingLocalEdits, doc_id: DocId, client_op_id
 pub fn clear_pending_edit_and_check_current_doc_empty(
     pending: &mut PendingLocalEdits,
     current_doc: Option<DocId>,
+    repo_id: Option<RepoId>,
+    scope_nonce: Option<u64>,
     doc_id: DocId,
     client_op_id: u64,
 ) -> bool {
-    ack_pending_edit(pending, doc_id, client_op_id)
+    ack_pending_edit(pending, repo_id, scope_nonce, doc_id, client_op_id)
         && current_doc == Some(doc_id)
         && !pending.contains_key(&doc_id)
 }
@@ -62,4 +81,26 @@ pub fn cloned_pending_edits_for_doc(
     doc_id: DocId,
 ) -> Vec<PendingLocalEdit> {
     pending.get(&doc_id).cloned().unwrap_or_default()
+}
+
+fn op_marker(op: &Op) -> String {
+    match op {
+        Op::Insert { pos, content } => format!("insert:{pos}:{}", content.len()),
+        Op::Delete { pos, len } => format!("delete:{pos}:{len}"),
+    }
+}
+
+fn now_millis() -> i64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        js_sys::Date::now() as i64
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_millis() as i64)
+            .unwrap_or(0)
+    }
 }

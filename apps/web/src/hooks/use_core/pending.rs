@@ -2,7 +2,7 @@
 //!   - 03_rendering#document-authority-bridge
 //!   - 16_web_thin_client_ledger#web-edit-intent
 //!
-use deve_core::models::{DocId, Op};
+use deve_core::models::{DocId, Op, RepoId};
 use std::collections::HashMap;
 
 #[path = "pending_history.rs"]
@@ -14,9 +14,14 @@ mod tests;
 
 #[derive(Clone, Debug)]
 pub struct PendingLocalEdit {
+    pub repo_id: RepoId,
+    pub doc_id: DocId,
+    pub scope_nonce: u64,
     pub client_id: u64,
     pub client_op_id: u64,
+    pub created_at_ms: i64,
     pub base_version: u64,
+    pub op_marker: String,
     pub op: Op,
 }
 

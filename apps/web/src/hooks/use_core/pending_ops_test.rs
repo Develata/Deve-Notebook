@@ -1,4 +1,9 @@
 use super::*;
+use deve_core::models::RepoId;
+
+fn repo_id() -> RepoId {
+    RepoId::from_u128(1)
+}
 
 #[test]
 fn clearing_last_pending_edit_for_current_doc_requests_navigation_reset() {
@@ -6,7 +11,9 @@ fn clearing_last_pending_edit_for_current_doc_requests_navigation_reset() {
     let mut pending = PendingLocalEdits::new();
     push_pending_edit(
         &mut pending,
+        repo_id(),
         doc_id,
+        31,
         11,
         7,
         3,
@@ -18,6 +25,8 @@ fn clearing_last_pending_edit_for_current_doc_requests_navigation_reset() {
     assert!(clear_pending_edit_and_check_current_doc_empty(
         &mut pending,
         Some(doc_id),
+        Some(repo_id()),
+        Some(31),
         doc_id,
         7,
     ));
@@ -31,7 +40,9 @@ fn clearing_one_of_many_pending_edits_keeps_navigation_guard() {
     for client_op_id in [7, 8] {
         push_pending_edit(
             &mut pending,
+            repo_id(),
             doc_id,
+            31,
             11,
             client_op_id,
             3,
@@ -44,6 +55,8 @@ fn clearing_one_of_many_pending_edits_keeps_navigation_guard() {
     assert!(!clear_pending_edit_and_check_current_doc_empty(
         &mut pending,
         Some(doc_id),
+        Some(repo_id()),
+        Some(31),
         doc_id,
         7,
     ));
@@ -57,7 +70,9 @@ fn clearing_other_doc_pending_edit_does_not_reset_current_navigation_guard() {
     let mut pending = PendingLocalEdits::new();
     push_pending_edit(
         &mut pending,
+        repo_id(),
         other_doc,
+        31,
         11,
         7,
         3,
@@ -69,8 +84,62 @@ fn clearing_other_doc_pending_edit_does_not_reset_current_navigation_guard() {
     assert!(!clear_pending_edit_and_check_current_doc_empty(
         &mut pending,
         Some(current_doc),
+        Some(repo_id()),
+        Some(31),
         other_doc,
         7,
     ));
     assert!(!pending.contains_key(&other_doc));
+}
+
+#[test]
+fn pending_row_records_repo_scope_time_and_marker() {
+    let doc_id = DocId::from_u128(45);
+    let mut pending = PendingLocalEdits::new();
+    push_pending_edit(
+        &mut pending,
+        repo_id(),
+        doc_id,
+        31,
+        11,
+        7,
+        3,
+        Op::Insert {
+            pos: 2,
+            content: "abc".into(),
+        },
+    );
+
+    let edit = &pending.get(&doc_id).expect("pending doc")[0];
+    assert_eq!(edit.repo_id, repo_id());
+    assert_eq!(edit.doc_id, doc_id);
+    assert_eq!(edit.scope_nonce, 31);
+    assert_eq!(edit.op_marker, "insert:2:3");
+    assert!(edit.created_at_ms > 0);
+}
+
+#[test]
+fn clearing_with_other_scope_keeps_pending_edit() {
+    let doc_id = DocId::from_u128(46);
+    let mut pending = PendingLocalEdits::new();
+    push_pending_edit(
+        &mut pending,
+        repo_id(),
+        doc_id,
+        31,
+        11,
+        7,
+        3,
+        Op::Delete { pos: 2, len: 4 },
+    );
+
+    assert!(!clear_pending_edit_and_check_current_doc_empty(
+        &mut pending,
+        Some(doc_id),
+        Some(repo_id()),
+        Some(99),
+        doc_id,
+        7,
+    ));
+    assert_eq!(pending.get(&doc_id).map(Vec::len), Some(1));
 }

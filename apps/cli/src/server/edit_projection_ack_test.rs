@@ -2,7 +2,7 @@ use super::{
     edit_message_test_support::{recv_ack, send_insert},
     edit_state_test_support::{edit_harness, seed_doc, unicast_channel, writer_browser_session},
 };
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use tokio::sync::mpsc::error::TryRecvError;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -20,6 +20,24 @@ async fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails() -> any
     assert_eq!(scope_nonce, Some(37));
     assert_eq!(ack_doc_id, doc_id);
     assert_eq!(client_op_id, 9);
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            scope_nonce,
+            switch_nonce,
+        }) => {
+            assert_eq!(scope_nonce, Some(37));
+            assert_eq!(switch_nonce, None);
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("Projection writeback failed"))
+            );
+        }
+        other => panic!("expected projection writeback ProtocolError, got {other:?}"),
+    }
     match broadcast_rx.recv().await? {
         ServerMessage::NewOp {
             doc_id: broadcast_doc_id,
@@ -34,5 +52,6 @@ async fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails() -> any
             .find_client_op_in_local_repo("default", doc_id, 7, 9)?
             .is_some()
     );
+    assert!(h.state.sync_manager.is_projection_degraded("default"));
     Ok(())
 }

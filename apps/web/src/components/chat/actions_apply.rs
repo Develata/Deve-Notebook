@@ -9,7 +9,7 @@ use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_action;
 use crate::hooks::use_core::{CoreState, pending};
-use deve_core::models::Op;
+use deve_core::models::{Op, RepoId};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
@@ -64,11 +64,21 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             show_apply_block(&core, "writer client id unavailable");
             return;
         };
+        let Some(repo_id) = core
+            .current_repo_id
+            .get_untracked()
+            .and_then(|repo_id| repo_id.parse::<RepoId>().ok())
+        else {
+            show_apply_block(&core, "current repo id unavailable");
+            return;
+        };
         let client_op_id = next_client_op_id();
         core.set_pending_local_edits.update(|pending_edits| {
             pending::push_pending_edit(
                 pending_edits,
+                repo_id,
                 doc_id,
+                scope_nonce,
                 client_id,
                 client_op_id,
                 core.doc_version.get_untracked(),

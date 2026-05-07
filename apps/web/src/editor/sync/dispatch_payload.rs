@@ -104,7 +104,9 @@ mod tests {
             let mut pending = HashMap::new();
             push_pending_edit(
                 &mut pending,
+                repo_id,
                 doc_id,
+                scope_nonce,
                 11,
                 13,
                 0,

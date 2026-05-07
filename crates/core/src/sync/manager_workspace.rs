@@ -25,11 +25,15 @@ impl SyncManager {
     }
 
     pub fn persist_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<()> {
-        projection_io::persist_doc(self, repo_name, doc_id)
+        projection_io::persist_doc(self, repo_name, doc_id).inspect_err(|_| {
+            self.mark_projection_writeback_fault(repo_name);
+        })
     }
 
     pub fn remove_projection_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        projection_io::remove_projection_path(self, repo_name, path)
+        projection_io::remove_projection_path(self, repo_name, path).inspect_err(|_| {
+            self.mark_projection_writeback_fault(repo_name);
+        })
     }
 
     /// 应用操作并选择性持久化到 Vault

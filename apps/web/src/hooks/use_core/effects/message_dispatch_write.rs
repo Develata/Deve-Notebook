@@ -44,6 +44,8 @@ pub fn handle_ack_message(
         clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
             pending_edits,
             current_doc,
+            Some(repo_id),
+            scope_nonce,
             doc_id,
             client_op_id,
         );

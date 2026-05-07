@@ -7,6 +7,7 @@ use super::delta_input::DeltaInputCtx;
 use super::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::pending;
+use deve_core::models::RepoId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, Update};
 
@@ -28,13 +29,23 @@ pub(super) fn forward_deltas(ctx: &DeltaInputCtx, deltas: Vec<Delta>) -> bool {
         leptos::logging::warn!("Delta ignored: writer client id unavailable.");
         return false;
     };
+    let Some(repo_id) = ctx
+        .current_repo_id
+        .get_untracked()
+        .and_then(|repo_id| repo_id.parse::<RepoId>().ok())
+    else {
+        leptos::logging::warn!("Delta ignored: current repo id unavailable.");
+        return false;
+    };
     for delta in deltas {
         for op in delta.to_ops() {
             let client_op_id = next_client_op_id();
             ctx.set_pending_local_edits.update(|pending_edits| {
                 pending::push_pending_edit(
                     pending_edits,
+                    repo_id,
                     ctx.doc_id,
+                    scope_nonce,
                     client_id,
                     client_op_id,
                     ctx.local_version.get_untracked(),

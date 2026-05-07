@@ -67,6 +67,8 @@ pub fn handle_edit_rejected_message(
         clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
             pending_edits,
             current_doc,
+            None,
+            scope_nonce,
             doc_id,
             client_op_id,
         );

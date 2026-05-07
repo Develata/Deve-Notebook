@@ -8,7 +8,9 @@ use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
-use super::edit_support::{CommittedEdit, broadcast_and_ack_committed_edit, reject_edit};
+use super::edit_support::{
+    CommittedEdit, broadcast_and_ack_committed_edit, reject_edit, report_projection_writeback_fault,
+};
 
 pub(super) struct ClientEditAppend<'a> {
     pub(super) state: &'a Arc<AppState>,
@@ -55,17 +57,10 @@ pub(super) fn append_client_edit(input: ClientEditAppend<'_>) {
         },
     ) {
         Ok((_global_seq, local_seq)) => {
-            if let Err(err) = state
+            let projection_writeback_error = state
                 .sync_manager
                 .persist_doc_in_local_repo(&scope.repo_name, doc_id)
-            {
-                tracing::error!(
-                    doc_id = %doc_id,
-                    client_op_id,
-                    "Workspace projection writeback failed after ledger commit: {:?}",
-                    err
-                );
-            }
+                .err();
             broadcast_and_ack_committed_edit(
                 ch,
                 scope,
@@ -78,6 +73,19 @@ pub(super) fn append_client_edit(input: ClientEditAppend<'_>) {
                     client_op_id,
                 },
             );
+            if let Some(err) = projection_writeback_error {
+                tracing::error!(
+                    doc_id = %doc_id,
+                    client_op_id,
+                    "Workspace projection writeback failed after ledger commit: {:?}",
+                    err
+                );
+                report_projection_writeback_fault(
+                    ch,
+                    scope_nonce,
+                    format!("Projection writeback failed after ledger commit: {err}"),
+                );
+            }
         }
         Err(err) => {
             tracing::error!("Failed to persist op: {:?}", err);

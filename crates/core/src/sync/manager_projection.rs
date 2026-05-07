@@ -40,6 +40,10 @@ impl SyncManager {
         self.projection_health.is_degraded(repo_name)
     }
 
+    pub fn mark_projection_writeback_fault(&self, repo_name: &str) {
+        self.mark_projection_degraded(repo_name);
+    }
+
     pub fn healthy_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
         Ok(self
             .repo

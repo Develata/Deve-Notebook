@@ -8,7 +8,7 @@ use crate::server::repo_scope::{
 };
 use crate::server::{AppState, channel::DualChannel, session::WsSession};
 use deve_core::models::{DocId, Op};
-use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerMessage};
+use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
 
 pub(super) struct CommittedEdit {
@@ -92,5 +92,17 @@ pub(super) fn broadcast_and_ack_committed_edit(
         doc_id: edit.doc_id,
         seq: edit.local_seq,
         client_op_id: edit.client_op_id,
+    });
+}
+
+pub(super) fn report_projection_writeback_fault(
+    ch: &DualChannel,
+    scope_nonce: Option<u64>,
+    detail: impl Into<String>,
+) {
+    ch.unicast(ServerMessage::ProtocolError {
+        error: ServerError::with_detail(ServerErrorCode::StoragePersistFailed, detail),
+        switch_nonce: None,
+        scope_nonce,
     });
 }

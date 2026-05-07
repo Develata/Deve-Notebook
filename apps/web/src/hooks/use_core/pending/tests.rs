@@ -1,5 +1,10 @@
 use super::*;
+use deve_core::models::RepoId;
 use deve_core::protocol::{ClientOrigin, ConfirmedOp};
+
+fn repo_id() -> RepoId {
+    RepoId::from_u128(1)
+}
 
 #[test]
 fn reconcile_removes_ops_confirmed_by_history() {
@@ -7,7 +12,9 @@ fn reconcile_removes_ops_confirmed_by_history() {
     let mut pending = PendingLocalEdits::new();
     push_pending_edit(
         &mut pending,
+        repo_id(),
         doc_id,
+        17,
         11,
         1,
         10,
@@ -18,7 +25,9 @@ fn reconcile_removes_ops_confirmed_by_history() {
     );
     push_pending_edit(
         &mut pending,
+        repo_id(),
         doc_id,
+        17,
         11,
         2,
         10,
@@ -57,7 +66,7 @@ fn reconcile_ignores_matches_before_base_version() {
         pos: 3,
         content: "x".into(),
     };
-    push_pending_edit(&mut pending, doc_id, 13, 7, 20, op.clone());
+    push_pending_edit(&mut pending, repo_id(), doc_id, 17, 13, 7, 20, op.clone());
     let history = vec![ConfirmedOp::new(
         19,
         op,
@@ -78,7 +87,7 @@ fn reconcile_keeps_entries_without_origin_metadata() {
         pos: 1,
         content: "z".into(),
     };
-    push_pending_edit(&mut pending, doc_id, 21, 5, 0, op.clone());
+    push_pending_edit(&mut pending, repo_id(), doc_id, 17, 21, 5, 0, op.clone());
     let history = vec![ConfirmedOp::new(1, op, None)];
     assert_eq!(reconcile_with_history(&mut pending, doc_id, &history), 0);
     assert_eq!(cloned_ops_for_doc(&pending, doc_id).len(), 1);
