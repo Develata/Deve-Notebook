@@ -10,6 +10,7 @@
 
 mod packaging;
 mod process;
+mod shell_core;
 mod supervisor;
 mod types;
 mod validation;
@@ -23,6 +24,7 @@ pub use process::{
     NativeProcessAdapterError, NativeProcessAdapterPolicy, NativeProcessAdapterSnapshot,
     NativeProcessAdapterState,
 };
+pub use shell_core::{NativeShellCore, NativeShellCoreSnapshot};
 pub use supervisor::{
     NativeServiceFailureKind, NativeServiceHealthProbe, NativeServiceSupervisor,
     NativeServiceSupervisorError, NativeServiceSupervisorObservation,

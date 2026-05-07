@@ -1,29 +1,21 @@
 //! plan_ref:
 //!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
 
-use deve_core::native_adapter::{
-    NativeAdapterPlatform, NativeEndpointReady, NativePlatformEventEffect, NativePlatformEventKind,
-    NativeProcessAdapter, NativeProcessAdapterError, NativeProcessAdapterSnapshot,
-    NativeRuntimeReadiness, NativeServiceFailureKind, NativeServiceOffline,
-    NativeServiceRestarting, NativeServiceSupervisor, NativeServiceSupervisorError,
-    NativeServiceSupervisorObservation, NativeServiceSupervisorState,
-    classify_native_platform_event, validate_native_endpoint_ready,
-};
+use deve_core::native_adapter::{NativeEndpointReady, NativeShellCore};
 
-use crate::types::{
-    DesktopBootstrap, DesktopRecoveryBootstrap, DesktopServiceState, DesktopSessionMaterial,
-    DesktopShellError, DesktopShellSnapshot,
-};
+use crate::types::{DesktopServiceState, DesktopSessionMaterial, DesktopShellError};
+
+#[path = "shell_bootstrap.rs"]
+mod bootstrap;
+#[path = "shell_lifecycle.rs"]
+mod lifecycle;
+#[path = "shell_recovery.rs"]
+mod recovery;
 
 #[derive(Debug, Clone)]
 pub struct DesktopShell {
     state: DesktopServiceState,
-    endpoint: Option<NativeEndpointReady>,
-    readiness: NativeRuntimeReadiness,
-    offline: Option<NativeServiceOffline>,
-    restarting: Option<NativeServiceRestarting>,
-    supervisor: NativeServiceSupervisor,
-    process_adapter: NativeProcessAdapter,
+    core: NativeShellCore,
 }
 
 impl Default for DesktopShell {
@@ -36,23 +28,15 @@ impl DesktopShell {
     pub fn new() -> Self {
         Self {
             state: DesktopServiceState::ColdStart,
-            endpoint: None,
-            readiness: NativeRuntimeReadiness::default(),
-            offline: None,
-            restarting: None,
-            supervisor: NativeServiceSupervisor::new(2),
-            process_adapter: NativeProcessAdapter::default(),
+            core: NativeShellCore::new(2),
         }
     }
 
     pub fn start_service(&mut self) {
-        if self.terminal_offline_reason().is_some() {
+        if !self.core.start_service() {
             return;
         }
         self.state = DesktopServiceState::ServiceStarting;
-        self.offline = None;
-        self.restarting = None;
-        self.supervisor.start();
     }
 
     pub fn bind_endpoint(
@@ -61,16 +45,12 @@ impl DesktopShell {
     ) -> Result<(), DesktopShellError> {
         self.ensure_not_terminal_offline()?;
         let process_snapshot = self
-            .process_adapter
+            .core
             .bind_existing_endpoint(endpoint)
             .map_err(Self::map_process_adapter_error)?;
         self.observe_process_snapshot(&process_snapshot)?;
-        self.readiness.endpoint_reachable = process_snapshot.health_probe.endpoint_reachable;
-        self.readiness.node_role_readable = process_snapshot.health_probe.node_role_readable;
-        self.endpoint = process_snapshot.endpoint;
+        self.core.apply_endpoint_probe_snapshot(&process_snapshot);
         self.state = DesktopServiceState::EndpointBound;
-        self.offline = None;
-        self.restarting = None;
         Ok(())
     }
 
@@ -81,264 +61,16 @@ impl DesktopShell {
         if !session.bound {
             return Err(DesktopShellError::SessionNotBound);
         }
-        self.endpoint
-            .as_ref()
+        self.core
+            .endpoint()
             .ok_or(DesktopShellError::SessionNotBound)?;
         let process_snapshot = self
-            .process_adapter
+            .core
             .bind_session(session.bound)
             .map_err(Self::map_process_adapter_error)?;
         self.observe_process_snapshot(&process_snapshot)?;
-        let process_endpoint = process_snapshot
-            .endpoint
-            .ok_or(DesktopShellError::SessionNotBound)?;
-        validate_native_endpoint_ready(&process_endpoint)?;
-        self.endpoint = Some(process_endpoint);
-        self.readiness.auth_status_valid = true;
+        self.core.apply_session_snapshot(&process_snapshot)?;
         self.state = DesktopServiceState::SessionBound;
         Ok(())
-    }
-
-    pub fn mark_probe_timeout(&mut self) -> Result<(), DesktopShellError> {
-        let process_snapshot = self.process_adapter.record_probe_timeout();
-        let result = self.observe_process_snapshot(&process_snapshot);
-        self.clear_shell_runtime_binding();
-        result
-    }
-
-    pub fn mark_process_shutdown(&mut self) -> Result<(), DesktopShellError> {
-        let process_snapshot = self.process_adapter.record_process_stopped();
-        let result = self.observe_process_snapshot(&process_snapshot);
-        self.clear_shell_runtime_binding();
-        result
-    }
-
-    pub fn mark_runtime_ready(&mut self, readiness: NativeRuntimeReadiness) -> bool {
-        if self.terminal_offline_reason().is_some() {
-            return false;
-        }
-        let ready = readiness.is_runtime_ready();
-        self.readiness = readiness;
-        if ready {
-            self.state = DesktopServiceState::RuntimeReady;
-            self.offline = None;
-            self.restarting = None;
-        }
-        ready
-    }
-
-    pub fn bootstrap_for_web(&mut self) -> Result<DesktopBootstrap, DesktopShellError> {
-        match &self.state {
-            DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline => {
-                let reason = self
-                    .offline
-                    .as_ref()
-                    .map(|offline| offline.reason.clone())
-                    .unwrap_or_else(|| "unknown".to_string());
-                return Err(DesktopShellError::ServiceOffline { reason });
-            }
-            DesktopServiceState::SessionInvalid => return Err(DesktopShellError::SessionInvalid),
-            DesktopServiceState::ForegroundReprobe => {
-                return Err(DesktopShellError::ForegroundReprobeRequired);
-            }
-            _ => {}
-        }
-
-        let endpoint = self
-            .endpoint
-            .as_ref()
-            .ok_or(DesktopShellError::SessionNotBound)?;
-        validate_native_endpoint_ready(endpoint)?;
-        self.state = DesktopServiceState::WebShellLoading;
-
-        Ok(DesktopBootstrap {
-            http_base: endpoint.http_base.clone(),
-            ws_base: endpoint.ws_base.clone(),
-            node_role: endpoint.node_role.clone(),
-            session_bound: endpoint.session_bound,
-        })
-    }
-
-    pub fn recovery_bootstrap_for_web(&self) -> Option<DesktopRecoveryBootstrap> {
-        match self.state {
-            DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline => {
-                Some(DesktopRecoveryBootstrap {
-                    service_state: "service_offline",
-                })
-            }
-            DesktopServiceState::SessionInvalid => Some(DesktopRecoveryBootstrap {
-                service_state: "session_invalid",
-            }),
-            DesktopServiceState::ForegroundReprobe => Some(DesktopRecoveryBootstrap {
-                service_state: "foreground_reprobe",
-            }),
-            DesktopServiceState::ColdStart
-            | DesktopServiceState::ServiceStarting
-            | DesktopServiceState::EndpointBound
-            | DesktopServiceState::SessionBound
-            | DesktopServiceState::WebShellLoading
-            | DesktopServiceState::RuntimeReady => None,
-        }
-    }
-
-    pub fn handle_platform_event(
-        &mut self,
-        event: NativePlatformEventKind,
-    ) -> NativePlatformEventEffect {
-        let effect = classify_native_platform_event(NativeAdapterPlatform::Desktop, event);
-        if effect == NativePlatformEventEffect::RequireForegroundReprobe
-            && self.is_service_recovery_state()
-        {
-            return NativePlatformEventEffect::NoBusinessStateChange;
-        }
-        if effect == NativePlatformEventEffect::RequireForegroundReprobe {
-            self.require_foreground_reprobe();
-        }
-        effect
-    }
-
-    pub fn complete_foreground_reprobe(&mut self, readiness: NativeRuntimeReadiness) -> bool {
-        if self.state != DesktopServiceState::ForegroundReprobe {
-            return false;
-        }
-        self.mark_runtime_ready(readiness)
-    }
-
-    pub fn mark_service_offline(&mut self, reason: impl Into<String>, retryable: bool) {
-        let offline = NativeServiceOffline {
-            reason: reason.into(),
-            retryable,
-        };
-        let offline = self.supervisor.record_service_offline(offline);
-        self.record_offline_snapshot(offline);
-        self.clear_runtime_binding();
-    }
-
-    pub fn mark_supervisor_failure(
-        &mut self,
-        kind: NativeServiceFailureKind,
-        reason: impl Into<String>,
-    ) {
-        let offline = self.supervisor.record_failure(kind, reason);
-        self.record_offline_snapshot(offline);
-        self.clear_runtime_binding();
-    }
-
-    pub fn invalidate_session(&mut self) {
-        self.state = DesktopServiceState::SessionInvalid;
-        self.readiness.auth_status_valid = false;
-        self.process_adapter.clear_session();
-        if let Some(endpoint) = self.endpoint.as_mut() {
-            endpoint.session_bound = false;
-        }
-    }
-
-    pub fn snapshot(&self) -> DesktopShellSnapshot {
-        DesktopShellSnapshot {
-            state: self.state.clone(),
-            endpoint: self.endpoint.clone(),
-            readiness: self.readiness,
-            offline: self.offline.clone(),
-            restarting: self.restarting.clone(),
-            supervisor: self.supervisor.snapshot(),
-            process_adapter: self.process_adapter.snapshot(),
-        }
-    }
-
-    fn require_foreground_reprobe(&mut self) {
-        self.state = DesktopServiceState::ForegroundReprobe;
-        self.readiness.auth_status_valid = false;
-        self.readiness.node_role_readable = false;
-        self.readiness.repo_handshake_complete = false;
-        self.readiness.writer_ready = false;
-        self.readiness.scope_nonce_current = false;
-    }
-
-    fn clear_runtime_binding(&mut self) {
-        self.readiness = NativeRuntimeReadiness::default();
-        self.process_adapter.record_process_stopped();
-        self.endpoint = None;
-    }
-
-    fn clear_shell_runtime_binding(&mut self) {
-        self.readiness = NativeRuntimeReadiness::default();
-        self.endpoint = None;
-    }
-
-    fn is_service_recovery_state(&self) -> bool {
-        matches!(
-            self.state,
-            DesktopServiceState::ServiceRestarting | DesktopServiceState::ServiceOffline
-        )
-    }
-
-    fn ensure_not_terminal_offline(&self) -> Result<(), DesktopShellError> {
-        let Some(reason) = self.terminal_offline_reason() else {
-            return Ok(());
-        };
-        Err(DesktopShellError::ServiceOffline { reason })
-    }
-
-    fn terminal_offline_reason(&self) -> Option<String> {
-        let supervisor = self.supervisor.snapshot();
-        if supervisor.state != NativeServiceSupervisorState::Offline {
-            return None;
-        }
-        supervisor
-            .offline
-            .filter(|offline| !offline.retryable)
-            .map(|offline| offline.reason)
-    }
-
-    fn record_offline_snapshot(&mut self, offline: NativeServiceOffline) {
-        let supervisor = self.supervisor.snapshot();
-        self.restarting = offline.retryable.then_some(NativeServiceRestarting {
-            attempt: supervisor.restart_attempt,
-        });
-        self.state = if offline.retryable {
-            DesktopServiceState::ServiceRestarting
-        } else {
-            DesktopServiceState::ServiceOffline
-        };
-        self.offline = Some(offline);
-    }
-
-    fn observe_process_snapshot(
-        &mut self,
-        process_snapshot: &NativeProcessAdapterSnapshot,
-    ) -> Result<(), DesktopShellError> {
-        let observation = self.supervisor.record_process_snapshot(process_snapshot);
-        self.apply_supervisor_observation(observation)
-    }
-
-    fn apply_supervisor_observation(
-        &mut self,
-        observation: NativeServiceSupervisorObservation,
-    ) -> Result<(), DesktopShellError> {
-        match observation {
-            NativeServiceSupervisorObservation::EndpointHealthy
-            | NativeServiceSupervisorObservation::SessionHandoffReady => Ok(()),
-            NativeServiceSupervisorObservation::Offline(offline) => {
-                let reason = offline.reason.clone();
-                self.record_offline_snapshot(offline);
-                Err(DesktopShellError::ServiceOffline { reason })
-            }
-            NativeServiceSupervisorObservation::Idle => Err(DesktopShellError::Supervisor(
-                NativeServiceSupervisorError::EndpointNotHealthy,
-            )),
-        }
-    }
-
-    fn map_process_adapter_error(error: NativeProcessAdapterError) -> DesktopShellError {
-        match error {
-            NativeProcessAdapterError::InvalidEndpoint(error) => {
-                DesktopShellError::InvalidEndpoint(error)
-            }
-            NativeProcessAdapterError::EndpointNotBound
-            | NativeProcessAdapterError::SessionNotBound => DesktopShellError::SessionNotBound,
-            NativeProcessAdapterError::ChildProcessRuntimeDisabled => {
-                DesktopShellError::ProcessAdapter(error)
-            }
-        }
     }
 }
