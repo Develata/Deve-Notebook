@@ -29,6 +29,9 @@ Core application state management hub. The largest hook module — manages WebSo
 | `navigation.rs` | Document navigation |
 | `dashboard_context.rs` | Dashboard data context |
 | `diff_session.rs` | Diff session management |
+| `effects_sc_test_read_lists.rs` | Source-control read-list test harness |
+| `effects_sc_test_read_lists_changes.rs` | ChangesList scope dispatch tests |
+| `effects_sc_test_read_lists_history.rs` | CommitHistory scope dispatch tests |
 | `storage_runtime.rs` | Storage runtime integration |
 | `switch_nonce.rs` | Switch nonce tracking |
 
