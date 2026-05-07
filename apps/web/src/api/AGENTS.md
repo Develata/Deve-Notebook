@@ -13,6 +13,8 @@ WebSocket API layer. Manages the connection lifecycle, message serialization/des
 |------|-------------|
 | `mod.rs` | Module entry and re-exports |
 | `connection.rs` | WebSocket connection management — connect, reconnect, close |
+| `connection_role.rs` | Node role probing and runtime summary formatting |
+| `connection_role_test.rs` | Node role probe formatting and stale-epoch unit tests |
 | `incoming.rs` | Incoming ServerMessage deserialization and dispatch |
 | `output.rs` | Outgoing ClientMessage serialization and sending |
 | `auth_probe.rs` | Authentication status probing before connection |
