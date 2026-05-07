@@ -16,6 +16,10 @@ mod merge;
 mod scope_guard;
 mod source_control;
 
+#[cfg(test)]
+#[path = "fallthrough_test.rs"]
+mod fallthrough_tests;
+
 /// WebSocket 消息路由入口。
 ///
 /// 通过分层路由把协议消息收敛到对应业务域，避免 route 层拥有 handler 语义。
