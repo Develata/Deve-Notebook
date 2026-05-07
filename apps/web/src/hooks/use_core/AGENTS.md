@@ -22,6 +22,8 @@ Core application state management hub. The largest hook module — manages WebSo
 | `callbacks_sc.rs` | Source control callbacks |
 | `callbacks_sc_scope.rs` | SC scope callbacks |
 | `callbacks_sc_target.rs` | SC target callbacks |
+| `callbacks_sc_read_diff.rs` | Source-control doc/commit diff read callbacks |
+| `callbacks_sc_read_diff_test.rs` | Source-control diff read callback unit tests |
 | `callbacks_scope.rs` | Scope-related callbacks |
 | `callbacks_switch.rs` | Repo/branch switch callbacks |
 | `callbacks_sync.rs` | Sync callbacks |
