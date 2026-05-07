@@ -15,12 +15,12 @@ pub(super) async fn route_docs(
     session: &mut WsSession,
     msg: ClientMessage,
 ) {
-    if let Some(scope_nonce) = requested_scope_nonce(&msg)
+    if let Some(scope) = msg.document_scope_gate()
         && super::scope_guard::reject_invalid_browser_scope_nonce(
             ch,
             session,
-            scope_nonce,
-            "document",
+            scope.scope_nonce,
+            scope.scope_name,
         )
     {
         return;
@@ -52,17 +52,6 @@ pub(super) async fn route_docs(
             docs::handle_move_doc(state, ch, session, src_path, dest_path).await;
         }
         other => super::merge::route_merge(state, ch, session, other).await,
-    }
-}
-
-fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
-    match msg {
-        ClientMessage::CreateDoc { scope_nonce, .. }
-        | ClientMessage::RenameDoc { scope_nonce, .. }
-        | ClientMessage::DeleteDoc { scope_nonce, .. }
-        | ClientMessage::CopyDoc { scope_nonce, .. }
-        | ClientMessage::MoveDoc { scope_nonce, .. } => Some(*scope_nonce),
-        _ => None,
     }
 }
 

@@ -21,6 +21,7 @@
 
 pub mod auth;
 pub mod client;
+mod client_scope;
 pub mod confirmed_op;
 pub mod doc_file_op_errors;
 pub mod error;
@@ -29,6 +30,7 @@ pub mod sc_path_target;
 pub mod server;
 
 pub use client::ClientMessage;
+pub use client_scope::ClientMessageScopeGate;
 pub use confirmed_op::{ClientOrigin, ConfirmedOp};
 pub use error::{ServerError, ServerErrorCode};
 pub use frame::{MAX_WS_FRAME_BYTES, MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION};

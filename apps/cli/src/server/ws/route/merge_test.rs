@@ -1,4 +1,4 @@
-use super::{requested_scope_nonce, route_merge};
+use super::route_merge;
 use crate::server::session::PendingMergeConflict;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
 use deve_core::models::{DocId, PeerId, RepoId};
@@ -40,9 +40,11 @@ fn extracts_scope_nonce_from_merge_messages() {
         },
     ];
     for msg in cases {
-        assert_eq!(requested_scope_nonce(&msg), Some(Some(5)));
+        let gate = msg.merge_control_scope_gate().expect("scope gate");
+        assert_eq!(gate.scope_nonce, Some(5));
+        assert_eq!(gate.scope_name, "merge control");
     }
-    assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
+    assert_eq!(ClientMessage::Ping.merge_control_scope_gate(), None);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

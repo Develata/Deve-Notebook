@@ -14,11 +14,15 @@ pub(super) async fn route_scoped_core(
     session: &mut WsSession,
     msg: ClientMessage,
 ) -> Option<ClientMessage> {
-    let Some((scope_nonce, scope_name)) = requested_scope_nonce(&msg) else {
+    let Some(scope) = msg.core_scope_gate() else {
         return Some(msg);
     };
-    if super::scope_guard::reject_invalid_browser_scope_nonce(ch, session, scope_nonce, scope_name)
-    {
+    if super::scope_guard::reject_invalid_browser_scope_nonce(
+        ch,
+        session,
+        scope.scope_nonce,
+        scope.scope_name,
+    ) {
         return None;
     }
     match msg {
@@ -73,23 +77,6 @@ pub(super) async fn route_scoped_core(
         other => return Some(other),
     }
     None
-}
-
-fn requested_scope_nonce(msg: &ClientMessage) -> Option<(Option<u64>, &'static str)> {
-    match msg {
-        ClientMessage::OpenDoc { scope_nonce, .. } => Some((*scope_nonce, "open doc")),
-        ClientMessage::RequestHistory { scope_nonce, .. } => {
-            Some((*scope_nonce, "document history"))
-        }
-        ClientMessage::Edit { scope_nonce, .. } => Some((*scope_nonce, "edit")),
-        ClientMessage::ListDocs { scope_nonce, .. } => Some((*scope_nonce, "document list")),
-        ClientMessage::ListShadows { scope_nonce, .. } => Some((*scope_nonce, "shadow list")),
-        ClientMessage::ListRepos { scope_nonce, .. } => Some((*scope_nonce, "repo list")),
-        ClientMessage::Search { scope_nonce, .. } => Some((*scope_nonce, "search")),
-        ClientMessage::DeletePeer { scope_nonce, .. } => Some((*scope_nonce, "delete peer")),
-        ClientMessage::RequestKey { scope_nonce } => Some((*scope_nonce, "request key")),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use super::{requested_scope_nonce, route_docs};
+use super::route_docs;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use tokio::time::{Duration, timeout};
@@ -31,9 +31,10 @@ fn extracts_scope_nonce_from_doc_messages() {
         },
     ];
     for msg in cases {
-        assert_eq!(requested_scope_nonce(&msg), Some(Some(3)));
+        let gate = msg.document_scope_gate().expect("scope gate");
+        assert_eq!((gate.scope_nonce, gate.scope_name), (Some(3), "document"));
     }
-    assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
+    assert_eq!(ClientMessage::Ping.document_scope_gate(), None);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

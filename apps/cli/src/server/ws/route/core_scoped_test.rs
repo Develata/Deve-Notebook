@@ -1,4 +1,4 @@
-use super::{requested_scope_nonce, route_scoped_core};
+use super::route_scoped_core;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
@@ -79,9 +79,10 @@ fn extracts_scope_nonce_from_core_scoped_messages() {
         ),
     ];
     for (msg, scope_name) in cases {
-        assert_eq!(requested_scope_nonce(&msg), Some((Some(11), scope_name)));
+        let gate = msg.core_scope_gate().expect("scope gate");
+        assert_eq!((gate.scope_nonce, gate.scope_name), (Some(11), scope_name));
     }
-    assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
+    assert_eq!(ClientMessage::Ping.core_scope_gate(), None);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -15,12 +15,12 @@ pub(super) async fn route_source_control(
     session: &mut WsSession,
     msg: ClientMessage,
 ) {
-    if let Some(scope_nonce) = requested_scope_nonce(&msg)
+    if let Some(scope) = msg.source_control_scope_gate()
         && super::scope_guard::reject_invalid_browser_scope_nonce(
             ch,
             session,
-            scope_nonce,
-            "source control",
+            scope.scope_nonce,
+            scope.scope_name,
         )
     {
         return;
@@ -77,24 +77,6 @@ pub(super) async fn route_source_control(
             source_control::handle_get_doc_diff(state, ch, session, request_id, target).await;
         }
         other => super::core::route_core(state, ch, session, other).await,
-    }
-}
-
-fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
-    match msg {
-        ClientMessage::GetChanges { scope_nonce, .. }
-        | ClientMessage::StageFile { scope_nonce, .. }
-        | ClientMessage::StageFiles { scope_nonce, .. }
-        | ClientMessage::UnstageFile { scope_nonce, .. }
-        | ClientMessage::UnstageFiles { scope_nonce, .. }
-        | ClientMessage::DiscardFile { scope_nonce, .. }
-        | ClientMessage::Commit { scope_nonce, .. }
-        | ClientMessage::GetCommitHistory { scope_nonce, .. }
-        | ClientMessage::GetDocDiff { scope_nonce, .. }
-        | ClientMessage::GetCommitDiff { scope_nonce, .. }
-        | ClientMessage::ResolveConflict { scope_nonce, .. }
-        | ClientMessage::CommitAndPush { scope_nonce, .. } => Some(*scope_nonce),
-        _ => None,
     }
 }
 

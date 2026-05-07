@@ -1,4 +1,4 @@
-use super::{requested_scope_nonce, route_source_control};
+use super::route_source_control;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
 use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode, ServerMessage};
 use deve_core::source_control::ConflictResolution;
@@ -63,9 +63,13 @@ fn extracts_scope_nonce_from_source_control_messages() {
         },
     ];
     for msg in cases {
-        assert_eq!(requested_scope_nonce(&msg), Some(Some(7)));
+        let gate = msg.source_control_scope_gate().expect("scope gate");
+        assert_eq!(
+            (gate.scope_nonce, gate.scope_name),
+            (Some(7), "source control")
+        );
     }
-    assert_eq!(requested_scope_nonce(&ClientMessage::Ping), None);
+    assert_eq!(ClientMessage::Ping.source_control_scope_gate(), None);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

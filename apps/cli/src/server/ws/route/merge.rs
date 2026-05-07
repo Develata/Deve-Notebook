@@ -15,12 +15,12 @@ pub(super) async fn route_merge(
     session: &mut WsSession,
     msg: ClientMessage,
 ) {
-    if let Some(scope_nonce) = requested_scope_nonce(&msg)
+    if let Some(scope) = msg.merge_control_scope_gate()
         && super::scope_guard::reject_invalid_browser_scope_nonce(
             ch,
             session,
-            scope_nonce,
-            "merge control",
+            scope.scope_nonce,
+            scope.scope_name,
         )
     {
         return;
@@ -63,19 +63,6 @@ pub(super) async fn route_merge(
             merge::handle_merge_peer(state, ch, session, peer_id, doc_id).await;
         }
         other => super::source_control::route_source_control(state, ch, session, other).await,
-    }
-}
-
-fn requested_scope_nonce(msg: &ClientMessage) -> Option<Option<u64>> {
-    match msg {
-        ClientMessage::GetSyncMode { scope_nonce, .. }
-        | ClientMessage::SetSyncMode { scope_nonce, .. }
-        | ClientMessage::GetPendingOps { scope_nonce, .. }
-        | ClientMessage::ConfirmMerge { scope_nonce }
-        | ClientMessage::ResolveMergeConflict { scope_nonce, .. }
-        | ClientMessage::DiscardPending { scope_nonce }
-        | ClientMessage::MergePeer { scope_nonce, .. } => Some(*scope_nonce),
-        _ => None,
     }
 }
 
