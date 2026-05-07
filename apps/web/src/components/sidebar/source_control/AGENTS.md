@@ -17,6 +17,11 @@ Source control sidebar panel. Shows changes, staged/unstaged sections, commit in
 | `staged_section.rs` | Staged changes section |
 | `unstaged_section.rs` | Unstaged changes section |
 | `commit.rs` | Commit interface |
+| `commit_ai.rs` | Commit message AI generation runtime |
+| `commit_ai_backend_test.rs` | Commit AI backend decision tests |
+| `commit_ai_runtime.rs` | Commit AI backend/effect planning |
+| `commit_ai_runtime_test.rs` | Commit AI effect planning tests |
+| `commit_ai_signal_test.rs` | Commit AI Leptos signal runner tests |
 | `history.rs` | Commit history view |
 | `context_menu.rs` | Right-click context menu |
 | `repositories.rs` | Multi-repo listing |

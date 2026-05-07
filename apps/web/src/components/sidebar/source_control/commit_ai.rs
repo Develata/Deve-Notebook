@@ -168,5 +168,11 @@ pub fn sync_generated_commit_message(
 }
 
 #[cfg(test)]
-#[path = "commit_ai_test.rs"]
-mod tests;
+#[path = "commit_ai_backend_test.rs"]
+mod backend_tests;
+#[cfg(test)]
+#[path = "commit_ai_runtime_test.rs"]
+mod runtime_tests;
+#[cfg(test)]
+#[path = "commit_ai_signal_test.rs"]
+mod signal_tests;
