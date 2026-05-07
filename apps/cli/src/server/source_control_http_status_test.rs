@@ -59,6 +59,25 @@ async fn test_http_status_rejects_selector_mismatch() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_http_status_maps_missing_repo_to_not_found() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+
+    let response = harness
+        .client
+        .get(format!("{}/api/sc/status", harness.base_url))
+        .query(&[("repo_name", "missing")])
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::NOT_FOUND);
+    assert_eq!(body.code, ServerErrorCode::StorageNotFound);
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_git_mirror_repair_review_is_readonly_record_source() -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
     let repo_id = harness.repo.get_repo_info()?.expect("default repo info").uuid;

@@ -58,7 +58,7 @@ fn legacy_json_text_remains_debug_compatible() {
 #[test]
 fn unsupported_version_is_rejected() {
     let frame = ServerFrame {
-        protocol_version: WS_PROTOCOL_VERSION - 1,
+        protocol_version: MIN_SUPPORTED_WS_PROTOCOL_VERSION - 1,
         message: ServerMessage::Pong,
     };
     let bytes = encode_binary_frame(&frame).unwrap();

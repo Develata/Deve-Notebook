@@ -4,7 +4,9 @@ use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use crate::server::ws::filter::BroadcastFilter;
 use axum::extract::ws::Message;
-use deve_core::protocol::frame::{WS_PROTOCOL_VERSION, encode_client_binary_with_version};
+use deve_core::protocol::frame::{
+    MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION, encode_client_binary_with_version,
+};
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use tokio::sync::mpsc;
 
@@ -115,7 +117,10 @@ async fn unsupported_protocol_version_reports_structured_error() -> anyhow::Resu
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.set_scope_nonce(Some(31));
-    let bytes = encode_client_binary_with_version(&ClientMessage::Ping, WS_PROTOCOL_VERSION - 1)?;
+    let bytes = encode_client_binary_with_version(
+        &ClientMessage::Ping,
+        MIN_SUPPORTED_WS_PROTOCOL_VERSION - 1,
+    )?;
 
     let flow = handle_incoming_message(
         &state,

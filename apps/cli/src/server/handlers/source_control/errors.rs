@@ -37,6 +37,7 @@ fn status(code: ServerErrorCode) -> StatusCode {
     match code {
         ServerErrorCode::ScDocNotFound
         | ServerErrorCode::ScCommitNotFound
+        | ServerErrorCode::StorageNotFound
         | ServerErrorCode::DocNotFound
         | ServerErrorCode::PluginUnknownPlugin => StatusCode::NOT_FOUND,
         ServerErrorCode::StorageDbLocked | ServerErrorCode::SyncDisconnected => {
@@ -51,6 +52,7 @@ fn status(code: ServerErrorCode) -> StatusCode {
             StatusCode::FORBIDDEN
         }
         ServerErrorCode::SyncInvalidPayload
+        | ServerErrorCode::SyncDecryptFailed
         | ServerErrorCode::PluginInvalidMessage
         | ServerErrorCode::PluginUnsupportedMessage => StatusCode::BAD_REQUEST,
         ServerErrorCode::ScRepoNotSelected
@@ -102,6 +104,14 @@ mod tests {
         );
         assert_eq!(
             status(ServerErrorCode::SyncInvalidPayload),
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            status(ServerErrorCode::StorageNotFound),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            status(ServerErrorCode::SyncDecryptFailed),
             StatusCode::BAD_REQUEST
         );
         assert_eq!(
