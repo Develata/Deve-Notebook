@@ -114,7 +114,7 @@ async fn resolve_merge_conflict_rejects_stale_scope_without_consuming_pending() 
         ServerMessage::ProtocolError {
             error, scope_nonce, ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert_eq!(scope_nonce, Some(16));
             assert!(
                 error
@@ -240,7 +240,11 @@ fn assert_scope_guard_error(message: ServerMessage, scope_nonce: Option<u64>, de
             scope_nonce: actual_scope_nonce,
             ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            let expected_code = detail
+                .contains("stale")
+                .then_some(ServerErrorCode::ScStaleScope)
+                .unwrap_or(ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, expected_code);
             assert_eq!(actual_scope_nonce, scope_nonce);
             assert!(error.detail.as_deref().expect("detail").contains(detail));
         }

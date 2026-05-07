@@ -62,7 +62,7 @@ fn validate(
         if session.scope_nonce() != scope_nonce || session.sync_scope_nonce() != Some(scope_nonce) {
             clear_stale_browser_sync_scope(session);
             return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
+                ServerErrorCode::ScStaleScope,
                 "writer scope nonce is stale",
             ));
         }

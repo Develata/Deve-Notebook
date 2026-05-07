@@ -22,6 +22,13 @@ impl SyncHelloScopeFailure {
             clear_active_repo,
         }
     }
+
+    fn stale_scope(detail: String, clear_active_repo: bool) -> Self {
+        Self {
+            error: ServerError::with_detail(ServerErrorCode::ScStaleScope, detail),
+            clear_active_repo,
+        }
+    }
 }
 
 pub(super) fn validate_scope(
@@ -100,7 +107,7 @@ fn validate_non_browser_scope(
     if let Some(current_sync_scope_nonce) = session.sync_scope_nonce()
         && current_sync_scope_nonce != scope_nonce
     {
-        return Err(SyncHelloScopeFailure::repo_context_invalid(
+        return Err(SyncHelloScopeFailure::stale_scope(
             format!(
                 "SyncHello stale scope nonce: current_sync_scope_nonce={}, requested_scope_nonce={}",
                 current_sync_scope_nonce, scope_nonce

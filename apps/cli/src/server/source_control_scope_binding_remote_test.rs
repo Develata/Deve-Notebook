@@ -39,7 +39,7 @@ async fn remote_changes_without_repo_selection_report_stale_remote_scope() -> an
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert!(
                 error
                     .detail
@@ -80,7 +80,7 @@ async fn remote_changes_on_missing_branch_clears_stale_scope() -> anyhow::Result
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert!(
                 error
                     .detail

@@ -24,14 +24,16 @@ pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &Server
 fn should_clear_failed_current_scope(session: &WsSession, error: &ServerError) -> bool {
     if session.active_branch.is_some() {
         return match error.code {
-            ServerErrorCode::SyncRepoUnbound | ServerErrorCode::ScRepoContextInvalid => {
-                should_clear_stale_remote_scope(error)
-            }
+            ServerErrorCode::SyncRepoUnbound
+            | ServerErrorCode::ScRepoContextInvalid
+            | ServerErrorCode::ScStaleScope => should_clear_stale_remote_scope(error),
             _ => false,
         };
     }
     matches!(
         error.code,
-        ServerErrorCode::ScRepoContextInvalid | ServerErrorCode::StorageNotFound
+        ServerErrorCode::ScRepoContextInvalid
+            | ServerErrorCode::ScStaleScope
+            | ServerErrorCode::StorageNotFound
     ) || (error.code == ServerErrorCode::SyncRepoUnbound && session.has_runtime_scope_binding())
 }

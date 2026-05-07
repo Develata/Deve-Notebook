@@ -63,7 +63,7 @@ async fn delete_doc_rejects_stale_scope_before_handler() -> anyhow::Result<()> {
         ServerMessage::ProtocolError {
             error, scope_nonce, ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert_eq!(scope_nonce, Some(16));
             assert!(
                 error
@@ -177,7 +177,12 @@ fn assert_scope_guard_error(message: ServerMessage, scope_nonce: Option<u64>, de
             scope_nonce: actual_scope_nonce,
             ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            let expected_code = if detail.contains("stale") {
+                ServerErrorCode::ScStaleScope
+            } else {
+                ServerErrorCode::ScRepoContextInvalid
+            };
+            assert_eq!(error.code, expected_code);
             assert_eq!(actual_scope_nonce, scope_nonce);
             assert!(error.detail.as_deref().expect("detail").contains(detail));
         }

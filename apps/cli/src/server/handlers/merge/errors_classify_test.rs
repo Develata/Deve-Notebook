@@ -47,12 +47,12 @@ fn classifies_remote_bootstrap_drift_as_repo_context_invalid() {
 }
 
 #[test]
-fn classifies_stale_scope_nonce_as_repo_context_invalid() {
+fn classifies_stale_scope_nonce_as_stale_scope() {
     assert_eq!(
         classify_failure_code(
             "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
         ),
-        ServerErrorCode::ScRepoContextInvalid
+        ServerErrorCode::ScStaleScope
     );
 }
 

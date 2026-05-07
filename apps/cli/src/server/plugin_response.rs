@@ -36,6 +36,38 @@ pub fn send_plugin_unsupported_message(ch: &DualChannel, req_id: &str, detail: i
     );
 }
 
+pub fn send_plugin_unknown_plugin(ch: &DualChannel, req_id: &str, detail: impl Into<String>) {
+    send_plugin_error(
+        ch,
+        req_id,
+        ServerError::with_detail(ServerErrorCode::PluginUnknownPlugin, detail),
+    );
+}
+
+pub fn send_plugin_capability_denied(ch: &DualChannel, req_id: &str, detail: impl Into<String>) {
+    send_plugin_error(
+        ch,
+        req_id,
+        ServerError::with_detail(ServerErrorCode::PluginCapabilityDenied, detail),
+    );
+}
+
+pub fn send_plugin_runtime_error(ch: &DualChannel, req_id: &str, detail: impl Into<String>) {
+    send_plugin_error(
+        ch,
+        req_id,
+        ServerError::with_detail(ServerErrorCode::PluginRuntimeError, detail),
+    );
+}
+
+pub fn send_plugin_serialization_error(ch: &DualChannel, req_id: &str, detail: impl Into<String>) {
+    send_plugin_error(
+        ch,
+        req_id,
+        ServerError::with_detail(ServerErrorCode::PluginSerializationError, detail),
+    );
+}
+
 pub fn send_plugin_request_failed(ch: &DualChannel, req_id: &str, detail: impl Into<String>) {
     send_plugin_error(
         ch,

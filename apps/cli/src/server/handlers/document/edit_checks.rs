@@ -21,7 +21,7 @@ pub(super) fn reject_missing_doc(
     {
         Ok(Some(_)) => Ok(()),
         Ok(None) => Err(ServerError::with_detail(
-            ServerErrorCode::StorageNotFound,
+            ServerErrorCode::DocNotFound,
             format!("Document not found in active repository: {doc_id}"),
         )),
         Err(err) => Err(ServerError::with_detail(

@@ -58,11 +58,11 @@ fn maps_scope_remote_bootstrap_drift_to_repo_context_invalid() {
 }
 
 #[test]
-fn maps_scope_stale_nonce_to_repo_context_invalid() {
+fn maps_scope_stale_nonce_to_stale_scope() {
     let err = map_repo_scope_error(anyhow::anyhow!(
         "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
     ));
-    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(err.code, ServerErrorCode::ScStaleScope);
 }
 
 #[test]

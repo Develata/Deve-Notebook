@@ -25,7 +25,7 @@ async fn list_shadows_on_missing_remote_branch_clears_stale_scope() -> anyhow::R
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
         }
         other => panic!(
             "expected ProtocolError for stale shadow scope, got {:?}",

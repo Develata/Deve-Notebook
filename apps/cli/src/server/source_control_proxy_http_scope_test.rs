@@ -47,7 +47,7 @@ fn maps_plain_text_stale_scope_nonce() {
         StatusCode::CONFLICT,
         b"Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7",
     );
-    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(err.code, ServerErrorCode::ScStaleScope);
 }
 
 #[test]

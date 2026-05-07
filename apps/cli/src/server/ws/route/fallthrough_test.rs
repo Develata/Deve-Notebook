@@ -119,7 +119,7 @@ fn assert_stale_detail(message: ServerMessage, scope_nonce: Option<u64>, expecte
             scope_nonce: actual_scope_nonce,
             ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert_eq!(actual_scope_nonce, scope_nonce);
             assert!(
                 error

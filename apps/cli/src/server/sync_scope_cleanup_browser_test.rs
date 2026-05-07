@@ -52,7 +52,7 @@ fn browser_writer_registration_rejects_stale_scope_nonce_with_scoped_error() -> 
     handle_register_writer(&ch, &mut session, repo_id, PeerId::new("browser"), 11);
 
     let (error, scope_nonce) = try_recv_protocol_error(&mut rx);
-    assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     assert_eq!(scope_nonce, Some(11));
     assert_runtime_binding_cleared(&session);
     Ok(())

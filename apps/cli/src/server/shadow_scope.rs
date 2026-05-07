@@ -91,11 +91,13 @@ pub(crate) fn map_remote_branch_availability(
 }
 
 pub(crate) fn should_clear_missing_remote_branch(error: &ServerError) -> bool {
-    error.code == ServerErrorCode::ScRepoContextInvalid
-        && error
-            .detail
-            .as_deref()
-            .is_some_and(|detail| detail.contains("Remote branch not available:"))
+    matches!(
+        error.code,
+        ServerErrorCode::ScRepoContextInvalid | ServerErrorCode::ScStaleScope
+    ) && error
+        .detail
+        .as_deref()
+        .is_some_and(|detail| detail.contains("Remote branch not available:"))
 }
 
 pub(crate) fn clear_stale_remote_branch(session: &mut WsSession) {

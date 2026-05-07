@@ -7,14 +7,22 @@ use super::error_code;
 use deve_core::protocol::ServerErrorCode;
 
 #[test]
-fn classifies_missing_docs_and_repos_as_storage_not_found() {
+fn classifies_missing_docs_as_doc_not_found_and_repos_as_storage_not_found() {
     assert_eq!(
         error_code(&anyhow::anyhow!("Document not found: abc")),
-        ServerErrorCode::StorageNotFound
+        ServerErrorCode::DocNotFound
     );
     assert_eq!(
         error_code(&anyhow::anyhow!("Repository not found: wiki")),
         ServerErrorCode::StorageNotFound
+    );
+}
+
+#[test]
+fn classifies_document_context_invalid_as_doc_context_invalid() {
+    assert_eq!(
+        error_code(&anyhow::anyhow!("Document context invalid: stale doc_id")),
+        ServerErrorCode::DocContextInvalid
     );
 }
 

@@ -136,9 +136,10 @@ async fn native_ai_disabled_blocks_ai_chat_rpc_and_finishes_chat() {
             } => {
                 assert_eq!(req_id, "req-disabled");
                 assert!(result.is_none());
+                let error = error.expect("plugin error");
+                assert_eq!(error.code, ServerErrorCode::PluginCapabilityDenied);
                 assert!(
                     error
-                        .expect("plugin error")
                         .detail
                         .unwrap_or_default()
                         .contains(crate::server::ai_chat::NATIVE_AI_DISABLED_ERROR)
@@ -160,4 +161,42 @@ async fn native_ai_disabled_blocks_ai_chat_rpc_and_finishes_chat() {
     }
     assert!(saw_error);
     assert!(saw_finish);
+}
+
+#[tokio::test]
+async fn missing_plugin_returns_unknown_plugin_error() {
+    let plugins: Vec<Box<dyn PluginRuntime>> = Vec::new();
+    let (tx, _) = broadcast::channel(4);
+    let (uni_tx, mut uni_rx) = mpsc::channel(4);
+    let ch = DualChannel::new(tx, uni_tx);
+
+    handle_plugin_call_with_plugins(
+        &plugins,
+        &ch,
+        "req-missing".to_string(),
+        "missing-plugin".to_string(),
+        "chat".to_string(),
+        vec![],
+    )
+    .await;
+
+    match uni_rx.recv().await.expect("plugin response") {
+        ServerMessage::PluginResponse {
+            req_id,
+            result,
+            error,
+        } => {
+            assert_eq!(req_id, "req-missing");
+            assert!(result.is_none());
+            let error = error.expect("plugin error");
+            assert_eq!(error.code, ServerErrorCode::PluginUnknownPlugin);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("missing-plugin"))
+            );
+        }
+        other => panic!("unexpected message: {other:?}"),
+    }
 }

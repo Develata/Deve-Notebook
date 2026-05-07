@@ -54,7 +54,7 @@ fn accepts_bound_matching_peer() {
 fn rejects_browser_writer_with_stale_scope_nonce() {
     let (mut session, repo_id, peer_id) = browser_session(new_repo_id());
     let error = validate(&mut session, repo_id, &peer_id, 8).unwrap_err();
-    assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     assert_sync_cleared(&session);
 }
 

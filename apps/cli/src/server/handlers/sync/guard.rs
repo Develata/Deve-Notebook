@@ -40,7 +40,7 @@ pub(super) fn require_bound_peer(
             repo_id
         );
         ch.send_protocol_error_with_scope_nonce(
-            ServerError::new(ServerErrorCode::SyncRepoUnbound),
+            ServerError::new(ServerErrorCode::SyncRepoRouteMismatch),
             scope_nonce,
         );
         return None;
@@ -96,7 +96,7 @@ fn validate_browser_sync_scope(session: &mut WsSession) -> Result<u64, ServerErr
     if sync_scope_nonce != scope_nonce {
         clear_stale_browser_sync_scope(session);
         return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
+            ServerErrorCode::ScStaleScope,
             "browser sync scope nonce is stale",
         ));
     }

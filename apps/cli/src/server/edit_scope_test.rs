@@ -22,7 +22,7 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
     assert_eq!(scope_nonce, Some(19));
     assert_eq!(rejected_doc_id, doc_id);
     assert_eq!(client_op_id, 9);
-    assert_eq!(error.code, ServerErrorCode::StorageNotFound);
+    assert_eq!(error.code, ServerErrorCode::DocNotFound);
     assert!(
         h.state
             .repo

@@ -121,7 +121,12 @@ fn assert_protocol_error(message: ServerMessage, expected_scope: u64, detail: &s
     else {
         panic!("expected ProtocolError, got {message:?}");
     };
-    assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    let expected_code = if detail.contains("stale") {
+        ServerErrorCode::ScStaleScope
+    } else {
+        ServerErrorCode::ScRepoContextInvalid
+    };
+    assert_eq!(error.code, expected_code);
     assert_eq!(scope_nonce, Some(expected_scope));
     assert!(error.detail.as_deref().is_some_and(|got| got == detail));
 }

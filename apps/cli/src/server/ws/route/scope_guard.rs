@@ -22,7 +22,7 @@ pub(super) fn validate_browser_scope_nonce(
     };
     if session.scope_nonce() != requested_scope_nonce {
         return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
+            ServerErrorCode::ScStaleScope,
             format!(
                 "{scope_name} scope nonce is stale: current_scope_nonce={}, requested_scope_nonce={}",
                 session.scope_nonce(),
@@ -78,7 +78,7 @@ mod tests {
         let missing = validate_browser_scope_nonce(&session, None, "merge").unwrap_err();
         assert_eq!(missing.code, ServerErrorCode::ScRepoContextInvalid);
         let stale = validate_browser_scope_nonce(&session, Some(10), "merge").unwrap_err();
-        assert_eq!(stale.code, ServerErrorCode::ScRepoContextInvalid);
+        assert_eq!(stale.code, ServerErrorCode::ScStaleScope);
         assert!(stale.detail.as_deref().expect("detail").contains("stale"));
         assert!(validate_browser_scope_nonce(&session, Some(11), "merge").is_ok());
     }
@@ -116,7 +116,7 @@ mod tests {
             ServerMessage::ProtocolError {
                 error, scope_nonce, ..
             } => {
-                assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+                assert_eq!(error.code, ServerErrorCode::ScStaleScope);
                 assert_eq!(scope_nonce, Some(10));
                 assert!(
                     error

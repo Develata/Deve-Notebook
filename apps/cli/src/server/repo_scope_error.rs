@@ -4,8 +4,8 @@
 //! Repo scope error taxonomy and protocol mapping.
 
 use crate::server::error_classify::{
-    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_storage_corruption,
-    is_storage_not_found,
+    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_stale_scope,
+    is_storage_corruption, is_storage_not_found,
 };
 use anyhow::Error;
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -30,6 +30,9 @@ pub fn map_repo_scope_error(error: Error) -> ServerError {
     }
     if is_storage_corruption(&lower) {
         return ServerError::with_detail(ServerErrorCode::StoragePersistFailed, detail);
+    }
+    if is_stale_scope(&lower) {
+        return ServerError::with_detail(ServerErrorCode::ScStaleScope, detail);
     }
     if is_repo_context_invalid(&lower) {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);

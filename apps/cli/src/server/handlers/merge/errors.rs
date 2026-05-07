@@ -5,7 +5,8 @@
 
 use crate::server::channel::DualChannel;
 use crate::server::error_classify::{
-    is_db_locked, is_repo_context_invalid, is_storage_corruption, is_storage_not_found,
+    is_db_locked, is_repo_context_invalid, is_stale_scope, is_storage_corruption,
+    is_storage_not_found,
 };
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
@@ -76,6 +77,9 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
     }
     if is_storage_corruption(&lower) {
         return ServerErrorCode::StoragePersistFailed;
+    }
+    if is_stale_scope(&lower) {
+        return ServerErrorCode::ScStaleScope;
     }
     if is_repo_context_invalid(&lower) {
         return ServerErrorCode::ScRepoContextInvalid;

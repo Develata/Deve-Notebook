@@ -36,7 +36,7 @@ async fn ws_sync_request_rejects_wrong_repo_after_sync_hello() -> anyhow::Result
     expect_reject(
         &mut ws,
         sync_request(uuid::Uuid::new_v4()),
-        ServerErrorCode::SyncRepoUnbound,
+        ServerErrorCode::SyncRepoRouteMismatch,
         "",
     )
     .await?;
@@ -51,7 +51,7 @@ async fn ws_sync_push_rejects_wrong_repo_after_sync_hello() -> anyhow::Result<()
     expect_reject(
         &mut ws,
         sync_push(PeerId::new("origin"), uuid::Uuid::new_v4()),
-        ServerErrorCode::SyncRepoUnbound,
+        ServerErrorCode::SyncRepoRouteMismatch,
         "",
     )
     .await?;

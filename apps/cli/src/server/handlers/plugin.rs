@@ -10,7 +10,8 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::plugin_response::{
-    send_plugin_invalid_message, send_plugin_request_failed, send_plugin_result,
+    send_plugin_capability_denied, send_plugin_invalid_message, send_plugin_result,
+    send_plugin_runtime_error, send_plugin_serialization_error, send_plugin_unknown_plugin,
     send_plugin_unsupported_message,
 };
 use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
@@ -53,7 +54,7 @@ pub async fn handle_plugin_call_with_plugins(
         return;
     }
     if plugin_id == "ai-chat" && !crate::server::ai_chat::is_native_ai_enabled() {
-        send_plugin_request_failed(
+        send_plugin_capability_denied(
             ch,
             &req_id,
             crate::server::ai_chat::NATIVE_AI_DISABLED_ERROR,
@@ -83,14 +84,14 @@ pub async fn handle_plugin_call_with_plugins(
         match call_result {
             Ok(result) => match dynamic_result_to_json(result) {
                 Ok(json_result) => send_plugin_result(ch, req_id, json_result),
-                Err(detail) => send_plugin_request_failed(ch, &req_id, detail),
+                Err(detail) => send_plugin_serialization_error(ch, &req_id, detail),
             },
             Err(e) => {
-                send_plugin_request_failed(ch, &req_id, format!("Plugin runtime error: {}", e));
+                send_plugin_runtime_error(ch, &req_id, format!("Plugin runtime error: {}", e));
             }
         }
     } else {
-        send_plugin_unsupported_message(ch, &req_id, format!("Plugin not found: {}", plugin_id));
+        send_plugin_unknown_plugin(ch, &req_id, format!("Plugin not found: {}", plugin_id));
     }
 }
 

@@ -102,7 +102,7 @@ async fn browser_sync_hello_rejects_stale_scope_nonce() -> anyhow::Result<()> {
         Some(ServerMessage::ProtocolError {
             error, scope_nonce, ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert_eq!(scope_nonce, Some(7));
         }
         other => panic!("expected ProtocolError, got {:?}", other),

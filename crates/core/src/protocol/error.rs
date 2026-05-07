@@ -55,6 +55,38 @@ pub enum ServerErrorCode {
     ScCommitDiffUnprojectable,
     #[serde(rename = "GRAPH_DEGRADED_PROJECTION_REQUIRED")]
     GraphDegradedProjectionRequired,
+    #[serde(rename = "AUTH_INVALID_PASSWORD")]
+    AuthInvalidPassword,
+    #[serde(rename = "AUTH_RATE_LIMITED")]
+    AuthRateLimited,
+    #[serde(rename = "AUTH_CSRF_MISMATCH")]
+    AuthCsrfMismatch,
+    #[serde(rename = "SC_STALE_SCOPE")]
+    ScStaleScope,
+    #[serde(rename = "DOC_NOT_FOUND")]
+    DocNotFound,
+    #[serde(rename = "DOC_CONTEXT_INVALID")]
+    DocContextInvalid,
+    #[serde(rename = "SYNC_REPO_ROUTE_MISMATCH")]
+    SyncRepoRouteMismatch,
+    #[serde(rename = "SYNC_SNAPSHOT_REQUIRED")]
+    SyncSnapshotRequired,
+    #[serde(rename = "SYNC_INVALID_PAYLOAD")]
+    SyncInvalidPayload,
+    #[serde(rename = "SYNC_PEER_UNKNOWN")]
+    SyncPeerUnknown,
+    #[serde(rename = "SYNC_VERSION_MISMATCH")]
+    SyncVersionMismatch,
+    #[serde(rename = "SYNC_DISCONNECTED")]
+    SyncDisconnected,
+    #[serde(rename = "PLUGIN_UNKNOWN_PLUGIN")]
+    PluginUnknownPlugin,
+    #[serde(rename = "PLUGIN_CAPABILITY_DENIED")]
+    PluginCapabilityDenied,
+    #[serde(rename = "PLUGIN_RUNTIME_ERROR")]
+    PluginRuntimeError,
+    #[serde(rename = "PLUGIN_SERIALIZATION_ERROR")]
+    PluginSerializationError,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -110,5 +142,56 @@ mod tests {
         ))
         .unwrap();
         assert!(encoded.contains("GRAPH_DEGRADED_PROJECTION_REQUIRED"));
+    }
+
+    #[test]
+    fn serde_names_for_plan_error_catalog_codes_are_stable() {
+        let cases = [
+            (
+                ServerErrorCode::AuthInvalidPassword,
+                "AUTH_INVALID_PASSWORD",
+            ),
+            (ServerErrorCode::AuthRateLimited, "AUTH_RATE_LIMITED"),
+            (ServerErrorCode::AuthCsrfMismatch, "AUTH_CSRF_MISMATCH"),
+            (ServerErrorCode::ScStaleScope, "SC_STALE_SCOPE"),
+            (ServerErrorCode::DocNotFound, "DOC_NOT_FOUND"),
+            (ServerErrorCode::DocContextInvalid, "DOC_CONTEXT_INVALID"),
+            (
+                ServerErrorCode::SyncRepoRouteMismatch,
+                "SYNC_REPO_ROUTE_MISMATCH",
+            ),
+            (
+                ServerErrorCode::SyncSnapshotRequired,
+                "SYNC_SNAPSHOT_REQUIRED",
+            ),
+            (ServerErrorCode::SyncInvalidPayload, "SYNC_INVALID_PAYLOAD"),
+            (ServerErrorCode::SyncPeerUnknown, "SYNC_PEER_UNKNOWN"),
+            (
+                ServerErrorCode::SyncVersionMismatch,
+                "SYNC_VERSION_MISMATCH",
+            ),
+            (ServerErrorCode::SyncDisconnected, "SYNC_DISCONNECTED"),
+            (
+                ServerErrorCode::PluginUnknownPlugin,
+                "PLUGIN_UNKNOWN_PLUGIN",
+            ),
+            (
+                ServerErrorCode::PluginCapabilityDenied,
+                "PLUGIN_CAPABILITY_DENIED",
+            ),
+            (ServerErrorCode::PluginRuntimeError, "PLUGIN_RUNTIME_ERROR"),
+            (
+                ServerErrorCode::PluginSerializationError,
+                "PLUGIN_SERIALIZATION_ERROR",
+            ),
+        ];
+
+        for (code, expected) in cases {
+            let encoded = serde_json::to_string(&ServerError::new(code)).unwrap();
+            assert!(
+                encoded.contains(expected),
+                "encoded {code:?} as {encoded}, expected {expected}"
+            );
+        }
     }
 }

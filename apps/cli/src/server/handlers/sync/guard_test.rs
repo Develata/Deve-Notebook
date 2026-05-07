@@ -12,7 +12,7 @@ fn rejects_missing_browser_sync_scope() {
     session.set_scope_nonce(Some(9));
 
     let error = validate_browser_sync_scope(&mut session).expect_err("must fail");
-    assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     assert_sync_cleared(&session);
 }
 

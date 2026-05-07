@@ -35,24 +35,43 @@ pub fn unsupported(detail: impl Into<String>) -> ServerError {
 
 fn status(code: ServerErrorCode) -> StatusCode {
     match code {
-        ServerErrorCode::ScDocNotFound | ServerErrorCode::ScCommitNotFound => StatusCode::NOT_FOUND,
-        ServerErrorCode::StorageDbLocked => StatusCode::SERVICE_UNAVAILABLE,
+        ServerErrorCode::ScDocNotFound
+        | ServerErrorCode::ScCommitNotFound
+        | ServerErrorCode::DocNotFound
+        | ServerErrorCode::PluginUnknownPlugin => StatusCode::NOT_FOUND,
+        ServerErrorCode::StorageDbLocked | ServerErrorCode::SyncDisconnected => {
+            StatusCode::SERVICE_UNAVAILABLE
+        }
         ServerErrorCode::AuthTokenExpired | ServerErrorCode::AuthTokenMissing => {
             StatusCode::UNAUTHORIZED
         }
-        ServerErrorCode::PluginUnsupportedMessage => StatusCode::NOT_IMPLEMENTED,
+        ServerErrorCode::AuthInvalidPassword => StatusCode::UNAUTHORIZED,
+        ServerErrorCode::AuthRateLimited => StatusCode::TOO_MANY_REQUESTS,
+        ServerErrorCode::AuthCsrfMismatch | ServerErrorCode::PluginCapabilityDenied => {
+            StatusCode::FORBIDDEN
+        }
+        ServerErrorCode::SyncInvalidPayload
+        | ServerErrorCode::PluginInvalidMessage
+        | ServerErrorCode::PluginUnsupportedMessage => StatusCode::BAD_REQUEST,
         ServerErrorCode::ScRepoNotSelected
         | ServerErrorCode::ScRemoteBranchReadonly
         | ServerErrorCode::ScRepoContextInvalid
+        | ServerErrorCode::ScStaleScope
         | ServerErrorCode::ScPendingNotFound
         | ServerErrorCode::ScStagedNotFound
         | ServerErrorCode::ScCommitDiffUnprojectable
         | ServerErrorCode::ScNothingToCommit
         | ServerErrorCode::ScConflictTargetMissing
+        | ServerErrorCode::DocContextInvalid
         | ServerErrorCode::SyncRepoUnbound
+        | ServerErrorCode::SyncRepoRouteMismatch
+        | ServerErrorCode::SyncSnapshotRequired
+        | ServerErrorCode::SyncVersionMismatch
         | ServerErrorCode::StorageConflict
         | ServerErrorCode::SyncEditRejected => StatusCode::CONFLICT,
-        ServerErrorCode::SyncPeerUnauthenticated => StatusCode::FORBIDDEN,
+        ServerErrorCode::SyncPeerUnauthenticated | ServerErrorCode::SyncPeerUnknown => {
+            StatusCode::FORBIDDEN
+        }
         _ => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
@@ -64,9 +83,34 @@ mod tests {
     use deve_core::protocol::ServerErrorCode;
 
     #[test]
-    fn plugin_unsupported_errors_map_to_not_implemented() {
+    fn plugin_unsupported_errors_map_to_bad_request() {
         let err = unsupported("Repository not configured");
         assert_eq!(err.code, ServerErrorCode::PluginUnsupportedMessage);
-        assert_eq!(status(err.code), StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(status(err.code), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn plan_catalog_statuses_cover_new_structured_codes() {
+        assert_eq!(status(ServerErrorCode::ScStaleScope), StatusCode::CONFLICT);
+        assert_eq!(
+            status(ServerErrorCode::DocContextInvalid),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            status(ServerErrorCode::SyncRepoRouteMismatch),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            status(ServerErrorCode::SyncInvalidPayload),
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            status(ServerErrorCode::PluginUnknownPlugin),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            status(ServerErrorCode::PluginCapabilityDenied),
+            StatusCode::FORBIDDEN
+        );
     }
 }

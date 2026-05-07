@@ -2,7 +2,8 @@
 //!   - 07_diff_logic#source-control-runtime
 
 use crate::server::error_classify::{
-    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_storage_corruption,
+    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_stale_scope,
+    is_storage_corruption,
 };
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use reqwest::StatusCode;
@@ -20,6 +21,9 @@ pub(super) fn decode_plain_text_error(
     }
     if is_repo_not_selected(&lower) {
         return ServerError::with_detail(ServerErrorCode::ScRepoNotSelected, raw_detail);
+    }
+    if is_stale_scope(&lower) {
+        return ServerError::with_detail(ServerErrorCode::ScStaleScope, raw_detail);
     }
     if is_repo_context_invalid(&lower) {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, raw_detail);

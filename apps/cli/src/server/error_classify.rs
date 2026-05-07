@@ -94,7 +94,25 @@ pub(super) fn is_repo_context_invalid(lower: &str) -> bool {
             "local workspace path requested on remote branch",
             "local workspace root requested on remote branch",
             "scope mismatch",
-            "stale scope nonce",
+        ],
+    )
+}
+
+pub(super) fn is_stale_scope(lower: &str) -> bool {
+    contains_any(lower, &["stale scope nonce", "stale remote scope:"])
+}
+
+pub(super) fn is_repo_route_mismatch(lower: &str) -> bool {
+    contains_any(lower, &["sync repo mismatch", "repo route mismatch"])
+}
+
+pub(super) fn is_invalid_sync_payload(lower: &str) -> bool {
+    contains_any(
+        lower,
+        &[
+            "invalid sync payload",
+            "encrypted op seq mismatch",
+            "sync payload peer/repo mismatch",
         ],
     )
 }

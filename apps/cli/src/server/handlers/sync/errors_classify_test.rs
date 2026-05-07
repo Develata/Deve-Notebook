@@ -63,6 +63,32 @@ fn classifies_remote_bootstrap_drift_as_repo_context_invalid() {
 }
 
 #[test]
+fn classifies_stale_scope_as_stale_scope() {
+    assert_eq!(
+        classify_failure_code(
+            "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
+        ),
+        ServerErrorCode::ScStaleScope
+    );
+}
+
+#[test]
+fn classifies_sync_repo_mismatch_as_route_mismatch() {
+    assert_eq!(
+        classify_failure_code("Sync repo mismatch: session bound to None, got repo-a"),
+        ServerErrorCode::SyncRepoRouteMismatch
+    );
+}
+
+#[test]
+fn classifies_invalid_sync_payload_as_sync_invalid_payload() {
+    assert_eq!(
+        classify_failure_code("Encrypted op seq mismatch: envelope 1, payload 2"),
+        ServerErrorCode::SyncInvalidPayload
+    );
+}
+
+#[test]
 fn classifies_legacy_projection_breakage_as_storage_persist_failed() {
     assert_eq!(
         classify_failure_code(

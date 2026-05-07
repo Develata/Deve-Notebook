@@ -60,7 +60,7 @@ async fn reject_stale_browser_scope(
         Some(ServerMessage::ProtocolError {
             error, scope_nonce, ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert_eq!(scope_nonce, Some(16));
             assert!(
                 error

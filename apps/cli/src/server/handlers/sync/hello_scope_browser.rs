@@ -36,7 +36,7 @@ pub(super) fn validate_browser_scope(
         ));
     }
     if session.scope_nonce() != scope_nonce {
-        return Err(SyncHelloScopeFailure::repo_context_invalid(
+        return Err(SyncHelloScopeFailure::stale_scope(
             format!(
                 "Browser SyncHello stale scope nonce: current_scope_nonce={}, requested_scope_nonce={}",
                 session.scope_nonce(),

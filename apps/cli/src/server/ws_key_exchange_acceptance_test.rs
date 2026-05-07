@@ -98,7 +98,12 @@ fn assert_protocol_error(message: ServerMessage, scope_nonce: Option<u64>, detai
             scope_nonce: actual_scope,
             ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            let expected_code = if detail.contains("stale") {
+                ServerErrorCode::ScStaleScope
+            } else {
+                ServerErrorCode::ScRepoContextInvalid
+            };
+            assert_eq!(error.code, expected_code);
             assert_eq!(actual_scope, scope_nonce);
             assert!(error.detail.as_deref().is_some_and(|got| got.contains(detail)));
         }

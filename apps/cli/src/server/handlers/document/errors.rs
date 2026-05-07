@@ -21,19 +21,21 @@ pub(crate) struct OpenDocErrorContext<'a> {
 
 fn error_code(err: &anyhow::Error) -> ServerErrorCode {
     let detail = err.to_string();
+    let lower = detail.to_ascii_lowercase();
+    if lower.contains("document context invalid") || lower.contains("doc context invalid") {
+        return ServerErrorCode::DocContextInvalid;
+    }
+    if lower.contains("document not found") || lower.contains("doc not found") {
+        return ServerErrorCode::DocNotFound;
+    }
     let mapped = map_repo_scope_error(anyhow!(detail.clone())).code;
     if mapped != ServerErrorCode::RequestFailed {
         return mapped;
     }
-    if detail
-        .to_ascii_lowercase()
-        .contains("tracked document projection missing")
-    {
+    if lower.contains("tracked document projection missing") {
         return ServerErrorCode::StoragePersistFailed;
     }
-    if detail.to_ascii_lowercase().contains("table")
-        && detail.to_ascii_lowercase().contains("does not exist")
-    {
+    if lower.contains("table") && lower.contains("does not exist") {
         return ServerErrorCode::StoragePersistFailed;
     }
     ServerErrorCode::RequestFailed

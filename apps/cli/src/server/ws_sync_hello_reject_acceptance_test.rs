@@ -20,8 +20,15 @@ async fn ws_endpoint_rejects_sync_hello_before_repo_switch() -> anyhow::Result<(
     let mut ws = connect_harness(&harness).await?;
     let remote = IdentityKeyPair::generate();
 
-    expect_sync_hello_reject(&mut ws, &remote, harness.repo_id, SWITCH_NONCE, "scope mismatch")
-        .await?;
+    expect_sync_hello_reject(
+        &mut ws,
+        &remote,
+        harness.repo_id,
+        SWITCH_NONCE,
+        ServerErrorCode::ScRepoContextInvalid,
+        "scope mismatch",
+    )
+    .await?;
 
     harness.shutdown().await;
     Ok(())
@@ -39,6 +46,7 @@ async fn ws_endpoint_rejects_sync_hello_for_wrong_repo() -> anyhow::Result<()> {
         &remote,
         uuid::Uuid::new_v4(),
         SWITCH_NONCE,
+        ServerErrorCode::ScRepoContextInvalid,
         "scope mismatch",
     )
     .await?;
@@ -54,8 +62,15 @@ async fn ws_endpoint_rejects_sync_hello_with_stale_scope_nonce() -> anyhow::Resu
     switch_repo(&mut ws, harness.repo_id).await?;
     let remote = IdentityKeyPair::generate();
 
-    expect_sync_hello_reject(&mut ws, &remote, harness.repo_id, STALE_NONCE, "stale scope nonce")
-        .await?;
+    expect_sync_hello_reject(
+        &mut ws,
+        &remote,
+        harness.repo_id,
+        STALE_NONCE,
+        ServerErrorCode::ScStaleScope,
+        "stale scope nonce",
+    )
+    .await?;
 
     harness.shutdown().await;
     Ok(())
@@ -66,10 +81,16 @@ async fn expect_sync_hello_reject(
     remote: &IdentityKeyPair,
     repo_id: uuid::Uuid,
     scope_nonce: u64,
+    expected_code: ServerErrorCode,
     detail: &str,
 ) -> anyhow::Result<()> {
     send_client_message(ws, client_sync_hello(remote, repo_id, scope_nonce)).await?;
-    assert_protocol_error(recv_server_message(ws).await?, scope_nonce, detail);
+    assert_protocol_error(
+        recv_server_message(ws).await?,
+        scope_nonce,
+        expected_code,
+        detail,
+    );
     Ok(())
 }
 
@@ -110,12 +131,17 @@ async fn switch_repo(ws: &mut TestWs, repo_id: uuid::Uuid) -> anyhow::Result<()>
     Ok(())
 }
 
-fn assert_protocol_error(message: ServerMessage, expected_scope: u64, detail: &str) {
+fn assert_protocol_error(
+    message: ServerMessage,
+    expected_scope: u64,
+    expected_code: ServerErrorCode,
+    detail: &str,
+) {
     match message {
         ServerMessage::ProtocolError {
             error, scope_nonce, ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, expected_code);
             assert_eq!(scope_nonce, Some(expected_scope));
             assert!(
                 error.detail.as_deref().is_some_and(|got| got.contains(detail)),

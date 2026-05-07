@@ -9,6 +9,7 @@ use deve_core::protocol::{ServerError, ServerErrorCode};
 pub(crate) fn should_clear_stale_remote_scope(error: &ServerError) -> bool {
     match error.code {
         ServerErrorCode::SyncRepoUnbound => true,
+        ServerErrorCode::ScStaleScope => true,
         ServerErrorCode::ScRepoContextInvalid => error
             .detail
             .as_deref()
@@ -20,7 +21,9 @@ pub(crate) fn should_clear_stale_remote_scope(error: &ServerError) -> bool {
 pub(super) fn should_clear_stale_local_scope(error: &ServerError) -> bool {
     matches!(
         error.code,
-        ServerErrorCode::ScRepoContextInvalid | ServerErrorCode::StorageNotFound
+        ServerErrorCode::ScRepoContextInvalid
+            | ServerErrorCode::ScStaleScope
+            | ServerErrorCode::StorageNotFound
     )
 }
 
@@ -55,7 +58,7 @@ mod tests {
     #[test]
     fn clears_prefixed_stale_remote_scope_errors() {
         assert!(should_clear_stale_remote_scope(&ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
+            ServerErrorCode::ScStaleScope,
             "stale remote scope: selector drifted after branch switch",
         )));
     }

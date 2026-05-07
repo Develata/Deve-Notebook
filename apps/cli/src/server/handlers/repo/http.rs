@@ -8,8 +8,8 @@
 //! # Repo HTTP API
 
 use crate::server::error_classify::{
-    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_storage_corruption,
-    is_storage_not_found,
+    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_stale_scope,
+    is_storage_corruption, is_storage_not_found,
 };
 use axum::Json;
 use axum::extract::{Query, State};
@@ -162,7 +162,7 @@ fn classify_graph_projection_error(
 
 fn plugin_host_error_response(error: impl ToString) -> axum::response::Response {
     http_error(
-        StatusCode::NOT_IMPLEMENTED,
+        StatusCode::BAD_REQUEST,
         ServerErrorCode::PluginUnsupportedMessage,
         error.to_string(),
     )
@@ -187,6 +187,9 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
     }
     if is_repo_not_selected(&lower) {
         return (StatusCode::CONFLICT, ServerErrorCode::SyncRepoUnbound);
+    }
+    if is_stale_scope(&lower) {
+        return (StatusCode::CONFLICT, ServerErrorCode::ScStaleScope);
     }
     if is_repo_context_invalid(&lower) {
         return (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid);

@@ -42,12 +42,12 @@ fn classifies_missing_repo_selection_as_sync_repo_unbound() {
 }
 
 #[test]
-fn classifies_stale_scope_nonce_as_repo_context_invalid() {
+fn classifies_stale_scope_nonce_as_stale_scope() {
     assert_eq!(
         classify_repo_error(
             "Browser SyncHello stale scope nonce: current_scope_nonce=9, requested_scope_nonce=7"
         ),
-        (StatusCode::CONFLICT, ServerErrorCode::ScRepoContextInvalid)
+        (StatusCode::CONFLICT, ServerErrorCode::ScStaleScope)
     );
 }
 
@@ -120,7 +120,7 @@ fn classifies_missing_remote_catalog_as_storage_persist_failed() {
 }
 
 #[test]
-fn plugin_host_repository_unavailable_maps_to_not_implemented() {
+fn plugin_host_repository_unavailable_maps_to_bad_request() {
     let response = plugin_host_error_response("Repository not configured");
-    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }

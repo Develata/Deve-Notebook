@@ -74,6 +74,7 @@ pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
         ServerErrorCode::ScRepoNotSelected
             | ServerErrorCode::ScRemoteBranchReadonly
             | ServerErrorCode::ScRepoContextInvalid
+            | ServerErrorCode::ScStaleScope
             | ServerErrorCode::ScPendingNotFound
             | ServerErrorCode::ScStagedNotFound
             | ServerErrorCode::ScDocNotFound

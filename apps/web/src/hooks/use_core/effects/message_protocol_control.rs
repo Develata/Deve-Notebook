@@ -47,7 +47,11 @@ pub(super) fn clear_failed_scope_switch(
 pub(super) fn is_auth_error(code: ServerErrorCode) -> bool {
     matches!(
         code,
-        ServerErrorCode::AuthTokenExpired | ServerErrorCode::AuthTokenMissing
+        ServerErrorCode::AuthTokenExpired
+            | ServerErrorCode::AuthTokenMissing
+            | ServerErrorCode::AuthInvalidPassword
+            | ServerErrorCode::AuthRateLimited
+            | ServerErrorCode::AuthCsrfMismatch
     )
 }
 
@@ -59,6 +63,7 @@ pub(crate) fn should_recover_scope_pref_after_failed_repo_switch(
     matches!(
         code,
         ServerErrorCode::ScRepoContextInvalid
+            | ServerErrorCode::ScStaleScope
             | ServerErrorCode::SyncRepoUnbound
             | ServerErrorCode::StorageNotFound
     ) && switch_nonce.is_some()
