@@ -70,10 +70,10 @@ check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate_test.rs
 check_contains apps/cli/src/server/ai_chat/mod.rs "Native AI Chat tools are disabled by default"
 check_contains apps/cli/src/server/ai_chat/mod.rs "native_ai_rejects_request_tools_before_provider_call"
 check_contains apps/cli/src/server/ai_chat/stream.rs "Native AI Chat provider tool calls are disabled by default"
-check_contains apps/cli/src/server/ai_chat/stream.rs "finalize_stream_response_rejects_provider_tool_calls"
-check_contains apps/cli/src/server/ai_chat/stream.rs "provider_tool_call_rejection_does_not_send_finish_chunk"
-check_contains apps/cli/src/server/ai_chat/stream.rs "provider_tool_call_delta_is_rejected_immediately"
-check_contains apps/cli/src/server/ai_chat/stream.rs "provider_tool_call_payload_is_rejected_before_content_chunk"
+check_contains apps/cli/src/server/ai_chat/stream_test.rs "finalize_stream_response_rejects_provider_tool_calls"
+check_contains apps/cli/src/server/ai_chat/stream_test.rs "provider_tool_call_rejection_does_not_send_finish_chunk"
+check_contains apps/cli/src/server/ai_chat/stream_test.rs "provider_tool_call_delta_is_rejected_immediately"
+check_contains apps/cli/src/server/ai_chat/stream_test.rs "provider_tool_call_payload_is_rejected_before_content_chunk"
 
 # Trusted CLI is default-off and policy-gated at both server and UI boundaries.
 check_contains docs/plan/10_ai_agent.md "default-off、policy-gated 的 Trusted CLI path"
@@ -117,9 +117,9 @@ check_contains apps/web/src/components/settings_sections.rs "if !button_state.ge
 check_contains apps/web/src/components/settings_sections_policy.rs "ai_backend_button_state"
 check_contains apps/web/src/components/settings_sections_policy.rs "native_disabled"
 check_contains apps/web/src/components/settings_sections_policy.rs "trusted_disabled"
-check_contains apps/web/src/components/settings_sections_policy.rs "trusted_cli_default_off_keeps_native_visible_and_disables_trusted_backend"
-check_contains apps/web/src/components/settings_sections_policy.rs "ai_backend_buttons_disable_only_unavailable_backends"
-check_contains apps/web/src/components/settings_sections_policy.rs "ai_backend_buttons_show_disabled_reason_only_for_disabled_native"
+check_contains apps/web/src/components/settings_sections_policy_test.rs "trusted_cli_default_off_keeps_native_visible_and_disables_trusted_backend"
+check_contains apps/web/src/components/settings_sections_policy_test.rs "ai_backend_buttons_disable_only_unavailable_backends"
+check_contains apps/web/src/components/settings_sections_policy_test.rs "ai_backend_buttons_show_disabled_reason_only_for_disabled_native"
 check_contains apps/web/src/hooks/use_ai_backend.rs "backend: AI_BACKEND_NATIVE"
 
 echo "ai-baseline-check: ok"

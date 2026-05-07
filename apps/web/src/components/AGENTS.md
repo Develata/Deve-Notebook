@@ -21,6 +21,8 @@ All UI components organized by feature area. Each subdirectory is a self-contain
 | `dropdown.rs` | Reusable dropdown component |
 | `outline.rs` | Document outline panel |
 | `settings.rs` | Settings dialog |
+| `settings_sections_policy.rs` | Settings section button-state and disabled-state policy helpers |
+| `settings_sections_policy_test.rs` | Settings policy helper unit tests |
 | `merge_modal.rs` | Merge conflict resolution modal |
 | `merge_panel.rs` | Merge panel for side-by-side conflict view |
 | `disconnect_overlay.rs` | Connection lost overlay |
