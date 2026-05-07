@@ -431,9 +431,9 @@ contains apps/web/src/components/mobile_layout/drawers/left_tab_button.rs "fn mo
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "data-deve-mobile-more-menu=move || mobile_more_menu_marker(show_more.get())"
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "data-deve-mobile-more-item=mobile_more_item_marker(item)"
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "data-deve-mobile-more-pin-action=mobile_more_pin_action_marker(item)"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_menu_marker_is_visible_when_open()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_menu_items_cover_sidebar_entries()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_menu_reuses_desktop_entry_classes()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_menu_marker_is_visible_when_open()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_menu_items_cover_sidebar_entries()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_menu_reuses_desktop_entry_classes()"
 
 # UI-MOB-016: mobile More menu closes on item select and Escape, while Pin
 # only updates the pinned set.
@@ -457,13 +457,13 @@ contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "pub(su
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "pub(super) fn mobile_more_after_escape() -> bool"
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "pub(super) fn mobile_more_after_pin_click(open: bool) -> bool"
 contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "pub(super) fn toggle_mobile_more_pin("
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_pin_actions_cover_sidebar_entries()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_item_click_closes_menu()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_escape_closes_menu()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_pin_click_keeps_menu_state()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_pin_toggle_adds_unpinned_view()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_pin_toggle_removes_pinned_view_when_not_last()"
-contains apps/web/src/components/mobile_layout/drawers/left_more_menu.rs "fn mobile_sidebar_more_pin_toggle_keeps_last_view_pinned()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_pin_actions_cover_sidebar_entries()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_item_click_closes_menu()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_escape_closes_menu()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_pin_click_keeps_menu_state()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_pin_toggle_adds_unpinned_view()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_pin_toggle_removes_pinned_view_when_not_last()"
+contains apps/web/src/components/mobile_layout/drawers/left_more_menu_test.rs "fn mobile_sidebar_more_pin_toggle_keeps_last_view_pinned()"
 
 # UI-MOB-017: mobile Diff owns the viewport and must not be covered by AI Chat
 # or the editor accessory toolbar.
