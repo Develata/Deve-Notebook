@@ -26,6 +26,8 @@ Sync engine and P2P reconciliation. Manages document synchronization between the
 | `rebuild_projection_state.rs` | Rebuild state tracking |
 | `persist_guard.rs` | PersistGuard — prevents watcher from reacting to our own writes |
 | `repo_scoped.rs` | RepoScopedSyncEngine |
+| `repo_scoped_registry.rs` | Repo-scoped SyncEngine registry facade |
+| `repo_scoped_strict.rs` | Strict repo-scoped SyncEngine loading |
 | `repo_scoped_lock.rs` | Repo-scoped locking |
 | `scan.rs` | Vault directory scanning |
 | `scan_file.rs` | Individual file scanning |
