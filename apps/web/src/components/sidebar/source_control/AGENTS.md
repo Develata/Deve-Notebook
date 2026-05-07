@@ -23,6 +23,8 @@ Source control sidebar panel. Shows changes, staged/unstaged sections, commit in
 | `commit_ai_runtime_test.rs` | Commit AI effect planning tests |
 | `commit_ai_signal_test.rs` | Commit AI Leptos signal runner tests |
 | `history.rs` | Commit history view |
+| `graph_panel.rs` | Read-only source-control graph projection panel |
+| `graph_panel_test.rs` | Graph panel state and copy unit tests |
 | `context_menu.rs` | Right-click context menu |
 | `repositories.rs` | Multi-repo listing |
 
