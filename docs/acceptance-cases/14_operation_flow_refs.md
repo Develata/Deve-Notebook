@@ -40,8 +40,8 @@
 
 - case_id: RENDER-FEAT-01
   goal: Document edit produces a confirmed operation.
-  steps: [ui_type: "confirmed op check", run: "deve dump --help"]
-  assertions: [stdout_contains: "dump"]
+  steps: [ui_type: "confirmed op check", run: "cargo test -p deve_cli duplicate_client_op -- --nocapture"]
+  assertions: [duplicate_client_op_returns_original_ack true]
 
 - case_id: REPO-FEAT-01
   goal: Repo file open resolves through UUID-first retrieval.

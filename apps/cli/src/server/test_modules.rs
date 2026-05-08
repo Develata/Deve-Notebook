@@ -11,6 +11,7 @@ mod document_remote_scope_state_test_support;
 mod document_remote_scope_test_support;
 mod document_scope_bootstrap_test;
 mod document_local_scope_test_support;
+mod edit_idempotency_test;
 mod edit_projection_ack_test;
 mod edit_runtime_repair_test;
 mod edit_message_test_support;
