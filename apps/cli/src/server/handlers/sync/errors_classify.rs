@@ -49,7 +49,6 @@ pub(super) fn classify_failure_code(detail: &str) -> ServerErrorCode {
 
 fn is_peer_auth_failure(lower: &str) -> bool {
     lower.contains("signature")
-        || lower.contains("peerid mismatch")
         || lower.contains("verify")
         || lower.contains("public key")
         || lower.contains("unauthenticated")

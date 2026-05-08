@@ -9,7 +9,28 @@ use crate::security::hashing::sha256_hex;
 use crate::security::keypair::verify_signature;
 use crate::sync::protocol::{self, HandshakeResult};
 use crate::sync::vector::VersionVector;
-use anyhow::{Result, anyhow};
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum HandshakeError {
+    #[error("PeerID mismatch: claimed {claimed}, derived {derived}")]
+    PeerIdMismatch { claimed: PeerId, derived: String },
+
+    #[error("Invalid Handshake Signature")]
+    InvalidSignature,
+
+    #[error("Failed to encode handshake vector: {0}")]
+    VectorSerialization(#[from] serde_json::Error),
+}
+
+impl HandshakeError {
+    pub const fn is_peer_auth_failure(&self) -> bool {
+        matches!(
+            self,
+            HandshakeError::PeerIdMismatch { .. } | HandshakeError::InvalidSignature
+        )
+    }
+}
 
 impl SyncEngine {
     /// 计算与远端 Peer 的差异 (Internal)
@@ -39,18 +60,17 @@ impl SyncEngine {
         pub_key: &[u8],
         signature: &[u8],
         remote_vector: VersionVector,
-    ) -> Result<HandshakeResult> {
+    ) -> Result<HandshakeResult, HandshakeError> {
         // 1. Verify PeerID (Hash of PubKey)
         // 这里的 12 是截取长度，需与 IdentityKeyPair::peer_id 保持一致
         let hash = sha256_hex(pub_key);
         let derived_id = &hash[0..12];
 
         if remote_peer_id.as_str() != derived_id {
-            return Err(anyhow!(
-                "PeerID mismatch: claimed {}, derived {}",
-                remote_peer_id,
-                derived_id
-            ));
+            return Err(HandshakeError::PeerIdMismatch {
+                claimed: remote_peer_id,
+                derived: derived_id.to_owned(),
+            });
         }
 
         // 2. Verify Signature
@@ -65,7 +85,7 @@ impl SyncEngine {
         msg.extend_from_slice(&vec_bytes);
 
         if !verify_signature(pub_key, &msg, signature) {
-            return Err(anyhow!("Invalid Handshake Signature"));
+            return Err(HandshakeError::InvalidSignature);
         }
 
         let mut remote_vector = remote_vector;
@@ -80,5 +100,81 @@ impl SyncEngine {
             snapshot_requests,
             auto_apply: self.sync_mode == SyncMode::Auto,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{HandshakeError, SyncEngine};
+    use crate::config::SyncMode;
+    use crate::ledger::RepoManager;
+    use crate::models::{PeerId, RepoId};
+    use crate::security::IdentityKeyPair;
+    use crate::sync::vector::VersionVector;
+    use std::sync::Arc;
+
+    fn build_engine() -> anyhow::Result<(tempfile::TempDir, SyncEngine, RepoId)> {
+        let dir = tempfile::tempdir()?;
+        let vault = dir.path().join("vault");
+        let mut repo = RepoManager::init(dir.path(), 8, Some("notes"), Some("urn:test:notes"))?;
+        repo.set_vault_root(&vault);
+        let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+        let repo = Arc::new(repo);
+        let engine = SyncEngine::new(PeerId::new("local"), repo, SyncMode::Auto, None);
+        Ok((dir, engine, repo_id))
+    }
+
+    fn handshake_signature(remote: &IdentityKeyPair, vector: &VersionVector) -> Vec<u8> {
+        let sorted_map: std::collections::BTreeMap<_, _> = vector.iter().collect();
+        let vec_bytes = serde_json::to_vec(&sorted_map).expect("serialize vector");
+        let mut msg = Vec::new();
+        msg.extend_from_slice(b"deve-handshake");
+        msg.extend_from_slice(remote.peer_id().as_str().as_bytes());
+        msg.extend_from_slice(&vec_bytes);
+        remote.sign(&msg)
+    }
+
+    #[test]
+    fn handshake_reports_peer_id_mismatch_as_typed_auth_error() -> anyhow::Result<()> {
+        let (_dir, mut engine, repo_id) = build_engine()?;
+        let remote = IdentityKeyPair::generate();
+        let other = IdentityKeyPair::generate();
+        let vector = VersionVector::new();
+        let other_pubkey = other.public_key_bytes();
+
+        let err = engine
+            .handshake(
+                repo_id,
+                remote.peer_id(),
+                &other_pubkey,
+                &handshake_signature(&remote, &vector),
+                vector,
+            )
+            .expect_err("mismatched pubkey must fail");
+
+        assert!(matches!(err, HandshakeError::PeerIdMismatch { .. }));
+        assert!(err.is_peer_auth_failure());
+        Ok(())
+    }
+
+    #[test]
+    fn handshake_reports_invalid_signature_as_typed_auth_error() -> anyhow::Result<()> {
+        let (_dir, mut engine, repo_id) = build_engine()?;
+        let remote = IdentityKeyPair::generate();
+        let pubkey = remote.public_key_bytes();
+
+        let err = engine
+            .handshake(
+                repo_id,
+                remote.peer_id(),
+                &pubkey,
+                &[0; 64],
+                VersionVector::new(),
+            )
+            .expect_err("invalid signature must fail");
+
+        assert!(matches!(err, HandshakeError::InvalidSignature));
+        assert!(err.is_peer_auth_failure());
+        Ok(())
     }
 }

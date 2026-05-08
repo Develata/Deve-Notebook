@@ -13,10 +13,10 @@ fn classifies_signature_failures_as_peer_unauthenticated() {
 }
 
 #[test]
-fn classifies_peer_id_mismatch_as_peer_unauthenticated() {
+fn generic_classifier_does_not_map_peer_id_mismatch_by_string() {
     assert_eq!(
         classify_failure_code("Handshake failed: PeerID mismatch: claimed a, derived b"),
-        ServerErrorCode::SyncPeerUnauthenticated
+        ServerErrorCode::RequestFailed
     );
 }
 

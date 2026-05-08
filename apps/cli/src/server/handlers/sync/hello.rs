@@ -76,7 +76,7 @@ pub(super) async fn handle(
         Err(e) => {
             clear_sync_hello_scope_failure(session, false);
             tracing::error!("Handshake failed with {}: {}", peer_id, e);
-            errors::classified_failure(ch, format!("Handshake failed: {}", e), scope);
+            errors::handshake_failed(ch, e, scope);
             return;
         }
     };
