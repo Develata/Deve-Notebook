@@ -71,6 +71,31 @@ async fn versioned_binary_ping_routes_to_pong() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn minimum_supported_binary_ping_routes_to_pong() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let filter = BroadcastFilter::allow_all();
+    let mut session = WsSession::new();
+    let bytes =
+        encode_client_binary_with_version(&ClientMessage::Ping, MIN_SUPPORTED_WS_PROTOCOL_VERSION)?;
+
+    let flow = handle_incoming_message(
+        &state,
+        &ch,
+        &mut session,
+        Message::Binary(bytes),
+        &filter,
+        "peer-1",
+    )
+    .await;
+
+    assert!(matches!(flow, SocketFlow::Continue));
+    assert!(matches!(uni_rx.recv().await, Some(ServerMessage::Pong)));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn legacy_json_text_is_rejected_by_default_with_structured_error() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);

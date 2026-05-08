@@ -69,6 +69,29 @@ fn unsupported_version_is_rejected() {
 }
 
 #[test]
+fn minimum_supported_binary_version_still_decodes() {
+    let client_frame = ClientFrame {
+        protocol_version: MIN_SUPPORTED_WS_PROTOCOL_VERSION,
+        message: ClientMessage::Ping,
+    };
+    let client_bytes = encode_binary_frame(&client_frame).unwrap();
+    assert!(matches!(
+        decode_client_binary(&client_bytes),
+        Ok(ClientMessage::Ping)
+    ));
+
+    let server_frame = ServerFrame {
+        protocol_version: MIN_SUPPORTED_WS_PROTOCOL_VERSION,
+        message: ServerMessage::Pong,
+    };
+    let server_bytes = encode_binary_frame(&server_frame).unwrap();
+    assert!(matches!(
+        decode_server_binary(&server_bytes),
+        Ok(ServerMessage::Pong)
+    ));
+}
+
+#[test]
 fn sync_vector_fields_roundtrip_in_current_binary_frame() {
     let repo_id = uuid::Uuid::new_v4();
     let peer = PeerId::new("peer-a");
