@@ -22,6 +22,8 @@ use anyhow::Context;
 mod defaults;
 #[path = "config/env_alias.rs"]
 mod env_alias;
+#[path = "config/profile.rs"]
+mod profile;
 #[path = "config/schema.rs"]
 mod schema;
 
@@ -51,9 +53,11 @@ impl Config {
             .context("Failed to build configuration")?;
 
         let mut config = settings
+            .clone()
             .try_deserialize::<Self>()
             .context("Failed to parse configuration")?;
-        env_alias::apply_ai_aliases(&mut config)?;
+        profile::apply_profile_presets(&settings, &mut config);
+        env_alias::apply_env_aliases(&mut config)?;
         Ok(config)
     }
 

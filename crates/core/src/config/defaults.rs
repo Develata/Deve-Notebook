@@ -21,6 +21,10 @@ pub(super) fn snapshot_depth() -> usize {
     100
 }
 
+pub(super) fn mem_cache_mb() -> usize {
+    128
+}
+
 pub(super) fn concurrency() -> usize {
     4
 }

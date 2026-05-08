@@ -28,38 +28,42 @@ impl Drop for CwdGuard {
 }
 
 struct EnvGuard {
-    previous: Vec<(&'static str, Option<OsString>)>,
+    previous: Vec<(OsString, Option<OsString>)>,
 }
 
 impl EnvGuard {
-    fn set(entries: &[(&'static str, &'static str)]) -> Self {
-        let previous = entries
-            .iter()
-            .map(|(key, value)| {
-                let old = std::env::var_os(key);
-                unsafe {
-                    std::env::set_var(key, value);
-                }
-                (*key, old)
-            })
-            .collect();
-        Self { previous }
-    }
-
     fn set_optional(entries: &[(&'static str, Option<&str>)]) -> Self {
-        let previous = entries
-            .iter()
-            .map(|(key, value)| {
-                let old = std::env::var_os(key);
-                unsafe {
-                    match value {
-                        Some(value) => std::env::set_var(key, value),
-                        None => std::env::remove_var(key),
-                    }
-                }
-                (*key, old)
+        let mut keys = std::env::vars_os()
+            .filter_map(|(key, _)| {
+                let is_deve = key.to_str().is_some_and(|key| key.starts_with("DEVE_"));
+                is_deve.then_some(key)
             })
-            .collect();
+            .collect::<Vec<_>>();
+        keys.extend([
+            OsString::from("MEM_CACHE_MB"),
+            OsString::from("AGENT_CLI_PATH"),
+        ]);
+        keys.extend(entries.iter().map(|(key, _)| OsString::from(key)));
+
+        let mut previous = Vec::new();
+        for key in keys {
+            if previous.iter().any(|(seen, _)| seen == &key) {
+                continue;
+            }
+            let key_str = key.to_string_lossy();
+            let value = entries
+                .iter()
+                .find_map(|(entry_key, value)| (key_str == *entry_key).then_some(*value))
+                .flatten();
+            let old = std::env::var_os(&key);
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(&key, value),
+                    None => std::env::remove_var(&key),
+                }
+            }
+            previous.push((key, old));
+        }
         Self { previous }
     }
 }

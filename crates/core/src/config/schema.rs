@@ -190,6 +190,9 @@ pub struct Config {
     /// 快照保留深度。
     #[serde(default = "defaults::snapshot_depth")]
     pub snapshot_depth: usize,
+    /// 内存缓存上限。
+    #[serde(default = "defaults::mem_cache_mb")]
+    pub mem_cache_mb: usize,
     /// 后台压缩并发度。
     #[serde(default = "defaults::concurrency")]
     pub concurrency: usize,
@@ -210,6 +213,7 @@ impl Default for Config {
             sync_mode: SyncMode::default(),
             merge_strategy: MergeStrategy::default(),
             snapshot_depth: defaults::snapshot_depth(),
+            mem_cache_mb: defaults::mem_cache_mb(),
             concurrency: defaults::concurrency(),
             ui: UiConfig::default(),
             ai: AiConfig::default(),

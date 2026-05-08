@@ -18,6 +18,8 @@ merge_strategy = "manual"
 # Performance Tuning
 # Number of changes to keep in history
 snapshot_depth = 100
+# Memory cache limit in MB
+mem_cache_mb = 128
 # Background compression concurrency
 concurrency = 4
 

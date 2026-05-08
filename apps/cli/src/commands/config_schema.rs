@@ -14,6 +14,7 @@ const CONFIG_KEY_SPECS: &[ConfigKeySpec] = &[
     ConfigKeySpec::integer("ai.agent_bridge.timeout_ms"),
     ConfigKeySpec::integer("concurrency"),
     ConfigKeySpec::string("ledger_dir", &[]),
+    ConfigKeySpec::integer("mem_cache_mb"),
     ConfigKeySpec::string("merge_strategy", &["manual", "auto"]),
     ConfigKeySpec::string("profile", &["standard", "low-spec"]),
     ConfigKeySpec::integer("snapshot_depth"),

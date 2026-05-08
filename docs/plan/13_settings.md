@@ -82,6 +82,7 @@
 | `vault_path`            | String | `vault`    | 投影库根目录 (Relative or Absolute).                   |
 | `sync_mode`             | String | `auto`     | 同步模式: `auto` (自动合并), `manual` (接收后暂存，按单一 peer/repo 目标确认后原子合并). |
 | `snapshot_depth`        | Number | `100`      | 快照保留深度 (Versions per Repo).                      |
+| `mem_cache_mb`          | Number | `128`      | 内存缓存上限 (MB).                                      |
 | `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
 | `merge_strategy`        | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `07_diff_logic.md §Conflict Resolution`。 |
 

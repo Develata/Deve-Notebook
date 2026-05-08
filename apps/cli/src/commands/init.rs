@@ -56,6 +56,8 @@ merge_strategy = "manual"
 # Performance Tuning
 # Number of changes to keep in history
 snapshot_depth = 100
+# Memory cache limit in MB
+mem_cache_mb = 128
 # Background compression concurrency
 concurrency = 4
 
@@ -132,6 +134,7 @@ mod tests {
 
         let config = std::fs::read_to_string(root.join("config.toml")).expect("config");
         assert!(config.contains("merge_strategy = \"manual\""));
+        assert!(config.contains("mem_cache_mb = 128"));
         assert!(config.contains("[ui]"));
         assert!(config.contains("recent_docs_count = 10"));
         assert!(config.contains("[ai]"));
