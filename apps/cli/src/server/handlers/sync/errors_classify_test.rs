@@ -13,6 +13,14 @@ fn classifies_signature_failures_as_peer_unauthenticated() {
 }
 
 #[test]
+fn classifies_peer_id_mismatch_as_peer_unauthenticated() {
+    assert_eq!(
+        classify_failure_code("Handshake failed: PeerID mismatch: claimed a, derived b"),
+        ServerErrorCode::SyncPeerUnauthenticated
+    );
+}
+
+#[test]
 fn classifies_snapshot_generation_as_storage_persist_failed() {
     assert_eq!(
         classify_failure_code("Failed to generate snapshot for repo x"),

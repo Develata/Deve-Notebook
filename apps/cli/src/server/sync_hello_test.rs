@@ -10,7 +10,7 @@ use super::sync_hello_test_support::{
 };
 use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{DocId, LedgerEntry, Op, VersionVector};
-use deve_core::protocol::{ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ServerErrorCode, ServerMessage, SessionProof};
 use deve_core::security::IdentityKeyPair;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -155,6 +155,59 @@ async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Res
 
     let error = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    assert!(
+        !state
+            .repo
+            .remotes_dir()
+            .join(remote.peer_id().to_filename())
+            .try_exists()?
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_invalid_session_proof_before_binding_session() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let mut hello = signed_hello_for_repo(&remote, repo_id);
+    hello.session_proof = SessionProof::new(vec![0; 64]);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = empty_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+    assert!(session.authenticated_peer_id.is_none());
+    assert!(session.bound_repo_id.is_none());
+    assert_eq!(session.sync_scope_nonce(), None);
+    assert!(
+        !state
+            .repo
+            .remotes_dir()
+            .join(remote.peer_id().to_filename())
+            .try_exists()?
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_peer_pubkey_mismatch_before_binding_session() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let other = IdentityKeyPair::generate();
+    let mut hello = signed_hello_for_repo(&remote, repo_id);
+    hello.peer_pubkey = other.public_key_bytes().to_vec();
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = empty_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.bound_repo_id.is_none());
     assert_eq!(session.sync_scope_nonce(), None);
