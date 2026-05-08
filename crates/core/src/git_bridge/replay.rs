@@ -51,7 +51,7 @@ pub(super) fn run_projection_replay(
         Ok(parent) => parent,
         Err(reason) => {
             let records = items.into_iter().map(|item| item.record).collect();
-            return mark_remaining_out_of_sync(db, &mut report, records, reason);
+            return mark_remaining_out_of_sync(db, &mut report, records, reason.into());
         }
     };
 

@@ -4,6 +4,7 @@
 //!
 //! Preflight, commit loading, and chain validation for Git projection replay.
 
+use super::error::{GitReplayPlanError, GitReplayPlanResult};
 use super::git_cmd;
 use super::preflight::{
     ensure_git_changes_match_deve_commits, ensure_git_worktree, ensure_notegit_is_not_tracked,
@@ -26,11 +27,11 @@ pub(super) fn prepare_replay(
     records: Vec<GitMirrorRecord>,
 ) -> std::result::Result<Vec<ReplayItem>, (Vec<GitMirrorRecord>, String)> {
     if let Err(reason) = preflight_replay(db, repo_root, &records) {
-        return Err((records, reason));
+        return Err((records, reason.into()));
     }
     match load_replay_items(db, records) {
         Ok(items) => Ok(items),
-        Err((records, reason)) => Err((records, reason)),
+        Err((records, reason)) => Err((records, reason.into())),
     }
 }
 
@@ -38,7 +39,7 @@ fn preflight_replay(
     db: &Database,
     repo_root: &Path,
     records: &[GitMirrorRecord],
-) -> std::result::Result<(), String> {
+) -> GitReplayPlanResult<()> {
     ensure_git_worktree(repo_root)?;
     ensure_notegit_is_not_tracked(repo_root)?;
     ensure_source_control_clean(db)?;
@@ -49,7 +50,7 @@ fn preflight_replay(
 fn load_replay_items(
     db: &Database,
     records: Vec<GitMirrorRecord>,
-) -> std::result::Result<Vec<ReplayItem>, (Vec<GitMirrorRecord>, String)> {
+) -> std::result::Result<Vec<ReplayItem>, (Vec<GitMirrorRecord>, GitReplayPlanError)> {
     let mut items = Vec::with_capacity(records.len());
     for record in &records {
         let commit = match load_deve_commit(db, &record.deve_commit_id) {
@@ -59,10 +60,10 @@ fn load_replay_items(
         if commit.ledger_seq != record.ledger_seq {
             return Err((
                 records.clone(),
-                format!(
-                    "Git mirror record ledger_seq {} does not match Deve commit ledger_seq {}",
-                    record.ledger_seq, commit.ledger_seq
-                ),
+                GitReplayPlanError::MirrorRecordSeqMismatch {
+                    record_seq: record.ledger_seq,
+                    commit_seq: commit.ledger_seq,
+                },
             ));
         }
         items.push(ReplayItem {
@@ -83,14 +84,15 @@ fn load_replay_items(
     Ok(items)
 }
 
-fn validate_contiguous_chain(items: &[ReplayItem]) -> std::result::Result<(), String> {
+fn validate_contiguous_chain(items: &[ReplayItem]) -> GitReplayPlanResult<()> {
     for pair in items.windows(2) {
         let previous = &pair[0].commit.id;
         if pair[1].commit.parent_id.as_deref() != Some(previous.as_str()) {
-            return Err(format!(
-                "queued Git mirror records are not a contiguous Deve commit chain: {} parent is {:?}, expected {}",
-                pair[1].commit.id, pair[1].commit.parent_id, previous
-            ));
+            return Err(GitReplayPlanError::NonContiguousCommitChain {
+                commit_id: pair[1].commit.id.clone(),
+                parent: pair[1].commit.parent_id.clone(),
+                expected: previous.clone(),
+            });
         }
     }
     Ok(())
@@ -100,31 +102,38 @@ pub(super) fn initial_git_parent(
     db: &Database,
     repo_root: &Path,
     first_commit: &CommitInfo,
-) -> std::result::Result<Option<String>, String> {
+) -> GitReplayPlanResult<Option<String>> {
     let head = git_cmd::current_head(repo_root)?;
     let Some(parent_id) = first_commit.parent_id.as_deref() else {
         return Ok(head);
     };
     let parent_record = get_record(db, parent_id)
-        .map_err(|err| format!("failed to read parent Git mirror record {parent_id}: {err}"))?
-        .ok_or_else(|| {
-            format!("first queued Git mirror commit parent {parent_id} is not mirrored")
+        .map_err(|err| GitReplayPlanError::ParentRecordRead {
+            parent_id: parent_id.to_string(),
+            message: err.to_string(),
+        })?
+        .ok_or_else(|| GitReplayPlanError::ParentNotMirrored {
+            parent_id: parent_id.to_string(),
         })?;
     if parent_record.state != GitMirrorCommitState::Committed {
-        return Err(format!(
-            "first queued Git mirror commit parent {parent_id} is {}",
-            parent_record.state.as_str()
-        ));
+        return Err(GitReplayPlanError::ParentStateNotCommitted {
+            parent_id: parent_id.to_string(),
+            state: parent_record.state.as_str().to_string(),
+        });
     }
-    let git_parent = parent_record.git_commit_id.ok_or_else(|| {
-        format!("committed parent Git mirror record {parent_id} has no git_commit_id")
-    })?;
+    let git_parent =
+        parent_record
+            .git_commit_id
+            .ok_or_else(|| GitReplayPlanError::ParentMissingGitCommit {
+                parent_id: parent_id.to_string(),
+            })?;
     ensure_git_commit_exists(repo_root, &git_parent)?;
     if head.as_deref() != Some(git_parent.as_str()) {
-        return Err(format!(
-            "Git HEAD does not match mirrored parent {parent_id}: head={:?} expected={}",
-            head, git_parent
-        ));
+        return Err(GitReplayPlanError::HeadMismatch {
+            parent_id: parent_id.to_string(),
+            head,
+            expected: git_parent,
+        });
     }
     Ok(Some(git_parent))
 }

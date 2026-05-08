@@ -5,6 +5,7 @@ pub(super) type GitBridgeResult<T> = std::result::Result<T, GitBridgeError>;
 pub(super) type GitCommandResult<T> = std::result::Result<T, GitCommandError>;
 pub(super) type GitPreflightResult<T> = std::result::Result<T, GitPreflightError>;
 pub(super) type GitReplayResult<T> = std::result::Result<T, GitReplayError>;
+pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -121,6 +122,50 @@ impl From<GitReplayError> for String {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitReplayPlanError {
+    #[error(transparent)]
+    GitCommand(#[from] GitCommandError),
+    #[error(transparent)]
+    GitPreflight(#[from] GitPreflightError),
+    #[error(transparent)]
+    GitReplay(#[from] GitReplayError),
+    #[error(
+        "Git mirror record ledger_seq {record_seq} does not match Deve commit ledger_seq {commit_seq}"
+    )]
+    MirrorRecordSeqMismatch { record_seq: u64, commit_seq: u64 },
+    #[error(
+        "queued Git mirror records are not a contiguous Deve commit chain: {commit_id} parent is {parent:?}, expected {expected}"
+    )]
+    NonContiguousCommitChain {
+        commit_id: String,
+        parent: Option<String>,
+        expected: String,
+    },
+    #[error("failed to read parent Git mirror record {parent_id}: {message}")]
+    ParentRecordRead { parent_id: String, message: String },
+    #[error("first queued Git mirror commit parent {parent_id} is not mirrored")]
+    ParentNotMirrored { parent_id: String },
+    #[error("first queued Git mirror commit parent {parent_id} is {state}")]
+    ParentStateNotCommitted { parent_id: String, state: String },
+    #[error("committed parent Git mirror record {parent_id} has no git_commit_id")]
+    ParentMissingGitCommit { parent_id: String },
+    #[error(
+        "Git HEAD does not match mirrored parent {parent_id}: head={head:?} expected={expected}"
+    )]
+    HeadMismatch {
+        parent_id: String,
+        head: Option<String>,
+        expected: String,
+    },
+}
+
+impl From<GitReplayPlanError> for String {
+    fn from(err: GitReplayPlanError) -> Self {
+        err.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GitCommandError;
@@ -191,6 +236,28 @@ mod tests {
             }
             .to_string(),
             "failed to read mirror .gitignore: missing"
+        );
+    }
+
+    #[test]
+    fn git_replay_plan_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitReplayPlanError::NonContiguousCommitChain {
+                commit_id: "c2".into(),
+                parent: Some("old".into()),
+                expected: "c1".into(),
+            }
+            .to_string(),
+            "queued Git mirror records are not a contiguous Deve commit chain: c2 parent is Some(\"old\"), expected c1"
+        );
+        assert_eq!(
+            super::GitReplayPlanError::HeadMismatch {
+                parent_id: "p1".into(),
+                head: Some("abc".into()),
+                expected: "def".into(),
+            }
+            .to_string(),
+            "Git HEAD does not match mirrored parent p1: head=Some(\"abc\") expected=def"
         );
     }
 }
