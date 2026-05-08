@@ -4,6 +4,7 @@
 //!
 //! Snapshot bootstrap for an empty Git mirror history.
 
+use super::error::{GitSnapshotBootstrapError, GitSnapshotBootstrapResult};
 use super::executor::{GitMirrorRunReport, commit_message};
 use super::git_cmd;
 use super::preflight::{
@@ -56,14 +57,19 @@ fn create_git_commit_from_snapshot(
     repo_root: &Path,
     record: &GitMirrorRecord,
     commit: &CommitInfo,
-) -> std::result::Result<String, String> {
+) -> GitSnapshotBootstrapResult<String> {
     preflight_snapshot_bootstrap(db, repo_root, commit)?;
-    let temp_dir = tempfile::tempdir()
-        .map_err(|err| format!("failed to create temporary Git mirror index: {err}"))?;
+    let temp_dir = tempfile::tempdir().map_err(|err| GitSnapshotBootstrapError::TempIndex {
+        message: err.to_string(),
+    })?;
     let index_path = temp_dir.path().join("mirror-bootstrap.index");
     read_parent_tree(repo_root, &index_path, None)?;
-    let files = source_control::commit_diff::projection_files_at_commit(db, &commit.id)
-        .map_err(|err| format!("failed to load current projection snapshot: {err}"))?;
+    let files =
+        source_control::commit_diff::projection_files_at_commit(db, &commit.id).map_err(|err| {
+            GitSnapshotBootstrapError::ProjectionSnapshotLoad {
+                message: err.to_string(),
+            }
+        })?;
     for file in &files {
         add_blob_to_index(
             repo_root,
@@ -97,28 +103,34 @@ fn preflight_snapshot_bootstrap(
     db: &Database,
     repo_root: &Path,
     commit: &CommitInfo,
-) -> std::result::Result<(), String> {
-    let status = inspect_repo_root(repo_root)
-        .map_err(|err| format!("Git mirror snapshot bootstrap failed to inspect status: {err}"))?;
+) -> GitSnapshotBootstrapResult<()> {
+    let status =
+        inspect_repo_root(repo_root).map_err(|err| GitSnapshotBootstrapError::StatusInspect {
+            message: err.to_string(),
+        })?;
     if status.state != GitMirrorState::Ready {
-        return Err(status.reason.unwrap_or_else(|| {
-            format!(
-                "Git mirror is not ready: state={} git={}",
-                status.state.as_str(),
-                status.git_metadata_kind.as_str()
-            )
-        }));
+        return Err(GitSnapshotBootstrapError::MirrorNotReady {
+            reason: status.reason.unwrap_or_else(|| {
+                format!(
+                    "Git mirror is not ready: state={} git={}",
+                    status.state.as_str(),
+                    status.git_metadata_kind.as_str()
+                )
+            }),
+        });
     }
     ensure_git_worktree(repo_root)?;
     ensure_notegit_is_not_tracked(repo_root)?;
     ensure_source_control_clean(db)?;
     if let Some(head) = git_cmd::current_head(repo_root)? {
-        return Err(format!(
-            "Git mirror snapshot bootstrap requires empty Git history, but HEAD is {head}"
-        ));
+        return Err(GitSnapshotBootstrapError::NonEmptyGitHistory { head });
     }
-    let files = source_control::commit_diff::projection_files_at_commit(db, &commit.id)
-        .map_err(|err| format!("failed to inspect current projection snapshot: {err}"))?;
+    let files =
+        source_control::commit_diff::projection_files_at_commit(db, &commit.id).map_err(|err| {
+            GitSnapshotBootstrapError::ProjectionSnapshotInspect {
+                message: err.to_string(),
+            }
+        })?;
     ensure_git_changes_match_snapshot_paths(repo_root, files.into_iter().map(|file| file.path))?;
     Ok(())
 }

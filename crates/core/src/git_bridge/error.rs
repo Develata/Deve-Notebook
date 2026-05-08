@@ -8,6 +8,7 @@ pub(super) type GitReplayResult<T> = std::result::Result<T, GitReplayError>;
 pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanError>;
 pub(super) type GitProjectionReplayResult<T> = std::result::Result<T, GitProjectionReplayError>;
 pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommitError>;
+pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -202,6 +203,34 @@ impl From<GitMirrorCommitError> for String {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitSnapshotBootstrapError {
+    #[error(transparent)]
+    GitCommand(#[from] GitCommandError),
+    #[error(transparent)]
+    GitPreflight(#[from] GitPreflightError),
+    #[error(transparent)]
+    GitReplay(#[from] GitReplayError),
+    #[error("Git mirror snapshot bootstrap failed to inspect status: {message}")]
+    StatusInspect { message: String },
+    #[error("{reason}")]
+    MirrorNotReady { reason: String },
+    #[error("Git mirror snapshot bootstrap requires empty Git history, but HEAD is {head}")]
+    NonEmptyGitHistory { head: String },
+    #[error("failed to inspect current projection snapshot: {message}")]
+    ProjectionSnapshotInspect { message: String },
+    #[error("failed to load current projection snapshot: {message}")]
+    ProjectionSnapshotLoad { message: String },
+    #[error("failed to create temporary Git mirror index: {message}")]
+    TempIndex { message: String },
+}
+
+impl From<GitSnapshotBootstrapError> for String {
+    fn from(err: GitSnapshotBootstrapError) -> Self {
+        err.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GitCommandError;
@@ -328,6 +357,28 @@ mod tests {
             )
             .to_string(),
             "Git mirror refuses to run with 3 pending source-control change(s)"
+        );
+    }
+
+    #[test]
+    fn git_snapshot_bootstrap_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitSnapshotBootstrapError::NonEmptyGitHistory { head: "abc".into() }.to_string(),
+            "Git mirror snapshot bootstrap requires empty Git history, but HEAD is abc"
+        );
+        assert_eq!(
+            super::GitSnapshotBootstrapError::ProjectionSnapshotLoad {
+                message: "missing table".into(),
+            }
+            .to_string(),
+            "failed to load current projection snapshot: missing table"
+        );
+        assert_eq!(
+            super::GitSnapshotBootstrapError::MirrorNotReady {
+                reason: "repo-local .gitignore does not ignore .notegit/".into(),
+            }
+            .to_string(),
+            "repo-local .gitignore does not ignore .notegit/"
         );
     }
 }
