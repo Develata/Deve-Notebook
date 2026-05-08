@@ -39,6 +39,31 @@ fn sync_transfer_json_uses_plan_field_names() {
     );
     assert!(client_snapshot_value["SyncPushSnapshot"]["payload"].is_array());
 
+    let client_snapshot_plan_json = serde_json::json!({
+        "SyncPushSnapshot": {
+            "source_peer_id": peer.clone(),
+            "repo_id": repo_id,
+            "server_vector": VersionVector::new(),
+            "snapshot_kind": "full",
+            "payload": []
+        }
+    });
+    match serde_json::from_value::<ClientMessage>(client_snapshot_plan_json).unwrap() {
+        ClientMessage::SyncPushSnapshot {
+            source_peer_id,
+            server_vector,
+            snapshot_kind,
+            payload,
+            ..
+        } => {
+            assert_eq!(source_peer_id, peer);
+            assert_eq!(server_vector, VersionVector::new());
+            assert_eq!(snapshot_kind.as_deref(), Some("full"));
+            assert!(payload.is_empty());
+        }
+        other => panic!("expected SyncPushSnapshot, got {other:?}"),
+    }
+
     let server = ServerMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id,
