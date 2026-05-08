@@ -1,4 +1,5 @@
 use super::validate;
+use crate::ledger::runtime_tables;
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
 use crate::ledger::{GlobalSeq, seq::checked_next_local_seq};
 use crate::models::{DocId, LedgerEntry, LedgerEvent, PeerId, deserialize_ledger_entry};
@@ -25,6 +26,7 @@ pub fn append_generated_client_op(
     client_op_id: u64,
     mut op_entry_builder: impl FnMut(u64) -> LedgerEntry,
 ) -> Result<(u64, u64)> {
+    runtime_tables::repair_client_op_index_if_missing(db)?;
     append_generated_op_inner(
         db,
         doc_id,

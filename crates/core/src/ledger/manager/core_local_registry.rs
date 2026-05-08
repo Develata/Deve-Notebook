@@ -28,15 +28,6 @@ impl RepoManager {
         {
             let guard = self.read_extra_local_dbs()?;
             if let Some(db) = guard.get(stem) {
-                crate::ledger::runtime_tables::repair_client_op_index(db.as_ref()).map_err(
-                    |err| {
-                        anyhow!(
-                            "Broken local repo {} while repairing client op index: {}",
-                            stem,
-                            err
-                        )
-                    },
-                )?;
                 source_control::validate_tables(db.as_ref()).map_err(|err| {
                     anyhow!(
                         "Broken local repo {} while validating source control tables: {}",

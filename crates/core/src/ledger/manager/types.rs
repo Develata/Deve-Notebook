@@ -7,7 +7,7 @@ use crate::models::{PeerId, RepoId};
 use crate::sync::persist_guard::PersistGuard;
 use redb::Database;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
@@ -35,6 +35,8 @@ pub struct RepoManager {
     pub(crate) local_repo_name: String,
     /// 其他本地库缓存 (name -> Database)。不变量：同一路径在进程内只打开一次。
     pub(crate) extra_local_dbs: RwLock<HashMap<String, Arc<Database>>>,
+    /// 已完成 runtime side-table repair 的本地 secondary repo。
+    pub(crate) repaired_local_runtime_tables: RwLock<HashSet<String>>,
     /// 远端影子库集合 (peer_id -> repo_id -> Database) - 懒加载
     pub(crate) shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>>,
     /// 快照保留深度

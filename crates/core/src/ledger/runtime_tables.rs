@@ -6,7 +6,7 @@
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};
 use crate::models::deserialize_ledger_entry;
 use anyhow::{Result, anyhow};
-use redb::{Database, ReadableTable, TableHandle};
+use redb::{Database, ReadableTable, TableError, TableHandle};
 use std::collections::BTreeMap;
 
 pub(crate) fn repair_client_op_index(db: &Database) -> Result<bool> {
@@ -43,6 +43,18 @@ pub(crate) fn repair_client_op_index(db: &Database) -> Result<bool> {
     }
     write_txn.commit()?;
     Ok(true)
+}
+
+pub(crate) fn repair_client_op_index_if_missing(db: &Database) -> Result<bool> {
+    let read_txn = db.begin_read()?;
+    match read_txn.open_table(CLIENT_OP_INDEX) {
+        Ok(_) => Ok(false),
+        Err(TableError::TableDoesNotExist(_)) => {
+            drop(read_txn);
+            repair_client_op_index(db)
+        }
+        Err(err) => Err(err.into()),
+    }
 }
 
 fn collect_client_op_entries(

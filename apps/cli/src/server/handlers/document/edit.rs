@@ -64,6 +64,19 @@ pub(super) async fn handle_edit(
     ) else {
         return;
     };
+    if let Err(err) = state
+        .repo
+        .repair_client_op_index_if_missing_in_local_repo(&scope.repo_name)
+    {
+        reject_edit(
+            ch,
+            response_scope_nonce,
+            doc_id,
+            client_op_id,
+            ServerError::with_detail(ServerErrorCode::StoragePersistFailed, err.to_string()),
+        );
+        return;
+    }
     if confirm_existing_client_op(ExistingClientOpCheck {
         state,
         scope: &scope,

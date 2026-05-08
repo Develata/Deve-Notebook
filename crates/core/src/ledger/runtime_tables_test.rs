@@ -187,7 +187,8 @@ fn fails_closed_when_ledger_ops_authority_missing_for_secondary_local_repo() -> 
         Ok(())
     })?;
 
-    let err = repo
+    let reopened = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
+    let err = reopened
         .run_on_local_repo("wiki", |_| Ok(()))
         .expect_err("missing ledger_ops authority table must fail closed");
     assert!(

@@ -12,6 +12,7 @@ use crate::ledger::RepoManager;
 use crate::ledger::manager::structure_projection;
 use crate::ledger::node_ops;
 use crate::ledger::ops;
+use crate::ledger::runtime_tables;
 use crate::models::{DocId, LedgerEntry, PeerId, RepoType, StructureOp};
 use anyhow::Result;
 
@@ -80,6 +81,10 @@ impl RepoManager {
                 op_entry_builder,
             )
         })
+    }
+
+    pub fn repair_client_op_index_if_missing_in_local_repo(&self, repo_name: &str) -> Result<bool> {
+        self.run_on_local_repo(repo_name, runtime_tables::repair_client_op_index_if_missing)
     }
 
     pub fn append_generated_structure_event_in_local_repo(

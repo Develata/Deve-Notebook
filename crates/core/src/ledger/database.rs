@@ -52,12 +52,24 @@ impl RepoManager {
         if repo_name == self.local_repo_name {
             return Ok(());
         }
+        if self
+            .repaired_local_runtime_tables
+            .read()
+            .map_err(|_| anyhow::anyhow!("Local repo runtime repair lock poisoned"))?
+            .contains(repo_name)
+        {
+            return Ok(());
+        }
         if super::runtime_tables::repair_client_op_index(db.as_ref())? {
             tracing::warn!(
                 "Rebuilt client_op_index while opening local repo runtime tables: {}",
                 repo_name
             );
         }
+        self.repaired_local_runtime_tables
+            .write()
+            .map_err(|_| anyhow::anyhow!("Local repo runtime repair lock poisoned"))?
+            .insert(repo_name.to_string());
         Ok(())
     }
 

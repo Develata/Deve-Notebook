@@ -40,7 +40,10 @@ async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
     let op_count_before = h.state.repo.get_local_ops(doc_id)?.len();
     h.state.repo.run_on_local_repo("default", |db| {
         let write = db.begin_write()?;
-        write.delete_table(CLIENT_OP_INDEX)?;
+        {
+            let mut client_ops = write.open_table(CLIENT_OP_INDEX)?;
+            client_ops.insert((7, 9), 999)?;
+        }
         write.commit()?;
         Ok(())
     })?;

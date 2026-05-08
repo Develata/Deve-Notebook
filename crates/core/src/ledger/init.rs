@@ -29,7 +29,7 @@
 
 use anyhow::{Context, Result};
 use redb::Database;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
@@ -186,6 +186,7 @@ pub fn init(
         local_db,
         local_repo_name: final_name,
         extra_local_dbs: RwLock::new(HashMap::new()),
+        repaired_local_runtime_tables: RwLock::new(HashSet::new()),
         shadow_dbs: RwLock::new(HashMap::new()),
         snapshot_depth,
         vault_root: None,
