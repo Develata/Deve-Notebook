@@ -73,13 +73,13 @@ pub(super) async fn handle_request(
                 response.peer_id
             );
             ch.unicast(ServerMessage::SyncPushSnapshot {
-                peer_id: response.peer_id,
+                source_peer_id: response.peer_id,
                 repo_id: response.repo_id,
                 scope_nonce: delivery_scope_nonce,
                 branch: session.active_branch.clone(),
                 server_vector,
                 snapshot_kind: Some("full".to_string()),
-                ops: response.ops,
+                encrypted_payload: response.ops,
             });
         }
         Err(e) => {
@@ -95,7 +95,7 @@ pub(super) async fn handle_push(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
-    ops: Vec<EncryptedOp>,
+    encrypted_payload: Vec<EncryptedOp>,
 ) {
     let Some(scope) = require_current_sync_scope(ch, session) else {
         return;
@@ -119,13 +119,13 @@ pub(super) async fn handle_push(
         "Handling PushSnapshot source {} via transport {} ({} ops)",
         peer_id,
         transport_peer,
-        ops.len()
+        encrypted_payload.len()
     );
 
     let response = deve_core::sync::protocol::SyncResponse {
         peer_id: peer_id.clone(),
         repo_id,
-        ops,
+        ops: encrypted_payload,
     };
 
     let Some(applied) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {

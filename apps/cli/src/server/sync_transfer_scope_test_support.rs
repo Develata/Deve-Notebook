@@ -150,10 +150,10 @@ pub(super) async fn recv_sync_push_peer_nonce(
 ) -> (PeerId, u64) {
     match rx.recv().await {
         Some(ServerMessage::SyncPush {
-            peer_id,
+            source_peer_id,
             scope_nonce,
             ..
-        }) => (peer_id, scope_nonce),
+        }) => (source_peer_id, scope_nonce),
         other => panic!("expected SyncPush, got {:?}", other),
     }
 }

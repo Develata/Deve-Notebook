@@ -161,13 +161,13 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
     }
 
     let server = ServerMessage::SyncPushSnapshot {
-        peer_id: peer.clone(),
+        source_peer_id: peer.clone(),
         repo_id,
         scope_nonce: 3,
         branch: Some(peer.clone()),
         server_vector: vector.clone(),
         snapshot_kind: Some("full".to_string()),
-        ops: vec![],
+        encrypted_payload: vec![],
     };
     let decoded_server = decode_server_binary(&encode_server_binary(&server).unwrap()).unwrap();
     match decoded_server {

@@ -89,11 +89,11 @@ pub(super) async fn handle_request(
     };
     for response in non_empty {
         ch.unicast(ServerMessage::SyncPush {
-            peer_id: response.peer_id,
+            source_peer_id: response.peer_id,
             repo_id: response.repo_id,
             scope_nonce: delivery_scope_nonce,
             branch: session.active_branch.clone(),
-            ops: response.ops,
+            encrypted_payload: response.ops,
         });
     }
 }
@@ -104,7 +104,7 @@ pub(super) async fn handle_push(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
-    ops: Vec<EncryptedOp>,
+    encrypted_payload: Vec<EncryptedOp>,
 ) {
     let Some(scope) = require_current_sync_scope(ch, session) else {
         return;
@@ -132,7 +132,7 @@ pub(super) async fn handle_push(
     let response = sync_proto::SyncResponse {
         peer_id: peer_id.clone(),
         repo_id,
-        ops,
+        ops: encrypted_payload,
     };
 
     let Some(applied) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {

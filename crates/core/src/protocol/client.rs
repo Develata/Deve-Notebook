@@ -33,7 +33,8 @@ pub enum ClientMessage {
         requests: Vec<(PeerId, (u64, u64))>,
     },
     SyncSnapshotRequest {
-        peer_id: PeerId,
+        #[serde(alias = "peer_id")]
+        source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
         #[serde(default)]
         known_vector: VersionVector,
@@ -41,18 +42,22 @@ pub enum ClientMessage {
         reason: Option<String>,
     },
     SyncPush {
-        peer_id: PeerId,
+        #[serde(alias = "peer_id")]
+        source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
-        ops: Vec<EncryptedOp>,
+        #[serde(alias = "ops")]
+        encrypted_payload: Vec<EncryptedOp>,
     },
     SyncPushSnapshot {
-        peer_id: PeerId,
+        #[serde(alias = "peer_id")]
+        source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
         #[serde(default)]
         server_vector: VersionVector,
         #[serde(default)]
         snapshot_kind: Option<String>,
-        ops: Vec<EncryptedOp>,
+        #[serde(alias = "ops")]
+        encrypted_payload: Vec<EncryptedOp>,
     },
     Edit {
         doc_id: DocId,

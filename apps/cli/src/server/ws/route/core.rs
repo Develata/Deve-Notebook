@@ -53,20 +53,29 @@ async fn route_unscoped_core(
                 .await;
         }
         ClientMessage::SyncSnapshotRequest {
-            peer_id,
+            source_peer_id,
             repo_id,
             reason,
             ..
         } => {
-            sync::handle_sync_snapshot_request(state, ch, session, peer_id, repo_id, reason).await;
+            sync::handle_sync_snapshot_request(state, ch, session, source_peer_id, repo_id, reason)
+                .await;
         }
         ClientMessage::SyncPushSnapshot {
-            peer_id,
+            source_peer_id,
             repo_id,
-            ops,
+            encrypted_payload,
             ..
         } => {
-            sync::handle_sync_push_snapshot(state, ch, session, peer_id, repo_id, ops).await;
+            sync::handle_sync_push_snapshot(
+                state,
+                ch,
+                session,
+                source_peer_id,
+                repo_id,
+                encrypted_payload,
+            )
+            .await;
         }
         ClientMessage::SyncRequest {
             repo_id, requests, ..
@@ -74,11 +83,19 @@ async fn route_unscoped_core(
             sync::handle_sync_request(state, ch, session, repo_id, requests).await;
         }
         ClientMessage::SyncPush {
-            peer_id,
+            source_peer_id,
             repo_id,
-            ops,
+            encrypted_payload,
         } => {
-            sync::handle_sync_push(state, ch, session, peer_id, repo_id, ops).await;
+            sync::handle_sync_push(
+                state,
+                ch,
+                session,
+                source_peer_id,
+                repo_id,
+                encrypted_payload,
+            )
+            .await;
         }
         ClientMessage::RegisterWriter {
             peer_id,

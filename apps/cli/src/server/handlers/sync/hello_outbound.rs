@@ -70,7 +70,7 @@ fn send_snapshot_requests(
 ) {
     for req in requests {
         ch.unicast(ServerMessage::SyncSnapshotRequest {
-            peer_id: req.peer_id,
+            source_peer_id: req.peer_id,
             repo_id: req.repo_id,
             known_vector: known_vector.clone(),
             reason: req.reason,
@@ -94,11 +94,11 @@ fn send_pushes(
                     continue;
                 }
                 ch.unicast(ServerMessage::SyncPush {
-                    peer_id: response.peer_id,
+                    source_peer_id: response.peer_id,
                     repo_id: response.repo_id,
                     scope_nonce,
                     branch: session.active_branch.clone(),
-                    ops: response.ops,
+                    encrypted_payload: response.ops,
                 });
             }
             Err(err) => {

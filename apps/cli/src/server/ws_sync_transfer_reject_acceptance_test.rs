@@ -133,9 +133,9 @@ fn sync_request(repo_id: uuid::Uuid) -> ClientMessage {
 
 fn sync_push(peer_id: PeerId, repo_id: uuid::Uuid) -> ClientMessage {
     ClientMessage::SyncPush {
-        peer_id,
+        source_peer_id: peer_id,
         repo_id,
-        ops: vec![],
+        encrypted_payload: vec![],
     }
 }
 

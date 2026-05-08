@@ -56,26 +56,26 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
         requests: vec![(peer.clone(), (1, 2))],
     });
     ch.unicast(ServerMessage::SyncSnapshotRequest {
-        peer_id: peer.clone(),
+        source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
         known_vector: VersionVector::default(),
         reason: None,
     });
     ch.unicast(ServerMessage::SyncPush {
-        peer_id: peer.clone(),
+        source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
         scope_nonce: 7,
         branch: Some(peer.clone()),
-        ops: vec![],
+        encrypted_payload: vec![],
     });
     ch.unicast(ServerMessage::SyncPushSnapshot {
-        peer_id: peer.clone(),
+        source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
         scope_nonce: 7,
         branch: Some(peer),
         server_vector: VersionVector::default(),
         snapshot_kind: None,
-        ops: vec![],
+        encrypted_payload: vec![],
     });
 
     assert!(matches!(unicast_rx.recv().await, Some(ServerMessage::Pong)));

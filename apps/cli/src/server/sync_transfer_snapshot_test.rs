@@ -60,18 +60,18 @@ async fn snapshot_request_exports_requested_shadow_source() -> anyhow::Result<()
 
     match rx.recv().await {
         Some(deve_core::protocol::ServerMessage::SyncPushSnapshot {
-            peer_id,
+            source_peer_id,
             scope_nonce,
             server_vector,
             snapshot_kind,
-            ops,
+            encrypted_payload,
             ..
         }) => {
-            assert_eq!(peer_id, source_peer);
+            assert_eq!(source_peer_id, source_peer);
             assert_eq!(scope_nonce, 47);
             assert_eq!(server_vector.get(&source_peer), 1);
             assert_eq!(snapshot_kind.as_deref(), Some("full"));
-            assert_eq!(ops.len(), 1);
+            assert_eq!(encrypted_payload.len(), 1);
         }
         other => panic!("expected SyncPushSnapshot, got {:?}", other),
     }
