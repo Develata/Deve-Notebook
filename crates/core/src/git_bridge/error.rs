@@ -261,6 +261,12 @@ pub(super) enum GitImportApplyError {
     ReadImportedWorktreeFile { path: String, message: String },
     #[error("failed to check Git import conflict for {path}: {message}")]
     ConflictCheck { path: String, message: String },
+    #[error("failed to inspect Git import staged changes: {message}")]
+    StagedInspect { message: String },
+    #[error("failed to inspect existing Git import pending entry for {path}: {message}")]
+    PendingEntryInspect { path: String, message: String },
+    #[error("failed to write Git import pending entries: {message}")]
+    PendingEntryWrite { message: String },
     #[error("failed to inspect tracked path {path}: {message}")]
     TrackedPathInspect { path: String, message: String },
     #[error("Git import refuses added path already tracked by Deve: {path}")]
@@ -456,6 +462,21 @@ mod tests {
             }
             .to_string(),
             "Git import rename target is already tracked by another Deve doc: moved.md"
+        );
+        assert_eq!(
+            super::GitImportApplyError::PendingEntryInspect {
+                path: "note.md".into(),
+                message: "table missing".into(),
+            }
+            .to_string(),
+            "failed to inspect existing Git import pending entry for note.md: table missing"
+        );
+        assert_eq!(
+            super::GitImportApplyError::PendingEntryWrite {
+                message: "transaction failed".into(),
+            }
+            .to_string(),
+            "failed to write Git import pending entries: transaction failed"
         );
     }
 

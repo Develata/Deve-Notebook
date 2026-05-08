@@ -59,8 +59,9 @@ pub fn apply_import(
         return Ok(report);
     }
 
-    let (applied, skipped, blockers) =
-        repo.run_on_local_repo(repo_name, |db| apply_pending_candidates(db, &candidates))?;
+    let (applied, skipped, blockers) = repo.run_on_local_repo(repo_name, |db| {
+        apply_pending_candidates(db, &candidates).map_err(anyhow::Error::from)
+    })?;
     report.applied = applied;
     report.skipped = skipped;
     report.blockers = blockers;
@@ -180,12 +181,16 @@ fn tracked_doc_id(
 fn apply_pending_candidates(
     db: &Database,
     candidates: &[pending_fs::PendingFsEntry],
-) -> Result<(usize, usize, Vec<GitImportPlanBlocker>)> {
+) -> GitImportApplyResult<(usize, usize, Vec<GitImportPlanBlocker>)> {
     let blockers = preflight_pending_apply(db, candidates)?;
     if !blockers.is_empty() {
         return Ok((0, 0, blockers));
     }
-    let written = pending_fs::upsert_many(db, candidates)?;
+    let written = pending_fs::upsert_many(db, candidates).map_err(|err| {
+        GitImportApplyError::PendingEntryWrite {
+            message: err.to_string(),
+        }
+    })?;
     Ok((
         written,
         candidates.len().saturating_sub(written),
@@ -196,9 +201,12 @@ fn apply_pending_candidates(
 fn preflight_pending_apply(
     db: &Database,
     candidates: &[pending_fs::PendingFsEntry],
-) -> Result<Vec<GitImportPlanBlocker>> {
+) -> GitImportApplyResult<Vec<GitImportPlanBlocker>> {
     let mut blockers = Vec::new();
-    let staged = staging::list_staged_entries(db)?;
+    let staged =
+        staging::list_staged_entries(db).map_err(|err| GitImportApplyError::StagedInspect {
+            message: err.to_string(),
+        })?;
     if !staged.is_empty() {
         blockers.push(GitImportPlanBlocker {
             path: "-".to_string(),
@@ -217,7 +225,7 @@ fn preflight_pending_apply(
                 reason: "Git import apply refuses duplicate pending target".to_string(),
             });
         }
-        if let Some(existing) = pending_fs::get(db, &entry.path)?
+        if let Some(existing) = pending_entry_at(db, &entry.path)?
             && !pending_fs::semantic_eq(&existing, entry)
         {
             blockers.push(GitImportPlanBlocker {
@@ -227,7 +235,7 @@ fn preflight_pending_apply(
         }
         if let Some(previous_path) = entry.renamed_from.as_deref()
             && previous_path != entry.path
-            && pending_fs::get(db, previous_path)?.is_some()
+            && pending_entry_at(db, previous_path)?.is_some()
         {
             blockers.push(GitImportPlanBlocker {
                 path: previous_path.to_string(),
@@ -237,6 +245,16 @@ fn preflight_pending_apply(
         }
     }
     Ok(blockers)
+}
+
+fn pending_entry_at(
+    db: &Database,
+    path: &str,
+) -> GitImportApplyResult<Option<pending_fs::PendingFsEntry>> {
+    pending_fs::get(db, path).map_err(|err| GitImportApplyError::PendingEntryInspect {
+        path: path.to_string(),
+        message: err.to_string(),
+    })
 }
 
 fn change_status_label(status: ChangeStatus) -> &'static str {
