@@ -192,7 +192,10 @@ impl RepoManager {
         self.select_local_repo_name_for_execution(&candidates)
     }
 
-    pub fn resolve_local_repo_selector_for_execution(&self, repo: &RepoSelector) -> Result<String> {
+    pub(crate) fn resolve_local_repo_selector_for_execution(
+        &self,
+        repo: &RepoSelector,
+    ) -> Result<String> {
         self.resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())
     }
 }
