@@ -8,7 +8,7 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
-use deve_core::protocol::{ServerError, ServerMessage};
+use deve_core::protocol::{ServerError, ServerMessage, SessionProof};
 use deve_core::security::IdentityKeyPair;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use deve_core::sync::vector::VersionVector;
@@ -56,8 +56,8 @@ pub(super) fn signed_hello(remote: &IdentityKeyPair, vector: &VersionVector) -> 
     msg.extend_from_slice(&vec_bytes);
     SyncHelloInput {
         peer_id,
-        pub_key: remote.public_key_bytes().to_vec(),
-        signature: remote.sign(&msg),
+        peer_pubkey: remote.public_key_bytes().to_vec(),
+        session_proof: SessionProof::new(remote.sign(&msg)),
         remote_vector: vector.clone(),
         repo_id: uuid::Uuid::nil(),
         scope_nonce: 1,

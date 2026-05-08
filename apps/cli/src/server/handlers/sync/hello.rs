@@ -8,6 +8,7 @@ use crate::server::channel::DualChannel;
 use crate::server::handlers::listing;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
+use deve_core::protocol::SessionProof;
 use std::sync::Arc;
 
 #[path = "hello_outbound.rs"]
@@ -24,8 +25,8 @@ use super::errors;
 
 pub struct SyncHelloInput {
     pub peer_id: PeerId,
-    pub pub_key: Vec<u8>,
-    pub signature: Vec<u8>,
+    pub peer_pubkey: Vec<u8>,
+    pub session_proof: SessionProof,
     pub remote_vector: VersionVector,
     pub repo_id: RepoId,
     pub scope_nonce: u64,
@@ -39,8 +40,8 @@ pub(super) async fn handle(
 ) {
     let SyncHelloInput {
         peer_id,
-        pub_key,
-        signature,
+        peer_pubkey,
+        session_proof,
         remote_vector,
         repo_id,
         scope_nonce,
@@ -61,8 +62,8 @@ pub(super) async fn handle(
             .handshake(
                 repo_id,
                 peer_id.clone(),
-                &pub_key,
-                &signature,
+                &peer_pubkey,
+                session_proof.signature(),
                 remote_vector,
             )
             .map(|result| (local_peer_id, local_vector, engine.clone(), result))

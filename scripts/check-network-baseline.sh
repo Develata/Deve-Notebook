@@ -62,5 +62,9 @@ check_contains apps/cli/src/server/handlers/sync/writer.rs "session.set_writer_i
 check_contains apps/cli/src/server/handlers/document/edit_checks.rs ".writer_peer_id_for(repo_id, requested_scope_nonce)"
 check_contains apps/cli/src/server/ws/route/core_scoped.rs "document::handle_edit("
 check_contains apps/cli/src/server/handlers/sync/snapshot.rs "snapshot_kind: Some(\"full\".to_string())"
+check_contains crates/core/src/protocol/session_proof.rs "pub struct SessionProof"
+check_contains crates/core/src/protocol/client.rs "peer_pubkey: Vec<u8>"
+check_contains crates/core/src/protocol/client.rs "session_proof: SessionProof"
+check_contains apps/cli/src/server/ws/route/mod.rs "session_proof"
 
 echo "network-baseline-check: ok"

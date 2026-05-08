@@ -6,6 +6,7 @@
 
 use crate::models::{DocId, Op, PeerId, VersionVector};
 use crate::protocol::ScPathTarget;
+use crate::protocol::SessionProof;
 use crate::security::EncryptedOp;
 use serde::{Deserialize, Serialize};
 
@@ -14,8 +15,8 @@ pub enum ClientMessage {
     Ping,
     SyncHello {
         peer_id: PeerId,
-        pub_key: Vec<u8>,
-        signature: Vec<u8>,
+        peer_pubkey: Vec<u8>,
+        session_proof: SessionProof,
         vector: VersionVector,
         repo_id: crate::models::RepoId,
         scope_nonce: u64,

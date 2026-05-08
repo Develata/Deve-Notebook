@@ -33,8 +33,8 @@ pub(crate) async fn route_message(
     match msg {
         ClientMessage::SyncHello {
             peer_id,
-            pub_key,
-            signature,
+            peer_pubkey,
+            session_proof,
             vector,
             repo_id,
             scope_nonce,
@@ -45,8 +45,8 @@ pub(crate) async fn route_message(
                 session,
                 sync::SyncHelloInput {
                     peer_id,
-                    pub_key,
-                    signature,
+                    peer_pubkey,
+                    session_proof,
                     remote_vector: vector,
                     repo_id,
                     scope_nonce,

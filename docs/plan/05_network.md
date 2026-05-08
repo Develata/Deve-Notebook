@@ -146,7 +146,9 @@
 
 - `SyncHello`
   - 必填:
+    - `peer_id`
     - `repo_id`
+    - `scope_nonce`
     - `peer_pubkey`
     - `vector`
     - `session_proof`
@@ -223,7 +225,7 @@ VectorCompared
 ### 6.1 Repo-Scoped Handshake
 
 1. 客户端建立 ws。
-2. 发送 `SyncHello { repo_id, peer_pubkey, vector, session_proof }`
+2. 发送 `SyncHello { peer_id, repo_id, scope_nonce, peer_pubkey, vector, session_proof }`
 3. Server 验证会话、repo 权限、repo route。
 4. Server 返回 `ServerMessage::SyncHello { repo_id, peer_id, pub_key, signature, vector, scope_nonce }`
 5. 后续 sync traffic 必须沿用同一 `repo_id`

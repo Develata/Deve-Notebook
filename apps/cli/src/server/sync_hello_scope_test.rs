@@ -50,7 +50,7 @@ async fn sync_hello_rejects_non_browser_stale_sync_scope_nonce_rebind() -> anyho
 
     handle_sync_hello(&state, &ch, &mut session, hello).await;
 
-    assert_repo_context_error(recv_protocol_error(&mut rx).await, "current_sync_scope_nonce");
+    assert_stale_scope_error(recv_protocol_error(&mut rx).await, "current_sync_scope_nonce");
     assert_repo_selector_preserved_without_runtime(&session, &repo_name, repo_id);
     Ok(())
 }
@@ -80,6 +80,18 @@ async fn sync_hello_rejects_non_browser_unresolved_active_repo_selector() -> any
 
 fn assert_repo_context_error(error: ServerError, detail: &str) {
     assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert!(
+        error
+            .detail
+            .as_deref()
+            .is_some_and(|value| value.contains(detail)),
+        "unexpected detail: {:?}",
+        error.detail
+    );
+}
+
+fn assert_stale_scope_error(error: ServerError, detail: &str) {
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     assert!(
         error
             .detail

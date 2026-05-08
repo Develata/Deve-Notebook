@@ -147,8 +147,8 @@ fn client_sync_hello(
     let hello = signed_hello_for_scope(remote, repo_id, scope_nonce);
     ClientMessage::SyncHello {
         peer_id: hello.peer_id,
-        pub_key: hello.pub_key,
-        signature: hello.signature,
+        peer_pubkey: hello.peer_pubkey,
+        session_proof: hello.session_proof,
         vector: hello.remote_vector,
         repo_id: hello.repo_id,
         scope_nonce: hello.scope_nonce,

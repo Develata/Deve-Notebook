@@ -4,7 +4,7 @@
 //!
 use crate::storage::identity::{StoredPeerIdentity, note_handshake, save_repo_vector};
 use deve_core::models::{PeerId, VersionVector};
-use deve_core::protocol::ClientMessage;
+use deve_core::protocol::{ClientMessage, SessionProof};
 use std::collections::BTreeMap;
 
 use super::super::handshake_state::reset_handshake_attempt;
@@ -41,8 +41,8 @@ pub(super) async fn deliver_signed_handshake(
             let writer_peer_id = peer_id.clone();
             ctx.ws.send(ClientMessage::SyncHello {
                 peer_id,
-                pub_key: identity.public_key.clone(),
-                signature,
+                peer_pubkey: identity.public_key.clone(),
+                session_proof: SessionProof::new(signature),
                 vector: ctx.vector.clone(),
                 repo_id,
                 scope_nonce: ctx.current_scope_nonce,

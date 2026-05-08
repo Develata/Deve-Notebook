@@ -63,7 +63,7 @@
   steps:
     - ws_connect: "relative /ws"
     - ws_send: { type: "SwitchRepoExact", name: "notes", repo_id: "11111111-1111-1111-1111-111111111111", switch_nonce: 1 }
-    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", pub_key: "signed_pubkey_bytes", signature: "signature_bytes", vector: { peer: "web-light-peer", seq: 7 }, repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", peer_pubkey: "signed_pubkey_bytes", session_proof: { signature: "signature_bytes" }, vector: { peer: "web-light-peer", seq: 7 }, repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
     - ws_send: { type: "RegisterWriter", peer_id: "web-light-peer", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
     - run: cargo test -p deve_cli ws_endpoint_sync_hello_uses_switched_repo_scope -- --nocapture
     - run: cargo test -p deve_cli ws_endpoint_register_writer_after_sync_hello_returns_write_ready -- --nocapture
@@ -121,9 +121,9 @@
     - 浏览器已先后打开 Repo A 与 Repo B
   steps:
     - ws_send: { type: "SwitchRepoExact", name: "repo-a", repo_id: "11111111-1111-1111-1111-111111111111", switch_nonce: 1 }
-    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", pub_key: "signed_pubkey_bytes", signature: "signature_bytes", vector: { peer: "web-light-peer", seq: 7 }, repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
+    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", peer_pubkey: "signed_pubkey_bytes", session_proof: { signature: "signature_bytes" }, vector: { peer: "web-light-peer", seq: 7 }, repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
     - ws_send: { type: "SwitchRepoExact", name: "repo-b", repo_id: "22222222-2222-2222-2222-222222222222", switch_nonce: 2 }
-    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", pub_key: "signed_pubkey_bytes", signature: "signature_bytes", vector: { peer: "web-light-peer", seq: 1 }, repo_id: "22222222-2222-2222-2222-222222222222", scope_nonce: 2 }
+    - ws_send: { type: "SyncHello", peer_id: "web-light-peer", peer_pubkey: "signed_pubkey_bytes", session_proof: { signature: "signature_bytes" }, vector: { peer: "web-light-peer", seq: 1 }, repo_id: "22222222-2222-2222-2222-222222222222", scope_nonce: 2 }
     - run: cargo test -p deve_cli browser_sync_hello_rejects_stale_scope_nonce -- --nocapture
     - run: cargo test -p deve_cli browser_sync_hello_rejects_stale_active_db_binding -- --nocapture
     - run: cargo test -p deve_cli browser_sync_hello_rejects_stale_bound_repo_and_writer_identity -- --nocapture

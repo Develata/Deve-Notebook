@@ -28,6 +28,7 @@ pub mod error;
 pub mod frame;
 pub mod sc_path_target;
 pub mod server;
+pub mod session_proof;
 
 pub use client::ClientMessage;
 pub use client_scope::ClientMessageScopeGate;
@@ -36,3 +37,4 @@ pub use error::{ServerError, ServerErrorCode};
 pub use frame::{MAX_WS_FRAME_BYTES, MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION};
 pub use sc_path_target::ScPathTarget;
 pub use server::{MergeConflictAction, ServerMessage};
+pub use session_proof::SessionProof;
