@@ -25,14 +25,11 @@ pub(super) fn prepare_replay(
     db: &Database,
     repo_root: &Path,
     records: Vec<GitMirrorRecord>,
-) -> std::result::Result<Vec<ReplayItem>, (Vec<GitMirrorRecord>, String)> {
+) -> std::result::Result<Vec<ReplayItem>, (Vec<GitMirrorRecord>, GitReplayPlanError)> {
     if let Err(reason) = preflight_replay(db, repo_root, &records) {
-        return Err((records, reason.into()));
+        return Err((records, reason));
     }
-    match load_replay_items(db, records) {
-        Ok(items) => Ok(items),
-        Err((records, reason)) => Err((records, reason.into())),
-    }
+    load_replay_items(db, records)
 }
 
 fn preflight_replay(

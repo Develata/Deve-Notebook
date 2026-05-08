@@ -31,7 +31,7 @@ pub(super) fn run_projection_replay(
     let items = match prepare_replay(db, repo_root, records) {
         Ok(items) => items,
         Err((records, reason)) => {
-            return mark_remaining_out_of_sync(db, &mut report, records, reason);
+            return mark_remaining_out_of_sync(db, &mut report, records, reason.into());
         }
     };
 
