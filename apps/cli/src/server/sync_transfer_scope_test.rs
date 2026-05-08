@@ -33,7 +33,8 @@ async fn non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push() -> 
     let mut session = bound_session(repo_id, Some(PeerId::new("peer-a")), Some(19));
     session.set_offered_sync_sources([PeerId::new("peer-a")]);
 
-    handle_sync_snapshot_request(&state, &ch, &mut session, PeerId::new("peer-a"), repo_id).await;
+    handle_sync_snapshot_request(&state, &ch, &mut session, PeerId::new("peer-a"), repo_id, None)
+        .await;
 
     assert_eq!(recv_sync_snapshot_nonce(&mut rx).await, 19);
     Ok(())

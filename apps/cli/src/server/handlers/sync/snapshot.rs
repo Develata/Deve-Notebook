@@ -20,6 +20,7 @@ pub(super) async fn handle_request(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    reason: Option<String>,
 ) {
     let Some(scope) = require_current_sync_scope(ch, session) else {
         return;
@@ -48,6 +49,7 @@ pub(super) async fn handle_request(
     let request = deve_core::sync::protocol::SyncSnapshotRequest {
         peer_id: peer_id.clone(),
         repo_id,
+        reason: reason.or_else(|| Some("explicit-sync-snapshot-request".to_string())),
     };
 
     let Some(snapshot) = engine::with_strict(state, ch, repo_id, scope, |engine| {
@@ -76,6 +78,7 @@ pub(super) async fn handle_request(
                 scope_nonce: delivery_scope_nonce,
                 branch: session.active_branch.clone(),
                 server_vector,
+                snapshot_kind: Some("full".to_string()),
                 ops: response.ops,
             });
         }

@@ -68,8 +68,9 @@ pub async fn handle_sync_snapshot_request(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    reason: Option<String>,
 ) {
-    snapshot::handle_request(state, ch, session, peer_id, repo_id).await;
+    snapshot::handle_request(state, ch, session, peer_id, repo_id, reason).await;
 }
 
 pub async fn handle_sync_push_snapshot(

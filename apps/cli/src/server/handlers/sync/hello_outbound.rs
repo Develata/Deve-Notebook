@@ -73,6 +73,7 @@ fn send_snapshot_requests(
             peer_id: req.peer_id,
             repo_id: req.repo_id,
             known_vector: known_vector.clone(),
+            reason: req.reason,
         });
     }
 }

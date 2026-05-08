@@ -48,19 +48,29 @@ async fn snapshot_request_exports_requested_shadow_source() -> anyhow::Result<()
     let mut session = bound_session(repo_id, Some(relay_peer), Some(47));
     session.set_offered_sync_sources([source_peer.clone()]);
 
-    handle_sync_snapshot_request(&state, &ch, &mut session, source_peer.clone(), repo_id).await;
+    handle_sync_snapshot_request(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        Some("client-requested-full-snapshot".to_string()),
+    )
+    .await;
 
     match rx.recv().await {
         Some(deve_core::protocol::ServerMessage::SyncPushSnapshot {
             peer_id,
             scope_nonce,
             server_vector,
+            snapshot_kind,
             ops,
             ..
         }) => {
             assert_eq!(peer_id, source_peer);
             assert_eq!(scope_nonce, 47);
             assert_eq!(server_vector.get(&source_peer), 1);
+            assert_eq!(snapshot_kind.as_deref(), Some("full"));
             assert_eq!(ops.len(), 1);
         }
         other => panic!("expected SyncPushSnapshot, got {:?}", other),
@@ -80,7 +90,7 @@ async fn snapshot_request_rejects_unoffered_source() -> anyhow::Result<()> {
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, Some(relay_peer), Some(49));
 
-    handle_sync_snapshot_request(&state, &ch, &mut session, source_peer, repo_id).await;
+    handle_sync_snapshot_request(&state, &ch, &mut session, source_peer, repo_id, None).await;
 
     let error = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);

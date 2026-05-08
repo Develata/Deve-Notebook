@@ -50,8 +50,8 @@
     - packet_format_eq: ["server", "versioned-bincode"]
     - packet_format_any_of: ["client", "versioned-bincode", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF3"
-    - versioned_packet_protocol_version_eq: 4
-    - min_supported_packet_protocol_version_eq: 3
+    - versioned_packet_protocol_version_eq: 5
+    - min_supported_packet_protocol_version_eq: 5
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
     - reject_binary_without_magic: true
@@ -111,7 +111,7 @@
     - run: cargo test -p deve_cli snapshot_request_exports_requested_shadow_source -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
   assertions:
-    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "peer-a", scope_nonce: 1, server_vector: "present" }
+    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "peer-a", scope_nonce: 1, server_vector: "present", snapshot_kind: "full" }
     - sync_push_snapshot_peer_id_eq_requested_source: true
     - unoffered_source_returns_structured_protocol_error: true
 
@@ -152,7 +152,7 @@
     - relay transport 已认证，但 source peer 未被当前 SyncHello diff 请求或授权
   steps:
     - ws_send: { type: "SyncPush", peer_id: "unrequested-source", repo_id: "11111111-1111-1111-1111-111111111111", ops: [] }
-    - ws_send: { type: "SyncSnapshotRequest", peer_id: "unoffered-source", repo_id: "11111111-1111-1111-1111-111111111111" }
+    - ws_send: { type: "SyncSnapshotRequest", peer_id: "unoffered-source", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: {}, reason: "source-boundary-check" }
     - run: cargo test -p deve_cli ws_sync_push_rejects_unrequested_source -- --nocapture
     - run: cargo test -p deve_cli sync_push_rejects_unrequested_relay_source -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture

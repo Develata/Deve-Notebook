@@ -35,6 +35,7 @@ pub struct SyncRequest {
 pub struct SyncSnapshotRequest {
     pub peer_id: PeerId,
     pub repo_id: RepoId,
+    pub reason: Option<String>,
 }
 
 /// 同步响应：包含拉取到的加密操作列表
@@ -92,7 +93,11 @@ pub fn compute_diff_requests(
     for (peer_id, range) in missing_from_local {
         // 策略: 如果落后超过阈值，直接请求快照
         if range.end - range.start > SNAPSHOT_THRESHOLD {
-            snapshot_requests.push(SyncSnapshotRequest { peer_id, repo_id });
+            snapshot_requests.push(SyncSnapshotRequest {
+                peer_id,
+                repo_id,
+                reason: Some("version-vector-gap".to_string()),
+            });
         } else {
             to_request.push(SyncRequest {
                 peer_id,
@@ -103,4 +108,30 @@ pub fn compute_diff_requests(
     }
 
     (to_send, to_request, snapshot_requests)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn large_missing_gap_requests_snapshot_with_reason() {
+        let repo_id = uuid::Uuid::new_v4();
+        let peer_id = PeerId::new("peer-a");
+        let local_vector = VersionVector::new();
+        let mut remote_vector = VersionVector::new();
+        remote_vector.update(peer_id.clone(), SNAPSHOT_THRESHOLD + 1);
+
+        let (_to_send, to_request, snapshot_requests) =
+            compute_diff_requests(&local_vector, &remote_vector, repo_id);
+
+        assert!(to_request.is_empty());
+        assert_eq!(snapshot_requests.len(), 1);
+        assert_eq!(snapshot_requests[0].peer_id, peer_id);
+        assert_eq!(snapshot_requests[0].repo_id, repo_id);
+        assert_eq!(
+            snapshot_requests[0].reason.as_deref(),
+            Some("version-vector-gap")
+        );
+    }
 }

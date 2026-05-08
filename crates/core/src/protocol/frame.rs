@@ -9,8 +9,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const WS_PROTOCOL_VERSION: u16 = 4;
-pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 3;
+pub const WS_PROTOCOL_VERSION: u16 = 5;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 5;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
 pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF3";
 pub const MISSING_WS_FRAME_MAGIC: &str = "missing WS frame magic";
@@ -38,6 +38,11 @@ pub struct ClientFrame {
 pub struct ServerFrame {
     pub protocol_version: u16,
     pub message: ServerMessage,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct VersionEnvelope {
+    protocol_version: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,20 +106,15 @@ pub fn decode_client_binary_with_format(
 
 pub fn decode_server_binary(bytes: &[u8]) -> Result<ServerMessage, ProtocolFrameError> {
     let frame: ServerFrame = decode_required_binary_frame(bytes)?;
-    ensure_supported(frame.protocol_version)?;
     Ok(frame.message)
 }
 
 pub fn decode_client_binary_frame(bytes: &[u8]) -> Result<ClientFrame, ProtocolFrameError> {
-    let frame: ClientFrame = decode_required_binary_frame(bytes)?;
-    ensure_supported(frame.protocol_version)?;
-    Ok(frame)
+    decode_required_binary_frame(bytes)
 }
 
 pub fn decode_server_binary_frame(bytes: &[u8]) -> Result<ServerFrame, ProtocolFrameError> {
-    let frame: ServerFrame = decode_required_binary_frame(bytes)?;
-    ensure_supported(frame.protocol_version)?;
-    Ok(frame)
+    decode_required_binary_frame(bytes)
 }
 
 pub fn decode_client_json(text: &str) -> Result<ClientMessage, ProtocolFrameError> {
@@ -124,8 +124,10 @@ pub fn decode_client_json(text: &str) -> Result<ClientMessage, ProtocolFrameErro
 pub fn decode_client_json_with_format(
     text: &str,
 ) -> Result<DecodedClientMessage, ProtocolFrameError> {
+    if let Ok(envelope) = serde_json::from_str::<VersionEnvelope>(text) {
+        ensure_supported(envelope.protocol_version)?;
+    }
     if let Ok(frame) = serde_json::from_str::<ClientFrame>(text) {
-        ensure_supported(frame.protocol_version)?;
         return Ok(DecodedClientMessage {
             message: frame.message,
             format: WsFrameFormat::VersionedJsonText,
@@ -138,8 +140,10 @@ pub fn decode_client_json_with_format(
 }
 
 pub fn decode_server_json(text: &str) -> Result<ServerMessage, ProtocolFrameError> {
+    if let Ok(envelope) = serde_json::from_str::<VersionEnvelope>(text) {
+        ensure_supported(envelope.protocol_version)?;
+    }
     if let Ok(frame) = serde_json::from_str::<ServerFrame>(text) {
-        ensure_supported(frame.protocol_version)?;
         return Ok(frame.message);
     }
     serde_json::from_str::<ServerMessage>(text).map_err(json_decode_error)
@@ -166,7 +170,15 @@ fn decode_required_binary_frame<T: DeserializeOwned>(
 ) -> Result<T, ProtocolFrameError> {
     let payload = framed_payload(bytes)
         .ok_or_else(|| ProtocolFrameError::Decode(MISSING_WS_FRAME_MAGIC.to_string()))?;
+    ensure_supported(decode_binary_protocol_version(payload)?)?;
     decode_bincode(payload)
+}
+
+fn decode_binary_protocol_version(bytes: &[u8]) -> Result<u16, ProtocolFrameError> {
+    bincode_options()
+        .allow_trailing_bytes()
+        .deserialize(bytes)
+        .map_err(bincode_decode_error)
 }
 
 fn decode_bincode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, ProtocolFrameError> {

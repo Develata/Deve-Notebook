@@ -59,6 +59,7 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
         peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
         known_vector: VersionVector::default(),
+        reason: None,
     });
     ch.unicast(ServerMessage::SyncPush {
         peer_id: peer.clone(),
@@ -73,6 +74,7 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
         scope_nonce: 7,
         branch: Some(peer),
         server_vector: VersionVector::default(),
+        snapshot_kind: None,
         ops: vec![],
     });
 

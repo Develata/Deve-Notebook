@@ -36,6 +36,8 @@ pub enum ClientMessage {
         repo_id: crate::models::RepoId,
         #[serde(default)]
         known_vector: VersionVector,
+        #[serde(default)]
+        reason: Option<String>,
     },
     SyncPush {
         peer_id: PeerId,
@@ -47,6 +49,8 @@ pub enum ClientMessage {
         repo_id: crate::models::RepoId,
         #[serde(default)]
         server_vector: VersionVector,
+        #[serde(default)]
+        snapshot_kind: Option<String>,
         ops: Vec<EncryptedOp>,
     },
     Edit {

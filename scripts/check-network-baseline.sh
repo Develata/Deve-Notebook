@@ -44,8 +44,8 @@ check_contains apps/cli/src/server/node_role_http.rs "\"ws_port\": r.ws_port"
 check_contains apps/cli/src/server/node_role_http.rs "\"main_port\": r.main_port"
 
 # NET-004: frame protocol is versioned binary by default, with legacy JSON debug-gated.
-check_contains crates/core/src/protocol/frame.rs "pub const WS_PROTOCOL_VERSION: u16 = 4;"
-check_contains crates/core/src/protocol/frame.rs "pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 3;"
+check_contains crates/core/src/protocol/frame.rs "pub const WS_PROTOCOL_VERSION: u16 = 5;"
+check_contains crates/core/src/protocol/frame.rs "pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 5;"
 check_contains crates/core/src/protocol/frame.rs "pub const WS_FRAME_MAGIC: &[u8] = b\"DEVEWSF3\";"
 check_contains crates/core/src/protocol/frame.rs "missing WS frame magic"
 check_contains apps/cli/src/server/ws/receive.rs "MISSING_WS_FRAME_MAGIC"
@@ -59,7 +59,8 @@ check_contains apps/web/src/hooks/use_core/effects/message_dispatch_write.rs "ws
 check_contains apps/cli/src/server/session_writer.rs "pub scope_nonce: u64"
 check_contains apps/cli/src/server/session_scope.rs "writer_peer_id_for(&self, repo_id: &RepoId, scope_nonce: Option<u64>)"
 check_contains apps/cli/src/server/handlers/sync/writer.rs "session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce)"
-check_contains apps/cli/src/server/handlers/document/edit_checks.rs ".writer_peer_id_for(repo_id, scope_nonce)"
+check_contains apps/cli/src/server/handlers/document/edit_checks.rs ".writer_peer_id_for(repo_id, requested_scope_nonce)"
 check_contains apps/cli/src/server/ws/route/core_scoped.rs "document::handle_edit("
+check_contains apps/cli/src/server/handlers/sync/snapshot.rs "snapshot_kind: Some(\"full\".to_string())"
 
 echo "network-baseline-check: ok"

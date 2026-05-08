@@ -88,6 +88,7 @@ fn sync_snapshot_uses_requested_local_repo_id() {
         .get_snapshot_for_sync(&SyncSnapshotRequest {
             peer_id: PeerId::new("local"),
             repo_id: extra_id,
+            reason: None,
         })
         .expect("build sync snapshot");
 

@@ -185,6 +185,7 @@ fn apply_remote_snapshot_replaces_stale_shadow_repo_contents() {
         .get_snapshot_for_sync(&SyncSnapshotRequest {
             peer_id: PeerId::new("local"),
             repo_id,
+            reason: None,
         })
         .expect("build snapshot");
     engine

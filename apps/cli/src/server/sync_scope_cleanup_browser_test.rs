@@ -33,7 +33,8 @@ async fn browser_sync_snapshot_request_rejects_missing_sync_scope_nonce() -> any
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = browser_session_without_sync_scope(&state, repo_id, 19)?;
 
-    handle_sync_snapshot_request(&state, &ch, &mut session, PeerId::new("browser"), repo_id).await;
+    handle_sync_snapshot_request(&state, &ch, &mut session, PeerId::new("browser"), repo_id, None)
+        .await;
 
     let (error, scope_nonce) = recv_protocol_error(&mut rx).await;
     assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);

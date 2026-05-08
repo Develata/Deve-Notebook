@@ -53,9 +53,12 @@ async fn route_unscoped_core(
                 .await;
         }
         ClientMessage::SyncSnapshotRequest {
-            peer_id, repo_id, ..
+            peer_id,
+            repo_id,
+            reason,
+            ..
         } => {
-            sync::handle_sync_snapshot_request(state, ch, session, peer_id, repo_id).await;
+            sync::handle_sync_snapshot_request(state, ch, session, peer_id, repo_id, reason).await;
         }
         ClientMessage::SyncPushSnapshot {
             peer_id,

@@ -76,6 +76,7 @@ fn output_write_classification_distinguishes_reads_from_writes() {
         peer_id: PeerId::new("browser-peer"),
         repo_id: uuid::Uuid::nil(),
         server_vector: VersionVector::new(),
+        snapshot_kind: None,
         ops: vec![],
     }));
     assert!(!is_write_message(&ClientMessage::Ping));
