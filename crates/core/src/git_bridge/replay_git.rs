@@ -16,9 +16,10 @@ pub(super) fn read_parent_tree(
 ) -> std::result::Result<(), String> {
     let envs = [("GIT_INDEX_FILE", index_path)];
     match parent_git {
-        Some(parent) => git_cmd::run_env(repo_root, &["read-tree", parent], &envs).map(|_| ()),
-        None => git_cmd::run_env(repo_root, &["read-tree", "--empty"], &envs).map(|_| ()),
-    }
+        Some(parent) => git_cmd::run_env(repo_root, &["read-tree", parent], &envs)?,
+        None => git_cmd::run_env(repo_root, &["read-tree", "--empty"], &envs)?,
+    };
+    Ok(())
 }
 
 pub(super) fn apply_diff_to_index(
@@ -80,8 +81,8 @@ pub(super) fn add_blob_to_index(
             &path,
         ],
         &[("GIT_INDEX_FILE", index_path)],
-    )
-    .map(|_| ())
+    )?;
+    Ok(())
 }
 
 fn remove_path_from_index(
@@ -94,8 +95,8 @@ fn remove_path_from_index(
         repo_root,
         &["update-index", "--force-remove", "--", &path],
         &[("GIT_INDEX_FILE", index_path)],
-    )
-    .map(|_| ())
+    )?;
+    Ok(())
 }
 
 fn validate_mirror_path(path: &str) -> std::result::Result<String, String> {
@@ -136,12 +137,13 @@ pub(super) fn update_head(
     match old_parent {
         Some(parent) => git_cmd::run(repo_root, &["update-ref", "HEAD", git_commit, parent]),
         None => git_cmd::run(repo_root, &["update-ref", "HEAD", git_commit]),
-    }
-    .map(|_| ())
+    }?;
+    Ok(())
 }
 
 pub(super) fn sync_main_index_to_head(repo_root: &Path) -> std::result::Result<(), String> {
-    git_cmd::run(repo_root, &["read-tree", "--reset", "HEAD"]).map(|_| ())
+    git_cmd::run(repo_root, &["read-tree", "--reset", "HEAD"])?;
+    Ok(())
 }
 
 pub(super) fn ensure_git_commit_exists(
@@ -149,5 +151,6 @@ pub(super) fn ensure_git_commit_exists(
     git_commit: &str,
 ) -> std::result::Result<(), String> {
     let commit_object = format!("{git_commit}^{{commit}}");
-    git_cmd::run(repo_root, &["cat-file", "-e", &commit_object]).map(|_| ())
+    git_cmd::run(repo_root, &["cat-file", "-e", &commit_object])?;
+    Ok(())
 }
