@@ -92,6 +92,6 @@ fn validate_import_path_rejects_internal_and_escape_paths() {
         "notes/.notegit/state",
     ] {
         let err = validate_import_path(path).expect_err("unsafe path");
-        assert!(err.contains("unsafe path"), "{err}");
+        assert!(err.to_string().contains("unsafe path"), "{err}");
     }
 }

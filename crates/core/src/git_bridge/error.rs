@@ -9,6 +9,7 @@ pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanErr
 pub(super) type GitProjectionReplayResult<T> = std::result::Result<T, GitProjectionReplayError>;
 pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommitError>;
 pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
+pub(super) type GitImportPlanResult<T> = std::result::Result<T, GitImportPlanError>;
 pub(super) type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
@@ -233,6 +234,28 @@ impl From<GitSnapshotBootstrapError> for String {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitImportPlanError {
+    #[error(transparent)]
+    GitCommand(#[from] GitCommandError),
+    #[error(transparent)]
+    GitPreflight(#[from] GitPreflightError),
+    #[error("Git import dry-run failed to inspect mirror status: {message}")]
+    StatusInspect { message: String },
+    #[error("Git import dry-run requires ready Git mirror: {reason}")]
+    MirrorNotReady { reason: String },
+    #[error("Git import dry-run requires Git HEAD")]
+    MissingHead,
+    #[error("Git import refuses unsafe path: {path}")]
+    UnsafePath { path: String },
+}
+
+impl From<GitImportPlanError> for String {
+    fn from(err: GitImportPlanError) -> Self {
+        err.to_string()
+    }
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitImportApplyError {
     #[error("failed to read imported Git worktree file {path}: {message}")]
     ReadImportedWorktreeFile { path: String, message: String },
@@ -433,6 +456,28 @@ mod tests {
             }
             .to_string(),
             "Git import rename target is already tracked by another Deve doc: moved.md"
+        );
+    }
+
+    #[test]
+    fn git_import_plan_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitImportPlanError::MissingHead.to_string(),
+            "Git import dry-run requires Git HEAD"
+        );
+        assert_eq!(
+            super::GitImportPlanError::MirrorNotReady {
+                reason: "state=disabled git=missing".into(),
+            }
+            .to_string(),
+            "Git import dry-run requires ready Git mirror: state=disabled git=missing"
+        );
+        assert_eq!(
+            super::GitImportPlanError::UnsafePath {
+                path: "../note.md".into(),
+            }
+            .to_string(),
+            "Git import refuses unsafe path: ../note.md"
         );
     }
 }

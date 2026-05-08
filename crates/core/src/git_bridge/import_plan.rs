@@ -6,12 +6,13 @@
 //! Read-only Git import planning. This module observes external Git/worktree
 //! changes and never writes Deve ledger, pending_fs, staging, or `.notegit`.
 
+use super::error::{GitImportPlanError, GitImportPlanResult};
 use super::git_cmd;
 use super::preflight::{ensure_git_worktree, ensure_notegit_is_not_tracked};
 use super::status::{GitMirrorState, inspect_repo_root};
 use crate::source_control::ChangeStatus;
 use crate::utils::{notegit, path::to_forward_slash};
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -38,12 +39,15 @@ pub struct GitImportPlanBlocker {
 }
 
 pub fn plan_import(repo_root: &Path) -> Result<GitImportPlan> {
+    plan_import_inner(repo_root).map_err(Into::into)
+}
+
+fn plan_import_inner(repo_root: &Path) -> GitImportPlanResult<GitImportPlan> {
     ensure_import_ready(repo_root)?;
     let fields = git_cmd::run_z_fields(
         repo_root,
         &["diff", "--name-status", "-z", "-M", "HEAD", "--"],
-    )
-    .map_err(|err| anyhow!(err))?;
+    )?;
     let mut plan = GitImportPlan {
         repo_root: repo_root.to_path_buf(),
         entries: Vec::new(),
@@ -59,8 +63,10 @@ pub fn plan_import(repo_root: &Path) -> Result<GitImportPlan> {
     Ok(plan)
 }
 
-fn ensure_import_ready(repo_root: &Path) -> Result<()> {
-    let status = inspect_repo_root(repo_root)?;
+fn ensure_import_ready(repo_root: &Path) -> GitImportPlanResult<()> {
+    let status = inspect_repo_root(repo_root).map_err(|err| GitImportPlanError::StatusInspect {
+        message: err.to_string(),
+    })?;
     if status.state != GitMirrorState::Ready {
         let reason = status.reason.unwrap_or_else(|| {
             format!(
@@ -69,17 +75,12 @@ fn ensure_import_ready(repo_root: &Path) -> Result<()> {
                 status.git_metadata_kind.as_str()
             )
         });
-        return Err(anyhow!(
-            "Git import dry-run requires ready Git mirror: {reason}"
-        ));
+        return Err(GitImportPlanError::MirrorNotReady { reason });
     }
-    ensure_git_worktree(repo_root).map_err(|err| anyhow!(err))?;
-    ensure_notegit_is_not_tracked(repo_root).map_err(|err| anyhow!(err))?;
-    if git_cmd::current_head(repo_root)
-        .map_err(|err| anyhow!(err))?
-        .is_none()
-    {
-        return Err(anyhow!("Git import dry-run requires Git HEAD"));
+    ensure_git_worktree(repo_root)?;
+    ensure_notegit_is_not_tracked(repo_root)?;
+    if git_cmd::current_head(repo_root)?.is_none() {
+        return Err(GitImportPlanError::MissingHead);
     }
     Ok(())
 }
@@ -125,12 +126,11 @@ fn parse_name_status_fields(plan: &mut GitImportPlan, fields: &[String]) {
     }
 }
 
-fn add_untracked_entries(plan: &mut GitImportPlan, repo_root: &Path) -> Result<()> {
+fn add_untracked_entries(plan: &mut GitImportPlan, repo_root: &Path) -> GitImportPlanResult<()> {
     let paths = git_cmd::run_z_fields(
         repo_root,
         &["ls-files", "-o", "--exclude-standard", "-z", "--"],
-    )
-    .map_err(|err| anyhow!(err))?;
+    )?;
     for path in paths {
         push_regular_entry(plan, path, "??".to_string(), ChangeStatus::Added);
     }
@@ -200,7 +200,7 @@ fn push_rename_entry(
     }
 }
 
-fn validate_import_path(path: &str) -> std::result::Result<String, String> {
+fn validate_import_path(path: &str) -> GitImportPlanResult<String> {
     let path = to_forward_slash(path);
     if path.is_empty()
         || path.starts_with('/')
@@ -210,7 +210,7 @@ fn validate_import_path(path: &str) -> std::result::Result<String, String> {
             .any(|part| part.is_empty() || part == "." || part == "..")
         || notegit::is_internal_repo_path(&path)
     {
-        return Err(format!("Git import refuses unsafe path: {path}"));
+        return Err(GitImportPlanError::UnsafePath { path });
     }
     Ok(path)
 }
