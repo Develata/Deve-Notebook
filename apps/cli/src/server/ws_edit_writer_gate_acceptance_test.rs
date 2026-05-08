@@ -155,7 +155,7 @@ fn assert_writer_rejected(message: ServerMessage, expected_doc: DocId) {
             client_op_id,
             error,
         } => {
-            assert_eq!(scope_nonce, Some(SCOPE));
+            assert_eq!(scope_nonce, SCOPE);
             assert_eq!(doc_id, expected_doc);
             assert_eq!(client_op_id, CLIENT_OP_ID);
             assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);

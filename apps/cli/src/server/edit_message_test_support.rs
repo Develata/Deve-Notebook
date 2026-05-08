@@ -52,7 +52,7 @@ pub(crate) async fn send_insert_with_scope(
 
 pub(crate) async fn recv_edit_rejected(
     rx: &mut mpsc::Receiver<ServerMessage>,
-) -> (Option<u64>, DocId, u64, ServerError) {
+) -> (u64, DocId, u64, ServerError) {
     match rx.recv().await {
         Some(ServerMessage::EditRejected {
             scope_nonce,

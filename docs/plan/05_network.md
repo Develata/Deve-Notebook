@@ -108,7 +108,7 @@
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF3` magic header、`protocol_version` 与 bincode payload。
-- `protocol_version` 当前固定为 `5`；当前兼容窗口为 `5..=5`；任何破坏兼容的 schema 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
+- `protocol_version` 当前固定为 `6`；当前兼容窗口为 `6..=6`；任何破坏兼容的 schema 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
 - 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned bincode frame。
 - 浏览器客户端到服务端 **SHOULD** 优先使用 versioned bincode frame；text-frame versioned JSON 只能作为调试入口保留。
 - 旧式 JSON text frame **MAY** 在显式 development/debug 兼容开关下解析，**MUST NOT** 成为生产默认运行时合同。

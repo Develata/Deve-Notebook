@@ -30,7 +30,7 @@ async fn edit_clears_stale_remote_readonly_binding_before_checks() -> anyhow::Re
 
     let (scope_nonce, rejected_doc_id, client_op_id, error) =
         recv_edit_rejected(&mut uni_rx).await;
-    assert_eq!(scope_nonce, Some(29));
+    assert_eq!(scope_nonce, 29);
     assert_eq!(rejected_doc_id, doc_id);
     assert_eq!(client_op_id, 9);
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
@@ -53,7 +53,7 @@ async fn edit_rejects_stale_message_scope_at_writer_gate() -> anyhow::Result<()>
 
     let (scope_nonce, rejected_doc_id, client_op_id, error) =
         recv_edit_rejected(&mut uni_rx).await;
-    assert_eq!(scope_nonce, Some(41));
+    assert_eq!(scope_nonce, 41);
     assert_eq!(rejected_doc_id, doc_id);
     assert_eq!(client_op_id, 9);
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
@@ -73,7 +73,7 @@ async fn browser_edit_reject_uses_current_scope_when_request_scope_missing() -> 
 
     let (scope_nonce, rejected_doc_id, client_op_id, error) =
         recv_edit_rejected(&mut uni_rx).await;
-    assert_eq!(scope_nonce, Some(42));
+    assert_eq!(scope_nonce, 42);
     assert_eq!(rejected_doc_id, doc_id);
     assert_eq!(client_op_id, 9);
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);

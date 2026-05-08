@@ -38,7 +38,7 @@ pub(super) fn writer_peer_id(
     client_op_id: u64,
     ch: &DualChannel,
     requested_scope_nonce: Option<u64>,
-    response_scope_nonce: Option<u64>,
+    response_scope_nonce: u64,
 ) -> Option<PeerId> {
     session
         .writer_peer_id_for(repo_id, requested_scope_nonce)
@@ -58,7 +58,7 @@ pub(super) struct ExistingClientOpCheck<'a> {
     pub(super) state: &'a Arc<AppState>,
     pub(super) scope: &'a ResolvedRepo,
     pub(super) ch: &'a DualChannel,
-    pub(super) scope_nonce: Option<u64>,
+    pub(super) scope_nonce: u64,
     pub(super) doc_id: DocId,
     pub(super) op: &'a Op,
     pub(super) client_id: u64,
@@ -84,7 +84,7 @@ pub(super) fn confirm_existing_client_op(input: ExistingClientOpCheck<'_>) -> bo
             ch.unicast(ServerMessage::Ack {
                 repo_id: scope.repo_id,
                 branch: scope.branch.clone(),
-                scope_nonce,
+                scope_nonce: Some(scope_nonce),
                 doc_id,
                 seq: entry.seq,
                 client_op_id,

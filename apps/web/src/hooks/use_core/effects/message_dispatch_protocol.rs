@@ -50,7 +50,7 @@ pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals 
 }
 
 pub fn handle_edit_rejected_message(
-    scope_nonce: Option<u64>,
+    scope_nonce: u64,
     doc_id: DocId,
     client_op_id: u64,
     error: ServerError,
@@ -58,7 +58,7 @@ pub fn handle_edit_rejected_message(
     locale: Locale,
     signals: CoreSignals,
 ) {
-    if !accepts_edit_rejected_message(scope_nonce, signals) {
+    if !accepts_edit_rejected_message(Some(scope_nonce), signals) {
         return;
     }
     let current_doc = signals.current_doc.get_untracked();
@@ -68,7 +68,7 @@ pub fn handle_edit_rejected_message(
             pending_edits,
             current_doc,
             None,
-            scope_nonce,
+            Some(scope_nonce),
             doc_id,
             client_op_id,
         );

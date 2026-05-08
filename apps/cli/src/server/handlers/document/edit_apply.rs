@@ -16,7 +16,7 @@ pub(super) struct ClientEditAppend<'a> {
     pub(super) state: &'a Arc<AppState>,
     pub(super) scope: &'a ResolvedRepo,
     pub(super) ch: &'a DualChannel,
-    pub(super) scope_nonce: Option<u64>,
+    pub(super) scope_nonce: u64,
     pub(super) doc_id: DocId,
     pub(super) op: Op,
     pub(super) local_peer_id: PeerId,
@@ -82,7 +82,7 @@ pub(super) fn append_client_edit(input: ClientEditAppend<'_>) {
                 );
                 report_projection_writeback_fault(
                     ch,
-                    scope_nonce,
+                    Some(scope_nonce),
                     format!("Projection writeback failed after ledger commit: {err}"),
                 );
             }

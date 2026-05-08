@@ -12,7 +12,7 @@ use deve_core::protocol::{ClientOrigin, ConfirmedOp, ServerError, ServerErrorCod
 use std::sync::Arc;
 
 pub(super) struct CommittedEdit {
-    pub(super) scope_nonce: Option<u64>,
+    pub(super) scope_nonce: u64,
     pub(super) doc_id: DocId,
     pub(super) local_seq: u64,
     pub(super) op: Op,
@@ -23,18 +23,15 @@ pub(super) struct CommittedEdit {
 pub(super) fn edit_response_scope_nonce(
     session: &WsSession,
     requested_scope_nonce: Option<u64>,
-) -> Option<u64> {
-    if session.is_browser_session() {
-        return requested_scope_nonce.or(Some(session.scope_nonce()));
-    }
-    requested_scope_nonce
+) -> u64 {
+    requested_scope_nonce.unwrap_or_else(|| session.scope_nonce())
 }
 
 pub(super) fn resolve_edit_scope(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
-    scope_nonce: Option<u64>,
+    scope_nonce: u64,
     doc_id: DocId,
     client_op_id: u64,
 ) -> Option<ResolvedRepo> {
@@ -63,7 +60,7 @@ pub(super) fn resolve_edit_scope(
 
 pub(super) fn reject_edit(
     ch: &DualChannel,
-    scope_nonce: Option<u64>,
+    scope_nonce: u64,
     doc_id: DocId,
     client_op_id: u64,
     error: ServerError,
@@ -84,7 +81,7 @@ pub(super) fn broadcast_and_ack_committed_edit(
     ch.broadcast(ServerMessage::NewOp {
         repo_id: scope.repo_id,
         branch: scope.branch.clone(),
-        scope_nonce: edit.scope_nonce,
+        scope_nonce: Some(edit.scope_nonce),
         doc_id: edit.doc_id,
         entry: ConfirmedOp::new(
             edit.local_seq,
@@ -98,7 +95,7 @@ pub(super) fn broadcast_and_ack_committed_edit(
     ch.unicast(ServerMessage::Ack {
         repo_id: scope.repo_id,
         branch: scope.branch.clone(),
-        scope_nonce: edit.scope_nonce,
+        scope_nonce: Some(edit.scope_nonce),
         doc_id: edit.doc_id,
         seq: edit.local_seq,
         client_op_id: edit.client_op_id,
