@@ -41,6 +41,7 @@
     *   Pending overlay 是 session runtime state，不是 `pending_fs_ops` side table 条目。
     *   Pending overlay 只能由 `Ack` / `Reject` / stale-scope recovery 清理，不得由 watcher 或 scan 清理。
 *   **pending_fs_ops (文件系统待处理队列)**：外部文件系统变化或显式 import 进入 Source Control 前的 repo runtime side table。
+    *   `PendingFsEntry` 是 `pending_fs_ops` 中的一条 repo-scoped 文件系统/import pending 记录。
     *   `pending_fs_ops` 不承载 Web pending overlay，不是 ledger authority。
 *   **Vault (投影仓)**：宿主文件系统上的一个具体目录路径 `$ROOT/data/vault`。
     *   是 Projection 的物理容器。

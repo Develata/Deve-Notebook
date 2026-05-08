@@ -61,7 +61,7 @@ Workspace_r = P_r ⊕ D_r
 
 ### 2.4 Non-Authoritative Runtime State
 
-- `pending_fs_ops`
+- `pending_fs_ops` (`PendingFsEntry` rows)
 - `staging`
 - `commit_index`
 - `snapshot_index`
