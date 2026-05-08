@@ -37,14 +37,15 @@ pub(super) fn writer_peer_id(
     doc_id: DocId,
     client_op_id: u64,
     ch: &DualChannel,
-    scope_nonce: Option<u64>,
+    requested_scope_nonce: Option<u64>,
+    response_scope_nonce: Option<u64>,
 ) -> Option<PeerId> {
     session
-        .writer_peer_id_for(repo_id, scope_nonce)
+        .writer_peer_id_for(repo_id, requested_scope_nonce)
         .or_else(|| {
             reject_edit(
                 ch,
-                scope_nonce,
+                response_scope_nonce,
                 doc_id,
                 client_op_id,
                 ServerError::new(ServerErrorCode::SyncPeerUnauthenticated),

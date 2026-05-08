@@ -49,7 +49,7 @@ authority 仍是 ledger facts 与 commit anchors。
 
 ### 2.2 Core State
 
-- `PendingFsOp`
+- `PendingFsEntry`
 - `StagedEntry`
 - `CommitInfo`
 - `CommitAnchor(ledger_seq)`
@@ -107,7 +107,7 @@ Git mirror 命令面必须遵守以下边界：
 
 ```text
 VaultChangeDetected
-  -> PendingFsOp
+  -> PendingFsEntry
   -> Staged
   -> LedgerCommitted
   -> Cleared
@@ -116,8 +116,8 @@ VaultChangeDetected
 旁路：
 
 ```text
-PendingFsOp -> Discarded
-PendingFsOp -> Conflict
+PendingFsEntry -> Discarded
+PendingFsEntry -> Conflict
 Staged -> Unstaged
 ```
 

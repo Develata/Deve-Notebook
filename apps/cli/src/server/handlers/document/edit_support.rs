@@ -20,6 +20,16 @@ pub(super) struct CommittedEdit {
     pub(super) client_op_id: u64,
 }
 
+pub(super) fn edit_response_scope_nonce(
+    session: &WsSession,
+    requested_scope_nonce: Option<u64>,
+) -> Option<u64> {
+    if session.is_browser_session() {
+        return requested_scope_nonce.or(Some(session.scope_nonce()));
+    }
+    requested_scope_nonce
+}
+
 pub(super) fn resolve_edit_scope(
     state: &Arc<AppState>,
     ch: &DualChannel,
