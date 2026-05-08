@@ -4,6 +4,7 @@
 //!
 //! Explicit Git mirror executor. It never acts as source-control authority.
 
+use super::error::{GitMirrorCommitError, GitMirrorCommitResult};
 use super::git_cmd;
 use super::preflight::{
     ensure_git_changes_match_deve_commit, ensure_git_worktree, ensure_notegit_is_not_tracked,
@@ -131,14 +132,14 @@ fn commit_worktree(
     db: &Database,
     repo_root: &Path,
     record: &GitMirrorRecord,
-) -> std::result::Result<String, String> {
+) -> GitMirrorCommitResult<String> {
     preflight_mirror_commit(db, repo_root, record)?;
     git_cmd::run(repo_root, &["add", "-A"])?;
     if !git_cmd::has_staged_changes(repo_root)? {
         if let Some(git_commit_id) = matching_head_commit(repo_root, record)? {
             return Ok(git_commit_id);
         }
-        return Err("git mirror has no staged changes for queued Deve commit".to_string());
+        return Err(GitMirrorCommitError::NoStagedChanges);
     }
     git_cmd::run(
         repo_root,
@@ -160,7 +161,7 @@ fn preflight_mirror_commit(
     db: &Database,
     repo_root: &Path,
     record: &GitMirrorRecord,
-) -> std::result::Result<(), String> {
+) -> GitMirrorCommitResult<()> {
     ensure_git_worktree(repo_root)?;
     ensure_notegit_is_not_tracked(repo_root)?;
     ensure_source_control_clean(db)?;
@@ -171,7 +172,7 @@ fn preflight_mirror_commit(
 fn matching_head_commit(
     repo_root: &Path,
     record: &GitMirrorRecord,
-) -> std::result::Result<Option<String>, String> {
+) -> GitMirrorCommitResult<Option<String>> {
     let body = match git_cmd::run(repo_root, &["log", "-1", "--pretty=%B"]) {
         Ok(body) => body,
         Err(_) => return Ok(None),

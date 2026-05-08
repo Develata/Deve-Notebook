@@ -7,6 +7,7 @@ pub(super) type GitPreflightResult<T> = std::result::Result<T, GitPreflightError
 pub(super) type GitReplayResult<T> = std::result::Result<T, GitReplayError>;
 pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanError>;
 pub(super) type GitProjectionReplayResult<T> = std::result::Result<T, GitProjectionReplayError>;
+pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommitError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -185,6 +186,22 @@ impl From<GitProjectionReplayError> for String {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitMirrorCommitError {
+    #[error(transparent)]
+    GitCommand(#[from] GitCommandError),
+    #[error(transparent)]
+    GitPreflight(#[from] GitPreflightError),
+    #[error("git mirror has no staged changes for queued Deve commit")]
+    NoStagedChanges,
+}
+
+impl From<GitMirrorCommitError> for String {
+    fn from(err: GitMirrorCommitError) -> Self {
+        err.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GitCommandError;
@@ -296,6 +313,21 @@ mod tests {
             }
             .to_string(),
             "Deve commit c1 has no projection diff to mirror"
+        );
+    }
+
+    #[test]
+    fn git_mirror_commit_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitMirrorCommitError::NoStagedChanges.to_string(),
+            "git mirror has no staged changes for queued Deve commit"
+        );
+        assert_eq!(
+            super::GitMirrorCommitError::GitPreflight(
+                super::GitPreflightError::PendingSourceControlChanges { count: 3 },
+            )
+            .to_string(),
+            "Git mirror refuses to run with 3 pending source-control change(s)"
         );
     }
 }
