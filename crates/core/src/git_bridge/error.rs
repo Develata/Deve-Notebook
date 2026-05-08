@@ -6,6 +6,7 @@ pub(super) type GitCommandResult<T> = std::result::Result<T, GitCommandError>;
 pub(super) type GitPreflightResult<T> = std::result::Result<T, GitPreflightError>;
 pub(super) type GitReplayResult<T> = std::result::Result<T, GitReplayError>;
 pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanError>;
+pub(super) type GitProjectionReplayResult<T> = std::result::Result<T, GitProjectionReplayError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -166,6 +167,24 @@ impl From<GitReplayPlanError> for String {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitProjectionReplayError {
+    #[error(transparent)]
+    GitCommand(#[from] GitCommandError),
+    #[error(transparent)]
+    GitReplay(#[from] GitReplayError),
+    #[error("failed to compute projection diff for {commit_id}: {message}")]
+    ProjectionDiff { commit_id: String, message: String },
+    #[error("Deve commit {commit_id} has no projection diff to mirror")]
+    EmptyProjectionDiff { commit_id: String },
+}
+
+impl From<GitProjectionReplayError> for String {
+    fn from(err: GitProjectionReplayError) -> Self {
+        err.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GitCommandError;
@@ -258,6 +277,25 @@ mod tests {
             }
             .to_string(),
             "Git HEAD does not match mirrored parent p1: head=Some(\"abc\") expected=def"
+        );
+    }
+
+    #[test]
+    fn git_projection_replay_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitProjectionReplayError::ProjectionDiff {
+                commit_id: "c1".into(),
+                message: "table missing".into(),
+            }
+            .to_string(),
+            "failed to compute projection diff for c1: table missing"
+        );
+        assert_eq!(
+            super::GitProjectionReplayError::EmptyProjectionDiff {
+                commit_id: "c1".into(),
+            }
+            .to_string(),
+            "Deve commit c1 has no projection diff to mirror"
         );
     }
 }

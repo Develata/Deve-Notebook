@@ -4,6 +4,7 @@
 //!
 //! Projection replay for accumulated Git mirror records.
 
+use super::error::{GitProjectionReplayError, GitProjectionReplayResult};
 use super::executor::{GitMirrorRunReport, commit_message};
 use super::git_cmd;
 use super::replay_git::{
@@ -94,24 +95,21 @@ fn create_git_commit_from_projection(
     index_path: &Path,
     parent_git: Option<&str>,
     item: &ReplayItem,
-) -> std::result::Result<String, String> {
+) -> GitProjectionReplayResult<String> {
     read_parent_tree(repo_root, index_path, parent_git)?;
     let diffs = source_control::commit_diff::compare_commits(
         db,
         item.commit.parent_id.as_deref(),
         &item.commit.id,
     )
-    .map_err(|err| {
-        format!(
-            "failed to compute projection diff for {}: {err}",
-            item.commit.id
-        )
+    .map_err(|err| GitProjectionReplayError::ProjectionDiff {
+        commit_id: item.commit.id.clone(),
+        message: err.to_string(),
     })?;
     if diffs.is_empty() {
-        return Err(format!(
-            "Deve commit {} has no projection diff to mirror",
-            item.commit.id
-        ));
+        return Err(GitProjectionReplayError::EmptyProjectionDiff {
+            commit_id: item.commit.id.clone(),
+        });
     }
     for diff in &diffs {
         apply_diff_to_index(repo_root, index_path, diff)?;
