@@ -27,14 +27,6 @@ fn generic_classifier_does_not_map_auth_words_by_string() {
 }
 
 #[test]
-fn classifies_snapshot_generation_as_storage_persist_failed() {
-    assert_eq!(
-        classify_failure_code("Failed to generate snapshot for repo x"),
-        ServerErrorCode::StoragePersistFailed
-    );
-}
-
-#[test]
 fn classifies_missing_sync_scope_as_repo_unbound() {
     assert_eq!(
         classify_failure_code("Active repository not selected: multiple local repos exist"),
@@ -100,6 +92,21 @@ fn classifies_invalid_sync_payload_as_sync_invalid_payload() {
         classify_failure_code("Encrypted op seq mismatch: envelope 1, payload 2"),
         ServerErrorCode::SyncInvalidPayload
     );
+}
+
+#[test]
+fn generic_classifier_does_not_map_sync_context_words_by_string() {
+    for detail in [
+        "Failed to generate snapshot: repo key missing",
+        "Failed to build sync payload for repo x: repo key missing",
+        "Failed to build sync response for repo x: repo key missing",
+        "Failed to get sync engine for repo x: repo key missing",
+    ] {
+        assert_eq!(
+            classify_failure_code(detail),
+            ServerErrorCode::RequestFailed
+        );
+    }
 }
 
 #[test]

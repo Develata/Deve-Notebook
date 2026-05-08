@@ -109,7 +109,7 @@ fn send_pushes(
             }
             Err(err) => {
                 clear_sync_hello_scope_failure(session, false);
-                errors::classified_failure(
+                errors::sync_payload_build_failed(
                     ch,
                     format!("Failed to build sync payload for repo {}: {}", repo_id, err),
                     scope,

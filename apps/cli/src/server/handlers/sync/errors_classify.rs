@@ -38,17 +38,7 @@ pub(super) fn classify_failure_code(detail: &str) -> ServerErrorCode {
     if is_repo_context_invalid(&lower) {
         return ServerErrorCode::ScRepoContextInvalid;
     }
-    if is_sync_storage_failure(&lower) {
-        return ServerErrorCode::StoragePersistFailed;
-    }
     ServerErrorCode::RequestFailed
-}
-
-fn is_sync_storage_failure(lower: &str) -> bool {
-    lower.contains("snapshot")
-        || lower.contains("sync payload")
-        || lower.contains("sync response")
-        || lower.contains("sync engine")
 }
 
 #[cfg(test)]

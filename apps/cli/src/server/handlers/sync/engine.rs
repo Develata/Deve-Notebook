@@ -21,7 +21,7 @@ where
     match state.sync_engine.with_strict_engine(repo_id, f) {
         Ok(result) => Some(result),
         Err(err) => {
-            errors::classified_failure(
+            errors::sync_engine_failed(
                 ch,
                 format!("Failed to get sync engine for repo {}: {}", repo_id, err),
                 scope_nonce,
@@ -44,7 +44,7 @@ where
     match state.sync_engine.with_strict_engine_mut(repo_id, f) {
         Ok(result) => Some(result),
         Err(err) => {
-            errors::classified_failure(
+            errors::sync_engine_failed(
                 ch,
                 format!("Failed to get sync engine for repo {}: {}", repo_id, err),
                 scope_nonce,

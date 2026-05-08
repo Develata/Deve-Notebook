@@ -27,18 +27,13 @@ pub(super) fn request_failed(
     send(ch, ServerErrorCode::RequestFailed, detail, scope_nonce);
 }
 
-pub(super) fn classified_failure(
-    ch: &DualChannel,
-    detail: impl Into<String>,
-    scope_nonce: Option<u64>,
-) {
-    let detail = detail.into();
-    send(
-        ch,
-        classify::classify_failure_code(&detail),
-        detail,
-        scope_nonce,
-    );
+fn classify_failure_code_or(detail: &str, fallback: ServerErrorCode) -> ServerErrorCode {
+    let code = classify::classify_failure_code(detail);
+    if code == ServerErrorCode::RequestFailed {
+        fallback
+    } else {
+        code
+    }
 }
 
 pub(super) fn handshake_failed(ch: &DualChannel, err: HandshakeError, scope_nonce: Option<u64>) {
@@ -56,6 +51,48 @@ fn handshake_failure_code(err: &HandshakeError) -> ServerErrorCode {
     } else {
         ServerErrorCode::SyncInvalidPayload
     }
+}
+
+pub(super) fn sync_engine_failed(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    let detail = detail.into();
+    send(
+        ch,
+        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
+        detail,
+        scope_nonce,
+    );
+}
+
+pub(super) fn sync_payload_build_failed(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    let detail = detail.into();
+    send(
+        ch,
+        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
+        detail,
+        scope_nonce,
+    );
+}
+
+pub(super) fn snapshot_generation_failed(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    let detail = detail.into();
+    send(
+        ch,
+        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
+        detail,
+        scope_nonce,
+    );
 }
 
 pub(super) fn storage_persist_failed(
@@ -79,7 +116,7 @@ pub(super) fn sync_apply_failed(
     let detail = detail.into();
     send(
         ch,
-        classify::classify_failure_code(&detail),
+        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
         detail,
         scope_nonce,
     );
@@ -100,7 +137,7 @@ pub(super) fn sync_peer_unauthenticated(
 
 #[cfg(test)]
 mod tests {
-    use super::handshake_failure_code;
+    use super::{classify_failure_code_or, handshake_failure_code};
     use deve_core::models::PeerId;
     use deve_core::protocol::ServerErrorCode;
     use deve_core::sync::engine::handshake::HandshakeError;
@@ -128,6 +165,31 @@ mod tests {
 
         assert_eq!(
             handshake_failure_code(&HandshakeError::VectorSerialization(serde_err)),
+            ServerErrorCode::SyncInvalidPayload
+        );
+    }
+
+    #[test]
+    fn sync_context_helpers_fallback_to_storage_persist_without_string_slop() {
+        assert_eq!(
+            classify_failure_code_or(
+                "Failed to generate snapshot: repo key missing",
+                ServerErrorCode::StoragePersistFailed,
+            ),
+            ServerErrorCode::StoragePersistFailed
+        );
+        assert_eq!(
+            classify_failure_code_or(
+                "Failed to build sync payload: Repository not found: notes",
+                ServerErrorCode::StoragePersistFailed,
+            ),
+            ServerErrorCode::StorageNotFound
+        );
+        assert_eq!(
+            classify_failure_code_or(
+                "Failed to apply sync ops: encrypted op seq mismatch",
+                ServerErrorCode::StoragePersistFailed,
+            ),
             ServerErrorCode::SyncInvalidPayload
         );
     }

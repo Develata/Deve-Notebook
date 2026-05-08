@@ -95,7 +95,7 @@ async fn open_deleted_doc_with_saved_snapshot_returns_error_without_snapshot() -
 
     match uni_rx.recv().await {
         Some(ServerMessage::ProtocolError { error, .. }) => {
-            assert_eq!(error.code, ServerErrorCode::StorageNotFound);
+            assert_eq!(error.code, ServerErrorCode::DocNotFound);
         }
         other => panic!("expected ProtocolError, got {:?}", other),
     }

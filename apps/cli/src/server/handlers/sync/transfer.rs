@@ -65,7 +65,7 @@ pub(super) async fn handle_request(
     let (header_vector, responses) = match responses {
         Ok(result) => result,
         Err(err) => {
-            errors::classified_failure(
+            errors::sync_payload_build_failed(
                 ch,
                 format!(
                     "Failed to build sync response for repo {}: {}",

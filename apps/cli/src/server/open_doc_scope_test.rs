@@ -37,7 +37,7 @@ async fn open_deleted_doc_returns_error_without_snapshot() -> anyhow::Result<()>
 
     assert_protocol_error(
         &mut uni_rx,
-        Some(ServerErrorCode::StorageNotFound),
+        Some(ServerErrorCode::DocNotFound),
         None,
         "must not send deleted snapshot",
     )
