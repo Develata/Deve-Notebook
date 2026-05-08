@@ -168,6 +168,80 @@ fn malformed_overlay_row_is_ignored_by_doc_read_helpers() {
 }
 
 #[test]
+fn malformed_overlay_metadata_is_ignored_by_doc_read_helpers() {
+    let doc_id = DocId::from_u128(49);
+    let mut pending = PendingLocalEdits::new();
+    pending.entry(doc_id).or_default().extend([
+        PendingLocalEdit {
+            repo_id: repo_id(),
+            doc_id,
+            scope_nonce: 31,
+            client_id: 11,
+            client_op_id: 7,
+            created_at_ms: 1,
+            base_version: 3,
+            op_marker: String::new(),
+            op: Op::Insert {
+                pos: 0,
+                content: "a".into(),
+            },
+        },
+        PendingLocalEdit {
+            repo_id: repo_id(),
+            doc_id,
+            scope_nonce: 31,
+            client_id: 11,
+            client_op_id: 8,
+            created_at_ms: -1,
+            base_version: 3,
+            op_marker: "delete:0:1".into(),
+            op: Op::Delete { pos: 0, len: 1 },
+        },
+    ]);
+
+    assert_eq!(pending_count_for_doc(&pending, doc_id), 0);
+    assert!(!has_pending_edits_for_doc(&pending, doc_id));
+    assert!(cloned_ops_for_doc(&pending, doc_id).is_empty());
+    assert!(cloned_pending_edits_for_doc(&pending, doc_id).is_empty());
+}
+
+#[test]
+fn clearing_last_valid_edit_ignores_malformed_rows_for_navigation_reset() {
+    let doc_id = DocId::from_u128(50);
+    let other_doc = DocId::from_u128(51);
+    let mut pending = PendingLocalEdits::new();
+    pending.entry(doc_id).or_default().push(PendingLocalEdit {
+        repo_id: repo_id(),
+        doc_id: other_doc,
+        scope_nonce: 31,
+        client_id: 11,
+        client_op_id: 99,
+        created_at_ms: 1,
+        base_version: 3,
+        op_marker: "insert:0:1".into(),
+        op: Op::Insert {
+            pos: 0,
+            content: "a".into(),
+        },
+    });
+    push_pending_edit(
+        &mut pending,
+        pending_input(doc_id, 31, 11, 7, 3, Op::Delete { pos: 2, len: 4 }),
+    );
+
+    assert!(clear_pending_edit_and_check_current_doc_empty(
+        &mut pending,
+        Some(doc_id),
+        Some(repo_id()),
+        Some(31),
+        doc_id,
+        7,
+    ));
+    assert_eq!(pending.get(&doc_id).map(Vec::len), Some(1));
+    assert!(!has_pending_edits_for_doc(&pending, doc_id));
+}
+
+#[test]
 fn clearing_with_other_scope_keeps_pending_edit() {
     let doc_id = DocId::from_u128(46);
     let mut pending = PendingLocalEdits::new();

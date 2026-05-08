@@ -63,9 +63,8 @@ pub fn clear_pending_edit_and_check_current_doc_empty(
     doc_id: DocId,
     client_op_id: u64,
 ) -> bool {
-    ack_pending_edit(pending, repo_id, scope_nonce, doc_id, client_op_id)
-        && current_doc == Some(doc_id)
-        && !pending.contains_key(&doc_id)
+    let changed = ack_pending_edit(pending, repo_id, scope_nonce, doc_id, client_op_id);
+    changed && current_doc == Some(doc_id) && !has_pending_edits_for_doc(pending, doc_id)
 }
 
 pub fn cloned_ops_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> Vec<Op> {
@@ -112,12 +111,7 @@ fn op_marker(op: &Op) -> String {
 }
 
 fn overlay_row_matches_doc(edit: &PendingLocalEdit, doc_id: DocId) -> bool {
-    if edit.doc_id != doc_id {
-        return false;
-    }
-    debug_assert!(edit.created_at_ms >= 0);
-    debug_assert!(!edit.op_marker.is_empty());
-    true
+    edit.doc_id == doc_id && edit.created_at_ms >= 0 && !edit.op_marker.is_empty()
 }
 
 fn now_millis() -> i64 {
