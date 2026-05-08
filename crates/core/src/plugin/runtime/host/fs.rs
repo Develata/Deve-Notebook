@@ -12,7 +12,9 @@ use rhai::{Engine, EvalAltResult};
 use std::path::Path;
 use std::sync::Arc;
 
-use super::path_guard::is_ledger_managed_write_target;
+use super::path_guard::{
+    is_capability_read_target, is_capability_write_target, is_ledger_managed_write_target,
+};
 
 /// 注册文件系统 API
 pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
@@ -24,7 +26,9 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
         "fs_read",
         move |path: &str| -> Result<String, Box<EvalAltResult>> {
             let p = Path::new(path);
-            if !caps_read.check_read(p) {
+            if !is_capability_read_target(caps_read.as_ref(), p)
+                .map_err(|e| -> Box<EvalAltResult> { e.into() })?
+            {
                 return Err(format!(
                     "Permission denied: read access to '{}' is not allowed by manifest.",
                     path
@@ -40,7 +44,9 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
         "fs_write",
         move |path: &str, content: &str| -> Result<(), Box<EvalAltResult>> {
             let p = Path::new(path);
-            if !caps_write.check_write(p) {
+            if !is_capability_write_target(caps_write.as_ref(), p)
+                .map_err(|e| -> Box<EvalAltResult> { e.into() })?
+            {
                 return Err(format!(
                     "Permission denied: write access to '{}' is not allowed by manifest.",
                     path
@@ -77,75 +83,5 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::plugin::runtime::host::path_guard::split_managed_note_target;
-    use std::sync::Mutex;
-    use tempfile::tempdir;
-
-    static CWD_LOCK: Mutex<()> = Mutex::new(());
-
-    #[test]
-    fn classifies_ledger_managed_relative_paths() {
-        assert_eq!(
-            split_managed_note_target("vault/default/notes/a.md"),
-            Some(("default".into(), "notes/a.md".into()))
-        );
-        assert!(is_ledger_managed_write_target(Path::new("ledger/local/wiki.redb")).unwrap());
-        assert!(!is_ledger_managed_write_target(Path::new("tmp/report.md")).unwrap());
-    }
-
-    #[test]
-    fn fs_write_denies_managed_markdown() {
-        let _guard = CWD_LOCK.lock().expect("lock cwd");
-        let dir = tempdir().expect("tempdir");
-        let old_cwd = std::env::current_dir().expect("cwd");
-        std::env::set_current_dir(dir.path()).expect("set cwd");
-
-        let mut engine = Engine::new();
-        let caps = Arc::new(Capability {
-            allow_fs_write: vec![dir.path().join("vault/default")],
-            ..Default::default()
-        });
-        register_fs_api(&mut engine, caps);
-        let script = format!(
-            r#"fs_write("{}", "blocked")"#,
-            dir.path()
-                .join("vault/default/notes/a.md")
-                .to_string_lossy()
-                .replace('\\', "\\\\")
-        );
-        let err = engine
-            .eval::<()>(&script)
-            .expect_err("managed markdown must fail");
-
-        std::env::set_current_dir(old_cwd).expect("restore cwd");
-        assert!(err.to_string().contains("ledger-managed write denied"));
-    }
-
-    #[test]
-    fn fs_write_allows_non_ledger_asset() {
-        let _guard = CWD_LOCK.lock().expect("lock cwd");
-        let dir = tempdir().expect("tempdir");
-        let old_cwd = std::env::current_dir().expect("cwd");
-        std::env::set_current_dir(dir.path()).expect("set cwd");
-
-        let output = dir.path().join("vault/default/exports/report.txt");
-        let mut engine = Engine::new();
-        let caps = Arc::new(Capability {
-            allow_fs_write: vec![dir.path().join("vault/default/exports")],
-            ..Default::default()
-        });
-        register_fs_api(&mut engine, caps);
-        let script = format!(
-            r#"fs_write("{}", "ok")"#,
-            output.to_string_lossy().replace('\\', "\\\\")
-        );
-        engine
-            .eval::<()>(&script)
-            .expect("export write should work");
-
-        std::env::set_current_dir(old_cwd).expect("restore cwd");
-        assert_eq!(std::fs::read_to_string(output).expect("read output"), "ok");
-    }
-}
+#[path = "fs_test.rs"]
+mod tests;
