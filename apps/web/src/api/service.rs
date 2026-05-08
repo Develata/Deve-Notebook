@@ -20,7 +20,7 @@ use self::readiness::{
 use self::service_ping::spawn_ping_loop;
 use super::connection::{ConnectionManagerSignals, spawn_connection_manager};
 use super::status::ConnectionStatus;
-use super::writer_id::derive_writer_client_id;
+use super::writer_id::{derive_writer_client_id, new_writer_session_nonce};
 
 mod readiness;
 mod service_ping;
@@ -46,6 +46,7 @@ pub struct WsService {
     set_node_role_probe_failed: WriteSignal<bool>,
     pub msg_seq: ReadSignal<u64>,
     pub connection_epoch: ReadSignal<u64>,
+    writer_session_nonce: u64,
     msg_queue: ReadSignal<VecDeque<(u64, u64, ServerMessage)>>,
     tx: UnboundedSender<ClientMessage>,
     #[cfg(test)]
@@ -100,6 +101,7 @@ impl WsService {
             set_node_role_probe_failed,
             msg_seq,
             connection_epoch,
+            writer_session_nonce: new_writer_session_nonce(),
             msg_queue,
             tx,
             #[cfg(test)]
@@ -121,8 +123,10 @@ impl WsService {
     pub fn mark_writer_ready(&self, repo_id: impl Into<String>, scope_nonce: u64, peer_id: &str) {
         self.set_writer_ready_repo_id.set(Some(repo_id.into()));
         self.set_writer_ready_scope_nonce.set(Some(scope_nonce));
-        self.set_writer_client_id
-            .set(Some(derive_writer_client_id(peer_id)));
+        self.set_writer_client_id.set(Some(derive_writer_client_id(
+            peer_id,
+            self.writer_session_nonce,
+        )));
     }
 
     pub fn clear_writer_ready(&self) {

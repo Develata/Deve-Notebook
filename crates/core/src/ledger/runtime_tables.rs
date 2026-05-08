@@ -81,16 +81,18 @@ fn collect_client_op_entries(
                 }
             };
         let key = (client_id, client_op_id);
-        if let Some(previous_seq) = entries.insert(key, seq) {
-            return Err(anyhow!(
-                "Broken client op index rebuild: duplicate client op ({}, {}) at seq {} and {} while scanning doc {}",
+        if let Some(previous_seq) = entries.get(&key) {
+            tracing::warn!(
                 client_id,
                 client_op_id,
-                previous_seq,
-                seq,
-                doc_id
-            ));
+                first_seq = *previous_seq,
+                duplicate_seq = seq,
+                %doc_id,
+                "Ignoring duplicate client op metadata while rebuilding client_op_index"
+            );
+            continue;
         }
+        entries.insert(key, seq);
     }
 
     Ok(entries)

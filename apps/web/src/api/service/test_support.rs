@@ -50,6 +50,7 @@ impl WsService {
             set_node_role_probe_failed,
             msg_seq,
             connection_epoch,
+            writer_session_nonce: 1,
             msg_queue,
             tx,
             test_rx: Some(Arc::new(Mutex::new(rx))),

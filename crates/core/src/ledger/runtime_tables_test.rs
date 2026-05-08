@@ -170,6 +170,64 @@ fn repairs_partial_non_empty_client_op_index_for_primary_local_repo_on_init() ->
 }
 
 #[test]
+fn rebuild_coalesces_legacy_duplicate_client_op_metadata_to_first_seq() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let ledger_dir = tmp_dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
+    let doc_id = DocId::new();
+    let peer_id = PeerId::new("browser-peer");
+
+    repo.append_generated_op_in_local_repo("main", doc_id, peer_id.clone(), |seq| {
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "first".into(),
+            },
+            1000,
+            peer_id.clone(),
+            seq,
+            Some(42),
+            Some(9),
+        )
+    })?;
+    repo.append_generated_op_in_local_repo("main", doc_id, peer_id.clone(), |seq| {
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 5,
+                content: "second".into(),
+            },
+            1001,
+            peer_id.clone(),
+            seq,
+            Some(42),
+            Some(9),
+        )
+    })?;
+    repo.run_on_local_repo("main", |db| {
+        let write = db.begin_write()?;
+        let _ = write.delete_table(CLIENT_OP_INDEX)?;
+        write.commit()?;
+        Ok(())
+    })?;
+
+    let reopened = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
+    let found = reopened
+        .find_client_op_in_local_repo("main", 42, 9)?
+        .expect("duplicate client op metadata should map to first durable ack");
+    assert_eq!(found.0, 1);
+    assert_eq!(
+        found.1.content_op(),
+        Some(&Op::Insert {
+            pos: 0,
+            content: "first".into(),
+        })
+    );
+    Ok(())
+}
+
+#[test]
 fn fails_closed_when_ledger_ops_authority_missing_for_secondary_local_repo() -> Result<()> {
     let tmp_dir = TempDir::new()?;
     let ledger_dir = tmp_dir.path().join("ledger");
