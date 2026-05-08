@@ -43,13 +43,15 @@ pub(super) fn forward_deltas(ctx: &DeltaInputCtx, deltas: Vec<Delta>) -> bool {
             ctx.set_pending_local_edits.update(|pending_edits| {
                 pending::push_pending_edit(
                     pending_edits,
-                    repo_id,
-                    ctx.doc_id,
-                    scope_nonce,
-                    client_id,
-                    client_op_id,
-                    ctx.local_version.get_untracked(),
-                    op.clone(),
+                    pending::PendingLocalEditInput {
+                        repo_id,
+                        doc_id: ctx.doc_id,
+                        scope_nonce,
+                        client_id,
+                        client_op_id,
+                        base_version: ctx.local_version.get_untracked(),
+                        op: op.clone(),
+                    },
                 );
             });
             ctx.ws.send(ClientMessage::Edit {

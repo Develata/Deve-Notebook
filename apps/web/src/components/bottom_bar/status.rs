@@ -5,6 +5,7 @@
 //!   - 15_release#runtime-observability
 //!
 use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::pending::pending_count_for_doc;
 use crate::hooks::use_core::status_summary::{SyncStatusInput, SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -14,7 +15,7 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
     let summary = Memo::new(move |_| {
         let current_doc = core.current_doc.get();
         let pending_ack_count = current_doc
-            .and_then(|doc_id| core.pending_local_edits.get().get(&doc_id).map(Vec::len))
+            .map(|doc_id| pending_count_for_doc(&core.pending_local_edits.get(), doc_id))
             .unwrap_or_default();
         let current_repo_id = core.current_repo_id.get();
         let current_scope_nonce = core.current_scope_nonce.get();

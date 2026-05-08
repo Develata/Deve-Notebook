@@ -76,13 +76,15 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
         core.set_pending_local_edits.update(|pending_edits| {
             pending::push_pending_edit(
                 pending_edits,
-                repo_id,
-                doc_id,
-                scope_nonce,
-                client_id,
-                client_op_id,
-                core.doc_version.get_untracked(),
-                op.clone(),
+                pending::PendingLocalEditInput {
+                    repo_id,
+                    doc_id,
+                    scope_nonce,
+                    client_id,
+                    client_op_id,
+                    base_version: core.doc_version.get_untracked(),
+                    op: op.clone(),
+                },
             );
         });
         core.ws.send(build_apply_edit_message(

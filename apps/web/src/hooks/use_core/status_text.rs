@@ -5,6 +5,7 @@
 use crate::api::WsService;
 use leptos::prelude::{Get, Signal};
 
+use super::pending::pending_count_for_doc;
 use super::state::CoreSignals;
 use super::status_summary::{SyncStatusInput, derive_sync_status};
 
@@ -33,7 +34,7 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
         );
         let current_doc = current_doc_for_text.get();
         let pending_ack_count = current_doc
-            .and_then(|doc_id| pending_edits_for_text.get().get(&doc_id).map(Vec::len))
+            .map(|doc_id| pending_count_for_doc(&pending_edits_for_text.get(), doc_id))
             .unwrap_or_default();
         derive_sync_status(SyncStatusInput {
             connection_status: status_signal_for_text.get(),

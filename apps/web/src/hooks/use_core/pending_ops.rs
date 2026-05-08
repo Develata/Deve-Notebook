@@ -4,18 +4,19 @@
 //!
 use deve_core::models::{DocId, Op, RepoId};
 
-use super::{PendingLocalEdit, PendingLocalEdits};
+use super::{PendingLocalEdit, PendingLocalEditInput, PendingLocalEdits};
 
-pub fn push_pending_edit(
-    pending: &mut PendingLocalEdits,
-    repo_id: RepoId,
-    doc_id: DocId,
-    scope_nonce: u64,
-    client_id: u64,
-    client_op_id: u64,
-    base_version: u64,
-    op: Op,
-) {
+pub fn push_pending_edit(pending: &mut PendingLocalEdits, input: PendingLocalEditInput) {
+    let PendingLocalEditInput {
+        repo_id,
+        doc_id,
+        scope_nonce,
+        client_id,
+        client_op_id,
+        base_version,
+        op,
+    } = input;
+    let op_marker = op_marker(&op);
     pending.entry(doc_id).or_default().push(PendingLocalEdit {
         repo_id,
         client_id,
@@ -24,7 +25,7 @@ pub fn push_pending_edit(
         client_op_id,
         created_at_ms: now_millis(),
         base_version,
-        op_marker: op_marker(&op),
+        op_marker,
         op,
     });
 }
@@ -72,6 +73,7 @@ pub fn cloned_ops_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> Vec<Op>
         .get(&doc_id)
         .into_iter()
         .flatten()
+        .filter(|edit| overlay_row_matches_doc(edit, doc_id))
         .map(|edit| edit.op.clone())
         .collect()
 }
@@ -80,7 +82,26 @@ pub fn cloned_pending_edits_for_doc(
     pending: &PendingLocalEdits,
     doc_id: DocId,
 ) -> Vec<PendingLocalEdit> {
-    pending.get(&doc_id).cloned().unwrap_or_default()
+    pending
+        .get(&doc_id)
+        .into_iter()
+        .flatten()
+        .filter(|edit| overlay_row_matches_doc(edit, doc_id))
+        .cloned()
+        .collect()
+}
+
+pub fn pending_count_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> usize {
+    pending
+        .get(&doc_id)
+        .into_iter()
+        .flatten()
+        .filter(|edit| overlay_row_matches_doc(edit, doc_id))
+        .count()
+}
+
+pub fn has_pending_edits_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> bool {
+    pending_count_for_doc(pending, doc_id) > 0
 }
 
 fn op_marker(op: &Op) -> String {
@@ -88,6 +109,15 @@ fn op_marker(op: &Op) -> String {
         Op::Insert { pos, content } => format!("insert:{pos}:{}", content.len()),
         Op::Delete { pos, len } => format!("delete:{pos}:{len}"),
     }
+}
+
+fn overlay_row_matches_doc(edit: &PendingLocalEdit, doc_id: DocId) -> bool {
+    if edit.doc_id != doc_id {
+        return false;
+    }
+    debug_assert!(edit.created_at_ms >= 0);
+    debug_assert!(!edit.op_marker.is_empty());
+    true
 }
 
 fn now_millis() -> i64 {

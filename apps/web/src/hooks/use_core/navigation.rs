@@ -5,7 +5,7 @@
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
-use super::pending::PendingLocalEdits;
+use super::pending::{PendingLocalEdits, has_pending_edits_for_doc};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavigationTarget {
@@ -40,7 +40,5 @@ fn has_pending_for_current_doc(
     current_doc: Option<DocId>,
     pending_local_edits: &PendingLocalEdits,
 ) -> bool {
-    current_doc
-        .and_then(|doc_id| pending_local_edits.get(&doc_id))
-        .is_some_and(|edits| !edits.is_empty())
+    current_doc.is_some_and(|doc_id| has_pending_edits_for_doc(pending_local_edits, doc_id))
 }

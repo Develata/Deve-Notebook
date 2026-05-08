@@ -240,10 +240,11 @@ fn assert_scope_guard_error(message: ServerMessage, scope_nonce: Option<u64>, de
             scope_nonce: actual_scope_nonce,
             ..
         } => {
-            let expected_code = detail
-                .contains("stale")
-                .then_some(ServerErrorCode::ScStaleScope)
-                .unwrap_or(ServerErrorCode::ScRepoContextInvalid);
+            let expected_code = if detail.contains("stale") {
+                ServerErrorCode::ScStaleScope
+            } else {
+                ServerErrorCode::ScRepoContextInvalid
+            };
             assert_eq!(error.code, expected_code);
             assert_eq!(actual_scope_nonce, scope_nonce);
             assert!(error.detail.as_deref().expect("detail").contains(detail));

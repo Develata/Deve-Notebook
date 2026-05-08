@@ -75,7 +75,9 @@ mod tests {
     use super::handle_write_ready_message;
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::PendingBranchTarget;
-    use crate::hooks::use_core::pending::push_pending_edit;
+    use crate::hooks::use_core::pending::{
+        PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
+    };
     use deve_core::models::{DocId, Op, RepoId};
     use deve_core::protocol::ClientMessage;
     use leptos::prelude::{GetUntracked, signal};
@@ -104,15 +106,17 @@ mod tests {
             let mut pending = HashMap::new();
             push_pending_edit(
                 &mut pending,
-                repo_id,
-                doc_id,
-                scope_nonce,
-                11,
-                13,
-                0,
-                Op::Insert {
-                    pos: 0,
-                    content: "pending".into(),
+                PendingLocalEditInput {
+                    repo_id,
+                    doc_id,
+                    scope_nonce,
+                    client_id: 11,
+                    client_op_id: 13,
+                    base_version: 0,
+                    op: Op::Insert {
+                        pos: 0,
+                        content: "pending".into(),
+                    },
                 },
             );
             pending
@@ -206,11 +210,8 @@ mod tests {
             other => panic!("expected Edit, got {other:?}"),
         }
         assert_eq!(
-            ctx.pending_local_edits
-                .get_untracked()
-                .get(&doc_id)
-                .map(Vec::len),
-            Some(1)
+            pending_count_for_doc(&ctx.pending_local_edits.get_untracked(), doc_id),
+            1
         );
     }
 }
