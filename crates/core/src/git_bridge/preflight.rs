@@ -4,6 +4,7 @@
 //!
 //! Shared preflight checks and Deve commit lookup for Git mirror execution.
 
+use super::error::{GitPreflightError, GitPreflightResult};
 use super::git_cmd;
 use super::store::GitMirrorRecord;
 use crate::source_control::{self, CommitInfo};
@@ -12,65 +13,66 @@ use redb::Database;
 use std::collections::BTreeSet;
 use std::path::Path;
 
-pub(super) fn ensure_git_worktree(repo_root: &Path) -> std::result::Result<(), String> {
+pub(super) fn ensure_git_worktree(repo_root: &Path) -> GitPreflightResult<()> {
     let inside = git_cmd::run(repo_root, &["rev-parse", "--is-inside-work-tree"])?;
     if inside.trim() == "true" {
         return Ok(());
     }
-    Err(format!(
-        "Git mirror is not a usable worktree: rev-parse returned {}",
-        inside.trim()
-    ))
+    Err(GitPreflightError::NotWorktree {
+        output: inside.trim().to_string(),
+    })
 }
 
-pub(super) fn ensure_notegit_is_not_tracked(repo_root: &Path) -> std::result::Result<(), String> {
+pub(super) fn ensure_notegit_is_not_tracked(repo_root: &Path) -> GitPreflightResult<()> {
     let paths = git_cmd::run_z_paths(repo_root, &["ls-files", "-z", "--", notegit::NOTE_GIT_DIR])?;
     if paths.is_empty() {
         return Ok(());
     }
-    Err(format!(
-        "Git mirror refuses to run because {} is already tracked by Git",
-        notegit::NOTE_GIT_DIR
-    ))
+    Err(GitPreflightError::NotegitTracked)
 }
 
-pub(super) fn ensure_source_control_clean(db: &Database) -> std::result::Result<(), String> {
-    let pending = source_control::pending_fs::list_all(db)
-        .map_err(|err| format!("failed to inspect pending source-control changes: {err}"))?;
+pub(super) fn ensure_source_control_clean(db: &Database) -> GitPreflightResult<()> {
+    let pending = source_control::pending_fs::list_all(db).map_err(|err| {
+        GitPreflightError::SourceControlInspect {
+            kind: "pending",
+            message: err.to_string(),
+        }
+    })?;
     if !pending.is_empty() {
-        return Err(format!(
-            "Git mirror refuses to run with {} pending source-control change(s)",
-            pending.len()
-        ));
+        return Err(GitPreflightError::PendingSourceControlChanges {
+            count: pending.len(),
+        });
     }
 
-    let staged = source_control::staging::list_staged_entries(db)
-        .map_err(|err| format!("failed to inspect staged source-control changes: {err}"))?;
+    let staged = source_control::staging::list_staged_entries(db).map_err(|err| {
+        GitPreflightError::SourceControlInspect {
+            kind: "staged",
+            message: err.to_string(),
+        }
+    })?;
     if !staged.is_empty() {
-        return Err(format!(
-            "Git mirror refuses to run with {} staged source-control change(s)",
-            staged.len()
-        ));
+        return Err(GitPreflightError::StagedSourceControlChanges {
+            count: staged.len(),
+        });
     }
     Ok(())
 }
 
-pub(super) fn ensure_git_worktree_clean(repo_root: &Path) -> std::result::Result<(), String> {
+pub(super) fn ensure_git_worktree_clean(repo_root: &Path) -> GitPreflightResult<()> {
     let changed = git_changed_paths(repo_root)?;
     if changed.is_empty() {
         return Ok(());
     }
-    Err(format!(
-        "Git mirror refuses to push dirty Git worktree path(s): {}",
-        changed.into_iter().collect::<Vec<_>>().join(", ")
-    ))
+    Err(GitPreflightError::DirtyGitWorktree {
+        paths: changed.into_iter().collect::<Vec<_>>().join(", "),
+    })
 }
 
 pub(super) fn ensure_git_changes_match_deve_commit(
     db: &Database,
     repo_root: &Path,
     record: &GitMirrorRecord,
-) -> std::result::Result<(), String> {
+) -> GitPreflightResult<()> {
     let expected = expected_mirror_paths(db, record)?;
     ensure_git_changes_within(repo_root, expected, "queued Deve commit")
 }
@@ -79,7 +81,7 @@ pub(super) fn ensure_git_changes_match_deve_commits(
     db: &Database,
     repo_root: &Path,
     records: &[GitMirrorRecord],
-) -> std::result::Result<(), String> {
+) -> GitPreflightResult<()> {
     let mut expected = BTreeSet::new();
     for record in records {
         expected.extend(expected_mirror_paths(db, record)?);
@@ -90,7 +92,7 @@ pub(super) fn ensure_git_changes_match_deve_commits(
 pub(super) fn ensure_git_changes_match_snapshot_paths(
     repo_root: &Path,
     paths: impl IntoIterator<Item = String>,
-) -> std::result::Result<(), String> {
+) -> GitPreflightResult<()> {
     let mut expected = BTreeSet::new();
     expected.insert(".gitignore".to_string());
     expected.extend(paths.into_iter().map(|path| to_forward_slash(&path)));
@@ -100,18 +102,27 @@ pub(super) fn ensure_git_changes_match_snapshot_paths(
 pub(super) fn expected_mirror_paths(
     db: &Database,
     record: &GitMirrorRecord,
-) -> std::result::Result<BTreeSet<String>, String> {
+) -> GitPreflightResult<BTreeSet<String>> {
     let commit = load_deve_commit(db, &record.deve_commit_id)?;
     if commit.ledger_seq != record.ledger_seq {
-        return Err(format!(
-            "Git mirror record ledger_seq {} does not match Deve commit ledger_seq {}",
-            record.ledger_seq, commit.ledger_seq
-        ));
+        return Err(GitPreflightError::MirrorRecordSeqMismatch {
+            record_seq: record.ledger_seq,
+            commit_seq: commit.ledger_seq,
+        });
     }
 
-    let diffs =
-        source_control::commit_diff::compare_commits(db, commit.parent_id.as_deref(), &commit.id)
-            .map_err(|err| format!("failed to compute queued Deve commit diff: {err}"))?;
+    let diffs = match source_control::commit_diff::compare_commits(
+        db,
+        commit.parent_id.as_deref(),
+        &commit.id,
+    ) {
+        Ok(diffs) => diffs,
+        Err(err) => {
+            return Err(GitPreflightError::CommitDiff {
+                message: err.to_string(),
+            });
+        }
+    };
     let mut paths = BTreeSet::new();
     paths.insert(".gitignore".to_string());
     for diff in diffs {
@@ -123,31 +134,39 @@ pub(super) fn expected_mirror_paths(
     Ok(paths)
 }
 
-pub(super) fn load_deve_commit(
-    db: &Database,
-    commit_id: &str,
-) -> std::result::Result<CommitInfo, String> {
+pub(super) fn load_deve_commit(db: &Database, commit_id: &str) -> GitPreflightResult<CommitInfo> {
     let read_txn = db
         .begin_read()
-        .map_err(|err| format!("failed to read Deve commit table: {err}"))?;
+        .map_err(|err| GitPreflightError::CommitTable {
+            action: "read",
+            message: err.to_string(),
+        })?;
     let table = read_txn
         .open_table(source_control::commits::COMMITS_TABLE)
-        .map_err(|err| format!("failed to open Deve commit table: {err}"))?;
+        .map_err(|err| GitPreflightError::CommitTable {
+            action: "open",
+            message: err.to_string(),
+        })?;
     let raw = table
         .get(commit_id)
-        .map_err(|err| format!("failed to load Deve commit {commit_id}: {err}"))?
-        .ok_or_else(|| {
-            format!("queued Git mirror record references missing Deve commit {commit_id}")
+        .map_err(|err| GitPreflightError::CommitLoad {
+            commit_id: commit_id.to_string(),
+            message: err.to_string(),
+        })?
+        .ok_or_else(|| GitPreflightError::MissingDeveCommit {
+            commit_id: commit_id.to_string(),
         })?;
-    serde_json::from_str(raw.value())
-        .map_err(|err| format!("failed to decode Deve commit {commit_id}: {err}"))
+    serde_json::from_str(raw.value()).map_err(|err| GitPreflightError::CommitDecode {
+        commit_id: commit_id.to_string(),
+        message: err.to_string(),
+    })
 }
 
 fn ensure_git_changes_within(
     repo_root: &Path,
     expected: BTreeSet<String>,
     scope: &str,
-) -> std::result::Result<(), String> {
+) -> GitPreflightResult<()> {
     let changed = git_changed_paths(repo_root)?;
     let unexpected: Vec<_> = changed
         .into_iter()
@@ -156,13 +175,13 @@ fn ensure_git_changes_within(
     if unexpected.is_empty() {
         return Ok(());
     }
-    Err(format!(
-        "Git mirror refuses to include path(s) outside {scope}: {}",
-        unexpected.join(", ")
-    ))
+    Err(GitPreflightError::ProjectionScope {
+        scope: scope.to_string(),
+        paths: unexpected.join(", "),
+    })
 }
 
-fn git_changed_paths(repo_root: &Path) -> std::result::Result<BTreeSet<String>, String> {
+fn git_changed_paths(repo_root: &Path) -> GitPreflightResult<BTreeSet<String>> {
     let mut paths = BTreeSet::new();
     for args in [
         &["diff", "--name-only", "-z"][..],

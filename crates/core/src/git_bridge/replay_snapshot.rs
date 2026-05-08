@@ -119,5 +119,6 @@ fn preflight_snapshot_bootstrap(
     }
     let files = source_control::commit_diff::projection_files_at_commit(db, &commit.id)
         .map_err(|err| format!("failed to inspect current projection snapshot: {err}"))?;
-    ensure_git_changes_match_snapshot_paths(repo_root, files.into_iter().map(|file| file.path))
+    ensure_git_changes_match_snapshot_paths(repo_root, files.into_iter().map(|file| file.path))?;
+    Ok(())
 }

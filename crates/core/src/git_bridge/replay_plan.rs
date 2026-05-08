@@ -42,7 +42,8 @@ fn preflight_replay(
     ensure_git_worktree(repo_root)?;
     ensure_notegit_is_not_tracked(repo_root)?;
     ensure_source_control_clean(db)?;
-    ensure_git_changes_match_deve_commits(db, repo_root, records)
+    ensure_git_changes_match_deve_commits(db, repo_root, records)?;
+    Ok(())
 }
 
 fn load_replay_items(
@@ -53,7 +54,7 @@ fn load_replay_items(
     for record in &records {
         let commit = match load_deve_commit(db, &record.deve_commit_id) {
             Ok(commit) => commit,
-            Err(reason) => return Err((records.clone(), reason)),
+            Err(reason) => return Err((records.clone(), reason.into())),
         };
         if commit.ledger_seq != record.ledger_seq {
             return Err((

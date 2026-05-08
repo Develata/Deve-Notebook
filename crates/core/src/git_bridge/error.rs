@@ -3,6 +3,7 @@
 
 pub(super) type GitBridgeResult<T> = std::result::Result<T, GitBridgeError>;
 pub(super) type GitCommandResult<T> = std::result::Result<T, GitCommandError>;
+pub(super) type GitPreflightResult<T> = std::result::Result<T, GitPreflightError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -60,6 +61,49 @@ impl From<GitCommandError> for String {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitPreflightError {
+    #[error(transparent)]
+    GitCommand(#[from] GitCommandError),
+    #[error("Git mirror is not a usable worktree: rev-parse returned {output}")]
+    NotWorktree { output: String },
+    #[error("Git mirror refuses to run because .notegit is already tracked by Git")]
+    NotegitTracked,
+    #[error("failed to inspect {kind} source-control changes: {message}")]
+    SourceControlInspect { kind: &'static str, message: String },
+    #[error("Git mirror refuses to run with {count} pending source-control change(s)")]
+    PendingSourceControlChanges { count: usize },
+    #[error("Git mirror refuses to run with {count} staged source-control change(s)")]
+    StagedSourceControlChanges { count: usize },
+    #[error("Git mirror refuses to push dirty Git worktree path(s): {paths}")]
+    DirtyGitWorktree { paths: String },
+    #[error(
+        "Git mirror record ledger_seq {record_seq} does not match Deve commit ledger_seq {commit_seq}"
+    )]
+    MirrorRecordSeqMismatch { record_seq: u64, commit_seq: u64 },
+    #[error("failed to compute queued Deve commit diff: {message}")]
+    CommitDiff { message: String },
+    #[error("failed to {action} Deve commit table: {message}")]
+    CommitTable {
+        action: &'static str,
+        message: String,
+    },
+    #[error("failed to load Deve commit {commit_id}: {message}")]
+    CommitLoad { commit_id: String, message: String },
+    #[error("queued Git mirror record references missing Deve commit {commit_id}")]
+    MissingDeveCommit { commit_id: String },
+    #[error("failed to decode Deve commit {commit_id}: {message}")]
+    CommitDecode { commit_id: String, message: String },
+    #[error("Git mirror refuses to include path(s) outside {scope}: {paths}")]
+    ProjectionScope { scope: String, paths: String },
+}
+
+impl From<GitPreflightError> for String {
+    fn from(err: GitPreflightError) -> Self {
+        err.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GitCommandError;
@@ -96,6 +140,22 @@ mod tests {
         assert_eq!(
             message,
             "failed to run git rev-parse HEAD: No such file or directory"
+        );
+    }
+
+    #[test]
+    fn git_preflight_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitPreflightError::ProjectionScope {
+                scope: "queued Deve commit".into(),
+                paths: "extra.md".into(),
+            }
+            .to_string(),
+            "Git mirror refuses to include path(s) outside queued Deve commit: extra.md"
+        );
+        assert_eq!(
+            super::GitPreflightError::PendingSourceControlChanges { count: 2 }.to_string(),
+            "Git mirror refuses to run with 2 pending source-control change(s)"
         );
     }
 }
