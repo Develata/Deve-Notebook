@@ -1,7 +1,7 @@
 //! Repo scope nonce protocol entities.
 //! plan_ref:
-//!   - 05_network#repo-scoped-messages
-//!   - 16_web_thin_client_ledger#repo-scoped-write-readiness
+//!   - 05_network#repo-scoped-handshake
+//!   - 16_web_thin_client_ledger#write-readiness
 
 use serde::{Deserialize, Serialize};
 use std::fmt;

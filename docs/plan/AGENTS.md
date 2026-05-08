@@ -92,6 +92,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_storage#repo-runtime-layout` | `### 3.2 Repo Runtime Layout` | `.notegit`、repo runtime metadata 与内部目录布局 |
 | `04_storage#browser-storage-layering` | `### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
 | `04_storage#internal-path-normalization` | `### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
+| `05_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
 | `05_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `05_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
 | `06_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
@@ -123,6 +124,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `13_settings#browser-ui-prefs` | `## 4. Browser UI Preferences` | 浏览器本地 UI 偏好持久化与敏感数据禁止边界 |
 | `14_tech_stack#search-baseline` | `### 1.2 搜索基线` | repo-scoped baseline search、可禁用索引与 Tantivy feature-gated 实现 |
 | `15_release#runtime-observability` | `### 5.4 Runtime Observability` | 运行时状态、连接角色与 release/debug 可观测性 |
+| `16_web_thin_client_ledger#write-readiness` | `### 2.3 Write Readiness` | Web thin client repo-scoped 写入就绪状态合同 |
 | `16_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
 | `17_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `17_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |

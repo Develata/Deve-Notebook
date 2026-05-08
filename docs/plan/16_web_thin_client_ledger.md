@@ -48,7 +48,7 @@ State_auth = L_confirmed
 - `scope_nonce`
 - `switch_nonce`
 
-### 2.3 Write Readiness
+### 2.3 Write Readiness {#write-readiness}
 
 写入就绪状态必须是 repo-scoped：
 

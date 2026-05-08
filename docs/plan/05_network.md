@@ -222,7 +222,7 @@ VectorCompared
 
 ## 6. Handshake Contract
 
-### 6.1 Repo-Scoped Handshake
+### 6.1 Repo-Scoped Handshake {#repo-scoped-handshake}
 
 1. 客户端建立 ws。
 2. 发送 `SyncHello { peer_id, repo_id, scope_nonce, peer_pubkey, vector, session_proof }`
