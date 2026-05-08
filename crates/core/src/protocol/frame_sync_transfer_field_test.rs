@@ -31,6 +31,33 @@ fn sync_transfer_json_uses_plan_field_names() {
     assert!(client_value["SyncPush"].get("ops").is_none());
     assert!(client_value["SyncPush"]["encrypted_payload"].is_array());
 
+    let client_push_plan_json = serde_json::json!({
+        "SyncPush": {
+            "source_peer_id": peer.clone(),
+            "repo_id": repo_id,
+            "header": {
+                "repo_id": repo_id,
+                "peer_id": peer.clone(),
+                "vector": VersionVector::new(),
+                "payload_kind": "diff"
+            },
+            "encrypted_payload": []
+        }
+    });
+    match serde_json::from_value::<ClientMessage>(client_push_plan_json).unwrap() {
+        ClientMessage::SyncPush {
+            source_peer_id,
+            header,
+            encrypted_payload,
+            ..
+        } => {
+            assert_eq!(source_peer_id, peer);
+            assert_eq!(header.payload_kind, SyncPayloadKind::Diff);
+            assert!(encrypted_payload.is_empty());
+        }
+        other => panic!("expected SyncPush, got {other:?}"),
+    }
+
     let client_snapshot = ClientMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id,

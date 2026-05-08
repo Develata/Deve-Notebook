@@ -97,7 +97,7 @@
     - run: cargo test -p deve_cli ws_sync_request -- --nocapture
   assertions:
     - ws_receive_contains: { type: "SyncPush", repo_id: "11111111-1111-1111-1111-111111111111", scope_nonce: 1 }
-    - sync_push_peer_id_eq_requested_source: true
+    - sync_push_source_peer_id_eq_requested_source: true
     - new_sync_request_frames_include_known_vector: true
     - wrong_or_unbound_repo_returns_structured_protocol_error: true
 
@@ -106,13 +106,13 @@
   preconditions:
     - 增量同步不可继续，当前 peer/source 已由握手或 offer 流程授权
   steps:
-    - ws_send: { type: "SyncSnapshotRequest", peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { peer: "web-light-peer", seq: 3 } }
+    - ws_send: { type: "SyncSnapshotRequest", source_peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: { peer: "web-light-peer", seq: 3 } }
     - run: cargo test -p deve_cli non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_exports_requested_shadow_source -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
   assertions:
-    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "peer-a", scope_nonce: 1, server_vector: "present", snapshot_kind: "full" }
-    - sync_push_snapshot_peer_id_eq_requested_source: true
+    - ws_receive_contains: { type: "SyncPushSnapshot", repo_id: "11111111-1111-1111-1111-111111111111", source_peer_id: "peer-a", scope_nonce: 1, server_vector: "present", snapshot_kind: "full" }
+    - sync_push_snapshot_source_peer_id_eq_requested_source: true
     - unoffered_source_returns_structured_protocol_error: true
 
 - case_id: NET-009
@@ -137,7 +137,7 @@
   preconditions:
     - 入站 SyncPush 已通过当前 sync scope 授权，但 payload source 是远端分支
   steps:
-    - ws_send: { type: "SyncPush", peer_id: "malicious-source", repo_id: "11111111-1111-1111-1111-111111111111", ops: ["encrypted_ledger_facts"] }
+    - ws_send: { type: "SyncPush", source_peer_id: "malicious-source", repo_id: "11111111-1111-1111-1111-111111111111", header: { repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "malicious-source", vector: {}, payload_kind: "diff" }, encrypted_payload: ["encrypted_ledger_facts"] }
     - run: cargo test -p deve_cli sync_push_does_not_pollute_transport_or_local_ledger -- --nocapture
     - run: cargo test -p deve_cli manual_sync_push_buffers_without_applying_remote_ops -- --nocapture
   assertions:
@@ -151,8 +151,8 @@
   preconditions:
     - relay transport 已认证，但 source peer 未被当前 SyncHello diff 请求或授权
   steps:
-    - ws_send: { type: "SyncPush", peer_id: "unrequested-source", repo_id: "11111111-1111-1111-1111-111111111111", ops: [] }
-    - ws_send: { type: "SyncSnapshotRequest", peer_id: "unoffered-source", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: {}, reason: "source-boundary-check" }
+    - ws_send: { type: "SyncPush", source_peer_id: "unrequested-source", repo_id: "11111111-1111-1111-1111-111111111111", header: { repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "unrequested-source", vector: {}, payload_kind: "diff" }, encrypted_payload: [] }
+    - ws_send: { type: "SyncSnapshotRequest", source_peer_id: "unoffered-source", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: {}, reason: "source-boundary-check" }
     - run: cargo test -p deve_cli ws_sync_push_rejects_unrequested_source -- --nocapture
     - run: cargo test -p deve_cli sync_push_rejects_unrequested_relay_source -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
