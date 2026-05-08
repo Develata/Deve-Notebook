@@ -1,6 +1,8 @@
 use super::{
     is_ledger_managed_relative_path, is_ledger_managed_write_target, project_relative_path,
+    resolve_capability_read_target, resolve_capability_write_target,
 };
+use crate::plugin::manifest::Capability;
 use std::path::Path;
 use tempfile::tempdir;
 
@@ -47,6 +49,37 @@ fn project_relative_path_uses_canonical_target_location() {
         .expect("inside project root");
 
     assert_eq!(rel, "vault/default/notes/a.md");
+}
+
+#[cfg(unix)]
+#[test]
+fn capability_targets_return_canonical_symlink_destination() {
+    let dir = tempdir().expect("tempdir");
+    let allowed = dir.path().join("allowed");
+    std::fs::create_dir_all(&allowed).expect("mkdir");
+    let target = allowed.join("target.txt");
+    std::fs::write(&target, "ok").expect("write");
+    let alias = allowed.join("alias.txt");
+    symlink(&target, &alias).expect("symlink");
+    let caps = Capability {
+        allow_fs_read: vec![allowed.clone()],
+        allow_fs_write: vec![allowed],
+        ..Default::default()
+    };
+    let canonical = std::fs::canonicalize(&target).expect("canonical target");
+
+    assert_eq!(
+        resolve_capability_read_target(&caps, &alias)
+            .expect("read target")
+            .expect("read allowed"),
+        canonical
+    );
+    assert_eq!(
+        resolve_capability_write_target(&caps, &alias)
+            .expect("write target")
+            .expect("write allowed"),
+        canonical
+    );
 }
 
 #[test]

@@ -13,7 +13,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::path_guard::{
-    is_capability_read_target, is_capability_write_target, is_ledger_managed_write_target,
+    is_ledger_managed_write_target, resolve_capability_read_target, resolve_capability_write_target,
 };
 
 /// 注册文件系统 API
@@ -26,16 +26,16 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
         "fs_read",
         move |path: &str| -> Result<String, Box<EvalAltResult>> {
             let p = Path::new(path);
-            if !is_capability_read_target(caps_read.as_ref(), p)
+            let target = resolve_capability_read_target(caps_read.as_ref(), p)
                 .map_err(|e| -> Box<EvalAltResult> { e.into() })?
-            {
-                return Err(format!(
-                    "Permission denied: read access to '{}' is not allowed by manifest.",
-                    path
-                )
-                .into());
-            }
-            std::fs::read_to_string(p).map_err(|_| "IO Error: Read failed".into())
+                .ok_or_else(|| -> Box<EvalAltResult> {
+                    format!(
+                        "Permission denied: read access to '{}' is not allowed by manifest.",
+                        path
+                    )
+                    .into()
+                })?;
+            std::fs::read_to_string(target).map_err(|_| "IO Error: Read failed".into())
         },
     );
 
@@ -44,24 +44,26 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
         "fs_write",
         move |path: &str, content: &str| -> Result<(), Box<EvalAltResult>> {
             let p = Path::new(path);
-            if !is_capability_write_target(caps_write.as_ref(), p)
+            let target = resolve_capability_write_target(caps_write.as_ref(), p)
+                .map_err(|e| -> Box<EvalAltResult> { e.into() })?
+                .ok_or_else(|| -> Box<EvalAltResult> {
+                    format!(
+                        "Permission denied: write access to '{}' is not allowed by manifest.",
+                        path
+                    )
+                    .into()
+                })?;
+            if is_ledger_managed_write_target(&target)
                 .map_err(|e| -> Box<EvalAltResult> { e.into() })?
             {
-                return Err(format!(
-                    "Permission denied: write access to '{}' is not allowed by manifest.",
-                    path
-                )
-                .into());
-            }
-            if is_ledger_managed_write_target(p).map_err(|e| -> Box<EvalAltResult> { e.into() })? {
                 tracing::warn!("Plugin fs_write blocked on ledger-managed path: {}", path);
                 return Err("Permission denied: ledger-managed write denied.".into());
             }
-            if let Some(parent) = p.parent() {
+            if let Some(parent) = target.parent() {
                 std::fs::create_dir_all(parent)
                     .map_err(|_| "IO Error: Failed to create parent dir")?;
             }
-            std::fs::write(p, content).map_err(|_| "IO Error: Write failed".into())
+            std::fs::write(target, content).map_err(|_| "IO Error: Write failed".into())
         },
     );
 

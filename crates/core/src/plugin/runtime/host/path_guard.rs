@@ -18,18 +18,24 @@ pub(super) fn is_ledger_managed_write_target(path: &Path) -> Result<bool, String
     Ok(project_relative_path(&cwd, path)?.is_some_and(|rel| is_ledger_managed_relative_path(&rel)))
 }
 
-pub(super) fn is_capability_read_target(caps: &Capability, path: &Path) -> Result<bool, String> {
+pub(super) fn resolve_capability_read_target(
+    caps: &Capability,
+    path: &Path,
+) -> Result<Option<PathBuf>, String> {
     if !caps.check_read(path) {
-        return Ok(false);
+        return Ok(None);
     }
-    is_canonical_capability_target(&caps.allow_fs_read, path)
+    resolve_canonical_capability_target(&caps.allow_fs_read, path)
 }
 
-pub(super) fn is_capability_write_target(caps: &Capability, path: &Path) -> Result<bool, String> {
+pub(super) fn resolve_capability_write_target(
+    caps: &Capability,
+    path: &Path,
+) -> Result<Option<PathBuf>, String> {
     if !caps.check_write(path) {
-        return Ok(false);
+        return Ok(None);
     }
-    is_canonical_capability_target(&caps.allow_fs_write, path)
+    resolve_canonical_capability_target(&caps.allow_fs_write, path)
 }
 
 pub(super) fn split_managed_note_target(rel_path: &str) -> Option<(String, String)> {
@@ -45,16 +51,19 @@ pub(super) fn split_managed_note_target(rel_path: &str) -> Option<(String, Strin
     Some((repo_name, repo_path))
 }
 
-fn is_canonical_capability_target(prefixes: &[PathBuf], path: &Path) -> Result<bool, String> {
+fn resolve_canonical_capability_target(
+    prefixes: &[PathBuf],
+    path: &Path,
+) -> Result<Option<PathBuf>, String> {
     let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
     let target = canonicalize_target(&cwd, path)?;
-    prefixes.iter().try_fold(false, |matched, prefix| {
-        if matched {
-            return Ok(true);
-        }
+    for prefix in prefixes {
         let allowed = canonicalize_target(&cwd, prefix)?;
-        Ok(!allowed.as_os_str().is_empty() && target.starts_with(&allowed))
-    })
+        if !allowed.as_os_str().is_empty() && target.starts_with(&allowed) {
+            return Ok(Some(target));
+        }
+    }
+    Ok(None)
 }
 
 fn resolve_host_path(cwd: &Path, path: &Path) -> PathBuf {
