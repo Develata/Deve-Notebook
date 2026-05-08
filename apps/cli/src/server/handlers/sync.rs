@@ -17,6 +17,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
+use deve_core::protocol::SyncPushHeader;
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
 
@@ -57,9 +58,10 @@ pub async fn handle_sync_push(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    header: SyncPushHeader,
     ops: Vec<EncryptedOp>,
 ) {
-    transfer::handle_push(state, ch, session, peer_id, repo_id, ops).await;
+    transfer::handle_push(state, ch, session, peer_id, repo_id, header, ops).await;
 }
 
 pub async fn handle_sync_snapshot_request(

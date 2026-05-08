@@ -78,6 +78,7 @@ async fn route_unscoped_core(
         ClientMessage::SyncPush {
             source_peer_id,
             repo_id,
+            header,
             encrypted_payload,
         } => {
             sync::handle_sync_push(
@@ -86,6 +87,7 @@ async fn route_unscoped_core(
                 session,
                 source_peer_id,
                 repo_id,
+                header,
                 encrypted_payload,
             )
             .await;

@@ -6,7 +6,7 @@
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::RepoId;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerMessage, SyncPushHeader};
 use deve_core::sync::engine::SyncEngine;
 use deve_core::sync::protocol::HandshakeResult;
 
@@ -93,9 +93,15 @@ fn send_pushes(
                 if response.ops.is_empty() {
                     continue;
                 }
+                let header = SyncPushHeader::diff(
+                    response.repo_id,
+                    response.peer_id.clone(),
+                    engine.version_vector().clone(),
+                );
                 ch.unicast(ServerMessage::SyncPush {
                     source_peer_id: response.peer_id,
                     repo_id: response.repo_id,
+                    header,
                     scope_nonce,
                     branch: session.active_branch.clone(),
                     encrypted_payload: response.ops,

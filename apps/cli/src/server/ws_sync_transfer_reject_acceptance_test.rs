@@ -6,7 +6,7 @@ use super::ws_protocol_acceptance_support::{
     WsHarness, connect_harness, recv_server_message, send_client_message,
 };
 use deve_core::models::{PeerId, VersionVector};
-use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage, SyncPushHeader};
 use deve_core::security::IdentityKeyPair;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
@@ -133,8 +133,9 @@ fn sync_request(repo_id: uuid::Uuid) -> ClientMessage {
 
 fn sync_push(peer_id: PeerId, repo_id: uuid::Uuid) -> ClientMessage {
     ClientMessage::SyncPush {
-        source_peer_id: peer_id,
+        source_peer_id: peer_id.clone(),
         repo_id,
+        header: SyncPushHeader::diff(repo_id, peer_id, VersionVector::new()),
         encrypted_payload: vec![],
     }
 }

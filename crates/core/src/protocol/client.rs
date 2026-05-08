@@ -7,6 +7,7 @@
 use crate::models::{DocId, Op, PeerId, VersionVector};
 use crate::protocol::ScPathTarget;
 use crate::protocol::SessionProof;
+use crate::protocol::SyncPushHeader;
 use crate::security::EncryptedOp;
 use serde::{Deserialize, Serialize};
 
@@ -45,6 +46,7 @@ pub enum ClientMessage {
         #[serde(alias = "peer_id")]
         source_peer_id: PeerId,
         repo_id: crate::models::RepoId,
+        header: SyncPushHeader,
         #[serde(alias = "ops")]
         encrypted_payload: Vec<EncryptedOp>,
     },

@@ -44,8 +44,8 @@ check_contains apps/cli/src/server/node_role_http.rs "\"ws_port\": r.ws_port"
 check_contains apps/cli/src/server/node_role_http.rs "\"main_port\": r.main_port"
 
 # NET-004: frame protocol is versioned binary by default, with legacy JSON debug-gated.
-check_contains crates/core/src/protocol/frame.rs "pub const WS_PROTOCOL_VERSION: u16 = 5;"
-check_contains crates/core/src/protocol/frame.rs "pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 5;"
+check_contains crates/core/src/protocol/frame.rs "pub const WS_PROTOCOL_VERSION: u16 = 7;"
+check_contains crates/core/src/protocol/frame.rs "pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 7;"
 check_contains crates/core/src/protocol/frame.rs "pub const WS_FRAME_MAGIC: &[u8] = b\"DEVEWSF3\";"
 check_contains crates/core/src/protocol/frame.rs "missing WS frame magic"
 check_contains apps/cli/src/server/ws/receive.rs "MISSING_WS_FRAME_MAGIC"

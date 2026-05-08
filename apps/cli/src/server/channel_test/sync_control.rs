@@ -1,6 +1,6 @@
 use super::DualChannel;
 use deve_core::models::{PeerId, VersionVector};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerMessage, SyncPushHeader};
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -64,6 +64,7 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
     ch.unicast(ServerMessage::SyncPush {
         source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
+        header: SyncPushHeader::diff(uuid::Uuid::nil(), peer.clone(), VersionVector::default()),
         scope_nonce: 7,
         branch: Some(peer.clone()),
         encrypted_payload: vec![],

@@ -30,6 +30,7 @@ pub mod sc_path_target;
 pub mod scope_nonce;
 pub mod server;
 pub mod session_proof;
+pub mod sync_push_header;
 
 pub use client::ClientMessage;
 pub use client_scope::ClientMessageScopeGate;
@@ -40,3 +41,4 @@ pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};
 pub use server::{MergeConflictAction, ServerMessage};
 pub use session_proof::SessionProof;
+pub use sync_push_header::{SyncPayloadKind, SyncPushHeader};

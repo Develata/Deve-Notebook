@@ -8,6 +8,7 @@ use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;
 use crate::merge::ConflictHunk;
 use crate::models::{DocId, PeerId, RepoId, VersionVector};
+use crate::protocol::SyncPushHeader;
 use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,7 @@ pub enum ServerMessage {
     WriteReady { peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId> },
     SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] known_vector: VersionVector, requests: Vec<(PeerId, (u64, u64))> },
     SyncSnapshotRequest { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, #[serde(default)] known_vector: VersionVector, #[serde(default)] reason: Option<String> },
-    SyncPush { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, #[serde(alias = "ops")] encrypted_payload: Vec<EncryptedOp> },
+    SyncPush { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, header: SyncPushHeader, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, #[serde(alias = "ops")] encrypted_payload: Vec<EncryptedOp> },
     SyncPushSnapshot { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, #[serde(default)] server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(alias = "ops", alias = "encrypted_payload")] payload: Vec<EncryptedOp> },
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
     NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },

@@ -9,8 +9,8 @@ use super::sync_transfer_scope_test_support::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::range;
-use deve_core::models::PeerId;
-use deve_core::protocol::ServerErrorCode;
+use deve_core::models::{PeerId, RepoId, VersionVector};
+use deve_core::protocol::{ServerErrorCode, SyncPushHeader};
 use deve_core::security::EncryptedOp;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -27,6 +27,7 @@ async fn manual_sync_push_buffers_without_applying_remote_ops() -> anyhow::Resul
         &mut session,
         peer.clone(),
         repo_id,
+        sync_push_header(repo_id, &peer),
         vec![EncryptedOp {
             doc_id: None,
             seq: 1,
@@ -60,6 +61,7 @@ async fn sync_push_uses_message_source_peer_for_shadow_write() -> anyhow::Result
         &mut session,
         source_peer.clone(),
         repo_id,
+        sync_push_header(repo_id, &source_peer),
         vec![op],
     )
     .await;
@@ -89,6 +91,7 @@ async fn sync_push_does_not_pollute_transport_or_local_ledger() -> anyhow::Resul
         &mut session,
         malicious_source.clone(),
         repo_id,
+        sync_push_header(repo_id, &malicious_source),
         vec![op],
     )
     .await;
@@ -120,6 +123,7 @@ async fn sync_push_rejects_envelope_seq_mismatch() -> anyhow::Result<()> {
         &mut session,
         source_peer.clone(),
         repo_id,
+        sync_push_header(repo_id, &source_peer),
         vec![op],
     )
     .await;
@@ -142,6 +146,7 @@ async fn sync_push_rejects_unrequested_authenticated_source() -> anyhow::Result<
         &mut session,
         source_peer.clone(),
         repo_id,
+        sync_push_header(repo_id, &source_peer),
         vec![op],
     )
     .await;
@@ -167,6 +172,7 @@ async fn sync_push_rejects_unrequested_relay_source() -> anyhow::Result<()> {
         &mut session,
         source_peer.clone(),
         repo_id,
+        sync_push_header(repo_id, &source_peer),
         vec![op],
     )
     .await;
@@ -175,4 +181,35 @@ async fn sync_push_rejects_unrequested_relay_source() -> anyhow::Result<()> {
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
     assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
     Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_rejects_route_header_source_mismatch() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let source_peer = PeerId::new("origin-peer");
+    let header_peer = PeerId::new("other-origin");
+    let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(source_peer.clone()), Some(42));
+    session.set_requested_sync_sources([source_peer.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        sync_push_header(repo_id, &header_peer),
+        vec![op],
+    )
+    .await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+fn sync_push_header(repo_id: RepoId, peer_id: &PeerId) -> SyncPushHeader {
+    SyncPushHeader::diff(repo_id, peer_id.clone(), VersionVector::new())
 }

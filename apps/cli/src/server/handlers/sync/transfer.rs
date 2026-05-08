@@ -6,7 +6,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerMessage, SyncPayloadKind, SyncPushHeader};
 use deve_core::security::EncryptedOp;
 use deve_core::sync::protocol as sync_proto;
 use std::sync::Arc;
@@ -45,6 +45,7 @@ pub(super) async fn handle_request(
     }
 
     let Some(responses) = engine::with_strict(state, ch, repo_id, scope, |engine| {
+        let header_vector = engine.version_vector().clone();
         let mut responses = Vec::new();
         for (peer_id, range) in requests {
             let sync_req = sync_proto::SyncRequest {
@@ -57,12 +58,12 @@ pub(super) async fn handle_request(
                 Err(err) => return Err(err),
             }
         }
-        Ok(responses)
+        Ok((header_vector, responses))
     }) else {
         return;
     };
-    let responses = match responses {
-        Ok(responses) => responses,
+    let (header_vector, responses) = match responses {
+        Ok(result) => result,
         Err(err) => {
             errors::classified_failure(
                 ch,
@@ -88,9 +89,15 @@ pub(super) async fn handle_request(
         return;
     };
     for response in non_empty {
+        let header = SyncPushHeader::diff(
+            response.repo_id,
+            response.peer_id.clone(),
+            header_vector.clone(),
+        );
         ch.unicast(ServerMessage::SyncPush {
             source_peer_id: response.peer_id,
             repo_id: response.repo_id,
+            header,
             scope_nonce: delivery_scope_nonce,
             branch: session.active_branch.clone(),
             encrypted_payload: response.ops,
@@ -104,6 +111,7 @@ pub(super) async fn handle_push(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    header: SyncPushHeader,
     encrypted_payload: Vec<EncryptedOp>,
 ) {
     let Some(scope) = require_current_sync_scope(ch, session) else {
@@ -118,6 +126,21 @@ pub(super) async fn handle_push(
             format!(
                 "SyncPush source {} was not requested from transport {}",
                 peer_id, transport_peer
+            ),
+            scope,
+        );
+        return;
+    }
+    if !sync_push_header_matches(&header, repo_id, &peer_id) {
+        errors::sync_apply_failed(
+            ch,
+            format!(
+                "invalid sync payload header: route repo/source {}/{} but header repo/source/kind {}/{}/{}",
+                repo_id,
+                peer_id,
+                header.repo_id,
+                header.peer_id,
+                sync_payload_kind_name(&header.payload_kind)
             ),
             scope,
         );
@@ -156,5 +179,18 @@ pub(super) async fn handle_push(
                 scope,
             );
         }
+    }
+}
+
+fn sync_push_header_matches(header: &SyncPushHeader, repo_id: RepoId, peer_id: &PeerId) -> bool {
+    header.repo_id == repo_id
+        && &header.peer_id == peer_id
+        && header.payload_kind == SyncPayloadKind::Diff
+}
+
+fn sync_payload_kind_name(kind: &SyncPayloadKind) -> &'static str {
+    match kind {
+        SyncPayloadKind::Diff => "diff",
+        SyncPayloadKind::Snapshot => "snapshot",
     }
 }
