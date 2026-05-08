@@ -1,8 +1,8 @@
 //! plan_ref:
 //!   - 06_repository#repo-catalog-contract
 
-use super::helpers::resolve_remote_repo_entry_by_id;
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
+use crate::ledger::manager::remote_repo_scan_helpers::resolve_remote_repo_entry_by_id;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
 use anyhow::Result;

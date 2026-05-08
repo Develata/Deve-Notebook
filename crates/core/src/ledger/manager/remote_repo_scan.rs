@@ -2,20 +2,13 @@
 //!   - 06_repository#repo-catalog-contract
 //!   - 06_repository#repo-catalog-repair-contract
 
-#[path = "remote_repo_scan_helpers.rs"]
-mod helpers;
-#[path = "remote_repo_select.rs"]
-mod select;
-#[path = "remote_repo_scan_validate.rs"]
-mod validate;
-
-use self::helpers::{
+use crate::ledger::database::{cached_database, relocate_database_path};
+use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
+use crate::ledger::manager::remote_repo_scan_helpers::{
     duplicate_catalog_ids, repaired_remote_repo_info, scanned_remote_repo_info,
     validate_scanned_remote_entries,
 };
-use self::validate::validate_remote_repo_url_coverage;
-use crate::ledger::database::{cached_database, relocate_database_path};
-use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
+use crate::ledger::manager::remote_repo_scan_validate::validate_remote_repo_url_coverage;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
