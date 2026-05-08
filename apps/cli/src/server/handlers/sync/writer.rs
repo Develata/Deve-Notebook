@@ -23,7 +23,7 @@ pub(super) fn handle(
             ch.unicast(ServerMessage::WriteReady {
                 peer_id,
                 repo_id,
-                scope_nonce,
+                scope_nonce: scope_nonce.into(),
                 branch: session.active_branch.clone(),
             });
         }

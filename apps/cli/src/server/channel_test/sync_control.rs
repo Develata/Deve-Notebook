@@ -1,6 +1,6 @@
 use super::DualChannel;
 use deve_core::models::{PeerId, VersionVector};
-use deve_core::protocol::{ServerMessage, SyncPushHeader};
+use deve_core::protocol::{ScopeNonce, ServerMessage, SyncPushHeader};
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -13,7 +13,7 @@ async fn sync_hello_is_not_dropped_when_unicast_queue_is_full() {
     ch.unicast(ServerMessage::SyncHello {
         peer_id: PeerId::new("peer-a"),
         repo_id: uuid::Uuid::nil(),
-        scope_nonce: 7,
+        scope_nonce: ScopeNonce::new(7),
         pub_key: vec![1, 2],
         signature: vec![3, 4],
         vector: VersionVector::default(),
@@ -32,7 +32,7 @@ async fn sync_hello_is_not_dropped_when_unicast_queue_is_full() {
         }) => {
             assert_eq!(peer_id.as_str(), "peer-a");
             assert_eq!(repo_id, uuid::Uuid::nil());
-            assert_eq!(scope_nonce, 7);
+            assert_eq!(scope_nonce.get(), 7);
             assert_eq!(pub_key, vec![1, 2]);
             assert_eq!(signature, vec![3, 4]);
             assert_eq!(vector, VersionVector::default());
@@ -65,14 +65,14 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
         source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
         header: SyncPushHeader::diff(uuid::Uuid::nil(), peer.clone(), VersionVector::default()),
-        scope_nonce: 7,
+        scope_nonce: ScopeNonce::new(7),
         branch: Some(peer.clone()),
         encrypted_payload: vec![],
     });
     ch.unicast(ServerMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id: uuid::Uuid::nil(),
-        scope_nonce: 7,
+        scope_nonce: ScopeNonce::new(7),
         branch: Some(peer),
         server_vector: VersionVector::default(),
         snapshot_kind: None,

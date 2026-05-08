@@ -49,7 +49,7 @@ fn client_sync_hello(remote: &IdentityKeyPair, repo_id: uuid::Uuid) -> ClientMes
         session_proof: hello.session_proof,
         vector: hello.remote_vector,
         repo_id: hello.repo_id,
-        scope_nonce: hello.scope_nonce,
+        scope_nonce: hello.scope_nonce.into(),
     }
 }
 
@@ -106,7 +106,7 @@ fn assert_sync_hello(message: ServerMessage, repo_id: uuid::Uuid, peer_id: &Peer
         } => {
             assert_eq!(&actual_peer, peer_id);
             assert_eq!(actual, repo_id);
-            assert_eq!(scope_nonce, SWITCH_NONCE);
+            assert_eq!(scope_nonce.get(), SWITCH_NONCE);
             assert!(!pub_key.is_empty());
             assert!(!signature.is_empty());
         }

@@ -6,6 +6,7 @@
 
 use crate::models::{DocId, Op, PeerId, VersionVector};
 use crate::protocol::ScPathTarget;
+use crate::protocol::ScopeNonce;
 use crate::protocol::SessionProof;
 use crate::protocol::SyncPushHeader;
 use crate::security::EncryptedOp;
@@ -20,12 +21,12 @@ pub enum ClientMessage {
         session_proof: SessionProof,
         vector: VersionVector,
         repo_id: crate::models::RepoId,
-        scope_nonce: u64,
+        scope_nonce: ScopeNonce,
     },
     RegisterWriter {
         peer_id: PeerId,
         repo_id: crate::models::RepoId,
-        scope_nonce: u64,
+        scope_nonce: ScopeNonce,
     },
     SyncRequest {
         repo_id: crate::models::RepoId,

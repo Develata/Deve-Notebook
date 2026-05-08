@@ -226,7 +226,7 @@ fn assert_sync_hello(
         } => {
             assert_eq!(&peer_id, local_peer);
             assert_eq!(actual, repo_id);
-            assert_eq!(actual_scope, scope_nonce);
+            assert_eq!(actual_scope.get(), scope_nonce);
             assert!(!pub_key.is_empty());
             assert!(!signature.is_empty());
         }

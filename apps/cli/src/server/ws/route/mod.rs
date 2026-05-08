@@ -49,7 +49,7 @@ pub(crate) async fn route_message(
                     session_proof,
                     remote_vector: vector,
                     repo_id,
-                    scope_nonce,
+                    scope_nonce: scope_nonce.get(),
                 },
             )
             .await;

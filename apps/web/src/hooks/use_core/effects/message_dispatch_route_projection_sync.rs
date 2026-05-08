@@ -22,7 +22,7 @@ pub fn route_projection_sync_message(
             vector,
             ..
         } => {
-            handle_sync_hello_message(peer_id, repo_id, scope_nonce, vector, signals);
+            handle_sync_hello_message(peer_id, repo_id, scope_nonce.get(), vector, signals);
             None
         }
         ServerMessage::SyncModeStatus {

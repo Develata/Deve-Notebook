@@ -102,7 +102,7 @@ fn client_sync_hello(remote: &IdentityKeyPair, repo_id: uuid::Uuid) -> ClientMes
         session_proof: hello.session_proof,
         vector: hello.remote_vector,
         repo_id: hello.repo_id,
-        scope_nonce: hello.scope_nonce,
+        scope_nonce: hello.scope_nonce.into(),
     }
 }
 
@@ -155,7 +155,7 @@ fn assert_writer_rejected(message: ServerMessage, expected_doc: DocId) {
             client_op_id,
             error,
         } => {
-            assert_eq!(scope_nonce, SCOPE);
+            assert_eq!(scope_nonce.get(), SCOPE);
             assert_eq!(doc_id, expected_doc);
             assert_eq!(client_op_id, CLIENT_OP_ID);
             assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);

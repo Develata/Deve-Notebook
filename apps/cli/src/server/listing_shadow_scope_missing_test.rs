@@ -58,7 +58,7 @@ async fn list_shadows_on_missing_remote_preserves_scope_nonce_in_error() -> anyh
         Some(ServerMessage::ProtocolError {
             error, scope_nonce, ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
             assert_eq!(scope_nonce, Some(77));
         }
         other => panic!("expected ProtocolError, got {:?}", other),

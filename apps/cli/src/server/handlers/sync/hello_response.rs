@@ -27,7 +27,7 @@ pub(super) fn send(
     ch.unicast(ServerMessage::SyncHello {
         peer_id: local_peer_id,
         repo_id,
-        scope_nonce,
+        scope_nonce: scope_nonce.into(),
         pub_key: state.identity_key.public_key_bytes().to_vec(),
         signature: my_sig,
         vector: local_vector,

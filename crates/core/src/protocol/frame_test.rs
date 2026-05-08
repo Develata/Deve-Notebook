@@ -163,7 +163,7 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
     let server = ServerMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id,
-        scope_nonce: 3,
+        scope_nonce: crate::protocol::ScopeNonce::new(3),
         branch: Some(peer.clone()),
         server_vector: vector.clone(),
         snapshot_kind: Some("full".to_string()),

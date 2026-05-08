@@ -102,7 +102,7 @@ fn send_pushes(
                     source_peer_id: response.peer_id,
                     repo_id: response.repo_id,
                     header,
-                    scope_nonce,
+                    scope_nonce: scope_nonce.into(),
                     branch: session.active_branch.clone(),
                     encrypted_payload: response.ops,
                 });

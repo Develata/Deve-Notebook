@@ -109,7 +109,7 @@ async fn request_key_on_missing_shadow_branch_clears_remote_scope() -> anyhow::R
     assert_eq!(denied.repo_id, None);
     assert_eq!(denied.scope_nonce, 41);
     assert_eq!(denied.branch, None);
-    assert_eq!(denied.error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(denied.error.code, ServerErrorCode::ScStaleScope);
     assert!(denied
         .error
         .detail

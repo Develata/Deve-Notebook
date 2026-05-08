@@ -105,7 +105,7 @@ fn sync_transfer_json_uses_plan_field_names() {
     let server = ServerMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id,
-        scope_nonce: 9,
+        scope_nonce: crate::protocol::ScopeNonce::new(9),
         branch: None,
         server_vector: VersionVector::new(),
         snapshot_kind: Some("full".to_string()),

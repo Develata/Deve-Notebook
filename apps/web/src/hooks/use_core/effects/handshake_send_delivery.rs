@@ -45,12 +45,12 @@ pub(super) async fn deliver_signed_handshake(
                 session_proof: SessionProof::new(signature),
                 vector: ctx.vector.clone(),
                 repo_id,
-                scope_nonce: ctx.current_scope_nonce,
+                scope_nonce: ctx.current_scope_nonce.into(),
             });
             ctx.ws.send(ClientMessage::RegisterWriter {
                 peer_id: writer_peer_id,
                 repo_id,
-                scope_nonce: ctx.current_scope_nonce,
+                scope_nonce: ctx.current_scope_nonce.into(),
             });
         }
         Err(err) => {

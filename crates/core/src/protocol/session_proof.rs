@@ -24,6 +24,7 @@ mod tests {
     use super::SessionProof;
     use crate::models::{PeerId, VersionVector};
     use crate::protocol::ClientMessage;
+    use crate::protocol::ScopeNonce;
     use crate::protocol::frame::{ClientFrame, decode_client_json};
 
     #[test]
@@ -36,7 +37,7 @@ mod tests {
             session_proof: SessionProof::new(vec![4, 5, 6]),
             vector: VersionVector::new(),
             repo_id,
-            scope_nonce: 7,
+            scope_nonce: ScopeNonce::new(7),
         };
         let text = serde_json::to_string(&ClientFrame::current(message)).unwrap();
         let value: serde_json::Value = serde_json::from_str(&text).unwrap();
@@ -64,7 +65,7 @@ mod tests {
                 assert_eq!(peer_pubkey, vec![1, 2, 3]);
                 assert_eq!(session_proof.signature(), &[4, 5, 6]);
                 assert_eq!(decoded_repo, repo_id);
-                assert_eq!(scope_nonce, 7);
+                assert_eq!(scope_nonce.get(), 7);
             }
             other => panic!("expected SyncHello, got {other:?}"),
         }

@@ -66,7 +66,7 @@ pub(super) fn reject_edit(
     error: ServerError,
 ) {
     ch.unicast(ServerMessage::EditRejected {
-        scope_nonce,
+        scope_nonce: scope_nonce.into(),
         doc_id,
         client_op_id,
         error,

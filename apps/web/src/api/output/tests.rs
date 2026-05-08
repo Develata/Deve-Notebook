@@ -70,7 +70,7 @@ fn output_write_classification_distinguishes_reads_from_writes() {
     assert!(is_write_message(&ClientMessage::RegisterWriter {
         peer_id: PeerId::new("browser-peer"),
         repo_id: uuid::Uuid::nil(),
-        scope_nonce: 1,
+        scope_nonce: 1.into(),
     }));
     assert!(is_write_message(&ClientMessage::SyncPushSnapshot {
         source_peer_id: PeerId::new("browser-peer"),

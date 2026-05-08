@@ -83,7 +83,7 @@ fn assert_key_provide(message: ServerMessage, repo_id: uuid::Uuid) {
             repo_key,
         } => {
             assert_eq!(actual, repo_id);
-            assert_eq!(scope_nonce, SCOPE);
+            assert_eq!(scope_nonce.get(), SCOPE);
             assert_eq!(branch, None);
             assert_eq!(repo_key.len(), 32);
         }

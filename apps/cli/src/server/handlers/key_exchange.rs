@@ -100,7 +100,7 @@ pub async fn handle_request_key(state: &Arc<AppState>, ch: &DualChannel, session
             );
             ch.unicast(ServerMessage::KeyProvide {
                 repo_id: scope.repo_id,
-                scope_nonce,
+                scope_nonce: scope_nonce.into(),
                 branch: session.active_branch.clone(),
                 repo_key: key.to_bytes().to_vec(),
             });
@@ -131,7 +131,7 @@ fn send_key_denied_error(
 ) {
     ch.unicast(ServerMessage::KeyDenied {
         repo_id,
-        scope_nonce,
+        scope_nonce: scope_nonce.into(),
         branch,
         error,
     });

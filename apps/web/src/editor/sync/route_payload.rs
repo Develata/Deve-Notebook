@@ -17,7 +17,7 @@ pub(super) fn route_payload_message(
             branch,
             ..
         } => {
-            dispatch_payload::handle_write_ready_message(ctx, repo_id, branch, scope_nonce);
+            dispatch_payload::handle_write_ready_message(ctx, repo_id, branch, scope_nonce.get());
             None
         }
         ServerMessage::Pong => None,
@@ -32,7 +32,7 @@ pub(super) fn route_payload_message(
                 ctx,
                 repo_id,
                 branch,
-                scope_nonce,
+                scope_nonce.get(),
                 &encrypted_payload,
             );
             None
@@ -44,7 +44,13 @@ pub(super) fn route_payload_message(
             payload,
             ..
         } => {
-            dispatch_payload::handle_sync_push_message(ctx, repo_id, branch, scope_nonce, &payload);
+            dispatch_payload::handle_sync_push_message(
+                ctx,
+                repo_id,
+                branch,
+                scope_nonce.get(),
+                &payload,
+            );
             None
         }
         ServerMessage::KeyProvide {
@@ -57,7 +63,7 @@ pub(super) fn route_payload_message(
                 ctx,
                 repo_id,
                 branch,
-                scope_nonce,
+                scope_nonce.get(),
                 &repo_key,
             );
             None
@@ -68,7 +74,13 @@ pub(super) fn route_payload_message(
             branch,
             error,
         } => {
-            dispatch_payload::handle_key_denied_message(ctx, repo_id, branch, scope_nonce, &error);
+            dispatch_payload::handle_key_denied_message(
+                ctx,
+                repo_id,
+                branch,
+                scope_nonce.get(),
+                &error,
+            );
             None
         }
         other => Some(other),

@@ -1,6 +1,6 @@
 use super::DualChannel;
 use deve_core::models::PeerId;
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ScopeNonce, ServerError, ServerErrorCode, ServerMessage};
 use tokio::sync::{broadcast, mpsc};
 
 mod request_response;
@@ -115,7 +115,7 @@ async fn write_ready_is_not_dropped_when_unicast_queue_is_full() {
     ch.unicast(ServerMessage::WriteReady {
         peer_id: PeerId::new("peer-a"),
         repo_id: uuid::Uuid::nil(),
-        scope_nonce: 9,
+        scope_nonce: ScopeNonce::new(9),
         branch: Some(PeerId::new("peer-a")),
     });
 
@@ -130,7 +130,7 @@ async fn write_ready_is_not_dropped_when_unicast_queue_is_full() {
         }) => {
             assert_eq!(peer_id.as_str(), "peer-a");
             assert_eq!(repo_id, uuid::Uuid::nil());
-            assert_eq!(scope_nonce, 9);
+            assert_eq!(scope_nonce.get(), 9);
             assert_eq!(branch.as_ref().map(PeerId::as_str), Some("peer-a"));
         }
         other => panic!("expected queued WriteReady, got {:?}", other),
@@ -146,13 +146,13 @@ async fn key_messages_are_not_dropped_when_unicast_queue_is_full() {
     ch.unicast(ServerMessage::Pong);
     ch.unicast(ServerMessage::KeyProvide {
         repo_id: uuid::Uuid::nil(),
-        scope_nonce: 3,
+        scope_nonce: ScopeNonce::new(3),
         branch: Some(PeerId::new("peer-a")),
         repo_key: vec![1, 2, 3],
     });
     ch.unicast(ServerMessage::KeyDenied {
         repo_id: Some(uuid::Uuid::nil()),
-        scope_nonce: 3,
+        scope_nonce: ScopeNonce::new(3),
         branch: Some(PeerId::new("peer-a")),
         error: ServerError::new(ServerErrorCode::SyncPeerUnauthenticated),
     });
@@ -174,7 +174,7 @@ async fn key_messages_are_not_dropped_when_unicast_queue_is_full() {
                 repo_key,
             } => {
                 assert_eq!(repo_id, uuid::Uuid::nil());
-                assert_eq!(scope_nonce, 3);
+                assert_eq!(scope_nonce.get(), 3);
                 assert_eq!(branch.as_ref().map(PeerId::as_str), Some("peer-a"));
                 assert_eq!(repo_key, vec![1, 2, 3]);
                 saw_provide = true;
@@ -186,7 +186,7 @@ async fn key_messages_are_not_dropped_when_unicast_queue_is_full() {
                 error,
             } => {
                 assert_eq!(repo_id, Some(uuid::Uuid::nil()));
-                assert_eq!(scope_nonce, 3);
+                assert_eq!(scope_nonce.get(), 3);
                 assert_eq!(branch.as_ref().map(PeerId::as_str), Some("peer-a"));
                 assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
                 saw_denied = true;

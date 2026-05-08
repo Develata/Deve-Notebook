@@ -75,7 +75,7 @@ pub(super) async fn handle_request(
             ch.unicast(ServerMessage::SyncPushSnapshot {
                 source_peer_id: response.peer_id,
                 repo_id: response.repo_id,
-                scope_nonce: delivery_scope_nonce,
+                scope_nonce: delivery_scope_nonce.into(),
                 branch: session.active_branch.clone(),
                 server_vector,
                 snapshot_kind: Some("full".to_string()),

@@ -38,7 +38,7 @@ pub(super) async fn assert_key_provide(
             ..
         }) => {
             assert_eq!(repo_id, expected_repo_id);
-            assert_eq!(scope_nonce, expected_scope_nonce);
+            assert_eq!(scope_nonce.get(), expected_scope_nonce);
             assert_eq!(branch, expected_branch);
         }
         other => panic!("expected KeyProvide, got {:?}", other),
@@ -54,7 +54,7 @@ pub(super) async fn recv_key_denied(rx: &mut mpsc::Receiver<ServerMessage>) -> K
             error,
         }) => KeyDenied {
             repo_id,
-            scope_nonce,
+            scope_nonce: scope_nonce.get(),
             branch,
             error,
         },

@@ -140,7 +140,7 @@ pub(super) async fn recv_protocol_error(
 
 pub(super) async fn recv_sync_push_nonce(rx: &mut mpsc::Receiver<ServerMessage>) -> u64 {
     match rx.recv().await {
-        Some(ServerMessage::SyncPush { scope_nonce, .. }) => scope_nonce,
+        Some(ServerMessage::SyncPush { scope_nonce, .. }) => scope_nonce.get(),
         other => panic!("expected SyncPush, got {:?}", other),
     }
 }
@@ -153,14 +153,14 @@ pub(super) async fn recv_sync_push_peer_nonce(
             source_peer_id,
             scope_nonce,
             ..
-        }) => (source_peer_id, scope_nonce),
+        }) => (source_peer_id, scope_nonce.get()),
         other => panic!("expected SyncPush, got {:?}", other),
     }
 }
 
 pub(super) async fn recv_sync_snapshot_nonce(rx: &mut mpsc::Receiver<ServerMessage>) -> u64 {
     match rx.recv().await {
-        Some(ServerMessage::SyncPushSnapshot { scope_nonce, .. }) => scope_nonce,
+        Some(ServerMessage::SyncPushSnapshot { scope_nonce, .. }) => scope_nonce.get(),
         other => panic!("expected SyncPushSnapshot, got {:?}", other),
     }
 }

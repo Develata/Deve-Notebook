@@ -27,7 +27,7 @@ async fn ws_endpoint_register_writer_after_sync_hello_returns_write_ready() -> a
             branch,
         } => assert_eq!(
             (peer_id, repo_id, scope_nonce, branch),
-            (remote.peer_id(), harness.repo_id, SCOPE, None)
+            (remote.peer_id(), harness.repo_id, SCOPE.into(), None)
         ),
         other => panic!("expected WriteReady, got {other:?}"),
     }
@@ -93,7 +93,7 @@ fn client_sync_hello(remote: &IdentityKeyPair, repo_id: uuid::Uuid) -> ClientMes
         session_proof: hello.session_proof,
         vector: hello.remote_vector,
         repo_id: hello.repo_id,
-        scope_nonce: hello.scope_nonce,
+        scope_nonce: hello.scope_nonce.into(),
     }
 }
 
@@ -108,7 +108,7 @@ async fn send_writer(
         ClientMessage::RegisterWriter {
             peer_id: remote.peer_id(),
             repo_id,
-            scope_nonce,
+            scope_nonce: scope_nonce.into(),
         },
     )
     .await

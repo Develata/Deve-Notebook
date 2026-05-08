@@ -25,7 +25,7 @@ pub fn route_protocol_and_write_message(
             error,
         } => {
             handle_edit_rejected_message(
-                scope_nonce,
+                scope_nonce.get(),
                 doc_id,
                 client_op_id,
                 error,
@@ -49,7 +49,7 @@ pub fn route_protocol_and_write_message(
             scope_nonce,
             branch,
         } => {
-            handle_write_ready_message(peer_id, repo_id, scope_nonce, branch, ws, signals);
+            handle_write_ready_message(peer_id, repo_id, scope_nonce.get(), branch, ws, signals);
             None
         }
         ServerMessage::Ack {

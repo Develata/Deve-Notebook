@@ -59,7 +59,7 @@ pub(crate) async fn recv_edit_rejected(
             doc_id,
             client_op_id,
             error,
-        }) => (scope_nonce, doc_id, client_op_id, error),
+        }) => (scope_nonce.get(), doc_id, client_op_id, error),
         other => panic!("expected EditRejected, got {:?}", other),
     }
 }

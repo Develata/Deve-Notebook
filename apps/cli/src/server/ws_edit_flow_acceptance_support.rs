@@ -40,7 +40,7 @@ pub(super) async fn ready_writer_ws(
         ClientMessage::RegisterWriter {
             peer_id: remote.peer_id(),
             repo_id: harness.repo_id,
-            scope_nonce,
+            scope_nonce: scope_nonce.into(),
         },
     )
     .await?;
@@ -151,7 +151,7 @@ fn client_sync_hello(
         session_proof: hello.session_proof,
         vector: hello.remote_vector,
         repo_id: hello.repo_id,
-        scope_nonce: hello.scope_nonce,
+        scope_nonce: hello.scope_nonce.into(),
     }
 }
 
@@ -169,7 +169,7 @@ fn assert_write_ready(
             branch,
         } => assert_eq!(
             (peer_id, actual, actual_scope, branch),
-            (remote.peer_id(), repo_id, scope_nonce, None)
+            (remote.peer_id(), repo_id, scope_nonce.into(), None)
         ),
         other => panic!("expected WriteReady, got {other:?}"),
     }

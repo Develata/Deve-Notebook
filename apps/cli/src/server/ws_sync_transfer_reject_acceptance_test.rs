@@ -108,7 +108,7 @@ fn client_sync_hello(remote: &IdentityKeyPair, repo_id: uuid::Uuid) -> ClientMes
         session_proof: hello.session_proof,
         vector: hello.remote_vector,
         repo_id: hello.repo_id,
-        scope_nonce: hello.scope_nonce,
+        scope_nonce: hello.scope_nonce.into(),
     }
 }
 
