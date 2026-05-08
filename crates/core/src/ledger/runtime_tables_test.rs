@@ -41,8 +41,48 @@ fn repairs_missing_client_op_index_for_secondary_local_repo_on_runtime_open() ->
     })?;
 
     let found = repo
-        .find_client_op_in_local_repo("wiki", doc_id, 42, 9)?
+        .find_client_op_in_local_repo("wiki", 42, 9)?
         .expect("client op should be rebuilt and indexed");
+    assert_eq!(found.1.doc_id, Some(doc_id));
+    assert_eq!(found.1.client_id, Some(42));
+    assert_eq!(found.1.client_op_id, Some(9));
+    Ok(())
+}
+
+#[test]
+fn repairs_empty_client_op_index_for_primary_local_repo_on_init() -> Result<()> {
+    let tmp_dir = TempDir::new()?;
+    let ledger_dir = tmp_dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
+    let doc_id = DocId::new();
+    let peer_id = PeerId::new("browser-peer");
+
+    repo.append_generated_client_op_in_local_repo("main", doc_id, peer_id.clone(), 42, 9, |seq| {
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "hello".into(),
+            },
+            1000,
+            peer_id.clone(),
+            seq,
+            Some(42),
+            Some(9),
+        )
+    })?;
+    repo.run_on_local_repo("main", |db| {
+        let write = db.begin_write()?;
+        let _ = write.delete_table(CLIENT_OP_INDEX)?;
+        write.commit()?;
+        Ok(())
+    })?;
+
+    let reopened = RepoManager::init(&ledger_dir, 2, Some("main"), Some("urn:main"))?;
+    let found = reopened
+        .find_client_op_in_local_repo("main", 42, 9)?
+        .expect("primary client op index should be rebuilt during init");
+    assert_eq!(found.1.doc_id, Some(doc_id));
     assert_eq!(found.1.client_id, Some(42));
     assert_eq!(found.1.client_op_id, Some(9));
     Ok(())

@@ -8,6 +8,7 @@ use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
+use super::edit_checks::{ExistingClientOpCheck, confirm_existing_client_op};
 use super::edit_support::{
     CommittedEdit, broadcast_and_ack_committed_edit, reject_edit, report_projection_writeback_fault,
 };
@@ -88,6 +89,18 @@ pub(super) fn append_client_edit(input: ClientEditAppend<'_>) {
             }
         }
         Err(err) => {
+            if confirm_existing_client_op(ExistingClientOpCheck {
+                state,
+                scope,
+                ch,
+                scope_nonce,
+                doc_id,
+                op: &op,
+                client_id,
+                client_op_id,
+            }) {
+                return;
+            }
             tracing::error!("Failed to persist op: {:?}", err);
             reject_edit(
                 ch,

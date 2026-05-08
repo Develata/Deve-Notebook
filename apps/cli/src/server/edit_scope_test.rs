@@ -26,7 +26,7 @@ async fn edit_rejects_doc_outside_active_repo_before_append() -> anyhow::Result<
     assert!(
         h.state
             .repo
-            .find_client_op_in_local_repo("test", doc_id, 7, 9)?
+            .find_client_op_in_local_repo("test", 7, 9)?
             .is_none(),
         "must not append orphan op into active repo"
     );

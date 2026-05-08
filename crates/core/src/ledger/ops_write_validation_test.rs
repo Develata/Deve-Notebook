@@ -87,7 +87,7 @@ fn append_generated_client_op_rejects_out_of_bounds_content_range() -> Result<()
         2
     );
     assert!(
-        repo.find_client_op_in_local_repo(repo.local_repo_name(), doc_id, 7, 3)?
+        repo.find_client_op_in_local_repo(repo.local_repo_name(), 7, 3)?
             .is_none()
     );
     Ok(())

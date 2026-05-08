@@ -78,14 +78,27 @@ pub(super) fn confirm_existing_client_op(input: ExistingClientOpCheck<'_>) -> bo
     } = input;
     match state
         .repo
-        .find_client_op_in_local_repo(&scope.repo_name, doc_id, client_id, client_op_id)
+        .find_client_op_in_local_repo(&scope.repo_name, client_id, client_op_id)
     {
         Ok(Some((_global_seq, entry))) if entry.content_op() == Some(op) => {
+            let Some(ack_doc_id) = entry.doc_id else {
+                reject_edit(
+                    ch,
+                    scope_nonce,
+                    doc_id,
+                    client_op_id,
+                    ServerError::with_detail(
+                        ServerErrorCode::StoragePersistFailed,
+                        "Broken client op index: indexed entry missing doc id",
+                    ),
+                );
+                return true;
+            };
             ch.unicast(ServerMessage::Ack {
                 repo_id: scope.repo_id,
                 branch: scope.branch.clone(),
                 scope_nonce: Some(scope_nonce),
-                doc_id,
+                doc_id: ack_doc_id,
                 seq: entry.seq,
                 client_op_id,
             });

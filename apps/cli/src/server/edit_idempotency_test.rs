@@ -27,9 +27,40 @@ async fn duplicate_client_op_returns_original_ack_without_append() -> anyhow::Re
     let found = h
         .state
         .repo
-        .find_client_op_in_local_repo("default", doc_id, 7, 9)?
+        .find_client_op_in_local_repo("default", 7, 9)?
         .expect("client op index entry");
     assert_eq!(found.1.seq, first_ack.seq);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn duplicate_client_op_across_docs_returns_original_ack() -> anyhow::Result<()> {
+    let h = edit_harness(false)?;
+    let first_doc = seed_doc(&h.state, "default", "notes/first.md")?;
+    let second_doc = seed_doc(&h.state, "default", "notes/second.md")?;
+    let second_doc_ops_before = h
+        .state
+        .repo
+        .get_local_ops_in_local_repo("default", second_doc)?
+        .len();
+    let (ch, mut uni_rx) = unicast_channel(&h.state);
+    let mut session = writer_browser_session("default", h.default_repo_id, 45);
+
+    send_insert(&h.state, &ch, &mut session, first_doc, 0).await;
+    let first_ack = recv_ack_with_seq(&mut uni_rx).await;
+    send_insert(&h.state, &ch, &mut session, second_doc, 0).await;
+    let duplicate_ack = recv_ack_with_seq(&mut uni_rx).await;
+
+    assert_eq!(first_ack, duplicate_ack);
+    assert_eq!(duplicate_ack.doc_id, first_doc);
+    assert_eq!(
+        h.state
+            .repo
+            .get_local_ops_in_local_repo("default", second_doc)?
+            .len(),
+        second_doc_ops_before,
+        "second document must not receive another op for a reused client op id"
+    );
     Ok(())
 }
 
@@ -61,7 +92,7 @@ async fn duplicate_client_op_with_different_op_is_rejected() -> anyhow::Result<(
     let found = h
         .state
         .repo
-        .find_client_op_in_local_repo("default", doc_id, 7, 9)?
+        .find_client_op_in_local_repo("default", 7, 9)?
         .expect("client op index entry");
     assert_eq!(found.1.seq, first_ack.seq);
     Ok(())

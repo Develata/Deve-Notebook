@@ -83,13 +83,17 @@ fn append_generated_op_inner(
         node_ops.insert(node_id.as_u128(), new_global_seq_key)?;
     }
     if let Some((client_id, client_op_id)) = client_ref {
-        let doc_id = entry
-            .doc_id
-            .ok_or_else(|| anyhow!("client op missing doc id"))?;
-        client_ops.insert(
-            (doc_id.as_u128(), client_id, client_op_id),
-            new_global_seq_key,
-        )?;
+        if client_ops.get((client_id, client_op_id))?.is_some() {
+            return Err(anyhow!(
+                "Client op already indexed: ({}, {})",
+                client_id,
+                client_op_id
+            ));
+        }
+        if entry.doc_id.is_none() {
+            return Err(anyhow!("client op missing doc id"));
+        }
+        client_ops.insert((client_id, client_op_id), new_global_seq_key)?;
     }
     peer_seqs.insert(key, next_local_seq)?;
     drop(peer_seqs);

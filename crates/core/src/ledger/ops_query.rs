@@ -110,7 +110,6 @@ pub fn get_ops_from_db_after(
 
 pub fn find_client_op_in_db(
     db: &Database,
-    doc_id: DocId,
     client_id: u64,
     client_op_id: u64,
 ) -> Result<Option<(u64, LedgerEntry)>> {
@@ -123,7 +122,7 @@ pub fn find_client_op_in_db(
         Err(err) => return Err(err.into()),
     };
     let Some(global_seq) = client_ops
-        .get((doc_id.as_u128(), client_id, client_op_id))?
+        .get((client_id, client_op_id))?
         .map(|seq| seq.value())
     else {
         return Ok(None);
@@ -135,7 +134,17 @@ pub fn find_client_op_in_db(
             global_seq
         )));
     };
-    Ok(Some((global_seq, deserialize_ledger_entry(bytes.value())?)))
+    let entry = deserialize_ledger_entry(bytes.value())?;
+    if entry.doc_id.is_none()
+        || entry.client_id != Some(client_id)
+        || entry.client_op_id != Some(client_op_id)
+    {
+        return Err(broken_client_op_index(format!(
+            "metadata mismatch at seq {} for client op ({}, {})",
+            global_seq, client_id, client_op_id
+        )));
+    }
+    Ok(Some((global_seq, entry)))
 }
 
 fn broken_client_op_index(detail: impl Into<String>) -> anyhow::Error {

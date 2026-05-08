@@ -124,12 +124,11 @@ impl RepoManager {
     pub fn find_client_op_in_local_repo(
         &self,
         repo_name: &str,
-        doc_id: DocId,
         client_id: u64,
         client_op_id: u64,
     ) -> Result<Option<(u64, LedgerEntry)>> {
         self.run_on_local_repo(repo_name, |db| {
-            ops::find_client_op_in_db(db, doc_id, client_id, client_op_id)
+            ops::find_client_op_in_db(db, client_id, client_op_id)
         })
     }
 }

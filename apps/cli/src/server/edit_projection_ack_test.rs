@@ -49,7 +49,7 @@ async fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails() -> any
     assert!(
         h.state
             .repo
-            .find_client_op_in_local_repo("default", doc_id, 7, 9)?
+            .find_client_op_in_local_repo("default", 7, 9)?
             .is_some()
     );
     assert!(h.state.sync_manager.is_projection_degraded("default"));

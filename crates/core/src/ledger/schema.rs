@@ -57,10 +57,10 @@ pub const PEER_DOC_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::ne
 // (NodeId (u128), PeerId (&str)) -> MaxSeq (u64)
 pub const NODE_PEER_SEQ: TableDefinition<(u128, &str), u64> = TableDefinition::new("node_peer_seq");
 
-// (DocId, ClientId, ClientOpId) -> GlobalSeq
+// (ClientId, ClientOpId) -> GlobalSeq
 // 浏览器写入去重索引，用于 reconnect 后安全重发。
-pub const CLIENT_OP_INDEX: TableDefinition<(u128, u64, u64), u64> =
-    TableDefinition::new("client_op_index");
+pub const CLIENT_OP_INDEX: TableDefinition<(u64, u64), u64> =
+    TableDefinition::new("client_op_index_v2");
 
 // Path String -> PendingFsEntry (Bytes - JSON)
 // 存储 Watcher 检测到但用户尚未确认的文件系统变更
