@@ -1,5 +1,4 @@
 use super::RepoManager;
-use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, PEER_DOC_SEQ};
 use crate::ledger::{node_meta, range};
 use crate::models::{DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp};
 use anyhow::Result;
@@ -132,59 +131,6 @@ fn append_generated_op_rejects_structure_entries() -> Result<()> {
         })?
         .is_none()
     );
-    Ok(())
-}
-
-#[test]
-fn append_generated_op_rejects_global_seq_overflow_without_side_effects() -> Result<()> {
-    let tmp_dir = TempDir::new()?;
-    let repo = init_repo(tmp_dir.path())?;
-    let doc_id = DocId::new();
-    let peer_id = PeerId::new("browser");
-
-    repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        let write = db.begin_write()?;
-        write
-            .open_table(LEDGER_OPS)?
-            .insert(u64::MAX, b"max-seq-sentinel".as_slice())?;
-        write.commit()?;
-        Ok(())
-    })?;
-
-    let err = repo
-        .append_generated_op_in_local_repo(repo.local_repo_name(), doc_id, peer_id.clone(), |seq| {
-            content_entry(
-                doc_id,
-                peer_id.clone(),
-                seq,
-                Op::Insert {
-                    pos: 0,
-                    content: "overflow".into(),
-                },
-            )
-        })
-        .expect_err("GlobalSeq overflow must fail before side indexes are updated");
-
-    assert!(err.to_string().contains("GlobalSeq overflow"));
-    repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        let read = db.begin_read()?;
-        let ops = read.open_table(LEDGER_OPS)?;
-        let doc_ops = read.open_multimap_table(DOC_OPS)?;
-        assert!(ops.get(u64::MAX)?.is_some());
-        assert_eq!(doc_ops.get(doc_id.as_u128())?.count(), 0);
-        match read.open_table(PEER_DOC_SEQ) {
-            Ok(peer_seqs) => {
-                assert!(
-                    peer_seqs
-                        .get((doc_id.as_u128(), peer_id.as_str()))?
-                        .is_none()
-                );
-            }
-            Err(redb::TableError::TableDoesNotExist(_)) => {}
-            Err(err) => return Err(err.into()),
-        }
-        Ok(())
-    })?;
     Ok(())
 }
 

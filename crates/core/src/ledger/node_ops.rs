@@ -4,8 +4,9 @@
 //!
 use crate::ledger::ops;
 use crate::ledger::schema::{LEDGER_OPS, NODE_OPS, NODE_PEER_SEQ};
+use crate::ledger::seq::checked_next_local_seq;
 use crate::models::{LedgerEntry, PeerId, StructureOp, deserialize_ledger_entry};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::{ReadableMultimapTable, ReadableTable, WriteTransaction};
 
 /// Invariants:
@@ -21,14 +22,16 @@ pub(crate) fn append_generated_structure_op_to_txn(
     let node_id = structure.node_id();
     let peer_key = peer_id.as_str().to_string();
     let key = (node_id.as_u128(), peer_key.as_str());
-    let next_local_seq = {
+    let current_local_seq = {
         let node_seqs = write_txn.open_table(NODE_PEER_SEQ)?;
         if let Some(val) = node_seqs.get(key)? {
-            val.value() + 1
+            val.value()
         } else {
-            scan_node_peer_seq(write_txn, node_id.as_u128(), &peer_id)? + 1
+            scan_node_peer_seq(write_txn, node_id.as_u128(), &peer_id)?
         }
     };
+    let next_local_seq =
+        checked_next_local_seq(current_local_seq).ok_or_else(|| anyhow!("LocalSeq overflow"))?;
     let entry = LedgerEntry::new_structure(structure, timestamp, peer_id, next_local_seq);
     let global_seq = ops::append_op_to_txn(write_txn, &entry, repo_scope)?;
     let mut node_seqs = write_txn.open_table(NODE_PEER_SEQ)?;

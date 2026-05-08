@@ -1,6 +1,6 @@
 use super::validate;
-use crate::ledger::GlobalSeq;
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
+use crate::ledger::{GlobalSeq, seq::checked_next_local_seq};
 use crate::models::{DocId, LedgerEntry, LedgerEvent, PeerId, deserialize_ledger_entry};
 use anyhow::{Result, anyhow};
 use redb::{Database, ReadableMultimapTable, ReadableTable};
@@ -46,11 +46,13 @@ fn append_generated_op_inner(
     let write_txn = db.begin_write()?;
     let mut peer_seqs = write_txn.open_table(PEER_DOC_SEQ)?;
     let key = (doc_id.as_u128(), peer_id.as_str());
-    let next_local_seq = if let Some(val) = peer_seqs.get(key)? {
-        val.value() + 1
+    let current_local_seq = if let Some(val) = peer_seqs.get(key)? {
+        val.value()
     } else {
-        scan_existing_peer_seq(&write_txn, doc_id, &peer_id)? + 1
+        scan_existing_peer_seq(&write_txn, doc_id, &peer_id)?
     };
+    let next_local_seq =
+        checked_next_local_seq(current_local_seq).ok_or_else(|| anyhow!("LocalSeq overflow"))?;
 
     let entry = op_entry_builder(next_local_seq);
     if entry.seq != next_local_seq {

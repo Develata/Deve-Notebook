@@ -51,9 +51,13 @@ impl fmt::Display for GlobalSeq {
     }
 }
 
+pub(crate) const fn checked_next_local_seq(current: u64) -> Option<u64> {
+    current.checked_add(1)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::GlobalSeq;
+    use super::{GlobalSeq, checked_next_local_seq};
 
     #[test]
     fn global_seq_zero_is_empty_ledger_anchor() {
@@ -71,5 +75,11 @@ mod tests {
     #[test]
     fn global_seq_next_rejects_overflow() {
         assert!(GlobalSeq::from_storage_key(u64::MAX).next().is_none());
+    }
+
+    #[test]
+    fn local_seq_next_rejects_overflow() {
+        assert_eq!(checked_next_local_seq(41), Some(42));
+        assert_eq!(checked_next_local_seq(u64::MAX), None);
     }
 }
