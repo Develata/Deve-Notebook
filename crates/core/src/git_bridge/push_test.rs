@@ -1,4 +1,4 @@
-use super::{GitMirrorPushOptions, push_mirror};
+use super::{GitMirrorPushOptions, push_mirror, validate_push_name};
 use crate::git_bridge::{
     GitMirrorCommitState, GitMirrorRunOptions, get_record, run_pending_mirror,
 };
@@ -101,6 +101,23 @@ fn current_branch(repo_root: &Path) -> String {
     git(repo_root, &["branch", "--show-current"])
         .trim()
         .to_string()
+}
+
+#[test]
+fn push_name_validation_rejects_option_like_or_whitespace_values() {
+    for (value, label) in [
+        ("--mirror", "remote"),
+        ("origin --upload-pack=sh", "remote"),
+        ("feature branch", "branch"),
+        ("", "branch"),
+    ] {
+        let err = validate_push_name(value, label)
+            .expect_err("invalid push target must be rejected")
+            .to_string();
+        assert!(err.contains("Git push mirror refuses invalid"), "{err:?}");
+        assert!(err.contains(label), "{err:?}");
+        assert!(err.contains(value), "{err:?}");
+    }
 }
 
 #[test]

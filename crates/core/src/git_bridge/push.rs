@@ -6,6 +6,7 @@
 //! Explicit Git mirror remote publish. This module only pushes the `.git`
 //! mirror and never treats Git refs as Deve authority.
 
+use super::error::{GitBridgeError, GitBridgeResult};
 use super::git_cmd;
 use super::preflight::{
     ensure_git_worktree, ensure_git_worktree_clean, ensure_notegit_is_not_tracked,
@@ -163,8 +164,8 @@ fn resolve_push_target(
     let branch = match options.branch.as_deref() {
         Some(branch) => validate_push_name(branch, "branch")
             .map(|branch| branch.to_string())
-            .map_err(|reason| blocker("git_remote", reason)),
-        None => current_branch(repo_root).map_err(|reason| blocker("git_remote", reason)),
+            .map_err(|err| blocker("git_remote", err.to_string())),
+        None => current_branch(repo_root).map_err(|err| blocker("git_remote", err.to_string())),
     };
     let branch = match branch {
         Ok(branch) => {
@@ -180,8 +181,10 @@ fn resolve_push_target(
     let remote = match options.remote.as_deref() {
         Some(remote) => validate_push_name(remote, "remote")
             .map(|remote| remote.to_string())
-            .map_err(|reason| blocker("git_remote", reason)),
-        None => default_remote(repo_root, &branch).map_err(|reason| blocker("git_remote", reason)),
+            .map_err(|err| blocker("git_remote", err.to_string())),
+        None => {
+            default_remote(repo_root, &branch).map_err(|err| blocker("git_remote", err.to_string()))
+        }
     };
     let remote = match remote {
         Ok(remote) => {
@@ -200,18 +203,17 @@ fn resolve_push_target(
     }
 }
 
-fn current_branch(repo_root: &Path) -> std::result::Result<String, String> {
-    let branch = git_cmd::run(repo_root, &["branch", "--show-current"])?;
+fn current_branch(repo_root: &Path) -> GitBridgeResult<String> {
+    let branch = git_cmd::run(repo_root, &["branch", "--show-current"])
+        .map_err(GitBridgeError::GitCommand)?;
     let branch = branch.trim();
     if branch.is_empty() {
-        return Err(
-            "Git push mirror requires a named branch; detached HEAD needs --branch".to_string(),
-        );
+        return Err(GitBridgeError::DetachedHead);
     }
     validate_push_name(branch, "branch").map(|branch| branch.to_string())
 }
 
-fn default_remote(repo_root: &Path, branch: &str) -> std::result::Result<String, String> {
+fn default_remote(repo_root: &Path, branch: &str) -> GitBridgeResult<String> {
     let key = format!("branch.{branch}.remote");
     if let Ok(remote) = git_cmd::run(repo_root, &["config", "--get", &key]) {
         let remote = remote.trim();
@@ -222,16 +224,17 @@ fn default_remote(repo_root: &Path, branch: &str) -> std::result::Result<String,
     Ok("origin".to_string())
 }
 
-fn validate_push_name<'a>(value: &'a str, label: &str) -> std::result::Result<&'a str, String> {
+fn validate_push_name<'a>(value: &'a str, label: &'static str) -> GitBridgeResult<&'a str> {
     if value.is_empty()
         || value.starts_with('-')
         || value
             .chars()
             .any(|ch| ch.is_ascii_control() || ch.is_ascii_whitespace())
     {
-        return Err(format!(
-            "Git push mirror refuses invalid {label}: {value:?}"
-        ));
+        return Err(GitBridgeError::InvalidPushName {
+            label,
+            value: value.to_string(),
+        });
     }
     Ok(value)
 }

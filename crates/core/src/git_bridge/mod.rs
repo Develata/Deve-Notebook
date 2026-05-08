@@ -5,6 +5,7 @@
 //! Git ecosystem mirror bridge. Deve ledger/source-control state remains
 //! authority; Git metadata is an optional external mirror.
 
+mod error;
 mod executor;
 mod failure_metadata;
 mod git_cmd;
