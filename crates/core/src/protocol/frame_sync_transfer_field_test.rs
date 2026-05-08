@@ -87,6 +87,48 @@ fn sync_transfer_json_accepts_legacy_debug_aliases() {
         other => panic!("expected SyncPush, got {other:?}"),
     }
 
+    let client_snapshot_legacy = serde_json::json!({
+        "SyncPushSnapshot": {
+            "peer_id": peer,
+            "repo_id": repo_id,
+            "ops": []
+        }
+    });
+    match serde_json::from_value::<ClientMessage>(client_snapshot_legacy).unwrap() {
+        ClientMessage::SyncPushSnapshot {
+            source_peer_id,
+            server_vector,
+            snapshot_kind,
+            payload,
+            ..
+        } => {
+            assert_eq!(source_peer_id, peer);
+            assert_eq!(server_vector, VersionVector::new());
+            assert_eq!(snapshot_kind, None);
+            assert!(payload.is_empty());
+        }
+        other => panic!("expected SyncPushSnapshot, got {other:?}"),
+    }
+
+    let client_snapshot_current_alias = serde_json::json!({
+        "SyncPushSnapshot": {
+            "source_peer_id": peer,
+            "repo_id": repo_id,
+            "encrypted_payload": []
+        }
+    });
+    match serde_json::from_value::<ClientMessage>(client_snapshot_current_alias).unwrap() {
+        ClientMessage::SyncPushSnapshot {
+            source_peer_id,
+            payload,
+            ..
+        } => {
+            assert_eq!(source_peer_id, peer);
+            assert!(payload.is_empty());
+        }
+        other => panic!("expected SyncPushSnapshot, got {other:?}"),
+    }
+
     let server_snapshot = serde_json::json!({
         "SyncPushSnapshot": {
             "peer_id": peer,
