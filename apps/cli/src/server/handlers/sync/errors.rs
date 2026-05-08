@@ -58,11 +58,10 @@ pub(super) fn sync_engine_failed(
     detail: impl Into<String>,
     scope_nonce: Option<u64>,
 ) {
-    let detail = detail.into();
-    send(
+    context_failure(
         ch,
-        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
         detail,
+        ServerErrorCode::StoragePersistFailed,
         scope_nonce,
     );
 }
@@ -72,11 +71,10 @@ pub(super) fn sync_payload_build_failed(
     detail: impl Into<String>,
     scope_nonce: Option<u64>,
 ) {
-    let detail = detail.into();
-    send(
+    context_failure(
         ch,
-        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
         detail,
+        ServerErrorCode::StoragePersistFailed,
         scope_nonce,
     );
 }
@@ -86,11 +84,10 @@ pub(super) fn snapshot_generation_failed(
     detail: impl Into<String>,
     scope_nonce: Option<u64>,
 ) {
-    let detail = detail.into();
-    send(
+    context_failure(
         ch,
-        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
         detail,
+        ServerErrorCode::StoragePersistFailed,
         scope_nonce,
     );
 }
@@ -113,10 +110,24 @@ pub(super) fn sync_apply_failed(
     detail: impl Into<String>,
     scope_nonce: Option<u64>,
 ) {
+    context_failure(
+        ch,
+        detail,
+        ServerErrorCode::StoragePersistFailed,
+        scope_nonce,
+    );
+}
+
+fn context_failure(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    fallback: ServerErrorCode,
+    scope_nonce: Option<u64>,
+) {
     let detail = detail.into();
     send(
         ch,
-        classify_failure_code_or(&detail, ServerErrorCode::StoragePersistFailed),
+        classify_failure_code_or(&detail, fallback),
         detail,
         scope_nonce,
     );
