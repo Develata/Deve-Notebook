@@ -41,16 +41,10 @@ pub(super) fn route_payload_message(
             repo_id,
             scope_nonce,
             branch,
-            encrypted_payload,
+            payload,
             ..
         } => {
-            dispatch_payload::handle_sync_push_message(
-                ctx,
-                repo_id,
-                branch,
-                scope_nonce,
-                &encrypted_payload,
-            );
+            dispatch_payload::handle_sync_push_message(ctx, repo_id, branch, scope_nonce, &payload);
             None
         }
         ServerMessage::KeyProvide {

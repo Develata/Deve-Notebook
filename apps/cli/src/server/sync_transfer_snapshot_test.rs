@@ -64,14 +64,14 @@ async fn snapshot_request_exports_requested_shadow_source() -> anyhow::Result<()
             scope_nonce,
             server_vector,
             snapshot_kind,
-            encrypted_payload,
+            payload,
             ..
         }) => {
             assert_eq!(source_peer_id, source_peer);
             assert_eq!(scope_nonce, 47);
             assert_eq!(server_vector.get(&source_peer), 1);
             assert_eq!(snapshot_kind.as_deref(), Some("full"));
-            assert_eq!(encrypted_payload.len(), 1);
+            assert_eq!(payload.len(), 1);
         }
         other => panic!("expected SyncPushSnapshot, got {:?}", other),
     }

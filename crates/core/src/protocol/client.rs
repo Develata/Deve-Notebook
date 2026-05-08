@@ -56,8 +56,8 @@ pub enum ClientMessage {
         server_vector: VersionVector,
         #[serde(default)]
         snapshot_kind: Option<String>,
-        #[serde(alias = "ops")]
-        encrypted_payload: Vec<EncryptedOp>,
+        #[serde(alias = "ops", alias = "encrypted_payload")]
+        payload: Vec<EncryptedOp>,
     },
     Edit {
         doc_id: DocId,

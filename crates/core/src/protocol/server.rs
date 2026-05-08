@@ -29,7 +29,7 @@ pub enum ServerMessage {
     SyncRequest { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] known_vector: VersionVector, requests: Vec<(PeerId, (u64, u64))> },
     SyncSnapshotRequest { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, #[serde(default)] known_vector: VersionVector, #[serde(default)] reason: Option<String> },
     SyncPush { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, #[serde(alias = "ops")] encrypted_payload: Vec<EncryptedOp> },
-    SyncPushSnapshot { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, #[serde(default)] server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(alias = "ops")] encrypted_payload: Vec<EncryptedOp> },
+    SyncPushSnapshot { #[serde(alias = "peer_id")] source_peer_id: PeerId, repo_id: RepoId, scope_nonce: u64, #[serde(default)] branch: Option<PeerId>, #[serde(default)] server_vector: VersionVector, #[serde(default)] snapshot_kind: Option<String>, #[serde(alias = "ops", alias = "encrypted_payload")] payload: Vec<EncryptedOp> },
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
     NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },
     Snapshot { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, content: String, base_seq: u64, version: u64, delta_ops: Vec<ConfirmedOp> },

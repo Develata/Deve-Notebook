@@ -20,6 +20,25 @@ fn sync_transfer_json_uses_plan_field_names() {
     assert!(client_value["SyncPush"].get("ops").is_none());
     assert!(client_value["SyncPush"]["encrypted_payload"].is_array());
 
+    let client_snapshot = ClientMessage::SyncPushSnapshot {
+        source_peer_id: peer.clone(),
+        repo_id,
+        server_vector: VersionVector::new(),
+        snapshot_kind: Some("full".to_string()),
+        payload: vec![],
+    };
+    let client_snapshot_value = serde_json::to_value(&client_snapshot).unwrap();
+    assert_eq!(
+        client_snapshot_value["SyncPushSnapshot"]["source_peer_id"],
+        serde_json::to_value(&peer).unwrap()
+    );
+    assert!(
+        client_snapshot_value["SyncPushSnapshot"]
+            .get("encrypted_payload")
+            .is_none()
+    );
+    assert!(client_snapshot_value["SyncPushSnapshot"]["payload"].is_array());
+
     let server = ServerMessage::SyncPushSnapshot {
         source_peer_id: peer.clone(),
         repo_id,
@@ -27,7 +46,7 @@ fn sync_transfer_json_uses_plan_field_names() {
         branch: None,
         server_vector: VersionVector::new(),
         snapshot_kind: Some("full".to_string()),
-        encrypted_payload: vec![],
+        payload: vec![],
     };
     let server_value = serde_json::to_value(&server).unwrap();
     assert_eq!(
@@ -36,7 +55,12 @@ fn sync_transfer_json_uses_plan_field_names() {
     );
     assert!(server_value["SyncPushSnapshot"].get("peer_id").is_none());
     assert!(server_value["SyncPushSnapshot"].get("ops").is_none());
-    assert!(server_value["SyncPushSnapshot"]["encrypted_payload"].is_array());
+    assert!(
+        server_value["SyncPushSnapshot"]
+            .get("encrypted_payload")
+            .is_none()
+    );
+    assert!(server_value["SyncPushSnapshot"]["payload"].is_array());
 }
 
 #[test]
@@ -75,11 +99,32 @@ fn sync_transfer_json_accepts_legacy_debug_aliases() {
     match serde_json::from_value::<ServerMessage>(server_snapshot).unwrap() {
         ServerMessage::SyncPushSnapshot {
             source_peer_id,
-            encrypted_payload,
+            payload,
             ..
         } => {
             assert_eq!(source_peer_id, peer);
-            assert!(encrypted_payload.is_empty());
+            assert!(payload.is_empty());
+        }
+        other => panic!("expected SyncPushSnapshot, got {other:?}"),
+    }
+
+    let server_snapshot_current_alias = serde_json::json!({
+        "SyncPushSnapshot": {
+            "source_peer_id": peer,
+            "repo_id": repo_id,
+            "scope_nonce": 9,
+            "branch": null,
+            "encrypted_payload": []
+        }
+    });
+    match serde_json::from_value::<ServerMessage>(server_snapshot_current_alias).unwrap() {
+        ServerMessage::SyncPushSnapshot {
+            source_peer_id,
+            payload,
+            ..
+        } => {
+            assert_eq!(source_peer_id, peer);
+            assert!(payload.is_empty());
         }
         other => panic!("expected SyncPushSnapshot, got {other:?}"),
     }

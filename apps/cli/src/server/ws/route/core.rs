@@ -64,18 +64,11 @@ async fn route_unscoped_core(
         ClientMessage::SyncPushSnapshot {
             source_peer_id,
             repo_id,
-            encrypted_payload,
+            payload,
             ..
         } => {
-            sync::handle_sync_push_snapshot(
-                state,
-                ch,
-                session,
-                source_peer_id,
-                repo_id,
-                encrypted_payload,
-            )
-            .await;
+            sync::handle_sync_push_snapshot(state, ch, session, source_peer_id, repo_id, payload)
+                .await;
         }
         ClientMessage::SyncRequest {
             repo_id, requests, ..
