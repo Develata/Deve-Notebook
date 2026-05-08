@@ -28,7 +28,12 @@ pub(super) fn build_switch_repo_callback(
         let target_repo = name.clone();
         let ws_repo_action = ws.clone();
         let action = Callback::new(move |_: ()| {
-            let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
+            let Some(switch_nonce) =
+                next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
+            else {
+                show_switch_block(set_sync_banner, "switch repo", "scope nonce exhausted");
+                return;
+            };
             prepare_scope_switch(&ws_repo_action, signals);
             signals
                 .set_pending_repo_switch

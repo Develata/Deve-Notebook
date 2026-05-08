@@ -21,7 +21,12 @@ pub(super) fn restore_session_scope(
     active_branch: Option<PeerId>,
 ) {
     if let Some(branch) = active_branch {
-        let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
+        let Some(switch_nonce) =
+            next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
+        else {
+            request_repo_list(ws, signals);
+            return;
+        };
         signals
             .set_pending_branch_switch
             .set(Some(PendingBranchTarget::Shadow(branch.to_string())));
@@ -46,7 +51,12 @@ pub(super) fn restore_session_scope(
     }
 
     if let Some(repo_name) = current_repo {
-        let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
+        let Some(switch_nonce) =
+            next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
+        else {
+            request_repo_list(ws, signals);
+            return;
+        };
         if let Some(msg) = build_switch_repo(repo_name.clone(), current_repo_id, switch_nonce) {
             signals.set_pending_repo_switch.set(Some(repo_name));
             signals

@@ -35,7 +35,12 @@ pub(super) fn build_switch_branch_callback(
         let target_peer = peer_id.clone();
         let ws_branch_action = ws.clone();
         let action = Callback::new(move |_: ()| {
-            let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
+            let Some(switch_nonce) =
+                next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
+            else {
+                show_switch_block(set_sync_banner, "switch branch", "scope nonce exhausted");
+                return;
+            };
             let pending = target_peer
                 .clone()
                 .map(PendingBranchTarget::Shadow)

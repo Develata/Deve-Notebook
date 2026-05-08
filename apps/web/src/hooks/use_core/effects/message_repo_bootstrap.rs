@@ -17,7 +17,10 @@ pub fn maybe_switch_to_first_repo(repos: &[String], ws: &WsService, signals: Cor
         return;
     }
 
-    let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
+    let Some(switch_nonce) = next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
+    else {
+        return;
+    };
     ws.clear_writer_ready();
     signals.set_handshake_ready.set(false);
     signals.set_handshake_scope_nonce.set(None);

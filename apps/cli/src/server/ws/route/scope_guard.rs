@@ -4,7 +4,7 @@
 //! Browser scope nonce guard for repo-scoped WebSocket routes.
 
 use crate::server::{channel::DualChannel, session::WsSession};
-use deve_core::protocol::{ServerError, ServerErrorCode};
+use deve_core::protocol::{ScopeNonce, ServerError, ServerErrorCode};
 
 pub(super) fn validate_browser_scope_nonce(
     session: &WsSession,
@@ -20,13 +20,14 @@ pub(super) fn validate_browser_scope_nonce(
             format!("{scope_name} scope nonce missing"),
         ));
     };
-    if session.scope_nonce() != requested_scope_nonce {
+    let current_scope_nonce = ScopeNonce::new(session.scope_nonce());
+    let requested_scope_nonce = ScopeNonce::new(requested_scope_nonce);
+    if current_scope_nonce != requested_scope_nonce {
         return Err(ServerError::with_detail(
             ServerErrorCode::ScStaleScope,
             format!(
                 "{scope_name} scope nonce is stale: current_scope_nonce={}, requested_scope_nonce={}",
-                session.scope_nonce(),
-                requested_scope_nonce
+                current_scope_nonce, requested_scope_nonce
             ),
         ));
     }

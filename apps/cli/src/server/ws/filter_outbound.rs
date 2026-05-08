@@ -18,7 +18,7 @@ impl BroadcastFilter {
             return None;
         };
 
-        Some(stamp::stamp_scope_nonce(msg, scope.scope_nonce))
+        Some(stamp::stamp_scope_nonce(msg, scope.scope_nonce.get()))
     }
 
     pub(crate) fn scoped_protocol_error(
@@ -29,7 +29,7 @@ impl BroadcastFilter {
         let scope_nonce = match &self.scope {
             None => None,
             Some(scope) => match scope.read() {
-                Ok(scope) => Some(scope.scope_nonce),
+                Ok(scope) => Some(scope.scope_nonce.get()),
                 Err(_) => {
                     tracing::error!(
                         "WS broadcast filter read lock poisoned while building scoped protocol error"

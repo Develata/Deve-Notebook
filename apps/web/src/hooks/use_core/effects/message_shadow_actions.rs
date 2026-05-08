@@ -21,9 +21,12 @@ pub fn request_shadow_list(ws: &WsService, signals: CoreSignals) {
 }
 
 pub fn recover_local_branch(ws: &WsService, signals: CoreSignals) {
+    let Some(switch_nonce) = next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
+    else {
+        return;
+    };
     ws.clear_writer_ready();
     signals.set_handshake_ready.set(false);
-    let switch_nonce = next_switch_nonce_after(signals.current_scope_nonce.get_untracked());
     signals
         .set_pending_branch_switch
         .set(Some(PendingBranchTarget::Local));
