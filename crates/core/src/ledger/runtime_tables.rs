@@ -6,50 +6,69 @@
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};
 use crate::models::deserialize_ledger_entry;
 use anyhow::{Result, anyhow};
-use redb::{Database, ReadableTable, ReadableTableMetadata, TableError};
+use redb::{Database, ReadableTable, TableHandle};
 use std::collections::BTreeMap;
 
-pub(crate) fn repair_missing_client_op_index(db: &Database) -> Result<bool> {
-    let read_txn = db.begin_read()?;
-    let mut table_missing = false;
-    match read_txn.open_table(CLIENT_OP_INDEX) {
-        Ok(table) if !table.is_empty()? => return Ok(false),
-        Ok(_) => {}
-        Err(TableError::TableDoesNotExist(_)) => table_missing = true,
-        Err(err) => return Err(err.into()),
-    }
-    drop(read_txn);
-
-    let entries = collect_client_op_entries(db)?;
-    if !table_missing && entries.is_empty() {
-        return Ok(false);
-    }
+pub(crate) fn repair_client_op_index(db: &Database) -> Result<bool> {
     let write_txn = db.begin_write()?;
+    require_write_table(
+        &write_txn,
+        LEDGER_OPS.name(),
+        "Broken client op index rebuild: ledger_ops authority table missing",
+    )?;
+    let table_missing = !write_table_exists(&write_txn, CLIENT_OP_INDEX.name())?;
+    let expected = collect_client_op_entries(&write_txn)?;
+    let mut changed = table_missing;
     {
         let mut client_ops = write_txn.open_table(CLIENT_OP_INDEX)?;
-        for (key, seq) in entries {
-            client_ops.insert(key, seq)?;
+        let mut existing = BTreeMap::new();
+        for item in client_ops.iter()? {
+            let (key, seq) = item?;
+            existing.insert(key.value(), seq.value());
         }
+        if existing != expected {
+            for key in existing.keys() {
+                if !expected.contains_key(key) {
+                    client_ops.remove(*key)?;
+                }
+            }
+            for (key, seq) in expected {
+                client_ops.insert(key, seq)?;
+            }
+            changed = true;
+        }
+    }
+    if !changed {
+        return Ok(false);
     }
     write_txn.commit()?;
     Ok(true)
 }
 
-fn collect_client_op_entries(db: &Database) -> Result<BTreeMap<(u64, u64), u64>> {
-    let read_txn = db.begin_read()?;
-    let ops = read_txn.open_table(LEDGER_OPS)?;
+fn collect_client_op_entries(
+    write_txn: &redb::WriteTransaction,
+) -> Result<BTreeMap<(u64, u64), u64>> {
+    let ops = write_txn.open_table(LEDGER_OPS)?;
     let mut entries = BTreeMap::new();
 
     for item in ops.iter()? {
         let (seq, bytes) = item?;
         let entry = deserialize_ledger_entry(bytes.value())?;
-        let (Some(doc_id), Some(client_id), Some(client_op_id)) =
-            (entry.doc_id, entry.client_id, entry.client_op_id)
-        else {
-            continue;
-        };
-        let key = (client_id, client_op_id);
         let seq = seq.value();
+        let (doc_id, client_id, client_op_id) =
+            match (entry.doc_id, entry.client_id, entry.client_op_id) {
+                (Some(doc_id), Some(client_id), Some(client_op_id)) => {
+                    (doc_id, client_id, client_op_id)
+                }
+                (Some(_), None, None) | (None, None, None) => continue,
+                _ => {
+                    return Err(anyhow!(
+                        "Broken client op index rebuild: incomplete client op metadata at seq {}",
+                        seq
+                    ));
+                }
+            };
+        let key = (client_id, client_op_id);
         if let Some(previous_seq) = entries.insert(key, seq) {
             return Err(anyhow!(
                 "Broken client op index rebuild: duplicate client op ({}, {}) at seq {} and {} while scanning doc {}",
@@ -63,4 +82,25 @@ fn collect_client_op_entries(db: &Database) -> Result<BTreeMap<(u64, u64), u64>>
     }
 
     Ok(entries)
+}
+
+fn require_write_table(
+    write_txn: &redb::WriteTransaction,
+    name: &str,
+    missing_message: &'static str,
+) -> Result<()> {
+    if write_table_exists(write_txn, name)? {
+        Ok(())
+    } else {
+        Err(anyhow!(missing_message))
+    }
+}
+
+fn write_table_exists(write_txn: &redb::WriteTransaction, name: &str) -> Result<bool> {
+    for table in write_txn.list_tables()? {
+        if table.name() == name {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }

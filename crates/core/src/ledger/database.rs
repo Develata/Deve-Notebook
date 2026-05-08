@@ -52,9 +52,9 @@ impl RepoManager {
         if repo_name == self.local_repo_name {
             return Ok(());
         }
-        if super::runtime_tables::repair_missing_client_op_index(db.as_ref())? {
+        if super::runtime_tables::repair_client_op_index(db.as_ref())? {
             tracing::warn!(
-                "Rebuilt missing client_op_index while opening local repo runtime tables: {}",
+                "Rebuilt client_op_index while opening local repo runtime tables: {}",
                 repo_name
             );
         }

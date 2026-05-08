@@ -139,7 +139,7 @@ pub fn init(
 
     // 4. 初始化核心表
     init_core_tables(local_db.as_ref())?;
-    super::runtime_tables::repair_missing_client_op_index(local_db.as_ref())?;
+    super::runtime_tables::repair_client_op_index(local_db.as_ref())?;
 
     // 5. 初始化 Source Control 表
     source_control::init_tables(local_db.as_ref())?;
