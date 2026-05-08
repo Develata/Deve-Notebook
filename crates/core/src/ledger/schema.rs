@@ -23,13 +23,13 @@ pub const PATH_TO_NODEID: TableDefinition<&str, u128> = TableDefinition::new("pa
 // FileNodeId (u128) -> NodeId (u128) - For Rename Detection (File only)
 pub const INODE_TO_NODEID: TableDefinition<u128, u128> = TableDefinition::new("inode_to_nodeid");
 
-// Sequence (u64) -> LedgerEntry (Bytes)
+// GlobalSeq storage key (u64) -> LedgerEntry (Bytes)
 pub const LEDGER_OPS: TableDefinition<u64, &[u8]> = TableDefinition::new("ledger_ops");
 
-// DocId (u128) -> Vec<u64> (Sequence Numbers) - Secondary Index
+// DocId (u128) -> Vec<u64> (GlobalSeq storage keys) - Secondary Index
 pub const DOC_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("doc_ops");
 
-// NodeId (u128) -> Vec<u64> (Structure Fact Sequence Numbers)
+// NodeId (u128) -> Vec<u64> (Structure Fact GlobalSeq storage keys)
 pub const NODE_OPS: MultimapTableDefinition<u128, u64> = MultimapTableDefinition::new("node_ops");
 
 // DocId (u128) -> (Sequence (u64), Content (String)) - We might store multiple snapshots?

@@ -1,10 +1,11 @@
 use super::validate;
+use crate::ledger::GlobalSeq;
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
 use crate::models::{DocId, LedgerEntry, LedgerEvent, PeerId, deserialize_ledger_entry};
 use anyhow::{Result, anyhow};
 use redb::{Database, ReadableMultimapTable, ReadableTable};
 
-/// Returns: `(GlobalSeq, LocalSeq)`
+/// Returns: `(GlobalSeq storage key, LocalSeq)`.
 pub fn append_generated_op(
     db: &Database,
     doc_id: DocId,
@@ -62,22 +63,31 @@ fn append_generated_op_inner(
     let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
     let mut node_ops = write_txn.open_multimap_table(NODE_OPS)?;
     let mut client_ops = write_txn.open_table(CLIENT_OP_INDEX)?;
-    let last_global_seq = ops.last()?.map(|(k, _)| k.value()).unwrap_or(0u64);
-    let new_global_seq = last_global_seq + 1;
+    let last_global_seq = ops
+        .last()?
+        .map(|(k, _)| GlobalSeq::from_storage_key(k.value()))
+        .unwrap_or(GlobalSeq::ZERO);
+    let new_global_seq = last_global_seq
+        .next()
+        .ok_or_else(|| anyhow!("GlobalSeq overflow"))?;
+    let new_global_seq_key = new_global_seq.storage_key();
     let bytes = bincode::serialize(&entry)?;
 
-    ops.insert(new_global_seq, bytes.as_slice())?;
+    ops.insert(new_global_seq_key, bytes.as_slice())?;
     if let Some(doc_id) = entry.doc_id {
-        doc_ops.insert(doc_id.as_u128(), new_global_seq)?;
+        doc_ops.insert(doc_id.as_u128(), new_global_seq_key)?;
     }
     if let Some(node_id) = entry.structure_node_id() {
-        node_ops.insert(node_id.as_u128(), new_global_seq)?;
+        node_ops.insert(node_id.as_u128(), new_global_seq_key)?;
     }
     if let Some((client_id, client_op_id)) = client_ref {
         let doc_id = entry
             .doc_id
             .ok_or_else(|| anyhow!("client op missing doc id"))?;
-        client_ops.insert((doc_id.as_u128(), client_id, client_op_id), new_global_seq)?;
+        client_ops.insert(
+            (doc_id.as_u128(), client_id, client_op_id),
+            new_global_seq_key,
+        )?;
     }
     peer_seqs.insert(key, next_local_seq)?;
     drop(peer_seqs);
@@ -86,7 +96,7 @@ fn append_generated_op_inner(
     drop(node_ops);
     drop(client_ops);
     write_txn.commit()?;
-    Ok((new_global_seq, next_local_seq))
+    Ok((new_global_seq_key, next_local_seq))
 }
 
 fn ensure_content_entry(entry: &LedgerEntry, expected_doc_id: DocId) -> Result<()> {
