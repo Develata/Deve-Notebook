@@ -45,6 +45,7 @@ impl RhaiRuntime {
         let mut engine = Engine::new();
         engine.set_max_expr_depths(128, 128);
         engine.set_max_operations(MAX_RHAI_OPERATIONS);
+        engine.disable_symbol("eval");
 
         // 配置模块解析器 (仅非 WASM 环境支持文件系统)
         #[cfg(not(target_arch = "wasm32"))]
@@ -176,5 +177,19 @@ mod tests {
             .load(manifest_deny, "fn read(p) { fs_read(p) }")
             .unwrap();
         assert!(rt_deny.call("read", vec![path_str.into()]).is_err());
+    }
+
+    #[test]
+    fn rhai_eval_symbol_is_disabled() {
+        let manifest = PluginManifest {
+            id: "eval-denied".into(),
+            name: "Eval Denied".into(),
+            version: "0.1".into(),
+            entry: "m.rhai".into(),
+            capabilities: Default::default(),
+        };
+        let mut rt = RhaiRuntime::new(manifest.clone(), PathBuf::from("."));
+
+        assert!(rt.load(manifest, r#"fn run() { eval("40 + 2") }"#).is_err());
     }
 }

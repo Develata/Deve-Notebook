@@ -19,11 +19,11 @@ use crate::plugin::manifest::PluginManifest;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::plugin::runtime::{PluginRuntime, RhaiRuntime};
 #[cfg(not(target_arch = "wasm32"))]
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs;
 #[cfg(not(target_arch = "wasm32"))]
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub struct PluginLoader {
@@ -97,7 +97,7 @@ impl PluginLoader {
             .with_context(|| "Failed to parse manifest.json")?;
 
         // 2. Read entry script
-        let entry_path = path.join(&manifest.entry);
+        let entry_path = validate_plugin_entry(path, &manifest.entry)?;
         let script_content = fs::read_to_string(&entry_path)
             .with_context(|| format!("Missing entry script '{}' in {:?}", manifest.entry, path))?;
 
@@ -107,6 +107,57 @@ impl PluginLoader {
 
         Ok(Box::new(runtime))
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn validate_plugin_entry(plugin_root: &Path, entry: &str) -> Result<PathBuf> {
+    if entry.is_empty() {
+        bail!("Invalid plugin entry: entry must not be empty");
+    }
+    if entry.contains('\\') {
+        bail!(
+            "Invalid plugin entry '{}': use forward-slash relative paths",
+            entry
+        );
+    }
+
+    let entry_path = Path::new(entry);
+    if entry_path.is_absolute() {
+        bail!(
+            "Invalid plugin entry '{}': absolute paths are not allowed",
+            entry
+        );
+    }
+
+    let mut has_component = false;
+    for component in entry_path.components() {
+        has_component = true;
+        if !matches!(component, Component::Normal(_)) {
+            bail!(
+                "Invalid plugin entry '{}': only normal relative path segments are allowed",
+                entry
+            );
+        }
+    }
+    if !has_component {
+        bail!("Invalid plugin entry: entry must name a Rhai script");
+    }
+
+    if entry_path.extension().and_then(|ext| ext.to_str()) != Some("rhai") {
+        bail!(
+            "Invalid plugin entry '{}': entry must be a .rhai script",
+            entry
+        );
+    }
+
+    let resolved = plugin_root.join(entry_path);
+    if !resolved.starts_with(plugin_root) {
+        bail!(
+            "Invalid plugin entry '{}': entry must stay inside plugin directory",
+            entry
+        );
+    }
+    Ok(resolved)
 }
 
 #[cfg(test)]
@@ -221,5 +272,85 @@ mod tests {
             err.to_string().contains("Failed to load plugin at")
                 || err.to_string().contains("Missing entry script")
         );
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn load_plugin_rejects_entry_parent_traversal() {
+        let dir = tempdir().expect("tempdir");
+        let plugin_dir = dir.path().join("bad-plugin");
+        fs::create_dir(&plugin_dir).expect("mkdir plugin");
+        fs::write(
+            plugin_dir.join("manifest.json"),
+            r#"{
+                "id": "bad-plugin",
+                "name": "Bad Plugin",
+                "version": "1.0.0",
+                "entry": "../outside.rhai"
+            }"#,
+        )
+        .expect("write manifest");
+        fs::write(dir.path().join("outside.rhai"), "fn hello() { \"bad\" }")
+            .expect("write outside");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_plugin(&plugin_dir) {
+            Ok(_) => panic!("entry traversal must be rejected"),
+            Err(err) => err,
+        };
+
+        assert!(err.to_string().contains("Invalid plugin entry"));
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn load_plugin_rejects_non_rhai_entry() {
+        let dir = tempdir().expect("tempdir");
+        let plugin_dir = dir.path().join("bad-plugin");
+        fs::create_dir(&plugin_dir).expect("mkdir plugin");
+        fs::write(
+            plugin_dir.join("manifest.json"),
+            r#"{
+                "id": "bad-plugin",
+                "name": "Bad Plugin",
+                "version": "1.0.0",
+                "entry": "index.txt"
+            }"#,
+        )
+        .expect("write manifest");
+        fs::write(plugin_dir.join("index.txt"), "fn hello() { \"bad\" }").expect("write entry");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_plugin(&plugin_dir) {
+            Ok(_) => panic!("non-rhai entry must be rejected"),
+            Err(err) => err,
+        };
+
+        assert!(err.to_string().contains(".rhai"));
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn load_plugin_allows_nested_rhai_entry() {
+        let dir = tempdir().expect("tempdir");
+        let plugin_dir = dir.path().join("nested-plugin");
+        let script_dir = plugin_dir.join("scripts");
+        fs::create_dir_all(&script_dir).expect("mkdir scripts");
+        fs::write(
+            plugin_dir.join("manifest.json"),
+            r#"{
+                "id": "nested-plugin",
+                "name": "Nested Plugin",
+                "version": "1.0.0",
+                "entry": "scripts/index.rhai"
+            }"#,
+        )
+        .expect("write manifest");
+        fs::write(script_dir.join("index.rhai"), "fn hello() { \"ok\" }").expect("write entry");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let plugin = loader.load_plugin(&plugin_dir).expect("load plugin");
+
+        assert_eq!(plugin.manifest().id, "nested-plugin");
     }
 }

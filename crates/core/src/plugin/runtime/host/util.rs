@@ -40,7 +40,11 @@ pub fn register_util_api(engine: &mut Engine, caps: Arc<Capability>) {
         "env",
         move |key: &str| -> Result<rhai::Dynamic, Box<EvalAltResult>> {
             if !caps_env.check_env(key) {
-                return Ok(rhai::Dynamic::UNIT); // 未授权返回 Unit
+                return Err(format!(
+                    "Permission denied: env access to '{}' is not allowed by manifest",
+                    key
+                )
+                .into());
             }
             match std::env::var(key) {
                 Ok(v) => Ok(v.into()),
@@ -55,4 +59,46 @@ pub fn register_log_api(engine: &mut Engine) {
     engine.register_fn("log_info", |msg: &str| {
         println!("[Plugin Log] {}", msg);
     });
+}
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests {
+    use super::*;
+
+    static ENV_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn env_denies_unlisted_key() {
+        let mut engine = Engine::new();
+        register_util_api(&mut engine, Arc::new(Capability::default()));
+
+        let err = engine
+            .eval::<rhai::Dynamic>(r#"env("SECRET_KEY")"#)
+            .expect_err("unlisted env key must fail closed");
+
+        assert!(err.to_string().contains("Permission denied"));
+    }
+
+    #[test]
+    fn env_returns_unit_for_allowed_unset_key() {
+        let _guard = ENV_TEST_LOCK.lock().expect("env test lock");
+        let key = format!("DEVE_TEST_PLUGIN_ENV_UNSET_{}", std::process::id());
+        // SAFETY: This test serializes access through ENV_TEST_LOCK and uses a
+        // process-unique key that production code does not read.
+        unsafe {
+            std::env::remove_var(&key);
+        }
+
+        let mut cap = Capability::default();
+        cap.allow_env.push(key.clone());
+        let mut engine = Engine::new();
+        register_util_api(&mut engine, Arc::new(cap));
+
+        let value = engine
+            .eval::<rhai::Dynamic>(&format!(r#"env("{}")"#, key))
+            .expect("allowed unset env returns Unit");
+
+        assert!(value.is_unit());
+    }
 }

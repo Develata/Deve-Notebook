@@ -19,6 +19,8 @@ use aes_gcm::{
 };
 use serde::{Deserialize, Serialize};
 
+const AES_GCM_NONCE_LEN: usize = 12;
+
 /// 仓库密钥 (AES-256)
 ///
 /// **用途**:
@@ -83,6 +85,13 @@ impl RepoKey {
 
     /// 解密
     pub fn decrypt(&self, enc: &EncryptedOp) -> anyhow::Result<LedgerEntry> {
+        if enc.nonce.len() != AES_GCM_NONCE_LEN {
+            return Err(anyhow::anyhow!(
+                "Invalid nonce length: expected {} bytes, got {}",
+                AES_GCM_NONCE_LEN,
+                enc.nonce.len()
+            ));
+        }
         let nonce = Nonce::from_slice(&enc.nonce);
         let plaintext = self
             .cipher
@@ -139,5 +148,30 @@ mod tests {
         // Decrypt
         let dec = key.decrypt(&enc).unwrap();
         assert_eq!(dec.doc_id, entry.doc_id);
+    }
+
+    #[test]
+    fn decrypt_rejects_invalid_nonce_length() {
+        let key = RepoKey::generate();
+        let entry = LedgerEntry::new_content(
+            DocId::new(),
+            Op::Insert {
+                pos: 0,
+                content: "Secret".into(),
+            },
+            12345,
+            crate::models::PeerId::new("test-peer"),
+            1,
+            None,
+            None,
+        );
+
+        let mut enc = key.encrypt(&entry, 100).unwrap();
+        enc.nonce.truncate(AES_GCM_NONCE_LEN - 1);
+
+        let err = key
+            .decrypt(&enc)
+            .expect_err("invalid nonce length must fail closed");
+        assert!(err.to_string().contains("Invalid nonce length"));
     }
 }

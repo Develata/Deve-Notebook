@@ -55,7 +55,7 @@ pub struct PendingFsEntry {
     pub doc_id: Option<DocId>,
     /// 变更类型
     pub change_type: ChangeStatus,
-    /// 内容 SHA-256 哈希 (16 字节前缀，hex 编码)
+    /// 内容 SipHash 指纹 (64-bit, hex 编码；非密码学安全)
     pub content_hash: String,
     /// 检测时间戳 (毫秒)
     pub detected_at: i64,

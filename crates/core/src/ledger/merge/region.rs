@@ -29,10 +29,10 @@ pub(super) fn merge_regions(
 
     while i < local_edits.len() || j < remote_edits.len() {
         let region = next_region(base, local_edits, remote_edits, &mut i, &mut j);
-        match region.merge_edit {
-            Some(edit) => merged_edits.push(edit),
-            None if region.conflict.is_some() => conflicts.push(region.conflict.unwrap()),
-            None => {}
+        match (region.merge_edit, region.conflict) {
+            (Some(edit), _) => merged_edits.push(edit),
+            (None, Some(conflict)) => conflicts.push(conflict),
+            (None, None) => {}
         }
     }
 
