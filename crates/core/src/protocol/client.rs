@@ -149,7 +149,7 @@ pub enum ClientMessage {
     },
     ResolveMergeConflict {
         doc_id: DocId,
-        action: super::server::MergeConflictAction,
+        action: super::merge_conflict::MergeConflictAction,
         #[serde(default)]
         result_content: Option<String>,
         #[serde(default)]

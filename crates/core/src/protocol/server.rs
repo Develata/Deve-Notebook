@@ -6,6 +6,7 @@
 
 use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;
+use super::merge_conflict::MergeConflictAction;
 use crate::merge::ConflictHunk;
 use crate::models::{DocId, PeerId, RepoId, VersionVector};
 use crate::protocol::ScopeNonce;
@@ -13,13 +14,6 @@ use crate::protocol::SyncPushHeader;
 use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MergeConflictAction {
-    AcceptCurrent,
-    AcceptIncoming,
-    AcceptBoth,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[rustfmt::skip]
