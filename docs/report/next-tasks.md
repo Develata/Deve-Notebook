@@ -1,6 +1,6 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-06
+> 更新日期：2026-05-08
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
@@ -8,8 +8,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Near-fuse cohesion triage | P2 | `scripts/plan-coverage.sh` soft file list | 只按职责边界拆分或保留说明，不做纯行数拆分；hard fuse 继续保持 0 |
-| 2 | Mainline implementation gap scan | P2 | plan/features/acceptance/current code | 基于最新 baseline 选择下一批会影响用户验收的代码实现项 |
+| 1 | Mainline implementation gap scan | P2 | plan/features/acceptance/current code | 基于最新 baseline 选择下一批会影响用户验收的代码实现项 |
+
+## 最近完成
+
+- Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `merge_test.rs` 场景测试上下文，不做纯行数拆分。
 
 ## 当前基线
 
