@@ -21,7 +21,8 @@ pub(crate) use super::database_cache::{register_database, relocate_database_path
 pub(crate) use super::database_open::{cached_database, cached_or_create_database};
 use crate::models::PeerId;
 use crate::models::RepoId;
-use anyhow::{Context, Result};
+use crate::utils::fs::checked_exists;
+use anyhow::Result;
 use redb::Database;
 use std::path::Path;
 use std::sync::Arc;
@@ -216,11 +217,6 @@ impl RepoManager {
     fn get_or_open_db_at(&self, db_path: &Path) -> Result<Arc<Database>> {
         cached_database(db_path)
     }
-}
-
-fn checked_exists(path: &Path, context: &str) -> Result<bool> {
-    path.try_exists()
-        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }
 
 #[cfg(test)]

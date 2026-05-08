@@ -6,6 +6,7 @@ use super::persist_guard::PersistGuard;
 use super::projection_plan;
 use super::rebuild;
 use crate::ledger::RepoManager;
+use crate::utils::fs::checked_exists;
 use anyhow::Result;
 use std::path::Path;
 use tracing::warn;
@@ -58,7 +59,7 @@ pub(super) fn materialize_local_repo(
 
     for (repo_path, doc_id) in plan.docs {
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
-        if super::checked_exists(&file_path, "workspace path while materializing projection")? {
+        if checked_exists(&file_path, "workspace path while materializing projection")? {
             continue;
         }
         let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;

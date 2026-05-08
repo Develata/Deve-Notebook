@@ -39,6 +39,7 @@ use super::init_reuse::should_reuse_existing_repo;
 use super::node_check;
 use super::schema::*;
 use super::source_control;
+use crate::utils::fs::checked_exists;
 
 /// 初始化 RepoManager 实例
 ///
@@ -195,11 +196,6 @@ pub fn init(
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during init")?;
     Ok(repo)
-}
-
-fn checked_exists(path: &Path, context: &str) -> Result<bool> {
-    path.try_exists()
-        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }
 
 /// 初始化本地数据库的核心表

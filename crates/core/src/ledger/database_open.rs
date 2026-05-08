@@ -8,7 +8,8 @@
 use super::database_cache::{
     CachedDatabaseEntry, OPENED_DBS, current_file_stamp, reusable_cached_database,
 };
-use anyhow::{Context, Result};
+use crate::utils::fs::checked_exists;
+use anyhow::Result;
 use redb::Database;
 use std::path::Path;
 use std::sync::Arc;
@@ -50,9 +51,4 @@ pub(crate) fn cached_or_create_database(db_path: &Path) -> Result<Arc<Database>>
 
     tracing::info!("Opened and cached database: {:?}", db_path);
     Ok(arc_db)
-}
-
-fn checked_exists(path: &Path, context: &str) -> Result<bool> {
-    path.try_exists()
-        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }

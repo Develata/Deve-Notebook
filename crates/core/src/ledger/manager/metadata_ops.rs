@@ -13,8 +13,8 @@
 use crate::ledger::RepoManager;
 use crate::ledger::{doc_lookup, inode_index, node_meta};
 use crate::models::{DocId, NodeMeta};
-use anyhow::{Context, Result};
-use std::path::Path;
+use crate::utils::fs::checked_exists;
+use anyhow::Result;
 
 impl RepoManager {
     /// 根据路径获取 DocId
@@ -96,9 +96,4 @@ impl RepoManager {
         };
         self.bind_inode_in_local_repo(repo_name, &inode, doc_id)
     }
-}
-
-fn checked_exists(path: &Path, context: &str) -> Result<bool> {
-    path.try_exists()
-        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }

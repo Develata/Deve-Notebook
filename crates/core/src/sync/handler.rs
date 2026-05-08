@@ -10,6 +10,7 @@
 use crate::ledger::RepoManager;
 use crate::protocol::ServerMessage;
 use crate::source_control::ChangeStatus;
+use crate::utils::fs::checked_exists;
 use crate::vfs::Vfs;
 use anyhow::Result;
 use std::sync::Arc;
@@ -44,7 +45,7 @@ impl<'a> FsEventHandler<'a> {
             .repo
             .local_repo_workspace_path(self.repo_name, repo_path)?;
 
-        if !super::checked_exists(&file_path, "workspace path while handling fs event")? {
+        if !checked_exists(&file_path, "workspace path while handling fs event")? {
             return self.handle_delete(repo_path);
         }
 

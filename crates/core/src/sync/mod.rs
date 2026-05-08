@@ -66,8 +66,6 @@ use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
-use anyhow::{Context, Result};
-#[cfg(not(target_arch = "wasm32"))]
 use dir_refresh_guard::DirRefreshGuard;
 #[cfg(not(target_arch = "wasm32"))]
 pub use manager_projection::diagnose_projection_local_repo;
@@ -93,10 +91,4 @@ pub struct SyncManager {
     dir_refresh_guard: DirRefreshGuard,
     persist_guard: Arc<PersistGuard>,
     projection_health: ProjectionHealth,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub(super) fn checked_exists(path: &std::path::Path, context: &str) -> Result<bool> {
-    path.try_exists()
-        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }

@@ -14,9 +14,8 @@
 //! 影子库用于存储远端 Peer 的数据副本，实现 Trinity Isolation 架构中的
 //! "Receive Only" 隔离策略。每个 Peer 拥有独立的 `.redb` 文件。
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
 use super::RepoInfo;
@@ -26,6 +25,7 @@ use super::ops;
 use super::shadow;
 use crate::ledger::source_control;
 use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId, RepoType};
+use crate::utils::fs::checked_exists;
 use redb::Database;
 
 type ShadowRepoMap = HashMap<PeerId, HashMap<RepoId, Arc<Database>>>;
@@ -170,11 +170,6 @@ impl RepoManager {
             .write()
             .map_err(|_| anyhow!("Shadow DB registry lock poisoned"))
     }
-}
-
-fn checked_exists(path: &Path, context: &str) -> Result<bool> {
-    path.try_exists()
-        .with_context(|| format!("Failed to stat {}: {:?}", context, path))
 }
 
 #[cfg(test)]

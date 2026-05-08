@@ -3,6 +3,7 @@
 
 use super::{SnapshotPolicy, SyncManager, rebuild};
 use crate::models::DocId;
+use crate::utils::fs::checked_exists;
 use anyhow::{Result, anyhow};
 use tracing::{info, warn};
 
@@ -67,7 +68,7 @@ pub(super) fn remove_projection_path(
     path: &str,
 ) -> Result<()> {
     let file_path = sync.repo.local_repo_workspace_path(repo_name, path)?;
-    if !super::checked_exists(&file_path, "workspace path while removing projection")? {
+    if !checked_exists(&file_path, "workspace path while removing projection")? {
         return Ok(());
     }
     sync.repo.record_projection_delete(repo_name, path);
