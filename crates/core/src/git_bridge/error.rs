@@ -4,6 +4,7 @@
 pub(super) type GitBridgeResult<T> = std::result::Result<T, GitBridgeError>;
 pub(super) type GitCommandResult<T> = std::result::Result<T, GitCommandError>;
 pub(super) type GitPreflightResult<T> = std::result::Result<T, GitPreflightError>;
+pub(super) type GitReplayResult<T> = std::result::Result<T, GitReplayError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -104,6 +105,22 @@ impl From<GitPreflightError> for String {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitReplayError {
+    #[error(transparent)]
+    GitCommand(#[from] GitCommandError),
+    #[error("failed to read mirror .gitignore: {message}")]
+    ReadGitignore { message: String },
+    #[error("Git mirror refuses unsafe projection path: {path}")]
+    UnsafeProjectionPath { path: String },
+}
+
+impl From<GitReplayError> for String {
+    fn from(err: GitReplayError) -> Self {
+        err.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GitCommandError;
@@ -156,6 +173,24 @@ mod tests {
         assert_eq!(
             super::GitPreflightError::PendingSourceControlChanges { count: 2 }.to_string(),
             "Git mirror refuses to run with 2 pending source-control change(s)"
+        );
+    }
+
+    #[test]
+    fn git_replay_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitReplayError::UnsafeProjectionPath {
+                path: ".notegit/state".into(),
+            }
+            .to_string(),
+            "Git mirror refuses unsafe projection path: .notegit/state"
+        );
+        assert_eq!(
+            super::GitReplayError::ReadGitignore {
+                message: "missing".into(),
+            }
+            .to_string(),
+            "failed to read mirror .gitignore: missing"
         );
     }
 }
