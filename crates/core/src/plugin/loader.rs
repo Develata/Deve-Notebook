@@ -304,6 +304,61 @@ mod tests {
 
     #[test]
     #[cfg(not(target_arch = "wasm32"))]
+    fn load_plugin_rejects_absolute_entry_path() {
+        let dir = tempdir().expect("tempdir");
+        let plugin_dir = dir.path().join("bad-plugin");
+        fs::create_dir(&plugin_dir).expect("mkdir plugin");
+        let outside = dir
+            .path()
+            .join("outside.rhai")
+            .to_string_lossy()
+            .replace('\\', "/");
+        let manifest_content = serde_json::json!({
+            "id": "bad-plugin",
+            "name": "Bad Plugin",
+            "version": "1.0.0",
+            "entry": outside
+        })
+        .to_string();
+        fs::write(plugin_dir.join("manifest.json"), manifest_content).expect("write manifest");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_plugin(&plugin_dir) {
+            Ok(_) => panic!("absolute entry path must be rejected"),
+            Err(err) => err,
+        };
+
+        assert!(err.to_string().contains("absolute paths are not allowed"));
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn load_plugin_rejects_backslash_entry_path() {
+        let dir = tempdir().expect("tempdir");
+        let plugin_dir = dir.path().join("bad-plugin");
+        fs::create_dir(&plugin_dir).expect("mkdir plugin");
+        fs::write(
+            plugin_dir.join("manifest.json"),
+            r#"{
+                "id": "bad-plugin",
+                "name": "Bad Plugin",
+                "version": "1.0.0",
+                "entry": "scripts\\index.rhai"
+            }"#,
+        )
+        .expect("write manifest");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_plugin(&plugin_dir) {
+            Ok(_) => panic!("backslash entry path must be rejected"),
+            Err(err) => err,
+        };
+
+        assert!(err.to_string().contains("forward-slash relative paths"));
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
     fn load_plugin_rejects_non_rhai_entry() {
         let dir = tempdir().expect("tempdir");
         let plugin_dir = dir.path().join("bad-plugin");
