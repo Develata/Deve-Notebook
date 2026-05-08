@@ -6,6 +6,7 @@ use anyhow::{Result, anyhow};
 use crate::ledger::listing::RepoListing;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
+use crate::ledger::traits::RepoSelector;
 use crate::models::RepoId;
 
 #[derive(Default)]
@@ -189,6 +190,10 @@ impl RepoManager {
     ) -> Result<String> {
         let candidates = self.resolve_local_repo_candidates_with_repair(repo_id, repo_name)?;
         self.select_local_repo_name_for_execution(&candidates)
+    }
+
+    pub fn resolve_local_repo_selector_for_execution(&self, repo: &RepoSelector) -> Result<String> {
+        self.resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())
     }
 }
 
