@@ -38,20 +38,10 @@ pub(super) fn classify_failure_code(detail: &str) -> ServerErrorCode {
     if is_repo_context_invalid(&lower) {
         return ServerErrorCode::ScRepoContextInvalid;
     }
-    if is_peer_auth_failure(&lower) {
-        return ServerErrorCode::SyncPeerUnauthenticated;
-    }
     if is_sync_storage_failure(&lower) {
         return ServerErrorCode::StoragePersistFailed;
     }
     ServerErrorCode::RequestFailed
-}
-
-fn is_peer_auth_failure(lower: &str) -> bool {
-    lower.contains("signature")
-        || lower.contains("verify")
-        || lower.contains("public key")
-        || lower.contains("unauthenticated")
 }
 
 fn is_sync_storage_failure(lower: &str) -> bool {

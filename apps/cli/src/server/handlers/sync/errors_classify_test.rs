@@ -5,19 +5,25 @@ use super::classify_failure_code;
 use deve_core::protocol::ServerErrorCode;
 
 #[test]
-fn classifies_signature_failures_as_peer_unauthenticated() {
-    assert_eq!(
-        classify_failure_code("Handshake failed: signature verification failed"),
-        ServerErrorCode::SyncPeerUnauthenticated
-    );
-}
-
-#[test]
 fn generic_classifier_does_not_map_peer_id_mismatch_by_string() {
     assert_eq!(
         classify_failure_code("Handshake failed: PeerID mismatch: claimed a, derived b"),
         ServerErrorCode::RequestFailed
     );
+}
+
+#[test]
+fn generic_classifier_does_not_map_auth_words_by_string() {
+    for detail in [
+        "Handshake failed: signature verification failed",
+        "Failed to verify remote public key cache",
+        "Remote peer unauthenticated",
+    ] {
+        assert_eq!(
+            classify_failure_code(detail),
+            ServerErrorCode::RequestFailed
+        );
+    }
 }
 
 #[test]
