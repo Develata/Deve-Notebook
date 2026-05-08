@@ -6,11 +6,13 @@
 //! Explicit Git import apply. It writes only Source Control pending state;
 //! ledger commit authority remains the normal Stage -> Commit workflow.
 
+use super::error::{GitImportApplyError, GitImportApplyResult};
 use super::import_plan::{GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, plan_import};
 use crate::ledger::RepoManager;
+use crate::models::DocId;
 use crate::source_control::{ChangeStatus, conflict, pending_fs, staging};
 use crate::utils::path::join_normalized;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -36,10 +38,13 @@ pub fn apply_import(
         for entry in &plan.entries {
             match build_pending_entry(repo, repo_name, repo_root, entry) {
                 Ok(candidate) => candidates.push(candidate),
-                Err(reason) => apply_blockers.push(GitImportPlanBlocker {
-                    path: entry.path.clone(),
-                    reason,
-                }),
+                Err(reason) => {
+                    let reason: String = reason.into();
+                    apply_blockers.push(GitImportPlanBlocker {
+                        path: entry.path.clone(),
+                        reason,
+                    });
+                }
             }
         }
     }
@@ -67,7 +72,7 @@ fn build_pending_entry(
     repo_name: &str,
     repo_root: &Path,
     entry: &GitImportPlanEntry,
-) -> std::result::Result<pending_fs::PendingFsEntry, String> {
+) -> GitImportApplyResult<pending_fs::PendingFsEntry> {
     let content_hash = content_hash_for_entry(repo_root, entry)?;
     let doc_id = resolve_import_doc_id(repo, repo_name, entry)?;
     let has_conflict = match doc_id {
@@ -75,11 +80,9 @@ fn build_pending_entry(
             .run_on_local_repo(repo_name, |db| {
                 conflict::check_conflict(db, doc_id, &content_hash)
             })
-            .map_err(|err| {
-                format!(
-                    "failed to check Git import conflict for {}: {err}",
-                    entry.path
-                )
+            .map_err(|err| GitImportApplyError::ConflictCheck {
+                path: entry.path.clone(),
+                message: err.to_string(),
             })?,
         None => false,
     };
@@ -97,14 +100,17 @@ fn build_pending_entry(
 fn content_hash_for_entry(
     repo_root: &Path,
     entry: &GitImportPlanEntry,
-) -> std::result::Result<String, String> {
+) -> GitImportApplyResult<String> {
     if entry.status == ChangeStatus::Deleted {
         return Ok(String::new());
     }
     let path = join_normalized(repo_root, &entry.path);
-    let content = std::fs::read_to_string(&path)
-        .with_context(|| format!("failed to read imported Git worktree file {}", entry.path))
-        .map_err(|err| err.to_string())?;
+    let content = std::fs::read_to_string(&path).map_err(|err| {
+        GitImportApplyError::ReadImportedWorktreeFile {
+            path: entry.path.clone(),
+            message: err.to_string(),
+        }
+    })?;
     Ok(pending_fs::content_hash(&content))
 }
 
@@ -112,32 +118,24 @@ fn resolve_import_doc_id(
     repo: &RepoManager,
     repo_name: &str,
     entry: &GitImportPlanEntry,
-) -> std::result::Result<Option<crate::models::DocId>, String> {
+) -> GitImportApplyResult<Option<DocId>> {
     match entry.status {
         ChangeStatus::Added => {
-            if repo
-                .get_tracked_docid_in_local_repo(repo_name, &entry.path)
-                .map_err(|err| format!("failed to inspect tracked path {}: {err}", entry.path))?
-                .is_some()
-            {
-                return Err(format!(
-                    "Git import refuses added path already tracked by Deve: {}",
-                    entry.path
-                ));
+            if tracked_doc_id(repo, repo_name, &entry.path)?.is_some() {
+                return Err(GitImportApplyError::AddedPathAlreadyTracked {
+                    path: entry.path.clone(),
+                });
             }
             Ok(None)
         }
-        ChangeStatus::Modified | ChangeStatus::Deleted => repo
-            .get_tracked_docid_in_local_repo(repo_name, &entry.path)
-            .map_err(|err| format!("failed to inspect tracked path {}: {err}", entry.path))?
-            .ok_or_else(|| {
-                format!(
-                    "Git import requires tracked Deve doc for {} path: {}",
-                    change_status_label(entry.status),
-                    entry.path
-                )
-            })
-            .map(Some),
+        ChangeStatus::Modified | ChangeStatus::Deleted => {
+            tracked_doc_id(repo, repo_name, &entry.path)?
+                .ok_or_else(|| GitImportApplyError::MissingTrackedDoc {
+                    status: change_status_label(entry.status),
+                    path: entry.path.clone(),
+                })
+                .map(Some)
+        }
         ChangeStatus::Renamed => resolve_rename_doc_id(repo, repo_name, entry),
     }
 }
@@ -146,28 +144,37 @@ fn resolve_rename_doc_id(
     repo: &RepoManager,
     repo_name: &str,
     entry: &GitImportPlanEntry,
-) -> std::result::Result<Option<crate::models::DocId>, String> {
-    let previous_path = entry
-        .previous_path
-        .as_deref()
-        .ok_or_else(|| format!("Git import rename is missing previous path: {}", entry.path))?;
-    let doc_id = repo
-        .get_tracked_docid_in_local_repo(repo_name, previous_path)
-        .map_err(|err| format!("failed to inspect tracked path {previous_path}: {err}"))?
-        .ok_or_else(|| {
-            format!("Git import requires tracked Deve doc for renamed path: {previous_path}")
-        })?;
-    if let Some(current_doc) = repo
-        .get_tracked_docid_in_local_repo(repo_name, &entry.path)
-        .map_err(|err| format!("failed to inspect tracked path {}: {err}", entry.path))?
+) -> GitImportApplyResult<Option<DocId>> {
+    let previous_path = entry.previous_path.as_deref().ok_or_else(|| {
+        GitImportApplyError::RenameMissingPreviousPath {
+            path: entry.path.clone(),
+        }
+    })?;
+    let doc_id = tracked_doc_id(repo, repo_name, previous_path)?.ok_or_else(|| {
+        GitImportApplyError::RenameMissingTrackedDoc {
+            previous_path: previous_path.to_string(),
+        }
+    })?;
+    if let Some(current_doc) = tracked_doc_id(repo, repo_name, &entry.path)?
         && current_doc != doc_id
     {
-        return Err(format!(
-            "Git import rename target is already tracked by another Deve doc: {}",
-            entry.path
-        ));
+        return Err(GitImportApplyError::RenameTargetAlreadyTracked {
+            path: entry.path.clone(),
+        });
     }
     Ok(Some(doc_id))
+}
+
+fn tracked_doc_id(
+    repo: &RepoManager,
+    repo_name: &str,
+    path: &str,
+) -> GitImportApplyResult<Option<DocId>> {
+    repo.get_tracked_docid_in_local_repo(repo_name, path)
+        .map_err(|err| GitImportApplyError::TrackedPathInspect {
+            path: path.to_string(),
+            message: err.to_string(),
+        })
 }
 
 fn apply_pending_candidates(

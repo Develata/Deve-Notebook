@@ -9,6 +9,7 @@ pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanErr
 pub(super) type GitProjectionReplayResult<T> = std::result::Result<T, GitProjectionReplayError>;
 pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommitError>;
 pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
+pub(super) type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -231,6 +232,32 @@ impl From<GitSnapshotBootstrapError> for String {
     }
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub(super) enum GitImportApplyError {
+    #[error("failed to read imported Git worktree file {path}: {message}")]
+    ReadImportedWorktreeFile { path: String, message: String },
+    #[error("failed to check Git import conflict for {path}: {message}")]
+    ConflictCheck { path: String, message: String },
+    #[error("failed to inspect tracked path {path}: {message}")]
+    TrackedPathInspect { path: String, message: String },
+    #[error("Git import refuses added path already tracked by Deve: {path}")]
+    AddedPathAlreadyTracked { path: String },
+    #[error("Git import requires tracked Deve doc for {status} path: {path}")]
+    MissingTrackedDoc { status: &'static str, path: String },
+    #[error("Git import rename is missing previous path: {path}")]
+    RenameMissingPreviousPath { path: String },
+    #[error("Git import requires tracked Deve doc for renamed path: {previous_path}")]
+    RenameMissingTrackedDoc { previous_path: String },
+    #[error("Git import rename target is already tracked by another Deve doc: {path}")]
+    RenameTargetAlreadyTracked { path: String },
+}
+
+impl From<GitImportApplyError> for String {
+    fn from(err: GitImportApplyError) -> Self {
+        err.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::GitCommandError;
@@ -379,6 +406,33 @@ mod tests {
             }
             .to_string(),
             "repo-local .gitignore does not ignore .notegit/"
+        );
+    }
+
+    #[test]
+    fn git_import_apply_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitImportApplyError::ReadImportedWorktreeFile {
+                path: "note.md".into(),
+                message: "missing".into(),
+            }
+            .to_string(),
+            "failed to read imported Git worktree file note.md: missing"
+        );
+        assert_eq!(
+            super::GitImportApplyError::MissingTrackedDoc {
+                status: "modified",
+                path: "note.md".into(),
+            }
+            .to_string(),
+            "Git import requires tracked Deve doc for modified path: note.md"
+        );
+        assert_eq!(
+            super::GitImportApplyError::RenameTargetAlreadyTracked {
+                path: "moved.md".into(),
+            }
+            .to_string(),
+            "Git import rename target is already tracked by another Deve doc: moved.md"
         );
     }
 }
