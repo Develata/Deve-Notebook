@@ -24,6 +24,7 @@ mod commit_structure_plan;
 mod dir_structure_plan;
 mod dir_structure_support;
 mod local_repo_metadata_repair;
+mod local_repo_metadata_repair_support;
 mod local_repo_names;
 mod local_repo_source_control_repair;
 mod merge_ops;

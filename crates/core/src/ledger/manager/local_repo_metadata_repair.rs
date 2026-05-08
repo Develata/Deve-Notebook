@@ -10,10 +10,9 @@ use redb::Database;
 use std::collections::HashMap;
 use std::path::Path;
 
-#[path = "local_repo_metadata_repair_support.rs"]
-mod support;
-
-use self::support::{repair_workspace_root, validate_local_repo_info};
+use crate::ledger::manager::local_repo_metadata_repair_support::{
+    repair_workspace_root, validate_local_repo_info,
+};
 
 impl RepoManager {
     pub(crate) fn validate_local_repo_metadata(
