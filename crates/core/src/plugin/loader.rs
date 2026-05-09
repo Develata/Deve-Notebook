@@ -157,7 +157,23 @@ fn validate_plugin_entry(plugin_root: &Path, entry: &str) -> Result<PathBuf> {
             entry
         );
     }
-    Ok(resolved)
+    let canonical_root = fs::canonicalize(plugin_root)
+        .with_context(|| format!("Failed to canonicalize plugin directory {:?}", plugin_root))?;
+    let canonical_entry = match fs::canonicalize(&resolved) {
+        Ok(path) => path,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(resolved),
+        Err(err) => {
+            return Err(err)
+                .with_context(|| format!("Failed to canonicalize plugin entry {:?}", resolved));
+        }
+    };
+    if !canonical_entry.starts_with(&canonical_root) {
+        bail!(
+            "Invalid plugin entry '{}': resolved entry must stay inside plugin directory",
+            entry
+        );
+    }
+    Ok(canonical_entry)
 }
 
 #[cfg(test)]
@@ -382,6 +398,73 @@ mod tests {
         };
 
         assert!(err.to_string().contains(".rhai"));
+    }
+
+    #[test]
+    #[cfg(all(not(target_arch = "wasm32"), unix))]
+    fn load_plugin_rejects_symlinked_entry_outside_plugin_dir() {
+        let dir = tempdir().expect("tempdir");
+        let plugin_dir = dir.path().join("bad-plugin");
+        fs::create_dir(&plugin_dir).expect("mkdir plugin");
+        fs::write(
+            plugin_dir.join("manifest.json"),
+            r#"{
+                "id": "bad-plugin",
+                "name": "Bad Plugin",
+                "version": "1.0.0",
+                "entry": "index.rhai"
+            }"#,
+        )
+        .expect("write manifest");
+        let outside = dir.path().join("outside.rhai");
+        fs::write(&outside, "fn hello() { \"bad\" }").expect("write outside");
+        std::os::unix::fs::symlink(&outside, plugin_dir.join("index.rhai")).expect("symlink entry");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_plugin(&plugin_dir) {
+            Ok(_) => panic!("symlinked outside entry must be rejected"),
+            Err(err) => err,
+        };
+
+        assert!(
+            err.to_string()
+                .contains("resolved entry must stay inside plugin directory")
+        );
+    }
+
+    #[test]
+    #[cfg(all(not(target_arch = "wasm32"), unix))]
+    fn load_plugin_rejects_entry_through_symlinked_directory() {
+        let dir = tempdir().expect("tempdir");
+        let plugin_dir = dir.path().join("bad-plugin");
+        fs::create_dir(&plugin_dir).expect("mkdir plugin");
+        fs::write(
+            plugin_dir.join("manifest.json"),
+            r#"{
+                "id": "bad-plugin",
+                "name": "Bad Plugin",
+                "version": "1.0.0",
+                "entry": "scripts/index.rhai"
+            }"#,
+        )
+        .expect("write manifest");
+        let outside_dir = dir.path().join("outside-scripts");
+        fs::create_dir(&outside_dir).expect("mkdir outside scripts");
+        fs::write(outside_dir.join("index.rhai"), "fn hello() { \"bad\" }")
+            .expect("write outside entry");
+        std::os::unix::fs::symlink(&outside_dir, plugin_dir.join("scripts"))
+            .expect("symlink scripts");
+
+        let loader = PluginLoader::new(dir.path().to_path_buf());
+        let err = match loader.load_plugin(&plugin_dir) {
+            Ok(_) => panic!("entry through symlinked outside directory must be rejected"),
+            Err(err) => err,
+        };
+
+        assert!(
+            err.to_string()
+                .contains("resolved entry must stay inside plugin directory")
+        );
     }
 
     #[test]
