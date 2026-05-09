@@ -3,13 +3,9 @@
 //!   - 04_storage#projection-contract
 //!   - 06_repository#tree-projection-contract
 //!
-#[path = "append_validate_content.rs"]
 mod content;
-#[path = "append_validate_errors.rs"]
 mod errors;
-#[path = "append_validate_projection.rs"]
 mod projection;
-#[path = "append_validate_structure.rs"]
 mod structure;
 
 use crate::models::{LedgerEntry, LedgerEvent};

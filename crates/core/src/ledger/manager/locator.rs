@@ -201,5 +201,4 @@ impl RepoManager {
 }
 
 #[cfg(test)]
-#[path = "locator_test.rs"]
 mod tests;

@@ -197,5 +197,4 @@ fn change_identity_key(
 }
 
 #[cfg(test)]
-#[path = "source_control_target_lookup_test.rs"]
 mod tests;

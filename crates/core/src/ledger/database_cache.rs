@@ -195,5 +195,4 @@ pub(crate) fn evict_database_paths_under(root: &Path) -> Result<()> {
 }
 
 #[cfg(test)]
-#[path = "database_cache_test.rs"]
 mod tests;

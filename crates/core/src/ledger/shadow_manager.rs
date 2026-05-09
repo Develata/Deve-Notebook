@@ -173,5 +173,4 @@ impl RepoManager {
 }
 
 #[cfg(test)]
-#[path = "shadow_manager_test.rs"]
 mod tests;

@@ -107,5 +107,4 @@ fn normalized(path: &str) -> String {
 }
 
 #[cfg(test)]
-#[path = "source_control_path_target_test.rs"]
 mod tests;

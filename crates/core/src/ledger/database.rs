@@ -220,5 +220,4 @@ impl RepoManager {
 }
 
 #[cfg(test)]
-#[path = "database_test.rs"]
 mod tests;

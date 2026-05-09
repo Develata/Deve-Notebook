@@ -11,13 +11,9 @@
 
 use crate::models::{PeerId, RepoId};
 
-#[path = "ops_query.rs"]
 mod query;
-#[path = "ops_validate.rs"]
 mod validate;
-#[path = "ops_write_direct.rs"]
 mod write_direct;
-#[path = "ops_write_generated.rs"]
 mod write_generated;
 
 pub use query::{

@@ -226,5 +226,4 @@ impl RepoManager {
 }
 
 #[cfg(test)]
-#[path = "maintenance_test.rs"]
 mod tests;

@@ -12,10 +12,9 @@ use crate::models::DocId;
 use anyhow::{Result, anyhow};
 use redb::{Database, ReadableMultimapTable};
 
-#[path = "snapshot_verify.rs"]
-mod snapshot_verify;
+mod verify;
 
-pub use snapshot_verify::verify_snapshot_consistency;
+pub use verify::verify_snapshot_consistency;
 
 /// Save a snapshot for a document (Local DB only).
 pub fn save_snapshot(

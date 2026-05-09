@@ -159,5 +159,4 @@ impl RepoManager {
     }
 }
 #[cfg(test)]
-#[path = "remote_repo_scan_test.rs"]
 mod tests;

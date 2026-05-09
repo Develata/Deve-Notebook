@@ -8,7 +8,6 @@ use anyhow::Result;
 use redb::Database;
 
 #[cfg(test)]
-#[path = "projection_cleanup_test.rs"]
 mod tests;
 
 /// Post-conditions:

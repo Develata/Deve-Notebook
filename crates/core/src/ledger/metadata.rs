@@ -9,7 +9,6 @@
 //! 管理 Path/DocId/Inode 之间的映射关系。
 //! 所有映射仅存储在 local.redb 中。
 
-#[path = "metadata_tree.rs"]
 mod tree;
 
 use crate::ledger::node_meta;

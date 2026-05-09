@@ -107,5 +107,4 @@ impl RepoManager {
 }
 
 #[cfg(test)]
-#[path = "structure_ops_test.rs"]
 mod tests;
