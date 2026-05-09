@@ -9,7 +9,6 @@ use deve_core::models::DocId;
 use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use tokio::sync::mpsc;
 
-#[path = "core_test_support.rs"]
 mod support;
 
 async fn reject_missing_browser_scope(

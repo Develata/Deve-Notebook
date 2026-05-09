@@ -109,5 +109,4 @@ async fn route_unscoped_core(
 }
 
 #[cfg(test)]
-#[path = "core_test.rs"]
 mod tests;

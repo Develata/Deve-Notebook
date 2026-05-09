@@ -80,5 +80,4 @@ pub(super) async fn route_scoped_core(
 }
 
 #[cfg(test)]
-#[path = "core_scoped_test.rs"]
 mod tests;
