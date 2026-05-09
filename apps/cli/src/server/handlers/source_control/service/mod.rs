@@ -2,11 +2,8 @@
 //!   - 07_diff_logic#source-control-runtime
 //!   - 06_repository#repo-scope-runtime
 
-#[path = "service/read.rs"]
 mod read;
-#[path = "service/target.rs"]
 mod target;
-#[path = "service/write.rs"]
 mod write;
 
 use crate::server::repo_scope::ResolvedRepo;

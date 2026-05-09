@@ -73,5 +73,4 @@ pub fn git_mirror_repair_review(
 }
 
 #[cfg(test)]
-#[path = "read_test.rs"]
 mod tests;

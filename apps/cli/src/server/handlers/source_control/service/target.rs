@@ -207,5 +207,4 @@ fn unique_match<'a>(
 }
 
 #[cfg(test)]
-#[path = "target_test.rs"]
 mod tests;

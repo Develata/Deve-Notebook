@@ -11,11 +11,12 @@ Source control service layer that abstracts read/write/target operations. Provid
 
 | File | Description |
 |------|-------------|
+| `mod.rs` | Service module entry and shared selector/result helpers |
 | `read.rs` | Read operations (changes, diff, history queries) |
-| `read_test.rs` | Read service tests |
+| `read/tests.rs` | Read service tests |
 | `write.rs` | Write operations (stage, unstage, discard, commit) |
 | `target.rs` | Target resolution — resolves doc_id for source control operations |
-| `target_*_test.rs` | Target resolution guard tests |
+| `target/tests/` | Target resolution guard tests |
 
 ## For AI Agents
 
