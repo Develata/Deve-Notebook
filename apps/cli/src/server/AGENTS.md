@@ -22,12 +22,13 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `repo_scope*_test.rs` | Remaining repo scope runtime selector and recovery tests |
 | `shadow_scope.rs` | Shadow branch scope management and stale branch cleanup |
 | `error_classify.rs` | Error string classification into semantic error codes |
-| `error_classify_test.rs` | Shared error classification tests |
+| `error_classify/tests.rs` | Shared error classification tests |
 | `tree_state.rs` | Repo-scoped file tree state registry (`RepoTreeRegistry`) |
 | `security.rs` | Identity key loading/generation |
 | `rate_limit.rs` | Per-IP sliding window rate limiter with lazy GC; fails closed on poisoned lock |
 | `metrics.rs` | System metrics collection and periodic broadcasting |
 | `static_files.rs` | Static file serving for web frontend SPA |
+| `static_files/tests.rs` | Static file serving tests |
 | `prewarm.rs` | Background repo prewarm on startup |
 | `node_role.rs` | Node role state (main/proxy) |
 | `node_role_http.rs` | Node role HTTP endpoint |

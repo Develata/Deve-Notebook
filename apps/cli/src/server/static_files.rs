@@ -165,5 +165,4 @@ fn not_found_response() -> Response<Body> {
 }
 
 #[cfg(test)]
-#[path = "static_files_test.rs"]
 mod tests;

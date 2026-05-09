@@ -128,5 +128,4 @@ fn contains_any(input: &str, patterns: &[&str]) -> bool {
 }
 
 #[cfg(test)]
-#[path = "error_classify_test.rs"]
 mod tests;
