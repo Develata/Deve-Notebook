@@ -11,9 +11,7 @@ use deve_core::models::{DocId, NodeId, NodeMeta, PeerId, RepoId, RepoType};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
-#[path = "switcher_payload_emit.rs"]
 mod emit;
-#[path = "switcher_payload_local.rs"]
 mod local;
 
 pub(crate) struct RepoViewPayload {
