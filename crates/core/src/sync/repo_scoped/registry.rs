@@ -1,4 +1,4 @@
-// crates/core/src/sync/repo_scoped_registry.rs
+// crates/core/src/sync/repo_scoped/registry.rs
 //! # Repo-Scoped SyncEngine Registry
 //! plan_ref:
 //!   - 05_network#server-ws-runtime

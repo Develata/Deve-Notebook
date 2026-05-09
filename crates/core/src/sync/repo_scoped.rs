@@ -5,13 +5,9 @@
 //!   - 06_repository#repo-scope-runtime
 //!
 //! 管理多个仓库的 SyncEngine 实例，每个仓库拥有独立的同步状态。
-#[path = "repo_scoped_hydration.rs"]
 mod hydration;
-#[path = "repo_scoped_lock.rs"]
 mod lock;
-#[path = "repo_scoped_registry.rs"]
 mod registry;
-#[path = "repo_scoped_strict.rs"]
 mod strict;
 
 use crate::models::{PeerId, RepoId};
@@ -90,5 +86,4 @@ impl Clone for RepoScopedSyncEngine {
     }
 }
 #[cfg(test)]
-#[path = "repo_scoped_test.rs"]
 mod tests;

@@ -1,4 +1,4 @@
-// crates/core/src/sync/repo_scoped_strict.rs
+// crates/core/src/sync/repo_scoped/strict.rs
 //! # Repo-Scoped Strict Engine Loading
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
