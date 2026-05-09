@@ -98,6 +98,12 @@ pub(super) fn is_repo_context_invalid(lower: &str) -> bool {
     )
 }
 
+pub(super) fn is_remote_exact_selector_mismatch(lower: &str) -> bool {
+    lower.contains("stale remote scope:")
+        && lower.contains("session repo mismatch")
+        && lower.contains("exact repository selector")
+}
+
 pub(super) fn is_stale_scope(lower: &str) -> bool {
     contains_any(lower, &["stale scope nonce", "stale remote scope:"])
 }

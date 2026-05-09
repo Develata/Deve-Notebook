@@ -66,6 +66,14 @@ fn maps_scope_stale_nonce_to_stale_scope() {
 }
 
 #[test]
+fn maps_stale_remote_exact_selector_mismatch_to_repo_context_invalid() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "stale remote scope: Session repo mismatch: expected a, resolved b for exact repository selector wiki-2"
+    ));
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
+
+#[test]
 fn maps_broken_shadow_listing_to_storage_persist_failed() {
     let err = map_repo_scope_error(anyhow::anyhow!(
         "Broken shadow repo notes for peer peer-a while listing repos"

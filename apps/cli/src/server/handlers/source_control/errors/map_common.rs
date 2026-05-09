@@ -4,8 +4,8 @@
 //! Common repository-scope error classification.
 
 use crate::server::error_classify::{
-    is_db_locked, is_repo_context_invalid, is_repo_not_selected, is_stale_scope,
-    is_storage_corruption, is_storage_not_found,
+    is_db_locked, is_remote_exact_selector_mismatch, is_repo_context_invalid, is_repo_not_selected,
+    is_stale_scope, is_storage_corruption, is_storage_not_found,
 };
 use deve_core::protocol::ServerErrorCode;
 
@@ -25,6 +25,9 @@ pub(super) fn classify_common_scope_code(detail: &str) -> Option<ServerErrorCode
     }
     if lower.contains("tracked document projection missing") {
         return Some(ServerErrorCode::StoragePersistFailed);
+    }
+    if is_remote_exact_selector_mismatch(&lower) {
+        return Some(ServerErrorCode::ScRepoContextInvalid);
     }
     if is_stale_scope(&lower) {
         return Some(ServerErrorCode::ScStaleScope);

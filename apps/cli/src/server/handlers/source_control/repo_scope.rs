@@ -21,6 +21,10 @@ pub fn resolve_current_repo_scope(
         {
             if shadow_scope::should_clear_missing_remote_branch(&error) {
                 shadow_scope::clear_stale_remote_branch(session);
+                return Err(ServerError {
+                    code: ServerErrorCode::ScRepoContextInvalid,
+                    detail: error.detail,
+                });
             } else {
                 session.clear_active_db();
                 session.clear_sync_binding();
@@ -31,7 +35,7 @@ pub fn resolve_current_repo_scope(
             session.clear_active_db();
             session.clear_sync_binding();
             return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
+                ServerErrorCode::ScStaleScope,
                 stale_unbound_remote_scope_detail(
                     session
                         .active_branch

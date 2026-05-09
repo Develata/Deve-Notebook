@@ -23,6 +23,14 @@ fn classifies_remote_workspace_access_as_repo_context_invalid() {
 }
 
 #[test]
+fn classifies_stale_remote_exact_selector_mismatch_as_context_invalid() {
+    let err = map_repo_scope_error(anyhow::anyhow!(
+        "stale remote scope: Session repo mismatch: expected a, resolved b for exact repository selector wiki-2"
+    ));
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
+
+#[test]
 fn classifies_missing_local_repo_name_as_storage_not_found() {
     let err = map_repo_scope_error(anyhow::anyhow!("Local repo not found for name wiki"));
     assert_eq!(err.code, ServerErrorCode::StorageNotFound);
