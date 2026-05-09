@@ -62,6 +62,7 @@ mod source_control_target_lookup;
 mod source_control_target_resolution;
 mod source_control_workdir;
 mod source_control_workdir_db;
+mod source_control_workdir_diff;
 mod source_control_workdir_helpers;
 mod structure_ops;
 pub(crate) mod structure_projection;
