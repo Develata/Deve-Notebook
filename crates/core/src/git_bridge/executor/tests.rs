@@ -152,10 +152,8 @@ fn export_for_default_repo(repo: &RepoManager, repo_root: &Path) -> super::GitMi
     .expect("export mirror")
 }
 
-#[path = "executor_snapshot_test.rs"]
 mod snapshot;
 
-#[path = "executor_preflight_test.rs"]
 mod preflight;
 
 #[test]

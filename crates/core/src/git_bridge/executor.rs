@@ -208,5 +208,4 @@ fn commit_body_matches_record(body: &str, record: &GitMirrorRecord) -> bool {
 }
 
 #[cfg(test)]
-#[path = "executor_test.rs"]
-mod executor_test;
+mod tests;
