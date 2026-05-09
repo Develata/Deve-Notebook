@@ -5,7 +5,7 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::map_repo_scope_error;
+use crate::server::repo_scope::{RepoScopeFailure, map_repo_scope_error};
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
 use deve_core::models::RepoId;
@@ -61,7 +61,7 @@ pub(super) async fn handle_switch_repo(
             return;
         }
         Err(err) => {
-            let error = map_repo_scope_error(anyhow::anyhow!("Failed to list repos: {}", err));
+            let error = map_requested_repo_resolution_error(err);
             if shadow_scope::should_clear_missing_remote_branch(&error) {
                 shadow_scope::clear_stale_remote_branch(session);
             }
@@ -120,4 +120,13 @@ pub(super) async fn handle_switch_repo(
         session.active_branch
     );
     emit_repo_view(ch, repo_view);
+}
+
+fn map_requested_repo_resolution_error(err: anyhow::Error) -> ServerError {
+    if let Some(error) = RepoScopeFailure::from_anyhow(&err)
+        && error.is_remote_branch_unavailable()
+    {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail());
+    }
+    map_repo_scope_error(anyhow::anyhow!("Failed to list repos: {}", err))
 }

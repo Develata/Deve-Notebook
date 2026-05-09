@@ -10,6 +10,7 @@ use crate::server::repo_scope::{
 };
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
+use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
@@ -35,7 +36,7 @@ pub(super) fn resolve_current_branch_switch_context(
             let mapped = map_current_scope_error(session, err);
             if can_ignore_missing_current_scope(session, mapped.code) {
                 if let Some(branch) = session.active_branch.as_ref() {
-                    shadow_scope::map_remote_branch_availability(state, branch)?;
+                    ensure_current_remote_branch_for_switcher(state, branch)?;
                 }
                 None
             } else {
@@ -113,7 +114,29 @@ fn map_current_scope_error(session: &WsSession, err: anyhow::Error) -> ServerErr
             );
         }
     }
-    map_repo_scope_error_ref(&err)
+    let mapped = map_repo_scope_error_ref(&err);
+    if session.active_branch.is_some()
+        && mapped.code == ServerErrorCode::ScStaleScope
+        && let Some(detail) = mapped.detail.as_deref()
+        && detail.starts_with("stale remote scope:")
+    {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, detail);
+    }
+    mapped
+}
+
+fn ensure_current_remote_branch_for_switcher(
+    state: &Arc<AppState>,
+    branch: &PeerId,
+) -> Result<(), ServerError> {
+    match shadow_scope::ensure_remote_branch_available(state, branch) {
+        Ok(()) => Ok(()),
+        Err(error) if error.is_remote_branch_unavailable() => Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            error.detail(),
+        )),
+        Err(error) => Err(ServerError::from(error)),
+    }
 }
 
 fn recover_local_repo_url_from_hint(
