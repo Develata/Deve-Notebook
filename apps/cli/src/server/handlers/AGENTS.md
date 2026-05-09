@@ -28,6 +28,7 @@ Client message handlers organized by domain. Each submodule processes a category
 | `key_exchange.rs` | E2EE key exchange: provides RepoKey over authenticated WebSocket |
 | `search.rs` | Full-text search handler (feature-gated behind `search`) |
 | `plugin.rs` | Plugin RPC handler: routes to Rhai plugins or agent-bridge |
+| `plugin/tests.rs` | Plugin RPC handler tests |
 
 ## Subdirectories
 | Directory | Purpose |

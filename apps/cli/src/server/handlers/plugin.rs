@@ -126,5 +126,4 @@ fn dynamic_result_to_json(result: rhai::Dynamic) -> Result<serde_json::Value, St
 }
 
 #[cfg(test)]
-#[path = "plugin_test.rs"]
 mod tests;
