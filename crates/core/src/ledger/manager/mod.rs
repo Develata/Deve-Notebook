@@ -40,6 +40,7 @@ mod remote_repo_scan_entry;
 mod remote_repo_scan_helpers;
 mod remote_repo_scan_validate;
 mod remote_repo_select;
+mod repair_runtime;
 pub(crate) mod repo_catalog_entries;
 mod repo_catalog_runtime;
 mod repo_db;
