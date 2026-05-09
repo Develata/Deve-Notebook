@@ -85,5 +85,4 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
 }
 
 #[cfg(test)]
-#[path = "fs_test.rs"]
 mod tests;
