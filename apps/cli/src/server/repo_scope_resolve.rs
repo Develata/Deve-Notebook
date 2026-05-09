@@ -5,12 +5,13 @@
 
 use super::lookup::resolve_repo_by_name;
 use super::repo_scope_bootstrap::fallback_local_repo_name;
+use super::repo_scope_error::RepoScopeFailure;
 use super::repo_scope_selector::resolve_repo_name_from_session;
 use super::stale_remote_scope_detail;
 use crate::server::AppState;
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
 
@@ -32,9 +33,10 @@ pub fn stale_unbound_remote_scope_detail(branch: &PeerId) -> String {
 /// Invariants: 只在 `active_branch == None` 时允许默认回退；引导完成后统一走 `resolve_session_repo`。
 pub fn bootstrap_local_repo(state: &Arc<AppState>, session: &WsSession) -> Result<ResolvedRepo> {
     if session.active_branch.is_some() {
-        return Err(anyhow!(
-            "Cannot bootstrap local repo while on remote branch"
-        ));
+        return Err(RepoScopeFailure::repo_context_invalid(
+            "Cannot bootstrap local repo while on remote branch",
+        )
+        .into());
     }
     if session.active_repo.is_some() || session.active_repo_id.is_some() {
         return resolve_session_repo(state, session);
@@ -53,12 +55,16 @@ pub fn resolve_session_repo(state: &Arc<AppState>, session: &WsSession) -> Resul
             if let Some(branch) = session.active_branch.as_ref() {
                 shadow_scope::ensure_remote_branch_available(state, branch)?;
                 if session.has_runtime_scope_binding() {
-                    return Err(anyhow!("{}", stale_unbound_remote_scope_detail(branch)));
+                    return Err(
+                        RepoScopeFailure::stale_scope(stale_unbound_remote_scope_detail(branch))
+                            .into(),
+                    );
                 }
             }
-            return Err(anyhow!(
-                "Active repository not selected for current session"
-            ));
+            return Err(RepoScopeFailure::repo_unbound(
+                "Active repository not selected for current session",
+            )
+            .into());
         }
     };
     let branch = session.active_branch.clone();

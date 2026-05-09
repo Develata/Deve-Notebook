@@ -5,7 +5,8 @@
 
 use crate::server::AppState;
 use crate::server::repo_scope::{
-    ResolvedRepo, map_repo_scope_error, resolve_session_repo, stale_unbound_remote_scope_detail,
+    RepoScopeFailure, ResolvedRepo, map_repo_scope_error, map_repo_scope_error_ref,
+    resolve_session_repo, stale_unbound_remote_scope_detail,
 };
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
@@ -88,12 +89,18 @@ fn can_ignore_missing_current_scope(session: &WsSession, code: ServerErrorCode) 
 }
 
 fn map_current_scope_error(session: &WsSession, err: anyhow::Error) -> ServerError {
+    if let Some(error) = RepoScopeFailure::from_anyhow(&err)
+        && (error.is_remote_branch_unavailable()
+            || matches!(error, RepoScopeFailure::StaleScope { .. }))
+    {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail());
+    }
     if session.active_branch.is_some()
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()
         && session.has_runtime_scope_binding()
     {
-        let mapped = map_repo_scope_error(anyhow::anyhow!(err.to_string()));
+        let mapped = map_repo_scope_error_ref(&err);
         if mapped.code == ServerErrorCode::SyncRepoUnbound {
             return ServerError::with_detail(
                 ServerErrorCode::ScRepoContextInvalid,
@@ -106,7 +113,7 @@ fn map_current_scope_error(session: &WsSession, err: anyhow::Error) -> ServerErr
             );
         }
     }
-    map_repo_scope_error(anyhow::anyhow!(err.to_string()))
+    map_repo_scope_error_ref(&err)
 }
 
 fn recover_local_repo_url_from_hint(

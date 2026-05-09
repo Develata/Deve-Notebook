@@ -3,82 +3,79 @@
 //!   - 06_repository#repo-scope-runtime
 
 use crate::server::AppState;
-use crate::server::repo_scope::{map_repo_scope_error, stale_remote_scope_detail};
+use crate::server::repo_scope::RepoScopeFailure;
 use crate::server::session::WsSession;
-use anyhow::{Result, anyhow};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-pub(crate) fn ensure_remote_branch_available(state: &Arc<AppState>, branch: &PeerId) -> Result<()> {
+pub(crate) fn ensure_remote_branch_available(
+    state: &Arc<AppState>,
+    branch: &PeerId,
+) -> Result<(), RepoScopeFailure> {
     let peer_dir = checked_remotes_dir(state)?.join(branch.to_filename());
     match peer_dir.try_exists() {
         Ok(true) => {}
         Ok(false) => {
-            return Err(anyhow!(
-                "{}",
-                stale_remote_scope_detail(format!("Remote branch not available: {}", branch))
-            ));
+            return Err(RepoScopeFailure::remote_branch_unavailable(branch));
         }
         Err(err) => {
-            return Err(anyhow!(
+            return Err(RepoScopeFailure::storage_persist_failed(format!(
                 "Failed to stat remote peer directory {:?} while validating branch availability: {}",
-                peer_dir,
-                err
-            ));
+                peer_dir, err
+            )));
         }
     }
     if !std::fs::metadata(&peer_dir)
         .map_err(|err| {
-            anyhow!(
+            RepoScopeFailure::storage_persist_failed(format!(
                 "Failed to read remote peer directory metadata {:?} while validating branch availability: {}",
                 peer_dir,
                 err
-            )
+            ))
         })?
         .is_dir()
     {
-        return Err(anyhow!(
+        return Err(RepoScopeFailure::storage_persist_failed(format!(
             "Broken shadow peer {} while validating branch availability: expected directory",
             branch
-        ));
+        )));
     }
     Ok(())
 }
 
-fn checked_remotes_dir(state: &Arc<AppState>) -> Result<PathBuf> {
+fn checked_remotes_dir(state: &Arc<AppState>) -> Result<PathBuf, RepoScopeFailure> {
     let remotes_dir = state.repo.remotes_dir();
     match remotes_dir.try_exists() {
         Ok(true) => {}
         Ok(false) => {
-            return Err(anyhow!(
+            return Err(RepoScopeFailure::storage_persist_failed(format!(
                 "Broken remote repo catalog: remote repo directory missing at {:?}",
                 remotes_dir
-            ));
+            )));
         }
         Err(err) => {
-            return Err(anyhow!(
+            return Err(RepoScopeFailure::storage_persist_failed(format!(
                 "Broken remote repo catalog: failed to stat remote repo directory {:?}: {}",
-                remotes_dir,
-                err
-            ));
+                remotes_dir, err
+            )));
         }
     }
     if !std::fs::metadata(&remotes_dir)
         .map_err(|err| {
-            anyhow!(
+            RepoScopeFailure::storage_persist_failed(format!(
                 "Broken remote repo catalog: failed to read remote repo directory metadata {:?}: {}",
                 remotes_dir,
                 err
-            )
+            ))
         })?
         .is_dir()
     {
-        return Err(anyhow!(
+        return Err(RepoScopeFailure::storage_persist_failed(format!(
             "Broken remote repo catalog: expected directory at {:?}",
             remotes_dir
-        ));
+        )));
     }
     Ok(remotes_dir)
 }
@@ -87,7 +84,7 @@ pub(crate) fn map_remote_branch_availability(
     state: &Arc<AppState>,
     branch: &PeerId,
 ) -> Result<(), ServerError> {
-    ensure_remote_branch_available(state, branch).map_err(map_repo_scope_error)
+    ensure_remote_branch_available(state, branch).map_err(ServerError::from)
 }
 
 pub(crate) fn should_clear_missing_remote_branch(error: &ServerError) -> bool {

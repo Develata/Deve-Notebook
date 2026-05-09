@@ -4,6 +4,7 @@
 //! Repository-scope source-control error mapping tests.
 
 use super::*;
+use crate::server::repo_scope::RepoScopeFailure;
 
 #[test]
 fn maps_repo_scope_miss_to_repo_not_selected() {
@@ -70,6 +71,20 @@ fn maps_stale_remote_exact_selector_mismatch_to_repo_context_invalid() {
     let err = map_repo_scope_error(anyhow::anyhow!(
         "stale remote scope: Session repo mismatch: expected a, resolved b for exact repository selector wiki-2"
     ));
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
+
+#[test]
+fn maps_typed_repo_unbound_to_source_control_not_selected() {
+    let err = map_repo_scope_error(RepoScopeFailure::repo_unbound("typed repo unbound").into());
+    assert_eq!(err.code, ServerErrorCode::ScRepoNotSelected);
+}
+
+#[test]
+fn maps_typed_exact_selector_mismatch_to_repo_context_invalid() {
+    let err = map_repo_scope_error(
+        RepoScopeFailure::exact_selector_mismatch("typed exact selector mismatch").into(),
+    );
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
 }
 

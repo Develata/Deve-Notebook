@@ -45,13 +45,15 @@ pub(super) fn precheck_remote_scope(
     if session.active_repo.is_some() || session.active_repo_id.is_some() {
         return false;
     }
-    if let Err(error) = shadow_scope::map_remote_branch_availability(state, &branch) {
-        if shadow_scope::should_clear_missing_remote_branch(&error) {
+    if let Err(error) = shadow_scope::ensure_remote_branch_available(state, &branch) {
+        let error = if error.is_remote_branch_unavailable() {
             shadow_scope::clear_stale_remote_branch(session);
+            ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail())
         } else {
             session.clear_active_db();
             session.clear_sync_binding();
-        }
+            ServerError::from(error)
+        };
         ch.send_protocol_error_with_scope_and_switch_nonce(error, scope_nonce, switch_nonce);
         return true;
     }

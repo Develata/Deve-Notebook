@@ -35,7 +35,9 @@ use anyhow::Result;
 use std::sync::Arc;
 
 pub(crate) use self::repo_scope_cleanup::should_clear_stale_remote_scope;
-pub use self::repo_scope_error::{map_repo_scope_error, stale_remote_scope_detail};
+pub use self::repo_scope_error::{
+    RepoScopeFailure, map_repo_scope_error, map_repo_scope_error_ref, stale_remote_scope_detail,
+};
 pub use self::repo_scope_resolve::{
     ResolvedRepo, bootstrap_local_repo, resolve_session_repo, stale_unbound_remote_scope_detail,
 };

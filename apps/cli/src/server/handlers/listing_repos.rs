@@ -4,14 +4,15 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync};
+use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::session::WsSession;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 use super::listing_scope::{
-    clear_local_unbound_runtime_binding, precheck_remote_unbound_scope, send_listing_error,
+    clear_local_unbound_runtime_binding, map_listing_repo_scope_error,
+    precheck_remote_unbound_scope, send_listing_error,
 };
 
 /// 处理 ListRepos 请求 - 返回当前分支下的仓库列表
@@ -31,7 +32,7 @@ pub async fn handle_list_repos(
         || session.has_runtime_scope_binding())
         && let Err(error) = resolve_session_repo_and_sync(state, session)
     {
-        ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(error), scope_nonce);
+        ch.send_protocol_error_with_scope_nonce(map_listing_repo_scope_error(error), scope_nonce);
         return;
     }
     let active_branch = session.active_branch.as_ref();

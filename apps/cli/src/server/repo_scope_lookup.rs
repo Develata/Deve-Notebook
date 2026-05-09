@@ -9,7 +9,7 @@
 //! - 对本地分支，不允许借 stale `repo_id` 反向覆盖当前 selector。
 
 use super::ResolvedRepo;
-use super::repo_scope_error::stale_remote_scope_detail;
+use super::repo_scope_error::{RepoScopeFailure, stale_remote_scope_detail};
 use crate::server::AppState;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};
@@ -43,16 +43,16 @@ pub(super) fn resolve_repo_by_name(
                 .as_deref()
                 == Some(repo_name.as_str())
         {
-            return Err(anyhow!(
-                "{}",
-                repo_mismatch_detail(
+            return Err(
+                RepoScopeFailure::exact_selector_mismatch(repo_mismatch_detail(
                     branch.as_ref(),
                     expected_repo_id,
                     info.uuid,
                     &repo_name,
-                    true
-                )
-            ));
+                    true,
+                ))
+                .into(),
+            );
         }
         return Err(anyhow!(
             "{}",

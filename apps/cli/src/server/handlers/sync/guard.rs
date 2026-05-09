@@ -17,10 +17,13 @@ pub(super) fn require_current_sync_scope(
     if !session.is_browser_session() {
         return Some(None);
     }
-    match validate_browser_sync_scope(session) {
+    match validate_browser_sync_scope_state(session) {
         Ok(scope_nonce) => Some(Some(scope_nonce)),
         Err(error) => {
-            ch.send_protocol_error_with_scope_nonce(error, Some(session.scope_nonce()));
+            ch.send_protocol_error_with_scope_nonce(
+                error.into_request_error(),
+                Some(session.scope_nonce()),
+            );
             None
         }
     }
@@ -33,16 +36,22 @@ pub(super) fn require_bound_peer(
     scope_nonce: Option<u64>,
 ) -> Option<PeerId> {
     if !session.is_repo_bound(&repo_id) {
+        let code = if session.bound_repo_id.is_none()
+            || session
+                .get_active_db()
+                .is_some_and(|db| db.repo_id == Some(repo_id))
+        {
+            ServerErrorCode::SyncRepoUnbound
+        } else {
+            ServerErrorCode::SyncRepoRouteMismatch
+        };
         clear_remote_unbound_state(session);
         tracing::warn!(
             "Sync repo mismatch: session bound to {:?}, got {}",
             session.bound_repo_id,
             repo_id
         );
-        ch.send_protocol_error_with_scope_nonce(
-            ServerError::new(ServerErrorCode::SyncRepoRouteMismatch),
-            scope_nonce,
-        );
+        ch.send_protocol_error_with_scope_nonce(ServerError::new(code), scope_nonce);
         return None;
     }
 
@@ -84,21 +93,42 @@ pub(super) fn require_delivery_scope_nonce(
     }
 }
 
+#[cfg(test)]
 fn validate_browser_sync_scope(session: &mut WsSession) -> Result<u64, ServerError> {
+    validate_browser_sync_scope_state(session).map_err(BrowserSyncScopeFailure::into_request_error)
+}
+
+enum BrowserSyncScopeFailure {
+    NotBound,
+    StaleNonce,
+}
+
+impl BrowserSyncScopeFailure {
+    fn into_request_error(self) -> ServerError {
+        match self {
+            Self::NotBound => ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                "browser sync scope not bound",
+            ),
+            Self::StaleNonce => ServerError::with_detail(
+                ServerErrorCode::ScStaleScope,
+                "browser sync scope nonce is stale",
+            ),
+        }
+    }
+}
+
+fn validate_browser_sync_scope_state(
+    session: &mut WsSession,
+) -> Result<u64, BrowserSyncScopeFailure> {
     let scope_nonce = session.scope_nonce();
     let Some(sync_scope_nonce) = session.sync_scope_nonce() else {
         clear_stale_browser_sync_scope(session);
-        return Err(ServerError::with_detail(
-            ServerErrorCode::ScRepoContextInvalid,
-            "browser sync scope not bound",
-        ));
+        return Err(BrowserSyncScopeFailure::NotBound);
     };
     if sync_scope_nonce != scope_nonce {
         clear_stale_browser_sync_scope(session);
-        return Err(ServerError::with_detail(
-            ServerErrorCode::ScStaleScope,
-            "browser sync scope nonce is stale",
-        ));
+        return Err(BrowserSyncScopeFailure::StaleNonce);
     }
     Ok(sync_scope_nonce)
 }

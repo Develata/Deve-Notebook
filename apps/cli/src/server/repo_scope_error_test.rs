@@ -3,7 +3,7 @@
 //!
 //! Repo scope error classification regression tests.
 
-use super::map_repo_scope_error;
+use super::{RepoScopeFailure, map_repo_scope_error};
 use deve_core::protocol::ServerErrorCode;
 
 #[test]
@@ -28,6 +28,31 @@ fn classifies_stale_remote_exact_selector_mismatch_as_context_invalid() {
         "stale remote scope: Session repo mismatch: expected a, resolved b for exact repository selector wiki-2"
     ));
     assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+}
+
+#[test]
+fn maps_typed_remote_branch_unavailable_without_string_classification() {
+    let err = map_repo_scope_error(RepoScopeFailure::remote_branch_unavailable("peer-a").into());
+    assert_eq!(err.code, ServerErrorCode::ScStaleScope);
+    assert_eq!(
+        err.detail.as_deref(),
+        Some("stale remote scope: Remote branch not available: peer-a")
+    );
+}
+
+#[test]
+fn maps_typed_exact_selector_mismatch_without_string_classification() {
+    let err = map_repo_scope_error(
+        RepoScopeFailure::exact_selector_mismatch("typed exact selector mismatch").into(),
+    );
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(err.detail.as_deref(), Some("typed exact selector mismatch"));
+}
+
+#[test]
+fn maps_typed_repo_unbound_without_string_classification() {
+    let err = map_repo_scope_error(RepoScopeFailure::repo_unbound("typed repo unbound").into());
+    assert_eq!(err.code, ServerErrorCode::SyncRepoUnbound);
 }
 
 #[test]

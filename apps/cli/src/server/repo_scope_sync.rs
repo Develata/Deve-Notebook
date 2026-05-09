@@ -5,10 +5,11 @@
 
 use super::repo_scope_cleanup::{should_clear_stale_local_scope, should_clear_stale_remote_scope};
 use super::{
-    ResolvedRepo, map_repo_scope_error, resolve_session_repo, stale_unbound_remote_scope_detail,
+    RepoScopeFailure, ResolvedRepo, map_repo_scope_error_ref, resolve_session_repo,
+    stale_unbound_remote_scope_detail,
 };
 use crate::server::{AppState, session::WsSession, shadow_scope};
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use deve_core::protocol::ServerErrorCode;
 use std::sync::Arc;
 
@@ -28,8 +29,10 @@ pub fn resolve_session_repo_and_sync(
 
 fn handle_resolution_error(session: &mut WsSession, err: anyhow::Error) -> Result<ResolvedRepo> {
     let err = normalize_unbound_remote_scope_error(session, err);
-    let mapped = map_repo_scope_error(anyhow!(err.to_string()));
-    if session.active_branch.is_some() && shadow_scope::should_clear_missing_remote_branch(&mapped)
+    let mapped = map_repo_scope_error_ref(&err);
+    if session.active_branch.is_some()
+        && RepoScopeFailure::from_anyhow(&err)
+            .is_some_and(RepoScopeFailure::is_remote_branch_unavailable)
     {
         shadow_scope::clear_stale_remote_branch(session);
         return Err(err);
@@ -47,17 +50,15 @@ fn normalize_unbound_remote_scope_error(session: &WsSession, err: anyhow::Error)
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()
         && session.has_runtime_scope_binding()
-        && map_repo_scope_error(anyhow!(err.to_string())).code == ServerErrorCode::SyncRepoUnbound
+        && map_repo_scope_error_ref(&err).code == ServerErrorCode::SyncRepoUnbound
     {
-        return anyhow!(
-            "{}",
-            stale_unbound_remote_scope_detail(
-                session
-                    .active_branch
-                    .as_ref()
-                    .expect("checked active branch")
-            )
-        );
+        return RepoScopeFailure::stale_scope(stale_unbound_remote_scope_detail(
+            session
+                .active_branch
+                .as_ref()
+                .expect("checked active branch"),
+        ))
+        .into();
     }
     err
 }

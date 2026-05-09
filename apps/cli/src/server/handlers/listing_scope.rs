@@ -3,7 +3,9 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
-use crate::server::repo_scope::{map_repo_scope_error, stale_unbound_remote_scope_detail};
+use crate::server::repo_scope::{
+    RepoScopeFailure, map_repo_scope_error, stale_unbound_remote_scope_detail,
+};
 use crate::server::session::WsSession;
 use crate::server::shadow_scope;
 use anyhow::anyhow;
@@ -33,13 +35,15 @@ pub(super) fn precheck_remote_unbound_scope(
     if session.active_repo.is_some() || session.active_repo_id.is_some() {
         return false;
     }
-    if let Err(error) = shadow_scope::map_remote_branch_availability(state, &branch) {
-        if shadow_scope::should_clear_missing_remote_branch(&error) {
+    if let Err(error) = shadow_scope::ensure_remote_branch_available(state, &branch) {
+        let error = if error.is_remote_branch_unavailable() {
             shadow_scope::clear_stale_remote_branch(session);
+            ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail())
         } else {
             session.clear_active_db();
             session.clear_sync_binding();
-        }
+            ServerError::from(error)
+        };
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return true;
     }
@@ -68,6 +72,18 @@ pub(super) fn send_listing_error(
         ServerError::with_detail(classify_listing_error(&detail), detail),
         scope_nonce,
     );
+}
+
+pub(super) fn map_listing_repo_scope_error(error: anyhow::Error) -> ServerError {
+    if let Some(error) = RepoScopeFailure::from_anyhow(&error)
+        && matches!(
+            error,
+            RepoScopeFailure::RemoteBranchUnavailable { .. } | RepoScopeFailure::StaleScope { .. }
+        )
+    {
+        return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail());
+    }
+    map_repo_scope_error(error)
 }
 
 pub(super) fn browser_scope_nonce(session: Option<&WsSession>) -> Option<u64> {

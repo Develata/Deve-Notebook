@@ -9,7 +9,7 @@ use crate::server::handlers::document::errors::send_doc_error_with_scope_and_swi
 use crate::server::handlers::switcher::{
     RepoViewPayload, emit_repo_view, prepare_repo_view_messages, switch_scope_nonce,
 };
-use crate::server::repo_scope::{map_repo_scope_error, resolve_session_repo_or_bootstrap_local};
+use crate::server::repo_scope::resolve_session_repo_or_bootstrap_local;
 use crate::server::session::WsSession;
 use std::sync::Arc;
 
@@ -17,6 +17,7 @@ use std::sync::Arc;
 mod listing_docs_scope;
 
 use self::listing_docs_scope::LocalBootstrapGuard;
+use super::listing_scope::map_listing_repo_scope_error;
 
 pub async fn handle_list_docs(
     state: &Arc<AppState>,
@@ -35,7 +36,7 @@ pub async fn handle_list_docs(
         Ok(scope) => (scope.repo_name, scope.repo_id),
         Err(err) => {
             return ch.send_protocol_error_with_scope_and_switch_nonce(
-                map_repo_scope_error(err),
+                map_listing_repo_scope_error(err),
                 scope_nonce,
                 switch_nonce,
             );

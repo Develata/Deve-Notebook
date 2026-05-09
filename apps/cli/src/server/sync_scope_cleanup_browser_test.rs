@@ -28,6 +28,22 @@ async fn browser_sync_request_rejects_missing_sync_scope_nonce() -> anyhow::Resu
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_request_rejects_stale_sync_scope_nonce() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session_without_sync_scope(&state, repo_id, 23)?;
+    session.set_sync_scope_nonce(19);
+
+    handle_sync_request(&state, &ch, &mut session, repo_id, vec![]).await;
+
+    let (error, scope_nonce) = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
+    assert_eq!(scope_nonce, Some(23));
+    assert_runtime_binding_cleared(&session);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn browser_sync_snapshot_request_rejects_missing_sync_scope_nonce() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let (ch, mut rx) = unicast_channel(&state);
