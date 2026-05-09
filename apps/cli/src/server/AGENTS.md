@@ -12,6 +12,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `mod.rs` | `AppState` struct definition, `start_server()` and `start_plugin_host_only()` entry points |
 | `router.rs` | Axum router construction: protected routes (JWT), public routes, login, static fallback |
 | `setup.rs` | Server init helpers: CORS config, file watcher spawn, port hint writing |
+| `start/tests.rs` | Server startup helper tests |
 | `session/mod.rs` | Per-WebSocket-connection session state (`WsSession`): scope nonce, branch, repo, rate limiting |
 | `session/` | Session helper modules for writer identity, repo binding, branch/scope binding, and rate limiting |
 | `channel/mod.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
@@ -24,6 +25,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `error_classify.rs` | Error string classification into semantic error codes |
 | `error_classify/tests.rs` | Shared error classification tests |
 | `tree_state.rs` | Repo-scoped file tree state registry (`RepoTreeRegistry`) |
+| `tree_state/tests.rs` | Repo-scoped tree registry tests |
 | `security.rs` | Identity key loading/generation |
 | `rate_limit.rs` | Per-IP sliding window rate limiter with lazy GC; fails closed on poisoned lock |
 | `metrics.rs` | System metrics collection and periodic broadcasting |

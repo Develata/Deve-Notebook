@@ -82,5 +82,4 @@ impl Default for RepoTreeRegistry {
 }
 
 #[cfg(test)]
-#[path = "tree_state_test.rs"]
 mod tests;

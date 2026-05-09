@@ -174,5 +174,4 @@ pub async fn start_plugin_host_only(
 }
 
 #[cfg(test)]
-#[path = "start_test.rs"]
 mod tests;
