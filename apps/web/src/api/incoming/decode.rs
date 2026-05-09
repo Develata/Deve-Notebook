@@ -2,8 +2,8 @@
 //!   - 05_network#web-ws-runtime
 //!
 
-use deve_core::protocol::ServerMessage;
-use deve_core::protocol::frame::{decode_server_binary, decode_server_json};
+use deve_core::protocol::frame::{ProtocolFrameError, decode_server_binary, decode_server_json};
+use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 
 const FRAME_PREVIEW_BYTES: usize = 16;
 
@@ -17,7 +17,7 @@ pub(super) fn decode_binary_message(bytes: &[u8]) -> Option<ServerMessage> {
                 preview_bytes(bytes),
                 frame_error
             );
-            None
+            protocol_error_message(frame_error)
         }
     }
 }
@@ -27,8 +27,22 @@ pub(super) fn decode_text_message(text: &str) -> Option<ServerMessage> {
         Ok(server_msg) => Some(server_msg),
         Err(error) => {
             leptos::logging::error!("JSON Parse Error: {:?}", error);
-            None
+            protocol_error_message(error)
         }
+    }
+}
+
+fn protocol_error_message(error: ProtocolFrameError) -> Option<ServerMessage> {
+    match error {
+        ProtocolFrameError::UnsupportedVersion { .. } => Some(ServerMessage::ProtocolError {
+            error: ServerError::with_detail(
+                ServerErrorCode::SyncVersionMismatch,
+                error.to_string(),
+            ),
+            switch_nonce: None,
+            scope_nonce: None,
+        }),
+        ProtocolFrameError::Decode(_) => None,
     }
 }
 

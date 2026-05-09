@@ -5,7 +5,9 @@ use deve_core::protocol::ConfirmedOp;
 use deve_core::protocol::ServerError;
 use deve_core::protocol::ServerErrorCode;
 use deve_core::protocol::ServerMessage;
-use deve_core::protocol::frame::encode_server_binary;
+use deve_core::protocol::frame::{
+    WS_PROTOCOL_VERSION, encode_server_binary, encode_server_binary_with_version,
+};
 use std::collections::VecDeque;
 
 #[test]
@@ -43,11 +45,52 @@ fn binary_versioned_frame_decodes_server_message() {
 }
 
 #[test]
+fn binary_unsupported_server_version_surfaces_protocol_error() {
+    let bytes =
+        encode_server_binary_with_version(&ServerMessage::Pong, WS_PROTOCOL_VERSION + 1).unwrap();
+
+    match decode_binary_message(&bytes) {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncVersionMismatch);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| { detail.contains("unsupported WS protocol version") })
+            );
+        }
+        other => panic!("expected ProtocolError, got {other:?}"),
+    }
+}
+
+#[test]
 fn text_legacy_json_still_decodes_server_message() {
     assert!(matches!(
         decode_text_message(r#""Pong""#),
         Some(ServerMessage::Pong)
     ));
+}
+
+#[test]
+fn text_unsupported_server_version_surfaces_protocol_error() {
+    let text = serde_json::json!({
+        "protocol_version": WS_PROTOCOL_VERSION + 1,
+        "message": "Pong"
+    })
+    .to_string();
+
+    match decode_text_message(&text) {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncVersionMismatch);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| { detail.contains("unsupported WS protocol version") })
+            );
+        }
+        other => panic!("expected ProtocolError, got {other:?}"),
+    }
 }
 
 #[test]

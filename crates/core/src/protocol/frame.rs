@@ -88,7 +88,17 @@ pub fn encode_client_binary_with_version(
 }
 
 pub fn encode_server_binary(message: &ServerMessage) -> Result<Vec<u8>, ProtocolFrameError> {
-    encode_binary_frame(&ServerFrame::current(message.clone()))
+    encode_server_binary_with_version(message, WS_PROTOCOL_VERSION)
+}
+
+pub fn encode_server_binary_with_version(
+    message: &ServerMessage,
+    protocol_version: u16,
+) -> Result<Vec<u8>, ProtocolFrameError> {
+    encode_binary_frame(&ServerFrame {
+        protocol_version,
+        message: message.clone(),
+    })
 }
 
 pub fn decode_client_binary(bytes: &[u8]) -> Result<ClientMessage, ProtocolFrameError> {
