@@ -13,6 +13,7 @@ Authentication HTTP handlers for login and session management.
 |------|-------------|
 | `mod.rs` | Handler module declarations |
 | `login.rs` | Login endpoint — validates credentials, issues session |
+| `login/tests.rs` | Login endpoint tests |
 | `session.rs` | Session check/refresh endpoint |
 
 ## For AI Agents

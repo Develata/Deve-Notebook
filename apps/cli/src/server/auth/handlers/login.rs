@@ -92,5 +92,4 @@ fn verify_login_password(password_input: &str, password_hash: &str) -> anyhow::R
 }
 
 #[cfg(test)]
-#[path = "login_test.rs"]
 mod tests;

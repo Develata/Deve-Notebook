@@ -84,5 +84,4 @@ impl BruteForceGuard {
 }
 
 #[cfg(test)]
-#[path = "brute_force_test.rs"]
 mod tests;
