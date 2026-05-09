@@ -11,18 +11,15 @@ mod switcher_branch_hint;
 mod switcher_error;
 mod switcher_guard;
 #[cfg(test)]
-#[path = "../switcher_last_local_repo_test.rs"]
 mod switcher_last_local_repo_test;
 mod switcher_payload;
 mod switcher_prepare;
 #[cfg(test)]
-#[path = "switcher_prepare_test/mod.rs"]
 mod switcher_prepare_test;
 mod switcher_repo;
 mod switcher_scope;
 mod switcher_selector;
 #[cfg(test)]
-#[path = "../switcher_selector_single_remote_test.rs"]
 mod switcher_selector_single_remote_test;
 
 use deve_core::models::RepoId;
@@ -54,5 +51,4 @@ pub async fn handle_switch_repo(
 }
 
 #[cfg(test)]
-#[path = "../switcher_switch_nonce_test.rs"]
 mod switcher_switch_nonce_test;

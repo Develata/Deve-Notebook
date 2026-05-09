@@ -1,4 +1,4 @@
-<!-- Parent: ../AGENTS.md -->
+<!-- Parent: ../../AGENTS.md -->
 <!-- Generated: 2026-03-22 -->
 
 # switcher_prepare_test
