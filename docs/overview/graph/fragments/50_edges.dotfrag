@@ -191,10 +191,10 @@
     app_sc_publish_result -> mod_sc_commit_publish;
     app_sc_publish_result -> mod_proto_ws_publish;
     app_sc_merge_select -> app_sc_merge_request;
-    app_sc_merge_request -> mod_sync_reconcile_merge;
+    app_sc_merge_request -> mod_ledger_reconcile_merge;
     app_sc_merge_request -> mod_ledger_merge_peer;
     app_sc_merge_request -> mod_proto_ws_merge_peer;
-    app_sc_merge_complete -> mod_sync_reconcile_merge;
+    app_sc_merge_complete -> mod_ledger_reconcile_merge;
     app_sc_merge_complete -> mod_proto_ws_merge_peer;
     app_sc_merge_conflict -> mod_ledger_merge_peer;
     app_sc_merge_conflict -> mod_proto_ws_merge_peer;
@@ -310,7 +310,7 @@
     mod_sc_commit_publish -> core_sc_publish;
     mod_ledger_publish -> core_ledger_publish;
     mod_proto_ws_publish -> core_proto_publish;
-    mod_sync_reconcile_merge -> core_sync_merge_peer;
+    mod_ledger_reconcile_merge -> core_ledger_reconcile_peer;
     mod_ledger_merge_peer -> core_ledger_merge_peer;
     mod_proto_ws_merge_peer -> core_proto_merge_peer;
     mod_sync_manual_runtime -> core_sync_runtime;
@@ -349,7 +349,7 @@
     core_sc_publish -> core_ledger_publish [style=dashed, color="#831843", label="anchors publish commit"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
     core_sec_key -> core_sync_key [style=dashed, color="#831843", label="provides repo key"];
-    core_sync_merge_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
+    core_ledger_reconcile_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
     core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];
     core_search_query -> core_proto_search [style=dashed, color="#831843", label="returns scoped results"];

@@ -4,7 +4,7 @@
             fillcolor="#fff0f7";
             color="#be185d";
 
-            core_sync_merge_peer [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_ledger_reconcile_peer [label="ledger\n(reconcile)", fillcolor="#fdf2f8"];
             core_ledger_merge_peer [label="ledger\n(authority)", fillcolor="#fdf2f8"];
             core_proto_merge_peer [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }

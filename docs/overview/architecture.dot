@@ -1686,7 +1686,7 @@ digraph DeveNoteArchitecture {
             fillcolor="#effef3";
             color="#16a34a";
 
-            mod_sync_reconcile_merge [label="sync::reconcile", fillcolor="#f0fdf4"];
+            mod_ledger_reconcile_merge [label="ledger::reconcile", fillcolor="#f0fdf4"];
             mod_ledger_merge_peer [label="ledger::merge", fillcolor="#f0fdf4"];
             mod_proto_ws_merge_peer [label="protocol::ws", fillcolor="#f0fdf4"];
         }
@@ -2177,7 +2177,7 @@ digraph DeveNoteArchitecture {
             fillcolor="#fff0f7";
             color="#be185d";
 
-            core_sync_merge_peer [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_ledger_reconcile_peer [label="ledger\n(reconcile)", fillcolor="#fdf2f8"];
             core_ledger_merge_peer [label="ledger\n(authority)", fillcolor="#fdf2f8"];
             core_proto_merge_peer [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
@@ -2609,10 +2609,10 @@ digraph DeveNoteArchitecture {
     app_sc_publish_result -> mod_sc_commit_publish;
     app_sc_publish_result -> mod_proto_ws_publish;
     app_sc_merge_select -> app_sc_merge_request;
-    app_sc_merge_request -> mod_sync_reconcile_merge;
+    app_sc_merge_request -> mod_ledger_reconcile_merge;
     app_sc_merge_request -> mod_ledger_merge_peer;
     app_sc_merge_request -> mod_proto_ws_merge_peer;
-    app_sc_merge_complete -> mod_sync_reconcile_merge;
+    app_sc_merge_complete -> mod_ledger_reconcile_merge;
     app_sc_merge_complete -> mod_proto_ws_merge_peer;
     app_sc_merge_conflict -> mod_ledger_merge_peer;
     app_sc_merge_conflict -> mod_proto_ws_merge_peer;
@@ -2728,7 +2728,7 @@ digraph DeveNoteArchitecture {
     mod_sc_commit_publish -> core_sc_publish;
     mod_ledger_publish -> core_ledger_publish;
     mod_proto_ws_publish -> core_proto_publish;
-    mod_sync_reconcile_merge -> core_sync_merge_peer;
+    mod_ledger_reconcile_merge -> core_ledger_reconcile_peer;
     mod_ledger_merge_peer -> core_ledger_merge_peer;
     mod_proto_ws_merge_peer -> core_proto_merge_peer;
     mod_sync_manual_runtime -> core_sync_runtime;
@@ -2767,7 +2767,7 @@ digraph DeveNoteArchitecture {
     core_sc_publish -> core_ledger_publish [style=dashed, color="#831843", label="anchors publish commit"];
     core_sc -> core_ledger [style=dashed, color="#831843", label="writes"];
     core_sec_key -> core_sync_key [style=dashed, color="#831843", label="provides repo key"];
-    core_sync_merge_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
+    core_ledger_reconcile_peer -> core_ledger_merge_peer [style=dashed, color="#831843", label="applies merged patch"];
     core_sync_transfer -> core_proto_transfer [style=dashed, color="#831843", label="moves encrypted ops"];
     core_sync_runtime -> core_proto_runtime [style=dashed, color="#831843", label="drives sync mode"];
     core_search_query -> core_proto_search [style=dashed, color="#831843", label="returns scoped results"];
@@ -3485,7 +3485,7 @@ digraph DeveNoteArchitecture {
     core_sync_discard_file -> obj_workspace_projection;
     core_sc_conflict -> obj_merge_conflict;
     core_ledger_conflict -> obj_merge_conflict;
-    core_sync_merge_peer -> obj_merge_conflict;
+    core_ledger_reconcile_peer -> obj_merge_conflict;
     core_ledger_merge_peer -> obj_merge_conflict;
     core_sync_runtime -> obj_confirmed_op;
 

@@ -37,7 +37,7 @@
     core_sync_discard_file -> obj_workspace_projection;
     core_sc_conflict -> obj_merge_conflict;
     core_ledger_conflict -> obj_merge_conflict;
-    core_sync_merge_peer -> obj_merge_conflict;
+    core_ledger_reconcile_peer -> obj_merge_conflict;
     core_ledger_merge_peer -> obj_merge_conflict;
     core_sync_runtime -> obj_confirmed_op;
 
