@@ -155,5 +155,4 @@ fn rejects_peer_deleted_for_non_browser_unbound_sessions() {
     }));
 }
 
-#[path = "filter_test_extra.rs"]
 mod extra;

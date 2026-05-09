@@ -3,7 +3,7 @@
 //!
 //! Additional broadcast scope-stamping regression coverage.
 
-use super::super::BroadcastFilter;
+use super::BroadcastFilter;
 use crate::server::session::WsSession;
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ConfirmedOp, ServerMessage};

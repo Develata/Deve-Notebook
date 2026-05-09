@@ -7,11 +7,8 @@ use crate::server::session::WsSession;
 use deve_core::protocol::ServerMessage;
 use std::sync::{Arc, RwLock};
 
-#[path = "filter_outbound.rs"]
 mod outbound;
-#[path = "filter_scope.rs"]
 mod scope;
-#[path = "filter_stamp.rs"]
 mod stamp;
 
 use scope::{SessionBroadcastScope, matches_runtime_scope_nonce, matches_scope};
@@ -112,8 +109,6 @@ impl BroadcastFilter {
 }
 
 #[cfg(test)]
-#[path = "filter_poison_test.rs"]
 mod poison_tests;
 #[cfg(test)]
-#[path = "filter_test.rs"]
 mod tests;

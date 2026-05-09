@@ -12,7 +12,7 @@ WebSocket connection management: message filtering, receiving client messages, s
 | File | Description |
 |------|-------------|
 | `mod.rs` | WebSocket module entry |
-| `filter.rs` | Message filtering — validates and routes incoming WS messages |
+| `filter/` | Broadcast filtering — enforces repo/branch/scope delivery and nonce stamping |
 | `receive.rs` | Receives and deserializes client WebSocket messages |
 | `send.rs` | Serializes and sends server WebSocket messages |
 
@@ -20,6 +20,7 @@ WebSocket connection management: message filtering, receiving client messages, s
 
 | Directory | Purpose |
 |-----------|---------|
+| `filter/` | Broadcast filter facade, scope matching, outbound stamping, and regression tests |
 | `route/` | WebSocket route handlers by domain |
 
 ## For AI Agents
@@ -27,6 +28,6 @@ WebSocket connection management: message filtering, receiving client messages, s
 ### Working In This Directory
 
 - All messages are repo-scoped — every message carries repo_id, branch, scope_nonce.
-- `filter.rs` is the first validation gate for incoming messages.
+- `filter/` is the first validation gate for outgoing broadcast delivery.
 
 <!-- MANUAL: -->
