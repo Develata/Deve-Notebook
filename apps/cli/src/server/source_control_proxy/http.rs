@@ -8,9 +8,7 @@ use reqwest::{RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use std::fmt;
 
-#[path = "source_control_proxy_http_plain.rs"]
 mod plain;
-#[path = "source_control_proxy_http_target.rs"]
 mod target;
 
 pub(crate) use target::ProxyScOp;
@@ -87,5 +85,4 @@ impl fmt::Display for ProxyServerError {
 impl std::error::Error for ProxyServerError {}
 
 #[cfg(test)]
-#[path = "source_control_proxy_http_test.rs"]
 mod tests;

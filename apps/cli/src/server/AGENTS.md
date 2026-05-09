@@ -34,16 +34,9 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `listing_scope_binding*_test.rs` | Listing bootstrap and stale runtime binding tests |
 | `listing_scope_cleanup*_test.rs` | Listing stale scope cleanup tests |
 | `listing_shadow_scope*_test.rs` | Shadow branch listing scope tests |
-| `source_control_proxy.rs` | Source control proxy: `RemoteSourceControlApi` implementing `Repository` trait |
-| `source_control_proxy_client.rs` | Source control proxy HTTP client construction |
-| `source_control_proxy_http.rs` | HTTP proxy for remote source control operations |
-| `source_control_proxy_http_plain.rs` | Plain-text proxy error classification |
-| `source_control_proxy_http_target.rs` | Remote SC target-specific error mapping |
-| `source_control_proxy_commits.rs` | Commit history proxy operations |
-| `source_control_proxy_mutations.rs` | Mutation proxy (stage/unstage/discard/commit) |
-| `source_control_proxy_queries.rs` | Query proxy (changes/diff/pending) |
+| `source_control_proxy/` | Source control proxy facade and implementation modules for `RemoteSourceControlApi` |
 | `source_control_http_*_test.rs` | Source control HTTP roundtrip tests and helpers |
-| `source_control_proxy_http_*_test.rs` | Source control proxy HTTP error decoding tests |
+| `source_control_proxy/http/tests/` | Source control proxy HTTP error decoding tests |
 | `source_control_changes_identity*_test.rs` | Source control changes identity retention tests |
 | `source_control_local_commit_scope*_test.rs` | Source control commit scope nonce and bootstrap tests |
 | `source_control_{local,remote}_scope*_test.rs` | Source control scope/identity runtime tests |
@@ -63,6 +56,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 |-----------|---------|
 | `handlers/` | Client message handlers organized by domain |
 | `repo_scope/` | Repo scope facade and implementation modules |
+| `source_control_proxy/` | Remote Source Control bridge implementation |
 | `ws/` | WebSocket connection lifecycle, message routing, and broadcast filtering |
 | `auth/` | Authentication middleware, JWT cookie handling, brute-force protection |
 | `ai_chat/` | OpenAI-compatible streaming chat integration |

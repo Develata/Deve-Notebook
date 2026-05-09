@@ -1,17 +1,12 @@
-// apps/cli/src/server/source_control_proxy.rs
+// apps/cli/src/server/source_control_proxy/mod.rs
 //! # Source Control Remote Proxy
 //! plan_ref:
 //!   - 07_diff_logic#source-control-runtime
 
-#[path = "source_control_proxy_client.rs"]
 mod client;
-#[path = "source_control_proxy_commits.rs"]
 mod commits;
-#[path = "source_control_proxy_http.rs"]
 mod http;
-#[path = "source_control_proxy_mutations.rs"]
 mod mutations;
-#[path = "source_control_proxy_queries.rs"]
 mod queries;
 
 use anyhow::Result;
