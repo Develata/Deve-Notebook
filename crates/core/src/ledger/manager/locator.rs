@@ -104,7 +104,7 @@ impl RepoManager {
         Ok(LocalRepoCandidates { by_id, by_name })
     }
 
-    fn select_local_repo_name(&self, candidates: &LocalRepoCandidates) -> Result<String> {
+    fn selected_candidate_name(candidates: &LocalRepoCandidates) -> Result<Option<String>> {
         if let (Some(from_id), Some(from_name)) = (&candidates.by_id, &candidates.by_name)
             && from_id != from_name
         {
@@ -114,11 +114,14 @@ impl RepoManager {
                 from_name
             );
         }
-        if let Some(name) = candidates
+        Ok(candidates
             .by_id
             .clone()
-            .or_else(|| candidates.by_name.clone())
-        {
+            .or_else(|| candidates.by_name.clone()))
+    }
+
+    fn select_local_repo_name(&self, candidates: &LocalRepoCandidates) -> Result<String> {
+        if let Some(name) = Self::selected_candidate_name(candidates)? {
             return Ok(name);
         }
         match self
@@ -136,20 +139,7 @@ impl RepoManager {
         &self,
         candidates: &LocalRepoCandidates,
     ) -> Result<String> {
-        if let (Some(from_id), Some(from_name)) = (&candidates.by_id, &candidates.by_name)
-            && from_id != from_name
-        {
-            anyhow::bail!(
-                "Repo selector mismatch: repo_id resolved to {}, repo_name resolved to {}",
-                from_id,
-                from_name
-            );
-        }
-        if let Some(name) = candidates
-            .by_id
-            .clone()
-            .or_else(|| candidates.by_name.clone())
-        {
+        if let Some(name) = Self::selected_candidate_name(candidates)? {
             return Ok(name);
         }
         match self
