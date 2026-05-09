@@ -3,10 +3,10 @@
 //!
 //! Copied directory structure registration.
 
-use super::super::errors;
 use super::CopyRegisterCtx;
-use super::register_path::map_dest_rel;
+use super::path::map_dest_rel;
 use crate::server::handlers::docs::copy_utils::collect_dirs;
+use crate::server::handlers::docs::errors;
 use std::path::Path;
 
 pub(super) fn register_dirs(

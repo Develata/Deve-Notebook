@@ -3,10 +3,10 @@
 //!
 //! Copied markdown document registration.
 
-use super::super::errors;
 use super::CopyRegisterCtx;
-use super::register_path::map_dest_rel;
+use super::path::map_dest_rel;
 use crate::server::handlers::docs::copy_utils::collect_md_files;
+use crate::server::handlers::docs::errors;
 use crate::server::handlers::docs::file_register::create_file_from_content;
 use deve_core::state;
 use std::path::Path;

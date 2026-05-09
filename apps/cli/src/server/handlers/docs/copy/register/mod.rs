@@ -10,12 +10,9 @@ use crate::server::repo_scope::{ResolvedRepo, local_repo_root};
 use std::path::Path;
 use std::sync::Arc;
 
-#[path = "register_dirs.rs"]
 mod dirs;
-#[path = "register_files.rs"]
 mod files;
-#[path = "register_path.rs"]
-mod register_path;
+mod path;
 
 #[derive(Clone, Copy)]
 pub(super) struct CopyRegisterCtx<'a> {

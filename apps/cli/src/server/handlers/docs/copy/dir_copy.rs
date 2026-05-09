@@ -65,5 +65,4 @@ fn ensure_clean_node_consistency(
 }
 
 #[cfg(test)]
-#[path = "dir_copy_test.rs"]
 mod tests;
