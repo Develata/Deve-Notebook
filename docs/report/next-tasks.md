@@ -12,7 +12,7 @@
 
 ## 最近完成
 
-- Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `merge_test.rs` 场景测试上下文，不做纯行数拆分。
+- Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `apps/cli/src/server/ws/route/merge/tests.rs` 场景测试上下文，不做纯行数拆分。
 
 ## 当前基线
 
