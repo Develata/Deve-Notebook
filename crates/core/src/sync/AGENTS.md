@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Sync engine and P2P reconciliation. Manages document synchronization between the server and peers, filesystem materialization, projection rebuilding, snapshot policies, and the PersistGuard that prevents watcher storms during writes.
+Sync engine and P2P reconciliation. Manages document synchronization between the server and peers, filesystem materialization, projection rebuilding, and snapshot policies.
 
 ## Key Files
 
@@ -25,7 +25,6 @@ Sync engine and P2P reconciliation. Manages document synchronization between the
 | `rebuild.rs` | Full projection rebuild |
 | `rebuild_projection.rs` | Rebuild projection orchestration |
 | `rebuild_projection_state.rs` | Rebuild state tracking |
-| `persist_guard.rs` | PersistGuard — prevents watcher from reacting to our own writes |
 | `repo_scoped.rs` | RepoScopedSyncEngine |
 | `repo_scoped/` | Repo-scoped SyncEngine helper modules and tests |
 | `scan.rs` | Vault directory scanning |
@@ -45,13 +44,13 @@ Sync engine and P2P reconciliation. Manages document synchronization between the
 | Directory | Purpose |
 |-----------|---------|
 | `engine/` | Sync engine — handshake and transfer |
-| `vector/` | Vector clock algorithm for causal ordering |
+| `vector/` | Compatibility re-export for the shared VersionVector model |
 
 ## For AI Agents
 
 ### Working In This Directory
 
-- **PersistGuard** (`persist_guard.rs`) is critical — shared between RepoManager and SyncManager.
+- **PersistGuard** lives in `writeback/` and is shared between RepoManager and SyncManager.
 - `repo_scoped.rs` is the main entry point for repo-scoped sync operations.
 - See `05_network.md` in deve-note plan for sync design.
 

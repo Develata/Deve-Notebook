@@ -4,7 +4,7 @@
 //!   - 04_storage#repo-runtime-layout
 //!
 use crate::models::{PeerId, RepoId};
-use crate::sync::persist_guard::PersistGuard;
+use crate::writeback::PersistGuard;
 use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

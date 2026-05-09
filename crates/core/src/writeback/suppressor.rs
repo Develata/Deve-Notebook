@@ -84,7 +84,9 @@ impl WriteSuppressor {
     }
 
     fn insert(&self, repo: &str, path: &str, fingerprint: Fingerprint) {
-        let Some(mut guard) = self.lock() else { return };
+        let Some(mut guard) = self.lock() else {
+            return;
+        };
         let bucket = guard.entry(repo.to_string()).or_default();
         bucket.retain(|_, entry| entry.at.elapsed() <= self.window);
         bucket.insert(

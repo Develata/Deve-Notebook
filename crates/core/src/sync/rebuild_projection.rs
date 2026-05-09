@@ -2,11 +2,11 @@
 //!   - 04_storage#projection-contract
 //!   - 06_repository#tree-projection-contract
 
-use super::persist_guard::PersistGuard;
 use super::projection_plan;
 use super::rebuild;
 use super::rebuild_projection_state;
 use crate::ledger::RepoManager;
+use crate::writeback::PersistGuard;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;

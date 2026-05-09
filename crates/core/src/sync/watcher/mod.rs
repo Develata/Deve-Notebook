@@ -11,7 +11,6 @@ mod dispatch_test;
 mod dispatch_test_support;
 mod filter;
 mod registry;
-pub(crate) mod suppressor;
 
 use crate::models::RepoId;
 use crate::protocol::ServerMessage;

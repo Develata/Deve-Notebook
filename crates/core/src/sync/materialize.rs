@@ -2,11 +2,11 @@
 //!   - 06_repository#tree-projection-contract
 //!
 
-use super::persist_guard::PersistGuard;
 use super::projection_plan;
 use super::rebuild;
 use crate::ledger::RepoManager;
 use crate::utils::fs::checked_exists;
+use crate::writeback::PersistGuard;
 use anyhow::Result;
 use std::path::Path;
 use tracing::warn;

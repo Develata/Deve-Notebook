@@ -29,8 +29,6 @@ mod pending_content;
 #[cfg(not(target_arch = "wasm32"))]
 mod pending_rename;
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) mod persist_guard;
-#[cfg(not(target_arch = "wasm32"))]
 mod projection_diagnostic;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_health;
@@ -68,9 +66,9 @@ use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
-use dir_refresh_guard::DirRefreshGuard;
+use crate::writeback::PersistGuard;
 #[cfg(not(target_arch = "wasm32"))]
-use persist_guard::PersistGuard;
+use dir_refresh_guard::DirRefreshGuard;
 #[cfg(not(target_arch = "wasm32"))]
 pub use projection_diagnostic::{
     ProjectionDiagnostic, ProjectionDiagnosticIssue, ProjectionDiagnosticStatus,

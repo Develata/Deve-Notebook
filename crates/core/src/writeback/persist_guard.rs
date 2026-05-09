@@ -2,14 +2,16 @@
 //!   - 04_storage#projection-contract
 //!   - 04_storage#watcher-contract
 
+use super::WriteSuppressor;
+
 pub(crate) struct PersistGuard {
-    inner: crate::sync::watcher::suppressor::WriteSuppressor,
+    inner: WriteSuppressor,
 }
 
 impl PersistGuard {
     pub(crate) fn new() -> Self {
         Self {
-            inner: crate::sync::watcher::suppressor::WriteSuppressor::new(),
+            inner: WriteSuppressor::new(),
         }
     }
 

@@ -191,7 +191,7 @@ pub fn init(
         shadow_dbs: RwLock::new(HashMap::new()),
         snapshot_depth,
         vault_root: None,
-        persist_guard: Arc::new(crate::sync::persist_guard::PersistGuard::new()),
+        persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
     };
     repo.repair_remote_repo_catalogs()
         .context("Failed to repair remote repo catalogs during init")?;

@@ -45,6 +45,8 @@ pub mod vfs;
 pub mod watcher;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod watcher_ignore;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod writeback;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "search"))]
 pub mod search;
