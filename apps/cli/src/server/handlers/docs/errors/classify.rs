@@ -38,5 +38,4 @@ fn is_conflict(lower: &str) -> bool {
 }
 
 #[cfg(test)]
-#[path = "errors_classify_test.rs"]
 mod tests;
