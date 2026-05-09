@@ -17,8 +17,6 @@ pub mod handler;
 #[cfg(not(target_arch = "wasm32"))]
 mod manager_lifecycle;
 #[cfg(not(target_arch = "wasm32"))]
-mod manager_projection;
-#[cfg(not(target_arch = "wasm32"))]
 mod manager_reconcile;
 #[cfg(not(target_arch = "wasm32"))]
 mod manager_workspace;
@@ -38,6 +36,8 @@ mod projection_diagnostic;
 mod projection_health;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_io;
+#[cfg(not(target_arch = "wasm32"))]
+mod projection_persistence_runtime;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_plan;
 pub mod protocol;
@@ -68,8 +68,6 @@ use crate::vfs::Vfs;
 #[cfg(not(target_arch = "wasm32"))]
 use dir_refresh_guard::DirRefreshGuard;
 #[cfg(not(target_arch = "wasm32"))]
-pub use manager_projection::diagnose_projection_local_repo;
-#[cfg(not(target_arch = "wasm32"))]
 use persist_guard::PersistGuard;
 #[cfg(not(target_arch = "wasm32"))]
 pub use projection_diagnostic::{
@@ -77,6 +75,8 @@ pub use projection_diagnostic::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use projection_health::ProjectionHealth;
+#[cfg(not(target_arch = "wasm32"))]
+pub use projection_persistence_runtime::diagnose_projection_local_repo;
 #[cfg(not(target_arch = "wasm32"))]
 use snapshot_policy::SnapshotPolicy;
 #[cfg(not(target_arch = "wasm32"))]
