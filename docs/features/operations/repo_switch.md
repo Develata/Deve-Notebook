@@ -43,7 +43,7 @@
 - `Trigger`: 服务端返回 `RepoSwitched`、doc list、tree update
 - `Preconditions`: `op.repo.switch.request-switch` 已执行
 - `Immediate Result`: 当前 repo / scope_nonce / tree / docs 全部重绑到新 repo
-- `Application Entry`: `apps/cli/src/server/handlers/switcher_payload.rs`, `apps/web/src/hooks/use_core/effects/message_repo_scope.rs`
+- `Application Entry`: `apps/cli/src/server/handlers/switcher/switcher_payload.rs`, `apps/web/src/hooks/use_core/effects/message_repo_scope.rs`
 
 ## Notes
 

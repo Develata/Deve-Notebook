@@ -17,7 +17,9 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `channel.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
 | `repo_scope/mod.rs` | Repo scope facade: maps session state to active repo/branch with fail-closed validation |
 | `repo_scope/` | Repo scope implementation helpers for bootstrap, cleanup, error mapping, lookup, remote resolution, selector logic, sync, and workspace paths |
-| `repo_scope*_test.rs` | Repo scope runtime selector, cleanup, and recovery tests |
+| `repo_scope_test/` | Repo scope catalog, error mapping, local scope, and alias tests |
+| `repo_scope_recovery_test_extra/` | Repo scope recovery and local-counterpart tests |
+| `repo_scope*_test.rs` | Remaining repo scope runtime selector and recovery tests |
 | `shadow_scope.rs` | Shadow branch scope management and stale branch cleanup |
 | `error_classify.rs` | Error string classification into semantic error codes |
 | `error_classify_test.rs` | Shared error classification tests |

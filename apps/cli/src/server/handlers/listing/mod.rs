@@ -1,4 +1,4 @@
-// apps/cli/src/server/handlers/listing.rs
+// apps/cli/src/server/handlers/listing/mod.rs
 //! # 列表查询处理器
 //!
 //! 处理各类列表查询请求: ListDocs, ListShadows, ListRepos

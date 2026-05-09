@@ -13,15 +13,15 @@ Client message handlers organized by domain. Each submodule processes a category
 | `admin.rs` | Admin HTTP endpoints: dump, export, node-check with error classification |
 | `admin_dump.rs` | Admin debug dump endpoint implementation |
 | `admin_test.rs` | Admin handler tests |
-| `listing.rs` | ListDocs, ListShadows, ListRepos handlers with stale scope precheck and cleanup |
-| `listing_docs.rs` | Document listing implementation with projection refresh |
-| `switcher.rs` | Branch/repo switching orchestration: validates targets, prepares scope, commits switch |
-| `switcher_scope.rs` | Resolves current branch switch context for scope transitions |
-| `switcher_selector.rs` | Target repo selection: exact stem match, UUID lookup, URL recovery |
-| `switcher_prepare.rs` | Prepares repo switch: resolves DB handle, repo_id, validates metadata |
-| `switcher_guard.rs` | Guards switch operations requiring browser session and switch_nonce |
-| `switcher_payload.rs` | Builds and emits the DocList + TreeUpdate + RepoSwitched message sequence |
-| `switcher_error.rs` | Switcher-specific error construction |
+| `listing/` | ListDocs, ListShadows, ListRepos handlers with stale scope precheck and cleanup |
+| `listing/docs.rs` | Document listing implementation with projection refresh |
+| `switcher/` | Branch/repo switching orchestration: validates targets, prepares scope, commits switch |
+| `switcher/switcher_scope.rs` | Resolves current branch switch context for scope transitions |
+| `switcher/switcher_selector.rs` | Target repo selection: exact stem match, UUID lookup, URL recovery |
+| `switcher/switcher_prepare.rs` | Prepares repo switch: resolves DB handle, repo_id, validates metadata |
+| `switcher/switcher_guard.rs` | Guards switch operations requiring browser session and switch_nonce |
+| `switcher/switcher_payload.rs` | Builds and emits the DocList + TreeUpdate + RepoSwitched message sequence |
+| `switcher/switcher_error.rs` | Switcher-specific error construction |
 | `document.rs` | Document content ops entry point (delegates to `document/` submodule) |
 | `merge.rs` | Merge operations entry point (delegates to `merge/` submodule) |
 | `sync.rs` | Sync operations entry point (delegates to `sync/` submodule) |
@@ -40,13 +40,13 @@ Client message handlers organized by domain. Each submodule processes a category
 | `source_control/` | Git-like source control (changes, staging, commits, diff) |
 | `source_control/errors/` | Source control error mapping |
 | `source_control/service/` | Source control service layer (read/write/target resolution) |
-| `switcher_prepare_test/` | Switcher preparation integration tests |
+| `switcher/switcher_prepare_test/` | Switcher preparation integration tests |
 | `sync/` | P2P sync engine handlers (hello, transfer, snapshot, cleanup) |
 
 ## For AI Agents
 
 ### Working In This Directory
-- Every handler must respect repo scope; use `resolve_session_repo_and_sync` or `bootstrap_local_repo` from `repo_scope.rs`.
+- Every handler must respect repo scope; use `resolve_session_repo_and_sync` or `bootstrap_local_repo` from `repo_scope/mod.rs`.
 - Listing handlers precheck for stale remote unbound scopes before querying data.
 - Switcher is a multi-phase pipeline: guard -> validate target -> select repo -> prepare -> preload view -> commit session -> emit messages.
 - Branch switching now carries a session-level "last local repo" hint so `remote -> Local` returns to the user's previous local repo when possible.
