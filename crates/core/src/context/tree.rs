@@ -19,7 +19,7 @@ impl DirectoryTree {
     pub fn generate(root_path: &Path) -> Self {
         let mut builder = WalkBuilder::new(root_path);
         builder
-            .hidden(true) // Skip hidden files (.git) by default usually, but we want to be specific
+            .hidden(true) // Skip hidden files and directories.
             .git_ignore(true)
             .git_global(false) // Don't look at user's global gitignore
             .max_depth(Some(5)); // Limit depth
