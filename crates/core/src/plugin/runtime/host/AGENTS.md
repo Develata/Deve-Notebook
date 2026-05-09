@@ -14,7 +14,7 @@ Host API functions exposed to Rhai plugin scripts. Provides file system access, 
 | `mod.rs` | Host module entry and global state setters |
 | `fs.rs` | Filesystem operations (read/write within vault) |
 | `git.rs` | Git operations for plugins |
-| `git_target.rs` | Git target resolution |
+| `git/target.rs` | Git target resolution |
 | `note.rs` | Note manipulation API |
 | `search.rs` | Search API for plugins |
 | `chat.rs` | Chat API for plugins |

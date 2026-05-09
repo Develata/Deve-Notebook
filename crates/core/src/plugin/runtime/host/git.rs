@@ -7,8 +7,7 @@
 //! **功能**: 提供 Git-like 源代码控制能力。
 //! **安全**: 需通过 Capability 的 source_control 检查。
 
-#[path = "git_target.rs"]
-mod git_target;
+mod target;
 
 use crate::ledger::traits::RepoSelector;
 use crate::plugin::manifest::Capability;
@@ -80,7 +79,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
-            let target = git_target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
+            let target = target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
             let diff = repo
                 .diff_doc_path_in_repo(&selector, &target)
                 .map_err(|e| e.to_string())?;
@@ -97,7 +96,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
-            let target = git_target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
+            let target = target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
             repo.stage_pending_in_repo(&selector, &target)
                 .map_err(|e| e.to_string().into())
         },
