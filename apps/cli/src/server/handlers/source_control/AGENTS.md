@@ -14,8 +14,7 @@ Git-like source control handlers: changes detection, staging/unstaging, commit, 
 | `mod.rs` | Module declarations and shared types |
 | `http.rs` | HTTP endpoint registration for source control |
 | `http_commits.rs` | Commit listing HTTP endpoint |
-| `http_mutations.rs` | Mutation endpoints (stage, unstage, discard) |
-| `http_mutations_commit.rs` | Commit endpoint |
+| `http_mutations/` | Mutation endpoints (stage, unstage, discard, commit) |
 | `changes.rs` | Detect uncommitted changes |
 | `staging.rs` | Stage/unstage operations |
 | `commits.rs` | Commit history listing |

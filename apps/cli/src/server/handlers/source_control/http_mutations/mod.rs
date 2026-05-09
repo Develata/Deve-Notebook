@@ -1,11 +1,10 @@
-// apps/cli/src/server/handlers/source_control/http_mutations.rs
+// apps/cli/src/server/handlers/source_control/http_mutations/mod.rs
 //! plan_ref:
 //!   - 07_diff_logic#source-control-runtime
 //!   - 06_repository#repo-scope-runtime
 //!
 //! # Source Control HTTP Mutation API
 
-#[path = "http_mutations_commit.rs"]
 mod commit;
 
 use axum::Json;
