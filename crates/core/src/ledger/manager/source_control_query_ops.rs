@@ -10,10 +10,11 @@
 //! - Diff 左侧来自当前 Ledger 投影，右侧来自工作区文件。
 
 use crate::ledger::RepoManager;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitFileDiff};
-use crate::utils::path::to_forward_slash;
+use crate::source_control::{ChangeEntry, CommitFileDiff};
 use anyhow::Result;
 use std::collections::HashSet;
+
+use super::source_control_target_resolution::change_identity_key;
 
 impl RepoManager {
     pub fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
@@ -61,20 +62,4 @@ impl RepoManager {
             crate::source_control::commit_diff::compare_commits(db, commit_a.as_deref(), &commit_b)
         })
     }
-}
-
-fn change_identity_key(
-    entry: &ChangeEntry,
-) -> (
-    Option<crate::models::DocId>,
-    String,
-    Option<String>,
-    ChangeStatus,
-) {
-    (
-        entry.doc_id,
-        to_forward_slash(&entry.path),
-        entry.renamed_from.as_deref().map(to_forward_slash),
-        entry.status,
-    )
 }

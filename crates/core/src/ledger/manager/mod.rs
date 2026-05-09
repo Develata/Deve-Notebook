@@ -56,6 +56,7 @@ mod source_control_query_ops;
 mod source_control_runtime;
 mod source_control_target;
 mod source_control_target_lookup;
+mod source_control_target_resolution;
 mod source_control_workdir;
 mod source_control_workdir_db;
 mod source_control_workdir_helpers;
