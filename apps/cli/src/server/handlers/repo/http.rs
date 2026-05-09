@@ -201,5 +201,4 @@ fn classify_repo_error(detail: &str) -> (StatusCode, ServerErrorCode) {
 }
 
 #[cfg(test)]
-#[path = "http_test.rs"]
 mod tests;

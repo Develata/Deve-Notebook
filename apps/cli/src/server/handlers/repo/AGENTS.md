@@ -13,7 +13,7 @@ Repository management HTTP endpoints. Handles repo listing, creation, and metada
 |------|-------------|
 | `mod.rs` | Module entry and route registration |
 | `http.rs` | HTTP handlers for repo CRUD |
-| `http_test.rs` | Tests for repo HTTP endpoints |
+| `http/tests.rs` | Tests for repo HTTP endpoints |
 
 ## For AI Agents
 
