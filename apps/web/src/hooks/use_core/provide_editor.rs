@@ -31,5 +31,6 @@ pub(super) fn build_editor_context(state: &CoreState) -> EditorContext {
         handshake_scope_nonce: state.handshake_scope_nonce,
         pending_local_edits: state.pending_local_edits,
         set_pending_local_edits: state.set_pending_local_edits,
+        set_pending_navigation: state.set_pending_navigation,
     }
 }

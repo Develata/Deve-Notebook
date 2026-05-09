@@ -6,6 +6,7 @@ use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId};
 use leptos::prelude::*;
 
+use super::super::navigation::PendingNavigation;
 use super::super::pending::PendingLocalEdits;
 use super::super::types::PendingBranchTarget;
 
@@ -35,4 +36,5 @@ pub struct EditorContext {
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
+    pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
 }

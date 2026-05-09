@@ -75,6 +75,7 @@ mod tests {
     use super::handle_write_ready_message;
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::PendingBranchTarget;
+    use crate::hooks::use_core::navigation::PendingNavigation;
     use crate::hooks::use_core::pending::{
         PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
     };
@@ -90,6 +91,16 @@ mod tests {
         repo_id: RepoId,
         doc_id: DocId,
         scope_nonce: u64,
+    ) -> SyncContext<'a> {
+        write_ready_ctx_with_pending_scope(ws, repo_id, doc_id, scope_nonce, scope_nonce)
+    }
+
+    fn write_ready_ctx_with_pending_scope<'a>(
+        ws: &'a WsService,
+        repo_id: RepoId,
+        doc_id: DocId,
+        scope_nonce: u64,
+        pending_scope_nonce: u64,
     ) -> SyncContext<'a> {
         let (active_branch, _) = signal(None);
         let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
@@ -109,7 +120,7 @@ mod tests {
                 PendingLocalEditInput {
                     repo_id,
                     doc_id,
-                    scope_nonce,
+                    scope_nonce: pending_scope_nonce,
                     client_id: 11,
                     client_op_id: 13,
                     base_version: 0,
@@ -128,6 +139,7 @@ mod tests {
         let (load_progress, set_load_progress) = signal((0usize, 0usize));
         let (load_eta_ms, set_load_eta_ms) = signal(0u64);
         let (repo_key, set_repo_key) = signal(None);
+        let (_, set_pending_navigation) = signal(None::<PendingNavigation>);
 
         let _ = (content, playback_version, load_progress, load_eta_ms);
 
@@ -152,6 +164,7 @@ mod tests {
             set_content,
             pending_local_edits,
             set_pending_local_edits,
+            set_pending_navigation,
             local_version,
             set_local_version,
             history,
@@ -209,6 +222,26 @@ mod tests {
             }
             other => panic!("expected Edit, got {other:?}"),
         }
+        assert_eq!(
+            pending_count_for_doc(&ctx.pending_local_edits.get_untracked(), doc_id),
+            1
+        );
+    }
+
+    #[test]
+    fn write_ready_resend_skips_pending_edit_from_stale_scope() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let repo_id = RepoId::new_v4();
+        let doc_id = DocId::from_u128(7);
+        ws.set_node_role_for_test("main");
+        ws.mark_writer_ready(repo_id.to_string(), 17, "web-light-peer");
+        let ctx = write_ready_ctx_with_pending_scope(&ws, repo_id, doc_id, 17, 16);
+
+        handle_write_ready_message(&ctx, repo_id, None, 17);
+
+        assert!(ws.drain_sent_for_test().is_empty());
         assert_eq!(
             pending_count_for_doc(&ctx.pending_local_edits.get_untracked(), doc_id),
             1

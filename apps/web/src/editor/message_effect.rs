@@ -92,6 +92,7 @@ pub fn setup_server_message_effect(ctx: ServerMessageEffectCtx) {
                 set_content,
                 pending_local_edits: core.pending_local_edits,
                 set_pending_local_edits: core.set_pending_local_edits,
+                set_pending_navigation: core.set_pending_navigation,
                 local_version,
                 set_local_version,
                 history,

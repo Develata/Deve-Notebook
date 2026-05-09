@@ -8,6 +8,7 @@
 use crate::api::WsService;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::navigation::PendingNavigation;
 use crate::hooks::use_core::pending::PendingLocalEdits;
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
@@ -45,6 +46,7 @@ pub struct SyncContext<'a> {
     pub set_content: WriteSignal<String>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
+    pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     // 版本追踪
     pub local_version: ReadSignal<u64>,
     pub set_local_version: WriteSignal<u64>,

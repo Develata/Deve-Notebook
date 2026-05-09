@@ -21,7 +21,6 @@ pub fn handle_write_ready_message(
     if !accepts_write_ready_message(&repo_id, &branch, scope_nonce, signals) {
         return;
     }
-    signals.set_handshake_ready.set(true);
     ws.mark_writer_ready(repo_id, scope_nonce, peer_id.as_str());
 }
 
@@ -52,5 +51,42 @@ pub fn handle_ack_message(
     });
     if clear_navigation {
         signals.set_pending_navigation.set(None);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::handle_write_ready_message;
+    use crate::api::{ConnectionStatus, WsService};
+    use crate::hooks::use_core::state::init_signals;
+    use deve_core::models::{PeerId, RepoId};
+    use leptos::prelude::{GetUntracked, Set, signal};
+
+    #[test]
+    fn write_ready_marks_writer_without_completing_handshake() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let repo_id = RepoId::new_v4();
+        let repo_id_text = repo_id.to_string();
+
+        signals.set_current_repo_id.set(Some(repo_id_text.clone()));
+        signals.set_current_scope_nonce.set(7);
+        signals.set_handshake_scope_nonce.set(Some(7));
+        signals.set_handshake_ready.set(false);
+
+        handle_write_ready_message(
+            PeerId::new("web-light-peer"),
+            repo_id,
+            7,
+            None,
+            &ws,
+            signals,
+        );
+
+        assert!(!signals.handshake_ready.get_untracked());
+        assert!(ws.writer_ready_for(Some(&repo_id_text), Some(7)));
     }
 }
