@@ -20,10 +20,9 @@ use deve_core::ledger::traits::RepoSelector;
 use serde::Deserialize;
 use std::sync::Arc;
 
-#[path = "admin_dump.rs"]
-mod admin_dump;
+mod dump;
 
-pub use admin_dump::dump;
+pub use dump::dump;
 
 #[derive(Deserialize)]
 pub struct DumpQuery {
@@ -153,5 +152,4 @@ pub(super) fn classify_admin_error(detail: &str, fallback: StatusCode) -> Status
 }
 
 #[cfg(test)]
-#[path = "admin_test.rs"]
 mod tests;

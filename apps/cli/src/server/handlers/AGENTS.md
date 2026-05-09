@@ -11,8 +11,8 @@ Client message handlers organized by domain. Each submodule processes a category
 |------|-------------|
 | `mod.rs` | Module declarations for all handler domains |
 | `admin.rs` | Admin HTTP endpoints: dump, export, node-check with error classification |
-| `admin_dump.rs` | Admin debug dump endpoint implementation |
-| `admin_test.rs` | Admin handler tests |
+| `admin/dump.rs` | Admin debug dump endpoint implementation |
+| `admin/tests.rs` | Admin handler tests |
 | `listing/` | ListDocs, ListShadows, ListRepos handlers with stale scope precheck and cleanup |
 | `listing/docs.rs` | Document listing implementation with projection refresh |
 | `switcher/` | Branch/repo switching orchestration: validates targets, prepares scope, commits switch |
