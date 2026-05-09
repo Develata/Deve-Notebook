@@ -14,7 +14,7 @@ fn run_pending_mirror_marks_noop_as_out_of_sync() {
 
     assert_eq!(report.out_of_sync, 1);
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("get")
         .expect("record");
     assert_eq!(record.state, GitMirrorCommitState::OutOfSync);
@@ -42,7 +42,7 @@ fn run_pending_mirror_rejects_pending_source_control_changes() {
     assert_eq!(report.committed, 0);
     assert_eq!(report.out_of_sync, 1);
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("get")
         .expect("record");
     assert_eq!(
@@ -68,7 +68,7 @@ fn run_pending_mirror_rejects_git_paths_outside_deve_commit() {
     assert_eq!(report.committed, 0);
     assert_eq!(report.out_of_sync, 1);
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("get")
         .expect("record");
     assert_eq!(
@@ -101,7 +101,7 @@ fn run_pending_mirror_rejects_tracked_notegit_paths() {
     assert_eq!(report.committed, 0);
     assert_eq!(report.out_of_sync, 1);
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("get")
         .expect("record");
     assert_eq!(

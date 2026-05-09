@@ -67,7 +67,7 @@ pub fn git_mirror_repair_review(
         .resolve_local_repo_name_for_execution(selector.repo_id, selector.repo_name.as_deref())
         .map_err(|e| errors::map_repo_error(ScOp::ListChanges, e))?;
     let records = repo
-        .run_on_local_repo(&repo_name, list_records)
+        .run_on_local_repo(&repo_name, |db| Ok(list_records(db)?))
         .map_err(|e| errors::map_repo_error(ScOp::ListChanges, e))?;
     Ok(build_repair_review(&repo_name, &records))
 }

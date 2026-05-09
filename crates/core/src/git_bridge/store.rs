@@ -6,9 +6,9 @@
 
 use crate::models::RepoId;
 use crate::source_control::CommitInfo;
-use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable, TableDefinition, TableError};
 
+use super::error::{GitMirrorStoreError, GitMirrorStoreResult};
 use super::failure_metadata::GitMirrorFailureMetadata;
 mod schema;
 
@@ -17,12 +17,22 @@ pub use schema::{GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord, G
 pub const GIT_MIRROR_COMMITS_TABLE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("git_mirror_commits");
 
-pub fn init_table(db: &Database) -> Result<()> {
-    let write_txn = db.begin_write()?;
+pub fn init_table(db: &Database) -> GitMirrorStoreResult<()> {
+    let write_txn = db.begin_write().map_err(|err| GitMirrorStoreError::Init {
+        message: err.to_string(),
+    })?;
     {
-        let _ = write_txn.open_table(GIT_MIRROR_COMMITS_TABLE)?;
+        let _ = write_txn
+            .open_table(GIT_MIRROR_COMMITS_TABLE)
+            .map_err(|err| GitMirrorStoreError::Init {
+                message: err.to_string(),
+            })?;
     }
-    write_txn.commit()?;
+    write_txn
+        .commit()
+        .map_err(|err| GitMirrorStoreError::Init {
+            message: err.to_string(),
+        })?;
     Ok(())
 }
 
@@ -30,7 +40,7 @@ pub fn queue_deve_commit(
     db: &Database,
     repo_id: RepoId,
     commit: &CommitInfo,
-) -> Result<GitMirrorRecord> {
+) -> GitMirrorStoreResult<GitMirrorRecord> {
     if let Some(existing) = get_record(db, &commit.id)? {
         return Ok(existing);
     }
@@ -58,7 +68,7 @@ pub fn mark_committed(
     db: &Database,
     deve_commit_id: &str,
     git_commit_id: &str,
-) -> Result<GitMirrorRecord> {
+) -> GitMirrorStoreResult<GitMirrorRecord> {
     let mut record = required_record(db, deve_commit_id)?;
     record.state = GitMirrorCommitState::Committed;
     record.git_commit_id = Some(git_commit_id.to_string());
@@ -77,7 +87,7 @@ pub fn mark_out_of_sync(
     db: &Database,
     deve_commit_id: &str,
     error: impl Into<String>,
-) -> Result<GitMirrorRecord> {
+) -> GitMirrorStoreResult<GitMirrorRecord> {
     let mut record = required_record(db, deve_commit_id)?;
     let error = error.into();
     let stage = GitMirrorFailureStage::classify(&error);
@@ -94,30 +104,66 @@ pub fn mark_out_of_sync(
     Ok(record)
 }
 
-pub fn get_record(db: &Database, deve_commit_id: &str) -> Result<Option<GitMirrorRecord>> {
-    let read_txn = db.begin_read()?;
+pub fn get_record(
+    db: &Database,
+    deve_commit_id: &str,
+) -> GitMirrorStoreResult<Option<GitMirrorRecord>> {
+    let read_txn = db
+        .begin_read()
+        .map_err(|err| read_record_error(deve_commit_id, err))?;
     let table = match read_txn.open_table(GIT_MIRROR_COMMITS_TABLE) {
         Ok(table) => table,
         Err(TableError::TableDoesNotExist(_)) => return Ok(None),
-        Err(err) => return Err(err.into()),
+        Err(err) => return Err(read_record_error(deve_commit_id, err)),
     };
     table
-        .get(deve_commit_id)?
-        .map(|guard| serde_json::from_slice::<GitMirrorRecord>(guard.value()).map_err(Into::into))
+        .get(deve_commit_id)
+        .map_err(|err| read_record_error(deve_commit_id, err))?
+        .map(|guard| {
+            serde_json::from_slice::<GitMirrorRecord>(guard.value()).map_err(|err| {
+                GitMirrorStoreError::DecodeRecord {
+                    deve_commit_id: deve_commit_id.to_string(),
+                    message: err.to_string(),
+                }
+            })
+        })
         .transpose()
 }
 
-pub fn list_records(db: &Database) -> Result<Vec<GitMirrorRecord>> {
-    let read_txn = db.begin_read()?;
+pub fn list_records(db: &Database) -> GitMirrorStoreResult<Vec<GitMirrorRecord>> {
+    let read_txn = db
+        .begin_read()
+        .map_err(|err| GitMirrorStoreError::ListRecords {
+            message: err.to_string(),
+        })?;
     let table = match read_txn.open_table(GIT_MIRROR_COMMITS_TABLE) {
         Ok(table) => table,
         Err(TableError::TableDoesNotExist(_)) => return Ok(Vec::new()),
-        Err(err) => return Err(err.into()),
+        Err(err) => {
+            return Err(GitMirrorStoreError::ListRecords {
+                message: err.to_string(),
+            });
+        }
     };
     let mut records = Vec::new();
-    for entry in table.iter()? {
-        let (_, raw) = entry?;
-        records.push(serde_json::from_slice::<GitMirrorRecord>(raw.value())?);
+    let entries = table
+        .iter()
+        .map_err(|err| GitMirrorStoreError::ListRecords {
+            message: err.to_string(),
+        })?;
+    for entry in entries {
+        let (key, raw) = entry.map_err(|err| GitMirrorStoreError::ListRecords {
+            message: err.to_string(),
+        })?;
+        let deve_commit_id = key.value().to_string();
+        records.push(
+            serde_json::from_slice::<GitMirrorRecord>(raw.value()).map_err(|err| {
+                GitMirrorStoreError::DecodeRecord {
+                    deve_commit_id,
+                    message: err.to_string(),
+                }
+            })?,
+        );
     }
     records.sort_by(|left, right| {
         left.ledger_seq
@@ -127,7 +173,7 @@ pub fn list_records(db: &Database) -> Result<Vec<GitMirrorRecord>> {
     Ok(records)
 }
 
-pub fn summarize_records(db: &Database) -> Result<GitMirrorSummary> {
+pub fn summarize_records(db: &Database) -> GitMirrorStoreResult<GitMirrorSummary> {
     let mut summary = GitMirrorSummary::default();
     for record in list_records(db)? {
         match record.state {
@@ -139,20 +185,49 @@ pub fn summarize_records(db: &Database) -> Result<GitMirrorSummary> {
     Ok(summary)
 }
 
-fn required_record(db: &Database, deve_commit_id: &str) -> Result<GitMirrorRecord> {
-    get_record(db, deve_commit_id)?
-        .ok_or_else(|| anyhow!("Git mirror record not found for Deve commit {deve_commit_id}"))
+fn required_record(db: &Database, deve_commit_id: &str) -> GitMirrorStoreResult<GitMirrorRecord> {
+    get_record(db, deve_commit_id)?.ok_or_else(|| GitMirrorStoreError::MissingRecord {
+        deve_commit_id: deve_commit_id.to_string(),
+    })
 }
 
-fn write_record(db: &Database, record: &GitMirrorRecord) -> Result<()> {
-    let bytes = serde_json::to_vec(record)?;
-    let write_txn = db.begin_write()?;
+fn write_record(db: &Database, record: &GitMirrorRecord) -> GitMirrorStoreResult<()> {
+    let bytes = serde_json::to_vec(record).map_err(|err| GitMirrorStoreError::EncodeRecord {
+        deve_commit_id: record.deve_commit_id.clone(),
+        message: err.to_string(),
+    })?;
+    let write_txn = db
+        .begin_write()
+        .map_err(|err| write_record_error(record, err))?;
     {
-        let mut table = write_txn.open_table(GIT_MIRROR_COMMITS_TABLE)?;
-        table.insert(record.deve_commit_id.as_str(), bytes.as_slice())?;
+        let mut table = write_txn
+            .open_table(GIT_MIRROR_COMMITS_TABLE)
+            .map_err(|err| write_record_error(record, err))?;
+        table
+            .insert(record.deve_commit_id.as_str(), bytes.as_slice())
+            .map_err(|err| write_record_error(record, err))?;
     }
-    write_txn.commit()?;
+    write_txn
+        .commit()
+        .map_err(|err| write_record_error(record, err))?;
     Ok(())
+}
+
+fn read_record_error(deve_commit_id: &str, err: impl std::fmt::Display) -> GitMirrorStoreError {
+    GitMirrorStoreError::ReadRecord {
+        deve_commit_id: deve_commit_id.to_string(),
+        message: err.to_string(),
+    }
+}
+
+fn write_record_error(
+    record: &GitMirrorRecord,
+    err: impl std::fmt::Display,
+) -> GitMirrorStoreError {
+    GitMirrorStoreError::WriteRecord {
+        deve_commit_id: record.deve_commit_id.clone(),
+        message: err.to_string(),
+    }
 }
 
 #[cfg(test)]

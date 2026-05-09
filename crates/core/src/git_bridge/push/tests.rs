@@ -151,7 +151,7 @@ fn push_mirror_pushes_exported_head_to_remote() {
     assert_eq!(report.remote.as_deref(), Some("origin"));
     assert_eq!(report.branch.as_deref(), Some(branch.as_str()));
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("record")
         .expect("present");
     assert_eq!(record.state, GitMirrorCommitState::Committed);

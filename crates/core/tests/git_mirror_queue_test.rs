@@ -63,7 +63,7 @@ fn commit_queues_git_mirror_record_when_mirror_is_ready() {
 
     let record = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
-            git_bridge::get_record(db, &commit.id)
+            Ok(git_bridge::get_record(db, &commit.id)?)
         })
         .expect("read mirror record")
         .expect("mirror record");
@@ -84,7 +84,7 @@ fn commit_without_git_mirror_keeps_no_mirror_record() {
 
     let record = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
-            git_bridge::get_record(db, &commit.id)
+            Ok(git_bridge::get_record(db, &commit.id)?)
         })
         .expect("read mirror record");
     assert!(record.is_none());

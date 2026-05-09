@@ -159,7 +159,7 @@ fn run_pending_mirror_commits_single_queued_record() {
     assert_eq!(report.attempted, 1);
     assert_eq!(report.committed, 1);
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("get")
         .expect("record");
     assert_eq!(record.state, GitMirrorCommitState::Committed);
@@ -180,11 +180,11 @@ fn run_pending_mirror_replays_multiple_queued_records() {
     assert_eq!(report.attempted, 2);
     assert_eq!(report.committed, 2);
     let first_record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &first.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &first.id)?))
         .expect("get first")
         .expect("first record");
     let second_record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &second.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &second.id)?))
         .expect("get second")
         .expect("second record");
     assert_eq!(first_record.state, GitMirrorCommitState::Committed);

@@ -11,6 +11,7 @@ pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommi
 pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
 pub(super) type GitImportPlanResult<T> = std::result::Result<T, GitImportPlanError>;
 pub(super) type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
+pub type GitMirrorStoreResult<T> = std::result::Result<T, GitMirrorStoreError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(super) enum GitBridgeError {
@@ -283,6 +284,42 @@ pub(super) enum GitImportApplyError {
 
 impl From<GitImportApplyError> for String {
     fn from(err: GitImportApplyError) -> Self {
+        err.to_string()
+    }
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum GitMirrorStoreError {
+    #[error("failed to initialize Git mirror store: {message}")]
+    Init { message: String },
+    #[error("failed to read Git mirror record {deve_commit_id}: {message}")]
+    ReadRecord {
+        deve_commit_id: String,
+        message: String,
+    },
+    #[error("failed to list Git mirror records: {message}")]
+    ListRecords { message: String },
+    #[error("failed to decode Git mirror record {deve_commit_id}: {message}")]
+    DecodeRecord {
+        deve_commit_id: String,
+        message: String,
+    },
+    #[error("failed to encode Git mirror record {deve_commit_id}: {message}")]
+    EncodeRecord {
+        deve_commit_id: String,
+        message: String,
+    },
+    #[error("failed to write Git mirror record {deve_commit_id}: {message}")]
+    WriteRecord {
+        deve_commit_id: String,
+        message: String,
+    },
+    #[error("Git mirror record not found for Deve commit {deve_commit_id}")]
+    MissingRecord { deve_commit_id: String },
+}
+
+impl From<GitMirrorStoreError> for String {
+    fn from(err: GitMirrorStoreError) -> Self {
         err.to_string()
     }
 }

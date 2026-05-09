@@ -1,6 +1,6 @@
 use super::{
-    GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord, get_record, init_table,
-    mark_committed, mark_out_of_sync, queue_deve_commit, summarize_records,
+    GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord, GitMirrorStoreError, get_record,
+    init_table, mark_committed, mark_out_of_sync, queue_deve_commit, summarize_records,
 };
 use crate::source_control::CommitInfo;
 
@@ -71,6 +71,20 @@ fn mark_committed_and_out_of_sync_update_summary() {
             .expect("get")
             .and_then(|record| record.git_commit_id),
         Some("abc123".to_string())
+    );
+}
+
+#[test]
+fn missing_record_returns_typed_store_error() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
+    init_table(&db).expect("init");
+
+    assert_eq!(
+        mark_committed(&db, "missing", "abc123").expect_err("missing record"),
+        GitMirrorStoreError::MissingRecord {
+            deve_commit_id: "missing".to_string(),
+        }
     );
 }
 

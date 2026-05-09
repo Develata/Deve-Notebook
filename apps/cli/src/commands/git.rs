@@ -27,9 +27,12 @@ pub fn status(
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
         let status = deve_core::git_bridge::inspect_repo_root(&repo_root)?;
-        let summary =
-            repo.run_on_local_repo(&repo_name, deve_core::git_bridge::summarize_records)?;
-        let records = repo.run_on_local_repo(&repo_name, deve_core::git_bridge::list_records)?;
+        let summary = repo.run_on_local_repo(&repo_name, |db| {
+            Ok(deve_core::git_bridge::summarize_records(db)?)
+        })?;
+        let records = repo.run_on_local_repo(&repo_name, |db| {
+            Ok(deve_core::git_bridge::list_records(db)?)
+        })?;
         print_status(&repo_name, &status, &summary, &records);
     }
     Ok(())

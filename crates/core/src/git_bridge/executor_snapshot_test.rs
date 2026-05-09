@@ -12,11 +12,11 @@ fn export_mirror_bootstraps_latest_projection_snapshot() {
     assert_eq!(report.attempted, 1);
     assert_eq!(report.committed, 1);
     let first_record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &first.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &first.id)?))
         .expect("get first");
     assert!(first_record.is_none());
     let second_record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &second.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &second.id)?))
         .expect("get second")
         .expect("second record");
     assert_eq!(second_record.state, GitMirrorCommitState::Committed);
@@ -48,7 +48,7 @@ fn export_mirror_rejects_snapshot_bootstrap_on_existing_git_history() {
     assert_eq!(report.committed, 0);
     assert_eq!(report.out_of_sync, 1);
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("get")
         .expect("record");
     assert_eq!(record.state, GitMirrorCommitState::OutOfSync);
@@ -75,7 +75,7 @@ fn export_mirror_rejects_snapshot_bootstrap_when_mirror_is_not_ready() {
     assert_eq!(report.committed, 0);
     assert_eq!(report.out_of_sync, 1);
     let record = repo
-        .run_on_local_repo(repo.local_repo_name(), |db| get_record(db, &commit.id))
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
         .expect("get")
         .expect("record");
     assert_eq!(
