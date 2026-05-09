@@ -131,5 +131,4 @@ fn is_ledger_managed_relative_path(rel_path: &str) -> bool {
 }
 
 #[cfg(test)]
-#[path = "path_guard_test.rs"]
 mod tests;
