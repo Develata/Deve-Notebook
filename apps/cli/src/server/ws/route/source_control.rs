@@ -81,5 +81,4 @@ pub(super) async fn route_source_control(
 }
 
 #[cfg(test)]
-#[path = "source_control_test.rs"]
 mod tests;

@@ -56,5 +56,4 @@ pub(super) async fn route_docs(
 }
 
 #[cfg(test)]
-#[path = "docs_test.rs"]
 mod tests;
