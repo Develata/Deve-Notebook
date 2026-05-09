@@ -10,13 +10,35 @@
 //! - Diff 左侧来自当前 Ledger 投影，右侧来自工作区文件。
 
 use crate::ledger::RepoManager;
-use crate::source_control::{ChangeEntry, CommitFileDiff};
+use crate::ledger::source_control;
+use crate::models::DocId;
+use crate::source_control::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, pending_fs};
 use anyhow::Result;
 use std::collections::HashSet;
 
 use super::source_control_target_resolution::change_identity_key;
 
 impl RepoManager {
+    pub fn list_staged_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
+        self.run_on_local_repo(repo_name, source_control::list_staged)
+    }
+
+    pub fn list_pending_fs_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
+        self.run_on_local_repo(repo_name, |db| {
+            let entries = pending_fs::list_all(db)?;
+            Ok(entries
+                .into_iter()
+                .map(|entry| ChangeEntry {
+                    path: entry.path,
+                    renamed_from: entry.renamed_from,
+                    doc_id: entry.doc_id,
+                    status: entry.change_type,
+                    has_conflict: entry.has_conflict,
+                })
+                .collect())
+        })
+    }
+
     pub fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
         self.list_changes_in_local_repo(self.local_repo_name())
     }
@@ -40,6 +62,35 @@ impl RepoManager {
     pub fn diff_doc_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<String> {
         let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
         self.diff_doc_target_in_local_repo(repo_name, &target)
+    }
+
+    /// 获取文档的已提交内容 (用于 Diff)
+    pub fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
+        source_control::validate_tables(self.local_db.as_ref()).map_err(|err| {
+            anyhow::anyhow!(
+                "Broken local repo {} while validating source control tables: {}",
+                self.local_repo_name,
+                err
+            )
+        })?;
+        source_control::get_committed_content(&self.local_db, doc_id)
+    }
+
+    /// 检测单个文档的变更状态
+    pub fn detect_change(
+        &self,
+        committed: Option<&str>,
+        current: Option<&str>,
+    ) -> Option<ChangeStatus> {
+        source_control::detect_change(committed, current)
+    }
+
+    pub fn list_commits_in_local_repo(
+        &self,
+        repo_name: &str,
+        limit: u32,
+    ) -> Result<Vec<CommitInfo>> {
+        self.run_on_local_repo(repo_name, |db| source_control::list_commits(db, limit))
     }
 
     pub fn diff_commits(
