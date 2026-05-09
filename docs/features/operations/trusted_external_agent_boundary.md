@@ -43,7 +43,7 @@
 - `Trigger`: trusted 条件不满足，或系统主动执行 fallback
 - `Preconditions`: 用户尝试选择 / 使用 `trusted-cli`
 - `Immediate Result`: 前端保持或回退到 `native`，并显示明确原因
-- `Application Entry`: `apps/web/src/hooks/use_ai_backend.rs`, `apps/web/src/components/settings_sections.rs`, `apps/web/src/components/sidebar/extensions.rs`, `apps/cli/src/server/agent_bridge.rs`
+- `Application Entry`: `apps/web/src/hooks/use_ai_backend.rs`, `apps/web/src/components/settings_sections.rs`, `apps/web/src/components/sidebar/extensions.rs`, `apps/cli/src/server/agent_bridge/mod.rs`
 
 ### `op.ai.trusted-agent.receive-stream`
 

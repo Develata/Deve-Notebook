@@ -13,6 +13,8 @@ This is not a plugin marketplace surface, not MCP, and not a generic notebook-au
 
 | File | Description |
 |------|-------------|
+| `mod.rs` | Agent bridge facade, global policy state, HTTP capability endpoint, and chat dispatch |
+| `policy.rs` | Default-off trusted CLI policy and backend capability resolution |
 | `prompt.rs` | Prompt construction for agent interactions |
 | `stream.rs` | Response streaming from agent bridge |
 

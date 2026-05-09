@@ -111,5 +111,4 @@ fn run_config() -> Result<policy::AgentBridgeRunConfig, String> {
 }
 
 #[cfg(test)]
-#[path = "agent_bridge/http_test.rs"]
-mod http_test;
+mod http_tests;

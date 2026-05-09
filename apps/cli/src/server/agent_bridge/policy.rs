@@ -136,5 +136,4 @@ fn is_executable_file(path: &Path) -> bool {
 }
 
 #[cfg(test)]
-#[path = "policy_test.rs"]
 mod tests;

@@ -128,7 +128,7 @@ The closing implementation is represented by:
 
 - [settings_sections.rs](apps/web/src/components/settings_sections.rs)
 - [extensions_channels.rs](apps/web/src/components/sidebar/extensions_channels.rs)
-- [agent_bridge.rs](apps/cli/src/server/agent_bridge.rs)
+- [agent_bridge/mod.rs](apps/cli/src/server/agent_bridge/mod.rs)
 - [policy.rs](apps/cli/src/server/agent_bridge/policy.rs)
 
 The previous `release / CI` drift is closed. The plan and `.github`
