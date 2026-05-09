@@ -3,7 +3,6 @@
 //!
 //! Sync protocol error response helpers.
 
-#[path = "errors_classify.rs"]
 mod classify;
 
 use crate::server::channel::DualChannel;

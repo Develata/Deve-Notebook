@@ -22,7 +22,8 @@ Sync engine handlers at the WebSocket boundary. Manages the sync lifecycle: hell
 | `writer.rs` | Writer readiness notification |
 | `guard.rs` | Sync concurrency guard |
 | `cleanup.rs` | Cleanup stale sync state |
-| `errors.rs` | Sync-specific error types |
+| `errors/mod.rs` | Sync-specific error response helpers |
+| `errors/classify.rs` | Sync-specific error classification |
 
 ## For AI Agents
 
