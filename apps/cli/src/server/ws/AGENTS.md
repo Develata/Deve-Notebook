@@ -13,7 +13,7 @@ WebSocket connection management: message filtering, receiving client messages, s
 |------|-------------|
 | `mod.rs` | WebSocket module entry |
 | `filter/` | Broadcast filtering — enforces repo/branch/scope delivery and nonce stamping |
-| `receive.rs` | Receives and deserializes client WebSocket messages |
+| `receive/` | Receives, validates, and deserializes client WebSocket messages |
 | `send.rs` | Serializes and sends server WebSocket messages |
 
 ## Subdirectories
@@ -21,6 +21,7 @@ WebSocket connection management: message filtering, receiving client messages, s
 | Directory | Purpose |
 |-----------|---------|
 | `filter/` | Broadcast filter facade, scope matching, outbound stamping, and regression tests |
+| `receive/` | Inbound frame decoding, legacy text debug gate, rate-limit handling, and regression tests |
 | `route/` | WebSocket route handlers by domain |
 
 ## For AI Agents

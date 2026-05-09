@@ -46,9 +46,9 @@ soft-warning list by moving its merge-conflict emission regression test into
 stays focused on peer merge apply, conflict emission, and completion broadcast
 helpers.
 
-`apps/cli/src/server/ws/receive_test.rs` was removed from the soft-warning list by
+`apps/cli/src/server/ws/receive/tests.rs` was removed from the soft-warning list by
 moving WS frame and legacy text protocol cases into
-`apps/cli/src/server/ws/receive_frame_test.rs`. The original file now keeps the
+`apps/cli/src/server/ws/receive/tests/frame.rs`. The original file now keeps the
 shared receive fixture plus control-scope and rate-limit coverage.
 
 `apps/cli/src/server/sync_transfer_scope_test.rs` was removed from the

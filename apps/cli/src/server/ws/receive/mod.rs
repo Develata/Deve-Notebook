@@ -151,5 +151,4 @@ fn error_detail(error: &ProtocolFrameError, fallback: &'static str) -> String {
 }
 
 #[cfg(test)]
-#[path = "receive_test.rs"]
 mod tests;

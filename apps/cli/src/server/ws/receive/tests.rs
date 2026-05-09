@@ -19,7 +19,6 @@ use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
-#[path = "receive_frame_test.rs"]
 mod frame;
 
 #[test]
