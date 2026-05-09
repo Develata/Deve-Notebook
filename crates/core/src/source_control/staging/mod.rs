@@ -9,11 +9,8 @@
 //! **存储结构**:
 //! - Table: `staged_files` - 存储已暂存的文件路径及其变更元数据
 
-#[path = "staging_index.rs"]
 mod index;
-#[path = "staging_query.rs"]
 mod query;
-#[path = "staging_target.rs"]
 mod target;
 
 use crate::models::DocId;

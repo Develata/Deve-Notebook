@@ -14,7 +14,6 @@ use crate::source_control::CommitInfo;
 use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable, TableDefinition};
 
-#[path = "commits_repair.rs"]
 mod repair;
 pub use self::repair::repair_missing_order_table;
 

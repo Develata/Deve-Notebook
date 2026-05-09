@@ -19,17 +19,12 @@
 //! **存储结构**:
 //! - Table: `pending_fs_ops` (path -> PendingFsEntry 序列化字节)
 
-#[path = "pending_fs_index.rs"]
 mod index;
-#[path = "pending_fs_mutation.rs"]
 mod mutation;
-#[path = "pending_fs_query.rs"]
 mod query;
-#[path = "pending_fs_target.rs"]
 mod target;
 
 #[cfg(test)]
-#[path = "pending_fs_idempotency_test.rs"]
 mod idempotency_test;
 
 use crate::models::DocId;

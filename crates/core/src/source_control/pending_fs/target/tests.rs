@@ -206,5 +206,4 @@ fn get_for_target_fails_closed_when_exact_path_and_rename_successor_conflict() {
     );
 }
 
-#[path = "pending_fs_target_test_extra.rs"]
 mod extra;
