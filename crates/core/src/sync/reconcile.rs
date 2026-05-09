@@ -63,5 +63,4 @@ pub fn append_patch_in_local_repo(
 }
 
 #[cfg(test)]
-#[path = "reconcile_test.rs"]
 mod tests;
