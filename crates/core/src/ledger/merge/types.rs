@@ -11,7 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub use crate::merge::ConflictHunk;
+pub use crate::protocol::ConflictHunk;
 
 /// 合并操作结果
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
