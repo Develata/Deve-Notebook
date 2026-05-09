@@ -211,5 +211,4 @@ where
 }
 
 #[cfg(test)]
-#[path = "ledger_decode_test.rs"]
 mod tests;

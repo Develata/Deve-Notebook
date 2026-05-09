@@ -14,7 +14,7 @@ Root source of the core library. Declares all public modules and gates backend-o
 | `lib.rs` | Module declarations and crate-level docs |
 | `config.rs` | Configuration loading (env/config.toml) with profile support |
 | `error.rs` | Unified error types using thiserror |
-| `models.rs` | Core data types (re-exports from models/) |
+| `models/mod.rs` | Core data types (re-exports from models/) |
 | `state.rs` | Document state (re-exports from state/) |
 | `vfs.rs` | Virtual filesystem operations (backend-only) |
 | `watcher.rs` | Filesystem change detection (backend-only) |

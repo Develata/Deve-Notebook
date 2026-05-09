@@ -1,4 +1,4 @@
-// crates\core\src
+// crates\core\src\models
 //! # 核心数据模型 (Core Data Models)
 //! plan_ref:
 //!   - 04_storage#facts-partition
@@ -23,9 +23,7 @@ use smol_str::SmolStr;
 use std::fmt;
 use uuid::Uuid;
 
-#[path = "models/ledger_decode.rs"]
 mod ledger_decode;
-#[path = "models/ledger_event.rs"]
 mod ledger_event;
 
 pub use crate::sync::vector::VersionVector;
