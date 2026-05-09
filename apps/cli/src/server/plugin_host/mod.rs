@@ -1,12 +1,10 @@
-// apps/cli/src/server/plugin_host.rs
+// apps/cli/src/server/plugin_host/mod.rs
 //! plan_ref:
 //!   - 17_plugins#plugin-runtime-boundary
 //!
 //! # Plugin Host Only Server
 
-#[path = "plugin_host_routes.rs"]
 mod routes;
-#[path = "plugin_host_ws.rs"]
 mod ws_host;
 
 use std::sync::Arc;
