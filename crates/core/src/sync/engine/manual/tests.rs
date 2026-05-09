@@ -6,7 +6,6 @@ use crate::sync::engine::SyncEngine;
 use crate::sync::protocol::SyncResponse;
 use std::sync::Arc;
 
-#[path = "manual_snapshot_test.rs"]
 mod snapshot;
 
 fn build_engine(

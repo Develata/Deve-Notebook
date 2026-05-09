@@ -170,5 +170,4 @@ impl SyncEngine {
 }
 
 #[cfg(test)]
-#[path = "manual_test.rs"]
 mod tests;
