@@ -13,8 +13,8 @@ use deve_core::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::PeerId;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::{ChangeStatus, SourceControlApi};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 
 #[test]
 fn remote_diff_rejects_deleted_doc_even_with_doc_id_hint() -> anyhow::Result<()> {
