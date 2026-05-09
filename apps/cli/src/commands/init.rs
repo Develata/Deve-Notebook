@@ -5,6 +5,7 @@
 //!   - 13_settings#configuration-settings
 
 use deve_core::ledger::RepoManager;
+use deve_core::utils::fs::checked_exists;
 use std::path::{Path, PathBuf};
 
 /// 初始化命令
@@ -108,11 +109,6 @@ timeout_ms = 30000
 
     println!("Initialization complete.");
     Ok(())
-}
-
-fn checked_exists(path: &Path, context: &str) -> anyhow::Result<bool> {
-    path.try_exists()
-        .map_err(|err| anyhow::anyhow!("Failed to stat {} {:?}: {}", context, path, err))
 }
 
 #[cfg(test)]

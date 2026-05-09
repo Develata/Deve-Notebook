@@ -3,10 +3,11 @@
 //!   - 06_repository#tree-projection-contract
 //!   - 12_commands#cli-commands
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::source_control::pending_fs;
-use std::path::{Path, PathBuf};
+use deve_core::utils::fs::checked_exists;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub(super) fn repair_repo_prefixed_paths(
@@ -228,13 +229,6 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
         let parent = path.parent().map(|p| p.to_path_buf());
         let _ = std::fs::remove_dir(&path);
         cursor = parent;
-    }
-}
-
-fn checked_exists(path: &Path, context: &str) -> Result<bool> {
-    match path.try_exists() {
-        Ok(exists) => Ok(exists),
-        Err(err) => Err(err).context(context.to_string()),
     }
 }
 

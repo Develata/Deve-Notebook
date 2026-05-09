@@ -44,6 +44,7 @@ use crate::server::session::WsSession;
 use anyhow::Context;
 use deve_core::models::RepoId;
 use deve_core::protocol::ServerMessage;
+pub(super) use deve_core::utils::fs::checked_exists;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -83,11 +84,6 @@ pub(super) fn resolve_local_write_scope(
         return None;
     }
     Some(scope)
-}
-
-pub(super) fn checked_exists(path: &Path, context: &str) -> anyhow::Result<bool> {
-    path.try_exists()
-        .with_context(|| format!("Failed to stat {}: {}", context, path.display()))
 }
 
 pub(super) fn checked_existing_is_dir(path: &Path, context: &str) -> anyhow::Result<Option<bool>> {

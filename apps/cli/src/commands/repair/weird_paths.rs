@@ -6,6 +6,7 @@
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use deve_core::source_control::pending_fs;
+use deve_core::utils::fs::checked_exists;
 use deve_core::utils::notegit::is_internal_repo_path;
 use deve_core::utils::path::path_to_forward_slash;
 use std::path::{Path, PathBuf};
@@ -131,11 +132,6 @@ fn unique_path(path: PathBuf) -> Result<PathBuf> {
         }
     }
     unreachable!()
-}
-
-fn checked_exists(path: &Path, context: &str) -> Result<bool> {
-    path.try_exists()
-        .map_err(|err| anyhow::anyhow!("failed to stat {} {:?}: {}", context, path, err))
 }
 
 #[cfg(test)]
