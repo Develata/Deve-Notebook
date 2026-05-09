@@ -18,16 +18,16 @@ pub fn handle_new_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp)
 }
 
 pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::ConfirmedOp) {
-    if entry.seq <= ctx.local_version.get_untracked() {
-        return;
-    }
     let echoed_origin = entry
         .origin
         .filter(|origin| Some(origin.client_id) == ctx.client_id);
-    let echoed = echoed_origin.is_some();
     if let Some(origin) = echoed_origin {
         clear_confirmed_pending_edit(ctx, origin.client_op_id);
     }
+    if entry.seq <= ctx.local_version.get_untracked() {
+        return;
+    }
+    let echoed = echoed_origin.is_some();
     if !echoed {
         if let Ok(json) = serde_json::to_string(&entry.op) {
             applyRemoteOp(&json);
@@ -99,6 +99,7 @@ mod tests {
         scope_nonce: u64,
         client_id: u64,
         client_op_id: u64,
+        local_version_value: u64,
     ) -> (
         SyncContext<'a>,
         leptos::prelude::ReadSignal<Option<PendingNavigation>>,
@@ -137,7 +138,7 @@ mod tests {
             target: NavigationTarget::Doc,
             action: Callback::new(|_| {}),
         }));
-        let (local_version, set_local_version) = signal(0u64);
+        let (local_version, set_local_version) = signal(local_version_value);
         let (history, set_history) = signal(Vec::new());
         let (is_playback, _) = signal(false);
         let (_, set_playback_version) = signal(0u64);
@@ -192,7 +193,7 @@ mod tests {
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
         let repo_id = RepoId::new_v4();
         let doc_id = DocId::from_u128(7);
-        let (ctx, pending_navigation) = echoed_live_ctx(&ws, repo_id, doc_id, 17, 11, 13);
+        let (ctx, pending_navigation) = echoed_live_ctx(&ws, repo_id, doc_id, 17, 11, 13, 0);
 
         apply_live_op(
             &ctx,
@@ -216,5 +217,38 @@ mod tests {
         assert!(pending_navigation.get_untracked().is_none());
         assert_eq!(ctx.local_version.get_untracked(), 1);
         assert_eq!(ctx.history.get_untracked().len(), 1);
+    }
+
+    #[test]
+    fn stale_echoed_new_op_clears_pending_without_advancing_history() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let repo_id = RepoId::new_v4();
+        let doc_id = DocId::from_u128(7);
+        let (ctx, pending_navigation) = echoed_live_ctx(&ws, repo_id, doc_id, 17, 11, 13, 5);
+
+        apply_live_op(
+            &ctx,
+            ConfirmedOp::new(
+                3,
+                Op::Insert {
+                    pos: 0,
+                    content: "pending".into(),
+                },
+                Some(ClientOrigin {
+                    client_id: 11,
+                    client_op_id: 13,
+                }),
+            ),
+        );
+
+        assert_eq!(
+            pending_count_for_doc(&ctx.pending_local_edits.get_untracked(), doc_id),
+            0
+        );
+        assert!(pending_navigation.get_untracked().is_none());
+        assert_eq!(ctx.local_version.get_untracked(), 5);
+        assert!(ctx.history.get_untracked().is_empty());
     }
 }
