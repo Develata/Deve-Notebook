@@ -27,8 +27,8 @@ fn ensure_shadow_repo(repo: &RepoManager, repo_id: RepoId) -> anyhow::Result<Pee
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn readonly_remote_source_control_writes_are_rejected_before_mutation()
--> anyhow::Result<()> {
+async fn readonly_remote_source_control_writes_are_rejected_before_mutation() -> anyhow::Result<()>
+{
     let (dir, state, _default_id, test_id) = build_state()?;
     let peer_id = ensure_shadow_repo(state.repo.as_ref(), test_id)?;
     write_workspace_file(&dir, "test", "notes/pending.md", "pending");

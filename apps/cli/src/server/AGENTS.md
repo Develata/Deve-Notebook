@@ -49,7 +49,8 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `source_control_remote_scope_test/` | Source control remote scope/identity runtime tests |
 | `source_control_scope_binding_test/` | Source control scope binding runtime tests |
 | `source_control_git_import_conflict_test/` | Source control Git import conflict tests |
-| `source_control_scope*_test.rs` | Source control scope binding and selector runtime tests |
+| `source_control_scope_test/` | Source control scope binding and selector runtime tests |
+| `source_control_scope_test_support.rs` | Source control scope test support |
 | `switcher_branch_test/` | Branch switcher success, reject, and scope message tests |
 | `switcher_branch_scope_test/` | Branch switcher repo-scope fail-closed and selector binding tests |
 | `switcher_current_scope_test/` | Current local/remote scope validation tests for branch switching |

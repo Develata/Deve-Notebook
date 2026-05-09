@@ -84,8 +84,6 @@ fn create_shadow_commit(
     })
 }
 
-#[path = "source_control_scope_doc_diff_test_extra.rs"]
 mod doc_diff;
 
-#[path = "source_control_scope_history_test_extra.rs"]
 mod history;
