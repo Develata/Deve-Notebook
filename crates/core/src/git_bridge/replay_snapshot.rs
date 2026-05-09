@@ -4,7 +4,9 @@
 //!
 //! Snapshot bootstrap for an empty Git mirror history.
 
-use super::error::{GitSnapshotBootstrapError, GitSnapshotBootstrapResult};
+use super::error::{
+    GitMirrorRunError, GitMirrorRunResult, GitSnapshotBootstrapError, GitSnapshotBootstrapResult,
+};
 use super::executor::{GitMirrorRunReport, commit_message};
 use super::git_cmd;
 use super::preflight::{
@@ -19,7 +21,6 @@ use super::status::{GitMirrorState, inspect_repo_root};
 use super::store::{GitMirrorRecord, mark_committed, mark_out_of_sync, queue_deve_commit};
 use crate::models::RepoId;
 use crate::source_control::{self, CommitInfo};
-use anyhow::Result;
 use redb::Database;
 use std::path::Path;
 
@@ -27,15 +28,37 @@ pub(super) fn run_snapshot_bootstrap(
     db: &Database,
     repo_root: &Path,
     repo_id: RepoId,
-) -> Result<GitMirrorRunReport> {
-    let Some(commit) = source_control::commits::list(db, 1)?.into_iter().next() else {
+) -> GitMirrorRunResult<GitMirrorRunReport> {
+    let Some(commit) = source_control::commits::list(db, 1)
+        .map_err(|err| GitMirrorRunError::CommitList {
+            message: err.to_string(),
+        })?
+        .into_iter()
+        .next()
+    else {
         return Ok(GitMirrorRunReport::default());
     };
+    let status = inspect_repo_root(repo_root).map_err(|err| GitMirrorRunError::StatusInspect {
+        message: err.to_string(),
+    })?;
     let record = queue_deve_commit(db, repo_id, &commit)?;
     let mut report = GitMirrorRunReport {
         attempted: 1,
         ..GitMirrorRunReport::default()
     };
+    if status.state != GitMirrorState::Ready {
+        let reason = status.reason.unwrap_or_else(|| {
+            format!(
+                "Git mirror is not ready: state={} git={}",
+                status.state.as_str(),
+                status.git_metadata_kind.as_str()
+            )
+        });
+        let updated = mark_out_of_sync(db, &record.deve_commit_id, reason)?;
+        report.out_of_sync = 1;
+        report.records.push(updated);
+        return Ok(report);
+    }
 
     match create_git_commit_from_snapshot(db, repo_root, &record, &commit) {
         Ok(git_commit_id) => {
@@ -104,21 +127,6 @@ fn preflight_snapshot_bootstrap(
     repo_root: &Path,
     commit: &CommitInfo,
 ) -> GitSnapshotBootstrapResult<()> {
-    let status =
-        inspect_repo_root(repo_root).map_err(|err| GitSnapshotBootstrapError::StatusInspect {
-            message: err.to_string(),
-        })?;
-    if status.state != GitMirrorState::Ready {
-        return Err(GitSnapshotBootstrapError::MirrorNotReady {
-            reason: status.reason.unwrap_or_else(|| {
-                format!(
-                    "Git mirror is not ready: state={} git={}",
-                    status.state.as_str(),
-                    status.git_metadata_kind.as_str()
-                )
-            }),
-        });
-    }
     ensure_git_worktree(repo_root)?;
     ensure_notegit_is_not_tracked(repo_root)?;
     ensure_source_control_clean(db)?;

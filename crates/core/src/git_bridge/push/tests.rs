@@ -92,7 +92,11 @@ fn commit_deve_file(dir: &TempDir, repo: &RepoManager, path: &str, content: &str
 fn mirror_queued(repo: &RepoManager, repo_root: &Path) {
     let report = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
-            run_pending_mirror(db, repo_root, GitMirrorRunOptions::default())
+            Ok(run_pending_mirror(
+                db,
+                repo_root,
+                GitMirrorRunOptions::default(),
+            )?)
         })
         .expect("run mirror");
     assert_eq!(report.out_of_sync, 0);

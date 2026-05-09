@@ -24,7 +24,8 @@ mod store;
 
 pub use error::{
     GitImportApplyError, GitImportApplyResult, GitImportPlanError, GitImportPlanResult,
-    GitMirrorPushError, GitMirrorPushResult, GitMirrorStoreError, GitMirrorStoreResult,
+    GitMirrorPushError, GitMirrorPushResult, GitMirrorRunError, GitMirrorRunResult,
+    GitMirrorStoreError, GitMirrorStoreResult,
 };
 pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, export_mirror, run_pending_mirror};
 pub use import_apply::{GitImportApplyReport, apply_import};

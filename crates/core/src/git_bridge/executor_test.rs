@@ -126,7 +126,11 @@ fn commit_deve_modification(
 
 fn run_for_default_repo(repo: &RepoManager, repo_root: &Path) -> super::GitMirrorRunReport {
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        run_pending_mirror(db, repo_root, GitMirrorRunOptions::default())
+        Ok(run_pending_mirror(
+            db,
+            repo_root,
+            GitMirrorRunOptions::default(),
+        )?)
     })
     .expect("run mirror")
 }
@@ -138,7 +142,12 @@ fn export_for_default_repo(repo: &RepoManager, repo_root: &Path) -> super::GitMi
         .expect("present")
         .uuid;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
-        export_mirror(db, repo_root, repo_id, GitMirrorRunOptions::default())
+        Ok(export_mirror(
+            db,
+            repo_root,
+            repo_id,
+            GitMirrorRunOptions::default(),
+        )?)
     })
     .expect("export mirror")
 }

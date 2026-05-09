@@ -102,30 +102,39 @@ async fn resolved_import_keep_fs_commits_and_exports_to_git() -> anyhow::Result<
             .list_staged_in_local_repo(&fixture.repo_name)?
             .is_empty()
     );
-    fixture.state.repo.run_on_local_repo(&fixture.repo_name, |db| {
-        let record = get_record(db, &committed_id)?.expect("queued imported commit");
-        assert_eq!(record.state, GitMirrorCommitState::Queued);
-        Ok::<_, anyhow::Error>(())
-    })?;
+    fixture
+        .state
+        .repo
+        .run_on_local_repo(&fixture.repo_name, |db| {
+            let record = get_record(db, &committed_id)?.expect("queued imported commit");
+            assert_eq!(record.state, GitMirrorCommitState::Queued);
+            Ok::<_, anyhow::Error>(())
+        })?;
 
-    let export_report = fixture.state.repo.run_on_local_repo(&fixture.repo_name, |db| {
-        export_mirror(
-            db,
-            &fixture.repo_root,
-            fixture.repo_id,
-            GitMirrorRunOptions::default(),
-        )
-    })?;
+    let export_report = fixture
+        .state
+        .repo
+        .run_on_local_repo(&fixture.repo_name, |db| {
+            Ok(export_mirror(
+                db,
+                &fixture.repo_root,
+                fixture.repo_id,
+                GitMirrorRunOptions::default(),
+            )?)
+        })?;
 
     assert_eq!(export_report.attempted, 1, "{export_report:?}");
     assert_eq!(export_report.committed, 1, "{export_report:?}");
     assert_eq!(export_report.out_of_sync, 0, "{export_report:?}");
-    fixture.state.repo.run_on_local_repo(&fixture.repo_name, |db| {
-        let record = get_record(db, &committed_id)?.expect("committed imported mirror record");
-        assert_eq!(record.state, GitMirrorCommitState::Committed);
-        assert!(record.git_commit_id.is_some(), "{record:?}");
-        Ok::<_, anyhow::Error>(())
-    })?;
+    fixture
+        .state
+        .repo
+        .run_on_local_repo(&fixture.repo_name, |db| {
+            let record = get_record(db, &committed_id)?.expect("committed imported mirror record");
+            assert_eq!(record.state, GitMirrorCommitState::Committed);
+            assert!(record.git_commit_id.is_some(), "{record:?}");
+            Ok::<_, anyhow::Error>(())
+        })?;
     assert!(git(&fixture.repo_root, &["status", "--porcelain"]).is_empty());
     assert_eq!(
         git(&fixture.repo_root, &["show", "HEAD:note.md"]),

@@ -4,7 +4,7 @@
 //!
 //! Projection replay for accumulated Git mirror records.
 
-use super::error::{GitProjectionReplayError, GitProjectionReplayResult};
+use super::error::{GitMirrorRunResult, GitProjectionReplayError, GitProjectionReplayResult};
 use super::executor::{GitMirrorRunReport, commit_message};
 use super::git_cmd;
 use super::replay_git::{
@@ -14,7 +14,6 @@ use super::replay_git::{
 use super::replay_plan::{ReplayItem, initial_git_parent, prepare_replay};
 use super::store::{GitMirrorRecord, mark_committed, mark_out_of_sync};
 use crate::source_control;
-use anyhow::Result;
 use redb::Database;
 use std::path::Path;
 
@@ -22,7 +21,7 @@ pub(super) fn run_projection_replay(
     db: &Database,
     repo_root: &Path,
     records: Vec<GitMirrorRecord>,
-) -> Result<GitMirrorRunReport> {
+) -> GitMirrorRunResult<GitMirrorRunReport> {
     let mut report = GitMirrorRunReport {
         attempted: records.len(),
         ..GitMirrorRunReport::default()
@@ -140,7 +139,7 @@ fn mark_remaining_out_of_sync(
     report: &mut GitMirrorRunReport,
     records: Vec<GitMirrorRecord>,
     reason: String,
-) -> Result<GitMirrorRunReport> {
+) -> GitMirrorRunResult<GitMirrorRunReport> {
     for record in records {
         let updated = mark_out_of_sync(db, &record.deve_commit_id, reason.clone())?;
         report.out_of_sync += 1;

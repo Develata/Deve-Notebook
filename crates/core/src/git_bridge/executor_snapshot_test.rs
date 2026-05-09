@@ -89,3 +89,45 @@ fn export_mirror_rejects_snapshot_bootstrap_when_mirror_is_not_ready() {
             .is_some_and(|err| err.contains("does not ignore .notegit"))
     );
 }
+
+#[cfg(unix)]
+#[test]
+fn export_mirror_propagates_snapshot_status_inspect_without_queueing() {
+    use std::os::unix::fs::symlink;
+
+    let (dir, repo, repo_root) = new_repo_without_git();
+    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    std::fs::create_dir_all(&repo_root).expect("repo root");
+    let outside = dir.path().join("outside.gitignore");
+    std::fs::write(&outside, ".notegit/\n").expect("outside gitignore");
+    symlink(&outside, repo_root.join(".gitignore")).expect("symlink gitignore");
+    let repo_id = repo
+        .get_repo_info()
+        .expect("repo info")
+        .expect("present")
+        .uuid;
+
+    let err = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| -> anyhow::Result<_> {
+            Ok(export_mirror(
+                db,
+                &repo_root,
+                repo_id,
+                GitMirrorRunOptions::default(),
+            )?)
+        })
+        .expect_err("status inspect should propagate");
+
+    assert!(
+        matches!(
+            err.downcast_ref::<crate::git_bridge::GitMirrorRunError>(),
+            Some(crate::git_bridge::GitMirrorRunError::StatusInspect { message })
+                if message.contains("refusing to follow symlinked .gitignore")
+        ),
+        "{err:?}"
+    );
+    let record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
+        .expect("get");
+    assert!(record.is_none(), "{record:?}");
+}

@@ -157,11 +157,11 @@ fn run_mirror_for_repo(
     retry_out_of_sync: bool,
 ) -> Result<deve_core::git_bridge::GitMirrorRunReport> {
     repo.run_on_local_repo(repo_name, |db| {
-        deve_core::git_bridge::run_pending_mirror(
+        Ok(deve_core::git_bridge::run_pending_mirror(
             db,
             repo_root,
             GitMirrorRunOptions { retry_out_of_sync },
-        )
+        )?)
     })
 }
 
@@ -175,11 +175,11 @@ fn run_export_for_repo(
         .get_repo_info_for(None, Some(repo_name))?
         .ok_or_else(|| anyhow::anyhow!("Local repo metadata is missing for {repo_name}"))?;
     repo.run_on_local_repo(repo_name, |db| {
-        deve_core::git_bridge::export_mirror(
+        Ok(deve_core::git_bridge::export_mirror(
             db,
             repo_root,
             repo_info.uuid,
             GitMirrorRunOptions { retry_out_of_sync },
-        )
+        )?)
     })
 }

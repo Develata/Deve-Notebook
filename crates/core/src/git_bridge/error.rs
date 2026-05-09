@@ -11,6 +11,7 @@ pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommi
 pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
 pub type GitImportPlanResult<T> = std::result::Result<T, GitImportPlanError>;
 pub type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
+pub type GitMirrorRunResult<T> = std::result::Result<T, GitMirrorRunError>;
 pub type GitMirrorPushResult<T> = std::result::Result<T, GitMirrorPushError>;
 pub type GitMirrorStoreResult<T> = std::result::Result<T, GitMirrorStoreError>;
 
@@ -215,10 +216,6 @@ pub(super) enum GitSnapshotBootstrapError {
     GitPreflight(#[from] GitPreflightError),
     #[error(transparent)]
     GitReplay(#[from] GitReplayError),
-    #[error("Git mirror snapshot bootstrap failed to inspect status: {message}")]
-    StatusInspect { message: String },
-    #[error("{reason}")]
-    MirrorNotReady { reason: String },
     #[error("Git mirror snapshot bootstrap requires empty Git history, but HEAD is {head}")]
     NonEmptyGitHistory { head: String },
     #[error("failed to inspect current projection snapshot: {message}")]
@@ -307,6 +304,22 @@ pub enum GitImportApplyError {
 
 impl From<GitImportApplyError> for String {
     fn from(err: GitImportApplyError) -> Self {
+        err.to_string()
+    }
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum GitMirrorRunError {
+    #[error("Git mirror executor failed to inspect mirror status: {message}")]
+    StatusInspect { message: String },
+    #[error("Git mirror executor failed to inspect latest Deve commit: {message}")]
+    CommitList { message: String },
+    #[error(transparent)]
+    Store(#[from] GitMirrorStoreError),
+}
+
+impl From<GitMirrorRunError> for String {
+    fn from(err: GitMirrorRunError) -> Self {
         err.to_string()
     }
 }
@@ -503,13 +516,6 @@ mod tests {
             .to_string(),
             "failed to load current projection snapshot: missing table"
         );
-        assert_eq!(
-            super::GitSnapshotBootstrapError::MirrorNotReady {
-                reason: "repo-local .gitignore does not ignore .notegit/".into(),
-            }
-            .to_string(),
-            "repo-local .gitignore does not ignore .notegit/"
-        );
     }
 
     #[test]
@@ -614,6 +620,31 @@ mod tests {
         );
         assert_eq!(
             super::GitMirrorPushError::Store(super::GitMirrorStoreError::ListRecords {
+                message: "table type mismatch".into(),
+            })
+            .to_string(),
+            "failed to list Git mirror records: table type mismatch"
+        );
+    }
+
+    #[test]
+    fn git_mirror_run_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitMirrorRunError::StatusInspect {
+                message: "permission denied".into(),
+            }
+            .to_string(),
+            "Git mirror executor failed to inspect mirror status: permission denied"
+        );
+        assert_eq!(
+            super::GitMirrorRunError::CommitList {
+                message: "table missing".into(),
+            }
+            .to_string(),
+            "Git mirror executor failed to inspect latest Deve commit: table missing"
+        );
+        assert_eq!(
+            super::GitMirrorRunError::Store(super::GitMirrorStoreError::ListRecords {
                 message: "table type mismatch".into(),
             })
             .to_string(),

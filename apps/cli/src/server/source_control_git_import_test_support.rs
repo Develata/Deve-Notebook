@@ -76,7 +76,12 @@ pub(super) fn create_mapped_imported_conflict_fixture() -> anyhow::Result<Import
     init_git_repo(&repo_root);
     let baseline_commit = seed_note_baseline(&dir, &state, &repo_name, "hello\n")?;
     let baseline_report = state.repo.run_on_local_repo(&repo_name, |db| {
-        export_mirror(db, &repo_root, repo_id, GitMirrorRunOptions::default())
+        Ok(export_mirror(
+            db,
+            &repo_root,
+            repo_id,
+            GitMirrorRunOptions::default(),
+        )?)
     })?;
     assert_eq!(baseline_report.attempted, 1, "{baseline_report:?}");
     assert_eq!(baseline_report.committed, 1, "{baseline_report:?}");
@@ -112,7 +117,9 @@ fn seed_note_baseline(
             },
         )
     })?;
-    state.repo.stage_pending_in_local_repo(repo_name, "note.md")?;
+    state
+        .repo
+        .stage_pending_in_local_repo(repo_name, "note.md")?;
     Ok(state
         .repo
         .commit_staged_in_local_repo(repo_name, "baseline")?

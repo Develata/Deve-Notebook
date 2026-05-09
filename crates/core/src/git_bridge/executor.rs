@@ -4,7 +4,9 @@
 //!
 //! Explicit Git mirror executor. It never acts as source-control authority.
 
-use super::error::{GitMirrorCommitError, GitMirrorCommitResult};
+use super::error::{
+    GitMirrorCommitError, GitMirrorCommitResult, GitMirrorRunError, GitMirrorRunResult,
+};
 use super::git_cmd;
 use super::preflight::{
     ensure_git_changes_match_deve_commit, ensure_git_worktree, ensure_notegit_is_not_tracked,
@@ -17,7 +19,6 @@ use super::store::{
     GitMirrorCommitState, GitMirrorRecord, list_records, mark_committed, mark_out_of_sync,
 };
 use crate::models::RepoId;
-use anyhow::Result;
 use redb::Database;
 use std::path::Path;
 
@@ -39,13 +40,15 @@ pub fn run_pending_mirror(
     db: &Database,
     repo_root: &Path,
     options: GitMirrorRunOptions,
-) -> Result<GitMirrorRunReport> {
+) -> GitMirrorRunResult<GitMirrorRunReport> {
     let candidates = pending_candidates(db, options.retry_out_of_sync)?;
     if candidates.is_empty() {
         return Ok(GitMirrorRunReport::default());
     }
 
-    let status = inspect_repo_root(repo_root)?;
+    let status = inspect_repo_root(repo_root).map_err(|err| GitMirrorRunError::StatusInspect {
+        message: err.to_string(),
+    })?;
     if status.state != GitMirrorState::Ready {
         let reason = status.reason.unwrap_or_else(|| {
             format!(
@@ -69,7 +72,7 @@ pub fn export_mirror(
     repo_root: &Path,
     repo_id: RepoId,
     options: GitMirrorRunOptions,
-) -> Result<GitMirrorRunReport> {
+) -> GitMirrorRunResult<GitMirrorRunReport> {
     let report = run_pending_mirror(db, repo_root, options)?;
     if report.attempted > 0 || !list_records(db)?.is_empty() {
         return Ok(report);
@@ -77,7 +80,10 @@ pub fn export_mirror(
     run_snapshot_bootstrap(db, repo_root, repo_id)
 }
 
-fn pending_candidates(db: &Database, retry_out_of_sync: bool) -> Result<Vec<GitMirrorRecord>> {
+fn pending_candidates(
+    db: &Database,
+    retry_out_of_sync: bool,
+) -> GitMirrorRunResult<Vec<GitMirrorRecord>> {
     Ok(list_records(db)?
         .into_iter()
         .filter(|record| {
@@ -91,7 +97,7 @@ fn run_one_candidate(
     db: &Database,
     repo_root: &Path,
     record: &GitMirrorRecord,
-) -> Result<GitMirrorRunReport> {
+) -> GitMirrorRunResult<GitMirrorRunReport> {
     let mut report = GitMirrorRunReport {
         attempted: 1,
         ..GitMirrorRunReport::default()
@@ -115,7 +121,7 @@ fn mark_all_out_of_sync(
     db: &Database,
     records: Vec<GitMirrorRecord>,
     reason: String,
-) -> Result<GitMirrorRunReport> {
+) -> GitMirrorRunResult<GitMirrorRunReport> {
     let mut report = GitMirrorRunReport {
         attempted: records.len(),
         ..GitMirrorRunReport::default()
