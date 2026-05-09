@@ -48,6 +48,7 @@ mod repo_info;
 mod repo_lookup;
 mod repo_scope_runtime;
 mod repository;
+mod shadow_maintenance_runtime;
 mod snapshot_ops;
 mod source_control_api;
 mod source_control_ops;

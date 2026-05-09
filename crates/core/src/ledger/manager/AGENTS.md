@@ -36,6 +36,7 @@ RepoManager — the high-level orchestrator for all repository operations. Manag
 | `merge_ops.rs` | Merge orchestration |
 | `maintenance.rs` | Database maintenance tasks |
 | `repair_runtime.rs` | Explicit catalog repair runtime |
+| `shadow_maintenance_runtime.rs` | Shadow reset/delete maintenance runtime |
 | `projection_cleanup.rs` | Projection cleanup and orphan removal |
 | `workspace.rs` | Workspace materialization |
 | `source_control_api.rs` | Source control API surface |
