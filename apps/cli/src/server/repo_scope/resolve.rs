@@ -4,9 +4,9 @@
 //! Session repo scope resolution and fail-closed validation.
 
 use super::lookup::resolve_repo_by_name;
-use super::repo_scope_bootstrap::fallback_local_repo_name;
-use super::repo_scope_error::RepoScopeFailure;
-use super::repo_scope_selector::resolve_repo_name_from_session;
+use super::bootstrap::fallback_local_repo_name;
+use super::error::RepoScopeFailure;
+use super::selector::resolve_repo_name_from_session;
 use super::stale_remote_scope_detail;
 use crate::server::AppState;
 use crate::server::session::WsSession;

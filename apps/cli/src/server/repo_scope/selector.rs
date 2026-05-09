@@ -8,8 +8,8 @@
 //! - 远端分支只有在 selector 可由当前 branch 唯一恢复时才允许继续执行。
 //! - 本模块只负责把 session hint 收敛成可执行 selector；不负责最终 `RepoUUID` 解析。
 
-use super::repo_scope_error::stale_remote_scope_detail;
-use super::repo_scope_remote::recover_remote_repo_name_from_selector;
+use super::error::stale_remote_scope_detail;
+use super::remote::recover_remote_repo_name_from_selector;
 use crate::server::AppState;
 use crate::server::error_classify::{is_db_locked, is_storage_corruption};
 use crate::server::session::WsSession;

@@ -9,7 +9,7 @@
 //! - 对本地分支，不允许借 stale `repo_id` 反向覆盖当前 selector。
 
 use super::ResolvedRepo;
-use super::repo_scope_error::{RepoScopeFailure, stale_remote_scope_detail};
+use super::error::{RepoScopeFailure, stale_remote_scope_detail};
 use crate::server::AppState;
 use anyhow::{Result, anyhow};
 use deve_core::models::{PeerId, RepoId};

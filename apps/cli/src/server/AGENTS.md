@@ -15,7 +15,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `session.rs` | Per-WebSocket-connection session state (`WsSession`): scope nonce, branch, repo, rate limiting |
 | `session_scope.rs` | Session-level scope binding helpers (switch_branch, switch_repo, clear_active_db) |
 | `channel.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
-| `repo_scope.rs` | Repo scope facade: maps session state to active repo/branch with fail-closed validation |
+| `repo_scope/mod.rs` | Repo scope facade: maps session state to active repo/branch with fail-closed validation |
 | `repo_scope/` | Repo scope implementation helpers for bootstrap, cleanup, error mapping, lookup, remote resolution, selector logic, sync, and workspace paths |
 | `repo_scope*_test.rs` | Repo scope runtime selector, cleanup, and recovery tests |
 | `shadow_scope.rs` | Shadow branch scope management and stale branch cleanup |
@@ -62,7 +62,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | Directory | Purpose |
 |-----------|---------|
 | `handlers/` | Client message handlers organized by domain |
-| `repo_scope/` | Repo scope implementation modules owned by the `repo_scope.rs` facade |
+| `repo_scope/` | Repo scope facade and implementation modules |
 | `ws/` | WebSocket connection lifecycle, message routing, and broadcast filtering |
 | `auth/` | Authentication middleware, JWT cookie handling, brute-force protection |
 | `ai_chat/` | OpenAI-compatible streaming chat integration |

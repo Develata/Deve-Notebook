@@ -3,7 +3,7 @@
 //!
 //! Stale repo scope cleanup helpers.
 
-use super::repo_scope_error::STALE_REMOTE_SCOPE_PREFIX;
+use super::error::STALE_REMOTE_SCOPE_PREFIX;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub(crate) fn should_clear_stale_remote_scope(error: &ServerError) -> bool {

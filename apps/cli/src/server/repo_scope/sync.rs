@@ -3,7 +3,7 @@
 //!
 //! Session repo scope binding synchronization.
 
-use super::repo_scope_cleanup::{should_clear_stale_local_scope, should_clear_stale_remote_scope};
+use super::cleanup::{should_clear_stale_local_scope, should_clear_stale_remote_scope};
 use super::{
     RepoScopeFailure, ResolvedRepo, map_repo_scope_error_ref, resolve_session_repo,
     stale_unbound_remote_scope_detail,
