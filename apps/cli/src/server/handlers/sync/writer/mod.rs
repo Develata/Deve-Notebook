@@ -99,5 +99,4 @@ fn browser_active_db_mismatch(session: &WsSession, repo_id: RepoId) -> bool {
 }
 
 #[cfg(test)]
-#[path = "writer_test.rs"]
 mod tests;

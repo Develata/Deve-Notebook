@@ -19,8 +19,8 @@ Sync engine handlers at the WebSocket boundary. Manages the sync lifecycle: hell
 | `engine.rs` | Sync engine orchestration |
 | `snapshot.rs` | Snapshot exchange during sync |
 | `transfer.rs` | Data transfer operations |
-| `writer.rs` | Writer readiness notification |
-| `guard.rs` | Sync concurrency guard |
+| `writer/mod.rs` | Writer readiness notification |
+| `guard/mod.rs` | Sync concurrency guard |
 | `cleanup.rs` | Cleanup stale sync state |
 | `errors/mod.rs` | Sync-specific error response helpers |
 | `errors/classify.rs` | Sync-specific error classification |

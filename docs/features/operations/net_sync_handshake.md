@@ -67,7 +67,7 @@
    - `apps/web/src/hooks/use_core/effects/handshake_send.rs`
    - `apps/web/src/hooks/use_core/effects/handshake_send_delivery.rs`
    - `apps/cli/src/server/handlers/sync/hello/mod.rs`
-   - `apps/cli/src/server/handlers/sync/writer.rs`
+   - `apps/cli/src/server/handlers/sync/writer/mod.rs`
 4. `Core Subsystems`:
    - `protocol`
    - `sync`
@@ -91,7 +91,7 @@
 3. `Concrete Modules`:
    - `apps/web/src/hooks/use_core/effects/message_dispatch_write.rs`
    - `apps/web/src/hooks/use_core/effects/message_repo_scope_accept.rs`
-   - `apps/cli/src/server/handlers/sync/writer.rs`
+   - `apps/cli/src/server/handlers/sync/writer/mod.rs`
 4. `Core Subsystems`:
    - `protocol`
    - `sync`

@@ -134,5 +134,4 @@ fn validate_browser_sync_scope_state(
 }
 
 #[cfg(test)]
-#[path = "guard_test.rs"]
 mod tests;
