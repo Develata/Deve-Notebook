@@ -54,7 +54,10 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
         },
     )?;
     git(&repo_root, &["mv", "note.md", "renamed.md"]);
-    std::fs::write(repo_root.join("renamed.md"), format!("{baseline}git import\n"))?;
+    std::fs::write(
+        repo_root.join("renamed.md"),
+        format!("{baseline}git import\n"),
+    )?;
 
     let report = apply_import(&state.repo, &repo_name, &repo_root)?;
 

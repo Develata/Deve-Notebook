@@ -43,9 +43,10 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `source_control_proxy/` | Source control proxy facade and implementation modules for `RemoteSourceControlApi` |
 | `source_control_http_test/` | Source control HTTP roundtrip tests and helpers |
 | `source_control_proxy/http/tests/` | Source control proxy HTTP error decoding tests |
-| `source_control_changes_identity*_test.rs` | Source control changes identity retention tests |
+| `source_control_changes_identity_test/` | Source control changes identity retention tests |
 | `source_control_local_commit_scope*_test.rs` | Source control commit scope nonce and bootstrap tests |
 | `source_control_{local,remote}_scope*_test.rs` | Source control scope/identity runtime tests |
+| `source_control_git_import_conflict_test/` | Source control Git import conflict tests |
 | `source_control_scope*_test.rs` | Source control scope binding and selector runtime tests |
 | `switcher_branch_test/` | Branch switcher success, reject, and scope message tests |
 | `switcher_branch_scope_test/` | Branch switcher repo-scope fail-closed and selector binding tests |
