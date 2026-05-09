@@ -47,9 +47,8 @@ pub fn run_pending_mirror(
         return Ok(GitMirrorRunReport::default());
     }
 
-    let status = inspect_repo_root(repo_root).map_err(|err| GitMirrorRunError::StatusInspect {
-        message: err.to_string(),
-    })?;
+    let status = inspect_repo_root(repo_root)
+        .map_err(|source| GitMirrorRunError::StatusInspect { source })?;
     if status.state != GitMirrorState::Ready {
         let reason = status.reason.unwrap_or_else(|| {
             format!(

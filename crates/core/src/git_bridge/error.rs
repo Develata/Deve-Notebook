@@ -265,8 +265,8 @@ pub enum GitImportPlanError {
     GitCommand { message: String },
     #[error("{message}")]
     GitPreflight { message: String },
-    #[error("Git import dry-run failed to inspect mirror status: {message}")]
-    StatusInspect { message: String },
+    #[error("Git import dry-run failed to inspect mirror status: {source}")]
+    StatusInspect { source: GitMirrorStatusError },
     #[error("Git import dry-run requires ready Git mirror: {reason}")]
     MirrorNotReady { reason: String },
     #[error("Git import dry-run requires Git HEAD")]
@@ -337,8 +337,8 @@ impl From<GitImportApplyError> for String {
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum GitMirrorRunError {
-    #[error("Git mirror executor failed to inspect mirror status: {message}")]
-    StatusInspect { message: String },
+    #[error("Git mirror executor failed to inspect mirror status: {source}")]
+    StatusInspect { source: GitMirrorStatusError },
     #[error("Git mirror executor failed to inspect latest Deve commit: {message}")]
     CommitList { message: String },
     #[error("Git mirror executor failed to inspect {kind} source-control changes: {message}")]
@@ -438,8 +438,8 @@ impl GitMirrorRunFailure {
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum GitMirrorPushError {
-    #[error("Git push mirror failed to inspect mirror status: {message}")]
-    StatusInspect { message: String },
+    #[error("Git push mirror failed to inspect mirror status: {source}")]
+    StatusInspect { source: GitMirrorStatusError },
     #[error(transparent)]
     Store(#[from] GitMirrorStoreError),
 }
@@ -732,6 +732,15 @@ mod tests {
             "Git import dry-run requires ready Git mirror: state=disabled git=missing"
         );
         assert_eq!(
+            super::GitImportPlanError::StatusInspect {
+                source: super::GitMirrorStatusError::GitMetadataPresence {
+                    message: "permission denied".into(),
+                },
+            }
+            .to_string(),
+            "Git import dry-run failed to inspect mirror status: failed to inspect .git metadata presence: permission denied"
+        );
+        assert_eq!(
             super::GitImportPlanError::UnsafePath {
                 path: "../note.md".into(),
             }
@@ -744,10 +753,12 @@ mod tests {
     fn git_mirror_push_error_preserves_legacy_messages() {
         assert_eq!(
             super::GitMirrorPushError::StatusInspect {
-                message: "permission denied".into(),
+                source: super::GitMirrorStatusError::GitignoreProtection {
+                    message: "permission denied".into(),
+                },
             }
             .to_string(),
-            "Git push mirror failed to inspect mirror status: permission denied"
+            "Git push mirror failed to inspect mirror status: failed to inspect .gitignore .notegit protection: permission denied"
         );
         assert_eq!(
             super::GitMirrorPushError::Store(super::GitMirrorStoreError::ListRecords {
@@ -762,10 +773,12 @@ mod tests {
     fn git_mirror_run_error_preserves_legacy_messages() {
         assert_eq!(
             super::GitMirrorRunError::StatusInspect {
-                message: "permission denied".into(),
+                source: super::GitMirrorStatusError::GitignoreProtection {
+                    message: "permission denied".into(),
+                },
             }
             .to_string(),
-            "Git mirror executor failed to inspect mirror status: permission denied"
+            "Git mirror executor failed to inspect mirror status: failed to inspect .gitignore .notegit protection: permission denied"
         );
         assert_eq!(
             super::GitMirrorRunError::CommitList {

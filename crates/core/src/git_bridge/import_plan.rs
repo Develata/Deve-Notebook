@@ -63,9 +63,8 @@ fn plan_import_inner(repo_root: &Path) -> GitImportPlanResult<GitImportPlan> {
 }
 
 fn ensure_import_ready(repo_root: &Path) -> GitImportPlanResult<()> {
-    let status = inspect_repo_root(repo_root).map_err(|err| GitImportPlanError::StatusInspect {
-        message: err.to_string(),
-    })?;
+    let status = inspect_repo_root(repo_root)
+        .map_err(|source| GitImportPlanError::StatusInspect { source })?;
     if status.state != GitMirrorState::Ready {
         let reason = status.reason.unwrap_or_else(|| {
             format!(

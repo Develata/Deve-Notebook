@@ -39,9 +39,8 @@ pub(super) fn run_snapshot_bootstrap(
     else {
         return Ok(GitMirrorRunReport::default());
     };
-    let status = inspect_repo_root(repo_root).map_err(|err| GitMirrorRunError::StatusInspect {
-        message: err.to_string(),
-    })?;
+    let status = inspect_repo_root(repo_root)
+        .map_err(|source| GitMirrorRunError::StatusInspect { source })?;
     let record = queue_deve_commit(db, repo_id, &commit)?;
     let mut report = GitMirrorRunReport {
         attempted: 1,

@@ -121,8 +121,8 @@ fn export_mirror_propagates_snapshot_status_inspect_without_queueing() {
     assert!(
         matches!(
             err.downcast_ref::<crate::git_bridge::GitMirrorRunError>(),
-            Some(crate::git_bridge::GitMirrorRunError::StatusInspect { message })
-                if message.contains("refusing to follow symlinked .gitignore")
+            Some(crate::git_bridge::GitMirrorRunError::StatusInspect { source })
+                if source.to_string().contains("refusing to follow symlinked .gitignore")
         ),
         "{err:?}"
     );

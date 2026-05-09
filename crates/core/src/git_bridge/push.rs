@@ -46,9 +46,8 @@ pub fn push_mirror(
     options: GitMirrorPushOptions,
 ) -> GitMirrorPushResult<GitMirrorPushReport> {
     let mut report = GitMirrorPushReport::default();
-    let status = inspect_repo_root(repo_root).map_err(|err| GitMirrorPushError::StatusInspect {
-        message: err.to_string(),
-    })?;
+    let status = inspect_repo_root(repo_root)
+        .map_err(|source| GitMirrorPushError::StatusInspect { source })?;
     if status.state != GitMirrorState::Ready {
         report.blockers.push(blocker(
             "mirror_not_ready",
