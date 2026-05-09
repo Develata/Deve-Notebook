@@ -5,7 +5,8 @@
 //! Explicit Git mirror executor. It never acts as source-control authority.
 
 use super::error::{
-    GitMirrorCommitError, GitMirrorCommitResult, GitMirrorRunError, GitMirrorRunResult,
+    GitMirrorCommitError, GitMirrorCommitResult, GitMirrorRunError, GitMirrorRunFailure,
+    GitMirrorRunResult,
 };
 use super::git_cmd;
 use super::preflight::{
@@ -109,7 +110,11 @@ fn run_one_candidate(
             report.records.push(updated);
         }
         Err(err) => {
-            let updated = mark_out_of_sync(db, &record.deve_commit_id, err)?;
+            let reason = match GitMirrorRunFailure::from_commit_error(err) {
+                GitMirrorRunFailure::OutOfSync(reason) => reason,
+                GitMirrorRunFailure::Propagate(err) => return Err(err),
+            };
+            let updated = mark_out_of_sync(db, &record.deve_commit_id, reason)?;
             report.out_of_sync = 1;
             report.records.push(updated);
         }

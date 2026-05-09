@@ -4,7 +4,9 @@
 //!
 //! Projection replay for accumulated Git mirror records.
 
-use super::error::{GitMirrorRunResult, GitProjectionReplayError, GitProjectionReplayResult};
+use super::error::{
+    GitMirrorRunFailure, GitMirrorRunResult, GitProjectionReplayError, GitProjectionReplayResult,
+};
 use super::executor::{GitMirrorRunReport, commit_message};
 use super::git_cmd;
 use super::replay_git::{
@@ -30,7 +32,11 @@ pub(super) fn run_projection_replay(
     let items = match prepare_replay(db, repo_root, records) {
         Ok(items) => items,
         Err((records, reason)) => {
-            return mark_remaining_out_of_sync(db, &mut report, records, reason.into());
+            let reason = match GitMirrorRunFailure::from_replay_plan_error(reason) {
+                GitMirrorRunFailure::OutOfSync(reason) => reason,
+                GitMirrorRunFailure::Propagate(err) => return Err(err),
+            };
+            return mark_remaining_out_of_sync(db, &mut report, records, reason);
         }
     };
 
@@ -51,7 +57,11 @@ pub(super) fn run_projection_replay(
         Ok(parent) => parent,
         Err(reason) => {
             let records = items.into_iter().map(|item| item.record).collect();
-            return mark_remaining_out_of_sync(db, &mut report, records, reason.into());
+            let reason = match GitMirrorRunFailure::from_replay_plan_error(reason) {
+                GitMirrorRunFailure::OutOfSync(reason) => reason,
+                GitMirrorRunFailure::Propagate(err) => return Err(err),
+            };
+            return mark_remaining_out_of_sync(db, &mut report, records, reason);
         }
     };
 

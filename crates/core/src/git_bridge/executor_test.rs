@@ -1,6 +1,6 @@
 use super::{GitMirrorRunOptions, export_mirror, run_pending_mirror};
 use crate::git_bridge::{
-    GitMirrorCommitState, GitMirrorFailureStage, get_record, queue_deve_commit,
+    GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRunError, get_record, queue_deve_commit,
 };
 use crate::ledger::RepoManager;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
@@ -235,4 +235,59 @@ fn run_pending_mirror_rejects_multiple_queued_records_without_fake_mapping() {
         .output()
         .expect("run git rev-list");
     assert!(!output.status.success());
+}
+
+#[test]
+fn run_pending_mirror_propagates_single_commit_table_error_without_marking_record() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo_root = dir.path().join("repo");
+    init_git_repo(&repo_root);
+    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
+    pending_fs::init_table(&db).expect("pending table");
+    crate::source_control::staging::init_table(&db).expect("staged table");
+    let repo_id = uuid::Uuid::new_v4();
+    queue_deve_commit(&db, repo_id, &commit("deve-1", 7)).expect("queue");
+
+    let err = run_pending_mirror(&db, &repo_root, GitMirrorRunOptions::default())
+        .expect_err("missing commit table should propagate");
+
+    assert!(
+        matches!(err, GitMirrorRunError::CommitTable { action: "open", .. }),
+        "{err:?}"
+    );
+    let record = get_record(&db, "deve-1")
+        .expect("get")
+        .expect("record remains queued");
+    assert_eq!(record.state, GitMirrorCommitState::Queued);
+    assert_eq!(record.attempts, 0);
+    assert!(record.last_error.is_none(), "{record:?}");
+}
+
+#[test]
+fn run_pending_mirror_propagates_replay_commit_table_error_without_marking_records() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo_root = dir.path().join("repo");
+    init_git_repo(&repo_root);
+    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
+    pending_fs::init_table(&db).expect("pending table");
+    crate::source_control::staging::init_table(&db).expect("staged table");
+    let repo_id = uuid::Uuid::new_v4();
+    queue_deve_commit(&db, repo_id, &commit("deve-1", 7)).expect("queue first");
+    queue_deve_commit(&db, repo_id, &commit("deve-2", 8)).expect("queue second");
+
+    let err = run_pending_mirror(&db, &repo_root, GitMirrorRunOptions::default())
+        .expect_err("missing commit table should propagate from replay preflight");
+
+    assert!(
+        matches!(err, GitMirrorRunError::CommitTable { action: "open", .. }),
+        "{err:?}"
+    );
+    for id in ["deve-1", "deve-2"] {
+        let record = get_record(&db, id)
+            .expect("get")
+            .expect("record remains queued");
+        assert_eq!(record.state, GitMirrorCommitState::Queued, "{record:?}");
+        assert_eq!(record.attempts, 0, "{record:?}");
+        assert!(record.last_error.is_none(), "{record:?}");
+    }
 }

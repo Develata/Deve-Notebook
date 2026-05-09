@@ -314,6 +314,19 @@ pub enum GitMirrorRunError {
     StatusInspect { message: String },
     #[error("Git mirror executor failed to inspect latest Deve commit: {message}")]
     CommitList { message: String },
+    #[error("Git mirror executor failed to inspect {kind} source-control changes: {message}")]
+    SourceControlInspect { kind: &'static str, message: String },
+    #[error("Git mirror executor failed to {action} Deve commit table: {message}")]
+    CommitTable {
+        action: &'static str,
+        message: String,
+    },
+    #[error("Git mirror executor failed to load Deve commit {commit_id}: {message}")]
+    CommitLoad { commit_id: String, message: String },
+    #[error("Git mirror executor failed to decode Deve commit {commit_id}: {message}")]
+    CommitDecode { commit_id: String, message: String },
+    #[error("Git mirror executor failed to read parent Git mirror record {parent_id}: {message}")]
+    ParentRecordRead { parent_id: String, message: String },
     #[error(transparent)]
     Store(#[from] GitMirrorStoreError),
 }
@@ -321,6 +334,48 @@ pub enum GitMirrorRunError {
 impl From<GitMirrorRunError> for String {
     fn from(err: GitMirrorRunError) -> Self {
         err.to_string()
+    }
+}
+
+pub(super) enum GitMirrorRunFailure {
+    OutOfSync(String),
+    Propagate(GitMirrorRunError),
+}
+
+impl GitMirrorRunFailure {
+    pub(super) fn from_commit_error(err: GitMirrorCommitError) -> Self {
+        match err {
+            GitMirrorCommitError::GitPreflight(err) => Self::from_preflight_error(err),
+            other => Self::OutOfSync(other.to_string()),
+        }
+    }
+
+    pub(super) fn from_replay_plan_error(err: GitReplayPlanError) -> Self {
+        match err {
+            GitReplayPlanError::GitPreflight(err) => Self::from_preflight_error(err),
+            GitReplayPlanError::ParentRecordRead { parent_id, message } => {
+                Self::Propagate(GitMirrorRunError::ParentRecordRead { parent_id, message })
+            }
+            other => Self::OutOfSync(other.to_string()),
+        }
+    }
+
+    fn from_preflight_error(err: GitPreflightError) -> Self {
+        match err {
+            GitPreflightError::SourceControlInspect { kind, message } => {
+                Self::Propagate(GitMirrorRunError::SourceControlInspect { kind, message })
+            }
+            GitPreflightError::CommitTable { action, message } => {
+                Self::Propagate(GitMirrorRunError::CommitTable { action, message })
+            }
+            GitPreflightError::CommitLoad { commit_id, message } => {
+                Self::Propagate(GitMirrorRunError::CommitLoad { commit_id, message })
+            }
+            GitPreflightError::CommitDecode { commit_id, message } => {
+                Self::Propagate(GitMirrorRunError::CommitDecode { commit_id, message })
+            }
+            other => Self::OutOfSync(other.to_string()),
+        }
     }
 }
 
@@ -644,11 +699,126 @@ mod tests {
             "Git mirror executor failed to inspect latest Deve commit: table missing"
         );
         assert_eq!(
+            super::GitMirrorRunError::SourceControlInspect {
+                kind: "pending",
+                message: "table missing".into(),
+            }
+            .to_string(),
+            "Git mirror executor failed to inspect pending source-control changes: table missing"
+        );
+        assert_eq!(
+            super::GitMirrorRunError::CommitTable {
+                action: "open",
+                message: "table missing".into(),
+            }
+            .to_string(),
+            "Git mirror executor failed to open Deve commit table: table missing"
+        );
+        assert_eq!(
             super::GitMirrorRunError::Store(super::GitMirrorStoreError::ListRecords {
                 message: "table type mismatch".into(),
             })
             .to_string(),
             "failed to list Git mirror records: table type mismatch"
         );
+    }
+
+    #[test]
+    fn git_mirror_run_failure_classifies_infra_and_business_failures() {
+        match super::GitMirrorRunFailure::from_commit_error(
+            super::GitMirrorCommitError::GitPreflight(super::GitPreflightError::CommitDiff {
+                message: "lost projected path".into(),
+            }),
+        ) {
+            super::GitMirrorRunFailure::OutOfSync(reason) => {
+                assert!(
+                    reason.contains("failed to compute queued Deve commit diff"),
+                    "{reason}"
+                );
+            }
+            super::GitMirrorRunFailure::Propagate(err) => {
+                panic!("CommitDiff should remain mirror out-of-sync, got {err:?}");
+            }
+        }
+
+        match super::GitMirrorRunFailure::from_commit_error(
+            super::GitMirrorCommitError::GitPreflight(super::GitPreflightError::CommitTable {
+                action: "open",
+                message: "table missing".into(),
+            }),
+        ) {
+            super::GitMirrorRunFailure::Propagate(super::GitMirrorRunError::CommitTable {
+                action: "open",
+                message,
+            }) => assert_eq!(message, "table missing"),
+            other => panic!(
+                "CommitTable should propagate, got {}",
+                classify_failure(other)
+            ),
+        }
+
+        match super::GitMirrorRunFailure::from_commit_error(
+            super::GitMirrorCommitError::GitPreflight(
+                super::GitPreflightError::SourceControlInspect {
+                    kind: "pending",
+                    message: "table missing".into(),
+                },
+            ),
+        ) {
+            super::GitMirrorRunFailure::Propagate(
+                super::GitMirrorRunError::SourceControlInspect {
+                    kind: "pending",
+                    message,
+                },
+            ) => assert_eq!(message, "table missing"),
+            other => panic!(
+                "SourceControlInspect should propagate, got {}",
+                classify_failure(other)
+            ),
+        }
+
+        match super::GitMirrorRunFailure::from_replay_plan_error(
+            super::GitReplayPlanError::ParentRecordRead {
+                parent_id: "p1".into(),
+                message: "store failed".into(),
+            },
+        ) {
+            super::GitMirrorRunFailure::Propagate(super::GitMirrorRunError::ParentRecordRead {
+                parent_id,
+                message,
+            }) => {
+                assert_eq!(parent_id, "p1");
+                assert_eq!(message, "store failed");
+            }
+            other => panic!(
+                "ParentRecordRead should propagate, got {}",
+                classify_failure(other)
+            ),
+        }
+
+        match super::GitMirrorRunFailure::from_replay_plan_error(
+            super::GitReplayPlanError::NonContiguousCommitChain {
+                commit_id: "c2".into(),
+                parent: Some("old".into()),
+                expected: "c1".into(),
+            },
+        ) {
+            super::GitMirrorRunFailure::OutOfSync(reason) => {
+                assert!(
+                    reason.contains("not a contiguous Deve commit chain"),
+                    "{reason}"
+                );
+            }
+            super::GitMirrorRunFailure::Propagate(err) => {
+                panic!("NonContiguousCommitChain should be out-of-sync, got {err:?}");
+            }
+        }
+    }
+
+    fn classify_failure(failure: super::GitMirrorRunFailure) -> String {
+        match failure {
+            super::GitMirrorRunFailure::OutOfSync(reason) => format!("out_of_sync: {reason}"),
+            super::GitMirrorRunFailure::Propagate(err) => format!("propagate: {err:?}"),
+        }
     }
 }
