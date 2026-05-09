@@ -23,6 +23,7 @@ mod status;
 mod store;
 
 pub use error::{
+    GitImportApplyError, GitImportApplyResult, GitImportPlanError, GitImportPlanResult,
     GitMirrorPushError, GitMirrorPushResult, GitMirrorStoreError, GitMirrorStoreResult,
 };
 pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, export_mirror, run_pending_mirror};

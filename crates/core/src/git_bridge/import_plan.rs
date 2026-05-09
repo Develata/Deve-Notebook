@@ -12,7 +12,6 @@ use super::preflight::{ensure_git_worktree, ensure_notegit_is_not_tracked};
 use super::status::{GitMirrorState, inspect_repo_root};
 use crate::source_control::ChangeStatus;
 use crate::utils::{notegit, path::to_forward_slash};
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -38,8 +37,8 @@ pub struct GitImportPlanBlocker {
     pub reason: String,
 }
 
-pub fn plan_import(repo_root: &Path) -> Result<GitImportPlan> {
-    plan_import_inner(repo_root).map_err(Into::into)
+pub fn plan_import(repo_root: &Path) -> GitImportPlanResult<GitImportPlan> {
+    plan_import_inner(repo_root)
 }
 
 fn plan_import_inner(repo_root: &Path) -> GitImportPlanResult<GitImportPlan> {

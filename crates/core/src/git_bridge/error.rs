@@ -9,8 +9,8 @@ pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanErr
 pub(super) type GitProjectionReplayResult<T> = std::result::Result<T, GitProjectionReplayError>;
 pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommitError>;
 pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
-pub(super) type GitImportPlanResult<T> = std::result::Result<T, GitImportPlanError>;
-pub(super) type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
+pub type GitImportPlanResult<T> = std::result::Result<T, GitImportPlanError>;
+pub type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
 pub type GitMirrorPushResult<T> = std::result::Result<T, GitMirrorPushError>;
 pub type GitMirrorStoreResult<T> = std::result::Result<T, GitMirrorStoreError>;
 
@@ -236,11 +236,11 @@ impl From<GitSnapshotBootstrapError> for String {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub(super) enum GitImportPlanError {
-    #[error(transparent)]
-    GitCommand(#[from] GitCommandError),
-    #[error(transparent)]
-    GitPreflight(#[from] GitPreflightError),
+pub enum GitImportPlanError {
+    #[error("{message}")]
+    GitCommand { message: String },
+    #[error("{message}")]
+    GitPreflight { message: String },
     #[error("Git import dry-run failed to inspect mirror status: {message}")]
     StatusInspect { message: String },
     #[error("Git import dry-run requires ready Git mirror: {reason}")]
@@ -251,6 +251,22 @@ pub(super) enum GitImportPlanError {
     UnsafePath { path: String },
 }
 
+impl From<GitCommandError> for GitImportPlanError {
+    fn from(err: GitCommandError) -> Self {
+        Self::GitCommand {
+            message: err.to_string(),
+        }
+    }
+}
+
+impl From<GitPreflightError> for GitImportPlanError {
+    fn from(err: GitPreflightError) -> Self {
+        Self::GitPreflight {
+            message: err.to_string(),
+        }
+    }
+}
+
 impl From<GitImportPlanError> for String {
     fn from(err: GitImportPlanError) -> Self {
         err.to_string()
@@ -258,7 +274,13 @@ impl From<GitImportPlanError> for String {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub(super) enum GitImportApplyError {
+pub enum GitImportApplyError {
+    #[error(transparent)]
+    Plan(#[from] GitImportPlanError),
+    #[error(
+        "Git import apply failed while writing pending entries for repo {repo_name}: {message}"
+    )]
+    LocalRepoApply { repo_name: String, message: String },
     #[error("failed to read imported Git worktree file {path}: {message}")]
     ReadImportedWorktreeFile { path: String, message: String },
     #[error("failed to check Git import conflict for {path}: {message}")]
@@ -530,10 +552,37 @@ mod tests {
             .to_string(),
             "failed to write Git import pending entries: transaction failed"
         );
+        assert_eq!(
+            super::GitImportApplyError::Plan(super::GitImportPlanError::MissingHead).to_string(),
+            "Git import dry-run requires Git HEAD"
+        );
+        assert_eq!(
+            super::GitImportApplyError::LocalRepoApply {
+                repo_name: "default".into(),
+                message: "database unavailable".into(),
+            }
+            .to_string(),
+            "Git import apply failed while writing pending entries for repo default: database unavailable"
+        );
     }
 
     #[test]
     fn git_import_plan_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitImportPlanError::from(super::GitCommandError::Spawn {
+                args: "status".into(),
+                message: "missing git".into(),
+            })
+            .to_string(),
+            "failed to run git status: missing git"
+        );
+        assert_eq!(
+            super::GitImportPlanError::from(
+                super::GitPreflightError::PendingSourceControlChanges { count: 1 },
+            )
+            .to_string(),
+            "Git mirror refuses to run with 1 pending source-control change(s)"
+        );
         assert_eq!(
             super::GitImportPlanError::MissingHead.to_string(),
             "Git import dry-run requires Git HEAD"

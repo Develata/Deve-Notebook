@@ -12,7 +12,6 @@ use crate::ledger::RepoManager;
 use crate::models::DocId;
 use crate::source_control::{ChangeStatus, conflict, pending_fs, staging};
 use crate::utils::path::join_normalized;
-use anyhow::Result;
 use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
@@ -30,7 +29,7 @@ pub fn apply_import(
     repo: &RepoManager,
     repo_name: &str,
     repo_root: &Path,
-) -> Result<GitImportApplyReport> {
+) -> GitImportApplyResult<GitImportApplyReport> {
     let plan = plan_import(repo_root)?;
     let mut apply_blockers = Vec::new();
     let mut candidates = Vec::new();
@@ -59,9 +58,14 @@ pub fn apply_import(
         return Ok(report);
     }
 
-    let (applied, skipped, blockers) = repo.run_on_local_repo(repo_name, |db| {
-        apply_pending_candidates(db, &candidates).map_err(anyhow::Error::from)
-    })?;
+    let (applied, skipped, blockers) = repo
+        .run_on_local_repo(repo_name, |db| {
+            apply_pending_candidates(db, &candidates).map_err(anyhow::Error::from)
+        })
+        .map_err(|err| GitImportApplyError::LocalRepoApply {
+            repo_name: repo_name.to_string(),
+            message: err.to_string(),
+        })?;
     report.applied = applied;
     report.skipped = skipped;
     report.blockers = blockers;
