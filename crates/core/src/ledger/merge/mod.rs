@@ -1,4 +1,4 @@
-// crates\core\src\ledger
+// crates/core/src/ledger/merge
 //! plan_ref:
 //!   - 04_storage#facts-partition
 //!   - 03_rendering#document-authority-bridge
@@ -9,18 +9,13 @@
 // 功能：导出合并引擎与结果类型
 // ---------------------------------------------------------------
 
-#[path = "merge/diff.rs"]
 mod diff;
-#[path = "merge/engine.rs"]
 mod engine;
-#[path = "merge/region.rs"]
 mod region;
-#[path = "merge/types.rs"]
 mod types;
 
 pub use engine::MergeEngine;
 pub use types::{ConflictHunk, MergeResult};
 
 #[cfg(test)]
-#[path = "merge/tests.rs"]
 mod tests;
