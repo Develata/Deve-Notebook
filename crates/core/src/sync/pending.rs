@@ -94,5 +94,4 @@ pub(super) fn message(
 }
 
 #[cfg(test)]
-#[path = "pending_test.rs"]
 mod tests;
