@@ -59,10 +59,20 @@ pub fn handle_edit_rejected_message(
     locale: Locale,
     signals: CoreSignals,
 ) {
-    if !accepts_edit_rejected_message(Some(scope_nonce), signals) {
+    let accepts_current_scope = accepts_edit_rejected_message(Some(scope_nonce), signals);
+    let has_matching_pending = pending::has_pending_edit(
+        &signals.pending_local_edits.get_untracked(),
+        None,
+        Some(scope_nonce),
+        doc_id,
+        client_op_id,
+    );
+    if !accepts_current_scope && !has_matching_pending {
         return;
     }
-    let current_doc = signals.current_doc.get_untracked();
+    let current_doc = accepts_current_scope
+        .then(|| signals.current_doc.get_untracked())
+        .flatten();
     let mut clear_navigation = false;
     signals.set_pending_local_edits.update(|pending_edits| {
         clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
@@ -77,7 +87,9 @@ pub fn handle_edit_rejected_message(
     if clear_navigation {
         signals.set_pending_navigation.set(None);
     }
-    handle_protocol_error(ws, locale, &error, None, protocol_control_signals(signals));
+    if accepts_current_scope {
+        handle_protocol_error(ws, locale, &error, None, protocol_control_signals(signals));
+    }
 }
 
 pub fn handle_protocol_error_message(
@@ -188,11 +200,16 @@ fn recover_from_failed_scope_restore(ws: &WsService, signals: CoreSignals) {
 
 #[cfg(test)]
 mod tests {
-    use super::finish_pending_chat_on_protocol_error;
-    use crate::api::ConnectionStatus;
+    use super::{finish_pending_chat_on_protocol_error, handle_edit_rejected_message};
+    use crate::api::{ConnectionStatus, WsService};
+    use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation};
+    use crate::hooks::use_core::pending::{
+        PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
+    };
     use crate::hooks::use_core::state::init_signals;
     use crate::hooks::use_core::types::ChatMessage;
     use crate::i18n::Locale;
+    use deve_core::models::{DocId, Op, RepoId};
     use deve_core::protocol::{ServerError, ServerErrorCode};
     use leptos::prelude::*;
 
@@ -285,5 +302,58 @@ mod tests {
             signals.plugin_request_ids.get_untracked(),
             vec!["req-1".to_string()]
         );
+    }
+
+    #[test]
+    fn stale_edit_rejected_clears_matching_retained_pending_without_banner() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        let repo_id = RepoId::new_v4();
+        let doc_id = DocId::from_u128(92);
+
+        signals.set_current_repo_id.set(Some(repo_id.to_string()));
+        signals.set_current_scope_nonce.set(8);
+        signals.set_current_doc.set(Some(doc_id));
+        signals.set_pending_navigation.set(Some(PendingNavigation {
+            target: NavigationTarget::Doc,
+            action: Callback::new(|_| {}),
+        }));
+        signals.set_pending_local_edits.update(|pending| {
+            push_pending_edit(
+                pending,
+                PendingLocalEditInput {
+                    repo_id,
+                    doc_id,
+                    scope_nonce: 7,
+                    client_id: 11,
+                    client_op_id: 13,
+                    base_version: 0,
+                    op: Op::Insert {
+                        pos: 0,
+                        content: "pending".into(),
+                    },
+                },
+            );
+        });
+
+        handle_edit_rejected_message(
+            7,
+            doc_id,
+            13,
+            ServerError::with_detail(ServerErrorCode::SyncEditRejected, "old scope rejected"),
+            &ws,
+            Locale::En,
+            signals,
+        );
+
+        assert_eq!(
+            pending_count_for_doc(&signals.pending_local_edits.get_untracked(), doc_id),
+            0
+        );
+        assert!(signals.pending_navigation.get_untracked().is_some());
+        assert!(signals.sync_banner.get_untracked().is_none());
     }
 }

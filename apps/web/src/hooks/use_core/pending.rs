@@ -36,11 +36,30 @@ pub struct PendingLocalEdit {
     pub op: Op,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PendingScope {
+    pub repo_id: RepoId,
+    pub scope_nonce: u64,
+}
+
+impl PendingScope {
+    pub fn from_repo_id_str(repo_id: Option<&str>, scope_nonce: u64) -> Option<Self> {
+        repo_id.and_then(|repo_id| {
+            repo_id.parse::<RepoId>().ok().map(|repo_id| Self {
+                repo_id,
+                scope_nonce,
+            })
+        })
+    }
+}
+
 pub type PendingLocalEdits = HashMap<DocId, Vec<PendingLocalEdit>>;
 pub use history::reconcile_with_history;
 pub use ops::{
     clear_pending_edit_and_check_current_doc_empty, cloned_ops_for_doc,
-    cloned_pending_edits_for_doc, has_pending_edits_for_doc, pending_count_for_doc,
+    cloned_ops_for_doc_in_scope, cloned_pending_edits_for_doc,
+    cloned_pending_edits_for_doc_in_scope, has_pending_edit, has_pending_edits_for_doc,
+    has_pending_edits_for_doc_in_scope, pending_count_for_doc, pending_count_for_doc_in_scope,
     push_pending_edit,
 };
 #[cfg(test)]

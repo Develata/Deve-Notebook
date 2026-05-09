@@ -48,6 +48,8 @@ pub(super) fn build_switch_repo_callback(
         });
         let _ = guard_navigation(
             signals.current_doc.get_untracked(),
+            signals.current_repo_id.get_untracked().as_deref(),
+            signals.current_scope_nonce.get_untracked(),
             &signals.pending_local_edits.get_untracked(),
             signals.set_pending_navigation,
             NavigationTarget::Repo,

@@ -72,6 +72,7 @@ pub(super) fn switch_scope(signals: &CoreSignals) -> SwitchScopeSignals {
         pending_local_edits: signals.pending_local_edits,
         set_pending_navigation: signals.set_pending_navigation,
         current_repo: signals.current_repo,
+        current_repo_id: signals.current_repo_id,
         current_scope_nonce: signals.current_scope_nonce,
         active_branch: signals.active_branch,
         pending_branch_switch: signals.pending_branch_switch,

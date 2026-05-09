@@ -37,6 +37,7 @@ pub struct SwitchScopeSignals {
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     pub current_repo: ReadSignal<Option<String>>,
+    pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,

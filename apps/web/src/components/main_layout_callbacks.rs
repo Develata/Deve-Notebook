@@ -44,6 +44,8 @@ pub fn build_home_callback(
     set_doc: WriteSignal<Option<deve_core::models::DocId>>,
     set_explicit_home: WriteSignal<bool>,
     current_doc: ReadSignal<Option<deve_core::models::DocId>>,
+    current_repo_id: ReadSignal<Option<String>>,
+    current_scope_nonce: ReadSignal<u64>,
     pending_local_edits: ReadSignal<PendingLocalEdits>,
     set_pending_navigation: WriteSignal<
         Option<crate::hooks::use_core::navigation::PendingNavigation>,
@@ -56,6 +58,8 @@ pub fn build_home_callback(
         });
         let _ = guard_navigation(
             current_doc.get_untracked(),
+            current_repo_id.get_untracked().as_deref(),
+            current_scope_nonce.get_untracked(),
             &pending_local_edits.get_untracked(),
             set_pending_navigation,
             NavigationTarget::Home,

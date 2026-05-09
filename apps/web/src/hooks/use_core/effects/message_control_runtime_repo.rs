@@ -25,7 +25,6 @@ pub(super) fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_handshake_scope_nonce.set(None);
     signals.set_pending_branch_switch_nonce.set(None);
     signals.set_pending_repo_switch_nonce.set(None);
-    signals.set_pending_local_edits.set(Default::default());
     signals.set_plugin_response.set(None);
     signals.set_plugin_request_ids.set(Vec::new());
     signals.set_chat_messages.set(Vec::new());

@@ -84,6 +84,8 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
         core.set_current_doc,
         core.set_explicit_home,
         core.current_doc,
+        core.current_repo_id,
+        core.current_scope_nonce,
         core.pending_local_edits,
         core.set_pending_navigation,
     );

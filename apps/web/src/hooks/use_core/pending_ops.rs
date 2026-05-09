@@ -4,7 +4,7 @@
 //!
 use deve_core::models::{DocId, Op, RepoId};
 
-use super::{PendingLocalEdit, PendingLocalEditInput, PendingLocalEdits};
+use super::{PendingLocalEdit, PendingLocalEditInput, PendingLocalEdits, PendingScope};
 
 pub fn push_pending_edit(pending: &mut PendingLocalEdits, input: PendingLocalEditInput) {
     let PendingLocalEditInput {
@@ -64,15 +64,39 @@ pub fn clear_pending_edit_and_check_current_doc_empty(
     client_op_id: u64,
 ) -> bool {
     let changed = ack_pending_edit(pending, repo_id, scope_nonce, doc_id, client_op_id);
-    changed && current_doc == Some(doc_id) && !has_pending_edits_for_doc(pending, doc_id)
+    changed
+        && current_doc == Some(doc_id)
+        && pending_count_for_doc_filtered(pending, doc_id, repo_id, scope_nonce) == 0
 }
 
 pub fn cloned_ops_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> Vec<Op> {
+    cloned_ops_for_doc_filtered(pending, doc_id, None, None)
+}
+
+pub fn cloned_ops_for_doc_in_scope(
+    pending: &PendingLocalEdits,
+    doc_id: DocId,
+    scope: PendingScope,
+) -> Vec<Op> {
+    cloned_ops_for_doc_filtered(
+        pending,
+        doc_id,
+        Some(scope.repo_id),
+        Some(scope.scope_nonce),
+    )
+}
+
+fn cloned_ops_for_doc_filtered(
+    pending: &PendingLocalEdits,
+    doc_id: DocId,
+    repo_id: Option<RepoId>,
+    scope_nonce: Option<u64>,
+) -> Vec<Op> {
     pending
         .get(&doc_id)
         .into_iter()
         .flatten()
-        .filter(|edit| overlay_row_matches_doc(edit, doc_id))
+        .filter(|edit| overlay_row_matches_filters(edit, doc_id, repo_id, scope_nonce))
         .map(|edit| edit.op.clone())
         .collect()
 }
@@ -81,26 +105,91 @@ pub fn cloned_pending_edits_for_doc(
     pending: &PendingLocalEdits,
     doc_id: DocId,
 ) -> Vec<PendingLocalEdit> {
+    cloned_pending_edits_for_doc_filtered(pending, doc_id, None, None)
+}
+
+pub fn cloned_pending_edits_for_doc_in_scope(
+    pending: &PendingLocalEdits,
+    doc_id: DocId,
+    scope: PendingScope,
+) -> Vec<PendingLocalEdit> {
+    cloned_pending_edits_for_doc_filtered(
+        pending,
+        doc_id,
+        Some(scope.repo_id),
+        Some(scope.scope_nonce),
+    )
+}
+
+fn cloned_pending_edits_for_doc_filtered(
+    pending: &PendingLocalEdits,
+    doc_id: DocId,
+    repo_id: Option<RepoId>,
+    scope_nonce: Option<u64>,
+) -> Vec<PendingLocalEdit> {
     pending
         .get(&doc_id)
         .into_iter()
         .flatten()
-        .filter(|edit| overlay_row_matches_doc(edit, doc_id))
+        .filter(|edit| overlay_row_matches_filters(edit, doc_id, repo_id, scope_nonce))
         .cloned()
         .collect()
 }
 
 pub fn pending_count_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> usize {
+    pending_count_for_doc_filtered(pending, doc_id, None, None)
+}
+
+pub fn pending_count_for_doc_in_scope(
+    pending: &PendingLocalEdits,
+    doc_id: DocId,
+    scope: PendingScope,
+) -> usize {
+    pending_count_for_doc_filtered(
+        pending,
+        doc_id,
+        Some(scope.repo_id),
+        Some(scope.scope_nonce),
+    )
+}
+
+fn pending_count_for_doc_filtered(
+    pending: &PendingLocalEdits,
+    doc_id: DocId,
+    repo_id: Option<RepoId>,
+    scope_nonce: Option<u64>,
+) -> usize {
     pending
         .get(&doc_id)
         .into_iter()
         .flatten()
-        .filter(|edit| overlay_row_matches_doc(edit, doc_id))
+        .filter(|edit| overlay_row_matches_filters(edit, doc_id, repo_id, scope_nonce))
         .count()
 }
 
 pub fn has_pending_edits_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> bool {
     pending_count_for_doc(pending, doc_id) > 0
+}
+
+pub fn has_pending_edits_for_doc_in_scope(
+    pending: &PendingLocalEdits,
+    doc_id: DocId,
+    scope: PendingScope,
+) -> bool {
+    pending_count_for_doc_in_scope(pending, doc_id, scope) > 0
+}
+
+pub fn has_pending_edit(
+    pending: &PendingLocalEdits,
+    repo_id: Option<RepoId>,
+    scope_nonce: Option<u64>,
+    doc_id: DocId,
+    client_op_id: u64,
+) -> bool {
+    pending.get(&doc_id).into_iter().flatten().any(|edit| {
+        edit.client_op_id == client_op_id
+            && overlay_row_matches_filters(edit, doc_id, repo_id, scope_nonce)
+    })
 }
 
 fn op_marker(op: &Op) -> String {
@@ -112,6 +201,17 @@ fn op_marker(op: &Op) -> String {
 
 fn overlay_row_matches_doc(edit: &PendingLocalEdit, doc_id: DocId) -> bool {
     edit.doc_id == doc_id && edit.created_at_ms >= 0 && !edit.op_marker.is_empty()
+}
+
+fn overlay_row_matches_filters(
+    edit: &PendingLocalEdit,
+    doc_id: DocId,
+    repo_id: Option<RepoId>,
+    scope_nonce: Option<u64>,
+) -> bool {
+    overlay_row_matches_doc(edit, doc_id)
+        && repo_id.is_none_or(|repo_id| edit.repo_id == repo_id)
+        && scope_nonce.is_none_or(|scope_nonce| edit.scope_nonce == scope_nonce)
 }
 
 fn now_millis() -> i64 {

@@ -32,12 +32,21 @@ pub fn handle_ack_message(
     client_op_id: u64,
     signals: CoreSignals,
 ) {
-    if !matches_current_message_scope(&Some(repo_id), &branch, signals)
-        || scope_nonce != Some(signals.current_scope_nonce.get_untracked())
-    {
+    let accepts_current_scope = matches_current_message_scope(&Some(repo_id), &branch, signals)
+        && scope_nonce == Some(signals.current_scope_nonce.get_untracked());
+    let has_matching_pending = pending::has_pending_edit(
+        &signals.pending_local_edits.get_untracked(),
+        Some(repo_id),
+        scope_nonce,
+        doc_id,
+        client_op_id,
+    );
+    if !accepts_current_scope && !has_matching_pending {
         return;
     }
-    let current_doc = signals.current_doc.get_untracked();
+    let current_doc = accepts_current_scope
+        .then(|| signals.current_doc.get_untracked())
+        .flatten();
     let mut clear_navigation = false;
     signals.set_pending_local_edits.update(|pending_edits| {
         clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
@@ -56,11 +65,15 @@ pub fn handle_ack_message(
 
 #[cfg(test)]
 mod tests {
-    use super::handle_write_ready_message;
+    use super::{handle_ack_message, handle_write_ready_message};
     use crate::api::{ConnectionStatus, WsService};
+    use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation};
+    use crate::hooks::use_core::pending::{
+        PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
+    };
     use crate::hooks::use_core::state::init_signals;
-    use deve_core::models::{PeerId, RepoId};
-    use leptos::prelude::{GetUntracked, Set, signal};
+    use deve_core::models::{DocId, Op, PeerId, RepoId};
+    use leptos::prelude::{Callback, GetUntracked, Set, Update, signal};
 
     #[test]
     fn write_ready_marks_writer_without_completing_handshake() {
@@ -88,5 +101,48 @@ mod tests {
 
         assert!(!signals.handshake_ready.get_untracked());
         assert!(ws.writer_ready_for(Some(&repo_id_text), Some(7)));
+    }
+
+    #[test]
+    fn stale_ack_clears_matching_retained_pending_without_touching_navigation() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        let repo_id = RepoId::new_v4();
+        let doc_id = DocId::from_u128(91);
+
+        signals.set_current_repo_id.set(Some(repo_id.to_string()));
+        signals.set_current_scope_nonce.set(8);
+        signals.set_current_doc.set(Some(doc_id));
+        signals.set_pending_navigation.set(Some(PendingNavigation {
+            target: NavigationTarget::Doc,
+            action: Callback::new(|_| {}),
+        }));
+        signals.set_pending_local_edits.update(|pending| {
+            push_pending_edit(
+                pending,
+                PendingLocalEditInput {
+                    repo_id,
+                    doc_id,
+                    scope_nonce: 7,
+                    client_id: 11,
+                    client_op_id: 13,
+                    base_version: 0,
+                    op: Op::Insert {
+                        pos: 0,
+                        content: "pending".into(),
+                    },
+                },
+            );
+        });
+
+        handle_ack_message(repo_id, None, Some(7), doc_id, 13, signals);
+
+        assert_eq!(
+            pending_count_for_doc(&signals.pending_local_edits.get_untracked(), doc_id),
+            0
+        );
+        assert!(signals.pending_navigation.get_untracked().is_some());
     }
 }

@@ -43,6 +43,8 @@ pub struct DocCallbackSignals {
 pub fn create_doc_callbacks(ws: &WsService, signals: DocCallbackSignals) -> DocCallbacks {
     let on_doc_select = create_doc_select_callback(
         signals.current_doc,
+        signals.local_scope.current_repo_id,
+        signals.local_scope.current_scope_nonce,
         signals.pending_local_edits,
         signals.set_pending_navigation,
         signals.set_current_doc,

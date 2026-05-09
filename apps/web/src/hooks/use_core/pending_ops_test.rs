@@ -260,3 +260,108 @@ fn clearing_with_other_scope_keeps_pending_edit() {
     ));
     assert_eq!(pending.get(&doc_id).map(Vec::len), Some(1));
 }
+
+#[test]
+fn clearing_last_current_scope_edit_ignores_other_scope_for_navigation_reset() {
+    let doc_id = DocId::from_u128(52);
+    let mut pending = PendingLocalEdits::new();
+    push_pending_edit(
+        &mut pending,
+        pending_input(doc_id, 31, 11, 7, 3, Op::Delete { pos: 2, len: 4 }),
+    );
+    push_pending_edit(
+        &mut pending,
+        pending_input(doc_id, 32, 11, 8, 3, Op::Delete { pos: 3, len: 2 }),
+    );
+
+    assert!(clear_pending_edit_and_check_current_doc_empty(
+        &mut pending,
+        Some(doc_id),
+        Some(repo_id()),
+        Some(31),
+        doc_id,
+        7,
+    ));
+    assert_eq!(pending.get(&doc_id).map(Vec::len), Some(1));
+}
+
+#[test]
+fn scoped_read_helpers_ignore_other_repo_or_scope() {
+    let doc_id = DocId::from_u128(53);
+    let mut pending = PendingLocalEdits::new();
+    push_pending_edit(
+        &mut pending,
+        pending_input(
+            doc_id,
+            31,
+            11,
+            7,
+            3,
+            Op::Insert {
+                pos: 0,
+                content: "a".into(),
+            },
+        ),
+    );
+    push_pending_edit(
+        &mut pending,
+        pending_input(
+            doc_id,
+            32,
+            11,
+            8,
+            3,
+            Op::Insert {
+                pos: 1,
+                content: "b".into(),
+            },
+        ),
+    );
+
+    let scope = PendingScope {
+        repo_id: repo_id(),
+        scope_nonce: 31,
+    };
+    assert_eq!(pending_count_for_doc_in_scope(&pending, doc_id, scope), 1);
+    assert!(has_pending_edits_for_doc_in_scope(&pending, doc_id, scope));
+    assert_eq!(
+        cloned_ops_for_doc_in_scope(&pending, doc_id, scope).len(),
+        1
+    );
+    assert_eq!(
+        cloned_pending_edits_for_doc_in_scope(&pending, doc_id, scope).len(),
+        1
+    );
+}
+
+#[test]
+fn exact_pending_edit_match_requires_scope_and_client_op() {
+    let doc_id = DocId::from_u128(54);
+    let mut pending = PendingLocalEdits::new();
+    push_pending_edit(
+        &mut pending,
+        pending_input(doc_id, 31, 11, 7, 3, Op::Delete { pos: 2, len: 4 }),
+    );
+
+    assert!(has_pending_edit(
+        &pending,
+        Some(repo_id()),
+        Some(31),
+        doc_id,
+        7,
+    ));
+    assert!(!has_pending_edit(
+        &pending,
+        Some(repo_id()),
+        Some(32),
+        doc_id,
+        7,
+    ));
+    assert!(!has_pending_edit(
+        &pending,
+        Some(repo_id()),
+        Some(31),
+        doc_id,
+        8,
+    ));
+}

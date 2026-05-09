@@ -5,7 +5,7 @@
 //!   - 15_release#runtime-observability
 //!
 use crate::hooks::use_core::CoreState;
-use crate::hooks::use_core::pending::pending_count_for_doc;
+use crate::hooks::use_core::pending::{PendingScope, pending_count_for_doc_in_scope};
 use crate::hooks::use_core::status_summary::{SyncStatusInput, SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -14,11 +14,21 @@ use leptos::prelude::*;
 pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
     let summary = Memo::new(move |_| {
         let current_doc = core.current_doc.get();
-        let pending_ack_count = current_doc
-            .map(|doc_id| pending_count_for_doc(&core.pending_local_edits.get(), doc_id))
-            .unwrap_or_default();
         let current_repo_id = core.current_repo_id.get();
         let current_scope_nonce = core.current_scope_nonce.get();
+        let pending_ack_count = current_doc
+            .and_then(|doc_id| {
+                PendingScope::from_repo_id_str(current_repo_id.as_deref(), current_scope_nonce).map(
+                    |scope| {
+                        pending_count_for_doc_in_scope(
+                            &core.pending_local_edits.get(),
+                            doc_id,
+                            scope,
+                        )
+                    },
+                )
+            })
+            .unwrap_or_default();
         let handshake_ready = core.handshake_ready.get();
         let readiness = core.ws.native_runtime_readiness_for(
             current_repo_id.as_deref(),

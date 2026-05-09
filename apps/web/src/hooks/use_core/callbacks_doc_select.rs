@@ -9,6 +9,8 @@ use leptos::prelude::*;
 
 pub(super) fn create_doc_select_callback(
     current_doc: ReadSignal<Option<DocId>>,
+    current_repo_id: ReadSignal<Option<String>>,
+    current_scope_nonce: ReadSignal<u64>,
     pending_local_edits: ReadSignal<PendingLocalEdits>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     set_current_doc: WriteSignal<Option<DocId>>,
@@ -25,6 +27,8 @@ pub(super) fn create_doc_select_callback(
         });
         let _ = guard_navigation(
             current_doc.get_untracked(),
+            current_repo_id.get_untracked().as_deref(),
+            current_scope_nonce.get_untracked(),
             &pending_local_edits.get_untracked(),
             set_pending_navigation,
             NavigationTarget::Doc,

@@ -6,7 +6,6 @@ use super::context::SyncContext;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::pending;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
-use deve_core::models::RepoId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::GetUntracked;
 
@@ -41,19 +40,18 @@ fn resend_pending_edits(ctx: &SyncContext) {
     }) else {
         return;
     };
-    let Some(repo_id) = ctx
-        .current_repo_id
-        .get_untracked()
-        .and_then(|repo_id| repo_id.parse::<RepoId>().ok())
-    else {
+    let Some(scope) = pending::PendingScope::from_repo_id_str(
+        ctx.current_repo_id.get_untracked().as_deref(),
+        scope_nonce,
+    ) else {
         return;
     };
-    let edits =
-        pending::cloned_pending_edits_for_doc(&ctx.pending_local_edits.get_untracked(), ctx.doc_id);
-    for edit in edits
-        .into_iter()
-        .filter(|edit| edit.repo_id == repo_id && edit.scope_nonce == scope_nonce)
-    {
+    let edits = pending::cloned_pending_edits_for_doc_in_scope(
+        &ctx.pending_local_edits.get_untracked(),
+        ctx.doc_id,
+        scope,
+    );
+    for edit in edits {
         ctx.ws.send(ClientMessage::Edit {
             doc_id: ctx.doc_id,
             op: edit.op,

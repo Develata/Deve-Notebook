@@ -24,7 +24,17 @@ pub(super) fn merge_history_tail(
 }
 
 pub(super) fn replay_pending_overlay(ctx: &SyncContext) {
-    let ops = pending::cloned_ops_for_doc(&ctx.pending_local_edits.get_untracked(), ctx.doc_id);
+    let Some(scope) = pending::PendingScope::from_repo_id_str(
+        ctx.current_repo_id.get_untracked().as_deref(),
+        ctx.current_scope_nonce.get_untracked(),
+    ) else {
+        return;
+    };
+    let ops = pending::cloned_ops_for_doc_in_scope(
+        &ctx.pending_local_edits.get_untracked(),
+        ctx.doc_id,
+        scope,
+    );
     if ops.is_empty() {
         return;
     }
