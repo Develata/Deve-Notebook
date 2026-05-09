@@ -143,5 +143,4 @@ fn resolve_session_repo_rejects_uuid_shaped_remote_display_name_with_stale_uuid(
     Ok(())
 }
 
-#[path = "repo_scope_recovery_test_local_counterpart.rs"]
 mod local_counterpart;
