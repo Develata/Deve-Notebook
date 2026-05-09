@@ -115,5 +115,4 @@ fn must_deliver_broadcast(msg: &ServerMessage) -> bool {
 }
 
 #[cfg(test)]
-#[path = "send_test.rs"]
 mod tests;
