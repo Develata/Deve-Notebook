@@ -3,11 +3,8 @@
 //!
 //! Source-control error mapping entry points.
 
-#[path = "map_common.rs"]
 mod common;
-#[path = "map_op.rs"]
 mod op;
-#[path = "map_op_specific.rs"]
 mod op_specific;
 
 use anyhow::Error;
@@ -58,9 +55,7 @@ fn source_control_scope_failure(
 }
 
 #[cfg(test)]
-#[path = "map_op_test.rs"]
 mod op_tests;
 
 #[cfg(test)]
-#[path = "map_scope_test.rs"]
 mod scope_tests;
