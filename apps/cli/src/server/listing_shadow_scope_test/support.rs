@@ -44,7 +44,11 @@ pub(super) fn bind_stale_runtime(
     repo_id: uuid::Uuid,
     nonce: u64,
 ) -> anyhow::Result<()> {
-    session.set_active_db(state.repo.open_database(None, state.repo.local_repo_name())?);
+    session.set_active_db(
+        state
+            .repo
+            .open_database(None, state.repo.local_repo_name())?,
+    );
     session.set_authenticated(PeerId::new("stale-peer"));
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(nonce);

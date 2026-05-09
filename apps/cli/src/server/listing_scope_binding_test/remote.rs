@@ -2,7 +2,9 @@
 //!   - 06_repository#repo-scope-runtime
 
 use super::support::{build_state, seed_remote_branch, seed_stale_binding};
-use crate::server::{channel::DualChannel, handlers::listing::handle_list_repos, session::WsSession};
+use crate::server::{
+    channel::DualChannel, handlers::listing::handle_list_repos, session::WsSession,
+};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use tokio::sync::mpsc;

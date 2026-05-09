@@ -35,10 +35,11 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `node_role.rs` | Node role state (main/proxy) |
 | `node_role_http.rs` | Node role HTTP endpoint |
 | `notegit.rs` | Host directory preparation (.notegit, host keys) |
-| `list_docs_scope*_test.rs` | Repo-scoped document listing binding tests |
-| `listing_scope_binding*_test.rs` | Listing bootstrap and stale runtime binding tests |
-| `listing_scope_cleanup*_test.rs` | Listing stale scope cleanup tests |
-| `listing_shadow_scope*_test.rs` | Shadow branch listing scope tests |
+| `list_docs_scope_test/` | Repo-scoped document listing binding tests |
+| `listing_scope_binding_test/` | Listing bootstrap and stale runtime binding tests |
+| `listing_scope_cleanup_test/` | Listing stale scope cleanup tests |
+| `listing_shadow_scope_test/` | Shadow branch listing scope tests |
+| `listing_*_test.rs` | Remaining listing integration tests |
 | `source_control_proxy/` | Source control proxy facade and implementation modules for `RemoteSourceControlApi` |
 | `source_control_http_*_test.rs` | Source control HTTP roundtrip tests and helpers |
 | `source_control_proxy/http/tests/` | Source control proxy HTTP error decoding tests |

@@ -46,7 +46,11 @@ pub(super) fn bind_stale_shadow_scope(
 ) -> anyhow::Result<()> {
     session.switch_branch(Some("missing-shadow".into()));
     session.switch_repo("ghost".into(), Some(repo_id));
-    session.set_active_db(state.repo.open_database(None, state.repo.local_repo_name())?);
+    session.set_active_db(
+        state
+            .repo
+            .open_database(None, state.repo.local_repo_name())?,
+    );
     session.set_authenticated(PeerId::new("stale-peer"));
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(nonce);

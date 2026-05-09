@@ -2,7 +2,9 @@
 //!   - 06_repository#repo-scope-runtime
 
 use super::support::{bind_stale_shadow_scope, build_state, seed_shadow_repo};
-use crate::server::{channel::DualChannel, handlers::listing::handle_list_repos, session::WsSession};
+use crate::server::{
+    channel::DualChannel, handlers::listing::handle_list_repos, session::WsSession,
+};
 use deve_core::ledger::RepoManager;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use tokio::sync::mpsc;
