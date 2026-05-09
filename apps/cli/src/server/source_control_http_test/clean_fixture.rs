@@ -17,15 +17,15 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
             .list_pending_fs_in_local_repo(repo_name)?
             .is_empty()
     );
-    assert!(harness.repo.list_staged_in_local_repo(repo_name)?.is_empty());
+    assert!(
+        harness
+            .repo
+            .list_staged_in_local_repo(repo_name)?
+            .is_empty()
+    );
 
     write_workspace_file(&harness.dir, "smoke/a.md", "hello");
-    seed_pending(
-        &harness.repo,
-        "smoke/a.md",
-        ChangeStatus::Added,
-        "hello",
-    );
+    seed_pending(&harness.repo, "smoke/a.md", ChangeStatus::Added, "hello");
     let initial = http_status(&harness).await?;
     assert_eq!(initial.len(), 1);
     assert_eq!(initial[0].path, "smoke/a.md");
@@ -41,13 +41,15 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
 
     post_path(&harness, "/api/sc/unstage", "smoke/a.md").await?;
     assert_eq!(
-        harness
-            .repo
-            .list_pending_fs_in_local_repo(repo_name)?
-            .len(),
+        harness.repo.list_pending_fs_in_local_repo(repo_name)?.len(),
         1
     );
-    assert!(harness.repo.list_staged_in_local_repo(repo_name)?.is_empty());
+    assert!(
+        harness
+            .repo
+            .list_staged_in_local_repo(repo_name)?
+            .is_empty()
+    );
 
     post_path(&harness, "/api/sc/stage-pending", "smoke/a.md").await?;
     let commit = post_commit(&harness, "clean smoke fixture").await?;
@@ -59,7 +61,12 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
             .list_pending_fs_in_local_repo(repo_name)?
             .is_empty()
     );
-    assert!(harness.repo.list_staged_in_local_repo(repo_name)?.is_empty());
+    assert!(
+        harness
+            .repo
+            .list_staged_in_local_repo(repo_name)?
+            .is_empty()
+    );
 
     harness.shutdown().await;
     Ok(())

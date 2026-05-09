@@ -32,7 +32,11 @@ async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_http_status_rejects_selector_mismatch() -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
-    let default_id = harness.repo.get_repo_info()?.expect("default repo info").uuid;
+    let default_id = harness
+        .repo
+        .get_repo_info()?
+        .expect("default repo info")
+        .uuid;
     RepoManager::init(harness.dir.path(), 10, Some("test"), Some("urn:test"))?;
 
     let response = harness
@@ -80,17 +84,23 @@ async fn test_http_status_maps_missing_repo_to_not_found() -> anyhow::Result<()>
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_git_mirror_repair_review_is_readonly_record_source() -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
-    let repo_id = harness.repo.get_repo_info()?.expect("default repo info").uuid;
-    harness.repo.run_on_local_repo(harness.repo.local_repo_name(), |db| {
-        init_table(db)?;
-        queue_deve_commit(db, repo_id, &commit("deve-1", 1))?;
-        mark_out_of_sync(
-            db,
-            "deve-1",
-            "Git mirror refuses to include path(s) outside queued Deve commit: docs/example.md",
-        )?;
-        Ok(())
-    })?;
+    let repo_id = harness
+        .repo
+        .get_repo_info()?
+        .expect("default repo info")
+        .uuid;
+    harness
+        .repo
+        .run_on_local_repo(harness.repo.local_repo_name(), |db| {
+            init_table(db)?;
+            queue_deve_commit(db, repo_id, &commit("deve-1", 1))?;
+            mark_out_of_sync(
+                db,
+                "deve-1",
+                "Git mirror refuses to include path(s) outside queued Deve commit: docs/example.md",
+            )?;
+            Ok(())
+        })?;
 
     let response = harness
         .client

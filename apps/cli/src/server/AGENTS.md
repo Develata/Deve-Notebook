@@ -41,7 +41,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `listing_shadow_scope_test/` | Shadow branch listing scope tests |
 | `listing_*_test.rs` | Remaining listing integration tests |
 | `source_control_proxy/` | Source control proxy facade and implementation modules for `RemoteSourceControlApi` |
-| `source_control_http_*_test.rs` | Source control HTTP roundtrip tests and helpers |
+| `source_control_http_test/` | Source control HTTP roundtrip tests and helpers |
 | `source_control_proxy/http/tests/` | Source control proxy HTTP error decoding tests |
 | `source_control_changes_identity*_test.rs` | Source control changes identity retention tests |
 | `source_control_local_commit_scope*_test.rs` | Source control commit scope nonce and bootstrap tests |
