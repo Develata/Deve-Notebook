@@ -34,13 +34,14 @@ pub fn handle_ack_message(
 ) {
     let accepts_current_scope = matches_current_message_scope(&Some(repo_id), &branch, signals)
         && scope_nonce == Some(signals.current_scope_nonce.get_untracked());
-    let has_matching_pending = pending::has_pending_edit(
-        &signals.pending_local_edits.get_untracked(),
-        Some(repo_id),
-        scope_nonce,
-        doc_id,
-        client_op_id,
-    );
+    let has_matching_pending = scope_nonce.is_some()
+        && pending::has_pending_edit(
+            &signals.pending_local_edits.get_untracked(),
+            Some(repo_id),
+            scope_nonce,
+            doc_id,
+            client_op_id,
+        );
     if !accepts_current_scope && !has_matching_pending {
         return;
     }
@@ -144,5 +145,43 @@ mod tests {
             0
         );
         assert!(signals.pending_navigation.get_untracked().is_some());
+    }
+
+    #[test]
+    fn ack_without_scope_does_not_clear_retained_pending() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        let repo_id = RepoId::new_v4();
+        let doc_id = DocId::from_u128(93);
+
+        signals.set_current_repo_id.set(Some(repo_id.to_string()));
+        signals.set_current_scope_nonce.set(8);
+        signals.set_current_doc.set(Some(doc_id));
+        signals.set_pending_local_edits.update(|pending| {
+            push_pending_edit(
+                pending,
+                PendingLocalEditInput {
+                    repo_id,
+                    doc_id,
+                    scope_nonce: 7,
+                    client_id: 11,
+                    client_op_id: 13,
+                    base_version: 0,
+                    op: Op::Insert {
+                        pos: 0,
+                        content: "pending".into(),
+                    },
+                },
+            );
+        });
+
+        handle_ack_message(repo_id, None, None, doc_id, 13, signals);
+
+        assert_eq!(
+            pending_count_for_doc(&signals.pending_local_edits.get_untracked(), doc_id),
+            1
+        );
     }
 }
