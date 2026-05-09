@@ -126,11 +126,18 @@ pub fn handle_protocol_error(
         (false, false, Some(detail)) => leptos::logging::warn!("协议错误 {}: {}", message, detail),
         (false, false, None) => leptos::logging::warn!("协议错误 {}", message),
     }
-    if !handled_in_search
-        && !handled_in_source_control
-        && let Some(window) = web_sys::window()
-    {
-        let _ = window.alert_with_message(message);
+    if !handled_in_search && !handled_in_source_control {
+        signals.set_sync_banner.set(Some(protocol_error_banner(
+            message,
+            error.detail.as_deref(),
+        )));
+    }
+}
+
+fn protocol_error_banner(message: &str, detail: Option<&str>) -> String {
+    match detail {
+        Some(detail) if !detail.is_empty() => format!("{message}: {detail}"),
+        _ => message.to_string(),
     }
 }
 

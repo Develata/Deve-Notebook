@@ -50,8 +50,8 @@
     - packet_format_eq: ["server", "versioned-bincode"]
     - packet_format_any_of: ["client", "versioned-bincode", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF3"
-    - versioned_packet_protocol_version_eq: 7
-    - min_supported_packet_protocol_version_eq: 7
+    - versioned_packet_protocol_version_eq: 8
+    - min_supported_packet_protocol_version_eq: 8
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
     - reject_binary_without_magic: true

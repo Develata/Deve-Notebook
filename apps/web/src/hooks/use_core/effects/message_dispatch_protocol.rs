@@ -13,6 +13,7 @@ use super::message_protocol::{
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
 use crate::api::WsService;
 use crate::hooks::use_core::pending;
+use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::Locale;
 use deve_core::models::DocId;
 use deve_core::protocol::ServerError;
@@ -110,6 +111,64 @@ pub fn handle_protocol_error_message(
         switch_nonce,
         protocol_control_signals(signals),
     );
+    finish_pending_chat_on_protocol_error(&error, locale, signals);
+}
+
+fn finish_pending_chat_on_protocol_error(
+    error: &ServerError,
+    locale: Locale,
+    signals: CoreSignals,
+) -> bool {
+    if !signals.is_chat_streaming.get_untracked() {
+        return false;
+    }
+    let pending = signals.plugin_request_ids.get_untracked();
+    if pending.is_empty() {
+        return false;
+    }
+
+    let text = chat_protocol_error_text(error, locale);
+    let mut matched = false;
+    let mut matched_ids = Vec::new();
+    signals.set_chat_messages.update(|messages| {
+        for req_id in &pending {
+            if let Some(message) = messages
+                .iter_mut()
+                .rev()
+                .find(|msg| msg.req_id.as_deref() == Some(req_id.as_str()))
+            {
+                append_chat_protocol_error(message, &text);
+                matched_ids.push(req_id.clone());
+                matched = true;
+            }
+        }
+    });
+    if !matched_ids.is_empty() {
+        signals
+            .set_plugin_request_ids
+            .update(|ids| ids.retain(|id| !matched_ids.iter().any(|matched_id| matched_id == id)));
+    }
+    if matched {
+        signals.set_is_chat_streaming.set(false);
+    }
+    matched
+}
+
+fn chat_protocol_error_text(error: &ServerError, locale: Locale) -> String {
+    error
+        .detail
+        .clone()
+        .unwrap_or_else(|| crate::i18n::t::server_error::message(locale, error.code).to_string())
+}
+
+fn append_chat_protocol_error(message: &mut ChatMessage, detail: &str) {
+    if detail.is_empty() || message.content.contains(detail) {
+        return;
+    }
+    if !message.content.is_empty() {
+        message.content.push_str("\n\n");
+    }
+    message.content.push_str(detail);
 }
 
 fn recover_from_failed_scope_restore(ws: &WsService, signals: CoreSignals) {
@@ -125,4 +184,106 @@ fn recover_from_failed_scope_restore(ws: &WsService, signals: CoreSignals) {
     signals.set_repo_list.set(Vec::new());
     clear_repo_scoped_runtime(signals);
     request_repo_list(ws, signals);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::finish_pending_chat_on_protocol_error;
+    use crate::api::ConnectionStatus;
+    use crate::hooks::use_core::state::init_signals;
+    use crate::hooks::use_core::types::ChatMessage;
+    use crate::i18n::Locale;
+    use deve_core::protocol::{ServerError, ServerErrorCode};
+    use leptos::prelude::*;
+
+    #[test]
+    fn protocol_error_finishes_pending_chat_placeholder() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        signals.set_is_chat_streaming.set(true);
+        signals.set_plugin_request_ids.set(vec!["req-1".into()]);
+        signals.set_chat_messages.set(vec![ChatMessage {
+            role: "assistant".into(),
+            content: String::new(),
+            req_id: Some("req-1".into()),
+            ts_ms: 0,
+        }]);
+
+        assert!(finish_pending_chat_on_protocol_error(
+            &ServerError::with_detail(
+                ServerErrorCode::RequestFailed,
+                "Invalid bincode client message"
+            ),
+            Locale::En,
+            signals,
+        ));
+
+        assert!(!signals.is_chat_streaming.get_untracked());
+        assert_eq!(
+            signals.plugin_request_ids.get_untracked(),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            signals.chat_messages.get_untracked()[0].content,
+            "Invalid bincode client message"
+        );
+    }
+
+    #[test]
+    fn protocol_error_appends_after_partial_chat_content() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        signals.set_is_chat_streaming.set(true);
+        signals.set_plugin_request_ids.set(vec!["req-1".into()]);
+        signals.set_chat_messages.set(vec![ChatMessage {
+            role: "assistant".into(),
+            content: "partial".into(),
+            req_id: Some("req-1".into()),
+            ts_ms: 0,
+        }]);
+
+        assert!(finish_pending_chat_on_protocol_error(
+            &ServerError::with_detail(ServerErrorCode::RequestFailed, "transport failed"),
+            Locale::En,
+            signals,
+        ));
+
+        assert!(!signals.is_chat_streaming.get_untracked());
+        assert_eq!(
+            signals.chat_messages.get_untracked()[0].content,
+            "partial\n\ntransport failed"
+        );
+    }
+
+    #[test]
+    fn protocol_error_does_not_clear_unmatched_chat_request() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (connection_status, _) = signal(ConnectionStatus::Connected);
+        let signals = init_signals(connection_status);
+        signals.set_is_chat_streaming.set(true);
+        signals.set_plugin_request_ids.set(vec!["req-1".into()]);
+        signals.set_chat_messages.set(vec![ChatMessage {
+            role: "assistant".into(),
+            content: String::new(),
+            req_id: Some("other-req".into()),
+            ts_ms: 0,
+        }]);
+
+        assert!(!finish_pending_chat_on_protocol_error(
+            &ServerError::with_detail(ServerErrorCode::RequestFailed, "transport failed"),
+            Locale::En,
+            signals,
+        ));
+
+        assert!(signals.is_chat_streaming.get_untracked());
+        assert_eq!(
+            signals.plugin_request_ids.get_untracked(),
+            vec!["req-1".to_string()]
+        );
+    }
 }

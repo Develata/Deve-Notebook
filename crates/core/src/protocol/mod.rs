@@ -26,6 +26,7 @@ pub mod confirmed_op;
 pub mod doc_file_op_errors;
 pub mod error;
 pub mod frame;
+mod json_wire;
 pub mod merge_conflict;
 pub mod sc_path_target;
 pub mod scope_nonce;

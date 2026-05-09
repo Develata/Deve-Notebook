@@ -119,6 +119,7 @@ pub enum ClientMessage {
         req_id: String,
         plugin_id: String,
         fn_name: String,
+        #[serde(with = "crate::protocol::json_wire::vec")]
         args: Vec<serde_json::Value>,
     },
     Search {

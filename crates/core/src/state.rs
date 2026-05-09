@@ -21,6 +21,7 @@ mod utf16;
 mod validate;
 
 pub use diff::compute_diff;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use validate::ContentOpValidator;
 pub use validate::{InvalidContentOp, describe_invalid_content_op, find_invalid_content_op};
 

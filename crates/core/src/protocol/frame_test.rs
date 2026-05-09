@@ -21,12 +21,114 @@ fn server_binary_frame_roundtrips() {
 }
 
 #[test]
+fn plugin_response_result_roundtrip_in_current_binary_frame() {
+    let result = serde_json::json!({
+        "type": "text",
+        "content": "Error: No AI API key configured."
+    });
+    let server = ServerMessage::PluginResponse {
+        req_id: "req-1".to_string(),
+        result: Some(result.clone()),
+        error: None,
+    };
+
+    let decoded = decode_server_binary(&encode_server_binary(&server).unwrap()).unwrap();
+
+    match decoded {
+        ServerMessage::PluginResponse {
+            req_id,
+            result: decoded_result,
+            error,
+        } => {
+            assert_eq!(req_id, "req-1");
+            assert_eq!(decoded_result, Some(result));
+            assert!(error.is_none());
+        }
+        other => panic!("expected PluginResponse, got {other:?}"),
+    }
+}
+
+#[test]
+fn plugin_response_result_remains_json_debug_compatible() {
+    let frame = ServerFrame::current(ServerMessage::PluginResponse {
+        req_id: "req-1".to_string(),
+        result: Some(serde_json::json!({"type": "text", "content": "ok"})),
+        error: None,
+    });
+    let text = serde_json::to_string(&frame).unwrap();
+
+    let decoded = decode_server_json(&text).unwrap();
+
+    match decoded {
+        ServerMessage::PluginResponse { result, .. } => {
+            assert_eq!(
+                result,
+                Some(serde_json::json!({"type": "text", "content": "ok"}))
+            );
+        }
+        other => panic!("expected PluginResponse, got {other:?}"),
+    }
+}
+
+#[test]
 fn binary_decode_reports_versioned_binary_format() {
     let bytes = encode_client_binary(&ClientMessage::Ping).unwrap();
     let decoded = decode_client_binary_with_format(&bytes).unwrap();
 
     assert_eq!(decoded.format, WsFrameFormat::VersionedBinary);
     assert!(matches!(decoded.message, ClientMessage::Ping));
+}
+
+#[test]
+fn plugin_call_args_roundtrip_in_current_binary_frame() {
+    let args = vec![
+        serde_json::json!("req-1"),
+        serde_json::json!({"current_file": "notes/a.md", "selection": null}),
+        serde_json::json!([{"role": "user", "content": "ping"}]),
+    ];
+    let client = ClientMessage::PluginCall {
+        req_id: "req-1".to_string(),
+        plugin_id: "ai-chat".to_string(),
+        fn_name: "chat".to_string(),
+        args: args.clone(),
+    };
+
+    let decoded = decode_client_binary(&encode_client_binary(&client).unwrap()).unwrap();
+
+    match decoded {
+        ClientMessage::PluginCall {
+            req_id,
+            plugin_id,
+            fn_name,
+            args: decoded_args,
+        } => {
+            assert_eq!(req_id, "req-1");
+            assert_eq!(plugin_id, "ai-chat");
+            assert_eq!(fn_name, "chat");
+            assert_eq!(decoded_args, args);
+        }
+        other => panic!("expected PluginCall, got {other:?}"),
+    }
+}
+
+#[test]
+fn plugin_call_args_remain_json_debug_compatible() {
+    let frame = ClientFrame::current(ClientMessage::PluginCall {
+        req_id: "req-1".to_string(),
+        plugin_id: "ai-chat".to_string(),
+        fn_name: "chat".to_string(),
+        args: vec![serde_json::json!({"nested": ["ok"]})],
+    });
+    let text = serde_json::to_string(&frame).unwrap();
+
+    let decoded = decode_client_json(&text).unwrap();
+
+    match decoded {
+        ClientMessage::PluginCall { args, .. } => {
+            assert_eq!(args, vec![serde_json::json!({"nested": ["ok"]})]);
+        }
+        other => panic!("expected PluginCall, got {other:?}"),
+    }
 }
 
 #[test]
