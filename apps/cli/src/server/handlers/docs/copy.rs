@@ -13,7 +13,6 @@ mod prepare;
 mod register;
 
 #[cfg(test)]
-#[path = "copy_path_validation_test.rs"]
 mod path_validation_tests;
 
 use super::copy_utils::copy_dir_assets_only;

@@ -111,5 +111,4 @@ fn relative_path_under_base(base: &Path, path: &Path) -> io::Result<String> {
 }
 
 #[cfg(test)]
-#[path = "copy_utils_test.rs"]
 mod tests;

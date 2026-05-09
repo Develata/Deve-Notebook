@@ -9,6 +9,7 @@ Implements document and directory deep-copy operations. Handles recursive direct
 ## Key Files
 | File | Description |
 |------|-------------|
+| `path_validation_tests.rs` | Copy path validation regression tests for parent `copy.rs` |
 | `dir_copy.rs` | Recursive directory copy: walks source tree, registers structure facts, copies content |
 | `dir_copy_test.rs` | Tests for directory copy |
 | `file_copy.rs` | Single file copy: duplicates content ops and registers new node |
