@@ -89,5 +89,4 @@ pub(crate) fn send_doc_error_with_scope_and_switch_nonce(
 }
 
 #[cfg(test)]
-#[path = "errors_test.rs"]
 mod tests;

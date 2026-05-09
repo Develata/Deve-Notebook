@@ -14,7 +14,8 @@ Document content operations: opening documents (loading snapshot + delta ops), e
 | `snapshot.rs` | Snapshot building: retrieves base snapshot + pending delta ops |
 | `history.rs` | Document edit history retrieval |
 | `confirmed.rs` | Confirmed operation tracking and emission |
-| `errors.rs` | Document error classification (maps to `ServerErrorCode` using `error_classify` patterns) |
+| `errors/mod.rs` | Document error classification (maps to `ServerErrorCode` using `error_classify` patterns) |
+| `errors/tests.rs` | Document error classification tests |
 
 ## For AI Agents
 
