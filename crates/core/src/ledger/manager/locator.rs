@@ -4,14 +4,9 @@
 use anyhow::{Result, anyhow};
 
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
+use crate::ledger::manager::repo_selector_resolution::{LocalRepoCandidates, select_repo_name};
 use crate::ledger::manager::types::RepoManager;
 use crate::models::RepoId;
-
-#[derive(Default)]
-struct LocalRepoCandidates {
-    by_id: Option<String>,
-    by_name: Option<String>,
-}
 
 impl RepoManager {
     pub fn find_local_repo_name_by_id(&self, target_id: RepoId) -> Result<Option<String>> {
@@ -104,53 +99,19 @@ impl RepoManager {
         Ok(LocalRepoCandidates { by_id, by_name })
     }
 
-    fn selected_candidate_name(candidates: &LocalRepoCandidates) -> Result<Option<String>> {
-        if let (Some(from_id), Some(from_name)) = (&candidates.by_id, &candidates.by_name)
-            && from_id != from_name
-        {
-            anyhow::bail!(
-                "Repo selector mismatch: repo_id resolved to {}, repo_name resolved to {}",
-                from_id,
-                from_name
-            );
-        }
-        Ok(candidates
-            .by_id
-            .clone()
-            .or_else(|| candidates.by_name.clone()))
-    }
-
     fn select_local_repo_name(&self, candidates: &LocalRepoCandidates) -> Result<String> {
-        if let Some(name) = Self::selected_candidate_name(candidates)? {
-            return Ok(name);
-        }
-        match self
-            .repo_catalog_runtime()
-            .list_local_display_names()?
-            .as_slice()
-        {
-            [repo] => Ok(repo.clone()),
-            [] => anyhow::bail!("No local repositories available"),
-            _ => anyhow::bail!("Active repository not selected: multiple local repos exist"),
-        }
+        select_repo_name(candidates, || {
+            self.repo_catalog_runtime().list_local_display_names()
+        })
     }
 
     fn select_local_repo_name_for_execution(
         &self,
         candidates: &LocalRepoCandidates,
     ) -> Result<String> {
-        if let Some(name) = Self::selected_candidate_name(candidates)? {
-            return Ok(name);
-        }
-        match self
-            .repo_catalog_runtime()
-            .list_local_execution_names()?
-            .as_slice()
-        {
-            [repo] => Ok(repo.clone()),
-            [] => anyhow::bail!("No local repositories available"),
-            _ => anyhow::bail!("Active repository not selected: multiple local repos exist"),
-        }
+        select_repo_name(candidates, || {
+            self.repo_catalog_runtime().list_local_execution_names()
+        })
     }
 
     fn resolve_local_repo_candidates_with_repair(

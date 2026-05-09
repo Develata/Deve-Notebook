@@ -46,6 +46,7 @@ mod repo_db;
 mod repo_info;
 mod repo_lookup;
 mod repo_scope_runtime;
+mod repo_selector_resolution;
 mod repository;
 mod shadow_maintenance_runtime;
 mod snapshot_ops;
