@@ -4,7 +4,7 @@
 
 use crate::ledger::range;
 use crate::models::{DocId, LedgerEvent, NodeId, StructureOp};
-use anyhow::{Result, anyhow};
+use crate::source_control::commit_diff_error::{CommitDiffError, CommitDiffResult};
 use redb::Database;
 use std::collections::{HashMap, HashSet};
 
@@ -14,9 +14,19 @@ struct NodeState {
     doc_id: Option<DocId>,
 }
 
-pub(super) fn doc_paths_at_seq(db: &Database, seq: u64) -> Result<HashMap<DocId, String>> {
+pub(super) fn doc_paths_at_seq(
+    db: &Database,
+    seq: u64,
+) -> CommitDiffResult<HashMap<DocId, String>> {
     let mut nodes = HashMap::<NodeId, NodeState>::new();
-    for (_, entry) in range::get_ops_in_range(db, 1, seq.saturating_add(1))? {
+    let end = seq.saturating_add(1);
+    for (_, entry) in
+        range::get_ops_in_range(db, 1, end).map_err(|err| CommitDiffError::LedgerRange {
+            start: 1,
+            end,
+            message: err.to_string(),
+        })?
+    {
         let LedgerEvent::Structure(op) = entry.event else {
             continue;
         };
@@ -29,19 +39,21 @@ pub(super) fn doc_paths_at_seq(db: &Database, seq: u64) -> Result<HashMap<DocId,
         if let Some(doc_id) = state.doc_id {
             let path = path_for(*node_id, &nodes, &mut cache, &mut visiting)?;
             if let Some(existing) = paths.insert(doc_id, path.clone()) {
-                return Err(anyhow!(
-                    "Commit diff structure maps doc {} to multiple live paths: {}, {}",
+                return Err(CommitDiffError::MultipleLivePaths {
                     doc_id,
                     existing,
-                    path
-                ));
+                    path,
+                });
             }
         }
     }
     Ok(paths)
 }
 
-fn apply_structure(nodes: &mut HashMap<NodeId, NodeState>, op: StructureOp) -> Result<()> {
+fn apply_structure(
+    nodes: &mut HashMap<NodeId, NodeState>,
+    op: StructureOp,
+) -> CommitDiffResult<()> {
     match op {
         StructureOp::CreateFile {
             node_id,
@@ -75,12 +87,9 @@ fn apply_structure(nodes: &mut HashMap<NodeId, NodeState>, op: StructureOp) -> R
         StructureOp::RenameNode {
             node_id, new_name, ..
         } => {
-            let state = nodes.get_mut(&node_id).ok_or_else(|| {
-                anyhow!(
-                    "Commit diff structure rename references missing node {}",
-                    node_id
-                )
-            })?;
+            let state = nodes
+                .get_mut(&node_id)
+                .ok_or(CommitDiffError::RenameMissingNode { node_id })?;
             state.name = new_name;
         }
         StructureOp::MoveNode {
@@ -88,12 +97,9 @@ fn apply_structure(nodes: &mut HashMap<NodeId, NodeState>, op: StructureOp) -> R
             new_parent_id,
             ..
         } => {
-            let state = nodes.get_mut(&node_id).ok_or_else(|| {
-                anyhow!(
-                    "Commit diff structure move references missing node {}",
-                    node_id
-                )
-            })?;
+            let state = nodes
+                .get_mut(&node_id)
+                .ok_or(CommitDiffError::MoveMissingNode { node_id })?;
             state.parent_id = new_parent_id;
         }
         StructureOp::DeleteNode { node_id, .. } => remove_subtree(nodes, node_id),
@@ -118,22 +124,16 @@ fn path_for(
     nodes: &HashMap<NodeId, NodeState>,
     cache: &mut HashMap<NodeId, String>,
     visiting: &mut HashSet<NodeId>,
-) -> Result<String> {
+) -> CommitDiffResult<String> {
     if let Some(path) = cache.get(&node_id) {
         return Ok(path.clone());
     }
     if !visiting.insert(node_id) {
-        return Err(anyhow!(
-            "Commit diff structure contains cycle at node {}",
-            node_id
-        ));
+        return Err(CommitDiffError::StructureCycle { node_id });
     }
     let Some(state) = nodes.get(&node_id) else {
         visiting.remove(&node_id);
-        return Err(anyhow!(
-            "Commit diff structure references missing node {}",
-            node_id
-        ));
+        return Err(CommitDiffError::StructureMissingNode { node_id });
     };
     let path = match state.parent_id {
         Some(parent_id) if nodes.contains_key(&parent_id) => {

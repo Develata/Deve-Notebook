@@ -111,17 +111,13 @@ pub(super) fn expected_mirror_paths(
         });
     }
 
-    let diffs = match source_control::commit_diff::compare_commits(
+    let diffs = match source_control::commit_diff::compare_commits_checked(
         db,
         commit.parent_id.as_deref(),
         &commit.id,
     ) {
         Ok(diffs) => diffs,
-        Err(err) => {
-            return Err(GitPreflightError::CommitDiff {
-                message: err.to_string(),
-            });
-        }
+        Err(err) => return Err(map_commit_diff_error(err)),
     };
     let mut paths = BTreeSet::new();
     paths.insert(".gitignore".to_string());
@@ -132,6 +128,32 @@ pub(super) fn expected_mirror_paths(
         }
     }
     Ok(paths)
+}
+
+fn map_commit_diff_error(err: source_control::CommitDiffError) -> GitPreflightError {
+    match err {
+        source_control::CommitDiffError::CommitTable { action, message } => {
+            GitPreflightError::CommitTable { action, message }
+        }
+        source_control::CommitDiffError::CommitLoad { commit_id, message } => {
+            GitPreflightError::CommitLoad { commit_id, message }
+        }
+        source_control::CommitDiffError::CommitDecode { commit_id, message } => {
+            GitPreflightError::CommitDecode { commit_id, message }
+        }
+        source_control::CommitDiffError::CommitNotFound { commit_id } => {
+            GitPreflightError::MissingDeveCommit { commit_id }
+        }
+        source_control::CommitDiffError::LedgerRange { .. }
+        | source_control::CommitDiffError::ContentLoad { .. } => {
+            GitPreflightError::CommitDiffStorage {
+                message: err.to_string(),
+            }
+        }
+        other => GitPreflightError::CommitDiff {
+            message: other.to_string(),
+        },
+    }
 }
 
 pub(super) fn load_deve_commit(db: &Database, commit_id: &str) -> GitPreflightResult<CommitInfo> {

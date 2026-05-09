@@ -93,6 +93,8 @@ pub(super) enum GitPreflightError {
     MirrorRecordSeqMismatch { record_seq: u64, commit_seq: u64 },
     #[error("failed to compute queued Deve commit diff: {message}")]
     CommitDiff { message: String },
+    #[error("failed to read queued Deve commit diff data: {message}")]
+    CommitDiffStorage { message: String },
     #[error("failed to {action} Deve commit table: {message}")]
     CommitTable {
         action: &'static str,
@@ -182,6 +184,8 @@ pub(super) enum GitProjectionReplayError {
     GitReplay(#[from] GitReplayError),
     #[error("failed to compute projection diff for {commit_id}: {message}")]
     ProjectionDiff { commit_id: String, message: String },
+    #[error("failed to read projection diff data for {commit_id}: {message}")]
+    ProjectionDiffStorage { commit_id: String, message: String },
     #[error("Deve commit {commit_id} has no projection diff to mirror")]
     EmptyProjectionDiff { commit_id: String },
 }
@@ -325,6 +329,8 @@ pub enum GitMirrorRunError {
     CommitLoad { commit_id: String, message: String },
     #[error("Git mirror executor failed to decode Deve commit {commit_id}: {message}")]
     CommitDecode { commit_id: String, message: String },
+    #[error("Git mirror executor failed to read queued Deve commit diff data: {message}")]
+    CommitDiffStorage { message: String },
     #[error("Git mirror executor failed to read parent Git mirror record {parent_id}: {message}")]
     ParentRecordRead { parent_id: String, message: String },
     #[error(transparent)]
@@ -360,6 +366,15 @@ impl GitMirrorRunFailure {
         }
     }
 
+    pub(super) fn from_projection_replay_error(err: GitProjectionReplayError) -> Self {
+        match err {
+            GitProjectionReplayError::ProjectionDiffStorage { message, .. } => {
+                Self::Propagate(GitMirrorRunError::CommitDiffStorage { message })
+            }
+            other => Self::OutOfSync(format!("Git mirror projection replay failed: {other}")),
+        }
+    }
+
     fn from_preflight_error(err: GitPreflightError) -> Self {
         match err {
             GitPreflightError::SourceControlInspect { kind, message } => {
@@ -373,6 +388,9 @@ impl GitMirrorRunFailure {
             }
             GitPreflightError::CommitDecode { commit_id, message } => {
                 Self::Propagate(GitMirrorRunError::CommitDecode { commit_id, message })
+            }
+            GitPreflightError::CommitDiffStorage { message } => {
+                Self::Propagate(GitMirrorRunError::CommitDiffStorage { message })
             }
             other => Self::OutOfSync(other.to_string()),
         }
@@ -715,6 +733,13 @@ mod tests {
             "Git mirror executor failed to open Deve commit table: table missing"
         );
         assert_eq!(
+            super::GitMirrorRunError::CommitDiffStorage {
+                message: "range table missing".into(),
+            }
+            .to_string(),
+            "Git mirror executor failed to read queued Deve commit diff data: range table missing"
+        );
+        assert_eq!(
             super::GitMirrorRunError::Store(super::GitMirrorStoreError::ListRecords {
                 message: "table type mismatch".into(),
             })
@@ -753,6 +778,22 @@ mod tests {
             }) => assert_eq!(message, "table missing"),
             other => panic!(
                 "CommitTable should propagate, got {}",
+                classify_failure(other)
+            ),
+        }
+
+        match super::GitMirrorRunFailure::from_commit_error(
+            super::GitMirrorCommitError::GitPreflight(
+                super::GitPreflightError::CommitDiffStorage {
+                    message: "range table missing".into(),
+                },
+            ),
+        ) {
+            super::GitMirrorRunFailure::Propagate(
+                super::GitMirrorRunError::CommitDiffStorage { message },
+            ) => assert_eq!(message, "range table missing"),
+            other => panic!(
+                "CommitDiffStorage should propagate, got {}",
                 classify_failure(other)
             ),
         }
@@ -811,6 +852,39 @@ mod tests {
             }
             super::GitMirrorRunFailure::Propagate(err) => {
                 panic!("NonContiguousCommitChain should be out-of-sync, got {err:?}");
+            }
+        }
+
+        match super::GitMirrorRunFailure::from_projection_replay_error(
+            super::GitProjectionReplayError::ProjectionDiffStorage {
+                commit_id: "c1".into(),
+                message: "range table missing".into(),
+            },
+        ) {
+            super::GitMirrorRunFailure::Propagate(
+                super::GitMirrorRunError::CommitDiffStorage { message },
+            ) => assert_eq!(message, "range table missing"),
+            other => panic!(
+                "ProjectionDiffStorage should propagate, got {}",
+                classify_failure(other)
+            ),
+        }
+
+        match super::GitMirrorRunFailure::from_projection_replay_error(
+            super::GitProjectionReplayError::ProjectionDiff {
+                commit_id: "c1".into(),
+                message: "lost projected path".into(),
+            },
+        ) {
+            super::GitMirrorRunFailure::OutOfSync(reason) => {
+                assert!(
+                    reason.contains("Git mirror projection replay failed"),
+                    "{reason}"
+                );
+                assert!(reason.contains("lost projected path"), "{reason}");
+            }
+            super::GitMirrorRunFailure::Propagate(err) => {
+                panic!("ProjectionDiff should remain mirror out-of-sync, got {err:?}");
             }
         }
     }

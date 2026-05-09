@@ -85,12 +85,11 @@ pub(super) fn run_projection_replay(
                 let mut records = Vec::with_capacity(remaining.len() + 1);
                 records.push(item.record);
                 records.extend(remaining.into_iter().map(|item| item.record));
-                return mark_remaining_out_of_sync(
-                    db,
-                    &mut report,
-                    records,
-                    format!("Git mirror projection replay failed: {reason}"),
-                );
+                let reason = match GitMirrorRunFailure::from_projection_replay_error(reason) {
+                    GitMirrorRunFailure::OutOfSync(reason) => reason,
+                    GitMirrorRunFailure::Propagate(err) => return Err(err),
+                };
+                return mark_remaining_out_of_sync(db, &mut report, records, reason);
             }
         }
     }
@@ -106,15 +105,12 @@ fn create_git_commit_from_projection(
     item: &ReplayItem,
 ) -> GitProjectionReplayResult<String> {
     read_parent_tree(repo_root, index_path, parent_git)?;
-    let diffs = source_control::commit_diff::compare_commits(
+    let diffs = source_control::commit_diff::compare_commits_checked(
         db,
         item.commit.parent_id.as_deref(),
         &item.commit.id,
     )
-    .map_err(|err| GitProjectionReplayError::ProjectionDiff {
-        commit_id: item.commit.id.clone(),
-        message: err.to_string(),
-    })?;
+    .map_err(|err| map_projection_diff_error(item.commit.id.clone(), err))?;
     if diffs.is_empty() {
         return Err(GitProjectionReplayError::EmptyProjectionDiff {
             commit_id: item.commit.id.clone(),
@@ -142,6 +138,28 @@ fn create_git_commit_from_projection(
         );
     }
     Ok(git_commit)
+}
+
+fn map_projection_diff_error(
+    commit_id: String,
+    err: source_control::CommitDiffError,
+) -> GitProjectionReplayError {
+    match err {
+        source_control::CommitDiffError::CommitTable { .. }
+        | source_control::CommitDiffError::CommitLoad { .. }
+        | source_control::CommitDiffError::CommitDecode { .. }
+        | source_control::CommitDiffError::LedgerRange { .. }
+        | source_control::CommitDiffError::ContentLoad { .. } => {
+            GitProjectionReplayError::ProjectionDiffStorage {
+                commit_id,
+                message: err.to_string(),
+            }
+        }
+        other => GitProjectionReplayError::ProjectionDiff {
+            commit_id,
+            message: other.to_string(),
+        },
+    }
 }
 
 fn mark_remaining_out_of_sync(

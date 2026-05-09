@@ -25,6 +25,8 @@ pub mod changes;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod commit_diff;
 #[cfg(not(target_arch = "wasm32"))]
+mod commit_diff_error;
+#[cfg(not(target_arch = "wasm32"))]
 mod commit_diff_paths;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod commits;
@@ -38,5 +40,7 @@ pub mod staging;
 // 重新导出常用类型
 #[cfg(not(target_arch = "wasm32"))]
 pub use api::SourceControlApi;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use commit_diff_error::CommitDiffError;
 pub use line_diff::ChangeRange;
 pub use types::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution};
