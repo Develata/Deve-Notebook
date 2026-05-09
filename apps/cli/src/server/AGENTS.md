@@ -14,7 +14,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `setup.rs` | Server init helpers: CORS config, file watcher spawn, port hint writing |
 | `session/mod.rs` | Per-WebSocket-connection session state (`WsSession`): scope nonce, branch, repo, rate limiting |
 | `session/` | Session helper modules for writer identity, repo binding, branch/scope binding, and rate limiting |
-| `channel.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
+| `channel/mod.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
 | `repo_scope/mod.rs` | Repo scope facade: maps session state to active repo/branch with fail-closed validation |
 | `repo_scope/` | Repo scope implementation helpers for bootstrap, cleanup, error mapping, lookup, remote resolution, selector logic, sync, and workspace paths |
 | `repo_scope_test/` | Repo scope catalog, error mapping, local scope, and alias tests |
@@ -63,7 +63,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `auth/` | Authentication middleware, JWT cookie handling, brute-force protection |
 | `ai_chat/` | OpenAI-compatible streaming chat integration |
 | `agent_bridge/` | Default-off Trusted CLI bridge; policy-gated, not MCP and not a generic plugin authority |
-| `channel_test/` | Integration tests for channel delivery guarantees |
+| `channel/tests/` | Integration tests for channel delivery guarantees |
 
 ## For AI Agents
 

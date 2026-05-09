@@ -1,4 +1,4 @@
-// apps/cli/src/server/channel.rs
+// apps/cli/src/server/channel/mod.rs
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
 //!
@@ -7,7 +7,6 @@
 //! **功能**:
 //! 提供统一的双通道发送接口，区分广播 (Broadcast) 和单播 (Unicast)。
 
-#[path = "channel_delivery.rs"]
 mod delivery;
 
 use delivery::send_unicast;
@@ -80,5 +79,4 @@ impl DualChannel {
 }
 
 #[cfg(test)]
-#[path = "channel_test/mod.rs"]
 mod tests;

@@ -1,7 +1,7 @@
-<!-- Parent: ../AGENTS.md -->
+<!-- Parent: ../../AGENTS.md -->
 <!-- Generated: 2026-03-22 -->
 
-# channel_test
+# channel/tests
 
 ## Purpose
 
@@ -11,7 +11,7 @@ Integration tests for the broadcast channel system, verifying request-response p
 
 | File | Description |
 |------|-------------|
-| `mod.rs` | Test module declarations |
+| `../tests.rs` | Test module declarations |
 | `request_response.rs` | Tests for request-response channel patterns |
 | `sync_control.rs` | Tests for sync control message flow |
 
