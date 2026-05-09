@@ -224,8 +224,12 @@ pub(super) enum GitSnapshotBootstrapError {
     NonEmptyGitHistory { head: String },
     #[error("failed to inspect current projection snapshot: {message}")]
     ProjectionSnapshotInspect { message: String },
+    #[error("failed to inspect current projection snapshot data: {message}")]
+    ProjectionSnapshotInspectStorage { message: String },
     #[error("failed to load current projection snapshot: {message}")]
     ProjectionSnapshotLoad { message: String },
+    #[error("failed to load current projection snapshot data: {message}")]
+    ProjectionSnapshotLoadStorage { message: String },
     #[error("failed to create temporary Git mirror index: {message}")]
     TempIndex { message: String },
 }
@@ -331,6 +335,8 @@ pub enum GitMirrorRunError {
     CommitDecode { commit_id: String, message: String },
     #[error("Git mirror executor failed to read queued Deve commit diff data: {message}")]
     CommitDiffStorage { message: String },
+    #[error("Git mirror executor failed to create temporary Git mirror index: {message}")]
+    TempIndex { message: String },
     #[error("Git mirror executor failed to read parent Git mirror record {parent_id}: {message}")]
     ParentRecordRead { parent_id: String, message: String },
     #[error(transparent)]
@@ -372,6 +378,20 @@ impl GitMirrorRunFailure {
                 Self::Propagate(GitMirrorRunError::CommitDiffStorage { message })
             }
             other => Self::OutOfSync(format!("Git mirror projection replay failed: {other}")),
+        }
+    }
+
+    pub(super) fn from_snapshot_bootstrap_error(err: GitSnapshotBootstrapError) -> Self {
+        match err {
+            GitSnapshotBootstrapError::GitPreflight(err) => Self::from_preflight_error(err),
+            GitSnapshotBootstrapError::ProjectionSnapshotInspectStorage { message }
+            | GitSnapshotBootstrapError::ProjectionSnapshotLoadStorage { message } => {
+                Self::Propagate(GitMirrorRunError::CommitDiffStorage { message })
+            }
+            GitSnapshotBootstrapError::TempIndex { message } => {
+                Self::Propagate(GitMirrorRunError::TempIndex { message })
+            }
+            other => Self::OutOfSync(other.to_string()),
         }
     }
 
@@ -740,6 +760,13 @@ mod tests {
             "Git mirror executor failed to read queued Deve commit diff data: range table missing"
         );
         assert_eq!(
+            super::GitMirrorRunError::TempIndex {
+                message: "no space".into(),
+            }
+            .to_string(),
+            "Git mirror executor failed to create temporary Git mirror index: no space"
+        );
+        assert_eq!(
             super::GitMirrorRunError::Store(super::GitMirrorStoreError::ListRecords {
                 message: "table type mismatch".into(),
             })
@@ -885,6 +912,33 @@ mod tests {
             }
             super::GitMirrorRunFailure::Propagate(err) => {
                 panic!("ProjectionDiff should remain mirror out-of-sync, got {err:?}");
+            }
+        }
+
+        match super::GitMirrorRunFailure::from_snapshot_bootstrap_error(
+            super::GitSnapshotBootstrapError::ProjectionSnapshotInspectStorage {
+                message: "range table missing".into(),
+            },
+        ) {
+            super::GitMirrorRunFailure::Propagate(
+                super::GitMirrorRunError::CommitDiffStorage { message },
+            ) => assert_eq!(message, "range table missing"),
+            other => panic!(
+                "ProjectionSnapshotInspectStorage should propagate, got {}",
+                classify_failure(other)
+            ),
+        }
+
+        match super::GitMirrorRunFailure::from_snapshot_bootstrap_error(
+            super::GitSnapshotBootstrapError::ProjectionSnapshotInspect {
+                message: "duplicate live paths".into(),
+            },
+        ) {
+            super::GitMirrorRunFailure::OutOfSync(reason) => {
+                assert!(reason.contains("duplicate live paths"), "{reason}");
+            }
+            super::GitMirrorRunFailure::Propagate(err) => {
+                panic!("ProjectionSnapshotInspect should remain out-of-sync, got {err:?}");
             }
         }
     }

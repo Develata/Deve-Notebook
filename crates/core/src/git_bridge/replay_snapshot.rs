@@ -5,7 +5,8 @@
 //! Snapshot bootstrap for an empty Git mirror history.
 
 use super::error::{
-    GitMirrorRunError, GitMirrorRunResult, GitSnapshotBootstrapError, GitSnapshotBootstrapResult,
+    GitMirrorRunError, GitMirrorRunFailure, GitMirrorRunResult, GitSnapshotBootstrapError,
+    GitSnapshotBootstrapResult,
 };
 use super::executor::{GitMirrorRunReport, commit_message};
 use super::git_cmd;
@@ -67,6 +68,10 @@ pub(super) fn run_snapshot_bootstrap(
             report.records.push(updated);
         }
         Err(reason) => {
+            let reason = match GitMirrorRunFailure::from_snapshot_bootstrap_error(reason) {
+                GitMirrorRunFailure::OutOfSync(reason) => reason,
+                GitMirrorRunFailure::Propagate(err) => return Err(err),
+            };
             let updated = mark_out_of_sync(db, &record.deve_commit_id, reason)?;
             report.out_of_sync = 1;
             report.records.push(updated);
@@ -87,12 +92,8 @@ fn create_git_commit_from_snapshot(
     })?;
     let index_path = temp_dir.path().join("mirror-bootstrap.index");
     read_parent_tree(repo_root, &index_path, None)?;
-    let files =
-        source_control::commit_diff::projection_files_at_commit(db, &commit.id).map_err(|err| {
-            GitSnapshotBootstrapError::ProjectionSnapshotLoad {
-                message: err.to_string(),
-            }
-        })?;
+    let files = source_control::commit_diff::projection_files_at_commit(db, &commit.id)
+        .map_err(|err| map_projection_snapshot_load_error(err))?;
     for file in &files {
         add_blob_to_index(
             repo_root,
@@ -133,12 +134,46 @@ fn preflight_snapshot_bootstrap(
     if let Some(head) = git_cmd::current_head(repo_root)? {
         return Err(GitSnapshotBootstrapError::NonEmptyGitHistory { head });
     }
-    let files =
-        source_control::commit_diff::projection_files_at_commit(db, &commit.id).map_err(|err| {
-            GitSnapshotBootstrapError::ProjectionSnapshotInspect {
-                message: err.to_string(),
-            }
-        })?;
+    let files = source_control::commit_diff::projection_files_at_commit(db, &commit.id)
+        .map_err(|err| map_projection_snapshot_inspect_error(err))?;
     ensure_git_changes_match_snapshot_paths(repo_root, files.into_iter().map(|file| file.path))?;
     Ok(())
+}
+
+fn map_projection_snapshot_inspect_error(
+    err: source_control::CommitDiffError,
+) -> GitSnapshotBootstrapError {
+    if is_snapshot_storage_error(&err) {
+        return GitSnapshotBootstrapError::ProjectionSnapshotInspectStorage {
+            message: err.to_string(),
+        };
+    }
+    GitSnapshotBootstrapError::ProjectionSnapshotInspect {
+        message: err.to_string(),
+    }
+}
+
+fn map_projection_snapshot_load_error(
+    err: source_control::CommitDiffError,
+) -> GitSnapshotBootstrapError {
+    if is_snapshot_storage_error(&err) {
+        return GitSnapshotBootstrapError::ProjectionSnapshotLoadStorage {
+            message: err.to_string(),
+        };
+    }
+    GitSnapshotBootstrapError::ProjectionSnapshotLoad {
+        message: err.to_string(),
+    }
+}
+
+fn is_snapshot_storage_error(err: &source_control::CommitDiffError) -> bool {
+    matches!(
+        err,
+        source_control::CommitDiffError::CommitTable { .. }
+            | source_control::CommitDiffError::CommitLoad { .. }
+            | source_control::CommitDiffError::CommitNotFound { .. }
+            | source_control::CommitDiffError::CommitDecode { .. }
+            | source_control::CommitDiffError::LedgerRange { .. }
+            | source_control::CommitDiffError::ContentLoad { .. }
+    )
 }

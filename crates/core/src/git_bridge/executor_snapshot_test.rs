@@ -131,3 +131,49 @@ fn export_mirror_propagates_snapshot_status_inspect_without_queueing() {
         .expect("get");
     assert!(record.is_none(), "{record:?}");
 }
+
+#[test]
+fn export_mirror_propagates_snapshot_projection_storage_error_without_marking_record() {
+    let (dir, repo, repo_root) = new_repo_without_git();
+    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    init_git_repo(&repo_root);
+    repo.run_on_local_repo(repo.local_repo_name(), |db| -> anyhow::Result<()> {
+        let write = db.begin_write()?;
+        write.delete_table(crate::ledger::schema::LEDGER_OPS)?;
+        write.commit()?;
+        Ok(())
+    })
+    .expect("delete ledger ops table");
+    let repo_id = repo
+        .get_repo_info()
+        .expect("repo info")
+        .expect("present")
+        .uuid;
+
+    let err = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| -> anyhow::Result<_> {
+            Ok(export_mirror(
+                db,
+                &repo_root,
+                repo_id,
+                GitMirrorRunOptions::default(),
+            )?)
+        })
+        .expect_err("snapshot projection storage failure should propagate");
+
+    assert!(
+        matches!(
+            err.downcast_ref::<crate::git_bridge::GitMirrorRunError>(),
+            Some(crate::git_bridge::GitMirrorRunError::CommitDiffStorage { message })
+                if message.contains("failed to read ledger ops")
+        ),
+        "{err:?}"
+    );
+    let record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| Ok(get_record(db, &commit.id)?))
+        .expect("get")
+        .expect("record remains queued");
+    assert_eq!(record.state, GitMirrorCommitState::Queued);
+    assert_eq!(record.attempts, 0);
+    assert!(record.last_error.is_none(), "{record:?}");
+}
