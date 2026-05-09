@@ -99,5 +99,4 @@ pub fn register_skill_api(engine: &mut Engine, caps: Arc<Capability>) {
 }
 
 #[cfg(test)]
-#[path = "skill_test.rs"]
 mod tests;
