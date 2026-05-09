@@ -172,5 +172,4 @@ fn classify_search_error(detail: &str) -> ServerErrorCode {
 }
 
 #[cfg(test)]
-#[path = "search_test.rs"]
 mod tests;

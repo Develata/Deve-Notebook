@@ -27,6 +27,8 @@ Client message handlers organized by domain. Each submodule processes a category
 | `sync/mod.rs` | Sync operations entry point |
 | `key_exchange.rs` | E2EE key exchange: provides RepoKey over authenticated WebSocket |
 | `search.rs` | Full-text search handler (feature-gated behind `search`) |
+| `search/tests.rs` | Search handler test module |
+| `search/tests/` | Search handler feature-enabled/disabled test cases |
 | `plugin.rs` | Plugin RPC handler: routes to Rhai plugins or agent-bridge |
 | `plugin/tests.rs` | Plugin RPC handler tests |
 
