@@ -1,4 +1,4 @@
-// apps/cli/src/server/session.rs
+// apps/cli/src/server/session/mod.rs
 //! plan_ref:
 //!   - 06_repository#repo-scope-runtime
 //!
@@ -10,7 +10,6 @@ use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::{DocId, PeerId, RepoId};
 use std::time::Instant;
 
-#[path = "session_writer.rs"]
 mod writer;
 
 pub use writer::WriterIdentity;
@@ -102,12 +101,9 @@ pub struct WsSession {
     pub message_count_in_window: u16,
 }
 
-#[path = "session_rate_limit.rs"]
-mod session_rate_limit;
-#[path = "session_repo.rs"]
-mod session_repo;
-#[path = "session_scope.rs"]
-mod session_scope;
+mod rate_limit;
+mod repo;
+mod scope;
 
 impl Default for WsSession {
     fn default() -> Self {
@@ -141,5 +137,4 @@ impl WsSession {
 }
 
 #[cfg(test)]
-#[path = "session_test.rs"]
 mod tests;

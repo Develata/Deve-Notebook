@@ -12,8 +12,8 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `mod.rs` | `AppState` struct definition, `start_server()` and `start_plugin_host_only()` entry points |
 | `router.rs` | Axum router construction: protected routes (JWT), public routes, login, static fallback |
 | `setup.rs` | Server init helpers: CORS config, file watcher spawn, port hint writing |
-| `session.rs` | Per-WebSocket-connection session state (`WsSession`): scope nonce, branch, repo, rate limiting |
-| `session_scope.rs` | Session-level scope binding helpers (switch_branch, switch_repo, clear_active_db) |
+| `session/mod.rs` | Per-WebSocket-connection session state (`WsSession`): scope nonce, branch, repo, rate limiting |
+| `session/` | Session helper modules for writer identity, repo binding, branch/scope binding, and rate limiting |
 | `channel.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
 | `repo_scope/mod.rs` | Repo scope facade: maps session state to active repo/branch with fail-closed validation |
 | `repo_scope/` | Repo scope implementation helpers for bootstrap, cleanup, error mapping, lookup, remote resolution, selector logic, sync, and workspace paths |
