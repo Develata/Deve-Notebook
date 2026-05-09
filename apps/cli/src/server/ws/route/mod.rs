@@ -17,7 +17,6 @@ mod scope_guard;
 mod source_control;
 
 #[cfg(test)]
-#[path = "fallthrough_test.rs"]
 mod fallthrough_tests;
 
 /// WebSocket 消息路由入口。
