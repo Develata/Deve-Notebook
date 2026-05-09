@@ -241,9 +241,7 @@ impl fmt::Display for ProtocolFrameError {
 impl std::error::Error for ProtocolFrameError {}
 
 #[cfg(test)]
-#[path = "frame_test.rs"]
 mod tests;
 
 #[cfg(test)]
-#[path = "frame_sync_transfer_field_test.rs"]
 mod sync_transfer_field_tests;
