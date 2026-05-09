@@ -10,7 +10,7 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
-use super::listing_scope::{
+use super::scope::{
     clear_local_unbound_runtime_binding, map_listing_repo_scope_error,
     precheck_remote_unbound_scope, send_listing_error,
 };

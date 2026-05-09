@@ -97,5 +97,4 @@ fn classify_listing_error(detail: &str) -> ServerErrorCode {
 }
 
 #[cfg(test)]
-#[path = "listing_scope_test.rs"]
 mod tests;

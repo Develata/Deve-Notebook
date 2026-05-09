@@ -13,11 +13,10 @@ use crate::server::repo_scope::resolve_session_repo_or_bootstrap_local;
 use crate::server::session::WsSession;
 use std::sync::Arc;
 
-#[path = "listing_docs_scope.rs"]
-mod listing_docs_scope;
+mod scope;
 
-use self::listing_docs_scope::LocalBootstrapGuard;
-use super::listing_scope::map_listing_repo_scope_error;
+use self::scope::LocalBootstrapGuard;
+use super::scope::map_listing_repo_scope_error;
 
 pub async fn handle_list_docs(
     state: &Arc<AppState>,
@@ -28,7 +27,7 @@ pub async fn handle_list_docs(
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
     let local_bootstrap_guard = LocalBootstrapGuard::new(session);
-    if listing_docs_scope::precheck_remote_scope(state, ch, session, scope_nonce, switch_nonce) {
+    if scope::precheck_remote_scope(state, ch, session, scope_nonce, switch_nonce) {
         return;
     }
     let resolved = resolve_session_repo_or_bootstrap_local(state, session);
@@ -43,7 +42,7 @@ pub async fn handle_list_docs(
         }
     };
 
-    let docs = match listing_docs_scope::load_docs(state, session, repo_id) {
+    let docs = match scope::load_docs(state, session, repo_id) {
         Ok(docs) => docs,
         Err(err) => {
             local_bootstrap_guard.rollback_after_error(session);
@@ -58,7 +57,7 @@ pub async fn handle_list_docs(
             return;
         }
     };
-    let nodes = match listing_docs_scope::load_nodes(state, session, repo_id) {
+    let nodes = match scope::load_nodes(state, session, repo_id) {
         Ok(nodes) => nodes,
         Err(err) => {
             local_bootstrap_guard.rollback_after_error(session);

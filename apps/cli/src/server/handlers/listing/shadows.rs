@@ -11,7 +11,7 @@ use deve_core::models::PeerId;
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
-use super::listing_scope::{
+use super::scope::{
     browser_scope_nonce, clear_local_unbound_runtime_binding, precheck_remote_unbound_scope,
     send_listing_error,
 };
