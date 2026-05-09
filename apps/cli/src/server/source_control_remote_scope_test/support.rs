@@ -84,7 +84,9 @@ pub(super) fn seed_shadow_doc_with_url(
         );
         let bytes = bincode::serialize(&entry)?;
         let write = db.begin_write()?;
-        write.open_table(LEDGER_OPS)?.insert(1u64, bytes.as_slice())?;
+        write
+            .open_table(LEDGER_OPS)?
+            .insert(1u64, bytes.as_slice())?;
         write
             .open_multimap_table(DOC_OPS)?
             .insert(doc_id.as_u128(), 1u64)?;
