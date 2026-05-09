@@ -158,5 +158,4 @@ fn emit_merge_conflict(
 }
 
 #[cfg(test)]
-#[path = "peer_apply_test.rs"]
 mod tests;

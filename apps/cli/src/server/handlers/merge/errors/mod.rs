@@ -88,5 +88,4 @@ fn classify_failure_code(detail: &str) -> ServerErrorCode {
 }
 
 #[cfg(test)]
-#[path = "errors_classify_test.rs"]
-mod tests;
+mod classify_tests;

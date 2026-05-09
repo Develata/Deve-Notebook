@@ -83,13 +83,10 @@ pub(super) fn resolve_merge_scope(
 }
 
 #[cfg(test)]
-#[path = "scope_test_support.rs"]
 mod test_support;
 
 #[cfg(test)]
-#[path = "scope_test.rs"]
 mod tests;
 
 #[cfg(test)]
-#[path = "scope_stale_test.rs"]
 mod stale_tests;

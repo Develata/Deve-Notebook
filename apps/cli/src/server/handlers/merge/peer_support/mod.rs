@@ -100,5 +100,4 @@ pub(super) fn resolve_local_merge_scope(
 }
 
 #[cfg(test)]
-#[path = "peer_support_test.rs"]
 mod tests;

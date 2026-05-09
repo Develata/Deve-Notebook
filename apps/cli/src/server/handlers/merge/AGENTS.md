@@ -11,18 +11,20 @@ Merge conflict resolution handlers. Supports both manual merge (user-driven conf
 
 | File | Description |
 |------|-------------|
-| `scope.rs` | Merge scope bootstrap for single-repo sessions |
+| `scope/mod.rs` | Merge scope bootstrap for single-repo sessions |
+| `scope/test_support.rs` | Merge scope test fixtures |
+| `scope/tests.rs` | Merge scope bootstrap tests |
+| `scope/stale_tests.rs` | Merge stale scope binding tests |
 | `manual.rs` | Manual merge handler — user resolves conflicts interactively |
 | `manual_pending.rs` | Manual merge pending-operation handlers |
 | `manual_support.rs` | Manual merge helper utilities |
 | `peer.rs` | Peer merge handler — automatic during sync |
-| `peer_apply.rs` | Peer merge apply and conflict emission helpers |
-| `peer_support.rs` | Peer merge helper utilities |
-| `peer_support_test.rs` | Peer merge helper tests |
-| `scope_stale_test.rs` | Merge scope stale binding tests |
-| `errors.rs` | Merge-specific error types |
-| `errors_classify_test.rs` | Merge error classification tests |
-| `scope_test_support.rs` | Merge scope test fixtures |
+| `peer_apply/mod.rs` | Peer merge apply and conflict emission helpers |
+| `peer_apply/tests.rs` | Peer merge apply tests |
+| `peer_support/mod.rs` | Peer merge helper utilities |
+| `peer_support/tests.rs` | Peer merge helper tests |
+| `errors/mod.rs` | Merge-specific error helpers |
+| `errors/classify_tests.rs` | Merge error classification tests |
 
 ## For AI Agents
 
