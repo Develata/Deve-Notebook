@@ -2,7 +2,8 @@
 //!   - 06_repository#tree-projection-contract
 //!   - 04_storage#projection-contract
 
-use super::{SyncManager, reconcile};
+use super::SyncManager;
+use crate::ledger::reconcile;
 use crate::models::DocId;
 use crate::utils::fs::checked_exists;
 use anyhow::Result;

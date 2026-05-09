@@ -50,6 +50,7 @@ pub mod node_meta;
 mod node_ops;
 pub mod ops;
 pub mod range;
+pub mod reconcile;
 mod runtime_tables;
 pub mod schema;
 pub mod seq;

@@ -5,8 +5,8 @@
 //!   - 04_storage#projection-contract
 //!
 use crate::ledger::RepoManager;
+use crate::ledger::reconcile;
 use crate::source_control::changes;
-use crate::sync::reconcile;
 use anyhow::{Context, Result};
 
 impl RepoManager {

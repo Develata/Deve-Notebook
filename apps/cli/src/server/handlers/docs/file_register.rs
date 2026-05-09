@@ -6,9 +6,9 @@ use super::checked_exists;
 use crate::server::AppState;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_path};
 use anyhow::Result;
+use deve_core::ledger::reconcile;
 use deve_core::models::{DocId, StructureOp};
 use deve_core::state;
-use deve_core::sync::reconcile;
 use std::sync::Arc;
 
 pub(super) fn create_file_from_content(

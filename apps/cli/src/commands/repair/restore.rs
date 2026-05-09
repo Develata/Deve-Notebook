@@ -4,9 +4,9 @@
 //!   - 12_commands#cli-commands
 
 use anyhow::{Context, Result};
-use deve_core::ledger::RepoManager;
+use deve_core::ledger::{RepoManager, reconcile};
 use deve_core::models::Op;
-use deve_core::sync::{SyncManager, reconcile};
+use deve_core::sync::SyncManager;
 use deve_core::utils::path::to_forward_slash;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

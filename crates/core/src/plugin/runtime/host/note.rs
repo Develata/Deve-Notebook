@@ -1,10 +1,10 @@
 //! plan_ref:
 //!   - 17_plugins#plugin-runtime-boundary
 //!
+use crate::ledger::reconcile;
 use crate::models::DocId;
 use crate::plugin::manifest::Capability;
 use crate::state;
-use crate::sync::reconcile;
 use anyhow::Result;
 use rhai::{Engine, EvalAltResult};
 use std::path::Path;

@@ -8,9 +8,9 @@ use super::peer_support::resolve_doc_path;
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::ledger::merge::ConflictHunk;
+use deve_core::ledger::reconcile;
 use deve_core::models::DocId;
 use deve_core::protocol::{MergeConflictAction, ServerMessage};
-use deve_core::sync::reconcile;
 use std::sync::Arc;
 
 pub(super) struct MergeConflictPayload {
