@@ -13,12 +13,13 @@ Sync engine and P2P reconciliation. Manages document synchronization between the
 |------|-------------|
 | `mod.rs` | SyncManager struct and module entry |
 | `manager_lifecycle.rs` | SyncManager construction and startup scan orchestration |
-| `projection_persistence_runtime.rs` | SyncManager projection materialize/rebuild/diagnostic health facade |
 | `manager_reconcile.rs` | SyncManager document reconcile facade |
 | `manager_workspace.rs` | SyncManager workspace writeback, discard, fs-event facade |
 | `handler.rs` | Sync message handler |
 | `materialize.rs` | Materializes ledger content to filesystem |
 | `projection_io.rs` | Projection read/write |
+| `projection_persistence_runtime.rs` | SyncManager projection materialize/writeback runtime facade |
+| `projection_repair_runtime.rs` | SyncManager projection diagnose/rebuild/degraded health runtime facade |
 | `projection_plan.rs` | Projection planning |
 | `reconcile.rs` | Content reconciliation |
 | `rebuild.rs` | Full projection rebuild |

@@ -40,6 +40,8 @@ mod projection_io;
 mod projection_persistence_runtime;
 #[cfg(not(target_arch = "wasm32"))]
 mod projection_plan;
+#[cfg(not(target_arch = "wasm32"))]
+mod projection_repair_runtime;
 pub mod protocol;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod rebuild;
@@ -76,7 +78,7 @@ pub use projection_diagnostic::{
 #[cfg(not(target_arch = "wasm32"))]
 use projection_health::ProjectionHealth;
 #[cfg(not(target_arch = "wasm32"))]
-pub use projection_persistence_runtime::diagnose_projection_local_repo;
+pub use projection_repair_runtime::diagnose_projection_local_repo;
 #[cfg(not(target_arch = "wasm32"))]
 use snapshot_policy::SnapshotPolicy;
 #[cfg(not(target_arch = "wasm32"))]
