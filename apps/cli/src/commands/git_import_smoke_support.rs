@@ -222,14 +222,14 @@ pub(super) fn push_report(
 ) -> Result<GitMirrorPushReport> {
     let repo = open_repo(ledger_dir, vault_root)?;
     repo.run_on_local_repo("default", |db| {
-        push_mirror(
+        Ok(push_mirror(
             db,
             repo_root,
             GitMirrorPushOptions {
                 remote: Some(remote.into()),
                 branch: Some(branch.into()),
             },
-        )
+        )?)
     })
 }
 

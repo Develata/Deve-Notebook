@@ -11,6 +11,7 @@ pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommi
 pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
 pub(super) type GitImportPlanResult<T> = std::result::Result<T, GitImportPlanError>;
 pub(super) type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
+pub type GitMirrorPushResult<T> = std::result::Result<T, GitMirrorPushError>;
 pub type GitMirrorStoreResult<T> = std::result::Result<T, GitMirrorStoreError>;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
@@ -289,6 +290,20 @@ impl From<GitImportApplyError> for String {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum GitMirrorPushError {
+    #[error("Git push mirror failed to inspect mirror status: {message}")]
+    StatusInspect { message: String },
+    #[error(transparent)]
+    Store(#[from] GitMirrorStoreError),
+}
+
+impl From<GitMirrorPushError> for String {
+    fn from(err: GitMirrorPushError) -> Self {
+        err.to_string()
+    }
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum GitMirrorStoreError {
     #[error("failed to initialize Git mirror store: {message}")]
     Init { message: String },
@@ -536,6 +551,24 @@ mod tests {
             }
             .to_string(),
             "Git import refuses unsafe path: ../note.md"
+        );
+    }
+
+    #[test]
+    fn git_mirror_push_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitMirrorPushError::StatusInspect {
+                message: "permission denied".into(),
+            }
+            .to_string(),
+            "Git push mirror failed to inspect mirror status: permission denied"
+        );
+        assert_eq!(
+            super::GitMirrorPushError::Store(super::GitMirrorStoreError::ListRecords {
+                message: "table type mismatch".into(),
+            })
+            .to_string(),
+            "failed to list Git mirror records: table type mismatch"
         );
     }
 }

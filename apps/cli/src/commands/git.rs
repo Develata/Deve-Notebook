@@ -111,14 +111,14 @@ pub fn push(
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
         let report = repo.run_on_local_repo(&repo_name, |db| {
-            deve_core::git_bridge::push_mirror(
+            Ok(deve_core::git_bridge::push_mirror(
                 db,
                 &repo_root,
                 deve_core::git_bridge::GitMirrorPushOptions {
                     remote: remote.map(str::to_string),
                     branch: branch.map(str::to_string),
                 },
-            )
+            )?)
         })?;
         print_push_report(&repo_name, &report);
     }

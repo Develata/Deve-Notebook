@@ -135,14 +135,14 @@ fn push_mirror_pushes_exported_head_to_remote() {
 
     let report = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
-            push_mirror(
+            Ok(push_mirror(
                 db,
                 &repo_root,
                 GitMirrorPushOptions {
                     remote: Some("origin".into()),
                     branch: Some(branch.clone()),
                 },
-            )
+            )?)
         })
         .expect("push mirror");
 
@@ -175,14 +175,14 @@ fn push_mirror_refuses_unexported_queue_without_touching_remote() {
 
     let report = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
-            push_mirror(
+            Ok(push_mirror(
                 db,
                 &repo_root,
                 GitMirrorPushOptions {
                     remote: Some("origin".into()),
                     branch: Some("main".into()),
                 },
-            )
+            )?)
         })
         .expect("push mirror");
 
@@ -223,14 +223,14 @@ fn push_mirror_refuses_git_head_without_deve_mapping() {
 
     let report = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
-            push_mirror(
+            Ok(push_mirror(
                 db,
                 &repo_root,
                 GitMirrorPushOptions {
                     remote: Some("origin".into()),
                     branch: Some(branch),
                 },
-            )
+            )?)
         })
         .expect("push mirror");
 

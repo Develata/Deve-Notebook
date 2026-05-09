@@ -22,7 +22,9 @@ mod replay_snapshot;
 mod status;
 mod store;
 
-pub use error::{GitMirrorStoreError, GitMirrorStoreResult};
+pub use error::{
+    GitMirrorPushError, GitMirrorPushResult, GitMirrorStoreError, GitMirrorStoreResult,
+};
 pub use executor::{GitMirrorRunOptions, GitMirrorRunReport, export_mirror, run_pending_mirror};
 pub use import_apply::{GitImportApplyReport, apply_import};
 pub use import_plan::{GitImportPlan, GitImportPlanBlocker, GitImportPlanEntry, plan_import};

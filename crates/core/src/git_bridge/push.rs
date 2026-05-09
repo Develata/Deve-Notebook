@@ -6,7 +6,7 @@
 //! Explicit Git mirror remote publish. This module only pushes the `.git`
 //! mirror and never treats Git refs as Deve authority.
 
-use super::error::{GitBridgeError, GitBridgeResult};
+use super::error::{GitBridgeError, GitBridgeResult, GitMirrorPushError, GitMirrorPushResult};
 use super::git_cmd;
 use super::preflight::{
     ensure_git_worktree, ensure_git_worktree_clean, ensure_notegit_is_not_tracked,
@@ -14,7 +14,6 @@ use super::preflight::{
 };
 use super::status::{GitMirrorState, inspect_repo_root};
 use super::store::{GitMirrorCommitState, GitMirrorRecord, list_records};
-use anyhow::Result;
 use redb::Database;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -45,9 +44,11 @@ pub fn push_mirror(
     db: &Database,
     repo_root: &Path,
     options: GitMirrorPushOptions,
-) -> Result<GitMirrorPushReport> {
+) -> GitMirrorPushResult<GitMirrorPushReport> {
     let mut report = GitMirrorPushReport::default();
-    let status = inspect_repo_root(repo_root)?;
+    let status = inspect_repo_root(repo_root).map_err(|err| GitMirrorPushError::StatusInspect {
+        message: err.to_string(),
+    })?;
     if status.state != GitMirrorState::Ready {
         report.blockers.push(blocker(
             "mirror_not_ready",
@@ -62,7 +63,7 @@ pub fn push_mirror(
         return Ok(report);
     }
 
-    collect_preflight_blockers(db, repo_root, &mut report)?;
+    collect_preflight_blockers(db, repo_root, &mut report);
     let records = list_records(db)?;
     collect_mapping_blockers(&records, &mut report);
     resolve_push_target(repo_root, &options, &mut report);
@@ -82,11 +83,7 @@ pub fn push_mirror(
     Ok(report)
 }
 
-fn collect_preflight_blockers(
-    db: &Database,
-    repo_root: &Path,
-    report: &mut GitMirrorPushReport,
-) -> Result<()> {
+fn collect_preflight_blockers(db: &Database, repo_root: &Path, report: &mut GitMirrorPushReport) {
     for (location, result) in [
         ("git_worktree", ensure_git_worktree(repo_root)),
         (
@@ -109,7 +106,6 @@ fn collect_preflight_blockers(
         )),
         Err(reason) => report.blockers.push(blocker("git_worktree", reason)),
     }
-    Ok(())
 }
 
 fn collect_mapping_blockers(records: &[GitMirrorRecord], report: &mut GitMirrorPushReport) {
