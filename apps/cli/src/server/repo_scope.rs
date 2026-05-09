@@ -7,27 +7,16 @@
 //! - 进入底层 DB/Tree 算子前，必须先拿到真实 `RepoId`。
 //! - 本地写路径不得静默回退到进程默认主库。
 
-#[path = "repo_scope_lookup.rs"]
 mod lookup;
-#[path = "repo_scope_bootstrap.rs"]
 mod repo_scope_bootstrap;
-#[path = "repo_scope_cleanup.rs"]
 mod repo_scope_cleanup;
-#[path = "repo_scope_counterpart.rs"]
 mod repo_scope_counterpart;
-#[path = "repo_scope_error.rs"]
 mod repo_scope_error;
-#[path = "repo_scope_remote.rs"]
 mod repo_scope_remote;
-#[path = "repo_scope_resolve.rs"]
 mod repo_scope_resolve;
-#[path = "repo_scope_selector.rs"]
 mod repo_scope_selector;
-#[path = "repo_scope_sync.rs"]
 mod repo_scope_sync;
-#[path = "repo_scope_sync_bootstrap.rs"]
 mod repo_scope_sync_bootstrap;
-#[path = "repo_scope_workspace.rs"]
 mod repo_scope_workspace;
 
 use crate::server::AppState;

@@ -159,5 +159,4 @@ pub fn map_repo_scope_error_ref(error: &Error) -> ServerError {
 }
 
 #[cfg(test)]
-#[path = "repo_scope_error_test.rs"]
 mod tests;
