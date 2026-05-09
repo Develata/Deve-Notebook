@@ -14,6 +14,7 @@ AI chat streaming integration. Handles SSE-based streaming from AI providers, co
 | `mod.rs` | Module entry and stream handler initialization |
 | `config.rs` | AI provider configuration (API keys, endpoints) |
 | `stream.rs` | SSE stream handling — proxies AI provider responses |
+| `stream/tests.rs` | SSE stream handling tests |
 | `sse_parser.rs` | Server-Sent Events parser |
 | `types.rs` | Chat message and response type definitions |
 

@@ -134,5 +134,4 @@ fn finalize_stream_response(
 }
 
 #[cfg(test)]
-#[path = "stream_test.rs"]
 mod tests;
