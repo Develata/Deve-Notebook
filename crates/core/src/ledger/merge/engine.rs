@@ -9,8 +9,7 @@
 // 功能：冲突检测、冲突片段构建、合并结果输出
 // ---------------------------------------------------------------
 
-use crate::models::{DocId, LedgerEntry};
-use crate::sync::vector::VersionVector;
+use crate::models::{DocId, LedgerEntry, VersionVector};
 
 use super::diff::{apply_edits, diff_to_edits};
 use super::region::merge_regions;

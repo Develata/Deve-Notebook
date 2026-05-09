@@ -8,10 +8,10 @@ use super::{
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
+use deve_core::models::VersionVector;
 use deve_core::protocol::{ServerError, ServerMessage, SessionProof};
 use deve_core::security::IdentityKeyPair;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
-use deve_core::sync::vector::VersionVector;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 use tokio::sync::mpsc;

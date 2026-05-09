@@ -55,7 +55,7 @@
 //!    ```
 
 use crate::models::PeerId;
-use crate::sync::vector::VersionVector;
+use crate::models::VersionVector;
 
 pub mod handshake;
 pub mod manual;

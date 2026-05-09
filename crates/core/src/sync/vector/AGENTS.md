@@ -5,14 +5,14 @@
 
 ## Purpose
 
-Vector clock algorithm for causal ordering of operations across peers.
+Compatibility re-export for the shared `VersionVector` model.
 
 ## Key Files
 
 | File | Description |
 |------|-------------|
-| `mod.rs` | VectorClock type |
-| `algo.rs` | Vector clock comparison and merge algorithms |
-| `tests.rs` | Vector clock tests |
+| `mod.rs` | Re-exports `models::version_vector` for legacy callers |
+
+The implementation lives in `crates/core/src/models/version_vector/`.
 
 <!-- MANUAL: -->

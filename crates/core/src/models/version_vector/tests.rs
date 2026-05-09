@@ -1,4 +1,3 @@
-// crates\core\src\sync\vector
 //! # 版本向量单元测试
 
 use super::*;

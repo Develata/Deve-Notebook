@@ -15,5 +15,6 @@ Core data model types: ledger event encoding/decoding, operation types, and seri
 | `ledger_event.rs` | LedgerEvent type definitions (ContentFact, StructureFact) |
 | `ledger_decode.rs` | Ledger event deserialization |
 | `ledger_decode/tests.rs` | Decode tests |
+| `version_vector/` | Shared version-vector model and algorithms |
 
 <!-- MANUAL: -->

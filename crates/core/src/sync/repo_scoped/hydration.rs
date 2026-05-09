@@ -3,8 +3,8 @@
 
 use crate::ledger::listing::RepoListing;
 use crate::ledger::{RepoManager, range};
+use crate::models::VersionVector;
 use crate::models::{PeerId, RepoId};
-use crate::sync::vector::VersionVector;
 use anyhow::{Result, anyhow};
 
 pub(super) fn build_version_vector(

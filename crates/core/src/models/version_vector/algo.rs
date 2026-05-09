@@ -1,8 +1,8 @@
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
 
+use super::PeerId;
 use super::{INLINE_CAP, VersionVector, VvDiffResult};
-use crate::models::PeerId;
 use smallvec::SmallVec;
 impl VersionVector {
     /// 合并另一个版本向量。取两者的最大值 (Union / Max)。

@@ -4,11 +4,11 @@
 
 use super::SyncEngine;
 use crate::config::SyncMode;
+use crate::models::VersionVector;
 use crate::models::{PeerId, RepoId};
 use crate::security::hashing::sha256_hex;
 use crate::security::keypair::verify_signature;
 use crate::sync::protocol::{self, HandshakeResult};
-use crate::sync::vector::VersionVector;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -108,9 +108,9 @@ mod tests {
     use super::{HandshakeError, SyncEngine};
     use crate::config::SyncMode;
     use crate::ledger::RepoManager;
+    use crate::models::VersionVector;
     use crate::models::{PeerId, RepoId};
     use crate::security::IdentityKeyPair;
-    use crate::sync::vector::VersionVector;
     use std::sync::Arc;
 
     fn build_engine() -> anyhow::Result<(tempfile::TempDir, SyncEngine, RepoId)> {

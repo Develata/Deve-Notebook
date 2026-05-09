@@ -14,7 +14,7 @@
 //! - `Op`: 编辑操作（Insert / Delete）。
 //! - `LedgerEntry`: 带时间戳的操作记录，用于持久化。
 //! - `FileNodeId`: 跨平台文件系统标识符（inode/file index）。
-//! - `VersionVector`: P2P 同步的版本向量（从 sync::vector 重新导出）。
+//! - `VersionVector`: P2P 同步的版本向量。
 //!
 //! **类型**: Core MUST (核心必选)
 
@@ -25,10 +25,11 @@ use uuid::Uuid;
 
 mod ledger_decode;
 mod ledger_event;
+pub mod version_vector;
 
-pub use crate::sync::vector::VersionVector;
 pub use ledger_decode::deserialize_ledger_entry;
 pub use ledger_event::{ContentOp, LedgerEntry, LedgerEvent, Op, StructureOp};
+pub use version_vector::VersionVector;
 
 /// 节点唯一标识符 (Peer ID)
 ///

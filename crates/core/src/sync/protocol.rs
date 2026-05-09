@@ -15,9 +15,9 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
+use crate::models::VersionVector;
 use crate::models::{PeerId, RepoId};
 use crate::security::EncryptedOp;
-use crate::sync::vector::VersionVector;
 
 /// 同步请求：表示需要从某个 Peer 拉取的数据范围
 #[derive(Debug, Clone)]
