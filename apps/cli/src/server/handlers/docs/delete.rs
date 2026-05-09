@@ -21,7 +21,6 @@ use deve_core::protocol::doc_file_op_errors as path_err;
 use std::sync::Arc;
 
 #[cfg(test)]
-#[path = "delete_test.rs"]
 mod tests;
 
 pub async fn handle_delete_doc(
