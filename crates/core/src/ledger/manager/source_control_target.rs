@@ -4,7 +4,6 @@
 //!
 use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;
-use crate::source_control::diff;
 use crate::source_control::{pending_fs, staging};
 use anyhow::Result;
 use std::collections::HashSet;
@@ -92,15 +91,5 @@ impl RepoManager {
                 },
             )
         })
-    }
-
-    pub fn diff_doc_target_in_local_repo(
-        &self,
-        repo_name: &str,
-        target: &ScPathTarget,
-    ) -> Result<String> {
-        let (path, old_content, new_content) =
-            self.workdir_diff_inputs_for_target_in_local_repo(repo_name, target)?;
-        Ok(diff::unified_diff(&old_content, &new_content, &path))
     }
 }

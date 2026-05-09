@@ -12,7 +12,10 @@
 use crate::ledger::RepoManager;
 use crate::ledger::source_control;
 use crate::models::DocId;
-use crate::source_control::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, pending_fs};
+use crate::protocol::ScPathTarget;
+use crate::source_control::{
+    ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, diff, pending_fs,
+};
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -62,6 +65,16 @@ impl RepoManager {
     pub fn diff_doc_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<String> {
         let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
         self.diff_doc_target_in_local_repo(repo_name, &target)
+    }
+
+    pub fn diff_doc_target_in_local_repo(
+        &self,
+        repo_name: &str,
+        target: &ScPathTarget,
+    ) -> Result<String> {
+        let (path, old_content, new_content) =
+            self.workdir_diff_inputs_for_target_in_local_repo(repo_name, target)?;
+        Ok(diff::unified_diff(&old_content, &new_content, &path))
     }
 
     /// 获取文档的已提交内容 (用于 Diff)
