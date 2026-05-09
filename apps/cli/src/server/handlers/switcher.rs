@@ -6,7 +6,6 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-#[path = "switcher_branch.rs"]
 mod switcher_branch;
 #[path = "switcher_branch_hint.rs"]
 mod switcher_branch_hint;

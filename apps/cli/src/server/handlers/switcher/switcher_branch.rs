@@ -16,9 +16,7 @@ use crate::server::repo_scope::map_repo_scope_error;
 use crate::server::session::WsSession;
 use std::sync::Arc;
 
-#[path = "switcher_branch_emit.rs"]
 mod emit;
-#[path = "switcher_branch_prepare.rs"]
 mod prepare;
 
 pub(super) async fn handle_switch_branch(
