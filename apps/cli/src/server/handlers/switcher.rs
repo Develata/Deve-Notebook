@@ -23,7 +23,6 @@ mod switcher_prepare;
 mod switcher_prepare_test;
 #[path = "switcher_repo.rs"]
 mod switcher_repo;
-#[path = "switcher_scope.rs"]
 mod switcher_scope;
 mod switcher_selector;
 #[cfg(test)]

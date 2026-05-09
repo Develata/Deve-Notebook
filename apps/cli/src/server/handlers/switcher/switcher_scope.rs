@@ -14,7 +14,6 @@ use deve_core::models::PeerId;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
-#[path = "switcher_scope_cleanup.rs"]
 mod cleanup;
 
 pub(super) struct CurrentBranchSwitchContext {
