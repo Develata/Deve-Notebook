@@ -56,6 +56,13 @@ pub(super) fn list_changes(
     get_changes(api, repo, "/api/sc/status")
 }
 
+pub(super) fn list_staged(
+    api: &RemoteSourceControlApi,
+    repo: &RepoSelector,
+) -> Result<Vec<ChangeEntry>> {
+    get_changes(api, repo, "/api/sc/staged")
+}
+
 pub(super) fn diff_doc_path(
     api: &RemoteSourceControlApi,
     repo: &RepoSelector,

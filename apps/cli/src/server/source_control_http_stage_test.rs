@@ -17,6 +17,12 @@ async fn test_proxy_unstage_roundtrip() -> anyhow::Result<()> {
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     proxy.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
     assert!(proxy.list_pending_fs_in_repo(&selector)?.is_empty());
+    let staged = deve_core::source_control::SourceControlApi::list_staged_in_repo(
+        &proxy,
+        &selector,
+    )?;
+    assert_eq!(staged.len(), 1);
+    assert_eq!(staged[0].path, "notes/a.md");
     proxy.unstage_file_in_repo(&selector, &path_target("notes/a.md"))?;
     let pending = proxy.list_pending_fs_in_repo(&selector)?;
     assert_eq!(pending.len(), 1);

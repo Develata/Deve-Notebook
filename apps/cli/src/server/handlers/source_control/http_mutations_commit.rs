@@ -30,7 +30,7 @@ pub async fn commit_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Json(payload): Json<CommitPayload>,
 ) -> impl IntoResponse {
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::commit_staged(repo.as_ref(), &payload.repo, &payload.message) {
             Ok(info) => Json::<CommitInfo>(info).into_response(),
             Err(e) => errors::http(e),

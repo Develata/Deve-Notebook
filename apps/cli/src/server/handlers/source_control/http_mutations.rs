@@ -64,7 +64,7 @@ pub async fn stage_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::stage_pending(repo.as_ref(), &payload.repo, &target) {
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
             Err(e) => super::errors::http(e),
@@ -89,7 +89,7 @@ pub async fn discard_pending_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::discard_pending(repo.as_ref(), &payload.repo, &target) {
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
             Err(e) => super::errors::http(e),
@@ -114,7 +114,7 @@ pub async fn unstage_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::unstage_file(repo.as_ref(), &payload.repo, &target) {
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
             Err(e) => super::errors::http(e),

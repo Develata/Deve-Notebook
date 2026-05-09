@@ -53,7 +53,7 @@ pub async fn commit_history_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Query(q): Query<CommitHistoryQuery>,
 ) -> impl IntoResponse {
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::list_commit_history(repo.as_ref(), &q.repo, q.limit) {
             Ok(commits) => Json::<Vec<CommitInfo>>(commits).into_response(),
             Err(e) => super::errors::http(e),
@@ -81,7 +81,7 @@ pub async fn commit_diff_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Query(q): Query<CommitDiffQuery>,
 ) -> impl IntoResponse {
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => {
             match service::diff_commits(repo.as_ref(), &q.repo, q.commit_a.as_deref(), &q.commit_b)
             {

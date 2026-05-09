@@ -49,6 +49,8 @@ pub async fn start_server_with_options(
     let port = launch.port();
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
     host::set_repository(repo_api)?;
+    let source_control_api: Arc<dyn deve_core::source_control::SourceControlApi> = repo.clone();
+    host::set_source_control_api(source_control_api)?;
     host::set_repo_manager(repo.clone())?;
     node_role::set_node_role(node_role::NodeRole {
         role: launch.node_role_label().into(),

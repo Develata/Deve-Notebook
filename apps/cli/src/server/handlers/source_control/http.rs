@@ -58,7 +58,7 @@ pub async fn pending_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Query(q): Query<RepoQuery>,
 ) -> impl IntoResponse {
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::list_pending(repo.as_ref(), &q.repo) {
             Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
             Err(e) => super::errors::http(e),
@@ -77,6 +77,25 @@ pub async fn status(
     }
 }
 
+pub async fn staged(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<RepoQuery>,
+) -> impl IntoResponse {
+    match deve_core::source_control::SourceControlApi::list_staged_in_repo(
+        state.repo.as_ref(),
+        &q.repo,
+    ) {
+        Ok(changes) => {
+            Json::<Vec<ChangeEntry>>(super::present::collapse_rename_candidates(changes))
+                .into_response()
+        }
+        Err(e) => super::errors::http(super::errors::map_repo_error(
+            super::errors::ScOp::ListChanges,
+            e,
+        )),
+    }
+}
+
 pub async fn git_mirror_repair_review(
     State(state): State<Arc<AppState>>,
     Query(q): Query<RepoQuery>,
@@ -91,10 +110,29 @@ pub async fn status_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Query(q): Query<RepoQuery>,
 ) -> impl IntoResponse {
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::list_changes(repo.as_ref(), &q.repo) {
             Ok(changes) => Json::<Vec<ChangeEntry>>(changes).into_response(),
             Err(e) => super::errors::http(e),
+        },
+        Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
+    }
+}
+
+pub async fn staged_plugin_host(
+    State(_state): State<Arc<PluginHostState>>,
+    Query(q): Query<RepoQuery>,
+) -> impl IntoResponse {
+    match host::source_control_api() {
+        Ok(repo) => match repo.list_staged_in_repo(&q.repo) {
+            Ok(changes) => {
+                Json::<Vec<ChangeEntry>>(super::present::collapse_rename_candidates(changes))
+                    .into_response()
+            }
+            Err(e) => super::errors::http(super::errors::map_repo_error(
+                super::errors::ScOp::ListChanges,
+                e,
+            )),
         },
         Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
@@ -114,7 +152,7 @@ pub async fn diff_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Query(q): Query<DiffQuery>,
 ) -> impl IntoResponse {
-    match host::repository() {
+    match host::source_control_api() {
         Ok(repo) => match service::diff_doc_target(repo.as_ref(), &q.repo, &q.target()) {
             Ok(diff) => diff.into_response(),
             Err(e) => super::errors::http(e),

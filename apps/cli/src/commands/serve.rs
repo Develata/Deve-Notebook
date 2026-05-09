@@ -118,8 +118,10 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
     let base_url = format!("http://127.0.0.1:{}", main_port);
     let remote =
         Arc::new(crate::server::source_control_proxy::RemoteSourceControlApi::new(base_url));
-    let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = remote;
+    let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = remote.clone();
     host::set_repository(repo_api)?;
+    let source_control_api: Arc<dyn deve_core::source_control::SourceControlApi> = remote;
+    host::set_source_control_api(source_control_api)?;
 
     let plugins = load_plugins()?;
 

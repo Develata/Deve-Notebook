@@ -3,12 +3,12 @@
 //!   - 04_storage#repo-runtime-layout
 
 use super::super::errors::{self, ScOp};
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::CommitInfo;
+use deve_core::source_control::{CommitInfo, SourceControlApi};
 
 pub fn stage_pending(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     target: &ScPathTarget,
 ) -> super::ScResult<String> {
@@ -25,7 +25,7 @@ pub fn stage_pending(
 }
 
 pub fn stage_pending_many(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     targets: Vec<ScPathTarget>,
 ) -> super::ScResult<Vec<String>> {
@@ -48,7 +48,7 @@ pub fn stage_pending_many(
 }
 
 pub fn discard_pending(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     target: &ScPathTarget,
 ) -> super::ScResult<String> {
@@ -63,7 +63,7 @@ pub fn discard_pending(
 }
 
 pub fn unstage_file(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     target: &ScPathTarget,
 ) -> super::ScResult<String> {
@@ -80,7 +80,7 @@ pub fn unstage_file(
 }
 
 pub fn unstage_many(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     targets: Vec<ScPathTarget>,
 ) -> super::ScResult<Vec<String>> {
@@ -103,7 +103,7 @@ pub fn unstage_many(
 }
 
 pub fn commit_staged(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     message: &str,
 ) -> super::ScResult<CommitInfo> {

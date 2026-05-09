@@ -4,26 +4,23 @@
 //! Source-control read service tests.
 
 use super::diff_doc_target;
-use deve_core::ledger::traits::{RepoSelector, Repository};
-use deve_core::models::DocId;
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo};
+use deve_core::source_control::{
+    ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, SourceControlApi,
+};
 use std::sync::Mutex;
 
 struct FakeRepo {
     seen_target: Mutex<Option<ScPathTarget>>,
 }
 
-impl Repository for FakeRepo {
-    fn list_docs_in_repo(&self, _: &RepoSelector) -> anyhow::Result<Vec<(DocId, String)>> {
+impl SourceControlApi for FakeRepo {
+    fn list_pending_fs_in_repo(&self, _: &RepoSelector) -> anyhow::Result<Vec<ChangeEntry>> {
         Ok(vec![])
     }
 
-    fn get_doc_content_in_repo(&self, _: &RepoSelector, _: DocId) -> anyhow::Result<String> {
-        Ok(String::new())
-    }
-
-    fn list_pending_fs_in_repo(&self, _: &RepoSelector) -> anyhow::Result<Vec<ChangeEntry>> {
+    fn list_staged_in_repo(&self, _: &RepoSelector) -> anyhow::Result<Vec<ChangeEntry>> {
         Ok(vec![])
     }
 

@@ -49,7 +49,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_status.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repository().map_err(|e| e.to_string())?;
+            let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             let mut changes = repo
                 .list_changes_in_repo(&selector)
@@ -77,7 +77,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_diff.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repository().map_err(|e| e.to_string())?;
+            let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             let target = git_target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
@@ -94,7 +94,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_stage.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repository().map_err(|e| e.to_string())?;
+            let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             let target = git_target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
@@ -109,7 +109,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             if !caps_commit.check_source_control() {
                 return Err("Permission denied: source control access not allowed.".into());
             }
-            let repo = super::repository().map_err(|e| e.to_string())?;
+            let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             let commit = repo
                 .commit_staged_in_repo(&selector, message)

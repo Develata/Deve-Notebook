@@ -22,6 +22,10 @@ pub(super) fn build_router(state: Arc<PluginHostState>) -> Router {
             "/api/sc/status",
             get(source_control::http::status_plugin_host),
         )
+        .route(
+            "/api/sc/staged",
+            get(source_control::http::staged_plugin_host),
+        )
         .route("/api/sc/diff", get(source_control::http::diff_plugin_host))
         .route(
             "/api/sc/commits",

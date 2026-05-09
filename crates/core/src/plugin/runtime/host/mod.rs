@@ -40,12 +40,16 @@ use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::traits::Repository;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::source_control::SourceControlApi;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::sync::SyncManager;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::{Arc, OnceLock};
 
 #[cfg(not(target_arch = "wasm32"))]
 static REPOSITORY: OnceLock<Arc<dyn Repository>> = OnceLock::new();
+#[cfg(not(target_arch = "wasm32"))]
+static SOURCE_CONTROL_API: OnceLock<Arc<dyn SourceControlApi>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
 static REPO_MANAGER: OnceLock<Arc<RepoManager>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
@@ -56,6 +60,13 @@ pub fn set_repository(repo: Arc<dyn Repository>) -> Result<(), anyhow::Error> {
     REPOSITORY
         .set(repo)
         .map_err(|_| anyhow::anyhow!("Repository already set"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn set_source_control_api(api: Arc<dyn SourceControlApi>) -> Result<(), anyhow::Error> {
+    SOURCE_CONTROL_API
+        .set(api)
+        .map_err(|_| anyhow::anyhow!("SourceControlApi already set"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -78,6 +89,14 @@ pub fn repository() -> Result<Arc<dyn Repository>, anyhow::Error> {
         .get()
         .cloned()
         .ok_or_else(|| anyhow::anyhow!("Repository not configured"))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn source_control_api() -> Result<Arc<dyn SourceControlApi>, anyhow::Error> {
+    SOURCE_CONTROL_API
+        .get()
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("SourceControlApi not configured"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -6,12 +6,12 @@
 use super::super::errors::{self, ScOp};
 use deve_core::git_bridge::{GitMirrorRepairReview, build_repair_review, list_records};
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
+use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, SourceControlApi};
 
 pub fn list_pending(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
 ) -> super::ScResult<Vec<ChangeEntry>> {
     repo.list_pending_fs_in_repo(selector)
@@ -20,7 +20,7 @@ pub fn list_pending(
 }
 
 pub fn list_changes(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
 ) -> super::ScResult<Vec<ChangeEntry>> {
     repo.list_changes_in_repo(selector)
@@ -29,7 +29,7 @@ pub fn list_changes(
 }
 
 pub fn diff_doc_target(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     target: &ScPathTarget,
 ) -> super::ScResult<String> {
@@ -41,7 +41,7 @@ pub fn diff_doc_target(
 }
 
 pub fn list_commit_history(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     limit: u32,
 ) -> super::ScResult<Vec<CommitInfo>> {
@@ -50,7 +50,7 @@ pub fn list_commit_history(
 }
 
 pub fn diff_commits(
-    repo: &dyn Repository,
+    repo: &dyn SourceControlApi,
     selector: &RepoSelector,
     commit_a_id: Option<&str>,
     commit_b_id: &str,
