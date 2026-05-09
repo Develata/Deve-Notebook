@@ -1,8 +1,8 @@
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
-use deve_core::source_control::{ChangeStatus, staging};
+use deve_core::source_control::{ChangeStatus, SourceControlApi, staging};
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -43,7 +43,7 @@ fn stage_path_only_target_fails_closed_for_docless_reused_old_path() {
     })
     .expect("seed pending");
 
-    let err = <RepoManager as Repository>::stage_pending_in_repo(
+    let err = <RepoManager as SourceControlApi>::stage_pending_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget::from_path("notes/old.md"),
@@ -86,7 +86,7 @@ fn unstage_path_only_target_fails_closed_for_docless_reused_old_path() {
     })
     .expect("seed staged");
 
-    let err = <RepoManager as Repository>::unstage_file_in_repo(
+    let err = <RepoManager as SourceControlApi>::unstage_file_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget::from_path("notes/old.md"),

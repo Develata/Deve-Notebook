@@ -1,9 +1,9 @@
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
-use deve_core::source_control::{ChangeStatus, staging};
+use deve_core::source_control::{ChangeStatus, SourceControlApi, staging};
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -103,7 +103,7 @@ fn target_resolution_keeps_exact_deleted_path() {
     let doc_id = seed_rename_pair(&dir, &repo);
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("notes/b.md").expect("stage add");
-    <RepoManager as Repository>::unstage_file_in_repo(
+    <RepoManager as SourceControlApi>::unstage_file_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget {
@@ -152,7 +152,7 @@ fn stage_target_uses_doc_id_when_only_rename_successor_exists() {
     })
     .expect("seed successor");
 
-    <RepoManager as Repository>::stage_pending_in_repo(
+    <RepoManager as SourceControlApi>::stage_pending_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget {
@@ -173,7 +173,7 @@ fn stage_target_keeps_exact_deleted_half_of_rename_pair() {
     let (dir, repo) = new_repo();
     let doc_id = seed_rename_pair(&dir, &repo);
 
-    <RepoManager as Repository>::stage_pending_in_repo(
+    <RepoManager as SourceControlApi>::stage_pending_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget {
@@ -182,7 +182,7 @@ fn stage_target_keeps_exact_deleted_half_of_rename_pair() {
         },
     )
     .expect("stage successor");
-    <RepoManager as Repository>::stage_pending_in_repo(
+    <RepoManager as SourceControlApi>::stage_pending_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget {

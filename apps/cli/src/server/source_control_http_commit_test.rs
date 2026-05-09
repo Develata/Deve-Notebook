@@ -2,8 +2,8 @@
 //!   - 07_diff_logic#source-control-runtime
 
 use super::support::{ProxyHarness, path_target, seed_pending, write_workspace_file};
-use deve_core::ledger::traits::{RepoSelector, Repository};
-use deve_core::source_control::ChangeStatus;
+use deve_core::ledger::traits::RepoSelector;
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_proxy_commit_queries_roundtrip() -> anyhow::Result<()> {

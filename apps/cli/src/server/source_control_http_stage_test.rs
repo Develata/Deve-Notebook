@@ -4,9 +4,9 @@
 use super::support::{
     ProxyHarness, path_target, seed_pending, seed_tracked_rename, write_workspace_file,
 };
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_proxy_unstage_roundtrip() -> anyhow::Result<()> {

@@ -1,9 +1,9 @@
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
-use deve_core::source_control::{ChangeStatus, staging};
+use deve_core::source_control::{ChangeStatus, SourceControlApi, staging};
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -67,7 +67,7 @@ fn stage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
     })
     .expect("seed pending b");
 
-    let err = <RepoManager as Repository>::stage_pending_in_repo(
+    let err = <RepoManager as SourceControlApi>::stage_pending_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget {
@@ -112,7 +112,7 @@ fn unstage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
     })
     .expect("seed staged b");
 
-    let err = <RepoManager as Repository>::unstage_file_in_repo(
+    let err = <RepoManager as SourceControlApi>::unstage_file_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget {
@@ -146,7 +146,7 @@ fn stage_path_only_target_fails_closed_for_tracked_entry() {
     })
     .expect("seed tracked pending");
 
-    let err = <RepoManager as Repository>::stage_pending_in_repo(
+    let err = <RepoManager as SourceControlApi>::stage_pending_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget::from_path("notes/b.md"),
@@ -189,7 +189,7 @@ fn unstage_path_only_target_fails_closed_for_tracked_entry() {
     })
     .expect("seed tracked staged");
 
-    let err = <RepoManager as Repository>::unstage_file_in_repo(
+    let err = <RepoManager as SourceControlApi>::unstage_file_in_repo(
         &repo,
         &RepoSelector::default(),
         &ScPathTarget::from_path("notes/b.md"),

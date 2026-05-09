@@ -5,12 +5,12 @@
 
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::DocId;
 use deve_core::models::PeerId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::protocol::ServerMessage;
-use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use deve_core::{config::SyncMode, sync::SyncManager};

@@ -1,8 +1,8 @@
 use super::source_control_test_support::ProxyHarness;
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::TempDir;
 

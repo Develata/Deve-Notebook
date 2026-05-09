@@ -9,8 +9,6 @@
 use crate::ledger::RepoManager;
 use crate::ledger::traits::{RepoSelector, Repository};
 use crate::models::DocId;
-use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use crate::state::reconstruct_content;
 use anyhow::Result;
 
@@ -37,51 +35,4 @@ impl Repository for RepoManager {
         Ok(reconstruct_content(&entries))
     }
 
-    fn list_pending_fs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        self.source_control_runtime().list_pending_fs_in_repo(repo)
-    }
-
-    fn stage_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        self.source_control_runtime()
-            .stage_pending_in_repo(repo, target)
-    }
-
-    fn discard_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        self.source_control_runtime()
-            .discard_pending_in_repo(repo, target)
-    }
-
-    fn unstage_file_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        self.source_control_runtime()
-            .unstage_file_in_repo(repo, target)
-    }
-
-    fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        self.source_control_runtime().list_changes_in_repo(repo)
-    }
-
-    fn diff_doc_path_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<String> {
-        self.source_control_runtime()
-            .diff_doc_path_in_repo(repo, target)
-    }
-
-    fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {
-        self.source_control_runtime()
-            .list_commits_in_repo(repo, limit)
-    }
-
-    fn diff_commits_in_repo(
-        &self,
-        repo: &RepoSelector,
-        commit_a_id: Option<&str>,
-        commit_b_id: &str,
-    ) -> Result<Vec<CommitFileDiff>> {
-        self.source_control_runtime()
-            .diff_commits_in_repo(repo, commit_a_id, commit_b_id)
-    }
-
-    fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
-        self.source_control_runtime()
-            .commit_staged_in_repo(repo, message)
-    }
 }

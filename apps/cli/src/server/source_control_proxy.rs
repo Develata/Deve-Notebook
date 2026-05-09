@@ -65,47 +65,6 @@ impl Repository for RemoteSourceControlApi {
     fn get_doc_content_in_repo(&self, repo: &RepoSelector, doc_id: DocId) -> Result<String> {
         queries::get_doc_content(self, repo, doc_id)
     }
-
-    fn list_pending_fs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        SourceControlApi::list_pending_fs_in_repo(self, repo)
-    }
-
-    fn stage_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        SourceControlApi::stage_pending_in_repo(self, repo, target)
-    }
-
-    fn discard_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        SourceControlApi::discard_pending_in_repo(self, repo, target)
-    }
-
-    fn unstage_file_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        SourceControlApi::unstage_file_in_repo(self, repo, target)
-    }
-
-    fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        SourceControlApi::list_changes_in_repo(self, repo)
-    }
-
-    fn diff_doc_path_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<String> {
-        SourceControlApi::diff_doc_path_in_repo(self, repo, target)
-    }
-
-    fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {
-        SourceControlApi::list_commits_in_repo(self, repo, limit)
-    }
-
-    fn diff_commits_in_repo(
-        &self,
-        repo: &RepoSelector,
-        commit_a_id: Option<&str>,
-        commit_b_id: &str,
-    ) -> Result<Vec<CommitFileDiff>> {
-        SourceControlApi::diff_commits_in_repo(self, repo, commit_a_id, commit_b_id)
-    }
-
-    fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
-        SourceControlApi::commit_staged_in_repo(self, repo, message)
-    }
 }
 
 impl SourceControlApi for RemoteSourceControlApi {

@@ -10,10 +10,10 @@ use super::remote_test_support::{
     build_state, commit_added_file, new_repo, seed_pending_entry, write_workspace_file,
 };
 use deve_core::ledger::schema::{NODEID_TO_META, PATH_TO_NODEID};
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::PeerId;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 
 #[test]

@@ -2,8 +2,9 @@ use super::handlers::source_control::{
     handle_get_changes, handle_get_commit_diff, handle_get_commit_history, handle_get_doc_diff,
 };
 use super::{channel::DualChannel, session::WsSession};
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::{ScPathTarget, ServerMessage};
+use deve_core::source_control::SourceControlApi;
 use tokio::sync::mpsc;
 
 use super::source_control_scope_test_support as support;

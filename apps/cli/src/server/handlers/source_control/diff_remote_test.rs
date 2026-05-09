@@ -8,9 +8,9 @@ use super::remote_test_support::{
     commit_added_file, new_repo, pending_entry, seed_pending_entry, write_workspace_file,
 };
 use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
-use deve_core::ledger::traits::{RepoSelector, Repository};
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeStatus;
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 
 #[test]
 fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
