@@ -27,7 +27,6 @@ mod switcher_prepare_test;
 mod switcher_repo;
 #[path = "switcher_scope.rs"]
 mod switcher_scope;
-#[path = "switcher_selector.rs"]
 mod switcher_selector;
 #[cfg(test)]
 #[path = "../switcher_selector_single_remote_test.rs"]

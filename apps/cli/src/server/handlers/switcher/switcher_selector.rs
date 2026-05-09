@@ -9,11 +9,8 @@ use deve_core::ledger::listing::RepoListing;
 use deve_core::models::{PeerId, RepoId};
 use std::sync::Arc;
 
-#[path = "switcher_requested_repo.rs"]
 mod requested_repo;
-#[path = "switcher_selector_resolution.rs"]
 mod resolution;
-#[path = "switcher_selector_support.rs"]
 mod support;
 
 use resolution::{fallback_single_remote_repo, unresolved_target_repo_error};
