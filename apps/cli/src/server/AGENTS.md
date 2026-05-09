@@ -47,10 +47,11 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `source_control_local_commit_scope*_test.rs` | Source control commit scope nonce and bootstrap tests |
 | `source_control_{local,remote}_scope*_test.rs` | Source control scope/identity runtime tests |
 | `source_control_scope*_test.rs` | Source control scope binding and selector runtime tests |
-| `switcher_branch*_test.rs` | Branch switcher success, reject, and scope message tests |
-| `switcher_branch_scope*_test.rs` | Branch switcher repo-scope fail-closed and selector binding tests |
-| `switcher_current_scope*_test.rs` | Current local/remote scope validation tests for branch switching |
-| `switcher_exact_selector*_test.rs` | Exact remote selector switcher collision and fail-closed tests |
+| `switcher_branch_test/` | Branch switcher success, reject, and scope message tests |
+| `switcher_branch_scope_test/` | Branch switcher repo-scope fail-closed and selector binding tests |
+| `switcher_current_scope_test/` | Current local/remote scope validation tests for branch switching |
+| `switcher_exact_selector_test/` | Exact remote selector switcher collision and fail-closed tests |
+| `switcher_*_test.rs` | Remaining switcher integration tests |
 | `switcher_test_support.rs` | Shared switcher test harness for AppState/session/unicast setup |
 | `plugin_host/mod.rs` | Plugin host server mode for satellite processes |
 | `plugin_host/` | Plugin host HTTP routes and WebSocket handler |

@@ -2,9 +2,7 @@
 //!   - 06_repository#repo-scope-runtime
 
 use crate::server::handlers::switcher::handle_switch_repo;
-use crate::server::switcher_test_support::{
-    app_state_with_tree, browser_session, unicast_channel,
-};
+use crate::server::switcher_test_support::{app_state_with_tree, browser_session, unicast_channel};
 use crate::server::tree_state::RepoTreeRegistry;
 use deve_core::ledger::RepoManager;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
