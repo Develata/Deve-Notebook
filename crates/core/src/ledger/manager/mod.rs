@@ -53,6 +53,7 @@ mod repository;
 mod shadow_maintenance_runtime;
 mod snapshot_ops;
 mod source_control_api;
+mod source_control_default_api;
 mod source_control_ops;
 mod source_control_path_target;
 mod source_control_query_ops;
