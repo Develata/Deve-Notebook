@@ -18,13 +18,9 @@
 //! **类型**: Core MUST (核心必选)
 
 use anyhow::Context;
-#[path = "config/defaults.rs"]
 mod defaults;
-#[path = "config/env_alias.rs"]
 mod env_alias;
-#[path = "config/profile.rs"]
 mod profile;
-#[path = "config/schema.rs"]
 mod schema;
 
 pub use schema::{
@@ -71,5 +67,4 @@ impl Config {
 }
 
 #[cfg(test)]
-#[path = "config_test.rs"]
 mod tests;

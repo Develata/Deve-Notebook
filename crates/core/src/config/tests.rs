@@ -2,9 +2,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-#[path = "config_agent_bridge_test.rs"]
 mod agent_bridge_tests;
-#[path = "config_load_test.rs"]
 mod load_tests;
 
 static CWD_LOCK: Mutex<()> = Mutex::new(());
@@ -56,6 +54,7 @@ impl EnvGuard {
                 .find_map(|(entry_key, value)| (key_str == *entry_key).then_some(*value))
                 .flatten();
             let old = std::env::var_os(&key);
+            // SAFETY: config tests serialize env mutation through CWD_LOCK and restore every key.
             unsafe {
                 match value {
                     Some(value) => std::env::set_var(&key, value),
@@ -71,6 +70,7 @@ impl EnvGuard {
 impl Drop for EnvGuard {
     fn drop(&mut self) {
         for (key, value) in self.previous.drain(..) {
+            // SAFETY: EnvGuard owns restoration for keys it changed while tests hold CWD_LOCK.
             unsafe {
                 match value {
                     Some(value) => std::env::set_var(key, value),
