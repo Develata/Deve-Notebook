@@ -67,21 +67,16 @@ pub(super) async fn route_merge(
 }
 
 #[cfg(test)]
-#[path = "merge_readonly_test.rs"]
 mod readonly_tests;
 
 #[cfg(test)]
-#[path = "merge_peer_test_support.rs"]
 mod merge_peer_test_support;
 
 #[cfg(test)]
-#[path = "merge_peer_contract_test.rs"]
 mod peer_contract_tests;
 
 #[cfg(test)]
-#[path = "merge_peer_resume_test.rs"]
 mod peer_resume_tests;
 
 #[cfg(test)]
-#[path = "merge_test.rs"]
 mod tests;

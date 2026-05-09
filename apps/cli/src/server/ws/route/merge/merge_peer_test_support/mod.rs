@@ -1,10 +1,7 @@
 //! Shared peer merge route test support.
 
-#[path = "merge_peer_test_support/assertions.rs"]
 mod assertions;
-#[path = "merge_peer_test_support/ledger.rs"]
 mod ledger;
-#[path = "merge_peer_test_support/state.rs"]
 mod state;
 
 pub(super) use assertions::{
