@@ -9,6 +9,7 @@ pub(super) type GitReplayPlanResult<T> = std::result::Result<T, GitReplayPlanErr
 pub(super) type GitProjectionReplayResult<T> = std::result::Result<T, GitProjectionReplayError>;
 pub(super) type GitMirrorCommitResult<T> = std::result::Result<T, GitMirrorCommitError>;
 pub(super) type GitSnapshotBootstrapResult<T> = std::result::Result<T, GitSnapshotBootstrapError>;
+pub type GitMirrorStatusResult<T> = std::result::Result<T, GitMirrorStatusError>;
 pub type GitImportPlanResult<T> = std::result::Result<T, GitImportPlanError>;
 pub type GitImportApplyResult<T> = std::result::Result<T, GitImportApplyError>;
 pub type GitMirrorRunResult<T> = std::result::Result<T, GitMirrorRunError>;
@@ -67,6 +68,24 @@ impl GitCommandError {
 
 impl From<GitCommandError> for String {
     fn from(err: GitCommandError) -> Self {
+        err.to_string()
+    }
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum GitMirrorStatusError {
+    #[error("failed to inspect .notegit presence: {message}")]
+    NotegitPresence { message: String },
+    #[error("failed to inspect .git metadata presence: {message}")]
+    GitMetadataPresence { message: String },
+    #[error("failed to inspect .git metadata: {message}")]
+    GitMetadataInspect { message: String },
+    #[error("failed to inspect .gitignore .notegit protection: {message}")]
+    GitignoreProtection { message: String },
+}
+
+impl From<GitMirrorStatusError> for String {
+    fn from(err: GitMirrorStatusError) -> Self {
         err.to_string()
     }
 }
@@ -503,6 +522,25 @@ mod tests {
         assert_eq!(
             message,
             "failed to run git rev-parse HEAD: No such file or directory"
+        );
+    }
+
+    #[test]
+    fn git_mirror_status_error_preserves_legacy_messages() {
+        assert_eq!(
+            super::GitMirrorStatusError::GitignoreProtection {
+                message: "permission denied".into(),
+            }
+            .to_string(),
+            "failed to inspect .gitignore .notegit protection: permission denied"
+        );
+        let message: String = super::GitMirrorStatusError::GitMetadataPresence {
+            message: "io error".into(),
+        }
+        .into();
+        assert_eq!(
+            message,
+            "failed to inspect .git metadata presence: io error"
         );
     }
 

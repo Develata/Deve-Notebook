@@ -4,6 +4,7 @@
 //!
 //! Read-only Git ecosystem mirror inspection.
 
+use super::error::{GitMirrorStatusError, GitMirrorStatusResult};
 use crate::utils::notegit;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -56,10 +57,19 @@ pub struct GitMirrorStatus {
     pub reason: Option<String>,
 }
 
-pub fn inspect_repo_root(repo_root: &Path) -> std::io::Result<GitMirrorStatus> {
-    let notegit_present = notegit::repo_dir(repo_root).try_exists()?;
+pub fn inspect_repo_root(repo_root: &Path) -> GitMirrorStatusResult<GitMirrorStatus> {
+    let notegit_present = notegit::repo_dir(repo_root).try_exists().map_err(|err| {
+        GitMirrorStatusError::NotegitPresence {
+            message: err.to_string(),
+        }
+    })?;
     let git_metadata_kind = classify_git_metadata(repo_root)?;
-    let gitignore_protects_notegit = notegit::gitignore_ignores_notegit(repo_root)?;
+    let gitignore_protects_notegit =
+        notegit::gitignore_ignores_notegit(repo_root).map_err(|err| {
+            GitMirrorStatusError::GitignoreProtection {
+                message: err.to_string(),
+            }
+        })?;
     let (state, reason) = classify_state(git_metadata_kind, gitignore_protects_notegit);
 
     Ok(GitMirrorStatus {
@@ -72,12 +82,21 @@ pub fn inspect_repo_root(repo_root: &Path) -> std::io::Result<GitMirrorStatus> {
     })
 }
 
-fn classify_git_metadata(repo_root: &Path) -> std::io::Result<GitMetadataKind> {
+fn classify_git_metadata(repo_root: &Path) -> GitMirrorStatusResult<GitMetadataKind> {
     let path = repo_root.join(notegit::GIT_DIR);
-    if !path.try_exists()? {
+    if !path
+        .try_exists()
+        .map_err(|err| GitMirrorStatusError::GitMetadataPresence {
+            message: err.to_string(),
+        })?
+    {
         return Ok(GitMetadataKind::Missing);
     }
-    let meta = std::fs::symlink_metadata(path)?;
+    let meta = std::fs::symlink_metadata(path).map_err(|err| {
+        GitMirrorStatusError::GitMetadataInspect {
+            message: err.to_string(),
+        }
+    })?;
     if meta.is_dir() {
         return Ok(GitMetadataKind::Directory);
     }
