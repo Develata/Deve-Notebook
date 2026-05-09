@@ -19,7 +19,6 @@ use deve_core::protocol::doc_file_op_errors as path_err;
 use std::sync::Arc;
 
 #[cfg(test)]
-#[path = "create_test.rs"]
 mod tests;
 
 /// 处理创建文档请求
