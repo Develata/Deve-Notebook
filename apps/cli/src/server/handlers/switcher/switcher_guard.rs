@@ -54,5 +54,4 @@ pub(super) fn require_browser_switch_nonce(
 }
 
 #[cfg(test)]
-#[path = "../switcher_guard_test.rs"]
 mod tests;

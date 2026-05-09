@@ -7,11 +7,8 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 mod switcher_branch;
-#[path = "switcher_branch_hint.rs"]
 mod switcher_branch_hint;
-#[path = "switcher_error.rs"]
 mod switcher_error;
-#[path = "switcher_guard.rs"]
 mod switcher_guard;
 #[cfg(test)]
 #[path = "../switcher_last_local_repo_test.rs"]
@@ -21,7 +18,6 @@ mod switcher_prepare;
 #[cfg(test)]
 #[path = "switcher_prepare_test/mod.rs"]
 mod switcher_prepare_test;
-#[path = "switcher_repo.rs"]
 mod switcher_repo;
 mod switcher_scope;
 mod switcher_selector;
