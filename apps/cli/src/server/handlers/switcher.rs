@@ -18,7 +18,6 @@ mod switcher_guard;
 #[path = "../switcher_last_local_repo_test.rs"]
 mod switcher_last_local_repo_test;
 mod switcher_payload;
-#[path = "switcher_prepare.rs"]
 mod switcher_prepare;
 #[cfg(test)]
 #[path = "switcher_prepare_test/mod.rs"]

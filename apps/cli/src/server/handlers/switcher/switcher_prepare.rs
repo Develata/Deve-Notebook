@@ -9,9 +9,7 @@ use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::RepoId;
 use std::sync::Arc;
 
-#[path = "switcher_prepare_branch.rs"]
 mod branch;
-#[path = "switcher_prepare_recovery.rs"]
 mod recovery;
 
 pub(super) struct PreparedRepoSwitch {
