@@ -10,7 +10,6 @@ use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable, TableDefinition, TableError};
 
 use super::failure_metadata::GitMirrorFailureMetadata;
-#[path = "store_schema.rs"]
 mod schema;
 
 pub use schema::{GitMirrorCommitState, GitMirrorFailureStage, GitMirrorRecord, GitMirrorSummary};
@@ -157,5 +156,4 @@ fn write_record(db: &Database, record: &GitMirrorRecord) -> Result<()> {
 }
 
 #[cfg(test)]
-#[path = "store_test.rs"]
 mod tests;

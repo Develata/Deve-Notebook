@@ -247,5 +247,4 @@ fn blocker(location: impl Into<String>, reason: impl Into<String>) -> GitMirrorP
 }
 
 #[cfg(test)]
-#[path = "push_test.rs"]
-mod push_test;
+mod tests;

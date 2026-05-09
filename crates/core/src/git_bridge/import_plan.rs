@@ -237,5 +237,4 @@ fn push_blocker(plan: &mut GitImportPlan, path: impl Into<String>, reason: impl 
 }
 
 #[cfg(test)]
-#[path = "import_plan_test.rs"]
 mod tests;

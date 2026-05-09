@@ -267,5 +267,4 @@ fn change_status_label(status: ChangeStatus) -> &'static str {
 }
 
 #[cfg(test)]
-#[path = "import_apply_test.rs"]
 mod tests;
