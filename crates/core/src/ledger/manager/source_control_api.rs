@@ -13,43 +13,40 @@ use anyhow::Result;
 
 impl SourceControlApi for RepoManager {
     fn list_pending_fs_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.list_pending_fs_in_local_repo(&repo_name)
+        self.source_control_runtime().list_pending_fs_in_repo(repo)
     }
 
     fn list_staged_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.list_staged_in_local_repo(&repo_name)
+        self.source_control_runtime().list_staged_in_repo(repo)
     }
 
     fn stage_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.stage_pending_target_in_local_repo(&repo_name, target)
+        self.source_control_runtime()
+            .stage_pending_in_repo(repo, target)
     }
 
     fn discard_pending_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.discard_pending_target_in_local_repo(&repo_name, target)
+        self.source_control_runtime()
+            .discard_pending_in_repo(repo, target)
     }
 
     fn unstage_file_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<()> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.unstage_file_target_in_local_repo(&repo_name, target)
+        self.source_control_runtime()
+            .unstage_file_in_repo(repo, target)
     }
 
     fn list_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.list_changes_in_local_repo(&repo_name)
+        self.source_control_runtime().list_changes_in_repo(repo)
     }
 
     fn diff_doc_path_in_repo(&self, repo: &RepoSelector, target: &ScPathTarget) -> Result<String> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.diff_doc_target_in_local_repo(&repo_name, target)
+        self.source_control_runtime()
+            .diff_doc_path_in_repo(repo, target)
     }
 
     fn list_commits_in_repo(&self, repo: &RepoSelector, limit: u32) -> Result<Vec<CommitInfo>> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.list_commits_in_local_repo(&repo_name, limit)
+        self.source_control_runtime()
+            .list_commits_in_repo(repo, limit)
     }
 
     fn diff_commits_in_repo(
@@ -58,12 +55,12 @@ impl SourceControlApi for RepoManager {
         commit_a_id: Option<&str>,
         commit_b_id: &str,
     ) -> Result<Vec<CommitFileDiff>> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.diff_commits_in_local_repo(&repo_name, commit_a_id, commit_b_id)
+        self.source_control_runtime()
+            .diff_commits_in_repo(repo, commit_a_id, commit_b_id)
     }
 
     fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
-        let repo_name = self.resolve_local_repo_selector_for_execution(repo)?;
-        self.commit_staged_in_local_repo(&repo_name, message)
+        self.source_control_runtime()
+            .commit_staged_in_repo(repo, message)
     }
 }

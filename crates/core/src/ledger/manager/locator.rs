@@ -3,10 +3,8 @@
 
 use anyhow::{Result, anyhow};
 
-use crate::ledger::listing::RepoListing;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
-use crate::ledger::traits::RepoSelector;
 use crate::models::RepoId;
 
 #[derive(Default)]
@@ -17,7 +15,7 @@ struct LocalRepoCandidates {
 
 impl RepoManager {
     pub fn find_local_repo_name_by_id(&self, target_id: RepoId) -> Result<Option<String>> {
-        self.refresh_local_repo_catalog()?;
+        self.repo_catalog_runtime().refresh_local_catalog()?;
         self.find_local_repo_name_by_id_without_repair(target_id)
     }
 
@@ -123,7 +121,11 @@ impl RepoManager {
         {
             return Ok(name);
         }
-        match self.list_repos(None)?.as_slice() {
+        match self
+            .repo_catalog_runtime()
+            .list_local_display_names()?
+            .as_slice()
+        {
             [repo] => Ok(repo.clone()),
             [] => anyhow::bail!("No local repositories available"),
             _ => anyhow::bail!("Active repository not selected: multiple local repos exist"),
@@ -150,7 +152,11 @@ impl RepoManager {
         {
             return Ok(name);
         }
-        match self.list_local_repo_names_for_execution()?.as_slice() {
+        match self
+            .repo_catalog_runtime()
+            .list_local_execution_names()?
+            .as_slice()
+        {
             [repo] => Ok(repo.clone()),
             [] => anyhow::bail!("No local repositories available"),
             _ => anyhow::bail!("Active repository not selected: multiple local repos exist"),
@@ -190,13 +196,6 @@ impl RepoManager {
     ) -> Result<String> {
         let candidates = self.resolve_local_repo_candidates_with_repair(repo_id, repo_name)?;
         self.select_local_repo_name_for_execution(&candidates)
-    }
-
-    pub(crate) fn resolve_local_repo_selector_for_execution(
-        &self,
-        repo: &RepoSelector,
-    ) -> Result<String> {
-        self.resolve_local_repo_name_for_execution(repo.repo_id, repo.repo_name.as_deref())
     }
 }
 

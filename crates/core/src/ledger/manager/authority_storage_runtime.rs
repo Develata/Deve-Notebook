@@ -1,0 +1,92 @@
+//! plan_ref:
+//!   - 04_storage#facts-partition
+//!   - 04_storage#projection-contract
+//!   - 03_rendering#document-authority-bridge
+
+use crate::ledger::manager::types::RepoManager;
+use crate::ledger::ops;
+use crate::models::{DocId, LedgerEntry, PeerId};
+use anyhow::Result;
+
+pub(crate) struct AuthorityStorageRuntime<'a> {
+    manager: &'a RepoManager,
+}
+
+impl<'a> AuthorityStorageRuntime<'a> {
+    pub(crate) fn new(manager: &'a RepoManager) -> Self {
+        Self { manager }
+    }
+
+    pub(crate) fn append_local_op(&self, entry: &LedgerEntry) -> Result<u64> {
+        let repo_scope = ops::local_repo_scope(self.manager.local_repo_name());
+        ops::append_op_to_db(&self.manager.local_db, entry, &repo_scope)
+    }
+
+    pub(crate) fn append_local_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        entry: &LedgerEntry,
+    ) -> Result<u64> {
+        let repo_scope = ops::local_repo_scope(repo_name);
+        self.manager
+            .run_on_local_repo(repo_name, |db| ops::append_op_to_db(db, entry, &repo_scope))
+    }
+
+    pub(crate) fn append_generated_op(
+        &self,
+        doc_id: DocId,
+        peer_id: PeerId,
+        op_entry_builder: impl FnMut(u64) -> LedgerEntry,
+    ) -> Result<(u64, u64)> {
+        let repo_scope = ops::local_repo_scope(self.manager.local_repo_name());
+        ops::append_generated_op(
+            &self.manager.local_db,
+            doc_id,
+            peer_id,
+            &repo_scope,
+            op_entry_builder,
+        )
+    }
+
+    pub(crate) fn append_generated_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        peer_id: PeerId,
+        op_entry_builder: impl FnMut(u64) -> LedgerEntry,
+    ) -> Result<(u64, u64)> {
+        let repo_scope = ops::local_repo_scope(repo_name);
+        self.manager.run_on_local_repo(repo_name, move |db| {
+            ops::append_generated_op(db, doc_id, peer_id, &repo_scope, op_entry_builder)
+        })
+    }
+
+    pub(crate) fn append_generated_client_op_in_local_repo(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        peer_id: PeerId,
+        client_id: u64,
+        client_op_id: u64,
+        op_entry_builder: impl FnMut(u64) -> LedgerEntry,
+    ) -> Result<(u64, u64)> {
+        let repo_scope = ops::local_repo_scope(repo_name);
+        self.manager.run_on_local_repo(repo_name, move |db| {
+            ops::append_generated_client_op(
+                db,
+                doc_id,
+                peer_id,
+                &repo_scope,
+                client_id,
+                client_op_id,
+                op_entry_builder,
+            )
+        })
+    }
+}
+
+impl RepoManager {
+    pub(crate) fn authority_storage_runtime(&self) -> AuthorityStorageRuntime<'_> {
+        AuthorityStorageRuntime::new(self)
+    }
+}
