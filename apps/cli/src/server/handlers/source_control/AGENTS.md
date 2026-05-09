@@ -21,12 +21,7 @@ Git-like source control handlers: changes detection, staging/unstaging, commit, 
 | `commits.rs` | Commit history listing |
 | `commits_query.rs` | Commit history and diff query helpers |
 | `commits_write.rs` | Commit write acknowledgement helper |
-| `diff.rs` | Local diff computation |
-| `diff_remote.rs` | Remote diff via proxy |
-| `diff_remote_content.rs` | Remote diff content resolution helpers |
-| `diff_remote_test.rs` | Remote diff projection tests |
-| `diff_remote_test_extra.rs` | Additional remote diff fail-closed tests |
-| `diff_remote_test_support.rs` | Remote diff test fixtures |
+| `diff/` | Local and remote diff dispatch, helpers, and tests |
 | `discard.rs` | Discard uncommitted changes |
 | `local_discard.rs` | Local-only discard path |
 | `conflict.rs` | Merge conflict handling |

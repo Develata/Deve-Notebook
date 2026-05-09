@@ -3,18 +3,13 @@
 //!
 //! Source-control document diff dispatch.
 
-#[path = "diff_remote.rs"]
 mod remote;
-#[path = "diff_remote_content.rs"]
 mod remote_content;
 #[cfg(test)]
-#[path = "diff_remote_test.rs"]
 mod remote_test;
 #[cfg(test)]
-#[path = "diff_remote_test_extra.rs"]
 mod remote_test_extra;
 #[cfg(test)]
-#[path = "diff_remote_test_support.rs"]
 mod remote_test_support;
 
 use crate::server::AppState;
