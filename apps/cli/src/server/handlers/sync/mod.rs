@@ -127,5 +127,6 @@ pub async fn handle_delete_peer(
 }
 
 #[cfg(test)]
-#[path = "../sync_delete_peer_test.rs"]
-mod sync_delete_peer_test;
+mod tests {
+    mod delete_peer;
+}

@@ -24,7 +24,7 @@ Client message handlers organized by domain. Each submodule processes a category
 | `switcher/switcher_error.rs` | Switcher-specific error construction |
 | `document.rs` | Document content ops entry point (delegates to `document/` submodule) |
 | `merge.rs` | Merge operations entry point (delegates to `merge/` submodule) |
-| `sync.rs` | Sync operations entry point (delegates to `sync/` submodule) |
+| `sync/mod.rs` | Sync operations entry point |
 | `key_exchange.rs` | E2EE key exchange: provides RepoKey over authenticated WebSocket |
 | `search.rs` | Full-text search handler (feature-gated behind `search`) |
 | `plugin.rs` | Plugin RPC handler: routes to Rhai plugins or agent-bridge |
