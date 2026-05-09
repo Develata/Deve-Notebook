@@ -14,11 +14,12 @@
 //! **Post-condition**: Ledger 包含新的 Content/Structure Facts，快照已更新，提交记录已创建，暂存区已清空。
 
 use crate::ledger::RepoManager;
-use crate::ledger::manager::commit_plan;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::ledger::manager::git_mirror_queue_runtime;
+use crate::ledger::manager::{commit_plan, commit_preflight};
 use crate::ledger::range;
 use crate::source_control::{CommitInfo, commits, staging};
-use crate::utils::path::to_forward_slash;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::PathBuf;
 
 impl RepoManager {
@@ -50,9 +51,9 @@ impl RepoManager {
         }
         let mut targets = commit_plan::build_targets(staged);
         targets.sort_by_key(|target| target.delete_only);
-        self.preflight_staged_commit_targets(repo_name, &targets)?;
+        commit_preflight::preflight_staged_commit_targets(self, repo_name, &targets)?;
         #[cfg(not(target_arch = "wasm32"))]
-        let git_mirror_repo_id = self.git_mirror_queue_repo_id(repo_name);
+        let git_mirror_repo_id = git_mirror_queue_runtime::queue_repo_id(self, repo_name);
 
         let doc_count = targets.len() as u32;
         for target in &targets {
@@ -92,97 +93,5 @@ impl RepoManager {
             message
         );
         Ok(commit)
-    }
-
-    fn preflight_staged_commit_targets(
-        &self,
-        repo_name: &str,
-        targets: &[commit_plan::CommitTarget],
-    ) -> Result<()> {
-        for target in targets.iter().filter(|target| !target.delete_only) {
-            let disk_path = self.local_repo_workspace_path(repo_name, &target.path)?;
-            std::fs::read_to_string(&disk_path)
-                .with_context(|| format!("Failed to read staged workspace file {:?}", disk_path))?;
-            self.preflight_staged_upsert_identity(repo_name, target)?;
-        }
-        Ok(())
-    }
-
-    fn preflight_staged_upsert_identity(
-        &self,
-        repo_name: &str,
-        target: &commit_plan::CommitTarget,
-    ) -> Result<()> {
-        let Some(doc_id) = target.doc_id else {
-            return Ok(());
-        };
-        if let Some(bound_doc_id) = self.get_tracked_docid_in_local_repo(repo_name, &target.path)?
-            && bound_doc_id != doc_id
-        {
-            anyhow::bail!(
-                "source control upsert target path mismatch: staged path {} is bound to {}, but staged doc is {}",
-                target.path,
-                bound_doc_id,
-                doc_id
-            );
-        }
-        let Some(meta) = self.get_file_meta_for_doc_in_local_repo(repo_name, doc_id)? else {
-            return Ok(());
-        };
-        let current_path = to_forward_slash(&meta.path);
-        if current_path != target.path && !target.has_rename_evidence {
-            anyhow::bail!(
-                "source control upsert target path mismatch: doc {} is at {}, staged path {} lacks rename evidence",
-                doc_id,
-                current_path,
-                target.path
-            );
-        }
-        Ok(())
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    fn git_mirror_queue_repo_id(&self, repo_name: &str) -> Option<crate::models::RepoId> {
-        let repo_root = match self.local_repo_workspace_root(repo_name) {
-            Ok(root) => root,
-            Err(err) => {
-                tracing::warn!(
-                    repo_name,
-                    error = %err,
-                    "Git mirror queue skipped because workspace root is unavailable"
-                );
-                return None;
-            }
-        };
-        match crate::git_bridge::inspect_repo_root(&repo_root) {
-            Ok(status) if status.state == crate::git_bridge::GitMirrorState::Ready => {}
-            Ok(_) => return None,
-            Err(err) => {
-                tracing::warn!(
-                    repo_name,
-                    error = %err,
-                    "Git mirror queue skipped because mirror status could not be inspected"
-                );
-                return None;
-            }
-        }
-        match self.run_on_local_repo(repo_name, Self::read_repo_info_from_db) {
-            Ok(Some(info)) => Some(info.uuid),
-            Ok(None) => {
-                tracing::warn!(
-                    repo_name,
-                    "Git mirror queue skipped because repository metadata is missing"
-                );
-                None
-            }
-            Err(err) => {
-                tracing::warn!(
-                    repo_name,
-                    error = %err,
-                    "Git mirror queue skipped because repository metadata could not be read"
-                );
-                None
-            }
-        }
     }
 }
