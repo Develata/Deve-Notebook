@@ -8,7 +8,8 @@ use crate::ledger::RepoManager;
 use crate::models::DocId;
 use crate::source_control::pending_fs;
 use crate::state::reconstruct_content;
-use anyhow::{Context, Result};
+use crate::utils::fs::checked_exists;
+use anyhow::Result;
 use std::path::Path;
 
 use super::projection_cleanup::drop_unanchored_projection_path;
@@ -94,8 +95,5 @@ pub(super) fn restore_doc_projection_at_path(
 }
 
 pub(super) fn workspace_path_exists(path: &Path, context: &str) -> Result<bool> {
-    match path.try_exists() {
-        Ok(exists) => Ok(exists),
-        Err(err) => Err(err).context(context.to_string()),
-    }
+    checked_exists(path, context)
 }
