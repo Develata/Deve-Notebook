@@ -61,5 +61,4 @@ fn read_repo_key(path: &Path) -> Result<Option<RepoKey>> {
 }
 
 #[cfg(test)]
-#[path = "storage_test.rs"]
 mod tests;
