@@ -1,10 +1,12 @@
 use super::{GitMirrorPushOptions, push_mirror, validate_push_name};
 use crate::git_bridge::{
-    GitMirrorCommitState, GitMirrorRunOptions, get_record, run_pending_mirror,
+    GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorPushError, GitMirrorRunOptions,
+    get_record, run_pending_mirror,
 };
 use crate::ledger::RepoManager;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
 use crate::source_control::{ChangeStatus, CommitInfo};
+use redb::TableHandle;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::TempDir;
@@ -242,5 +244,39 @@ fn push_mirror_refuses_git_head_without_deve_mapping() {
             .any(|blocker| blocker.reason.contains("without Deve mirror mapping")),
         "{:?}",
         report.blockers
+    );
+}
+
+#[test]
+fn push_mirror_propagates_store_error_instead_of_blocker() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let repo_root = dir.path().join("repo");
+    init_git_repo(&repo_root);
+    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
+    {
+        let txn = db.begin_write().expect("write txn");
+        {
+            let _ = txn
+                .open_table(redb::TableDefinition::<u64, u64>::new(
+                    GIT_MIRROR_COMMITS_TABLE.name(),
+                ))
+                .expect("wrong table type");
+        }
+        txn.commit().expect("commit wrong table");
+    }
+
+    let err = push_mirror(
+        &db,
+        &repo_root,
+        GitMirrorPushOptions {
+            remote: Some("origin".into()),
+            branch: Some("main".into()),
+        },
+    )
+    .expect_err("store errors must not become user repair blockers");
+
+    assert!(
+        matches!(err, GitMirrorPushError::Store(_)),
+        "unexpected error: {err:?}"
     );
 }
