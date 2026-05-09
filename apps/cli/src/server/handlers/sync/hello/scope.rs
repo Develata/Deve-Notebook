@@ -7,7 +7,6 @@ use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
-#[path = "hello_scope_browser.rs"]
 mod browser;
 
 pub(super) struct SyncHelloScopeFailure {

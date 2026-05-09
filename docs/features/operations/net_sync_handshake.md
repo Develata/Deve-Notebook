@@ -66,7 +66,7 @@
 3. `Concrete Modules`:
    - `apps/web/src/hooks/use_core/effects/handshake_send.rs`
    - `apps/web/src/hooks/use_core/effects/handshake_send_delivery.rs`
-   - `apps/cli/src/server/handlers/sync/hello.rs`
+   - `apps/cli/src/server/handlers/sync/hello/mod.rs`
    - `apps/cli/src/server/handlers/sync/writer.rs`
 4. `Core Subsystems`:
    - `protocol`
@@ -78,8 +78,8 @@
 2. `Application Response`: 校验 repo/scope 是否仍匹配，匹配后设置 `handshake_ready` 并更新 peer/vector。
 3. `Concrete Modules`:
    - `apps/web/src/hooks/use_core/effects/message_sync.rs`
-   - `apps/cli/src/server/handlers/sync/hello.rs`
-   - `apps/cli/src/server/handlers/sync/hello_scope.rs`
+   - `apps/cli/src/server/handlers/sync/hello/mod.rs`
+   - `apps/cli/src/server/handlers/sync/hello/scope.rs`
 4. `Core Subsystems`:
    - `protocol`
    - `sync`

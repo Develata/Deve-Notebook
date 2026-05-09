@@ -11,11 +11,11 @@ Sync engine handlers at the WebSocket boundary. Manages the sync lifecycle: hell
 
 | File | Description |
 |------|-------------|
-| `hello.rs` | Sync hello handshake — initiates peer connection |
-| `hello_response.rs` | Sync hello response signing and emission |
-| `hello_outbound.rs` | Non-browser SyncHello follow-up request/push emission |
-| `hello_scope.rs` | Scope validation during sync hello |
-| `hello_scope_browser.rs` | Browser-specific SyncHello scope validation |
+| `hello/mod.rs` | Sync hello handshake — initiates peer connection |
+| `hello/response.rs` | Sync hello response signing and emission |
+| `hello/outbound.rs` | Non-browser SyncHello follow-up request/push emission |
+| `hello/scope.rs` | Scope validation during sync hello |
+| `hello/scope/browser.rs` | Browser-specific SyncHello scope validation |
 | `engine.rs` | Sync engine orchestration |
 | `snapshot.rs` | Snapshot exchange during sync |
 | `transfer.rs` | Data transfer operations |

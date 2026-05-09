@@ -11,14 +11,11 @@ use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::SessionProof;
 use std::sync::Arc;
 
-#[path = "hello_outbound.rs"]
-mod hello_outbound;
-#[path = "hello_response.rs"]
-mod hello_response;
-#[path = "hello_scope.rs"]
-mod hello_scope;
+mod outbound;
+mod response;
+mod scope;
 
-use self::hello_scope::validate_scope;
+use self::scope::validate_scope;
 use super::cleanup::clear_sync_hello_scope_failure;
 use super::engine;
 use super::errors;
@@ -120,7 +117,7 @@ pub(super) async fn handle(
     session.set_offered_sync_sources(result.to_send.iter().map(|req| req.peer_id.clone()));
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 
-    match hello_response::send(state, ch, repo_id, scope_nonce, local_peer_id, local_vector) {
+    match response::send(state, ch, repo_id, scope_nonce, local_peer_id, local_vector) {
         Ok(()) => {}
         Err(err) => {
             clear_sync_hello_scope_failure(session, false);
@@ -133,7 +130,7 @@ pub(super) async fn handle(
         return;
     }
 
-    hello_outbound::send(
+    outbound::send(
         ch,
         session,
         &outbound_engine,
