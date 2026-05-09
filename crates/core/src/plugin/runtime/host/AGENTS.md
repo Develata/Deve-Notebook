@@ -17,6 +17,7 @@ Host API functions exposed to Rhai plugin scripts. Provides file system access, 
 | `git/target.rs` | Git target resolution |
 | `note.rs` | Note manipulation API |
 | `search.rs` | Search API for plugins |
+| `search/` | Search host helpers and tests |
 | `chat.rs` | Chat API for plugins |
 | `skill.rs` | Skill execution API |
 | `path_guard.rs` | Path guard — constrains plugin file access to vault |

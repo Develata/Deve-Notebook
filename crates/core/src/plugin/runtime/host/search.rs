@@ -19,14 +19,10 @@ use regex::Regex;
 use rhai::{Engine, EvalAltResult};
 use std::sync::Arc;
 
-#[path = "search_output.rs"]
 mod output;
-#[path = "search_scope.rs"]
 mod scope;
 #[cfg(test)]
-#[path = "search_test.rs"]
 mod tests;
-#[path = "search_walk.rs"]
 mod walk;
 
 /// 最大返回结果数（768 MB 内存安全阈值）
