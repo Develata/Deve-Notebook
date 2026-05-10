@@ -91,5 +91,4 @@ fn import_apply_command(repo_name: &str) -> String {
 }
 
 #[cfg(test)]
-#[path = "git_push_output_test.rs"]
-mod push_tests;
+mod tests;

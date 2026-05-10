@@ -10,17 +10,11 @@ use deve_core::git_bridge::{
     GitMirrorSummary,
 };
 
-#[path = "git_output_command.rs"]
 mod command;
-#[path = "git_import_output.rs"]
 mod import_output;
-#[path = "git_push_output.rs"]
 mod push_output;
-#[path = "git_output_record.rs"]
 mod record;
-#[path = "git_output_run_report.rs"]
 mod run_report;
-#[path = "git_output_status.rs"]
 mod status;
 
 use import_output::{import_apply_report_lines, import_plan_lines};
@@ -66,9 +60,7 @@ pub(super) fn print_import_apply_report(repo_name: &str, report: &GitImportApply
 }
 
 #[cfg(test)]
-#[path = "git_output_test.rs"]
 mod tests;
 
 #[cfg(test)]
-#[path = "git_output_repair_action_test.rs"]
 mod repair_action_tests;

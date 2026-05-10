@@ -108,5 +108,4 @@ fn change_status_label(status: ChangeStatus) -> &'static str {
 }
 
 #[cfg(test)]
-#[path = "git_import_output_test.rs"]
 mod tests;
