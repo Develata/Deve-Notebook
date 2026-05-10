@@ -13,6 +13,7 @@ Minimal native desktop shell skeleton. This crate fixes the adapter/session/boot
 - The shell may validate and inject endpoint/session bootstrap data, but must not write ledger, vault, source-control, search index, `.git/`, or `.notegit/` authority.
 - Session material must remain out of URLs, logs, localStorage, and bootstrap payloads.
 - Use `deve_core::native_adapter` as the shared contract source.
+- `src/shell.rs` is the shell facade; shell behavior slices live under `src/shell/`, and shell tests live under `src/shell_test/` plus `src/shell_recovery_test/`.
 
 ## Testing
 

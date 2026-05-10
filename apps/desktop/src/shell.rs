@@ -5,11 +5,8 @@ use deve_core::native_adapter::{NativeEndpointReady, NativeShellCore};
 
 use crate::types::{DesktopServiceState, DesktopSessionMaterial, DesktopShellError};
 
-#[path = "shell_bootstrap.rs"]
 mod bootstrap;
-#[path = "shell_lifecycle.rs"]
 mod lifecycle;
-#[path = "shell_recovery.rs"]
 mod recovery;
 
 #[derive(Debug, Clone)]
