@@ -199,5 +199,4 @@ fn resolve_effective(cap: &AiBackendCapabilities) -> BackendSendDecision {
 }
 
 #[cfg(test)]
-#[path = "ai_backend_test.rs"]
 mod tests;

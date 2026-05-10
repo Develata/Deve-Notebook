@@ -14,7 +14,6 @@
 //! 3. 读取服务器消息并更新信号
 //! 4. 将连接会话委托给 `connection_session`
 
-#[path = "connection_session.rs"]
 mod session;
 
 use futures::channel::mpsc::UnboundedReceiver;

@@ -175,5 +175,4 @@ fn trim_base(base: String) -> String {
 }
 
 #[cfg(test)]
-#[path = "native_bootstrap_test.rs"]
 mod tests;

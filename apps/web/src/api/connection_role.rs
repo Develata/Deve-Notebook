@@ -163,5 +163,4 @@ fn format_repo_health(json: &serde_json::Value) -> String {
 }
 
 #[cfg(test)]
-#[path = "connection_role_test.rs"]
 mod tests;
