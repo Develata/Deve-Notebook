@@ -10,7 +10,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 
-#[path = "common/mod.rs"]
 mod common;
 
 pub struct Harness {
