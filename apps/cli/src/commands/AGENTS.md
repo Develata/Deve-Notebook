@@ -11,6 +11,8 @@ Implements all CLI subcommands. Each subcommand is a separate module that initia
 |------|-------------|
 | `mod.rs` | Module declarations for all subcommands |
 | `serve.rs` | Starts the Axum server; detects port conflicts and switches to proxy/plugin-host mode |
+| `serve/support.rs` | Serve command runtime initialization and port helpers |
+| `serve/tests.rs` | Serve command tests |
 | `init.rs` | Initializes vault directory structure, ledger, config.toml, and .env |
 | `scan.rs` | Indexes all Markdown files in the vault into the ledger |
 | `watch.rs` | Starts filesystem watcher for real-time vault change tracking (blocks until Ctrl+C) |

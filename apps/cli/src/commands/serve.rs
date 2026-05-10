@@ -16,12 +16,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::{Duration, sleep, timeout};
 
-#[path = "serve_support.rs"]
-mod serve_support;
+mod support;
 #[cfg(test)]
-#[path = "serve_test.rs"]
 mod tests;
-use serve_support::{find_free_port, init_runtime, load_plugins};
+use support::{find_free_port, init_runtime, load_plugins};
 
 pub struct ServeOptions {
     pub port: u16,
