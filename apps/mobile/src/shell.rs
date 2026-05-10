@@ -5,11 +5,8 @@ use deve_core::native_adapter::{NativeEndpointReady, NativeServiceSuspended, Nat
 
 use crate::types::{MobileServiceState, MobileSessionMaterial, MobileShellError};
 
-#[path = "shell_bootstrap.rs"]
 mod bootstrap;
-#[path = "shell_lifecycle.rs"]
 mod lifecycle;
-#[path = "shell_recovery.rs"]
 mod recovery;
 
 #[derive(Debug, Clone)]

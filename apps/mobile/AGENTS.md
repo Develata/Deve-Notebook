@@ -15,6 +15,7 @@ Minimal native mobile shell skeleton. This crate fixes mobile lifecycle, endpoin
 - Resume from background/suspension must require fresh auth/node-role/WS handshake and current `scope_nonce`.
 - Session material must remain out of URLs, logs, Web localStorage, system clipboard, and bootstrap payloads.
 - Use `deve_core::native_adapter` as the shared contract source.
+- `src/shell.rs` is the shell facade; shell behavior slices live under `src/shell/`, and shell tests live under `src/shell_test/` plus `src/shell_recovery_test/`.
 
 ## Testing
 
