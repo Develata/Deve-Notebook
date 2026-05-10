@@ -6,7 +6,6 @@
 //! document projections, then delegates all link parsing to `deve_core::graph`.
 
 #[cfg(test)]
-#[path = "graph_test.rs"]
 mod tests;
 
 use crate::graph_projection::project_repo_graph;

@@ -89,7 +89,7 @@ fn set_rejects_nested_key_when_parent_is_scalar() {
 
 #[test]
 fn supported_config_keys_match_settings_plan_tables() {
-    let docs = include_str!("../../../../docs/plan/13_settings.md");
+    let docs = include_str!("../../../../../docs/plan/13_settings.md");
     let documented = extract_documented_config_rows(docs)
         .into_keys()
         .collect::<BTreeSet<_>>();
@@ -100,7 +100,7 @@ fn supported_config_keys_match_settings_plan_tables() {
 
 #[test]
 fn supported_config_schema_matches_settings_plan_type_and_choices() {
-    let docs = include_str!("../../../../docs/plan/13_settings.md");
+    let docs = include_str!("../../../../../docs/plan/13_settings.md");
     let documented = extract_documented_config_rows(docs);
 
     for spec in config_key_specs() {

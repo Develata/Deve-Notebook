@@ -169,5 +169,4 @@ where
 }
 
 #[cfg(test)]
-#[path = "live_proxy_test.rs"]
 mod tests;

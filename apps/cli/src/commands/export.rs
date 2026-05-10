@@ -7,10 +7,8 @@
 //! `LEDGER_OPS` is emitted as one line, global_seq monotonic, via either
 //! direct DB access or live-proxy fallback when the server holds the lock.
 
-#[path = "export_doc.rs"]
-mod export_doc;
+mod doc;
 #[cfg(test)]
-#[path = "export_test.rs"]
 mod tests;
 
 use crate::admin_api::ExportEntry;
@@ -99,16 +97,16 @@ fn run_markdown(
     let repo_name = resolve_local_repo_arg(&repo, repo_name.as_deref())?;
     guard_markdown_projection(&repo, &repo_name, allow_degraded_projection)?;
     if let Some(doc) = doc {
-        return export_doc::export_markdown_doc(
+        return doc::export_markdown_doc(
             &repo,
             &repo_name,
-            export_doc::parse_doc_id(&doc)?,
-            export_doc::output_file(output)?,
+            doc::parse_doc_id(&doc)?,
+            doc::output_file(output)?,
             allow_degraded_projection,
         );
     }
     let output_dir = PathBuf::from(output.unwrap_or_else(|| "export".into()));
-    let exported = export_doc::export_repo_markdown(&repo, &repo_name, &output_dir)?;
+    let exported = doc::export_repo_markdown(&repo, &repo_name, &output_dir)?;
     println!("Exported {} markdown files to {:?}", exported, output_dir);
     Ok(())
 }

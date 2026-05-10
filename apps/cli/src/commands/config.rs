@@ -7,7 +7,6 @@ use std::path::Path;
 use toml::Value;
 use toml::value::Table;
 
-#[path = "config_schema.rs"]
 mod schema;
 
 const CONFIG_FILE: &str = "config.toml";
@@ -89,5 +88,4 @@ fn validate_config(output: &str) -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
-#[path = "config_test.rs"]
 mod tests;

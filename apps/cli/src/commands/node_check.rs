@@ -139,5 +139,4 @@ fn authority_corrupt_summary(report: &ProjectionCheckResponse) -> String {
 }
 
 #[cfg(test)]
-#[path = "node_check_test.rs"]
 mod tests;

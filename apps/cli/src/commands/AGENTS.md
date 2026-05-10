@@ -16,12 +16,18 @@ Implements all CLI subcommands. Each subcommand is a separate module that initia
 | `watch.rs` | Starts filesystem watcher for real-time vault change tracking (blocks until Ctrl+C) |
 | `dump.rs` | Debug tool: prints all ops for a file path and reconstructs content |
 | `export.rs` | Exports entire ledger to JSONL format for backup/migration |
+| `export/doc.rs` | Markdown single-document export helpers |
+| `export/tests.rs` | Export command tests |
 | `verify_p2p.rs` | Simulates multi-node P2P sync to verify shadow repo isolation and CRDT merging |
 | `seed.rs` | Copies local repo ops into a shadow repo for testing (test/migration only) |
 | `node_check.rs` | Checks and optionally repairs node consistency (missing/orphan nodes) |
+| `node_check/tests.rs` | Node-check command tests |
 | `repo_arg.rs` | Shared helper for resolving `--repo` CLI arguments (supports both UUID and name) |
 | `live_proxy.rs` | HTTP proxy client for CLI commands when the database is locked by a running server |
-| `live_proxy_test.rs` | Tests for the live proxy port hint mechanism |
+| `live_proxy/tests.rs` | Tests for the live proxy port hint mechanism |
+| `config/schema.rs` | `deve_cli config set` schema whitelist |
+| `config/tests.rs` | Config command tests |
+| `graph/tests.rs` | Graph command tests |
 
 ## Subdirectories
 | Directory | Purpose |
