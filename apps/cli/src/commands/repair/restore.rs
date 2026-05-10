@@ -152,5 +152,4 @@ fn overwrite_patch(current: &str, target: &str) -> Vec<Op> {
 }
 
 #[cfg(test)]
-#[path = "restore_test.rs"]
 mod tests;

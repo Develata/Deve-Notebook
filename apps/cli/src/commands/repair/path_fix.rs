@@ -233,8 +233,6 @@ fn prune_empty_parents(root: PathBuf, start: Option<&std::path::Path>) {
 }
 
 #[cfg(test)]
-#[path = "path_fix_rollback_test.rs"]
 mod rollback_tests;
 #[cfg(test)]
-#[path = "path_fix_test.rs"]
 mod tests;

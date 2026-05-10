@@ -3,7 +3,6 @@
 //!   - 06_repository#tree-projection-contract
 
 #[cfg(test)]
-#[path = "check_test.rs"]
 mod check_test;
 mod path_fix;
 mod rebuild;

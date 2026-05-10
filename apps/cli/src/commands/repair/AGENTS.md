@@ -15,7 +15,12 @@ Implements the `repair` CLI subcommand which recovers from various forms of loca
 | `weird_paths.rs` | Quarantines directories with `.md` extensions (invalid filesystem layout) with rollback |
 | `restore.rs` | Restores corrupted documents from backup by diffing current vs backup content and patching |
 | `rebuild.rs` | Rebuilds the file projection for repos via `SyncManager::rebuild_projection_local_repo` |
-| `*_test.rs` | Test files for path_fix, restore, and weird_paths |
+| `check_test/mod.rs` | Repair preflight check tests |
+| `path_fix/tests.rs` | Path-fix repair tests |
+| `path_fix/rollback_tests.rs` | Path-fix rollback tests |
+| `restore/tests.rs` | Restore repair tests |
+| `rebuild/tests.rs` | Projection rebuild tests |
+| `weird_paths/tests.rs` | Weird-path quarantine tests |
 
 ## For AI Agents
 

@@ -71,5 +71,4 @@ fn print_authority_corruption(corruption: &AuthorityCorruption) {
 }
 
 #[cfg(test)]
-#[path = "rebuild_test.rs"]
 mod tests;

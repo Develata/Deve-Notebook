@@ -135,5 +135,4 @@ fn unique_path(path: PathBuf) -> Result<PathBuf> {
 }
 
 #[cfg(test)]
-#[path = "weird_paths_test.rs"]
 mod tests;
