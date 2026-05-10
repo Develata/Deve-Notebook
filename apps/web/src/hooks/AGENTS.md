@@ -13,6 +13,7 @@ Reactive hooks for the web frontend. Includes layout hooks, outline management, 
 |------|-------------|
 | `mod.rs` | Hook module declarations |
 | `use_layout.rs` | Layout state hook (sidebar, panels) |
+| `use_layout/` | Layout resize and persistence helpers |
 | `use_outline.rs` | Document outline hook |
 | `use_ctrl_key.rs` | Ctrl/Cmd key detection hook |
 

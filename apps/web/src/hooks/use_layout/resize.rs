@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 08_ui_design_01_web#web-layout-persistence
 //!
-use super::use_layout_storage::clamp;
+use super::storage::clamp;
 use leptos::prelude::*;
 use web_sys::PointerEvent;
 

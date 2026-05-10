@@ -14,6 +14,7 @@ Keyboard shortcut system. Defines shortcuts, manages a global registry, and hand
 | `mod.rs` | Shortcut module entry |
 | `config.rs` | Shortcut configuration and default bindings |
 | `global.rs` | Global keyboard event listener |
+| `global/` | Global shortcut handler helpers |
 | `registry.rs` | Shortcut registry — maps key combos to actions |
 | `types.rs` | Shortcut type definitions |
 

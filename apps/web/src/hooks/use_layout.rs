@@ -4,18 +4,16 @@
 //!
 //! Layout Hook for resizable sidebar, chat panel, and outer gutter widths.
 
-use self::use_layout_resize::{
+use self::resize::{
     ResizeBounds, ResizeOutputSignals, ResizeStateSignals, ResizeTarget, do_resize_callback,
     start_resize_callback, stop_resize_callback,
 };
-use self::use_layout_storage::{clamp, read_width, write_width};
+use self::storage::{clamp, read_width, write_width};
 use leptos::prelude::*;
 use web_sys::PointerEvent;
 
-#[path = "use_layout_resize.rs"]
-mod use_layout_resize;
-#[path = "use_layout_storage.rs"]
-mod use_layout_storage;
+mod resize;
+mod storage;
 
 /// 布局钩子返回类型
 pub type LayoutHookReturn = (

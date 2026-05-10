@@ -14,9 +14,7 @@
 
 #![allow(dead_code)] // 快捷键系统模块预留
 
-#[path = "global_handlers.rs"]
 mod handlers;
-#[path = "global_search_box.rs"]
 mod search_box;
 
 use super::types::KeyCombo;
