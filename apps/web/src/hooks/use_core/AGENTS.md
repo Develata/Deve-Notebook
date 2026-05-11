@@ -46,6 +46,8 @@ Core application state management hub. The largest hook module — manages WebSo
 | `effects_sc_test_read_lists.rs` | Source-control read-list test harness |
 | `effects_sc_test_read_lists_changes.rs` | ChangesList scope dispatch tests |
 | `effects_sc_test_read_lists_history.rs` | CommitHistory scope dispatch tests |
+| `effects_sc_feedback/` | Source-control feedback tests |
+| `effects_switch/` | Repo/branch switch effect slices and tests |
 | `storage_runtime.rs` | Storage runtime integration |
 | `storage_runtime/` | Storage bootstrap/effect/repo helpers |
 | `switch_nonce.rs` | Switch nonce tracking |

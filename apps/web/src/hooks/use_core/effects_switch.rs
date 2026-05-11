@@ -6,16 +6,12 @@ use deve_core::models::PeerId;
 use leptos::prelude::*;
 
 use super::types::{PendingBranchTarget, RepoSwitchSignals};
-#[path = "effects_switch_branch.rs"]
 mod branch;
-#[path = "effects_switch_repo.rs"]
 mod repo;
 
 #[cfg(test)]
-#[path = "effects_switch_branch_test.rs"]
 mod branch_tests;
 #[cfg(test)]
-#[path = "effects_switch_repo_test.rs"]
 mod repo_tests;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

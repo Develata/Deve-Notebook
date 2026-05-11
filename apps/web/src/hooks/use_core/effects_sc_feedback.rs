@@ -8,7 +8,6 @@ use leptos::prelude::*;
 use super::sync_banner_notice::show_temporary_sync_banner;
 
 #[cfg(test)]
-#[path = "effects_sc_feedback_test.rs"]
 mod tests;
 
 pub(crate) fn show_file_op_feedback(
