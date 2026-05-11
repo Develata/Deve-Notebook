@@ -57,7 +57,7 @@ authority 仍是 ledger facts 与 commit anchors。
 - `MergeBase`
 - `ConflictSet`
 
-### 2.3 Authority Rule
+### 2.3 Authority Rule {#authority-diff-core}
 
 - 文本差异最终必须收敛为 `Content Facts`。
 - rename / move / create / delete 最终必须收敛为 `Structure Facts`。

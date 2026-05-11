@@ -362,7 +362,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 远端恶意数据只能污染对应 remote mirror，不得自动污染 local ledger
 - merge 到 local 必须是显式用户动作
 
-### 10.4 Remote Shadow Apply Atomicity
+### 10.4 Remote Shadow Apply Atomicity {#remote-shadow-apply-atomicity}
 
 - `SyncPush` / `SyncPushSnapshot` 必须先完成 payload 解密，再进入 storage 写入。
 - 增量 payload 的 ledger append 与 tree projection 必须在同一个 shadow repo 写事务内完成；中途校验或 projection 失败时不得留下前序 op。

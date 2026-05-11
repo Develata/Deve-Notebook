@@ -93,13 +93,16 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_storage#browser-storage-layering` | `### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
 | `04_storage#internal-path-normalization` | `### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
 | `05_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
+| `05_network#remote-shadow-apply-atomicity` | `### 10.4 Remote Shadow Apply Atomicity` | remote shadow apply、snapshot replay 与 local write fault 的原子性/隔离合同 |
 | `05_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `05_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
 | `06_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
 | `06_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
+| `06_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
 | `06_repository#repo-selector-resolution-contract` | `### 2.5 Selector Inputs and Logical Identity` | UUID-first selector 解析、别名恢复与歧义 fail-closed 合同 |
 | `06_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
 | `06_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
+| `07_diff_logic#authority-diff-core` | `### 2.3 Authority Rule` | diff / stage / merge 最终收敛到 ledger facts 的 authority 边界 |
 | `07_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `07_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
 | `08_ui_design#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |

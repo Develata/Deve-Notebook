@@ -266,7 +266,7 @@ ReadonlyDegraded
   - **MUST** 清理 stale last scope
   - **MUST** 重新 bootstrap 健康 repo 列表
 
-## 7. Recovery / Repair Contract
+## 7. Recovery / Repair Contract {#repo-health-and-repair}
 
 ### 7.1 Selector Recovery
 
