@@ -13,7 +13,7 @@
 //!
 //! - `App`: 根组件，提供语言环境上下文和认证状态管理。
 
-use self::app_auth_monitor::{
+use self::auth_monitor::{
     current_page_active, mount_visibility_listener, should_run_session_probe,
 };
 use crate::api::{AuthProbe, probe_auth_status};
@@ -25,8 +25,7 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
-#[path = "app_auth_monitor.rs"]
-mod app_auth_monitor;
+mod auth_monitor;
 
 /// 根应用程序组件
 ///

@@ -13,6 +13,7 @@ Root source directory for the web frontend. Contains the app entry point, API la
 |------|-------------|
 | `main.rs` | WASM entry point — mounts the Leptos app |
 | `app.rs` | Root App component — auth state, locale context, layout routing |
+| `app/` | Root App helper modules |
 
 ## Subdirectories
 
