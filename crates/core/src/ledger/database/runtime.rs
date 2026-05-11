@@ -34,9 +34,7 @@ impl<'a> RepoDatabaseRuntime<'a> {
             .manager
             .resolve_local_repo_name_for_execution(None, Some(name))?;
         let db = self.manager.get_or_open_local_db(&stem)?;
-        let repo_id = self
-            .manager
-            .get_repo_info_for(None, Some(&stem))?
+        let repo_id = RepoManager::read_repo_info_from_db(db.as_ref())?
             .map(|info| info.uuid)
             .ok_or_else(|| {
                 anyhow::anyhow!(
