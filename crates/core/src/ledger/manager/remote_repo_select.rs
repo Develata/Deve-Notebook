@@ -57,7 +57,6 @@ impl<'a> RepoCatalogRuntime<'a> {
         repo_id: uuid::Uuid,
     ) -> Result<Option<String>> {
         Ok(self
-            .manager
             .resolve_remote_repo_entry_by_id(peer_id, repo_id)?
             .filter(|entry| entry.is_switchable())
             .map(|entry| entry.stem))
