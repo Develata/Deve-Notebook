@@ -111,5 +111,4 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
 }
 
 #[cfg(test)]
-#[path = "snapshot_test.rs"]
 mod tests;

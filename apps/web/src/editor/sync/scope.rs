@@ -84,5 +84,4 @@ pub fn matches_scoped_message(
 }
 
 #[cfg(test)]
-#[path = "scope_test.rs"]
 mod tests;

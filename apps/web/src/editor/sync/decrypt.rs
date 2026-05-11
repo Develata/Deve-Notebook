@@ -75,7 +75,6 @@ pub(super) fn buffer_encrypted_ops_until_key(
 }
 
 #[cfg(test)]
-#[path = "decrypt_test.rs"]
 mod tests;
 
 /// 将解密后的 LedgerEntry 应用到编辑器
