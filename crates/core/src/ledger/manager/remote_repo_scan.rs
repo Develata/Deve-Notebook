@@ -5,8 +5,8 @@
 use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::remote_repo_scan_helpers::{
-    duplicate_catalog_ids, repaired_remote_repo_info, scanned_remote_repo_info,
-    validate_scanned_remote_entries,
+    checked_remote_peer_dir, duplicate_catalog_ids, repaired_remote_repo_info,
+    scanned_remote_repo_info, validate_scanned_remote_entries,
 };
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::repo_catalog_runtime::RepoCatalogRuntime;
@@ -16,41 +16,7 @@ use anyhow::{Result, anyhow};
 
 impl<'a> RepoCatalogRuntime<'a> {
     pub(crate) fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
-        let peer_dir = self
-            .manager
-            .checked_remotes_dir()?
-            .join(peer_id.to_filename());
-        match peer_dir.try_exists() {
-            Ok(true) => {}
-            Ok(false) => {
-                return Err(anyhow!(
-                    "Broken shadow peer {} while repairing catalog: directory missing",
-                    peer_id
-                ));
-            }
-            Err(err) => {
-                return Err(anyhow!(
-                    "Failed to stat remote peer directory {:?} while repairing catalog: {}",
-                    peer_dir,
-                    err
-                ));
-            }
-        }
-        if !std::fs::metadata(&peer_dir)
-            .map_err(|err| {
-                anyhow!(
-                    "Failed to read remote peer directory metadata {:?} while repairing catalog: {}",
-                    peer_dir,
-                    err
-                )
-            })?
-            .is_dir()
-        {
-            return Err(anyhow!(
-                "Broken shadow peer {} while repairing catalog: expected directory",
-                peer_id
-            ));
-        }
+        let peer_dir = checked_remote_peer_dir(self.manager, peer_id, "repairing catalog")?;
         let mut repairs = Vec::new();
         for (path, stem) in redb_repo_entries(&peer_dir, "repairing remote catalog")? {
             let repair = repaired_remote_repo_info(&path, &stem).map_err(|err| {
@@ -113,41 +79,7 @@ impl<'a> RepoCatalogRuntime<'a> {
         &self,
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
-        let peer_dir = self
-            .manager
-            .checked_remotes_dir()?
-            .join(peer_id.to_filename());
-        match peer_dir.try_exists() {
-            Ok(true) => {}
-            Ok(false) => {
-                return Err(anyhow!(
-                    "Broken shadow peer {} while pure scanning catalog: directory missing",
-                    peer_id
-                ));
-            }
-            Err(err) => {
-                return Err(anyhow!(
-                    "Failed to stat remote peer directory {:?} while pure scanning catalog: {}",
-                    peer_dir,
-                    err
-                ));
-            }
-        }
-        if !std::fs::metadata(&peer_dir)
-            .map_err(|err| {
-                anyhow!(
-                    "Failed to read remote peer directory metadata {:?} while pure scanning catalog: {}",
-                    peer_dir,
-                    err
-                )
-            })?
-            .is_dir()
-        {
-            return Err(anyhow!(
-                "Broken shadow peer {} while pure scanning catalog: expected directory",
-                peer_id
-            ));
-        }
+        let peer_dir = checked_remote_peer_dir(self.manager, peer_id, "pure scanning catalog")?;
         let mut repos = Vec::new();
         for (path, stem) in redb_repo_entries(&peer_dir, "pure scanning remote catalog")? {
             let info = scanned_remote_repo_info(self.manager, &path, &stem).map_err(|err| {

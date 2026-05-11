@@ -8,7 +8,51 @@ use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::PeerId;
 use anyhow::{Result, anyhow};
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+pub(super) fn checked_remote_peer_dir(
+    manager: &RepoManager,
+    peer_id: &PeerId,
+    action: &str,
+) -> Result<PathBuf> {
+    let peer_dir = manager.checked_remotes_dir()?.join(peer_id.to_filename());
+    match peer_dir.try_exists() {
+        Ok(true) => {}
+        Ok(false) => {
+            return Err(anyhow!(
+                "Broken shadow peer {} while {}: directory missing",
+                peer_id,
+                action
+            ));
+        }
+        Err(err) => {
+            return Err(anyhow!(
+                "Failed to stat remote peer directory {:?} while {}: {}",
+                peer_dir,
+                action,
+                err
+            ));
+        }
+    }
+    if !std::fs::metadata(&peer_dir)
+        .map_err(|err| {
+            anyhow!(
+                "Failed to read remote peer directory metadata {:?} while {}: {}",
+                peer_dir,
+                action,
+                err
+            )
+        })?
+        .is_dir()
+    {
+        return Err(anyhow!(
+            "Broken shadow peer {} while {}: expected directory",
+            peer_id,
+            action
+        ));
+    }
+    Ok(peer_dir)
+}
 
 pub(super) fn read_remote_repo_info_without_repair(
     _repo: &RepoManager,
