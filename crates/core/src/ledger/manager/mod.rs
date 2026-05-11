@@ -27,6 +27,7 @@ mod dir_structure_support;
 mod git_mirror_queue_runtime;
 mod local_repo_metadata_repair;
 mod local_repo_metadata_repair_support;
+pub(crate) use local_repo_metadata_repair::repair_local_repo_metadata;
 mod local_repo_names;
 mod local_repo_source_control_repair;
 mod merge_ops;

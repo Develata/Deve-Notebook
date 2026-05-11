@@ -3,6 +3,7 @@
 //!   - 06_repository#repo-catalog-contract
 //!   - 04_storage#repo-runtime-layout
 
+use crate::ledger::manager::local_repo_metadata_repair::repair_local_repo_metadata;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
 use anyhow::{Context, Result};
@@ -17,7 +18,7 @@ impl<'a> RepairRuntime<'a> {
     }
 
     pub(crate) fn repair_local_repo_catalog(&self) -> Result<()> {
-        RepoManager::repair_local_repo_metadata(
+        repair_local_repo_metadata(
             &self.manager.ledger_dir,
             &self.manager.local_repo_name,
             self.manager.local_db.as_ref(),

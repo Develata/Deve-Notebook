@@ -36,6 +36,7 @@ use std::sync::{Arc, RwLock};
 use super::RepoManager;
 use super::database::{cached_or_create_database, register_database};
 use super::init_reuse::should_reuse_existing_repo;
+use super::manager::repair_local_repo_metadata;
 use super::node_check;
 use super::schema::*;
 use super::source_control;
@@ -174,13 +175,7 @@ pub fn init(
         write_txn.commit()?;
     }
 
-    super::RepoManager::repair_local_repo_metadata(
-        &ledger_dir,
-        &final_name,
-        local_db.as_ref(),
-        None,
-        false,
-    )?;
+    repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref(), None, false)?;
 
     let repo = RepoManager {
         ledger_dir,

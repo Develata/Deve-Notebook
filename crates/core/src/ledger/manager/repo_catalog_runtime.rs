@@ -2,6 +2,7 @@
 //!   - 06_repository#repo-catalog-contract
 //!   - 06_repository#repo-scope-runtime
 
+use crate::ledger::manager::local_repo_metadata_repair::validate_local_repo_metadata;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
@@ -9,7 +10,7 @@ use anyhow::{Result, anyhow};
 
 impl RepoManager {
     pub(crate) fn refresh_local_repo_catalog(&self) -> Result<()> {
-        Self::validate_local_repo_metadata(
+        validate_local_repo_metadata(
             &self.ledger_dir,
             &self.local_repo_name,
             self.local_db.as_ref(),
