@@ -15,4 +15,10 @@ Command palette UI (Ctrl+K). Fuzzy search over registered commands.
 | `registry.rs` | Command registration |
 | `types.rs` | Command types |
 
+## Subdirectories
+
+| Directory | Purpose |
+|-----------|---------|
+| `registry/` | Git bridge and merge command registration helpers |
+
 <!-- MANUAL: -->

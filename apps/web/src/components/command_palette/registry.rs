@@ -10,9 +10,7 @@ use crate::components::main_layout::ChatControl;
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
-#[path = "registry_git.rs"]
 mod git;
-#[path = "registry_merge.rs"]
 mod merge;
 
 use git::{git_import_command, git_push_command, git_repair_command};
