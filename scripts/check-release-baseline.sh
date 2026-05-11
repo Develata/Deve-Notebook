@@ -140,5 +140,7 @@ contains "scripts/smoke-runtime-happy-path.sh" "ws_endpoint_register_writer_afte
 contains "scripts/smoke-runtime-happy-path.sh" "ws_edit_after_register_writer_emits_new_op_and_ack"
 contains "scripts/smoke-runtime-happy-path.sh" "ws_open_doc_and_history_read_back_registered_edit"
 contains "scripts/smoke-runtime-happy-path.sh" "restore_runs_only_on_clean_reconnect_edge"
+contains "scripts/smoke-runtime-happy-path.sh" "expected exactly one test"
+contains "docs/features/operations/release_quality_gates.md" "runtime happy-path smoke remains an explicit local/CI script gate"
 
 echo "release-baseline-check: ok"

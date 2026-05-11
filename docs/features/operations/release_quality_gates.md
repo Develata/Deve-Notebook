@@ -58,7 +58,7 @@
 
 1. Release dispatch enters the `test` job.
 2. Instruction interface is the CI job surface and its ordered verification steps.
-3. Flow coordination enforces lint, web WASM compatibility, runtime happy-path smoke, and test gates before publish.
+3. Flow coordination enforces lint, web WASM compatibility, and test gates before publish; runtime happy-path smoke remains an explicit local/CI script gate.
 4. Execution domains are CI release logic, quality gates, and runtime budget policy.
 
 ## Notes
