@@ -12,11 +12,8 @@ use std::rc::Rc;
 
 use super::state::CoreSignals;
 
-#[path = "storage_runtime_bootstrap.rs"]
 mod bootstrap;
-#[path = "storage_runtime_effect.rs"]
 mod effect;
-#[path = "storage_runtime_repo.rs"]
 mod repo;
 
 /// 初始化浏览器身份与 repo 级向量缓存。

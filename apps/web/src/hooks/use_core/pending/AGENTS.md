@@ -11,6 +11,9 @@ Pending operation tracking for optimistic UI updates. Tracks in-flight operation
 
 | File | Description |
 |------|-------------|
+| `history.rs` | Server-history reconciliation helpers |
+| `ops.rs` | Pending edit query and mutation helpers |
+| `ops_tests.rs` | Pending edit scope/operation tests |
 | `tests.rs` | Pending operation tests |
 
 <!-- MANUAL: -->

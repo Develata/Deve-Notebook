@@ -109,5 +109,4 @@ pub(crate) fn derive_sync_status(input: SyncStatusInput<'_>) -> SyncStatusSummar
 }
 
 #[cfg(test)]
-#[path = "status_summary_tests.rs"]
 mod tests;

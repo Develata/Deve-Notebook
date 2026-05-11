@@ -85,5 +85,4 @@ enum ScopePrefUpdate {
 }
 
 #[cfg(test)]
-#[path = "scope_prefs_test.rs"]
 mod tests;

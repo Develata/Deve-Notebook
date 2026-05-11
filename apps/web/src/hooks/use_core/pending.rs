@@ -5,9 +5,7 @@
 use deve_core::models::{DocId, Op, RepoId};
 use std::collections::HashMap;
 
-#[path = "pending_history.rs"]
 mod history;
-#[path = "pending_ops.rs"]
 mod ops;
 #[cfg(test)]
 mod tests;
@@ -63,5 +61,4 @@ pub use ops::{
     push_pending_edit,
 };
 #[cfg(test)]
-#[path = "pending_ops_test.rs"]
 mod ops_tests;

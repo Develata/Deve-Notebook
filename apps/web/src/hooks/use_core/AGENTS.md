@@ -41,7 +41,14 @@ Core application state management hub. The largest hook module — manages WebSo
 | `effects_sc_test_read_lists_changes.rs` | ChangesList scope dispatch tests |
 | `effects_sc_test_read_lists_history.rs` | CommitHistory scope dispatch tests |
 | `storage_runtime.rs` | Storage runtime integration |
+| `storage_runtime/` | Storage bootstrap/effect/repo helpers |
 | `switch_nonce.rs` | Switch nonce tracking |
+| `write_gate.rs` | Repo write/read gate facade |
+| `write_gate/` | Repo gate logic and tests |
+| `status_summary.rs` | Sync status summary derivation |
+| `status_summary/` | Sync status summary tests |
+| `scope_prefs.rs` | Last repo scope preference persistence |
+| `scope_prefs/` | Scope preference tests |
 
 ## Subdirectories
 

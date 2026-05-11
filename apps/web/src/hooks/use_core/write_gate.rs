@@ -9,7 +9,6 @@ use crate::hooks::use_core::types::CoreState;
 use deve_core::models::PeerId;
 use leptos::prelude::{Get, GetUntracked, ReadSignal, Signal};
 
-#[path = "write_gate_logic.rs"]
 mod logic;
 #[derive(Clone, Copy)]
 pub(crate) struct RepoWriteSignals {
@@ -150,5 +149,4 @@ pub(crate) fn repo_write_allowed_for_core_tracked(core: &CoreState) -> bool {
 }
 
 #[cfg(test)]
-#[path = "write_gate_tests.rs"]
 mod tests;
