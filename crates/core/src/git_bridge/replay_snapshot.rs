@@ -92,7 +92,7 @@ fn create_git_commit_from_snapshot(
     let index_path = temp_dir.path().join("mirror-bootstrap.index");
     read_parent_tree(repo_root, &index_path, None)?;
     let files = source_control::commit_diff::projection_files_at_commit(db, &commit.id)
-        .map_err(|err| map_projection_snapshot_load_error(err))?;
+        .map_err(map_projection_snapshot_load_error)?;
     for file in &files {
         add_blob_to_index(
             repo_root,
@@ -134,7 +134,7 @@ fn preflight_snapshot_bootstrap(
         return Err(GitSnapshotBootstrapError::NonEmptyGitHistory { head });
     }
     let files = source_control::commit_diff::projection_files_at_commit(db, &commit.id)
-        .map_err(|err| map_projection_snapshot_inspect_error(err))?;
+        .map_err(map_projection_snapshot_inspect_error)?;
     ensure_git_changes_match_snapshot_paths(repo_root, files.into_iter().map(|file| file.path))?;
     Ok(())
 }
