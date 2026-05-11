@@ -71,5 +71,4 @@ fn should_accept_sync_hello(
 }
 
 #[cfg(test)]
-#[path = "message_sync_test.rs"]
 mod tests;

@@ -6,7 +6,6 @@ use crate::hooks::use_core::state::CoreSignals;
 use deve_core::models::{PeerId, RepoId};
 use leptos::prelude::Set;
 
-#[path = "message_runtime_sync_gate.rs"]
 mod gate;
 
 pub fn handle_sync_mode_status(

@@ -19,16 +19,19 @@ Server message effect handlers. Processes incoming WebSocket messages and update
 | `message_dispatch_gate/` | Gate logic for message dispatch and tests |
 | `message_dispatch_protocol.rs` | Protocol message dispatch |
 | `message_control.rs` | Control message handling |
+| `message_control_runtime/` | Control runtime handling and tests |
+| `message_control_runtime_repo/` | Repo-scoped control runtime helpers |
 | `message_protocol/` | Protocol message processing and tests |
 | `message_projection/` | Projection update handling and tests |
-| `message_refresh.rs` | Refresh message handling |
+| `message_refresh/` | Refresh message handling and tests |
 | `message_repo_scope/` | Repo scope message handling and tests |
 | `message_dispatch_route_projection/` | Projection/sync routing helpers |
 | `message_runtime.rs` | Runtime message handling |
 | `message_dispatch_runtime/` | Runtime response dispatch handling and tests |
 | `message_scope/` | Scope message handling and tests |
 | `message_shadow/` | Shadow branch message handling and tests |
-| `message_sync.rs` | Sync message handling |
+| `message_runtime_sync/` | Runtime sync status/pending-op handling |
+| `message_sync/` | Sync message handling and tests |
 
 ## For AI Agents
 

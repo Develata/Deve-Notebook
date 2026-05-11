@@ -7,8 +7,7 @@ use crate::hooks::use_core::write_gate::{RepoWriteGateState, repo_source_control
 use deve_core::models::PeerId;
 
 #[cfg(test)]
-#[path = "message_refresh_test.rs"]
-mod message_refresh_test;
+mod tests;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RefreshScope {

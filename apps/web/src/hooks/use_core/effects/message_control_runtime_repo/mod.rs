@@ -9,7 +9,6 @@ use leptos::prelude::Set;
 
 use super::super::effects_sc_state::{self, clear_repo_scoped_state};
 use super::super::state::CoreSignals;
-#[path = "message_control_runtime_repo_requests.rs"]
 mod requests;
 
 pub(super) fn clear_repo_scoped_runtime(signals: CoreSignals) {

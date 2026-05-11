@@ -43,5 +43,4 @@ pub fn refresh_after_repo_switch(ws: &WsService, signals: CoreSignals) {
 }
 
 #[cfg(test)]
-#[path = "message_control_runtime_test.rs"]
 mod tests;
