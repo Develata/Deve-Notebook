@@ -1,4 +1,5 @@
 use crate::ledger::RepoManager;
+use crate::ledger::listing::RepoListing;
 use crate::models::PeerId;
 
 #[test]
@@ -45,7 +46,7 @@ fn list_remote_repo_names_fails_closed_on_unreadable_shadow_metadata() {
     crate::test_support::seed_shadow_repo_missing_metadata(&repo, "peer-a", "broken");
 
     let err = repo
-        .list_remote_repo_names(&peer)
+        .list_repos(Some(&peer))
         .expect_err("unreadable shadow metadata must fail closed");
 
     assert!(

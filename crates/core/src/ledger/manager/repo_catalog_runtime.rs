@@ -74,7 +74,7 @@ impl<'a> RepoCatalogRuntime<'a> {
 
     pub(crate) fn list_repos(&self, peer_id: Option<&PeerId>) -> Result<Vec<String>> {
         if let Some(peer_id) = peer_id {
-            return self.manager.list_remote_repo_names(peer_id);
+            return self.list_remote_repo_names(peer_id);
         }
         self.refresh_local_catalog()?;
         let target_dir =
@@ -145,7 +145,7 @@ impl<'a> RepoCatalogRuntime<'a> {
     pub(crate) fn list_switchable_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
         let mut peers = Vec::new();
         for peer_id in self.shadow_peer_dirs()? {
-            if !self.manager.list_remote_repo_names(&peer_id)?.is_empty() {
+            if !self.list_remote_repo_names(&peer_id)?.is_empty() {
                 peers.push(peer_id);
             }
         }
