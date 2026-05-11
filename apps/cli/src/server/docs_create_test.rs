@@ -44,6 +44,25 @@ async fn create_doc_rejects_stale_browser_scope_with_scoped_error() -> anyhow::R
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_doc_rejects_degraded_local_projection_before_mutation() -> anyhow::Result<()> {
+    let h = docs_harness()?;
+    h.state
+        .sync_manager
+        .mark_projection_writeback_fault("default");
+    let (ch, mut rx) = channel(&h.state);
+    let mut session = browser_session(&h.state, h.repo_id, 29);
+
+    handle_create_doc(&h.state, &ch, &mut session, "blocked.md".into()).await;
+
+    let (error, scope_nonce) = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+    assert_eq!(scope_nonce, Some(29));
+    assert!(h.state.repo.get_docid("blocked.md")?.is_none());
+    assert!(!h.vault_path("blocked.md").exists());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn create_doc_rejects_invalid_browser_path_with_scoped_error() -> anyhow::Result<()> {
     let h = docs_harness()?;
     let (ch, mut rx) = channel(&h.state);

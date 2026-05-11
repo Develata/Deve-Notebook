@@ -33,13 +33,14 @@ pub async fn handle_sync_hello(
 }
 
 pub fn handle_register_writer(
+    state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
     repo_id: RepoId,
     peer_id: PeerId,
     scope_nonce: u64,
 ) {
-    writer::handle(ch, session, repo_id, peer_id, scope_nonce);
+    writer::handle(state, ch, session, repo_id, peer_id, scope_nonce);
 }
 
 pub async fn handle_sync_request(

@@ -5,7 +5,8 @@
 
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    map_repo_scope_error, resolve_local_counterpart_repo, resolve_session_repo_or_bootstrap_local,
+    ensure_resolved_local_repo_writable, map_repo_scope_error, resolve_local_counterpart_repo,
+    resolve_session_repo_or_bootstrap_local,
 };
 use crate::server::{AppState, session::WsSession};
 use deve_core::models::RepoId;
@@ -53,6 +54,10 @@ pub(super) fn resolve_write_repo_id(
             ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
             scope_nonce,
         );
+        return None;
+    }
+    if let Err(error) = ensure_resolved_local_repo_writable(state, &scope) {
+        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return None;
     }
     Some(scope.repo_id)

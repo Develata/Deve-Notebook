@@ -49,6 +49,16 @@ pub(super) async fn handle_edit(
         );
         return;
     }
+    if let Err(error) =
+        crate::server::repo_scope::ensure_resolved_local_repo_writable(state, &scope)
+    {
+        tracing::debug!(
+            repo_name = %scope.repo_name,
+            "Edit rejected: local repo projection is degraded"
+        );
+        reject_edit(ch, response_scope_nonce, doc_id, client_op_id, error);
+        return;
+    }
     if let Err(error) = reject_missing_doc(state, &scope.repo_name, doc_id) {
         reject_edit(ch, response_scope_nonce, doc_id, client_op_id, error);
         return;

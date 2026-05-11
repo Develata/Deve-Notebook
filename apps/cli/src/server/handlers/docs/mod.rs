@@ -38,7 +38,8 @@ pub use rename::{handle_move_doc, handle_rename_doc};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    ResolvedRepo, map_repo_scope_error, resolve_session_repo_or_bootstrap_local,
+    ResolvedRepo, ensure_resolved_local_repo_writable, map_repo_scope_error,
+    resolve_session_repo_or_bootstrap_local,
 };
 use crate::server::session::WsSession;
 use anyhow::Context;
@@ -81,6 +82,14 @@ pub(super) fn resolve_local_write_scope(
     if scope.branch.is_some() {
         tracing::debug!("Docs write rejected: resolved scope is readonly (remote branch)");
         errors::remote_branch_readonly_scoped(ch, scope_nonce);
+        return None;
+    }
+    if let Err(error) = ensure_resolved_local_repo_writable(state, &scope) {
+        tracing::debug!(
+            repo_name = %scope.repo_name,
+            "Docs write rejected: local repo projection is degraded"
+        );
+        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return None;
     }
     Some(scope)

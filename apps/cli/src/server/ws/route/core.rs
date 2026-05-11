@@ -97,7 +97,7 @@ async fn route_unscoped_core(
             repo_id,
             scope_nonce,
         } => {
-            sync::handle_register_writer(ch, session, repo_id, peer_id, scope_nonce.get());
+            sync::handle_register_writer(state, ch, session, repo_id, peer_id, scope_nonce.get());
         }
         ClientMessage::Ping => {
             ch.unicast(ServerMessage::Pong);

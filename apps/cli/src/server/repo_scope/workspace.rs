@@ -5,6 +5,7 @@
 
 use super::{AppState, ResolvedRepo};
 use anyhow::{Result, anyhow};
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use redb::Database;
 use std::sync::Arc;
 
@@ -49,4 +50,34 @@ pub fn local_repo_root(state: &Arc<AppState>, repo: &ResolvedRepo) -> Result<std
         ));
     }
     state.repo.local_repo_workspace_root(&repo.repo_name)
+}
+
+pub fn ensure_resolved_local_repo_writable(
+    state: &Arc<AppState>,
+    repo: &ResolvedRepo,
+) -> std::result::Result<(), ServerError> {
+    if repo.branch.is_some() {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRemoteBranchReadonly,
+            repo.repo_name.clone(),
+        ));
+    }
+    ensure_local_repo_projection_writable(state, &repo.repo_name)
+}
+
+pub fn ensure_local_repo_projection_writable(
+    state: &Arc<AppState>,
+    repo_name: &str,
+) -> std::result::Result<(), ServerError> {
+    if state.sync_manager.is_projection_degraded(repo_name) {
+        return Err(degraded_local_repo_write_error(repo_name));
+    }
+    Ok(())
+}
+
+pub fn degraded_local_repo_write_error(repo_name: &str) -> ServerError {
+    ServerError::with_detail(
+        ServerErrorCode::StoragePersistFailed,
+        format!("Local repo projection is degraded; repair before writing: {repo_name}"),
+    )
 }

@@ -20,6 +20,9 @@ pub async fn commit(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CommitPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::ensure_http_selector_writable(&state, &payload.repo) {
+        return errors::http(error);
+    }
     match service::commit_staged(state.repo.as_ref(), &payload.repo, &payload.message) {
         Ok(info) => Json::<CommitInfo>(info).into_response(),
         Err(e) => errors::http(e),
@@ -30,6 +33,9 @@ pub async fn commit_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Json(payload): Json<CommitPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = host::ensure_source_control_write_allowed(&payload.repo) {
+        return errors::http(error);
+    }
     match host::source_control_api() {
         Ok(repo) => match service::commit_staged(repo.as_ref(), &payload.repo, &payload.message) {
             Ok(info) => Json::<CommitInfo>(info).into_response(),

@@ -17,7 +17,7 @@ pub async fn handle_stage_file(
     target: ScPathTarget,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+    let scope = match super::repo_scope::resolve_current_writable_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
@@ -47,7 +47,7 @@ pub async fn handle_unstage_file(
     target: ScPathTarget,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+    let scope = match super::repo_scope::resolve_current_writable_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
@@ -77,7 +77,7 @@ pub async fn handle_stage_files(
     targets: Vec<ScPathTarget>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+    let scope = match super::repo_scope::resolve_current_writable_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };
@@ -99,7 +99,7 @@ pub async fn handle_unstage_files(
     targets: Vec<ScPathTarget>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let scope = match super::repo_scope::resolve_current_local_repo(state, session) {
+    let scope = match super::repo_scope::resolve_current_writable_local_repo(state, session) {
         Ok(scope) => scope,
         Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
     };

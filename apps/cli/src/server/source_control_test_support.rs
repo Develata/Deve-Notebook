@@ -14,6 +14,7 @@ use tokio::task::JoinHandle;
 pub(super) struct ProxyHarness {
     pub dir: TempDir,
     pub repo: Arc<RepoManager>,
+    pub sync_manager: Arc<deve_core::sync::SyncManager>,
     pub base_url: String,
     pub client: reqwest::Client,
     pub proxy: RemoteSourceControlApi,
@@ -29,12 +30,10 @@ impl ProxyHarness {
         repo.set_vault_root(&vault);
         let repo = Arc::new(repo);
         let (tx, _rx) = broadcast::channel(16);
+        let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault.clone()));
         let state = Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(
-                repo.clone(),
-                vault.clone(),
-            )),
+            sync_manager: sync_manager.clone(),
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(
@@ -65,6 +64,7 @@ impl ProxyHarness {
         Ok(Self {
             dir,
             repo,
+            sync_manager,
             base_url: base_url.clone(),
             client: local_client(),
             proxy: RemoteSourceControlApi::new(base_url),

@@ -51,7 +51,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.rendering.projection-refresh` | [`rendering_projection_refresh.md`](./operations/rendering_projection_refresh.md) | `RENDER-BLOCK-001`, `RENDER-INLINE-001`, `RENDER-CURSOR-001` |
 | `flow.repo.branch-switch` | [`repo_branch_switch.md`](./operations/repo_branch_switch.md) | `CMD-004`, `REPO-FEAT-02`, `REPO-FEAT-03` |
 | `flow.repo.file-op-shell-routing` | [`repo_file_op_shell_routing.md`](./operations/repo_file_op_shell_routing.md) | `REPO-FEAT-01`, `UI-DESK-003` |
-| `flow.repo.file-operations` | [`repo_file_operations.md`](./operations/repo_file_operations.md) | `REPO-FEAT-01`, `UI-DESK-003`, `STORE-012` |
+| `flow.repo.file-operations` | [`repo_file_operations.md`](./operations/repo_file_operations.md) | `REPO-FEAT-01`, `UI-DESK-003`, `STORE-012`, `STORE-013` |
 | `flow.repo.open-doc` | [`repo_open_doc.md`](./operations/repo_open_doc.md) | `CMD-003`, `REPO-FEAT-01`, `STORE-009` |
 | `flow.repo.switch` | [`repo_switch.md`](./operations/repo_switch.md) | `REPO-FEAT-01`, `REPO-FEAT-03` |
 | `flow.sc.commit` | [`sc_commit.md`](./operations/sc_commit.md) | `DIFF-FEAT-01`, `DIFF-FEAT-03`, `AI-007` |

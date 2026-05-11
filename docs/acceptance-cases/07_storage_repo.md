@@ -145,4 +145,20 @@
   assertions:
     - missing_scope_nonce_rejected_before_handler true
     - stale_scope_nonce_rejected_before_handler true
+
+- case_id: STORE-013
+  goal: Degraded local projection write gate。
+  preconditions:
+    - local repo 已被标记为 projection degraded
+  steps:
+    - run: cargo test -p deve_cli degraded_local -- --nocapture
+    - run: cargo test -p deve_core source_control_write_gate -- --nocapture
+  assertions:
+    - degraded_projection_blocks_docs_create_before_mutation: true
+    - degraded_projection_blocks_edit_before_append: true
+    - degraded_projection_blocks_RegisterWriter: true
+    - degraded_projection_blocks_source_control_mutations: true
+    - degraded_projection_blocks_merge_mutations: true
+    - degraded_projection_blocks_http_source_control_mutations: true
+    - degraded_projection_blocks_plugin_host_source_control_mutations: true
 ```

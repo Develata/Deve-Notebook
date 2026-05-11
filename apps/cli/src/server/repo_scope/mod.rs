@@ -32,7 +32,10 @@ pub use self::resolve::{
 };
 pub use self::sync::resolve_session_repo_and_sync;
 pub use self::sync_bootstrap::resolve_session_repo_or_bootstrap_local;
-pub use self::workspace::{local_repo_path, local_repo_root, run_on_resolved_local_repo};
+pub use self::workspace::{
+    ensure_local_repo_projection_writable, ensure_resolved_local_repo_writable, local_repo_path,
+    local_repo_root, run_on_resolved_local_repo,
+};
 
 /// 将当前 resolved scope 收敛到本地可写仓库。
 /// Invariants: 已处于本地分支时直接返回当前 scope；远端影子仓库只允许按 `RepoUUID -> URL` 收敛到本地仓库；无可写本地对应仓库时显式返回 `None`。

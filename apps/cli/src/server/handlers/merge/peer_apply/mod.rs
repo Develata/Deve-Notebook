@@ -5,7 +5,7 @@
 
 use super::errors;
 use super::peer_support::resolve_doc_path;
-use crate::server::repo_scope::ResolvedRepo;
+use crate::server::repo_scope::{ResolvedRepo, ensure_resolved_local_repo_writable};
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::ledger::merge::ConflictHunk;
 use deve_core::ledger::reconcile;
@@ -29,6 +29,10 @@ pub(super) fn write_merged_content(
     content: &str,
     scope_nonce: Option<u64>,
 ) -> bool {
+    if let Err(error) = ensure_resolved_local_repo_writable(state, scope) {
+        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+        return false;
+    }
     let entries = match state
         .repo
         .get_local_ops_in_local_repo(&scope.repo_name, doc_id)

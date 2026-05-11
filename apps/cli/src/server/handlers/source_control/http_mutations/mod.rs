@@ -18,7 +18,7 @@ use crate::server::handlers::source_control::service;
 use crate::server::plugin_host::PluginHostState;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::runtime::host;
-use deve_core::protocol::ScPathTarget;
+use deve_core::protocol::{ScPathTarget, ServerError};
 
 pub use commit::{commit, commit_plugin_host};
 
@@ -52,6 +52,9 @@ pub async fn stage(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
+    if let Err(error) = ensure_http_selector_writable(&state, &payload.repo) {
+        return super::errors::http(error);
+    }
     match service::stage_pending(state.repo.as_ref(), &payload.repo, &target) {
         Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
         Err(e) => super::errors::http(e),
@@ -63,6 +66,9 @@ pub async fn stage_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
+    if let Err(error) = host::ensure_source_control_write_allowed(&payload.repo) {
+        return super::errors::http(error);
+    }
     match host::source_control_api() {
         Ok(repo) => match service::stage_pending(repo.as_ref(), &payload.repo, &target) {
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
@@ -77,6 +83,9 @@ pub async fn discard_pending(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
+    if let Err(error) = ensure_http_selector_writable(&state, &payload.repo) {
+        return super::errors::http(error);
+    }
     match super::local_discard::discard_via_sync_manager(&state, &payload.repo, &target) {
         Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
         Err(e) => super::errors::http(e),
@@ -88,6 +97,9 @@ pub async fn discard_pending_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
+    if let Err(error) = host::ensure_source_control_write_allowed(&payload.repo) {
+        return super::errors::http(error);
+    }
     match host::source_control_api() {
         Ok(repo) => match service::discard_pending(repo.as_ref(), &payload.repo, &target) {
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
@@ -102,6 +114,9 @@ pub async fn unstage(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
+    if let Err(error) = ensure_http_selector_writable(&state, &payload.repo) {
+        return super::errors::http(error);
+    }
     match service::unstage_file(state.repo.as_ref(), &payload.repo, &target) {
         Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
         Err(e) => super::errors::http(e),
@@ -113,6 +128,9 @@ pub async fn unstage_plugin_host(
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
     let target = payload.target();
+    if let Err(error) = host::ensure_source_control_write_allowed(&payload.repo) {
+        return super::errors::http(error);
+    }
     match host::source_control_api() {
         Ok(repo) => match service::unstage_file(repo.as_ref(), &payload.repo, &target) {
             Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
@@ -120,4 +138,15 @@ pub async fn unstage_plugin_host(
         },
         Err(e) => super::errors::http(super::errors::unsupported(e.to_string())),
     }
+}
+
+pub(super) fn ensure_http_selector_writable(
+    state: &Arc<AppState>,
+    selector: &RepoSelector,
+) -> Result<(), ServerError> {
+    let repo_name = state
+        .repo
+        .resolve_local_repo_name_for_execution(selector.repo_id, selector.repo_name.as_deref())
+        .map_err(super::errors::map_repo_scope_error)?;
+    crate::server::repo_scope::ensure_local_repo_projection_writable(state, &repo_name)
 }

@@ -3,8 +3,8 @@
 //!   - 06_repository#repo-scope-runtime
 
 use crate::server::repo_scope::{
-    ResolvedRepo, bootstrap_local_repo, resolve_session_repo_and_sync,
-    stale_unbound_remote_scope_detail,
+    ResolvedRepo, bootstrap_local_repo, ensure_resolved_local_repo_writable,
+    resolve_session_repo_and_sync, stale_unbound_remote_scope_detail,
 };
 use crate::server::shadow_scope;
 use crate::server::{AppState, session::WsSession};
@@ -72,5 +72,14 @@ pub fn resolve_current_local_repo(
             scope.repo_name,
         ));
     }
+    Ok(scope)
+}
+
+pub fn resolve_current_writable_local_repo(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> Result<ResolvedRepo, ServerError> {
+    let scope = resolve_current_local_repo(state, session)?;
+    ensure_resolved_local_repo_writable(state, &scope)?;
     Ok(scope)
 }

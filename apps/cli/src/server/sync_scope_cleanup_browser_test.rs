@@ -66,11 +66,30 @@ fn browser_writer_registration_rejects_stale_scope_nonce_with_scoped_error() -> 
     let mut session = browser_session_without_sync_scope(&state, repo_id, 13)?;
     session.set_sync_scope_nonce(13);
 
-    handle_register_writer(&ch, &mut session, repo_id, PeerId::new("browser"), 11);
+    handle_register_writer(&state, &ch, &mut session, repo_id, PeerId::new("browser"), 11);
 
     let (error, scope_nonce) = try_recv_protocol_error(&mut rx);
     assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     assert_eq!(scope_nonce, Some(11));
     assert_runtime_binding_cleared(&session);
+    Ok(())
+}
+
+#[test]
+fn browser_writer_registration_rejects_degraded_local_projection() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    state
+        .sync_manager
+        .mark_projection_writeback_fault("default");
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = browser_session_without_sync_scope(&state, repo_id, 37)?;
+    session.set_sync_scope_nonce(37);
+
+    handle_register_writer(&state, &ch, &mut session, repo_id, PeerId::new("browser"), 37);
+
+    let (error, scope_nonce) = try_recv_protocol_error(&mut rx);
+    assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+    assert_eq!(scope_nonce, Some(37));
+    assert!(session.writer_identity.is_none());
     Ok(())
 }

@@ -156,6 +156,14 @@ The WebSocket route scope gate is aligned for the modeled browser routes:
 - route-level tests cover every currently routed scoped input in those
   four layers
 
+The degraded local projection write gate is aligned:
+
+- docs create, document edit, RegisterWriter, source-control mutations,
+  merge mutations, and HTTP source-control mutations reject degraded local
+  projection before mutating ledger, pending state, staged state, or workspace
+- read-only degraded fallback remains a recovery/read surface, not a normal
+  mounted write path
+
 ## Current State
 
 Within the currently modeled operation slice:

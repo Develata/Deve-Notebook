@@ -96,6 +96,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
+            ensure_write_allowed(&selector)?;
             let target = target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
             repo.stage_pending_in_repo(&selector, &target)
                 .map_err(|e| e.to_string().into())
@@ -110,6 +111,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             }
             let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
+            ensure_write_allowed(&selector)?;
             let commit = repo
                 .commit_staged_in_repo(&selector, message)
                 .map_err(|e| e.to_string())?;
@@ -117,4 +119,14 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             rhai::serde::to_dynamic(&json).map_err(|e| e.to_string().into())
         },
     );
+}
+
+fn ensure_write_allowed(selector: &RepoSelector) -> Result<(), Box<EvalAltResult>> {
+    super::ensure_source_control_write_allowed(selector)
+        .map_err(|error| plugin_error_text(error).into())
+}
+
+fn plugin_error_text(error: crate::protocol::ServerError) -> String {
+    let crate::protocol::ServerError { code, detail } = error;
+    detail.unwrap_or_else(|| format!("Plugin source-control write rejected: {code:?}"))
 }

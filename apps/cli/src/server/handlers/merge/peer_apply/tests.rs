@@ -1,7 +1,12 @@
 use super::*;
-use crate::server::channel::DualChannel;
-use deve_core::models::PeerId;
+use crate::server::{AppState, channel::DualChannel, tree_state::RepoTreeRegistry};
+use deve_core::config::SyncMode;
+use deve_core::ledger::RepoManager;
+use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::protocol::ServerErrorCode;
+use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
+use std::sync::Arc;
+use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
 #[tokio::test]
@@ -95,4 +100,95 @@ async fn merge_conflict_emits_typed_payload_before_diff_fallback() {
         }
         other => panic!("expected StorageConflict third, got {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> anyhow::Result<()> {
+    let (_dir, state, doc_id, repo_id) = degraded_app_state()?;
+    let before = state
+        .repo
+        .get_local_ops_in_local_repo("default", doc_id)?
+        .len();
+    let (broadcast_tx, _) = broadcast::channel(4);
+    let (unicast_tx, mut unicast_rx) = mpsc::channel(4);
+    let ch = DualChannel::new(broadcast_tx, unicast_tx);
+    let scope = ResolvedRepo {
+        repo_id,
+        repo_name: "default".into(),
+        branch: None,
+    };
+
+    assert!(!write_merged_content(
+        &state,
+        &ch,
+        &scope,
+        doc_id,
+        "changed",
+        Some(13)
+    ));
+
+    match unicast_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+            assert_eq!(scope_nonce, Some(13));
+        }
+        other => panic!("expected degraded projection ProtocolError, got {other:?}"),
+    }
+    assert_eq!(
+        state
+            .repo
+            .get_local_ops_in_local_repo("default", doc_id)?
+            .len(),
+        before
+    );
+    Ok(())
+}
+
+fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::Uuid)> {
+    let dir = tempdir()?;
+    let vault = dir.path().join("vault");
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some("default"), None)?;
+    repo.set_vault_root(&vault);
+    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+    let (doc_id, _) =
+        repo.apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
+    repo.append_generated_op_in_local_repo("default", doc_id, PeerId::new("local"), |seq| {
+        LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "base".into(),
+            },
+            1,
+            PeerId::new("local"),
+            seq,
+            None,
+            None,
+        )
+    })?;
+    let repo = Arc::new(repo);
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault));
+    sync_manager.mark_projection_writeback_fault("default");
+    Ok((
+        dir,
+        Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager,
+            tx: broadcast::channel(4).0,
+            plugins: vec![],
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                PeerId::new("local"),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_available: false,
+            identity_key: Arc::new(deve_core::security::IdentityKeyPair::generate()),
+        }),
+        doc_id,
+        repo_id,
+    ))
 }

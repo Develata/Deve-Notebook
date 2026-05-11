@@ -5,6 +5,7 @@
 //! state.
 
 use super::support::{ProxyHarness, path_target, seed_pending, write_workspace_file};
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use deve_core::source_control::{ChangeEntry, ChangeStatus, CommitInfo};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -68,6 +69,41 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
             .is_empty()
     );
 
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo_name = harness.repo.local_repo_name();
+    write_workspace_file(&harness.dir, "smoke/degraded.md", "hello");
+    seed_pending(
+        &harness.repo,
+        "smoke/degraded.md",
+        ChangeStatus::Added,
+        "hello",
+    );
+    harness
+        .sync_manager
+        .mark_projection_writeback_fault(repo_name);
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&path_target("smoke/degraded.md"))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(body.code, ServerErrorCode::StoragePersistFailed);
+    assert_eq!(
+        harness.repo.list_pending_fs_in_local_repo(repo_name)?.len(),
+        1
+    );
+    assert!(harness.repo.list_staged_in_local_repo(repo_name)?.is_empty());
     harness.shutdown().await;
     Ok(())
 }

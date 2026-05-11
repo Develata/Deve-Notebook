@@ -38,7 +38,9 @@ use rhai::Engine;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::ledger::traits::Repository;
+use crate::ledger::traits::{RepoSelector, Repository};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::protocol::{ServerError, ServerErrorCode};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::source_control::SourceControlApi;
 #[cfg(not(target_arch = "wasm32"))]
@@ -100,6 +102,35 @@ pub fn source_control_api() -> Result<Arc<dyn SourceControlApi>, anyhow::Error> 
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+pub fn ensure_source_control_write_allowed(selector: &RepoSelector) -> Result<(), ServerError> {
+    let (Some(repo), Some(sync)) = (REPO_MANAGER.get().cloned(), SYNC_MANAGER.get().cloned())
+    else {
+        return Ok(());
+    };
+    ensure_source_control_write_allowed_for(repo.as_ref(), sync.as_ref(), selector)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn ensure_source_control_write_allowed_for(
+    repo: &RepoManager,
+    sync: &SyncManager,
+    selector: &RepoSelector,
+) -> Result<(), ServerError> {
+    let repo_name = repo
+        .resolve_local_repo_name_for_execution(selector.repo_id, selector.repo_name.as_deref())
+        .map_err(|err| {
+            ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, err.to_string())
+        })?;
+    if sync.is_projection_degraded(&repo_name) {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::StoragePersistFailed,
+            format!("Local repo projection is degraded; repair before writing: {repo_name}"),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn repo_manager() -> Result<Arc<RepoManager>, anyhow::Error> {
     REPO_MANAGER
         .get()
@@ -137,3 +168,6 @@ pub fn register_core_api(engine: &mut Engine, manifest: &PluginManifest) {
 pub fn register_core_api(engine: &mut Engine, _manifest: &PluginManifest) {
     util::register_log_api(engine);
 }
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests;

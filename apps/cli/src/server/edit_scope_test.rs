@@ -69,3 +69,26 @@ async fn edit_fails_closed_on_broken_client_op_index() -> anyhow::Result<()> {
     assert_eq!(h.state.repo.get_local_ops(doc_id)?.len(), op_count_before);
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn edit_rejects_degraded_local_projection_before_append() -> anyhow::Result<()> {
+    let h = edit_harness(false)?;
+    let doc_id = seed_doc_with_content(&h.state, "default", "notes/a.md", "hello")?;
+    let op_count_before = h.state.repo.get_local_ops(doc_id)?.len();
+    h.state
+        .sync_manager
+        .mark_projection_writeback_fault("default");
+    let (ch, mut uni_rx) = unicast_channel(&h.state);
+    let mut session = writer_browser_session("default", h.default_repo_id, 31);
+
+    send_insert(&h.state, &ch, &mut session, doc_id, 5).await;
+
+    let (scope_nonce, rejected_doc_id, client_op_id, error) =
+        recv_edit_rejected(&mut uni_rx).await;
+    assert_eq!(scope_nonce, 31);
+    assert_eq!(rejected_doc_id, doc_id);
+    assert_eq!(client_op_id, 9);
+    assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
+    assert_eq!(h.state.repo.get_local_ops(doc_id)?.len(), op_count_before);
+    Ok(())
+}

@@ -3,14 +3,18 @@
 //!
 //! Sync writer readiness registration.
 
+use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::repo_scope::ensure_local_repo_projection_writable;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use std::sync::Arc;
 
 use super::cleanup::{clear_remote_unbound_state, clear_stale_browser_sync_scope};
 
 pub(super) fn handle(
+    state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
     repo_id: RepoId,
@@ -18,15 +22,21 @@ pub(super) fn handle(
     scope_nonce: u64,
 ) {
     match validate(session, repo_id, &peer_id, scope_nonce) {
-        Ok(()) => {
-            session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce);
-            ch.unicast(ServerMessage::WriteReady {
-                peer_id,
-                repo_id,
-                scope_nonce: scope_nonce.into(),
-                branch: session.active_branch.clone(),
-            });
-        }
+        Ok(()) => match validate_local_projection_writable(state, session, repo_id) {
+            Ok(()) => {
+                session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce);
+                ch.unicast(ServerMessage::WriteReady {
+                    peer_id,
+                    repo_id,
+                    scope_nonce: scope_nonce.into(),
+                    branch: session.active_branch.clone(),
+                });
+            }
+            Err(error) => ch.send_protocol_error_with_scope_nonce(
+                error,
+                session.is_browser_session().then_some(scope_nonce),
+            ),
+        },
         Err(error) => ch.send_protocol_error_with_scope_nonce(
             error,
             session.is_browser_session().then_some(scope_nonce),
@@ -96,6 +106,23 @@ fn browser_active_db_mismatch(session: &WsSession, repo_id: RepoId) -> bool {
         && session
             .active_db_for(None, repo_name, Some(repo_id))
             .is_none()
+}
+
+fn validate_local_projection_writable(
+    state: &Arc<AppState>,
+    session: &WsSession,
+    repo_id: RepoId,
+) -> Result<(), ServerError> {
+    if session.active_branch.is_some() {
+        return Ok(());
+    }
+    if session.active_repo_id != Some(repo_id) {
+        return Ok(());
+    }
+    let Some(repo_name) = session.active_repo.as_deref() else {
+        return Ok(());
+    };
+    ensure_local_repo_projection_writable(state, repo_name)
 }
 
 #[cfg(test)]
