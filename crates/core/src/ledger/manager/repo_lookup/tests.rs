@@ -20,6 +20,7 @@ fn local_repo_info_lookup_without_repair_preserves_unrepaired_metadata() {
     .expect("write metadata");
 
     let looked_up = main
+        .repo_scope_runtime()
         .get_local_repo_info_by_id_without_repair(wiki_info.uuid)
         .expect("lookup")
         .expect("present");
@@ -39,6 +40,7 @@ fn local_repo_info_lookup_without_repair_fails_closed_on_broken_main_metadata() 
         .expect("poison metadata");
 
     let err = main
+        .repo_scope_runtime()
         .get_local_repo_info_by_id_without_repair(main_info.uuid)
         .expect_err("broken main metadata must fail closed");
     assert!(

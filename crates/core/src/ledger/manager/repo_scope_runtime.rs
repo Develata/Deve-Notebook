@@ -2,7 +2,7 @@
 //!   - 06_repository#repo-selector-resolution-contract
 //!   - 06_repository#repo-scope-runtime
 
-use crate::ledger::manager::types::RepoManager;
+use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::ledger::manager::{
     repo_catalog_entries::redb_repo_entries,
     repo_selector_resolution::{LocalRepoCandidates, select_repo_name},
@@ -85,6 +85,66 @@ impl<'a> RepoScopeRuntime<'a> {
         }
 
         Ok(None)
+    }
+
+    pub(crate) fn get_local_repo_info_by_id(&self, repo_id: RepoId) -> Result<Option<RepoInfo>> {
+        self.manager
+            .repo_catalog_runtime()
+            .refresh_local_catalog()?;
+        self.get_local_repo_info_by_id_without_repair(repo_id)
+    }
+
+    pub(crate) fn get_local_repo_info_by_id_without_repair(
+        &self,
+        repo_id: RepoId,
+    ) -> Result<Option<RepoInfo>> {
+        let Some(repo_stem) = self.find_local_repo_name_by_id_without_repair(repo_id)? else {
+            return Ok(None);
+        };
+        self.read_local_repo_info_by_stem_without_repair(&repo_stem)
+    }
+
+    pub(crate) fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
+        self.manager
+            .repo_catalog_runtime()
+            .refresh_local_catalog()?;
+        let mut matches = Vec::new();
+        for repo_name in self
+            .manager
+            .repo_catalog_runtime()
+            .list_local_execution_names()?
+        {
+            let info = self
+                .read_local_repo_info_by_stem_without_repair(&repo_name)?
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Broken local repo {} while resolving URL {}: repository metadata missing",
+                        repo_name,
+                        target_url
+                    )
+                })?;
+            if info.url.as_deref() == Some(target_url) {
+                matches.push(repo_name);
+            }
+        }
+        if matches.len() > 1 {
+            return Err(anyhow::anyhow!(
+                "Ambiguous local repository selector for URL {}",
+                target_url
+            ));
+        }
+        Ok(matches.into_iter().next())
+    }
+
+    pub(crate) fn read_local_repo_info_by_stem_without_repair(
+        &self,
+        stem: &str,
+    ) -> Result<Option<RepoInfo>> {
+        if stem == self.manager.local_repo_name {
+            return RepoManager::read_repo_info_from_db(&self.manager.local_db);
+        }
+        self.manager
+            .run_on_local_repo_stem(stem, RepoManager::read_repo_info_from_db)
     }
 
     pub(crate) fn resolve_local_repo_name(

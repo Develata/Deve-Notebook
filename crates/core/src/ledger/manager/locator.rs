@@ -12,14 +12,6 @@ impl RepoManager {
             .find_local_repo_name_by_id(target_id)
     }
 
-    pub(crate) fn find_local_repo_name_by_id_without_repair(
-        &self,
-        target_id: RepoId,
-    ) -> Result<Option<String>> {
-        self.repo_scope_runtime()
-            .find_local_repo_name_by_id_without_repair(target_id)
-    }
-
     /// Invariant: 进入本地 DB 写路径前，repo selector 必须被解析为单一 repo 名称。
     pub fn resolve_local_repo_name(
         &self,

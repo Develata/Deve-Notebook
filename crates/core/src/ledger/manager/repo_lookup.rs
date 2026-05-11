@@ -9,21 +9,7 @@ use crate::models::PeerId;
 
 impl RepoManager {
     pub fn get_local_repo_info_by_id(&self, repo_id: uuid::Uuid) -> Result<Option<RepoInfo>> {
-        self.refresh_local_repo_catalog()?;
-        self.get_local_repo_info_by_id_without_repair(repo_id)
-    }
-
-    pub(crate) fn get_local_repo_info_by_id_without_repair(
-        &self,
-        repo_id: uuid::Uuid,
-    ) -> Result<Option<RepoInfo>> {
-        let Some(repo_stem) = self.find_local_repo_name_by_id_without_repair(repo_id)? else {
-            return Ok(None);
-        };
-        if repo_stem == self.local_repo_name {
-            return self.read_local_repo_info_by_stem_without_repair(&repo_stem);
-        }
-        self.read_local_repo_info_by_stem_without_repair(&repo_stem)
+        self.repo_scope_runtime().get_local_repo_info_by_id(repo_id)
     }
 
     pub fn get_repo_url(&self, branch: Option<&PeerId>, repo_name: &str) -> Result<Option<String>> {
@@ -33,29 +19,8 @@ impl RepoManager {
     }
 
     pub fn find_local_repo_name_by_url(&self, target_url: &str) -> Result<Option<String>> {
-        self.refresh_local_repo_catalog()?;
-        let mut matches = Vec::new();
-        for repo_name in self.list_local_repo_names_for_execution()? {
-            let info = self
-                .get_repo_info_for(None, Some(&repo_name))?
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Broken local repo {} while resolving URL {}: repository metadata missing",
-                        repo_name,
-                        target_url
-                    )
-                })?;
-            if info.url.as_deref() == Some(target_url) {
-                matches.push(repo_name);
-            }
-        }
-        if matches.len() > 1 {
-            return Err(anyhow::anyhow!(
-                "Ambiguous local repository selector for URL {}",
-                target_url
-            ));
-        }
-        Ok(matches.into_iter().next())
+        self.repo_scope_runtime()
+            .find_local_repo_name_by_url(target_url)
     }
 
     pub fn get_repo_info_for(
@@ -70,20 +35,17 @@ impl RepoManager {
             return self.read_remote_repo_info(peer_id, name);
         }
         if let Some(stem) = self.resolve_local_repo_stem(name)? {
-            return self.read_local_repo_info_by_stem_without_repair(&stem);
+            return self
+                .repo_scope_runtime()
+                .read_local_repo_info_by_stem_without_repair(&stem);
         }
         self.refresh_local_repo_catalog()?;
         if let Some(stem) = self.resolve_local_repo_stem(name)? {
-            return self.read_local_repo_info_by_stem_without_repair(&stem);
+            return self
+                .repo_scope_runtime()
+                .read_local_repo_info_by_stem_without_repair(&stem);
         }
         Ok(None)
-    }
-
-    fn read_local_repo_info_by_stem_without_repair(&self, stem: &str) -> Result<Option<RepoInfo>> {
-        if stem == self.local_repo_name {
-            return Self::read_repo_info_from_db(&self.local_db);
-        }
-        self.run_on_local_repo_stem(stem, Self::read_repo_info_from_db)
     }
 
     fn read_remote_repo_info(&self, peer_id: &PeerId, repo_name: &str) -> Result<Option<RepoInfo>> {
