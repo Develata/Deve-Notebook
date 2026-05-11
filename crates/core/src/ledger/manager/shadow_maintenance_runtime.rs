@@ -28,22 +28,14 @@ impl<'a> ShadowMaintenanceRuntime<'a> {
         repo_id: &RepoId,
         doc_id: &DocId,
     ) -> Result<()> {
-        self.manager.ensure_shadow_db(peer_id, repo_id)?;
-
-        let guard = self.manager.read_shadow_dbs()?;
-        let peer_map = guard
-            .get(peer_id)
-            .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
-        let db = peer_map
-            .get(repo_id)
-            .ok_or_else(|| anyhow::anyhow!("Shadow DB not found"))?;
-
-        let write_txn = db.begin_write()?;
-        write_txn
-            .open_multimap_table(DOC_OPS)?
-            .remove_all(&doc_id.as_u128())?;
-        write_txn.commit()?;
-        Ok(())
+        self.manager.run_on_shadow_repo(peer_id, repo_id, |db| {
+            let write_txn = db.begin_write()?;
+            write_txn
+                .open_multimap_table(DOC_OPS)?
+                .remove_all(&doc_id.as_u128())?;
+            write_txn.commit()?;
+            Ok(())
+        })
     }
 
     /// 重置指定 Shadow 节点的结构事实索引。
@@ -53,40 +45,24 @@ impl<'a> ShadowMaintenanceRuntime<'a> {
         repo_id: &RepoId,
         node_id: &NodeId,
     ) -> Result<()> {
-        self.manager.ensure_shadow_db(peer_id, repo_id)?;
-
-        let guard = self.manager.read_shadow_dbs()?;
-        let peer_map = guard
-            .get(peer_id)
-            .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
-        let db = peer_map
-            .get(repo_id)
-            .ok_or_else(|| anyhow::anyhow!("Shadow DB not found"))?;
-
-        let write_txn = db.begin_write()?;
-        write_txn
-            .open_multimap_table(NODE_OPS)?
-            .remove_all(&node_id.as_u128())?;
-        write_txn.commit()?;
-        Ok(())
+        self.manager.run_on_shadow_repo(peer_id, repo_id, |db| {
+            let write_txn = db.begin_write()?;
+            write_txn
+                .open_multimap_table(NODE_OPS)?
+                .remove_all(&node_id.as_u128())?;
+            write_txn.commit()?;
+            Ok(())
+        })
     }
 
     /// 整库重置指定 Shadow Repo 的 ledger/projection 内容，但保留 RepoMetadata。
     pub(crate) fn reset_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
-        self.manager.ensure_shadow_db(peer_id, repo_id)?;
-
-        let guard = self.manager.read_shadow_dbs()?;
-        let peer_map = guard
-            .get(peer_id)
-            .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
-        let db = peer_map
-            .get(repo_id)
-            .ok_or_else(|| anyhow::anyhow!("Shadow DB not found"))?;
-
-        let write_txn = db.begin_write()?;
-        Self::reset_shadow_repo_txn(&write_txn)?;
-        write_txn.commit()?;
-        Ok(())
+        self.manager.run_on_shadow_repo(peer_id, repo_id, |db| {
+            let write_txn = db.begin_write()?;
+            Self::reset_shadow_repo_txn(&write_txn)?;
+            write_txn.commit()?;
+            Ok(())
+        })
     }
 
     pub(crate) fn reset_shadow_repo_txn(write_txn: &redb::WriteTransaction) -> Result<()> {
