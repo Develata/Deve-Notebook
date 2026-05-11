@@ -8,15 +8,11 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::super::types::HandshakeSignals;
-#[path = "handshake_cycle.rs"]
-mod handshake_cycle;
-#[path = "handshake_reset.rs"]
-mod handshake_reset;
-#[path = "handshake_send.rs"]
-mod handshake_send;
-#[path = "handshake_state.rs"]
-mod handshake_state;
-use self::handshake_cycle::run_handshake_cycle;
+mod cycle;
+mod reset;
+mod send;
+mod state;
+use self::cycle::run_handshake_cycle;
 #[cfg(test)]
 pub(super) fn handshake_mode_key(
     endpoint: &str,
@@ -25,7 +21,7 @@ pub(super) fn handshake_mode_key(
     branch: Option<&deve_core::models::PeerId>,
     scope_nonce: u64,
 ) -> Option<String> {
-    self::handshake_state::handshake_mode_key(endpoint, degraded, repo_id, branch, scope_nonce)
+    self::state::handshake_mode_key(endpoint, degraded, repo_id, branch, scope_nonce)
 }
 #[cfg(test)]
 pub(super) fn restore_bootstrap_key(
@@ -36,7 +32,7 @@ pub(super) fn restore_bootstrap_key(
     should_restore: bool,
     last_mode: Option<&str>,
 ) -> Option<String> {
-    self::handshake_state::restore_bootstrap_key(
+    self::state::restore_bootstrap_key(
         endpoint,
         repo_name,
         branch,
@@ -51,7 +47,7 @@ pub(super) fn should_restore_session_scope(
     pending_branch_switch: Option<&crate::hooks::use_core::PendingBranchTarget>,
     pending_repo_switch: Option<&str>,
 ) -> bool {
-    self::handshake_state::should_restore_session_scope(
+    self::state::should_restore_session_scope(
         is_reconnect_bootstrap,
         pending_branch_switch,
         pending_repo_switch,
@@ -63,11 +59,7 @@ pub(super) fn should_suspend_handshake(
     pending_branch_switch: Option<&crate::hooks::use_core::PendingBranchTarget>,
     pending_repo_switch: Option<&str>,
 ) -> bool {
-    self::handshake_state::should_suspend_handshake(
-        branch,
-        pending_branch_switch,
-        pending_repo_switch,
-    )
+    self::state::should_suspend_handshake(branch, pending_branch_switch, pending_repo_switch)
 }
 
 /// 设置握手 Effect。
@@ -94,5 +86,4 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
 }
 
 #[cfg(test)]
-#[path = "handshake_test.rs"]
 mod tests;

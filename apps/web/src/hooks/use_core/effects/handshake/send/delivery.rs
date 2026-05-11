@@ -7,7 +7,7 @@ use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::{ClientMessage, SessionProof};
 use std::collections::BTreeMap;
 
-use super::super::handshake_state::reset_handshake_attempt;
+use super::super::state::reset_handshake_attempt;
 use super::HandshakeAttemptCtx;
 
 pub(super) fn build_handshake_message(

@@ -9,9 +9,8 @@ use leptos::prelude::{GetUntracked, Set};
 
 use super::super::types::HandshakeSignals;
 use super::super::{PendingBranchTarget, switch_nonce::next_switch_nonce_after};
-#[path = "handshake_bootstrap_repo.rs"]
-mod handshake_bootstrap_repo;
-use self::handshake_bootstrap_repo::{build_switch_repo, request_repo_list};
+mod repo;
+use self::repo::{build_switch_repo, request_repo_list};
 
 pub(super) fn restore_session_scope(
     ws: &WsService,

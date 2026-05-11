@@ -1,4 +1,4 @@
-use super::handshake_state::{reset_handshake_attempt_state, suspended_handshake_mode_key};
+use super::state::{reset_handshake_attempt_state, suspended_handshake_mode_key};
 use super::{
     handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,
     should_suspend_handshake,
@@ -11,9 +11,6 @@ use leptos::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[path = "handshake_test_reset.rs"]
 mod reset;
-#[path = "handshake_test_restore.rs"]
 mod restore;
-#[path = "handshake_test_suspend.rs"]
 mod suspend;

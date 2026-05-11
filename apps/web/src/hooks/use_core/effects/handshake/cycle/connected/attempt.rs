@@ -11,9 +11,9 @@ use leptos::prelude::Set;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use super::super::super::handshake_reset::reset_scope_mismatch;
-use super::super::super::handshake_send::{HandshakeAttemptCtx, spawn_handshake_attempt};
-use super::super::super::handshake_state::set_handshake_scope_nonce_if_changed;
+use super::super::super::reset::reset_scope_mismatch;
+use super::super::super::send::{HandshakeAttemptCtx, spawn_handshake_attempt};
+use super::super::super::state::set_handshake_scope_nonce_if_changed;
 
 pub(super) struct ConnectedHandshakeAttemptInput<'a> {
     pub ws: &'a WsService,

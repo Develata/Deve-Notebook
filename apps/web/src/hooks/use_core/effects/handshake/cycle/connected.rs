@@ -9,10 +9,9 @@ use std::rc::Rc;
 
 use super::super::super::super::types::HandshakeSignals;
 use super::super::super::handshake_bootstrap::restore_session_scope;
-#[path = "handshake_cycle_connected_attempt.rs"]
 mod attempt;
-use super::super::handshake_reset::{RestoreScopeTarget, suspend_current_handshake};
-use super::super::handshake_state::{
+use super::super::reset::{RestoreScopeTarget, suspend_current_handshake};
+use super::super::state::{
     handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,
     should_suspend_handshake,
 };

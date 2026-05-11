@@ -11,9 +11,9 @@ Server message effect handlers. Processes incoming WebSocket messages and update
 
 | File | Description |
 |------|-------------|
-| `handshake.rs` | Handshake effect — initial connection setup |
+| `handshake/` | Handshake effect — initial connection, retry, suspend, signing, and tests |
 | `handshake_bootstrap.rs` | Handshake bootstrap for first connection |
-| `handshake_state.rs` | Handshake state tracking |
+| `handshake_bootstrap/` | Handshake bootstrap helpers |
 | `message.rs` | Top-level message effect entry |
 | `message_dispatch.rs` | Message dispatch to specific handlers |
 | `message_dispatch_gate.rs` | Gate logic for message dispatch |

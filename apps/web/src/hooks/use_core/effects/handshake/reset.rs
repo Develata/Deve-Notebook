@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::super::handshake_bootstrap::restore_session_scope;
-use super::handshake_state::{
+use super::state::{
     reset_handshake_attempt, set_handshake_scope_nonce_if_changed, suspended_handshake_mode_key,
 };
 

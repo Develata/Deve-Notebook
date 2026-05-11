@@ -12,9 +12,8 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::super::super::types::HandshakeSignals;
-use super::handshake_reset::restore_scope_if_needed;
-use super::handshake_state::{reset_handshake_attempt, set_handshake_scope_nonce_if_changed};
-#[path = "handshake_send_delivery.rs"]
+use super::reset::restore_scope_if_needed;
+use super::state::{reset_handshake_attempt, set_handshake_scope_nonce_if_changed};
 mod delivery;
 
 pub(super) struct HandshakeAttemptCtx {

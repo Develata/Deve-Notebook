@@ -8,7 +8,6 @@ use leptos::prelude::{GetUntracked, Set};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[path = "handshake_state_mode.rs"]
 mod mode;
 pub(super) use self::mode::{
     handshake_mode_key, restore_bootstrap_key, should_restore_session_scope,

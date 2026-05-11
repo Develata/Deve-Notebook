@@ -7,8 +7,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::super::super::types::HandshakeSignals;
-use super::handshake_reset::reset_disconnected_state;
-#[path = "handshake_cycle_connected.rs"]
+use super::reset::reset_disconnected_state;
 mod connected;
 
 pub(super) fn run_handshake_cycle(
