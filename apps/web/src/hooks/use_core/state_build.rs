@@ -8,15 +8,10 @@ use leptos::prelude::*;
 use super::CoreState;
 use super::state::CoreSignals;
 use super::state_callbacks::CoreStateCallbacks;
-#[path = "state_build_assemble.rs"]
 mod assemble;
-#[path = "state_build_doc.rs"]
 mod doc;
-#[path = "state_build_runtime.rs"]
 mod runtime;
-#[path = "state_build_source_control.rs"]
 mod source_control;
-#[path = "state_build_sync.rs"]
 mod sync;
 
 pub(super) fn build_core_state(

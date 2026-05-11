@@ -4,15 +4,10 @@
 //!
 //! `CoreSignals` 初始化工厂。
 
-#[path = "state_init/build.rs"]
 mod build;
-#[path = "state_init/docs.rs"]
 mod docs;
-#[path = "state_init/repo.rs"]
 mod repo;
-#[path = "state_init/runtime.rs"]
 mod runtime;
-#[path = "state_init/source_control.rs"]
 mod source_control;
 
 use crate::api::ConnectionStatus;

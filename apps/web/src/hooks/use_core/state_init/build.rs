@@ -9,11 +9,9 @@ use super::{
     docs::DocSignals, repo::RepoSignals, runtime::RuntimeSignals,
     source_control::SourceControlSignals,
 };
-#[path = "build_assemble.rs"]
 mod assemble;
-#[path = "build_spectator.rs"]
-mod build_spectator;
-use self::{assemble::assemble_core_signals_with_spectator, build_spectator::build_is_spectator};
+mod spectator;
+use self::{assemble::assemble_core_signals_with_spectator, spectator::build_is_spectator};
 
 pub(super) fn assemble_core_signals(
     connection_status: ReadSignal<ConnectionStatus>,

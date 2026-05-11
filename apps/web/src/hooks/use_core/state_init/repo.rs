@@ -7,12 +7,10 @@ use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
 use super::super::types::PendingBranchTarget;
-#[path = "repo_projection.rs"]
-mod repo_projection;
-#[path = "repo_scope.rs"]
-mod repo_scope;
-use self::repo_projection::init_repo_projection_signals;
-use self::repo_scope::init_repo_scope_signals;
+mod projection;
+mod scope;
+use self::projection::init_repo_projection_signals;
+use self::scope::init_repo_scope_signals;
 
 #[derive(Clone, Copy)]
 pub(super) struct RepoSignals {

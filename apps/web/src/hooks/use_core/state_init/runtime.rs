@@ -11,15 +11,12 @@ use super::super::navigation::PendingNavigation;
 use super::super::pending::PendingLocalEdits;
 use super::super::state::PluginResponse;
 use super::super::types::{ChatMessage, PeerSession};
-#[path = "runtime_ai.rs"]
-mod runtime_ai;
-#[path = "runtime_connection.rs"]
-mod runtime_connection;
-#[path = "runtime_sync.rs"]
-mod runtime_sync;
-use self::runtime_ai::init_ai_runtime_signals;
-use self::runtime_connection::init_connection_runtime_signals;
-use self::runtime_sync::init_sync_runtime_signals;
+mod ai;
+mod connection;
+mod sync;
+use self::ai::init_ai_runtime_signals;
+use self::connection::init_connection_runtime_signals;
+use self::sync::init_sync_runtime_signals;
 
 #[derive(Clone, Copy)]
 pub(super) struct RuntimeSignals {
