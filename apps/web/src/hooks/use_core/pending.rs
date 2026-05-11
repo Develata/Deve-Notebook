@@ -54,11 +54,14 @@ impl PendingScope {
 pub type PendingLocalEdits = HashMap<DocId, Vec<PendingLocalEdit>>;
 pub use history::reconcile_with_history;
 pub use ops::{
-    clear_pending_edit_and_check_current_doc_empty, cloned_ops_for_doc,
-    cloned_ops_for_doc_in_scope, cloned_pending_edits_for_doc,
-    cloned_pending_edits_for_doc_in_scope, has_pending_edit, has_pending_edits_for_doc,
-    has_pending_edits_for_doc_in_scope, pending_count_for_doc, pending_count_for_doc_in_scope,
-    push_pending_edit,
+    clear_pending_edit_and_check_current_doc_empty, cloned_ops_for_doc_in_scope,
+    cloned_pending_edits_for_doc_in_scope, has_pending_edit, has_pending_edits_for_doc_in_scope,
+    pending_count_for_doc_in_scope, push_pending_edit,
+};
+#[cfg(test)]
+pub use ops::{
+    cloned_ops_for_doc, cloned_pending_edits_for_doc, has_pending_edits_for_doc,
+    pending_count_for_doc,
 };
 #[cfg(test)]
 mod ops_tests;

@@ -69,6 +69,7 @@ pub fn clear_pending_edit_and_check_current_doc_empty(
         && pending_count_for_doc_filtered(pending, doc_id, repo_id, scope_nonce) == 0
 }
 
+#[cfg(test)]
 pub fn cloned_ops_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> Vec<Op> {
     cloned_ops_for_doc_filtered(pending, doc_id, None, None)
 }
@@ -101,6 +102,7 @@ fn cloned_ops_for_doc_filtered(
         .collect()
 }
 
+#[cfg(test)]
 pub fn cloned_pending_edits_for_doc(
     pending: &PendingLocalEdits,
     doc_id: DocId,
@@ -136,6 +138,7 @@ fn cloned_pending_edits_for_doc_filtered(
         .collect()
 }
 
+#[cfg(test)]
 pub fn pending_count_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> usize {
     pending_count_for_doc_filtered(pending, doc_id, None, None)
 }
@@ -167,6 +170,7 @@ fn pending_count_for_doc_filtered(
         .count()
 }
 
+#[cfg(test)]
 pub fn has_pending_edits_for_doc(pending: &PendingLocalEdits, doc_id: DocId) -> bool {
     pending_count_for_doc(pending, doc_id) > 0
 }
