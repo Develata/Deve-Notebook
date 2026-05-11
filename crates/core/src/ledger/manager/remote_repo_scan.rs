@@ -8,7 +8,6 @@ use crate::ledger::manager::remote_repo_scan_helpers::{
     duplicate_catalog_ids, repaired_remote_repo_info, scanned_remote_repo_info,
     validate_scanned_remote_entries,
 };
-use crate::ledger::manager::remote_repo_scan_validate::validate_remote_repo_url_coverage;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::repo_catalog_runtime::RepoCatalogRuntime;
 use crate::ledger::manager::types::RepoManager;
@@ -165,7 +164,17 @@ impl<'a> RepoCatalogRuntime<'a> {
     }
 
     pub(crate) fn validate_remote_repo_url_coverage(&self, peer_id: &PeerId) -> Result<()> {
-        validate_remote_repo_url_coverage(self.manager, peer_id)
+        for entry in self.scan_remote_repo_entries(peer_id)? {
+            if let Some(info) = &entry.info
+                && info.url.as_deref().is_none_or(|u| u.trim().is_empty())
+            {
+                anyhow::bail!(
+                    "Broken remote repo {} while validating URL coverage: repository URL not resolved",
+                    entry.stem
+                );
+            }
+        }
+        Ok(())
     }
 }
 
