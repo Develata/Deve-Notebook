@@ -17,13 +17,11 @@ use crate::i18n::Locale;
 use deve_core::protocol::ServerErrorCode;
 use leptos::prelude::*;
 
-#[path = "panel_effects.rs"]
-mod panel_effects;
-#[path = "panel_status.rs"]
-mod panel_status;
+mod effects;
+mod status;
 
-use self::panel_effects::{attach_plugin_response_effect, attach_scope_reset_effect};
-use self::panel_status::{error_notice, loading_notice};
+use self::effects::{attach_plugin_response_effect, attach_scope_reset_effect};
+use self::status::{error_notice, loading_notice};
 
 pub(crate) fn chat_retry_prompt(last_prompt: &str) -> Option<String> {
     let prompt = last_prompt.trim();

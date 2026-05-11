@@ -102,5 +102,4 @@ pub(super) fn plan_chat_messages(plan: &ChatBackendSendPlan) -> Vec<ChatMessageP
 }
 
 #[cfg(test)]
-#[path = "actions_send_backend_test.rs"]
 mod tests;

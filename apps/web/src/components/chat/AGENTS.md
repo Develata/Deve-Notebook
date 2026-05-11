@@ -12,12 +12,12 @@ AI chat interface. Chat panel, message list, input area, actions, drag-and-drop.
 | File | Description |
 |------|-------------|
 | `mod.rs` | Module declarations |
-| `panel.rs` | Main chat panel |
+| `panel/` | Main chat panel facade, effects, status notices, and tests |
 | `header.rs` | Chat header |
 | `message_list.rs` | Message list |
 | `message_item.rs` | Message rendering |
 | `input_area.rs` | Chat input |
-| `actions.rs` | Action buttons |
+| `actions/` | Action callbacks, backend send planning, and tests |
 | `drop_handler.rs` | Content drop handler |
 
 <!-- MANUAL: -->

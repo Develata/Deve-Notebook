@@ -211,5 +211,4 @@ pub fn make_send_message(
 }
 
 #[cfg(test)]
-#[path = "actions_send_test.rs"]
 mod tests;
