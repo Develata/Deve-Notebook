@@ -111,4 +111,16 @@
     - json_fields_present: ["version", "profile", "delivery", "environment"]
     - json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]
     - ui_text_visible_any_of: ["embedded-frontend", "static-dir", "api-only", "plugin-host-proxy"]
+
+- case_id: REL-007
+  goal: 当前运行写读主链路可在临时 repo 中自动验收。
+  preconditions:
+    - Rust workspace 可构建
+  steps:
+    - run: scripts/smoke-runtime-happy-path.sh
+  assertions:
+    - ws_assert: repo_switch_sync_hello_register_writer_ok true
+    - ws_assert: create_edit_ack_new_op_ok true
+    - ws_assert: open_doc_history_readback_ok true
+    - ui_assert: reconnect_bootstrap_restore_contract_ok true
 ```

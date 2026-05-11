@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# REL-005/REL-006 keep Docker, compose, release workflow, and runtime
+# REL-005/REL-006/REL-007 keep Docker, compose, release workflow, and runtime
 # visibility surfaces aligned with the current release baseline.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -104,9 +104,11 @@ contains "scripts/smoke-docker-release.sh" "docker_cmd run -d"
 contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/node/role"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-005"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-006"
+contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-007"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_BIN=/path/to/docker"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "scripts/smoke-runtime-happy-path.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
@@ -133,5 +135,10 @@ contains "scripts/smoke-runtime-release-info.sh" "allowed_delivery"
 contains "scripts/smoke-runtime-release-info.sh" "repo_health"
 contains "scripts/smoke-runtime-release-info.sh" "repo_health counts do not add up"
 contains "scripts/smoke-runtime-release-info.sh" "unknown repo_health must use zero counts"
+contains "scripts/smoke-runtime-happy-path.sh" "ws_endpoint_sync_hello_uses_switched_repo_scope"
+contains "scripts/smoke-runtime-happy-path.sh" "ws_endpoint_register_writer_after_sync_hello_returns_write_ready"
+contains "scripts/smoke-runtime-happy-path.sh" "ws_edit_after_register_writer_emits_new_op_and_ack"
+contains "scripts/smoke-runtime-happy-path.sh" "ws_open_doc_and_history_read_back_registered_edit"
+contains "scripts/smoke-runtime-happy-path.sh" "restore_runs_only_on_clean_reconnect_edge"
 
 echo "release-baseline-check: ok"

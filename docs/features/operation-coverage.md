@@ -35,7 +35,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.plugin.runtime-boundary` | [`plugin_runtime_boundary.md`](./operations/plugin_runtime_boundary.md) | `PLUG-001`, `AI-005`, `AI-006` |
 | `flow.release.ci` | [`release_ci.md`](./operations/release_ci.md) | `REL-001`, `REL-002`, `REL-003`, `TECH-001`, `PERF-001` |
 | `flow.release.tag-dispatch` | [`release_tag_dispatch.md`](./operations/release_tag_dispatch.md) | `REL-001`, `REL-003` |
-| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `TECH-001`, `PERF-001` |
+| `flow.release.quality-gates` | [`release_quality_gates.md`](./operations/release_quality_gates.md) | `REL-003`, `REL-007`, `TECH-001`, `PERF-001` |
 | `flow.release.artifact-publish` | [`release_artifact_publish.md`](./operations/release_artifact_publish.md) | `REL-001`, `REL-002`, `REL-003` |
 | `flow.release.delivery-verification` | [`release_delivery_verification.md`](./operations/release_delivery_verification.md) | `REL-001`, `REL-002`, `REL-003` |
 | `flow.rendering.cursor-reveal` | [`rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md) | `RENDER-CURSOR-001`, `RENDER-RICH-002` |

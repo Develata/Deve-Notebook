@@ -174,6 +174,20 @@ The public endpoint intentionally exposes aggregate counts only. Use
 `node-check --projection --repo <repo>` or protected `/api/admin/projection-check`
 for repo-specific details.
 
+## Runtime Happy Path Smoke
+
+Validate the current in-process runtime write/read path without depending on the
+checked-in dev ledger:
+
+```bash
+scripts/smoke-runtime-happy-path.sh
+```
+
+The script uses temporary repo state and the real Axum/WebSocket harness. It
+covers repo switch, `SyncHello`, `RegisterWriter`, document create, edit ack,
+confirmed `NewOp`, `OpenDoc`, history readback, and the Web reconnect bootstrap
+unit contract.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
