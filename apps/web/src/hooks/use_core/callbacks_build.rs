@@ -6,9 +6,7 @@ use crate::api::WsService;
 
 use super::state::CoreSignals;
 use super::state_callbacks::CoreStateCallbacks;
-#[path = "callbacks_build_scope.rs"]
 mod scope;
-#[path = "callbacks_build_sections.rs"]
 mod sections;
 
 pub(super) fn build_callbacks(ws: &WsService, signals: &CoreSignals) -> CoreStateCallbacks {

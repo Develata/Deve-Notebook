@@ -7,9 +7,7 @@ use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
-#[path = "callbacks_sync_read.rs"]
 mod read;
-#[path = "callbacks_sync_write.rs"]
 mod write;
 
 use super::callbacks_scope::LocalScopeSignals;

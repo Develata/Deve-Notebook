@@ -25,6 +25,8 @@ Core application state management hub. The largest hook module — manages WebSo
 | `types.rs` | Shared type definitions |
 | `types/` | CoreState, chat helpers, and shared signal structs |
 | `callbacks.rs` | General callback handlers |
+| `callbacks_build/` | Core callback assembly helpers |
+| `callbacks_sync/` | Sync callback read/write helpers |
 | `callbacks_sc.rs` | Source control callbacks |
 | `callbacks_sc_scope.rs` | SC scope callbacks |
 | `callbacks_sc_target.rs` | SC target callbacks |
@@ -34,6 +36,7 @@ Core application state management hub. The largest hook module — manages WebSo
 | `callbacks_switch.rs` | Repo/branch switch callbacks |
 | `callbacks_sync.rs` | Sync callbacks |
 | `apply.rs` | State application logic |
+| `apply/` | Tree lookup and node mutation helpers |
 | `navigation.rs` | Document navigation |
 | `dashboard_context.rs` | Dashboard data context |
 | `diff_session.rs` | Diff session management |
