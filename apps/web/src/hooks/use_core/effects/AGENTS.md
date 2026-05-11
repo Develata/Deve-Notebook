@@ -16,15 +16,16 @@ Server message effect handlers. Processes incoming WebSocket messages and update
 | `handshake_bootstrap/` | Handshake bootstrap helpers |
 | `message.rs` | Top-level message effect entry |
 | `message_dispatch.rs` | Message dispatch to specific handlers |
-| `message_dispatch_gate.rs` | Gate logic for message dispatch |
+| `message_dispatch_gate/` | Gate logic for message dispatch and tests |
 | `message_dispatch_protocol.rs` | Protocol message dispatch |
 | `message_control.rs` | Control message handling |
-| `message_protocol.rs` | Protocol message processing |
+| `message_protocol/` | Protocol message processing and tests |
 | `message_projection/` | Projection update handling and tests |
 | `message_refresh.rs` | Refresh message handling |
 | `message_repo_scope/` | Repo scope message handling and tests |
 | `message_dispatch_route_projection/` | Projection/sync routing helpers |
 | `message_runtime.rs` | Runtime message handling |
+| `message_dispatch_runtime/` | Runtime response dispatch handling and tests |
 | `message_scope/` | Scope message handling and tests |
 | `message_shadow/` | Shadow branch message handling and tests |
 | `message_sync.rs` | Sync message handling |

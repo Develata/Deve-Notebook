@@ -6,7 +6,6 @@ use leptos::prelude::GetUntracked;
 
 use super::super::state::CoreSignals;
 use deve_core::models::{PeerId, RepoId};
-#[path = "message_dispatch_gate_logic.rs"]
 mod logic;
 
 pub fn accepts_unscoped_update(signals: CoreSignals) -> bool {
@@ -42,5 +41,4 @@ pub fn accepts_search_results(
 }
 
 #[cfg(test)]
-#[path = "message_dispatch_gate_test.rs"]
 mod tests;

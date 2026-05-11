@@ -9,7 +9,6 @@ use crate::i18n::{Locale, t};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use leptos::prelude::{GetUntracked, ReadSignal, Set, WriteSignal};
 
-#[path = "message_protocol_control.rs"]
 mod control;
 use self::control::is_auth_error;
 pub(crate) use self::control::should_recover_scope_pref_after_failed_repo_switch;
@@ -150,5 +149,4 @@ pub(super) fn clear_failed_scope_switch(
 }
 
 #[cfg(test)]
-#[path = "message_protocol_test.rs"]
 mod tests;

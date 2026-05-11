@@ -106,5 +106,4 @@ pub fn handle_search_results_message(
 }
 
 #[cfg(test)]
-#[path = "message_dispatch_runtime_test.rs"]
 mod tests;

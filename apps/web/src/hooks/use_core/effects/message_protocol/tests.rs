@@ -1,4 +1,3 @@
-#[path = "message_protocol_test_support.rs"]
 mod support;
 
 use super::clear_failed_scope_switch;
