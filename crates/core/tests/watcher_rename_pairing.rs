@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 04_storage#watcher-contract
 
+mod common;
 mod watcher_test_support;
 
 use deve_core::models::NodeId;

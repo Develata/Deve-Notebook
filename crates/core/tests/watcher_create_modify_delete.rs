@@ -3,6 +3,7 @@
 //!
 //! STORE-007: watcher maps create/modify/delete into pending_fs_ops only.
 
+mod common;
 mod watcher_test_support;
 
 use deve_core::source_control::ChangeStatus;

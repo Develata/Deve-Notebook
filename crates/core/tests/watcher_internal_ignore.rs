@@ -4,6 +4,7 @@
 //! POS-005: `.deveignore` applies to watcher events and startup scan.
 //! STORE-007: ignored directory scans do not create pending_fs_ops.
 
+mod common;
 mod watcher_test_support;
 
 use deve_core::source_control::ChangeStatus;

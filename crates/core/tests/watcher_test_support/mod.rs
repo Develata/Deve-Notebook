@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 
-mod common;
+use crate::common;
 
 pub struct Harness {
     pub dir: TempDir,
