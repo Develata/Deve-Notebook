@@ -27,6 +27,8 @@ use redb::Database;
 use std::path::Path;
 use std::sync::Arc;
 
+mod runtime;
+
 /// 数据库访问信息
 ///
 /// 包含数据库引用及其访问模式
@@ -45,6 +47,10 @@ pub struct DatabaseHandle {
 }
 
 impl RepoManager {
+    pub(crate) fn database_runtime(&self) -> runtime::RepoDatabaseRuntime<'_> {
+        runtime::RepoDatabaseRuntime::new(self)
+    }
+
     fn repair_secondary_local_runtime_tables(
         &self,
         repo_name: &str,
@@ -90,70 +96,7 @@ impl RepoManager {
         branch: Option<&PeerId>,
         repo_name: &str,
     ) -> Result<DatabaseHandle> {
-        let name = repo_name.trim_end_matches(".redb");
-
-        match branch {
-            // 本地分支 (可读写)
-            None => {
-                let stem = self.resolve_local_repo_name_for_execution(None, Some(name))?;
-                let db = self.get_or_open_local_db(&stem)?;
-                let repo_id = self
-                    .get_repo_info_for(None, Some(&stem))?
-                    .map(|info| info.uuid)
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Broken local repo {} while opening database: repository metadata missing",
-                            stem
-                        )
-                    })?;
-                Ok(DatabaseHandle {
-                    db,
-                    readonly: false,
-                    branch: None,
-                    repo_id: Some(repo_id),
-                    repo_name: stem,
-                })
-            }
-            // 远端影子库 (只读)
-            Some(peer_id) => {
-                let resolved = self
-                    .resolve_remote_repo_entry(peer_id, name)?
-                    .ok_or_else(|| anyhow::anyhow!("Repository not found: {}", name))?;
-                let repo_name = resolved.stem.clone();
-                let repo_id = match &resolved.info {
-                    Some(info) => info.uuid,
-                    None => uuid::Uuid::parse_str(&resolved.stem).map_err(|_| {
-                        anyhow::anyhow!(
-                            "Broken remote repo {} for peer {} while opening database: repository metadata missing",
-                            resolved.stem,
-                            peer_id
-                        )
-                    })?,
-                };
-                let loaded = self
-                    .read_shadow_dbs()?
-                    .get(peer_id)
-                    .and_then(|repos| repos.get(&repo_id))
-                    .cloned();
-                if let Some(db) = loaded {
-                    return Ok(DatabaseHandle {
-                        db,
-                        readonly: true,
-                        branch: Some(peer_id.clone()),
-                        repo_id: Some(repo_id),
-                        repo_name,
-                    });
-                }
-                let db = self.get_or_open_db_at(&resolved.path)?;
-                Ok(DatabaseHandle {
-                    db,
-                    readonly: true, // 远端分支始终只读
-                    branch: Some(peer_id.clone()),
-                    repo_id: Some(repo_id),
-                    repo_name,
-                })
-            }
-        }
+        self.database_runtime().open_database(branch, repo_name)
     }
 
     /// 获取或打开本地数据库 (返回 Arc)
