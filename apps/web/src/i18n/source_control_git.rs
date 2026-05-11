@@ -5,7 +5,6 @@
 
 use super::Locale;
 
-#[path = "source_control_git_repair.rs"]
 mod repair;
 
 pub use repair::*;

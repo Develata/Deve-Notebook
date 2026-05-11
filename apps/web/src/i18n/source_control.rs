@@ -10,9 +10,7 @@
 
 use super::Locale;
 
-#[path = "source_control_actions.rs"]
 mod actions;
-#[path = "source_control_gate.rs"]
 mod gate;
 
 pub use super::source_control_git::*;
