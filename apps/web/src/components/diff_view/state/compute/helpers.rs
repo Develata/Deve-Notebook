@@ -149,5 +149,4 @@ pub fn cache_completed_diff(key: String, value: (DiffLines, DiffAlgorithm)) {
 }
 
 #[cfg(test)]
-#[path = "state_compute_helpers_test.rs"]
 mod tests;

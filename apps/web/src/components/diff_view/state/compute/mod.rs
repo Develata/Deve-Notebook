@@ -10,9 +10,7 @@ use leptos::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-#[path = "state_compute_chunk.rs"]
 mod chunk;
-#[path = "state_compute_helpers.rs"]
 mod helpers;
 use chunk::{ChunkedDiffStart, start_chunked_diff};
 use helpers::{algo_label, initial_cached_or_preview, preview_diff};

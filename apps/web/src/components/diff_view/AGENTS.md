@@ -12,8 +12,7 @@ Source control diff viewer with split and unified modes. Implements patience dif
 | File | Description |
 |------|-------------|
 | `mod.rs` | DiffView component entry |
-| `state.rs` | Diff view state management |
-| `state_compute.rs` | Diff state computation |
+| `state/` | Diff view state management, compute scheduling, and tests |
 | `body.rs` | Diff body rendering |
 | `header.rs` | Diff header (file path, stats) |
 | `line_render.rs` | Line rendering with word-level highlights |
@@ -23,9 +22,6 @@ Source control diff viewer with split and unified modes. Implements patience dif
 | `navigation.rs` | Hunk navigation |
 | `viewport.rs` | Viewport-based lazy rendering |
 | `cache.rs` | Diff computation cache |
-| `state_compute_chunk.rs` | Chunked diff scheduler |
-| `state_compute_helpers.rs` | Diff compute cache/preview helpers |
-| `state_compute_helpers_test.rs` | Diff compute helper unit tests |
 
 ## Subdirectories
 
