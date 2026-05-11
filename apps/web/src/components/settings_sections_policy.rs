@@ -133,5 +133,4 @@ fn ai_backend_button_class(disabled: bool, selected: bool) -> &'static str {
 }
 
 #[cfg(test)]
-#[path = "settings_sections_policy_test.rs"]
 mod tests;

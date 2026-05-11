@@ -25,6 +25,7 @@ File explorer sidebar with tree view, repo switcher, and source control panel in
 
 | Directory | Purpose |
 |-----------|---------|
+| `path_utils/` | Path utility unit tests |
 | `source_control/` | Source control panel |
 
 ## For AI Agents

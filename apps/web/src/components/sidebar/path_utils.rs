@@ -86,5 +86,4 @@ fn format_with_suffix(stem: &str, suffix: &str, ext: &str) -> String {
 }
 
 #[cfg(test)]
-#[path = "path_utils_test.rs"]
 mod tests;
