@@ -14,8 +14,8 @@ use anyhow::Result;
 
 impl RepoManager {
     pub fn unstage_file_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
-        self.unstage_file_target_in_local_repo(repo_name, &target)
+        self.source_control_runtime()
+            .unstage_file_in_local_repo(repo_name, path)
     }
 
     pub fn commit_staged_in_local_repo(
@@ -23,25 +23,19 @@ impl RepoManager {
         repo_name: &str,
         message: &str,
     ) -> Result<CommitInfo> {
-        let Some(vault_root) = &self.vault_root else {
-            anyhow::bail!("vault_root is required for staged commits");
-        };
-        if repo_name == self.local_repo_name() {
-            return self.commit_staged_with_ops(message, vault_root.clone());
-        }
-        self.commit_staged_with_ops_in_local_repo(repo_name, message, vault_root.clone())
+        self.source_control_runtime()
+            .commit_staged_in_local_repo(repo_name, message)
     }
 
     // === Pending FS Ops (Working Directory) ===
 
     pub fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
-        self.stage_pending_target_in_local_repo(repo_name, &target)
+        self.source_control_runtime()
+            .stage_pending_in_local_repo(repo_name, path)
     }
 
     pub fn discard_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        let target = self.tracked_target_for_path_in_local_repo(repo_name, path)?;
-        self.discard_pending_target_in_local_repo(repo_name, &target)
-            .map(|_| ())
+        self.source_control_runtime()
+            .discard_pending_in_local_repo(repo_name, path)
     }
 }

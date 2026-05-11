@@ -4,9 +4,7 @@
 //!
 use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{pending_fs, staging};
 use anyhow::Result;
-use std::collections::HashSet;
 
 impl RepoManager {
     pub fn stage_pending_target_in_local_repo(
@@ -14,14 +12,8 @@ impl RepoManager {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| {
-            let entry = if let Some(entry) = pending_fs::take_for_target(db, target)? {
-                entry
-            } else {
-                anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
-            };
-            crate::ledger::source_control::stage_pending_entry(db, &entry)
-        })
+        self.source_control_runtime()
+            .stage_pending_target_in_local_repo(repo_name, target)
     }
 
     pub fn stage_resolved_pending_target_in_local_repo(
@@ -29,7 +21,8 @@ impl RepoManager {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<()> {
-        self.stage_resolved_pending_targets_in_local_repo(repo_name, std::slice::from_ref(target))
+        self.source_control_runtime()
+            .stage_resolved_pending_target_in_local_repo(repo_name, target)
     }
 
     pub fn stage_resolved_pending_targets_in_local_repo(
@@ -37,24 +30,8 @@ impl RepoManager {
         repo_name: &str,
         targets: &[ScPathTarget],
     ) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| {
-            let mut selected = Vec::new();
-            let mut seen_paths = HashSet::new();
-            for target in targets {
-                let entry = pending_fs::get_for_target(db, target)?.ok_or_else(|| {
-                    anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path)
-                })?;
-                if seen_paths.insert(entry.path.clone()) {
-                    selected.push(entry);
-                }
-            }
-            for mut entry in selected {
-                pending_fs::remove(db, &entry.path)?;
-                entry.has_conflict = false;
-                crate::ledger::source_control::stage_pending_entry(db, &entry)?;
-            }
-            Ok(())
-        })
+        self.source_control_runtime()
+            .stage_resolved_pending_targets_in_local_repo(repo_name, targets)
     }
 
     pub fn discard_pending_target_in_local_repo(
@@ -62,11 +39,8 @@ impl RepoManager {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<()> {
-        let path = self
-            .run_on_local_repo(repo_name, |db| pending_fs::get_for_target(db, target))?
-            .map(|entry| entry.path)
-            .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path))?;
-        self.discard_pending_workdir_in_local_repo(repo_name, &path)
+        self.source_control_runtime()
+            .discard_pending_target_in_local_repo(repo_name, target)
     }
 
     pub fn unstage_file_target_in_local_repo(
@@ -74,22 +48,7 @@ impl RepoManager {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<()> {
-        self.run_on_local_repo(repo_name, |db| {
-            let Some((path, staged)) = staging::take_staged_for_target(db, target)? else {
-                anyhow::bail!("Path is not staged: {}", target.path);
-            };
-            pending_fs::upsert(
-                db,
-                &pending_fs::PendingFsEntry {
-                    path,
-                    renamed_from: staged.renamed_from,
-                    doc_id: staged.doc_id,
-                    change_type: staged.status,
-                    content_hash: staged.content_hash,
-                    detected_at: chrono::Utc::now().timestamp_millis(),
-                    has_conflict: staged.has_conflict,
-                },
-            )
-        })
+        self.source_control_runtime()
+            .unstage_file_target_in_local_repo(repo_name, target)
     }
 }
