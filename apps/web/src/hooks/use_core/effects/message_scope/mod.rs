@@ -12,9 +12,7 @@
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::PeerId;
 
-#[path = "message_scope_branch.rs"]
 mod branch;
-#[path = "message_scope_request.rs"]
 mod request;
 use self::branch::{expected_branch_string, expected_peer_branch};
 pub use self::request::{RequestMatch, accepts_system_or_matching_request};
@@ -70,5 +68,4 @@ pub fn shadow_list_matches_scope(request: RequestMatch<'_>, scope: &ShadowListSc
 }
 
 #[cfg(test)]
-#[path = "message_scope_test.rs"]
 mod tests;

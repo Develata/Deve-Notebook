@@ -22,10 +22,10 @@ Server message effect handlers. Processes incoming WebSocket messages and update
 | `message_protocol.rs` | Protocol message processing |
 | `message_projection.rs` | Projection update handling |
 | `message_refresh.rs` | Refresh message handling |
-| `message_repo_scope.rs` | Repo scope message handling |
+| `message_repo_scope/` | Repo scope message handling and tests |
 | `message_runtime.rs` | Runtime message handling |
-| `message_scope.rs` | Scope message handling |
-| `message_shadow.rs` | Shadow branch message handling |
+| `message_scope/` | Scope message handling and tests |
+| `message_shadow/` | Shadow branch message handling and tests |
 | `message_sync.rs` | Sync message handling |
 
 ## For AI Agents

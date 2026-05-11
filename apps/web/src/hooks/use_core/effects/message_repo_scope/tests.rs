@@ -8,9 +8,6 @@ use crate::hooks::use_core::state::init_signals;
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 
-#[path = "message_repo_scope_test_errors.rs"]
 mod errors;
-#[path = "message_repo_scope_test_scope.rs"]
 mod scope;
-#[path = "message_repo_scope_test_write.rs"]
 mod write;

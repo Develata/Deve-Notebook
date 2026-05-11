@@ -7,9 +7,7 @@ use crate::hooks::use_core::state::CoreSignals;
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 
-#[path = "message_repo_scope_accept.rs"]
 mod accept;
-#[path = "message_repo_scope_logic.rs"]
 mod logic;
 #[cfg(test)]
 pub use self::accept::{WriteReadyScopeInput, accepts_write_ready};
@@ -63,5 +61,4 @@ pub fn matches_projection_message_scope(
 }
 
 #[cfg(test)]
-#[path = "message_repo_scope_test.rs"]
 mod tests;

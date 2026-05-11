@@ -6,11 +6,7 @@ use super::{
 use crate::hooks::use_core::PendingBranchTarget;
 use deve_core::models::PeerId;
 
-#[path = "message_scope_test_branch.rs"]
 mod branch;
-#[path = "message_scope_test_repo.rs"]
 mod repo;
-#[path = "message_scope_test_request.rs"]
 mod request;
-#[path = "message_scope_test_shadow.rs"]
 mod shadow;

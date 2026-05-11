@@ -7,9 +7,7 @@ use deve_core::models::PeerId;
 use leptos::prelude::{GetUntracked, Set, Update};
 
 use super::super::state::CoreSignals;
-#[path = "message_shadow_actions.rs"]
 mod actions;
-#[path = "message_shadow_logic.rs"]
 mod logic;
 pub use self::actions::request_shadow_list;
 pub(crate) use self::logic::{
@@ -18,7 +16,6 @@ pub(crate) use self::logic::{
 };
 
 #[cfg(test)]
-#[path = "message_shadow_test.rs"]
 mod tests;
 
 pub fn handle_shadow_list(
