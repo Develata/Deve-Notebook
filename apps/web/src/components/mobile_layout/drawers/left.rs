@@ -12,9 +12,7 @@ use leptos::prelude::*;
 
 use super::drawer_class;
 
-#[path = "left_header.rs"]
 mod header;
-#[path = "left_tabs.rs"]
 mod tabs;
 
 use header::LeftDrawerHeader;

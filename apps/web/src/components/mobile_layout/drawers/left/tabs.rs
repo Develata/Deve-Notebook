@@ -7,9 +7,7 @@ use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
 
-#[path = "left_more_menu.rs"]
 mod more_menu;
-#[path = "left_tab_button.rs"]
 mod tab_button;
 
 use more_menu::LeftDrawerMoreMenu;

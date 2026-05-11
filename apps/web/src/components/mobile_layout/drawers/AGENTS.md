@@ -13,9 +13,13 @@ Swipeable left (file explorer) and right (outline/chat) drawers for mobile layou
 |------|-------------|
 | `mod.rs` | Drawer module declarations |
 | `left.rs` | Left drawer (file explorer) |
-| `left_more_menu.rs` | Mobile left drawer More menu and pin-state policy |
-| `left_more_menu_test.rs` | Mobile More menu marker, close, and pin-toggle unit tests |
 | `right.rs` | Right drawer (outline/chat) |
+
+## Subdirectories
+
+| Directory | Purpose |
+|-----------|---------|
+| `left/` | Left drawer header, tabs, More menu, and unit tests |
 
 ## For AI Agents
 

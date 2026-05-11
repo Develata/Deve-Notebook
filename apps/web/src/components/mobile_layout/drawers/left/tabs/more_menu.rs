@@ -150,5 +150,4 @@ fn more_item_class(view: SidebarView) -> &'static str {
 }
 
 #[cfg(test)]
-#[path = "left_more_menu_test.rs"]
 mod tests;
