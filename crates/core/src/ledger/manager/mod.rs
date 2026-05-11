@@ -18,9 +18,9 @@ mod workspace;
 
 mod authority_storage_runtime;
 mod commit_apply;
-mod commit_ops;
 mod commit_plan;
 mod commit_preflight;
+mod commit_runtime;
 mod commit_structure_plan;
 mod dir_structure_plan;
 mod dir_structure_support;

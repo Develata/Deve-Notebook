@@ -147,9 +147,11 @@ impl<'a> SourceControlRuntime<'a> {
         if repo_name == self.manager.local_repo_name() {
             return self
                 .manager
+                .commit_runtime()
                 .commit_staged_with_ops(message, vault_root.clone());
         }
         self.manager
+            .commit_runtime()
             .commit_staged_with_ops_in_local_repo(repo_name, message, vault_root.clone())
     }
 
