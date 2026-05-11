@@ -12,17 +12,25 @@ use crate::ledger::schema::{
 use crate::models::{DocId, NodeId, PeerId, RepoId};
 use anyhow::{Context, Result};
 
-impl RepoManager {
+pub(crate) struct ShadowMaintenanceRuntime<'a> {
+    manager: &'a RepoManager,
+}
+
+impl<'a> ShadowMaintenanceRuntime<'a> {
+    pub(crate) fn new(manager: &'a RepoManager) -> Self {
+        Self { manager }
+    }
+
     /// 重置指定 Shadow 文档的所有历史操作。
-    pub fn reset_shadow_doc(
+    pub(crate) fn reset_shadow_doc(
         &self,
         peer_id: &PeerId,
         repo_id: &RepoId,
         doc_id: &DocId,
     ) -> Result<()> {
-        self.ensure_shadow_db(peer_id, repo_id)?;
+        self.manager.ensure_shadow_db(peer_id, repo_id)?;
 
-        let guard = self.read_shadow_dbs()?;
+        let guard = self.manager.read_shadow_dbs()?;
         let peer_map = guard
             .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
@@ -39,15 +47,15 @@ impl RepoManager {
     }
 
     /// 重置指定 Shadow 节点的结构事实索引。
-    pub fn reset_shadow_node(
+    pub(crate) fn reset_shadow_node(
         &self,
         peer_id: &PeerId,
         repo_id: &RepoId,
         node_id: &NodeId,
     ) -> Result<()> {
-        self.ensure_shadow_db(peer_id, repo_id)?;
+        self.manager.ensure_shadow_db(peer_id, repo_id)?;
 
-        let guard = self.read_shadow_dbs()?;
+        let guard = self.manager.read_shadow_dbs()?;
         let peer_map = guard
             .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
@@ -64,10 +72,10 @@ impl RepoManager {
     }
 
     /// 整库重置指定 Shadow Repo 的 ledger/projection 内容，但保留 RepoMetadata。
-    pub fn reset_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
-        self.ensure_shadow_db(peer_id, repo_id)?;
+    pub(crate) fn reset_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
+        self.manager.ensure_shadow_db(peer_id, repo_id)?;
 
-        let guard = self.read_shadow_dbs()?;
+        let guard = self.manager.read_shadow_dbs()?;
         let peer_map = guard
             .get(peer_id)
             .ok_or_else(|| anyhow::anyhow!("Peer DBs not loaded"))?;
@@ -115,8 +123,8 @@ impl RepoManager {
     }
 
     /// 删除指定 Peer 的影子库目录。
-    pub fn delete_peer_branch(&self, peer_id: &PeerId) -> Result<()> {
-        let peer_dir = self.remotes_dir().join(peer_id.to_filename());
+    pub(crate) fn delete_peer_branch(&self, peer_id: &PeerId) -> Result<()> {
+        let peer_dir = self.manager.remotes_dir().join(peer_id.to_filename());
 
         match peer_dir.try_exists() {
             Ok(true) => {}
@@ -128,7 +136,7 @@ impl RepoManager {
         }
 
         {
-            let mut guard = self.write_shadow_dbs()?;
+            let mut guard = self.manager.write_shadow_dbs()?;
             guard.remove(peer_id);
         }
         evict_database_paths_under(&peer_dir)?;
@@ -138,6 +146,46 @@ impl RepoManager {
 
         tracing::info!("Deleted peer branch: {}", peer_id);
         Ok(())
+    }
+}
+
+impl RepoManager {
+    pub fn reset_shadow_doc(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        doc_id: &DocId,
+    ) -> Result<()> {
+        self.shadow_maintenance_runtime()
+            .reset_shadow_doc(peer_id, repo_id, doc_id)
+    }
+
+    pub fn reset_shadow_node(
+        &self,
+        peer_id: &PeerId,
+        repo_id: &RepoId,
+        node_id: &NodeId,
+    ) -> Result<()> {
+        self.shadow_maintenance_runtime()
+            .reset_shadow_node(peer_id, repo_id, node_id)
+    }
+
+    pub fn reset_shadow_repo(&self, peer_id: &PeerId, repo_id: &RepoId) -> Result<()> {
+        self.shadow_maintenance_runtime()
+            .reset_shadow_repo(peer_id, repo_id)
+    }
+
+    pub(crate) fn reset_shadow_repo_txn(write_txn: &redb::WriteTransaction) -> Result<()> {
+        ShadowMaintenanceRuntime::reset_shadow_repo_txn(write_txn)
+    }
+
+    pub fn delete_peer_branch(&self, peer_id: &PeerId) -> Result<()> {
+        self.shadow_maintenance_runtime()
+            .delete_peer_branch(peer_id)
+    }
+
+    pub(crate) fn shadow_maintenance_runtime(&self) -> ShadowMaintenanceRuntime<'_> {
+        ShadowMaintenanceRuntime::new(self)
     }
 }
 
