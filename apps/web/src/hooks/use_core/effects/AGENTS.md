@@ -20,9 +20,10 @@ Server message effect handlers. Processes incoming WebSocket messages and update
 | `message_dispatch_protocol.rs` | Protocol message dispatch |
 | `message_control.rs` | Control message handling |
 | `message_protocol.rs` | Protocol message processing |
-| `message_projection.rs` | Projection update handling |
+| `message_projection/` | Projection update handling and tests |
 | `message_refresh.rs` | Refresh message handling |
 | `message_repo_scope/` | Repo scope message handling and tests |
+| `message_dispatch_route_projection/` | Projection/sync routing helpers |
 | `message_runtime.rs` | Runtime message handling |
 | `message_scope/` | Scope message handling and tests |
 | `message_shadow/` | Shadow branch message handling and tests |

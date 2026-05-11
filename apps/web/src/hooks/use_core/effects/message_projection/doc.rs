@@ -9,7 +9,6 @@ use super::super::message_repo_scope::{
     matches_current_message_scope, matches_projection_message_scope,
 };
 use super::super::message_scope::accepts_system_or_matching_request;
-#[path = "message_projection_doc_selection.rs"]
 mod selection;
 
 pub fn handle_doc_list(
@@ -42,5 +41,4 @@ pub fn handle_doc_list(
 }
 
 #[cfg(test)]
-#[path = "message_projection_doc_test.rs"]
 mod tests;
