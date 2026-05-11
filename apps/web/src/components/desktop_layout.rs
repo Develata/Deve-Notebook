@@ -4,10 +4,10 @@
 //!
 //! # Desktop Layout
 
-use self::desktop_layout_banner::DesktopSyncBanner;
-use self::desktop_layout_content::DesktopLayoutContent;
-use self::desktop_layout_handles::{DesktopInnerResizeHandle, DesktopOuterResizeHandle};
-use self::desktop_layout_sidebar::DesktopSidebar;
+use self::banner::DesktopSyncBanner;
+use self::content::DesktopLayoutContent;
+use self::handles::{DesktopInnerResizeHandle, DesktopOuterResizeHandle};
+use self::sidebar::DesktopSidebar;
 use crate::components::activity_bar::SidebarView;
 use crate::components::desktop_chat_panel::DesktopChatPanel;
 use crate::components::header::Header;
@@ -15,14 +15,10 @@ use crate::hooks::use_core::CoreState;
 use crate::hooks::use_layout::LayoutHookReturn;
 use leptos::prelude::*;
 
-#[path = "desktop_layout_banner.rs"]
-mod desktop_layout_banner;
-#[path = "desktop_layout_content.rs"]
-mod desktop_layout_content;
-#[path = "desktop_layout_handles.rs"]
-mod desktop_layout_handles;
-#[path = "desktop_layout_sidebar.rs"]
-mod desktop_layout_sidebar;
+mod banner;
+mod content;
+mod handles;
+mod sidebar;
 
 #[component]
 pub fn DesktopLayout(
