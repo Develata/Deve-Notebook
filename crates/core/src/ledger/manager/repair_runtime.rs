@@ -7,24 +7,32 @@ use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
 use anyhow::{Context, Result};
 
-impl RepoManager {
-    pub fn repair_local_repo_catalog(&self) -> Result<()> {
-        Self::repair_local_repo_metadata(
-            &self.ledger_dir,
-            &self.local_repo_name,
-            self.local_db.as_ref(),
-            self.vault_root.as_deref(),
+pub(crate) struct RepairRuntime<'a> {
+    manager: &'a RepoManager,
+}
+
+impl<'a> RepairRuntime<'a> {
+    pub(crate) fn new(manager: &'a RepoManager) -> Self {
+        Self { manager }
+    }
+
+    pub(crate) fn repair_local_repo_catalog(&self) -> Result<()> {
+        RepoManager::repair_local_repo_metadata(
+            &self.manager.ledger_dir,
+            &self.manager.local_repo_name,
+            self.manager.local_db.as_ref(),
+            self.manager.vault_root.as_deref(),
             true,
         )?;
-        Self::repair_local_repo_source_control_tables(
-            &self.ledger_dir,
-            &self.local_repo_name,
-            self.local_db.as_ref(),
+        RepoManager::repair_local_repo_source_control_tables(
+            &self.manager.ledger_dir,
+            &self.manager.local_repo_name,
+            self.manager.local_db.as_ref(),
         )
     }
 
-    pub fn repair_remote_repo_catalogs(&self) -> Result<()> {
-        let remotes_dir = self.checked_remotes_dir()?;
+    pub(crate) fn repair_remote_repo_catalogs(&self) -> Result<()> {
+        let remotes_dir = self.manager.checked_remotes_dir()?;
         let mut peers = Vec::new();
         for entry in std::fs::read_dir(remotes_dir)? {
             let entry = entry?;
@@ -54,13 +62,31 @@ impl RepoManager {
         }
         peers.sort_by_key(|peer_id| peer_id.to_string());
         for peer_id in peers {
-            self.repair_remote_repo_catalog(&peer_id).with_context(|| {
-                format!("Broken shadow peer {} while repairing catalogs", peer_id)
-            })?;
-            self.scan_remote_repo_entries(&peer_id).with_context(|| {
-                format!("Broken shadow peer {} while repairing catalogs", peer_id)
-            })?;
+            self.manager
+                .repair_remote_repo_catalog(&peer_id)
+                .with_context(|| {
+                    format!("Broken shadow peer {} while repairing catalogs", peer_id)
+                })?;
+            self.manager
+                .scan_remote_repo_entries(&peer_id)
+                .with_context(|| {
+                    format!("Broken shadow peer {} while repairing catalogs", peer_id)
+                })?;
         }
         Ok(())
+    }
+}
+
+impl RepoManager {
+    pub fn repair_local_repo_catalog(&self) -> Result<()> {
+        self.repair_runtime().repair_local_repo_catalog()
+    }
+
+    pub fn repair_remote_repo_catalogs(&self) -> Result<()> {
+        self.repair_runtime().repair_remote_repo_catalogs()
+    }
+
+    pub(crate) fn repair_runtime(&self) -> RepairRuntime<'_> {
+        RepairRuntime::new(self)
     }
 }
