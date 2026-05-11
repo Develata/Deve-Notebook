@@ -12,7 +12,8 @@ All UI components organized by feature area. Each subdirectory is a self-contain
 | File | Description |
 |------|-------------|
 | `mod.rs` | Component module declarations and re-exports |
-| `main_layout.rs` | Main application layout — desktop responsive shell |
+| `main_layout.rs` | Main application layout facade |
+| `main_layout_runtime.rs` | Main layout runtime shell |
 | `desktop_layout.rs` | Desktop layout facade with sidebar, editor, panels |
 | `desktop_chat_panel.rs` | Desktop AI chat panel |
 | `header.rs` | Top header bar |
@@ -44,6 +45,8 @@ All UI components organized by feature area. Each subdirectory is a self-contain
 | `desktop_layout/` | Desktop layout banner, content, handles, and sidebar helpers |
 | `icons/` | SVG icon components |
 | `login/` | Login page and auth state |
+| `main_layout/` | Main layout callbacks, context providers, and setup helpers |
+| `main_layout_runtime/` | Main layout body and overlay helpers |
 | `mobile_layout/` | Mobile-responsive layout with drawers |
 | `outline_render/` | Markdown outline and KaTeX rendering |
 | `search_box/` | Search with file operations |

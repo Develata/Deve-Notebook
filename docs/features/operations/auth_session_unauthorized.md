@@ -34,7 +34,7 @@
 - `Trigger`: `401`、`403`、`AuthTokenExpired`、`AuthTokenMissing`
 - `Preconditions`: `op.auth.session.issue-protected-request` 已执行
 - `Immediate Result`: 连接状态切换为 `Unauthorized`，或 `AuthState` 切换为 `Unauthenticated`
-- `Application Entry`: `apps/web/src/api/auth_probe.rs`, `apps/web/src/api/service.rs`, `apps/web/src/components/main_layout_setup.rs`
+- `Application Entry`: `apps/web/src/api/auth_probe.rs`, `apps/web/src/api/service.rs`, `apps/web/src/components/main_layout/setup.rs`
 
 ### `op.auth.session.enter-reauth-surface`
 
@@ -87,7 +87,7 @@
 2. `Application Response`: `MainLayout` 观察 `ConnectionStatus::Unauthorized`，触发 `on_session_expired`；根 `App` 切换到 `Unauthenticated`，退出受保护布局。
 3. `Concrete Modules`:
    - `apps/web/src/components/main_layout.rs`
-   - `apps/web/src/components/main_layout_setup.rs`
+   - `apps/web/src/components/main_layout/setup.rs`
    - `apps/web/src/app.rs`
 4. `Core Subsystems`: 无。此步是 unauthorized surface 的 UI 收口。
 

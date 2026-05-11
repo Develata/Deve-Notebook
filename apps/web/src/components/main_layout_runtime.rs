@@ -8,13 +8,11 @@ use crate::hooks::use_core::CoreState;
 use crate::hooks::use_layout::LayoutHookReturn;
 use leptos::prelude::*;
 
-#[path = "main_layout_body.rs"]
-mod main_layout_body;
-#[path = "main_layout_overlays.rs"]
-mod main_layout_overlays;
+mod body;
+mod overlays;
 
-use self::main_layout_body::MainLayoutBody;
-use self::main_layout_overlays::MainLayoutOverlays;
+use self::body::MainLayoutBody;
+use self::overlays::MainLayoutOverlays;
 
 #[component]
 pub fn MainLayoutRuntime(

@@ -25,7 +25,7 @@
 - `Trigger`: choose repo, branch, or home while current doc is open
 - `Preconditions`: current document may have pending local edits
 - `Immediate Result`: scope action either runs immediately or becomes pending
-- `Application Entry`: `apps/web/src/hooks/use_core/{callbacks_switch_repo.rs,callbacks_switch_branch.rs}` and `apps/web/src/components/main_layout_callbacks.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/{callbacks_switch_repo.rs,callbacks_switch_branch.rs}` and `apps/web/src/components/main_layout/callbacks.rs`
 
 ### `op.doc.nav.choose-stay`
 

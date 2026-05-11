@@ -5,11 +5,9 @@
 //!
 //! # Main Layout
 
-use self::main_layout_callbacks::{
-    build_home_callback, build_open_callback, toggle_search_callback,
-};
-use self::main_layout_contexts::use_mobile_breakpoint;
-use self::main_layout_setup::{
+use self::callbacks::{build_home_callback, build_open_callback, toggle_search_callback};
+use self::contexts::use_mobile_breakpoint;
+use self::setup::{
     bind_global_shortcuts, init_search_ui_state, init_sidebar_ui_state, watch_session_expired,
 };
 pub use crate::components::layout_context::{ChatControl, SearchControl};
@@ -20,12 +18,9 @@ use crate::hooks::use_layout::use_layout;
 use crate::i18n::Locale;
 use leptos::prelude::*;
 
-#[path = "main_layout_callbacks.rs"]
-mod main_layout_callbacks;
-#[path = "main_layout_contexts.rs"]
-mod main_layout_contexts;
-#[path = "main_layout_setup.rs"]
-mod main_layout_setup;
+mod callbacks;
+mod contexts;
+mod setup;
 
 #[component]
 pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> AnyView {
