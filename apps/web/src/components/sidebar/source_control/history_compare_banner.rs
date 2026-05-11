@@ -2,7 +2,6 @@
 //!   - 07_diff_logic#source-control-runtime
 //!   - 03_rendering#document-authority-bridge
 //!
-#[path = "history_compare_banner_copy.rs"]
 mod copy;
 
 use crate::components::sidebar::source_control::history_compare_logic::short_commit_id;

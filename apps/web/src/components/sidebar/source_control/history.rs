@@ -8,13 +8,11 @@ use crate::hooks::use_core::source_control_notice::is_deleted_no_doc_id_notice;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
-#[path = "history_compare_reset.rs"]
-mod history_compare_reset;
-#[path = "history_compare_state.rs"]
-mod history_compare_state;
+mod compare_reset;
+mod compare_state;
 
-use self::history_compare_reset::{has_compare_state_to_clear, should_reset_compare_state};
-use self::history_compare_state::reset_compare_state;
+use self::compare_reset::{has_compare_state_to_clear, should_reset_compare_state};
+use self::compare_state::reset_compare_state;
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {

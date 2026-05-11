@@ -18,15 +18,20 @@ Source control sidebar panel. Shows changes, staged/unstaged sections, commit in
 | `unstaged_section.rs` | Unstaged changes section |
 | `commit.rs` | Commit interface |
 | `commit_ai.rs` | Commit message AI generation runtime |
-| `commit_ai_backend_test.rs` | Commit AI backend decision tests |
 | `commit_ai_runtime.rs` | Commit AI backend/effect planning |
-| `commit_ai_runtime_test.rs` | Commit AI effect planning tests |
-| `commit_ai_signal_test.rs` | Commit AI Leptos signal runner tests |
 | `history.rs` | Commit history view |
 | `graph_panel.rs` | Read-only source-control graph projection panel |
-| `graph_panel_test.rs` | Graph panel state and copy unit tests |
 | `context_menu.rs` | Right-click context menu |
 | `repositories.rs` | Multi-repo listing |
+
+## Subdirectories
+
+| Directory | Purpose |
+|-----------|---------|
+| `commit_ai/` | Commit AI backend, runtime, and signal tests |
+| `graph_panel/` | Graph panel state and copy unit tests |
+| `history/` | History compare reset/state helpers |
+| `history_compare_banner/` | History compare banner copy helpers |
 
 ## For AI Agents
 

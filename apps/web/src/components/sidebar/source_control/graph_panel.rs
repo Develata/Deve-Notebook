@@ -211,5 +211,4 @@ fn GraphStat(label: &'static str, value: usize, attr: &'static str) -> impl Into
 }
 
 #[cfg(test)]
-#[path = "graph_panel_test.rs"]
 mod tests;
