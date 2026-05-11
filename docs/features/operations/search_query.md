@@ -43,7 +43,7 @@
 - `Trigger`: 服务端返回 `ServerMessage::SearchResults`
 - `Preconditions`: request id 与 `scope_nonce` 匹配当前 workspace
 - `Immediate Result`: 搜索结果列表更新
-- `Application Entry`: `apps/web/src/hooks/use_core/effects/message_dispatch_runtime.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/effects/message_dispatch_runtime/mod.rs`
 
 ## Response Flow
 

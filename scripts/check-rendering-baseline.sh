@@ -47,7 +47,7 @@ contains apps/web/src/utils/markdown.rs "link_rendering_rejects_script_scheme"
 contains apps/web/src/utils/markdown.rs "unsupported_highlight_syntax_stays_plain_text"
 contains apps/web/src/components/chat/message_item.rs "chat_apply_label_is_build_only_for_assistant_messages"
 contains apps/web/src/components/chat/message_list.rs "chat_apply_click_is_consumed_only_in_build_mode"
-contains apps/web/src/components/chat/actions_apply.rs "chat_apply_edit_message_carries_current_scope_nonce"
+contains apps/web/src/components/chat/actions/apply.rs "chat_apply_edit_message_carries_current_scope_nonce"
 contains scripts/check-ai-baseline.sh "chat_apply_edit_message_carries_current_scope_nonce"
 
 # Current release must not claim full renderer or settings persistence as implemented.

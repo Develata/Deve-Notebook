@@ -34,7 +34,7 @@
 - `Trigger`: 点击发送按钮或按 Enter
 - `Preconditions`: prompt 非空，当前未在 streaming
 - `Immediate Result`: 前端附加 user/assistant placeholder，发起 plugin call
-- `Application Entry`: `apps/web/src/components/chat/actions_send.rs`, `apps/cli/src/server/handlers/plugin.rs`
+- `Application Entry`: `apps/web/src/components/chat/actions/send.rs`, `apps/cli/src/server/handlers/plugin.rs`
 
 ### `op.ai.chat.switch-native-mode`
 
@@ -43,7 +43,7 @@
 - `Trigger`: 输入 `/plan`、`/build` 或 `/agents`
 - `Preconditions`: panel 已打开，当前未在 streaming
 - `Immediate Result`: 只切换本地 Native `PLAN` / `BUILD` 会话模式，不切换 backend，不发起 plugin call
-- `Application Entry`: `apps/web/src/components/chat/slash_commands.rs`, `apps/web/src/components/chat/actions_send.rs`
+- `Application Entry`: `apps/web/src/components/chat/slash_commands.rs`, `apps/web/src/components/chat/actions/send.rs`
 
 ### `op.ai.chat.apply-controlled-markdown`
 
@@ -52,7 +52,7 @@
 - `Trigger`: 在 BUILD 模式下点击 assistant code block 的 `Apply`
 - `Preconditions`: 当前 session mode 为 `BUILD`，当前文档可写，repo writer ready，local scope nonce 稳定
 - `Immediate Result`: 通过现有 `ClientMessage::Edit` 管道把 code block 作为受控 Markdown delta 追加到当前文档
-- `Application Entry`: `apps/web/src/components/chat/message_list.rs`, `apps/web/src/components/chat/actions_apply.rs`
+- `Application Entry`: `apps/web/src/components/chat/message_list.rs`, `apps/web/src/components/chat/actions/apply.rs`
 
 ### `op.ai.chat.receive-stream`
 

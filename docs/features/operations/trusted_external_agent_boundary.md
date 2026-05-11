@@ -34,7 +34,7 @@
 - `Trigger`: 用户在 trusted backend 下点击发送或按 Enter
 - `Preconditions`: 当前 backend 已切到 `trusted-cli`，prompt 非空
 - `Immediate Result`: 通过 trusted gate 后才允许发起 bridge 请求；失败时必须回退 `native`
-- `Application Entry`: `apps/web/src/components/chat/actions_send.rs`, `apps/cli/src/server/handlers/plugin.rs`
+- `Application Entry`: `apps/web/src/components/chat/actions/send.rs`, `apps/cli/src/server/handlers/plugin.rs`
 
 ### `op.ai.trusted-agent.receive-disabled`
 
@@ -52,7 +52,7 @@
 - `Trigger`: trusted bridge 返回流式 chunk
 - `Preconditions`: `op.ai.trusted-agent.submit` 已成功越过 trusted gate
 - `Immediate Result`: assistant 消息增量更新，直到 bridge 显式结束
-- `Application Entry`: `apps/cli/src/server/agent_bridge/stream.rs`, `apps/web/src/hooks/use_core/effects/message_dispatch_runtime.rs`
+- `Application Entry`: `apps/cli/src/server/agent_bridge/stream.rs`, `apps/web/src/hooks/use_core/effects/message_dispatch_runtime/mod.rs`
 
 ## Notes
 
