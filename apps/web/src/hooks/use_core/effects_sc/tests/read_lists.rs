@@ -175,7 +175,5 @@ fn assert_history_preserved(result: &ReadListDispatchResult) {
     assert!(result.notice.is_some());
 }
 
-#[path = "effects_sc_test_read_lists_changes.rs"]
 mod changes;
-#[path = "effects_sc_test_read_lists_history.rs"]
 mod history;

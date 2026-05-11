@@ -43,9 +43,10 @@ Core application state management hub. The largest hook module — manages WebSo
 | `navigation.rs` | Document navigation |
 | `dashboard_context.rs` | Dashboard data context |
 | `diff_session.rs` | Diff session management |
-| `effects_sc_test_read_lists.rs` | Source-control read-list test harness |
-| `effects_sc_test_read_lists_changes.rs` | ChangesList scope dispatch tests |
-| `effects_sc_test_read_lists_history.rs` | CommitHistory scope dispatch tests |
+| `effects_sc.rs` | Source-control message dispatch facade |
+| `effects_sc/` | Source-control message dispatch slices and tests |
+| `effects_sc_apply.rs` | Source-control refresh/apply facade |
+| `effects_sc_apply/` | Source-control refresh/apply slices and tests |
 | `effects_sc_feedback/` | Source-control feedback tests |
 | `effects_switch/` | Repo/branch switch effect slices and tests |
 | `storage_runtime.rs` | Storage runtime integration |
