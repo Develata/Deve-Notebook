@@ -15,10 +15,8 @@ use crate::components::search_box::types::SearchResult;
 use crate::components::touch_feedback::interactive_item_state_class;
 use crate::hooks::use_core::CoreState;
 
-#[path = "result_item_sections.rs"]
-mod result_item_sections;
-#[path = "result_item_state.rs"]
-mod result_item_state;
+mod sections;
+mod state;
 
 pub struct SearchResultItemView {
     pub idx: usize,
@@ -47,22 +45,22 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
         core,
         set_recent_move_dirs,
     } = view;
-    let is_mobile = result_item_state::is_mobile();
+    let is_mobile = state::is_mobile();
     let detail_text = item.detail.clone();
     let detail_text_cond = detail_text.clone();
-    let is_group = result_item_state::is_group(&item);
-    let is_error = result_item_state::is_error(&item);
+    let is_group = state::is_group(&item);
+    let is_error = state::is_error(&item);
     let is_selectable = logic::is_selectable(Some(&item));
 
     if is_group {
-        return result_item_sections::group_row(item.title, is_mobile).into_any();
+        return sections::group_row(item.title, is_mobile).into_any();
     }
 
     if is_error {
-        return result_item_sections::error_row(item.title, is_mobile).into_any();
+        return sections::error_row(item.title, is_mobile).into_any();
     }
 
-    let base = result_item_state::base_row_class(is_mobile);
+    let base = state::base_row_class(is_mobile);
 
     let action_clone = item.action.clone();
     let detail_clone = item.detail.clone();
@@ -106,10 +104,10 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
             {move || if is_mobile {
                 view! {}.into_any()
             } else {
-                result_item_sections::item_icon(is_sel, action_clone.clone(), detail_clone.clone())
+                sections::item_icon(is_sel, action_clone.clone(), detail_clone.clone())
                     .into_any()
             }}
-            {result_item_sections::item_content(
+            {sections::item_content(
                 item.title.clone(),
                 detail_text_cond,
                 detail_text,
@@ -118,7 +116,7 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
             {move || if is_mobile {
                 view! {}.into_any()
             } else {
-                result_item_sections::selection_arrow(is_sel).into_any()
+                sections::selection_arrow(is_sel).into_any()
             }}
         </button>
     }

@@ -34,7 +34,7 @@
 - `Trigger`: choose a suggested move/copy destination
 - `Preconditions`: parsed command is eligible for destination completion
 - `Immediate Result`: `SearchAction::InsertQuery` rewrites the query with destination text and cursor position
-- `Application Entry`: `apps/web/src/components/search_box/file_ops/results_common.rs`, `apps/web/src/components/search_box/file_ops/results_move_copy.rs`
+- `Application Entry`: `apps/web/src/components/search_box/file_ops/results/common.rs`, `apps/web/src/components/search_box/file_ops/results/move_copy.rs`
 
 ### `op.repo.file-shell.build-action`
 
@@ -43,7 +43,7 @@
 - `Trigger`: parsed command has enough source and destination data to execute
 - `Preconditions`: normalized path intent is valid for the current file-op kind
 - `Immediate Result`: `SearchAction::FileOp` becomes the downstream dispatch target
-- `Application Entry`: `apps/web/src/components/search_box/file_ops/results_common.rs`, `apps/web/src/components/search_box/file_ops/results_remove.rs`
+- `Application Entry`: `apps/web/src/components/search_box/file_ops/results/common.rs`, `apps/web/src/components/search_box/file_ops/results/remove.rs`
 
 ## Response Flow
 

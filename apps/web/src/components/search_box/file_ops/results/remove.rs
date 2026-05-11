@@ -8,7 +8,6 @@ use deve_core::protocol::doc_file_op_errors as path_err;
 use super::super::path_utils::{normalize_doc_path, validate_doc_shell_path};
 
 #[cfg(test)]
-#[path = "results_remove_test.rs"]
 mod tests;
 
 pub(super) fn build_remove_results(args: &[String]) -> Vec<SearchResult> {

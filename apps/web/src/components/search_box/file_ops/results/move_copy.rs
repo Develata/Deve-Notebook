@@ -9,10 +9,9 @@ use std::collections::HashSet;
 
 use super::super::parser::{ParsedArgs, is_ready_for_dst};
 use super::super::path_utils::{collect_dirs, filter_dirs, validate_doc_shell_path};
-use super::results_common::{build_execute_result, build_insert_query, group_header};
+use super::common::{build_execute_result, build_insert_query, group_header};
 
 #[cfg(test)]
-#[path = "results_move_copy_test.rs"]
 mod tests;
 
 pub(super) fn build_move_copy_results(

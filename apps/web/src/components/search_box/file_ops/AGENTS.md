@@ -16,4 +16,10 @@ File operation commands triggered from the search box (create, rename, move).
 | `path_utils.rs` | Path manipulation utilities |
 | `results.rs` | File operation result rendering |
 
+## Subdirectories
+
+| Directory | Purpose |
+|-----------|---------|
+| `results/` | File operation result helpers and unit tests |
+
 <!-- MANUAL: -->
