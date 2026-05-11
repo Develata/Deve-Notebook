@@ -29,5 +29,4 @@ pub(super) fn source_control_read_scope_nonce(scope: SourceControlScopeSignals) 
 }
 
 #[cfg(test)]
-#[path = "callbacks_sc_scope_test.rs"]
 mod tests;

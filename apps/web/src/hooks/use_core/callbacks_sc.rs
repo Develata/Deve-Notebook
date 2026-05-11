@@ -11,9 +11,7 @@ use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use leptos::prelude::*;
 
-#[path = "callbacks_sc_read.rs"]
 mod read;
-#[path = "callbacks_sc_write.rs"]
 mod write;
 
 use read::create_read_callbacks;

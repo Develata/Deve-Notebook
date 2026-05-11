@@ -8,11 +8,8 @@ use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use leptos::prelude::*;
 
-#[path = "callbacks_doc_write_create.rs"]
 mod create;
-#[path = "callbacks_doc_write_path.rs"]
 mod path;
-#[path = "callbacks_doc_write_scope.rs"]
 mod scope;
 
 use create::create_doc_create_callback;

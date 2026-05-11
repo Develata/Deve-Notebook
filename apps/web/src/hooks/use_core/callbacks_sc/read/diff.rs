@@ -99,5 +99,4 @@ pub(super) fn create_get_commit_diff_callback(
 }
 
 #[cfg(test)]
-#[path = "callbacks_sc_read_diff_test.rs"]
 mod tests;

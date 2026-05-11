@@ -93,5 +93,4 @@ fn show_search_block(set_sync_banner: WriteSignal<Option<String>>, reason: &str)
 }
 
 #[cfg(test)]
-#[path = "callbacks_misc_test.rs"]
 mod tests;

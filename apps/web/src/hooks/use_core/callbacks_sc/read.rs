@@ -10,9 +10,7 @@ use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::{Callback, WriteSignal};
 
-#[path = "callbacks_sc_read_changes.rs"]
 mod changes;
-#[path = "callbacks_sc_read_diff.rs"]
 mod diff;
 
 use super::{SourceControlRequestSignals, SourceControlScopeSignals};

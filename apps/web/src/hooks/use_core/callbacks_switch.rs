@@ -7,11 +7,8 @@ use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
 use leptos::prelude::*;
 
-#[path = "callbacks_switch_branch.rs"]
 mod branch;
-#[path = "callbacks_switch_repo.rs"]
 mod repo;
-#[path = "callbacks_switch_scope.rs"]
 mod scope;
 
 use super::types::SwitchScopeSignals;

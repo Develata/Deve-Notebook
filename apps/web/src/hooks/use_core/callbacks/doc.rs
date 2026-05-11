@@ -10,9 +10,7 @@ use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
-#[path = "callbacks_doc_select.rs"]
 mod select;
-#[path = "callbacks_doc_write.rs"]
 mod write;
 
 use select::create_doc_select_callback;

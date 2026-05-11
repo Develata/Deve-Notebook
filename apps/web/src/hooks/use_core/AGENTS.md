@@ -25,15 +25,18 @@ Core application state management hub. The largest hook module — manages WebSo
 | `types.rs` | Shared type definitions |
 | `types/` | CoreState, chat helpers, and shared signal structs |
 | `callbacks.rs` | General callback handlers |
+| `callbacks/` | General callback domain slices for docs, write paths, search, plugin, and stats |
 | `callbacks_build/` | Core callback assembly helpers |
+| `callbacks_sc/` | Source-control read/write callback slices |
 | `callbacks_sync/` | Sync callback read/write helpers |
 | `callbacks_sc.rs` | Source control callbacks |
 | `callbacks_sc_scope.rs` | SC scope callbacks |
+| `callbacks_sc_scope/` | SC scope callback tests |
 | `callbacks_sc_target.rs` | SC target callbacks |
-| `callbacks_sc_read_diff.rs` | Source-control doc/commit diff read callbacks |
-| `callbacks_sc_read_diff_test.rs` | Source-control diff read callback unit tests |
+| `callbacks_sc_target/` | SC target callback tests |
 | `callbacks_scope.rs` | Scope-related callbacks |
 | `callbacks_switch.rs` | Repo/branch switch callbacks |
+| `callbacks_switch/` | Repo/branch switch callback slices |
 | `callbacks_sync.rs` | Sync callbacks |
 | `apply.rs` | State application logic |
 | `apply/` | Tree lookup and node mutation helpers |

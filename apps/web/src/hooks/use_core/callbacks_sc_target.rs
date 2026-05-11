@@ -32,5 +32,4 @@ fn normalized(path: &str) -> String {
 }
 
 #[cfg(test)]
-#[path = "callbacks_sc_target_test.rs"]
 mod tests;
