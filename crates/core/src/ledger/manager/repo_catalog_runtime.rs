@@ -40,7 +40,36 @@ impl<'a> RepoCatalogRuntime<'a> {
     }
 
     pub(crate) fn list_local_execution_names(&self) -> Result<Vec<String>> {
-        self.manager.list_local_repo_names_for_execution()
+        self.refresh_local_catalog()?;
+        let local_dir = RepoManager::checked_local_dir_for(
+            &self.manager.ledger_dir,
+            "listing execution names",
+        )?;
+
+        let mut repos = Vec::new();
+        for (path, stem) in redb_repo_entries(&local_dir, "listing execution names")? {
+            if stem == self.manager.local_repo_name {
+                self.manager.get_repo_info()?.ok_or_else(|| {
+                    anyhow!(
+                        "Broken local repo {} while listing execution names: repository metadata missing",
+                        stem
+                    )
+                })?;
+                repos.push(stem);
+                continue;
+            }
+            RepoManager::read_required_repo_info_from_path(&path, &stem, "listing execution names")
+                .map_err(|err| {
+                    anyhow!(
+                        "Broken local repo {} while listing execution names: {}",
+                        stem,
+                        err
+                    )
+                })?;
+            repos.push(stem);
+        }
+        repos.sort();
+        Ok(repos)
     }
 
     pub(crate) fn list_repos(&self, peer_id: Option<&PeerId>) -> Result<Vec<String>> {

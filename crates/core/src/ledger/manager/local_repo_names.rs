@@ -1,43 +1,15 @@
 //! plan_ref:
 //!   - 06_repository#repo-catalog-contract
 
-use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 impl RepoManager {
     /// Invariants:
     /// - 返回值始终是可执行的本地 repo 文件 stem，而不是显示别名。
     /// - 返回前必须先修复本地 repo catalog，避免 name drift 污染执行路径。
     pub fn list_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
-        self.refresh_local_repo_catalog()?;
-        let local_dir =
-            RepoManager::checked_local_dir_for(&self.ledger_dir, "listing execution names")?;
-
-        let mut repos = Vec::new();
-        for (path, stem) in redb_repo_entries(&local_dir, "listing execution names")? {
-            if stem == self.local_repo_name {
-                self.get_repo_info()?.ok_or_else(|| {
-                    anyhow!(
-                        "Broken local repo {} while listing execution names: repository metadata missing",
-                        stem
-                    )
-                })?;
-                repos.push(stem);
-                continue;
-            }
-            RepoManager::read_required_repo_info_from_path(&path, &stem, "listing execution names")
-                .map_err(|err| {
-                    anyhow!(
-                        "Broken local repo {} while listing execution names: {}",
-                        stem,
-                        err
-                    )
-                })?;
-            repos.push(stem);
-        }
-        repos.sort();
-        Ok(repos)
+        self.repo_catalog_runtime().list_local_execution_names()
     }
 }
 
