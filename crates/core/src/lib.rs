@@ -27,7 +27,6 @@ pub mod git_bridge;
 pub mod graph;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ledger;
-pub mod merge;
 pub mod models;
 pub mod native_adapter;
 pub mod plugin;
