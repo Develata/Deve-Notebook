@@ -129,14 +129,11 @@ impl TreeManager {
 
     /// 仅重命名节点 (不移动)
     pub fn rename_node(&mut self, node_id: NodeId, new_name: String) -> TreeDelta {
-        let (parent_id, old_path) = match self.nodes.get(&node_id) {
-            Some(info) => (info.parent_id, info.path_cache.clone()),
+        let parent_id = match self.nodes.get(&node_id) {
+            Some(info) => info.parent_id,
             None => return TreeDelta::update(node_id, None, new_name, String::new()),
         };
-        let new_path = match old_path.rsplit_once('/') {
-            Some((prefix, _)) => format!("{}/{}", prefix, new_name),
-            None => new_name.clone(),
-        };
+        let new_path = self.compute_child_path(parent_id, &new_name);
         self.update_node(node_id, parent_id, new_name, new_path)
     }
 
@@ -164,8 +161,8 @@ impl TreeManager {
         new_name: String,
         new_path: String,
     ) -> TreeDelta {
-        let (old_parent, old_path) = match self.nodes.get(&node_id) {
-            Some(info) => (info.parent_id, info.path_cache.clone()),
+        let old_parent = match self.nodes.get(&node_id) {
+            Some(info) => info.parent_id,
             None => return TreeDelta::update(node_id, new_parent_id, new_name, new_path),
         };
 
@@ -188,7 +185,7 @@ impl TreeManager {
             info.name = new_name.clone();
             info.path_cache = new_path.clone();
         }
-        self.update_subtree_paths(&old_path, &new_path);
+        self.update_descendant_paths(node_id);
 
         TreeDelta::update(node_id, new_parent_id, new_name, new_path)
     }
@@ -226,16 +223,26 @@ impl TreeManager {
         }
     }
 
-    fn update_subtree_paths(&mut self, old_prefix: &str, new_prefix: &str) {
-        let old_prefix = old_prefix.trim_end_matches('/');
-        if old_prefix.is_empty() {
-            return;
-        }
-        let old_prefix_slash = format!("{}/", old_prefix);
-        for info in self.nodes.values_mut() {
-            if info.path_cache.starts_with(&old_prefix_slash) {
-                info.path_cache = format!("{}{}", new_prefix, &info.path_cache[old_prefix.len()..]);
+    fn update_descendant_paths(&mut self, root_id: NodeId) {
+        let mut stack = self
+            .nodes
+            .get(&root_id)
+            .map(|info| info.children_ids.clone())
+            .unwrap_or_default();
+
+        while let Some(node_id) = stack.pop() {
+            let Some(info) = self.nodes.get(&node_id) else {
+                continue;
+            };
+            let parent_id = info.parent_id;
+            let name = info.name.clone();
+            let children = info.children_ids.clone();
+            let path = self.compute_child_path(parent_id, &name);
+
+            if let Some(info) = self.nodes.get_mut(&node_id) {
+                info.path_cache = path;
             }
+            stack.extend(children);
         }
     }
 }
