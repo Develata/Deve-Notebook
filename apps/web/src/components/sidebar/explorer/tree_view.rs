@@ -57,4 +57,4 @@ fn visible_tree_nodes(tree_nodes: Vec<FileNode>, docs: Vec<(DocId, String)>) -> 
 }
 
 #[cfg(test)]
-mod explorer_tree_test;
+mod tests;

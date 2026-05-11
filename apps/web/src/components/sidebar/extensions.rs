@@ -8,7 +8,6 @@
 //!
 //! 轻量展示当前第一方扩展能力，并为后续插件运行时预留接口位。
 
-#[path = "extensions_channels.rs"]
 mod channels;
 
 use crate::components::icons::{Book, Puzzle};

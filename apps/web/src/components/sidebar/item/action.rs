@@ -127,4 +127,4 @@ fn sanitize_arg(arg: &str) -> String {
 }
 
 #[cfg(test)]
-mod item_action_test;
+mod tests;

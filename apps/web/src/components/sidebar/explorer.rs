@@ -14,13 +14,10 @@ use crate::i18n::Locale;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
-use crate::components::dropdown::AnchorRect;
-
-#[path = "explorer_header.rs"]
 mod header;
-#[path = "explorer_tree.rs"]
 mod tree_view;
 
+use crate::components::dropdown::AnchorRect;
 use header::ExplorerHeader;
 use tree_view::ExplorerTree;
 

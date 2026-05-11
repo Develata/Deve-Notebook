@@ -12,19 +12,22 @@ File explorer sidebar with tree view, repo switcher, and source control panel in
 | File | Description |
 |------|-------------|
 | `mod.rs` | Sidebar component |
-| `explorer.rs` | File explorer tree |
+| `explorer.rs` | File explorer shell |
 | `tree.rs` | Tree view rendering |
 | `item.rs` | Tree item component |
 | `types.rs` | Sidebar type definitions |
 | `components.rs` | Shared sidebar components |
 | `path_utils.rs` | Path display utilities |
 | `repo_switcher.rs` | Repository switching UI |
-| `extensions.rs` | Extension panel |
+| `extensions.rs` | Extension panel shell |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
+| `explorer/` | Explorer header, tree projection fallback, and unit tests |
+| `extensions/` | Extension channel cards |
+| `item/` | File tree item actions and unit tests |
 | `path_utils/` | Path utility unit tests |
 | `source_control/` | Source control panel |
 

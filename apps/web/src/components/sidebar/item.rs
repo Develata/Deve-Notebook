@@ -21,7 +21,6 @@ use crate::components::touch_feedback::interactive_item_state_class;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
-#[path = "item_action.rs"]
 mod action;
 
 use action::{create_action_handler, create_menu_anchor};
