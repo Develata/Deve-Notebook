@@ -15,7 +15,12 @@ Search execution logic: action dispatch, query execution, provider routing, and 
 | `actions.rs` | Search action dispatch |
 | `execute.rs` | Query execution |
 | `providers.rs` | Provider routing |
-| `providers_test.rs` | Provider routing tests |
 | `selection.rs` | Result selection management |
+
+## Subdirectories
+
+| Directory | Purpose |
+|-----------|---------|
+| `providers/` | Provider routing tests |
 
 <!-- MANUAL: -->

@@ -34,7 +34,7 @@
 - `Trigger`: provider router evaluates the current query
 - `Preconditions`: query draft is available
 - `Immediate Result`: result list is sourced from command, branch, file, or file-op providers according to mode
-- `Application Entry`: `apps/web/src/components/search_box/logic/providers.rs`, `apps/web/src/components/search_box/providers_command.rs`, `apps/web/src/components/search_box/providers_branch.rs`, `apps/web/src/components/search_box/providers_file.rs`
+- `Application Entry`: `apps/web/src/components/search_box/logic/providers.rs`, `apps/web/src/components/search_box/providers/command.rs`, `apps/web/src/components/search_box/providers/branch.rs`, `apps/web/src/components/search_box/providers/file.rs`
 
 ## Response Flow
 

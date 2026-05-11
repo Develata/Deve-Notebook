@@ -25,7 +25,7 @@
 - `Trigger`: Quick Open 输入框键入
 - `Preconditions`: `op.repo.open-doc.open-quick-open` 已执行
 - `Immediate Result`: 根据当前 repo 的文档列表过滤候选项
-- `Application Entry`: `apps/web/src/components/search_box/providers_file.rs`
+- `Application Entry`: `apps/web/src/components/search_box/providers/file.rs`
 
 ### `op.repo.open-doc.choose-doc`
 
@@ -67,7 +67,7 @@
 
 1. `User Operation`: 用户输入文件名或路径片段。
 2. `Application Response`: `FileProvider` 用当前 repo 的 `(DocId, path)` 列表做模糊匹配，并生成 `SearchAction::OpenDoc`。
-3. `Concrete Modules`: `apps/web/src/components/search_box/providers_file.rs`
+3. `Concrete Modules`: `apps/web/src/components/search_box/providers/file.rs`
 4. `Core Subsystems`: `tree`, `ledger`。候选数据来自当前 repo 的文档投影与标识映射。
 
 ### `op.repo.open-doc.choose-doc`

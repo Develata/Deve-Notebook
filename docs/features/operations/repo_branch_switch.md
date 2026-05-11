@@ -25,7 +25,7 @@
 - `Trigger`: 选择本地或远端 branch 候选项
 - `Preconditions`: switcher 已打开，候选列表非空
 - `Immediate Result`: 目标 branch 被选中
-- `Application Entry`: `apps/web/src/components/search_box/providers_branch.rs`, `apps/web/src/components/search_box/logic/execute.rs`
+- `Application Entry`: `apps/web/src/components/search_box/providers/branch.rs`, `apps/web/src/components/search_box/logic/execute.rs`
 
 ### `op.repo.branch-switch.request-switch`
 

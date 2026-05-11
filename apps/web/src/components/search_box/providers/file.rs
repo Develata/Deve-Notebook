@@ -8,7 +8,6 @@ use crate::components::search_box::types::{SearchAction, SearchProvider, SearchR
 use deve_core::models::DocId;
 
 #[cfg(test)]
-#[path = "providers_file/tests.rs"]
 mod tests;
 
 pub struct FileProvider {

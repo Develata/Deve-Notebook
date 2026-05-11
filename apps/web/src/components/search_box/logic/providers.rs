@@ -177,5 +177,4 @@ fn full_text_results(
 }
 
 #[cfg(test)]
-#[path = "providers_test.rs"]
 mod tests;
