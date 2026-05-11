@@ -3,9 +3,7 @@
 //!
 //! 定义 `use_core` 所需的所有响应式信号。
 
-#[path = "state_core_signals.rs"]
 mod core_signals;
-#[path = "state_types.rs"]
 mod state_types;
 
 pub use super::state_init::init_signals;

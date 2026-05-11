@@ -13,11 +13,13 @@ Core application state management hub. The largest hook module — manages WebSo
 |------|-------------|
 | `mod.rs` | use_core hook entry and composition |
 | `state.rs` | Core reactive state signals |
+| `state/` | Core signal and plugin response type slices |
 | `state_build.rs` | State construction from server data |
 | `state_init.rs` | Initial state setup |
 | `provide.rs` | Context provider for child components |
 | `contexts.rs` | Context type definitions |
 | `types.rs` | Shared type definitions |
+| `types/` | CoreState, chat helpers, and shared signal structs |
 | `callbacks.rs` | General callback handlers |
 | `callbacks_sc.rs` | Source control callbacks |
 | `callbacks_sc_scope.rs` | SC scope callbacks |
