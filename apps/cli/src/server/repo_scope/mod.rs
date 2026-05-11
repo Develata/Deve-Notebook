@@ -7,11 +7,11 @@
 //! - 进入底层 DB/Tree 算子前，必须先拿到真实 `RepoId`。
 //! - 本地写路径不得静默回退到进程默认主库。
 
-mod lookup;
 mod bootstrap;
 mod cleanup;
 mod counterpart;
 mod error;
+mod lookup;
 mod remote;
 mod resolve;
 mod selector;

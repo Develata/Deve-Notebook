@@ -34,5 +34,4 @@ impl Repository for RepoManager {
         let entries: Vec<_> = ops.into_iter().map(|(_, e)| e).collect();
         Ok(reconstruct_content(&entries))
     }
-
 }
