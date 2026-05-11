@@ -214,6 +214,26 @@ fn rebuild_projection_recovers_when_node_projection_is_missing() {
     );
 }
 
+#[test]
+fn rebuild_projection_removes_deleted_dir_subtree_from_plan() {
+    let (dir, repo) = new_repo();
+    seed_file(repo.as_ref(), "notes/sub/a.md", "ledger");
+
+    let root = dir.path().join("vault").join("default");
+    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    sync.rebuild_projection_local_repo("default")
+        .expect("initial rebuild");
+    assert!(root.join("notes/sub/a.md").exists());
+
+    repo.apply_dir_delete_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
+        .expect("delete subtree");
+    sync.rebuild_projection_local_repo("default")
+        .expect("rebuild after subtree delete");
+
+    assert!(!root.join("notes/sub/a.md").exists());
+    assert!(!root.join("notes/sub").exists());
+}
+
 #[cfg(unix)]
 #[test]
 fn rebuild_projection_fails_closed_on_unreadable_stale_directory() {

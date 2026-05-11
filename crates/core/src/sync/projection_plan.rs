@@ -59,7 +59,7 @@ struct ProjectionNode {
 fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, ProjectionNode>> {
     let read = db.begin_read()?;
     let ops = read.open_table(LEDGER_OPS)?;
-    let mut nodes = HashMap::new();
+    let mut state = ProjectionState::default();
 
     for item in ops.iter()? {
         let (_, bytes) = item?;
@@ -80,8 +80,7 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
                         doc_id
                     ));
                 }
-                insert_node(
-                    &mut nodes,
+                state.insert_node(
                     node_id,
                     ProjectionNode {
                         kind: NodeKind::File,
@@ -96,8 +95,7 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
                 parent_id,
                 name,
             } => {
-                insert_node(
-                    &mut nodes,
+                state.insert_node(
                     node_id,
                     ProjectionNode {
                         kind: NodeKind::Dir,
@@ -110,7 +108,7 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
             crate::models::StructureOp::RenameNode {
                 node_id, new_name, ..
             } => {
-                let node = nodes.get_mut(&node_id).ok_or_else(|| {
+                let node = state.nodes.get_mut(&node_id).ok_or_else(|| {
                     anyhow!(
                         "Structure projection rename references missing node {}",
                         node_id
@@ -123,43 +121,82 @@ fn build_structure_state(db: &redb::Database) -> Result<HashMap<NodeId, Projecti
                 new_parent_id,
                 ..
             } => {
-                let node = nodes.get_mut(&node_id).ok_or_else(|| {
+                state.move_node(node_id, new_parent_id).ok_or_else(|| {
                     anyhow!(
                         "Structure projection move references missing node {}",
                         node_id
                     )
                 })?;
-                node.parent_id = new_parent_id;
             }
             crate::models::StructureOp::DeleteNode { node_id, .. } => {
-                remove_subtree(&mut nodes, node_id);
+                state.remove_subtree(node_id);
             }
         }
     }
 
-    Ok(nodes)
+    Ok(state.nodes)
 }
 
-fn insert_node(
-    nodes: &mut HashMap<NodeId, ProjectionNode>,
-    node_id: NodeId,
-    node: ProjectionNode,
-) -> Result<()> {
-    if nodes.insert(node_id, node).is_some() {
-        anyhow::bail!("Structure projection duplicate create for node {}", node_id);
+#[derive(Default)]
+struct ProjectionState {
+    nodes: HashMap<NodeId, ProjectionNode>,
+    children_by_parent: HashMap<NodeId, Vec<NodeId>>,
+}
+
+impl ProjectionState {
+    fn insert_node(&mut self, node_id: NodeId, node: ProjectionNode) -> Result<()> {
+        let parent_id = node.parent_id;
+        if self.nodes.insert(node_id, node).is_some() {
+            anyhow::bail!("Structure projection duplicate create for node {}", node_id);
+        }
+        self.attach_child(parent_id, node_id);
+        Ok(())
     }
-    Ok(())
-}
 
-fn remove_subtree(nodes: &mut HashMap<NodeId, ProjectionNode>, root: NodeId) {
-    let mut stack = vec![root];
-    while let Some(node_id) = stack.pop() {
-        let children = nodes
-            .iter()
-            .filter_map(|(child_id, node)| (node.parent_id == Some(node_id)).then_some(*child_id))
-            .collect::<Vec<_>>();
-        stack.extend(children);
-        nodes.remove(&node_id);
+    fn move_node(&mut self, node_id: NodeId, new_parent_id: Option<NodeId>) -> Option<()> {
+        let old_parent_id = self.nodes.get(&node_id)?.parent_id;
+        self.detach_child(old_parent_id, node_id);
+        self.attach_child(new_parent_id, node_id);
+        self.nodes.get_mut(&node_id)?.parent_id = new_parent_id;
+        Some(())
+    }
+
+    fn remove_subtree(&mut self, root: NodeId) {
+        let parent_id = self.nodes.get(&root).and_then(|node| node.parent_id);
+        self.detach_child(parent_id, root);
+
+        let mut stack = vec![root];
+        while let Some(node_id) = stack.pop() {
+            if let Some(children) = self.children_by_parent.remove(&node_id) {
+                stack.extend(children);
+            }
+            self.nodes.remove(&node_id);
+        }
+    }
+
+    fn attach_child(&mut self, parent_id: Option<NodeId>, child_id: NodeId) {
+        let Some(parent_id) = parent_id else {
+            return;
+        };
+        let children = self.children_by_parent.entry(parent_id).or_default();
+        if !children.contains(&child_id) {
+            children.push(child_id);
+        }
+    }
+
+    fn detach_child(&mut self, parent_id: Option<NodeId>, child_id: NodeId) {
+        let Some(parent_id) = parent_id else {
+            return;
+        };
+        let should_remove = if let Some(children) = self.children_by_parent.get_mut(&parent_id) {
+            children.retain(|id| *id != child_id);
+            children.is_empty()
+        } else {
+            false
+        };
+        if should_remove {
+            self.children_by_parent.remove(&parent_id);
+        }
     }
 }
 
