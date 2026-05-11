@@ -19,6 +19,7 @@ All UI components organized by feature area. Each subdirectory is a self-contain
 | `bottom_bar.rs` | Bottom status bar |
 | `layout_context.rs` | Layout state context (sidebar open, panel sizes) |
 | `dropdown.rs` | Reusable dropdown component |
+| `dropdown/` | Dropdown placement helpers |
 | `outline.rs` | Document outline panel |
 | `settings.rs` | Settings dialog |
 | `settings_sections_policy.rs` | Settings section button-state and disabled-state policy helpers |
@@ -28,6 +29,7 @@ All UI components organized by feature area. Each subdirectory is a self-contain
 | `disconnect_overlay.rs` | Connection lost overlay |
 | `spectator_overlay.rs` | Read-only spectator mode overlay |
 | `playback.rs` | Document history playback component |
+| `sidebar_menu/` | Sidebar context menu item renderer |
 
 ## Subdirectories
 

@@ -11,7 +11,6 @@ use leptos::prelude::*;
 use crate::components::dropdown::{Align, AnchorRect, Dropdown};
 use crate::i18n::{Locale, t};
 
-#[path = "sidebar_menu_item.rs"]
 mod item;
 
 use item::SidebarMenuItems;

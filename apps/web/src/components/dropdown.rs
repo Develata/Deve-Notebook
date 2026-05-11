@@ -8,7 +8,6 @@
 
 use leptos::prelude::*;
 
-#[path = "dropdown_position.rs"]
 mod position;
 
 use position::{build_panel_style, measure_dropdown};
