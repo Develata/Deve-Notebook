@@ -125,16 +125,13 @@ impl<'a> RepoCatalogRuntime<'a> {
     pub(crate) fn list_shadows_on_disk(&self) -> Result<Vec<PeerId>> {
         let mut peers = Vec::new();
         for peer_id in self.shadow_peer_dirs()? {
-            let entries = self
-                .manager
-                .scan_remote_repo_entries(&peer_id)
-                .map_err(|err| {
-                    anyhow!(
-                        "Broken shadow peer {} while listing shadows: {}",
-                        peer_id,
-                        err
-                    )
-                })?;
+            let entries = self.scan_remote_repo_entries(&peer_id).map_err(|err| {
+                anyhow!(
+                    "Broken shadow peer {} while listing shadows: {}",
+                    peer_id,
+                    err
+                )
+            })?;
             if !entries.is_empty() {
                 peers.push(peer_id);
             }

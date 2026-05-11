@@ -179,19 +179,6 @@ impl<'a> RepoCatalogRuntime<'a> {
 }
 
 impl RepoManager {
-    pub(crate) fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
-        self.repo_catalog_runtime()
-            .repair_remote_repo_catalog(peer_id)
-    }
-
-    pub(crate) fn scan_remote_repo_entries(
-        &self,
-        peer_id: &PeerId,
-    ) -> Result<Vec<RemoteRepoEntry>> {
-        self.repo_catalog_runtime()
-            .scan_remote_repo_entries(peer_id)
-    }
-
     pub fn validate_remote_repo_url_coverage(&self, peer_id: &PeerId) -> Result<()> {
         self.repo_catalog_runtime()
             .validate_remote_repo_url_coverage(peer_id)

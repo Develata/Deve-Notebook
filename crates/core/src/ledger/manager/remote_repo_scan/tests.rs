@@ -10,6 +10,7 @@ fn repair_remote_repo_catalog_fails_closed_on_missing_peer_directory() {
     let peer = PeerId::new("peer-missing");
 
     let err = repo
+        .repo_catalog_runtime()
         .repair_remote_repo_catalog(&peer)
         .expect_err("missing peer directory must fail closed");
 
