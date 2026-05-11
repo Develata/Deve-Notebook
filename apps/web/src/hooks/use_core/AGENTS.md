@@ -17,7 +17,9 @@ Core application state management hub. The largest hook module — manages WebSo
 | `state_build.rs` | State construction from server data |
 | `state_init.rs` | Initial state setup |
 | `provide.rs` | Context provider for child components |
+| `provide/` | Context provider builders by child context |
 | `contexts.rs` | Context type definitions |
+| `contexts/` | Context type slices by UI domain |
 | `types.rs` | Shared type definitions |
 | `types/` | CoreState, chat helpers, and shared signal structs |
 | `callbacks.rs` | General callback handlers |

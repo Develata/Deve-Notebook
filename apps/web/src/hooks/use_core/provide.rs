@@ -4,17 +4,11 @@
 //!
 //! 子上下文提供入口。
 
-#[path = "provide_branch.rs"]
 mod branch;
-#[path = "provide_chat.rs"]
 mod chat;
-#[path = "provide_doc.rs"]
 mod doc;
-#[path = "provide_editor.rs"]
 mod editor;
-#[path = "provide_source_control.rs"]
 mod source_control;
-#[path = "provide_sync.rs"]
 mod sync;
 
 use super::types::CoreState;
