@@ -22,7 +22,7 @@ impl RepoManager {
 }
 
 pub(crate) struct RepoCatalogRuntime<'a> {
-    manager: &'a RepoManager,
+    pub(super) manager: &'a RepoManager,
 }
 
 impl<'a> RepoCatalogRuntime<'a> {

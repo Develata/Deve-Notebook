@@ -10,12 +10,17 @@ use crate::ledger::manager::remote_repo_scan_helpers::{
 };
 use crate::ledger::manager::remote_repo_scan_validate::validate_remote_repo_url_coverage;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
+use crate::ledger::manager::repo_catalog_runtime::RepoCatalogRuntime;
 use crate::ledger::manager::types::RepoManager;
 use crate::models::PeerId;
 use anyhow::{Result, anyhow};
-impl RepoManager {
+
+impl<'a> RepoCatalogRuntime<'a> {
     pub(crate) fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
-        let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
+        let peer_dir = self
+            .manager
+            .checked_remotes_dir()?
+            .join(peer_id.to_filename());
         match peer_dir.try_exists() {
             Ok(true) => {}
             Ok(false) => {
@@ -78,7 +83,9 @@ impl RepoManager {
             ));
         }
         for (path, repair) in repairs {
-            let desired = self.allocate_remote_repo_path(peer_id, &repair.info)?;
+            let desired = self
+                .manager
+                .allocate_remote_repo_path(peer_id, &repair.info)?;
             let target = if desired != path {
                 relocate_database_path(&path, &desired)?;
                 std::fs::rename(&path, &desired)?;
@@ -88,7 +95,7 @@ impl RepoManager {
             };
             if repair.write_back {
                 let db = cached_database(&target)?;
-                Self::write_repo_info_to_db(db.as_ref(), &repair.info)?;
+                RepoManager::write_repo_info_to_db(db.as_ref(), &repair.info)?;
             }
         }
         Ok(())
@@ -107,7 +114,10 @@ impl RepoManager {
         &self,
         peer_id: &PeerId,
     ) -> Result<Vec<RemoteRepoEntry>> {
-        let peer_dir = self.checked_remotes_dir()?.join(peer_id.to_filename());
+        let peer_dir = self
+            .manager
+            .checked_remotes_dir()?
+            .join(peer_id.to_filename());
         match peer_dir.try_exists() {
             Ok(true) => {}
             Ok(false) => {
@@ -141,7 +151,7 @@ impl RepoManager {
         }
         let mut repos = Vec::new();
         for (path, stem) in redb_repo_entries(&peer_dir, "pure scanning remote catalog")? {
-            let info = scanned_remote_repo_info(self, &path, &stem).map_err(|err| {
+            let info = scanned_remote_repo_info(self.manager, &path, &stem).map_err(|err| {
                 anyhow!(
                     "Broken shadow repo {} for peer {} while pure scanning catalog: {}",
                     stem,
@@ -154,9 +164,30 @@ impl RepoManager {
         Ok(repos)
     }
 
-    pub fn validate_remote_repo_url_coverage(&self, peer_id: &PeerId) -> Result<()> {
-        validate_remote_repo_url_coverage(self, peer_id)
+    pub(crate) fn validate_remote_repo_url_coverage(&self, peer_id: &PeerId) -> Result<()> {
+        validate_remote_repo_url_coverage(self.manager, peer_id)
     }
 }
+
+impl RepoManager {
+    pub(crate) fn repair_remote_repo_catalog(&self, peer_id: &PeerId) -> Result<()> {
+        self.repo_catalog_runtime()
+            .repair_remote_repo_catalog(peer_id)
+    }
+
+    pub(crate) fn scan_remote_repo_entries(
+        &self,
+        peer_id: &PeerId,
+    ) -> Result<Vec<RemoteRepoEntry>> {
+        self.repo_catalog_runtime()
+            .scan_remote_repo_entries(peer_id)
+    }
+
+    pub fn validate_remote_repo_url_coverage(&self, peer_id: &PeerId) -> Result<()> {
+        self.repo_catalog_runtime()
+            .validate_remote_repo_url_coverage(peer_id)
+    }
+}
+
 #[cfg(test)]
 mod tests;
