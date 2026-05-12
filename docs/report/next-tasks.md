@@ -8,7 +8,10 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Mainline gap selection after smoke closure | P2 | `docs/plan` × features × acceptance × code | 在已完成 runtime/search/auth/AI smoke 后，重新选出下一批真正影响用户验收的主线缺口；不做抽象重构 |
+| 1 | AI BUILD controlled Apply browser smoke | P1 | Native AI Chat BUILD mode, assistant code block Apply, Web edit path | 本地 OpenAI-compatible SSE mock；`/build` 不发 plugin call；Apply 只在 BUILD 可见；点击 Apply 后当前 Markdown 经 `ClientMessage::Edit` 改变 |
+| 2 | Merge conflict UI browser smoke | P1 | Source Control merge conflict UI, `ResolveMergeConflict` actions | 用真实 server conflict fixture；验证 accept-current / accept-incoming / accept-both，携带 `doc_id` / `action` / `result_content` / `scope_nonce` |
+| 3 | Rendering interaction spot smoke | P2 | Code toolbar, Ctrl/Cmd link activation, Outline, Mermaid, nested rendering | 隔离数据根 + Chrome MCP；只验证 source-first projection，不扩展为富文本 authority |
+| 4 | Settings / Extensions reserved UI browser smoke | P2 | Trusted CLI default-off, Calculation Runtime planned/disabled, reserved setting markers | 验证可见文案、disabled reason、`aria-disabled` / marker；不新增 server-backed Settings API |
 
 ## 最近完成
 
@@ -31,6 +34,7 @@
 - Search disabled fail-closed smoke：新增 `search-disabled-fail-closed-smoke-2026-05-12.md`，用隔离后端和 Chrome MCP 验证未编译 search feature 时 `?needle` 显示用户可见 unavailable 反馈、无 stale result、状态保持就绪。
 - Auth session expired browser smoke：新增 `auth-session-expired-browser-smoke-2026-05-12.md`，用隔离后端和 Chrome MCP 验证外部 session 失效与 UI logout 均进入登录页、无 Reconnecting overlay、无 console error，并修复 MainLayout 卸载后旧 WS 任务写 disposed signal 的生命周期 bug。
 - Native AI positive smoke：新增 `native-ai-positive-smoke-2026-05-12.md`，用本地 OpenAI-compatible SSE mock 验证 Native AI Chat 正向 browser 链路，并修复 `ai-chat` Rhai prompt 常量在正向分支中的作用域 bug。
+- Mainline gap selection after smoke closure：新增 `mainline-gap-selection-after-smoke-2026-05-12.md`，确认下一批按 AI BUILD Apply、Merge Conflict UI、Rendering 交互、Settings/Extensions reserved UI 依次执行。
 - Runtime happy-path smoke：新增 `scripts/smoke-runtime-happy-path.sh`，用临时 repo 覆盖 repo switch、SyncHello、RegisterWriter、CreateDoc、Edit、OpenDoc、History 与 reconnect bootstrap 单测。
 - Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `apps/cli/src/server/ws/route/merge/tests.rs` 场景测试上下文，不做纯行数拆分。
 
