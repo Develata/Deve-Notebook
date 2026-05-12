@@ -69,6 +69,8 @@
   preconditions:
     - 文档大小 >= 1MB
   steps:
+    - run: scripts/check-large-doc-baseline.sh
+    - run: cargo test -p deve_web large_doc_search_gate -- --nocapture
     - ui_open_doc: "large.md"
     - ui_time_to_first_paint: true
   assertions:

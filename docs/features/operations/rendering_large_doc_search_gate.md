@@ -25,7 +25,7 @@
 - `Trigger`: submit a search query while `load_state != ready`
 - `Preconditions`: large-document replay is still in progress
 - `Immediate Result`: search request is blocked by the load gate and no `ClientMessage::Search` is sent
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_misc.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks/misc.rs`
 
 ### `op.render.large-search.submit-after-ready`
 
@@ -34,7 +34,7 @@
 - `Trigger`: resubmit search after load state becomes `ready`
 - `Preconditions`: workspace is ready and scope is stable
 - `Immediate Result`: gate releases and search request proceeds into the normal search pipeline
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_misc.rs`, `apps/cli/src/server/handlers/search.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks/misc.rs`, `apps/cli/src/server/handlers/search.rs`
 
 ## Response Flow
 

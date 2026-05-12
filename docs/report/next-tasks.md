@@ -8,12 +8,14 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Next feature/acceptance gap scan | P2 | plan/features/acceptance/current code | 基于 browser smoke 后的最新状态选择下一批用户可感知实现项 |
+| 1 | Rendering browser spot smoke | P2 | Chrome MCP + current Web runtime | checkbox writeback、math block、large-doc search gate 至少点验一轮；发现缺陷则先修 |
+| 2 | Next feature/acceptance gap scan | P2 | plan/features/acceptance/current code | 基于最新 spot smoke 继续选择下一批用户可感知实现项 |
 
 ## 最近完成
 
 - Mainline implementation gap scan：新增 `mainline-gap-scan-2026-05-12.md`，确认 plan coverage 无 blocking、architecture registry 0 drift、runtime happy/recovery smoke 通过、search feature-on/off 路径通过。
 - Browser runtime/search smoke：新增 `browser-runtime-search-smoke-2026-05-12.md`，用隔离数据根验证登录、Ready、新建、编辑、刷新重连、Search `?note`，并修复 search result 选择后弹窗反向重开的 UI bug。
+- Feature acceptance gap scan：新增 `feature-acceptance-gap-scan-2026-05-12.md`，确认 Commands / Settings baseline 闭合，并修正 Rendering large-doc search gate 的 feature 路径与 acceptance 自动化绑定。
 - Runtime happy-path smoke：新增 `scripts/smoke-runtime-happy-path.sh`，用临时 repo 覆盖 repo switch、SyncHello、RegisterWriter、CreateDoc、Edit、OpenDoc、History 与 reconnect bootstrap 单测。
 - Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `apps/cli/src/server/ws/route/merge/tests.rs` 场景测试上下文，不做纯行数拆分。
 
