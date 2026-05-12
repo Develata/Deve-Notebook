@@ -34,7 +34,7 @@
 - `Trigger`: 输入 `?query` 后 100ms debounce 自动触发
 - `Preconditions`: workspace ready，repo scope 稳定，未处于 branch/repo switch
 - `Immediate Result`: 发送 `ClientMessage::Search`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_misc.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks/misc.rs`
 
 ### `op.search.receive-results`
 
