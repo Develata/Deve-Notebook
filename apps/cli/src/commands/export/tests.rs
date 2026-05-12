@@ -83,6 +83,34 @@ fn markdown_export_supports_single_doc_output() {
 }
 
 #[test]
+fn markdown_export_preserves_user_frontmatter_without_system_metadata() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, None, None).expect("init repo");
+    let content = "---\ntitle: User Note\n---\nbody";
+    let doc_id = seed_doc(&repo, "notes/frontmatter.md", content);
+    let output = dir.path().join("frontmatter.md");
+
+    run(
+        &ledger_dir,
+        Some(output.display().to_string()),
+        None,
+        Some(doc_id.to_string()),
+        8,
+        "markdown",
+        false,
+    )
+    .expect("export markdown doc");
+
+    let exported = std::fs::read_to_string(output).expect("read export");
+    assert_eq!(exported, content);
+    assert!(!exported.contains("doc_id"));
+    assert!(!exported.contains("node_id"));
+    assert!(!exported.contains("repo_id"));
+    assert!(!exported.contains("uuid:"));
+}
+
+#[test]
 fn json_export_rejects_single_doc_selector() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");

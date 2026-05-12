@@ -139,6 +139,29 @@ mod tests {
         assert!(config.contains("timeout_ms = 30000"));
     }
 
+    #[test]
+    fn init_creates_trinity_workspace_layout() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+
+        run(
+            &root.join("ledger"),
+            &root.join("vault"),
+            root.to_path_buf(),
+            8,
+        )
+        .expect("init");
+
+        assert!(root.join("ledger/local").is_dir());
+        assert!(root.join("ledger/remotes").is_dir());
+        assert!(root.join("ledger/.host/keys").is_dir());
+        assert!(root.join("vault/default").is_dir());
+        assert!(root.join("vault/default/.notegit").is_dir());
+        let gitignore = std::fs::read_to_string(root.join("vault/default/.gitignore"))
+            .expect("repo-local gitignore");
+        assert!(gitignore.lines().any(|line| line.trim() == ".notegit/"));
+    }
+
     #[cfg(unix)]
     #[test]
     fn init_fails_closed_on_unreadable_config_target() {

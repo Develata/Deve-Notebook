@@ -58,3 +58,45 @@ pub fn run(
     );
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::run;
+    use deve_core::ledger::RepoManager;
+    use deve_core::models::{LedgerEntry, Op, PeerId};
+
+    #[test]
+    fn recover_rebuilds_workspace_files_from_ledger() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let ledger_dir = dir.path().join("ledger");
+        let vault = dir.path().join("vault");
+        let repo = RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))
+            .expect("init repo");
+        let (doc_id, _) = repo
+            .apply_file_structure_in_local_repo("default", "notes/recovered.md", None, "test")
+            .expect("create doc");
+        repo.append_generated_op_in_local_repo("default", doc_id, PeerId::new("local"), |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "recovered from ledger".into(),
+                },
+                1,
+                PeerId::new("local"),
+                seq,
+                None,
+                None,
+            )
+        })
+        .expect("append content");
+
+        run(&ledger_dir, &vault, Some("default".into()), 8).expect("recover");
+
+        assert_eq!(
+            std::fs::read_to_string(vault.join("default/notes/recovered.md"))
+                .expect("recovered file"),
+            "recovered from ledger"
+        );
+    }
+}

@@ -1,7 +1,9 @@
 //! STORE-001 / STORE-003 / STORE-004: storage layer acceptance tests.
 
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::{DOC_OPS, LEDGER_OPS, NODEID_TO_META, PATH_TO_NODEID, SNAPSHOT_INDEX};
+use deve_core::ledger::{
+    DOC_OPS, LEDGER_OPS, NODEID_TO_META, PATH_TO_NODEID, SNAPSHOT_DATA, SNAPSHOT_INDEX,
+};
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use tempfile::TempDir;
 
@@ -39,6 +41,7 @@ fn required_redb_tables_exist_after_init() {
         rtx.open_table(NODEID_TO_META)?;
         rtx.open_table(PATH_TO_NODEID)?;
         rtx.open_table(LEDGER_OPS)?;
+        rtx.open_table(SNAPSHOT_DATA)?;
         // Multimap tables
         rtx.open_multimap_table(DOC_OPS)?;
         rtx.open_multimap_table(SNAPSHOT_INDEX)?;

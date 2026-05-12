@@ -70,7 +70,7 @@ async fn request_history_on_deleted_doc_returns_error_without_history() -> anyho
 
     assert_protocol_error(
         &mut uni_rx,
-        Some(ServerErrorCode::StorageNotFound),
+        Some(ServerErrorCode::DocNotFound),
         None,
         "must not send deleted history",
     )

@@ -143,6 +143,29 @@ fn init_without_url_does_not_reuse_same_name_repo_with_explicit_url() {
 }
 
 #[test]
+fn init_allocates_collision_safe_repo_name_for_same_name_different_url() {
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let first = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("https://a.example"))
+        .expect("init first wiki");
+    let second = RepoManager::init(&ledger_dir, 8, Some("wiki"), Some("https://b.example"))
+        .expect("init second wiki");
+
+    let first_info = first.get_repo_info().expect("first info").expect("present");
+    let second_info = second
+        .get_repo_info()
+        .expect("second info")
+        .expect("present");
+    assert_eq!(first_info.name, "wiki");
+    assert_eq!(second_info.name, "wiki-1");
+    assert_eq!(first_info.url.as_deref(), Some("https://a.example"));
+    assert_eq!(second_info.url.as_deref(), Some("https://b.example"));
+    assert_ne!(first_info.uuid, second_info.uuid);
+    assert!(ledger_dir.join("local/wiki.redb").exists());
+    assert!(ledger_dir.join("local/wiki-1.redb").exists());
+}
+
+#[test]
 fn init_fails_closed_on_existing_local_repo_without_metadata() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");

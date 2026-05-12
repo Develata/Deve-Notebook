@@ -4,69 +4,69 @@
 - case_id: STORE-001
   goal: Trinity Isolation 结构存在。
   preconditions:
-    - 已执行 `deve init`
+    - CLI init 与 core ledger init 可在临时目录运行
   steps:
-    - run: dir "${DEVE_DATA_DIR}"
+    - run: cargo test -p deve_cli init_creates_trinity_workspace_layout -- --nocapture
+    - run: cargo test -p deve_core trinity_dir_structure_after_init -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - fs_exists: "${DEVE_DATA_DIR}/vault"
-    - fs_exists: "${DEVE_DATA_DIR}/ledger/local"
-    - fs_exists: "${DEVE_DATA_DIR}/ledger/remotes"
+    - cli_assert: init_trinity_layout_bound true
+    - cli_assert: ledger_local_remotes_bound true
 
 - case_id: STORE-002
   goal: Repo 命名冲突自动重命名。
   preconditions:
     - 两个 Repo 同名不同 URL
   steps:
-    - run: deve repo create --name wiki --url https://a.example
-    - run: deve repo create --name wiki --url https://b.example
+    - run: cargo test -p deve_core init_allocates_collision_safe_repo_name_for_same_name_different_url -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - fs_exists: "${DEVE_DATA_DIR}/ledger/local/wiki.redb"
-    - fs_exists: "${DEVE_DATA_DIR}/ledger/local/wiki-1.redb"
+    - cli_assert: collision_safe_local_repo_name true
+    - cli_assert: repo_identity_not_changed_by_physical_suffix true
 
 - case_id: STORE-003
   goal: Redb 索引表存在。
   preconditions:
     - 至少一个 .redb 文件
   steps:
-    - run: deve db inspect --tables ${DEVE_DATA_DIR}/ledger/local/wiki.redb
+    - run: cargo test -p deve_core required_redb_tables_exist_after_init -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - stdout_contains_all:
-        - "NODEID_TO_META"
-        - "PATH_TO_NODEID"
-        - "LEDGER_OPS"
+    - cli_assert: required_storage_tables_reachable true
 
 - case_id: STORE-004
   goal: Snapshot 双表与修剪。
   preconditions:
     - snapshot_depth=3
   steps:
-    - run: deve doc edit --id <doc> --repeat 5
-    - run: deve db inspect --tables ${DEVE_DATA_DIR}/ledger/local/wiki.redb
+    - run: cargo test -p deve_core snapshot_respects_depth_limit -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - stdout_contains: "SNAPSHOT_INDEX"
-    - stdout_contains: "SNAPSHOT_DATA"
-    - snapshot_count_le: 3
+    - cli_assert: snapshot_tables_reachable true
+    - cli_assert: snapshot_count_le_config true
 
 - case_id: STORE-005
   goal: Ledger-First 与原子持久化。
   preconditions:
     - 存在一个可编辑文档 <doc>
   steps:
-    - run: deve doc edit --id <doc> --set "x"
-    - run: deve dump --doc <doc> --field seq
+    - run: cargo test -p deve_core edit_round_trip_reconstructs_content -- --nocapture
+    - run: cargo test -p deve_core global_seq_increases -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - ledger_seq_increases true
-    - vault_content_eq: "x"
+    - cli_assert: ledger_seq_increases true
+    - cli_assert: reconstructed_content_matches true
 
 - case_id: STORE-006
   goal: Clean File Policy。
   preconditions:
     - 文档含 Frontmatter
   steps:
-    - run: type ${DEVE_DATA_DIR}/vault/frontmatter.md
+    - run: cargo test -p deve_cli markdown_export_preserves_user_frontmatter_without_system_metadata -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - file_not_contains: "uuid"
-    - file_contains: "---"
+    - cli_assert: clean_markdown_contains_user_frontmatter true
+    - cli_assert: clean_markdown_has_no_system_metadata_injection true
 
 - case_id: STORE-007
   goal: Watcher 事件映射与目录 scan 过滤。
@@ -76,46 +76,50 @@
     - 已跟踪文件存在: ${DEVE_DATA_DIR}/vault/main/notes/delete.md
     - ${DEVE_DATA_DIR}/vault/.deveignore 包含: ignored/*.md
   steps:
-    - run: powershell -Command "'new' | Set-Content ${DEVE_DATA_DIR}/vault/main/notes/new.md"
-    - run: powershell -Command "'dirty' | Set-Content ${DEVE_DATA_DIR}/vault/main/notes/live.md"
-    - run: powershell -Command "Remove-Item ${DEVE_DATA_DIR}/vault/main/notes/delete.md"
-    - run: powershell -Command "New-Item -ItemType Directory -Force ${DEVE_DATA_DIR}/vault/main/ignored"
-    - run: powershell -Command "'ignored' | Set-Content ${DEVE_DATA_DIR}/vault/main/ignored/scratch.md"
+    - run: cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture
+    - run: cargo test -p deve_core watcher_respects_deveignore_for_matching_markdown -- --nocapture
+    - run: cargo test -p deve_core watcher_startup_scan_respects_deveignore -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - pending_fs_ops_contains: "notes/new.md:Added"
-    - pending_fs_ops_contains: "notes/live.md:Modified"
-    - pending_fs_ops_contains: "notes/delete.md:Deleted"
-    - pending_fs_ops_not_contains: "ignored/scratch.md"
-    - ledger_op_not_appended: "notes/new.md"
+    - cli_assert: pending_fs_ops_contains_added_modified_deleted true
+    - cli_assert: pending_fs_ops_ignores_deveignore true
+    - cli_assert: ignored_markdown_not_appended_to_ledger true
 
 - case_id: STORE-008
   goal: 数据恢复策略。
   preconditions:
-    - 备份 ledger
+    - ledger 中存在可重建文档
   steps:
-    - run: powershell -Command "Remove-Item -Recurse ${DEVE_DATA_DIR}/vault"
-    - run: deve recover --from-ledger
+    - run: cargo test -p deve_cli recover_rebuilds_workspace_files_from_ledger -- --nocapture
+    - run: cargo test -p deve_core rebuild_projection_recovers_when_node_projection_is_missing -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - fs_exists: "${DEVE_DATA_DIR}/vault"
-    - vault_rebuilt true
+    - cli_assert: vault_rebuilt_from_ledger true
+    - cli_assert: projection_rebuild_uses_authority_facts true
 
 - case_id: STORE-009
   goal: UUID-First Retrieval。
   preconditions:
-    - API 接口支持 Name/Path
+    - 文档打开与历史读取使用 repo-scoped DocId
   steps:
-    - run: deve api call --path-by-name "file.md"
+    - run: cargo test -p deve_cli document_scope_bootstrap -- --nocapture
+    - run: cargo test -p deve_cli open_doc_scope -- --nocapture
+    - run: cargo test -p deve_cli resolve_target_prefers_doc_id_over_stale_path -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - log_contains: "resolve_to_uuid"
+    - cli_assert: open_doc_bootstraps_by_doc_id true
+    - cli_assert: wrong_repo_doc_id_fails_closed true
+    - cli_assert: path_hint_does_not_override_doc_id true
 
 - case_id: STORE-010
   goal: 路径规范化。
   preconditions:
     - Windows 路径输入
   steps:
-    - run: deve path normalize "folder\\sub\\a.md"
+    - run: cargo test -p deve_core path_normalize_structure -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - stdout_eq: "folder/sub/a.md"
+    - cli_assert: persisted_paths_use_forward_slash true
 
 - case_id: STORE-011
   goal: Browser storage authority boundary。
