@@ -10,6 +10,7 @@ run_test() {
   local package="$1"
   local filter="$2"
   local output
+  local total
 
   echo "runtime-happy-path-smoke: run: cargo test -p $package $filter -- --nocapture"
   if ! output="$(cd "$ROOT_DIR" && cargo test -p "$package" "$filter" -- --nocapture 2>&1)"; then
@@ -17,12 +18,14 @@ run_test() {
     return 1
   fi
   printf '%s\n' "$output"
-  if ! grep -Fq "running 1 test" <<<"$output"; then
-    echo "runtime-happy-path-smoke: expected exactly one test for filter '$filter'" >&2
+
+  total="$(awk '/^running [0-9]+ tests?/{sum += $2} END {print sum + 0}' <<<"$output")"
+  if [[ "$total" -ne 1 ]]; then
+    echo "runtime-happy-path-smoke: expected exactly one executed test for filter '$filter'" >&2
     return 1
   fi
-  if ! grep -Fq "$filter" <<<"$output"; then
-    echo "runtime-happy-path-smoke: test output did not mention filter '$filter'" >&2
+  if ! grep -Eq "^test .*$filter .*\\.\\.\\. ok$" <<<"$output"; then
+    echo "runtime-happy-path-smoke: expected passing test '$filter'" >&2
     return 1
   fi
 }
