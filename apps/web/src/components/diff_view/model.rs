@@ -111,3 +111,40 @@ pub fn to_unified(left: &[LineView], right: &[LineView]) -> Vec<UnifiedLine> {
     }
     lines
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{LineKind, compute_diff_preview_with_meta, to_unified};
+
+    #[test]
+    fn diff_replace_lines_emit_word_level_ranges() {
+        let ((left, right), _) =
+            compute_diff_preview_with_meta("alpha beta\n", "alpha gamma\n", 20);
+
+        let changed_left = left
+            .iter()
+            .find(|line| line.kind == LineKind::Del)
+            .expect("deleted replace line");
+        let changed_right = right
+            .iter()
+            .find(|line| line.kind == LineKind::Add)
+            .expect("added replace line");
+
+        assert!(!changed_left.word_ranges.is_empty());
+        assert!(!changed_right.word_ranges.is_empty());
+    }
+
+    #[test]
+    fn unified_diff_offsets_word_ranges_after_prefix_marker() {
+        let ((left, right), _) =
+            compute_diff_preview_with_meta("alpha beta\n", "alpha gamma\n", 20);
+        let unified = to_unified(&left, &right);
+        let deleted = unified
+            .iter()
+            .find(|line| line.kind == LineKind::Del)
+            .expect("deleted unified line");
+
+        assert!(deleted.content.starts_with("- "));
+        assert!(deleted.word_ranges.iter().all(|(start, _)| *start >= 2));
+    }
+}

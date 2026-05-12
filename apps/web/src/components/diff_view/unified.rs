@@ -86,8 +86,9 @@ pub fn hunk_rows(lines: &[UnifiedLine]) -> Vec<usize> {
 mod tests {
     use super::{
         ChunkWindow, DIFF_VIEWPORT_CHUNK_SIZE, DIFF_VIEWPORT_PREFETCH_CHUNKS, LINE_HEIGHT_PX,
-        slice_lines,
+        hunk_rows, slice_lines,
     };
+    use crate::components::diff_view::model::{LineKind, UnifiedLine};
 
     #[test]
     fn diff_first_viewport_initial_window_is_bounded_for_long_doc() {
@@ -143,5 +144,34 @@ mod tests {
 
         assert_eq!(visible.first(), Some(&0));
         assert_eq!(visible.len(), DIFF_VIEWPORT_CHUNK_SIZE * 2);
+    }
+
+    #[test]
+    fn diff_hunk_rows_collect_changed_line_indices() {
+        let lines = vec![
+            UnifiedLine {
+                num: Some(1),
+                content: "same".to_string(),
+                class: "",
+                word_ranges: Vec::new(),
+                kind: LineKind::Normal,
+            },
+            UnifiedLine {
+                num: Some(2),
+                content: "- old".to_string(),
+                class: "",
+                word_ranges: Vec::new(),
+                kind: LineKind::Del,
+            },
+            UnifiedLine {
+                num: Some(3),
+                content: "+ new".to_string(),
+                class: "",
+                word_ranges: Vec::new(),
+                kind: LineKind::Add,
+            },
+        ];
+
+        assert_eq!(hunk_rows(&lines), vec![1, 2]);
     }
 }

@@ -50,23 +50,23 @@ TERM-003|manual-doc|docs/features/01_terminology.md|forbidden term review
 UI-DESK-001|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop shell workflow
 UI-DESK-002|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop window workflow
 UI-DIFF-001|manual-chrome|docs/features/07_diff_logic.md|diff first viewport workflow
-UI-DIFF-002|manual-chrome|docs/features/07_diff_logic.md|stage/unstage UI workflow
-UI-DIFF-003|manual-chrome|docs/features/07_diff_logic.md|commit UI workflow
-UI-DIFF-004|manual-chrome|docs/features/07_diff_logic.md|discard UI workflow
-UI-DIFF-005|manual-chrome|docs/features/07_diff_logic.md|diff navigation workflow
-UI-DIFF-006|manual-chrome|docs/features/07_diff_logic.md|history compare workflow
-UI-DIFF-007|manual-chrome|docs/features/07_diff_logic.md|merge UI workflow
-UI-DIFF-008|manual-chrome|docs/features/07_diff_logic.md|conflict UI workflow
-UI-DIFF-009|manual-chrome|docs/features/07_diff_logic.md|remote branch diff workflow
-UI-DIFF-010|manual-chrome|docs/features/07_diff_logic.md|local branch diff workflow
-UI-DIFF-011|manual-chrome|docs/features/07_diff_logic.md|pending change detail workflow
-UI-DIFF-012|manual-chrome|docs/features/07_diff_logic.md|empty diff workflow
-UI-DIFF-013|manual-chrome|docs/features/07_diff_logic.md|diff error workflow
-UI-DIFF-014|manual-chrome|docs/features/07_diff_logic.md|diff loading workflow
-UI-DIFF-015|manual-chrome|docs/features/07_diff_logic.md|diff scope switch workflow
-UI-DIFF-016|manual-chrome|docs/features/07_diff_logic.md|diff auth gate workflow
-UI-DIFF-017|manual-chrome|docs/features/07_diff_logic.md|diff reconnect workflow
-UI-DIFF-018|manual-chrome|docs/features/07_diff_logic.md|diff mobile fallback workflow
+UI-DIFF-002|manual-chrome|docs/features/07_diff_logic.md|mobile diff edit debounce workflow
+UI-DIFF-003|manual-chrome|docs/features/07_diff_logic.md|desktop diff chat coexistence workflow
+UI-DIFF-004|manual-chrome|docs/features/07_diff_logic.md|diff i18n copy workflow
+UI-DIFF-005|manual-chrome|docs/features/07_diff_logic.md|diff compute indicator workflow
+UI-DIFF-006|manual-chrome|docs/features/07_diff_logic.md|diff hunk button navigation workflow
+UI-DIFF-007|manual-chrome|docs/features/07_diff_logic.md|diff word-level replace highlight workflow
+UI-DIFF-008|manual-chrome|docs/features/07_diff_logic.md|diff bracket and alt-key navigation workflow
+UI-DIFF-009|manual-chrome|docs/features/07_diff_logic.md|diff header change stats workflow
+UI-DIFF-010|manual-chrome|docs/features/07_diff_logic.md|diff unchanged-region folding workflow
+UI-DIFF-011|manual-chrome|docs/features/07_diff_logic.md|diff context-lines switch workflow
+UI-DIFF-012|manual-chrome|docs/features/07_diff_logic.md|diff semantic anchor restore workflow
+UI-DIFF-013|manual-chrome|docs/features/07_diff_logic.md|diff cache badge and compute time workflow
+UI-DIFF-014|manual-chrome|docs/features/07_diff_logic.md|diff cache invalidation workflow
+UI-DIFF-015|manual-chrome|docs/features/07_diff_logic.md|diff algorithm label workflow
+UI-DIFF-016|manual-chrome|docs/features/07_diff_logic.md|diff F7 navigation workflow
+UI-DIFF-017|manual-chrome|docs/features/07_diff_logic.md|diff cache ratio workflow
+UI-DIFF-018|manual-chrome|docs/features/07_diff_logic.md|diff repo-scope cache isolation workflow
 UI-GEN-001|manual-chrome|docs/features/08_ui_design.md|global shell workflow
 UI-MOB-001|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile shell workflow
 UI-MOB-002|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile navigation workflow

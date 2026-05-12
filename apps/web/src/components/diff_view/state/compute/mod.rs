@@ -15,6 +15,8 @@ mod helpers;
 use chunk::{ChunkedDiffStart, start_chunked_diff};
 use helpers::{algo_label, initial_cached_or_preview, preview_diff};
 
+pub const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;
+
 pub fn create_compute_state(
     repo_scope: String,
     path: String,
@@ -111,7 +113,7 @@ pub fn create_compute_state(
             let old_content_ref = old_content.clone();
             let path = path.clone();
             let repo_scope = repo_scope.clone();
-            let debounce = Timeout::new(150, move || {
+            let debounce = Timeout::new(DIFF_EDIT_DEBOUNCE_MS, move || {
                 if latest.get_untracked() != next_token {
                     return;
                 }
@@ -161,5 +163,15 @@ pub fn create_compute_state(
         diff_result,
         unified_lines,
         metrics,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DIFF_EDIT_DEBOUNCE_MS;
+
+    #[test]
+    fn diff_edit_debounce_matches_acceptance_contract() {
+        assert_eq!(DIFF_EDIT_DEBOUNCE_MS, 150);
     }
 }

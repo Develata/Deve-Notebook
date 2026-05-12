@@ -6,7 +6,7 @@ use super::fold::FoldState;
 use super::model::hunk_fold::UnifiedRow;
 use super::model::split_fold::SplitRow;
 use super::split_pane::SplitPane;
-use super::state::{ComputePhase, DiffComputeState};
+use super::state::{DiffComputeState, diff_compute_indicator_visible};
 use super::unified_pane::UnifiedPane;
 use super::viewport::UnifiedViewportState;
 use crate::i18n::{Locale, t};
@@ -35,7 +35,7 @@ pub struct DiffBodyDeps {
 pub fn DiffBody(deps: DiffBodyDeps) -> impl IntoView {
     view! {
         <div class="flex-1 overflow-hidden flex relative">
-            <Show when=move || deps.compute.compute_state.get() != ComputePhase::Ready>
+            <Show when=move || diff_compute_indicator_visible(deps.compute.compute_state.get())>
                 <div class="diff-compute-indicator absolute top-2 right-2 z-[calc(var(--z-editor)_+_1)] rounded border border-[var(--diff-border)] bg-[var(--diff-header-bg)] px-2 py-1 text-[11px] text-[var(--diff-muted)] shadow-sm">
                     {move || t::diff::computing(deps.locale.get())}
                 </div>

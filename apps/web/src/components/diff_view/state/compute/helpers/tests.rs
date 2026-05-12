@@ -1,7 +1,8 @@
 use super::{
-    INITIAL_DIFF_PREVIEW_BYTES, INITIAL_DIFF_PREVIEW_LINES, InitialKeyPolicy,
+    INITIAL_DIFF_PREVIEW_BYTES, INITIAL_DIFF_PREVIEW_LINES, InitialKeyPolicy, algo_label,
     initial_cached_or_preview, initial_diff_key_policy, preview_input, recompute_with_cache,
 };
+use crate::components::diff_view::model::DiffAlgorithm;
 
 fn long_lines(prefix: &str) -> String {
     (0..3_000)
@@ -143,4 +144,10 @@ fn diff_first_viewport_initial_short_cache_miss_is_complete() {
     assert!(!initial.cache_hit);
     assert!(initial.complete);
     assert!(initial.key.is_some());
+}
+
+#[test]
+fn diff_algorithm_label_names_are_stable() {
+    assert_eq!(algo_label(DiffAlgorithm::Myers), "Myers");
+    assert_eq!(algo_label(DiffAlgorithm::PatienceMyers), "Patience+Myers");
 }

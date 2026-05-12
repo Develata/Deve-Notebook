@@ -17,6 +17,32 @@ pub struct HunkNavState {
     pub on_next_hunk: Callback<()>,
 }
 
+pub fn format_hunk_index_text(current: usize, count: usize) -> String {
+    if count == 0 {
+        return "0/0".to_string();
+    }
+    let idx = current.min(count.saturating_sub(1));
+    format!("{}/{}", idx + 1, count)
+}
+
+pub fn next_hunk_index(current: usize, count: usize) -> Option<usize> {
+    if count == 0 {
+        return None;
+    }
+    Some((current + 1) % count)
+}
+
+pub fn prev_hunk_index(current: usize, count: usize) -> Option<usize> {
+    if count == 0 {
+        return None;
+    }
+    Some((current + count - 1) % count)
+}
+
+pub fn count_lines_by_kind(lines: &[UnifiedLine], kind: LineKind) -> usize {
+    lines.iter().filter(|line| line.kind == kind).count()
+}
+
 pub fn create_hunk_nav(
     unified_lines: Memo<Vec<UnifiedLine>>,
     force_unified: bool,
@@ -27,28 +53,12 @@ pub fn create_hunk_nav(
     let hunk_rows = Memo::new(move |_| collect_hunks(&unified_lines.get()));
     let (hunk_idx, set_hunk_idx) = signal(0usize);
     let has_hunks = Signal::derive(move || !hunk_rows.get().is_empty());
-    let hunk_index_text = Signal::derive(move || {
-        let rows = hunk_rows.get();
-        if rows.is_empty() {
-            return "0/0".to_string();
-        }
-        let idx = hunk_idx.get().min(rows.len().saturating_sub(1));
-        format!("{}/{}", idx + 1, rows.len())
-    });
-    let added_count = Signal::derive(move || {
-        unified_lines
-            .get()
-            .into_iter()
-            .filter(|l| l.kind == LineKind::Add)
-            .count()
-    });
-    let deleted_count = Signal::derive(move || {
-        unified_lines
-            .get()
-            .into_iter()
-            .filter(|l| l.kind == LineKind::Del)
-            .count()
-    });
+    let hunk_index_text =
+        Signal::derive(move || format_hunk_index_text(hunk_idx.get(), hunk_rows.get().len()));
+    let added_count =
+        Signal::derive(move || count_lines_by_kind(&unified_lines.get(), LineKind::Add));
+    let deleted_count =
+        Signal::derive(move || count_lines_by_kind(&unified_lines.get(), LineKind::Del));
 
     Effect::new(move |_| {
         let count = hunk_rows.get().len();
@@ -86,16 +96,15 @@ pub fn create_hunk_nav(
         if count == 0 {
             return;
         }
-        let current = hunk_idx.get_untracked();
-        jump_to_hunk.run((current + count - 1) % count);
+        if let Some(idx) = prev_hunk_index(hunk_idx.get_untracked(), count) {
+            jump_to_hunk.run(idx);
+        }
     });
     let on_next_hunk = Callback::new(move |_| {
         let count = hunk_rows.get_untracked().len();
-        if count == 0 {
-            return;
+        if let Some(idx) = next_hunk_index(hunk_idx.get_untracked(), count) {
+            jump_to_hunk.run(idx);
         }
-        let current = hunk_idx.get_untracked();
-        jump_to_hunk.run((current + 1) % count);
     });
 
     HunkNavState {
@@ -117,4 +126,50 @@ pub fn should_ignore_shortcut(ev: &web_sys::KeyboardEvent) -> bool {
     };
     let tag = el.tag_name().to_ascii_lowercase();
     tag == "input" || tag == "textarea" || el.has_attribute("contenteditable")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{count_lines_by_kind, format_hunk_index_text, next_hunk_index, prev_hunk_index};
+    use crate::components::diff_view::model::{LineKind, UnifiedLine};
+
+    fn line(kind: LineKind) -> UnifiedLine {
+        UnifiedLine {
+            num: Some(1),
+            content: String::new(),
+            class: "",
+            word_ranges: Vec::new(),
+            kind,
+        }
+    }
+
+    #[test]
+    fn diff_hunk_navigation_indices_wrap() {
+        assert_eq!(next_hunk_index(0, 3), Some(1));
+        assert_eq!(next_hunk_index(2, 3), Some(0));
+        assert_eq!(prev_hunk_index(0, 3), Some(2));
+        assert_eq!(prev_hunk_index(2, 3), Some(1));
+        assert_eq!(next_hunk_index(0, 0), None);
+        assert_eq!(prev_hunk_index(0, 0), None);
+    }
+
+    #[test]
+    fn diff_hunk_index_text_clamps_to_available_hunks() {
+        assert_eq!(format_hunk_index_text(0, 0), "0/0");
+        assert_eq!(format_hunk_index_text(0, 3), "1/3");
+        assert_eq!(format_hunk_index_text(9, 3), "3/3");
+    }
+
+    #[test]
+    fn diff_header_change_stats_count_added_and_deleted_lines() {
+        let lines = vec![
+            line(LineKind::Normal),
+            line(LineKind::Add),
+            line(LineKind::Del),
+            line(LineKind::Add),
+        ];
+
+        assert_eq!(count_lines_by_kind(&lines, LineKind::Add), 2);
+        assert_eq!(count_lines_by_kind(&lines, LineKind::Del), 1);
+    }
 }

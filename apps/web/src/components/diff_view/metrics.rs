@@ -66,3 +66,32 @@ pub fn now_ms() -> u64 {
 pub fn elapsed_ms(start: u64, end: u64) -> u32 {
     end.saturating_sub(start) as u32
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{create_metrics_state, elapsed_ms, record_cache_sample};
+    use leptos::prelude::GetUntracked;
+
+    #[test]
+    fn diff_cache_ratio_updates_from_samples() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+
+        let metrics = create_metrics_state();
+        record_cache_sample(&metrics, false);
+        assert_eq!(metrics.cache_hit.get_untracked(), false);
+        assert_eq!(metrics.cache_hit_ratio.get_untracked(), 0);
+
+        record_cache_sample(&metrics, true);
+        assert_eq!(metrics.cache_hit.get_untracked(), true);
+        assert_eq!(metrics.cache_hits.get_untracked(), 1);
+        assert_eq!(metrics.cache_total.get_untracked(), 2);
+        assert_eq!(metrics.cache_hit_ratio.get_untracked(), 50);
+    }
+
+    #[test]
+    fn diff_elapsed_ms_saturates_for_clock_skew() {
+        assert_eq!(elapsed_ms(10, 25), 15);
+        assert_eq!(elapsed_ms(25, 10), 0);
+    }
+}

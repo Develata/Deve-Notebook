@@ -16,6 +16,10 @@ pub enum ComputePhase {
     Ready,
 }
 
+pub fn diff_compute_indicator_visible(phase: ComputePhase) -> bool {
+    phase != ComputePhase::Ready
+}
+
 #[derive(Clone)]
 pub struct DiffComputeState {
     pub is_editing: ReadSignal<bool>,
@@ -26,4 +30,16 @@ pub struct DiffComputeState {
     pub diff_result: Memo<(Vec<LineView>, Vec<LineView>)>,
     pub unified_lines: Memo<Vec<UnifiedLine>>,
     pub metrics: DiffMetricsState,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ComputePhase, diff_compute_indicator_visible};
+
+    #[test]
+    fn diff_compute_indicator_tracks_non_ready_phases() {
+        assert!(diff_compute_indicator_visible(ComputePhase::Computing));
+        assert!(diff_compute_indicator_visible(ComputePhase::PartialReady));
+        assert!(!diff_compute_indicator_visible(ComputePhase::Ready));
+    }
 }

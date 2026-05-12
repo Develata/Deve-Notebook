@@ -71,3 +71,59 @@ pub fn build_folded_rows(
 
     rows
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{UnifiedRow, build_folded_rows};
+    use crate::components::diff_view::model::{LineKind, UnifiedLine};
+    use std::collections::HashSet;
+
+    fn line(idx: usize, kind: LineKind) -> UnifiedLine {
+        UnifiedLine {
+            num: Some(idx + 1),
+            content: format!("line-{idx}"),
+            class: "",
+            word_ranges: Vec::new(),
+            kind,
+        }
+    }
+
+    #[test]
+    fn diff_fold_rows_collapse_and_expand_unchanged_region() {
+        let mut lines: Vec<_> = (0..20).map(|i| line(i, LineKind::Normal)).collect();
+        lines[10] = line(10, LineKind::Add);
+
+        let folded = build_folded_rows(&lines, 3, true, &HashSet::new());
+        assert!(
+            folded
+                .iter()
+                .any(|row| matches!(row, UnifiedRow::Fold { id: 0, .. }))
+        );
+
+        let expanded = build_folded_rows(&lines, 3, true, &HashSet::from([0usize]));
+        assert!(
+            expanded
+                .iter()
+                .all(|row| matches!(row, UnifiedRow::Line(_)))
+        );
+    }
+
+    #[test]
+    fn diff_context_lines_change_fold_count() {
+        let mut lines: Vec<_> = (0..30).map(|i| line(i, LineKind::Normal)).collect();
+        lines[15] = line(15, LineKind::Del);
+
+        let context_3 = build_folded_rows(&lines, 3, true, &HashSet::new());
+        let context_8 = build_folded_rows(&lines, 8, true, &HashSet::new());
+        let visible_3 = context_3
+            .iter()
+            .filter(|row| matches!(row, UnifiedRow::Line(_)))
+            .count();
+        let visible_8 = context_8
+            .iter()
+            .filter(|row| matches!(row, UnifiedRow::Line(_)))
+            .count();
+
+        assert!(visible_8 > visible_3);
+    }
+}

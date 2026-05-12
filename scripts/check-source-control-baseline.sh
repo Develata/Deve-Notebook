@@ -118,6 +118,62 @@ check_contains apps/web/src/components/diff_view/viewport.rs "fn diff_first_view
 check_contains apps/web/src/components/diff_view/unified_pane.rs "data-deve-diff-first-viewport=move ||"
 check_contains apps/web/src/components/diff_view/unified_pane.rs "fn diff_first_viewport_marker_requires_ready_visible_rows()"
 
+# UI-DIFF-002..018: extended Diff interactions have semantic acceptance
+# bindings and minimal automated guards for the behavior that is already pure
+# enough to test outside Chrome.
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-002|manual-chrome|docs/features/07_diff_logic.md|mobile diff edit debounce workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-003|manual-chrome|docs/features/07_diff_logic.md|desktop diff chat coexistence workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-004|manual-chrome|docs/features/07_diff_logic.md|diff i18n copy workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-005|manual-chrome|docs/features/07_diff_logic.md|diff compute indicator workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-006|manual-chrome|docs/features/07_diff_logic.md|diff hunk button navigation workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-007|manual-chrome|docs/features/07_diff_logic.md|diff word-level replace highlight workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-008|manual-chrome|docs/features/07_diff_logic.md|diff bracket and alt-key navigation workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-009|manual-chrome|docs/features/07_diff_logic.md|diff header change stats workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-010|manual-chrome|docs/features/07_diff_logic.md|diff unchanged-region folding workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-011|manual-chrome|docs/features/07_diff_logic.md|diff context-lines switch workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-012|manual-chrome|docs/features/07_diff_logic.md|diff semantic anchor restore workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-013|manual-chrome|docs/features/07_diff_logic.md|diff cache badge and compute time workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-014|manual-chrome|docs/features/07_diff_logic.md|diff cache invalidation workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-015|manual-chrome|docs/features/07_diff_logic.md|diff algorithm label workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-016|manual-chrome|docs/features/07_diff_logic.md|diff F7 navigation workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-017|manual-chrome|docs/features/07_diff_logic.md|diff cache ratio workflow"
+check_contains docs/acceptance-bindings.tsv "UI-DIFF-018|manual-chrome|docs/features/07_diff_logic.md|diff repo-scope cache isolation workflow"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-002 "run: cargo test -p deve_web diff_edit_debounce -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-004 "run: scripts/check-source-control-baseline.sh"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-004 "cli_assert: diff_hardcoded_copy_absent true"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-005 "run: cargo test -p deve_web diff_compute_indicator -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-006 "run: cargo test -p deve_web diff_hunk_navigation -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-007 "run: cargo test -p deve_web diff_replace_lines -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-008 "run: cargo test -p deve_web diff_hunk_navigation -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-009 "run: cargo test -p deve_web diff_header_change_stats -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-010 "run: cargo test -p deve_web diff_fold_rows -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-011 "run: cargo test -p deve_web diff_context_lines -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-012 "run: cargo test -p deve_web diff_semantic_anchor -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-013 "run: cargo test -p deve_web diff_cache -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-013 "run: cargo test -p deve_web diff_elapsed_ms -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-014 "run: cargo test -p deve_web diff_cache -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-015 "run: cargo test -p deve_web diff_algorithm_label -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-016 "run: cargo test -p deve_web diff_hunk_navigation -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-017 "run: cargo test -p deve_web diff_cache_ratio -- --nocapture"
+check_case_block docs/acceptance-cases/05_ui.md UI-DIFF-018 "run: cargo test -p deve_web diff_cache_key -- --nocapture"
+check_contains apps/web/src/components/diff_view/state/compute/mod.rs "pub const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;"
+check_contains apps/web/src/components/diff_view/state/compute/mod.rs "fn diff_edit_debounce_matches_acceptance_contract()"
+check_contains apps/web/src/components/diff_view/state/mod.rs "fn diff_compute_indicator_tracks_non_ready_phases()"
+check_contains apps/web/src/components/diff_view/navigation.rs "fn diff_hunk_navigation_indices_wrap()"
+check_contains apps/web/src/components/diff_view/navigation.rs "fn diff_header_change_stats_count_added_and_deleted_lines()"
+check_contains apps/web/src/components/diff_view/model.rs "fn diff_replace_lines_emit_word_level_ranges()"
+check_contains apps/web/src/components/diff_view/model/hunk_fold.rs "fn diff_fold_rows_collapse_and_expand_unchanged_region()"
+check_contains apps/web/src/components/diff_view/model/hunk_fold.rs "fn diff_context_lines_change_fold_count()"
+check_contains apps/web/src/components/diff_view/anchor.rs "fn diff_semantic_anchor_delta_preserves_original_offset()"
+check_contains apps/web/src/components/diff_view/cache.rs "fn diff_cache_key_is_scoped_by_repo_path_mode_and_context()"
+check_contains apps/web/src/components/diff_view/metrics.rs "fn diff_cache_ratio_updates_from_samples()"
+check_contains apps/web/src/components/diff_view/metrics.rs "fn diff_elapsed_ms_saturates_for_clock_skew()"
+check_contains apps/web/src/components/diff_view/state/compute/helpers/tests.rs "fn diff_algorithm_label_names_are_stable()"
+check_absent apps/web/src/components/diff_view '"Diff:"'
+check_absent apps/web/src/components/diff_view '"Read Only"'
+check_absent apps/web/src/components/diff_view '"Preview Diff"'
+check_absent apps/web/src/components/diff_view '"Close Diff View"'
+
 # CommitAndPush is a publish entry point that currently completes as CommitAck,
 # not a separate user-visible SyncPush result flow.
 check_contains docs/features/operations/sc_commit_and_push.md "CommitAck"

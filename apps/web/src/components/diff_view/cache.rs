@@ -75,3 +75,23 @@ pub fn cache_get(key: &str) -> Option<DiffComputeValue> {
 pub fn cache_put(key: String, value: DiffComputeValue) {
     DIFF_CACHE.with(|c| c.borrow_mut().put(key, value));
 }
+
+#[cfg(test)]
+mod tests {
+    use super::build_key;
+
+    #[test]
+    fn diff_cache_key_is_scoped_by_repo_path_mode_and_context() {
+        let key = build_key("repo-a", "notes/a.md", "old", "new", "unified", 5);
+
+        assert!(key.starts_with("repo-a|notes/a.md|unified|5|"));
+        assert_ne!(
+            key,
+            build_key("repo-b", "notes/a.md", "old", "new", "unified", 5)
+        );
+        assert_ne!(
+            key,
+            build_key("repo-a", "notes/a.md", "old", "new", "unified", 8)
+        );
+    }
+}

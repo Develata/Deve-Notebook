@@ -12,6 +12,10 @@ pub struct ScrollAnchor {
     pub offset_top: i32,
 }
 
+pub fn anchor_scroll_delta(current_offset_top: i32, anchor: &ScrollAnchor) -> i32 {
+    current_offset_top - anchor.offset_top
+}
+
 fn anchor_candidates(container: &web_sys::HtmlElement) -> Vec<web_sys::HtmlElement> {
     let Ok(list) = container.query_selector_all("[data-anchor-key]") else {
         return Vec::new();
@@ -53,7 +57,7 @@ pub fn restore_anchor(container: &web_sys::HtmlElement, anchor: &ScrollAnchor) -
             .is_some_and(|k| k == anchor.key)
         {
             let top = el.get_bounding_client_rect().top();
-            let delta = (top - ctop) as i32 - anchor.offset_top;
+            let delta = anchor_scroll_delta((top - ctop) as i32, anchor);
             container.set_scroll_top(container.scroll_top() + delta);
             return true;
         }
@@ -74,4 +78,20 @@ pub fn active_container(
     left_ref
         .get()
         .map(|v| v.unchecked_into::<web_sys::HtmlElement>())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ScrollAnchor, anchor_scroll_delta};
+
+    #[test]
+    fn diff_semantic_anchor_delta_preserves_original_offset() {
+        let anchor = ScrollAnchor {
+            key: "row-42".to_string(),
+            offset_top: 80,
+        };
+
+        assert_eq!(anchor_scroll_delta(120, &anchor), 40);
+        assert_eq!(anchor_scroll_delta(40, &anchor), -40);
+    }
 }
