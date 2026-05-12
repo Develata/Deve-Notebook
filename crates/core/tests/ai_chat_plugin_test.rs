@@ -8,6 +8,48 @@
 mod tests {
     use deve_core::plugin::loader::PluginLoader;
     use std::path::PathBuf;
+    use std::sync::Mutex;
+
+    static AI_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    struct EnvGuard {
+        previous: Vec<(&'static str, Option<String>)>,
+    }
+
+    impl EnvGuard {
+        fn set(values: &[(&'static str, Option<&'static str>)]) -> Self {
+            let previous = values
+                .iter()
+                .map(|(key, _)| (*key, std::env::var(key).ok()))
+                .collect();
+            for (key, value) in values {
+                // SAFETY: AI_ENV_LOCK serializes these tests, and all keys are
+                // process-level plugin configuration variables.
+                unsafe {
+                    match value {
+                        Some(value) => std::env::set_var(key, value),
+                        None => std::env::remove_var(key),
+                    }
+                }
+            }
+            Self { previous }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (key, value) in self.previous.drain(..).rev() {
+                // SAFETY: AI_ENV_LOCK is still held by the test while this
+                // guard restores process-level plugin configuration variables.
+                unsafe {
+                    match value {
+                        Some(value) => std::env::set_var(key, value),
+                        None => std::env::remove_var(key),
+                    }
+                }
+            }
+        }
+    }
 
     fn load_ai_chat() -> Box<dyn deve_core::plugin::runtime::PluginRuntime> {
         let plugin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -123,6 +165,12 @@ mod tests {
 
     #[test]
     fn test_chat_without_api_key_returns_error() {
+        let _guard = AI_ENV_LOCK.lock().expect("ai env lock");
+        let _env = EnvGuard::set(&[
+            ("AI_API_KEY", None),
+            ("OPENAI_API_KEY", None),
+            ("ANTHROPIC_API_KEY", None),
+        ]);
         let plugin = load_ai_chat();
         // 调用 chat 时没有 API key 应返回错误消息 (不 panic)
         let result = plugin
@@ -142,6 +190,42 @@ mod tests {
             content.contains("API key") || content.contains("Error"),
             "Should return API key error, got: {}",
             content
+        );
+    }
+
+    #[test]
+    fn test_chat_with_api_key_reaches_stream_bridge() {
+        let _guard = AI_ENV_LOCK.lock().expect("ai env lock");
+        let _env = EnvGuard::set(&[
+            ("AI_API_KEY", Some("deve-test-key")),
+            ("AI_BASE_URL", Some("http://127.0.0.1:1/v1")),
+            ("AI_MODEL", Some("deve-test-model")),
+            ("OPENAI_API_KEY", None),
+            ("ANTHROPIC_API_KEY", None),
+        ]);
+        let plugin = load_ai_chat();
+        let context = serde_json::json!({
+            "current_file": "notes/current.md",
+            "current_markdown": "# Current\n\nNative AI positive path.",
+            "chat_mode": "plan"
+        });
+        let context = rhai::serde::to_dynamic(&context).expect("context to dynamic");
+
+        let err = plugin
+            .call(
+                "chat",
+                vec!["test-req-id".into(), "Summarize".into(), context],
+            )
+            .expect_err("stream bridge is not configured in this plugin-only test");
+        let detail = err.to_string();
+
+        assert!(
+            detail.contains("Chat stream handler not configured"),
+            "chat should reach the stream bridge, got: {detail}"
+        );
+        assert!(
+            !detail.contains("SYSTEM_PROMPT"),
+            "prompt construction must not fail on hidden constant scope: {detail}"
         );
     }
 }

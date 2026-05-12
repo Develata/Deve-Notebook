@@ -8,7 +8,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Native AI positive smoke provider preflight | P2 | AI Chat native backend, test provider / mock provider feasibility | 不依赖真实外部 API key；若无稳定 provider，先补最小 test provider 再跑正向 browser smoke |
+| 1 | Mainline gap selection after smoke closure | P2 | `docs/plan` × features × acceptance × code | 在已完成 runtime/search/auth/AI smoke 后，重新选出下一批真正影响用户验收的主线缺口；不做抽象重构 |
 
 ## 最近完成
 
@@ -30,6 +30,7 @@
 - UI Diff browser interaction smoke：新增 `ui-diff-browser-interaction-smoke-2026-05-12.md`，用隔离后端和 Chrome MCP 验证 Source Control diff 打开、hunk 导航、键盘导航、fold 展开、context 切换、cache/header 徽标与 mobile runtime edit debounce。
 - Search disabled fail-closed smoke：新增 `search-disabled-fail-closed-smoke-2026-05-12.md`，用隔离后端和 Chrome MCP 验证未编译 search feature 时 `?needle` 显示用户可见 unavailable 反馈、无 stale result、状态保持就绪。
 - Auth session expired browser smoke：新增 `auth-session-expired-browser-smoke-2026-05-12.md`，用隔离后端和 Chrome MCP 验证外部 session 失效与 UI logout 均进入登录页、无 Reconnecting overlay、无 console error，并修复 MainLayout 卸载后旧 WS 任务写 disposed signal 的生命周期 bug。
+- Native AI positive smoke：新增 `native-ai-positive-smoke-2026-05-12.md`，用本地 OpenAI-compatible SSE mock 验证 Native AI Chat 正向 browser 链路，并修复 `ai-chat` Rhai prompt 常量在正向分支中的作用域 bug。
 - Runtime happy-path smoke：新增 `scripts/smoke-runtime-happy-path.sh`，用临时 repo 覆盖 repo switch、SyncHello、RegisterWriter、CreateDoc、Edit、OpenDoc、History 与 reconnect bootstrap 单测。
 - Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `apps/cli/src/server/ws/route/merge/tests.rs` 场景测试上下文，不做纯行数拆分。
 

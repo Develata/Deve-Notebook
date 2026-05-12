@@ -5,9 +5,11 @@ fn run_tool(name, arguments) {
     "Error: native AI tools are disabled by default"
 }
 
-const SYSTEM_PROMPT = "You are a helpful AI assistant for Deve-Notebook. \
+fn system_prompt_base() {
+    "You are a helpful AI assistant for Deve-Notebook. \
 Focus on the current markdown note and the explicitly provided context. \
-Do not assume access to external tools unless the host explicitly adds them.";
+Do not assume access to external tools unless the host explicitly adds them."
+}
 
 fn _build_config() {
     let base_url = env("AI_BASE_URL");
@@ -44,7 +46,7 @@ fn _build_config() {
 }
 
 fn build_system_prompt(context) {
-    let system = SYSTEM_PROMPT;
+    let system = system_prompt_base();
     if context == () {
         return system;
     }
