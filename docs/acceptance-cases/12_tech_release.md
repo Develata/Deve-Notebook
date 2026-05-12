@@ -123,4 +123,16 @@
     - ws_assert: create_edit_ack_new_op_ok true
     - ws_assert: open_doc_history_readback_ok true
     - ui_assert: reconnect_bootstrap_restore_contract_ok true
+
+- case_id: REL-008
+  goal: 当前运行恢复链路可自动验收。
+  preconditions:
+    - Rust workspace 可构建
+  steps:
+    - run: scripts/smoke-runtime-recovery-path.sh
+  assertions:
+    - server_assert: degraded_local_writes_blocked_before_mutation true
+    - server_assert: stale_sync_scope_cleanup_ok true
+    - ui_assert: reconnect_and_read_only_gates_ok true
+    - ui_assert: auth_failure_status_not_conflated_with_reconnect true
 ```

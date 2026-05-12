@@ -38,6 +38,8 @@ contains "$RUNBOOK" 'DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release
 contains "$RUNBOOK" 'scripts/smoke-runtime-release-info.sh'
 contains "$RUNBOOK" 'scripts/smoke-runtime-happy-path.sh'
 contains "$RUNBOOK" 'repo switch, `SyncHello`, `RegisterWriter`, document create, edit ack'
+contains "$RUNBOOK" 'scripts/smoke-runtime-recovery-path.sh'
+contains "$RUNBOOK" 'degraded local projection write gates'
 contains "$RUNBOOK" 'repo_health.status=degraded'
 contains "$RUNBOOK" '/api/admin/projection-check'
 contains "$RUNBOOK" 'DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh'

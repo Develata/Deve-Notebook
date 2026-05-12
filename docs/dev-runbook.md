@@ -188,6 +188,19 @@ covers repo switch, `SyncHello`, `RegisterWriter`, document create, edit ack,
 confirmed `NewOp`, `OpenDoc`, history readback, and the Web reconnect bootstrap
 unit contract.
 
+## Runtime Recovery Smoke
+
+Validate the current degraded/reconnect recovery path without depending on the
+checked-in dev ledger:
+
+```bash
+scripts/smoke-runtime-recovery-path.sh
+```
+
+The script covers degraded local projection write gates, stale sync-scope
+cleanup, Web write/read gates for recovery states, message refresh scope guards,
+status summary mapping, and auth-probe separation from ordinary reconnect.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:

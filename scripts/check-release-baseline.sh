@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# REL-005/REL-006/REL-007 keep Docker, compose, release workflow, and runtime
-# visibility surfaces aligned with the current release baseline.
+# REL-005/REL-006/REL-007/REL-008 keep Docker, compose, release workflow, and
+# runtime visibility and smoke surfaces aligned with the current release baseline.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -105,10 +105,12 @@ contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/n
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-005"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-006"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-007"
+contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-008"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_DOCKER_BIN=/path/to/docker"
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/smoke-runtime-happy-path.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "scripts/smoke-runtime-recovery-path.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
@@ -141,6 +143,13 @@ contains "scripts/smoke-runtime-happy-path.sh" "ws_edit_after_register_writer_em
 contains "scripts/smoke-runtime-happy-path.sh" "ws_open_doc_and_history_read_back_registered_edit"
 contains "scripts/smoke-runtime-happy-path.sh" "restore_runs_only_on_clean_reconnect_edge"
 contains "scripts/smoke-runtime-happy-path.sh" "expected exactly one test"
-contains "docs/features/operations/release_quality_gates.md" "runtime happy-path smoke remains an explicit local/CI script gate"
+contains "scripts/smoke-runtime-recovery-path.sh" "degraded_local"
+contains "scripts/smoke-runtime-recovery-path.sh" "sync_scope_cleanup"
+contains "scripts/smoke-runtime-recovery-path.sh" "write_gate"
+contains "scripts/smoke-runtime-recovery-path.sh" "message_refresh"
+contains "scripts/smoke-runtime-recovery-path.sh" "status_summary"
+contains "scripts/smoke-runtime-recovery-path.sh" "auth_probe"
+contains "scripts/smoke-runtime-recovery-path.sh" "expected at least one test"
+contains "docs/features/operations/release_quality_gates.md" "runtime happy-path and recovery smokes remain explicit local/CI script gates"
 
 echo "release-baseline-check: ok"
