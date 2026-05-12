@@ -8,7 +8,10 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| - | - | - | - | 当前队列已清空；下一批应从新的 gap scan 或用户指定方向产生 |
+| 1 | UI Diff browser interaction smoke | P1 | `apps/web/src/components/diff_view/`, Chrome MCP, isolated backend | hunk click、keyboard navigation、fold click、context select、cache badge 与 mobile edit debounce 有实机证据；若暴露 bug 先修 |
+| 2 | Search disabled / low-spec fail-closed browser smoke | P1 | Search UI, low-spec/search-disabled runtime config | 禁用或低配路径不宣称不可用能力；Search UI 与状态提示 fail-closed |
+| 3 | Auth logout / session-expired browser smoke | P1 | Auth/session monitor, WS reconnect status, Chrome MCP | logout/session-expired 与普通 disconnected/reconnecting 状态分离，不造成误诊断 lockout |
+| 4 | Native AI positive smoke provider preflight | P2 | AI Chat native backend, test provider / mock provider feasibility | 不依赖真实外部 API key；若无稳定 provider，先补最小 test provider 再跑正向 browser smoke |
 
 ## 最近完成
 
@@ -26,6 +29,7 @@
 - UI Diff acceptance closure：新增 `ui-diff-acceptance-closure-2026-05-12.md`，修正 `UI-DIFF-*` manual binding 语义漂移，并为已有 diff behavior 增加最小自动 guard。
 - Storage / Repo acceptance drift：新增 `storage-repo-acceptance-drift-2026-05-12.md`，移除 `07_storage_repo.md` 中过时伪 CLI 步骤，新增 `scripts/check-storage-repo-baseline.sh`，并补齐 init/recover/export 轻量测试证据。
 - WebWrite pending navigation smoke：新增 `webwrite-pending-navigation-smoke-2026-05-12.md`，用隔离后端和 Chrome MCP 验证 pending modal、取消保留、确认离开与 Reject 后 pending overlay 闭合。
+- Feature acceptance gap scan 05：新增 `feature-acceptance-gap-scan-2026-05-12-05.md`，确认当前无 P0 / blocking drift，并将下一批收敛到 UI Diff、Search disabled、Auth session 与 Native AI provider preflight。
 - Runtime happy-path smoke：新增 `scripts/smoke-runtime-happy-path.sh`，用临时 repo 覆盖 repo switch、SyncHello、RegisterWriter、CreateDoc、Edit、OpenDoc、History 与 reconnect bootstrap 单测。
 - Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `apps/cli/src/server/ws/route/merge/tests.rs` 场景测试上下文，不做纯行数拆分。
 
