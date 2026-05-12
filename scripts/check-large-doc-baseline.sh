@@ -53,11 +53,11 @@ contains apps/web/src/editor/sync/snapshot.rs "initial_batch: 16"
 contains apps/web/src/editor/sync/snapshot.rs "max_batch: 256"
 
 # Search is a runtime gate: non-ready load states must not send ClientMessage::Search.
-contains apps/web/src/hooks/use_core/callbacks_misc.rs 'load_state.get_untracked() != "ready"'
-contains apps/web/src/hooks/use_core/callbacks_misc.rs 'show_search_block(set_sync_banner, "snapshot loading")'
-contains apps/web/src/hooks/use_core/callbacks_misc.rs "ClientMessage::Search"
-contains apps/web/src/hooks/use_core/callbacks_misc_test.rs "large_doc_search_gate_blocks_until_prefetch_ready"
-contains apps/web/src/hooks/use_core/callbacks_misc_test.rs "drain_sent_for_test().is_empty()"
-contains apps/web/src/hooks/use_core/callbacks_misc_test.rs "large_doc_search_gate_sends_after_ready"
+contains apps/web/src/hooks/use_core/callbacks/misc.rs 'load_state.get_untracked() != "ready"'
+contains apps/web/src/hooks/use_core/callbacks/misc.rs 'show_search_block(set_sync_banner, "snapshot loading")'
+contains apps/web/src/hooks/use_core/callbacks/misc.rs "ClientMessage::Search"
+contains apps/web/src/hooks/use_core/callbacks/misc/tests.rs "large_doc_search_gate_blocks_until_prefetch_ready"
+contains apps/web/src/hooks/use_core/callbacks/misc/tests.rs "drain_sent_for_test().is_empty()"
+contains apps/web/src/hooks/use_core/callbacks/misc/tests.rs "large_doc_search_gate_sends_after_ready"
 
 echo "large-doc-baseline-check: ok"

@@ -42,7 +42,7 @@ check_contains apps/web/src/api/incoming.rs "push_server_message(queue, next_seq
 check_contains apps/web/src/api/connection.rs "set_connection_epoch.set(connection_epoch);"
 check_contains apps/web/src/hooks/use_core/effects/message.rs "is_current_connection_message(connection_epoch, current_connection_epoch)"
 check_contains apps/web/src/hooks/use_core/effects/message.rs "fn dashboard_metrics_stale_connection_epoch_is_skipped_by_message_effect()"
-check_contains apps/web/src/hooks/use_core/state_init/runtime_sync.rs "let (system_metrics_live, set_system_metrics_live) = signal(false);"
+check_contains apps/web/src/hooks/use_core/state_init/runtime/sync.rs "let (system_metrics_live, set_system_metrics_live) = signal(false);"
 check_contains apps/web/src/hooks/use_core/mod.rs "reset_dashboard_metrics_live_on_disconnect(ws.status, signals.set_system_metrics_live);"
 check_contains apps/web/src/hooks/use_core/mod.rs "fn dashboard_metrics_live_resets_on_disconnect_states()"
 check_contains apps/web/src/hooks/use_core/effects/message_runtime_remaining.rs "metrics.sample_seq.saturating_add(1)"

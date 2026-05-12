@@ -51,6 +51,6 @@ check_contains apps/cli/src/server/auth/headers.rs "X-Frame-Options"
 check_contains apps/cli/src/server/auth/headers.rs "Content-Security-Policy"
 check_contains apps/web/src/api/auth_probe.rs "matches!(status, 401 | 403) || has_auth_error_code"
 check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Unauthorized);"
-check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Connected | ConnectionStatus::Unauthorized"
+check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None"
 
 echo "auth-baseline-check: ok"

@@ -32,7 +32,7 @@ if [[ -n "$unexpected_hits" ]]; then
   fail "direct browser storage access must go through apps/web/src/storage/prefs.rs unless it is capability probing"
 fi
 
-check_contains apps/web/src/hooks/use_layout_storage.rs "read_i32_pref"
+check_contains apps/web/src/hooks/use_layout/storage.rs "read_i32_pref"
 check_contains apps/web/src/hooks/use_outline.rs "read_bool_pref"
 check_contains apps/web/src/shortcuts/config.rs "read_pref"
 check_contains apps/web/src/i18n/mod.rs "write_pref"
