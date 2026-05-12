@@ -44,9 +44,14 @@ pub fn Sidebar(
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
     let search_control = expect_context::<SearchControl>();
+    let last_active_view = StoredValue::new_local(active_view.get_untracked());
 
     Effect::new(move |_| {
-        if active_view.get() == SidebarView::Search {
+        let current = active_view.get();
+        let previous = last_active_view.get_value();
+        last_active_view.set_value(current);
+
+        if should_open_search_overlay(previous, current) {
             search_control.set_mode.set("?".to_string());
             search_control.set_show.set(true);
         }
@@ -81,5 +86,30 @@ pub fn Sidebar(
                 }.into_any(),
             }}
         </div>
+    }
+}
+
+fn should_open_search_overlay(previous: SidebarView, current: SidebarView) -> bool {
+    previous != SidebarView::Search && current == SidebarView::Search
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SidebarView, should_open_search_overlay};
+
+    #[test]
+    fn search_overlay_opens_only_on_search_view_transition() {
+        assert!(should_open_search_overlay(
+            SidebarView::Explorer,
+            SidebarView::Search
+        ));
+        assert!(!should_open_search_overlay(
+            SidebarView::Search,
+            SidebarView::Search
+        ));
+        assert!(!should_open_search_overlay(
+            SidebarView::Search,
+            SidebarView::Explorer
+        ));
     }
 }
