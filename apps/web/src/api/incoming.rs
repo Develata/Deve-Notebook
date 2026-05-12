@@ -20,15 +20,18 @@ pub fn enqueue_server_message(
     set_msg_queue: WriteSignal<VecDeque<(u64, u64, ServerMessage)>>,
     connection_epoch: u64,
     server_msg: ServerMessage,
-) {
-    let mut next_seq = 0u64;
-    set_msg_seq.update(|seq| {
+) -> bool {
+    let Some(next_seq) = set_msg_seq.try_update(|seq| {
         *seq = seq.saturating_add(1);
-        next_seq = *seq;
-    });
-    set_msg_queue.update(move |queue| {
-        push_server_message(queue, next_seq, connection_epoch, server_msg);
-    });
+        *seq
+    }) else {
+        return false;
+    };
+    set_msg_queue
+        .try_update(move |queue| {
+            push_server_message(queue, next_seq, connection_epoch, server_msg);
+        })
+        .is_some()
 }
 
 pub fn handle_socket_event(
@@ -43,14 +46,30 @@ pub fn handle_socket_event(
         SocketEvent::Opened => {}
         SocketEvent::Message(SocketMessage::Bytes(bytes)) => {
             if let Some(server_msg) = decode_binary_message(&bytes) {
-                confirm_connection(confirmed_connected, set_status, "binary");
-                enqueue_server_message(set_msg_seq, set_msg_queue, connection_epoch, server_msg);
+                if !confirm_connection(confirmed_connected, set_status, "binary")
+                    || !enqueue_server_message(
+                        set_msg_seq,
+                        set_msg_queue,
+                        connection_epoch,
+                        server_msg,
+                    )
+                {
+                    return false;
+                }
             }
         }
         SocketEvent::Message(SocketMessage::Text(txt)) => {
             if let Some(server_msg) = decode_text_message(&txt) {
-                confirm_connection(confirmed_connected, set_status, "text");
-                enqueue_server_message(set_msg_seq, set_msg_queue, connection_epoch, server_msg);
+                if !confirm_connection(confirmed_connected, set_status, "text")
+                    || !enqueue_server_message(
+                        set_msg_seq,
+                        set_msg_queue,
+                        connection_epoch,
+                        server_msg,
+                    )
+                {
+                    return false;
+                }
             }
         }
         SocketEvent::Error => {
@@ -74,16 +93,19 @@ fn confirm_connection(
     confirmed_connected: &mut bool,
     set_status: WriteSignal<ConnectionStatus>,
     transport: &str,
-) {
+) -> bool {
     if *confirmed_connected {
-        return;
+        return true;
     }
     leptos::logging::log!(
         "WS: First {} message received, connection confirmed!",
         transport
     );
-    set_status.set(ConnectionStatus::Connected);
+    if set_status.try_set(ConnectionStatus::Connected).is_some() {
+        return false;
+    }
     *confirmed_connected = true;
+    true
 }
 
 fn push_server_message(

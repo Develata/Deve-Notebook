@@ -80,11 +80,13 @@ fn derives_http_base_from_ws_url() {
 fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
+    let lifecycle = ConnectionLifecycle::new();
     let (node_role, set_node_role) = signal("main".to_string());
     let (probe_failed, set_probe_failed) = signal(false);
     let (connection_epoch, set_connection_epoch) = signal(2u64);
 
     assert!(!apply_node_role_probe_failure(
+        &lifecycle,
         set_node_role,
         set_probe_failed,
         connection_epoch,
@@ -94,6 +96,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     assert!(!probe_failed.get_untracked());
 
     assert!(apply_node_role_probe_failure(
+        &lifecycle,
         set_node_role,
         set_probe_failed,
         connection_epoch,
@@ -104,6 +107,7 @@ fn stale_node_role_probe_results_do_not_mutate_current_connection() {
 
     set_connection_epoch.set(3);
     assert!(!apply_node_role_probe_success(
+        &lifecycle,
         set_node_role,
         set_probe_failed,
         connection_epoch,

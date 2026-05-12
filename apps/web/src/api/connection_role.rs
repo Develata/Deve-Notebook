@@ -7,11 +7,14 @@ use gloo_net::http::Request;
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 
+use super::connection::ConnectionLifecycle;
+
 const NODE_ROLE_PROBE_RETRIES: usize = 3;
 const NODE_ROLE_PROBE_RETRY_DELAY_MS: u32 = 150;
 const NODE_ROLE_PROBE_TIMEOUT_MS: u32 = 1_500;
 
 pub(super) async fn fetch_node_role(
+    lifecycle: ConnectionLifecycle,
     ws_url: String,
     set_node_role: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
@@ -19,6 +22,7 @@ pub(super) async fn fetch_node_role(
     probe_connection_epoch: u64,
 ) {
     fetch_node_role_for_http_base(
+        lifecycle,
         http_base_from_ws_url(&ws_url),
         set_node_role,
         set_node_role_probe_failed,
@@ -29,6 +33,7 @@ pub(super) async fn fetch_node_role(
 }
 
 pub(super) async fn fetch_node_role_for_http_base(
+    lifecycle: ConnectionLifecycle,
     http_base: String,
     set_node_role: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
@@ -39,8 +44,12 @@ pub(super) async fn fetch_node_role_for_http_base(
     let url = format!("{}/api/node/role", http_url);
 
     for attempt in 0..NODE_ROLE_PROBE_RETRIES {
+        if !lifecycle.is_active() {
+            return;
+        }
         if let Some(json) = fetch_node_role_json_with_timeout(&url).await {
             apply_node_role_probe_success(
+                &lifecycle,
                 set_node_role,
                 set_node_role_probe_failed,
                 current_connection_epoch,
@@ -55,8 +64,12 @@ pub(super) async fn fetch_node_role_for_http_base(
         }
     }
 
+    if !lifecycle.is_active() {
+        return;
+    }
     leptos::logging::error!("Node role probe failed after retries: {}", url);
     apply_node_role_probe_failure(
+        &lifecycle,
         set_node_role,
         set_node_role_probe_failed,
         current_connection_epoch,
@@ -83,32 +96,32 @@ async fn fetch_node_role_json_with_timeout(url: &str) -> Option<serde_json::Valu
 }
 
 fn apply_node_role_probe_success(
+    lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
     summary: String,
 ) -> bool {
-    if current_connection_epoch.get_untracked() != probe_connection_epoch {
+    if lifecycle.try_get(current_connection_epoch) != Some(probe_connection_epoch) {
         return false;
     }
-    set_node_role.set(summary);
-    set_node_role_probe_failed.set(false);
-    true
+    lifecycle.try_set(set_node_role, summary)
+        && lifecycle.try_set(set_node_role_probe_failed, false)
 }
 
 fn apply_node_role_probe_failure(
+    lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
 ) -> bool {
-    if current_connection_epoch.get_untracked() != probe_connection_epoch {
+    if lifecycle.try_get(current_connection_epoch) != Some(probe_connection_epoch) {
         return false;
     }
-    set_node_role.set(String::new());
-    set_node_role_probe_failed.set(true);
-    true
+    lifecycle.try_set(set_node_role, String::new())
+        && lifecycle.try_set(set_node_role_probe_failed, true)
 }
 
 pub(super) fn http_base_from_ws_url(ws_url: &str) -> String {

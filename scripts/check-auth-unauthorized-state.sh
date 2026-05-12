@@ -20,8 +20,8 @@ check_absent() {
 }
 
 check_contains apps/web/src/api/auth_probe.rs "matches!(status, 401 | 403) || has_auth_error_code"
-check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Unauthorized);"
-check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Disconnected);"
+check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, ConnectionStatus::Unauthorized)"
+check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, ConnectionStatus::Disconnected)"
 check_contains apps/web/src/components/main_layout/setup.rs "ws_status.get() == ConnectionStatus::Unauthorized"
 check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None"
 check_absent apps/web/src/api/output.rs "set_status.set(ConnectionStatus::Disconnected);"

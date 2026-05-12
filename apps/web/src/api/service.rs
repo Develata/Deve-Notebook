@@ -18,7 +18,7 @@ use self::readiness::{
     native_runtime_readiness_from_parts, writer_ready_matches,
 };
 use self::service_ping::spawn_ping_loop;
-use super::connection::{ConnectionManagerSignals, spawn_connection_manager};
+use super::connection::{ConnectionLifecycle, ConnectionManagerSignals, spawn_connection_manager};
 use super::status::ConnectionStatus;
 use super::writer_id::{derive_writer_client_id, new_writer_session_nonce};
 
@@ -66,10 +66,14 @@ impl WsService {
         let (node_role, set_node_role) = signal(String::new());
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (tx, rx) = unbounded::<ClientMessage>();
+        let lifecycle = ConnectionLifecycle::new();
+        let cleanup_lifecycle = lifecycle.clone();
+        on_cleanup(move || cleanup_lifecycle.shutdown());
 
         spawn_connection_manager(
             rx,
             ConnectionManagerSignals {
+                lifecycle,
                 set_status,
                 set_msg_seq,
                 set_msg_queue,

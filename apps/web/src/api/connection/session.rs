@@ -7,6 +7,7 @@ use super::super::ConnectionStatus;
 use super::super::incoming::handle_socket_event;
 use super::super::output::{is_write_message, send_or_requeue};
 use super::super::socket::{BrowserSocket, SocketEvent};
+use super::ConnectionLifecycle;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::channel::mpsc::UnboundedReceiver;
@@ -14,8 +15,9 @@ use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use std::collections::VecDeque;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub(super) struct ConnectedSessionSignals {
+    pub lifecycle: ConnectionLifecycle,
     pub set_status: WriteSignal<ConnectionStatus>,
     pub set_msg_seq: WriteSignal<u64>,
     pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
@@ -33,6 +35,9 @@ pub(super) async fn run_connected_session(
     let mut announced_open = false;
 
     loop {
+        if !signals.lifecycle.is_active() {
+            return;
+        }
         if socket.is_open() && !announced_open {
             leptos::logging::log!("WS: Socket opened, waiting for first message...");
             announced_open = true;

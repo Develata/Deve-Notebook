@@ -14,6 +14,7 @@
 //! 3. 读取服务器消息并更新信号
 //! 4. 将连接会话委托给 `connection_session`
 
+mod lifecycle;
 mod session;
 
 use futures::channel::mpsc::UnboundedReceiver;
@@ -21,6 +22,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
+pub(super) use self::lifecycle::ConnectionLifecycle;
 use self::session::ConnectedSessionSignals;
 use super::ConnectionStatus;
 use super::auth_probe::{AuthProbe, probe_auth_status_with_http_base};
@@ -34,8 +36,9 @@ use super::socket::BrowserSocket;
 /// 本地开发后端默认端口；仅在 debug 构建中作为兜底候选。
 pub(super) const DEV_WS_PORT: u16 = 3001;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub(super) struct ConnectionManagerSignals {
+    pub lifecycle: ConnectionLifecycle,
     pub set_status: WriteSignal<ConnectionStatus>,
     pub set_msg_seq: WriteSignal<u64>,
     pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
@@ -56,7 +59,9 @@ pub fn spawn_connection_manager(
         let auth_http_base = native_bootstrap.http_base().map(str::to_string);
         if let Some(blocked_status) = native_bootstrap.blocked_status() {
             leptos::logging::error!("Native bootstrap is present but not ready; refusing fallback");
-            signals.set_status.set(blocked_status);
+            let _ = signals
+                .lifecycle
+                .try_set(signals.set_status, blocked_status);
             return;
         }
 
@@ -67,22 +72,43 @@ pub fn spawn_connection_manager(
         let mut connection_epoch = 0u64;
 
         loop {
+            if !signals.lifecycle.is_active() {
+                return;
+            }
             let url = urls
                 .get(url_idx)
                 .cloned()
                 .unwrap_or_else(build_same_origin_ws_url);
             connection_epoch = connection_epoch.saturating_add(1);
-            signals.set_connection_epoch.set(connection_epoch);
-            signals.set_status.set(ConnectionStatus::Connecting);
+            if !signals
+                .lifecycle
+                .try_set(signals.set_connection_epoch, connection_epoch)
+            {
+                return;
+            }
+            if !signals
+                .lifecycle
+                .try_set(signals.set_status, ConnectionStatus::Connecting)
+            {
+                return;
+            }
             leptos::logging::log!("WS: Connecting to {}...", url);
 
             match BrowserSocket::connect(&url) {
                 Ok((socket, events)) => {
-                    signals.set_endpoint.set(url.clone());
-                    signals.set_node_role.set(String::new());
-                    signals.set_node_role_probe_failed.set(false);
+                    if !signals.lifecycle.try_set(signals.set_endpoint, url.clone())
+                        || !signals
+                            .lifecycle
+                            .try_set(signals.set_node_role, String::new())
+                        || !signals
+                            .lifecycle
+                            .try_set(signals.set_node_role_probe_failed, false)
+                    {
+                        return;
+                    }
                     if let Some(http_base) = auth_http_base.clone() {
                         spawn_local(fetch_node_role_for_http_base(
+                            signals.lifecycle.clone(),
                             http_base,
                             signals.set_node_role,
                             signals.set_node_role_probe_failed,
@@ -91,6 +117,7 @@ pub fn spawn_connection_manager(
                         ));
                     } else {
                         spawn_local(fetch_node_role(
+                            signals.lifecycle.clone(),
                             url.clone(),
                             signals.set_node_role,
                             signals.set_node_role_probe_failed,
@@ -106,6 +133,7 @@ pub fn spawn_connection_manager(
                         &mut rx,
                         &mut queue,
                         ConnectedSessionSignals {
+                            lifecycle: signals.lifecycle.clone(),
                             set_status: signals.set_status,
                             set_msg_seq: signals.set_msg_seq,
                             set_msg_queue: signals.set_msg_queue,
@@ -114,23 +142,33 @@ pub fn spawn_connection_manager(
                     )
                     .await;
 
+                    if !signals.lifecycle.is_active() {
+                        return;
+                    }
                     leptos::logging::log!("WS: Connection Lost");
 
                     if matches!(
                         probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
                         AuthProbe::Invalid
                     ) {
-                        signals.set_status.set(ConnectionStatus::Unauthorized);
+                        let _ = signals
+                            .lifecycle
+                            .try_set(signals.set_status, ConnectionStatus::Unauthorized);
                         return;
                     }
                 }
                 Err(e) => {
                     leptos::logging::error!("WS Open Error: {:?}", e);
+                    if !signals.lifecycle.is_active() {
+                        return;
+                    }
                     if matches!(
                         probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
                         AuthProbe::Invalid
                     ) {
-                        signals.set_status.set(ConnectionStatus::Unauthorized);
+                        let _ = signals
+                            .lifecycle
+                            .try_set(signals.set_status, ConnectionStatus::Unauthorized);
                         return;
                     }
                     if url_idx + 1 < urls.len() {
@@ -140,14 +178,24 @@ pub fn spawn_connection_manager(
                 }
             }
 
+            if !signals.lifecycle.is_active() {
+                return;
+            }
             if matches!(
                 probe_auth_status_with_http_base(auth_http_base.as_deref()).await,
                 AuthProbe::Invalid
             ) {
-                signals.set_status.set(ConnectionStatus::Unauthorized);
+                let _ = signals
+                    .lifecycle
+                    .try_set(signals.set_status, ConnectionStatus::Unauthorized);
                 return;
             }
-            signals.set_status.set(ConnectionStatus::Disconnected);
+            if !signals
+                .lifecycle
+                .try_set(signals.set_status, ConnectionStatus::Disconnected)
+            {
+                return;
+            }
             backoff.wait().await;
             url_idx = 0;
         }
