@@ -25,7 +25,7 @@
 - `Trigger`: 用户点击某个 repo 名称
 - `Preconditions`: switcher 已打开，repo list 已可用
 - `Immediate Result`: 准备进入 repo scope 切换
-- `Application Entry`: `apps/web/src/components/sidebar/repo_switcher.rs`, `apps/web/src/hooks/use_core/callbacks_switch_repo.rs`
+- `Application Entry`: `apps/web/src/components/sidebar/repo_switcher.rs`, `apps/web/src/hooks/use_core/callbacks_switch/repo.rs`
 
 ### `op.repo.switch.request-switch`
 
@@ -34,7 +34,7 @@
 - `Trigger`: 前端发送 `ClientMessage::SwitchRepo`
 - `Preconditions`: 当前没有 pending scope switch，目标 repo 不是当前 repo
 - `Immediate Result`: 设置 `pending_repo_switch` 与 `pending_repo_switch_nonce`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_switch_repo.rs`, `apps/cli/src/server/handlers/switcher_repo.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_switch/repo.rs`, `apps/cli/src/server/handlers/switcher/switcher_repo.rs`
 
 ### `op.repo.switch.receive-scope`
 
@@ -43,7 +43,7 @@
 - `Trigger`: 服务端返回 `RepoSwitched`、doc list、tree update
 - `Preconditions`: `op.repo.switch.request-switch` 已执行
 - `Immediate Result`: 当前 repo / scope_nonce / tree / docs 全部重绑到新 repo
-- `Application Entry`: `apps/cli/src/server/handlers/switcher/switcher_payload.rs`, `apps/web/src/hooks/use_core/effects/message_repo_scope.rs`
+- `Application Entry`: `apps/cli/src/server/handlers/switcher/switcher_payload.rs`, `apps/web/src/hooks/use_core/effects/message_repo_scope/mod.rs`
 
 ## Notes
 

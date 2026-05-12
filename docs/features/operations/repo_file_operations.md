@@ -34,7 +34,7 @@
 - `Trigger`: choose `CreateDoc` candidate or create control
 - `Preconditions`: repo write gate allows local write
 - `Immediate Result`: sends `ClientMessage::CreateDoc`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_doc_write_create.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks/doc/write/create.rs`
 
 ### `op.repo.file-ops.submit-path-op`
 
@@ -43,7 +43,7 @@
 - `Trigger`: choose file op candidate or context-menu action
 - `Preconditions`: repo write gate allows local write and target path is scoped
 - `Immediate Result`: sends `RenameDoc`, `CopyDoc`, `MoveDoc`, or `DeleteDoc`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_doc_write_path.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks/doc/write/path.rs`
 
 ### `op.repo.file-ops.receive-result`
 

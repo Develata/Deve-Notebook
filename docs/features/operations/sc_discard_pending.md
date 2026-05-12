@@ -16,7 +16,7 @@
 - `Trigger`: 点击 `Discard All`，或执行等价 discard pending 操作
 - `Preconditions`: 当前 repo scope 稳定，write gate 未阻塞，存在待丢弃的 pending changes / ops
 - `Immediate Result`: 前端发送 `ClientMessage::DiscardPending`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sync_write.rs`, `apps/cli/src/server/ws/route/merge.rs`, `apps/cli/src/server/handlers/merge/manual.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sync/write.rs`, `apps/cli/src/server/ws/route/merge.rs`, `apps/cli/src/server/handlers/merge/manual.rs`
 
 ### `op.sc.discard.receive-ack`
 
@@ -25,7 +25,7 @@
 - `Trigger`: 服务端返回 `PendingDiscarded`
 - `Preconditions`: `op.sc.discard.request` 已执行
 - `Immediate Result`: pending 区被清空，工作区回到当前 projection
-- `Application Entry`: `apps/cli/src/server/handlers/merge/manual.rs`, `apps/web/src/hooks/use_core/effects/message_dispatch_sync.rs`, `apps/web/src/hooks/use_core/effects/message_runtime_sync.rs`
+- `Application Entry`: `apps/cli/src/server/handlers/merge/manual.rs`, `apps/web/src/hooks/use_core/effects/message_dispatch_sync.rs`, `apps/web/src/hooks/use_core/effects/message_runtime_sync/mod.rs`
 
 ## Notes
 

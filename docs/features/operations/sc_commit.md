@@ -34,7 +34,7 @@
 - `Trigger`: 点击 commit 按钮，或执行等价命令
 - `Preconditions`: staged changes 非空，message 非空，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::Commit { scope_nonce }`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
 
 ### `op.sc.commit.generate-message`
 
@@ -52,7 +52,7 @@
 - `Trigger`: 服务端返回 commit ack，或返回 source control error / write gate failure
 - `Preconditions`: `op.sc.commit.submit` 已执行
 - `Immediate Result`: staged 区被清空并刷新历史，或显示明确错误
-- `Application Entry`: `apps/web/src/hooks/use_core/effects_sc.rs`, `apps/web/src/hooks/use_core/effects/message_protocol.rs`, `apps/web/src/components/sidebar/source_control/error_notice.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/effects_sc.rs`, `apps/web/src/hooks/use_core/effects/message_protocol/mod.rs`, `apps/web/src/components/sidebar/source_control/error_notice.rs`
 
 ## Response Flows
 
@@ -78,12 +78,12 @@
 1. `User Operation`: 用户点击 commit。
 2. `Application Response`: write gate 先检查 `session expired / offline / readonly / scope switching / handshaking repo`；通过后发送 repo-scoped `Commit` 消息。
 3. `Concrete Modules`:
-   - `apps/web/src/hooks/use_core/write_gate_logic.rs`
-   - `apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs`
+   - `apps/web/src/hooks/use_core/write_gate/logic.rs`
+   - `apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs`
    - `apps/cli/src/server/ws/route/source_control.rs`
    - `apps/cli/src/server/handlers/source_control/commits.rs`
    - `apps/cli/src/server/handlers/source_control/service/write.rs`
-   - `crates/core/src/ledger/manager/commit_ops.rs`
+   - `crates/core/src/ledger/manager/commit_runtime.rs`
 4. `Core Subsystems`:
    - `source_control`
    - `ledger`
@@ -107,7 +107,7 @@
 2. `Application Response`: 成功时刷新 `changes / history` 并清空 staged；失败时进入 source control notice 或 protocol error surface。
 3. `Concrete Modules`:
    - `apps/web/src/hooks/use_core/effects_sc.rs`
-   - `apps/web/src/hooks/use_core/effects/message_protocol.rs`
+   - `apps/web/src/hooks/use_core/effects/message_protocol/mod.rs`
    - `apps/web/src/components/sidebar/source_control/error_notice.rs`
    - `apps/cli/src/server/handlers/source_control/errors/`
 4. `Core Subsystems`:

@@ -16,7 +16,7 @@
 - `Trigger`: 点击单个 change 的 `Stage`
 - `Preconditions`: 当前 change 位于 unstaged 区域，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::StageFile`
-- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item.rs`, `apps/web/src/hooks/use_core/callbacks_sc_write_targets.rs`
+- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item.rs`, `apps/web/src/hooks/use_core/callbacks_sc/write/targets.rs`
 
 ### `op.sc.stage.receive-ack`
 
@@ -34,7 +34,7 @@
 - `Trigger`: 点击单个 staged change 的 `Unstage`
 - `Preconditions`: 条目当前位于 staged 区域，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::UnstageFile`
-- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item.rs`, `apps/web/src/hooks/use_core/callbacks_sc_write_targets.rs`
+- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item.rs`, `apps/web/src/hooks/use_core/callbacks_sc/write/targets.rs`
 
 ### `op.sc.unstage.receive-ack`
 

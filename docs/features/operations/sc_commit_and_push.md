@@ -34,7 +34,7 @@
 - `Trigger`: 用户点击 `Commit & Push`
 - `Preconditions`: write gate 未阻塞，当前是 local repo scope
 - `Immediate Result`: 发送 `ClientMessage::CommitAndPush`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
 
 ### `op.sc.commit-publish.receive-result`
 
@@ -43,7 +43,7 @@
 - `Trigger`: 服务端返回 `CommitAck`
 - `Preconditions`: `CommitAndPush` 请求已成功进入处理链
 - `Immediate Result`: 刷新 changes / commit history，并清空当前 notice
-- `Application Entry`: `apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/effects_sc/dispatch_acks.rs`
 
 ## Notes
 

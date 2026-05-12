@@ -16,7 +16,7 @@
 - `Trigger`: 点击单个 change 的 `Discard`
 - `Preconditions`: 当前条目位于 unstaged / working changes，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::DiscardFile`
-- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs`, `apps/web/src/hooks/use_core/callbacks_sc_write_targets.rs`, `apps/cli/src/server/ws/route/source_control.rs`
+- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs`, `apps/web/src/hooks/use_core/callbacks_sc/write/targets.rs`, `apps/cli/src/server/ws/route/source_control.rs`
 
 ### `op.sc.discard-file.receive-ack`
 

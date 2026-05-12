@@ -16,7 +16,7 @@
 - `Trigger`: 用户重新聚焦标签页、恢复前台页面、继续停留在受保护工作区
 - `Preconditions`: 当前 UI 处于 `Authenticated`
 - `Immediate Result`: 前端允许 session probe 继续运行
-- `Application Entry`: `apps/web/src/app.rs`, `apps/web/src/app_auth_monitor.rs`
+- `Application Entry`: `apps/web/src/app.rs`, `apps/web/src/app/auth_monitor.rs`
 
 ### `op.auth.session.issue-protected-request`
 
@@ -25,7 +25,7 @@
 - `Trigger`: 用户继续执行受保护操作，或运行中的 WS / HTTP 路径继续发送请求
 - `Preconditions`: 当前 UI 仍认为 session 可用
 - `Immediate Result`: 请求进入 `/api/auth/status` probe 或 repo-scoped protocol path
-- `Application Entry`: `apps/web/src/api/auth_probe.rs`, `apps/web/src/api/connection.rs`, `apps/web/src/hooks/use_core/effects/message_protocol.rs`
+- `Application Entry`: `apps/web/src/api/auth_probe.rs`, `apps/web/src/api/connection.rs`, `apps/web/src/hooks/use_core/effects/message_protocol/mod.rs`
 
 ### `op.auth.session.receive-unauthorized`
 
@@ -53,7 +53,7 @@
 2. `Application Response`: `App` 根据 `page_active` 与 `AuthState` 决定是否允许 session probe。
 3. `Concrete Modules`:
    - `apps/web/src/app.rs`
-   - `apps/web/src/app_auth_monitor.rs`
+   - `apps/web/src/app/auth_monitor.rs`
 4. `Core Subsystems`: 无。此步只决定是否继续探测，不直接进入核心鉴权。
 
 ### `op.auth.session.issue-protected-request`
@@ -63,7 +63,7 @@
 3. `Concrete Modules`:
    - `apps/web/src/api/auth_probe.rs`
    - `apps/web/src/api/connection.rs`
-   - `apps/web/src/hooks/use_core/effects/message_protocol.rs`
+   - `apps/web/src/hooks/use_core/effects/message_protocol/mod.rs`
 4. `Core Subsystems`:
    - `security`
    - `protocol`
@@ -75,7 +75,7 @@
 3. `Concrete Modules`:
    - `apps/web/src/api/auth_probe.rs`
    - `apps/web/src/api/service.rs`
-   - `apps/web/src/hooks/use_core/effects/message_protocol.rs`
+   - `apps/web/src/hooks/use_core/effects/message_protocol/mod.rs`
    - `crates/core/src/protocol/auth.rs`
 4. `Core Subsystems`:
    - `security`

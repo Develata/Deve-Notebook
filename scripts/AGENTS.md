@@ -41,6 +41,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-graph-baseline.sh` | Verifies Graph remains a read-only derived projection and does not become a ledger/workspace authority path |
 | `check-mobile-baseline.sh` | Verifies Mobile Web shell viewport mapping, drawer gestures, resize-handle exclusion, keyboard toolbar, search top sheet/results scrolling, bottom bar, and editor font-size baseline contracts |
 | `check-dev-runbook-baseline.sh` | Verifies current startup, auth, frontend, Chrome MCP, search, and verification runbook boundaries |
+| `check-feature-operation-paths.sh` | Verifies feature operation and acceptance docs do not point at removed source/script/doc paths |
 | `check-release-baseline.sh` | Verifies Docker, compose, and release workflow surfaces match the embedded-frontend release baseline |
 | `smoke-web-release-build.sh` | Builds the Web release assets with normalized Trunk/Browserslist environment |
 | `smoke-runtime-happy-path.sh` | Runs temporary-repo Axum/WebSocket happy-path tests for switch, handshake, writer, edit, open, history, and reconnect bootstrap |

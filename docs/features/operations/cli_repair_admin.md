@@ -4,7 +4,7 @@
 
 - `Flow ID`: `flow.cli.repair-admin`
 - `Domain`: `commands`
-- `Related Feature Chapters`: `docs/features/12_commands.md`, `docs/features/02_repository.md`
+- `Related Feature Chapters`: `docs/features/12_commands.md`, `docs/features/06_repository.md`
 - `Related Acceptance Cases`: `CMD-001`, `CMD-009`, `REPO-FEAT-03`
 
 ## Operations

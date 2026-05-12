@@ -25,7 +25,7 @@
 - `Trigger`: source-control or sync operation fails
 - `Preconditions`: backend emits `ServerErrorCode`
 - `Immediate Result`: frontend routes by code, not natural-language detail
-- `Application Entry`: `crates/core/src/protocol/error.rs`, `apps/web/src/hooks/use_core/effects/message_protocol.rs`
+- `Application Entry`: `crates/core/src/protocol/error.rs`, `apps/web/src/hooks/use_core/effects/message_protocol/mod.rs`
 
 ### `op.i18n.error.render-message`
 

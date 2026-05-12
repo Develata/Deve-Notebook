@@ -16,7 +16,7 @@
 - `Trigger`: 页面进入当前 repo scope 或重连完成
 - `Preconditions`: 已有当前 repo 选择，连接未处于 unauthorized
 - `Immediate Result`: 前端开始检查是否应对当前 repo 触发 handshake
-- `Application Entry`: `apps/web/src/hooks/use_core/effects/handshake.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/effects/handshake/mod.rs`
 
 ### `op.net.sync.send-hello`
 
@@ -25,7 +25,7 @@
 - `Trigger`: handshake gate 通过
 - `Preconditions`: 当前 repo scope、vector、identity、scope nonce 已就绪
 - `Immediate Result`: 发送 `ClientMessage::SyncHello` 与 `RegisterWriter`
-- `Application Entry`: `apps/web/src/hooks/use_core/effects/handshake_send.rs`, `apps/web/src/hooks/use_core/effects/handshake_send_delivery.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/effects/handshake/send.rs`, `apps/web/src/hooks/use_core/effects/handshake/send/delivery.rs`
 
 ### `op.net.sync.receive-hello`
 
@@ -34,7 +34,7 @@
 - `Trigger`: 服务端返回 `ServerMessage::SyncHello`
 - `Preconditions`: `op.net.sync.send-hello` 已发送
 - `Immediate Result`: 当前 repo scope 标记为 handshake-ready，peer/vector 写回本地 runtime
-- `Application Entry`: `apps/web/src/hooks/use_core/effects/message_sync.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/effects/message_sync/mod.rs`
 
 ### `op.net.sync.receive-write-ready`
 
@@ -52,9 +52,9 @@
 1. `User Operation`: 当前 repo workspace 被恢复或重新进入前台。
 2. `Application Response`: handshake cycle 判断连接、repo、scope、branch 与恢复条件是否允许继续。
 3. `Concrete Modules`:
-   - `apps/web/src/hooks/use_core/effects/handshake.rs`
-   - `apps/web/src/hooks/use_core/effects/handshake_cycle.rs`
-   - `apps/web/src/hooks/use_core/effects/handshake_state.rs`
+   - `apps/web/src/hooks/use_core/effects/handshake/mod.rs`
+   - `apps/web/src/hooks/use_core/effects/handshake/cycle.rs`
+   - `apps/web/src/hooks/use_core/effects/handshake/state.rs`
 4. `Core Subsystems`:
    - `protocol`
    - `sync`
@@ -64,8 +64,8 @@
 1. `User Operation`: runtime 进入可发起 handshake 的时刻。
 2. `Application Response`: 组装 vector，签名握手消息，发送 `SyncHello` 与 `RegisterWriter`。
 3. `Concrete Modules`:
-   - `apps/web/src/hooks/use_core/effects/handshake_send.rs`
-   - `apps/web/src/hooks/use_core/effects/handshake_send_delivery.rs`
+   - `apps/web/src/hooks/use_core/effects/handshake/send.rs`
+   - `apps/web/src/hooks/use_core/effects/handshake/send/delivery.rs`
    - `apps/cli/src/server/handlers/sync/hello/mod.rs`
    - `apps/cli/src/server/handlers/sync/writer/mod.rs`
 4. `Core Subsystems`:
@@ -77,7 +77,7 @@
 1. `User Operation`: runtime 收到服务端 handshake ack。
 2. `Application Response`: 校验 repo/scope 是否仍匹配，匹配后设置 `handshake_ready` 并更新 peer/vector。
 3. `Concrete Modules`:
-   - `apps/web/src/hooks/use_core/effects/message_sync.rs`
+   - `apps/web/src/hooks/use_core/effects/message_sync/mod.rs`
    - `apps/cli/src/server/handlers/sync/hello/mod.rs`
    - `apps/cli/src/server/handlers/sync/hello/scope.rs`
 4. `Core Subsystems`:
@@ -90,7 +90,7 @@
 2. `Application Response`: 校验 repo/branch/scope 仍匹配，匹配后标记当前 repo 可写。
 3. `Concrete Modules`:
    - `apps/web/src/hooks/use_core/effects/message_dispatch_write.rs`
-   - `apps/web/src/hooks/use_core/effects/message_repo_scope_accept.rs`
+   - `apps/web/src/hooks/use_core/effects/message_repo_scope/accept.rs`
    - `apps/cli/src/server/handlers/sync/writer/mod.rs`
 4. `Core Subsystems`:
    - `protocol`

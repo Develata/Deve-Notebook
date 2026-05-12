@@ -16,7 +16,7 @@
 - `Trigger`: 外围运行时进入 plugin-host 可用态，或主进程占用端口后切换到 proxy/plugin-host 路径
 - `Preconditions`: 插件仍属于外围能力；未越过 trusted / default-off 边界
 - `Immediate Result`: 检测主进程、严格加载本地插件，并暴露只接受 `PluginCall` 的 host WS 入口
-- `Application Entry`: `apps/cli/src/commands/serve.rs`, `apps/cli/src/commands/serve_support.rs`, `apps/cli/src/server/plugin_host/mod.rs`, `apps/cli/src/server/plugin_host/ws_host.rs`
+- `Application Entry`: `apps/cli/src/commands/serve.rs`, `apps/cli/src/commands/serve/support.rs`, `apps/cli/src/server/plugin_host/mod.rs`, `apps/cli/src/server/plugin_host/ws_host.rs`
 
 ### `op.plugin.call.submit`
 

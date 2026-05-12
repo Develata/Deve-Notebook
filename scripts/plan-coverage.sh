@@ -293,6 +293,25 @@ fi
 log ""
 
 # ---------------------------------------------------------------------------
+# Check 5 — Feature operation / acceptance path drift
+# ---------------------------------------------------------------------------
+log "== Check 5: feature operation path drift =="
+path_status=0
+path_report="$(bash "$ROOT/scripts/check-feature-operation-paths.sh" 2>&1)" || path_status=$?
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  if [[ "$line" == feature-operation-path-check:\ missing* ]]; then
+    err "$line"
+  else
+    log "$line"
+  fi
+done <<< "$path_report"
+if [ "$path_status" -ne 0 ]; then
+  blocking=$((blocking + 1))
+fi
+log ""
+
+# ---------------------------------------------------------------------------
 # Reverse coverage matrix
 # ---------------------------------------------------------------------------
 log "== Reverse coverage matrix (plan anchor → files) =="

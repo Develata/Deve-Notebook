@@ -16,7 +16,7 @@
 - `Trigger`: 用户在 conflict 条目上点击 `KeepFs`
 - `Preconditions`: 条目 `has_conflict=true`，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::ResolveConflict { resolution: KeepFs }`
-- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs`, `apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`
+- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs`, `apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`
 
 ### `op.sc.conflict.keep-ledger`
 
@@ -25,7 +25,7 @@
 - `Trigger`: 用户在 conflict 条目上点击 `KeepLedger`
 - `Preconditions`: 条目 `has_conflict=true`，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::ResolveConflict { resolution: KeepLedger }`
-- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs`, `apps/web/src/hooks/use_core/callbacks_sc_write_commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`
+- `Application Entry`: `apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs`, `apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`
 
 ### `op.sc.conflict.receive-resolved`
 
@@ -34,7 +34,7 @@
 - `Trigger`: 服务端返回 `ConflictResolved`
 - `Preconditions`: `op.sc.conflict.keep-fs` 或 `op.sc.conflict.keep-ledger` 已执行
 - `Immediate Result`: conflict 标记消失并刷新 changes list
-- `Application Entry`: `apps/cli/src/server/handlers/source_control/conflict.rs`, `apps/web/src/hooks/use_core/effects_sc_dispatch_acks.rs`
+- `Application Entry`: `apps/cli/src/server/handlers/source_control/conflict.rs`, `apps/web/src/hooks/use_core/effects_sc/dispatch_acks.rs`
 
 ## Notes
 

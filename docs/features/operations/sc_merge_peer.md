@@ -25,7 +25,7 @@
 - `Trigger`: merge command action 触发
 - `Preconditions`: current doc 已选中，local repo scope 稳定，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::MergePeer { peer_id, doc_id, scope_nonce }`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sync_write.rs`, `apps/cli/src/server/ws/route/merge.rs`, `apps/cli/src/server/handlers/merge/peer.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sync/write.rs`, `apps/cli/src/server/ws/route/merge.rs`, `apps/cli/src/server/handlers/merge/peer.rs`
 
 ### `op.sc.merge-peer.receive-complete`
 
@@ -34,7 +34,7 @@
 - `Trigger`: 服务端广播 `ServerMessage::MergeComplete`
 - `Preconditions`: `op.sc.merge-peer.request` 已发送且 merge 成功
 - `Immediate Result`: pending merge state 清理，runtime 显示合并成功
-- `Application Entry`: `apps/web/src/hooks/use_core/effects/message_runtime_sync.rs`
+- `Application Entry`: `apps/web/src/hooks/use_core/effects/message_runtime_sync/mod.rs`
 
 ### `op.sc.merge-peer.receive-conflict`
 
@@ -43,7 +43,7 @@
 - `Trigger`: 服务端返回 `ServerMessage::MergeConflict`
 - `Preconditions`: `op.sc.merge-peer.request` 已发送且 remote/local 无法直接合并
 - `Immediate Result`: 打开 diff/conflict surface，等待用户后续选择
-- `Application Entry`: `apps/cli/src/server/handlers/merge/peer.rs`, `apps/web/src/hooks/use_core/effects_sc_dispatch_lists.rs`, `apps/web/src/components/diff_view/conflict_actions.rs`
+- `Application Entry`: `apps/cli/src/server/handlers/merge/peer.rs`, `apps/web/src/hooks/use_core/effects_sc/dispatch_lists.rs`, `apps/web/src/components/diff_view/conflict_actions.rs`
 
 ## Response Flows
 
@@ -60,8 +60,8 @@
 1. `User Operation`: 用户发起合并当前 peer。
 2. `Application Response`: write gate 先检查 repo scope、writer-ready、readonly、current doc；通过后发送 `MergePeer`。
 3. `Concrete Modules`:
-   - `apps/web/src/hooks/use_core/callbacks_sync_write.rs`
-   - `apps/web/src/hooks/use_core/write_gate_logic.rs`
+   - `apps/web/src/hooks/use_core/callbacks_sync/write.rs`
+   - `apps/web/src/hooks/use_core/write_gate/logic.rs`
    - `apps/cli/src/server/ws/route/merge.rs`
    - `apps/cli/src/server/handlers/merge/peer.rs`
    - `crates/core/src/ledger/merge/`
@@ -76,7 +76,7 @@
 1. `User Operation`: 用户观察 merge 成功结果。
 2. `Application Response`: runtime 接收 `MergeComplete`，清理 pending merge 状态并显示 merged count。
 3. `Concrete Modules`:
-   - `apps/web/src/hooks/use_core/effects/message_runtime_sync.rs`
+   - `apps/web/src/hooks/use_core/effects/message_runtime_sync/mod.rs`
    - `apps/cli/src/server/handlers/merge/peer.rs`
 4. `Core Subsystems`:
    - `sync`
@@ -88,8 +88,8 @@
 2. `Application Response`: 服务端优先发送 typed `MergeConflict`，前端切入 diff/conflict surface；`DocDiff` 仅保留为非权威兼容 fallback。
 3. `Concrete Modules`:
    - `apps/cli/src/server/handlers/merge/peer.rs`
-   - `apps/cli/src/server/handlers/merge/peer_apply.rs`
-   - `apps/web/src/hooks/use_core/effects_sc_dispatch_lists.rs`
+   - `apps/cli/src/server/handlers/merge/peer_apply/mod.rs`
+   - `apps/web/src/hooks/use_core/effects_sc/dispatch_lists.rs`
    - `apps/web/src/components/diff_view/conflict_actions.rs`
 4. `Core Subsystems`:
    - `ledger`
