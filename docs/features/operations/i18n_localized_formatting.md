@@ -45,5 +45,5 @@
 
 ## Notes
 
-- Current code still contains manual relative time/date formatting; this flow keeps it visible as a plan/code convergence target.
+- Manual date/time formatting is guarded by `scripts/check-i18n-formatting-baseline.sh`.
 - Main objects: `locale::selection`, `format::localized`, `i18n::catalog`.

@@ -5,7 +5,7 @@
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::{Locale, t};
-use crate::utils::markdown::render_markdown;
+use crate::utils::{markdown::render_markdown, time::format_time_of_day};
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -93,10 +93,8 @@ pub fn MessageItem(
             .then(|| t::chat::apply(locale.get()));
         render_markdown(&content, apply_label)
     };
-    let ts_text = {
-        let date = js_sys::Date::new(&wasm_bindgen::JsValue::from_f64(msg.ts_ms as f64));
-        format!("{:02}:{:02}", date.get_hours(), date.get_minutes())
-    };
+    let ts_ms = msg.ts_ms;
+    let ts_text = move || format_time_of_day(ts_ms, locale.get());
 
     view! {
         <div class="flex flex-col gap-1">

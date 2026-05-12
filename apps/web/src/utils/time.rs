@@ -37,3 +37,11 @@ pub fn format_relative(timestamp_ms: i64, locale: Locale) -> String {
         }
     }
 }
+
+pub fn format_time_of_day(timestamp_ms: u64, locale: Locale) -> String {
+    let date = js_sys::Date::new(&JsValue::from_f64(timestamp_ms as f64));
+    date.to_locale_time_string(time_i18n::date_locale(locale))
+        .as_string()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| date.to_iso_string().as_string().unwrap_or_default())
+}
