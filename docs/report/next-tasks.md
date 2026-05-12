@@ -8,8 +8,7 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | I18N localized formatting browser spot smoke | P2 | Web i18n formatting + Chrome MCP | 隔离后端中切换 locale 后，chat timestamp / history relative time 可见格式按 locale 更新 |
-| 2 | Next feature/acceptance gap scan | P2 | plan/features/acceptance/current code | 基于最新 i18n spot smoke 继续选择下一批用户可感知实现项 |
+| 1 | Next feature/acceptance gap scan | P2 | plan/features/acceptance/current code | 基于最新 i18n spot smoke 继续选择下一批用户可感知实现项 |
 
 ## 最近完成
 
@@ -22,6 +21,7 @@
 - Feature acceptance gap scan 02：新增 `feature-acceptance-gap-scan-2026-05-12-02.md`，确认 feature/acceptance 绑定闭合，并修复 dev runbook 对新增路径 guard 的遗漏。
 - Release delivery smoke：新增 `release-delivery-smoke-2026-05-12.md`，确认 Web release build、embedded frontend runtime release info 与 Docker production-auth smoke 均通过。
 - Feature acceptance gap scan 03：新增 `feature-acceptance-gap-scan-2026-05-12-03.md`，修复 I18N-005 chat timestamp 手写格式缺口，并新增 i18n formatting guard。
+- I18N localized formatting browser smoke：新增 `i18n-localized-formatting-browser-smoke-2026-05-12.md`，用 Chrome MCP 验证 chat timestamp 与 Source Control history relative time 的 locale 切换重渲染。
 - Runtime happy-path smoke：新增 `scripts/smoke-runtime-happy-path.sh`，用临时 repo 覆盖 repo switch、SyncHello、RegisterWriter、CreateDoc、Edit、OpenDoc、History 与 reconnect bootstrap 单测。
 - Near-fuse cohesion triage：已按职责拆分 i18n common/source-control/git copy；保留 `ClientMessage` 协议枚举与 `apps/cli/src/server/ws/route/merge/tests.rs` 场景测试上下文，不做纯行数拆分。
 
