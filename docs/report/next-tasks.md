@@ -8,15 +8,15 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Desktop Web shell browser smoke | P2 | `08_ui_design_02_desktop` × `UI-DESK-001..003` × Web shell | Chrome MCP 验证桌面 diff 滚动同步、layout resize 持久化与 search mode routing |
-| 2 | `.deveignore` watcher/scan user-facing smoke | P2 | `04_storage` × watcher/scan × Source Control UI | 验证 ignored markdown 不进入 pending、tree projection、ledger 或 Source Control 可见变更 |
-| 3 | Mobile residual interaction spot smoke | P2 | `08_ui_design_03_mobile` × residual `UI-MOB-*` | 验证 keyboard toolbar、search result scroll isolation、AI readability/error recovery、mobile diff visibility/close |
-| 4 | Source Control `CommitAndPush` browser smoke | P2 | `07_diff_logic` × `flow.sc.commit-and-push` × Web Source Control | 验证 `Commit & Push` 走 scoped `ClientMessage::CommitAndPush`、以 `CommitAck` 完成，且不授予 Web Git mirror push authority |
-| 5 | Plan-code mapping soft cleanup | P2 | `plan_ref` soft warnings × cohesive file review | 分批补准确 `plan_ref` 或记录 cohesive soft-size 理由；不做机械拆分 |
-| 6 | Optional AI slash command smoke | P3 | `10_ai_agent` × `AI-002/AI-004` | 在 Current MUST/UI Contract 闭合后再验证 `/plan` 与 `/agents` UX |
+| 1 | `.deveignore` watcher/scan user-facing smoke | P2 | `04_storage` × watcher/scan × Source Control UI | 验证 ignored markdown 不进入 pending、tree projection、ledger 或 Source Control 可见变更 |
+| 2 | Mobile residual interaction spot smoke | P2 | `08_ui_design_03_mobile` × residual `UI-MOB-*` | 验证 keyboard toolbar、search result scroll isolation、AI readability/error recovery、mobile diff visibility/close |
+| 3 | Source Control `CommitAndPush` browser smoke | P2 | `07_diff_logic` × `flow.sc.commit-and-push` × Web Source Control | 验证 `Commit & Push` 走 scoped `ClientMessage::CommitAndPush`、以 `CommitAck` 完成，且不授予 Web Git mirror push authority |
+| 4 | Plan-code mapping soft cleanup | P2 | `plan_ref` soft warnings × cohesive file review | 分批补准确 `plan_ref` 或记录 cohesive soft-size 理由；不做机械拆分 |
+| 5 | Optional AI slash command smoke | P3 | `10_ai_agent` × `AI-002/AI-004` | 在 Current MUST/UI Contract 闭合后再验证 `/plan` 与 `/agents` UX |
 
 ## 最近完成
 
+- Desktop Web shell browser smoke：新增 `desktop-web-shell-browser-smoke-2026-05-13.md`，用 Chrome MCP 验证 desktop breakpoint、五列布局 marker、sidebar/right panel resize 持久化、Source Control diff 双栏滚动同步、Unified Search command/branch/file routing 与当前导航 console/network 健康；未发现代码缺陷。
 - Auth security acceptance refresh：新增 `auth-security-acceptance-refresh-2026-05-13.md`，复核 `AUTH-003..010/012` 的 cookie、CORS、CSRF baseline、rate-limit、JWT、WS unauthorized 与 public status endpoint；未发现运行缺陷，并修正 `AUTH-007` 中旧 `/api/write` 示例为当前受保护写入口 `/api/sc/commit`。
 - Mainline gap rescan after smoke queue closure：新增 `mainline-gap-rescan-after-smoke-closure-2026-05-13.md`，确认上一轮 G1-G7 smoke 队列已闭合，native/desktop/mobile 默认 no-packaging skeleton 不是当前阻塞项，并将下一批收敛到 Auth 安全验收复核、Desktop 宽屏 browser smoke、`.deveignore` 用户面 smoke、Mobile 残余交互 spot smoke、Source Control `CommitAndPush`、plan-code 软映射清理与 optional AI slash command smoke。
 - Graph read-only projection panel browser smoke：新增 `graph-readonly-projection-panel-smoke-2026-05-13.md`，用 Chrome MCP 验证 empty / loaded / blocked / degraded Graph states、readonly projection summary、renderer gate closed、HTTP graph projection JSON 与稳定态 console/network 健康，并补齐 Graph panel 可测性 marker。
