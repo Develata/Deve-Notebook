@@ -8,12 +8,12 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Git mirror CLI-only notice / readonly repair review smoke | P2 | Git Import/Push/Repair notices, repair review readonly states | 验证 Web 不执行 Git writer，只显示 CLI-only notice / readonly review |
-| 2 | Dashboard SystemMetrics browser smoke | P2 | live metrics, stale epoch, disconnected freeze | 验证 Dashboard 指标刷新、断线冻结/恢复、RAM-only 状态 |
-| 3 | Graph read-only projection panel browser smoke | P2 | graph summary, empty/degraded/blocked states, renderer gate | 验证 readonly projection summary 与 renderer future-only 边界 |
+| 1 | Dashboard SystemMetrics browser smoke | P2 | live metrics, stale epoch, disconnected freeze | 验证 Dashboard 指标刷新、断线冻结/恢复、RAM-only 状态 |
+| 2 | Graph read-only projection panel browser smoke | P2 | graph summary, empty/degraded/blocked states, renderer gate | 验证 readonly projection summary 与 renderer future-only 边界 |
 
 ## 最近完成
 
+- Git mirror CLI-only notice / readonly repair review smoke：新增 `git-mirror-cli-notice-readonly-repair-smoke-2026-05-13.md`，用 Chrome MCP 验证 Git Import/Push/Repair Command Palette notice、readonly repair review、copyable retry command、无 Web Git writer，并修复 CommandId 搜索与 Git notice callback 上下文捕获问题。
 - Command Surface routing smoke：新增 `command-surface-routing-smoke-2026-05-13.md`，用 Chrome MCP 验证 `Ctrl+Shift+P` command mode、`Ctrl+P` Quick Open、`Ctrl+Shift+K` branch mode、过滤、键盘导航、执行/取消、console/network 健康，并修正非 plan 文档中的旧 `Ctrl/Cmd+K` 表述。
 - Mobile Web shell narrow-viewport smoke：新增 `mobile-web-shell-narrow-viewport-smoke-2026-05-13.md`，用 Chrome MCP 真实 375x812 mobile viewport emulation 验证 mobile layout marker、左右 drawer、Search top sheet、bottom bar 折叠/展开、AI Chat 全屏页、44px touch target 与 console/network 健康。
 - Browser storage / projection degraded write-gate smoke：新增 `browser-storage-projection-degraded-write-gate-smoke-2026-05-13.md`，用 Chrome init script 模拟 IndexedDB/WebCrypto 缺失，验证 degraded 横幅、只读 UI、Source Control 写阻断、projection degraded 服务端写闸与 runtime recovery smoke，并修复 Source Control `ReadOnly` hint 误报 remote branch 的文案问题。

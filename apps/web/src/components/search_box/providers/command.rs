@@ -39,9 +39,7 @@ impl SearchProvider for CommandProvider {
             .commands
             .iter()
             .map(|cmd| {
-                let score = sublime_fuzzy::best_match(clean_query, &cmd.title)
-                    .map(|m| m.score() as f32)
-                    .unwrap_or(0.0);
+                let score = command_match_score(clean_query, cmd);
                 (cmd, score)
             })
             .filter(|(_, score)| *score > 0.0)
@@ -57,5 +55,64 @@ impl SearchProvider for CommandProvider {
         results.sort_by(|a, b| score_desc(a.score, b.score));
         results.truncate(20);
         results
+    }
+}
+
+fn command_match_score(query: &str, cmd: &Command) -> f32 {
+    let title_score = sublime_fuzzy::best_match(query, &cmd.title)
+        .map(|m| m.score() as f32)
+        .unwrap_or(0.0);
+    let command_id = cmd.id.replace(['_', '-', '.'], " ");
+    let id_score = sublime_fuzzy::best_match(query, &command_id)
+        .map(|m| m.score() as f32)
+        .unwrap_or(0.0);
+    title_score.max(id_score)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CommandProvider;
+    use crate::components::command_palette::Command;
+    use crate::components::search_box::types::SearchProvider;
+    use crate::i18n::{Locale, t};
+    use leptos::prelude::Callback;
+
+    fn command(id: &str, title: &str) -> Command {
+        Command {
+            id: id.to_string(),
+            title: title.to_string(),
+            action: Callback::new(|_| {}),
+            is_file: false,
+        }
+    }
+
+    #[test]
+    fn command_provider_matches_stable_command_id_words() {
+        let provider = CommandProvider::new(vec![command(
+            "git_import_changes",
+            t::command_palette::git_import_changes(Locale::Zh),
+        )]);
+
+        let results = provider.search(">git import");
+
+        assert_eq!(
+            results.first().map(|result| result.id.as_str()),
+            Some("git_import_changes")
+        );
+    }
+
+    #[test]
+    fn command_provider_matches_command_id_even_when_title_is_localized() {
+        let provider = CommandProvider::new(vec![command(
+            "git_push_mirror",
+            t::command_palette::git_push_mirror(Locale::Zh),
+        )]);
+
+        let results = provider.search(">git push");
+
+        assert_eq!(
+            results.first().map(|result| result.id.as_str()),
+            Some("git_push_mirror")
+        );
     }
 }
