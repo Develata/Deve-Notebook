@@ -20,6 +20,7 @@ use tempfile::{TempDir, tempdir};
 use tokio::sync::{broadcast, mpsc};
 
 mod frame;
+mod frame_errors;
 
 #[test]
 fn invalid_client_messages_use_structured_request_failed() {
@@ -98,7 +99,7 @@ async fn browser_invalid_json_carries_scope_nonce() -> anyhow::Result<()> {
         Some(ServerMessage::ProtocolError {
             error, scope_nonce, ..
         }) => {
-            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
             assert_eq!(scope_nonce, Some(17));
         }
         other => panic!("expected scoped ProtocolError, got {:?}", other),

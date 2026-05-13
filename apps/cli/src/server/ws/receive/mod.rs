@@ -69,7 +69,7 @@ async fn handle_binary(
         Err(e) => {
             tracing::warn!("Bincode parse error: {:?}, {} bytes", e, bin.len());
             ch.send_protocol_error_with_scope_nonce(
-                invalid_client_message(error_detail(&e, "Invalid bincode client message")),
+                invalid_frame_message(&e, "Invalid bincode client message"),
                 browser_scope_nonce(session),
             );
         }
@@ -106,7 +106,7 @@ async fn handle_text(
         Err(e) => {
             tracing::warn!("Failed to parse client message: {}", text);
             ch.send_protocol_error_with_scope_nonce(
-                invalid_client_message(error_detail(&e, "Invalid JSON client message")),
+                invalid_frame_message(&e, "Invalid JSON client message"),
                 browser_scope_nonce(session),
             );
         }
@@ -140,6 +140,14 @@ fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
 
 fn invalid_client_message(detail: impl Into<String>) -> ServerError {
     ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
+}
+
+fn invalid_frame_message(error: &ProtocolFrameError, fallback: &'static str) -> ServerError {
+    let code = match error {
+        ProtocolFrameError::UnsupportedVersion { .. } => ServerErrorCode::SyncVersionMismatch,
+        ProtocolFrameError::Decode(_) => ServerErrorCode::SyncInvalidPayload,
+    };
+    ServerError::with_detail(code, error_detail(error, fallback))
 }
 
 fn error_detail(error: &ProtocolFrameError, fallback: &'static str) -> String {

@@ -55,6 +55,8 @@
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
     - reject_binary_without_magic: true
+    - unsupported_protocol_version_error_code: "SYNC_VERSION_MISMATCH"
+    - malformed_versioned_payload_error_code: "SYNC_INVALID_PAYLOAD"
 
 - case_id: NET-005
   goal: WebLightPeer repo-scoped 握手。
@@ -173,6 +175,7 @@
   assertions:
     - stdout_contains: "ws-structured-errors-check: ok"
     - core_scoped_missing_or_stale_scope_returns_protocol_error: true
+    - malformed_ws_payload_returns_structured_error: true
 
 - case_id: NET-013
   goal: 认证失效必须进入 Unauthorized，而不是普通重连。

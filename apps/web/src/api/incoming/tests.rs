@@ -128,6 +128,20 @@ fn binary_unsupported_server_version_surfaces_protocol_error() {
 }
 
 #[test]
+fn binary_malformed_versioned_payload_surfaces_protocol_error() {
+    let mut bytes = encode_server_binary(&ServerMessage::Pong).unwrap();
+    bytes.pop();
+
+    match decode_binary_message(&bytes) {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
+            assert_eq!(error.detail.as_deref(), Some("Invalid WS server frame"));
+        }
+        other => panic!("expected malformed payload ProtocolError, got {other:?}"),
+    }
+}
+
+#[test]
 fn text_legacy_json_still_decodes_server_message() {
     assert!(matches!(
         decode_text_message(r#""Pong""#),

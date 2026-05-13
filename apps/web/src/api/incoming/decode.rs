@@ -2,7 +2,9 @@
 //!   - 05_network#web-ws-runtime
 //!
 
-use deve_core::protocol::frame::{ProtocolFrameError, decode_server_binary, decode_server_json};
+use deve_core::protocol::frame::{
+    MISSING_WS_FRAME_MAGIC, ProtocolFrameError, decode_server_binary, decode_server_json,
+};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 
 const FRAME_PREVIEW_BYTES: usize = 16;
@@ -42,7 +44,15 @@ fn protocol_error_message(error: ProtocolFrameError) -> Option<ServerMessage> {
             switch_nonce: None,
             scope_nonce: None,
         }),
-        ProtocolFrameError::Decode(_) => None,
+        ProtocolFrameError::Decode(detail) if detail == MISSING_WS_FRAME_MAGIC => None,
+        ProtocolFrameError::Decode(_) => Some(ServerMessage::ProtocolError {
+            error: ServerError::with_detail(
+                ServerErrorCode::SyncInvalidPayload,
+                "Invalid WS server frame",
+            ),
+            switch_nonce: None,
+            scope_nonce: None,
+        }),
     }
 }
 

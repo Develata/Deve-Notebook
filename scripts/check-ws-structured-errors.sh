@@ -39,4 +39,13 @@ rg -q 'ServerMessage::ProtocolError' \
 rg -q 'ServerErrorCode' "$ROOT_DIR/apps/web/src/i18n/server_error.rs" \
   || fail "web server error i18n mapping is missing ServerErrorCode"
 
+rg -q 'ServerErrorCode::SyncVersionMismatch' "$ROOT_DIR/apps/cli/src/server/ws/receive/mod.rs" \
+  || fail "unsupported WS protocol versions are not mapped to SyncVersionMismatch"
+
+rg -q 'ServerErrorCode::SyncInvalidPayload' "$ROOT_DIR/apps/cli/src/server/ws/receive/mod.rs" \
+  || fail "malformed WS payloads are not mapped to SyncInvalidPayload"
+
+rg -q 'ServerErrorCode::SyncInvalidPayload' "$ROOT_DIR/apps/web/src/api/incoming/decode.rs" \
+  || fail "web malformed versioned WS payloads are not surfaced structurally"
+
 echo "ws-structured-errors-check: ok"
