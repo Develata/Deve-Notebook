@@ -23,7 +23,7 @@ mod unified_pane;
 mod viewport;
 
 use self::body::{DiffBody, DiffBodyDeps};
-use self::conflict_actions::MergeConflictActions;
+use self::conflict_actions::{MergeConflictActions, accept_both_content};
 use self::header::DiffHeader;
 use self::lifecycle::{setup_anchor_effects, setup_shortcuts};
 use self::model::hunk_fold::build_folded_rows;
@@ -62,6 +62,7 @@ pub fn DiffView(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let filename = diff_title(&path, &display_path);
+    let default_accept_both_content = accept_both_content(&old_content, &new_content);
 
     let compute = create_compute_state(
         repo_scope,
@@ -132,6 +133,8 @@ pub fn DiffView(
                         mobile=mobile
                         conflict=conflict
                         resolved_content=resolved_content
+                        is_editing=compute.is_editing
+                        accept_both_content=default_accept_both_content.clone()
                         on_resolve=on_resolve
                     />
                 })

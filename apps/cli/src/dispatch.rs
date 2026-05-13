@@ -128,6 +128,26 @@ pub async fn run(
         Some(Commands::Seed { peer, repo }) => {
             commands::seed::run(ledger_dir, peer, repo, config.snapshot_depth)?
         }
+        Some(Commands::SeedMergeConflictFixture {
+            peer,
+            repo,
+            path,
+            base,
+            local,
+            remote,
+        }) => commands::merge_conflict_fixture::run(
+            ledger_dir,
+            vault_path,
+            config.snapshot_depth,
+            commands::merge_conflict_fixture::MergeConflictFixtureOptions {
+                peer,
+                repo,
+                path,
+                base,
+                local,
+                remote,
+            },
+        )?,
         Some(Commands::NodeCheck {
             repair,
             projection,

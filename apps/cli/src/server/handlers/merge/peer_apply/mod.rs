@@ -108,15 +108,21 @@ pub(super) fn broadcast_merge_complete(
 pub(super) fn send_merge_conflict(
     state: &Arc<AppState>,
     ch: &DualChannel,
-    scope: &ResolvedRepo,
+    path_scope: &ResolvedRepo,
+    message_scope: &ResolvedRepo,
     payload: MergeConflictPayload,
     scope_nonce: Option<u64>,
 ) -> bool {
-    let Some(path) = resolve_doc_path(state, ch, &scope.repo_name, payload.doc_id, scope_nonce)
-    else {
+    let Some(path) = resolve_doc_path(
+        state,
+        ch,
+        &path_scope.repo_name,
+        payload.doc_id,
+        scope_nonce,
+    ) else {
         return false;
     };
-    emit_merge_conflict(ch, scope, path, payload, scope_nonce);
+    emit_merge_conflict(ch, message_scope, path, payload, scope_nonce);
     true
 }
 

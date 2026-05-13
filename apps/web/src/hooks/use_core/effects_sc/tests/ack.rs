@@ -53,6 +53,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
         set_sync_banner,
         doc_diff_request_id,
         set_doc_diff_request_id,
+        diff,
         set_diff,
         commit_diff_request_id,
         set_commit_diff_request_id,

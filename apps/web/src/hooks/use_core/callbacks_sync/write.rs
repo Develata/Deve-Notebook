@@ -5,13 +5,17 @@
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
-use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::hooks::use_core::write_gate::{
+    RepoWriteSignals, repo_source_control_read_block_untracked, repo_write_block_untracked,
+};
 use crate::hooks::use_core::write_gate_banner::cannot_send;
-use deve_core::models::DocId;
+use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
-use super::super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
+use super::super::callbacks_scope::{
+    LocalScopeSignals, stable_local_scope_nonce, stable_peer_branch_scope_nonce,
+};
 
 pub(super) struct SyncWriteCallbacks {
     pub(super) on_set_sync_mode: Callback<String>,
@@ -78,8 +82,9 @@ pub(super) fn create_sync_write_callbacks(
 
     let ws4 = ws.clone();
     let on_merge_peer = Callback::new(move |peer_id: String| {
+        let target_peer = PeerId::new(&peer_id);
         let Some(scope_nonce) =
-            sync_write_scope_nonce(&ws4, local_scope, write_gate, set_sync_banner, "MergePeer")
+            merge_peer_scope_nonce(&ws4, local_scope, write_gate, set_sync_banner, &target_peer)
         else {
             return;
         };
@@ -114,6 +119,26 @@ fn sync_write_scope_nonce(
     }
     let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
         let message = cannot_send(action, "local repo scope is not stable");
+        warn_sync_banner(set_sync_banner, message);
+        return None;
+    };
+    Some(scope_nonce)
+}
+
+fn merge_peer_scope_nonce(
+    ws: &WsService,
+    local_scope: LocalScopeSignals,
+    write_gate: RepoWriteSignals,
+    set_sync_banner: WriteSignal<Option<String>>,
+    peer_id: &PeerId,
+) -> Option<u64> {
+    if let Some(block) = repo_source_control_read_block_untracked(ws, write_gate) {
+        let message = cannot_send("MergePeer", block.label());
+        warn_sync_banner(set_sync_banner, message);
+        return None;
+    }
+    let Some(scope_nonce) = stable_peer_branch_scope_nonce(local_scope, peer_id) else {
+        let message = cannot_send("MergePeer", "selected peer scope is not stable");
         warn_sync_banner(set_sync_banner, message);
         return None;
     };

@@ -106,6 +106,22 @@ pub(crate) enum Commands {
         #[arg(long)]
         repo: Option<String>,
     },
+    /// Seed a deterministic merge conflict fixture for browser smoke tests
+    #[command(hide = true)]
+    SeedMergeConflictFixture {
+        #[arg(long, default_value = "peer-a")]
+        peer: String,
+        #[arg(long)]
+        repo: Option<String>,
+        #[arg(long, default_value = "notes/conflict.md")]
+        path: String,
+        #[arg(long, default_value = "base")]
+        base: String,
+        #[arg(long, default_value = "local")]
+        local: String,
+        #[arg(long, default_value = "remote")]
+        remote: String,
+    },
     /// Check node consistency
     NodeCheck {
         #[arg(long)]

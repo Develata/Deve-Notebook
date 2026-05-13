@@ -89,6 +89,7 @@ fn dispatch_doc_diff_from_repo(
         set_sync_banner,
         doc_diff_request_id,
         set_doc_diff_request_id,
+        diff,
         set_diff,
         commit_diff_request_id,
         set_commit_diff_request_id,

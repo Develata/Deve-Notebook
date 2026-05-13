@@ -36,7 +36,7 @@ async fn merge_peer_conflict_replays_after_state_reopen_without_losing_ops() -> 
         &mut first_rx,
         MergeConflictExpectation {
             repo_id,
-            branch: None,
+            branch: Some(peer_id.clone()),
             scope_nonce: Some(61),
             doc_id,
             path: "resume.md",
@@ -74,7 +74,7 @@ async fn merge_peer_conflict_replays_after_state_reopen_without_losing_ops() -> 
         &mut resume_rx,
         MergeConflictExpectation {
             repo_id,
-            branch: None,
+            branch: Some(peer_id.clone()),
             scope_nonce: Some(62),
             doc_id,
             path: "resume.md",

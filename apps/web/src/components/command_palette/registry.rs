@@ -6,7 +6,8 @@
 //! 命令面板的静态命令定义。
 
 use super::types::Command;
-use crate::components::main_layout::ChatControl;
+use crate::components::main_layout::{ChatControl, SearchControl};
+use crate::hooks::use_core::{BranchContext, CoreState, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
@@ -26,6 +27,10 @@ pub fn create_static_commands(
 ) -> Vec<Command> {
     // Try to get ChatControl from context at creation time
     let chat_control = use_context::<ChatControl>();
+    let search_control = use_context::<SearchControl>();
+    let branch_context = use_context::<BranchContext>();
+    let sync_merge_context = use_context::<SyncMergeContext>();
+    let core_state = use_context::<CoreState>();
 
     let mut commands = vec![
         // 打开文档命令 - 打开文档模态框
@@ -64,10 +69,10 @@ pub fn create_static_commands(
             id: "switch_peer".to_string(),
             title: (t::command_palette::switch_peer)(locale).to_string(),
             action: Callback::new(move |_| {
-                let search_control = use_context::<crate::components::main_layout::SearchControl>()
-                    .expect("search control");
-                search_control.set_mode.set("@".to_string());
-                search_control.set_show.set(true);
+                if let Some(search_control) = search_control {
+                    search_control.set_mode.set("@".to_string());
+                    search_control.set_show.set(true);
+                }
                 set_show.set(false);
             }),
             is_file: false,
@@ -77,15 +82,21 @@ pub fn create_static_commands(
             id: "establish_branch".to_string(),
             title: (t::command_palette::establish_branch)(locale).to_string(),
             action: Callback::new(move |_| {
-                let search_control = use_context::<crate::components::main_layout::SearchControl>()
-                    .expect("search control");
-                search_control.set_mode.set("@".to_string());
-                search_control.set_show.set(true);
+                if let Some(search_control) = search_control {
+                    search_control.set_mode.set("@".to_string());
+                    search_control.set_show.set(true);
+                }
                 set_show.set(false);
             }),
             is_file: false,
         },
-        merge_peer_command(locale, set_show),
+        merge_peer_command(
+            locale,
+            set_show,
+            branch_context,
+            sync_merge_context,
+            core_state,
+        ),
         git_import_command(locale, set_show),
         git_push_command(locale, set_show),
         git_repair_command(locale, set_show),

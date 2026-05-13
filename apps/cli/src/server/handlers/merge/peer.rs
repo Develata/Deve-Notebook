@@ -28,7 +28,7 @@ pub(super) async fn handle_merge_peer(
     let Some(scope) = resolve_merge_scope(state, ch, session, scope_nonce) else {
         return;
     };
-    let Some(local_scope) = resolve_local_merge_scope(state, scope, ch, scope_nonce) else {
+    let Some(local_scope) = resolve_local_merge_scope(state, scope.clone(), ch, scope_nonce) else {
         return;
     };
     let peer_id = PeerId::new(peer_id);
@@ -61,6 +61,7 @@ pub(super) async fn handle_merge_peer(
                 state,
                 ch,
                 &local_scope,
+                &scope,
                 MergeConflictPayload {
                     doc_id,
                     base,

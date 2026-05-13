@@ -122,7 +122,7 @@ async fn assert_resolve_merge_conflict_strategy(case: ResolveStrategyCase) -> an
         &mut uni_rx,
         MergeConflictExpectation {
             repo_id,
-            branch: None,
+            branch: Some(peer_id.clone()),
             scope_nonce: Some(case.scope_nonce),
             doc_id,
             path: "notes/conflict.md",

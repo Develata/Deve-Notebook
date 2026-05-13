@@ -16,6 +16,7 @@ mod git_output;
 pub mod graph;
 pub mod init;
 pub mod live_proxy;
+pub mod merge_conflict_fixture;
 pub mod node_check;
 pub mod recover;
 pub mod repair;
