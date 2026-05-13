@@ -106,7 +106,7 @@ fn chat(req_id, user_msg, context, prior_history) {
 
     if config.api_key == () || config.api_key == "" {
         return #{
-            type: "text",
+            type: "error",
             content: "Error: No AI API key configured. Set AI_API_KEY or OPENAI_API_KEY environment variable."
         };
     }

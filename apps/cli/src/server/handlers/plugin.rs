@@ -10,9 +10,9 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::plugin_response::{
-    send_plugin_capability_denied, send_plugin_invalid_message, send_plugin_result,
-    send_plugin_runtime_error, send_plugin_serialization_error, send_plugin_unknown_plugin,
-    send_plugin_unsupported_message,
+    send_plugin_capability_denied, send_plugin_invalid_message, send_plugin_request_failed,
+    send_plugin_result, send_plugin_runtime_error, send_plugin_serialization_error,
+    send_plugin_unknown_plugin, send_plugin_unsupported_message,
 };
 use deve_core::plugin::runtime::chat_stream::{ChatStreamScope, ChatStreamSink};
 use deve_core::protocol::ServerMessage;
@@ -83,7 +83,13 @@ pub async fn handle_plugin_call_with_plugins(
 
         match call_result {
             Ok(result) => match dynamic_result_to_json(result) {
-                Ok(json_result) => send_plugin_result(ch, req_id, json_result),
+                Ok(json_result) => {
+                    if let Some(detail) = plugin_result_error_detail(&json_result) {
+                        send_plugin_request_failed(ch, &req_id, detail);
+                    } else {
+                        send_plugin_result(ch, req_id, json_result);
+                    }
+                }
                 Err(detail) => send_plugin_serialization_error(ch, &req_id, detail),
             },
             Err(e) => {
@@ -123,6 +129,24 @@ fn json_args_to_dynamic(args: Vec<serde_json::Value>) -> Result<Vec<rhai::Dynami
 fn dynamic_result_to_json(result: rhai::Dynamic) -> Result<serde_json::Value, String> {
     rhai::serde::from_dynamic(&result)
         .map_err(|err| format!("Plugin returned non-JSON-serializable result: {err}"))
+}
+
+fn plugin_result_error_detail(result: &serde_json::Value) -> Option<String> {
+    if result.get("type").and_then(|value| value.as_str()) != Some("error") {
+        return None;
+    }
+    let detail = result
+        .get("content")
+        .or_else(|| result.get("detail"))
+        .or_else(|| result.get("message"))
+        .and_then(|value| value.as_str())
+        .unwrap_or("Plugin returned an error")
+        .trim();
+    Some(if detail.is_empty() {
+        "Plugin returned an error".to_string()
+    } else {
+        detail.to_string()
+    })
 }
 
 #[cfg(test)]

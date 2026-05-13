@@ -180,12 +180,17 @@ mod tests {
             )
             .expect("chat should not panic");
 
-        // 应返回 map 包含 error 信息
+        // 应返回结构化 error 结果，server 会把它转换为 PluginResponse.error。
         let response: rhai::Map = rhai::serde::from_dynamic(&result).unwrap();
+        let kind = response
+            .get("type")
+            .and_then(|v| v.clone().into_string().ok())
+            .unwrap_or_default();
         let content = response
             .get("content")
             .and_then(|v| v.clone().into_string().ok())
             .unwrap_or_default();
+        assert_eq!(kind, "error");
         assert!(
             content.contains("API key") || content.contains("Error"),
             "Should return API key error, got: {}",

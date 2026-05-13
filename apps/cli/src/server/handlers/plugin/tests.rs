@@ -11,9 +11,12 @@ use tokio::sync::{Mutex, broadcast, mpsc};
 
 static AI_CONFIG_LOCK: Mutex<()> = Mutex::const_new(());
 
+mod error_result;
+
 struct ProbePlugin {
     called: Arc<AtomicBool>,
     manifest: PluginManifest,
+    result: Option<serde_json::Value>,
 }
 
 impl ProbePlugin {
@@ -27,7 +30,14 @@ impl ProbePlugin {
                 entry: "main.rhai".to_string(),
                 capabilities: Default::default(),
             },
+            result: None,
         }
+    }
+
+    fn with_json_result(id: &str, called: Arc<AtomicBool>, result: serde_json::Value) -> Self {
+        let mut plugin = Self::new(id, called);
+        plugin.result = Some(result);
+        plugin
     }
 }
 
@@ -38,6 +48,9 @@ impl PluginRuntime for ProbePlugin {
 
     fn call(&self, _fn_name: &str, _args: Vec<Dynamic>) -> Result<Dynamic> {
         self.called.store(true, Ordering::SeqCst);
+        if let Some(result) = self.result.as_ref() {
+            return Ok(rhai::serde::to_dynamic(result).expect("json to dynamic"));
+        }
         Ok("called".into())
     }
 
