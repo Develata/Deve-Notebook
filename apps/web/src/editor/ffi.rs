@@ -36,6 +36,10 @@ unsafe extern "C" {
     #[wasm_bindgen(js_namespace = window, js_name = applyRemoteOpsBatch)]
     pub fn applyRemoteOpsBatch(ops_json: &str);
 
+    /// 将当前编辑器全文状态同步回 Rust signals，不产生新的写入 delta
+    #[wasm_bindgen(js_namespace = window, js_name = syncEditorStateToRust)]
+    pub fn sync_editor_state_to_rust();
+
     /// 获取当前编辑器内容
     pub fn getEditorContent() -> String;
 

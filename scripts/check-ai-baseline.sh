@@ -60,7 +60,8 @@ check_contains apps/web/src/components/chat/actions/send_backend/tests.rs "trust
 check_contains apps/web/src/components/chat/actions/apply.rs "chat_apply_append_markdown_op_uses_utf16_end_position"
 check_contains apps/web/src/components/chat/actions/apply.rs "chat_apply_edit_message_carries_current_scope_nonce"
 check_contains apps/web/src/components/chat/actions/apply.rs "apply_local_programmatic_op"
-check_contains apps/web/src/components/chat/actions/apply.rs "chat_apply_stats_use_applied_editor_content"
+check_contains apps/web/src/components/chat/actions/apply.rs "sync_editor_state_to_rust"
+check_contains apps/web/js/editor_adapter.js "window.syncEditorStateToRust = syncEditorStateToRust"
 check_contains apps/web/src/components/chat/message_item.rs "chat_apply_label_is_build_only_for_assistant_messages"
 check_contains apps/web/src/components/chat/message_list.rs "chat_apply_click_is_consumed_only_in_build_mode"
 

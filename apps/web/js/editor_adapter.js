@@ -178,6 +178,7 @@ window.applyRemoteContent = applyRemoteContent;
 window.applyRemoteOp = applyRemoteOp;
 window.applyRemoteOpsBatch = applyRemoteOpsBatch;
 globalThis.applyRemoteOpsBatch = applyRemoteOpsBatch;
+window.syncEditorStateToRust = syncEditorStateToRust;
 window.scrollGlobal = scrollGlobal;
 window.setReadOnly = setReadOnly;
 window.updateGutterDiff = updateGutterDiff;

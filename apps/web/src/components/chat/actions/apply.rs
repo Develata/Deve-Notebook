@@ -2,8 +2,7 @@
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!   - 16_web_thin_client_ledger#web-edit-intent
 //!
-use crate::editor::EditorStats;
-use crate::editor::ffi::{applyRemoteOp, getEditorContent};
+use crate::editor::ffi::{applyRemoteOp, getEditorContent, sync_editor_state_to_rust};
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
@@ -73,7 +72,7 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
             show_apply_block(&core, "current repo id unavailable");
             return;
         };
-        if !apply_local_programmatic_op(&core, &op) {
+        if !apply_local_programmatic_op(&op) {
             show_apply_block(&core, "failed to apply code locally");
             return;
         }
@@ -102,22 +101,13 @@ pub fn make_on_apply(core: CoreState) -> Callback<String> {
     })
 }
 
-fn apply_local_programmatic_op(core: &CoreState, op: &Op) -> bool {
+fn apply_local_programmatic_op(op: &Op) -> bool {
     let Ok(json) = serde_json::to_string(op) else {
         return false;
     };
     applyRemoteOp(&json);
-    let text = getEditorContent();
-    core.on_stats.run(stats_for_content(&text));
+    sync_editor_state_to_rust();
     true
-}
-
-fn stats_for_content(text: &str) -> EditorStats {
-    EditorStats {
-        chars: text.len(),
-        words: text.split_whitespace().count(),
-        lines: text.lines().count(),
-    }
 }
 
 fn show_apply_block(core: &CoreState, reason: &str) {
@@ -161,7 +151,7 @@ fn build_apply_edit_message(
 mod tests {
     use super::{
         ApplyEditPlanError, build_append_markdown_op, build_append_markdown_op_at_utf16_len,
-        build_apply_edit_message, stats_for_content,
+        build_apply_edit_message,
     };
     use deve_core::models::{DocId, Op};
     use deve_core::protocol::ClientMessage;
@@ -209,14 +199,5 @@ mod tests {
             }
             other => panic!("expected Edit message, got {other:?}"),
         }
-    }
-
-    #[test]
-    fn chat_apply_stats_use_applied_editor_content() {
-        let stats = stats_for_content("\nAI BUILD controlled apply smoke line\n");
-
-        assert_eq!(stats.chars, 38);
-        assert_eq!(stats.words, 6);
-        assert_eq!(stats.lines, 2);
     }
 }
