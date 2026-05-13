@@ -8,10 +8,17 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Mainline gap rescan after smoke queue closure | P2 | docs/plan × features × acceptance-cases × code | 重新确认 smoke 队列闭合后的下一批实现缺口 |
+| 1 | Auth security acceptance refresh | P1 | `09_auth` × `AUTH-003..010/012` × server/auth code | 重新验证 cookie、CORS、CSRF、rate-limit、JWT、WS unauthorized 与 public status endpoint；发现缺陷则小批修复 |
+| 2 | Desktop Web shell browser smoke | P2 | `08_ui_design_02_desktop` × `UI-DESK-001..003` × Web shell | Chrome MCP 验证桌面 diff 滚动同步、layout resize 持久化与 search mode routing |
+| 3 | `.deveignore` watcher/scan user-facing smoke | P2 | `04_storage` × watcher/scan × Source Control UI | 验证 ignored markdown 不进入 pending、tree projection、ledger 或 Source Control 可见变更 |
+| 4 | Mobile residual interaction spot smoke | P2 | `08_ui_design_03_mobile` × residual `UI-MOB-*` | 验证 keyboard toolbar、search result scroll isolation、AI readability/error recovery、mobile diff visibility/close |
+| 5 | Source Control `CommitAndPush` browser smoke | P2 | `07_diff_logic` × `flow.sc.commit-and-push` × Web Source Control | 验证 `Commit & Push` 走 scoped `ClientMessage::CommitAndPush`、以 `CommitAck` 完成，且不授予 Web Git mirror push authority |
+| 6 | Plan-code mapping soft cleanup | P2 | `plan_ref` soft warnings × cohesive file review | 分批补准确 `plan_ref` 或记录 cohesive soft-size 理由；不做机械拆分 |
+| 7 | Optional AI slash command smoke | P3 | `10_ai_agent` × `AI-002/AI-004` | 在 Current MUST/UI Contract 闭合后再验证 `/plan` 与 `/agents` UX |
 
 ## 最近完成
 
+- Mainline gap rescan after smoke queue closure：新增 `mainline-gap-rescan-after-smoke-closure-2026-05-13.md`，确认上一轮 G1-G7 smoke 队列已闭合，native/desktop/mobile 默认 no-packaging skeleton 不是当前阻塞项，并将下一批收敛到 Auth 安全验收复核、Desktop 宽屏 browser smoke、`.deveignore` 用户面 smoke、Mobile 残余交互 spot smoke、Source Control `CommitAndPush`、plan-code 软映射清理与 optional AI slash command smoke。
 - Graph read-only projection panel browser smoke：新增 `graph-readonly-projection-panel-smoke-2026-05-13.md`，用 Chrome MCP 验证 empty / loaded / blocked / degraded Graph states、readonly projection summary、renderer gate closed、HTTP graph projection JSON 与稳定态 console/network 健康，并补齐 Graph panel 可测性 marker。
 - Dashboard SystemMetrics browser smoke：新增 `dashboard-system-metrics-browser-smoke-2026-05-13.md`，用 Chrome MCP 验证 Dashboard live metrics、WS sample refresh、断线冻结、重连恢复、RAM-only 边界、稳定态 console/network 健康，并补齐 Storage/Quick Actions DOM marker。
 - Git mirror CLI-only notice / readonly repair review smoke：新增 `git-mirror-cli-notice-readonly-repair-smoke-2026-05-13.md`，用 Chrome MCP 验证 Git Import/Push/Repair Command Palette notice、readonly repair review、copyable retry command、无 Web Git writer，并修复 CommandId 搜索与 Git notice callback 上下文捕获问题。
