@@ -8,14 +8,14 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Mobile Web shell narrow-viewport smoke | P2 | 375x812 viewport, drawers, search sheet, bottom bar, chat | 验证移动壳层核心入口与手势，console/network 无异常 |
-| 2 | Command Palette / Quick Open / Branch Switcher routing smoke | P2 | Ctrl+P, Ctrl+Shift+P, Ctrl+Shift+K, action routing | 验证快捷键、搜索、键盘导航、执行/取消和 branch switcher UI |
-| 3 | Git mirror CLI-only notice / readonly repair review smoke | P2 | Git Import/Push/Repair notices, repair review readonly states | 验证 Web 不执行 Git writer，只显示 CLI-only notice / readonly review |
-| 4 | Dashboard SystemMetrics browser smoke | P2 | live metrics, stale epoch, disconnected freeze | 验证 Dashboard 指标刷新、断线冻结/恢复、RAM-only 状态 |
-| 5 | Graph read-only projection panel browser smoke | P2 | graph summary, empty/degraded/blocked states, renderer gate | 验证 readonly projection summary 与 renderer future-only 边界 |
+| 1 | Command Palette / Quick Open / Branch Switcher routing smoke | P2 | Ctrl+P, Ctrl+Shift+P, Ctrl+Shift+K, action routing | 验证快捷键、搜索、键盘导航、执行/取消和 branch switcher UI |
+| 2 | Git mirror CLI-only notice / readonly repair review smoke | P2 | Git Import/Push/Repair notices, repair review readonly states | 验证 Web 不执行 Git writer，只显示 CLI-only notice / readonly review |
+| 3 | Dashboard SystemMetrics browser smoke | P2 | live metrics, stale epoch, disconnected freeze | 验证 Dashboard 指标刷新、断线冻结/恢复、RAM-only 状态 |
+| 4 | Graph read-only projection panel browser smoke | P2 | graph summary, empty/degraded/blocked states, renderer gate | 验证 readonly projection summary 与 renderer future-only 边界 |
 
 ## 最近完成
 
+- Mobile Web shell narrow-viewport smoke：新增 `mobile-web-shell-narrow-viewport-smoke-2026-05-13.md`，用 Chrome MCP 真实 375x812 mobile viewport emulation 验证 mobile layout marker、左右 drawer、Search top sheet、bottom bar 折叠/展开、AI Chat 全屏页、44px touch target 与 console/network 健康。
 - Browser storage / projection degraded write-gate smoke：新增 `browser-storage-projection-degraded-write-gate-smoke-2026-05-13.md`，用 Chrome init script 模拟 IndexedDB/WebCrypto 缺失，验证 degraded 横幅、只读 UI、Source Control 写阻断、projection degraded 服务端写闸与 runtime recovery smoke，并修复 Source Control `ReadOnly` hint 误报 remote branch 的文案问题。
 - Repo / remote spectator read-only UI smoke：新增 `remote-spectator-readonly-ui-smoke-2026-05-13.md`，用隔离 local + `peer-a` shadow branch 验证 remote spectator 只读提示、编辑器只读、Explorer/Quick Open 创建阻断、Source Control 写入口阻断与返回本地恢复可写。
 - Network / repo scope browser recovery smoke：新增 `network-repo-scope-browser-recovery-smoke-2026-05-13.md`，用隔离双 repo 数据根与 Chrome MCP 验证 WS 断线锁屏、重连恢复、repo switch 重新握手、scope 隔离与 write gate。
