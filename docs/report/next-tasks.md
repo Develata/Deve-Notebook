@@ -8,10 +8,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Full regression gate after targeted fixes | P2 | `15_release` × workspace | G1-G3 后运行最终格式化、targeted tests，并按资源预算决定是否跑完整 `cargo test` |
+| - | 当前无 active implementation queue | - | - | 上一轮 release / plugin / protocol / regression 队列已闭合；下一批应重新按 gap scan 或用户指定优先级选择 |
 
 ## 最近完成
 
+- Final regression gate：新增 `final-regression-gate-2026-05-13.md`，跑完整 baseline scripts、runtime happy/recovery smoke、全仓库 `cargo test` 与 `cargo clippy --all-targets -- -D warnings`；修复 WS acceptance 旧错误码断言、AI Chat 插件测试 env 竞态，以及 clippy 暴露的 Web incoming / diff metrics 小问题。
 - Protocol error / version alignment capture：新增 `protocol-error-version-alignment-capture-2026-05-13.md`，将 unsupported WS protocol version 统一为 `SYNC_VERSION_MISMATCH`、malformed versioned payload 统一为 `SYNC_INVALID_PAYLOAD`，补齐服务端 versioned JSON / malformed binary 与 Web malformed server frame 测试，并加强 network / structured-error guard。
 - Plugin runtime security boundary refresh：新增 `plugin-runtime-security-boundary-refresh-2026-05-13.md`，确认 manifest entry、host FS、ledger-managed write、Rhai eval/env、trusted-cli policy 与 Web fallback 均 fail-closed；修复 Rhai import 使用裸 `FileModuleResolver` 的边界缺口，新增 `GuardedFileModuleResolver` 阻断 parent traversal 与 symlink escape。
 - Release / production runtime verification refresh：新增 `release-production-runtime-verification-2026-05-13.md`，验证 embedded/static frontend、production auth fail-closed 与配置成功、`/api/node/role`、Chrome MCP production frontend、runtime happy/recovery 与 Docker smoke；同时加强 Docker smoke，使其验证生产登录。

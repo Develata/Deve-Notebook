@@ -123,7 +123,14 @@ mod tests {
 
     #[test]
     fn test_internal_config_defaults() {
-        // 清除可能存在的环境变量 (不影响其他测试——读取时不会修改)
+        let _guard = AI_ENV_LOCK.lock().expect("ai env lock");
+        let _env = EnvGuard::set(&[
+            ("AI_BASE_URL", None),
+            ("AI_API_KEY", None),
+            ("AI_MODEL", None),
+            ("OPENAI_API_KEY", None),
+            ("ANTHROPIC_API_KEY", None),
+        ]);
         let plugin = load_ai_chat();
         let result = plugin
             .call("_build_config", vec![])

@@ -46,30 +46,28 @@ pub fn handle_socket_event(
         SocketEvent::Opened => {}
         SocketEvent::Message(SocketMessage::Bytes(bytes)) => {
             if let Some(server_msg) = decode_binary_message(&bytes) {
-                if !confirm_connection(confirmed_connected, set_status, "binary")
-                    || !enqueue_server_message(
-                        set_msg_seq,
-                        set_msg_queue,
-                        connection_epoch,
-                        server_msg,
-                    )
-                {
-                    return false;
-                }
+                return confirm_and_enqueue_server_message(
+                    confirmed_connected,
+                    set_status,
+                    set_msg_seq,
+                    set_msg_queue,
+                    connection_epoch,
+                    "binary",
+                    server_msg,
+                );
             }
         }
         SocketEvent::Message(SocketMessage::Text(txt)) => {
             if let Some(server_msg) = decode_text_message(&txt) {
-                if !confirm_connection(confirmed_connected, set_status, "text")
-                    || !enqueue_server_message(
-                        set_msg_seq,
-                        set_msg_queue,
-                        connection_epoch,
-                        server_msg,
-                    )
-                {
-                    return false;
-                }
+                return confirm_and_enqueue_server_message(
+                    confirmed_connected,
+                    set_status,
+                    set_msg_seq,
+                    set_msg_queue,
+                    connection_epoch,
+                    "text",
+                    server_msg,
+                );
             }
         }
         SocketEvent::Error => {
@@ -87,6 +85,19 @@ pub fn handle_socket_event(
         }
     }
     true
+}
+
+fn confirm_and_enqueue_server_message(
+    confirmed_connected: &mut bool,
+    set_status: WriteSignal<ConnectionStatus>,
+    set_msg_seq: WriteSignal<u64>,
+    set_msg_queue: WriteSignal<VecDeque<(u64, u64, ServerMessage)>>,
+    connection_epoch: u64,
+    transport: &str,
+    server_msg: ServerMessage,
+) -> bool {
+    confirm_connection(confirmed_connected, set_status, transport)
+        && enqueue_server_message(set_msg_seq, set_msg_queue, connection_epoch, server_msg)
 }
 
 fn confirm_connection(

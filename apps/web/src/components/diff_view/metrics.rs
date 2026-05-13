@@ -79,11 +79,11 @@ mod tests {
 
         let metrics = create_metrics_state();
         record_cache_sample(&metrics, false);
-        assert_eq!(metrics.cache_hit.get_untracked(), false);
+        assert!(!metrics.cache_hit.get_untracked());
         assert_eq!(metrics.cache_hit_ratio.get_untracked(), 0);
 
         record_cache_sample(&metrics, true);
-        assert_eq!(metrics.cache_hit.get_untracked(), true);
+        assert!(metrics.cache_hit.get_untracked());
         assert_eq!(metrics.cache_hits.get_untracked(), 1);
         assert_eq!(metrics.cache_total.get_untracked(), 2);
         assert_eq!(metrics.cache_hit_ratio.get_untracked(), 50);
