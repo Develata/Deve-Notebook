@@ -24,8 +24,8 @@ check_absent() {
 }
 
 # NET-001: reconnect UI and write gate must distinguish network states.
-check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Connecting);"
-check_contains apps/web/src/api/connection.rs "set_status.set(ConnectionStatus::Disconnected);"
+check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, ConnectionStatus::Connecting)"
+check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, ConnectionStatus::Disconnected)"
 check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None"
 check_contains apps/web/src/hooks/use_core/write_gate/logic.rs "ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline)"
 check_contains apps/web/src/hooks/use_core/write_gate/logic.rs "ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting)"

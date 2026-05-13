@@ -39,7 +39,7 @@ check_contains apps/web/src/hooks/use_core/dashboard_context.rs "pub metrics_liv
 check_contains apps/web/src/api/service.rs "pub connection_epoch: ReadSignal<u64>"
 check_contains apps/web/src/api/service/tests.rs "fn dashboard_metrics_stale_connection_epoch_is_not_current()"
 check_contains apps/web/src/api/incoming.rs "push_server_message(queue, next_seq, connection_epoch, server_msg);"
-check_contains apps/web/src/api/connection.rs "set_connection_epoch.set(connection_epoch);"
+check_contains apps/web/src/api/connection.rs ".try_set(signals.set_connection_epoch, connection_epoch)"
 check_contains apps/web/src/hooks/use_core/effects/message.rs "is_current_connection_message(connection_epoch, current_connection_epoch)"
 check_contains apps/web/src/hooks/use_core/effects/message.rs "fn dashboard_metrics_stale_connection_epoch_is_skipped_by_message_effect()"
 check_contains apps/web/src/hooks/use_core/state_init/runtime/sync.rs "let (system_metrics_live, set_system_metrics_live) = signal(false);"
