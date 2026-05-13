@@ -8,17 +8,17 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Network / repo scope browser recovery smoke | P1 | WS reconnect, repo switch, stale scope isolation, write gate | 隔离数据根 + Chrome MCP；验证后端不可达/恢复、多 repo 切换、旧 scope 消息不驱动新 scope、断连/重连写闸 |
-| 2 | Repo / remote spectator read-only UI smoke | P1 | remote/spectator scope, readonly controls, Source Control write block | 验证 remote/spectator 可见只读、create/edit/stage/commit 不可写、返回 local scope 后恢复 |
-| 3 | Browser storage / projection degraded write-gate smoke | P1 | IndexedDB/WebCrypto fallback, degraded projection, mutation block | 验证 degraded 状态用户可见，`RegisterWriter`、edit、Source Control mutation 被阻断 |
-| 4 | Mobile Web shell narrow-viewport smoke | P2 | 375x812 viewport, drawers, search sheet, bottom bar, chat | 验证移动壳层核心入口与手势，console/network 无异常 |
-| 5 | Command Palette / Quick Open / Branch Switcher routing smoke | P2 | Ctrl+P, Ctrl+Shift+P, Ctrl+Shift+K, action routing | 验证快捷键、搜索、键盘导航、执行/取消和 branch switcher UI |
-| 6 | Git mirror CLI-only notice / readonly repair review smoke | P2 | Git Import/Push/Repair notices, repair review readonly states | 验证 Web 不执行 Git writer，只显示 CLI-only notice / readonly review |
-| 7 | Dashboard SystemMetrics browser smoke | P2 | live metrics, stale epoch, disconnected freeze | 验证 Dashboard 指标刷新、断线冻结/恢复、RAM-only 状态 |
-| 8 | Graph read-only projection panel browser smoke | P2 | graph summary, empty/degraded/blocked states, renderer gate | 验证 readonly projection summary 与 renderer future-only 边界 |
+| 1 | Repo / remote spectator read-only UI smoke | P1 | remote/spectator scope, readonly controls, Source Control write block | 验证 remote/spectator 可见只读、create/edit/stage/commit 不可写、返回 local scope 后恢复 |
+| 2 | Browser storage / projection degraded write-gate smoke | P1 | IndexedDB/WebCrypto fallback, degraded projection, mutation block | 验证 degraded 状态用户可见，`RegisterWriter`、edit、Source Control mutation 被阻断 |
+| 3 | Mobile Web shell narrow-viewport smoke | P2 | 375x812 viewport, drawers, search sheet, bottom bar, chat | 验证移动壳层核心入口与手势，console/network 无异常 |
+| 4 | Command Palette / Quick Open / Branch Switcher routing smoke | P2 | Ctrl+P, Ctrl+Shift+P, Ctrl+Shift+K, action routing | 验证快捷键、搜索、键盘导航、执行/取消和 branch switcher UI |
+| 5 | Git mirror CLI-only notice / readonly repair review smoke | P2 | Git Import/Push/Repair notices, repair review readonly states | 验证 Web 不执行 Git writer，只显示 CLI-only notice / readonly review |
+| 6 | Dashboard SystemMetrics browser smoke | P2 | live metrics, stale epoch, disconnected freeze | 验证 Dashboard 指标刷新、断线冻结/恢复、RAM-only 状态 |
+| 7 | Graph read-only projection panel browser smoke | P2 | graph summary, empty/degraded/blocked states, renderer gate | 验证 readonly projection summary 与 renderer future-only 边界 |
 
 ## 最近完成
 
+- Network / repo scope browser recovery smoke：新增 `network-repo-scope-browser-recovery-smoke-2026-05-13.md`，用隔离双 repo 数据根与 Chrome MCP 验证 WS 断线锁屏、重连恢复、repo switch 重新握手、scope 隔离与 write gate。
 - Mainline gap rescan：新增 `mainline-gap-rescan-2026-05-13.md`，重新按 `docs/plan × features × acceptance-cases × code` 选择下一批 browser smoke，并修复 network/dashboard guard 对 lifecycle-aware `try_set` 的旧匹配。
 - Settings / Extensions reserved UI browser smoke：新增 `settings-extensions-reserved-ui-browser-smoke-2026-05-13.md`，用隔离数据根与 Chrome MCP 验证 Trusted CLI default-off、Settings reserved marker、Calculation Runtime planned/disabled 与 `/api/settings` absent，并补齐 `aria-disabled` / reserved marker。
 - Rendering interaction spot smoke：新增 `rendering-interaction-spot-smoke-2026-05-13.md`，用隔离数据根与 Chrome MCP 验证 code toolbar、Ctrl/Cmd link activation、Outline navigation、Mermaid projection/source reveal、nested rendering 与 source authority。
