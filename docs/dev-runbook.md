@@ -233,6 +233,7 @@ scripts/check-auth-unauthorized-state.sh
 scripts/check-network-baseline.sh
 scripts/check-cli-settings-baseline.sh
 scripts/check-browser-prefs-boundary.sh
+scripts/check-storage-repo-baseline.sh
 scripts/check-search-baseline.sh
 scripts/check-rendering-baseline.sh
 scripts/check-ai-baseline.sh
