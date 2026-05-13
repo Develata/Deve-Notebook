@@ -6,12 +6,11 @@
 
 ## 当前执行队列
 
-| 顺序 | TODO | 优先级 | 范围 | 验收口径 |
-|:--|:--|:--|:--|:--|
-| 1 | Optional AI slash command smoke | P3 | `10_ai_agent` × `AI-002/AI-004` | 在 Current MUST/UI Contract 闭合后再验证 `/plan` 与 `/agents` UX |
+当前无 active execution item。
 
 ## 最近完成
 
+- Optional AI slash command smoke：新增 `ai-slash-command-browser-smoke-2026-05-13.md`，用隔离数据根验证 `/plan` 与 `/agents` 只切换 Native PLAN/BUILD session mode、不切 backend、不发起 provider/plugin call，并确认浏览器 console/network 健康。
 - Plan-code mapping soft cleanup：新增 `plan-code-mapping-soft-cleanup-2026-05-13.md`，修正测试目录/`*_tests.rs` 的 `plan_ref` soft warning 豁免，并给剩余 Git bridge / protocol / commit diff 生产模块补准确 `plan_ref`；非豁免缺失注解从 56 降到 0，未触碰 `docs/plan/`，未做机械拆分。
 - Source Control `CommitAndPush` browser smoke：新增 `source-control-commit-and-push-browser-smoke-2026-05-13.md`，用隔离数据根验证 watcher pending、stage、split action `提交并推送`、`CommitAck` 完成、reload clean state 与无 Web Git mirror push authority；未发现业务代码缺陷。
 - Mobile residual interaction spot smoke：新增 `mobile-residual-interaction-smoke-2026-05-13.md`，用 Chrome MCP 真实移动视口验证 keyboard toolbar gate、Search Top Sheet 滚动隔离、AI Chat 可读性/结构化错误/retry 与 mobile diff 打开/关闭；修复 `ai-chat` 缺 API key 误作为 text success 返回、CLI plugin error result 结构化转换缺失、ChatPanel 错误 effect 对 pending req 过度依赖的问题。
