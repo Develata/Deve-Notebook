@@ -8,12 +8,12 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Source Control `CommitAndPush` browser smoke | P2 | `07_diff_logic` × `flow.sc.commit-and-push` × Web Source Control | 验证 `Commit & Push` 走 scoped `ClientMessage::CommitAndPush`、以 `CommitAck` 完成，且不授予 Web Git mirror push authority |
-| 2 | Plan-code mapping soft cleanup | P2 | `plan_ref` soft warnings × cohesive file review | 分批补准确 `plan_ref` 或记录 cohesive soft-size 理由；不做机械拆分 |
-| 3 | Optional AI slash command smoke | P3 | `10_ai_agent` × `AI-002/AI-004` | 在 Current MUST/UI Contract 闭合后再验证 `/plan` 与 `/agents` UX |
+| 1 | Plan-code mapping soft cleanup | P2 | `plan_ref` soft warnings × cohesive file review | 分批补准确 `plan_ref` 或记录 cohesive soft-size 理由；不做机械拆分 |
+| 2 | Optional AI slash command smoke | P3 | `10_ai_agent` × `AI-002/AI-004` | 在 Current MUST/UI Contract 闭合后再验证 `/plan` 与 `/agents` UX |
 
 ## 最近完成
 
+- Source Control `CommitAndPush` browser smoke：新增 `source-control-commit-and-push-browser-smoke-2026-05-13.md`，用隔离数据根验证 watcher pending、stage、split action `提交并推送`、`CommitAck` 完成、reload clean state 与无 Web Git mirror push authority；未发现业务代码缺陷。
 - Mobile residual interaction spot smoke：新增 `mobile-residual-interaction-smoke-2026-05-13.md`，用 Chrome MCP 真实移动视口验证 keyboard toolbar gate、Search Top Sheet 滚动隔离、AI Chat 可读性/结构化错误/retry 与 mobile diff 打开/关闭；修复 `ai-chat` 缺 API key 误作为 text success 返回、CLI plugin error result 结构化转换缺失、ChatPanel 错误 effect 对 pending req 过度依赖的问题。
 - `.deveignore` watcher/scan user-facing smoke：新增 `deveignore-watcher-scan-browser-smoke-2026-05-13.md`，用隔离数据根验证 repo-relative 与 vault-relative ignore 规则覆盖 startup scan、watcher 增量事件、Source Control pending/status、repo docs、graph projection、export/dump 与 reload recovery；ignored Markdown 未进入 pending、tree projection、ledger 或 UI 可见变更。
 - Desktop Web shell browser smoke：新增 `desktop-web-shell-browser-smoke-2026-05-13.md`，用 Chrome MCP 验证 desktop breakpoint、五列布局 marker、sidebar/right panel resize 持久化、Source Control diff 双栏滚动同步、Unified Search command/branch/file routing 与当前导航 console/network 健康；未发现代码缺陷。
