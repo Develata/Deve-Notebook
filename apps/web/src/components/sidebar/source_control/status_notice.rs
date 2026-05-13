@@ -43,10 +43,32 @@ pub(crate) fn blocked_hint(locale: Locale, block: RepoWriteBlock) -> &'static st
         RepoWriteBlock::Offline => sc::offline_hint(locale),
         RepoWriteBlock::Reconnecting => sc::reconnecting_hint(locale),
         RepoWriteBlock::SnapshotLoading => sc::snapshot_loading_hint(locale),
-        RepoWriteBlock::ReadOnly => sc::remote_branch_readonly_hint(locale),
+        RepoWriteBlock::ReadOnly => sc::readonly_write_gate_hint(locale),
         RepoWriteBlock::ScopeSwitching => sc::scope_switching_hint(locale),
         RepoWriteBlock::NoRepo => sc::no_repo_hint(locale),
         RepoWriteBlock::HandshakingRepo => sc::handshaking_repo_hint(locale),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::i18n::{Locale, source_control};
+
+    #[test]
+    fn readonly_hint_does_not_assume_remote_branch() {
+        assert_eq!(
+            blocked_hint(Locale::Zh, RepoWriteBlock::ReadOnly),
+            source_control::readonly_write_gate_hint(Locale::Zh)
+        );
+        assert_ne!(
+            blocked_hint(Locale::Zh, RepoWriteBlock::ReadOnly),
+            source_control::remote_branch_readonly_hint(Locale::Zh)
+        );
+        assert_eq!(
+            blocked_hint(Locale::En, RepoWriteBlock::ReadOnly),
+            source_control::readonly_write_gate_hint(Locale::En)
+        );
     }
 }
 

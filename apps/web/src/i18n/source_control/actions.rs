@@ -157,3 +157,12 @@ pub fn remote_branch_readonly_hint(locale: Locale) -> &'static str {
         Locale::Zh => "切回本地分支后才能查看变更、暂存文件或提交。",
     }
 }
+
+pub fn readonly_write_gate_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Restore a writable local state before viewing changes, staging files, or committing."
+        }
+        Locale::Zh => "恢复本地可写状态后才能查看变更、暂存文件或提交。",
+    }
+}
