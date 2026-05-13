@@ -129,10 +129,10 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                     </div>
                     <div class="bg-sidebar px-4 py-2 border-t border-default flex justify-between items-center text-xs text-muted">
                         <div class="flex gap-4">
-                            <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Up/Down</kbd> to navigate</span>
-                            <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Enter</kbd> to select</span>
+                            <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Up/Down</kbd> " " {move || t::command_palette::keyboard_navigate_hint(locale.get())}</span>
+                            <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Enter</kbd> " " {move || t::command_palette::keyboard_select_hint(locale.get())}</span>
                         </div>
-                        <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Esc</kbd> to close</span>
+                        <span><kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">Esc</kbd> " " {move || t::command_palette::keyboard_close_hint(locale.get())}</span>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 use super::*;
 use crate::components::search_box::file_ops::parser::ParsedArgs;
 use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchAction};
+use crate::i18n::Locale;
 
 fn parsed_args(args: &[&str], ends_with_space: bool) -> ParsedArgs {
     ParsedArgs {
@@ -14,7 +15,7 @@ fn parsed_args(args: &[&str], ends_with_space: bool) -> ParsedArgs {
 #[test]
 fn move_same_source_and_destination_returns_error() {
     let parsed = parsed_args(&["notes/today.md", "notes/today.md"], false);
-    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].detail.as_deref(), Some("Error"));
@@ -24,7 +25,7 @@ fn move_same_source_and_destination_returns_error() {
 #[test]
 fn move_same_directory_target_returns_error_after_finalization() {
     let parsed = parsed_args(&["notes/today.md", "notes/"], false);
-    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].detail.as_deref(), Some("Error"));
@@ -34,7 +35,7 @@ fn move_same_directory_target_returns_error_after_finalization() {
 #[test]
 fn copy_different_destination_builds_file_op_action() {
     let parsed = parsed_args(&["notes/today.md", "archive/"], false);
-    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &[], &[]);
+    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &[], &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     match &results[0].action {
@@ -50,7 +51,7 @@ fn copy_different_destination_builds_file_op_action() {
 #[test]
 fn move_without_source_returns_error() {
     let parsed = parsed_args(&[], false);
-    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].detail.as_deref(), Some("Error"));
@@ -60,7 +61,7 @@ fn move_without_source_returns_error() {
 #[test]
 fn move_rejects_traversal_source_path() {
     let parsed = parsed_args(&["../secret.md", "notes/ok.md"], false);
-    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[]);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].detail.as_deref(), Some("Error"));
@@ -70,7 +71,7 @@ fn move_rejects_traversal_source_path() {
 #[test]
 fn copy_rejects_reserved_destination_path() {
     let parsed = parsed_args(&["notes/today.md", ".notegit/copy.md"], false);
-    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &[], &[]);
+    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &[], &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].detail.as_deref(), Some("Error"));
@@ -84,7 +85,7 @@ fn move_directory_suggestions_skip_noop_target() {
         (DocId::from_u128(1), "notes/today.md".to_string()),
         (DocId::from_u128(2), "archive/other.md".to_string()),
     ];
-    let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[]);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[], Locale::En);
 
     let queries: Vec<String> = results
         .iter()

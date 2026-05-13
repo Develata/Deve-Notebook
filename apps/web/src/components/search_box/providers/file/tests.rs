@@ -1,9 +1,13 @@
 use super::FileProvider;
 use crate::components::search_box::types::{SearchAction, SearchProvider};
+use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 
 fn provider() -> FileProvider {
-    FileProvider::new(vec![(DocId::from_u128(1), "notes/existing.md".to_string())])
+    FileProvider::new(
+        vec![(DocId::from_u128(1), "notes/existing.md".to_string())],
+        Locale::En,
+    )
 }
 
 #[test]
@@ -30,6 +34,24 @@ fn file_provider_trims_create_candidate_query() {
         .expect("create candidate");
     assert_eq!(create.0, "Create/Open 'notes/new'");
     assert_eq!(create.1, "notes/new");
+}
+
+#[test]
+fn file_provider_localizes_create_candidate_title() {
+    let provider = FileProvider::new(
+        vec![(DocId::from_u128(1), "notes/existing.md".to_string())],
+        Locale::Zh,
+    );
+    let results = provider.search("notes/new");
+
+    let create = results
+        .iter()
+        .find_map(|result| match &result.action {
+            SearchAction::CreateDoc(_) => Some(result.title.clone()),
+            _ => None,
+        })
+        .expect("create candidate");
+    assert_eq!(create, t::search::create_or_open(Locale::Zh, "notes/new"));
 }
 
 #[test]

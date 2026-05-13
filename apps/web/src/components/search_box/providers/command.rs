@@ -5,14 +5,16 @@
 use crate::components::command_palette::Command;
 use crate::components::search_box::score::score_desc;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::i18n::{Locale, t};
 
 pub struct CommandProvider {
     commands: Vec<Command>,
+    locale: Locale,
 }
 
 impl CommandProvider {
-    pub fn new(commands: Vec<Command>) -> Self {
-        Self { commands }
+    pub fn new(commands: Vec<Command>, locale: Locale) -> Self {
+        Self { commands, locale }
     }
 }
 
@@ -28,7 +30,7 @@ impl SearchProvider for CommandProvider {
                 .map(|cmd| SearchResult {
                     id: cmd.id.clone(),
                     title: cmd.title.clone(),
-                    detail: Some("Command".to_string()),
+                    detail: Some(t::search::command_detail(self.locale).to_string()),
                     score: 1.0,
                     action: SearchAction::RunCommand(cmd.clone()),
                 })
@@ -46,7 +48,7 @@ impl SearchProvider for CommandProvider {
             .map(|(cmd, score)| SearchResult {
                 id: cmd.id.clone(),
                 title: cmd.title.clone(),
-                detail: Some("Command".to_string()),
+                detail: Some(t::search::command_detail(self.locale).to_string()),
                 score,
                 action: SearchAction::RunCommand(cmd.clone()),
             })
@@ -88,10 +90,13 @@ mod tests {
 
     #[test]
     fn command_provider_matches_stable_command_id_words() {
-        let provider = CommandProvider::new(vec![command(
-            "git_import_changes",
-            t::command_palette::git_import_changes(Locale::Zh),
-        )]);
+        let provider = CommandProvider::new(
+            vec![command(
+                "git_import_changes",
+                t::command_palette::git_import_changes(Locale::Zh),
+            )],
+            Locale::Zh,
+        );
 
         let results = provider.search(">git import");
 
@@ -103,10 +108,13 @@ mod tests {
 
     #[test]
     fn command_provider_matches_command_id_even_when_title_is_localized() {
-        let provider = CommandProvider::new(vec![command(
-            "git_push_mirror",
-            t::command_palette::git_push_mirror(Locale::Zh),
-        )]);
+        let provider = CommandProvider::new(
+            vec![command(
+                "git_push_mirror",
+                t::command_palette::git_push_mirror(Locale::Zh),
+            )],
+            Locale::Zh,
+        );
 
         let results = provider.search(">git push");
 

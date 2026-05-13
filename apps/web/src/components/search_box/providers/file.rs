@@ -5,6 +5,7 @@
 use crate::components::search_box::file_ops::validate_doc_shell_path;
 use crate::components::search_box::score::score_desc;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 
 #[cfg(test)]
@@ -12,11 +13,12 @@ mod tests;
 
 pub struct FileProvider {
     docs: Vec<(DocId, String)>,
+    locale: Locale,
 }
 
 impl FileProvider {
-    pub fn new(docs: Vec<(DocId, String)>) -> Self {
-        Self { docs }
+    pub fn new(docs: Vec<(DocId, String)>, locale: Locale) -> Self {
+        Self { docs, locale }
     }
 }
 
@@ -69,8 +71,8 @@ impl SearchProvider for FileProvider {
         {
             results.push(SearchResult {
                 id: "create-doc".to_string(),
-                title: format!("Create/Open '{}'", create_query),
-                detail: Some("New File".to_string()),
+                title: t::search::create_or_open(self.locale, create_query),
+                detail: Some(t::common::new_file(self.locale).to_string()),
                 score: 0.1,
                 action: SearchAction::CreateDoc(create_query.to_string()),
             });

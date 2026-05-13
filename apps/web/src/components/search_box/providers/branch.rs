@@ -4,21 +4,24 @@
 //!
 use crate::components::search_box::score::score_desc;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::i18n::{Locale, t};
 
 pub const LOCAL_BRANCH_LABEL: &str = "Local";
 
 pub struct BranchProvider {
     branches: Vec<String>,
     current_branch: Option<String>,
+    locale: Locale,
 }
 
 impl BranchProvider {
-    pub fn new(shadows: Vec<String>, current: Option<String>) -> Self {
+    pub fn new(shadows: Vec<String>, current: Option<String>, locale: Locale) -> Self {
         let mut branches = vec![LOCAL_BRANCH_LABEL.to_string()];
         branches.extend(shadows);
         Self {
             branches,
             current_branch: current,
+            locale,
         }
     }
 }
@@ -44,7 +47,7 @@ impl SearchProvider for BranchProvider {
             .map(|(name, score)| SearchResult {
                 id: name.clone(),
                 title: name.clone(),
-                detail: branch_detail(name, self.current_branch.as_deref()),
+                detail: branch_detail(name, self.current_branch.as_deref(), self.locale),
                 score,
                 action: SearchAction::SwitchBranch(name.clone()),
             })
@@ -55,13 +58,13 @@ impl SearchProvider for BranchProvider {
     }
 }
 
-fn branch_detail(name: &str, current_branch: Option<&str>) -> Option<String> {
+fn branch_detail(name: &str, current_branch: Option<&str>, locale: Locale) -> Option<String> {
     if current_branch == Some(name) {
-        Some("Current Branch".to_string())
+        Some(t::search::current_branch(locale).to_string())
     } else if name == LOCAL_BRANCH_LABEL {
         None
     } else {
-        Some("Remote Branch".to_string())
+        Some(t::search::remote_branch(locale).to_string())
     }
 }
 
@@ -69,15 +72,17 @@ fn branch_detail(name: &str, current_branch: Option<&str>) -> Option<String> {
 mod tests {
     use super::{BranchProvider, branch_detail};
     use crate::components::search_box::types::SearchProvider;
+    use crate::i18n::{Locale, t};
 
     #[test]
     fn branch_detail_keeps_local_entry_local_when_remote_is_current() {
-        assert_eq!(branch_detail("Local", Some("peer-a")), None);
+        assert_eq!(branch_detail("Local", Some("peer-a"), Locale::En), None);
     }
 
     #[test]
     fn branch_provider_marks_local_entry_as_local_when_viewing_remote() {
-        let provider = BranchProvider::new(vec!["peer-a".into()], Some("peer-a".into()));
+        let provider =
+            BranchProvider::new(vec!["peer-a".into()], Some("peer-a".into()), Locale::En);
         let results = provider.search("@");
         let local = results
             .iter()
@@ -88,12 +93,26 @@ mod tests {
 
     #[test]
     fn branch_provider_marks_remote_entry_as_remote_when_not_current() {
-        let provider = BranchProvider::new(vec!["peer-a".into()], Some("Local".into()));
+        let provider = BranchProvider::new(vec!["peer-a".into()], Some("Local".into()), Locale::En);
         let results = provider.search("@");
         let remote = results
             .iter()
             .find(|result| result.title == "peer-a")
             .expect("missing remote branch entry");
         assert_eq!(remote.detail.as_deref(), Some("Remote Branch"));
+    }
+
+    #[test]
+    fn branch_provider_localizes_remote_detail() {
+        let provider = BranchProvider::new(vec!["peer-a".into()], Some("Local".into()), Locale::Zh);
+        let results = provider.search("@");
+        let remote = results
+            .iter()
+            .find(|result| result.title == "peer-a")
+            .expect("missing remote branch entry");
+        assert_eq!(
+            remote.detail.as_deref(),
+            Some(t::search::remote_branch(Locale::Zh))
+        );
     }
 }

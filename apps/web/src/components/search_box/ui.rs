@@ -155,7 +155,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                         results_ref,
                         ui_mode,
                     })}
-                    {footer(ui_mode)}
+                    {footer(ui_mode, locale)}
                 </div>
             </div>
         </Show>

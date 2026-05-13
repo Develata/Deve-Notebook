@@ -90,12 +90,12 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
                     .iter()
                     .map(|(k, v)| (*k, v.clone()))
                     .collect::<Vec<_>>();
-                file_ops::build_file_ops_results(&q, &doc_list, &recent_move_dirs.get())
+                file_ops::build_file_ops_results(&q, &doc_list, &recent_move_dirs.get(), now_locale)
             }
             SearchSurfaceMode::Command => {
                 let cmds =
                     create_static_commands(now_locale, on_settings, on_open, set_show, locale);
-                CommandProvider::new(cmds).search(&q)
+                CommandProvider::new(cmds, now_locale).search(&q)
             }
             SearchSurfaceMode::Branch => {
                 let current = core
@@ -103,7 +103,8 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
                     .get()
                     .map(|p| p.to_string())
                     .or(Some(LOCAL_BRANCH_LABEL.to_string()));
-                providers::BranchProvider::new(core.shadow_repos.get(), current).search(&q)
+                providers::BranchProvider::new(core.shadow_repos.get(), current, now_locale)
+                    .search(&q)
             }
             SearchSurfaceMode::FullText => {
                 let stripped = q.strip_prefix('?').unwrap_or_default();
@@ -130,7 +131,7 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
                     .iter()
                     .map(|(k, v)| (*k, v.clone()))
                     .collect::<Vec<_>>();
-                FileProvider::new(doc_list).search(&q)
+                FileProvider::new(doc_list, now_locale).search(&q)
             }
         }
     })

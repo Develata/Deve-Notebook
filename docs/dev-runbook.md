@@ -239,6 +239,7 @@ scripts/check-search-baseline.sh
 scripts/check-rendering-baseline.sh
 scripts/check-ai-baseline.sh
 scripts/check-feature-operation-paths.sh
+scripts/check-i18n-hardcoded-baseline.sh
 scripts/check-i18n-formatting-baseline.sh
 scripts/check-source-control-baseline.sh
 scripts/check-source-control-smoke-hygiene.sh

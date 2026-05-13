@@ -5,12 +5,18 @@
 use crate::components::search_box::types::{
     FileOpAction, FileOpKind, InsertQuery, SearchAction, SearchResult,
 };
+use crate::i18n::{Locale, t};
 
 use super::super::path_utils::{
     finalize_dst, format_arg, format_dir_arg_with_cursor, normalize_doc_path,
 };
 
-pub(super) fn build_execute_result(kind: FileOpKind, src: &str, dst: &str) -> Option<SearchResult> {
+pub(super) fn build_execute_result(
+    kind: FileOpKind,
+    src: &str,
+    dst: &str,
+    locale: Locale,
+) -> Option<SearchResult> {
     let src_norm = normalize_doc_path(src);
     let dst_norm = finalize_dst(&src_norm, dst);
 
@@ -19,15 +25,15 @@ pub(super) fn build_execute_result(kind: FileOpKind, src: &str, dst: &str) -> Op
     }
 
     let title = match kind {
-        FileOpKind::Move => format!("Move: {} -> {}", src_norm, dst_norm),
-        FileOpKind::Copy => format!("Copy: {} -> {}", src_norm, dst_norm),
+        FileOpKind::Move => t::search::move_file_op(locale, &src_norm, &dst_norm),
+        FileOpKind::Copy => t::search::copy_file_op(locale, &src_norm, &dst_norm),
         FileOpKind::Remove => return None,
     };
 
     Some(SearchResult {
         id: format!("fileop-{}-{}", src_norm, dst_norm),
         title,
-        detail: Some("FileOp".to_string()),
+        detail: Some(t::search::file_op_detail(locale).to_string()),
         score: 1.0,
         action: SearchAction::FileOp(FileOpAction {
             kind,
@@ -54,21 +60,21 @@ pub(super) fn build_insert_query(kind: &FileOpKind, src: &str, dir: &str) -> Ins
     }
 }
 
-pub(super) fn group_header(title: &str) -> SearchResult {
+pub(super) fn group_header(title: &str, locale: Locale) -> SearchResult {
     SearchResult {
         id: format!("group-{}", title.to_lowercase()),
         title: title.to_string(),
-        detail: Some("Group".to_string()),
+        detail: Some(t::search::group_detail(locale).to_string()),
         score: 0.0,
         action: SearchAction::Noop,
     }
 }
 
-pub(super) fn error_result(msg: String) -> SearchResult {
+pub(super) fn error_result(locale: Locale, msg: String) -> SearchResult {
     SearchResult {
         id: "fileop-error".to_string(),
         title: msg,
-        detail: Some("Error".to_string()),
+        detail: Some(t::search::error_detail(locale).to_string()),
         score: 0.0,
         action: SearchAction::Noop,
     }

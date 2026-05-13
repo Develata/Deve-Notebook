@@ -92,6 +92,27 @@ pub fn toggle_ai_chat(locale: Locale) -> &'static str {
     }
 }
 
+pub fn keyboard_navigate_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "to navigate",
+        Locale::Zh => "导航",
+    }
+}
+
+pub fn keyboard_select_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "to select",
+        Locale::Zh => "选择",
+    }
+}
+
+pub fn keyboard_close_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "to close",
+        Locale::Zh => "关闭",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

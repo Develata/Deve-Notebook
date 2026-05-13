@@ -15,6 +15,7 @@ mod results;
 pub use path_utils::{normalize_doc_path, validate_doc_shell_path};
 
 use crate::components::search_box::types::{FileOpKind, SearchResult};
+use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 
 use parser::{parse_args, split_command};
@@ -40,6 +41,7 @@ pub fn build_file_ops_results(
     query: &str,
     docs: &[(DocId, String)],
     recent_dirs: &[String],
+    locale: Locale,
 ) -> Vec<SearchResult> {
     let Some((kind, after_cmd)) = detect_file_op(query) else {
         return Vec::new();
@@ -47,17 +49,20 @@ pub fn build_file_ops_results(
 
     let parsed = parse_args(after_cmd);
     if let Some(err) = parsed.error {
-        return vec![error_result(err)];
+        return vec![error_result(locale, err)];
     }
 
     if parsed.in_quote {
-        return vec![error_result("Unclosed quote".to_string())];
+        return vec![error_result(
+            locale,
+            t::search::unclosed_quote(locale).to_string(),
+        )];
     }
 
     match kind {
-        FileOpKind::Remove => build_remove_results(&parsed.args),
+        FileOpKind::Remove => build_remove_results(&parsed.args, locale),
         FileOpKind::Move | FileOpKind::Copy => {
-            build_move_copy_results(kind, &parsed, docs, recent_dirs)
+            build_move_copy_results(kind, &parsed, docs, recent_dirs, locale)
         }
     }
 }
