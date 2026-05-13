@@ -44,7 +44,10 @@ pub fn ActionsCard() -> impl IntoView {
     };
 
     view! {
-        <div class="bg-panel rounded-lg border border-default p-4">
+        <div
+            class="bg-panel rounded-lg border border-default p-4"
+            data-deve-dashboard-card="quick-actions"
+        >
             <h3 class="text-sm font-semibold text-secondary mb-3">{move || t::dashboard::quick_actions(locale.get())}</h3>
             <div class="flex gap-2">
                 <button

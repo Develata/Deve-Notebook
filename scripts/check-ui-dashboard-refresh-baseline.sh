@@ -55,6 +55,9 @@ check_contains apps/web/src/components/dashboard/health_card.rs "data-deve-dashb
 check_contains apps/web/src/components/dashboard/health_card.rs "data-deve-dashboard-health-sample"
 check_contains apps/web/src/components/dashboard/sync_card.rs "data-deve-dashboard-sync-source=\"ws-system-metrics\""
 check_contains apps/web/src/components/dashboard/sync_card.rs "data-deve-dashboard-sync-sample"
+check_contains apps/web/src/components/dashboard/storage_card.rs "data-deve-dashboard-card=\"storage\""
+check_contains apps/web/src/components/dashboard/storage_card.rs "data-deve-dashboard-storage-source=\"ws-system-metrics\""
+check_contains apps/web/src/components/dashboard/actions_card.rs "data-deve-dashboard-card=\"quick-actions\""
 
 check_absent apps/web/src/hooks/use_core/dashboard_context.rs "localStorage"
 check_absent apps/web/src/hooks/use_core/dashboard_context.rs "indexedDB"

@@ -29,7 +29,13 @@ pub fn StorageCard(metrics: SystemMetricsData) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     view! {
-        <div class="bg-panel rounded-lg border border-default p-4">
+        <div
+            class="bg-panel rounded-lg border border-default p-4"
+            data-deve-dashboard-card="storage"
+            data-deve-dashboard-storage-source="ws-system-metrics"
+            data-deve-dashboard-storage-db-size-bytes=metrics.db_size_bytes.to_string()
+            data-deve-dashboard-storage-doc-count=metrics.doc_count.to_string()
+        >
             <h3 class="text-sm font-semibold text-secondary mb-3">{move || t::dashboard::storage(locale.get())}</h3>
             <div class="space-y-2">
                 <div class="flex justify-between items-center">
