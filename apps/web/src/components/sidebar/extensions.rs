@@ -70,7 +70,12 @@ pub fn ExtensionsView() -> impl IntoView {
                             </span>
                         </div>
                     </div>
-                    <div class="rounded-xl border border-dashed border-default bg-panel p-4 opacity-75">
+                    <div
+                        class="rounded-xl border border-dashed border-default bg-panel p-4 opacity-75"
+                        data-deve-extension-reserved="calculation-runtime"
+                        aria-disabled="true"
+                        title=move || t::extensions::code_execution_disabled(locale.get())
+                    >
                         <div class="flex items-start justify-between gap-3">
                             <div class="flex gap-3">
                                 <div class="rounded-lg bg-active p-2 text-primary"><Puzzle class="w-5 h-5" /></div>

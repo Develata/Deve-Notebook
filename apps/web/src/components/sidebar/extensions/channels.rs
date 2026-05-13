@@ -40,6 +40,7 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
                     "w-full rounded-xl border border-default bg-panel hover:bg-active p-4 text-left transition-colors"
                 }
                 disabled=move || !native_available.get()
+                aria-disabled=move || (!native_available.get()).to_string()
                 title=native_reason
                 on:click=move |_| {
                     if native_available.get_untracked() {
@@ -69,6 +70,7 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
                     "w-full rounded-xl border border-default bg-panel hover:bg-active p-4 text-left transition-colors"
                 }
                 disabled=move || !trusted_available.get()
+                aria-disabled=move || (!trusted_available.get()).to_string()
                 title=trusted_reason
                 on:click=move |_| {
                     if trusted_available.get_untracked() {

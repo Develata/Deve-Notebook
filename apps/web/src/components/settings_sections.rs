@@ -70,6 +70,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                     <button
                         class=move || button_state.get().native_class
                         disabled=move || button_state.get().native_disabled
+                        aria-disabled=move || button_state.get().native_disabled.to_string()
                         title=move || button_state.get().native_title
                         on:click=move |_| {
                             if !button_state.get_untracked().native_disabled {
@@ -82,6 +83,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                     <button
                         class=move || button_state.get().trusted_class
                         disabled=move || button_state.get().trusted_disabled
+                        aria-disabled=move || button_state.get().trusted_disabled.to_string()
                         title=move || button_state.get().trusted_title
                         on:click=move |_| {
                             if !button_state.get_untracked().trusted_disabled {
