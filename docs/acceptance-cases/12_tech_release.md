@@ -60,7 +60,7 @@
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
     - run: cargo test --locked
-    - run: cargo audit
+    - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
   assertions:
     - exit_code_all_eq: 0
 

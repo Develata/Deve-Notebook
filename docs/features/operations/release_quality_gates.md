@@ -36,6 +36,15 @@
 - `Immediate Result`: protocol or shared-core references to backend-only modules fail before publish
 - `Application Entry`: `.github/workflows/release.yml`, `apps/web/`
 
+### `op.release.quality.audit-dependencies`
+
+- `Name`: Audit Dependency Advisories
+- `Surface`: `github-actions`, `local-or-ci-script`
+- `Trigger`: release test job or maintainer release preflight reaches dependency audit stage
+- `Preconditions`: `cargo-audit` and `npm` are available, or local diagnostic-only skip is acceptable
+- `Immediate Result`: high-risk dependency advisories block release when required mode is enabled
+- `Application Entry`: `.github/workflows/release.yml`, `scripts/check-release-audit-gate.sh`
+
 ### `op.release.quality.run-tests`
 
 - `Name`: `Run Test Gate`
@@ -67,10 +76,10 @@
 
 1. Release dispatch enters the `test` job.
 2. Instruction interface is the CI job surface and its ordered verification steps.
-3. Flow coordination enforces lint, web WASM compatibility, and test gates before publish; runtime happy-path and recovery smokes remain explicit local/CI script gates.
+3. Flow coordination enforces lint, web WASM compatibility, dependency audit, and test gates before publish; runtime happy-path and recovery smokes remain explicit local/CI script gates.
 4. Execution domains are CI release logic, quality gates, and runtime budget policy.
 
 ## Notes
 
-- Current workflow explicitly models `clippy`, `deve_web` WASM check, and `cargo test`; runtime smoke scripts are local/CI gates that can be run before broader release verification.
+- Current workflow explicitly models `clippy`, `deve_web` WASM check, dependency audit, and `cargo test`; runtime smoke scripts are local/CI gates that can be run before broader release verification.
 - Main objects: `quality::gate`, `ci::workflow`, `runtime::budget`.

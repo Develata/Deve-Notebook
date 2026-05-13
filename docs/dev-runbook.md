@@ -175,6 +175,31 @@ The public endpoint intentionally exposes aggregate counts only. Use
 `node-check --projection --repo <repo>` or protected `/api/admin/projection-check`
 for repo-specific details.
 
+## Release Dependency Audit
+
+Local diagnostic mode:
+
+```bash
+scripts/check-release-audit-gate.sh
+```
+
+The script runs `cargo audit` when `cargo-audit` is installed and runs
+`npm audit --audit-level=high` for `apps/web` when `npm` is available. Missing
+tools print an explicit skip diagnostic in local mode.
+
+Release / CI required mode:
+
+```bash
+DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
+```
+
+Required mode fails closed if `cargo-audit` or `npm` is unavailable.
+Install the Rust audit tool with:
+
+```bash
+cargo install cargo-audit --locked
+```
+
 ## Runtime Happy Path Smoke
 
 Validate the current in-process runtime write/read path without depending on the
@@ -259,6 +284,7 @@ scripts/check-ui-token-baseline.sh
 scripts/check-ui-z-index-baseline.sh
 scripts/check-dev-runbook-baseline.sh
 scripts/check-ws-structured-errors.sh
+scripts/check-release-audit-gate.sh
 scripts/check-release-baseline.sh
 scripts/check-architecture-registry.sh
 scripts/plan-coverage.sh

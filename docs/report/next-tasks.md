@@ -8,11 +8,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Release dependency audit gate | P2 | `15_release` × `REL-003` | 明确 `cargo audit` 的本地/CI 执行路径；若工具缺失必须有诊断或显式 skip 口径 |
-| 2 | Native pre-gate freshness report | P2 | `08_ui_design_02/03` × `14_tech_stack` | 复跑 Desktop/Mobile no-packaging shell、supervisor、recovery tests 并产出 report；不打开 Tauri/native-packaging gate |
+| 1 | Native pre-gate freshness report | P2 | `08_ui_design_02/03` × `14_tech_stack` | 复跑 Desktop/Mobile no-packaging shell、supervisor、recovery tests 并产出 report；不打开 Tauri/native-packaging gate |
 
 ## 最近完成
 
+- Release dependency audit gate：新增 `release-dependency-audit-gate-2026-05-13.md` 与 `scripts/check-release-audit-gate.sh`，将 `REL-003` 依赖审计收敛为本地 diagnostic / CI required 双路径；release workflow 安装 Node.js 20 与 `cargo-audit` 后 required 模式执行。
 - I18N visible text batch 2：新增 `i18n-visible-text-batch-2-2026-05-13.md`，将 ActivityBar more action、Sidebar item action 与 Disconnect overlay status line 收敛到 `t::*`，并扩展 `check-i18n-hardcoded-baseline.sh` 覆盖本批范围。
 - Mainline gap rescan after final regression：新增 `mainline-gap-rescan-after-final-regression-2026-05-13.md`，确认 guard 输入健康，选择 `11_i18n` 可见文案作为下一批 Current MUST 缺口；已完成 Command/Search 小批次，新增 `check-i18n-hardcoded-baseline.sh` 并绑定 I18N-001。
 - Final regression gate：新增 `final-regression-gate-2026-05-13.md`，跑完整 baseline scripts、runtime happy/recovery smoke、全仓库 `cargo test` 与 `cargo clippy --all-targets -- -D warnings`；修复 WS acceptance 旧错误码断言、AI Chat 插件测试 env 竞态，以及 clippy 暴露的 Web incoming / diff metrics 小问题。
