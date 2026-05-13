@@ -8,10 +8,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Graph read-only projection panel browser smoke | P2 | graph summary, empty/degraded/blocked states, renderer gate | 验证 readonly projection summary 与 renderer future-only 边界 |
+| 1 | Mainline gap rescan after smoke queue closure | P2 | docs/plan × features × acceptance-cases × code | 重新确认 smoke 队列闭合后的下一批实现缺口 |
 
 ## 最近完成
 
+- Graph read-only projection panel browser smoke：新增 `graph-readonly-projection-panel-smoke-2026-05-13.md`，用 Chrome MCP 验证 empty / loaded / blocked / degraded Graph states、readonly projection summary、renderer gate closed、HTTP graph projection JSON 与稳定态 console/network 健康，并补齐 Graph panel 可测性 marker。
 - Dashboard SystemMetrics browser smoke：新增 `dashboard-system-metrics-browser-smoke-2026-05-13.md`，用 Chrome MCP 验证 Dashboard live metrics、WS sample refresh、断线冻结、重连恢复、RAM-only 边界、稳定态 console/network 健康，并补齐 Storage/Quick Actions DOM marker。
 - Git mirror CLI-only notice / readonly repair review smoke：新增 `git-mirror-cli-notice-readonly-repair-smoke-2026-05-13.md`，用 Chrome MCP 验证 Git Import/Push/Repair Command Palette notice、readonly repair review、copyable retry command、无 Web Git writer，并修复 CommandId 搜索与 Git notice callback 上下文捕获问题。
 - Command Surface routing smoke：新增 `command-surface-routing-smoke-2026-05-13.md`，用 Chrome MCP 验证 `Ctrl+Shift+P` command mode、`Ctrl+P` Quick Open、`Ctrl+Shift+K` branch mode、过滤、键盘导航、执行/取消、console/network 健康，并修正非 plan 文档中的旧 `Ctrl/Cmd+K` 表述。

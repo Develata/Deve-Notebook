@@ -87,7 +87,12 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
                 <span class="flex-1 text-left">{move || t::source_control::graph(locale.get())}</span>
             </button>
             <Show when=move || expanded.get()>
-                <div class="px-4 pb-3 pt-2" data-deve-graph-panel="readonly">
+                <div
+                    class="px-4 pb-3 pt-2"
+                    data-deve-graph-panel="readonly"
+                    data-deve-graph-projection-mode="readonly-summary"
+                    data-deve-graph-renderer-gate="closed"
+                >
                     {move || graph_panel_body(locale.get(), &fetch_state.get())}
                 </div>
             </Show>
@@ -203,6 +208,7 @@ fn GraphStat(label: &'static str, value: usize, attr: &'static str) -> impl Into
         <div
             class="rounded border border-default bg-panel/70 px-2 py-1"
             data-deve-graph-stat=attr
+            data-deve-graph-stat-value=value.to_string()
         >
             <p class="text-[10px] uppercase tracking-wide text-muted">{label}</p>
             <p class="mt-0.5 font-mono text-[15px] text-primary">{value}</p>
