@@ -8,11 +8,11 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Rendering interaction spot smoke | P2 | Code toolbar, Ctrl/Cmd link activation, Outline, Mermaid, nested rendering | 隔离数据根 + Chrome MCP；只验证 source-first projection，不扩展为富文本 authority |
-| 2 | Settings / Extensions reserved UI browser smoke | P2 | Trusted CLI default-off, Calculation Runtime planned/disabled, reserved setting markers | 验证可见文案、disabled reason、`aria-disabled` / marker；不新增 server-backed Settings API |
+| 1 | Settings / Extensions reserved UI browser smoke | P2 | Trusted CLI default-off, Calculation Runtime planned/disabled, reserved setting markers | 验证可见文案、disabled reason、`aria-disabled` / marker；不新增 server-backed Settings API |
 
 ## 最近完成
 
+- Rendering interaction spot smoke：新增 `rendering-interaction-spot-smoke-2026-05-13.md`，用隔离数据根与 Chrome MCP 验证 code toolbar、Ctrl/Cmd link activation、Outline navigation、Mermaid projection/source reveal、nested rendering 与 source authority。
 - Merge conflict UI browser smoke：新增 `merge-conflict-ui-browser-smoke-2026-05-13.md`，用 hidden conflict fixture 与 Chrome MCP 验证 `accept-current` / `accept-incoming` / `accept-both`，并修复 peer branch merge gate、conflict message scope、legacy `DocDiff` fallback 覆盖与 accept-both 默认内容。
 - Mainline implementation gap scan：新增 `mainline-gap-scan-2026-05-12.md`，确认 plan coverage 无 blocking、architecture registry 0 drift、runtime happy/recovery smoke 通过、search feature-on/off 路径通过。
 - Browser runtime/search smoke：新增 `browser-runtime-search-smoke-2026-05-12.md`，用隔离数据根验证登录、Ready、新建、编辑、刷新重连、Search `?note`，并修复 search result 选择后弹窗反向重开的 UI bug。
