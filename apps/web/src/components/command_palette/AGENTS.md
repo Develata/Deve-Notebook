@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Command palette UI (Ctrl+K). Fuzzy search over registered commands.
+Command palette UI (Ctrl/Cmd+Shift+P). Fuzzy search over registered commands.
 
 ## Key Files
 

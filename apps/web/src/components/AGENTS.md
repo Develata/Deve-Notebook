@@ -39,7 +39,7 @@ All UI components organized by feature area. Each subdirectory is a self-contain
 | `activity_bar/` | VS Code-style activity bar |
 | `branch_switcher/` | Branch switching UI |
 | `chat/` | AI chat interface |
-| `command_palette/` | Command palette (Ctrl+K) |
+| `command_palette/` | Command palette (Ctrl/Cmd+Shift+P) |
 | `dashboard/` | System dashboard |
 | `diff_view/` | Source control diff viewer |
 | `desktop_layout/` | Desktop layout banner, content, handles, and sidebar helpers |

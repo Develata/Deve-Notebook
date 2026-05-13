@@ -13,7 +13,7 @@
 
 - `Name`: `Open Command Palette`
 - `Surface`: `keyboard-shortcut`
-- `Trigger`: `Ctrl/Cmd+K`
+- `Trigger`: `Ctrl/Cmd+Shift+P`
 - `Preconditions`: 应用主界面已加载
 - `Immediate Result`: command palette overlay 显示，查询文本重置，选中项重置为首项
 - `Application Entry`: `apps/web/src/components/command_palette/mod.rs`, `apps/web/src/components/command_palette/logic.rs`, `apps/web/src/components/command_palette/ui.rs`
