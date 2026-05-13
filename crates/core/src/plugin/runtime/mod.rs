@@ -18,6 +18,8 @@ use rhai::Dynamic;
 
 pub mod chat_stream;
 pub mod host;
+#[cfg(not(target_arch = "wasm32"))]
+mod module_resolver;
 pub mod provider;
 pub mod rhai_v1;
 pub mod tools;

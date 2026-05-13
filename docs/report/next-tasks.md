@@ -8,12 +8,12 @@
 
 | 顺序 | TODO | 优先级 | 范围 | 验收口径 |
 |:--|:--|:--|:--|:--|
-| 1 | Plugin runtime security boundary refresh | P1 | `17_plugins` × `10_ai_agent` × `PLUG-003/AI-005/AI-006` | path guard、capability default-deny、Rhai sandbox、env 权限、structured error、trusted-cli default-off 均 fail-closed |
-| 2 | Protocol error / version alignment capture | P2 | `05_network` × `16_web_thin_client_ledger` × `NET-004/012/013` | unsupported version、malformed payload、legacy frame 拒绝均结构化暴露，不造成错误 lockout |
-| 3 | Full regression gate after targeted fixes | P2 | `15_release` × workspace | G1-G3 后运行最终格式化、targeted tests，并按资源预算决定是否跑完整 `cargo test` |
+| 1 | Protocol error / version alignment capture | P2 | `05_network` × `16_web_thin_client_ledger` × `NET-004/012/013` | unsupported version、malformed payload、legacy frame 拒绝均结构化暴露，不造成错误 lockout |
+| 2 | Full regression gate after targeted fixes | P2 | `15_release` × workspace | G1-G3 后运行最终格式化、targeted tests，并按资源预算决定是否跑完整 `cargo test` |
 
 ## 最近完成
 
+- Plugin runtime security boundary refresh：新增 `plugin-runtime-security-boundary-refresh-2026-05-13.md`，确认 manifest entry、host FS、ledger-managed write、Rhai eval/env、trusted-cli policy 与 Web fallback 均 fail-closed；修复 Rhai import 使用裸 `FileModuleResolver` 的边界缺口，新增 `GuardedFileModuleResolver` 阻断 parent traversal 与 symlink escape。
 - Release / production runtime verification refresh：新增 `release-production-runtime-verification-2026-05-13.md`，验证 embedded/static frontend、production auth fail-closed 与配置成功、`/api/node/role`、Chrome MCP production frontend、runtime happy/recovery 与 Docker smoke；同时加强 Docker smoke，使其验证生产登录。
 - Mainline gap rescan after AI slash closure：新增 `mainline-gap-rescan-after-ai-slash-closure-2026-05-13.md`，确认上一轮 active queue 已闭合、核心 guard 无 blocking drift，并将下一批收敛到 release/production runtime、plugin runtime security、protocol error capture 与最终回归；同步修复 `docs/dev-runbook.md` 漏列 `check-storage-repo-baseline.sh`。
 - Optional AI slash command smoke：新增 `ai-slash-command-browser-smoke-2026-05-13.md`，用隔离数据根验证 `/plan` 与 `/agents` 只切换 Native PLAN/BUILD session mode、不切 backend、不发起 provider/plugin call，并确认浏览器 console/network 健康。

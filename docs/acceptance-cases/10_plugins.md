@@ -195,6 +195,7 @@
     - 存在未来 host api / plugin capability 文档
   steps:
     - doc_read: "docs/plan/17_plugins.md"
+    - run: cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture
   assertions:
     - doc_contains: "vault/<repo>/**/*.md"
     - doc_contains: ".notegit"

@@ -13,13 +13,12 @@
 
 use super::{PluginRuntime, host};
 use crate::plugin::manifest::PluginManifest;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::plugin::runtime::module_resolver::GuardedFileModuleResolver;
 use anyhow::{Result, anyhow};
 use rhai::{AST, Dynamic, Engine, Scope};
 use std::path::PathBuf;
 use std::sync::Mutex;
-
-#[cfg(not(target_arch = "wasm32"))]
-use rhai::module_resolvers::FileModuleResolver;
 
 /// Rhai 脚本最大操作数限制，防止无限循环 (768 MB 内存安全阈值)
 const MAX_RHAI_OPERATIONS: u64 = 100_000;
@@ -50,7 +49,7 @@ impl RhaiRuntime {
         // 配置模块解析器 (仅非 WASM 环境支持文件系统)
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let resolver = FileModuleResolver::new_with_path(&_base_dir);
+            let resolver = GuardedFileModuleResolver::new(_base_dir);
             engine.set_module_resolver(resolver);
         }
 
