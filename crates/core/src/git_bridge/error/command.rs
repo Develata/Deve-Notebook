@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 12_commands#cli-commands
+//!
+
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub(in crate::git_bridge) enum GitBridgeError {
     #[error("Git push mirror refuses invalid {label}: {value:?}")]

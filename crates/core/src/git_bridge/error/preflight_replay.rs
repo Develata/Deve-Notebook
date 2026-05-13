@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!
+
 use super::GitCommandError;
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]

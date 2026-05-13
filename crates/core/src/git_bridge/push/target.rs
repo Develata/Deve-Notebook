@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 12_commands#cli-commands
+//!
+
 use super::{GitMirrorPushBlocker, GitMirrorPushOptions, GitMirrorPushReport};
 use crate::git_bridge::error::{GitBridgeError, GitBridgeResult};
 use crate::git_bridge::git_cmd;

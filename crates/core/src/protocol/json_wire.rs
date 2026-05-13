@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 05_network#server-ws-runtime
+//!   - 05_network#web-ws-runtime
+//!
 //! JSON payload adapters for bincode protocol frames.
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as DeError};

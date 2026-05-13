@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 04_storage#git-ecosystem-coexistence
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!
+
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum GitMirrorStatusError {
     #[error("failed to inspect .notegit presence: {message}")]

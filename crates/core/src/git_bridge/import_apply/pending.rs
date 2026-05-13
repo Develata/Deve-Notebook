@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 12_commands#cli-commands
+//!
+
 use super::{GitImportApplyError, GitImportApplyResult, GitImportPlanBlocker};
 use crate::source_control::{pending_fs, staging};
 use redb::Database;

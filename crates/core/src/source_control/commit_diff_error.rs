@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 06_repository#tree-projection-contract
+//!   - 07_diff_logic#source-control-runtime
+//!
 //! Typed errors for commit-diff projection and content reconstruction.
 
 use crate::models::{DocId, NodeId};

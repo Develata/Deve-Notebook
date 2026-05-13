@@ -52,7 +52,8 @@ is_plan_ref_missing_exempt() {
   local rel="$1"
   case "$rel" in
     */target/*|*/tests/*|*/benches/*) return 0 ;;
-    *_test.rs|*_test_*.rs|*_test_support.rs|*/tests.rs|*/test_modules.rs) return 0 ;;
+    */*_test/*|*/*_tests/*|*/test_*/*) return 0 ;;
+    *_test.rs|*_tests.rs|*_test_*.rs|*_test_support.rs|*/tests.rs|*/test_modules.rs) return 0 ;;
     */channel_test/*|*/switcher_prepare_test/*) return 0 ;;
     */generated/*|*_generated.rs|*/vendor/*|*/public/*|*/dist/*) return 0 ;;
   esac

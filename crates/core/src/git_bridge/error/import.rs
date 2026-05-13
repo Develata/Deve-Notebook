@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 12_commands#cli-commands
+//!
+
 use super::{GitCommandError, GitMirrorStatusError, GitPreflightError};
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
