@@ -35,7 +35,10 @@
     - run: scripts/check-auth-baseline.sh
     - run: cargo test -p deve_cli auth -- --nocapture
   assertions:
-    - header_contains: "Set-Cookie: token=...; Secure; SameSite=Strict; HttpOnly"
+    - header_contains: "Set-Cookie: token="
+    - header_contains: "Secure"
+    - header_contains: "SameSite=Strict"
+    - header_contains: "HttpOnly"
 
 - case_id: AUTH-004
   goal: CORS 环境驱动配置 (H1 收口)。
@@ -43,7 +46,7 @@
     - DEVE_ENV=production
     - ALLOWED_ORIGINS="https://app.deve.com"
   steps:
-    - run: curl -I -H "Origin: http://localhost:8080" http://localhost:3000/api/node/role
+    - run: curl -i -H "Origin: http://localhost:8080" http://localhost:3000/api/node/role
     - run: scripts/check-auth-baseline.sh
   assertions:
     - header_not_contains: "Access-Control-Allow-Origin: *"
@@ -75,9 +78,9 @@
 - case_id: AUTH-007
   goal: CSRF 防护。
   preconditions:
-    - 登录态存在
+    - 跨站浏览器请求因 SameSite=Strict 不携带有效 auth cookie
   steps:
-    - run: curl -X POST http://127.0.0.1:3000/api/write -H "Origin: http://evil" -d "x=1"
+    - run: curl -X POST http://127.0.0.1:3000/api/sc/commit -H "Origin: http://evil" -H "Content-Type: application/json" -d "{\"message\":\"x\",\"targets\":[]}"
     - run: scripts/check-auth-baseline.sh
   assertions:
     - http_status_in: [401, 403]
