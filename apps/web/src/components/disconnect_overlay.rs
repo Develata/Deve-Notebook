@@ -33,7 +33,11 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
                               <div class="bg-accent h-2.5 rounded-full animate-pulse" style="width: 100%"></div>
                             </div>
                             <div class="mt-4 text-sm text-muted">
-                                {format!("Status: {}", status)}
+                                {format!(
+                                    "{}: {}",
+                                    t::common::status(current_locale),
+                                    overlay_status_copy(current_locale, status)
+                                )}
                             </div>
                         </div>
                     </div>
@@ -71,9 +75,22 @@ fn overlay_copy(locale: Locale, status: ConnectionStatus) -> Option<(&'static st
     }
 }
 
+fn overlay_status_copy(locale: Locale, status: ConnectionStatus) -> &'static str {
+    match status {
+        ConnectionStatus::Disconnected => t::common::disconnected(locale),
+        ConnectionStatus::Connecting => t::common::reconnecting(locale),
+        ConnectionStatus::Unauthorized => t::bottom_bar::unauthorized(locale),
+        ConnectionStatus::NativeBootstrapInvalid => t::bottom_bar::native_bootstrap_invalid(locale),
+        ConnectionStatus::NativeSessionPending => t::bottom_bar::native_session_pending(locale),
+        ConnectionStatus::NativeServiceOffline => t::bottom_bar::native_service_offline(locale),
+        ConnectionStatus::NativeReprobeRequired => t::bottom_bar::native_reprobe_required(locale),
+        ConnectionStatus::Connected => t::bottom_bar::ready(locale),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::overlay_copy;
+    use super::{overlay_copy, overlay_status_copy};
     use crate::api::ConnectionStatus;
     use crate::i18n::Locale;
 
@@ -93,6 +110,18 @@ mod tests {
         assert_eq!(
             overlay_copy(Locale::En, ConnectionStatus::Unauthorized),
             None
+        );
+    }
+
+    #[test]
+    fn disconnected_lockdown_status_line_is_localized() {
+        assert_eq!(
+            overlay_status_copy(Locale::Zh, ConnectionStatus::Disconnected),
+            "已断开连接"
+        );
+        assert_eq!(
+            overlay_status_copy(Locale::En, ConnectionStatus::NativeServiceOffline),
+            "Native Service Offline"
         );
     }
 }

@@ -3,6 +3,7 @@
 //!   - 08_ui_design_01_web#web-layout-persistence
 //!
 use crate::components::icons::{ChevronRight, EllipsisVertical, FileText, Plus};
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 /// 文件/文件夹图标组件
@@ -41,6 +42,8 @@ pub fn ItemActions(
     #[prop(into)] on_menu: Callback<web_sys::MouseEvent>,
     #[prop(into)] on_create: Callback<web_sys::MouseEvent>,
 ) -> impl IntoView {
+    let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
+
     view! {
         <div
             class="flex items-center gap-1 pr-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -49,7 +52,7 @@ pub fn ItemActions(
             // 更多/菜单 按钮
             <button
                 class="p-1 rounded hover:bg-hover text-secondary transition-colors"
-                title="More"
+                title=move || t::sidebar::more(locale.get())
                 on:click=move |ev| on_menu.run(ev)
             >
                 <EllipsisVertical />
@@ -60,7 +63,7 @@ pub fn ItemActions(
                     // 新建文件按钮 (仅文件夹显示)
                     <button
                         class="p-1 rounded hover:bg-hover text-secondary transition-colors"
-                        title="New File"
+                        title=move || t::common::new_file(locale.get())
                         on:click=move |ev| on_create.run(ev)
                     >
                         <Plus />

@@ -12,7 +12,7 @@ mod types;
 pub use types::SidebarView;
 
 use crate::components::icons::MoreHorizontal;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use popup_menu::ViewPopupMenu;
 
@@ -93,7 +93,7 @@ pub fn ActivityBar(
             <div class="flex-none flex items-center relative ml-1">
                 <button
                     class="p-2 text-muted hover:text-primary rounded-lg transition-colors"
-                    title="More..."
+                    title=move || t::sidebar::more_actions(locale.get())
                     on:click=move |_| set_show_more.update(|v| *v = !*v)
                 >
                     <MoreHorizontal class="w-[18px] h-[18px]"/>

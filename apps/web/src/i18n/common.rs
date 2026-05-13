@@ -30,6 +30,13 @@ pub fn new_file(locale: Locale) -> &'static str {
     }
 }
 
+pub fn status(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Status",
+        Locale::Zh => "状态",
+    }
+}
+
 pub fn read_only_mode(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Read-Only Mode",
