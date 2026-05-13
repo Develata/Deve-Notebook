@@ -13,6 +13,7 @@ DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
 AUTH_SECRET="${DEVE_DOCKER_SMOKE_AUTH_SECRET:-deve_docker_smoke_secret_32_bytes_ok!!}"
 AUTH_USER="${DEVE_DOCKER_SMOKE_AUTH_USER:-admin}"
 AUTH_PASS="${DEVE_DOCKER_SMOKE_AUTH_PASS:-\$argon2id\$v=19\$m=65536,t=2,p=1\$c29tZXNhbHQ\$CTFhFdXPJO1aFaMaO6Mm5c8y7cJHAph8ArZWb2GRPPc}"
+AUTH_PASSWORD="${DEVE_DOCKER_SMOKE_AUTH_PASSWORD:-password}"
 DATA_DIR=""
 
 fail() {
@@ -94,8 +95,18 @@ docker_cmd run -d \
 for _ in $(seq 1 60); do
   status="$(curl_local -fsS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/node/role" || true)"
   if [[ "$status" == "200" ]]; then
-    echo "docker-release-smoke: ok"
-    exit 0
+    login_status="$(
+      curl_local -fsS -o /dev/null -w '%{http_code}' \
+        -X POST "http://127.0.0.1:${HOST_PORT}/api/auth/login" \
+        -H 'Content-Type: application/json' \
+        --data "{\"username\":\"${AUTH_USER}\",\"password\":\"${AUTH_PASSWORD}\"}" \
+        || true
+    )"
+    if [[ "$login_status" == "200" ]]; then
+      echo "docker-release-smoke: ok"
+      exit 0
+    fi
+    echo "docker-release-smoke: node-role ready but login returned $login_status; retrying" >&2
   fi
   sleep 1
 done
