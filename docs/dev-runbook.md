@@ -304,6 +304,13 @@ result, startup result, and an explicit statement that no child-process runtime
 or native authority write path was opened. Store the target-host result under
 `docs/report/`.
 
+Use the evidence template and validator:
+
+```bash
+cp docs/report/native-target-host-evidence-template.md docs/report/native-target-host-<target>-YYYY-MM-DD.md
+scripts/check-native-target-host-evidence.sh docs/report/native-target-host-<target>-YYYY-MM-DD.md
+```
+
 Optional GitHub Actions entry:
 
 ```text
@@ -438,6 +445,7 @@ scripts/check-dev-data-health-baseline.sh
 scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
 scripts/check-native-process-adapter-gate.sh
+scripts/check-native-target-host-evidence.sh
 scripts/check-desktop-package-preflight.sh
 scripts/check-desktop-platform-package-build.sh
 scripts/check-mobile-platform-package-preflight.sh
