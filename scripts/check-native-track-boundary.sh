@@ -85,6 +85,8 @@ check_contains apps/web/src/api/service.rs "native_runtime_readiness_for_untrack
 check_contains apps/web/src/api/connection_role.rs "NODE_ROLE_PROBE_RETRIES"
 check_contains apps/web/src/api/connection_role.rs "NODE_ROLE_PROBE_TIMEOUT_MS"
 check_contains apps/web/src/api/connection_role.rs "probe_node_role_summary_for_http_base"
+check_contains apps/web/src/api/connection_role.rs "strip_prefix(\"wss://\")"
+check_contains apps/web/src/api/connection_role/tests.rs "ws_url_to_http_base_only_rewrites_leading_scheme_and_ws_suffix"
 check_contains apps/web/src/api/connection_role/tests.rs "stale_node_role_probe_results_do_not_mutate_current_connection"
 check_contains apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs "foreground_reprobe_resets_stale_writer_scope_and_node_role"
 check_contains apps/desktop/src/shell.rs "observe_process_snapshot"

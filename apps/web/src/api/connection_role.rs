@@ -138,11 +138,23 @@ fn apply_node_role_probe_failure(
 }
 
 pub(crate) fn http_base_from_ws_url(ws_url: &str) -> String {
-    ws_url
-        .replace("wss://", "https://")
-        .replace("ws://", "http://")
-        .trim_end_matches("/ws")
-        .to_string()
+    let http_url = match ws_url.strip_prefix("wss://") {
+        Some(rest) => format!("https://{rest}"),
+        None => match ws_url.strip_prefix("ws://") {
+            Some(rest) => format!("http://{rest}"),
+            None => ws_url.to_string(),
+        },
+    };
+    strip_ws_path_suffix(&http_url)
+}
+
+fn strip_ws_path_suffix(http_url: &str) -> String {
+    let split_idx = http_url.find(['?', '#']).unwrap_or(http_url.len());
+    let (base, suffix) = http_url.split_at(split_idx);
+    match base.strip_suffix("/ws") {
+        Some(base) => format!("{base}{suffix}"),
+        None => http_url.to_string(),
+    }
 }
 
 fn node_role_url_for_http_base(http_base: &str) -> String {

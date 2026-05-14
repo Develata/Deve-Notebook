@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- WS HTTP base derivation boundary：新增 `ws-http-base-derivation-boundary-2026-05-14.md`，将 Web node-role probe 的 WS-to-HTTP base 推导从全局字符串替换收敛为只处理 leading scheme 与末尾 `/ws`，避免边界输入中 path/query 文本被误改写。
 - Web API query encoding：新增 `web-api-query-encoding-2026-05-14.md`，为 Web HTTP adapter 增加共享 query component encoder，并覆盖 Graph projection 与 Git mirror readonly repair review 的 `repo_id` 参数，避免保留字符造成 query 结构歧义。
 - Auth config env no-panic：新增 `auth-config-env-no-panic-2026-05-14.md`，将 `AuthConfig::from_env` 的 `AUTH_SECRET/AUTH_PASS` 局部 `expect("checked above")` 改为显式模式匹配；生产缺失配置仍 fail-closed，`DEVE_ENV=development` 显式开发 fallback 语义不变。
 - Git push target no-panic：新增 `git-push-target-no-panic-2026-05-14.md`，将 Git mirror push 执行前的 `remote/branch` 解析 `expect` 改为最终显式 target guard；异常内部状态返回 `git_remote` blocker，不触发 panic，正常 preflight/mapping/push 语义不变。

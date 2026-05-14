@@ -77,6 +77,18 @@ fn derives_http_base_from_ws_url() {
 }
 
 #[test]
+fn ws_url_to_http_base_only_rewrites_leading_scheme_and_ws_suffix() {
+    assert_eq!(
+        http_base_from_ws_url("ws://127.0.0.1:3001/ws?next=ws://shadow/ws"),
+        "http://127.0.0.1:3001?next=ws://shadow/ws"
+    );
+    assert_eq!(
+        http_base_from_ws_url("custom://127.0.0.1:3001/ws"),
+        "custom://127.0.0.1:3001"
+    );
+}
+
+#[test]
 fn stale_node_role_probe_results_do_not_mutate_current_connection() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
