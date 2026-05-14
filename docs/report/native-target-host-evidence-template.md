@@ -20,6 +20,10 @@ Commands:
 <exact commands executed>
 ```
 
+Command results:
+
+- <command or workflow step>: <success, failure, skipped, or explicit N/A>
+
 Artifact paths:
 
 - <package artifact path, workflow artifact name, or explicit N/A with reason>

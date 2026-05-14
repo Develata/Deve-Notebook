@@ -62,12 +62,15 @@ jobs:
           scripts/smoke-web-release-build.sh
 
       - name: Desktop macOS target-host preflight
+        id: desktop_macos_preflight
         run: scripts/check-desktop-target-host-preflight.sh
 
       - name: Native process adapter gate remains closed
+        id: desktop_macos_process_gate
         run: scripts/check-native-process-adapter-gate.sh
 
       - name: Desktop macOS package build
+        id: desktop_macos_package_build
         if: ${{ inputs.run_desktop_package_build }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
@@ -90,6 +93,10 @@ jobs:
             scripts/check-desktop-target-host-preflight.sh
             scripts/check-native-process-adapter-gate.sh
             DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-build.sh
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
+            desktop_preflight=${{ steps.desktop_macos_preflight.outcome }}
+            process_gate=${{ steps.desktop_macos_process_gate.outcome }}
+            package_build=${{ inputs.run_desktop_package_build && steps.desktop_macos_package_build.outcome || 'skipped' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_desktop_package_build && 'target/release/bundle/**' || 'N/A - Desktop package build was not requested' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: ${{ inputs.run_desktop_package_build && 'package build attempted; inspect job result and artifacts before declaring readiness' || 'diagnostic-only' }}
         run: scripts/write-native-target-host-evidence.sh
@@ -137,12 +144,15 @@ jobs:
           scripts/smoke-web-release-build.sh
 
       - name: Desktop Windows target-host preflight
+        id: desktop_windows_preflight
         run: scripts/check-desktop-target-host-preflight.sh
 
       - name: Native process adapter gate remains closed
+        id: desktop_windows_process_gate
         run: scripts/check-native-process-adapter-gate.sh
 
       - name: Desktop Windows package build
+        id: desktop_windows_package_build
         if: ${{ inputs.run_desktop_package_build }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
@@ -166,6 +176,10 @@ jobs:
             scripts/check-desktop-target-host-preflight.sh
             scripts/check-native-process-adapter-gate.sh
             DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-platform-package-build.sh
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
+            desktop_preflight=${{ steps.desktop_windows_preflight.outcome }}
+            process_gate=${{ steps.desktop_windows_process_gate.outcome }}
+            package_build=${{ inputs.run_desktop_package_build && steps.desktop_windows_package_build.outcome || 'skipped' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_desktop_package_build && 'target/release/bundle/**' || 'N/A - Desktop package build was not requested' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: ${{ inputs.run_desktop_package_build && 'package build attempted; inspect job result and artifacts before declaring readiness' || 'diagnostic-only' }}
         run: scripts/write-native-target-host-evidence.sh
@@ -210,12 +224,15 @@ jobs:
           scripts/smoke-web-release-build.sh
 
       - name: Mobile iOS target-host preflight
+        id: mobile_ios_preflight
         run: scripts/check-mobile-platform-package-preflight.sh
 
       - name: Native process adapter gate remains closed
+        id: mobile_ios_process_gate
         run: scripts/check-native-process-adapter-gate.sh
 
       - name: Keep iOS package execution closed
+        id: mobile_ios_package_closed_gate
         run: |
           test ! -e apps/mobile/gen/apple
           echo "iOS package build remains closed until an explicit package execution gate is added."
@@ -229,6 +246,10 @@ jobs:
             scripts/check-mobile-platform-package-preflight.sh
             scripts/check-native-process-adapter-gate.sh
             test ! -e apps/mobile/gen/apple
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
+            mobile_ios_preflight=${{ steps.mobile_ios_preflight.outcome }}
+            process_gate=${{ steps.mobile_ios_process_gate.outcome }}
+            package_closed_gate=${{ steps.mobile_ios_package_closed_gate.outcome }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: N/A - iOS package execution remains closed
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: N/A - iOS package execution remains closed
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: N/A - iOS package execution remains closed

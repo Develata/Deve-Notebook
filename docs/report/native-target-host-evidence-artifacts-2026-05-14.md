@@ -23,6 +23,8 @@ or native authority writes.
 - Each target-host workflow job writes a validated evidence Markdown file under
   `target/native-target-host-evidence/`.
 - Each target-host workflow job uploads that evidence as a separate artifact.
+- Evidence records critical workflow step outcomes for preflight, process gate,
+  package build or package-closed gate.
 - Desktop package artifacts remain separate from evidence artifacts.
 - iOS evidence explicitly records that iOS package execution remains closed.
 

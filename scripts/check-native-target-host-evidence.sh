@@ -26,6 +26,7 @@ validate_report() {
   contains "$file" "Host OS:"
   contains "$file" "Tool versions:"
   contains "$file" "Commands:"
+  contains "$file" "Command results:"
   contains "$file" "Artifact paths:"
   contains "$file" "Install result:"
   contains "$file" "Startup result:"

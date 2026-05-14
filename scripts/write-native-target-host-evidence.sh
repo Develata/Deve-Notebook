@@ -11,6 +11,7 @@ SLUG="$(
 OUT="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT:-$ROOT_DIR/target/native-target-host-evidence/${SLUG:-local}.md}"
 WORKFLOW_RUN="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_WORKFLOW_RUN:-}"
 COMMANDS="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS:-scripts/write-native-target-host-evidence.sh}"
+COMMAND_RESULTS="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS:-N/A - command outcomes not provided by this execution environment}"
 ARTIFACTS="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS:-N/A - package artifact not produced by this diagnostic run}"
 INSTALL_RESULT="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT:-N/A - install/startup smoke must be captured by target-host package execution evidence}"
 STARTUP_RESULT="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT:-N/A - install/startup smoke must be captured by target-host package execution evidence}"
@@ -71,6 +72,7 @@ mkdir -p "$(dirname "$OUT")"
   tool_version "NSIS makensis" makensis -VERSION
   printf '\nCommands:\n\n'
   printf '```bash\n%s\n```\n\n' "$COMMANDS"
+  printf 'Command results:\n\n%s\n\n' "$COMMAND_RESULTS"
   printf 'Artifact paths:\n\n%s\n\n' "$ARTIFACTS"
   printf 'Install result: %s\n\n' "$INSTALL_RESULT"
   printf 'Startup result: %s\n\n' "$STARTUP_RESULT"
