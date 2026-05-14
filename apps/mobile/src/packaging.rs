@@ -160,7 +160,7 @@ const SHELL_ACCEPTANCE: MobileShellPackagingAcceptance = MobileShellPackagingAcc
     main_window_title: MOBILE_TAURI_MAIN_WINDOW_TITLE,
     manifest_declared: true,
     build_script_declared: true,
-    android_project_generated: false,
+    android_project_generated: true,
     ios_project_generated: false,
     runtime_entrypoint_declared: true,
     platform_package_build_declared: true,

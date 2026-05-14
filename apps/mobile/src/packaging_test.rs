@@ -108,7 +108,7 @@ fn mobile_shell_acceptance_keeps_runtime_authority_closed() {
     assert_eq!(shell.main_window_title, MOBILE_TAURI_MAIN_WINDOW_TITLE);
     assert!(shell.manifest_declared);
     assert!(shell.build_script_declared);
-    assert!(!shell.android_project_generated);
+    assert!(shell.android_project_generated);
     assert!(!shell.ios_project_generated);
     assert!(shell.runtime_entrypoint_declared);
     assert!(shell.platform_package_build_declared);

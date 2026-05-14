@@ -324,6 +324,8 @@ target host, set `DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1` to allow
 `cargo tauri android init` and `cargo tauri android build` under
 `apps/mobile/native-packaging`. This still does not open iOS packaging,
 child-process runtime, or native authority writes.
+The required Android build also needs Gradle wrapper distribution and Gradle
+Plugin Portal dependencies to resolve or already exist in the host cache.
 
 ## Native Process Adapter Gate
 

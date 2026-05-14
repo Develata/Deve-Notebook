@@ -88,6 +88,7 @@ check_contains apps/desktop/tauri.conf.json '"icon": ["icons/icon.png"]'
   || fail "missing desktop Tauri icon: apps/desktop/icons/icon.png"
 check_contains apps/desktop/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/mobile/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/wry"]'
+check_contains apps/mobile/Cargo.toml 'crate-type = ["staticlib", "cdylib", "rlib"]'
 check_manifest_dependency apps/mobile/Cargo.toml tauri 2.11.1
 check_manifest_dependency apps/mobile/Cargo.toml tauri-build 2.6.1
 check_contains apps/mobile/tauri.conf.json '"identifier": "dev.deve.notebook.mobile"'
@@ -97,6 +98,10 @@ check_contains apps/mobile/tauri.conf.json '"icon": ["icons/icon.png"]'
   || fail "missing mobile Tauri icon: apps/mobile/icons/icon.png"
 check_contains apps/mobile/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/mobile/build.rs "tauri_build::build()"
+check_contains apps/mobile/gen/android/settings.gradle "include ':app'"
+check_contains apps/mobile/gen/android/app/src/main/AndroidManifest.xml 'android:name=".MainActivity"'
+check_contains apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt "class MainActivity : TauriActivity()"
+check_contains apps/mobile/gen/android/gradle/wrapper/gradle-wrapper.properties "gradle-8.14.3-bin.zip"
 check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/desktop/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
@@ -141,7 +146,7 @@ check_contains apps/mobile/src/packaging.rs "MobileShellPackagingAcceptance"
 check_contains apps/mobile/src/packaging.rs "MobileAndroidShellPackageExecution"
 check_contains apps/mobile/src/packaging.rs "manifest_declared: true"
 check_contains apps/mobile/src/packaging.rs "build_script_declared: true"
-check_contains apps/mobile/src/packaging.rs "android_project_generated: false"
+check_contains apps/mobile/src/packaging.rs "android_project_generated: true"
 check_contains apps/mobile/src/packaging.rs "ios_project_generated: false"
 check_contains apps/mobile/src/packaging.rs "runtime_entrypoint_declared: true"
 check_contains apps/mobile/src/packaging.rs "platform_package_build_declared: true"
