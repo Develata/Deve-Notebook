@@ -16,6 +16,23 @@ use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 
+/// 校验存储的密码哈希是否为 Argon2 PHC 格式。
+pub fn validate_argon2_phc(stored_hash: &str) -> Result<()> {
+    parse_argon2_phc(stored_hash).map(|_| ())
+}
+
+fn parse_argon2_phc(stored_hash: &str) -> Result<PasswordHash<'_>> {
+    let parsed =
+        PasswordHash::new(stored_hash).map_err(|e| anyhow!("Invalid hash format: {}", e))?;
+    if !parsed.algorithm.as_str().starts_with("argon2") {
+        return Err(anyhow!(
+            "Invalid hash algorithm: expected Argon2 PHC, got {}",
+            parsed.algorithm
+        ));
+    }
+    Ok(parsed)
+}
+
 /// 验证密码是否匹配已存储的 Argon2 哈希
 ///
 /// # 前置条件
@@ -24,8 +41,7 @@ use argon2::{
 /// # 后置条件
 /// - 返回 Ok(true) 当且仅当密码匹配
 pub fn verify_password(password: &str, stored_hash: &str) -> Result<bool> {
-    let parsed =
-        PasswordHash::new(stored_hash).map_err(|e| anyhow!("Invalid hash format: {}", e))?;
+    let parsed = parse_argon2_phc(stored_hash)?;
     match Argon2::default().verify_password(password.as_bytes(), &parsed) {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
@@ -54,5 +70,11 @@ mod tests {
         let hash = hash_password(password).unwrap();
         assert!(verify_password(password, &hash).unwrap());
         assert!(!verify_password("wrong", &hash).unwrap());
+    }
+
+    #[test]
+    fn rejects_non_phc_hash() {
+        let err = validate_argon2_phc("not-a-valid-phc-hash").expect_err("must reject");
+        assert!(err.to_string().contains("Invalid hash format"));
     }
 }

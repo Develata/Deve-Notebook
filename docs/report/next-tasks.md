@@ -8,13 +8,13 @@
 
 1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
 2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton，并回到 mainline implementation gap scan。
-3. Auth hardening batch：修复 `AUTH_USER` token subject 硬编码与 `AUTH_PASS` PHC 启动校验，补最小回归。
-4. WS text-frame debug gate：将 versioned JSON text 与 legacy JSON text 一并收敛到显式 debug flag，生产默认只接受 versioned binary。
-5. Mobile PendingAck scope filter：移动端 footer pending 状态复用 repo/scope 过滤，避免旧 scope pending 污染当前状态。
-6. Acceptance/release guard cleanup：修复 letter-suffixed acceptance ID 解析、补 CLI baseline 覆盖，并更新过时 `REL-001` release artifact 验收。
+3. WS text-frame debug gate：将 versioned JSON text 与 legacy JSON text 一并收敛到显式 debug flag，生产默认只接受 versioned binary。
+4. Mobile PendingAck scope filter：移动端 footer pending 状态复用 repo/scope 过滤，避免旧 scope pending 污染当前状态。
+5. Acceptance/release guard cleanup：修复 letter-suffixed acceptance ID 解析、补 CLI baseline 覆盖，并更新过时 `REL-001` release artifact 验收。
 
 ## 最近完成
 
+- Auth hardening batch：新增 `auth-hardening-batch-2026-05-14.md`，修复 `AUTH_USER` token subject 硬编码与 `AUTH_PASS` PHC 启动校验，并扩展 auth baseline guard。
 - Mainline gap rescan after native gate design：新增 `mainline-gap-rescan-after-native-gate-design-2026-05-14.md`，确认当前 blocking guard 仍为绿，并将下一批收敛到 auth hardening、WS text debug gate、mobile pending scope filter 与 acceptance/release guard cleanup。
 - Native packaging gate design：新增 `native-packaging-gate-design-2026-05-14.md`，确认 Desktop/Mobile 仍保持 no-Tauri skeleton；真实 Tauri packaging 必须先经 Desktop dependency spike，再做 Desktop shell acceptance、Mobile dependency spike 与独立 process adapter gate。
 - Error-code catalog drift review：新增 `error-code-catalog-drift-review-2026-05-14.md`，确认 `ServerErrorCode` 与 Web i18n 映射内部一致；plan catalog 仍缺 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED`，需明确允许修改 `docs/plan/` 后再补。

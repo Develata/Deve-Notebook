@@ -18,11 +18,14 @@ check_contains() {
 # AUTH-001/002/009: runtime config is env-driven and production fails closed.
 check_contains crates/core/src/security/auth/config.rs "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
 check_contains crates/core/src/security/auth/config.rs "AUTH_SECRET must be >= 32 bytes"
+check_contains crates/core/src/security/auth/config.rs "AUTH_PASS must be a valid Argon2 PHC hash"
 check_contains apps/cli/src/server/router.rs "WARNING: development-only auth defaults active"
 check_contains crates/core/src/security/auth/jwt.rs "sub"
 check_contains crates/core/src/security/auth/jwt.rs "iat"
 check_contains crates/core/src/security/auth/jwt.rs "exp"
 check_contains crates/core/src/security/auth/jwt.rs "ver"
+check_contains crates/core/src/security/auth/jwt.rs "subject: &str"
+check_contains crates/core/src/security/auth/jwt.rs "sub: subject.to_string()"
 
 # AUTH-003/005/012: cookie session and status endpoint contract.
 check_contains apps/cli/src/server/auth/handlers/session.rs ".http_only(true)"

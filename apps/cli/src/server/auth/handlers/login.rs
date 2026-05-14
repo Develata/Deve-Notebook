@@ -60,7 +60,7 @@ pub async fn login(
 
     guard.record_success(&ip);
     log_login(true, &ip, &body.username, user_agent);
-    match jwt::issue_token(&config.secret, config.token_version) {
+    match jwt::issue_token(&config.secret, &config.username, config.token_version) {
         Ok(token) => (
             StatusCode::OK,
             build_auth_cookie(&token),

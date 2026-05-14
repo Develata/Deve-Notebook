@@ -13,6 +13,7 @@
 //! - `AUTH_ALLOW_ANONYMOUS_LOCALHOST`: 是否允许 localhost 免密
 //! - `DEVE_ENV`: 部署环境 (`production` / `development`)
 
+use super::password;
 use anyhow::{Result, anyhow};
 
 /// 认证配置 (不可变，加载后冻结)
@@ -63,6 +64,8 @@ impl AuthConfig {
 
         let username = std::env::var("AUTH_USER").unwrap_or_else(|_| "admin".into());
         let password_hash = password_hash.expect("checked above");
+        password::validate_argon2_phc(&password_hash)
+            .map_err(|err| anyhow!("AUTH_PASS must be a valid Argon2 PHC hash: {}", err))?;
 
         let allow_anon = env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false);
 
@@ -109,6 +112,9 @@ fn env_flag(name: &str, default: bool) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_dev_default() {
@@ -116,5 +122,65 @@ mod tests {
         assert_eq!(cfg.username, "admin");
         assert!(!cfg.allow_anonymous_localhost);
         assert!(cfg.secret.len() >= 32);
+    }
+
+    #[test]
+    fn invalid_auth_pass_phc_fails_closed_at_config_load() {
+        let _lock = ENV_LOCK.lock().expect("env test lock");
+        let env = EnvGuard::set(&[
+            ("DEVE_ENV", Some("production")),
+            (
+                "AUTH_SECRET",
+                Some("test_secret_key_at_least_32_bytes_long!"),
+            ),
+            ("AUTH_PASS", Some("not-a-valid-phc-hash")),
+            ("AUTH_USER", Some("alice")),
+            ("AUTH_ALLOW_ANONYMOUS_LOCALHOST", None),
+            ("AUTH_TOKEN_VERSION", None),
+        ]);
+
+        let err = AuthConfig::from_env().expect_err("invalid PHC must fail closed");
+        assert!(
+            err.to_string()
+                .contains("AUTH_PASS must be a valid Argon2 PHC hash")
+        );
+        drop(env);
+    }
+
+    struct EnvGuard {
+        old: Vec<(&'static str, Option<String>)>,
+    }
+
+    impl EnvGuard {
+        fn set(vars: &[(&'static str, Option<&str>)]) -> Self {
+            let old = vars
+                .iter()
+                .map(|(key, _)| (*key, std::env::var(key).ok()))
+                .collect::<Vec<_>>();
+            for (key, value) in vars {
+                // SAFETY: this test holds ENV_LOCK while mutating process env.
+                unsafe {
+                    match value {
+                        Some(value) => std::env::set_var(key, value),
+                        None => std::env::remove_var(key),
+                    }
+                }
+            }
+            Self { old }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            for (key, value) in self.old.drain(..) {
+                // SAFETY: EnvGuard restores only keys it changed while ENV_LOCK is held.
+                unsafe {
+                    match value {
+                        Some(value) => std::env::set_var(key, value),
+                        None => std::env::remove_var(key),
+                    }
+                }
+            }
+        }
     }
 }

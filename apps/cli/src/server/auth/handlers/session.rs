@@ -177,7 +177,8 @@ mod tests {
     #[test]
     fn status_accepts_valid_token_cookie() {
         let config = AuthConfig::dev_default().unwrap();
-        let token = jwt::issue_token(&config.secret, config.token_version).unwrap();
+        let token =
+            jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
         let cookie = format!("token={token}");
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 3001);
         assert!(auth_status_from_cookie_header(Some(&cookie), addr, &config));
@@ -186,7 +187,8 @@ mod tests {
     #[test]
     fn status_rejects_token_cookie_prefixes() {
         let config = AuthConfig::dev_default().unwrap();
-        let token = jwt::issue_token(&config.secret, config.token_version).unwrap();
+        let token =
+            jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
         let cookie = format!("token_csrf={token}");
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 3001);
         assert!(!auth_status_from_cookie_header(

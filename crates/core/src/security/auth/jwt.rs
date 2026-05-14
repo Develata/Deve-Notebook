@@ -22,11 +22,11 @@ const TOKEN_LIFETIME_SECS: i64 = 86_400;
 ///
 /// 遵循 `09_auth.md` 规范:
 /// ```json
-/// { "sub": "admin", "iat": ..., "exp": ..., "ver": 1 }
+/// { "sub": "<current-user>", "iat": ..., "exp": ..., "ver": 1 }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Claims {
-    /// Subject — 固定为 "admin" (Single-User 模型)
+    /// Subject — 当前认证用户。
     pub sub: String,
     /// Issued At (Unix timestamp)
     pub iat: i64,
@@ -40,14 +40,15 @@ pub struct Claims {
 ///
 /// # 前置条件
 /// - `secret` 长度 >= 32 字节 (HS256 安全要求)
+/// - `subject` 为已认证用户名
 /// - `token_version` 为当前有效版本号
 ///
 /// # 后置条件
 /// - 返回的 Token 在 24 小时内有效
-pub fn issue_token(secret: &str, token_version: u32) -> Result<String> {
+pub fn issue_token(secret: &str, subject: &str, token_version: u32) -> Result<String> {
     let now = chrono::Utc::now().timestamp();
     let claims = Claims {
-        sub: "admin".into(),
+        sub: subject.to_string(),
         iat: now,
         exp: now + TOKEN_LIFETIME_SECS,
         ver: token_version,
@@ -87,23 +88,32 @@ mod tests {
     #[test]
     fn test_issue_and_validate() {
         let secret = "test_secret_key_at_least_32_bytes_long!";
-        let token = issue_token(secret, 1).unwrap();
+        let token = issue_token(secret, "admin", 1).unwrap();
         let claims = validate_token(secret, &token, 1).unwrap();
         assert_eq!(claims.sub, "admin");
         assert_eq!(claims.ver, 1);
     }
 
     #[test]
+    fn issue_token_preserves_subject() {
+        let secret = "test_secret_key_at_least_32_bytes_long!";
+        let token = issue_token(secret, "alice", 7).unwrap();
+        let claims = validate_token(secret, &token, 7).unwrap();
+        assert_eq!(claims.sub, "alice");
+        assert_eq!(claims.ver, 7);
+    }
+
+    #[test]
     fn test_revoked_token() {
         let secret = "test_secret_key_at_least_32_bytes_long!";
-        let token = issue_token(secret, 1).unwrap();
+        let token = issue_token(secret, "admin", 1).unwrap();
         let result = validate_token(secret, &token, 2); // ver mismatch
         assert!(result.is_err());
     }
 
     #[test]
     fn test_invalid_secret() {
-        let token = issue_token("secret_a_32_bytes_long_xxxxxxxx!", 1).unwrap();
+        let token = issue_token("secret_a_32_bytes_long_xxxxxxxx!", "admin", 1).unwrap();
         let result = validate_token("secret_b_32_bytes_long_xxxxxxxx!", &token, 1);
         assert!(result.is_err());
     }
