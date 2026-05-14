@@ -320,7 +320,8 @@ Native Target Host -> target=desktop-macos|desktop-windows
 The workflow is manual-only and diagnostic by default. Set
 `required_preflight=true` to fail closed on missing prerequisites. Set
 `run_desktop_package_build=true` only when the target-host runner is intended to
-produce package artifacts.
+produce package artifacts. Each target-host job uploads a validated
+`deve-native-target-host-evidence-*` artifact.
 
 ## Mobile Package Build Preflight
 
@@ -384,7 +385,8 @@ Native Target Host -> target=mobile-ios
 ```
 
 The workflow is manual-only and runs iOS preflight only. It does not run
-`cargo tauri ios init` or `cargo tauri ios build`.
+`cargo tauri ios init` or `cargo tauri ios build`. It uploads a validated
+`deve-native-target-host-evidence-ios` artifact.
 
 ## Native Process Adapter Gate
 
@@ -446,6 +448,7 @@ scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
 scripts/check-native-process-adapter-gate.sh
 scripts/check-native-target-host-evidence.sh
+scripts/write-native-target-host-evidence.sh
 scripts/check-desktop-package-preflight.sh
 scripts/check-desktop-platform-package-build.sh
 scripts/check-mobile-platform-package-preflight.sh

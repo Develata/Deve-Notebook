@@ -81,6 +81,27 @@ jobs:
           path: target/release/bundle/**
           if-no-files-found: error
 
+      - name: Write Desktop macOS target-host evidence
+        if: always()
+        env:
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_TARGET: Desktop macOS
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: target/native-target-host-evidence/desktop-macos.md
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
+            scripts/check-desktop-target-host-preflight.sh
+            scripts/check-native-process-adapter-gate.sh
+            DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-build.sh
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_desktop_package_build && 'target/release/bundle/**' || 'N/A - Desktop package build was not requested' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: ${{ inputs.run_desktop_package_build && 'package build attempted; inspect job result and artifacts before declaring readiness' || 'diagnostic-only' }}
+        run: scripts/write-native-target-host-evidence.sh
+
+      - name: Upload Desktop macOS target-host evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deve-native-target-host-evidence-macos
+          path: target/native-target-host-evidence/desktop-macos.md
+          if-no-files-found: error
+
   desktop-windows:
     if: ${{ inputs.target == 'all' || inputs.target == 'desktop-windows' }}
     runs-on: windows-latest
@@ -136,6 +157,27 @@ jobs:
           path: target/release/bundle/**
           if-no-files-found: error
 
+      - name: Write Desktop Windows target-host evidence
+        if: always()
+        env:
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_TARGET: Desktop Windows
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: target/native-target-host-evidence/desktop-windows.md
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
+            scripts/check-desktop-target-host-preflight.sh
+            scripts/check-native-process-adapter-gate.sh
+            DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-platform-package-build.sh
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_desktop_package_build && 'target/release/bundle/**' || 'N/A - Desktop package build was not requested' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: ${{ inputs.run_desktop_package_build && 'package build attempted; inspect job result and artifacts before declaring readiness' || 'diagnostic-only' }}
+        run: scripts/write-native-target-host-evidence.sh
+
+      - name: Upload Desktop Windows target-host evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deve-native-target-host-evidence-windows
+          path: target/native-target-host-evidence/desktop-windows.md
+          if-no-files-found: error
+
   mobile-ios:
     if: ${{ inputs.target == 'all' || inputs.target == 'mobile-ios' }}
     runs-on: macos-latest
@@ -177,3 +219,26 @@ jobs:
         run: |
           test ! -e apps/mobile/gen/apple
           echo "iOS package build remains closed until an explicit package execution gate is added."
+
+      - name: Write Mobile iOS target-host evidence
+        if: always()
+        env:
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_TARGET: Mobile iOS
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: target/native-target-host-evidence/mobile-ios.md
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
+            scripts/check-mobile-platform-package-preflight.sh
+            scripts/check-native-process-adapter-gate.sh
+            test ! -e apps/mobile/gen/apple
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: N/A - iOS package execution remains closed
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: N/A - iOS package execution remains closed
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: N/A - iOS package execution remains closed
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: diagnostic-only - iOS package execution remains closed
+        run: scripts/write-native-target-host-evidence.sh
+
+      - name: Upload Mobile iOS target-host evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deve-native-target-host-evidence-ios
+          path: target/native-target-host-evidence/mobile-ios.md
+          if-no-files-found: error
