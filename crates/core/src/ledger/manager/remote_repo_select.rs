@@ -31,7 +31,13 @@ impl<'a> RepoCatalogRuntime<'a> {
         let mut by_stem = Vec::new();
         let mut by_name = Vec::new();
         for entry in entries {
-            let info = entry.info.as_ref().expect("validated readable");
+            let Some(info) = entry.info.as_ref() else {
+                return Err(anyhow!(
+                    "Broken shadow repo {} for peer {} while resolving selector",
+                    entry.stem,
+                    peer_id
+                ));
+            };
             if entry.stem == selector {
                 by_stem.push(entry.clone());
             }

@@ -77,6 +77,8 @@ contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::begin_stop(r
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::finish_stop(repo_id)"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "stop_handle(rejected)?"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/registry.rs" "WatcherSlot::Stopping"
+contains "$ROOT_DIR/crates/core/src/ledger/manager/remote_repo_select.rs" "let Some(info) = entry.info.as_ref() else"
+not_contains "$ROOT_DIR/crates/core/src/ledger/manager/remote_repo_select.rs" "expect(\"validated readable\")"
 
 not_contains "$ACCEPTANCE" "deve repo create"
 not_contains "$ACCEPTANCE" "deve db inspect"
