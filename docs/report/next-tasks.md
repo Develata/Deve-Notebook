@@ -8,10 +8,12 @@
 
 1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
 2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton。
-3. Mainline implementation gap scan：若前两项继续不开放，则下一批只做 fresh gap scan 或用户指定的非平台化 Current MUST；不得用泛化重构替代明确缺口。
+3. Full regression gate refresh：若前两项继续不开放，且没有用户指定的非平台化 Current MUST，则下一批运行完整回归闸门：`cargo test`、`cargo clippy --all-targets -- -D warnings`、`cargo fmt --check`、`git diff --check`。
+4. Mainline implementation gap scan：完整回归闸门通过后，若仍未打开前两项，则下一批只做 fresh gap scan 或用户指定的非平台化 Current MUST；不得用泛化重构替代明确缺口。
 
 ## 最近完成
 
+- Mainline gap scan after Chrome smoke：新增 `mainline-gap-scan-after-chrome-smoke-2026-05-14.md`，复跑 plan/code 双射、acceptance/features、architecture、主线 baseline、runtime happy/recovery 与 release audit；未发现新的 unblocked Current MUST，下一步推进到完整回归闸门刷新。
 - Chrome MCP isolated browser smoke after native port validation：新增 `chrome-mcp-isolated-browser-smoke-after-native-port-validation-2026-05-14.md`，用隔离数据根验证当前 Web runtime 的 create/open/edit/save/reload/reconnect 与 console/network 健康；未发现运行缺陷。
 - Mainline gap rescan after native port validation：新增 `mainline-gap-rescan-after-native-port-validation-2026-05-14.md`，复跑 network/native/release/dev-runbook guard、runtime happy/recovery smoke 与 plan coverage；未发现 unblocked 主线代码缺口，后续 Chrome MCP 隔离浏览器 smoke 已由上方条目闭合。
 - Native endpoint port validation：新增 `native-endpoint-port-validation-2026-05-14.md`，将 Native endpoint validator 的显式端口校验从“数字即可”收敛为有效非零 `u16`，Web native bootstrap 继承同一 `InvalidEndpoint` fail-closed 语义。
