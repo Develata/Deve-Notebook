@@ -86,6 +86,7 @@
     - run: scripts/check-native-track-boundary.sh
     - run: scripts/check-native-packaging-gate.sh
     - run: scripts/check-desktop-package-preflight.sh
+    - run: scripts/check-desktop-platform-package-build.sh
     - run: scripts/check-graph-baseline.sh
     - run: cargo test -p deve_cli graph -- --nocapture
   assertions:

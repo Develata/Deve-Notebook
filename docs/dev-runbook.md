@@ -244,6 +244,30 @@ The script covers degraded local projection write gates, stale sync-scope
 cleanup, Web write/read gates for recovery states, message refresh scope guards,
 status summary mapping, and auth-probe separation from ordinary reconnect.
 
+## Desktop Package Build Gate
+
+Validate the Desktop packaging preflight and diagnose target-host package build
+readiness:
+
+```bash
+scripts/check-desktop-platform-package-build.sh
+```
+
+The script keeps ordinary local baselines diagnostic-only. It reports missing
+target-host prerequisites such as the Desktop Tauri binary entrypoint, build
+script, Web `dist/index.html`, or `cargo-tauri` CLI, then exits successfully
+unless package build is explicitly required.
+
+On a target platform host, require the actual package build:
+
+```bash
+DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-build.sh
+```
+
+Required mode fails closed on missing prerequisites. When all prerequisites are
+present it runs `cargo tauri build` from `apps/desktop`. A Linux or WSL result
+only validates that host target; it does not certify macOS or Windows packages.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
@@ -289,6 +313,7 @@ scripts/check-dev-data-health-baseline.sh
 scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
 scripts/check-desktop-package-preflight.sh
+scripts/check-desktop-platform-package-build.sh
 scripts/check-graph-baseline.sh
 scripts/check-diff-color-baseline.sh
 scripts/check-large-doc-baseline.sh
