@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Chat drop file fail-closed：新增 `chat-drop-file-fail-closed-2026-05-14.md`，将 AI Chat 文件拖拽中的 `FileReader` 创建失败和读取失败改为可见 banner，保留 1 MiB 限制，并用 AI baseline guard 防止回退到 panic/静默失败路径。
 - Source Control proxy client fail-closed：新增 `source-control-proxy-client-fail-closed-2026-05-14.md`，将 plugin-host proxy 的 Source Control HTTP client 初始化从 `expect` 改为 `Result` 传播，并用 source-control baseline guard 防止回退到 panic 路径。
 - Watch Ctrl-C handler fail-closed：新增 `watch-ctrlc-handler-fail-closed-2026-05-14.md`，将 `deve watch` 的 Ctrl+C handler 安装提前到 scan / watcher start 之前，并把 handler 注册失败从 panic 改为 `Result` 错误。
 - Node check projection vault fail-closed：新增 `node-check-projection-vault-fail-closed-2026-05-14.md`，将 `deve node-check --projection` 的 `SyncManager` 构造切到 `new_checked`，补缺失 vault 不 panic 的测试，并把 dev-data-health baseline 绑定到 checked constructor。

@@ -12,6 +12,11 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen::closure::Closure;
 
 type EventClosure = Rc<RefCell<Option<Closure<dyn FnMut(web_sys::Event)>>>>;
+const MAX_CHAT_ATTACHMENT_BYTES: f64 = 1024.0 * 1024.0;
+
+fn attach_file_error(reason: &str) -> String {
+    cannot_action("attach file", reason)
+}
 
 pub fn on_drag_over(set_is_drag_over: WriteSignal<bool>) -> impl Fn(web_sys::DragEvent) {
     move |ev: web_sys::DragEvent| {
@@ -42,14 +47,19 @@ pub fn on_drop(
             for i in 0..files.length() {
                 if let Some(file) = files.item(i) {
                     let name = file.name();
-                    if file.size() > 1024.0 * 1024.0 {
-                        let message = cannot_action("attach file", "file is larger than 1 MiB");
+                    if file.size() > MAX_CHAT_ATTACHMENT_BYTES {
+                        let message = attach_file_error("file is larger than 1 MiB");
                         leptos::logging::warn!("{}: {}", message, name);
                         show_sync_banner(set_sync_banner, message);
                         continue;
                     }
 
-                    let reader = web_sys::FileReader::new().unwrap();
+                    let Ok(reader) = web_sys::FileReader::new() else {
+                        let message = attach_file_error("file reader is unavailable");
+                        leptos::logging::warn!("{}: {}", message, name);
+                        show_sync_banner(set_sync_banner, message);
+                        continue;
+                    };
                     let reader_c = reader.clone();
                     let name_c = name.clone();
                     let set_input = set_input;
@@ -74,9 +84,36 @@ pub fn on_drop(
 
                     reader.set_onload(Some(onload.as_ref().unchecked_ref()));
                     *onload_slot.borrow_mut() = Some(onload);
-                    let _ = reader.read_as_text(&file);
+                    if reader.read_as_text(&file).is_err() {
+                        reader.set_onload(None);
+                        let _ = onload_slot.borrow_mut().take();
+                        let message = attach_file_error("file read failed");
+                        leptos::logging::warn!("{}: {}", message, name);
+                        show_sync_banner(set_sync_banner, message);
+                    }
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::attach_file_error;
+
+    #[test]
+    fn attach_file_errors_are_visible_banner_copy() {
+        assert_eq!(
+            attach_file_error("file is larger than 1 MiB"),
+            "Cannot attach file: file is larger than 1 MiB"
+        );
+        assert_eq!(
+            attach_file_error("file reader is unavailable"),
+            "Cannot attach file: file reader is unavailable"
+        );
+        assert_eq!(
+            attach_file_error("file read failed"),
+            "Cannot attach file: file read failed"
+        );
     }
 }

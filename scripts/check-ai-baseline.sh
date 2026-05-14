@@ -64,6 +64,11 @@ check_contains apps/web/src/components/chat/actions/apply.rs "sync_editor_state_
 check_contains apps/web/js/editor_adapter.js "window.syncEditorStateToRust = syncEditorStateToRust"
 check_contains apps/web/src/components/chat/message_item.rs "chat_apply_label_is_build_only_for_assistant_messages"
 check_contains apps/web/src/components/chat/message_list.rs "chat_apply_click_is_consumed_only_in_build_mode"
+check_contains apps/web/src/components/chat/drop_handler.rs "file reader is unavailable"
+check_contains apps/web/src/components/chat/drop_handler.rs "file read failed"
+check_contains apps/web/src/components/chat/drop_handler.rs "attach_file_errors_are_visible_banner_copy"
+check_absent apps/web/src/components/chat/drop_handler.rs "FileReader::new().unwrap()"
+check_absent apps/web/src/components/chat/drop_handler.rs "let _ = reader.read_as_text(&file);"
 
 # Native AI remains read-first. BUILD mode may expose controlled apply, not tools/shell/MCP.
 check_contains docs/features/operations/ai_chat.md "Native AI 默认拒绝请求侧"
