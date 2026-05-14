@@ -89,6 +89,7 @@ pub fn SourceControlView() -> impl IntoView {
                     notice=core.notice
                     block=core.read_block
                     current_repo_id=core.current_repo_id
+                    current_scope_nonce=core.current_scope_nonce
                     clear_notice=core.clear_notice
                 />
                 <ChangesPanel expanded=expand_changes visible=show_changes />

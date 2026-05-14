@@ -24,6 +24,8 @@ pub use commit::{commit, commit_plugin_host};
 
 #[derive(Deserialize)]
 pub struct PathPayload {
+    #[serde(default)]
+    pub scope_nonce: Option<u64>,
     pub path: String,
     #[serde(default)]
     pub doc_id: Option<deve_core::models::DocId>,
@@ -42,6 +44,8 @@ impl PathPayload {
 
 #[derive(Deserialize)]
 pub struct CommitPayload {
+    #[serde(default)]
+    pub scope_nonce: Option<u64>,
     pub message: String,
     #[serde(flatten)]
     pub repo: RepoSelector,
@@ -51,6 +55,9 @@ pub async fn stage(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(payload.scope_nonce) {
+        return super::errors::http(error);
+    }
     let target = payload.target();
     if let Err(error) = ensure_http_selector_writable(&state, &payload.repo) {
         return super::errors::http(error);
@@ -65,6 +72,9 @@ pub async fn stage_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(payload.scope_nonce) {
+        return super::errors::http(error);
+    }
     let target = payload.target();
     if let Err(error) = host::ensure_source_control_write_allowed(&payload.repo) {
         return super::errors::http(error);
@@ -82,6 +92,9 @@ pub async fn discard_pending(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(payload.scope_nonce) {
+        return super::errors::http(error);
+    }
     let target = payload.target();
     if let Err(error) = ensure_http_selector_writable(&state, &payload.repo) {
         return super::errors::http(error);
@@ -96,6 +109,9 @@ pub async fn discard_pending_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(payload.scope_nonce) {
+        return super::errors::http(error);
+    }
     let target = payload.target();
     if let Err(error) = host::ensure_source_control_write_allowed(&payload.repo) {
         return super::errors::http(error);
@@ -113,6 +129,9 @@ pub async fn unstage(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(payload.scope_nonce) {
+        return super::errors::http(error);
+    }
     let target = payload.target();
     if let Err(error) = ensure_http_selector_writable(&state, &payload.repo) {
         return super::errors::http(error);
@@ -127,6 +146,9 @@ pub async fn unstage_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Json(payload): Json<PathPayload>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(payload.scope_nonce) {
+        return super::errors::http(error);
+    }
     let target = payload.target();
     if let Err(error) = host::ensure_source_control_write_allowed(&payload.repo) {
         return super::errors::http(error);

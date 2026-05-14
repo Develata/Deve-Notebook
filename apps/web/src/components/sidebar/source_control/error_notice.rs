@@ -19,6 +19,7 @@ pub fn ErrorNotice(
     notice: ReadSignal<Option<SourceControlNotice>>,
     block: Signal<Option<RepoWriteBlock>>,
     current_repo_id: ReadSignal<Option<String>>,
+    current_scope_nonce: ReadSignal<u64>,
     clear_notice: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
@@ -36,9 +37,11 @@ pub fn ErrorNotice(
         }
 
         repair_review.set(GitRepairReviewFetchState::Loading);
+        let scope_nonce = current_scope_nonce.get_untracked();
         spawn_local(async move {
-            let fetched = fetch_git_mirror_repair_review(repo_id.clone()).await;
+            let fetched = fetch_git_mirror_repair_review(repo_id.clone(), scope_nonce).await;
             let still_current = current_repo_id.get_untracked() == repo_id
+                && current_scope_nonce.get_untracked() == scope_nonce
                 && notice
                     .get_untracked()
                     .as_ref()

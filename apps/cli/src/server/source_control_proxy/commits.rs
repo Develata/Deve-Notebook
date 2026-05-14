@@ -8,6 +8,8 @@ use deve_core::ledger::traits::RepoSelector;
 use deve_core::source_control::{CommitFileDiff, CommitInfo};
 use serde_json::json;
 
+use super::REMOTE_PROXY_SCOPE_NONCE;
+
 pub(super) fn list_commits(
     api: &RemoteSourceControlApi,
     repo: &RepoSelector,
@@ -50,6 +52,7 @@ pub(super) fn commit_staged(
     let url = format!("{}/api/sc/commit", api.base_url);
     let res = super::block_on_safe(async {
         http::send_json(api.client.post(&url).json(&json!({
+            "scope_nonce": REMOTE_PROXY_SCOPE_NONCE,
             "message": message,
             "repo_id": repo.repo_id.map(|id| id.to_string()),
             "repo_name": repo.repo_name.clone(),

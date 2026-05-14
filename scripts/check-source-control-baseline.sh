@@ -78,6 +78,12 @@ check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "source_
 check_contains apps/cli/src/server/ws/route/source_control.rs "ClientMessage::CommitAndPush { message, .. }"
 check_contains apps/cli/src/server/ws/route/source_control.rs "source_control::handle_commit_and_push"
 check_contains apps/cli/src/server/ws/route/source_control/tests.rs "source_control_scope_nonce_gate_rejects_missing_scope_before_handler"
+check_contains apps/cli/src/server/handlers/source_control/http_scope.rs "source control scope nonce missing"
+check_contains apps/cli/src/server/source_control_http_test/status.rs "test_http_status_rejects_missing_scope_nonce"
+check_contains apps/cli/src/server/source_control_http_test/stage.rs "test_http_stage_rejects_missing_scope_nonce_before_mutation"
+check_contains apps/cli/src/server/source_control_proxy/mod.rs "REMOTE_PROXY_SCOPE_NONCE"
+check_contains apps/web/src/api/git_mirror.rs "scope_nonce={scope_nonce}"
+check_contains apps/web/src/components/sidebar/source_control/error_notice.rs "current_scope_nonce.get_untracked() == scope_nonce"
 check_contains apps/web/src/components/sidebar/source_control/commit_actions.rs "on_commit_and_push.run(())"
 check_contains apps/web/src/i18n/source_control/actions.rs "Commit & Push"
 

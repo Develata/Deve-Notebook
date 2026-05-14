@@ -64,6 +64,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
         set_notice: state.set_source_control_notice,
         clear_notice,
         current_repo_id: state.current_repo_id,
+        current_scope_nonce: state.current_scope_nonce,
         active_branch: state.active_branch,
         pending_branch_switch: state.pending_branch_switch,
         pending_repo_switch: state.pending_repo_switch,

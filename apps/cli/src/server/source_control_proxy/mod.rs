@@ -15,6 +15,8 @@ use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, SourceControlApi};
 
+const REMOTE_PROXY_SCOPE_NONCE: u64 = 1;
+
 #[derive(Clone)]
 pub struct RemoteSourceControlApi {
     base_url: String,
@@ -31,6 +33,7 @@ impl RemoteSourceControlApi {
         mut req: reqwest::RequestBuilder,
         repo: &RepoSelector,
     ) -> reqwest::RequestBuilder {
+        req = req.query(&[("scope_nonce", REMOTE_PROXY_SCOPE_NONCE.to_string())]);
         if let Some(repo_id) = repo.repo_id {
             req = req.query(&[("repo_id", repo_id.to_string())]);
         }

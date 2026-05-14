@@ -27,6 +27,7 @@ pub struct SourceControlContext {
     pub set_notice: WriteSignal<Option<SourceControlNotice>>,
     pub clear_notice: Callback<()>,
     pub current_repo_id: ReadSignal<Option<String>>,
+    pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,

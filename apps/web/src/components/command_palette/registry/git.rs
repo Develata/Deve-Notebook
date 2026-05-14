@@ -93,6 +93,7 @@ mod tests {
         let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
         let (notice, set_notice) = signal(None::<SourceControlNotice>);
         let (current_repo_id, _) = signal(Some("default".to_string()));
+        let (current_scope_nonce, _) = signal(1u64);
         let (active_branch, _) = signal(None::<PeerId>);
         let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
         let (pending_repo_switch, _) = signal(None::<String>);
@@ -114,6 +115,7 @@ mod tests {
             set_notice,
             clear_notice,
             current_repo_id,
+            current_scope_nonce,
             active_branch,
             pending_branch_switch,
             pending_repo_switch,

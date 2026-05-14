@@ -36,11 +36,15 @@ pub enum GitMirrorRepairReviewFetchError {
 
 pub async fn fetch_git_mirror_repair_review(
     repo_id: Option<String>,
+    scope_nonce: u64,
 ) -> Result<GitMirrorRepairReview, GitMirrorRepairReviewFetchError> {
-    let response = Request::get(&git_mirror_repair_review_url(repo_id.as_deref()))
-        .send()
-        .await
-        .map_err(|_| GitMirrorRepairReviewFetchError::RequestFailed)?;
+    let response = Request::get(&git_mirror_repair_review_url(
+        repo_id.as_deref(),
+        scope_nonce,
+    ))
+    .send()
+    .await
+    .map_err(|_| GitMirrorRepairReviewFetchError::RequestFailed)?;
     response
         .ok()
         .then_some(response)
@@ -50,11 +54,13 @@ pub async fn fetch_git_mirror_repair_review(
         .map_err(|_| GitMirrorRepairReviewFetchError::RequestFailed)
 }
 
-fn git_mirror_repair_review_url(repo_id: Option<&str>) -> String {
-    repo_id.map_or_else(
-        || "/api/sc/git-mirror/repair-review".to_string(),
-        |repo_id| format!("/api/sc/git-mirror/repair-review?repo_id={repo_id}"),
-    )
+fn git_mirror_repair_review_url(repo_id: Option<&str>, scope_nonce: u64) -> String {
+    match repo_id {
+        Some(repo_id) => {
+            format!("/api/sc/git-mirror/repair-review?scope_nonce={scope_nonce}&repo_id={repo_id}")
+        }
+        None => format!("/api/sc/git-mirror/repair-review?scope_nonce={scope_nonce}"),
+    }
 }
 
 #[cfg(test)]
@@ -64,12 +70,12 @@ mod tests {
     #[test]
     fn repair_review_url_uses_repo_id_when_available() {
         assert_eq!(
-            git_mirror_repair_review_url(Some("repo-1")),
-            "/api/sc/git-mirror/repair-review?repo_id=repo-1"
+            git_mirror_repair_review_url(Some("repo-1"), 7),
+            "/api/sc/git-mirror/repair-review?scope_nonce=7&repo_id=repo-1"
         );
         assert_eq!(
-            git_mirror_repair_review_url(None),
-            "/api/sc/git-mirror/repair-review"
+            git_mirror_repair_review_url(None, 7),
+            "/api/sc/git-mirror/repair-review?scope_nonce=7"
         );
     }
 

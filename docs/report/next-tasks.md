@@ -8,11 +8,11 @@
 
 1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
 2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton，并回到 mainline implementation gap scan。
-3. Source Control HTTP scope gate：为 `/api/sc/*` read/mutation surface 增加 `scope_nonce` 输入与 stale-scope fail-closed guard，避免 HTTP 绕过第 7 章 source-control scope contract。
-4. Mainline implementation gap scan：完成 Source Control HTTP scope gate 后，重新按 `docs/plan × features × acceptance-cases × code` 选择下一批非平台化缺口；默认不打开 native packaging gate，不修改 `docs/plan/`。
+3. Mainline implementation gap scan：重新按 `docs/plan × features × acceptance-cases × code` 选择下一批非平台化缺口；默认不打开 native packaging gate，不修改 `docs/plan/`。
 
 ## 最近完成
 
+- Source Control HTTP scope gate：新增 `source-control-http-scope-gate-2026-05-14.md`，为 `/api/sc/*` read/mutation surface 增加显式 `scope_nonce` gate，补齐 proxy 默认 nonce、Web Git repair readonly review scope 传递与 baseline guard。
 - Acceptance stale command cleanup：新增 `acceptance-stale-command-cleanup-2026-05-14.md`，清理 POS/DIFF/AUTH/REPO/STORE acceptance 中的过期伪命令与 stale test filter，并把 Web release smoke 归属修正为 `CMD-007A`。
 - Acceptance / release guard cleanup：新增 `acceptance-release-guard-cleanup-2026-05-14.md`，修复 letter-suffixed acceptance ID 解析、补齐 CLI baseline command surface，并将 `REL-001` 从过时 `dist/v1.0.0` 验收改为当前 GHCR/Docker release workflow surface。
 - Mobile PendingAck scope filter：新增 `mobile-pending-ack-scope-filter-2026-05-14.md`，移动端 footer pending 状态复用 repo/scope 过滤，避免旧 scope pending 污染当前状态。

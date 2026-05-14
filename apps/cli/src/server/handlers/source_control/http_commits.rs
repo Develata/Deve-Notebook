@@ -20,6 +20,8 @@ use deve_core::source_control::{CommitFileDiff, CommitInfo};
 
 #[derive(Deserialize)]
 pub struct CommitHistoryQuery {
+    #[serde(default)]
+    pub scope_nonce: Option<u64>,
     #[serde(default = "default_limit")]
     pub limit: u32,
     #[serde(flatten)]
@@ -28,6 +30,8 @@ pub struct CommitHistoryQuery {
 
 #[derive(Deserialize)]
 pub struct CommitDiffQuery {
+    #[serde(default)]
+    pub scope_nonce: Option<u64>,
     pub commit_b: String,
     #[serde(default)]
     pub commit_a: Option<String>,
@@ -43,6 +47,9 @@ pub async fn commit_history(
     State(state): State<Arc<AppState>>,
     Query(q): Query<CommitHistoryQuery>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(q.scope_nonce) {
+        return super::errors::http(error);
+    }
     match service::list_commit_history(state.repo.as_ref(), &q.repo, q.limit) {
         Ok(commits) => Json::<Vec<CommitInfo>>(commits).into_response(),
         Err(e) => super::errors::http(e),
@@ -53,6 +60,9 @@ pub async fn commit_history_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Query(q): Query<CommitHistoryQuery>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(q.scope_nonce) {
+        return super::errors::http(error);
+    }
     match host::source_control_api() {
         Ok(repo) => match service::list_commit_history(repo.as_ref(), &q.repo, q.limit) {
             Ok(commits) => Json::<Vec<CommitInfo>>(commits).into_response(),
@@ -66,6 +76,9 @@ pub async fn commit_diff(
     State(state): State<Arc<AppState>>,
     Query(q): Query<CommitDiffQuery>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(q.scope_nonce) {
+        return super::errors::http(error);
+    }
     match service::diff_commits(
         state.repo.as_ref(),
         &q.repo,
@@ -81,6 +94,9 @@ pub async fn commit_diff_plugin_host(
     State(_state): State<Arc<PluginHostState>>,
     Query(q): Query<CommitDiffQuery>,
 ) -> impl IntoResponse {
+    if let Err(error) = super::http_scope::require(q.scope_nonce) {
+        return super::errors::http(error);
+    }
     match host::source_control_api() {
         Ok(repo) => {
             match service::diff_commits(repo.as_ref(), &q.repo, q.commit_a.as_deref(), &q.commit_b)

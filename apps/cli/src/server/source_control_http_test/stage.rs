@@ -84,6 +84,7 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
         .client
         .post(format!("{}/api/sc/stage-pending", harness.base_url))
         .json(&serde_json::json!({
+            "scope_nonce": 1,
             "path": "notes/a.md",
             "doc_id": doc_id.to_string(),
         }))
@@ -92,6 +93,36 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
 
     assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
     assert!(repo.list_pending_fs_in_repo(&selector)?.is_empty());
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_http_stage_rejects_missing_scope_nonce_before_mutation() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(body.code, deve_core::protocol::ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(
+        body.detail.as_deref(),
+        Some("source control scope nonce missing")
+    );
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
     harness.shutdown().await;
     Ok(())
 }

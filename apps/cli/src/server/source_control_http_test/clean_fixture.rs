@@ -4,7 +4,7 @@
 //! Source Control smoke fixture that never depends on checked-in dev ledger
 //! state.
 
-use super::support::{ProxyHarness, path_target, seed_pending, write_workspace_file};
+use super::support::{ProxyHarness, seed_pending, write_workspace_file};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use deve_core::source_control::{ChangeEntry, ChangeStatus, CommitInfo};
 
@@ -91,7 +91,10 @@ async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow
     let response = harness
         .client
         .post(format!("{}/api/sc/stage-pending", harness.base_url))
-        .json(&path_target("smoke/degraded.md"))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "smoke/degraded.md",
+        }))
         .send()
         .await?;
     let status = response.status();
@@ -112,6 +115,7 @@ async fn http_status(harness: &ProxyHarness) -> anyhow::Result<Vec<ChangeEntry>>
     let response = harness
         .client
         .get(format!("{}/api/sc/status", harness.base_url))
+        .query(&[("scope_nonce", "1")])
         .send()
         .await?;
     assert_eq!(response.status(), reqwest::StatusCode::OK);
@@ -122,7 +126,10 @@ async fn post_path(harness: &ProxyHarness, endpoint: &str, path: &str) -> anyhow
     let response = harness
         .client
         .post(format!("{}{}", harness.base_url, endpoint))
-        .json(&path_target(path))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": path,
+        }))
         .send()
         .await?;
     assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
@@ -133,7 +140,10 @@ async fn post_commit(harness: &ProxyHarness, message: &str) -> anyhow::Result<Co
     let response = harness
         .client
         .post(format!("{}/api/sc/commit", harness.base_url))
-        .json(&serde_json::json!({ "message": message }))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "message": message,
+        }))
         .send()
         .await?;
     assert_eq!(response.status(), reqwest::StatusCode::OK);
