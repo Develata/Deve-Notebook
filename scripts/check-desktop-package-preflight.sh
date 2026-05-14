@@ -28,6 +28,8 @@ check_desktop_native_tree_includes_runtime_surface() {
     || fail "desktop native-packaging tree must include tauri-build"
   rg -q '(^| )tray-icon v' <<<"$tree" \
     || fail "desktop native-packaging tree must include tray-icon"
+  rg -q '(^| )tauri-runtime-wry v' <<<"$tree" \
+    || fail "desktop native-packaging tree must include tauri-runtime-wry"
 }
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"

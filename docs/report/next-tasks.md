@@ -6,13 +6,14 @@
 
 ## 当前执行队列
 
-1. Desktop Tauri runtime entrypoint decision：package-build 诊断门禁已落地；若继续 Desktop，需要先设计 `apps/desktop/src/main.rs` / `build.rs` 入口，只打开 window shell，不打开 child-process runtime 或 native authority writes。
+1. Desktop target-host package build verification：Desktop Tauri entrypoint 已打开 window shell；当前本机仍缺 `cargo tauri` CLI，真实 package build/signing 只能在目标 host 用 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-build.sh` 验证。
 2. Mobile Packaging Dependency Spike：必须显式选择后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
 3. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
 
 ## 最近完成
 
-- NPG-2e Desktop Platform Package Build Decision：新增 `scripts/check-desktop-platform-package-build.sh`，默认诊断 target-host package build prerequisites，显式 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1` 时才要求真实 `cargo tauri build`；当前缺 `apps/desktop/src/main.rs`、`apps/desktop/build.rs` 与 `cargo tauri` CLI，因此不声明 platform package ready。
+- NPG-2f Desktop Tauri Runtime Entrypoint：新增 `apps/desktop/src/main.rs`、`apps/desktop/build.rs` 与 `tauri_entry` window shell runtime，native-packaging 下启动 Tauri menu/tray/window shell；默认 build 仍 no-Tauri，未打开 child-process runtime、native authority writes 或 platform release ready。
+- NPG-2e Desktop Platform Package Build Decision：新增 `scripts/check-desktop-platform-package-build.sh`，默认诊断 target-host package build prerequisites，显式 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1` 时才要求真实 `cargo tauri build`；该批次当时缺 `apps/desktop/src/main.rs`、`apps/desktop/build.rs` 与 `cargo tauri` CLI，因此不声明 platform package ready。
 - NPG-2d Desktop Package Build Preflight Script：新增 `scripts/check-desktop-package-preflight.sh`，固定 Desktop default no-Tauri、native-packaging Tauri/tray-icon tree、menu_tray/packaging tests 与 release acceptance 绑定；仍未执行 platform package build/signing。
 - NPG-2c Desktop Menu/Tray Runtime Binding：在 `apps/desktop/native-packaging` scope 内接入 Tauri menu/tray builder，动作仍只解析为 UI intent；未启动 Tauri runtime，未打开 child-process runtime、native authority writes 或 platform release ready。
 - NPG-2b Desktop Menu/Tray Surface Declaration：为 Desktop native-packaging 增加 menu/tray action surface，动作限定为 UI intent；真实 Tauri menu/tray builder、child-process runtime、native authority writes 与 platform release ready 仍未打开。

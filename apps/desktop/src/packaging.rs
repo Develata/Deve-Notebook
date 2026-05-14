@@ -59,6 +59,8 @@ pub struct DesktopShellPackagingAcceptance {
     pub identifier: &'static str,
     pub main_window_label: &'static str,
     pub main_window_title: &'static str,
+    pub runtime_entrypoint_declared: bool,
+    pub build_script_declared: bool,
     pub menu_bar_runtime_declared: bool,
     pub system_tray_runtime_declared: bool,
     pub menu_and_tray_runtime_deferred: bool,
@@ -128,6 +130,8 @@ impl DesktopPackagingScaffold {
 
     pub fn shell_acceptance_is_authority_free(&self) -> bool {
         self.acceptance.shell.menu_bar_runtime_declared
+            && self.acceptance.shell.runtime_entrypoint_declared
+            && self.acceptance.shell.build_script_declared
             && self.acceptance.shell.system_tray_runtime_declared
             && !self.acceptance.shell.menu_and_tray_runtime_deferred
             && self.acceptance.shell.installer_metadata_declared
@@ -167,6 +171,8 @@ const SHELL_ACCEPTANCE: DesktopShellPackagingAcceptance = DesktopShellPackagingA
     identifier: DESKTOP_TAURI_IDENTIFIER,
     main_window_label: DESKTOP_TAURI_MAIN_WINDOW_LABEL,
     main_window_title: DESKTOP_TAURI_MAIN_WINDOW_TITLE,
+    runtime_entrypoint_declared: true,
+    build_script_declared: true,
     menu_bar_runtime_declared: true,
     system_tray_runtime_declared: true,
     menu_and_tray_runtime_deferred: false,

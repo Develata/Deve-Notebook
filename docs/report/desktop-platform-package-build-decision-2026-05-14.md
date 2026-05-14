@@ -21,13 +21,15 @@ Date: 2026-05-14
 - Default mode runs the existing Desktop package preflight, reports target-host package prerequisites, and skips the actual package build when prerequisites are missing.
 - `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1` turns missing prerequisites into a hard failure and runs `cargo tauri build` when all prerequisites exist.
 
-## Current Missing Prerequisites
+## Missing Prerequisites At This Batch
 
 - `apps/desktop/src/main.rs`
 - `apps/desktop/build.rs`
 - `cargo tauri` CLI
 
 `apps/web/dist/index.html` is present in the current workspace.
+
+Later Desktop entrypoint work may close the `main.rs` / `build.rs` items; target-host package build still remains gated by this script.
 
 ## Boundary
 

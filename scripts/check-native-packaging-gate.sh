@@ -15,6 +15,8 @@ check_desktop_tauri_lock_entries() {
     || fail "desktop native-packaging dependency spike must lock tauri-build"
   rg -q 'name = "tray-icon"' "$ROOT_DIR/Cargo.lock" \
     || fail "desktop native-packaging menu/tray binding must lock tray-icon"
+  rg -q 'name = "tauri-runtime-wry"' "$ROOT_DIR/Cargo.lock" \
+    || fail "desktop native-packaging runtime entrypoint must lock tauri-runtime-wry"
 }
 
 check_default_desktop_tree_excludes_tauri() {
@@ -30,6 +32,8 @@ check_desktop_feature_tree_includes_tauri() {
     || fail "desktop native-packaging feature must include tauri-build"
   cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tray-icon v' \
     || fail "desktop native-packaging feature must include tray-icon"
+  cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tauri-runtime-wry v' \
+    || fail "desktop native-packaging feature must include tauri-runtime-wry"
 }
 
 "$ROOT_DIR/scripts/check-native-track-boundary.sh"

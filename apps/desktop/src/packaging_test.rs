@@ -73,6 +73,7 @@ fn desktop_tauri_manifest_declares_shell_metadata_only() {
     assert_eq!(window["fullscreen"], false);
     assert_eq!(config["app"]["withGlobalTauri"], false);
     assert_eq!(config["bundle"]["active"], true);
+    assert_eq!(config["bundle"]["icon"][0], "icons/icon.png");
     assert_eq!(config["bundle"]["createUpdaterArtifacts"], false);
     assert!(config["bundle"]["targets"].is_null());
     assert!(
@@ -90,6 +91,8 @@ fn desktop_shell_acceptance_keeps_runtime_authority_closed() {
     assert_eq!(shell.identifier, DESKTOP_TAURI_IDENTIFIER);
     assert_eq!(shell.main_window_label, DESKTOP_TAURI_MAIN_WINDOW_LABEL);
     assert_eq!(shell.main_window_title, DESKTOP_TAURI_MAIN_WINDOW_TITLE);
+    assert!(shell.runtime_entrypoint_declared);
+    assert!(shell.build_script_declared);
     assert!(shell.menu_bar_runtime_declared);
     assert!(shell.system_tray_runtime_declared);
     assert!(!shell.menu_and_tray_runtime_deferred);

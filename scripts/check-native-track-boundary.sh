@@ -35,13 +35,15 @@ check_no_packaging_dependency_leak() {
   done < <(find "$ROOT_DIR" -path "$ROOT_DIR/target" -prune -o -name Cargo.toml -type f -print)
 
   local runtime_imports
-  runtime_imports="$(rg -n '(^|[^[:alnum:]_])(use[[:space:]]+tauri|tauri::)' \
+  runtime_imports="$(rg -n '(^|[^[:alnum:]_])((use[[:space:]]+tauri(::|[[:space:];,{]))|tauri::)' \
     "$ROOT_DIR/apps" "$ROOT_DIR/crates" || true)"
   if [[ -n "$runtime_imports" ]]; then
     while IFS= read -r line; do
       case "$line" in
         "$ROOT_DIR/apps/desktop/src/menu_tray.rs":*) ;;
-        *) fail "native packaging runtime import outside desktop menu/tray binding: ${line#"$ROOT_DIR"/}" ;;
+        "$ROOT_DIR/apps/desktop/src/main.rs":*) ;;
+        "$ROOT_DIR/apps/desktop/src/tauri_entry.rs":*) ;;
+        *) fail "native packaging runtime import outside desktop shell binding: ${line#"$ROOT_DIR"/}" ;;
       esac
     done <<< "$runtime_imports"
   fi
@@ -57,11 +59,16 @@ check_no_process_runtime_leak() {
 check_contains Cargo.toml '"apps/desktop"'
 check_contains Cargo.toml '"apps/mobile"'
 
-check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/tray-icon"]'
+check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/tray-icon", "tauri/wry"]'
 check_contains apps/desktop/Cargo.toml 'tauri = { version = "2.11.1", optional = true, default-features = false }'
 check_contains apps/desktop/Cargo.toml 'tauri-build = { version = "2.6.1", optional = true, default-features = false }'
+check_contains apps/desktop/build.rs "tauri_build::build()"
+check_contains apps/desktop/src/main.rs "run_desktop_tauri_app"
 check_contains apps/desktop/tauri.conf.json '"identifier": "dev.deve.notebook"'
 check_contains apps/desktop/tauri.conf.json '"productName": "Deve Notebook"'
+check_contains apps/desktop/tauri.conf.json '"icon": ["icons/icon.png"]'
+[[ -f "$ROOT_DIR/apps/desktop/icons/icon.png" ]] \
+  || fail "missing desktop Tauri icon: apps/desktop/icons/icon.png"
 check_contains apps/desktop/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/mobile/Cargo.toml "native-packaging = []"
 check_not_contains apps/mobile/Cargo.toml "tauri ="
@@ -72,6 +79,8 @@ check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
 check_contains apps/desktop/src/packaging.rs "status: \"dependency-spike-open\""
 check_contains apps/desktop/src/packaging.rs "DesktopShellPackagingAcceptance"
 check_contains apps/desktop/src/packaging.rs "DesktopMenuTraySurface"
+check_contains apps/desktop/src/packaging.rs "runtime_entrypoint_declared: true"
+check_contains apps/desktop/src/packaging.rs "build_script_declared: true"
 check_contains apps/desktop/src/packaging.rs "session_handoff_required_before_writable_ui: true"
 check_contains apps/desktop/src/packaging.rs "menu_bar_runtime_declared: true"
 check_contains apps/desktop/src/packaging.rs "system_tray_runtime_declared: true"
@@ -86,6 +95,11 @@ check_contains apps/desktop/src/menu_tray.rs "tauri::tray"
 check_contains apps/desktop/src/menu_tray.rs "build_desktop_menu"
 check_contains apps/desktop/src/menu_tray.rs "build_desktop_tray_icon"
 check_contains apps/desktop/src/menu_tray.rs "resolve_desktop_menu_action_id"
+check_contains apps/desktop/src/tauri_entry.rs "tauri::Builder::default()"
+check_contains apps/desktop/src/tauri_entry.rs "tauri::generate_context!()"
+check_contains apps/desktop/src/tauri_entry.rs "DesktopTauriRuntimeSurface"
+check_contains apps/desktop/src/tauri_entry.rs "child_process_runtime_enabled: false"
+check_contains apps/desktop/src/tauri_entry.rs "opens_authority_write_path: false"
 check_contains apps/desktop/src/packaging.rs "child_process_runtime_enabled: false"
 check_contains apps/desktop/src/packaging.rs "release_ready_claimed: false"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"

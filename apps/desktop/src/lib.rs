@@ -20,6 +20,8 @@ mod shell;
 mod shell_recovery_test;
 #[cfg(test)]
 mod shell_test;
+#[cfg(feature = "native-packaging")]
+mod tauri_entry;
 mod types;
 
 #[cfg(feature = "native-packaging")]
@@ -42,6 +44,11 @@ pub use packaging::{
     DesktopTrayAction, desktop_packaging_scaffold,
 };
 pub use shell::DesktopShell;
+#[cfg(feature = "native-packaging")]
+pub use tauri_entry::{
+    DesktopTauriRuntimeSurface, DesktopTauriShellEffect, desktop_tauri_runtime_surface,
+    menu_action_shell_effect, run_desktop_tauri_app, tray_action_shell_effect,
+};
 pub use types::{
     DesktopBootstrap, DesktopRecoveryBootstrap, DesktopServiceState, DesktopSessionMaterial,
     DesktopShellError, DesktopShellSnapshot,
