@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED:-0}"
+BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
 
 fail() {
   echo "desktop-platform-package-build-check: $*" >&2
@@ -54,13 +55,18 @@ fi
 
 if [[ "$REQUIRED" != "1" ]]; then
   echo "desktop-platform-package-build-check: package prerequisites present; set DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 to run cargo tauri build"
+  echo "desktop-platform-package-build-check: set DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm to verify a target-host subset"
   echo "desktop-platform-package-build-check: ok"
   exit 0
 fi
 
 (
   cd "$ROOT_DIR/apps/desktop"
-  run cargo tauri build
+  if [[ -n "$BUNDLES" ]]; then
+    run cargo tauri build --ci --bundles "$BUNDLES"
+  else
+    run cargo tauri build --ci
+  fi
 )
 
 echo "desktop-platform-package-build-check: ok"

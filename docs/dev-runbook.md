@@ -267,6 +267,8 @@ DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-bui
 Required mode fails closed on missing prerequisites. When all prerequisites are
 present it runs `cargo tauri build` from `apps/desktop`. A Linux or WSL result
 only validates that host target; it does not certify macOS or Windows packages.
+Use `DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm` to verify a Linux bundle subset when
+the host cannot run the AppImage `linuxdeploy` path.
 
 ## Chrome MCP Smoke
 

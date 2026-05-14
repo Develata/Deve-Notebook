@@ -56,12 +56,27 @@ check_no_process_runtime_leak() {
   fi
 }
 
+check_manifest_dependency() {
+  local file="$1"
+  local dep="$2"
+  local version="$3"
+  local line
+  line="$(rg "^[[:space:]]*${dep}[[:space:]]*=" "$ROOT_DIR/$file" || true)"
+  [[ -n "$line" ]] || fail "missing dependency '$dep' in $file"
+  rg -q --fixed-strings "version = \"$version\"" <<<"$line" \
+    || fail "dependency '$dep' must pin version $version in $file"
+  rg -q --fixed-strings "optional = true" <<<"$line" \
+    || fail "dependency '$dep' must stay optional in $file"
+  rg -q --fixed-strings "default-features = false" <<<"$line" \
+    || fail "dependency '$dep' must disable default features in $file"
+}
+
 check_contains Cargo.toml '"apps/desktop"'
 check_contains Cargo.toml '"apps/mobile"'
 
 check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/tray-icon", "tauri/wry"]'
-check_contains apps/desktop/Cargo.toml 'tauri = { version = "2.11.1", optional = true, default-features = false }'
-check_contains apps/desktop/Cargo.toml 'tauri-build = { version = "2.6.1", optional = true, default-features = false }'
+check_manifest_dependency apps/desktop/Cargo.toml tauri 2.11.1
+check_manifest_dependency apps/desktop/Cargo.toml tauri-build 2.6.1
 check_contains apps/desktop/build.rs "tauri_build::build()"
 check_contains apps/desktop/src/main.rs "run_desktop_tauri_app"
 check_contains apps/desktop/tauri.conf.json '"identifier": "dev.deve.notebook"'

@@ -6,12 +6,13 @@
 
 ## 当前执行队列
 
-1. Desktop target-host package build verification：Desktop Tauri entrypoint 已打开 window shell；当前本机仍缺 `cargo tauri` CLI，真实 package build/signing 只能在目标 host 用 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-build.sh` 验证。
-2. Mobile Packaging Dependency Spike：必须显式选择后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
-3. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
+1. Mobile Packaging Dependency Spike：必须显式选择后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
+2. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
+3. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
 
 ## 最近完成
 
+- NPG-2g Desktop Target-Host Package Build Verification：安装并验证 `tauri-cli 2.11.1`；用 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm scripts/check-desktop-platform-package-build.sh` 完成 Linux `deb,rpm` package build；默认 AppImage 仍受 `linuxdeploy` host 条件影响，不声明 macOS/Windows readiness。
 - NPG-2f Desktop Tauri Runtime Entrypoint：新增 `apps/desktop/src/main.rs`、`apps/desktop/build.rs` 与 `tauri_entry` window shell runtime，native-packaging 下启动 Tauri menu/tray/window shell；默认 build 仍 no-Tauri，未打开 child-process runtime、native authority writes 或 platform release ready。
 - NPG-2e Desktop Platform Package Build Decision：新增 `scripts/check-desktop-platform-package-build.sh`，默认诊断 target-host package build prerequisites，显式 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1` 时才要求真实 `cargo tauri build`；该批次当时缺 `apps/desktop/src/main.rs`、`apps/desktop/build.rs` 与 `cargo tauri` CLI，因此不声明 platform package ready。
 - NPG-2d Desktop Package Build Preflight Script：新增 `scripts/check-desktop-package-preflight.sh`，固定 Desktop default no-Tauri、native-packaging Tauri/tray-icon tree、menu_tray/packaging tests 与 release acceptance 绑定；仍未执行 platform package build/signing。
