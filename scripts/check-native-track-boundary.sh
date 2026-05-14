@@ -138,9 +138,11 @@ check_contains apps/desktop/build.rs "tauri_build::build()"
 check_contains apps/desktop/src/main.rs "run_desktop_tauri_app"
 check_contains apps/desktop/tauri.conf.json '"identifier": "dev.deve.notebook"'
 check_contains apps/desktop/tauri.conf.json '"productName": "Deve Notebook"'
-check_contains apps/desktop/tauri.conf.json '"icon": ["icons/icon.png"]'
+check_contains apps/desktop/tauri.conf.json '"icon": ["icons/icon.png", "icons/icon.ico"]'
 [[ -f "$ROOT_DIR/apps/desktop/icons/icon.png" ]] \
   || fail "missing desktop Tauri icon: apps/desktop/icons/icon.png"
+[[ -f "$ROOT_DIR/apps/desktop/icons/icon.ico" ]] \
+  || fail "missing desktop Tauri Windows icon: apps/desktop/icons/icon.ico"
 check_contains apps/desktop/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/mobile/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/wry"]'
 check_contains apps/mobile/Cargo.toml 'crate-type = ["staticlib", "cdylib", "rlib"]'
