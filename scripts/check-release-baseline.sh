@@ -174,6 +174,9 @@ contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" 'Deci
 contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" "No real child-process runtime was opened."
 contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" "DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1"
 contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" "Android/iOS Mobile package execution remains target-host work"
+contains "docs/plan/08_ui_design_03_mobile.md" "{#mobile-android-shell-package-execution-gate}"
+contains "docs/plan/08_ui_design_03_mobile.md" "Android package build **MUST NOT** 启动、持有、重启后端子进程"
+contains "docs/report/mobile-android-shell-package-gate-2026-05-14.md" "Android shell-only package execution"
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["version", "profile", "delivery", "environment"]'
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]'
 contains "docs/features/15_release.md" "版本、profile、环境、交付形态和 repo health 聚合状态"

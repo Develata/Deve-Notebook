@@ -7,13 +7,14 @@
 ## 当前执行队列
 
 1. Desktop macOS/Windows target-host package execution：在 macOS/Windows 主机可用后，运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
-2. Mobile Android shell-only package execution gate decision：Android required preflight 已在当前 Linux/WSL host 通过，但 plan 仍关闭 Android project generation 与 package build；除非显式打开一个更窄的 Android shell-only gate，否则不得运行 `cargo tauri android init/build`。
-3. Mobile iOS target-host package execution：iOS 仍阻塞于 macOS target host；当前 Linux/WSL 只允许诊断，不得声明 iOS package ready。
+2. Mobile Android shell-only package execution implementation：plan 已允许 Android shell-only package execution 单独开门；下一批只可实现 Android target-host script / shell package execution，不得打开 iOS、process runtime 或 native authority writes。
+3. Mobile iOS target-host package execution：iOS 仍阻塞于 macOS target host 与独立验收；当前 Linux/WSL 只允许诊断，不得声明 iOS package ready。
 4. Process runtime gate reopen review：只有 target-host package execution 闭合后，才重新评审是否实现真实 child-process runtime；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
-- Mobile Android Target-host Preflight：用 `DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 DEVE_MOBILE_PACKAGE_TARGETS=android scripts/check-mobile-platform-package-preflight.sh` 在当前 Linux/WSL host 验证 Android prerequisites；package build 仍按当前 gate 关闭。
+- Mobile Android Shell-only Package Gate：在 plan 中拆分 Android 与 iOS package execution；Android 可进入 shell-only target-host package execution，iOS、process runtime 与 native authority writes 仍关闭。
+- Mobile Android Target-host Preflight：用 `DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 DEVE_MOBILE_PACKAGE_TARGETS=android scripts/check-mobile-platform-package-preflight.sh` 在当前 Linux/WSL host 验证 Android prerequisites。
 - Desktop Process Runtime Gate Decision：确认真实 child-process runtime 继续关闭，直到 macOS/Windows 与 Android/iOS target-host package execution 提供证据；Desktop fake runtime 仍限于 test-only state-machine harness。
 - Desktop macOS/Windows Target-host Preflight：新增 `scripts/check-desktop-target-host-preflight.sh`，默认在 Linux/WSL 上只诊断 macOS/Windows host 缺失，required 模式可在目标主机 fail-closed 检查 macOS signing/Xcode 与 Windows MSVC/WiX/NSIS 前置条件。
 - Desktop AppImage Package Verification：在 Linux/WSL host 上验证 Desktop `native-packaging` AppImage package path；记录 `librsvg2-dev` / `pkg-config librsvg-2.0` 与 `APPIMAGE_EXTRACT_AND_RUN=1` host prerequisite，生成 `Deve Notebook_0.0.1_amd64.AppImage`。

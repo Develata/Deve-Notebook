@@ -37,14 +37,10 @@ Result:
 
 ## Gate Consequence
 
-Android prerequisites are no longer the immediate blocker on this host. The
-remaining blocker is the plan gate: `08_ui_design_03_mobile.md` and
-`14_tech_stack.md` still state that Android/iOS project generation and platform
-package build are not open.
+Android prerequisites are no longer the immediate blocker on this host.
 
-Opening Android shell-only package execution now requires an explicit plan
-change or a narrower gate decision. Until then, the implementation must stop at
-required preflight evidence.
+Follow-up: the narrower Android shell-only package gate is tracked in
+`docs/report/mobile-android-shell-package-gate-2026-05-14.md`.
 
 ## Verification
 

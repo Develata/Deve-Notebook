@@ -103,7 +103,8 @@ Gate 状态：
   Desktop release ready。
 - Mobile packaging dependency spike 已打开：`tauri` / `tauri-build` **MAY** 只作为 `apps/mobile`
   的 optional dependency 存在，并且必须挂在 `native-packaging` feature 后。
-- Mobile packaging scaffold 只记录 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；不得声明 Mobile runtime entrypoint、Android/iOS package build 或 release ready。
+- Mobile packaging scaffold 只记录 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；Android shell-only package execution 可由 `08_ui_design_03_mobile.md#mobile-android-shell-package-execution-gate` 单独打开。
+- iOS package execution 仍必须等待 macOS target host 与独立验收；Mobile runtime entrypoint、process runtime、native authority write path 与 release ready 不得由 Android package execution 隐式打开。
 - Mobile foreground/background reprobe 与 session/readiness correctness 继续由 no-packaging skeleton tests 保证。
 - Native embedded service supervision 按 no-runtime contract 处理；该 contract 不启动真实子进程、不依赖 Tauri runtime capability、不授予 native shell core authority。
 - `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DesktopAndMobileDependencySpikeOpen`；
