@@ -1,12 +1,16 @@
 //! plan_ref:
 //!   - 07_diff_logic#source-control-runtime
 
-pub(super) fn build_client(base_url: &str) -> reqwest::Client {
+use anyhow::{Context, Result};
+
+pub(super) fn build_client(base_url: &str) -> Result<reqwest::Client> {
     let mut builder = reqwest::Client::builder();
     if is_loopback_url(base_url) {
         builder = builder.no_proxy();
     }
-    builder.build().expect("build source control HTTP client")
+    builder
+        .build()
+        .context("Failed to build source control HTTP client")
 }
 
 fn is_loopback_url(base_url: &str) -> bool {
@@ -26,7 +30,7 @@ fn is_loopback_ip(host: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_loopback_url;
+    use super::{build_client, is_loopback_url};
 
     #[test]
     fn detects_loopback_base_urls() {
@@ -39,5 +43,11 @@ mod tests {
     fn leaves_remote_urls_proxy_eligible() {
         assert!(!is_loopback_url("https://example.com"));
         assert!(!is_loopback_url("http://10.0.0.2:3000"));
+    }
+
+    #[test]
+    fn builds_source_control_http_client_without_panicking() {
+        assert!(build_client("http://127.0.0.1:3000").is_ok());
+        assert!(build_client("https://example.com").is_ok());
     }
 }

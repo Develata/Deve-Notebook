@@ -24,9 +24,9 @@ pub struct RemoteSourceControlApi {
 }
 
 impl RemoteSourceControlApi {
-    pub fn new(base_url: String) -> Self {
-        let client = client::build_client(&base_url);
-        Self { base_url, client }
+    pub fn new(base_url: String) -> Result<Self> {
+        let client = client::build_client(&base_url)?;
+        Ok(Self { base_url, client })
     }
 
     fn with_repo_query(

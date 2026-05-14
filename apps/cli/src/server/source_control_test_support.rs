@@ -67,7 +67,7 @@ impl ProxyHarness {
             sync_manager,
             base_url: base_url.clone(),
             client: local_client(),
-            proxy: RemoteSourceControlApi::new(base_url),
+            proxy: RemoteSourceControlApi::new(base_url)?,
             shutdown: Some(shutdown_tx),
             task,
         })
