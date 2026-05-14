@@ -43,16 +43,20 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.92
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: wasm32-unknown-unknown,aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Install Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install release tools
+      - name: Install Trunk
         run: |
           cargo install trunk --locked --version 0.21.14
+
+      - name: Install Tauri CLI
+        if: ${{ inputs.run_desktop_package_build }}
+        run: |
           cargo install tauri-cli --locked --version 2.11.1
 
       - name: Build web dist
@@ -125,16 +129,20 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.92
-          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+          targets: wasm32-unknown-unknown,x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
 
       - name: Install Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install release tools
+      - name: Install Trunk
         run: |
           cargo install trunk --locked --version 0.21.14
+
+      - name: Install Tauri CLI
+        if: ${{ inputs.run_desktop_package_build }}
+        run: |
           cargo install tauri-cli --locked --version 2.11.1
 
       - name: Build web dist
@@ -205,17 +213,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.92
-          targets: aarch64-apple-ios
+          targets: wasm32-unknown-unknown,aarch64-apple-ios
 
       - name: Install Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install release tools
+      - name: Install Trunk
         run: |
           cargo install trunk --locked --version 0.21.14
-          cargo install tauri-cli --locked --version 2.11.1
 
       - name: Build web dist
         run: |

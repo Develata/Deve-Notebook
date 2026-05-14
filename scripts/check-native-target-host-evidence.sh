@@ -11,8 +11,13 @@ fail() {
 contains() {
   local file="$1"
   local text="$2"
-  rg --fixed-strings --quiet -- "$text" "$file" \
-    || fail "missing '$text' in ${file#$ROOT_DIR/}"
+  if command -v rg >/dev/null 2>&1; then
+    rg --fixed-strings --quiet -- "$text" "$file" \
+      || fail "missing '$text' in ${file#$ROOT_DIR/}"
+  else
+    grep -F -- "$text" "$file" >/dev/null \
+      || fail "missing '$text' in ${file#$ROOT_DIR/}"
+  fi
 }
 
 validate_report() {
