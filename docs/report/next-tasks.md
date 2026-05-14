@@ -6,13 +6,14 @@
 
 ## 当前执行队列
 
-1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
-2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton，并回到 mainline implementation gap scan。
-3. Mainline implementation gap scan：重新按 `docs/plan × features × acceptance-cases × code` 选择下一批非平台化缺口；默认不打开 native packaging gate，不修改 `docs/plan/`。
+1. Chrome MCP isolated browser smoke refresh：用隔离数据根复验当前 Web runtime 的登录、Ready、create/open/edit/save/reload/reconnect、console/network 健康；若暴露 bug，先修 bug，再记录 dated report。
+2. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
+3. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton。
 
 ## 最近完成
 
 - Watcher lifecycle duplicate start gate：新增 `watcher-lifecycle-duplicate-start-gate-2026-05-14.md`，为同一 repo 重复启动 watcher 增加启动前 registry gate，并在竞态 rejected handle 上显式 `stop + join`，避免 orphan watcher runtime。
+- Mainline gap rescan after watcher lifecycle：新增 `mainline-gap-rescan-after-watcher-lifecycle-2026-05-14.md`，复跑 runtime happy/recovery smoke、plan coverage、release/dev-runbook/native guards 与 Web dependency audit；当前未发现 unblocked 主线代码缺口，下一步收敛为 Chrome MCP 隔离浏览器 smoke refresh。
 - Peer registration retry status：新增 `peer-registration-retry-status-2026-05-14.md`，将 `Connected` 但 repo peer/writer 尚未注册的状态从普通 `Handshaking repo` 中拆出，显示 `Logged in / Peer not registered`，并在 desktop/mobile 状态栏提供 retry peer 入口，驱动 handshake retry nonce 重新注册。
 - Web foreground reprobe write gate：新增 `web-foreground-reprobe-write-gate-2026-05-14.md`，浏览器从后台/失焦恢复到前台时清空 stale writer-ready、handshake scope 与 node-role readiness，触发新 repo handshake 与 `/api/node/role` reprobe，避免旧写入授权跨 foreground recovery 继续生效。
 - Source Control HTTP scope gate：新增 `source-control-http-scope-gate-2026-05-14.md`，为 `/api/sc/*` read/mutation surface 增加显式 `scope_nonce` gate，补齐 proxy 默认 nonce、Web Git repair readonly review scope 传递与 baseline guard。
