@@ -6,12 +6,14 @@
 
 ## 当前执行队列
 
-1. NPG-2 Desktop Shell Packaging Acceptance：在 NPG-1 dependency spike 通过后，验证 Desktop shell-level packaging acceptance；仍不得打开 child-process runtime 或 native authority writes。
-2. Mobile Packaging Dependency Spike：必须等 Desktop shell acceptance 闭合后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
-3. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
+1. NPG-2b Desktop Menu/Tray Runtime Declaration：在 `native-packaging` feature 后声明 menu/tray runtime surface；不得打开 child-process runtime 或 native authority writes。
+2. Desktop platform package build decision：NPG-2b 闭合后，才可选择在目标平台 host 上验证 Tauri package build/signing；WSL/Linux 不能宣称 macOS/Windows release ready。
+3. Mobile Packaging Dependency Spike：必须显式选择后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
+4. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
 
 ## 最近完成
 
+- NPG-2a Desktop Shell Manifest Acceptance：新增 `desktop-shell-packaging-acceptance-2026-05-14.md` 与 Desktop `tauri.conf.json` shell manifest，验证 window/bundle/updater-disabled/session-handoff acceptance；menu/tray runtime 仍延后，未打开 child-process runtime，也未声明 platform release ready。
 - NPG-1 Desktop Packaging Dependency Spike：新增 `desktop-packaging-dependency-spike-2026-05-14.md`，允许 `tauri` / `tauri-build` 仅作为 `apps/desktop` 的 optional `native-packaging` 依赖；default build 与 Mobile build 仍保持 no-Tauri，native layer 不获得 ledger/vault/source-control/search/Git authority。
 - Error-code catalog plan alignment：新增 `error-code-catalog-plan-alignment-2026-05-14.md`，在 `11_i18n.md#i18n-error-code-catalog` 补齐 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED`，关闭已知小范围 plan catalog drift。
 - Mainline gap scan after full regression：新增 `mainline-gap-scan-after-full-regression-2026-05-14.md`，复跑 plan/code 双射、acceptance/features、architecture、domain baselines、native/release gates 与 UI/AI/WS 细分 guard，并引用上一批 full regression/runtime smoke 结果；未发现新的 unblocked Current MUST。

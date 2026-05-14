@@ -21,8 +21,10 @@ mod types;
 
 #[cfg(feature = "native-packaging")]
 pub use packaging::{
-    DesktopPackagingAcceptance, DesktopPackagingAuthority, DesktopPackagingCapability,
-    DesktopPackagingDependencyBatch, DesktopPackagingScaffold, desktop_packaging_scaffold,
+    DESKTOP_TAURI_CONFIG_PATH, DESKTOP_TAURI_IDENTIFIER, DESKTOP_TAURI_MAIN_WINDOW_LABEL,
+    DESKTOP_TAURI_MAIN_WINDOW_TITLE, DESKTOP_TAURI_PRODUCT_NAME, DesktopPackagingAcceptance,
+    DesktopPackagingAuthority, DesktopPackagingCapability, DesktopPackagingDependencyBatch,
+    DesktopPackagingScaffold, DesktopShellPackagingAcceptance, desktop_packaging_scaffold,
 };
 pub use shell::DesktopShell;
 pub use types::{

@@ -4,8 +4,14 @@
 //!
 //! Feature-gated desktop packaging scaffold.
 //!
-//! This module describes the first packaging batch without importing a
-//! packaging runtime. The actual runtime dependency remains a separate change.
+//! This module records the desktop shell packaging acceptance surface without
+//! importing or starting a native runtime process.
+
+pub const DESKTOP_TAURI_CONFIG_PATH: &str = "apps/desktop/tauri.conf.json";
+pub const DESKTOP_TAURI_PRODUCT_NAME: &str = "Deve Notebook";
+pub const DESKTOP_TAURI_IDENTIFIER: &str = "dev.deve.notebook";
+pub const DESKTOP_TAURI_MAIN_WINDOW_LABEL: &str = "main";
+pub const DESKTOP_TAURI_MAIN_WINDOW_TITLE: &str = "Deve Notebook";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DesktopPackagingCapability {
@@ -38,6 +44,24 @@ pub struct DesktopPackagingDependencyBatch {
 pub struct DesktopPackagingAcceptance {
     pub capabilities: &'static [DesktopPackagingCapability],
     pub forbidden_authorities: &'static [DesktopPackagingAuthority],
+    pub shell: DesktopShellPackagingAcceptance,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopShellPackagingAcceptance {
+    pub tauri_config_path: &'static str,
+    pub product_name: &'static str,
+    pub identifier: &'static str,
+    pub main_window_label: &'static str,
+    pub main_window_title: &'static str,
+    pub menu_bar_runtime_declared: bool,
+    pub system_tray_runtime_declared: bool,
+    pub menu_and_tray_runtime_deferred: bool,
+    pub installer_metadata_declared: bool,
+    pub auto_update_artifacts_enabled: bool,
+    pub session_handoff_required_before_writable_ui: bool,
+    pub child_process_runtime_enabled: bool,
+    pub release_ready_claimed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,6 +80,21 @@ impl DesktopPackagingScaffold {
         self.dependency_batch.feature_gate == "native-packaging"
             && self.dependency_batch.status == "dependency-spike-open"
     }
+
+    pub fn shell_acceptance_is_authority_free(&self) -> bool {
+        !self.acceptance.shell.menu_bar_runtime_declared
+            && !self.acceptance.shell.system_tray_runtime_declared
+            && self.acceptance.shell.menu_and_tray_runtime_deferred
+            && self.acceptance.shell.installer_metadata_declared
+            && !self.acceptance.shell.auto_update_artifacts_enabled
+            && self
+                .acceptance
+                .shell
+                .session_handoff_required_before_writable_ui
+            && !self.acceptance.shell.child_process_runtime_enabled
+            && !self.acceptance.shell.release_ready_claimed
+            && self.is_authority_free()
+    }
 }
 
 pub fn desktop_packaging_scaffold() -> DesktopPackagingScaffold {
@@ -69,10 +108,27 @@ pub fn desktop_packaging_scaffold() -> DesktopPackagingScaffold {
         acceptance: DesktopPackagingAcceptance {
             capabilities: PACKAGING_CAPABILITIES,
             forbidden_authorities: FORBIDDEN_AUTHORITIES,
+            shell: SHELL_ACCEPTANCE,
         },
         no_packaging_tests_remain_authoritative: true,
     }
 }
+
+const SHELL_ACCEPTANCE: DesktopShellPackagingAcceptance = DesktopShellPackagingAcceptance {
+    tauri_config_path: DESKTOP_TAURI_CONFIG_PATH,
+    product_name: DESKTOP_TAURI_PRODUCT_NAME,
+    identifier: DESKTOP_TAURI_IDENTIFIER,
+    main_window_label: DESKTOP_TAURI_MAIN_WINDOW_LABEL,
+    main_window_title: DESKTOP_TAURI_MAIN_WINDOW_TITLE,
+    menu_bar_runtime_declared: false,
+    system_tray_runtime_declared: false,
+    menu_and_tray_runtime_deferred: true,
+    installer_metadata_declared: true,
+    auto_update_artifacts_enabled: false,
+    session_handoff_required_before_writable_ui: true,
+    child_process_runtime_enabled: false,
+    release_ready_claimed: false,
+};
 
 const PACKAGING_CAPABILITIES: &[DesktopPackagingCapability] = &[
     DesktopPackagingCapability::WindowShell,

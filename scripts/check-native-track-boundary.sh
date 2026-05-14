@@ -53,6 +53,9 @@ check_contains Cargo.toml '"apps/mobile"'
 check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build"]'
 check_contains apps/desktop/Cargo.toml 'tauri = { version = "2.11.1", optional = true, default-features = false }'
 check_contains apps/desktop/Cargo.toml 'tauri-build = { version = "2.6.1", optional = true, default-features = false }'
+check_contains apps/desktop/tauri.conf.json '"identifier": "dev.deve.notebook"'
+check_contains apps/desktop/tauri.conf.json '"productName": "Deve Notebook"'
+check_contains apps/desktop/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/mobile/Cargo.toml "native-packaging = []"
 check_not_contains apps/mobile/Cargo.toml "tauri ="
 check_not_contains apps/mobile/Cargo.toml "tauri-build ="
@@ -60,9 +63,17 @@ check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/desktop/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
 check_contains apps/desktop/src/packaging.rs "status: \"dependency-spike-open\""
+check_contains apps/desktop/src/packaging.rs "DesktopShellPackagingAcceptance"
+check_contains apps/desktop/src/packaging.rs "session_handoff_required_before_writable_ui: true"
+check_contains apps/desktop/src/packaging.rs "menu_bar_runtime_declared: false"
+check_contains apps/desktop/src/packaging.rs "system_tray_runtime_declared: false"
+check_contains apps/desktop/src/packaging.rs "menu_and_tray_runtime_deferred: true"
+check_contains apps/desktop/src/packaging.rs "child_process_runtime_enabled: false"
+check_contains apps/desktop/src/packaging.rs "release_ready_claimed: false"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingCapability::Installer"
 check_contains apps/desktop/src/packaging_test.rs "desktop_packaging_dependency_spike_is_feature_gated"
+check_contains apps/desktop/src/packaging_test.rs "desktop_tauri_manifest_declares_shell_metadata_only"
 check_contains apps/desktop/src/shell_test/policy.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/desktop/src/shell_test/policy.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains apps/mobile/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
