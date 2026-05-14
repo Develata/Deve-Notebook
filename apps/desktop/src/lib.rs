@@ -15,6 +15,10 @@ mod menu_tray;
 mod packaging;
 #[cfg(all(test, feature = "native-packaging"))]
 mod packaging_test;
+#[cfg(all(test, feature = "native-packaging"))]
+mod process_runtime;
+#[cfg(all(test, feature = "native-packaging"))]
+mod process_runtime_test;
 mod shell;
 #[cfg(test)]
 mod shell_recovery_test;
