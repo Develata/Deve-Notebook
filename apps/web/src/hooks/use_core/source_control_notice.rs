@@ -17,7 +17,7 @@ pub struct SourceControlNotice {
 
 impl SourceControlNotice {
     pub fn from_server_error(error: &ServerError) -> Option<Self> {
-        is_source_control_error(error.code).then(|| Self {
+        is_source_control_error(error.code).then_some(Self {
             code: error.code,
             detail: None,
         })
