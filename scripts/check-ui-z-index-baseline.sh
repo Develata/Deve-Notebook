@@ -96,6 +96,11 @@ contains apps/web/src/components/search_box/ui_sheet/style.rs "z-[var(--z-overla
 contains apps/web/src/components/command_palette/ui.rs "z-[var(--z-modal)]"
 contains apps/web/src/components/disconnect_overlay.rs "z-[var(--z-toast)]"
 contains apps/web/src/components/dropdown.rs "z-[calc(var(--z-floating)_+_1)]"
+contains apps/web/src/components/dropdown/position.rs "fn viewport_height() -> f64"
+contains apps/web/src/components/dropdown/position.rs ".and_then(|window| window.inner_height().ok())"
+if rg -q --fixed-strings 'expect("window")' "$ROOT_DIR/apps/web/src/components/dropdown/position.rs"; then
+  fail "dropdown viewport height must not panic when window is unavailable"
+fi
 contains apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs "z-[calc(var(--z-floating)_+_1)]"
 contains apps/web/src/components/mobile_layout/drawers/mod.rs "z-[calc(var(--z-overlay)_+_1)]"
 contains apps/web/index.html "z-[var(--z-toast)]"

@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Dropdown viewport height no-panic：新增 `dropdown-viewport-height-no-panic-2026-05-14.md`，将 dropdown placement 的 `window.expect("window")` 改为显式 `Option` fallback，正常浏览器行为不变，并加 native 单测与 UI baseline 防回归。
 - Search result detail no-panic：新增 `search-result-detail-no-panic-2026-05-14.md`，将 Unified Search result detail 渲染从 `detail_text.clone().unwrap()` 改为单一 `Option<String>` 显式 view 构造，保持 UI 输出语义不变，并加 Search baseline 防回归。
 - Git status retry hint no-panic：新增 `git-status-retry-hint-no-panic-2026-05-14.md`，将 `deve_cli git status` lagging-record retry hint 从 `expect` 维护的显示层不变量改为显式 retry command，保持输出合同不变，并加 Source Control baseline 防回归。
 - Source Control remote scope stale branch no-panic：新增 `source-control-remote-scope-stale-branch-no-panic-2026-05-14.md`，将 remote stale-scope detail 构造中的 `active_branch.expect("checked active branch")` 改为显式分支绑定，保持结构化错误语义不变，并加 source-control baseline 防回归。

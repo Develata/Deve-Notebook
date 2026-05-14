@@ -74,11 +74,25 @@ pub(super) fn build_panel_style(
     style
 }
 
+#[cfg(target_arch = "wasm32")]
 fn viewport_height() -> f64 {
     web_sys::window()
-        .expect("window")
-        .inner_height()
-        .ok()
+        .and_then(|window| window.inner_height().ok())
         .and_then(|v| v.as_f64())
         .unwrap_or(0.0)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn viewport_height() -> f64 {
+    0.0
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::viewport_height;
+
+    #[test]
+    fn viewport_height_falls_back_without_browser_window() {
+        assert_eq!(viewport_height(), 0.0);
+    }
 }
