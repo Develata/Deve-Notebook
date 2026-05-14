@@ -42,7 +42,7 @@ fn protocol_error_finishes_pending_chat_placeholder() {
     );
     assert_eq!(
         signals.chat_messages.get_untracked()[0].content,
-        "Invalid bincode client message"
+        "Request failed"
     );
 }
 
@@ -70,7 +70,7 @@ fn protocol_error_appends_after_partial_chat_content() {
     assert!(!signals.is_chat_streaming.get_untracked());
     assert_eq!(
         signals.chat_messages.get_untracked()[0].content,
-        "partial\n\ntransport failed"
+        "partial\n\nRequest failed"
     );
 }
 

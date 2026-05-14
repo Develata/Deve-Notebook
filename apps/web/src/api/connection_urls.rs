@@ -106,6 +106,7 @@ fn query_port() -> Option<u16> {
     parse_ws_port(&val)
 }
 
+#[cfg(any(target_arch = "wasm32", test))]
 fn parse_ws_port(value: &str) -> Option<u16> {
     match value.parse::<u16>() {
         Ok(port) if port > 0 => Some(port),
