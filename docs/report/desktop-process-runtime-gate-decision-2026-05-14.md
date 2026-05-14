@@ -19,7 +19,8 @@ complete across Desktop and Mobile platforms:
 - Linux Desktop `deb` / `rpm` / AppImage package paths have been verified.
 - macOS and Windows Desktop package signing, installer generation, install, and
   startup smoke remain target-host work.
-- Android/iOS Mobile package execution remains target-host work.
+- Android Mobile shell package execution is verified.
+- iOS Mobile package execution remains target-host work.
 
 Opening `Command::new`, `tokio::process`, direct spawn, or process ownership
 before target-host package execution would make service supervision look ready

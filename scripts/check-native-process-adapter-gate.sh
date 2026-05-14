@@ -51,7 +51,8 @@ check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md '
 check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "No real child-process runtime was opened."
 check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "Command::new"
 check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1"
-check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "Android/iOS Mobile package execution remains target-host work"
+check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "Android Mobile shell package execution is verified"
+check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "iOS Mobile package execution remains target-host work"
 
 check_no_process_runtime_leak
 
