@@ -77,11 +77,13 @@
     - ${DEVE_DATA_DIR}/vault/.deveignore 包含: ignored/*.md
   steps:
     - run: cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture
+    - run: cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture
     - run: cargo test -p deve_core watcher_respects_deveignore_for_matching_markdown -- --nocapture
     - run: cargo test -p deve_core watcher_startup_scan_respects_deveignore -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: pending_fs_ops_contains_added_modified_deleted true
+    - cli_assert: duplicate_watcher_start_fails_closed true
     - cli_assert: pending_fs_ops_ignores_deveignore true
     - cli_assert: ignored_markdown_not_appended_to_ledger true
 

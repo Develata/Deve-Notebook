@@ -52,6 +52,7 @@ case_contains STORE-005 "cargo test -p deve_core edit_round_trip_reconstructs_co
 case_contains STORE-005 "cargo test -p deve_core global_seq_increases -- --nocapture"
 case_contains STORE-006 "cargo test -p deve_cli markdown_export_preserves_user_frontmatter_without_system_metadata -- --nocapture"
 case_contains STORE-007 "cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture"
+case_contains STORE-007 "cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture"
 case_contains STORE-007 "cargo test -p deve_core watcher_respects_deveignore_for_matching_markdown -- --nocapture"
 case_contains STORE-007 "cargo test -p deve_core watcher_startup_scan_respects_deveignore -- --nocapture"
 case_contains STORE-008 "cargo test -p deve_cli recover_rebuilds_workspace_files_from_ledger -- --nocapture"
@@ -70,6 +71,9 @@ contains "$ROOT_DIR/apps/cli/src/commands/recover.rs" "fn recover_rebuilds_works
 contains "$ROOT_DIR/apps/cli/src/commands/export/tests.rs" "fn markdown_export_preserves_user_frontmatter_without_system_metadata()"
 contains "$ROOT_DIR/crates/core/tests/local_repo_metadata_repair_test.rs" "fn init_allocates_collision_safe_repo_name_for_same_name_different_url()"
 contains "$ROOT_DIR/crates/core/tests/store_acceptance_test.rs" "SNAPSHOT_DATA"
+contains "$ROOT_DIR/crates/core/tests/watcher_lifecycle.rs" "fn watcher_duplicate_start_fails_and_can_restart_after_stop()"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::is_running(info.uuid)"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "stop_handle(rejected)?"
 
 not_contains "$ACCEPTANCE" "deve repo create"
 not_contains "$ACCEPTANCE" "deve db inspect"

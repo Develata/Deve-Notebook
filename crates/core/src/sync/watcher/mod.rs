@@ -52,6 +52,9 @@ pub fn start_repo_watcher(
         .ok_or_else(|| {
             WatcherError::WatcherInitFailed(format!("Repository missing: {repo_name}"))
         })?;
+    if registry::is_running(info.uuid)? {
+        return Err(WatcherError::AlreadyRunning(info.uuid));
+    }
     crate::sync::scan::scan_local_repo(&sync.repo, &sync.vfs, repo_name)?;
     let repo_root = sync.repo.local_repo_workspace_root(repo_name)?;
     let mut backend = backend::desktop_backend(&repo_root, debounce)
@@ -71,7 +74,11 @@ pub fn start_repo_watcher(
             cb,
         )
     });
-    registry::insert(info.uuid, registry::WatcherHandle { stop_tx, join })?;
+    let handle = registry::WatcherHandle { stop_tx, join };
+    if let Err((err, rejected)) = registry::insert_or_reject(info.uuid, handle) {
+        stop_handle(rejected)?;
+        return Err(err);
+    }
     Ok(info.uuid)
 }
 
@@ -79,6 +86,10 @@ pub fn stop_repo_watcher(repo_id: RepoId) -> Result<(), WatcherError> {
     let Some(handle) = registry::remove(repo_id)? else {
         return Ok(());
     };
+    stop_handle(handle)
+}
+
+fn stop_handle(handle: registry::WatcherHandle) -> Result<(), WatcherError> {
     let _ = handle.stop_tx.send(());
     handle
         .join
