@@ -21,6 +21,13 @@ record_error() {
   errors=$((errors + 1))
 }
 
+record_stale_command_if_present() {
+  local pattern="$1"
+  if rg --quiet --fixed-strings -- "$pattern" "$ACCEPTANCE_DIR"; then
+    record_error "stale acceptance command remains: $pattern"
+  fi
+}
+
 [[ -d "$ACCEPTANCE_DIR" ]] || {
   record_error "missing acceptance directory: docs/acceptance-cases"
   exit 1
@@ -74,6 +81,15 @@ while IFS= read -r case_id; do
     unbound=$((unbound + 1))
   fi
 done < <(printf '%s\n' "${!case_set[@]}" | sort)
+
+record_stale_command_if_present "deve dump --doc"
+record_stale_command_if_present "deve merge --peer"
+record_stale_command_if_present "deve auth decode-jwt"
+record_stale_command_if_present "deve api call"
+record_stale_command_if_present "cargo test -p deve_core path_normalize_structure -- --nocapture"
+if rg --quiet -- '--field (doc_id|last_op)' "$ACCEPTANCE_DIR"; then
+  record_error "stale acceptance dump --field command remains"
+fi
 
 echo "automated acceptance bindings: $automated"
 echo "feature walkthrough bindings: $feature"

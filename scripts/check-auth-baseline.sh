@@ -15,6 +15,14 @@ check_contains() {
     || fail "missing '$pattern' in $file"
 }
 
+check_absent() {
+  local file="$1"
+  local pattern="$2"
+  if rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file"; then
+    fail "unexpected '$pattern' in $file"
+  fi
+}
+
 # AUTH-001/002/009: runtime config is env-driven and production fails closed.
 check_contains crates/core/src/security/auth/config.rs "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
 check_contains crates/core/src/security/auth/config.rs "AUTH_SECRET must be >= 32 bytes"
@@ -26,6 +34,7 @@ check_contains crates/core/src/security/auth/jwt.rs "exp"
 check_contains crates/core/src/security/auth/jwt.rs "ver"
 check_contains crates/core/src/security/auth/jwt.rs "subject: &str"
 check_contains crates/core/src/security/auth/jwt.rs "sub: subject.to_string()"
+check_absent docs/acceptance-cases/08_auth.md "deve auth decode-jwt"
 
 # AUTH-003/005/012: cookie session and status endpoint contract.
 check_contains apps/cli/src/server/auth/handlers/session.rs ".http_only(true)"

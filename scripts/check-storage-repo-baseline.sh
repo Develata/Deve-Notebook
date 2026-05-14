@@ -59,7 +59,7 @@ case_contains STORE-008 "cargo test -p deve_core rebuild_projection_recovers_whe
 case_contains STORE-009 "cargo test -p deve_cli document_scope_bootstrap -- --nocapture"
 case_contains STORE-009 "cargo test -p deve_cli open_doc_scope -- --nocapture"
 case_contains STORE-009 "cargo test -p deve_cli resolve_target_prefers_doc_id_over_stale_path -- --nocapture"
-case_contains STORE-010 "cargo test -p deve_core path_normalize_structure -- --nocapture"
+case_contains STORE-010 "cargo test -p deve_core --test path_normalize_structure_test -- --nocapture"
 
 for case_id in STORE-001 STORE-002 STORE-003 STORE-004 STORE-005 STORE-006 STORE-007 STORE-008 STORE-009 STORE-010; do
   case_contains "$case_id" "run: scripts/check-storage-repo-baseline.sh"
@@ -76,6 +76,7 @@ not_contains "$ACCEPTANCE" "deve db inspect"
 not_contains "$ACCEPTANCE" "deve doc edit"
 not_contains "$ACCEPTANCE" "deve dump --doc"
 not_contains "$ACCEPTANCE" "deve api call"
+not_contains "$ACCEPTANCE" "cargo test -p deve_core path_normalize_structure -- --nocapture"
 not_contains "$ACCEPTANCE" "deve path normalize"
 not_contains "$ACCEPTANCE" "deve recover --from-ledger"
 not_contains "$ACCEPTANCE" "powershell -Command"

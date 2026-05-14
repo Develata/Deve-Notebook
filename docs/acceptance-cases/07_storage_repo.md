@@ -116,7 +116,7 @@
   preconditions:
     - Windows 路径输入
   steps:
-    - run: cargo test -p deve_core path_normalize_structure -- --nocapture
+    - run: cargo test -p deve_core --test path_normalize_structure_test -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: persisted_paths_use_forward_slash true

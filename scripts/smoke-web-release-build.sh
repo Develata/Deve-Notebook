@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# REL-004 Web release build smoke.
+# CMD-007A Web release build smoke.
 # Normalizes environment quirks observed in WSL/Trunk:
 # - Trunk 0.21 expects NO_COLOR to be a bool-like value, not "1".
 # - Trunk's Tailwind pipeline may emit non-actionable Browserslist DB freshness

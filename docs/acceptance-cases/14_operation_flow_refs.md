@@ -45,8 +45,8 @@
 
 - case_id: REPO-FEAT-01
   goal: Repo file open resolves through UUID-first retrieval.
-  steps: [run: "deve api call --path-by-name file.md"]
-  assertions: [log_contains: "resolve_to_uuid"]
+  steps: [run: "cargo test -p deve_cli open_doc_scope -- --nocapture"]
+  assertions: [cli_assert: open_doc_bootstraps_by_doc_id true]
 
 - case_id: REPO-FEAT-02
   goal: Branch switch operation is reachable from command surfaces.

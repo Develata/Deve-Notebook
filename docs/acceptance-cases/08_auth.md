@@ -101,8 +101,8 @@
   preconditions:
     - 登录成功获得 JWT
   steps:
-    - run: deve auth decode-jwt --token <jwt>
     - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_core issue_token_preserves_subject -- --nocapture
     - run: cargo test -p deve_core auth -- --nocapture
   assertions:
     - jwt_claims_eq: ["sub", "iat", "exp", "ver"]

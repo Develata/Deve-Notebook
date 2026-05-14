@@ -41,11 +41,13 @@
   preconditions:
     - 文件存在: ${DEVE_DATA_DIR}/vault/rename_a.md
   steps:
-    - run: deve dump --path ${DEVE_DATA_DIR}/vault/rename_a.md --field doc_id
+    - run: deve dump --path ${DEVE_DATA_DIR}/vault/rename_a.md
     - run: powershell -Command "Rename-Item ${DEVE_DATA_DIR}/vault/rename_a.md rename_b.md"
-    - run: deve dump --path ${DEVE_DATA_DIR}/vault/rename_b.md --field doc_id
+    - run: deve dump --path ${DEVE_DATA_DIR}/vault/rename_b.md
+    - run: cargo test -p deve_core watcher_pairs_rename_and_preserves_doc_identity -- --nocapture
   assertions:
-    - stdout_eq: "doc_id_before == doc_id_after"
+    - stdout_contains: "DocId:"
+    - api_assert: rename_preserves_doc_identity true
 
 - case_id: POS-005
   goal: `.deveignore` 对 watcher 与 startup scan 均生效。

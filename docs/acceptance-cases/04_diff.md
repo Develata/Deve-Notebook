@@ -8,16 +8,16 @@
   steps:
     - ui_place_cursor_after: "A😀"
     - ui_type: "X"
-    - run: deve dump --doc current --field last_op
+    - run: cargo test -p deve_core compute_diff_uses_utf16_positions -- --nocapture
   assertions:
-    - stdout_contains: "utf16_index"
+    - api_assert: utf16_positions_match_editor_offsets true
 
 - case_id: DIFF-002
   goal: 3-Way Merge 使用 LCA。
   preconditions:
     - Local 与 Remote 均基于同一 Base 修改
   steps:
-    - run: deve merge --peer <peer_id>
+    - ui_command: "P2P: Merge Peer"
     - run: cargo test -p deve_cli merge_scope_nonce_gate -- --nocapture
     - run: cargo test -p deve_cli merge_manual_write_readonly_gate -- --nocapture
     - run: cargo test -p deve_cli merge_peer_local_branch_contract -- --nocapture
@@ -31,7 +31,7 @@
   preconditions:
     - Local 与 Remote 修改同一段落
   steps:
-    - run: deve merge --peer <peer_id>
+    - ui_command: "P2P: Merge Peer"
     - run: cargo test -p deve_cli resolve_merge_conflict -- --nocapture
   assertions:
     - ws_message: "MergeConflict"
