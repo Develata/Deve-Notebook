@@ -40,6 +40,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-native-packaging-gate.sh` | Verifies Desktop Tauri dependencies stay isolated behind `apps/desktop/native-packaging` while default and Mobile builds remain no-Tauri |
 | `check-native-process-adapter-gate.sh` | Verifies child-process runtime remains gate-closed and process observations stay state-machine-only |
 | `check-native-target-host-evidence.sh` | Verifies Desktop/Mobile target-host evidence reports include host, artifact, install/startup, and no-process/no-authority fields |
+| `dispatch-native-target-host-workflow.sh` | Builds or explicitly dispatches the manual Native Target Host GitHub Actions workflow command |
 | `write-native-target-host-evidence.sh` | Writes validated Desktop/Mobile target-host evidence reports for manual workflow artifacts or local target-host runs |
 | `check-desktop-package-preflight.sh` | Verifies Desktop default/no-packaging and native-packaging compile surfaces before target-host package builds |
 | `check-desktop-platform-package-build.sh` | Diagnoses target-host Desktop package build prerequisites and only runs `cargo tauri build` when explicitly required |

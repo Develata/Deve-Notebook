@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Native Target-host Workflow Dispatch Helper：新增 `scripts/dispatch-native-target-host-workflow.sh`，默认 dry-run 输出 `gh workflow run native-target-host.yml` 命令；只有显式 `DEVE_NATIVE_TARGET_HOST_DISPATCH=1` 且 GitHub CLI 已认证时才触发远端 workflow。
 - Mainline Native Gap Refresh After Evidence Outcomes：复跑 native process gate、target-host evidence validator、runbook/acceptance/release baseline、runtime happy/recovery smoke 与 plan coverage；本地未发现新的 unblocked Current MUST，Desktop macOS/Windows 与 Mobile iOS 仍只差目标机执行证据。
 - Native Target-host Evidence Artifacts：新增 `scripts/write-native-target-host-evidence.sh`，手动 target-host workflow 每个 job 生成并上传 `deve-native-target-host-evidence-*` artifact；Desktop package artifact 与 evidence artifact 分离，iOS 继续记录 package execution closed。
 - Native Target-host Acceptance Alignment：将 `scripts/check-native-target-host-evidence.sh` 接入 `REL-005` release acceptance，并由 release baseline 反查；未改 `docs/plan/`，未执行目标机 package build，未打开 process runtime。

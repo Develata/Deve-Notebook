@@ -323,6 +323,16 @@ The workflow is manual-only and diagnostic by default. Set
 produce package artifacts. Each target-host job uploads a validated
 `deve-native-target-host-evidence-*` artifact.
 
+CLI dispatch helper:
+
+```bash
+scripts/dispatch-native-target-host-workflow.sh
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true scripts/dispatch-native-target-host-workflow.sh
+```
+
+The helper is dry-run by default and requires an authenticated GitHub CLI before
+it can dispatch the manual workflow.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package
@@ -448,6 +458,7 @@ scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
 scripts/check-native-process-adapter-gate.sh
 scripts/check-native-target-host-evidence.sh
+scripts/dispatch-native-target-host-workflow.sh
 scripts/write-native-target-host-evidence.sh
 scripts/check-desktop-package-preflight.sh
 scripts/check-desktop-platform-package-build.sh

@@ -83,6 +83,9 @@ contains ".github/workflows/native-target-host.yml" "deve-native-target-host-evi
 contains ".github/workflows/native-target-host.yml" "deve-native-target-host-evidence-ios"
 contains ".github/workflows/native-target-host.yml" "iOS package build remains closed"
 contains ".github/AGENTS.md" "optional target-host workflows"
+contains "scripts/dispatch-native-target-host-workflow.sh" "DEVE_NATIVE_TARGET_HOST_DISPATCH"
+contains "scripts/dispatch-native-target-host-workflow.sh" "workflow run native-target-host.yml"
+contains "scripts/dispatch-native-target-host-workflow.sh" "dry-run"
 contains "scripts/check-native-target-host-evidence.sh" "Process runtime gate: closed"
 contains "scripts/check-native-target-host-evidence.sh" "Native authority writes: closed"
 contains "scripts/write-native-target-host-evidence.sh" "Process runtime gate: closed"
@@ -93,6 +96,7 @@ contains "docs/report/native-target-host-evidence-template.md" "# Native Target-
 contains "docs/report/native-target-host-evidence-template.md" "Command results:"
 contains "docs/report/native-target-host-evidence-template.md" "Artifact paths:"
 contains "docs/dev-runbook.md" "scripts/check-native-target-host-evidence.sh"
+contains "docs/dev-runbook.md" "scripts/dispatch-native-target-host-workflow.sh"
 contains "docs/dev-runbook.md" "scripts/write-native-target-host-evidence.sh"
 
 contains "Dockerfile" "cargo install trunk --locked --version 0.21.14"
