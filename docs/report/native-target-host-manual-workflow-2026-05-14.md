@@ -24,6 +24,9 @@ baseline, and does not modify `docs/plan/`.
 - `required_preflight=true` makes target-host prerequisites fail closed.
 - `run_desktop_package_build=true` runs Desktop package build after Desktop
   preflight.
+- Desktop package builds upload `target/release/bundle/**` as workflow
+  artifacts.
+- Every target-host job reruns `scripts/check-native-process-adapter-gate.sh`.
 
 ## Boundary
 
@@ -36,6 +39,8 @@ baseline, and does not modify `docs/plan/`.
 
 ## Verification
 
+- `ruby -e 'require "yaml"; YAML.load_file(".github/workflows/native-target-host.yml")'`
+- `scripts/check-native-process-adapter-gate.sh`
 - `scripts/check-release-baseline.sh`
 - `scripts/plan-coverage.sh --summary-missing-plan-ref`
 - `cargo fmt --check`

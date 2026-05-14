@@ -74,6 +74,9 @@ contains ".github/workflows/native-target-host.yml" "scripts/smoke-web-release-b
 contains ".github/workflows/native-target-host.yml" "scripts/check-desktop-target-host-preflight.sh"
 contains ".github/workflows/native-target-host.yml" "scripts/check-desktop-platform-package-build.sh"
 contains ".github/workflows/native-target-host.yml" "scripts/check-mobile-platform-package-preflight.sh"
+contains ".github/workflows/native-target-host.yml" "scripts/check-native-process-adapter-gate.sh"
+contains ".github/workflows/native-target-host.yml" "actions/upload-artifact@v4"
+contains ".github/workflows/native-target-host.yml" "target/release/bundle/**"
 contains ".github/workflows/native-target-host.yml" "iOS package build remains closed"
 contains ".github/AGENTS.md" "optional target-host workflows"
 

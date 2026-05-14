@@ -12,7 +12,7 @@
 
 ## 最近完成
 
-- Native Target-host Manual Workflow：新增手动触发的 `.github/workflows/native-target-host.yml`，用于 macOS/Windows Desktop 与 iOS Mobile target-host diagnostic/preflight；默认不进入 release tag baseline，不执行 package build，iOS build 继续关闭。
+- Native Target-host Manual Workflow：新增手动触发的 `.github/workflows/native-target-host.yml`，用于 macOS/Windows Desktop 与 iOS Mobile target-host diagnostic/preflight；默认不进入 release tag baseline，不执行 package build，iOS build 继续关闭；Desktop package build 显式打开时上传 package artifact，且每个 target-host job 复跑 process gate。
 - Mainline Gap Scan After Native Handoff：复跑 architecture registry、acceptance bindings、dev-runbook/release baselines、runtime happy/recovery smoke、native process gate 与 plan coverage；未发现新的 unblocked Current MUST，target-host package execution 仍是 native 方向唯一阻塞。
 - Native Target-host Handoff：固化 macOS/Windows Desktop 与 iOS Mobile 目标机执行命令、证据格式和 no-process/no-authority 边界；未改 `docs/plan/`，未打开 iOS build 或 process runtime。
 - Mobile Android Shell Package Execution：新增 feature-gated Tauri mobile WebView shell entrypoint、`apps/mobile/build.rs`、`apps/mobile/gen/android` 与 `scripts/check-mobile-android-shell-package-build.sh`；required 模式已生成 Android project、Rust Android `.so` 与 `app-universal-release-unsigned.apk`；iOS、process runtime 与 native authority writes 仍关闭。

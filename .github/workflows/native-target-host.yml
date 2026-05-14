@@ -64,11 +64,22 @@ jobs:
       - name: Desktop macOS target-host preflight
         run: scripts/check-desktop-target-host-preflight.sh
 
+      - name: Native process adapter gate remains closed
+        run: scripts/check-native-process-adapter-gate.sh
+
       - name: Desktop macOS package build
         if: ${{ inputs.run_desktop_package_build }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
         run: scripts/check-desktop-platform-package-build.sh
+
+      - name: Upload Desktop macOS package artifacts
+        if: ${{ inputs.run_desktop_package_build }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deve-desktop-macos-packages
+          path: target/release/bundle/**
+          if-no-files-found: error
 
   desktop-windows:
     if: ${{ inputs.target == 'all' || inputs.target == 'desktop-windows' }}
@@ -107,12 +118,23 @@ jobs:
       - name: Desktop Windows target-host preflight
         run: scripts/check-desktop-target-host-preflight.sh
 
+      - name: Native process adapter gate remains closed
+        run: scripts/check-native-process-adapter-gate.sh
+
       - name: Desktop Windows package build
         if: ${{ inputs.run_desktop_package_build }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
           DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
         run: scripts/check-desktop-platform-package-build.sh
+
+      - name: Upload Desktop Windows package artifacts
+        if: ${{ inputs.run_desktop_package_build }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deve-desktop-windows-packages
+          path: target/release/bundle/**
+          if-no-files-found: error
 
   mobile-ios:
     if: ${{ inputs.target == 'all' || inputs.target == 'mobile-ios' }}
@@ -147,6 +169,9 @@ jobs:
 
       - name: Mobile iOS target-host preflight
         run: scripts/check-mobile-platform-package-preflight.sh
+
+      - name: Native process adapter gate remains closed
+        run: scripts/check-native-process-adapter-gate.sh
 
       - name: Keep iOS package execution closed
         run: |
