@@ -14,6 +14,8 @@ use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use futures::SinkExt;
 use tokio_tungstenite::tungstenite::Message;
 
+static WS_JSON_TEXT_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn ws_endpoint_roundtrips_versioned_binary_ping() -> anyhow::Result<()> {
     let harness = WsHarness::spawn().await?;
@@ -109,39 +111,89 @@ async fn ws_endpoint_rejects_legacy_binary_without_magic() -> anyhow::Result<()>
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn ws_endpoint_accepts_versioned_json_text_debug_frame() -> anyhow::Result<()> {
+async fn ws_endpoint_rejects_versioned_json_text_by_default() -> anyhow::Result<()> {
+    let _lock = WS_JSON_TEXT_ENV_LOCK.lock().await;
+    let _env = EnvGuard::set_many(&[
+        ("DEVE_ENV", Some("production")),
+        ("DEVE_ALLOW_WS_JSON_TEXT", None),
+        ("DEVE_ALLOW_LEGACY_WS_JSON", None),
+    ]);
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
     let text = serde_json::to_string(&ClientFrame::current(ClientMessage::Ping))?;
 
     ws.send(Message::Text(text)).await?;
 
-    assert!(matches!(
-        recv_server_message(&mut ws).await?,
-        ServerMessage::Pong
-    ));
+    assert_json_text_disabled(recv_server_message(&mut ws).await?);
     harness.shutdown().await;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn ws_endpoint_rejects_legacy_json_text_by_default() -> anyhow::Result<()> {
+    let _lock = WS_JSON_TEXT_ENV_LOCK.lock().await;
+    let _env = EnvGuard::set_many(&[
+        ("DEVE_ENV", Some("production")),
+        ("DEVE_ALLOW_WS_JSON_TEXT", None),
+        ("DEVE_ALLOW_LEGACY_WS_JSON", None),
+    ]);
     let harness = WsHarness::spawn().await?;
     let mut ws = connect_harness(&harness).await?;
     let text = serde_json::to_string(&ClientMessage::Ping)?;
 
     ws.send(Message::Text(text)).await?;
 
-    match recv_server_message(&mut ws).await? {
+    assert_json_text_disabled(recv_server_message(&mut ws).await?);
+    harness.shutdown().await;
+    Ok(())
+}
+
+fn assert_json_text_disabled(message: ServerMessage) {
+    match message {
         ServerMessage::ProtocolError { error, .. } => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
             assert_eq!(
                 error.detail.as_deref(),
-                Some("Legacy JSON WS text frames are disabled outside development debug mode")
+                Some("JSON WS text frames are disabled outside development debug mode")
             );
         }
-        other => panic!("expected legacy JSON ProtocolError, got {other:?}"),
+        other => panic!("expected JSON text ProtocolError, got {other:?}"),
     }
-    harness.shutdown().await;
-    Ok(())
+}
+
+struct EnvGuard {
+    old: Vec<(&'static str, Option<String>)>,
+}
+
+impl EnvGuard {
+    fn set_many(vars: &[(&'static str, Option<&str>)]) -> Self {
+        let old = vars
+            .iter()
+            .map(|(key, _)| (*key, std::env::var(key).ok()))
+            .collect::<Vec<_>>();
+        for (key, value) in vars {
+            // SAFETY: these tests hold WS_JSON_TEXT_ENV_LOCK while mutating these env keys.
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+        Self { old }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for (key, value) in self.old.drain(..) {
+            // SAFETY: EnvGuard restores only keys it changed while the async env lock is held.
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+    }
 }

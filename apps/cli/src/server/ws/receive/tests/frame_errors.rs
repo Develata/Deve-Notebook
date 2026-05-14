@@ -1,4 +1,4 @@
-use super::super::{LEGACY_JSON_TEXT_DISABLED_ERROR, SocketFlow, handle_incoming_message};
+use super::super::{JSON_TEXT_DISABLED_ERROR, SocketFlow, handle_incoming_message};
 use super::build_state;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
@@ -48,7 +48,7 @@ async fn browser_invalid_bincode_uses_current_scope_nonce_when_sync_scope_is_sta
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn legacy_json_text_is_rejected_by_default_with_structured_error() -> anyhow::Result<()> {
+async fn legacy_json_text_is_debug_gated_with_structured_error() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -74,10 +74,7 @@ async fn legacy_json_text_is_rejected_by_default_with_structured_error() -> anyh
             error, scope_nonce, ..
         }) => {
             assert_eq!(error.code, ServerErrorCode::RequestFailed);
-            assert_eq!(
-                error.detail.as_deref(),
-                Some(LEGACY_JSON_TEXT_DISABLED_ERROR)
-            );
+            assert_eq!(error.detail.as_deref(), Some(JSON_TEXT_DISABLED_ERROR));
             assert_eq!(scope_nonce, Some(41));
         }
         other => panic!("expected legacy text ProtocolError, got {:?}", other),

@@ -11,7 +11,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::protocol::frame::{
-    MISSING_WS_FRAME_MAGIC, ProtocolFrameError, WsFrameFormat, decode_client_binary,
+    MISSING_WS_FRAME_MAGIC, ProtocolFrameError, decode_client_binary,
     decode_client_json_with_format,
 };
 use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -19,8 +19,8 @@ use deve_core::protocol::{ServerError, ServerErrorCode};
 use super::route;
 use super::send::BroadcastFilter;
 
-const LEGACY_JSON_TEXT_DISABLED_ERROR: &str =
-    "Legacy JSON WS text frames are disabled outside development debug mode";
+const JSON_TEXT_DISABLED_ERROR: &str =
+    "JSON WS text frames are disabled outside development debug mode";
 
 pub(super) enum SocketFlow {
     Continue,
@@ -90,16 +90,14 @@ async fn handle_text(
     }
     match decode_client_json_with_format(text) {
         Ok(decoded) => {
-            if decoded.format == WsFrameFormat::LegacyJsonText {
-                if !allow_legacy_json_text_debug() {
-                    ch.send_protocol_error_with_scope_nonce(
-                        invalid_client_message(LEGACY_JSON_TEXT_DISABLED_ERROR),
-                        browser_scope_nonce(session),
-                    );
-                    return SocketFlow::Continue;
-                }
-                tracing::debug!("Accepted legacy JSON WS text debug frame");
+            if !allow_ws_json_text_debug() {
+                ch.send_protocol_error_with_scope_nonce(
+                    invalid_client_message(JSON_TEXT_DISABLED_ERROR),
+                    browser_scope_nonce(session),
+                );
+                return SocketFlow::Continue;
             }
+            tracing::debug!(format = ?decoded.format, "Accepted JSON WS text debug frame");
             route::route_message(state, ch, session, decoded.message).await;
             broadcast_filter.sync_from_session(session);
         }
@@ -114,9 +112,14 @@ async fn handle_text(
     SocketFlow::Continue
 }
 
-fn allow_legacy_json_text_debug() -> bool {
+fn allow_ws_json_text_debug() -> bool {
     matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
-        || matches!(std::env::var("DEVE_ALLOW_LEGACY_WS_JSON"), Ok(value) if value == "1" || value.eq_ignore_ascii_case("true"))
+        || env_flag("DEVE_ALLOW_WS_JSON_TEXT")
+        || env_flag("DEVE_ALLOW_LEGACY_WS_JSON")
+}
+
+fn env_flag(name: &str) -> bool {
+    matches!(std::env::var(name), Ok(value) if value == "1" || value.eq_ignore_ascii_case("true"))
 }
 
 fn record_message(session: &mut WsSession, ch: &DualChannel, peer_id: &str) -> bool {
