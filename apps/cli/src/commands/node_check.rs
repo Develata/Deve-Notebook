@@ -70,7 +70,7 @@ fn collect_projection_reports(
     target_repo: Option<&str>,
 ) -> Result<Vec<ProjectionCheckResponse>> {
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
-    let sync_manager = SyncManager::new(repo, vault_path.to_path_buf());
+    let sync_manager = SyncManager::new_checked(repo, vault_path.to_path_buf())?;
     let mut reports = Vec::with_capacity(repo_names.len());
     for repo_name in repo_names {
         let diagnostic = sync_manager.diagnose_projection_local_repo(&repo_name)?;

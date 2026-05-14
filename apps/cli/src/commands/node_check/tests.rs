@@ -72,3 +72,18 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
     assert!(err.to_string().contains("default:missing_parent"));
     Ok(())
 }
+
+#[test]
+fn projection_node_check_missing_vault_fails_closed_without_panic() -> anyhow::Result<()> {
+    let (dir, repo) = new_repo()?;
+    let missing_vault = dir.path().join("missing-vault");
+
+    let err = collect_projection_reports(repo, &missing_vault, Some("default"))
+        .expect_err("missing vault must be returned as an error");
+
+    assert!(
+        err.to_string().contains("Failed to canonicalize VFS root"),
+        "unexpected error: {err}"
+    );
+    Ok(())
+}
