@@ -3,6 +3,7 @@
 //!
 //! Read-only Git mirror repair review API.
 
+use super::query::encode_query_component;
 use gloo_net::http::Request;
 use serde::Deserialize;
 
@@ -57,6 +58,7 @@ pub async fn fetch_git_mirror_repair_review(
 fn git_mirror_repair_review_url(repo_id: Option<&str>, scope_nonce: u64) -> String {
     match repo_id {
         Some(repo_id) => {
+            let repo_id = encode_query_component(repo_id);
             format!("/api/sc/git-mirror/repair-review?scope_nonce={scope_nonce}&repo_id={repo_id}")
         }
         None => format!("/api/sc/git-mirror/repair-review?scope_nonce={scope_nonce}"),
@@ -76,6 +78,14 @@ mod tests {
         assert_eq!(
             git_mirror_repair_review_url(None, 7),
             "/api/sc/git-mirror/repair-review?scope_nonce=7"
+        );
+    }
+
+    #[test]
+    fn repair_review_url_encodes_repo_id_query_component() {
+        assert_eq!(
+            git_mirror_repair_review_url(Some("repo 1&x=1/雪"), 7),
+            "/api/sc/git-mirror/repair-review?scope_nonce=7&repo_id=repo%201%26x%3D1%2F%E9%9B%AA"
         );
     }
 

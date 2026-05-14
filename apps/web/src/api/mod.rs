@@ -17,6 +17,7 @@ mod graph;
 mod incoming;
 mod native_bootstrap;
 mod output;
+mod query;
 mod service;
 mod socket;
 mod status;

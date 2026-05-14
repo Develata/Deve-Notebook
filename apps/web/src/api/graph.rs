@@ -4,6 +4,7 @@
 //!
 //! Read-only repo graph projection API.
 
+use super::query::encode_query_component;
 use deve_core::graph::GraphProjection;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use gloo_net::http::Request;
@@ -54,7 +55,7 @@ fn graph_projection_url(repo_id: Option<&str>, allow_degraded_projection: bool) 
     if let Some(repo_id) = repo_id {
         url.push_str(separator);
         url.push_str("repo_id=");
-        url.push_str(repo_id);
+        url.push_str(&encode_query_component(repo_id));
         separator = "&";
     }
     if allow_degraded_projection {
@@ -81,6 +82,14 @@ mod tests {
         assert_eq!(
             graph_projection_url(Some("repo-1"), true),
             "/api/repo/graph?repo_id=repo-1&allow_degraded_projection=true"
+        );
+    }
+
+    #[test]
+    fn graph_projection_url_encodes_repo_id_query_component() {
+        assert_eq!(
+            graph_projection_url(Some("repo 1&x=1/雪"), true),
+            "/api/repo/graph?repo_id=repo%201%26x%3D1%2F%E9%9B%AA&allow_degraded_projection=true"
         );
     }
 

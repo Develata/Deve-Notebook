@@ -107,6 +107,8 @@ check_absent crates/core/src/git_bridge/push.rs 'expect("branch resolved")'
 check_contains crates/core/src/git_bridge/push/tests.rs "unresolved_push_target_becomes_blocker_instead_of_panic"
 check_contains apps/cli/src/commands/git_output/status.rs 'let retry_command = git_command("export", repo_name, true);'
 check_contains apps/web/src/api/git_mirror.rs "scope_nonce={scope_nonce}"
+check_contains apps/web/src/api/git_mirror.rs "encode_query_component(repo_id)"
+check_contains apps/web/src/api/git_mirror.rs "repair_review_url_encodes_repo_id_query_component"
 check_contains apps/web/src/components/sidebar/source_control/error_notice.rs "current_scope_nonce.get_untracked() == scope_nonce"
 check_contains apps/web/src/components/sidebar/source_control/commit_actions.rs "on_commit_and_push.run(())"
 check_contains apps/web/src/i18n/source_control/actions.rs "Commit & Push"
