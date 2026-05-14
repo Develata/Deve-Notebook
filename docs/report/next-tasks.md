@@ -6,14 +6,13 @@
 
 ## 当前执行队列
 
-1. Mobile Android APK assemble closure：Android shell project 已生成，Rust Android `.so` 已生成；当前阻塞在 Gradle Plugin Portal 解析 `org.gradle.kotlin.kotlin-dsl:5.2.0`。下一步先闭合 Gradle dependency resolution/cache，再重跑 `DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-package-build.sh`。
-2. Desktop macOS/Windows target-host package execution：在 macOS/Windows 主机可用后，运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
-3. Mobile iOS target-host package execution：iOS 仍阻塞于 macOS target host 与独立验收；当前 Linux/WSL 只允许诊断，不得声明 iOS package ready。
-4. Process runtime gate reopen review：只有 target-host package execution 闭合后，才重新评审是否实现真实 child-process runtime；当前仍不得实现 `Command::new`/spawn runtime。
+1. Desktop macOS/Windows target-host package execution：在 macOS/Windows 主机可用后，运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
+2. Mobile iOS target-host package execution：iOS 仍阻塞于 macOS target host 与独立验收；当前 Linux/WSL 只允许诊断，不得声明 iOS package ready。
+3. Process runtime gate reopen review：只有 target-host package execution 闭合后，才重新评审是否实现真实 child-process runtime；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
-- Mobile Android Shell Package Execution：新增 feature-gated Tauri mobile WebView shell entrypoint、`apps/mobile/build.rs`、`apps/mobile/gen/android` 与 `scripts/check-mobile-android-shell-package-build.sh`；required 模式已生成 Android project 与 Rust Android `.so`，APK assemble 仍阻塞于 Gradle plugin dependency resolution；iOS、process runtime 与 native authority writes 仍关闭。
+- Mobile Android Shell Package Execution：新增 feature-gated Tauri mobile WebView shell entrypoint、`apps/mobile/build.rs`、`apps/mobile/gen/android` 与 `scripts/check-mobile-android-shell-package-build.sh`；required 模式已生成 Android project、Rust Android `.so` 与 `app-universal-release-unsigned.apk`；iOS、process runtime 与 native authority writes 仍关闭。
 - Mobile Android Shell-only Package Gate：在 plan 中拆分 Android 与 iOS package execution；Android 可进入 shell-only target-host package execution，iOS、process runtime 与 native authority writes 仍关闭。
 - Mobile Android Target-host Preflight：用 `DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 DEVE_MOBILE_PACKAGE_TARGETS=android scripts/check-mobile-platform-package-preflight.sh` 在当前 Linux/WSL host 验证 Android prerequisites。
 - Desktop Process Runtime Gate Decision：确认真实 child-process runtime 继续关闭，直到 macOS/Windows 与 Android/iOS target-host package execution 提供证据；Desktop fake runtime 仍限于 test-only state-machine harness。

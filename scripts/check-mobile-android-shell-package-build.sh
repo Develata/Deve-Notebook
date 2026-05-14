@@ -41,6 +41,41 @@ assert_android_shell_boundary() {
     || fail "mobile shell must expose the Tauri mobile entrypoint from lib.rs, not src/main.rs"
 }
 
+configure_gradle_proxy_from_env() {
+  [[ "${DEVE_MOBILE_ANDROID_GRADLE_PROXY_FROM_ENV:-1}" == "1" ]] || return 0
+  [[ "${GRADLE_OPTS:-}" != *".proxyHost="* ]] || return 0
+
+  local proxy_url="${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy:-}}}}"
+  [[ -n "$proxy_url" ]] || return 0
+
+  local scheme auth host port
+  if [[ "$proxy_url" =~ ^([A-Za-z][A-Za-z0-9+.-]*)://([^/@]+@)?([^/:]+):([0-9]+)(/.*)?$ ]]; then
+    scheme="${BASH_REMATCH[1]}"
+    auth="${BASH_REMATCH[2]}"
+    host="${BASH_REMATCH[3]}"
+    port="${BASH_REMATCH[4]}"
+  else
+    echo "mobile-android-shell-package-build-check: skip Gradle proxy autoconfig; unsupported proxy URL format" >&2
+    return 0
+  fi
+
+  case "$scheme" in
+    http|https) ;;
+    *)
+      echo "mobile-android-shell-package-build-check: skip Gradle proxy autoconfig; unsupported proxy scheme: $scheme" >&2
+      return 0
+      ;;
+  esac
+
+  if [[ -n "$auth" ]]; then
+    echo "mobile-android-shell-package-build-check: skip Gradle proxy autoconfig; authenticated proxy is not encoded into GRADLE_OPTS" >&2
+    return 0
+  fi
+
+  export GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }-Dhttp.proxyHost=$host -Dhttp.proxyPort=$port -Dhttps.proxyHost=$host -Dhttps.proxyPort=$port"
+  echo "mobile-android-shell-package-build-check: Gradle proxy configured from HTTPS_PROXY/HTTP_PROXY"
+}
+
 validate_target
 validate_artifact_kind
 assert_android_shell_boundary
@@ -59,6 +94,8 @@ fi
 DEVE_MOBILE_PACKAGE_TARGETS=android \
   DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 \
   run "$ROOT_DIR/scripts/check-mobile-platform-package-preflight.sh"
+
+configure_gradle_proxy_from_env
 
 if [[ ! -d "$ROOT_DIR/apps/mobile/gen/android" ]]; then
   (
