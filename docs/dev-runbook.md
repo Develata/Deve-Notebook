@@ -287,6 +287,23 @@ real target host, set `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1` to make
 missing signing/build prerequisites fail closed before running the package
 build script.
 
+Target-host handoff commands:
+
+```bash
+DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=macos scripts/check-desktop-target-host-preflight.sh
+DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-build.sh
+```
+
+```bash
+DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=windows scripts/check-desktop-target-host-preflight.sh
+DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-platform-package-build.sh
+```
+
+Capture the host OS, tool versions, command output, artifact paths, install
+result, startup result, and an explicit statement that no child-process runtime
+or native authority write path was opened. Store the target-host result under
+`docs/report/`.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package
@@ -326,6 +343,21 @@ target host, set `DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1` to allow
 child-process runtime, or native authority writes.
 The required Android build also needs Gradle wrapper distribution and Gradle
 Plugin Portal dependencies to resolve or already exist in the host cache.
+
+Target-host handoff commands:
+
+```bash
+DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-package-build.sh
+```
+
+```bash
+DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 DEVE_MOBILE_PACKAGE_TARGETS=ios scripts/check-mobile-platform-package-preflight.sh
+```
+
+The current iOS gate is preflight-only. Do not run `cargo tauri ios init` or
+`cargo tauri ios build` until an explicit iOS shell-only package execution gate
+is added. Capture Android artifacts or iOS missing prerequisites under
+`docs/report/`, together with the same no-process/no-authority boundary.
 
 ## Native Process Adapter Gate
 

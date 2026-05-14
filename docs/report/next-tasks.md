@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Native Target-host Handoff：固化 macOS/Windows Desktop 与 iOS Mobile 目标机执行命令、证据格式和 no-process/no-authority 边界；未改 `docs/plan/`，未打开 iOS build 或 process runtime。
 - Mobile Android Shell Package Execution：新增 feature-gated Tauri mobile WebView shell entrypoint、`apps/mobile/build.rs`、`apps/mobile/gen/android` 与 `scripts/check-mobile-android-shell-package-build.sh`；required 模式已生成 Android project、Rust Android `.so` 与 `app-universal-release-unsigned.apk`；iOS、process runtime 与 native authority writes 仍关闭。
 - Mobile iOS Target-host Preflight：用 `DEVE_MOBILE_PACKAGE_TARGETS=ios scripts/check-mobile-platform-package-preflight.sh` 在 Linux/WSL 上验证 iOS default diagnostic；required 模式正确 fail-closed，缺 `cargo tauri ios` 与 macOS target host。
 - Native Process Adapter Gate Refresh：Android APK 闭合后复跑 `scripts/check-native-process-adapter-gate.sh`，确认 process runtime 仍关闭；Android package 已验证，但 Desktop macOS/Windows 与 Mobile iOS target-host execution 仍未闭合。
