@@ -14,14 +14,14 @@ fail() {
 contains() {
   local file="$1"
   local text="$2"
-  rg --fixed-strings --quiet "$text" "$ROOT_DIR/$file" \
+  rg --fixed-strings --quiet -- "$text" "$ROOT_DIR/$file" \
     || fail "missing '$text' in $file"
 }
 
 not_contains() {
   local file="$1"
   local text="$2"
-  if rg --fixed-strings --quiet "$text" "$ROOT_DIR/$file"; then
+  if rg --fixed-strings --quiet -- "$text" "$ROOT_DIR/$file"; then
     fail "unexpected '$text' in $file"
   fi
 }
@@ -29,7 +29,7 @@ not_contains() {
 line_no() {
   local file="$1"
   local text="$2"
-  rg --line-number --fixed-strings "$text" "$ROOT_DIR/$file" | head -n1 | cut -d: -f1
+  rg --line-number --fixed-strings -- "$text" "$ROOT_DIR/$file" | head -n1 | cut -d: -f1
 }
 
 assert_before() {
@@ -80,11 +80,21 @@ assert_before "Dockerfile" "COPY --from=frontend /app/apps/web/dist/ /app/apps/w
 
 contains "docker-compose.yml" "AUTH_SECRET: \${AUTH_SECRET:?set AUTH_SECRET to at least 32 random bytes}"
 contains "docker-compose.yml" "AUTH_PASS: \${AUTH_PASS:?set AUTH_PASS to an Argon2 PHC password hash}"
+contains "docker-compose.yml" "image: ghcr.io/develata/deve-notebook:latest"
+contains "docker-compose.yml" "container_name: deve-server"
+contains "docker-compose.yml" "restart: always"
+contains "docker-compose.yml" "- ./data:/data"
 contains "docker-compose.yml" "DEVE_BIND_ADDR: 0.0.0.0:3001"
 contains "docker-compose.yml" "DEVE_LEDGER_DIR: /data/ledger"
 contains "docker-compose.yml" "DEVE_VAULT_PATH: /data/vault"
 contains "docker-compose.yml" "mem_limit: 512m"
 contains "docker-compose.yml" "http://localhost:3001/api/node/role"
+not_contains "docker-compose.yml" "build:"
+contains "docker-compose.dev.yml" "build:"
+contains "docker-compose.dev.yml" "dockerfile: Dockerfile"
+contains "docker-compose.dev.yml" "container_name: deve-server-dev"
+contains "docker-compose.dev.yml" "restart: unless-stopped"
+contains "docker-compose.dev.yml" "deve-dev-data:/data"
 
 contains ".env.example" "AUTH_SECRET=replace-with-at-least-32-random-bytes"
 contains ".env.example" "AUTH_PASS=\$argon2id\$v=19\$m=65536,t=3,p=1\$..."

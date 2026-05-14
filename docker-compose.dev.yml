@@ -1,16 +1,17 @@
-# Deve-Notebook production Docker Compose
-# This file mirrors docs/plan/15_release.md: run the published OCI image,
-# keep data under ./data, and fail closed unless production auth material is set.
+# Deve-Notebook local build Docker Compose
+# Use this when testing the local Dockerfile instead of the published OCI image.
 
 services:
   deve-server:
-    image: ghcr.io/develata/deve-notebook:latest
-    container_name: deve-server
-    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: deve-server-dev
+    restart: unless-stopped
     ports:
       - "3001:3001"
     volumes:
-      - ./data:/data
+      - deve-dev-data:/data
     environment:
       DEVE_BIND_ADDR: 0.0.0.0:3001
       DEVE_LEDGER_DIR: /data/ledger
@@ -29,3 +30,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+volumes:
+  deve-dev-data: {}

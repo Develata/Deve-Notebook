@@ -1,15 +1,18 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-13
+> 更新日期：2026-05-14
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-当前无 active execution queue。下一轮建议重新执行 `docs/plan × features × acceptance-cases × code` 主线缺口扫描，再选择新的小批次。
+1. Docker release smoke freshness：运行 `DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh`，确认当前 Dockerfile 仍能构建登录可用的生产容器，并写入 `docs/report/`。
+2. Release dependency maintenance triage：评估 `npm audit` 中 Mermaid moderate advisory 是否可安全升级；若不能升级，记录非阻塞理由。
+3. Native packaging gate design：只有在 Web/Server/Docker release shape 稳定后，再决定是否打开 Desktop/Mobile Tauri gate；当前不得直接引入 Tauri dependency。
 
 ## 最近完成
 
+- Mainline gap rescan 2026-05-14：新增 `mainline-gap-rescan-2026-05-14.md`，确认 plan coverage / native boundary / release guards 健康；将 `docker-compose.yml` 收敛为生产 release compose，新增 `docker-compose.dev.yml` 保留本地 Dockerfile build，并更新 release/dev-runbook guards。
 - Native pre-gate freshness report：新增 `native-pre-gate-freshness-2026-05-13.md`，复跑 Desktop/Mobile no-packaging shell、supervisor、recovery、native packaging gate 与 core native_adapter tests；未打开 Tauri/native-packaging gate。
 - Release dependency audit gate：新增 `release-dependency-audit-gate-2026-05-13.md` 与 `scripts/check-release-audit-gate.sh`，将 `REL-003` 依赖审计收敛为本地 diagnostic / CI required 双路径；release workflow 安装 Node.js 20 与 `cargo-audit` 后 required 模式执行。
 - I18N visible text batch 2：新增 `i18n-visible-text-batch-2-2026-05-13.md`，将 ActivityBar more action、Sidebar item action 与 Disconnect overlay status line 收敛到 `t::*`，并扩展 `check-i18n-hardcoded-baseline.sh` 覆盖本批范围。

@@ -153,6 +153,22 @@ When Docker is missing or unreachable, the script prints the resolved Docker
 binary plus `DOCKER_HOST` / `DOCKER_CONTEXT` so WSL and remote daemon issues are
 diagnosable without changing the script.
 
+## Docker Compose
+
+`docker-compose.yml` is the production compose entry. It runs the published
+`ghcr.io/develata/deve-notebook:latest` image, persists data under `./data`, and
+fails closed unless `AUTH_SECRET` and `AUTH_PASS` are set.
+
+```bash
+docker compose up -d
+```
+
+Use `docker-compose.dev.yml` only when validating the local Dockerfile build:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
 ## Runtime Release Info Smoke
 
 With a local backend already running, validate the public runtime/release shape
