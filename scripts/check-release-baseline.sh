@@ -170,6 +170,10 @@ contains "scripts/check-mobile-platform-package-preflight.sh" "package build rem
 contains "scripts/check-native-process-adapter-gate.sh" "DeferredUntilPackagingGate"
 contains "scripts/check-native-process-adapter-gate.sh" "check_no_process_runtime_leak"
 contains "scripts/check-native-process-adapter-gate.sh" "process_observation"
+contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" 'Decision: `KeepClosedUntilTargetHostPackages`'
+contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" "No real child-process runtime was opened."
+contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" "DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1"
+contains "docs/report/desktop-process-runtime-gate-decision-2026-05-14.md" "Android/iOS Mobile package execution remains target-host work"
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["version", "profile", "delivery", "environment"]'
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]'
 contains "docs/features/15_release.md" "版本、profile、环境、交付形态和 repo health 聚合状态"

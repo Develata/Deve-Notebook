@@ -6,11 +6,13 @@
 
 ## 当前执行队列
 
-1. Desktop process runtime gate decision：Linux deb/rpm/AppImage 已完成打包验证；macOS/Windows package verification 已有 target-host preflight，但实际签名、安装器与启动行为仍阻塞于对应主机。当前可明确 defer macOS/Windows 实机验收后，再决定是否打开真实 child-process runtime；仍不得直接实现 `Command::new`/spawn runtime。
-2. Desktop macOS/Windows target-host package execution：在 macOS/Windows 主机可用后，运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
+1. Desktop macOS/Windows target-host package execution：在 macOS/Windows 主机可用后，运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
+2. Mobile Android/iOS target-host package execution：在 Android/iOS target-capable host 可用后，运行 mobile package preflight 与 package execution smoke；不得让移动壳层绕过 foreground reprobe、session handoff 或 writer gate。
+3. Process runtime gate reopen review：只有 target-host package execution 闭合后，才重新评审是否实现真实 child-process runtime；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
+- Desktop Process Runtime Gate Decision：确认真实 child-process runtime 继续关闭，直到 macOS/Windows 与 Android/iOS target-host package execution 提供证据；Desktop fake runtime 仍限于 test-only state-machine harness。
 - Desktop macOS/Windows Target-host Preflight：新增 `scripts/check-desktop-target-host-preflight.sh`，默认在 Linux/WSL 上只诊断 macOS/Windows host 缺失，required 模式可在目标主机 fail-closed 检查 macOS signing/Xcode 与 Windows MSVC/WiX/NSIS 前置条件。
 - Desktop AppImage Package Verification：在 Linux/WSL host 上验证 Desktop `native-packaging` AppImage package path；记录 `librsvg2-dev` / `pkg-config librsvg-2.0` 与 `APPIMAGE_EXTRACT_AND_RUN=1` host prerequisite，生成 `Deve Notebook_0.0.1_amd64.AppImage`。
 - Native Regression Refresh after Process Fake Runtime：复跑 native process/packaging、Desktop/Mobile preflight、release baseline/audit diagnostic、runtime happy/recovery smoke、临时 dev server release-info smoke 与 plan coverage；默认 no-process/no-authority 边界保持稳定。
