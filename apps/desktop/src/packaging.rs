@@ -12,6 +12,10 @@ pub const DESKTOP_TAURI_PRODUCT_NAME: &str = "Deve Notebook";
 pub const DESKTOP_TAURI_IDENTIFIER: &str = "dev.deve.notebook";
 pub const DESKTOP_TAURI_MAIN_WINDOW_LABEL: &str = "main";
 pub const DESKTOP_TAURI_MAIN_WINDOW_TITLE: &str = "Deve Notebook";
+pub const DESKTOP_MENU_APP_ID: &str = "deve-menu-app";
+pub const DESKTOP_MENU_WINDOW_ID: &str = "deve-menu-window";
+pub const DESKTOP_MENU_HELP_ID: &str = "deve-menu-help";
+pub const DESKTOP_TRAY_ID: &str = "deve-tray";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DesktopPackagingCapability {
@@ -45,6 +49,7 @@ pub struct DesktopPackagingAcceptance {
     pub capabilities: &'static [DesktopPackagingCapability],
     pub forbidden_authorities: &'static [DesktopPackagingAuthority],
     pub shell: DesktopShellPackagingAcceptance,
+    pub menu_tray: DesktopMenuTraySurface,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -62,6 +67,46 @@ pub struct DesktopShellPackagingAcceptance {
     pub session_handoff_required_before_writable_ui: bool,
     pub child_process_runtime_enabled: bool,
     pub release_ready_claimed: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DesktopMenuAction {
+    ShowMainWindow,
+    OpenCommandPalette,
+    OpenSettings,
+    QuitRequested,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DesktopTrayAction {
+    ShowMainWindow,
+    ToggleWindowVisibility,
+    QuitRequested,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopMenuTraySurface {
+    pub app_menu_id: &'static str,
+    pub window_menu_id: &'static str,
+    pub help_menu_id: &'static str,
+    pub tray_id: &'static str,
+    pub menu_actions: &'static [DesktopMenuAction],
+    pub tray_actions: &'static [DesktopTrayAction],
+    pub menu_runtime_imported: bool,
+    pub tray_runtime_imported: bool,
+    pub actions_are_ui_intents_only: bool,
+    pub opens_process_runtime: bool,
+    pub opens_authority_write_path: bool,
+}
+
+impl DesktopMenuTraySurface {
+    pub fn is_deferred_runtime_surface(self) -> bool {
+        !self.menu_runtime_imported
+            && !self.tray_runtime_imported
+            && self.actions_are_ui_intents_only
+            && !self.opens_process_runtime
+            && !self.opens_authority_write_path
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,6 +138,7 @@ impl DesktopPackagingScaffold {
                 .session_handoff_required_before_writable_ui
             && !self.acceptance.shell.child_process_runtime_enabled
             && !self.acceptance.shell.release_ready_claimed
+            && self.acceptance.menu_tray.is_deferred_runtime_surface()
             && self.is_authority_free()
     }
 }
@@ -109,6 +155,7 @@ pub fn desktop_packaging_scaffold() -> DesktopPackagingScaffold {
             capabilities: PACKAGING_CAPABILITIES,
             forbidden_authorities: FORBIDDEN_AUTHORITIES,
             shell: SHELL_ACCEPTANCE,
+            menu_tray: MENU_TRAY_SURFACE,
         },
         no_packaging_tests_remain_authoritative: true,
     }
@@ -129,6 +176,33 @@ const SHELL_ACCEPTANCE: DesktopShellPackagingAcceptance = DesktopShellPackagingA
     child_process_runtime_enabled: false,
     release_ready_claimed: false,
 };
+
+const MENU_TRAY_SURFACE: DesktopMenuTraySurface = DesktopMenuTraySurface {
+    app_menu_id: DESKTOP_MENU_APP_ID,
+    window_menu_id: DESKTOP_MENU_WINDOW_ID,
+    help_menu_id: DESKTOP_MENU_HELP_ID,
+    tray_id: DESKTOP_TRAY_ID,
+    menu_actions: MENU_ACTIONS,
+    tray_actions: TRAY_ACTIONS,
+    menu_runtime_imported: false,
+    tray_runtime_imported: false,
+    actions_are_ui_intents_only: true,
+    opens_process_runtime: false,
+    opens_authority_write_path: false,
+};
+
+const MENU_ACTIONS: &[DesktopMenuAction] = &[
+    DesktopMenuAction::ShowMainWindow,
+    DesktopMenuAction::OpenCommandPalette,
+    DesktopMenuAction::OpenSettings,
+    DesktopMenuAction::QuitRequested,
+];
+
+const TRAY_ACTIONS: &[DesktopTrayAction] = &[
+    DesktopTrayAction::ShowMainWindow,
+    DesktopTrayAction::ToggleWindowVisibility,
+    DesktopTrayAction::QuitRequested,
+];
 
 const PACKAGING_CAPABILITIES: &[DesktopPackagingCapability] = &[
     DesktopPackagingCapability::WindowShell,

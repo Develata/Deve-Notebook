@@ -4,9 +4,10 @@
 use serde_json::Value;
 
 use crate::{
-    DESKTOP_TAURI_CONFIG_PATH, DESKTOP_TAURI_IDENTIFIER, DESKTOP_TAURI_MAIN_WINDOW_LABEL,
-    DESKTOP_TAURI_MAIN_WINDOW_TITLE, DESKTOP_TAURI_PRODUCT_NAME, DesktopPackagingAuthority,
-    DesktopPackagingCapability, desktop_packaging_scaffold,
+    DESKTOP_MENU_APP_ID, DESKTOP_MENU_HELP_ID, DESKTOP_MENU_WINDOW_ID, DESKTOP_TAURI_CONFIG_PATH,
+    DESKTOP_TAURI_IDENTIFIER, DESKTOP_TAURI_MAIN_WINDOW_LABEL, DESKTOP_TAURI_MAIN_WINDOW_TITLE,
+    DESKTOP_TAURI_PRODUCT_NAME, DESKTOP_TRAY_ID, DesktopMenuAction, DesktopPackagingAuthority,
+    DesktopPackagingCapability, DesktopTrayAction, desktop_packaging_scaffold,
 };
 use deve_core::native_adapter::CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY;
 
@@ -74,6 +75,11 @@ fn desktop_tauri_manifest_declares_shell_metadata_only() {
     assert_eq!(config["bundle"]["active"], true);
     assert_eq!(config["bundle"]["createUpdaterArtifacts"], false);
     assert!(config["bundle"]["targets"].is_null());
+    assert!(
+        config["plugins"]
+            .as_object()
+            .is_some_and(|plugins| plugins.is_empty())
+    );
 }
 
 #[test]
@@ -92,4 +98,37 @@ fn desktop_shell_acceptance_keeps_runtime_authority_closed() {
     assert!(shell.session_handoff_required_before_writable_ui);
     assert!(!shell.child_process_runtime_enabled);
     assert!(!shell.release_ready_claimed);
+}
+
+#[test]
+fn desktop_menu_tray_surface_declares_ui_intents_only() {
+    let surface = desktop_packaging_scaffold().acceptance.menu_tray;
+
+    assert_eq!(surface.app_menu_id, DESKTOP_MENU_APP_ID);
+    assert_eq!(surface.window_menu_id, DESKTOP_MENU_WINDOW_ID);
+    assert_eq!(surface.help_menu_id, DESKTOP_MENU_HELP_ID);
+    assert_eq!(surface.tray_id, DESKTOP_TRAY_ID);
+    assert_eq!(
+        surface.menu_actions,
+        [
+            DesktopMenuAction::ShowMainWindow,
+            DesktopMenuAction::OpenCommandPalette,
+            DesktopMenuAction::OpenSettings,
+            DesktopMenuAction::QuitRequested,
+        ]
+    );
+    assert_eq!(
+        surface.tray_actions,
+        [
+            DesktopTrayAction::ShowMainWindow,
+            DesktopTrayAction::ToggleWindowVisibility,
+            DesktopTrayAction::QuitRequested,
+        ]
+    );
+    assert!(surface.is_deferred_runtime_surface());
+    assert!(!surface.menu_runtime_imported);
+    assert!(!surface.tray_runtime_imported);
+    assert!(surface.actions_are_ui_intents_only);
+    assert!(!surface.opens_process_runtime);
+    assert!(!surface.opens_authority_write_path);
 }

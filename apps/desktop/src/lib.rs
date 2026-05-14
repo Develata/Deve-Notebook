@@ -3,9 +3,10 @@
 //!
 //! Minimal desktop native shell skeleton.
 //!
-//! This crate intentionally avoids depending on Tauri for the first boundary
-//! pass. It models the shell's allowed responsibilities: bind to a controlled
-//! local service, bind a short-lived session out of band, inject a Web bootstrap
+//! The default build intentionally avoids Tauri; optional native packaging
+//! dependencies are isolated behind the `native-packaging` feature. This crate
+//! models the shell's allowed responsibilities: bind to a controlled local
+//! service, bind a short-lived session out of band, inject a Web bootstrap
 //! object, and report service recovery state.
 
 #[cfg(feature = "native-packaging")]
@@ -21,10 +22,12 @@ mod types;
 
 #[cfg(feature = "native-packaging")]
 pub use packaging::{
-    DESKTOP_TAURI_CONFIG_PATH, DESKTOP_TAURI_IDENTIFIER, DESKTOP_TAURI_MAIN_WINDOW_LABEL,
-    DESKTOP_TAURI_MAIN_WINDOW_TITLE, DESKTOP_TAURI_PRODUCT_NAME, DesktopPackagingAcceptance,
-    DesktopPackagingAuthority, DesktopPackagingCapability, DesktopPackagingDependencyBatch,
-    DesktopPackagingScaffold, DesktopShellPackagingAcceptance, desktop_packaging_scaffold,
+    DESKTOP_MENU_APP_ID, DESKTOP_MENU_HELP_ID, DESKTOP_MENU_WINDOW_ID, DESKTOP_TAURI_CONFIG_PATH,
+    DESKTOP_TAURI_IDENTIFIER, DESKTOP_TAURI_MAIN_WINDOW_LABEL, DESKTOP_TAURI_MAIN_WINDOW_TITLE,
+    DESKTOP_TAURI_PRODUCT_NAME, DESKTOP_TRAY_ID, DesktopMenuAction, DesktopMenuTraySurface,
+    DesktopPackagingAcceptance, DesktopPackagingAuthority, DesktopPackagingCapability,
+    DesktopPackagingDependencyBatch, DesktopPackagingScaffold, DesktopShellPackagingAcceptance,
+    DesktopTrayAction, desktop_packaging_scaffold,
 };
 pub use shell::DesktopShell;
 pub use types::{
