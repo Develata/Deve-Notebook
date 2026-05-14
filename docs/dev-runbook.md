@@ -336,6 +336,18 @@ it can dispatch the manual workflow. If `gh` is unavailable, the helper can use
 `DEVE_NATIVE_TARGET_HOST_REPOSITORY=owner/repo` when the repository cannot be
 derived from `origin`.
 
+Collect and validate workflow evidence artifacts after a run completes:
+
+```bash
+scripts/collect-native-target-host-evidence.sh
+DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 DEVE_NATIVE_TARGET_HOST_RUN_ID=<run-id> scripts/collect-native-target-host-evidence.sh
+```
+
+The collector is dry-run by default. It validates every downloaded evidence
+Markdown file with `scripts/check-native-target-host-evidence.sh`. It uses an
+authenticated GitHub CLI when available, otherwise `DEVE_GITHUB_TOKEN`,
+`GH_TOKEN`, or `GITHUB_TOKEN` plus `curl` and `unzip`.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package
