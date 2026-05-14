@@ -47,7 +47,6 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
     } = view;
     let is_mobile = state::is_mobile();
     let detail_text = item.detail.clone();
-    let detail_text_cond = detail_text.clone();
     let is_group = state::is_group(&item);
     let is_error = state::is_error(&item);
     let is_selectable = logic::is_selectable(Some(&item));
@@ -107,12 +106,7 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
                 sections::item_icon(is_sel, action_clone.clone(), detail_clone.clone())
                     .into_any()
             }}
-            {sections::item_content(
-                item.title.clone(),
-                detail_text_cond,
-                detail_text,
-                is_mobile,
-            )}
+            {sections::item_content(item.title.clone(), detail_text, is_mobile)}
             {move || if is_mobile {
                 view! {}.into_any()
             } else {

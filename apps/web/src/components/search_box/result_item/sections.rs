@@ -53,18 +53,22 @@ pub(super) fn item_icon(
 
 pub(super) fn item_content(
     title: String,
-    detail_cond: Option<String>,
     detail_text: Option<String>,
     is_mobile: bool,
 ) -> impl IntoView {
+    let detail_class = if is_mobile {
+        "text-[11px] opacity-60 font-mono"
+    } else {
+        "text-xs opacity-60 font-mono"
+    };
+    let detail_view = detail_text
+        .map(|detail| view! { <span class=detail_class>{detail}</span> }.into_any())
+        .unwrap_or_else(|| view! {}.into_any());
+
     view! {
         <div class="flex-1 truncate flex flex-col items-start gap-0.5">
             <span class="font-medium">{title}</span>
-            <Show when=move || detail_cond.is_some()>
-                <span class=if is_mobile { "text-[11px] opacity-60 font-mono" } else { "text-xs opacity-60 font-mono" }>
-                    {detail_text.clone().unwrap()}
-                </span>
-            </Show>
+            {detail_view}
         </div>
     }
 }

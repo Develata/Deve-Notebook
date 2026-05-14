@@ -46,6 +46,8 @@ check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.r
 
 check_contains apps/web/src/hooks/use_core/effects/message_protocol/mod.rs "signals.set_search_results.set(Vec::new());"
 check_contains apps/web/src/i18n/search.rs "Search unavailable"
+check_absent apps/web/src/components/search_box/result_item/sections.rs "detail_text.clone().unwrap()"
+check_contains apps/web/src/components/search_box/result_item/sections.rs "let detail_view = detail_text"
 check_contains docs/acceptance-cases/16_search.md "增量索引优化不作为本文件阻塞项"
 check_contains docs/acceptance-cases/16_search.md "no_heavy_index_startup_for_baseline true"
 check_contains docs/features/operations/search_query.md "不依赖常驻重型索引"
