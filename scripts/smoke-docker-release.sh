@@ -14,7 +14,8 @@ AUTH_SECRET="${DEVE_DOCKER_SMOKE_AUTH_SECRET:-deve_docker_smoke_secret_32_bytes_
 AUTH_USER="${DEVE_DOCKER_SMOKE_AUTH_USER:-admin}"
 AUTH_PASS="${DEVE_DOCKER_SMOKE_AUTH_PASS:-\$argon2id\$v=19\$m=65536,t=2,p=1\$c29tZXNhbHQ\$CTFhFdXPJO1aFaMaO6Mm5c8y7cJHAph8ArZWb2GRPPc}"
 AUTH_PASSWORD="${DEVE_DOCKER_SMOKE_AUTH_PASSWORD:-password}"
-DATA_DIR=""
+DATA_VOLUME="${DEVE_DOCKER_SMOKE_DATA_VOLUME:-}"
+REMOVE_DATA_VOLUME=0
 
 fail() {
   echo "docker-release-smoke: $*" >&2
@@ -66,8 +67,8 @@ require_or_skip() {
 
 cleanup() {
   docker_cmd rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
-  if [[ -n "$DATA_DIR" ]]; then
-    rm -rf "$DATA_DIR"
+  if [[ -n "$DATA_VOLUME" && "$REMOVE_DATA_VOLUME" == "1" ]]; then
+    docker_cmd volume rm -f "$DATA_VOLUME" >/dev/null 2>&1 || true
   fi
 }
 
@@ -75,15 +76,20 @@ docker_bin_available || require_or_skip "docker command not found"
 command -v curl >/dev/null 2>&1 || require_or_skip "curl command not found"
 docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
 
-DATA_DIR="$(mktemp -d)"
+if [[ -z "$DATA_VOLUME" ]]; then
+  DATA_VOLUME="deve-docker-smoke-data-$$"
+  REMOVE_DATA_VOLUME=1
+fi
+
 trap cleanup EXIT
 
 docker_cmd build -t "$IMAGE" "$ROOT_DIR"
+docker_cmd volume create "$DATA_VOLUME" >/dev/null
 
 docker_cmd run -d \
   --name "$CONTAINER_NAME" \
   -p "$HOST_PORT:3001" \
-  -v "$DATA_DIR:/data" \
+  -v "$DATA_VOLUME:/data" \
   -e DEVE_LEDGER_DIR=/data/ledger \
   -e DEVE_VAULT_PATH=/data/vault \
   -e DEVE_BIND_ADDR=0.0.0.0:3001 \
