@@ -15,6 +15,14 @@ contains() {
     || fail "missing '$pattern' in $file"
 }
 
+not_contains() {
+  local file="$1"
+  local pattern="$2"
+  if rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file"; then
+    fail "unexpected '$pattern' in $file"
+  fi
+}
+
 # UI-WEB-001: non-runtime Web routes fall back to SPA index; API/WS do not.
 contains docs/acceptance-cases/05_ui.md "case_id: UI-WEB-001"
 contains docs/acceptance-cases/05_ui.md "scripts/check-ui-spa-routing-baseline.sh"
@@ -25,11 +33,17 @@ contains docs/plan/08_ui_design_01_web.md "Serve(path) \\to index.html"
 
 contains apps/cli/src/server/static_files.rs "is_spa_fallback_path"
 contains apps/cli/src/server/static_files.rs "ServeDir::new(&dir).fallback(fallback)"
+contains apps/cli/src/server/static_files.rs "Response::new(Body::from(bytes))"
+not_contains apps/cli/src/server/static_files.rs "expect(\"spa index response\")"
+not_contains apps/cli/src/server/static_files.rs "expect(\"spa fallback error response\")"
 contains apps/cli/src/server/static_files/tests.rs "static_dir_spa_route_returns_index_with_ok_status"
 contains apps/cli/src/server/static_files/tests.rs "static_dir_unknown_api_route_does_not_fallback_to_index"
 contains apps/cli/src/server/static_files/tests.rs "static_dir_unknown_ws_route_does_not_fallback_to_index"
 contains apps/cli/src/server/static_files/tests.rs "static_dir_serves_existing_asset_without_spa_fallback"
 contains apps/cli/src/server/static_files_embed.rs "asset_for_request_path_in"
+contains apps/cli/src/server/static_files_embed.rs "HeaderValue::from_static(mime_for_path(asset.path))"
+not_contains apps/cli/src/server/static_files_embed.rs "expect(\"embedded asset response\")"
+not_contains apps/cli/src/server/static_files_embed.rs "expect(\"not found response\")"
 contains apps/cli/src/server/static_files_embed.rs "embedded_lookup_rejects_api_route_before_spa_fallback"
 contains apps/cli/src/server/static_files_embed.rs "embedded_lookup_rejects_ws_route_before_spa_fallback"
 

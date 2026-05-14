@@ -19,7 +19,7 @@
 use anyhow::{Context, Result, anyhow};
 use axum::Router;
 use axum::body::Body;
-use axum::http::{Request, Response, StatusCode, header};
+use axum::http::{HeaderValue, Request, Response, StatusCode, header};
 use std::convert::Infallible;
 use std::path::PathBuf;
 use tower::service_fn;
@@ -141,27 +141,29 @@ async fn serve_spa_fallback<B>(
     }
 
     let response = match tokio::fs::read(&index).await {
-        Ok(bytes) => Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
-            .body(Body::from(bytes))
-            .expect("spa index response"),
+        Ok(bytes) => {
+            let mut response = Response::new(Body::from(bytes));
+            *response.status_mut() = StatusCode::OK;
+            response.headers_mut().insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("text/html; charset=utf-8"),
+            );
+            response
+        }
         Err(err) => {
             tracing::error!(error = %err, path = ?index, "Failed to read SPA index fallback");
-            Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::empty())
-                .expect("spa fallback error response")
+            let mut response = Response::new(Body::empty());
+            *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            response
         }
     };
     Ok(response)
 }
 
 fn not_found_response() -> Response<Body> {
-    Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body(Body::empty())
-        .expect("not found response")
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = StatusCode::NOT_FOUND;
+    response
 }
 
 #[cfg(test)]

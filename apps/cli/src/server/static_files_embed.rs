@@ -5,7 +5,7 @@
 
 use axum::Router;
 use axum::body::Body;
-use axum::http::{Request, Response, StatusCode, header};
+use axum::http::{HeaderValue, Request, Response, StatusCode, header};
 use std::convert::Infallible;
 
 mod embedded {
@@ -67,18 +67,19 @@ fn normalize_request_path(path: &str) -> String {
 }
 
 fn asset_response(asset: &embedded::EmbeddedAsset) -> Response<Body> {
-    Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, mime_for_path(asset.path))
-        .body(Body::from(asset.bytes))
-        .expect("embedded asset response")
+    let mut response = Response::new(Body::from(asset.bytes));
+    *response.status_mut() = StatusCode::OK;
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static(mime_for_path(asset.path)),
+    );
+    response
 }
 
 fn not_found_response() -> Response<Body> {
-    Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body(Body::empty())
-        .expect("not found response")
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = StatusCode::NOT_FOUND;
+    response
 }
 
 fn mime_for_path(path: &str) -> &'static str {

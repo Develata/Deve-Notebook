@@ -11,7 +11,12 @@
 //! - `X-Frame-Options: DENY`
 //! - `Content-Security-Policy`: see `CSP_POLICY`
 
-use axum::{body::Body, http::Request, middleware::Next, response::Response};
+use axum::{
+    body::Body,
+    http::{HeaderValue, Request},
+    middleware::Next,
+    response::Response,
+};
 
 const CSP_POLICY: &str = concat!(
     "default-src 'self'; ",
@@ -29,9 +34,15 @@ pub async fn security_headers(req: Request<Body>, next: Next) -> Response {
     let mut response = next.run(req).await;
     let headers = response.headers_mut();
 
-    headers.insert("X-Content-Type-Options", "nosniff".parse().unwrap());
-    headers.insert("X-Frame-Options", "DENY".parse().unwrap());
-    headers.insert("Content-Security-Policy", CSP_POLICY.parse().unwrap());
+    headers.insert(
+        "X-Content-Type-Options",
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert("X-Frame-Options", HeaderValue::from_static("DENY"));
+    headers.insert(
+        "Content-Security-Policy",
+        HeaderValue::from_static(CSP_POLICY),
+    );
 
     response
 }
