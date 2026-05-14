@@ -41,8 +41,14 @@ pub fn main() {
     tracing_wasm::set_as_global_default();
     tracing::info!("Initializing Deve-Note Web App");
 
-    let window = web_sys::window().unwrap();
-    let doc = window.document().unwrap();
+    let Some(window) = web_sys::window() else {
+        tracing::error!("Browser window is unavailable; Web app mount skipped");
+        return;
+    };
+    let Some(doc) = window.document() else {
+        tracing::error!("Browser document is unavailable; Web app mount skipped");
+        return;
+    };
 
     if let Ok(set_boot_panel) =
         js_sys::Reflect::get(&window, &wasm_bindgen::JsValue::from_str("setBootPanel"))

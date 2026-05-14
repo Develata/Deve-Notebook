@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Web entry DOM no-panic：新增 `web-entry-dom-no-panic-2026-05-14.md`，将 Web WASM 入口的 `window/document` 直接 `unwrap` 改为显式宿主能力检查；缺少浏览器 DOM 时记录错误并跳过挂载，正常浏览器 boot panel、loading overlay 与 Leptos mount 路径不变。
 - HTTP surface response no-panic：新增 `http-surface-response-no-panic-2026-05-14.md`，将安全响应头 `.parse().unwrap()` 与静态/embedded SPA response builder `expect(...)` 改为不可失败的显式 `HeaderValue::from_static` / `Response::new` 构造，保持状态码、Content-Type、SPA fallback 与 API/WS no-fallback 语义不变。
 - Native AI HTTP client no-panic：新增 `native-ai-http-client-no-panic-2026-05-14.md`，将 Native AI Chat SSE HTTP client 单例初始化从 `expect("Failed to create HTTP client")` 改为 `Result` 传播，保留共享 client 行为，失败进入既有 AI Chat error path 而不是 panic server。
 - Remote repo selector readable no-panic：新增 `remote-repo-selector-readable-no-panic-2026-05-14.md`，将 remote repo selector 解析里的 `expect("validated readable")` 改为局部 `let Some(info) else` fail-closed guard，保持 broken shadow repo 错误语义不变，并加 storage/repo baseline 防回归。
