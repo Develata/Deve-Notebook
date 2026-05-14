@@ -77,15 +77,37 @@ pub fn push_mirror(
         return Ok(report);
     }
 
-    let remote = report.remote.as_deref().expect("remote resolved");
-    let branch = report.branch.as_deref().expect("branch resolved");
-    match git_cmd::run(repo_root, &["push", remote, branch]) {
+    let Some((remote, branch)) = resolved_push_target(&mut report) else {
+        return Ok(report);
+    };
+    match git_cmd::run(repo_root, &["push", &remote, &branch]) {
         Ok(_) => {
             report.pushed = true;
         }
         Err(reason) => report.blockers.push(blocker("git_command", reason)),
     }
     Ok(report)
+}
+
+fn resolved_push_target(report: &mut GitMirrorPushReport) -> Option<(String, String)> {
+    let remote = report.remote.clone();
+    let branch = report.branch.clone();
+    if remote.is_none() {
+        report.blockers.push(blocker(
+            "git_remote",
+            "Git push mirror target remote was not resolved; inspect remote configuration",
+        ));
+    }
+    if branch.is_none() {
+        report.blockers.push(blocker(
+            "git_remote",
+            "Git push mirror target branch was not resolved; inspect branch configuration",
+        ));
+    }
+    match (remote, branch) {
+        (Some(remote), Some(branch)) => Some((remote, branch)),
+        _ => None,
+    }
 }
 
 fn collect_preflight_blockers(db: &Database, repo_root: &Path, report: &mut GitMirrorPushReport) {

@@ -1,4 +1,4 @@
-use super::{GitMirrorPushOptions, push_mirror, validate_push_name};
+use super::{GitMirrorPushOptions, push_mirror, resolved_push_target, validate_push_name};
 use crate::git_bridge::{
     GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorPushError, GitMirrorRunOptions,
     get_record, run_pending_mirror,
@@ -124,6 +124,40 @@ fn push_name_validation_rejects_option_like_or_whitespace_values() {
         assert!(err.contains(label), "{err:?}");
         assert!(err.contains(value), "{err:?}");
     }
+}
+
+#[test]
+fn unresolved_push_target_becomes_blocker_instead_of_panic() {
+    let mut missing_both = Default::default();
+    assert_eq!(resolved_push_target(&mut missing_both), None);
+    assert_eq!(missing_both.blockers.len(), 2);
+    assert!(
+        missing_both
+            .blockers
+            .iter()
+            .any(|blocker| blocker.reason.contains("remote was not resolved")),
+        "{:?}",
+        missing_both.blockers
+    );
+    assert!(
+        missing_both
+            .blockers
+            .iter()
+            .any(|blocker| blocker.reason.contains("branch was not resolved")),
+        "{:?}",
+        missing_both.blockers
+    );
+
+    let mut ready = super::GitMirrorPushReport {
+        remote: Some("origin".into()),
+        branch: Some("main".into()),
+        ..Default::default()
+    };
+    assert_eq!(
+        resolved_push_target(&mut ready),
+        Some(("origin".into(), "main".into()))
+    );
+    assert!(ready.blockers.is_empty());
 }
 
 #[test]
