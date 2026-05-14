@@ -141,6 +141,7 @@ contains "docs/acceptance-cases/12_tech_release.md" "scripts/smoke-runtime-recov
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-desktop-package-preflight.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-graph-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["version", "profile", "delivery", "environment"]'
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]'

@@ -13,6 +13,8 @@ check_desktop_tauri_lock_entries() {
     || fail "desktop native-packaging dependency spike must lock tauri"
   rg -q 'name = "tauri-build"' "$ROOT_DIR/Cargo.lock" \
     || fail "desktop native-packaging dependency spike must lock tauri-build"
+  rg -q 'name = "tray-icon"' "$ROOT_DIR/Cargo.lock" \
+    || fail "desktop native-packaging menu/tray binding must lock tray-icon"
 }
 
 check_default_desktop_tree_excludes_tauri() {
@@ -26,6 +28,8 @@ check_desktop_feature_tree_includes_tauri() {
     || fail "desktop native-packaging feature must include tauri"
   cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tauri-build v' \
     || fail "desktop native-packaging feature must include tauri-build"
+  cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tray-icon v' \
+    || fail "desktop native-packaging feature must include tray-icon"
 }
 
 "$ROOT_DIR/scripts/check-native-track-boundary.sh"
@@ -34,6 +38,7 @@ check_default_desktop_tree_excludes_tauri
 check_desktop_feature_tree_includes_tauri
 
 cargo check --locked -p deve_desktop --no-default-features
+cargo test --locked -p deve_desktop --features native-packaging menu_tray -- --nocapture
 cargo test --locked -p deve_desktop --features native-packaging packaging -- --nocapture
 cargo test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
 

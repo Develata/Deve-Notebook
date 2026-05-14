@@ -288,6 +288,7 @@ scripts/check-source-control-smoke-hygiene.sh
 scripts/check-dev-data-health-baseline.sh
 scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
+scripts/check-desktop-package-preflight.sh
 scripts/check-graph-baseline.sh
 scripts/check-diff-color-baseline.sh
 scripts/check-large-doc-baseline.sh
