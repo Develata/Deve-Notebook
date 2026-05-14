@@ -46,19 +46,13 @@ fn handle_resolution_error(session: &mut WsSession, err: anyhow::Error) -> Resul
 }
 
 fn normalize_unbound_remote_scope_error(session: &WsSession, err: anyhow::Error) -> anyhow::Error {
-    if session.active_branch.is_some()
+    if let Some(branch) = session.active_branch.as_ref()
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()
         && session.has_runtime_scope_binding()
         && map_repo_scope_error_ref(&err).code == ServerErrorCode::SyncRepoUnbound
     {
-        return RepoScopeFailure::stale_scope(stale_unbound_remote_scope_detail(
-            session
-                .active_branch
-                .as_ref()
-                .expect("checked active branch"),
-        ))
-        .into();
+        return RepoScopeFailure::stale_scope(stale_unbound_remote_scope_detail(branch)).into();
     }
     err
 }

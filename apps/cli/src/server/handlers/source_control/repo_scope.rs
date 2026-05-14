@@ -31,17 +31,14 @@ pub fn resolve_current_repo_scope(
             }
             return Err(error);
         }
-        if session.active_branch.is_some() && session.has_runtime_scope_binding() {
+        if let Some(branch) = session.active_branch.clone()
+            && session.has_runtime_scope_binding()
+        {
             session.clear_active_db();
             session.clear_sync_binding();
             return Err(ServerError::with_detail(
                 ServerErrorCode::ScStaleScope,
-                stale_unbound_remote_scope_detail(
-                    session
-                        .active_branch
-                        .as_ref()
-                        .expect("checked active branch"),
-                ),
+                stale_unbound_remote_scope_detail(&branch),
             ));
         }
         if session.active_branch.is_some() {

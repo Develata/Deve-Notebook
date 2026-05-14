@@ -95,7 +95,7 @@ fn map_current_scope_error(session: &WsSession, err: anyhow::Error) -> ServerErr
     {
         return ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail());
     }
-    if session.active_branch.is_some()
+    if let Some(branch) = session.active_branch.as_ref()
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()
         && session.has_runtime_scope_binding()
@@ -104,12 +104,7 @@ fn map_current_scope_error(session: &WsSession, err: anyhow::Error) -> ServerErr
         if mapped.code == ServerErrorCode::SyncRepoUnbound {
             return ServerError::with_detail(
                 ServerErrorCode::ScRepoContextInvalid,
-                stale_unbound_remote_scope_detail(
-                    session
-                        .active_branch
-                        .as_ref()
-                        .expect("checked active branch"),
-                ),
+                stale_unbound_remote_scope_detail(branch),
             );
         }
     }

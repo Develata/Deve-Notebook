@@ -98,6 +98,9 @@ check_contains apps/cli/src/server/source_control_proxy/mod.rs "REMOTE_PROXY_SCO
 check_contains apps/cli/src/server/source_control_proxy/client.rs "pub(super) fn build_client(base_url: &str) -> Result<reqwest::Client>"
 check_contains apps/cli/src/commands/serve.rs "RemoteSourceControlApi::new(base_url)?"
 check_absent apps/cli/src/server/source_control_proxy/client.rs 'expect("build source control HTTP client")'
+check_absent apps/cli/src/server/handlers/source_control/repo_scope.rs 'expect("checked active branch")'
+check_absent apps/cli/src/server/repo_scope/sync.rs 'expect("checked active branch")'
+check_absent apps/cli/src/server/handlers/switcher/switcher_scope.rs 'expect("checked active branch")'
 check_contains apps/web/src/api/git_mirror.rs "scope_nonce={scope_nonce}"
 check_contains apps/web/src/components/sidebar/source_control/error_notice.rs "current_scope_nonce.get_untracked() == scope_nonce"
 check_contains apps/web/src/components/sidebar/source_control/commit_actions.rs "on_commit_and_push.run(())"
