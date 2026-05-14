@@ -6,12 +6,12 @@
 
 ## 当前执行队列
 
-1. Mobile Platform Package Build Preflight：在 Mobile shell manifest acceptance 稳定后，新增 Android/iOS target-host prerequisite diagnostic；不得在 Linux/WSL 上声明移动端 package ready。
-2. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
-3. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
+1. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 与 platform preflight 稳定后才允许设计 child-process runtime。
+2. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
 
 ## 最近完成
 
+- NPG-3b Mobile Platform Package Build Preflight：新增 `mobile-platform-package-preflight-2026-05-14.md` 与 `scripts/check-mobile-platform-package-preflight.sh`，诊断 Android/iOS target-host prerequisites；默认不 fail、不生成 Android/iOS project、不运行 `cargo tauri android/ios build`，显式 `DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1` 时仅要求 prerequisites fail-closed。
 - NPG-3a Mobile Shell Packaging Acceptance：新增 `mobile-shell-packaging-acceptance-2026-05-14.md` 与 Mobile `tauri.conf.json` shell manifest，验证 mobile shell metadata、icon、updater-disabled、session-handoff 与 foreground-reprobe acceptance；未打开 Android/iOS project generation、platform package build、runtime entrypoint、child-process runtime 或 native authority writes。
 - NPG-3 Mobile Packaging Dependency Spike：新增 `mobile-packaging-dependency-spike-2026-05-14.md`，允许 `tauri` / `tauri-build` 仅作为 `apps/mobile` 的 optional `native-packaging` 依赖；default Mobile build 仍 no-Tauri，未打开 Mobile runtime entrypoint、Android/iOS package build、child-process runtime 或 native authority writes。
 - NPG-2g Desktop Target-Host Package Build Verification：安装并验证 `tauri-cli 2.11.1`；用 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm scripts/check-desktop-platform-package-build.sh` 完成 Linux `deb,rpm` package build；默认 AppImage 仍受 `linuxdeploy` host 条件影响，不声明 macOS/Windows readiness。

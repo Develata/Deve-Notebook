@@ -270,6 +270,32 @@ only validates that host target; it does not certify macOS or Windows packages.
 Use `DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm` to verify a Linux bundle subset when
 the host cannot run the AppImage `linuxdeploy` path.
 
+## Mobile Package Build Preflight
+
+Validate the Mobile shell manifest and diagnose Android/iOS target-host package
+prerequisites:
+
+```bash
+scripts/check-mobile-platform-package-preflight.sh
+```
+
+The script keeps ordinary local baselines diagnostic-only. It verifies the
+Mobile shell remains manifest-only, blocks generated Android/iOS project paths,
+checks the `native-packaging` compile/test surface, and reports missing target
+host tools such as `cargo tauri`, Android SDK/JDK/ADB, Rust Android target,
+macOS/Xcode, or Rust iOS target.
+
+To require prerequisites on a target host without running a package build:
+
+```bash
+DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 scripts/check-mobile-platform-package-preflight.sh
+```
+
+Use `DEVE_MOBILE_PACKAGE_TARGETS=android` or
+`DEVE_MOBILE_PACKAGE_TARGETS=ios` to narrow diagnostics. Linux/WSL can only
+diagnose Android readiness; iOS readiness requires macOS. This gate does not
+run `cargo tauri android build` or `cargo tauri ios build`.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
@@ -316,6 +342,7 @@ scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
 scripts/check-desktop-package-preflight.sh
 scripts/check-desktop-platform-package-build.sh
+scripts/check-mobile-platform-package-preflight.sh
 scripts/check-graph-baseline.sh
 scripts/check-diff-color-baseline.sh
 scripts/check-large-doc-baseline.sh
