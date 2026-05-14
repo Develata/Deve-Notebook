@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Native AI HTTP client no-panic：新增 `native-ai-http-client-no-panic-2026-05-14.md`，将 Native AI Chat SSE HTTP client 单例初始化从 `expect("Failed to create HTTP client")` 改为 `Result` 传播，保留共享 client 行为，失败进入既有 AI Chat error path 而不是 panic server。
 - Remote repo selector readable no-panic：新增 `remote-repo-selector-readable-no-panic-2026-05-14.md`，将 remote repo selector 解析里的 `expect("validated readable")` 改为局部 `let Some(info) else` fail-closed guard，保持 broken shadow repo 错误语义不变，并加 storage/repo baseline 防回归。
 - Scope pref serialization no-panic：新增 `scope-pref-serialization-no-panic-2026-05-14.md`，将 Web repo scope preference 持久化里的 `expect("scope pref should serialize")` 改为显式 `serialize_scope_pref` fail-soft helper；正常 repo-name-only JSON 不变，异常序列化只跳过本次写入并记录 warning。
 - Protocol switch nonce no-panic：新增 `protocol-switch-nonce-no-panic-2026-05-14.md`，将 Web protocol error scope-switch cleanup 的 `switch_nonce.expect("checked above")` 改为显式 `let Some(...) else` 早退，保持缺失 nonce 不清理 pending switch 的语义不变，并加 auth/protocol baseline 防回归。

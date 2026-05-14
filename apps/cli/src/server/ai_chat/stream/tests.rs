@@ -4,6 +4,12 @@ use deve_core::protocol::ServerMessage;
 use std::sync::{Arc, Mutex};
 
 #[test]
+fn native_ai_http_client_creation_is_result_based() {
+    let client = get_http_client().expect("native AI HTTP client should build");
+    let _ = client.clone();
+}
+
+#[test]
 fn finalize_stream_response_rejects_provider_tool_calls() {
     let err = finalize_stream_response(
         "partial".to_string(),

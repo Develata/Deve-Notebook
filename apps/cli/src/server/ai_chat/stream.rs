@@ -19,15 +19,18 @@ const NATIVE_AI_TOOL_CALLS_DISABLED_ERROR: &str =
     "Native AI Chat provider tool calls are disabled by default";
 
 /// 全局 HTTP 客户端单例
-static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static HTTP_CLIENT: OnceLock<Result<reqwest::Client, String>> = OnceLock::new();
 
-pub fn get_http_client() -> &'static reqwest::Client {
-    HTTP_CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .pool_max_idle_per_host(5)
-            .build()
-            .expect("Failed to create HTTP client")
-    })
+pub fn get_http_client() -> Result<&'static reqwest::Client> {
+    HTTP_CLIENT
+        .get_or_init(|| {
+            reqwest::Client::builder()
+                .pool_max_idle_per_host(5)
+                .build()
+                .map_err(|err| err.to_string())
+        })
+        .as_ref()
+        .map_err(|err| anyhow!("Failed to create HTTP client: {}", err))
 }
 
 /// 执行流式请求
@@ -39,7 +42,7 @@ pub async fn execute_stream(
     body: serde_json::Value,
     sink: &ChatStreamSink,
 ) -> Result<ChatStreamResponse> {
-    let client = get_http_client();
+    let client = get_http_client()?;
     let mut req = client.post(endpoint).bearer_auth(api_key).json(&body);
 
     for (key, value) in headers {
