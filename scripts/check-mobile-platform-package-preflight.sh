@@ -75,9 +75,9 @@ run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 require_file "apps/mobile/tauri.conf.json"
 require_file "apps/mobile/icons/icon.png"
+require_file "apps/mobile/build.rs"
+require_file "apps/mobile/src/tauri_entry.rs"
 forbid_path "apps/mobile/src/main.rs"
-forbid_path "apps/mobile/build.rs"
-forbid_path "apps/mobile/gen/android"
 forbid_path "apps/mobile/gen/apple"
 forbid_path "apps/mobile/src-tauri"
 
@@ -138,5 +138,5 @@ if ((${#target_missing[@]} > 0)); then
   exit 0
 fi
 
-echo "mobile-platform-package-preflight-check: prerequisites present; package build remains closed in this gate"
+echo "mobile-platform-package-preflight-check: prerequisites present; Android shell package build is allowed only through scripts/check-mobile-android-shell-package-build.sh"
 echo "mobile-platform-package-preflight-check: ok"

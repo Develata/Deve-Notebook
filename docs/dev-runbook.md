@@ -297,10 +297,10 @@ scripts/check-mobile-platform-package-preflight.sh
 ```
 
 The script keeps ordinary local baselines diagnostic-only. It verifies the
-Mobile shell remains manifest-only, blocks generated Android/iOS project paths,
-checks the `native-packaging` compile/test surface, and reports missing target
-host tools such as `cargo tauri`, Android SDK/JDK/ADB, Rust Android target,
-macOS/Xcode, or Rust iOS target.
+Mobile shell remains shell-only, blocks iOS generated project paths, checks the
+`native-packaging` compile/test surface, and reports missing target host tools
+such as `cargo tauri`, Android SDK/JDK/ADB, Rust Android target, macOS/Xcode,
+or Rust iOS target.
 
 To require prerequisites on a target host without running a package build:
 
@@ -312,6 +312,18 @@ Use `DEVE_MOBILE_PACKAGE_TARGETS=android` or
 `DEVE_MOBILE_PACKAGE_TARGETS=ios` to narrow diagnostics. Linux/WSL can only
 diagnose Android readiness; iOS readiness requires macOS. This gate does not
 run `cargo tauri android build` or `cargo tauri ios build`.
+
+Android shell-only package execution is a separate explicit gate:
+
+```bash
+scripts/check-mobile-android-shell-package-build.sh
+```
+
+By default it runs boundary/preflight checks and does not build. On an Android
+target host, set `DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1` to allow
+`cargo tauri android init` and `cargo tauri android build` under
+`apps/mobile/native-packaging`. This still does not open iOS packaging,
+child-process runtime, or native authority writes.
 
 ## Native Process Adapter Gate
 

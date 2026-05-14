@@ -24,6 +24,8 @@ check_mobile_tauri_lock_entries() {
     || fail "mobile native-packaging dependency spike must lock tauri"
   rg -q 'name = "tauri-build"' "$ROOT_DIR/Cargo.lock" \
     || fail "mobile native-packaging dependency spike must lock tauri-build"
+  rg -q 'name = "tauri-runtime-wry"' "$ROOT_DIR/Cargo.lock" \
+    || fail "mobile native-packaging shell entrypoint must lock tauri-runtime-wry"
 }
 
 check_default_desktop_tree_excludes_tauri() {
@@ -54,6 +56,8 @@ check_mobile_feature_tree_includes_tauri() {
     || fail "mobile native-packaging feature must include tauri"
   cargo tree --locked -p deve_mobile --features native-packaging | rg -q '(^| )tauri-build v' \
     || fail "mobile native-packaging feature must include tauri-build"
+  cargo tree --locked -p deve_mobile --features native-packaging | rg -q '(^| )tauri-runtime-wry v' \
+    || fail "mobile native-packaging feature must include tauri-runtime-wry"
 }
 
 "$ROOT_DIR/scripts/check-native-track-boundary.sh"

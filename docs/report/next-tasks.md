@@ -6,13 +6,14 @@
 
 ## 当前执行队列
 
-1. Desktop macOS/Windows target-host package execution：在 macOS/Windows 主机可用后，运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
-2. Mobile Android shell-only package execution implementation：plan 已允许 Android shell-only package execution 单独开门；下一批只可实现 Android target-host script / shell package execution，不得打开 iOS、process runtime 或 native authority writes。
+1. Mobile Android shell-only package execution verification：脚本与 feature-gated shell entrypoint 已就位；只有明确接受 generated Android project/package artifacts 时，才运行 `DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-package-build.sh`。
+2. Desktop macOS/Windows target-host package execution：在 macOS/Windows 主机可用后，运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
 3. Mobile iOS target-host package execution：iOS 仍阻塞于 macOS target host 与独立验收；当前 Linux/WSL 只允许诊断，不得声明 iOS package ready。
 4. Process runtime gate reopen review：只有 target-host package execution 闭合后，才重新评审是否实现真实 child-process runtime；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
+- Mobile Android Shell Package Execution：新增 feature-gated Tauri mobile WebView shell entrypoint、`apps/mobile/build.rs` 与 `scripts/check-mobile-android-shell-package-build.sh`；默认脚本不生成/不构建，required 模式才运行 Android init/build；iOS、process runtime 与 native authority writes 仍关闭。
 - Mobile Android Shell-only Package Gate：在 plan 中拆分 Android 与 iOS package execution；Android 可进入 shell-only target-host package execution，iOS、process runtime 与 native authority writes 仍关闭。
 - Mobile Android Target-host Preflight：用 `DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 DEVE_MOBILE_PACKAGE_TARGETS=android scripts/check-mobile-platform-package-preflight.sh` 在当前 Linux/WSL host 验证 Android prerequisites。
 - Desktop Process Runtime Gate Decision：确认真实 child-process runtime 继续关闭，直到 macOS/Windows 与 Android/iOS target-host package execution 提供证据；Desktop fake runtime 仍限于 test-only state-machine harness。
