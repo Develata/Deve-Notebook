@@ -341,12 +341,15 @@ Collect and validate workflow evidence artifacts after a run completes:
 ```bash
 scripts/collect-native-target-host-evidence.sh
 DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 DEVE_NATIVE_TARGET_HOST_RUN_ID=<run-id> scripts/collect-native-target-host-evidence.sh
+DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 DEVE_NATIVE_TARGET_HOST_RUN_ID=latest scripts/collect-native-target-host-evidence.sh
 ```
 
 The collector is dry-run by default. It validates every downloaded evidence
 Markdown file with `scripts/check-native-target-host-evidence.sh`. It uses an
 authenticated GitHub CLI when available, otherwise `DEVE_GITHUB_TOKEN`,
-`GH_TOKEN`, or `GITHUB_TOKEN` plus `curl` and `unzip`.
+`GH_TOKEN`, or `GITHUB_TOKEN` plus `curl` and `unzip`. Use
+`DEVE_NATIVE_TARGET_HOST_RUN_ID=latest` to resolve the most recent
+`native-target-host.yml` workflow_dispatch run for the selected ref.
 
 ## Mobile Package Build Preflight
 
