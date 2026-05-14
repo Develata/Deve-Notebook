@@ -7,10 +7,12 @@
 ## 当前执行队列
 
 1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
-2. Native packaging gate design：只有在 Web/Server/Docker release shape 稳定后，再决定是否打开 Desktop/Mobile Tauri gate；当前不得直接引入 Tauri dependency。
+2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton，并回到 mainline implementation gap scan。
+3. Mainline implementation gap scan：若不打开 plan patch 或 native packaging gate，则重新按 `docs/plan × features × acceptance-cases × code` 选择下一批用户可验收缺口。
 
 ## 最近完成
 
+- Native packaging gate design：新增 `native-packaging-gate-design-2026-05-14.md`，确认 Desktop/Mobile 仍保持 no-Tauri skeleton；真实 Tauri packaging 必须先经 Desktop dependency spike，再做 Desktop shell acceptance、Mobile dependency spike 与独立 process adapter gate。
 - Error-code catalog drift review：新增 `error-code-catalog-drift-review-2026-05-14.md`，确认 `ServerErrorCode` 与 Web i18n 映射内部一致；plan catalog 仍缺 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED`，需明确允许修改 `docs/plan/` 后再补。
 - Release dependency maintenance triage：新增 `release-dependency-maintenance-triage-2026-05-14.md`，将 Mermaid 从 `11.13.0` 升到 `11.15.0`，清除 `npm audit` 报告的 4 个 moderate advisory；Graph renderer gate 仍保持关闭。
 - Docker release smoke freshness：新增 `docker-release-smoke-freshness-2026-05-14.md`，用 Docker Desktop CLI 复验当前 Dockerfile 生产容器，修复 WSL bind mount 导致非 root `appuser` 无法写 `/data/ledger` 的 smoke harness 问题；Docker smoke 现在使用临时 Docker named volume，并验证 `/api/node/role` 与生产登录。
