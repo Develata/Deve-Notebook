@@ -37,7 +37,7 @@ jobs:
       APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
       APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust 1.92
         uses: dtolnay/rust-toolchain@stable
@@ -45,10 +45,10 @@ jobs:
           toolchain: 1.92
           targets: wasm32-unknown-unknown,aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Install Node.js 20
-        uses: actions/setup-node@v4
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Trunk
         run: |
@@ -82,7 +82,7 @@ jobs:
 
       - name: Upload Desktop macOS package artifacts
         if: ${{ inputs.run_desktop_package_build }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deve-desktop-macos-packages
           path: target/release/bundle/**
@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload Desktop macOS target-host evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deve-native-target-host-evidence-macos
           path: target/native-target-host-evidence/desktop-macos.md
@@ -123,7 +123,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust 1.92
         uses: dtolnay/rust-toolchain@stable
@@ -131,10 +131,10 @@ jobs:
           toolchain: 1.92
           targets: wasm32-unknown-unknown,x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
 
-      - name: Install Node.js 20
-        uses: actions/setup-node@v4
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Trunk
         run: |
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload Desktop Windows package artifacts
         if: ${{ inputs.run_desktop_package_build }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deve-desktop-windows-packages
           path: target/release/bundle/**
@@ -194,7 +194,7 @@ jobs:
 
       - name: Upload Desktop Windows target-host evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deve-native-target-host-evidence-windows
           path: target/native-target-host-evidence/desktop-windows.md
@@ -207,7 +207,7 @@ jobs:
       DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ inputs.required_preflight && '1' || '0' }}
       DEVE_MOBILE_PACKAGE_TARGETS: ios
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Rust 1.92
         uses: dtolnay/rust-toolchain@stable
@@ -215,10 +215,10 @@ jobs:
           toolchain: 1.92
           targets: wasm32-unknown-unknown,aarch64-apple-ios
 
-      - name: Install Node.js 20
-        uses: actions/setup-node@v4
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install Trunk
         run: |
@@ -265,7 +265,7 @@ jobs:
 
       - name: Upload Mobile iOS target-host evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deve-native-target-host-evidence-ios
           path: target/native-target-host-evidence/mobile-ios.md
