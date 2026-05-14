@@ -6,11 +6,12 @@
 
 ## 当前执行队列
 
-1. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
+1. Desktop macOS/Windows package verification：Linux deb/rpm/AppImage 已完成目标主机打包验证；macOS/Windows 仍需对应 host 验证签名、安装器与启动行为。
 2. Desktop process runtime gate decision：完成 target-host package verification 或明确 defer 后，再决定是否打开真实 child-process runtime；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
+- Desktop AppImage Package Verification：在 Linux/WSL host 上验证 Desktop `native-packaging` AppImage package path；记录 `librsvg2-dev` / `pkg-config librsvg-2.0` 与 `APPIMAGE_EXTRACT_AND_RUN=1` host prerequisite，生成 `Deve Notebook_0.0.1_amd64.AppImage`。
 - Native Regression Refresh after Process Fake Runtime：复跑 native process/packaging、Desktop/Mobile preflight、release baseline/audit diagnostic、runtime happy/recovery smoke、临时 dev server release-info smoke 与 plan coverage；默认 no-process/no-authority 边界保持稳定。
 - NPG-4c Desktop Process Adapter Fake Runtime Harness：新增 Desktop `native-packaging` test-only fake runtime harness，验证 spawn/probe/session/restart 状态机、retry budget、session handoff fatal 与 writer gate 不被 process state 绕过；仍未实现真实 process spawn。
 - NPG-4b Native Process Adapter API Scaffold：新增 `process_runtime.rs` typed contract，覆盖 spawn spec、runtime snapshot、event/failure taxonomy 与 structured validation；补充 process adapter scaffold 测试，仍未实现 `Command::new` 或真实 process spawn。

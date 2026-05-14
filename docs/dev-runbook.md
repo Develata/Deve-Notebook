@@ -270,6 +270,11 @@ only validates that host target; it does not certify macOS or Windows packages.
 Use `DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm` to verify a Linux bundle subset when
 the host cannot run the AppImage `linuxdeploy` path.
 
+For Linux AppImage verification, `linuxdeploy --plugin gtk` requires
+`pkg-config librsvg-2.0` metadata; on Debian/Ubuntu hosts install
+`librsvg2-dev`. On WSL hosts without `libfuse2`, run AppImage tooling through
+`APPIMAGE_EXTRACT_AND_RUN=1`.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package
