@@ -65,11 +65,20 @@ fn next_scope_pref_json(repo_name: Option<String>, switching: bool) -> ScopePref
         return ScopePrefUpdate::Skip;
     }
     match repo_name.filter(|name| !name.trim().is_empty()) {
-        Some(repo_name) => ScopePrefUpdate::Persist(
-            serde_json::to_string(&StoredScopePref { repo_name })
-                .expect("scope pref should serialize"),
-        ),
+        Some(repo_name) => {
+            serialize_scope_pref(repo_name).map_or(ScopePrefUpdate::Skip, ScopePrefUpdate::Persist)
+        }
         None => ScopePrefUpdate::Clear,
+    }
+}
+
+fn serialize_scope_pref(repo_name: String) -> Option<String> {
+    match serde_json::to_string(&StoredScopePref { repo_name }) {
+        Ok(json) => Some(json),
+        Err(err) => {
+            leptos::logging::warn!("无法序列化 repo scope preference: {}", err);
+            None
+        }
     }
 }
 

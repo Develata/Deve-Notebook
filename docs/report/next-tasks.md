@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Scope pref serialization no-panic：新增 `scope-pref-serialization-no-panic-2026-05-14.md`，将 Web repo scope preference 持久化里的 `expect("scope pref should serialize")` 改为显式 `serialize_scope_pref` fail-soft helper；正常 repo-name-only JSON 不变，异常序列化只跳过本次写入并记录 warning。
 - Protocol switch nonce no-panic：新增 `protocol-switch-nonce-no-panic-2026-05-14.md`，将 Web protocol error scope-switch cleanup 的 `switch_nonce.expect("checked above")` 改为显式 `let Some(...) else` 早退，保持缺失 nonce 不清理 pending switch 的语义不变，并加 auth/protocol baseline 防回归。
 - Ctrl key DOM helper no-panic：新增 `ctrl-key-dom-helper-no-panic-2026-05-14.md`，将 Ctrl/Cmd link activation hook 的 `window/document/body` 访问改为显式 `Option` helper，正常 DOM runtime 行为不变，并加 native 单测与 rendering baseline 防回归。
 - Outline inline parser no-panic：新增 `outline-inline-parser-no-panic-2026-05-14.md`，为 outline inline parser 增加 UTF-8 边界安全的 `next_char_at` helper，移除 parse/scan 里的直接 next-char unwrap，保持合法输入渲染语义不变，并加 rendering baseline 防回归。

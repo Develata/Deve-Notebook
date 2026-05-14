@@ -38,6 +38,8 @@ check_contains apps/web/src/shortcuts/config.rs "read_pref"
 check_contains apps/web/src/i18n/mod.rs "write_pref"
 check_contains apps/web/src/storage/prefs.rs "typed_prefs_roundtrip_through_fallback_layer"
 check_contains apps/web/src/hooks/use_core/scope_prefs.rs "repo_name: String"
+check_contains apps/web/src/hooks/use_core/scope_prefs.rs "fn serialize_scope_pref(repo_name: String) -> Option<String>"
+check_absent apps/web/src/hooks/use_core/scope_prefs.rs "expect(\"scope pref should serialize\")"
 check_absent apps/web/src/hooks/use_core/scope_prefs.rs "repo_id:"
 check_absent apps/web/src/hooks/use_core/scope_prefs.rs "active_branch:"
 
