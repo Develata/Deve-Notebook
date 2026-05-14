@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Outline inline parser no-panic：新增 `outline-inline-parser-no-panic-2026-05-14.md`，为 outline inline parser 增加 UTF-8 边界安全的 `next_char_at` helper，移除 parse/scan 里的直接 next-char unwrap，保持合法输入渲染语义不变，并加 rendering baseline 防回归。
 - Dropdown viewport height no-panic：新增 `dropdown-viewport-height-no-panic-2026-05-14.md`，将 dropdown placement 的 `window.expect("window")` 改为显式 `Option` fallback，正常浏览器行为不变，并加 native 单测与 UI baseline 防回归。
 - Search result detail no-panic：新增 `search-result-detail-no-panic-2026-05-14.md`，将 Unified Search result detail 渲染从 `detail_text.clone().unwrap()` 改为单一 `Option<String>` 显式 view 构造，保持 UI 输出语义不变，并加 Search baseline 防回归。
 - Git status retry hint no-panic：新增 `git-status-retry-hint-no-panic-2026-05-14.md`，将 `deve_cli git status` lagging-record retry hint 从 `expect` 维护的显示层不变量改为显式 retry command，保持输出合同不变，并加 Source Control baseline 防回归。

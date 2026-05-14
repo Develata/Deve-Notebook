@@ -49,6 +49,10 @@ contains apps/web/src/components/chat/message_item.rs "chat_apply_label_is_build
 contains apps/web/src/components/chat/message_list.rs "chat_apply_click_is_consumed_only_in_build_mode"
 contains apps/web/src/components/chat/actions/apply.rs "chat_apply_edit_message_carries_current_scope_nonce"
 contains scripts/check-ai-baseline.sh "chat_apply_edit_message_carries_current_scope_nonce"
+contains apps/web/src/components/outline_render/scan.rs "pub(super) fn next_char_at"
+contains apps/web/src/components/outline_render/parse_test.rs "outline_scan_helpers_fail_soft_on_non_char_boundary_start"
+absent apps/web/src/components/outline_render/parse.rs "chars().next().unwrap()"
+absent apps/web/src/components/outline_render/scan.rs "chars().next().unwrap()"
 
 # CodeMirror toolbar keeps only the extension point by default; future actions must register real handlers.
 contains docs/acceptance-cases/03_rendering.md 'menu_empty_state_text "No actions available"'

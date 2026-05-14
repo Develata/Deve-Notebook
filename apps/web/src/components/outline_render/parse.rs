@@ -5,7 +5,9 @@
 //!
 //! # Outline Inline Parser
 
-use super::scan::{find_math_close, find_next_char, find_style_close};
+use super::scan::{
+    find_math_close, find_next_char, find_style_close, next_char_at, tail_starts_with,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SegmentKind {
@@ -28,14 +30,13 @@ pub fn split_inline_segments(text: &str) -> Vec<Segment> {
     let mut last = 0;
     let mut i = 0;
 
-    while i < text.len() {
-        let ch = text[i..].chars().next().unwrap();
-        let len = ch.len_utf8();
-
-        if ch == '\\' && i + len < text.len() {
-            i += len;
-            let next_len = text[i..].chars().next().unwrap().len_utf8();
-            i += next_len;
+    while let Some((ch, len)) = next_char_at(text, i) {
+        if ch == '\\' {
+            if let Some((_, next_len)) = next_char_at(text, i + len) {
+                i += len + next_len;
+            } else {
+                i += len;
+            }
             continue;
         }
 
@@ -43,39 +44,40 @@ pub fn split_inline_segments(text: &str) -> Vec<Segment> {
             && let Some(close) = find_next_char(text, i + len, '`')
         {
             push_text(&mut segments, text, last, i);
-            let code = &text[i + len..close];
-            segments.push(Segment {
-                kind: SegmentKind::Code,
-                text: code.to_string(),
-            });
-            i = close + len;
-            last = i;
-            continue;
+            if let Some(code) = text.get(i + len..close) {
+                segments.push(Segment {
+                    kind: SegmentKind::Code,
+                    text: code.to_string(),
+                });
+                i = close + len;
+                last = i;
+                continue;
+            }
         }
 
         if ch == '$'
-            && i + len < text.len()
-            && let Some(next) = text[i + len..].chars().next()
+            && let Some((next, _)) = next_char_at(text, i + len)
             && !next.is_whitespace()
             && let Some(close) = find_math_close(text, i + len)
         {
             push_text(&mut segments, text, last, i);
-            let math = &text[i + len..close];
-            segments.push(Segment {
-                kind: SegmentKind::Math,
-                text: math.to_string(),
-            });
-            i = close + len;
-            last = i;
-            continue;
+            if let Some(math) = text.get(i + len..close) {
+                segments.push(Segment {
+                    kind: SegmentKind::Math,
+                    text: math.to_string(),
+                });
+                i = close + len;
+                last = i;
+                continue;
+            }
         }
 
         if ch == '*' || ch == '~' || ch == '_' {
-            let (marker, kind) = if ch == '*' && text[i + len..].starts_with('*') {
+            let (marker, kind) = if ch == '*' && tail_starts_with(text, i + len, "*") {
                 ("**", SegmentKind::Strong)
-            } else if ch == '_' && text[i + len..].starts_with('_') {
+            } else if ch == '_' && tail_starts_with(text, i + len, "_") {
                 ("__", SegmentKind::Strong)
-            } else if ch == '~' && text[i + len..].starts_with('~') {
+            } else if ch == '~' && tail_starts_with(text, i + len, "~") {
                 ("~~", SegmentKind::Del)
             } else if ch == '*' {
                 ("*", SegmentKind::Em)
@@ -89,14 +91,15 @@ pub fn split_inline_segments(text: &str) -> Vec<Segment> {
                 && let Some(close) = find_style_close(text, i + marker.len(), marker)
             {
                 push_text(&mut segments, text, last, i);
-                let inner = &text[i + marker.len()..close];
-                segments.push(Segment {
-                    kind,
-                    text: inner.to_string(),
-                });
-                i = close + marker.len();
-                last = i;
-                continue;
+                if let Some(inner) = text.get(i + marker.len()..close) {
+                    segments.push(Segment {
+                        kind,
+                        text: inner.to_string(),
+                    });
+                    i = close + marker.len();
+                    last = i;
+                    continue;
+                }
             }
         }
 
@@ -108,10 +111,12 @@ pub fn split_inline_segments(text: &str) -> Vec<Segment> {
 }
 
 fn push_text(segments: &mut Vec<Segment>, text: &str, start: usize, end: usize) {
-    if end > start {
+    if end > start
+        && let Some(text) = text.get(start..end)
+    {
         segments.push(Segment {
             kind: SegmentKind::Text,
-            text: text[start..end].to_string(),
+            text: text.to_string(),
         });
     }
 }

@@ -5,27 +5,33 @@
 //!
 //! Shared inline scan helpers for outline parsing.
 
+pub(super) fn next_char_at(text: &str, index: usize) -> Option<(char, usize)> {
+    let ch = text.get(index..)?.chars().next()?;
+    Some((ch, ch.len_utf8()))
+}
+
+pub(super) fn tail_starts_with(text: &str, index: usize, marker: &str) -> bool {
+    text.get(index..)
+        .is_some_and(|tail| tail.starts_with(marker))
+}
+
 pub fn find_next_char(text: &str, start: usize, target: char) -> Option<usize> {
     let mut i = start;
-    while i < text.len() {
-        let ch = text[i..].chars().next().unwrap();
+    while let Some((ch, len)) = next_char_at(text, i) {
         if ch == target {
             return Some(i);
         }
-        i += ch.len_utf8();
+        i += len;
     }
     None
 }
 
 pub fn find_math_close(text: &str, start: usize) -> Option<usize> {
     let mut i = start;
-    while i < text.len() {
-        let ch = text[i..].chars().next().unwrap();
-        let len = ch.len_utf8();
+    while let Some((ch, len)) = next_char_at(text, i) {
         if ch == '\\' {
             i += len;
-            if i < text.len() {
-                let next_len = text[i..].chars().next().unwrap().len_utf8();
+            if let Some((_, next_len)) = next_char_at(text, i) {
                 i += next_len;
             }
             continue;
@@ -40,18 +46,15 @@ pub fn find_math_close(text: &str, start: usize) -> Option<usize> {
 
 pub fn find_style_close(text: &str, start: usize, marker: &str) -> Option<usize> {
     let mut i = start;
-    while i < text.len() {
-        let ch = text[i..].chars().next().unwrap();
-        let len = ch.len_utf8();
+    while let Some((ch, len)) = next_char_at(text, i) {
         if ch == '\\' {
             i += len;
-            if i < text.len() {
-                let next_len = text[i..].chars().next().unwrap().len_utf8();
+            if let Some((_, next_len)) = next_char_at(text, i) {
                 i += next_len;
             }
             continue;
         }
-        if text[i..].starts_with(marker) {
+        if tail_starts_with(text, i, marker) {
             return Some(i);
         }
         i += len;
