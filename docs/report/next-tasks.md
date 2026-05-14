@@ -6,11 +6,13 @@
 
 ## 当前执行队列
 
-1. Native Process Adapter Runtime Design：process adapter gate diagnostic 已闭合；下一步如要打开真实 runtime，必须先设计 spawn/probe/session/restart API、feature scope、failure contract 与测试矩阵，不得直接写子进程实现。
-2. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
+1. Native Process Adapter API Scaffold：按 runtime design 先实现 typed spawn spec / runtime snapshot / structured error / tests；不得实现 `Command::new` 或真实 process spawn。
+2. Desktop Process Adapter Fake Runtime Harness：API scaffold 稳定后，用 fake runtime 验证 spawn/probe/session/restart 状态机；仍不得启动真实后端进程。
+3. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
 
 ## 最近完成
 
+- NPG-4a Native Process Adapter Runtime Design：新增 `native-process-adapter-runtime-design-2026-05-14.md`，明确 post-gate child-process runtime 的 API shape、feature scope、失败合同与测试矩阵；本批未实现 spawn runtime。
 - NPG-4 Native Process Adapter Gate：新增 `native-process-adapter-gate-2026-05-14.md` 与 `scripts/check-native-process-adapter-gate.sh`，固定 process adapter 仍为 `DeferredUntilPackagingGate`，拒绝 Desktop/Mobile/native adapter 里的 direct process spawn/import，并复跑 core/desktop/mobile process observation 定向测试；未打开 child-process runtime。
 - NPG-3b Mobile Platform Package Build Preflight：新增 `mobile-platform-package-preflight-2026-05-14.md` 与 `scripts/check-mobile-platform-package-preflight.sh`，诊断 Android/iOS target-host prerequisites；默认不 fail、不生成 Android/iOS project、不运行 `cargo tauri android/ios build`，显式 `DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1` 时仅要求 prerequisites fail-closed。
 - NPG-3a Mobile Shell Packaging Acceptance：新增 `mobile-shell-packaging-acceptance-2026-05-14.md` 与 Mobile `tauri.conf.json` shell manifest，验证 mobile shell metadata、icon、updater-disabled、session-handoff 与 foreground-reprobe acceptance；未打开 Android/iOS project generation、platform package build、runtime entrypoint、child-process runtime 或 native authority writes。
