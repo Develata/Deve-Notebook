@@ -39,10 +39,8 @@ pub struct WsService {
     set_writer_client_id: WriteSignal<Option<u64>>,
     pub endpoint: ReadSignal<String>,
     pub node_role: ReadSignal<String>,
-    #[cfg(test)]
     set_node_role: WriteSignal<String>,
     pub node_role_probe_failed: ReadSignal<bool>,
-    #[cfg(test)]
     set_node_role_probe_failed: WriteSignal<bool>,
     pub msg_seq: ReadSignal<u64>,
     pub connection_epoch: ReadSignal<u64>,
@@ -98,10 +96,8 @@ impl WsService {
             set_writer_client_id,
             endpoint,
             node_role,
-            #[cfg(test)]
             set_node_role,
             node_role_probe_failed,
-            #[cfg(test)]
             set_node_role_probe_failed,
             msg_seq,
             connection_epoch,
@@ -137,6 +133,22 @@ impl WsService {
         self.set_writer_ready_repo_id.set(None);
         self.set_writer_ready_scope_nonce.set(None);
         self.set_writer_client_id.set(None);
+    }
+
+    pub(crate) fn begin_foreground_reprobe(&self) {
+        self.clear_writer_ready();
+        self.set_node_role.set(String::new());
+        self.set_node_role_probe_failed.set(true);
+    }
+
+    pub(crate) fn complete_foreground_node_role_reprobe(&self, summary: impl Into<String>) {
+        self.set_node_role.set(summary.into());
+        self.set_node_role_probe_failed.set(false);
+    }
+
+    pub(crate) fn fail_foreground_node_role_reprobe(&self) {
+        self.set_node_role.set(String::new());
+        self.set_node_role_probe_failed.set(true);
     }
 
     pub fn writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>) -> bool {

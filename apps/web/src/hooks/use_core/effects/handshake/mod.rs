@@ -9,10 +9,12 @@ use std::rc::Rc;
 
 use super::super::types::HandshakeSignals;
 mod cycle;
+mod lifecycle;
 mod reset;
 mod send;
 mod state;
 use self::cycle::run_handshake_cycle;
+use self::lifecycle::mount_foreground_reprobe_listener;
 #[cfg(test)]
 pub(super) fn handshake_mode_key(
     endpoint: &str,
@@ -69,6 +71,7 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
     let endpoint_signal = ws.endpoint;
     let last_mode = Rc::new(RefCell::new(None::<String>));
     let handshake_attempt = Rc::new(Cell::new(0u64));
+    mount_foreground_reprobe_listener(ws.clone(), signals, last_mode.clone());
 
     Effect::new(move |_| {
         // 失败重置会把 handshake_scope_nonce 清回 None；这里显式订阅它，

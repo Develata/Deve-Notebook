@@ -40,31 +40,21 @@ pub(super) async fn fetch_node_role_for_http_base(
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
 ) {
-    let http_url = http_base.trim_end_matches('/');
-    let url = format!("{}/api/node/role", http_url);
-
-    for attempt in 0..NODE_ROLE_PROBE_RETRIES {
-        if !lifecycle.is_active() {
-            return;
-        }
-        if let Some(json) = fetch_node_role_json_with_timeout(&url).await {
-            apply_node_role_probe_success(
-                &lifecycle,
-                set_node_role,
-                set_node_role_probe_failed,
-                current_connection_epoch,
-                probe_connection_epoch,
-                format_node_role_summary(&json),
-            );
-            return;
-        }
-
-        if attempt + 1 < NODE_ROLE_PROBE_RETRIES {
-            TimeoutFuture::new(NODE_ROLE_PROBE_RETRY_DELAY_MS).await;
-        }
+    let url = node_role_url_for_http_base(&http_base);
+    let summary = probe_node_role_summary_with_retries(&url, || lifecycle.is_active()).await;
+    if !lifecycle.is_active() {
+        return;
     }
 
-    if !lifecycle.is_active() {
+    if let Some(summary) = summary {
+        apply_node_role_probe_success(
+            &lifecycle,
+            set_node_role,
+            set_node_role_probe_failed,
+            current_connection_epoch,
+            probe_connection_epoch,
+            summary,
+        );
         return;
     }
     leptos::logging::error!("Node role probe failed after retries: {}", url);
@@ -75,6 +65,29 @@ pub(super) async fn fetch_node_role_for_http_base(
         current_connection_epoch,
         probe_connection_epoch,
     );
+}
+
+pub(crate) async fn probe_node_role_summary_for_http_base(http_base: String) -> Option<String> {
+    let url = node_role_url_for_http_base(&http_base);
+    probe_node_role_summary_with_retries(&url, || true).await
+}
+
+async fn probe_node_role_summary_with_retries(
+    url: &str,
+    mut should_continue: impl FnMut() -> bool,
+) -> Option<String> {
+    for attempt in 0..NODE_ROLE_PROBE_RETRIES {
+        if !should_continue() {
+            return None;
+        }
+        if let Some(json) = fetch_node_role_json_with_timeout(url).await {
+            return Some(format_node_role_summary(&json));
+        }
+        if attempt + 1 < NODE_ROLE_PROBE_RETRIES {
+            TimeoutFuture::new(NODE_ROLE_PROBE_RETRY_DELAY_MS).await;
+        }
+    }
+    None
 }
 
 async fn fetch_node_role_json_with_timeout(url: &str) -> Option<serde_json::Value> {
@@ -124,12 +137,17 @@ fn apply_node_role_probe_failure(
         && lifecycle.try_set(set_node_role_probe_failed, true)
 }
 
-pub(super) fn http_base_from_ws_url(ws_url: &str) -> String {
+pub(crate) fn http_base_from_ws_url(ws_url: &str) -> String {
     ws_url
         .replace("wss://", "https://")
         .replace("ws://", "http://")
         .trim_end_matches("/ws")
         .to_string()
+}
+
+fn node_role_url_for_http_base(http_base: &str) -> String {
+    let http_url = http_base.trim_end_matches('/');
+    format!("{}/api/node/role", http_url)
 }
 
 fn format_node_role_summary(json: &serde_json::Value) -> String {
