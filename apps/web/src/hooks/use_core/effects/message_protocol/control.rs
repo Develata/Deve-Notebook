@@ -12,10 +12,9 @@ pub(super) fn clear_failed_scope_switch(
     switch_nonce: Option<u64>,
     signals: ProtocolControlSignals,
 ) {
-    if switch_nonce.is_none() {
+    let Some(switch_nonce) = switch_nonce else {
         return;
-    }
-    let switch_nonce = switch_nonce.expect("checked above");
+    };
     let clear_branch = signals.pending_branch_switch.get_untracked().is_some()
         && signals.pending_branch_switch_nonce.get_untracked() == Some(switch_nonce);
     let clear_repo = signals.pending_repo_switch_nonce.get_untracked() == Some(switch_nonce);

@@ -24,6 +24,8 @@ check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, Conn
 check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, ConnectionStatus::Disconnected)"
 check_contains apps/web/src/components/main_layout/setup.rs "ws_status.get() == ConnectionStatus::Unauthorized"
 check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None"
+check_contains apps/web/src/hooks/use_core/effects/message_protocol/control.rs "let Some(switch_nonce) = switch_nonce else"
+check_absent apps/web/src/hooks/use_core/effects/message_protocol/control.rs "expect(\"checked above\")"
 check_absent apps/web/src/api/output.rs "set_status.set(ConnectionStatus::Disconnected);"
 
 echo "auth-unauthorized-check: ok"
