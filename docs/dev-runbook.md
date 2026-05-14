@@ -275,6 +275,18 @@ For Linux AppImage verification, `linuxdeploy --plugin gtk` requires
 `librsvg2-dev`. On WSL hosts without `libfuse2`, run AppImage tooling through
 `APPIMAGE_EXTRACT_AND_RUN=1`.
 
+Diagnose macOS/Windows target-host prerequisites without claiming readiness on
+the wrong host:
+
+```bash
+scripts/check-desktop-target-host-preflight.sh
+```
+
+Use `DEVE_DESKTOP_TARGET_HOSTS=macos` or `windows` to narrow diagnostics. On a
+real target host, set `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1` to make
+missing signing/build prerequisites fail closed before running the package
+build script.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package

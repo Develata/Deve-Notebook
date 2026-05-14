@@ -88,6 +88,7 @@
     - run: scripts/check-native-process-adapter-gate.sh
     - run: scripts/check-desktop-package-preflight.sh
     - run: scripts/check-desktop-platform-package-build.sh
+    - run: scripts/check-desktop-target-host-preflight.sh
     - run: scripts/check-mobile-platform-package-preflight.sh
     - run: scripts/check-graph-baseline.sh
     - run: cargo test -p deve_cli graph -- --nocapture
