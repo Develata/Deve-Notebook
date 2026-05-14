@@ -1,5 +1,30 @@
 use super::*;
 
+fn valid_spawn_spec() -> NativeProcessSpawnSpec {
+    let root = std::env::current_dir().expect("current dir");
+    NativeProcessSpawnSpec {
+        executable: root.join("target/native/deve_cli"),
+        argv: vec!["serve".to_string(), "--dev".to_string()],
+        cwd: root.clone(),
+        env_allowlist: vec!["DEVE_PROFILE".to_string(), "MEM_CACHE_MB".to_string()],
+        env: vec![NativeProcessEnvBinding {
+            key: "DEVE_PROFILE".to_string(),
+            value: "standard".to_string(),
+        }],
+        profile: "standard".to_string(),
+        config_path: root.join("config.toml"),
+        vault_path: root.join("vault"),
+        ledger_path: root.join("ledger"),
+        bind_hints: NativeProcessBindHints {
+            http_host: "127.0.0.1".to_string(),
+            http_port: Some(3001),
+            ws_host: "localhost".to_string(),
+            ws_port: Some(3001),
+        },
+        path_resolution: NativeProcessPathResolution::AbsoluteOnly,
+    }
+}
+
 fn endpoint(http_base: &str, ws_base: &str) -> NativeEndpointReady {
     NativeEndpointReady {
         http_base: http_base.to_string(),
@@ -82,4 +107,84 @@ fn default_adapter_rejects_non_loopback_existing_endpoint() {
             NativeAdapterError::NonLoopbackHost { field: "http_base" }
         ))
     ));
+}
+
+#[test]
+fn process_spawn_spec_rejects_empty_executable() {
+    let mut spec = valid_spawn_spec();
+    spec.executable = std::path::PathBuf::new();
+
+    assert_eq!(
+        spec.validate_contract(),
+        Err(NativeProcessRuntimeError::EmptyPath {
+            field: "executable"
+        })
+    );
+}
+
+#[test]
+fn process_spawn_spec_rejects_relative_executable_without_resolver() {
+    let mut spec = valid_spawn_spec();
+    spec.executable = "deve_cli".into();
+
+    assert_eq!(
+        spec.validate_contract(),
+        Err(NativeProcessRuntimeError::RelativePathForbidden {
+            field: "executable"
+        })
+    );
+}
+
+#[test]
+fn process_spawn_spec_rejects_unknown_environment_variable() {
+    let mut spec = valid_spawn_spec();
+    spec.env.push(NativeProcessEnvBinding {
+        key: "AUTH_SECRET".to_string(),
+        value: "must-not-be-forwarded".to_string(),
+    });
+
+    assert_eq!(
+        spec.validate_contract(),
+        Err(
+            NativeProcessRuntimeError::EnvironmentVariableNotAllowlisted {
+                key: "AUTH_SECRET".to_string()
+            }
+        )
+    );
+}
+
+#[test]
+fn process_spawn_spec_rejects_non_loopback_bind_hints() {
+    let mut spec = valid_spawn_spec();
+    spec.bind_hints.http_host = "0.0.0.0".to_string();
+
+    assert_eq!(
+        spec.validate_contract(),
+        Err(NativeProcessRuntimeError::NonLoopbackBindHost { field: "http_host" })
+    );
+}
+
+#[test]
+fn process_runtime_snapshot_never_serializes_secret_token_or_output_payload() {
+    let snapshot =
+        NativeProcessRuntimeSnapshot::disabled_by_policy(CURRENT_NATIVE_PROCESS_ADAPTER_POLICY);
+    let encoded = serde_json::to_string(&snapshot).expect("serialize snapshot");
+
+    assert_eq!(snapshot.state, NativeProcessRuntimeState::Disabled);
+    assert!(!snapshot.child_process_runtime_enabled);
+    assert!(!snapshot.authority_writes_allowed);
+    assert!(!encoded.contains("secret"));
+    assert!(!encoded.contains("token"));
+    assert!(!encoded.contains("stdout"));
+    assert!(!encoded.contains("stderr"));
+}
+
+#[test]
+fn process_runtime_failure_contract_marks_only_budgeted_failures_retryable() {
+    assert!(NativeProcessRuntimeFailureKind::BindFailed.retryable_by_default());
+    assert!(NativeProcessRuntimeFailureKind::HealthProbeFailed.retryable_by_default());
+    assert!(NativeProcessRuntimeFailureKind::ProcessExited.retryable_by_default());
+    assert!(!NativeProcessRuntimeFailureKind::SessionHandoffFailed.retryable_by_default());
+    assert!(!NativeProcessRuntimeFailureKind::SpawnExecutableMissing.retryable_by_default());
+    assert!(!NativeProcessRuntimeFailureKind::EnvironmentPolicyViolation.retryable_by_default());
 }

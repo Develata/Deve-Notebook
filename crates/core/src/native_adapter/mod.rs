@@ -10,6 +10,7 @@
 
 mod packaging;
 mod process;
+mod process_runtime;
 mod shell_core;
 mod supervisor;
 mod types;
@@ -23,6 +24,12 @@ pub use process::{
     CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeProcessAdapter, NativeProcessAdapterDecision,
     NativeProcessAdapterError, NativeProcessAdapterPolicy, NativeProcessAdapterSnapshot,
     NativeProcessAdapterState,
+};
+pub use process_runtime::{
+    NativeProcessBindHints, NativeProcessEnvBinding, NativeProcessExitStatus,
+    NativeProcessPathResolution, NativeProcessRuntimeError, NativeProcessRuntimeEvent,
+    NativeProcessRuntimeFailureKind, NativeProcessRuntimeHandle, NativeProcessRuntimeSnapshot,
+    NativeProcessRuntimeState, NativeProcessSpawnSpec,
 };
 pub use shell_core::{NativeShellCore, NativeShellCoreSnapshot};
 pub use supervisor::{

@@ -41,6 +41,10 @@ check_contains crates/core/src/native_adapter/process.rs "bind_existing_endpoint
 check_contains crates/core/src/native_adapter/process.rs "bind_session"
 check_contains crates/core/src/native_adapter/process.rs "record_probe_timeout"
 check_contains crates/core/src/native_adapter/process.rs "record_process_stopped"
+check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessSpawnSpec"
+check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessRuntimeSnapshot"
+check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessRuntimeError"
+check_contains crates/core/src/native_adapter/process_runtime.rs "validate_contract"
 check_contains apps/desktop/src/shell_test/policy.rs "desktop_default_build_defers_real_process_adapter"
 check_contains apps/mobile/src/shell_test/policy.rs "mobile_default_build_defers_real_process_adapter"
 
