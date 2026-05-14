@@ -73,7 +73,10 @@ contains "$ROOT_DIR/crates/core/tests/local_repo_metadata_repair_test.rs" "fn in
 contains "$ROOT_DIR/crates/core/tests/store_acceptance_test.rs" "SNAPSHOT_DATA"
 contains "$ROOT_DIR/crates/core/tests/watcher_lifecycle.rs" "fn watcher_duplicate_start_fails_and_can_restart_after_stop()"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::is_running(info.uuid)"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::begin_stop(repo_id)"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::finish_stop(repo_id)"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "stop_handle(rejected)?"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/registry.rs" "WatcherSlot::Stopping"
 
 not_contains "$ACCEPTANCE" "deve repo create"
 not_contains "$ACCEPTANCE" "deve db inspect"

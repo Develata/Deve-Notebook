@@ -12,7 +12,12 @@ pub(crate) struct WatcherHandle {
     pub join: JoinHandle<Result<(), WatcherError>>,
 }
 
-static REGISTRY: LazyLock<Mutex<HashMap<RepoId, WatcherHandle>>> =
+enum WatcherSlot {
+    Running(WatcherHandle),
+    Stopping,
+}
+
+static REGISTRY: LazyLock<Mutex<HashMap<RepoId, WatcherSlot>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 pub(crate) fn insert_or_reject(
@@ -26,7 +31,7 @@ pub(crate) fn insert_or_reject(
     if guard.contains_key(&repo_id) {
         return Err((WatcherError::AlreadyRunning(repo_id), handle));
     }
-    guard.insert(repo_id, handle);
+    guard.insert(repo_id, WatcherSlot::Running(handle));
     Ok(())
 }
 
@@ -37,11 +42,31 @@ pub(crate) fn is_running(repo_id: RepoId) -> Result<bool, WatcherError> {
     Ok(guard.contains_key(&repo_id))
 }
 
-pub(crate) fn remove(repo_id: RepoId) -> Result<Option<WatcherHandle>, WatcherError> {
+pub(crate) fn begin_stop(repo_id: RepoId) -> Result<Option<WatcherHandle>, WatcherError> {
     let mut guard = REGISTRY
         .lock()
         .map_err(|_| WatcherError::RegistryPoisoned)?;
-    Ok(guard.remove(&repo_id))
+    match guard.remove(&repo_id) {
+        Some(WatcherSlot::Running(handle)) => {
+            guard.insert(repo_id, WatcherSlot::Stopping);
+            Ok(Some(handle))
+        }
+        Some(WatcherSlot::Stopping) => {
+            guard.insert(repo_id, WatcherSlot::Stopping);
+            Ok(None)
+        }
+        None => Ok(None),
+    }
+}
+
+pub(crate) fn finish_stop(repo_id: RepoId) -> Result<(), WatcherError> {
+    let mut guard = REGISTRY
+        .lock()
+        .map_err(|_| WatcherError::RegistryPoisoned)?;
+    if matches!(guard.get(&repo_id), Some(WatcherSlot::Stopping)) {
+        guard.remove(&repo_id);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -71,7 +96,8 @@ mod tests {
     #[test]
     fn duplicate_insert_rejects_second_handle_without_replacing_existing() {
         let repo_id = uuid::Uuid::from_u128(17);
-        let _ = remove(repo_id);
+        let _ = begin_stop(repo_id);
+        let _ = finish_stop(repo_id);
 
         let (first, release_first, _first_done) = parked_handle();
         match insert_or_reject(repo_id, first) {
@@ -87,8 +113,8 @@ mod tests {
         assert!(matches!(rejected, WatcherError::AlreadyRunning(id) if id == repo_id));
 
         release_second.send(()).expect("release rejected thread");
-        let original = remove(repo_id)
-            .expect("remove original watcher")
+        let original = begin_stop(repo_id)
+            .expect("begin stop original watcher")
             .expect("original watcher still registered");
         release_first.send(()).expect("release original thread");
         original.stop_tx.send(()).expect("stop original");
@@ -97,6 +123,41 @@ mod tests {
             .join()
             .expect("original watcher thread join")
             .expect("original watcher thread result");
+        finish_stop(repo_id).expect("finish original stop");
+        assert!(!is_running(repo_id).expect("registry readable"));
+    }
+
+    #[test]
+    fn stopping_slot_blocks_new_watcher_until_finish_stop() {
+        let repo_id = uuid::Uuid::from_u128(18);
+        let _ = begin_stop(repo_id);
+        let _ = finish_stop(repo_id);
+
+        let (first, release_first, _first_done) = parked_handle();
+        match insert_or_reject(repo_id, first) {
+            Ok(()) => {}
+            Err((err, _)) => panic!("insert first watcher: {err}"),
+        }
+        let original = begin_stop(repo_id)
+            .expect("begin stop original watcher")
+            .expect("original watcher still registered");
+        assert!(is_running(repo_id).expect("stopping slot blocks start"));
+
+        let (second, release_second, _second_done) = parked_handle();
+        let rejected = insert_or_reject(repo_id, second)
+            .expect_err("stopping repo must reject new watcher")
+            .0;
+        assert!(matches!(rejected, WatcherError::AlreadyRunning(id) if id == repo_id));
+        release_second.send(()).expect("release rejected thread");
+
+        release_first.send(()).expect("release original thread");
+        original.stop_tx.send(()).expect("stop original");
+        original
+            .join
+            .join()
+            .expect("original watcher thread join")
+            .expect("original watcher thread result");
+        finish_stop(repo_id).expect("finish original stop");
         assert!(!is_running(repo_id).expect("registry readable"));
     }
 }

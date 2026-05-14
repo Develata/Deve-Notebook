@@ -13,6 +13,7 @@
 ## Fix
 
 - watcher 启动前先通过 registry 检查同 repo 是否已运行。
+- watcher stop 会先把 registry slot 标记为 `Stopping`，直到 `stop + join` 完成后才释放，避免 stop/start 窗口出现双 watcher。
 - registry 登记改为 `insert_or_reject`，在并发竞态下仍返回 rejected handle。
 - rejected watcher handle 会被显式 `stop + join`，避免未登记线程继续消费事件。
 - `stop_repo_watcher` 复用统一 `stop_handle`，保持 close/drain 语义集中。
@@ -21,6 +22,8 @@
 ## Verification
 
 - `cargo test -p deve_core duplicate_insert_rejects_second_handle_without_replacing_existing -- --nocapture`
+- `cargo test -p deve_core stopping_slot_blocks_new_watcher_until_finish_stop -- --nocapture`
+- `cargo test -p deve_core rejected_registration_stops_and_joins_rejected_handle -- --nocapture`
 - `cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture`
 - `cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture`
 - `cargo fmt --check`
