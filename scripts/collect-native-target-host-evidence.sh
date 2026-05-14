@@ -18,6 +18,12 @@ fail() {
   exit 1
 }
 
+cleanup_tmp_dir() {
+  local tmp_dir="${1:-}"
+
+  [[ -n "$tmp_dir" ]] && rm -rf "$tmp_dir"
+}
+
 resolve_repository() {
   local repo="$REPOSITORY"
   local remote_url
@@ -177,16 +183,19 @@ latest_run_with_api() {
 
   encoded_ref="$(urlencode "$REF")"
   tmp_dir="$(mktemp -d)"
-  trap "rm -rf '$tmp_dir'" EXIT
   runs_json="$tmp_dir/runs.json"
 
-  curl -fsS \
+  if ! curl -fsS \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "https://api.github.com/repos/$repo/actions/workflows/$WORKFLOW_FILE/runs?branch=$encoded_ref&event=workflow_dispatch&per_page=1" \
-    >"$runs_json"
+    >"$runs_json"; then
+    cleanup_tmp_dir "$tmp_dir"
+    fail "latest run lookup request failed"
+  fi
   run_id="$(latest_run_id_from_json "$runs_json")"
+  cleanup_tmp_dir "$tmp_dir"
   [[ -n "$run_id" ]] || fail "no Native Target Host workflow_dispatch runs found for ref: $REF"
   printf '%s\n' "$run_id"
 }
@@ -233,16 +242,19 @@ status_with_api() {
   command -v curl >/dev/null 2>&1 || fail "run status lookup requires curl"
 
   tmp_dir="$(mktemp -d)"
-  trap "rm -rf '$tmp_dir'" EXIT
   run_json="$tmp_dir/run.json"
 
-  curl -fsS \
+  if ! curl -fsS \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "https://api.github.com/repos/$repo/actions/runs/$RUN_ID" \
-    >"$run_json"
+    >"$run_json"; then
+    cleanup_tmp_dir "$tmp_dir"
+    fail "run status lookup request failed"
+  fi
   run_status_from_json "$run_json"
+  cleanup_tmp_dir "$tmp_dir"
 }
 
 print_run_status() {
@@ -285,15 +297,17 @@ collect_with_api() {
   command -v unzip >/dev/null 2>&1 || fail "GitHub API artifact download requires unzip"
 
   tmp_dir="$(mktemp -d)"
-  trap "rm -rf '$tmp_dir'" EXIT
   list_json="$tmp_dir/artifacts.json"
 
-  curl -fsS \
+  if ! curl -fsS \
     -H "Accept: application/vnd.github+json" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-GitHub-Api-Version: 2022-11-28" \
     "https://api.github.com/repos/$repo/actions/runs/$RUN_ID/artifacts?per_page=100" \
-    >"$list_json"
+    >"$list_json"; then
+    cleanup_tmp_dir "$tmp_dir"
+    fail "artifact list request failed"
+  fi
 
   while IFS= read -r artifact; do
     download_url="$(artifact_download_url "$list_json" "$artifact")"
@@ -301,16 +315,20 @@ collect_with_api() {
     artifact_dir="$OUT_DIR/$artifact"
     zip_path="$tmp_dir/$artifact.zip"
     mkdir -p "$artifact_dir"
-    curl -fsSL \
+    if ! curl -fsSL \
       -H "Accept: application/vnd.github+json" \
       -H "Authorization: Bearer $TOKEN" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
       "$download_url" \
-      -o "$zip_path"
+      -o "$zip_path"; then
+      cleanup_tmp_dir "$tmp_dir"
+      fail "artifact download request failed: $artifact"
+    fi
     unzip -q -o "$zip_path" -d "$artifact_dir"
     validate_artifact_dir "$artifact_dir"
   done < <(artifact_names)
 
+  cleanup_tmp_dir "$tmp_dir"
   echo "native-target-host-evidence-collect: downloaded via GitHub API: $OUT_DIR"
 }
 
