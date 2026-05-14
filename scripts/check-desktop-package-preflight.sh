@@ -13,8 +13,17 @@ run() {
   "$@"
 }
 
+stdin_contains_regex() {
+  local pattern="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$pattern"
+  else
+    grep -E -- "$pattern" >/dev/null
+  fi
+}
+
 check_default_desktop_tree_excludes_tauri() {
-  if cargo tree --locked -p deve_desktop --no-default-features | rg -q '(^| )tauri v'; then
+  if cargo tree --locked -p deve_desktop --no-default-features | stdin_contains_regex '(^| )tauri v'; then
     fail "default desktop dependency tree must remain no-Tauri"
   fi
 }
@@ -22,13 +31,13 @@ check_default_desktop_tree_excludes_tauri() {
 check_desktop_native_tree_includes_runtime_surface() {
   local tree
   tree="$(cargo tree --locked -p deve_desktop --features native-packaging)"
-  rg -q '(^| )tauri v' <<<"$tree" \
+  stdin_contains_regex '(^| )tauri v' <<<"$tree" \
     || fail "desktop native-packaging tree must include tauri"
-  rg -q '(^| )tauri-build v' <<<"$tree" \
+  stdin_contains_regex '(^| )tauri-build v' <<<"$tree" \
     || fail "desktop native-packaging tree must include tauri-build"
-  rg -q '(^| )tray-icon v' <<<"$tree" \
+  stdin_contains_regex '(^| )tray-icon v' <<<"$tree" \
     || fail "desktop native-packaging tree must include tray-icon"
-  rg -q '(^| )tauri-runtime-wry v' <<<"$tree" \
+  stdin_contains_regex '(^| )tauri-runtime-wry v' <<<"$tree" \
     || fail "desktop native-packaging tree must include tauri-runtime-wry"
 }
 
