@@ -92,7 +92,7 @@ fn overlay_status_copy(locale: Locale, status: ConnectionStatus) -> &'static str
 mod tests {
     use super::{overlay_copy, overlay_status_copy};
     use crate::api::ConnectionStatus;
-    use crate::i18n::Locale;
+    use crate::i18n::{Locale, t};
 
     #[test]
     fn disconnected_lockdown_overlay_shows_reconnecting_text() {
@@ -117,11 +117,11 @@ mod tests {
     fn disconnected_lockdown_status_line_is_localized() {
         assert_eq!(
             overlay_status_copy(Locale::Zh, ConnectionStatus::Disconnected),
-            "已断开连接"
+            t::common::disconnected(Locale::Zh)
         );
         assert_eq!(
             overlay_status_copy(Locale::En, ConnectionStatus::NativeServiceOffline),
-            "Native Service Offline"
+            t::bottom_bar::native_service_offline(Locale::En)
         );
     }
 }
