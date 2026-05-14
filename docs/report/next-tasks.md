@@ -8,10 +8,12 @@
 
 1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
 2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton。
-3. Mainline implementation gap scan：若前两项继续不开放，则下一批只做 fresh gap scan 或用户指定的非平台化 Current MUST；不得用泛化重构替代明确缺口。
+3. Chrome MCP isolated browser smoke refresh：若前两项继续不开放，则下一批用隔离数据根验证当前 Web runtime 的 create/open/edit/save/reload/reconnect 与 console/network 健康；只有 smoke 暴露具体 bug 时才进入实现。
+4. Mainline implementation gap scan：若 browser smoke 仍无缺陷，则下一批只做 fresh gap scan 或用户指定的非平台化 Current MUST；不得用泛化重构替代明确缺口。
 
 ## 最近完成
 
+- Mainline gap rescan after native port validation：新增 `mainline-gap-rescan-after-native-port-validation-2026-05-14.md`，复跑 network/native/release/dev-runbook guard、runtime happy/recovery smoke 与 plan coverage；当前未发现 unblocked 主线代码缺口，下一步收敛为 Chrome MCP 隔离浏览器 smoke refresh。
 - Native endpoint port validation：新增 `native-endpoint-port-validation-2026-05-14.md`，将 Native endpoint validator 的显式端口校验从“数字即可”收敛为有效非零 `u16`，Web native bootstrap 继承同一 `InvalidEndpoint` fail-closed 语义。
 - WS port query validation：新增 `ws-port-query-validation-2026-05-14.md`，将 Web runtime 的 `?ws_port=` override 收敛为有效非零 `u16` 端口输入，避免 URL 外部输入生成无效 WebSocket candidate。
 - WS HTTP base derivation boundary：新增 `ws-http-base-derivation-boundary-2026-05-14.md`，将 Web node-role probe 的 WS-to-HTTP base 推导从全局字符串替换收敛为只处理 leading scheme 与末尾 `/ws`，避免边界输入中 path/query 文本被误改写。
