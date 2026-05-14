@@ -13,16 +13,36 @@ run() {
   "$@"
 }
 
+contains_fixed() {
+  local file="$1"
+  local pattern="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q --fixed-strings "$pattern" "$file"
+  else
+    grep -F -- "$pattern" "$file" >/dev/null
+  fi
+}
+
+search_regex() {
+  local pattern="$1"
+  shift
+  if command -v rg >/dev/null 2>&1; then
+    rg -n "$pattern" "$@"
+  else
+    grep -REn -- "$pattern" "$@"
+  fi
+}
+
 check_contains() {
   local file="$1"
   local pattern="$2"
-  rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file" \
+  contains_fixed "$ROOT_DIR/$file" "$pattern" \
     || fail "missing '$pattern' in $file"
 }
 
 check_no_process_runtime_leak() {
   local imports
-  imports="$(rg -n '(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()' \
+  imports="$(search_regex '(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()' \
     "$ROOT_DIR/apps/desktop/src" \
     "$ROOT_DIR/apps/mobile/src" \
     "$ROOT_DIR/crates/core/src/native_adapter" || true)"
