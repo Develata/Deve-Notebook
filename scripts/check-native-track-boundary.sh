@@ -89,6 +89,12 @@ check_contains apps/desktop/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/mobile/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build"]'
 check_manifest_dependency apps/mobile/Cargo.toml tauri 2.11.1
 check_manifest_dependency apps/mobile/Cargo.toml tauri-build 2.6.1
+check_contains apps/mobile/tauri.conf.json '"identifier": "dev.deve.notebook.mobile"'
+check_contains apps/mobile/tauri.conf.json '"productName": "Deve Notebook"'
+check_contains apps/mobile/tauri.conf.json '"icon": ["icons/icon.png"]'
+[[ -f "$ROOT_DIR/apps/mobile/icons/icon.png" ]] \
+  || fail "missing mobile Tauri icon: apps/mobile/icons/icon.png"
+check_contains apps/mobile/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/desktop/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
@@ -129,10 +135,22 @@ check_contains apps/mobile/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/mobile/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/mobile/src/packaging.rs "build_crate: \"tauri-build\""
 check_contains apps/mobile/src/packaging.rs "status: \"dependency-spike-open\""
+check_contains apps/mobile/src/packaging.rs "MobileShellPackagingAcceptance"
+check_contains apps/mobile/src/packaging.rs "manifest_declared: true"
+check_contains apps/mobile/src/packaging.rs "android_project_generated: false"
+check_contains apps/mobile/src/packaging.rs "ios_project_generated: false"
+check_contains apps/mobile/src/packaging.rs "runtime_entrypoint_declared: false"
+check_contains apps/mobile/src/packaging.rs "platform_package_build_declared: false"
+check_contains apps/mobile/src/packaging.rs "session_handoff_required_before_writable_ui: true"
+check_contains apps/mobile/src/packaging.rs "foreground_reprobe_required: true"
+check_contains apps/mobile/src/packaging.rs "child_process_runtime_enabled: false"
+check_contains apps/mobile/src/packaging.rs "release_ready_claimed: false"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingAuthority::Ledger"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::PermissionBridge"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::StorePackage"
 check_contains apps/mobile/src/packaging_test.rs "mobile_packaging_dependency_spike_is_feature_gated"
+check_contains apps/mobile/src/packaging_test.rs "mobile_tauri_manifest_declares_shell_metadata_only"
+check_contains apps/mobile/src/packaging_test.rs "mobile_shell_acceptance_keeps_runtime_authority_closed"
 check_contains apps/mobile/src/shell_test/policy.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/mobile/src/shell_test/policy.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains crates/core/src/native_adapter/packaging.rs "DesktopDependencySpikeOpen"

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Deve Notebook",
+  "version": "0.0.1",
+  "identifier": "dev.deve.notebook.mobile",
+  "build": {
+    "devUrl": "http://127.0.0.1:3001",
+    "frontendDist": "../web/dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Deve Notebook",
+        "width": 390,
+        "height": 844,
+        "minWidth": 320,
+        "minHeight": 568,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "shortDescription": "Deve Notebook",
+    "longDescription": "A ledger-first collaborative notebook mobile shell.",
+    "icon": ["icons/icon.png"],
+    "createUpdaterArtifacts": false
+  },
+  "plugins": {}
+}

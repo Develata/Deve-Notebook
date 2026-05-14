@@ -1,7 +1,13 @@
 //! plan_ref:
 //!   - 14_tech_stack#native-packaging-dependency-gate
 
-use crate::{MobilePackagingAuthority, MobilePackagingCapability, mobile_packaging_scaffold};
+use serde_json::Value;
+
+use crate::{
+    MOBILE_TAURI_CONFIG_PATH, MOBILE_TAURI_IDENTIFIER, MOBILE_TAURI_MAIN_WINDOW_LABEL,
+    MOBILE_TAURI_MAIN_WINDOW_TITLE, MOBILE_TAURI_PRODUCT_NAME, MobilePackagingAuthority,
+    MobilePackagingCapability, mobile_packaging_scaffold,
+};
 use deve_core::native_adapter::CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY;
 
 #[test]
@@ -47,6 +53,59 @@ fn mobile_packaging_acceptance_is_shell_only() {
         ]
     );
     assert!(scaffold.is_authority_free());
+    assert!(scaffold.shell_acceptance_is_authority_free());
     assert!(scaffold.acceptance.lifecycle_reprobe_remains_required);
     assert!(scaffold.no_packaging_tests_remain_authoritative);
+}
+
+#[test]
+fn mobile_tauri_manifest_declares_shell_metadata_only() {
+    let config: Value = serde_json::from_str(include_str!("../tauri.conf.json"))
+        .expect("mobile tauri config should be valid json");
+    let scaffold = mobile_packaging_scaffold();
+    let shell = scaffold.acceptance.shell;
+    let window = &config["app"]["windows"][0];
+
+    assert_eq!(shell.tauri_config_path, MOBILE_TAURI_CONFIG_PATH);
+    assert_eq!(config["productName"], MOBILE_TAURI_PRODUCT_NAME);
+    assert_eq!(config["identifier"], MOBILE_TAURI_IDENTIFIER);
+    assert_eq!(config["build"]["devUrl"], "http://127.0.0.1:3001");
+    assert_eq!(config["build"]["frontendDist"], "../web/dist");
+    assert_eq!(window["label"], MOBILE_TAURI_MAIN_WINDOW_LABEL);
+    assert_eq!(window["title"], MOBILE_TAURI_MAIN_WINDOW_TITLE);
+    assert_eq!(window["width"], 390);
+    assert_eq!(window["height"], 844);
+    assert_eq!(window["minWidth"], 320);
+    assert_eq!(window["minHeight"], 568);
+    assert_eq!(window["resizable"], true);
+    assert_eq!(window["fullscreen"], false);
+    assert_eq!(config["app"]["withGlobalTauri"], false);
+    assert_eq!(config["app"]["security"]["csp"], Value::Null);
+    assert_eq!(config["bundle"]["active"], true);
+    assert_eq!(config["bundle"]["icon"][0], "icons/icon.png");
+    assert_eq!(config["bundle"]["createUpdaterArtifacts"], false);
+    assert!(
+        config["plugins"]
+            .as_object()
+            .is_some_and(|plugins| plugins.is_empty())
+    );
+}
+
+#[test]
+fn mobile_shell_acceptance_keeps_runtime_authority_closed() {
+    let shell = mobile_packaging_scaffold().acceptance.shell;
+
+    assert_eq!(shell.product_name, MOBILE_TAURI_PRODUCT_NAME);
+    assert_eq!(shell.identifier, MOBILE_TAURI_IDENTIFIER);
+    assert_eq!(shell.main_window_label, MOBILE_TAURI_MAIN_WINDOW_LABEL);
+    assert_eq!(shell.main_window_title, MOBILE_TAURI_MAIN_WINDOW_TITLE);
+    assert!(shell.manifest_declared);
+    assert!(!shell.android_project_generated);
+    assert!(!shell.ios_project_generated);
+    assert!(!shell.runtime_entrypoint_declared);
+    assert!(!shell.platform_package_build_declared);
+    assert!(shell.session_handoff_required_before_writable_ui);
+    assert!(shell.foreground_reprobe_required);
+    assert!(!shell.child_process_runtime_enabled);
+    assert!(!shell.release_ready_claimed);
 }
