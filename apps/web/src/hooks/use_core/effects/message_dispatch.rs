@@ -23,7 +23,7 @@ pub fn handle_message<F>(
     let Some(msg) = route_projection_and_sync_message(msg, signals) else {
         return;
     };
-    let Some(msg) = route_runtime_message(msg, ws, signals) else {
+    let Some(msg) = route_runtime_message(msg, ws, locale, signals) else {
         return;
     };
     let Some(msg) = route_control_message(msg, ws, signals) else {

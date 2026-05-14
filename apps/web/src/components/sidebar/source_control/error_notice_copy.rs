@@ -42,13 +42,8 @@ pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
             sc::deleted_change_no_doc_diff(locale, path)
         }
         deve_core::protocol::ServerErrorCode::ScCommitDiffUnprojectable => {
-            let commit = notice
-                .detail
-                .as_deref()
-                .map(|detail| detail.chars().take(7).collect::<String>());
-            sc::legacy_commit_unprojectable(locale, commit.as_deref())
+            sc::legacy_commit_unprojectable(locale, None)
         }
-        _ if notice.detail.is_some() => notice.detail.clone().unwrap_or_default(),
         deve_core::protocol::ServerErrorCode::ScNothingToCommit => {
             sc::stage_files_before_commit(locale).to_string()
         }

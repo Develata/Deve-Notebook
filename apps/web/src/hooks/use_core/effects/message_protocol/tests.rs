@@ -99,7 +99,7 @@ fn source_control_errors_are_recorded_as_panel_notice() {
     assert!(stored);
     let notice = harness.source_control_notice.get_untracked().unwrap();
     assert_eq!(notice.code, ServerErrorCode::ScNothingToCommit);
-    assert_eq!(notice.detail.as_deref(), Some("no staged changes"));
+    assert_eq!(notice.detail, None);
     harness.assert_source_control_requests_cleared();
 }
 
@@ -144,7 +144,7 @@ fn search_errors_clear_search_request_and_show_banner() {
     harness.assert_search_request_cleared();
     assert_eq!(
         harness.sync_banner.get_untracked().as_deref(),
-        Some("Search unavailable: Search feature disabled")
+        Some("Search unavailable: Request failed")
     );
 }
 
@@ -160,7 +160,7 @@ fn search_errors_use_localized_fallback_banner() {
     harness.assert_search_request_cleared();
     assert_eq!(
         harness.sync_banner.get_untracked().as_deref(),
-        Some("搜索不可用: 搜索失败")
+        Some("搜索不可用: 请求失败")
     );
 }
 

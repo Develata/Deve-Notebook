@@ -8,6 +8,7 @@ use crate::api::ConnectionStatus;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::state::init_signals;
 use crate::hooks::use_core::types::ChatMessage;
+use crate::i18n::Locale;
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 
@@ -197,6 +198,7 @@ fn plugin_text_response_finishes_matching_chat_placeholder() {
         "req-1".into(),
         Some(serde_json::json!({"type": "text", "content": "Missing AI API key"})),
         None,
+        Locale::En,
         signals,
     );
 
@@ -230,6 +232,7 @@ fn plugin_text_response_does_not_duplicate_streamed_chat_content() {
         "req-1".into(),
         Some(serde_json::json!({"type": "text", "content": "hello"})),
         None,
+        Locale::En,
         signals,
     );
 

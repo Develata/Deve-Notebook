@@ -167,10 +167,7 @@ fn finish_pending_chat_on_protocol_error(
 }
 
 fn chat_protocol_error_text(error: &ServerError, locale: Locale) -> String {
-    error
-        .detail
-        .clone()
-        .unwrap_or_else(|| crate::i18n::t::server_error::message(locale, error.code).to_string())
+    crate::i18n::t::server_error::message(locale, error.code).to_string()
 }
 
 fn append_chat_protocol_error(message: &mut ChatMessage, detail: &str) {

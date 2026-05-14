@@ -9,12 +9,14 @@ use super::message_dispatch_gate::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results,
 };
 use super::message_runtime::handle_chat_chunk;
+use crate::i18n::{Locale, t};
 use deve_core::models::{PeerId, RepoId};
 
 pub fn handle_plugin_response_message(
     req_id: String,
     result: Option<serde_json::Value>,
     error: Option<deve_core::protocol::ServerError>,
+    locale: Locale,
     signals: CoreSignals,
 ) {
     if !accepts_plugin_response(&req_id, signals) {
@@ -23,7 +25,13 @@ pub fn handle_plugin_response_message(
     signals
         .set_plugin_request_ids
         .update(|ids| ids.retain(|id| id != &req_id));
-    finish_chat_request_from_plugin_response(&req_id, result.as_ref(), error.as_ref(), signals);
+    finish_chat_request_from_plugin_response(
+        &req_id,
+        result.as_ref(),
+        error.as_ref(),
+        locale,
+        signals,
+    );
     signals
         .set_plugin_response
         .set(Some((req_id, result, error)));
@@ -33,10 +41,11 @@ fn finish_chat_request_from_plugin_response(
     req_id: &str,
     result: Option<&serde_json::Value>,
     error: Option<&deve_core::protocol::ServerError>,
+    locale: Locale,
     signals: CoreSignals,
 ) {
     let response_text = plugin_response_text(result);
-    let error_text = error.and_then(|err| err.detail.as_deref());
+    let error_text = error.map(|err| t::server_error::message(locale, err.code));
     let mut matched_chat_message = false;
     signals.set_chat_messages.update(|messages| {
         let Some(message) = messages

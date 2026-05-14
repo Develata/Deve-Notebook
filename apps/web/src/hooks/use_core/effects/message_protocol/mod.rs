@@ -53,12 +53,9 @@ fn record_search_notice(
     }
     signals.set_search_request_id.set(None);
     signals.set_search_results.set(Vec::new());
-    let detail = error
-        .detail
-        .clone()
-        .unwrap_or_else(|| t::search::failed(locale).to_string());
+    let code_message = t::server_error::message(locale, error.code);
     signals.set_sync_banner.set(Some(format!(
-        "{}: {detail}",
+        "{}: {code_message}",
         t::search::unavailable(locale)
     )));
     true
@@ -71,7 +68,7 @@ fn record_source_control_notice(error: &ServerError, signals: ProtocolControlSig
             .set_source_control_notice
             .set(Some(SourceControlNotice {
                 code: error.code,
-                detail: error.detail.clone(),
+                detail: None,
             }));
         return true;
     }
@@ -126,18 +123,14 @@ pub fn handle_protocol_error(
         (false, false, None) => leptos::logging::warn!("协议错误 {}", message),
     }
     if !handled_in_search && !handled_in_source_control {
-        signals.set_sync_banner.set(Some(protocol_error_banner(
-            message,
-            error.detail.as_deref(),
-        )));
+        signals
+            .set_sync_banner
+            .set(Some(protocol_error_banner(message)));
     }
 }
 
-fn protocol_error_banner(message: &str, detail: Option<&str>) -> String {
-    match detail {
-        Some(detail) if !detail.is_empty() => format!("{message}: {detail}"),
-        _ => message.to_string(),
-    }
+fn protocol_error_banner(message: &str) -> String {
+    message.to_string()
 }
 
 pub(super) fn clear_failed_scope_switch(

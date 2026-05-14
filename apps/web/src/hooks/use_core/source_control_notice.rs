@@ -19,7 +19,7 @@ impl SourceControlNotice {
     pub fn from_server_error(error: &ServerError) -> Option<Self> {
         is_source_control_error(error.code).then(|| Self {
             code: error.code,
-            detail: error.detail.clone(),
+            detail: None,
         })
     }
 
@@ -112,7 +112,7 @@ mod tests {
         let sc_error = ServerError::with_detail(ServerErrorCode::ScDocNotFound, "missing doc");
         let sc_notice = SourceControlNotice::from_server_error(&sc_error).unwrap();
         assert_eq!(sc_notice.code, ServerErrorCode::ScDocNotFound);
-        assert_eq!(sc_notice.detail.as_deref(), Some("missing doc"));
+        assert_eq!(sc_notice.detail, None);
 
         let generic_error = ServerError::new(ServerErrorCode::RequestFailed);
         assert!(SourceControlNotice::from_server_error(&generic_error).is_none());

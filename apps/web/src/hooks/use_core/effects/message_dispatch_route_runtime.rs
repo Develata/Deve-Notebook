@@ -3,6 +3,7 @@
 //!   - 06_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::i18n::Locale;
 use deve_core::protocol::ServerMessage;
 
 use super::super::state::CoreSignals;
@@ -13,6 +14,7 @@ use super::message_dispatch_runtime::{
 pub fn route_runtime_message(
     msg: ServerMessage,
     _ws: &WsService,
+    locale: Locale,
     signals: CoreSignals,
 ) -> Option<ServerMessage> {
     match msg {
@@ -21,7 +23,7 @@ pub fn route_runtime_message(
             result,
             error,
         } => {
-            handle_plugin_response_message(req_id, result, error, signals);
+            handle_plugin_response_message(req_id, result, error, locale, signals);
             None
         }
         ServerMessage::ChatChunk {
