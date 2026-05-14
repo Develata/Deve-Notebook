@@ -30,6 +30,7 @@ pub struct CoreState {
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
     pub handshake_ready: ReadSignal<bool>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
+    pub on_retry_peer_registration: Callback<()>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
     pub pending_navigation: ReadSignal<Option<PendingNavigation>>,

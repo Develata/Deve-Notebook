@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Peer registration retry status：新增 `peer-registration-retry-status-2026-05-14.md`，将 `Connected` 但 repo peer/writer 尚未注册的状态从普通 `Handshaking repo` 中拆出，显示 `Logged in / Peer not registered`，并在 desktop/mobile 状态栏提供 retry peer 入口，驱动 handshake retry nonce 重新注册。
 - Web foreground reprobe write gate：新增 `web-foreground-reprobe-write-gate-2026-05-14.md`，浏览器从后台/失焦恢复到前台时清空 stale writer-ready、handshake scope 与 node-role readiness，触发新 repo handshake 与 `/api/node/role` reprobe，避免旧写入授权跨 foreground recovery 继续生效。
 - Source Control HTTP scope gate：新增 `source-control-http-scope-gate-2026-05-14.md`，为 `/api/sc/*` read/mutation surface 增加显式 `scope_nonce` gate，补齐 proxy 默认 nonce、Web Git repair readonly review scope 传递与 baseline guard。
 - Acceptance stale command cleanup：新增 `acceptance-stale-command-cleanup-2026-05-14.md`，清理 POS/DIFF/AUTH/REPO/STORE acceptance 中的过期伪命令与 stale test filter，并把 Web release smoke 归属修正为 `CMD-007A`。

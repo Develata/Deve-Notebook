@@ -69,6 +69,7 @@ pub struct HandshakeSignals {
     pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
     pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
+    pub handshake_retry_nonce: ReadSignal<u64>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub set_doc_list_request_id: WriteSignal<Option<String>>,
     pub set_tree_request_id: WriteSignal<Option<String>>,

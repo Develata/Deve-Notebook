@@ -34,6 +34,8 @@ pub struct CoreSignals {
     pub set_handshake_ready: WriteSignal<bool>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
     pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
+    pub handshake_retry_nonce: ReadSignal<u64>,
+    pub set_handshake_retry_nonce: WriteSignal<u64>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,
     pub set_pending_local_edits: WriteSignal<PendingLocalEdits>,
     pub pending_navigation: ReadSignal<Option<PendingNavigation>>,

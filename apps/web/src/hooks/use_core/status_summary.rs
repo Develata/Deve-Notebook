@@ -18,6 +18,7 @@ pub(crate) enum SyncStatusKind {
     SnapshotLoading,
     ReadOnly,
     HandshakingRepo,
+    PeerNotRegistered,
     PendingAck,
     Ready,
 }
@@ -58,6 +59,7 @@ impl SyncStatusSummary {
             SyncStatusKind::SnapshotLoading => "Loading Snapshot",
             SyncStatusKind::ReadOnly => "Read-only",
             SyncStatusKind::HandshakingRepo => "Handshaking repo",
+            SyncStatusKind::PeerNotRegistered => "Logged in / Peer not registered",
             SyncStatusKind::PendingAck => "Pending Ack",
             SyncStatusKind::Ready => "Ready",
         }
@@ -95,7 +97,7 @@ pub(crate) fn derive_sync_status(input: SyncStatusInput<'_>) -> SyncStatusSummar
             SyncStatusKind::ReadOnly
         }
         ConnectionStatus::Connected if !input.handshake_ready || !input.writer_ready => {
-            SyncStatusKind::HandshakingRepo
+            SyncStatusKind::PeerNotRegistered
         }
         ConnectionStatus::Connected if input.pending_ack_count > 0 => SyncStatusKind::PendingAck,
         ConnectionStatus::Connected => SyncStatusKind::Ready,

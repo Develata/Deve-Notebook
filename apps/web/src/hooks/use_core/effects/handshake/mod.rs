@@ -15,6 +15,7 @@ mod send;
 mod state;
 use self::cycle::run_handshake_cycle;
 use self::lifecycle::mount_foreground_reprobe_listener;
+use self::state::reset_handshake_attempt;
 #[cfg(test)]
 pub(super) fn handshake_mode_key(
     endpoint: &str,
@@ -71,9 +72,15 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
     let endpoint_signal = ws.endpoint;
     let last_mode = Rc::new(RefCell::new(None::<String>));
     let handshake_attempt = Rc::new(Cell::new(0u64));
+    let last_manual_retry = Rc::new(Cell::new(signals.handshake_retry_nonce.get_untracked()));
     mount_foreground_reprobe_listener(ws.clone(), signals, last_mode.clone());
 
     Effect::new(move |_| {
+        let manual_retry_nonce = signals.handshake_retry_nonce.get();
+        if should_reset_manual_retry(last_manual_retry.get(), manual_retry_nonce) {
+            last_manual_retry.set(manual_retry_nonce);
+            reset_handshake_attempt(&last_mode, &ws_clone, signals);
+        }
         // 失败重置会把 handshake_scope_nonce 清回 None；这里显式订阅它，
         // 以便同一 scope 内的握手准备失败后能重新触发一次 attempt。
         let _handshake_retry_gate = signals.handshake_scope_nonce.get();
@@ -86,6 +93,10 @@ pub fn setup(ws: &WsService, signals: HandshakeSignals) {
             &handshake_attempt,
         );
     });
+}
+
+fn should_reset_manual_retry(last_seen: u64, current: u64) -> bool {
+    current != last_seen
 }
 
 #[cfg(test)]

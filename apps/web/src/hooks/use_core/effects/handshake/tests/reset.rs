@@ -16,6 +16,7 @@ fn reset_handshake_attempt_state_clears_retry_blockers() {
     let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
     let (_pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(None::<u64>);
     let (handshake_scope_nonce, set_handshake_scope_nonce) = signal(Some(7u64));
+    let (handshake_retry_nonce, _) = signal(0u64);
     let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo-1".to_string()));
     let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
     let (tree_request_id, set_tree_request_id) = signal(Some("tree-1".to_string()));
@@ -37,6 +38,7 @@ fn reset_handshake_attempt_state_clears_retry_blockers() {
         set_pending_repo_switch_nonce,
         handshake_scope_nonce,
         set_handshake_scope_nonce,
+        handshake_retry_nonce,
         set_repo_list_request_id,
         set_doc_list_request_id,
         set_tree_request_id,

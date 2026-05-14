@@ -69,6 +69,20 @@ pub fn handshaking_repo(locale: Locale) -> &'static str {
     }
 }
 
+pub fn peer_not_registered(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Logged in / Peer not registered",
+        Locale::Zh => "已登录 / Peer 未注册",
+    }
+}
+
+pub fn retry_peer_registration(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Retry peer",
+        Locale::Zh => "重试 Peer",
+    }
+}
+
 pub fn read_only(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Read-only",

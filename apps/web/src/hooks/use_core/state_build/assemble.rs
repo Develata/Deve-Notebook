@@ -3,6 +3,7 @@
 //!   - 06_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use leptos::prelude::{Callback, Set, Update, WriteSignal};
 
 use super::super::CoreState;
 use super::super::callbacks_switch::SwitchCallbacks;
@@ -19,6 +20,18 @@ pub(super) fn assemble_core_state(
     sc: SourceControlStateSection,
     switch: SwitchCallbacks,
 ) -> CoreState {
+    let on_retry_peer_registration = build_retry_peer_registration_callback(
+        ws.clone(),
+        RetryPeerRegistrationSignals {
+            set_handshake_ready: sync.set_handshake_ready,
+            set_handshake_scope_nonce: sync.set_handshake_scope_nonce,
+            set_handshake_retry_nonce: sync.set_handshake_retry_nonce,
+            set_repo_list_request_id: sync.set_repo_list_request_id,
+            set_doc_list_request_id: sync.set_doc_list_request_id,
+            set_tree_request_id: sync.set_tree_request_id,
+        },
+    );
+
     CoreState {
         ws,
         docs: doc.docs,
@@ -31,6 +44,7 @@ pub(super) fn assemble_core_state(
         peers: sync.peers,
         handshake_ready: sync.handshake_ready,
         handshake_scope_nonce: sync.handshake_scope_nonce,
+        on_retry_peer_registration,
         pending_local_edits: doc.pending_local_edits,
         set_pending_local_edits: doc.set_pending_local_edits,
         pending_navigation: doc.pending_navigation,
@@ -113,5 +127,75 @@ pub(super) fn assemble_core_state(
         set_is_chat_streaming: runtime.set_is_chat_streaming,
         ai_mode: runtime.ai_mode,
         set_ai_mode: runtime.set_ai_mode,
+    }
+}
+
+#[derive(Clone, Copy)]
+struct RetryPeerRegistrationSignals {
+    set_handshake_ready: WriteSignal<bool>,
+    set_handshake_scope_nonce: WriteSignal<Option<u64>>,
+    set_handshake_retry_nonce: WriteSignal<u64>,
+    set_repo_list_request_id: WriteSignal<Option<String>>,
+    set_doc_list_request_id: WriteSignal<Option<String>>,
+    set_tree_request_id: WriteSignal<Option<String>>,
+}
+
+fn build_retry_peer_registration_callback(
+    ws: WsService,
+    signals: RetryPeerRegistrationSignals,
+) -> Callback<()> {
+    Callback::new(move |_: ()| {
+        ws.clear_writer_ready();
+        signals.set_handshake_ready.set(false);
+        signals.set_handshake_scope_nonce.set(None);
+        signals.set_repo_list_request_id.set(None);
+        signals.set_doc_list_request_id.set(None);
+        signals.set_tree_request_id.set(None);
+        signals.set_handshake_retry_nonce.update(|nonce| {
+            *nonce = nonce.wrapping_add(1);
+        });
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::ConnectionStatus;
+    use leptos::prelude::{Callable, GetUntracked, signal};
+
+    #[test]
+    fn retry_peer_registration_clears_stale_writer_and_bumps_retry_nonce() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+        let (handshake_ready, set_handshake_ready) = signal(true);
+        let (handshake_scope_nonce, set_handshake_scope_nonce) = signal(Some(7u64));
+        let (handshake_retry_nonce, set_handshake_retry_nonce) = signal(0u64);
+        let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo".to_string()));
+        let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc".to_string()));
+        let (tree_request_id, set_tree_request_id) = signal(Some("tree".to_string()));
+
+        let retry = build_retry_peer_registration_callback(
+            ws.clone(),
+            RetryPeerRegistrationSignals {
+                set_handshake_ready,
+                set_handshake_scope_nonce,
+                set_handshake_retry_nonce,
+                set_repo_list_request_id,
+                set_doc_list_request_id,
+                set_tree_request_id,
+            },
+        );
+
+        retry.run(());
+
+        assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+        assert!(!handshake_ready.get_untracked());
+        assert_eq!(handshake_scope_nonce.get_untracked(), None);
+        assert_eq!(handshake_retry_nonce.get_untracked(), 1);
+        assert_eq!(repo_list_request_id.get_untracked(), None);
+        assert_eq!(doc_list_request_id.get_untracked(), None);
+        assert_eq!(tree_request_id.get_untracked(), None);
     }
 }

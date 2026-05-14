@@ -32,6 +32,8 @@ pub(super) fn assemble_core_signals_with_spectator(
         set_handshake_ready: runtime.set_handshake_ready,
         handshake_scope_nonce: runtime.handshake_scope_nonce,
         set_handshake_scope_nonce: runtime.set_handshake_scope_nonce,
+        handshake_retry_nonce: runtime.handshake_retry_nonce,
+        set_handshake_retry_nonce: runtime.set_handshake_retry_nonce,
         pending_local_edits: runtime.pending_local_edits,
         set_pending_local_edits: runtime.set_pending_local_edits,
         pending_navigation: runtime.pending_navigation,

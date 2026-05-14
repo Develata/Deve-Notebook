@@ -64,7 +64,7 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
     let color = move || match summary.get().kind {
         SyncStatusKind::Ready => "bg-green-500",
         SyncStatusKind::PendingAck => "bg-sky-500",
-        SyncStatusKind::ReadOnly => "bg-slate-400",
+        SyncStatusKind::ReadOnly | SyncStatusKind::PeerNotRegistered => "bg-slate-400",
         SyncStatusKind::HandshakingRepo
         | SyncStatusKind::Reconnecting
         | SyncStatusKind::NativeSessionPending
@@ -86,6 +86,9 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
             SyncStatusKind::ReadOnly => t::bottom_bar::read_only(locale.get()).to_string(),
             SyncStatusKind::HandshakingRepo => {
                 t::bottom_bar::handshaking_repo(locale.get()).to_string()
+            }
+            SyncStatusKind::PeerNotRegistered => {
+                t::bottom_bar::peer_not_registered(locale.get()).to_string()
             }
             SyncStatusKind::SnapshotLoading => {
                 t::bottom_bar::snapshot_loading(locale.get()).to_string()
@@ -112,6 +115,17 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
         <div class="flex items-center gap-2 min-w-0">
             <div class=move || format!("w-2 h-2 rounded-full {}", color())></div>
             <span class="text-xs text-secondary font-medium">{text}</span>
+            <Show when=move || matches!(summary.get().kind, SyncStatusKind::PeerNotRegistered)>
+                <button
+                    type="button"
+                    class="text-[10px] text-accent hover:text-accent-hover underline underline-offset-2"
+                    data-deve-peer-registration-retry="true"
+                    aria-label=move || t::bottom_bar::retry_peer_registration(locale.get())
+                    on:click=move |_| core.on_retry_peer_registration.run(())
+                >
+                    {move || t::bottom_bar::retry_peer_registration(locale.get())}
+                </button>
+            </Show>
             <Show when=move || !repo_label().is_empty()>
                 <span class="text-[10px] text-muted font-mono truncate">{repo_label}</span>
             </Show>

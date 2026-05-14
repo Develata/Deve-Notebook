@@ -97,12 +97,13 @@ fn reports_read_only_for_remote_branch_views() {
 }
 
 #[test]
-fn reports_repo_handshake_until_writer_is_ready() {
+fn reports_peer_not_registered_until_writer_is_ready() {
     let summary = summary(SyncStatusInput {
         writer_ready: false,
         ..ready_input()
     });
-    assert_eq!(summary.kind, SyncStatusKind::HandshakingRepo);
+    assert_eq!(summary.kind, SyncStatusKind::PeerNotRegistered);
+    assert_eq!(summary.header_text(), "Logged in / Peer not registered");
 }
 
 #[test]
@@ -129,6 +130,16 @@ fn reports_repo_handshake_for_remote_branch_until_node_role_is_readable() {
     let summary = summary(SyncStatusInput {
         remote_branch_active: true,
         node_role_readable: false,
+        ..ready_input()
+    });
+    assert_eq!(summary.kind, SyncStatusKind::HandshakingRepo);
+}
+
+#[test]
+fn reports_handshaking_repo_while_repo_switch_is_pending() {
+    let summary = summary(SyncStatusInput {
+        pending_repo_switch: Some("other"),
+        writer_ready: false,
         ..ready_input()
     });
     assert_eq!(summary.kind, SyncStatusKind::HandshakingRepo);

@@ -75,6 +75,10 @@ pub fn StatusView(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
                 "bg-slate-400",
                 t::bottom_bar::read_only(locale.get()).to_string(),
             ),
+            SyncStatusKind::PeerNotRegistered => (
+                "bg-slate-400",
+                t::bottom_bar::peer_not_registered(locale.get()).to_string(),
+            ),
             SyncStatusKind::HandshakingRepo => (
                 "bg-yellow-500",
                 t::bottom_bar::handshaking_repo(locale.get()).to_string(),
@@ -116,6 +120,17 @@ pub fn StatusView(core: CoreState, locale: RwSignal<Locale>) -> impl IntoView {
             <div class="flex items-center gap-1.5">
                 <div class={format!("w-2 h-2 rounded-full {}", color)}></div>
                 <span class="text-[11px] text-secondary font-medium">{text}</span>
+                <Show when=move || matches!(summary.kind, SyncStatusKind::PeerNotRegistered)>
+                    <button
+                        type="button"
+                        class="text-[11px] text-accent underline underline-offset-2"
+                        data-deve-peer-registration-retry="mobile"
+                        aria-label={t::bottom_bar::retry_peer_registration(locale.get())}
+                        on:click=move |_| core.on_retry_peer_registration.run(())
+                    >
+                        {t::bottom_bar::retry_peer_registration(locale.get())}
+                    </button>
+                </Show>
             </div>
         }
         .into_any()

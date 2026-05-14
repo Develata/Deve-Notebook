@@ -180,6 +180,7 @@ mod tests {
         let (_, set_pending_repo_switch) = signal(None);
         let (_, set_pending_repo_switch_nonce) = signal(None);
         let (handshake_scope_nonce, set_handshake_scope_nonce) = signal(None);
+        let (handshake_retry_nonce, _) = signal(0u64);
         let (_, set_repo_list_request_id) = signal(None);
         let (_, set_doc_list_request_id) = signal(None);
         let (_, set_tree_request_id) = signal(None);
@@ -201,6 +202,7 @@ mod tests {
             set_pending_repo_switch_nonce,
             handshake_scope_nonce,
             set_handshake_scope_nonce,
+            handshake_retry_nonce,
             set_repo_list_request_id,
             set_doc_list_request_id,
             set_tree_request_id,
