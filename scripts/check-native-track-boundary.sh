@@ -34,9 +34,16 @@ check_no_packaging_dependency_leak() {
     fi
   done < <(find "$ROOT_DIR" -path "$ROOT_DIR/target" -prune -o -name Cargo.toml -type f -print)
 
-  if rg -n '(^|[^[:alnum:]_])(use[[:space:]]+tauri|tauri::)' \
-    "$ROOT_DIR/apps" "$ROOT_DIR/crates" >/dev/null; then
-    fail "native packaging runtime imports must stay absent until the packaging gate opens"
+  local runtime_imports
+  runtime_imports="$(rg -n '(^|[^[:alnum:]_])(use[[:space:]]+tauri|tauri::)' \
+    "$ROOT_DIR/apps" "$ROOT_DIR/crates" || true)"
+  if [[ -n "$runtime_imports" ]]; then
+    while IFS= read -r line; do
+      case "$line" in
+        "$ROOT_DIR/apps/desktop/src/menu_tray.rs":*) ;;
+        *) fail "native packaging runtime import outside desktop menu/tray binding: ${line#"$ROOT_DIR"/}" ;;
+      esac
+    done <<< "$runtime_imports"
   fi
 }
 
@@ -50,7 +57,7 @@ check_no_process_runtime_leak() {
 check_contains Cargo.toml '"apps/desktop"'
 check_contains Cargo.toml '"apps/mobile"'
 
-check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build"]'
+check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/tray-icon"]'
 check_contains apps/desktop/Cargo.toml 'tauri = { version = "2.11.1", optional = true, default-features = false }'
 check_contains apps/desktop/Cargo.toml 'tauri-build = { version = "2.6.1", optional = true, default-features = false }'
 check_contains apps/desktop/tauri.conf.json '"identifier": "dev.deve.notebook"'
@@ -66,21 +73,26 @@ check_contains apps/desktop/src/packaging.rs "status: \"dependency-spike-open\""
 check_contains apps/desktop/src/packaging.rs "DesktopShellPackagingAcceptance"
 check_contains apps/desktop/src/packaging.rs "DesktopMenuTraySurface"
 check_contains apps/desktop/src/packaging.rs "session_handoff_required_before_writable_ui: true"
-check_contains apps/desktop/src/packaging.rs "menu_bar_runtime_declared: false"
-check_contains apps/desktop/src/packaging.rs "system_tray_runtime_declared: false"
-check_contains apps/desktop/src/packaging.rs "menu_and_tray_runtime_deferred: true"
-check_contains apps/desktop/src/packaging.rs "menu_runtime_imported: false"
-check_contains apps/desktop/src/packaging.rs "tray_runtime_imported: false"
+check_contains apps/desktop/src/packaging.rs "menu_bar_runtime_declared: true"
+check_contains apps/desktop/src/packaging.rs "system_tray_runtime_declared: true"
+check_contains apps/desktop/src/packaging.rs "menu_and_tray_runtime_deferred: false"
+check_contains apps/desktop/src/packaging.rs "menu_runtime_imported: true"
+check_contains apps/desktop/src/packaging.rs "tray_runtime_imported: true"
 check_contains apps/desktop/src/packaging.rs "actions_are_ui_intents_only: true"
 check_contains apps/desktop/src/packaging.rs "opens_process_runtime: false"
 check_contains apps/desktop/src/packaging.rs "opens_authority_write_path: false"
+check_contains apps/desktop/src/menu_tray.rs "tauri::menu"
+check_contains apps/desktop/src/menu_tray.rs "tauri::tray"
+check_contains apps/desktop/src/menu_tray.rs "build_desktop_menu"
+check_contains apps/desktop/src/menu_tray.rs "build_desktop_tray_icon"
+check_contains apps/desktop/src/menu_tray.rs "resolve_desktop_menu_action_id"
 check_contains apps/desktop/src/packaging.rs "child_process_runtime_enabled: false"
 check_contains apps/desktop/src/packaging.rs "release_ready_claimed: false"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingCapability::Installer"
 check_contains apps/desktop/src/packaging_test.rs "desktop_packaging_dependency_spike_is_feature_gated"
 check_contains apps/desktop/src/packaging_test.rs "desktop_tauri_manifest_declares_shell_metadata_only"
-check_contains apps/desktop/src/packaging_test.rs "desktop_menu_tray_surface_declares_ui_intents_only"
+check_contains apps/desktop/src/packaging_test.rs "desktop_menu_tray_runtime_binding_declares_ui_intents_only"
 check_contains apps/desktop/src/shell_test/policy.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/desktop/src/shell_test/policy.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains apps/mobile/src/lib.rs "#[cfg(feature = \"native-packaging\")]"

@@ -6,13 +6,14 @@
 
 ## 当前执行队列
 
-1. Desktop menu/tray runtime binding decision：NPG-2b surface 已闭合后，下一步可选择是否引入真实 Tauri menu/tray builder；不得打开 child-process runtime 或 native authority writes。
-2. Desktop platform package build decision：menu/tray runtime binding 闭合后，才可选择在目标平台 host 上验证 Tauri package build/signing；WSL/Linux 不能宣称 macOS/Windows release ready。
+1. Desktop package build preflight script：平台 build 前必须先固定 default/no-packaging、native-packaging compile 与 guard 脚本的最小自动化入口。
+2. Desktop platform package build decision：preflight 脚本闭合后，才可选择在目标平台 host 上验证 Tauri package build/signing；WSL/Linux 不能宣称 macOS/Windows release ready。
 3. Mobile Packaging Dependency Spike：必须显式选择后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
 4. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
 
 ## 最近完成
 
+- NPG-2c Desktop Menu/Tray Runtime Binding：在 `apps/desktop/native-packaging` scope 内接入 Tauri menu/tray builder，动作仍只解析为 UI intent；未启动 Tauri runtime，未打开 child-process runtime、native authority writes 或 platform release ready。
 - NPG-2b Desktop Menu/Tray Surface Declaration：为 Desktop native-packaging 增加 menu/tray action surface，动作限定为 UI intent；真实 Tauri menu/tray builder、child-process runtime、native authority writes 与 platform release ready 仍未打开。
 - NPG-2a Desktop Shell Manifest Acceptance：新增 `desktop-shell-packaging-acceptance-2026-05-14.md` 与 Desktop `tauri.conf.json` shell manifest，验证 window/bundle/updater-disabled/session-handoff acceptance；menu/tray runtime 仍延后，未打开 child-process runtime，也未声明 platform release ready。
 - NPG-1 Desktop Packaging Dependency Spike：新增 `desktop-packaging-dependency-spike-2026-05-14.md`，允许 `tauri` / `tauri-build` 仅作为 `apps/desktop` 的 optional `native-packaging` 依赖；default build 与 Mobile build 仍保持 no-Tauri，native layer 不获得 ledger/vault/source-control/search/Git authority。

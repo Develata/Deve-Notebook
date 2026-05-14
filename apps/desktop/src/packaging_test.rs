@@ -90,9 +90,9 @@ fn desktop_shell_acceptance_keeps_runtime_authority_closed() {
     assert_eq!(shell.identifier, DESKTOP_TAURI_IDENTIFIER);
     assert_eq!(shell.main_window_label, DESKTOP_TAURI_MAIN_WINDOW_LABEL);
     assert_eq!(shell.main_window_title, DESKTOP_TAURI_MAIN_WINDOW_TITLE);
-    assert!(!shell.menu_bar_runtime_declared);
-    assert!(!shell.system_tray_runtime_declared);
-    assert!(shell.menu_and_tray_runtime_deferred);
+    assert!(shell.menu_bar_runtime_declared);
+    assert!(shell.system_tray_runtime_declared);
+    assert!(!shell.menu_and_tray_runtime_deferred);
     assert!(shell.installer_metadata_declared);
     assert!(!shell.auto_update_artifacts_enabled);
     assert!(shell.session_handoff_required_before_writable_ui);
@@ -101,7 +101,7 @@ fn desktop_shell_acceptance_keeps_runtime_authority_closed() {
 }
 
 #[test]
-fn desktop_menu_tray_surface_declares_ui_intents_only() {
+fn desktop_menu_tray_runtime_binding_declares_ui_intents_only() {
     let surface = desktop_packaging_scaffold().acceptance.menu_tray;
 
     assert_eq!(surface.app_menu_id, DESKTOP_MENU_APP_ID);
@@ -125,9 +125,9 @@ fn desktop_menu_tray_surface_declares_ui_intents_only() {
             DesktopTrayAction::QuitRequested,
         ]
     );
-    assert!(surface.is_deferred_runtime_surface());
-    assert!(!surface.menu_runtime_imported);
-    assert!(!surface.tray_runtime_imported);
+    assert!(surface.is_runtime_bound_authority_free());
+    assert!(surface.menu_runtime_imported);
+    assert!(surface.tray_runtime_imported);
     assert!(surface.actions_are_ui_intents_only);
     assert!(!surface.opens_process_runtime);
     assert!(!surface.opens_authority_write_path);

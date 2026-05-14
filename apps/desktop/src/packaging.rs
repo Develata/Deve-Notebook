@@ -100,9 +100,9 @@ pub struct DesktopMenuTraySurface {
 }
 
 impl DesktopMenuTraySurface {
-    pub fn is_deferred_runtime_surface(self) -> bool {
-        !self.menu_runtime_imported
-            && !self.tray_runtime_imported
+    pub fn is_runtime_bound_authority_free(self) -> bool {
+        self.menu_runtime_imported
+            && self.tray_runtime_imported
             && self.actions_are_ui_intents_only
             && !self.opens_process_runtime
             && !self.opens_authority_write_path
@@ -127,9 +127,9 @@ impl DesktopPackagingScaffold {
     }
 
     pub fn shell_acceptance_is_authority_free(&self) -> bool {
-        !self.acceptance.shell.menu_bar_runtime_declared
-            && !self.acceptance.shell.system_tray_runtime_declared
-            && self.acceptance.shell.menu_and_tray_runtime_deferred
+        self.acceptance.shell.menu_bar_runtime_declared
+            && self.acceptance.shell.system_tray_runtime_declared
+            && !self.acceptance.shell.menu_and_tray_runtime_deferred
             && self.acceptance.shell.installer_metadata_declared
             && !self.acceptance.shell.auto_update_artifacts_enabled
             && self
@@ -138,7 +138,7 @@ impl DesktopPackagingScaffold {
                 .session_handoff_required_before_writable_ui
             && !self.acceptance.shell.child_process_runtime_enabled
             && !self.acceptance.shell.release_ready_claimed
-            && self.acceptance.menu_tray.is_deferred_runtime_surface()
+            && self.acceptance.menu_tray.is_runtime_bound_authority_free()
             && self.is_authority_free()
     }
 }
@@ -167,9 +167,9 @@ const SHELL_ACCEPTANCE: DesktopShellPackagingAcceptance = DesktopShellPackagingA
     identifier: DESKTOP_TAURI_IDENTIFIER,
     main_window_label: DESKTOP_TAURI_MAIN_WINDOW_LABEL,
     main_window_title: DESKTOP_TAURI_MAIN_WINDOW_TITLE,
-    menu_bar_runtime_declared: false,
-    system_tray_runtime_declared: false,
-    menu_and_tray_runtime_deferred: true,
+    menu_bar_runtime_declared: true,
+    system_tray_runtime_declared: true,
+    menu_and_tray_runtime_deferred: false,
     installer_metadata_declared: true,
     auto_update_artifacts_enabled: false,
     session_handoff_required_before_writable_ui: true,
@@ -184,8 +184,8 @@ const MENU_TRAY_SURFACE: DesktopMenuTraySurface = DesktopMenuTraySurface {
     tray_id: DESKTOP_TRAY_ID,
     menu_actions: MENU_ACTIONS,
     tray_actions: TRAY_ACTIONS,
-    menu_runtime_imported: false,
-    tray_runtime_imported: false,
+    menu_runtime_imported: true,
+    tray_runtime_imported: true,
     actions_are_ui_intents_only: true,
     opens_process_runtime: false,
     opens_authority_write_path: false,
