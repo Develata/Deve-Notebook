@@ -85,6 +85,7 @@
     - run: scripts/check-release-baseline.sh
     - run: scripts/check-native-track-boundary.sh
     - run: scripts/check-native-packaging-gate.sh
+    - run: scripts/check-native-process-adapter-gate.sh
     - run: scripts/check-desktop-package-preflight.sh
     - run: scripts/check-desktop-platform-package-build.sh
     - run: scripts/check-mobile-platform-package-preflight.sh

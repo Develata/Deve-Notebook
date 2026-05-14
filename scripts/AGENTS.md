@@ -38,6 +38,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-dev-data-health-baseline.sh` | Verifies projection health diagnostics expose repair hints and fail-closed authority corruption boundaries |
 | `check-native-track-boundary.sh` | Verifies Desktop/Mobile native adapter boundaries remain future-safe and do not redefine core authority |
 | `check-native-packaging-gate.sh` | Verifies Desktop Tauri dependencies stay isolated behind `apps/desktop/native-packaging` while default and Mobile builds remain no-Tauri |
+| `check-native-process-adapter-gate.sh` | Verifies child-process runtime remains gate-closed and process observations stay state-machine-only |
 | `check-desktop-package-preflight.sh` | Verifies Desktop default/no-packaging and native-packaging compile surfaces before target-host package builds |
 | `check-desktop-platform-package-build.sh` | Diagnoses target-host Desktop package build prerequisites and only runs `cargo tauri build` when explicitly required |
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |

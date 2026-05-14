@@ -296,6 +296,20 @@ Use `DEVE_MOBILE_PACKAGE_TARGETS=android` or
 diagnose Android readiness; iOS readiness requires macOS. This gate does not
 run `cargo tauri android build` or `cargo tauri ios build`.
 
+## Native Process Adapter Gate
+
+Validate that the native process adapter remains gate-closed and state-machine
+only:
+
+```bash
+scripts/check-native-process-adapter-gate.sh
+```
+
+The script checks the process adapter policy, rejects `std::process`,
+`Command::new`, `tokio::process`, or direct spawn usage in Desktop/Mobile/native
+adapter code, and runs targeted process-observation tests. It does not open the
+child-process runtime.
+
 ## Chrome MCP Smoke
 
 In WSL2, if Chrome MCP cannot connect because `127.0.0.1:9222` is down, run:
@@ -340,6 +354,7 @@ scripts/check-source-control-smoke-hygiene.sh
 scripts/check-dev-data-health-baseline.sh
 scripts/check-native-track-boundary.sh
 scripts/check-native-packaging-gate.sh
+scripts/check-native-process-adapter-gate.sh
 scripts/check-desktop-package-preflight.sh
 scripts/check-desktop-platform-package-build.sh
 scripts/check-mobile-platform-package-preflight.sh

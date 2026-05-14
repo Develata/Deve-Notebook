@@ -56,6 +56,7 @@ contains ".github/workflows/release.yml" "scripts/plan-coverage.sh --write-repor
 contains ".github/workflows/release.yml" "scripts/check-architecture-registry.sh"
 contains ".github/workflows/release.yml" "scripts/check-native-track-boundary.sh"
 contains ".github/workflows/release.yml" "scripts/check-native-packaging-gate.sh"
+contains ".github/workflows/release.yml" "scripts/check-native-process-adapter-gate.sh"
 contains ".github/workflows/release.yml" "scripts/check-mobile-platform-package-preflight.sh"
 contains ".github/workflows/release.yml" "scripts/check-graph-baseline.sh"
 contains ".github/workflows/release.yml" "cargo test --locked"
@@ -108,6 +109,7 @@ contains "docs/dev-runbook.md" "DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docke
 contains "docs/dev-runbook.md" "DEVE_DOCKER_BIN=/path/to/docker"
 contains "docs/dev-runbook.md" "scripts/check-native-track-boundary.sh"
 contains "docs/dev-runbook.md" "scripts/check-native-packaging-gate.sh"
+contains "docs/dev-runbook.md" "scripts/check-native-process-adapter-gate.sh"
 contains "docs/dev-runbook.md" "scripts/check-mobile-platform-package-preflight.sh"
 contains "docs/dev-runbook.md" "scripts/check-graph-baseline.sh"
 contains "docs/acceptance-cases/11_commands_settings.md" "scripts/smoke-web-release-build.sh"
@@ -143,6 +145,7 @@ contains "docs/acceptance-cases/12_tech_release.md" "scripts/smoke-runtime-recov
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-baseline.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-process-adapter-gate.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-desktop-package-preflight.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-desktop-platform-package-build.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-mobile-platform-package-preflight.sh"
@@ -152,6 +155,9 @@ contains "scripts/check-mobile-platform-package-preflight.sh" "DEVE_MOBILE_PACKA
 contains "scripts/check-mobile-platform-package-preflight.sh" "cargo tauri android --help"
 contains "scripts/check-mobile-platform-package-preflight.sh" "cargo tauri ios --help"
 contains "scripts/check-mobile-platform-package-preflight.sh" "package build remains closed in this gate"
+contains "scripts/check-native-process-adapter-gate.sh" "DeferredUntilPackagingGate"
+contains "scripts/check-native-process-adapter-gate.sh" "check_no_process_runtime_leak"
+contains "scripts/check-native-process-adapter-gate.sh" "process_observation"
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["version", "profile", "delivery", "environment"]'
 contains "docs/acceptance-cases/12_tech_release.md" 'json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]'
 contains "docs/features/15_release.md" "版本、profile、环境、交付形态和 repo health 聚合状态"
