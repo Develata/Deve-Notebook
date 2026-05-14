@@ -8,17 +8,66 @@ fail() {
   exit 1
 }
 
+contains_fixed() {
+  local file="$1"
+  local pattern="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q --fixed-strings "$pattern" "$file"
+  else
+    grep -F -- "$pattern" "$file" >/dev/null
+  fi
+}
+
+contains_regex() {
+  local file="$1"
+  local pattern="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$pattern" "$file"
+  else
+    grep -E -- "$pattern" "$file" >/dev/null
+  fi
+}
+
+contains_regex_ignore_case() {
+  local file="$1"
+  local pattern="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg -iq "$pattern" "$file"
+  else
+    grep -Ei -- "$pattern" "$file" >/dev/null
+  fi
+}
+
+search_regex() {
+  local pattern="$1"
+  shift
+  if command -v rg >/dev/null 2>&1; then
+    rg -n "$pattern" "$@"
+  else
+    grep -REn -- "$pattern" "$@"
+  fi
+}
+
+stdin_contains_fixed() {
+  local pattern="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q --fixed-strings "$pattern"
+  else
+    grep -F -- "$pattern" >/dev/null
+  fi
+}
+
 check_contains() {
   local file="$1"
   local pattern="$2"
-  rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file" \
+  contains_fixed "$ROOT_DIR/$file" "$pattern" \
     || fail "missing '$pattern' in $file"
 }
 
 check_not_contains() {
   local file="$1"
   local pattern="$2"
-  ! rg -q --fixed-strings "$pattern" "$ROOT_DIR/$file" \
+  ! contains_fixed "$ROOT_DIR/$file" "$pattern" \
     || fail "unexpected '$pattern' in $file"
 }
 
@@ -26,7 +75,7 @@ check_no_packaging_dependency_leak() {
   local cargo_file
   local tauri_manifest_pattern="(^[[:space:]]*[\"']?(tauri|tauri-build)[\"']?[[:space:]]*=|package[[:space:]]*=[[:space:]]*[\"'](tauri|tauri-build)[\"']|^[[:space:]]*\[[^]]*(dependencies|dev-dependencies|build-dependencies)\.[\"']?(tauri|tauri-build)[\"']?[[:space:]]*\])"
   while IFS= read -r cargo_file; do
-    if rg -iq "$tauri_manifest_pattern" "$cargo_file"; then
+    if contains_regex_ignore_case "$cargo_file" "$tauri_manifest_pattern"; then
       if [[ "$cargo_file" == "$ROOT_DIR/apps/desktop/Cargo.toml" ]] \
         || [[ "$cargo_file" == "$ROOT_DIR/apps/mobile/Cargo.toml" ]]; then
         continue
@@ -36,7 +85,7 @@ check_no_packaging_dependency_leak() {
   done < <(find "$ROOT_DIR" -path "$ROOT_DIR/target" -prune -o -name Cargo.toml -type f -print)
 
   local runtime_imports
-  runtime_imports="$(rg -n '(^|[^[:alnum:]_])((use[[:space:]]+tauri(::|[[:space:];,{]))|tauri::)' \
+  runtime_imports="$(search_regex '(^|[^[:alnum:]_])((use[[:space:]]+tauri(::|[[:space:];,{]))|tauri::)' \
     "$ROOT_DIR/apps" "$ROOT_DIR/crates" || true)"
   if [[ -n "$runtime_imports" ]]; then
     while IFS= read -r line; do
@@ -52,7 +101,7 @@ check_no_packaging_dependency_leak() {
 }
 
 check_no_process_runtime_leak() {
-  if rg -n '(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()' \
+  if search_regex '(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()' \
     "$ROOT_DIR/apps/desktop/src" "$ROOT_DIR/apps/mobile/src" >/dev/null; then
     fail "native process runtime must stay absent from desktop/mobile skeletons until the process adapter gate opens"
   fi
@@ -63,13 +112,19 @@ check_manifest_dependency() {
   local dep="$2"
   local version="$3"
   local line
-  line="$(rg "^[[:space:]]*${dep}[[:space:]]*=" "$ROOT_DIR/$file" || true)"
+  line="$(
+    if command -v rg >/dev/null 2>&1; then
+      rg "^[[:space:]]*${dep}[[:space:]]*=" "$ROOT_DIR/$file" || true
+    else
+      grep -E -- "^[[:space:]]*${dep}[[:space:]]*=" "$ROOT_DIR/$file" || true
+    fi
+  )"
   [[ -n "$line" ]] || fail "missing dependency '$dep' in $file"
-  rg -q --fixed-strings "version = \"$version\"" <<<"$line" \
+  stdin_contains_fixed "version = \"$version\"" <<<"$line" \
     || fail "dependency '$dep' must pin version $version in $file"
-  rg -q --fixed-strings "optional = true" <<<"$line" \
+  stdin_contains_fixed "optional = true" <<<"$line" \
     || fail "dependency '$dep' must stay optional in $file"
-  rg -q --fixed-strings "default-features = false" <<<"$line" \
+  stdin_contains_fixed "default-features = false" <<<"$line" \
     || fail "dependency '$dep' must disable default features in $file"
 }
 

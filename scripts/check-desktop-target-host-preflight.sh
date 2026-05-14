@@ -69,8 +69,13 @@ diagnose_env() {
 
 diagnose_rust_target() {
   local target="$1"
-  rustup target list --installed 2>/dev/null | rg -qx "$target" \
+  if command -v rg >/dev/null 2>&1; then
+    rustup target list --installed 2>/dev/null | rg -qx "$target" \
+      || target_missing+=("rust target $target")
+  else
+    rustup target list --installed 2>/dev/null | grep -Fx -- "$target" >/dev/null \
     || target_missing+=("rust target $target")
+  fi
 }
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
