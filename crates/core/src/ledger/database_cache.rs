@@ -10,8 +10,6 @@ use std::collections::HashMap;
 use std::fs::Metadata;
 #[cfg(unix)]
 use std::os::unix::fs::MetadataExt;
-#[cfg(windows)]
-use std::os::windows::fs::MetadataExt;
 use std::sync::{Arc, RwLock};
 use tracing::warn;
 
@@ -28,9 +26,7 @@ pub(crate) struct FileStamp {
     #[cfg(unix)]
     ino: u64,
     #[cfg(windows)]
-    volume_serial_number: u64,
-    #[cfg(windows)]
-    file_index: u64,
+    file_id: file_id::FileId,
     len: u64,
     modified: Option<SystemTime>,
 }
@@ -43,8 +39,7 @@ impl FileStamp {
         }
         #[cfg(windows)]
         {
-            self.volume_serial_number == other.volume_serial_number
-                && self.file_index == other.file_index
+            self.file_id == other.file_id
         }
         #[cfg(not(any(unix, windows)))]
         {
@@ -95,7 +90,7 @@ pub(crate) fn reusable_cached_database(path: &Path) -> Result<Option<Arc<Databas
 
 pub(crate) fn current_file_stamp(path: &Path) -> Result<Option<FileStamp>> {
     match std::fs::metadata(path) {
-        Ok(metadata) => Ok(Some(file_stamp(&metadata))),
+        Ok(metadata) => Ok(Some(file_stamp(path, &metadata)?)),
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(err) => Err(anyhow!(err)).context(format!(
             "Failed to read database cache metadata: {:?}",
@@ -115,31 +110,31 @@ pub(crate) fn path_looks_like_redb(path: &Path) -> Result<bool> {
 }
 
 #[cfg(unix)]
-fn file_stamp(metadata: &Metadata) -> FileStamp {
-    FileStamp {
+fn file_stamp(_path: &Path, metadata: &Metadata) -> Result<FileStamp> {
+    Ok(FileStamp {
         dev: metadata.dev(),
         ino: metadata.ino(),
         len: metadata.len(),
         modified: metadata.modified().ok(),
-    }
+    })
 }
 
 #[cfg(windows)]
-fn file_stamp(metadata: &Metadata) -> FileStamp {
-    FileStamp {
-        volume_serial_number: metadata.volume_serial_number().unwrap_or(0) as u64,
-        file_index: metadata.file_index().unwrap_or(0),
+fn file_stamp(path: &Path, metadata: &Metadata) -> Result<FileStamp> {
+    Ok(FileStamp {
+        file_id: file_id::get_file_id(path)
+            .with_context(|| format!("Failed to read database cache file identity: {:?}", path))?,
         len: metadata.len(),
         modified: metadata.modified().ok(),
-    }
+    })
 }
 
 #[cfg(not(any(unix, windows)))]
-fn file_stamp(metadata: &Metadata) -> FileStamp {
-    FileStamp {
+fn file_stamp(_path: &Path, metadata: &Metadata) -> Result<FileStamp> {
+    Ok(FileStamp {
         len: metadata.len(),
         modified: metadata.modified().ok(),
-    }
+    })
 }
 
 pub(crate) fn register_database(db_path: &Path, db: Arc<Database>) -> Result<()> {
