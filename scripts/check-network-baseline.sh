@@ -34,6 +34,8 @@ check_contains apps/web/src/hooks/use_core/write_gate/logic.rs "ConnectionStatus
 check_contains apps/web/src/api/connection_urls.rs "format!(\"{}://{}/ws\", ws_scheme, host)"
 check_contains apps/web/src/api/connection_urls.rs "if cfg!(debug_assertions)"
 check_contains apps/web/src/api/connection_urls.rs "ws_port"
+check_contains apps/web/src/api/connection_urls.rs "fn parse_ws_port(value: &str) -> Option<u16>"
+check_contains apps/web/src/api/connection_urls.rs "query_ws_port_rejects_invalid_or_zero_ports"
 check_absent apps/web/src/api/connection_urls.rs "Scanning ports"
 
 # NET-003: role endpoint remains public and exposes the main/proxy route contract.

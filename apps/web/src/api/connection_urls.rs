@@ -103,7 +103,14 @@ fn query_port() -> Option<u16> {
     }
     let params = web_sys::UrlSearchParams::new_with_str(&search).ok()?;
     let val = params.get("ws_port")?;
-    val.parse::<u16>().ok()
+    parse_ws_port(&val)
+}
+
+fn parse_ws_port(value: &str) -> Option<u16> {
+    match value.parse::<u16>() {
+        Ok(port) if port > 0 => Some(port),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -136,5 +143,14 @@ mod tests {
         let urls = build_ws_urls_for_native_state(&NativeBootstrapState::Absent);
 
         assert_eq!(urls, vec![format!("ws://localhost:{DEV_WS_PORT}/ws")]);
+    }
+
+    #[test]
+    fn query_ws_port_rejects_invalid_or_zero_ports() {
+        assert_eq!(parse_ws_port("3001"), Some(3001));
+        assert_eq!(parse_ws_port("0"), None);
+        assert_eq!(parse_ws_port(""), None);
+        assert_eq!(parse_ws_port("not-a-port"), None);
+        assert_eq!(parse_ws_port("65536"), None);
     }
 }
