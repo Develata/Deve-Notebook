@@ -304,6 +304,17 @@ result, startup result, and an explicit statement that no child-process runtime
 or native authority write path was opened. Store the target-host result under
 `docs/report/`.
 
+Optional GitHub Actions entry:
+
+```text
+Native Target Host -> target=desktop-macos|desktop-windows
+```
+
+The workflow is manual-only and diagnostic by default. Set
+`required_preflight=true` to fail closed on missing prerequisites. Set
+`run_desktop_package_build=true` only when the target-host runner is intended to
+produce package artifacts.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package
@@ -358,6 +369,15 @@ The current iOS gate is preflight-only. Do not run `cargo tauri ios init` or
 `cargo tauri ios build` until an explicit iOS shell-only package execution gate
 is added. Capture Android artifacts or iOS missing prerequisites under
 `docs/report/`, together with the same no-process/no-authority boundary.
+
+Optional GitHub Actions entry:
+
+```text
+Native Target Host -> target=mobile-ios
+```
+
+The workflow is manual-only and runs iOS preflight only. It does not run
+`cargo tauri ios init` or `cargo tauri ios build`.
 
 ## Native Process Adapter Gate
 

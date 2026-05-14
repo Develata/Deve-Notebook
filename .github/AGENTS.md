@@ -5,9 +5,10 @@
 
 ## Purpose
 
-GitHub CI/CD configuration. The current baseline contains the tag-driven
-release workflow only; nightly and speckit sync workflows are not required
-repo metadata.
+GitHub CI/CD configuration. The current release baseline contains the
+tag-driven release workflow only. Optional manual target-host workflows may
+exist for deferred delivery evidence; nightly and speckit sync workflows are
+not required repo metadata.
 
 ## Subdirectories
 
@@ -19,7 +20,8 @@ repo metadata.
 
 | File | Description |
 |------|-------------|
-| `workflows/release.yml` | Release packaging and publishing |
+| `workflows/release.yml` | Required release quality gates and Docker publishing |
+| `workflows/native-target-host.yml` | Optional manual Desktop/Mobile target-host diagnostics |
 
 ## For AI Agents
 
@@ -27,6 +29,8 @@ repo metadata.
 
 - Workflow files use GitHub Actions YAML syntax.
 - Keep workflows lean — the target environment is resource-constrained.
+- Do not attach optional target-host workflows to tag releases until the release
+  plan explicitly promotes them into the required release baseline.
 - Do not recreate `nightly.yml` or `speckit-sync-check.yml` unless the plan
   explicitly reintroduces them as required release surfaces.
 

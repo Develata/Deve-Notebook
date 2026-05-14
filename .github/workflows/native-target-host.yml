@@ -1,0 +1,154 @@
+name: Native Target Host
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target host validation to run.
+        type: choice
+        default: all
+        options:
+          - all
+          - desktop-macos
+          - desktop-windows
+          - mobile-ios
+      required_preflight:
+        description: Fail closed when target-host prerequisites are missing.
+        type: boolean
+        default: false
+      run_desktop_package_build:
+        description: Run Desktop package build after preflight.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  desktop-macos:
+    if: ${{ inputs.target == 'all' || inputs.target == 'desktop-macos' }}
+    runs-on: macos-latest
+    env:
+      DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED: ${{ inputs.required_preflight && '1' || '0' }}
+      DEVE_DESKTOP_TARGET_HOSTS: macos
+      APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+      APPLE_PROVIDER_SHORT_NAME: ${{ secrets.APPLE_PROVIDER_SHORT_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Install Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install release tools
+        run: |
+          cargo install trunk --locked --version 0.21.14
+          cargo install tauri-cli --locked --version 2.11.1
+
+      - name: Build web dist
+        run: |
+          npm --prefix apps/web ci --ignore-scripts
+          npm --prefix apps/web run build
+          scripts/smoke-web-release-build.sh
+
+      - name: Desktop macOS target-host preflight
+        run: scripts/check-desktop-target-host-preflight.sh
+
+      - name: Desktop macOS package build
+        if: ${{ inputs.run_desktop_package_build }}
+        env:
+          DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
+        run: scripts/check-desktop-platform-package-build.sh
+
+  desktop-windows:
+    if: ${{ inputs.target == 'all' || inputs.target == 'desktop-windows' }}
+    runs-on: windows-latest
+    env:
+      DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED: ${{ inputs.required_preflight && '1' || '0' }}
+      DEVE_DESKTOP_TARGET_HOSTS: windows
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92
+          targets: x86_64-pc-windows-msvc,aarch64-pc-windows-msvc
+
+      - name: Install Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install release tools
+        run: |
+          cargo install trunk --locked --version 0.21.14
+          cargo install tauri-cli --locked --version 2.11.1
+
+      - name: Build web dist
+        run: |
+          npm --prefix apps/web ci --ignore-scripts
+          npm --prefix apps/web run build
+          scripts/smoke-web-release-build.sh
+
+      - name: Desktop Windows target-host preflight
+        run: scripts/check-desktop-target-host-preflight.sh
+
+      - name: Desktop Windows package build
+        if: ${{ inputs.run_desktop_package_build }}
+        env:
+          DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
+          DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
+        run: scripts/check-desktop-platform-package-build.sh
+
+  mobile-ios:
+    if: ${{ inputs.target == 'all' || inputs.target == 'mobile-ios' }}
+    runs-on: macos-latest
+    env:
+      DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ inputs.required_preflight && '1' || '0' }}
+      DEVE_MOBILE_PACKAGE_TARGETS: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92
+          targets: aarch64-apple-ios
+
+      - name: Install Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install release tools
+        run: |
+          cargo install trunk --locked --version 0.21.14
+          cargo install tauri-cli --locked --version 2.11.1
+
+      - name: Build web dist
+        run: |
+          npm --prefix apps/web ci --ignore-scripts
+          npm --prefix apps/web run build
+          scripts/smoke-web-release-build.sh
+
+      - name: Mobile iOS target-host preflight
+        run: scripts/check-mobile-platform-package-preflight.sh
+
+      - name: Keep iOS package execution closed
+        run: |
+          test ! -e apps/mobile/gen/apple
+          echo "iOS package build remains closed until an explicit package execution gate is added."
