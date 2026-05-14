@@ -8,6 +8,7 @@ RUN_ID="${DEVE_NATIVE_TARGET_HOST_RUN_ID:-${GITHUB_RUN_ID:-}}"
 ARTIFACTS="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS:-deve-native-target-host-evidence-macos,deve-native-target-host-evidence-windows,deve-native-target-host-evidence-ios}"
 OUT_DIR="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_DIR:-$ROOT_DIR/target/native-target-host-evidence-download}"
 COLLECT="${DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT:-0}"
+STATUS="${DEVE_NATIVE_TARGET_HOST_STATUS:-0}"
 REF="${DEVE_NATIVE_TARGET_HOST_REF:-}"
 REPOSITORY="${DEVE_NATIVE_TARGET_HOST_REPOSITORY:-${GITHUB_REPOSITORY:-}}"
 TOKEN="${DEVE_GITHUB_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-}}}"
@@ -115,6 +116,29 @@ if runs:
 PY
 }
 
+run_status_from_json() {
+  local run_json="$1"
+  local python
+
+  python="$(python_bin)" || fail "python3 or python is required for GitHub API run status parsing"
+  "$python" - "$run_json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    run = json.load(handle)
+print(
+    "native-target-host-evidence-collect: status: "
+    f"id={run.get('id', '')} "
+    f"status={run.get('status', '')} "
+    f"conclusion={run.get('conclusion') or 'null'} "
+    f"branch={run.get('head_branch', '')} "
+    f"event={run.get('event', '')} "
+    f"url={run.get('html_url', '')}"
+)
+PY
+}
+
 validate_artifact_dir() {
   local artifact_dir="$1"
   local found=0
@@ -169,13 +193,67 @@ latest_run_with_api() {
 
 resolve_latest_run_id() {
   local repo="$1"
+  local run_id
 
   if command -v "$GH_BIN" >/dev/null 2>&1 && "$GH_BIN" auth status >/dev/null 2>&1; then
-    latest_run_with_gh "$repo"
+    run_id="$(latest_run_with_gh "$repo")"
+    [[ -n "$run_id" && "$run_id" != "null" ]] || fail "no Native Target Host workflow_dispatch runs found for ref: $REF"
+    printf '%s\n' "$run_id"
     return
   fi
 
   latest_run_with_api "$repo"
+}
+
+resolve_requested_run_id() {
+  local repo="$1"
+
+  [[ -n "$RUN_ID" ]] || fail "DEVE_NATIVE_TARGET_HOST_RUN_ID is required; use a run id or latest"
+  if [[ "$RUN_ID" == "latest" ]]; then
+    RUN_ID="$(resolve_latest_run_id "$repo")"
+    echo "native-target-host-evidence-collect: resolved latest run_id=$RUN_ID"
+  fi
+}
+
+status_with_gh() {
+  local repo="$1"
+
+  "$GH_BIN" run view "$RUN_ID" \
+    --repo "$repo" \
+    --json databaseId,status,conclusion,url,headBranch,event \
+    --jq '"native-target-host-evidence-collect: status: id=\(.databaseId) status=\(.status) conclusion=\(.conclusion // "null") branch=\(.headBranch) event=\(.event) url=\(.url)"'
+}
+
+status_with_api() {
+  local repo="$1"
+  local tmp_dir
+  local run_json
+
+  [[ -n "$TOKEN" ]] || fail "run status lookup requires DEVE_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN"
+  command -v curl >/dev/null 2>&1 || fail "run status lookup requires curl"
+
+  tmp_dir="$(mktemp -d)"
+  trap "rm -rf '$tmp_dir'" EXIT
+  run_json="$tmp_dir/run.json"
+
+  curl -fsS \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "https://api.github.com/repos/$repo/actions/runs/$RUN_ID" \
+    >"$run_json"
+  run_status_from_json "$run_json"
+}
+
+print_run_status() {
+  local repo="$1"
+
+  if command -v "$GH_BIN" >/dev/null 2>&1 && "$GH_BIN" auth status >/dev/null 2>&1; then
+    status_with_gh "$repo"
+    return
+  fi
+
+  status_with_api "$repo"
 }
 
 collect_with_gh() {
@@ -244,6 +322,9 @@ if [[ -z "$REF" ]]; then
 fi
 
 repo="$(resolve_repository 2>/dev/null || true)"
+if [[ "$STATUS" == "1" && -z "$RUN_ID" ]]; then
+  RUN_ID="latest"
+fi
 display_run_id="${RUN_ID:-<run-id>}"
 
 echo "native-target-host-evidence-collect: run_id=$display_run_id"
@@ -256,6 +337,14 @@ if [[ "$RUN_ID" == "latest" || -z "$RUN_ID" ]]; then
     echo "native-target-host-evidence-collect: latest command: set DEVE_NATIVE_TARGET_HOST_REPOSITORY=owner/repo for latest run lookup"
   fi
 fi
+if [[ -n "$repo" ]]; then
+  echo "native-target-host-evidence-collect: status command: $GH_BIN run view $display_run_id --repo $repo --json databaseId,status,conclusion,url,headBranch,event"
+  if [[ "$display_run_id" == "latest" || "$display_run_id" == "<run-id>" ]]; then
+    echo "native-target-host-evidence-collect: status api: resolve latest, then GET https://api.github.com/repos/$repo/actions/runs/<resolved-run-id>"
+  else
+    echo "native-target-host-evidence-collect: status api: GET https://api.github.com/repos/$repo/actions/runs/$display_run_id"
+  fi
+fi
 echo "native-target-host-evidence-collect: output=${OUT_DIR#$ROOT_DIR/}"
 while IFS= read -r artifact; do
   if [[ -n "$repo" ]]; then
@@ -265,17 +354,22 @@ while IFS= read -r artifact; do
   fi
 done < <(artifact_names)
 
-if [[ "$COLLECT" != "1" ]]; then
-  echo "native-target-host-evidence-collect: dry-run; set DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 and DEVE_NATIVE_TARGET_HOST_RUN_ID=<run-id|latest> to download"
+if [[ "$COLLECT" != "1" && "$STATUS" != "1" ]]; then
+  echo "native-target-host-evidence-collect: dry-run; set DEVE_NATIVE_TARGET_HOST_STATUS=1 to inspect status or DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 and DEVE_NATIVE_TARGET_HOST_RUN_ID=<run-id|latest> to download"
   exit 0
 fi
 
 [[ -n "$repo" ]] || fail "cannot resolve GitHub repository; set DEVE_NATIVE_TARGET_HOST_REPOSITORY=owner/repo"
-[[ -n "$RUN_ID" ]] || fail "DEVE_NATIVE_TARGET_HOST_RUN_ID is required; use a run id or latest"
-if [[ "$RUN_ID" == "latest" ]]; then
-  RUN_ID="$(resolve_latest_run_id "$repo")"
-  echo "native-target-host-evidence-collect: resolved latest run_id=$RUN_ID"
+resolve_requested_run_id "$repo"
+
+if [[ "$STATUS" == "1" ]]; then
+  print_run_status "$repo"
 fi
+
+if [[ "$COLLECT" != "1" ]]; then
+  exit 0
+fi
+
 mkdir -p "$OUT_DIR"
 
 if command -v "$GH_BIN" >/dev/null 2>&1 && "$GH_BIN" auth status >/dev/null 2>&1; then

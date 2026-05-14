@@ -340,6 +340,7 @@ Collect and validate workflow evidence artifacts after a run completes:
 
 ```bash
 scripts/collect-native-target-host-evidence.sh
+DEVE_NATIVE_TARGET_HOST_STATUS=1 scripts/collect-native-target-host-evidence.sh
 DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 DEVE_NATIVE_TARGET_HOST_RUN_ID=<run-id> scripts/collect-native-target-host-evidence.sh
 DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 DEVE_NATIVE_TARGET_HOST_RUN_ID=latest scripts/collect-native-target-host-evidence.sh
 ```
@@ -349,7 +350,9 @@ Markdown file with `scripts/check-native-target-host-evidence.sh`. It uses an
 authenticated GitHub CLI when available, otherwise `DEVE_GITHUB_TOKEN`,
 `GH_TOKEN`, or `GITHUB_TOKEN` plus `curl` and `unzip`. Use
 `DEVE_NATIVE_TARGET_HOST_RUN_ID=latest` to resolve the most recent
-`native-target-host.yml` workflow_dispatch run for the selected ref.
+`native-target-host.yml` workflow_dispatch run for the selected ref. Use
+`DEVE_NATIVE_TARGET_HOST_STATUS=1` to inspect the current run status without
+downloading artifacts.
 
 ## Mobile Package Build Preflight
 
