@@ -23,7 +23,7 @@ fn desktop_packaging_dependency_spike_is_feature_gated() {
     assert!(scaffold.dependency_feature_is_isolated());
     assert!(gate.is_desktop_dependency_spike_open());
     assert!(gate.desktop_tauri_dependencies_allowed);
-    assert!(!gate.mobile_tauri_dependencies_allowed);
+    assert!(gate.mobile_tauri_dependencies_allowed);
 }
 
 #[test]

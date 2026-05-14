@@ -7,10 +7,14 @@ license.workspace = true
 
 [features]
 default = []
-native-packaging = []
+native-packaging = ["dep:tauri", "dep:tauri-build"]
 
 [dependencies]
 deve_core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+tauri = { version = "2.11.1", optional = true, default-features = false, features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2.6.1", optional = true, default-features = false, features = [] }

@@ -5,17 +5,18 @@ use crate::{MobilePackagingAuthority, MobilePackagingCapability, mobile_packagin
 use deve_core::native_adapter::CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY;
 
 #[test]
-fn mobile_packaging_scaffold_is_feature_gated_and_planned() {
+fn mobile_packaging_dependency_spike_is_feature_gated() {
     let scaffold = mobile_packaging_scaffold();
     let gate = CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY;
 
     assert_eq!(scaffold.dependency_batch.feature_gate, "native-packaging");
     assert_eq!(scaffold.dependency_batch.runtime_crate, "tauri");
     assert_eq!(scaffold.dependency_batch.build_crate, "tauri-build");
-    assert_eq!(scaffold.dependency_batch.status, "planned");
+    assert_eq!(scaffold.dependency_batch.status, "dependency-spike-open");
     assert!(scaffold.dependency_feature_is_isolated());
-    assert!(gate.mobile_packaging_stays_deferred());
-    assert!(!gate.mobile_tauri_dependencies_allowed);
+    assert!(gate.is_mobile_dependency_spike_open());
+    assert!(gate.mobile_tauri_dependencies_allowed);
+    assert!(!gate.mobile_packaging_stays_deferred());
 }
 
 #[test]

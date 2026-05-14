@@ -19,7 +19,7 @@
 
 *   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
 *   Mobile native adapter 第一阶段只允许承担：绑定/探测已有受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件。
-*   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；真实 `tauri` / `tauri-build` dependency 只能在 `native-packaging` feature 与独立 gate 打开后引入。
+*   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；`tauri` / `tauri-build` dependency 只能作为 `apps/mobile` 的 optional dependency 挂在 `native-packaging` feature 后。
 *   mobile process adapter **MUST** 等 process adapter gate 显式打开后才能启动、持有或重启后端子进程。
 *   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；后台恢复失败 **MUST NOT** 被伪装成普通断网。
 *   Mobile native adapter **MUST NOT** 自行定义 Ledger/Vault authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
@@ -116,35 +116,37 @@ Gate policy 必须满足：
 
 ### 1.4 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
 
-Mobile packaging scaffold 只描述移动壳层的 post-gate 目标能力，**MUST NOT** 被解释为 packaging gate 已显式启用：
+Mobile packaging scaffold 只描述移动壳层的 dependency spike 与 post-gate 目标能力，**MUST NOT** 被解释为 Mobile runtime entrypoint、platform package build 或 release ready 已显式启用：
 
 *   dependency batch: `tauri` runtime crate + `tauri-build` build crate。
 *   packaging capability 只覆盖移动壳层能力：WebView shell、permission bridge、share sheet、
     deeplink、file picker、push notification、store package。
-*   packaging scaffold 不得获得 ledger/vault/source-control/search index/`.git`/`.notegit`
+*   packaging dependency spike 不得获得 ledger/vault/source-control/search index/`.git`/`.notegit`
     authority；这些业务真相仍只归 core/server。
 *   lifecycle correctness 仍由 no-packaging mobile skeleton tests 保证：background/resume 后必须
     fresh reprobe auth、node role、WS repo handshake 与 current `scope_nonce`，packaging 不得绕过。
-*   `scripts/check-native-track-boundary.sh` 必须继续阻止真实 packaging dependency 或 import
-    在门禁打开前泄漏到 workspace root、core、cli、web 或 native 默认构建。
+*   `scripts/check-native-track-boundary.sh` 必须继续阻止 packaging dependency 或 import
+    泄漏到 workspace root、core、cli、web 或 native 默认构建。
 
 ### 1.5 Mobile Packaging Dependency Gate {#mobile-packaging-dependency-gate-decision}
 
-Mobile packaging dependency gate 默认关闭；在 gate 未经单独设计、评审与验收前，真实 Tauri Mobile runtime
-dependency **MUST NOT** 进入默认 workspace 构建。
+Mobile packaging dependency gate 已进入 Mobile dependency spike；真实 `tauri` / `tauri-build`
+dependency 只允许作为 `apps/mobile` 的 optional dependency，并且必须挂在 `native-packaging`
+feature 后。默认 workspace 构建仍 **MUST** 保持 no-Tauri。
 
 Gate policy 必须满足：
 
 *   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
-    DesktopDependencySpikeOpen`
+    DesktopAndMobileDependencySpikeOpen`
 *   `desktop_tauri_dependencies_allowed = true`
-*   `mobile_tauri_dependencies_allowed = false`
+*   `mobile_tauri_dependencies_allowed = true`
 *   `default_build_remains_no_tauri = true`
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-Mobile gate 打开时 **MUST** 先更新边界脚本，并继续保证 foreground reprobe、writer-ready 与
-repo scope gate 不被 native runtime 绕过。
+当前 gate 只允许 Mobile dependency spike：Mobile runtime entrypoint、Android/iOS platform package
+build、child-process runtime 与 native authority write path 仍未打开。foreground reprobe、
+writer-ready 与 repo scope gate **MUST NOT** 被 native runtime 绕过。
 
 ## 2. Responsive Architecture {#mobile-responsive-layout}
 

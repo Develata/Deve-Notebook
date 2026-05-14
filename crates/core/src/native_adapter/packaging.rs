@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub enum NativePackagingDependencyGateDecision {
     DeferredUntilRuntimeBatch,
     DesktopDependencySpikeOpen,
+    DesktopAndMobileDependencySpikeOpen,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,9 +25,20 @@ pub struct NativePackagingDependencyGatePolicy {
 
 impl NativePackagingDependencyGatePolicy {
     pub fn is_desktop_dependency_spike_open(self) -> bool {
-        self.decision == NativePackagingDependencyGateDecision::DesktopDependencySpikeOpen
+        matches!(
+            self.decision,
+            NativePackagingDependencyGateDecision::DesktopDependencySpikeOpen
+                | NativePackagingDependencyGateDecision::DesktopAndMobileDependencySpikeOpen
+        ) && self.desktop_tauri_dependencies_allowed
+            && self.default_build_remains_no_tauri
+            && self.native_feature_gate_required
+            && !self.authority_writes_allowed
+    }
+
+    pub fn is_mobile_dependency_spike_open(self) -> bool {
+        self.decision == NativePackagingDependencyGateDecision::DesktopAndMobileDependencySpikeOpen
             && self.desktop_tauri_dependencies_allowed
-            && !self.mobile_tauri_dependencies_allowed
+            && self.mobile_tauri_dependencies_allowed
             && self.default_build_remains_no_tauri
             && self.native_feature_gate_required
             && !self.authority_writes_allowed
@@ -42,9 +54,9 @@ impl NativePackagingDependencyGatePolicy {
 
 pub const CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY: NativePackagingDependencyGatePolicy =
     NativePackagingDependencyGatePolicy {
-        decision: NativePackagingDependencyGateDecision::DesktopDependencySpikeOpen,
+        decision: NativePackagingDependencyGateDecision::DesktopAndMobileDependencySpikeOpen,
         desktop_tauri_dependencies_allowed: true,
-        mobile_tauri_dependencies_allowed: false,
+        mobile_tauri_dependencies_allowed: true,
         default_build_remains_no_tauri: true,
         native_feature_gate_required: true,
         authority_writes_allowed: false,
@@ -55,13 +67,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn current_policy_opens_desktop_dependency_spike_only() {
+    fn current_policy_opens_desktop_and_mobile_dependency_spikes() {
         let policy = CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY;
 
         assert!(policy.is_desktop_dependency_spike_open());
+        assert!(policy.is_mobile_dependency_spike_open());
         assert!(policy.desktop_tauri_dependencies_allowed);
-        assert!(!policy.mobile_tauri_dependencies_allowed);
-        assert!(policy.mobile_packaging_stays_deferred());
+        assert!(policy.mobile_tauri_dependencies_allowed);
+        assert!(!policy.mobile_packaging_stays_deferred());
         assert!(policy.default_build_remains_no_tauri);
         assert!(policy.native_feature_gate_required);
         assert!(!policy.authority_writes_allowed);

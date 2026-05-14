@@ -101,11 +101,13 @@ Gate 状态：
   的 optional dependency 存在，并且必须挂在 `native-packaging` feature 后。
 - Desktop 默认构建仍 **MUST** 保持 no-Tauri；Desktop packaging dependency spike 不等价于
   Desktop release ready。
-- Mobile packaging scaffold 只记录 `tauri` / `tauri-build` batch 与 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；不得引入实际 Tauri Mobile dependency。
+- Mobile packaging dependency spike 已打开：`tauri` / `tauri-build` **MAY** 只作为 `apps/mobile`
+  的 optional dependency 存在，并且必须挂在 `native-packaging` feature 后。
+- Mobile packaging scaffold 只记录 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；不得声明 Mobile runtime entrypoint、Android/iOS package build 或 release ready。
 - Mobile foreground/background reprobe 与 session/readiness correctness 继续由 no-packaging skeleton tests 保证。
 - Native embedded service supervision 按 no-runtime contract 处理；该 contract 不启动真实子进程、不依赖 Tauri runtime capability、不授予 native shell core authority。
-- `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DesktopDependencySpikeOpen`；Desktop-only
-  Tauri dependency 只允许在 `apps/desktop/native-packaging` scope 内出现。
+- `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DesktopAndMobileDependencySpikeOpen`；
+  Tauri dependency 只允许在对应 native crate 的 `native-packaging` scope 内出现。
 - `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY = DeferredUntilPackagingGate`；`child_process_runtime_enabled = false`、`packaging_gate_required = true`、`authority_writes_allowed = false`。
 - 后续 child-process runtime 必须在对应 native crate 的 `native-packaging` feature 后实现，并继续禁止 core authority writes。
 

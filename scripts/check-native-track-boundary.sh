@@ -27,7 +27,8 @@ check_no_packaging_dependency_leak() {
   local tauri_manifest_pattern="(^[[:space:]]*[\"']?(tauri|tauri-build)[\"']?[[:space:]]*=|package[[:space:]]*=[[:space:]]*[\"'](tauri|tauri-build)[\"']|^[[:space:]]*\[[^]]*(dependencies|dev-dependencies|build-dependencies)\.[\"']?(tauri|tauri-build)[\"']?[[:space:]]*\])"
   while IFS= read -r cargo_file; do
     if rg -iq "$tauri_manifest_pattern" "$cargo_file"; then
-      if [[ "$cargo_file" == "$ROOT_DIR/apps/desktop/Cargo.toml" ]]; then
+      if [[ "$cargo_file" == "$ROOT_DIR/apps/desktop/Cargo.toml" ]] \
+        || [[ "$cargo_file" == "$ROOT_DIR/apps/mobile/Cargo.toml" ]]; then
         continue
       fi
       fail "native packaging dependency is not allowed yet: ${cargo_file#"$ROOT_DIR"/}"
@@ -85,9 +86,9 @@ check_contains apps/desktop/tauri.conf.json '"icon": ["icons/icon.png"]'
 [[ -f "$ROOT_DIR/apps/desktop/icons/icon.png" ]] \
   || fail "missing desktop Tauri icon: apps/desktop/icons/icon.png"
 check_contains apps/desktop/tauri.conf.json '"createUpdaterArtifacts": false'
-check_contains apps/mobile/Cargo.toml "native-packaging = []"
-check_not_contains apps/mobile/Cargo.toml "tauri ="
-check_not_contains apps/mobile/Cargo.toml "tauri-build ="
+check_contains apps/mobile/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build"]'
+check_manifest_dependency apps/mobile/Cargo.toml tauri 2.11.1
+check_manifest_dependency apps/mobile/Cargo.toml tauri-build 2.6.1
 check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/desktop/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
@@ -127,16 +128,17 @@ check_contains apps/desktop/src/shell_test/policy.rs "CURRENT_NATIVE_PROCESS_ADA
 check_contains apps/mobile/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/mobile/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/mobile/src/packaging.rs "build_crate: \"tauri-build\""
-check_contains apps/mobile/src/packaging.rs "status: \"planned\""
+check_contains apps/mobile/src/packaging.rs "status: \"dependency-spike-open\""
 check_contains apps/mobile/src/packaging.rs "MobilePackagingAuthority::Ledger"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::PermissionBridge"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::StorePackage"
-check_contains apps/mobile/src/packaging_test.rs "mobile_packaging_scaffold_is_feature_gated_and_planned"
+check_contains apps/mobile/src/packaging_test.rs "mobile_packaging_dependency_spike_is_feature_gated"
 check_contains apps/mobile/src/shell_test/policy.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/mobile/src/shell_test/policy.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains crates/core/src/native_adapter/packaging.rs "DesktopDependencySpikeOpen"
 check_contains crates/core/src/native_adapter/packaging.rs "desktop_tauri_dependencies_allowed: true"
-check_contains crates/core/src/native_adapter/packaging.rs "mobile_tauri_dependencies_allowed: false"
+check_contains crates/core/src/native_adapter/packaging.rs "DesktopAndMobileDependencySpikeOpen"
+check_contains crates/core/src/native_adapter/packaging.rs "mobile_tauri_dependencies_allowed: true"
 check_contains crates/core/src/native_adapter/process.rs "DeferredUntilPackagingGate"
 check_contains crates/core/src/native_adapter/process.rs "child_process_runtime_enabled: false"
 check_contains crates/core/src/native_adapter/process.rs "record_probe_timeout"
@@ -226,7 +228,7 @@ check_contains docs/plan/14_tech_stack.md "native-packaging"
 check_contains docs/plan/14_tech_stack.md "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains docs/plan/14_tech_stack.md "不得进入 workspace root"
 check_contains docs/plan/14_tech_stack.md "Desktop packaging dependency spike"
-check_contains docs/plan/14_tech_stack.md "Mobile packaging scaffold"
+check_contains docs/plan/14_tech_stack.md "Mobile packaging dependency spike"
 
 check_contains docs/report/README.md "## Current Baselines"
 check_contains docs/report/README.md "| Native shell |"

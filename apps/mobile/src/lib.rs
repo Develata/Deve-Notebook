@@ -3,10 +3,11 @@
 //!
 //! Minimal mobile native shell skeleton.
 //!
-//! This crate intentionally avoids depending on Tauri Mobile for the first
-//! boundary pass. It models the shell's allowed responsibilities: bind to a
-//! controlled local service, bind a short-lived session, inject a Web bootstrap
-//! object, and force foreground reprobe after mobile lifecycle transitions.
+//! The default build intentionally avoids Tauri. Optional packaging
+//! dependencies are isolated behind the `native-packaging` feature. This crate
+//! models the shell's allowed responsibilities: bind to a controlled local
+//! service, bind a short-lived session, inject a Web bootstrap object, and force
+//! foreground reprobe after mobile lifecycle transitions.
 
 #[cfg(feature = "native-packaging")]
 mod packaging;

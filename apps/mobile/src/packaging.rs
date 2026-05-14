@@ -4,8 +4,8 @@
 //!
 //! Feature-gated mobile packaging scaffold.
 //!
-//! This module records the first mobile packaging batch without importing a
-//! packaging runtime. The real Tauri Mobile dependency remains a separate gate.
+//! This module records the mobile packaging dependency batch without importing
+//! or starting a native runtime process.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MobilePackagingCapability {
@@ -57,7 +57,7 @@ impl MobilePackagingScaffold {
 
     pub fn dependency_feature_is_isolated(&self) -> bool {
         self.dependency_batch.feature_gate == "native-packaging"
-            && self.dependency_batch.status == "planned"
+            && self.dependency_batch.status == "dependency-spike-open"
     }
 }
 
@@ -67,7 +67,7 @@ pub fn mobile_packaging_scaffold() -> MobilePackagingScaffold {
             feature_gate: "native-packaging",
             runtime_crate: "tauri",
             build_crate: "tauri-build",
-            status: "planned",
+            status: "dependency-spike-open",
         },
         acceptance: MobilePackagingAcceptance {
             capabilities: PACKAGING_CAPABILITIES,

@@ -22,11 +22,11 @@ fn desktop_default_build_opens_only_dependency_spike() {
 
     assert_eq!(
         policy.decision,
-        NativePackagingDependencyGateDecision::DesktopDependencySpikeOpen
+        NativePackagingDependencyGateDecision::DesktopAndMobileDependencySpikeOpen
     );
     assert!(policy.is_desktop_dependency_spike_open());
     assert!(policy.desktop_tauri_dependencies_allowed);
-    assert!(!policy.mobile_tauri_dependencies_allowed);
+    assert!(policy.mobile_tauri_dependencies_allowed);
     assert!(policy.default_build_remains_no_tauri);
     assert!(!policy.authority_writes_allowed);
 }

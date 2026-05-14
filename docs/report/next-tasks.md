@@ -6,12 +6,14 @@
 
 ## 当前执行队列
 
-1. Mobile Packaging Dependency Spike：必须显式选择后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
-2. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
-3. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
+1. Mobile Shell Packaging Acceptance：Mobile dependency spike 已打开；下一步只允许定义 Mobile shell manifest/metadata acceptance，不打开 Android/iOS package build、runtime entrypoint 或 child-process adapter。
+2. Mobile Platform Package Build Preflight：在 Mobile shell manifest acceptance 稳定后，新增 Android/iOS target-host prerequisite diagnostic；不得在 Linux/WSL 上声明移动端 package ready。
+3. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
+4. Desktop AppImage/macOS/Windows package verification：Linux deb/rpm 已验收；AppImage 仍受 `linuxdeploy` 目标主机条件影响，macOS/Windows 仍需对应 host 验证。
 
 ## 最近完成
 
+- NPG-3 Mobile Packaging Dependency Spike：新增 `mobile-packaging-dependency-spike-2026-05-14.md`，允许 `tauri` / `tauri-build` 仅作为 `apps/mobile` 的 optional `native-packaging` 依赖；default Mobile build 仍 no-Tauri，未打开 Mobile runtime entrypoint、Android/iOS package build、child-process runtime 或 native authority writes。
 - NPG-2g Desktop Target-Host Package Build Verification：安装并验证 `tauri-cli 2.11.1`；用 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm scripts/check-desktop-platform-package-build.sh` 完成 Linux `deb,rpm` package build；默认 AppImage 仍受 `linuxdeploy` host 条件影响，不声明 macOS/Windows readiness。
 - NPG-2f Desktop Tauri Runtime Entrypoint：新增 `apps/desktop/src/main.rs`、`apps/desktop/build.rs` 与 `tauri_entry` window shell runtime，native-packaging 下启动 Tauri menu/tray/window shell；默认 build 仍 no-Tauri，未打开 child-process runtime、native authority writes 或 platform release ready。
 - NPG-2e Desktop Platform Package Build Decision：新增 `scripts/check-desktop-platform-package-build.sh`，默认诊断 target-host package build prerequisites，显式 `DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1` 时才要求真实 `cargo tauri build`；该批次当时缺 `apps/desktop/src/main.rs`、`apps/desktop/build.rs` 与 `cargo tauri` CLI，因此不声明 platform package ready。

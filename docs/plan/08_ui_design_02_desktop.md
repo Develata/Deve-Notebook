@@ -54,14 +54,14 @@ feature 后。默认 workspace 构建仍 **MUST** 保持 no-Tauri。
 Gate policy 必须满足：
 
 *   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
-    DesktopDependencySpikeOpen`
+    DesktopAndMobileDependencySpikeOpen`
 *   `desktop_tauri_dependencies_allowed = true`
-*   `mobile_tauri_dependencies_allowed = false`
+*   `mobile_tauri_dependencies_allowed = true`
 *   `default_build_remains_no_tauri = true`
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-当前 gate 只允许 Desktop dependency spike：packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority，不启动后端子进程，不声明 macOS/Windows release ready。
+当前 gate 允许 Desktop 与 Mobile dependency spike：packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority，不启动后端子进程，不声明 macOS/Windows/Android/iOS release ready。
 
 ### 1.4 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 
