@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Mainline Native Gap Refresh After Evidence Outcomes：复跑 native process gate、target-host evidence validator、runbook/acceptance/release baseline、runtime happy/recovery smoke 与 plan coverage；本地未发现新的 unblocked Current MUST，Desktop macOS/Windows 与 Mobile iOS 仍只差目标机执行证据。
 - Native Target-host Evidence Artifacts：新增 `scripts/write-native-target-host-evidence.sh`，手动 target-host workflow 每个 job 生成并上传 `deve-native-target-host-evidence-*` artifact；Desktop package artifact 与 evidence artifact 分离，iOS 继续记录 package execution closed。
 - Native Target-host Acceptance Alignment：将 `scripts/check-native-target-host-evidence.sh` 接入 `REL-005` release acceptance，并由 release baseline 反查；未改 `docs/plan/`，未执行目标机 package build，未打开 process runtime。
 - Native Target-host Evidence Validator：新增 `docs/report/native-target-host-evidence-template.md` 与 `scripts/check-native-target-host-evidence.sh`，目标机结果必须记录 host/tool/commands/artifacts/install/startup/no-process/no-authority/conclusion，避免 package evidence 缺字段；未改 `docs/plan/`，未打开 process runtime。
