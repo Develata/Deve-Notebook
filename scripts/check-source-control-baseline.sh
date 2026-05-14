@@ -43,7 +43,16 @@ check_contains docs/plan/12_commands.md 'AI: Switch to PLAN Mode'
 check_contains docs/plan/12_commands.md 'AI: Switch to BUILD Mode'
 check_contains docs/plan/12_commands.md '不负责切换 `native / trusted-cli` 后端'
 check_contains apps/web/src/components/command_palette/registry.rs "merge_peer_command"
+check_contains apps/web/src/components/command_palette/registry.rs "establish_branch_command(locale, set_show)"
+check_contains apps/web/src/components/command_palette/registry/branch.rs "Command::unavailable"
+check_contains apps/web/src/components/command_palette/registry/branch.rs "establish_branch_command_is_unavailable_notice_only"
+check_contains apps/web/src/components/command_palette/ui.rs "data-deve-command-unavailable"
+check_contains apps/web/src/hooks/use_core/source_control_notice.rs "ESTABLISH_BRANCH_UNAVAILABLE_DETAIL"
+check_contains apps/web/src/components/sidebar/source_control/error_notice_copy.rs "is_establish_branch_unavailable_notice"
+check_contains apps/web/src/i18n/command_palette.rs "establish_branch_unavailable_reason"
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_web command_sets_cli_only_notice -- --nocapture"
+check_contains docs/acceptance-cases/11_commands_settings.md "cargo test -p deve_web establish_branch_command -- --nocapture"
+check_absent apps/web/src/components/command_palette/registry.rs "P2P: Establish Branch (Placeholder)"
 check_absent docs/acceptance-cases/04_diff.md "deve merge --peer"
 check_absent docs/acceptance-cases/04_diff.md "deve dump --doc"
 check_absent docs/acceptance-cases/04_diff.md "--field last_op"
@@ -55,6 +64,10 @@ check_contains apps/web/src/i18n/command_palette.rs "Git: Push Mirror"
 check_contains apps/web/src/components/command_palette/registry/git.rs "git_import_command_sets_cli_only_notice"
 check_contains apps/web/src/components/command_palette/registry/git.rs "git_push_command_sets_cli_only_notice"
 check_contains apps/web/src/components/command_palette/registry/git.rs "git_repair_command_sets_cli_only_notice"
+
+# CMD-004A: unimplemented P2P branch creation remains discoverable as an
+# unavailable Command Palette entry and must not masquerade as branch switch.
+check_contains docs/acceptance-cases/11_commands_settings.md "case_id: CMD-004A"
 
 # Git mirror Web surfaces are intentionally read-only / CLI-only for this
 # stage. Do not let repair review, Command Palette notices, import apply, or

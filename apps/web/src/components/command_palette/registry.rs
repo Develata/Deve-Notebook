@@ -11,9 +11,11 @@ use crate::hooks::use_core::{BranchContext, CoreState, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
+mod branch;
 mod git;
 mod merge;
 
+use branch::establish_branch_command;
 use git::{git_import_command, git_push_command, git_repair_command};
 use merge::merge_peer_command;
 
@@ -34,62 +36,46 @@ pub fn create_static_commands(
 
     let mut commands = vec![
         // 打开文档命令 - 打开文档模态框
-        Command {
-            id: "open".to_string(),
-            title: (t::command_palette::open_document)(locale).to_string(),
-            action: Callback::new(move |_| {
+        Command::available(
+            "open",
+            (t::command_palette::open_document)(locale),
+            Callback::new(move |_| {
                 on_open.run(());
                 // Do not close, as on_open re-purposes the search box
             }),
-            is_file: false,
-        },
-        Command {
-            id: "settings".to_string(),
-            title: (t::command_palette::open_settings)(locale).to_string(),
-            action: Callback::new(move |_| {
+        ),
+        Command::available(
+            "settings",
+            (t::command_palette::open_settings)(locale),
+            Callback::new(move |_| {
                 on_settings.run(());
                 set_show.set(false);
             }),
-            is_file: false,
-        },
-        Command {
-            id: "lang".to_string(),
-            title: (t::command_palette::toggle_language)(locale).to_string(),
-            action: Callback::new(move |_| {
+        ),
+        Command::available(
+            "lang",
+            (t::command_palette::toggle_language)(locale),
+            Callback::new(move |_| {
                 locale_signal.update(|locale| {
                     *locale = locale.toggle();
                     persist_locale_preference(*locale);
                 });
                 set_show.set(false);
             }),
-            is_file: false,
-        },
+        ),
         // P2P: Switch to Peer
-        Command {
-            id: "switch_peer".to_string(),
-            title: (t::command_palette::switch_peer)(locale).to_string(),
-            action: Callback::new(move |_| {
+        Command::available(
+            "switch_peer",
+            (t::command_palette::switch_peer)(locale),
+            Callback::new(move |_| {
                 if let Some(search_control) = search_control {
                     search_control.set_mode.set("@".to_string());
                     search_control.set_show.set(true);
                 }
                 set_show.set(false);
             }),
-            is_file: false,
-        },
-        // P2P: Establish Branch (Placeholder)
-        Command {
-            id: "establish_branch".to_string(),
-            title: (t::command_palette::establish_branch)(locale).to_string(),
-            action: Callback::new(move |_| {
-                if let Some(search_control) = search_control {
-                    search_control.set_mode.set("@".to_string());
-                    search_control.set_show.set(true);
-                }
-                set_show.set(false);
-            }),
-            is_file: false,
-        },
+        ),
+        establish_branch_command(locale, set_show),
         merge_peer_command(
             locale,
             set_show,
@@ -104,16 +90,15 @@ pub fn create_static_commands(
 
     // Add AI Chat toggle command if ChatControl is available
     if let Some(chat_ctrl) = chat_control {
-        commands.push(Command {
-            id: "toggle_ai_chat".to_string(),
-            title: (t::command_palette::toggle_ai_chat)(locale).to_string(),
-            action: Callback::new(move |_| {
+        commands.push(Command::available(
+            "toggle_ai_chat",
+            (t::command_palette::toggle_ai_chat)(locale),
+            Callback::new(move |_| {
                 let current = chat_ctrl.chat_visible.get_untracked();
                 chat_ctrl.set_chat_visible.set(!current);
                 set_show.set(false);
             }),
-            is_file: false,
-        });
+        ));
     }
 
     commands

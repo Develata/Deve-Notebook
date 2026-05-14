@@ -70,6 +70,11 @@ mod tests {
         );
         assert!(git_import_cli_only_hint(Locale::En).contains("deve_cli git import --apply"));
         assert_eq!(
+            establish_branch_unavailable_title(Locale::En),
+            "P2P branch creation is unavailable"
+        );
+        assert!(establish_branch_unavailable_hint(Locale::Zh).contains("P2P: Merge Peer"));
+        assert_eq!(
             git_push_cli_only_title(Locale::Zh),
             "Git mirror 推送只能通过 CLI 执行"
         );

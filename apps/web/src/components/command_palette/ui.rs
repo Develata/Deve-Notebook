@@ -99,22 +99,51 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                                             key=|(_, cmd)| cmd.id.clone()
                                             children=move |(idx, cmd)| {
                                                 let is_sel = idx == idx_sel;
+                                                let is_unavailable = cmd.availability.is_unavailable();
+                                                let unavailable_reason = cmd
+                                                    .availability
+                                                    .reason()
+                                                    .map(str::to_string);
+                                                let unavailable_attr = if is_unavailable {
+                                                    cmd.id.clone()
+                                                } else {
+                                                    String::new()
+                                                };
+                                                let title = cmd.title.clone();
                                                 view! {
                                                     <button
                                                         class=format!(
                                                             "w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 group transition-colors {}",
-                                                            if is_sel { "bg-accent-subtle text-accent" } else { "text-primary hover:bg-hover" }
+                                                            if is_unavailable {
+                                                                "text-muted opacity-75"
+                                                            } else if is_sel {
+                                                                "bg-accent-subtle text-accent"
+                                                            } else {
+                                                                "text-primary hover:bg-hover"
+                                                            }
                                                         )
+                                                        aria-disabled=if is_unavailable { "true" } else { "false" }
+                                                        data-deve-command-unavailable=unavailable_attr
                                                         on:click=move |_| cmd.action.run(())
                                                         on:mousemove=move |_| set_selected_index.set(idx)
                                                     >
-                                                        <div class=format!("flex-none {}", if is_sel { "text-accent" } else { "text-muted" })>
+                                                        <div class=format!("flex-none {}", if is_sel && !is_unavailable { "text-accent" } else { "text-muted" })>
                                                             <Zap class="w-5 h-5"/>
                                                         </div>
-                                                        <div class="flex-1 truncate">
-                                                            <span class="font-medium">{cmd.title.clone()}</span>
+                                                        <div class="flex-1 min-w-0">
+                                                            <span class="block truncate font-medium">{title}</span>
+                                                            {unavailable_reason
+                                                                .map(|reason| {
+                                                                    view! {
+                                                                        <span class="mt-0.5 block truncate text-xs text-muted">
+                                                                            {reason}
+                                                                        </span>
+                                                                    }
+                                                                    .into_any()
+                                                                })
+                                                                .unwrap_or_else(|| view! {}.into_any())}
                                                         </div>
-                                                        <Show when=move || is_sel>
+                                                        <Show when=move || is_sel && !is_unavailable>
                                                             <ArrowRight class="w-4 h-4 text-accent opacity-0 group-hover:opacity-100 transition-opacity"/>
                                                         </Show>
                                                     </button>

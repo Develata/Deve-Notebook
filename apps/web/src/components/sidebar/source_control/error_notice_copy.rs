@@ -4,7 +4,8 @@
 //!
 use crate::hooks::use_core::source_control_notice::{
     SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
-    is_git_import_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
+    is_establish_branch_unavailable_notice, is_git_import_cli_notice, is_git_push_cli_notice,
+    is_git_repair_cli_notice,
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
 
@@ -21,10 +22,16 @@ pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
     if is_git_repair_cli_notice(notice) {
         return sc::git_repair_cli_only_title(locale).to_string();
     }
+    if is_establish_branch_unavailable_notice(notice) {
+        return sc::establish_branch_unavailable_title(locale).to_string();
+    }
     server_error::message(locale, notice.code).to_string()
 }
 
 pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
+    if is_establish_branch_unavailable_notice(notice) {
+        return sc::establish_branch_unavailable_hint(locale).to_string();
+    }
     if is_git_import_cli_notice(notice) {
         return sc::git_import_cli_only_hint(locale).to_string();
     }
@@ -123,5 +130,16 @@ mod tests {
                 .iter()
                 .any(|line| line.contains("retry-out-of-sync"))
         );
+    }
+
+    #[test]
+    fn establish_branch_notice_uses_unavailable_copy() {
+        let notice = SourceControlNotice::establish_branch_unavailable();
+
+        assert_eq!(
+            title(Locale::En, &notice),
+            sc::establish_branch_unavailable_title(Locale::En)
+        );
+        assert!(hint(Locale::Zh, &notice).contains("P2P: Merge Peer"));
     }
 }

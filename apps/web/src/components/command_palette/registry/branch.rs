@@ -1,76 +1,34 @@
 //! plan_ref:
 //!   - 12_commands#command-palette-shortcuts
-//!   - 07_diff_logic#git-mirror-lifecycle
 //!
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::{SourceControlContext, source_control_notice::SourceControlNotice};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
-fn show_source_control_notice(
-    source_control: Option<SourceControlContext>,
-    notice: SourceControlNotice,
-    set_show: WriteSignal<bool>,
-) {
-    if let Some(source_control) = source_control {
-        source_control.set_notice.set(Some(notice));
-    }
-    set_show.set(false);
-}
-
-pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
+pub(super) fn establish_branch_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
     let source_control = use_context::<SourceControlContext>();
-    Command::available(
-        "git_import_changes",
-        (t::command_palette::git_import_changes)(locale),
+    Command::unavailable(
+        "establish_branch",
+        (t::command_palette::establish_branch)(locale),
+        (t::command_palette::establish_branch_unavailable_reason)(locale),
         Callback::new(move |_| {
-            show_source_control_notice(
-                source_control.clone(),
-                SourceControlNotice::git_import_cli_only(),
-                set_show,
-            );
-        }),
-    )
-}
-
-pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
-    Command::available(
-        "git_push_mirror",
-        (t::command_palette::git_push_mirror)(locale),
-        Callback::new(move |_| {
-            show_source_control_notice(
-                source_control.clone(),
-                SourceControlNotice::git_push_cli_only(),
-                set_show,
-            );
-        }),
-    )
-}
-
-pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
-    Command::available(
-        "git_repair_mirror",
-        (t::command_palette::git_repair_mirror)(locale),
-        Callback::new(move |_| {
-            show_source_control_notice(
-                source_control.clone(),
-                SourceControlNotice::git_repair_cli_only(),
-                set_show,
-            );
+            if let Some(source_control) = source_control.clone() {
+                source_control
+                    .set_notice
+                    .set(Some(SourceControlNotice::establish_branch_unavailable()));
+            }
+            set_show.set(false);
         }),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{git_import_command, git_push_command, git_repair_command};
-    use crate::components::command_palette::types::Command;
+    use super::establish_branch_command;
     use crate::hooks::use_core::diff_session::DiffSessionWire;
     use crate::hooks::use_core::source_control_notice::{
-        SourceControlNotice, is_git_import_cli_notice, is_git_push_cli_notice,
-        is_git_repair_cli_notice,
+        SourceControlNotice, is_establish_branch_unavailable_notice,
     };
     use crate::hooks::use_core::write_gate::RepoWriteBlock;
     use crate::hooks::use_core::{PendingBranchTarget, SourceControlContext};
@@ -138,64 +96,21 @@ mod tests {
         notice
     }
 
-    fn assert_cli_notice_command(
-        command: Command,
-        show: ReadSignal<bool>,
-        notice: ReadSignal<Option<SourceControlNotice>>,
-        is_expected_notice: fn(&SourceControlNotice) -> bool,
-    ) {
-        command.action.run(());
-
-        assert!(!show.get_untracked());
-        let notice = notice.get_untracked().expect("source control notice");
-        assert!(is_expected_notice(&notice));
-    }
-
     #[test]
-    fn git_import_command_sets_cli_only_notice() {
+    fn establish_branch_command_is_unavailable_notice_only() {
         let owner = Owner::new();
         owner.with(|| {
             let notice = provide_source_control_context();
             let (show, set_show) = signal(true);
+            let command = establish_branch_command(Locale::En, set_show);
 
-            assert_cli_notice_command(
-                git_import_command(Locale::En, set_show),
-                show,
-                notice,
-                is_git_import_cli_notice,
-            );
-        });
-    }
+            assert!(command.availability.is_unavailable());
 
-    #[test]
-    fn git_push_command_sets_cli_only_notice() {
-        let owner = Owner::new();
-        owner.with(|| {
-            let notice = provide_source_control_context();
-            let (show, set_show) = signal(true);
+            command.action.run(());
 
-            assert_cli_notice_command(
-                git_push_command(Locale::En, set_show),
-                show,
-                notice,
-                is_git_push_cli_notice,
-            );
-        });
-    }
-
-    #[test]
-    fn git_repair_command_sets_cli_only_notice() {
-        let owner = Owner::new();
-        owner.with(|| {
-            let notice = provide_source_control_context();
-            let (show, set_show) = signal(true);
-
-            assert_cli_notice_command(
-                git_repair_command(Locale::En, set_show),
-                show,
-                notice,
-                is_git_repair_cli_notice,
-            );
+            assert!(!show.get_untracked());
+            let notice = notice.get_untracked().expect("source control notice");
+            assert!(is_establish_branch_unavailable_notice(&notice));
         });
     }
 }

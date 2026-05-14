@@ -123,6 +123,24 @@ pub fn selected_item_unavailable(locale: Locale) -> &'static str {
     }
 }
 
+pub fn establish_branch_unavailable_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "P2P branch creation is unavailable",
+        Locale::Zh => "P2P 分支创建不可用",
+    }
+}
+
+pub fn establish_branch_unavailable_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Current Web runtime can switch to peer branches and run P2P: Merge Peer; creating a new local branch from a peer branch has no backend contract yet."
+        }
+        Locale::Zh => {
+            "当前 Web runtime 可以切换到 peer 分支并执行 P2P: Merge Peer；从 peer 分支创建本地分支尚无后端合同。"
+        }
+    }
+}
+
 pub fn loading_commit_diff(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Loading commit diff...",

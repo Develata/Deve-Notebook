@@ -58,6 +58,19 @@
   assertions:
     - ui_assert: branch_switcher_visible true
 
+- case_id: CMD-004A
+  goal: 未绑定后端的 P2P branch 创建入口必须显示 unavailable 状态。
+  preconditions:
+    - Command Palette 可用
+  steps:
+    - ui_keypress: "Ctrl+Shift+P"
+    - ui_command: "P2P: Establish Branch"
+    - run: scripts/check-source-control-baseline.sh
+    - run: cargo test -p deve_web establish_branch_command -- --nocapture
+  assertions:
+    - ui_assert: command_unavailable "establish_branch"
+    - ui_assert: source_control_notice_eq "establish-branch-unavailable"
+
 - case_id: CMD-005
   goal: AI 模式与斜杠命令。
   preconditions:

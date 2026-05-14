@@ -57,6 +57,13 @@ pub fn establish_branch(locale: Locale) -> &'static str {
     }
 }
 
+pub fn establish_branch_unavailable_reason(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Unavailable: no branch creation backend",
+        Locale::Zh => "不可用：尚无分支创建后端",
+    }
+}
+
 pub fn merge_peer(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "P2P: Merge Peer",
@@ -119,6 +126,10 @@ mod tests {
 
     #[test]
     fn git_bridge_commands_are_localized() {
+        assert_eq!(
+            establish_branch_unavailable_reason(Locale::Zh),
+            "不可用：尚无分支创建后端"
+        );
         assert_eq!(git_import_changes(Locale::En), "Git: Import Changes");
         assert_eq!(git_import_changes(Locale::Zh), "Git: 导入外部变更");
         assert_eq!(git_push_mirror(Locale::En), "Git: Push Mirror");

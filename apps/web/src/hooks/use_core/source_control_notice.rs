@@ -8,6 +8,7 @@ pub const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
 pub const GIT_IMPORT_CLI_NOTICE_DETAIL: &str = "git-import-cli-only";
 pub const GIT_PUSH_CLI_NOTICE_DETAIL: &str = "git-push-cli-only";
 pub const GIT_REPAIR_CLI_NOTICE_DETAIL: &str = "git-repair-cli-only";
+pub const ESTABLISH_BRANCH_UNAVAILABLE_DETAIL: &str = "establish-branch-unavailable";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceControlNotice {
@@ -43,6 +44,13 @@ impl SourceControlNotice {
             detail: Some(GIT_REPAIR_CLI_NOTICE_DETAIL.to_string()),
         }
     }
+
+    pub fn establish_branch_unavailable() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL.to_string()),
+        }
+    }
 }
 
 pub fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
@@ -68,6 +76,10 @@ pub fn is_git_repair_cli_notice(notice: &SourceControlNotice) -> bool {
     notice.detail.as_deref() == Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
 }
 
+pub fn is_establish_branch_unavailable_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
+}
+
 pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
     matches!(
         code,
@@ -88,9 +100,10 @@ pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        DELETED_NO_DOC_ID_NOTICE_PREFIX, GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_PUSH_CLI_NOTICE_DETAIL,
-        GIT_REPAIR_CLI_NOTICE_DETAIL, SourceControlNotice, deleted_no_doc_id_path,
-        is_deleted_no_doc_id_notice, is_git_import_cli_notice, is_git_push_cli_notice,
+        DELETED_NO_DOC_ID_NOTICE_PREFIX, ESTABLISH_BRANCH_UNAVAILABLE_DETAIL,
+        GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_PUSH_CLI_NOTICE_DETAIL, GIT_REPAIR_CLI_NOTICE_DETAIL,
+        SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
+        is_establish_branch_unavailable_notice, is_git_import_cli_notice, is_git_push_cli_notice,
         is_git_repair_cli_notice, is_source_control_error,
     };
     use deve_core::protocol::{ServerError, ServerErrorCode};
@@ -150,5 +163,14 @@ mod tests {
             Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
         );
         assert!(is_git_repair_cli_notice(&repair_notice));
+
+        let establish_branch_notice = SourceControlNotice::establish_branch_unavailable();
+        assert_eq!(
+            establish_branch_notice.detail.as_deref(),
+            Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
+        );
+        assert!(is_establish_branch_unavailable_notice(
+            &establish_branch_notice
+        ));
     }
 }

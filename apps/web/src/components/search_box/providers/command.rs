@@ -30,7 +30,7 @@ impl SearchProvider for CommandProvider {
                 .map(|cmd| SearchResult {
                     id: cmd.id.clone(),
                     title: cmd.title.clone(),
-                    detail: Some(t::search::command_detail(self.locale).to_string()),
+                    detail: Some(command_result_detail(cmd, self.locale)),
                     score: 1.0,
                     action: SearchAction::RunCommand(cmd.clone()),
                 })
@@ -48,7 +48,7 @@ impl SearchProvider for CommandProvider {
             .map(|(cmd, score)| SearchResult {
                 id: cmd.id.clone(),
                 title: cmd.title.clone(),
-                detail: Some(t::search::command_detail(self.locale).to_string()),
+                detail: Some(command_result_detail(cmd, self.locale)),
                 score,
                 action: SearchAction::RunCommand(cmd.clone()),
             })
@@ -58,6 +58,13 @@ impl SearchProvider for CommandProvider {
         results.truncate(20);
         results
     }
+}
+
+fn command_result_detail(cmd: &Command, locale: Locale) -> String {
+    cmd.availability
+        .reason()
+        .map(str::to_string)
+        .unwrap_or_else(|| t::search::command_detail(locale).to_string())
 }
 
 fn command_match_score(query: &str, cmd: &Command) -> f32 {
@@ -80,12 +87,11 @@ mod tests {
     use leptos::prelude::Callback;
 
     fn command(id: &str, title: &str) -> Command {
-        Command {
-            id: id.to_string(),
-            title: title.to_string(),
-            action: Callback::new(|_| {}),
-            is_file: false,
-        }
+        Command::available(id, title, Callback::new(|_| {}))
+    }
+
+    fn unavailable_command(id: &str, title: &str, reason: &str) -> Command {
+        Command::unavailable(id, title, reason, Callback::new(|_| {}))
     }
 
     #[test]
@@ -121,6 +127,25 @@ mod tests {
         assert_eq!(
             results.first().map(|result| result.id.as_str()),
             Some("git_push_mirror")
+        );
+    }
+
+    #[test]
+    fn command_provider_exposes_unavailable_reason_as_detail() {
+        let provider = CommandProvider::new(
+            vec![unavailable_command(
+                "establish_branch",
+                "P2P: Establish Branch",
+                "Unavailable: no branch creation backend",
+            )],
+            Locale::En,
+        );
+
+        let results = provider.search(">establish");
+
+        assert_eq!(
+            results.first().and_then(|result| result.detail.as_deref()),
+            Some("Unavailable: no branch creation backend")
         );
     }
 }
