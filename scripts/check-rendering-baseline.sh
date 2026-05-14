@@ -53,6 +53,13 @@ contains apps/web/src/components/outline_render/scan.rs "pub(super) fn next_char
 contains apps/web/src/components/outline_render/parse_test.rs "outline_scan_helpers_fail_soft_on_non_char_boundary_start"
 absent apps/web/src/components/outline_render/parse.rs "chars().next().unwrap()"
 absent apps/web/src/components/outline_render/scan.rs "chars().next().unwrap()"
+contains docs/features/operations/rendering_link_activation_gate.md "apps/web/src/hooks/use_ctrl_key.rs"
+contains apps/web/src/hooks/use_ctrl_key.rs "fn body() -> Option<web_sys::HtmlElement>"
+contains apps/web/src/hooks/use_ctrl_key.rs "fn browser_window() -> Option<web_sys::Window>"
+contains apps/web/src/hooks/use_ctrl_key.rs "ctrl_key_dom_helpers_fail_soft_without_browser_window"
+absent apps/web/src/hooks/use_ctrl_key.rs "expect(\"window\")"
+absent apps/web/src/hooks/use_ctrl_key.rs "expect(\"document\")"
+absent apps/web/src/hooks/use_ctrl_key.rs "body().unwrap()"
 
 # CodeMirror toolbar keeps only the extension point by default; future actions must register real handlers.
 contains docs/acceptance-cases/03_rendering.md 'menu_empty_state_text "No actions available"'

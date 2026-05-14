@@ -21,8 +21,9 @@ use leptos::prelude::*;
 pub fn use_ctrl_key() {
     // Keydown: Add class when Ctrl/Meta pressed
     window_event_listener(leptos::ev::keydown, move |ev: web_sys::KeyboardEvent| {
-        if (ev.ctrl_key() || ev.meta_key()) && document().body().is_some() {
-            let body = document().body().unwrap();
+        if (ev.ctrl_key() || ev.meta_key())
+            && let Some(body) = body()
+        {
             let _ = body.class_list().add_1("is-ctrl-pressed");
         }
     });
@@ -30,24 +31,46 @@ pub fn use_ctrl_key() {
     // Keyup: Remove class when Ctrl/Meta released
     window_event_listener(leptos::ev::keyup, move |ev: web_sys::KeyboardEvent| {
         let key = ev.key();
-        if (key == "Control" || key == "Meta") && document().body().is_some() {
-            let body = document().body().unwrap();
+        if (key == "Control" || key == "Meta")
+            && let Some(body) = body()
+        {
             let _ = body.class_list().remove_1("is-ctrl-pressed");
         }
     });
 
     // Blur: Clear state when window loses focus (edge case protection)
     window_event_listener(leptos::ev::blur, move |_| {
-        if let Some(body) = document().body() {
+        if let Some(body) = body() {
             let _ = body.class_list().remove_1("is-ctrl-pressed");
         }
     });
 }
 
-/// Helper: Get document from window.
-fn document() -> web_sys::Document {
+fn body() -> Option<web_sys::HtmlElement> {
+    document()?.body()
+}
+
+fn document() -> Option<web_sys::Document> {
+    browser_window()?.document()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn browser_window() -> Option<web_sys::Window> {
     web_sys::window()
-        .expect("window")
-        .document()
-        .expect("document")
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn browser_window() -> Option<web_sys::Window> {
+    None
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::{body, document};
+
+    #[test]
+    fn ctrl_key_dom_helpers_fail_soft_without_browser_window() {
+        assert!(document().is_none());
+        assert!(body().is_none());
+    }
 }
