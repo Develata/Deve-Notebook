@@ -6,12 +6,12 @@
 
 ## 当前执行队列
 
-1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
-2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton。
-3. Concrete Current MUST selection：`mainline-gap-scan-after-full-regression-2026-05-14.md` 未发现新的 unblocked 主线缺口；若前两项继续不开放，下一批必须由用户指定一个非平台化 Current MUST，或明确授权新的 browser smoke / module audit。不得继续空转式重复 gap scan。
+1. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton。
+2. Concrete Current MUST selection：`mainline-gap-scan-after-full-regression-2026-05-14.md` 未发现新的 unblocked 主线缺口；若 native packaging 继续不开放，下一批必须由用户指定一个非平台化 Current MUST，或明确授权新的 browser smoke / module audit。不得继续空转式重复 gap scan。
 
 ## 最近完成
 
+- Error-code catalog plan alignment：新增 `error-code-catalog-plan-alignment-2026-05-14.md`，在 `11_i18n.md#i18n-error-code-catalog` 补齐 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED`，关闭已知小范围 plan catalog drift。
 - Mainline gap scan after full regression：新增 `mainline-gap-scan-after-full-regression-2026-05-14.md`，复跑 plan/code 双射、acceptance/features、architecture、domain baselines、native/release gates 与 UI/AI/WS 细分 guard，并引用上一批 full regression/runtime smoke 结果；未发现新的 unblocked Current MUST。
 - Full regression gate refresh：新增 `full-regression-gate-refresh-2026-05-14.md`，复跑 full workspace `cargo test`、`cargo clippy --all-targets -- -D warnings`、format/diff hygiene、plan coverage、runtime happy/recovery smoke；修正 Web protocol-error chat test 的 localized server-error copy 断言，并收敛 wasm-only WS port parser helper 的 cfg。
 - Mainline gap scan after Chrome smoke：新增 `mainline-gap-scan-after-chrome-smoke-2026-05-14.md`，复跑 plan/code 双射、acceptance/features、architecture、主线 baseline、runtime happy/recovery 与 release audit；未发现新的 unblocked Current MUST，下一步推进到完整回归闸门刷新。
