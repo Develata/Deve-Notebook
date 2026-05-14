@@ -122,6 +122,13 @@ contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/n
 contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_SMOKE_AUTH_PASSWORD"
 contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/auth/login"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-005"
+contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-001"
+contains "docs/acceptance-cases/12_tech_release.md" "tags: ['v*']"
+contains "docs/acceptance-cases/12_tech_release.md" "type=semver,pattern={{version}}"
+contains "docs/acceptance-cases/12_tech_release.md" "type=raw,value=latest"
+contains "docs/acceptance-cases/12_tech_release.md" 'ghcr.io/${{ github.repository }}'
+not_contains "docs/acceptance-cases/12_tech_release.md" "run: ls dist"
+not_contains "docs/acceptance-cases/12_tech_release.md" 'stdout_contains: "v1.0.0"'
 contains "docs/acceptance-cases/12_tech_release.md" "DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-006"
 contains "docs/acceptance-cases/12_tech_release.md" "case_id: REL-007"

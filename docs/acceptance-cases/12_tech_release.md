@@ -31,13 +31,17 @@
     - stdout_contains: "profile = 'low-spec'"
 
 - case_id: REL-001
-  goal: Release Channels 命名规范。
+  goal: 当前 release channel 由 tag-triggered GHCR/Docker surface 表达。
   preconditions:
-    - 构建 stable release
+    - `.github/workflows/release.yml` 可读
   steps:
-    - run: ls dist
+    - run: scripts/check-release-baseline.sh
+    - run: rg -n "tags: \\['v\\*'\\]|type=semver,pattern=\\{\\{version\\}\\}|type=raw,value=latest|ghcr.io/\\$\\{\\{ github.repository \\}\\}" .github/workflows/release.yml
   assertions:
-    - stdout_contains: "v1.0.0"
+    - stdout_contains: "tags: ['v*']"
+    - stdout_contains: "type=semver,pattern={{version}}"
+    - stdout_contains: "type=raw,value=latest"
+    - stdout_contains: "ghcr.io/${{ github.repository }}"
 
 - case_id: REL-002
   goal: Docker 部署可用。

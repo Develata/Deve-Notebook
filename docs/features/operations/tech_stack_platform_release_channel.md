@@ -30,11 +30,11 @@
 ### `op.tech.platform.verify-release-channel`
 
 - `Name`: `Verify Release Channel`
-- `Surface`: `ci-or-dist`
-- `Trigger`: release artifact or tag is prepared
+- `Surface`: `ci-or-registry-metadata`
+- `Trigger`: release workflow metadata or tag is prepared
 - `Preconditions`: release naming and channel rules are known
 - `Immediate Result`: stable, preview, and future channels remain distinguishable
-- `Application Entry`: `.github/workflows/release.yml`, `dist/`
+- `Application Entry`: `.github/workflows/release.yml`
 
 ### `op.tech.platform.verify-container`
 

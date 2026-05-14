@@ -12,8 +12,16 @@
     - run: deve serve --dry-run
     - run: deve dump --help
     - run: deve export --help
+    - run: deve graph --help
     - run: deve verify-p2p --help
     - run: deve seed --help
+    - run: deve node-check --help
+    - run: deve sc-status --help
+    - run: deve git status --help
+    - run: deve git mirror --help
+    - run: deve git export --help
+    - run: deve git import --help
+    - run: deve git push --help
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli main -- --nocapture
   assertions:

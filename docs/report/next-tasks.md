@@ -8,10 +8,11 @@
 
 1. Error-code catalog plan patch：只在明确允许修改 `docs/plan/` 时，将 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED` 补入 `11_i18n.md`；否则继续保持 plan 不动。
 2. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton，并回到 mainline implementation gap scan。
-3. Acceptance/release guard cleanup：修复 letter-suffixed acceptance ID 解析、补 CLI baseline 覆盖，并更新过时 `REL-001` release artifact 验收。
+3. Mainline implementation gap scan：重新按 `docs/plan × features × acceptance-cases × code` 选择下一批非平台化缺口；默认不打开 native packaging gate，不修改 `docs/plan/`。
 
 ## 最近完成
 
+- Acceptance / release guard cleanup：新增 `acceptance-release-guard-cleanup-2026-05-14.md`，修复 letter-suffixed acceptance ID 解析、补齐 CLI baseline command surface，并将 `REL-001` 从过时 `dist/v1.0.0` 验收改为当前 GHCR/Docker release workflow surface。
 - Mobile PendingAck scope filter：新增 `mobile-pending-ack-scope-filter-2026-05-14.md`，移动端 footer pending 状态复用 repo/scope 过滤，避免旧 scope pending 污染当前状态。
 - WS text-frame debug gate：新增 `ws-text-frame-debug-gate-2026-05-14.md`，将 versioned JSON text 与 legacy JSON text 一并收敛到显式 debug flag，生产默认只接受 versioned binary。
 - Auth hardening batch：新增 `auth-hardening-batch-2026-05-14.md`，修复 `AUTH_USER` token subject 硬编码与 `AUTH_PASS` PHC 启动校验，并扩展 auth baseline guard。

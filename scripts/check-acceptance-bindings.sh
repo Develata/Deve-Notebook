@@ -29,7 +29,7 @@ record_error() {
 while IFS= read -r case_id; do
   [[ -n "$case_id" ]] || continue
   case_set["$case_id"]=1
-done < <(grep -RhoE 'case_id: [A-Z][A-Z0-9-]*-[0-9]+' "$ACCEPTANCE_DIR"/*.md 2>/dev/null | awk '{ print $2 }' | sort -u)
+done < <(grep -RhoE 'case_id: [A-Z][A-Z0-9]*(-[A-Z0-9]+)*' "$ACCEPTANCE_DIR"/*.md 2>/dev/null | awk '{ print $2 }' | sort -u)
 
 if [[ -f "$ACCEPTANCE_BINDINGS" ]]; then
   while IFS='|' read -r case_id binding evidence note; do

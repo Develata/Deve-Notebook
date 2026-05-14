@@ -21,11 +21,11 @@
 ### `op.release.verify.inspect-release-channel`
 
 - `Name`: `Inspect Release Channel Surface`
-- `Surface`: `ci-or-dist`
+- `Surface`: `ci-or-registry-metadata`
 - `Trigger`: maintainer verifies naming and channel exposure
-- `Preconditions`: tag or release artifact metadata is available
+- `Preconditions`: release workflow and Docker metadata are readable
 - `Immediate Result`: stable release channel remains distinguishable from future channels
-- `Application Entry`: `.github/workflows/release.yml`, `dist/`
+- `Application Entry`: `.github/workflows/release.yml`
 
 ### `op.release.verify.verify-container-delivery`
 
