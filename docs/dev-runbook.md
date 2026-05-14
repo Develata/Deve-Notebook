@@ -331,7 +331,10 @@ DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos 
 ```
 
 The helper is dry-run by default and requires an authenticated GitHub CLI before
-it can dispatch the manual workflow.
+it can dispatch the manual workflow. If `gh` is unavailable, the helper can use
+`DEVE_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` plus `curl`; set
+`DEVE_NATIVE_TARGET_HOST_REPOSITORY=owner/repo` when the repository cannot be
+derived from `origin`.
 
 ## Mobile Package Build Preflight
 
