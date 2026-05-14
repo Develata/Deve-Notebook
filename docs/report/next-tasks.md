@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Native endpoint port validation：新增 `native-endpoint-port-validation-2026-05-14.md`，将 Native endpoint validator 的显式端口校验从“数字即可”收敛为有效非零 `u16`，Web native bootstrap 继承同一 `InvalidEndpoint` fail-closed 语义。
 - WS port query validation：新增 `ws-port-query-validation-2026-05-14.md`，将 Web runtime 的 `?ws_port=` override 收敛为有效非零 `u16` 端口输入，避免 URL 外部输入生成无效 WebSocket candidate。
 - WS HTTP base derivation boundary：新增 `ws-http-base-derivation-boundary-2026-05-14.md`，将 Web node-role probe 的 WS-to-HTTP base 推导从全局字符串替换收敛为只处理 leading scheme 与末尾 `/ws`，避免边界输入中 path/query 文本被误改写。
 - Web API query encoding：新增 `web-api-query-encoding-2026-05-14.md`，为 Web HTTP adapter 增加共享 query component encoder，并覆盖 Graph projection 与 Git mirror readonly repair review 的 `repo_id` 参数，避免保留字符造成 query 结构歧义。

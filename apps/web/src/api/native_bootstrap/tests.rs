@@ -38,6 +38,18 @@ fn rejects_non_loopback_native_bootstrap() {
 }
 
 #[test]
+fn rejects_native_bootstrap_with_invalid_or_zero_port() {
+    assert_eq!(
+        parse("http://127.0.0.1:0", "ws://127.0.0.1:3001", true),
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidEndpoint)
+    );
+    assert_eq!(
+        parse("http://127.0.0.1:65536", "ws://127.0.0.1:3001", true),
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidEndpoint)
+    );
+}
+
+#[test]
 fn rejects_missing_native_bootstrap_fields() {
     assert_eq!(
         parse_native_bootstrap_fields(

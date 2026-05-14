@@ -18,7 +18,7 @@ pub enum NativeAdapterError {
     UserInfoForbidden { field: &'static str },
     #[error("{field} host must be 127.0.0.1 or localhost")]
     NonLoopbackHost { field: &'static str },
-    #[error("{field} port must be numeric")]
+    #[error("{field} port must be a non-zero TCP port")]
     InvalidPort { field: &'static str },
     #[error("{field} must be a base URL without path, query, or fragment")]
     NotBaseUrl { field: &'static str },
@@ -104,12 +104,17 @@ fn validate_loopback_base_url(
     if !matches!(host, "127.0.0.1" | "localhost") {
         return Err(NativeAdapterError::NonLoopbackHost { field });
     }
-    if let Some(port) = port
-        && (port.is_empty() || !port.as_bytes().iter().all(u8::is_ascii_digit))
-    {
-        return Err(NativeAdapterError::InvalidPort { field });
+    if let Some(port) = port {
+        validate_port(field, port)?;
     }
     Ok(())
+}
+
+fn validate_port(field: &'static str, port: &str) -> Result<(), NativeAdapterError> {
+    match port.parse::<u16>() {
+        Ok(port) if port > 0 => Ok(()),
+        _ => Err(NativeAdapterError::InvalidPort { field }),
+    }
 }
 
 fn split_host_port(authority: &str) -> (&str, Option<&str>) {
