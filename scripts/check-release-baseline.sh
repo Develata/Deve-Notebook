@@ -168,6 +168,7 @@ contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-basel
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-process-adapter-gate.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-target-host-evidence.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-desktop-package-preflight.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-desktop-platform-package-build.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-desktop-target-host-preflight.sh"

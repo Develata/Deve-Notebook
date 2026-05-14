@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Native Target-host Acceptance Alignment：将 `scripts/check-native-target-host-evidence.sh` 接入 `REL-005` release acceptance，并由 release baseline 反查；未改 `docs/plan/`，未执行目标机 package build，未打开 process runtime。
 - Native Target-host Evidence Validator：新增 `docs/report/native-target-host-evidence-template.md` 与 `scripts/check-native-target-host-evidence.sh`，目标机结果必须记录 host/tool/commands/artifacts/install/startup/no-process/no-authority/conclusion，避免 package evidence 缺字段；未改 `docs/plan/`，未打开 process runtime。
 - Native Target-host Manual Workflow：新增手动触发的 `.github/workflows/native-target-host.yml`，用于 macOS/Windows Desktop 与 iOS Mobile target-host diagnostic/preflight；默认不进入 release tag baseline，不执行 package build，iOS build 继续关闭；Desktop package build 显式打开时上传 package artifact，且每个 target-host job 复跑 process gate。
 - Mainline Gap Scan After Native Handoff：复跑 architecture registry、acceptance bindings、dev-runbook/release baselines、runtime happy/recovery smoke、native process gate 与 plan coverage；未发现新的 unblocked Current MUST，target-host package execution 仍是 native 方向唯一阻塞。
