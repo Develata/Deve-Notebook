@@ -6,7 +6,7 @@
 //!
 //! 启动文件系统监听，实时捕获变更并同步到 Ledger。
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use deve_core::ledger::RepoManager;
 use std::path::Path;
 use std::sync::Arc;
@@ -44,6 +44,7 @@ pub fn run(
         println!("Watcher dry-run OK: {:?}", vault_path);
         return Ok(());
     }
+    install_shutdown_handler()?;
     sync_manager.scan()?;
     let repo_ids = sync_manager
         .healthy_local_repo_names_for_execution()?
@@ -57,13 +58,6 @@ pub fn run(
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
-
-    // 3. 注册 Ctrl+C 信号处理 (必须在 watcher.watch() 之前)
-    ctrlc::set_handler(move || {
-        println!("\n收到退出信号，正在停止...");
-        RUNNING.store(false, Ordering::SeqCst);
-    })
-    .expect("无法设置 Ctrl+C 处理器");
 
     // 4. 创建并启动 Watcher
     println!("启动 Watcher: {:?}", vault_path);
@@ -81,9 +75,21 @@ pub fn run(
     Ok(())
 }
 
+fn install_shutdown_handler() -> Result<()> {
+    ctrlc::set_handler(shutdown_signal_handler()).context("Failed to set Ctrl-C handler")
+}
+
+fn shutdown_signal_handler() -> impl FnMut() + Send + 'static {
+    || {
+        println!("\n收到退出信号，正在停止...");
+        RUNNING.store(false, Ordering::SeqCst);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::run;
+    use super::{RUNNING, run, shutdown_signal_handler};
+    use std::sync::atomic::Ordering;
     use tempfile::TempDir;
 
     #[test]
@@ -94,5 +100,16 @@ mod tests {
         std::fs::create_dir_all(&vault_dir).expect("create vault");
 
         run(&ledger_dir, &vault_dir, 8, true).expect("watch dry-run");
+    }
+
+    #[test]
+    fn shutdown_signal_handler_marks_watch_loop_stopped() {
+        RUNNING.store(true, Ordering::SeqCst);
+        let mut handler = shutdown_signal_handler();
+
+        handler();
+
+        assert!(!RUNNING.load(Ordering::SeqCst));
+        RUNNING.store(true, Ordering::SeqCst);
     }
 }

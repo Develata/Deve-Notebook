@@ -66,6 +66,9 @@ check_contains docs/acceptance-cases/11_commands_settings.md "deve git mirror --
 check_contains docs/acceptance-cases/11_commands_settings.md "deve git export --help"
 check_contains docs/acceptance-cases/11_commands_settings.md "deve git import --help"
 check_contains docs/acceptance-cases/11_commands_settings.md "deve git push --help"
+check_contains apps/cli/src/commands/watch.rs "install_shutdown_handler()?"
+check_contains apps/cli/src/commands/watch.rs "Failed to set Ctrl-C handler"
+check_absent apps/cli/src/commands/watch.rs "无法设置 Ctrl+C 处理器"
 
 # config.toml remains the current authoritative runtime settings file.
 check_contains apps/cli/src/commands/config.rs "const CONFIG_FILE: &str = \"config.toml\";"
