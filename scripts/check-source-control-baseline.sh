@@ -101,6 +101,8 @@ check_absent apps/cli/src/server/source_control_proxy/client.rs 'expect("build s
 check_absent apps/cli/src/server/handlers/source_control/repo_scope.rs 'expect("checked active branch")'
 check_absent apps/cli/src/server/repo_scope/sync.rs 'expect("checked active branch")'
 check_absent apps/cli/src/server/handlers/switcher/switcher_scope.rs 'expect("checked active branch")'
+check_absent apps/cli/src/commands/git_output/status.rs 'expect("lagging record rendered retry command")'
+check_contains apps/cli/src/commands/git_output/status.rs 'let retry_command = git_command("export", repo_name, true);'
 check_contains apps/web/src/api/git_mirror.rs "scope_nonce={scope_nonce}"
 check_contains apps/web/src/components/sidebar/source_control/error_notice.rs "current_scope_nonce.get_untracked() == scope_nonce"
 check_contains apps/web/src/components/sidebar/source_control/commit_actions.rs "on_commit_and_push.run(())"

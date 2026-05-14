@@ -50,7 +50,7 @@ pub(super) fn status_lines_at(
     }
     lines.push(format!("  repo_root: {}", status.repo_root.display()));
 
-    let mut retry_command = None;
+    let retry_command = git_command("export", repo_name, true);
     let mut lagging_count = 0usize;
     let mut lagging_lines = Vec::new();
     for record in records.iter().filter(|record| {
@@ -60,8 +60,6 @@ pub(super) fn status_lines_at(
         )
     }) {
         lagging_count += 1;
-        let retry_command =
-            retry_command.get_or_insert_with(|| git_command("export", repo_name, true));
         lagging_lines.extend(record_detail_lines(
             "lag",
             lagging_count,
@@ -78,7 +76,6 @@ pub(super) fn status_lines_at(
 
     lines.push(format!("  lagging_records={lagging_count}"));
     lines.extend(lagging_lines);
-    let retry_command = retry_command.expect("lagging record rendered retry command");
 
     if summary.queued > 0 {
         lines.push(format!(
