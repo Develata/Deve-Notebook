@@ -27,6 +27,8 @@ check_absent() {
 check_contains crates/core/src/security/auth/config.rs "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
 check_contains crates/core/src/security/auth/config.rs "AUTH_SECRET must be >= 32 bytes"
 check_contains crates/core/src/security/auth/config.rs "AUTH_PASS must be a valid Argon2 PHC hash"
+check_contains crates/core/src/security/auth/config.rs "missing_secret_or_password_fails_closed_in_production"
+check_absent crates/core/src/security/auth/config.rs 'expect("checked above")'
 check_contains apps/cli/src/server/router.rs "WARNING: development-only auth defaults active"
 check_contains crates/core/src/security/auth/jwt.rs "sub"
 check_contains crates/core/src/security/auth/jwt.rs "iat"

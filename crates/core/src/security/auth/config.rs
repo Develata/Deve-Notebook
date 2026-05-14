@@ -41,19 +41,20 @@ impl AuthConfig {
         let secret = std::env::var("AUTH_SECRET").ok();
         let password_hash = std::env::var("AUTH_PASS").ok();
 
-        if secret.is_none() || password_hash.is_none() {
-            if is_dev_mode {
+        let (secret, password_hash) = match (secret, password_hash) {
+            (Some(secret), Some(password_hash)) => (secret, password_hash),
+            _ if is_dev_mode => {
                 tracing::warn!(
                     "DEVE_ENV=development detected → using dev defaults (INSECURE for production)"
                 );
                 return Self::dev_default();
             }
-            return Err(anyhow!(
-                "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
-            ));
-        }
-
-        let secret = secret.expect("checked above");
+            _ => {
+                return Err(anyhow!(
+                    "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
+                ));
+            }
+        };
 
         if secret.len() < 32 {
             return Err(anyhow!(
@@ -63,7 +64,6 @@ impl AuthConfig {
         }
 
         let username = std::env::var("AUTH_USER").unwrap_or_else(|_| "admin".into());
-        let password_hash = password_hash.expect("checked above");
         password::validate_argon2_phc(&password_hash)
             .map_err(|err| anyhow!("AUTH_PASS must be a valid Argon2 PHC hash: {}", err))?;
 
@@ -143,6 +143,26 @@ mod tests {
         assert!(
             err.to_string()
                 .contains("AUTH_PASS must be a valid Argon2 PHC hash")
+        );
+        drop(env);
+    }
+
+    #[test]
+    fn missing_secret_or_password_fails_closed_in_production() {
+        let _lock = ENV_LOCK.lock().expect("env test lock");
+        let env = EnvGuard::set(&[
+            ("DEVE_ENV", Some("production")),
+            ("AUTH_SECRET", None),
+            ("AUTH_PASS", None),
+            ("AUTH_USER", None),
+            ("AUTH_ALLOW_ANONYMOUS_LOCALHOST", None),
+            ("AUTH_TOKEN_VERSION", None),
+        ]);
+
+        let err = AuthConfig::from_env().expect_err("missing production auth must fail closed");
+        assert!(
+            err.to_string()
+                .contains("Production mode requires AUTH_SECRET and AUTH_PASS")
         );
         drop(env);
     }
