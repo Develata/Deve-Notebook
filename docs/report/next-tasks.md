@@ -12,6 +12,7 @@
 
 ## 最近完成
 
+- Code toolbar default action boundary：新增 `code-toolbar-default-action-boundary-2026-05-14.md`，移除 Web 初始化中的 `Run Code` / `Send to AI` 默认占位动作，只保留 `deve_code_actions` 扩展点；当前默认行为回到 `RENDER-CODE-001` 的空菜单状态，并用 rendering baseline 防回归。
 - Watcher lifecycle duplicate start gate：新增 `watcher-lifecycle-duplicate-start-gate-2026-05-14.md`，为同一 repo 重复启动 watcher 增加启动前 registry gate，并在竞态 rejected handle 上显式 `stop + join`，避免 orphan watcher runtime。
 - Mainline gap rescan after watcher lifecycle：新增 `mainline-gap-rescan-after-watcher-lifecycle-2026-05-14.md`，复跑 runtime happy/recovery smoke、plan coverage、release/dev-runbook/native guards 与 Web dependency audit；当前未发现 unblocked 主线代码缺口，下一步收敛为 Chrome MCP 隔离浏览器 smoke refresh。
 - Chrome MCP isolated browser smoke refresh：新增 `chrome-mcp-isolated-browser-smoke-refresh-2026-05-14.md`，用隔离数据根验证登录、Ready、新建、编辑写回、reload 读回、强制断线与同数据根重连恢复；最终稳定态 console/network 健康，未发现代码缺陷。

@@ -50,6 +50,13 @@ contains apps/web/src/components/chat/message_list.rs "chat_apply_click_is_consu
 contains apps/web/src/components/chat/actions/apply.rs "chat_apply_edit_message_carries_current_scope_nonce"
 contains scripts/check-ai-baseline.sh "chat_apply_edit_message_carries_current_scope_nonce"
 
+# CodeMirror toolbar keeps only the extension point by default; future actions must register real handlers.
+contains docs/acceptance-cases/03_rendering.md 'menu_empty_state_text "No actions available"'
+contains apps/web/js/init.js "window.deve_code_actions = window.deve_code_actions || [];"
+absent apps/web/js/init.js "Run Code"
+absent apps/web/js/init.js "Send to AI"
+absent apps/web/js/init.js "TODO: Connect to backend"
+
 # Current release must not claim full renderer or settings persistence as implemented.
 absent docs/features/03_rendering.md "完整 preview mode 已实现"
 absent docs/features/03_rendering.md "完整 virtual rendering 已实现"
