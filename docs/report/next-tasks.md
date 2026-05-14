@@ -6,11 +6,13 @@
 
 ## 当前执行队列
 
-1. Native packaging gate opening decision：只有明确批准打开 `native-packaging` dependency gate 时，才执行 `NPG-1 Desktop Packaging Dependency Spike`；否则继续保持 no-Tauri skeleton。
-2. Concrete Current MUST selection：`mainline-gap-scan-after-full-regression-2026-05-14.md` 未发现新的 unblocked 主线缺口；若 native packaging 继续不开放，下一批必须由用户指定一个非平台化 Current MUST，或明确授权新的 browser smoke / module audit。不得继续空转式重复 gap scan。
+1. NPG-2 Desktop Shell Packaging Acceptance：在 NPG-1 dependency spike 通过后，验证 Desktop shell-level packaging acceptance；仍不得打开 child-process runtime 或 native authority writes。
+2. Mobile Packaging Dependency Spike：必须等 Desktop shell acceptance 闭合后再打开；Mobile 仍保持 no-Tauri default build 与 foreground reprobe gate。
+3. Native Process Adapter Gate：仍是独立 gate；只有 Desktop/Mobile packaging shell 验收稳定后才允许设计 child-process runtime。
 
 ## 最近完成
 
+- NPG-1 Desktop Packaging Dependency Spike：新增 `desktop-packaging-dependency-spike-2026-05-14.md`，允许 `tauri` / `tauri-build` 仅作为 `apps/desktop` 的 optional `native-packaging` 依赖；default build 与 Mobile build 仍保持 no-Tauri，native layer 不获得 ledger/vault/source-control/search/Git authority。
 - Error-code catalog plan alignment：新增 `error-code-catalog-plan-alignment-2026-05-14.md`，在 `11_i18n.md#i18n-error-code-catalog` 补齐 `SC_COMMIT_DIFF_UNPROJECTABLE` 与 `GRAPH_DEGRADED_PROJECTION_REQUIRED`，关闭已知小范围 plan catalog drift。
 - Mainline gap scan after full regression：新增 `mainline-gap-scan-after-full-regression-2026-05-14.md`，复跑 plan/code 双射、acceptance/features、architecture、domain baselines、native/release gates 与 UI/AI/WS 细分 guard，并引用上一批 full regression/runtime smoke 结果；未发现新的 unblocked Current MUST。
 - Full regression gate refresh：新增 `full-regression-gate-refresh-2026-05-14.md`，复跑 full workspace `cargo test`、`cargo clippy --all-targets -- -D warnings`、format/diff hygiene、plan coverage、runtime happy/recovery smoke；修正 Web protocol-error chat test 的 localized server-error copy 断言，并收敛 wasm-only WS port parser helper 的 cfg。

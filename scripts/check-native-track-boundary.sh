@@ -27,6 +27,9 @@ check_no_packaging_dependency_leak() {
   local tauri_manifest_pattern="(^[[:space:]]*[\"']?(tauri|tauri-build)[\"']?[[:space:]]*=|package[[:space:]]*=[[:space:]]*[\"'](tauri|tauri-build)[\"']|^[[:space:]]*\[[^]]*(dependencies|dev-dependencies|build-dependencies)\.[\"']?(tauri|tauri-build)[\"']?[[:space:]]*\])"
   while IFS= read -r cargo_file; do
     if rg -iq "$tauri_manifest_pattern" "$cargo_file"; then
+      if [[ "$cargo_file" == "$ROOT_DIR/apps/desktop/Cargo.toml" ]]; then
+        continue
+      fi
       fail "native packaging dependency is not allowed yet: ${cargo_file#"$ROOT_DIR"/}"
     fi
   done < <(find "$ROOT_DIR" -path "$ROOT_DIR/target" -prune -o -name Cargo.toml -type f -print)
@@ -47,15 +50,19 @@ check_no_process_runtime_leak() {
 check_contains Cargo.toml '"apps/desktop"'
 check_contains Cargo.toml '"apps/mobile"'
 
-check_contains apps/desktop/Cargo.toml "native-packaging = []"
+check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build"]'
+check_contains apps/desktop/Cargo.toml 'tauri = { version = "2.11.1", optional = true, default-features = false }'
+check_contains apps/desktop/Cargo.toml 'tauri-build = { version = "2.6.1", optional = true, default-features = false }'
 check_contains apps/mobile/Cargo.toml "native-packaging = []"
+check_not_contains apps/mobile/Cargo.toml "tauri ="
+check_not_contains apps/mobile/Cargo.toml "tauri-build ="
 check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
 check_contains apps/desktop/src/packaging.rs "runtime_crate: \"tauri\""
 check_contains apps/desktop/src/packaging.rs "build_crate: \"tauri-build\""
-check_contains apps/desktop/src/packaging.rs "status: \"planned\""
+check_contains apps/desktop/src/packaging.rs "status: \"dependency-spike-open\""
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingCapability::Installer"
-check_contains apps/desktop/src/packaging_test.rs "desktop_packaging_scaffold_is_feature_gated_and_planned"
+check_contains apps/desktop/src/packaging_test.rs "desktop_packaging_dependency_spike_is_feature_gated"
 check_contains apps/desktop/src/shell_test/policy.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/desktop/src/shell_test/policy.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
 check_contains apps/mobile/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
@@ -68,8 +75,9 @@ check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::StorePac
 check_contains apps/mobile/src/packaging_test.rs "mobile_packaging_scaffold_is_feature_gated_and_planned"
 check_contains apps/mobile/src/shell_test/policy.rs "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains apps/mobile/src/shell_test/policy.rs "CURRENT_NATIVE_PROCESS_ADAPTER_POLICY"
-check_contains crates/core/src/native_adapter/packaging.rs "DeferredUntilRuntimeBatch"
-check_contains crates/core/src/native_adapter/packaging.rs "real_tauri_dependencies_allowed: false"
+check_contains crates/core/src/native_adapter/packaging.rs "DesktopDependencySpikeOpen"
+check_contains crates/core/src/native_adapter/packaging.rs "desktop_tauri_dependencies_allowed: true"
+check_contains crates/core/src/native_adapter/packaging.rs "mobile_tauri_dependencies_allowed: false"
 check_contains crates/core/src/native_adapter/process.rs "DeferredUntilPackagingGate"
 check_contains crates/core/src/native_adapter/process.rs "child_process_runtime_enabled: false"
 check_contains crates/core/src/native_adapter/process.rs "record_probe_timeout"
@@ -158,7 +166,7 @@ check_contains docs/plan/14_tech_stack.md "{#native-packaging-dependency-gate}"
 check_contains docs/plan/14_tech_stack.md "native-packaging"
 check_contains docs/plan/14_tech_stack.md "CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY"
 check_contains docs/plan/14_tech_stack.md "不得进入 workspace root"
-check_contains docs/plan/14_tech_stack.md "Desktop packaging scaffold"
+check_contains docs/plan/14_tech_stack.md "Desktop packaging dependency spike"
 check_contains docs/plan/14_tech_stack.md "Mobile packaging scaffold"
 
 check_contains docs/report/README.md "## Current Baselines"

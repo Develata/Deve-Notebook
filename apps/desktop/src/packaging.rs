@@ -54,7 +54,7 @@ impl DesktopPackagingScaffold {
 
     pub fn dependency_feature_is_isolated(&self) -> bool {
         self.dependency_batch.feature_gate == "native-packaging"
-            && self.dependency_batch.status == "planned"
+            && self.dependency_batch.status == "dependency-spike-open"
     }
 }
 
@@ -64,7 +64,7 @@ pub fn desktop_packaging_scaffold() -> DesktopPackagingScaffold {
             feature_gate: "native-packaging",
             runtime_crate: "tauri",
             build_crate: "tauri-build",
-            status: "planned",
+            status: "dependency-spike-open",
         },
         acceptance: DesktopPackagingAcceptance {
             capabilities: PACKAGING_CAPABILITIES,

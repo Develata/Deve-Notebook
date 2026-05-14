@@ -95,13 +95,17 @@ Native track 默认构建必须无 packaging runtime 依赖。Desktop/Mobile nat
 - 每次引入或升级 packaging dependency 都必须更新
   `scripts/check-native-track-boundary.sh`、Desktop/Mobile plan 与对应评审报告。
 
-Scaffold 规则：
+Gate 状态：
 
-- Desktop packaging scaffold 只记录 `tauri` / `tauri-build` batch 与 window/menu/tray/installer/auto-update acceptance；不得引入实际 Tauri dependency，也不得视为已具备 native packaging。
+- Desktop packaging dependency spike 已打开：`tauri` / `tauri-build` **MAY** 只作为 `apps/desktop`
+  的 optional dependency 存在，并且必须挂在 `native-packaging` feature 后。
+- Desktop 默认构建仍 **MUST** 保持 no-Tauri；Desktop packaging dependency spike 不等价于
+  Desktop release ready。
 - Mobile packaging scaffold 只记录 `tauri` / `tauri-build` batch 与 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；不得引入实际 Tauri Mobile dependency。
 - Mobile foreground/background reprobe 与 session/readiness correctness 继续由 no-packaging skeleton tests 保证。
-- Native embedded service supervision 按 no-runtime contract 处理；该 contract 不启动真实子进程、不引入 Tauri dependency、不授予 native shell core authority。
-- `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DeferredUntilRuntimeBatch`；真实 `tauri` / `tauri-build` dependency 不允许进入默认 workspace 构建。
+- Native embedded service supervision 按 no-runtime contract 处理；该 contract 不启动真实子进程、不依赖 Tauri runtime capability、不授予 native shell core authority。
+- `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DesktopDependencySpikeOpen`；Desktop-only
+  Tauri dependency 只允许在 `apps/desktop/native-packaging` scope 内出现。
 - `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY = DeferredUntilPackagingGate`；`child_process_runtime_enabled = false`、`packaging_gate_required = true`、`authority_writes_allowed = false`。
 - 后续 child-process runtime 必须在对应 native crate 的 `native-packaging` feature 后实现，并继续禁止 core authority writes。
 

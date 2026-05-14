@@ -42,24 +42,26 @@ Desktop packaging scaffold 只描述桌面壳层的 post-gate 目标能力，**M
 *   no-packaging skeleton tests 仍是 endpoint/session/bootstrap/readiness correctness 的
     authority；packaging acceptance 不得替代这些测试。
 
-在真正添加 Tauri dependency 前，`scripts/check-native-track-boundary.sh` 必须继续阻止
+除 Desktop dependency spike 已允许范围外，`scripts/check-native-track-boundary.sh` 必须继续阻止
 Cargo dependency/import 泄漏。
 
 ### 1.3 Desktop Packaging Dependency Gate {#desktop-packaging-dependency-gate-decision}
 
-Desktop packaging dependency gate 默认关闭；在 gate 未经单独设计、评审与验收前，真实 `tauri` / `tauri-build`
-dependency **MUST NOT** 进入默认 workspace 构建。
+Desktop packaging dependency gate 已进入 Desktop dependency spike；真实 `tauri` / `tauri-build`
+dependency 只允许作为 `apps/desktop` 的 optional dependency，并且必须挂在 `native-packaging`
+feature 后。默认 workspace 构建仍 **MUST** 保持 no-Tauri。
 
 Gate policy 必须满足：
 
 *   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
-    DeferredUntilRuntimeBatch`
-*   `real_tauri_dependencies_allowed = false`
+    DesktopDependencySpikeOpen`
+*   `desktop_tauri_dependencies_allowed = true`
+*   `mobile_tauri_dependencies_allowed = false`
 *   `default_build_remains_no_tauri = true`
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-Gate 打开时 **MUST** 先更新 `scripts/check-native-track-boundary.sh`；默认构建仍 no-Tauri，依赖只在 Desktop native adapter feature 后，packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority。
+当前 gate 只允许 Desktop dependency spike：packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority，不启动后端子进程，不声明 macOS/Windows release ready。
 
 ### 1.4 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 

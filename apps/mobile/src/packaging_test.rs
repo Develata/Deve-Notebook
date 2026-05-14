@@ -14,8 +14,8 @@ fn mobile_packaging_scaffold_is_feature_gated_and_planned() {
     assert_eq!(scaffold.dependency_batch.build_crate, "tauri-build");
     assert_eq!(scaffold.dependency_batch.status, "planned");
     assert!(scaffold.dependency_feature_is_isolated());
-    assert!(gate.is_deferred_no_dependency());
-    assert!(!gate.real_tauri_dependencies_allowed);
+    assert!(gate.mobile_packaging_stays_deferred());
+    assert!(!gate.mobile_tauri_dependencies_allowed);
 }
 
 #[test]

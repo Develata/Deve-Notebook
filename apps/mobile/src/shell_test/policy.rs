@@ -17,15 +17,16 @@ fn mobile_default_build_defers_real_process_adapter() {
 }
 
 #[test]
-fn mobile_default_build_keeps_packaging_dependency_gate_closed() {
+fn mobile_default_build_keeps_mobile_packaging_deferred() {
     let policy = CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY;
 
     assert_eq!(
         policy.decision,
-        NativePackagingDependencyGateDecision::DeferredUntilRuntimeBatch
+        NativePackagingDependencyGateDecision::DesktopDependencySpikeOpen
     );
-    assert!(policy.is_deferred_no_dependency());
-    assert!(!policy.real_tauri_dependencies_allowed);
+    assert!(policy.mobile_packaging_stays_deferred());
+    assert!(policy.desktop_tauri_dependencies_allowed);
+    assert!(!policy.mobile_tauri_dependencies_allowed);
     assert!(policy.default_build_remains_no_tauri);
     assert!(!policy.authority_writes_allowed);
 }

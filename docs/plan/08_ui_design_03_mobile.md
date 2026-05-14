@@ -136,13 +136,14 @@ dependency **MUST NOT** 进入默认 workspace 构建。
 Gate policy 必须满足：
 
 *   `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY.decision =
-    DeferredUntilRuntimeBatch`
-*   `real_tauri_dependencies_allowed = false`
+    DesktopDependencySpikeOpen`
+*   `desktop_tauri_dependencies_allowed = true`
+*   `mobile_tauri_dependencies_allowed = false`
 *   `default_build_remains_no_tauri = true`
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-Gate 打开时 **MUST** 先更新边界脚本，并继续保证 foreground reprobe、writer-ready 与
+Mobile gate 打开时 **MUST** 先更新边界脚本，并继续保证 foreground reprobe、writer-ready 与
 repo scope gate 不被 native runtime 绕过。
 
 ## 2. Responsive Architecture {#mobile-responsive-layout}
