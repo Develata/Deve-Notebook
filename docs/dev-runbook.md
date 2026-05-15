@@ -484,7 +484,9 @@ DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-androi
 
 GitHub-hosted emulator orchestration uses the wrapper script below; it installs
 SDK packages, creates/boots a lean `default/x86_64` AVD, builds an `x86_64`
-debug APK, then delegates to the Android install/startup smoke:
+debug APK, then delegates to the Android install/startup smoke. The wrapper uses
+an isolated `ANDROID_AVD_HOME` under `target/` and uploads emulator diagnostics
+with the target-host evidence artifact.
 
 ```bash
 DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-emulator-install-startup-smoke.sh

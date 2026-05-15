@@ -331,6 +331,8 @@ contains "scripts/check-mobile-android-install-startup-smoke.sh" "child-process 
 contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED"
 contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-default"
 contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "print_emulator_diagnostics"
+contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "ANDROID_AVD_HOME"
+contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "avdmanager.log"
 contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "sdkmanager"
 contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "avdmanager"
 contains "scripts/check-mobile-android-emulator-install-startup-smoke.sh" "emulator"

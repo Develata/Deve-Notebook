@@ -12,6 +12,7 @@ BOOT_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS:-900}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-120}"
 PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-x86_64}"
 LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android-emulator-smoke}"
+AVD_HOME="${DEVE_MOBILE_ANDROID_AVD_HOME:-$ROOT_DIR/target/mobile-android-avd}"
 
 # This gate owns only target-host emulator orchestration. It delegates package
 # build and install/startup checks to the narrower Android shell gates.
@@ -74,6 +75,14 @@ print_emulator_diagnostics() {
     echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
     adb devices 2>&1 || true
   fi
+  if command -v emulator >/dev/null 2>&1; then
+    echo "mobile-android-emulator-install-startup-smoke-check: emulator AVD list:"
+    emulator -list-avds 2>&1 || true
+  fi
+  if [[ -f "$LOG_DIR/avdmanager.log" ]]; then
+    echo "mobile-android-emulator-install-startup-smoke-check: avdmanager.log tail:"
+    tail -n 120 "$LOG_DIR/avdmanager.log" || true
+  fi
   if [[ -f "$LOG_DIR/emulator.log" ]]; then
     echo "mobile-android-emulator-install-startup-smoke-check: emulator.log tail:"
     tail -n 120 "$LOG_DIR/emulator.log" || true
@@ -98,11 +107,16 @@ ensure_avd() {
     return 0
   fi
 
-  printf 'no\n' | avdmanager_cmd create avd \
-    --force \
-    --name "$AVD_NAME" \
-    --package "$system_image" \
-    --device "$DEVICE_PROFILE" >/dev/null
+  if ! printf 'no\n' | avdmanager_cmd create avd \
+      --force \
+      --name "$AVD_NAME" \
+      --package "$system_image" \
+      --device "$DEVICE_PROFILE" >"$LOG_DIR/avdmanager.log" 2>&1; then
+    fail "Android AVD creation failed: $AVD_NAME"
+  fi
+
+  emulator_cmd -list-avds | grep -Fx -- "$AVD_NAME" >/dev/null \
+    || fail "Android AVD was not visible to emulator after creation: $AVD_NAME"
 }
 
 wait_for_boot() {
@@ -168,7 +182,9 @@ require_command avdmanager
 require_command emulator
 require_command adb
 
-mkdir -p "$LOG_DIR"
+mkdir -p "$LOG_DIR" "$AVD_HOME"
+export ANDROID_AVD_HOME="$AVD_HOME"
+
 install_sdk_packages
 ensure_avd
 
