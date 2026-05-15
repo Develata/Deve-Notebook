@@ -70,10 +70,7 @@ jobs:
           scripts/install-native-target-host-tools.sh
 
       - name: Build web dist
-        run: |
-          npm --prefix apps/web ci --ignore-scripts
-          npm --prefix apps/web run build
-          scripts/smoke-web-release-build.sh
+        run: scripts/build-web-dist-ci.sh
 
       - name: Desktop macOS target-host preflight
         id: desktop_macos_preflight
@@ -180,10 +177,7 @@ jobs:
           scripts/install-native-target-host-tools.sh
 
       - name: Build web dist
-        run: |
-          npm --prefix apps/web ci --ignore-scripts
-          npm --prefix apps/web run build
-          scripts/smoke-web-release-build.sh
+        run: scripts/build-web-dist-ci.sh
 
       - name: Desktop Windows target-host preflight
         id: desktop_windows_preflight
@@ -286,10 +280,7 @@ jobs:
           scripts/install-native-target-host-tools.sh
 
       - name: Build web dist
-        run: |
-          npm --prefix apps/web ci --ignore-scripts
-          npm --prefix apps/web run build
-          scripts/smoke-web-release-build.sh
+        run: scripts/build-web-dist-ci.sh
 
       - name: Mobile iOS target-host preflight
         id: mobile_ios_preflight

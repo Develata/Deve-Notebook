@@ -8,6 +8,7 @@ set -euo pipefail
 #   noise even though this repo does not lock browserslist/caniuse-lite.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TRUNK_BIN="${DEVE_TRUNK_BIN:-trunk}"
 
 export NO_COLOR="${NO_COLOR:-true}"
 if [[ "$NO_COLOR" == "1" ]]; then
@@ -16,4 +17,5 @@ fi
 export BROWSERSLIST_IGNORE_OLD_DATA="${BROWSERSLIST_IGNORE_OLD_DATA:-true}"
 
 cd "$ROOT_DIR/apps/web"
-trunk build --release
+echo "web-release-build-smoke: trunk=$TRUNK_BIN"
+"$TRUNK_BIN" build --release

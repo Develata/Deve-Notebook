@@ -43,6 +43,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `collect-native-target-host-evidence.sh` | Downloads Native Target Host workflow evidence artifacts through GitHub CLI or token-backed API fallback and validates each report |
 | `dispatch-native-target-host-workflow.sh` | Builds or explicitly dispatches the manual Native Target Host GitHub Actions workflow through GitHub CLI or token-backed API fallback |
 | `install-native-target-host-tools.sh` | Installs pinned Trunk and Tauri CLI release binaries for manual target-host workflows without compiling those tools from source |
+| `build-web-dist-ci.sh` | Builds Web assets in native target-host CI with explicit npm/trunk command diagnostics |
 | `write-native-target-host-evidence.sh` | Writes validated Desktop/Mobile target-host evidence reports for manual workflow artifacts or local target-host runs |
 | `check-desktop-package-preflight.sh` | Verifies Desktop default/no-packaging and native-packaging compile surfaces before target-host package builds |
 | `check-desktop-platform-package-build.sh` | Diagnoses target-host Desktop package build prerequisites and only runs `cargo tauri build` when explicitly required |
