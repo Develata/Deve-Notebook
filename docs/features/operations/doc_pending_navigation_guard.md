@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.doc.pending-navigation-guard`
 - `Domain`: `document`
 - `Related Feature Chapters`: `docs/features/16_web_thin_client_ledger.md`, `docs/features/08_ui_design_02_desktop.md`, `docs/features/06_repository.md`
-- `Related Acceptance Cases`: `WEBWRITE-FEAT-01`, `WEBWRITE-FEAT-02`, `WEBWRITE-FEAT-03`
+- `Related Acceptance Cases`: `WEBNAV-FEAT-01`, `WEBNAV-FEAT-02`, `WEBNAV-FEAT-03`
 
 ## Operations
 

@@ -6,13 +6,13 @@
 
 ## 当前执行队列
 
-1. Mainline Coverage Alignment Batch A：修正 `RENDER-LARGE-001` 对完整 virtual rendering 的过度断言；把 `WEBWRITE-FEAT-01/02/03` 重新绑定到 Pending -> Ack、Reject cleanup 与 repo-scoped write readiness，而不是 pending navigation modal。
-2. Mainline Coverage Alignment Batch B：为 `.notegit/.git` segment ignore、`.notegit-backup` 反例、ledger JSON Lines export、writeback-failure Ack 增加明确 acceptance/baseline 绑定。
-3. Modal Focus Contract Closure：将 Settings、Pending Navigation、Merge 等 modal 接入共享 focus trap / restore / `role="dialog"` / `aria-modal` 语义，并补最小测试或 smoke guard。
-4. Storage/Server Edge Coverage：评估 watcher overflow/reconcile/debounce、auth secret owner-only permission、repo catalog quarantine 的可测试入口；有 harness 的先补覆盖，没有 harness 的先设计最小注入点。
+1. Mainline Coverage Alignment Batch B：为 `.notegit/.git` segment ignore、`.notegit-backup` 反例、ledger JSON Lines export、writeback-failure Ack 增加明确 acceptance/baseline 绑定。
+2. Modal Focus Contract Closure：将 Settings、Pending Navigation、Merge 等 modal 接入共享 focus trap / restore / `role="dialog"` / `aria-modal` 语义，并补最小测试或 smoke guard。
+3. Storage/Server Edge Coverage：评估 watcher overflow/reconcile/debounce、auth secret owner-only permission、repo catalog quarantine 的可测试入口；有 harness 的先补覆盖，没有 harness 的先设计最小注入点。
 
 ## 最近完成
 
+- Mainline Coverage Alignment Batch A：修正 `RENDER-LARGE-001` 对完整 virtual rendering 的过度断言，给 large-doc baseline 增加防回归；`WEBWRITE-FEAT-01/02/03` 已重新绑定到 Pending -> Ack、Reject cleanup 与 repo-scoped writer readiness，pending navigation 独立为 `WEBNAV-FEAT-01/02/03`。
 - Mainline Gap Scan After Native Target-host Closure：复跑 architecture registry、plan coverage、runtime happy/recovery smoke；形式化守卫均为绿，但发现 large-doc acceptance 过度承诺、WebWrite 验收绑定错位、modal focus 合同未全量接入，以及若干 storage/server Current MUST 缺少窄覆盖。下一批不再泛扫，转入 coverage/code 对齐。
 - Mobile Android Emulator Install/Startup Smoke：GitHub run `25934596796` 完成 Android emulator shell package build、install 与 startup smoke；evidence 显示 `mobile_android_preflight=success`、`process_gate=success`、`package_build=success`、`install_startup_smoke=success`，process runtime 与 native authority writes 仍关闭。
 - Mobile iOS Simulator Install/Startup Smoke：GitHub run `25926372319` 完成 iOS simulator shell package build、install 与 startup smoke；evidence 显示 `mobile_ios_preflight=success`、`process_gate=success`、`package_build=success`、`install_startup_smoke=success`，process runtime 与 native authority writes 仍关闭。

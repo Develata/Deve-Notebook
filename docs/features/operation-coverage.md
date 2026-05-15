@@ -21,8 +21,8 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.cli.runtime-handoff` | [`cli_runtime_handoff.md`](./operations/cli_runtime_handoff.md) | `CMD-001`, `CMD-006`, `CMD-007`, `CMD-008`, `CMD-009` |
 | `flow.cli.server-runtime` | [`cli_server_runtime.md`](./operations/cli_server_runtime.md) | `CMD-001`, `CMD-007`, `REL-002` |
 | `flow.cli.vault-indexing` | [`cli_vault_indexing.md`](./operations/cli_vault_indexing.md) | `CMD-001`, `CMD-006` |
-| `flow.doc.edit-confirmed-op` | [`doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md) | `RENDER-FEAT-01`, `STORAGE-FEAT-01`, `STORAGE-FEAT-02` |
-| `flow.doc.pending-navigation-guard` | [`doc_pending_navigation_guard.md`](./operations/doc_pending_navigation_guard.md) | `WEBWRITE-FEAT-01`, `WEBWRITE-FEAT-02`, `WEBWRITE-FEAT-03` |
+| `flow.doc.edit-confirmed-op` | [`doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md) | `RENDER-FEAT-01`, `STORAGE-FEAT-01`, `STORAGE-FEAT-02`, `WEBWRITE-FEAT-01`, `WEBWRITE-FEAT-02`, `WEBWRITE-FEAT-03` |
+| `flow.doc.pending-navigation-guard` | [`doc_pending_navigation_guard.md`](./operations/doc_pending_navigation_guard.md) | `WEBNAV-FEAT-01`, `WEBNAV-FEAT-02`, `WEBNAV-FEAT-03` |
 | `flow.i18n.error-mapping` | [`i18n_error_mapping.md`](./operations/i18n_error_mapping.md) | `I18N-004`, `I18N-006`, `AUTH-002` |
 | `flow.i18n.hardcoded-audit` | [`i18n_hardcoded_audit.md`](./operations/i18n_hardcoded_audit.md) | `I18N-001`, `I18N-003` |
 | `flow.i18n.locale-error` | [`i18n_locale_error.md`](./operations/i18n_locale_error.md) | `I18N-001`, `I18N-002`, `I18N-003`, `I18N-004`, `I18N-005`, `I18N-006` |

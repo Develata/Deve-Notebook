@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.doc.edit-confirmed-op`
 - `Domain`: `document`
 - `Related Feature Chapters`: `docs/features/03_rendering.md`, `docs/features/04_storage.md`, `docs/features/16_web_thin_client_ledger.md`
-- `Related Acceptance Cases`: `RENDER-FEAT-01`, `STORAGE-FEAT-01`, `STORAGE-FEAT-02`
+- `Related Acceptance Cases`: `RENDER-FEAT-01`, `STORAGE-FEAT-01`, `STORAGE-FEAT-02`, `WEBWRITE-FEAT-01`, `WEBWRITE-FEAT-02`, `WEBWRITE-FEAT-03`
 
 ## Operations
 

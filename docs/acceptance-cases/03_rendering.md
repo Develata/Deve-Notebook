@@ -65,7 +65,7 @@
     - ui_dom_attr_eq: ["rel", "noopener noreferrer"]
 
 - case_id: RENDER-LARGE-001
-  goal: 大文档首屏优先渲染。
+  goal: 大文档 snapshot-first 与渐进回放不阻塞首屏。
   preconditions:
     - 文档大小 >= 1MB
   steps:
@@ -75,7 +75,9 @@
     - ui_time_to_first_paint: true
   assertions:
     - metric_lt_ms: ["first_paint", 2000]
-    - ui_assert: virtual_render_enabled true
+    - ui_assert: snapshot_first true
+    - ui_assert: progressive_replay_enabled true
+    - ui_assert: search_disabled_until_prefetch_complete true
 
 - case_id: RENDER-MATH-001
   goal: 公式渲染与折叠。

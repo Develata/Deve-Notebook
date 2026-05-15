@@ -69,16 +69,44 @@
   assertions: [stdout_contains: "rebuild-projection"]
 
 - case_id: WEBWRITE-FEAT-01
+  goal: Pending local edit is cleared by confirmed Ack/NewOp.
+  steps:
+    - run: "cargo test -p deve_cli duplicate_client_op_returns_original_ack_without_append -- --nocapture"
+    - run: "cargo test -p deve_web echoed_new_op_clears_matching_pending_overlay -- --nocapture"
+  assertions:
+    - ws_assert: ack_contains "doc_id client_op_id scope_nonce"
+    - ui_assert: pending_overlay_cleared_after_confirmed_echo true
+
+- case_id: WEBWRITE-FEAT-02
+  goal: EditRejected clears matching pending edit without leaving infinite PendingAck.
+  steps:
+    - run: "cargo test -p deve_cli duplicate_client_op_with_different_op_is_rejected -- --nocapture"
+    - run: "cargo test -p deve_web stale_edit_rejected_clears_matching_retained_pending_without_banner -- --nocapture"
+  assertions:
+    - ws_assert: edit_rejected_contains "scope_nonce doc_id client_op_id"
+    - ui_assert: pending_overlay_cleared_after_reject true
+
+- case_id: WEBWRITE-FEAT-03
+  goal: Repo-scoped writer readiness gates edit replay.
+  steps:
+    - run: "cargo test -p deve_web writer_ready_requires_matching_repo_and_scope_nonce -- --nocapture"
+    - run: "cargo test -p deve_web write_ready_resend_sends_pending_edit_when_native_runtime_is_ready -- --nocapture"
+    - run: "cargo test -p deve_web write_ready_resend_skips_pending_edit_from_stale_scope -- --nocapture"
+  assertions:
+    - ui_assert: stale_scope_does_not_send_edit true
+    - ui_assert: matching_repo_scope_sends_pending_edit true
+
+- case_id: WEBNAV-FEAT-01
   goal: Pending edit navigation guard detects unsaved local input.
   steps: [ui_type: "pending edit", ui_attempt_navigation: true]
   assertions: [ui_assert: pending_navigation_modal_visible true]
 
-- case_id: WEBWRITE-FEAT-02
+- case_id: WEBNAV-FEAT-02
   goal: Pending edit navigation can be cancelled safely.
   steps: [ui_attempt_navigation: true, ui_click: "Stay"]
   assertions: [ui_assert: editor_visible true]
 
-- case_id: WEBWRITE-FEAT-03
+- case_id: WEBNAV-FEAT-03
   goal: Pending edit navigation can continue after explicit discard.
   steps: [ui_attempt_navigation: true, ui_click: "Discard and Leave"]
   assertions: [ui_assert: navigation_completed true]

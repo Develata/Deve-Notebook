@@ -43,6 +43,12 @@ contains docs/acceptance-cases/04_diff.md "cargo test -p deve_web large_doc_sear
 contains docs/acceptance-cases/03_rendering.md "case_id: RENDER-LARGE-001"
 contains docs/acceptance-cases/03_rendering.md "scripts/check-large-doc-baseline.sh"
 contains docs/acceptance-cases/03_rendering.md "cargo test -p deve_web large_doc_search_gate -- --nocapture"
+contains docs/acceptance-cases/03_rendering.md "snapshot_first true"
+contains docs/acceptance-cases/03_rendering.md "progressive_replay_enabled true"
+contains docs/acceptance-cases/03_rendering.md "search_disabled_until_prefetch_complete true"
+if rg --quiet --fixed-strings -- "virtual_render_enabled true" "$ROOT_DIR/docs/acceptance-cases/03_rendering.md"; then
+  fail "RENDER-LARGE-001 must not claim complete virtual rendering"
+fi
 contains docs/acceptance-cases/04_diff.md "snapshot_first true"
 contains docs/acceptance-cases/04_diff.md "search_disabled_until_prefetch_complete true"
 contains docs/features/operations/rendering_large_doc_search_gate.md "apps/web/src/hooks/use_core/callbacks/misc.rs"
