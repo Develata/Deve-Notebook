@@ -2,11 +2,12 @@
 //!   - 14_tech_stack#native-packaging-dependency-gate
 //!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
 //!   - 08_ui_design_03_mobile#mobile-android-shell-package-execution-gate
+//!   - 08_ui_design_03_mobile#mobile-ios-shell-package-execution-gate
 //!
 //! Feature-gated mobile packaging scaffold.
 //!
-//! This module records the mobile packaging dependency batch and Android
-//! shell-only package gate without starting a backend process.
+//! This module records the mobile packaging dependency batch plus shell-only
+//! package gates without starting a backend process.
 
 pub const MOBILE_TAURI_CONFIG_PATH: &str = "apps/mobile/tauri.conf.json";
 pub const MOBILE_TAURI_PRODUCT_NAME: &str = "Deve Notebook";
@@ -15,8 +16,11 @@ pub const MOBILE_TAURI_MAIN_WINDOW_LABEL: &str = "main";
 pub const MOBILE_TAURI_MAIN_WINDOW_TITLE: &str = "Deve Notebook";
 pub const MOBILE_ANDROID_PACKAGE_SCRIPT: &str =
     "scripts/check-mobile-android-shell-package-build.sh";
+pub const MOBILE_IOS_PACKAGE_SCRIPT: &str = "scripts/check-mobile-ios-shell-package-build.sh";
 pub const MOBILE_ANDROID_PACKAGE_GATE_ANCHOR: &str =
     "08_ui_design_03_mobile#mobile-android-shell-package-execution-gate";
+pub const MOBILE_IOS_PACKAGE_GATE_ANCHOR: &str =
+    "08_ui_design_03_mobile#mobile-ios-shell-package-execution-gate";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MobilePackagingCapability {
@@ -53,6 +57,7 @@ pub struct MobilePackagingAcceptance {
     pub forbidden_authorities: &'static [MobilePackagingAuthority],
     pub shell: MobileShellPackagingAcceptance,
     pub android_shell_package: MobileAndroidShellPackageExecution,
+    pub ios_shell_package: MobileIosShellPackageExecution,
     pub lifecycle_reprobe_remains_required: bool,
 }
 
@@ -98,6 +103,29 @@ impl MobileAndroidShellPackageExecution {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MobileIosShellPackageExecution {
+    pub gate_anchor: &'static str,
+    pub target_host_script: &'static str,
+    pub project_generation_allowed: bool,
+    pub package_build_allowed: bool,
+    pub android_package_build_allowed: bool,
+    pub child_process_runtime_enabled: bool,
+    pub opens_authority_write_path: bool,
+    pub release_ready_claimed: bool,
+}
+
+impl MobileIosShellPackageExecution {
+    pub fn is_shell_only_open(self) -> bool {
+        self.project_generation_allowed
+            && self.package_build_allowed
+            && !self.android_package_build_allowed
+            && !self.child_process_runtime_enabled
+            && !self.opens_authority_write_path
+            && !self.release_ready_claimed
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MobilePackagingScaffold {
     pub dependency_batch: MobilePackagingDependencyBatch,
@@ -129,6 +157,7 @@ impl MobilePackagingScaffold {
             && !self.acceptance.shell.child_process_runtime_enabled
             && !self.acceptance.shell.release_ready_claimed
             && self.acceptance.android_shell_package.is_shell_only_open()
+            && self.acceptance.ios_shell_package.is_shell_only_open()
             && self.is_authority_free()
     }
 }
@@ -146,6 +175,7 @@ pub fn mobile_packaging_scaffold() -> MobilePackagingScaffold {
             forbidden_authorities: FORBIDDEN_AUTHORITIES,
             shell: SHELL_ACCEPTANCE,
             android_shell_package: ANDROID_SHELL_PACKAGE_EXECUTION,
+            ios_shell_package: IOS_SHELL_PACKAGE_EXECUTION,
             lifecycle_reprobe_remains_required: true,
         },
         no_packaging_tests_remain_authoritative: true,
@@ -177,6 +207,18 @@ const ANDROID_SHELL_PACKAGE_EXECUTION: MobileAndroidShellPackageExecution =
         project_generation_allowed: true,
         package_build_allowed: true,
         ios_package_build_allowed: false,
+        child_process_runtime_enabled: false,
+        opens_authority_write_path: false,
+        release_ready_claimed: false,
+    };
+
+const IOS_SHELL_PACKAGE_EXECUTION: MobileIosShellPackageExecution =
+    MobileIosShellPackageExecution {
+        gate_anchor: MOBILE_IOS_PACKAGE_GATE_ANCHOR,
+        target_host_script: MOBILE_IOS_PACKAGE_SCRIPT,
+        project_generation_allowed: true,
+        package_build_allowed: true,
+        android_package_build_allowed: false,
         child_process_runtime_enabled: false,
         opens_authority_write_path: false,
         release_ready_claimed: false,

@@ -110,6 +110,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `08_ui_design#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
 | `08_ui_design_01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
 | `08_ui_design_03_mobile#mobile-android-shell-package-execution-gate` | `### 1.6 Android Shell-only Package Execution Gate` | Android shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
+| `08_ui_design_03_mobile#mobile-ios-shell-package-execution-gate` | `### 1.7 iOS Shell-only Package Execution Gate` | iOS shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
 | `09_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/status/me HTTP endpoint 合同 |
 | `09_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
 | `09_auth#password-hashing` | `### 5.5 Password Hashing` | Argon2 PHC 密码哈希与验证合同 |

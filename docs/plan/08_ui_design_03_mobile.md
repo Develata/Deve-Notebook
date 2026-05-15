@@ -116,7 +116,7 @@ Gate policy 必须满足：
 
 ### 1.4 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
 
-Mobile packaging scaffold 只描述移动壳层的 dependency spike 与 post-gate 目标能力，**MUST NOT** 被解释为 iOS package build、release ready、process runtime 或 native authority 已显式启用。Android shell-only package execution 由 §1.6 单独门禁：
+Mobile packaging scaffold 只描述移动壳层的 dependency spike 与 post-gate 目标能力，**MUST NOT** 被解释为 release ready、process runtime 或 native authority 已显式启用。Android shell-only package execution 由 §1.6 单独门禁；iOS shell-only package execution 由 §1.7 单独门禁：
 
 *   dependency batch: `tauri` runtime crate + `tauri-build` build crate。
 *   packaging capability 只覆盖移动壳层能力：WebView shell、permission bridge、share sheet、
@@ -149,7 +149,7 @@ Gate policy 必须满足：
 *   Mobile dependency spike 已打开：`tauri` / `tauri-build` 只能作为 `apps/mobile`
     的 optional dependency 存在。
 *   Android shell-only package execution 可按 §1.6 单独打开。
-*   iOS package execution 仍必须等待 macOS target host 与独立验收。
+*   iOS shell-only package execution 可按 §1.7 单独打开。
 *   Mobile process runtime、child-process supervision 与 native authority write path 仍未打开。
 
 Foreground reprobe、writer-ready 与 repo scope gate **MUST NOT** 被 native runtime 绕过。
@@ -170,6 +170,24 @@ Gate policy 必须满足：
 *   Android package build **MUST NOT** 绕过 foreground reprobe、session handoff、node-role
     probe、repo handshake、writer-ready 或 current `scope_nonce`。
 *   Android package execution 成功 **MUST NOT** 声明 iOS ready、Desktop ready、release ready
+    或 process runtime ready。
+
+### 1.7 iOS Shell-only Package Execution Gate {#mobile-ios-shell-package-execution-gate}
+
+iOS shell-only package execution gate 只允许把 Mobile WebView 壳层推进到 iOS target-host package execution；它不是 Mobile release ready，也不是 process adapter gate。
+
+Gate policy 必须满足：
+
+*   iOS required preflight **MUST** 先在 macOS target host 通过。
+*   iOS project generation 与 package build **MAY** 只在 `apps/mobile` 的 `native-packaging`
+    feature 与显式 target-host script 下执行。
+*   iOS package build **MUST** 只声明 WebView shell、manifest、permission bridge、
+    deeplink/share/file/store package 等壳层能力。
+*   iOS package build **MUST NOT** 启动、持有、重启后端子进程。
+*   iOS package build **MUST NOT** 写 ledger/vault/source-control/search index/`.git`/`.notegit`。
+*   iOS package build **MUST NOT** 绕过 foreground reprobe、session handoff、node-role
+    probe、repo handshake、writer-ready 或 current `scope_nonce`。
+*   iOS package execution 成功 **MUST NOT** 声明 Android ready、Desktop ready、release ready
     或 process runtime ready。
 
 ## 2. Responsive Architecture {#mobile-responsive-layout}

@@ -4,7 +4,8 @@
 use serde_json::Value;
 
 use crate::{
-    MOBILE_ANDROID_PACKAGE_GATE_ANCHOR, MOBILE_ANDROID_PACKAGE_SCRIPT, MOBILE_TAURI_CONFIG_PATH,
+    MOBILE_ANDROID_PACKAGE_GATE_ANCHOR, MOBILE_ANDROID_PACKAGE_SCRIPT,
+    MOBILE_IOS_PACKAGE_GATE_ANCHOR, MOBILE_IOS_PACKAGE_SCRIPT, MOBILE_TAURI_CONFIG_PATH,
     MOBILE_TAURI_IDENTIFIER, MOBILE_TAURI_MAIN_WINDOW_LABEL, MOBILE_TAURI_MAIN_WINDOW_TITLE,
     MOBILE_TAURI_PRODUCT_NAME, MobilePackagingAuthority, MobilePackagingCapability,
     mobile_packaging_scaffold, mobile_tauri_runtime_surface,
@@ -61,6 +62,7 @@ fn mobile_packaging_acceptance_is_shell_only() {
             .android_shell_package
             .is_shell_only_open()
     );
+    assert!(scaffold.acceptance.ios_shell_package.is_shell_only_open());
     assert!(scaffold.acceptance.lifecycle_reprobe_remains_required);
     assert!(scaffold.no_packaging_tests_remain_authoritative);
 }
@@ -132,5 +134,22 @@ fn mobile_android_shell_package_gate_is_shell_only() {
     assert!(!android.opens_authority_write_path);
     assert!(!android.release_ready_claimed);
     assert!(android.is_shell_only_open());
+    assert!(runtime.is_shell_only());
+}
+
+#[test]
+fn mobile_ios_shell_package_gate_is_shell_only() {
+    let ios = mobile_packaging_scaffold().acceptance.ios_shell_package;
+    let runtime = mobile_tauri_runtime_surface();
+
+    assert_eq!(ios.gate_anchor, MOBILE_IOS_PACKAGE_GATE_ANCHOR);
+    assert_eq!(ios.target_host_script, MOBILE_IOS_PACKAGE_SCRIPT);
+    assert!(ios.project_generation_allowed);
+    assert!(ios.package_build_allowed);
+    assert!(!ios.android_package_build_allowed);
+    assert!(!ios.child_process_runtime_enabled);
+    assert!(!ios.opens_authority_write_path);
+    assert!(!ios.release_ready_claimed);
+    assert!(ios.is_shell_only_open());
     assert!(runtime.is_shell_only());
 }

@@ -144,4 +144,5 @@ if ((${#target_missing[@]} > 0)); then
 fi
 
 echo "mobile-platform-package-preflight-check: prerequisites present; Android shell package build is allowed only through scripts/check-mobile-android-shell-package-build.sh"
+echo "mobile-platform-package-preflight-check: prerequisites present; iOS shell package build is allowed only through scripts/check-mobile-ios-shell-package-build.sh"
 echo "mobile-platform-package-preflight-check: ok"

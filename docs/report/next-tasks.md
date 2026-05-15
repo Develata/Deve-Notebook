@@ -6,7 +6,7 @@
 
 ## 当前执行队列
 
-1. Mobile iOS target-host package execution：当前 Linux/WSL 已验证 default diagnostic 与 required fail-closed；iOS 仍阻塞于 macOS target host 与独立验收，不得声明 iOS package ready。
+1. Mobile iOS target-host package execution：iOS shell-only package gate 已落地；下一步在 GitHub macOS target host 用 `target=mobile-ios` + `run_mobile_ios_package_build=true` 验证 package build、no-process/no-authority 边界并收集 evidence。
 2. Desktop installer install/uninstall smoke：Desktop macOS/Windows package build 与 packaged startup smoke 已通过；下一步另起批次验证 macOS `.dmg/.app` 与 Windows MSI/NSIS 安装、启动、卸载/清理，不得与 startup probe 混为同一验收。
 3. Process runtime gate reopen review：Android Mobile shell APK、Desktop package artifacts 与 Desktop packaged startup smoke 已闭合，但 Desktop installer evidence 与 Mobile iOS target-host package execution 仍未闭合；当前仍不得实现 `Command::new`/spawn runtime。
 

@@ -8,6 +8,7 @@ TARGET="${DEVE_NATIVE_TARGET_HOST_TARGET:-all}"
 REQUIRED_PREFLIGHT="${DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT:-false}"
 RUN_DESKTOP_PACKAGE_BUILD="${DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD:-false}"
 RUN_DESKTOP_STARTUP_SMOKE="${DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE:-false}"
+RUN_MOBILE_IOS_PACKAGE_BUILD="${DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_PACKAGE_BUILD:-false}"
 DISPATCH="${DEVE_NATIVE_TARGET_HOST_DISPATCH:-0}"
 REF="${DEVE_NATIVE_TARGET_HOST_REF:-}"
 REPOSITORY="${DEVE_NATIVE_TARGET_HOST_REPOSITORY:-${GITHUB_REPOSITORY:-}}"
@@ -66,11 +67,18 @@ dispatch_payload() {
   local python
 
   python="$(python_bin)" || fail "python3 or python is required for GitHub API dispatch fallback"
-  "$python" - "$REF" "$TARGET" "$REQUIRED_PREFLIGHT" "$RUN_DESKTOP_PACKAGE_BUILD" "$RUN_DESKTOP_STARTUP_SMOKE" <<'PY'
+  "$python" - "$REF" "$TARGET" "$REQUIRED_PREFLIGHT" "$RUN_DESKTOP_PACKAGE_BUILD" "$RUN_DESKTOP_STARTUP_SMOKE" "$RUN_MOBILE_IOS_PACKAGE_BUILD" <<'PY'
 import json
 import sys
 
-ref, target, required_preflight, run_desktop_package_build, run_desktop_startup_smoke = sys.argv[1:]
+(
+    ref,
+    target,
+    required_preflight,
+    run_desktop_package_build,
+    run_desktop_startup_smoke,
+    run_mobile_ios_package_build,
+) = sys.argv[1:]
 payload = {
     "ref": ref,
     "inputs": {
@@ -78,6 +86,7 @@ payload = {
         "required_preflight": required_preflight,
         "run_desktop_package_build": run_desktop_package_build,
         "run_desktop_startup_smoke": run_desktop_startup_smoke,
+        "run_mobile_ios_package_build": run_mobile_ios_package_build,
     },
 }
 print(json.dumps(payload, separators=(",", ":")))
@@ -113,6 +122,7 @@ esac
 REQUIRED_PREFLIGHT="$(normalize_bool "$REQUIRED_PREFLIGHT")"
 RUN_DESKTOP_PACKAGE_BUILD="$(normalize_bool "$RUN_DESKTOP_PACKAGE_BUILD")"
 RUN_DESKTOP_STARTUP_SMOKE="$(normalize_bool "$RUN_DESKTOP_STARTUP_SMOKE")"
+RUN_MOBILE_IOS_PACKAGE_BUILD="$(normalize_bool "$RUN_MOBILE_IOS_PACKAGE_BUILD")"
 
 if [[ -z "$REF" ]]; then
   REF="$(git -C "$ROOT_DIR" branch --show-current 2>/dev/null || true)"
@@ -127,6 +137,7 @@ command_args=(
   --field "required_preflight=$REQUIRED_PREFLIGHT"
   --field "run_desktop_package_build=$RUN_DESKTOP_PACKAGE_BUILD"
   --field "run_desktop_startup_smoke=$RUN_DESKTOP_STARTUP_SMOKE"
+  --field "run_mobile_ios_package_build=$RUN_MOBILE_IOS_PACKAGE_BUILD"
   --ref "$REF"
 )
 

@@ -415,6 +415,19 @@ child-process runtime, or native authority writes.
 The required Android build also needs Gradle wrapper distribution and Gradle
 Plugin Portal dependencies to resolve or already exist in the host cache.
 
+iOS shell-only package execution is a separate explicit gate:
+
+```bash
+scripts/check-mobile-ios-shell-package-build.sh
+```
+
+By default it runs boundary/preflight checks and does not build. On a macOS
+target host, set `DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1` to allow
+`cargo tauri ios init` and `cargo tauri ios build` under
+`apps/mobile/native-packaging`. This still does not open child-process runtime
+or native authority writes. iOS device/simulator install and startup smoke
+remain a later independent gate.
+
 Target-host handoff commands:
 
 ```bash
@@ -422,13 +435,11 @@ DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-
 ```
 
 ```bash
-DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 DEVE_MOBILE_PACKAGE_TARGETS=ios scripts/check-mobile-platform-package-preflight.sh
+DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-ios-shell-package-build.sh
 ```
 
-The current iOS gate is preflight-only. Do not run `cargo tauri ios init` or
-`cargo tauri ios build` until an explicit iOS shell-only package execution gate
-is added. Capture Android artifacts or iOS missing prerequisites under
-`docs/report/`, together with the same no-process/no-authority boundary.
+Capture Android/iOS artifacts or missing prerequisites under `docs/report/`,
+together with the same no-process/no-authority boundary.
 
 Optional GitHub Actions entry:
 
@@ -436,9 +447,11 @@ Optional GitHub Actions entry:
 Native Target Host -> target=mobile-ios
 ```
 
-The workflow is manual-only and runs iOS preflight only. It does not run
-`cargo tauri ios init` or `cargo tauri ios build`. It uploads a validated
-`deve-native-target-host-evidence-ios` artifact.
+The workflow is manual-only. It runs iOS preflight by default and only runs
+`cargo tauri ios init` / `cargo tauri ios build` when
+`run_mobile_ios_package_build=true`. It uploads a validated
+`deve-native-target-host-evidence-ios` artifact and, when package build is
+requested, a `deve-mobile-ios-packages` artifact.
 
 ## Native Process Adapter Gate
 

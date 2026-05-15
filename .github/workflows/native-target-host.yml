@@ -24,6 +24,10 @@ on:
         description: Run Desktop packaged binary startup smoke after package build.
         type: boolean
         default: false
+      run_mobile_ios_package_build:
+        description: Run Mobile iOS shell-only package build after preflight.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -230,7 +234,7 @@ jobs:
     if: ${{ inputs.target == 'all' || inputs.target == 'mobile-ios' }}
     runs-on: macos-latest
     env:
-      DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ inputs.required_preflight && '1' || '0' }}
+      DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ (inputs.required_preflight || inputs.run_mobile_ios_package_build) && '1' || '0' }}
       DEVE_MOBILE_PACKAGE_TARGETS: ios
     steps:
       - uses: actions/checkout@v6
@@ -249,6 +253,7 @@ jobs:
       - name: Install native target-host tools
         env:
           DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
         run: |
           scripts/install-native-target-host-tools.sh
 
@@ -266,11 +271,28 @@ jobs:
         id: mobile_ios_process_gate
         run: scripts/check-native-process-adapter-gate.sh
 
+      - name: Mobile iOS shell package build
+        id: mobile_ios_package_build
+        if: ${{ inputs.run_mobile_ios_package_build }}
+        env:
+          DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED: "1"
+          DEVE_MOBILE_IOS_PACKAGE_TARGET: aarch64
+        run: scripts/check-mobile-ios-shell-package-build.sh
+
       - name: Keep iOS package execution closed
         id: mobile_ios_package_closed_gate
+        if: ${{ ! inputs.run_mobile_ios_package_build }}
         run: |
           test ! -e apps/mobile/gen/apple
-          echo "iOS package build remains closed until an explicit package execution gate is added."
+          echo "iOS package build remains closed because run_mobile_ios_package_build=false."
+
+      - name: Upload Mobile iOS package artifacts
+        if: ${{ inputs.run_mobile_ios_package_build }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-ios-packages
+          path: apps/mobile/gen/apple/**
+          if-no-files-found: error
 
       - name: Write Mobile iOS target-host evidence
         if: always()
@@ -280,15 +302,18 @@ jobs:
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
             scripts/check-mobile-platform-package-preflight.sh
             scripts/check-native-process-adapter-gate.sh
-            test ! -e apps/mobile/gen/apple
+            run_mobile_ios_package_build=${{ inputs.run_mobile_ios_package_build }}
+            package_build_command=${{ inputs.run_mobile_ios_package_build && 'DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-ios-shell-package-build.sh' || 'skipped' }}
+            package_closed_command=${{ ! inputs.run_mobile_ios_package_build && 'test ! -e apps/mobile/gen/apple' || 'skipped' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             mobile_ios_preflight=${{ steps.mobile_ios_preflight.outcome }}
             process_gate=${{ steps.mobile_ios_process_gate.outcome }}
-            package_closed_gate=${{ steps.mobile_ios_package_closed_gate.outcome }}
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: N/A - iOS package execution remains closed
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: N/A - iOS package execution remains closed
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: N/A - iOS package execution remains closed
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: diagnostic-only - iOS package execution remains closed
+            package_build=${{ inputs.run_mobile_ios_package_build && steps.mobile_ios_package_build.outcome || 'skipped' }}
+            package_closed_gate=${{ ! inputs.run_mobile_ios_package_build && steps.mobile_ios_package_closed_gate.outcome || 'skipped' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_mobile_ios_package_build && 'apps/mobile/gen/apple/**' || 'N/A - iOS package execution remains closed' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: ${{ inputs.run_mobile_ios_package_build && 'N/A - iOS install smoke not requested by package execution gate' || 'N/A - iOS package execution remains closed' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: ${{ inputs.run_mobile_ios_package_build && 'N/A - iOS device/simulator startup smoke not requested by package execution gate' || 'N/A - iOS package execution remains closed' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: ${{ inputs.run_mobile_ios_package_build && 'iOS shell package build attempted; inspect job result and artifacts before declaring device/install readiness' || 'diagnostic-only - iOS package execution remains closed' }}
         run: scripts/write-native-target-host-evidence.sh
 
       - name: Upload Mobile iOS target-host evidence
