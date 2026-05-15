@@ -99,7 +99,11 @@ copy_tool_from_extract() {
 ensure_path() {
   export PATH="$BIN_DIR:$PATH"
   if [[ -n "${GITHUB_PATH:-}" ]]; then
-    printf '%s\n' "$BIN_DIR" >>"$GITHUB_PATH"
+    if [[ "$TRIPLE" == *windows* ]] && command -v cygpath >/dev/null 2>&1; then
+      cygpath -w "$BIN_DIR" >>"$GITHUB_PATH"
+    else
+      printf '%s\n' "$BIN_DIR" >>"$GITHUB_PATH"
+    fi
   fi
 }
 
