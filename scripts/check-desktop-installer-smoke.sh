@@ -107,9 +107,20 @@ print_log_tail() {
   [[ -f "$log" ]] || return 0
   echo "desktop-installer-smoke-check: tail of ${log#"$ROOT_DIR"/}" >&2
   tail -n 120 "$log" >&2 || true
-  echo "desktop-installer-smoke-check: MSI path hints from ${log#"$ROOT_DIR"/}" >&2
+  echo "desktop-installer-smoke-check: path hints from ${log#"$ROOT_DIR"/}" >&2
   grep -Ei 'APPLICATIONFOLDER|INSTALLDIR|TARGETDIR|DeveNotebookInstallerSmoke|deve_desktop|Deve Notebook' "$log" \
     | tail -n 80 >&2 || true
+}
+
+terminate_child() {
+  local child="$1"
+  local signal="$2"
+
+  kill "-$signal" "$child" >/dev/null 2>&1 || true
+  kill "-$signal" "-$child" >/dev/null 2>&1 || true
+  if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
+    taskkill.exe //PID "$child" //T //F >/dev/null 2>&1 || true
+  fi
 }
 
 run_bounded_command() {
@@ -130,16 +141,20 @@ run_bounded_command() {
   fi
 
   set +e
-  "$@" &
+  if ! is_windows_host && command -v setsid >/dev/null 2>&1; then
+    setsid "$@" &
+  else
+    "$@" &
+  fi
   child=$!
   while kill -0 "$child" >/dev/null 2>&1; do
     if ((elapsed >= timeout_secs)); then
-      kill "$child" >/dev/null 2>&1 || true
+      terminate_child "$child" TERM
       while kill -0 "$child" >/dev/null 2>&1 && ((kill_wait < TIMEOUT_KILL_AFTER_SECS)); do
         sleep 1
         kill_wait=$((kill_wait + 1))
       done
-      kill -9 "$child" >/dev/null 2>&1 || true
+      terminate_child "$child" KILL
       wait "$child" >/dev/null 2>&1
       set -e
       return 124
@@ -186,6 +201,22 @@ run_windows_installer_command() {
   else
     unset MSYS2_ARG_CONV_EXCL
   fi
+  return "$status"
+}
+
+run_logged_windows_installer_command() {
+  local log="$1"
+  local label="$2"
+  local output
+  local status
+  shift 2
+
+  set +e
+  output="$(run_windows_installer_command "$label" "$@" 2>&1)"
+  status=$?
+  set -e
+  printf '%s\n' "$output"
+  printf '%s\n' "$output" >"$log" || true
   return "$status"
 }
 
@@ -245,6 +276,9 @@ smoke_macos_app_install() {
   echo "+ uninstall $label from ${installed_app#"$ROOT_DIR"/}"
   rm -rf "$installed_app" || status=1
   [[ ! -e "$installed_app" ]] || status=1
+  if ((status != 0)); then
+    preserve_failure_path "$install_root"
+  fi
   return "$status"
 }
 
@@ -259,8 +293,11 @@ smoke_macos_dmg_install() {
   cleanup_paths+=("$mount_dir")
   cleanup_mounts+=("$mount_dir")
 
-  run_installer_command "hdiutil attach ${dmg#"$ROOT_DIR"/}" \
-    hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir" || return 1
+  if ! run_installer_command "hdiutil attach ${dmg#"$ROOT_DIR"/}" \
+    hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir"; then
+    preserve_failure_path "$mount_dir"
+    return 1
+  fi
   mounted_app="$(
     first_match "$mount_dir" -maxdepth 2 -name '*.app' -type d || true
   )"
@@ -271,9 +308,15 @@ smoke_macos_dmg_install() {
     smoke_macos_app_install "dmg app" "$mounted_app" || status=1
   fi
 
-  run_installer_command "hdiutil detach ${mount_dir#"$ROOT_DIR"/}" \
-    hdiutil detach "$mount_dir" || status=1
-  cleanup_mounts=("${cleanup_mounts[@]/$mount_dir}")
+  if run_installer_command "hdiutil detach ${mount_dir#"$ROOT_DIR"/}" \
+    hdiutil detach "$mount_dir"; then
+    cleanup_mounts=("${cleanup_mounts[@]/$mount_dir}")
+  else
+    status=1
+  fi
+  if ((status != 0)); then
+    preserve_failure_path "$mount_dir"
+  fi
   return "$status"
 }
 
@@ -355,6 +398,8 @@ smoke_windows_nsis_install() {
   local nsis="$1"
   local install_root
   local install_dir
+  local install_log
+  local uninstall_log
   local exe
   local uninstaller
   local status=0
@@ -363,17 +408,29 @@ smoke_windows_nsis_install() {
   install_root="$(mktemp -d "$WORK_ROOT/windows-nsis.XXXXXX")"
   cleanup_paths+=("$install_root")
   install_dir="$install_root/$SMOKE_ROOT_NAME"
+  install_log="$install_root/nsis-install.log"
+  uninstall_log="$install_root/nsis-uninstall.log"
 
-  run_windows_installer_command \
+  if ! run_logged_windows_installer_command "$install_log" \
     "${nsis#"$ROOT_DIR"/} /S /D=$(to_windows_path "$install_dir")" \
-    "$nsis" /S "/D=$(to_windows_path "$install_dir")" || return 1
+    "$nsis" /S "/D=$(to_windows_path "$install_dir")"; then
+    print_log_tail "$install_log"
+    preserve_failure_path "$install_root"
+    return 1
+  fi
   sleep 3
   exe="$(find_desktop_exe "$install_dir" || true)"
   if [[ -z "$exe" ]]; then
     echo "desktop-installer-smoke-check: NSIS install completed but installed binary was not found" >&2
+    print_log_tail "$install_log"
+    preserve_failure_path "$install_root"
     status=1
   else
-    run_startup_probe "$exe" || status=1
+    if ! run_startup_probe "$exe"; then
+      print_log_tail "$install_log"
+      preserve_failure_path "$install_root"
+      status=1
+    fi
   fi
 
   uninstaller="$(
@@ -381,14 +438,24 @@ smoke_windows_nsis_install() {
   )"
   if [[ -z "$uninstaller" ]]; then
     echo "desktop-installer-smoke-check: NSIS uninstaller was not found" >&2
+    preserve_failure_path "$install_root"
     status=1
   else
-    run_windows_installer_command \
+    if ! run_logged_windows_installer_command "$uninstall_log" \
       "${uninstaller#"$ROOT_DIR"/} /S" \
-      "$uninstaller" /S || status=1
+      "$uninstaller" /S; then
+      print_log_tail "$uninstall_log"
+      preserve_failure_path "$install_root"
+      status=1
+    fi
     sleep 3
   fi
-  [[ -z "${exe:-}" || ! -f "$exe" ]] || status=1
+  if [[ -n "${exe:-}" && -f "$exe" ]]; then
+    echo "desktop-installer-smoke-check: NSIS uninstall completed but installed binary still exists: $exe" >&2
+    print_log_tail "$uninstall_log"
+    preserve_failure_path "$install_root"
+    status=1
+  fi
   return "$status"
 }
 
