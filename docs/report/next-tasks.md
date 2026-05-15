@@ -1,17 +1,19 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-14
+> 更新日期：2026-05-15
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Desktop macOS/Windows target-host package execution：当前 Linux/WSL 已验证 default diagnostic 与 required fail-closed；下一步必须在 macOS/Windows 主机运行 `DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 scripts/check-desktop-target-host-preflight.sh` 与对应 package build/signing/install/startup smoke。
+1. Desktop macOS/Windows install/startup smoke：macOS `.app/.dmg` 与 Windows MSI/NSIS 已由 GitHub target hosts 产出；下一步验证安装、启动、服务连接失败态、no-process/no-authority 边界与卸载/清理。
 2. Mobile iOS target-host package execution：当前 Linux/WSL 已验证 default diagnostic 与 required fail-closed；iOS 仍阻塞于 macOS target host 与独立验收，不得声明 iOS package ready。
-3. Process runtime gate reopen review：Android Mobile shell APK 已闭合，但 Desktop macOS/Windows 与 Mobile iOS target-host package execution 仍未闭合；当前仍不得实现 `Command::new`/spawn runtime。
+3. Native target-host CI latency cleanup：当前 workflow 每次从源码安装 Trunk/Tauri CLI，macOS package feedback 约 27 分钟；下一步评估缓存或稳定二进制安装，降低后续迭代成本。
+4. Process runtime gate reopen review：Android Mobile shell APK 与 Desktop package artifacts 已闭合，但 Desktop install/startup 与 Mobile iOS target-host package execution 仍未闭合；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
+- Native Desktop Package Artifacts：GitHub macOS target host 成功产出 unsigned `.app/.dmg` package artifact，GitHub Windows target host 成功产出 MSI/NSIS package artifact；新增 `apps/desktop/icons/icon.icns` 关闭 macOS `No matching IconType` 阻塞，process runtime gate 与 native authority writes 继续关闭。
 - Native Target-host Workflow Dispatch Helper：新增 `scripts/dispatch-native-target-host-workflow.sh`，默认 dry-run 输出 `gh workflow run native-target-host.yml` 命令；只有显式 `DEVE_NATIVE_TARGET_HOST_DISPATCH=1` 且 GitHub CLI 已认证时才触发远端 workflow。
 - Native Target-host Workflow Dispatch API Fallback：`scripts/dispatch-native-target-host-workflow.sh` 支持在缺少 `gh` 时使用 `DEVE_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` + `curl` 触发 manual workflow；当前环境缺少 token，GitHub MCP dispatch 两次 TLS handshake timeout，仍未获得目标机执行证据。
 - Native Target-host Evidence Collector：新增 `scripts/collect-native-target-host-evidence.sh`，workflow 完成后可按 run id 下载 `deve-native-target-host-evidence-*` artifacts 并逐个运行 evidence validator；默认 dry-run，不打开 process runtime。
