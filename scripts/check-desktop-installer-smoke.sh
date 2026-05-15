@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED:-0}"
 BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
-TIMEOUT_SECS="${DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS:-20}"
+STARTUP_TIMEOUT_SECS="${DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS:-20}"
+INSTALLER_TIMEOUT_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_TIMEOUT_SECS:-180}"
 WORK_ROOT="${DEVE_DESKTOP_INSTALLER_SMOKE_WORK_DIR:-$ROOT_DIR/target/desktop-installer-smoke}"
 SMOKE_ROOT_NAME="DeveNotebookInstallerSmoke"
 
@@ -79,14 +80,46 @@ run_with_timeout() {
   local binary="$1"
 
   if command -v gtimeout >/dev/null 2>&1; then
-    DEVE_DESKTOP_STARTUP_SMOKE=1 gtimeout "${TIMEOUT_SECS}s" "$binary"
+    DEVE_DESKTOP_STARTUP_SMOKE=1 gtimeout "${STARTUP_TIMEOUT_SECS}s" "$binary"
     return
   fi
   if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
-    DEVE_DESKTOP_STARTUP_SMOKE=1 timeout "${TIMEOUT_SECS}s" "$binary"
+    DEVE_DESKTOP_STARTUP_SMOKE=1 timeout "${STARTUP_TIMEOUT_SECS}s" "$binary"
     return
   fi
   DEVE_DESKTOP_STARTUP_SMOKE=1 "$binary"
+}
+
+run_installer_command() {
+  local label="$1"
+  shift
+
+  echo "+ $label"
+  if command -v gtimeout >/dev/null 2>&1; then
+    gtimeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
+    return
+  fi
+  if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
+    timeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
+    return
+  fi
+  "$@"
+}
+
+run_windows_installer_command() {
+  local label="$1"
+  shift
+
+  echo "+ $label"
+  if command -v gtimeout >/dev/null 2>&1; then
+    MSYS2_ARG_CONV_EXCL='*' gtimeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
+    return
+  fi
+  if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
+    MSYS2_ARG_CONV_EXCL='*' timeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
+    return
+  fi
+  MSYS2_ARG_CONV_EXCL='*' "$@"
 }
 
 run_startup_probe() {
@@ -159,8 +192,8 @@ smoke_macos_dmg_install() {
   cleanup_paths+=("$mount_dir")
   cleanup_mounts+=("$mount_dir")
 
-  echo "+ hdiutil attach ${dmg#"$ROOT_DIR"/}"
-  hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir" >/dev/null || return 1
+  run_installer_command "hdiutil attach ${dmg#"$ROOT_DIR"/}" \
+    hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_dir" || return 1
   mounted_app="$(
     first_match "$mount_dir" -maxdepth 2 -name '*.app' -type d || true
   )"
@@ -171,8 +204,8 @@ smoke_macos_dmg_install() {
     smoke_macos_app_install "dmg app" "$mounted_app" || status=1
   fi
 
-  echo "+ hdiutil detach ${mount_dir#"$ROOT_DIR"/}"
-  hdiutil detach "$mount_dir" >/dev/null || status=1
+  run_installer_command "hdiutil detach ${mount_dir#"$ROOT_DIR"/}" \
+    hdiutil detach "$mount_dir" || status=1
   cleanup_mounts=("${cleanup_mounts[@]/$mount_dir}")
   return "$status"
 }
@@ -230,8 +263,11 @@ smoke_windows_msi_install() {
   install_dir="$install_root/$SMOKE_ROOT_NAME"
   cleanup_paths+=("$install_dir")
 
-  echo "+ msiexec.exe /i ${msi#"$ROOT_DIR"/} /qn /norestart APPLICATIONFOLDER=$(to_windows_path "$install_dir")"
-  msiexec.exe /i "$(to_windows_path "$msi")" /qn /norestart "APPLICATIONFOLDER=$(to_windows_path "$install_dir")" || return 1
+  run_windows_installer_command \
+    "msiexec.exe /i ${msi#"$ROOT_DIR"/} /qn /norestart APPLICATIONFOLDER=$(to_windows_path "$install_dir") INSTALLDIR=$(to_windows_path "$install_dir")" \
+    msiexec.exe /i "$(to_windows_path "$msi")" /qn /norestart \
+    "APPLICATIONFOLDER=$(to_windows_path "$install_dir")" \
+    "INSTALLDIR=$(to_windows_path "$install_dir")" || return 1
   sleep 3
   exe="$(find_desktop_exe "$install_dir" || true)"
   if [[ -z "$exe" ]]; then
@@ -241,8 +277,9 @@ smoke_windows_msi_install() {
     run_startup_probe "$exe" || status=1
   fi
 
-  echo "+ msiexec.exe /x ${msi#"$ROOT_DIR"/} /qn /norestart"
-  msiexec.exe /x "$(to_windows_path "$msi")" /qn /norestart || status=1
+  run_windows_installer_command \
+    "msiexec.exe /x ${msi#"$ROOT_DIR"/} /qn /norestart" \
+    msiexec.exe /x "$(to_windows_path "$msi")" /qn /norestart || status=1
   sleep 3
   [[ -z "$exe" || ! -f "$exe" ]] || status=1
   return "$status"
@@ -261,8 +298,9 @@ smoke_windows_nsis_install() {
   cleanup_paths+=("$install_root")
   install_dir="$install_root/$SMOKE_ROOT_NAME"
 
-  echo "+ ${nsis#"$ROOT_DIR"/} /S /D=$(to_windows_path "$install_dir")"
-  "$nsis" /S "/D=$(to_windows_path "$install_dir")" || return 1
+  run_windows_installer_command \
+    "${nsis#"$ROOT_DIR"/} /S /D=$(to_windows_path "$install_dir")" \
+    "$nsis" /S "/D=$(to_windows_path "$install_dir")" || return 1
   sleep 3
   exe="$(find_desktop_exe "$install_dir" || true)"
   if [[ -z "$exe" ]]; then
@@ -279,8 +317,9 @@ smoke_windows_nsis_install() {
     echo "desktop-installer-smoke-check: NSIS uninstaller was not found" >&2
     status=1
   else
-    echo "+ ${uninstaller#"$ROOT_DIR"/} /S"
-    "$uninstaller" /S || status=1
+    run_windows_installer_command \
+      "${uninstaller#"$ROOT_DIR"/} /S" \
+      "$uninstaller" /S || status=1
     sleep 3
   fi
   [[ -z "${exe:-}" || ! -f "$exe" ]] || status=1
