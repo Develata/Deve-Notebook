@@ -69,7 +69,7 @@
     - cli_assert: clean_markdown_has_no_system_metadata_injection true
 
 - case_id: STORE-007
-  goal: Watcher 事件映射与目录 scan 过滤。
+  goal: Watcher 事件映射、目录 scan 过滤与内部路径边界。
   preconditions:
     - watch 运行中并监听 local repo: main
     - 已跟踪文件存在: ${DEVE_DATA_DIR}/vault/main/notes/live.md
@@ -78,12 +78,16 @@
   steps:
     - run: cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture
     - run: cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture
+    - run: cargo test -p deve_core internal_repo_path_uses_segment_semantics -- --nocapture
+    - run: cargo test -p deve_core --test watcher_internal_ignore -- --nocapture
     - run: cargo test -p deve_core watcher_respects_deveignore_for_matching_markdown -- --nocapture
     - run: cargo test -p deve_core watcher_startup_scan_respects_deveignore -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: pending_fs_ops_contains_added_modified_deleted true
     - cli_assert: duplicate_watcher_start_fails_closed true
+    - cli_assert: internal_notegit_and_git_segments_ignored true
+    - cli_assert: notegit_backup_sibling_not_rejected_by_prefix true
     - cli_assert: pending_fs_ops_ignores_deveignore true
     - cli_assert: ignored_markdown_not_appended_to_ledger true
 
@@ -167,4 +171,30 @@
     - degraded_projection_blocks_merge_mutations: true
     - degraded_projection_blocks_http_source_control_mutations: true
     - degraded_projection_blocks_plugin_host_source_control_mutations: true
+
+- case_id: STORE-014
+  goal: Ledger JSON Lines export。
+  preconditions:
+    - ledger 中存在 content 与 structure facts
+  steps:
+    - run: cargo test -p deve_cli jsonl_roundtrip_is_monotonic_and_line_stable -- --nocapture
+    - run: cargo test -p deve_cli includes_dir_structure_fact_in_export -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
+  assertions:
+    - cli_assert: jsonl_rows_are_single_line true
+    - cli_assert: jsonl_global_seq_monotonic true
+    - cli_assert: jsonl_export_includes_structure_facts true
+
+- case_id: STORE-015
+  goal: Writeback failure 后 Ledger Ack 仍成立。
+  preconditions:
+    - ledger append 已成功
+    - workspace projection writeback 失败
+  steps:
+    - run: cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
+  assertions:
+    - cli_assert: ack_sent_for_committed_ledger_edit true
+    - cli_assert: writeback_failure_reported_as_protocol_error true
+    - cli_assert: committed_client_op_index_persisted true
 ```

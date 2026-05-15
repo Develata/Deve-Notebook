@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# STORE-001..010 keep storage/repo acceptance bound to the current CLI and
-# test surface. Do not resurrect pseudo commands such as `deve repo create`.
+# Storage/repo acceptance cases stay bound to the current CLI and test surface.
+# Do not resurrect pseudo commands such as `deve repo create`.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ACCEPTANCE="$ROOT_DIR/docs/acceptance-cases/07_storage_repo.md"
@@ -53,6 +53,8 @@ case_contains STORE-005 "cargo test -p deve_core global_seq_increases -- --nocap
 case_contains STORE-006 "cargo test -p deve_cli markdown_export_preserves_user_frontmatter_without_system_metadata -- --nocapture"
 case_contains STORE-007 "cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture"
 case_contains STORE-007 "cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture"
+case_contains STORE-007 "cargo test -p deve_core internal_repo_path_uses_segment_semantics -- --nocapture"
+case_contains STORE-007 "cargo test -p deve_core --test watcher_internal_ignore -- --nocapture"
 case_contains STORE-007 "cargo test -p deve_core watcher_respects_deveignore_for_matching_markdown -- --nocapture"
 case_contains STORE-007 "cargo test -p deve_core watcher_startup_scan_respects_deveignore -- --nocapture"
 case_contains STORE-008 "cargo test -p deve_cli recover_rebuilds_workspace_files_from_ledger -- --nocapture"
@@ -61,8 +63,11 @@ case_contains STORE-009 "cargo test -p deve_cli document_scope_bootstrap -- --no
 case_contains STORE-009 "cargo test -p deve_cli open_doc_scope -- --nocapture"
 case_contains STORE-009 "cargo test -p deve_cli resolve_target_prefers_doc_id_over_stale_path -- --nocapture"
 case_contains STORE-010 "cargo test -p deve_core --test path_normalize_structure_test -- --nocapture"
+case_contains STORE-014 "cargo test -p deve_cli jsonl_roundtrip_is_monotonic_and_line_stable -- --nocapture"
+case_contains STORE-014 "cargo test -p deve_cli includes_dir_structure_fact_in_export -- --nocapture"
+case_contains STORE-015 "cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture"
 
-for case_id in STORE-001 STORE-002 STORE-003 STORE-004 STORE-005 STORE-006 STORE-007 STORE-008 STORE-009 STORE-010; do
+for case_id in STORE-001 STORE-002 STORE-003 STORE-004 STORE-005 STORE-006 STORE-007 STORE-008 STORE-009 STORE-010 STORE-014 STORE-015; do
   case_contains "$case_id" "run: scripts/check-storage-repo-baseline.sh"
 done
 
@@ -72,12 +77,24 @@ contains "$ROOT_DIR/apps/cli/src/commands/export/tests.rs" "fn markdown_export_p
 contains "$ROOT_DIR/crates/core/tests/local_repo_metadata_repair_test.rs" "fn init_allocates_collision_safe_repo_name_for_same_name_different_url()"
 contains "$ROOT_DIR/crates/core/tests/store_acceptance_test.rs" "SNAPSHOT_DATA"
 contains "$ROOT_DIR/crates/core/tests/watcher_lifecycle.rs" "fn watcher_duplicate_start_fails_and_can_restart_after_stop()"
+contains "$ROOT_DIR/crates/core/src/utils/notegit.rs" "fn internal_repo_path_uses_segment_semantics()"
+contains "$ROOT_DIR/crates/core/src/utils/notegit.rs" ".notegit-backup/state.json"
+contains "$ROOT_DIR/crates/core/src/utils/notegit.rs" ".git-backup/config"
+contains "$ROOT_DIR/crates/core/tests/watcher_internal_ignore.rs" "fn watcher_ignores_internal_notegit_paths()"
+contains "$ROOT_DIR/crates/core/tests/watcher_internal_ignore.rs" "fn watcher_ignores_internal_git_paths()"
+contains "$ROOT_DIR/crates/core/tests/watcher_internal_ignore.rs" "fn watcher_allows_notegit_backup_sibling_path()"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/filter.rs" "!is_internal_repo_path(normalized)"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::is_running(info.uuid)"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::begin_stop(repo_id)"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "registry::finish_stop(repo_id)"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/mod.rs" "stop_handle(rejected)?"
 contains "$ROOT_DIR/crates/core/src/sync/watcher/registry.rs" "WatcherSlot::Stopping"
 contains "$ROOT_DIR/crates/core/src/ledger/manager/remote_repo_select.rs" "let Some(info) = entry.info.as_ref() else"
+contains "$ROOT_DIR/apps/cli/src/export_entries.rs" "fn jsonl_roundtrip_is_monotonic_and_line_stable()"
+contains "$ROOT_DIR/apps/cli/src/export_entries.rs" "fn includes_dir_structure_fact_in_export()"
+contains "$ROOT_DIR/apps/cli/src/server/edit_projection_ack_test.rs" "fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails()"
+contains "$ROOT_DIR/apps/cli/src/server/handlers/document/edit_apply.rs" "broadcast_and_ack_committed_edit("
+contains "$ROOT_DIR/apps/cli/src/server/handlers/document/edit_apply.rs" "report_projection_writeback_fault("
 not_contains "$ROOT_DIR/crates/core/src/ledger/manager/remote_repo_select.rs" "expect(\"validated readable\")"
 
 not_contains "$ACCEPTANCE" "deve repo create"

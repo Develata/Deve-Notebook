@@ -39,6 +39,19 @@ fn watcher_ignores_internal_git_paths() -> anyhow::Result<()> {
 }
 
 #[test]
+fn watcher_allows_notegit_backup_sibling_path() -> anyhow::Result<()> {
+    let mut h = Harness::new(None)?;
+    h.start_watchers()?;
+
+    let sibling = h.dir.path().join("vault/main/.notegit-backup/x.md");
+    std::fs::create_dir_all(sibling.parent().expect("parent"))?;
+    std::fs::write(&sibling, "backup sibling")?;
+
+    h.wait_pending("main", ".notegit-backup/x.md", ChangeStatus::Added)?;
+    Ok(())
+}
+
+#[test]
 fn watcher_respects_deveignore_for_matching_markdown() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
     std::fs::write(h.dir.path().join("vault/.deveignore"), "ignored/*.md\n")?;
