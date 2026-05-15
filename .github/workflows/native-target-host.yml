@@ -78,6 +78,8 @@ jobs:
         if: ${{ inputs.run_desktop_package_build }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
+          DEVE_DESKTOP_PACKAGE_BUNDLES: app,dmg
+          DEVE_DESKTOP_PACKAGE_NO_SIGN: "1"
         run: scripts/check-desktop-platform-package-build.sh
 
       - name: Upload Desktop macOS package artifacts
@@ -96,7 +98,7 @@ jobs:
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
             scripts/check-desktop-target-host-preflight.sh
             scripts/check-native-process-adapter-gate.sh
-            DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-build.sh
+            DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg DEVE_DESKTOP_PACKAGE_NO_SIGN=1 scripts/check-desktop-platform-package-build.sh
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             desktop_preflight=${{ steps.desktop_macos_preflight.outcome }}
             process_gate=${{ steps.desktop_macos_process_gate.outcome }}

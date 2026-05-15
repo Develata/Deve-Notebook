@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED:-0}"
 BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
+NO_SIGN="${DEVE_DESKTOP_PACKAGE_NO_SIGN:-0}"
 
 fail() {
   echo "desktop-platform-package-build-check: $*" >&2
@@ -17,6 +18,10 @@ run() {
 
 host_os() {
   uname -s 2>/dev/null || printf 'unknown'
+}
+
+is_linux_host() {
+  [[ "$(host_os)" == "Linux" ]]
 }
 
 missing=()
@@ -46,7 +51,7 @@ require_file "apps/desktop/src/main.rs"
 require_file "apps/desktop/build.rs"
 require_file "apps/web/dist/index.html"
 require_command "cargo tauri CLI" cargo tauri --version
-if [[ "$REQUIRED" == "1" ]] && requires_bundle "appimage"; then
+if [[ "$REQUIRED" == "1" ]] && is_linux_host && requires_bundle "appimage"; then
   require_command "pkg-config librsvg-2.0 (install librsvg2-dev)" pkg-config --exists librsvg-2.0
 fi
 
@@ -64,18 +69,21 @@ fi
 
 if [[ "$REQUIRED" != "1" ]]; then
   echo "desktop-platform-package-build-check: package prerequisites present; set DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 to run cargo tauri build"
-  echo "desktop-platform-package-build-check: set DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm to verify a target-host subset"
+  echo "desktop-platform-package-build-check: set DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg / msi,nsis / deb,rpm to verify a target-host subset"
   echo "desktop-platform-package-build-check: ok"
   exit 0
 fi
 
 (
   cd "$ROOT_DIR/apps/desktop"
-  if [[ -n "$BUNDLES" ]]; then
-    run cargo tauri build --ci --bundles "$BUNDLES"
-  else
-    run cargo tauri build --ci
+  build_args=(--ci)
+  if [[ "$NO_SIGN" == "1" ]]; then
+    build_args+=(--no-sign)
   fi
+  if [[ -n "$BUNDLES" ]]; then
+    build_args+=(--bundles "$BUNDLES")
+  fi
+  run cargo tauri build "${build_args[@]}"
 )
 
 echo "desktop-platform-package-build-check: ok"
