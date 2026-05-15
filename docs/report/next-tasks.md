@@ -1,16 +1,16 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-15
+> 更新日期：2026-05-16
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Mobile Android install/startup target-host evidence execution：触发 `native-target-host.yml` 的 `mobile-android` job，设置 `run_mobile_android_package_build=true` 与 `run_mobile_android_install_startup_smoke=true`，收集 `deve-native-target-host-evidence-android`。
-2. Mainline implementation gap scan outside native shell：Native/Desktop/Mobile shell 当前 blocking gap 已收敛到 target-host evidence；下一步可回到 core/web/server Current MUST 的 docs/code 四向扫描。
+1. Mainline implementation gap scan outside native shell：Native/Desktop/Mobile shell 当前 blocking gap 已闭合到 target-host evidence；下一步回到 core/web/server Current MUST 的 docs/code 四向扫描。
 
 ## 最近完成
 
+- Mobile Android Emulator Install/Startup Smoke：GitHub run `25934596796` 完成 Android emulator shell package build、install 与 startup smoke；evidence 显示 `mobile_android_preflight=success`、`process_gate=success`、`package_build=success`、`install_startup_smoke=success`，process runtime 与 native authority writes 仍关闭。
 - Mobile iOS Simulator Install/Startup Smoke：GitHub run `25926372319` 完成 iOS simulator shell package build、install 与 startup smoke；evidence 显示 `mobile_ios_preflight=success`、`process_gate=success`、`package_build=success`、`install_startup_smoke=success`，process runtime 与 native authority writes 仍关闭。
 - Native Shell Mainline Gap Rescan：复跑 native packaging、mobile package、mobile install/startup 默认 gate、release baseline、process gate 与 plan coverage；未发现新的 blocking native shell 架构缺口，后续 target-host evidence 按平台单独闭合。
 - Mobile Install/Startup Evidence Plan：新增 Android 与 iOS install/startup smoke fail-closed 脚本、runbook 入口与 release baseline 守卫；默认不安装设备包，required 模式必须具备真实 emulator/device 或 booted simulator。

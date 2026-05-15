@@ -57,4 +57,11 @@ DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-ios-instal
 
 ## Result
 
-Mobile install/startup has executable fail-closed gates, but it remains open until target-host evidence is collected from an Android emulator/device and a booted iOS simulator.
+Mobile install/startup has executable fail-closed gates.
+
+Target-host evidence is now closed for:
+
+- Android emulator/device install/startup path through emulator shell package build, install, and startup: GitHub run `25934596796`.
+- iOS simulator shell package build, install, and startup: GitHub run `25926372319`.
+
+Physical Android device install, iOS real-device signing/install, and store/distribution readiness remain separate future gates.
