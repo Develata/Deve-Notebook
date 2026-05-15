@@ -512,7 +512,10 @@ package execution runs only when `run_mobile_android_package_build=true`.
 Set `run_mobile_android_install_startup_smoke=true` together with package build
 to start a GitHub-hosted Android emulator, build an `x86_64` debug APK, install
 it, and launch the shell. It uploads `deve-native-target-host-evidence-android`
-and, when package build is requested, `deve-mobile-android-packages`.
+and, when package build is requested, `deve-mobile-android-packages`. The
+Android job skips host Linux native-packaging cargo checks because the target
+evidence is `cargo tauri android build` plus emulator install/startup, not a
+desktop Wry/GTK host build.
 
 It runs iOS preflight by default and only runs
 `cargo tauri ios init` / `cargo tauri ios build` when

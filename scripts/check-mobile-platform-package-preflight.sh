@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED:-0}"
 TARGETS="${DEVE_MOBILE_PACKAGE_TARGETS:-android,ios}"
 ANDROID_PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-aarch64}"
+HOST_NATIVE_PACKAGING_CHECK="${DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK:-1}"
 
 fail() {
   echo "mobile-platform-package-preflight-check: $*" >&2
@@ -105,8 +106,13 @@ if ((${#hard_missing[@]} > 0)); then
 fi
 
 run cargo check --locked -p deve_mobile --no-default-features
-run cargo check --locked -p deve_mobile --features native-packaging
-run cargo test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
+if [[ "$HOST_NATIVE_PACKAGING_CHECK" == "1" ]]; then
+  run cargo check --locked -p deve_mobile --features native-packaging
+  run cargo test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
+else
+  echo "mobile-platform-package-preflight-check: host native-packaging cargo check skipped by DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK=0"
+  echo "mobile-platform-package-preflight-check: host native-packaging packaging tests skipped by DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK=0"
+fi
 
 echo "mobile-platform-package-preflight-check: host_os=$(host_os)"
 echo "mobile-platform-package-preflight-check: targets=$TARGETS"

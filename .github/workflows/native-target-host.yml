@@ -271,6 +271,7 @@ jobs:
     env:
       DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ (inputs.required_preflight || inputs.run_mobile_android_package_build) && '1' || '0' }}
       DEVE_MOBILE_PACKAGE_TARGETS: android
+      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
     steps:
       - uses: actions/checkout@v6
 
