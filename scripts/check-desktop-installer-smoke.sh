@@ -6,6 +6,7 @@ REQUIRED="${DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED:-0}"
 BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
 STARTUP_TIMEOUT_SECS="${DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS:-20}"
 INSTALLER_TIMEOUT_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_TIMEOUT_SECS:-180}"
+TIMEOUT_KILL_AFTER_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_KILL_AFTER_SECS:-10}"
 WORK_ROOT="${DEVE_DESKTOP_INSTALLER_SMOKE_WORK_DIR:-$ROOT_DIR/target/desktop-installer-smoke}"
 SMOKE_ROOT_NAME="DeveNotebookInstallerSmoke"
 
@@ -86,11 +87,11 @@ run_bounded_command() {
   shift
 
   if command -v gtimeout >/dev/null 2>&1; then
-    gtimeout "${timeout_secs}s" "$@"
+    gtimeout --kill-after="${TIMEOUT_KILL_AFTER_SECS}s" "${timeout_secs}s" "$@"
     return
   fi
   if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
-    timeout "${timeout_secs}s" "$@"
+    timeout --kill-after="${TIMEOUT_KILL_AFTER_SECS}s" "${timeout_secs}s" "$@"
     return
   fi
 
