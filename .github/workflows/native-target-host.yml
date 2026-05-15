@@ -388,7 +388,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deve-native-target-host-evidence-android
-          path: target/native-target-host-evidence/mobile-android.md
+          path: |
+            target/native-target-host-evidence/mobile-android.md
+            target/mobile-android-emulator-smoke/**
           if-no-files-found: error
 
   mobile-ios:

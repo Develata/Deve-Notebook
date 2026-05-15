@@ -4,11 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-35}"
-SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
+SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-default}"
 ARCH="${DEVE_MOBILE_ANDROID_EMULATOR_ARCH:-x86_64}"
-AVD_NAME="${DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME:-deve-mobile-smoke}"
-DEVICE_PROFILE="${DEVE_MOBILE_ANDROID_EMULATOR_DEVICE:-pixel_6}"
-BOOT_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS:-600}"
+AVD_NAME="${DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME:-deve-mobile-smoke-api${API_LEVEL}-${SYSTEM_TARGET}-${ARCH}}"
+DEVICE_PROFILE="${DEVE_MOBILE_ANDROID_EMULATOR_DEVICE:-pixel_2}"
+BOOT_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS:-900}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-120}"
 PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-x86_64}"
 LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android-emulator-smoke}"
@@ -18,6 +18,7 @@ LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android
 
 fail() {
   echo "mobile-android-emulator-install-startup-smoke-check: $*" >&2
+  print_emulator_diagnostics >&2
   exit 1
 }
 
@@ -68,6 +69,17 @@ cleanup() {
   fi
 }
 
+print_emulator_diagnostics() {
+  if command -v adb >/dev/null 2>&1; then
+    echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
+    adb devices 2>&1 || true
+  fi
+  if [[ -f "$LOG_DIR/emulator.log" ]]; then
+    echo "mobile-android-emulator-install-startup-smoke-check: emulator.log tail:"
+    tail -n 120 "$LOG_DIR/emulator.log" || true
+  fi
+}
+
 install_sdk_packages() {
   local system_image="system-images;android-$API_LEVEL;$SYSTEM_TARGET;$ARCH"
 
@@ -96,8 +108,10 @@ ensure_avd() {
 wait_for_boot() {
   local deadline=$((SECONDS + BOOT_TIMEOUT_SECS))
   local booted=""
+  local remaining=0
 
   while (( SECONDS < deadline )); do
+    ensure_emulator_process_alive
     EMULATOR_SERIAL="$(first_emulator_serial)"
     if [[ -n "$EMULATOR_SERIAL" ]]; then
       break
@@ -106,9 +120,15 @@ wait_for_boot() {
   done
 
   [[ -n "${EMULATOR_SERIAL:-}" ]] \
-    || fail "Android emulator device did not appear within ${BOOT_TIMEOUT_SECS}s"
+    || fail "Android emulator serial did not appear within ${BOOT_TIMEOUT_SECS}s"
+
+  remaining=$((deadline - SECONDS))
+  (( remaining > 0 )) || fail "Android emulator serial appeared after boot deadline"
+  timeout "$remaining" adb -s "$EMULATOR_SERIAL" wait-for-device \
+    || fail "Android emulator did not reach adb device state within ${BOOT_TIMEOUT_SECS}s"
 
   while (( SECONDS < deadline )); do
+    ensure_emulator_process_alive
     booted="$(adb_cmd -s "$EMULATOR_SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
     if [[ "$booted" == "1" ]]; then
       return 0
@@ -120,7 +140,14 @@ wait_for_boot() {
 }
 
 first_emulator_serial() {
-  adb_cmd devices | awk '$1 ~ /^emulator-/ && $2 == "device" { print $1; exit }'
+  adb_cmd devices | awk '$1 ~ /^emulator-/ { print $1; exit }'
+}
+
+ensure_emulator_process_alive() {
+  if [[ -n "${EMULATOR_PID:-}" ]] && ! kill -0 "$EMULATOR_PID" >/dev/null 2>&1; then
+    wait "$EMULATOR_PID" >/dev/null 2>&1 || true
+    fail "Android emulator process exited before boot completed"
+  fi
 }
 
 assert_positive_integer "DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS" "$BOOT_TIMEOUT_SECS"
