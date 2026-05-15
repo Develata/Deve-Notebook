@@ -224,6 +224,7 @@ contains "docs/dev-runbook.md" "DEVE_DESKTOP_TARGET_HOSTS=macos"
 contains "docs/dev-runbook.md" "DEVE_DESKTOP_TARGET_HOSTS=windows"
 contains "docs/dev-runbook.md" "DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg"
 contains "docs/dev-runbook.md" "DEVE_DESKTOP_PACKAGE_NO_SIGN=1"
+contains "docs/dev-runbook.md" "cargo tauri build --features native-packaging"
 contains "docs/dev-runbook.md" "DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis"
 contains "docs/dev-runbook.md" "DEVE_MOBILE_PACKAGE_TARGETS=ios"
 contains "docs/dev-runbook.md" 'Do not run `cargo tauri ios init` or'

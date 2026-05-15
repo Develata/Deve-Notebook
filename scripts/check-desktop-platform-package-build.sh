@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED:-0}"
 BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
 NO_SIGN="${DEVE_DESKTOP_PACKAGE_NO_SIGN:-0}"
+FEATURES="${DEVE_DESKTOP_PACKAGE_FEATURES:-native-packaging}"
 
 fail() {
   echo "desktop-platform-package-build-check: $*" >&2
@@ -77,6 +78,9 @@ fi
 (
   cd "$ROOT_DIR/apps/desktop"
   build_args=(--ci)
+  if [[ -n "$FEATURES" ]]; then
+    build_args+=(--features "$FEATURES")
+  fi
   if [[ "$NO_SIGN" == "1" ]]; then
     build_args+=(--no-sign)
   fi

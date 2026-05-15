@@ -7,6 +7,7 @@
 - 新增 packaged binary startup probe：`DEVE_DESKTOP_STARTUP_SMOKE=1`。
 - 新增 `scripts/check-desktop-package-startup-smoke.sh`。
 - 将 startup smoke 接入 manual `native-target-host.yml`，由 `run_desktop_startup_smoke=true` 显式开启。
+- `scripts/check-desktop-platform-package-build.sh` 必须把 `native-packaging` feature 传给 `cargo tauri build`，否则 bundle 会产出默认 no-Tauri binary。
 - 更新 release acceptance、runbook、release baseline 与 dispatch helper。
 
 ## Boundary
@@ -25,6 +26,7 @@
 - `scripts/check-desktop-package-startup-smoke.sh`
 - `cargo build --locked -p deve_desktop --features native-packaging --release`
 - `DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 scripts/check-desktop-package-startup-smoke.sh`
+- `bash -n scripts/check-desktop-platform-package-build.sh`
 - `DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh`
 - `scripts/check-dev-runbook-baseline.sh`
 - `scripts/check-release-baseline.sh`
