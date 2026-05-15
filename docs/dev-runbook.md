@@ -361,6 +361,7 @@ scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=mobile-ios DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 ```
 
 The helper is dry-run by default and requires an authenticated GitHub CLI before
@@ -491,7 +492,9 @@ The workflow is manual-only. It runs iOS preflight by default and only runs
 `cargo tauri ios init` / `cargo tauri ios build` when
 `run_mobile_ios_package_build=true`. It uploads a validated
 `deve-native-target-host-evidence-ios` artifact and, when package build is
-requested, a `deve-mobile-ios-packages` artifact.
+requested, a `deve-mobile-ios-packages` artifact. Set
+`run_mobile_ios_install_startup_smoke=true` together with package build to boot a
+simulator, install the generated `.app`, and launch the shell.
 
 ## Native Process Adapter Gate
 

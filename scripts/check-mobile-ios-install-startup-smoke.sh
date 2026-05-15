@@ -6,6 +6,7 @@ REQUIRED="${DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 APP_PATH="${DEVE_MOBILE_IOS_APP_PATH:-apps/mobile/gen/apple/build/arm64-sim/Deve Notebook.app}"
 BUNDLE_ID="${DEVE_MOBILE_IOS_BUNDLE_ID:-dev.deve.notebook.mobile}"
 SIMULATOR="${DEVE_MOBILE_IOS_SIMULATOR:-booted}"
+BOOT_SIMULATOR="${DEVE_MOBILE_IOS_BOOT_SIMULATOR:-0}"
 TERMINATE_AFTER="${DEVE_MOBILE_IOS_INSTALL_SMOKE_TERMINATE:-1}"
 
 # This gate installs and launches only the iOS WebView shell. It must not imply
@@ -34,6 +35,37 @@ xcrun_cmd() {
   xcrun "$@"
 }
 
+booted_simulator_exists() {
+  xcrun_cmd simctl list devices booted | grep -q "Booted"
+}
+
+select_available_simulator() {
+  xcrun_cmd simctl list devices available \
+    | awk -F '[()]' '/iPhone/ && /Shutdown/ { print $2; exit }'
+}
+
+ensure_booted_simulator() {
+  if [[ "$SIMULATOR" != "booted" ]]; then
+    xcrun_cmd simctl bootstatus "$SIMULATOR" -b >/dev/null
+    return 0
+  fi
+
+  if booted_simulator_exists; then
+    return 0
+  fi
+
+  [[ "$BOOT_SIMULATOR" == "1" ]] \
+    || fail "a booted iOS simulator is required; boot one or set DEVE_MOBILE_IOS_BOOT_SIMULATOR=1"
+
+  local selected
+  selected="$(select_available_simulator)"
+  [[ -n "$selected" ]] || fail "no available shutdown iPhone simulator found to boot"
+
+  xcrun_cmd simctl boot "$selected" >/dev/null || true
+  xcrun_cmd simctl bootstatus "$selected" -b >/dev/null
+  SIMULATOR="$selected"
+}
+
 cleanup() {
   [[ "$TERMINATE_AFTER" == "1" ]] || return 0
   xcrun_cmd simctl terminate "$SIMULATOR" "$BUNDLE_ID" >/dev/null 2>&1 || true
@@ -59,8 +91,7 @@ if [[ -d "$ROOT_DIR/$APP_PATH" ]]; then
   APP_PATH="$ROOT_DIR/$APP_PATH"
 fi
 
-xcrun_cmd simctl list devices booted | grep -q "Booted" \
-  || fail "a booted iOS simulator is required; boot one or set DEVE_MOBILE_IOS_SIMULATOR to a booted device id"
+ensure_booted_simulator
 
 trap cleanup EXIT
 
