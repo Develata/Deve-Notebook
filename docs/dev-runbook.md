@@ -455,6 +455,32 @@ DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-ios-shell-package-
 Capture Android/iOS artifacts or missing prerequisites under `docs/report/`,
 together with the same no-process/no-authority boundary.
 
+Mobile install/startup smoke is separate from package build evidence:
+
+```bash
+scripts/check-mobile-android-install-startup-smoke.sh
+scripts/check-mobile-ios-install-startup-smoke.sh
+```
+
+Both scripts are diagnostic-only by default. Required Android mode needs `adb`,
+an attached emulator/device, and an installable APK. Use
+`DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when the default unsigned APK
+cannot be installed:
+
+```bash
+DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-install-startup-smoke.sh
+```
+
+Required iOS mode needs macOS, a built simulator `.app`, and a booted simulator:
+
+```bash
+DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-ios-install-startup-smoke.sh
+```
+
+These gates install and launch only the WebView shell. They do not open
+child-process runtime, backend supervision, ledger/vault/source-control/search,
+Git, or `.notegit` authority writes.
+
 Optional GitHub Actions entry:
 
 ```text
