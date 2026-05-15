@@ -6,11 +6,12 @@
 
 ## 当前执行队列
 
-1. Process runtime gate decision after target-host closure：Desktop macOS/Windows package、startup 与 installer install/uninstall smoke 已闭合；Android shell APK 与 iOS simulator shell package build 已闭合。下一步只评估是否继续保持 process runtime closed；除非出现明确 current feature 需求，仍不得实现 `Command::new`/spawn runtime。
-2. Mobile device install/startup evidence planning：Android emulator/device install smoke 与 iOS simulator/device install smoke 是独立后续 gate；Desktop installer closure 不等价于 Mobile install readiness。
+1. Mobile device install/startup evidence planning：Android emulator/device install smoke 与 iOS simulator/device install smoke 是独立后续 gate；Desktop installer closure 不等价于 Mobile install readiness。
+2. Native shell mainline gap rescan：Desktop installer、Android shell APK、iOS simulator package build 与 process runtime keep-closed decision 已闭合；下一步按 docs/plan 重新扫描 native/mainline 仍未闭合的 Current MUST。
 
 ## 最近完成
 
+- Process Runtime Gate Decision After Target-host Closure：Desktop target-host installer evidence、Android shell APK 与 iOS simulator shell package build 已闭合；新结论为 `KeepClosedUntilExplicitRuntimeFeature`，除非出现明确 current feature 需求，仍不得实现 `Command::new`/spawn runtime。
 - Desktop Installer Install/Uninstall Smoke Target-host Evidence：GitHub macOS run `25921302704` 与 Windows run `25924163007` 均完成 package build、packaged startup smoke、installer install/uninstall smoke、process gate 与 no-authority evidence；Windows `Build web dist` 的 `exit 127` 已通过 `scripts/build-web-dist-ci.sh` 关闭。
 - Mobile iOS Target-host Package Execution：GitHub macOS run `25917428903` 完成 iOS simulator shell package build、preflight、process gate 与 no-authority evidence；下载并检查 `deve-mobile-ios-packages`，确认包含 `apps/mobile/gen/apple/build/arm64-sim/Deve Notebook.app`。device signing 与 iOS install/startup smoke 仍是独立后续 gate。
 - Desktop macOS/Windows Package Startup Smoke Target-host Evidence：GitHub macOS run `25914679737` 与 Windows run `25914681934` 均完成 package build、packaged startup smoke、process gate 与 no-authority evidence；两端 evidence artifact 已用 `scripts/collect-native-target-host-evidence.sh` 校验。

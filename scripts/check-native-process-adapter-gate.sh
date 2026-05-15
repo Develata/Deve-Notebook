@@ -67,12 +67,17 @@ check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessR
 check_contains crates/core/src/native_adapter/process_runtime.rs "validate_contract"
 check_contains apps/desktop/src/shell_test/policy.rs "desktop_default_build_defers_real_process_adapter"
 check_contains apps/mobile/src/shell_test/policy.rs "mobile_default_build_defers_real_process_adapter"
-check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md 'Decision: `KeepClosedUntilTargetHostPackages`'
-check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "No real child-process runtime was opened."
-check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "Command::new"
-check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1"
-check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "Android Mobile shell package execution is verified"
-check_contains docs/report/desktop-process-runtime-gate-decision-2026-05-14.md "iOS Mobile package execution remains target-host work"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "KeepClosedUntilExplicitRuntimeFeature"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "No real child-process runtime was opened."
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "Desktop macOS"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "Desktop Windows"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "Android shell APK package execution is closed"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "iOS simulator shell package build is closed"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "Mobile process runtime must wait for Android/iOS install/startup evidence"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "Command::new"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "tokio::process"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "direct spawn"
+check_contains docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md "must be a separate implementation batch"
 
 check_no_process_runtime_leak
 
