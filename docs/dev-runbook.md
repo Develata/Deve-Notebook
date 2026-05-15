@@ -295,6 +295,7 @@ DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=macos sc
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-platform-package-build.sh
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg DEVE_DESKTOP_PACKAGE_NO_SIGN=1 scripts/check-desktop-platform-package-build.sh
 DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-package-startup-smoke.sh
+DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-installer-smoke.sh
 ```
 
 Use the unsigned macOS command only for CI/package-shape smoke validation. It
@@ -304,6 +305,7 @@ does not replace signed/notarized release packaging.
 DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=windows scripts/check-desktop-target-host-preflight.sh
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-platform-package-build.sh
 DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-package-startup-smoke.sh
+DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-installer-smoke.sh
 ```
 
 The startup smoke runs the packaged Desktop binary with
@@ -314,6 +316,13 @@ authority path. This is package startup evidence, not installer
 install/uninstall evidence. The probe defaults to a 20-second timeout; override
 with `DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS=<seconds>` only when diagnosing a
 slow target host.
+
+The installer smoke is a separate target-host gate. On macOS it mounts the
+`.dmg`, copies the `.app` to a temporary Applications directory, runs the same
+startup probe, uninstalls by deleting the copied bundle, and verifies removal.
+On Windows it runs MSI/NSIS silent install, probes the installed binary, then
+runs the installer-specific uninstall path. It remains diagnostic-only unless
+`DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1` is set.
 
 Capture the host OS, tool versions, command output, artifact paths, install
 result, startup result, and an explicit statement that no child-process runtime
@@ -337,8 +346,10 @@ The workflow is manual-only and diagnostic by default. Set
 `required_preflight=true` to fail closed on missing prerequisites. Set
 `run_desktop_package_build=true` only when the target-host runner is intended to
 produce package artifacts. Set `run_desktop_startup_smoke=true` with package
-builds to run the target-host packaged-binary startup probe. Each target-host
-job uploads a validated `deve-native-target-host-evidence-*` artifact.
+builds to run the target-host packaged-binary startup probe. Set
+`run_desktop_installer_smoke=true` with package builds to run install/uninstall
+smoke. Each target-host job uploads a validated
+`deve-native-target-host-evidence-*` artifact.
 The workflow installs pinned Trunk and Tauri CLI release binaries through
 `scripts/install-native-target-host-tools.sh`; it must not compile those tools
 from source on every target-host run.
@@ -348,6 +359,7 @@ CLI dispatch helper:
 ```bash
 scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true scripts/dispatch-native-target-host-workflow.sh
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 ```
 

@@ -47,6 +47,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-desktop-package-preflight.sh` | Verifies Desktop default/no-packaging and native-packaging compile surfaces before target-host package builds |
 | `check-desktop-platform-package-build.sh` | Diagnoses target-host Desktop package build prerequisites and only runs `cargo tauri build` when explicitly required |
 | `check-desktop-package-startup-smoke.sh` | Verifies target-host Desktop package artifacts expose a startup-probeable shell binary without opening process runtime or authority writes |
+| `check-desktop-installer-smoke.sh` | Verifies target-host Desktop installer install/startup/uninstall flow without opening process runtime or authority writes |
 | `check-desktop-target-host-preflight.sh` | Diagnoses macOS/Windows Desktop target-host prerequisites without claiming package readiness on the wrong host |
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
