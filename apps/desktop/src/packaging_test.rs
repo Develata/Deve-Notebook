@@ -74,6 +74,7 @@ fn desktop_tauri_manifest_declares_shell_metadata_only() {
     assert_eq!(config["app"]["withGlobalTauri"], false);
     assert_eq!(config["bundle"]["active"], true);
     assert_eq!(config["bundle"]["icon"][0], "icons/icon.png");
+    assert_eq!(config["bundle"]["icon"][2], "icons/icon.icns");
     assert_eq!(config["bundle"]["createUpdaterArtifacts"], false);
     assert!(config["bundle"]["targets"].is_null());
     assert!(

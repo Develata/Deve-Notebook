@@ -29,7 +29,7 @@
     "active": true,
     "shortDescription": "Deve Notebook",
     "longDescription": "A ledger-first collaborative notebook shell.",
-    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"],
     "createUpdaterArtifacts": false
   },
   "plugins": {}
