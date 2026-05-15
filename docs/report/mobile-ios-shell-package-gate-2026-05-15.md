@@ -25,8 +25,34 @@
 - `scripts/check-mobile-ios-shell-package-build.sh`
 - `DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-ios-shell-package-build.sh` exits non-zero on Linux/WSL.
 
+## Target-host Evidence
+
+- GitHub run: `25917428903`
+- Workflow: `Native Target Host`
+- Target: `mobile-ios`
+- Head: `a493d0bb`
+- Host: macOS 15.7.4 arm64, Xcode 16.4
+- Toolchain: Rust 1.92.0, Tauri CLI 2.11.1, Node.js 24.15.0
+- Evidence artifact: `deve-native-target-host-evidence-ios`
+- Package artifact: `deve-mobile-ios-packages`
+
+Results:
+
+- `mobile_ios_preflight=success`
+- `process_gate=success`
+- `package_build=success`
+- iOS simulator package output includes `apps/mobile/gen/apple/build/arm64-sim/Deve Notebook.app`.
+- Process runtime remains closed.
+- Native authority writes remain closed.
+- iOS install smoke and startup smoke were not requested by this package execution gate.
+
+Corrections made during target-host validation:
+
+- Run `25916157565` failed on signed device target `aarch64`; default target was changed to unsigned simulator `aarch64-sim`.
+- Run `25916796983` built the simulator app, then failed because the native boundary scan inspected generated iOS artifacts; the scan now excludes generated package output and validates only hand-written source.
+
 ## Next
 
-1. Push this batch and run GitHub `Native Target Host` with `target=mobile-ios` plus `run_mobile_ios_package_build=true`.
-2. Collect and validate `deve-native-target-host-evidence-ios`.
-3. Inspect `deve-mobile-ios-packages` before declaring iOS package execution closed.
+1. Keep iOS device signing as a separate future signing gate.
+2. Keep iOS install/startup smoke as a separate simulator/device runtime gate.
+3. Do not reopen child-process runtime or native authority writes from package build evidence alone.
