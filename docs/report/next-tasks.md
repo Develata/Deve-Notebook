@@ -8,12 +8,12 @@
 
 1. Desktop macOS/Windows package startup smoke target-host run：startup probe 与 workflow/dispatch 接口已落地；下一步在 GitHub macOS/Windows target hosts 用 `run_desktop_package_build=true` + `run_desktop_startup_smoke=true` 验证 packaged binary startup、no-process/no-authority 边界并收集 evidence。
 2. Mobile iOS target-host package execution：当前 Linux/WSL 已验证 default diagnostic 与 required fail-closed；iOS 仍阻塞于 macOS target host 与独立验收，不得声明 iOS package ready。
-3. Native target-host CI latency cleanup：当前 workflow 每次从源码安装 Trunk/Tauri CLI，macOS package feedback 约 27 分钟；下一步评估缓存或稳定二进制安装，降低后续迭代成本。
-4. Desktop installer install/uninstall smoke：package startup smoke 通过后，另起批次验证 macOS `.dmg/.app` 与 Windows MSI/NSIS 安装、启动、卸载/清理；不得与 startup probe 混为同一验收。
-5. Process runtime gate reopen review：Android Mobile shell APK 与 Desktop package artifacts 已闭合，但 Desktop target-host startup/install evidence 与 Mobile iOS target-host package execution 仍未闭合；当前仍不得实现 `Command::new`/spawn runtime。
+3. Desktop installer install/uninstall smoke：package startup smoke 通过后，另起批次验证 macOS `.dmg/.app` 与 Windows MSI/NSIS 安装、启动、卸载/清理；不得与 startup probe 混为同一验收。
+4. Process runtime gate reopen review：Android Mobile shell APK 与 Desktop package artifacts 已闭合，但 Desktop target-host startup/install evidence 与 Mobile iOS target-host package execution 仍未闭合；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
+- Native Target-host Tool Install Speedup：新增 `scripts/install-native-target-host-tools.sh`，manual target-host workflow 改用 Trunk `0.21.14` 与 Tauri CLI `2.11.1` 官方 release binary，不再每次从源码 `cargo install`，降低 macOS/Windows package startup smoke feedback latency。
 - Desktop Package Startup Smoke：新增 `DEVE_DESKTOP_STARTUP_SMOKE=1` packaged binary probe 与 `scripts/check-desktop-package-startup-smoke.sh`；manual `native-target-host.yml` 新增 `run_desktop_startup_smoke` 输入，dispatch helper、runbook、release acceptance 与 release baseline 已同步；本批未修改 `docs/plan/`，未打开 process runtime 或 native authority writes。
 - Native Desktop Package Artifacts：GitHub macOS target host 成功产出 unsigned `.app/.dmg` package artifact，GitHub Windows target host 成功产出 MSI/NSIS package artifact；新增 `apps/desktop/icons/icon.icns` 关闭 macOS `No matching IconType` 阻塞，process runtime gate 与 native authority writes 继续关闭。
 - Native Target-host Workflow Dispatch Helper：新增 `scripts/dispatch-native-target-host-workflow.sh`，默认 dry-run 输出 `gh workflow run native-target-host.yml` 命令；只有显式 `DEVE_NATIVE_TARGET_HOST_DISPATCH=1` 且 GitHub CLI 已认证时才触发远端 workflow。

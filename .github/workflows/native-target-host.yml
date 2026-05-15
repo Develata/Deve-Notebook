@@ -54,14 +54,12 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install Trunk
+      - name: Install native target-host tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: ${{ inputs.run_desktop_package_build && '1' || '0' }}
         run: |
-          cargo install trunk --locked --version 0.21.14
-
-      - name: Install Tauri CLI
-        if: ${{ inputs.run_desktop_package_build }}
-        run: |
-          cargo install tauri-cli --locked --version 2.11.1
+          scripts/install-native-target-host-tools.sh
 
       - name: Build web dist
         run: |
@@ -154,14 +152,12 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install Trunk
+      - name: Install native target-host tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: ${{ inputs.run_desktop_package_build && '1' || '0' }}
         run: |
-          cargo install trunk --locked --version 0.21.14
-
-      - name: Install Tauri CLI
-        if: ${{ inputs.run_desktop_package_build }}
-        run: |
-          cargo install tauri-cli --locked --version 2.11.1
+          scripts/install-native-target-host-tools.sh
 
       - name: Build web dist
         run: |
@@ -250,9 +246,11 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install Trunk
+      - name: Install native target-host tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
         run: |
-          cargo install trunk --locked --version 0.21.14
+          scripts/install-native-target-host-tools.sh
 
       - name: Build web dist
         run: |

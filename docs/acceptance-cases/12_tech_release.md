@@ -87,6 +87,7 @@
     - run: scripts/check-native-packaging-gate.sh
     - run: scripts/check-native-process-adapter-gate.sh
     - run: scripts/check-native-target-host-evidence.sh
+    - run: scripts/install-native-target-host-tools.sh
     - run: scripts/check-desktop-package-preflight.sh
     - run: scripts/check-desktop-platform-package-build.sh
     - run: scripts/check-desktop-package-startup-smoke.sh

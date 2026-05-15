@@ -338,6 +338,9 @@ The workflow is manual-only and diagnostic by default. Set
 produce package artifacts. Set `run_desktop_startup_smoke=true` with package
 builds to run the target-host packaged-binary startup probe. Each target-host
 job uploads a validated `deve-native-target-host-evidence-*` artifact.
+The workflow installs pinned Trunk and Tauri CLI release binaries through
+`scripts/install-native-target-host-tools.sh`; it must not compile those tools
+from source on every target-host run.
 
 CLI dispatch helper:
 
