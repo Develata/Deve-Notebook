@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED:-0}"
-TARGET="${DEVE_MOBILE_IOS_PACKAGE_TARGET:-aarch64}"
+TARGET="${DEVE_MOBILE_IOS_PACKAGE_TARGET:-aarch64-sim}"
 
 # This gate builds only the iOS WebView shell; it must not open child-process runtime.
 

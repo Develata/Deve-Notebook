@@ -12,6 +12,8 @@
 ## Boundary
 
 - iOS package build 只能在 macOS target host、`apps/mobile/native-packaging` feature 与显式 script 下运行。
+- iOS CI/default package target 是 `aarch64-sim`，避免无签名 runner 触发 device signing。
+- signed device IPA build 必须作为后续 signing gate 处理。
 - 本地 Linux/WSL 默认只做 diagnostic；required 模式必须 fail-closed。
 - iOS package execution 不运行 device/simulator install 或 startup smoke。
 - iOS package execution 不启动、持有或重启后端子进程。

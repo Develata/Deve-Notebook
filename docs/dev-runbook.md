@@ -423,10 +423,12 @@ scripts/check-mobile-ios-shell-package-build.sh
 
 By default it runs boundary/preflight checks and does not build. On a macOS
 target host, set `DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1` to allow
-`cargo tauri ios init` and `cargo tauri ios build` under
-`apps/mobile/native-packaging`. This still does not open child-process runtime
-or native authority writes. iOS device/simulator install and startup smoke
-remain a later independent gate.
+`cargo tauri ios init` and `cargo tauri ios build --target aarch64-sim` under
+`apps/mobile/native-packaging`. The CI/default target is `aarch64-sim` to avoid
+Apple signing requirements. Signed device IPA builds require a later signing
+gate and must use `DEVE_MOBILE_IOS_PACKAGE_TARGET=aarch64` with signing material.
+This still does not open child-process runtime or native authority writes. iOS
+device/simulator install and startup smoke remain a later independent gate.
 
 Target-host handoff commands:
 

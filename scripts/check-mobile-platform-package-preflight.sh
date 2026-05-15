@@ -127,6 +127,7 @@ if target_enabled ios; then
     diagnose_command "xcodebuild" xcodebuild -version
     diagnose_command "xcrun" xcrun --version
     diagnose_rust_target "aarch64-apple-ios"
+    diagnose_rust_target "aarch64-apple-ios-sim"
   fi
 fi
 

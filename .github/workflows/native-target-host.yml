@@ -243,7 +243,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.92
-          targets: wasm32-unknown-unknown,aarch64-apple-ios
+          targets: wasm32-unknown-unknown,aarch64-apple-ios,aarch64-apple-ios-sim
 
       - name: Install Node.js 24
         uses: actions/setup-node@v6
@@ -276,7 +276,7 @@ jobs:
         if: ${{ inputs.run_mobile_ios_package_build }}
         env:
           DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED: "1"
-          DEVE_MOBILE_IOS_PACKAGE_TARGET: aarch64
+          DEVE_MOBILE_IOS_PACKAGE_TARGET: aarch64-sim
         run: scripts/check-mobile-ios-shell-package-build.sh
 
       - name: Keep iOS package execution closed
