@@ -48,6 +48,15 @@ search_regex() {
   fi
 }
 
+search_runtime_imports() {
+  local pattern='(^|[^[:alnum:]_])((use[[:space:]]+tauri(::|[[:space:];,{]))|tauri::)'
+
+  grep -REIn -I \
+    --exclude-dir=gen \
+    --exclude-dir=target \
+    -- "$pattern" "$ROOT_DIR/apps" "$ROOT_DIR/crates" || true
+}
+
 stdin_contains_fixed() {
   local pattern="$1"
   if command -v rg >/dev/null 2>&1; then
@@ -85,8 +94,7 @@ check_no_packaging_dependency_leak() {
   done < <(find "$ROOT_DIR" -path "$ROOT_DIR/target" -prune -o -name Cargo.toml -type f -print)
 
   local runtime_imports
-  runtime_imports="$(search_regex '(^|[^[:alnum:]_])((use[[:space:]]+tauri(::|[[:space:];,{]))|tauri::)' \
-    "$ROOT_DIR/apps" "$ROOT_DIR/crates" || true)"
+  runtime_imports="$(search_runtime_imports)"
   if [[ -n "$runtime_imports" ]]; then
     while IFS= read -r line; do
       case "$line" in
@@ -94,7 +102,7 @@ check_no_packaging_dependency_leak() {
         "$ROOT_DIR/apps/desktop/src/main.rs":*) ;;
         "$ROOT_DIR/apps/desktop/src/tauri_entry.rs":*) ;;
         "$ROOT_DIR/apps/mobile/src/tauri_entry.rs":*) ;;
-        *) fail "native packaging runtime import outside desktop shell binding: ${line#"$ROOT_DIR"/}" ;;
+        *) fail "native packaging runtime import outside native shell binding: ${line#"$ROOT_DIR"/}" ;;
       esac
     done <<< "$runtime_imports"
   fi
