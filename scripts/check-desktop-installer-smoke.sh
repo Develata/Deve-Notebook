@@ -23,7 +23,9 @@ cleanup() {
   local mount
   local path
   for mount in "${cleanup_mounts[@]:-}"; do
-    hdiutil detach "$mount" >/dev/null 2>&1 || true
+    if command -v hdiutil >/dev/null 2>&1; then
+      run_bounded_command 15 hdiutil detach "$mount" >/dev/null 2>&1 || true
+    fi
   done
   for path in "${cleanup_paths[@]:-}"; do
     rm -rf "$path" >/dev/null 2>&1 || true
@@ -76,18 +78,47 @@ record_failure() {
   failures+=("$1")
 }
 
-run_with_timeout() {
-  local binary="$1"
+run_bounded_command() {
+  local timeout_secs="$1"
+  local child
+  local elapsed=0
+  local status
+  shift
 
   if command -v gtimeout >/dev/null 2>&1; then
-    DEVE_DESKTOP_STARTUP_SMOKE=1 gtimeout "${STARTUP_TIMEOUT_SECS}s" "$binary"
+    gtimeout "${timeout_secs}s" "$@"
     return
   fi
   if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
-    DEVE_DESKTOP_STARTUP_SMOKE=1 timeout "${STARTUP_TIMEOUT_SECS}s" "$binary"
+    timeout "${timeout_secs}s" "$@"
     return
   fi
-  DEVE_DESKTOP_STARTUP_SMOKE=1 "$binary"
+
+  set +e
+  "$@" &
+  child=$!
+  while kill -0 "$child" >/dev/null 2>&1; do
+    if ((elapsed >= timeout_secs)); then
+      kill "$child" >/dev/null 2>&1 || true
+      sleep 1
+      kill -9 "$child" >/dev/null 2>&1 || true
+      wait "$child" >/dev/null 2>&1
+      set -e
+      return 124
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  wait "$child"
+  status=$?
+  set -e
+  return "$status"
+}
+
+run_with_timeout() {
+  local binary="$1"
+
+  run_bounded_command "$STARTUP_TIMEOUT_SECS" env DEVE_DESKTOP_STARTUP_SMOKE=1 "$binary"
 }
 
 run_installer_command() {
@@ -95,15 +126,7 @@ run_installer_command() {
   shift
 
   echo "+ $label"
-  if command -v gtimeout >/dev/null 2>&1; then
-    gtimeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
-    return
-  fi
-  if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
-    timeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
-    return
-  fi
-  "$@"
+  run_bounded_command "$INSTALLER_TIMEOUT_SECS" "$@"
 }
 
 run_windows_installer_command() {
@@ -111,15 +134,7 @@ run_windows_installer_command() {
   shift
 
   echo "+ $label"
-  if command -v gtimeout >/dev/null 2>&1; then
-    MSYS2_ARG_CONV_EXCL='*' gtimeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
-    return
-  fi
-  if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
-    MSYS2_ARG_CONV_EXCL='*' timeout "${INSTALLER_TIMEOUT_SECS}s" "$@"
-    return
-  fi
-  MSYS2_ARG_CONV_EXCL='*' "$@"
+  run_bounded_command "$INSTALLER_TIMEOUT_SECS" env MSYS2_ARG_CONV_EXCL='*' "$@"
 }
 
 run_startup_probe() {
