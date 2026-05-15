@@ -95,6 +95,7 @@
     - run: scripts/check-desktop-target-host-preflight.sh
     - run: scripts/check-mobile-platform-package-preflight.sh
     - run: scripts/check-mobile-android-shell-package-build.sh
+    - run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
     - run: scripts/check-mobile-ios-shell-package-build.sh
     - run: scripts/check-mobile-android-install-startup-smoke.sh
     - run: scripts/check-mobile-ios-install-startup-smoke.sh

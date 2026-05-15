@@ -26,6 +26,7 @@ iOS install/startup smoke requires a macOS host, built simulator `.app`, and a b
 ## Gate Shape
 
 - `scripts/check-mobile-android-install-startup-smoke.sh` is the Android install/startup gate.
+- `scripts/check-mobile-android-emulator-install-startup-smoke.sh` is the GitHub-hosted Android emulator orchestration wrapper.
 - `scripts/check-mobile-ios-install-startup-smoke.sh` is the iOS install/startup gate.
 - Both scripts are diagnostic-only by default.
 - Required mode must fail closed when target-host tools, artifacts, or devices are missing.
@@ -41,6 +42,12 @@ DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-androi
 ```
 
 Use `DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1` when building an emulator-smoke APK. Use `DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when using another signed APK. Use `DEVE_MOBILE_ANDROID_SERIAL=<adb-serial>` when multiple emulator/device targets are attached.
+
+GitHub target-host dispatch:
+
+```bash
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=mobile-android DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
+```
 
 iOS:
 

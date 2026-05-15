@@ -361,6 +361,7 @@ scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=mobile-android DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=mobile-ios DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 ```
 
@@ -465,6 +466,7 @@ Mobile install/startup smoke is separate from package build evidence:
 
 ```bash
 scripts/check-mobile-android-install-startup-smoke.sh
+scripts/check-mobile-android-emulator-install-startup-smoke.sh
 scripts/check-mobile-ios-install-startup-smoke.sh
 ```
 
@@ -480,6 +482,14 @@ emulator/device is attached. Android `adb` calls are bounded by
 DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-install-startup-smoke.sh
 ```
 
+GitHub-hosted emulator orchestration uses the wrapper script below; it installs
+SDK packages, creates/boots an AVD, builds an `x86_64` debug APK, then delegates
+to the Android install/startup smoke:
+
+```bash
+DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-emulator-install-startup-smoke.sh
+```
+
 Required iOS mode needs macOS, a built simulator `.app`, and a booted simulator:
 
 ```bash
@@ -493,10 +503,18 @@ Git, or `.notegit` authority writes.
 Optional GitHub Actions entry:
 
 ```text
+Native Target Host -> target=mobile-android
 Native Target Host -> target=mobile-ios
 ```
 
-The workflow is manual-only. It runs iOS preflight by default and only runs
+The workflow is manual-only. It runs Android/iOS preflight by default. Android
+package execution runs only when `run_mobile_android_package_build=true`.
+Set `run_mobile_android_install_startup_smoke=true` together with package build
+to start a GitHub-hosted Android emulator, build an `x86_64` debug APK, install
+it, and launch the shell. It uploads `deve-native-target-host-evidence-android`
+and, when package build is requested, `deve-mobile-android-packages`.
+
+It runs iOS preflight by default and only runs
 `cargo tauri ios init` / `cargo tauri ios build` when
 `run_mobile_ios_package_build=true`. It uploads a validated
 `deve-native-target-host-evidence-ios` artifact and, when package build is

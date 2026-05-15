@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED:-0}"
 TARGETS="${DEVE_MOBILE_PACKAGE_TARGETS:-android,ios}"
+ANDROID_PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-aarch64}"
 
 fail() {
   echo "mobile-platform-package-preflight-check: $*" >&2
@@ -76,6 +77,16 @@ diagnose_rust_target() {
   fi
 }
 
+android_rust_target() {
+  case "$ANDROID_PACKAGE_TARGET" in
+    aarch64) printf 'aarch64-linux-android' ;;
+    armv7) printf 'armv7-linux-androideabi' ;;
+    i686) printf 'i686-linux-android' ;;
+    x86_64) printf 'x86_64-linux-android' ;;
+    *) target_missing+=("unsupported Android package target $ANDROID_PACKAGE_TARGET") ;;
+  esac
+}
+
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 require_file "apps/mobile/tauri.conf.json"
@@ -117,7 +128,8 @@ if target_enabled android; then
   diagnose_command "javac" javac -version
   diagnose_dir_env "ANDROID_HOME or ANDROID_SDK_ROOT" ANDROID_HOME ANDROID_SDK_ROOT
   diagnose_command "adb" adb --version
-  diagnose_rust_target "aarch64-linux-android"
+  android_target="$(android_rust_target)"
+  [[ -n "$android_target" ]] && diagnose_rust_target "$android_target"
 fi
 
 if target_enabled ios; then

@@ -11,6 +11,7 @@ on:
           - all
           - desktop-macos
           - desktop-windows
+          - mobile-android
           - mobile-ios
       required_preflight:
         description: Fail closed when target-host prerequisites are missing.
@@ -26,6 +27,14 @@ on:
         default: false
       run_desktop_installer_smoke:
         description: Run Desktop installer install/uninstall smoke after package build.
+        type: boolean
+        default: false
+      run_mobile_android_package_build:
+        description: Run Mobile Android shell-only package build after preflight.
+        type: boolean
+        default: false
+      run_mobile_android_install_startup_smoke:
+        description: Run Mobile Android emulator install/startup smoke after package build.
         type: boolean
         default: false
       run_mobile_ios_package_build:
@@ -254,6 +263,121 @@ jobs:
           path: |
             target/native-target-host-evidence/desktop-windows.md
             target/desktop-installer-smoke/**
+          if-no-files-found: error
+
+  mobile-android:
+    if: ${{ inputs.target == 'all' || inputs.target == 'mobile-android' }}
+    runs-on: ubuntu-latest
+    env:
+      DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ (inputs.required_preflight || inputs.run_mobile_android_package_build) && '1' || '0' }}
+      DEVE_MOBILE_PACKAGE_TARGETS: android
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92
+          targets: wasm32-unknown-unknown,aarch64-linux-android,x86_64-linux-android
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install native target-host tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
+        run: |
+          scripts/install-native-target-host-tools.sh
+
+      - name: Build web dist
+        run: scripts/build-web-dist-ci.sh
+
+      - name: Mobile Android target-host preflight
+        id: mobile_android_preflight
+        run: scripts/check-mobile-platform-package-preflight.sh
+
+      - name: Native process adapter gate remains closed
+        id: mobile_android_process_gate
+        run: scripts/check-native-process-adapter-gate.sh
+
+      - name: Reject Android install smoke without package build
+        id: mobile_android_invalid_request
+        if: ${{ ! inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+        run: |
+          echo "Android install/startup smoke requires run_mobile_android_package_build=true."
+          exit 1
+
+      - name: Mobile Android shell package build
+        id: mobile_android_package_build
+        if: ${{ inputs.run_mobile_android_package_build && ! inputs.run_mobile_android_install_startup_smoke }}
+        env:
+          DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED: "1"
+        run: scripts/check-mobile-android-shell-package-build.sh
+
+      - name: Enable Android emulator KVM access
+        if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Mobile Android emulator install/startup smoke
+        id: mobile_android_install_startup_smoke
+        if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+        env:
+          DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED: "1"
+          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
+          DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS: "120"
+        run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
+
+      - name: Upload Mobile Android package artifacts
+        if: ${{ inputs.run_mobile_android_package_build }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-android-packages
+          path: |
+            apps/mobile/gen/android/app/build/outputs/**/*.apk
+            apps/mobile/gen/android/app/build/outputs/**/*.aab
+          if-no-files-found: error
+
+      - name: Write Mobile Android target-host evidence
+        if: always()
+        env:
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_TARGET: Mobile Android
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: target/native-target-host-evidence/mobile-android.md
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
+            scripts/check-mobile-platform-package-preflight.sh
+            scripts/check-native-process-adapter-gate.sh
+            run_mobile_android_package_build=${{ inputs.run_mobile_android_package_build }}
+            package_build_command=${{ inputs.run_mobile_android_package_build && ! inputs.run_mobile_android_install_startup_smoke && 'DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-package-build.sh' || 'skipped' }}
+            install_startup_command=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && 'DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 DEVE_MOBILE_ANDROID_PACKAGE_TARGET=x86_64 DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS=120 scripts/check-mobile-android-emulator-install-startup-smoke.sh' || 'skipped' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
+            mobile_android_preflight=${{ steps.mobile_android_preflight.outcome }}
+            process_gate=${{ steps.mobile_android_process_gate.outcome }}
+            invalid_request=${{ inputs.run_mobile_android_install_startup_smoke && ! inputs.run_mobile_android_package_build && steps.mobile_android_invalid_request.outcome || 'skipped' }}
+            package_build=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_install_startup_smoke.outcome || inputs.run_mobile_android_package_build && steps.mobile_android_package_build.outcome || 'skipped' }}
+            install_startup_smoke=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_install_startup_smoke.outcome || inputs.run_mobile_android_install_startup_smoke && 'skipped - package build was not requested' || 'skipped' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_mobile_android_package_build && 'apps/mobile/gen/android/app/build/outputs/**/*.{apk,aab}' || 'N/A - Android package execution remains closed' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_install_startup_smoke.outcome || inputs.run_mobile_android_package_build && 'N/A - Android install smoke not requested by package execution gate' || 'N/A - Android package execution remains closed' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_install_startup_smoke.outcome || inputs.run_mobile_android_package_build && 'N/A - Android emulator startup smoke not requested by package execution gate' || 'N/A - Android package execution remains closed' }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && 'Android shell package build and emulator install/startup smoke attempted; inspect job result and artifacts before declaring emulator readiness' || inputs.run_mobile_android_package_build && 'Android shell package build attempted; inspect job result and artifacts before declaring install readiness' || 'diagnostic-only - Android package execution remains closed' }}
+        run: scripts/write-native-target-host-evidence.sh
+
+      - name: Upload Mobile Android target-host evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-native-target-host-evidence-android
+          path: target/native-target-host-evidence/mobile-android.md
           if-no-files-found: error
 
   mobile-ios:
