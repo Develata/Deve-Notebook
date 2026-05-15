@@ -18,6 +18,8 @@ This batch does not declare Mobile release readiness.
 Package build evidence does not prove device or simulator install/startup readiness.
 
 Android install/startup smoke requires an installable signed or debug APK and a reachable emulator or device through `adb`.
+Multi-device hosts should set `DEVE_MOBILE_ANDROID_SERIAL`.
+All required-mode Android `adb` calls are bounded by `DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS`.
 
 iOS install/startup smoke requires a macOS host, built simulator `.app`, and a booted iOS simulator through `xcrun simctl`.
 
@@ -38,7 +40,7 @@ Android:
 DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-install-startup-smoke.sh
 ```
 
-Use `DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1` when building an emulator-smoke APK. Use `DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when using another signed APK.
+Use `DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1` when building an emulator-smoke APK. Use `DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when using another signed APK. Use `DEVE_MOBILE_ANDROID_SERIAL=<adb-serial>` when multiple emulator/device targets are attached.
 
 iOS:
 

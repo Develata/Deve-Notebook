@@ -471,7 +471,10 @@ scripts/check-mobile-ios-install-startup-smoke.sh
 Both scripts are diagnostic-only by default. Required Android mode needs `adb`,
 an attached emulator/device, and an installable APK. The default install-smoke
 APK path points to the debug APK output. Use
-`DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when using another signed APK:
+`DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when using another signed APK.
+Use `DEVE_MOBILE_ANDROID_SERIAL=<adb-serial>` when more than one Android
+emulator/device is attached. Android `adb` calls are bounded by
+`DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS`:
 
 ```bash
 DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-install-startup-smoke.sh

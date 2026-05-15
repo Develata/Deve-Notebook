@@ -155,7 +155,24 @@ validate_artifact_dir() {
     found=1
   done < <(find "$artifact_dir" -type f -name '*.md' -print0)
 
-  (( found == 1 )) || fail "no evidence Markdown files found in ${artifact_dir#$ROOT_DIR/}"
+  (( found == 1 )) || fail "no evidence Markdown files found in ${artifact_dir#"$ROOT_DIR"/}"
+}
+
+validate_artifact_name() {
+  local artifact="$1"
+
+  case "$artifact" in
+    ""|.|..|*/*|*\\*) fail "invalid artifact name: $artifact" ;;
+  esac
+}
+
+prepare_artifact_dir() {
+  local artifact="$1"
+  local artifact_dir="$2"
+
+  validate_artifact_name "$artifact"
+  rm -rf "$artifact_dir"
+  mkdir -p "$artifact_dir"
 }
 
 latest_run_with_gh() {
@@ -275,7 +292,7 @@ collect_with_gh() {
 
   while IFS= read -r artifact; do
     artifact_dir="$OUT_DIR/$artifact"
-    mkdir -p "$artifact_dir"
+    prepare_artifact_dir "$artifact" "$artifact_dir"
     "$GH_BIN" run download "$RUN_ID" --repo "$repo" --name "$artifact" --dir "$artifact_dir"
     validate_artifact_dir "$artifact_dir"
   done < <(artifact_names)
@@ -314,7 +331,7 @@ collect_with_api() {
     [[ -n "$download_url" ]] || fail "missing artifact in workflow run: $artifact"
     artifact_dir="$OUT_DIR/$artifact"
     zip_path="$tmp_dir/$artifact.zip"
-    mkdir -p "$artifact_dir"
+    prepare_artifact_dir "$artifact" "$artifact_dir"
     if ! curl -fsSL \
       -H "Accept: application/vnd.github+json" \
       -H "Authorization: Bearer $TOKEN" \
@@ -363,12 +380,13 @@ if [[ -n "$repo" ]]; then
     echo "native-target-host-evidence-collect: status api: GET https://api.github.com/repos/$repo/actions/runs/$display_run_id"
   fi
 fi
-echo "native-target-host-evidence-collect: output=${OUT_DIR#$ROOT_DIR/}"
+echo "native-target-host-evidence-collect: output=${OUT_DIR#"$ROOT_DIR"/}"
 while IFS= read -r artifact; do
+  validate_artifact_name "$artifact"
   if [[ -n "$repo" ]]; then
-    echo "native-target-host-evidence-collect: command: $GH_BIN run download $display_run_id --repo $repo --name $artifact --dir ${OUT_DIR#$ROOT_DIR/}/$artifact"
+    echo "native-target-host-evidence-collect: command: $GH_BIN run download $display_run_id --repo $repo --name $artifact --dir ${OUT_DIR#"$ROOT_DIR"/}/$artifact"
   else
-    echo "native-target-host-evidence-collect: command: $GH_BIN run download $display_run_id --name $artifact --dir ${OUT_DIR#$ROOT_DIR/}/$artifact"
+    echo "native-target-host-evidence-collect: command: $GH_BIN run download $display_run_id --name $artifact --dir ${OUT_DIR#"$ROOT_DIR"/}/$artifact"
   fi
 done < <(artifact_names)
 
