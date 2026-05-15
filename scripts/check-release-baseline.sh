@@ -78,6 +78,8 @@ contains ".github/workflows/native-target-host.yml" "run_mobile_ios_install_star
 contains ".github/workflows/native-target-host.yml" "aarch64-apple-ios-sim"
 contains ".github/workflows/native-target-host.yml" "x86_64-linux-android"
 contains ".github/workflows/native-target-host.yml" "actions/setup-java@v5"
+contains ".github/workflows/native-target-host.yml" "Install Android SDK platform tools"
+contains ".github/workflows/native-target-host.yml" "sdkmanager \"platform-tools\" \"emulator\""
 contains ".github/workflows/native-target-host.yml" "runs-on: macos-latest"
 contains ".github/workflows/native-target-host.yml" "runs-on: windows-latest"
 contains ".github/workflows/native-target-host.yml" "runs-on: ubuntu-latest"
