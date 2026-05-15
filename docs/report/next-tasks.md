@@ -6,12 +6,13 @@
 
 ## 当前执行队列
 
-1. Mobile install/startup target-host evidence execution：用 `scripts/check-mobile-android-install-startup-smoke.sh` 在 Android emulator/device 上安装并启动 APK；用 `scripts/check-mobile-ios-install-startup-smoke.sh` 在 macOS booted simulator 上安装并启动 `.app`。
+1. Mobile Android install/startup target-host evidence execution：用 `scripts/check-mobile-android-install-startup-smoke.sh` 在 Android emulator/device 上安装并启动 installable APK；当前默认 release APK 仍需 signed/debug installable artifact 策略。
 2. Mainline implementation gap scan outside native shell：Native/Desktop/Mobile shell 当前 blocking gap 已收敛到 target-host evidence；下一步可回到 core/web/server Current MUST 的 docs/code 四向扫描。
 
 ## 最近完成
 
-- Native Shell Mainline Gap Rescan：复跑 native packaging、mobile package、mobile install/startup 默认 gate、release baseline、process gate 与 plan coverage；未发现新的 blocking native shell 架构缺口，剩余为 Android/iOS target-host install/startup evidence。
+- Mobile iOS Simulator Install/Startup Smoke：GitHub run `25926372319` 完成 iOS simulator shell package build、install 与 startup smoke；evidence 显示 `mobile_ios_preflight=success`、`process_gate=success`、`package_build=success`、`install_startup_smoke=success`，process runtime 与 native authority writes 仍关闭。
+- Native Shell Mainline Gap Rescan：复跑 native packaging、mobile package、mobile install/startup 默认 gate、release baseline、process gate 与 plan coverage；未发现新的 blocking native shell 架构缺口，后续 target-host evidence 按平台单独闭合。
 - Mobile Install/Startup Evidence Plan：新增 Android 与 iOS install/startup smoke fail-closed 脚本、runbook 入口与 release baseline 守卫；默认不安装设备包，required 模式必须具备真实 emulator/device 或 booted simulator。
 - Process Runtime Gate Decision After Target-host Closure：Desktop target-host installer evidence、Android shell APK 与 iOS simulator shell package build 已闭合；新结论为 `KeepClosedUntilExplicitRuntimeFeature`，除非出现明确 current feature 需求，仍不得实现 `Command::new`/spawn runtime。
 - Desktop Installer Install/Uninstall Smoke Target-host Evidence：GitHub macOS run `25921302704` 与 Windows run `25924163007` 均完成 package build、packaged startup smoke、installer install/uninstall smoke、process gate 与 no-authority evidence；Windows `Build web dist` 的 `exit 127` 已通过 `scripts/build-web-dist-ci.sh` 关闭。
