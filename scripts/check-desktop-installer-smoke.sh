@@ -131,10 +131,24 @@ run_installer_command() {
 
 run_windows_installer_command() {
   local label="$1"
+  local previous_arg_conv="${MSYS2_ARG_CONV_EXCL-}"
+  local had_arg_conv=0
+  local status
   shift
 
   echo "+ $label"
-  run_bounded_command "$INSTALLER_TIMEOUT_SECS" env MSYS2_ARG_CONV_EXCL='*' "$@"
+  [[ -v MSYS2_ARG_CONV_EXCL ]] && had_arg_conv=1
+  export MSYS2_ARG_CONV_EXCL='*'
+  set +e
+  run_bounded_command "$INSTALLER_TIMEOUT_SECS" "$@"
+  status=$?
+  set -e
+  if ((had_arg_conv)); then
+    export MSYS2_ARG_CONV_EXCL="$previous_arg_conv"
+  else
+    unset MSYS2_ARG_CONV_EXCL
+  fi
+  return "$status"
 }
 
 run_startup_probe() {
