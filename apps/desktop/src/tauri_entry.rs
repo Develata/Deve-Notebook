@@ -43,6 +43,25 @@ impl DesktopTauriRuntimeSurface {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopTauriStartupSmoke {
+    pub packaged_binary_started: bool,
+    pub shell_only_runtime: bool,
+    pub child_process_runtime_enabled: bool,
+    pub opens_authority_write_path: bool,
+}
+
+impl DesktopTauriStartupSmoke {
+    pub fn passed(self) -> bool {
+        self.packaged_binary_started
+            && self.shell_only_runtime
+            && !self.child_process_runtime_enabled
+            && !self.opens_authority_write_path
+    }
+}
+
+pub const DESKTOP_TAURI_STARTUP_SMOKE_OK: &str = "desktop-startup-smoke: ok";
+
 pub fn desktop_tauri_runtime_surface() -> DesktopTauriRuntimeSurface {
     DesktopTauriRuntimeSurface {
         runtime_entrypoint_declared: true,
@@ -51,6 +70,16 @@ pub fn desktop_tauri_runtime_surface() -> DesktopTauriRuntimeSurface {
         menu_tray_runtime_bound: true,
         child_process_runtime_enabled: false,
         opens_authority_write_path: false,
+    }
+}
+
+pub fn desktop_tauri_startup_smoke() -> DesktopTauriStartupSmoke {
+    let surface = desktop_tauri_runtime_surface();
+    DesktopTauriStartupSmoke {
+        packaged_binary_started: true,
+        shell_only_runtime: surface.is_shell_only(),
+        child_process_runtime_enabled: surface.child_process_runtime_enabled,
+        opens_authority_write_path: surface.opens_authority_write_path,
     }
 }
 
@@ -143,6 +172,17 @@ mod tests {
         assert!(desktop_tauri_runtime_surface().is_shell_only());
         assert!(!desktop_tauri_runtime_surface().child_process_runtime_enabled);
         assert!(!desktop_tauri_runtime_surface().opens_authority_write_path);
+    }
+
+    #[test]
+    fn desktop_tauri_startup_smoke_keeps_authority_closed() {
+        let smoke = desktop_tauri_startup_smoke();
+
+        assert!(smoke.passed());
+        assert!(smoke.packaged_binary_started);
+        assert!(smoke.shell_only_runtime);
+        assert!(!smoke.child_process_runtime_enabled);
+        assert!(!smoke.opens_authority_write_path);
     }
 
     #[test]

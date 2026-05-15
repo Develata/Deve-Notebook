@@ -50,7 +50,8 @@ pub use packaging::{
 pub use shell::DesktopShell;
 #[cfg(feature = "native-packaging")]
 pub use tauri_entry::{
-    DesktopTauriRuntimeSurface, DesktopTauriShellEffect, desktop_tauri_runtime_surface,
+    DESKTOP_TAURI_STARTUP_SMOKE_OK, DesktopTauriRuntimeSurface, DesktopTauriShellEffect,
+    DesktopTauriStartupSmoke, desktop_tauri_runtime_surface, desktop_tauri_startup_smoke,
     menu_action_shell_effect, run_desktop_tauri_app, tray_action_shell_effect,
 };
 pub use types::{

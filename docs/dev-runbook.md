@@ -293,6 +293,7 @@ Target-host handoff commands:
 DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=macos scripts/check-desktop-target-host-preflight.sh
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-platform-package-build.sh
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg DEVE_DESKTOP_PACKAGE_NO_SIGN=1 scripts/check-desktop-platform-package-build.sh
+DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-package-startup-smoke.sh
 ```
 
 Use the unsigned macOS command only for CI/package-shape smoke validation. It
@@ -301,7 +302,17 @@ does not replace signed/notarized release packaging.
 ```bash
 DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=windows scripts/check-desktop-target-host-preflight.sh
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-platform-package-build.sh
+DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-package-startup-smoke.sh
 ```
+
+The startup smoke runs the packaged Desktop binary with
+`DEVE_DESKTOP_STARTUP_SMOKE=1`. It validates that the binary can start and
+report a shell-only runtime surface, then exits before opening a GUI window,
+child-process runtime, ledger, vault, source-control, search, Git, or `.notegit`
+authority path. This is package startup evidence, not installer
+install/uninstall evidence. The probe defaults to a 20-second timeout; override
+with `DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS=<seconds>` only when diagnosing a
+slow target host.
 
 Capture the host OS, tool versions, command output, artifact paths, install
 result, startup result, and an explicit statement that no child-process runtime
@@ -324,14 +335,16 @@ Native Target Host -> target=desktop-macos|desktop-windows
 The workflow is manual-only and diagnostic by default. Set
 `required_preflight=true` to fail closed on missing prerequisites. Set
 `run_desktop_package_build=true` only when the target-host runner is intended to
-produce package artifacts. Each target-host job uploads a validated
-`deve-native-target-host-evidence-*` artifact.
+produce package artifacts. Set `run_desktop_startup_smoke=true` with package
+builds to run the target-host packaged-binary startup probe. Each target-host
+job uploads a validated `deve-native-target-host-evidence-*` artifact.
 
 CLI dispatch helper:
 
 ```bash
 scripts/dispatch-native-target-host-workflow.sh
 DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true scripts/dispatch-native-target-host-workflow.sh
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 DEVE_NATIVE_TARGET_HOST_TARGET=desktop-macos DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE=true scripts/dispatch-native-target-host-workflow.sh
 ```
 
 The helper is dry-run by default and requires an authenticated GitHub CLI before
