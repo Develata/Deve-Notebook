@@ -144,7 +144,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deve-native-target-host-evidence-macos
-          path: target/native-target-host-evidence/desktop-macos.md
+          path: |
+            target/native-target-host-evidence/desktop-macos.md
+            target/desktop-installer-smoke/**
           if-no-files-found: error
 
   desktop-windows:
@@ -251,7 +253,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deve-native-target-host-evidence-windows
-          path: target/native-target-host-evidence/desktop-windows.md
+          path: |
+            target/native-target-host-evidence/desktop-windows.md
+            target/desktop-installer-smoke/**
           if-no-files-found: error
 
   mobile-ios:

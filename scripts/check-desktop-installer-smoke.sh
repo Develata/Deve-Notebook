@@ -12,6 +12,7 @@ SMOKE_ROOT_NAME="DeveNotebookInstallerSmoke"
 
 cleanup_paths=()
 cleanup_mounts=()
+preserved_paths=()
 missing=()
 failures=()
 
@@ -29,6 +30,9 @@ cleanup() {
     fi
   done
   for path in "${cleanup_paths[@]:-}"; do
+    if path_is_preserved "$path"; then
+      continue
+    fi
     rm -rf "$path" >/dev/null 2>&1 || true
   done
 }
@@ -79,18 +83,40 @@ record_failure() {
   failures+=("$1")
 }
 
+path_is_preserved() {
+  local candidate="$1"
+  local preserved
+
+  for preserved in "${preserved_paths[@]:-}"; do
+    [[ "$candidate" == "$preserved" ]] && return 0
+  done
+  return 1
+}
+
+preserve_failure_path() {
+  local path="$1"
+
+  path_is_preserved "$path" && return 0
+  preserved_paths+=("$path")
+  echo "desktop-installer-smoke-check: preserving failure evidence at ${path#"$ROOT_DIR"/}" >&2
+}
+
 print_log_tail() {
   local log="$1"
 
   [[ -f "$log" ]] || return 0
   echo "desktop-installer-smoke-check: tail of ${log#"$ROOT_DIR"/}" >&2
   tail -n 120 "$log" >&2 || true
+  echo "desktop-installer-smoke-check: MSI path hints from ${log#"$ROOT_DIR"/}" >&2
+  grep -Ei 'APPLICATIONFOLDER|INSTALLDIR|TARGETDIR|DeveNotebookInstallerSmoke|deve_desktop|Deve Notebook' "$log" \
+    | tail -n 80 >&2 || true
 }
 
 run_bounded_command() {
   local timeout_secs="$1"
   local child
   local elapsed=0
+  local kill_wait=0
   local status
   shift
 
@@ -109,7 +135,10 @@ run_bounded_command() {
   while kill -0 "$child" >/dev/null 2>&1; do
     if ((elapsed >= timeout_secs)); then
       kill "$child" >/dev/null 2>&1 || true
-      sleep 1
+      while kill -0 "$child" >/dev/null 2>&1 && ((kill_wait < TIMEOUT_KILL_AFTER_SECS)); do
+        sleep 1
+        kill_wait=$((kill_wait + 1))
+      done
       kill -9 "$child" >/dev/null 2>&1 || true
       wait "$child" >/dev/null 2>&1
       set -e
@@ -286,15 +315,22 @@ smoke_windows_msi_install() {
     "INSTALLDIR=$(to_windows_path "$install_dir")" \
     /l*v "$(to_windows_path "$install_log")"; then
     print_log_tail "$install_log"
+    preserve_failure_path "$install_root"
     return 1
   fi
   sleep 3
   exe="$(find_desktop_exe "$install_dir" || true)"
   if [[ -z "$exe" ]]; then
     echo "desktop-installer-smoke-check: MSI install completed but installed binary was not found under $install_dir" >&2
+    print_log_tail "$install_log"
+    preserve_failure_path "$install_root"
     status=1
   else
-    run_startup_probe "$exe" || status=1
+    if ! run_startup_probe "$exe"; then
+      print_log_tail "$install_log"
+      preserve_failure_path "$install_root"
+      status=1
+    fi
   fi
 
   if ! run_windows_installer_command \
@@ -302,10 +338,16 @@ smoke_windows_msi_install() {
     msiexec.exe /x "$(to_windows_path "$msi")" /qn /norestart \
     /l*v "$(to_windows_path "$uninstall_log")"; then
     print_log_tail "$uninstall_log"
+    preserve_failure_path "$install_root"
     status=1
   fi
   sleep 3
-  [[ -z "$exe" || ! -f "$exe" ]] || status=1
+  if [[ -n "$exe" && -f "$exe" ]]; then
+    echo "desktop-installer-smoke-check: MSI uninstall completed but installed binary still exists: $exe" >&2
+    print_log_tail "$uninstall_log"
+    preserve_failure_path "$install_root"
+    status=1
+  fi
   return "$status"
 }
 
