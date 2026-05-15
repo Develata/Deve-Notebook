@@ -6,6 +6,7 @@ REQUIRED="${DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED:-0}"
 TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-aarch64}"
 BUILD_APK="${DEVE_MOBILE_ANDROID_PACKAGE_APK:-1}"
 BUILD_AAB="${DEVE_MOBILE_ANDROID_PACKAGE_AAB:-0}"
+BUILD_DEBUG="${DEVE_MOBILE_ANDROID_PACKAGE_DEBUG:-0}"
 
 # This gate builds only the Android WebView shell; it must not open child-process runtime.
 
@@ -29,6 +30,9 @@ validate_target() {
 validate_artifact_kind() {
   if [[ "$BUILD_APK" != "1" && "$BUILD_AAB" != "1" ]]; then
     fail "at least one of DEVE_MOBILE_ANDROID_PACKAGE_APK or DEVE_MOBILE_ANDROID_PACKAGE_AAB must be 1"
+  fi
+  if [[ "$BUILD_DEBUG" == "1" && "$BUILD_AAB" == "1" ]]; then
+    fail "debug Android install-smoke builds must produce APK only; AAB is release/store packaging"
   fi
 }
 
@@ -105,6 +109,9 @@ if [[ ! -d "$ROOT_DIR/apps/mobile/gen/android" ]]; then
 fi
 
 build_args=(cargo tauri android build --ci --features native-packaging --target "$TARGET")
+if [[ "$BUILD_DEBUG" == "1" ]]; then
+  build_args+=(--debug)
+fi
 if [[ "$BUILD_APK" == "1" ]]; then
   build_args+=(--apk)
 fi

@@ -6,7 +6,7 @@
 
 ## 当前执行队列
 
-1. Mobile Android install/startup target-host evidence execution：用 `scripts/check-mobile-android-install-startup-smoke.sh` 在 Android emulator/device 上安装并启动 installable APK；当前默认 release APK 仍需 signed/debug installable artifact 策略。
+1. Mobile Android install/startup target-host evidence execution：用 `DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1 scripts/check-mobile-android-shell-package-build.sh` 生成 installable debug APK，再用 `scripts/check-mobile-android-install-startup-smoke.sh` 在 Android emulator/device 上安装并启动。
 2. Mainline implementation gap scan outside native shell：Native/Desktop/Mobile shell 当前 blocking gap 已收敛到 target-host evidence；下一步可回到 core/web/server Current MUST 的 docs/code 四向扫描。
 
 ## 最近完成

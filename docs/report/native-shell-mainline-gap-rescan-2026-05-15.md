@@ -36,7 +36,7 @@ The current Native/Desktop/Mobile line remains:
 
 Android install/startup evidence remains open until a target host provides:
 
-- an installable APK, usually signed or explicitly supplied through `DEVE_MOBILE_ANDROID_APK_PATH`;
+- an installable APK, usually debug-built for emulator smoke or explicitly supplied through `DEVE_MOBILE_ANDROID_APK_PATH`;
 - a reachable emulator/device through `adb`;
 - a successful required run of `DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-install-startup-smoke.sh`.
 

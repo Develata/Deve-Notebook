@@ -427,6 +427,11 @@ target host, set `DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1` to allow
 child-process runtime, or native authority writes.
 The required Android build also needs Gradle wrapper distribution and Gradle
 Plugin Portal dependencies to resolve or already exist in the host cache.
+For emulator install/startup smoke, build an installable debug APK:
+
+```bash
+DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1 scripts/check-mobile-android-shell-package-build.sh
+```
 
 iOS shell-only package execution is a separate explicit gate:
 
@@ -464,9 +469,9 @@ scripts/check-mobile-ios-install-startup-smoke.sh
 ```
 
 Both scripts are diagnostic-only by default. Required Android mode needs `adb`,
-an attached emulator/device, and an installable APK. Use
-`DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when the default unsigned APK
-cannot be installed:
+an attached emulator/device, and an installable APK. The default install-smoke
+APK path points to the debug APK output. Use
+`DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk` when using another signed APK:
 
 ```bash
 DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-android-install-startup-smoke.sh
