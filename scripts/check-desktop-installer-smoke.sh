@@ -79,6 +79,14 @@ record_failure() {
   failures+=("$1")
 }
 
+print_log_tail() {
+  local log="$1"
+
+  [[ -f "$log" ]] || return 0
+  echo "desktop-installer-smoke-check: tail of ${log#"$ROOT_DIR"/}" >&2
+  tail -n 120 "$log" >&2 || true
+}
+
 run_bounded_command() {
   local timeout_secs="$1"
   local child
@@ -248,56 +256,38 @@ to_windows_path() {
   fi
 }
 
-to_unix_path() {
-  if command -v cygpath >/dev/null 2>&1; then
-    cygpath -u "$1"
-  else
-    printf '%s\n' "$1"
-  fi
-}
-
-windows_env_path() {
-  local name="$1"
-  local value
-  value="$(printenv "$name" 2>/dev/null || true)"
-  [[ -n "$value" ]] || return 0
-  to_unix_path "$value"
-}
-
 find_desktop_exe() {
   local root="$1"
   first_match "$root" -type f \( -iname 'deve_desktop.exe' -o -iname 'Deve Notebook.exe' \)
-}
-
-windows_program_files_root() {
-  local root
-
-  root="$(windows_env_path ProgramFiles)"
-  if [[ -z "$root" ]]; then
-    root="$(windows_env_path 'ProgramFiles(x86)')"
-  fi
-  if [[ -z "$root" ]]; then
-    return 1
-  fi
-  printf '%s\n' "$root"
 }
 
 smoke_windows_msi_install() {
   local msi="$1"
   local install_root
   local install_dir
+  local install_log
+  local uninstall_log
   local exe=""
   local status=0
 
-  install_root="$(windows_program_files_root)" || return 1
+  prepare_work_dir
+  install_root="$(mktemp -d "$WORK_ROOT/windows-msi.XXXXXX")"
+  cleanup_paths+=("$install_root")
   install_dir="$install_root/$SMOKE_ROOT_NAME"
-  cleanup_paths+=("$install_dir")
+  install_log="$install_root/msiexec-install.log"
+  uninstall_log="$install_root/msiexec-uninstall.log"
 
-  run_windows_installer_command \
-    "msiexec.exe /i ${msi#"$ROOT_DIR"/} /qn /norestart APPLICATIONFOLDER=$(to_windows_path "$install_dir") INSTALLDIR=$(to_windows_path "$install_dir")" \
+  if ! run_windows_installer_command \
+    "msiexec.exe /i ${msi#"$ROOT_DIR"/} /qn /norestart ALLUSERS=2 MSIINSTALLPERUSER=1 APPLICATIONFOLDER=$(to_windows_path "$install_dir") INSTALLDIR=$(to_windows_path "$install_dir") /l*v $(to_windows_path "$install_log")" \
     msiexec.exe /i "$(to_windows_path "$msi")" /qn /norestart \
+    ALLUSERS=2 \
+    MSIINSTALLPERUSER=1 \
     "APPLICATIONFOLDER=$(to_windows_path "$install_dir")" \
-    "INSTALLDIR=$(to_windows_path "$install_dir")" || return 1
+    "INSTALLDIR=$(to_windows_path "$install_dir")" \
+    /l*v "$(to_windows_path "$install_log")"; then
+    print_log_tail "$install_log"
+    return 1
+  fi
   sleep 3
   exe="$(find_desktop_exe "$install_dir" || true)"
   if [[ -z "$exe" ]]; then
@@ -307,9 +297,13 @@ smoke_windows_msi_install() {
     run_startup_probe "$exe" || status=1
   fi
 
-  run_windows_installer_command \
-    "msiexec.exe /x ${msi#"$ROOT_DIR"/} /qn /norestart" \
-    msiexec.exe /x "$(to_windows_path "$msi")" /qn /norestart || status=1
+  if ! run_windows_installer_command \
+    "msiexec.exe /x ${msi#"$ROOT_DIR"/} /qn /norestart /l*v $(to_windows_path "$uninstall_log")" \
+    msiexec.exe /x "$(to_windows_path "$msi")" /qn /norestart \
+    /l*v "$(to_windows_path "$uninstall_log")"; then
+    print_log_tail "$uninstall_log"
+    status=1
+  fi
   sleep 3
   [[ -z "$exe" || ! -f "$exe" ]] || status=1
   return "$status"
