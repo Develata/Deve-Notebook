@@ -6,13 +6,13 @@
 
 ## 当前执行队列
 
-1. Desktop macOS/Windows package startup smoke target-host run：startup probe 与 workflow/dispatch 接口已落地；下一步在 GitHub macOS/Windows target hosts 用 `run_desktop_package_build=true` + `run_desktop_startup_smoke=true` 验证 packaged binary startup、no-process/no-authority 边界并收集 evidence。
-2. Mobile iOS target-host package execution：当前 Linux/WSL 已验证 default diagnostic 与 required fail-closed；iOS 仍阻塞于 macOS target host 与独立验收，不得声明 iOS package ready。
-3. Desktop installer install/uninstall smoke：package startup smoke 通过后，另起批次验证 macOS `.dmg/.app` 与 Windows MSI/NSIS 安装、启动、卸载/清理；不得与 startup probe 混为同一验收。
-4. Process runtime gate reopen review：Android Mobile shell APK 与 Desktop package artifacts 已闭合，但 Desktop target-host startup/install evidence 与 Mobile iOS target-host package execution 仍未闭合；当前仍不得实现 `Command::new`/spawn runtime。
+1. Mobile iOS target-host package execution：当前 Linux/WSL 已验证 default diagnostic 与 required fail-closed；iOS 仍阻塞于 macOS target host 与独立验收，不得声明 iOS package ready。
+2. Desktop installer install/uninstall smoke：Desktop macOS/Windows package build 与 packaged startup smoke 已通过；下一步另起批次验证 macOS `.dmg/.app` 与 Windows MSI/NSIS 安装、启动、卸载/清理，不得与 startup probe 混为同一验收。
+3. Process runtime gate reopen review：Android Mobile shell APK、Desktop package artifacts 与 Desktop packaged startup smoke 已闭合，但 Desktop installer evidence 与 Mobile iOS target-host package execution 仍未闭合；当前仍不得实现 `Command::new`/spawn runtime。
 
 ## 最近完成
 
+- Desktop macOS/Windows Package Startup Smoke Target-host Evidence：GitHub macOS run `25914679737` 与 Windows run `25914681934` 均完成 package build、packaged startup smoke、process gate 与 no-authority evidence；两端 evidence artifact 已用 `scripts/collect-native-target-host-evidence.sh` 校验。
 - Native Target-host Tool Install Speedup：新增 `scripts/install-native-target-host-tools.sh`，manual target-host workflow 改用 Trunk `0.21.14` 与 Tauri CLI `2.11.1` 官方 release binary，不再每次从源码 `cargo install`，降低 macOS/Windows package startup smoke feedback latency。
 - Desktop Package Startup Smoke：新增 `DEVE_DESKTOP_STARTUP_SMOKE=1` packaged binary probe 与 `scripts/check-desktop-package-startup-smoke.sh`；manual `native-target-host.yml` 新增 `run_desktop_startup_smoke` 输入，dispatch helper、runbook、release acceptance 与 release baseline 已同步；本批未修改 `docs/plan/`，未打开 process runtime 或 native authority writes。
 - Native Desktop Package Artifacts：GitHub macOS target host 成功产出 unsigned `.app/.dmg` package artifact，GitHub Windows target host 成功产出 MSI/NSIS package artifact；新增 `apps/desktop/icons/icon.icns` 关闭 macOS `No matching IconType` 阻塞，process runtime gate 与 native authority writes 继续关闭。

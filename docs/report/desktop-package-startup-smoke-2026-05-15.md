@@ -35,8 +35,16 @@
 - `scripts/plan-coverage.sh`
 - `cargo fmt --check`
 
+## Target-host Evidence
+
+- macOS run `25914679737`: `desktop_preflight=success`, `process_gate=success`, `package_build=success`, `startup_smoke=success`.
+- Windows run `25914681934`: `desktop_preflight=success`, `process_gate=success`, `package_build=success`, `startup_smoke=success`.
+- macOS evidence artifact `deve-native-target-host-evidence-macos` validated with `scripts/collect-native-target-host-evidence.sh`.
+- Windows evidence artifact `deve-native-target-host-evidence-windows` validated with `scripts/collect-native-target-host-evidence.sh`.
+- Package artifacts were uploaded as `deve-desktop-macos-packages` and `deve-desktop-windows-packages`.
+
 ## Next
 
-1. Push this batch and run GitHub `Native Target Host` with package build plus startup smoke for macOS and Windows.
-2. Collect validated evidence artifacts.
-3. Add a separate installer install/uninstall smoke only after package startup smoke is green on both target hosts.
+1. Add a separate installer install/uninstall smoke for macOS `.dmg/.app` and Windows MSI/NSIS.
+2. Keep Mobile iOS target-host package execution as an independent pending target.
+3. Keep process runtime gate closed until installer and iOS evidence are both closed.
