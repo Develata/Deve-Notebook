@@ -186,11 +186,12 @@ contains "docs/dev-runbook.md" "DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOK
 contains "docs/dev-runbook.md" "DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE=true"
 contains "docs/dev-runbook.md" "DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE=true"
 
+not_contains "Dockerfile" "cargo-chef"
+not_contains "Dockerfile" "cargo chef"
 contains "Dockerfile" "cargo install trunk --locked --version 0.21.14"
 contains "Dockerfile" "rustup target add wasm32-unknown-unknown"
+contains "Dockerfile" "https://deb.nodesource.com/setup_24.x"
 contains "Dockerfile" "npm ci --ignore-scripts && npm run build"
-contains "Dockerfile" "sed -i 's/\\\\nplugin = false//g' recipe.json"
-contains "Dockerfile" "cargo chef cook --release --locked --recipe-path recipe.json"
 contains "Dockerfile" "NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk build --release"
 contains "Dockerfile" "COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/"
 contains "Dockerfile" "cargo build --release --locked --package deve_cli"
@@ -198,7 +199,6 @@ contains "Dockerfile" "ENV DEVE_LEDGER_DIR=/data/ledger"
 contains "Dockerfile" "ENV DEVE_VAULT_PATH=/data/vault"
 contains "Dockerfile" "ENV DEVE_BIND_ADDR=0.0.0.0:3001"
 contains "Dockerfile" 'CMD ["deve_cli", "serve", "--port", "3001"]'
-assert_before "Dockerfile" "sed -i 's/\\\\nplugin = false//g' recipe.json" "cargo chef cook --release --locked --recipe-path recipe.json"
 assert_before "Dockerfile" "trunk build --release" "cargo build --release --locked --package deve_cli"
 assert_before "Dockerfile" "COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/" "cargo build --release --locked --package deve_cli"
 
