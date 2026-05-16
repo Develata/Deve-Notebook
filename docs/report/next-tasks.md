@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Refresh After Edge Coverage：复跑主线 guard 与 smoke，按 `docs/plan/`、features、acceptance-cases、代码四向交叉重新选择下一批 unblocked Current MUST。
+1. Full Regression Gate Refresh：在继续新实现批次前，运行 full workspace `cargo test`、`cargo clippy --all-targets --all-features -- -D warnings`、`cargo fmt --check`、`git diff --check`，并复核 release/runtime smoke guard。
 
 ## 最近完成
 
+- Mainline Gap Refresh After Edge Coverage：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、native gate、plan coverage 与 runtime happy/recovery smoke；未发现新的 unblocked Current MUST，下一步进入完整回归闸门。
 - Storage/Server Edge Coverage：为 watcher overflow/rescan、zero debounce fail-closed、modified-burst collapse、repo catalog hard fail/quarantine 与 host identity key owner-only permission 增加 acceptance 绑定和 baseline guard。
 - Modal Focus Contract Closure：Settings、Pending Navigation、Merge modal 已接入共享 focus trap / restore / `role="dialog"` / `aria-modal` 语义；`UI-GEN-003` 与 `check-ui-focus-baseline.sh` 已扩展为 shared dialog surface guard。
 - Mainline Coverage Alignment Batch B：为 `.notegit/.git` segment ignore、`.notegit-backup` 反例、ledger JSON Lines export、writeback-failure Ack 增加明确 storage acceptance 与 baseline 绑定；新增 watcher `.notegit-backup` sibling 负例测试。
