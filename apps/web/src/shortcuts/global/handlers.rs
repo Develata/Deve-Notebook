@@ -37,16 +37,7 @@ pub(super) fn plan_global_shortcut(
     }
 }
 
-pub(super) fn handle_global_shortcut(
-    ev: &KeyboardEvent,
-    show_search: Signal<bool>,
-    set_show_search: WriteSignal<bool>,
-    search_mode: Signal<String>,
-    set_search_mode: WriteSignal<String>,
-    locale: RwSignal<Locale>,
-    set_outline_visible: WriteSignal<bool>,
-    set_sidebar_visible: WriteSignal<bool>,
-) {
+pub(super) fn handle_global_shortcut(ev: &KeyboardEvent, signals: GlobalShortcutSignals) {
     let is_ctrl = ev.meta_key() || ev.ctrl_key();
     let shift = ev.shift_key();
     let alt = ev.alt_key();
@@ -58,18 +49,7 @@ pub(super) fn handle_global_shortcut(
     ev.prevent_default();
     ev.stop_propagation();
 
-    apply_global_shortcut_action(
-        action,
-        GlobalShortcutSignals {
-            show_search,
-            set_show_search,
-            search_mode,
-            set_search_mode,
-            locale,
-            set_outline_visible,
-            set_sidebar_visible,
-        },
-    );
+    apply_global_shortcut_action(action, signals);
 }
 
 #[derive(Clone, Copy)]

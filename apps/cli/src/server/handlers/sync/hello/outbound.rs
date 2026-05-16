@@ -14,35 +14,27 @@ use deve_core::sync::protocol::HandshakeResult;
 use super::super::cleanup::clear_sync_hello_scope_failure;
 use super::super::errors;
 
-pub(super) fn send(
-    ch: &DualChannel,
-    state: &std::sync::Arc<AppState>,
-    session: &mut WsSession,
-    engine: &SyncEngine,
-    result: HandshakeResult,
-    repo_id: RepoId,
-    scope: Option<u64>,
-    scope_nonce: u64,
-) {
-    let known_vector = engine.version_vector().clone();
+pub(super) struct OutboundSyncContext<'a> {
+    pub ch: &'a DualChannel,
+    pub state: &'a std::sync::Arc<AppState>,
+    pub session: &'a mut WsSession,
+    pub engine: &'a SyncEngine,
+    pub repo_id: RepoId,
+    pub scope: Option<u64>,
+    pub scope_nonce: u64,
+}
+
+pub(super) fn send(ctx: OutboundSyncContext<'_>, result: HandshakeResult) {
+    let known_vector = ctx.engine.version_vector().clone();
     send_requests(
-        ch,
-        session,
-        repo_id,
+        ctx.ch,
+        ctx.session,
+        ctx.repo_id,
         known_vector.clone(),
         result.to_request,
     );
-    send_snapshot_requests(ch, known_vector, result.snapshot_requests);
-    send_pushes(
-        ch,
-        state,
-        session,
-        engine,
-        repo_id,
-        scope,
-        scope_nonce,
-        result.to_send,
-    );
+    send_snapshot_requests(ctx.ch, known_vector, result.snapshot_requests);
+    send_pushes(ctx, result.to_send);
 }
 
 fn send_requests(
@@ -82,17 +74,11 @@ fn send_snapshot_requests(
 }
 
 fn send_pushes(
-    ch: &DualChannel,
-    state: &std::sync::Arc<AppState>,
-    session: &mut WsSession,
-    engine: &SyncEngine,
-    repo_id: RepoId,
-    scope: Option<u64>,
-    scope_nonce: u64,
+    ctx: OutboundSyncContext<'_>,
     requests: Vec<deve_core::sync::protocol::SyncRequest>,
 ) {
     for req in requests {
-        match engine.get_ops_for_sync(&req) {
+        match ctx.engine.get_ops_for_sync(&req) {
             Ok(response) => {
                 if response.ops.is_empty() {
                     continue;
@@ -100,25 +86,31 @@ fn send_pushes(
                 let header = SyncPushHeader::diff(
                     response.repo_id,
                     response.peer_id.clone(),
-                    engine.version_vector().clone(),
+                    ctx.engine.version_vector().clone(),
                 );
-                let header =
-                    super::super::transfer::attach_local_source_proof(state, header, &response.ops);
-                ch.unicast(ServerMessage::SyncPush {
+                let header = super::super::transfer::attach_local_source_proof(
+                    ctx.state,
+                    header,
+                    &response.ops,
+                );
+                ctx.ch.unicast(ServerMessage::SyncPush {
                     source_peer_id: response.peer_id,
                     repo_id: response.repo_id,
                     header,
-                    scope_nonce: scope_nonce.into(),
-                    branch: session.active_branch.clone(),
+                    scope_nonce: ctx.scope_nonce.into(),
+                    branch: ctx.session.active_branch.clone(),
                     encrypted_payload: response.ops,
                 });
             }
             Err(err) => {
-                clear_sync_hello_scope_failure(session, false);
+                clear_sync_hello_scope_failure(ctx.session, false);
                 errors::sync_payload_build_failed(
-                    ch,
-                    format!("Failed to build sync payload for repo {}: {}", repo_id, err),
-                    scope,
+                    ctx.ch,
+                    format!(
+                        "Failed to build sync payload for repo {}: {}",
+                        ctx.repo_id, err
+                    ),
+                    ctx.scope,
                 );
                 return;
             }

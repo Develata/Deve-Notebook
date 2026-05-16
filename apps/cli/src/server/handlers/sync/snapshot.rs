@@ -10,9 +10,9 @@ use deve_core::protocol::{ServerMessage, SyncPayloadKind, SyncSourceProof};
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
 
-use super::engine;
 use super::errors;
 use super::guard::{require_bound_peer, require_current_sync_scope, require_delivery_scope_nonce};
+use super::{SyncPushSnapshotInput, engine};
 
 pub(super) async fn handle_request(
     state: &Arc<AppState>,
@@ -105,12 +105,15 @@ pub(super) async fn handle_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
-    peer_id: PeerId,
-    repo_id: RepoId,
-    server_vector: VersionVector,
-    source_proof: Option<SyncSourceProof>,
-    payload: Vec<EncryptedOp>,
+    input: SyncPushSnapshotInput,
 ) {
+    let SyncPushSnapshotInput {
+        peer_id,
+        repo_id,
+        server_vector,
+        source_proof,
+        ops: payload,
+    } = input;
     let Some(scope) = require_current_sync_scope(ch, session) else {
         return;
     };

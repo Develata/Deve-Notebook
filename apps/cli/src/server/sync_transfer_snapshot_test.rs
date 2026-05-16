@@ -2,7 +2,9 @@
 //!   - 05_network#server-ws-runtime
 //!   - 06_repository#repo-scope-runtime
 
-use super::handlers::sync::{handle_sync_push_snapshot, handle_sync_snapshot_request};
+use super::handlers::sync::{
+    SyncPushSnapshotInput, handle_sync_push_snapshot, handle_sync_snapshot_request,
+};
 use super::sync_transfer_scope_test_support::{
     bound_session, build_state, encrypted_insert_for_author, recv_protocol_error,
     remote_insert_entry, unicast_channel,
@@ -33,11 +35,13 @@ async fn sync_push_snapshot_uses_message_source_peer_for_shadow_replace() -> any
         &state,
         &ch,
         &mut session,
-        source_peer.clone(),
-        repo_id,
-        server_vector,
-        Some(source_proof),
-        vec![op],
+        SyncPushSnapshotInput {
+            peer_id: source_peer.clone(),
+            repo_id,
+            server_vector,
+            source_proof: Some(source_proof),
+            ops: vec![op],
+        },
     )
     .await;
 
@@ -69,11 +73,13 @@ async fn sync_push_snapshot_rejects_relay_forged_source_proof() -> anyhow::Resul
         &state,
         &ch,
         &mut session,
-        source_peer.clone(),
-        repo_id,
-        server_vector,
-        Some(forged_proof),
-        vec![op],
+        SyncPushSnapshotInput {
+            peer_id: source_peer.clone(),
+            repo_id,
+            server_vector,
+            source_proof: Some(forged_proof),
+            ops: vec![op],
+        },
     )
     .await;
 

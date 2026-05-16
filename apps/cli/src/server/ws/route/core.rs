@@ -73,11 +73,13 @@ async fn route_unscoped_core(
                 state,
                 ch,
                 session,
-                source_peer_id,
-                repo_id,
-                server_vector,
-                source_proof,
-                payload,
+                sync::SyncPushSnapshotInput {
+                    peer_id: source_peer_id,
+                    repo_id,
+                    server_vector,
+                    source_proof,
+                    ops: payload,
+                },
             )
             .await;
         }

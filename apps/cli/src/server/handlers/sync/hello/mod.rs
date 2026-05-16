@@ -131,13 +131,15 @@ pub(super) async fn handle(
     }
 
     outbound::send(
-        ch,
-        state,
-        session,
-        &outbound_engine,
+        outbound::OutboundSyncContext {
+            ch,
+            state,
+            session,
+            engine: &outbound_engine,
+            repo_id,
+            scope,
+            scope_nonce,
+        },
         result,
-        repo_id,
-        scope,
-        scope_nonce,
     );
 }

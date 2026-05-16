@@ -100,18 +100,17 @@ pub fn create_global_shortcut_handler(
     set_outline_visible: WriteSignal<bool>,
     set_sidebar_visible: WriteSignal<bool>,
 ) -> impl Fn(KeyboardEvent) + Clone + 'static {
-    move |ev: KeyboardEvent| {
-        handlers::handle_global_shortcut(
-            &ev,
-            show_search,
-            set_show_search,
-            search_mode,
-            set_search_mode,
-            locale,
-            set_outline_visible,
-            set_sidebar_visible,
-        )
-    }
+    let signals = handlers::GlobalShortcutSignals {
+        show_search,
+        set_show_search,
+        search_mode,
+        set_search_mode,
+        locale,
+        set_outline_visible,
+        set_sidebar_visible,
+    };
+
+    move |ev: KeyboardEvent| handlers::handle_global_shortcut(&ev, signals)
 }
 
 /// 处理搜索框内的快捷键（因为搜索框会阻止事件冒泡）

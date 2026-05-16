@@ -23,6 +23,14 @@ use std::sync::Arc;
 
 pub use hello::SyncHelloInput;
 
+pub struct SyncPushSnapshotInput {
+    pub peer_id: PeerId,
+    pub repo_id: RepoId,
+    pub server_vector: VersionVector,
+    pub source_proof: Option<SyncSourceProof>,
+    pub ops: Vec<EncryptedOp>,
+}
+
 pub async fn handle_sync_hello(
     state: &Arc<AppState>,
     ch: &DualChannel,
@@ -80,23 +88,9 @@ pub async fn handle_sync_push_snapshot(
     state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
-    peer_id: PeerId,
-    repo_id: RepoId,
-    server_vector: VersionVector,
-    source_proof: Option<SyncSourceProof>,
-    ops: Vec<EncryptedOp>,
+    input: SyncPushSnapshotInput,
 ) {
-    snapshot::handle_push(
-        state,
-        ch,
-        session,
-        peer_id,
-        repo_id,
-        server_vector,
-        source_proof,
-        ops,
-    )
-    .await;
+    snapshot::handle_push(state, ch, session, input).await;
 }
 
 pub async fn handle_delete_peer(
