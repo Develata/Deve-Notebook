@@ -8,6 +8,7 @@
 //! 手动合并模式下用于审核和合并待处理操作的模态对话框。
 //! 从底部状态栏或分支切换器触发。
 
+use crate::components::focus_scope;
 use crate::hooks::use_core::SyncMergeContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -16,6 +17,9 @@ use leptos::prelude::*;
 pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
     let core = expect_context::<SyncMergeContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let panel_ref = NodeRef::<leptos::html::Div>::new();
+    let close_button_ref = NodeRef::<leptos::html::Button>::new();
+    focus_scope::attach_modal_focus_restore_effect(move || show.get(), close_button_ref);
 
     let confirm_merge = move |_| {
         core.on_confirm_merge.run(());
@@ -30,10 +34,20 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
     view! {
         <Show when=move || show.get()>
             <div class="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                <div class="bg-panel rounded-xl shadow-2xl w-full max-w-lg p-6 flex flex-col max-h-[80vh]">
+                <div
+                    node_ref=panel_ref
+                    role="dialog"
+                    aria-modal="true"
+                    tabindex="-1"
+                    class="bg-panel rounded-xl shadow-2xl w-full max-w-lg p-6 flex flex-col max-h-[80vh]"
+                    on:keydown=move |ev| {
+                        let _ = focus_scope::handle_focus_trap_keydown(&ev, panel_ref);
+                    }
+                >
                     <div class="flex items-center justify-between mb-4 flex-none">
                         <h2 class="text-xl font-bold text-primary">{move || t::merge::pending_merges(locale.get())}</h2>
                         <button
+                            node_ref=close_button_ref
                             class="p-1 hover:bg-hover rounded-full text-muted"
                             on:click=move |_| set_show.set(false)
                         >

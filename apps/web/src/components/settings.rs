@@ -8,9 +8,9 @@
 //! 设置模态框，允许用户更改语言、同步模式等全局配置。
 //! 显示版本信息和未来功能占位符（如混合模式）。
 
-use crate::components::icons::X;
 use crate::components::settings_sections::{AiBackendSection, SyncModeSection};
 use crate::components::settings_sections_policy::{language_button_state, reserved_setting_state};
+use crate::components::{focus_scope, icons::X};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
@@ -19,14 +19,27 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let language_state = Signal::derive(move || language_button_state(locale.get()));
     let reserved_state = Signal::derive(move || reserved_setting_state(locale.get()));
+    let panel_ref = NodeRef::<leptos::html::Div>::new();
+    let close_button_ref = NodeRef::<leptos::html::Button>::new();
+    focus_scope::attach_modal_focus_restore_effect(move || show.get(), close_button_ref);
 
     view! {
         <Show when=move || show.get()>
             <div class="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
-                <div class="bg-panel rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 opacity-100">
+                <div
+                    node_ref=panel_ref
+                    role="dialog"
+                    aria-modal="true"
+                    tabindex="-1"
+                    class="bg-panel rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 opacity-100"
+                    on:keydown=move |ev| {
+                        let _ = focus_scope::handle_focus_trap_keydown(&ev, panel_ref);
+                    }
+                >
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-xl font-bold text-primary">{move || t::settings::title(locale.get())}</h2>
                         <button
+                            node_ref=close_button_ref
                             class="p-1 hover:bg-hover rounded-full text-muted"
                             on:click=move |_| set_show.set(false)
                         >

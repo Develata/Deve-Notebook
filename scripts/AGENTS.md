@@ -23,7 +23,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-rendering-baseline.sh` | Verifies Markdown rendering current/future split, lightweight renderer subset, and controlled apply boundaries |
 | `check-ui-token-baseline.sh` | Verifies style color literals stay confined to design-token files |
 | `check-ui-z-index-baseline.sh` | Verifies shell z-index registry tokens and prevents private numeric z-levels |
-| `check-ui-focus-baseline.sh` | Verifies modal focus trap and restore bindings for Command Palette surfaces |
+| `check-ui-focus-baseline.sh` | Verifies modal focus trap and restore bindings for shared dialog surfaces |
 | `check-ui-spa-routing-baseline.sh` | Verifies SPA route fallback stays 200 while API/WS paths do not fall back to index |
 | `check-ui-disconnect-baseline.sh` | Verifies disconnect lockdown overlay copy and edit-disabled bindings |
 | `check-ui-dashboard-refresh-baseline.sh` | Verifies Dashboard SystemMetrics refresh and WS-backed sync status bindings |

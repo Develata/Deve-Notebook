@@ -2,6 +2,7 @@
 //!   - 03_rendering#document-authority-bridge
 //!   - 16_web_thin_client_ledger#web-edit-intent
 //!
+use crate::components::focus_scope;
 use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -12,6 +13,12 @@ pub fn PendingNavigationModal(
     set_pending: WriteSignal<Option<PendingNavigation>>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let panel_ref = NodeRef::<leptos::html::Div>::new();
+    let cancel_button_ref = NodeRef::<leptos::html::Button>::new();
+    focus_scope::attach_modal_focus_restore_effect(
+        move || pending.get().is_some(),
+        cancel_button_ref,
+    );
     let confirm = move |_| {
         let next = pending.get_untracked();
         set_pending.set(None);
@@ -24,7 +31,16 @@ pub fn PendingNavigationModal(
     view! {
         <Show when=move || pending.get().is_some()>
             <div class="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                <div class="w-full max-w-md rounded-xl border border-default bg-panel p-6 shadow-2xl">
+                <div
+                    node_ref=panel_ref
+                    role="dialog"
+                    aria-modal="true"
+                    tabindex="-1"
+                    class="w-full max-w-md rounded-xl border border-default bg-panel p-6 shadow-2xl"
+                    on:keydown=move |ev| {
+                        let _ = focus_scope::handle_focus_trap_keydown(&ev, panel_ref);
+                    }
+                >
                     <h2 class="text-xl font-semibold text-primary">
                         {move || t::common::pending_navigation_title(locale.get())}
                     </h2>
@@ -44,6 +60,7 @@ pub fn PendingNavigationModal(
                     </p>
                     <div class="mt-6 flex gap-3">
                         <button
+                            node_ref=cancel_button_ref
                             class="flex-1 rounded-lg border border-default px-4 py-2 text-sm font-medium text-primary hover:bg-hover"
                             on:click=cancel
                         >

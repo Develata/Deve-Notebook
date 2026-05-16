@@ -56,6 +56,37 @@ pub(crate) fn focus_input_next_frame(input_ref: NodeRef<leptos::html::Input>) {
     });
 }
 
+pub(crate) fn focus_button_next_frame(button_ref: NodeRef<leptos::html::Button>) {
+    request_animation_frame(move || {
+        if let Some(button) = button_ref.get_untracked() {
+            let _ = button.focus();
+        }
+    });
+}
+
+pub(crate) fn attach_modal_focus_restore_effect(
+    is_open: impl Fn() -> bool + Copy + 'static,
+    initial_focus_ref: NodeRef<leptos::html::Button>,
+) {
+    let last_open = StoredValue::new_local(is_open());
+    let previous_focus = StoredValue::new_local(None::<web_sys::Element>);
+
+    Effect::new(move |_| {
+        let open = is_open();
+        let was_open = last_open.get_value();
+        last_open.set_value(open);
+
+        if open && !was_open {
+            previous_focus.set_value(active_element());
+            focus_button_next_frame(initial_focus_ref);
+        } else if !open && was_open {
+            let previous = previous_focus.get_value();
+            previous_focus.set_value(None);
+            restore_focus_next_frame(previous);
+        }
+    });
+}
+
 pub(crate) fn restore_focus_next_frame(previous: Option<Element>) {
     request_animation_frame(move || {
         request_animation_frame(move || {
