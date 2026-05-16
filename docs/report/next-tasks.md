@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Post-regression Implementation Selection：基于 green full regression，审查 `docs/plan/`、`docs/report/` 与当前代码，选择下一批可执行实现；优先考虑 Desktop/Android 平台推进，但不得绕过 shell-only、no-process、no-authority gate。
+1. Mainline Refresh After Command Surface Closure：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、runtime happy/recovery smoke、release/native gates 与 plan coverage；确认 Command Palette reserved/CLI-only 边界闭合后是否还有新的 unblocked Current MUST。
 
 ## 最近完成
 
+- Command Surface Reserved Boundary：为 Git status/mirror/export 补 CLI-only unavailable notice；为 Source Control sync/commit/push 与 AI retry/backend/PLAN/BUILD 补 unavailable entries；新增 `CMD-004B` / `CMD-004C` 与 baseline guards，未新增 Web Git writer、native process runtime 或 plan 变更。
 - Full Regression Gate Refresh：全仓库 `cargo test`、全 feature clippy、格式/diff hygiene、release/audit、plan coverage、acceptance bindings 与 runtime happy/recovery smoke 均通过；修复 Desktop native-packaging 测试中的 clippy bool assertion。
 - Mainline Gap Refresh After Edge Coverage：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、native gate、plan coverage 与 runtime happy/recovery smoke；未发现新的 unblocked Current MUST，下一步进入完整回归闸门。
 - Storage/Server Edge Coverage：为 watcher overflow/rescan、zero debounce fail-closed、modified-burst collapse、repo catalog hard fail/quarantine 与 host identity key owner-only permission 增加 acceptance 绑定和 baseline guard。

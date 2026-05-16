@@ -4,14 +4,24 @@
 //!
 use crate::hooks::use_core::source_control_notice::{
     SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
-    is_establish_branch_unavailable_notice, is_git_import_cli_notice, is_git_push_cli_notice,
-    is_git_repair_cli_notice,
+    is_establish_branch_unavailable_notice, is_git_export_cli_notice, is_git_import_cli_notice,
+    is_git_mirror_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
+    is_git_status_cli_notice,
 };
 use crate::i18n::{Locale, server_error, source_control as sc};
 
 pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
     if is_deleted_no_doc_id_notice(notice) {
         return sc::diff_unavailable(locale).to_string();
+    }
+    if is_git_status_cli_notice(notice) {
+        return sc::git_status_cli_only_title(locale).to_string();
+    }
+    if is_git_mirror_cli_notice(notice) {
+        return sc::git_mirror_cli_only_title(locale).to_string();
+    }
+    if is_git_export_cli_notice(notice) {
+        return sc::git_export_cli_only_title(locale).to_string();
     }
     if is_git_import_cli_notice(notice) {
         return sc::git_import_cli_only_title(locale).to_string();
@@ -31,6 +41,15 @@ pub fn title(locale: Locale, notice: &SourceControlNotice) -> String {
 pub fn hint(locale: Locale, notice: &SourceControlNotice) -> String {
     if is_establish_branch_unavailable_notice(notice) {
         return sc::establish_branch_unavailable_hint(locale).to_string();
+    }
+    if is_git_status_cli_notice(notice) {
+        return sc::git_status_cli_only_hint(locale).to_string();
+    }
+    if is_git_mirror_cli_notice(notice) {
+        return sc::git_mirror_cli_only_hint(locale).to_string();
+    }
+    if is_git_export_cli_notice(notice) {
+        return sc::git_export_cli_only_hint(locale).to_string();
     }
     if is_git_import_cli_notice(notice) {
         return sc::git_import_cli_only_hint(locale).to_string();
@@ -88,6 +107,30 @@ mod tests {
     use super::{details, hint, title};
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
     use crate::i18n::{Locale, source_control as sc};
+
+    #[test]
+    fn local_git_status_mirror_export_notices_use_cli_copy() {
+        let status = SourceControlNotice::git_status_cli_only();
+        assert_eq!(
+            title(Locale::En, &status),
+            sc::git_status_cli_only_title(Locale::En)
+        );
+        assert!(hint(Locale::En, &status).contains("deve_cli git status"));
+
+        let mirror = SourceControlNotice::git_mirror_cli_only();
+        assert_eq!(
+            title(Locale::Zh, &mirror),
+            sc::git_mirror_cli_only_title(Locale::Zh)
+        );
+        assert!(hint(Locale::Zh, &mirror).contains("deve_cli git mirror"));
+
+        let export = SourceControlNotice::git_export_cli_only();
+        assert_eq!(
+            title(Locale::En, &export),
+            sc::git_export_cli_only_title(Locale::En)
+        );
+        assert!(hint(Locale::En, &export).contains("deve_cli git export"));
+    }
 
     #[test]
     fn local_git_import_notice_uses_cli_copy() {

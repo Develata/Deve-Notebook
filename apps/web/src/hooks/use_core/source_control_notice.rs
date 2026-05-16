@@ -5,6 +5,9 @@
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub const DELETED_NO_DOC_ID_NOTICE_PREFIX: &str = "deleted-no-doc-id:";
+pub const GIT_STATUS_CLI_NOTICE_DETAIL: &str = "git-status-cli-only";
+pub const GIT_MIRROR_CLI_NOTICE_DETAIL: &str = "git-mirror-cli-only";
+pub const GIT_EXPORT_CLI_NOTICE_DETAIL: &str = "git-export-cli-only";
 pub const GIT_IMPORT_CLI_NOTICE_DETAIL: &str = "git-import-cli-only";
 pub const GIT_PUSH_CLI_NOTICE_DETAIL: &str = "git-push-cli-only";
 pub const GIT_REPAIR_CLI_NOTICE_DETAIL: &str = "git-repair-cli-only";
@@ -28,6 +31,27 @@ impl SourceControlNotice {
         Self {
             code: ServerErrorCode::ScRepoContextInvalid,
             detail: Some(GIT_IMPORT_CLI_NOTICE_DETAIL.to_string()),
+        }
+    }
+
+    pub fn git_status_cli_only() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(GIT_STATUS_CLI_NOTICE_DETAIL.to_string()),
+        }
+    }
+
+    pub fn git_mirror_cli_only() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(GIT_MIRROR_CLI_NOTICE_DETAIL.to_string()),
+        }
+    }
+
+    pub fn git_export_cli_only() -> Self {
+        Self {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some(GIT_EXPORT_CLI_NOTICE_DETAIL.to_string()),
         }
     }
 
@@ -62,6 +86,18 @@ pub fn deleted_no_doc_id_path(notice: &SourceControlNotice) -> Option<&str> {
 
 pub fn is_deleted_no_doc_id_notice(notice: &SourceControlNotice) -> bool {
     deleted_no_doc_id_path(notice).is_some()
+}
+
+pub fn is_git_status_cli_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(GIT_STATUS_CLI_NOTICE_DETAIL)
+}
+
+pub fn is_git_mirror_cli_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(GIT_MIRROR_CLI_NOTICE_DETAIL)
+}
+
+pub fn is_git_export_cli_notice(notice: &SourceControlNotice) -> bool {
+    notice.detail.as_deref() == Some(GIT_EXPORT_CLI_NOTICE_DETAIL)
 }
 
 pub fn is_git_import_cli_notice(notice: &SourceControlNotice) -> bool {
@@ -101,10 +137,12 @@ pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
 mod tests {
     use super::{
         DELETED_NO_DOC_ID_NOTICE_PREFIX, ESTABLISH_BRANCH_UNAVAILABLE_DETAIL,
-        GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_PUSH_CLI_NOTICE_DETAIL, GIT_REPAIR_CLI_NOTICE_DETAIL,
+        GIT_EXPORT_CLI_NOTICE_DETAIL, GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_MIRROR_CLI_NOTICE_DETAIL,
+        GIT_PUSH_CLI_NOTICE_DETAIL, GIT_REPAIR_CLI_NOTICE_DETAIL, GIT_STATUS_CLI_NOTICE_DETAIL,
         SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
-        is_establish_branch_unavailable_notice, is_git_import_cli_notice, is_git_push_cli_notice,
-        is_git_repair_cli_notice, is_source_control_error,
+        is_establish_branch_unavailable_notice, is_git_export_cli_notice, is_git_import_cli_notice,
+        is_git_mirror_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
+        is_git_status_cli_notice, is_source_control_error,
     };
     use deve_core::protocol::{ServerError, ServerErrorCode};
 
@@ -143,6 +181,27 @@ mod tests {
 
     #[test]
     fn local_git_cli_notices_are_detected() {
+        let status_notice = SourceControlNotice::git_status_cli_only();
+        assert_eq!(
+            status_notice.detail.as_deref(),
+            Some(GIT_STATUS_CLI_NOTICE_DETAIL)
+        );
+        assert!(is_git_status_cli_notice(&status_notice));
+
+        let mirror_notice = SourceControlNotice::git_mirror_cli_only();
+        assert_eq!(
+            mirror_notice.detail.as_deref(),
+            Some(GIT_MIRROR_CLI_NOTICE_DETAIL)
+        );
+        assert!(is_git_mirror_cli_notice(&mirror_notice));
+
+        let export_notice = SourceControlNotice::git_export_cli_only();
+        assert_eq!(
+            export_notice.detail.as_deref(),
+            Some(GIT_EXPORT_CLI_NOTICE_DETAIL)
+        );
+        assert!(is_git_export_cli_notice(&export_notice));
+
         let import_notice = SourceControlNotice::git_import_cli_only();
         assert_eq!(
             import_notice.detail.as_deref(),

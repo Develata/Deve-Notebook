@@ -9,6 +9,60 @@ mod repair;
 
 pub use repair::*;
 
+pub fn git_status_cli_only_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git status is CLI-only",
+        Locale::Zh => "Git status 只能通过 CLI 查看",
+    }
+}
+
+pub fn git_status_cli_only_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Run `deve_cli git status --repo <repo>` to inspect mirror readiness and queue state."
+        }
+        Locale::Zh => {
+            "请运行 `deve_cli git status --repo <repo>` 查看 mirror readiness 与队列状态。"
+        }
+    }
+}
+
+pub fn git_mirror_cli_only_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git mirror execution is CLI-only",
+        Locale::Zh => "Git mirror 执行只能通过 CLI 完成",
+    }
+}
+
+pub fn git_mirror_cli_only_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Run `deve_cli git mirror --repo <repo>` to execute queued mirror commits after preflight."
+        }
+        Locale::Zh => {
+            "请运行 `deve_cli git mirror --repo <repo>`，在 preflight 后执行 queued mirror commits。"
+        }
+    }
+}
+
+pub fn git_export_cli_only_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git mirror export is CLI-only",
+        Locale::Zh => "Git mirror 导出只能通过 CLI 执行",
+    }
+}
+
+pub fn git_export_cli_only_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Run `deve_cli git export --repo <repo>` to create Git mirror commits from Deve projections."
+        }
+        Locale::Zh => {
+            "请运行 `deve_cli git export --repo <repo>`，从 Deve projection 建立 Git mirror commits。"
+        }
+    }
+}
+
 pub fn git_import_cli_only_title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Git import is CLI-only",
@@ -77,6 +131,21 @@ mod tests {
 
     #[test]
     fn git_bridge_source_control_copy_is_localized() {
+        assert_eq!(
+            git_status_cli_only_title(Locale::En),
+            "Git status is CLI-only"
+        );
+        assert!(git_status_cli_only_hint(Locale::Zh).contains("deve_cli git status"));
+        assert_eq!(
+            git_mirror_cli_only_title(Locale::Zh),
+            "Git mirror 执行只能通过 CLI 完成"
+        );
+        assert!(git_mirror_cli_only_hint(Locale::En).contains("deve_cli git mirror"));
+        assert_eq!(
+            git_export_cli_only_title(Locale::En),
+            "Git mirror export is CLI-only"
+        );
+        assert!(git_export_cli_only_hint(Locale::Zh).contains("deve_cli git export"));
         assert_eq!(
             git_import_cli_only_title(Locale::En),
             "Git import is CLI-only"

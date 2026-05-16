@@ -14,10 +14,15 @@ use leptos::prelude::*;
 mod branch;
 mod git;
 mod merge;
+mod reserved;
 
 use branch::establish_branch_command;
-use git::{git_import_command, git_push_command, git_repair_command};
+use git::{
+    git_export_command, git_import_command, git_mirror_command, git_push_command,
+    git_repair_command, git_status_command,
+};
 use merge::merge_peer_command;
+use reserved::{ai_reserved_commands, source_control_reserved_commands};
 
 /// 创建静态命令列表。
 pub fn create_static_commands(
@@ -75,6 +80,10 @@ pub fn create_static_commands(
                 set_show.set(false);
             }),
         ),
+    ];
+
+    commands.extend(source_control_reserved_commands(locale));
+    commands.extend(vec![
         establish_branch_command(locale, set_show),
         merge_peer_command(
             locale,
@@ -83,10 +92,13 @@ pub fn create_static_commands(
             sync_merge_context,
             core_state,
         ),
+        git_status_command(locale, set_show),
+        git_mirror_command(locale, set_show),
+        git_export_command(locale, set_show),
         git_import_command(locale, set_show),
         git_push_command(locale, set_show),
         git_repair_command(locale, set_show),
-    ];
+    ]);
 
     // Add AI Chat toggle command if ChatControl is available
     if let Some(chat_ctrl) = chat_control {
@@ -100,6 +112,7 @@ pub fn create_static_commands(
             }),
         ));
     }
+    commands.extend(ai_reserved_commands(locale));
 
     commands
 }
@@ -148,8 +161,47 @@ mod tests {
                 .collect::<Vec<_>>();
 
             assert!(ids.contains(&"git_import_changes"));
+            assert!(ids.contains(&"git_status"));
+            assert!(ids.contains(&"git_mirror"));
+            assert!(ids.contains(&"git_export_mirror"));
             assert!(ids.contains(&"git_push_mirror"));
             assert!(ids.contains(&"git_repair_mirror"));
+        });
+    }
+
+    #[test]
+    fn static_commands_partition_reserved_surfaces() {
+        let owner = leptos::reactive::owner::Owner::new();
+
+        owner.with(|| {
+            let (_, set_show) = signal(false);
+            let locale = RwSignal::new(Locale::En);
+            let commands = create_static_commands(
+                Locale::En,
+                Callback::new(|_| {}),
+                Callback::new(|_| {}),
+                set_show,
+                locale,
+            );
+
+            for id in [
+                "source_control_sync",
+                "source_control_commit",
+                "source_control_push",
+                "ai_retry_last_request",
+                "ai_switch_backend",
+                "ai_switch_plan",
+                "ai_switch_build",
+            ] {
+                let command = commands
+                    .iter()
+                    .find(|command| command.id == id)
+                    .unwrap_or_else(|| panic!("missing command {id}"));
+                assert!(
+                    command.availability.is_unavailable(),
+                    "{id} must remain unavailable until a backend contract is wired"
+                );
+            }
         });
     }
 }

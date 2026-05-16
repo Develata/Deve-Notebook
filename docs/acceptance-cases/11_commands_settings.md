@@ -71,6 +71,47 @@
     - ui_assert: command_unavailable "establish_branch"
     - ui_assert: source_control_notice_eq "establish-branch-unavailable"
 
+- case_id: CMD-004B
+  goal: Git mirror Command Palette 入口只能作为 CLI-only notice，不得执行 Web Git writer。
+  preconditions:
+    - Command Palette 可用
+  steps:
+    - ui_keypress: "Ctrl+Shift+P"
+    - ui_command: "Git: Status"
+    - ui_command: "Git: Mirror"
+    - ui_command: "Git: Export Mirror"
+    - run: scripts/check-source-control-baseline.sh
+    - run: cargo test -p deve_web git_status_command -- --nocapture
+    - run: cargo test -p deve_web git_mirror_command -- --nocapture
+    - run: cargo test -p deve_web git_export_command -- --nocapture
+  assertions:
+    - ui_assert: command_unavailable "git_status"
+    - ui_assert: command_unavailable "git_mirror"
+    - ui_assert: command_unavailable "git_export_mirror"
+    - ui_assert: source_control_notice_eq "git-*-cli-only"
+    - ui_assert: web_git_writer_absent true
+
+- case_id: CMD-004C
+  goal: Source Control 与 AI 的未接线命令入口必须明确显示 unavailable 状态。
+  preconditions:
+    - Command Palette 可用
+  steps:
+    - ui_keypress: "Ctrl+Shift+P"
+    - ui_command: "Source Control: Sync"
+    - ui_command: "Source Control: Commit"
+    - ui_command: "Source Control: Push"
+    - ui_command: "AI: Switch to PLAN Mode"
+    - ui_command: "AI: Switch to BUILD Mode"
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_web reserved_commands -- --nocapture
+    - run: cargo test -p deve_web static_commands_partition_reserved_surfaces -- --nocapture
+  assertions:
+    - ui_assert: command_unavailable "source_control_sync"
+    - ui_assert: command_unavailable "source_control_commit"
+    - ui_assert: command_unavailable "source_control_push"
+    - ui_assert: command_unavailable "ai_switch_plan"
+    - ui_assert: command_unavailable "ai_switch_build"
+
 - case_id: CMD-005
   goal: AI 模式与斜杠命令。
   preconditions:
