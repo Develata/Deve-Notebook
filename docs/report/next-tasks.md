@@ -6,11 +6,11 @@
 
 ## 当前执行队列
 
-1. Docker Release Smoke Host Follow-up：在健康 Docker daemon 或 CI runner 上重跑 `scripts/smoke-docker-release.sh`，关闭本机 Docker/WSL `SIGBUS` 环境阻塞；若仍失败，再进入 Dockerfile 或 runtime auth 修复。
-2. Mainline Gap Scan After Full Regression：Docker smoke 关闭后重新交叉 `docs/plan/`、features、acceptance、scripts 与代码，选出下一批最小可执行 P1。
+1. Mainline Gap Scan After Full Regression：Docker smoke 关闭后重新交叉 `docs/plan/`、features、acceptance、scripts 与代码，选出下一批最小可执行 P1。
 
 ## 最近完成
 
+- Docker Release Smoke CI Follow-up：本机 Docker/WSL `SIGBUS` 被确认为宿主问题；新增 manual Docker Smoke workflow；移除 Dockerfile `cargo-chef` 漂移路径，升级 NodeSource 24，并将 `Cargo.lock` 纳入版本控制；GitHub run `25963571993` 通过 `scripts/smoke-docker-release.sh` 的 release image build、`/api/node/role` 与 production login smoke；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Release Boundary Alignment：全仓库 `cargo test`、全 feature `clippy`、`fmt --check`、architecture/acceptance/plan coverage、release/native/mobile/domain guards、Web release build 与 runtime happy/recovery smoke 均通过；未改 `docs/plan/`，未发现应用回归；本机 Docker release smoke 被 Docker/WSL `SIGBUS` 环境问题阻塞。
 - Mainline Gap Scan After Release Boundary Alignment：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline 与 plan coverage；修复 `RENDER-LARGE-002` / `op.render.large-doc.delta-fallback` 的 operation coverage 与 architecture registry drift；未发现 P0，未改 `docs/plan/`，native process/runtime/signing/store gates 仍关闭。
 - Release Platform Acceptance Boundary Alignment：`REL-005` 已明确为 embedded frontend single binary + shell-only target-host evidence 边界，不声明 signed/store/physical-device/native-process/native-authority readiness；release baseline 已反查。
