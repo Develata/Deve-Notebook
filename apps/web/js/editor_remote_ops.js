@@ -55,31 +55,50 @@ export function applyRemoteOp(op_json) {
 }
 
 export function applyRemoteOpsBatch(ops_json) {
-  if (ctx.activeView) {
-    ctx.isRemote = true;
-    try {
-      const ops = JSON.parse(ops_json);
-      if (!Array.isArray(ops) || ops.length === 0) return;
-      for (const op of ops) {
-        if (op.Insert) {
-          ctx.activeView.dispatch({
-            changes: { from: op.Insert.pos, insert: op.Insert.content },
-          });
-        } else if (op.Delete) {
-          ctx.activeView.dispatch({
-            changes: {
-              from: op.Delete.pos,
-              to: op.Delete.pos + op.Delete.len,
-              insert: "",
-            },
-          });
-        }
+  if (!ctx.activeView) return false;
+  ctx.isRemote = true;
+  try {
+    const ops = JSON.parse(ops_json);
+    if (!Array.isArray(ops) || ops.length === 0) return true;
+    for (const op of ops) {
+      if (op.Insert) {
+        const pos = op.Insert.pos;
+        ensureValidRange(pos, pos);
+        ctx.activeView.dispatch({
+          changes: { from: pos, insert: op.Insert.content },
+        });
+      } else if (op.Delete) {
+        const from = op.Delete.pos;
+        const to = op.Delete.pos + op.Delete.len;
+        ensureValidRange(from, to);
+        ctx.activeView.dispatch({
+          changes: {
+            from,
+            to,
+            insert: "",
+          },
+        });
       }
-    } catch (e) {
-      console.error("applyRemoteOpsBatch Error:", e);
-    } finally {
-      ctx.isRemote = false;
     }
+    return true;
+  } catch (e) {
+    console.error("applyRemoteOpsBatch Error:", e);
+    return false;
+  } finally {
+    ctx.isRemote = false;
+  }
+}
+
+function ensureValidRange(from, to) {
+  const length = ctx.activeView.state.doc.length;
+  if (
+    !Number.isInteger(from) ||
+    !Number.isInteger(to) ||
+    from < 0 ||
+    to < from ||
+    to > length
+  ) {
+    throw new RangeError(`Invalid remote op range ${from}..${to} for ${length}`);
   }
 }
 

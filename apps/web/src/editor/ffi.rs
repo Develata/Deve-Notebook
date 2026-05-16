@@ -34,7 +34,7 @@ unsafe extern "C" {
 
     /// 批量应用远程操作 (增量)
     #[wasm_bindgen(js_namespace = window, js_name = applyRemoteOpsBatch)]
-    pub fn applyRemoteOpsBatch(ops_json: &str);
+    pub fn applyRemoteOpsBatch(ops_json: &str) -> bool;
 
     /// 将当前编辑器全文状态同步回 Rust signals，不产生新的写入 delta
     #[wasm_bindgen(js_namespace = window, js_name = syncEditorStateToRust)]

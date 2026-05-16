@@ -79,6 +79,19 @@
     - ui_assert: progressive_replay_enabled true
     - ui_assert: search_disabled_until_prefetch_complete true
 
+- case_id: RENDER-LARGE-002
+  goal: 大文档 delta batch 不可应用时回退 full snapshot。
+  preconditions:
+    - 文档 snapshot 已到达
+    - delta batch replay 失败
+  steps:
+    - run: scripts/check-large-doc-baseline.sh
+    - run: cargo test -p deve_web snapshot_apply_failure -- --nocapture
+  assertions:
+    - cli_assert: remote_batch_apply_returns_failure true
+    - cli_assert: failed_batch_does_not_advance_version_or_history true
+    - ui_assert: full_snapshot_fallback_requested true
+
 - case_id: RENDER-MATH-001
   goal: 公式渲染与折叠。
   preconditions:

@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.rendering.large-doc-prefetch`
 - `Domain`: `rendering`
 - `Related Feature Chapters`: `docs/features/03_rendering.md`, `docs/features/16_web_thin_client_ledger.md`
-- `Related Acceptance Cases`: `RENDER-LARGE-001`
+- `Related Acceptance Cases`: `RENDER-LARGE-001`, `RENDER-LARGE-002`
 
 ## Operations
 
@@ -36,14 +36,25 @@
 - `Immediate Result`: load state becomes `ready` and incremental progress indicators clear
 - `Application Entry`: `apps/web/src/editor/sync/history.rs`, `apps/web/src/editor/sync/snapshot_finish.rs`
 
+### `op.render.large-doc.delta-fallback`
+
+- `Name`: `Fallback From Failed Delta Replay`
+- `Surface`: `editor`
+- `Trigger`: a snapshot delta batch cannot be applied to the current editor view
+- `Preconditions`: snapshot request still matches current repo, branch, request, and scope
+- `Immediate Result`: replay stops, local version/history are not advanced, and a full snapshot request is sent
+- `Application Entry`: `apps/web/src/editor/sync/snapshot.rs`, `apps/web/src/editor/sync/snapshot_apply.rs`, `apps/web/js/editor_remote_ops.js`
+
 ## Response Flow
 
 1. User opens a large document.
 2. Instruction interface starts open-doc loading and accepts the initial snapshot.
 3. Flow coordination shows snapshot content first, then replays remaining ops in adaptive batches.
-4. Execution domains are rendering projection and ledger-backed document content.
+4. Failed delta replay stops the batch chain and reopens the document through the full snapshot path.
+5. Execution domains are rendering projection and ledger-backed document content.
 
 ## Notes
 
 - This flow is about snapshot-first visibility plus progressive replay, not a second authority buffer.
+- Failed delta replay must not advance local version or history.
 - Main objects: `doc::content`, `load::progress`, `render::projection`.

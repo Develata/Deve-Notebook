@@ -38,8 +38,15 @@ pub(super) fn replay_pending_overlay(ctx: &SyncContext) {
     if ops.is_empty() {
         return;
     }
-    if let Ok(json) = serde_json::to_string(&ops) {
-        applyRemoteOpsBatch(&json);
+    match serde_json::to_string(&ops) {
+        Ok(json) => {
+            if !applyRemoteOpsBatch(&json) {
+                leptos::logging::warn!("Pending overlay replay batch failed");
+            }
+        }
+        Err(err) => {
+            leptos::logging::warn!("Pending overlay replay serialization failed: {err}");
+        }
     }
 }
 

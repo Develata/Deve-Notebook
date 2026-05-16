@@ -13,7 +13,7 @@ pub struct PrefetchConfig {
 }
 
 /// 批量应用操作的回调类型
-pub type ApplyBatchFn<T> = Rc<dyn Fn(&[T])>;
+pub type ApplyBatchFn<T> = Rc<dyn Fn(&[T]) -> bool>;
 
 pub fn apply_ops_in_batches<T: 'static>(
     ops: Vec<T>,
@@ -76,7 +76,9 @@ fn run_batch<T: 'static>(
     let count = st.batch.min(remaining);
     let start_idx = st.index;
     let end_idx = st.index + count;
-    apply_batch(&ops[start_idx..end_idx]);
+    if !apply_batch(&ops[start_idx..end_idx]) {
+        return;
+    }
     st.index = end_idx;
 
     let elapsed = now_ms() - start;
