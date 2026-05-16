@@ -6,7 +6,8 @@
 
 - Source of truth: `docs/plan/08_ui_design_02_desktop.md`, `docs/plan/08_ui_design_03_mobile.md`, `docs/plan/15_release.md`.
 - Evidence inputs: `docs/report/platform-distribution-readiness-triage-2026-05-16.md`, `docs/report/platform-artifact-consumption-runbook-2026-05-16.md`, `docs/report/docker-release-smoke-ci-follow-up-2026-05-16.md`.
-- Current head: `6c78f2fb`.
+- Selection baseline head: `6c78f2fb`.
+- Workflow dispatch target: the repository `HEAD` after this selection is committed.
 
 ## Constraints
 
@@ -19,7 +20,7 @@
 
 - Docker Smoke GitHub run `25963571993` passed on `f3f23e1e`.
 - Native Target Host GitHub run `25960266472` passed on `9439c864`.
-- Current `HEAD` is newer than both platform evidence runs.
+- The selection baseline is newer than both platform evidence runs.
 - Existing evidence proves the platform shell paths, but not current-head readiness.
 
 ## Selection
