@@ -14,6 +14,8 @@
  * ```
  */
 
+import { editorCopy } from "../i18n.js";
+
 // Initialize global registry
 if (typeof window !== 'undefined') {
     window.deve_code_actions = window.deve_code_actions || [];
@@ -61,7 +63,7 @@ export function showMenu(anchor, context) {
     if (actions.length === 0) {
         const empty = document.createElement("div");
         empty.className = "px-3 py-2 text-gray-400 dark:text-gray-500 whitespace-nowrap";
-        empty.textContent = "No actions available";
+        empty.textContent = editorCopy("noActionsAvailable");
         menu.appendChild(empty);
     } else {
         for (const action of actions) {

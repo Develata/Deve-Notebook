@@ -122,10 +122,39 @@ pub fn code_execution_disabled(locale: Locale) -> &'static str {
     }
 }
 
+pub fn editor_copy_code(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Copy Code",
+        Locale::Zh => "复制代码",
+    }
+}
+
+pub fn editor_more_actions(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "More Actions",
+        Locale::Zh => "更多操作",
+    }
+}
+
+pub fn editor_no_actions_available(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "No actions available",
+        Locale::Zh => "暂无可用操作",
+    }
+}
+
+pub fn editor_mermaid_error(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Mermaid Error",
+        Locale::Zh => "Mermaid 错误",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         calculation_runtime_desc, calculation_runtime_title, channel_desc, code_execution_disabled,
+        editor_copy_code, editor_mermaid_error, editor_more_actions, editor_no_actions_available,
         planned_label,
     };
     use crate::i18n::Locale;
@@ -146,5 +175,14 @@ mod tests {
             code_execution_disabled(Locale::En),
             "Code execution disabled"
         );
+    }
+
+    #[test]
+    fn editor_widget_copy_has_facade_keys() {
+        assert_eq!(editor_copy_code(Locale::En), "Copy Code");
+        assert_eq!(editor_copy_code(Locale::Zh), "复制代码");
+        assert_eq!(editor_more_actions(Locale::Zh), "更多操作");
+        assert_eq!(editor_no_actions_available(Locale::Zh), "暂无可用操作");
+        assert_eq!(editor_mermaid_error(Locale::Zh), "Mermaid 错误");
     }
 }

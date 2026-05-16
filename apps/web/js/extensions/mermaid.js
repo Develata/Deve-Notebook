@@ -1,6 +1,7 @@
 import { WidgetType, Decoration, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
 import { findMermaidRanges } from "./mermaid_parser.js";
+import { editorCopy } from "../i18n.js";
 import mermaid from "mermaid"; // 静态导入 (已打包)
 
 // --- 初始化 Mermaid (Initialize) ---
@@ -126,7 +127,7 @@ class MermaidWidget extends WidgetType {
      * 显示错误信息 (Show Error)
      */
     showError(container, error) {
-        container.innerText = "Mermaid Error:\n" + error.message;
+        container.innerText = editorCopy("mermaidError") + ":\n" + error.message;
         container.className = "text-red-500 font-mono text-xs p-2 bg-red-50 rounded";
         const pre = document.createElement("pre");
         pre.className = "mt-2 text-gray-400 whitespace-pre-wrap";

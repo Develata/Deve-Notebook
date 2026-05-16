@@ -16,7 +16,7 @@
 - `Trigger`: run source search for visible hardcoded strings
 - `Preconditions`: frontend source is readable
 - `Immediate Result`: non-facade visible text candidates are listed
-- `Application Entry`: `apps/web/src/components/`, `apps/web/src/i18n/`
+- `Application Entry`: `apps/web/src/components/`, `apps/web/js/extensions/`, `apps/web/src/i18n/`
 
 ### `op.i18n.audit.add-key`
 
@@ -33,8 +33,8 @@
 - `Surface`: `repo-search-or-test`
 - `Trigger`: run audit after adding or changing UI text
 - `Preconditions`: updated source compiles or is searchable
-- `Immediate Result`: visible text is routed through `t::*`
-- `Application Entry`: `apps/web/src/i18n/mod.rs`
+- `Immediate Result`: visible text is routed through `t::*` or a JS bridge sourced from `t::*`
+- `Application Entry`: `apps/web/src/i18n/mod.rs`, `apps/web/js/i18n.js`
 
 ## Response Flow
 

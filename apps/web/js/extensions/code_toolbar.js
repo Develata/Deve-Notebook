@@ -2,6 +2,7 @@ import { WidgetType, Decoration, ViewPlugin } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import { toggleMenu } from "./code_menu.js";
 import { ICON_COPY, ICON_CHECK, ICON_ELLIPSIS } from "./code_icons.js";
+import { editorCopy } from "../i18n.js";
 
 /**
  * Code Toolbar Widget (代码块工具栏)
@@ -32,7 +33,7 @@ class CodeToolbarWidget extends WidgetType {
         // Copy Button
         const copyBtn = document.createElement("button");
         copyBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors flex items-center justify-center";
-        copyBtn.title = "Copy Code";
+        copyBtn.title = editorCopy("copyCode");
         copyBtn.innerHTML = ICON_COPY;
 
         copyBtn.onclick = async (e) => {
@@ -51,7 +52,7 @@ class CodeToolbarWidget extends WidgetType {
         // Menu Button
         const menuBtn = document.createElement("button");
         menuBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors relative group flex items-center justify-center";
-        menuBtn.title = "More Actions";
+        menuBtn.title = editorCopy("moreActions");
         menuBtn.innerHTML = ICON_ELLIPSIS;
         menuBtn.onclick = (e) => {
             e.preventDefault();

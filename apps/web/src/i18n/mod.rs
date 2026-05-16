@@ -31,6 +31,7 @@ pub mod dashboard;
 pub mod diff;
 pub mod extensions;
 pub mod header;
+pub mod js_bridge;
 pub mod login;
 pub mod merge;
 pub mod playback;
@@ -46,6 +47,8 @@ pub mod source_control_native;
 pub mod time;
 
 use crate::storage::prefs::{read_pref, write_pref};
+
+pub use js_bridge::publish_browser_i18n;
 
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub const LOCALE_STORAGE_KEY: &str = "deve.ui.locale";

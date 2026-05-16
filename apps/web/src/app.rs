@@ -20,7 +20,7 @@ use crate::api::{AuthProbe, probe_auth_status};
 use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage, logout};
 use crate::components::main_layout::MainLayout;
 use crate::i18n::login as login_i18n;
-use crate::i18n::{Locale, initial_locale};
+use crate::i18n::{Locale, initial_locale, publish_browser_i18n};
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -39,6 +39,8 @@ pub fn App() -> impl IntoView {
     // 全局语言环境状态
     let locale = RwSignal::new(initial_locale());
     provide_context(locale);
+    publish_browser_i18n(locale.get_untracked());
+    Effect::new(move |_| publish_browser_i18n(locale.get()));
 
     // 认证状态
     let (auth_state, set_auth_state) = signal(AuthState::Checking);

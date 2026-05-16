@@ -6,13 +6,13 @@
 
 ## 当前执行队列
 
-1. JS Editor Widget I18N Bridge：为 `apps/web/js/extensions` 增加轻量 i18n copy bridge，移除 CodeMirror widget 可见英文硬编码，并扩展 i18n baseline guard。
-2. Global Shortcut Parity：补齐 `Ctrl/Cmd+L`、`Ctrl/Cmd+Shift+O`、`Ctrl/Cmd+B` 到现有 language / outline / sidebar intent，补最小测试。
-3. Indirect Sync Source Attribution Envelope：为 `SyncPush` / `SyncPushSnapshot` 设计并实现 source-signed envelope，补 forged relay payload 负例验收。
-4. Dockerfile Plan Drift Decision：`Dockerfile` 已移除 `cargo-chef` 并通过 CI Docker Smoke；需要后续明确是修正 `docs/plan/15_release.md`，还是恢复可通过 locked CI 的 cargo-chef 构建层。
+1. Global Shortcut Parity：补齐 `Ctrl/Cmd+L`、`Ctrl/Cmd+Shift+O`、`Ctrl/Cmd+B` 到现有 language / outline / sidebar intent，补最小测试。
+2. Indirect Sync Source Attribution Envelope：为 `SyncPush` / `SyncPushSnapshot` 设计并实现 source-signed envelope，补 forged relay payload 负例验收。
+3. Dockerfile Plan Drift Decision：`Dockerfile` 已移除 `cargo-chef` 并通过 CI Docker Smoke；需要后续明确是修正 `docs/plan/15_release.md`，还是恢复可通过 locked CI 的 cargo-chef 构建层。
 
 ## 最近完成
 
+- JS Editor Widget I18N Bridge：新增 Rust `t::*` 到 `window.deve_i18n` 的轻量桥接，Code Toolbar、Code Menu 与 Mermaid widget 可见文案改为读取桥接文案；i18n hardcoded guard 覆盖 `apps/web/js/extensions`；未改 `docs/plan/`。
 - Mainline Gap Scan After Full Regression：复跑 plan coverage、architecture registry、acceptance bindings、feature paths、runtime happy/recovery smoke、release/native/mobile gates 与 GitHub Docker Smoke；未发现 P0；选定 JS editor widget i18n、global shortcut parity 与 indirect sync attribution envelope 为下一批 P1；未改 `docs/plan/`。
 - Docker Release Smoke CI Follow-up：本机 Docker/WSL `SIGBUS` 被确认为宿主问题；新增 manual Docker Smoke workflow；移除 Dockerfile `cargo-chef` 漂移路径，升级 NodeSource 24，并将 `Cargo.lock` 纳入版本控制；GitHub run `25963571993` 通过 `scripts/smoke-docker-release.sh` 的 release image build、`/api/node/role` 与 production login smoke；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Release Boundary Alignment：全仓库 `cargo test`、全 feature `clippy`、`fmt --check`、architecture/acceptance/plan coverage、release/native/mobile/domain guards、Web release build 与 runtime happy/recovery smoke 均通过；未改 `docs/plan/`，未发现应用回归；本机 Docker release smoke 被 Docker/WSL `SIGBUS` 环境问题阻塞。

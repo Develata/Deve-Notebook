@@ -6,6 +6,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPONENT_SCOPE="$ROOT_DIR/apps/web/src/components"
+JS_EXTENSION_SCOPE="$ROOT_DIR/apps/web/js/extensions"
 
 fail() {
   echo "i18n-hardcoded-baseline-check: $*" >&2
@@ -59,6 +60,9 @@ contains apps/web/src/i18n/command_palette.rs "pub fn keyboard_navigate_hint"
 contains apps/web/src/i18n/search.rs "pub fn command_detail"
 contains apps/web/src/i18n/search.rs "pub fn file_op_detail"
 contains apps/web/src/i18n/common.rs "pub fn status"
+contains apps/web/src/i18n/extensions.rs "pub fn editor_copy_code"
+contains apps/web/src/i18n/js_bridge.rs "publish_browser_i18n"
+contains apps/web/js/i18n.js "export function editorCopy"
 
 reject_component_literal "to navigate" "keyboard navigation copy"
 reject_component_literal "to select" "keyboard selection copy"
@@ -82,5 +86,9 @@ reject_scope_literal 'title="More..."' "activity more action" "$COMPONENT_SCOPE/
 reject_scope_literal 'title="More"' "sidebar item more action" "$COMPONENT_SCOPE/sidebar"
 reject_scope_literal 'title="New File"' "sidebar new-file action" "$COMPONENT_SCOPE/sidebar"
 reject_scope_literal 'format!("Status: {}", status)' "disconnect overlay status line" "$COMPONENT_SCOPE/disconnect_overlay.rs"
+reject_scope_literal '"Copy Code"' "editor code-toolbar copy" "$JS_EXTENSION_SCOPE"
+reject_scope_literal '"More Actions"' "editor code-toolbar menu copy" "$JS_EXTENSION_SCOPE"
+reject_scope_literal '"No actions available"' "editor code-menu empty copy" "$JS_EXTENSION_SCOPE"
+reject_scope_literal '"Mermaid Error' "editor mermaid error copy" "$JS_EXTENSION_SCOPE"
 
 echo "i18n-hardcoded-baseline-check: ok"
