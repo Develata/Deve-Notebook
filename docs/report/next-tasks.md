@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Scan After Current-head Platform Evidence Refresh：按 `docs/plan/`、`docs/features/`、`docs/acceptance-cases/`、baseline scripts 与代码现状重新扫描 Current MUST 缺口；平台签名、商店、物理设备与真实 native process runtime 继续保持显式 opt-in gate。
+1. Platform Post-Gate Scope Decision：在 current-head Docker/Desktop/Android/iOS shell-only evidence 已绿后，明确是否打开 Desktop signing/notarization、Windows signed installer、Android signed/physical-device、iOS signing/TestFlight/device 之一；默认继续关闭真实 native process runtime 与 native authority writes。
 
 ## 最近完成
 
+- Mainline Gap Scan After Current-head Platform Evidence Refresh：复跑 plan coverage、architecture registry、acceptance bindings、feature paths、领域 baseline、release/native/mobile guards、runtime happy/recovery smoke 与 Web release build；未发现 blocking drift 或新的 unblocked Current MUST；下一步只做平台 post-gate scope decision，不隐式打开 signing/store/physical-device/native process。
 - Current HEAD Platform Evidence Refresh：推送 `main` 到 `154fcc91` 后触发 Docker Smoke `25966339253` 与 Native Target Host `25966339263`；Docker、Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 均通过；evidence artifacts 已下载并通过 validator，process runtime 与 native authority writes 仍关闭。
 - Platform Work Selection After Full Regression：按 Desktop、Mobile 与 Release plan 复核现有平台 evidence；选定当前 `HEAD` 平台证据刷新为下一批，不打开 process runtime、native authority、signing、store 或 physical-device gate。
 - Full Regression Gate Refresh After Mainline Queue Closure：全仓库 `cargo test --locked`、全 feature `clippy -D warnings`、`fmt --check`、runtime happy/recovery smoke、release/native/mobile/domain guards 与 Web release build 均通过；clippy 暴露的 sync handler/global shortcut/i18n bridge 结构问题已小幅收束；本机 Docker daemon 不可达导致 Docker release smoke 按脚本跳过。
