@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Full Regression Gate Refresh：在继续新实现批次前，运行 full workspace `cargo test`、`cargo clippy --all-targets --all-features -- -D warnings`、`cargo fmt --check`、`git diff --check`，并复核 release/runtime smoke guard。
+1. Post-regression Implementation Selection：基于 green full regression，审查 `docs/plan/`、`docs/report/` 与当前代码，选择下一批可执行实现；优先考虑 Desktop/Android 平台推进，但不得绕过 shell-only、no-process、no-authority gate。
 
 ## 最近完成
 
+- Full Regression Gate Refresh：全仓库 `cargo test`、全 feature clippy、格式/diff hygiene、release/audit、plan coverage、acceptance bindings 与 runtime happy/recovery smoke 均通过；修复 Desktop native-packaging 测试中的 clippy bool assertion。
 - Mainline Gap Refresh After Edge Coverage：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、native gate、plan coverage 与 runtime happy/recovery smoke；未发现新的 unblocked Current MUST，下一步进入完整回归闸门。
 - Storage/Server Edge Coverage：为 watcher overflow/rescan、zero debounce fail-closed、modified-burst collapse、repo catalog hard fail/quarantine 与 host identity key owner-only permission 增加 acceptance 绑定和 baseline guard。
 - Modal Focus Contract Closure：Settings、Pending Navigation、Merge modal 已接入共享 focus trap / restore / `role="dialog"` / `aria-modal` 语义；`UI-GEN-003` 与 `check-ui-focus-baseline.sh` 已扩展为 shared dialog surface guard。

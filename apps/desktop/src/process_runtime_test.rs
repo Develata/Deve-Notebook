@@ -118,7 +118,7 @@ fn desktop_process_runtime_fake_records_successful_state_sequence() {
     let snapshot = runtime.snapshot();
     assert_eq!(snapshot.state, NativeProcessRuntimeState::RuntimeReady);
     assert!(snapshot.handle.is_some());
-    assert_eq!(snapshot.endpoint.expect("endpoint").session_bound, true);
+    assert!(snapshot.endpoint.expect("endpoint").session_bound);
 }
 
 #[test]
