@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Rescan After Dockerfile Drift Closure：复跑 plan/code 双射、acceptance/features 与 release baseline，确认当前队列清空后是否还有新的 unblocked Current MUST。
+1. Full Regression Gate Refresh After Mainline Queue Closure：复跑全仓库 `cargo test`、全 feature `clippy`、`fmt --check`、runtime happy/recovery smoke、release/native/mobile/domain guards 与 plan coverage；确认主线队列清空后的 release-ready baseline。
 
 ## 最近完成
 
+- Mainline Gap Rescan After Dockerfile Drift Closure：复跑 release baseline、acceptance bindings、feature operation paths、plan coverage、architecture registry、network baseline、native process/packaging gates、mobile baseline、dev-runbook baseline 与 runtime happy/recovery smoke；未发现新的 unblocked Current MUST，下一步进入全量回归闸门。
 - Dockerfile Plan Drift Decision：保留当前 direct locked Docker build；将 `15_release.md` 的 Docker build strategy 从依赖缓存层 wording 改为 locked direct release build，并用 release baseline guard 防止旧策略静默回流。
 - Indirect Sync Source Attribution Envelope：为 `SyncPush` / `SyncPushSnapshot` 增加 source-signed proof；间接同步 payload 在 transport peer 与 source peer 不一致时必须通过 source proof 校验；补 forged relay diff/snapshot 负例与协议 proof 单测；因 bincode schema 变化按计划规则将 WS protocol version bump 到 `9`。
 - Global Shortcut Parity：补齐 `Ctrl/Cmd+L`、`Ctrl/Cmd+Shift+O`、`Ctrl/Cmd+B`；新增纯快捷键决策测试，Outline / Sidebar 收敛到 layout control context；Command Palette `Toggle Sidebar` 接入同一控制面；未改 `docs/plan/`。
