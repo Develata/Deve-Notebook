@@ -389,6 +389,57 @@ authenticated GitHub CLI when available, otherwise `DEVE_GITHUB_TOKEN`,
 `DEVE_NATIVE_TARGET_HOST_STATUS=1` to inspect the current run status without
 downloading artifacts.
 
+## Platform Artifact Consumption
+
+Use this section when the goal is to obtain and smoke-test current shell-only
+platform artifacts. It records consumption workflow, not release readiness.
+
+Dispatch a full shell-only target-host run:
+
+```bash
+DEVE_NATIVE_TARGET_HOST_DISPATCH=1 \
+DEVE_NATIVE_TARGET_HOST_TARGET=all \
+DEVE_NATIVE_TARGET_HOST_REQUIRED_PREFLIGHT=true \
+DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true \
+DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_STARTUP_SMOKE=true \
+DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_INSTALLER_SMOKE=true \
+DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_PACKAGE_BUILD=true \
+DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE=true \
+DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_PACKAGE_BUILD=true \
+DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE=true \
+scripts/dispatch-native-target-host-workflow.sh
+```
+
+After the run completes, validate evidence artifacts:
+
+```bash
+DEVE_NATIVE_TARGET_HOST_EVIDENCE_COLLECT=1 \
+DEVE_NATIVE_TARGET_HOST_RUN_ID=<run-id> \
+scripts/collect-native-target-host-evidence.sh
+```
+
+Download package artifacts when manual inspection is needed:
+
+```bash
+mkdir -p target/platform-artifacts
+gh run download <run-id> --name deve-desktop-macos-packages --dir target/platform-artifacts/desktop-macos
+gh run download <run-id> --name deve-desktop-windows-packages --dir target/platform-artifacts/desktop-windows
+gh run download <run-id> --name deve-mobile-android-packages --dir target/platform-artifacts/mobile-android
+gh run download <run-id> --name deve-mobile-ios-packages --dir target/platform-artifacts/mobile-ios
+```
+
+Artifact interpretation:
+
+- Docker: validate with `DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh` or production compose with explicit `AUTH_SECRET` / `AUTH_PASS`.
+- Desktop macOS: `.app/.dmg` evidence is shell-only; unsigned CI artifacts do not claim signing, notarization, or Gatekeeper release readiness.
+- Desktop Windows: MSI/NSIS evidence covers package build, startup smoke, and installer install/uninstall smoke; it does not claim signed installer readiness.
+- Android: emulator evidence covers shell APK install/startup; it does not claim Play Store, signed release, or physical-device readiness.
+- iOS: simulator evidence covers shell `.app` install/startup; it does not claim device signing, TestFlight, App Store, or physical-device readiness.
+
+All platform artifacts remain shell-only. They must not open native
+child-process runtime, backend supervision ownership, ledger/vault/source-control
+authority, search authority, Git authority, or `.notegit` authority.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package

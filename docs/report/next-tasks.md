@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Platform Artifact Consumption Runbook：整理 Docker、Desktop macOS/Windows、Android emulator 与 iOS simulator artifact 获取、安装/启动 smoke 与边界说明；必须明确当前证据仍是 shell-only，不声明 store/signing/physical-device readiness，也不得打开 native process runtime 或 native authority writes。
+1. Post-platform Mainline Guard Refresh：平台 CI/script/runbook 改动后复跑 release/native guards、acceptance bindings、plan coverage 与 runtime happy/recovery smoke；确认平台发布面闭合没有引入新的主线 drift。
 
 ## 最近完成
 
+- Platform Artifact Consumption Runbook：在 `docs/dev-runbook.md` 增加 Docker、Desktop macOS/Windows、Android emulator、iOS simulator artifact 获取、evidence 校验与 shell-only 边界说明；release baseline 已反查，未声明 store/signing/physical-device readiness。
 - Platform Distribution Readiness Triage：修复 Desktop target-host preflight 误阻塞；GitHub run `25960266472` 在当前 `HEAD 9439c864` 完成 Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 全平台 shell-only evidence；本地 Docker release smoke 通过，process runtime 与 native authority writes 继续关闭。
 - Mainline Refresh After Command Surface Closure：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、release/native gates、runtime happy/recovery smoke 与 plan coverage；确认 Command Surface boundary 关闭后无新的 unblocked Current MUST，下一步转入平台发布 readiness triage。
 - Command Surface Reserved Boundary：为 Git status/mirror/export 补 CLI-only unavailable notice；为 Source Control sync/commit/push 与 AI retry/backend/PLAN/BUILD 补 unavailable entries；新增 `CMD-004B` / `CMD-004C` 与 baseline guards，未新增 Web Git writer、native process runtime 或 plan 变更。
