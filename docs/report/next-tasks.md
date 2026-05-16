@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Platform Post-Gate Scope Decision：在 current-head Docker/Desktop/Android/iOS shell-only evidence 已绿后，明确是否打开 Desktop signing/notarization、Windows signed installer、Android signed/physical-device、iOS signing/TestFlight/device 之一；默认继续关闭真实 native process runtime 与 native authority writes。
+1. Platform Signed / Physical-device Preflight Scaffold：为 Desktop signing/notarization、Windows signed installer、Android signed release 与 Android physical-device smoke 增加 diagnostic / required 双模式 preflight；默认不需要 secrets、不执行真实签名、不声明 store/physical-device readiness，并继续关闭真实 native process runtime 与 native authority writes。
 
 ## 最近完成
 
+- Platform Post-Gate Scope Decision：current-head shell-only platform evidence 已绿；选定下一批先做签名/物理设备 preflight scaffold，而不是直接进入真实签名、商店发布、物理设备发布或 native process runtime。
 - Mainline Gap Scan After Current-head Platform Evidence Refresh：复跑 plan coverage、architecture registry、acceptance bindings、feature paths、领域 baseline、release/native/mobile guards、runtime happy/recovery smoke 与 Web release build；未发现 blocking drift 或新的 unblocked Current MUST；下一步只做平台 post-gate scope decision，不隐式打开 signing/store/physical-device/native process。
 - Current HEAD Platform Evidence Refresh：推送 `main` 到 `154fcc91` 后触发 Docker Smoke `25966339253` 与 Native Target Host `25966339263`；Docker、Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 均通过；evidence artifacts 已下载并通过 validator，process runtime 与 native authority writes 仍关闭。
 - Platform Work Selection After Full Regression：按 Desktop、Mobile 与 Release plan 复核现有平台 evidence；选定当前 `HEAD` 平台证据刷新为下一批，不打开 process runtime、native authority、signing、store 或 physical-device gate。
