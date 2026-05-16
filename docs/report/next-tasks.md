@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Post-platform Mainline Guard Refresh：平台 CI/script/runbook 改动后复跑 release/native guards、acceptance bindings、plan coverage 与 runtime happy/recovery smoke；确认平台发布面闭合没有引入新的主线 drift。
+1. Post-platform Mainline Gap Scan：平台 shell-only 发布面闭合后，重新按 `docs/plan/`、`docs/features/`、`docs/acceptance-cases/`、guard scripts 与当前代码做四向交叉；只筛选真正影响当前验收的最小实现缺口，不打开 signed/store/physical-device/native-process/native-authority gates。
 
 ## 最近完成
 
+- Post-platform Mainline Guard Refresh：平台 CI/script/runbook 改动后复跑 release/native/mobile guards、architecture registry、acceptance bindings、feature paths、plan coverage、target-host evidence、runtime happy/recovery smoke、fmt 与 diff hygiene；全部通过，未引入新的主线 drift。
 - Platform Artifact Consumption Runbook：在 `docs/dev-runbook.md` 增加 Docker、Desktop macOS/Windows、Android emulator、iOS simulator artifact 获取、evidence 校验与 shell-only 边界说明；release baseline 已反查，未声明 store/signing/physical-device readiness。
 - Platform Distribution Readiness Triage：修复 Desktop target-host preflight 误阻塞；GitHub run `25960266472` 在当前 `HEAD 9439c864` 完成 Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 全平台 shell-only evidence；本地 Docker release smoke 通过，process runtime 与 native authority writes 继续关闭。
 - Mainline Refresh After Command Surface Closure：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、release/native gates、runtime happy/recovery smoke 与 plan coverage；确认 Command Surface boundary 关闭后无新的 unblocked Current MUST，下一步转入平台发布 readiness triage。
