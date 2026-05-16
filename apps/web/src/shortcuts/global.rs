@@ -11,6 +11,9 @@
 //! - `Ctrl+P`: 打开/关闭文件搜索
 //! - `Ctrl+Shift+P`: 打开/关闭命令面板
 //! - `Ctrl+Shift+K`: 打开/关闭分支切换器
+//! - `Ctrl+L`: 切换语言
+//! - `Ctrl+Shift+O`: 打开/关闭大纲
+//! - `Ctrl+B`: 打开/关闭侧边栏
 
 #![allow(dead_code)] // 快捷键系统模块预留
 
@@ -18,6 +21,7 @@ mod handlers;
 mod search_box;
 
 use super::types::KeyCombo;
+use crate::i18n::Locale;
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
@@ -29,6 +33,12 @@ pub mod ids {
     pub const COMMAND_PALETTE: &str = "global.command_palette";
     /// 打开/关闭分支切换器
     pub const BRANCH_SWITCHER: &str = "global.branch_switcher";
+    /// 切换语言
+    pub const TOGGLE_LANGUAGE: &str = "global.toggle_language";
+    /// 打开/关闭大纲
+    pub const TOGGLE_OUTLINE: &str = "global.toggle_outline";
+    /// 打开/关闭侧边栏
+    pub const TOGGLE_SIDEBAR: &str = "global.toggle_sidebar";
 }
 
 /// 全局快捷键按键组合
@@ -49,6 +59,21 @@ pub mod combos {
     pub fn branch_switcher() -> KeyCombo {
         KeyCombo::new("k", true, true, false)
     }
+
+    /// Ctrl+L
+    pub fn toggle_language() -> KeyCombo {
+        KeyCombo::new("l", true, false, false)
+    }
+
+    /// Ctrl+Shift+O
+    pub fn toggle_outline() -> KeyCombo {
+        KeyCombo::new("o", true, true, false)
+    }
+
+    /// Ctrl+B
+    pub fn toggle_sidebar() -> KeyCombo {
+        KeyCombo::new("b", true, false, false)
+    }
 }
 
 /// 创建全局快捷键处理器
@@ -59,6 +84,9 @@ pub mod combos {
 /// - `set_show_search`: 设置搜索框显示状态
 /// - `search_mode`: 当前搜索模式 ("" 为文件搜索, ">" 为命令)
 /// - `set_search_mode`: 设置搜索模式
+/// - `locale`: 当前语言状态
+/// - `set_outline_visible`: 设置大纲显示状态
+/// - `set_sidebar_visible`: 设置侧边栏显示状态
 ///
 /// # 返回
 ///
@@ -68,6 +96,9 @@ pub fn create_global_shortcut_handler(
     set_show_search: WriteSignal<bool>,
     search_mode: Signal<String>,
     set_search_mode: WriteSignal<String>,
+    locale: RwSignal<Locale>,
+    set_outline_visible: WriteSignal<bool>,
+    set_sidebar_visible: WriteSignal<bool>,
 ) -> impl Fn(KeyboardEvent) + Clone + 'static {
     move |ev: KeyboardEvent| {
         handlers::handle_global_shortcut(
@@ -76,6 +107,9 @@ pub fn create_global_shortcut_handler(
             set_show_search,
             search_mode,
             set_search_mode,
+            locale,
+            set_outline_visible,
+            set_sidebar_visible,
         )
     }
 }

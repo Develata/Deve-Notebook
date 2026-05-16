@@ -58,6 +58,22 @@
   assertions:
     - ui_assert: branch_switcher_visible true
 
+- case_id: CMD-004D
+  goal: Settings 全局快捷键。
+  preconditions:
+    - 应用已运行
+  steps:
+    - ui_keypress: "Ctrl+L"
+    - ui_keypress: "Ctrl+Shift+O"
+    - ui_keypress: "Ctrl+B"
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_web global_shortcut -- --nocapture
+    - run: cargo test -p deve_web static_commands_include_sidebar_toggle -- --nocapture
+  assertions:
+    - ui_assert: locale_toggled true
+    - ui_assert: outline_visibility_toggled true
+    - ui_assert: sidebar_visibility_toggled true
+
 - case_id: CMD-004A
   goal: 未绑定后端的 P2P branch 创建入口必须显示 unavailable 状态。
   preconditions:

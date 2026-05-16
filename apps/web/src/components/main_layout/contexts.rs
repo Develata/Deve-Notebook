@@ -3,7 +3,7 @@
 //!   - 08_ui_design_03_mobile#mobile-responsive-layout
 //!   - 10_ai_agent#native-ai-chat-runtime
 //!
-use super::{ChatControl, SearchControl};
+use super::{ChatControl, OutlineControl, SearchControl, SidebarControl};
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
@@ -24,6 +24,17 @@ pub fn provide_chat_control(chat_visible: ReadSignal<bool>, set_chat_visible: Wr
         chat_visible,
         set_chat_visible,
     });
+}
+
+pub fn provide_outline_control(visible: ReadSignal<bool>, set_visible: WriteSignal<bool>) {
+    provide_context(OutlineControl {
+        visible,
+        set_visible,
+    });
+}
+
+pub fn provide_sidebar_control(set_visible: WriteSignal<bool>) {
+    provide_context(SidebarControl { set_visible });
 }
 
 pub(crate) fn viewport_width_maps_to_mobile(width: f64) -> bool {

@@ -24,6 +24,19 @@ pub struct ChatControl {
     pub set_chat_visible: WriteSignal<bool>,
 }
 
+/// Outline panel visibility control context.
+#[derive(Clone, Copy)]
+pub struct OutlineControl {
+    pub visible: ReadSignal<bool>,
+    pub set_visible: WriteSignal<bool>,
+}
+
+/// Sidebar visibility control context.
+#[derive(Clone, Copy)]
+pub struct SidebarControl {
+    pub set_visible: WriteSignal<bool>,
+}
+
 /// Editor content context for outline rendering
 #[derive(Clone, Copy)]
 pub struct EditorContentContext {

@@ -2,17 +2,28 @@
 //!   - 09_auth#unauthorized-disconnected-ui
 //!
 
-use super::contexts::{provide_chat_control, provide_search_control};
+use super::contexts::{
+    provide_chat_control, provide_outline_control, provide_search_control, provide_sidebar_control,
+};
 use crate::api::ConnectionStatus;
 use crate::components::activity_bar::SidebarView;
+use crate::hooks::use_outline::use_outline;
+use crate::i18n::Locale;
 use crate::shortcuts::create_global_shortcut_handler;
+use crate::storage::prefs::{read_bool_pref, write_bool_pref};
 use leptos::prelude::*;
+
+const SIDEBAR_VISIBLE_STORAGE_KEY: &str = "ui_sidebar_visible";
 
 pub struct SearchUiState {
     pub show_search: ReadSignal<bool>,
     pub set_show_search: WriteSignal<bool>,
     pub search_mode: ReadSignal<String>,
     pub set_search_mode: WriteSignal<String>,
+}
+
+pub struct OutlineUiState {
+    pub set_visible: WriteSignal<bool>,
 }
 
 pub struct SidebarUiState {
@@ -23,6 +34,8 @@ pub struct SidebarUiState {
     pub pinned_views: ReadSignal<Vec<SidebarView>>,
     pub set_pinned_views: WriteSignal<Vec<SidebarView>>,
     pub chat_visible: ReadSignal<bool>,
+    pub visible: ReadSignal<bool>,
+    pub set_visible: WriteSignal<bool>,
 }
 
 pub fn watch_session_expired(
@@ -49,12 +62,21 @@ pub fn init_search_ui_state() -> SearchUiState {
     }
 }
 
+pub fn init_outline_ui_state() -> OutlineUiState {
+    let (visible, set_visible) = use_outline();
+    provide_outline_control(visible, set_visible);
+
+    OutlineUiState { set_visible }
+}
+
 pub fn init_sidebar_ui_state() -> SidebarUiState {
     let (show_settings, set_show_settings) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
     let (pinned_views, set_pinned_views) = signal(SidebarView::all());
     let (chat_visible, set_chat_visible) = signal(true);
+    let (visible, set_visible) = use_sidebar_visibility();
     provide_chat_control(chat_visible, set_chat_visible);
+    provide_sidebar_control(set_visible);
 
     SidebarUiState {
         show_settings,
@@ -64,15 +86,36 @@ pub fn init_sidebar_ui_state() -> SidebarUiState {
         pinned_views,
         set_pinned_views,
         chat_visible,
+        visible,
+        set_visible,
     }
 }
 
-pub fn bind_global_shortcuts(search: &SearchUiState) {
+pub fn bind_global_shortcuts(
+    search: &SearchUiState,
+    outline: &OutlineUiState,
+    sidebar: &SidebarUiState,
+    locale: RwSignal<Locale>,
+) {
     let handle_keydown = create_global_shortcut_handler(
         search.show_search.into(),
         search.set_show_search,
         search.search_mode.into(),
         search.set_search_mode,
+        locale,
+        outline.set_visible,
+        sidebar.set_visible,
     );
     window_event_listener(leptos::ev::keydown, handle_keydown);
+}
+
+fn use_sidebar_visibility() -> (ReadSignal<bool>, WriteSignal<bool>) {
+    let initial = read_bool_pref(SIDEBAR_VISIBLE_STORAGE_KEY).unwrap_or(true);
+    let (visible, set_visible) = signal(initial);
+
+    Effect::new(move |_| {
+        let _ = write_bool_pref(SIDEBAR_VISIBLE_STORAGE_KEY, visible.get());
+    });
+
+    (visible, set_visible)
 }

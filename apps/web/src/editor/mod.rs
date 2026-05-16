@@ -6,7 +6,7 @@
 
 use crate::api::WsService;
 use crate::components::icons::PanelLeft;
-use crate::components::layout_context::EditorContentContext;
+use crate::components::layout_context::{EditorContentContext, OutlineControl};
 use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::hooks::use_outline::use_outline;
@@ -78,7 +78,9 @@ pub fn Editor(
         let should_readonly = should_editor_be_read_only(is_pb, write_blocked);
         ffi::set_read_only(should_readonly);
     });
-    let (outline_pref, set_outline_pref) = use_outline();
+    let (outline_pref, set_outline_pref) = use_context::<OutlineControl>()
+        .map(|outline| (outline.visible, outline.set_visible))
+        .unwrap_or_else(use_outline);
     let show_outline = Signal::derive(move || !embedded && outline_pref.get());
     let on_toggle_outline = Callback::new(move |_| set_outline_pref.update(|b| *b = !*b));
     let on_scroll = Callback::new(move |line: usize| ffi::scroll_global(line));

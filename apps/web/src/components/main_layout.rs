@@ -8,9 +8,12 @@
 use self::callbacks::{build_home_callback, build_open_callback, toggle_search_callback};
 use self::contexts::use_mobile_breakpoint;
 use self::setup::{
-    bind_global_shortcuts, init_search_ui_state, init_sidebar_ui_state, watch_session_expired,
+    bind_global_shortcuts, init_outline_ui_state, init_search_ui_state, init_sidebar_ui_state,
+    watch_session_expired,
 };
-pub use crate::components::layout_context::{ChatControl, SearchControl};
+pub use crate::components::layout_context::{
+    ChatControl, OutlineControl, SearchControl, SidebarControl,
+};
 use crate::components::main_layout_runtime::MainLayoutRuntime;
 use crate::hooks::use_core::use_core;
 use crate::hooks::use_ctrl_key::use_ctrl_key;
@@ -24,7 +27,7 @@ mod setup;
 
 #[component]
 pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> AnyView {
-    let _locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let core = use_core();
     watch_session_expired(core.ws.status, on_session_expired);
 
@@ -56,8 +59,9 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
     use_ctrl_key();
 
     let search = init_search_ui_state();
+    let outline = init_outline_ui_state();
     let sidebar = init_sidebar_ui_state();
-    bind_global_shortcuts(&search);
+    bind_global_shortcuts(&search, &outline, &sidebar, locale);
 
     let is_mobile = use_mobile_breakpoint();
 
@@ -103,6 +107,7 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
             pinned_views=sidebar.pinned_views
             set_pinned_views=sidebar.set_pinned_views
             chat_visible=sidebar.chat_visible
+            sidebar_visible=sidebar.visible
             on_home=on_home
             on_open=on_open
             on_command=on_command

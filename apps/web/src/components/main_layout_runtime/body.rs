@@ -19,6 +19,7 @@ pub fn MainLayoutBody(
     pinned_views: ReadSignal<Vec<SidebarView>>,
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
     chat_visible: ReadSignal<bool>,
+    sidebar_visible: ReadSignal<bool>,
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
@@ -52,6 +53,7 @@ pub fn MainLayoutBody(
                     set_active_view=set_active_view
                     pinned_views=pinned_views
                     set_pinned_views=set_pinned_views
+                    sidebar_visible=sidebar_visible
                     on_home=on_home
                     on_open=on_open
                     on_command=on_command

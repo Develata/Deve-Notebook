@@ -36,6 +36,13 @@ pub fn toggle_language(locale: Locale) -> &'static str {
     }
 }
 
+pub fn toggle_sidebar(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Toggle Sidebar",
+        Locale::Zh => "切换侧边栏",
+    }
+}
+
 pub fn open_document(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Open Document",

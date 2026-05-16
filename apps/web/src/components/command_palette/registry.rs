@@ -6,7 +6,7 @@
 //! 命令面板的静态命令定义。
 
 use super::types::Command;
-use crate::components::main_layout::{ChatControl, SearchControl};
+use crate::components::main_layout::{ChatControl, SearchControl, SidebarControl};
 use crate::hooks::use_core::{BranchContext, CoreState, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
@@ -35,6 +35,7 @@ pub fn create_static_commands(
     // Try to get ChatControl from context at creation time
     let chat_control = use_context::<ChatControl>();
     let search_control = use_context::<SearchControl>();
+    let sidebar_control = use_context::<SidebarControl>();
     let branch_context = use_context::<BranchContext>();
     let sync_merge_context = use_context::<SyncMergeContext>();
     let core_state = use_context::<CoreState>();
@@ -81,6 +82,19 @@ pub fn create_static_commands(
             }),
         ),
     ];
+
+    if let Some(sidebar_control) = sidebar_control {
+        commands.push(Command::available(
+            "toggle_sidebar",
+            (t::command_palette::toggle_sidebar)(locale),
+            Callback::new(move |_| {
+                sidebar_control
+                    .set_visible
+                    .update(|visible| *visible = !*visible);
+                set_show.set(false);
+            }),
+        ));
+    }
 
     commands.extend(source_control_reserved_commands(locale));
     commands.extend(vec![
@@ -138,6 +152,7 @@ pub fn filter_commands(query: &str, commands: Vec<Command>, max_results: usize) 
 #[cfg(test)]
 mod tests {
     use super::create_static_commands;
+    use crate::components::layout_context::SidebarControl;
     use crate::i18n::Locale;
     use leptos::prelude::*;
 
@@ -202,6 +217,33 @@ mod tests {
                     "{id} must remain unavailable until a backend contract is wired"
                 );
             }
+        });
+    }
+
+    #[test]
+    fn static_commands_include_sidebar_toggle_when_control_is_available() {
+        let owner = leptos::reactive::owner::Owner::new();
+
+        owner.with(|| {
+            let (_, set_show) = signal(false);
+            let (visible, set_visible) = signal(true);
+            provide_context(SidebarControl { set_visible });
+            let locale = RwSignal::new(Locale::En);
+            let commands = create_static_commands(
+                Locale::En,
+                Callback::new(|_| {}),
+                Callback::new(|_| {}),
+                set_show,
+                locale,
+            );
+            let command = commands
+                .iter()
+                .find(|command| command.id == "toggle_sidebar")
+                .expect("toggle sidebar command");
+
+            command.action.run(());
+
+            assert!(!visible.get_untracked());
         });
     }
 }

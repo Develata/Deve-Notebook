@@ -28,6 +28,7 @@ pub fn DesktopLayout(
     set_active_view: WriteSignal<SidebarView>,
     pinned_views: ReadSignal<Vec<SidebarView>>,
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
+    sidebar_visible: ReadSignal<bool>,
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
@@ -46,6 +47,8 @@ pub fn DesktopLayout(
         _do_resize,
         _is_resizing,
     ) = layout;
+    let sidebar_core = core.clone();
+    let content_core = core.clone();
 
     view! {
         <Header
@@ -77,18 +80,24 @@ pub fn DesktopLayout(
                 on_resize=start_resize_outer_right
             />
 
-            <DesktopSidebar
-                core=core.clone()
-                sidebar_width=sidebar_width
-                active_view=active_view
-                set_active_view=set_active_view
-                pinned_views=pinned_views
-                set_pinned_views=set_pinned_views
-            />
+            {move || if sidebar_visible.get() {
+                view! {
+                    <DesktopSidebar
+                        core=sidebar_core.clone()
+                        sidebar_width=sidebar_width
+                        active_view=active_view
+                        set_active_view=set_active_view
+                        pinned_views=pinned_views
+                        set_pinned_views=set_pinned_views
+                    />
 
-            <DesktopInnerResizeHandle on_resize=start_resize_left />
+                    <DesktopInnerResizeHandle on_resize=start_resize_left />
+                }.into_any()
+            } else {
+                view! {}.into_any()
+            }}
 
-            <DesktopLayoutContent core=core.clone() />
+            <DesktopLayoutContent core=content_core />
 
             <DesktopChatPanel
                 chat_visible=chat_visible

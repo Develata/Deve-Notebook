@@ -18,6 +18,7 @@ fn git_bridge_commands_are_localized() {
     assert_eq!(git_push_mirror(Locale::Zh), "Git: 推送 Mirror");
     assert_eq!(git_repair_mirror(Locale::En), "Git: Repair Mirror");
     assert_eq!(git_repair_mirror(Locale::Zh), "Git: 修复 Mirror");
+    assert_eq!(toggle_sidebar(Locale::En), "Toggle Sidebar");
     assert_eq!(ai_switch_plan(Locale::En), "AI: Switch to PLAN Mode");
     assert!(ai_slash_mode_reason(Locale::En).contains("/plan"));
 }
