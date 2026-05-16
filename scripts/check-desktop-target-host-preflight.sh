@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REQUIRED="${DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED:-0}"
 TARGETS="${DEVE_DESKTOP_TARGET_HOSTS:-macos,windows}"
+NO_SIGN="${DEVE_DESKTOP_PACKAGE_NO_SIGN:-0}"
 
 fail() {
   echo "desktop-target-host-preflight-check: $*" >&2
@@ -62,6 +63,30 @@ diagnose_any_command() {
   target_missing+=("$label")
 }
 
+has_visual_studio_build_tools() {
+  local candidate
+
+  for candidate in \
+    "C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" \
+    "/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"; do
+    [[ -x "$candidate" ]] || continue
+    "$candidate" \
+      -latest \
+      -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
+      -property installationPath >/dev/null 2>&1 \
+      && return 0
+  done
+  return 1
+}
+
+diagnose_msvc_toolchain() {
+  if command -v cl >/dev/null 2>&1 || command -v cl.exe >/dev/null 2>&1; then
+    return 0
+  fi
+  has_visual_studio_build_tools && return 0
+  target_missing+=("MSVC cl.exe")
+}
+
 diagnose_env() {
   local name="$1"
   [[ -n "${!name:-}" ]] || target_missing+=("env $name")
@@ -110,8 +135,10 @@ if target_enabled macos; then
     diagnose_command "xcrun" xcrun --version
     diagnose_rust_target "aarch64-apple-darwin"
     diagnose_rust_target "x86_64-apple-darwin"
-    diagnose_env "APPLE_SIGNING_IDENTITY"
-    diagnose_env "APPLE_PROVIDER_SHORT_NAME"
+    if [[ "$NO_SIGN" != "1" ]]; then
+      diagnose_env "APPLE_SIGNING_IDENTITY"
+      diagnose_env "APPLE_PROVIDER_SHORT_NAME"
+    fi
   fi
 fi
 
@@ -120,7 +147,7 @@ if target_enabled windows; then
     target_missing+=("Windows target-host requires Windows")
   else
     diagnose_any_command "PowerShell" pwsh powershell powershell.exe
-    diagnose_any_command "MSVC cl.exe" cl cl.exe
+    diagnose_msvc_toolchain
     diagnose_any_command "WiX Toolset" wix wix.exe candle candle.exe
     diagnose_any_command "NSIS makensis" makensis makensis.exe
     diagnose_rust_target "x86_64-pc-windows-msvc"

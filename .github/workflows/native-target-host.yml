@@ -87,6 +87,8 @@ jobs:
 
       - name: Desktop macOS target-host preflight
         id: desktop_macos_preflight
+        env:
+          DEVE_DESKTOP_PACKAGE_NO_SIGN: "1"
         run: scripts/check-desktop-target-host-preflight.sh
 
       - name: Native process adapter gate remains closed
@@ -188,6 +190,19 @@ jobs:
           DEVE_NATIVE_INSTALL_TAURI_CLI: ${{ inputs.run_desktop_package_build && '1' || '0' }}
         run: |
           scripts/install-native-target-host-tools.sh
+
+      - name: Install Windows installer tools
+        if: ${{ inputs.run_desktop_package_build }}
+        shell: pwsh
+        run: |
+          $nsis = "${env:ProgramFiles(x86)}\NSIS"
+          if (!(Test-Path "$nsis\makensis.exe")) {
+            choco install nsis -y --no-progress
+          }
+          if (!(Test-Path "$nsis\makensis.exe")) {
+            throw "NSIS makensis.exe was not installed at $nsis"
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value $nsis
 
       - name: Build web dist
         run: scripts/build-web-dist-ci.sh
