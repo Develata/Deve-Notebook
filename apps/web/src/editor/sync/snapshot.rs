@@ -11,7 +11,7 @@ use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
 use super::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
 use crate::editor::ffi::{applyRemoteContent, set_read_only};
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
-use deve_core::models::{PeerId, RepoId};
+use deve_core::models::{Op, PeerId, RepoId};
 use deve_core::protocol::{ClientMessage, ConfirmedOp};
 use leptos::prelude::*;
 
@@ -66,6 +66,8 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
         message.delta_ops.len()
     );
 
+    let full_fallback_content =
+        reconstruct_full_snapshot_content(&message.new_content, &message.delta_ops);
     emit_stats(ctx.on_stats, &message.new_content);
     applyRemoteContent(&message.new_content);
     ctx.set_content.set(message.new_content);
@@ -88,7 +90,17 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
             set_history: ctx.set_history,
         },
         gate.clone(),
-        build_delta_failure_fallback(ctx, &gate, message.request_id),
+        build_delta_failure_fallback(
+            ctx,
+            &gate,
+            DeltaFailureFallback {
+                full_content: full_fallback_content,
+                version: message.version,
+                history: confirmed_history(&message.delta_ops),
+                finish: LoadFinish::from_ctx(ctx, message.version, load_start, message.request_id),
+                request_id: message.request_id,
+            },
+        ),
     );
     let on_progress = build_progress_handler(ctx.set_load_progress, ctx.set_load_eta_ms);
     let finish = LoadFinish::from_ctx(ctx, message.version, load_start, message.request_id);
@@ -111,10 +123,18 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
     );
 }
 
+struct DeltaFailureFallback {
+    full_content: Option<String>,
+    version: u64,
+    history: Vec<(u64, Op)>,
+    finish: LoadFinish,
+    request_id: u64,
+}
+
 fn build_delta_failure_fallback(
     ctx: &SyncContext,
     gate: &SnapshotRequestGate,
-    request_id: u64,
+    fallback: DeltaFailureFallback,
 ) -> std::rc::Rc<dyn Fn()> {
     let gate = gate.clone();
     let ws = ctx.ws.clone();
@@ -130,8 +150,18 @@ fn build_delta_failure_fallback(
         if !gate.matches() {
             return;
         }
+        if let Some(full_content) = fallback.full_content.clone() {
+            leptos::logging::warn!(
+                "Snapshot delta batch apply failed; applying reconstructed full snapshot fallback for doc={doc_id}"
+            );
+            applyRemoteContent(&full_content);
+            set_local_version.set(fallback.version);
+            set_history.set(fallback.history.clone());
+            fallback.finish.clone().complete_with_content(full_content);
+            return;
+        }
         leptos::logging::warn!(
-            "Snapshot delta batch apply failed; requesting full snapshot fallback for doc={doc_id}"
+            "Snapshot delta batch apply failed; requesting snapshot reopen fallback for doc={doc_id}"
         );
         set_read_only(true);
         set_local_version.set(0);
@@ -142,10 +172,22 @@ fn build_delta_failure_fallback(
         set_load_eta_ms.set(0);
         ws.send(ClientMessage::OpenDoc {
             doc_id,
-            request_id,
+            request_id: fallback.request_id,
             scope_nonce: Some(scope_nonce),
         });
     })
+}
+
+fn reconstruct_full_snapshot_content(base: &str, delta_ops: &[ConfirmedOp]) -> Option<String> {
+    let ops: Vec<_> = delta_ops.iter().map(|entry| entry.op.clone()).collect();
+    deve_core::state::try_apply_content_ops(base, &ops)
+}
+
+fn confirmed_history(delta_ops: &[ConfirmedOp]) -> Vec<(u64, Op)> {
+    delta_ops
+        .iter()
+        .map(|entry| (entry.seq, entry.op.clone()))
+        .collect()
 }
 
 #[cfg(test)]

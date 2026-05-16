@@ -60,6 +60,7 @@ contains docs/features/operations/rendering_large_doc_search_gate.md "apps/web/s
 contains docs/features/operations/rendering_large_doc_prefetch.md "RENDER-LARGE-002"
 contains docs/features/operations/rendering_large_doc_prefetch.md "op.render.large-doc.delta-fallback"
 contains docs/features/operations/rendering_large_doc_prefetch.md "Failed delta replay must not advance local version or history."
+contains docs/features/operations/rendering_large_doc_prefetch.md "snapshot reopen is only a last-resort fallback"
 contains apps/web/src/editor/sync/snapshot.rs "applyRemoteContent(&message.new_content);"
 contains apps/web/src/editor/sync/snapshot.rs 'ctx.set_load_state.set("partial".to_string())'
 contains apps/web/src/editor/sync/snapshot.rs "apply_ops_in_batches("
@@ -78,14 +79,21 @@ contains apps/web/src/hooks/use_core/callbacks/misc/tests.rs "large_doc_search_g
 contains apps/web/src/hooks/use_core/callbacks/misc/tests.rs "drain_sent_for_test().is_empty()"
 contains apps/web/src/hooks/use_core/callbacks/misc/tests.rs "large_doc_search_gate_sends_after_ready"
 
-# Failed remote op batches must be observable and must request a full snapshot fallback.
+# Failed remote op batches must be observable and must recover through full-content fallback.
 contains apps/web/src/editor/sync/snapshot.rs "build_delta_failure_fallback("
+contains apps/web/src/editor/sync/snapshot.rs "try_apply_content_ops"
+contains apps/web/src/editor/sync/snapshot_finish.rs "complete_with_content"
 contains apps/web/src/editor/sync/snapshot.rs "ClientMessage::OpenDoc"
 contains apps/web/src/editor/sync/snapshot_apply.rs "snapshot_apply_failure_does_not_advance_version_or_history"
+contains apps/web/src/editor/sync/snapshot/tests.rs "snapshot_delta_fallback_reconstructs_full_content"
 contains apps/web/src/editor/sync/history_replay.rs "Pending overlay replay batch failed"
 contains apps/web/src/editor/ffi.rs "pub fn applyRemoteOpsBatch(ops_json: &str) -> bool;"
-contains apps/web/index.html "return rawApplyRemoteOpsBatch(opsJson) === true;"
+contains apps/web/index.html "return false;"
+contains apps/web/index.html "Queued editor ops batch replay failed"
 contains apps/web/js/editor_remote_ops.js "return false;"
 contains apps/web/js/editor_remote_ops.js "ensureValidRange"
+contains apps/web/js/editor_remote_ops.js "Unsupported remote op"
+contains apps/web/builder.js "entryPoints: ['js/editor_adapter.js']"
+contains apps/web/builder.js "outfile: 'js/editor.bundle.js'"
 
 echo "large-doc-baseline-check: ok"

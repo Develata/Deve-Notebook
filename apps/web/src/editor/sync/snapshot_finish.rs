@@ -49,6 +49,10 @@ impl LoadFinish {
 
     pub(super) fn complete(self) {
         let text = getEditorContent();
+        self.complete_with_content(text);
+    }
+
+    pub(super) fn complete_with_content(self, text: String) {
         emit_stats(self.on_stats, &text);
         self.set_content.set(text);
         self.set_playback_version.set(self.version);

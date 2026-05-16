@@ -95,6 +95,69 @@ pub fn reconstruct_content(ops: &[LedgerEntry]) -> String {
     content.to_string()
 }
 
+/// 将一组 UTF-16 索引的内容操作应用到已有文本。
+///
+/// 返回 `None` 表示操作无法按当前文本边界应用；调用方必须 fail closed，
+/// 不能在本地投影未更新时推进版本。
+pub fn try_apply_content_ops(base: &str, ops: &[Op]) -> Option<String> {
+    let mut content = Rope::from_str(base);
+    let mut total_utf16 = utf16::utf16_len(base)?;
+    let mut cache = Utf16IndexCache::build(&content, adaptive_step(total_utf16));
+
+    for op in ops {
+        match op {
+            Op::Insert { pos, content: text } => {
+                if *pos > total_utf16 {
+                    return None;
+                }
+                let delta = utf16::utf16_len(text)?;
+                let next_len = total_utf16.checked_add(delta)?;
+                let char_idx = cache.locate(&content, *pos);
+                let char_delta = text.chars().count();
+                content.insert(char_idx, text);
+                total_utf16 = next_len;
+                let next_step = adaptive_step(total_utf16);
+                if cache.update_after_insert(*pos, delta, char_delta) || cache.step() != next_step {
+                    cache = Utf16IndexCache::build(&content, next_step);
+                }
+            }
+            Op::Delete { pos, len } => {
+                let end_pos = pos.checked_add(*len)?;
+                if *pos > total_utf16 || end_pos > total_utf16 {
+                    return None;
+                }
+                let start_idx = cache.locate(&content, *pos);
+                let end_idx = cache.locate(&content, end_pos);
+                if *len > 0 && end_idx <= start_idx {
+                    return None;
+                }
+                if end_idx > start_idx {
+                    let removed_slice = content.slice(start_idx..end_idx);
+                    let mut removed_utf16 = 0u32;
+                    let mut removed_chars = 0usize;
+                    for ch in removed_slice.chars() {
+                        removed_utf16 += ch.len_utf16() as u32;
+                        removed_chars += 1;
+                    }
+                    if removed_utf16 != *len {
+                        return None;
+                    }
+                    content.remove(start_idx..end_idx);
+                    total_utf16 = total_utf16.checked_sub(removed_utf16)?;
+                    let next_step = adaptive_step(total_utf16);
+                    if cache.update_after_delete(*pos, removed_utf16, removed_utf16, removed_chars)
+                        || cache.step() != next_step
+                    {
+                        cache = Utf16IndexCache::build(&content, next_step);
+                    }
+                }
+            }
+        }
+    }
+
+    Some(content.to_string())
+}
+
 fn adaptive_step(total_utf16: u32) -> u32 {
     let step = total_utf16 / 64;
     step.clamp(64, 1024)

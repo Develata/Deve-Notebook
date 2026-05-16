@@ -36,6 +36,27 @@ fn reconstruct_utf16_delete_emoji() {
 }
 
 #[test]
+fn try_apply_content_ops_applies_utf16_delta_to_existing_base() {
+    let ops = vec![
+        Op::Insert {
+            pos: 3,
+            content: "X".into(),
+        },
+        Op::Delete { pos: 1, len: 2 },
+    ];
+
+    let content = crate::state::try_apply_content_ops("A😀B", &ops).expect("valid ops");
+    assert_eq!(content, "AXB");
+}
+
+#[test]
+fn try_apply_content_ops_rejects_out_of_bounds_delta() {
+    let ops = vec![Op::Delete { pos: 2, len: 2 }];
+
+    assert_eq!(crate::state::try_apply_content_ops("abc", &ops), None);
+}
+
+#[test]
 fn compute_diff_uses_utf16_positions() {
     let ops = crate::state::compute_diff("A😀B", "A😀XB");
     assert_eq!(ops.len(), 1);

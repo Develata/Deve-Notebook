@@ -132,8 +132,7 @@
         window.queueEditorAction("op", String(opJson ?? ""));
       };
       window.applyRemoteOpsBatch = (opsJson) => {
-        window.queueEditorAction("opsBatch", String(opsJson ?? "[]"));
-        return true;
+        return false;
       };
       window.getEditorContent = () => "";
       window.scrollGlobal = () => {};
@@ -230,6 +229,7 @@
               const ops = JSON.parse(opsJson);
               if (!Array.isArray(ops)) return false;
               for (const op of ops) {
+                if (!op || (!op.Insert && !op.Delete)) return false;
                 rawApplyRemoteOp(JSON.stringify(op));
               }
               return true;
@@ -253,7 +253,9 @@
               rawApplyRemoteOp(action.payload);
               break;
             case "opsBatch":
-              rawApplyRemoteOpsBatch(action.payload);
+              if (rawApplyRemoteOpsBatch(action.payload) !== true) {
+                console.warn("Queued editor ops batch replay failed");
+              }
               break;
             case "readOnly":
               rawSetReadOnly(action.payload);
@@ -279,8 +281,7 @@
         };
         window.applyRemoteOpsBatch = (opsJson) => {
           if (!window._editor_bridge_ready) {
-            window.queueEditorAction("opsBatch", String(opsJson ?? "[]"));
-            return true;
+            return false;
           }
           return rawApplyRemoteOpsBatch(opsJson) === true;
         };

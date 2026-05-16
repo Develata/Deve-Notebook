@@ -1,6 +1,10 @@
-use super::{SnapshotRequestMatch, snapshot_request_matches};
+use super::{
+    SnapshotRequestMatch, confirmed_history, reconstruct_full_snapshot_content,
+    snapshot_request_matches,
+};
 use crate::hooks::use_core::PendingBranchTarget;
-use deve_core::models::PeerId;
+use deve_core::models::{Op, PeerId};
+use deve_core::protocol::ConfirmedOp;
 
 #[test]
 fn snapshot_request_rejects_pending_repo_switch() {
@@ -85,4 +89,25 @@ fn snapshot_request_rejects_scope_nonce_mismatch_even_with_same_repo_and_request
         repo_id,
         branch: None,
     }));
+}
+
+#[test]
+fn snapshot_delta_fallback_reconstructs_full_content() {
+    let ops = vec![
+        ConfirmedOp::new(
+            3,
+            Op::Insert {
+                pos: 3,
+                content: "X".into(),
+            },
+            None,
+        ),
+        ConfirmedOp::new(4, Op::Delete { pos: 1, len: 2 }, None),
+    ];
+
+    assert_eq!(
+        reconstruct_full_snapshot_content("A😀B", &ops).as_deref(),
+        Some("AXB")
+    );
+    assert_eq!(confirmed_history(&ops).len(), 2);
 }

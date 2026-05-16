@@ -42,7 +42,7 @@
 - `Surface`: `editor`
 - `Trigger`: a snapshot delta batch cannot be applied to the current editor view
 - `Preconditions`: snapshot request still matches current repo, branch, request, and scope
-- `Immediate Result`: replay stops, local version/history are not advanced, and a full snapshot request is sent
+- `Immediate Result`: replay stops; local version/history are not advanced until the full-content fallback is applied
 - `Application Entry`: `apps/web/src/editor/sync/snapshot.rs`, `apps/web/src/editor/sync/snapshot_apply.rs`, `apps/web/js/editor_remote_ops.js`
 
 ## Response Flow
@@ -50,7 +50,7 @@
 1. User opens a large document.
 2. Instruction interface starts open-doc loading and accepts the initial snapshot.
 3. Flow coordination shows snapshot content first, then replays remaining ops in adaptive batches.
-4. Failed delta replay stops the batch chain and reopens the document through the full snapshot path.
+4. Failed delta replay stops the batch chain and applies reconstructed full snapshot content; snapshot reopen is only a last-resort fallback if local reconstruction fails.
 5. Execution domains are rendering projection and ledger-backed document content.
 
 ## Notes

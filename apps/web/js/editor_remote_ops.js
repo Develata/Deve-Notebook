@@ -78,6 +78,8 @@ export function applyRemoteOpsBatch(ops_json) {
             insert: "",
           },
         });
+      } else {
+        throw new TypeError(`Unsupported remote op: ${JSON.stringify(op)}`);
       }
     }
     return true;
