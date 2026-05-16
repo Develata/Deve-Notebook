@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Storage/Server Edge Coverage：评估 watcher overflow/reconcile/debounce、auth secret owner-only permission、repo catalog quarantine 的可测试入口；有 harness 的先补覆盖，没有 harness 的先设计最小注入点。
+1. Mainline Gap Refresh After Edge Coverage：复跑主线 guard 与 smoke，按 `docs/plan/`、features、acceptance-cases、代码四向交叉重新选择下一批 unblocked Current MUST。
 
 ## 最近完成
 
+- Storage/Server Edge Coverage：为 watcher overflow/rescan、zero debounce fail-closed、modified-burst collapse、repo catalog hard fail/quarantine 与 host identity key owner-only permission 增加 acceptance 绑定和 baseline guard。
 - Modal Focus Contract Closure：Settings、Pending Navigation、Merge modal 已接入共享 focus trap / restore / `role="dialog"` / `aria-modal` 语义；`UI-GEN-003` 与 `check-ui-focus-baseline.sh` 已扩展为 shared dialog surface guard。
 - Mainline Coverage Alignment Batch B：为 `.notegit/.git` segment ignore、`.notegit-backup` 反例、ledger JSON Lines export、writeback-failure Ack 增加明确 storage acceptance 与 baseline 绑定；新增 watcher `.notegit-backup` sibling 负例测试。
 - Mainline Coverage Alignment Batch A：修正 `RENDER-LARGE-001` 对完整 virtual rendering 的过度断言，给 large-doc baseline 增加防回归；`WEBWRITE-FEAT-01/02/03` 已重新绑定到 Pending -> Ack、Reject cleanup 与 repo-scoped writer readiness，pending navigation 独立为 `WEBNAV-FEAT-01/02/03`。

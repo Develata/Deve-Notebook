@@ -78,3 +78,34 @@ fn keep_event(repo_root: &Path, paths: &[PathBuf]) -> bool {
         filter::allows_repo_path(&rel) || (filter::allows_repo_dir_path(&rel) && path.is_dir())
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{BackendBatch, normalize};
+    use notify_debouncer_full::{
+        DebouncedEvent,
+        notify::{Error, Event, EventKind, event::Flag},
+    };
+    use std::path::Path;
+    use std::time::Instant;
+
+    #[test]
+    fn notify_backend_error_requests_rescan() {
+        let batch =
+            normalize(Path::new("/repo"), Err(vec![Error::generic("overflow")])).expect("batch");
+
+        assert!(matches!(batch, BackendBatch::Rescan));
+    }
+
+    #[test]
+    fn notify_rescan_flag_requests_rescan() {
+        let event = Event::new(EventKind::Other).set_flag(Flag::Rescan);
+        let batch = normalize(
+            Path::new("/repo"),
+            Ok(vec![DebouncedEvent::new(event, Instant::now())]),
+        )
+        .expect("batch");
+
+        assert!(matches!(batch, BackendBatch::Rescan));
+    }
+}

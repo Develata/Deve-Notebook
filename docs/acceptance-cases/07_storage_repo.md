@@ -197,4 +197,36 @@
     - cli_assert: ack_sent_for_committed_ledger_edit true
     - cli_assert: writeback_failure_reported_as_protocol_error true
     - cli_assert: committed_client_op_index_persisted true
+
+- case_id: STORE-016
+  goal: Watcher overflow/reconcile 与 debounce 边界。
+  preconditions:
+    - watcher backend 可返回 rescan batch
+    - debounce window 可配置
+  steps:
+    - run: cargo test -p deve_core notify_backend_error_requests_rescan -- --nocapture
+    - run: cargo test -p deve_core notify_rescan_flag_requests_rescan -- --nocapture
+    - run: cargo test -p deve_core watcher_rejects_zero_debounce_window -- --nocapture
+    - run: cargo test -p deve_core dispatch_batch_collapses_modified_burst_by_content_hash -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
+  assertions:
+    - cli_assert: watcher_backend_error_triggers_rescan true
+    - cli_assert: watcher_rescan_flag_triggers_rescan true
+    - cli_assert: zero_debounce_rejected true
+    - cli_assert: modify_burst_collapses_to_single_pending_entry true
+
+- case_id: STORE-017
+  goal: Repo catalog hard fail / quarantine。
+  preconditions:
+    - local/remote repo catalog 可被测试夹具破坏
+    - repair 命令可运行在临时 ledger
+  steps:
+    - run: cargo test -p deve_core remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing -- --nocapture
+    - run: cargo test -p deve_core remote_repo_listing_fails_closed_on_unexpected_non_redb_entry -- --nocapture
+    - run: cargo test -p deve_cli quarantines_nil_shadow_repo_into_invalid_peer_dir -- --nocapture
+    - run: scripts/check-storage-repo-baseline.sh
+  assertions:
+    - cli_assert: missing_remote_catalog_fails_closed true
+    - cli_assert: unexpected_remote_catalog_entry_fails_closed true
+    - cli_assert: nil_shadow_repo_quarantined_not_deleted true
 ```

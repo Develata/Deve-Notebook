@@ -23,6 +23,15 @@ check_absent() {
   fi
 }
 
+# AUTH-013: host identity key permissions are owner-only and fail closed.
+check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-013"
+check_contains docs/acceptance-cases/08_auth.md "cargo test -p deve_cli identity_key_permissions_are_corrected_to_owner_only -- --nocapture"
+check_contains docs/acceptance-cases/08_auth.md "cargo test -p deve_cli identity_key_permissions_fail_closed_for_non_file -- --nocapture"
+check_contains apps/cli/src/server/security.rs "enforce_owner_only_identity_key"
+check_contains apps/cli/src/server/security.rs "permissions.set_mode(0o600)"
+check_contains apps/cli/src/server/security.rs "identity_key_permissions_are_corrected_to_owner_only"
+check_contains apps/cli/src/server/security.rs "identity_key_permissions_fail_closed_for_non_file"
+
 # AUTH-001/002/009: runtime config is env-driven and production fails closed.
 check_contains crates/core/src/security/auth/config.rs "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
 check_contains crates/core/src/security/auth/config.rs "AUTH_SECRET must be >= 32 bytes"

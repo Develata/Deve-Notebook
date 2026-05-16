@@ -66,8 +66,15 @@ case_contains STORE-010 "cargo test -p deve_core --test path_normalize_structure
 case_contains STORE-014 "cargo test -p deve_cli jsonl_roundtrip_is_monotonic_and_line_stable -- --nocapture"
 case_contains STORE-014 "cargo test -p deve_cli includes_dir_structure_fact_in_export -- --nocapture"
 case_contains STORE-015 "cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture"
+case_contains STORE-016 "cargo test -p deve_core notify_backend_error_requests_rescan -- --nocapture"
+case_contains STORE-016 "cargo test -p deve_core notify_rescan_flag_requests_rescan -- --nocapture"
+case_contains STORE-016 "cargo test -p deve_core watcher_rejects_zero_debounce_window -- --nocapture"
+case_contains STORE-016 "cargo test -p deve_core dispatch_batch_collapses_modified_burst_by_content_hash -- --nocapture"
+case_contains STORE-017 "cargo test -p deve_core remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing -- --nocapture"
+case_contains STORE-017 "cargo test -p deve_core remote_repo_listing_fails_closed_on_unexpected_non_redb_entry -- --nocapture"
+case_contains STORE-017 "cargo test -p deve_cli quarantines_nil_shadow_repo_into_invalid_peer_dir -- --nocapture"
 
-for case_id in STORE-001 STORE-002 STORE-003 STORE-004 STORE-005 STORE-006 STORE-007 STORE-008 STORE-009 STORE-010 STORE-014 STORE-015; do
+for case_id in STORE-001 STORE-002 STORE-003 STORE-004 STORE-005 STORE-006 STORE-007 STORE-008 STORE-009 STORE-010 STORE-014 STORE-015 STORE-016 STORE-017; do
   case_contains "$case_id" "run: scripts/check-storage-repo-baseline.sh"
 done
 
@@ -77,6 +84,10 @@ contains "$ROOT_DIR/apps/cli/src/commands/export/tests.rs" "fn markdown_export_p
 contains "$ROOT_DIR/crates/core/tests/local_repo_metadata_repair_test.rs" "fn init_allocates_collision_safe_repo_name_for_same_name_different_url()"
 contains "$ROOT_DIR/crates/core/tests/store_acceptance_test.rs" "SNAPSHOT_DATA"
 contains "$ROOT_DIR/crates/core/tests/watcher_lifecycle.rs" "fn watcher_duplicate_start_fails_and_can_restart_after_stop()"
+contains "$ROOT_DIR/crates/core/tests/watcher_lifecycle.rs" "fn watcher_rejects_zero_debounce_window()"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/backend/notify_impl.rs" "fn notify_backend_error_requests_rescan()"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/backend/notify_impl.rs" "fn notify_rescan_flag_requests_rescan()"
+contains "$ROOT_DIR/crates/core/src/sync/watcher/dispatch_burst_test.rs" "fn dispatch_batch_collapses_modified_burst_by_content_hash()"
 contains "$ROOT_DIR/crates/core/src/utils/notegit.rs" "fn internal_repo_path_uses_segment_semantics()"
 contains "$ROOT_DIR/crates/core/src/utils/notegit.rs" ".notegit-backup/state.json"
 contains "$ROOT_DIR/crates/core/src/utils/notegit.rs" ".git-backup/config"
@@ -95,6 +106,9 @@ contains "$ROOT_DIR/apps/cli/src/export_entries.rs" "fn includes_dir_structure_f
 contains "$ROOT_DIR/apps/cli/src/server/edit_projection_ack_test.rs" "fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails()"
 contains "$ROOT_DIR/apps/cli/src/server/handlers/document/edit_apply.rs" "broadcast_and_ack_committed_edit("
 contains "$ROOT_DIR/apps/cli/src/server/handlers/document/edit_apply.rs" "report_projection_writeback_fault("
+contains "$ROOT_DIR/crates/core/tests/remote_repo_catalog_missing_test.rs" "fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing()"
+contains "$ROOT_DIR/crates/core/tests/repo_catalog_entry_fail_closed_test.rs" "fn remote_repo_listing_fails_closed_on_unexpected_non_redb_entry()"
+contains "$ROOT_DIR/apps/cli/src/commands/repair/shadow.rs" "fn quarantines_nil_shadow_repo_into_invalid_peer_dir()"
 not_contains "$ROOT_DIR/crates/core/src/ledger/manager/remote_repo_select.rs" "expect(\"validated readable\")"
 
 not_contains "$ACCEPTANCE" "deve repo create"

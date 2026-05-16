@@ -145,4 +145,17 @@
   assertions:
     - http_status_eq: 200
     - json_field_eq: ["authenticated", false]
+
+- case_id: AUTH-013
+  goal: Host identity key owner-only 权限。
+  preconditions:
+    - Unix-like host
+    - identity.key 存在或由启动流程生成
+  steps:
+    - run: cargo test -p deve_cli identity_key_permissions_are_corrected_to_owner_only -- --nocapture
+    - run: cargo test -p deve_cli identity_key_permissions_fail_closed_for_non_file -- --nocapture
+    - run: scripts/check-auth-baseline.sh
+  assertions:
+    - cli_assert: identity_key_permission_corrected_to_0600 true
+    - cli_assert: identity_key_non_file_fails_closed true
 ```
