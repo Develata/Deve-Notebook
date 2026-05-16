@@ -132,6 +132,7 @@ pub(super) async fn handle(
 
     outbound::send(
         ch,
+        state,
         session,
         &outbound_engine,
         result,

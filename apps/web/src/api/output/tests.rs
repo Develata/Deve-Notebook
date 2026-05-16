@@ -77,6 +77,7 @@ fn output_write_classification_distinguishes_reads_from_writes() {
         repo_id: uuid::Uuid::nil(),
         server_vector: VersionVector::new(),
         snapshot_kind: None,
+        source_proof: None,
         payload: vec![],
     }));
     assert!(!is_write_message(&ClientMessage::Ping));

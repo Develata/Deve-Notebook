@@ -50,8 +50,8 @@
     - packet_format_eq: ["server", "versioned-bincode"]
     - packet_format_any_of: ["client", "versioned-bincode", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF3"
-    - versioned_packet_protocol_version_eq: 8
-    - min_supported_packet_protocol_version_eq: 8
+    - versioned_packet_protocol_version_eq: 9
+    - min_supported_packet_protocol_version_eq: 9
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
     - reject_binary_without_magic: true
@@ -141,6 +141,8 @@
   steps:
     - ws_send: { type: "SyncPush", source_peer_id: "malicious-source", repo_id: "11111111-1111-1111-1111-111111111111", header: { repo_id: "11111111-1111-1111-1111-111111111111", peer_id: "malicious-source", vector: {}, payload_kind: "diff" }, encrypted_payload: ["encrypted_ledger_facts"] }
     - run: cargo test -p deve_cli sync_push_does_not_pollute_transport_or_local_ledger -- --nocapture
+    - run: cargo test -p deve_cli sync_push_uses_message_source_peer_for_shadow_write -- --nocapture
+    - run: cargo test -p deve_cli sync_push_snapshot_uses_message_source_peer_for_shadow_replace -- --nocapture
     - run: cargo test -p deve_cli manual_sync_push_buffers_without_applying_remote_ops -- --nocapture
   assertions:
     - shadow_written_under_source_peer: "ledger/remotes/malicious-source"
@@ -157,10 +159,14 @@
     - ws_send: { type: "SyncSnapshotRequest", source_peer_id: "unoffered-source", repo_id: "11111111-1111-1111-1111-111111111111", known_vector: {}, reason: "source-boundary-check" }
     - run: cargo test -p deve_cli ws_sync_push_rejects_unrequested_source -- --nocapture
     - run: cargo test -p deve_cli sync_push_rejects_unrequested_relay_source -- --nocapture
+    - run: cargo test -p deve_cli sync_push_rejects_relay_forged_source_proof -- --nocapture
+    - run: cargo test -p deve_cli sync_push_snapshot_rejects_relay_forged_source_proof -- --nocapture
+    - run: cargo test -p deve_core source_proof -- --nocapture
     - run: cargo test -p deve_cli snapshot_request_rejects_unoffered_source -- --nocapture
   assertions:
     - ws_receive_contains: { type: "ProtocolError", code: "SyncPeerUnauthenticated", scope_nonce: 1 }
     - unrequested_source_not_written: true
+    - forged_source_proof_returns_invalid_payload: true
     - relay_cannot_force_receive: true
     - note: "GossipOffer/FetchRequest relay offer protocol is not implemented in the current protocol surface; this case validates the current fail-closed source authorization boundary."
 

@@ -117,6 +117,14 @@ pub(super) fn sync_apply_failed(
     );
 }
 
+pub(super) fn sync_invalid_payload(
+    ch: &DualChannel,
+    detail: impl Into<String>,
+    scope_nonce: Option<u64>,
+) {
+    send(ch, ServerErrorCode::SyncInvalidPayload, detail, scope_nonce);
+}
+
 fn context_failure(
     ch: &DualChannel,
     detail: impl Into<String>,

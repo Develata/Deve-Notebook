@@ -44,4 +44,6 @@ pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};
 pub use server::ServerMessage;
 pub use session_proof::SessionProof;
-pub use sync_push_header::{SyncPayloadKind, SyncPushHeader};
+pub use sync_push_header::{
+    SyncPayloadKind, SyncPushHeader, SyncSourceProof, SyncSourceProofError,
+};

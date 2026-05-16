@@ -6,11 +6,11 @@
 
 ## 当前执行队列
 
-1. Indirect Sync Source Attribution Envelope：为 `SyncPush` / `SyncPushSnapshot` 设计并实现 source-signed envelope，补 forged relay payload 负例验收。
-2. Dockerfile Plan Drift Decision：`Dockerfile` 已移除 `cargo-chef` 并通过 CI Docker Smoke；需要后续明确是修正 `docs/plan/15_release.md`，还是恢复可通过 locked CI 的 cargo-chef 构建层。
+1. Dockerfile Plan Drift Decision：`Dockerfile` 已移除 `cargo-chef` 并通过 CI Docker Smoke；需要后续明确是修正 `docs/plan/15_release.md`，还是恢复可通过 locked CI 的 cargo-chef 构建层。
 
 ## 最近完成
 
+- Indirect Sync Source Attribution Envelope：为 `SyncPush` / `SyncPushSnapshot` 增加 source-signed proof；间接同步 payload 在 transport peer 与 source peer 不一致时必须通过 source proof 校验；补 forged relay diff/snapshot 负例与协议 proof 单测；因 bincode schema 变化按计划规则将 WS protocol version bump 到 `9`。
 - Global Shortcut Parity：补齐 `Ctrl/Cmd+L`、`Ctrl/Cmd+Shift+O`、`Ctrl/Cmd+B`；新增纯快捷键决策测试，Outline / Sidebar 收敛到 layout control context；Command Palette `Toggle Sidebar` 接入同一控制面；未改 `docs/plan/`。
 - JS Editor Widget I18N Bridge：新增 Rust `t::*` 到 `window.deve_i18n` 的轻量桥接，Code Toolbar、Code Menu 与 Mermaid widget 可见文案改为读取桥接文案；i18n hardcoded guard 覆盖 `apps/web/js/extensions`；未改 `docs/plan/`。
 - Mainline Gap Scan After Full Regression：复跑 plan coverage、architecture registry、acceptance bindings、feature paths、runtime happy/recovery smoke、release/native/mobile gates 与 GitHub Docker Smoke；未发现 P0；选定 JS editor widget i18n、global shortcut parity 与 indirect sync attribution envelope 为下一批 P1；未改 `docs/plan/`。

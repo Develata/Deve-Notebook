@@ -269,6 +269,7 @@ fn sync_vector_fields_roundtrip_in_current_binary_frame() {
         branch: Some(peer.clone()),
         server_vector: vector.clone(),
         snapshot_kind: Some("full".to_string()),
+        source_proof: None,
         payload: vec![],
     };
     let decoded_server = decode_server_binary(&encode_server_binary(&server).unwrap()).unwrap();

@@ -5,8 +5,8 @@
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::models::{PeerId, RepoId};
-use deve_core::protocol::ServerMessage;
+use deve_core::models::{PeerId, RepoId, VersionVector};
+use deve_core::protocol::{ServerMessage, SyncPayloadKind, SyncSourceProof};
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
 
@@ -72,13 +72,21 @@ pub(super) async fn handle_request(
                 response.ops.len(),
                 response.peer_id
             );
+            let source_peer_id = response.peer_id.clone();
             ch.unicast(ServerMessage::SyncPushSnapshot {
-                source_peer_id: response.peer_id,
+                source_peer_id,
                 repo_id: response.repo_id,
                 scope_nonce: delivery_scope_nonce.into(),
                 branch: session.active_branch.clone(),
-                server_vector,
+                server_vector: server_vector.clone(),
                 snapshot_kind: Some("full".to_string()),
+                source_proof: snapshot_source_proof(
+                    state,
+                    response.repo_id,
+                    &response.peer_id,
+                    &server_vector,
+                    &response.ops,
+                ),
                 payload: response.ops,
             });
         }
@@ -99,6 +107,8 @@ pub(super) async fn handle_push(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    server_vector: VersionVector,
+    source_proof: Option<SyncSourceProof>,
     payload: Vec<EncryptedOp>,
 ) {
     let Some(scope) = require_current_sync_scope(ch, session) else {
@@ -114,6 +124,21 @@ pub(super) async fn handle_push(
                 "SyncPushSnapshot source {} was not requested from transport {}",
                 peer_id, transport_peer
             ),
+            scope,
+        );
+        return;
+    }
+    if let Err(err) = validate_snapshot_source_proof(
+        repo_id,
+        &peer_id,
+        &server_vector,
+        source_proof.as_ref(),
+        &payload,
+        transport_peer != peer_id,
+    ) {
+        errors::sync_invalid_payload(
+            ch,
+            format!("invalid sync snapshot source proof: {}", err),
             scope,
         );
         return;
@@ -144,5 +169,52 @@ pub(super) async fn handle_push(
             tracing::error!("Failed to apply snapshot from {}: {:?}", peer_id, e);
             errors::sync_apply_failed(ch, format!("Failed to apply snapshot: {}", e), scope);
         }
+    }
+}
+
+fn snapshot_source_proof(
+    state: &Arc<AppState>,
+    repo_id: RepoId,
+    peer_id: &PeerId,
+    server_vector: &VersionVector,
+    payload: &[EncryptedOp],
+) -> Option<SyncSourceProof> {
+    if peer_id != &state.identity_key.peer_id() {
+        return None;
+    }
+    match SyncSourceProof::sign(
+        repo_id,
+        peer_id,
+        server_vector,
+        SyncPayloadKind::Snapshot,
+        payload,
+        &state.identity_key,
+    ) {
+        Ok(proof) => Some(proof),
+        Err(err) => {
+            tracing::warn!("Failed to sign local sync snapshot source proof: {}", err);
+            None
+        }
+    }
+}
+
+fn validate_snapshot_source_proof(
+    repo_id: RepoId,
+    peer_id: &PeerId,
+    server_vector: &VersionVector,
+    source_proof: Option<&SyncSourceProof>,
+    payload: &[EncryptedOp],
+    required: bool,
+) -> Result<(), deve_core::protocol::SyncSourceProofError> {
+    match source_proof {
+        Some(proof) => proof.verify(
+            repo_id,
+            peer_id,
+            server_vector,
+            SyncPayloadKind::Snapshot,
+            payload,
+        ),
+        None if required => Err(deve_core::protocol::SyncSourceProofError::Missing),
+        None => Ok(()),
     }
 }

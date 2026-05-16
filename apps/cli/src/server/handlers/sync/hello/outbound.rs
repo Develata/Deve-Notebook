@@ -3,6 +3,7 @@
 //!
 //! Sync hello outbound follow-up messages.
 
+use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::RepoId;
@@ -15,6 +16,7 @@ use super::super::errors;
 
 pub(super) fn send(
     ch: &DualChannel,
+    state: &std::sync::Arc<AppState>,
     session: &mut WsSession,
     engine: &SyncEngine,
     result: HandshakeResult,
@@ -33,6 +35,7 @@ pub(super) fn send(
     send_snapshot_requests(ch, known_vector, result.snapshot_requests);
     send_pushes(
         ch,
+        state,
         session,
         engine,
         repo_id,
@@ -80,6 +83,7 @@ fn send_snapshot_requests(
 
 fn send_pushes(
     ch: &DualChannel,
+    state: &std::sync::Arc<AppState>,
     session: &mut WsSession,
     engine: &SyncEngine,
     repo_id: RepoId,
@@ -98,6 +102,8 @@ fn send_pushes(
                     response.peer_id.clone(),
                     engine.version_vector().clone(),
                 );
+                let header =
+                    super::super::transfer::attach_local_source_proof(state, header, &response.ops);
                 ch.unicast(ServerMessage::SyncPush {
                     source_peer_id: response.peer_id,
                     repo_id: response.repo_id,

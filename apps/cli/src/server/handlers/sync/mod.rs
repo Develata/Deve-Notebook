@@ -16,8 +16,8 @@ mod writer;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
-use deve_core::models::{PeerId, RepoId};
-use deve_core::protocol::SyncPushHeader;
+use deve_core::models::{PeerId, RepoId, VersionVector};
+use deve_core::protocol::{SyncPushHeader, SyncSourceProof};
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
 
@@ -82,9 +82,21 @@ pub async fn handle_sync_push_snapshot(
     session: &mut WsSession,
     peer_id: PeerId,
     repo_id: RepoId,
+    server_vector: VersionVector,
+    source_proof: Option<SyncSourceProof>,
     ops: Vec<EncryptedOp>,
 ) {
-    snapshot::handle_push(state, ch, session, peer_id, repo_id, ops).await;
+    snapshot::handle_push(
+        state,
+        ch,
+        session,
+        peer_id,
+        repo_id,
+        server_vector,
+        source_proof,
+        ops,
+    )
+    .await;
 }
 
 pub async fn handle_delete_peer(

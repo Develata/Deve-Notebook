@@ -76,6 +76,7 @@ async fn sync_followups_are_not_dropped_when_unicast_queue_is_full() {
         branch: Some(peer),
         server_vector: VersionVector::default(),
         snapshot_kind: None,
+        source_proof: None,
         payload: vec![],
     });
 

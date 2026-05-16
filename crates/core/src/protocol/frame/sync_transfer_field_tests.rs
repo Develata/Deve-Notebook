@@ -63,6 +63,7 @@ fn sync_transfer_json_uses_plan_field_names() {
         repo_id,
         server_vector: VersionVector::new(),
         snapshot_kind: Some("full".to_string()),
+        source_proof: None,
         payload: vec![],
     };
     let client_snapshot_value = serde_json::to_value(&client_snapshot).unwrap();
@@ -109,6 +110,7 @@ fn sync_transfer_json_uses_plan_field_names() {
         branch: None,
         server_vector: VersionVector::new(),
         snapshot_kind: Some("full".to_string()),
+        source_proof: None,
         payload: vec![],
     };
     let server_value = serde_json::to_value(&server).unwrap();

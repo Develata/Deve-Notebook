@@ -94,6 +94,7 @@ pub(super) async fn handle_request(
             response.peer_id.clone(),
             header_vector.clone(),
         );
+        let header = attach_local_source_proof(state, header, &response.ops);
         ch.unicast(ServerMessage::SyncPush {
             source_peer_id: response.peer_id,
             repo_id: response.repo_id,
@@ -103,6 +104,19 @@ pub(super) async fn handle_request(
             encrypted_payload: response.ops,
         });
     }
+}
+
+pub(super) fn attach_local_source_proof(
+    state: &Arc<AppState>,
+    mut header: SyncPushHeader,
+    payload: &[EncryptedOp],
+) -> SyncPushHeader {
+    if header.peer_id == state.identity_key.peer_id()
+        && let Err(err) = header.sign_source(payload, &state.identity_key)
+    {
+        tracing::warn!("Failed to sign local sync source proof: {}", err);
+    }
+    header
 }
 
 pub(super) async fn handle_push(
@@ -144,6 +158,10 @@ pub(super) async fn handle_push(
             ),
             scope,
         );
+        return;
+    }
+    if let Err(err) = header.validate_source_proof(&encrypted_payload, transport_peer != peer_id) {
+        errors::sync_invalid_payload(ch, format!("invalid sync source proof: {}", err), scope);
         return;
     }
     tracing::debug!(

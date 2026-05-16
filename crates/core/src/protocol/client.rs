@@ -9,6 +9,7 @@ use crate::protocol::ScPathTarget;
 use crate::protocol::ScopeNonce;
 use crate::protocol::SessionProof;
 use crate::protocol::SyncPushHeader;
+use crate::protocol::SyncSourceProof;
 use crate::security::EncryptedOp;
 use serde::{Deserialize, Serialize};
 
@@ -59,6 +60,8 @@ pub enum ClientMessage {
         server_vector: VersionVector,
         #[serde(default)]
         snapshot_kind: Option<String>,
+        #[serde(default)]
+        source_proof: Option<SyncSourceProof>,
         #[serde(alias = "ops", alias = "encrypted_payload")]
         payload: Vec<EncryptedOp>,
     },
