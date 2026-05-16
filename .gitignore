@@ -8,7 +8,6 @@
 /debug
 /release
 **/*.rs.bk
-Cargo.lock
 
 # Node
 node_modules/

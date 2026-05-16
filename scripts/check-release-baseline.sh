@@ -46,6 +46,12 @@ assert_before() {
   (( before_line < after_line )) || fail "'$before' must appear before '$after' in $file"
 }
 
+git -C "$ROOT_DIR" ls-files --error-unmatch Cargo.lock >/dev/null 2>&1 \
+  || fail "Cargo.lock must be tracked for locked release/Docker builds"
+if git -C "$ROOT_DIR" check-ignore -q Cargo.lock; then
+  fail "Cargo.lock must not be ignored"
+fi
+
 contains ".github/workflows/release.yml" "tags: ['v*']"
 contains ".github/workflows/release.yml" "cargo clippy --locked --all-targets -- -D warnings"
 contains ".github/workflows/release.yml" "actions/checkout@v6"
