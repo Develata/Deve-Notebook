@@ -7,6 +7,7 @@
             app_render_large_doc_open [label="editor::open_loading", fillcolor="#bfdbfe"];
             app_render_large_doc_partial [label="render::partial_snapshot", fillcolor="#eff6ff"];
             app_render_large_doc_ready [label="render::load_ready", fillcolor="#eff6ff"];
+            app_render_large_doc_delta_fallback [label="render::delta_fallback", fillcolor="#bfdbfe"];
             app_render_large_search_open [label="search::open_during_load", fillcolor="#eff6ff"];
             app_render_large_search_gate [label="search::block_while_loading", fillcolor="#bfdbfe"];
             app_render_large_search_release [label="search::release_after_ready", fillcolor="#bfdbfe"];

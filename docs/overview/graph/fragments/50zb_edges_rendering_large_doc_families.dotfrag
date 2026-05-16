@@ -1,6 +1,7 @@
     op_render_large_doc_open -> app_render_large_doc_open;
     op_render_large_doc_first -> app_render_large_doc_partial;
     op_render_large_doc_ready -> app_render_large_doc_ready;
+    op_render_large_doc_delta_fallback -> app_render_large_doc_delta_fallback;
     op_render_large_search_open -> app_render_large_search_open;
     op_render_large_search_block -> app_render_large_search_gate;
     op_render_large_search_release -> app_render_large_search_release;
@@ -14,6 +15,10 @@
     app_render_large_doc_ready -> mod_render_snapshot_load;
     app_render_large_doc_ready -> mod_render_load_status;
     app_render_large_doc_ready -> mod_editor_runtime;
+    app_render_large_doc_delta_fallback -> mod_render_snapshot_load;
+    app_render_large_doc_delta_fallback -> mod_render_prefetch;
+    app_render_large_doc_delta_fallback -> mod_render_load_status;
+    app_render_large_doc_delta_fallback -> mod_editor_runtime;
     app_render_large_search_open -> mod_render_search_gate;
     app_render_large_search_gate -> mod_render_search_gate;
     app_render_large_search_gate -> mod_render_load_status;

@@ -7,6 +7,7 @@
                 op_render_large_doc_open [label="Open Large Document", fillcolor="#fde68a"];
                 op_render_large_doc_first [label="Observe First Screen During Partial Load", fillcolor="#fef9c3"];
                 op_render_large_doc_ready [label="Observe Large Document Ready State", fillcolor="#fef9c3"];
+                op_render_large_doc_delta_fallback [label="Fallback From Failed Delta Replay", fillcolor="#fde68a"];
             }
 
             subgraph cluster_user_render_large_doc_search_gate {

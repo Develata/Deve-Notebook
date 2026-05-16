@@ -42,7 +42,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 | `flow.rendering.checkbox-writeback` | [`rendering_checkbox_writeback.md`](./operations/rendering_checkbox_writeback.md) | `RENDER-RICH-001` |
 | `flow.rendering.inline-source-reveal` | [`rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md) | `RENDER-CURSOR-001`, `RENDER-RICH-002` |
 | `flow.rendering.link-activation-gate` | [`rendering_link_activation_gate.md`](./operations/rendering_link_activation_gate.md) | `RENDER-LINK-001` |
-| `flow.rendering.large-doc-prefetch` | [`rendering_large_doc_prefetch.md`](./operations/rendering_large_doc_prefetch.md) | `RENDER-LARGE-001` |
+| `flow.rendering.large-doc-prefetch` | [`rendering_large_doc_prefetch.md`](./operations/rendering_large_doc_prefetch.md) | `RENDER-LARGE-001`, `RENDER-LARGE-002` |
 | `flow.rendering.large-doc-search-gate` | [`rendering_large_doc_search_gate.md`](./operations/rendering_large_doc_search_gate.md) | `RENDER-LARGE-001`, `UI-DESK-003` |
 | `flow.rendering.math-mermaid` | [`rendering_math_mermaid.md`](./operations/rendering_math_mermaid.md) | `RENDER-MATH-001`, `RENDER-MERMAID-001`, `RENDER-BLOCK-001` |
 | `flow.rendering.math-source-projection` | [`rendering_math_source_projection.md`](./operations/rendering_math_source_projection.md) | `RENDER-MATH-001`, `RENDER-BLOCK-001` |

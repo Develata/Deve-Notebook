@@ -17,6 +17,7 @@
     user_render_large_doc_prefetch_spine -> op_render_large_doc_open [style=dashed, color="#d97706", constraint=false];
     op_render_large_doc_open -> op_render_large_doc_first [style=dashed, color="#d97706", constraint=false];
     op_render_large_doc_first -> op_render_large_doc_ready [style=dashed, color="#d97706", constraint=false];
+    op_render_large_doc_ready -> op_render_large_doc_delta_fallback [style=dashed, color="#d97706", constraint=false];
     user_render_large_doc_search_gate_spine -> op_render_large_search_open [style=dashed, color="#d97706", constraint=false];
     op_render_large_search_open -> op_render_large_search_block [style=dashed, color="#d97706", constraint=false];
     op_render_large_search_block -> op_render_large_search_release [style=dashed, color="#d97706", constraint=false];
