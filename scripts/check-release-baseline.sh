@@ -194,6 +194,9 @@ contains "docs/dev-runbook.md" "DEVE_NATIVE_TARGET_HOST_RUN_MOBILE_IOS_INSTALL_S
 
 not_contains "Dockerfile" "cargo-chef"
 not_contains "Dockerfile" "cargo chef"
+not_contains "docs/plan/15_release.md" "cargo-chef"
+contains "docs/plan/15_release.md" "固定版本的 Cargo-installed tools（当前为 \`trunk\`）"
+contains "docs/plan/15_release.md" "Docker 发布基线 **MUST** 使用 locked direct release build"
 contains "Dockerfile" "cargo install trunk --locked --version 0.21.14"
 contains "Dockerfile" "rustup target add wasm32-unknown-unknown"
 contains "Dockerfile" "https://deb.nodesource.com/setup_24.x"
