@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# REL-005/REL-006/REL-007/REL-008 keep Docker, compose, release workflow, and
-# runtime visibility and smoke surfaces aligned with the current release baseline.
+# REL-005/REL-006/REL-007/REL-008 keep Docker, compose, release workflow,
+# shell-only platform evidence, runtime visibility, and smoke surfaces aligned
+# with the current release baseline.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -265,6 +266,12 @@ contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-basel
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-process-adapter-gate.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "target_host_platform_evidence_shell_only true"
+contains "docs/acceptance-cases/12_tech_release.md" "signed_release_readiness_not_claimed true"
+contains "docs/acceptance-cases/12_tech_release.md" "store_distribution_readiness_not_claimed true"
+contains "docs/acceptance-cases/12_tech_release.md" "physical_device_readiness_not_claimed true"
+contains "docs/acceptance-cases/12_tech_release.md" "native_process_runtime_closed true"
+contains "docs/acceptance-cases/12_tech_release.md" "native_authority_writes_closed true"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-target-host-evidence.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/install-native-target-host-tools.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-desktop-package-preflight.sh"

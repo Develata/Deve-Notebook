@@ -78,9 +78,11 @@
     - exit_code_eq: 0
 
 - case_id: REL-005
-  goal: Docker、Compose 与 release workflow 保持当前 embedded frontend 单二进制发布边界。
+  goal: Docker、Compose、release workflow 与 target-host platform evidence 保持当前 embedded frontend / shell-only 发布边界。
   preconditions:
-    - Dockerfile、docker-compose.yml、.github/workflows/release.yml 可读
+    - Dockerfile、docker-compose.yml、.github/workflows/release.yml 与 .github/workflows/native-target-host.yml 可读
+    - platform evidence 只声明 target-host shell package、startup、install smoke
+    - platform evidence 不声明 signed release、store distribution、physical-device readiness、native process runtime 或 native authority writes
   steps:
     - run: scripts/check-release-baseline.sh
     - run: scripts/check-native-track-boundary.sh
@@ -103,6 +105,13 @@
     - run: cargo test -p deve_cli graph -- --nocapture
   assertions:
     - exit_code_eq: 0
+    - release_assert: embedded_frontend_single_binary_boundary true
+    - release_assert: target_host_platform_evidence_shell_only true
+    - release_assert: signed_release_readiness_not_claimed true
+    - release_assert: store_distribution_readiness_not_claimed true
+    - release_assert: physical_device_readiness_not_claimed true
+    - release_assert: native_process_runtime_closed true
+    - release_assert: native_authority_writes_closed true
     - api_assert: graph_projection_http_endpoint_protected_readonly true
     - api_assert: graph_projection_degraded_failure_code_eq "GRAPH_DEGRADED_PROJECTION_REQUIRED"
     - cli_assert: graph_projection_cli_and_http_share_adapter true

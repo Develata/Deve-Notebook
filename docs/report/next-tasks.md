@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Release Platform Acceptance Boundary Alignment：澄清 `REL-005` 是 shell-only target-host gated evidence，不等价于 signed/store/physical-device/native-process/native-authority readiness。
+1. Mainline Gap Scan After Release Boundary Alignment：重新交叉 `docs/plan/`、features、acceptance、scripts 与代码，选出下一批最小可执行 P1。
 
 ## 最近完成
 
+- Release Platform Acceptance Boundary Alignment：`REL-005` 已明确为 embedded frontend single binary + shell-only target-host evidence 边界，不声明 signed/store/physical-device/native-process/native-authority readiness；release baseline 已反查。
 - Remote Ops Batch Apply Failure Fallback：Web editor remote ops batch apply 失败现在返回可观测 failure，Rust snapshot replay 不提前推进 version/history，并优先用本地重建 full-content fallback 恢复；新增 `RENDER-LARGE-002` 与 large-doc baseline guard。
 - Mobile Accessory Toolbar Write Gate：移动辅助键盘栏改为服从完整 repo write gate，insert/wrap/undo 回调二次检查 readonly，JS FFI 在 CodeMirror read-only 时拒绝写入；新增 `UI-MOB-019` 与 mobile baseline guard。
 - Post-platform Mainline Gap Scan：平台 shell-only 发布面闭合后重新交叉 `docs/plan/`、features、acceptance、scripts 与代码；未发现 P0，选定 Mobile accessory toolbar write gate 为首个 P1 实现缺口，remote batch fallback 与 `REL-005` wording 继续排队。
