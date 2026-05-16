@@ -154,6 +154,17 @@ When Docker is missing or unreachable, the script prints the resolved Docker
 binary plus `DOCKER_HOST` / `DOCKER_CONTEXT` so WSL and remote daemon issues are
 diagnosable without changing the script.
 
+Optional GitHub Actions entry for host-isolated Docker smoke:
+
+```bash
+gh workflow run docker-smoke.yml --ref main
+gh run list --workflow docker-smoke.yml --limit 1
+```
+
+This workflow is manual-only. It runs the same `scripts/smoke-docker-release.sh`
+on an Ubuntu runner with `DEVE_DOCKER_SMOKE_REQUIRED=1`; it does not publish a
+GHCR image and does not replace the tag-triggered `release.yml` channel.
+
 ## Docker Compose
 
 `docker-compose.yml` is the production compose entry. It runs the published

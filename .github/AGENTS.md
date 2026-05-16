@@ -21,6 +21,7 @@ not required repo metadata.
 | File | Description |
 |------|-------------|
 | `workflows/release.yml` | Required release quality gates and Docker publishing |
+| `workflows/docker-smoke.yml` | Optional manual Docker release smoke on a GitHub-hosted Linux runner |
 | `workflows/native-target-host.yml` | Optional manual Desktop/Mobile target-host diagnostics |
 
 ## For AI Agents
@@ -31,6 +32,8 @@ not required repo metadata.
 - Keep workflows lean — the target environment is resource-constrained.
 - Do not attach optional target-host workflows to tag releases until the release
   plan explicitly promotes them into the required release baseline.
+- Keep Docker smoke manual-only unless the release baseline explicitly promotes
+  it into a required branch or tag gate.
 - Do not recreate `nightly.yml` or `speckit-sync-check.yml` unless the plan
   explicitly reintroduces them as required release surfaces.
 

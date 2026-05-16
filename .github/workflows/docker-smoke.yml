@@ -1,0 +1,25 @@
+name: Docker Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-release-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Show Docker version
+        run: docker version
+
+      - name: Run Docker release smoke
+        env:
+          DEVE_DOCKER_SMOKE_REQUIRED: "1"
+          DEVE_DOCKER_SMOKE_IMAGE: deve-notebook:ci-smoke-${{ github.run_id }}
+          DEVE_DOCKER_SMOKE_CONTAINER: deve-docker-smoke-${{ github.run_id }}
+          DEVE_DOCKER_SMOKE_PORT: "32133"
+        run: scripts/smoke-docker-release.sh
