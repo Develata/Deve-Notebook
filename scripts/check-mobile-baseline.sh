@@ -505,6 +505,25 @@ contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_
 contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_without_current_doc_returns_dashboard()"
 contains apps/web/src/components/mobile_layout/content.rs "fn mobile_diff_close_respects_pending_switch_gates()"
 
+# UI-MOB-019: accessory toolbar write actions must share the same repo write
+# gate as the editor, including undo.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-MOB-019"
+contains_case_block UI-MOB-019 "run: scripts/check-mobile-baseline.sh"
+contains_case_block UI-MOB-019 "run: cargo test -p deve_web mobile_toolbar_write_gate -- --nocapture"
+contains_case_block UI-MOB-019 "cli_assert: mobile_toolbar_uses_repo_write_gate true"
+contains_case_block UI-MOB-019 "cli_assert: mobile_toolbar_actions_guarded true"
+contains_case_block UI-MOB-019 "ui_assert: accessory_toolbar_buttons_disabled_when_write_blocked true"
+contains_case_block UI-MOB-019 "ui_assert: mobile_undo_disabled_when_write_blocked true"
+contains docs/acceptance-bindings.tsv "UI-MOB-019|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile accessory toolbar write gate"
+contains docs/features/08_ui_design_03_mobile.md "移动辅助键盘栏必须服从完整 repo write gate"
+contains apps/web/src/components/mobile_layout/layout_frame.rs "repo_write_allowed_for_core_tracked"
+contains apps/web/src/components/mobile_layout/layout_frame.rs "readonly=Signal::derive(move || !repo_write_allowed_for_core_tracked(&toolbar_core))"
+contains apps/web/src/components/mobile_layout/toolbar.rs "pub(super) fn mobile_toolbar_action_enabled(readonly: bool) -> bool"
+contains apps/web/src/components/mobile_layout/toolbar.rs "fn run_mobile_toolbar_action(readonly: Signal<bool>, action: impl FnOnce())"
+contains apps/web/src/components/mobile_layout/toolbar.rs "run_mobile_toolbar_action(readonly, ffi::mobile_undo)"
+contains apps/web/src/components/mobile_layout/toolbar.rs "fn mobile_toolbar_write_gate_blocks_actions()"
+contains apps/web/index.html "if (view.state?.readOnly) return false;"
+
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"

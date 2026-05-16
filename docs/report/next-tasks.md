@@ -6,10 +6,13 @@
 
 ## 当前执行队列
 
-1. Post-platform Mainline Gap Scan：平台 shell-only 发布面闭合后，重新按 `docs/plan/`、`docs/features/`、`docs/acceptance-cases/`、guard scripts 与当前代码做四向交叉；只筛选真正影响当前验收的最小实现缺口，不打开 signed/store/physical-device/native-process/native-authority gates。
+1. Remote Ops Batch Apply Failure Fallback：让 Web editor remote ops batch apply 失败变成可观测失败，并触发 full snapshot/reopen fallback；不得在 JS 捕获异常后仍推进 Rust 侧版本/history。
+2. Release Platform Acceptance Boundary Alignment：澄清 `REL-005` 是 shell-only target-host gated evidence，不等价于 signed/store/physical-device/native-process/native-authority readiness。
 
 ## 最近完成
 
+- Mobile Accessory Toolbar Write Gate：移动辅助键盘栏改为服从完整 repo write gate，insert/wrap/undo 回调二次检查 readonly，JS FFI 在 CodeMirror read-only 时拒绝写入；新增 `UI-MOB-019` 与 mobile baseline guard。
+- Post-platform Mainline Gap Scan：平台 shell-only 发布面闭合后重新交叉 `docs/plan/`、features、acceptance、scripts 与代码；未发现 P0，选定 Mobile accessory toolbar write gate 为首个 P1 实现缺口，remote batch fallback 与 `REL-005` wording 继续排队。
 - Post-platform Mainline Guard Refresh：平台 CI/script/runbook 改动后复跑 release/native/mobile guards、architecture registry、acceptance bindings、feature paths、plan coverage、target-host evidence、runtime happy/recovery smoke、fmt 与 diff hygiene；全部通过，未引入新的主线 drift。
 - Platform Artifact Consumption Runbook：在 `docs/dev-runbook.md` 增加 Docker、Desktop macOS/Windows、Android emulator、iOS simulator artifact 获取、evidence 校验与 shell-only 边界说明；release baseline 已反查，未声明 store/signing/physical-device readiness。
 - Platform Distribution Readiness Triage：修复 Desktop target-host preflight 误阻塞；GitHub run `25960266472` 在当前 `HEAD 9439c864` 完成 Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 全平台 shell-only evidence；本地 Docker release smoke 通过，process runtime 与 native authority writes 继续关闭。

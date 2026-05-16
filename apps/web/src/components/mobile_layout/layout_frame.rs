@@ -13,6 +13,7 @@ use super::outline_button::OutlineToggleButton;
 use super::toolbar::MobileAccessoryToolbar;
 use crate::components::activity_bar::SidebarView;
 use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
 use crate::i18n::Locale;
 use leptos::ev::TouchEvent;
 use leptos::prelude::*;
@@ -63,6 +64,7 @@ pub fn MobileLayoutFrame(
 ) -> impl IntoView {
     let current_doc = core.current_doc;
     let diff_content = core.diff_content;
+    let toolbar_core = core.clone();
 
     view! {
         <div
@@ -115,7 +117,7 @@ pub fn MobileLayoutFrame(
 
             <MobileAccessoryToolbar
                 keyboard_offset=keyboard_offset
-                readonly=core.is_spectator
+                readonly=Signal::derive(move || !repo_write_allowed_for_core_tracked(&toolbar_core))
                 visible=Signal::derive(move || {
                     mobile_accessory_toolbar_visible(
                         current_doc.get().is_some(),

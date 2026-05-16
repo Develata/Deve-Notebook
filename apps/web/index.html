@@ -148,6 +148,7 @@
       window.mobileInsertText = (text) => {
         const view = window._debug_view;
         if (!view || typeof text !== "string") return false;
+        if (view.state?.readOnly) return false;
         const sel = view.state.selection.main;
         view.dispatch({
           changes: { from: sel.from, to: sel.to, insert: text },
@@ -160,6 +161,7 @@
       window.mobileWrapSelection = (prefix, suffix) => {
         const view = window._debug_view;
         if (!view) return false;
+        if (view.state?.readOnly) return false;
         const sel = view.state.selection.main;
         const p = String(prefix || "");
         const s = String(suffix || "");
@@ -177,6 +179,7 @@
       window.mobileUndo = () => {
         const view = window._debug_view;
         if (!view) return false;
+        if (view.state?.readOnly) return false;
         view.focus();
         try {
           if (document.queryCommandSupported?.("undo")) {

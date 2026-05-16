@@ -24,6 +24,7 @@
 
 - 用户应能看到 branch、ready/read-only、基础统计信息。
 - bottom bar 在窄屏下应可折叠/展开，不应挤压主内容区到不可用。
+- 移动辅助键盘栏必须服从完整 repo write gate；只读、握手中、快照加载中、writer 未就绪或 scope switching 时不得触发编辑或撤销。
 
 ### 4. 搜索与 Sheet
 

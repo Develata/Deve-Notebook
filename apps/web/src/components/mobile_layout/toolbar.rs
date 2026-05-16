@@ -19,6 +19,16 @@ pub(super) fn mobile_toolbar_style(keyboard_offset: i32) -> String {
     )
 }
 
+pub(super) fn mobile_toolbar_action_enabled(readonly: bool) -> bool {
+    !readonly
+}
+
+fn run_mobile_toolbar_action(readonly: Signal<bool>, action: impl FnOnce()) {
+    if mobile_toolbar_action_enabled(readonly.get_untracked()) {
+        action();
+    }
+}
+
 #[component]
 pub fn MobileAccessoryToolbar(
     keyboard_offset: ReadSignal<i32>,
@@ -27,28 +37,28 @@ pub fn MobileAccessoryToolbar(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let on_tab = Callback::new(move |_| {
-        ffi::mobile_insert_text("\t");
+        run_mobile_toolbar_action(readonly, || ffi::mobile_insert_text("\t"));
     });
     let on_h1 = Callback::new(move |_| {
-        ffi::mobile_insert_text("# ");
+        run_mobile_toolbar_action(readonly, || ffi::mobile_insert_text("# "));
     });
     let on_list = Callback::new(move |_| {
-        ffi::mobile_insert_text("- ");
+        run_mobile_toolbar_action(readonly, || ffi::mobile_insert_text("- "));
     });
     let on_task = Callback::new(move |_| {
-        ffi::mobile_insert_text("- [ ] ");
+        run_mobile_toolbar_action(readonly, || ffi::mobile_insert_text("- [ ] "));
     });
     let on_bold = Callback::new(move |_| {
-        ffi::mobile_wrap_selection("**", "**");
+        run_mobile_toolbar_action(readonly, || ffi::mobile_wrap_selection("**", "**"));
     });
     let on_italic = Callback::new(move |_| {
-        ffi::mobile_wrap_selection("_", "_");
+        run_mobile_toolbar_action(readonly, || ffi::mobile_wrap_selection("_", "_"));
     });
     let on_code = Callback::new(move |_| {
-        ffi::mobile_wrap_selection("`", "`");
+        run_mobile_toolbar_action(readonly, || ffi::mobile_wrap_selection("`", "`"));
     });
     let on_undo = Callback::new(move |_| {
-        ffi::mobile_undo();
+        run_mobile_toolbar_action(readonly, ffi::mobile_undo);
     });
 
     let base = toolbar_button_class();
@@ -70,7 +80,7 @@ pub fn MobileAccessoryToolbar(
                     <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_bold.run(()) disabled=disabled title=move || t::common::bold(locale.get())>"B"</button>
                     <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_italic.run(()) disabled=disabled title=move || t::common::italic(locale.get())>"I"</button>
                     <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_code.run(()) disabled=disabled title=move || t::common::code(locale.get())>"<>"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_undo.run(()) title=move || t::common::undo(locale.get())>"↩"</button>
+                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_undo.run(()) disabled=disabled title=move || t::common::undo(locale.get())>"↩"</button>
                 </div>
             </div>
         </Show>
@@ -79,7 +89,7 @@ pub fn MobileAccessoryToolbar(
 
 #[cfg(test)]
 mod tests {
-    use super::{mobile_toolbar_style, toolbar_button_class};
+    use super::{mobile_toolbar_action_enabled, mobile_toolbar_style, toolbar_button_class};
 
     #[test]
     fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard() {
@@ -94,5 +104,11 @@ mod tests {
         let class = toolbar_button_class();
         assert!(class.contains("h-11"));
         assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_toolbar_write_gate_blocks_actions() {
+        assert!(mobile_toolbar_action_enabled(false));
+        assert!(!mobile_toolbar_action_enabled(true));
     }
 }
