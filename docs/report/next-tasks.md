@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Refresh After Command Surface Closure：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、runtime happy/recovery smoke、release/native gates 与 plan coverage；确认 Command Palette reserved/CLI-only 边界闭合后是否还有新的 unblocked Current MUST。
+1. Platform Distribution Readiness Triage：审查 Docker、Desktop、Android、iOS 当前 release evidence、CI/runbook 与剩余 gate，选择最小可执行平台批次；不得打开 native process runtime、native authority writes、physical-device release readiness 或 store/signing 声明。
 
 ## 最近完成
 
+- Mainline Refresh After Command Surface Closure：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、release/native gates、runtime happy/recovery smoke 与 plan coverage；确认 Command Surface boundary 关闭后无新的 unblocked Current MUST，下一步转入平台发布 readiness triage。
 - Command Surface Reserved Boundary：为 Git status/mirror/export 补 CLI-only unavailable notice；为 Source Control sync/commit/push 与 AI retry/backend/PLAN/BUILD 补 unavailable entries；新增 `CMD-004B` / `CMD-004C` 与 baseline guards，未新增 Web Git writer、native process runtime 或 plan 变更。
 - Full Regression Gate Refresh：全仓库 `cargo test`、全 feature clippy、格式/diff hygiene、release/audit、plan coverage、acceptance bindings 与 runtime happy/recovery smoke 均通过；修复 Desktop native-packaging 测试中的 clippy bool assertion。
 - Mainline Gap Refresh After Edge Coverage：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、native gate、plan coverage 与 runtime happy/recovery smoke；未发现新的 unblocked Current MUST，下一步进入完整回归闸门。
