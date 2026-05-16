@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Platform Work Selection After Full Regression：按 `docs/plan/08_ui_design_02_desktop.md`、`docs/plan/08_ui_design_03_mobile.md`、`docs/plan/15_release.md` 与现有 `docs/report/` 平台 evidence，确定下一批 Docker/Desktop/Android 实施范围；默认保持 native authority writes 与真实 process runtime 关闭，除非显式打开 post-gate runtime feature。
+1. Current HEAD Platform Evidence Refresh：触发 GitHub Docker Smoke 与 Native Target Host `target=all` workflow，在当前 `HEAD` 刷新 Docker、Desktop macOS/Windows、Android emulator、iOS simulator shell-only evidence；收集 artifacts 并确认 process runtime 与 native authority writes 仍关闭。
 
 ## 最近完成
 
+- Platform Work Selection After Full Regression：按 Desktop、Mobile 与 Release plan 复核现有平台 evidence；选定当前 `HEAD` 平台证据刷新为下一批，不打开 process runtime、native authority、signing、store 或 physical-device gate。
 - Full Regression Gate Refresh After Mainline Queue Closure：全仓库 `cargo test --locked`、全 feature `clippy -D warnings`、`fmt --check`、runtime happy/recovery smoke、release/native/mobile/domain guards 与 Web release build 均通过；clippy 暴露的 sync handler/global shortcut/i18n bridge 结构问题已小幅收束；本机 Docker daemon 不可达导致 Docker release smoke 按脚本跳过。
 - Mainline Gap Rescan After Dockerfile Drift Closure：复跑 release baseline、acceptance bindings、feature operation paths、plan coverage、architecture registry、network baseline、native process/packaging gates、mobile baseline、dev-runbook baseline 与 runtime happy/recovery smoke；未发现新的 unblocked Current MUST，下一步进入全量回归闸门。
 - Dockerfile Plan Drift Decision：保留当前 direct locked Docker build；将 `15_release.md` 的 Docker build strategy 从依赖缓存层 wording 改为 locked direct release build，并用 release baseline guard 防止旧策略静默回流。
