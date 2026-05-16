@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Platform Distribution Readiness Triage：审查 Docker、Desktop、Android、iOS 当前 release evidence、CI/runbook 与剩余 gate，选择最小可执行平台批次；不得打开 native process runtime、native authority writes、physical-device release readiness 或 store/signing 声明。
+1. Platform Artifact Consumption Runbook：整理 Docker、Desktop macOS/Windows、Android emulator 与 iOS simulator artifact 获取、安装/启动 smoke 与边界说明；必须明确当前证据仍是 shell-only，不声明 store/signing/physical-device readiness，也不得打开 native process runtime 或 native authority writes。
 
 ## 最近完成
 
+- Platform Distribution Readiness Triage：修复 Desktop target-host preflight 误阻塞；GitHub run `25960266472` 在当前 `HEAD 9439c864` 完成 Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 全平台 shell-only evidence；本地 Docker release smoke 通过，process runtime 与 native authority writes 继续关闭。
 - Mainline Refresh After Command Surface Closure：复跑 architecture registry、acceptance bindings、feature paths、领域 baseline、release/native gates、runtime happy/recovery smoke 与 plan coverage；确认 Command Surface boundary 关闭后无新的 unblocked Current MUST，下一步转入平台发布 readiness triage。
 - Command Surface Reserved Boundary：为 Git status/mirror/export 补 CLI-only unavailable notice；为 Source Control sync/commit/push 与 AI retry/backend/PLAN/BUILD 补 unavailable entries；新增 `CMD-004B` / `CMD-004C` 与 baseline guards，未新增 Web Git writer、native process runtime 或 plan 变更。
 - Full Regression Gate Refresh：全仓库 `cargo test`、全 feature clippy、格式/diff hygiene、release/audit、plan coverage、acceptance bindings 与 runtime happy/recovery smoke 均通过；修复 Desktop native-packaging 测试中的 clippy bool assertion。
