@@ -101,6 +101,8 @@
     - run: scripts/check-mobile-ios-shell-package-build.sh
     - run: scripts/check-mobile-android-install-startup-smoke.sh
     - run: scripts/check-mobile-ios-install-startup-smoke.sh
+    - run: scripts/check-desktop-signing-preflight.sh
+    - run: scripts/check-mobile-android-release-preflight.sh
     - run: scripts/check-graph-baseline.sh
     - run: cargo test -p deve_cli graph -- --nocapture
   assertions:
@@ -110,6 +112,7 @@
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
     - release_assert: physical_device_readiness_not_claimed true
+    - release_assert: signing_and_physical_device_preflight_diagnostic_only true
     - release_assert: native_process_runtime_closed true
     - release_assert: native_authority_writes_closed true
     - api_assert: graph_projection_http_endpoint_protected_readonly true

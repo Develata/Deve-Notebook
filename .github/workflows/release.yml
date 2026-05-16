@@ -60,6 +60,8 @@ jobs:
           scripts/check-native-process-adapter-gate.sh
           scripts/check-mobile-platform-package-preflight.sh
           scripts/check-mobile-android-shell-package-build.sh
+          scripts/check-desktop-signing-preflight.sh
+          scripts/check-mobile-android-release-preflight.sh
           scripts/check-graph-baseline.sh
       
       - name: Run tests

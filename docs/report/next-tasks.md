@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Platform Signed / Physical-device Preflight Scaffold：为 Desktop signing/notarization、Windows signed installer、Android signed release 与 Android physical-device smoke 增加 diagnostic / required 双模式 preflight；默认不需要 secrets、不执行真实签名、不声明 store/physical-device readiness，并继续关闭真实 native process runtime 与 native authority writes。
+1. Platform Credential / Target-host Handoff：若继续平台 post-gate，需要明确 macOS signing/notarization、Windows signed installer、Android signed APK/AAB 或 Android physical-device smoke 的目标，并提供对应 target host / signing material；若暂不提供，则返回主线 feature implementation selection。
 
 ## 最近完成
 
+- Platform Signed / Physical-device Preflight Scaffold：新增 Desktop signing 与 Android signed/physical-device diagnostic/required preflight；默认不需要 private material，required 模式缺前置条件 fail-closed；release workflow、REL-005、dev-runbook 与 release baseline 已绑定，未打开真实签名、物理设备发布、native process runtime 或 native authority writes。
 - Platform Post-Gate Scope Decision：current-head shell-only platform evidence 已绿；选定下一批先做签名/物理设备 preflight scaffold，而不是直接进入真实签名、商店发布、物理设备发布或 native process runtime。
 - Mainline Gap Scan After Current-head Platform Evidence Refresh：复跑 plan coverage、architecture registry、acceptance bindings、feature paths、领域 baseline、release/native/mobile guards、runtime happy/recovery smoke 与 Web release build；未发现 blocking drift 或新的 unblocked Current MUST；下一步只做平台 post-gate scope decision，不隐式打开 signing/store/physical-device/native process。
 - Current HEAD Platform Evidence Refresh：推送 `main` 到 `154fcc91` 后触发 Docker Smoke `25966339253` 与 Native Target Host `25966339263`；Docker、Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 均通过；evidence artifacts 已下载并通过 validator，process runtime 与 native authority writes 仍关闭。

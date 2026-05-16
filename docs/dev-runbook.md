@@ -451,6 +451,62 @@ All platform artifacts remain shell-only. They must not open native
 child-process runtime, backend supervision ownership, ledger/vault/source-control
 authority, search authority, Git authority, or `.notegit` authority.
 
+## Platform Signing / Physical-device Preflight
+
+Use these gates before attempting signed Desktop artifacts, Android signed
+release artifacts, or Android physical-device smoke. They validate prerequisite
+shape only; they do not sign, install on physical devices, upload store
+artifacts, open child-process runtime, or create native authority writes.
+
+Desktop signing diagnostics:
+
+```bash
+scripts/check-desktop-signing-preflight.sh
+DEVE_DESKTOP_SIGNING_TARGETS=macos scripts/check-desktop-signing-preflight.sh
+DEVE_DESKTOP_SIGNING_TARGETS=windows scripts/check-desktop-signing-preflight.sh
+```
+
+Required mode fails closed on missing target-host tools or signing material:
+
+```bash
+DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_SIGNING_TARGETS=macos scripts/check-desktop-signing-preflight.sh
+DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_SIGNING_TARGETS=windows scripts/check-desktop-signing-preflight.sh
+```
+
+macOS signing/notarization preflight checks `APPLE_SIGNING_IDENTITY`,
+`APPLE_PROVIDER_SHORT_NAME`, and either
+`APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` or
+`APPLE_API_KEY` / `APPLE_API_KEY_ID` / `APPLE_API_ISSUER`. Windows signing
+preflight checks `WINDOWS_SIGNING_CERT_PATH` or
+`WINDOWS_SIGNING_CERT_BASE64`, `WINDOWS_SIGNING_CERT_PASSWORD`, and `signtool`
+on a Windows target host.
+
+Android signed release and physical-device diagnostics:
+
+```bash
+scripts/check-mobile-android-release-preflight.sh
+```
+
+Required signing mode checks keystore material and key metadata without
+printing secret values:
+
+```bash
+DEVE_MOBILE_ANDROID_RELEASE_PREFLIGHT_REQUIRED=1 scripts/check-mobile-android-release-preflight.sh
+```
+
+Required physical-device mode checks for a non-emulator `adb` target:
+
+```bash
+DEVE_MOBILE_ANDROID_PHYSICAL_DEVICE_PREFLIGHT_REQUIRED=1 scripts/check-mobile-android-release-preflight.sh
+DEVE_MOBILE_ANDROID_SERIAL=<adb-serial> DEVE_MOBILE_ANDROID_PHYSICAL_DEVICE_PREFLIGHT_REQUIRED=1 scripts/check-mobile-android-release-preflight.sh
+```
+
+Android signing preflight accepts `DEVE_ANDROID_KEYSTORE_PATH` or
+`DEVE_ANDROID_KEYSTORE_BASE64`, plus `DEVE_ANDROID_KEY_ALIAS`,
+`DEVE_ANDROID_KEYSTORE_PASSWORD`, and `DEVE_ANDROID_KEY_PASSWORD`.
+`DEVE_MOBILE_ANDROID_RELEASE_ARTIFACT_KIND=apk|aab` records the intended
+artifact kind; it does not build or upload the artifact.
+
 ## Mobile Package Build Preflight
 
 Validate the Mobile shell manifest and diagnose Android/iOS target-host package
