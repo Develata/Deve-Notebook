@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Full Regression Gate Refresh After Acceptance Closure：在 `docs/report/post-acceptance-mainline-gap-rescan-2026-05-17.md` 确认 manual acceptance 清零、领域 baseline 与 runtime smoke 均通过后，先跑全仓库回归门禁；完成前不得打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Mainline Feature Implementation Selection After Acceptance Closure：在 `docs/report/full-regression-after-acceptance-closure-2026-05-17.md` 确认全仓库回归绿灯后，从 `docs/plan/`、`docs/features/`、acceptance cases 与代码证据中选择一个可本地闭合的 current feature gap；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
 
 ## 最近完成
 
+- Full Regression Gate Refresh After Acceptance Closure：跑通 `cargo fmt --check`、`cargo test --locked`、`cargo clippy --all-targets --all-features -- -D warnings`、acceptance/feature path/architecture/plan coverage 与 runtime happy/recovery smoke；acceptance bindings 保持 automated `146` / feature walkthrough `54` / manual `0` / unbound `0`，未改 `docs/plan/`。
 - Post-Acceptance Mainline Gap Rescan：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、foundation/network/auth/settings/storage/rendering/AI/source-control/search/graph/mobile/release/native/dev-runbook baseline 与 runtime happy/recovery smoke；acceptance bindings 保持 automated `146` / feature walkthrough `54` / manual `0` / unbound `0`，未改 `docs/plan/`。
 - Foundation Acceptance Closure：新增 `scripts/check-foundation-baseline.sh`，把 `TERM-001..003` 与 `POS-001..006` 绑定到术语/定位 plan 文本、init/watcher/rename/deveignore 既有测试与核心非目标边界；acceptance bindings 从 automated `138` / manual `8` 收敛到 automated `146` / manual `0`，未改 `docs/plan/`。
 - Command Acceptance Boundary Closure：把 `CMD-005` 绑定到 `scripts/check-ai-baseline.sh` 的现有 slash-command guard；`/plan`、`/build`、`/agents` 只切换本地 Native `PLAN / BUILD` session mode，不切 backend、不发 plugin call；acceptance bindings 从 automated `137` / manual `9` 收敛到 automated `138` / manual `8`，未改 `docs/plan/`。
