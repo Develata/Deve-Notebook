@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Full Regression Gate Refresh After Web Shell Current Closure：在 Repo Switcher 与 PWA Manifest 当前 Web shell 合同闭合后，复跑全仓库测试、全 feature clippy、格式、release/native/mobile/domain guards、runtime happy/recovery smoke 与 diff hygiene；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Mainline Gap Rescan After Web Shell Current Closure：在全量回归闸门为绿后，重新交叉 `docs/plan/`、`docs/features/`、acceptance cases 与代码，选择下一批最小实现；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
 
 ## 最近完成
 
+- Full Regression Gate Refresh After Web Shell Current Closure：跑通 `cargo fmt --check`、`cargo test --locked`、全 feature clippy、acceptance/architecture/feature path/plan coverage、Web/UI/domain/release/native/mobile guards、Web release build、runtime happy/recovery smoke 与 diff hygiene；本机无 3001 服务导致 runtime release-info smoke 按脚本跳过；未改 `docs/plan/`。
 - Mainline Feature Gap Selection After Web PWA Manifest：复跑 Web/UI/mobile、repo file operations、network、acceptance、feature path、plan coverage 与 runtime happy/recovery smoke；未发现新的小型 unblocked Current Web/server gap，下一批转入 full regression gate；未改 `docs/plan/`。
 - Web PWA Manifest Browser Smoke：用隔离数据根和 embedded Web dev server 验证根页面 manifest link、theme-color、`/manifest.json` 200、`application/json` 与 browser console error/warn 归零；未改 `docs/plan/`。
 - Web PWA Manifest Contract：补齐 `manifest.json`、`theme-color`、Trunk copy binding 与 `UI-WEB-006` baseline；只声明 standalone install metadata，不新增 service worker、离线 authority、native runtime 或浏览器存储行为；未改 `docs/plan/`。
