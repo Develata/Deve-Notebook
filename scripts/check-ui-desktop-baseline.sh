@@ -112,6 +112,9 @@ contains_case_block UI-WEB-004 "cli_assert: activity_more_pin_keeps_menu_open_bo
 contains_case_block UI-WEB-004 "ui_assert: more_menu_visible false"
 contains_case_block UI-WEB-004 "ui_assert: pinned_state_updated true"
 
+contains docs/report/web-activity-more-browser-smoke-2026-05-17.md "Browser smoke result: pass."
+contains docs/report/web-activity-more-browser-smoke-2026-05-17.md "menuStillOpen=true"
+contains docs/report/web-activity-more-browser-smoke-2026-05-17.md "Row click and Pin/Unpin are separate in the actual DOM event path."
 contains apps/web/src/components/activity_bar/mod.rs "data-deve-activity-more-button=activity_more_button_marker()"
 contains apps/web/src/components/activity_bar/mod.rs "fn activity_more_button_marker_is_stable()"
 contains apps/web/src/components/activity_bar/popup_menu.rs "data-deve-activity-more-item=activity_more_item_marker(item)"

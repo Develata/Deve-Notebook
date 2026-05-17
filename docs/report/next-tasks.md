@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Rescan After Web Activity Bar More Contract Closure：在 `docs/report/web-activity-more-contract-2026-05-17.md` 闭合 Activity Bar More 行点击 / Pin 独立合同后，复跑必要领域 baseline，再选择下一批 current feature gap；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Mainline Feature Gap Selection After Web Activity Bar Browser Smoke：在 `docs/report/web-activity-more-browser-smoke-2026-05-17.md` 闭合 Activity Bar More 真实浏览器点击验证后，从 current Web/server feature gap 中选择下一批最小实现；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
 
 ## 最近完成
 
+- Web Activity Bar More Browser Smoke：用隔离数据根和 embedded Web dev server 验证 Activity Bar More button、4 个 item marker、4 个 pin marker、行点击关闭菜单、Pin/Unpin 保持菜单打开并更新 pin 状态；desktop baseline 已反查该 smoke report，未改 `docs/plan/`。
 - Web Activity Bar More Contract：补齐 Activity Bar More button/item/pin DOM marker、纯状态 helper 与 `UI-WEB-004` desktop baseline 绑定；行点击关闭菜单并切换视图，Pin/Unpin 保持独立并保留菜单状态；acceptance bindings 变为 automated `147` / feature walkthrough `54` / manual `0` / unbound `0`，未改 `docs/plan/`。
 - Web New Window Query Context：修复 `Open in New Window` 对旧 `doc` query 参数的重复追加问题，并让初始 DocList reconciliation 在无当前文档时消费 decoded `?doc=...` path；pending-created selection 继续优先于 query selection；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Acceptance Closure：跑通 `cargo fmt --check`、`cargo test --locked`、`cargo clippy --all-targets --all-features -- -D warnings`、acceptance/feature path/architecture/plan coverage 与 runtime happy/recovery smoke；acceptance bindings 保持 automated `146` / feature walkthrough `54` / manual `0` / unbound `0`，未改 `docs/plan/`。
