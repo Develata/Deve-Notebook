@@ -61,6 +61,7 @@ check_mobile_feature_tree_includes_tauri() {
 }
 
 "$ROOT_DIR/scripts/check-native-track-boundary.sh"
+bash -n "$ROOT_DIR/scripts/check-desktop-native-session-package-smoke.sh"
 check_desktop_tauri_lock_entries
 check_mobile_tauri_lock_entries
 check_default_desktop_tree_excludes_tauri
@@ -79,6 +80,7 @@ cargo test --locked -p deve_desktop --features native-packaging menu_tray -- --n
 cargo test --locked -p deve_desktop --features native-packaging packaging -- --nocapture
 cargo test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
 cargo test --locked -p deve_cli native_session -- --nocapture
+"$ROOT_DIR/scripts/check-desktop-native-session-package-smoke.sh"
 
 check_desktop_tauri_lock_entries
 check_mobile_tauri_lock_entries

@@ -12,9 +12,10 @@
 
 use crate::{
     DESKTOP_TAURI_MAIN_WINDOW_LABEL, DesktopLocalServiceTauriState, DesktopMenuAction,
-    DesktopTrayAction, build_desktop_menu, build_desktop_tray_icon, build_desktop_tray_menu,
-    desktop_tauri_bootstrap_plugin, desktop_tauri_local_service_bootstrap_from_env,
-    resolve_desktop_menu_action_id, resolve_desktop_tray_action_id,
+    DesktopTauriBootstrapError, DesktopTrayAction, build_desktop_menu, build_desktop_tray_icon,
+    build_desktop_tray_menu, desktop_tauri_bootstrap_plugin,
+    desktop_tauri_local_service_bootstrap_from_env, resolve_desktop_menu_action_id,
+    resolve_desktop_tray_action_id, try_desktop_tauri_local_service_bootstrap_from_env,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, Runtime};
@@ -64,7 +65,25 @@ impl DesktopTauriStartupSmoke {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopTauriNativeSessionSmoke {
+    pub local_service_started: bool,
+    pub session_bound: bool,
+    pub native_session_cookie_installed_before_bootstrap: bool,
+    pub opens_authority_write_path: bool,
+}
+
+impl DesktopTauriNativeSessionSmoke {
+    pub fn passed(self) -> bool {
+        self.local_service_started
+            && self.session_bound
+            && self.native_session_cookie_installed_before_bootstrap
+            && !self.opens_authority_write_path
+    }
+}
+
 pub const DESKTOP_TAURI_STARTUP_SMOKE_OK: &str = "desktop-startup-smoke: ok";
+pub const DESKTOP_TAURI_NATIVE_SESSION_SMOKE_OK: &str = "desktop-native-session-smoke: ok";
 
 pub fn desktop_tauri_runtime_surface() -> DesktopTauriRuntimeSurface {
     DesktopTauriRuntimeSurface {
@@ -85,6 +104,37 @@ pub fn desktop_tauri_startup_smoke() -> DesktopTauriStartupSmoke {
         child_process_runtime_enabled: surface.child_process_runtime_enabled,
         opens_authority_write_path: surface.opens_authority_write_path,
     }
+}
+
+pub fn desktop_tauri_native_session_smoke(
+    timestamp_unix_ms: i64,
+) -> Result<DesktopTauriNativeSessionSmoke, DesktopTauriBootstrapError> {
+    let Some(mut bootstrap) =
+        try_desktop_tauri_local_service_bootstrap_from_env(timestamp_unix_ms)?
+    else {
+        return Ok(DesktopTauriNativeSessionSmoke {
+            local_service_started: false,
+            session_bound: false,
+            native_session_cookie_installed_before_bootstrap: false,
+            opens_authority_write_path: false,
+        });
+    };
+
+    let local_service_started = bootstrap.runtime.is_some();
+    let smoke = DesktopTauriNativeSessionSmoke {
+        local_service_started,
+        session_bound: bootstrap.script.session_bound(),
+        native_session_cookie_installed_before_bootstrap: bootstrap
+            .script
+            .has_native_session_cookie(),
+        opens_authority_write_path: bootstrap.script.opens_authority_write_path(),
+    };
+
+    if let Some(runtime) = bootstrap.runtime.as_mut() {
+        let _ = runtime.stop(timestamp_unix_ms.saturating_add(1));
+    }
+
+    Ok(smoke)
 }
 
 pub fn menu_action_shell_effect(action: DesktopMenuAction) -> DesktopTauriShellEffect {
@@ -208,6 +258,17 @@ mod tests {
         assert!(smoke.packaged_binary_started);
         assert!(smoke.shell_only_runtime);
         assert!(!smoke.child_process_runtime_enabled);
+        assert!(!smoke.opens_authority_write_path);
+    }
+
+    #[test]
+    fn desktop_tauri_native_session_smoke_reports_disabled_without_opt_in() {
+        let smoke = desktop_tauri_native_session_smoke(1).expect("smoke");
+
+        assert!(!smoke.passed());
+        assert!(!smoke.local_service_started);
+        assert!(!smoke.session_bound);
+        assert!(!smoke.native_session_cookie_installed_before_bootstrap);
         assert!(!smoke.opens_authority_write_path);
     }
 

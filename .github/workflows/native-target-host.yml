@@ -112,6 +112,14 @@ jobs:
           DEVE_DESKTOP_PACKAGE_BUNDLES: app,dmg
         run: scripts/check-desktop-package-startup-smoke.sh
 
+      - name: Desktop macOS native session package smoke
+        id: desktop_macos_native_session_smoke
+        if: ${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke }}
+        env:
+          DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED: "1"
+          DEVE_DESKTOP_PACKAGE_BUNDLES: app,dmg
+        run: scripts/check-desktop-native-session-package-smoke.sh
+
       - name: Desktop macOS installer install/uninstall smoke
         id: desktop_macos_installer_smoke
         if: ${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
@@ -138,12 +146,14 @@ jobs:
             scripts/check-native-process-adapter-gate.sh
             DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg DEVE_DESKTOP_PACKAGE_NO_SIGN=1 scripts/check-desktop-platform-package-build.sh
             DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-package-startup-smoke.sh
+            DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-native-session-package-smoke.sh
             DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-installer-smoke.sh
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             desktop_preflight=${{ steps.desktop_macos_preflight.outcome }}
             process_gate=${{ steps.desktop_macos_process_gate.outcome }}
             package_build=${{ inputs.run_desktop_package_build && steps.desktop_macos_package_build.outcome || 'skipped' }}
             startup_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_macos_startup_smoke.outcome || 'skipped' }}
+            native_session_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_macos_native_session_smoke.outcome || 'skipped' }}
             installer_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_macos_installer_smoke.outcome || 'skipped' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_desktop_package_build && 'target/release/bundle/**' || 'N/A - Desktop package build was not requested' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: ${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_macos_installer_smoke.outcome || inputs.run_desktop_installer_smoke && 'skipped - package build was not requested' || 'N/A - installer execution was not requested' }}
@@ -231,6 +241,14 @@ jobs:
           DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
         run: scripts/check-desktop-package-startup-smoke.sh
 
+      - name: Desktop Windows native session package smoke
+        id: desktop_windows_native_session_smoke
+        if: ${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke }}
+        env:
+          DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED: "1"
+          DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
+        run: scripts/check-desktop-native-session-package-smoke.sh
+
       - name: Desktop Windows installer install/uninstall smoke
         id: desktop_windows_installer_smoke
         if: ${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
@@ -257,12 +275,14 @@ jobs:
             scripts/check-native-process-adapter-gate.sh
             DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-platform-package-build.sh
             DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-package-startup-smoke.sh
+            DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-native-session-package-smoke.sh
             DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-installer-smoke.sh
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             desktop_preflight=${{ steps.desktop_windows_preflight.outcome }}
             process_gate=${{ steps.desktop_windows_process_gate.outcome }}
             package_build=${{ inputs.run_desktop_package_build && steps.desktop_windows_package_build.outcome || 'skipped' }}
             startup_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_windows_startup_smoke.outcome || 'skipped' }}
+            native_session_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_windows_native_session_smoke.outcome || 'skipped' }}
             installer_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_windows_installer_smoke.outcome || 'skipped' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_desktop_package_build && 'target/release/bundle/**' || 'N/A - Desktop package build was not requested' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: ${{ inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke && steps.desktop_windows_installer_smoke.outcome || inputs.run_desktop_installer_smoke && 'skipped - package build was not requested' || 'N/A - installer execution was not requested' }}

@@ -277,8 +277,10 @@ DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 scripts/check-desktop-platform-package-bui
 
 Required mode fails closed on missing prerequisites. When all prerequisites are
 present it runs `cargo tauri build --features native-packaging` from
-`apps/desktop`. A Linux or WSL result only validates that host target; it does
-not certify macOS or Windows packages. Use
+`apps/desktop`. Required mode first builds `deve_cli` and passes it to Tauri as
+the `binaries/deve_cli` external binary sidecar, so package startup smoke can
+exercise the local-service handoff path. A Linux or WSL result only validates
+that host target; it does not certify macOS or Windows packages. Use
 `DEVE_DESKTOP_PACKAGE_BUNDLES=deb,rpm` to verify a Linux bundle subset when the
 host cannot run the AppImage `linuxdeploy` path.
 
@@ -306,6 +308,7 @@ DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=macos sc
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-platform-package-build.sh
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg DEVE_DESKTOP_PACKAGE_NO_SIGN=1 scripts/check-desktop-platform-package-build.sh
 DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-package-startup-smoke.sh
+DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-native-session-package-smoke.sh
 DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg scripts/check-desktop-installer-smoke.sh
 ```
 
@@ -316,6 +319,7 @@ does not replace signed/notarized release packaging.
 DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED=1 DEVE_DESKTOP_TARGET_HOSTS=windows scripts/check-desktop-target-host-preflight.sh
 DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-platform-package-build.sh
 DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-package-startup-smoke.sh
+DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-native-session-package-smoke.sh
 DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-installer-smoke.sh
 ```
 
@@ -327,6 +331,14 @@ authority path. This is package startup evidence, not installer
 install/uninstall evidence. The probe defaults to a 20-second timeout; override
 with `DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS=<seconds>` only when diagnosing a
 slow target host.
+
+The native session package smoke runs the packaged Desktop binary with
+`DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1` and `DEVE_DESKTOP_LOCAL_SERVICE=1` from a
+temporary data root. It verifies that the bundled sibling `deve_cli` can start
+`serve --native-loopback`, issue the native-only HttpOnly session cookie, pass
+`/api/auth/status`, and exit without exposing token/secret material to JS-visible
+bootstrap, URL, localStorage, logs, or crash reports. It remains diagnostic-only
+unless `DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1` is set.
 
 The installer smoke is a separate target-host gate. On macOS it mounts the
 `.dmg`, copies the `.app` to a temporary Applications directory, runs the same
@@ -357,7 +369,8 @@ The workflow is manual-only and diagnostic by default. Set
 `required_preflight=true` to fail closed on missing prerequisites. Set
 `run_desktop_package_build=true` only when the target-host runner is intended to
 produce package artifacts. Set `run_desktop_startup_smoke=true` with package
-builds to run the target-host packaged-binary startup probe. Set
+builds to run both the target-host packaged-binary startup probe and the native
+session package smoke. Set
 `run_desktop_installer_smoke=true` with package builds to run install/uninstall
 smoke. Each target-host job uploads a validated
 `deve-native-target-host-evidence-*` artifact.

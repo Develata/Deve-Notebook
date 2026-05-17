@@ -89,9 +89,11 @@ pub use tauri_bootstrap::{
 };
 #[cfg(feature = "native-packaging")]
 pub use tauri_entry::{
-    DESKTOP_TAURI_STARTUP_SMOKE_OK, DesktopTauriRuntimeSurface, DesktopTauriShellEffect,
-    DesktopTauriStartupSmoke, desktop_tauri_runtime_surface, desktop_tauri_startup_smoke,
-    menu_action_shell_effect, run_desktop_tauri_app, tray_action_shell_effect,
+    DESKTOP_TAURI_NATIVE_SESSION_SMOKE_OK, DESKTOP_TAURI_STARTUP_SMOKE_OK,
+    DesktopTauriNativeSessionSmoke, DesktopTauriRuntimeSurface, DesktopTauriShellEffect,
+    DesktopTauriStartupSmoke, desktop_tauri_native_session_smoke, desktop_tauri_runtime_surface,
+    desktop_tauri_startup_smoke, menu_action_shell_effect, run_desktop_tauri_app,
+    tray_action_shell_effect,
 };
 pub use types::{
     DesktopBootstrap, DesktopNativeSessionCookie, DesktopRecoveryBootstrap, DesktopServiceState,

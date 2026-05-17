@@ -66,6 +66,14 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
         spec.env_allowlist
             .contains(&NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string())
     );
+    assert!(spec.env_allowlist.contains(&"AUTH_SECRET".to_string()));
+    assert!(spec.env_allowlist.contains(&"AUTH_PASS".to_string()));
+    assert!(spec.env_allowlist.contains(&"AUTH_USER".to_string()));
+    assert!(
+        !spec
+            .env_allowlist
+            .contains(&"AUTH_ALLOW_ANONYMOUS_LOCALHOST".to_string())
+    );
     let secret = spec
         .env
         .iter()
@@ -74,6 +82,28 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
     assert_eq!(secret.value.len(), 64);
     assert!(secret.value.chars().all(|ch| ch.is_ascii_hexdigit()));
     assert!(!format!("{:?}", secret).contains(&secret.value));
+    let auth_secret = spec
+        .env
+        .iter()
+        .find(|binding| binding.key == "AUTH_SECRET")
+        .expect("auth secret");
+    assert_eq!(auth_secret.value.len(), 64);
+    assert!(auth_secret.value.chars().all(|ch| ch.is_ascii_hexdigit()));
+    assert!(!format!("{:?}", auth_secret).contains(&auth_secret.value));
+    let auth_pass = spec
+        .env
+        .iter()
+        .find(|binding| binding.key == "AUTH_PASS")
+        .expect("auth pass");
+    assert!(auth_pass.value.starts_with("$argon2"));
+    assert!(!format!("{:?}", auth_pass).contains(&auth_pass.value));
+    assert_eq!(
+        spec.env
+            .iter()
+            .find(|binding| binding.key == "AUTH_USER")
+            .map(|binding| binding.value.as_str()),
+        Some("native")
+    );
     assert_eq!(spec.profile, "low-spec");
     assert!(plan.health_probe_required_before_bootstrap);
     assert!(plan.session_handoff_required_before_bootstrap);

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 14_tech_stack#native-packaging-dependency-gate
+//!   - 08_ui_design_02_desktop#desktop-packaging-scaffold
+
 #[cfg(feature = "native-packaging")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var_os("DEVE_DESKTOP_STARTUP_SMOKE").is_some() {
@@ -6,6 +10,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             return Err(std::io::Error::other("desktop startup smoke failed").into());
         }
         println!("{}", deve_desktop::DESKTOP_TAURI_STARTUP_SMOKE_OK);
+        return Ok(());
+    }
+    if std::env::var_os("DEVE_DESKTOP_NATIVE_SESSION_SMOKE").is_some() {
+        let smoke = deve_desktop::desktop_tauri_native_session_smoke(0)?;
+        if !smoke.passed() {
+            return Err(std::io::Error::other("desktop native session smoke failed").into());
+        }
+        println!("{}", deve_desktop::DESKTOP_TAURI_NATIVE_SESSION_SMOKE_OK);
         return Ok(());
     }
 

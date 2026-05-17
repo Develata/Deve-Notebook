@@ -10,6 +10,7 @@ use deve_core::native_adapter::{
     NativeProcessBindHints, NativeProcessEnvBinding, NativeProcessPathResolution,
     NativeProcessRuntimeError, NativeProcessSpawnSpec,
 };
+use deve_core::security::auth::password;
 use thiserror::Error;
 
 pub const DEVE_DESKTOP_LOCAL_SERVICE_ENV: &str = "DEVE_DESKTOP_LOCAL_SERVICE";
@@ -80,6 +81,8 @@ pub enum DesktopLocalServiceEntrypointError {
     PortAllocationFailed(#[source] std::io::Error),
     #[error("failed to generate native session bootstrap secret")]
     SessionSecretGenerationFailed,
+    #[error("failed to generate native auth material")]
+    SessionAuthMaterialGenerationFailed,
     #[error(transparent)]
     InvalidSpawnSpec(#[from] NativeProcessRuntimeError),
 }
@@ -143,6 +146,10 @@ fn build_spawn_spec(
     let ledger_path = input.data_root.join("ledger");
     let vault_path = input.data_root.join("vault");
     let native_session_secret = generate_native_session_bootstrap_secret()?;
+    let native_auth_secret = generate_native_session_bootstrap_secret()?;
+    let native_auth_password = generate_native_session_bootstrap_secret()?;
+    let native_auth_password_hash = password::hash_password(&native_auth_password)
+        .map_err(|_| DesktopLocalServiceEntrypointError::SessionAuthMaterialGenerationFailed)?;
     Ok(NativeProcessSpawnSpec {
         executable,
         argv: vec![
@@ -157,6 +164,9 @@ fn build_spawn_spec(
             "DEVE_LEDGER_DIR".to_string(),
             "DEVE_VAULT_PATH".to_string(),
             NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
+            "AUTH_SECRET".to_string(),
+            "AUTH_PASS".to_string(),
+            "AUTH_USER".to_string(),
         ],
         env: vec![
             NativeProcessEnvBinding {
@@ -174,6 +184,18 @@ fn build_spawn_spec(
             NativeProcessEnvBinding {
                 key: NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
                 value: native_session_secret,
+            },
+            NativeProcessEnvBinding {
+                key: "AUTH_SECRET".to_string(),
+                value: native_auth_secret,
+            },
+            NativeProcessEnvBinding {
+                key: "AUTH_PASS".to_string(),
+                value: native_auth_password_hash,
+            },
+            NativeProcessEnvBinding {
+                key: "AUTH_USER".to_string(),
+                value: "native".to_string(),
             },
         ],
         profile: profile_env_value(input.profile).to_string(),
