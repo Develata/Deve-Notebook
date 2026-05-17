@@ -133,6 +133,11 @@ check_contains crates/core/src/plugin/runtime/module_resolver.rs "parent_travers
 check_contains crates/core/src/plugin/runtime/module_resolver.rs "symlinked_module_escape_is_rejected"
 check_contains crates/core/src/plugin/runtime/rhai_v1.rs "GuardedFileModuleResolver"
 check_contains crates/core/src/plugin/runtime/chat_stream.rs "Native AI Chat currently rejects"
+
+# PLUG-002: Calculation Runtime remains interface-only and visibly disabled.
+check_contains docs/acceptance-cases/10_plugins.md "case_id: PLUG-002"
+check_contains docs/acceptance-cases/10_plugins.md "text_visible \"Calculation Runtime\""
+check_contains docs/plan/17_plugins.md "Calculation Runtime 仍然是长期能力，但本章**不要求代码实现**"
 check_contains apps/web/src/components/sidebar/extensions.rs "calculation_runtime_title"
 check_contains apps/web/src/components/sidebar/extensions.rs "code_execution_disabled"
 check_contains apps/web/src/components/sidebar/extensions.rs "data-deve-extension-reserved"
@@ -140,6 +145,17 @@ check_contains apps/web/src/components/sidebar/extensions.rs "aria-disabled=\"tr
 check_contains apps/web/src/i18n/extensions.rs "Calculation Runtime"
 check_contains apps/web/src/i18n/extensions.rs "default off"
 check_contains apps/web/src/i18n/extensions.rs "Code execution disabled"
+
+# PLUG-003: ledger-managed plugin boundaries remain future-hard constraints,
+# and Rhai module imports stay sandboxed by guarded resolver tests.
+check_contains docs/acceptance-cases/10_plugins.md "case_id: PLUG-003"
+check_contains docs/acceptance-cases/10_plugins.md "cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture"
+check_contains docs/plan/17_plugins.md "vault/<repo>/**/*.md"
+check_contains docs/plan/17_plugins.md ".notegit"
+check_contains docs/plan/17_plugins.md "ledger-aware host functions"
+check_contains crates/core/src/plugin/runtime/module_resolver.rs "fn parent_traversal_import_is_rejected()"
+check_contains crates/core/src/plugin/runtime/module_resolver.rs "fn symlinked_module_escape_is_rejected()"
+
 check_contains apps/web/src/components/settings_sections.rs "disabled=move || button_state.get().native_disabled"
 check_contains apps/web/src/components/settings_sections.rs "disabled=move || button_state.get().trusted_disabled"
 check_contains apps/web/src/components/settings_sections.rs "if !button_state.get_untracked().native_disabled"

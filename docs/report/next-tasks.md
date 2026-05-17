@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Plugin Runtime Acceptance Closure：按 `docs/report/ai-chat-ux-acceptance-closure-2026-05-17.md` 继续收敛 `PLUG-002` 与 `PLUG-003`；优先绑定已有 plugin UI reserved-state 与 sandbox/security guards，保持 Calculation Runtime interface-only/default-disabled；不得重新打开 MCP runtime、通用代码执行、平台 signing、physical-device、native process runtime、Web Git writer、server-backed Settings API 或 native authority writes。
+1. Rendering Manual Acceptance Closure：按 `docs/report/plugin-runtime-acceptance-closure-2026-05-17.md` 继续收敛 `RENDER-CODE-001`、`RENDER-LINK-002`、`RENDER-NEST-001`、`RENDER-WHITELIST-001`；优先绑定已有 rendering guards 与 focused tests，保持 source-first editor authority；不得声明 complete WYSIWYG、任意 HTML、完整 virtual rendering、平台 signing、physical-device、native process runtime、Web Git writer、server-backed Settings API 或 native authority writes。
 
 ## 最近完成
 
+- Plugin Runtime Acceptance Closure：把 `PLUG-002` 与 `PLUG-003` 绑定到 `scripts/check-ai-baseline.sh` 的现有 Calculation Runtime reserved UI、ledger-managed boundary 与 guarded module resolver sandbox checks；acceptance bindings 从 automated `131` / manual `15` 收敛到 automated `133` / manual `13`，未改 `docs/plan/`。
 - AI Chat UX Acceptance Closure：把 `AI-001` 与 `AI-004` 绑定到 `scripts/check-ai-baseline.sh` 的现有 chat context、plugin text response、slash command 与 backend-preservation checks；acceptance bindings 从 automated `129` / manual `17` 收敛到 automated `131` / manual `15`，未改 `docs/plan/`。
 - Auth Security Acceptance Closure：把 `AUTH-005`、`AUTH-008`、`AUTH-009`、`AUTH-010` 绑定到 `scripts/check-auth-baseline.sh` 的现有 exact cookie、rate-limit、JWT payload 与 WS unauthorized structured response checks；acceptance bindings 从 automated `125` / manual `21` 收敛到 automated `129` / manual `17`，未改 `docs/plan/`。
 - Mainline Feature Selection After Full Regression：选择 Network Acceptance Automation Closure 为第一批主线闭合项，并把 `NET-005..013` 绑定到 `scripts/check-network-baseline.sh` 的现有 runtime smoke、targeted tests 与 auth/structured-error guard；acceptance bindings 从 automated `117` / manual `29` 收敛到 automated `125` / manual `21`，未改 `docs/plan/`。
