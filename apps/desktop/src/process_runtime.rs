@@ -11,6 +11,8 @@ use deve_core::native_adapter::{
 };
 use thiserror::Error;
 
+const DEVE_DESKTOP_SERVICE_STDIO_INHERIT_ENV: &str = "DEVE_DESKTOP_SERVICE_STDIO_INHERIT";
+
 #[derive(Debug, Error)]
 pub enum DesktopProcessRuntimeError {
     #[error(transparent)]
@@ -80,9 +82,12 @@ impl DesktopProcessLauncher for DesktopCommandProcessLauncher {
             .args(&spec.argv)
             .current_dir(&spec.cwd)
             .env_clear()
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+            .stdin(Stdio::null());
+        if std::env::var_os(DEVE_DESKTOP_SERVICE_STDIO_INHERIT_ENV).is_some() {
+            command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+        } else {
+            command.stdout(Stdio::null()).stderr(Stdio::null());
+        }
         for binding in &spec.env {
             command.env(&binding.key, &binding.value);
         }

@@ -42,25 +42,25 @@ run_with_timeout() {
   local smoke_root="$2"
 
   if command -v gtimeout >/dev/null 2>&1; then
-    (
-      cd "$smoke_root"
-      DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 \
-        gtimeout "${TIMEOUT_SECS}s" "$binary"
-    )
+	    (
+	      cd "$smoke_root"
+	      DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 \
+	        gtimeout "${TIMEOUT_SECS}s" "$binary"
+	    )
     return
   fi
   if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
-    (
-      cd "$smoke_root"
-      DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 \
-        timeout "${TIMEOUT_SECS}s" "$binary"
-    )
+	  (
+	    cd "$smoke_root"
+	    DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 \
+	      timeout "${TIMEOUT_SECS}s" "$binary"
+	  )
     return
   fi
-  (
-    cd "$smoke_root"
-    DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 "$binary"
-  )
+	  (
+	    cd "$smoke_root"
+	    DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$binary"
+	  )
 }
 
 run_native_session_probe() {
