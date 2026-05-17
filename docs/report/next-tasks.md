@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Settings Local Persistence / Feedback Closure：targeted baseline 已建立；下一步执行 Settings browser smoke，覆盖 Settings 打开、语言即时反馈、sync mode 反馈、AI backend disabled/available 反馈、reserved Hybrid marker、reload persistence 边界；不得实现 server-backed Settings API。
+1. Settings Local Persistence / Feedback Closure：targeted baseline 与 browser smoke 已完成；下一步复跑 plan coverage、acceptance bindings、feature operation paths、Settings baseline、runtime happy/recovery smoke 与 diff hygiene，确认无 drift 后关闭本批并选择下一批主线实现；不得实现 server-backed Settings API。
 
 ## 最近完成
 
+- Settings Local Feedback Browser Smoke：用隔离数据根 `/tmp/deve-settings-smoke.WtGZPv` 和 embedded Web dev server 验证 Settings 打开、语言即时反馈与 reload 持久、sync mode 反馈、AI backend disabled reason、Hybrid reserved marker、核心 API 200 与当前 navigation console 健康；未发现 product code bug，未改 `docs/plan/`。
 - Settings Local Feedback Baseline：新增 `scripts/check-settings-local-feedback-baseline.sh` 并绑定 `SET-001..007`；覆盖 `deve config print/set`、trusted-cli effective fallback、Settings UI immediate feedback、reserved/disabled feedback 与 future Settings API absent；未改 `docs/plan/`。
 - Mainline Gap Rescan After Repo File Operations Closure：复跑 plan coverage、architecture registry、acceptance bindings、feature operation paths、repo file-op baseline、storage/UI desktop baseline、runtime happy/recovery smoke 与 diff hygiene；未发现 blocking drift 或新的 unblocked Current MUST；下一批选择 Settings local persistence / feedback，不打开 server-backed Settings API。
 - Repo File Operations Browser Smoke：用隔离数据根 `/tmp/deve-fileops-smoke.ul9eb0` 和 embedded Web dev server 验证 create、move/rename、copy、delete、reload、断线锁态与重连恢复；最终稳定 reload 无 console error/warn，网络核心请求均 200，未发现 product code bug，未改 `docs/plan/`。
