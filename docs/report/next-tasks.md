@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Repo File Operations Closure：按 `docs/report/mainline-feature-implementation-selection-2026-05-17.md` 执行下一批主线功能实现；先建立 create / rename / copy / move / delete 的 targeted baseline 与 browser smoke，再只修复该链路中发现的具体缺口。
+1. Repo File Operations Browser Smoke：按 `docs/report/repo-file-operations-baseline-2026-05-17.md` 的 Next 执行隔离数据根实机验证；覆盖 create / rename-or-move / copy / delete / reload / reconnect，若发现缺口则只修复该链路中的具体问题。
 
 ## 最近完成
 
+- Repo File Operations Baseline：新增 `scripts/check-repo-file-ops-baseline.sh`，绑定 `UI-DESK-003`、`STORE-012`、`STORE-013`，覆盖 SearchBox file-op shell、FileProvider create candidate、document structure WS scope gate、server docs create/copy/move/delete handler 与 degraded write gate；未发现 product code bug，未改 `docs/plan/`。
 - Mainline Feature Implementation Selection：从 platform credential / target-host handoff 返回主线，比较 Repo File Operations、Settings local persistence / feedback、Source Control command surface 与平台 post-gate；选定 Repo File Operations Closure 为下一批本地可推进功能，不打开 signing、physical-device、native process、native authority write、Web Git writer 或 server-backed Settings API。
 - Platform Signed / Physical-device Preflight Scaffold：新增 Desktop signing 与 Android signed/physical-device diagnostic/required preflight；默认不需要 private material，required 模式缺前置条件 fail-closed；release workflow、REL-005、dev-runbook 与 release baseline 已绑定，未打开真实签名、物理设备发布、native process runtime 或 native authority writes。
 - Platform Post-Gate Scope Decision：current-head shell-only platform evidence 已绿；选定下一批先做签名/物理设备 preflight scaffold，而不是直接进入真实签名、商店发布、物理设备发布或 native process runtime。

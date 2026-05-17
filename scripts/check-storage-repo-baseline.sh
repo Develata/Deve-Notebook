@@ -16,14 +16,14 @@ contains() {
   local file="$1"
   local text="$2"
   rg --fixed-strings --quiet "$text" "$file" \
-    || fail "missing '$text' in ${file#$ROOT_DIR/}"
+    || fail "missing '$text' in ${file#"$ROOT_DIR"/}"
 }
 
 not_contains() {
   local file="$1"
   local text="$2"
   if rg --fixed-strings --quiet "$text" "$file"; then
-    fail "unexpected '$text' in ${file#$ROOT_DIR/}"
+    fail "unexpected '$text' in ${file#"$ROOT_DIR"/}"
   fi
 }
 
@@ -63,6 +63,11 @@ case_contains STORE-009 "cargo test -p deve_cli document_scope_bootstrap -- --no
 case_contains STORE-009 "cargo test -p deve_cli open_doc_scope -- --nocapture"
 case_contains STORE-009 "cargo test -p deve_cli resolve_target_prefers_doc_id_over_stale_path -- --nocapture"
 case_contains STORE-010 "cargo test -p deve_core --test path_normalize_structure_test -- --nocapture"
+case_contains STORE-012 "cargo test -p deve_cli docs_scope_nonce_gate -- --nocapture"
+case_contains STORE-012 "run: scripts/check-repo-file-ops-baseline.sh"
+case_contains STORE-013 "cargo test -p deve_cli degraded_local -- --nocapture"
+case_contains STORE-013 "cargo test -p deve_core source_control_write_gate -- --nocapture"
+case_contains STORE-013 "run: scripts/check-repo-file-ops-baseline.sh"
 case_contains STORE-014 "cargo test -p deve_cli jsonl_roundtrip_is_monotonic_and_line_stable -- --nocapture"
 case_contains STORE-014 "cargo test -p deve_cli includes_dir_structure_fact_in_export -- --nocapture"
 case_contains STORE-015 "cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture"
@@ -109,6 +114,15 @@ contains "$ROOT_DIR/apps/cli/src/server/handlers/document/edit_apply.rs" "report
 contains "$ROOT_DIR/crates/core/tests/remote_repo_catalog_missing_test.rs" "fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing()"
 contains "$ROOT_DIR/crates/core/tests/repo_catalog_entry_fail_closed_test.rs" "fn remote_repo_listing_fails_closed_on_unexpected_non_redb_entry()"
 contains "$ROOT_DIR/apps/cli/src/commands/repair/shadow.rs" "fn quarantines_nil_shadow_repo_into_invalid_peer_dir()"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_web file_ops"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_web file_provider"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli docs_scope_nonce_gate"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli docs_create_test"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli docs_copy_contract"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli docs_dir_copy"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli docs_projection_repair"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli degraded_local"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_core source_control_write_gate"
 not_contains "$ROOT_DIR/crates/core/src/ledger/manager/remote_repo_select.rs" "expect(\"validated readable\")"
 
 not_contains "$ACCEPTANCE" "deve repo create"
@@ -120,7 +134,7 @@ not_contains "$ACCEPTANCE" "cargo test -p deve_core path_normalize_structure -- 
 not_contains "$ACCEPTANCE" "deve path normalize"
 not_contains "$ACCEPTANCE" "deve recover --from-ledger"
 not_contains "$ACCEPTANCE" "powershell -Command"
-not_contains "$ACCEPTANCE" 'dir "${DEVE_DATA_DIR}"'
-not_contains "$ACCEPTANCE" 'type ${DEVE_DATA_DIR}'
+not_contains "$ACCEPTANCE" "dir \"\${DEVE_DATA_DIR}\""
+not_contains "$ACCEPTANCE" "type \${DEVE_DATA_DIR}"
 
 echo "storage-repo-baseline-check: ok"

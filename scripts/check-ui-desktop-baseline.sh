@@ -77,9 +77,12 @@ contains apps/web/src/hooks/use_layout/resize.rs "fn desktop_layout_resize_outer
 contains docs/acceptance-cases/05_ui.md "case_id: UI-DESK-003"
 contains_case_block UI-DESK-003 "run: scripts/check-ui-desktop-baseline.sh"
 contains_case_block UI-DESK-003 "run: cargo test -p deve_web unified_search_mode -- --nocapture"
+contains_case_block UI-DESK-003 "run: scripts/check-repo-file-ops-baseline.sh"
 contains_case_block UI-DESK-003 "cli_assert: unified_search_mode_prefix_routing_bound true"
 contains_case_block UI-DESK-003 "cli_assert: unified_search_mode_dom_marker_bound true"
+contains_case_block UI-DESK-003 "cli_assert: repo_file_ops_baseline_bound true"
 contains_case_block UI-DESK-003 "ui_assert: mode_eq \"command\""
+contains_case_block UI-DESK-003 "ui_assert: mode_eq \"file-op\""
 contains_case_block UI-DESK-003 "ui_assert: mode_eq \"branch\""
 contains_case_block UI-DESK-003 "ui_assert: mode_eq \"file\""
 
@@ -89,7 +92,9 @@ contains apps/web/src/components/search_box/logic/providers.rs "SearchSurfaceMod
 contains apps/web/src/components/search_box/logic/providers.rs "SearchSurfaceMode::Branch"
 contains apps/web/src/components/search_box/logic/providers.rs "SearchSurfaceMode::File"
 contains apps/web/src/components/search_box/logic/providers/tests.rs "fn unified_search_mode_routes_command_branch_file_prefixes()"
+contains apps/web/src/components/search_box/logic/providers/tests.rs "fn unified_search_mode_routes_extended_prefixes()"
 contains apps/web/src/components/search_box/logic/providers/tests.rs "fn unified_search_mode_exposes_stable_dom_values()"
+contains apps/web/src/components/search_box/logic/providers/tests.rs "SearchSurfaceMode::FileOp"
 contains apps/web/src/components/search_box/ui_sections.rs "data-deve-search-mode=move || search_surface_mode(&query.get()).as_str()"
 
 echo "ui-desktop-baseline-check: ok"

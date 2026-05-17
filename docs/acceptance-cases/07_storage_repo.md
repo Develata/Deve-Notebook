@@ -152,9 +152,11 @@
     - Browser session has current `scope_nonce`
   steps:
     - run: cargo test -p deve_cli docs_scope_nonce_gate -- --nocapture
+    - run: scripts/check-repo-file-ops-baseline.sh
   assertions:
     - missing_scope_nonce_rejected_before_handler true
     - stale_scope_nonce_rejected_before_handler true
+    - cli_assert: repo_file_ops_baseline_bound true
 
 - case_id: STORE-013
   goal: Degraded local projection write gate。
@@ -163,6 +165,7 @@
   steps:
     - run: cargo test -p deve_cli degraded_local -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate -- --nocapture
+    - run: scripts/check-repo-file-ops-baseline.sh
   assertions:
     - degraded_projection_blocks_docs_create_before_mutation: true
     - degraded_projection_blocks_edit_before_append: true
@@ -171,6 +174,7 @@
     - degraded_projection_blocks_merge_mutations: true
     - degraded_projection_blocks_http_source_control_mutations: true
     - degraded_projection_blocks_plugin_host_source_control_mutations: true
+    - cli_assert: repo_file_ops_baseline_bound true
 
 - case_id: STORE-014
   goal: Ledger JSON Lines export。
