@@ -173,6 +173,17 @@ impl<L: DesktopProcessLauncher> DesktopLocalServiceRuntime<L> {
             .record_endpoint_probe(endpoint, probe, timestamp_unix_ms)
     }
 
+    pub fn record_health_probe_failure(
+        &mut self,
+        timestamp_unix_ms: i64,
+    ) -> NativeProcessRuntimeSnapshot {
+        self.core.record_failure(
+            NativeProcessRuntimeFailureKind::HealthProbeFailed,
+            timestamp_unix_ms,
+        );
+        self.core.snapshot()
+    }
+
     pub fn record_session_handoff(
         &mut self,
         session_bound: bool,

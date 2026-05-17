@@ -20,6 +20,10 @@ mod process_runtime;
 #[cfg(all(test, feature = "native-packaging"))]
 mod process_runtime_test;
 #[cfg(feature = "native-packaging")]
+mod service_bootstrap;
+#[cfg(all(test, feature = "native-packaging"))]
+mod service_bootstrap_test;
+#[cfg(feature = "native-packaging")]
 mod service_entrypoint;
 #[cfg(all(test, feature = "native-packaging"))]
 mod service_entrypoint_test;
@@ -55,6 +59,13 @@ pub use packaging::{
 pub use process_runtime::{
     DesktopCommandProcessLauncher, DesktopLocalServiceRuntime, DesktopProcessLauncher,
     DesktopProcessRuntimeError,
+};
+#[cfg(feature = "native-packaging")]
+pub use service_bootstrap::{
+    DesktopLocalServiceBootstrapError, DesktopLocalServiceBootstrapResult,
+    DesktopLocalServiceProbe, DesktopLocalServiceProbeOutcome, DesktopLocalServiceSessionHandoff,
+    DesktopLoopbackHttpProbe, node_role_probe_outcome_from_json,
+    run_desktop_local_service_bootstrap, session_material_from_auth_status_json,
 };
 #[cfg(feature = "native-packaging")]
 pub use service_entrypoint::{
