@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Rescan After Platform Evidence Diagnostics：基于 full regression green 的 `590994e6`，重新交叉 `docs/plan/ × docs/features/ × docs/acceptance-cases/ × guard scripts × code`，选择下一批真正影响 Current 用户验收的最小实现；不得因为平台 evidence 已绿而隐式打开 native process runtime、native authority writes、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
+1. Desktop / Android Post-Gate Scope Decision After Mainline Green：基于 `docs/plan/08_ui_design_02_desktop.md`、`08_ui_design_03_mobile.md`、`15_release.md` 与当前 target-host evidence，明确是否以及如何打开 Desktop/Android post-gate；本批只做范围决策与首批实现切片选择，不直接打开 native process runtime、native authority writes、signing、store 或 physical-device readiness。
 
 ## 最近完成
 
+- Mainline Gap Rescan After Platform Evidence Diagnostics：复跑 acceptance bindings、feature operation paths、architecture registry，并扫描 `docs/plan` / features / acceptance / latest reports 的 Future、Planned、Optional、post-gate 与 manual/unbound 标记；当前无新的 unblocked Current Web/server MUST gap，下一批转入 Desktop / Android post-gate scope decision；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Platform Evidence Diagnostics：跑通 `cargo fmt --check`、`cargo test --locked`、全 feature clippy、acceptance/architecture/feature path/plan coverage、domain baselines、release/native/mobile guards、Web release build、runtime happy/recovery smoke 与 diff hygiene；本机无 3001 服务导致 runtime release-info smoke 按脚本跳过；未改 `docs/plan/`。
 - Mainline Feature Selection After Platform Evidence Refresh：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、network/auth/source-control/settings/repo-file/release/mobile/native/runtime guards 与 runtime happy/recovery smoke；Android diagnostics hardening run `25981541267` 在 `1a48cc9a` 通过；未发现新的小型 unblocked Current Web/server MUST gap，下一批转入 full regression gate；未改 `docs/plan/`。
 - Platform Evidence Refresh After Web Shell Current Closure：推送 `main` 后触发 Docker Smoke `25980828115` 与 Native Target Host `25980828117`；Docker、Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 均通过；补充 Android evidence-only workflow step 后，Android rerun `25981241624` 通过并明确 package build 由 emulator smoke 覆盖；evidence artifacts 已下载并通过 validator，process runtime 与 native authority writes 仍关闭。
