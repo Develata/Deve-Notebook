@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Rescan After Web Repo Switcher Contract Closure：在 `docs/report/web-repo-switcher-contract-2026-05-17.md` 闭合 Repo Switcher 按钮语义 / 外部点击收起合同后，复跑必要领域 baseline，并决定是否需要真实浏览器 smoke；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Mainline Feature Gap Selection After Web Repo Switcher Browser Smoke：在 `docs/report/web-repo-switcher-browser-smoke-2026-05-17.md` 闭合 Repo Switcher 真实浏览器交互与 modal focus warning 归零后，从 current Web/server feature gap 中选择下一批最小实现；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
 
 ## 最近完成
 
+- Web Repo Switcher Browser Smoke：用隔离数据根和 embedded Web dev server 验证 Repo Switcher trigger/menu/item/outside-click 真实 DOM 路径、核心 HTTP 200 与 console error/warn 归零；同时修复 `focus_scope::attach_modal_focus_restore_effect` 初始化时的非跟踪读取 warning；未改 `docs/plan/`。
 - Web Repo Switcher Contract：补齐 Repo Switcher trigger/menu/backdrop/item DOM marker、纯状态 helper 与 `UI-WEB-005` desktop baseline 绑定；触发器和菜单项保持 `button` 语义，外部点击和菜单项选择均收起菜单；未改 `docs/plan/`。
 - Web Activity Bar More Browser Smoke：用隔离数据根和 embedded Web dev server 验证 Activity Bar More button、4 个 item marker、4 个 pin marker、行点击关闭菜单、Pin/Unpin 保持菜单打开并更新 pin 状态；desktop baseline 已反查该 smoke report，未改 `docs/plan/`。
 - Web Activity Bar More Contract：补齐 Activity Bar More button/item/pin DOM marker、纯状态 helper 与 `UI-WEB-004` desktop baseline 绑定；行点击关闭菜单并切换视图，Pin/Unpin 保持独立并保留菜单状态；acceptance bindings 变为 automated `147` / feature walkthrough `54` / manual `0` / unbound `0`，未改 `docs/plan/`。

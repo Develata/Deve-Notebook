@@ -142,6 +142,10 @@ contains_case_block UI-WEB-005 "cli_assert: repo_switcher_outside_dismiss_bound 
 contains_case_block UI-WEB-005 "ui_assert: repo_switcher_menu_visible true"
 contains_case_block UI-WEB-005 "ui_assert: repo_switcher_menu_visible false"
 
+contains docs/report/web-repo-switcher-browser-smoke-2026-05-17.md "Browser smoke result: pass."
+contains docs/report/web-repo-switcher-browser-smoke-2026-05-17.md "Repo Switcher trigger/menu/item/outside-click behavior matches the Web shell contract in the actual DOM event path."
+contains docs/report/web-repo-switcher-browser-smoke-2026-05-17.md 'Browser console `error` / `warn` count after the final reload was `0`.'
+contains docs/report/web-repo-switcher-browser-smoke-2026-05-17.md "focus_scope::attach_modal_focus_restore_effect"
 contains apps/web/src/components/sidebar/repo_switcher.rs "08_ui_design_01_web#web-layout-persistence"
 contains apps/web/src/components/sidebar/repo_switcher.rs "data-deve-repo-switcher-trigger=repo_switcher_trigger_marker()"
 contains apps/web/src/components/sidebar/repo_switcher.rs "data-deve-repo-switcher-backdrop=repo_switcher_backdrop_marker()"

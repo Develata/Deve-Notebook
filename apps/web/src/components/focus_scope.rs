@@ -68,7 +68,7 @@ pub(crate) fn attach_modal_focus_restore_effect(
     is_open: impl Fn() -> bool + Copy + 'static,
     initial_focus_ref: NodeRef<leptos::html::Button>,
 ) {
-    let last_open = StoredValue::new_local(is_open());
+    let last_open = StoredValue::new_local(false);
     let previous_focus = StoredValue::new_local(None::<web_sys::Element>);
 
     Effect::new(move |_| {
