@@ -14,7 +14,11 @@ pub use types::SidebarView;
 use crate::components::icons::MoreHorizontal;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
-use popup_menu::ViewPopupMenu;
+use popup_menu::{ViewPopupMenu, activity_more_after_item_click, toggle_activity_more_pin};
+
+fn activity_more_button_marker() -> &'static str {
+    "activity-more-button"
+}
 
 #[component]
 pub fn ActivityBar(
@@ -45,7 +49,7 @@ pub fn ActivityBar(
         } else {
             set_active_view.set(view);
         }
-        set_show_more.set(false);
+        set_show_more.set(activity_more_after_item_click());
     });
 
     let icon_btn = move |view: SidebarView| {
@@ -71,11 +75,7 @@ pub fn ActivityBar(
 
     let toggle_pin = Callback::new(move |view: SidebarView| {
         set_pinned_views.update(|pinned| {
-            if pinned.contains(&view) {
-                pinned.retain(|&v| v != view);
-            } else {
-                pinned.push(view);
-            }
+            let _ = toggle_activity_more_pin(pinned, view);
         });
     });
 
@@ -92,6 +92,7 @@ pub fn ActivityBar(
 
             <div class="flex-none flex items-center relative ml-1">
                 <button
+                    data-deve-activity-more-button=activity_more_button_marker()
                     class="p-2 text-muted hover:text-primary rounded-lg transition-colors"
                     title=move || t::sidebar::more_actions(locale.get())
                     on:click=move |_| set_show_more.update(|v| *v = !*v)
@@ -107,6 +108,8 @@ pub fn ActivityBar(
                                 pinned_views=pinned_views
                                 select_view=select_view
                                 toggle_pin=toggle_pin
+                                show_more=show_more
+                                set_show_more=set_show_more
                                 locale=locale
                             />
                         </div>
@@ -116,5 +119,15 @@ pub fn ActivityBar(
                 }}
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::activity_more_button_marker;
+
+    #[test]
+    fn activity_more_button_marker_is_stable() {
+        assert_eq!(activity_more_button_marker(), "activity-more-button");
     }
 }
