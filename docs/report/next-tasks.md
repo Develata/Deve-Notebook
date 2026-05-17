@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Feature Implementation Selection After Full Regression：基于 `docs/plan/`、`docs/features/`、`docs/acceptance-cases/` 与当前代码做四向 gap rescan，输出下一批可实现功能选择；不得打开平台 signing、physical-device、native process runtime、Web Git writer、server-backed Settings API 或 native authority writes。
+1. Auth Security Acceptance Closure：按 `docs/report/mainline-feature-selection-after-full-regression-2026-05-17.md` 继续收敛 `AUTH-005`、`AUTH-008`、`AUTH-009`、`AUTH-010`；优先绑定已有 auth guard 与 focused tests，不新增 auth 产品范围；不得打开平台 signing、physical-device、native process runtime、Web Git writer、server-backed Settings API 或 native authority writes。
 
 ## 最近完成
 
+- Mainline Feature Selection After Full Regression：选择 Network Acceptance Automation Closure 为第一批主线闭合项，并把 `NET-005..013` 绑定到 `scripts/check-network-baseline.sh` 的现有 runtime smoke、targeted tests 与 auth/structured-error guard；acceptance bindings 从 automated `117` / manual `29` 收敛到 automated `125` / manual `21`，未改 `docs/plan/`。
 - Full Regression Gate Refresh After Mainline Local Closures：全仓库 `cargo test --locked`、全 feature `clippy -D warnings`、`fmt --check`、acceptance/architecture/feature path/plan coverage、domain baseline、runtime happy/recovery smoke 与 diff hygiene 均通过；补齐 dev runbook 中 Settings local feedback 与 Repo file operations guard 清单；未改 `docs/plan/`。
 - Mainline Gap Rescan After Source Control Command Surface Closure：复跑 Source Control baseline、Settings baseline、Repo file-op baseline、acceptance bindings、feature paths、architecture registry、plan coverage、runtime happy/recovery smoke 与 diff hygiene；Source Control 本批关闭，下一步进入全量回归闸门；未改 `docs/plan/`。
 - Source Control Command Surface Browser Smoke：用隔离数据根 `/tmp/deve-sc-command-smoke.tGIaja` 和 embedded Web dev server 验证 Command Palette Source Control unavailable entries、Git CLI-only notices、Git status CLI-only panel notice、外部 workspace change、stage、commit message enablement、commit success 与当前 navigation console 健康；未发现 product code bug，未改 `docs/plan/`。
