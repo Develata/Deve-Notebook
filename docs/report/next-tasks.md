@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Feature Implementation Selection After Platform Evidence Refresh：回到 `docs/plan/ × docs/features/ × docs/acceptance-cases/ × code` 四向交叉，选择下一批真正影响 Current 用户验收的最小实现；不得因为平台 evidence 已绿而隐式打开 native process runtime、native authority writes、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
+1. Full Regression Gate Refresh After Platform Evidence Diagnostics：在 `1a48cc9a` 上跑完整回归闸门；必须覆盖 `fmt`、全仓库 `cargo test --locked`、全 feature `clippy -D warnings`、acceptance / architecture / feature path / plan coverage、domain baselines、release/native/mobile guards、Web release build、runtime happy/recovery smoke 与 diff hygiene；不得在该批次打开 native process runtime、native authority writes、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Mainline Feature Selection After Platform Evidence Refresh：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、network/auth/source-control/settings/repo-file/release/mobile/native/runtime guards 与 runtime happy/recovery smoke；Android diagnostics hardening run `25981541267` 在 `1a48cc9a` 通过；未发现新的小型 unblocked Current Web/server MUST gap，下一批转入 full regression gate；未改 `docs/plan/`。
 - Platform Evidence Refresh After Web Shell Current Closure：推送 `main` 后触发 Docker Smoke `25980828115` 与 Native Target Host `25980828117`；Docker、Desktop macOS/Windows package/startup/installer、Android emulator install/startup、iOS simulator install/startup 均通过；补充 Android evidence-only workflow step 后，Android rerun `25981241624` 通过并明确 package build 由 emulator smoke 覆盖；evidence artifacts 已下载并通过 validator，process runtime 与 native authority writes 仍关闭。
 - Mainline Gap Rescan After Web Shell Current Closure：复跑 acceptance bindings、feature operation paths、architecture registry 与 plan coverage；当前无新的 unblocked Current Web/server MUST gap，上一轮 platform evidence 已比当前 `HEAD` 落后 31 个提交，下一批选择刷新当前 HEAD 的 shell-only platform evidence；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Web Shell Current Closure：跑通 `cargo fmt --check`、`cargo test --locked`、全 feature clippy、acceptance/architecture/feature path/plan coverage、Web/UI/domain/release/native/mobile guards、Web release build、runtime happy/recovery smoke 与 diff hygiene；本机无 3001 服务导致 runtime release-info smoke 按脚本跳过；未改 `docs/plan/`。
