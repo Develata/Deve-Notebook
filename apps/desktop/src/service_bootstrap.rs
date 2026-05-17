@@ -2,9 +2,11 @@
 //!   - 08_ui_design_02_desktop#desktop-service-supervisor-contract
 //!   - 08_ui_design_02_desktop#desktop-process-adapter-decision
 
-use std::io::{Read, Write};
+mod loopback_http;
+
+use std::io::Write;
 use std::net::TcpStream;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use deve_core::native_adapter::{
     NATIVE_SESSION_BOOTSTRAP_HEADER, NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeAdapterError,
@@ -20,8 +22,15 @@ use crate::{
     DesktopSessionMaterial, DesktopShell, DesktopShellError,
 };
 
+use loopback_http::{
+    LoopbackHttpResponse, is_retryable_startup_probe_error, loopback_host_from_http_base,
+    parse_loopback_http_url, read_capped_response, split_http_response,
+};
+
 const MAX_LOOPBACK_RESPONSE_BYTES: usize = 64 * 1024;
 const LOOPBACK_HTTP_TIMEOUT: Duration = Duration::from_millis(300);
+const LOOPBACK_HTTP_STARTUP_GRACE: Duration = Duration::from_secs(5);
+const LOOPBACK_HTTP_RETRY_INTERVAL: Duration = Duration::from_millis(50);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesktopLocalServiceProbeOutcome {
@@ -163,6 +172,8 @@ where
 pub struct DesktopLoopbackHttpProbe {
     timeout: Duration,
     max_response_bytes: usize,
+    startup_grace: Duration,
+    retry_interval: Duration,
 }
 
 impl Default for DesktopLoopbackHttpProbe {
@@ -170,6 +181,8 @@ impl Default for DesktopLoopbackHttpProbe {
         Self {
             timeout: LOOPBACK_HTTP_TIMEOUT,
             max_response_bytes: MAX_LOOPBACK_RESPONSE_BYTES,
+            startup_grace: LOOPBACK_HTTP_STARTUP_GRACE,
+            retry_interval: LOOPBACK_HTTP_RETRY_INTERVAL,
         }
     }
 }
@@ -179,7 +192,15 @@ impl DesktopLoopbackHttpProbe {
         Self {
             timeout,
             max_response_bytes,
+            startup_grace: LOOPBACK_HTTP_STARTUP_GRACE,
+            retry_interval: LOOPBACK_HTTP_RETRY_INTERVAL,
         }
+    }
+
+    pub fn with_startup_retry(mut self, startup_grace: Duration, retry_interval: Duration) -> Self {
+        self.startup_grace = startup_grace;
+        self.retry_interval = retry_interval;
+        self
     }
 }
 
@@ -188,7 +209,8 @@ impl DesktopLocalServiceProbe for DesktopLoopbackHttpProbe {
         &mut self,
         plan: &DesktopLocalServiceEntrypointPlan,
     ) -> Result<DesktopLocalServiceProbeOutcome, DesktopLocalServiceBootstrapError> {
-        let json = self.get_json(&format!("{}/api/node/role", plan.http_base))?;
+        let json =
+            self.get_json_with_startup_retry(&format!("{}/api/node/role", plan.http_base))?;
         node_role_probe_outcome_from_json(plan, &json)
     }
 }
@@ -213,6 +235,26 @@ impl DesktopLocalServiceSessionHandoff for DesktopLoopbackHttpProbe {
 }
 
 impl DesktopLoopbackHttpProbe {
+    fn get_json_with_startup_retry(
+        &self,
+        url: &str,
+    ) -> Result<Value, DesktopLocalServiceBootstrapError> {
+        let deadline = Instant::now() + self.startup_grace;
+        loop {
+            match self.get_json(url) {
+                Ok(json) => return Ok(json),
+                Err(error) if is_retryable_startup_probe_error(&error) => {
+                    let now = Instant::now();
+                    if now >= deadline || self.retry_interval.is_zero() {
+                        return Err(error);
+                    }
+                    std::thread::sleep(self.retry_interval.min(deadline.duration_since(now)));
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    }
+
     fn get_json(&self, url: &str) -> Result<Value, DesktopLocalServiceBootstrapError> {
         self.get_json_with_cookie(url, None)
     }
@@ -360,63 +402,6 @@ fn string_field(
         .ok_or(DesktopLocalServiceBootstrapError::InvalidNodeRolePayload)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct LoopbackHttpTarget {
-    addr: std::net::SocketAddr,
-    host: String,
-    host_header: String,
-    path: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct LoopbackHttpResponse {
-    status: u16,
-    headers: Vec<(String, String)>,
-    body: Vec<u8>,
-}
-
-impl LoopbackHttpResponse {
-    fn header(&self, name: &str) -> Option<&str> {
-        self.headers
-            .iter()
-            .find(|(key, _)| key.eq_ignore_ascii_case(name))
-            .map(|(_, value)| value.as_str())
-    }
-}
-
-fn parse_loopback_http_url(
-    url: &str,
-) -> Result<LoopbackHttpTarget, DesktopLocalServiceBootstrapError> {
-    let Some(rest) = url.strip_prefix("http://") else {
-        return Err(DesktopLocalServiceBootstrapError::InvalidProbeUrl);
-    };
-    let (authority, path) = rest
-        .split_once('/')
-        .map(|(authority, path)| (authority, format!("/{path}")))
-        .unwrap_or((rest, "/".to_string()));
-    let (host, port_text) = authority
-        .rsplit_once(':')
-        .ok_or(DesktopLocalServiceBootstrapError::InvalidProbeUrl)?;
-    if !matches!(host, "127.0.0.1" | "localhost") {
-        return Err(DesktopLocalServiceBootstrapError::InvalidProbeUrl);
-    }
-    let port = port_text
-        .parse::<u16>()
-        .ok()
-        .filter(|port| *port != 0)
-        .ok_or(DesktopLocalServiceBootstrapError::InvalidProbeUrl)?;
-    Ok(LoopbackHttpTarget {
-        addr: std::net::SocketAddr::from(([127, 0, 0, 1], port)),
-        host: host.to_string(),
-        host_header: authority.to_string(),
-        path,
-    })
-}
-
-fn loopback_host_from_http_base(url: &str) -> Result<String, DesktopLocalServiceBootstrapError> {
-    Ok(parse_loopback_http_url(url)?.host)
-}
-
 fn native_session_secret_from_plan(plan: &DesktopLocalServiceEntrypointPlan) -> Option<&str> {
     plan.spawn_spec
         .env
@@ -424,55 +409,4 @@ fn native_session_secret_from_plan(plan: &DesktopLocalServiceEntrypointPlan) -> 
         .find(|binding| binding.key == NATIVE_SESSION_BOOTSTRAP_SECRET_ENV)
         .map(|binding| binding.value.as_str())
         .filter(|value| !value.trim().is_empty())
-}
-
-fn read_capped_response(
-    mut stream: TcpStream,
-    max_bytes: usize,
-) -> Result<Vec<u8>, DesktopLocalServiceBootstrapError> {
-    let mut response = Vec::new();
-    let mut buffer = [0u8; 4096];
-    loop {
-        let read = stream
-            .read(&mut buffer)
-            .map_err(DesktopLocalServiceBootstrapError::ProbeIo)?;
-        if read == 0 {
-            break;
-        }
-        if response.len().saturating_add(read) > max_bytes {
-            return Err(DesktopLocalServiceBootstrapError::ProbeResponseTooLarge);
-        }
-        response.extend_from_slice(&buffer[..read]);
-    }
-    Ok(response)
-}
-
-fn split_http_response(
-    bytes: &[u8],
-) -> Result<LoopbackHttpResponse, DesktopLocalServiceBootstrapError> {
-    let header_end = bytes
-        .windows(4)
-        .position(|window| window == b"\r\n\r\n")
-        .ok_or(DesktopLocalServiceBootstrapError::ProbeInvalidResponse)?;
-    let headers = std::str::from_utf8(&bytes[..header_end])
-        .map_err(|_| DesktopLocalServiceBootstrapError::ProbeInvalidResponse)?;
-    let status = headers
-        .lines()
-        .next()
-        .and_then(|line| line.split_whitespace().nth(1))
-        .and_then(|code| code.parse::<u16>().ok())
-        .ok_or(DesktopLocalServiceBootstrapError::ProbeInvalidResponse)?;
-    let headers = headers
-        .lines()
-        .skip(1)
-        .filter_map(|line| {
-            let (key, value) = line.split_once(':')?;
-            Some((key.trim().to_string(), value.trim().to_string()))
-        })
-        .collect();
-    Ok(LoopbackHttpResponse {
-        status,
-        headers,
-        body: bytes[header_end + 4..].to_vec(),
-    })
 }

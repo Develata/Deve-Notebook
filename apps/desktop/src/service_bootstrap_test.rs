@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::thread;
+use std::time::Duration;
 
 use deve_core::config::AppProfile;
 use deve_core::native_adapter::{
@@ -292,6 +293,34 @@ fn desktop_loopback_http_probe_reads_node_role() {
 }
 
 #[test]
+fn desktop_loopback_http_probe_retries_during_service_startup() {
+    let node_role_base = spawn_delayed_json_response(
+        Duration::from_millis(80),
+        json!({
+            "role": "native-main",
+            "native_service": {
+                "state": "session_pending",
+                "endpoint": {
+                    "http_base": "http://127.0.0.1:39101",
+                    "ws_base": "ws://127.0.0.1:39101",
+                    "node_role": "native-main",
+                    "session_bound": false
+                }
+            }
+        }),
+    );
+    let mut plan = plan();
+    plan.http_base = node_role_base;
+    let mut probe = DesktopLoopbackHttpProbe::new(Duration::from_millis(50), 64 * 1024)
+        .with_startup_retry(Duration::from_millis(800), Duration::from_millis(20));
+
+    let outcome = probe.probe_node_role(&plan).expect("node role probe");
+
+    assert!(outcome.probe.is_healthy());
+    assert_eq!(outcome.endpoint.node_role, "native-main");
+}
+
+#[test]
 fn desktop_loopback_http_probe_requires_native_session_secret() {
     let mut plan = plan();
     plan.spawn_spec
@@ -348,6 +377,29 @@ fn spawn_json_response(body: serde_json::Value) -> String {
     let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind test listener");
     let addr = listener.local_addr().expect("listener addr");
     thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut request = [0u8; 1024];
+        let _ = stream.read(&mut request);
+        let body = body.to_string();
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream
+            .write_all(response.as_bytes())
+            .expect("write response");
+    });
+    format!("http://{}", addr)
+}
+
+fn spawn_delayed_json_response(delay: Duration, body: serde_json::Value) -> String {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind test listener");
+    let addr = listener.local_addr().expect("listener addr");
+    drop(listener);
+    thread::spawn(move || {
+        thread::sleep(delay);
+        let listener = TcpListener::bind(addr).expect("bind delayed test listener");
         let (mut stream, _) = listener.accept().expect("accept");
         let mut request = [0u8; 1024];
         let _ = stream.read(&mut request);
