@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Feature Gap Selection After Web PWA Manifest Contract：在 `docs/report/web-pwa-manifest-contract-2026-05-17.md` 闭合 Web PWA manifest standalone 元数据合同后，从 current Web/server feature gap 中选择下一批最小实现；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Mainline Feature Gap Selection After Web PWA Manifest Browser Smoke：在 `docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md` 闭合 Web PWA manifest runtime static delivery 后，从 current Web/server feature gap 中选择下一批最小实现；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
 
 ## 最近完成
 
+- Web PWA Manifest Browser Smoke：用隔离数据根和 embedded Web dev server 验证根页面 manifest link、theme-color、`/manifest.json` 200、`application/json` 与 browser console error/warn 归零；未改 `docs/plan/`。
 - Web PWA Manifest Contract：补齐 `manifest.json`、`theme-color`、Trunk copy binding 与 `UI-WEB-006` baseline；只声明 standalone install metadata，不新增 service worker、离线 authority、native runtime 或浏览器存储行为；未改 `docs/plan/`。
 - Web Repo Switcher Browser Smoke：用隔离数据根和 embedded Web dev server 验证 Repo Switcher trigger/menu/item/outside-click 真实 DOM 路径、核心 HTTP 200 与 console error/warn 归零；同时修复 `focus_scope::attach_modal_focus_restore_effect` 初始化时的非跟踪读取 warning；未改 `docs/plan/`。
 - Web Repo Switcher Contract：补齐 Repo Switcher trigger/menu/backdrop/item DOM marker、纯状态 helper 与 `UI-WEB-005` desktop baseline 绑定；触发器和菜单项保持 `button` 语义，外部点击和菜单项选择均收起菜单；未改 `docs/plan/`。

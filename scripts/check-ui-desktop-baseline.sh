@@ -175,5 +175,9 @@ contains apps/web/public/manifest.json '"theme_color": "#1e1e1e"'
 contains apps/web/public/manifest.json '"start_url": "/"'
 contains apps/web/public/manifest.json '"scope": "/"'
 contains apps/web/public/manifest.json '"src": "/favicon.svg"'
+contains docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md "Browser smoke result: pass."
+contains docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md "PWA manifest metadata is available through the actual static-file serving path."
+contains docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md 'Browser console `error` / `warn` count was `0`.'
+contains docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md "content-type: application/json"
 
 echo "ui-desktop-baseline-check: ok"
