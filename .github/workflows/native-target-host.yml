@@ -367,7 +367,7 @@ jobs:
 
       - name: Mobile Android shell package build covered by emulator smoke
         id: mobile_android_package_build_via_emulator
-        if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+        if: ${{ always() && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
         run: |
           find apps/mobile/gen/android/app/build/outputs -type f \( -name '*.apk' -o -name '*.aab' \) -print -quit | grep -q .
           echo "Android shell package build was executed inside emulator install/startup smoke."
