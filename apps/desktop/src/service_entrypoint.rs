@@ -150,6 +150,50 @@ fn build_spawn_spec(
     let native_auth_password = generate_native_session_bootstrap_secret()?;
     let native_auth_password_hash = password::hash_password(&native_auth_password)
         .map_err(|_| DesktopLocalServiceEntrypointError::SessionAuthMaterialGenerationFailed)?;
+    let platform_env = platform_required_child_env();
+    let mut env_allowlist = vec![
+        "DEVE_PROFILE".to_string(),
+        "DEVE_LEDGER_DIR".to_string(),
+        "DEVE_VAULT_PATH".to_string(),
+        NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
+        "AUTH_SECRET".to_string(),
+        "AUTH_PASS".to_string(),
+        "AUTH_USER".to_string(),
+    ];
+    let mut env = vec![
+        NativeProcessEnvBinding {
+            key: "DEVE_PROFILE".to_string(),
+            value: profile_env_value(input.profile).to_string(),
+        },
+        NativeProcessEnvBinding {
+            key: "DEVE_LEDGER_DIR".to_string(),
+            value: ledger_path.to_string_lossy().to_string(),
+        },
+        NativeProcessEnvBinding {
+            key: "DEVE_VAULT_PATH".to_string(),
+            value: vault_path.to_string_lossy().to_string(),
+        },
+        NativeProcessEnvBinding {
+            key: NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
+            value: native_session_secret,
+        },
+        NativeProcessEnvBinding {
+            key: "AUTH_SECRET".to_string(),
+            value: native_auth_secret,
+        },
+        NativeProcessEnvBinding {
+            key: "AUTH_PASS".to_string(),
+            value: native_auth_password_hash,
+        },
+        NativeProcessEnvBinding {
+            key: "AUTH_USER".to_string(),
+            value: "native".to_string(),
+        },
+    ];
+    for binding in platform_env {
+        env_allowlist.push(binding.key.clone());
+        env.push(binding);
+    }
     Ok(NativeProcessSpawnSpec {
         executable,
         argv: vec![
@@ -159,45 +203,8 @@ fn build_spawn_spec(
             input.port.to_string(),
         ],
         cwd: input.data_root.clone(),
-        env_allowlist: vec![
-            "DEVE_PROFILE".to_string(),
-            "DEVE_LEDGER_DIR".to_string(),
-            "DEVE_VAULT_PATH".to_string(),
-            NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
-            "AUTH_SECRET".to_string(),
-            "AUTH_PASS".to_string(),
-            "AUTH_USER".to_string(),
-        ],
-        env: vec![
-            NativeProcessEnvBinding {
-                key: "DEVE_PROFILE".to_string(),
-                value: profile_env_value(input.profile).to_string(),
-            },
-            NativeProcessEnvBinding {
-                key: "DEVE_LEDGER_DIR".to_string(),
-                value: ledger_path.to_string_lossy().to_string(),
-            },
-            NativeProcessEnvBinding {
-                key: "DEVE_VAULT_PATH".to_string(),
-                value: vault_path.to_string_lossy().to_string(),
-            },
-            NativeProcessEnvBinding {
-                key: NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
-                value: native_session_secret,
-            },
-            NativeProcessEnvBinding {
-                key: "AUTH_SECRET".to_string(),
-                value: native_auth_secret,
-            },
-            NativeProcessEnvBinding {
-                key: "AUTH_PASS".to_string(),
-                value: native_auth_password_hash,
-            },
-            NativeProcessEnvBinding {
-                key: "AUTH_USER".to_string(),
-                value: "native".to_string(),
-            },
-        ],
+        env_allowlist,
+        env,
         profile: profile_env_value(input.profile).to_string(),
         config_path: input.data_root.join("config.toml"),
         vault_path,
@@ -210,6 +217,28 @@ fn build_spawn_spec(
         },
         path_resolution: NativeProcessPathResolution::AbsoluteOnly,
     })
+}
+
+fn platform_required_child_env() -> Vec<NativeProcessEnvBinding> {
+    if !cfg!(windows) {
+        return Vec::new();
+    }
+    ["SystemRoot", "WINDIR"]
+        .into_iter()
+        .filter_map(|key| {
+            env_value_case_insensitive(key).map(|value| NativeProcessEnvBinding {
+                key: key.to_string(),
+                value,
+            })
+        })
+        .collect()
+}
+
+fn env_value_case_insensitive(key: &str) -> Option<String> {
+    std::env::vars_os()
+        .find(|(candidate, _)| candidate.to_string_lossy().eq_ignore_ascii_case(key))
+        .map(|(_, value)| value.to_string_lossy().to_string())
+        .filter(|value| !value.trim().is_empty())
 }
 
 fn generate_native_session_bootstrap_secret() -> Result<String, DesktopLocalServiceEntrypointError>
