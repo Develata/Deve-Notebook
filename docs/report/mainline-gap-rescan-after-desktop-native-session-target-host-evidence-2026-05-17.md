@@ -7,7 +7,7 @@
 - Source of truth: `docs/plan/`.
 - Input evidence: `docs/report/desktop-native-session-target-host-evidence-refresh-2026-05-17.md`.
 - Cross-check: `docs/features/`, `docs/acceptance-cases/`, guard scripts, current code, latest Desktop target-host evidence.
-- Boundary: Current Web/server + shell-only platform gates.
+- Boundary: Current Web/server + Desktop native-session evidence + shell-only non-Desktop platform gates.
 - Non-goal: Android process runtime、native authority writes、signing、store、physical-device readiness、Web Git writer、server-backed Settings API。
 
 ## Verification
