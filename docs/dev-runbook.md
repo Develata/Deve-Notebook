@@ -690,6 +690,7 @@ scripts/check-acceptance-bindings.sh
 scripts/check-auth-baseline.sh
 scripts/check-auth-unauthorized-state.sh
 scripts/check-network-baseline.sh
+scripts/check-foundation-baseline.sh
 scripts/check-cli-settings-baseline.sh
 scripts/check-settings-local-feedback-baseline.sh
 scripts/check-browser-prefs-boundary.sh
