@@ -20,6 +20,16 @@ contains() {
   fi
 }
 
+has_line() {
+  local file="$1"
+  local text="$2"
+  if command -v rg >/dev/null 2>&1; then
+    rg --fixed-strings --line-regexp --quiet -- "$text" "$file"
+  else
+    grep -Fx -- "$text" "$file" >/dev/null
+  fi
+}
+
 validate_report() {
   local file="$1"
 
@@ -38,6 +48,18 @@ validate_report() {
   contains "$file" "Process runtime gate: closed"
   contains "$file" "Native authority writes: closed"
   contains "$file" "Conclusion:"
+
+  if has_line "$file" "Target: Desktop macOS" \
+    || has_line "$file" "Target: Desktop Windows"; then
+    contains "$file" "desktop_preflight="
+    contains "$file" "process_gate="
+    contains "$file" "invalid_startup_request="
+    contains "$file" "invalid_installer_request="
+    contains "$file" "package_build="
+    contains "$file" "startup_smoke="
+    contains "$file" "native_session_smoke="
+    contains "$file" "installer_smoke="
+  fi
 }
 
 if (($# == 0)); then

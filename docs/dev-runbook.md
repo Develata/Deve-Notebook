@@ -372,7 +372,9 @@ produce package artifacts. Set `run_desktop_startup_smoke=true` with package
 builds to run both the target-host packaged-binary startup probe and the native
 session package smoke. Set
 `run_desktop_installer_smoke=true` with package builds to run install/uninstall
-smoke. Each target-host job uploads a validated
+smoke. A startup, native-session, or installer smoke request without
+`run_desktop_package_build=true` is an invalid Desktop target-host request and
+must fail closed. Each target-host job uploads a validated
 `deve-native-target-host-evidence-*` artifact.
 The workflow installs pinned Trunk and Tauri CLI release binaries through
 `scripts/install-native-target-host-tools.sh`; it must not compile those tools

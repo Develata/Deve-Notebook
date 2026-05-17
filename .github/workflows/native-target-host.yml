@@ -95,6 +95,20 @@ jobs:
         id: desktop_macos_process_gate
         run: scripts/check-native-process-adapter-gate.sh
 
+      - name: Reject Desktop macOS startup smoke without package build
+        id: desktop_macos_invalid_startup_request
+        if: ${{ ! inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke }}
+        run: |
+          echo "Desktop macOS startup/native-session smoke requires run_desktop_package_build=true."
+          exit 1
+
+      - name: Reject Desktop macOS installer smoke without package build
+        id: desktop_macos_invalid_installer_request
+        if: ${{ ! inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
+        run: |
+          echo "Desktop macOS installer smoke requires run_desktop_package_build=true."
+          exit 1
+
       - name: Desktop macOS package build
         id: desktop_macos_package_build
         if: ${{ inputs.run_desktop_package_build }}
@@ -151,6 +165,8 @@ jobs:
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             desktop_preflight=${{ steps.desktop_macos_preflight.outcome }}
             process_gate=${{ steps.desktop_macos_process_gate.outcome }}
+            invalid_startup_request=${{ inputs.run_desktop_startup_smoke && ! inputs.run_desktop_package_build && steps.desktop_macos_invalid_startup_request.outcome || 'skipped' }}
+            invalid_installer_request=${{ inputs.run_desktop_installer_smoke && ! inputs.run_desktop_package_build && steps.desktop_macos_invalid_installer_request.outcome || 'skipped' }}
             package_build=${{ inputs.run_desktop_package_build && steps.desktop_macos_package_build.outcome || 'skipped' }}
             startup_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_macos_startup_smoke.outcome || 'skipped' }}
             native_session_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_macos_native_session_smoke.outcome || 'skipped' }}
@@ -225,6 +241,20 @@ jobs:
         id: desktop_windows_process_gate
         run: scripts/check-native-process-adapter-gate.sh
 
+      - name: Reject Desktop Windows startup smoke without package build
+        id: desktop_windows_invalid_startup_request
+        if: ${{ ! inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke }}
+        run: |
+          echo "Desktop Windows startup/native-session smoke requires run_desktop_package_build=true."
+          exit 1
+
+      - name: Reject Desktop Windows installer smoke without package build
+        id: desktop_windows_invalid_installer_request
+        if: ${{ ! inputs.run_desktop_package_build && inputs.run_desktop_installer_smoke }}
+        run: |
+          echo "Desktop Windows installer smoke requires run_desktop_package_build=true."
+          exit 1
+
       - name: Desktop Windows package build
         id: desktop_windows_package_build
         if: ${{ inputs.run_desktop_package_build }}
@@ -280,6 +310,8 @@ jobs:
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             desktop_preflight=${{ steps.desktop_windows_preflight.outcome }}
             process_gate=${{ steps.desktop_windows_process_gate.outcome }}
+            invalid_startup_request=${{ inputs.run_desktop_startup_smoke && ! inputs.run_desktop_package_build && steps.desktop_windows_invalid_startup_request.outcome || 'skipped' }}
+            invalid_installer_request=${{ inputs.run_desktop_installer_smoke && ! inputs.run_desktop_package_build && steps.desktop_windows_invalid_installer_request.outcome || 'skipped' }}
             package_build=${{ inputs.run_desktop_package_build && steps.desktop_windows_package_build.outcome || 'skipped' }}
             startup_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_windows_startup_smoke.outcome || 'skipped' }}
             native_session_smoke=${{ inputs.run_desktop_package_build && inputs.run_desktop_startup_smoke && steps.desktop_windows_native_session_smoke.outcome || 'skipped' }}

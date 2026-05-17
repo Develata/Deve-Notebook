@@ -140,6 +140,13 @@ RUN_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE="$(normalize_bool "$RUN_MOBILE_ANDROID_
 RUN_MOBILE_IOS_PACKAGE_BUILD="$(normalize_bool "$RUN_MOBILE_IOS_PACKAGE_BUILD")"
 RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE="$(normalize_bool "$RUN_MOBILE_IOS_INSTALL_STARTUP_SMOKE")"
 
+if [[ "$RUN_DESKTOP_PACKAGE_BUILD" != "true" && "$RUN_DESKTOP_STARTUP_SMOKE" == "true" ]]; then
+  fail "desktop startup/native-session smoke requires DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true"
+fi
+if [[ "$RUN_DESKTOP_PACKAGE_BUILD" != "true" && "$RUN_DESKTOP_INSTALLER_SMOKE" == "true" ]]; then
+  fail "desktop installer smoke requires DEVE_NATIVE_TARGET_HOST_RUN_DESKTOP_PACKAGE_BUILD=true"
+fi
+
 if [[ -z "$REF" ]]; then
   REF="$(git -C "$ROOT_DIR" branch --show-current 2>/dev/null || true)"
 fi
