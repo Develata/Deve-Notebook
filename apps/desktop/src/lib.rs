@@ -19,6 +19,10 @@ mod packaging_test;
 mod process_runtime;
 #[cfg(all(test, feature = "native-packaging"))]
 mod process_runtime_test;
+#[cfg(feature = "native-packaging")]
+mod service_entrypoint;
+#[cfg(all(test, feature = "native-packaging"))]
+mod service_entrypoint_test;
 mod shell;
 #[cfg(test)]
 mod shell_recovery_test;
@@ -51,6 +55,13 @@ pub use packaging::{
 pub use process_runtime::{
     DesktopCommandProcessLauncher, DesktopLocalServiceRuntime, DesktopProcessLauncher,
     DesktopProcessRuntimeError,
+};
+#[cfg(feature = "native-packaging")]
+pub use service_entrypoint::{
+    DEVE_DESKTOP_LOCAL_SERVICE_ENV, DesktopLocalServiceEntrypointError,
+    DesktopLocalServiceEntrypointInput, DesktopLocalServiceEntrypointPlan,
+    DesktopLocalServiceEntrypointPolicy, desktop_local_service_entrypoint_policy_from_env,
+    plan_desktop_local_service_entrypoint, plan_desktop_local_service_entrypoint_from_env,
 };
 pub use shell::DesktopShell;
 #[cfg(feature = "native-packaging")]

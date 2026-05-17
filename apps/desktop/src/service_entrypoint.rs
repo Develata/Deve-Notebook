@@ -1,0 +1,226 @@
+//! plan_ref:
+//!   - 08_ui_design_02_desktop#desktop-process-adapter-decision
+
+use std::net::TcpListener;
+use std::path::{Path, PathBuf};
+
+use deve_core::config::AppProfile;
+use deve_core::native_adapter::{
+    NativeProcessAdapterDecision, NativeProcessAdapterPolicy, NativeProcessBindHints,
+    NativeProcessEnvBinding, NativeProcessPathResolution, NativeProcessRuntimeError,
+    NativeProcessSpawnSpec,
+};
+use thiserror::Error;
+
+pub const DEVE_DESKTOP_LOCAL_SERVICE_ENV: &str = "DEVE_DESKTOP_LOCAL_SERVICE";
+const DESKTOP_SERVICE_MAX_RESTART_ATTEMPTS: u32 = 2;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopLocalServiceEntrypointPolicy {
+    pub opt_in: bool,
+    pub child_process_runtime_enabled: bool,
+    pub max_restart_attempts: u32,
+}
+
+impl DesktopLocalServiceEntrypointPolicy {
+    pub fn disabled() -> Self {
+        Self {
+            opt_in: false,
+            child_process_runtime_enabled: false,
+            max_restart_attempts: DESKTOP_SERVICE_MAX_RESTART_ATTEMPTS,
+        }
+    }
+
+    pub fn opt_in_enabled() -> Self {
+        Self {
+            opt_in: true,
+            child_process_runtime_enabled: true,
+            max_restart_attempts: DESKTOP_SERVICE_MAX_RESTART_ATTEMPTS,
+        }
+    }
+
+    pub fn native_policy(self) -> NativeProcessAdapterPolicy {
+        NativeProcessAdapterPolicy {
+            decision: NativeProcessAdapterDecision::DeferredUntilPackagingGate,
+            child_process_runtime_enabled: self.child_process_runtime_enabled,
+            packaging_gate_required: true,
+            authority_writes_allowed: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DesktopLocalServiceEntrypointInput {
+    pub current_exe: PathBuf,
+    pub data_root: PathBuf,
+    pub port: u16,
+    pub profile: AppProfile,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DesktopLocalServiceEntrypointPlan {
+    pub policy: DesktopLocalServiceEntrypointPolicy,
+    pub spawn_spec: NativeProcessSpawnSpec,
+    pub http_base: String,
+    pub ws_base: String,
+    pub health_probe_required_before_bootstrap: bool,
+    pub session_handoff_required_before_bootstrap: bool,
+    pub opens_authority_write_path: bool,
+}
+
+#[derive(Debug, Error)]
+pub enum DesktopLocalServiceEntrypointError {
+    #[error("desktop local service opt-in value is invalid: {value}")]
+    InvalidOptInValue { value: String },
+    #[error("desktop executable path has no parent directory")]
+    MissingExecutableParent,
+    #[error("failed to resolve desktop process path")]
+    ProcessPathFailed(#[source] std::io::Error),
+    #[error("failed to allocate a loopback port")]
+    PortAllocationFailed(#[source] std::io::Error),
+    #[error(transparent)]
+    InvalidSpawnSpec(#[from] NativeProcessRuntimeError),
+}
+
+pub fn desktop_local_service_entrypoint_policy_from_env()
+-> Result<DesktopLocalServiceEntrypointPolicy, DesktopLocalServiceEntrypointError> {
+    let Some(value) = std::env::var_os(DEVE_DESKTOP_LOCAL_SERVICE_ENV) else {
+        return Ok(DesktopLocalServiceEntrypointPolicy::disabled());
+    };
+    parse_opt_in_value(&value.to_string_lossy())
+}
+
+pub fn plan_desktop_local_service_entrypoint(
+    policy: DesktopLocalServiceEntrypointPolicy,
+    input: DesktopLocalServiceEntrypointInput,
+) -> Result<Option<DesktopLocalServiceEntrypointPlan>, DesktopLocalServiceEntrypointError> {
+    if !policy.opt_in {
+        return Ok(None);
+    }
+
+    let spawn_spec = build_spawn_spec(&input)?;
+    spawn_spec.validate_contract()?;
+    Ok(Some(DesktopLocalServiceEntrypointPlan {
+        http_base: format!("http://127.0.0.1:{}", input.port),
+        ws_base: format!("ws://127.0.0.1:{}", input.port),
+        spawn_spec,
+        policy,
+        health_probe_required_before_bootstrap: true,
+        session_handoff_required_before_bootstrap: true,
+        opens_authority_write_path: false,
+    }))
+}
+
+pub fn plan_desktop_local_service_entrypoint_from_env()
+-> Result<Option<DesktopLocalServiceEntrypointPlan>, DesktopLocalServiceEntrypointError> {
+    let policy = desktop_local_service_entrypoint_policy_from_env()?;
+    if !policy.opt_in {
+        return Ok(None);
+    }
+
+    let current_exe =
+        std::env::current_exe().map_err(DesktopLocalServiceEntrypointError::ProcessPathFailed)?;
+    let data_root =
+        std::env::current_dir().map_err(DesktopLocalServiceEntrypointError::ProcessPathFailed)?;
+    let port = allocate_loopback_port()?;
+    plan_desktop_local_service_entrypoint(
+        policy,
+        DesktopLocalServiceEntrypointInput {
+            current_exe,
+            data_root,
+            port,
+            profile: AppProfile::Standard,
+        },
+    )
+}
+
+fn build_spawn_spec(
+    input: &DesktopLocalServiceEntrypointInput,
+) -> Result<NativeProcessSpawnSpec, DesktopLocalServiceEntrypointError> {
+    let executable = packaged_cli_sibling(&input.current_exe)?;
+    let ledger_path = input.data_root.join("ledger");
+    let vault_path = input.data_root.join("vault");
+    Ok(NativeProcessSpawnSpec {
+        executable,
+        argv: vec![
+            "serve".to_string(),
+            "--native-loopback".to_string(),
+            "--port".to_string(),
+            input.port.to_string(),
+        ],
+        cwd: input.data_root.clone(),
+        env_allowlist: vec![
+            "DEVE_PROFILE".to_string(),
+            "DEVE_LEDGER_DIR".to_string(),
+            "DEVE_VAULT_PATH".to_string(),
+        ],
+        env: vec![
+            NativeProcessEnvBinding {
+                key: "DEVE_PROFILE".to_string(),
+                value: profile_env_value(input.profile).to_string(),
+            },
+            NativeProcessEnvBinding {
+                key: "DEVE_LEDGER_DIR".to_string(),
+                value: ledger_path.to_string_lossy().to_string(),
+            },
+            NativeProcessEnvBinding {
+                key: "DEVE_VAULT_PATH".to_string(),
+                value: vault_path.to_string_lossy().to_string(),
+            },
+        ],
+        profile: profile_env_value(input.profile).to_string(),
+        config_path: input.data_root.join("config.toml"),
+        vault_path,
+        ledger_path,
+        bind_hints: NativeProcessBindHints {
+            http_host: "127.0.0.1".to_string(),
+            http_port: Some(input.port),
+            ws_host: "127.0.0.1".to_string(),
+            ws_port: Some(input.port),
+        },
+        path_resolution: NativeProcessPathResolution::AbsoluteOnly,
+    })
+}
+
+fn packaged_cli_sibling(current_exe: &Path) -> Result<PathBuf, DesktopLocalServiceEntrypointError> {
+    let Some(parent) = current_exe.parent() else {
+        return Err(DesktopLocalServiceEntrypointError::MissingExecutableParent);
+    };
+    Ok(parent.join(deve_cli_binary_name()))
+}
+
+fn deve_cli_binary_name() -> &'static str {
+    if cfg!(windows) {
+        "deve_cli.exe"
+    } else {
+        "deve_cli"
+    }
+}
+
+fn profile_env_value(profile: AppProfile) -> &'static str {
+    match profile {
+        AppProfile::Standard => "standard",
+        AppProfile::LowSpec => "low-spec",
+    }
+}
+
+fn parse_opt_in_value(
+    value: &str,
+) -> Result<DesktopLocalServiceEntrypointPolicy, DesktopLocalServiceEntrypointError> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Ok(DesktopLocalServiceEntrypointPolicy::opt_in_enabled()),
+        "0" | "false" | "no" | "off" => Ok(DesktopLocalServiceEntrypointPolicy::disabled()),
+        _ => Err(DesktopLocalServiceEntrypointError::InvalidOptInValue {
+            value: value.to_string(),
+        }),
+    }
+}
+
+fn allocate_loopback_port() -> Result<u16, DesktopLocalServiceEntrypointError> {
+    let listener = TcpListener::bind(("127.0.0.1", 0))
+        .map_err(DesktopLocalServiceEntrypointError::PortAllocationFailed)?;
+    listener
+        .local_addr()
+        .map(|addr| addr.port())
+        .map_err(DesktopLocalServiceEntrypointError::PortAllocationFailed)
+}

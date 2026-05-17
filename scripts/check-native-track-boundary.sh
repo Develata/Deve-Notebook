@@ -123,6 +123,7 @@ check_no_process_runtime_leak() {
 
   check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
   check_contains apps/desktop/src/lib.rs "mod process_runtime;"
+  check_contains apps/desktop/src/lib.rs "mod service_entrypoint;"
   check_contains apps/desktop/src/process_runtime.rs "DesktopLocalServiceRuntime"
   check_contains apps/desktop/src/process_runtime.rs "DesktopCommandProcessLauncher"
   check_contains apps/desktop/src/process_runtime.rs "validate_desktop_service_command"
@@ -131,6 +132,18 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/process_runtime.rs "command.env(&binding.key, &binding.value)"
   check_contains apps/desktop/src/process_runtime.rs "executable must be deve_cli"
   check_contains apps/desktop/src/process_runtime.rs "first argv must be serve"
+  check_contains apps/desktop/src/process_runtime.rs "argv must be exactly serve --native-loopback --port <port>"
+  check_contains apps/desktop/src/process_runtime.rs "argv port must match loopback bind hints"
+  check_contains apps/desktop/src/service_entrypoint.rs "DEVE_DESKTOP_LOCAL_SERVICE"
+  check_contains apps/desktop/src/service_entrypoint.rs "plan_desktop_local_service_entrypoint_from_env"
+  check_contains apps/desktop/src/service_entrypoint.rs "packaged_cli_sibling"
+  check_contains apps/desktop/src/service_entrypoint.rs "\"--native-loopback\""
+  check_contains apps/desktop/src/service_entrypoint.rs "health_probe_required_before_bootstrap: true"
+  check_contains apps/desktop/src/service_entrypoint.rs "session_handoff_required_before_bootstrap: true"
+  check_contains apps/desktop/src/service_entrypoint.rs "opens_authority_write_path: false"
+  check_not_contains apps/desktop/src/tauri_entry.rs "start_desktop_local_service_if_enabled"
+  check_not_contains apps/desktop/src/tauri_entry.rs "plan_desktop_local_service_entrypoint_from_env"
+  check_not_contains apps/desktop/src/tauri_entry.rs "app.manage(Mutex::new(runtime))"
 
   if [[ -f "$ROOT_DIR/apps/mobile/src/process_runtime.rs" ]] \
     || contains_regex "$ROOT_DIR/apps/mobile/src/lib.rs" 'mod[[:space:]]+process_runtime[[:space:]]*;'; then

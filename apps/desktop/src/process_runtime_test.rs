@@ -17,7 +17,12 @@ fn valid_spawn_spec() -> NativeProcessSpawnSpec {
     let root = std::env::current_dir().expect("current dir");
     NativeProcessSpawnSpec {
         executable: root.join("target/native/deve_cli"),
-        argv: vec!["serve".to_string(), "--dev".to_string()],
+        argv: vec![
+            "serve".to_string(),
+            "--native-loopback".to_string(),
+            "--port".to_string(),
+            "3001".to_string(),
+        ],
         cwd: root.clone(),
         env_allowlist: vec!["DEVE_PROFILE".to_string()],
         env: vec![NativeProcessEnvBinding {
@@ -386,6 +391,40 @@ fn desktop_local_service_runtime_rejects_non_serve_argv_before_spawn() {
         error,
         DesktopProcessRuntimeError::InvalidServiceCommand {
             reason: "first argv must be serve"
+        }
+    ));
+}
+
+#[test]
+fn desktop_local_service_runtime_rejects_extra_serve_argv_before_spawn() {
+    let launcher = RecordingLauncher::default();
+    let mut runtime = DesktopLocalServiceRuntime::with_launcher(enabled_policy(), 1, launcher);
+    let mut spec = valid_spawn_spec();
+    spec.argv.push("--dev".to_string());
+
+    let error = runtime.start(&spec, 10).expect_err("reject extra argv");
+
+    assert!(matches!(
+        error,
+        DesktopProcessRuntimeError::InvalidServiceCommand {
+            reason: "argv must be exactly serve --native-loopback --port <port>"
+        }
+    ));
+}
+
+#[test]
+fn desktop_local_service_runtime_rejects_mismatched_argv_port_before_spawn() {
+    let launcher = RecordingLauncher::default();
+    let mut runtime = DesktopLocalServiceRuntime::with_launcher(enabled_policy(), 1, launcher);
+    let mut spec = valid_spawn_spec();
+    spec.argv[3] = "39101".to_string();
+
+    let error = runtime.start(&spec, 10).expect_err("reject port mismatch");
+
+    assert!(matches!(
+        error,
+        DesktopProcessRuntimeError::InvalidServiceCommand {
+            reason: "argv port must match loopback bind hints"
         }
     ));
 }

@@ -59,6 +59,12 @@ impl DesktopCommandProcessLauncher {
     }
 }
 
+impl Drop for DesktopCommandProcessLauncher {
+    fn drop(&mut self) {
+        let _ = self.stop();
+    }
+}
+
 impl DesktopProcessLauncher for DesktopCommandProcessLauncher {
     fn spawn_service(
         &mut self,
@@ -225,6 +231,7 @@ impl DesktopProcessRuntimeError {
 fn validate_desktop_service_command(
     spec: &NativeProcessSpawnSpec,
 ) -> Result<(), DesktopProcessRuntimeError> {
+    spec.validate_contract()?;
     let executable_name = spec
         .executable
         .file_name()
@@ -240,7 +247,29 @@ fn validate_desktop_service_command(
             reason: "first argv must be serve",
         });
     }
+    if spec.argv.len() != 4
+        || spec.argv.get(1).map(String::as_str) != Some("--native-loopback")
+        || spec.argv.get(2).map(String::as_str) != Some("--port")
+    {
+        return Err(DesktopProcessRuntimeError::InvalidServiceCommand {
+            reason: "argv must be exactly serve --native-loopback --port <port>",
+        });
+    }
+    let Some(port) = spec.argv.get(3).and_then(|value| parse_nonzero_port(value)) else {
+        return Err(DesktopProcessRuntimeError::InvalidServiceCommand {
+            reason: "argv port must be a non-zero u16",
+        });
+    };
+    if spec.bind_hints.http_port != Some(port) || spec.bind_hints.ws_port != Some(port) {
+        return Err(DesktopProcessRuntimeError::InvalidServiceCommand {
+            reason: "argv port must match loopback bind hints",
+        });
+    }
     Ok(())
+}
+
+fn parse_nonzero_port(value: &str) -> Option<u16> {
+    value.parse::<u16>().ok().filter(|port| *port != 0)
 }
 
 fn spawn_failure_kind(error: &std::io::Error) -> NativeProcessRuntimeFailureKind {

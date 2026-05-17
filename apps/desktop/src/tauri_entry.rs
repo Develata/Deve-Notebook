@@ -4,9 +4,11 @@
 //!
 //! Desktop Tauri window-shell entrypoint.
 //!
-//! This module starts only the native shell window/menu/tray runtime. It does
-//! not spawn the Deve backend service and does not write ledger, vault,
-//! source-control, search, Git, or `.notegit` authority.
+//! The runtime starts only the native shell window/menu/tray surface.
+//! Local-service process planning lives in `service_entrypoint`; actual spawn,
+//! health probe, and session handoff must be wired before Web bootstrap in a
+//! later batch. This module does not write ledger, vault, source-control,
+//! search, Git, or `.notegit` authority.
 
 use crate::{
     DESKTOP_TAURI_MAIN_WINDOW_LABEL, DesktopMenuAction, DesktopTrayAction, build_desktop_menu,
