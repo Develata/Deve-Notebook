@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Settings Local Persistence / Feedback Closure：targeted baseline 与 browser smoke 已完成；下一步复跑 plan coverage、acceptance bindings、feature operation paths、Settings baseline、runtime happy/recovery smoke 与 diff hygiene，确认无 drift 后关闭本批并选择下一批主线实现；不得实现 server-backed Settings API。
+1. Source Control Command Surface Refresh：按 `docs/report/mainline-gap-rescan-after-settings-local-feedback-closure-2026-05-17.md` 执行下一批本地主线功能；先复跑 Source Control command-surface/baseline tests，再做 Command Palette Source Control / Git / AI reserved entries 与 Source Control panel commit surface 的 browser smoke；不得实现 Web Git writer、server-backed Settings API、native process runtime 或 native authority writes。
 
 ## 最近完成
 
+- Mainline Gap Rescan After Settings Local Feedback Closure：复跑 Settings baseline、CLI settings baseline、Source Control baseline、acceptance bindings、feature operation paths、architecture registry、plan coverage、runtime happy/recovery smoke 与 diff hygiene；Settings 本批关闭，下一批选择 Source Control Command Surface Refresh；未改 `docs/plan/`。
 - Settings Local Feedback Browser Smoke：用隔离数据根 `/tmp/deve-settings-smoke.WtGZPv` 和 embedded Web dev server 验证 Settings 打开、语言即时反馈与 reload 持久、sync mode 反馈、AI backend disabled reason、Hybrid reserved marker、核心 API 200 与当前 navigation console 健康；未发现 product code bug，未改 `docs/plan/`。
 - Settings Local Feedback Baseline：新增 `scripts/check-settings-local-feedback-baseline.sh` 并绑定 `SET-001..007`；覆盖 `deve config print/set`、trusted-cli effective fallback、Settings UI immediate feedback、reserved/disabled feedback 与 future Settings API absent；未改 `docs/plan/`。
 - Mainline Gap Rescan After Repo File Operations Closure：复跑 plan coverage、architecture registry、acceptance bindings、feature operation paths、repo file-op baseline、storage/UI desktop baseline、runtime happy/recovery smoke 与 diff hygiene；未发现 blocking drift 或新的 unblocked Current MUST；下一批选择 Settings local persistence / feedback，不打开 server-backed Settings API。
