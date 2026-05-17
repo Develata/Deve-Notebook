@@ -691,6 +691,7 @@ scripts/check-auth-baseline.sh
 scripts/check-auth-unauthorized-state.sh
 scripts/check-network-baseline.sh
 scripts/check-cli-settings-baseline.sh
+scripts/check-settings-local-feedback-baseline.sh
 scripts/check-browser-prefs-boundary.sh
 scripts/check-storage-repo-baseline.sh
 scripts/check-search-baseline.sh
@@ -700,6 +701,7 @@ scripts/check-feature-operation-paths.sh
 scripts/check-i18n-hardcoded-baseline.sh
 scripts/check-i18n-formatting-baseline.sh
 scripts/check-source-control-baseline.sh
+scripts/check-repo-file-ops-baseline.sh
 scripts/check-source-control-smoke-hygiene.sh
 scripts/check-dev-data-health-baseline.sh
 scripts/check-native-track-boundary.sh

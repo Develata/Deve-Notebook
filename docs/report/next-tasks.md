@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Full Regression Gate Refresh After Mainline Local Closures：按 `docs/report/mainline-gap-rescan-after-source-control-command-surface-closure-2026-05-17.md` 执行全量回归闸门；先跑 full workspace tests、all-feature clippy、fmt、release/native/mobile/domain guards、runtime happy/recovery smoke，再选择下一批实现；不得打开平台 signing、physical-device、native process runtime、Web Git writer、server-backed Settings API 或 native authority writes。
+1. Mainline Feature Implementation Selection After Full Regression：基于 `docs/plan/`、`docs/features/`、`docs/acceptance-cases/` 与当前代码做四向 gap rescan，输出下一批可实现功能选择；不得打开平台 signing、physical-device、native process runtime、Web Git writer、server-backed Settings API 或 native authority writes。
 
 ## 最近完成
 
+- Full Regression Gate Refresh After Mainline Local Closures：全仓库 `cargo test --locked`、全 feature `clippy -D warnings`、`fmt --check`、acceptance/architecture/feature path/plan coverage、domain baseline、runtime happy/recovery smoke 与 diff hygiene 均通过；补齐 dev runbook 中 Settings local feedback 与 Repo file operations guard 清单；未改 `docs/plan/`。
 - Mainline Gap Rescan After Source Control Command Surface Closure：复跑 Source Control baseline、Settings baseline、Repo file-op baseline、acceptance bindings、feature paths、architecture registry、plan coverage、runtime happy/recovery smoke 与 diff hygiene；Source Control 本批关闭，下一步进入全量回归闸门；未改 `docs/plan/`。
 - Source Control Command Surface Browser Smoke：用隔离数据根 `/tmp/deve-sc-command-smoke.tGIaja` 和 embedded Web dev server 验证 Command Palette Source Control unavailable entries、Git CLI-only notices、Git status CLI-only panel notice、外部 workspace change、stage、commit message enablement、commit success 与当前 navigation console 健康；未发现 product code bug，未改 `docs/plan/`。
 - Mainline Gap Rescan After Settings Local Feedback Closure：复跑 Settings baseline、CLI settings baseline、Source Control baseline、acceptance bindings、feature operation paths、architecture registry、plan coverage、runtime happy/recovery smoke 与 diff hygiene；Settings 本批关闭，下一批选择 Source Control Command Surface Refresh；未改 `docs/plan/`。
