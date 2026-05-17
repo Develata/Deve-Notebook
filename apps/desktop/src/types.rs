@@ -58,11 +58,13 @@ pub struct DesktopBootstrap {
 }
 
 impl DesktopBootstrap {
-    pub fn script_tag(&self) -> Result<String, DesktopShellError> {
+    pub fn script_source(&self) -> Result<String, DesktopShellError> {
         let payload = serde_json::to_string(self)?;
-        Ok(format!(
-            "<script>window.__DEVE_NATIVE_BOOTSTRAP={payload};</script>"
-        ))
+        Ok(format!("window.__DEVE_NATIVE_BOOTSTRAP={payload};"))
+    }
+
+    pub fn script_tag(&self) -> Result<String, DesktopShellError> {
+        Ok(format!("<script>{}</script>", self.script_source()?))
     }
 }
 
@@ -72,11 +74,13 @@ pub struct DesktopRecoveryBootstrap {
 }
 
 impl DesktopRecoveryBootstrap {
-    pub fn script_tag(&self) -> Result<String, DesktopShellError> {
+    pub fn script_source(&self) -> Result<String, DesktopShellError> {
         let payload = serde_json::to_string(self)?;
-        Ok(format!(
-            "<script>window.__DEVE_NATIVE_BOOTSTRAP={payload};</script>"
-        ))
+        Ok(format!("window.__DEVE_NATIVE_BOOTSTRAP={payload};"))
+    }
+
+    pub fn script_tag(&self) -> Result<String, DesktopShellError> {
+        Ok(format!("<script>{}</script>", self.script_source()?))
     }
 }
 

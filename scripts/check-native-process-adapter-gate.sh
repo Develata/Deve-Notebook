@@ -66,6 +66,7 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/lib.rs "mod process_runtime;"
   check_contains apps/desktop/src/lib.rs "mod service_bootstrap;"
   check_contains apps/desktop/src/lib.rs "mod service_entrypoint;"
+  check_contains apps/desktop/src/lib.rs "mod tauri_bootstrap;"
   check_contains apps/desktop/src/process_runtime.rs "DesktopLocalServiceRuntime"
   check_contains apps/desktop/src/process_runtime.rs "DesktopCommandProcessLauncher"
   check_contains apps/desktop/src/process_runtime.rs "validate_desktop_service_command"
@@ -85,6 +86,10 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/service_bootstrap.rs "/api/auth/status"
   check_contains apps/desktop/src/service_bootstrap.rs "bootstrap_for_web"
   check_contains apps/desktop/src/service_bootstrap.rs "SessionHandoffFailed"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "desktop_tauri_bootstrap_plugin"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "js_init_script"
+  check_contains apps/desktop/src/tauri_entry.rs "desktop_tauri_local_service_bootstrap_from_env"
+  check_contains apps/desktop/src/tauri_entry.rs "DesktopLocalServiceTauriState::new"
   check_not_contains apps/desktop/src/tauri_entry.rs "start_desktop_local_service_if_enabled"
   check_not_contains apps/desktop/src/tauri_entry.rs "app.manage(Mutex::new(runtime))"
 

@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Desktop Local Service Tauri Bootstrap Injection / Session Material Bridge：将 Desktop `native-packaging` 的 successful service bootstrap 接入 Tauri WebView initialization script 或等价 bootstrap 注入面，并实现不进入 URL、localStorage、日志或 crash report 的 session material bridge；probe/handoff 失败只能注入 recovery bootstrap；不得打开 native authority writes、Android process runtime、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
+1. Desktop Native HttpOnly Session Material Bridge：为 Desktop `native-packaging` 设计并实现 native-only session issuance / cookie install 通道；session material 不得进入 URL、localStorage、JS-visible bootstrap、日志或 crash report；不得启用 anonymous localhost bypass、dev secret fallback、native authority writes、Android process runtime、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Desktop Local Service Tauri Bootstrap Injection Gate：新增 Desktop `native-packaging` Tauri `js_init_script` bootstrap 接入层；成功路径只接受 session-bound endpoint bootstrap，失败路径只注入 `service_offline` / `session_invalid` recovery bootstrap；真实 HttpOnly session material bridge 仍列为下一批；未改 `docs/plan/`。
 - Desktop Local Service Health Probe / Session Handoff Gate：新增 Desktop `native-packaging` local-service health/session bootstrap driver、loopback `/api/node/role` probe、`/api/auth/status` handoff gate 与 bootstrap script 生成前置条件；Tauri setup 仍不启动子进程、不注入 WebView，Mobile process runtime 与 native authority writes 仍关闭；未改 `docs/plan/`。
 - Desktop Local Service Entrypoint Plan Boundary：新增 Desktop `native-packaging` local-service entrypoint plan、`DEVE_DESKTOP_LOCAL_SERVICE` 显式 opt-in、packaged sibling `deve_cli` 解析、`serve --native-loopback --port` spawn spec 与 gate 脚本反查；Tauri setup 仍不启动子进程，Mobile process runtime 与 native authority writes 仍关闭；未改 `docs/plan/`。
 - Desktop Local Service Lifecycle Runtime Spike：新增 Desktop `native-packaging` 下的受控 `DesktopLocalServiceRuntime`、launcher/start/stop/state machine 与 gate 脚本更新；默认 process policy 仍关闭，Tauri entrypoint 未自动启动后端，Mobile process runtime 与 native authority writes 仍关闭；未改 `docs/plan/`。

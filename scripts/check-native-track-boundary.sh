@@ -100,6 +100,7 @@ check_no_packaging_dependency_leak() {
       case "$line" in
         "$ROOT_DIR/apps/desktop/src/menu_tray.rs":*) ;;
         "$ROOT_DIR/apps/desktop/src/main.rs":*) ;;
+        "$ROOT_DIR/apps/desktop/src/tauri_bootstrap.rs":*) ;;
         "$ROOT_DIR/apps/desktop/src/tauri_entry.rs":*) ;;
         "$ROOT_DIR/apps/mobile/src/tauri_entry.rs":*) ;;
         *) fail "native packaging runtime import outside native shell binding: ${line#"$ROOT_DIR"/}" ;;
@@ -125,6 +126,7 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/lib.rs "mod process_runtime;"
   check_contains apps/desktop/src/lib.rs "mod service_bootstrap;"
   check_contains apps/desktop/src/lib.rs "mod service_entrypoint;"
+  check_contains apps/desktop/src/lib.rs "mod tauri_bootstrap;"
   check_contains apps/desktop/src/process_runtime.rs "DesktopLocalServiceRuntime"
   check_contains apps/desktop/src/process_runtime.rs "DesktopCommandProcessLauncher"
   check_contains apps/desktop/src/process_runtime.rs "validate_desktop_service_command"
@@ -148,9 +150,17 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/service_bootstrap.rs "/api/auth/status"
   check_contains apps/desktop/src/service_bootstrap.rs "bootstrap_for_web"
   check_contains apps/desktop/src/service_bootstrap.rs "SessionHandoffFailed"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "desktop_tauri_bootstrap_plugin"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "js_init_script"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "desktop_tauri_session_invalid_init_script"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "ForbiddenMaterial"
+  check_contains apps/desktop/src/tauri_entry.rs "desktop_tauri_local_service_bootstrap_from_env"
+  check_contains apps/desktop/src/tauri_entry.rs "DesktopLocalServiceTauriState::new"
   check_not_contains apps/desktop/src/tauri_entry.rs "start_desktop_local_service_if_enabled"
   check_not_contains apps/desktop/src/tauri_entry.rs "plan_desktop_local_service_entrypoint_from_env"
   check_not_contains apps/desktop/src/tauri_entry.rs "app.manage(Mutex::new(runtime))"
+  check_not_contains apps/desktop/src/tauri_bootstrap.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
+  check_not_contains apps/desktop/src/tauri_bootstrap.rs "localStorage"
 
   if [[ -f "$ROOT_DIR/apps/mobile/src/process_runtime.rs" ]] \
     || contains_regex "$ROOT_DIR/apps/mobile/src/lib.rs" 'mod[[:space:]]+process_runtime[[:space:]]*;'; then

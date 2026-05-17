@@ -33,6 +33,10 @@ mod shell_recovery_test;
 #[cfg(test)]
 mod shell_test;
 #[cfg(feature = "native-packaging")]
+mod tauri_bootstrap;
+#[cfg(all(test, feature = "native-packaging"))]
+mod tauri_bootstrap_test;
+#[cfg(feature = "native-packaging")]
 mod tauri_entry;
 mod types;
 
@@ -75,6 +79,14 @@ pub use service_entrypoint::{
     plan_desktop_local_service_entrypoint, plan_desktop_local_service_entrypoint_from_env,
 };
 pub use shell::DesktopShell;
+#[cfg(feature = "native-packaging")]
+pub use tauri_bootstrap::{
+    DesktopLocalServiceTauriState, DesktopTauriBootstrapError, DesktopTauriBootstrapScript,
+    DesktopTauriLocalServiceBootstrap, desktop_tauri_bootstrap_plugin,
+    desktop_tauri_local_service_bootstrap_from_env, desktop_tauri_recovery_init_script,
+    desktop_tauri_service_offline_init_script, desktop_tauri_session_invalid_init_script,
+    desktop_tauri_success_init_script, try_desktop_tauri_local_service_bootstrap_from_env,
+};
 #[cfg(feature = "native-packaging")]
 pub use tauri_entry::{
     DESKTOP_TAURI_STARTUP_SMOKE_OK, DesktopTauriRuntimeSurface, DesktopTauriShellEffect,

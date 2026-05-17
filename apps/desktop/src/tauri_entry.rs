@@ -4,17 +4,19 @@
 //!
 //! Desktop Tauri window-shell entrypoint.
 //!
-//! The runtime starts only the native shell window/menu/tray surface.
-//! Local-service process planning lives in `service_entrypoint`; actual spawn,
-//! health probe, and session handoff must be wired before Web bootstrap in a
-//! later batch. This module does not write ledger, vault, source-control,
-//! search, Git, or `.notegit` authority.
+//! The default runtime starts only the native shell window/menu/tray surface.
+//! The local-service bootstrap path is opt-in and must inject either a
+//! session-bound endpoint bootstrap or a recovery bootstrap before Web startup.
+//! This module does not write ledger, vault, source-control, search, Git, or
+//! `.notegit` authority.
 
 use crate::{
-    DESKTOP_TAURI_MAIN_WINDOW_LABEL, DesktopMenuAction, DesktopTrayAction, build_desktop_menu,
-    build_desktop_tray_icon, build_desktop_tray_menu, resolve_desktop_menu_action_id,
-    resolve_desktop_tray_action_id,
+    DESKTOP_TAURI_MAIN_WINDOW_LABEL, DesktopLocalServiceTauriState, DesktopMenuAction,
+    DesktopTrayAction, build_desktop_menu, build_desktop_tray_icon, build_desktop_tray_menu,
+    desktop_tauri_bootstrap_plugin, desktop_tauri_local_service_bootstrap_from_env,
+    resolve_desktop_menu_action_id, resolve_desktop_tray_action_id,
 };
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, Runtime};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -105,8 +107,23 @@ pub fn tray_action_shell_effect(action: DesktopTrayAction) -> DesktopTauriShellE
 }
 
 pub fn run_desktop_tauri_app() -> tauri::Result<()> {
-    tauri::Builder::default()
-        .setup(|app| {
+    let mut local_service_bootstrap =
+        desktop_tauri_local_service_bootstrap_from_env(current_unix_time_millis());
+    let mut service_runtime = local_service_bootstrap
+        .as_mut()
+        .and_then(|bootstrap| bootstrap.runtime.take());
+    let mut builder = tauri::Builder::default();
+
+    if let Some(bootstrap) = local_service_bootstrap.as_ref() {
+        builder = builder.plugin(desktop_tauri_bootstrap_plugin(&bootstrap.script));
+    }
+
+    builder
+        .setup(move |app| {
+            if let Some(runtime) = service_runtime.take() {
+                app.manage(DesktopLocalServiceTauriState::new(runtime));
+            }
+
             let menu = build_desktop_menu(app)?;
             app.set_menu(menu)?;
 
@@ -133,6 +150,13 @@ pub fn run_desktop_tauri_app() -> tauri::Result<()> {
             _ => {}
         })
         .run(tauri::generate_context!())
+}
+
+fn current_unix_time_millis() -> i64 {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => i64::try_from(duration.as_millis()).unwrap_or(i64::MAX),
+        Err(_) => 0,
+    }
 }
 
 fn apply_shell_effect<R: Runtime>(app: &AppHandle<R>, effect: DesktopTauriShellEffect) {

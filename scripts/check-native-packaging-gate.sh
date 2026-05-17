@@ -73,6 +73,7 @@ cargo check --locked -p deve_mobile --no-default-features
 cargo check --locked -p deve_mobile --features native-packaging
 cargo test --locked -p deve_desktop --features native-packaging process_runtime -- --nocapture
 cargo test --locked -p deve_desktop --features native-packaging service_bootstrap -- --nocapture
+cargo test --locked -p deve_desktop --features native-packaging tauri_bootstrap -- --nocapture
 cargo test --locked -p deve_desktop --features native-packaging menu_tray -- --nocapture
 cargo test --locked -p deve_desktop --features native-packaging packaging -- --nocapture
 cargo test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
