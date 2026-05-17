@@ -1,15 +1,16 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-16
+> 更新日期：2026-05-17
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Platform Credential / Target-host Handoff：若继续平台 post-gate，需要明确 macOS signing/notarization、Windows signed installer、Android signed APK/AAB 或 Android physical-device smoke 的目标，并提供对应 target host / signing material；若暂不提供，则返回主线 feature implementation selection。
+1. Repo File Operations Closure：按 `docs/report/mainline-feature-implementation-selection-2026-05-17.md` 执行下一批主线功能实现；先建立 create / rename / copy / move / delete 的 targeted baseline 与 browser smoke，再只修复该链路中发现的具体缺口。
 
 ## 最近完成
 
+- Mainline Feature Implementation Selection：从 platform credential / target-host handoff 返回主线，比较 Repo File Operations、Settings local persistence / feedback、Source Control command surface 与平台 post-gate；选定 Repo File Operations Closure 为下一批本地可推进功能，不打开 signing、physical-device、native process、native authority write、Web Git writer 或 server-backed Settings API。
 - Platform Signed / Physical-device Preflight Scaffold：新增 Desktop signing 与 Android signed/physical-device diagnostic/required preflight；默认不需要 private material，required 模式缺前置条件 fail-closed；release workflow、REL-005、dev-runbook 与 release baseline 已绑定，未打开真实签名、物理设备发布、native process runtime 或 native authority writes。
 - Platform Post-Gate Scope Decision：current-head shell-only platform evidence 已绿；选定下一批先做签名/物理设备 preflight scaffold，而不是直接进入真实签名、商店发布、物理设备发布或 native process runtime。
 - Mainline Gap Scan After Current-head Platform Evidence Refresh：复跑 plan coverage、architecture registry、acceptance bindings、feature paths、领域 baseline、release/native/mobile guards、runtime happy/recovery smoke 与 Web release build；未发现 blocking drift 或新的 unblocked Current MUST；下一步只做平台 post-gate scope decision，不隐式打开 signing/store/physical-device/native process。
