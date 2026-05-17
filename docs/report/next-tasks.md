@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Post-regression Work Selection After Desktop Native Session Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases 与 target-host evidence，选择下一批小而硬实现或证据刷新；候选优先为 Desktop installer required smoke preflight、Android target-host package evidence refresh、或新发现的 Current Web/server gap；不打开 Android process runtime、native authority writes、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
+1. Desktop Installer Required Smoke Preflight After Native Session Evidence：检查并硬化 Desktop target-host installer required smoke 的 workflow、脚本与 evidence 字段；required 模式缺 installer artifact、target-host 前置条件或 required evidence field 时必须 fail-closed；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Post-regression Work Selection After Desktop Native Session Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases 与 target-host evidence，选定下一批为 Desktop installer required smoke preflight；Android 继续保持 shell-only，未打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Desktop Native Session Evidence Closure：跑通 `cargo fmt --check`、`cargo test --locked`、all-features clippy、acceptance/architecture/feature path/plan coverage、domain baselines、native gates、Web release build、runtime happy/recovery smoke 与 diff hygiene；runtime release-info smoke 因本机无 3001 服务按脚本跳过；未改 `docs/plan/`。
 - Mainline Gap Rescan After Desktop Native Session Target-host Evidence：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、network/auth/source-control/settings/repo-file/release/mobile/native baselines 与 runtime happy/recovery smoke；未发现新的 unblocked Current Web/server MUST gap，下一批进入 full regression gate；未改 `docs/plan/`。
 - Desktop Native Session Target-host Evidence Refresh：在 `50efefdf` 上刷新 macOS / Windows Desktop native-package target-host evidence；package build、startup smoke 与 native-session smoke 均通过，process runtime gate 与 native authority writes 仍关闭；同时修复 Windows child `SystemRoot` / `WINDIR` 最小保留与 main repo catalog validation 重复路径打开问题；未改 `docs/plan/`。
