@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Rendering Manual Acceptance Closure：按 `docs/report/plugin-runtime-acceptance-closure-2026-05-17.md` 继续收敛 `RENDER-CODE-001`、`RENDER-LINK-002`、`RENDER-NEST-001`、`RENDER-WHITELIST-001`；优先绑定已有 rendering guards 与 focused tests，保持 source-first editor authority；不得声明 complete WYSIWYG、任意 HTML、完整 virtual rendering、平台 signing、physical-device、native process runtime、Web Git writer、server-backed Settings API 或 native authority writes。
+1. Command Acceptance Boundary Closure：按 `docs/report/rendering-manual-acceptance-closure-2026-05-17.md` 继续收敛 `CMD-005`；只绑定当前 command behavior，不得打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
 
 ## 最近完成
 
+- Rendering Manual Acceptance Closure：把 `RENDER-CODE-001`、`RENDER-LINK-002`、`RENDER-NEST-001`、`RENDER-WHITELIST-001` 绑定到 `scripts/check-rendering-baseline.sh` 的现有 renderer tests、CodeMirror toolbar guard、link safety guard、nested CSS/JS decorations 与 Chrome MCP smoke evidence；acceptance bindings 从 automated `133` / manual `13` 收敛到 automated `137` / manual `9`，未改 `docs/plan/`。
 - Plugin Runtime Acceptance Closure：把 `PLUG-002` 与 `PLUG-003` 绑定到 `scripts/check-ai-baseline.sh` 的现有 Calculation Runtime reserved UI、ledger-managed boundary 与 guarded module resolver sandbox checks；acceptance bindings 从 automated `131` / manual `15` 收敛到 automated `133` / manual `13`，未改 `docs/plan/`。
 - AI Chat UX Acceptance Closure：把 `AI-001` 与 `AI-004` 绑定到 `scripts/check-ai-baseline.sh` 的现有 chat context、plugin text response、slash command 与 backend-preservation checks；acceptance bindings 从 automated `129` / manual `17` 收敛到 automated `131` / manual `15`，未改 `docs/plan/`。
 - Auth Security Acceptance Closure：把 `AUTH-005`、`AUTH-008`、`AUTH-009`、`AUTH-010` 绑定到 `scripts/check-auth-baseline.sh` 的现有 exact cookie、rate-limit、JWT payload 与 WS unauthorized structured response checks；acceptance bindings 从 automated `125` / manual `21` 收敛到 automated `129` / manual `17`，未改 `docs/plan/`。
