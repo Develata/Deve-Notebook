@@ -35,6 +35,9 @@ pub(super) fn validate_local_repo_metadata(
     entries.sort_by(|(_, left_stem), (_, right_stem)| left_stem.cmp(right_stem));
 
     for (path, stem) in entries {
+        if stem == main_repo_name {
+            continue;
+        }
         let db = cached_or_create_database(&path).map_err(|err| {
             anyhow!(
                 "Broken local repo {} while validating catalog: {}",

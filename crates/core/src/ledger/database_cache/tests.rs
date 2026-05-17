@@ -1,5 +1,7 @@
 use super::{OPENED_DBS, evict_database_paths_under, register_database, reusable_cached_database};
 #[cfg(unix)]
+use crate::ledger::RepoManager;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 
@@ -89,4 +91,39 @@ fn reusable_cached_database_fails_closed_when_header_cannot_be_read() {
             || err.to_string().contains("Failed to read database header")
             || err.to_string().contains("Permission denied")
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn local_catalog_validation_reuses_open_main_database() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("repo");
+    let path = ledger_dir.join("local").join("main.redb");
+
+    let stamp = {
+        let cache = OPENED_DBS.read().expect("cache");
+        cache
+            .get(&path)
+            .and_then(|entry| entry.stamp)
+            .expect("registered stamp")
+    };
+    {
+        let mut cache = OPENED_DBS.write().expect("cache");
+        let entry = cache.get_mut(&path).expect("cached entry");
+        let mut stale = stamp;
+        stale.modified = None;
+        entry.stamp = Some(stale);
+    }
+
+    let original = std::fs::metadata(&path).expect("metadata").permissions();
+    let mut blocked = original.clone();
+    blocked.set_mode(0o000);
+    std::fs::set_permissions(&path, blocked).expect("chmod 000");
+
+    repo.refresh_local_repo_catalog()
+        .expect("main repo validation must use the open database handle");
+
+    std::fs::set_permissions(&path, original).expect("restore perms");
+    clear_temp_entries(dir.path());
 }
