@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Deve-Note",
+  "short_name": "Deve",
+  "description": "Server-backed collaborative notebook thin client.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101820",
+  "theme_color": "#1e1e1e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

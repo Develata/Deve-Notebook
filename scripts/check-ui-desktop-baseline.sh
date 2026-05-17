@@ -158,4 +158,22 @@ contains apps/web/src/components/sidebar/repo_switcher.rs "fn repo_switcher_trig
 contains apps/web/src/components/sidebar/repo_switcher.rs "fn repo_switcher_outside_click_closes_menu()"
 contains apps/web/src/components/sidebar/repo_switcher.rs "fn repo_switcher_item_click_closes_menu()"
 
+# UI-WEB-006: Web PWA manifest surface stays standalone and self-hosted.
+contains docs/acceptance-cases/05_ui.md "case_id: UI-WEB-006"
+contains_case_block UI-WEB-006 "run: scripts/check-ui-desktop-baseline.sh"
+contains_case_block UI-WEB-006 "run: cd apps/web && NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk build"
+contains_case_block UI-WEB-006 "cli_assert: pwa_manifest_link_bound true"
+contains_case_block UI-WEB-006 "cli_assert: pwa_manifest_copied_to_dist true"
+contains_case_block UI-WEB-006 "cli_assert: pwa_manifest_standalone_bound true"
+contains_case_block UI-WEB-006 "cli_assert: pwa_theme_color_bound true"
+
+contains apps/web/index.html '<meta name="theme-color" content="#1e1e1e" />'
+contains apps/web/index.html '<link rel="manifest" href="/manifest.json" />'
+contains apps/web/index.html '<link data-trunk rel="copy-file" href="public/manifest.json" />'
+contains apps/web/public/manifest.json '"display": "standalone"'
+contains apps/web/public/manifest.json '"theme_color": "#1e1e1e"'
+contains apps/web/public/manifest.json '"start_url": "/"'
+contains apps/web/public/manifest.json '"scope": "/"'
+contains apps/web/public/manifest.json '"src": "/favicon.svg"'
+
 echo "ui-desktop-baseline-check: ok"
