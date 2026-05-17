@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Post-Acceptance Mainline Gap Rescan：按 `docs/report/foundation-acceptance-closure-2026-05-17.md` 复跑 acceptance/feature/architecture/plan guard，确认 manual acceptance 已清零后重新选择下一批真实实现缺口；不得因 guard 清零而打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Full Regression Gate Refresh After Acceptance Closure：在 `docs/report/post-acceptance-mainline-gap-rescan-2026-05-17.md` 确认 manual acceptance 清零、领域 baseline 与 runtime smoke 均通过后，先跑全仓库回归门禁；完成前不得打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
 
 ## 最近完成
 
+- Post-Acceptance Mainline Gap Rescan：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、foundation/network/auth/settings/storage/rendering/AI/source-control/search/graph/mobile/release/native/dev-runbook baseline 与 runtime happy/recovery smoke；acceptance bindings 保持 automated `146` / feature walkthrough `54` / manual `0` / unbound `0`，未改 `docs/plan/`。
 - Foundation Acceptance Closure：新增 `scripts/check-foundation-baseline.sh`，把 `TERM-001..003` 与 `POS-001..006` 绑定到术语/定位 plan 文本、init/watcher/rename/deveignore 既有测试与核心非目标边界；acceptance bindings 从 automated `138` / manual `8` 收敛到 automated `146` / manual `0`，未改 `docs/plan/`。
 - Command Acceptance Boundary Closure：把 `CMD-005` 绑定到 `scripts/check-ai-baseline.sh` 的现有 slash-command guard；`/plan`、`/build`、`/agents` 只切换本地 Native `PLAN / BUILD` session mode，不切 backend、不发 plugin call；acceptance bindings 从 automated `137` / manual `9` 收敛到 automated `138` / manual `8`，未改 `docs/plan/`。
 - Rendering Manual Acceptance Closure：把 `RENDER-CODE-001`、`RENDER-LINK-002`、`RENDER-NEST-001`、`RENDER-WHITELIST-001` 绑定到 `scripts/check-rendering-baseline.sh` 的现有 renderer tests、CodeMirror toolbar guard、link safety guard、nested CSS/JS decorations 与 Chrome MCP smoke evidence；acceptance bindings 从 automated `133` / manual `13` 收敛到 automated `137` / manual `9`，未改 `docs/plan/`。
