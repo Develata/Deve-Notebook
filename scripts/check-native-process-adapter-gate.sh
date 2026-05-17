@@ -78,20 +78,38 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/process_runtime.rs "argv port must match loopback bind hints"
   check_contains apps/desktop/src/service_entrypoint.rs "DEVE_DESKTOP_LOCAL_SERVICE"
   check_contains apps/desktop/src/service_entrypoint.rs "\"--native-loopback\""
+  check_contains apps/desktop/src/service_entrypoint.rs "NATIVE_SESSION_BOOTSTRAP_SECRET_ENV"
+  check_contains apps/desktop/src/service_entrypoint.rs "generate_native_session_bootstrap_secret"
   check_contains apps/desktop/src/service_entrypoint.rs "health_probe_required_before_bootstrap: true"
   check_contains apps/desktop/src/service_entrypoint.rs "session_handoff_required_before_bootstrap: true"
   check_contains apps/desktop/src/service_bootstrap.rs "run_desktop_local_service_bootstrap"
   check_contains apps/desktop/src/service_bootstrap.rs "DesktopLoopbackHttpProbe"
   check_contains apps/desktop/src/service_bootstrap.rs "/api/node/role"
   check_contains apps/desktop/src/service_bootstrap.rs "/api/auth/status"
+  check_contains apps/desktop/src/service_bootstrap.rs "/api/auth/native-session"
+  check_contains apps/desktop/src/service_bootstrap.rs "NATIVE_SESSION_BOOTSTRAP_HEADER"
+  check_contains apps/desktop/src/service_bootstrap.rs "MissingNativeSessionBootstrapSecret"
   check_contains apps/desktop/src/service_bootstrap.rs "bootstrap_for_web"
   check_contains apps/desktop/src/service_bootstrap.rs "SessionHandoffFailed"
   check_contains apps/desktop/src/tauri_bootstrap.rs "desktop_tauri_bootstrap_plugin"
   check_contains apps/desktop/src/tauri_bootstrap.rs "js_init_script"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "on_webview_ready"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "set_cookie"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "NativeSessionCookieRequired"
+  check_contains apps/desktop/src/tauri_bootstrap.rs "desktop native session cookie install failed before bootstrap"
   check_contains apps/desktop/src/tauri_entry.rs "desktop_tauri_local_service_bootstrap_from_env"
   check_contains apps/desktop/src/tauri_entry.rs "DesktopLocalServiceTauriState::new"
+  check_contains apps/cli/src/server/auth/handlers/native_session.rs "NativeSessionBridge"
+  check_contains apps/cli/src/server/auth/handlers/native_session.rs "NATIVE_SESSION_BOOTSTRAP_HEADER"
+  check_contains apps/cli/src/server/auth/handlers/native_session.rs "issue_once"
+  check_contains apps/cli/src/server/router.rs "/api/auth/native-session"
+  check_contains apps/cli/src/server/start.rs "NativeSessionBridge::from_env"
   check_not_contains apps/desktop/src/tauri_entry.rs "start_desktop_local_service_if_enabled"
   check_not_contains apps/desktop/src/tauri_entry.rs "app.manage(Mutex::new(runtime))"
+  check_not_contains apps/desktop/src/service_entrypoint.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
+  check_not_contains apps/desktop/src/service_bootstrap.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
+  check_not_contains apps/desktop/src/tauri_bootstrap.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
+  check_not_contains apps/cli/src/server/auth/handlers/native_session.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
 
   if [[ -f "$ROOT_DIR/apps/mobile/src/process_runtime.rs" ]] \
     || search_regex 'mod[[:space:]]+process_runtime[[:space:]]*;' "$ROOT_DIR/apps/mobile/src/lib.rs" >/dev/null; then
@@ -133,6 +151,8 @@ check_no_process_runtime_leak
 run cargo test --locked -p deve_core native_adapter::process_test -- --nocapture
 run cargo test --locked -p deve_desktop desktop_default_build_defers_real_process_adapter -- --nocapture
 run cargo test --locked -p deve_mobile mobile_default_build_defers_real_process_adapter -- --nocapture
+run cargo test --locked -p deve_cli native_session -- --nocapture
+run cargo test --locked -p deve_desktop --features native-packaging service_entrypoint -- --nocapture
 run cargo test --locked -p deve_desktop --features native-packaging service_bootstrap -- --nocapture
 run cargo test --locked -p deve_desktop process_observation -- --nocapture
 run cargo test --locked -p deve_mobile process_observation -- --nocapture

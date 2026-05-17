@@ -4,6 +4,9 @@
 
 use serde::{Deserialize, Serialize};
 
+pub const NATIVE_SESSION_BOOTSTRAP_SECRET_ENV: &str = "DEVE_NATIVE_SESSION_BOOTSTRAP_SECRET";
+pub const NATIVE_SESSION_BOOTSTRAP_HEADER: &str = "x-deve-native-session-secret";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NativeAdapterPlatform {

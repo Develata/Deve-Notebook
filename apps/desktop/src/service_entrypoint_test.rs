@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use deve_core::config::AppProfile;
+use deve_core::native_adapter::NATIVE_SESSION_BOOTSTRAP_SECRET_ENV;
 
 use crate::{
     DesktopLocalServiceEntrypointError, DesktopLocalServiceEntrypointInput,
@@ -61,6 +62,18 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
     assert!(spec.env_allowlist.contains(&"DEVE_PROFILE".to_string()));
     assert!(spec.env_allowlist.contains(&"DEVE_LEDGER_DIR".to_string()));
     assert!(spec.env_allowlist.contains(&"DEVE_VAULT_PATH".to_string()));
+    assert!(
+        spec.env_allowlist
+            .contains(&NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string())
+    );
+    let secret = spec
+        .env
+        .iter()
+        .find(|binding| binding.key == NATIVE_SESSION_BOOTSTRAP_SECRET_ENV)
+        .expect("native session secret");
+    assert_eq!(secret.value.len(), 64);
+    assert!(secret.value.chars().all(|ch| ch.is_ascii_hexdigit()));
+    assert!(!format!("{:?}", secret).contains(&secret.value));
     assert_eq!(spec.profile, "low-spec");
     assert!(plan.health_probe_required_before_bootstrap);
     assert!(plan.session_handoff_required_before_bootstrap);

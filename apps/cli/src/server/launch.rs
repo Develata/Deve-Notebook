@@ -78,6 +78,10 @@ impl ServerLaunchOptions {
         })
     }
 
+    pub fn is_native_loopback(&self) -> bool {
+        self.native.is_some()
+    }
+
     fn native_endpoint(&self, session_bound: bool) -> NativeEndpointReady {
         NativeEndpointReady {
             http_base: format!("http://{}:{}", self.advertised_host, self.port),

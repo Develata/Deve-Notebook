@@ -6,13 +6,16 @@ use std::sync::Mutex;
 
 use deve_core::native_adapter::NativeProcessRuntimeSnapshot;
 use tauri::plugin::TauriPlugin;
+use tauri::webview::Cookie;
+use tauri::webview::cookie::SameSite;
 use thiserror::Error;
 
 use crate::{
     DesktopBootstrap, DesktopCommandProcessLauncher, DesktopLocalServiceBootstrapError,
     DesktopLocalServiceEntrypointError, DesktopLocalServiceRuntime, DesktopLoopbackHttpProbe,
-    DesktopProcessLauncher, DesktopRecoveryBootstrap, DesktopShell, DesktopShellError,
-    plan_desktop_local_service_entrypoint_from_env, run_desktop_local_service_bootstrap,
+    DesktopNativeSessionCookie, DesktopProcessLauncher, DesktopRecoveryBootstrap, DesktopShell,
+    DesktopShellError, plan_desktop_local_service_entrypoint_from_env,
+    run_desktop_local_service_bootstrap,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +24,7 @@ pub struct DesktopTauriBootstrapScript {
     recovery: bool,
     session_bound: bool,
     opens_authority_write_path: bool,
+    native_session_cookie: Option<DesktopNativeSessionCookie>,
 }
 
 #[derive(Debug)]
@@ -58,6 +62,8 @@ pub enum DesktopTauriBootstrapError {
     Shell(#[from] DesktopShellError),
     #[error("desktop Tauri bootstrap requires a bound session")]
     SessionNotBound,
+    #[error("desktop Tauri bootstrap requires a native session cookie")]
+    NativeSessionCookieRequired,
     #[error("desktop Tauri bootstrap source contains forbidden material: {marker}")]
     ForbiddenMaterial { marker: &'static str },
 }
@@ -67,6 +73,7 @@ impl DesktopTauriBootstrapScript {
         source: String,
         recovery: bool,
         session_bound: bool,
+        native_session_cookie: Option<DesktopNativeSessionCookie>,
     ) -> Result<Self, DesktopTauriBootstrapError> {
         validate_tauri_bootstrap_source(&source)?;
         Ok(Self {
@@ -74,6 +81,7 @@ impl DesktopTauriBootstrapScript {
             recovery,
             session_bound,
             opens_authority_write_path: false,
+            native_session_cookie,
         })
     }
 
@@ -92,21 +100,34 @@ impl DesktopTauriBootstrapScript {
     pub fn opens_authority_write_path(&self) -> bool {
         self.opens_authority_write_path
     }
+
+    pub fn has_native_session_cookie(&self) -> bool {
+        self.native_session_cookie.is_some()
+    }
 }
 
 pub fn desktop_tauri_success_init_script(
     bootstrap: &DesktopBootstrap,
+    native_session_cookie: Option<DesktopNativeSessionCookie>,
 ) -> Result<DesktopTauriBootstrapScript, DesktopTauriBootstrapError> {
     if !bootstrap.session_bound {
         return Err(DesktopTauriBootstrapError::SessionNotBound);
     }
-    DesktopTauriBootstrapScript::new(bootstrap.script_source()?, false, true)
+    if native_session_cookie.is_none() {
+        return Err(DesktopTauriBootstrapError::NativeSessionCookieRequired);
+    }
+    DesktopTauriBootstrapScript::new(
+        bootstrap.script_source()?,
+        false,
+        true,
+        native_session_cookie,
+    )
 }
 
 pub fn desktop_tauri_recovery_init_script(
     recovery: DesktopRecoveryBootstrap,
 ) -> Result<DesktopTauriBootstrapScript, DesktopTauriBootstrapError> {
-    DesktopTauriBootstrapScript::new(recovery.script_source()?, true, false)
+    DesktopTauriBootstrapScript::new(recovery.script_source()?, true, false, None)
 }
 
 pub fn desktop_tauri_service_offline_init_script()
@@ -126,8 +147,16 @@ pub fn desktop_tauri_session_invalid_init_script()
 pub fn desktop_tauri_bootstrap_plugin<R: tauri::Runtime>(
     script: &DesktopTauriBootstrapScript,
 ) -> TauriPlugin<R> {
+    let native_session_cookie = script.native_session_cookie.clone();
     tauri::plugin::Builder::new("deve-native-bootstrap")
         .js_init_script(script.source.clone())
+        .on_webview_ready(move |webview| {
+            if let Some(cookie) = native_session_cookie.as_ref() {
+                webview
+                    .set_cookie(tauri_cookie_from_native_session(cookie))
+                    .expect("desktop native session cookie install failed before bootstrap");
+            }
+        })
         .build()
 }
 
@@ -137,7 +166,9 @@ pub fn desktop_tauri_local_service_bootstrap_from_env(
     match try_desktop_tauri_local_service_bootstrap_from_env(timestamp_unix_ms) {
         Ok(result) => result,
         Err(DesktopTauriBootstrapError::LocalService(
-            DesktopLocalServiceBootstrapError::SessionHandoffFailed,
+            DesktopLocalServiceBootstrapError::SessionHandoffFailed
+            | DesktopLocalServiceBootstrapError::MissingNativeSessionBootstrapSecret
+            | DesktopLocalServiceBootstrapError::NativeSessionCookieInvalid,
         )) => desktop_tauri_session_invalid_init_script()
             .ok()
             .map(recovery_bootstrap),
@@ -170,12 +201,25 @@ pub fn try_desktop_tauri_local_service_bootstrap_from_env(
         &mut session_handoff,
         timestamp_unix_ms,
     )?;
-    let script = desktop_tauri_success_init_script(&result.bootstrap)?;
+    let script = desktop_tauri_success_init_script(
+        &result.bootstrap,
+        result.session_material.native_session_cookie().cloned(),
+    )?;
 
     Ok(Some(DesktopTauriLocalServiceBootstrap {
         script,
         runtime: Some(runtime),
     }))
+}
+
+fn tauri_cookie_from_native_session(cookie: &DesktopNativeSessionCookie) -> Cookie<'static> {
+    Cookie::build((cookie.name().to_string(), cookie.value().to_string()))
+        .domain(cookie.domain().to_string())
+        .path(cookie.path().to_string())
+        .http_only(cookie.http_only())
+        .same_site(SameSite::Strict)
+        .secure(cookie.secure())
+        .build()
 }
 
 fn recovery_bootstrap(

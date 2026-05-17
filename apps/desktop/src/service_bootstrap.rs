@@ -7,16 +7,17 @@ use std::net::TcpStream;
 use std::time::Duration;
 
 use deve_core::native_adapter::{
-    NativeAdapterError, NativeEndpointReady, NativeProcessRuntimeSnapshot,
-    NativeServiceFailureKind, NativeServiceHealthProbe, validate_native_endpoint_bases,
+    NATIVE_SESSION_BOOTSTRAP_HEADER, NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeAdapterError,
+    NativeEndpointReady, NativeProcessRuntimeSnapshot, NativeServiceFailureKind,
+    NativeServiceHealthProbe, validate_native_endpoint_bases,
 };
 use serde_json::Value;
 use thiserror::Error;
 
 use crate::{
     DesktopBootstrap, DesktopLocalServiceEntrypointPlan, DesktopLocalServiceRuntime,
-    DesktopProcessLauncher, DesktopProcessRuntimeError, DesktopSessionMaterial, DesktopShell,
-    DesktopShellError,
+    DesktopNativeSessionCookie, DesktopProcessLauncher, DesktopProcessRuntimeError,
+    DesktopSessionMaterial, DesktopShell, DesktopShellError,
 };
 
 const MAX_LOOPBACK_RESPONSE_BYTES: usize = 64 * 1024;
@@ -32,6 +33,7 @@ pub struct DesktopLocalServiceProbeOutcome {
 pub struct DesktopLocalServiceBootstrapResult {
     pub bootstrap: DesktopBootstrap,
     pub bootstrap_script: String,
+    pub session_material: DesktopSessionMaterial,
     pub runtime_snapshot: NativeProcessRuntimeSnapshot,
 }
 
@@ -72,8 +74,12 @@ pub enum DesktopLocalServiceBootstrapError {
     ProbeInvalidResponse,
     #[error("desktop local service probe IO failed")]
     ProbeIo(#[source] std::io::Error),
+    #[error("desktop native session bootstrap secret is missing")]
+    MissingNativeSessionBootstrapSecret,
     #[error("desktop local service node-role payload is invalid")]
     InvalidNodeRolePayload,
+    #[error("desktop native session cookie is invalid")]
+    NativeSessionCookieInvalid,
 }
 
 pub fn run_desktop_local_service_bootstrap<L, P, H>(
@@ -134,6 +140,7 @@ where
             return Err(error);
         }
     };
+    let session_material = session.clone();
     shell.bind_session(session).map_err(|error| {
         runtime.record_session_handoff(false, timestamp_unix_ms.saturating_add(2));
         DesktopLocalServiceBootstrapError::Shell(error)
@@ -147,6 +154,7 @@ where
     Ok(DesktopLocalServiceBootstrapResult {
         bootstrap,
         bootstrap_script,
+        session_material,
         runtime_snapshot,
     })
 }
@@ -189,15 +197,63 @@ impl DesktopLocalServiceSessionHandoff for DesktopLoopbackHttpProbe {
     fn bind_session(
         &mut self,
         plan: &DesktopLocalServiceEntrypointPlan,
-        _endpoint: &NativeEndpointReady,
+        endpoint: &NativeEndpointReady,
     ) -> Result<DesktopSessionMaterial, DesktopLocalServiceBootstrapError> {
-        let json = self.get_json(&format!("{}/api/auth/status", plan.http_base))?;
+        let Some(secret) = native_session_secret_from_plan(plan) else {
+            return Err(DesktopLocalServiceBootstrapError::MissingNativeSessionBootstrapSecret);
+        };
+        let cookie = self.issue_native_session_cookie(plan, endpoint, secret)?;
+        let json = self.get_json_with_cookie(
+            &format!("{}/api/auth/status", plan.http_base),
+            Some(&cookie.request_cookie_header()),
+        )?;
         session_material_from_auth_status_json(&json)
+            .map(|_| DesktopSessionMaterial::bound_with_native_session_cookie(cookie))
     }
 }
 
 impl DesktopLoopbackHttpProbe {
     fn get_json(&self, url: &str) -> Result<Value, DesktopLocalServiceBootstrapError> {
+        self.get_json_with_cookie(url, None)
+    }
+
+    fn get_json_with_cookie(
+        &self,
+        url: &str,
+        cookie_header: Option<&str>,
+    ) -> Result<Value, DesktopLocalServiceBootstrapError> {
+        let response = self.http_request("GET", url, &[], cookie_header)?;
+        serde_json::from_slice(&response.body)
+            .map_err(|_| DesktopLocalServiceBootstrapError::ProbeInvalidResponse)
+    }
+
+    fn issue_native_session_cookie(
+        &self,
+        plan: &DesktopLocalServiceEntrypointPlan,
+        endpoint: &NativeEndpointReady,
+        secret: &str,
+    ) -> Result<DesktopNativeSessionCookie, DesktopLocalServiceBootstrapError> {
+        let response = self.http_request(
+            "POST",
+            &format!("{}/api/auth/native-session", plan.http_base),
+            &[(NATIVE_SESSION_BOOTSTRAP_HEADER, secret)],
+            None,
+        )?;
+        let set_cookie = response
+            .header("set-cookie")
+            .ok_or(DesktopLocalServiceBootstrapError::NativeSessionCookieInvalid)?;
+        let domain = loopback_host_from_http_base(&endpoint.http_base)?;
+        DesktopNativeSessionCookie::from_set_cookie(set_cookie, &domain)
+            .map_err(|_| DesktopLocalServiceBootstrapError::NativeSessionCookieInvalid)
+    }
+
+    fn http_request(
+        &self,
+        method: &'static str,
+        url: &str,
+        extra_headers: &[(&str, &str)],
+        cookie_header: Option<&str>,
+    ) -> Result<LoopbackHttpResponse, DesktopLocalServiceBootstrapError> {
         let target = parse_loopback_http_url(url)?;
         let mut stream = TcpStream::connect_timeout(&target.addr, self.timeout)
             .map_err(DesktopLocalServiceBootstrapError::ProbeIo)?;
@@ -208,21 +264,33 @@ impl DesktopLoopbackHttpProbe {
             .set_write_timeout(Some(self.timeout))
             .map_err(DesktopLocalServiceBootstrapError::ProbeIo)?;
 
-        let request = format!(
-            "GET {} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nConnection: close\r\n\r\n",
+        let mut request = format!(
+            "{method} {} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nContent-Length: 0\r\nConnection: close\r\n",
             target.path, target.host_header
         );
+        if let Some(cookie_header) = cookie_header {
+            request.push_str("Cookie: ");
+            request.push_str(cookie_header);
+            request.push_str("\r\n");
+        }
+        for (name, value) in extra_headers {
+            request.push_str(name);
+            request.push_str(": ");
+            request.push_str(value);
+            request.push_str("\r\n");
+        }
+        request.push_str("\r\n");
         stream
             .write_all(request.as_bytes())
             .map_err(DesktopLocalServiceBootstrapError::ProbeIo)?;
 
         let bytes = read_capped_response(stream, self.max_response_bytes)?;
-        let (status, body) = split_http_response(&bytes)?;
+        let response = split_http_response(&bytes)?;
+        let status = response.status;
         if !(200..=299).contains(&status) {
             return Err(DesktopLocalServiceBootstrapError::ProbeHttpStatus { status });
         }
-        serde_json::from_slice(body)
-            .map_err(|_| DesktopLocalServiceBootstrapError::ProbeInvalidResponse)
+        Ok(response)
     }
 }
 
@@ -295,8 +363,25 @@ fn string_field(
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct LoopbackHttpTarget {
     addr: std::net::SocketAddr,
+    host: String,
     host_header: String,
     path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct LoopbackHttpResponse {
+    status: u16,
+    headers: Vec<(String, String)>,
+    body: Vec<u8>,
+}
+
+impl LoopbackHttpResponse {
+    fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.as_str())
+    }
 }
 
 fn parse_loopback_http_url(
@@ -322,9 +407,23 @@ fn parse_loopback_http_url(
         .ok_or(DesktopLocalServiceBootstrapError::InvalidProbeUrl)?;
     Ok(LoopbackHttpTarget {
         addr: std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+        host: host.to_string(),
         host_header: authority.to_string(),
         path,
     })
+}
+
+fn loopback_host_from_http_base(url: &str) -> Result<String, DesktopLocalServiceBootstrapError> {
+    Ok(parse_loopback_http_url(url)?.host)
+}
+
+fn native_session_secret_from_plan(plan: &DesktopLocalServiceEntrypointPlan) -> Option<&str> {
+    plan.spawn_spec
+        .env
+        .iter()
+        .find(|binding| binding.key == NATIVE_SESSION_BOOTSTRAP_SECRET_ENV)
+        .map(|binding| binding.value.as_str())
+        .filter(|value| !value.trim().is_empty())
 }
 
 fn read_capped_response(
@@ -348,7 +447,9 @@ fn read_capped_response(
     Ok(response)
 }
 
-fn split_http_response(bytes: &[u8]) -> Result<(u16, &[u8]), DesktopLocalServiceBootstrapError> {
+fn split_http_response(
+    bytes: &[u8],
+) -> Result<LoopbackHttpResponse, DesktopLocalServiceBootstrapError> {
     let header_end = bytes
         .windows(4)
         .position(|window| window == b"\r\n\r\n")
@@ -361,5 +462,17 @@ fn split_http_response(bytes: &[u8]) -> Result<(u16, &[u8]), DesktopLocalService
         .and_then(|line| line.split_whitespace().nth(1))
         .and_then(|code| code.parse::<u16>().ok())
         .ok_or(DesktopLocalServiceBootstrapError::ProbeInvalidResponse)?;
-    Ok((status, &bytes[header_end + 4..]))
+    let headers = headers
+        .lines()
+        .skip(1)
+        .filter_map(|line| {
+            let (key, value) = line.split_once(':')?;
+            Some((key.trim().to_string(), value.trim().to_string()))
+        })
+        .collect();
+    Ok(LoopbackHttpResponse {
+        status,
+        headers,
+        body: bytes[header_end + 4..].to_vec(),
+    })
 }

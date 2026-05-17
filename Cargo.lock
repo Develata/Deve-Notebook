@@ -1312,6 +1312,7 @@ name = "deve_desktop"
 version = "0.0.1"
 dependencies = [
  "deve_core",
+ "getrandom 0.3.4",
  "serde",
  "serde_json",
  "tauri",

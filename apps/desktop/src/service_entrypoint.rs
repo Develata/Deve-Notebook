@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 
 use deve_core::config::AppProfile;
 use deve_core::native_adapter::{
-    NativeProcessAdapterDecision, NativeProcessAdapterPolicy, NativeProcessBindHints,
-    NativeProcessEnvBinding, NativeProcessPathResolution, NativeProcessRuntimeError,
-    NativeProcessSpawnSpec,
+    NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeProcessAdapterDecision, NativeProcessAdapterPolicy,
+    NativeProcessBindHints, NativeProcessEnvBinding, NativeProcessPathResolution,
+    NativeProcessRuntimeError, NativeProcessSpawnSpec,
 };
 use thiserror::Error;
 
@@ -78,6 +78,8 @@ pub enum DesktopLocalServiceEntrypointError {
     ProcessPathFailed(#[source] std::io::Error),
     #[error("failed to allocate a loopback port")]
     PortAllocationFailed(#[source] std::io::Error),
+    #[error("failed to generate native session bootstrap secret")]
+    SessionSecretGenerationFailed,
     #[error(transparent)]
     InvalidSpawnSpec(#[from] NativeProcessRuntimeError),
 }
@@ -140,6 +142,7 @@ fn build_spawn_spec(
     let executable = packaged_cli_sibling(&input.current_exe)?;
     let ledger_path = input.data_root.join("ledger");
     let vault_path = input.data_root.join("vault");
+    let native_session_secret = generate_native_session_bootstrap_secret()?;
     Ok(NativeProcessSpawnSpec {
         executable,
         argv: vec![
@@ -153,6 +156,7 @@ fn build_spawn_spec(
             "DEVE_PROFILE".to_string(),
             "DEVE_LEDGER_DIR".to_string(),
             "DEVE_VAULT_PATH".to_string(),
+            NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
         ],
         env: vec![
             NativeProcessEnvBinding {
@@ -167,6 +171,10 @@ fn build_spawn_spec(
                 key: "DEVE_VAULT_PATH".to_string(),
                 value: vault_path.to_string_lossy().to_string(),
             },
+            NativeProcessEnvBinding {
+                key: NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
+                value: native_session_secret,
+            },
         ],
         profile: profile_env_value(input.profile).to_string(),
         config_path: input.data_root.join("config.toml"),
@@ -180,6 +188,24 @@ fn build_spawn_spec(
         },
         path_resolution: NativeProcessPathResolution::AbsoluteOnly,
     })
+}
+
+fn generate_native_session_bootstrap_secret() -> Result<String, DesktopLocalServiceEntrypointError>
+{
+    let mut bytes = [0u8; 32];
+    getrandom::fill(&mut bytes)
+        .map_err(|_| DesktopLocalServiceEntrypointError::SessionSecretGenerationFailed)?;
+    Ok(hex_encode(&bytes))
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    out
 }
 
 fn packaged_cli_sibling(current_exe: &Path) -> Result<PathBuf, DesktopLocalServiceEntrypointError> {

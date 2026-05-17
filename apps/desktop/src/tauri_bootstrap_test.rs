@@ -4,8 +4,9 @@ use deve_core::native_adapter::{
 
 use crate::{
     DesktopBootstrap, DesktopCommandProcessLauncher, DesktopLocalServiceRuntime,
-    DesktopLocalServiceTauriState, DesktopTauriBootstrapError, DesktopTauriBootstrapScript,
-    desktop_tauri_session_invalid_init_script, desktop_tauri_success_init_script,
+    DesktopLocalServiceTauriState, DesktopNativeSessionCookie, DesktopTauriBootstrapError,
+    DesktopTauriBootstrapScript, desktop_tauri_session_invalid_init_script,
+    desktop_tauri_success_init_script,
 };
 
 fn success_bootstrap() -> DesktopBootstrap {
@@ -17,9 +18,19 @@ fn success_bootstrap() -> DesktopBootstrap {
     }
 }
 
+fn native_session_cookie() -> DesktopNativeSessionCookie {
+    DesktopNativeSessionCookie::from_set_cookie(
+        "token=abc.def; Path=/; HttpOnly; SameSite=Strict",
+        "127.0.0.1",
+    )
+    .expect("cookie")
+}
+
 #[test]
 fn tauri_success_init_script_is_raw_js_and_session_bound() {
-    let script = desktop_tauri_success_init_script(&success_bootstrap()).expect("script");
+    let script =
+        desktop_tauri_success_init_script(&success_bootstrap(), Some(native_session_cookie()))
+            .expect("script");
 
     assert!(
         script
@@ -33,6 +44,7 @@ fn tauri_success_init_script_is_raw_js_and_session_bound() {
     assert!(!script.is_recovery());
     assert!(script.session_bound());
     assert!(!script.opens_authority_write_path());
+    assert!(script.has_native_session_cookie());
 }
 
 #[test]
@@ -41,9 +53,28 @@ fn tauri_success_init_script_rejects_unbound_session() {
     bootstrap.session_bound = false;
 
     assert!(matches!(
-        desktop_tauri_success_init_script(&bootstrap),
+        desktop_tauri_success_init_script(&bootstrap, None),
         Err(DesktopTauriBootstrapError::SessionNotBound)
     ));
+}
+
+#[test]
+fn tauri_success_init_script_requires_native_session_cookie() {
+    assert!(matches!(
+        desktop_tauri_success_init_script(&success_bootstrap(), None),
+        Err(DesktopTauriBootstrapError::NativeSessionCookieRequired)
+    ));
+}
+
+#[test]
+fn tauri_success_init_script_can_carry_http_only_cookie_outside_js_source() {
+    let script =
+        desktop_tauri_success_init_script(&success_bootstrap(), Some(native_session_cookie()))
+            .expect("script");
+
+    assert!(script.has_native_session_cookie());
+    assert!(!script.source().contains("abc.def"));
+    assert!(!script.source().contains("token"));
 }
 
 #[test]
@@ -70,6 +101,7 @@ fn tauri_bootstrap_source_rejects_secret_bearing_material() {
         "window.__DEVE_NATIVE_BOOTSTRAP={token:\"x\"};".to_string(),
         false,
         true,
+        None,
     );
 
     assert!(matches!(

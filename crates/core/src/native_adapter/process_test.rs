@@ -180,6 +180,22 @@ fn process_runtime_snapshot_never_serializes_secret_token_or_output_payload() {
 }
 
 #[test]
+fn process_env_binding_debug_and_serde_redact_secret_values() {
+    let binding = NativeProcessEnvBinding {
+        key: NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
+        value: "native-secret-value".to_string(),
+    };
+
+    let debug = format!("{binding:?}");
+    let encoded = serde_json::to_string(&binding).expect("serialize env binding");
+
+    assert!(debug.contains("<redacted>"));
+    assert!(encoded.contains("<redacted>"));
+    assert!(!debug.contains("native-secret-value"));
+    assert!(!encoded.contains("native-secret-value"));
+}
+
+#[test]
 fn process_runtime_failure_contract_marks_only_budgeted_failures_retryable() {
     assert!(NativeProcessRuntimeFailureKind::BindFailed.retryable_by_default());
     assert!(NativeProcessRuntimeFailureKind::HealthProbeFailed.retryable_by_default());

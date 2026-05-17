@@ -5,9 +5,10 @@ use std::thread;
 
 use deve_core::config::AppProfile;
 use deve_core::native_adapter::{
-    NativeEndpointReady, NativeProcessAdapterDecision, NativeProcessAdapterPolicy,
-    NativeProcessExitStatus, NativeProcessRuntimeFailureKind, NativeProcessRuntimeHandle,
-    NativeProcessRuntimeState, NativeProcessSpawnSpec, NativeServiceHealthProbe,
+    NATIVE_SESSION_BOOTSTRAP_HEADER, NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeEndpointReady,
+    NativeProcessAdapterDecision, NativeProcessAdapterPolicy, NativeProcessExitStatus,
+    NativeProcessRuntimeFailureKind, NativeProcessRuntimeHandle, NativeProcessRuntimeState,
+    NativeProcessSpawnSpec, NativeServiceHealthProbe,
 };
 use serde_json::json;
 
@@ -268,7 +269,7 @@ fn desktop_auth_status_controls_session_material() {
 }
 
 #[test]
-fn desktop_loopback_http_probe_reads_node_role_and_auth_status() {
+fn desktop_loopback_http_probe_reads_node_role() {
     let node_role_base = spawn_json_response(json!({
         "role": "native-main",
         "native_service": {
@@ -288,16 +289,59 @@ fn desktop_loopback_http_probe_reads_node_role_and_auth_status() {
     let outcome = probe.probe_node_role(&plan).expect("node role probe");
     assert!(outcome.probe.is_healthy());
     assert_eq!(outcome.endpoint.node_role, "native-main");
+}
 
-    let auth_base = spawn_json_response(json!({"authenticated": true}));
-    plan.http_base = auth_base;
+#[test]
+fn desktop_loopback_http_probe_requires_native_session_secret() {
+    let mut plan = plan();
+    plan.spawn_spec
+        .env
+        .retain(|binding| binding.key != NATIVE_SESSION_BOOTSTRAP_SECRET_ENV);
+    let endpoint = endpoint(false);
+    let mut probe = DesktopLoopbackHttpProbe::default();
+
+    let error = probe
+        .bind_session(&plan, &endpoint)
+        .expect_err("missing native session secret fails closed");
+
+    assert!(matches!(
+        error,
+        DesktopLocalServiceBootstrapError::MissingNativeSessionBootstrapSecret
+    ));
+}
+
+#[test]
+fn desktop_loopback_http_probe_issues_native_session_cookie_before_auth_status() {
+    let mut plan = plan();
+    plan.http_base = spawn_native_session_then_auth_status();
+    let endpoint = endpoint(false);
+    let mut probe = DesktopLoopbackHttpProbe::default();
+
     let session = probe
-        .bind_session(&plan, &outcome.endpoint)
-        .expect("auth status");
-    let mut shell = DesktopShell::new();
-    shell.start_service();
-    shell.bind_endpoint(outcome.endpoint).expect("endpoint");
-    shell.bind_session(session).expect("session");
+        .bind_session(&plan, &endpoint)
+        .expect("native session");
+    let cookie = session.native_session_cookie().expect("native cookie");
+
+    assert_eq!(cookie.name(), "token");
+    assert_eq!(cookie.domain(), "127.0.0.1");
+    assert_eq!(cookie.path(), "/");
+    assert!(cookie.http_only());
+    assert_eq!(cookie.same_site(), "Strict");
+    assert!(!format!("{:?}", cookie).contains("native.jwt"));
+}
+
+#[test]
+fn desktop_native_session_cookie_rejects_non_loopback_domain() {
+    let error = crate::DesktopNativeSessionCookie::from_set_cookie(
+        "token=native.jwt; Path=/; HttpOnly; SameSite=Strict",
+        "example.com",
+    )
+    .expect_err("non-loopback domain rejected");
+
+    assert!(matches!(
+        error,
+        crate::DesktopShellError::NativeSessionCookieInvalid
+    ));
 }
 
 fn spawn_json_response(body: serde_json::Value) -> String {
@@ -318,4 +362,51 @@ fn spawn_json_response(body: serde_json::Value) -> String {
             .expect("write response");
     });
     format!("http://{}", addr)
+}
+
+fn spawn_native_session_then_auth_status() -> String {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind test listener");
+    let addr = listener.local_addr().expect("listener addr");
+    thread::spawn(move || {
+        for idx in 0..2 {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let mut request = [0u8; 2048];
+            let read = stream.read(&mut request).expect("read request");
+            let request = String::from_utf8_lossy(&request[..read]);
+            if idx == 0 {
+                assert!(request.starts_with("POST /api/auth/native-session "));
+                assert!(request.contains(NATIVE_SESSION_BOOTSTRAP_HEADER));
+                let body = LoginSuccess::json();
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nSet-Cookie: token=native.jwt; Path=/; HttpOnly; SameSite=Strict\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream
+                    .write_all(response.as_bytes())
+                    .expect("write response");
+            } else {
+                assert!(request.starts_with("GET /api/auth/status "));
+                assert!(request.contains("Cookie: token=native.jwt"));
+                let body = json!({"authenticated": true}).to_string();
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream
+                    .write_all(response.as_bytes())
+                    .expect("write response");
+            }
+        }
+    });
+    format!("http://{}", addr)
+}
+
+struct LoginSuccess;
+
+impl LoginSuccess {
+    fn json() -> String {
+        json!({"success": true}).to_string()
+    }
 }

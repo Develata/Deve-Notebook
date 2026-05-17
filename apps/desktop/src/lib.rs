@@ -94,6 +94,6 @@ pub use tauri_entry::{
     menu_action_shell_effect, run_desktop_tauri_app, tray_action_shell_effect,
 };
 pub use types::{
-    DesktopBootstrap, DesktopRecoveryBootstrap, DesktopServiceState, DesktopSessionMaterial,
-    DesktopShellError, DesktopShellSnapshot,
+    DesktopBootstrap, DesktopNativeSessionCookie, DesktopRecoveryBootstrap, DesktopServiceState,
+    DesktopSessionMaterial, DesktopShellError, DesktopShellSnapshot,
 };

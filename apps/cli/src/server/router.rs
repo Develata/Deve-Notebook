@@ -13,7 +13,7 @@
 
 use anyhow::Result;
 use axum::{
-    Router,
+    Extension, Router,
     routing::{get, post},
 };
 use std::sync::Arc;
@@ -31,6 +31,15 @@ pub fn build_app(
     app_state: Arc<AppState>,
     port: u16,
     auth_config: Arc<AuthConfig>,
+) -> Result<Router> {
+    build_app_with_native_session(app_state, port, auth_config, None)
+}
+
+pub fn build_app_with_native_session(
+    app_state: Arc<AppState>,
+    port: u16,
+    auth_config: Arc<AuthConfig>,
+    native_session_bridge: Option<Arc<auth::handlers::NativeSessionBridge>>,
 ) -> Result<Router> {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
@@ -103,6 +112,16 @@ pub fn build_app(
             auth::middleware::login_rate_limit_middleware,
         ));
 
+    let native_session_route = match native_session_bridge {
+        Some(bridge) => Router::new()
+            .route(
+                "/api/auth/native-session",
+                post(auth::handlers::native_session),
+            )
+            .layer(Extension(bridge)),
+        None => Router::new(),
+    };
+
     let public = Router::new()
         .route("/api/node/role", get(node_role_http::role))
         .route("/api/auth/status", get(auth::handlers::status))
@@ -115,6 +134,7 @@ pub fn build_app(
         .merge(protected)
         .merge(public)
         .merge(login_route)
+        .merge(native_session_route)
         .merge(static_files::static_fallback())
         .with_state(app_state)
         .layer(axum::middleware::from_fn(auth::headers::security_headers))

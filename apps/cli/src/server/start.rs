@@ -68,6 +68,9 @@ pub async fn start_server_with_options(
     let host_dir = notegit::prepare(repo.as_ref(), &vault_path)?;
     setup::write_main_port_hint(&host_dir, port)?;
     let auth_config = Arc::new(router::load_auth_config());
+    let native_session_bridge =
+        super::auth::handlers::NativeSessionBridge::from_env(launch.is_native_loopback())
+            .map(|bridge| bridge.map(Arc::new))?;
     let (tx, _rx) = broadcast::channel(100);
 
     let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(
@@ -112,7 +115,12 @@ pub async fn start_server_with_options(
     metrics::spawn_broadcaster(app_state.clone());
 
     static_files::validate_static_dir_override()?;
-    let app = router::build_app(app_state, port, auth_config)?;
+    let app = match native_session_bridge {
+        Some(bridge) => {
+            router::build_app_with_native_session(app_state, port, auth_config, Some(bridge))?
+        }
+        None => router::build_app(app_state, port, auth_config)?,
+    };
     let addr = launch.bind_addr();
     println!("Server running on {}", launch.ws_display_base());
 

@@ -2,17 +2,49 @@
 //!   - 08_ui_design_02_desktop#desktop-process-adapter-decision
 //!   - 08_ui_design_03_mobile#mobile-process-adapter-decision
 
+use std::fmt;
 use std::path::{Component, Path, PathBuf};
 
-use serde::{Deserialize, Serialize};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize, Serializer};
 use thiserror::Error;
 
 use super::{NativeEndpointReady, NativeProcessAdapterPolicy, NativeServiceHealthProbe};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize)]
 pub struct NativeProcessEnvBinding {
     pub key: String,
     pub value: String,
+}
+
+impl fmt::Debug for NativeProcessEnvBinding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NativeProcessEnvBinding")
+            .field("key", &self.key)
+            .field("value", &redacted_env_value(&self.key, &self.value))
+            .finish()
+    }
+}
+
+impl Serialize for NativeProcessEnvBinding {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("NativeProcessEnvBinding", 2)?;
+        state.serialize_field("key", &self.key)?;
+        state.serialize_field("value", redacted_env_value(&self.key, &self.value))?;
+        state.end()
+    }
+}
+
+fn redacted_env_value<'a>(key: &str, value: &'a str) -> &'a str {
+    let key = key.to_ascii_uppercase();
+    if key.contains("SECRET") || key.contains("TOKEN") || key.contains("PASS") {
+        "<redacted>"
+    } else {
+        value
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

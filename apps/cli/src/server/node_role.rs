@@ -78,6 +78,21 @@ pub fn update_repo_health(repo_health: RepoHealthSummary) {
     }
 }
 
+pub fn mark_native_session_bound() {
+    let cell = role_cell();
+    match cell.write() {
+        Ok(mut current) => {
+            if let Some(service) = current.native_service.as_mut() {
+                service.state = "endpoint_ready".into();
+                if let Some(endpoint) = service.endpoint.as_mut() {
+                    endpoint.session_bound = true;
+                }
+            }
+        }
+        Err(_) => tracing::warn!("NodeRole lock poisoned, ignoring native session update"),
+    }
+}
+
 pub fn get_node_role() -> NodeRole {
     let cell = role_cell();
     match cell.read() {

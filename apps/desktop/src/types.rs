@@ -1,6 +1,8 @@
 //! plan_ref:
 //!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
 
+use std::fmt;
+
 use deve_core::native_adapter::{
     NativeAdapterError, NativeEndpointReady, NativeProcessAdapterError,
     NativeProcessAdapterSnapshot, NativeRuntimeReadiness, NativeServiceOffline,
@@ -34,18 +36,153 @@ pub struct DesktopShellSnapshot {
     pub process_adapter: NativeProcessAdapterSnapshot,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct DesktopSessionMaterial {
     pub(super) bound: bool,
+    native_session_cookie: Option<DesktopNativeSessionCookie>,
 }
 
 impl DesktopSessionMaterial {
     pub fn bound() -> Self {
-        Self { bound: true }
+        Self {
+            bound: true,
+            native_session_cookie: None,
+        }
     }
 
     pub fn pending() -> Self {
-        Self { bound: false }
+        Self {
+            bound: false,
+            native_session_cookie: None,
+        }
+    }
+
+    pub fn bound_with_native_session_cookie(cookie: DesktopNativeSessionCookie) -> Self {
+        Self {
+            bound: true,
+            native_session_cookie: Some(cookie),
+        }
+    }
+
+    pub fn native_session_cookie(&self) -> Option<&DesktopNativeSessionCookie> {
+        self.native_session_cookie.as_ref()
+    }
+}
+
+impl fmt::Debug for DesktopSessionMaterial {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DesktopSessionMaterial")
+            .field("bound", &self.bound)
+            .field("native_session_cookie", &self.native_session_cookie)
+            .finish()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct DesktopNativeSessionCookie {
+    name: String,
+    value: String,
+    domain: String,
+    path: String,
+    secure: bool,
+    http_only: bool,
+    same_site: String,
+}
+
+impl DesktopNativeSessionCookie {
+    pub fn from_set_cookie(set_cookie: &str, domain: &str) -> Result<Self, DesktopShellError> {
+        let mut parts = set_cookie.split(';').map(str::trim);
+        let Some(name_value) = parts.next() else {
+            return Err(DesktopShellError::NativeSessionCookieInvalid);
+        };
+        let Some((name, value)) = name_value.split_once('=') else {
+            return Err(DesktopShellError::NativeSessionCookieInvalid);
+        };
+        let name = name.trim();
+        let value = value.trim();
+        if name != "token" || value.is_empty() || !is_loopback_cookie_domain(domain) {
+            return Err(DesktopShellError::NativeSessionCookieInvalid);
+        }
+
+        let mut cookie = Self {
+            name: name.to_string(),
+            value: value.to_string(),
+            domain: domain.to_string(),
+            path: "/".to_string(),
+            secure: false,
+            http_only: false,
+            same_site: String::new(),
+        };
+        for attr in parts {
+            let lower = attr.to_ascii_lowercase();
+            if lower == "httponly" {
+                cookie.http_only = true;
+            } else if lower == "secure" {
+                cookie.secure = true;
+            } else if let Some((key, value)) = attr.split_once('=') {
+                if key.eq_ignore_ascii_case("path") {
+                    cookie.path = value.trim().to_string();
+                } else if key.eq_ignore_ascii_case("samesite") {
+                    cookie.same_site = value.trim().to_string();
+                }
+            }
+        }
+        if !cookie.http_only || !cookie.same_site.eq_ignore_ascii_case("strict") {
+            return Err(DesktopShellError::NativeSessionCookieInvalid);
+        }
+        Ok(cookie)
+    }
+
+    #[cfg(feature = "native-packaging")]
+    pub(crate) fn value(&self) -> &str {
+        &self.value
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn domain(&self) -> &str {
+        &self.domain
+    }
+
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    pub fn secure(&self) -> bool {
+        self.secure
+    }
+
+    pub fn http_only(&self) -> bool {
+        self.http_only
+    }
+
+    pub fn same_site(&self) -> &str {
+        &self.same_site
+    }
+
+    #[cfg(feature = "native-packaging")]
+    pub(crate) fn request_cookie_header(&self) -> String {
+        format!("{}={}", self.name, self.value)
+    }
+}
+
+fn is_loopback_cookie_domain(domain: &str) -> bool {
+    matches!(domain.trim(), "127.0.0.1" | "localhost")
+}
+
+impl fmt::Debug for DesktopNativeSessionCookie {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DesktopNativeSessionCookie")
+            .field("name", &self.name)
+            .field("value", &"<redacted>")
+            .field("domain", &self.domain)
+            .field("path", &self.path)
+            .field("secure", &self.secure)
+            .field("http_only", &self.http_only)
+            .field("same_site", &self.same_site)
+            .finish()
     }
 }
 
@@ -94,6 +231,8 @@ pub enum DesktopShellError {
     ServiceOffline { reason: String },
     #[error("desktop session is invalid")]
     SessionInvalid,
+    #[error("desktop native session cookie is invalid")]
+    NativeSessionCookieInvalid,
     #[error("desktop foreground reprobe is required before loading writable shell")]
     ForegroundReprobeRequired,
     #[error("desktop service supervisor rejected transition: {0}")]

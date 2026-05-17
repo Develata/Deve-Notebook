@@ -38,9 +38,10 @@ pub use supervisor::{
     NativeServiceSupervisorSnapshot, NativeServiceSupervisorState,
 };
 pub use types::{
-    NativeAdapterPlatform, NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady,
-    NativePlatformEvent, NativePlatformEventEffect, NativePlatformEventKind,
-    NativeRuntimeReadiness, NativeServiceOffline, NativeServiceRestarting, NativeServiceSuspended,
+    NATIVE_SESSION_BOOTSTRAP_HEADER, NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeAdapterPlatform,
+    NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady, NativePlatformEvent,
+    NativePlatformEventEffect, NativePlatformEventKind, NativeRuntimeReadiness,
+    NativeServiceOffline, NativeServiceRestarting, NativeServiceSuspended,
     classify_native_platform_event, platform_event_can_grant_write,
 };
 pub use validation::{
