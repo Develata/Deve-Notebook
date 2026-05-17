@@ -32,39 +32,62 @@ check_contains apps/cli/src/server/security.rs "permissions.set_mode(0o600)"
 check_contains apps/cli/src/server/security.rs "identity_key_permissions_are_corrected_to_owner_only"
 check_contains apps/cli/src/server/security.rs "identity_key_permissions_fail_closed_for_non_file"
 
-# AUTH-001/002/009: runtime config is env-driven and production fails closed.
+# AUTH-001/002: runtime config is env-driven and production fails closed.
 check_contains crates/core/src/security/auth/config.rs "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
 check_contains crates/core/src/security/auth/config.rs "AUTH_SECRET must be >= 32 bytes"
 check_contains crates/core/src/security/auth/config.rs "AUTH_PASS must be a valid Argon2 PHC hash"
 check_contains crates/core/src/security/auth/config.rs "missing_secret_or_password_fails_closed_in_production"
 check_absent crates/core/src/security/auth/config.rs 'expect("checked above")'
 check_contains apps/cli/src/server/router.rs "WARNING: development-only auth defaults active"
+
+# AUTH-009: JWT payload is minimized to sub, iat, exp, and version.
+check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-009"
+check_contains docs/acceptance-cases/08_auth.md "cargo test -p deve_core issue_token_preserves_subject -- --nocapture"
 check_contains crates/core/src/security/auth/jwt.rs "sub"
 check_contains crates/core/src/security/auth/jwt.rs "iat"
 check_contains crates/core/src/security/auth/jwt.rs "exp"
 check_contains crates/core/src/security/auth/jwt.rs "ver"
 check_contains crates/core/src/security/auth/jwt.rs "subject: &str"
 check_contains crates/core/src/security/auth/jwt.rs "sub: subject.to_string()"
+check_contains crates/core/src/security/auth/jwt.rs "fn issue_token_preserves_subject()"
 check_absent docs/acceptance-cases/08_auth.md "deve auth decode-jwt"
 
-# AUTH-003/005/012: cookie session and status endpoint contract.
+# AUTH-003/012: cookie session and status endpoint contract.
 check_contains apps/cli/src/server/auth/handlers/session.rs ".http_only(true)"
 check_contains apps/cli/src/server/auth/handlers/session.rs ".same_site(SameSite::Strict)"
 check_contains apps/cli/src/server/auth/handlers/session.rs ".secure(https_enabled())"
 check_contains apps/cli/src/server/auth/handlers/session.rs "Login audit"
 check_contains apps/cli/src/server/auth/handlers/session.rs "user_agent"
-check_contains apps/cli/src/server/auth/cookie.rs "token_csrf"
 check_contains apps/cli/src/server/auth/handlers/session.rs "AuthStatusResponse::unauthenticated()"
 check_contains apps/cli/src/server/router.rs ".route(\"/api/auth/status\", get(auth::handlers::status))"
 
-# AUTH-007/008/010: auth middleware, rate limiting, and WS handshake errors are structured.
+# AUTH-005: auth cookie extraction must match the exact token name and reject
+# token_csrf/tokenBackup prefix traps.
+check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-005"
+check_contains apps/cli/src/server/auth/cookie.rs "token_csrf"
+check_contains apps/cli/src/server/auth/cookie.rs "tokenBackup=bad"
+check_contains apps/cli/src/server/auth/handlers/session.rs "fn status_rejects_token_cookie_prefixes()"
+
+# AUTH-007: protected writes reject missing or invalid auth.
 check_contains apps/cli/src/server/auth/middleware.rs "Json(AuthErrorResponse::new(code))"
+check_contains apps/cli/src/server/auth/middleware.rs "development-only anonymous localhost auth bypass active"
+
+# AUTH-008: login rate limiting must block repeated failures and fail closed
+# when the brute-force guard is poisoned.
+check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-008"
 check_contains apps/cli/src/server/auth/middleware.rs "StatusCode::TOO_MANY_REQUESTS"
 check_contains apps/cli/src/server/auth/handlers/login.rs "Login blocked (brute force)"
 check_contains apps/cli/src/server/auth/brute_force.rs "BruteForceGuard lock poisoned; failing closed"
+check_contains apps/cli/src/server/auth/brute_force/tests.rs "fn test_blocked_after_max_failures()"
+check_contains apps/cli/src/server/auth/brute_force/tests.rs "fn poisoned_lock_blocks_ip_fail_closed()"
+
+# AUTH-010: WebSocket handshake failures must be 401 structured JSON with
+# AUTH_TOKEN_MISSING / token auth error codes.
+check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-010"
 check_contains apps/cli/src/server/ws/mod.rs "Json(AuthErrorResponse::new(code))"
 check_contains apps/cli/src/server/ws/mod.rs "StatusCode::UNAUTHORIZED"
-check_contains apps/cli/src/server/auth/middleware.rs "development-only anonymous localhost auth bypass active"
+check_contains apps/cli/src/server/ws/mod.rs "async fn unauthorized_ws_response_is_structured_json()"
+check_contains apps/cli/src/server/ws/auth.rs "AuthErrorCode::TokenMissing"
 
 # AUTH-004/011: security headers and frontend session-expired state separation.
 check_contains apps/cli/src/server/setup.rs "Wildcard CORS origin is forbidden"
