@@ -28,9 +28,9 @@ use loopback_http::{
 };
 
 const MAX_LOOPBACK_RESPONSE_BYTES: usize = 64 * 1024;
-const LOOPBACK_HTTP_TIMEOUT: Duration = Duration::from_millis(300);
-const LOOPBACK_HTTP_STARTUP_GRACE: Duration = Duration::from_secs(5);
-const LOOPBACK_HTTP_RETRY_INTERVAL: Duration = Duration::from_millis(50);
+const LOOPBACK_HTTP_TIMEOUT: Duration = Duration::from_secs(1);
+const LOOPBACK_HTTP_STARTUP_GRACE: Duration = Duration::from_secs(15);
+const LOOPBACK_HTTP_RETRY_INTERVAL: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesktopLocalServiceProbeOutcome {
