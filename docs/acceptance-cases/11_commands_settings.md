@@ -232,10 +232,11 @@
     - 未设置 DEVE_PROFILE
   steps:
     - run: deve config print
+    - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:
-    - stdout_contains: "profile = 'standard'"
+    - stdout_contains: 'profile = "standard"'
 
 - case_id: SET-002
   goal: config.toml 配置可由 CLI 更新。
@@ -243,6 +244,7 @@
     - config.toml 可写
   steps:
     - run: deve config set ui.sidebar_width 300
+    - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:
@@ -253,6 +255,7 @@
   preconditions:
     - docs/plan/13_settings.md 仍标记 Settings API 为 future work
   steps:
+    - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:

@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Settings Local Persistence / Feedback Closure：按 `docs/report/mainline-gap-rescan-after-repo-file-ops-closure-2026-05-17.md` 执行下一批本地功能；先建立 `deve config print/set`、Settings UI immediate feedback、reserved/disabled feedback 的 targeted baseline，再做浏览器 smoke；不得实现 server-backed Settings API。
+1. Settings Local Persistence / Feedback Closure：targeted baseline 已建立；下一步执行 Settings browser smoke，覆盖 Settings 打开、语言即时反馈、sync mode 反馈、AI backend disabled/available 反馈、reserved Hybrid marker、reload persistence 边界；不得实现 server-backed Settings API。
 
 ## 最近完成
 
+- Settings Local Feedback Baseline：新增 `scripts/check-settings-local-feedback-baseline.sh` 并绑定 `SET-001..007`；覆盖 `deve config print/set`、trusted-cli effective fallback、Settings UI immediate feedback、reserved/disabled feedback 与 future Settings API absent；未改 `docs/plan/`。
 - Mainline Gap Rescan After Repo File Operations Closure：复跑 plan coverage、architecture registry、acceptance bindings、feature operation paths、repo file-op baseline、storage/UI desktop baseline、runtime happy/recovery smoke 与 diff hygiene；未发现 blocking drift 或新的 unblocked Current MUST；下一批选择 Settings local persistence / feedback，不打开 server-backed Settings API。
 - Repo File Operations Browser Smoke：用隔离数据根 `/tmp/deve-fileops-smoke.ul9eb0` 和 embedded Web dev server 验证 create、move/rename、copy、delete、reload、断线锁态与重连恢复；最终稳定 reload 无 console error/warn，网络核心请求均 200，未发现 product code bug，未改 `docs/plan/`。
 - Repo File Operations Baseline：新增 `scripts/check-repo-file-ops-baseline.sh`，绑定 `UI-DESK-003`、`STORE-012`、`STORE-013`，覆盖 SearchBox file-op shell、FileProvider create candidate、document structure WS scope gate、server docs create/copy/move/delete handler 与 degraded write gate；未发现 product code bug，未改 `docs/plan/`。

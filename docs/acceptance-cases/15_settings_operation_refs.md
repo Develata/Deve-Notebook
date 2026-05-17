@@ -12,6 +12,7 @@
   steps:
     - run: deve config print
     - http_get: "/api/ai/backend-capabilities"
+    - run: scripts/check-settings-local-feedback-baseline.sh
   assertions:
     - stdout_contains: 'mode = "trusted-cli"'
     - http_assert: effective_backend_eq "native"
@@ -26,6 +27,7 @@
     - edit_file: /tmp/deve-settings/config.toml
       set: "profile = \"low-spec\""
     - run: cd /tmp/deve-settings && deve serve --dry-run
+    - run: scripts/check-settings-local-feedback-baseline.sh
   assertions:
     - log_contains_any: ["LowSpec", "low-spec"]
 
@@ -38,6 +40,7 @@
     - ui_click: "中文"
     - ui_click: "Manual"
     - ui_click: "Native"
+    - run: scripts/check-settings-local-feedback-baseline.sh
   assertions:
     - ui_assert: locale_eq "zh-CN"
     - ui_assert: sync_mode_eq "manual"
@@ -53,6 +56,7 @@
     - ui_hover: "Trusted CLI"
     - ui_query: "Hybrid Editing"
     - run: cargo test -p deve_web settings -- --nocapture
+    - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh
   assertions:
     - ui_assert: setting_disabled true

@@ -96,8 +96,8 @@ check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_EN
 check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/13_settings.md "DEVE_AI_AGENT_BRIDGE_ENABLED"
 check_contains docs/plan/13_settings.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
-check_contains docs/plan/13_settings.md '运行模式预设: `standard` (默认), `low-spec` (低配).'
-check_absent docs/plan/13_settings.md '`debug` (调试)'
+check_contains docs/plan/13_settings.md "运行模式预设: \`standard\` (默认), \`low-spec\` (低配)."
+check_absent docs/plan/13_settings.md "\`debug\` (调试)"
 check_contains docs/plan/13_settings.md "**Future Settings Surface**"
 check_contains docs/plan/13_settings.md "server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计"
 check_contains docs/plan/13_settings.md "启用前 **MUST** 更新本章、feature spec 与 acceptance case"

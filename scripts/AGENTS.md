@@ -29,6 +29,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-ui-dashboard-refresh-baseline.sh` | Verifies Dashboard SystemMetrics refresh and WS-backed sync status bindings |
 | `check-ui-desktop-baseline.sh` | Verifies Desktop canonical column markers, split diff scroll sync, layout resize persistence, and Unified Search mode routing bindings |
 | `check-cli-settings-baseline.sh` | Verifies CLI command surface, `config.toml` settings mutation, and shortcut entry contracts |
+| `check-settings-local-feedback-baseline.sh` | Verifies SET-003..007 local config persistence, effective feedback, reserved UI feedback, and future Settings API boundary |
 | `check-browser-prefs-boundary.sh` | Verifies harmless Web UI prefs are the only functional localStorage users and go through the fallback layer |
 | `check-diff-color-baseline.sh` | Verifies diff gutter colors use canonical source-control semantic tokens |
 | `check-large-doc-baseline.sh` | Verifies large-document snapshot-first, batch replay, and search gate contracts |
