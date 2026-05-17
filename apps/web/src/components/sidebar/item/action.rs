@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 06_repository#tree-projection-contract
+//!   - 08_ui_design_01_web#web-layout-persistence
 //!   - 16_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::dropdown::AnchorRect;
@@ -109,13 +110,27 @@ fn build_new_window_url(href: &str, doc_param: &str) -> String {
     let (base, hash) = href
         .split_once('#')
         .map_or((href, ""), |(base, hash)| (base, hash));
-    let sep = if base.contains('?') { '&' } else { '?' };
+    let (path, query) = base
+        .split_once('?')
+        .map_or((base, ""), |(path, query)| (path, query));
+    let query = replace_doc_query_param(query, doc_param);
     let suffix = if hash.is_empty() {
         String::new()
     } else {
         format!("#{hash}")
     };
-    format!("{base}{sep}doc={doc_param}{suffix}")
+    format!("{path}?{query}{suffix}")
+}
+
+fn replace_doc_query_param(query: &str, doc_param: &str) -> String {
+    let mut pairs = query
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+        .filter(|pair| pair.split_once('=').map_or(*pair, |(key, _)| key) != "doc")
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    pairs.push(format!("doc={doc_param}"));
+    pairs.join("&")
 }
 
 fn quote_arg(arg: &str) -> String {

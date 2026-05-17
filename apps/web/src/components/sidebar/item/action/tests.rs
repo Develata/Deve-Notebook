@@ -31,3 +31,14 @@ fn new_window_url_preserves_hash_fragment() {
         "http://127.0.0.1:8080/?doc=doc.md#section"
     );
 }
+
+#[test]
+fn new_window_url_replaces_stale_doc_query_param() {
+    assert_eq!(
+        build_new_window_url(
+            "http://127.0.0.1:8080/?doc=old.md&sc_full=1#section",
+            "notes%2Fnew.md"
+        ),
+        "http://127.0.0.1:8080/?sc_full=1&doc=notes%2Fnew.md#section"
+    );
+}
