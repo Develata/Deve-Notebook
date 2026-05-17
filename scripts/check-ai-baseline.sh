@@ -32,8 +32,10 @@ check_absent apps/web/src/components/command_palette/registry.rs "Switch Backend
 check_absent apps/web/src/components/command_palette/registry.rs "Switch to PLAN"
 check_absent apps/web/src/components/command_palette/registry.rs "Switch to BUILD"
 
-# Slash commands are local Native PLAN / BUILD session-mode switches. They must not
-# switch native/trusted-cli backend or send a plugin call by themselves.
+# AI-004: Slash commands are local Native PLAN / BUILD session-mode switches.
+# They must not switch native/trusted-cli backend or send a plugin call by themselves.
+check_contains docs/acceptance-cases/10_plugins.md "case_id: AI-004"
+check_contains docs/acceptance-cases/10_plugins.md "cargo test -p deve_web slash_commands_preserve_backend_mode -- --nocapture"
 check_contains docs/plan/10_ai_agent.md "用作后端切换命令"
 check_contains docs/features/operations/ai_chat.md "不切换 backend，不发起 plugin call"
 check_contains apps/web/src/components/chat/slash_commands.rs "\"/plan\" => Some(SlashCommand::Plan)"
@@ -54,8 +56,18 @@ check_contains apps/web/src/components/chat/actions/send.rs "build_chat_context"
 check_contains apps/web/src/components/chat/actions/send.rs "bounded_chat_history"
 check_contains plugins/ai-chat/main.rhai "system_prompt_base"
 check_contains plugins/ai-chat/main.rhai "append_prior_history"
+
+# AI-001: Native AI Chat must include current markdown context and finish the
+# matching chat placeholder on text responses.
+check_contains docs/acceptance-cases/10_plugins.md "case_id: AI-001"
+check_contains docs/acceptance-cases/10_plugins.md "cargo test -p deve_core --test ai_chat_plugin_test -- --nocapture"
+check_contains docs/acceptance-cases/10_plugins.md "cargo test -p deve_web chat_context -- --nocapture"
+check_contains docs/acceptance-cases/10_plugins.md "cargo test -p deve_web plugin_text_response -- --nocapture"
 check_contains crates/core/tests/ai_chat_plugin_test.rs "test_chat_with_api_key_reaches_stream_bridge"
+check_contains apps/web/src/components/chat/actions/send/tests.rs "chat_context_includes_current_doc_markdown_selection_and_mode"
 check_contains apps/web/src/components/chat/actions/send.rs "core_for_send.on_plugin_call"
+check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs "plugin_text_response_finishes_matching_chat_placeholder"
+check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs "plugin_text_response_does_not_duplicate_streamed_chat_content"
 check_contains apps/web/src/components/chat/actions/send_backend/tests.rs "trusted_cli_untrusted_send_uses_native_plugin_and_visible_notice"
 check_contains apps/web/src/components/chat/actions/apply.rs "chat_apply_append_markdown_op_uses_utf16_end_position"
 check_contains apps/web/src/components/chat/actions/apply.rs "chat_apply_edit_message_carries_current_scope_nonce"
@@ -75,8 +87,6 @@ check_contains docs/features/operations/ai_chat.md "Native AI 默认拒绝请求
 check_contains docs/features/operations/ai_chat.md "/api/ai/backend-capabilities"
 check_contains docs/acceptance-cases/10_plugins.md "AI-007"
 check_contains apps/web/src/hooks/use_core/effects/message_dispatch_runtime/mod.rs "finish_chat_request_from_plugin_response"
-check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs "plugin_text_response_finishes_matching_chat_placeholder"
-check_contains apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs "plugin_text_response_does_not_duplicate_streamed_chat_content"
 check_contains apps/cli/src/server/ai_chat/mod.rs "Native AI Chat tools are disabled by default"
 check_contains apps/cli/src/server/ai_chat/mod.rs "native_ai_rejects_request_tools_before_provider_call"
 check_contains apps/cli/src/server/ai_chat/stream.rs "Native AI Chat provider tool calls are disabled by default"
