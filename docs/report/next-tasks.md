@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Command Acceptance Boundary Closure：按 `docs/report/rendering-manual-acceptance-closure-2026-05-17.md` 继续收敛 `CMD-005`；只绑定当前 command behavior，不得打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Manual-doc Residue Triage：按 `docs/report/command-acceptance-boundary-closure-2026-05-17.md` 复核剩余 `POS-*` 与 `TERM-*` manual-doc case；若只是定位/术语人工评审，不强行自动化。若发现具体 plan/code drift，再单独开小批次修复。
 
 ## 最近完成
 
+- Command Acceptance Boundary Closure：把 `CMD-005` 绑定到 `scripts/check-ai-baseline.sh` 的现有 slash-command guard；`/plan`、`/build`、`/agents` 只切换本地 Native `PLAN / BUILD` session mode，不切 backend、不发 plugin call；acceptance bindings 从 automated `137` / manual `9` 收敛到 automated `138` / manual `8`，未改 `docs/plan/`。
 - Rendering Manual Acceptance Closure：把 `RENDER-CODE-001`、`RENDER-LINK-002`、`RENDER-NEST-001`、`RENDER-WHITELIST-001` 绑定到 `scripts/check-rendering-baseline.sh` 的现有 renderer tests、CodeMirror toolbar guard、link safety guard、nested CSS/JS decorations 与 Chrome MCP smoke evidence；acceptance bindings 从 automated `133` / manual `13` 收敛到 automated `137` / manual `9`，未改 `docs/plan/`。
 - Plugin Runtime Acceptance Closure：把 `PLUG-002` 与 `PLUG-003` 绑定到 `scripts/check-ai-baseline.sh` 的现有 Calculation Runtime reserved UI、ledger-managed boundary 与 guarded module resolver sandbox checks；acceptance bindings 从 automated `131` / manual `15` 收敛到 automated `133` / manual `13`，未改 `docs/plan/`。
 - AI Chat UX Acceptance Closure：把 `AI-001` 与 `AI-004` 绑定到 `scripts/check-ai-baseline.sh` 的现有 chat context、plugin text response、slash command 与 backend-preservation checks；acceptance bindings 从 automated `129` / manual `17` 收敛到 automated `131` / manual `15`，未改 `docs/plan/`。

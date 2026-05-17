@@ -32,11 +32,16 @@ check_absent apps/web/src/components/command_palette/registry.rs "Switch Backend
 check_absent apps/web/src/components/command_palette/registry.rs "Switch to PLAN"
 check_absent apps/web/src/components/command_palette/registry.rs "Switch to BUILD"
 
-# AI-004: Slash commands are local Native PLAN / BUILD session-mode switches.
+# AI-004/CMD-005: Slash commands are local Native PLAN / BUILD session-mode switches.
 # They must not switch native/trusted-cli backend or send a plugin call by themselves.
 check_contains docs/acceptance-cases/10_plugins.md "case_id: AI-004"
+check_contains docs/acceptance-cases/11_commands_settings.md "case_id: CMD-005"
+check_contains docs/acceptance-cases/11_commands_settings.md "ui_type: \"/plan\""
+check_contains docs/acceptance-cases/11_commands_settings.md "ui_type: \"/build\""
+check_contains docs/acceptance-cases/11_commands_settings.md "ui_type: \"/agents\""
 check_contains docs/acceptance-cases/10_plugins.md "cargo test -p deve_web slash_commands_preserve_backend_mode -- --nocapture"
 check_contains docs/plan/10_ai_agent.md "用作后端切换命令"
+check_contains docs/plan/12_commands.md "\`/agents\`: 在原生 \`PLAN ↔ BUILD\` 之间顺序切换。"
 check_contains docs/features/operations/ai_chat.md "不切换 backend，不发起 plugin call"
 check_contains apps/web/src/components/chat/slash_commands.rs "\"/plan\" => Some(SlashCommand::Plan)"
 check_contains apps/web/src/components/chat/slash_commands.rs "\"/build\" => Some(SlashCommand::Build)"
