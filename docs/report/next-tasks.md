@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Rescan After Web Shell Current Closure：在全量回归闸门为绿后，重新交叉 `docs/plan/`、`docs/features/`、acceptance cases 与代码，选择下一批最小实现；不得默认打开 Web Git writer、server-backed Settings API、native process runtime、signing、physical-device 或 native authority writes。
+1. Current HEAD Platform Evidence Refresh After Web Shell Current Closure：在 mainline gap rescan 未发现新的 unblocked Current Web/server gap 后，推送当前 `HEAD` 并触发 Docker Smoke 与 Native Target Host workflow，刷新 Desktop macOS/Windows、Android emulator、iOS simulator shell-only evidence；不得打开 native process runtime、native authority writes、signing、store 或 physical-device readiness。
 
 ## 最近完成
 
+- Mainline Gap Rescan After Web Shell Current Closure：复跑 acceptance bindings、feature operation paths、architecture registry 与 plan coverage；当前无新的 unblocked Current Web/server MUST gap，上一轮 platform evidence 已比当前 `HEAD` 落后 31 个提交，下一批选择刷新当前 HEAD 的 shell-only platform evidence；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Web Shell Current Closure：跑通 `cargo fmt --check`、`cargo test --locked`、全 feature clippy、acceptance/architecture/feature path/plan coverage、Web/UI/domain/release/native/mobile guards、Web release build、runtime happy/recovery smoke 与 diff hygiene；本机无 3001 服务导致 runtime release-info smoke 按脚本跳过；未改 `docs/plan/`。
 - Mainline Feature Gap Selection After Web PWA Manifest：复跑 Web/UI/mobile、repo file operations、network、acceptance、feature path、plan coverage 与 runtime happy/recovery smoke；未发现新的小型 unblocked Current Web/server gap，下一批转入 full regression gate；未改 `docs/plan/`。
 - Web PWA Manifest Browser Smoke：用隔离数据根和 embedded Web dev server 验证根页面 manifest link、theme-color、`/manifest.json` 200、`application/json` 与 browser console error/warn 归零；未改 `docs/plan/`。
