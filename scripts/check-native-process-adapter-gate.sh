@@ -46,8 +46,29 @@ check_no_process_runtime_leak() {
     "$ROOT_DIR/apps/desktop/src" \
     "$ROOT_DIR/apps/mobile/src" \
     "$ROOT_DIR/crates/core/src/native_adapter" || true)"
-  [[ -z "$imports" ]] \
-    || fail "native process runtime must stay absent until process adapter gate opens: ${imports//$'\n'/; }"
+  if [[ -n "$imports" ]]; then
+    while IFS= read -r line; do
+      case "$line" in
+        "$ROOT_DIR/apps/desktop/src/process_runtime.rs":*) ;;
+        *) fail "native process runtime is only allowed in the Desktop post-gate runtime spike: ${line#"$ROOT_DIR"/}" ;;
+      esac
+    done <<< "$imports"
+  fi
+
+  check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
+  check_contains apps/desktop/src/lib.rs "mod process_runtime;"
+  check_contains apps/desktop/src/process_runtime.rs "DesktopLocalServiceRuntime"
+  check_contains apps/desktop/src/process_runtime.rs "DesktopCommandProcessLauncher"
+  check_contains apps/desktop/src/process_runtime.rs "validate_desktop_service_command"
+  check_contains apps/desktop/src/process_runtime.rs "stop_service"
+  check_contains apps/desktop/src/process_runtime.rs "env_clear()"
+  check_contains apps/desktop/src/process_runtime.rs "executable must be deve_cli"
+  check_contains apps/desktop/src/process_runtime.rs "first argv must be serve"
+
+  if [[ -f "$ROOT_DIR/apps/mobile/src/process_runtime.rs" ]] \
+    || search_regex 'mod[[:space:]]+process_runtime[[:space:]]*;' "$ROOT_DIR/apps/mobile/src/lib.rs" >/dev/null; then
+    fail "mobile process runtime must remain closed"
+  fi
 }
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"

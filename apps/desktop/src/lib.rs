@@ -15,7 +15,7 @@ mod menu_tray;
 mod packaging;
 #[cfg(all(test, feature = "native-packaging"))]
 mod packaging_test;
-#[cfg(all(test, feature = "native-packaging"))]
+#[cfg(feature = "native-packaging")]
 mod process_runtime;
 #[cfg(all(test, feature = "native-packaging"))]
 mod process_runtime_test;
@@ -46,6 +46,11 @@ pub use packaging::{
     DesktopPackagingAcceptance, DesktopPackagingAuthority, DesktopPackagingCapability,
     DesktopPackagingDependencyBatch, DesktopPackagingScaffold, DesktopShellPackagingAcceptance,
     DesktopTrayAction, desktop_packaging_scaffold,
+};
+#[cfg(feature = "native-packaging")]
+pub use process_runtime::{
+    DesktopCommandProcessLauncher, DesktopLocalServiceRuntime, DesktopProcessLauncher,
+    DesktopProcessRuntimeError,
 };
 pub use shell::DesktopShell;
 #[cfg(feature = "native-packaging")]

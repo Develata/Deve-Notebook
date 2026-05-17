@@ -109,9 +109,37 @@ check_no_packaging_dependency_leak() {
 }
 
 check_no_process_runtime_leak() {
-  if search_regex '(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()' \
-    "$ROOT_DIR/apps/desktop/src" "$ROOT_DIR/apps/mobile/src" >/dev/null; then
-    fail "native process runtime must stay absent from desktop/mobile skeletons until the process adapter gate opens"
+  local process_imports
+  process_imports="$(search_regex '(^|[^[:alnum:]_])(std::process|Command::new|tokio::process|\.spawn\()' \
+    "$ROOT_DIR/apps/desktop/src" "$ROOT_DIR/apps/mobile/src" || true)"
+  if [[ -n "$process_imports" ]]; then
+    while IFS= read -r line; do
+      case "$line" in
+        "$ROOT_DIR/apps/desktop/src/process_runtime.rs":*) ;;
+        *) fail "native process runtime is only allowed in the Desktop post-gate runtime spike: ${line#"$ROOT_DIR"/}" ;;
+      esac
+    done <<< "$process_imports"
+  fi
+
+  check_contains apps/desktop/src/lib.rs "#[cfg(feature = \"native-packaging\")]"
+  check_contains apps/desktop/src/lib.rs "mod process_runtime;"
+  check_contains apps/desktop/src/process_runtime.rs "DesktopLocalServiceRuntime"
+  check_contains apps/desktop/src/process_runtime.rs "DesktopCommandProcessLauncher"
+  check_contains apps/desktop/src/process_runtime.rs "validate_desktop_service_command"
+  check_contains apps/desktop/src/process_runtime.rs "stop_service"
+  check_contains apps/desktop/src/process_runtime.rs "env_clear()"
+  check_contains apps/desktop/src/process_runtime.rs "command.env(&binding.key, &binding.value)"
+  check_contains apps/desktop/src/process_runtime.rs "executable must be deve_cli"
+  check_contains apps/desktop/src/process_runtime.rs "first argv must be serve"
+
+  if [[ -f "$ROOT_DIR/apps/mobile/src/process_runtime.rs" ]] \
+    || contains_regex "$ROOT_DIR/apps/mobile/src/lib.rs" 'mod[[:space:]]+process_runtime[[:space:]]*;'; then
+    fail "mobile process runtime must remain closed"
+  fi
+
+  if search_regex '(^|[^[:alnum:]_])(ledger|vault|source_control|search|GitMirror|NoteGit|std::fs|OpenOptions|File::create|File::options)' \
+    "$ROOT_DIR/apps/desktop/src/process_runtime.rs" >/dev/null; then
+    fail "desktop process runtime must remain authority-free"
   fi
 }
 

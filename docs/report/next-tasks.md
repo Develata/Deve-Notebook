@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Desktop Local Service Lifecycle Spike：在 Desktop `native-packaging` scope 后实现 authority-free local service lifecycle spike；只允许受控 `deve_cli serve` 子进程、loopback endpoint、health probe、session handoff 与 bounded restart，不得打开 native authority writes、Android process runtime、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
+1. Desktop Local Service Entrypoint Wiring：在 Desktop `native-packaging` entrypoint 后接入上一批 runtime scaffold；必须显式 opt-in，解析受控 packaged `deve_cli`，分配 loopback bind hints，完成 health probe 与 session handoff 后才允许 Web bootstrap；不得打开 native authority writes、Android process runtime、signing、store、physical-device readiness、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Desktop Local Service Lifecycle Runtime Spike：新增 Desktop `native-packaging` 下的受控 `DesktopLocalServiceRuntime`、launcher/start/stop/state machine 与 gate 脚本更新；默认 process policy 仍关闭，Tauri entrypoint 未自动启动后端，Mobile process runtime 与 native authority writes 仍关闭；未改 `docs/plan/`。
 - Desktop / Android Post-Gate Scope Decision：确认下一批先做 Desktop Local Service Lifecycle Spike；Android 继续保持 shell-only package execution，不打开 mobile process runtime；本批只做范围决策，未改 `docs/plan/`。
 - Mainline Gap Rescan After Platform Evidence Diagnostics：复跑 acceptance bindings、feature operation paths、architecture registry，并扫描 `docs/plan` / features / acceptance / latest reports 的 Future、Planned、Optional、post-gate 与 manual/unbound 标记；当前无新的 unblocked Current Web/server MUST gap，下一批转入 Desktop / Android post-gate scope decision；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Platform Evidence Diagnostics：跑通 `cargo fmt --check`、`cargo test --locked`、全 feature clippy、acceptance/architecture/feature path/plan coverage、domain baselines、release/native/mobile guards、Web release build、runtime happy/recovery smoke 与 diff hygiene；本机无 3001 服务导致 runtime release-info smoke 按脚本跳过；未改 `docs/plan/`。
