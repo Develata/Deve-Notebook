@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Rescan After Repo File Operations Closure：复跑主线映射守卫与必要领域 baseline，确认 Repo File Operations Closure 未引入 drift，再选择下一批无需外部凭据的功能实现项。
+1. Settings Local Persistence / Feedback Closure：按 `docs/report/mainline-gap-rescan-after-repo-file-ops-closure-2026-05-17.md` 执行下一批本地功能；先建立 `deve config print/set`、Settings UI immediate feedback、reserved/disabled feedback 的 targeted baseline，再做浏览器 smoke；不得实现 server-backed Settings API。
 
 ## 最近完成
 
+- Mainline Gap Rescan After Repo File Operations Closure：复跑 plan coverage、architecture registry、acceptance bindings、feature operation paths、repo file-op baseline、storage/UI desktop baseline、runtime happy/recovery smoke 与 diff hygiene；未发现 blocking drift 或新的 unblocked Current MUST；下一批选择 Settings local persistence / feedback，不打开 server-backed Settings API。
 - Repo File Operations Browser Smoke：用隔离数据根 `/tmp/deve-fileops-smoke.ul9eb0` 和 embedded Web dev server 验证 create、move/rename、copy、delete、reload、断线锁态与重连恢复；最终稳定 reload 无 console error/warn，网络核心请求均 200，未发现 product code bug，未改 `docs/plan/`。
 - Repo File Operations Baseline：新增 `scripts/check-repo-file-ops-baseline.sh`，绑定 `UI-DESK-003`、`STORE-012`、`STORE-013`，覆盖 SearchBox file-op shell、FileProvider create candidate、document structure WS scope gate、server docs create/copy/move/delete handler 与 degraded write gate；未发现 product code bug，未改 `docs/plan/`。
 - Mainline Feature Implementation Selection：从 platform credential / target-host handoff 返回主线，比较 Repo File Operations、Settings local persistence / feedback、Source Control command surface 与平台 post-gate；选定 Repo File Operations Closure 为下一批本地可推进功能，不打开 signing、physical-device、native process、native authority write、Web Git writer 或 server-backed Settings API。
