@@ -342,7 +342,7 @@ jobs:
           echo "Android install/startup smoke requires run_mobile_android_package_build=true."
           exit 1
 
-      - name: Mobile Android shell package build
+      - name: Mobile Android shell package build (standalone)
         id: mobile_android_package_build
         if: ${{ inputs.run_mobile_android_package_build && ! inputs.run_mobile_android_install_startup_smoke }}
         env:
@@ -365,6 +365,13 @@ jobs:
           DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS: "120"
         run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
 
+      - name: Mobile Android shell package build covered by emulator smoke
+        id: mobile_android_package_build_via_emulator
+        if: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+        run: |
+          find apps/mobile/gen/android/app/build/outputs -type f \( -name '*.apk' -o -name '*.aab' \) -print -quit | grep -q .
+          echo "Android shell package build was executed inside emulator install/startup smoke."
+
       - name: Upload Mobile Android package artifacts
         if: ${{ inputs.run_mobile_android_package_build }}
         uses: actions/upload-artifact@v7
@@ -384,13 +391,13 @@ jobs:
             scripts/check-mobile-platform-package-preflight.sh
             scripts/check-native-process-adapter-gate.sh
             run_mobile_android_package_build=${{ inputs.run_mobile_android_package_build }}
-            package_build_command=${{ inputs.run_mobile_android_package_build && ! inputs.run_mobile_android_install_startup_smoke && 'DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-package-build.sh' || 'skipped' }}
+            package_build_command=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && 'covered by emulator install/startup smoke: DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-package-build.sh' || inputs.run_mobile_android_package_build && 'DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1 scripts/check-mobile-android-shell-package-build.sh' || 'skipped' }}
             install_startup_command=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && 'DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED=1 DEVE_MOBILE_ANDROID_PACKAGE_TARGET=x86_64 DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS=120 scripts/check-mobile-android-emulator-install-startup-smoke.sh' || 'skipped' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             mobile_android_preflight=${{ steps.mobile_android_preflight.outcome }}
             process_gate=${{ steps.mobile_android_process_gate.outcome }}
             invalid_request=${{ inputs.run_mobile_android_install_startup_smoke && ! inputs.run_mobile_android_package_build && steps.mobile_android_invalid_request.outcome || 'skipped' }}
-            package_build=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_install_startup_smoke.outcome || inputs.run_mobile_android_package_build && steps.mobile_android_package_build.outcome || 'skipped' }}
+            package_build=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_package_build_via_emulator.outcome || inputs.run_mobile_android_package_build && steps.mobile_android_package_build.outcome || 'skipped' }}
             install_startup_smoke=${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_install_startup_smoke.outcome || inputs.run_mobile_android_install_startup_smoke && 'skipped - package build was not requested' || 'skipped' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: ${{ inputs.run_mobile_android_package_build && 'apps/mobile/gen/android/app/build/outputs/**/*.{apk,aab}' || 'N/A - Android package execution remains closed' }}
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: ${{ inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke && steps.mobile_android_install_startup_smoke.outcome || inputs.run_mobile_android_package_build && 'N/A - Android install smoke not requested by package execution gate' || 'N/A - Android package execution remains closed' }}
