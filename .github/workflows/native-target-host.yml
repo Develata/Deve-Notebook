@@ -385,6 +385,8 @@ jobs:
 
       - name: Native process adapter gate remains closed
         id: mobile_android_process_gate
+        env:
+          DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS: "0"
         run: scripts/check-native-process-adapter-gate.sh
 
       - name: Reject Android install smoke without package build

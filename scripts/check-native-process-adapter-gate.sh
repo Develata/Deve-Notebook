@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+RUN_DESKTOP_NATIVE_PACKAGING_TESTS="${DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS:-1}"
 
 fail() {
   echo "native-process-adapter-gate-check: $*" >&2
@@ -158,8 +159,18 @@ run cargo test --locked -p deve_core native_adapter::process_test -- --nocapture
 run cargo test --locked -p deve_desktop desktop_default_build_defers_real_process_adapter -- --nocapture
 run cargo test --locked -p deve_mobile mobile_default_build_defers_real_process_adapter -- --nocapture
 run cargo test --locked -p deve_cli native_session -- --nocapture
-run cargo test --locked -p deve_desktop --features native-packaging service_entrypoint -- --nocapture
-run cargo test --locked -p deve_desktop --features native-packaging service_bootstrap -- --nocapture
+case "$RUN_DESKTOP_NATIVE_PACKAGING_TESTS" in
+  1|true|TRUE|yes|YES)
+    run cargo test --locked -p deve_desktop --features native-packaging service_entrypoint -- --nocapture
+    run cargo test --locked -p deve_desktop --features native-packaging service_bootstrap -- --nocapture
+    ;;
+  0|false|FALSE|no|NO)
+    echo "native-process-adapter-gate-check: skip Desktop native-packaging tests for scoped target-host run"
+    ;;
+  *)
+    fail "invalid DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS: $RUN_DESKTOP_NATIVE_PACKAGING_TESTS"
+    ;;
+esac
 run cargo test --locked -p deve_desktop process_observation -- --nocapture
 run cargo test --locked -p deve_mobile process_observation -- --nocapture
 
