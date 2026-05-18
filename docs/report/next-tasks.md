@@ -1,15 +1,16 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-17
+> 更新日期：2026-05-18
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Full Regression Gate Refresh After Desktop Installer Evidence Closure：在 Desktop installer target-host evidence 与主线 gap rescan 闭合后，运行全仓库格式、测试、clippy、coverage、domain baseline、runtime smoke、release/native/mobile gates 与 diff hygiene；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
+1. Post-regression Work Selection After Desktop Installer Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases、guard scripts 与 target-host evidence，选择下一批小而硬实现或证据刷新；候选优先为新发现的 Current Web/server gap、Android target-host package evidence refresh、或 Desktop/Android post-gate scope decision；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Full Regression Gate Refresh After Desktop Installer Evidence Closure：跑通 `cargo fmt --check`、`cargo test --locked`、all-features clippy、acceptance/architecture/feature path/plan coverage、domain baselines、native/mobile gates、Web release build、runtime happy/recovery smoke 与 diff hygiene；runtime release-info smoke 因本机无 3001 服务按脚本跳过；未改 `docs/plan/`。
 - Mainline Gap Rescan After Desktop Installer Target-host Evidence：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、release/domain/UI/native/mobile baselines 与 runtime happy/recovery smoke；未发现新的 unblocked Current Web/server MUST gap，下一批进入 full regression gate；未改 `docs/plan/`。
 - Desktop Installer Target-host Evidence Refresh After Required Smoke Preflight：在 `04723cef` 上刷新 macOS / Windows Desktop installer target-host evidence；package build 与 installer install/uninstall smoke 均通过，invalid request gate 保持 skipped，process runtime gate 与 native authority writes 仍关闭；未改 `docs/plan/`。
 - Desktop Installer Required Smoke Preflight After Native Session Evidence：硬化 Desktop target-host workflow 的 invalid startup/installer request fail-closed、Desktop evidence required fields 与 release baseline guard；本地诊断、required Linux fail-closed、validator 正/负样例、YAML parse 与 diff hygiene 通过；未改 `docs/plan/`。
