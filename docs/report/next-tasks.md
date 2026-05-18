@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Mainline Gap Rescan After Desktop Installer Target-host Evidence：基于 latest Desktop installer target-host evidence、full regression gate、`docs/plan/`、features、acceptance cases 与 guard scripts 复扫主线缺口；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
+1. Full Regression Gate Refresh After Desktop Installer Evidence Closure：在 Desktop installer target-host evidence 与主线 gap rescan 闭合后，运行全仓库格式、测试、clippy、coverage、domain baseline、runtime smoke、release/native/mobile gates 与 diff hygiene；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Mainline Gap Rescan After Desktop Installer Target-host Evidence：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、release/domain/UI/native/mobile baselines 与 runtime happy/recovery smoke；未发现新的 unblocked Current Web/server MUST gap，下一批进入 full regression gate；未改 `docs/plan/`。
 - Desktop Installer Target-host Evidence Refresh After Required Smoke Preflight：在 `04723cef` 上刷新 macOS / Windows Desktop installer target-host evidence；package build 与 installer install/uninstall smoke 均通过，invalid request gate 保持 skipped，process runtime gate 与 native authority writes 仍关闭；未改 `docs/plan/`。
 - Desktop Installer Required Smoke Preflight After Native Session Evidence：硬化 Desktop target-host workflow 的 invalid startup/installer request fail-closed、Desktop evidence required fields 与 release baseline guard；本地诊断、required Linux fail-closed、validator 正/负样例、YAML parse 与 diff hygiene 通过；未改 `docs/plan/`。
 - Post-regression Work Selection After Desktop Native Session Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases 与 target-host evidence，选定下一批为 Desktop installer required smoke preflight；Android 继续保持 shell-only，未打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
