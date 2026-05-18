@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Android Target-host Package Evidence Refresh After Desktop Installer Evidence Closure：在当前 `HEAD` 上触发 `mobile-android` Native Target Host required preflight、shell package build 与 emulator install/startup smoke；收集并验证 `mobile-android.md` evidence；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
+1. Mainline Gap Rescan After Android Target-host Evidence Refresh：基于最新 Android shell-only target-host evidence、Desktop installer evidence、full regression gate、`docs/plan/`、features、acceptance cases 与 guard scripts，复扫是否出现新的 unblocked Current Web/server `MUST` gap；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Android Target-host Package Evidence Refresh After Desktop Installer Evidence Closure：在 `699e5bbd` 上刷新 `mobile-android` target-host evidence；required preflight、scoped process gate、shell package build、emulator install/startup smoke、package coverage marker 与 evidence validator 均通过；首轮 run `26023064624` 暴露 Android job 被 Desktop Linux native-packaging 依赖误阻塞，已用 scoped process gate 修复；未改 `docs/plan/`。
 - Post-regression Work Selection After Desktop Installer Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases、guard scripts 与 target-host evidence，选定下一批为 Android target-host package evidence refresh；Current Web/server 未发现新的 unblocked `MUST` gap，Desktop post-gate runtime scope 暂不打开；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Desktop Installer Evidence Closure：跑通 `cargo fmt --check`、`cargo test --locked`、all-features clippy、acceptance/architecture/feature path/plan coverage、domain baselines、native/mobile gates、Web release build、runtime happy/recovery smoke 与 diff hygiene；runtime release-info smoke 因本机无 3001 服务按脚本跳过；未改 `docs/plan/`。
 - Mainline Gap Rescan After Desktop Installer Target-host Evidence：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、release/domain/UI/native/mobile baselines 与 runtime happy/recovery smoke；未发现新的 unblocked Current Web/server MUST gap，下一批进入 full regression gate；未改 `docs/plan/`。
