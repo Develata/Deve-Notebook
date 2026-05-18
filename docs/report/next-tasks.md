@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Post-regression Work Selection After Android Target-host Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases、guard scripts、Desktop installer evidence 与 Android shell-only target-host evidence，选择下一批小型实现或 evidence 目标；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
+1. Mobile iOS Target-host Evidence Refresh After Android Evidence Closure：触发 `native-target-host.yml` 的 `mobile-ios` target，运行 required iOS preflight、shell package build、simulator install/startup smoke，收集并校验 `mobile-ios.md` evidence；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Post-regression Work Selection After Android Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases、guard scripts、Desktop installer evidence、Android shell-only evidence 与现有 iOS evidence，选定下一批为 Mobile iOS target-host evidence refresh；Current Web/server 未发现新的 unblocked `MUST` gap，Desktop/Android runtime scope 暂不扩大；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Android Target-host Evidence Closure：跑通 `cargo fmt --check`、`cargo test --locked`、locked all-features clippy、acceptance/architecture/feature path/plan coverage、release audit diagnostic、domain baselines、native/mobile gates、Web release build、Docker release smoke、runtime happy/recovery smoke 与 diff hygiene；runtime release-info smoke 因本机无 3001 服务按脚本跳过；未改 `docs/plan/`。
 - Mainline Gap Rescan After Android Target-host Evidence Refresh：复跑 acceptance bindings、feature operation paths、architecture registry、plan coverage、release/domain/UI/native/mobile baselines、Android evidence validator 与 runtime happy/recovery smoke；未发现新的 unblocked Current Web/server `MUST` gap，下一批进入 full regression gate；未改 `docs/plan/`。
 - Android Target-host Package Evidence Refresh After Desktop Installer Evidence Closure：在 `699e5bbd` 上刷新 `mobile-android` target-host evidence；required preflight、scoped process gate、shell package build、emulator install/startup smoke、package coverage marker 与 evidence validator 均通过；首轮 run `26023064624` 暴露 Android job 被 Desktop Linux native-packaging 依赖误阻塞，已用 scoped process gate 修复；未改 `docs/plan/`。
