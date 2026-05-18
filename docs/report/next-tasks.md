@@ -6,10 +6,11 @@
 
 ## 当前执行队列
 
-1. Desktop Installer Target-host Evidence Refresh After Required Smoke Preflight：dispatch Desktop macOS / Windows target-host installer smoke with package build enabled，收集并校验 evidence artifacts；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
+1. Mainline Gap Rescan After Desktop Installer Target-host Evidence：基于 latest Desktop installer target-host evidence、full regression gate、`docs/plan/`、features、acceptance cases 与 guard scripts 复扫主线缺口；不打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Desktop Installer Target-host Evidence Refresh After Required Smoke Preflight：在 `04723cef` 上刷新 macOS / Windows Desktop installer target-host evidence；package build 与 installer install/uninstall smoke 均通过，invalid request gate 保持 skipped，process runtime gate 与 native authority writes 仍关闭；未改 `docs/plan/`。
 - Desktop Installer Required Smoke Preflight After Native Session Evidence：硬化 Desktop target-host workflow 的 invalid startup/installer request fail-closed、Desktop evidence required fields 与 release baseline guard；本地诊断、required Linux fail-closed、validator 正/负样例、YAML parse 与 diff hygiene 通过；未改 `docs/plan/`。
 - Post-regression Work Selection After Desktop Native Session Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases 与 target-host evidence，选定下一批为 Desktop installer required smoke preflight；Android 继续保持 shell-only，未打开 signing、store、physical-device readiness、native authority writes、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Desktop Native Session Evidence Closure：跑通 `cargo fmt --check`、`cargo test --locked`、all-features clippy、acceptance/architecture/feature path/plan coverage、domain baselines、native gates、Web release build、runtime happy/recovery smoke 与 diff hygiene；runtime release-info smoke 因本机无 3001 服务按脚本跳过；未改 `docs/plan/`。
