@@ -36,7 +36,8 @@
 
 ## Archived Inputs
 
-- `baseline-2026-04-08.md` 与 `gap-*-2026-04-08.md` 是 raw historical scans，只作 forensic input。
+- `archive-legacy-2026-04-08.md` 汇总 `baseline-2026-04-08.md` 与 `gap-*-2026-04-08.md` raw historical scans，只作 forensic input。
+- `archive-2026-05-12-to-2026-05-16.md` 汇总 2026-05-12 至 2026-05-16 的中间 smoke、gap scan、guard refresh、平台诊断与 work-selection 报告；完整原文保留在 git history。
 - 已知过时断言包括：Watcher backend 缺失、WS Unauthorized 为 plain text、Agent Bridge 默认拉起 CLI、locale detection 缺失、`server/mod.rs` 过大，以及 MCP 可作为产品 runtime 方向。
 - `legacy-acceptance-checklist-2026-05-01.md` 已删除；权威入口是 `docs/acceptance-cases/00_index.md`。
 

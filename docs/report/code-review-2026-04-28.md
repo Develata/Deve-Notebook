@@ -15,7 +15,7 @@ future。
 
 - WebCrypto / IndexedDB 当前更接近 capability probe 与 metadata/vector store，还不是完整的浏览器私钥权威模型。
 - mobile native、desktop native packaging、graph visualization rendering、relay trust boundary 与若干 rendering 细节仍属于 future/partial。
-- `baseline-2026-04-08.md` 与 `gap-*-2026-04-08.md` 存在大量过时断言，不能继续作为 active TODO 使用。
+- `archive-legacy-2026-04-08.md` 中汇总的早期 raw scans 存在大量过时断言，不能继续作为 active TODO 使用。
 
 本次审查为 targeted code/docs inspection，没有重新跑全量测试；后续 release gate 以
 `release-verification-baseline-2026-05-01.md` 为准。
@@ -94,7 +94,7 @@ future。
 
 当前缺口 / 风险：
 
-- `baseline-2026-04-08.md` 是有价值的历史材料，但其结论已混有大量过时项，应原地归档而不是继续编辑成当前真相。
+- `archive-legacy-2026-04-08.md` 中的早期 raw scans 是有价值的历史材料，但其结论已混有大量过时项，应作为归档输入而不是继续编辑成当前真相。
 - `gap-core/server/web/i18n-ui-2026-04-08.md` 是 raw old scan，只能作 forensic input，不应直接转成 TODO。
 - `next-tasks.md` 之前膨胀成实现流水日志；当前应只保留短执行队列，完成证据迁移到 dated reports。
 
