@@ -1,15 +1,17 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-18
+> 更新日期：2026-05-19
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Post-regression Work Selection After Mobile iOS Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases、guard scripts、Desktop/Android/iOS target-host evidence 与当前报告，选择下一批小型实现或 evidence 目标；不打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API。
+1. Android Target-host Package Evidence Rerun After Windows Symlink Privilege：本机已补齐 Android Studio JBR、Android command-line tools、API 36 SDK/emulator/system image、NDK 与 Android Rust targets；required Android platform preflight 已通过；当前 package build 阻塞于 Windows 不允许 Tauri 创建 `jniLibs` 符号链接。下一步先启用 Windows Developer Mode 或授予 `SeCreateSymbolicLinkPrivilege`，再重跑 Android shell package build，并在通过后跑 API 36 emulator install/startup smoke；不打开 signing、store、physical-device readiness、Android process runtime、native authority writes、Web Git writer 或 server-backed Settings API。
+2. Post-regression Work Selection After Mobile iOS Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases、guard scripts、Desktop/Android/iOS target-host evidence 与当前报告，选择下一批小型实现或 evidence 目标；不打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Android Studio Target-host Toolchain Probe 2026-05-19：确认本机 Android Studio `2025.3.4.7` 可用，补齐 `android-clt`、API 36 SDK/emulator/system image、NDK `28.2.13676358` 与 `aarch64-linux-android` / `x86_64-linux-android` Rust targets；required Android platform preflight 通过，Android shell package build 已完成 Rust release `.so` 编译但阻塞于 Windows symlink privilege，未声明 package/emulator evidence closure；未打开 signing、store、physical-device readiness、Android process runtime、native authority writes、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Windows Desktop Package/Installer Smoke 2026-05-19：在 `d88ce6cc` 上补齐 Windows target-host 工具链（`aarch64-pc-windows-msvc`、`cargo-tauri 2.11.1`、WiX、NSIS），required Windows target-host preflight、MSI/NSIS package build、release startup smoke、native-session package smoke 与 installer install/uninstall smoke 均通过；package build 显式 `--no-sign`，未打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Windows Desktop Smoke 2026-05-18：在 `eb30caff` 上用 Windows Git Bash 跑 Desktop package preflight、Windows target-host preflight diagnostic、platform package build diagnostic、startup/installer smoke diagnostic、native process adapter gate 与 native packaging gate；因本机缺 `cargo tauri`、WiX、NSIS、`aarch64-pc-windows-msvc` 与 package/release artifacts，未声明 package/startup/installer readiness；修复 Windows Git Bash native gate 路径搜索误判与 Mobile Tauri Windows/macOS icon 前置缺失；未打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Full Regression Gate Refresh After Mobile iOS Target-host Evidence Closure：跑通 `cargo fmt --check`、`cargo test --locked`、locked all-features clippy、acceptance/architecture/feature path/plan coverage、release audit diagnostic、domain baselines、UI baselines、native/mobile gates、iOS/Android evidence validator、Web release build、Docker release smoke、runtime happy/recovery smoke 与 diff hygiene；runtime release-info smoke 因本机无 3001 服务按脚本跳过；未改 `docs/plan/`。
