@@ -2,16 +2,52 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR_NATIVE="$ROOT_DIR"
+if native_root="$(cd "$ROOT_DIR" && pwd -W 2>/dev/null)"; then
+  ROOT_DIR_NATIVE="${native_root//\\//}"
+fi
 
 fail() {
   echo "native-track-boundary-check: $*" >&2
   exit 1
 }
 
+is_windows_bash_host() {
+  case "$(uname -s 2>/dev/null || printf 'unknown')" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+can_use_rg_for_paths() {
+  command -v rg >/dev/null 2>&1 && ! is_windows_bash_host
+}
+
+normalize_search_line() {
+  local line="$1"
+  printf '%s\n' "${line//\\//}"
+}
+
+repo_line_matches() {
+  local line="$1"
+  local rel="$2"
+  line="$(normalize_search_line "$line")"
+  [[ "$line" == "$ROOT_DIR/$rel":* ]] && return 0
+  [[ "$line" == "$ROOT_DIR_NATIVE/$rel":* ]]
+}
+
+repo_line_display() {
+  local line="$1"
+  line="$(normalize_search_line "$line")"
+  line="${line#"$ROOT_DIR"/}"
+  line="${line#"$ROOT_DIR_NATIVE"/}"
+  printf '%s\n' "$line"
+}
+
 contains_fixed() {
   local file="$1"
   local pattern="$2"
-  if command -v rg >/dev/null 2>&1; then
+  if can_use_rg_for_paths; then
     rg -q --fixed-strings "$pattern" "$file"
   else
     grep -F -- "$pattern" "$file" >/dev/null
@@ -21,7 +57,7 @@ contains_fixed() {
 contains_regex() {
   local file="$1"
   local pattern="$2"
-  if command -v rg >/dev/null 2>&1; then
+  if can_use_rg_for_paths; then
     rg -q "$pattern" "$file"
   else
     grep -E -- "$pattern" "$file" >/dev/null
@@ -31,7 +67,7 @@ contains_regex() {
 contains_regex_ignore_case() {
   local file="$1"
   local pattern="$2"
-  if command -v rg >/dev/null 2>&1; then
+  if can_use_rg_for_paths; then
     rg -iq "$pattern" "$file"
   else
     grep -Ei -- "$pattern" "$file" >/dev/null
@@ -41,7 +77,7 @@ contains_regex_ignore_case() {
 search_regex() {
   local pattern="$1"
   shift
-  if command -v rg >/dev/null 2>&1; then
+  if can_use_rg_for_paths; then
     rg -n "$pattern" "$@"
   else
     grep -REn -- "$pattern" "$@"
@@ -97,14 +133,12 @@ check_no_packaging_dependency_leak() {
   runtime_imports="$(search_runtime_imports)"
   if [[ -n "$runtime_imports" ]]; then
     while IFS= read -r line; do
-      case "$line" in
-        "$ROOT_DIR/apps/desktop/src/menu_tray.rs":*) ;;
-        "$ROOT_DIR/apps/desktop/src/main.rs":*) ;;
-        "$ROOT_DIR/apps/desktop/src/tauri_bootstrap.rs":*) ;;
-        "$ROOT_DIR/apps/desktop/src/tauri_entry.rs":*) ;;
-        "$ROOT_DIR/apps/mobile/src/tauri_entry.rs":*) ;;
-        *) fail "native packaging runtime import outside native shell binding: ${line#"$ROOT_DIR"/}" ;;
-      esac
+      repo_line_matches "$line" "apps/desktop/src/menu_tray.rs" && continue
+      repo_line_matches "$line" "apps/desktop/src/main.rs" && continue
+      repo_line_matches "$line" "apps/desktop/src/tauri_bootstrap.rs" && continue
+      repo_line_matches "$line" "apps/desktop/src/tauri_entry.rs" && continue
+      repo_line_matches "$line" "apps/mobile/src/tauri_entry.rs" && continue
+      fail "native packaging runtime import outside native shell binding: $(repo_line_display "$line")"
     done <<< "$runtime_imports"
   fi
 }
@@ -115,10 +149,8 @@ check_no_process_runtime_leak() {
     "$ROOT_DIR/apps/desktop/src" "$ROOT_DIR/apps/mobile/src" || true)"
   if [[ -n "$process_imports" ]]; then
     while IFS= read -r line; do
-      case "$line" in
-        "$ROOT_DIR/apps/desktop/src/process_runtime.rs":*) ;;
-        *) fail "native process runtime is only allowed in the Desktop post-gate runtime spike: ${line#"$ROOT_DIR"/}" ;;
-      esac
+      repo_line_matches "$line" "apps/desktop/src/process_runtime.rs" && continue
+      fail "native process runtime is only allowed in the Desktop post-gate runtime spike: $(repo_line_display "$line")"
     done <<< "$process_imports"
   fi
 
@@ -246,9 +278,13 @@ check_manifest_dependency apps/mobile/Cargo.toml tauri 2.11.1
 check_manifest_dependency apps/mobile/Cargo.toml tauri-build 2.6.1
 check_contains apps/mobile/tauri.conf.json '"identifier": "dev.deve.notebook.mobile"'
 check_contains apps/mobile/tauri.conf.json '"productName": "Deve Notebook"'
-check_contains apps/mobile/tauri.conf.json '"icon": ["icons/icon.png"]'
+check_contains apps/mobile/tauri.conf.json '"icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]'
 [[ -f "$ROOT_DIR/apps/mobile/icons/icon.png" ]] \
   || fail "missing mobile Tauri icon: apps/mobile/icons/icon.png"
+[[ -f "$ROOT_DIR/apps/mobile/icons/icon.ico" ]] \
+  || fail "missing mobile Tauri Windows icon: apps/mobile/icons/icon.ico"
+[[ -f "$ROOT_DIR/apps/mobile/icons/icon.icns" ]] \
+  || fail "missing mobile Tauri macOS icon: apps/mobile/icons/icon.icns"
 check_contains apps/mobile/tauri.conf.json '"createUpdaterArtifacts": false'
 check_contains apps/mobile/build.rs "tauri_build::build()"
 check_contains apps/mobile/gen/android/settings.gradle "include ':app'"

@@ -8,55 +8,81 @@ fail() {
   exit 1
 }
 
+is_windows_bash_host() {
+  case "$(uname -s 2>/dev/null || printf 'unknown')" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+path_contains_regex() {
+  local pattern="$1"
+  local file="$2"
+  if command -v rg >/dev/null 2>&1 && ! is_windows_bash_host; then
+    rg -q "$pattern" "$file"
+  else
+    grep -E -- "$pattern" "$file" >/dev/null
+  fi
+}
+
+stdin_contains_regex() {
+  local pattern="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -q "$pattern"
+  else
+    grep -E -- "$pattern" >/dev/null
+  fi
+}
+
 check_desktop_tauri_lock_entries() {
-  rg -q 'name = "tauri"' "$ROOT_DIR/Cargo.lock" \
+  path_contains_regex 'name = "tauri"' "$ROOT_DIR/Cargo.lock" \
     || fail "desktop native-packaging dependency spike must lock tauri"
-  rg -q 'name = "tauri-build"' "$ROOT_DIR/Cargo.lock" \
+  path_contains_regex 'name = "tauri-build"' "$ROOT_DIR/Cargo.lock" \
     || fail "desktop native-packaging dependency spike must lock tauri-build"
-  rg -q 'name = "tray-icon"' "$ROOT_DIR/Cargo.lock" \
+  path_contains_regex 'name = "tray-icon"' "$ROOT_DIR/Cargo.lock" \
     || fail "desktop native-packaging menu/tray binding must lock tray-icon"
-  rg -q 'name = "tauri-runtime-wry"' "$ROOT_DIR/Cargo.lock" \
+  path_contains_regex 'name = "tauri-runtime-wry"' "$ROOT_DIR/Cargo.lock" \
     || fail "desktop native-packaging runtime entrypoint must lock tauri-runtime-wry"
 }
 
 check_mobile_tauri_lock_entries() {
-  rg -q 'name = "tauri"' "$ROOT_DIR/Cargo.lock" \
+  path_contains_regex 'name = "tauri"' "$ROOT_DIR/Cargo.lock" \
     || fail "mobile native-packaging dependency spike must lock tauri"
-  rg -q 'name = "tauri-build"' "$ROOT_DIR/Cargo.lock" \
+  path_contains_regex 'name = "tauri-build"' "$ROOT_DIR/Cargo.lock" \
     || fail "mobile native-packaging dependency spike must lock tauri-build"
-  rg -q 'name = "tauri-runtime-wry"' "$ROOT_DIR/Cargo.lock" \
+  path_contains_regex 'name = "tauri-runtime-wry"' "$ROOT_DIR/Cargo.lock" \
     || fail "mobile native-packaging shell entrypoint must lock tauri-runtime-wry"
 }
 
 check_default_desktop_tree_excludes_tauri() {
-  if cargo tree --locked -p deve_desktop --no-default-features | rg -q '(^| )tauri v'; then
+  if cargo tree --locked -p deve_desktop --no-default-features | stdin_contains_regex '(^| )tauri v'; then
     fail "default desktop dependency tree must remain no-Tauri"
   fi
 }
 
 check_default_mobile_tree_excludes_tauri() {
-  if cargo tree --locked -p deve_mobile --no-default-features | rg -q '(^| )tauri v'; then
+  if cargo tree --locked -p deve_mobile --no-default-features | stdin_contains_regex '(^| )tauri v'; then
     fail "default mobile dependency tree must remain no-Tauri"
   fi
 }
 
 check_desktop_feature_tree_includes_tauri() {
-  cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tauri v' \
+  cargo tree --locked -p deve_desktop --features native-packaging | stdin_contains_regex '(^| )tauri v' \
     || fail "desktop native-packaging feature must include tauri"
-  cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tauri-build v' \
+  cargo tree --locked -p deve_desktop --features native-packaging | stdin_contains_regex '(^| )tauri-build v' \
     || fail "desktop native-packaging feature must include tauri-build"
-  cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tray-icon v' \
+  cargo tree --locked -p deve_desktop --features native-packaging | stdin_contains_regex '(^| )tray-icon v' \
     || fail "desktop native-packaging feature must include tray-icon"
-  cargo tree --locked -p deve_desktop --features native-packaging | rg -q '(^| )tauri-runtime-wry v' \
+  cargo tree --locked -p deve_desktop --features native-packaging | stdin_contains_regex '(^| )tauri-runtime-wry v' \
     || fail "desktop native-packaging feature must include tauri-runtime-wry"
 }
 
 check_mobile_feature_tree_includes_tauri() {
-  cargo tree --locked -p deve_mobile --features native-packaging | rg -q '(^| )tauri v' \
+  cargo tree --locked -p deve_mobile --features native-packaging | stdin_contains_regex '(^| )tauri v' \
     || fail "mobile native-packaging feature must include tauri"
-  cargo tree --locked -p deve_mobile --features native-packaging | rg -q '(^| )tauri-build v' \
+  cargo tree --locked -p deve_mobile --features native-packaging | stdin_contains_regex '(^| )tauri-build v' \
     || fail "mobile native-packaging feature must include tauri-build"
-  cargo tree --locked -p deve_mobile --features native-packaging | rg -q '(^| )tauri-runtime-wry v' \
+  cargo tree --locked -p deve_mobile --features native-packaging | stdin_contains_regex '(^| )tauri-runtime-wry v' \
     || fail "mobile native-packaging feature must include tauri-runtime-wry"
 }
 

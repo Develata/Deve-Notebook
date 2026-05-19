@@ -2,11 +2,47 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR_NATIVE="$ROOT_DIR"
+if native_root="$(cd "$ROOT_DIR" && pwd -W 2>/dev/null)"; then
+  ROOT_DIR_NATIVE="${native_root//\\//}"
+fi
 RUN_DESKTOP_NATIVE_PACKAGING_TESTS="${DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS:-1}"
 
 fail() {
   echo "native-process-adapter-gate-check: $*" >&2
   exit 1
+}
+
+is_windows_bash_host() {
+  case "$(uname -s 2>/dev/null || printf 'unknown')" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+can_use_rg_for_paths() {
+  command -v rg >/dev/null 2>&1 && ! is_windows_bash_host
+}
+
+normalize_search_line() {
+  local line="$1"
+  printf '%s\n' "${line//\\//}"
+}
+
+repo_line_matches() {
+  local line="$1"
+  local rel="$2"
+  line="$(normalize_search_line "$line")"
+  [[ "$line" == "$ROOT_DIR/$rel":* ]] && return 0
+  [[ "$line" == "$ROOT_DIR_NATIVE/$rel":* ]]
+}
+
+repo_line_display() {
+  local line="$1"
+  line="$(normalize_search_line "$line")"
+  line="${line#"$ROOT_DIR"/}"
+  line="${line#"$ROOT_DIR_NATIVE"/}"
+  printf '%s\n' "$line"
 }
 
 run() {
@@ -17,7 +53,7 @@ run() {
 contains_fixed() {
   local file="$1"
   local pattern="$2"
-  if command -v rg >/dev/null 2>&1; then
+  if can_use_rg_for_paths; then
     rg -q --fixed-strings "$pattern" "$file"
   else
     grep -F -- "$pattern" "$file" >/dev/null
@@ -27,7 +63,7 @@ contains_fixed() {
 search_regex() {
   local pattern="$1"
   shift
-  if command -v rg >/dev/null 2>&1; then
+  if can_use_rg_for_paths; then
     rg -n "$pattern" "$@"
   else
     grep -REn -- "$pattern" "$@"
@@ -56,10 +92,8 @@ check_no_process_runtime_leak() {
     "$ROOT_DIR/crates/core/src/native_adapter" || true)"
   if [[ -n "$imports" ]]; then
     while IFS= read -r line; do
-      case "$line" in
-        "$ROOT_DIR/apps/desktop/src/process_runtime.rs":*) ;;
-        *) fail "native process runtime is only allowed in the Desktop post-gate runtime spike: ${line#"$ROOT_DIR"/}" ;;
-      esac
+      repo_line_matches "$line" "apps/desktop/src/process_runtime.rs" && continue
+      fail "native process runtime is only allowed in the Desktop post-gate runtime spike: $(repo_line_display "$line")"
     done <<< "$imports"
   fi
 

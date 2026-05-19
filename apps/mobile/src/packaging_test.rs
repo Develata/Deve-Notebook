@@ -91,7 +91,10 @@ fn mobile_tauri_manifest_declares_shell_metadata_only() {
     assert_eq!(config["app"]["withGlobalTauri"], false);
     assert_eq!(config["app"]["security"]["csp"], Value::Null);
     assert_eq!(config["bundle"]["active"], true);
-    assert_eq!(config["bundle"]["icon"][0], "icons/icon.png");
+    assert_eq!(
+        config["bundle"]["icon"],
+        serde_json::json!(["icons/icon.png", "icons/icon.ico", "icons/icon.icns"])
+    );
     assert_eq!(config["bundle"]["createUpdaterArtifacts"], false);
     assert!(
         config["plugins"]
