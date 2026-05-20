@@ -32,6 +32,7 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `15_release.md` | Build, packaging, and deployment |
 | `16_web_thin_client_ledger.md` | Web thin client, pending overlay, repo-scoped writer gate, ack/reject contract |
 | `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
+| `../registry/runtime-skeleton-registry.md` | Runtime convergence status and current module path registry |
 
 ## Subdirectories
 
@@ -53,7 +54,7 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 - `07_diff_logic.md#git-mirror-lifecycle` is the authoritative Git mirror lifecycle and command-boundary contract; storage and command chapters should reference it instead of duplicating preflight/import/export/push rules.
 - `pending overlay` is Web thin-client session runtime state; it must not be modeled as `pending_fs_ops` or cleared by watcher/scan semantics.
 - `08_ui_design.md#native-post-gate-common-contract` owns shared Desktop/Mobile post-gate native shell requirements; Desktop/Mobile subchapters should contain only platform deltas.
-- `deve-note plan.md` owns the Runtime Skeleton Registry; new refactor targets should be added there or explicitly marked as local-only before appearing in chapter tails.
+- `docs/registry/runtime-skeleton-registry.md` owns the current Runtime Skeleton Registry status/path table; new refactor targets should be added there or explicitly marked as local-only before appearing in chapter tails.
 
 ## Plan-Code Bijection Enforcement (双射执行机制)
 

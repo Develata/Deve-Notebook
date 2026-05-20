@@ -12,6 +12,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `acceptance-cases/`: automation-oriented validation cases and script entry contracts
 - `coverage-matrix.md`: stable chapter mapping across the three layers
 - `overview/`: cross-layer architecture view (doc-derived + code-derived lisp + diff + SVG)
+- `registry/`: controlled live registries that map plan concepts to current implementation state
 - `report/`: time-stamped gap analyses, audits, and progress snapshots (non-authoritative)
 - `tasks/`: implementation blueprints for infra-first restructuring and migration batches
 
@@ -20,6 +21,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 | File | Description |
 |------|-------------|
 | `coverage-matrix.md` | Three-layer chapter mapping (plan ↔ features ↔ acceptance-cases) |
+| `registry/runtime-skeleton-registry.md` | Runtime convergence status, current module path, and tracking task registry |
 | `ai-chat-streaming.md` | Design doc for AI chat streaming protocol (referenced from `plan/10_ai_agent.md`) |
 
 ## For AI Agents
@@ -31,5 +33,6 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `docs/plan/` answers: how the system is engineered.
 - `docs/features/` answers: what the product does and how an agent can verify it via Chrome MCP.
 - `docs/acceptance-cases/` answers: what automated tests/scripts must prove without relying on manual browser interaction.
+- `docs/registry/` answers: where a named plan concept is currently carried in code, and what its convergence status is.
 
 <!-- MANUAL: -->

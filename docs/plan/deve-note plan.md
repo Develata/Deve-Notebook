@@ -113,22 +113,13 @@
 
 ### Runtime Skeleton Registry
 
-*   本表是 runtime 名称与边界的权威登记；各章 `Refactor Target` 与本表冲突时，以本表为准。
-*   `authority_storage_runtime` **MUST** 拥有 ledger append validation 与 authority table 边界。
-*   `projection_persistence_runtime` **MUST** 从 ledger fold 派生 projection / workspace writeback / drift explanation。
-*   `watcher_runtime` **MUST** 只把外部文件事件归一化为 `pending_fs_ops`。
-*   `repair_runtime` / `projection_repair_runtime` **MUST** 统一 degraded、quarantine、projection rebuild 与 repair action 边界。
-*   `repo_catalog_runtime` / `repo_scope_runtime` **MUST** 统一 repo identity、branch、`scope_nonce` 与 writable state。
-*   `session_runtime` / `auth_gateway` / `browser_auth_runtime` **MUST** 统一认证状态、HTTP/WS 入口鉴权、cookie/JWT/session refresh、unauthorized recovery 与 cross-cutting security header。
-*   `transport_runtime` / `repo_scope_sync_runtime` / `browser_peer_runtime` **MUST** 统一 WebLightPeer handshake、stale message discard 与 repo-scoped protocol gate。
-*   `relay_proxy_runtime` **MUST** 只负责 relay/proxy routing，不得改写 payload source attribution。
-*   `browser_peer_runtime -> browser_document_runtime -> pending_overlay_runtime -> write_confirmation_runtime` **MUST** 是 Web write confirmation 主链。
-*   `pending_overlay_runtime` **MUST NOT** 写入 `pending_fs_ops`。
-*   `source_control_runtime` **MUST** 消费 `pending_fs_ops` / `GitImportRequested` 并生成 Deve stage/commit intent。
-*   `diff_session_runtime` / `merge_runtime` **MUST** 只通过 `source_control_runtime` 进入 ledger commit。
-*   `source_control_runtime -> Git mirror bridge` **MUST** 只在 Deve commit confirmed 后执行 export/import/push bridge。
-*   `document_runtime -> render_projection_runtime -> widget_bridge_runtime / outline_projection_runtime` **MUST** 保持 projection-only 边界。
-*   `ui_shell -> application_control -> feature_runtime` **MUST** 维持 view intent、control 编排与 feature state machine 的单向依赖。
+Runtime 名称、收敛状态、当前代码承载路径与 tracking task 统一维护在
+[`docs/registry/runtime-skeleton-registry.md`](../registry/runtime-skeleton-registry.md)。
+
+本章不再复制状态表，避免把 `docs/plan/` 变成随实现频繁变化的进度文档。各章
+`Refactor Target` 与 registry 冲突时，先核对当前代码；若 registry 过时，更新
+registry；若 plan 边界本身需要改变，必须按 `00_engineering_constitution.md`
+的骨架治理规则处理。
 
 ### Global: Code Standards (代码规范)
 

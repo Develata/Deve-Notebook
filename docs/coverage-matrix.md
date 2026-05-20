@@ -44,6 +44,7 @@ The following documents exist under `docs/` but do not participate in the three-
 | `docs/overview/architecture-doc.lisp` | Architecture View | Doc-derived view; references plan anchors |
 | `docs/overview/architecture-code.lisp` | Architecture View | Code-derived view; references source tree |
 | `docs/overview/architecture-diff.md` | Verification Report | Divergence between doc and code views |
+| `docs/registry/runtime-skeleton-registry.md` | Controlled Registry | Runtime name/status/current module path registry; referenced from the plan index |
 | `docs/plan/plugins/agent_bridge/01_agent_bridge.md` | Design Note | Dual-channel AI architecture; referenced from `10_ai_agent.md` Metadata |
 | `docs/ai-chat-streaming.md` | Design Note | Streaming bridge design; referenced from `10_ai_agent.md` Metadata |
 
