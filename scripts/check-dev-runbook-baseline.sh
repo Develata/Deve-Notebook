@@ -16,7 +16,7 @@ fail() {
 contains() {
   local file="$1"
   local text="$2"
-  rg --fixed-strings --quiet "$text" "$file" || fail "missing '$text' in $file"
+  MSYS2_ARG_CONV_EXCL="$text" rg --fixed-strings --quiet "$text" "$file" || fail "missing '$text' in $file"
 }
 
 contains "$RUNBOOK" 'cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001'

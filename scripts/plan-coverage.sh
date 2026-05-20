@@ -86,6 +86,12 @@ done
 log() { echo "$@"; REPORT+="$*"$'\n'; }
 err() { echo "ERROR: $*" >&2; REPORT+="ERROR: $*"$'\n'; }
 
+tracked_rust_files() {
+  git -C "$ROOT" ls-files -- 'crates' 'apps' |
+    grep -E '\.rs$' |
+    sed "s|^|$ROOT/|"
+}
+
 log_missing_plan_ref_groups() {
   local title="$1"
   local depth="$2"
@@ -128,8 +134,9 @@ soft_warnings=0
 # Check 1 — Single-file size fuse (> 500 hard, > 250 soft)
 # ---------------------------------------------------------------------------
 log "== Check 1: single-file size fuse =="
-while IFS= read -r f; do
-  lines=$(wc -l < "$f")
+while read -r lines f; do
+  [ -n "${f:-}" ] || continue
+  [ "$f" = "total" ] && continue
   rel="${f#$ROOT/}"
   if [ "$lines" -gt "$FUSE_LINES" ]; then
     if is_allowlisted "$rel"; then
@@ -143,7 +150,7 @@ while IFS= read -r f; do
     log "soft($lines): $f"
     soft_warnings=$((soft_warnings + 1))
   fi
-done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null | sort)
+done < <(tracked_rust_files | sort | tr '\n' '\0' | xargs -0 wc -l)
 log "fuse violations: $blocking, soft warnings: $soft_warnings"
 log ""
 
@@ -204,7 +211,7 @@ while IFS= read -r f; do
       plan_coverage_map["$key"]+="$f "
     fi
   done < <(awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f")
-done < <(find "${CODE_DIRS[@]}" -type f -name '*.rs' 2>/dev/null | sort)
+done < <(tracked_rust_files | sort)
 
 log "modules with plan_ref: $annotated_refs"
 log "modules without plan_ref (soft): $missing_refs"

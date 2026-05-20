@@ -11,14 +11,14 @@ fail() {
 check_contains() {
   local file="$1"
   local pattern="$2"
-  rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file" \
+  MSYS2_ARG_CONV_EXCL="$pattern" rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file" \
     || fail "missing '$pattern' in $file"
 }
 
 check_absent() {
   local file="$1"
   local pattern="$2"
-  if rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file"; then
+  if MSYS2_ARG_CONV_EXCL="$pattern" rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file"; then
     fail "unexpected '$pattern' in $file"
   fi
 }

@@ -69,7 +69,7 @@ fi
 
 while IFS= read -r case_id; do
   [[ -n "$case_id" ]] || continue
-  if grep -rqF "$case_id" "${CODE_DIRS[@]}" "$ROOT/tests" "$ROOT/scripts" 2>/dev/null; then
+  if rg --quiet --fixed-strings -- "$case_id" "${CODE_DIRS[@]}" "$ROOT/tests" "$ROOT/scripts" 2>/dev/null; then
     automated=$((automated + 1))
   elif { [[ -f "$FEATURE_OP_COVERAGE" ]] && grep -qF "$case_id" "$FEATURE_OP_COVERAGE"; } \
     || { [[ -d "$FEATURE_OP_DIR" ]] && grep -rqF "$case_id" "$FEATURE_OP_DIR"; }; then

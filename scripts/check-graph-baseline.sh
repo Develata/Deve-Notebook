@@ -22,13 +22,13 @@ fail() {
 contains() {
   local file="$1"
   local text="$2"
-  rg --fixed-strings --quiet -- "$text" "$file" || fail "missing '$text' in $file"
+  MSYS2_ARG_CONV_EXCL="$text" rg --fixed-strings --quiet -- "$text" "$file" || fail "missing '$text' in $file"
 }
 
 absent() {
   local file="$1"
   local text="$2"
-  if rg --fixed-strings --quiet -- "$text" "$file"; then
+  if MSYS2_ARG_CONV_EXCL="$text" rg --fixed-strings --quiet -- "$text" "$file"; then
     fail "unexpected '$text' in $file"
   fi
 }

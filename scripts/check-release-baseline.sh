@@ -15,14 +15,14 @@ fail() {
 contains() {
   local file="$1"
   local text="$2"
-  rg --fixed-strings --quiet -- "$text" "$ROOT_DIR/$file" \
+  MSYS2_ARG_CONV_EXCL="$text" rg --fixed-strings --quiet -- "$text" "$ROOT_DIR/$file" \
     || fail "missing '$text' in $file"
 }
 
 not_contains() {
   local file="$1"
   local text="$2"
-  if rg --fixed-strings --quiet -- "$text" "$ROOT_DIR/$file"; then
+  if MSYS2_ARG_CONV_EXCL="$text" rg --fixed-strings --quiet -- "$text" "$ROOT_DIR/$file"; then
     fail "unexpected '$text' in $file"
   fi
 }
@@ -30,7 +30,7 @@ not_contains() {
 line_no() {
   local file="$1"
   local text="$2"
-  rg --line-number --fixed-strings -- "$text" "$ROOT_DIR/$file" | head -n1 | cut -d: -f1
+  MSYS2_ARG_CONV_EXCL="$text" rg --line-number --fixed-strings -- "$text" "$ROOT_DIR/$file" | head -n1 | cut -d: -f1
 }
 
 assert_before() {
