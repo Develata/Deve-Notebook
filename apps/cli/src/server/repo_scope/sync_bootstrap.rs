@@ -25,7 +25,7 @@ pub fn resolve_session_repo_or_bootstrap_local(
     }
     match resolve_session_repo_and_sync(state, session) {
         Ok(scope) => Ok(scope),
-        Err(err) if wants_local_bootstrap(session) && !session.has_runtime_scope_binding() => {
+        Err(_) if wants_local_bootstrap(session) && !session.has_runtime_scope_binding() => {
             bootstrap_and_bind_local_repo(state, session)
         }
         Err(err) => Err(err),

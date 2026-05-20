@@ -15,6 +15,10 @@ cleanup_mounts=()
 preserved_paths=()
 missing=()
 failures=()
+windows_registry_snapshot=""
+windows_registry_snapshot_taken=0
+windows_registry_existed=0
+windows_install_registry_key='HKCU\Software\deve\Deve Notebook'
 
 fail() {
   echo "desktop-installer-smoke-check: $*" >&2
@@ -24,6 +28,8 @@ fail() {
 cleanup() {
   local mount
   local path
+
+  restore_windows_install_registry
   for mount in "${cleanup_mounts[@]:-}"; do
     if command -v hdiutil >/dev/null 2>&1; then
       run_bounded_command 15 hdiutil detach "$mount" >/dev/null 2>&1 || true
@@ -328,6 +334,43 @@ to_windows_path() {
   fi
 }
 
+snapshot_windows_install_registry() {
+  local snapshot_dir
+
+  is_windows_host || return 0
+  command -v reg.exe >/dev/null 2>&1 || return 0
+  ((windows_registry_snapshot_taken == 0)) || return 0
+
+  prepare_work_dir
+  snapshot_dir="$WORK_ROOT/windows-registry-snapshot"
+  mkdir -p "$snapshot_dir"
+  cleanup_paths+=("$snapshot_dir")
+  windows_registry_snapshot="$snapshot_dir/deve-notebook-install.reg"
+  windows_registry_snapshot_taken=1
+
+  if MSYS2_ARG_CONV_EXCL='*' reg.exe query "$windows_install_registry_key" >/dev/null 2>&1; then
+    windows_registry_existed=1
+    if ! MSYS2_ARG_CONV_EXCL='*' reg.exe export "$windows_install_registry_key" "$(to_windows_path "$windows_registry_snapshot")" /y >/dev/null 2>&1; then
+      fail "failed to snapshot Windows install registry key before installer smoke"
+    fi
+  fi
+
+  echo "desktop-installer-smoke-check: isolating Windows install registry key $windows_install_registry_key"
+  MSYS2_ARG_CONV_EXCL='*' reg.exe delete "$windows_install_registry_key" /f >/dev/null 2>&1 || true
+}
+
+restore_windows_install_registry() {
+  ((windows_registry_snapshot_taken == 1)) || return 0
+  is_windows_host || return 0
+  command -v reg.exe >/dev/null 2>&1 || return 0
+
+  MSYS2_ARG_CONV_EXCL='*' reg.exe delete "$windows_install_registry_key" /f >/dev/null 2>&1 || true
+  if ((windows_registry_existed == 1)) && [[ -f "$windows_registry_snapshot" ]]; then
+    MSYS2_ARG_CONV_EXCL='*' reg.exe import "$(to_windows_path "$windows_registry_snapshot")" >/dev/null 2>&1 || true
+  fi
+  windows_registry_snapshot_taken=0
+}
+
 find_desktop_exe() {
   local root="$1"
   first_match "$root" -type f \( -iname 'deve_desktop.exe' -o -iname 'Deve Notebook.exe' \)
@@ -483,6 +526,8 @@ run_macos_smoke() {
 run_windows_smoke() {
   local msi=""
   local nsis=""
+
+  snapshot_windows_install_registry
 
   if requires_bundle msi; then
     msi="$(

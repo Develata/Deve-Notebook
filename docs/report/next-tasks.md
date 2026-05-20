@@ -1,16 +1,17 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-19
+> 更新日期：2026-05-20
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Full Regression Gate Refresh After Android Local Target-host Smoke Closure：基于最新 Desktop Windows package/installer evidence 与本机 Android API 36 package/emulator evidence，刷新主线 full regression gate；不打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API。
+1. Codex Cloud Full Regression Gate Refresh After Local Target-host Smoke Closure：基于 `docs/report/local-target-host-smoke-before-cloud-regression-2026-05-20.md` 的本机 Windows Desktop package/startup/installer evidence 与 Android API 36 package/emulator evidence，刷新主线 full regression gate；不打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API。
 2. Post-regression Work Selection After Mobile iOS Evidence Closure：基于最新 full regression gate、`docs/plan/`、features、acceptance cases、guard scripts、Desktop/Android/iOS target-host evidence 与当前报告，选择下一批小型实现或 evidence 目标；不打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API。
 
 ## 最近完成
 
+- Local Target-host Smoke Before Cloud Regression 2026-05-20：在 `1f4ed916` 之上先完成本机 Windows Desktop package/build/startup/native-session/installer smoke 与 Android API 36 package/emulator smoke；修复 `deve_cli` unused binding warning 与 Windows installer smoke 对 HKCU stale install registry 的重复运行隔离问题；required MSI/NSIS installer smoke 复跑通过且 registry 残留为 absent；未打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Android Target-host Package/Emulator Smoke After Developer Mode 2026-05-19：启用 Windows Developer Mode 后，`aarch64` Android shell release APK build 通过，API 36 x86_64 emulator install/startup smoke 通过；AVD 改用 C 盘 `C:\Users\QQ\.deve-mobile-android-avd` 避开 E 盘 target 空间不足；未打开 signing、store、physical-device readiness、Android process runtime、native authority writes、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Android Studio Target-host Toolchain Probe 2026-05-19：确认本机 Android Studio `2025.3.4.7` 可用，补齐 `android-clt`、API 36 SDK/emulator/system image、NDK `28.2.13676358` 与 `aarch64-linux-android` / `x86_64-linux-android` Rust targets；required Android platform preflight 通过，Android shell package build 已完成 Rust release `.so` 编译但阻塞于 Windows symlink privilege，未声明 package/emulator evidence closure；未打开 signing、store、physical-device readiness、Android process runtime、native authority writes、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Windows Desktop Package/Installer Smoke 2026-05-19：在 `d88ce6cc` 上补齐 Windows target-host 工具链（`aarch64-pc-windows-msvc`、`cargo-tauri 2.11.1`、WiX、NSIS），required Windows target-host preflight、MSI/NSIS package build、release startup smoke、native-session package smoke 与 installer install/uninstall smoke 均通过；package build 显式 `--no-sign`，未打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
