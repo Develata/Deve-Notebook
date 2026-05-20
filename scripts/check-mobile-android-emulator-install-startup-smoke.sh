@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-35}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-default}"
@@ -41,29 +42,33 @@ require_command() {
   command -v "$command_name" >/dev/null 2>&1 || fail "$command_name is required for Android emulator smoke"
 }
 
+require_android_tool() {
+  local command_name="$1"
+
+  android_tool_path "$command_name" >/dev/null 2>&1 || fail "$command_name is required for Android emulator smoke"
+}
+
 sdkmanager_cmd() {
-  require_command sdkmanager
-  sdkmanager "$@"
+  android_prepare_java_home || fail "Java 17+ or Android Studio JBR is required for sdkmanager"
+  android_run_tool sdkmanager "$@"
 }
 
 avdmanager_cmd() {
-  require_command avdmanager
-  avdmanager "$@"
+  android_prepare_java_home || fail "Java 17+ or Android Studio JBR is required for avdmanager"
+  android_run_tool avdmanager "$@"
 }
 
 emulator_cmd() {
-  require_command emulator
-  emulator "$@"
+  android_run_tool emulator "$@"
 }
 
 adb_cmd() {
-  require_command adb
-  adb "$@"
+  android_run_tool adb "$@"
 }
 
 cleanup() {
   if [[ -n "${EMULATOR_SERIAL:-}" ]]; then
-    adb -s "$EMULATOR_SERIAL" emu kill >/dev/null 2>&1 || true
+    adb_cmd -s "$EMULATOR_SERIAL" emu kill >/dev/null 2>&1 || true
   fi
   if [[ -n "${EMULATOR_PID:-}" ]]; then
     kill "$EMULATOR_PID" >/dev/null 2>&1 || true
@@ -74,10 +79,13 @@ print_emulator_diagnostics() {
   if command -v adb >/dev/null 2>&1; then
     echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
     adb devices 2>&1 || true
+  elif android_tool_path adb >/dev/null 2>&1; then
+    echo "mobile-android-emulator-install-startup-smoke-check: adb devices:"
+    android_run_tool adb devices 2>&1 || true
   fi
-  if command -v emulator >/dev/null 2>&1; then
+  if command -v emulator >/dev/null 2>&1 || android_tool_path emulator >/dev/null 2>&1; then
     echo "mobile-android-emulator-install-startup-smoke-check: emulator AVD list:"
-    emulator -list-avds 2>&1 || true
+    android_run_tool emulator -list-avds 2>&1 || true
   fi
   if [[ -f "$LOG_DIR/avdmanager.log" ]]; then
     echo "mobile-android-emulator-install-startup-smoke-check: avdmanager.log tail:"
@@ -138,7 +146,7 @@ wait_for_boot() {
 
   remaining=$((deadline - SECONDS))
   (( remaining > 0 )) || fail "Android emulator serial appeared after boot deadline"
-  timeout "$remaining" adb -s "$EMULATOR_SERIAL" wait-for-device \
+  timeout "$remaining" "$(android_tool_path adb)" -s "$EMULATOR_SERIAL" wait-for-device \
     || fail "Android emulator did not reach adb device state within ${BOOT_TIMEOUT_SECS}s"
 
   while (( SECONDS < deadline )); do
@@ -177,10 +185,10 @@ if [[ "$REQUIRED" != "1" ]]; then
 fi
 
 require_command timeout
-require_command sdkmanager
-require_command avdmanager
-require_command emulator
-require_command adb
+require_android_tool sdkmanager
+require_android_tool avdmanager
+require_android_tool emulator
+require_android_tool adb
 
 mkdir -p "$LOG_DIR" "$AVD_HOME"
 export ANDROID_AVD_HOME="$AVD_HOME"

@@ -537,6 +537,13 @@ Mobile shell remains shell-only, blocks iOS generated project paths, checks the
 such as `cargo tauri`, Android SDK/JDK/ADB, Rust Android target, macOS/Xcode,
 or Rust iOS target.
 
+Android gates resolve SDK tools from `PATH`, `ANDROID_HOME`, or
+`ANDROID_SDK_ROOT`. On Windows Android Studio installs where `adb` is available
+but `emulator` is not on `PATH`, the scripts also check
+`$ANDROID_HOME/emulator/emulator.exe`. If the shell `java` resolves to an older
+JRE, the gates use Android Studio's bundled JBR when present, for example the
+scoop path `~/scoop/apps/android-studio/current/jbr`.
+
 To require prerequisites on a target host without running a package build:
 
 ```bash

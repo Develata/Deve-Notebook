@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
 SIGNING_REQUIRED="${DEVE_MOBILE_ANDROID_RELEASE_PREFLIGHT_REQUIRED:-0}"
 DEVICE_REQUIRED="${DEVE_MOBILE_ANDROID_PHYSICAL_DEVICE_PREFLIGHT_REQUIRED:-0}"
 SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
@@ -68,7 +69,7 @@ validate_artifact_kind() {
 }
 
 adb_lines() {
-  adb devices 2>/dev/null | tail -n +2 | sed '/^[[:space:]]*$/d' || true
+  android_run_tool adb devices 2>/dev/null | tail -n +2 | sed '/^[[:space:]]*$/d' || true
 }
 
 physical_device_present() {
@@ -90,7 +91,7 @@ physical_device_present() {
 }
 
 diagnose_physical_device() {
-  command -v adb >/dev/null 2>&1 || {
+  android_tool_path adb >/dev/null 2>&1 || {
     missing_device+=("adb")
     return 0
   }
@@ -114,6 +115,7 @@ diagnose_keystore
 diagnose_env "DEVE_ANDROID_KEY_ALIAS"
 diagnose_env "DEVE_ANDROID_KEYSTORE_PASSWORD"
 diagnose_env "DEVE_ANDROID_KEY_PASSWORD"
+android_prepare_java_home >/dev/null 2>&1 || true
 diagnose_command_name "keytool" keytool
 diagnose_physical_device
 

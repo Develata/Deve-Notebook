@@ -68,6 +68,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `smoke-runtime-recovery-path.sh` | Runs degraded-local, stale-scope, reconnect gate, status, and auth-probe recovery smoke tests |
 | `smoke-docker-release.sh` | Builds and runs the Docker release image smoke test when Docker is available |
 | `smoke-runtime-release-info.sh` | Checks a running server's `/api/node/role` runtime release info fields |
+| `lib/android-tools.sh` | Shared Android SDK / Android Studio JBR discovery helpers for local and target-host Android gates |
 
 ## For AI Agents
 

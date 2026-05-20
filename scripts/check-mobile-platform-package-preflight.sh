@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
 REQUIRED="${DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED:-0}"
 TARGETS="${DEVE_MOBILE_PACKAGE_TARGETS:-android,ios}"
 ANDROID_PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-aarch64}"
@@ -67,6 +68,16 @@ diagnose_command() {
   "$@" >/dev/null 2>&1 || target_missing+=("$label")
 }
 
+diagnose_android_tool() {
+  local label="$1"
+  local tool="$2"
+  android_tool_path "$tool" >/dev/null 2>&1 || target_missing+=("$label")
+}
+
+diagnose_android_java() {
+  android_prepare_java_home >/dev/null 2>&1 || target_missing+=("java >=17 or Android Studio JBR")
+}
+
 diagnose_rust_target() {
   local target="$1"
   if command -v rg >/dev/null 2>&1; then
@@ -130,10 +141,10 @@ if cargo tauri --version >/dev/null 2>&1; then
 fi
 
 if target_enabled android; then
-  diagnose_command "java" java -version
+  diagnose_android_java
   diagnose_command "javac" javac -version
   diagnose_dir_env "ANDROID_HOME or ANDROID_SDK_ROOT" ANDROID_HOME ANDROID_SDK_ROOT
-  diagnose_command "adb" adb --version
+  diagnose_android_tool "adb" adb
   android_target="$(android_rust_target)"
   [[ -n "$android_target" ]] && diagnose_rust_target "$android_target"
 fi

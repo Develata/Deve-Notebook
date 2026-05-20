@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
 APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
@@ -41,24 +42,24 @@ assert_positive_integer() {
 }
 
 adb_cmd() {
-  command -v adb >/dev/null 2>&1 || fail "adb is required for Android install/startup smoke"
+  android_tool_path adb >/dev/null 2>&1 || fail "adb is required for Android install/startup smoke"
   if [[ -n "$ADB_SERIAL" ]]; then
-    adb -s "$ADB_SERIAL" "$@"
+    android_run_tool adb -s "$ADB_SERIAL" "$@"
     return
   fi
-  adb "$@"
+  android_run_tool adb "$@"
 }
 
 adb_timed() {
   local adb_args=()
 
-  command -v adb >/dev/null 2>&1 || fail "adb is required for Android install/startup smoke"
+  android_tool_path adb >/dev/null 2>&1 || fail "adb is required for Android install/startup smoke"
   command -v timeout >/dev/null 2>&1 \
     || fail "timeout is required for bounded Android install/startup smoke"
   if [[ -n "$ADB_SERIAL" ]]; then
     adb_args=(-s "$ADB_SERIAL")
   fi
-  timeout "$ADB_TIMEOUT_SECS" adb "${adb_args[@]}" "$@"
+  timeout "$ADB_TIMEOUT_SECS" "$(android_tool_path adb)" "${adb_args[@]}" "$@"
 }
 
 app_pid() {
