@@ -1,4 +1,6 @@
+#[cfg(unix)]
 use deve_core::ledger::RepoManager;
+#[cfg(unix)]
 use tempfile::TempDir;
 
 #[cfg(unix)]

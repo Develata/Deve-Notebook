@@ -3,7 +3,7 @@
 //!   - 04_storage#projection-contract
 //!   - 12_commands#cli-commands
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use deve_core::ledger::{RepoManager, reconcile};
 use deve_core::models::Op;
 use deve_core::sync::SyncManager;
@@ -90,11 +90,20 @@ fn workspace_starts_with_loading(
     repo_path: &str,
 ) -> Result<bool> {
     let path = repo.local_repo_workspace_path(repo_name, repo_path)?;
-    match std::fs::read_to_string(path) {
-        Ok(current) => Ok(current.starts_with("# Loading...")),
-        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(err) => Err(err.into()),
+    let metadata = match std::fs::metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(err) => {
+            return Err(err)
+                .with_context(|| format!("Failed to stat workspace target {}", path.display()));
+        }
+    };
+    if metadata.is_dir() {
+        bail!("Workspace target is a directory: {}", path.display());
     }
+    let current = std::fs::read_to_string(&path)
+        .with_context(|| format!("Failed to read workspace target {}", path.display()))?;
+    Ok(current.starts_with("# Loading..."))
 }
 
 fn resolve_repair_docid(

@@ -18,8 +18,12 @@ pub(super) fn preflight_staged_commit_targets(
 ) -> Result<()> {
     for target in targets.iter().filter(|target| !target.delete_only) {
         let disk_path = repo.local_repo_workspace_path(repo_name, &target.path)?;
-        std::fs::read_to_string(&disk_path)
-            .with_context(|| format!("Failed to read staged workspace file {:?}", disk_path))?;
+        std::fs::read_to_string(&disk_path).with_context(|| {
+            format!(
+                "Failed to read staged workspace file {} at {:?}",
+                target.path, disk_path
+            )
+        })?;
         preflight_staged_upsert_identity(repo, repo_name, target)?;
     }
     Ok(())

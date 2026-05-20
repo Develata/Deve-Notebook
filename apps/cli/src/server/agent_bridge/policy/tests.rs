@@ -1,6 +1,12 @@
 use super::AgentBridgePolicy;
 use deve_core::config::Config;
 
+fn missing_absolute_agent_path() -> (tempfile::TempDir, String) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("missing-agent");
+    (dir, path.to_string_lossy().into_owned())
+}
+
 #[test]
 fn policy_uses_resolved_config_values_as_single_authority() {
     let mut config = Config::default();
@@ -123,12 +129,13 @@ fn trusted_policy_requires_absolute_cli_path() {
 
 #[test]
 fn trusted_policy_requires_existing_executable_cli_path() {
+    let (_dir, cli_path) = missing_absolute_agent_path();
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: true,
         native_enabled: true,
         requested_mode: "trusted-cli".to_string(),
-        cli_path: Some("/definitely/missing/agent".to_string()),
+        cli_path: Some(cli_path),
         timeout_ms: 30_000,
     };
     assert_eq!(
@@ -228,12 +235,13 @@ fn capabilities_do_not_promote_native_mode_to_trusted_cli_when_native_is_disable
 
 #[test]
 fn capabilities_keep_requested_trusted_cli_reason_when_policy_blocks_it() {
+    let (_dir, cli_path) = missing_absolute_agent_path();
     let policy = AgentBridgePolicy {
         enabled: true,
         trusted: true,
         native_enabled: true,
         requested_mode: "trusted-cli".to_string(),
-        cli_path: Some("/definitely/missing/agent".to_string()),
+        cli_path: Some(cli_path),
         timeout_ms: 30_000,
     };
 

@@ -57,6 +57,12 @@ pub fn start_repo_watcher(
     }
     crate::sync::scan::scan_local_repo(&sync.repo, &sync.vfs, repo_name)?;
     let repo_root = sync.repo.local_repo_workspace_root(repo_name)?;
+    let repo_root = std::fs::canonicalize(&repo_root).map_err(|err| {
+        WatcherError::WatcherInitFailed(format!(
+            "Failed to canonicalize watcher root {:?}: {err}",
+            repo_root
+        ))
+    })?;
     let mut backend = backend::desktop_backend(&repo_root, debounce)
         .map_err(|err| WatcherError::WatcherInitFailed(err.to_string()))?;
     let (stop_tx, stop_rx) = std::sync::mpsc::channel();

@@ -1,4 +1,6 @@
-use super::{RepoManager, cached_database};
+use super::RepoManager;
+#[cfg(unix)]
+use super::cached_database;
 use crate::models::PeerId;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;

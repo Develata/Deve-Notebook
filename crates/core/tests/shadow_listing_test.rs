@@ -164,6 +164,7 @@ fn duplicate_shadow_uuid_peers_fail_closed_in_listing_and_switchable_views() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn pure_shadow_scan_fails_closed_and_does_not_resurrect_loaded_corrupted_shadow_files() {
     let dir = TempDir::new().expect("create tempdir");

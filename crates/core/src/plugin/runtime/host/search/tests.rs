@@ -1,4 +1,7 @@
-use super::walk::{next_walk_entry, read_searchable_text};
+#[cfg(unix)]
+use super::walk::next_walk_entry;
+use super::walk::read_searchable_text;
+#[cfg(unix)]
 use ignore::WalkBuilder;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;

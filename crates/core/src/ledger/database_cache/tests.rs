@@ -127,3 +127,34 @@ fn local_catalog_validation_reuses_open_main_database() {
     std::fs::set_permissions(&path, original).expect("restore perms");
     clear_temp_entries(dir.path());
 }
+
+#[cfg(windows)]
+#[test]
+fn reusable_cached_database_reuses_locked_same_file_on_windows() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("main.redb");
+    let db = Arc::new(redb::Database::create(&path).expect("create db"));
+    register_database(&path, db.clone()).expect("register");
+
+    let stamp = {
+        let cache = OPENED_DBS.read().expect("cache");
+        cache
+            .get(&path)
+            .and_then(|entry| entry.stamp)
+            .expect("registered stamp")
+    };
+    {
+        let mut cache = OPENED_DBS.write().expect("cache");
+        let entry = cache.get_mut(&path).expect("cached entry");
+        let mut stale = stamp;
+        stale.len = stale.len.saturating_add(1);
+        entry.stamp = Some(stale);
+    }
+
+    let reused = reusable_cached_database(&path)
+        .expect("stale same-file cache entry should reuse the open redb handle")
+        .expect("cached database");
+
+    assert!(Arc::ptr_eq(&reused, &db));
+    clear_temp_entries(dir.path());
+}

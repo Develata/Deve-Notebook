@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::sync::SyncManager;

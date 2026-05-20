@@ -69,7 +69,7 @@ pub(crate) fn reusable_cached_database(path: &Path) -> Result<Option<Arc<Databas
     }
     if let (Some(previous), Some(current)) = (entry.stamp, current_stamp)
         && previous.same_file_identity(current)
-        && path_looks_like_redb(path)?
+        && stale_same_identity_cache_entry_is_reusable(path)?
     {
         drop(cache);
         let mut cache = OPENED_DBS.write().map_err(|_| {
@@ -88,6 +88,16 @@ pub(crate) fn reusable_cached_database(path: &Path) -> Result<Option<Arc<Databas
     Ok(None)
 }
 
+#[cfg(windows)]
+fn stale_same_identity_cache_entry_is_reusable(_path: &Path) -> Result<bool> {
+    Ok(true)
+}
+
+#[cfg(not(windows))]
+fn stale_same_identity_cache_entry_is_reusable(path: &Path) -> Result<bool> {
+    path_looks_like_redb(path)
+}
+
 pub(crate) fn current_file_stamp(path: &Path) -> Result<Option<FileStamp>> {
     match std::fs::metadata(path) {
         Ok(metadata) => Ok(Some(file_stamp(path, &metadata)?)),
@@ -99,6 +109,7 @@ pub(crate) fn current_file_stamp(path: &Path) -> Result<Option<FileStamp>> {
     }
 }
 
+#[cfg(not(windows))]
 pub(crate) fn path_looks_like_redb(path: &Path) -> Result<bool> {
     const REDB_MAGIC: [u8; 9] = [b'r', b'e', b'd', b'b', 0x1A, 0x0A, 0xA9, 0x0D, 0x0A];
     let mut file = std::fs::File::open(path)

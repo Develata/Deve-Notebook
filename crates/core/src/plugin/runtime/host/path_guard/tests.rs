@@ -1,9 +1,14 @@
+use super::is_ledger_managed_relative_path;
+#[cfg(unix)]
 use super::{
-    is_ledger_managed_relative_path, is_ledger_managed_write_target, project_relative_path,
-    resolve_capability_read_target, resolve_capability_write_target,
+    is_ledger_managed_write_target, project_relative_path, resolve_capability_read_target,
+    resolve_capability_write_target,
 };
+#[cfg(unix)]
 use crate::plugin::manifest::Capability;
+#[cfg(unix)]
 use std::path::Path;
+#[cfg(unix)]
 use tempfile::tempdir;
 
 #[cfg(unix)]
