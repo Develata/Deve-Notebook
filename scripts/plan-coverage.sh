@@ -19,6 +19,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLAN_DIR="$ROOT/docs/plan"
+RUNTIME_REGISTRY="$ROOT/docs/registry/runtime-skeleton-registry.md"
 CODE_DIRS=("$ROOT/crates" "$ROOT/apps")
 FUSE_LINES=500
 SOFT_LINES=250
@@ -85,6 +86,27 @@ done
 
 log() { echo "$@"; REPORT+="$*"$'\n'; }
 err() { echo "ERROR: $*" >&2; REPORT+="ERROR: $*"$'\n'; }
+
+trim() {
+  local value="$1"
+  value="${value#"${value%%[![:space:]]*}"}"
+  value="${value%"${value##*[![:space:]]}"}"
+  printf '%s' "$value"
+}
+
+strip_md_code() {
+  local value
+  value="$(trim "$1")"
+  value="${value//\`/}"
+  printf '%s' "$value"
+}
+
+path_or_glob_exists() {
+  local rel="$1"
+  [ -n "$rel" ] || return 1
+  [ -e "$ROOT/$rel" ] && return 0
+  compgen -G "$ROOT/$rel" >/dev/null
+}
 
 tracked_rust_files() {
   git -C "$ROOT" ls-files -- 'crates' 'apps' |
@@ -317,6 +339,134 @@ done <<< "$path_report"
 if [ "$path_status" -ne 0 ]; then
   blocking=$((blocking + 1))
 fi
+log ""
+
+# ---------------------------------------------------------------------------
+# Check 6 — Runtime registry current module paths
+# ---------------------------------------------------------------------------
+log "== Check 6: runtime registry path drift =="
+registry_path_warnings=0
+registry_status_errors=0
+if [ -f "$RUNTIME_REGISTRY" ]; then
+  while IFS='|' read -r _ runtime_cell status_cell path_cell _tracking_cell _boundary_cell _rest; do
+    runtime="$(strip_md_code "$runtime_cell")"
+    status="$(strip_md_code "$status_cell")"
+    paths="$(trim "$path_cell")"
+
+    [ -n "$runtime" ] || continue
+    [ "$runtime" = "Runtime" ] && continue
+    [[ "$runtime" == ---* ]] && continue
+    [[ "$runtime" == \`* ]] && runtime="$(strip_md_code "$runtime")"
+
+    case "$status" in
+      已收敛|部分承载|未启动|抽象分层) ;;
+      *)
+        err "runtime-registry-status-invalid: $runtime -> $status"
+        registry_status_errors=$((registry_status_errors + 1))
+        blocking=$((blocking + 1))
+        continue
+        ;;
+    esac
+
+    while IFS= read -r raw_path; do
+      path="$(strip_md_code "$raw_path")"
+      [ -n "$path" ] || continue
+      if [ "$path" = "未启动" ]; then
+        if [ "$status" != "未启动" ]; then
+          log "runtime-registry-path-missing(soft): $runtime status=$status path=未启动"
+          registry_path_warnings=$((registry_path_warnings + 1))
+          soft_warnings=$((soft_warnings + 1))
+        fi
+        continue
+      fi
+      if ! path_or_glob_exists "$path"; then
+        log "runtime-registry-path-missing(soft): $runtime -> $path"
+        registry_path_warnings=$((registry_path_warnings + 1))
+        soft_warnings=$((soft_warnings + 1))
+      fi
+    done < <(printf '%s\n' "$paths" | tr ';' '\n')
+  done < <(
+    awk '
+      /^## Runtime Registry/ { in_registry = 1; next }
+      /^## Notes/ { in_registry = 0 }
+      in_registry && /^\|/ { print }
+    ' "$RUNTIME_REGISTRY" | grep -v '^|---'
+  )
+else
+  err "runtime registry not found: ${RUNTIME_REGISTRY#$ROOT/}"
+  registry_status_errors=$((registry_status_errors + 1))
+  blocking=$((blocking + 1))
+fi
+log "runtime registry path warnings (soft): $registry_path_warnings"
+log "runtime registry status errors (blocking): $registry_status_errors"
+log ""
+
+# ---------------------------------------------------------------------------
+# Check 7 — Plan AGENTS anchor registry drift
+# ---------------------------------------------------------------------------
+log "== Check 7: plan anchor registry drift =="
+agents_anchor_dangling=0
+agents_anchor_unused=0
+agents_anchor_missing=0
+declare -A agents_anchor_map=()
+
+while IFS= read -r ref; do
+  [ -n "$ref" ] || continue
+  agents_anchor_map["$ref"]=1
+  chapter="${ref%%#*}"
+  anchor="${ref#*#}"
+  chapter_file="$PLAN_DIR/$chapter.md"
+  if [ ! -f "$chapter_file" ]; then
+    err "agents-anchor-dangling: $ref chapter not found"
+    agents_anchor_dangling=$((agents_anchor_dangling + 1))
+    blocking=$((blocking + 1))
+  elif ! grep -Fq "{#$anchor}" "$chapter_file"; then
+    err "agents-anchor-dangling: $ref anchor not found"
+    agents_anchor_dangling=$((agents_anchor_dangling + 1))
+    blocking=$((blocking + 1))
+  fi
+done < <(grep -oE '`[0-9][0-9]_[A-Za-z0-9_]+#[A-Za-z0-9_-]+`' "$PLAN_DIR/AGENTS.md" | tr -d '`' | sort -u)
+
+for ref in "${!agents_anchor_map[@]}"; do
+  if [ -z "${plan_coverage_map[$ref]+x}" ]; then
+    log "agents-anchor-unused(soft): $ref"
+    agents_anchor_unused=$((agents_anchor_unused + 1))
+    soft_warnings=$((soft_warnings + 1))
+  fi
+done
+
+for ref in "${!plan_coverage_map[@]}"; do
+  if [ -z "${agents_anchor_map[$ref]+x}" ]; then
+    log "agents-anchor-missing(soft): $ref"
+    agents_anchor_missing=$((agents_anchor_missing + 1))
+    soft_warnings=$((soft_warnings + 1))
+  fi
+done
+
+log "agents anchor dangling (blocking): $agents_anchor_dangling"
+log "agents anchor unused (soft): $agents_anchor_unused"
+log "agents anchor missing from registry (soft): $agents_anchor_missing"
+log ""
+
+# ---------------------------------------------------------------------------
+# Check 8 — Plan metadata Primary Code Areas path drift
+# ---------------------------------------------------------------------------
+log "== Check 8: primary code areas path drift =="
+primary_area_warnings=0
+while IFS=: read -r plan_file line_no line_text; do
+  while IFS= read -r area; do
+    area="${area#\`}"
+    area="${area%\`}"
+    [ "$area" = "Primary Code Areas" ] && continue
+    if ! path_or_glob_exists "$area"; then
+      rel_plan="${plan_file#$ROOT/}"
+      log "primary-code-area-missing(soft): $rel_plan:$line_no -> $area"
+      primary_area_warnings=$((primary_area_warnings + 1))
+      soft_warnings=$((soft_warnings + 1))
+    fi
+  done < <(printf '%s\n' "$line_text" | grep -oE '`[^`]+`' || true)
+done < <(grep -Rsn --include='*.md' 'Primary Code Areas' "$PLAN_DIR")
+log "primary code area warnings (soft): $primary_area_warnings"
 log ""
 
 # ---------------------------------------------------------------------------
