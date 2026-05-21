@@ -1,17 +1,18 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-20
+> 更新日期：2026-05-21
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Real macOS Apple Target-host Evidence Refresh：只能在真实 macOS target host（Xcode + simulator toolchain）或明确具备 macOS runner 的环境刷新 macOS Desktop package/startup/installer/native-session evidence 与 iOS shell package/install/startup evidence；普通 Codex Cloud Linux 不可用于声明 Apple closure；不打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API。
-2. Local WSL/Linux Evidence Sync：本机 WSL Ubuntu 的 `~/gitclone/Deve-Notebook` 先同步到当前 commit 后再跑 Linux/WSL gates；当前不要用旧 clone 结果声明 current-head closure；Windows repo 与 WSL repo 只通过 git commit/report 同步。
+1. Local Full Regression Gate Refresh：在 `c7534fce` 或更新 commit 上跑 current-head full regression refresh；优先覆盖 `cargo fmt --check`、`cargo test --locked`、locked clippy、acceptance / architecture / feature path / plan coverage、native/mobile gates、Web release build、runtime smoke 与 diff hygiene；仍不打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API。
+2. Real macOS Apple Target-host Evidence Refresh（暂停到真实 Apple host）：只能在真实 macOS target host（Xcode + simulator toolchain）或明确具备 macOS runner 的环境刷新 macOS Desktop package/startup/installer/native-session evidence 与 iOS shell package/install/startup evidence；普通 Codex Cloud Linux 不可用于声明 Apple closure。
 3. Local Post-Apple Evidence Integration：真实 Apple evidence report 返回后，本机 pull 最新 commit，运行 target-host evidence validator、相关 native/mobile gates 与必要的 local regression guard；跨端状态只通过 git commit、`docs/report/next-tasks.md` 与新 report 同步。
 
 ## 最近完成
 
+- Local Windows / Android / WSL Evidence Refresh 2026-05-21：在 `c7534fce` 上完成本机 Windows Desktop target-host package/build/startup/installer smoke、Android Studio x86_64 shell APK build 与 Android 35 x86_64 emulator install/startup smoke；WSL ext4 clone 上 `check-native-process-adapter-gate.sh` 与 `check-native-packaging-gate.sh` 通过；修复 Tauri schema `schemars -> indexmap 1.x` Linux std feature 缺口、native manifest gate 格式耦合、Android shell build 父脚本未继承 JBR 与 Windows 跨盘 Kotlin incremental 失败；新增 `docs/report/local-windows-android-wsl-evidence-refresh-2026-05-21.md`；未打开 Apple、signing、store、physical-device readiness、native authority writes、Mobile/Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Local Windows / Android Studio / WSL Hardening 2026-05-20：根据 Claude Code audit 报告完成本机路线收束；新增 Android SDK/JBR 工具发现 helper，修复 Git Bash 下 `sdkmanager`/`avdmanager`/`emulator`/`adb`/`keytool` 对 PATH 和 Java 8 的误依赖；Windows Desktop target-host preflight 通过，Android required emulator install/startup smoke 通过，release preflight 保持 signing/physical-device diagnostic closed；确认 WSL Ubuntu 工具链可用但 `~/gitclone/Deve-Notebook` 仍停在旧 commit，后续 WSL gates 需先同步；新增 `docs/report/local-windows-android-wsl-hardening-2026-05-20.md`；未改 `docs/plan/`。
 - Apple Target-host Evidence Refresh 2026-05-20（云端诊断未闭合）：Claude Code 云端会话按 Apple 范围执行 Desktop/iOS target-host gates；当前 Linux 云端非 Apple-capable host，且 `native-packaging` 检查阶段缺 `glib-2.0`，相关 required gate 无法闭合；新增 `docs/report/apple-target-host-evidence-refresh-2026-05-20.md`；未打开 signing、store、physical-device readiness、native authority writes、Mobile process runtime、Android process runtime、Web Git writer 或 server-backed Settings API；未改 `docs/plan/`。
 - Post-regression Work Selection / Windows Guard Hardening 2026-05-20：在 `44fa7e35` 上完成 Windows Desktop smoke 后的本机 guard refresh；修复 acceptance binding 递归扫描生成目录超时、plan coverage 扫描生成 Rust/逐文件 `wc` 过慢，以及 Windows Git Bash/MSYS2 对 `/api...`、`/path...` fixed-string pattern 的路径转换误判；Web z-index gate 通过 release build 刷新未跟踪 bundle 后闭合；acceptance、architecture、feature path、plan coverage、release/domain/UI/native/mobile/evidence gates 均通过；新增 `docs/report/post-regression-selection-after-windows-desktop-smoke-2026-05-20.md`；选定下一步为 Apple-only target-host evidence refresh；未改 `docs/plan/`。
