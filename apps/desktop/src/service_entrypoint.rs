@@ -15,6 +15,7 @@ use thiserror::Error;
 
 pub const DEVE_DESKTOP_LOCAL_SERVICE_ENV: &str = "DEVE_DESKTOP_LOCAL_SERVICE";
 const DESKTOP_SERVICE_MAX_RESTART_ATTEMPTS: u32 = 2;
+const DESKTOP_TAURI_ORIGIN: &str = "http://tauri.localhost";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DesktopLocalServiceEntrypointPolicy {
@@ -159,6 +160,7 @@ fn build_spawn_spec(
         "AUTH_SECRET".to_string(),
         "AUTH_PASS".to_string(),
         "AUTH_USER".to_string(),
+        "ALLOWED_ORIGINS".to_string(),
     ];
     let mut env = vec![
         NativeProcessEnvBinding {
@@ -188,6 +190,10 @@ fn build_spawn_spec(
         NativeProcessEnvBinding {
             key: "AUTH_USER".to_string(),
             value: "native".to_string(),
+        },
+        NativeProcessEnvBinding {
+            key: "ALLOWED_ORIGINS".to_string(),
+            value: DESKTOP_TAURI_ORIGIN.to_string(),
         },
     ];
     for binding in platform_env {

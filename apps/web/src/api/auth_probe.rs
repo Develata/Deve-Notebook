@@ -7,6 +7,9 @@
 use deve_core::protocol::auth::AuthStatusResponse;
 use gloo_net::http::Request;
 use serde_json::Value;
+use web_sys::RequestCredentials;
+
+use super::native_bootstrap::read_native_bootstrap;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AuthProbe {
@@ -16,11 +19,17 @@ pub enum AuthProbe {
 }
 
 pub async fn probe_auth_status() -> AuthProbe {
-    probe_auth_status_with_http_base(None).await
+    let http_base = read_native_bootstrap().http_base().map(str::to_string);
+    probe_auth_status_with_http_base(http_base.as_deref()).await
 }
 
 pub async fn probe_auth_status_with_http_base(http_base: Option<&str>) -> AuthProbe {
-    match Request::get(&auth_status_url(http_base)).send().await {
+    let mut request = Request::get(&auth_status_url(http_base));
+    if http_base.is_some() {
+        request = request.credentials(RequestCredentials::Include);
+    }
+
+    match request.send().await {
         Ok(response) if response.ok() => match response.json::<AuthStatusResponse>().await {
             Ok(status) if status.authenticated => AuthProbe::Valid,
             Ok(_) => AuthProbe::Invalid,

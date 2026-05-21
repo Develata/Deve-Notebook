@@ -137,7 +137,7 @@ fn search_errors_clear_search_request_and_show_banner() {
     let harness = protocol_signal_harness(None, None, None, None);
     let stored = record_search_notice(
         Locale::En,
-        &ServerError::with_detail(ServerErrorCode::RequestFailed, "Search feature disabled"),
+        &ServerError::with_detail(ServerErrorCode::RequestFailed, "other search failure"),
         harness.control(),
     );
     assert!(stored);
@@ -145,6 +145,22 @@ fn search_errors_clear_search_request_and_show_banner() {
     assert_eq!(
         harness.sync_banner.get_untracked().as_deref(),
         Some("Search unavailable: Request failed")
+    );
+}
+
+#[test]
+fn search_disabled_errors_show_specific_banner() {
+    let harness = protocol_signal_harness(None, None, None, None);
+    let stored = record_search_notice(
+        Locale::Zh,
+        &ServerError::with_detail(ServerErrorCode::RequestFailed, "Search feature not enabled"),
+        harness.control(),
+    );
+    assert!(stored);
+    harness.assert_search_request_cleared();
+    assert_eq!(
+        harness.sync_banner.get_untracked().as_deref(),
+        Some("搜索不可用: 当前构建未启用搜索功能")
     );
 }
 

@@ -53,12 +53,35 @@ fn record_search_notice(
     }
     signals.set_search_request_id.set(None);
     signals.set_search_results.set(Vec::new());
-    let code_message = t::server_error::message(locale, error.code);
-    signals.set_sync_banner.set(Some(format!(
-        "{}: {code_message}",
-        t::search::unavailable(locale)
-    )));
+    signals
+        .set_sync_banner
+        .set(Some(search_error_banner(locale, error)));
     true
+}
+
+fn search_error_banner(locale: Locale, error: &ServerError) -> String {
+    if error.code == ServerErrorCode::RequestFailed
+        && error
+            .detail
+            .as_deref()
+            .is_some_and(is_search_feature_disabled_detail)
+    {
+        return format!(
+            "{}: {}",
+            t::search::unavailable(locale),
+            t::search::not_enabled(locale)
+        );
+    }
+
+    let code_message = t::server_error::message(locale, error.code);
+    format!("{}: {code_message}", t::search::unavailable(locale))
+}
+
+fn is_search_feature_disabled_detail(detail: &str) -> bool {
+    matches!(
+        detail,
+        "Search feature not enabled" | "Search feature disabled for current runtime profile"
+    )
 }
 
 fn record_source_control_notice(error: &ServerError, signals: ProtocolControlSignals) -> bool {

@@ -48,6 +48,13 @@ pub fn unavailable(locale: Locale) -> &'static str {
     }
 }
 
+pub fn not_enabled(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Search is not enabled in this build",
+        Locale::Zh => "当前构建未启用搜索功能",
+    }
+}
+
 pub fn command_detail(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Command",

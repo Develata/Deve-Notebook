@@ -99,14 +99,15 @@ fn desktop_loopback_http_probe_issues_native_session_cookie_before_auth_status()
     assert_eq!(cookie.domain(), "127.0.0.1");
     assert_eq!(cookie.path(), "/");
     assert!(cookie.http_only());
-    assert_eq!(cookie.same_site(), "Strict");
+    assert!(cookie.secure());
+    assert_eq!(cookie.same_site(), "None");
     assert!(!format!("{:?}", cookie).contains("native.jwt"));
 }
 
 #[test]
 fn desktop_native_session_cookie_rejects_non_loopback_domain() {
     let error = crate::DesktopNativeSessionCookie::from_set_cookie(
-        "token=native.jwt; Path=/; HttpOnly; SameSite=Strict",
+        "token=native.jwt; Path=/; HttpOnly; SameSite=None; Secure",
         "example.com",
     )
     .expect_err("non-loopback domain rejected");
@@ -115,4 +116,20 @@ fn desktop_native_session_cookie_rejects_non_loopback_domain() {
         error,
         crate::DesktopShellError::NativeSessionCookieInvalid
     ));
+}
+
+#[test]
+fn desktop_native_session_cookie_rejects_cookie_that_cannot_cross_tauri_origin() {
+    for set_cookie in [
+        "token=native.jwt; Path=/; HttpOnly; SameSite=Strict; Secure",
+        "token=native.jwt; Path=/; HttpOnly; SameSite=None",
+    ] {
+        let error = crate::DesktopNativeSessionCookie::from_set_cookie(set_cookie, "127.0.0.1")
+            .expect_err("native cookie must be cross-site capable for tauri.localhost");
+
+        assert!(matches!(
+            error,
+            crate::DesktopShellError::NativeSessionCookieInvalid
+        ));
+    }
 }

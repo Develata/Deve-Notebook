@@ -135,8 +135,8 @@ fn build_native_loopback_cookie(token: &str) -> [(String, String); 1] {
     let cookie = Cookie::build(("token", token.to_string()))
         .path("/")
         .http_only(true)
-        .same_site(SameSite::Strict)
-        .secure(false)
+        .same_site(SameSite::None)
+        .secure(true)
         .build();
     [("Set-Cookie".into(), cookie.to_string())]
 }
@@ -192,13 +192,13 @@ mod tests {
     }
 
     #[test]
-    fn native_loopback_cookie_is_http_only_but_not_secure() {
+    fn native_loopback_cookie_is_http_only_secure_and_cross_site() {
         let cookie = build_native_loopback_cookie("abc");
         let value = &cookie[0].1;
 
         assert!(value.contains("HttpOnly"));
-        assert!(value.contains("SameSite=Strict"));
-        assert!(!value.contains("Secure"));
+        assert!(value.contains("SameSite=None"));
+        assert!(value.contains("Secure"));
     }
 
     #[tokio::test]
@@ -219,8 +219,8 @@ mod tests {
             .expect("set-cookie");
         assert!(set_cookie.starts_with("token="));
         assert!(set_cookie.contains("HttpOnly"));
-        assert!(set_cookie.contains("SameSite=Strict"));
-        assert!(!set_cookie.contains("Secure"));
+        assert!(set_cookie.contains("SameSite=None"));
+        assert!(set_cookie.contains("Secure"));
         let bytes = body::to_bytes(response.into_body(), 4096)
             .await
             .expect("body");

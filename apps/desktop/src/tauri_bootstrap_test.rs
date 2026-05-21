@@ -20,7 +20,7 @@ fn success_bootstrap() -> DesktopBootstrap {
 
 fn native_session_cookie() -> DesktopNativeSessionCookie {
     DesktopNativeSessionCookie::from_set_cookie(
-        "token=abc.def; Path=/; HttpOnly; SameSite=Strict",
+        "token=abc.def; Path=/; HttpOnly; SameSite=None; Secure",
         "127.0.0.1",
     )
     .expect("cookie")

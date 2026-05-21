@@ -177,7 +177,7 @@ pub(super) fn spawn_native_session_then_auth_status() -> String {
                 assert!(request.contains(NATIVE_SESSION_BOOTSTRAP_HEADER));
                 let body = LoginSuccess::json();
                 let response = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nSet-Cookie: token=native.jwt; Path=/; HttpOnly; SameSite=Strict\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nSet-Cookie: token=native.jwt; Path=/; HttpOnly; SameSite=None; Secure\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
                     body.len(),
                     body
                 );

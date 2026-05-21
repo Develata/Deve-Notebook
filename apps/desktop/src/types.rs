@@ -127,7 +127,7 @@ impl DesktopNativeSessionCookie {
                 }
             }
         }
-        if !cookie.http_only || !cookie.same_site.eq_ignore_ascii_case("strict") {
+        if !cookie.http_only || !cookie.secure || !cookie.same_site.eq_ignore_ascii_case("none") {
             return Err(DesktopShellError::NativeSessionCookieInvalid);
         }
         Ok(cookie)
