@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED:-0}"
 TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-aarch64}"
 BUILD_APK="${DEVE_MOBILE_ANDROID_PACKAGE_APK:-1}"
@@ -80,9 +81,28 @@ configure_gradle_proxy_from_env() {
   echo "mobile-android-shell-package-build-check: Gradle proxy configured from HTTPS_PROXY/HTTP_PROXY"
 }
 
+configure_android_build_java() {
+  android_prepare_java_home \
+    || fail "java >=17 or Android Studio JBR is required for Android shell package build"
+}
+
+configure_kotlin_incremental_workaround() {
+  case "$(uname -s 2>/dev/null || printf 'unknown')" in
+    MINGW*|MSYS*|CYGWIN*) ;;
+    *) return 0 ;;
+  esac
+  [[ "${DEVE_MOBILE_ANDROID_DISABLE_KOTLIN_INCREMENTAL_ON_WINDOWS:-1}" == "1" ]] || return 0
+  [[ "${GRADLE_OPTS:-}" != *"kotlin.incremental=false"* ]] || return 0
+
+  export GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }-Dkotlin.incremental=false"
+  echo "mobile-android-shell-package-build-check: Kotlin incremental disabled for Windows cross-drive Gradle sources"
+}
+
 validate_target
 validate_artifact_kind
 assert_android_shell_boundary
+configure_android_build_java
+configure_kotlin_incremental_workaround
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
