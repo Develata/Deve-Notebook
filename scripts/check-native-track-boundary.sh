@@ -259,7 +259,14 @@ check_manifest_dependency() {
 check_contains Cargo.toml '"apps/desktop"'
 check_contains Cargo.toml '"apps/mobile"'
 
-check_contains apps/desktop/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/tray-icon", "tauri/wry"]'
+check_contains apps/desktop/Cargo.toml 'native-packaging = ['
+check_contains apps/desktop/Cargo.toml '"dep:indexmap_1"'
+check_contains apps/desktop/Cargo.toml '"dep:tauri"'
+check_contains apps/desktop/Cargo.toml '"dep:tauri-build"'
+check_contains apps/desktop/Cargo.toml '"tauri/tray-icon"'
+check_contains apps/desktop/Cargo.toml '"tauri/wry"'
+check_manifest_dependency apps/desktop/Cargo.toml indexmap_1 1.9.3
+check_contains apps/desktop/Cargo.toml 'features = ["std"]'
 check_manifest_dependency apps/desktop/Cargo.toml tauri 2.11.1
 check_manifest_dependency apps/desktop/Cargo.toml tauri-build 2.6.1
 check_contains apps/desktop/build.rs "tauri_build::build()"
@@ -274,8 +281,14 @@ check_contains apps/desktop/tauri.conf.json '"icon": ["icons/icon.png", "icons/i
 [[ -f "$ROOT_DIR/apps/desktop/icons/icon.icns" ]] \
   || fail "missing desktop Tauri macOS icon: apps/desktop/icons/icon.icns"
 check_contains apps/desktop/tauri.conf.json '"createUpdaterArtifacts": false'
-check_contains apps/mobile/Cargo.toml 'native-packaging = ["dep:tauri", "dep:tauri-build", "tauri/wry"]'
+check_contains apps/mobile/Cargo.toml 'native-packaging = ['
+check_contains apps/mobile/Cargo.toml '"dep:indexmap_1"'
+check_contains apps/mobile/Cargo.toml '"dep:tauri"'
+check_contains apps/mobile/Cargo.toml '"dep:tauri-build"'
+check_contains apps/mobile/Cargo.toml '"tauri/wry"'
 check_contains apps/mobile/Cargo.toml 'crate-type = ["staticlib", "cdylib", "rlib"]'
+check_manifest_dependency apps/mobile/Cargo.toml indexmap_1 1.9.3
+check_contains apps/mobile/Cargo.toml 'features = ["std"]'
 check_manifest_dependency apps/mobile/Cargo.toml tauri 2.11.1
 check_manifest_dependency apps/mobile/Cargo.toml tauri-build 2.6.1
 check_contains apps/mobile/tauri.conf.json '"identifier": "dev.deve.notebook.mobile"'
