@@ -93,6 +93,7 @@ check_no_process_runtime_leak() {
   if [[ -n "$imports" ]]; then
     while IFS= read -r line; do
       repo_line_matches "$line" "apps/desktop/src/process_runtime.rs" && continue
+      repo_line_matches "$line" "apps/desktop/src/process_runtime/launcher.rs" && continue
       fail "native process runtime is only allowed in the Desktop post-gate runtime spike: $(repo_line_display "$line")"
     done <<< "$imports"
   fi
@@ -106,11 +107,11 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/process_runtime.rs "DesktopCommandProcessLauncher"
   check_contains apps/desktop/src/process_runtime.rs "validate_desktop_service_command"
   check_contains apps/desktop/src/process_runtime.rs "stop_service"
-  check_contains apps/desktop/src/process_runtime.rs "env_clear()"
-  check_contains apps/desktop/src/process_runtime.rs "executable must be deve_cli"
-  check_contains apps/desktop/src/process_runtime.rs "first argv must be serve"
-  check_contains apps/desktop/src/process_runtime.rs "argv must be exactly serve --native-loopback --port <port>"
-  check_contains apps/desktop/src/process_runtime.rs "argv port must match loopback bind hints"
+  check_contains apps/desktop/src/process_runtime/launcher.rs "env_clear()"
+  check_contains apps/desktop/src/process_runtime/validation.rs "executable must be deve_cli"
+  check_contains apps/desktop/src/process_runtime/validation.rs "first argv must be serve"
+  check_contains apps/desktop/src/process_runtime/validation.rs "argv must be exactly serve --native-loopback --port <port>"
+  check_contains apps/desktop/src/process_runtime/validation.rs "argv port must match loopback bind hints"
   check_contains apps/desktop/src/service_entrypoint.rs "DEVE_DESKTOP_LOCAL_SERVICE"
   check_contains apps/desktop/src/service_entrypoint.rs "\"--native-loopback\""
   check_contains apps/desktop/src/service_entrypoint.rs "NATIVE_SESSION_BOOTSTRAP_SECRET_ENV"
@@ -122,10 +123,10 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/service_entrypoint.rs "session_handoff_required_before_bootstrap: true"
   check_contains apps/desktop/src/service_bootstrap.rs "run_desktop_local_service_bootstrap"
   check_contains apps/desktop/src/service_bootstrap.rs "DesktopLoopbackHttpProbe"
-  check_contains apps/desktop/src/service_bootstrap.rs "/api/node/role"
-  check_contains apps/desktop/src/service_bootstrap.rs "/api/auth/status"
-  check_contains apps/desktop/src/service_bootstrap.rs "/api/auth/native-session"
-  check_contains apps/desktop/src/service_bootstrap.rs "NATIVE_SESSION_BOOTSTRAP_HEADER"
+  check_contains apps/desktop/src/service_bootstrap/probe.rs "/api/node/role"
+  check_contains apps/desktop/src/service_bootstrap/probe.rs "/api/auth/status"
+  check_contains apps/desktop/src/service_bootstrap/probe.rs "/api/auth/native-session"
+  check_contains apps/desktop/src/service_bootstrap/probe.rs "NATIVE_SESSION_BOOTSTRAP_HEADER"
   check_contains apps/desktop/src/service_bootstrap.rs "MissingNativeSessionBootstrapSecret"
   check_contains apps/desktop/src/service_bootstrap.rs "bootstrap_for_web"
   check_contains apps/desktop/src/service_bootstrap.rs "SessionHandoffFailed"
@@ -149,6 +150,7 @@ check_no_process_runtime_leak() {
   check_not_contains apps/desktop/src/tauri_entry.rs "app.manage(Mutex::new(runtime))"
   check_not_contains apps/desktop/src/service_entrypoint.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
   check_not_contains apps/desktop/src/service_bootstrap.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
+  check_not_contains apps/desktop/src/service_bootstrap/probe.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
   check_not_contains apps/desktop/src/tauri_bootstrap.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
   check_not_contains apps/cli/src/server/auth/handlers/native_session.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST"
 
