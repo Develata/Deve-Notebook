@@ -43,29 +43,50 @@ fn build_inferred_ws_urls() -> Vec<String> {
         None => return vec![format!("ws://localhost:{DEV_WS_PORT}/ws")],
     };
     let location = window.location();
-    let hostname = normalize_hostname(
-        location
-            .hostname()
-            .unwrap_or_else(|_| "localhost".to_string()),
-    );
+    let host = location
+        .host()
+        .unwrap_or_else(|_| "localhost:3001".to_string());
+    let hostname = location
+        .hostname()
+        .unwrap_or_else(|_| "localhost".to_string());
     let protocol = location.protocol().unwrap_or_else(|_| "http:".to_string());
+    build_inferred_ws_urls_from_parts(
+        host,
+        hostname,
+        protocol,
+        query_port(),
+        super::native_http::packaged_shell_loopback_ws_url(),
+        cfg!(debug_assertions),
+    )
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn build_inferred_ws_urls_from_parts(
+    host: String,
+    hostname: String,
+    protocol: String,
+    query_port: Option<u16>,
+    packaged_shell_loopback_ws_url: Option<String>,
+    include_debug_fallbacks: bool,
+) -> Vec<String> {
+    let hostname = normalize_hostname(hostname);
     let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
     let mut urls = Vec::new();
 
-    if let Some(port) = query_port() {
+    if let Some(port) = query_port {
         push_ws_url(
             &mut urls,
             format!("{}://{}:{}/ws", ws_scheme, hostname, port),
         );
     }
 
-    push_ws_url(&mut urls, build_same_origin_ws_url());
-
-    if let Some(url) = super::native_http::packaged_shell_loopback_ws_url() {
+    if let Some(url) = packaged_shell_loopback_ws_url {
         push_ws_url(&mut urls, url);
     }
 
-    if cfg!(debug_assertions) {
+    push_ws_url(&mut urls, format!("{}://{}/ws", ws_scheme, host));
+
+    if include_debug_fallbacks {
         push_ws_url(
             &mut urls,
             format!("{}://{}:{}/ws", ws_scheme, hostname, DEV_WS_PORT),
@@ -83,7 +104,7 @@ fn build_inferred_ws_urls() -> Vec<String> {
     urls
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(target_arch = "wasm32", test))]
 fn normalize_hostname(hostname: String) -> String {
     match hostname.as_str() {
         "" | "0.0.0.0" | "::" | "[::]" => "localhost".to_string(),
@@ -91,7 +112,7 @@ fn normalize_hostname(hostname: String) -> String {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(any(target_arch = "wasm32", test))]
 fn push_ws_url(urls: &mut Vec<String>, url: String) {
     if !urls.iter().any(|current| current == &url) {
         urls.push(url);
@@ -148,6 +169,41 @@ mod tests {
         let urls = build_ws_urls_for_native_state(&NativeBootstrapState::Absent);
 
         assert_eq!(urls, vec![format!("ws://localhost:{DEV_WS_PORT}/ws")]);
+    }
+
+    #[test]
+    fn packaged_shell_loopback_precedes_tauri_same_origin_ws() {
+        let urls = build_inferred_ws_urls_from_parts(
+            "tauri.localhost".to_string(),
+            "tauri.localhost".to_string(),
+            "http:".to_string(),
+            None,
+            Some("ws://127.0.0.1:3001/ws".to_string()),
+            false,
+        );
+
+        assert_eq!(
+            urls,
+            vec![
+                "ws://127.0.0.1:3001/ws".to_string(),
+                "ws://tauri.localhost/ws".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn explicit_query_port_still_precedes_packaged_shell_loopback() {
+        let urls = build_inferred_ws_urls_from_parts(
+            "tauri.localhost".to_string(),
+            "tauri.localhost".to_string(),
+            "http:".to_string(),
+            Some(4010),
+            Some("ws://127.0.0.1:3001/ws".to_string()),
+            false,
+        );
+
+        assert_eq!(urls[0], "ws://tauri.localhost:4010/ws");
+        assert_eq!(urls[1], "ws://127.0.0.1:3001/ws");
     }
 
     #[test]
