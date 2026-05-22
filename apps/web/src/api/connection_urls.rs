@@ -61,6 +61,10 @@ fn build_inferred_ws_urls() -> Vec<String> {
 
     push_ws_url(&mut urls, build_same_origin_ws_url());
 
+    if let Some(url) = super::native_http::packaged_shell_loopback_ws_url() {
+        push_ws_url(&mut urls, url);
+    }
+
     if cfg!(debug_assertions) {
         push_ws_url(
             &mut urls,

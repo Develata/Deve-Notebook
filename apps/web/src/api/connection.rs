@@ -30,6 +30,7 @@ use super::backoff::BackoffStrategy;
 use super::connection_role::{fetch_node_role, fetch_node_role_for_http_base};
 use super::connection_urls::{build_same_origin_ws_url, build_ws_urls_for_native_state};
 use super::native_bootstrap::read_native_bootstrap;
+use super::native_http::preferred_http_base;
 use super::output::prepare_queue_for_new_connection;
 use super::socket::BrowserSocket;
 
@@ -56,7 +57,7 @@ pub fn spawn_connection_manager(
 ) {
     spawn_local(async move {
         let native_bootstrap = read_native_bootstrap();
-        let auth_http_base = native_bootstrap.http_base().map(str::to_string);
+        let auth_http_base = preferred_http_base();
         if let Some(blocked_status) = native_bootstrap.blocked_status() {
             leptos::logging::error!("Native bootstrap is present but not ready; refusing fallback");
             let _ = signals

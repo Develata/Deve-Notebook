@@ -5,6 +5,9 @@
 
 use deve_core::protocol::auth::{AuthErrorCode, LoginRequest, LoginResponse};
 use gloo_net::http::Request;
+use web_sys::RequestCredentials;
+
+use crate::api::{AuthProbe, api_url, probe_auth_status};
 
 #[derive(Debug)]
 pub(super) enum LoginAttemptError {
@@ -24,7 +27,12 @@ pub(super) async fn attempt_login(
     password: String,
 ) -> Result<(), LoginAttemptError> {
     let request = LoginRequest { username, password };
-    let response = Request::post("/api/auth/login")
+    let api = api_url("/api/auth/login");
+    let mut builder = Request::post(&api.url);
+    if api.include_credentials {
+        builder = builder.credentials(RequestCredentials::Include);
+    }
+    let response = builder
         .header("Content-Type", "application/json")
         .json(&request)
         .map_err(|e| {
@@ -37,7 +45,10 @@ pub(super) async fn attempt_login(
     let payload = response.json::<LoginResponse>().await.ok();
     if let Some(result) = payload {
         if result.success {
-            return Ok(());
+            return match probe_auth_status().await {
+                AuthProbe::Valid => Ok(()),
+                AuthProbe::Invalid | AuthProbe::Unknown => Err(LoginAttemptError::InvalidResponse),
+            };
         }
         if let Some(code) = result.code {
             return Err(LoginAttemptError::Rejected(code));
@@ -52,10 +63,12 @@ pub(super) async fn attempt_login(
 }
 
 pub async fn logout() -> Result<(), String> {
-    let response = Request::post("/api/auth/logout")
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let api = api_url("/api/auth/logout");
+    let mut request = Request::post(&api.url);
+    if api.include_credentials {
+        request = request.credentials(RequestCredentials::Include);
+    }
+    let response = request.send().await.map_err(|e| e.to_string())?;
     if response.ok() {
         Ok(())
     } else {

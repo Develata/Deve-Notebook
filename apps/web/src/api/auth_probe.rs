@@ -9,7 +9,7 @@ use gloo_net::http::Request;
 use serde_json::Value;
 use web_sys::RequestCredentials;
 
-use super::native_bootstrap::read_native_bootstrap;
+use super::native_http::preferred_http_base;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AuthProbe {
@@ -19,7 +19,7 @@ pub enum AuthProbe {
 }
 
 pub async fn probe_auth_status() -> AuthProbe {
-    let http_base = read_native_bootstrap().http_base().map(str::to_string);
+    let http_base = preferred_http_base();
     probe_auth_status_with_http_base(http_base.as_deref()).await
 }
 
