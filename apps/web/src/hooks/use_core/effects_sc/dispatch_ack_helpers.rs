@@ -31,6 +31,8 @@ pub(super) fn handle_commit_ack(
     active_scope_nonce: u64,
 ) {
     ctx.set_notice.set(None);
+    ctx.set_diff.set(None);
+    ctx.set_commit_diff.set(Vec::new());
     show_ack_feedback(ctx, commit_ack_message(commit_id));
     refresh_after_commit(
         commit_id,
@@ -45,6 +47,8 @@ pub(super) fn handle_commit_ack(
             pending_repo_switch: ctx.pending_repo_switch,
             set_changes_request_id: ctx.set_changes_request_id,
             set_commit_history_request_id: ctx.set_commit_history_request_id,
+            set_doc_list_request_id: ctx.set_doc_list_request_id,
+            set_tree_request_id: ctx.set_tree_request_id,
         },
         ctx.ws,
     );

@@ -60,6 +60,29 @@ fn dispatch_batch_suppresses_duplicate_external_added_message() -> anyhow::Resul
 }
 
 #[test]
+fn dispatch_batch_does_not_reopen_committed_crlf_file_as_modified() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, _repo_id, repo_root) = new_sync()?;
+    let added = repo_root.join("notes").join("crlf.md");
+    std::fs::create_dir_all(added.parent().expect("parent"))?;
+    std::fs::write(&added, b"# CRLF\r\n\r\nCommitted from disk.\r\n")?;
+
+    crate::sync::scan::scan_local_repo(&repo, &sync.vfs, &repo_name)?;
+    repo.stage_pending_in_local_repo(&repo_name, "notes/crlf.md")?;
+    repo.commit_staged_in_local_repo(&repo_name, "add crlf file")?;
+    assert!(
+        repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty(),
+        "commit should leave no pending source-control entries"
+    );
+
+    crate::sync::scan::scan_local_repo(&repo, &sync.vfs, &repo_name)?;
+    assert!(
+        repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty(),
+        "a post-commit scan must not reopen a CRLF-only drift as modified"
+    );
+    Ok(())
+}
+
+#[test]
 fn dispatch_batch_suppresses_duplicate_rename_pair_messages() -> anyhow::Result<()> {
     let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
     let doc_id = commit_doc(&repo, &sync, &repo_name, "notes/a.md", "base")?;

@@ -4,6 +4,7 @@ use crate::hooks::use_core::effects_sc::{ScMessageContext, handle_sc_message};
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::storage::DegradedSyncMode;
 use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::source_control::ChangeStatus;
 
 #[test]
 fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
@@ -19,8 +20,8 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     let (changes_request_id, set_changes_request_id) = signal(None::<String>);
     let (history, set_history) = signal(Vec::<CommitInfo>::new());
     let (history_request_id, set_history_request_id) = signal(None::<String>);
-    let (_doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
-    let (_tree_request_id, set_tree_request_id) = signal(None::<String>);
+    let (doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
+    let (tree_request_id, set_tree_request_id) = signal(None::<String>);
     let (degraded, _set_degraded) = signal(None::<DegradedSyncMode>);
     let (sync_banner, set_sync_banner) = signal(None::<String>);
     let (doc_diff_request_id, set_doc_diff_request_id) = signal(None::<String>);
@@ -84,6 +85,11 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
 
     assert!(changes_request_id.get_untracked().is_some());
     assert!(history_request_id.get_untracked().is_some());
+    assert!(doc_list_request_id.get_untracked().is_some());
+    assert_eq!(
+        doc_list_request_id.get_untracked(),
+        tree_request_id.get_untracked()
+    );
     assert_eq!(notice.get_untracked(), None);
     assert!(staged.get_untracked().is_empty());
     assert!(unstaged.get_untracked().is_empty());
@@ -92,7 +98,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     assert!(commit_diff.get_untracked().is_empty());
 
     let sent = ws.drain_sent_for_test();
-    assert_eq!(sent.len(), 2);
+    assert_eq!(sent.len(), 3);
     match &sent[0] {
         ClientMessage::GetChanges {
             request_id,
@@ -121,4 +127,109 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
         }
         other => panic!("expected GetCommitHistory, got {other:?}"),
     }
+    match &sent[2] {
+        ClientMessage::ListDocs {
+            request_id,
+            scope_nonce,
+        } => {
+            assert_eq!(
+                Some(request_id),
+                doc_list_request_id.get_untracked().as_ref()
+            );
+            assert_eq!(*scope_nonce, Some(7));
+        }
+        other => panic!("expected ListDocs, got {other:?}"),
+    }
+}
+
+#[test]
+fn commit_ack_clears_open_source_control_diffs() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let repo_id = uuid::Uuid::new_v4();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.set_node_role_for_test("main");
+    ws.mark_writer_ready(repo_id.to_string(), 7, "web-light-peer");
+
+    let (_staged, set_staged) = signal(Vec::<ChangeEntry>::new());
+    let (_unstaged, set_unstaged) = signal(Vec::<ChangeEntry>::new());
+    let (_changes_request_id, set_changes_request_id) = signal(None::<String>);
+    let (_history, set_history) = signal(Vec::<CommitInfo>::new());
+    let (history_request_id, set_history_request_id) = signal(None::<String>);
+    let (_doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
+    let (_tree_request_id, set_tree_request_id) = signal(None::<String>);
+    let (degraded, _set_degraded) = signal(None::<DegradedSyncMode>);
+    let (sync_banner, set_sync_banner) = signal(None::<String>);
+    let (doc_diff_request_id, set_doc_diff_request_id) = signal(None::<String>);
+    let (diff, set_diff) = signal(Some(DiffSessionWire::new(
+        "external/fs-pending.md".into(),
+        String::new(),
+        "# External pending".into(),
+    )));
+    let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
+    let (commit_diff, set_commit_diff) = signal(vec![CommitFileDiff {
+        doc_id: None,
+        path: "external/fs-pending.md".into(),
+        status: ChangeStatus::Added,
+        previous_path: None,
+        old_content: String::new(),
+        new_content: "# External pending".into(),
+    }]);
+    let (_notice, set_notice) = signal(None::<SourceControlNotice>);
+    let (current_repo_id, _) = signal(Some(repo_id.to_string()));
+    let (load_state, _) = signal("ready".to_string());
+    let (is_spectator, _) = signal(false);
+    let (handshake_ready, _) = signal(true);
+    let (active_branch, _) = signal(None::<PeerId>);
+    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+    let (pending_repo_switch, _) = signal(None::<String>);
+    let (current_scope_nonce, _) = signal(7u64);
+    let schedule_refresh = || {};
+
+    let ctx = ScMessageContext {
+        set_staged,
+        set_unstaged,
+        changes_request_id: _changes_request_id,
+        set_changes_request_id,
+        set_history,
+        commit_history_request_id: history_request_id,
+        set_commit_history_request_id: set_history_request_id,
+        set_doc_list_request_id,
+        set_tree_request_id,
+        degraded_sync_mode: degraded,
+        sync_banner,
+        set_sync_banner,
+        doc_diff_request_id,
+        set_doc_diff_request_id,
+        diff,
+        set_diff,
+        commit_diff_request_id,
+        set_commit_diff_request_id,
+        set_commit_diff,
+        set_notice,
+        current_repo_id,
+        load_state,
+        is_spectator: is_spectator.into(),
+        handshake_ready,
+        active_branch,
+        pending_branch_switch,
+        pending_repo_switch,
+        current_scope_nonce,
+        schedule_refresh: &schedule_refresh,
+        ws: &ws,
+    };
+
+    assert!(handle_sc_message(
+        &ServerMessage::CommitAck {
+            repo_id: Some(repo_id),
+            branch: None,
+            scope_nonce: Some(7),
+            commit_id: "commit-1".into(),
+            timestamp: 1,
+        },
+        &ctx,
+    ));
+
+    assert!(diff.get_untracked().is_none());
+    assert!(commit_diff.get_untracked().is_empty());
 }

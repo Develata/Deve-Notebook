@@ -20,6 +20,8 @@ pub(in crate::hooks::use_core) struct CommitRefreshSignals {
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
     pub set_commit_history_request_id: WriteSignal<Option<String>>,
+    pub set_doc_list_request_id: WriteSignal<Option<String>>,
+    pub set_tree_request_id: WriteSignal<Option<String>>,
 }
 
 pub(in crate::hooks::use_core) fn refresh_after_commit(
@@ -71,6 +73,17 @@ pub(in crate::hooks::use_core) fn refresh_after_commit(
     ws.send(deve_core::protocol::ClientMessage::GetCommitHistory {
         request_id: history_request_id,
         limit: 50,
+        scope_nonce: Some(current_scope_nonce),
+    });
+    let list_request_id = uuid::Uuid::new_v4().to_string();
+    signals
+        .set_doc_list_request_id
+        .set(Some(list_request_id.clone()));
+    signals
+        .set_tree_request_id
+        .set(Some(list_request_id.clone()));
+    ws.send(deve_core::protocol::ClientMessage::ListDocs {
+        request_id: list_request_id,
         scope_nonce: Some(current_scope_nonce),
     });
 }

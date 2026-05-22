@@ -32,7 +32,7 @@ pub(super) fn sync_modified_pending(
     let disk_content = std::fs::read_to_string(&file_path)?;
     let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;
     let current = repo.run_on_local_repo(repo_name, |db| pending_fs::get(db, repo_path))?;
-    if rebuilt.content == disk_content {
+    if equivalent_reconciled_content(&rebuilt.content, &disk_content) {
         return if current.is_some() {
             pending::clear(repo, repo_name, repo_path)?;
             Ok(PendingSyncResult::Changed)
@@ -65,4 +65,19 @@ pub(super) fn sync_modified_pending(
         None,
     )?;
     Ok(PendingSyncResult::Changed)
+}
+
+fn equivalent_reconciled_content(left: &str, right: &str) -> bool {
+    left == right || left.replace("\r\n", "\n") == right.replace("\r\n", "\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::equivalent_reconciled_content;
+
+    #[test]
+    fn reconciled_content_equivalence_ignores_crlf_only_drift() {
+        assert!(equivalent_reconciled_content("a\nb\n", "a\r\nb\r\n"));
+        assert!(!equivalent_reconciled_content("a\nb\n", "a\nchanged\n"));
+    }
 }
