@@ -16,6 +16,7 @@ mod git_mirror;
 mod graph;
 mod incoming;
 mod native_bootstrap;
+mod native_http;
 mod output;
 mod query;
 mod service;

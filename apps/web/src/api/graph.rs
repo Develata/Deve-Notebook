@@ -4,10 +4,12 @@
 //!
 //! Read-only repo graph projection API.
 
+use super::native_http::api_url;
 use super::query::encode_query_component;
 use deve_core::graph::GraphProjection;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use gloo_net::http::Request;
+use web_sys::RequestCredentials;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GraphProjectionFetchError {
@@ -18,7 +20,12 @@ pub enum GraphProjectionFetchError {
 pub async fn fetch_graph_projection(
     repo_id: Option<String>,
 ) -> Result<GraphProjection, GraphProjectionFetchError> {
-    let response = Request::get(&graph_projection_url(repo_id.as_deref(), false))
+    let api = api_url(&graph_projection_url(repo_id.as_deref(), false));
+    let mut request = Request::get(&api.url);
+    if api.include_credentials {
+        request = request.credentials(RequestCredentials::Include);
+    }
+    let response = request
         .send()
         .await
         .map_err(|_| GraphProjectionFetchError::RequestFailed)?;

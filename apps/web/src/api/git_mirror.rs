@@ -6,6 +6,9 @@
 use super::query::encode_query_component;
 use gloo_net::http::Request;
 use serde::Deserialize;
+use web_sys::RequestCredentials;
+
+use super::native_http::api_url;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct GitMirrorRepairReview {
@@ -39,13 +42,18 @@ pub async fn fetch_git_mirror_repair_review(
     repo_id: Option<String>,
     scope_nonce: u64,
 ) -> Result<GitMirrorRepairReview, GitMirrorRepairReviewFetchError> {
-    let response = Request::get(&git_mirror_repair_review_url(
+    let api = api_url(&git_mirror_repair_review_url(
         repo_id.as_deref(),
         scope_nonce,
-    ))
-    .send()
-    .await
-    .map_err(|_| GitMirrorRepairReviewFetchError::RequestFailed)?;
+    ));
+    let mut request = Request::get(&api.url);
+    if api.include_credentials {
+        request = request.credentials(RequestCredentials::Include);
+    }
+    let response = request
+        .send()
+        .await
+        .map_err(|_| GitMirrorRepairReviewFetchError::RequestFailed)?;
     response
         .ok()
         .then_some(response)

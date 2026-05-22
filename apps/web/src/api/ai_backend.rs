@@ -3,6 +3,9 @@
 //!
 use gloo_net::http::Request;
 use serde::Deserialize;
+use web_sys::RequestCredentials;
+
+use super::native_http::api_url;
 
 pub const AI_BACKEND_NATIVE: &str = "native";
 pub const AI_BACKEND_TRUSTED_CLI: &str = "trusted-cli";
@@ -47,7 +50,12 @@ impl AiBackendCapabilities {
 }
 
 pub async fn fetch_ai_backend_capabilities() -> AiBackendCapabilities {
-    let response = Request::get("/api/ai/backend-capabilities").send().await;
+    let api = api_url("/api/ai/backend-capabilities");
+    let mut request = Request::get(&api.url);
+    if api.include_credentials {
+        request = request.credentials(RequestCredentials::Include);
+    }
+    let response = request.send().await;
     match response {
         Ok(resp) if resp.ok() => resp
             .json::<AiBackendCapabilities>()
