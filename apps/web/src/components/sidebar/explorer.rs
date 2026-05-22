@@ -21,6 +21,20 @@ use crate::components::dropdown::AnchorRect;
 use header::ExplorerHeader;
 use tree_view::ExplorerTree;
 
+pub(super) fn new_doc_search_query(
+    core: &crate::hooks::use_core::CoreState,
+    parent: Option<&str>,
+) -> String {
+    let path = crate::hooks::use_core::doc_name::next_untitled_doc_path(
+        core.docs
+            .get_untracked()
+            .iter()
+            .map(|(_, path)| path.as_str()),
+        parent,
+    );
+    format!("+{path}")
+}
+
 #[component]
 pub fn ExplorerView(
     _docs: ReadSignal<Vec<(DocId, String)>>,
@@ -30,6 +44,9 @@ pub fn ExplorerView(
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let doc = expect_context::<DocContext>();
+    let branch = expect_context::<crate::hooks::use_core::BranchContext>();
+    let core = expect_context::<crate::hooks::use_core::CoreState>();
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
     let (menu_anchor, set_menu_anchor) = signal(None::<AnchorRect>);
@@ -41,10 +58,9 @@ pub fn ExplorerView(
         search_control.set_show.set(true);
     });
 
+    let core_for_create = core.clone();
     let request_create = Callback::new(move |parent: Option<String>| {
-        let prefix = "+";
-        let path = parent.map(|p| format!("{}/", p)).unwrap_or_default();
-        open_search.run(format!("{}{}", prefix, path));
+        open_search.run(new_doc_search_query(&core_for_create, parent.as_deref()));
     });
 
     let request_delete = Callback::new(move |path: String| {
@@ -86,11 +102,6 @@ pub fn ExplorerView(
         on_delete: request_delete.clone(),
     };
     provide_context(actions);
-
-    // 使用 TreeDelta 增量更新的树
-    let doc = expect_context::<DocContext>();
-    let branch = expect_context::<crate::hooks::use_core::BranchContext>();
-    let core = expect_context::<crate::hooks::use_core::CoreState>();
 
     view! {
         <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none relative">

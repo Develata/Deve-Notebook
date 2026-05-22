@@ -206,6 +206,47 @@ mod tests {
     }
 
     #[test]
+    fn test_chat_without_api_key_returns_error_with_web_arguments() {
+        let _guard = AI_ENV_LOCK.lock().expect("ai env lock");
+        let _env = EnvGuard::set(&[
+            ("AI_API_KEY", None),
+            ("OPENAI_API_KEY", None),
+            ("ANTHROPIC_API_KEY", None),
+        ]);
+        let plugin = load_ai_chat();
+        let context = serde_json::json!({
+            "current_file": "",
+            "current_markdown": "",
+            "selection": null,
+            "chat_mode": "plan"
+        });
+        let history = serde_json::json!([]);
+        let result = plugin
+            .call(
+                "chat",
+                vec![
+                    "test-req-id".into(),
+                    "Hello".into(),
+                    rhai::serde::to_dynamic(&context).expect("context to dynamic"),
+                    rhai::serde::to_dynamic(&history).expect("history to dynamic"),
+                ],
+            )
+            .expect("chat should not panic with web arguments");
+
+        let response: rhai::Map = rhai::serde::from_dynamic(&result).unwrap();
+        let kind = response
+            .get("type")
+            .and_then(|v| v.clone().into_string().ok())
+            .unwrap_or_default();
+        let content = response
+            .get("content")
+            .and_then(|v| v.clone().into_string().ok())
+            .unwrap_or_default();
+        assert_eq!(kind, "error");
+        assert!(content.contains("API key"), "got: {content}");
+    }
+
+    #[test]
     fn test_chat_with_api_key_reaches_stream_bridge() {
         let _guard = AI_ENV_LOCK.lock().expect("ai env lock");
         let _env = EnvGuard::set(&[

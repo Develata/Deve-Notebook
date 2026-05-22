@@ -47,6 +47,8 @@ mod tests {
     #[test]
     fn source_control_blocking_hints_are_localized() {
         assert_eq!(scope_switching(Locale::Zh), "切换作用域中...");
+        assert_eq!(no_changes(Locale::En), "No changes");
+        assert_eq!(no_changes(Locale::Zh), "没有更改");
         assert_eq!(
             session_expired_hint(Locale::En),
             "Sign in again before staging, discarding, or committing changes."

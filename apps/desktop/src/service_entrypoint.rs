@@ -16,6 +16,7 @@ use thiserror::Error;
 pub const DEVE_DESKTOP_LOCAL_SERVICE_ENV: &str = "DEVE_DESKTOP_LOCAL_SERVICE";
 const DESKTOP_SERVICE_MAX_RESTART_ATTEMPTS: u32 = 2;
 const DESKTOP_TAURI_ORIGIN: &str = "http://tauri.localhost";
+const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DesktopLocalServiceEntrypointPolicy {
@@ -144,6 +145,7 @@ fn build_spawn_spec(
     input: &DesktopLocalServiceEntrypointInput,
 ) -> Result<NativeProcessSpawnSpec, DesktopLocalServiceEntrypointError> {
     let executable = packaged_cli_sibling(&input.current_exe)?;
+    let plugin_dir = packaged_plugin_sibling_dir(&input.current_exe)?;
     let ledger_path = input.data_root.join("ledger");
     let vault_path = input.data_root.join("vault");
     let native_session_secret = generate_native_session_bootstrap_secret()?;
@@ -161,6 +163,7 @@ fn build_spawn_spec(
         "AUTH_PASS".to_string(),
         "AUTH_USER".to_string(),
         "ALLOWED_ORIGINS".to_string(),
+        DEVE_PLUGIN_DIR_ENV.to_string(),
     ];
     let mut env = vec![
         NativeProcessEnvBinding {
@@ -194,6 +197,10 @@ fn build_spawn_spec(
         NativeProcessEnvBinding {
             key: "ALLOWED_ORIGINS".to_string(),
             value: DESKTOP_TAURI_ORIGIN.to_string(),
+        },
+        NativeProcessEnvBinding {
+            key: DEVE_PLUGIN_DIR_ENV.to_string(),
+            value: plugin_dir.to_string_lossy().to_string(),
         },
     ];
     for binding in platform_env {
@@ -270,6 +277,15 @@ fn packaged_cli_sibling(current_exe: &Path) -> Result<PathBuf, DesktopLocalServi
         return Err(DesktopLocalServiceEntrypointError::MissingExecutableParent);
     };
     Ok(parent.join(deve_cli_binary_name()))
+}
+
+fn packaged_plugin_sibling_dir(
+    current_exe: &Path,
+) -> Result<PathBuf, DesktopLocalServiceEntrypointError> {
+    let Some(parent) = current_exe.parent() else {
+        return Err(DesktopLocalServiceEntrypointError::MissingExecutableParent);
+    };
+    Ok(parent.join("plugins"))
 }
 
 fn deve_cli_binary_name() -> &'static str {

@@ -9,6 +9,7 @@
 //! 显示完整的变更列表视图。
 
 use crate::hooks::use_core::SourceControlContext;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 use super::staged_section::StagedSection;
@@ -22,6 +23,7 @@ use super::unstaged_section::UnstagedSection;
 #[component]
 pub fn Changes() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let write_block = core.write_block;
 
     Effect::new(move |_| {
@@ -44,8 +46,18 @@ pub fn Changes() -> impl IntoView {
 
                 view! {
                     <div>
-                        <StagedSection staged=staged />
-                        <UnstagedSection unstaged=unstaged />
+                        {if staged.is_empty() && unstaged.is_empty() {
+                            view! {
+                                <div class="px-3 py-6 text-xs text-muted text-center">
+                                    {t::source_control::no_changes(locale.get())}
+                                </div>
+                            }.into_any()
+                        } else {
+                            view! {
+                                <StagedSection staged=staged />
+                                <UnstagedSection unstaged=unstaged />
+                            }.into_any()
+                        }}
                     </div>
                 }
             }}

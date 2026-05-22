@@ -3,6 +3,30 @@
 //!
 use std::collections::HashSet;
 
+pub fn next_untitled_doc_path<'a, I>(paths: I, parent: Option<&str>) -> String
+where
+    I: IntoIterator<Item = &'a str>,
+{
+    let prefix = parent
+        .map(normalize_parent_prefix)
+        .filter(|path| !path.is_empty())
+        .unwrap_or_default();
+    let mut child_names = Vec::new();
+
+    for path in paths {
+        let normalized = deve_core::utils::path::to_forward_slash(path);
+        let Some(rest) = normalized.strip_prefix(&prefix) else {
+            continue;
+        };
+        if !rest.is_empty() && !rest.contains('/') {
+            child_names.push(rest.to_string());
+        }
+    }
+
+    let name = next_untitled_doc_name(child_names.iter().map(|path| path.as_str()));
+    format!("{}{}", prefix, name)
+}
+
 pub fn next_untitled_doc_name<'a, I>(paths: I) -> String
 where
     I: IntoIterator<Item = &'a str>,
@@ -41,9 +65,19 @@ where
     format!("Untitled {}.md", next)
 }
 
+fn normalize_parent_prefix(parent: &str) -> String {
+    let normalized = deve_core::utils::path::to_forward_slash(parent);
+    let trimmed = normalized.trim().trim_matches('/');
+    if trimmed.is_empty() {
+        String::new()
+    } else {
+        format!("{trimmed}/")
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::next_untitled_doc_name;
+    use super::{next_untitled_doc_name, next_untitled_doc_path};
 
     #[test]
     fn prefers_plain_untitled_when_available() {
@@ -71,6 +105,38 @@ mod tests {
                 "nested/Untitled 3.md",
             ]),
             "Untitled 3.md"
+        );
+    }
+
+    #[test]
+    fn builds_top_level_untitled_path() {
+        assert_eq!(
+            next_untitled_doc_path(["notes/a.md", "Untitled.md"], None),
+            "Untitled 2.md"
+        );
+    }
+
+    #[test]
+    fn builds_nested_untitled_path_from_direct_children_only() {
+        assert_eq!(
+            next_untitled_doc_path(
+                [
+                    "notes/Untitled.md",
+                    "notes/Untitled 2.md",
+                    "notes/nested/Untitled 3.md",
+                    "Untitled.md",
+                ],
+                Some("notes/")
+            ),
+            "notes/Untitled 3.md"
+        );
+    }
+
+    #[test]
+    fn normalizes_windows_parent_prefix() {
+        assert_eq!(
+            next_untitled_doc_path(["notes\\Untitled.md"], Some("notes\\")),
+            "notes/Untitled 2.md"
         );
     }
 }

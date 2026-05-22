@@ -18,6 +18,13 @@ pub fn staged_changes(locale: Locale) -> &'static str {
     }
 }
 
+pub fn no_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "No changes",
+        Locale::Zh => "没有更改",
+    }
+}
+
 pub fn graph(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Graph",

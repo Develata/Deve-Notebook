@@ -70,6 +70,7 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
     assert!(spec.env_allowlist.contains(&"AUTH_PASS".to_string()));
     assert!(spec.env_allowlist.contains(&"AUTH_USER".to_string()));
     assert!(spec.env_allowlist.contains(&"ALLOWED_ORIGINS".to_string()));
+    assert!(spec.env_allowlist.contains(&"DEVE_PLUGIN_DIR".to_string()));
     assert!(
         !spec
             .env_allowlist
@@ -111,6 +112,19 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
             .find(|binding| binding.key == "ALLOWED_ORIGINS")
             .map(|binding| binding.value.as_str()),
         Some("http://tauri.localhost")
+    );
+    assert_eq!(
+        spec.env
+            .iter()
+            .find(|binding| binding.key == "DEVE_PLUGIN_DIR")
+            .map(|binding| binding.value.as_str()),
+        request
+            .current_exe
+            .parent()
+            .map(|path| path.join("plugins"))
+            .as_ref()
+            .map(|path| path.to_string_lossy())
+            .as_deref()
     );
     assert_eq!(spec.profile, "low-spec");
     assert!(plan.health_probe_required_before_bootstrap);

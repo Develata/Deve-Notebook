@@ -17,10 +17,12 @@ pub(super) fn ExplorerHeader(
     search_control: SearchControl,
     is_readonly: Signal<bool>,
 ) -> impl IntoView {
+    let core_for_create = core.clone();
     let request_create = Callback::new(move |parent: Option<String>| {
-        let prefix = "+";
-        let path = parent.map(|p| format!("{}/", p)).unwrap_or_default();
-        search_control.set_mode.set(format!("{}{}", prefix, path));
+        search_control.set_mode.set(super::new_doc_search_query(
+            &core_for_create,
+            parent.as_deref(),
+        ));
         search_control.set_show.set(true);
     });
 
