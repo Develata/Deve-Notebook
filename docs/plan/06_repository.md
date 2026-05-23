@@ -307,6 +307,7 @@ ReadonlyDegraded
 - projection base 变更后，系统 **MUST** 先停止该 repo watcher，再执行 locator 更新、projection materialize / rebuild、watcher restart。
 - projection base 变更不需要移动旧 workspace；旧目录只能作为外部数据源，经显式 import / repair 流程进入 pending 或 rebuild。
 - repo rename / display name repair 不改变 projection base；但 workspace root 必须从 `<base>/<old_repo_name>/` realign / move 到 `<base>/<new_repo_name>/`。目标已存在、跨设备 move 不可安全完成或目录冲突时必须 fail-closed。
+- workspace root realign 前若存在 pending/staged/dirty workspace 或 projection fault，rename / display name repair **MUST** 先 fail-closed，并要求用户完成 commit、discard、repair 或显式 import。
 - locator 缺失或冲突必须保持 `DegradedLocator`，直到用户显式提供可用 base 且计算出的 workspace root 可用。
 
 ### 7.5 Catalog Conflict Repair

@@ -137,7 +137,7 @@ ProjectionWorkspaceRoot(repo_id) = projection_base_abs / repo_name(repo_id)
 最小模型：
 
 ```text
-ProjectionLocatorKey = LocalRepoId
+ProjectionLocatorKey = RepoId
 ProjectionLocatorValue = {
   repo_id,
   repo_name_hint,
@@ -149,12 +149,13 @@ ProjectionLocatorValue = {
 约束：
 
 - `projection_base_abs` **MUST** 是 canonicalize 后的绝对路径；若 base 不存在，`init` / locator repair 可以先创建 base，再 canonicalize。
-- `repo_name` 作为 workspace root 的路径段时 **MUST** 是单一安全文件名段，不得包含路径分隔符、`.` 或 `..`。
+- `repo_name` 作为 workspace root 的路径段时 **MUST** 先规范化为单一安全文件名段：不得包含路径分隔符、drive prefix、NUL、Windows 非法字符（`< > : " | ? *`），不得等于 `.` / `..`，不得使用 Windows reserved device name（大小写不敏感），不得以空格或点结尾，并且必须经过大小写/Unicode normalization 后做同目录冲突检查。
 - 本地可写 repo 进入 `ProjectionReady` 前 **MUST** 存在 locator。
 - locator **MUST NOT** 写入 `LEDGER_OPS`、Structure Facts、Content Facts 或 sync payload。
 - locator **MUST NOT** 作为 repo identity；`repo_name_hint` 只能用于诊断，不得替代 `RepoId` 或当前 repo metadata。
 - workspace root 是派生值。实现可以缓存 `workspace_root_abs`，但缓存 **MUST** 可由 `projection_base_abs + repo_name` 重建，且不得成为 authority。
 - repo rename / display name repair 时，locator base 保持不变；系统 **MUST** 将 workspace root 从 `<base>/<old_repo_name>/` realign / move 到 `<base>/<new_repo_name>/`，若目标已存在或不可安全移动则 fail-closed 并进入 `DegradedLocator`。
+- repo rename realign 前若存在 `pending_fs_ops`、staging、未解释 dirty workspace、projection writeback fault 或 active watcher write，系统 **MUST** 先要求用户 commit / discard / repair；不得隐式移动带脏状态的 workspace。
 - 两个本地 repo **MUST NOT** 解析到同一 workspace root。
 - 任意两个 workspace root **MUST NOT** 互为父子目录。
 - workspace root **MUST NOT** 位于 `ledger/`、`ledger/.host/`、`.notegit/` 或 `.git/` 内部。
