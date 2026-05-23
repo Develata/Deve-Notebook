@@ -20,6 +20,7 @@
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
 //! - `git import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `git push`: 将 Git mirror 发布到远端
+//! - `backup inspect`: 只读检查 WebDAV/S3 backup locator
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -150,6 +151,11 @@ pub(crate) enum Commands {
         #[command(subcommand)]
         action: GitAction,
     },
+    /// Inspect backup locator state without network access
+    Backup {
+        #[command(subcommand)]
+        action: BackupAction,
+    },
     /// Inspect or update repo Projection Locators
     Repo {
         #[command(subcommand)]
@@ -208,6 +214,17 @@ pub(crate) enum RepoProjectionAction {
     Check {
         #[arg(long)]
         repo: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum BackupAction {
+    /// Parse and inspect a backup locator without binding it to repo authority
+    Inspect {
+        #[arg(long)]
+        locator: String,
+        #[arg(long)]
+        branch: Option<String>,
     },
 }
 

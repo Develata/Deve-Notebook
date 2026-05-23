@@ -4,6 +4,7 @@
 //!   - 12_commands#cli-commands
 //!
 //! 包含所有 CLI 支持的子命令实现。
+pub mod backup;
 pub mod config;
 pub mod dump;
 pub mod export;

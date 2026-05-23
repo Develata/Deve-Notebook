@@ -1,4 +1,4 @@
-use super::{Args, Commands, ConfigAction, GitAction, run_pre_config_command};
+use super::{Args, BackupAction, Commands, ConfigAction, GitAction, run_pre_config_command};
 use clap::Parser;
 use std::sync::Mutex;
 
@@ -199,6 +199,30 @@ fn git_push_accepts_repo_remote_and_branch() {
             assert_eq!(repo.as_deref(), Some("default"));
             assert_eq!(remote.as_deref(), Some("origin"));
             assert_eq!(branch.as_deref(), Some("main"));
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
+
+#[test]
+fn backup_inspect_accepts_locator_and_branch() {
+    let args = Args::try_parse_from([
+        "deve",
+        "backup",
+        "inspect",
+        "--locator",
+        "s3://bucket-name/deve/",
+        "--branch",
+        "writer-1",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::Backup {
+            action: BackupAction::Inspect { locator, branch },
+        }) => {
+            assert_eq!(locator, "s3://bucket-name/deve/");
+            assert_eq!(branch.as_deref(), Some("writer-1"));
         }
         other => panic!("unexpected command: {other:?}"),
     }

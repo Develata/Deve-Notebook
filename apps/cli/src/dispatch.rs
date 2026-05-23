@@ -2,7 +2,7 @@
 //!   - 12_commands#cli-commands
 
 use crate::commands;
-use crate::{Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction};
+use crate::{BackupAction, Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction};
 use std::path::PathBuf;
 
 pub async fn run(
@@ -119,6 +119,11 @@ pub async fn run(
                 branch.as_deref(),
                 config.snapshot_depth,
             )?,
+        },
+        Some(Commands::Backup { action }) => match action {
+            BackupAction::Inspect { locator, branch } => {
+                commands::backup::inspect(&locator, branch.as_deref())?
+            }
         },
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {
