@@ -33,6 +33,7 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `16_web_thin_client_ledger.md` | Web thin client, pending overlay, repo-scoped writer gate, ack/reject contract |
 | `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
 | `18_backup.md` | Branch-scoped backup / restore locator, encrypted pack, WebDAV and S3 boundary |
+| `19_source_control_ui.md` | VS Code-like Source Control view contract and boundary |
 | `../registry/runtime-skeleton-registry.md` | Runtime convergence status and current module path registry |
 
 ## Subdirectories
@@ -162,6 +163,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `17_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `17_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
 | `18_backup#backup-locator-contract` | `## 2. Locator Model` | repo/branch URL 扩展为 WebDAV/S3 backup locator 的绑定与 authority 边界 |
+| `19_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 

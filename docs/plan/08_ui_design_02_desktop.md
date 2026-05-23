@@ -217,6 +217,8 @@ $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{cha
 
 ## 4. Source Control UI
 
+Source Control view 的详细信息架构、resource group、row action、menu 与 VS Code-like reference policy 由 `19_source_control_ui.md` 定义。本节只保留 Desktop shell 下的可见性与布局约束。
+
 ### 4.1 视图结构 (View Structure)
 定义源代码管理视图 $V_{sc}$ 为三个集合的并集：
 $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
@@ -235,7 +237,7 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 
 *   `view.layout.toggle_sidebar`: 切换侧边栏可见性。
 *   `view.layout.toggle_diff`: 切换 Diff/Editor 模式。
-*   `git.stage_all`: 暂存所有更改。
+*   `source_control.stage_all`: 暂存所有更改。
 
 ## 6. Post-Gate Implementation Target
 

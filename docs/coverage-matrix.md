@@ -30,6 +30,8 @@
 | `15_release` | `15_release` | `12_tech_release` | packaging/CI/release automation |
 | `16_web_thin_client_ledger` | `16_web_thin_client_ledger` | `06_network`, `07_storage_repo` | pending/ack/reject automation + Chrome MCP |
 | `17_plugins` | `17_plugins` | `10_plugins` | plugin/runtime boundary automation |
+| `18_backup` | `06_repository` | `07_storage_repo` | backup/restore locator boundary automation |
+| `19_source_control_ui` | `07_diff_logic`, `08_ui_design_02_desktop` | `04_diff`, `05_ui` | Source Control UI reference + automation |
 
 ### Non-Matrix Documents
 
@@ -50,7 +52,7 @@ The following documents exist under `docs/` but do not participate in the three-
 
 ## Rules
 
-- Every `docs/plan/` chapter (01-17 + 08_ui sub-chapters) must have a corresponding row in the Chapter Mapping table.
+- Every `docs/plan/` chapter (01-19 + 08_ui sub-chapters) must have a corresponding row in the Chapter Mapping table.
 - Every `docs/features/` chapter must define at least one Chrome MCP walkthrough, **except** `01_terminology` and `02_positioning` which use `Verification: glossary-only / boundary-only`.
 - Every `docs/acceptance-cases/` file must map to at least one stable automation surface.
 - Non-automated acceptance cases must be listed in `docs/acceptance-bindings.tsv`
