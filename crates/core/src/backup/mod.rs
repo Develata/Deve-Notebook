@@ -6,6 +6,7 @@
 //!   - 18_backup#backup-upload-state-machine-contract
 //!   - 18_backup#backup-restore-candidate-contract
 //!   - 18_backup#backup-restore-state-machine-contract
+//!   - 18_backup#backup-secret-ref-contract
 //!
 //! Backup runtime boundary.
 //!
@@ -21,6 +22,7 @@ mod locator;
 mod pack;
 mod restore;
 mod restore_flow;
+mod secret;
 mod upload;
 
 pub use binding::{
@@ -44,6 +46,10 @@ pub use restore::{
 pub use restore_flow::{
     BackupRestoreFlowError, BackupRestoreFlowEvidence, BackupRestoreFlowInput,
     BackupRestoreFlowPlan, BackupRestoreFlowState, plan_backup_restore_flow,
+};
+pub use secret::{
+    BackupSecretRef, BackupSecretRefError, BackupSecretRefKind, BackupSecretRefScheme,
+    parse_backup_credential_ref, parse_backup_key_ref,
 };
 pub use upload::{
     BackupUploadError, BackupUploadEvidence, BackupUploadPlan, BackupUploadPlanInput,

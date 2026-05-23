@@ -170,6 +170,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `18_backup#backup-upload-state-machine-contract` | `### 4.1 Backup Upload` | backup upload 从 BindingValidated 到 Complete 的状态推进、加密/上传/remote verify 顺序边界 |
 | `18_backup#backup-restore-candidate-contract` | `### 3.4 Restore Candidate` | verify/decrypt 后的 restore candidate admission、RemoteReadonly / ExplicitImport / ExplicitMerge 边界 |
 | `18_backup#backup-restore-state-machine-contract` | `### 4.2 Restore / Import` | backup restore 从 RemoteDiscovered 到 RestoreCandidate 的状态推进、下载阶段禁写 ledger 与显式写 gate 边界 |
+| `18_backup#backup-secret-ref-contract` | `## 7. Security Contract` | backup credential/key 只能作为 env/keyring/config 引用进入 runtime，禁止裸 secret/token/key material |
 | `19_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
