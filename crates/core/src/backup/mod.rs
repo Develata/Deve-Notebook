@@ -4,19 +4,21 @@
 //!   - 18_backup#backup-pack-contract
 //!   - 18_backup#backup-upload-state-machine-contract
 //!   - 18_backup#backup-restore-candidate-contract
+//!   - 18_backup#backup-restore-state-machine-contract
 //!
 //! Backup runtime boundary.
 //!
 //! This module currently owns locator parsing, branch path derivation, and
 //! branch backup binding validation, backup pack manifest planning/validation,
-//! upload state admission, and restore candidate admission only. It does not
-//! open network connections, write ledger state, modify staging, or touch
-//! Projection Workspaces.
+//! upload state admission, restore flow admission, and restore candidate
+//! admission only. It does not open network connections, write ledger state,
+//! modify staging, or touch Projection Workspaces.
 
 mod binding;
 mod locator;
 mod pack;
 mod restore;
+mod restore_flow;
 mod upload;
 
 pub use binding::{
@@ -31,6 +33,10 @@ pub use pack::{
 pub use restore::{
     BackupRestoreError, RestoreAdmissionMode, RestoreAdmissionState, RestoreCandidate,
     RestoreCandidateInput, RestoreEvidence, admit_restore_candidate,
+};
+pub use restore_flow::{
+    BackupRestoreFlowError, BackupRestoreFlowEvidence, BackupRestoreFlowInput,
+    BackupRestoreFlowPlan, BackupRestoreFlowState, plan_backup_restore_flow,
 };
 pub use upload::{
     BackupUploadError, BackupUploadEvidence, BackupUploadPlan, BackupUploadPlanInput,

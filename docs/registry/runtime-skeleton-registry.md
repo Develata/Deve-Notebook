@@ -52,7 +52,7 @@
 | `merge_runtime` | `部分承载` | `crates/core/src/ledger/merge/`; `apps/cli/src/server/handlers/merge/` | `docs/tasks/18_infra_runtime.md` | Merge lifecycle 只通过 source-control authority path 收敛。 |
 | `backup_locator_runtime` | `部分承载` | `crates/core/src/backup/locator.rs`; `crates/core/src/backup/binding.rs`; `apps/cli/src/commands/backup.rs` | `待分配` | repo/branch URL 到 WebDAV/S3 backup locator、branch binding 的解析与只读检查；不得成为 repo authority。 |
 | `backup_pack_runtime` | `部分承载` | `crates/core/src/backup/pack.rs`; `crates/core/src/backup/upload.rs` | `待分配` | 从 ledger/snapshot authority 规划 backup pack manifest、integrity metadata 与 upload state admission；不得读取 stale UI state 或直接访问 provider。 |
-| `backup_restore_runtime` | `部分承载` | `crates/core/src/backup/restore.rs` | `待分配` | verify/decrypt 后生成 restore candidate admission metadata；不得直接写 local branch 或 Projection Workspace。 |
+| `backup_restore_runtime` | `部分承载` | `crates/core/src/backup/restore.rs`; `crates/core/src/backup/restore_flow.rs` | `待分配` | verify/decrypt 后生成 restore flow 与 candidate admission metadata；不得直接写 local branch 或 Projection Workspace。 |
 | `document_runtime` | `部分承载` | `apps/cli/src/server/handlers/document/`; `apps/web/src/editor/` | `docs/tasks/20_web_thin_client_ledger_migration.md` | OpenDoc、snapshot、history 与 edit intent。 |
 | `render_projection_runtime` | `部分承载` | `apps/web/src/editor/`; `apps/web/src/components/outline_render/` | `docs/tasks/18_infra_runtime.md` | Projection-only rendering state 与 render hints。 |
 | `widget_bridge_runtime` | `部分承载` | `apps/web/js/extensions/`; `apps/web/src/editor/` | `docs/tasks/18_infra_runtime.md` | Widget bridge 与 renderer extension，不拥有 authority。 |

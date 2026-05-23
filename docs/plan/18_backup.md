@@ -133,7 +133,7 @@ Unbound
 - `RemoteVerified` 必须确认 remote manifest 与 uploaded pack hash 一致。
 - upload 失败不得回滚 local ledger 或 source-control state。
 
-### 4.2 Restore / Import
+### 4.2 Restore / Import {#backup-restore-state-machine-contract}
 
 ```text
 RemoteDiscovered
