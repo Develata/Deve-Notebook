@@ -166,6 +166,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `18_backup#backup-locator-contract` | `## 2. Locator Model` | repo/branch URL 扩展为 WebDAV/S3 backup locator 的绑定与 authority 边界 |
 | `18_backup#backup-branch-binding-contract` | `### 3.2 Branch Backup Binding` | branch/writer 到 backup folder/prefix 的 1:1 绑定、writable 与 active writer 冲突边界 |
 | `18_backup#backup-pack-contract` | `### 3.3 Backup Pack` | backup pack manifest、ledger facts range、snapshot/blob refs 与完整性 hash 边界 |
+| `18_backup#backup-upload-state-machine-contract` | `### 4.1 Backup Upload` | backup upload 从 BindingValidated 到 Complete 的状态推进、加密/上传/remote verify 顺序边界 |
 | `18_backup#backup-restore-candidate-contract` | `### 3.4 Restore Candidate` | verify/decrypt 后的 restore candidate admission、RemoteReadonly / ExplicitImport / ExplicitMerge 边界 |
 | `19_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 
