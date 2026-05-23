@@ -3,6 +3,7 @@
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
 //!   - 05_network#web-ws-runtime
+//!   - 05_network#relay-proxy-attribution-contract
 //!   - 16_web_thin_client_ledger#web-edit-intent
 //!
 //! **架构作用**:
@@ -28,6 +29,7 @@ pub mod error;
 pub mod frame;
 mod json_wire;
 pub mod merge_conflict;
+pub mod relay_proxy;
 pub mod sc_path_target;
 pub mod scope_nonce;
 pub mod server;
@@ -40,6 +42,9 @@ pub use confirmed_op::{ClientOrigin, ConfirmedOp};
 pub use error::{ServerError, ServerErrorCode};
 pub use frame::{MAX_WS_FRAME_BYTES, MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION};
 pub use merge_conflict::{ConflictHunk, MergeConflictAction};
+pub use relay_proxy::{
+    RelayProxyRoute, RelayProxyRouteError, RelayProxyRouteInput, plan_relay_proxy_route,
+};
 pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};
 pub use server::ServerMessage;

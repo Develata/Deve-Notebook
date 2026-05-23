@@ -371,7 +371,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - Shadow apply 失败域 **MUST NOT** 回滚 local branch 已确认 ledger write。
 - Local write 的 projection / workspace writeback fault **MUST NOT** 改写 remote shadow apply 事务结果。
 
-### 10.5 Indirect Sync and Attribution
+### 10.5 Indirect Sync and Attribution {#relay-proxy-attribution-contract}
 
 - A 经 C 中继传给 B 时，B 的落盘归属必须由 A 的签名来源决定，而不是由 C 的传输通道决定。
 - `SyncPush` 与 `SyncPushSnapshot` 必须携带 source peer / branch id；该字段决定 shadow 写入目标。

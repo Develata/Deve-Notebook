@@ -99,6 +99,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_storage#internal-path-normalization` | `### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
 | `05_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
 | `05_network#remote-shadow-apply-atomicity` | `### 10.4 Remote Shadow Apply Atomicity` | remote shadow apply、snapshot replay 与 local write fault 的原子性/隔离合同 |
+| `05_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |
 | `05_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `05_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
 | `06_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
