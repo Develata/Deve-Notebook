@@ -79,7 +79,7 @@ logical repo，但不拥有 repo authority。
 - `format_version`
 - `provider_kind`
 
-### 3.2 Branch Backup Binding
+### 3.2 Branch Backup Binding {#backup-branch-binding-contract}
 
 Branch backup binding 是一个 branch / writer identity 到 remote folder 或
 prefix 的 1:1 映射。
