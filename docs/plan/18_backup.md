@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core / Backup Transport`
 - `Status`: `Planned Contract`
 - `Counterpart Feature`: `docs/features/06_repository.md`
-- `Counterpart Acceptance`: `TBD`
+- `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/backup/`, `apps/cli/src/commands/backup.rs`, `apps/web/src/components/settings/`
 
 本章定义 repo / branch 对应 URL 的备份展开方式。它把 `06_repository.md`
@@ -86,8 +86,8 @@ prefix 的 1:1 映射。
 
 规则：
 
-- 1 Branch **MUST** bind to at most 1 writable backup folder/prefix。
-- 1 writable backup folder/prefix **MUST NOT** be shared by two active writers。
+- 一个 Branch **MUST** 最多绑定一个可写 backup folder/prefix。
+- 一个可写 backup folder/prefix **MUST NOT** 被两个 active writers 共享。
 - 多端备份必须表现为同一 `RepoId` 下的多个 branch backup bindings。
 - 非本 writer 的 branch backup 只能进入 `RemoteReadonly` 或 restore candidate。
 
@@ -200,20 +200,19 @@ RemoteDiscovered
 
 规则：
 
-- path separator in manifests **MUST** be `/`。
-- provider-specific metadata such as WebDAV ETag, S3 object version, mtime or
-  object key is transport diagnostic only。
-- remote layout drift must produce structured diagnostics, not silent rebinding。
+- manifest 内路径分隔符 **MUST** 是 `/`。
+- WebDAV ETag、S3 object version、mtime、object key 等 provider metadata 只能作为 transport diagnostic。
+- remote layout drift 必须产生结构化诊断，不得静默 rebind。
 
 ## 7. Security Contract
 
 - backup artifacts **MUST** be encrypted before upload。
 - manifests and packs **MUST** be authenticated by signature, AEAD tag, or an
   equivalent integrity mechanism owned by `09_auth.md`。
-- download must verify before decrypt/import effects are exposed to runtime。
+- download 必须先 verify，再允许 decrypt/import effect 暴露给 runtime。
 - credentials, tokens and key material **MUST NOT** be stored in repo catalog,
   locator string, localStorage, URL query, normal logs or crash reports。
-- cloud ACLs may restrict writer access, but cryptographic verification remains required。
+- cloud ACL 可以限制 writer access，但 cryptographic verification 仍是必需条件。
 
 ## 8. Failure Modes
 
@@ -228,18 +227,18 @@ RemoteDiscovered
 - remote version conflict
 - restore candidate incompatible with current repo health
 
-All failures must be structured. A failed backup or restore must not leave partial
-ledger writes, staged entries, pending imports or workspace projection changes.
+所有 failure 必须结构化。失败的 backup 或 restore 不得留下 partial ledger writes、
+staged entries、pending imports 或 workspace projection changes。
 
 ## 9. Forbidden Patterns
 
-- Treating WebDAV/S3 as shared writable sync authority。
-- Binding two active writers to the same backup folder/prefix。
-- Placing credentials or encryption secrets inside locator / repo URL。
-- Importing downloaded packs without verification and decryption。
-- Auto-merging backup branches during download。
-- Using WebDAV ETag or S3 object version as ledger, branch or repo authority。
-- Replacing Source Control commit history with backup manifests。
+- 把 WebDAV/S3 当作 shared writable sync authority。
+- 把两个 active writers 绑定到同一个 backup folder/prefix。
+- 把 credentials 或 encryption secrets 放入 locator / repo URL。
+- 未经 verification 与 decryption 就导入 downloaded packs。
+- download 阶段自动 merge backup branches。
+- 把 WebDAV ETag 或 S3 object version 当作 ledger、branch 或 repo authority。
+- 用 backup manifests 替代 Source Control commit history。
 
 ## 10. Runtime Boundary
 

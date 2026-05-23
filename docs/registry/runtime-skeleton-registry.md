@@ -50,6 +50,9 @@
 | `source_control_runtime` | `已收敛` | `crates/core/src/ledger/manager/source_control_runtime.rs`; `crates/core/src/source_control/` | `docs/tasks/18_infra_runtime.md` | 消费 `pending_fs_ops` / `GitImportRequested` 并生成 Deve stage/commit intent。 |
 | `diff_session_runtime` | `部分承载` | `crates/core/src/source_control/diff.rs`; `apps/cli/src/server/handlers/source_control/diff/`; `apps/web/src/components/diff_view/` | `docs/tasks/18_infra_runtime.md` | Diff session 只通过 `source_control_runtime` 进入 ledger commit。 |
 | `merge_runtime` | `部分承载` | `crates/core/src/ledger/merge/`; `apps/cli/src/server/handlers/merge/` | `docs/tasks/18_infra_runtime.md` | Merge lifecycle 只通过 source-control authority path 收敛。 |
+| `backup_locator_runtime` | `未启动` | `未启动` | `待分配` | repo/branch URL 到 WebDAV/S3 backup locator 的解析与绑定；不得成为 repo authority。 |
+| `backup_pack_runtime` | `未启动` | `未启动` | `待分配` | 从 ledger/snapshot authority 规划加密 backup packs；不得读取 stale UI state。 |
+| `backup_restore_runtime` | `未启动` | `未启动` | `待分配` | verify/decrypt 后生成 restore candidate；不得直接写 local branch 或 Projection Workspace。 |
 | `document_runtime` | `部分承载` | `apps/cli/src/server/handlers/document/`; `apps/web/src/editor/` | `docs/tasks/20_web_thin_client_ledger_migration.md` | OpenDoc、snapshot、history 与 edit intent。 |
 | `render_projection_runtime` | `部分承载` | `apps/web/src/editor/`; `apps/web/src/components/outline_render/` | `docs/tasks/18_infra_runtime.md` | Projection-only rendering state 与 render hints。 |
 | `widget_bridge_runtime` | `部分承载` | `apps/web/js/extensions/`; `apps/web/src/editor/` | `docs/tasks/18_infra_runtime.md` | Widget bridge 与 renderer extension，不拥有 authority。 |
