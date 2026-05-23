@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 04_storage#projection-locator-contract
 //!   - 05_network#server-ws-runtime
 //!   - 06_repository#repo-scope-runtime
 
@@ -18,9 +19,10 @@ use tokio::sync::mpsc;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger_dir, 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let (tx, _rx) = tokio::sync::broadcast::channel(16);

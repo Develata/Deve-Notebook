@@ -19,8 +19,19 @@ mod tests;
 pub struct RelayProxyRouteInput {
     pub expected_repo_id: RepoId,
     pub authenticated_transport_peer: PeerId,
+    pub declared_source_peer: PeerId,
     pub target_peer: PeerId,
+    pub expected_payload_kind: SyncPayloadKind,
     pub header: SyncPushHeader,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RelayProxySnapshotRouteInput {
+    pub expected_repo_id: RepoId,
+    pub authenticated_transport_peer: PeerId,
+    pub declared_source_peer: PeerId,
+    pub target_peer: PeerId,
+    pub source_proof_present: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,6 +48,10 @@ pub struct RelayProxyRoute {
 pub enum RelayProxyRouteError {
     #[error("relay/proxy route repo id does not match the expected repo route")]
     RepoRouteMismatch,
+    #[error("relay/proxy route source attribution does not match the plaintext header")]
+    SourceAttributionMismatch,
+    #[error("relay/proxy route payload kind does not match the message route")]
+    PayloadKindMismatch,
     #[error("relay/proxy route peer id is empty or whitespace: {field}")]
     InvalidPeerId { field: &'static str },
     #[error("indirect relay/proxy route requires source attribution proof")]
@@ -53,10 +68,17 @@ pub fn plan_relay_proxy_route(
         &input.authenticated_transport_peer,
         "authenticated_transport_peer",
     )?;
+    validate_peer_id(&input.declared_source_peer, "declared_source_peer")?;
     validate_peer_id(&input.target_peer, "target_peer")?;
     validate_peer_id(&input.header.peer_id, "header.peer_id")?;
+    if input.header.peer_id != input.declared_source_peer {
+        return Err(RelayProxyRouteError::SourceAttributionMismatch);
+    }
+    if input.header.payload_kind != input.expected_payload_kind {
+        return Err(RelayProxyRouteError::PayloadKindMismatch);
+    }
 
-    let indirect_transport = input.authenticated_transport_peer != input.header.peer_id;
+    let indirect_transport = input.authenticated_transport_peer != input.declared_source_peer;
     if indirect_transport && input.header.source_proof.is_none() {
         return Err(RelayProxyRouteError::MissingSourceAttributionProof);
     }
@@ -64,9 +86,34 @@ pub fn plan_relay_proxy_route(
     Ok(RelayProxyRoute {
         repo_id: input.header.repo_id,
         transport_peer: input.authenticated_transport_peer,
-        source_peer: input.header.peer_id,
+        source_peer: input.declared_source_peer,
         target_peer: input.target_peer,
         payload_kind: input.header.payload_kind,
+        indirect_transport,
+    })
+}
+
+pub fn plan_relay_proxy_snapshot_route(
+    input: RelayProxySnapshotRouteInput,
+) -> Result<RelayProxyRoute, RelayProxyRouteError> {
+    validate_peer_id(
+        &input.authenticated_transport_peer,
+        "authenticated_transport_peer",
+    )?;
+    validate_peer_id(&input.declared_source_peer, "declared_source_peer")?;
+    validate_peer_id(&input.target_peer, "target_peer")?;
+
+    let indirect_transport = input.authenticated_transport_peer != input.declared_source_peer;
+    if indirect_transport && !input.source_proof_present {
+        return Err(RelayProxyRouteError::MissingSourceAttributionProof);
+    }
+
+    Ok(RelayProxyRoute {
+        repo_id: input.expected_repo_id,
+        transport_peer: input.authenticated_transport_peer,
+        source_peer: input.declared_source_peer,
+        target_peer: input.target_peer,
+        payload_kind: SyncPayloadKind::Snapshot,
         indirect_transport,
     })
 }

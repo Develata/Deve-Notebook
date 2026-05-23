@@ -1,12 +1,15 @@
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
+//!   - 05_network#relay-proxy-attribution-contract
 //!   - 06_repository#repo-scope-runtime
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
-use deve_core::protocol::{ServerMessage, SyncPayloadKind, SyncPushHeader};
+use deve_core::protocol::{
+    RelayProxyRouteInput, ServerMessage, SyncPayloadKind, SyncPushHeader, plan_relay_proxy_route,
+};
 use deve_core::security::EncryptedOp;
 use deve_core::sync::protocol as sync_proto;
 use std::sync::Arc;
@@ -145,29 +148,32 @@ pub(super) async fn handle_push(
         );
         return;
     }
-    if !sync_push_header_matches(&header, repo_id, &peer_id) {
-        errors::sync_apply_failed(
-            ch,
-            format!(
-                "invalid sync payload header: route repo/source {}/{} but header repo/source/kind {}/{}/{}",
-                repo_id,
-                peer_id,
-                header.repo_id,
-                header.peer_id,
-                sync_payload_kind_name(&header.payload_kind)
-            ),
-            scope,
-        );
-        return;
-    }
-    if let Err(err) = header.validate_source_proof(&encrypted_payload, transport_peer != peer_id) {
+    let route = match plan_relay_proxy_route(RelayProxyRouteInput {
+        expected_repo_id: repo_id,
+        authenticated_transport_peer: transport_peer.clone(),
+        declared_source_peer: peer_id.clone(),
+        target_peer: state.identity_key.peer_id(),
+        expected_payload_kind: SyncPayloadKind::Diff,
+        header: header.clone(),
+    }) {
+        Ok(route) => route,
+        Err(err) => {
+            errors::sync_invalid_payload(
+                ch,
+                format!("invalid sync relay/proxy route: {}", err),
+                scope,
+            );
+            return;
+        }
+    };
+    if let Err(err) = header.validate_source_proof(&encrypted_payload, route.indirect_transport) {
         errors::sync_invalid_payload(ch, format!("invalid sync source proof: {}", err), scope);
         return;
     }
     tracing::debug!(
         "Handling SyncPush source {} via transport {}",
-        peer_id,
-        transport_peer
+        route.source_peer,
+        route.transport_peer
     );
 
     let response = sync_proto::SyncResponse {
@@ -197,18 +203,5 @@ pub(super) async fn handle_push(
                 scope,
             );
         }
-    }
-}
-
-fn sync_push_header_matches(header: &SyncPushHeader, repo_id: RepoId, peer_id: &PeerId) -> bool {
-    header.repo_id == repo_id
-        && &header.peer_id == peer_id
-        && header.payload_kind == SyncPayloadKind::Diff
-}
-
-fn sync_payload_kind_name(kind: &SyncPayloadKind) -> &'static str {
-    match kind {
-        SyncPayloadKind::Diff => "diff",
-        SyncPayloadKind::Snapshot => "snapshot",
     }
 }

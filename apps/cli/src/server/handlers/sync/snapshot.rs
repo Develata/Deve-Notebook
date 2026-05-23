@@ -1,12 +1,16 @@
 //! plan_ref:
 //!   - 05_network#server-ws-runtime
+//!   - 05_network#relay-proxy-attribution-contract
 //!   - 06_repository#repo-scope-runtime
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
-use deve_core::protocol::{ServerMessage, SyncPayloadKind, SyncSourceProof};
+use deve_core::protocol::{
+    RelayProxySnapshotRouteInput, ServerMessage, SyncPayloadKind, SyncSourceProof,
+    plan_relay_proxy_snapshot_route,
+};
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
 
@@ -131,13 +135,30 @@ pub(super) async fn handle_push(
         );
         return;
     }
+    let route = match plan_relay_proxy_snapshot_route(RelayProxySnapshotRouteInput {
+        expected_repo_id: repo_id,
+        authenticated_transport_peer: transport_peer.clone(),
+        declared_source_peer: peer_id.clone(),
+        target_peer: state.identity_key.peer_id(),
+        source_proof_present: source_proof.is_some(),
+    }) {
+        Ok(route) => route,
+        Err(err) => {
+            errors::sync_invalid_payload(
+                ch,
+                format!("invalid sync snapshot relay/proxy route: {}", err),
+                scope,
+            );
+            return;
+        }
+    };
     if let Err(err) = validate_snapshot_source_proof(
         repo_id,
         &peer_id,
         &server_vector,
         source_proof.as_ref(),
         &payload,
-        transport_peer != peer_id,
+        route.indirect_transport,
     ) {
         errors::sync_invalid_payload(
             ch,
@@ -149,8 +170,8 @@ pub(super) async fn handle_push(
 
     tracing::info!(
         "Handling PushSnapshot source {} via transport {} ({} ops)",
-        peer_id,
-        transport_peer,
+        route.source_peer,
+        route.transport_peer,
         payload.len()
     );
 

@@ -90,6 +90,38 @@ async fn sync_push_snapshot_rejects_relay_forged_source_proof() -> anyhow::Resul
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_snapshot_rejects_indirect_source_without_proof() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let relay_peer = PeerId::new("relay-peer");
+    let source_key = IdentityKeyPair::generate();
+    let source_peer = source_key.peer_id();
+    let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    let server_vector = VersionVector::new();
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(relay_peer), Some(43));
+    session.set_requested_sync_sources([source_peer.clone()]);
+
+    handle_sync_push_snapshot(
+        &state,
+        &ch,
+        &mut session,
+        SyncPushSnapshotInput {
+            peer_id: source_peer.clone(),
+            repo_id,
+            server_vector,
+            source_proof: None,
+            ops: vec![op],
+        },
+    )
+    .await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn snapshot_request_exports_requested_shadow_source() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let relay_peer = PeerId::new("relay-peer");

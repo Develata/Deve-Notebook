@@ -10,7 +10,7 @@ use super::sync_transfer_scope_test_support::{
 use deve_core::config::SyncMode;
 use deve_core::ledger::range;
 use deve_core::models::{PeerId, RepoId, VersionVector};
-use deve_core::protocol::{ServerErrorCode, SyncPushHeader};
+use deve_core::protocol::{ServerErrorCode, SyncPayloadKind, SyncPushHeader};
 use deve_core::security::{EncryptedOp, IdentityKeyPair};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -141,6 +141,34 @@ async fn sync_push_rejects_relay_forged_source_proof() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_rejects_indirect_source_without_proof() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let relay_peer = PeerId::new("relay-peer");
+    let source_key = IdentityKeyPair::generate();
+    let source_peer = source_key.peer_id();
+    let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(relay_peer), Some(41));
+    session.set_requested_sync_sources([source_peer.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        sync_push_header(repo_id, &source_peer),
+        vec![op],
+    )
+    .await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_push_rejects_envelope_seq_mismatch() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
     let source_peer = PeerId::new("origin-peer");
@@ -233,6 +261,34 @@ async fn sync_push_rejects_route_header_source_mismatch() -> anyhow::Result<()> 
         source_peer.clone(),
         repo_id,
         sync_push_header(repo_id, &header_peer),
+        vec![op],
+    )
+    .await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
+    assert_eq!(state.repo.get_shadow_max_seq(&source_peer, &repo_id)?, 0);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_push_rejects_route_header_payload_kind_mismatch() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let source_peer = PeerId::new("origin-peer");
+    let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
+    let mut header = sync_push_header(repo_id, &source_peer);
+    header.payload_kind = SyncPayloadKind::Snapshot;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(source_peer.clone()), Some(42));
+    session.set_requested_sync_sources([source_peer.clone()]);
+
+    handle_sync_push(
+        &state,
+        &ch,
+        &mut session,
+        source_peer.clone(),
+        repo_id,
+        header,
         vec![op],
     )
     .await;

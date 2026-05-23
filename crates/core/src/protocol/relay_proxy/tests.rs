@@ -1,4 +1,7 @@
-use super::{RelayProxyRouteError, RelayProxyRouteInput, plan_relay_proxy_route};
+use super::{
+    RelayProxyRouteError, RelayProxyRouteInput, RelayProxySnapshotRouteInput,
+    plan_relay_proxy_route, plan_relay_proxy_snapshot_route,
+};
 use crate::models::{PeerId, RepoId, VersionVector};
 use crate::protocol::{SyncPayloadKind, SyncPushHeader, SyncSourceProof};
 
@@ -28,8 +31,20 @@ fn input() -> RelayProxyRouteInput {
     RelayProxyRouteInput {
         expected_repo_id: repo_id(),
         authenticated_transport_peer: PeerId::new("source-peer"),
+        declared_source_peer: PeerId::new("source-peer"),
         target_peer: PeerId::new("target-peer"),
+        expected_payload_kind: SyncPayloadKind::Diff,
         header: header("source-peer"),
+    }
+}
+
+fn snapshot_input() -> RelayProxySnapshotRouteInput {
+    RelayProxySnapshotRouteInput {
+        expected_repo_id: repo_id(),
+        authenticated_transport_peer: PeerId::new("source-peer"),
+        declared_source_peer: PeerId::new("source-peer"),
+        target_peer: PeerId::new("target-peer"),
+        source_proof_present: false,
     }
 }
 
@@ -78,6 +93,52 @@ fn rejects_repo_route_mismatch() {
         plan_relay_proxy_route(input),
         Err(RelayProxyRouteError::RepoRouteMismatch)
     ));
+}
+
+#[test]
+fn rejects_declared_source_or_payload_kind_mismatch() {
+    let mut route_input = input();
+    route_input.declared_source_peer = PeerId::new("other-source");
+    assert!(matches!(
+        plan_relay_proxy_route(route_input),
+        Err(RelayProxyRouteError::SourceAttributionMismatch)
+    ));
+
+    let mut route_input = input();
+    route_input.expected_payload_kind = SyncPayloadKind::Snapshot;
+    assert!(matches!(
+        plan_relay_proxy_route(route_input),
+        Err(RelayProxyRouteError::PayloadKindMismatch)
+    ));
+}
+
+#[test]
+fn snapshot_route_uses_declared_source_without_fake_header() {
+    let route = plan_relay_proxy_snapshot_route(snapshot_input()).unwrap();
+
+    assert_eq!(route.repo_id, repo_id());
+    assert_eq!(route.source_peer, PeerId::new("source-peer"));
+    assert_eq!(route.payload_kind, SyncPayloadKind::Snapshot);
+    assert!(!route.indirect_transport);
+}
+
+#[test]
+fn indirect_snapshot_route_requires_source_proof_presence() {
+    let mut route_input = snapshot_input();
+    route_input.authenticated_transport_peer = PeerId::new("relay-peer");
+
+    assert!(matches!(
+        plan_relay_proxy_snapshot_route(route_input),
+        Err(RelayProxyRouteError::MissingSourceAttributionProof)
+    ));
+
+    let mut route_input = snapshot_input();
+    route_input.authenticated_transport_peer = PeerId::new("relay-peer");
+    route_input.source_proof_present = true;
+    let route = plan_relay_proxy_snapshot_route(route_input).unwrap();
+    assert_eq!(route.transport_peer, PeerId::new("relay-peer"));
+    assert_eq!(route.source_peer, PeerId::new("source-peer"));
+    assert!(route.indirect_transport);
 }
 
 #[test]

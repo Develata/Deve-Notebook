@@ -43,7 +43,8 @@ pub use error::{ServerError, ServerErrorCode};
 pub use frame::{MAX_WS_FRAME_BYTES, MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION};
 pub use merge_conflict::{ConflictHunk, MergeConflictAction};
 pub use relay_proxy::{
-    RelayProxyRoute, RelayProxyRouteError, RelayProxyRouteInput, plan_relay_proxy_route,
+    RelayProxyRoute, RelayProxyRouteError, RelayProxyRouteInput, RelayProxySnapshotRouteInput,
+    plan_relay_proxy_route, plan_relay_proxy_snapshot_route,
 };
 pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};
