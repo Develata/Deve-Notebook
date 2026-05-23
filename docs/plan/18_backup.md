@@ -67,7 +67,7 @@ locator 解析规则：
 
 ## 3. Authoritative Entities
 
-### 3.1 Backup Root
+### 3.1 Backup Root {#backup-root-contract}
 
 Backup root 是 remote storage 上的 repo-level namespace。它可以对应一个
 logical repo，但不拥有 repo authority。

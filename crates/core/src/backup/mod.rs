@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 18_backup#backup-locator-contract
 //!   - 18_backup#backup-remote-layout-contract
+//!   - 18_backup#backup-root-contract
 //!   - 18_backup#backup-branch-binding-contract
 //!   - 18_backup#backup-pack-contract
 //!   - 18_backup#backup-upload-state-machine-contract
@@ -22,6 +23,7 @@ mod locator;
 mod pack;
 mod restore;
 mod restore_flow;
+mod root;
 mod secret;
 mod upload;
 
@@ -46,6 +48,9 @@ pub use restore::{
 pub use restore_flow::{
     BackupRestoreFlowError, BackupRestoreFlowEvidence, BackupRestoreFlowInput,
     BackupRestoreFlowPlan, BackupRestoreFlowState, plan_backup_restore_flow,
+};
+pub use root::{
+    BACKUP_ROOT_FORMAT_VERSION, BackupRoot, BackupRootError, BackupRootInput, plan_backup_root,
 };
 pub use secret::{
     BackupSecretRef, BackupSecretRefError, BackupSecretRefKind, BackupSecretRefScheme,
