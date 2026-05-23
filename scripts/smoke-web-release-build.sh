@@ -8,7 +8,41 @@ set -euo pipefail
 #   noise even though this repo does not lock browserslist/caniuse-lite.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TRUNK_BIN="${DEVE_TRUNK_BIN:-trunk}"
+
+windows_path_to_wsl() {
+  local path="$1"
+  path="${path//$'\r'/}"
+  path="${path//\\//}"
+  if [[ "$path" =~ ^([A-Za-z]):/(.*)$ ]]; then
+    printf '/mnt/%s/%s\n' "$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')" "${BASH_REMATCH[2]}"
+  else
+    printf '%s\n' "$path"
+  fi
+}
+
+resolve_trunk_bin() {
+  local candidate
+  if [[ -n "${DEVE_TRUNK_BIN:-}" ]]; then
+    printf '%s\n' "$DEVE_TRUNK_BIN"
+    return
+  fi
+  for candidate in trunk trunk.exe; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      command -v "$candidate"
+      return
+    fi
+  done
+  if command -v where.exe >/dev/null 2>&1; then
+    candidate="$(where.exe trunk 2>/dev/null | head -n1 || true)"
+    if [[ -n "$candidate" ]]; then
+      windows_path_to_wsl "$candidate"
+      return
+    fi
+  fi
+  printf 'trunk\n'
+}
+
+TRUNK_BIN="$(resolve_trunk_bin)"
 
 export NO_COLOR="${NO_COLOR:-true}"
 if [[ "$NO_COLOR" == "1" ]]; then

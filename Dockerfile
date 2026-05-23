@@ -36,8 +36,8 @@ RUN apt-get update && \
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 -s /bin/bash appuser && \
-    mkdir -p /data && \
-    chown -R appuser:appuser /data
+    mkdir -p /data /notes && \
+    chown -R appuser:appuser /data /notes
 
 # 复制后端二进制
 COPY --from=backend /app/target/release/deve_cli /usr/local/bin/deve_cli
@@ -45,11 +45,12 @@ RUN chmod +x /usr/local/bin/deve_cli
 
 # 环境变量配置
 ENV DEVE_LEDGER_DIR=/data/ledger
-ENV DEVE_VAULT_PATH=/data/vault
 ENV DEVE_BIND_ADDR=0.0.0.0:3001
 
 EXPOSE 3001
 VOLUME /data
+VOLUME /notes
+WORKDIR /data
 
 # 切换至非 root 用户
 USER appuser
@@ -59,4 +60,4 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -sf http://localhost:3001/api/node/role || exit 1
 
 # 启动命令
-CMD ["deve_cli", "serve", "--port", "3001"]
+CMD ["sh", "-c", "if [ ! -f /data/ledger/.host/projection-locators.toml ]; then deve_cli init --repo default --projection-base /notes --path /data; fi; deve_cli serve --port 3001"]

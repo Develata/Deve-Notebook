@@ -6,7 +6,7 @@
   preconditions:
     - CLI 可用
   steps:
-    - run: deve init
+    - run: deve init --path ${DEVE_DATA_DIR} --repo default --projection-base ${DEVE_DATA_DIR}/notes
     - run: deve scan
     - run: deve watch --dry-run
     - run: deve serve --dry-run
@@ -146,14 +146,18 @@
     - ui_assert: ai_mode_eq "plan"
 
 - case_id: CMD-006
-  goal: CLI vault lifecycle commands expose safe parse surfaces.
+  goal: CLI Projection Workspace lifecycle commands expose safe parse surfaces.
   preconditions:
     - CLI 可用
   steps:
     - run: deve init --help
+    - run: deve repo projection set --help
+    - run: deve repo projection list --help
+    - run: deve repo projection check --help
     - run: deve scan --help
     - run: deve watch --dry-run
     - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_cli projection_locator -- --nocapture
   assertions:
     - exit_code_all_eq: 0
 

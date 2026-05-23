@@ -44,7 +44,9 @@ case_contains() {
 }
 
 case_contains STORE-001 "cargo test -p deve_cli init_creates_trinity_workspace_layout -- --nocapture"
+case_contains STORE-001 "cargo test -p deve_cli projection_locator_init_writes_locator_without_vault_path_config -- --nocapture"
 case_contains STORE-001 "cargo test -p deve_core trinity_dir_structure_after_init -- --nocapture"
+case_contains STORE-001 "cargo test -p deve_core projection_locator_toml_roundtrip -- --nocapture"
 case_contains STORE-002 "cargo test -p deve_core init_allocates_collision_safe_repo_name_for_same_name_different_url -- --nocapture"
 case_contains STORE-003 "cargo test -p deve_core required_redb_tables_exist_after_init -- --nocapture"
 case_contains STORE-004 "cargo test -p deve_core snapshot_respects_depth_limit -- --nocapture"
@@ -84,6 +86,7 @@ for case_id in STORE-001 STORE-002 STORE-003 STORE-004 STORE-005 STORE-006 STORE
 done
 
 contains "$ROOT_DIR/apps/cli/src/commands/init.rs" "fn init_creates_trinity_workspace_layout()"
+contains "$ROOT_DIR/apps/cli/src/commands/repo_projection.rs" "fn projection_locator_set_list_check_roundtrip()"
 contains "$ROOT_DIR/apps/cli/src/commands/recover.rs" "fn recover_rebuilds_workspace_files_from_ledger()"
 contains "$ROOT_DIR/apps/cli/src/commands/export/tests.rs" "fn markdown_export_preserves_user_frontmatter_without_system_metadata()"
 contains "$ROOT_DIR/crates/core/tests/local_repo_metadata_repair_test.rs" "fn init_allocates_collision_safe_repo_name_for_same_name_different_url()"

@@ -42,7 +42,7 @@
 - `Surface`: `cli`
 - `Trigger`: run `deve recover [--repo <repo>]`
 - `Preconditions`: ledger data is available for recovery
-- `Immediate Result`: recovery flow attempts to restore vault files
+- `Immediate Result`: recovery flow attempts to restore files into repo Projection Workspaces
 - `Application Entry`: `apps/cli/src/commands/recover.rs`
 
 ### `op.cli.admin.repair-paths`

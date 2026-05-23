@@ -155,7 +155,7 @@ check_contains apps/web/src/i18n/extensions.rs "Code execution disabled"
 # and Rhai module imports stay sandboxed by guarded resolver tests.
 check_contains docs/acceptance-cases/10_plugins.md "case_id: PLUG-003"
 check_contains docs/acceptance-cases/10_plugins.md "cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture"
-check_contains docs/plan/17_plugins.md "vault/<repo>/**/*.md"
+check_contains docs/plan/17_plugins.md "<projection_base>/<repo_name>/**/*.md"
 check_contains docs/plan/17_plugins.md ".notegit"
 check_contains docs/plan/17_plugins.md "ledger-aware host functions"
 check_contains crates/core/src/plugin/runtime/module_resolver.rs "fn parent_traversal_import_is_rejected()"

@@ -34,7 +34,7 @@
 
 ## 非目标
 
-- 当前阶段不把 Vault 目录当作唯一权威真相。
+- 当前阶段不把 Projection Workspace 当作唯一权威真相。
 - 当前阶段不允许未确认写入被显示层静默“算作成功”。
 
 ## Chrome MCP 验收实例
@@ -94,7 +94,7 @@
 
 前置条件：
 
-- Vault 根目录包含 `.deveignore`，规则匹配某个 repo 下的 Markdown 路径。
+- repo 的 Projection Workspace 根目录包含 `.deveignore`，规则匹配该 repo 下的 Markdown 路径。
 
 步骤：
 

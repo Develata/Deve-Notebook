@@ -22,9 +22,9 @@
 
 - `Name`: `Set Environment Override`
 - `Surface`: `shell`
-- `Trigger`: set `DEVE_PROFILE`, `DEVE_LEDGER_DIR`, or `DEVE_VAULT_PATH`
+- `Trigger`: set supported runtime environment keys such as `DEVE_PROFILE` or `DEVE_LEDGER_DIR`
 - `Preconditions`: environment variable value is parseable
-- `Immediate Result`: environment source overrides file/default settings
+- `Immediate Result`: supported environment source overrides file/default settings; `DEVE_VAULT_PATH` is rejected fail-closed
 - `Application Entry`: `crates/core/src/config.rs`
 
 ### `op.settings.env.inspect-effective`

@@ -15,7 +15,7 @@
 - `Surface`: `cli`
 - `Trigger`: typed command envelope is accepted for execution
 - `Preconditions`: parser completed successfully
-- `Immediate Result`: ledger path, vault path, and profile are materialized for dispatch
+- `Immediate Result`: ledger path and profile are materialized for dispatch; projection roots remain repo-scoped locator state
 - `Application Entry`: `apps/cli/src/main.rs`
 
 ### `op.cli.runtime.handoff-dispatch`
@@ -41,7 +41,7 @@
 1. Runtime bootstrap loads checked config and path state.
 2. Instruction interface hands the typed command into the dispatcher.
 3. Flow coordination selects the concrete command module family.
-4. Execution domains then continue in the command-family flows such as vault, server, export, or repair/admin.
+4. Execution domains then continue in the command-family flows such as projection workspace, server, export, or repair/admin.
 
 ## Notes
 

@@ -197,7 +197,7 @@
     - doc_read: "docs/plan/17_plugins.md"
     - run: cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture
   assertions:
-    - doc_contains: "vault/<repo>/**/*.md"
+    - doc_contains: "<projection_base>/<repo>/**/*.md"
     - doc_contains: ".notegit"
     - doc_contains: "ledger-aware host functions"
 ```

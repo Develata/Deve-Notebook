@@ -1,4 +1,4 @@
-# cli_vault_indexing.md - CLI Vault 索引链
+# cli_vault_indexing.md - CLI Projection Workspace 索引链
 
 ## Metadata
 
@@ -11,28 +11,28 @@
 
 ### `op.cli.vault.choose-init-path`
 
-- `Name`: `Choose Init Path`
+- `Name`: `Choose Init Path And Projection Base`
 - `Surface`: `cli`
-- `Trigger`: run `deve init --path <path>` or `deve init`
+- `Trigger`: run `deve init --path <path> --repo <name> --projection-base <path>`
 - `Preconditions`: CLI binary is available and config loads
-- `Immediate Result`: vault path is resolved for initialization
+- `Immediate Result`: ledger path is initialized and a host-local Projection Locator is written
 - `Application Entry`: `apps/cli/src/main.rs`, `apps/cli/src/dispatch.rs`
 
 ### `op.cli.vault.run-scan`
 
-- `Name`: `Run Vault Scan`
+- `Name`: `Run Projection Workspace Scan`
 - `Surface`: `cli`
 - `Trigger`: run `deve scan`
-- `Preconditions`: vault and ledger paths are configured
+- `Preconditions`: ledger path is configured and every writable repo has a Projection Locator
 - `Immediate Result`: scan command enters indexing flow
 - `Application Entry`: `apps/cli/src/commands/scan.rs`
 
 ### `op.cli.vault.watch-dry-run`
 
-- `Name`: `Watch Vault Dry Run`
+- `Name`: `Watch Projection Workspace Dry Run`
 - `Surface`: `cli`
 - `Trigger`: run `deve watch --dry-run`
-- `Preconditions`: vault path is readable
+- `Preconditions`: repo Projection Locators resolve to workspace roots
 - `Immediate Result`: watcher validates planned reactions without writing changes
 - `Application Entry`: `apps/cli/src/commands/watch.rs`
 
@@ -41,9 +41,9 @@
 1. User selects an init, scan, or watch option from the CLI.
 2. Instruction interface parses `Commands::{Init, Scan, Watch}`.
 3. Flow coordination delegates to the matching command module.
-4. Execution domains are config, ledger, tree projection, and filesystem watcher.
+4. Execution domains are config, Projection Locator runtime, ledger, tree projection, and filesystem watcher.
 
 ## Notes
 
-- This flow covers vault/index lifecycle commands, not long-running server runtime.
-- Main objects: `vault::path`, `ledger::snapshot`, `tree::projection`, `cli::option`.
+- This flow covers Projection Workspace / locator lifecycle commands, not long-running server runtime.
+- Main objects: `projection::locator`, `projection::workspace`, `ledger::snapshot`, `tree::projection`, `cli::option`.

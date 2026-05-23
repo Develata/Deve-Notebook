@@ -46,9 +46,9 @@ assert_before() {
   (( before_line < after_line )) || fail "'$before' must appear before '$after' in $file"
 }
 
-git -C "$ROOT_DIR" ls-files --error-unmatch Cargo.lock >/dev/null 2>&1 \
+git -c safe.directory="$ROOT_DIR" -C "$ROOT_DIR" ls-files --error-unmatch Cargo.lock >/dev/null 2>&1 \
   || fail "Cargo.lock must be tracked for locked release/Docker builds"
-if git -C "$ROOT_DIR" check-ignore -q Cargo.lock; then
+if git -c safe.directory="$ROOT_DIR" -C "$ROOT_DIR" check-ignore -q Cargo.lock; then
   fail "Cargo.lock must not be ignored"
 fi
 
@@ -221,9 +221,10 @@ contains "Dockerfile" "NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk bui
 contains "Dockerfile" "COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/"
 contains "Dockerfile" "cargo build --release --locked --package deve_cli"
 contains "Dockerfile" "ENV DEVE_LEDGER_DIR=/data/ledger"
-contains "Dockerfile" "ENV DEVE_VAULT_PATH=/data/vault"
+not_contains "Dockerfile" "DEVE_VAULT_PATH"
 contains "Dockerfile" "ENV DEVE_BIND_ADDR=0.0.0.0:3001"
-contains "Dockerfile" 'CMD ["deve_cli", "serve", "--port", "3001"]'
+contains "Dockerfile" "deve_cli init --repo default --projection-base /notes --path /data"
+contains "Dockerfile" "deve_cli serve --port 3001"
 assert_before "Dockerfile" "trunk build --release" "cargo build --release --locked --package deve_cli"
 assert_before "Dockerfile" "COPY --from=frontend /app/apps/web/dist/ /app/apps/web/dist/" "cargo build --release --locked --package deve_cli"
 
@@ -233,9 +234,10 @@ contains "docker-compose.yml" "image: ghcr.io/develata/deve-notebook:latest"
 contains "docker-compose.yml" "container_name: deve-server"
 contains "docker-compose.yml" "restart: always"
 contains "docker-compose.yml" "- ./data:/data"
+contains "docker-compose.yml" "- ./notes:/notes"
 contains "docker-compose.yml" "DEVE_BIND_ADDR: 0.0.0.0:3001"
 contains "docker-compose.yml" "DEVE_LEDGER_DIR: /data/ledger"
-contains "docker-compose.yml" "DEVE_VAULT_PATH: /data/vault"
+not_contains "docker-compose.yml" "DEVE_VAULT_PATH"
 contains "docker-compose.yml" "mem_limit: 512m"
 contains "docker-compose.yml" "http://localhost:3001/api/node/role"
 not_contains "docker-compose.yml" "build:"
@@ -275,8 +277,11 @@ contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_BIN"
 contains "scripts/smoke-docker-release.sh" "docker_cmd build -t"
 contains "scripts/smoke-docker-release.sh" "docker_cmd run -d"
 contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_SMOKE_DATA_VOLUME"
+contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_SMOKE_NOTES_VOLUME"
 contains "scripts/smoke-docker-release.sh" "docker_cmd volume create \"\$DATA_VOLUME\""
+contains "scripts/smoke-docker-release.sh" "docker_cmd volume create \"\$NOTES_VOLUME\""
 contains "scripts/smoke-docker-release.sh" "docker_cmd volume rm -f \"\$DATA_VOLUME\""
+contains "scripts/smoke-docker-release.sh" "docker_cmd volume rm -f \"\$NOTES_VOLUME\""
 contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/node/role"
 contains "scripts/smoke-docker-release.sh" "DEVE_DOCKER_SMOKE_AUTH_PASSWORD"
 contains "scripts/smoke-docker-release.sh" "http://127.0.0.1:\${HOST_PORT}/api/auth/login"

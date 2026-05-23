@@ -2,12 +2,14 @@
 
 ```markdown
 - case_id: STORE-001
-  goal: Trinity Isolation 结构存在。
+  goal: Trinity Isolation 与 Projection Locator 结构存在。
   preconditions:
     - CLI init 与 core ledger init 可在临时目录运行
   steps:
     - run: cargo test -p deve_cli init_creates_trinity_workspace_layout -- --nocapture
+    - run: cargo test -p deve_cli projection_locator_init_writes_locator_without_vault_path_config -- --nocapture
     - run: cargo test -p deve_core trinity_dir_structure_after_init -- --nocapture
+    - run: cargo test -p deve_core projection_locator_toml_roundtrip -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: init_trinity_layout_bound true
@@ -72,9 +74,9 @@
   goal: Watcher 事件映射、目录 scan 过滤与内部路径边界。
   preconditions:
     - watch 运行中并监听 local repo: main
-    - 已跟踪文件存在: ${DEVE_DATA_DIR}/vault/main/notes/live.md
-    - 已跟踪文件存在: ${DEVE_DATA_DIR}/vault/main/notes/delete.md
-    - ${DEVE_DATA_DIR}/vault/.deveignore 包含: ignored/*.md
+    - 已跟踪文件存在: ${DEVE_DATA_DIR}/notes/main/notes/live.md
+    - 已跟踪文件存在: ${DEVE_DATA_DIR}/notes/main/notes/delete.md
+    - ${DEVE_DATA_DIR}/notes/main/.deveignore 包含: ignored/*.md
   steps:
     - run: cargo test -p deve_core watcher_records_create_modify_delete_candidates -- --nocapture
     - run: cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture
@@ -100,7 +102,7 @@
     - run: cargo test -p deve_core rebuild_projection_recovers_when_node_projection_is_missing -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
-    - cli_assert: vault_rebuilt_from_ledger true
+    - cli_assert: projection_workspace_rebuilt_from_ledger true
     - cli_assert: projection_rebuild_uses_authority_facts true
 
 - case_id: STORE-009

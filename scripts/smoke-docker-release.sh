@@ -15,7 +15,9 @@ AUTH_USER="${DEVE_DOCKER_SMOKE_AUTH_USER:-admin}"
 AUTH_PASS="${DEVE_DOCKER_SMOKE_AUTH_PASS:-\$argon2id\$v=19\$m=65536,t=2,p=1\$c29tZXNhbHQ\$CTFhFdXPJO1aFaMaO6Mm5c8y7cJHAph8ArZWb2GRPPc}"
 AUTH_PASSWORD="${DEVE_DOCKER_SMOKE_AUTH_PASSWORD:-password}"
 DATA_VOLUME="${DEVE_DOCKER_SMOKE_DATA_VOLUME:-}"
+NOTES_VOLUME="${DEVE_DOCKER_SMOKE_NOTES_VOLUME:-}"
 REMOVE_DATA_VOLUME=0
+REMOVE_NOTES_VOLUME=0
 
 fail() {
   echo "docker-release-smoke: $*" >&2
@@ -70,6 +72,9 @@ cleanup() {
   if [[ -n "$DATA_VOLUME" && "$REMOVE_DATA_VOLUME" == "1" ]]; then
     docker_cmd volume rm -f "$DATA_VOLUME" >/dev/null 2>&1 || true
   fi
+  if [[ -n "$NOTES_VOLUME" && "$REMOVE_NOTES_VOLUME" == "1" ]]; then
+    docker_cmd volume rm -f "$NOTES_VOLUME" >/dev/null 2>&1 || true
+  fi
 }
 
 docker_bin_available || require_or_skip "docker command not found"
@@ -80,18 +85,23 @@ if [[ -z "$DATA_VOLUME" ]]; then
   DATA_VOLUME="deve-docker-smoke-data-$$"
   REMOVE_DATA_VOLUME=1
 fi
+if [[ -z "$NOTES_VOLUME" ]]; then
+  NOTES_VOLUME="deve-docker-smoke-notes-$$"
+  REMOVE_NOTES_VOLUME=1
+fi
 
 trap cleanup EXIT
 
 docker_cmd build -t "$IMAGE" "$ROOT_DIR"
 docker_cmd volume create "$DATA_VOLUME" >/dev/null
+docker_cmd volume create "$NOTES_VOLUME" >/dev/null
 
 docker_cmd run -d \
   --name "$CONTAINER_NAME" \
   -p "$HOST_PORT:3001" \
   -v "$DATA_VOLUME:/data" \
+  -v "$NOTES_VOLUME:/notes" \
   -e DEVE_LEDGER_DIR=/data/ledger \
-  -e DEVE_VAULT_PATH=/data/vault \
   -e DEVE_BIND_ADDR=0.0.0.0:3001 \
   -e AUTH_SECRET="$AUTH_SECRET" \
   -e AUTH_USER="$AUTH_USER" \

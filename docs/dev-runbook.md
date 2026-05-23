@@ -326,7 +326,7 @@ DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis sc
 The startup smoke runs the packaged Desktop binary with
 `DEVE_DESKTOP_STARTUP_SMOKE=1`. It validates that the binary can start and
 report a shell-only runtime surface, then exits before opening a GUI window,
-child-process runtime, ledger, vault, source-control, search, Git, or `.notegit`
+child-process runtime, ledger, Projection Locator/workspace, source-control, search, Git, or `.notegit`
 authority path. This is package startup evidence, not installer
 install/uninstall evidence. The probe defaults to a 20-second timeout; override
 with `DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS=<seconds>` only when diagnosing a
@@ -463,7 +463,7 @@ Artifact interpretation:
 - iOS: simulator evidence covers shell `.app` install/startup; it does not claim device signing, TestFlight, App Store, or physical-device readiness.
 
 All platform artifacts remain shell-only. They must not open native
-child-process runtime, backend supervision ownership, ledger/vault/source-control
+child-process runtime, backend supervision ownership, ledger/Projection Locator/source-control
 authority, search authority, Git authority, or `.notegit` authority.
 
 ## Platform Signing / Physical-device Preflight
@@ -639,7 +639,7 @@ DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED=1 scripts/check-mobile-ios-instal
 ```
 
 These gates install and launch only the WebView shell. They do not open
-child-process runtime, backend supervision, ledger/vault/source-control/search,
+child-process runtime, backend supervision, ledger/Projection Locator/source-control/search,
 Git, or `.notegit` authority writes.
 
 Optional GitHub Actions entry:

@@ -6,7 +6,7 @@
 
 Deve Notebook 是一个 Rust workspace，用于构建自托管的个人 Markdown
 笔记系统。它采用 ledger-first 存储模型：ledger 是权威源，用户可见的
-Markdown vault 是 projection。
+Markdown workspace 是 repo-scoped projection。
 
 本仓库仍处于活跃开发阶段。当前更准确的定位是：已有大量 runtime 路径和回归证据的
 工程原型，而不是已经打磨完成的终端用户发行版。
@@ -20,7 +20,7 @@ Markdown vault 是 projection。
 - 基于 Clap、Tokio、Axum、HTTP、WebSocket 的 CLI/server runtime。
 - Leptos CSR Web 前端：登录/会话、文档操作、命令入口、Source Control UI、
   merge/conflict 流程、只读 graph 视图、settings surface、i18n。
-- ledger-backed local repo state、vault projection、watcher-to-pending 外部编辑摄入、
+- ledger-backed local repo state、repo-scoped projection workspace、watcher-to-pending 外部编辑摄入、
   stage/commit/discard/merge 工作流，以及 projection health 诊断。
 - repo-scoped sync protocol，包含浏览器 WebLightPeer identity、scope nonce gate、
   structured protocol error 与 recovery path。
@@ -48,11 +48,13 @@ Markdown vault 是 projection。
 ## 权威模型
 
 ```text
-Ledger -> Folded State -> Projection -> Vault
+Ledger -> Folded State -> Projection -> Projection Workspace
 ```
 
 - `ledger/` 保存权威 repo facts。
-- `vault/` 保存用户可见 Markdown projection。
+- `ledger/.host/projection-locators.toml` 保存 host-local
+  `RepoId -> projection_base` 绑定。
+- `<projection_base>/<repo_name>/` 保存单个本地 repo 的用户可见 Markdown projection。
 - 文件系统变化先进入 `pending_fs_ops`；只有显式 stage/commit 才会追加 ledger facts。
 - `.notegit/` 是 Deve 拥有的 repo runtime state。
 - `.git/` 只是 Git ecosystem mirror bridge。
@@ -98,6 +100,7 @@ Ledger -> Folded State -> Projection -> Vault
 git clone https://github.com/develeta/deve-note.git
 cd deve-note
 scripts/smoke-web-release-build.sh
+cargo run -p deve_cli --bin deve_cli -- init --path . --repo default --projection-base notes
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
 
@@ -131,7 +134,6 @@ NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080
 重要本地配置：
 
 - `ledger_dir`：本地 ledger/runtime storage。
-- `vault_path`：用户可见 Markdown workspace projection。
 - `profile`：`standard` 或 `low-spec`。
 - `sync_mode`：`auto` 或 `manual`。
 - `merge_strategy`：`manual` 或 `auto`。
@@ -154,9 +156,11 @@ cargo run -p deve_cli --bin deve_cli -- <command>
 
 | 命令 | 作用 |
 | --- | --- |
-| `init --path <path>` | 初始化 workspace |
-| `scan` | 扫描 Markdown 文件 |
-| `watch [--dry-run]` | 监听 vault 变化并记录 pending candidates |
+| `init --path <path> --repo <name> --projection-base <path>` | 初始化 ledger、repo 与 Projection Locator |
+| `repo projection set --repo <selector> --base <path>` | 设置 repo Projection Locator |
+| `repo projection list/check` | 查看 repo Projection Locator |
+| `scan` | 扫描 repo projection workspace |
+| `watch [--dry-run]` | 监听 projection workspace 变化并记录 pending candidates |
 | `serve [--dev] [--port <port>]` | 启动 HTTP/WebSocket 后端 |
 | `export` | 将 ledger 数据导出为 JSON 或 Markdown |
 | `graph` | 输出只读 graph projection |

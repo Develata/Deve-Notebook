@@ -41,7 +41,7 @@
 - `Name`: `Start Local Hub`
 - `Surface`: `cli`
 - `Trigger`: run `deve serve`
-- `Preconditions`: ledger, vault, and server config are valid
+- `Preconditions`: ledger, Projection Locator state, and server config are valid
 - `Immediate Result`: Axum HTTP/WebSocket server starts
 - `Application Entry`: `apps/cli/src/commands/serve.rs`, `apps/cli/src/server/`
 

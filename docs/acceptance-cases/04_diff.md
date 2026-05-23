@@ -72,7 +72,7 @@
   preconditions:
     - `deve watch` 运行中
   steps:
-    - run: powershell -Command "1..5 | % { 'x' | Add-Content ${DEVE_DATA_DIR}/vault/debounce.md }"
+    - run: powershell -Command "1..5 | % { 'x' | Add-Content ${DEVE_DATA_DIR}/notes/default/debounce.md }"
     - run: cargo test -p deve_core dispatch_batch_collapses_modified_burst_by_content_hash -- --nocapture
   assertions:
     - api_assert: watcher_burst_pending_fs_ops_single_entry true

@@ -6,7 +6,7 @@ English | [中文](README.zh.md)
 
 Deve Notebook is a Rust workspace for a self-hosted personal Markdown notebook.
 It is built around a ledger-first storage model: the ledger is the authority,
-and the visible Markdown vault is a projection.
+and each visible Markdown workspace is a repo-scoped projection.
 
 This repository is in active development. It is useful as an engineering
 prototype with substantial implemented runtime paths and regression evidence,
@@ -22,7 +22,7 @@ Implemented and exercised today:
 - Leptos CSR Web frontend with login/session handling, document operations,
   command surfaces, source-control UI, merge/conflict flows, graph/read-only
   views, settings surfaces, and i18n coverage.
-- Ledger-backed local repo state, vault projection, watcher-to-pending external
+- Ledger-backed local repo state, repo-scoped projection workspaces, watcher-to-pending external
   edit ingestion, stage/commit/discard/merge workflows, and projection health
   diagnostics.
 - Repo-scoped sync protocol with browser WebLightPeer identity, scope nonce
@@ -61,11 +61,14 @@ Not implemented or not claimed:
 ## Authority Model
 
 ```text
-Ledger -> Folded State -> Projection -> Vault
+Ledger -> Folded State -> Projection -> Projection Workspace
 ```
 
 - `ledger/` stores authoritative repo facts.
-- `vault/` stores the user-visible Markdown projection.
+- `ledger/.host/projection-locators.toml` stores host-local
+  `RepoId -> projection_base` bindings.
+- `<projection_base>/<repo_name>/` stores the user-visible Markdown projection
+  for one local repo.
 - File-system changes enter `pending_fs_ops` first; they do not mutate authority
   until an explicit stage/commit path appends ledger facts.
 - `.notegit/` is Deve-owned repo runtime state.
@@ -113,6 +116,7 @@ Optional paths:
 git clone https://github.com/develeta/deve-note.git
 cd deve-note
 scripts/smoke-web-release-build.sh
+cargo run -p deve_cli --bin deve_cli -- init --path . --repo default --projection-base notes
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
 
@@ -146,7 +150,6 @@ Start from `config.example.toml`.
 Important local keys:
 
 - `ledger_dir`: local ledger/runtime storage.
-- `vault_path`: user-visible Markdown workspace projection.
 - `profile`: `standard` or `low-spec`.
 - `sync_mode`: `auto` or `manual`.
 - `merge_strategy`: `manual` or `auto`.
@@ -170,9 +173,11 @@ Common commands:
 
 | Command | Purpose |
 | --- | --- |
-| `init --path <path>` | Initialize a workspace |
-| `scan` | Scan Markdown files |
-| `watch [--dry-run]` | Watch vault changes and record pending candidates |
+| `init --path <path> --repo <name> --projection-base <path>` | Initialize ledger, repo, and Projection Locator |
+| `repo projection set --repo <selector> --base <path>` | Set a repo Projection Locator |
+| `repo projection list/check` | Inspect repo Projection Locators |
+| `scan` | Scan repo projection workspaces |
+| `watch [--dry-run]` | Watch projection workspace changes and record pending candidates |
 | `serve [--dev] [--port <port>]` | Start HTTP/WebSocket backend |
 | `export` | Export ledger data as JSON or Markdown |
 | `graph` | Print read-only graph projection |
