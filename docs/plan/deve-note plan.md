@@ -20,6 +20,7 @@
 - **[04_storage.md](./04_storage.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
 - **[06_repository.md](./06_repository.md)**: repo identity、branch scope、tree projection、repo health。
 - **[07_diff_logic.md](./07_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
+- **[18_backup.md](./18_backup.md)**: repo/branch URL 的备份展开、加密 pack、WebDAV/S3 边界。
 
 ### C. Runtime Protocols
 - **[05_network.md](./05_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
@@ -57,7 +58,7 @@
 *   **Current UI Contract（当前界面契约）**：`03`、`08`。定义交互与可见行为，但不得改写 Ledger / Auth / Network 权威规则。
 *   **Approved Runtime Architecture（已批准运行时架构）**：`16`，以及 `04/06/07` 中的 Node/Path Ledger Facts 收敛路线。当 `04/05/07/09/11` 在 Web 写路径上存在交叉时，以 `16` 的 Web 收敛规则为准；当路径、树结构与 Source Control commit 存在交叉时，以 `04/06/07` 的 Node-first 约束为准。
 *   **Optional Product Layer（可选产品层）**：`10` 定义 Native AI Chat 的启用后合同，以及 Trusted CLI Agent 的显式 opt-in 边界；它不得反向推翻 Current MUST，也不得成为核心数据路径的隐式依赖。
-*   **Planned / Optional（规划或扩展）**：`12`、`13`、`14`、`15`、`17`。可指导实现，但不得推翻 Current MUST。
+*   **Planned / Optional（规划或扩展）**：`12`、`13`、`14`、`15`、`17`、`18`。可指导实现，但不得推翻 Current MUST。
 
 ### 文档分层
 
@@ -86,6 +87,7 @@
 *   `05_network.md`：连接拓扑、WS/HTTP 路由契约、repo-scoped sync handshake。
 *   `06_repository.md`：`NodeId`、树结构、`Rename/Move/Create/Delete` 的结构事实写路径。
 *   `07_diff_logic.md`：外部文件系统变更在 Stage -> Commit 时如何拆成内容事实与结构事实。
+*   `18_backup.md`：repo/branch URL 如何扩展为 WebDAV/S3 backup locator；备份不得成为共享可写 sync authority。
 *   `09_auth.md`：user session、token 生命周期、鉴权失败处理。
 *   `10_ai_agent.md`：原生 AI Chat 的产品边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。
 *   `11_i18n.md`：错误码目录与前端文案映射，不负责传输层协议。
@@ -100,7 +102,7 @@
 ### Route 2 Guardrail（Node/Path 一等事实护栏）
 
 *   当实现进入 Node-first 重构时，路径与树结构相关的最终业务事实 **MUST** 进入 Ledger，而不是通过 `metadata` / `path cache` 直写完成。
-*   `metadata`、`DocId <-> Path` 映射、`TreeDelta`、侧边栏树与 Vault 工作区都 **MUST** 视为 projection 或 projection cache。
+*   `metadata`、`DocId <-> Path` 映射、`TreeDelta`、侧边栏树与 Projection Workspace 都 **MUST** 视为 projection 或 projection cache。
 *   `RenameDoc / MoveDoc / DeleteDoc / CreateDoc` 与 Source Control rename commit **MUST** 共享同一条结构事实写路径。
 
 ### Infra-First Guardrail（基础设施优先护栏）

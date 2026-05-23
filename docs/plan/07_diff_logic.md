@@ -41,7 +41,7 @@ authority 仍是 ledger facts 与 commit anchors。
 系统必须显式区分两个差异域：
 
 - `Working Directory Domain`
-  - 来源：Vault 工作区与当前规范 projection 的偏差
+  - 来源：repo Projection Workspace 与当前规范 projection 的偏差
   - 状态：`pending_fs_ops`
 - `Ledger Commit Domain`
   - 来源：已确认 ledger facts 与 commit anchors
@@ -106,7 +106,7 @@ Git mirror 命令面必须遵守以下边界：
 ### 3.1 External Edit Lifecycle
 
 ```text
-VaultChangeDetected
+ProjectionWorkspaceChangeDetected
   -> PendingFsEntry
   -> Staged
   -> LedgerCommitted

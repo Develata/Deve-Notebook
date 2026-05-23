@@ -27,7 +27,6 @@
 | **System Core**                  |                  |                                                                     |
 | `DEVE_PROFILE`                   | `standard`       | 运行模式预设: `standard` (默认), `low-spec` (低配). |
 | `DEVE_LEDGER_DIR`                | `ledger`         | 账本存储目录；Docker/runtime 推荐设为 `/data/ledger`。              |
-| `DEVE_VAULT_PATH`                | `vault`          | 投影库根目录；Docker/runtime 推荐设为 `/data/vault`。               |
 | `DEVE_SYNC_MODE`                 | `auto`           | 同步模式: `auto` 或 `manual`。                                      |
 | `LOG_LEVEL`                      | `info`           | 日志级别: `trace`, `debug`, `info`, `warn`, `error`.                |
 | `MEM_CACHE_MB`                   | `128`            | 内存缓存上限 (MB).                                                  |
@@ -79,7 +78,6 @@
 | :---------------------- | :----- | :--------- | :----------------------------------------------------- |
 | `profile`               | String | `standard` | 运行模式: `standard` (全功能), `low-spec` (低配).      |
 | `ledger_dir`            | String | `ledger`   | 账本存储目录 (Relative or Absolute).                   |
-| `vault_path`            | String | `vault`    | 投影库根目录 (Relative or Absolute).                   |
 | `sync_mode`             | String | `auto`     | 同步模式: `auto` (自动合并), `manual` (接收后暂存，按单一 peer/repo 目标确认后原子合并). |
 | `snapshot_depth`        | Number | `100`      | 快照保留深度 (Versions per Repo).                      |
 | `mem_cache_mb`          | Number | `128`      | 内存缓存上限 (MB).                                      |
@@ -87,6 +85,18 @@
 | `merge_strategy`        | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `07_diff_logic.md §Conflict Resolution`。 |
 
 `profile` 只提供默认预设。显式 `config.toml` 或环境变量 **MUST** 覆盖 profile preset；未显式设置时，`low-spec` **MUST** 使用 `snapshot_depth = 10`、`MEM_CACHE_MB = 32`，`standard` **MUST** 使用 `snapshot_depth = 100`、`MEM_CACHE_MB = 128`。
+
+### 2.2.1 Projection Locator Settings
+
+Projection base / workspace root 不属于 `config.toml` 的全局键。
+
+规则：
+
+*   系统 **MUST NOT** 支持 `vault_path` / `DEVE_VAULT_PATH` 作为全局投影根。
+*   每个本地可写 repo 的 projection base 必须通过 host-local Projection Locator 绑定；最终 workspace root 必须计算为 `<projection_base>/<repo_name>/`。locator 存储边界见 `04_storage.md#projection-locator-contract`。
+*   `config.toml` 可以决定 `ledger_dir`，但不得通过 `ledger_dir` 推导 projection base 或 workspace root。
+*   Settings UI 或 CLI 可以展示、创建、替换 locator；写入前 **MUST** 校验 path 类型、canonical path、冲突与保留目录边界。
+*   locator 变更属于 repo runtime 操作，不是用户 UI 偏好，也不是 ledger authority。
 
 ### 2.3 AI (人工智能)
 | Key                        | Type   | Default      | Description |

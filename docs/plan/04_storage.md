@@ -22,9 +22,11 @@
 
 ### 2.1 Core Stores
 
-- `Store A: Vault`
-  - `vault/<repo_name>/`
-  - 是 workspace projection 的物理容器，不是 authority。
+- `Store A: Projection Workspaces`
+  - `ProjectionLocator(RepoId) -> projection_base`
+  - `ProjectionWorkspaceRoot(RepoId) = projection_base/<repo_name>/`
+  - 是 repo-scoped workspace projection 的物理容器，不是 authority。
+  - 系统不再定义总 `vault` 根目录；每个本地可写 repo 必须显式绑定 projection base，再计算 repo workspace root。
 - `Store B: Local Branch Ledger`
   - `ledger/local/*.redb`
   - 本地唯一可写 authority。
@@ -90,11 +92,12 @@ Workspace_r = P_r ⊕ D_r
 - `ledger/local/<repo_name>.redb`
 - `ledger/remotes/<peer_name>/<repo_name>.redb`
 - `ledger/.host/identity.key`
+- `ledger/.host/projection-locators.toml`
 - `ledger/backups/<repo_name>-<timestamp>.redb`
 
 ### 3.2 Repo Runtime Layout {#repo-runtime-layout}
 
-- `vault/<repo_name>/.notegit/`
+- `<projection_base>/<repo_name>/.notegit/`
   - repo keys
   - pending/staged side tables
   - commit/runtime metadata
@@ -106,7 +109,58 @@ Workspace_r = P_r ⊕ D_r
 - `.notegit/` 可以随 repo 备份，但 **MUST NOT** 被跨 repo 复用。
 - `.notegit/` 是 Deve-owned repo runtime 目录，当前继续保留该命名。
 
-### 3.2.1 Git Mirror Storage Boundary {#git-ecosystem-coexistence}
+### 3.2.1 Projection Locator Layout {#projection-locator-contract}
+
+Projection Locator 是 host-local runtime state，负责把本地 repo instance 绑定到宿主文件系统中的 projection base。最终 repo workspace root 必须由 locator base 与当前 repo name 计算得到：
+
+```text
+ProjectionWorkspaceRoot(repo_id) = projection_base_abs / repo_name(repo_id)
+```
+
+示例：
+
+```text
+<projection_base>/<repo_name>/
+  .notegit/
+  .deveignore
+  a.md
+  notes/a.md
+```
+
+`projection_base` 可以包含其它文件或目录；系统只能 scan/watch/import 计算出的 `<projection_base>/<repo_name>/`，不得把 base 根目录本身当作 repo workspace。
+
+路径归属判定示例：
+
+- 若 `projection_base = E:/` 且 `repo_name = my-notebooks`，则 workspace root 是 `E:/my-notebooks/`；`E:/my-notebooks/.notegit/`、`E:/my-notebooks/notes/a.md` 与 `E:/my-notebooks/a.md` 都属于该 repo。
+- 若 `projection_base = E:/my-notebooks` 且 `repo_name = math`，则 workspace root 是 `E:/my-notebooks/math/`；`E:/my-notebooks/a.md` 可以存在，但不属于该 repo，系统不得 scan/watch/import 它。
+
+最小模型：
+
+```text
+ProjectionLocatorKey = LocalRepoId
+ProjectionLocatorValue = {
+  repo_id,
+  repo_name_hint,
+  projection_base_abs,
+  canonicalized_at,
+}
+```
+
+约束：
+
+- `projection_base_abs` **MUST** 是 canonicalize 后的绝对路径；若 base 不存在，`init` / locator repair 可以先创建 base，再 canonicalize。
+- `repo_name` 作为 workspace root 的路径段时 **MUST** 是单一安全文件名段，不得包含路径分隔符、`.` 或 `..`。
+- 本地可写 repo 进入 `ProjectionReady` 前 **MUST** 存在 locator。
+- locator **MUST NOT** 写入 `LEDGER_OPS`、Structure Facts、Content Facts 或 sync payload。
+- locator **MUST NOT** 作为 repo identity；`repo_name_hint` 只能用于诊断，不得替代 `RepoId` 或当前 repo metadata。
+- workspace root 是派生值。实现可以缓存 `workspace_root_abs`，但缓存 **MUST** 可由 `projection_base_abs + repo_name` 重建，且不得成为 authority。
+- repo rename / display name repair 时，locator base 保持不变；系统 **MUST** 将 workspace root 从 `<base>/<old_repo_name>/` realign / move 到 `<base>/<new_repo_name>/`，若目标已存在或不可安全移动则 fail-closed 并进入 `DegradedLocator`。
+- 两个本地 repo **MUST NOT** 解析到同一 workspace root。
+- 任意两个 workspace root **MUST NOT** 互为父子目录。
+- workspace root **MUST NOT** 位于 `ledger/`、`ledger/.host/`、`.notegit/` 或 `.git/` 内部。
+- locator 缺失、路径不可读、路径不可 canonicalize 或路径冲突时，repo **MUST** 进入 `DegradedLocator`，不得进入 mounted write path。
+
+### 3.2.2 Git Mirror Storage Boundary {#git-ecosystem-coexistence}
 
 Git mirror 的生命周期、命令面与失败语义以 `07_diff_logic.md#git-mirror-lifecycle` 为唯一权威。本章只定义存储边界：
 
@@ -239,6 +293,7 @@ Git mirror 的生命周期、命令面与失败语义以 `07_diff_logic.md#git-m
 RepoDiscovered
   -> RepoOpened
   -> RuntimeTablesReady
+  -> ProjectionLocated
   -> ProjectionReady
   -> WatcherReady
   -> Mounted
@@ -246,6 +301,7 @@ RepoDiscovered
 
 约束：
 
+- `ProjectionLocated` 必须验证 repo-scoped Projection Locator。
 - `WatcherReady` 是打开 repo 的最后一步。
 - watcher 初始化失败 **MUST** fail-closed。
 
@@ -279,7 +335,7 @@ LedgerCommitted -> ProjectionWritebackFailed -> RecoverableProjectionFault
 - `ProjectionRebuilt`
   - effect: tree/path/meta/snapshot updated
 - `WorkspacePersisted`
-  - effect: vault matches projection or explicit dirty overlay
+  - effect: repo projection workspace matches projection or explicit dirty overlay
 - `RecoverableProjectionFault`
   - effect: repo enters degraded-but-authority-valid state, waiting for rebuild
 
@@ -320,7 +376,7 @@ FsEvent
 
 规则：
 
-- **MUST NOT** 先改 Vault 再补 ledger。
+- **MUST NOT** 先改 Projection Workspace 再补 ledger。
 
 ### 6.2 Path B: Watcher / External Edit Ingestion
 
@@ -356,7 +412,7 @@ FsEvent
 - 所有系统写盘都必须满足：
 
 ```text
-Intent -> Ledger Facts -> Projection -> Vault
+Intent -> Ledger Facts -> Projection -> Projection Workspace
 ```
 
 - `metadata`、`path mapping`、`tree cache`、`NodeMeta` 只能由 projection builder 写入。
@@ -375,6 +431,7 @@ Intent -> Ledger Facts -> Projection -> Vault
   - 同一 repo 的 projection rebuild 与 workspace persist 不能并发乱序覆盖
   - 不同 repo 之间必须隔离
 - `PersistGuard` / `WriteSuppressor` 必须在 projection writeback 前后成对生效，防止 watcher storm
+- projection writeback **MUST** 通过 Projection Locator 解析目标 base，并计算 `<projection_base>/<repo_name>/` 作为目标 workspace root；禁止从全局 vault root 隐式推断。
 
 ## 8. Watcher Contract {#watcher-contract}
 
@@ -387,13 +444,13 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 - watcher_start 是 repo open 的最后一步。
 - 启动前必须执行一次全量 scan。
-- 启动扫描 **MUST** 读取 vault 根目录 `.deveignore`，并在创建 pending candidate 前跳过被忽略的 Markdown。
+- 启动扫描 **MUST** 读取 repo workspace root 下的 `.deveignore`，并在创建 pending candidate 前跳过被忽略的 Markdown。
 - scan 与 watcher 首批事件之间的去重必须由 side table 幂等性保证。
 
 ### 8.3 忽略与路径过滤
 
-- `.deveignore` 位于 vault 根目录；直接 watcher 事件、目录重扫与启动扫描 **MUST** 使用同一套匹配语义。
-- 忽略匹配 **MUST** 同时接受 vault-relative path（`<repo>/<path>`）与 repo-relative path（`<path>`），保证 repo-local 与 vault-wide 规则语义稳定。
+- `.deveignore` 位于 repo workspace root；直接 watcher 事件、目录重扫与启动扫描 **MUST** 使用同一套 repo-relative 匹配语义。
+- 忽略匹配 **MUST** 接受 repo-relative path（`<path>`）；不再存在 vault-wide ignore 语义。
 - `.notegit/` 与其它 repo 内部目录 **MUST** 按路径段语义忽略；`.notegit-backup` 这类同名前缀兄弟路径 **MUST NOT** 被误判为内部目录。
 - 被忽略 Markdown **MUST NOT** 通过 watcher/scan 生成 `Added`、`Modified`、`Deleted` 或 rename pending entry，也 **MUST NOT** 在 scan 中被当作 tracked doc 缺失处理。
 
@@ -424,13 +481,13 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 ### 9.1 Workspace Recovery
 
-- Vault 损坏时，从 ledger + snapshot 重建 projection。
+- Projection Workspace 损坏时，从 ledger + snapshot 重建 projection。
 - 无法解释的 workspace 偏差视为状态漂移，必须 reconcile 或 hard rebuild。
 
 ### 9.2 Ledger Repair Boundary
 
-- 只有显式 repair / reset 流程才允许从 Vault 反向导入生成新 ledger。
-- 日常运行路径不得把 Vault 当成 authority fallback。
+- 只有显式 repair / reset 流程才允许从 Projection Workspace 反向导入生成新 ledger。
+- 日常运行路径不得把 Projection Workspace 当成 authority fallback。
 
 ### 9.3 Catalog / Runtime Repair
 
@@ -445,6 +502,7 @@ Intent -> Ledger Facts -> Projection -> Vault
 ### 9.5 Hard Failure vs Degraded Mode
 
 - 以下情况允许进入 degraded mode：
+  - projection locator 缺失、不可访问或冲突
   - projection 缓存损坏
   - watcher overflow 待 reconcile
   - workspace writeback 失败但 ledger 已提交
@@ -466,8 +524,9 @@ Intent -> Ledger Facts -> Projection -> Vault
 - 原地修改 authority 状态。
 - 用 metadata/path table 直接完成 rename/move/delete。
 - 未经 Stage / Commit 让 watcher 事件直接入 ledger。
-- 让 Vault 作为真值源。
+- 让 Projection Workspace 作为真值源。
 - 让 side table 或 snapshot 成为删除真源。
+- 通过全局 `vault_path` 或 `ledger_dir` 隐式推断 repo projection base / workspace root。
 
 ## 11. Runtime Boundary
 
@@ -510,5 +569,5 @@ Intent -> Ledger Facts -> Projection -> Vault
 
 - `snapshot_depth`
 - backup / retention 相关配置
-- `vault.path`
+- `projection.locators`
 - `ledger.path`

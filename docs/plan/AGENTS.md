@@ -32,6 +32,7 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `15_release.md` | Build, packaging, and deployment |
 | `16_web_thin_client_ledger.md` | Web thin client, pending overlay, repo-scoped writer gate, ack/reject contract |
 | `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
+| `18_backup.md` | Branch-scoped backup / restore locator, encrypted pack, WebDAV and S3 boundary |
 | `../registry/runtime-skeleton-registry.md` | Runtime convergence status and current module path registry |
 
 ## Subdirectories
@@ -91,7 +92,8 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `04_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
 | `04_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
 | `04_storage#repo-runtime-layout` | `### 3.2 Repo Runtime Layout` | `.notegit`、repo runtime metadata 与内部目录布局 |
-| `04_storage#git-ecosystem-coexistence` | `### 3.2.1 Git Mirror Storage Boundary` | Git mirror 存储边界与 `.git` / `.notegit` 共存约束 |
+| `04_storage#projection-locator-contract` | `### 3.2.1 Projection Locator Layout` | repo-scoped projection base locator、computed workspace root 与冲突边界 |
+| `04_storage#git-ecosystem-coexistence` | `### 3.2.2 Git Mirror Storage Boundary` | Git mirror 存储边界与 `.git` / `.notegit` 共存约束 |
 | `04_storage#browser-storage-layering` | `### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
 | `04_storage#internal-path-normalization` | `### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
 | `05_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
@@ -159,6 +161,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `16_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
 | `17_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `17_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
+| `18_backup#backup-locator-contract` | `## 2. Locator Model` | repo/branch URL 扩展为 WebDAV/S3 backup locator 的绑定与 authority 边界 |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 

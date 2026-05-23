@@ -45,6 +45,7 @@
 
 - `Healthy`
 - `DegradedProjection`
+- `DegradedLocator`
 - `DegradedCatalog`
 - `Repairing`
 - `Quarantined`
@@ -67,6 +68,7 @@
 - 但进入任何底层 repo/document/source-control 算子前，必须解析成唯一 `RepoId`。
 - selector 解析必须 UUID-first；`RepoName` 与 `URL` 只能辅助定位，不得覆盖已解析的 `RepoId`。
 - selector 解析出现缺失、重复、metadata drift、URL 歧义时 **MUST** fail-closed。
+- repo / branch URL 的 WebDAV、S3 与 S3-compatible 备份展开由 `18_backup.md` 定义；该展开不得改变本章的 UUID-first repo scope 规则。
 
 逻辑 repo 归类规则：
 
@@ -86,8 +88,10 @@
 
 - `ledger/local/<repo_name>.redb`
 - `ledger/remotes/<peer_name>/<repo_name>.redb`
-- `vault/<repo_name>/`
-- `vault/<repo_name>/.notegit/`
+- `ledger/.host/projection-locators.toml`
+- `<projection_base>/<repo_name>/.notegit/`
+
+`projection_base` 与计算出的 workspace root 由 `04_storage.md#projection-locator-contract` 定义；本章只规定 repo identity 与 locator 绑定边界。
 
 ### 3.2 Collision Rule
 
@@ -100,6 +104,8 @@
 - catalog 损坏时 **MUST** 进入 repair 或 fail-closed，不得静默把错误 repo 绑定到当前 scope。
 - catalog entry 必须是可读 repo DB 文件，且 repo metadata 的 `RepoId / RepoName / URL` 不得相互漂移或重复。
 - remote catalog 文件名冲突只能通过安全重命名或受控 repair 处理，不得合并不同 logical identity。
+- local repo catalog 不得承载 projection base 或 workspace root；projection base 必须通过 host-local Projection Locator 解析，workspace root 必须由 base 与当前 repo name 计算。
+- Projection Locator 的 `repo_name_hint` 只能作为诊断信息；不得替代 `RepoId` 绑定。
 
 ### 3.4 Tree State Storage Model
 
@@ -131,7 +137,9 @@ struct NodeInfo {
 Unresolved
   -> ResolvingSelector
   -> OpeningInstance
+  -> ProjectionLocated
   -> Healthy
+  -> DegradedLocator
   -> DegradedProjection
   -> Repairing
   -> Healthy | Quarantined
@@ -141,6 +149,8 @@ Unresolved
 
 - `ResolvingSelector` 必须先完成 selector -> `RepoId` 解析。
 - `OpeningInstance` 必须验证 runtime tables、catalog、projection 依赖。
+- `ProjectionLocated` 必须完成 `RepoId -> projection_base -> <projection_base>/<repo_name>/` 解析、canonicalize 与冲突检查。
+- `DegradedLocator` 禁止 watcher、scan、stage、commit、projection writeback。
 - `Repairing` 期间禁止把该 repo 作为默认可写 scope 暴露给 UI。
 
 ### 4.2 Scope Binding
@@ -163,6 +173,7 @@ NoScope
 
 ```text
 Healthy -> DegradedProjection -> Repairing -> Healthy
+Healthy -> DegradedLocator   -> Repairing -> Healthy
 Healthy -> DegradedCatalog    -> Repairing -> Healthy
 Degraded* -> Quarantined
 ```
@@ -289,12 +300,21 @@ ReadonlyDegraded
 - 若 Structure Facts authority 本身引用缺失 parent / missing node / cycle / doc identity mismatch，repair **MUST** 输出结构化诊断并 fail-closed；该 repo 必须保持 `DegradedProjection` 或进入 quarantine，直到用户通过导出、重建 repo 或明确的 authority-level 迁移处理。
 - repair 失败时 repo **MUST** 退出正常 mounted write path。
 
-### 7.4 Catalog Conflict Repair
+### 7.4 Projection Locator Repair
+
+- locator repair 只能创建、替换、删除或校验 host-local Projection Locator。
+- locator repair 不得修改 repo ledger facts、repo URL、repo display name 或 shadow branch identity。
+- projection base 变更后，系统 **MUST** 先停止该 repo watcher，再执行 locator 更新、projection materialize / rebuild、watcher restart。
+- projection base 变更不需要移动旧 workspace；旧目录只能作为外部数据源，经显式 import / repair 流程进入 pending 或 rebuild。
+- repo rename / display name repair 不改变 projection base；但 workspace root 必须从 `<base>/<old_repo_name>/` realign / move 到 `<base>/<new_repo_name>/`。目标已存在、跨设备 move 不可安全完成或目录冲突时必须 fail-closed。
+- locator 缺失或冲突必须保持 `DegradedLocator`，直到用户显式提供可用 base 且计算出的 workspace root 可用。
+
+### 7.5 Catalog Conflict Repair
 
 - 同名 repo 文件但不同 logical identity 时，只允许修复 catalog/name drift，不得合并 authority。
 - remote repo selector 若只能唯一解析到一个健康 remote repo，可做受控 fallback；一旦出现歧义，必须 fail-closed。
 
-### 7.5 Startup Scan Contract
+### 7.6 Startup Scan Contract
 
 - startup materialize 遇到坏 repo 时，不得拖垮整个服务。
 - 坏 repo 必须显式标记 degraded/quarantined。
@@ -308,6 +328,7 @@ ReadonlyDegraded
 - 让 metadata/path table 成为 rename/move/delete 的主写路径。
 - 让 UI 直接根据名字推断 repo identity。
 - 把 remote readonly repo 误暴露为可写 source。
+- 让 repo name、URL、全局 vault root 或 `ledger_dir` 推断 projection base；repo name 只能参与由 locator base 派生 workspace root。
 
 ## 9. Runtime Boundary
 
@@ -349,6 +370,7 @@ ReadonlyDegraded
 长期应将 repo 逻辑显式收敛成三个独立 runtime：
 
 - `repo_catalog_runtime`
+- `projection_locator_runtime`
 - `repo_scope_runtime`
 - `projection_repair_runtime`
 

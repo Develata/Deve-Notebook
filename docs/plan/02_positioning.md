@@ -27,11 +27,11 @@
 
 *   **目标**：验证 `Reconciliation`（和解）的鲁棒性，确保 Ledger 与大量不可靠外部写入并存时数据不丢失。
 *   **功能清单**：
-    1.  `init`: 初始化 Ledger 和 Vault。
+    1.  `init`: 初始化 Ledger、本地 repo 与 repo-scoped Projection Locator。
     2.  `watch`: 启动文件监听，能够正确处理 `vim`/`vscode`/`nano` 的保存行为（含重命名/原子写入）。
-    3.  `append`: 通过 API 追加 `LedgerEntry / Ledger Facts`，验证 Vault 能否正确更新。
+    3.  `append`: 通过 API 追加 `LedgerEntry / Ledger Facts`，验证 repo Projection Workspace 能否正确更新。
 *   **验收标准**：
-    *   **受控和解闭环**：`VS Code 修改 -> Watcher -> pending_fs_ops -> Stage / Commit -> Ledger -> Vault 更新` 必须稳定，无死循环。
+    *   **受控和解闭环**：`VS Code 修改 -> Watcher -> pending_fs_ops -> Stage / Commit -> Ledger -> Projection Workspace 更新` 必须稳定，无死循环。
     *   **重命名测试**：在此阶段必须解决“文件重命名被识别为删除+新建”导致的 DocId 丢失问题（实现 Inode/FileID 追踪）。
 
 ### Core MUST（核心必须）
@@ -41,7 +41,7 @@
     *   **Workbench**: 标准布局容器 (Activity Bar + Side Bar + Editor + Panel)。
     *   **Command Palette**: 全局指令系统。
     *   **Editor**: Markdown 编辑器（集成 TeX 公式渲染）。
-*   **Ledger Consistency (账本一致性)**: 核心 **MUST** 维护 Ledger 与 Vault 的一致性，覆盖写入 (Write)、同步 (Sync)、和解 (Reconciliation)、冲突处理 (Conflict Resolution) 及可恢复性。
+*   **Ledger Consistency (账本一致性)**: 核心 **MUST** 维护 Ledger 与 repo-scoped Projection Workspace 的一致性，覆盖写入 (Write)、同步 (Sync)、和解 (Reconciliation)、冲突处理 (Conflict Resolution) 及可恢复性。
 *   **Extensibility Host**: 提供稳定的 Host Functions、Event Bus、Job Queue 与 Capability 校验机制。
 *   **Linux Path Normalization (Linux 路径标准化)**:
     *   **Input Handling**: 非 Linux 平台接收到的任何路径输入 **MUST** 在第一时间转换为 Linux 风格路径（Forward Slash `/`）。
@@ -61,7 +61,7 @@
 
 *   **No Heavyweight Defaults (无默认重能力)**: 核心 **MUST NOT** 内置以下能力作为必选路径：AI 推理、Full-Text Search (全文索引)、Code Execution (代码块执行)、Batch Pipeline (批量管线)、Image Processing (图像处理)、Advanced Layout (复杂排版)。
 *   **Non-Blocking Interaction (非阻塞交互)**: 核心 UI 线程 **MUST** 保持轻量。耗时操作 (Heavy Tasks) **MUST** 提交至 Job Queue，并支持 Cancel/Degrade (取消/降级)。
-*   **No Proprietary Format (无私有格式)**: Projection 层（用户对于 Vault 的可见视图）**MUST NOT** 引入破坏标准 Markdown 语义的私有语法。
+*   **No Proprietary Format (无私有格式)**: Projection 层（用户对于 Projection Workspace 的可见视图）**MUST NOT** 引入破坏标准 Markdown 语义的私有语法。
 *   **Ignored Files Strategy (忽略策略)**：核心在外部文件摄入边界 **MUST** 先应用 `.deveignore` 与内置忽略规则；被忽略路径 **MUST NOT** 经 watcher、目录重扫或启动扫描进入 Ledger、tree projection 或 `pending_fs_ops`。受控应用内创建属于显式 authority 写入，**MUST NOT** 被 `.deveignore` 隐式拦截。
 
 ### Plugin MAY（插件可选）

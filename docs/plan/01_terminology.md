@@ -19,7 +19,7 @@
 **表达约定（追求精确简练）**：
 
 * 每条要求 SHOULD 可验证（能写测试/能观测/能复现），避免“更好/更强/更优雅”这类不可判定表述。
-* 任何影响一致性与安全性的事实 MUST 位于 Ledger，或 MUST 可由 Ledger 唯一推导；Vault/Markdown 仅承载可读投影。
+* 任何影响一致性与安全性的事实 MUST 位于 Ledger，或 MUST 可由 Ledger 唯一推导；Projection Workspace / Markdown 仅承载可读投影。
 * 需要明确边界时，使用“**非目标**”直接排除。
 
 ## 2. Core Definitions (核心术语定义)
@@ -32,7 +32,7 @@
 *   **Projection (投影)**：从 Ledger 派生的、面向用户的可读/可编辑形式（如 Markdown 文件）。
     *   $P = Project(S_{ledger})$。投影不承载权威状态；对投影的外部修改必须先转为差异，再经 Reconciliation 生成 Ledger Facts。
 *   **Deve-authorized Write Path (Deve 授权写路径)**：由 Deve runtime 明确发起、绑定 repo scope / writer gate，并通过 ledger append、projection writeback、source-control import 或 repair 命令产生可审计副作用的写路径。
-    *   裸文件写入、外部编辑器保存、外部 `git checkout/reset/pull/rebase` 造成的 Vault 变化不属于该路径。
+    *   裸文件写入、外部编辑器保存、外部 `git checkout/reset/pull/rebase` 造成的 Projection Workspace 变化不属于该路径。
 *   **Writer Identity (写入身份)**：能够产生 ledger facts 或 pending authority intent 的受控身份。
     *   Branch 表达持久 writer identity 作用域；browser tab / native shell 只能获得 repo-scoped transient writer identity。
 *   **Writer Gate (写入闸门)**：把 auth session、repo scope、branch role、`scope_nonce` 与 writer registration 合并后的写入许可。
@@ -43,9 +43,15 @@
 *   **pending_fs_ops (文件系统待处理队列)**：外部文件系统变化或显式 import 进入 Source Control 前的 repo runtime side table。
     *   `PendingFsEntry` 是 `pending_fs_ops` 中的一条 repo-scoped 文件系统/import pending 记录。
     *   `pending_fs_ops` 不承载 Web pending overlay，不是 ledger authority。
-*   **Vault (投影仓)**：宿主文件系统上的一个具体目录路径 `$ROOT/data/vault`。
-    *   是 Projection 的物理容器。
-    *   **External Edit**：发生在 Vault 内但未经 Deve-authorized Write Path 产生的修改；不得直接成为权威状态。
+*   **Projection Workspace / Vault (投影工作区 / 投影仓)**：宿主文件系统上绑定到单个本地 repo instance 的计算目录，形式为 `<projection_base>/<repo_name>/`。
+    *   `projection_base` 是用户通过 Projection Locator 指定的父目录；它本身不是 repo workspace。
+    *   Projection Workspace 是该 repo 的 Markdown Projection 物理容器，不是全局共享仓库。
+    *   系统 **MUST NOT** 要求存在总 `vault` 根目录；旧模型中的 `vault` 在新模型下只是某个 locator base，因此最终目录自然是 `vault/<repo_name>/`。
+    *   Markdown 文件可以直接位于 repo workspace 根目录（如 `a.md`），也可以位于子目录（如 `notes/a.md`）；系统不得要求固定 `notes/` 子目录。
+    *   **External Edit**：发生在 Projection Workspace 内但未经 Deve-authorized Write Path 产生的修改；不得直接成为权威状态。
+*   **Projection Locator (投影定位记录)**：host-local runtime state，描述 `RepoId -> Projection Base path` 的绑定。
+    *   Projection Locator 只存在于当前宿主环境；不得写入 repo ledger facts，不得通过 P2P 同步，不得作为 logical repo identity。
+    *   本地可写 repo 在 mounted write path 前 **MUST** 具备可 canonicalize 的 Projection Locator；唯一性与冲突检查作用于计算得到的 Projection Workspace root。
 *   **Tree State (树状态)**:
     *   内存文件树缓存 $T_{mem}$，由 `TreeManager` 管理。
     *   用于目录树 UI、减少 IO 扫描并生成 `TreeDelta`。
@@ -72,7 +78,7 @@
 *   **Asset (资产)**：由 DocId 标识的二进制字节序列。
     *   运行时引用形式：`asset://<uuid>`。
     *   物理存储形式：Content Addressable Storage (CAS) 或由 Ledger 管理的 Blob。
-*   **Reconstruction (重建/反推)**：从 Vault 内的 External Edit 提取 $\Delta_{fs}$ 的过程。
+*   **Reconstruction (重建/反推)**：从 Projection Workspace 内的 External Edit 提取 $\Delta_{fs}$ 的过程。
     *   Reconstruction 只产生候选差异；它本身不得写 Ledger authority。
 *   **Reconciliation (和解/协调)**：将外部突变合并回权威 Ledger 的过程。
     *   $Merge(L_{current}, \Delta_{fs}) \to L_{next}$。
@@ -94,8 +100,9 @@
 ## 3. Data Structure Terms (数据结构术语)
 
 * **Three Stores (三库隔离)**：
-    * **Store A (Vault)**：用户工作区 $W_{user}$。
-        *   $W_{user} \approx Project(L_{local})$。允许包含未通过 Reconciliation 进入 Ledger 的脏数据（Dirty State）。
+    * **Store A (Projection Workspaces)**：一组 repo-scoped 用户工作区 $\{W_{repo}\}$。
+        *   $W_{repo} \approx Project(L_{repo})$。允许包含未通过 Reconciliation 进入 Ledger 的脏数据（Dirty State）。
+        *   每个本地可写 repo **MUST** 通过 Projection Locator 绑定到一个 projection base，并派生出独立的 `<projection_base>/<repo_name>/` 物理目录。
     * **Store B (Local Branch)**：本地权威分支 $B_{local}$。
         *   对应 `ledger/local/`，包含多个 `.redb` Repo 文件。
         *   $Write(B_{local})$ 仅允许通过 Command/System 写入。

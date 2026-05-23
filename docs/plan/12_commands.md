@@ -22,9 +22,12 @@
 ## 1. CLI Commands {#cli-commands}
 
 *   **Baseline CLI Contract**:
-    *   `deve init`: 初始化 Vault.
-    *   `deve scan`: 扫描并建立索引.
-    *   `deve watch`: 监听文件变更.
+    *   `deve init --repo <name> --projection-base <path>`: 初始化 ledger 与首个本地 repo，并注册该 repo 的 Projection Locator；最终 workspace root 为 `<path>/<name>/`。
+    *   `deve repo projection set --repo <selector> --base <path>`: 为本地 repo 创建或替换 projection base；必须停止 watcher、校验 locator、重建 projection，再恢复 repo runtime。
+    *   `deve repo projection list`: 列出本机 host-local Projection Locator。
+    *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
+    *   `deve scan`: 扫描当前已绑定 workspace root 的 repo 并建立索引.
+    *   `deve watch`: 监听已绑定 workspace root 的 repo 文件变更.
     *   `deve serve`: 启动 WebSocket 服务端.
     *   `deve dump`: 调试工具 (Dump Ops).
     *   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
@@ -32,7 +35,7 @@
     *   `deve verify-p2p`: P2P 逻辑验证.
     *   `deve seed`: 种子节点数据注入.
     *   `deve node-check`: 节点一致性检查，可选修复；`--projection` 执行只读 Structure Facts / projection authority 诊断。
-    *   `deve recover`: 从 ledger 数据恢复 vault 文件。
+    *   `deve recover`: 从 ledger 数据恢复 repo projection workspace 文件。
     *   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
     *   `deve config print`: 输出当前有效运行时配置。
     *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
@@ -68,6 +71,8 @@
     *   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支.
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
     *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
+    *   `Repo: Set Projection Base`: 为本地 repo 绑定 projection base；执行面必须复用 CLI locator 校验合同。
+    *   `Repo: Check Projection Workspace`: 只读检查 repo projection base 与 workspace root readiness。
 
 *   **命令执行边界**:
     *   Command Palette 入口启用时 **MUST** 调用明确 backend contract；未启用时 **MUST** 显示 disabled/unavailable 状态。
