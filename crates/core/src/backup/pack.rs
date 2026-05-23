@@ -30,6 +30,12 @@ impl BackupDigest {
             hex: hex.into(),
         }
     }
+
+    pub fn is_valid_sha256(&self) -> bool {
+        self.algorithm == "sha256"
+            && self.hex.len() == 64
+            && self.hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -223,10 +229,7 @@ fn validate_blob_ref(blob: &BackupBlobRef) -> Result<(), BackupPackError> {
 }
 
 fn validate_digest(digest: &BackupDigest) -> Result<(), BackupPackError> {
-    if digest.algorithm != "sha256" || digest.hex.len() != 64 {
-        return Err(BackupPackError::InvalidDigest);
-    }
-    if !digest.hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if !digest.is_valid_sha256() {
         return Err(BackupPackError::InvalidDigest);
     }
     Ok(())

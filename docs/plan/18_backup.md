@@ -105,7 +105,7 @@ pack 内容可以包含：
 
 pack 内容不得绕过 ledger append 或 source-control authority 直接写入 Projection Workspace。
 
-### 3.4 Restore Candidate
+### 3.4 Restore Candidate {#backup-restore-candidate-contract}
 
 Restore candidate 是下载、验证、解密后尚未导入的备份结果。
 
