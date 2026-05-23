@@ -185,7 +185,7 @@ fn safe_namespace(input: &str) -> Result<String, BackupLocatorError> {
     Ok(input.to_string())
 }
 
-fn normalize_remote_path(input: &str) -> Result<String, BackupLocatorError> {
+pub(crate) fn normalize_remote_path(input: &str) -> Result<String, BackupLocatorError> {
     reject_secret_material(input)?;
     if input.starts_with('/') {
         return Err(BackupLocatorError::UnsafeRemotePath(String::new()));
@@ -209,7 +209,7 @@ fn normalize_remote_path(input: &str) -> Result<String, BackupLocatorError> {
     Ok(out.join("/"))
 }
 
-fn safe_writer_identity(input: &str) -> Result<String, BackupLocatorError> {
+pub(crate) fn safe_writer_identity(input: &str) -> Result<String, BackupLocatorError> {
     if input.trim() != input {
         return Err(BackupLocatorError::UnsafeWriterIdentity(input.to_string()));
     }

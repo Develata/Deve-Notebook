@@ -91,7 +91,7 @@ prefix 的 1:1 映射。
 - 多端备份必须表现为同一 `RepoId` 下的多个 branch backup bindings。
 - 非本 writer 的 branch backup 只能进入 `RemoteReadonly` 或 restore candidate。
 
-### 3.3 Backup Pack
+### 3.3 Backup Pack {#backup-pack-contract}
 
 Backup pack 是加密签名后的 branch ledger artifact。
 
