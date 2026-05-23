@@ -44,6 +44,7 @@ deve.db
 /ledger/
 vault/
 Vault_old/
+test/
 
 # Web
 dist
