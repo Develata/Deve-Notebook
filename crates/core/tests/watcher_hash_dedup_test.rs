@@ -8,8 +8,15 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
         .expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, std::sync::Arc::new(repo))
+}
+
+fn repo_id(repo: &deve_core::ledger::RepoManager, repo_name: &str) -> anyhow::Result<uuid::Uuid> {
+    Ok(repo
+        .get_repo_info_for(None, Some(repo_name))?
+        .expect("repo info")
+        .uuid)
 }
 
 #[test]
@@ -34,24 +41,25 @@ fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
         )
     })?;
 
-    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    let sync = SyncManager::new(repo.clone());
     sync.persist_doc(doc_id)?;
+    let repo_id = repo_id(&repo, &name)?;
 
     // File on disk matches projection — no pending change
-    let events = sync.handle_fs_event("default/dedup.md")?;
+    let events = sync.handle_fs_event("default", repo_id, "dedup.md")?;
     assert!(events.is_empty(), "no change when content matches");
 
     // Write different content — should produce pending
     let file = dir.path().join("vault/default/dedup.md");
     std::fs::write(&file, "modified")?;
-    let first = sync.handle_fs_event("default/dedup.md")?;
+    let first = sync.handle_fs_event("default", repo_id, "dedup.md")?;
     assert!(
         !first.is_empty(),
         "first modification should produce change"
     );
 
     // Write same modified content again — hash dedup
-    let second = sync.handle_fs_event("default/dedup.md")?;
+    let second = sync.handle_fs_event("default", repo_id, "dedup.md")?;
     assert!(second.is_empty(), "repeated same content is deduped");
 
     // Only 1 pending op should exist
@@ -82,17 +90,18 @@ fn revert_to_original_clears_pending() -> anyhow::Result<()> {
         )
     })?;
 
-    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    let sync = SyncManager::new(repo.clone());
     sync.persist_doc(doc_id)?;
+    let repo_id = repo_id(&repo, &name)?;
 
     // Modify then revert
     let file = dir.path().join("vault/default/revert.md");
     std::fs::write(&file, "dirty")?;
-    let changed = sync.handle_fs_event("default/revert.md")?;
+    let changed = sync.handle_fs_event("default", repo_id, "revert.md")?;
     assert!(!changed.is_empty());
 
     std::fs::write(&file, "baseline")?;
-    let reverted = sync.handle_fs_event("default/revert.md")?;
+    let reverted = sync.handle_fs_event("default", repo_id, "revert.md")?;
     assert!(!reverted.is_empty(), "revert event fires");
 
     // After revert, pending should be empty (content matches projection)

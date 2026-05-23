@@ -4,7 +4,7 @@
 //!
 //! # 用户自定义忽略规则
 //!
-//! 解析 vault 根下的 `.deveignore` 文件，格式兼容 `.gitignore`。
+//! 解析 Projection Workspace 根下的 `.deveignore` 文件，格式兼容 `.gitignore`。
 //! Watcher 在处理文件事件前检查路径是否匹配忽略规则。
 
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
@@ -16,12 +16,12 @@ pub struct IgnoreRules {
 }
 
 impl IgnoreRules {
-    /// 从 vault 根目录加载 `.deveignore` 文件。
+    /// 从 Projection Workspace 根目录加载 `.deveignore` 文件。
     ///
     /// 文件不存在或无法解析时返回空规则集（不阻塞启动）。
-    pub fn load(vault_root: &Path) -> Self {
-        let ignore_path = vault_root.join(".deveignore");
-        let mut builder = GitignoreBuilder::new(vault_root);
+    pub fn load(workspace_root: &Path) -> Self {
+        let ignore_path = workspace_root.join(".deveignore");
+        let mut builder = GitignoreBuilder::new(workspace_root);
         if ignore_path.is_file()
             && let Some(err) = builder.add(&ignore_path)
         {
@@ -52,7 +52,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn empty_vault_returns_no_rules() {
+    fn empty_workspace_returns_no_rules() {
         let dir = tempdir().expect("tempdir");
         let rules = IgnoreRules::load(dir.path());
         assert!(!rules.is_ignored("notes/a.md"));

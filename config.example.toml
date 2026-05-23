@@ -6,8 +6,8 @@ profile = "standard"
 # Path Configuration
 # Local ledger storage (contains database and logs)
 ledger_dir = "ledger"
-# Root directory for your documents
-vault_path = "vault"
+# Projection workspace roots are configured per repo with:
+# deve repo projection set --repo <name-or-uuid> --base <path>
 
 # P2P Sync Mode (auto | manual)
 sync_mode = "auto"

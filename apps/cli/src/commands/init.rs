@@ -11,27 +11,29 @@ use std::path::{Path, PathBuf};
 /// 初始化命令
 ///
 /// **功能**:
-/// 初始化 `ledger` 和 `vault` 目录结构。
+/// 初始化 `ledger`、本地 repo、Projection Locator 和 repo projection workspace 目录结构。
 ///
 /// **参数**:
 /// * `ledger_dir`: 账本存储路径
-/// * `vault_path`: 文档库路径
+/// * `repo_name`: 本地 repo 名称
+/// * `projection_base`: repo projection base；最终 workspace 为 `<projection_base>/<repo_name>`
 /// * `path`: 指定的初始化根目录, config.toml 和 .env 将生成在此目录下
 /// * `snapshot_depth`: 快照深度配置
 pub fn run(
     ledger_dir: &Path,
-    vault_path: &Path,
+    repo_name: &str,
+    projection_base: &Path,
     path: PathBuf,
     snapshot_depth: usize,
 ) -> anyhow::Result<()> {
     println!("Initializing ledger at {:?}...", ledger_dir);
-    // 1. 初始化 RepoManager (创建目录结构)
-    let _ = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    std::fs::create_dir_all(vault_path.join("default"))?;
-    std::fs::create_dir_all(deve_core::utils::notegit::repo_dir(
-        &vault_path.join("default"),
-    ))?;
-    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&vault_path.join("default"))?;
+    std::fs::create_dir_all(&path)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(repo_name), None)?;
+    repo.set_projection_base_for_local_repo(repo_name, projection_base)?;
+    let workspace_root = repo.local_repo_workspace_root(repo_name)?;
+    std::fs::create_dir_all(&workspace_root)?;
+    std::fs::create_dir_all(deve_core::utils::notegit::repo_dir(&workspace_root))?;
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
     std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(ledger_dir))?;
 
     // 2. Generate default config.toml
@@ -45,8 +47,8 @@ profile = "standard"
 # Path Configuration
 # Local ledger storage (contains database and logs)
 ledger_dir = "ledger"
-# Root directory for your documents
-vault_path = "vault"
+# Projection workspaces are configured per repo by:
+# deve repo projection set --repo <name-or-uuid> --base <path>
 
 # P2P Sync Mode (auto | manual)
 sync_mode = "auto"
@@ -96,7 +98,6 @@ timeout_ms = 30000
 
 # DEVE_PROFILE=standard
 # DEVE_LEDGER_DIR=ledger
-# DEVE_VAULT_PATH=vault
 # DEVE_SYNC_MODE=auto
 # AI_API_KEY=
 # AI_BASE_URL=https://api.openai.com/v1
@@ -122,7 +123,8 @@ mod tests {
 
         run(
             &root.join("ledger"),
-            &root.join("vault"),
+            "default",
+            &root.join("notes"),
             root.to_path_buf(),
             8,
         )
@@ -146,7 +148,8 @@ mod tests {
 
         run(
             &root.join("ledger"),
-            &root.join("vault"),
+            "default",
+            &root.join("notes"),
             root.to_path_buf(),
             8,
         )
@@ -155,9 +158,10 @@ mod tests {
         assert!(root.join("ledger/local").is_dir());
         assert!(root.join("ledger/remotes").is_dir());
         assert!(root.join("ledger/.host/keys").is_dir());
-        assert!(root.join("vault/default").is_dir());
-        assert!(root.join("vault/default/.notegit").is_dir());
-        let gitignore = std::fs::read_to_string(root.join("vault/default/.gitignore"))
+        assert!(root.join("notes/default").is_dir());
+        assert!(root.join("notes/default/.notegit").is_dir());
+        assert!(root.join("ledger/.host/projection-locators.toml").is_file());
+        let gitignore = std::fs::read_to_string(root.join("notes/default/.gitignore"))
             .expect("repo-local gitignore");
         assert!(gitignore.lines().any(|line| line.trim() == ".notegit/"));
     }
@@ -173,7 +177,8 @@ mod tests {
 
         let err = run(
             &root.join("ledger"),
-            &root.join("vault"),
+            "default",
+            &root.join("notes"),
             bad_parent.clone(),
             8,
         )

@@ -9,12 +9,11 @@ use anyhow::{Result, bail};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::node_check::{check_node_consistency, repair_missing_nodes};
 use deve_core::sync::SyncManager;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 pub fn run(
     ledger_dir: &PathBuf,
-    vault_path: &Path,
     snapshot_depth: usize,
     repair: bool,
     projection: bool,
@@ -33,7 +32,7 @@ pub fn run(
         Err(err) => return Err(err),
     };
     if projection {
-        let reports = collect_projection_reports(Arc::new(repo), vault_path, repo_name.as_deref())?;
+        let reports = collect_projection_reports(Arc::new(repo), repo_name.as_deref())?;
         return print_projection_reports(&reports);
     }
     let reports = collect_reports(&repo, repo_name.as_deref(), repair)?;
@@ -66,11 +65,10 @@ fn collect_reports(
 
 fn collect_projection_reports(
     repo: Arc<RepoManager>,
-    vault_path: &Path,
     target_repo: Option<&str>,
 ) -> Result<Vec<ProjectionCheckResponse>> {
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
-    let sync_manager = SyncManager::new_checked(repo, vault_path.to_path_buf())?;
+    let sync_manager = SyncManager::new_checked(repo)?;
     let mut reports = Vec::with_capacity(repo_names.len());
     for repo_name in repo_names {
         let diagnostic = sync_manager.diagnose_projection_local_repo(&repo_name)?;

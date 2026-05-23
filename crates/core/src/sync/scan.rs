@@ -10,23 +10,21 @@ use crate::vfs::Vfs;
 use crate::watcher_ignore::IgnoreRules;
 use anyhow::{Result, anyhow};
 use std::collections::HashSet;
-use std::path::Path;
 use std::sync::Arc;
 use tracing::{info, warn};
 use walkdir::WalkDir;
 
-/// 全量扫描所有本地 repo 工作区：`vault/<repo_name>/...`
-pub fn scan_vault(repo: &Arc<RepoManager>, vfs: &Vfs, vault_root: &Path) -> Result<()> {
-    scan_vault_excluding(repo, vfs, vault_root, &HashSet::new())
+/// 全量扫描所有已绑定 Projection Locator 的本地 repo 工作区。
+pub fn scan_projection_workspaces(repo: &Arc<RepoManager>, vfs: &Vfs) -> Result<()> {
+    scan_all_local_repos_excluding(repo, vfs, &HashSet::new())
 }
 
-pub(crate) fn scan_vault_excluding(
+pub(crate) fn scan_all_local_repos_excluding(
     repo: &Arc<RepoManager>,
     vfs: &Vfs,
-    vault_root: &Path,
     excluded_repos: &HashSet<String>,
 ) -> Result<()> {
-    info!("SyncScan: Starting full scan of {:?}", vault_root);
+    info!("SyncScan: Starting full scan of local Projection Workspaces");
     for repo_name in repo.list_local_repo_names_for_execution()? {
         if excluded_repos.contains(&repo_name) {
             warn!(
@@ -44,7 +42,7 @@ pub(crate) fn scan_vault_excluding(
 pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &str) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
-    let ignore_rules = repo_root.parent().map(IgnoreRules::load);
+    let ignore_rules = Some(IgnoreRules::load(&repo_root));
     let mut on_disk = HashSet::new();
     let mut seen_docs = HashSet::<DocId>::new();
 
@@ -139,7 +137,11 @@ fn clear_scan_pending(repo: &Arc<RepoManager>, repo_name: &str, repo_path: &str)
     super::pending::clear(repo, repo_name, repo_path)
 }
 
-fn repo_relative_path(repo_name: &str, repo_root: &Path, path: &Path) -> Result<String> {
+fn repo_relative_path(
+    repo_name: &str,
+    repo_root: &std::path::Path,
+    path: &std::path::Path,
+) -> Result<String> {
     let rel = path.strip_prefix(repo_root).map_err(|_| {
         anyhow!(
             "Broken local repo {} while scanning workspace: path escaped repo root: {}",

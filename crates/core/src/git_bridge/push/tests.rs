@@ -54,7 +54,7 @@ fn init_bare_remote(path: &Path) {
 fn new_repo() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let repo_root = dir.path().join("vault").join("default");
     init_git_repo(&repo_root);
     (dir, repo, repo_root)
@@ -245,7 +245,7 @@ fn push_mirror_refuses_unexported_queue_without_touching_remote() {
 fn push_mirror_refuses_git_head_without_deve_mapping() {
     let dir = tempfile::tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let repo_root = dir.path().join("vault").join("default");
     init_git_repo(&repo_root);
     git(&repo_root, &["add", ".gitignore"]);

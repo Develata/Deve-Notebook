@@ -10,7 +10,7 @@ mod common;
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, repo)
 }
 

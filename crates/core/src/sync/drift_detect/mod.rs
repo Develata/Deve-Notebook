@@ -9,6 +9,7 @@ use crate::ledger::RepoManager;
 use crate::source_control::{pending_fs, staging};
 use anyhow::Result;
 use explain::{DiffEvidence, is_explained};
+use std::path::Path;
 
 #[derive(Debug, Default)]
 pub struct DriftReport {
@@ -44,6 +45,25 @@ pub(super) enum EntryKind {
 pub fn detect_repo_drift(repo: &RepoManager, repo_name: &str) -> Result<DriftReport> {
     let projection = enumerate::enumerate_projection(repo, repo_name)?;
     let workspace = walk::enumerate_workspace(repo, repo_name)?;
+    detect_repo_drift_from_entries(repo, repo_name, projection, workspace)
+}
+
+pub(crate) fn detect_repo_drift_at_workspace_root(
+    repo: &RepoManager,
+    repo_name: &str,
+    workspace_root: &Path,
+) -> Result<DriftReport> {
+    let projection = enumerate::enumerate_projection(repo, repo_name)?;
+    let workspace = walk::enumerate_workspace_root(workspace_root)?;
+    detect_repo_drift_from_entries(repo, repo_name, projection, workspace)
+}
+
+fn detect_repo_drift_from_entries(
+    repo: &RepoManager,
+    repo_name: &str,
+    projection: std::collections::BTreeMap<String, enumerate::ProjectedEntry>,
+    workspace: std::collections::BTreeMap<String, walk::WorkspaceEntry>,
+) -> Result<DriftReport> {
     let pending = repo.run_on_local_repo(repo_name, pending_fs::list_all)?;
     let staged = repo.run_on_local_repo(repo_name, staging::list_staged_entries)?;
     let mut report = DriftReport::default();

@@ -15,7 +15,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_st
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let local = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
     let local_info = local.get_repo_info()?.expect("local notes info");
     let peer_id = PeerId::new("peer-remote");
@@ -65,7 +65,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(&peer_id, &local_info)?;

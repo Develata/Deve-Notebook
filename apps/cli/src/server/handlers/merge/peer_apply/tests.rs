@@ -150,7 +150,7 @@ fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some("default"), None)?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let (doc_id, _) =
         repo.apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
@@ -169,7 +169,7 @@ fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::
         )
     })?;
     let repo = Arc::new(repo);
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault));
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone()));
     sync_manager.mark_projection_writeback_fault("default");
     Ok((
         dir,

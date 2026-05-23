@@ -74,27 +74,26 @@ fn init_fails_closed_on_unstatable_local_db_path() {
 }
 
 #[test]
-fn set_vault_root_checked_fails_closed_on_broken_secondary_repo() {
+fn set_projection_base_for_all_local_repos_checked_fails_closed_on_broken_secondary_repo() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let first_vault = dir.path().join("vault-ok");
     std::fs::create_dir_all(&first_vault).expect("first vault dir");
-    repo.set_vault_root_checked(&first_vault)
+    repo.set_projection_base_for_all_local_repos_checked(&first_vault)
         .expect("initial vault mount");
     common::seed_broken_local_repo_file(&ledger_dir, "broken");
     let vault_dir = dir.path().join("vault");
     std::fs::create_dir_all(&vault_dir).expect("vault dir");
 
     let err = repo
-        .set_vault_root_checked(&vault_dir)
+        .set_projection_base_for_all_local_repos_checked(&vault_dir)
         .expect_err("broken local repo must fail checked vault mount");
     assert!(err.to_string().contains("Broken local repo broken"));
-    assert_eq!(
-        repo.local_repo_workspace_root("main")
-            .expect("workspace root after failed mount"),
-        first_vault.join("main")
-    );
+    let root_err = repo
+        .local_repo_workspace_root("main")
+        .expect_err("workspace root lookup must also fail closed on broken catalog");
+    assert!(root_err.to_string().contains("Broken local repo broken"));
 }
 
 #[cfg(unix)]
@@ -180,7 +179,7 @@ fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let vault_root = dir.path().join("vault");
     std::fs::create_dir_all(vault_root.join("notes")).expect("workspace root");
-    main.set_vault_root_checked(&vault_root)
+    main.set_projection_base_for_all_local_repos_checked(&vault_root)
         .expect("mount vault");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
     common::write_repo_metadata(

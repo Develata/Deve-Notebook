@@ -30,7 +30,6 @@ const CONFIG_KEY_SPECS: &[ConfigKeySpec] = &[
     ConfigKeySpec::integer("ui.sidebar_width"),
     ConfigKeySpec::bool("ui.statusbar_visible"),
     ConfigKeySpec::string("ui.theme", &["auto", "light", "dark"]),
-    ConfigKeySpec::string("vault_path", &[]),
 ];
 
 #[derive(Debug, Clone, Copy)]

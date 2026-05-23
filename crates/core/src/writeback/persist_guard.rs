@@ -33,12 +33,9 @@ impl PersistGuard {
         }
     }
 
-    pub(crate) fn should_ignore(&self, vault_root: &std::path::Path, path: &str) -> bool {
+    pub(crate) fn should_ignore(&self, repo_root: &std::path::Path, path: &str) -> bool {
         split(path)
-            .map(|(repo, repo_path)| {
-                self.inner
-                    .should_suppress(repo, &vault_root.join(repo), repo_path)
-            })
+            .map(|(repo, repo_path)| self.inner.should_suppress(repo, repo_root, repo_path))
             .unwrap_or(false)
     }
 }

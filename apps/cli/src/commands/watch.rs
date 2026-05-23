@@ -23,25 +23,16 @@ static RUNNING: AtomicBool = AtomicBool::new(true);
 ///
 /// **阻塞行为**:
 /// 此函数会阻塞直到收到 Ctrl+C 信号。
-pub fn run(
-    ledger_dir: &Path,
-    vault_path: &Path,
-    snapshot_depth: usize,
-    dry_run: bool,
-) -> Result<()> {
+pub fn run(ledger_dir: &Path, snapshot_depth: usize, dry_run: bool) -> Result<()> {
     // 1. 初始化 RepoManager
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root_checked(vault_path)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo = Arc::new(repo);
 
     // 2. 初始化 SyncManager
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(
-        repo.clone(),
-        vault_path.to_path_buf(),
-    )?);
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
     if dry_run {
         repo.list_local_repo_names_for_execution()?;
-        println!("Watcher dry-run OK: {:?}", vault_path);
+        println!("Watcher dry-run OK: repo projection workspaces resolved");
         return Ok(());
     }
     install_shutdown_handler()?;
@@ -60,7 +51,7 @@ pub fn run(
         .collect::<Result<Vec<_>, _>>()?;
 
     // 4. 创建并启动 Watcher
-    println!("启动 Watcher: {:?}", vault_path);
+    println!("启动 Watcher: repo projection workspaces");
     println!("按 Ctrl+C 停止...");
 
     // 5. 阻塞主线程直到收到退出信号
@@ -99,7 +90,12 @@ mod tests {
         let vault_dir = dir.path().join("vault");
         std::fs::create_dir_all(&vault_dir).expect("create vault");
 
-        run(&ledger_dir, &vault_dir, 8, true).expect("watch dry-run");
+        let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
+            .expect("init");
+        repo.set_projection_base_for_local_repo("default", &vault_dir)
+            .expect("locator");
+
+        run(&ledger_dir, 8, true).expect("watch dry-run");
     }
 
     #[test]

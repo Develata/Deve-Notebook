@@ -7,7 +7,7 @@ use crate::source_control::staging;
 fn path_wrapper_preserves_doc_identity_from_exact_pending_entry() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -38,7 +38,7 @@ fn path_wrapper_preserves_doc_identity_from_exact_pending_entry() -> anyhow::Res
 fn path_wrapper_preserves_doc_identity_from_renamed_from_pending_entry() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -71,7 +71,7 @@ fn path_wrapper_preserves_doc_identity_from_renamed_from_pending_entry() -> anyh
 fn path_wrapper_fails_closed_when_old_path_is_reused() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let doc_id = crate::models::DocId::new();
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
@@ -114,7 +114,7 @@ fn path_wrapper_fails_closed_when_old_path_is_reused() -> anyhow::Result<()> {
 fn stage_wrapper_stages_renamed_entry_from_old_path() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -151,7 +151,7 @@ fn stage_wrapper_stages_renamed_entry_from_old_path() -> anyhow::Result<()> {
 fn path_wrapper_keeps_docless_exact_delete_path_only() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (_doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -184,7 +184,7 @@ fn path_wrapper_keeps_docless_exact_delete_path_only() -> anyhow::Result<()> {
 fn path_wrapper_promotes_docless_non_delete_to_tracked_identity() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",

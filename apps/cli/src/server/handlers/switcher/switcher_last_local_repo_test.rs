@@ -23,7 +23,7 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let test = RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
     let test_info = test.get_repo_info()?.expect("test repo info");
     let peer_id = PeerId::new("peer-remote");
@@ -41,7 +41,7 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let state = Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
         tx,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(

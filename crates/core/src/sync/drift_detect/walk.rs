@@ -20,9 +20,13 @@ pub fn enumerate_workspace(
     repo_name: &str,
 ) -> Result<BTreeMap<String, WorkspaceEntry>> {
     let root = repo.local_repo_workspace_root(repo_name)?;
+    enumerate_workspace_root(&root)
+}
+
+pub(super) fn enumerate_workspace_root(root: &Path) -> Result<BTreeMap<String, WorkspaceEntry>> {
     let mut entries = BTreeMap::new();
     if root.exists() {
-        walk_dir(root.as_path(), "", &mut entries)?;
+        walk_dir(root, "", &mut entries)?;
     }
     Ok(entries)
 }

@@ -8,7 +8,7 @@ use tempfile::tempdir;
 fn list_changes_keeps_same_path_entries_for_different_docs() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let doc_a = deve_core::models::DocId::new();
     let doc_b = deve_core::models::DocId::new();
 

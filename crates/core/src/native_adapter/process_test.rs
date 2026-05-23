@@ -13,7 +13,6 @@ fn valid_spawn_spec() -> NativeProcessSpawnSpec {
         }],
         profile: "standard".to_string(),
         config_path: root.join("config.toml"),
-        vault_path: root.join("vault"),
         ledger_path: root.join("ledger"),
         bind_hints: NativeProcessBindHints {
             http_host: "127.0.0.1".to_string(),

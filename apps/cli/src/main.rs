@@ -9,9 +9,9 @@
 //!
 //! ## 命令说明
 //!
-//! - `init`: 初始化新的 vault 目录
-//! - `scan`: 索引 vault 中的所有 Markdown 文件 (Sync Manager)
-//! - `watch`: 监控文件系统变更 (Watcher Service)
+//! - `init`: 初始化 ledger 与 repo Projection Locator
+//! - `scan`: 索引 repo projection workspace 中的 Markdown 文件 (Sync Manager)
+//! - `watch`: 监控 repo projection workspace 变更 (Watcher Service)
 //! - `dump`: 调试工具，用于检查 ops 记录
 //! - `serve`: 启动 WebSocket 后端服务器 (Backend Architecture)
 //! - `graph`: 输出当前 repo 的只读 GraphProjection JSON
@@ -47,6 +47,10 @@ pub(crate) enum Commands {
     Init {
         #[arg(short, long, default_value = ".")]
         path: PathBuf,
+        #[arg(long)]
+        repo: String,
+        #[arg(long = "projection-base")]
+        projection_base: PathBuf,
     },
     /// Scan and index the vault
     Scan,
@@ -146,6 +150,11 @@ pub(crate) enum Commands {
         #[command(subcommand)]
         action: GitAction,
     },
+    /// Inspect or update repo Projection Locators
+    Repo {
+        #[command(subcommand)]
+        action: RepoAction,
+    },
     /// Repair known local corruption from backups and quarantine invalid shadows
     Repair {
         /// Run repair readiness checks without executing repair steps
@@ -173,6 +182,33 @@ pub(crate) enum ConfigAction {
     Print,
     /// Set a whitelisted key in config.toml
     Set { key: String, value: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum RepoAction {
+    /// Inspect or update repo Projection Locator state
+    Projection {
+        #[command(subcommand)]
+        action: RepoProjectionAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub(crate) enum RepoProjectionAction {
+    /// Set the projection base for a local repo
+    Set {
+        #[arg(long)]
+        repo: String,
+        #[arg(long)]
+        base: PathBuf,
+    },
+    /// List repo Projection Locators
+    List,
+    /// Check the resolved projection workspace root for a local repo
+    Check {
+        #[arg(long)]
+        repo: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -233,15 +269,29 @@ async fn main() -> anyhow::Result<()> {
 
     // Use config values
     let ledger_dir = PathBuf::from(&config.ledger_dir);
-    let vault_path = PathBuf::from(&config.vault_path);
 
     tracing::info!("Starting Deve-Note with profile: {:?}", config.profile);
 
-    dispatch::run(args.command, &config, &ledger_dir, &vault_path).await?;
+    dispatch::run(args.command, &config, &ledger_dir).await?;
     Ok(())
 }
 
 fn run_pre_config_command(command: &Option<Commands>) -> anyhow::Result<bool> {
+    if let Some(Commands::Init {
+        path,
+        repo,
+        projection_base,
+    }) = command
+    {
+        commands::init::run(
+            &path.join("ledger"),
+            repo,
+            projection_base,
+            path.to_path_buf(),
+            100,
+        )?;
+        return Ok(true);
+    }
     if let Some(Commands::Config {
         action: ConfigAction::Set { key, value },
     }) = command

@@ -15,14 +15,8 @@ use deve_core::git_bridge::GitMirrorRunOptions;
 use deve_core::ledger::RepoManager;
 use std::path::Path;
 
-pub fn status(
-    ledger_dir: &Path,
-    vault_root: &Path,
-    target_repo: Option<&str>,
-    snapshot_depth: usize,
-) -> Result<()> {
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root(vault_root);
+pub fn status(ledger_dir: &Path, target_repo: Option<&str>, snapshot_depth: usize) -> Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
@@ -40,14 +34,12 @@ pub fn status(
 
 pub fn mirror(
     ledger_dir: &Path,
-    vault_root: &Path,
     target_repo: Option<&str>,
     retry_out_of_sync: bool,
     snapshot_depth: usize,
 ) -> Result<()> {
     run_executor(
         ledger_dir,
-        vault_root,
         target_repo,
         retry_out_of_sync,
         snapshot_depth,
@@ -58,14 +50,12 @@ pub fn mirror(
 
 pub fn export(
     ledger_dir: &Path,
-    vault_root: &Path,
     target_repo: Option<&str>,
     retry_out_of_sync: bool,
     snapshot_depth: usize,
 ) -> Result<()> {
     run_executor(
         ledger_dir,
-        vault_root,
         target_repo,
         retry_out_of_sync,
         snapshot_depth,
@@ -76,13 +66,11 @@ pub fn export(
 
 pub fn import(
     ledger_dir: &Path,
-    vault_root: &Path,
     target_repo: Option<&str>,
     apply: bool,
     snapshot_depth: usize,
 ) -> Result<()> {
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root(vault_root);
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
@@ -99,14 +87,12 @@ pub fn import(
 
 pub fn push(
     ledger_dir: &Path,
-    vault_root: &Path,
     target_repo: Option<&str>,
     remote: Option<&str>,
     branch: Option<&str>,
     snapshot_depth: usize,
 ) -> Result<()> {
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root(vault_root);
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
@@ -127,7 +113,6 @@ pub fn push(
 
 fn run_executor(
     ledger_dir: &Path,
-    vault_root: &Path,
     target_repo: Option<&str>,
     retry_out_of_sync: bool,
     snapshot_depth: usize,
@@ -139,8 +124,7 @@ fn run_executor(
     ) -> Result<deve_core::git_bridge::GitMirrorRunReport>,
     print_report: fn(&str, &deve_core::git_bridge::GitMirrorRunReport),
 ) -> Result<()> {
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root(vault_root);
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;

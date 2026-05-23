@@ -61,7 +61,7 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
     assert_eq!(spec.bind_hints.ws_port, Some(39101));
     assert!(spec.env_allowlist.contains(&"DEVE_PROFILE".to_string()));
     assert!(spec.env_allowlist.contains(&"DEVE_LEDGER_DIR".to_string()));
-    assert!(spec.env_allowlist.contains(&"DEVE_VAULT_PATH".to_string()));
+    assert!(!spec.env_allowlist.contains(&"DEVE_VAULT_PATH".to_string()));
     assert!(
         spec.env_allowlist
             .contains(&NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string())

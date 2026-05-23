@@ -12,7 +12,7 @@ use deve_core::config::{AppProfile, SyncMode};
 use deve_core::plugin::runtime::host;
 use reqwest::Client;
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 use tokio::time::{Duration, sleep, timeout};
 
@@ -38,11 +38,7 @@ pub struct ServeOptions {
 /// 2. 启动 `SyncManager` 进行初始扫描
 /// 3. 加载本地插件
 /// 4. 启动 WebSocket 服务监听端口
-pub async fn run(
-    ledger_dir: &PathBuf,
-    vault_path: PathBuf,
-    options: ServeOptions,
-) -> anyhow::Result<()> {
+pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()> {
     let ServeOptions {
         port,
         snapshot_depth,
@@ -62,8 +58,8 @@ pub async fn run(
         tracing::warn!("Serve dev mode enabled via --dev");
     }
     if dry_run {
-        let _ = init_runtime(ledger_dir, &vault_path, snapshot_depth)?;
-        tracing::info!("Serve dry-run OK: {:?}", vault_path);
+        let _ = init_runtime(ledger_dir, snapshot_depth)?;
+        tracing::info!("Serve dry-run OK: repo projection workspaces resolved");
         return Ok(());
     }
 
@@ -86,17 +82,14 @@ pub async fn run(
         return Err(err.into());
     }
 
-    let repo_arc = init_runtime(ledger_dir, &vault_path, snapshot_depth)?;
+    let repo_arc = init_runtime(ledger_dir, snapshot_depth)?;
     let plugins = load_plugins()?;
 
     if native_loopback {
         tracing::info!("Native loopback serve mode enabled on {}", bind_addr);
-        server::start_server_with_options(
-            repo_arc, vault_path, launch, plugins, profile, sync_mode,
-        )
-        .await?;
+        server::start_server_with_options(repo_arc, launch, plugins, profile, sync_mode).await?;
     } else {
-        server::start_server(repo_arc, vault_path, port, plugins, profile, sync_mode).await?;
+        server::start_server(repo_arc, port, plugins, profile, sync_mode).await?;
     }
     Ok(())
 }

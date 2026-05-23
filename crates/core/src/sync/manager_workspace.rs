@@ -81,12 +81,12 @@ impl SyncManager {
         Ok(seqs)
     }
 
-    pub fn handle_fs_event(&self, path_str: &str) -> Result<Vec<ServerMessage>> {
-        let Some((repo_name, repo_id, repo_path)) =
-            self.repo.resolve_local_workspace_path(path_str)?
-        else {
-            return Ok(vec![]);
-        };
+    pub fn handle_fs_event(
+        &self,
+        repo_name: &str,
+        repo_id: crate::models::RepoId,
+        repo_path: &str,
+    ) -> Result<Vec<ServerMessage>> {
         if self.is_projection_degraded(&repo_name) {
             tracing::warn!(
                 repo_name = %repo_name,
@@ -98,11 +98,12 @@ impl SyncManager {
             return Ok(vec![]);
         }
         let handler = handler::FsEventHandler::new(&self.repo, &self.vfs, &repo_name, repo_id);
-        handler.handle_event(&repo_path)
+        handler.handle_event(repo_path)
     }
 
     /// Invariant: 仅忽略近期由 SyncManager 自己写回、且内容哈希完全一致的事件。
-    pub fn should_ignore_fs_event(&self, path_str: &str) -> bool {
-        self.repo.should_ignore_workspace_event(path_str)
+    pub fn should_ignore_fs_event(&self, repo_name: &str, repo_path: &str) -> bool {
+        self.repo
+            .should_ignore_workspace_event(repo_name, repo_path)
     }
 }

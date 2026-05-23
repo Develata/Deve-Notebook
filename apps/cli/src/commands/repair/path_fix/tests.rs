@@ -141,7 +141,7 @@ fn validate_workspace_rename_target_fails_closed_when_target_exists() -> anyhow:
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let vault = dir.path().join("vault");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     let new_abs = repo.local_repo_workspace_path("default", "notes/live.md")?;
     std::fs::create_dir_all(old_abs.parent().expect("old parent"))?;
@@ -168,7 +168,7 @@ fn rename_workspace_file_fails_closed_when_target_exists() -> anyhow::Result<()>
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let vault = dir.path().join("vault");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     let new_abs = repo.local_repo_workspace_path("default", "notes/live.md")?;
     std::fs::create_dir_all(old_abs.parent().expect("old parent"))?;
@@ -191,7 +191,7 @@ fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> 
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let vault = dir.path().join("vault");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     std::fs::create_dir_all(&notes_dir)?;
@@ -224,7 +224,7 @@ fn rename_workspace_file_fails_closed_when_source_is_unstatable() -> anyhow::Res
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let vault = dir.path().join("vault");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     std::fs::create_dir_all(&notes_dir)?;

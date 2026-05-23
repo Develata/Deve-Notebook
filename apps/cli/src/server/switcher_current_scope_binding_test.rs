@@ -14,7 +14,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, PeerId)>
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(&peer_id, &local_info)?;

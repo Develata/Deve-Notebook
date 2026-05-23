@@ -14,13 +14,13 @@ async fn switch_branch_fails_closed_when_target_branch_lacks_current_repo_match(
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let default_info = repo.get_repo_info()?.expect("default info");
     let mut notes_repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
-    notes_repo.set_vault_root(&vault);
+    notes_repo.set_projection_base_for_all_local_repos(&vault);
     let notes_info = notes_repo.get_repo_info()?.expect("notes info");
     let mut ghost_repo = RepoManager::init(dir.path(), 10, Some("ghost"), Some("urn:ghost"))?;
-    ghost_repo.set_vault_root(&vault);
+    ghost_repo.set_projection_base_for_all_local_repos(&vault);
     let state = app_state(repo, vault, dir.path().join("host"))?;
     let peer_id = PeerId::new("peer-remote");
     state

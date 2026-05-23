@@ -23,13 +23,13 @@ async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale(
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let state = Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
         tx,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(

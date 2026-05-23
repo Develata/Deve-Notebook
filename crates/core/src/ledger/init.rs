@@ -63,6 +63,8 @@ pub fn init(
     repo_url: Option<&str>,
 ) -> Result<RepoManager> {
     let ledger_dir = ledger_dir.as_ref().to_path_buf();
+    let base_name =
+        super::manager::projection_locator::safe_repo_path_segment(repo_name.unwrap_or("default"))?;
 
     // 1. 创建目录结构
     std::fs::create_dir_all(&ledger_dir)
@@ -76,12 +78,9 @@ pub fn init(
     std::fs::create_dir_all(&remotes_dir)
         .with_context(|| format!("无法创建远端目录: {:?}", remotes_dir))?;
 
-    // 2. 准备仓库标识
-    let base_name = repo_name.unwrap_or("default");
-
     // 3. 碰撞检测与处理 (Collision Handling)
     // 策略: 检查文件是否存在 -> 若存在，检查 URL 是否匹配 -> 若不匹配，重命名尝试 (name-1)
-    let mut final_name = base_name.to_string();
+    let mut final_name = base_name.clone();
     let mut counter = 0;
     let local_db;
     let mut is_new_repo = false;
@@ -175,7 +174,7 @@ pub fn init(
         write_txn.commit()?;
     }
 
-    repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref(), None, false)?;
+    repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref(), false, None)?;
 
     let repo = RepoManager {
         ledger_dir,
@@ -185,7 +184,6 @@ pub fn init(
         repaired_local_runtime_tables: RwLock::new(HashSet::new()),
         shadow_dbs: RwLock::new(HashMap::new()),
         snapshot_depth,
-        vault_root: None,
         persist_guard: Arc::new(crate::writeback::PersistGuard::new()),
     };
     repo.repair_remote_repo_catalogs()

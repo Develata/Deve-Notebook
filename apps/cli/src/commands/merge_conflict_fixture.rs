@@ -6,7 +6,7 @@
 use anyhow::{Result, bail};
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::{LedgerEntry, Op, PeerId, StructureOp};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct MergeConflictFixtureOptions {
     pub peer: String,
@@ -19,7 +19,6 @@ pub struct MergeConflictFixtureOptions {
 
 pub fn run(
     ledger_dir: &Path,
-    vault_path: &Path,
     snapshot_depth: usize,
     options: MergeConflictFixtureOptions,
 ) -> Result<()> {
@@ -31,8 +30,7 @@ pub fn run(
         bail!("merge conflict fixture requires three distinct contents");
     }
 
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root_checked(vault_path)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_name = resolve_repo_name(&repo, options.repo.as_deref())?;
     let repo_info = repo
         .get_repo_info_for(None, Some(&repo_name))?
@@ -60,9 +58,7 @@ pub fn run(
         &options.base,
         &options.remote,
     )?;
-    let target = vault_path
-        .join(&repo_name)
-        .join(PathBuf::from(options.path.as_str()));
+    let target = repo.local_repo_workspace_path(&repo_name, &options.path)?;
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)?;
     }

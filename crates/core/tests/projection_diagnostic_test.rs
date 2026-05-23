@@ -9,13 +9,13 @@ mod common;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, Arc::new(repo))
 }
 
 #[test]
 fn projection_diagnostic_reports_missing_parent_as_authority_corrupt() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = DocId::new();
     common::append_unvalidated_local_op(
         repo.as_ref(),
@@ -33,7 +33,7 @@ fn projection_diagnostic_reports_missing_parent_as_authority_corrupt() {
         ),
     );
 
-    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let sync = SyncManager::new(repo);
     let diagnostic = sync
         .diagnose_projection_local_repo("default")
         .expect("diagnose projection");

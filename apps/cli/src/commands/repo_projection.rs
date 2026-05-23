@@ -1,0 +1,88 @@
+//! plan_ref:
+//!   - 12_commands#cli-commands
+//!   - 04_storage#projection-locator-contract
+
+use super::repo_arg::resolve_local_repo_arg;
+use anyhow::Result;
+use deve_core::ledger::RepoManager;
+use std::path::Path;
+
+pub fn set(
+    ledger_dir: &Path,
+    repo_selector: &str,
+    base: &Path,
+    snapshot_depth: usize,
+) -> Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo_name = resolve_local_repo_arg(&repo, Some(repo_selector))?;
+    let locator = repo.set_projection_base_for_local_repo(&repo_name, base)?;
+    let workspace = repo.check_projection_locator_for_local_repo(&repo_name)?;
+    println!(
+        "Projection Locator set: {} {} -> {:?}",
+        repo_name, locator.repo_id, workspace
+    );
+    Ok(())
+}
+
+pub fn list(ledger_dir: &Path, snapshot_depth: usize) -> Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    for locator in repo.list_projection_locators()? {
+        println!(
+            "{} {} {:?}",
+            locator.repo_id, locator.repo_name_hint, locator.projection_base_abs
+        );
+    }
+    Ok(())
+}
+
+pub fn check(ledger_dir: &Path, repo_selector: &str, snapshot_depth: usize) -> Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo_name = resolve_local_repo_arg(&repo, Some(repo_selector))?;
+    let workspace = repo.check_projection_locator_for_local_repo(&repo_name)?;
+    println!("Projection workspace OK: {} -> {:?}", repo_name, workspace);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{check, list, set};
+    use crate::commands::init;
+    use deve_core::ledger::RepoManager;
+
+    #[test]
+    fn projection_locator_init_writes_locator_without_vault_path_config() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let root = dir.path();
+        let ledger = root.join("ledger");
+        let notes = root.join("notes");
+
+        init::run(&ledger, "default", &notes, root.to_path_buf(), 8)?;
+
+        let config = std::fs::read_to_string(root.join("config.toml"))?;
+        assert!(!config.contains("vault_path"));
+        assert!(root.join("ledger/.host/projection-locators.toml").is_file());
+        assert!(notes.join("default/.notegit").is_dir());
+        Ok(())
+    }
+
+    #[test]
+    fn projection_locator_set_list_check_roundtrip() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger = dir.path().join("ledger");
+        let first = dir.path().join("first");
+        let second = dir.path().join("second");
+        let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+        repo.set_projection_base_for_local_repo("default", &first)?;
+
+        set(&ledger, "default", &second, 8)?;
+        list(&ledger, 8)?;
+        check(&ledger, "default", 8)?;
+
+        let reopened = RepoManager::init(&ledger, 8, None, None)?;
+        assert_eq!(
+            reopened.local_repo_workspace_root("default")?,
+            std::fs::canonicalize(&second)?.join("default")
+        );
+        Ok(())
+    }
+}

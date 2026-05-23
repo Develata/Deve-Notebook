@@ -21,7 +21,7 @@ pub(crate) fn dispatch_batch(
     events: Vec<DebouncedEvent>,
     callback: Option<&WatcherCallback>,
 ) -> Result<(), WatcherError> {
-    let ignore_rules = repo_root.parent().map(IgnoreRules::load);
+    let ignore_rules = Some(IgnoreRules::load(repo_root));
     for event in events {
         if is_rename(&event) && event.paths.len() >= 2 {
             dispatch_rename(sync, repo_name, repo_id, repo_root, &event.paths, callback)?;
@@ -38,13 +38,13 @@ pub(crate) fn dispatch_batch(
                 continue;
             }
             if !filter::allows_repo_path(&repo_path) {
-                dispatch_dir_change(sync, &root_relative, &repo_path, path)?;
+                dispatch_dir_change(sync, repo_name, repo_id, &root_relative, &repo_path, path)?;
                 continue;
             }
-            if sync.should_ignore_fs_event(&root_relative) {
+            if sync.should_ignore_fs_event(repo_name, &repo_path) {
                 continue;
             }
-            for msg in sync.handle_fs_event(&root_relative)? {
+            for msg in sync.handle_fs_event(repo_name, repo_id, &repo_path)? {
                 if let Some(cb) = callback {
                     cb(msg);
                 }
@@ -72,7 +72,7 @@ fn dispatch_rename(
     let Some(new_path) = repo_path(repo_root, &paths[1]) else {
         return Ok(());
     };
-    let ignore_rules = repo_root.parent().map(IgnoreRules::load);
+    let ignore_rules = Some(IgnoreRules::load(repo_root));
     let new_root_relative = sync
         .repo
         .local_repo_workspace_relative(repo_name, &new_path);
@@ -80,7 +80,14 @@ fn dispatch_rename(
         return Ok(());
     }
     if !filter::allows_repo_path(&old_path) || !filter::allows_repo_path(&new_path) {
-        dispatch_dir_change(sync, &new_root_relative, &new_path, &paths[1])?;
+        dispatch_dir_change(
+            sync,
+            repo_name,
+            repo_id,
+            &new_root_relative,
+            &new_path,
+            &paths[1],
+        )?;
         return Ok(());
     }
     let doc_id = rename_doc_id(sync, repo_name, &new_path)?.or_else(|| {
@@ -116,6 +123,8 @@ fn repo_path(repo_root: &Path, path: &Path) -> Option<String> {
 
 fn dispatch_dir_change(
     sync: &Arc<SyncManager>,
+    repo_name: &str,
+    repo_id: RepoId,
     root_relative: &str,
     repo_path: &str,
     path: &Path,
@@ -123,11 +132,12 @@ fn dispatch_dir_change(
     if !filter::allows_repo_dir_path(repo_path) || !is_directory_event(path, root_relative)? {
         return Ok(());
     }
-    sync.handle_dir_change(root_relative).map_err(|err| {
-        WatcherError::from(anyhow::anyhow!(
-            "Failed to handle dir change for {root_relative}: {err}"
-        ))
-    })?;
+    sync.handle_dir_change(repo_name, repo_id, repo_path)
+        .map_err(|err| {
+            WatcherError::from(anyhow::anyhow!(
+                "Failed to handle dir change for {root_relative}: {err}"
+            ))
+        })?;
     Ok(())
 }
 
@@ -147,10 +157,8 @@ fn rename_doc_id(
     repo_name: &str,
     repo_path: &str,
 ) -> Result<Option<crate::models::DocId>, WatcherError> {
-    let root_rel = sync
-        .repo
-        .local_repo_workspace_relative(repo_name, repo_path);
-    let Some(inode) = sync.vfs.get_inode(&root_rel)? else {
+    let disk_path = sync.repo.local_repo_workspace_path(repo_name, repo_path)?;
+    let Some(inode) = sync.vfs.get_inode_abs(&disk_path)? else {
         return Ok(None);
     };
     Ok(sync

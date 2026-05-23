@@ -101,7 +101,7 @@ pub(super) fn commit_deve_file(
 
 pub(super) fn open_repo(ledger_dir: &Path, vault_root: &Path) -> Result<RepoManager> {
     let mut repo = RepoManager::init(ledger_dir, 10, None, None)?;
-    repo.set_vault_root(vault_root);
+    repo.set_projection_base_for_all_local_repos(vault_root);
     Ok(repo)
 }
 
@@ -116,7 +116,7 @@ pub(super) fn prepare_exported_baseline(
         init_git_repo(repo_root);
         commit_deve_file(dir, &repo, "note.md", "hello\n")?;
     }
-    git::export(ledger_dir, vault_root, Some("default"), false, 10)?;
+    git::export(ledger_dir, Some("default"), false, 10)?;
     assert_eq!(git_cmd(repo_root, &["show", "HEAD:note.md"]), "hello\n");
     assert!(git_cmd(repo_root, &["status", "--porcelain"]).is_empty());
     Ok(())
@@ -149,7 +149,7 @@ pub(super) fn resolve_imported_change_to_queued_commit(
         doc_id
     };
     write_workspace_file(dir, "note.md", "git import\n");
-    git::import(ledger_dir, vault_root, Some("default"), true, 10)?;
+    git::import(ledger_dir, Some("default"), true, 10)?;
 
     let repo = open_repo(ledger_dir, vault_root)?;
     let pending = repo.list_pending_fs_in_local_repo("default")?;

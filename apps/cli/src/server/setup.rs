@@ -105,9 +105,9 @@ pub(super) fn start_file_watchers(
 }
 
 #[cfg(test)]
-fn validate_file_watcher_startup(vault_path: &std::path::Path) -> Result<()> {
-    deve_core::watcher::validate_watch_root(vault_path)
-        .with_context(|| format!("Watcher startup preflight failed for {:?}", vault_path))
+fn validate_file_watcher_startup(workspace_root: &std::path::Path) -> Result<()> {
+    deve_core::watcher::validate_watch_root(workspace_root)
+        .with_context(|| format!("Watcher startup preflight failed for {:?}", workspace_root))
 }
 
 #[cfg(test)]
@@ -133,10 +133,10 @@ mod tests {
     }
 
     #[test]
-    fn validate_file_watcher_startup_fails_closed_on_missing_vault_root() {
+    fn validate_file_watcher_startup_fails_closed_on_missing_workspace_root() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let err = validate_file_watcher_startup(&dir.path().join("missing-vault"))
-            .expect_err("missing vault root must fail closed");
+        let err = validate_file_watcher_startup(&dir.path().join("missing-workspace"))
+            .expect_err("missing workspace root must fail closed");
 
         assert!(
             err.to_string().contains("Watcher startup preflight failed")

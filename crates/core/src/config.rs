@@ -17,7 +17,7 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use anyhow::Context;
+use anyhow::{Context, bail};
 mod defaults;
 mod env_alias;
 mod profile;
@@ -37,6 +37,11 @@ impl Config {
         if let Err(e) = dotenvy::dotenv() {
             tracing::debug!(".env file not found or invalid: {}", e);
         }
+        if std::env::var_os("DEVE_VAULT_PATH").is_some() {
+            bail!(
+                "DEVE_VAULT_PATH is no longer supported; configure repo Projection Locators instead"
+            );
+        }
 
         let settings = config::Config::builder()
             .add_source(config::File::with_name("config").required(false))
@@ -47,6 +52,9 @@ impl Config {
             )
             .build()
             .context("Failed to build configuration")?;
+        if settings.get::<config::Value>("vault_path").is_ok() {
+            bail!("vault_path is no longer supported; configure repo Projection Locators instead");
+        }
 
         let mut config = settings
             .clone()

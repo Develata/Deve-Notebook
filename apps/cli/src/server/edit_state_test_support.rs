@@ -25,11 +25,11 @@ pub(crate) fn edit_harness(with_test_repo: bool) -> anyhow::Result<EditHarness> 
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let default_repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let test_repo_id = if with_test_repo {
         let mut test_repo = RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
-        test_repo.set_vault_root(&vault);
+        test_repo.set_projection_base_for_all_local_repos(&vault);
         Some(test_repo.get_repo_info()?.expect("test info").uuid)
     } else {
         None
@@ -43,7 +43,7 @@ pub(crate) fn edit_harness(with_test_repo: bool) -> anyhow::Result<EditHarness> 
         test_repo_id,
         state: Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

@@ -6,42 +6,35 @@ use super::{DirRefreshGuard, ProjectionHealth, SyncManager, materialize, scan};
 use crate::ledger::RepoManager;
 use crate::vfs::Vfs;
 use anyhow::Result;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 impl SyncManager {
-    pub fn new(repo: Arc<RepoManager>, vault_root: PathBuf) -> Self {
-        let vfs = Vfs::new(&vault_root);
+    pub fn new(repo: Arc<RepoManager>) -> Self {
         Self {
             dir_refresh_guard: DirRefreshGuard::new(),
             persist_guard: repo.persist_guard.clone(),
             repo,
-            vault_root,
-            vfs,
+            vfs: Vfs::unrooted(),
             projection_health: ProjectionHealth::new(),
         }
     }
 
-    pub fn new_checked(repo: Arc<RepoManager>, vault_root: PathBuf) -> Result<Self> {
-        let vfs = Vfs::new_checked(&vault_root)?;
+    pub fn new_checked(repo: Arc<RepoManager>) -> Result<Self> {
+        repo.list_local_repo_names_for_execution()?;
+        repo.validate_projection_locator_map()?;
         Ok(Self {
             dir_refresh_guard: DirRefreshGuard::new(),
             persist_guard: repo.persist_guard.clone(),
             repo,
-            vault_root,
-            vfs,
+            vfs: Vfs::unrooted(),
             projection_health: ProjectionHealth::new(),
         })
     }
 
     pub fn scan(&self) -> Result<()> {
-        let degraded = materialize::prepare_local_workspaces(
-            &self.repo,
-            &self.vault_root,
-            &self.persist_guard,
-        )?;
+        let degraded = materialize::prepare_local_workspaces(&self.repo, &self.persist_guard)?;
         let degraded_set = degraded.iter().cloned().collect();
         self.replace_projection_degraded(&degraded);
-        scan::scan_vault_excluding(&self.repo, &self.vfs, &self.vault_root, &degraded_set)
+        scan::scan_all_local_repos_excluding(&self.repo, &self.vfs, &degraded_set)
     }
 }

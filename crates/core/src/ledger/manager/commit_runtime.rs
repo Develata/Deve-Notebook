@@ -13,7 +13,6 @@ use crate::ledger::manager::{commit_plan, commit_preflight};
 use crate::ledger::range;
 use crate::source_control::{CommitInfo, commits, staging};
 use anyhow::Result;
-use std::path::PathBuf;
 
 pub(crate) struct CommitRuntime<'a> {
     manager: &'a RepoManager,
@@ -24,23 +23,14 @@ impl<'a> CommitRuntime<'a> {
         Self { manager }
     }
 
-    pub(crate) fn commit_staged_with_ops(
-        &self,
-        message: &str,
-        vault_root: PathBuf,
-    ) -> Result<CommitInfo> {
-        self.commit_staged_with_ops_in_local_repo(
-            self.manager.local_repo_name(),
-            message,
-            vault_root,
-        )
+    pub(crate) fn commit_staged_with_ops(&self, message: &str) -> Result<CommitInfo> {
+        self.commit_staged_with_ops_in_local_repo(self.manager.local_repo_name(), message)
     }
 
     pub(crate) fn commit_staged_with_ops_in_local_repo(
         &self,
         repo_name: &str,
         message: &str,
-        vault_root: PathBuf,
     ) -> Result<CommitInfo> {
         let staged = self
             .manager
@@ -65,7 +55,6 @@ impl<'a> CommitRuntime<'a> {
             } else {
                 self.manager.commit_file_ops_in_local_repo(
                     repo_name,
-                    &vault_root,
                     &target.path,
                     target.doc_id,
                 )?;

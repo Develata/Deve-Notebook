@@ -11,7 +11,7 @@ use tempfile::tempdir;
 fn apply_file_structure_fails_closed_when_legacy_path_binding_conflicts() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let doc_id = DocId::new();
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
@@ -40,7 +40,7 @@ fn apply_file_structure_fails_closed_when_legacy_path_binding_conflicts() {
 fn apply_file_delete_structure_returns_none_when_only_legacy_path_mapping_exists() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let doc_id = DocId::new();
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write = db.begin_write()?;
@@ -73,7 +73,7 @@ fn apply_file_delete_structure_returns_none_when_only_legacy_path_mapping_exists
 fn commit_staged_fails_when_workspace_file_is_missing() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
@@ -103,7 +103,7 @@ fn commit_staged_fails_when_workspace_file_is_missing() {
 fn commit_staged_preflights_all_workspace_files_before_ledger_append() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let existing_path = dir.path().join("vault/default/notes/a.md");
     std::fs::create_dir_all(existing_path.parent().expect("parent")).expect("create parent");
     std::fs::write(&existing_path, "ok").expect("write existing");
@@ -161,7 +161,7 @@ fn commit_staged_preflights_all_workspace_files_before_ledger_append() {
 fn commit_staged_rejects_delete_target_when_doc_id_path_mismatches() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_a, _ops) = repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
         .expect("doc a");
@@ -211,7 +211,7 @@ fn commit_staged_rejects_delete_target_when_doc_id_path_mismatches() {
 fn commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_a, _ops) = repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
         .expect("doc a");
@@ -264,7 +264,7 @@ fn commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc() {
 fn commit_staged_rejects_upsert_move_without_rename_evidence() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
         .expect("doc a");

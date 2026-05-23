@@ -70,7 +70,6 @@ pub struct NativeProcessSpawnSpec {
     pub env: Vec<NativeProcessEnvBinding>,
     pub profile: String,
     pub config_path: PathBuf,
-    pub vault_path: PathBuf,
     pub ledger_path: PathBuf,
     pub bind_hints: NativeProcessBindHints,
     pub path_resolution: NativeProcessPathResolution,
@@ -85,7 +84,6 @@ impl NativeProcessSpawnSpec {
             }
         }
         validate_absolute_path("config_path", &self.config_path)?;
-        validate_absolute_path("vault_path", &self.vault_path)?;
         validate_absolute_path("ledger_path", &self.ledger_path)?;
         validate_bind_hints(&self.bind_hints)?;
         validate_env_contract(&self.env_allowlist, &self.env)

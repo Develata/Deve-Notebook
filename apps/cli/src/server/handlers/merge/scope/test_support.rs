@@ -15,10 +15,10 @@ use std::{
 use tempfile::{TempDir, tempdir};
 use tokio::sync::broadcast;
 
-pub(super) fn app_state(repo: Arc<RepoManager>, vault: PathBuf) -> Arc<AppState> {
+pub(super) fn app_state(repo: Arc<RepoManager>, _projection_base: PathBuf) -> Arc<AppState> {
     Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
         tx: broadcast::channel(16).0,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(
@@ -47,7 +47,7 @@ pub(super) fn init_repo(
     url: Option<&str>,
 ) -> anyhow::Result<RepoManager> {
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some(name), url)?;
-    repo.set_vault_root(vault);
+    repo.set_projection_base_for_all_local_repos(vault);
     Ok(repo)
 }
 

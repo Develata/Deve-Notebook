@@ -11,7 +11,7 @@ fn repair_doc_path_rolls_back_workspace_and_mapping_on_pending_conflict() -> any
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let vault = dir.path().join("vault");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo = Arc::new(repo);
 
     let doc_id = DocId::new();

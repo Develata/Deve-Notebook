@@ -98,6 +98,10 @@ pub fn stop_repo_watcher(repo_id: RepoId) -> Result<(), WatcherError> {
     }
 }
 
+pub(crate) fn is_repo_watcher_running(repo_id: RepoId) -> Result<bool, WatcherError> {
+    registry::is_running(repo_id)
+}
+
 fn stop_handle(handle: registry::WatcherHandle) -> Result<(), WatcherError> {
     let _ = handle.stop_tx.send(());
     handle

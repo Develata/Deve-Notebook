@@ -13,7 +13,7 @@ async fn switch_branch_accepts_shadow_peer_even_if_local_repo_stem_matches() -> 
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let local = RepoManager::init(dir.path(), 10, Some("peer-remote"), Some("urn:local:peer"))?;
     let local_info = local.get_repo_info()?.expect("local peer repo info");
     let peer_id = PeerId::new("peer-remote");

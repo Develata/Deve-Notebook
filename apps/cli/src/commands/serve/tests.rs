@@ -47,11 +47,13 @@ async fn serve_dry_run_validates_runtime_without_binding() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let vault_dir = dir.path().join("vault");
-    std::fs::create_dir_all(&vault_dir).expect("create vault");
+    let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
+        .expect("init repo");
+    repo.set_projection_base_for_local_repo("default", &vault_dir)
+        .expect("locator");
 
     run(
         &ledger_dir,
-        vault_dir,
         ServeOptions {
             port: free_port(),
             snapshot_depth: 8,
@@ -70,14 +72,11 @@ async fn serve_dry_run_validates_runtime_without_binding() {
 async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
-    std::fs::create_dir_all(&vault_dir).expect("create vault");
     let listener = TcpListener::bind("127.0.0.1:0").expect("occupy loopback port");
     let port = listener.local_addr().expect("listener addr").port();
 
     let err = run(
         &ledger_dir,
-        vault_dir,
         ServeOptions {
             port,
             snapshot_depth: 8,

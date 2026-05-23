@@ -15,7 +15,7 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let local = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
     local.run_on_local_repo("notes", |db| {
         let read = db.begin_read()?;

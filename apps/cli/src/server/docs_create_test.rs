@@ -14,7 +14,7 @@ use std::os::unix::fs::PermissionsExt;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn create_doc_rejects_existing_workspace_file_without_backfill() -> anyhow::Result<()> {
     let h = docs_harness()?;
-    let path = h.vault_path("external.md");
+    let path = h.workspace_path("external.md");
     std::fs::create_dir_all(path.parent().expect("parent"))?;
     std::fs::write(&path, "external only")?;
     let (ch, mut rx) = channel(&h.state);
@@ -58,7 +58,7 @@ async fn create_doc_rejects_degraded_local_projection_before_mutation() -> anyho
     assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
     assert_eq!(scope_nonce, Some(29));
     assert!(h.state.repo.get_docid("blocked.md")?.is_none());
-    assert!(!h.vault_path("blocked.md").exists());
+    assert!(!h.workspace_path("blocked.md").exists());
     Ok(())
 }
 
@@ -80,7 +80,7 @@ async fn create_doc_rejects_invalid_browser_path_with_scoped_error() -> anyhow::
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn create_doc_fails_closed_when_target_path_is_unstatable() -> anyhow::Result<()> {
     let h = docs_harness()?;
-    let blocked = h.vault_path("blocked");
+    let blocked = h.workspace_path("blocked");
     std::fs::create_dir_all(&blocked)?;
     std::fs::set_permissions(&blocked, std::fs::Permissions::from_mode(0o000))?;
     let (ch, mut rx) = channel(&h.state);

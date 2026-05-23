@@ -80,13 +80,10 @@ pub use projection_repair_runtime::diagnose_projection_local_repo;
 #[cfg(not(target_arch = "wasm32"))]
 use snapshot_policy::SnapshotPolicy;
 #[cfg(not(target_arch = "wasm32"))]
-use std::path::PathBuf;
-#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 pub struct SyncManager {
     repo: Arc<RepoManager>,
-    vault_root: PathBuf,
     vfs: Vfs,
     dir_refresh_guard: DirRefreshGuard,
     persist_guard: Arc<PersistGuard>,

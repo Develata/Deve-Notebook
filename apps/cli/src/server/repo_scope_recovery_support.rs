@@ -15,7 +15,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let default_id = repo.get_repo_info()?.expect("default info").uuid;
     let test_repo = RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
     let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
@@ -26,7 +26,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

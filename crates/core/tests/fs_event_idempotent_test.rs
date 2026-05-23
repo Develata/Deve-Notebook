@@ -6,7 +6,7 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
         .expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -39,14 +39,21 @@ fn repeated_same_fs_modify_event_is_noop_after_first_pending_update() -> anyhow:
         },
     )?;
 
-    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    let sync = SyncManager::new(repo.clone());
     sync.persist_doc(doc_id)?;
-    assert!(sync.handle_fs_event("default/notes/a.md")?.is_empty());
+    let repo_id = repo
+        .get_repo_info_for(None, Some("default"))?
+        .expect("repo info")
+        .uuid;
+    assert!(
+        sync.handle_fs_event("default", repo_id, "notes/a.md")?
+            .is_empty()
+    );
 
     let file = dir.path().join("vault/default/notes/a.md");
     std::fs::write(&file, "dirty")?;
-    let first = sync.handle_fs_event("default/notes/a.md")?;
-    let second = sync.handle_fs_event("default/notes/a.md")?;
+    let first = sync.handle_fs_event("default", repo_id, "notes/a.md")?;
+    let second = sync.handle_fs_event("default", repo_id, "notes/a.md")?;
 
     assert!(!first.is_empty());
     assert!(second.is_empty());

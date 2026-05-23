@@ -23,7 +23,7 @@ async fn create_doc_ignores_stale_remote_readonly_binding_after_scope_recovery()
 
     assert!(session.get_active_db().is_none());
     assert!(h.state.repo.get_docid("notes/local.md")?.is_some());
-    assert!(h.vault_path("notes/local.md").exists());
+    assert!(h.workspace_path("notes/local.md").exists());
     Ok(())
 }
 
@@ -38,7 +38,7 @@ async fn create_doc_without_repo_selection_bootstraps_single_repo() -> anyhow::R
     assert_eq!(session.active_repo.as_deref(), Some("default"));
     assert_eq!(session.active_repo_id, Some(h.repo_id));
     assert!(h.state.repo.get_docid("notes/bootstrapped.md")?.is_some());
-    assert!(h.vault_path("notes/bootstrapped.md").exists());
+    assert!(h.workspace_path("notes/bootstrapped.md").exists());
     Ok(())
 }
 
@@ -66,6 +66,6 @@ async fn create_doc_with_stale_local_binding_bootstraps_single_repo() -> anyhow:
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.sync_scope_nonce().is_none());
     assert!(h.state.repo.get_docid("notes/local-stale.md")?.is_some());
-    assert!(h.vault_path("notes/local-stale.md").exists());
+    assert!(h.workspace_path("notes/local-stale.md").exists());
     Ok(())
 }

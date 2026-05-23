@@ -54,7 +54,7 @@ fn git(path: &Path, args: &[&str]) -> String {
 fn new_repo() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let repo_root = dir.path().join("vault").join("default");
     init_git_repo(&repo_root);
     (dir, repo, repo_root)
@@ -63,7 +63,7 @@ fn new_repo() -> (TempDir, RepoManager, PathBuf) {
 fn new_repo_without_git() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let repo_root = dir.path().join("vault").join("default");
     (dir, repo, repo_root)
 }

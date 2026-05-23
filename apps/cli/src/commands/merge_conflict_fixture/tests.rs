@@ -8,11 +8,11 @@ fn fixture_seeds_divergent_local_and_remote_content() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let vault = dir.path().join("vault");
-    std::fs::create_dir_all(vault.join("default"))?;
+    let repo = RepoManager::init(&ledger, 10, Some("default"), None)?;
+    repo.set_projection_base_for_local_repo("default", &vault)?;
 
     run(
         &ledger,
-        &vault,
         10,
         MergeConflictFixtureOptions {
             peer: "peer-a".into(),
@@ -24,8 +24,7 @@ fn fixture_seeds_divergent_local_and_remote_content() -> anyhow::Result<()> {
         },
     )?;
 
-    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_vault_root(&vault);
+    let repo = RepoManager::init(&ledger, 10, None, None)?;
     let info = repo.get_repo_info()?.expect("repo info");
     let docs = repo.list_local_docs(Some("default"))?;
     let (doc_id, path) = docs.first().expect("seeded doc");

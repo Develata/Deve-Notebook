@@ -9,7 +9,7 @@ fn new_repo() -> (TempDir, Arc<RepoManager>, std::path::PathBuf) {
     let dir = tempdir().expect("create tempdir");
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     (dir, Arc::new(repo), vault)
 }
 
@@ -52,8 +52,13 @@ fn commit_diff_reports_child_rename_after_directory_move() {
         .expect("doc id");
 
     std::fs::rename(vault.join("default/notes"), vault.join("default/docs")).expect("rename dir");
-    let sync = SyncManager::new(repo.clone(), vault.clone());
-    sync.handle_dir_change("default/docs")
+    let sync = SyncManager::new(repo.clone());
+    let repo_id = repo
+        .get_repo_info_for(None, Some("default"))
+        .expect("repo info lookup")
+        .expect("repo info")
+        .uuid;
+    sync.handle_dir_change("default", repo_id, "docs")
         .expect("handle dir change")
         .expect("repo-scoped result");
     repo.stage_pending("notes/a.md").expect("stage delete");

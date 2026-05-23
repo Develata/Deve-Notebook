@@ -13,6 +13,7 @@ mod core_docs_fallback;
 mod core_local_registry;
 mod core_mount;
 pub mod locator;
+pub mod projection_locator;
 pub mod types;
 mod workspace;
 

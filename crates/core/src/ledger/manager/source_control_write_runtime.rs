@@ -32,18 +32,15 @@ impl<'a> SourceControlWriteRuntime<'a> {
         repo_name: &str,
         message: &str,
     ) -> Result<CommitInfo> {
-        let Some(vault_root) = &self.manager.vault_root else {
-            anyhow::bail!("vault_root is required for staged commits");
-        };
         if repo_name == self.manager.local_repo_name() {
             return self
                 .manager
                 .commit_runtime()
-                .commit_staged_with_ops(message, vault_root.clone());
+                .commit_staged_with_ops(message);
         }
         self.manager
             .commit_runtime()
-            .commit_staged_with_ops_in_local_repo(repo_name, message, vault_root.clone())
+            .commit_staged_with_ops_in_local_repo(repo_name, message)
     }
 
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

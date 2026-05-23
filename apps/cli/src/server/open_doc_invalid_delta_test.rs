@@ -15,14 +15,14 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let vault = dir.path().join("vault");
     let host_dir = dir.path().join("host");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let default_id = repo.get_repo_info()?.expect("default info").uuid;
     let repo = Arc::new(repo);
     Ok((
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
             tx: broadcast::channel(16).0,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

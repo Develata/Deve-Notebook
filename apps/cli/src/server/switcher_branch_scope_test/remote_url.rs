@@ -14,7 +14,7 @@ async fn switch_branch_fails_closed_when_same_name_remote_repo_has_different_url
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let local = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:local:wiki"))?;
     let local_info = local.get_repo_info()?.expect("local wiki info");
     let peer_id = PeerId::new("peer-remote");

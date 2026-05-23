@@ -28,12 +28,9 @@ impl Harness {
         if let Some((name, url)) = extra_repo {
             let _ = common::try_create_initialized_local_repo_with_depth(&ledger, 10, name, url)?;
         }
-        repo.set_vault_root_checked(dir.path().join("vault"))?;
+        repo.set_projection_base_for_all_local_repos_checked(dir.path().join("vault"))?;
         let repo = Arc::new(repo);
-        let sync = Arc::new(SyncManager::new_checked(
-            repo.clone(),
-            dir.path().join("vault"),
-        )?);
+        let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
         Ok(Self {
             dir,
             repo,

@@ -13,10 +13,6 @@ pub(super) fn ledger() -> String {
     "ledger".to_string()
 }
 
-pub(super) fn vault() -> String {
-    "vault".to_string()
-}
-
 pub(super) fn snapshot_depth() -> usize {
     100
 }

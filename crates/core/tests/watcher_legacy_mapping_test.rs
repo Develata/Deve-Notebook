@@ -2,7 +2,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};
 use deve_core::models::DocId;
 use deve_core::sync::SyncManager;
-use deve_core::sync::scan::scan_vault;
+use deve_core::sync::scan::scan_projection_workspaces;
 use deve_core::vfs::Vfs;
 use std::sync::Arc;
 use tempfile::TempDir;
@@ -10,7 +10,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, Arc::new(repo))
 }
 
@@ -35,9 +35,14 @@ fn watcher_treats_legacy_only_path_as_new_file() {
     })
     .expect("seed legacy mapping");
 
-    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    let sync = SyncManager::new(repo.clone());
+    let repo_id = repo
+        .get_repo_info_for(None, Some("default"))
+        .expect("repo info lookup")
+        .expect("repo info")
+        .uuid;
     let messages = sync
-        .handle_fs_event("default/notes/legacy.md")
+        .handle_fs_event("default", repo_id, "notes/legacy.md")
         .expect("legacy-only path treated as new file");
 
     assert!(
@@ -68,7 +73,7 @@ fn full_scan_treats_legacy_only_path_as_new_file() {
     .expect("seed legacy mapping");
 
     let vfs = Vfs::new(dir.path().join("vault"));
-    scan_vault(&repo, &vfs, &dir.path().join("vault"))
+    scan_projection_workspaces(&repo, &vfs)
         .expect("full scan succeeds; legacy-only path treated as new");
 
     let pending = repo

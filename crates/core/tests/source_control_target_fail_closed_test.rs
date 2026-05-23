@@ -10,7 +10,7 @@ use tempfile::tempdir;
 fn repo_discard_target_fails_closed_when_doc_id_does_not_match() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_id, _ops) =
         repo.apply_file_structure_in_local_repo("default", "notes/live.md", None, "test")?;
     repo.run_on_local_repo("default", |db| {
@@ -47,7 +47,7 @@ fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let (doc_id, _ops) =
         repo.apply_file_structure_in_local_repo("default", "notes/live.md", None, "test")?;
     let wrong_doc_id = DocId::new();
@@ -89,7 +89,7 @@ fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
 fn repo_diff_target_fails_closed_when_path_is_not_tracked_or_changed() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
 
     let err = repo
         .diff_doc_target_in_local_repo("default", &ScPathTarget::from_path("notes/missing.md"))
@@ -106,7 +106,7 @@ fn repo_diff_target_fails_closed_when_path_is_not_tracked_or_changed() -> anyhow
 fn repo_diff_path_returns_not_found_when_only_legacy_path_mapping_exists() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     let doc_id = DocId::new();
     repo.run_on_local_repo("default", |db| {
         let write = db.begin_write()?;

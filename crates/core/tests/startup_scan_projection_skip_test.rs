@@ -11,7 +11,7 @@ fn setup_repos() -> (TempDir, Arc<RepoManager>) {
     let ledger = dir.path().join("ledger");
     let mut repo = RepoManager::init(&ledger, 10, Some("main"), Some("urn:main")).expect("main");
     common::create_initialized_local_repo_with_depth(&ledger, 10, "wiki", "urn:wiki");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, Arc::new(repo))
 }
 
@@ -64,7 +64,7 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
     std::fs::create_dir_all(&wiki_root).expect("wiki root");
     std::fs::write(wiki_root.join("untracked.md"), "must stay unscanned").expect("wiki file");
 
-    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    let sync = SyncManager::new(repo.clone());
     sync.scan().expect("startup scan should skip broken repo");
 
     assert_eq!(
@@ -90,9 +90,16 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             .is_empty()
     );
     assert!(
-        sync.handle_fs_event("wiki/untracked.md")
-            .expect("ignored event")
-            .is_empty()
+        sync.handle_fs_event(
+            "wiki",
+            repo.get_repo_info_for(None, Some("wiki"))
+                .expect("wiki info lookup")
+                .expect("wiki info")
+                .uuid,
+            "untracked.md"
+        )
+        .expect("ignored event")
+        .is_empty()
     );
     assert!(
         repo.list_pending_fs_in_local_repo("wiki")

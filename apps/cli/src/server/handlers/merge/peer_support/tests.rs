@@ -13,10 +13,10 @@ use std::path::PathBuf;
 use tempfile::tempdir;
 use tokio::sync::broadcast;
 
-fn app_state(repo: Arc<RepoManager>, vault: PathBuf) -> Arc<AppState> {
+fn app_state(repo: Arc<RepoManager>, _projection_base: PathBuf) -> Arc<AppState> {
     Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
         tx: broadcast::channel(8).0,
         plugins: vec![],
         sync_engine: Arc::new(deve_core::sync::repo_scoped::RepoScopedSyncEngine::new(
@@ -36,7 +36,7 @@ fn resolves_local_merge_scope_from_remote_repo_id() {
     let dir = tempdir().expect("tempdir");
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo = Arc::new(repo);
     let info = repo
         .get_repo_info_for(None, Some(repo.local_repo_name()))
@@ -76,7 +76,7 @@ fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
         Some("urn:default"),
     )
     .expect("init repo");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let info = repo.get_repo_info().expect("repo info").expect("present");
     let doc_id = DocId(uuid::Uuid::new_v4());
 

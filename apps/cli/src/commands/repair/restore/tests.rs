@@ -107,7 +107,7 @@ fn normalize_restore_path_strips_repo_prefix() {
 fn find_loading_corruption_uses_tracked_docs_only() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(dir.path());
+    repo.set_projection_base_for_all_local_repos(dir.path());
     let repo = Arc::new(repo);
     let doc_id = DocId::new();
     repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
@@ -133,7 +133,7 @@ fn find_loading_corruption_uses_tracked_docs_only() -> anyhow::Result<()> {
 fn find_loading_corruption_fails_closed_on_unreadable_workspace_target() -> anyhow::Result<()> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(dir.path());
+    repo.set_projection_base_for_all_local_repos(dir.path());
     let repo = Arc::new(repo);
     let doc_id = DocId::new();
     repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;

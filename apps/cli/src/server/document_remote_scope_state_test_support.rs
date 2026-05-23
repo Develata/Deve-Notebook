@@ -15,9 +15,9 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> 
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let mut test_repo = RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
-    test_repo.set_vault_root(&vault);
+    test_repo.set_projection_base_for_all_local_repos(&vault);
     let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
     let repo = Arc::new(repo);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -25,7 +25,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> 
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
             tx: broadcast::channel(16).0,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(
@@ -46,7 +46,7 @@ pub(super) fn build_single_repo_state() -> anyhow::Result<(TempDir, Arc<AppState
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo_id = repo.get_repo_info()?.expect("default info").uuid;
     let repo = Arc::new(repo);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
@@ -54,7 +54,7 @@ pub(super) fn build_single_repo_state() -> anyhow::Result<(TempDir, Arc<AppState
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
             tx: broadcast::channel(16).0,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

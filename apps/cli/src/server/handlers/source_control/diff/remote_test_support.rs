@@ -21,17 +21,16 @@ use tokio::sync::broadcast;
 pub(super) fn new_repo() -> anyhow::Result<(TempDir, RepoManager)> {
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     Ok((dir, repo))
 }
 
 pub(super) fn build_state(dir: &TempDir, repo: RepoManager) -> anyhow::Result<Arc<AppState>> {
-    let vault = dir.path().join("vault");
     let repo = Arc::new(repo);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     Ok(Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(SyncManager::new(repo.clone(), vault)),
+        sync_manager: Arc::new(SyncManager::new(repo.clone())),
         tx: broadcast::channel::<ServerMessage>(16).0,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(

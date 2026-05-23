@@ -178,9 +178,6 @@ pub struct Config {
     /// 账本目录路径。
     #[serde(default = "defaults::ledger")]
     pub ledger_dir: String,
-    /// Vault 根目录。
-    #[serde(default = "defaults::vault")]
-    pub vault_path: String,
     /// 同步模式。
     #[serde(default)]
     pub sync_mode: SyncMode,
@@ -209,7 +206,6 @@ impl Default for Config {
         Self {
             profile: defaults::profile(),
             ledger_dir: defaults::ledger(),
-            vault_path: defaults::vault(),
             sync_mode: SyncMode::default(),
             merge_strategy: MergeStrategy::default(),
             snapshot_depth: defaults::snapshot_depth(),

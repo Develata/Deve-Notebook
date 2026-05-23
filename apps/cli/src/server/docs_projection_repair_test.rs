@@ -24,7 +24,7 @@ async fn rename_recovers_from_missing_source_projection() -> anyhow::Result<()> 
     )
     .await;
     assert_eq!(h.state.repo.get_docid("notes/a.md")?, None);
-    assert_eq!(std::fs::read_to_string(h.vault_path("notes/b.md"))?, "hello");
+    assert_eq!(std::fs::read_to_string(h.workspace_path("notes/b.md"))?, "hello");
     Ok(())
 }
 
@@ -42,7 +42,7 @@ async fn copy_recovers_from_missing_source_projection() -> anyhow::Result<()> {
         "notes/b.md".into(),
     )
     .await;
-    assert_eq!(std::fs::read_to_string(h.vault_path("notes/b.md"))?, "hello");
+    assert_eq!(std::fs::read_to_string(h.workspace_path("notes/b.md"))?, "hello");
     assert!(h.state.repo.get_docid("notes/b.md")?.is_some());
     Ok(())
 }
@@ -103,7 +103,7 @@ async fn move_trims_source_and_destination_paths() -> anyhow::Result<()> {
 
     assert_eq!(h.state.repo.get_docid("notes/a.md")?, None);
     assert!(h.state.repo.get_docid("notes/b.md")?.is_some());
-    assert!(h.vault_path("notes/b.md").exists());
+    assert!(h.workspace_path("notes/b.md").exists());
     Ok(())
 }
 

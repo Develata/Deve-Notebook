@@ -13,7 +13,6 @@ impl RepoManager {
     pub(super) fn commit_file_ops_in_local_repo(
         &self,
         repo_name: &str,
-        _vault_root: &std::path::Path,
         normalized_path: &str,
         doc_id_hint: Option<crate::models::DocId>,
     ) -> Result<()> {

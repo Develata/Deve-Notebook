@@ -9,7 +9,7 @@ use tempfile::TempDir;
 fn new_repo() -> anyhow::Result<(TempDir, Arc<RepoManager>)> {
     let dir = TempDir::new()?;
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     Ok((dir, Arc::new(repo)))
 }
 
@@ -39,7 +39,7 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) -> anyhow::Result
 
 #[test]
 fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo()?;
+    let (_dir, repo) = new_repo()?;
     let doc_id = DocId::new();
     append_unvalidated(
         repo.as_ref(),
@@ -56,7 +56,7 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
         ),
     )?;
 
-    let reports = collect_projection_reports(repo, &dir.path().join("vault"), Some("default"))?;
+    let reports = collect_projection_reports(repo, Some("default"))?;
 
     assert_eq!(reports.len(), 1);
     assert_eq!(reports[0].status, "authority_corrupt");
@@ -74,15 +74,20 @@ fn projection_node_check_reports_authority_corruption() -> anyhow::Result<()> {
 }
 
 #[test]
-fn projection_node_check_missing_vault_fails_closed_without_panic() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo()?;
-    let missing_vault = dir.path().join("missing-vault");
+fn projection_node_check_missing_locator_fails_closed_without_panic() -> anyhow::Result<()> {
+    let dir = TempDir::new()?;
+    let repo = Arc::new(RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        None,
+        None,
+    )?);
 
-    let err = collect_projection_reports(repo, &missing_vault, Some("default"))
-        .expect_err("missing vault must be returned as an error");
+    let err = collect_projection_reports(repo, Some("default"))
+        .expect_err("missing locator must be returned as an error");
 
     assert!(
-        err.to_string().contains("Failed to canonicalize VFS root"),
+        err.to_string().contains("Projection Locator missing"),
         "unexpected error: {err}"
     );
     Ok(())

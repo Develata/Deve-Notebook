@@ -10,7 +10,7 @@ mod common;
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -97,7 +97,7 @@ fn wipe_node_projection(repo: &RepoManager) {
 
 #[test]
 fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     repo.apply_dir_create_structure_in_local_repo(repo.local_repo_name(), "notes/sub", "test")
         .expect("create dir");
     seed_file(repo.as_ref(), "notes/sub/a.md", "ledger");
@@ -108,7 +108,7 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
     inject_legacy_doc_path(repo.as_ref(), doc_id, "stale/a.md");
     wipe_node_projection(repo.as_ref());
 
-    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+    let sync = SyncManager::new(repo.clone());
     sync.rebuild_projection_local_repo("default")
         .expect("rebuild projection tables");
 
@@ -140,7 +140,7 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
 
 #[test]
 fn rebuild_projection_fails_closed_on_missing_structure_targets() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     common::append_unvalidated_local_op(
         repo.as_ref(),
         repo.local_repo_name(),
@@ -156,7 +156,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
         ),
     );
 
-    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let sync = SyncManager::new(repo);
     let err = sync
         .rebuild_projection_local_repo("default")
         .expect_err("malformed structure facts must fail closed");
@@ -165,7 +165,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
 
 #[test]
 fn rebuild_projection_fails_closed_on_missing_structure_parent() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = deve_core::models::DocId::new();
     common::append_unvalidated_local_op(
         repo.as_ref(),
@@ -183,7 +183,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_parent() {
         ),
     );
 
-    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let sync = SyncManager::new(repo);
     let err = sync
         .rebuild_projection_local_repo("default")
         .expect_err("missing structure parent must fail closed");

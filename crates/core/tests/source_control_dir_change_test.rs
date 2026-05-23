@@ -9,7 +9,7 @@ fn new_repo() -> (TempDir, Arc<RepoManager>, std::path::PathBuf) {
     let dir = tempdir().expect("create tempdir");
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     (dir, Arc::new(repo), vault)
 }
 
@@ -60,8 +60,13 @@ fn dir_change_rescan_records_child_rename_candidates() {
         workspace_path(&vault, "docs"),
     )
     .expect("rename folder");
-    let sync = SyncManager::new(repo.clone(), vault.clone());
-    sync.handle_dir_change("default/docs")
+    let sync = SyncManager::new(repo.clone());
+    let repo_id = repo
+        .get_repo_info_for(None, Some("default"))
+        .expect("repo info lookup")
+        .expect("repo info")
+        .uuid;
+    sync.handle_dir_change("default", repo_id, "docs")
         .expect("handle dir change")
         .expect("repo-scoped result");
 
@@ -83,10 +88,15 @@ fn dir_change_rescan_records_child_rename_candidates() {
 fn dir_change_ignores_repo_root_refresh() {
     let (_dir, repo, vault) = new_repo();
     write_workspace_file(&vault, "notes/a.md", "hello");
-    let sync = SyncManager::new(repo, vault);
+    let repo_id = repo
+        .get_repo_info_for(None, Some("default"))
+        .expect("repo info lookup")
+        .expect("repo info")
+        .uuid;
+    let sync = SyncManager::new(repo);
 
     assert!(
-        sync.handle_dir_change("default")
+        sync.handle_dir_change("default", repo_id, "")
             .expect("handle repo root dir change")
             .is_none()
     );

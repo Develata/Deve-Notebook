@@ -25,27 +25,21 @@ pub struct RepairOptions<'a> {
     pub check: bool,
 }
 
-pub fn run(
-    ledger_dir: &Path,
-    vault_path: &Path,
-    snapshot_depth: usize,
-    options: RepairOptions<'_>,
-) -> Result<()> {
+pub fn run(ledger_dir: &Path, snapshot_depth: usize, options: RepairOptions<'_>) -> Result<()> {
     let quarantined = if options.check {
         0
     } else {
         shadow::quarantine_nil_shadow_repos(&ledger_dir.join("remotes"))?
     };
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root_checked(vault_path)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo = Arc::new(repo);
 
     let repo_names = resolve_local_repo_args(&repo, options.target_repo)?;
     if options.check {
-        return check_repair_readiness(repo, vault_path, &repo_names);
+        return check_repair_readiness(repo, &repo_names);
     }
 
-    let sync_manager = SyncManager::new_checked(repo.clone(), vault_path.to_path_buf())?;
+    let sync_manager = SyncManager::new_checked(repo.clone())?;
     let fixed_paths = path_fix::repair_repo_prefixed_paths(&repo, &repo_names)?;
     let quarantined_md_dirs = weird_paths::quarantine_md_dirs(&repo, &repo_names)?;
     let restored = restore::restore_docs_from_backup(
@@ -86,12 +80,8 @@ pub fn run(
     Ok(())
 }
 
-fn check_repair_readiness(
-    repo: Arc<RepoManager>,
-    vault_path: &Path,
-    repo_names: &[String],
-) -> Result<()> {
-    let sync_manager = SyncManager::new_checked(repo, vault_path.to_path_buf())?;
+fn check_repair_readiness(repo: Arc<RepoManager>, repo_names: &[String]) -> Result<()> {
+    let sync_manager = SyncManager::new_checked(repo)?;
     let mut authority_corrupt = Vec::new();
     for repo_name in repo_names {
         let diagnostic = sync_manager.diagnose_projection_local_repo(repo_name)?;

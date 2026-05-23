@@ -7,7 +7,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -62,7 +62,7 @@ fn materialize_projection_creates_empty_directories_from_structure_facts() {
     )
     .expect("create dir structure");
 
-    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let sync = SyncManager::new(repo);
     sync.materialize_local_repo("default").expect("materialize");
 
     let root = dir.path().join("vault/default");
@@ -81,7 +81,7 @@ fn materialize_projection_prefers_node_path_over_legacy_doc_mapping() {
         .expect("doc id");
     inject_legacy_doc_path(repo.as_ref(), doc_id, "stale/a.md");
 
-    let sync = SyncManager::new(repo, dir.path().join("vault"));
+    let sync = SyncManager::new(repo);
     sync.materialize_local_repo("default").expect("materialize");
 
     let root = dir.path().join("vault/default");

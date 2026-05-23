@@ -5,7 +5,7 @@
 //! Platform-neutral native adapter contract.
 //!
 //! The native shell is allowed to bind the web application to a controlled
-//! local service. It is not allowed to become authority for ledger, vault,
+//! local service. It is not allowed to become authority for ledger, Projection Locator,
 //! source-control, search, or repo-scope write decisions.
 
 mod packaging;

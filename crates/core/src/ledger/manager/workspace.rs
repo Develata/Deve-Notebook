@@ -11,19 +11,18 @@ use anyhow::{Result, anyhow};
 use std::path::PathBuf;
 
 impl RepoManager {
-    /// 返回指定本地 repo 在 Vault 下的物理根目录：`vault/<repo_name>/`
+    /// 返回指定本地 repo 的 Projection Workspace 根目录：`<projection_base>/<repo_name>/`
     pub fn local_repo_workspace_root(&self, repo_name: &str) -> Result<PathBuf> {
-        let vault_root = self
-            .vault_root
-            .as_ref()
-            .ok_or_else(|| anyhow!("Vault root is not configured"))?;
-        Ok(join_normalized(
-            vault_root,
-            repo_name.trim_end_matches(".redb"),
-        ))
+        let info = self
+            .get_repo_info_for(None, Some(repo_name.trim_end_matches(".redb")))?
+            .ok_or_else(|| anyhow!("Local repo metadata is missing for {}", repo_name))?;
+        let locator = self.validated_projection_locator_for_repo_id(info.uuid)?;
+        let segment =
+            crate::ledger::manager::projection_locator::safe_repo_path_segment(&info.name)?;
+        Ok(locator.projection_base_abs.join(segment))
     }
 
-    /// 返回指定本地 repo 下某个文档的物理路径：`vault/<repo_name>/<repo_path>`
+    /// 返回指定本地 repo 下某个文档的物理路径：`<projection_base>/<repo_name>/<repo_path>`
     pub fn local_repo_workspace_path(&self, repo_name: &str, repo_path: &str) -> Result<PathBuf> {
         let repo_root = self.local_repo_workspace_root(repo_name)?;
         if repo_path.is_empty() {
@@ -32,7 +31,7 @@ impl RepoManager {
         Ok(join_normalized(&repo_root, repo_path))
     }
 
-    /// 返回指定本地 repo 的运行时元数据目录：`vault/<repo_name>/.notegit/`
+    /// 返回指定本地 repo 的运行时元数据目录：`<projection_base>/<repo_name>/.notegit/`
     pub fn local_repo_notegit_root(&self, repo_name: &str) -> Result<PathBuf> {
         Ok(crate::utils::notegit::repo_dir(
             &self.local_repo_workspace_root(repo_name)?,
@@ -45,7 +44,7 @@ impl RepoManager {
         ))
     }
 
-    /// 构造 Watcher / PersistGuard 使用的 Vault 根相对路径。
+    /// 构造 Watcher / PersistGuard 使用的 repo-scoped key。
     pub fn local_repo_workspace_relative(&self, repo_name: &str, repo_path: &str) -> String {
         let repo_name = repo_name.trim_end_matches(".redb");
         let repo_path = to_forward_slash(repo_path).trim_matches('/').to_string();
@@ -56,7 +55,7 @@ impl RepoManager {
         }
     }
 
-    /// 将 `vault/<repo_name>/<repo_path>` 形式的根相对路径解析回本地 repo 作用域。
+    /// 将 `<repo_name>/<repo_path>` 形式的 legacy repo-scoped key 解析回本地 repo 作用域。
     ///
     /// 返回 `(repo_name, repo_id, repo_path)`；若不在本地 repo 目录下则返回 `None`。
     pub fn resolve_local_workspace_path(
@@ -116,9 +115,11 @@ impl RepoManager {
         self.persist_guard.clear(&relative);
     }
 
-    pub(crate) fn should_ignore_workspace_event(&self, root_relative: &str) -> bool {
-        self.vault_root
-            .as_ref()
-            .is_some_and(|root| self.persist_guard.should_ignore(root, root_relative))
+    pub(crate) fn should_ignore_workspace_event(&self, repo_name: &str, repo_path: &str) -> bool {
+        let Ok(repo_root) = self.local_repo_workspace_root(repo_name) else {
+            return false;
+        };
+        let relative = self.local_repo_workspace_relative(repo_name, repo_path);
+        self.persist_guard.should_ignore(&repo_root, &relative)
     }
 }

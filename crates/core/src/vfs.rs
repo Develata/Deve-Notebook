@@ -25,6 +25,12 @@ impl Vfs {
             .unwrap_or_else(|err| panic!("Vfs::new requires canonicalizable root: {err}"))
     }
 
+    pub fn unrooted() -> Self {
+        Self {
+            root: PathBuf::new(),
+        }
+    }
+
     pub fn new_checked(root: impl AsRef<Path>) -> Result<Self> {
         let root = root.as_ref();
         let abs_root = std::fs::canonicalize(root)
@@ -34,6 +40,10 @@ impl Vfs {
 
     pub fn get_inode(&self, rel_path: &str) -> Result<Option<FileNodeId>> {
         let full_path = self.root.join(rel_path);
+        self.get_inode_abs(&full_path)
+    }
+
+    pub fn get_inode_abs(&self, full_path: &Path) -> Result<Option<FileNodeId>> {
         if !full_path
             .try_exists()
             .with_context(|| format!("Failed to stat VFS path: {:?}", full_path))?
@@ -41,7 +51,7 @@ impl Vfs {
             return Ok(None);
         }
 
-        let file_id = file_id::get_file_id(&full_path)?;
+        let file_id = file_id::get_file_id(full_path)?;
 
         // Hash the FileId to get a stable u128 for Redb
         use crate::utils::hash::StableHasher;

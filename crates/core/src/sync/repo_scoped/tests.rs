@@ -9,7 +9,7 @@ fn build_repo() -> anyhow::Result<(tempfile::TempDir, RepoManager, RepoId)> {
     let dir = tempfile::tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     Ok((dir, repo, repo_id))
 }

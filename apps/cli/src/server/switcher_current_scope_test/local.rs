@@ -17,7 +17,7 @@ fn state_with_shadow(create_notes: bool) -> anyhow::Result<Harness> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let default_info = repo.get_repo_info()?.expect("default repo info");
     if create_notes {
         RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;

@@ -27,9 +27,9 @@ pub(super) fn new_sync() -> anyhow::Result<SyncFixture> {
     let vault = dir.path().join("vault");
     std::fs::create_dir_all(&vault)?;
     let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_vault_root_checked(&vault)?;
+    repo.set_projection_base_for_all_local_repos_checked(&vault)?;
     let repo = Arc::new(repo);
-    let sync = Arc::new(SyncManager::new_checked(repo.clone(), vault)?);
+    let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
     let repo_name = repo.local_repo_name().to_string();
     let repo_id = repo
         .get_repo_info_for(None, Some(&repo_name))?

@@ -21,7 +21,6 @@ use tokio::sync::broadcast;
 
 pub async fn start_server(
     repo: Arc<RepoManager>,
-    vault_path: std::path::PathBuf,
     port: u16,
     plugins: Vec<Box<dyn PluginRuntime>>,
     #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
@@ -29,7 +28,6 @@ pub async fn start_server(
 ) -> anyhow::Result<()> {
     start_server_with_options(
         repo,
-        vault_path,
         ServerLaunchOptions::release(port),
         plugins,
         profile,
@@ -40,7 +38,6 @@ pub async fn start_server(
 
 pub async fn start_server_with_options(
     repo: Arc<RepoManager>,
-    vault_path: std::path::PathBuf,
     launch: ServerLaunchOptions,
     plugins: Vec<Box<dyn PluginRuntime>>,
     #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
@@ -65,7 +62,7 @@ pub async fn start_server_with_options(
     });
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
-    let host_dir = notegit::prepare(repo.as_ref(), &vault_path)?;
+    let host_dir = notegit::prepare(repo.as_ref())?;
     setup::write_main_port_hint(&host_dir, port)?;
     let auth_config = Arc::new(router::load_auth_config());
     let native_session_bridge =
@@ -73,10 +70,7 @@ pub async fn start_server_with_options(
             .map(|bridge| bridge.map(Arc::new))?;
     let (tx, _rx) = broadcast::channel(100);
 
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(
-        repo.clone(),
-        vault_path.clone(),
-    )?);
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
     sync_manager.scan()?;
     node_role::update_repo_health(repo_health_summary(repo.as_ref(), sync_manager.as_ref()));
     host::set_sync_manager(sync_manager.clone())?;

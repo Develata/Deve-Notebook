@@ -9,7 +9,7 @@ use tempfile::{TempDir, tempdir};
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, repo)
 }
 
@@ -63,7 +63,7 @@ fn scan_records_rename_candidate_by_inode() {
 
     let repo = Arc::new(repo);
     let vfs = Vfs::new(dir.path().join("vault"));
-    scan::scan_vault(&repo, &vfs, &dir.path().join("vault")).expect("scan vault");
+    scan::scan_projection_workspaces(&repo, &vfs).expect("scan workspace");
 
     let pending = repo.list_pending_fs().expect("pending after scan");
     assert_eq!(pending.len(), 2);

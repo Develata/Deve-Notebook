@@ -147,7 +147,6 @@ fn build_spawn_spec(
     let executable = packaged_cli_sibling(&input.current_exe)?;
     let plugin_dir = packaged_plugin_sibling_dir(&input.current_exe)?;
     let ledger_path = input.data_root.join("ledger");
-    let vault_path = input.data_root.join("vault");
     let native_session_secret = generate_native_session_bootstrap_secret()?;
     let native_auth_secret = generate_native_session_bootstrap_secret()?;
     let native_auth_password = generate_native_session_bootstrap_secret()?;
@@ -157,7 +156,6 @@ fn build_spawn_spec(
     let mut env_allowlist = vec![
         "DEVE_PROFILE".to_string(),
         "DEVE_LEDGER_DIR".to_string(),
-        "DEVE_VAULT_PATH".to_string(),
         NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
         "AUTH_SECRET".to_string(),
         "AUTH_PASS".to_string(),
@@ -173,10 +171,6 @@ fn build_spawn_spec(
         NativeProcessEnvBinding {
             key: "DEVE_LEDGER_DIR".to_string(),
             value: ledger_path.to_string_lossy().to_string(),
-        },
-        NativeProcessEnvBinding {
-            key: "DEVE_VAULT_PATH".to_string(),
-            value: vault_path.to_string_lossy().to_string(),
         },
         NativeProcessEnvBinding {
             key: NATIVE_SESSION_BOOTSTRAP_SECRET_ENV.to_string(),
@@ -220,7 +214,6 @@ fn build_spawn_spec(
         env,
         profile: profile_env_value(input.profile).to_string(),
         config_path: input.data_root.join("config.toml"),
-        vault_path,
         ledger_path,
         bind_hints: NativeProcessBindHints {
             http_host: "127.0.0.1".to_string(),

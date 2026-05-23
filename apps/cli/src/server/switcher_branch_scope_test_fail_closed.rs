@@ -13,7 +13,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_name_is_stale() -> 
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let peer_id = PeerId::new("peer-remote");
     let remote_repo_id = uuid::Uuid::new_v4();
     repo.ensure_shadow_repo_info(
@@ -63,7 +63,7 @@ async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair() -
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let peer_id = PeerId::new("peer-remote");
     let first = deve_core::ledger::RepoInfo {
         uuid: uuid::Uuid::new_v4(),

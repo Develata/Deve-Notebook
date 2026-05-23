@@ -29,7 +29,7 @@ mod tests {
     fn resolve_local_sc_target_returns_none_for_legacy_only_path_mapping() -> anyhow::Result<()> {
         let dir = tempdir()?;
         let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-        repo.set_vault_root(dir.path().join("vault"));
+        repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
         let doc_id = DocId::new();
         repo.run_on_local_repo("default", |db| {
             let write = db.begin_write()?;
@@ -58,7 +58,7 @@ mod tests {
     fn resolve_local_sc_target_fills_doc_id_from_tracked_projection() -> anyhow::Result<()> {
         let dir = tempdir()?;
         let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-        repo.set_vault_root(dir.path().join("vault"));
+        repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
         let doc_id = DocId::new();
         repo.run_on_local_repo("default", |db| {
             node_meta::ensure_file_node(db, "notes/a.md", doc_id)?;
@@ -87,7 +87,7 @@ mod tests {
     fn resolve_local_sc_target_fails_closed_when_old_path_is_reused() -> anyhow::Result<()> {
         let dir = tempfile::tempdir()?;
         let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-        repo.set_vault_root(dir.path().join("vault"));
+        repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
         let doc_id = crate::models::DocId::new();
         repo.run_on_local_repo(repo.local_repo_name(), |db| {
             pending_fs::upsert(

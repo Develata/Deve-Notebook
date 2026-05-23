@@ -14,7 +14,7 @@ async fn switch_repo_does_not_emit_partial_repo_view_when_tree_reset_fails() -> 
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let tree_manager = Arc::new(RepoTreeRegistry::new());
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = tree_manager.with_tree_mut(uuid::Uuid::new_v4(), None, |_| {

@@ -8,13 +8,11 @@ use crate::ledger::RepoManager;
 use crate::utils::fs::checked_exists;
 use crate::writeback::PersistGuard;
 use anyhow::Result;
-use std::path::Path;
 use tracing::warn;
 
-/// 启动时确保所有本地 repo 都拥有独立的 `vault/<repo_name>/` 工作区。
+/// 启动时确保所有已绑定 locator 的本地 repo 都拥有独立的 Projection Workspace。
 pub(super) fn prepare_local_workspaces(
     repo: &RepoManager,
-    _vault_root: &Path,
     guard: &PersistGuard,
 ) -> Result<Vec<String>> {
     let mut skipped = Vec::new();
@@ -35,7 +33,7 @@ pub(super) fn prepare_local_workspaces(
     Ok(skipped)
 }
 
-/// 将指定本地 repo 的文档视图投影到 `vault/<repo_name>/`。
+/// 将指定本地 repo 的文档视图投影到 `<projection_base>/<repo_name>/`。
 ///
 /// Invariants:
 /// - 仅补齐缺失文件；已有工作区绝不覆盖用户文件。

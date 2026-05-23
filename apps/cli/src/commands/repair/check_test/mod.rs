@@ -14,7 +14,7 @@ fn new_repo() -> anyhow::Result<(TempDir, Arc<RepoManager>)> {
     let dir = TempDir::new()?;
     std::fs::create_dir_all(dir.path().join("vault"))?;
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_vault_root_checked(dir.path().join("vault"))?;
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("vault"))?;
     Ok((dir, Arc::new(repo)))
 }
 
@@ -44,7 +44,7 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) -> anyhow::Result
 
 #[test]
 fn repair_check_fails_closed_on_authority_corrupt_projection() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo()?;
+    let (_dir, repo) = new_repo()?;
     let doc_id = DocId::new();
     append_unvalidated(
         repo.as_ref(),
@@ -61,7 +61,7 @@ fn repair_check_fails_closed_on_authority_corrupt_projection() -> anyhow::Result
         ),
     )?;
 
-    let err = check_repair_readiness(repo, &dir.path().join("vault"), &[String::from("default")])
+    let err = check_repair_readiness(repo, &[String::from("default")])
         .expect_err("authority corruption must keep repair preflight fail-closed");
 
     assert!(

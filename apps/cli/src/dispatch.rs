@@ -2,22 +2,29 @@
 //!   - 12_commands#cli-commands
 
 use crate::commands;
-use crate::{Commands, ConfigAction, GitAction};
-use std::path::{Path, PathBuf};
+use crate::{Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction};
+use std::path::PathBuf;
 
 pub async fn run(
     command: Option<Commands>,
     config: &deve_core::config::Config,
     ledger_dir: &PathBuf,
-    vault_path: &Path,
 ) -> anyhow::Result<()> {
     match command {
-        Some(Commands::Init { path }) => {
-            commands::init::run(ledger_dir, vault_path, path, config.snapshot_depth)?
-        }
-        Some(Commands::Scan) => commands::scan::run(ledger_dir, vault_path, config.snapshot_depth)?,
+        Some(Commands::Init {
+            path,
+            repo,
+            projection_base,
+        }) => commands::init::run(
+            ledger_dir,
+            &repo,
+            &projection_base,
+            path,
+            config.snapshot_depth,
+        )?,
+        Some(Commands::Scan) => commands::scan::run(ledger_dir, config.snapshot_depth)?,
         Some(Commands::Watch { dry_run }) => {
-            commands::watch::run(ledger_dir, vault_path, config.snapshot_depth, dry_run)?
+            commands::watch::run(ledger_dir, config.snapshot_depth, dry_run)?
         }
         Some(Commands::Dump { path, repo }) => {
             commands::dump::run(ledger_dir, path, repo, config.snapshot_depth)?
@@ -30,7 +37,6 @@ pub async fn run(
         }) => {
             commands::serve::run(
                 ledger_dir,
-                vault_path.to_path_buf(),
                 commands::serve::ServeOptions {
                     port,
                     snapshot_depth: config.snapshot_depth,
@@ -72,24 +78,20 @@ pub async fn run(
             config.snapshot_depth,
         )?,
         Some(Commands::Recover { repo }) => {
-            commands::recover::run(ledger_dir, vault_path, repo, config.snapshot_depth)?
+            commands::recover::run(ledger_dir, repo, config.snapshot_depth)?
         }
         Some(Commands::ScStatus { repo }) => {
             commands::sc_status::run(ledger_dir, repo.as_deref(), config.snapshot_depth)?
         }
         Some(Commands::Git { action }) => match action {
-            GitAction::Status { repo } => commands::git::status(
-                ledger_dir,
-                vault_path,
-                repo.as_deref(),
-                config.snapshot_depth,
-            )?,
+            GitAction::Status { repo } => {
+                commands::git::status(ledger_dir, repo.as_deref(), config.snapshot_depth)?
+            }
             GitAction::Mirror {
                 repo,
                 retry_out_of_sync,
             } => commands::git::mirror(
                 ledger_dir,
-                vault_path,
                 repo.as_deref(),
                 retry_out_of_sync,
                 config.snapshot_depth,
@@ -99,25 +101,19 @@ pub async fn run(
                 retry_out_of_sync,
             } => commands::git::export(
                 ledger_dir,
-                vault_path,
                 repo.as_deref(),
                 retry_out_of_sync,
                 config.snapshot_depth,
             )?,
-            GitAction::Import { repo, apply } => commands::git::import(
-                ledger_dir,
-                vault_path,
-                repo.as_deref(),
-                apply,
-                config.snapshot_depth,
-            )?,
+            GitAction::Import { repo, apply } => {
+                commands::git::import(ledger_dir, repo.as_deref(), apply, config.snapshot_depth)?
+            }
             GitAction::Push {
                 repo,
                 remote,
                 branch,
             } => commands::git::push(
                 ledger_dir,
-                vault_path,
                 repo.as_deref(),
                 remote.as_deref(),
                 branch.as_deref(),
@@ -137,7 +133,6 @@ pub async fn run(
             remote,
         }) => commands::merge_conflict_fixture::run(
             ledger_dir,
-            vault_path,
             config.snapshot_depth,
             commands::merge_conflict_fixture::MergeConflictFixtureOptions {
                 peer,
@@ -152,14 +147,9 @@ pub async fn run(
             repair,
             projection,
             repo,
-        }) => commands::node_check::run(
-            ledger_dir,
-            vault_path,
-            config.snapshot_depth,
-            repair,
-            projection,
-            repo,
-        )?,
+        }) => {
+            commands::node_check::run(ledger_dir, config.snapshot_depth, repair, projection, repo)?
+        }
         Some(Commands::Repair {
             check,
             backup,
@@ -168,7 +158,6 @@ pub async fn run(
             rebuild_projection,
         }) => commands::repair::run(
             ledger_dir,
-            vault_path,
             config.snapshot_depth,
             commands::repair::RepairOptions {
                 backup_root: &backup,
@@ -178,6 +167,19 @@ pub async fn run(
                 check,
             },
         )?,
+        Some(Commands::Repo { action }) => match action {
+            RepoAction::Projection { action } => match action {
+                RepoProjectionAction::Set { repo, base } => {
+                    commands::repo_projection::set(ledger_dir, &repo, &base, config.snapshot_depth)?
+                }
+                RepoProjectionAction::List => {
+                    commands::repo_projection::list(ledger_dir, config.snapshot_depth)?
+                }
+                RepoProjectionAction::Check { repo } => {
+                    commands::repo_projection::check(ledger_dir, &repo, config.snapshot_depth)?
+                }
+            },
+        },
         Some(Commands::Config { action }) => match action {
             ConfigAction::Print => commands::config::print(config)?,
             ConfigAction::Set { key, value } => commands::config::set(&key, &value)?,

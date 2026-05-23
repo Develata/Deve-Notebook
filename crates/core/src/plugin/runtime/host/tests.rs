@@ -17,9 +17,9 @@ fn source_control_write_gate_rejects_degraded_local_projection() -> anyhow::Resu
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo = Arc::new(repo);
-    let sync = SyncManager::new(repo.clone(), vault);
+    let sync = SyncManager::new(repo.clone());
     sync.mark_projection_writeback_fault("default");
 
     let error =
@@ -41,9 +41,9 @@ fn source_control_write_gate_accepts_healthy_local_projection() -> anyhow::Resul
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo = Arc::new(repo);
-    let sync = SyncManager::new(repo.clone(), vault);
+    let sync = SyncManager::new(repo.clone());
 
     ensure_source_control_write_allowed_for(repo.as_ref(), &sync, &RepoSelector::default())
         .expect("healthy projection should allow plugin source-control writes");

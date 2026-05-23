@@ -20,7 +20,7 @@ fn build_engine(
     let dir = tempfile::tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 8, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let repo = Arc::new(repo);
     let key = RepoKey::generate();

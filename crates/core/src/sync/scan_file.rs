@@ -23,8 +23,8 @@ pub(super) fn scan_disk_file(
     repo_name: &str,
     repo_path: &str,
 ) -> Result<Option<DocId>> {
-    let root_rel = repo.local_repo_workspace_relative(repo_name, repo_path);
-    let inode = vfs.get_inode(&root_rel)?;
+    let disk_path = repo.local_repo_workspace_path(repo_name, repo_path)?;
+    let inode = vfs.get_inode_abs(&disk_path)?;
     if let Some(inode) = inode
         && let Some(doc_id) = repo.get_docid_by_inode_in_local_repo(repo_name, &inode)?
     {

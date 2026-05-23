@@ -49,10 +49,7 @@ impl<'a> FsEventHandler<'a> {
             return self.handle_delete(repo_path);
         }
 
-        let root_rel = self
-            .repo
-            .local_repo_workspace_relative(self.repo_name, repo_path);
-        let inode = match self.vfs.get_inode(&root_rel)? {
+        let inode = match self.vfs.get_inode_abs(&file_path)? {
             Some(inode) => inode,
             None => return self.handle_delete(repo_path),
         };

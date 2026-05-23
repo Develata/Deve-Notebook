@@ -9,7 +9,7 @@ fn quarantine_md_dirs_rolls_back_workspace_on_pending_cleanup_failure() -> anyho
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let vault = dir.path().join("vault");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo = Arc::new(repo);
 
     let md_dir = repo.local_repo_workspace_root("default")?.join("bad.md");
@@ -48,7 +48,7 @@ fn quarantine_md_dirs_fails_closed_on_unreadable_quarantine_target() -> anyhow::
     let dir = tempdir()?;
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
     let vault = dir.path().join("vault");
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let repo = Arc::new(repo);
 
     let md_dir = repo.local_repo_workspace_root("default")?.join("bad.md");

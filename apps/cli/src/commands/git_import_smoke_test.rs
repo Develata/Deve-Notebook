@@ -17,7 +17,7 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
     let repo_root = vault_root.join("default");
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_vault_root(&vault_root);
+        repo.set_projection_base_for_all_local_repos(&vault_root);
         init_git_repo(&repo_root);
         commit_deve_file(&dir, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -27,17 +27,17 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
     write_workspace_file(&dir, "note.md", "hello import\n");
     write_workspace_file(&dir, "new.md", "new file\n");
 
-    git::import(&ledger_dir, &vault_root, Some("default"), false, 10)?;
+    git::import(&ledger_dir, Some("default"), false, 10)?;
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_vault_root(&vault_root);
+        repo.set_projection_base_for_all_local_repos(&vault_root);
         let pending = repo.list_pending_fs_in_local_repo("default")?;
         assert!(pending.is_empty(), "{pending:?}");
     }
 
-    git::import(&ledger_dir, &vault_root, Some("default"), true, 10)?;
+    git::import(&ledger_dir, Some("default"), true, 10)?;
     let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    repo.set_vault_root(&vault_root);
+    repo.set_projection_base_for_all_local_repos(&vault_root);
     let pending = repo.list_pending_fs_in_local_repo("default")?;
     assert_eq!(pending.len(), 2, "{pending:?}");
     assert!(
@@ -63,7 +63,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
     let repo_root = vault_root.join("default");
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_vault_root(&vault_root);
+        repo.set_projection_base_for_all_local_repos(&vault_root);
         init_git_repo(&repo_root);
         commit_deve_file(&dir, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -74,7 +74,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
     write_workspace_file(&dir, "new.md", "new file\n");
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_vault_root(&vault_root);
+        repo.set_projection_base_for_all_local_repos(&vault_root);
         let doc_id = repo.get_docid("note.md")?;
         repo.run_on_local_repo("default", |db| {
             pending_fs::upsert(
@@ -92,10 +92,10 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
         })?;
     }
 
-    git::import(&ledger_dir, &vault_root, Some("default"), true, 10)?;
+    git::import(&ledger_dir, Some("default"), true, 10)?;
 
     let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    repo.set_vault_root(&vault_root);
+    repo.set_projection_base_for_all_local_repos(&vault_root);
     let pending = repo.list_pending_fs_in_local_repo("default")?;
     assert_eq!(pending.len(), 1, "{pending:?}");
     assert_eq!(pending[0].path, "note.md");
@@ -113,7 +113,7 @@ fn git_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     let imported_commit_id =
         resolve_imported_change_to_queued_commit(&dir, &ledger_dir, &vault_root)?;
 
-    git::export(&ledger_dir, &vault_root, Some("default"), false, 10)?;
+    git::export(&ledger_dir, Some("default"), false, 10)?;
     assert_clean_resolved_import_export(&ledger_dir, &vault_root, &repo_root, &imported_commit_id)?;
     Ok(())
 }
@@ -138,7 +138,6 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         resolve_imported_change_to_queued_commit(&dir, &ledger_dir, &vault_root)?;
     git::push(
         &ledger_dir,
-        &vault_root,
         Some("default"),
         Some("origin"),
         Some(&branch),
@@ -153,7 +152,7 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         &["rev-parse", "--verify", &branch_ref]
     ));
 
-    git::export(&ledger_dir, &vault_root, Some("default"), false, 10)?;
+    git::export(&ledger_dir, Some("default"), false, 10)?;
     let git_commit_id = assert_clean_resolved_import_export(
         &ledger_dir,
         &vault_root,
@@ -164,7 +163,6 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     write_workspace_file(&dir, "dirty.md", "dirty\n");
     git::push(
         &ledger_dir,
-        &vault_root,
         Some("default"),
         Some("origin"),
         Some(&branch),
@@ -181,7 +179,6 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     std::fs::remove_file(repo_root.join("dirty.md"))?;
     git::push(
         &ledger_dir,
-        &vault_root,
         Some("default"),
         Some("origin"),
         Some(&branch),

@@ -14,33 +14,33 @@ fn test_capability_check_net() {
 #[test]
 fn test_capability_check_fs() {
     let cap = Capability {
-        allow_fs_read: vec![PathBuf::from("/data/vault"), PathBuf::from("C:\\Notes")],
-        allow_fs_write: vec![PathBuf::from("/data/vault/public")],
+        allow_fs_read: vec![PathBuf::from("/notes/default"), PathBuf::from("C:\\Notes")],
+        allow_fs_write: vec![PathBuf::from("/notes/default/public")],
         ..Default::default()
     };
 
     // Read checks
-    assert!(cap.check_read(Path::new("/data/vault/notes.md")));
+    assert!(cap.check_read(Path::new("/notes/default/notes.md")));
     assert!(cap.check_read(Path::new("C:\\Notes\\file.txt")));
     assert!(!cap.check_read(Path::new("/etc/passwd")));
 
     // Write checks
-    assert!(cap.check_write(Path::new("/data/vault/public/log.txt")));
-    assert!(!cap.check_write(Path::new("/data/vault/private.md")));
+    assert!(cap.check_write(Path::new("/notes/default/public/log.txt")));
+    assert!(!cap.check_write(Path::new("/notes/default/private.md")));
 
     // Path Traversal check
-    assert!(!cap.check_read(Path::new("/data/vault/../etc/passwd")));
-    assert!(!cap.check_write(Path::new("/data/vault/public/../../private.md")));
+    assert!(!cap.check_read(Path::new("/notes/default/../etc/passwd")));
+    assert!(!cap.check_write(Path::new("/notes/default/public/../../private.md")));
 }
 
 #[test]
 fn test_capability_does_not_match_sibling_prefixes() {
     let cap = Capability {
-        allow_fs_read: vec![PathBuf::from("/data/vault"), PathBuf::from("C:\\Notes")],
+        allow_fs_read: vec![PathBuf::from("/notes/default"), PathBuf::from("C:\\Notes")],
         ..Default::default()
     };
 
-    assert!(!cap.check_read(Path::new("/data/vaults/notes.md")));
+    assert!(!cap.check_read(Path::new("/notes/defaults/notes.md")));
     assert!(!cap.check_read(Path::new("C:\\Notes2\\file.txt")));
 }
 

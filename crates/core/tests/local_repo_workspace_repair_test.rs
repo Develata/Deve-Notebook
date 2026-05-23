@@ -27,7 +27,7 @@ fn repair_realigns_workspace_root_to_repaired_repo_name() {
         },
     );
 
-    repo.set_vault_root(&vault_dir);
+    repo.set_projection_base_for_all_local_repos(&vault_dir);
     repo.repair_local_repo_catalog()
         .expect("repair local catalog realigns workspace");
 
@@ -42,7 +42,7 @@ fn runtime_catalog_refresh_does_not_realign_workspace_root() {
     let ledger_dir = dir.path().join("ledger");
     let vault_dir = dir.path().join("vault");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    repo.set_vault_root(&vault_dir);
+    repo.set_projection_base_for_all_local_repos(&vault_dir);
     let main_db = repo.open_database(None, "main").expect("main db").db;
 
     common::write_repo_metadata(

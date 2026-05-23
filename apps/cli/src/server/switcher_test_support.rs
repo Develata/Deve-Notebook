@@ -22,15 +22,20 @@ pub(crate) fn browser_session(scope_nonce: u64) -> WsSession {
 
 pub(crate) fn app_state(
     repo: RepoManager,
-    vault: PathBuf,
+    _projection_base: PathBuf,
     host_dir: PathBuf,
 ) -> anyhow::Result<Arc<AppState>> {
-    app_state_with_tree(repo, vault, host_dir, Arc::new(RepoTreeRegistry::new()))
+    app_state_with_tree(
+        repo,
+        _projection_base,
+        host_dir,
+        Arc::new(RepoTreeRegistry::new()),
+    )
 }
 
 pub(crate) fn app_state_with_tree(
     repo: RepoManager,
-    vault: PathBuf,
+    _projection_base: PathBuf,
     host_dir: PathBuf,
     tree_manager: Arc<RepoTreeRegistry>,
 ) -> anyhow::Result<Arc<AppState>> {
@@ -39,7 +44,7 @@ pub(crate) fn app_state_with_tree(
     let identity_key = security::load_or_generate_identity_key(&host_dir)?;
     Ok(Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone(), vault)),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
         tx,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(
@@ -58,7 +63,7 @@ pub(crate) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
     let vault = dir.path().join("vault");
     let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_vault_root(&vault);
+    repo.set_projection_base_for_all_local_repos(&vault);
     let state = app_state(repo, vault, dir.path().join("host"))?;
     Ok((dir, state))
 }

@@ -36,7 +36,6 @@ fn default_config_matches_settings_plan_defaults() {
 
     assert_eq!(config.profile, AppProfile::Standard);
     assert_eq!(config.ledger_dir, "ledger");
-    assert_eq!(config.vault_path, "vault");
     assert_eq!(config.sync_mode, SyncMode::Auto);
     assert_eq!(config.merge_strategy, MergeStrategy::Manual);
     assert_eq!(config.snapshot_depth, 100);
@@ -192,7 +191,6 @@ fn env_overrides_flat_underscore_keys() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[
         ("DEVE_LEDGER_DIR", Some("/tmp/deve-ledger")),
-        ("DEVE_VAULT_PATH", Some("/tmp/deve-vault")),
         ("DEVE_SYNC_MODE", Some("manual")),
         ("MEM_CACHE_MB", None),
     ]);
@@ -202,6 +200,36 @@ fn env_overrides_flat_underscore_keys() {
     let config = Config::load_checked().expect("env config");
 
     assert_eq!(config.ledger_dir, "/tmp/deve-ledger");
-    assert_eq!(config.vault_path, "/tmp/deve-vault");
     assert_eq!(config.sync_mode, SyncMode::Manual);
+}
+
+#[test]
+fn load_checked_rejects_deve_vault_path_env() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_VAULT_PATH", Some("/tmp/deve-vault"))]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+
+    let err = Config::load_checked().expect_err("DEVE_VAULT_PATH must fail closed");
+
+    assert!(
+        err.to_string()
+            .contains("DEVE_VAULT_PATH is no longer supported")
+    );
+}
+
+#[test]
+fn load_checked_rejects_vault_path_config_key() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_VAULT_PATH", None)]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(dir.path().join("config.toml"), "vault_path = \"vault\"\n").expect("config");
+
+    let err = Config::load_checked().expect_err("vault_path must fail closed");
+
+    assert!(
+        err.to_string()
+            .contains("vault_path is no longer supported")
+    );
 }

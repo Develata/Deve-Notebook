@@ -10,12 +10,11 @@ use std::sync::Arc;
 const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
 
 pub(super) fn init_runtime(
-    ledger_dir: &PathBuf,
-    vault_path: &PathBuf,
+    ledger_dir: &Path,
     snapshot_depth: usize,
 ) -> anyhow::Result<Arc<RepoManager>> {
-    let mut repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
-    repo.set_vault_root_checked(vault_path)?;
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    repo.validate_projection_locator_map()?;
     Ok(Arc::new(repo))
 }
 

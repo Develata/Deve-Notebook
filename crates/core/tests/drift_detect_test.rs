@@ -13,7 +13,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create temp dir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_vault_root(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
     (dir, Arc::new(repo))
 }
 
@@ -44,16 +44,16 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
     doc_id
 }
 
-fn materialize(repo: &Arc<RepoManager>, dir: &TempDir) {
-    let sync = SyncManager::new(repo.clone(), dir.path().join("vault"));
+fn materialize(repo: &Arc<RepoManager>) {
+    let sync = SyncManager::new(repo.clone());
     sync.materialize_local_repo("default").expect("materialize");
 }
 
 #[test]
 fn clean_workspace_reports_no_drift() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
-    materialize(&repo, &dir);
+    materialize(&repo);
 
     let report = detect_repo_drift(repo.as_ref(), "default").expect("detect");
     assert_eq!(report.explained_count, 0);
@@ -65,7 +65,7 @@ fn clean_workspace_reports_no_drift() {
 fn pending_modify_is_explained() {
     let (dir, repo) = new_repo();
     let doc_id = seed_doc(repo.as_ref(), "notes/a.md", "ledger");
-    materialize(&repo, &dir);
+    materialize(&repo);
 
     let file_path = dir.path().join("vault/default/notes/a.md");
     std::fs::write(&file_path, "workspace").expect("write");
@@ -95,7 +95,7 @@ fn pending_modify_is_explained() {
 fn unexplained_orphan_file_is_fault() {
     let (dir, repo) = new_repo();
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
-    materialize(&repo, &dir);
+    materialize(&repo);
 
     let orphan_path = dir.path().join("vault/default/notes/orphan.md");
     std::fs::create_dir_all(orphan_path.parent().unwrap()).expect("dirs");
@@ -111,7 +111,7 @@ fn unexplained_orphan_file_is_fault() {
 fn unexplained_missing_file_is_fault() {
     let (dir, repo) = new_repo();
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
-    materialize(&repo, &dir);
+    materialize(&repo);
 
     let tracked_path = dir.path().join("vault/default/notes/a.md");
     std::fs::remove_file(tracked_path).expect("remove");
