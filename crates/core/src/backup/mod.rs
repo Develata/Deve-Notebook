@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 18_backup#backup-locator-contract
+//!   - 18_backup#backup-remote-layout-contract
 //!   - 18_backup#backup-branch-binding-contract
 //!   - 18_backup#backup-pack-contract
 //!   - 18_backup#backup-upload-state-machine-contract
@@ -15,6 +16,7 @@
 //! modify staging, or touch Projection Workspaces.
 
 mod binding;
+mod layout;
 mod locator;
 mod pack;
 mod restore;
@@ -24,6 +26,11 @@ mod upload;
 pub use binding::{
     BackupBindingAccess, BackupBindingError, BackupBranchBinding, BackupBranchBindingInput,
     plan_backup_branch_binding, validate_backup_branch_bindings,
+};
+pub use layout::{
+    BackupRemoteLayoutDiagnostic, BackupRemoteLayoutDiagnosticKind, BackupRemoteLayoutError,
+    BackupRemoteLayoutInput, BackupRemoteLayoutReport, BackupRemoteObject, BackupTransportMetadata,
+    inspect_backup_remote_layout,
 };
 pub use locator::{BackupLocator, BackupLocatorError, BackupProviderKind, BranchBackupLocator};
 pub use pack::{

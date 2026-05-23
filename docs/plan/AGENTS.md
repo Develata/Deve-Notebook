@@ -164,6 +164,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `17_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `17_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
 | `18_backup#backup-locator-contract` | `## 2. Locator Model` | repo/branch URL 扩展为 WebDAV/S3 backup locator 的绑定与 authority 边界 |
+| `18_backup#backup-remote-layout-contract` | `## 6. Remote Layout` | repo manifest、branch manifest、packs prefix 与 remote layout drift 的结构化诊断边界 |
 | `18_backup#backup-branch-binding-contract` | `### 3.2 Branch Backup Binding` | branch/writer 到 backup folder/prefix 的 1:1 绑定、writable 与 active writer 冲突边界 |
 | `18_backup#backup-pack-contract` | `### 3.3 Backup Pack` | backup pack manifest、ledger facts range、snapshot/blob refs 与完整性 hash 边界 |
 | `18_backup#backup-upload-state-machine-contract` | `### 4.1 Backup Upload` | backup upload 从 BindingValidated 到 Complete 的状态推进、加密/上传/remote verify 顺序边界 |

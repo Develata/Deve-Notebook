@@ -183,7 +183,7 @@ RemoteDiscovered
 - `RestoreCandidate`
 - `BackupError`
 
-## 6. Remote Layout
+## 6. Remote Layout {#backup-remote-layout-contract}
 
 推荐布局：
 
