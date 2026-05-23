@@ -17,7 +17,7 @@ pub fn Commit() -> impl IntoView {
     let controller = use_commit_controller(core, chat_ctx, locale);
 
     view! {
-        <div class="px-2 pb-3 pt-1">
+        <div class="border-t border-default px-2 py-2">
             <div class="flex flex-col gap-2">
                 <CommitMessageBox
                     locale

@@ -42,6 +42,7 @@ pub mod unstaged_section;
 pub mod unstaged_section_actions;
 
 use self::changes_panel::ChangesPanel;
+use self::commit::Commit;
 use self::error_notice::ErrorNotice;
 use self::graph_panel::GraphPanel;
 use self::header::SourceControlHeader;
@@ -55,14 +56,13 @@ pub fn SourceControlView() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
 
-    let expand_repos = RwSignal::new(true);
-    let expand_changes = RwSignal::new(true);
+    let expand_repos = RwSignal::new(false);
     let expand_graph = RwSignal::new(false);
     let expand_history = RwSignal::new(false);
 
     let show_repos = RwSignal::new(true);
     let show_changes = RwSignal::new(true);
-    let show_graph = RwSignal::new(true);
+    let show_graph = RwSignal::new(false);
 
     let show_menu = RwSignal::new(false);
 
@@ -92,7 +92,8 @@ pub fn SourceControlView() -> impl IntoView {
                     current_scope_nonce=core.current_scope_nonce
                     clear_notice=core.clear_notice
                 />
-                <ChangesPanel expanded=expand_changes visible=show_changes />
+                <Commit />
+                <ChangesPanel visible=show_changes />
                 <Show when=move || show_graph.get()>
                     <GraphPanel expanded=expand_graph />
                 </Show>

@@ -27,7 +27,7 @@ pub fn CommitMessageBox(
         <div class="relative w-full">
             <textarea
                 name="commit-message"
-                class="w-full h-9 p-1.5 pr-20 text-[13px] bg-input border border-default rounded-[2px] focus:outline-none focus:border-b-accent focus:ring-1 focus:ring-accent placeholder:text-muted text-primary font-sans resize-none block leading-tight"
+                class="w-full h-9 p-1.5 pr-9 text-[13px] bg-input border border-default rounded-[2px] focus:outline-none focus:border-b-accent focus:ring-1 focus:ring-accent placeholder:text-muted text-primary font-sans resize-none block leading-tight"
                 placeholder=move || {
                     write_block
                         .get()
@@ -41,7 +41,8 @@ pub fn CommitMessageBox(
             />
             <Show when=move || show_write_actions.get()>
                 <button
-                    class="absolute right-1 top-1 bottom-1 px-1.5 bg-accent hover:bg-accent-hover text-on-accent text-[10px] rounded flex items-center gap-1 transition-colors z-[calc(var(--z-editor)_+_1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="absolute right-1 top-1 bottom-1 w-7 bg-accent hover:bg-accent-hover text-on-accent rounded flex items-center justify-center transition-colors z-[calc(var(--z-editor)_+_1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label=move || t::source_control::generate_commit_message(locale.get())
                     title=move || {
                         write_block
                             .get()
@@ -52,13 +53,6 @@ pub fn CommitMessageBox(
                     on:click=move |_| on_generate.run(())
                 >
                     <Sparkles class="w-3 h-3" />
-                    {move || {
-                        if is_generating.get() {
-                            t::source_control::generating(locale.get())
-                        } else {
-                            t::source_control::generate(locale.get())
-                        }
-                    }}
                 </button>
             </Show>
         </div>
