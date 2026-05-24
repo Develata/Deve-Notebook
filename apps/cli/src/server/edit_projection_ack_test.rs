@@ -9,7 +9,7 @@ use tokio::sync::mpsc::error::TryRecvError;
 async fn edit_acknowledges_ledger_commit_when_workspace_writeback_fails() -> anyhow::Result<()> {
     let h = edit_harness(false)?;
     let doc_id = seed_doc(&h.state, "default", "notes/a.md")?;
-    std::fs::create_dir_all(h.dir.path().join("vault/default/notes/a.md"))?;
+    std::fs::create_dir_all(h.state.repo.local_repo_workspace_path("default", "notes/a.md")?)?;
     let mut broadcast_rx = h.state.tx.subscribe();
     let (ch, mut uni_rx) = unicast_channel(&h.state);
     let mut session = writer_browser_session("default", h.default_repo_id, 37);

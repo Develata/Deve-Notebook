@@ -12,10 +12,12 @@ use tokio::sync::broadcast;
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
-    let second = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let mut second = RepoManager::init(&ledger, 10, Some("notes"), Some("urn:notes"))?;
+    second.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let second_id = second.get_repo_info()?.expect("notes info").uuid;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(8);
@@ -24,7 +26,7 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

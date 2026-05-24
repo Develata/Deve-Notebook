@@ -12,17 +12,18 @@ use tokio::sync::{broadcast, mpsc};
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
     let host_dir = dir.path().join("host");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let default_id = repo.get_repo_info()?.expect("default info").uuid;
     let repo = Arc::new(repo);
     Ok((
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
             tx: broadcast::channel(16).0,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

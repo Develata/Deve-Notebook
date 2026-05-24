@@ -52,12 +52,12 @@ async fn request_key_on_remote_branch_uses_local_counterpart_keys_root() -> anyh
 
     assert_key_provide(&mut uni_rx, repo_id, 21, Some(peer_id.clone())).await;
     assert!(state.repo.local_repo_notegit_keys_root("notes")?.exists());
-    assert!(
-        !state
-            .repo
-            .local_repo_notegit_keys_root("shadow-notes")?
-            .exists()
+    let notes_root = state.repo.local_repo_workspace_root("notes")?;
+    let projection_base = notes_root.parent().expect("repo root must have projection base");
+    let shadow_keys = deve_core::utils::notegit::repo_keys_dir(
+        &projection_base.join("shadow-notes"),
     );
+    assert!(!shadow_keys.exists());
     Ok(())
 }
 
