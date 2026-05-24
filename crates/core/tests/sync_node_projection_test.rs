@@ -7,13 +7,14 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
         .expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection base");
     (dir, std::sync::Arc::new(repo))
 }
 
 #[test]
 fn persist_doc_prefers_node_projection_path() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/a.md", None, "test")
         .expect("create file structure");
@@ -52,19 +53,20 @@ fn persist_doc_prefers_node_projection_path() {
     })
     .expect("poison metadata path");
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     sync.persist_doc(doc_id).expect("persist doc");
 
-    let canonical = dir.path().join("vault").join("default").join("notes/a.md");
+    let canonical = repo
+        .local_repo_workspace_path("default", "notes/a.md")
+        .expect("canonical path");
     assert_eq!(
         std::fs::read_to_string(canonical).expect("read canonical"),
         "hello"
     );
     assert!(
-        !dir.path()
-            .join("vault")
-            .join("default")
-            .join("stale/a.md")
+        !repo
+            .local_repo_workspace_path("default", "stale/a.md")
+            .expect("stale path")
             .exists()
     );
 }
@@ -86,7 +88,7 @@ fn persist_doc_fails_closed_when_tracked_projection_is_missing() {
     })
     .expect("remove tracked node meta");
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
         .persist_doc(doc_id)
         .expect_err("missing tracked projection must fail closed");

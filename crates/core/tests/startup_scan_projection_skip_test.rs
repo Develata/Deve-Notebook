@@ -9,9 +9,11 @@ mod common;
 fn setup_repos() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("tempdir");
     let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(&ledger, 10, Some("main"), Some("urn:main")).expect("main");
     common::create_initialized_local_repo_with_depth(&ledger, 10, "wiki", "urn:wiki");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
     (dir, Arc::new(repo))
 }
 
@@ -57,21 +59,30 @@ fn inject_broken_structure(repo: &RepoManager) {
 
 #[test]
 fn startup_scan_skips_repo_with_broken_structure_projection() {
-    let (dir, repo) = setup_repos();
+    let (_dir, repo) = setup_repos();
     seed_main_file(repo.as_ref());
     inject_broken_structure(repo.as_ref());
-    let wiki_root = dir.path().join("vault/wiki");
+    let wiki_root = repo.local_repo_workspace_root("wiki").expect("wiki root");
     std::fs::create_dir_all(&wiki_root).expect("wiki root");
     std::fs::write(wiki_root.join("untracked.md"), "must stay unscanned").expect("wiki file");
 
-    let sync = SyncManager::new(repo.clone());
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     sync.scan().expect("startup scan should skip broken repo");
 
     assert_eq!(
-        std::fs::read_to_string(dir.path().join("vault/main/notes/live.md")).expect("main doc"),
+        std::fs::read_to_string(
+            repo.local_repo_workspace_path("main", "notes/live.md")
+                .expect("main doc path")
+        )
+        .expect("main doc"),
         "ok"
     );
-    assert!(!dir.path().join("vault/wiki/orphan.md").exists());
+    assert!(
+        !repo
+            .local_repo_workspace_path("wiki", "orphan.md")
+            .expect("wiki orphan path")
+            .exists()
+    );
     assert!(sync.is_projection_degraded("wiki"));
     assert!(!sync.is_projection_degraded("main"));
     assert_eq!(

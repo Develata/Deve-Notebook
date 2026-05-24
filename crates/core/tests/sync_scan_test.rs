@@ -3,21 +3,28 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::TempDir;
 
+fn init_repo(dir: &TempDir) -> Arc<RepoManager> {
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo =
+        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
+    Arc::new(repo)
+}
+
 #[cfg(unix)]
 #[test]
 fn scan_fails_closed_on_unreadable_repo_dir() {
     use std::os::unix::fs::PermissionsExt;
 
     let dir = TempDir::new().expect("create tempdir");
-    let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
-    let mut repo =
-        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
-    repo.set_projection_base_for_all_local_repos(&vault_dir);
-    let repo = Arc::new(repo);
-    let sync = SyncManager::new(repo);
+    let repo = init_repo(&dir);
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
 
-    let unreadable = vault_dir.join("default").join("private");
+    let unreadable = repo
+        .local_repo_workspace_path("default", "private")
+        .expect("workspace path");
     std::fs::create_dir_all(&unreadable).expect("create unreadable dir");
     std::fs::write(unreadable.join("hidden.md"), "# hidden").expect("write hidden doc");
     let mut perms = std::fs::metadata(&unreadable)
@@ -42,16 +49,14 @@ fn scan_fails_closed_on_unreadable_repo_dir() {
 #[test]
 fn scan_fails_closed_on_markdown_path_that_is_not_a_file() {
     let dir = TempDir::new().expect("create tempdir");
-    let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
-    let mut repo =
-        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
-    repo.set_projection_base_for_all_local_repos(&vault_dir);
-    let repo = Arc::new(repo);
-    let sync = SyncManager::new(repo);
+    let repo = init_repo(&dir);
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
 
-    std::fs::create_dir_all(vault_dir.join("default").join("broken.md"))
-        .expect("create invalid markdown directory");
+    std::fs::create_dir_all(
+        repo.local_repo_workspace_path("default", "broken.md")
+            .expect("workspace path"),
+    )
+    .expect("create invalid markdown directory");
 
     let err = sync
         .scan()
@@ -62,15 +67,12 @@ fn scan_fails_closed_on_markdown_path_that_is_not_a_file() {
 #[test]
 fn scan_ignores_git_mirror_markdown_paths() {
     let dir = TempDir::new().expect("create tempdir");
-    let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
-    let mut repo =
-        RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default")).expect("init");
-    repo.set_projection_base_for_all_local_repos(&vault_dir);
-    let repo = Arc::new(repo);
-    let sync = SyncManager::new(repo.clone());
+    let repo = init_repo(&dir);
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
 
-    let internal = vault_dir.join("default/.git/objects/x.md");
+    let internal = repo
+        .local_repo_workspace_path("default", ".git/objects/x.md")
+        .expect("workspace path");
     std::fs::create_dir_all(internal.parent().expect("parent")).expect("mkdir");
     std::fs::write(&internal, "git mirror state").expect("write");
 
