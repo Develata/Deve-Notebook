@@ -150,7 +150,10 @@ fn validate_pack_digests(pack_digests: &[BackupDigest]) -> Result<(), BackupRest
     let mut seen = HashSet::with_capacity(pack_digests.len());
     for digest in pack_digests {
         validate_digest(digest)?;
-        if !seen.insert(digest.hex.as_str()) {
+        let canonical = digest
+            .canonical_sha256_hex()
+            .ok_or(BackupRestoreError::InvalidDigest)?;
+        if !seen.insert(canonical) {
             return Err(BackupRestoreError::DuplicatePackDigest);
         }
     }

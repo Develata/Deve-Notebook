@@ -14,6 +14,10 @@ fn digest(seed: char) -> BackupDigest {
     BackupDigest::sha256(seed.to_string().repeat(64))
 }
 
+fn uppercase_digest(seed: char) -> BackupDigest {
+    BackupDigest::sha256(seed.to_ascii_uppercase().to_string().repeat(64))
+}
+
 fn binding(access: BackupBindingAccess) -> BackupBranchBinding {
     let branch = BackupLocator::parse("s3://bucket-name/deve/")
         .unwrap()
@@ -106,6 +110,18 @@ fn progresses_through_encrypted_uploaded_verified_and_complete() {
     evidence.completion_recorded = true;
     let plan = plan_backup_upload(protected_plan_input(evidence)).unwrap();
     assert_eq!(plan.state, BackupUploadState::Complete);
+}
+
+#[test]
+fn accepts_uploaded_and_remote_digests_with_canonical_case() {
+    let mut evidence = BackupUploadEvidence::none();
+    evidence.pack_encrypted = true;
+    evidence.uploaded_payload_digest = Some(uppercase_digest('a'));
+    evidence.remote_manifest_payload_digest = Some(uppercase_digest('a'));
+
+    let plan = plan_backup_upload(protected_plan_input(evidence)).unwrap();
+
+    assert_eq!(plan.state, BackupUploadState::RemoteVerified);
 }
 
 #[test]

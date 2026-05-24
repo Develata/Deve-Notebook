@@ -80,7 +80,10 @@ pub fn verify_backup_artifacts(
     }
     validate_digest(&input.expected_manifest_digest)?;
     validate_digest(&input.computed_manifest_digest)?;
-    if input.expected_manifest_digest != input.computed_manifest_digest {
+    if !input
+        .expected_manifest_digest
+        .same_sha256(&input.computed_manifest_digest)
+    {
         return Err(BackupVerificationError::ManifestHashMismatch);
     }
     if !input.manifest_authenticated {
@@ -122,7 +125,7 @@ fn verify_pack(pack: &BackupPackVerificationEvidence) -> Result<(), BackupVerifi
     validate_digest(&pack.expected_digest)?;
     validate_digest(&pack.computed_digest)?;
 
-    let hash_matches = pack.expected_digest == pack.computed_digest;
+    let hash_matches = pack.expected_digest.same_sha256(&pack.computed_digest);
     if pack.decrypted && (!hash_matches || !pack.authenticated) {
         return Err(BackupVerificationError::DecryptBeforeVerifyForbidden);
     }

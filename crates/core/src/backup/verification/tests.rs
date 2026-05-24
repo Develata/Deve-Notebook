@@ -5,6 +5,10 @@ fn digest(fill: char) -> BackupDigest {
     BackupDigest::sha256(fill.to_string().repeat(64))
 }
 
+fn uppercase_digest(fill: char) -> BackupDigest {
+    BackupDigest::sha256(fill.to_ascii_uppercase().to_string().repeat(64))
+}
+
 fn repo_id() -> RepoId {
     "11111111-1111-1111-1111-111111111111"
         .parse()
@@ -41,6 +45,18 @@ fn verifies_authenticated_decrypted_pack_artifacts() {
     assert_eq!(result.manifest_digest, digest('a'));
     assert_eq!(result.pack_count, 1);
     assert_eq!(result.pack_digests, vec![digest('b')]);
+    assert!(result.decrypted);
+}
+
+#[test]
+fn accepts_canonical_sha256_case_differences() {
+    let mut input = input();
+    input.expected_manifest_digest = uppercase_digest('a');
+    input.packs[0].expected_digest = uppercase_digest('b');
+
+    let result = verify_backup_artifacts(input).expect("case-insensitive digest match");
+
+    assert_eq!(result.pack_count, 1);
     assert!(result.decrypted);
 }
 

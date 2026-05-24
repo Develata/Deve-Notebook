@@ -8,6 +8,10 @@ fn digest(seed: char) -> BackupDigest {
     BackupDigest::sha256(seed.to_string().repeat(64))
 }
 
+fn uppercase_digest(seed: char) -> BackupDigest {
+    BackupDigest::sha256(seed.to_ascii_uppercase().to_string().repeat(64))
+}
+
 fn input() -> RestoreCandidateInput {
     let repo_id = uuid::Uuid::from_u128(42);
     let branch = BackupLocator::parse("s3://bucket-name/deve/")
@@ -108,6 +112,13 @@ fn rejects_bad_pack_digest_or_count() {
 
     let mut candidate_input = input();
     candidate_input.pack_digests[1] = candidate_input.pack_digests[0].clone();
+    assert!(matches!(
+        admit_restore_candidate(candidate_input),
+        Err(BackupRestoreError::DuplicatePackDigest)
+    ));
+
+    let mut candidate_input = input();
+    candidate_input.pack_digests[1] = uppercase_digest('b');
     assert!(matches!(
         admit_restore_candidate(candidate_input),
         Err(BackupRestoreError::DuplicatePackDigest)

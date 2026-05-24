@@ -8,6 +8,10 @@ fn digest(seed: char) -> BackupDigest {
     BackupDigest::sha256(seed.to_string().repeat(64))
 }
 
+fn uppercase_digest(seed: char) -> BackupDigest {
+    BackupDigest::sha256(seed.to_ascii_uppercase().to_string().repeat(64))
+}
+
 fn input(evidence: BackupRestoreFlowEvidence) -> BackupRestoreFlowInput {
     let branch = BackupLocator::parse("s3://bucket-name/deve/")
         .unwrap()
@@ -131,6 +135,14 @@ fn rejects_empty_pack_download_after_download_phase() {
 
     let mut restore_input = verified_input(evidence);
     restore_input.pack_digests[1] = restore_input.pack_digests[0].clone();
+
+    assert!(matches!(
+        plan_backup_restore_flow(restore_input),
+        Err(BackupRestoreFlowError::DuplicatePackDigest)
+    ));
+
+    let mut restore_input = verified_input(evidence);
+    restore_input.pack_digests[1] = uppercase_digest('b');
 
     assert!(matches!(
         plan_backup_restore_flow(restore_input),

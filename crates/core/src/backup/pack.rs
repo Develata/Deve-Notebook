@@ -39,6 +39,20 @@ impl BackupDigest {
             && self.hex.len() == 64
             && self.hex.bytes().all(|byte| byte.is_ascii_hexdigit())
     }
+
+    pub fn same_sha256(&self, other: &Self) -> bool {
+        self.is_valid_sha256()
+            && other.is_valid_sha256()
+            && self.hex.eq_ignore_ascii_case(&other.hex)
+    }
+
+    pub fn canonical_sha256_hex(&self) -> Option<String> {
+        if self.is_valid_sha256() {
+            Some(self.hex.to_ascii_lowercase())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

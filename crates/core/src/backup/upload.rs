@@ -147,14 +147,14 @@ fn validate_upload_evidence(
 
     if let Some(uploaded_digest) = &evidence.uploaded_payload_digest {
         validate_digest(uploaded_digest)?;
-        if uploaded_digest != expected_payload_digest {
+        if !uploaded_digest.same_sha256(expected_payload_digest) {
             return Err(BackupUploadError::UploadedPackDigestMismatch);
         }
     }
 
     if let Some(remote_digest) = &evidence.remote_manifest_payload_digest {
         validate_digest(remote_digest)?;
-        if remote_digest != expected_payload_digest {
+        if !remote_digest.same_sha256(expected_payload_digest) {
             return Err(BackupUploadError::RemoteManifestDigestMismatch);
         }
     }

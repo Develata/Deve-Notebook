@@ -8,6 +8,10 @@ fn digest() -> BackupDigest {
     BackupDigest::sha256("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 }
 
+fn uppercase_digest() -> BackupDigest {
+    BackupDigest::sha256("0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF")
+}
+
 fn plan_input() -> BackupPackPlanInput {
     let branch = BackupLocator::parse("s3://bucket-name/deve/")
         .unwrap()
@@ -42,6 +46,15 @@ fn plans_manifest_with_remote_layout_paths() {
         "deve/branches/writer-1/packs/000001.pack.enc"
     );
     assert_eq!(manifest.blob_refs[0].path, "blobs/aa.bin");
+}
+
+#[test]
+fn compares_sha256_digests_by_canonical_hex() {
+    assert!(digest().same_sha256(&uppercase_digest()));
+    assert_eq!(
+        uppercase_digest().canonical_sha256_hex().as_deref(),
+        Some("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+    );
 }
 
 #[test]
