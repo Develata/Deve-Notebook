@@ -6,13 +6,13 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
         .expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, std::sync::Arc::new(repo))
 }
 
 #[test]
 fn repeated_same_fs_modify_event_is_noop_after_first_pending_update() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -50,7 +50,7 @@ fn repeated_same_fs_modify_event_is_noop_after_first_pending_update() -> anyhow:
             .is_empty()
     );
 
-    let file = dir.path().join("vault/default/notes/a.md");
+    let file = repo.local_repo_workspace_path("default", "notes/a.md")?;
     std::fs::write(&file, "dirty")?;
     let first = sync.handle_fs_event("default", repo_id, "notes/a.md")?;
     let second = sync.handle_fs_event("default", repo_id, "notes/a.md")?;

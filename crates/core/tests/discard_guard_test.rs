@@ -9,13 +9,13 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, Arc::new(repo))
 }
 
 #[test]
 fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -41,7 +41,7 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
             )
         },
     )?;
-    let file_path = dir.path().join("vault/default/notes/a.md");
+    let file_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
     std::fs::create_dir_all(file_path.parent().expect("parent"))?;
     std::fs::write(&file_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -67,8 +67,8 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
 
 #[test]
 fn projection_delete_marks_watcher_ignore() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
-    let file_path = dir.path().join("vault/default/notes/a.md");
+    let (_dir, repo) = new_repo();
+    let file_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
     std::fs::create_dir_all(file_path.parent().expect("parent"))?;
     std::fs::write(&file_path, "temp")?;
     let sync = SyncManager::new(repo);
@@ -80,7 +80,7 @@ fn projection_delete_marks_watcher_ignore() -> anyhow::Result<()> {
 
 #[test]
 fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
@@ -106,7 +106,7 @@ fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
             )
         },
     )?;
-    let file_path = dir.path().join("vault/default/notes/a.md");
+    let file_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
     std::fs::create_dir_all(file_path.parent().expect("parent"))?;
     std::fs::write(&file_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {

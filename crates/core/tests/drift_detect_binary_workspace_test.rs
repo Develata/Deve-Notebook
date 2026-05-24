@@ -11,7 +11,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create temp dir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, Arc::new(repo))
 }
 
@@ -44,13 +44,15 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
 
 #[test]
 fn binary_workspace_file_is_reported_as_unexpected_not_fatal() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
     SyncManager::new(repo.clone())
         .materialize_local_repo("default")
         .expect("materialize");
 
-    let rogue = dir.path().join("vault/default/notes/blob.bin");
+    let rogue = repo
+        .local_repo_workspace_path("default", "notes/blob.bin")
+        .expect("workspace path");
     std::fs::create_dir_all(rogue.parent().expect("parent")).expect("dirs");
     std::fs::write(&rogue, [0xff, 0xfe, 0x00, 0x01]).expect("write binary");
 

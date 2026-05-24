@@ -8,7 +8,7 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
         .expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -21,7 +21,7 @@ fn repo_id(repo: &deve_core::ledger::RepoManager, repo_name: &str) -> anyhow::Re
 
 #[test]
 fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let name = repo.local_repo_name().to_string();
     let (doc_id, _ops) =
         repo.apply_file_structure_in_local_repo(&name, "dedup.md", None, "test")?;
@@ -50,7 +50,7 @@ fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
     assert!(events.is_empty(), "no change when content matches");
 
     // Write different content — should produce pending
-    let file = dir.path().join("vault/default/dedup.md");
+    let file = repo.local_repo_workspace_path("default", "dedup.md")?;
     std::fs::write(&file, "modified")?;
     let first = sync.handle_fs_event("default", repo_id, "dedup.md")?;
     assert!(
@@ -70,7 +70,7 @@ fn same_content_write_deduped_by_hash() -> anyhow::Result<()> {
 
 #[test]
 fn revert_to_original_clears_pending() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let name = repo.local_repo_name().to_string();
     let (doc_id, _ops) =
         repo.apply_file_structure_in_local_repo(&name, "revert.md", None, "test")?;
@@ -95,7 +95,7 @@ fn revert_to_original_clears_pending() -> anyhow::Result<()> {
     let repo_id = repo_id(&repo, &name)?;
 
     // Modify then revert
-    let file = dir.path().join("vault/default/revert.md");
+    let file = repo.local_repo_workspace_path("default", "revert.md")?;
     std::fs::write(&file, "dirty")?;
     let changed = sync.handle_fs_event("default", repo_id, "revert.md")?;
     assert!(!changed.is_empty());

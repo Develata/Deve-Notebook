@@ -10,14 +10,16 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, Arc::new(repo))
 }
 
 #[test]
 fn watcher_treats_legacy_only_path_as_new_file() {
-    let (dir, repo) = new_repo();
-    let path = dir.path().join("vault/default/notes/legacy.md");
+    let (_dir, repo) = new_repo();
+    let path = repo
+        .local_repo_workspace_path("default", "notes/legacy.md")
+        .expect("workspace path");
     std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
     std::fs::write(&path, "legacy content").expect("write file");
 
@@ -53,8 +55,10 @@ fn watcher_treats_legacy_only_path_as_new_file() {
 
 #[test]
 fn full_scan_treats_legacy_only_path_as_new_file() {
-    let (dir, repo) = new_repo();
-    let path = dir.path().join("vault/default/notes/legacy.md");
+    let (_dir, repo) = new_repo();
+    let path = repo
+        .local_repo_workspace_path("default", "notes/legacy.md")
+        .expect("workspace path");
     std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
     std::fs::write(&path, "legacy content").expect("write file");
 
@@ -72,7 +76,10 @@ fn full_scan_treats_legacy_only_path_as_new_file() {
     })
     .expect("seed legacy mapping");
 
-    let vfs = Vfs::new(dir.path().join("vault"));
+    let vfs = Vfs::new(
+        repo.local_repo_workspace_root("default")
+            .expect("workspace root"),
+    );
     scan_projection_workspaces(&repo, &vfs)
         .expect("full scan succeeds; legacy-only path treated as new");
 

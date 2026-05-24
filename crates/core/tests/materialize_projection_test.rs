@@ -7,7 +7,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -54,7 +54,7 @@ fn inject_legacy_doc_path(repo: &RepoManager, doc_id: deve_core::models::DocId, 
 
 #[test]
 fn materialize_projection_creates_empty_directories_from_structure_facts() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     repo.apply_dir_create_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/archive/2026",
@@ -62,10 +62,12 @@ fn materialize_projection_creates_empty_directories_from_structure_facts() {
     )
     .expect("create dir structure");
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new(repo.clone());
     sync.materialize_local_repo("default").expect("materialize");
 
-    let root = dir.path().join("vault/default");
+    let root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     assert!(root.join("notes").is_dir());
     assert!(root.join("notes/archive").is_dir());
     assert!(root.join("notes/archive/2026").is_dir());
@@ -73,7 +75,7 @@ fn materialize_projection_creates_empty_directories_from_structure_facts() {
 
 #[test]
 fn materialize_projection_prefers_node_path_over_legacy_doc_mapping() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     seed_file(repo.as_ref(), "notes/a.md", "ledger");
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -81,10 +83,12 @@ fn materialize_projection_prefers_node_path_over_legacy_doc_mapping() {
         .expect("doc id");
     inject_legacy_doc_path(repo.as_ref(), doc_id, "stale/a.md");
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new(repo.clone());
     sync.materialize_local_repo("default").expect("materialize");
 
-    let root = dir.path().join("vault/default");
+    let root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     assert_eq!(
         std::fs::read_to_string(root.join("notes/a.md")).expect("read canonical doc"),
         "ledger"

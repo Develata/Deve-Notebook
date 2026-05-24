@@ -10,7 +10,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, Arc::new(repo))
 }
 
@@ -45,10 +45,10 @@ fn seed_ledger_doc(repo: &RepoManager) -> anyhow::Result<DocId> {
 
 #[test]
 fn discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = seed_ledger_doc(&repo)?;
-    let old_path = dir.path().join("vault/default/notes/a.md");
-    let new_path = dir.path().join("vault/default/notes/b.md");
+    let old_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
+    let new_path = repo.local_repo_workspace_path("default", "notes/b.md")?;
     std::fs::create_dir_all(old_path.parent().expect("parent"))?;
     std::fs::write(&new_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -76,10 +76,10 @@ fn discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
 
 #[test]
 fn repo_discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = seed_ledger_doc(&repo)?;
-    let old_path = dir.path().join("vault/default/notes/a.md");
-    let new_path = dir.path().join("vault/default/notes/b.md");
+    let old_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
+    let new_path = repo.local_repo_workspace_path("default", "notes/b.md")?;
     std::fs::create_dir_all(old_path.parent().expect("parent"))?;
     std::fs::write(&new_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -106,15 +106,15 @@ fn repo_discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> 
 
 #[test]
 fn discard_target_resolves_renamed_pending_by_doc_id() -> anyhow::Result<()> {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
         repo.local_repo_name(),
         "notes/a.md",
         None,
         "test",
     )?;
-    let old_path = dir.path().join("vault/default/notes/a.md");
-    let new_path = dir.path().join("vault/default/notes/b.md");
+    let old_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
+    let new_path = repo.local_repo_workspace_path("default", "notes/b.md")?;
     std::fs::create_dir_all(old_path.parent().expect("parent"))?;
     std::fs::write(&new_path, "dirty")?;
     repo.run_on_local_repo(repo.local_repo_name(), |db| {

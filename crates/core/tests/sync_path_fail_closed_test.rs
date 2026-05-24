@@ -11,7 +11,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, Arc::new(repo))
 }
 
@@ -54,9 +54,11 @@ fn block_dir(path: &std::path::Path) -> std::fs::Permissions {
 #[cfg(unix)]
 #[test]
 fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     seed_file(repo.as_ref(), "notes/a.md", "ledger");
-    let blocked = dir.path().join("vault/default/notes");
+    let blocked = repo
+        .local_repo_workspace_path("default", "notes")
+        .expect("workspace path");
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
@@ -76,9 +78,11 @@ fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
 #[cfg(unix)]
 #[test]
 fn reconcile_doc_in_local_repo_fails_closed_when_workspace_path_is_unstatable() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = seed_file(repo.as_ref(), "notes/a.md", "ledger");
-    let blocked = dir.path().join("vault/default/notes");
+    let blocked = repo
+        .local_repo_workspace_path("default", "notes")
+        .expect("workspace path");
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
@@ -98,9 +102,11 @@ fn reconcile_doc_in_local_repo_fails_closed_when_workspace_path_is_unstatable() 
 #[cfg(unix)]
 #[test]
 fn bind_workspace_inode_fails_closed_when_workspace_path_is_unstatable() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = seed_file(repo.as_ref(), "notes/a.md", "ledger");
-    let blocked = dir.path().join("vault/default/notes");
+    let blocked = repo
+        .local_repo_workspace_path("default", "notes")
+        .expect("workspace path");
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 

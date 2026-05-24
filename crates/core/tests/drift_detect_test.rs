@@ -13,7 +13,7 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create temp dir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, Arc::new(repo))
 }
 
@@ -63,11 +63,13 @@ fn clean_workspace_reports_no_drift() {
 
 #[test]
 fn pending_modify_is_explained() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = seed_doc(repo.as_ref(), "notes/a.md", "ledger");
     materialize(&repo);
 
-    let file_path = dir.path().join("vault/default/notes/a.md");
+    let file_path = repo
+        .local_repo_workspace_path("default", "notes/a.md")
+        .expect("workspace path");
     std::fs::write(&file_path, "workspace").expect("write");
     let hash = pending_fs::content_hash("workspace");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -93,11 +95,13 @@ fn pending_modify_is_explained() {
 
 #[test]
 fn unexplained_orphan_file_is_fault() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
     materialize(&repo);
 
-    let orphan_path = dir.path().join("vault/default/notes/orphan.md");
+    let orphan_path = repo
+        .local_repo_workspace_path("default", "notes/orphan.md")
+        .expect("workspace path");
     std::fs::create_dir_all(orphan_path.parent().unwrap()).expect("dirs");
     std::fs::write(&orphan_path, "orphan").expect("write");
 
@@ -109,11 +113,13 @@ fn unexplained_orphan_file_is_fault() {
 
 #[test]
 fn unexplained_missing_file_is_fault() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
     materialize(&repo);
 
-    let tracked_path = dir.path().join("vault/default/notes/a.md");
+    let tracked_path = repo
+        .local_repo_workspace_path("default", "notes/a.md")
+        .expect("workspace path");
     std::fs::remove_file(tracked_path).expect("remove");
 
     let report = detect_repo_drift(repo.as_ref(), "default").expect("detect");

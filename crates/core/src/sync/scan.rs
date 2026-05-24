@@ -161,7 +161,7 @@ mod tests {
     fn repo_relative_path_fails_closed_when_path_escapes_repo_root() {
         let err = repo_relative_path(
             "default",
-            Path::new("/vault/default"),
+            Path::new("/projection/default"),
             Path::new("/tmp/a.md"),
         )
         .expect_err("escaped path must fail closed");
