@@ -36,7 +36,7 @@ pub(super) fn build_state_with_mode(
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

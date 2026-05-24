@@ -10,15 +10,16 @@ use std::path::Path;
 use std::sync::Arc;
 
 pub(crate) fn reopen_state(root: &Path) -> anyhow::Result<Arc<AppState>> {
-    let vault = root.join("vault");
-    let mut repo = RepoManager::init(root, 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger = root.join("ledger");
+    let projection_base = root.join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let (tx, _rx) = tokio::sync::broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&root.join("host"))?;
     Ok(Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(SyncManager::new(repo.clone())),
+        sync_manager: Arc::new(SyncManager::new_checked(repo.clone())?),
         tx,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(

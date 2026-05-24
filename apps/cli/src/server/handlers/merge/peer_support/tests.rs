@@ -9,14 +9,16 @@ use deve_core::ledger::schema::DOCID_TO_PATH;
 use deve_core::ledger::{REPO_METADATA, RepoInfo};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
-use std::path::PathBuf;
 use tempfile::tempdir;
 use tokio::sync::broadcast;
 
-fn app_state(repo: Arc<RepoManager>, _projection_base: PathBuf) -> Arc<AppState> {
+fn app_state(repo: Arc<RepoManager>) -> Arc<AppState> {
     Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+        sync_manager: Arc::new(
+            deve_core::sync::SyncManager::new_checked(repo.clone())
+                .expect("projection locator must be valid"),
+        ),
         tx: broadcast::channel(8).0,
         plugins: vec![],
         sync_engine: Arc::new(deve_core::sync::repo_scoped::RepoScopedSyncEngine::new(
@@ -34,15 +36,16 @@ fn app_state(repo: Arc<RepoManager>, _projection_base: PathBuf) -> Arc<AppState>
 #[test]
 fn resolves_local_merge_scope_from_remote_repo_id() {
     let dir = tempdir().expect("tempdir");
-    let vault = dir.path().join("vault");
+    let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("locator");
     let repo = Arc::new(repo);
     let info = repo
         .get_repo_info_for(None, Some(repo.local_repo_name()))
         .expect("repo info")
         .expect("repo info exists");
-    let state = app_state(repo.clone(), vault);
+    let state = app_state(repo.clone());
     let ch = DualChannel::new(
         broadcast::channel(8).0,
         crate::server::ws::send::new_unicast_channel().0,
@@ -68,7 +71,7 @@ fn resolves_local_merge_scope_from_remote_repo_id() {
 #[test]
 fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
     let dir = tempdir().expect("tempdir");
-    let vault = dir.path().join("vault");
+    let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(
         dir.path().join("ledger"),
         10,
@@ -76,7 +79,8 @@ fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
         Some("urn:default"),
     )
     .expect("init repo");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("locator");
     let info = repo.get_repo_info().expect("repo info").expect("present");
     let doc_id = DocId(uuid::Uuid::new_v4());
 
@@ -102,7 +106,7 @@ fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
     let repo = Arc::new(repo);
     let (unicast_tx, mut unicast_rx) = crate::server::ws::send::new_unicast_channel();
     let ch = DualChannel::new(broadcast::channel(8).0, unicast_tx);
-    let state = app_state(repo, vault);
+    let state = app_state(repo);
 
     assert!(resolve_doc_path(&state, &ch, "default", doc_id, Some(7)).is_none());
 

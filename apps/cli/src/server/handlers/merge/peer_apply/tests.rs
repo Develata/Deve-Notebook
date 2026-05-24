@@ -148,9 +148,9 @@ async fn peer_merge_write_rejects_degraded_local_projection_before_append() -> a
 
 fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::Uuid)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
+    let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some("default"), None)?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let (doc_id, _) =
         repo.apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
@@ -169,7 +169,7 @@ fn degraded_app_state() -> anyhow::Result<(TempDir, Arc<AppState>, DocId, uuid::
         )
     })?;
     let repo = Arc::new(repo);
-    let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone()));
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
     sync_manager.mark_projection_writeback_fault("default");
     Ok((
         dir,
