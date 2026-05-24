@@ -78,6 +78,16 @@ fn rejects_pack_hash_mismatch() {
 }
 
 #[test]
+fn rejects_duplicate_pack_sequence() {
+    let mut input = input();
+    input.packs.push(pack());
+
+    let err = verify_backup_artifacts(input).expect_err("duplicate pack sequence");
+
+    assert_eq!(err, BackupVerificationError::DuplicatePackSequence);
+}
+
+#[test]
 fn rejects_decrypt_before_hash_and_authentication_verify() {
     let mut input = input();
     input.packs[0].computed_digest = digest('c');

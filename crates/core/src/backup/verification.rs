@@ -11,6 +11,7 @@
 use super::pack::BackupDigest;
 use crate::models::RepoId;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use thiserror::Error;
 
 #[cfg(test)]
@@ -59,6 +60,8 @@ pub enum BackupVerificationError {
     EmptyPackList,
     #[error("backup verification pack sequence must be greater than zero")]
     InvalidPackSequence,
+    #[error("backup verification pack sequence is duplicated")]
+    DuplicatePackSequence,
     #[error("backup verification pack hash mismatch")]
     PackHashMismatch,
     #[error("backup verification pack authentication failed")]
@@ -89,7 +92,11 @@ pub fn verify_backup_artifacts(
 
     let mut pack_digests = Vec::with_capacity(input.packs.len());
     let mut all_decrypted = true;
+    let mut pack_sequences = HashSet::with_capacity(input.packs.len());
     for pack in input.packs {
+        if !pack_sequences.insert(pack.pack_sequence) {
+            return Err(BackupVerificationError::DuplicatePackSequence);
+        }
         verify_pack(&pack)?;
         all_decrypted &= pack.decrypted;
         pack_digests.push(pack.expected_digest);
