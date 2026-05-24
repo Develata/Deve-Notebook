@@ -72,7 +72,7 @@ pub struct WsSession {
     /// 当前活动分支。`None` 为本地分支，`Some(peer_id)` 为远程影子库。
     pub active_branch: Option<PeerId>,
 
-    /// 当前活动仓库名称。`None` 表示默认仓库，`Some(name)` 表示指定 `.redb`。
+    /// 当前活动仓库名称。`None` 表示默认仓库，`Some(name)` 表示显式 repo selector。
     pub active_repo: Option<String>,
 
     /// 当前活动仓库 ID（UUID-first）
