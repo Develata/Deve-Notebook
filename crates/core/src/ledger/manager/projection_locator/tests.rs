@@ -241,6 +241,31 @@ fn projection_locator_shared_base_allows_distinct_repo_roots() -> anyhow::Result
 }
 
 #[test]
+fn projection_locator_set_all_validates_final_map_not_intermediate_mix() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let old_base = dir.path().join("notes");
+    let new_base = old_base.join("wiki");
+    let mut main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+    crate::test_support::create_initialized_local_repo(&ledger, "wiki", "urn:wiki");
+
+    main.set_projection_base_for_all_local_repos_checked(&old_base)?;
+    main.set_projection_base_for_all_local_repos_checked(&new_base)?;
+
+    let new_base = std::fs::canonicalize(&new_base)?;
+    assert_eq!(
+        main.local_repo_workspace_root("default")?,
+        new_base.join("default")
+    );
+    assert_eq!(
+        main.local_repo_workspace_root("wiki")?,
+        new_base.join("wiki")
+    );
+    Ok(())
+}
+
+#[test]
 fn projection_locator_nested_workspace_roots_fail_closed() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;

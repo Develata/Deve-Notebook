@@ -7,7 +7,7 @@ use crate::models::RepoId;
 use crate::utils::notegit;
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 use unicode_normalization::UnicodeNormalization;
 
@@ -50,6 +50,49 @@ impl RepoManager {
     ) -> Result<ProjectionLocatorRecord> {
         let info = self.local_repo_info_for_locator(repo_name)?;
         self.set_projection_base_for_repo_id(info.uuid, &info.name, projection_base)
+    }
+
+    /// 为所有当前本地 repo 设置同一个 Projection Locator base。
+    ///
+    /// Invariants:
+    /// - 参数是 projection base；最终 workspace root 仍为 `<base>/<repo_name>/`。
+    /// - 批量更新必须按最终 locator map 校验并一次写入，不能暴露或误判中间混合态。
+    /// - 生产入口应优先通过 `set_projection_base_for_local_repo` 明确绑定目标 repo。
+    pub fn set_projection_base_for_all_local_repos_checked(
+        &mut self,
+        root: impl AsRef<Path>,
+    ) -> Result<()> {
+        self.refresh_local_repo_catalog()?;
+        let projection_base_abs = canonicalize_projection_base(root.as_ref())?;
+        let timestamp = chrono::Utc::now().timestamp_millis();
+        let local_infos = self
+            .list_local_repo_names_for_execution()?
+            .into_iter()
+            .map(|repo_name| {
+                self.get_repo_info_for(None, Some(&repo_name))?
+                    .ok_or_else(|| anyhow!("Local repo metadata is missing for {}", repo_name))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let local_ids = local_infos
+            .iter()
+            .map(|info| info.uuid)
+            .collect::<HashSet<_>>();
+
+        let mut file = self.read_projection_locator_file()?;
+        file.locators
+            .retain(|record| !local_ids.contains(&record.repo_id));
+        for info in local_infos {
+            file.locators.push(ProjectionLocatorRecord {
+                repo_id: info.uuid,
+                repo_name_hint: safe_repo_path_segment(&info.name)?,
+                projection_base_abs: projection_base_abs.clone(),
+                canonicalized_at_unix_ms: timestamp,
+            });
+        }
+        file.locators
+            .sort_by_key(|item| (item.repo_name_hint.clone(), item.repo_id));
+        self.validate_projection_locator_records(&file.locators, true)?;
+        self.write_projection_locator_file(&file)
     }
 
     pub fn set_projection_base_for_repo_id(
