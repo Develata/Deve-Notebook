@@ -176,7 +176,7 @@ pub fn validate_pack_manifest(
     Ok(())
 }
 
-fn pack_file_name(pack_sequence: u64) -> String {
+pub(super) fn pack_file_name(pack_sequence: u64) -> String {
     format!("{pack_sequence:06}.pack.enc")
 }
 
