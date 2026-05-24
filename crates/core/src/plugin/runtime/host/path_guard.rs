@@ -6,6 +6,7 @@ use crate::utils::path::path_to_forward_slash;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
+#[cfg(unix)]
 pub(super) fn project_relative_path(cwd: &Path, path: &Path) -> Result<Option<String>, String> {
     let cwd = std::fs::canonicalize(cwd)
         .map_err(|e| format!("Failed to canonicalize project root {:?}: {}", cwd, e))?;
@@ -14,8 +15,19 @@ pub(super) fn project_relative_path(cwd: &Path, path: &Path) -> Result<Option<St
 }
 
 pub(super) fn is_ledger_managed_write_target(path: &Path) -> Result<bool, String> {
-    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    Ok(project_relative_path(&cwd, path)?.is_some_and(|rel| is_ledger_managed_relative_path(&rel)))
+    let cwd = canonical_project_root()?;
+    let target = canonicalize_target(&cwd, path)?;
+    if project_relative_from_canonical(&cwd, &target)
+        .is_some_and(|rel| is_project_ledger_relative_path(&rel))
+    {
+        return Ok(true);
+    }
+    if let Ok(manager) = super::repo_manager()
+        && is_ledger_managed_write_target_for(manager.as_ref(), path)?
+    {
+        return Ok(true);
+    }
+    Ok(false)
 }
 
 pub(super) fn resolve_capability_read_target(
@@ -38,17 +50,46 @@ pub(super) fn resolve_capability_write_target(
     resolve_canonical_capability_target(&caps.allow_fs_write, path)
 }
 
-pub(super) fn split_managed_note_target(rel_path: &str) -> Option<(String, String)> {
-    let parts: Vec<_> = rel_path
-        .split('/')
-        .filter(|part| !part.is_empty())
-        .collect();
-    if parts.len() < 3 || parts[0] != "vault" || !rel_path.ends_with(".md") {
-        return None;
+pub(super) fn managed_note_target_parts(path: &Path) -> Result<Option<(String, String)>, String> {
+    if let Ok(manager) = super::repo_manager() {
+        return managed_note_target_parts_for(manager.as_ref(), path);
     }
-    let repo_name = parts[1].to_string();
-    let repo_path = parts[2..].join("/");
-    Some((repo_name, repo_path))
+    Ok(None)
+}
+
+pub(super) fn is_ledger_managed_write_target_for(
+    manager: &crate::ledger::RepoManager,
+    path: &Path,
+) -> Result<bool, String> {
+    let cwd = canonical_project_root()?;
+    let target = canonicalize_target(&cwd, path)?;
+    if target.starts_with(&canonicalize_target(&cwd, &manager.ledger_dir)?) {
+        return Ok(true);
+    }
+    let Some((_repo_name, repo_path)) =
+        repo_workspace_relative_for_canonical_target(manager, &cwd, &target)?
+    else {
+        return Ok(false);
+    };
+    Ok(is_projection_workspace_managed_relative_path(&repo_path))
+}
+
+fn managed_note_target_parts_for(
+    manager: &crate::ledger::RepoManager,
+    path: &Path,
+) -> Result<Option<(String, String)>, String> {
+    let cwd = canonical_project_root()?;
+    let target = canonicalize_target(&cwd, path)?;
+    let Some((repo_name, repo_path)) =
+        repo_workspace_relative_for_canonical_target(manager, &cwd, &target)?
+    else {
+        return Ok(None);
+    };
+    if is_projection_workspace_note_path(&repo_path) {
+        Ok(Some((repo_name, repo_path)))
+    } else {
+        Ok(None)
+    }
 }
 
 fn resolve_canonical_capability_target(
@@ -109,25 +150,64 @@ fn canonicalize_target(cwd: &Path, path: &Path) -> Result<PathBuf, String> {
     }
 }
 
-fn is_ledger_managed_relative_path(rel_path: &str) -> bool {
+fn is_project_ledger_relative_path(rel_path: &str) -> bool {
     let parts: Vec<_> = rel_path
         .split('/')
         .filter(|part| !part.is_empty())
         .collect();
-    if parts.first() == Some(&"ledger") {
-        return true;
-    }
-    if parts.len() >= 3 && parts[0] == "vault" {
-        if parts
-            .iter()
-            .skip(2)
-            .any(|part| crate::utils::notegit::is_internal_repo_segment(part))
-        {
-            return true;
+    parts.first() == Some(&"ledger")
+}
+
+fn is_projection_workspace_managed_relative_path(repo_path: &str) -> bool {
+    is_internal_repo_relative_path(repo_path) || is_projection_workspace_note_path(repo_path)
+}
+
+fn is_projection_workspace_note_path(repo_path: &str) -> bool {
+    !repo_path.is_empty()
+        && !is_internal_repo_relative_path(repo_path)
+        && repo_path.ends_with(".md")
+}
+
+fn is_internal_repo_relative_path(repo_path: &str) -> bool {
+    repo_path
+        .split('/')
+        .filter(|part| !part.is_empty())
+        .any(crate::utils::notegit::is_internal_repo_segment)
+}
+
+fn repo_workspace_relative_for_canonical_target(
+    manager: &crate::ledger::RepoManager,
+    cwd: &Path,
+    target: &Path,
+) -> Result<Option<(String, String)>, String> {
+    let repo_names = manager
+        .list_local_repo_names_for_execution()
+        .map_err(|e| e.to_string())?;
+    for repo_name in repo_names {
+        let root = manager
+            .local_repo_workspace_root(&repo_name)
+            .map_err(|e| e.to_string())?;
+        let root = canonicalize_target(cwd, &root)?;
+        if let Ok(repo_relative) = target.strip_prefix(&root) {
+            return Ok(Some((
+                repo_name,
+                path_to_forward_slash(repo_relative)
+                    .trim_matches('/')
+                    .to_string(),
+            )));
         }
-        return rel_path.ends_with(".md");
     }
-    false
+    Ok(None)
+}
+
+fn canonical_project_root() -> Result<PathBuf, String> {
+    let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    std::fs::canonicalize(&cwd)
+        .map_err(|e| format!("Failed to canonicalize project root {:?}: {}", cwd, e))
+}
+
+fn project_relative_from_canonical(cwd: &Path, target: &Path) -> Option<String> {
+    target.strip_prefix(cwd).ok().map(path_to_forward_slash)
 }
 
 #[cfg(test)]

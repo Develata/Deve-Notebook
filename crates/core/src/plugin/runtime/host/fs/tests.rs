@@ -1,5 +1,4 @@
 use super::*;
-use crate::plugin::runtime::host::path_guard::split_managed_note_target;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tempfile::tempdir;
@@ -29,36 +28,33 @@ impl Drop for CwdGuard {
 
 #[test]
 fn classifies_ledger_managed_relative_paths() {
-    assert_eq!(
-        split_managed_note_target("vault/default/notes/a.md"),
-        Some(("default".into(), "notes/a.md".into()))
-    );
     assert!(is_ledger_managed_write_target(Path::new("ledger/local/wiki.redb")).unwrap());
     assert!(!is_ledger_managed_write_target(Path::new("tmp/report.md")).unwrap());
 }
 
 #[test]
-fn fs_write_denies_managed_markdown() {
+fn fs_write_denies_project_ledger_path() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let dir = tempdir().expect("tempdir");
     let _cwd = CwdGuard::enter(dir.path());
+    std::fs::create_dir_all(dir.path().join("ledger/local")).expect("mkdir ledger");
 
     let mut engine = Engine::new();
     let caps = Arc::new(Capability {
-        allow_fs_write: vec![dir.path().join("vault/default")],
+        allow_fs_write: vec![dir.path().join("ledger/local")],
         ..Default::default()
     });
     register_fs_api(&mut engine, caps);
     let script = format!(
         r#"fs_write("{}", "blocked")"#,
         dir.path()
-            .join("vault/default/notes/a.md")
+            .join("ledger/local/wiki.redb")
             .to_string_lossy()
             .replace('\\', "\\\\")
     );
     let err = engine
         .eval::<()>(&script)
-        .expect_err("managed markdown must fail");
+        .expect_err("project ledger write must fail");
 
     assert!(err.to_string().contains("ledger-managed write denied"));
 }
@@ -69,10 +65,10 @@ fn fs_write_allows_non_ledger_asset() {
     let dir = tempdir().expect("tempdir");
     let _cwd = CwdGuard::enter(dir.path());
 
-    let output = dir.path().join("vault/default/exports/report.txt");
+    let output = dir.path().join("workspace/default/exports/report.txt");
     let mut engine = Engine::new();
     let caps = Arc::new(Capability {
-        allow_fs_write: vec![dir.path().join("vault/default/exports")],
+        allow_fs_write: vec![dir.path().join("workspace/default/exports")],
         ..Default::default()
     });
     register_fs_api(&mut engine, caps);

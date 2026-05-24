@@ -10,9 +10,7 @@ use rhai::{Engine, EvalAltResult};
 use std::path::Path;
 use std::sync::Arc;
 
-use super::path_guard::{
-    is_ledger_managed_write_target, project_relative_path, split_managed_note_target,
-};
+use super::path_guard::{is_ledger_managed_write_target, managed_note_target_parts};
 
 pub fn register_note_api(engine: &mut Engine, caps: Arc<Capability>) {
     let caps_read = caps.clone();
@@ -88,11 +86,8 @@ fn managed_target_parts(path: &Path) -> Result<(String, String)> {
     if !is_ledger_managed_write_target(path).map_err(anyhow::Error::msg)? {
         anyhow::bail!("note API only supports ledger-managed markdown targets");
     }
-    let cwd = std::env::current_dir()?;
-    let rel = project_relative_path(&cwd, path)
+    managed_note_target_parts(path)
         .map_err(anyhow::Error::msg)?
-        .ok_or_else(|| anyhow::anyhow!("note target is outside project root"))?;
-    split_managed_note_target(&rel)
         .ok_or_else(|| anyhow::anyhow!("note API requires a managed markdown path"))
 }
 

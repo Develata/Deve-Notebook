@@ -1,28 +1,41 @@
-use super::is_ledger_managed_relative_path;
 #[cfg(unix)]
 use super::{
     is_ledger_managed_write_target, project_relative_path, resolve_capability_read_target,
     resolve_capability_write_target,
 };
+use super::{is_ledger_managed_write_target_for, managed_note_target_parts_for};
 #[cfg(unix)]
 use crate::plugin::manifest::Capability;
 #[cfg(unix)]
 use std::path::Path;
-#[cfg(unix)]
 use tempfile::tempdir;
 
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
+
+fn is_managed_for(
+    repo: &crate::ledger::RepoManager,
+    path: &std::path::Path,
+) -> anyhow::Result<bool> {
+    is_ledger_managed_write_target_for(repo, path).map_err(anyhow::Error::msg)
+}
+
+fn note_target_parts_for(
+    repo: &crate::ledger::RepoManager,
+    path: &std::path::Path,
+) -> anyhow::Result<Option<(String, String)>> {
+    managed_note_target_parts_for(repo, path).map_err(anyhow::Error::msg)
+}
 
 #[cfg(unix)]
 #[test]
 fn ledger_managed_detection_fails_closed_through_symlink() {
     let dir = tempdir().expect("tempdir");
     let cwd = std::env::current_dir().expect("cwd");
-    let vault = dir.path().join("vault/default/notes");
-    std::fs::create_dir_all(&vault).expect("mkdir");
-    let target = vault.join("a.md");
-    std::fs::write(&target, "hello").expect("write");
+    let ledger = dir.path().join("ledger/local");
+    std::fs::create_dir_all(&ledger).expect("mkdir");
+    let target = ledger.join("wiki.redb");
+    std::fs::write(&target, "ledger").expect("write");
     let alias_dir = dir.path().join("tmp");
     std::fs::create_dir_all(&alias_dir).expect("mkdir alias");
     let alias = alias_dir.join("alias.md");
@@ -40,9 +53,9 @@ fn ledger_managed_detection_fails_closed_through_symlink() {
 #[test]
 fn project_relative_path_uses_canonical_target_location() {
     let dir = tempdir().expect("tempdir");
-    let vault = dir.path().join("vault/default/notes");
-    std::fs::create_dir_all(&vault).expect("mkdir");
-    let target = vault.join("a.md");
+    let workspace = dir.path().join("workspace/default/notes");
+    std::fs::create_dir_all(&workspace).expect("mkdir");
+    let target = workspace.join("a.md");
     std::fs::write(&target, "hello").expect("write");
     let alias_dir = dir.path().join("tmp");
     std::fs::create_dir_all(&alias_dir).expect("mkdir alias");
@@ -53,7 +66,7 @@ fn project_relative_path_uses_canonical_target_location() {
         .expect("canonical relative path")
         .expect("inside project root");
 
-    assert_eq!(rel, "vault/default/notes/a.md");
+    assert_eq!(rel, "workspace/default/notes/a.md");
 }
 
 #[cfg(unix)]
@@ -88,10 +101,79 @@ fn capability_targets_return_canonical_symlink_destination() {
 }
 
 #[test]
-fn git_mirror_paths_are_protected_plugin_targets() {
-    assert!(is_ledger_managed_relative_path("vault/default/.git/config"));
-    assert!(is_ledger_managed_relative_path(
-        "vault/default/notes/.git/objects/x"
-    ));
-    assert!(!is_ledger_managed_relative_path("vault/default/.gitignore"));
+fn custom_projection_workspace_paths_are_protected_plugin_targets() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("my-notebooks");
+    let repo =
+        crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_local_repo("default", &projection_base)?;
+    std::fs::create_dir_all(projection_base.join("default/notes"))?;
+    std::fs::create_dir_all(projection_base.join("default/.notegit"))?;
+    std::fs::create_dir_all(projection_base.join("default/.git/objects"))?;
+    std::fs::write(projection_base.join("default/notes/a.md"), "note")?;
+    std::fs::write(
+        projection_base.join("default/.notegit/runtime.bin"),
+        "runtime",
+    )?;
+    std::fs::write(projection_base.join("default/.git/objects/x"), "git")?;
+
+    assert!(is_managed_for(
+        &repo,
+        &projection_base.join("default/notes/a.md")
+    )?);
+    assert!(is_managed_for(
+        &repo,
+        &projection_base.join("default/.notegit/runtime.bin")
+    )?);
+    assert!(is_managed_for(
+        &repo,
+        &projection_base.join("default/.git/objects/x")
+    )?);
+    assert!(!is_managed_for(
+        &repo,
+        &projection_base.join("default/.gitignore")
+    )?);
+    Ok(())
+}
+
+#[test]
+fn projection_base_sibling_markdown_is_not_a_plugin_managed_target() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("my-notebooks");
+    let repo =
+        crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_local_repo("default", &projection_base)?;
+    std::fs::create_dir_all(projection_base.join("default"))?;
+    std::fs::write(projection_base.join("a.md"), "sibling")?;
+
+    assert!(!is_managed_for(&repo, &projection_base.join("a.md"))?);
+    Ok(())
+}
+
+#[test]
+fn custom_projection_workspace_note_target_resolves_repo_scope() -> anyhow::Result<()> {
+    let _guard = crate::test_support::local_repo_catalog_test_guard();
+    let dir = tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("my-notebooks");
+    let repo =
+        crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_local_repo("default", &projection_base)?;
+    std::fs::create_dir_all(projection_base.join("default/notes"))?;
+    std::fs::write(projection_base.join("default/notes/a.md"), "note")?;
+    std::fs::write(projection_base.join("a.md"), "sibling")?;
+
+    assert_eq!(
+        note_target_parts_for(&repo, &projection_base.join("default/notes/a.md"))?,
+        Some(("default".into(), "notes/a.md".into()))
+    );
+    assert_eq!(
+        note_target_parts_for(&repo, &projection_base.join("a.md"))?,
+        None
+    );
+    Ok(())
 }
