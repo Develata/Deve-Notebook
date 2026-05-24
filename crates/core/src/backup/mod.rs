@@ -17,13 +17,14 @@
 //!
 //! This module currently owns locator parsing, branch path derivation, and
 //! branch backup binding validation, backup pack manifest planning/validation,
-//! artifact protection admission, provider adapter dispatch, upload state
-//! admission, verification evidence validation, command output modeling,
-//! restore flow admission, and restore candidate admission only. It does not
-//! open network connections, write ledger state, modify staging, or touch
-//! Projection Workspaces.
+//! readonly branch discovery, artifact protection admission, provider adapter
+//! dispatch, upload state admission, verification evidence validation, command
+//! output modeling, restore flow admission, and restore candidate admission
+//! only. It does not open network connections, write ledger state, modify
+//! staging, or touch Projection Workspaces.
 
 mod binding;
+mod discovery;
 mod layout;
 mod locator;
 mod output;
@@ -40,6 +41,11 @@ mod verification;
 pub use binding::{
     BackupBindingAccess, BackupBindingError, BackupBranchBinding, BackupBranchBindingInput,
     plan_backup_branch_binding, validate_backup_branch_bindings,
+};
+pub use discovery::{
+    BackupBranchDiscoveryDiagnostic, BackupBranchDiscoveryDiagnosticKind,
+    BackupBranchDiscoveryInput, BackupBranchDiscoveryReport, DiscoveredBackupBranch,
+    discover_backup_branches,
 };
 pub use layout::{
     BackupRemoteLayoutDiagnostic, BackupRemoteLayoutDiagnosticKind, BackupRemoteLayoutError,
