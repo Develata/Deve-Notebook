@@ -246,6 +246,8 @@ contains "docker-compose.dev.yml" "dockerfile: Dockerfile"
 contains "docker-compose.dev.yml" "container_name: deve-server-dev"
 contains "docker-compose.dev.yml" "restart: unless-stopped"
 contains "docker-compose.dev.yml" "deve-dev-data:/data"
+contains "docker-compose.dev.yml" "deve-dev-notes:/notes"
+not_contains "docker-compose.dev.yml" "DEVE_VAULT_PATH"
 
 contains ".env.example" "AUTH_SECRET=replace-with-at-least-32-random-bytes"
 contains ".env.example" "AUTH_PASS=\$argon2id\$v=19\$m=65536,t=3,p=1\$..."
