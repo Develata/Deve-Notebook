@@ -106,6 +106,23 @@ pub fn run(action: BackupAction) -> anyhow::Result<()> {
             packs_decrypted,
             dry_run,
         })?,
+        BackupAction::Unbind {
+            locator,
+            repo_id,
+            branch_name,
+            writer,
+            local_writer,
+            access,
+            dry_run,
+        } => commands::backup::unbind(commands::backup::UnbindBackupCommandInput {
+            locator: &locator,
+            repo_id: &repo_id,
+            branch_name: &branch_name,
+            writer_identity: &writer,
+            local_writer_identity: &local_writer,
+            access: &access,
+            dry_run,
+        })?,
     }
     Ok(())
 }

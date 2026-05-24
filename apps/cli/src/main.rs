@@ -20,7 +20,7 @@
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
 //! - `git import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `git push`: 将 Git mirror 发布到远端
-//! - `backup bind/inspect/list/verify/restore`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery、remote layout 与 restore candidate admission
+//! - `backup bind/inspect/list/verify/run/restore/unbind`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery、remote layout 与 restore candidate admission
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -324,6 +324,23 @@ pub(crate) enum BackupAction {
         packs_downloaded: bool,
         #[arg(long = "packs-decrypted")]
         packs_decrypted: bool,
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Plan backup branch binding removal without persisting mutation
+    Unbind {
+        #[arg(long)]
+        locator: String,
+        #[arg(long = "repo-id")]
+        repo_id: String,
+        #[arg(long = "branch-name")]
+        branch_name: String,
+        #[arg(long)]
+        writer: String,
+        #[arg(long = "local-writer")]
+        local_writer: String,
+        #[arg(long)]
+        access: String,
         #[arg(long)]
         dry_run: bool,
     },
