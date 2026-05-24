@@ -20,7 +20,7 @@
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
 //! - `git import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `git push`: 将 Git mirror 发布到远端
-//! - `backup inspect`: 只读检查 WebDAV/S3 backup locator 和 provider adapter plan
+//! - `backup inspect/list`: 只读检查 WebDAV/S3 backup locator、provider adapter plan 与 branch manifest discovery
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -229,6 +229,13 @@ pub(crate) enum BackupAction {
         credential_ref: Option<String>,
         #[arg(long = "key-ref")]
         key_ref: Option<String>,
+    },
+    /// List backup branch manifests from explicit remote object paths
+    List {
+        #[arg(long)]
+        locator: String,
+        #[arg(long = "object")]
+        objects: Vec<String>,
     },
 }
 

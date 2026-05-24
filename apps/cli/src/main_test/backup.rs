@@ -63,3 +63,35 @@ fn backup_inspect_accepts_credential_and_key_refs() {
         other => panic!("unexpected command: {other:?}"),
     }
 }
+
+#[test]
+fn backup_list_accepts_locator_and_object_paths() {
+    let args = Args::try_parse_from([
+        "deve",
+        "backup",
+        "list",
+        "--locator",
+        "s3://bucket-name/deve/",
+        "--object",
+        "deve/repo.manifest.enc",
+        "--object",
+        "deve/branches/writer-1/branch.manifest.enc",
+    ])
+    .expect("parse args");
+
+    match args.command {
+        Some(Commands::Backup {
+            action: BackupAction::List { locator, objects },
+        }) => {
+            assert_eq!(locator, "s3://bucket-name/deve/");
+            assert_eq!(
+                objects,
+                vec![
+                    "deve/repo.manifest.enc".to_string(),
+                    "deve/branches/writer-1/branch.manifest.enc".to_string()
+                ]
+            );
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
