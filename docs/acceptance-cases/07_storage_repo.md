@@ -82,8 +82,8 @@
     - run: cargo test -p deve_core watcher_duplicate_start_fails_and_can_restart_after_stop -- --nocapture
     - run: cargo test -p deve_core internal_repo_path_uses_segment_semantics -- --nocapture
     - run: cargo test -p deve_core --test watcher_internal_ignore -- --nocapture
-    - run: cargo test -p deve_core watcher_respects_deveignore_for_matching_markdown -- --nocapture
-    - run: cargo test -p deve_core watcher_startup_scan_respects_deveignore -- --nocapture
+    - run: cargo test -p deve_core --test watcher_internal_ignore watcher_respects_deveignore_for_matching_markdown -- --nocapture
+    - run: cargo test -p deve_core --test watcher_internal_ignore watcher_startup_scan_respects_deveignore -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: pending_fs_ops_contains_added_modified_deleted true
