@@ -17,7 +17,6 @@ use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use std::path::Path;
 use std::process::Command;
-use tempfile::TempDir;
 
 pub(super) fn git_cmd(path: &Path, args: &[&str]) -> String {
     let output = Command::new("git")
@@ -65,8 +64,8 @@ pub(super) fn current_branch(repo_root: &Path) -> String {
         .to_string()
 }
 
-pub(super) fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault/default").join(path);
+pub(super) fn write_workspace_file(projection_base: &Path, path: &str, content: &str) {
+    let abs = projection_base.join("default").join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create parent");
     }
@@ -74,12 +73,12 @@ pub(super) fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
 }
 
 pub(super) fn commit_deve_file(
-    dir: &TempDir,
+    projection_base: &Path,
     repo: &RepoManager,
     path: &str,
     content: &str,
 ) -> Result<()> {
-    write_workspace_file(dir, path, content);
+    write_workspace_file(projection_base, path, content);
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -99,22 +98,21 @@ pub(super) fn commit_deve_file(
     Ok(())
 }
 
-pub(super) fn open_repo(ledger_dir: &Path, vault_root: &Path) -> Result<RepoManager> {
+pub(super) fn open_repo(ledger_dir: &Path, projection_base: &Path) -> Result<RepoManager> {
     let mut repo = RepoManager::init(ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(vault_root);
+    repo.set_projection_base_for_all_local_repos(projection_base);
     Ok(repo)
 }
 
 pub(super) fn prepare_exported_baseline(
-    dir: &TempDir,
     ledger_dir: &Path,
-    vault_root: &Path,
+    projection_base: &Path,
     repo_root: &Path,
 ) -> Result<()> {
     {
-        let repo = open_repo(ledger_dir, vault_root)?;
+        let repo = open_repo(ledger_dir, projection_base)?;
         init_git_repo(repo_root);
-        commit_deve_file(dir, &repo, "note.md", "hello\n")?;
+        commit_deve_file(projection_base, &repo, "note.md", "hello\n")?;
     }
     git::export(ledger_dir, Some("default"), false, 10)?;
     assert_eq!(git_cmd(repo_root, &["show", "HEAD:note.md"]), "hello\n");
@@ -123,12 +121,11 @@ pub(super) fn prepare_exported_baseline(
 }
 
 pub(super) fn resolve_imported_change_to_queued_commit(
-    dir: &TempDir,
     ledger_dir: &Path,
-    vault_root: &Path,
+    projection_base: &Path,
 ) -> Result<String> {
     let doc_id = {
-        let repo = open_repo(ledger_dir, vault_root)?;
+        let repo = open_repo(ledger_dir, projection_base)?;
         let doc_id = repo
             .get_tracked_docid_in_local_repo("default", "note.md")?
             .expect("doc id");
@@ -148,10 +145,10 @@ pub(super) fn resolve_imported_change_to_queued_commit(
         })?;
         doc_id
     };
-    write_workspace_file(dir, "note.md", "git import\n");
+    write_workspace_file(projection_base, "note.md", "git import\n");
     git::import(ledger_dir, Some("default"), true, 10)?;
 
-    let repo = open_repo(ledger_dir, vault_root)?;
+    let repo = open_repo(ledger_dir, projection_base)?;
     let pending = repo.list_pending_fs_in_local_repo("default")?;
     assert_eq!(pending.len(), 1, "{pending:?}");
     assert_eq!(pending[0].path, "note.md");
@@ -180,10 +177,10 @@ pub(super) fn resolve_imported_change_to_queued_commit(
 
 pub(super) fn exported_git_commit_id(
     ledger_dir: &Path,
-    vault_root: &Path,
+    projection_base: &Path,
     deve_commit_id: &str,
 ) -> Result<String> {
-    let repo = open_repo(ledger_dir, vault_root)?;
+    let repo = open_repo(ledger_dir, projection_base)?;
     repo.run_on_local_repo("default", |db| {
         let record = get_record(db, deve_commit_id)?.expect("committed imported commit");
         assert_eq!(record.state, GitMirrorCommitState::Committed);
@@ -195,12 +192,12 @@ pub(super) fn exported_git_commit_id(
 
 pub(super) fn assert_clean_resolved_import_export(
     ledger_dir: &Path,
-    vault_root: &Path,
+    projection_base: &Path,
     repo_root: &Path,
     deve_commit_id: &str,
 ) -> Result<String> {
-    let git_commit_id = exported_git_commit_id(ledger_dir, vault_root, deve_commit_id)?;
-    let repo = open_repo(ledger_dir, vault_root)?;
+    let git_commit_id = exported_git_commit_id(ledger_dir, projection_base, deve_commit_id)?;
+    let repo = open_repo(ledger_dir, projection_base)?;
     assert!(repo.list_pending_fs_in_local_repo("default")?.is_empty());
     assert!(repo.list_staged_in_local_repo("default")?.is_empty());
     assert!(git_cmd(repo_root, &["status", "--porcelain"]).is_empty());
@@ -215,12 +212,12 @@ pub(super) fn assert_clean_resolved_import_export(
 
 pub(super) fn push_report(
     ledger_dir: &Path,
-    vault_root: &Path,
+    projection_base: &Path,
     repo_root: &Path,
     remote: &str,
     branch: &str,
 ) -> Result<GitMirrorPushReport> {
-    let repo = open_repo(ledger_dir, vault_root)?;
+    let repo = open_repo(ledger_dir, projection_base)?;
     repo.run_on_local_repo("default", |db| {
         Ok(push_mirror(
             db,

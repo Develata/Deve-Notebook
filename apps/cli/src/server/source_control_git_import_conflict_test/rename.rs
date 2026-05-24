@@ -146,7 +146,8 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
         .get_tracked_docid_in_local_repo(&repo_name, "notes/a.md")?
         .expect("doc id");
 
-    std::fs::remove_file(dir.path().join("vault").join(&repo_name).join("notes/a.md"))?;
+    let repo_root = state.repo.local_repo_workspace_root(&repo_name)?;
+    std::fs::remove_file(repo_root.join("notes/a.md"))?;
     write_workspace_file(&dir, &repo_name, "notes/b.md", "hello\nrenamed\n");
     state.repo.run_on_local_repo(&repo_name, |db| {
         pending_fs::upsert_many(

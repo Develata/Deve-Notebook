@@ -12,12 +12,13 @@ use tokio::sync::{broadcast, mpsc};
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, uuid::Uuid)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_all_local_repos(&projection_base);
     let default_id = repo.get_repo_info()?.expect("default info").uuid;
-    let mut test_repo = RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
-    test_repo.set_projection_base_for_all_local_repos(&vault);
+    let mut test_repo = RepoManager::init(&ledger_dir, 10, Some("test"), Some("urn:test"))?;
+    test_repo.set_projection_base_for_all_local_repos(&projection_base);
     let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
@@ -63,7 +64,7 @@ pub(super) fn seed_pending(repo: &RepoManager, repo_name: &str, path: &str, cont
 }
 
 pub(super) fn write_workspace_file(dir: &TempDir, repo_name: &str, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join(repo_name).join(path);
+    let abs = dir.path().join("notes").join(repo_name).join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
