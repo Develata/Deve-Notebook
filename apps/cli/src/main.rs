@@ -20,7 +20,7 @@
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
 //! - `git import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `git push`: 将 Git mirror 发布到远端
-//! - `backup inspect`: 只读检查 WebDAV/S3 backup locator
+//! - `backup inspect`: 只读检查 WebDAV/S3 backup locator 和 provider adapter plan
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -225,6 +225,10 @@ pub(crate) enum BackupAction {
         locator: String,
         #[arg(long)]
         branch: Option<String>,
+        #[arg(long = "credential-ref")]
+        credential_ref: Option<String>,
+        #[arg(long = "key-ref")]
+        key_ref: Option<String>,
     },
 }
 

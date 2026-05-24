@@ -20,7 +20,7 @@ Implements all CLI subcommands. Each subcommand is a separate module that initia
 | `export.rs` | Exports entire ledger to JSONL format for backup/migration |
 | `export/doc.rs` | Markdown single-document export helpers |
 | `export/tests.rs` | Export command tests |
-| `backup.rs` | Read-only backup locator inspection command |
+| `backup.rs` | Read-only backup locator and provider adapter inspection command |
 | `verify_p2p.rs` | Simulates multi-node P2P sync to verify shadow repo isolation and CRDT merging |
 | `seed.rs` | Copies local repo ops into a shadow repo for testing (test/migration only) |
 | `node_check.rs` | Checks and optionally repairs node consistency (missing/orphan nodes) |

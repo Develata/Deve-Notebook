@@ -121,9 +121,17 @@ pub async fn run(
             )?,
         },
         Some(Commands::Backup { action }) => match action {
-            BackupAction::Inspect { locator, branch } => {
-                commands::backup::inspect(&locator, branch.as_deref())?
-            }
+            BackupAction::Inspect {
+                locator,
+                branch,
+                credential_ref,
+                key_ref,
+            } => commands::backup::inspect(
+                &locator,
+                branch.as_deref(),
+                credential_ref.as_deref(),
+                key_ref.as_deref(),
+            )?,
         },
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {
