@@ -115,6 +115,16 @@ impl RepoManager {
 
     pub fn list_projection_locators(&self) -> Result<Vec<ProjectionLocatorRecord>> {
         let mut locators = self.read_projection_locator_file()?.locators;
+        self.validate_projection_locator_records(&locators, false)?;
+        for locator in &mut locators {
+            locator.projection_base_abs = std::fs::canonicalize(&locator.projection_base_abs)
+                .with_context(|| {
+                    format!(
+                        "Failed to canonicalize Projection Locator base for repo {}: {:?}",
+                        locator.repo_id, locator.projection_base_abs
+                    )
+                })?;
+        }
         locators.sort_by_key(|item| (item.repo_name_hint.clone(), item.repo_id));
         Ok(locators)
     }

@@ -187,6 +187,37 @@ fn projection_locator_runtime_check_rejects_relative_base_in_file() -> anyhow::R
 }
 
 #[test]
+fn projection_locator_list_validates_unknown_repo_records() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+    let base = dir.path().join("notes");
+    std::fs::create_dir_all(&base)?;
+
+    write_projection_locator_file(
+        &main.projection_locator_path(),
+        &ProjectionLocatorFile {
+            version: 1,
+            locators: vec![ProjectionLocatorRecord {
+                repo_id: uuid::Uuid::new_v4(),
+                repo_name_hint: "ghost".into(),
+                projection_base_abs: std::fs::canonicalize(&base)?,
+                canonicalized_at_unix_ms: 1,
+            }],
+        },
+    )?;
+
+    let err = main
+        .list_projection_locators()
+        .expect_err("list must validate locator map before returning records");
+    assert!(
+        err.to_string()
+            .contains("Projection Locator references unknown local repo")
+    );
+    Ok(())
+}
+
+#[test]
 fn projection_locator_shared_base_allows_distinct_repo_roots() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
