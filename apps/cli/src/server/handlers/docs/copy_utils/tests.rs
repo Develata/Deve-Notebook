@@ -34,7 +34,7 @@ fn test_copy_dir_assets_only_skips_markdown() {
 #[test]
 fn test_collect_md_files() {
     let tmp = tempdir().unwrap();
-    let dir = tmp.path().join("vault");
+    let dir = tmp.path().join("workspace");
 
     fs::create_dir_all(dir.join("notes")).unwrap();
     fs::write(dir.join("index.md"), "").unwrap();
@@ -50,7 +50,7 @@ fn test_collect_md_files() {
 #[test]
 fn test_collect_md_files_fails_closed_when_file_escapes_base() {
     let tmp = tempdir().unwrap();
-    let dir = tmp.path().join("vault");
+    let dir = tmp.path().join("workspace");
     fs::create_dir_all(&dir).unwrap();
     fs::write(dir.join("index.md"), "").unwrap();
 
@@ -62,7 +62,7 @@ fn test_collect_md_files_fails_closed_when_file_escapes_base() {
 #[test]
 fn test_collect_dirs_fails_closed_when_dir_escapes_base() {
     let tmp = tempdir().unwrap();
-    let dir = tmp.path().join("vault");
+    let dir = tmp.path().join("workspace");
     fs::create_dir_all(dir.join("notes")).unwrap();
 
     let err = collect_dirs(&dir, &tmp.path().join("other")).expect_err("base mismatch must fail");
@@ -71,8 +71,8 @@ fn test_collect_dirs_fails_closed_when_dir_escapes_base() {
 
 #[test]
 fn relative_path_under_base_normalizes_mixed_separators() {
-    let base = Path::new("vault");
-    let path = Path::new("vault/notes\\daily.md");
+    let base = Path::new("workspace");
+    let path = Path::new("workspace/notes\\daily.md");
 
     let rel = relative_path_under_base(base, path).unwrap();
 

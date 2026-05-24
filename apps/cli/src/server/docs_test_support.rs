@@ -22,15 +22,19 @@ pub(crate) struct DocsHarness {
 
 impl DocsHarness {
     pub(crate) fn workspace_path(&self, relative: &str) -> PathBuf {
-        self.dir.path().join("vault/default").join(relative)
+        self.state
+            .repo
+            .local_repo_workspace_path("default", relative)
+            .expect("workspace path")
     }
 }
 
 pub(crate) fn docs_harness() -> anyhow::Result<DocsHarness> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None)?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let (tx, _rx) = broadcast::channel(16);
@@ -39,7 +43,7 @@ pub(crate) fn docs_harness() -> anyhow::Result<DocsHarness> {
         dir,
         state: Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

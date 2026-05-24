@@ -10,15 +10,18 @@ use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 use tempfile::tempdir;
 
+fn init_repo(dir: &tempfile::TempDir) -> anyhow::Result<RepoManager> {
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    Ok(repo)
+}
+
 #[test]
 fn resolve_repair_docid_returns_tracked_docid() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = Arc::new(RepoManager::init(
-        dir.path(),
-        10,
-        Some("default"),
-        Some("urn:default"),
-    )?);
+    let repo = Arc::new(init_repo(&dir)?);
     let doc_id = DocId::new();
     repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
     assert_eq!(
@@ -31,12 +34,7 @@ fn resolve_repair_docid_returns_tracked_docid() -> anyhow::Result<()> {
 #[test]
 fn resolve_repair_docid_returns_none_for_legacy_only_path_mapping() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let repo = Arc::new(RepoManager::init(
-        dir.path(),
-        10,
-        Some("default"),
-        Some("urn:default"),
-    )?);
+    let repo = Arc::new(init_repo(&dir)?);
     let doc_id = DocId::new();
     repo.run_on_local_repo("default", |db| {
         let write = db.begin_write()?;
@@ -106,9 +104,7 @@ fn normalize_restore_path_strips_repo_prefix() {
 #[test]
 fn find_loading_corruption_uses_tracked_docs_only() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(dir.path());
-    let repo = Arc::new(repo);
+    let repo = Arc::new(init_repo(&dir)?);
     let doc_id = DocId::new();
     repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
     let live = repo.local_repo_workspace_path("default", "notes/live.md")?;
@@ -132,9 +128,7 @@ fn find_loading_corruption_uses_tracked_docs_only() -> anyhow::Result<()> {
 #[test]
 fn find_loading_corruption_fails_closed_on_unreadable_workspace_target() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(dir.path());
-    let repo = Arc::new(repo);
+    let repo = Arc::new(init_repo(&dir)?);
     let doc_id = DocId::new();
     repo.apply_file_structure_in_local_repo("default", "notes/live.md", Some(doc_id), "test")?;
     let live = repo.local_repo_workspace_path("default", "notes/live.md")?;
