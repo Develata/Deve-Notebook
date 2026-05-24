@@ -133,3 +133,19 @@ fn rejects_expected_pack_path_outside_branch_prefix() {
         BackupRemoteLayoutError::ExpectedPackOutsideBranchPrefix
     );
 }
+
+#[test]
+fn rejects_duplicate_expected_pack_paths() {
+    let branch = branch();
+    let err = inspect_backup_remote_layout(BackupRemoteLayoutInput {
+        expected_pack_object_paths: vec![
+            "deve/branches/writer-1/packs/000001.pack.enc".into(),
+            "deve/branches/writer-1/packs/000001.pack.enc".into(),
+        ],
+        objects: Vec::new(),
+        branch,
+    })
+    .unwrap_err();
+
+    assert_eq!(err, BackupRemoteLayoutError::DuplicateExpectedPackPath);
+}

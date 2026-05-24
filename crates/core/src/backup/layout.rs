@@ -105,6 +105,8 @@ pub enum BackupRemoteLayoutDiagnosticKind {
 pub enum BackupRemoteLayoutError {
     #[error("expected backup pack object path is outside the branch pack prefix")]
     ExpectedPackOutsideBranchPrefix,
+    #[error("expected backup pack object path is duplicated")]
+    DuplicateExpectedPackPath,
     #[error(transparent)]
     Locator(#[from] super::BackupLocatorError),
 }
@@ -193,12 +195,16 @@ fn normalize_expected_pack_paths(
     pack_prefix: &str,
     expected_pack_object_paths: Vec<String>,
 ) -> Result<Vec<String>, BackupRemoteLayoutError> {
+    let mut seen = HashSet::with_capacity(expected_pack_object_paths.len());
     expected_pack_object_paths
         .into_iter()
         .map(|path| {
             let path = normalize_remote_path(&path)?;
             if path == pack_prefix || !path.starts_with(&format!("{pack_prefix}/")) {
                 return Err(BackupRemoteLayoutError::ExpectedPackOutsideBranchPrefix);
+            }
+            if !seen.insert(path.clone()) {
+                return Err(BackupRemoteLayoutError::DuplicateExpectedPackPath);
             }
             Ok(path)
         })

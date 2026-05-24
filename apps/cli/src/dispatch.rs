@@ -133,6 +133,12 @@ pub async fn run(
                 key_ref.as_deref(),
             )?,
             BackupAction::List { locator, objects } => commands::backup::list(&locator, &objects)?,
+            BackupAction::Verify {
+                locator,
+                branch,
+                objects,
+                expected_packs,
+            } => commands::backup::verify(&locator, &branch, &objects, &expected_packs)?,
         },
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {

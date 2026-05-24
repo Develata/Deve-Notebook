@@ -1,4 +1,4 @@
-use super::{inspect_lines, list_lines};
+use super::{inspect_lines, list_lines, verify_lines};
 
 #[test]
 fn backup_inspect_prints_sanitized_locator_components() {
@@ -127,4 +127,92 @@ fn backup_list_reports_discovery_diagnostics_without_binding() {
             .iter()
             .any(|line| line.contains("diagnostic kind=UnsafeWriterIdentity"))
     );
+}
+
+#[test]
+fn backup_verify_reports_healthy_layout_without_binding() {
+    let objects = vec![
+        "deve/repo.manifest.enc".to_string(),
+        "deve/branches/writer-a/branch.manifest.enc".to_string(),
+        "deve/branches/writer-a/packs/000001.pack.enc".to_string(),
+    ];
+    let expected_packs = vec!["deve/branches/writer-a/packs/000001.pack.enc".to_string()];
+    let lines = verify_lines(
+        "s3://bucket-name/deve/",
+        "writer-a",
+        &objects,
+        &expected_packs,
+    )
+    .expect("verify layout");
+
+    assert!(
+        lines
+            .iter()
+            .any(|line| line == "command=VerifyBackupTarget")
+    );
+    assert!(lines.iter().any(|line| line == "effect=RemoteVerify"));
+    assert!(lines.iter().any(|line| line == "branch_writer=writer-a"));
+    assert!(lines.iter().any(|line| line == "layout_healthy=true"));
+}
+
+#[test]
+fn backup_verify_reports_layout_diagnostics_without_binding() {
+    let objects = vec!["deve/branches/writer-a/packs/000002.pack.enc".to_string()];
+    let expected_packs = vec!["deve/branches/writer-a/packs/000001.pack.enc".to_string()];
+    let lines = verify_lines(
+        "s3://bucket-name/deve/",
+        "writer-a",
+        &objects,
+        &expected_packs,
+    )
+    .expect("verify diagnostics");
+
+    assert!(lines.iter().any(|line| line == "layout_healthy=false"));
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("diagnostic kind=MissingRepoManifest"))
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("diagnostic kind=MissingBranchManifest"))
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("diagnostic kind=MissingPack"))
+    );
+    assert!(
+        lines
+            .iter()
+            .any(|line| line.contains("diagnostic kind=UnexpectedPath"))
+    );
+}
+
+#[test]
+fn backup_verify_rejects_expected_pack_outside_branch_prefix() {
+    let err = verify_lines(
+        "s3://bucket-name/deve/",
+        "writer-a",
+        &[],
+        &["deve/branches/writer-b/packs/000001.pack.enc".to_string()],
+    )
+    .expect_err("outside pack prefix must fail closed");
+
+    assert!(err.to_string().contains("outside the branch pack prefix"));
+}
+
+#[test]
+fn backup_verify_rejects_duplicate_expected_pack_paths() {
+    let pack = "deve/branches/writer-a/packs/000001.pack.enc".to_string();
+    let err = verify_lines(
+        "s3://bucket-name/deve/",
+        "writer-a",
+        &[],
+        &[pack.clone(), pack],
+    )
+    .expect_err("duplicate expected pack path must fail closed");
+
+    assert!(err.to_string().contains("duplicated"));
 }

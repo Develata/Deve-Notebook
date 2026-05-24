@@ -10,9 +10,9 @@
 use anyhow::bail;
 use deve_core::backup::{
     BackupBindingStatus, BackupBranchDiscoveryInput, BackupCommandKind, BackupLocator,
-    BackupPlanEffect, BackupPlanInput, BackupRemoteObject, backup_command_plan,
-    discover_backup_branches, dispatch_backup_provider_adapter, parse_backup_credential_ref,
-    parse_backup_key_ref,
+    BackupPlanEffect, BackupPlanInput, BackupRemoteLayoutInput, BackupRemoteObject,
+    backup_command_plan, discover_backup_branches, dispatch_backup_provider_adapter,
+    inspect_backup_remote_layout, parse_backup_credential_ref, parse_backup_key_ref,
 };
 
 pub fn inspect(
@@ -29,6 +29,18 @@ pub fn inspect(
 
 pub fn list(locator: &str, object_paths: &[String]) -> anyhow::Result<()> {
     for line in list_lines(locator, object_paths)? {
+        println!("{line}");
+    }
+    Ok(())
+}
+
+pub fn verify(
+    locator: &str,
+    branch: &str,
+    object_paths: &[String],
+    expected_pack_paths: &[String],
+) -> anyhow::Result<()> {
+    for line in verify_lines(locator, branch, object_paths, expected_pack_paths)? {
         println!("{line}");
     }
     Ok(())
@@ -114,6 +126,52 @@ pub(crate) fn list_lines(locator: &str, object_paths: &[String]) -> anyhow::Resu
     Ok(lines)
 }
 
+pub(crate) fn verify_lines(
+    locator: &str,
+    branch: &str,
+    object_paths: &[String],
+    expected_pack_paths: &[String],
+) -> anyhow::Result<Vec<String>> {
+    let locator = BackupLocator::parse(locator)?;
+    let branch = locator.branch_locator(branch)?;
+    let branch_writer = branch.writer_identity.clone();
+    let plan = backup_command_plan(BackupPlanInput {
+        command: BackupCommandKind::VerifyBackupTarget,
+        binding_status: BackupBindingStatus::Unbound,
+        effect: BackupPlanEffect::RemoteVerify,
+    })?;
+    let report = inspect_backup_remote_layout(BackupRemoteLayoutInput {
+        branch,
+        objects: object_paths
+            .iter()
+            .map(|path| BackupRemoteObject {
+                path: path.clone(),
+                metadata: None,
+            })
+            .collect(),
+        expected_pack_object_paths: expected_pack_paths.to_vec(),
+    })?;
+
+    let mut lines = vec![
+        format!("backup_locator: provider={}", locator.provider.protocol()),
+        format!("command={:?}", plan.command),
+        format!("effect={:?}", plan.effect),
+        format!("branch_writer={branch_writer}"),
+        format!("repo_manifest={}", report.repo_manifest_path),
+        format!("branch_manifest={}", report.branch_manifest_path),
+        format!("pack_prefix={}", report.pack_prefix),
+        format!("observed_object_count={}", report.observed_object_count),
+        format!("expected_pack_count={}", expected_pack_paths.len()),
+        format!("layout_healthy={}", report.is_healthy()),
+    ];
+
+    for diagnostic in report.diagnostics {
+        lines.push(format_layout_diagnostic(diagnostic));
+    }
+
+    Ok(lines)
+}
+
 fn append_provider_adapter_lines(
     lines: &mut Vec<String>,
     locator: &BackupLocator,
@@ -152,6 +210,17 @@ fn append_provider_adapter_lines(
 fn format_discovery_diagnostic(
     diagnostic: deve_core::backup::BackupBranchDiscoveryDiagnostic,
 ) -> String {
+    let mut line = format!("diagnostic kind={:?}", diagnostic.kind);
+    if let Some(path) = diagnostic.path {
+        line.push_str(&format!(" path={path}"));
+    }
+    if let Some(detail) = diagnostic.detail {
+        line.push_str(&format!(" detail={detail}"));
+    }
+    line
+}
+
+fn format_layout_diagnostic(diagnostic: deve_core::backup::BackupRemoteLayoutDiagnostic) -> String {
     let mut line = format!("diagnostic kind={:?}", diagnostic.kind);
     if let Some(path) = diagnostic.path {
         line.push_str(&format!(" path={path}"));
