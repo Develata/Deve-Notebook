@@ -7,14 +7,20 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, Arc<RepoManager>, std::path::PathBuf) {
     let dir = tempdir().expect("create tempdir");
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(&vault);
-    (dir, Arc::new(repo), vault)
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
+    let repo = Arc::new(repo);
+    let workspace_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
+    (dir, repo, workspace_root)
 }
 
-fn write_workspace_file(root: &std::path::Path, path: &str, content: &str) {
-    let abs = root.join("default").join(path);
+fn write_workspace_file(workspace_root: &std::path::Path, path: &str, content: &str) {
+    let abs = workspace_root.join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -41,8 +47,8 @@ fn seed_pending_add(repo: &RepoManager, path: &str, content: &str) {
 
 #[test]
 fn commit_diff_reports_child_rename_after_directory_move() {
-    let (_dir, repo, vault) = new_repo();
-    write_workspace_file(&vault, "notes/a.md", "hello");
+    let (_dir, repo, workspace_root) = new_repo();
+    write_workspace_file(&workspace_root, "notes/a.md", "hello");
     seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage initial");
     let first = repo.commit_staged("initial").expect("commit initial");
@@ -51,8 +57,8 @@ fn commit_diff_reports_child_rename_after_directory_move() {
         .expect("lookup doc")
         .expect("doc id");
 
-    std::fs::rename(vault.join("default/notes"), vault.join("default/docs")).expect("rename dir");
-    let sync = SyncManager::new(repo.clone());
+    std::fs::rename(workspace_root.join("notes"), workspace_root.join("docs")).expect("rename dir");
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     let repo_id = repo
         .get_repo_info_for(None, Some("default"))
         .expect("repo info lookup")

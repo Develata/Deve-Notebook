@@ -10,7 +10,8 @@ mod common;
 fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection base");
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -108,7 +109,7 @@ fn rebuild_projection_rewrites_projection_tables_from_structure_facts() {
     inject_legacy_doc_path(repo.as_ref(), doc_id, "stale/a.md");
     wipe_node_projection(repo.as_ref());
 
-    let sync = SyncManager::new(repo.clone());
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     sync.rebuild_projection_local_repo("default")
         .expect("rebuild projection tables");
 
@@ -156,7 +157,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_targets() {
         ),
     );
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
         .rebuild_projection_local_repo("default")
         .expect_err("malformed structure facts must fail closed");
@@ -183,7 +184,7 @@ fn rebuild_projection_fails_closed_on_missing_structure_parent() {
         ),
     );
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
         .rebuild_projection_local_repo("default")
         .expect_err("missing structure parent must fail closed");
