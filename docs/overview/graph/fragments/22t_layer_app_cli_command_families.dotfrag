@@ -4,9 +4,9 @@
             fillcolor="#eff6ff";
             color="#2563eb";
 
-            app_cli_vault_init [label="Commands::Init", fillcolor="#bfdbfe"];
-            app_cli_vault_scan [label="Commands::Scan", fillcolor="#bfdbfe"];
-            app_cli_vault_watch [label="Commands::Watch", fillcolor="#bfdbfe"];
+            app_cli_projection_init [label="Commands::Init", fillcolor="#bfdbfe"];
+            app_cli_projection_scan [label="Commands::Scan", fillcolor="#bfdbfe"];
+            app_cli_projection_watch [label="Commands::Watch", fillcolor="#bfdbfe"];
             app_cli_server_bind [label="Serve::port", fillcolor="#bfdbfe"];
             app_cli_server_dev [label="Serve::dev", fillcolor="#bfdbfe"];
             app_cli_server_dry [label="Serve::dry_run", fillcolor="#bfdbfe"];

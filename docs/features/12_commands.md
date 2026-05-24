@@ -17,7 +17,7 @@
 - 共享命令入口路由层见 [`operations/command_surface_mode_routing.md`](./operations/command_surface_mode_routing.md) 与 [`operations/command_surface_action_routing.md`](./operations/command_surface_action_routing.md)。
 - SearchBox 文件操作命令壳层见 [`operations/repo_file_op_shell_routing.md`](./operations/repo_file_op_shell_routing.md)。
 - 跨命令面板与设置的语言切换共享链见 [`operations/locale_surface_switch.md`](./operations/locale_surface_switch.md)。
-- CLI 细粒度命令族见 [`operations/cli_vault_indexing.md`](./operations/cli_vault_indexing.md)、[`operations/cli_server_runtime.md`](./operations/cli_server_runtime.md)、[`operations/cli_export_inspect.md`](./operations/cli_export_inspect.md)、[`operations/cli_repair_admin.md`](./operations/cli_repair_admin.md)。
+- CLI 细粒度命令族见 [`operations/cli_projection_workspace_indexing.md`](./operations/cli_projection_workspace_indexing.md)、[`operations/cli_server_runtime.md`](./operations/cli_server_runtime.md)、[`operations/cli_export_inspect.md`](./operations/cli_export_inspect.md)、[`operations/cli_repair_admin.md`](./operations/cli_repair_admin.md)。
 
 ## 功能项
 

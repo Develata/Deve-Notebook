@@ -1,12 +1,12 @@
-            subgraph cluster_user_cli_vault {
-                label="CLI vault indexing [12_commands]";
+            subgraph cluster_user_cli_projection {
+                label="CLI projection workspace indexing [12_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
 
-                op_cli_vault_init_path [label="Choose Init Path", fillcolor="#fde68a"];
-                op_cli_vault_scan [label="Run Vault Scan", fillcolor="#fde68a"];
-                op_cli_vault_watch_dry [label="Watch Vault Dry Run", fillcolor="#fde68a"];
+                op_cli_projection_base [label="Choose Projection Base", fillcolor="#fde68a"];
+                op_cli_projection_scan [label="Run Projection Scan", fillcolor="#fde68a"];
+                op_cli_projection_watch_dry [label="Watch Projection Dry Run", fillcolor="#fde68a"];
             }
 
             subgraph cluster_user_cli_server {

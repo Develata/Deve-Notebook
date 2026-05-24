@@ -1,6 +1,6 @@
-    op_cli_vault_init_path -> app_cli_vault_init;
-    op_cli_vault_scan -> app_cli_vault_scan;
-    op_cli_vault_watch_dry -> app_cli_vault_watch;
+    op_cli_projection_base -> app_cli_projection_init;
+    op_cli_projection_scan -> app_cli_projection_scan;
+    op_cli_projection_watch_dry -> app_cli_projection_watch;
     op_cli_server_port -> app_cli_server_bind;
     op_cli_server_dev -> app_cli_server_dev;
     op_cli_server_dry -> app_cli_server_dry;
@@ -15,14 +15,14 @@
     op_cli_recover_repo -> app_cli_recover;
     op_cli_repair_paths -> app_cli_repair;
 
-    app_cli_vault_init -> mod_cli_init;
-    app_cli_vault_init -> mod_config_runtime;
-    app_cli_vault_scan -> mod_cli_scan;
-    app_cli_vault_scan -> mod_ledger_scan;
-    app_cli_vault_scan -> mod_tree_projection;
-    app_cli_vault_watch -> mod_cli_watch;
-    app_cli_vault_watch -> mod_fs_watcher;
-    app_cli_vault_watch -> mod_tree_projection;
+    app_cli_projection_init -> mod_cli_init;
+    app_cli_projection_init -> mod_config_runtime;
+    app_cli_projection_scan -> mod_cli_scan;
+    app_cli_projection_scan -> mod_ledger_scan;
+    app_cli_projection_scan -> mod_tree_projection;
+    app_cli_projection_watch -> mod_cli_watch;
+    app_cli_projection_watch -> mod_fs_watcher;
+    app_cli_projection_watch -> mod_tree_projection;
     app_cli_server_bind -> mod_cli_serve;
     app_cli_server_bind -> mod_config_runtime;
     app_cli_server_dev -> mod_cli_serve;

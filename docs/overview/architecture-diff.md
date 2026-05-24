@@ -77,7 +77,7 @@ Use this registry as the stable label set for the diff and SVG marker map.
 - `CLI help surface`
 - `CLI empty-command guidance`
 - `CLI runtime handoff`
-- `CLI vault indexing`
+- `CLI projection workspace indexing`
 - `CLI server runtime`
 - `CLI export / inspect`
 - `CLI repair / admin`

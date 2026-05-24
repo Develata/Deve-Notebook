@@ -1,24 +1,24 @@
-# cli_vault_indexing.md - CLI Projection Workspace 索引链
+# cli_projection_workspace_indexing.md - CLI Projection Workspace 索引链
 
 ## Metadata
 
-- `Flow ID`: `flow.cli.vault-indexing`
+- `Flow ID`: `flow.cli.projection-workspace-indexing`
 - `Domain`: `commands`
 - `Related Feature Chapters`: `docs/features/12_commands.md`
 - `Related Acceptance Cases`: `CMD-001`, `CMD-006`
 
 ## Operations
 
-### `op.cli.vault.choose-init-path`
+### `op.cli.projection.choose-base`
 
-- `Name`: `Choose Init Path And Projection Base`
+- `Name`: `Choose Projection Base`
 - `Surface`: `cli`
 - `Trigger`: run `deve init --path <path> --repo <name> --projection-base <path>`
 - `Preconditions`: CLI binary is available and config loads
 - `Immediate Result`: ledger path is initialized and a host-local Projection Locator is written
 - `Application Entry`: `apps/cli/src/main.rs`, `apps/cli/src/dispatch.rs`
 
-### `op.cli.vault.run-scan`
+### `op.cli.projection.run-scan`
 
 - `Name`: `Run Projection Workspace Scan`
 - `Surface`: `cli`
@@ -27,7 +27,7 @@
 - `Immediate Result`: scan command enters indexing flow
 - `Application Entry`: `apps/cli/src/commands/scan.rs`
 
-### `op.cli.vault.watch-dry-run`
+### `op.cli.projection.watch-dry-run`
 
 - `Name`: `Watch Projection Workspace Dry Run`
 - `Surface`: `cli`

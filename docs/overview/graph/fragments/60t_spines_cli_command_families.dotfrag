@@ -1,11 +1,11 @@
-    user_cli_vault_spine [label="CLI vault indexing flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_projection_spine [label="CLI projection workspace indexing flow", shape=plaintext, fontcolor="#92400e"];
     user_cli_server_spine [label="CLI server runtime flow", shape=plaintext, fontcolor="#92400e"];
     user_cli_export_spine [label="CLI export / inspect flow", shape=plaintext, fontcolor="#92400e"];
     user_cli_repair_spine [label="CLI repair / admin flow", shape=plaintext, fontcolor="#92400e"];
 
-    user_cli_vault_spine -> op_cli_vault_init_path [style=dashed, color="#d97706", constraint=false];
-    op_cli_vault_init_path -> op_cli_vault_scan [style=dashed, color="#d97706", constraint=false];
-    op_cli_vault_scan -> op_cli_vault_watch_dry [style=dashed, color="#d97706", constraint=false];
+    user_cli_projection_spine -> op_cli_projection_base [style=dashed, color="#d97706", constraint=false];
+    op_cli_projection_base -> op_cli_projection_scan [style=dashed, color="#d97706", constraint=false];
+    op_cli_projection_scan -> op_cli_projection_watch_dry [style=dashed, color="#d97706", constraint=false];
 
     user_cli_server_spine -> op_cli_server_port [style=dashed, color="#d97706", constraint=false];
     op_cli_server_port -> op_cli_server_dev [style=dashed, color="#d97706", constraint=false];

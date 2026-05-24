@@ -451,15 +451,15 @@ digraph DeveNoteArchitecture {
                 op_tech_platform [label="Inspect Platform Maturity", fillcolor="#fef9c3"];
             }
 
-            subgraph cluster_user_cli_vault {
-                label="CLI vault indexing [12_commands]";
+            subgraph cluster_user_cli_projection {
+                label="CLI projection workspace indexing [12_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
 
-                op_cli_vault_init_path [label="Choose Init Path", fillcolor="#fde68a"];
-                op_cli_vault_scan [label="Run Vault Scan", fillcolor="#fde68a"];
-                op_cli_vault_watch_dry [label="Watch Vault Dry Run", fillcolor="#fde68a"];
+                op_cli_projection_base [label="Choose Projection Base", fillcolor="#fde68a"];
+                op_cli_projection_scan [label="Run Projection Scan", fillcolor="#fde68a"];
+                op_cli_projection_watch_dry [label="Watch Projection Dry Run", fillcolor="#fde68a"];
             }
 
             subgraph cluster_user_cli_server {
@@ -1282,9 +1282,9 @@ digraph DeveNoteArchitecture {
             fillcolor="#eff6ff";
             color="#2563eb";
 
-            app_cli_vault_init [label="Commands::Init", fillcolor="#bfdbfe"];
-            app_cli_vault_scan [label="Commands::Scan", fillcolor="#bfdbfe"];
-            app_cli_vault_watch [label="Commands::Watch", fillcolor="#bfdbfe"];
+            app_cli_projection_init [label="Commands::Init", fillcolor="#bfdbfe"];
+            app_cli_projection_scan [label="Commands::Scan", fillcolor="#bfdbfe"];
+            app_cli_projection_watch [label="Commands::Watch", fillcolor="#bfdbfe"];
             app_cli_server_bind [label="Serve::port", fillcolor="#bfdbfe"];
             app_cli_server_dev [label="Serve::dev", fillcolor="#bfdbfe"];
             app_cli_server_dry [label="Serve::dry_run", fillcolor="#bfdbfe"];
@@ -2383,7 +2383,7 @@ digraph DeveNoteArchitecture {
             obj_search_mode [label="search::mode", fillcolor="#f8fafc"];
             obj_search_action [label="search::action", fillcolor="#f8fafc"];
             obj_fileop_intent [label="fileop::intent", fillcolor="#f8fafc"];
-            obj_vault_path [label="vault::path", fillcolor="#f8fafc"];
+            obj_projection_locator [label="projection::locator", fillcolor="#f8fafc"];
             obj_export_artifact [label="export::artifact", fillcolor="#f8fafc"];
             obj_repair_plan [label="repair::plan", fillcolor="#f8fafc"];
             obj_config_runtime [label="config::runtime", fillcolor="#f8fafc"];
@@ -2914,9 +2914,9 @@ digraph DeveNoteArchitecture {
     core_rendering -> core_ledger [style=dashed, color="#831843", label="projects doc source"];
     core_i18n -> core_proto [style=dashed, color="#831843", label="maps error codes"];
 
-    op_cli_vault_init_path -> app_cli_vault_init;
-    op_cli_vault_scan -> app_cli_vault_scan;
-    op_cli_vault_watch_dry -> app_cli_vault_watch;
+    op_cli_projection_base -> app_cli_projection_init;
+    op_cli_projection_scan -> app_cli_projection_scan;
+    op_cli_projection_watch_dry -> app_cli_projection_watch;
     op_cli_server_port -> app_cli_server_bind;
     op_cli_server_dev -> app_cli_server_dev;
     op_cli_server_dry -> app_cli_server_dry;
@@ -2931,14 +2931,14 @@ digraph DeveNoteArchitecture {
     op_cli_recover_repo -> app_cli_recover;
     op_cli_repair_paths -> app_cli_repair;
 
-    app_cli_vault_init -> mod_cli_init;
-    app_cli_vault_init -> mod_config_runtime;
-    app_cli_vault_scan -> mod_cli_scan;
-    app_cli_vault_scan -> mod_ledger_scan;
-    app_cli_vault_scan -> mod_tree_projection;
-    app_cli_vault_watch -> mod_cli_watch;
-    app_cli_vault_watch -> mod_fs_watcher;
-    app_cli_vault_watch -> mod_tree_projection;
+    app_cli_projection_init -> mod_cli_init;
+    app_cli_projection_init -> mod_config_runtime;
+    app_cli_projection_scan -> mod_cli_scan;
+    app_cli_projection_scan -> mod_ledger_scan;
+    app_cli_projection_scan -> mod_tree_projection;
+    app_cli_projection_watch -> mod_cli_watch;
+    app_cli_projection_watch -> mod_fs_watcher;
+    app_cli_projection_watch -> mod_tree_projection;
     app_cli_server_bind -> mod_cli_serve;
     app_cli_server_bind -> mod_config_runtime;
     app_cli_server_dev -> mod_cli_serve;
@@ -3516,7 +3516,7 @@ digraph DeveNoteArchitecture {
     core_commands -> obj_search_mode;
     core_commands -> obj_search_action;
     core_commands -> obj_fileop_intent;
-    core_commands -> obj_vault_path;
+    core_commands -> obj_projection_locator;
     core_commands -> obj_export_artifact;
     core_sc -> obj_repair_plan;
     core_settings -> obj_config_runtime;
@@ -3807,14 +3807,14 @@ digraph DeveNoteArchitecture {
     app_tech_runtime_budget_spine -> mod_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
     mod_tech_runtime_budget_spine -> core_tech_runtime_budget_spine [penwidth=2.2, color="#0f172a"];
 
-    user_cli_vault_spine [label="CLI vault indexing flow", shape=plaintext, fontcolor="#92400e"];
+    user_cli_projection_spine [label="CLI projection workspace indexing flow", shape=plaintext, fontcolor="#92400e"];
     user_cli_server_spine [label="CLI server runtime flow", shape=plaintext, fontcolor="#92400e"];
     user_cli_export_spine [label="CLI export / inspect flow", shape=plaintext, fontcolor="#92400e"];
     user_cli_repair_spine [label="CLI repair / admin flow", shape=plaintext, fontcolor="#92400e"];
 
-    user_cli_vault_spine -> op_cli_vault_init_path [style=dashed, color="#d97706", constraint=false];
-    op_cli_vault_init_path -> op_cli_vault_scan [style=dashed, color="#d97706", constraint=false];
-    op_cli_vault_scan -> op_cli_vault_watch_dry [style=dashed, color="#d97706", constraint=false];
+    user_cli_projection_spine -> op_cli_projection_base [style=dashed, color="#d97706", constraint=false];
+    op_cli_projection_base -> op_cli_projection_scan [style=dashed, color="#d97706", constraint=false];
+    op_cli_projection_scan -> op_cli_projection_watch_dry [style=dashed, color="#d97706", constraint=false];
 
     user_cli_server_spine -> op_cli_server_port [style=dashed, color="#d97706", constraint=false];
     op_cli_server_port -> op_cli_server_dev [style=dashed, color="#d97706", constraint=false];
