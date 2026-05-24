@@ -138,7 +138,13 @@ impl RepoManager {
         let info = self.local_repo_info_for_locator(repo_name)?;
         let locator = self.validated_projection_locator_for_repo_id(info.uuid)?;
         let safe_name = safe_repo_path_segment(&info.name)?;
-        Ok(locator.projection_base_abs.join(safe_name))
+        let workspace_root = locator.projection_base_abs.join(safe_name);
+        std::fs::canonicalize(&workspace_root).with_context(|| {
+            format!(
+                "Failed to canonicalize Projection workspace root for local repo {}: {:?}",
+                info.name, workspace_root
+            )
+        })
     }
 
     fn local_repo_info_for_locator(&self, repo_name: &str) -> Result<RepoInfo> {

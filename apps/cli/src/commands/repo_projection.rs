@@ -6,6 +6,7 @@ use super::repo_arg::resolve_local_repo_arg;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use std::path::Path;
+use std::sync::Arc;
 
 pub fn set(
     ledger_dir: &Path,
@@ -13,9 +14,10 @@ pub fn set(
     base: &Path,
     snapshot_depth: usize,
 ) -> Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo = Arc::new(RepoManager::init(ledger_dir, snapshot_depth, None, None)?);
     let repo_name = resolve_local_repo_arg(&repo, Some(repo_selector))?;
     let locator = repo.set_projection_base_for_local_repo(&repo_name, base)?;
+    deve_core::sync::SyncManager::new_checked(repo.clone())?.materialize_local_repo(&repo_name)?;
     let workspace = repo.check_projection_locator_for_local_repo(&repo_name)?;
     println!(
         "Projection Locator set: {} {} -> {:?}",
@@ -82,6 +84,26 @@ mod tests {
         assert_eq!(
             reopened.local_repo_workspace_root("default")?,
             std::fs::canonicalize(&second)?.join("default")
+        );
+        assert!(second.join("default/.notegit").is_dir());
+        assert!(second.join("default/.gitignore").is_file());
+        Ok(())
+    }
+
+    #[test]
+    fn projection_locator_check_fails_when_workspace_root_is_missing() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger = dir.path().join("ledger");
+        let base = dir.path().join("notes");
+        let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+        repo.set_projection_base_for_local_repo("default", &base)?;
+
+        let err = check(&ledger, "default", 8)
+            .expect_err("projection check must verify workspace root exists");
+        assert!(
+            err.to_string()
+                .contains("Failed to canonicalize Projection workspace root"),
+            "{err}"
         );
         Ok(())
     }
