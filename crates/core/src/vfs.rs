@@ -3,13 +3,14 @@
 //! plan_ref:
 //!   - 04_storage#watcher-contract
 //!
-//! 本模块提供 `Vfs` 结构体用于管理 vault 目录。
+//! 本模块提供 `Vfs` 结构体用于管理显式传入的文件系统根目录。
 //!
 //! ## 功能
 //!
 //! - `get_inode`: 获取跨平台文件标识符，用于重命名检测
 //!
-//! VFS 层仅保留文件系统标识抽象，repo-aware 扫描逻辑已迁移到 `sync::scan`。
+//! VFS 层仅保留文件系统标识抽象，repo-aware Projection Workspace 扫描逻辑已迁移到
+//! `sync::scan`。
 
 use crate::models::FileNodeId;
 use anyhow::{Context, Result};
@@ -76,7 +77,7 @@ mod tests {
     #[test]
     fn new_checked_fails_closed_on_missing_root() {
         let dir = tempdir().expect("tempdir");
-        let missing = dir.path().join("missing-vault");
+        let missing = dir.path().join("missing-workspace");
         let err = match Vfs::new_checked(&missing) {
             Ok(_) => panic!("missing root must fail closed"),
             Err(err) => err,
@@ -88,7 +89,7 @@ mod tests {
     #[should_panic(expected = "Failed to canonicalize VFS root")]
     fn new_panics_on_missing_root() {
         let dir = tempdir().expect("tempdir");
-        let missing = dir.path().join("missing-vault");
+        let missing = dir.path().join("missing-workspace");
         let _ = Vfs::new(&missing);
     }
 
@@ -96,8 +97,8 @@ mod tests {
     #[test]
     fn get_inode_fails_closed_on_unstatable_path() {
         let dir = tempdir().expect("tempdir");
-        let vault = dir.path().join("vault");
-        let notes = vault.join("default/notes");
+        let workspace = dir.path().join("projection-workspace");
+        let notes = workspace.join("notes");
         std::fs::create_dir_all(&notes).expect("mkdir");
         std::fs::write(notes.join("a.md"), "hello").expect("write");
         let original = std::fs::metadata(&notes).expect("metadata").permissions();
@@ -105,9 +106,9 @@ mod tests {
         blocked.set_mode(0o000);
         std::fs::set_permissions(&notes, blocked).expect("chmod 000");
 
-        let vfs = Vfs::new(&vault);
+        let vfs = Vfs::new(&workspace);
         let err = vfs
-            .get_inode("default/notes/a.md")
+            .get_inode("notes/a.md")
             .expect_err("unstatable path must fail closed");
 
         std::fs::set_permissions(&notes, original).expect("restore perms");
