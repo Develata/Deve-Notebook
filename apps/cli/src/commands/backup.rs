@@ -15,11 +15,13 @@ use deve_core::backup::{
     inspect_backup_remote_layout, parse_backup_credential_ref, parse_backup_key_ref,
 };
 
+mod args;
 mod bind;
 mod restore;
 mod run;
 mod unbind;
 
+pub(crate) use args::BackupAction;
 pub use bind::bind;
 pub use restore::{RestoreCommandInput, restore};
 pub use run::{RunBackupCommandInput, run_backup};
