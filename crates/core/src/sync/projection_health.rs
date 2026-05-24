@@ -53,5 +53,5 @@ impl ProjectionHealth {
 }
 
 fn normalize(repo_name: &str) -> String {
-    repo_name.trim_end_matches(".redb").to_string()
+    repo_name.to_string()
 }

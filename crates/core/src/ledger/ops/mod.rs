@@ -25,7 +25,7 @@ pub(crate) use write_direct::append_op_to_txn;
 pub use write_generated::{append_generated_client_op, append_generated_op};
 
 pub fn local_repo_scope(repo_name: &str) -> String {
-    format!("local:{}", repo_name.trim_end_matches(".redb"))
+    format!("local:{repo_name}")
 }
 
 pub fn shadow_repo_scope(peer_id: &PeerId, repo_id: &RepoId) -> String {

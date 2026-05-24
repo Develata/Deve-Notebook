@@ -33,7 +33,7 @@ impl RepoManager {
     where
         F: FnOnce(&redb::Database) -> Result<R>,
     {
-        let selector = repo_name.trim_end_matches(".redb");
+        let selector = repo_name;
         if let Some(stem) = self.resolve_local_repo_stem(selector)? {
             return self.run_on_local_repo_stem(&stem, f);
         }

@@ -302,6 +302,29 @@ fn projection_locator_rejects_reserved_repo_path_segments() {
 }
 
 #[test]
+fn projection_locator_preserves_redb_suffix_in_repo_name_segment() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let base = dir.path().join("notes");
+    let repo = RepoManager::init(&ledger, 8, Some("paper.redb"), Some("urn:paper"))?;
+
+    assert_eq!(repo.local_repo_name(), "paper.redb");
+
+    repo.set_projection_base_for_local_repo("paper.redb", &base)?;
+
+    assert_eq!(
+        repo.local_repo_workspace_root("paper.redb")?,
+        std::fs::canonicalize(&base)?.join("paper.redb")
+    );
+    assert_eq!(
+        repo.projection_locator_for_local_repo("paper.redb")?
+            .repo_name_hint,
+        "paper.redb"
+    );
+    Ok(())
+}
+
+#[test]
 fn projection_locator_normalized_workspace_key_detects_case_and_unicode_conflicts() {
     let base = PathBuf::from("notes");
 

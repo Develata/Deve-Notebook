@@ -50,7 +50,7 @@ impl RepoManager {
 }
 
 fn normalized_repo_stem(name: &str, fallback: &str) -> String {
-    let trimmed = name.trim_end_matches(".redb").trim();
+    let trimmed = name.trim();
     if trimmed.is_empty() {
         return fallback.to_string();
     }

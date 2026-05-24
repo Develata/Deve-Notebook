@@ -14,7 +14,7 @@ impl RepoManager {
     /// 返回指定本地 repo 的 Projection Workspace 根目录：`<projection_base>/<repo_name>/`
     pub fn local_repo_workspace_root(&self, repo_name: &str) -> Result<PathBuf> {
         let info = self
-            .get_repo_info_for(None, Some(repo_name.trim_end_matches(".redb")))?
+            .get_repo_info_for(None, Some(repo_name))?
             .ok_or_else(|| anyhow!("Local repo metadata is missing for {}", repo_name))?;
         let locator = self.validated_projection_locator_for_repo_id(info.uuid)?;
         let segment =
@@ -46,7 +46,6 @@ impl RepoManager {
 
     /// 构造 Watcher / PersistGuard 使用的 repo-scoped key。
     pub fn local_repo_workspace_relative(&self, repo_name: &str, repo_path: &str) -> String {
-        let repo_name = repo_name.trim_end_matches(".redb");
         let repo_path = to_forward_slash(repo_path).trim_matches('/').to_string();
         if repo_path.is_empty() {
             repo_name.to_string()

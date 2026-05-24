@@ -210,7 +210,7 @@ fn canonicalize_projection_base(base: &Path) -> Result<PathBuf> {
 }
 
 pub(crate) fn safe_repo_path_segment(repo_name: &str) -> Result<String> {
-    let segment = repo_name.trim_end_matches(".redb");
+    let segment = repo_name;
     if segment.is_empty() {
         return Err(anyhow!("repo_name must not be empty"));
     }

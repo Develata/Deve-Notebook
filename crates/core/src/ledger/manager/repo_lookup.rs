@@ -28,9 +28,7 @@ impl RepoManager {
         branch: Option<&PeerId>,
         repo_name: Option<&str>,
     ) -> Result<Option<RepoInfo>> {
-        let name = repo_name
-            .unwrap_or(&self.local_repo_name)
-            .trim_end_matches(".redb");
+        let name = repo_name.unwrap_or(&self.local_repo_name);
         if let Some(peer_id) = branch {
             return self.read_remote_repo_info(peer_id, name);
         }

@@ -21,11 +21,9 @@ impl<'a> RepoDatabaseRuntime<'a> {
         branch: Option<&PeerId>,
         repo_name: &str,
     ) -> Result<DatabaseHandle> {
-        let name = repo_name.trim_end_matches(".redb");
-
         match branch {
-            None => self.open_local_database(name),
-            Some(peer_id) => self.open_remote_database(peer_id, name),
+            None => self.open_local_database(repo_name),
+            Some(peer_id) => self.open_remote_database(peer_id, repo_name),
         }
     }
 

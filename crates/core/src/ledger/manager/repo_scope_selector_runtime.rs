@@ -50,20 +50,19 @@ impl<'a> RepoScopeSelectorRuntime<'a> {
         };
         let by_name = match repo_name {
             Some(repo_name) => {
-                let normalized = repo_name.trim_end_matches(".redb");
-                if let Some(stem) = self.manager.resolve_local_repo_stem(normalized)? {
+                if let Some(stem) = self.manager.resolve_local_repo_stem(repo_name)? {
                     self.manager
                         .get_repo_info_for(None, Some(&stem))?
                         .ok_or_else(|| {
                             anyhow::anyhow!(
                                 "Broken local repo {} while resolving selector {}: repository metadata missing",
                                 stem,
-                                normalized
+                                repo_name
                             )
                         })?;
                     Some(stem)
                 } else {
-                    anyhow::bail!("Local repo not found for name {}", normalized);
+                    anyhow::bail!("Local repo not found for name {}", repo_name);
                 }
             }
             None => None,
