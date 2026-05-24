@@ -13,6 +13,7 @@ use super::pack::BackupDigest;
 use super::restore::RestoreAdmissionMode;
 use crate::models::RepoId;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use thiserror::Error;
 
 #[cfg(test)]
@@ -87,6 +88,8 @@ pub enum BackupRestoreFlowError {
     EmptyPackDownload,
     #[error("backup restore digest must be sha256 hex")]
     InvalidDigest,
+    #[error("backup restore pack digest is duplicated")]
+    DuplicatePackDigest,
     #[error("backup restore download/decrypt phase must not append local ledger state")]
     LocalLedgerAppendForbidden,
     #[error("backup restore import or merge requires an explicit write gate")]
@@ -164,8 +167,12 @@ fn validate_pack_digests(
     evidence: BackupRestoreFlowEvidence,
     pack_digests: &[BackupDigest],
 ) -> Result<(), BackupRestoreFlowError> {
+    let mut seen = HashSet::with_capacity(pack_digests.len());
     for digest in pack_digests {
         validate_digest(digest)?;
+        if !seen.insert(digest.hex.as_str()) {
+            return Err(BackupRestoreFlowError::DuplicatePackDigest);
+        }
     }
     if !evidence.packs_downloaded && !evidence.packs_decrypted && !evidence.candidate_admitted {
         return Ok(());

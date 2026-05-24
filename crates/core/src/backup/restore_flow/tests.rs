@@ -128,6 +128,14 @@ fn rejects_empty_pack_download_after_download_phase() {
         plan_backup_restore_flow(restore_input),
         Err(BackupRestoreFlowError::EmptyPackDownload)
     ));
+
+    let mut restore_input = verified_input(evidence);
+    restore_input.pack_digests[1] = restore_input.pack_digests[0].clone();
+
+    assert!(matches!(
+        plan_backup_restore_flow(restore_input),
+        Err(BackupRestoreFlowError::DuplicatePackDigest)
+    ));
 }
 
 #[test]

@@ -12,6 +12,7 @@ use super::locator::{normalize_remote_path, safe_writer_identity};
 use super::pack::BackupDigest;
 use crate::models::RepoId;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use thiserror::Error;
 
 #[cfg(test)]
@@ -91,6 +92,8 @@ pub enum BackupRestoreError {
     PackDigestCountMismatch,
     #[error("backup restore candidate digest must be sha256 hex")]
     InvalidDigest,
+    #[error("backup restore candidate pack digest is duplicated")]
+    DuplicatePackDigest,
     #[error("backup restore import or merge requires an explicit write gate")]
     WriteGateRequired,
     #[error(transparent)]
@@ -108,9 +111,7 @@ pub fn admit_restore_candidate(
     }
     validate_pack_count(input.pack_count, input.pack_digests.len())?;
     validate_digest(&input.manifest_digest)?;
-    for digest in &input.pack_digests {
-        validate_digest(digest)?;
-    }
+    validate_pack_digests(&input.pack_digests)?;
     if requires_write_gate(input.admission_mode) && !input.write_gate_confirmed {
         return Err(BackupRestoreError::WriteGateRequired);
     }
@@ -143,6 +144,17 @@ fn validate_digest(digest: &BackupDigest) -> Result<(), BackupRestoreError> {
     } else {
         Err(BackupRestoreError::InvalidDigest)
     }
+}
+
+fn validate_pack_digests(pack_digests: &[BackupDigest]) -> Result<(), BackupRestoreError> {
+    let mut seen = HashSet::with_capacity(pack_digests.len());
+    for digest in pack_digests {
+        validate_digest(digest)?;
+        if !seen.insert(digest.hex.as_str()) {
+            return Err(BackupRestoreError::DuplicatePackDigest);
+        }
+    }
+    Ok(())
 }
 
 fn requires_write_gate(mode: RestoreAdmissionMode) -> bool {

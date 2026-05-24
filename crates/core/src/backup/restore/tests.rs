@@ -105,6 +105,13 @@ fn rejects_bad_pack_digest_or_count() {
         admit_restore_candidate(candidate_input),
         Err(BackupRestoreError::EmptyRestoreCandidate)
     ));
+
+    let mut candidate_input = input();
+    candidate_input.pack_digests[1] = candidate_input.pack_digests[0].clone();
+    assert!(matches!(
+        admit_restore_candidate(candidate_input),
+        Err(BackupRestoreError::DuplicatePackDigest)
+    ));
 }
 
 #[test]
