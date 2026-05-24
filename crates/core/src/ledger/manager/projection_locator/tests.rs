@@ -278,6 +278,66 @@ fn projection_locator_invalid_repo_name_fails_closed() -> anyhow::Result<()> {
 }
 
 #[test]
+fn projection_locator_rejects_reserved_repo_path_segments() {
+    for name in [
+        ".",
+        "..",
+        "CON",
+        "nul.txt",
+        "COM1",
+        "LPT9",
+        "bad/name",
+        "bad\\name",
+        "bad:name",
+        "trail ",
+        "trail.",
+        "has\0nul",
+    ] {
+        let err = safe_repo_path_segment(name).expect_err("repo name must fail closed");
+        assert!(
+            !err.to_string().is_empty(),
+            "invalid repo name must produce a diagnostic: {name:?}"
+        );
+    }
+}
+
+#[test]
+fn projection_locator_normalized_workspace_key_detects_case_and_unicode_conflicts() {
+    let base = PathBuf::from("notes");
+
+    assert_eq!(
+        normalized_workspace_key(&base, "Default"),
+        normalized_workspace_key(&base, "default")
+    );
+    assert_eq!(
+        normalized_workspace_key(&base, "\u{00e9}"),
+        normalized_workspace_key(&base, "e\u{0301}")
+    );
+}
+
+#[test]
+fn projection_locator_rejects_protected_workspace_roots() -> anyhow::Result<()> {
+    for protected_base in ["ledger/.host", ".git", ".notegit"] {
+        let dir = tempfile::tempdir()?;
+        let ledger = dir.path().join("ledger");
+        let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+        let base = dir.path().join(protected_base);
+
+        let err = repo
+            .set_projection_base_for_local_repo("default", &base)
+            .expect_err("protected workspace root must fail closed");
+        let message = err.to_string();
+        assert!(
+            message.contains("ledger_dir")
+                || message.contains(".notegit")
+                || message.contains(".git"),
+            "unexpected protected root diagnostic: {message}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn projection_locator_workspace_deveignore_filters_startup_scan() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
