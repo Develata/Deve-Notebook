@@ -46,7 +46,7 @@ struct Args {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum Commands {
-    /// Initialize a new Deve-Note vault
+    /// Initialize a ledger repo and Projection Locator
     Init {
         #[arg(short, long, default_value = ".")]
         path: PathBuf,
@@ -55,9 +55,9 @@ pub(crate) enum Commands {
         #[arg(long = "projection-base")]
         projection_base: PathBuf,
     },
-    /// Scan and index the vault
+    /// Scan repo projection workspaces
     Scan,
-    /// Watch the vault for changes
+    /// Watch repo projection workspaces for changes
     Watch {
         #[arg(long)]
         dry_run: bool,
@@ -138,7 +138,7 @@ pub(crate) enum Commands {
         #[arg(long)]
         repo: Option<String>,
     },
-    /// Recover vault files from ledger data
+    /// Recover projection workspace files from ledger data
     Recover {
         #[arg(long)]
         repo: Option<String>,
@@ -168,7 +168,8 @@ pub(crate) enum Commands {
         /// Run repair readiness checks without executing repair steps
         #[arg(long)]
         check: bool,
-        #[arg(long, default_value = "Vault_old/vault")]
+        /// Repo-scoped Markdown backup root used by --path restore
+        #[arg(long, default_value = "backups/projection-workspace")]
         backup: PathBuf,
         #[arg(long)]
         repo: Option<String>,

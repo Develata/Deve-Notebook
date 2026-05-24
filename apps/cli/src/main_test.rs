@@ -1,5 +1,5 @@
 use super::{Args, Commands, ConfigAction, GitAction, run_pre_config_command};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use std::sync::Mutex;
 
 mod backup;
@@ -72,6 +72,21 @@ fn sc_status_accepts_repo_selector() {
     match args.command {
         Some(Commands::ScStatus { repo }) => {
             assert_eq!(repo.as_deref(), Some("default"));
+        }
+        other => panic!("unexpected command: {other:?}"),
+    }
+}
+
+#[test]
+fn repair_defaults_to_projection_workspace_backup_root() {
+    let args = Args::try_parse_from(["deve", "repair", "--check"]).expect("parse args");
+
+    match args.command {
+        Some(Commands::Repair { backup, .. }) => {
+            assert_eq!(
+                backup,
+                std::path::PathBuf::from("backups/projection-workspace")
+            );
         }
         other => panic!("unexpected command: {other:?}"),
     }
@@ -204,4 +219,14 @@ fn git_push_accepts_repo_remote_and_branch() {
         }
         other => panic!("unexpected command: {other:?}"),
     }
+}
+
+#[test]
+fn top_level_help_uses_projection_workspace_language() {
+    let help = Args::command().render_long_help().to_string();
+
+    assert!(help.contains("Projection Locator"));
+    assert!(help.contains("projection workspaces"));
+    assert!(!help.contains("vault"));
+    assert!(!help.contains("Vault_old"));
 }
