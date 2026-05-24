@@ -174,6 +174,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `18_backup#backup-secret-ref-contract` | `## 7. Security Contract` | backup credential/key 只能作为 env/keyring/config 引用进入 runtime，禁止裸 secret/token/key material |
 | `18_backup#backup-verification-contract` | `## 7. Security Contract` | manifest/pack hash、认证证据、decrypt gate 与 RepoId 一致性的 fail-closed 校验边界 |
 | `18_backup#backup-provider-dispatch-contract` | `### 10.1 Backup Runtime` | WebDAV/S3 provider adapter dispatch、credential/key ref 接入与 provider metadata 非权威边界 |
+| `18_backup#backup-command-output-contract` | `### 5.3 Outputs` | BackupBindingStatus / BackupPlan / BackupError 的命令可见结构化输出与 fail-closed 分类边界 |
 | `19_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)

@@ -174,7 +174,7 @@ RemoteDiscovered
 - `RestoreBackup`
 - `UnbindBackupTarget`
 
-### 5.3 Outputs
+### 5.3 Outputs {#backup-command-output-contract}
 
 - `BackupBindingStatus`
 - `BackupPlan`

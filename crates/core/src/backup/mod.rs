@@ -10,19 +10,21 @@
 //!   - 18_backup#backup-secret-ref-contract
 //!   - 18_backup#backup-verification-contract
 //!   - 18_backup#backup-provider-dispatch-contract
+//!   - 18_backup#backup-command-output-contract
 //!
 //! Backup runtime boundary.
 //!
 //! This module currently owns locator parsing, branch path derivation, and
 //! branch backup binding validation, backup pack manifest planning/validation,
 //! provider adapter dispatch, upload state admission, verification evidence
-//! validation, restore flow admission, and restore candidate admission only. It
-//! does not open network connections, write ledger state, modify staging, or
-//! touch Projection Workspaces.
+//! validation, command output modeling, restore flow admission, and restore
+//! candidate admission only. It does not open network connections, write ledger
+//! state, modify staging, or touch Projection Workspaces.
 
 mod binding;
 mod layout;
 mod locator;
+mod output;
 mod pack;
 mod provider;
 mod restore;
@@ -42,6 +44,10 @@ pub use layout::{
     inspect_backup_remote_layout,
 };
 pub use locator::{BackupLocator, BackupLocatorError, BackupProviderKind, BranchBackupLocator};
+pub use output::{
+    BackupBindingStatus, BackupCommandKind, BackupCommandOutputError, BackupError, BackupErrorKind,
+    BackupPlan, BackupPlanEffect, BackupPlanInput, backup_binding_status, backup_command_plan,
+};
 pub use pack::{
     BACKUP_PACK_FORMAT_VERSION, BackupBlobRef, BackupDigest, BackupPackError, BackupPackManifest,
     BackupPackPlanInput, BackupSeqRange, plan_backup_pack, validate_pack_manifest,
