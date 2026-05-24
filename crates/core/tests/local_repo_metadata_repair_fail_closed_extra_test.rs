@@ -201,11 +201,11 @@ fn repair_local_repo_catalog_fails_closed_on_workspace_root_conflict() {
     let ledger_dir = dir.path().join("ledger");
     let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let vault_root = dir.path().join("vault");
-    std::fs::create_dir_all(vault_root.join("wiki")).expect("old root");
-    std::fs::create_dir_all(vault_root.join("notes")).expect("new root");
-    main.set_projection_base_for_all_local_repos_checked(&vault_root)
-        .expect("mount vault");
+    let projection_base = dir.path().join("projection-base");
+    std::fs::create_dir_all(projection_base.join("wiki")).expect("old root");
+    std::fs::create_dir_all(projection_base.join("notes")).expect("new root");
+    main.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("mount projection base");
 
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
     common::write_repo_metadata(

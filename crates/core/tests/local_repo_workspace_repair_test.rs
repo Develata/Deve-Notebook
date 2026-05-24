@@ -8,12 +8,12 @@ mod common;
 fn repair_realigns_workspace_root_to_repaired_repo_name() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
+    let projection_base = dir.path().join("projection-base");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let main_db = repo.open_database(None, "main").expect("main db").db;
+    repo.set_projection_base_for_all_local_repos(&projection_base);
 
-    std::fs::create_dir_all(vault_dir.join("legacy/.notegit")).expect("legacy workspace");
-    std::fs::write(vault_dir.join("legacy/note.md"), "hello").expect("write note");
+    std::fs::create_dir_all(projection_base.join("legacy/.notegit")).expect("legacy workspace");
     common::write_repo_metadata(
         main_db.as_ref(),
         &RepoInfo {
@@ -27,22 +27,20 @@ fn repair_realigns_workspace_root_to_repaired_repo_name() {
         },
     );
 
-    repo.set_projection_base_for_all_local_repos(&vault_dir);
     repo.repair_local_repo_catalog()
         .expect("repair local catalog realigns workspace");
 
-    assert!(vault_dir.join("main/.notegit").exists());
-    assert!(vault_dir.join("main/note.md").exists());
-    assert!(!vault_dir.join("legacy").exists());
+    assert!(projection_base.join("main/.notegit").exists());
+    assert!(!projection_base.join("legacy").exists());
 }
 
 #[test]
 fn runtime_catalog_refresh_does_not_realign_workspace_root() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
+    let projection_base = dir.path().join("projection-base");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    repo.set_projection_base_for_all_local_repos(&vault_dir);
+    repo.set_projection_base_for_all_local_repos(&projection_base);
     let main_db = repo.open_database(None, "main").expect("main db").db;
 
     common::write_repo_metadata(
@@ -57,8 +55,8 @@ fn runtime_catalog_refresh_does_not_realign_workspace_root() {
             url: Some("urn:main".into()),
         },
     );
-    std::fs::create_dir_all(vault_dir.join("legacy/.notegit")).expect("legacy workspace");
-    std::fs::write(vault_dir.join("legacy/note.md"), "hello").expect("write note");
+    std::fs::create_dir_all(projection_base.join("legacy/.notegit")).expect("legacy workspace");
+    std::fs::write(projection_base.join("legacy/note.md"), "hello").expect("write note");
 
     let err = repo
         .list_repos(None)
@@ -74,7 +72,7 @@ fn runtime_catalog_refresh_does_not_realign_workspace_root() {
             .name,
         "legacy"
     );
-    assert!(vault_dir.join("legacy/.notegit").exists());
-    assert!(vault_dir.join("legacy/note.md").exists());
-    assert!(!vault_dir.join("main").exists());
+    assert!(projection_base.join("legacy/.notegit").exists());
+    assert!(projection_base.join("legacy/note.md").exists());
+    assert!(!projection_base.join("main").exists());
 }
