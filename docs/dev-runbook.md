@@ -128,6 +128,39 @@ cases depend on the checked-in local `default` ledger being clean; use a seeded
 temporary repo for exact counts, or assert only that Source Control loads and
 reports its current state.
 
+## Backup Dry-Run Diagnostics
+
+Backup commands currently expose locator/runtime admission checks only. They do
+not contact WebDAV/S3 providers, upload/download artifacts, mutate binding
+state, append ledger entries, stage source-control changes, or touch Projection
+Workspaces.
+
+Locator and layout diagnostics:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- backup inspect --locator s3://bucket-name/deve/ --branch writer-1
+cargo run -p deve_cli --bin deve_cli -- backup list --locator s3://bucket-name/deve/ --object deve/repo.manifest.enc
+cargo run -p deve_cli --bin deve_cli -- backup verify --locator s3://bucket-name/deve/ --branch writer-1 --object deve/repo.manifest.enc --pack deve/branches/writer-1/packs/000001.pack.enc
+```
+
+Binding and upload planning:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- backup bind --locator s3://bucket-name/deve/ --repo-id <repo-id> --branch-name main --writer writer-1 --local-writer writer-1 --access writable --dry-run
+cargo run -p deve_cli --bin deve_cli -- backup run --locator s3://bucket-name/deve/ --repo-id <repo-id> --branch-name main --writer writer-1 --local-writer writer-1 --credential-ref env:DEVE_BACKUP_TOKEN --key-ref keyring:deve/default-backup-key --ledger-start 1 --ledger-end 1 --ledger-events 1 --payload-digest <sha256-hex> --encrypted --authenticated --dry-run
+cargo run -p deve_cli --bin deve_cli -- backup unbind --locator s3://bucket-name/deve/ --repo-id <repo-id> --branch-name main --writer writer-1 --local-writer writer-1 --access writable --dry-run
+```
+
+Restore candidate planning:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- backup restore --locator s3://bucket-name/deve/ --repo-id <repo-id> --manifest-repo-id <repo-id> --branch writer-1 --manifest-digest <sha256-hex> --pack-digest <sha256-hex> --mode remote-readonly --manifest-verified --packs-downloaded --packs-decrypted --dry-run
+```
+
+`explicit-import` and `explicit-merge` modes require `--write-gate` and still
+remain dry-run at this surface. Actual provider IO and explicit import/merge
+execution require later runtime work.
+
 ## Docker Release Smoke
 
 After enabling Docker Desktop WSL integration or another Docker-compatible
