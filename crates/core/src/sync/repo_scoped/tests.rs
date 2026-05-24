@@ -7,9 +7,10 @@ use std::sync::Arc;
 
 fn build_repo() -> anyhow::Result<(tempfile::TempDir, RepoManager, RepoId)> {
     let dir = tempfile::tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:test:notes"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, Some("notes"), Some("urn:test:notes"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     Ok((dir, repo, repo_id))
 }
