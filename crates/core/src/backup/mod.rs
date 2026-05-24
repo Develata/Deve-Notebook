@@ -9,6 +9,7 @@
 //!   - 18_backup#backup-restore-state-machine-contract
 //!   - 18_backup#backup-secret-ref-contract
 //!   - 18_backup#backup-verification-contract
+//!   - 18_backup#backup-artifact-protection-contract
 //!   - 18_backup#backup-provider-dispatch-contract
 //!   - 18_backup#backup-command-output-contract
 //!
@@ -16,16 +17,18 @@
 //!
 //! This module currently owns locator parsing, branch path derivation, and
 //! branch backup binding validation, backup pack manifest planning/validation,
-//! provider adapter dispatch, upload state admission, verification evidence
-//! validation, command output modeling, restore flow admission, and restore
-//! candidate admission only. It does not open network connections, write ledger
-//! state, modify staging, or touch Projection Workspaces.
+//! artifact protection admission, provider adapter dispatch, upload state
+//! admission, verification evidence validation, command output modeling,
+//! restore flow admission, and restore candidate admission only. It does not
+//! open network connections, write ledger state, modify staging, or touch
+//! Projection Workspaces.
 
 mod binding;
 mod layout;
 mod locator;
 mod output;
 mod pack;
+mod protection;
 mod provider;
 mod restore;
 mod restore_flow;
@@ -51,6 +54,10 @@ pub use output::{
 pub use pack::{
     BACKUP_PACK_FORMAT_VERSION, BackupBlobRef, BackupDigest, BackupPackError, BackupPackManifest,
     BackupPackPlanInput, BackupSeqRange, plan_backup_pack, validate_pack_manifest,
+};
+pub use protection::{
+    BackupArtifactKind, BackupArtifactProtection, BackupArtifactProtectionError,
+    BackupArtifactProtectionInput, BackupProtectionMechanism, plan_backup_artifact_protection,
 };
 pub use provider::{
     BackupProviderAdapterPlan, BackupProviderDispatchError, BackupProviderDispatchInput,

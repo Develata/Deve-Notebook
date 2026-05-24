@@ -204,7 +204,7 @@ RemoteDiscovered
 - WebDAV ETag、S3 object version、mtime、object key 等 provider metadata 只能作为 transport diagnostic。
 - remote layout drift 必须产生结构化诊断，不得静默 rebind。
 
-## 7. Security Contract {#backup-secret-ref-contract} {#backup-verification-contract}
+## 7. Security Contract {#backup-secret-ref-contract} {#backup-verification-contract} {#backup-artifact-protection-contract}
 
 - backup artifacts **MUST** be encrypted before upload。
 - manifests and packs **MUST** be authenticated by signature, AEAD tag, or an
