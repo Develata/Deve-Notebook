@@ -265,6 +265,41 @@ pub(crate) enum BackupAction {
         #[arg(long = "pack")]
         expected_packs: Vec<String>,
     },
+    /// Plan a branch backup upload without provider IO
+    Run {
+        #[arg(long)]
+        locator: String,
+        #[arg(long = "repo-id")]
+        repo_id: String,
+        #[arg(long = "branch-name")]
+        branch_name: String,
+        #[arg(long)]
+        writer: String,
+        #[arg(long = "local-writer")]
+        local_writer: String,
+        #[arg(long = "credential-ref")]
+        credential_ref: String,
+        #[arg(long = "key-ref")]
+        key_ref: String,
+        #[arg(long = "pack-sequence", default_value_t = 1)]
+        pack_sequence: u64,
+        #[arg(long = "ledger-start")]
+        ledger_start: Option<u64>,
+        #[arg(long = "ledger-end")]
+        ledger_end: Option<u64>,
+        #[arg(long = "ledger-events", default_value_t = 1)]
+        ledger_event_count: u64,
+        #[arg(long = "snapshot-count", default_value_t = 0)]
+        snapshot_count: u64,
+        #[arg(long = "payload-digest")]
+        payload_digest: String,
+        #[arg(long)]
+        encrypted: bool,
+        #[arg(long)]
+        authenticated: bool,
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Plan restore candidate admission from verified backup metadata
     Restore {
         #[arg(long)]

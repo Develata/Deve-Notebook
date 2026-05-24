@@ -17,9 +17,11 @@ use deve_core::backup::{
 
 mod bind;
 mod restore;
+mod run;
 
 pub use bind::bind;
 pub use restore::{RestoreCommandInput, restore};
+pub use run::{RunBackupCommandInput, run_backup};
 
 pub fn inspect(
     locator: &str,

@@ -2,6 +2,7 @@ use crate::{Args, BackupAction, Commands};
 use clap::Parser;
 
 mod restore;
+mod run;
 
 #[test]
 fn backup_bind_accepts_dry_run_binding_args() {
