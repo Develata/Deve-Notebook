@@ -12,8 +12,11 @@ use crate::models::RepoId;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod blob_ref;
 #[cfg(test)]
 mod tests;
+
+use blob_ref::{normalize_blob_refs, validate_blob_refs};
 
 pub const BACKUP_PACK_FORMAT_VERSION: u32 = 1;
 
@@ -103,6 +106,8 @@ pub enum BackupPackError {
     InvalidLedgerRange,
     #[error("backup pack digest must be sha256 hex")]
     InvalidDigest,
+    #[error("backup pack blob path is duplicated")]
+    DuplicateBlobPath,
     #[error(transparent)]
     Locator(#[from] super::BackupLocatorError),
 }
@@ -167,9 +172,7 @@ pub fn validate_pack_manifest(
     )?;
     validate_ledger_range(manifest.ledger_event_count, manifest.ledger_seq_range)?;
     validate_digest(&manifest.payload_digest)?;
-    for blob in &manifest.blob_refs {
-        validate_blob_ref(blob)?;
-    }
+    validate_blob_refs(&manifest.blob_refs)?;
     Ok(())
 }
 
@@ -205,27 +208,6 @@ fn validate_ledger_range(
         (_, Some(range)) if range.start <= range.end => Ok(()),
         (_, Some(_)) => Err(BackupPackError::InvalidLedgerRange),
     }
-}
-
-fn normalize_blob_refs(
-    blob_refs: Vec<BackupBlobRef>,
-) -> Result<Vec<BackupBlobRef>, BackupPackError> {
-    blob_refs
-        .into_iter()
-        .map(|blob| {
-            validate_digest(&blob.digest)?;
-            Ok(BackupBlobRef {
-                path: normalize_remote_path(&blob.path)?,
-                size_bytes: blob.size_bytes,
-                digest: blob.digest,
-            })
-        })
-        .collect()
-}
-
-fn validate_blob_ref(blob: &BackupBlobRef) -> Result<(), BackupPackError> {
-    normalize_remote_path(&blob.path)?;
-    validate_digest(&blob.digest)
 }
 
 fn validate_digest(digest: &BackupDigest) -> Result<(), BackupPackError> {

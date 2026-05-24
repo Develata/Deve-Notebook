@@ -111,3 +111,32 @@ fn rejects_invalid_digest_and_unsafe_blob_path() {
     input.blob_refs[0].path = "blobs\\aa.bin".into();
     assert!(plan_backup_pack(input).is_err());
 }
+
+#[test]
+fn rejects_duplicate_blob_paths_in_plan_and_manifest_validation() {
+    let mut input = plan_input();
+    input.blob_refs.push(BackupBlobRef {
+        path: "blobs/aa.bin".into(),
+        size_bytes: 99,
+        digest: digest(),
+    });
+
+    assert!(matches!(
+        plan_backup_pack(input),
+        Err(BackupPackError::DuplicateBlobPath)
+    ));
+
+    let input = plan_input();
+    let mut manifest = plan_backup_pack(input.clone()).unwrap();
+    manifest.blob_refs.push(manifest.blob_refs[0].clone());
+
+    assert!(matches!(
+        validate_pack_manifest(
+            &manifest,
+            input.repo_id,
+            &input.writer_identity,
+            &input.branch_path,
+        ),
+        Err(BackupPackError::DuplicateBlobPath)
+    ));
+}
