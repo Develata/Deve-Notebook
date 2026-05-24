@@ -39,9 +39,23 @@ pub struct BackupArtifactProtectionInput {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BackupArtifactProtection {
-    pub artifact_kind: BackupArtifactKind,
-    pub key_ref: BackupSecretRef,
-    pub mechanism: BackupProtectionMechanism,
+    artifact_kind: BackupArtifactKind,
+    key_ref: BackupSecretRef,
+    mechanism: BackupProtectionMechanism,
+}
+
+impl BackupArtifactProtection {
+    pub fn artifact_kind(&self) -> BackupArtifactKind {
+        self.artifact_kind
+    }
+
+    pub fn key_ref(&self) -> &BackupSecretRef {
+        &self.key_ref
+    }
+
+    pub fn mechanism(&self) -> BackupProtectionMechanism {
+        self.mechanism
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]

@@ -3,8 +3,10 @@ use super::{
     BackupUploadState, plan_backup_upload,
 };
 use crate::backup::{
+    BackupArtifactKind, BackupArtifactProtection, BackupArtifactProtectionInput,
     BackupBindingAccess, BackupBlobRef, BackupBranchBinding, BackupBranchBindingInput,
-    BackupLocator, BackupPackPlanInput, BackupSeqRange, plan_backup_branch_binding,
+    BackupLocator, BackupPackPlanInput, BackupProtectionMechanism, BackupSeqRange,
+    parse_backup_key_ref, plan_backup_artifact_protection, plan_backup_branch_binding,
     plan_backup_pack,
 };
 
@@ -51,8 +53,26 @@ fn plan_input(evidence: BackupUploadEvidence) -> BackupUploadPlanInput {
     BackupUploadPlanInput {
         binding,
         manifest,
+        protection: None,
         evidence,
     }
+}
+
+fn pack_protection() -> BackupArtifactProtection {
+    plan_backup_artifact_protection(BackupArtifactProtectionInput {
+        artifact_kind: BackupArtifactKind::Pack,
+        key_ref: parse_backup_key_ref("keyring:deve/default-backup-key").unwrap(),
+        encrypted: true,
+        authenticated: true,
+        mechanism: BackupProtectionMechanism::AeadTag,
+    })
+    .unwrap()
+}
+
+fn protected_plan_input(evidence: BackupUploadEvidence) -> BackupUploadPlanInput {
+    let mut input = plan_input(evidence);
+    input.protection = Some(pack_protection());
+    input
 }
 
 #[test]
@@ -72,20 +92,53 @@ fn plans_pack_planned_state_for_writable_binding_and_manifest() {
 fn progresses_through_encrypted_uploaded_verified_and_complete() {
     let mut evidence = BackupUploadEvidence::none();
     evidence.pack_encrypted = true;
-    let plan = plan_backup_upload(plan_input(evidence.clone())).unwrap();
+    let plan = plan_backup_upload(protected_plan_input(evidence.clone())).unwrap();
     assert_eq!(plan.state, BackupUploadState::PackEncrypted);
 
     evidence.uploaded_payload_digest = Some(digest('a'));
-    let plan = plan_backup_upload(plan_input(evidence.clone())).unwrap();
+    let plan = plan_backup_upload(protected_plan_input(evidence.clone())).unwrap();
     assert_eq!(plan.state, BackupUploadState::Uploaded);
 
     evidence.remote_manifest_payload_digest = Some(digest('a'));
-    let plan = plan_backup_upload(plan_input(evidence.clone())).unwrap();
+    let plan = plan_backup_upload(protected_plan_input(evidence.clone())).unwrap();
     assert_eq!(plan.state, BackupUploadState::RemoteVerified);
 
     evidence.completion_recorded = true;
-    let plan = plan_backup_upload(plan_input(evidence)).unwrap();
+    let plan = plan_backup_upload(protected_plan_input(evidence)).unwrap();
     assert_eq!(plan.state, BackupUploadState::Complete);
+}
+
+#[test]
+fn rejects_encrypted_upload_without_pack_protection() {
+    let mut evidence = BackupUploadEvidence::none();
+    evidence.pack_encrypted = true;
+
+    assert!(matches!(
+        plan_backup_upload(plan_input(evidence)),
+        Err(BackupUploadError::MissingArtifactProtection)
+    ));
+}
+
+#[test]
+fn rejects_non_pack_protection_for_upload() {
+    let mut evidence = BackupUploadEvidence::none();
+    evidence.pack_encrypted = true;
+    let mut input = plan_input(evidence);
+    input.protection = Some(
+        plan_backup_artifact_protection(BackupArtifactProtectionInput {
+            artifact_kind: BackupArtifactKind::BranchManifest,
+            key_ref: parse_backup_key_ref("keyring:deve/default-backup-key").unwrap(),
+            encrypted: true,
+            authenticated: true,
+            mechanism: BackupProtectionMechanism::AeadTag,
+        })
+        .unwrap(),
+    );
+
+    assert!(matches!(
+        plan_backup_upload(input),
+        Err(BackupUploadError::ProtectionKindMismatch)
+    ));
 }
 
 #[test]
@@ -137,7 +190,7 @@ fn rejects_uploaded_or_remote_digest_mismatch() {
     evidence.uploaded_payload_digest = Some(digest('c'));
 
     assert!(matches!(
-        plan_backup_upload(plan_input(evidence)),
+        plan_backup_upload(protected_plan_input(evidence)),
         Err(BackupUploadError::UploadedPackDigestMismatch)
     ));
 
@@ -147,7 +200,7 @@ fn rejects_uploaded_or_remote_digest_mismatch() {
     evidence.remote_manifest_payload_digest = Some(digest('c'));
 
     assert!(matches!(
-        plan_backup_upload(plan_input(evidence)),
+        plan_backup_upload(protected_plan_input(evidence)),
         Err(BackupUploadError::RemoteManifestDigestMismatch)
     ));
 }

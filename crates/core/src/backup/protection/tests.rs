@@ -15,9 +15,9 @@ fn input() -> BackupArtifactProtectionInput {
 fn admits_encrypted_authenticated_pack_with_key_ref() {
     let protection = plan_backup_artifact_protection(input()).expect("protection");
 
-    assert_eq!(protection.artifact_kind, BackupArtifactKind::Pack);
-    assert_eq!(protection.key_ref.kind, BackupSecretRefKind::Key);
-    assert_eq!(protection.mechanism, BackupProtectionMechanism::AeadTag);
+    assert_eq!(protection.artifact_kind(), BackupArtifactKind::Pack);
+    assert_eq!(protection.key_ref().kind, BackupSecretRefKind::Key);
+    assert_eq!(protection.mechanism(), BackupProtectionMechanism::AeadTag);
 }
 
 #[test]
@@ -28,8 +28,8 @@ fn admits_signature_protected_manifest_metadata() {
 
     let protection = plan_backup_artifact_protection(input).expect("protection");
 
-    assert_eq!(protection.artifact_kind, BackupArtifactKind::RepoManifest);
-    assert_eq!(protection.mechanism, BackupProtectionMechanism::Signature);
+    assert_eq!(protection.artifact_kind(), BackupArtifactKind::RepoManifest);
+    assert_eq!(protection.mechanism(), BackupProtectionMechanism::Signature);
 }
 
 #[test]

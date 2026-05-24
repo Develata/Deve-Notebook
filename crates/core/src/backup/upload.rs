@@ -10,6 +10,7 @@
 
 use super::binding::{BackupBindingAccess, BackupBranchBinding};
 use super::pack::{BackupDigest, BackupPackError, BackupPackManifest, validate_pack_manifest};
+use super::protection::{BackupArtifactKind, BackupArtifactProtection};
 use crate::models::RepoId;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -49,6 +50,7 @@ impl BackupUploadEvidence {
 pub struct BackupUploadPlanInput {
     pub binding: BackupBranchBinding,
     pub manifest: BackupPackManifest,
+    pub protection: Option<BackupArtifactProtection>,
     pub evidence: BackupUploadEvidence,
 }
 
@@ -75,6 +77,10 @@ pub enum BackupUploadError {
     UploadedPackDigestMismatch,
     #[error("remote backup manifest digest does not match uploaded pack")]
     RemoteManifestDigestMismatch,
+    #[error("backup upload requires pack protection evidence after encryption")]
+    MissingArtifactProtection,
+    #[error("backup upload protection evidence must describe a pack artifact")]
+    ProtectionKindMismatch,
     #[error(transparent)]
     Pack(#[from] BackupPackError),
 }
@@ -89,7 +95,11 @@ pub fn plan_backup_upload(
         &input.binding.writer_identity,
         &input.binding.branch_path,
     )?;
-    let state = validate_upload_evidence(&input.evidence, &input.manifest.payload_digest)?;
+    let state = validate_upload_evidence(
+        &input.evidence,
+        &input.manifest.payload_digest,
+        input.protection.as_ref(),
+    )?;
 
     Ok(BackupUploadPlan {
         repo_id: input.binding.repo_id,
@@ -112,6 +122,7 @@ fn validate_upload_binding(binding: &BackupBranchBinding) -> Result<(), BackupUp
 fn validate_upload_evidence(
     evidence: &BackupUploadEvidence,
     expected_payload_digest: &BackupDigest,
+    protection: Option<&BackupArtifactProtection>,
 ) -> Result<BackupUploadState, BackupUploadError> {
     if !expected_payload_digest.is_valid_sha256() {
         return Err(BackupUploadError::InvalidDigest);
@@ -123,6 +134,15 @@ fn validate_upload_evidence(
         || (evidence.completion_recorded && evidence.remote_manifest_payload_digest.is_none())
     {
         return Err(BackupUploadError::EvidenceOutOfOrder);
+    }
+
+    if let Some(protection) = protection
+        && protection.artifact_kind() != BackupArtifactKind::Pack
+    {
+        return Err(BackupUploadError::ProtectionKindMismatch);
+    }
+    if evidence.pack_encrypted && protection.is_none() {
+        return Err(BackupUploadError::MissingArtifactProtection);
     }
 
     if let Some(uploaded_digest) = &evidence.uploaded_payload_digest {
