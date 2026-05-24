@@ -16,7 +16,7 @@ fn watcher_burst_keeps_pending_row_byte_stable() -> anyhow::Result<()> {
     h.commit_doc("main", "notes/live.md", "base")?;
     h.start_watchers()?;
 
-    let file = h.dir.path().join("vault/main/notes/live.md");
+    let file = h.workspace_path("main", "notes/live.md")?;
     std::fs::write(&file, "dirty")?;
     h.wait_pending("main", "notes/live.md", ChangeStatus::Modified)?;
     let first = stable_pending_bytes(&h, "notes/live.md")?;

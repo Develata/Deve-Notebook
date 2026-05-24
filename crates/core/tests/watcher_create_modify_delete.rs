@@ -16,12 +16,12 @@ fn watcher_records_create_modify_delete_candidates() -> anyhow::Result<()> {
     h.commit_doc("main", "notes/live.md", "base")?;
     h.start_watchers()?;
 
-    let created = h.dir.path().join("vault/main/notes/new.md");
+    let created = h.workspace_path("main", "notes/new.md")?;
     std::fs::create_dir_all(created.parent().expect("parent"))?;
     std::fs::write(&created, "new")?;
     h.wait_pending("main", "notes/new.md", ChangeStatus::Added)?;
 
-    let tracked = h.dir.path().join("vault/main/notes/live.md");
+    let tracked = h.workspace_path("main", "notes/live.md")?;
     std::fs::write(&tracked, "dirty")?;
     h.wait_pending("main", "notes/live.md", ChangeStatus::Modified)?;
     // Keep modify and delete in separate debounce windows; some backends coalesce

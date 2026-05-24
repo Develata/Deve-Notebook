@@ -24,12 +24,13 @@ impl Harness {
     pub fn new(extra_repo: Option<(&str, &str)>) -> Result<Self> {
         let dir = TempDir::new()?;
         let ledger = dir.path().join("ledger");
-        std::fs::create_dir_all(dir.path().join("vault"))?;
+        let projection_base = dir.path().join("notes");
+        std::fs::create_dir_all(&projection_base)?;
         let mut repo = RepoManager::init(&ledger, 10, Some("main"), Some("urn:main"))?;
         if let Some((name, url)) = extra_repo {
             let _ = common::try_create_initialized_local_repo_with_depth(&ledger, 10, name, url)?;
         }
-        repo.set_projection_base_for_all_local_repos_checked(dir.path().join("vault"))?;
+        repo.set_projection_base_for_all_local_repos_checked(projection_base)?;
         let repo = Arc::new(repo);
         let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
         Ok(Self {
@@ -98,6 +99,10 @@ impl Harness {
 
     pub fn workspace_root(&self, repo_name: &str) -> Result<PathBuf> {
         self.repo.local_repo_workspace_root(repo_name)
+    }
+
+    pub fn workspace_path(&self, repo_name: &str, repo_path: &str) -> Result<PathBuf> {
+        self.repo.local_repo_workspace_path(repo_name, repo_path)
     }
 
     fn wait_until<T>(&self, timeout: Duration, mut f: impl FnMut() -> Option<T>) -> Result<T> {

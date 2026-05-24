@@ -15,8 +15,8 @@ fn watcher_pairs_rename_and_preserves_doc_identity() -> anyhow::Result<()> {
     h.start_watchers()?;
 
     std::fs::rename(
-        h.dir.path().join("vault/main/notes/a.md"),
-        h.dir.path().join("vault/main/notes/b.md"),
+        h.workspace_path("main", "notes/a.md")?,
+        h.workspace_path("main", "notes/b.md")?,
     )?;
 
     let added = h.wait_pending("main", "notes/b.md", ChangeStatus::Added)?;

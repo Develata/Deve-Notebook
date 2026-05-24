@@ -24,10 +24,10 @@ pub(super) type SyncFixture = (
 pub(super) fn new_sync() -> anyhow::Result<SyncFixture> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let vault = dir.path().join("vault");
-    std::fs::create_dir_all(&vault)?;
+    let projection_base = dir.path().join("notes");
+    std::fs::create_dir_all(&projection_base)?;
     let mut repo = RepoManager::init(&ledger, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos_checked(&vault)?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
     let repo_name = repo.local_repo_name().to_string();
