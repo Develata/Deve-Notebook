@@ -101,14 +101,14 @@ mod tests {
 
     #[test]
     fn test_join_normalized() {
-        let base = PathBuf::from("vault");
+        let base = PathBuf::from("workspace");
         let result = join_normalized(&base, "folder/file.md");
 
         #[cfg(target_os = "windows")]
-        assert_eq!(result, PathBuf::from("vault\\folder\\file.md"));
+        assert_eq!(result, PathBuf::from("workspace\\folder\\file.md"));
 
         #[cfg(not(target_os = "windows"))]
-        assert_eq!(result, PathBuf::from("vault/folder/file.md"));
+        assert_eq!(result, PathBuf::from("workspace/folder/file.md"));
     }
 
     #[test]

@@ -15,11 +15,12 @@ fn source_control_write_gate_allows_proxy_without_local_projection_state() {
 #[test]
 fn source_control_write_gate_rejects_degraded_local_projection() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
-    let sync = SyncManager::new(repo.clone());
+    let sync = SyncManager::new_checked(repo.clone())?;
     sync.mark_projection_writeback_fault("default");
 
     let error =
@@ -39,11 +40,12 @@ fn source_control_write_gate_rejects_degraded_local_projection() -> anyhow::Resu
 #[test]
 fn source_control_write_gate_accepts_healthy_local_projection() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
-    let sync = SyncManager::new(repo.clone());
+    let sync = SyncManager::new_checked(repo.clone())?;
 
     ensure_source_control_write_allowed_for(repo.as_ref(), &sync, &RepoSelector::default())
         .expect("healthy projection should allow plugin source-control writes");

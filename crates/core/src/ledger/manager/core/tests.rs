@@ -1,28 +1,41 @@
 use super::RepoManager;
 use crate::ledger::RepoInfo;
+use std::path::Path;
+
+fn locator_base_from_file(path: &Path) -> anyhow::Result<String> {
+    let content = std::fs::read_to_string(path)?;
+    let value: toml::Value = toml::from_str(&content)?;
+    Ok(value["locators"][0]["projection_base_abs"]
+        .as_str()
+        .expect("projection base")
+        .to_string())
+}
 
 #[test]
 fn set_projection_base_for_all_local_repos_restores_previous_root_when_catalog_refresh_fails()
 -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let first_vault = dir.path().join("vault-a");
-    std::fs::create_dir_all(&first_vault)?;
-    repo.set_projection_base_for_all_local_repos(&first_vault);
+    let ledger = dir.path().join("ledger");
+    let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
+    let first_projection_base = dir.path().join("notes-a");
+    std::fs::create_dir_all(&first_projection_base)?;
+    repo.set_projection_base_for_all_local_repos(&first_projection_base);
     assert_eq!(
         repo.local_repo_workspace_root("default")?,
-        std::fs::canonicalize(&first_vault)?.join("default")
+        std::fs::canonicalize(&first_projection_base)?.join("default")
     );
 
-    std::fs::remove_dir_all(dir.path().join("local"))?;
+    std::fs::remove_dir_all(ledger.join("local"))?;
 
-    let second_vault = dir.path().join("vault-b");
-    repo.set_projection_base_for_all_local_repos(&second_vault);
+    let second_projection_base = dir.path().join("notes-b");
+    repo.set_projection_base_for_all_local_repos(&second_projection_base);
 
     assert_eq!(
-        repo.local_repo_workspace_root("default")?,
-        std::fs::canonicalize(&first_vault)?.join("default")
+        locator_base_from_file(&repo.projection_locator_path())?,
+        std::fs::canonicalize(&first_projection_base)?
+            .to_string_lossy()
+            .to_string()
     );
     Ok(())
 }

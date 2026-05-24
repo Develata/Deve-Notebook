@@ -2,8 +2,8 @@ use super::*;
 
 #[test]
 fn run_pending_mirror_marks_noop_as_out_of_sync() {
-    let (dir, repo, repo_root) = new_repo();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo();
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
     git(&repo_root, &["add", "-A"]);
     git(
         &repo_root,
@@ -32,9 +32,9 @@ fn run_pending_mirror_marks_noop_as_out_of_sync() {
 
 #[test]
 fn run_pending_mirror_rejects_pending_source_control_changes() {
-    let (dir, repo, repo_root) = new_repo();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
-    write_workspace_file(&dir, "draft.md", "draft\n");
+    let (_dir, repo, repo_root) = new_repo();
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
+    write_workspace_file(&repo, "draft.md", "draft\n");
     seed_pending(&repo, "draft.md", ChangeStatus::Added, "draft\n");
 
     let report = run_for_default_repo(&repo, &repo_root);
@@ -59,9 +59,9 @@ fn run_pending_mirror_rejects_pending_source_control_changes() {
 
 #[test]
 fn run_pending_mirror_rejects_git_paths_outside_deve_commit() {
-    let (dir, repo, repo_root) = new_repo();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
-    write_workspace_file(&dir, "outside.md", "outside\n");
+    let (_dir, repo, repo_root) = new_repo();
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
+    write_workspace_file(&repo, "outside.md", "outside\n");
 
     let report = run_for_default_repo(&repo, &repo_root);
 
@@ -85,7 +85,7 @@ fn run_pending_mirror_rejects_git_paths_outside_deve_commit() {
 
 #[test]
 fn run_pending_mirror_rejects_tracked_notegit_paths() {
-    let (dir, repo, repo_root) = new_repo();
+    let (_dir, repo, repo_root) = new_repo();
     std::fs::create_dir_all(repo_root.join(".notegit")).expect("notegit dir");
     std::fs::write(repo_root.join(".notegit").join("state"), "secret").expect("notegit state");
     git(&repo_root, &["add", ".gitignore"]);
@@ -94,7 +94,7 @@ fn run_pending_mirror_rejects_tracked_notegit_paths() {
         &repo_root,
         &["commit", "--no-gpg-sign", "-m", "bad baseline"],
     );
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
 
     let report = run_for_default_repo(&repo, &repo_root);
 

@@ -33,23 +33,30 @@ fn init_git_repo(path: &Path) {
 
 fn new_repo() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
-    let repo_root = dir.path().join("vault").join("default");
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     init_git_repo(&repo_root);
     (dir, repo, repo_root)
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo
+        .local_repo_workspace_path("default", path)
+        .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create parent");
     }
     std::fs::write(abs, content).expect("write workspace file");
 }
 
-fn commit_deve_file(dir: &TempDir, repo: &RepoManager, path: &str, content: &str) {
-    write_workspace_file(dir, path, content);
+fn commit_deve_file(repo: &RepoManager, path: &str, content: &str) {
+    write_workspace_file(repo, path, content);
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -76,11 +83,11 @@ fn commit_git_baseline(repo_root: &Path) {
 
 #[test]
 fn apply_import_writes_modified_and_added_pending_entries() {
-    let (dir, repo, repo_root) = new_repo();
-    commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo();
+    commit_deve_file(&repo, "note.md", "hello\n");
     commit_git_baseline(&repo_root);
-    write_workspace_file(&dir, "note.md", "hello import\n");
-    write_workspace_file(&dir, "new.md", "new file\n");
+    write_workspace_file(&repo, "note.md", "hello import\n");
+    write_workspace_file(&repo, "new.md", "new file\n");
 
     let report = apply_import(&repo, repo.local_repo_name(), &repo_root).expect("apply import");
 
@@ -110,11 +117,11 @@ fn apply_import_writes_modified_and_added_pending_entries() {
 
 #[test]
 fn plan_import_dry_run_does_not_write_pending_entries() {
-    let (dir, repo, repo_root) = new_repo();
-    commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo();
+    commit_deve_file(&repo, "note.md", "hello\n");
     commit_git_baseline(&repo_root);
-    write_workspace_file(&dir, "note.md", "hello import\n");
-    write_workspace_file(&dir, "new.md", "new file\n");
+    write_workspace_file(&repo, "note.md", "hello import\n");
+    write_workspace_file(&repo, "new.md", "new file\n");
 
     let plan = plan_import(&repo_root).expect("plan import");
 
@@ -128,8 +135,8 @@ fn plan_import_dry_run_does_not_write_pending_entries() {
 
 #[test]
 fn apply_import_writes_renamed_pending_entry() {
-    let (dir, repo, repo_root) = new_repo();
-    commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo();
+    commit_deve_file(&repo, "note.md", "hello\n");
     commit_git_baseline(&repo_root);
     git(&repo_root, &["mv", "note.md", "moved.md"]);
 
@@ -149,10 +156,10 @@ fn apply_import_writes_renamed_pending_entry() {
 
 #[test]
 fn apply_import_reports_blocker_without_writing_when_source_control_staged_exists() {
-    let (dir, repo, repo_root) = new_repo();
-    commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo();
+    commit_deve_file(&repo, "note.md", "hello\n");
     commit_git_baseline(&repo_root);
-    write_workspace_file(&dir, "note.md", "hello import\n");
+    write_workspace_file(&repo, "note.md", "hello import\n");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -187,11 +194,11 @@ fn apply_import_reports_blocker_without_writing_when_source_control_staged_exist
 
 #[test]
 fn apply_import_existing_pending_blocker_prevents_partial_writes() {
-    let (dir, repo, repo_root) = new_repo();
-    commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo();
+    commit_deve_file(&repo, "note.md", "hello\n");
     commit_git_baseline(&repo_root);
-    write_workspace_file(&dir, "note.md", "hello import\n");
-    write_workspace_file(&dir, "new.md", "new file\n");
+    write_workspace_file(&repo, "note.md", "hello import\n");
+    write_workspace_file(&repo, "new.md", "new file\n");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,

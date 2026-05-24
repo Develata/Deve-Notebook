@@ -53,23 +53,35 @@ fn git(path: &Path, args: &[&str]) -> String {
 
 fn new_repo() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
-    let repo_root = dir.path().join("vault").join("default");
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     init_git_repo(&repo_root);
     (dir, repo, repo_root)
 }
 
 fn new_repo_without_git() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
-    let repo_root = dir.path().join("vault").join("default");
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     (dir, repo, repo_root)
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo
+        .local_repo_workspace_path("default", path)
+        .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create parent");
     }
@@ -104,21 +116,16 @@ fn seed_pending_with_doc(
     .expect("seed pending");
 }
 
-fn commit_deve_file(dir: &TempDir, repo: &RepoManager, path: &str, content: &str) -> CommitInfo {
-    write_workspace_file(dir, path, content);
+fn commit_deve_file(repo: &RepoManager, path: &str, content: &str) -> CommitInfo {
+    write_workspace_file(repo, path, content);
     seed_pending(repo, path, ChangeStatus::Added, content);
     repo.stage_pending(path).expect("stage");
     repo.commit_staged("initial").expect("commit")
 }
 
-fn commit_deve_modification(
-    dir: &TempDir,
-    repo: &RepoManager,
-    path: &str,
-    content: &str,
-) -> CommitInfo {
+fn commit_deve_modification(repo: &RepoManager, path: &str, content: &str) -> CommitInfo {
     let doc_id = repo.get_docid(path).expect("lookup doc").expect("doc id");
-    write_workspace_file(dir, path, content);
+    write_workspace_file(repo, path, content);
     seed_pending_with_doc(repo, path, Some(doc_id), ChangeStatus::Modified, content);
     repo.stage_pending(path).expect("stage");
     repo.commit_staged("modify").expect("commit")
@@ -158,8 +165,8 @@ mod preflight;
 
 #[test]
 fn run_pending_mirror_commits_single_queued_record() {
-    let (dir, repo, repo_root) = new_repo();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo();
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
 
     let report = run_for_default_repo(&repo, &repo_root);
 
@@ -178,9 +185,9 @@ fn run_pending_mirror_commits_single_queued_record() {
 
 #[test]
 fn run_pending_mirror_replays_multiple_queued_records() {
-    let (dir, repo, repo_root) = new_repo();
-    let first = commit_deve_file(&dir, &repo, "note.md", "hello\n");
-    let second = commit_deve_modification(&dir, &repo, "note.md", "hello world\n");
+    let (_dir, repo, repo_root) = new_repo();
+    let first = commit_deve_file(&repo, "note.md", "hello\n");
+    let second = commit_deve_modification(&repo, "note.md", "hello world\n");
 
     let report = run_for_default_repo(&repo, &repo_root);
 

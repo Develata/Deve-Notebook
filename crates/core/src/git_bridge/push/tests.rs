@@ -53,23 +53,30 @@ fn init_bare_remote(path: &Path) {
 
 fn new_repo() -> (TempDir, RepoManager, PathBuf) {
     let dir = tempfile::tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
-    let repo_root = dir.path().join("vault").join("default");
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     init_git_repo(&repo_root);
     (dir, repo, repo_root)
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo
+        .local_repo_workspace_path("default", path)
+        .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create parent");
     }
     std::fs::write(abs, content).expect("write workspace file");
 }
 
-fn commit_deve_file(dir: &TempDir, repo: &RepoManager, path: &str, content: &str) -> CommitInfo {
-    write_workspace_file(dir, path, content);
+fn commit_deve_file(repo: &RepoManager, path: &str, content: &str) -> CommitInfo {
+    write_workspace_file(repo, path, content);
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -163,7 +170,7 @@ fn unresolved_push_target_becomes_blocker_instead_of_panic() {
 #[test]
 fn push_mirror_pushes_exported_head_to_remote() {
     let (dir, repo, repo_root) = new_repo();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
     mirror_queued(&repo, &repo_root);
     let remote = dir.path().join("remote.git");
     init_bare_remote(&remote);
@@ -205,7 +212,7 @@ fn push_mirror_pushes_exported_head_to_remote() {
 #[test]
 fn push_mirror_refuses_unexported_queue_without_touching_remote() {
     let (dir, repo, repo_root) = new_repo();
-    commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    commit_deve_file(&repo, "note.md", "hello\n");
     let remote = dir.path().join("remote.git");
     init_bare_remote(&remote);
     git(
@@ -244,9 +251,14 @@ fn push_mirror_refuses_unexported_queue_without_touching_remote() {
 #[test]
 fn push_mirror_refuses_git_head_without_deve_mapping() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
-    let repo_root = dir.path().join("vault").join("default");
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     init_git_repo(&repo_root);
     git(&repo_root, &["add", ".gitignore"]);
     git(

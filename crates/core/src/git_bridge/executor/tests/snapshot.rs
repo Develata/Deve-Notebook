@@ -2,9 +2,9 @@ use super::*;
 
 #[test]
 fn export_mirror_bootstraps_latest_projection_snapshot() {
-    let (dir, repo, repo_root) = new_repo_without_git();
-    let first = commit_deve_file(&dir, &repo, "note.md", "hello\n");
-    let second = commit_deve_modification(&dir, &repo, "note.md", "hello world\n");
+    let (_dir, repo, repo_root) = new_repo_without_git();
+    let first = commit_deve_file(&repo, "note.md", "hello\n");
+    let second = commit_deve_modification(&repo, "note.md", "hello world\n");
     init_git_repo(&repo_root);
 
     let report = export_for_default_repo(&repo, &repo_root);
@@ -34,8 +34,8 @@ fn export_mirror_bootstraps_latest_projection_snapshot() {
 
 #[test]
 fn export_mirror_rejects_snapshot_bootstrap_on_existing_git_history() {
-    let (dir, repo, repo_root) = new_repo_without_git();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo_without_git();
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
     init_git_repo(&repo_root);
     git(&repo_root, &["add", ".gitignore"]);
     git(
@@ -66,8 +66,8 @@ fn export_mirror_rejects_snapshot_bootstrap_on_existing_git_history() {
 
 #[test]
 fn export_mirror_rejects_snapshot_bootstrap_when_mirror_is_not_ready() {
-    let (dir, repo, repo_root) = new_repo_without_git();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo_without_git();
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
     init_git_repo_without_notegit_ignore(&repo_root);
 
     let report = export_for_default_repo(&repo, &repo_root);
@@ -96,7 +96,7 @@ fn export_mirror_propagates_snapshot_status_inspect_without_queueing() {
     use std::os::unix::fs::symlink;
 
     let (dir, repo, repo_root) = new_repo_without_git();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
     std::fs::create_dir_all(&repo_root).expect("repo root");
     let outside = dir.path().join("outside.gitignore");
     std::fs::write(&outside, ".notegit/\n").expect("outside gitignore");
@@ -134,8 +134,8 @@ fn export_mirror_propagates_snapshot_status_inspect_without_queueing() {
 
 #[test]
 fn export_mirror_propagates_snapshot_projection_storage_error_without_marking_record() {
-    let (dir, repo, repo_root) = new_repo_without_git();
-    let commit = commit_deve_file(&dir, &repo, "note.md", "hello\n");
+    let (_dir, repo, repo_root) = new_repo_without_git();
+    let commit = commit_deve_file(&repo, "note.md", "hello\n");
     init_git_repo(&repo_root);
     repo.run_on_local_repo(repo.local_repo_name(), |db| -> anyhow::Result<()> {
         let write = db.begin_write()?;
