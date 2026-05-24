@@ -20,24 +20,52 @@ windows_path_to_wsl() {
   fi
 }
 
+repo_on_wsl_windows_mount() {
+  [[ "$ROOT_DIR" =~ ^/mnt/[A-Za-z] ]]
+}
+
+web_node_modules_has_windows_esbuild_only() {
+  [[ -d "$ROOT_DIR/apps/web/node_modules/@esbuild/win32-x64" ]] \
+    && [[ ! -d "$ROOT_DIR/apps/web/node_modules/@esbuild/linux-x64" ]]
+}
+
+resolve_windows_trunk_bin() {
+  local candidate
+  if ! command -v where.exe >/dev/null 2>&1; then
+    return 1
+  fi
+  candidate="$(where.exe trunk 2>/dev/null | head -n1 || true)"
+  if [[ -z "$candidate" ]]; then
+    return 1
+  fi
+  windows_path_to_wsl "$candidate"
+}
+
 resolve_trunk_bin() {
   local candidate
   if [[ -n "${DEVE_TRUNK_BIN:-}" ]]; then
     printf '%s\n' "$DEVE_TRUNK_BIN"
     return
   fi
+
+  if repo_on_wsl_windows_mount && web_node_modules_has_windows_esbuild_only; then
+    candidate="$(resolve_windows_trunk_bin || true)"
+    if [[ -n "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  fi
+
   for candidate in trunk trunk.exe; do
     if command -v "$candidate" >/dev/null 2>&1; then
       command -v "$candidate"
       return
     fi
   done
-  if command -v where.exe >/dev/null 2>&1; then
-    candidate="$(where.exe trunk 2>/dev/null | head -n1 || true)"
-    if [[ -n "$candidate" ]]; then
-      windows_path_to_wsl "$candidate"
-      return
-    fi
+  candidate="$(resolve_windows_trunk_bin || true)"
+  if [[ -n "$candidate" ]]; then
+    printf '%s\n' "$candidate"
+    return
   fi
   printf 'trunk\n'
 }
