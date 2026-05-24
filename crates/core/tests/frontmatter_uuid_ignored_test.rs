@@ -6,23 +6,22 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
         .expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection base");
     (dir, std::sync::Arc::new(repo))
 }
 
 #[test]
 fn watcher_ignores_uuid_frontmatter_as_identity_source() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = DocId::new();
-    let file = dir
-        .path()
-        .join("vault")
-        .join("default")
-        .join("notes/new.md");
+    let file = repo
+        .local_repo_workspace_path("default", "notes/new.md")
+        .expect("workspace path");
     std::fs::create_dir_all(file.parent().expect("parent")).expect("mkdir");
     std::fs::write(&file, format!("uuid: {doc_id}\nbody")).expect("write file");
 
-    let sync = SyncManager::new(repo.clone());
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     let repo_id = repo
         .get_repo_info_for(None, Some("default"))
         .expect("repo info lookup")

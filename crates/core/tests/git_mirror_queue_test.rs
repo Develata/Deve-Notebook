@@ -10,17 +10,21 @@ const BROKEN_GIT_MIRROR_TABLE: TableDefinition<u64, &str> =
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let ledger = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger, 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection base");
     (dir, repo)
 }
 
-fn repo_root(dir: &TempDir) -> std::path::PathBuf {
-    dir.path().join("vault").join("default")
+fn repo_root(repo: &RepoManager) -> std::path::PathBuf {
+    repo.local_repo_workspace_root("default")
+        .expect("workspace root")
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = repo_root(dir).join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo_root(repo).join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -50,11 +54,11 @@ fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus, content: &
 
 #[test]
 fn commit_queues_git_mirror_record_when_mirror_is_ready() {
-    let (dir, repo) = new_repo();
-    let root = repo_root(&dir);
+    let (_dir, repo) = new_repo();
+    let root = repo_root(&repo);
     std::fs::create_dir_all(root.join(".git")).expect("mkdir git");
     deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&root).expect("gitignore");
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
 
@@ -75,8 +79,8 @@ fn commit_queues_git_mirror_record_when_mirror_is_ready() {
 
 #[test]
 fn commit_without_git_mirror_keeps_no_mirror_record() {
-    let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
 
@@ -92,8 +96,8 @@ fn commit_without_git_mirror_keeps_no_mirror_record() {
 
 #[test]
 fn git_mirror_queue_failure_does_not_rollback_deve_commit() {
-    let (dir, repo) = new_repo();
-    let root = repo_root(&dir);
+    let (_dir, repo) = new_repo();
+    let root = repo_root(&repo);
     std::fs::create_dir_all(root.join(".git")).expect("mkdir git");
     deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&root).expect("gitignore");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -105,7 +109,7 @@ fn git_mirror_queue_failure_does_not_rollback_deve_commit() {
         Ok(())
     })
     .expect("poison git mirror table type");
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
 
@@ -117,7 +121,7 @@ fn git_mirror_queue_failure_does_not_rollback_deve_commit() {
     let commits = repo.list_commits(10).expect("list commits");
     assert!(commits.iter().any(|item| item.id == commit.id));
     assert_eq!(
-        std::fs::read_to_string(repo_root(&dir).join("notes/a.md")).expect("workspace file"),
+        std::fs::read_to_string(repo_root(&repo).join("notes/a.md")).expect("workspace file"),
         "hello"
     );
 }

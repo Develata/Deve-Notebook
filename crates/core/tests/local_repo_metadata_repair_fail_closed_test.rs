@@ -78,17 +78,17 @@ fn set_projection_base_for_all_local_repos_checked_fails_closed_on_broken_second
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    let first_vault = dir.path().join("vault-ok");
-    std::fs::create_dir_all(&first_vault).expect("first vault dir");
-    repo.set_projection_base_for_all_local_repos_checked(&first_vault)
-        .expect("initial vault mount");
+    let first_projection_base = dir.path().join("notes-ok");
+    std::fs::create_dir_all(&first_projection_base).expect("first projection base dir");
+    repo.set_projection_base_for_all_local_repos_checked(&first_projection_base)
+        .expect("initial projection base mount");
     common::seed_broken_local_repo_file(&ledger_dir, "broken");
-    let vault_dir = dir.path().join("vault");
-    std::fs::create_dir_all(&vault_dir).expect("vault dir");
+    let projection_base = dir.path().join("notes");
+    std::fs::create_dir_all(&projection_base).expect("projection base dir");
 
     let err = repo
-        .set_projection_base_for_all_local_repos_checked(&vault_dir)
-        .expect_err("broken local repo must fail checked vault mount");
+        .set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect_err("broken local repo must fail checked projection base mount");
     assert!(err.to_string().contains("Broken local repo broken"));
     let root_err = repo
         .local_repo_workspace_root("main")
@@ -177,10 +177,10 @@ fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
     let ledger_dir = dir.path().join("ledger");
     let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
-    let vault_root = dir.path().join("vault");
-    std::fs::create_dir_all(vault_root.join("notes")).expect("workspace root");
-    main.set_projection_base_for_all_local_repos_checked(&vault_root)
-        .expect("mount vault");
+    let projection_base = dir.path().join("notes-base");
+    std::fs::create_dir_all(projection_base.join("notes")).expect("workspace root");
+    main.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("mount projection base");
     let wiki_db = main.open_database(None, "wiki").expect("wiki db").db;
     common::write_repo_metadata(
         wiki_db.as_ref(),
@@ -191,18 +191,18 @@ fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
         },
     );
 
-    let original = std::fs::metadata(&vault_root)
+    let original = std::fs::metadata(&projection_base)
         .expect("metadata")
         .permissions();
     let mut blocked = original.clone();
     blocked.set_mode(0o000);
-    std::fs::set_permissions(&vault_root, blocked).expect("chmod 000");
+    std::fs::set_permissions(&projection_base, blocked).expect("chmod 000");
 
     let err = main
         .repair_local_repo_catalog()
         .expect_err("unstatable workspace root must fail closed");
 
-    std::fs::set_permissions(&vault_root, original).expect("restore perms");
+    std::fs::set_permissions(&projection_base, original).expect("restore perms");
     assert!(
         err.to_string()
             .contains("Failed to stat previous workspace root while repairing local catalog")
