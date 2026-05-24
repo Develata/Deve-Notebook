@@ -2,8 +2,10 @@
 //!   - 12_commands#cli-commands
 
 use crate::commands;
-use crate::{BackupAction, Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction};
+use crate::{Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction};
 use std::path::PathBuf;
+
+mod backup;
 
 pub async fn run(
     command: Option<Commands>,
@@ -120,43 +122,7 @@ pub async fn run(
                 config.snapshot_depth,
             )?,
         },
-        Some(Commands::Backup { action }) => match action {
-            BackupAction::Bind {
-                locator,
-                repo_id,
-                branch_name,
-                writer,
-                local_writer,
-                access,
-                dry_run,
-            } => commands::backup::bind(
-                &locator,
-                &repo_id,
-                &branch_name,
-                &writer,
-                &local_writer,
-                &access,
-                dry_run,
-            )?,
-            BackupAction::Inspect {
-                locator,
-                branch,
-                credential_ref,
-                key_ref,
-            } => commands::backup::inspect(
-                &locator,
-                branch.as_deref(),
-                credential_ref.as_deref(),
-                key_ref.as_deref(),
-            )?,
-            BackupAction::List { locator, objects } => commands::backup::list(&locator, &objects)?,
-            BackupAction::Verify {
-                locator,
-                branch,
-                objects,
-                expected_packs,
-            } => commands::backup::verify(&locator, &branch, &objects, &expected_packs)?,
-        },
+        Some(Commands::Backup { action }) => backup::run(action)?,
         Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
         Some(Commands::Seed { peer, repo }) => {
             commands::seed::run(ledger_dir, peer, repo, config.snapshot_depth)?

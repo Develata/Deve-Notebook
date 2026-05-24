@@ -16,8 +16,10 @@ use deve_core::backup::{
 };
 
 mod bind;
+mod restore;
 
 pub use bind::bind;
+pub use restore::{RestoreCommandInput, restore};
 
 pub fn inspect(
     locator: &str,

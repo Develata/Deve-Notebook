@@ -20,7 +20,7 @@
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
 //! - `git import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `git push`: 将 Git mirror 发布到远端
-//! - `backup bind/inspect/list/verify`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery 与 remote layout
+//! - `backup bind/inspect/list/verify/restore`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery、remote layout 与 restore candidate admission
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -264,6 +264,33 @@ pub(crate) enum BackupAction {
         objects: Vec<String>,
         #[arg(long = "pack")]
         expected_packs: Vec<String>,
+    },
+    /// Plan restore candidate admission from verified backup metadata
+    Restore {
+        #[arg(long)]
+        locator: String,
+        #[arg(long = "repo-id")]
+        repo_id: String,
+        #[arg(long = "manifest-repo-id")]
+        manifest_repo_id: String,
+        #[arg(long)]
+        branch: String,
+        #[arg(long = "manifest-digest")]
+        manifest_digest: String,
+        #[arg(long = "pack-digest")]
+        pack_digests: Vec<String>,
+        #[arg(long, default_value = "remote-readonly")]
+        mode: String,
+        #[arg(long = "write-gate")]
+        write_gate: bool,
+        #[arg(long = "manifest-verified")]
+        manifest_verified: bool,
+        #[arg(long = "packs-downloaded")]
+        packs_downloaded: bool,
+        #[arg(long = "packs-decrypted")]
+        packs_decrypted: bool,
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
