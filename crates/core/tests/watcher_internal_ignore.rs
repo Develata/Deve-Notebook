@@ -8,14 +8,16 @@ mod common;
 mod watcher_test_support;
 
 use deve_core::source_control::ChangeStatus;
+use std::path::PathBuf;
 use watcher_test_support::Harness;
 
 #[test]
 fn watcher_ignores_internal_notegit_paths() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
+    let root = ensure_workspace_root(&h)?;
     h.start_watchers()?;
 
-    let internal = h.dir.path().join("vault/main/.notegit/x.md");
+    let internal = root.join(".notegit/x.md");
     std::fs::create_dir_all(internal.parent().expect("parent"))?;
     std::fs::write(&internal, "tmp")?;
 
@@ -27,9 +29,10 @@ fn watcher_ignores_internal_notegit_paths() -> anyhow::Result<()> {
 #[test]
 fn watcher_ignores_internal_git_paths() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
+    let root = ensure_workspace_root(&h)?;
     h.start_watchers()?;
 
-    let internal = h.dir.path().join("vault/main/.git/objects/x.md");
+    let internal = root.join(".git/objects/x.md");
     std::fs::create_dir_all(internal.parent().expect("parent"))?;
     std::fs::write(&internal, "tmp")?;
 
@@ -41,9 +44,10 @@ fn watcher_ignores_internal_git_paths() -> anyhow::Result<()> {
 #[test]
 fn watcher_allows_notegit_backup_sibling_path() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
+    let root = ensure_workspace_root(&h)?;
     h.start_watchers()?;
 
-    let sibling = h.dir.path().join("vault/main/.notegit-backup/x.md");
+    let sibling = root.join(".notegit-backup/x.md");
     std::fs::create_dir_all(sibling.parent().expect("parent"))?;
     std::fs::write(&sibling, "backup sibling")?;
 
@@ -54,10 +58,11 @@ fn watcher_allows_notegit_backup_sibling_path() -> anyhow::Result<()> {
 #[test]
 fn watcher_respects_deveignore_for_matching_markdown() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
-    std::fs::write(h.dir.path().join("vault/.deveignore"), "ignored/*.md\n")?;
+    let root = ensure_workspace_root(&h)?;
+    std::fs::write(root.join(".deveignore"), "ignored/*.md\n")?;
     h.start_watchers()?;
 
-    let ignored = h.dir.path().join("vault/main/ignored/scratch.md");
+    let ignored = root.join("ignored/scratch.md");
     std::fs::create_dir_all(ignored.parent().expect("parent"))?;
     std::fs::write(&ignored, "ignored")?;
 
@@ -69,10 +74,11 @@ fn watcher_respects_deveignore_for_matching_markdown() -> anyhow::Result<()> {
 #[test]
 fn watcher_allows_deveignore_non_matching_markdown() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
-    std::fs::write(h.dir.path().join("vault/.deveignore"), "ignored/*.md\n")?;
+    let root = ensure_workspace_root(&h)?;
+    std::fs::write(root.join(".deveignore"), "ignored/*.md\n")?;
     h.start_watchers()?;
 
-    let kept = h.dir.path().join("vault/main/notes/keep.md");
+    let kept = root.join("notes/keep.md");
     std::fs::create_dir_all(kept.parent().expect("parent"))?;
     std::fs::write(&kept, "kept")?;
 
@@ -83,8 +89,9 @@ fn watcher_allows_deveignore_non_matching_markdown() -> anyhow::Result<()> {
 #[test]
 fn watcher_startup_scan_respects_deveignore() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
-    std::fs::write(h.dir.path().join("vault/.deveignore"), "ignored/*.md\n")?;
-    let ignored = h.dir.path().join("vault/main/ignored/preexisting.md");
+    let root = ensure_workspace_root(&h)?;
+    std::fs::write(root.join(".deveignore"), "ignored/*.md\n")?;
+    let ignored = root.join("ignored/preexisting.md");
     std::fs::create_dir_all(ignored.parent().expect("parent"))?;
     std::fs::write(&ignored, "ignored")?;
 
@@ -93,6 +100,12 @@ fn watcher_startup_scan_respects_deveignore() -> anyhow::Result<()> {
     wait_no_pending(&h, "ignored/preexisting.md")?;
     assert!(h.repo.list_pending_fs_in_local_repo("main")?.is_empty());
     Ok(())
+}
+
+fn ensure_workspace_root(h: &Harness) -> anyhow::Result<PathBuf> {
+    let root = h.workspace_root("main")?;
+    std::fs::create_dir_all(&root)?;
+    Ok(root)
 }
 
 fn wait_no_pending(h: &Harness, path: &str) -> anyhow::Result<()> {

@@ -6,6 +6,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, LedgerEntry, PeerId, RepoId};
 use deve_core::source_control::{ChangeEntry, ChangeStatus};
 use deve_core::sync::{SyncManager, watcher};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
@@ -93,6 +94,10 @@ impl Harness {
                 .find(|entry| entry.path == path && entry.status == status)
         })
         .map_err(|err| anyhow!("pending {repo_name}/{path} {status:?} not observed: {err}"))
+    }
+
+    pub fn workspace_root(&self, repo_name: &str) -> Result<PathBuf> {
+        self.repo.local_repo_workspace_root(repo_name)
     }
 
     fn wait_until<T>(&self, timeout: Duration, mut f: impl FnMut() -> Option<T>) -> Result<T> {
