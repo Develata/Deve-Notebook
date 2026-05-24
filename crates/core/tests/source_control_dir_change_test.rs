@@ -5,20 +5,20 @@ use deve_core::sync::SyncManager;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 
-fn new_repo() -> (TempDir, Arc<RepoManager>, std::path::PathBuf) {
+fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = tempdir().expect("create tempdir");
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(&vault);
-    (dir, Arc::new(repo), vault)
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
+    (dir, Arc::new(repo))
 }
 
-fn workspace_path(root: &std::path::Path, path: &str) -> std::path::PathBuf {
-    root.join("default").join(path)
+fn workspace_path(repo: &RepoManager, path: &str) -> std::path::PathBuf {
+    repo.local_repo_workspace_path("default", path)
+        .expect("workspace path")
 }
 
-fn write_workspace_file(root: &std::path::Path, path: &str, content: &str) {
-    let abs = workspace_path(root, path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = workspace_path(repo, path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -45,8 +45,8 @@ fn seed_pending_add(repo: &RepoManager, path: &str, content: &str) {
 
 #[test]
 fn dir_change_rescan_records_child_rename_candidates() {
-    let (_dir, repo, vault) = new_repo();
-    write_workspace_file(&vault, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(repo.as_ref(), "notes/a.md", "hello");
     seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage file");
     repo.commit_staged("initial").expect("commit file");
@@ -56,8 +56,8 @@ fn dir_change_rescan_records_child_rename_candidates() {
         .expect("tracked doc");
 
     std::fs::rename(
-        workspace_path(&vault, "notes"),
-        workspace_path(&vault, "docs"),
+        workspace_path(repo.as_ref(), "notes"),
+        workspace_path(repo.as_ref(), "docs"),
     )
     .expect("rename folder");
     let sync = SyncManager::new(repo.clone());
@@ -86,8 +86,8 @@ fn dir_change_rescan_records_child_rename_candidates() {
 
 #[test]
 fn dir_change_ignores_repo_root_refresh() {
-    let (_dir, repo, vault) = new_repo();
-    write_workspace_file(&vault, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(repo.as_ref(), "notes/a.md", "hello");
     let repo_id = repo
         .get_repo_info_for(None, Some("default"))
         .expect("repo info lookup")

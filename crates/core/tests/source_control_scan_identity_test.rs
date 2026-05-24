@@ -8,17 +8,18 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, repo)
 }
 
-fn workspace_path(dir: &TempDir, path: &str) -> std::path::PathBuf {
-    dir.path().join("vault").join("default").join(path)
+fn workspace_path(repo: &RepoManager, path: &str) -> std::path::PathBuf {
+    repo.local_repo_workspace_path("default", path)
+        .expect("workspace path")
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = workspace_path(dir, path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = workspace_path(repo, path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -45,8 +46,8 @@ fn seed_pending_add(repo: &RepoManager, path: &str, content: &str) {
 
 #[test]
 fn scan_records_rename_candidate_by_inode() {
-    let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending_add(&repo, "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.commit_staged("initial").expect("commit a");
@@ -56,13 +57,16 @@ fn scan_records_rename_candidate_by_inode() {
         .expect("existing doc");
 
     std::fs::rename(
-        workspace_path(&dir, "notes/a.md"),
-        workspace_path(&dir, "notes/b.md"),
+        workspace_path(&repo, "notes/a.md"),
+        workspace_path(&repo, "notes/b.md"),
     )
     .expect("rename file on disk");
 
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     let repo = Arc::new(repo);
-    let vfs = Vfs::new(dir.path().join("vault"));
+    let vfs = Vfs::new(repo_root);
     scan::scan_projection_workspaces(&repo, &vfs).expect("scan workspace");
 
     let pending = repo.list_pending_fs().expect("pending after scan");

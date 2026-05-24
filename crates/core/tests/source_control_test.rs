@@ -12,8 +12,9 @@ mod tests {
 
     fn new_repo() -> (TempDir, RepoManager) {
         let dir = tempdir().expect("create tempdir");
-        let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-        repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+        let mut repo =
+            RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+        repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
         (dir, repo)
     }
 
@@ -38,16 +39,19 @@ mod tests {
         .expect("seed pending entry");
     }
 
-    fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-        let abs = dir.path().join("vault").join("default").join(path);
+    fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+        let abs = repo
+            .local_repo_workspace_path("default", path)
+            .expect("workspace path");
         if let Some(parent) = abs.parent() {
             std::fs::create_dir_all(parent).expect("create workspace parent");
         }
         std::fs::write(abs, content).expect("write workspace file");
     }
 
-    fn workspace_path(dir: &TempDir, path: &str) -> std::path::PathBuf {
-        dir.path().join("vault").join("default").join(path)
+    fn workspace_path(repo: &RepoManager, path: &str) -> std::path::PathBuf {
+        repo.local_repo_workspace_path("default", path)
+            .expect("workspace path")
     }
 
     #[test]
@@ -106,9 +110,9 @@ mod tests {
 
     #[test]
     fn test_commit_flow() {
-        let (dir, repo) = new_repo();
-        write_workspace_file(&dir, "notes/a.md", "hello");
-        write_workspace_file(&dir, "notes/b.md", "world");
+        let (_dir, repo) = new_repo();
+        write_workspace_file(&repo, "notes/a.md", "hello");
+        write_workspace_file(&repo, "notes/b.md", "world");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_pending("notes/a.md").expect("stage a");
@@ -124,12 +128,12 @@ mod tests {
 
     #[test]
     fn test_commit_history_chain() {
-        let (dir, repo) = new_repo();
-        write_workspace_file(&dir, "notes/a.md", "hello");
+        let (_dir, repo) = new_repo();
+        write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
         let c1 = repo.commit_staged("c1").expect("commit 1");
-        write_workspace_file(&dir, "notes/b.md", "world");
+        write_workspace_file(&repo, "notes/b.md", "world");
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_pending("notes/b.md").expect("stage b");
         let c2 = repo.commit_staged("c2").expect("commit 2");
@@ -177,19 +181,19 @@ mod tests {
 
     #[test]
     fn test_discard_pending_modified_restores_ledger_projection() {
-        let (dir, repo) = new_repo();
-        write_workspace_file(&dir, "notes/a.md", "hello");
+        let (_dir, repo) = new_repo();
+        write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
         repo.commit_staged("initial").expect("commit a");
 
-        write_workspace_file(&dir, "notes/a.md", "world");
+        write_workspace_file(&repo, "notes/a.md", "world");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Modified, "world");
         repo.discard_pending("notes/a.md")
             .expect("discard modified");
 
         let content =
-            std::fs::read_to_string(workspace_path(&dir, "notes/a.md")).expect("read restored");
+            std::fs::read_to_string(workspace_path(&repo, "notes/a.md")).expect("read restored");
         assert_eq!(content, "hello");
         assert!(
             repo.list_pending_fs()
@@ -200,13 +204,13 @@ mod tests {
 
     #[test]
     fn test_diff_doc_path_reads_workspace_content() {
-        let (dir, repo) = new_repo();
-        write_workspace_file(&dir, "notes/a.md", "hello");
+        let (_dir, repo) = new_repo();
+        write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
         repo.commit_staged("initial").expect("commit a");
 
-        write_workspace_file(&dir, "notes/a.md", "world");
+        write_workspace_file(&repo, "notes/a.md", "world");
         let diff = repo.diff_doc_path("notes/a.md").expect("workdir diff");
         assert!(diff.contains("-hello"));
         assert!(diff.contains("+world"));
@@ -214,15 +218,18 @@ mod tests {
 
     #[test]
     fn test_scan_marks_deleted_without_dropping_doc_mapping() {
-        let (dir, repo) = new_repo();
-        write_workspace_file(&dir, "notes/a.md", "hello");
+        let (_dir, repo) = new_repo();
+        write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
         repo.commit_staged("initial").expect("commit a");
-        std::fs::remove_file(workspace_path(&dir, "notes/a.md")).expect("remove workspace file");
+        std::fs::remove_file(workspace_path(&repo, "notes/a.md")).expect("remove workspace file");
 
+        let repo_root = repo
+            .local_repo_workspace_root("default")
+            .expect("workspace root");
         let repo = Arc::new(repo);
-        let vfs = Vfs::new(dir.path().join("vault"));
+        let vfs = Vfs::new(repo_root);
         scan::scan_projection_workspaces(&repo, &vfs).expect("scan workspace");
 
         assert!(

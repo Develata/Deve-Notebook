@@ -10,8 +10,8 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, repo)
 }
 
@@ -44,12 +44,10 @@ fn seed_file(repo: &RepoManager, path: &str, content: &str) -> DocId {
 
 #[test]
 fn discard_pending_added_succeeds_on_legacy_only_projection() {
-    let (dir, repo) = new_repo();
-    let file = dir
-        .path()
-        .join("vault")
-        .join("default")
-        .join("notes/new.md");
+    let (_dir, repo) = new_repo();
+    let file = repo
+        .local_repo_workspace_path("default", "notes/new.md")
+        .expect("workspace path");
     std::fs::create_dir_all(file.parent().expect("parent")).expect("mkdir");
     std::fs::write(&file, "temp").expect("write file");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -89,9 +87,11 @@ fn discard_pending_added_succeeds_on_legacy_only_projection() {
 
 #[test]
 fn workdir_diff_returns_empty_old_content_for_legacy_only_path() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let doc_id = seed_file(&repo, "notes/a.md", "hello");
-    let file = dir.path().join("vault").join("default").join("notes/a.md");
+    let file = repo
+        .local_repo_workspace_path("default", "notes/a.md")
+        .expect("workspace path");
     std::fs::create_dir_all(file.parent().expect("parent")).expect("mkdir");
     std::fs::write(&file, "workspace hello").expect("write workspace");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
@@ -119,9 +119,11 @@ fn workdir_diff_returns_empty_old_content_for_legacy_only_path() {
 #[cfg(unix)]
 #[test]
 fn workdir_diff_fails_closed_on_unstatable_workspace_file() {
-    let (dir, repo) = new_repo();
+    let (_dir, repo) = new_repo();
     let _doc_id = seed_file(&repo, "notes/a.md", "hello");
-    let notes_dir = dir.path().join("vault").join("default").join("notes");
+    let notes_dir = repo
+        .local_repo_workspace_path("default", "notes")
+        .expect("workspace path");
     let file = notes_dir.join("a.md");
     std::fs::create_dir_all(&notes_dir).expect("mkdir");
     std::fs::write(&file, "workspace hello").expect("write workspace");

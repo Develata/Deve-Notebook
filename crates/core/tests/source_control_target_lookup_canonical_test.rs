@@ -6,13 +6,15 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, repo)
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo
+        .local_repo_workspace_path("default", path)
+        .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -21,8 +23,8 @@ fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
 
 #[test]
 fn workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set() {
-    let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "hello");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -62,8 +64,8 @@ fn workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set()
 
 #[test]
 fn workdir_diff_target_accepts_current_projection_path_without_change_entry() {
-    let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "hello");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -86,7 +88,7 @@ fn workdir_diff_target_accepts_current_projection_path_without_change_entry() {
         .get_docid("notes/a.md")
         .expect("lookup")
         .expect("doc id");
-    write_workspace_file(&dir, "notes/a.md", "world");
+    write_workspace_file(&repo, "notes/a.md", "world");
 
     let (path, old_content, new_content) = repo
         .workdir_diff_inputs_for_target_in_local_repo(
@@ -105,8 +107,8 @@ fn workdir_diff_target_accepts_current_projection_path_without_change_entry() {
 
 #[test]
 fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
-    let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "A");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "A");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -129,7 +131,7 @@ fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
         .expect("lookup a")
         .expect("doc a");
 
-    write_workspace_file(&dir, "notes/b.md", "B");
+    write_workspace_file(&repo, "notes/b.md", "B");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -153,7 +155,7 @@ fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
         .expect("doc b");
 
     assert_ne!(doc_a, doc_b);
-    write_workspace_file(&dir, "notes/a.md", "B changed");
+    write_workspace_file(&repo, "notes/a.md", "B changed");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,

@@ -8,21 +8,23 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, repo)
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo
+        .local_repo_workspace_path("default", path)
+        .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create parent");
     }
     std::fs::write(abs, content).expect("write workspace");
 }
 
-fn commit_doc(dir: &TempDir, repo: &RepoManager, path: &str, content: &str) -> DocId {
-    write_workspace_file(dir, path, content);
+fn commit_doc(_dir: &TempDir, repo: &RepoManager, path: &str, content: &str) -> DocId {
+    write_workspace_file(repo, path, content);
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -50,7 +52,7 @@ fn stage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
     let doc_b = commit_doc(&dir, &repo, "notes/b.md", "beta");
     assert_ne!(doc_a, doc_b);
 
-    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    write_workspace_file(&repo, "notes/b.md", "beta changed");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -86,7 +88,7 @@ fn unstage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
     let doc_b = commit_doc(&dir, &repo, "notes/b.md", "beta");
     assert_ne!(doc_a, doc_b);
 
-    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    write_workspace_file(&repo, "notes/b.md", "beta changed");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -129,7 +131,7 @@ fn stage_path_only_target_fails_closed_for_tracked_entry() {
     let (dir, repo) = new_repo();
     let doc_id = commit_doc(&dir, &repo, "notes/b.md", "beta");
 
-    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    write_workspace_file(&repo, "notes/b.md", "beta changed");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -163,7 +165,7 @@ fn unstage_path_only_target_fails_closed_for_tracked_entry() {
     let (dir, repo) = new_repo();
     let doc_id = commit_doc(&dir, &repo, "notes/b.md", "beta");
 
-    write_workspace_file(&dir, "notes/b.md", "beta changed");
+    write_workspace_file(&repo, "notes/b.md", "beta changed");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,

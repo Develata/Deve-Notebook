@@ -9,17 +9,18 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, repo)
 }
 
-fn workspace_path(dir: &TempDir, path: &str) -> std::path::PathBuf {
-    dir.path().join("vault").join("default").join(path)
+fn workspace_path(repo: &RepoManager, path: &str) -> std::path::PathBuf {
+    repo.local_repo_workspace_path("default", path)
+        .expect("workspace path")
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = workspace_path(dir, path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = workspace_path(repo, path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -42,9 +43,12 @@ fn poison_metadata_path(repo: &RepoManager, doc_id: deve_core::models::DocId, st
     .expect("poison metadata path");
 }
 
-fn scan_initial(repo: RepoManager, dir: &TempDir) -> Arc<RepoManager> {
+fn scan_initial(repo: RepoManager, _dir: &TempDir) -> Arc<RepoManager> {
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
     let repo = Arc::new(repo);
-    let vfs = Vfs::new(dir.path().join("vault"));
+    let vfs = Vfs::new(repo_root);
     scan::scan_projection_workspaces(&repo, &vfs).expect("scan initial file");
     repo
 }
@@ -52,7 +56,7 @@ fn scan_initial(repo: RepoManager, dir: &TempDir) -> Arc<RepoManager> {
 #[test]
 fn discard_tracked_add_prefers_node_projection_path() {
     let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    write_workspace_file(&repo, "notes/a.md", "hello");
     let repo = scan_initial(repo, &dir);
     repo.stage_pending("notes/a.md").expect("stage file");
     repo.commit_staged("initial").expect("commit file");
@@ -62,8 +66,8 @@ fn discard_tracked_add_prefers_node_projection_path() {
         .expect("doc id");
     poison_metadata_path(&repo, doc_id, "stale/a.md");
 
-    std::fs::remove_file(workspace_path(&dir, "notes/a.md")).expect("drop canonical file");
-    write_workspace_file(&dir, "notes/b.md", "hello");
+    std::fs::remove_file(workspace_path(&repo, "notes/a.md")).expect("drop canonical file");
+    write_workspace_file(&repo, "notes/b.md", "hello");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -83,15 +87,15 @@ fn discard_tracked_add_prefers_node_projection_path() {
     repo.discard_pending("notes/b.md")
         .expect("discard rename add");
 
-    assert!(workspace_path(&dir, "notes/a.md").exists());
-    assert!(!workspace_path(&dir, "notes/b.md").exists());
-    assert!(!workspace_path(&dir, "stale/a.md").exists());
+    assert!(workspace_path(&repo, "notes/a.md").exists());
+    assert!(!workspace_path(&repo, "notes/b.md").exists());
+    assert!(!workspace_path(&repo, "stale/a.md").exists());
 }
 
 #[test]
 fn scan_rename_prefers_node_projection_path() {
     let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    write_workspace_file(&repo, "notes/a.md", "hello");
     let repo = scan_initial(repo, &dir);
     repo.stage_pending("notes/a.md").expect("stage file");
     repo.commit_staged("initial").expect("commit file");
@@ -102,11 +106,14 @@ fn scan_rename_prefers_node_projection_path() {
     poison_metadata_path(&repo, doc_id, "stale/a.md");
 
     std::fs::rename(
-        workspace_path(&dir, "notes/a.md"),
-        workspace_path(&dir, "notes/b.md"),
+        workspace_path(&repo, "notes/a.md"),
+        workspace_path(&repo, "notes/b.md"),
     )
     .expect("rename file");
-    let vfs = Vfs::new(dir.path().join("vault"));
+    let vfs = Vfs::new(
+        repo.local_repo_workspace_root("default")
+            .expect("workspace root"),
+    );
     scan::scan_projection_workspaces(&repo, &vfs).expect("scan rename");
 
     let pending = repo.list_pending_fs().expect("pending after scan");

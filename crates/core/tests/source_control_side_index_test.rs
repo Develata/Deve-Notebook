@@ -8,13 +8,15 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, repo)
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo
+        .local_repo_workspace_path("default", path)
+        .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -41,8 +43,8 @@ fn seed_pending(repo: &RepoManager, path: &str, doc_id: Option<DocId>, status: C
     .expect("seed pending entry");
 }
 
-fn seed_rename_pair(dir: &TempDir, repo: &RepoManager) -> DocId {
-    write_workspace_file(dir, "notes/a.md", "hello");
+fn seed_rename_pair(_dir: &TempDir, repo: &RepoManager) -> DocId {
+    write_workspace_file(repo, "notes/a.md", "hello");
     seed_pending(repo, "notes/a.md", None, ChangeStatus::Added);
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.commit_staged("initial").expect("commit a");
@@ -50,9 +52,12 @@ fn seed_rename_pair(dir: &TempDir, repo: &RepoManager) -> DocId {
         .get_docid("notes/a.md")
         .expect("lookup")
         .expect("existing");
-    write_workspace_file(dir, "notes/b.md", "hello renamed");
-    std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))
-        .expect("remove old path");
+    write_workspace_file(repo, "notes/b.md", "hello renamed");
+    std::fs::remove_file(
+        repo.local_repo_workspace_path("default", "notes/a.md")
+            .expect("workspace path"),
+    )
+    .expect("remove old path");
     seed_pending(repo, "notes/a.md", Some(doc_id), ChangeStatus::Deleted);
     seed_pending(repo, "notes/b.md", Some(doc_id), ChangeStatus::Added);
     doc_id
@@ -125,8 +130,8 @@ fn target_resolution_keeps_exact_deleted_path() {
 
 #[test]
 fn stage_target_uses_doc_id_when_only_rename_successor_exists() {
-    let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", None, ChangeStatus::Added);
     repo.stage_pending("notes/a.md").expect("stage a");
     repo.commit_staged("initial").expect("commit a");
@@ -134,7 +139,7 @@ fn stage_target_uses_doc_id_when_only_rename_successor_exists() {
         .get_docid("notes/a.md")
         .expect("lookup")
         .expect("existing");
-    write_workspace_file(&dir, "notes/b.md", "hello renamed");
+    write_workspace_file(&repo, "notes/b.md", "hello renamed");
     seed_pending(&repo, "notes/b.md", Some(doc_id), ChangeStatus::Added);
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(

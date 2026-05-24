@@ -6,13 +6,15 @@ use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
     let dir = tempdir().expect("create tempdir");
-    let mut repo = RepoManager::init(dir.path(), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
     (dir, repo)
 }
 
-fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+fn write_workspace_file(repo: &RepoManager, path: &str, content: &str) {
+    let abs = repo
+        .local_repo_workspace_path("default", path)
+        .expect("workspace path");
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -21,8 +23,8 @@ fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
 
 #[test]
 fn delete_commit_emits_delete_structure_fact() {
-    let (dir, repo) = new_repo();
-    write_workspace_file(&dir, "notes/a.md", "hello");
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "hello");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -44,8 +46,11 @@ fn delete_commit_emits_delete_structure_fact() {
         .get_docid("notes/a.md")
         .expect("lookup")
         .expect("doc id");
-    std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))
-        .expect("remove file");
+    std::fs::remove_file(
+        repo.local_repo_workspace_path("default", "notes/a.md")
+            .expect("workspace path"),
+    )
+    .expect("remove file");
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
