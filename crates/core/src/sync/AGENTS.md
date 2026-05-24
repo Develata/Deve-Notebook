@@ -27,7 +27,7 @@ Sync engine and P2P reconciliation. Manages document synchronization between the
 | `rebuild_projection_state.rs` | Rebuild state tracking |
 | `repo_scoped.rs` | RepoScopedSyncEngine |
 | `repo_scoped/` | Repo-scoped SyncEngine helper modules and tests |
-| `scan.rs` | Vault directory scanning |
+| `scan.rs` | Projection Workspace scanning |
 | `scan_file.rs` | Individual file scanning |
 | `snapshot_policy.rs` | Snapshot frequency policy |
 | `pending.rs` | Pending sync operations |

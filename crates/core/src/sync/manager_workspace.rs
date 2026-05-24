@@ -36,7 +36,7 @@ impl SyncManager {
         })
     }
 
-    /// 应用操作并选择性持久化到 Vault
+    /// 应用操作并选择性持久化到 Projection Workspace。
     pub fn apply_local_op(
         &self,
         doc_id: DocId,

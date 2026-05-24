@@ -6,7 +6,7 @@ use std::path::PathBuf;
 ///
 /// Invariants:
 /// - 运行时只接受计划定义的 `ledger/.host` 与 `<projection_base>/<repo>/.notegit/` 布局。
-/// - 启动路径不再接受旧 `.deve` 或全局 Vault 根目录元数据。
+/// - 启动路径不再接受旧 `.deve` 或全局 projection root 元数据。
 pub fn prepare(repo: &RepoManager) -> Result<PathBuf> {
     let host_keys_dir = deve_core::utils::notegit::host_keys_dir(repo.ledger_dir());
     let main_repo_root = repo.local_repo_workspace_root(repo.local_repo_name())?;

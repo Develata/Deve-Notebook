@@ -87,12 +87,12 @@ mod tests {
     fn watch_dry_run_returns_without_blocking() {
         let dir = TempDir::new().expect("tempdir");
         let ledger_dir = dir.path().join("ledger");
-        let vault_dir = dir.path().join("vault");
-        std::fs::create_dir_all(&vault_dir).expect("create vault");
+        let projection_base = dir.path().join("notes");
+        std::fs::create_dir_all(&projection_base).expect("create projection base");
 
         let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
             .expect("init");
-        repo.set_projection_base_for_local_repo("default", &vault_dir)
+        repo.set_projection_base_for_local_repo("default", &projection_base)
             .expect("locator");
 
         run(&ledger_dir, 8, true).expect("watch dry-run");
