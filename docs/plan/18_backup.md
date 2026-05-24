@@ -242,7 +242,7 @@ staged entries、pending imports 或 workspace projection changes。
 
 ## 10. Runtime Boundary
 
-### 10.1 Backup Runtime
+### 10.1 Backup Runtime {#backup-provider-dispatch-contract}
 
 职责：
 
