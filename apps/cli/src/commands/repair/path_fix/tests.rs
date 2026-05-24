@@ -122,7 +122,7 @@ fn move_pending_ignores_entries_without_matching_doc_id() -> anyhow::Result<()> 
 #[test]
 fn prune_empty_parents_stops_when_start_dir_is_missing() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let root = dir.path().join("vault");
+    let root = dir.path().join("notes").join("default");
     let parent = root.join("notes");
     std::fs::create_dir_all(&parent)?;
     let missing = parent.join("missing");
@@ -139,9 +139,14 @@ fn prune_empty_parents_stops_when_start_dir_is_missing() -> anyhow::Result<()> {
 #[test]
 fn validate_workspace_rename_target_fails_closed_when_target_exists() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let vault = dir.path().join("vault");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    let projection_base = dir.path().join("notes");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     let new_abs = repo.local_repo_workspace_path("default", "notes/live.md")?;
     std::fs::create_dir_all(old_abs.parent().expect("old parent"))?;
@@ -166,9 +171,14 @@ fn validate_workspace_rename_target_fails_closed_when_target_exists() -> anyhow:
 #[test]
 fn rename_workspace_file_fails_closed_when_target_exists() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let vault = dir.path().join("vault");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    let projection_base = dir.path().join("notes");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     let new_abs = repo.local_repo_workspace_path("default", "notes/live.md")?;
     std::fs::create_dir_all(old_abs.parent().expect("old parent"))?;
@@ -189,9 +199,14 @@ fn rename_workspace_file_fails_closed_when_target_exists() -> anyhow::Result<()>
 #[test]
 fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let vault = dir.path().join("vault");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    let projection_base = dir.path().join("notes");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     std::fs::create_dir_all(&notes_dir)?;
@@ -222,9 +237,14 @@ fn validate_workspace_rename_target_fails_closed_when_source_is_unstatable() -> 
 #[test]
 fn rename_workspace_file_fails_closed_when_source_is_unstatable() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let vault = dir.path().join("vault");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    let projection_base = dir.path().join("notes");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let notes_dir = repo.local_repo_workspace_path("default", "default/notes")?;
     let old_abs = repo.local_repo_workspace_path("default", "default/notes/live.md")?;
     std::fs::create_dir_all(&notes_dir)?;

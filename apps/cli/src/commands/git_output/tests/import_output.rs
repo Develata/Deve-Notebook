@@ -9,7 +9,7 @@ fn print_git_import_plan_handles_dry_run_changes() {
     print_import_plan(
         "default",
         &GitImportPlan {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             entries: vec![GitImportPlanEntry {
                 path: "renamed.md".into(),
                 previous_path: Some("old.md".into()),
@@ -30,7 +30,7 @@ fn print_git_import_apply_report_handles_pending_import() {
         "default",
         &GitImportApplyReport {
             plan: GitImportPlan {
-                repo_root: std::path::PathBuf::from("vault/default"),
+                repo_root: std::path::PathBuf::from("notes/default"),
                 entries: vec![GitImportPlanEntry {
                     path: "note.md".into(),
                     previous_path: None,

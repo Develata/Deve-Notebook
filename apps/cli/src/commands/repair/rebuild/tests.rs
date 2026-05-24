@@ -10,7 +10,7 @@ use tempfile::TempDir;
 fn new_repo() -> anyhow::Result<(TempDir, Arc<RepoManager>)> {
     let dir = TempDir::new()?;
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
     Ok((dir, Arc::new(repo)))
 }
 
@@ -57,7 +57,7 @@ fn rebuild_repos_reports_authority_corrupt_without_rebuild() -> anyhow::Result<(
         ),
     )?;
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo)?;
     let report = rebuild_repos(&sync, &[String::from("default")])?;
 
     assert_eq!(report.rebuilt, 0);

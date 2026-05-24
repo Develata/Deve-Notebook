@@ -9,7 +9,7 @@ fn import_plan_lines_are_explicitly_dry_run_and_non_authoritative() {
     let clean = import_plan_lines(
         "default",
         &GitImportPlan {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             entries: vec![GitImportPlanEntry {
                 path: "note.md".into(),
                 previous_path: None,
@@ -34,7 +34,7 @@ fn import_plan_lines_are_explicitly_dry_run_and_non_authoritative() {
     let blocked = import_plan_lines(
         "default",
         &GitImportPlan {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             entries: Vec::new(),
             blockers: vec![GitImportPlanBlocker {
                 path: ".git/config".into(),
@@ -56,7 +56,7 @@ fn import_apply_report_lines_point_back_to_deve_source_control() {
         "default",
         &GitImportApplyReport {
             plan: GitImportPlan {
-                repo_root: std::path::PathBuf::from("vault/default"),
+                repo_root: std::path::PathBuf::from("notes/default"),
                 entries: vec![GitImportPlanEntry {
                     path: "note.md".into(),
                     previous_path: None,
@@ -86,7 +86,7 @@ fn import_apply_report_lines_point_back_to_deve_source_control() {
         "default",
         &GitImportApplyReport {
             plan: GitImportPlan {
-                repo_root: std::path::PathBuf::from("vault/default"),
+                repo_root: std::path::PathBuf::from("notes/default"),
                 entries: Vec::new(),
                 blockers: Vec::new(),
             },
@@ -112,7 +112,7 @@ fn import_apply_report_lines_count_plan_blockers_once() {
         "default",
         &GitImportApplyReport {
             plan: GitImportPlan {
-                repo_root: std::path::PathBuf::from("vault/default"),
+                repo_root: std::path::PathBuf::from("notes/default"),
                 entries: Vec::new(),
                 blockers: vec![GitImportPlanBlocker {
                     path: "bad.md".into(),

@@ -7,9 +7,14 @@ use tempfile::tempdir;
 #[test]
 fn quarantine_md_dirs_rolls_back_workspace_on_pending_cleanup_failure() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let vault = dir.path().join("vault");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    let projection_base = dir.path().join("notes");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
 
     let md_dir = repo.local_repo_workspace_root("default")?.join("bad.md");
@@ -46,9 +51,14 @@ fn quarantine_md_dirs_fails_closed_on_unreadable_quarantine_target() -> anyhow::
     use std::os::unix::fs::PermissionsExt;
 
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    let vault = dir.path().join("vault");
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    let projection_base = dir.path().join("notes");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
 
     let md_dir = repo.local_repo_workspace_root("default")?.join("bad.md");

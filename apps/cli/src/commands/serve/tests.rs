@@ -46,10 +46,10 @@ async fn detect_main_port_accepts_non_success_status() {
 async fn serve_dry_run_validates_runtime_without_binding() {
     let dir = TempDir::new().expect("tempdir");
     let ledger_dir = dir.path().join("ledger");
-    let vault_dir = dir.path().join("vault");
+    let projection_base = dir.path().join("notes");
     let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
         .expect("init repo");
-    repo.set_projection_base_for_local_repo("default", &vault_dir)
+    repo.set_projection_base_for_local_repo("default", &projection_base)
         .expect("locator");
 
     run(

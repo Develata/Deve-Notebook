@@ -42,7 +42,7 @@ fn out_of_sync_stage(index: usize, stage: GitMirrorFailureStage) -> GitMirrorRec
 
 fn ready_status() -> GitMirrorStatus {
     GitMirrorStatus {
-        repo_root: std::path::PathBuf::from("vault/default"),
+        repo_root: std::path::PathBuf::from("notes/default"),
         notegit_present: true,
         git_metadata_kind: GitMetadataKind::Directory,
         gitignore_protects_notegit: true,

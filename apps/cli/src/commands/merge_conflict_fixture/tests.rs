@@ -7,9 +7,9 @@ use deve_core::models::{PeerId, RepoType};
 fn fixture_seeds_divergent_local_and_remote_content() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
-    let vault = dir.path().join("vault");
+    let projection_base = dir.path().join("notes");
     let repo = RepoManager::init(&ledger, 10, Some("default"), None)?;
-    repo.set_projection_base_for_local_repo("default", &vault)?;
+    repo.set_projection_base_for_local_repo("default", &projection_base)?;
 
     run(
         &ledger,
@@ -30,7 +30,7 @@ fn fixture_seeds_divergent_local_and_remote_content() -> anyhow::Result<()> {
     let (doc_id, path) = docs.first().expect("seeded doc");
     assert_eq!(path, "notes/conflict.md");
     assert_eq!(
-        std::fs::read_to_string(vault.join("default/notes/conflict.md"))?,
+        std::fs::read_to_string(projection_base.join("default/notes/conflict.md"))?,
         "local"
     );
     assert_eq!(

@@ -10,7 +10,7 @@ fn print_git_status_handles_disabled_repo() {
     print_status(
         "default",
         &GitMirrorStatus {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             notegit_present: true,
             git_metadata_kind: GitMetadataKind::Missing,
             gitignore_protects_notegit: true,
@@ -27,7 +27,7 @@ fn print_git_status_handles_out_of_sync_summary() {
     print_status(
         "default",
         &GitMirrorStatus {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             notegit_present: true,
             git_metadata_kind: GitMetadataKind::Directory,
             gitignore_protects_notegit: true,
@@ -56,7 +56,7 @@ fn status_lines_include_per_commit_lag_and_retry_hint() {
     let lines = status_lines_at(
         "default",
         &GitMirrorStatus {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             notegit_present: true,
             git_metadata_kind: GitMetadataKind::Directory,
             gitignore_protects_notegit: true,
@@ -108,7 +108,7 @@ fn status_lines_keep_ordered_lagging_output_contract() {
     let lines = status_lines_at(
         "default",
         &GitMirrorStatus {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             notegit_present: true,
             git_metadata_kind: GitMetadataKind::Directory,
             gitignore_protects_notegit: true,
@@ -128,7 +128,7 @@ fn status_lines_keep_ordered_lagging_output_contract() {
         lines,
         vec![
             "git_status[default]: state=ready queue_state=queued git=directory notegit=present gitignore_notegit=protected queued=1 committed=0 out_of_sync=0",
-            "  repo_root: vault/default",
+            "  repo_root: notes/default",
             "  lagging_records=1",
             "  lag[1]: deve_commit=deve-1 state=queued ledger_seq=7 attempts=1 git_commit=- queued_lag_ms=10 updated_lag_ms=9 queued_at_ms=1 updated_at_ms=2",
             "  next_action: run `deve_cli git mirror --repo default` to mirror queued Deve commit(s)",
@@ -150,7 +150,7 @@ fn status_lines_include_git_mirror_failure_metadata() {
     let lines = status_lines_at(
         "default",
         &GitMirrorStatus {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             notegit_present: true,
             git_metadata_kind: GitMetadataKind::Directory,
             gitignore_protects_notegit: true,
@@ -176,7 +176,7 @@ fn status_lines_fallback_classifies_legacy_records_without_failure_stage() {
     let lines = status_lines_at(
         "default",
         &GitMirrorStatus {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             notegit_present: true,
             git_metadata_kind: GitMetadataKind::Directory,
             gitignore_protects_notegit: true,
@@ -212,7 +212,7 @@ fn status_lines_legacy_fallback_uses_core_failure_stage_classifier() {
     let lines = status_lines_at(
         "default",
         &GitMirrorStatus {
-            repo_root: std::path::PathBuf::from("vault/default"),
+            repo_root: std::path::PathBuf::from("notes/default"),
             notegit_present: true,
             git_metadata_kind: GitMetadataKind::Directory,
             gitignore_protects_notegit: true,

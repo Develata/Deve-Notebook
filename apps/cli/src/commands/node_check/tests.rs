@@ -9,7 +9,7 @@ use tempfile::TempDir;
 fn new_repo() -> anyhow::Result<(TempDir, Arc<RepoManager>)> {
     let dir = TempDir::new()?;
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
     Ok((dir, Arc::new(repo)))
 }
 
