@@ -37,7 +37,7 @@ Desktop packaging scaffold 只描述桌面壳层的 post-gate 目标能力，**M
 
 *   dependency batch: `tauri` + `tauri-build`，只能落在 Desktop native adapter 的 feature scope。
 *   capabilities: window shell、menu bar、system tray、installer、auto-update。
-*   forbidden authorities: ledger、vault、source-control、search index、`.git` mirror、
+*   forbidden authorities: ledger、Projection Workspace、source-control、search index、`.git` mirror、
     `.notegit`。
 *   no-packaging skeleton tests 仍是 endpoint/session/bootstrap/readiness correctness 的
     authority；packaging acceptance 不得替代这些测试。
@@ -61,7 +61,7 @@ Gate policy 必须满足：
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-当前 gate 允许 Desktop 与 Mobile dependency spike：packaging 不获得 ledger/vault/source-control/search/`.git`/`.notegit` authority，不启动后端子进程，不声明 macOS/Windows/Android/iOS release ready。
+当前 gate 允许 Desktop 与 Mobile dependency spike：packaging 不获得 ledger/Projection Workspace/source-control/search/`.git`/`.notegit` authority，不启动后端子进程，不声明 macOS/Windows/Android/iOS release ready。
 
 ### 1.4 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 
@@ -82,11 +82,11 @@ Idle
 *   `BindFailed`、`HealthProbeFailed`、`ProcessExited` 可在 retry budget 内进入 `Restarting`；超过预算后进入 `Offline`。
 *   `SpawnFailed` 与 `SessionHandoffFailed` 默认不可重试，必须进入 `Offline`。
 *   supervisor 的 `offline.reason` 是 native 内部诊断；recovery bootstrap 仍不得把 reason、token、secret 或 repo 写权限暴露给 Web。
-*   supervisor 不得写 ledger/vault/source-control/search index/`.git`/`.notegit`。
+*   supervisor 不得写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
 
 **Adapter inputs**:
 
-*   `profile/config/vault/ledger` 选择必须在 service boot 前完成，并传入后端启动参数；native 层不得在 Web 运行后直接改写这些路径。
+*   `profile/config/projection-locator/ledger` 选择必须在 service boot 前完成，并传入后端启动参数；native 层不得在 Web 运行后直接改写这些路径。
 *   `launch_intent` 只表示打开仓库、文档或 deeplink 的意图，必须转为普通 application command；不得绕过 repo scope gate 直接写 ledger。
 *   `session_material` 必须是进程内或同站 cookie 绑定的短生命周期本机会话材料；不得放入 URL、localStorage、日志或 crash report。
 
@@ -127,7 +127,7 @@ NativeColdStart
 
 **Forbidden native shortcuts**:
 
-*   native 层不得直接写 ledger/vault/source-control/search index。
+*   native 层不得直接写 ledger/Projection Workspace/source-control/search index。
 *   native 层不得直接操作 `.notegit/` 或 `.git/` 来伪造 source-control 成功。
 *   native 层不得把平台 online/offline、窗口焦点或 Tauri lifecycle 事件解释成业务可写状态。
 
@@ -155,7 +155,7 @@ Gate policy 必须满足：
 *   仍只落在 Desktop native adapter 的 `native-packaging` feature 后，不得进入 workspace
     root、core、cli 或 web 默认构建。
 *   只允许做受控 child-process spawn、health-probe、session-handoff、restart-budget
-    wiring；不得直接写 ledger/vault/source-control/search/`.git`/`.notegit`。
+    wiring；不得直接写 ledger/Projection Workspace/source-control/search/`.git`/`.notegit`。
 *   所有可写 UI 仍由 server/core 的 repo scope、writer-ready 与 `scope_nonce` 决定；
     process running 不等于 writable。
 

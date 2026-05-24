@@ -6,7 +6,7 @@
 //! Mobile shell-only Tauri entrypoint.
 //!
 //! This module starts only the mobile WebView shell. It does not spawn the Deve
-//! backend service and does not write ledger, vault, source-control, search,
+//! backend service and does not write ledger, projection-workspace, source-control, search,
 //! Git, or `.notegit` authority.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

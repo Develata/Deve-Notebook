@@ -47,7 +47,7 @@ fn mobile_packaging_acceptance_is_shell_only() {
         scaffold.acceptance.forbidden_authorities,
         [
             MobilePackagingAuthority::Ledger,
-            MobilePackagingAuthority::Vault,
+            MobilePackagingAuthority::ProjectionWorkspace,
             MobilePackagingAuthority::SourceControl,
             MobilePackagingAuthority::SearchIndex,
             MobilePackagingAuthority::GitMirror,

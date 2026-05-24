@@ -229,7 +229,7 @@ check_no_process_runtime_leak() {
     fail "mobile process runtime must remain closed"
   fi
 
-  if search_regex '(^|[^[:alnum:]_])(ledger|vault|source_control|search|GitMirror|NoteGit|std::fs|OpenOptions|File::create|File::options)' \
+  if search_regex '(^|[^[:alnum:]_])(ledger|vault|projection_workspace|ProjectionWorkspace|source_control|search|GitMirror|NoteGit|std::fs|OpenOptions|File::create|File::options)' \
     "$ROOT_DIR/apps/desktop/src/process_runtime.rs" "$ROOT_DIR/apps/desktop/src/process_runtime" >/dev/null; then
     fail "desktop process runtime must remain authority-free"
   fi
@@ -336,6 +336,7 @@ check_contains apps/desktop/src/tauri_entry.rs "opens_authority_write_path: fals
 check_contains apps/desktop/src/packaging.rs "child_process_runtime_enabled: false"
 check_contains apps/desktop/src/packaging.rs "release_ready_claimed: false"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::Ledger"
+check_contains apps/desktop/src/packaging.rs "DesktopPackagingAuthority::ProjectionWorkspace"
 check_contains apps/desktop/src/packaging.rs "DesktopPackagingCapability::Installer"
 check_contains apps/desktop/src/packaging_test.rs "desktop_packaging_dependency_spike_is_feature_gated"
 check_contains apps/desktop/src/packaging_test.rs "desktop_tauri_manifest_declares_shell_metadata_only"
@@ -366,6 +367,7 @@ check_contains apps/mobile/src/packaging.rs "foreground_reprobe_required: true"
 check_contains apps/mobile/src/packaging.rs "child_process_runtime_enabled: false"
 check_contains apps/mobile/src/packaging.rs "release_ready_claimed: false"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingAuthority::Ledger"
+check_contains apps/mobile/src/packaging.rs "MobilePackagingAuthority::ProjectionWorkspace"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::PermissionBridge"
 check_contains apps/mobile/src/packaging.rs "MobilePackagingCapability::StorePackage"
 check_contains apps/mobile/src/packaging_test.rs "mobile_packaging_dependency_spike_is_feature_gated"
@@ -448,7 +450,7 @@ check_contains docs/plan/08_ui_design_02_desktop.md "{#desktop-native-adapter-co
 check_contains docs/plan/08_ui_design_02_desktop.md "NativeEndpointReady { http_base, ws_base, node_role, session_bound }"
 check_contains docs/plan/08_ui_design_02_desktop.md "writer_ready(repo_id, scope_nonce)"
 check_contains docs/plan/08_ui_design_02_desktop.md "09_auth.md#unauthorized-disconnected-ui"
-check_contains docs/plan/08_ui_design_02_desktop.md "native 层不得直接写 ledger/vault/source-control/search index"
+check_contains docs/plan/08_ui_design_02_desktop.md "native 层不得直接写 ledger/Projection Workspace/source-control/search index"
 
 check_contains docs/plan/08_ui_design_03_mobile.md "{#mobile-current-native-boundary}"
 check_contains docs/plan/08_ui_design_03_mobile.md "**Current Native Boundary**"

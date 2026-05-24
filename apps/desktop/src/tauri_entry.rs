@@ -7,7 +7,7 @@
 //! The default runtime starts only the native shell window/menu/tray surface.
 //! The local-service bootstrap path is opt-in and must inject either a
 //! session-bound endpoint bootstrap or a recovery bootstrap before Web startup.
-//! This module does not write ledger, vault, source-control, search, Git, or
+//! This module does not write ledger, projection-workspace, source-control, search, Git, or
 //! `.notegit` authority.
 
 use crate::{

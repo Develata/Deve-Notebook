@@ -23,7 +23,7 @@ Application binaries for Deve-Notebook. Contains the CLI server (`cli`) providin
 - `cli`, `desktop`, `mobile`, and `web` are separate workspace members with their own `Cargo.toml`.
 - Application crates depend on `deve_core` for business logic and shared contracts.
 - The web app connects to the CLI server via WebSocket for real-time sync.
-- Native shell crates must not write ledger/vault/source-control/search authority directly.
+- Native shell crates must not write ledger/projection-workspace/source-control/search authority directly.
 - `trunk serve` proxies API requests to the CLI server during development.
 
 ### Testing Requirements

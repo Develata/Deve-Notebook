@@ -87,7 +87,7 @@ Native track 默认构建必须无 packaging runtime 依赖。Desktop/Mobile nat
   dependency、authority core、server runtime 或 web runtime。
 - 依赖必须挂在对应 crate 的 `native-packaging` feature 后；默认 feature set
   仍编译 no-packaging skeleton。
-- `native-packaging` 不得授予 ledger/vault/source-control/search/`.git`/`.notegit`
+- `native-packaging` 不得授予 ledger/Projection Workspace/source-control/search/`.git`/`.notegit`
   authority；业务真相仍在 core/server。
 - packaging 验收只覆盖窗口、菜单、托盘、权限、安装包、auto-update、移动平台
   bridge 等壳层能力；adapter/session/readiness correctness 继续由 no-packaging

@@ -27,13 +27,13 @@
 
 ### 1.1 Minimal Native Adapter Contract {#mobile-native-adapter-contract}
 
-Mobile native adapter 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-native-adapter-contract` 的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有 ledger/vault/source-control/search 的业务真相。
+Mobile native adapter 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-native-adapter-contract` 的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有 ledger/Projection Workspace/source-control/search 的业务真相。
 
 Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
 
 **Adapter inputs**:
 
-*   `profile/config/vault/ledger` 选择必须在 service boot 前完成；Web 运行后 native 层不得直接改写后端路径或 repo scope。
+*   `profile/config/projection-locator/ledger` 选择必须在 service boot 前完成；Web 运行后 native 层不得直接改写后端路径或 repo scope。
 *   `launch_intent` 可表达分享、文件打开、deeplink、通知点击等入口，但必须转为 application command；不得绕过 writer gate。
 *   `session_material` 必须绑定到当前 app install 与进程会话；不得放入 URL、Web localStorage、日志或系统剪贴板。
 *   `platform_lifecycle` 只允许传递 `foreground/background/suspended/resumed/network-online/network-offline/safe-area/keyboard` 等 shell 事件。
@@ -78,7 +78,7 @@ MobileColdStart
 
 **Forbidden native shortcuts**:
 
-*   native 层不得直接写 ledger/vault/source-control/search index。
+*   native 层不得直接写 ledger/Projection Workspace/source-control/search index。
 *   native 层不得直接操作 `.notegit/` 或 `.git/` 来伪造 source-control 成功。
 *   safe-area、keyboard、foreground/background、network online/offline 事件不得被解释成业务可写状态。
 
@@ -98,7 +98,7 @@ Mobile 与 Desktop 共用 `08_ui_design_02_desktop.md#desktop-service-supervisor
 *   `NetworkOffline` 仍只是公网提示；只有 embedded service health probe 失败才可进入 `ServiceOffline`。
 *   `BackgroundSuspended` 不得清空 pending overlay，也不得把旧 supervisor session handoff 直接视为可写。
 *   Health probe、retry budget、session handoff failure 分类与 Desktop 一致：bind/probe/process-exit 可预算内 retry，session handoff failure fatal。
-*   supervisor 不得写 ledger/vault/source-control/search index/`.git`/`.notegit`。
+*   supervisor 不得写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
 
 ### 1.3 Process Adapter Gate {#mobile-process-adapter-decision}
 
@@ -121,7 +121,7 @@ Mobile packaging scaffold 只描述移动壳层的 dependency spike 与 post-gat
 *   dependency batch: `tauri` runtime crate + `tauri-build` build crate。
 *   packaging capability 只覆盖移动壳层能力：WebView shell、permission bridge、share sheet、
     deeplink、file picker、push notification、store package。
-*   packaging dependency spike 不得获得 ledger/vault/source-control/search index/`.git`/`.notegit`
+*   packaging dependency spike 不得获得 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`
     authority；这些业务真相仍只归 core/server。
 *   lifecycle correctness 仍由 no-packaging mobile skeleton tests 保证：background/resume 后必须
     fresh reprobe auth、node role、WS repo handshake 与 current `scope_nonce`，packaging 不得绕过。
@@ -166,7 +166,7 @@ Gate policy 必须满足：
 *   Android package build **MUST** 只声明 WebView shell、manifest、permission bridge、
     deeplink/share/file/store package 等壳层能力。
 *   Android package build **MUST NOT** 启动、持有、重启后端子进程。
-*   Android package build **MUST NOT** 写 ledger/vault/source-control/search index/`.git`/`.notegit`。
+*   Android package build **MUST NOT** 写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
 *   Android package build **MUST NOT** 绕过 foreground reprobe、session handoff、node-role
     probe、repo handshake、writer-ready 或 current `scope_nonce`。
 *   Android package execution 成功 **MUST NOT** 声明 iOS ready、Desktop ready、release ready
@@ -184,7 +184,7 @@ Gate policy 必须满足：
 *   iOS package build **MUST** 只声明 WebView shell、manifest、permission bridge、
     deeplink/share/file/store package 等壳层能力。
 *   iOS package build **MUST NOT** 启动、持有、重启后端子进程。
-*   iOS package build **MUST NOT** 写 ledger/vault/source-control/search index/`.git`/`.notegit`。
+*   iOS package build **MUST NOT** 写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
 *   iOS package build **MUST NOT** 绕过 foreground reprobe、session handoff、node-role
     probe、repo handshake、writer-ready 或 current `scope_nonce`。
 *   iOS package execution 成功 **MUST NOT** 声明 Android ready、Desktop ready、release ready

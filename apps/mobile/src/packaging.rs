@@ -36,7 +36,7 @@ pub enum MobilePackagingCapability {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MobilePackagingAuthority {
     Ledger,
-    Vault,
+    ProjectionWorkspace,
     SourceControl,
     SearchIndex,
     GitMirror,
@@ -236,7 +236,7 @@ const PACKAGING_CAPABILITIES: &[MobilePackagingCapability] = &[
 
 const FORBIDDEN_AUTHORITIES: &[MobilePackagingAuthority] = &[
     MobilePackagingAuthority::Ledger,
-    MobilePackagingAuthority::Vault,
+    MobilePackagingAuthority::ProjectionWorkspace,
     MobilePackagingAuthority::SourceControl,
     MobilePackagingAuthority::SearchIndex,
     MobilePackagingAuthority::GitMirror,

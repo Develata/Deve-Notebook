@@ -44,7 +44,7 @@ fn desktop_packaging_acceptance_is_shell_only() {
         scaffold.acceptance.forbidden_authorities,
         [
             DesktopPackagingAuthority::Ledger,
-            DesktopPackagingAuthority::Vault,
+            DesktopPackagingAuthority::ProjectionWorkspace,
             DesktopPackagingAuthority::SourceControl,
             DesktopPackagingAuthority::SearchIndex,
             DesktopPackagingAuthority::GitMirror,

@@ -369,7 +369,7 @@ PinnedSetChanged
 
 - `native_adapter/` 是 shell adapter 层，不是 authority core。
 - Desktop / Mobile 子章 **MAY** 定义平台 endpoint、session handoff、lifecycle、foreground reprobe 与 process adapter 差异。
-- Desktop / Mobile 子章 **MUST NOT** 引入新的 ledger、vault、source-control、sync、search 或 settings authority。
+- Desktop / Mobile 子章 **MUST NOT** 引入新的 ledger、Projection Workspace、source-control、sync、search 或 settings authority。
 - native adapter 通过 gate 前 **MUST** 保持 no-packaging-runtime 默认构建。
 - native adapter 通过 gate 后 **MUST** 继续服从 writer gate、repo scope gate 与本章 control/runtime 分层。
 

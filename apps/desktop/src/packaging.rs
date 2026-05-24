@@ -29,7 +29,7 @@ pub enum DesktopPackagingCapability {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DesktopPackagingAuthority {
     Ledger,
-    Vault,
+    ProjectionWorkspace,
     SourceControl,
     SearchIndex,
     GitMirror,
@@ -220,7 +220,7 @@ const PACKAGING_CAPABILITIES: &[DesktopPackagingCapability] = &[
 
 const FORBIDDEN_AUTHORITIES: &[DesktopPackagingAuthority] = &[
     DesktopPackagingAuthority::Ledger,
-    DesktopPackagingAuthority::Vault,
+    DesktopPackagingAuthority::ProjectionWorkspace,
     DesktopPackagingAuthority::SourceControl,
     DesktopPackagingAuthority::SearchIndex,
     DesktopPackagingAuthority::GitMirror,

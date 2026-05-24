@@ -8,7 +8,7 @@ use crate::ledger::RepoManager;
 use anyhow::Result;
 
 impl SyncManager {
-    /// 显式强制重建指定 repo 的 Vault projection。
+    /// 显式强制重建指定 repo 的 Projection Workspace。
     pub fn rebuild_projection_local_repo(&self, repo_name: &str) -> Result<()> {
         rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)?;
         self.clear_projection_degraded(repo_name);
