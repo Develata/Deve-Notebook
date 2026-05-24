@@ -18,7 +18,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
     let selector = RepoSelector::default();
     let doc_id = commit_added_file(&dir, &repo, "notes/a.md", "hello", "initial")?;
 
-    std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
     write_workspace_file(&dir, "notes/b.md", "hello renamed");
     let mut added = pending_entry(
         "notes/b.md",

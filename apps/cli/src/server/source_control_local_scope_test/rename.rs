@@ -37,7 +37,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
         .get_docid("notes/a.md")?
         .expect("existing doc id");
 
-    std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
     write_workspace_file(&dir, "notes/b.md", "hello renamed");
     state
         .repo

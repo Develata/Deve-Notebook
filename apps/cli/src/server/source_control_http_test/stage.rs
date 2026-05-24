@@ -44,7 +44,7 @@ async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Resu
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "hello");
-    std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
     seed_tracked_rename(&repo, doc_id, "notes/a.md", "notes/b.md", "hello");
 
     let pending = proxy.list_pending_fs_in_repo(&selector)?;
@@ -77,7 +77,7 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "world");
-    std::fs::remove_file(dir.path().join("vault").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
     seed_tracked_rename(&repo, doc_id, "notes/a.md", "notes/b.md", "world");
 
     let response = harness

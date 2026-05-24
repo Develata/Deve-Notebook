@@ -13,7 +13,13 @@ use deve_core::source_control::CommitInfo;
 async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist()
 -> anyhow::Result<()> {
     let harness = ProxyHarness::spawn().await?;
-    RepoManager::init(harness.dir.path(), 10, Some("test"), Some("urn:test"))?;
+    let mut test_repo = RepoManager::init(
+        harness.dir.path().join("ledger"),
+        10,
+        Some("test"),
+        Some("urn:test"),
+    )?;
+    test_repo.set_projection_base_for_all_local_repos_checked(harness.dir.path().join("notes"))?;
 
     let response = harness
         .client
@@ -38,7 +44,13 @@ async fn test_http_status_rejects_selector_mismatch() -> anyhow::Result<()> {
         .get_repo_info()?
         .expect("default repo info")
         .uuid;
-    RepoManager::init(harness.dir.path(), 10, Some("test"), Some("urn:test"))?;
+    let mut test_repo = RepoManager::init(
+        harness.dir.path().join("ledger"),
+        10,
+        Some("test"),
+        Some("urn:test"),
+    )?;
+    test_repo.set_projection_base_for_all_local_repos_checked(harness.dir.path().join("notes"))?;
 
     let response = harness
         .client

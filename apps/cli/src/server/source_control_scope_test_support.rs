@@ -15,10 +15,10 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&projection_base);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let default_id = repo.get_repo_info()?.expect("default info").uuid;
     let mut test_repo = RepoManager::init(&ledger_dir, 10, Some("test"), Some("urn:test"))?;
-    test_repo.set_projection_base_for_all_local_repos(&projection_base);
+    test_repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let test_id = test_repo.get_repo_info()?.expect("test info").uuid;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
@@ -27,7 +27,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+            sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

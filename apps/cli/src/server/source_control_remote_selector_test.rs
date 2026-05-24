@@ -20,13 +20,18 @@ fn build_state() -> anyhow::Result<(
     String,
 )> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let state = Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
         tx: broadcast::channel(16).0,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(

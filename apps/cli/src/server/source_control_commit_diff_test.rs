@@ -7,7 +7,7 @@ use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::TempDir;
 
 fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+    let abs = dir.path().join("notes").join("default").join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
@@ -44,7 +44,7 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "hello");
-    std::fs::remove_file(dir.path().join("vault/default/notes/a.md"))?;
+    std::fs::remove_file(dir.path().join("notes/default/notes/a.md"))?;
     seed_pending(
         &repo,
         PendingFsEntry {

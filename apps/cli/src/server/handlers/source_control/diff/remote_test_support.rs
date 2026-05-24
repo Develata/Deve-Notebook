@@ -20,8 +20,9 @@ use tokio::sync::broadcast;
 
 pub(super) fn new_repo() -> anyhow::Result<(TempDir, RepoManager)> {
     let dir = tempdir()?;
-    let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(dir.path().join("vault"));
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     Ok((dir, repo))
 }
 
@@ -30,7 +31,7 @@ pub(super) fn build_state(dir: &TempDir, repo: RepoManager) -> anyhow::Result<Ar
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     Ok(Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(SyncManager::new(repo.clone())),
+        sync_manager: Arc::new(SyncManager::new_checked(repo.clone())?),
         tx: broadcast::channel::<ServerMessage>(16).0,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(
@@ -46,7 +47,7 @@ pub(super) fn build_state(dir: &TempDir, repo: RepoManager) -> anyhow::Result<Ar
 }
 
 pub(super) fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("vault").join("default").join(path);
+    let abs = dir.path().join("notes").join("default").join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }

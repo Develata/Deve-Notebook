@@ -25,12 +25,12 @@ pub(super) struct ProxyHarness {
 impl ProxyHarness {
     pub(super) async fn spawn() -> anyhow::Result<Self> {
         let dir = tempdir()?;
-        let vault = dir.path().join("vault");
-        let mut repo = RepoManager::init(dir.path(), 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos(&vault);
+        let projection_base = dir.path().join("notes");
+        let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
         let repo = Arc::new(repo);
         let (tx, _rx) = broadcast::channel(16);
-        let sync_manager = Arc::new(deve_core::sync::SyncManager::new(repo.clone()));
+        let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
         let state = Arc::new(AppState {
             repo: repo.clone(),
             sync_manager: sync_manager.clone(),

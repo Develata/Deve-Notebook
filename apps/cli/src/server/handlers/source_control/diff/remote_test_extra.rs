@@ -64,6 +64,7 @@ fn remote_diff_surfaces_shadow_lookup_errors_instead_of_not_found() -> anyhow::R
     let repo_id = uuid::Uuid::new_v4();
     std::fs::create_dir_all(
         dir.path()
+            .join("ledger")
             .join("remotes")
             .join(peer.to_filename())
             .join(format!("{}.redb", repo_id)),
