@@ -121,6 +121,23 @@ pub async fn run(
             )?,
         },
         Some(Commands::Backup { action }) => match action {
+            BackupAction::Bind {
+                locator,
+                repo_id,
+                branch_name,
+                writer,
+                local_writer,
+                access,
+                dry_run,
+            } => commands::backup::bind(
+                &locator,
+                &repo_id,
+                &branch_name,
+                &writer,
+                &local_writer,
+                &access,
+                dry_run,
+            )?,
             BackupAction::Inspect {
                 locator,
                 branch,

@@ -15,6 +15,10 @@ use deve_core::backup::{
     inspect_backup_remote_layout, parse_backup_credential_ref, parse_backup_key_ref,
 };
 
+mod bind;
+
+pub use bind::bind;
+
 pub fn inspect(
     locator: &str,
     branch: Option<&str>,

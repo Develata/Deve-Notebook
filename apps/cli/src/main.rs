@@ -20,7 +20,7 @@
 //! - `git export`: 将 queued Deve commits 导出到 Git mirror
 //! - `git import`: 规划或显式 apply 外部 Git/worktree changes
 //! - `git push`: 将 Git mirror 发布到远端
-//! - `backup inspect/list/verify`: 只读检查 WebDAV/S3 backup locator、provider adapter plan、branch manifest discovery 与 remote layout
+//! - `backup bind/inspect/list/verify`: 规划 WebDAV/S3 backup binding，或只读检查 locator、provider adapter plan、branch manifest discovery 与 remote layout
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -219,6 +219,23 @@ pub(crate) enum RepoProjectionAction {
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum BackupAction {
+    /// Plan a backup branch binding without persisting binding state
+    Bind {
+        #[arg(long)]
+        locator: String,
+        #[arg(long = "repo-id")]
+        repo_id: String,
+        #[arg(long = "branch-name")]
+        branch_name: String,
+        #[arg(long)]
+        writer: String,
+        #[arg(long = "local-writer")]
+        local_writer: String,
+        #[arg(long)]
+        access: String,
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Parse and inspect a backup locator without binding it to repo authority
     Inspect {
         #[arg(long)]
