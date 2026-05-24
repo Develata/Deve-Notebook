@@ -6,7 +6,8 @@ fn new_repo() -> (TempDir, std::sync::Arc<deve_core::ledger::RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = deve_core::ledger::RepoManager::init(dir.path().join("ledger"), 10, None, None)
         .expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locator");
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -39,7 +40,7 @@ fn repeated_same_fs_modify_event_is_noop_after_first_pending_update() -> anyhow:
         },
     )?;
 
-    let sync = SyncManager::new(repo.clone());
+    let sync = SyncManager::new_checked(repo.clone())?;
     sync.persist_doc(doc_id)?;
     let repo_id = repo
         .get_repo_info_for(None, Some("default"))?

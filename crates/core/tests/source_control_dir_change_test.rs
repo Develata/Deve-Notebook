@@ -8,7 +8,8 @@ use tempfile::{TempDir, tempdir};
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = tempdir().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locator");
     (dir, Arc::new(repo))
 }
 
@@ -60,7 +61,7 @@ fn dir_change_rescan_records_child_rename_candidates() {
         workspace_path(repo.as_ref(), "docs"),
     )
     .expect("rename folder");
-    let sync = SyncManager::new(repo.clone());
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
     let repo_id = repo
         .get_repo_info_for(None, Some("default"))
         .expect("repo info lookup")
@@ -93,7 +94,7 @@ fn dir_change_ignores_repo_root_refresh() {
         .expect("repo info lookup")
         .expect("repo info")
         .uuid;
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo).expect("sync manager");
 
     assert!(
         sync.handle_dir_change("default", repo_id, "")

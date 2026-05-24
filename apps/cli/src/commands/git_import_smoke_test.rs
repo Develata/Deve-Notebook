@@ -17,7 +17,7 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
     let repo_root = projection_base.join("default");
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos(&projection_base);
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
         init_git_repo(&repo_root);
         commit_deve_file(&projection_base, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -30,14 +30,14 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
     git::import(&ledger_dir, Some("default"), false, 10)?;
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos(&projection_base);
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
         let pending = repo.list_pending_fs_in_local_repo("default")?;
         assert!(pending.is_empty(), "{pending:?}");
     }
 
     git::import(&ledger_dir, Some("default"), true, 10)?;
     let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(&projection_base);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let pending = repo.list_pending_fs_in_local_repo("default")?;
     assert_eq!(pending.len(), 2, "{pending:?}");
     assert!(
@@ -63,7 +63,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
     let repo_root = projection_base.join("default");
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos(&projection_base);
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
         init_git_repo(&repo_root);
         commit_deve_file(&projection_base, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -74,7 +74,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
     write_workspace_file(&projection_base, "new.md", "new file\n");
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-        repo.set_projection_base_for_all_local_repos(&projection_base);
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
         let doc_id = repo.get_docid("note.md")?;
         repo.run_on_local_repo("default", |db| {
             pending_fs::upsert(
@@ -95,7 +95,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
     git::import(&ledger_dir, Some("default"), true, 10)?;
 
     let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(&projection_base);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let pending = repo.list_pending_fs_in_local_repo("default")?;
     assert_eq!(pending.len(), 1, "{pending:?}");
     assert_eq!(pending[0].path, "note.md");

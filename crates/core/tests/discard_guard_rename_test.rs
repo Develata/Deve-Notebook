@@ -10,7 +10,8 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locator");
     (dir, Arc::new(repo))
 }
 
@@ -66,7 +67,7 @@ fn discard_renamed_pending_restores_canonical_path() -> anyhow::Result<()> {
         )
     })?;
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo)?;
     sync.discard_pending_in_local_repo("default", "notes/b.md")?;
 
     assert_eq!(std::fs::read_to_string(old_path)?, "ledger");
@@ -132,7 +133,7 @@ fn discard_target_resolves_renamed_pending_by_doc_id() -> anyhow::Result<()> {
         )
     })?;
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo)?;
     let resolved = sync.discard_pending_target_in_local_repo(
         "default",
         &ScPathTarget {

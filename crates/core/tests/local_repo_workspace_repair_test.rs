@@ -11,7 +11,8 @@ fn repair_realigns_workspace_root_to_repaired_repo_name() {
     let projection_base = dir.path().join("projection-base");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let main_db = repo.open_database(None, "main").expect("main db").db;
-    repo.set_projection_base_for_all_local_repos(&projection_base);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection locator");
 
     std::fs::create_dir_all(projection_base.join("legacy/.notegit")).expect("legacy workspace");
     common::write_repo_metadata(
@@ -40,7 +41,8 @@ fn runtime_catalog_refresh_does_not_realign_workspace_root() {
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("projection-base");
     let mut repo = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
-    repo.set_projection_base_for_all_local_repos(&projection_base);
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
+        .expect("projection locator");
     let main_db = repo.open_database(None, "main").expect("main db").db;
 
     common::write_repo_metadata(

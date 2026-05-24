@@ -9,16 +9,6 @@ use anyhow::Result;
 use std::sync::Arc;
 
 impl SyncManager {
-    pub fn new(repo: Arc<RepoManager>) -> Self {
-        Self {
-            dir_refresh_guard: DirRefreshGuard::new(),
-            persist_guard: repo.persist_guard.clone(),
-            repo,
-            vfs: Vfs::unrooted(),
-            projection_health: ProjectionHealth::new(),
-        }
-    }
-
     pub fn new_checked(repo: Arc<RepoManager>) -> Result<Self> {
         repo.list_local_repo_names_for_execution()?;
         repo.validate_projection_locator_map()?;

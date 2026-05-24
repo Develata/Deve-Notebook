@@ -9,7 +9,8 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locator");
     (dir, Arc::new(repo))
 }
 
@@ -58,7 +59,7 @@ fn discard_restore_marks_projection_write_for_watcher_ignore() -> anyhow::Result
             },
         )
     })?;
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo)?;
     sync.discard_pending_in_local_repo("default", "notes/a.md")?;
     assert_eq!(std::fs::read_to_string(file_path)?, "ledger");
     assert!(sync.should_ignore_fs_event("default", "notes/a.md"));
@@ -71,7 +72,7 @@ fn projection_delete_marks_watcher_ignore() -> anyhow::Result<()> {
     let file_path = repo.local_repo_workspace_path("default", "notes/a.md")?;
     std::fs::create_dir_all(file_path.parent().expect("parent"))?;
     std::fs::write(&file_path, "temp")?;
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo)?;
     sync.remove_projection_path_in_local_repo("default", "notes/a.md")?;
     assert!(!file_path.exists());
     assert!(sync.should_ignore_fs_event("default", "notes/a.md"));
@@ -124,7 +125,7 @@ fn repo_discard_shares_guard_with_sync_manager() -> anyhow::Result<()> {
         )
     })?;
     repo.discard_pending_in_local_repo("default", "notes/a.md")?;
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo)?;
     assert!(sync.should_ignore_fs_event("default", "notes/a.md"));
     Ok(())
 }

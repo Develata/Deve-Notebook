@@ -11,7 +11,8 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locator");
     (dir, Arc::new(repo))
 }
 
@@ -62,7 +63,7 @@ fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
         .materialize_local_repo("default")
         .expect_err("unstatable workspace path must fail closed");
@@ -86,7 +87,7 @@ fn reconcile_doc_in_local_repo_fails_closed_when_workspace_path_is_unstatable() 
     std::fs::create_dir_all(&blocked).expect("create blocked dir");
     let original = block_dir(&blocked);
 
-    let sync = SyncManager::new(repo);
+    let sync = SyncManager::new_checked(repo).expect("sync manager");
     let err = sync
         .reconcile_doc_in_local_repo("default", doc_id)
         .expect_err("unstatable reconcile path must fail closed");

@@ -100,7 +100,7 @@ pub(super) fn commit_deve_file(
 
 pub(super) fn open_repo(ledger_dir: &Path, projection_base: &Path) -> Result<RepoManager> {
     let mut repo = RepoManager::init(ledger_dir, 10, None, None)?;
-    repo.set_projection_base_for_all_local_repos(projection_base);
+    repo.set_projection_base_for_all_local_repos_checked(projection_base)?;
     Ok(repo)
 }
 

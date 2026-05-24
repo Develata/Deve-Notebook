@@ -12,7 +12,7 @@ fn locator_base_from_file(path: &Path) -> anyhow::Result<String> {
 }
 
 #[test]
-fn set_projection_base_for_all_local_repos_restores_previous_root_when_catalog_refresh_fails()
+fn set_projection_base_for_all_local_repos_checked_restores_previous_root_when_catalog_refresh_fails()
 -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
@@ -20,7 +20,7 @@ fn set_projection_base_for_all_local_repos_restores_previous_root_when_catalog_r
     let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
     let first_projection_base = dir.path().join("notes-a");
     std::fs::create_dir_all(&first_projection_base)?;
-    repo.set_projection_base_for_all_local_repos(&first_projection_base);
+    repo.set_projection_base_for_all_local_repos_checked(&first_projection_base)?;
     assert_eq!(
         repo.local_repo_workspace_root("default")?,
         std::fs::canonicalize(&first_projection_base)?.join("default")
@@ -29,7 +29,10 @@ fn set_projection_base_for_all_local_repos_restores_previous_root_when_catalog_r
     std::fs::remove_dir_all(ledger.join("local"))?;
 
     let second_projection_base = dir.path().join("notes-b");
-    repo.set_projection_base_for_all_local_repos(&second_projection_base);
+    let err = repo
+        .set_projection_base_for_all_local_repos_checked(&second_projection_base)
+        .expect_err("catalog refresh failure must fail closed");
+    assert!(err.to_string().contains("local"));
 
     assert_eq!(
         locator_base_from_file(&repo.projection_locator_path())?,

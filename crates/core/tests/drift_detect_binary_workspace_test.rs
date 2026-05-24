@@ -11,7 +11,8 @@ use tempfile::TempDir;
 fn new_repo() -> (TempDir, Arc<RepoManager>) {
     let dir = TempDir::new().expect("create temp dir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
-    repo.set_projection_base_for_all_local_repos(dir.path().join("notes"));
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locator");
     (dir, Arc::new(repo))
 }
 
@@ -46,7 +47,8 @@ fn seed_doc(repo: &RepoManager, path: &str, content: &str) -> DocId {
 fn binary_workspace_file_is_reported_as_unexpected_not_fatal() {
     let (_dir, repo) = new_repo();
     seed_doc(repo.as_ref(), "notes/a.md", "ledger");
-    SyncManager::new(repo.clone())
+    SyncManager::new_checked(repo.clone())
+        .expect("sync manager")
         .materialize_local_repo("default")
         .expect("materialize");
 
