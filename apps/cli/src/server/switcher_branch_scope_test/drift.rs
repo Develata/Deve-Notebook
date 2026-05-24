@@ -13,10 +13,13 @@ use tempfile::tempdir;
 async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow_peer()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
-    let local = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
+    let local = RepoManager::init(&ledger_dir, 10, Some("notes"), Some("urn:notes"))?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let local_info = local.get_repo_info()?.expect("local repo info");
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     local.run_on_local_repo("notes", |db| {
         let read = db.begin_read()?;
         let table = read.open_table(REPO_METADATA)?;
@@ -33,12 +36,15 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
         write.commit()?;
         Ok(())
     })?;
-    let local = local
-        .get_repo_info_for(None, Some("notes"))?
-        .expect("local repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_info(&peer_id, &local)?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    state.repo.ensure_shadow_repo_info(
+        &peer_id,
+        &RepoInfo {
+            uuid: local_info.uuid,
+            name: "peer-remote".into(),
+            url: local_info.url,
+        },
+    )?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(0);
 

@@ -11,9 +11,14 @@ use tempfile::tempdir;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_repo_exact_fails_closed_when_remote_repo_id_is_stale() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     let info = RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -21,7 +26,7 @@ async fn switch_repo_exact_fails_closed_when_remote_repo_id_is_stale() -> anyhow
         url: Some("urn:test:wiki".into()),
     };
     repo.ensure_shadow_repo_info(&peer_id, &info)?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(30);
     session.switch_branch(Some(peer_id.to_string()));

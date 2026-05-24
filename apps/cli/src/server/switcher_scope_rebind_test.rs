@@ -21,15 +21,20 @@ fn browser_session(scope_nonce: u64) -> WsSession {
 async fn switch_branch_to_local_fails_closed_when_current_remote_scope_is_stale()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let state = Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
         tx,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(

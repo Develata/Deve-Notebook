@@ -12,19 +12,19 @@ use tempfile::{TempDir, tempdir};
 
 fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid, PeerId)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
-    Ok((
-        dir,
-        state,
-        local_info.uuid,
-        peer_id,
-    ))
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
+    Ok((dir, state, local_info.uuid, peer_id))
 }
 
 fn seed_stale_runtime_binding(session: &mut WsSession, state: &Arc<AppState>, repo_id: uuid::Uuid) {

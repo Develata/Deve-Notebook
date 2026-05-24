@@ -12,11 +12,12 @@ use tempfile::tempdir;
 async fn switch_branch_fails_closed_when_same_name_remote_repo_has_different_url()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
-    let local = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:local:wiki"))?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
+    let local = RepoManager::init(&ledger_dir, 10, Some("wiki"), Some("urn:local:wiki"))?;
     let local_info = local.get_repo_info()?.expect("local wiki info");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(
         &peer_id,
@@ -26,7 +27,7 @@ async fn switch_branch_fails_closed_when_same_name_remote_repo_has_different_url
             url: Some("urn:remote:wiki".into()),
         },
     )?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(0);
     session.switch_repo("wiki".into(), Some(local_info.uuid));

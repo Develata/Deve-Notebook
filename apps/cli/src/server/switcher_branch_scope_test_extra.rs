@@ -13,11 +13,12 @@ use tempfile::tempdir;
 async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_string()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
-    let local = RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
+    let local = RepoManager::init(&ledger_dir, 10, Some("notes"), Some("urn:notes"))?;
     let local_info = local.get_repo_info()?.expect("local notes info");
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     let remote_repo_id = uuid::Uuid::new_v4();
     repo.ensure_shadow_repo_info(
@@ -28,7 +29,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_st
             url: Some("urn:notes".into()),
         },
     )?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(28);
     session.switch_repo(local_info.uuid.to_string(), None);
@@ -63,19 +64,24 @@ async fn switch_branch_fails_closed_when_current_local_scope_hint_is_raw_uuid_st
 async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken()
 -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let local_info = repo.get_repo_info()?.expect("default repo info");
     let peer_id = PeerId::new("peer-remote");
-    repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
-    let db = repo.open_database(None, "default")?.db;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
+    state.repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
+    let db = state.repo.open_database(None, "default")?.db;
     let txn = db.begin_write()?;
     txn.open_table(REPO_METADATA)?
         .insert(&0, [0_u8, 1, 2, 3].as_slice())?;
     txn.commit()?;
 
-    let state = app_state(repo, vault, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(40);
     session.switch_repo("default".into(), Some(local_info.uuid));

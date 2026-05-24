@@ -44,7 +44,7 @@ pub(crate) fn app_state_with_tree(
     let identity_key = security::load_or_generate_identity_key(&host_dir)?;
     Ok(Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
         tx,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(
@@ -61,10 +61,15 @@ pub(crate) fn app_state_with_tree(
 
 pub(crate) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     Ok((dir, state))
 }
 

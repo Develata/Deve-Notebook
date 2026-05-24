@@ -14,15 +14,19 @@ mod remote_fail_closed;
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
     let state = Arc::new(AppState {
         repo: repo.clone(),
-        sync_manager: Arc::new(deve_core::sync::SyncManager::new(repo.clone())),
+        sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
         tx,
         plugins: vec![],
         sync_engine: Arc::new(RepoScopedSyncEngine::new(
@@ -36,6 +40,12 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
         identity_key,
     });
     Ok((dir, state))
+}
+
+fn init_local_repo(dir: &TempDir, name: &str, url: &str) -> anyhow::Result<RepoManager> {
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, Some(name), Some(url))?;
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
+    Ok(repo)
 }
 
 pub(super) fn seed_duplicate_remote(
@@ -64,7 +74,7 @@ pub(super) fn seed_duplicate_remote(
 #[test]
 fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    init_local_repo(&dir, "test", "urn:test")?;
     let test_id = state
         .repo
         .get_repo_info_for(None, Some("test"))?
@@ -85,7 +95,7 @@ fn select_target_repo_rejects_local_uuid_string_without_repo_id() -> anyhow::Res
 #[test]
 fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    init_local_repo(&dir, "test", "urn:test")?;
     let default_id = state
         .repo
         .get_repo_info_for(None, Some("default"))?
@@ -102,7 +112,7 @@ fn select_target_repo_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Resu
 fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_drift()
 -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
+    let wiki = init_local_repo(&dir, "wiki", "urn:wiki")?;
     let wiki_info = wiki.get_repo_info()?.expect("wiki info");
     let wiki_db = state.repo.open_database(None, "wiki")?.db;
     let txn = wiki_db.begin_write()?;
@@ -130,7 +140,7 @@ fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_
 fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift() -> anyhow::Result<()>
 {
     let (dir, state) = build_state()?;
-    let wiki = RepoManager::init(dir.path(), 10, Some("wiki"), Some("urn:wiki"))?;
+    let wiki = init_local_repo(&dir, "wiki", "urn:wiki")?;
     let wiki_info = wiki.get_repo_info()?.expect("wiki info");
     let wiki_db = state.repo.open_database(None, "wiki")?.db;
     let txn = wiki_db.begin_write()?;
@@ -157,7 +167,7 @@ fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift() -
 #[test]
 fn resolve_requested_repo_name_prefers_exact_local_stem_over_stale_uuid() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    init_local_repo(&dir, "test", "urn:test")?;
     let default_id = state
         .repo
         .get_repo_info_for(None, Some("default"))?
@@ -173,8 +183,8 @@ fn resolve_requested_repo_name_prefers_exact_local_stem_over_stale_uuid() -> any
 #[test]
 fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    RepoManager::init(dir.path(), 10, Some("notes-a"), Some("urn:notes-a"))?;
-    RepoManager::init(dir.path(), 10, Some("notes-b"), Some("urn:notes-b"))?;
+    init_local_repo(&dir, "notes-a", "urn:notes-a")?;
+    init_local_repo(&dir, "notes-b", "urn:notes-b")?;
     for repo_name in ["notes-a", "notes-b"] {
         let repo_uuid = state
             .repo
@@ -223,7 +233,7 @@ fn select_target_repo_fails_closed_when_local_url_candidate_is_unreadable() -> a
 #[test]
 fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
-    RepoManager::init(dir.path(), 10, Some("test"), Some("urn:test"))?;
+    init_local_repo(&dir, "test", "urn:test")?;
     let db = state.repo.open_database(None, "test")?.db;
     let txn = db.begin_write()?;
     txn.open_table(REPO_METADATA)?.remove(&0)?;

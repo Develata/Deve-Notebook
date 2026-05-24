@@ -11,7 +11,7 @@ use deve_core::protocol::ServerErrorCode;
 #[test]
 fn resolve_session_repo_preserves_missing_local_catalog_failure() -> anyhow::Result<()> {
     let (dir, state, _default_id, _test_id) = build_state()?;
-    std::fs::remove_dir_all(dir.path().join("local"))?;
+    std::fs::remove_dir_all(dir.path().join("ledger").join("local"))?;
 
     let mut session = WsSession::new();
     session.switch_repo("test".into(), None);
@@ -53,7 +53,7 @@ fn resolve_session_repo_and_sync_clears_missing_remote_branch_scope() -> anyhow:
 #[test]
 fn resolve_session_repo_preserves_missing_remote_catalog_failure() -> anyhow::Result<()> {
     let (dir, state, _default_id, _test_id) = build_state()?;
-    std::fs::remove_dir_all(dir.path().join("remotes"))?;
+    std::fs::remove_dir_all(dir.path().join("ledger").join("remotes"))?;
 
     let mut session = WsSession::new();
     session.switch_branch(Some("peer-a".into()));

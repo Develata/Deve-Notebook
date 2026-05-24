@@ -10,7 +10,13 @@ use deve_core::models::PeerId;
 fn resolve_local_counterpart_repo_fails_closed_on_duplicate_local_url_matches() -> anyhow::Result<()>
 {
     let (dir, state, _default_id, _test_id) = build_state()?;
-    let mirror = RepoManager::init(dir.path(), 10, Some("mirror"), Some("urn:mirror"))?;
+    let mut mirror = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("mirror"),
+        Some("urn:mirror"),
+    )?;
+    mirror.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
     let mirror_db = mirror.open_database(None, "mirror")?.db;
     let mirror_info = mirror
         .get_repo_info_for(None, Some("mirror"))?

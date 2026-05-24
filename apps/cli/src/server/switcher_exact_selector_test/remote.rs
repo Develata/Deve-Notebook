@@ -10,9 +10,14 @@ use tempfile::tempdir;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_keeps_exact_remote_selector_without_repo_uuid() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     let first = RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -29,7 +34,7 @@ async fn switch_branch_keeps_exact_remote_selector_without_repo_uuid() -> anyhow
     let selector = repo
         .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
         .expect("collision-safe selector");
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, _uni_rx) = unicast_channel(&state);
     let mut session = browser_session(0);
     session.switch_branch(Some(peer_id.to_string()));

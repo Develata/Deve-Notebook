@@ -12,16 +12,21 @@ use tempfile::tempdir;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_repo_does_not_emit_partial_repo_view_when_tree_reset_fails() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let tree_manager = Arc::new(RepoTreeRegistry::new());
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _ = tree_manager.with_tree_mut(uuid::Uuid::new_v4(), None, |_| {
             panic!("poison tree registry")
         });
     }));
-    let state = app_state_with_tree(repo, vault, dir.path().join("host"), tree_manager)?;
+    let state = app_state_with_tree(repo, projection_base, dir.path().join("host"), tree_manager)?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(10);
 

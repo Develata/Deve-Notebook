@@ -12,9 +12,14 @@ use super::AppState;
 
 fn state_with_remote(url: Option<&str>) -> anyhow::Result<(TempDir, Arc<AppState>, PeerId)> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(
         &peer_id,
@@ -24,7 +29,7 @@ fn state_with_remote(url: Option<&str>) -> anyhow::Result<(TempDir, Arc<AppState
             url: url.map(str::to_owned),
         },
     )?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     Ok((dir, state, peer_id))
 }
 

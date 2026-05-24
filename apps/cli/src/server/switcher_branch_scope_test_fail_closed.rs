@@ -11,9 +11,14 @@ use tempfile::tempdir;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn switch_branch_fails_closed_when_current_local_scope_name_is_stale() -> anyhow::Result<()> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     let remote_repo_id = uuid::Uuid::new_v4();
     repo.ensure_shadow_repo_info(
@@ -24,7 +29,7 @@ async fn switch_branch_fails_closed_when_current_local_scope_name_is_stale() -> 
             url: Some("urn:notes".into()),
         },
     )?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(42);
     session.switch_repo("stale-notes".into(), None);
@@ -61,9 +66,14 @@ async fn switch_branch_fails_closed_when_current_local_scope_name_is_stale() -> 
 async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair() -> anyhow::Result<()>
 {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(
+        dir.path().join("ledger"),
+        10,
+        Some("default"),
+        Some("urn:default"),
+    )?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     let first = deve_core::ledger::RepoInfo {
         uuid: uuid::Uuid::new_v4(),
@@ -80,7 +90,7 @@ async fn switch_branch_fails_closed_on_stale_exact_remote_selector_uuid_pair() -
     let selector = repo
         .find_remote_repo_selector_by_id(&peer_id, second.uuid)?
         .expect("collision-safe selector");
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut session = browser_session(16);
     session.switch_branch(Some(peer_id.to_string()));

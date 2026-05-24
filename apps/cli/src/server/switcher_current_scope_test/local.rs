@@ -15,16 +15,17 @@ type Harness = (TempDir, Arc<AppState>, RepoInfo, PeerId);
 
 fn state_with_shadow(create_notes: bool) -> anyhow::Result<Harness> {
     let dir = tempdir()?;
-    let vault = dir.path().join("vault");
-    let mut repo = RepoManager::init(dir.path(), 10, Some("default"), Some("urn:default"))?;
-    repo.set_projection_base_for_all_local_repos(&vault);
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let mut repo = RepoManager::init(&ledger_dir, 10, Some("default"), Some("urn:default"))?;
     let default_info = repo.get_repo_info()?.expect("default repo info");
     if create_notes {
-        RepoManager::init(dir.path(), 10, Some("notes"), Some("urn:notes"))?;
+        RepoManager::init(&ledger_dir, 10, Some("notes"), Some("urn:notes"))?;
     }
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
     let peer_id = PeerId::new("peer-remote");
     repo.ensure_shadow_repo_info(&peer_id, &default_info)?;
-    let state = app_state(repo, vault, dir.path().join("host"))?;
+    let state = app_state(repo, projection_base, dir.path().join("host"))?;
     Ok((dir, state, default_info, peer_id))
 }
 
