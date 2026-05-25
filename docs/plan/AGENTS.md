@@ -1,5 +1,5 @@
 <!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-03-22 | Updated: 2026-05-01 -->
+<!-- Generated: 2026-03-22 | Updated: 2026-05-25 -->
 
 # deve-note plan
 
@@ -72,12 +72,15 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 ```
 
 **规则**：
-- 注解格式为 `//! plan_ref:` 紧接 YAML-ish 列表；每行一条，格式 `  - <chapter_basename>#<stable-anchor-id>`。
+- 注解格式为 `//! plan_ref:` 紧接 YAML-ish 列表；每行一条，格式 `  - <chapter-path>#<stable-anchor-id>`。
+- `<chapter-path>` 可以是单文件章节的 basename（如 `04_repository`），也可以是多文件章节的相对路径（如 `03_storage/authority`，对应 `docs/plan/03_storage/authority.md`）。chapter-path 只允许一层子文件，不得出现多级子目录。
 - `#` 后面是 plan 章节里用 `{#id}` 声明的稳定 anchor，**MUST NOT** 依赖自然语言标题文字。
 - 纯工具/util 模块（如 `utils/path.rs`）可使用 `//! plan_ref: infra` 标记为基础设施，豁免章节追溯。
 - 同一模块 MAY 引用多个章节；跨域模块应优先拆分而非堆叠引用。
 - 删除代码前 MUST 核对其 `plan_ref` 对应条款是否已从 plan 中移除或重新分配。
 - 新增 plan_ref 时 MUST 在 plan 章节相应节加上 `{#anchor-id}`；若无 anchor，MUST 先补 anchor 再写代码引用。
+
+**chapter-path 兼容窗口**：`scripts/plan-coverage.sh` 同时接受 basename 与 chapter-path 两种形式，互不冲突。当多文件章节拆分时，旧 basename anchor 到新 chapter-path anchor 的批量迁移由 `scripts/plan-coverage.sh --rewrite-plan-ref --from <旧前缀> --to <新前缀> [--apply]` 完成（默认 dry-run，仅 `--apply` 才写文件；只改 `//! plan_ref:` 块内列表项前缀，保留注释前缀、缩进与行尾注释）。
 
 **稳定 plan anchor registry**：
 

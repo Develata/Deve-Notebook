@@ -23,6 +23,10 @@ RUNTIME_REGISTRY="$ROOT/docs/registry/runtime-skeleton-registry.md"
 CODE_DIRS=("$ROOT/crates" "$ROOT/apps")
 FUSE_LINES=500
 SOFT_LINES=250
+# Canonical plan_ref / AGENTS anchor core pattern (single source of truth).
+# chapter-path is either a single basename (`04_repository`) or a one-level
+# multi-file chapter path (`03_storage/authority`), followed by `#<anchor>`.
+PLAN_REF_CORE='[0-9][0-9]_[A-Za-z0-9_]+(/[A-Za-z0-9_]+)?#[A-Za-z0-9_-]+'
 ALLOWLIST="$ROOT/scripts/plan-coverage-allowlist.txt"
 I18N_ALLOWLIST="$ROOT/scripts/i18n-coverage-allowlist.txt"
 I18N_CJK_SCAN_DIRS=("$ROOT/apps/web/src/components")
@@ -66,22 +70,56 @@ LIST_MISSING_PLAN_REF=0
 SUMMARY_MISSING_PLAN_REF=0
 MISSING_PLAN_REF_SUMMARY_TOP=20
 
+# B0.5 Anchor Contract Upgrade — subcommand modes.
+# MODE: full (default) | rewrite | stub
+MODE="full"
+STUB_NAME=""
+REWRITE_FROM=""
+REWRITE_TO=""
+REWRITE_APPLY=0
+
 usage() {
-  echo "usage: plan-coverage.sh [--write-report] [--list-missing-plan-ref] [--summary-missing-plan-ref]"
+  cat <<'EOF'
+usage: plan-coverage.sh [options]
+  (no option)                     run full coverage report
+  --write-report                  also write scripts/plan-coverage.txt CI artifact
+  --list-missing-plan-ref         list non-exempt modules missing plan_ref
+  --summary-missing-plan-ref      grouped missing plan_ref counts
+  --rewrite-plan-ref --from P --to Q [--apply]
+                                  rewrite plan_ref chapter-path prefixes
+                                  (dry-run unless --apply)
+  --check-metadata-completeness   [stub] not yet enforcing (升级: B0)
+  --check-perf-budget             [stub] not yet enforcing (升级: B3.2)
+  --check-no-adr-plan-ref         [stub] not yet enforcing (升级: B4.3)
+  --check-reverse-coverage        [stub] not yet enforcing (升级: B4)
+  --check-md-links [dirs...]      [stub] not yet enforcing (升级: B3.4)
+EOF
 }
 
-for arg in "$@"; do
-  case "$arg" in
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --write-report) WRITE_REPORT=1 ;;
     --list-missing-plan-ref) LIST_MISSING_PLAN_REF=1 ;;
     --summary-missing-plan-ref) SUMMARY_MISSING_PLAN_REF=1 ;;
+    --rewrite-plan-ref) MODE="rewrite" ;;
+    --from) REWRITE_FROM="${2:-}"; shift || true ;;
+    --to) REWRITE_TO="${2:-}"; shift || true ;;
+    --apply) REWRITE_APPLY=1 ;;
+    --check-metadata-completeness|--check-perf-budget|--check-no-adr-plan-ref|--check-reverse-coverage|--check-md-links)
+      MODE="stub"; STUB_NAME="$1" ;;
     -h|--help)
       usage; exit 0 ;;
     *)
-      echo "ERROR: unknown argument: $arg" >&2
-      usage >&2
-      exit 2 ;;
+      # In stub mode (notably --check-md-links) trailing positional dirs are accepted.
+      if [ "$MODE" = "stub" ]; then
+        : # ignore stub positional args
+      else
+        echo "ERROR: unknown argument: $1" >&2
+        usage >&2
+        exit 2
+      fi ;;
   esac
+  shift || true
 done
 
 log() { echo "$@"; REPORT+="$*"$'\n'; }
@@ -112,6 +150,35 @@ tracked_rust_files() {
   git -C "$ROOT" ls-files -- 'crates' 'apps' |
     grep -E '\.rs$' |
     sed "s|^|$ROOT/|"
+}
+
+# resolve_plan_anchor <chapter_ref> -> echoes the chapter markdown file path.
+# Supports single-file chapters (`04_repository`) and multi-file chapter paths
+# (`03_storage/authority`). The chapter_ref is the part before the `#` anchor.
+resolve_plan_anchor() {
+  local chapter_ref="$1"
+  printf '%s/%s.md' "$PLAN_DIR" "$chapter_ref"
+}
+
+# extract_plan_ref_blocks <file> -> echoes each `//!   - <ref>` list line that
+# lives inside a `//! plan_ref:` block. Single source of truth for plan_ref
+# extraction so scanning and rewriting share identical block detection.
+extract_plan_ref_blocks() {
+  local f="$1"
+  awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f"
+}
+
+# resolve_agents_anchor_ref <ref> -> echoes "chapter_ref<TAB>anchor<TAB>status".
+# Only parses the AGENTS registry cell string; it performs no file/anchor
+# existence check. Callers that need validation must call resolve_plan_anchor
+# on the returned chapter_ref to avoid a second resolution implementation.
+# status defaults to `stable`; `planned` is reserved for B4 reverse-coverage
+# enforcing (registry rows trailing `planned/no-code-yet`).
+resolve_agents_anchor_ref() {
+  local ref="$1"
+  local chapter="${ref%%#*}"
+  local anchor="${ref#*#}"
+  printf '%s\t%s\t%s\n' "$chapter" "$anchor" "stable"
 }
 
 log_missing_plan_ref_groups() {
@@ -148,6 +215,82 @@ log_missing_plan_ref_groups() {
       head -n "$limit"
   )
 }
+
+# ---------------------------------------------------------------------------
+# B0.5 — rewrite plan_ref chapter-path prefixes across tracked Rust modules.
+# Only list items inside `//! plan_ref:` blocks are touched; the //! prefix,
+# indentation, list marker, ref-token boundary and trailing comments are
+# preserved. Default is dry-run; --apply performs an atomic same-dir replace.
+# ---------------------------------------------------------------------------
+run_rewrite_plan_ref() {
+  if [ -z "$REWRITE_FROM" ] || [ -z "$REWRITE_TO" ]; then
+    echo "ERROR: --rewrite-plan-ref requires --from <prefix> --to <prefix>" >&2
+    return 2
+  fi
+  local mode_label="dry-run"
+  [ "$REWRITE_APPLY" = "1" ] && mode_label="apply"
+  echo "== rewrite-plan-ref ($mode_label): '$REWRITE_FROM' -> '$REWRITE_TO' =="
+  local total_files=0 total_lines=0
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    grep -q '^//! plan_ref:' "$f" 2>/dev/null || continue
+    # Pre-filter: skip files that do not contain the from-prefix at all, so we
+    # only pay the mktemp+awk cost for files that can actually change.
+    grep -Fq "$REWRITE_FROM" "$f" 2>/dev/null || continue
+    local tmp
+    tmp="$(mktemp "${f}.rewrite.XXXXXX")"
+    awk -v from="$REWRITE_FROM" -v to="$REWRITE_TO" '
+      /^\/\/! plan_ref:/ { inblock = 1; print; next }
+      inblock && /^\/\/![ \t]*-[ \t]*/ {
+        match($0, /^\/\/![ \t]*-[ \t]*/)
+        pfx = substr($0, 1, RLENGTH)
+        rest = substr($0, RLENGTH + 1)
+        split(rest, parts, /[ \t]/)
+        token = parts[1]
+        after = substr(rest, length(token) + 1)
+        flen = length(from)
+        if (substr(token, 1, flen) == from) {
+          token = to substr(token, flen + 1)
+        }
+        print pfx token after
+        next
+      }
+      inblock { inblock = 0 }
+      { print }
+    ' "$f" > "$tmp"
+    if cmp -s "$f" "$tmp"; then
+      rm -f "$tmp"
+      continue
+    fi
+    local hits rel
+    hits=$(diff "$f" "$tmp" | grep -c '^>' || true)
+    rel="${f#$ROOT/}"
+    total_files=$((total_files + 1))
+    total_lines=$((total_lines + hits))
+    echo "  $rel ($hits line(s))"
+    if [ "$REWRITE_APPLY" = "1" ]; then
+      mv "$tmp" "$f"
+    else
+      diff "$f" "$tmp" | grep -E '^[<>]' | sed 's/^/    /' || true
+      rm -f "$tmp"
+    fi
+  done < <(tracked_rust_files)
+  echo "rewrite-plan-ref: $total_files file(s), $total_lines line(s) [$mode_label]"
+  return 0
+}
+
+# B0.5 — subcommand dispatch. stub/rewrite modes exit before the full report.
+case "$MODE" in
+  stub)
+    echo "$STUB_NAME: [stub] not yet enforcing"
+    exit 0
+    ;;
+  rewrite)
+    rc=0
+    run_rewrite_plan_ref || rc=$?
+    exit "$rc"
+    ;;
+esac
 
 blocking=0
 soft_warnings=0
@@ -204,13 +347,16 @@ while IFS= read -r f; do
   fi
   annotated_refs=$((annotated_refs + 1))
 
-  # Extract `<chapter_basename>#<stable-anchor-id>` refs and verify both parts.
+  # Extract `<chapter-path>#<stable-anchor-id>` refs and verify both parts.
+  # chapter-path is either a single-file basename (`04_repository`) or a
+  # multi-file chapter path (`03_storage/authority`).
   while IFS= read -r ref_line; do
     ref=$(echo "$ref_line" | sed -n 's|^//! *- *\([^[:space:]]\+\).*$|\1|p')
     [ -z "$ref" ] && continue
     [ "$ref" = "infra" ] && continue
 
-    if ! [[ "$ref" =~ ^[0-9][0-9]_[A-Za-z0-9_]+#[A-Za-z0-9_-]+$ ]]; then
+    plan_ref_anchor_re="^${PLAN_REF_CORE}$"
+    if ! [[ "$ref" =~ $plan_ref_anchor_re ]]; then
       err "invalid plan_ref in $rel: $ref"
       dangling_refs=$((dangling_refs + 1))
       blocking=$((blocking + 1))
@@ -219,7 +365,7 @@ while IFS= read -r f; do
 
     chapter="${ref%%#*}"
     anchor="${ref#*#}"
-    chapter_file="$PLAN_DIR/$chapter.md"
+    chapter_file="$(resolve_plan_anchor "$chapter")"
     if [ ! -f "$chapter_file" ]; then
       err "dangling plan_ref in $rel: $chapter.md not found in plan"
       dangling_refs=$((dangling_refs + 1))
@@ -232,7 +378,7 @@ while IFS= read -r f; do
       key="$ref"
       plan_coverage_map["$key"]+="$f "
     fi
-  done < <(awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f")
+  done < <(extract_plan_ref_blocks "$f")
 done < <(tracked_rust_files | sort)
 
 log "modules with plan_ref: $annotated_refs"
@@ -413,9 +559,8 @@ declare -A agents_anchor_map=()
 while IFS= read -r ref; do
   [ -n "$ref" ] || continue
   agents_anchor_map["$ref"]=1
-  chapter="${ref%%#*}"
-  anchor="${ref#*#}"
-  chapter_file="$PLAN_DIR/$chapter.md"
+  IFS=$'\t' read -r chapter anchor _status < <(resolve_agents_anchor_ref "$ref") || true
+  chapter_file="$(resolve_plan_anchor "$chapter")"
   if [ ! -f "$chapter_file" ]; then
     err "agents-anchor-dangling: $ref chapter not found"
     agents_anchor_dangling=$((agents_anchor_dangling + 1))
@@ -425,7 +570,7 @@ while IFS= read -r ref; do
     agents_anchor_dangling=$((agents_anchor_dangling + 1))
     blocking=$((blocking + 1))
   fi
-done < <(grep -oE '`[0-9][0-9]_[A-Za-z0-9_]+#[A-Za-z0-9_-]+`' "$PLAN_DIR/AGENTS.md" | tr -d '`' | sort -u)
+done < <(grep -oE "\`${PLAN_REF_CORE}\`" "$PLAN_DIR/AGENTS.md" | tr -d '`' | sort -u)
 
 for ref in "${!agents_anchor_map[@]}"; do
   if [ -z "${plan_coverage_map[$ref]+x}" ]; then
