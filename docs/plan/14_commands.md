@@ -4,6 +4,8 @@
 
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/components/command_palette/`

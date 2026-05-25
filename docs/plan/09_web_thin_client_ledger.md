@@ -4,6 +4,8 @@
 
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/hooks/use_core/pending*.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `crates/core/src/protocol/`

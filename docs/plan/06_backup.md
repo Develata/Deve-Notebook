@@ -4,6 +4,8 @@
 
 - `Layer`: `Authority Core / Backup Transport`
 - `Status`: `Planned Contract`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/backup/`, `apps/cli/src/commands/backup.rs`, `apps/web/src/components/settings/`

@@ -4,6 +4,8 @@
 
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`

@@ -4,6 +4,8 @@
 
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`

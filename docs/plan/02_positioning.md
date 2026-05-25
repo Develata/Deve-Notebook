@@ -4,6 +4,8 @@
 
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Feature`: `docs/features/02_positioning.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/02_positioning.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `crates/core/src/ledger/manager/`

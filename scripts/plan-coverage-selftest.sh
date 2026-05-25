@@ -70,6 +70,19 @@ else
   fail=$((fail + 1))
 fi
 
+# ---------------------------------------------------------------------------
+# (c) --check-metadata-completeness passes on the current tree (B0 enforcing)
+# ---------------------------------------------------------------------------
+echo "== (c) --check-metadata-completeness enforcing =="
+if out="$("$COVERAGE" --check-metadata-completeness 2>&1)" \
+   && printf '%s' "$out" | grep -q '^check-metadata-completeness: OK'; then
+  echo "ok        ($out)"; pass=$((pass + 1))
+else
+  echo "FAIL: --check-metadata-completeness did not pass on current tree:"
+  printf '%s\n' "$out"
+  fail=$((fail + 1))
+fi
+
 echo "----"
 echo "selftest: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

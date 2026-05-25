@@ -4,6 +4,8 @@
 
 - `Layer`: `Peripheral / Design Note`
 - `Status`: `Non-Authoritative Design Note`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Plan`: `docs/plan/16_ai_agent.md`, `docs/plan/19_plugins.md`
 - `Primary Code Areas`: `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`
 

@@ -4,6 +4,8 @@
 
 - `Layer`: Foundation
 - `Status`: Governing Rule
+- `Version`: 0.0.1
+- `Last Review`: 2026-05-24
 - `Scope`: architecture, plan, operation, acceptance, and implementation work
 - `Counterpart Overview`: `docs/overview/architecture.md`
 

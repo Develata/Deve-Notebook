@@ -88,7 +88,7 @@ usage: plan-coverage.sh [options]
   --rewrite-plan-ref --from P --to Q [--apply]
                                   rewrite plan_ref chapter-path prefixes
                                   (dry-run unless --apply)
-  --check-metadata-completeness   [stub] not yet enforcing (升级: B0)
+  --check-metadata-completeness   verify each plan chapter Metadata declares Version + Last Review
   --check-perf-budget             [stub] not yet enforcing (升级: B3.2)
   --check-no-adr-plan-ref         [stub] not yet enforcing (升级: B4.3)
   --check-reverse-coverage        [stub] not yet enforcing (升级: B4)
@@ -105,7 +105,8 @@ while [ "$#" -gt 0 ]; do
     --from) REWRITE_FROM="${2:-}"; shift || true ;;
     --to) REWRITE_TO="${2:-}"; shift || true ;;
     --apply) REWRITE_APPLY=1 ;;
-    --check-metadata-completeness|--check-perf-budget|--check-no-adr-plan-ref|--check-reverse-coverage|--check-md-links)
+    --check-metadata-completeness) MODE="metadata-check" ;;
+    --check-perf-budget|--check-no-adr-plan-ref|--check-reverse-coverage|--check-md-links)
       MODE="stub"; STUB_NAME="$1" ;;
     -h|--help)
       usage; exit 0 ;;
@@ -279,6 +280,34 @@ run_rewrite_plan_ref() {
   return 0
 }
 
+# B0 — metadata completeness check (enforcing).
+# Scans every tracked docs/plan markdown carrying a `## Metadata` block and
+# verifies the block declares both `Version` and `Last Review`. The Metadata
+# block spans from `## Metadata` to the next `## ` heading. Self-contained:
+# writes diagnostics to stderr, does not touch the global REPORT buffer.
+run_check_metadata_completeness() {
+  local missing=0 checked=0 f rel block miss
+  while IFS= read -r f; do
+    grep -q '^## Metadata' "$f" || continue
+    checked=$((checked + 1))
+    block="$(awk '/^## Metadata/{flag=1;next} flag && /^## /{flag=0} flag' "$f")"
+    rel="${f#"$ROOT/"}"
+    miss=""
+    printf '%s\n' "$block" | grep -q '^- `Version`:' || miss="${miss} Version"
+    printf '%s\n' "$block" | grep -q '^- `Last Review`:' || miss="${miss} Last_Review"
+    if [ -n "$miss" ]; then
+      echo "ERROR: metadata-completeness: $rel missing fields:${miss}" >&2
+      missing=$((missing + 1))
+    fi
+  done < <(git -C "$ROOT" ls-files -- 'docs/plan' | grep -E '\.md$' | sed "s|^|$ROOT/|")
+  if [ "$missing" -gt 0 ]; then
+    echo "check-metadata-completeness: FAIL — $missing/$checked chapter(s) missing Version/Last Review"
+    return 1
+  fi
+  echo "check-metadata-completeness: OK — $checked chapter(s) carry Version + Last Review"
+  return 0
+}
+
 # B0.5 — subcommand dispatch. stub/rewrite modes exit before the full report.
 case "$MODE" in
   stub)
@@ -288,6 +317,11 @@ case "$MODE" in
   rewrite)
     rc=0
     run_rewrite_plan_ref || rc=$?
+    exit "$rc"
+    ;;
+  metadata-check)
+    rc=0
+    run_check_metadata_completeness || rc=$?
     exit "$rc"
     ;;
 esac

@@ -4,6 +4,8 @@
 
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Deferred`
+- `Version`: `0.0.1`
+- `Last Review`: `2026-05-24`
 - `Counterpart Feature`: `docs/features/17_plugins.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`

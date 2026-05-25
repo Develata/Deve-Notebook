@@ -57,6 +57,8 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 - `pending overlay` is Web thin-client session runtime state; it must not be modeled as `pending_fs_ops` or cleared by watcher/scan semantics.
 - `11_ui_design.md#native-post-gate-common-contract` owns shared Desktop/Mobile post-gate native shell requirements; Desktop/Mobile subchapters should contain only platform deltas.
 - `docs/registry/runtime-skeleton-registry.md` owns the current Runtime Skeleton Registry status/path table; new refactor targets should be added there or explicitly marked as local-only before appearing in chapter tails.
+- 修改任一 plan 章节内容（typo 以上级别）后 MUST 刷新该章 Metadata 的 `Last Review` 字段；`Last Review` 仅由 plan review 行为更新，不与 git commit 时间挂钩。
+- Metadata 的 `Version` 仅表示章节自身版本（骨架级修改才 bump major）；MUST NOT 与 release version、protocol version (`WS_PROTOCOL_VERSION`)、redb schema version 或 HTTP API version 混用。`scripts/plan-coverage.sh --check-metadata-completeness` 强制校验每章 `Version` / `Last Review` 字段存在。
 
 ## Plan-Code Bijection Enforcement (双射执行机制)
 
