@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 use super::dir_structure_support::{load_meta, plan_parent_chain};
 use crate::ledger::RepoManager;

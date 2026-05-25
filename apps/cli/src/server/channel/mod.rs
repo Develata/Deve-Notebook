@@ -1,6 +1,6 @@
 // apps/cli/src/server/channel/mod.rs
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 //!
 //! # 响应通道抽象 (Response Channel)
 //!

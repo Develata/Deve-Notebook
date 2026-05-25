@@ -1,6 +1,6 @@
 // apps\web\src\components\command_palette
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
+//!   - 14_commands#command-palette-shortcuts
 //!
 //! 命令面板的命令类型定义。
 

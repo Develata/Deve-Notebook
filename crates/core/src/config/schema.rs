@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 13_settings#configuration-settings
-//!   - 10_ai_agent#trusted-agent-bridge
+//!   - 15_settings#configuration-settings
+//!   - 16_ai_agent#trusted-agent-bridge
 //!
 //! Runtime config schema and serde/default contracts.
 

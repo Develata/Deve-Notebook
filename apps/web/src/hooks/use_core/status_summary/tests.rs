@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
+//!   - 07_network#web-ws-runtime
 //!
 use super::{SyncStatusInput, SyncStatusKind, SyncStatusSummary, derive_sync_status};
 use crate::api::ConnectionStatus;

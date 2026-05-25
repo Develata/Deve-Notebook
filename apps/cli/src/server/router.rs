@@ -1,11 +1,11 @@
 // apps/cli/src/server/router.rs
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 09_auth#auth-http-endpoints
-//!   - 09_auth#jwt-cookie-contract
-//!   - 09_auth#auth-rate-limiting
-//!   - 09_auth#security-headers
-//!   - 08_ui_design_01_web#single-binary-distribution
+//!   - 07_network#server-ws-runtime
+//!   - 08_auth#auth-http-endpoints
+//!   - 08_auth#jwt-cookie-contract
+//!   - 08_auth#auth-rate-limiting
+//!   - 08_auth#security-headers
+//!   - 11_ui_design_01_web#single-binary-distribution
 //!
 //! # 路由构建模块
 //!

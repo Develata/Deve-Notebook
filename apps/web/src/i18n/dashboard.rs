@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 11_i18n#i18n-keys-reference
+//!   - 13_i18n#i18n-keys-reference
 //!
 //! # I18n Dashboard Module (仪表盘翻译)
 //!

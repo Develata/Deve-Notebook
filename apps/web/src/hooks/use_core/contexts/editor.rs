@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 10_rendering#large-document-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 use crate::editor::EditorStats;
 use deve_core::models::{DocId, PeerId};

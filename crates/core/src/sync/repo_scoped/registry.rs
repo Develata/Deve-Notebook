@@ -1,8 +1,8 @@
 // crates/core/src/sync/repo_scoped/registry.rs
 //! # Repo-Scoped SyncEngine Registry
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 //! Non-strict registry facade for already loaded repo-scoped sync engines.
 

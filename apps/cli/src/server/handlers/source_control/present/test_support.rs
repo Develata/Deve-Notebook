@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 use super::{expand_related_paths, resolve_target_path_strict};
 use deve_core::protocol::ScPathTarget;

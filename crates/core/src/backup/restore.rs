@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-restore-candidate-contract
+//!   - 06_backup#backup-restore-candidate-contract
 //!
 //! Restore candidate admission.
 //!

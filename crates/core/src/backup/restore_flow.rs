@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-restore-state-machine-contract
+//!   - 06_backup#backup-restore-state-machine-contract
 //!
 //! Backup restore/import state admission.
 //!

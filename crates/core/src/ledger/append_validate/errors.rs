@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#facts-partition
+//!   - 04_repository#tree-projection-contract
 //!
 use crate::models::{DocId, LedgerEntry, StructureOp};
 use crate::state::{InvalidContentOp, describe_invalid_content_op};

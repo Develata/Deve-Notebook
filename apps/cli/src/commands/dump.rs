@@ -1,8 +1,8 @@
 // apps/cli/src/commands/dump.rs
 //! # Dump 命令 (调试用)
 //! plan_ref:
-//!   - 12_commands#cli-commands
-//!   - 03_rendering#document-authority-bridge
+//!   - 14_commands#cli-commands
+//!   - 10_rendering#document-authority-bridge
 //!
 //! 打印指定文档的所有操作历史并重建内容
 

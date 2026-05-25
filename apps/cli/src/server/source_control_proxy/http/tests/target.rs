@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 use super::super::{ProxyScOp, decode_error, decode_error_with_op};
 use deve_core::protocol::ServerErrorCode;

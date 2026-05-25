@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 10_ai_agent#trusted-agent-bridge
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#trusted-agent-bridge
 //!
 use crate::api::{
     AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AI_PLUGIN_NATIVE, AI_PLUGIN_TRUSTED_CLI,

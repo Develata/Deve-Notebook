@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 10_rendering#large-document-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use super::EditorStats;
 use super::delta::Delta;

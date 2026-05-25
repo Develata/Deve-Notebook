@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 14_commands#command-palette-shortcuts
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use super::registry::{create_static_commands, filter_commands};
 use super::types::Command;

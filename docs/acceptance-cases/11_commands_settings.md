@@ -257,7 +257,7 @@
 - case_id: SET-007
   goal: Server-backed Settings API 仍按 future 边界处理。
   preconditions:
-    - docs/plan/13_settings.md 仍标记 Settings API 为 future work
+    - docs/plan/15_settings.md 仍标记 Settings API 为 future work
   steps:
     - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh

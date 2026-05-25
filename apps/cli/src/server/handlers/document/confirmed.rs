@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
+//!   - 10_rendering#document-authority-bridge
 //!
 //! Confirmed ledger operation projection for document runtime responses.
 

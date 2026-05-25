@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/chat_sheet.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-responsive-layout
-//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 11_ui_design_03_mobile#mobile-responsive-layout
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 
 use crate::components::chat::ChatPanel;

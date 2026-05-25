@@ -1,7 +1,7 @@
 // crates\core\src\ledger
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 04_storage#facts-partition
+//!   - 10_rendering#document-authority-bridge
+//!   - 03_storage#facts-partition
 //!
 //! # 快照模块 (Snapshot Management)
 //!

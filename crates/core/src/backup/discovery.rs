@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 18_backup#backup-branch-binding-contract
-//!   - 18_backup#backup-remote-layout-contract
+//!   - 06_backup#backup-branch-binding-contract
+//!   - 06_backup#backup-remote-layout-contract
 //!
 //! Backup branch discovery.
 //!

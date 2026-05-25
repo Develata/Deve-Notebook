@@ -1,8 +1,8 @@
 // apps\web\src\components\sidebar
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 10_ai_agent#trusted-agent-bridge
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#trusted-agent-bridge
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # ExtensionsView 组件 (ExtensionsView Component)
 //!

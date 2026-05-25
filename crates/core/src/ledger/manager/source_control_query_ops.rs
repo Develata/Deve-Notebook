@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 06_repository#repo-selector-resolution-contract
-//!   - 04_storage#internal-path-normalization
+//!   - 05_diff_logic#source-control-runtime
+//!   - 04_repository#repo-selector-resolution-contract
+//!   - 03_storage#internal-path-normalization
 //!
 //! # 版本控制查询
 //!

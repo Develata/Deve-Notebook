@@ -1,8 +1,8 @@
 // apps/cli/src/server/handlers/key_exchange.rs
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 09_auth#jwt-cookie-contract
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 08_auth#jwt-cookie-contract
+//!   - 04_repository#repo-scope-runtime
 //!
 //! # E2EE 密钥交换处理器
 //!

@@ -1,7 +1,7 @@
 // crates/core/src/ledger/manager/snapshot_ops.rs
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 04_storage#projection-contract
+//!   - 10_rendering#document-authority-bridge
+//!   - 03_storage#projection-contract
 //!
 //! # 快照管理
 //!

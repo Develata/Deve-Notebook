@@ -1,6 +1,6 @@
 // apps/web/src/components/chat/input_area.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 use crate::components::icons::*;
 use crate::i18n::{Locale, t};

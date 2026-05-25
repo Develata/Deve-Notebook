@@ -1,7 +1,7 @@
 // apps/cli/src/server/handlers/plugin.rs
 //! plan_ref:
-//!   - 10_ai_agent#trusted-agent-bridge
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 16_ai_agent#trusted-agent-bridge
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # 插件处理器 (Plugin Handler)
 //!

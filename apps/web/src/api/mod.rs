@@ -1,6 +1,6 @@
 // apps/web/src/api/mod.rs
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
+//!   - 07_network#web-ws-runtime
 //!
 //! # WebSocket API 模块
 //!

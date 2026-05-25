@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/footer_playback.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-responsive-layout
-//!   - 03_rendering#document-authority-bridge
+//!   - 11_ui_design_03_mobile#mobile-responsive-layout
+//!   - 10_rendering#document-authority-bridge
 //!
 //! # Mobile Footer — Time-Travel Playback Controls
 

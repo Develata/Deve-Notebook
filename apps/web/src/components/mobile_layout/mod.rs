@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/mod.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-responsive-layout
-//!   - 08_ui_design_03_mobile#mobile-current-native-boundary
+//!   - 11_ui_design_03_mobile#mobile-responsive-layout
+//!   - 11_ui_design_03_mobile#mobile-current-native-boundary
 //!
 //! # Mobile Layout
 

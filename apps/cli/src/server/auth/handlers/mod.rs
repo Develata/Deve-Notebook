@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 09_auth#auth-http-endpoints
-//!   - 09_auth#jwt-cookie-contract
+//!   - 08_auth#auth-http-endpoints
+//!   - 08_auth#jwt-cookie-contract
 
 mod login;
 mod native_session;

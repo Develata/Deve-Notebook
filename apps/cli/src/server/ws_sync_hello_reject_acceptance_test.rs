@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 
 use super::sync_hello_test_support::signed_hello_for_scope;
 use super::ws_protocol_acceptance_support::{

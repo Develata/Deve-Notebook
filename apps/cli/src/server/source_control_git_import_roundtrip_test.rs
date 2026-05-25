@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 04_storage#git-ecosystem-coexistence
-//!   - 07_diff_logic#source-control-runtime
-//!   - 12_commands#cli-commands
+//!   - 03_storage#git-ecosystem-coexistence
+//!   - 05_diff_logic#source-control-runtime
+//!   - 14_commands#cli-commands
 
 use crate::server::{
     channel::DualChannel,

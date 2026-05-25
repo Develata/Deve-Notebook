@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 09_auth#session-probe-policy
+//!   - 08_auth#session-probe-policy
 //!
 
 use crate::components::login::AuthState;

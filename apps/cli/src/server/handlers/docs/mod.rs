@@ -1,8 +1,8 @@
 // apps/cli/src/server/handlers/docs/mod.rs
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
-//!   - 06_repository#tree-projection-contract
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#tree-projection-contract
 //!
 //! # 文档 CRUD 处理器模块
 //!

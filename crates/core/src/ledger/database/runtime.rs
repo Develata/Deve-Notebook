@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 06_repository#repo-selector-resolution-contract
+//!   - 03_storage#repo-runtime-layout
+//!   - 04_repository#repo-selector-resolution-contract
 
 use super::DatabaseHandle;
 use crate::ledger::RepoManager;

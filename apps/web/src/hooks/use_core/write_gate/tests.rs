@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#web-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use super::{RepoWriteBlock, RepoWriteGateState, repo_source_control_read_block, repo_write_block};
 use crate::api::ConnectionStatus;

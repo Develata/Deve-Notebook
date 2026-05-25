@@ -1,7 +1,7 @@
 // apps\web\src\components\search_box
 //! plan_ref:
-//!   - 14_tech_stack#search-baseline
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 17_tech_stack#search-baseline
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use crate::components::focus_scope;
 use crate::components::search_box::SearchUiMode;

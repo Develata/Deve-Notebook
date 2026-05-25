@@ -1,6 +1,6 @@
 // crates/core/src/plugin/runtime/host/git.rs
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # 版本控制宿主函数
 //!

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-secret-ref-contract
+//!   - 06_backup#backup-secret-ref-contract
 //!
 //! Backup credential/key reference validation.
 //!

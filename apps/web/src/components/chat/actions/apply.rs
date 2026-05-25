@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::editor::ffi::{applyRemoteOp, getEditorContent, sync_editor_state_to_rust};
 use crate::editor::op_id::next_client_op_id;

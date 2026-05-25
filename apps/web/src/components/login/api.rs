@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 09_auth#auth-http-endpoints
-//!   - 09_auth#auth-rate-limiting
+//!   - 08_auth#auth-http-endpoints
+//!   - 08_auth#auth-rate-limiting
 //!
 
 use deve_core::protocol::auth::{AuthErrorCode, LoginRequest, LoginResponse};

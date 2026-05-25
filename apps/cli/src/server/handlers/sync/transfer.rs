@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 05_network#relay-proxy-attribution-contract
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 07_network#relay-proxy-attribution-contract
+//!   - 04_repository#repo-scope-runtime
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;

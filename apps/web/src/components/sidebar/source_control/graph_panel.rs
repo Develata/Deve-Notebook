@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 14_tech_stack#graph-visualization
-//!   - 07_diff_logic#source-control-runtime
+//!   - 17_tech_stack#graph-visualization
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! Minimal read-only graph projection summary. Renderer work remains future.
 

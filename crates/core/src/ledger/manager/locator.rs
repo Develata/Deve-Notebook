@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-selector-resolution-contract
+//!   - 04_repository#repo-selector-resolution-contract
 
 use anyhow::Result;
 

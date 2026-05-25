@@ -1,6 +1,6 @@
 //! # 时间格式化工具 (Time Formatting)
 //! plan_ref:
-//!   - 11_i18n#i18n-facade-contract
+//!   - 13_i18n#i18n-facade-contract
 //!
 //! 在 WASM 环境中使用 `js_sys::Date` 获取当前时间，
 //! 将毫秒时间戳转换为相对时间显示。

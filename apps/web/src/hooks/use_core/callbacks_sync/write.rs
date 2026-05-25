@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 06_repository#repo-scope-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;

@@ -1,9 +1,9 @@
 // apps/cli/src/server/handlers/repo/http.rs
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
-//!   - 06_repository#repo-catalog-contract
-//!   - 06_repository#repo-selector-resolution-contract
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-selector-resolution-contract
 //!
 //! # Repo HTTP API
 

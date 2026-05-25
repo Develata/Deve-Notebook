@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#remote-shadow-apply-atomicity
-//!   - 04_storage#repo-runtime-layout
+//!   - 07_network#remote-shadow-apply-atomicity
+//!   - 03_storage#repo-runtime-layout
 
 use crate::ledger::database_cache::evict_database_paths_under;
 use crate::ledger::manager::types::RepoManager;

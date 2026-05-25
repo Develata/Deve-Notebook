@@ -1,6 +1,6 @@
 // crates/core/src/security/auth/config.rs
 //! plan_ref:
-//!   - 09_auth#auth-config
+//!   - 08_auth#auth-config
 //!
 //! # 认证配置 (Auth Config)
 //!

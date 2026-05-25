@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::loader::PluginLoader;

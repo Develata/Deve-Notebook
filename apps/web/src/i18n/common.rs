@@ -1,6 +1,6 @@
 // apps/web/src/i18n/common.rs
 //! plan_ref:
-//!   - 11_i18n#i18n-keys-reference
+//!   - 13_i18n#i18n-keys-reference
 //!
 //! # I18n Common Module (通用翻译)
 //!

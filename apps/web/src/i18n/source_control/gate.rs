@@ -1,6 +1,6 @@
 //! Source Control gate and notice copy.
 //! plan_ref:
-//!   - 11_i18n#i18n-keys-reference
+//!   - 13_i18n#i18n-keys-reference
 
 use super::Locale;
 

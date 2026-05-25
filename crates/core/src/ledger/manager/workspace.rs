@@ -1,8 +1,8 @@
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 04_storage#internal-path-normalization
-//!   - 04_storage#projection-contract
-//!   - 04_storage#watcher-contract
+//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage#internal-path-normalization
+//!   - 03_storage#projection-contract
+//!   - 03_storage#watcher-contract
 //!
 use crate::ledger::RepoManager;
 use crate::models::RepoId;

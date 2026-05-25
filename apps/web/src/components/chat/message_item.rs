@@ -1,6 +1,6 @@
 // apps/web/src/components/chat/message_item.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::types::ChatMessage;

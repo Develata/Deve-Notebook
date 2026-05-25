@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChatSessionMode {

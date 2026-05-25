@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 15_release#runtime-observability
+//!   - 05_diff_logic#source-control-runtime
+//!   - 18_release#runtime-observability
 //!
 use crate::api::fetch_git_mirror_repair_review;
 use crate::components::sidebar::source_control::error_notice_copy as copy;

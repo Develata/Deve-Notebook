@@ -1,7 +1,7 @@
 // apps/web/src/utils/markdown.rs
 //! Lightweight Markdown renderer with HTML filtering and secure link handling.
 //! plan_ref:
-//!   - 03_rendering#markdown-render-whitelist
+//!   - 10_rendering#markdown-render-whitelist
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD;

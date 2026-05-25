@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use super::support::{build_state, seed_remote_branch, seed_stale_binding};
 use crate::server::{

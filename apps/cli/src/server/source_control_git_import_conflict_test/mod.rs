@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 12_commands#cli-commands
+//!   - 05_diff_logic#source-control-runtime
+//!   - 14_commands#cli-commands
 
 use crate::server::{
     channel::DualChannel, handlers::source_control::handle_resolve_conflict, session::WsSession,

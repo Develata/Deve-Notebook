@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 04_storage#internal-path-normalization
+//!   - 05_diff_logic#source-control-runtime
+//!   - 03_storage#internal-path-normalization
 //!
 use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;

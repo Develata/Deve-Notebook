@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use super::handlers::sync::handle_sync_hello;
 use super::sync_hello_test_support::{

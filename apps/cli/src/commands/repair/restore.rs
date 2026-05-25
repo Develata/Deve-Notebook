@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 04_storage#backup-export
-//!   - 04_storage#projection-contract
-//!   - 12_commands#cli-commands
+//!   - 03_storage#backup-export
+//!   - 03_storage#projection-contract
+//!   - 14_commands#cli-commands
 
 use anyhow::{Context, Result, bail};
 use deve_core::ledger::{RepoManager, reconcile};

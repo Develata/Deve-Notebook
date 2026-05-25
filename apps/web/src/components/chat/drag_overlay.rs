@@ -1,7 +1,7 @@
 // apps/web/src/components/chat/drag_overlay.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;

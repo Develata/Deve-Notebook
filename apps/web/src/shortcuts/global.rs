@@ -1,8 +1,8 @@
 // apps\web\src\shortcuts
 //! # 全局快捷键 (Global Shortcuts)
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
-//!   - 13_settings#keyboard-shortcuts
+//!   - 14_commands#command-palette-shortcuts
+//!   - 15_settings#keyboard-shortcuts
 //!
 //! 定义和处理全局快捷键。
 //!

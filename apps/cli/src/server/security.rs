@@ -1,8 +1,8 @@
 // apps/cli/src/server/security.rs
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 05_network#server-ws-runtime
-//!   - 09_auth#key-and-file-permissions
+//!   - 03_storage#repo-runtime-layout
+//!   - 07_network#server-ws-runtime
+//!   - 08_auth#key-and-file-permissions
 //!
 //! # 安全密钥管理模块
 //!

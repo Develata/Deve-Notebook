@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use super::ws_protocol_acceptance_support::{
     WsHarness, connect_harness, recv_server_message, send_client_message, switch_to_notes_repo,

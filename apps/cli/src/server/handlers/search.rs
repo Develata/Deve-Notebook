@@ -1,7 +1,7 @@
 // apps/cli/src/server/handlers/search.rs
 //! plan_ref:
-//!   - 14_tech_stack#search-baseline
-//!   - 06_repository#repo-scope-runtime
+//!   - 17_tech_stack#search-baseline
+//!   - 04_repository#repo-scope-runtime
 //!
 //! # 搜索处理器 (Search Handler)
 //!

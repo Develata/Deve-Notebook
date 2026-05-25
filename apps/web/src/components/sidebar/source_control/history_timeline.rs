@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 //!
 use crate::components::sidebar::source_control::history_commit_item::HistoryCommitItem;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;

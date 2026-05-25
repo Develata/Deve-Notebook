@@ -1,9 +1,9 @@
 //! plan_ref:
-//!   - 12_commands#cli-commands
-//!   - 18_backup#backup-locator-contract
-//!   - 18_backup#backup-provider-dispatch-contract
-//!   - 18_backup#backup-secret-ref-contract
-//!   - 18_backup#backup-command-output-contract
+//!   - 14_commands#cli-commands
+//!   - 06_backup#backup-locator-contract
+//!   - 06_backup#backup-provider-dispatch-contract
+//!   - 06_backup#backup-secret-ref-contract
+//!   - 06_backup#backup-command-output-contract
 //!
 //! Read-only backup locator and provider adapter command surface.
 

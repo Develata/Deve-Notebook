@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 05_network#server-ws-runtime
+//!   - 10_rendering#document-authority-bridge
+//!   - 07_network#server-ws-runtime
 
 use super::ws_edit_flow_acceptance_support::{
     ExpectedEdit, create_doc, expect_edit_committed, ready_writer_ws,

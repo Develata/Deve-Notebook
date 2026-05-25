@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 07_diff_logic#source-control-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 use super::ws_protocol_acceptance_support::{
     recv_server_message, send_client_message, switch_to_notes_repo,

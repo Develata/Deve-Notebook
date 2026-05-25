@@ -23,7 +23,7 @@ Reference baseline 位于 `docs/reference/source-control/vscode-scm-baseline/`�
 
 非目标：
 
-- 不重新定义 `07_diff_logic.md` 的 stage / commit / diff / merge authority。
+- 不重新定义 `05_diff_logic.md` 的 stage / commit / diff / merge authority。
 - 不把 Git index、Git refs 或 `.git` object store 作为 Deve authority。
 - 不复制 VS Code 源码、DOM、CSS、品牌图标或产品截图作为实现输入。
 - 不要求 Web 直接执行 Git import / push / repair。
@@ -112,7 +112,7 @@ Commit surface 规则：
 - commit message input **MUST** 位于 resource groups 之前。
 - primary action 是 `Commit` 或当前 gate 允许的等价 commit action。
 - `Commit & Push` 是 secondary action；它不得暗示 Web Git mirror push authority。
-- AI-generated commit message 是辅助输入，必须服从 `10_ai_agent.md` 的 capability gate。
+- AI-generated commit message 是辅助输入，必须服从 `16_ai_agent.md` 的 capability gate。
 - message empty、staged empty、readonly、writer-not-ready、scope switching、service offline 都必须显示结构化 disabled reason。
 
 ## 7. Menus and Commands

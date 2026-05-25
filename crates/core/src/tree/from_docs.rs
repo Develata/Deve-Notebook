@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 //! # 文档列表树构建 (Doc-list Tree Builder)
 //! 将 (DocId, path) 列表转换为内存树结构。仅用于只读/临时场景。

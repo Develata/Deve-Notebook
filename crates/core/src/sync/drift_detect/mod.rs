@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#projection-contract
+//!   - 03_storage#projection-contract
 
 mod enumerate;
 mod explain;

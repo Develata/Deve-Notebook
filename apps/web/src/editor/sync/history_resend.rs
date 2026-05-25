@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#web-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use super::context::SyncContext;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};

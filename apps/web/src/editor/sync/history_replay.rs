@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 10_rendering#large-document-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 use super::context::SyncContext;
 use super::live::apply_live_op;

@@ -1,7 +1,7 @@
 // crates\core\src\ledger\merge\diff.rs
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 03_rendering#document-authority-bridge
+//!   - 03_storage#facts-partition
+//!   - 10_rendering#document-authority-bridge
 //!
 // ---------------------------------------------------------------
 // 模块：差异编辑工具

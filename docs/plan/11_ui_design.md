@@ -8,7 +8,7 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
 
-> **Modules**: [Web](./08_ui_design_01_web.md) | [Desktop](./08_ui_design_02_desktop.md) | [Mobile](./08_ui_design_03_mobile.md)
+> **Modules**: [Web](./11_ui_design_01_web.md) | [Desktop](./11_ui_design_02_desktop.md) | [Mobile](./11_ui_design_03_mobile.md)
 
 ## 1. Scope
 
@@ -381,9 +381,9 @@ PinnedSetChanged
 - 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。
 - 本机 service **MUST NOT** 监听非回环地址。
 - 无公网时，本地读写能力 **MUST** 仍由 core/server authority 与 writer gate 决定。
-- 本地持久化、schema migration、repair、projection writeback、crash recovery 与本地内容落盘 **MUST** 服从 `04_storage.md`。
-- at-rest encryption、key rotation、key recovery 与进程级鉴权 **MUST** 服从 `09_auth.md`。
-- 备份、导出、关键操作审计与恢复演练 **MUST** 服从 `15_release.md`。
+- 本地持久化、schema migration、repair、projection writeback、crash recovery 与本地内容落盘 **MUST** 服从 `03_storage.md`。
+- at-rest encryption、key rotation、key recovery 与进程级鉴权 **MUST** 服从 `08_auth.md`。
+- 备份、导出、关键操作审计与恢复演练 **MUST** 服从 `18_release.md`。
 - 本地存储安全、备份、导出、审计与恢复演练 **MUST NOT** 落入 UI view 层。
 - native packaging 依赖 **MUST** 只落在对应 adapter feature scope。
 - 启动速度、输入延迟与内存预算 **MUST** 优先于视觉特效。

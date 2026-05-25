@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-pack-contract
+//!   - 06_backup#backup-pack-contract
 //!
 //! Backup pack blob reference validation.
 //!

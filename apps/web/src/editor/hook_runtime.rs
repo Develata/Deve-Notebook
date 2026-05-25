@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 10_rendering#large-document-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 use super::open_scope::OpenRequestKey;
 use crate::hooks::use_core::EditorContext;

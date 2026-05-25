@@ -1,7 +1,7 @@
 // apps\web\src\components\branch_switcher
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 04_repository#repo-scope-runtime
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 //! # Branch Switcher Component (分支切换器)
 //!

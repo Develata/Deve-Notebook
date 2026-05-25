@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
-//!   - 05_network#web-ws-runtime
+//!   - 10_rendering#large-document-runtime
+//!   - 07_network#web-ws-runtime
 //!
 use super::EditorStats;
 use super::sync;

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! Source Control smoke fixture that never depends on checked-in dev ledger
 //! state.

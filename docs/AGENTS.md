@@ -23,7 +23,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 |------|-------------|
 | `coverage-matrix.md` | Three-layer chapter mapping (plan ↔ features ↔ acceptance-cases) |
 | `registry/runtime-skeleton-registry.md` | Runtime convergence status, current module path, and tracking task registry |
-| `ai-chat-streaming.md` | Design doc for AI chat streaming protocol (referenced from `plan/10_ai_agent.md`) |
+| `ai-chat-streaming.md` | Design doc for AI chat streaming protocol (referenced from `plan/16_ai_agent.md`) |
 
 ## For AI Agents
 

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 
 use ignore::WalkBuilder;
 use serde::{Deserialize, Serialize};

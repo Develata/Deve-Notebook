@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-interaction-design
+//!   - 11_ui_design_03_mobile#mobile-interaction-design
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::i18n::{Locale, t};

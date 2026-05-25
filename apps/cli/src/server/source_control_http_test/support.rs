@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 pub(super) use super::super::source_control_test_support::ProxyHarness;
 use deve_core::ledger::RepoManager;

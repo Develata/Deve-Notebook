@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 10_rendering#large-document-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 //! Editor 主容器，负责挂载 CodeMirror、只读闸门与大纲侧栏。
 

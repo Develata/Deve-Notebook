@@ -1,7 +1,7 @@
 // apps/web/src/editor/sync/decrypt.rs
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 07_network#web-ws-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 //! # E2EE Decrypt (客户端解密)
 //!

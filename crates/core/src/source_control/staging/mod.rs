@@ -1,8 +1,8 @@
 // crates\core\src\source_control
 //! # 暂存区管理 (Staging Manager)
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#repo-runtime-layout
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! 管理文件的暂存状态，持久化到数据库。
 //!

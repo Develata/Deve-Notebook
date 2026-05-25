@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 07_diff_logic#merge-contract
+//!   - 07_network#server-ws-runtime
+//!   - 05_diff_logic#merge-contract
 //!
 //! Merge route readonly gate tests.
 

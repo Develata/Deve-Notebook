@@ -1,6 +1,6 @@
 // apps/web/src/hooks/use_ctrl_key.rs
 //! plan_ref:
-//!   - 13_settings#keyboard-shortcuts
+//!   - 15_settings#keyboard-shortcuts
 //!
 //! Global Ctrl/Meta key state management for link navigation.
 //!

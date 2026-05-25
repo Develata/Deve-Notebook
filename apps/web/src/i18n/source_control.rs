@@ -1,6 +1,6 @@
 // apps\web\src\i18n
 //! plan_ref:
-//!   - 11_i18n#i18n-keys-reference
+//!   - 13_i18n#i18n-keys-reference
 //!
 //! # I18n Source Control Module (源代码管理翻译)
 //!

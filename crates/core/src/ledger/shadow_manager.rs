@@ -1,9 +1,9 @@
 // crates\core\src\ledger
 //! plan_ref:
-//!   - 06_repository#repo-catalog-contract
-//!   - 06_repository#repo-scope-runtime
-//!   - 04_storage#repo-runtime-layout
-//!   - 04_storage#facts-partition
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-scope-runtime
+//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage#facts-partition
 //!
 //! # 影子库管理模块 (Shadow DB Manager)
 //!

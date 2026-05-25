@@ -1,7 +1,7 @@
 // apps/web/src/hooks/use_core/effects.rs
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 //! 响应式效果入口。
 

@@ -1,8 +1,8 @@
 // apps/cli/src/server/auth/middleware.rs
 //! plan_ref:
-//!   - 09_auth#jwt-cookie-contract
-//!   - 09_auth#auth-rate-limiting
-//!   - 09_auth#localhost-dev-policy
+//!   - 08_auth#jwt-cookie-contract
+//!   - 08_auth#auth-rate-limiting
+//!   - 08_auth#localhost-dev-policy
 //!
 //! # JWT Cookie 认证中间件
 //!

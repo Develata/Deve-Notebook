@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-interaction-design
+//!   - 11_ui_design_03_mobile#mobile-interaction-design
 //!
 //! Shared touch feedback classes for list-like mobile rows.
 

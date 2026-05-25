@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 13_settings#configuration-settings
+//!   - 15_settings#configuration-settings
 //!
 //! CLI-writable `config.toml` key schema.
 

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 14_tech_stack#search-baseline
-//!   - 04_storage#internal-path-normalization
+//!   - 17_tech_stack#search-baseline
+//!   - 03_storage#internal-path-normalization
 //!
 use crate::components::search_box::types::{
     FileOpAction, FileOpKind, InsertQuery, SearchAction, SearchResult,

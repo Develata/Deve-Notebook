@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 08_ui_design_01_web#web-layout-persistence
-//!   - 15_release#runtime-observability
+//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 18_release#runtime-observability
 //!
 use crate::components::dashboard::Dashboard;
 use crate::components::diff_view::DiffView;

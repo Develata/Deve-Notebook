@@ -1,6 +1,6 @@
 // apps/cli/src/server/plugin_host/mod.rs
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # Plugin Host Only Server
 

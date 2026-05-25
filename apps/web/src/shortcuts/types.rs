@@ -1,7 +1,7 @@
 // apps\web\src\shortcuts
 //! # 快捷键类型定义 (Shortcut Types)
 //! plan_ref:
-//!   - 13_settings#keyboard-shortcuts
+//!   - 15_settings#keyboard-shortcuts
 //!
 //! 定义快捷键相关的核心类型。
 

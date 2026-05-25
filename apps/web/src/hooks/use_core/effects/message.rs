@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
+//!   - 07_network#web-ws-runtime
 //!
 use crate::api::{WsService, is_current_connection_message};
 use crate::i18n::Locale;

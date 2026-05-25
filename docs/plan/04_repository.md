@@ -68,7 +68,7 @@
 - 但进入任何底层 repo/document/source-control 算子前，必须解析成唯一 `RepoId`。
 - selector 解析必须 UUID-first；`RepoName` 与 `URL` 只能辅助定位，不得覆盖已解析的 `RepoId`。
 - selector 解析出现缺失、重复、metadata drift、URL 歧义时 **MUST** fail-closed。
-- repo / branch URL 的 WebDAV、S3 与 S3-compatible 备份展开由 `18_backup.md` 定义；该展开不得改变本章的 UUID-first repo scope 规则。
+- repo / branch URL 的 WebDAV、S3 与 S3-compatible 备份展开由 `06_backup.md` 定义；该展开不得改变本章的 UUID-first repo scope 规则。
 
 逻辑 repo 归类规则：
 
@@ -91,7 +91,7 @@
 - `ledger/.host/projection-locators.toml`
 - `<projection_base>/<repo_name>/.notegit/`
 
-`projection_base` 与计算出的 workspace root 由 `04_storage.md#projection-locator-contract` 定义；本章只规定 repo identity 与 locator 绑定边界。
+`projection_base` 与计算出的 workspace root 由 `03_storage.md#projection-locator-contract` 定义；本章只规定 repo identity 与 locator 绑定边界。
 
 ### 3.2 Collision Rule
 

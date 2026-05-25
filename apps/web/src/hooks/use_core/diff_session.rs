@@ -1,7 +1,7 @@
 //! Diff 会话线协议对象。
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 05_diff_logic#source-control-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 //! Invariants:
 //! - `doc_id` 是 diff 的稳定文档身份；历史/兼容消息允许为空。

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 use crate::storage::DegradedSyncMode;
 use deve_core::models::PeerId;

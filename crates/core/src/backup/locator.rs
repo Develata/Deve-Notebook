@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-locator-contract
+//!   - 06_backup#backup-locator-contract
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-upload-state-machine-contract
+//!   - 06_backup#backup-upload-state-machine-contract
 //!
 //! Backup upload state admission.
 //!

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 04_repository#repo-scope-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};

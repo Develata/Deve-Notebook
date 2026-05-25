@@ -1,7 +1,7 @@
 // apps/cli/src/server/source_control_proxy/mod.rs
 //! # Source Control Remote Proxy
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 mod client;
 mod commits;

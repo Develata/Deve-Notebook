@@ -1,7 +1,7 @@
 //! Deterministic merge-conflict fixture for browser smoke validation.
 //! plan_ref:
-//!   - 07_diff_logic#merge-contract
-//!   - 12_commands#cli-commands
+//!   - 05_diff_logic#merge-contract
+//!   - 14_commands#cli-commands
 
 use anyhow::{Result, bail};
 use deve_core::ledger::{RepoInfo, RepoManager};

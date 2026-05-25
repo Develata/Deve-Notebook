@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 use super::*;
 use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};

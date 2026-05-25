@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 03_rendering#large-document-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 10_rendering#large-document-runtime
 //!
 use super::super::super::cache::{DiffLines, build_key, cache_get, cache_put};
 #[cfg(test)]

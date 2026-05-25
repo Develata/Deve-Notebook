@@ -1,6 +1,6 @@
 // crates\core\src\plugin
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # Plugin Loader (插件加载器)
 //!

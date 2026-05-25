@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 // crates/core/src/tree/node.rs
 //! # 文件节点定义 (File Node Definition)

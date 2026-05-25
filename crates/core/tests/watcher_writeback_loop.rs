@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#watcher-contract
+//!   - 03_storage#watcher-contract
 
 mod common;
 mod watcher_test_support;

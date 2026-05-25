@@ -148,6 +148,6 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 
 ## 7. Related Chapters (相关章节)
 
-*   外部 Agent / 计算运行时接口预留见 [17_plugins.md](./17_plugins.md)。
-*   统一命令入口见 [12_commands.md](./12_commands.md)。
-*   模式切换与安全开关见 [13_settings.md](./13_settings.md)。
+*   外部 Agent / 计算运行时接口预留见 [19_plugins.md](./19_plugins.md)。
+*   统一命令入口见 [14_commands.md](./14_commands.md)。
+*   模式切换与安全开关见 [15_settings.md](./15_settings.md)。

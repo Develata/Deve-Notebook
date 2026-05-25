@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
+//!   - 10_rendering#document-authority-bridge
 //!
 //! Guards snapshot delta chains before they are sent to browser runtimes.
 

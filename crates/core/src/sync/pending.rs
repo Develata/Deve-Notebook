@@ -1,7 +1,7 @@
 //! # Watcher Pending 辅助
 //! plan_ref:
-//!   - 04_storage#watcher-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#watcher-contract
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! Invariants:
 //! - Watcher 只能读写 pending side table。

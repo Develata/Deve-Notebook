@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 12_commands#cli-commands
+//!   - 05_diff_logic#source-control-runtime
+//!   - 14_commands#cli-commands
 //!
 //! Read-only Source Control status diagnostics for local smoke-test hygiene.
 

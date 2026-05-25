@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 06_repository#repo-catalog-contract
+//!   - 03_storage#repo-runtime-layout
+//!   - 04_repository#repo-catalog-contract
 
 use super::RepoInfo;
 

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-service-supervisor-contract
-//!   - 08_ui_design_02_desktop#desktop-process-adapter-decision
+//!   - 11_ui_design_02_desktop#desktop-service-supervisor-contract
+//!   - 11_ui_design_02_desktop#desktop-process-adapter-decision
 
 use std::io::Write;
 use std::net::TcpStream;

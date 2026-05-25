@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 11_i18n#i18n-error-code-catalog
+//!   - 13_i18n#i18n-error-code-catalog
 //!
 
 use super::Locale;

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 09_auth#unauthorized-handling
+//!   - 07_network#server-ws-runtime
+//!   - 08_auth#unauthorized-handling
 //!
 //! Authenticated WebSocket upgrade and session runtime entrypoint.
 

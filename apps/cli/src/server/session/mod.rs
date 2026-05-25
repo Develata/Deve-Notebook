@@ -1,6 +1,6 @@
 // apps/cli/src/server/session/mod.rs
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 //! # WebSocket 会话状态 (Session State)
 //!

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 14_tech_stack#search-baseline
-//!   - 12_commands#command-palette-shortcuts
+//!   - 17_tech_stack#search-baseline
+//!   - 14_commands#command-palette-shortcuts
 //!
 use crate::components::command_palette::registry::create_static_commands;
 use crate::components::search_box::file_ops;

@@ -17,7 +17,7 @@
 - unauthorized 与 disconnected 的严格分离
 - JWT、cookie、安全头、CORS、CSRF、rate limit 的工程合同
 
-peer identity、repo-scoped sync identity 与 pending write contract 不在本章主定义；它们分别由 `05_network` 与 `16_web_thin_client_ledger` 约束。
+peer identity、repo-scoped sync identity 与 pending write contract 不在本章主定义；它们分别由 `07_network` 与 `09_web_thin_client_ledger` 约束。
 
 ## 2. Authoritative Entities
 
@@ -123,7 +123,7 @@ WsConnecting
 要求：
 
 - 所有 auth endpoint **MUST** 返回稳定结构，不得以裸文本替代。
-- ws upgrade 的 unauthorized 结果 **MUST** 使用 `11_i18n.md#i18n-error-code-catalog` 的错误码目录。
+- ws upgrade 的 unauthorized 结果 **MUST** 使用 `13_i18n.md#i18n-error-code-catalog` 的错误码目录。
 
 ### 4.5 Bootstrapping Contract
 
@@ -280,7 +280,7 @@ WsConnecting
 - malformed origin / cors reject
 - ws handshake unauthorized
 
-错误码清单以 `11_i18n.md#i18n-error-code-catalog` 为唯一权威。
+错误码清单以 `13_i18n.md#i18n-error-code-catalog` 为唯一权威。
 
 ## 9. Recovery / Safety
 

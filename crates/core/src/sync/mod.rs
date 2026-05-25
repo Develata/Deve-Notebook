@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 //!
 pub mod buffer;
 #[cfg(not(target_arch = "wasm32"))]

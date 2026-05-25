@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 04_storage#projection-contract
+//!   - 04_repository#tree-projection-contract
+//!   - 03_storage#projection-contract
 //!
 use crate::ledger::node_meta;
 use crate::models::DocId;

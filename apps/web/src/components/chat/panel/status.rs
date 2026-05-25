@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 15_release#runtime-observability
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 18_release#runtime-observability
 //!
 use crate::i18n::{Locale, t};
 use deve_core::protocol::ServerErrorCode;

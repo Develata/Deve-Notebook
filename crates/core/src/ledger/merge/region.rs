@@ -1,7 +1,7 @@
 // crates\core\src\ledger\merge\region.rs
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 03_rendering#document-authority-bridge
+//!   - 03_storage#facts-partition
+//!   - 10_rendering#document-authority-bridge
 //!
 // ---------------------------------------------------------------
 // 模块：三路合并 region 聚合

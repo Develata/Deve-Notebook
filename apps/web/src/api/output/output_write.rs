@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 09_auth#unauthorized-handling
-//!   - 09_auth#unauthorized-disconnected-ui
+//!   - 08_auth#unauthorized-handling
+//!   - 08_auth#unauthorized-disconnected-ui
 //!
 
 use deve_core::protocol::ClientMessage;

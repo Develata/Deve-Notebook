@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#watcher-contract
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#watcher-contract
+//!   - 04_repository#tree-projection-contract
 
 use crate::ledger::RepoManager;
 use crate::models::DocId;

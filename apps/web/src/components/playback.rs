@@ -1,7 +1,7 @@
 // apps\web\src\components
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 03_rendering#large-document-runtime
+//!   - 10_rendering#document-authority-bridge
+//!   - 10_rendering#large-document-runtime
 //!
 //! # PlaybackController 组件 (PlaybackController Component)
 //!

@@ -8,7 +8,7 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/backup/`, `apps/cli/src/commands/backup.rs`, `apps/web/src/components/settings/`
 
-本章定义 repo / branch 对应 URL 的备份展开方式。它把 `06_repository.md`
+本章定义 repo / branch 对应 URL 的备份展开方式。它把 `04_repository.md`
 中的 characteristic parameter 从普通 URL 扩展为 WebDAV、S3 与
 S3-compatible backup locator，但不改变 `RepoId`、Branch、Ledger 与
 Source Control authority。
@@ -30,7 +30,7 @@ Source Control authority。
 
 ## 2. Locator Model {#backup-locator-contract}
 
-`06_repository.md` 中的 `URL / characteristic parameter` 在 backup 场景下
+`04_repository.md` 中的 `URL / characteristic parameter` 在 backup 场景下
 扩展为 protocol-aware locator。locator 是发现与恢复线索，不是 authority。
 
 支持的 locator 形式至少包括：
@@ -208,7 +208,7 @@ RemoteDiscovered
 
 - backup artifacts **MUST** be encrypted before upload。
 - manifests and packs **MUST** be authenticated by signature, AEAD tag, or an
-  equivalent integrity mechanism owned by `09_auth.md`。
+  equivalent integrity mechanism owned by `08_auth.md`。
 - download 必须先 verify，再允许 decrypt/import effect 暴露给 runtime。
 - credentials, tokens and key material **MUST NOT** be stored in repo catalog,
   locator string, localStorage, URL query, normal logs or crash reports。

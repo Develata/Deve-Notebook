@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#repo-catalog-contract
-//!   - 06_repository#repo-catalog-repair-contract
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-catalog-repair-contract
 
 use crate::ledger::database::{cached_database, relocate_database_path};
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;

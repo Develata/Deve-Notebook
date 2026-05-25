@@ -1,6 +1,6 @@
 // apps/cli/src/server/metrics.rs
 //! plan_ref:
-//!   - 15_release#runtime-observability
+//!   - 18_release#runtime-observability
 //!
 //! # 系统指标采集 (System Metrics Collection)
 //!

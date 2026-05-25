@@ -1,6 +1,6 @@
 // apps\cli\src\server
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 //!
 //! Deve-Note 后端 WebSocket/HTTP 服务器模块边界。
 

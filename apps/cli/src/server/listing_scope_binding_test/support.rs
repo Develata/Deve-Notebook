@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use crate::server::{AppState, security, session::WsSession, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;

@@ -1,8 +1,8 @@
 // crates\core\src\security
 //! # 密钥对管理 (KeyPair Management)
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 05_network#server-ws-runtime
+//!   - 03_storage#repo-runtime-layout
+//!   - 07_network#server-ws-runtime
 //!
 //! **功能**:
 //! 管理节点的身份密钥 (Identity Key)。基于 Ed25519 椭圆曲线签名算法。

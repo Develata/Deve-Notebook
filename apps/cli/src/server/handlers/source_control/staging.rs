@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 04_storage#repo-runtime-layout
+//!   - 05_diff_logic#source-control-runtime
+//!   - 03_storage#repo-runtime-layout
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;

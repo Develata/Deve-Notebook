@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
-//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
 //!
 //! Platform-neutral native adapter contract.
 //!

@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 14_tech_stack#native-packaging-dependency-gate
-//!   - 08_ui_design_03_mobile#mobile-android-shell-package-execution-gate
-//!   - 08_ui_design_03_mobile#mobile-ios-shell-package-execution-gate
+//!   - 17_tech_stack#native-packaging-dependency-gate
+//!   - 11_ui_design_03_mobile#mobile-android-shell-package-execution-gate
+//!   - 11_ui_design_03_mobile#mobile-ios-shell-package-execution-gate
 //!
 //! Mobile shell-only Tauri entrypoint.
 //!

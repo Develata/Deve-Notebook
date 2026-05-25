@@ -1,8 +1,8 @@
 // apps\web\src\shortcuts
 //! # 快捷键模块 (Shortcuts Module)
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
-//!   - 13_settings#keyboard-shortcuts
+//!   - 14_commands#command-palette-shortcuts
+//!   - 15_settings#keyboard-shortcuts
 //!
 //! 统一管理全局键盘快捷键。
 //!

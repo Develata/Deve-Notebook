@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 11_i18n#i18n-keys-reference
-//!   - 14_tech_stack#graph-visualization
+//!   - 13_i18n#i18n-keys-reference
+//!   - 17_tech_stack#graph-visualization
 //!
 //! Graph panel translation strings for Source Control.
 

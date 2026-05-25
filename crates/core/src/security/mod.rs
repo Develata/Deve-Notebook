@@ -1,9 +1,9 @@
 // crates\core\src\security
 //! # 安全模块 (Security Module)
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 05_network#server-ws-runtime
-//!   - 09_auth#jwt-cookie-contract
+//!   - 03_storage#repo-runtime-layout
+//!   - 07_network#server-ws-runtime
+//!   - 08_auth#jwt-cookie-contract
 //!
 //! **架构作用**:
 //! 提供网络层所需的安全原语，包括节点身份认证 (Ed25519) 和数据传输加密 (AES-GCM)。

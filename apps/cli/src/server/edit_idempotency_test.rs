@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 //! Edit idempotency acceptance for `(client_id, client_op_id)`.
 

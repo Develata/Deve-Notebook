@@ -1,9 +1,9 @@
 // apps/cli/src/server/setup.rs
 //! plan_ref:
-//!   - 04_storage#watcher-contract
-//!   - 09_auth#cors
-//!   - 09_auth#security-headers
-//!   - 15_release#runtime-observability
+//!   - 03_storage#watcher-contract
+//!   - 08_auth#cors
+//!   - 08_auth#security-headers
+//!   - 18_release#runtime-observability
 //!
 //! 服务器启动辅助: CORS 配置、文件监视器
 

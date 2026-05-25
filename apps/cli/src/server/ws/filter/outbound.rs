@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 //!
 //! Broadcast filter outbound nonce stamping helpers.
 

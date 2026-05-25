@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#projection-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#projection-contract
+//!   - 05_diff_logic#source-control-runtime
 
 use super::{SyncManager, discard_pending, handler, projection_io};
 use crate::models::{DocId, LedgerEntry, PeerId};

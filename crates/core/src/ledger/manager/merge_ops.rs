@@ -1,8 +1,8 @@
 // crates/core/src/ledger/manager/merge_ops.rs
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
+//!   - 03_storage#facts-partition
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
 //!
 //! # P2P 合并操作
 //!

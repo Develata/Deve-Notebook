@@ -1,8 +1,8 @@
 ﻿// crates\core\src\ledger\shadow
 //! plan_ref:
-//!   - 06_repository#repo-catalog-contract
-//!   - 06_repository#repo-scope-runtime
-//!   - 04_storage#facts-partition
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-scope-runtime
+//!   - 03_storage#facts-partition
 //!
 //! # 影子库模块 (Shadow Repository Module)
 //!

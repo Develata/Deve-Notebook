@@ -1,6 +1,6 @@
 //! Sync session proof protocol entity.
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
+//!   - 07_network#web-ws-runtime
 
 use serde::{Deserialize, Serialize};
 

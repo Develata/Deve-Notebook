@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! Git / 版本控制相关图标
 #![allow(dead_code)]

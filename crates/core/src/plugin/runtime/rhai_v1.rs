@@ -1,6 +1,6 @@
 // crates\core\src\plugin\runtime\rhai_v1.rs
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # Rhai Runtime Implementation
 //!

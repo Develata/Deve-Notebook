@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#web-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 pub(crate) fn cannot_action(action: &str, reason: &str) -> String {
     format!("Cannot {}: {}", action, reason)

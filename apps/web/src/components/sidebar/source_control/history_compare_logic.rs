@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 05_diff_logic#source-control-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 use deve_core::source_control::CommitInfo;
 

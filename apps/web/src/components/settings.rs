@@ -1,7 +1,7 @@
 // apps\web\src\components
 //! plan_ref:
-//!   - 13_settings#configuration-settings
-//!   - 13_settings#browser-ui-prefs
+//!   - 15_settings#configuration-settings
+//!   - 15_settings#browser-ui-prefs
 //!
 //! # SettingsModal 组件 (SettingsModal Component)
 //!

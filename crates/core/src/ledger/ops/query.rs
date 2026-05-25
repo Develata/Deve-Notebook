@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#facts-partition
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#tree-projection-contract
 
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS};
 use crate::models::{DocId, LedgerEntry, NodeId, deserialize_ledger_entry};

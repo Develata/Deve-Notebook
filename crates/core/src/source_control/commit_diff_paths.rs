@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 04_repository#tree-projection-contract
+//!   - 05_diff_logic#source-control-runtime
 
 use crate::ledger::range;
 use crate::models::{DocId, LedgerEvent, NodeId, StructureOp};

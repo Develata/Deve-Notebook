@@ -309,7 +309,7 @@ Baseline contract 的行内支持集合：
 工程约束：
 
 - “未完全预加载前禁用全文搜索”是 runtime gate，不是 view 层提示文字而已。
-- snapshot-first / replay 策略必须与 `16_web_thin_client_ledger.md` 保持一致。
+- snapshot-first / replay 策略必须与 `09_web_thin_client_ledger.md` 保持一致。
 
 补充：
 

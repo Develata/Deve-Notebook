@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
-//!   - 16_web_thin_client_ledger#write-readiness
+//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 09_web_thin_client_ledger#write-readiness
 //!
 use crate::api::{
     ConnectionStatus, WsService, http_base_from_ws_url, probe_node_role_summary_for_http_base,

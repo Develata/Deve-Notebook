@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#facts-partition
+//!   - 03_storage#facts-partition
 
 use serde::{Deserialize, Serialize};
 use std::fmt;

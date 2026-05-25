@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use crate::server::handlers::switcher::handle_switch_repo;
 use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};

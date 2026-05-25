@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 04_storage#projection-contract
-//!   - 06_repository#tree-projection-contract
+//!   - 05_diff_logic#source-control-runtime
+//!   - 03_storage#projection-contract
+//!   - 04_repository#tree-projection-contract
 //!
 use crate::ledger::RepoManager;
 use crate::models::DocId;

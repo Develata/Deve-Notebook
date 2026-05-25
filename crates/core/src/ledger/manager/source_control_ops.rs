@@ -1,8 +1,8 @@
 // crates/core/src/ledger/manager/source_control_ops.rs
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 06_repository#repo-selector-resolution-contract
-//!   - 04_storage#watcher-contract
+//!   - 05_diff_logic#source-control-runtime
+//!   - 04_repository#repo-selector-resolution-contract
+//!   - 03_storage#watcher-contract
 //!
 //! # 版本控制集成
 //!

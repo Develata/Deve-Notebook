@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 10_rendering#document-authority-bridge
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::focus_scope;
 use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation};

@@ -1,7 +1,7 @@
 // crates\core\src\plugin
 //! plan_ref:
-//!   - 04_storage#internal-path-normalization
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 03_storage#internal-path-normalization
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # Plugin Manifest & Capabilities (插件清单与能力)
 //!

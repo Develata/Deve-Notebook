@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 14_tech_stack#native-packaging-dependency-gate
-//!   - 08_ui_design_02_desktop#desktop-packaging-scaffold
+//!   - 17_tech_stack#native-packaging-dependency-gate
+//!   - 11_ui_design_02_desktop#desktop-packaging-scaffold
 
 #[cfg(feature = "native-packaging")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {

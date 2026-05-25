@@ -1,7 +1,7 @@
 // apps/web/src/components/sidebar/path_utils.rs
 //! plan_ref:
-//!   - 04_storage#internal-path-normalization
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#internal-path-normalization
+//!   - 04_repository#tree-projection-contract
 //!
 //! # 路径工具函数
 //!

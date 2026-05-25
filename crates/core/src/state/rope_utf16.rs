@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
+//!   - 10_rendering#large-document-runtime
 
 use ropey::Rope;
 

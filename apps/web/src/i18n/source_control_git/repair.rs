@@ -1,7 +1,7 @@
 //! Git mirror repair copy.
 //! plan_ref:
-//!   - 11_i18n#i18n-keys-reference
-//!   - 12_commands#cli-commands
+//!   - 13_i18n#i18n-keys-reference
+//!   - 14_commands#cli-commands
 
 use super::Locale;
 

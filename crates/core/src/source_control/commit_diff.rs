@@ -1,8 +1,8 @@
 // crates/core/src/source_control/commit_diff.rs
 //! # 提交间差异计算 (Commit Diff)
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 04_repository#tree-projection-contract
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! 对比两个提交之间的文件变更。
 //!

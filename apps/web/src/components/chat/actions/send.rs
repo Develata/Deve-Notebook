@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_runtime};
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};

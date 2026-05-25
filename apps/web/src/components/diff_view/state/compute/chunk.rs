@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 15_release#runtime-observability
+//!   - 05_diff_logic#source-control-runtime
+//!   - 18_release#runtime-observability
 //!
 use super::super::super::cache::{DiffLines, build_key, cache_get};
 use super::super::super::metrics::{DiffMetricsState, elapsed_ms, now_ms, record_cache_sample};

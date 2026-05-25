@@ -1,6 +1,6 @@
 // apps/web/src/components/outline_render/katex.rs
 //! plan_ref:
-//!   - 03_rendering#markdown-render-whitelist
+//!   - 10_rendering#markdown-render-whitelist
 //!
 //! # KaTeX Helpers
 

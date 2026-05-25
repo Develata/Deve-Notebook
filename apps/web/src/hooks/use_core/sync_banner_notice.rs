@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
+//!   - 07_network#web-ws-runtime
 //!
 #[cfg(not(all(test, not(target_arch = "wasm32"))))]
 use gloo_timers::callback::Timeout;

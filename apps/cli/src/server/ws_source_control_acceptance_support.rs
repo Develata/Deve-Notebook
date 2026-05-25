@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 07_diff_logic#source-control-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 use super::{router, sync_hello_test_support::build_state};
 use crate::server::AppState;

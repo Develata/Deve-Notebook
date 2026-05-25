@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 use super::commit_ai_runtime::{
     CommitAiEffectRunner, plan_commit_ai_effects, plan_commit_ai_runtime, run_commit_ai_effects,

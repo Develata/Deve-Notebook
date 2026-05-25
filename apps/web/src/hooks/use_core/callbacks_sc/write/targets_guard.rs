@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 06_repository#repo-scope-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 05_diff_logic#source-control-runtime
+//!   - 04_repository#repo-scope-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;

@@ -1,8 +1,8 @@
 // crates/core/src/sync/repo_scoped/strict.rs
 //! # Repo-Scoped Strict Engine Loading
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 //! Strict repo-scoped sync engine loading for transport-facing paths.
 

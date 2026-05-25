@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#projection-contract
+//!   - 03_storage#projection-contract
 
 use super::super::{projection_plan, rebuild};
 use super::EntryKind;

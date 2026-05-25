@@ -1,7 +1,7 @@
 // crates\core\src\search
 //! # Search Service (搜索服务)
 //! plan_ref:
-//!   - 14_tech_stack#search-baseline
+//!   - 17_tech_stack#search-baseline
 //!
 //! **架构作用**:
 //! 基于 Tantivy 的全文检索引擎，为 Standard Profile 提供高级搜索能力。

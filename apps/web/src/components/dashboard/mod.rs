@@ -1,6 +1,6 @@
 // apps/web/src/components/dashboard/mod.rs
 //! plan_ref:
-//!   - 15_release#runtime-observability
+//!   - 18_release#runtime-observability
 //!
 //! # Dashboard (仪表盘)
 //!

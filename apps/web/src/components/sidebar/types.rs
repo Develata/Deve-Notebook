@@ -1,7 +1,7 @@
 // apps\web\src\components\sidebar
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#tree-projection-contract
+//!   - 04_repository#repo-scope-runtime
 //!
 //! # Types (类型定义)
 //!

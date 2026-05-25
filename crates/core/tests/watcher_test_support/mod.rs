@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#watcher-contract
+//!   - 03_storage#watcher-contract
 #![allow(dead_code)]
 use anyhow::{Result, anyhow};
 use deve_core::ledger::RepoManager;

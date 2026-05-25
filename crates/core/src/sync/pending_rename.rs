@@ -1,7 +1,7 @@
 //! # Pending Rename 辅助
 //! plan_ref:
-//!   - 04_storage#watcher-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#watcher-contract
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! Invariants:
 //! - 外部 rename/move 在用户 Stage/Commit 前只能表现为 pending 候选。

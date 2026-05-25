@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 use super::buffered_ops::clear_sync_buffers;
 use crate::api::{ConnectionStatus, WsService};

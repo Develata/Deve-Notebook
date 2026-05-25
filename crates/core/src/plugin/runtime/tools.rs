@@ -1,6 +1,6 @@
 // crates/core/src/plugin/runtime/tools.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 //! # Reserved Tool Definitions for AI Function Calling
 //!

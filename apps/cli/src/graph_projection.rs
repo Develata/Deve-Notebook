@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 14_tech_stack#graph-visualization
-//!   - 06_repository#repo-scope-runtime
+//!   - 17_tech_stack#graph-visualization
+//!   - 04_repository#repo-scope-runtime
 //!
 //! Shared read-only graph projection adapter for CLI and protected HTTP.
 

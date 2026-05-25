@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 use crate::i18n::{Locale, t};
 use deve_core::models::PeerId;

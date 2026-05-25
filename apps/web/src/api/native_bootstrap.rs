@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
-//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
 
 use deve_core::native_adapter::{
     NativeEndpointReady, validate_native_endpoint_bases, validate_native_endpoint_ready,

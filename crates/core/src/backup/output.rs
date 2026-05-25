@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-command-output-contract
+//!   - 06_backup#backup-command-output-contract
 //!
 //! Backup command output model.
 //!

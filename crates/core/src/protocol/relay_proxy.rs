@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#relay-proxy-attribution-contract
+//!   - 07_network#relay-proxy-attribution-contract
 //!
 //! Relay/proxy route admission.
 //!

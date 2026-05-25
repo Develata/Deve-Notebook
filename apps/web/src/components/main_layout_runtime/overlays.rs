@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 08_ui_design_01_web#web-layout-persistence
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;

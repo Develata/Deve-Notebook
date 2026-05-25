@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#watcher-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#watcher-contract
+//!   - 05_diff_logic#source-control-runtime
 
 use super::{PendingFsEntry, index};
 use crate::ledger::schema::{PENDING_FS_DOC_INDEX, PENDING_FS_OPS};

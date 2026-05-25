@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#watcher-contract
-//!   - 04_storage#internal-path-normalization
+//!   - 03_storage#watcher-contract
+//!   - 03_storage#internal-path-normalization
 //!
 //! # Watcher Identity Index
 //!

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 05_diff_logic#source-control-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 use crate::components::sidebar::source_control::history_diff_row::HistoryDiffRow;
 use crate::components::sidebar::source_control::history_empty_state::no_diff_message;

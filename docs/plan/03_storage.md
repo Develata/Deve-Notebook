@@ -163,7 +163,7 @@ ProjectionLocatorValue = {
 
 ### 3.2.2 Git Mirror Storage Boundary {#git-ecosystem-coexistence}
 
-Git mirror 的生命周期、命令面与失败语义以 `07_diff_logic.md#git-mirror-lifecycle` 为唯一权威。本章只定义存储边界：
+Git mirror 的生命周期、命令面与失败语义以 `05_diff_logic.md#git-mirror-lifecycle` 为唯一权威。本章只定义存储边界：
 
 - `.notegit/` 是 Deve-owned runtime 目录，保存 ledger-aware workflow state 与必要 side table。
 - `.git/` 是 Git ecosystem mirror 目录，只用于复用 Git 工具链、远程托管、审计、备份与发布生态。

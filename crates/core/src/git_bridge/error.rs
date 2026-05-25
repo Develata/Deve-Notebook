@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 05_diff_logic#git-mirror-lifecycle
 
 mod command;
 mod import;

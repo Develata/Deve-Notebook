@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 09_auth#unauthorized-handling
+//!   - 08_auth#unauthorized-handling
 //!
 
 use deve_core::protocol::ServerErrorCode;

@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/drawers/left.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-interaction-design
-//!   - 06_repository#tree-projection-contract
+//!   - 11_ui_design_03_mobile#mobile-interaction-design
+//!   - 04_repository#tree-projection-contract
 //!
 
 use crate::components::activity_bar::SidebarView;

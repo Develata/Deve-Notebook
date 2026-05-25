@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 15_release#runtime-observability
+//!   - 05_diff_logic#source-control-runtime
+//!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::source_control_notice::{
     SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,

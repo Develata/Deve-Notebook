@@ -1,7 +1,7 @@
 // apps/web/src/components/chat/drop_handler.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 03_rendering#document-authority-bridge
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 10_rendering#document-authority-bridge
 //!
 use crate::hooks::use_core::sync_banner_notice::show_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 05_diff_logic#source-control-runtime
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use super::line_render::LineRender;
 use super::model::hunk_fold::UnifiedRow;

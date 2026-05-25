@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#git-ecosystem-coexistence
-//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 03_storage#git-ecosystem-coexistence
+//!   - 05_diff_logic#git-mirror-lifecycle
 //!
 //! Git ecosystem mirror bridge. Deve ledger/source-control state remains
 //! authority; Git metadata is an optional external mirror.

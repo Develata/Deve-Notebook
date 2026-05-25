@@ -1,6 +1,6 @@
 // crates/core/src/plugin/runtime/host/fs.rs
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # 文件系统宿主函数
 //!

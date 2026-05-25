@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use crate::server::repo_scope::{
     ResolvedRepo, bootstrap_local_repo, ensure_resolved_local_repo_writable,

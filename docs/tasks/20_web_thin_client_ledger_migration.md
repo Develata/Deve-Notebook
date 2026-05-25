@@ -1,6 +1,6 @@
 # 20_web_thin_client_ledger_migration.md - Web Thin Client Ledger 迁移顺序
 
-本文是 `docs/plan/16_web_thin_client_ledger.md` 的实施蓝图，不是独立权威 plan。若与 plan 冲突，以 plan 为准。
+本文是 `docs/plan/09_web_thin_client_ledger.md` 的实施蓝图，不是独立权威 plan。若与 plan 冲突，以 plan 为准。
 
 ## 1. 迁移顺序
 

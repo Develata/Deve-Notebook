@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#repo-catalog-contract
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-scope-runtime
 
 use crate::ledger::manager::local_repo_metadata_repair::validate_local_repo_metadata;
 use crate::ledger::manager::types::RepoManager;

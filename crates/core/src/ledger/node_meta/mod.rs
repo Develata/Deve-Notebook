@@ -1,7 +1,7 @@
 // crates/core/src/ledger/node_meta/mod.rs
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 04_storage#projection-contract
+//!   - 04_repository#tree-projection-contract
+//!   - 03_storage#projection-contract
 //!
 //! # Node 元数据映射模块 (Node Metadata Mapping)
 //!

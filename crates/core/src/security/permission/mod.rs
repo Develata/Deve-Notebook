@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
-//!   - 17_plugins#skills-cli-extension-boundary
+//!   - 19_plugins#plugin-runtime-boundary
+//!   - 19_plugins#skills-cli-extension-boundary
 
 use serde::{Deserialize, Serialize};
 

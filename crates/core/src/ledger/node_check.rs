@@ -1,7 +1,7 @@
 // crates/core/src/ledger/node_check.rs
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 04_storage#projection-contract
+//!   - 04_repository#tree-projection-contract
+//!   - 03_storage#projection-contract
 //!
 //! # Node 一致性检查 (Node Consistency Check)
 //!

@@ -1,8 +1,8 @@
 // crates/core/src/ledger/traits.rs
 //! plan_ref:
-//!   - 06_repository#repo-selector-resolution-contract
-//!   - 06_repository#repo-scope-runtime
-//!   - 07_diff_logic#source-control-runtime
+//!   - 04_repository#repo-selector-resolution-contract
+//!   - 04_repository#repo-scope-runtime
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! # Repository Trait
 

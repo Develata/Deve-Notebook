@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 14_tech_stack#graph-visualization
+//!   - 17_tech_stack#graph-visualization
 //!
 //! # Read-only knowledge graph projection
 //!

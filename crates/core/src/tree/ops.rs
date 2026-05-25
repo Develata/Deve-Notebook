@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 // crates/core/src/tree/ops.rs
 //! # 树操作辅助函数 (Tree Operations)

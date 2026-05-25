@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 //!
 //! Browser scope nonce guard for repo-scoped WebSocket routes.
 

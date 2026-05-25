@@ -14,33 +14,33 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `deve-note plan.md` | Master plan overview and table of contents |
 | `01_terminology.md` | Core terms: ledger, projection, writer gate, pending overlay, WebLightPeer, scope nonce |
 | `02_positioning.md` | Product positioning and target audience |
-| `03_rendering.md` | Markdown rendering pipeline and extensions |
-| `04_storage.md` | Ledger-first storage, node-first model, projection system |
-| `05_network.md` | P2P sync protocol, WebSocket transport, transfer engine |
-| `06_repository.md` | UUID-first repo identity, multi-repo catalog, shadow branches |
-| `07_diff_logic.md` | Source control diff, rename tracking, target resolution |
-| `08_ui_design.md` | Shared UI shell/control/runtime topology and native adapter gate registry |
-| `08_ui_design_01_web.md` | Web UI — layout, components, responsive design |
-| `08_ui_design_02_desktop.md` | Desktop UI — native integration |
-| `08_ui_design_03_mobile.md` | Mobile UI — touch gestures, drawers |
-| `09_auth.md` | Authentication, E2E encryption, key exchange |
-| `10_ai_agent.md` | Native AI chat baseline and trusted external agent boundary |
-| `11_i18n.md` | Internationalization strategy and authoritative error code catalog |
-| `12_commands.md` | Command palette and keyboard shortcuts |
-| `13_settings.md` | Settings system and persistence |
-| `14_tech_stack.md` | Technology choices and rationale |
-| `15_release.md` | Build, packaging, and deployment |
-| `16_web_thin_client_ledger.md` | Web thin client, pending overlay, repo-scoped writer gate, ack/reject contract |
-| `17_plugins.md` | Trusted agent / calculation runtime interface reservation |
-| `18_backup.md` | Branch-scoped backup / restore locator, encrypted pack, WebDAV and S3 boundary |
-| `19_source_control_ui.md` | VS Code-like Source Control view contract and boundary |
+| `10_rendering.md` | Markdown rendering pipeline and extensions |
+| `03_storage.md` | Ledger-first storage, node-first model, projection system |
+| `07_network.md` | P2P sync protocol, WebSocket transport, transfer engine |
+| `04_repository.md` | UUID-first repo identity, multi-repo catalog, shadow branches |
+| `05_diff_logic.md` | Source control diff, rename tracking, target resolution |
+| `11_ui_design.md` | Shared UI shell/control/runtime topology and native adapter gate registry |
+| `11_ui_design_01_web.md` | Web UI — layout, components, responsive design |
+| `11_ui_design_02_desktop.md` | Desktop UI — native integration |
+| `11_ui_design_03_mobile.md` | Mobile UI — touch gestures, drawers |
+| `08_auth.md` | Authentication, E2E encryption, key exchange |
+| `16_ai_agent.md` | Native AI chat baseline and trusted external agent boundary |
+| `13_i18n.md` | Internationalization strategy and authoritative error code catalog |
+| `14_commands.md` | Command palette and keyboard shortcuts |
+| `15_settings.md` | Settings system and persistence |
+| `17_tech_stack.md` | Technology choices and rationale |
+| `18_release.md` | Build, packaging, and deployment |
+| `09_web_thin_client_ledger.md` | Web thin client, pending overlay, repo-scoped writer gate, ack/reject contract |
+| `19_plugins.md` | Trusted agent / calculation runtime interface reservation |
+| `06_backup.md` | Branch-scoped backup / restore locator, encrypted pack, WebDAV and S3 boundary |
+| `12_source_control_ui.md` | VS Code-like Source Control view contract and boundary |
 | `../registry/runtime-skeleton-registry.md` | Runtime convergence status and current module path registry |
 
 ## Subdirectories
 
 | Directory | Purpose |
 |-----------|---------|
-| `plugins/` | Plugin system design documents (referenced from `10_ai_agent.md` Metadata) |
+| `plugins/` | Plugin system design documents (referenced from `16_ai_agent.md` Metadata) |
 
 ## For AI Agents
 
@@ -52,10 +52,10 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 - `docs/features/` contains Chrome MCP manual walkthroughs for user-visible behavior; do not move that content back into plan chapters.
 - `docs/acceptance-cases/` contains automation-oriented cases; keep those scripts and control-surface checks separate from plan prose.
 - Do not modify plan files unless asked — they are reference documents.
-- `11_i18n.md#i18n-error-code-catalog` is the only authoritative error-code catalog; other chapters may classify failure domains but must not define parallel error-code lists.
-- `07_diff_logic.md#git-mirror-lifecycle` is the authoritative Git mirror lifecycle and command-boundary contract; storage and command chapters should reference it instead of duplicating preflight/import/export/push rules.
+- `13_i18n.md#i18n-error-code-catalog` is the only authoritative error-code catalog; other chapters may classify failure domains but must not define parallel error-code lists.
+- `05_diff_logic.md#git-mirror-lifecycle` is the authoritative Git mirror lifecycle and command-boundary contract; storage and command chapters should reference it instead of duplicating preflight/import/export/push rules.
 - `pending overlay` is Web thin-client session runtime state; it must not be modeled as `pending_fs_ops` or cleared by watcher/scan semantics.
-- `08_ui_design.md#native-post-gate-common-contract` owns shared Desktop/Mobile post-gate native shell requirements; Desktop/Mobile subchapters should contain only platform deltas.
+- `11_ui_design.md#native-post-gate-common-contract` owns shared Desktop/Mobile post-gate native shell requirements; Desktop/Mobile subchapters should contain only platform deltas.
 - `docs/registry/runtime-skeleton-registry.md` owns the current Runtime Skeleton Registry status/path table; new refactor targets should be added there or explicitly marked as local-only before appearing in chapter tails.
 
 ## Plan-Code Bijection Enforcement (双射执行机制)
@@ -68,7 +68,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 
 ```rust
 //! plan_ref:
-//!   - 04_storage#watcher-contract
+//!   - 03_storage#watcher-contract
 ```
 
 **规则**：
@@ -88,98 +88,98 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 
 | Anchor | Plan 位置 | 语义 |
 |---|---|---|
-| `03_rendering#markdown-render-whitelist` | `### 4.3 Whitelist Rule` | Markdown 渲染白名单、HTML 过滤与安全链接边界 |
-| `03_rendering#large-document-runtime` | `## 7. Large Document Strategy` | 大文档、UTF-16 index cache 与渲染/runtime 定位策略 |
-| `03_rendering#document-authority-bridge` | `### 12.4 Authority Bridge` | 文档 snapshot/history/edit/ack/reject 权威桥接合同 |
-| `04_storage#facts-partition` | `### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |
-| `04_storage#projection-contract` | `## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
-| `04_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
-| `04_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
-| `04_storage#repo-runtime-layout` | `### 3.2 Repo Runtime Layout` | `.notegit`、repo runtime metadata 与内部目录布局 |
-| `04_storage#projection-locator-contract` | `### 3.2.1 Projection Locator Layout` | repo-scoped projection base locator、computed workspace root 与冲突边界 |
-| `04_storage#git-ecosystem-coexistence` | `### 3.2.2 Git Mirror Storage Boundary` | Git mirror 存储边界与 `.git` / `.notegit` 共存约束 |
-| `04_storage#browser-storage-layering` | `### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
-| `04_storage#internal-path-normalization` | `### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
-| `05_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
-| `05_network#remote-shadow-apply-atomicity` | `### 10.4 Remote Shadow Apply Atomicity` | remote shadow apply、snapshot replay 与 local write fault 的原子性/隔离合同 |
-| `05_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |
-| `05_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
-| `05_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
-| `06_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
-| `06_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
-| `06_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
-| `06_repository#repo-selector-resolution-contract` | `### 2.5 Selector Inputs and Logical Identity` | UUID-first selector 解析、别名恢复与歧义 fail-closed 合同 |
-| `06_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
-| `06_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
-| `07_diff_logic#authority-diff-core` | `### 2.3 Authority Rule` | diff / stage / merge 最终收敛到 ledger facts 的 authority 边界 |
-| `07_diff_logic#git-mirror-lifecycle` | `### 2.3.1 Git Mirror Lifecycle` | Git mirror readiness、import/export/push 与只读 status 边界 |
-| `07_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
-| `07_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
-| `08_ui_design#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |
-| `08_ui_design#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
-| `08_ui_design#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
-| `08_ui_design_01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
-| `08_ui_design_01_web#web-layout-persistence` | `## 6. Resizable Layout` | Web 布局尺寸、面板持久化与 local UI prefs 边界 |
-| `08_ui_design_02_desktop#desktop-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Desktop native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
-| `08_ui_design_02_desktop#desktop-packaging-scaffold` | `### 1.2 Desktop Packaging Scaffold` | Desktop packaging scaffold 与 no-packaging skeleton 边界 |
-| `08_ui_design_02_desktop#desktop-packaging-dependency-gate-decision` | `### 1.3 Desktop Packaging Dependency Gate` | Desktop native-packaging dependency spike 决策与默认关闭边界 |
-| `08_ui_design_02_desktop#desktop-service-supervisor-contract` | `### 1.4 Embedded Service Supervisor Contract` | Desktop embedded service supervisor 状态机与 readiness 分类 |
-| `08_ui_design_02_desktop#desktop-process-adapter-decision` | `### 1.5 Process Adapter Gate` | Desktop process adapter gate 的诊断、authority 与 packaging 前置条件 |
-| `08_ui_design_03_mobile#mobile-current-native-boundary` | `## 1. 原生适配器边界` | Mobile native adapter 当前边界与 post-gate 目标区分 |
-| `08_ui_design_03_mobile#mobile-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Mobile native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
-| `08_ui_design_03_mobile#mobile-service-supervisor-contract` | `### 1.2 Embedded Service Supervisor Contract` | Mobile embedded service supervisor、foreground reprobe 与 suspension 边界 |
-| `08_ui_design_03_mobile#mobile-process-adapter-decision` | `### 1.3 Process Adapter Gate` | Mobile process adapter gate 的诊断、authority 与 runtime 前置条件 |
-| `08_ui_design_03_mobile#mobile-packaging-dependency-gate-decision` | `### 1.5 Mobile Packaging Dependency Gate` | Mobile native-packaging dependency spike 决策与默认关闭边界 |
-| `08_ui_design_03_mobile#mobile-android-shell-package-execution-gate` | `### 1.6 Android Shell-only Package Execution Gate` | Android shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
-| `08_ui_design_03_mobile#mobile-ios-shell-package-execution-gate` | `### 1.7 iOS Shell-only Package Execution Gate` | iOS shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
-| `08_ui_design_03_mobile#mobile-responsive-layout` | `## 2. Responsive Architecture` | Mobile responsive layout、drawer 与 safe-area shell 合同 |
-| `08_ui_design_03_mobile#mobile-interaction-design` | `## 3. Interaction Design` | Mobile gesture、touch target、toolbar 与 interaction affordance 合同 |
-| `09_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/status/me HTTP endpoint 合同 |
-| `09_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
-| `09_auth#password-hashing` | `### 5.5 Password Hashing` | Argon2 PHC 密码哈希与验证合同 |
-| `09_auth#cors` | `### 6.2 CORS` | CORS origin allowlist、wildcard 禁止与 credential boundary |
-| `09_auth#auth-rate-limiting` | `### 6.4 Rate Limiting` | 登录与连接限流合同 |
-| `09_auth#security-headers` | `### 6.5 Security Headers` | HTTP 安全头合同 |
-| `09_auth#audit` | `### 6.6 Audit` | 鉴权、安全事件与审计记录边界 |
-| `09_auth#key-and-file-permissions` | `### 6.7 Key and File Permissions` | identity key 与本地文件权限 fail-closed 合同 |
-| `09_auth#localhost-dev-policy` | `### 6.8 Localhost / Dev Policy` | localhost/dev 例外、匿名访问与 loopback 限定规则 |
-| `09_auth#session-probe-policy` | `## 7. Session Probe Policy` | `/api/auth/status` 前台 session probe 与后台暂停合同 |
-| `09_auth#unauthorized-handling` | `### 9.1 Unauthorized Handling` | `401/403/AUTH_*` 进入 Unauthorized 并退出写态 |
-| `09_auth#unauthorized-disconnected-ui` | `### 9.4 Unauthorized vs Disconnected UI Contract` | Unauthorized 与 Disconnected 的 UI/重连分流合同 |
-| `09_auth#auth-config` | `## 本章相关配置` | 鉴权环境变量 |
-| `10_ai_agent#native-ai-chat-runtime` | `## 2. Native AI Chat` | Native AI Chat server/UI/streaming bridge 的 read-first 运行时合同 |
-| `10_ai_agent#trusted-agent-bridge` | `## 3. Trusted External Agent Bridge` | Trusted CLI Agent 的 default-off、policy-gated 桥接合同 |
-| `11_i18n#i18n-facade-contract` | `## 1. Internationalization Strategy` | `t::*` facade、用户可见文案与协议文案分层 |
-| `11_i18n#i18n-resource-management` | `## 2. Resource Management` | locale resource 加载、fallback 与资源组织 |
-| `11_i18n#i18n-keys-reference` | `## 5. I18n Keys Reference` | i18n key namespace 与引用表 |
-| `11_i18n#i18n-error-code-catalog` | `## 6. Error Code Catalog` | 后端结构化错误码到前端文案的唯一权威目录 |
-| `12_commands#cli-commands` | `## 1. CLI Commands` | CLI 命令集合、帮助面与配置命令入口 |
-| `12_commands#command-palette-shortcuts` | `## 2. Command Palette` | Command Palette、Quick Open 与全局快捷键入口 |
-| `13_settings#configuration-settings` | `## 2. Configuration Settings (config.toml)` | `config.toml` 运行时配置读取/写入合同 |
-| `13_settings#keyboard-shortcuts` | `## 3. Keyboard Shortcuts` | 用户可见快捷键映射合同 |
-| `13_settings#browser-ui-prefs` | `## 4. Browser UI Preferences` | 浏览器本地 UI 偏好持久化与敏感数据禁止边界 |
-| `14_tech_stack#graph-visualization` | `### 1.1 图谱可视化` | Graph visualization baseline 与 graph projection 技术边界 |
-| `14_tech_stack#search-baseline` | `### 1.2 搜索基线` | repo-scoped baseline search、可禁用索引与 Tantivy feature-gated 实现 |
-| `14_tech_stack#native-packaging-dependency-gate` | `### 1.4 原生打包依赖门禁` | Desktop/Mobile native-packaging optional dependency 与 gate policy |
-| `15_release#runtime-observability` | `### 5.4 Runtime Observability` | 运行时状态、连接角色与 release/debug 可观测性 |
-| `16_web_thin_client_ledger#write-readiness` | `### 2.3 Write Readiness` | Web thin client repo-scoped 写入就绪状态合同 |
-| `16_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
-| `17_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
-| `17_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
-| `18_backup#backup-locator-contract` | `## 2. Locator Model` | repo/branch URL 扩展为 WebDAV/S3 backup locator 的绑定与 authority 边界 |
-| `18_backup#backup-remote-layout-contract` | `## 6. Remote Layout` | repo manifest、branch manifest、packs prefix 与 remote layout drift 的结构化诊断边界 |
-| `18_backup#backup-root-contract` | `### 3.1 Backup Root` | remote repo-level namespace 的 locator、expected RepoId、format_version、provider_kind 校验边界 |
-| `18_backup#backup-branch-binding-contract` | `### 3.2 Branch Backup Binding` | branch/writer 到 backup folder/prefix 的 1:1 绑定、writable 与 active writer 冲突边界 |
-| `18_backup#backup-pack-contract` | `### 3.3 Backup Pack` | backup pack manifest、ledger facts range、snapshot/blob refs 与完整性 hash 边界 |
-| `18_backup#backup-upload-state-machine-contract` | `### 4.1 Backup Upload` | backup upload 从 BindingValidated 到 Complete 的状态推进、加密/上传/remote verify 顺序边界 |
-| `18_backup#backup-restore-candidate-contract` | `### 3.4 Restore Candidate` | verify/decrypt 后的 restore candidate admission、RemoteReadonly / ExplicitImport / ExplicitMerge 边界 |
-| `18_backup#backup-restore-state-machine-contract` | `### 4.2 Restore / Import` | backup restore 从 RemoteDiscovered 到 RestoreCandidate 的状态推进、下载阶段禁写 ledger 与显式写 gate 边界 |
-| `18_backup#backup-secret-ref-contract` | `## 7. Security Contract` | backup credential/key 只能作为 env/keyring/config 引用进入 runtime，禁止裸 secret/token/key material |
-| `18_backup#backup-verification-contract` | `## 7. Security Contract` | manifest/pack hash、认证证据、decrypt gate 与 RepoId 一致性的 fail-closed 校验边界 |
-| `18_backup#backup-artifact-protection-contract` | `## 7. Security Contract` | manifest/pack 上传前加密与认证 metadata admission，key ref 只作为引用进入 runtime |
-| `18_backup#backup-provider-dispatch-contract` | `### 10.1 Backup Runtime` | WebDAV/S3 provider adapter dispatch、credential/key ref 接入与 provider metadata 非权威边界 |
-| `18_backup#backup-command-output-contract` | `### 5.3 Outputs` | BackupBindingStatus / BackupPlan / BackupError 的命令可见结构化输出与 fail-closed 分类边界 |
-| `19_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
+| `10_rendering#markdown-render-whitelist` | `### 4.3 Whitelist Rule` | Markdown 渲染白名单、HTML 过滤与安全链接边界 |
+| `10_rendering#large-document-runtime` | `## 7. Large Document Strategy` | 大文档、UTF-16 index cache 与渲染/runtime 定位策略 |
+| `10_rendering#document-authority-bridge` | `### 12.4 Authority Bridge` | 文档 snapshot/history/edit/ack/reject 权威桥接合同 |
+| `03_storage#facts-partition` | `### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |
+| `03_storage#projection-contract` | `## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
+| `03_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
+| `03_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
+| `03_storage#repo-runtime-layout` | `### 3.2 Repo Runtime Layout` | `.notegit`、repo runtime metadata 与内部目录布局 |
+| `03_storage#projection-locator-contract` | `### 3.2.1 Projection Locator Layout` | repo-scoped projection base locator、computed workspace root 与冲突边界 |
+| `03_storage#git-ecosystem-coexistence` | `### 3.2.2 Git Mirror Storage Boundary` | Git mirror 存储边界与 `.git` / `.notegit` 共存约束 |
+| `03_storage#browser-storage-layering` | `### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
+| `03_storage#internal-path-normalization` | `### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
+| `07_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
+| `07_network#remote-shadow-apply-atomicity` | `### 10.4 Remote Shadow Apply Atomicity` | remote shadow apply、snapshot replay 与 local write fault 的原子性/隔离合同 |
+| `07_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |
+| `07_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
+| `07_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
+| `04_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
+| `04_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
+| `04_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
+| `04_repository#repo-selector-resolution-contract` | `### 2.5 Selector Inputs and Logical Identity` | UUID-first selector 解析、别名恢复与歧义 fail-closed 合同 |
+| `04_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
+| `04_repository#repo-scope-runtime` | `### 9.3 Scope Runtime Layer` | repo/branch/scope_nonce 运行时隔离与 fail-closed 合同 |
+| `05_diff_logic#authority-diff-core` | `### 2.3 Authority Rule` | diff / stage / merge 最终收敛到 ledger facts 的 authority 边界 |
+| `05_diff_logic#git-mirror-lifecycle` | `### 2.3.1 Git Mirror Lifecycle` | Git mirror readiness、import/export/push 与只读 status 边界 |
+| `05_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
+| `05_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
+| `11_ui_design#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |
+| `11_ui_design#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
+| `11_ui_design#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
+| `11_ui_design_01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
+| `11_ui_design_01_web#web-layout-persistence` | `## 6. Resizable Layout` | Web 布局尺寸、面板持久化与 local UI prefs 边界 |
+| `11_ui_design_02_desktop#desktop-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Desktop native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
+| `11_ui_design_02_desktop#desktop-packaging-scaffold` | `### 1.2 Desktop Packaging Scaffold` | Desktop packaging scaffold 与 no-packaging skeleton 边界 |
+| `11_ui_design_02_desktop#desktop-packaging-dependency-gate-decision` | `### 1.3 Desktop Packaging Dependency Gate` | Desktop native-packaging dependency spike 决策与默认关闭边界 |
+| `11_ui_design_02_desktop#desktop-service-supervisor-contract` | `### 1.4 Embedded Service Supervisor Contract` | Desktop embedded service supervisor 状态机与 readiness 分类 |
+| `11_ui_design_02_desktop#desktop-process-adapter-decision` | `### 1.5 Process Adapter Gate` | Desktop process adapter gate 的诊断、authority 与 packaging 前置条件 |
+| `11_ui_design_03_mobile#mobile-current-native-boundary` | `## 1. 原生适配器边界` | Mobile native adapter 当前边界与 post-gate 目标区分 |
+| `11_ui_design_03_mobile#mobile-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Mobile native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
+| `11_ui_design_03_mobile#mobile-service-supervisor-contract` | `### 1.2 Embedded Service Supervisor Contract` | Mobile embedded service supervisor、foreground reprobe 与 suspension 边界 |
+| `11_ui_design_03_mobile#mobile-process-adapter-decision` | `### 1.3 Process Adapter Gate` | Mobile process adapter gate 的诊断、authority 与 runtime 前置条件 |
+| `11_ui_design_03_mobile#mobile-packaging-dependency-gate-decision` | `### 1.5 Mobile Packaging Dependency Gate` | Mobile native-packaging dependency spike 决策与默认关闭边界 |
+| `11_ui_design_03_mobile#mobile-android-shell-package-execution-gate` | `### 1.6 Android Shell-only Package Execution Gate` | Android shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
+| `11_ui_design_03_mobile#mobile-ios-shell-package-execution-gate` | `### 1.7 iOS Shell-only Package Execution Gate` | iOS shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
+| `11_ui_design_03_mobile#mobile-responsive-layout` | `## 2. Responsive Architecture` | Mobile responsive layout、drawer 与 safe-area shell 合同 |
+| `11_ui_design_03_mobile#mobile-interaction-design` | `## 3. Interaction Design` | Mobile gesture、touch target、toolbar 与 interaction affordance 合同 |
+| `08_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/status/me HTTP endpoint 合同 |
+| `08_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
+| `08_auth#password-hashing` | `### 5.5 Password Hashing` | Argon2 PHC 密码哈希与验证合同 |
+| `08_auth#cors` | `### 6.2 CORS` | CORS origin allowlist、wildcard 禁止与 credential boundary |
+| `08_auth#auth-rate-limiting` | `### 6.4 Rate Limiting` | 登录与连接限流合同 |
+| `08_auth#security-headers` | `### 6.5 Security Headers` | HTTP 安全头合同 |
+| `08_auth#audit` | `### 6.6 Audit` | 鉴权、安全事件与审计记录边界 |
+| `08_auth#key-and-file-permissions` | `### 6.7 Key and File Permissions` | identity key 与本地文件权限 fail-closed 合同 |
+| `08_auth#localhost-dev-policy` | `### 6.8 Localhost / Dev Policy` | localhost/dev 例外、匿名访问与 loopback 限定规则 |
+| `08_auth#session-probe-policy` | `## 7. Session Probe Policy` | `/api/auth/status` 前台 session probe 与后台暂停合同 |
+| `08_auth#unauthorized-handling` | `### 9.1 Unauthorized Handling` | `401/403/AUTH_*` 进入 Unauthorized 并退出写态 |
+| `08_auth#unauthorized-disconnected-ui` | `### 9.4 Unauthorized vs Disconnected UI Contract` | Unauthorized 与 Disconnected 的 UI/重连分流合同 |
+| `08_auth#auth-config` | `## 本章相关配置` | 鉴权环境变量 |
+| `16_ai_agent#native-ai-chat-runtime` | `## 2. Native AI Chat` | Native AI Chat server/UI/streaming bridge 的 read-first 运行时合同 |
+| `16_ai_agent#trusted-agent-bridge` | `## 3. Trusted External Agent Bridge` | Trusted CLI Agent 的 default-off、policy-gated 桥接合同 |
+| `13_i18n#i18n-facade-contract` | `## 1. Internationalization Strategy` | `t::*` facade、用户可见文案与协议文案分层 |
+| `13_i18n#i18n-resource-management` | `## 2. Resource Management` | locale resource 加载、fallback 与资源组织 |
+| `13_i18n#i18n-keys-reference` | `## 5. I18n Keys Reference` | i18n key namespace 与引用表 |
+| `13_i18n#i18n-error-code-catalog` | `## 6. Error Code Catalog` | 后端结构化错误码到前端文案的唯一权威目录 |
+| `14_commands#cli-commands` | `## 1. CLI Commands` | CLI 命令集合、帮助面与配置命令入口 |
+| `14_commands#command-palette-shortcuts` | `## 2. Command Palette` | Command Palette、Quick Open 与全局快捷键入口 |
+| `15_settings#configuration-settings` | `## 2. Configuration Settings (config.toml)` | `config.toml` 运行时配置读取/写入合同 |
+| `15_settings#keyboard-shortcuts` | `## 3. Keyboard Shortcuts` | 用户可见快捷键映射合同 |
+| `15_settings#browser-ui-prefs` | `## 4. Browser UI Preferences` | 浏览器本地 UI 偏好持久化与敏感数据禁止边界 |
+| `17_tech_stack#graph-visualization` | `### 1.1 图谱可视化` | Graph visualization baseline 与 graph projection 技术边界 |
+| `17_tech_stack#search-baseline` | `### 1.2 搜索基线` | repo-scoped baseline search、可禁用索引与 Tantivy feature-gated 实现 |
+| `17_tech_stack#native-packaging-dependency-gate` | `### 1.4 原生打包依赖门禁` | Desktop/Mobile native-packaging optional dependency 与 gate policy |
+| `18_release#runtime-observability` | `### 5.4 Runtime Observability` | 运行时状态、连接角色与 release/debug 可观测性 |
+| `09_web_thin_client_ledger#write-readiness` | `### 2.3 Write Readiness` | Web thin client repo-scoped 写入就绪状态合同 |
+| `09_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
+| `19_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
+| `19_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |
+| `06_backup#backup-locator-contract` | `## 2. Locator Model` | repo/branch URL 扩展为 WebDAV/S3 backup locator 的绑定与 authority 边界 |
+| `06_backup#backup-remote-layout-contract` | `## 6. Remote Layout` | repo manifest、branch manifest、packs prefix 与 remote layout drift 的结构化诊断边界 |
+| `06_backup#backup-root-contract` | `### 3.1 Backup Root` | remote repo-level namespace 的 locator、expected RepoId、format_version、provider_kind 校验边界 |
+| `06_backup#backup-branch-binding-contract` | `### 3.2 Branch Backup Binding` | branch/writer 到 backup folder/prefix 的 1:1 绑定、writable 与 active writer 冲突边界 |
+| `06_backup#backup-pack-contract` | `### 3.3 Backup Pack` | backup pack manifest、ledger facts range、snapshot/blob refs 与完整性 hash 边界 |
+| `06_backup#backup-upload-state-machine-contract` | `### 4.1 Backup Upload` | backup upload 从 BindingValidated 到 Complete 的状态推进、加密/上传/remote verify 顺序边界 |
+| `06_backup#backup-restore-candidate-contract` | `### 3.4 Restore Candidate` | verify/decrypt 后的 restore candidate admission、RemoteReadonly / ExplicitImport / ExplicitMerge 边界 |
+| `06_backup#backup-restore-state-machine-contract` | `### 4.2 Restore / Import` | backup restore 从 RemoteDiscovered 到 RestoreCandidate 的状态推进、下载阶段禁写 ledger 与显式写 gate 边界 |
+| `06_backup#backup-secret-ref-contract` | `## 7. Security Contract` | backup credential/key 只能作为 env/keyring/config 引用进入 runtime，禁止裸 secret/token/key material |
+| `06_backup#backup-verification-contract` | `## 7. Security Contract` | manifest/pack hash、认证证据、decrypt gate 与 RepoId 一致性的 fail-closed 校验边界 |
+| `06_backup#backup-artifact-protection-contract` | `## 7. Security Contract` | manifest/pack 上传前加密与认证 metadata admission，key ref 只作为引用进入 runtime |
+| `06_backup#backup-provider-dispatch-contract` | `### 10.1 Backup Runtime` | WebDAV/S3 provider adapter dispatch、credential/key ref 接入与 provider metadata 非权威边界 |
+| `06_backup#backup-command-output-contract` | `### 5.3 Outputs` | BackupBindingStatus / BackupPlan / BackupError 的命令可见结构化输出与 fail-closed 分类边界 |
+| `12_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
 
 ### Layer 2 — CI Coverage Check (覆盖率扫描)
 

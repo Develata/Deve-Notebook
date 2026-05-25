@@ -1,6 +1,6 @@
 // apps/web/src/components/dashboard/health_card.rs
 //! plan_ref:
-//!   - 15_release#runtime-observability
+//!   - 18_release#runtime-observability
 //!
 //! # Health Card (健康状态卡片)
 //!

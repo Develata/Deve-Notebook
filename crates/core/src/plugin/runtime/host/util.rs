@@ -1,6 +1,6 @@
 // crates/core/src/plugin/runtime/host/util.rs
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # 辅助宿主函数
 //!

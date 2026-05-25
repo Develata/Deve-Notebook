@@ -1,7 +1,7 @@
 // apps/web/src/components/outline_render/scan.rs
 //! plan_ref:
-//!   - 03_rendering#markdown-render-whitelist
-//!   - 03_rendering#document-authority-bridge
+//!   - 10_rendering#markdown-render-whitelist
+//!   - 10_rendering#document-authority-bridge
 //!
 //! Shared inline scan helpers for outline parsing.
 

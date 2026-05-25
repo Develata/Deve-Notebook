@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 
 use super::classify_failure_code;
 use deve_core::protocol::ServerErrorCode;

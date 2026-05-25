@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 use crate::components::branch_label::current_branch_label;
 use crate::components::icons::*;

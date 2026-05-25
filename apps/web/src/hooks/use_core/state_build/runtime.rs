@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 15_release#runtime-observability
+//!   - 07_network#web-ws-runtime
+//!   - 18_release#runtime-observability
 //!
 use crate::editor::EditorStats;
 use leptos::prelude::*;

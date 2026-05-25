@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/footer.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-responsive-layout
-//!   - 15_release#runtime-observability
+//!   - 11_ui_design_03_mobile#mobile-responsive-layout
+//!   - 18_release#runtime-observability
 //!
 //! # Mobile Footer
 //!

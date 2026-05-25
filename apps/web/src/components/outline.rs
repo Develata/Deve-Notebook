@@ -1,7 +1,7 @@
 // apps\web\src\components
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 10_rendering#document-authority-bridge
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 //! # Outline 组件 (Outline Component)
 //!

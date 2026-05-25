@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 use crate::ledger::{RepoManager, node_ops, ops as ledger_ops};
 use crate::models::{DocId, NodeId, PeerId, StructureOp};

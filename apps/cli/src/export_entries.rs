@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#backup-export
+//!   - 03_storage#backup-export
 //!
 //! Builds JSONL export rows from `LEDGER_OPS`. Resolves each entry's
 //! current path through the node/projection layer so exported lines are

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-root-contract
+//!   - 06_backup#backup-root-contract
 //!
 //! Backup root manifest validation.
 //!

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 use crate::ledger::RepoManager;
 use crate::ledger::schema::LEDGER_OPS;

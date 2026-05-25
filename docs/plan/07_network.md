@@ -295,7 +295,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - progressive prefetch
 - search gate
 
-该链必须与 `03_rendering` 和 `16_web_thin_client_ledger` 保持一致。
+该链必须与 `10_rendering` 和 `09_web_thin_client_ledger` 保持一致。
 
 ## 8. Reconnection Contract
 

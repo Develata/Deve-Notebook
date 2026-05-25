@@ -1,7 +1,7 @@
 // crates/core/src/source_control/diff.rs
 //! # Source Control Diff Utilities
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! Provides unified diff generation for committed vs current content.
 

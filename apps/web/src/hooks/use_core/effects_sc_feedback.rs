@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 05_network#web-ws-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 07_network#web-ws-runtime
 //!
 use crate::storage::DegradedSyncMode;
 use leptos::prelude::*;

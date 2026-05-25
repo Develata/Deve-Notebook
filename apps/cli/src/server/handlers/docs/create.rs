@@ -1,9 +1,9 @@
 // apps/cli/src/server/handlers/docs/create.rs
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
-//!   - 06_repository#tree-projection-contract
-//!   - 04_storage#internal-path-normalization
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#tree-projection-contract
+//!   - 03_storage#internal-path-normalization
 //!
 //! # 创建文档处理器
 

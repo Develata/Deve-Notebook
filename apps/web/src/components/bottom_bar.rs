@@ -1,7 +1,7 @@
 // apps\web\src\components
 //! plan_ref:
-//!   - 15_release#runtime-observability
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 18_release#runtime-observability
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 //! # BottomBar 组件 (BottomBar Component)
 //!

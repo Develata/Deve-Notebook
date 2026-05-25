@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 05_network#web-ws-runtime
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 07_network#web-ws-runtime
 //!
 use crate::hooks::use_core::{ChatMessage, CoreState};
 use deve_core::protocol::ServerErrorCode;

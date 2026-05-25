@@ -1,6 +1,6 @@
 // crates/core/src/plugin/runtime/host/search.rs
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # 文件搜索宿主函数
 //!

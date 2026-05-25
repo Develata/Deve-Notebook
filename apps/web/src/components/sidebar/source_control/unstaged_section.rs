@@ -1,7 +1,7 @@
 // apps\web\src\components\sidebar\source_control
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 05_diff_logic#source-control-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 //! # UnstagedSection 组件 (工作区组件)
 //!

@@ -1,8 +1,8 @@
 // crates/core/src/source_control/api.rs
 //! # Source Control API (Trait)
 //! plan_ref:
-//!   - 06_repository#repo-selector-resolution-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 04_repository#repo-selector-resolution-contract
+//!   - 05_diff_logic#source-control-runtime
 
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;

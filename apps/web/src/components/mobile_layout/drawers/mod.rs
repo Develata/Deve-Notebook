@@ -1,6 +1,6 @@
 // apps/web/src/components/mobile_layout/drawers/mod.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-interaction-design
+//!   - 11_ui_design_03_mobile#mobile-interaction-design
 //!
 //! # Mobile Drawers
 

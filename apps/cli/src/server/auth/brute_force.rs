@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 09_auth#auth-rate-limiting
+//!   - 08_auth#auth-rate-limiting
 //!
 //! # 暴力破解防护 (Brute Force Protection)
 //!

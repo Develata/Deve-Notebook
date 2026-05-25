@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
 
 use super::session::WsSession;
 use deve_core::ledger::database::DatabaseHandle;

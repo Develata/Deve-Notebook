@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
-//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 14_commands#command-palette-shortcuts
+//!   - 05_diff_logic#git-mirror-lifecycle
 //!
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::{SourceControlContext, source_control_notice::SourceControlNotice};

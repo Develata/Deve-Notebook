@@ -1,7 +1,7 @@
 // apps\web\src\components\sidebar
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 03_rendering#document-authority-bridge
+//!   - 04_repository#tree-projection-contract
+//!   - 10_rendering#document-authority-bridge
 //!
 //! # FileTreeItem 组件 (文件树节点组件)
 //!

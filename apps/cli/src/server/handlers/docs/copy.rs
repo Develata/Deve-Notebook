@@ -1,9 +1,9 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
-//!   - 06_repository#tree-projection-contract
-//!   - 04_storage#internal-path-normalization
-//!   - 04_storage#watcher-contract
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#tree-projection-contract
+//!   - 03_storage#internal-path-normalization
+//!   - 03_storage#watcher-contract
 //!
 //! 复制文档处理器入口。
 

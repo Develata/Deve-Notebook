@@ -1,8 +1,8 @@
 // crates\core\src\protocol
 //! 客户端消息的浏览器 scope gate 元数据。
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#web-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 
 use super::client::ClientMessage;
 

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 use crate::ledger::RepoManager;
 use crate::protocol::ScPathTarget;

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-catalog-contract
+//!   - 04_repository#repo-catalog-contract
 
 use crate::ledger::manager::remote_repo_scan_entry::RemoteRepoEntry;
 use crate::ledger::manager::remote_repo_scan_helpers::{

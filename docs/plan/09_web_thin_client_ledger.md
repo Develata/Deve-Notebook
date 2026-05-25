@@ -18,7 +18,7 @@
 - browser writer identity
 - document navigation guard
 
-本章是 `04_storage`、`05_network`、`07_diff_logic` 在 Web 写路径上的收敛说明。
+本章是 `03_storage`、`07_network`、`05_diff_logic` 在 Web 写路径上的收敛说明。
 
 ## 2. Authoritative Entities
 
@@ -160,7 +160,7 @@ State_auth = L_confirmed
 
 ### 4.5 Structured Error Contract
 
-- ws 与 http **MUST** 共享 `11_i18n.md#i18n-error-code-catalog` 的错误码目录。
+- ws 与 http **MUST** 共享 `13_i18n.md#i18n-error-code-catalog` 的错误码目录。
 - ws **MUST** 使用结构化 `ProtocolError`。
 - source control 用户态错误 **MUST** 走 `SC_*`。
 - 持久化失败才能进入 `STORAGE_*`。

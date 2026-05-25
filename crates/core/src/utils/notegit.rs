@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
+//!   - 03_storage#repo-runtime-layout
 
 use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};

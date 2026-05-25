@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 11_i18n#i18n-keys-reference
-//!   - 12_commands#command-palette-shortcuts
+//!   - 13_i18n#i18n-keys-reference
+//!   - 14_commands#command-palette-shortcuts
 //!
 
 use super::Locale;

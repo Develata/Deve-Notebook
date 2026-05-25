@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 15_release#runtime-observability
+//!   - 18_release#runtime-observability
 //!
 
 use futures::FutureExt;

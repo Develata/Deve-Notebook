@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 use super::support::{ProxyHarness, path_target, seed_pending, write_workspace_file};
 use deve_core::ledger::traits::RepoSelector;

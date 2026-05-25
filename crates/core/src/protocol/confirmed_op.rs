@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 10_rendering#document-authority-bridge
+//!   - 09_web_thin_client_ledger#web-edit-intent
 
 use crate::models::Op;
 use serde::{Deserialize, Serialize};

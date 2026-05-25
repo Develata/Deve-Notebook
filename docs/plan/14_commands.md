@@ -40,7 +40,7 @@
     *   `deve config print`: 输出当前有效运行时配置。
     *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
 *   **Optional Bridge Contract**:
-    *   Git mirror 命令的 lifecycle、preflight、import/export/push blocker 与 repair 语义以 `07_diff_logic.md#git-mirror-lifecycle` 为唯一权威。
+    *   Git mirror 命令的 lifecycle、preflight、import/export/push blocker 与 repair 语义以 `05_diff_logic.md#git-mirror-lifecycle` 为唯一权威。
     *   `deve git status`: 只读检查 Git mirror readiness 与 queue/out-of-sync summary。
     *   `deve git mirror`: 显式执行 queued/out-of-sync Git mirror records。
     *   `deve git export`: 显式导出 Deve commits 到 Git mirror。

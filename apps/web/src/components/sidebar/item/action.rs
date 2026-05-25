@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 08_ui_design_01_web#web-layout-persistence
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 04_repository#tree-projection-contract
+//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::dropdown::AnchorRect;
 use crate::components::sidebar_menu::MenuAction;

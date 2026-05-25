@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#projection-locator-contract
-//!   - 06_repository#repo-health-and-repair
+//!   - 03_storage#projection-locator-contract
+//!   - 04_repository#repo-health-and-repair
 
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use crate::models::RepoId;

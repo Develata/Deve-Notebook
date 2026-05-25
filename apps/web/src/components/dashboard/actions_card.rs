@@ -1,6 +1,6 @@
 // apps/web/src/components/dashboard/actions_card.rs
 //! plan_ref:
-//!   - 15_release#runtime-observability
+//!   - 18_release#runtime-observability
 //!
 //! # Actions Card (快捷操作卡片)
 //!

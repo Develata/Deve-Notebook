@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 12_commands#cli-commands
-//!   - 14_tech_stack#graph-visualization
+//!   - 14_commands#cli-commands
+//!   - 17_tech_stack#graph-visualization
 //!
 //! Read-only graph projection export. This adapter gathers repo-scoped
 //! document projections, then delegates all link parsing to `deve_core::graph`.

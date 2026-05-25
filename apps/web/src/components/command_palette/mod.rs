@@ -1,7 +1,7 @@
 // apps\web\src\components\command_palette
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 14_commands#command-palette-shortcuts
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 //! CommandPalette 组件 (CommandPalette Component)
 //!

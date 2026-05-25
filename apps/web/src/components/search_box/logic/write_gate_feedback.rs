@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 16_web_thin_client_ledger#web-edit-intent
-//!   - 15_release#runtime-observability
+//!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;

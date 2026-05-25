@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 
 pub fn new_writer_session_nonce() -> u64 {

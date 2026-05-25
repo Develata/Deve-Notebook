@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 09_auth#auth-http-endpoints
-//!   - 09_auth#unauthorized-handling
-//!   - 09_auth#session-probe-policy
+//!   - 08_auth#auth-http-endpoints
+//!   - 08_auth#unauthorized-handling
+//!   - 08_auth#session-probe-policy
 //!
 
 use deve_core::protocol::auth::AuthStatusResponse;

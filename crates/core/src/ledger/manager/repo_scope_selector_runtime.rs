@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#repo-selector-resolution-contract
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-selector-resolution-contract
+//!   - 04_repository#repo-scope-runtime
 
 use crate::ledger::manager::repo_scope_lookup_runtime::RepoScopeLookupRuntime;
 use crate::ledger::manager::repo_selector_resolution::{LocalRepoCandidates, select_repo_name};

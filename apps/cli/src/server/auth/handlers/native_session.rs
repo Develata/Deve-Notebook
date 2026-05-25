@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 09_auth#jwt-cookie-contract
-//!   - 08_ui_design_02_desktop#desktop-service-supervisor-contract
+//!   - 08_auth#jwt-cookie-contract
+//!   - 11_ui_design_02_desktop#desktop-service-supervisor-contract
 
 use std::fmt;
 use std::net::SocketAddr;

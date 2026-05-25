@@ -1,8 +1,8 @@
 // apps\cli\src\commands
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 12_commands#cli-commands
-//!   - 13_settings#configuration-settings
+//!   - 03_storage#repo-runtime-layout
+//!   - 14_commands#cli-commands
+//!   - 15_settings#configuration-settings
 
 use deve_core::ledger::RepoManager;
 use deve_core::utils::fs::checked_exists;

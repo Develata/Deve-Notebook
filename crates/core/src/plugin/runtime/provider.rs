@@ -1,7 +1,7 @@
 // crates/core/src/plugin/runtime/provider.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 17_plugins#plugin-runtime-boundary
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 19_plugins#plugin-runtime-boundary
 //!
 //! # AiProvider 接口层
 //!

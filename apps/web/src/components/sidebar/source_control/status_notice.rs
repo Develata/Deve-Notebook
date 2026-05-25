@@ -1,8 +1,8 @@
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
-//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
-//!   - 07_diff_logic#source-control-runtime
-//!   - 15_release#runtime-observability
+//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 05_diff_logic#source-control-runtime
+//!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, bottom_bar, source_control as sc};

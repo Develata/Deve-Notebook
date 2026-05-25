@@ -1,11 +1,11 @@
 // apps\cli\src\commands
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
-//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
-//!   - 08_ui_design_01_web#single-binary-distribution
-//!   - 12_commands#cli-commands
-//!   - 15_release#runtime-observability
+//!   - 07_network#server-ws-runtime
+//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 11_ui_design_01_web#single-binary-distribution
+//!   - 14_commands#cli-commands
+//!   - 18_release#runtime-observability
 
 use crate::server;
 use deve_core::config::{AppProfile, SyncMode};

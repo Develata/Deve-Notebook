@@ -1,6 +1,6 @@
 //! Time and relative-time strings.
 //! plan_ref:
-//!   - 11_i18n#i18n-facade-contract
+//!   - 13_i18n#i18n-facade-contract
 
 use super::Locale;
 

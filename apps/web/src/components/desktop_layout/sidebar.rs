@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use crate::components::activity_bar::{ActivityBar, SidebarView};
 use crate::components::sidebar::Sidebar;

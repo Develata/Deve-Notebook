@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/drawers/right.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-interaction-design
-//!   - 03_rendering#document-authority-bridge
+//!   - 11_ui_design_03_mobile#mobile-interaction-design
+//!   - 10_rendering#document-authority-bridge
 //!
 
 use crate::components::outline::Outline;

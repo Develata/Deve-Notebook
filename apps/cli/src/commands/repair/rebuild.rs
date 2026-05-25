@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 12_commands#cli-commands
-//!   - 06_repository#tree-projection-contract
+//!   - 14_commands#cli-commands
+//!   - 04_repository#tree-projection-contract
 
 use anyhow::Result;
 use deve_core::sync::{ProjectionDiagnosticStatus, SyncManager};

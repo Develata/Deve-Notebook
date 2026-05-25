@@ -1,7 +1,7 @@
 //! # 全量扫描单文件处理
 //! plan_ref:
-//!   - 04_storage#watcher-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#watcher-contract
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! Invariants:
 //! - 全量扫描必须优先使用 inode -> doc_id 维持稳定身份。

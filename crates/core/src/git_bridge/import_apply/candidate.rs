@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#git-mirror-lifecycle
-//!   - 12_commands#cli-commands
+//!   - 05_diff_logic#git-mirror-lifecycle
+//!   - 14_commands#cli-commands
 //!
 
 use super::{GitImportApplyError, GitImportApplyResult, GitImportPlanEntry};

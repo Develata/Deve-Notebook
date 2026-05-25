@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#repo-catalog-repair-contract
-//!   - 12_commands#cli-commands
+//!   - 04_repository#repo-catalog-repair-contract
+//!   - 14_commands#cli-commands
 
 use anyhow::{Context, Result};
 use std::path::Path;

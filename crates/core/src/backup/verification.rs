@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-verification-contract
+//!   - 06_backup#backup-verification-contract
 //!
 //! Backup artifact verification admission.
 //!

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#backup-export
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#backup-export
+//!   - 04_repository#tree-projection-contract
 
 use anyhow::{Context, Result, anyhow};
 use deve_core::ledger::{RepoManager, metadata};

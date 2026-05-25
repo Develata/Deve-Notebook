@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 10_ai_agent#trusted-agent-bridge
+//!   - 16_ai_agent#trusted-agent-bridge
 //!
 //! Agent bridge: 将聊天请求桥接到外部 CLI。
 

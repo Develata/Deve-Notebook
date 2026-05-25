@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 04_storage#projection-locator-contract
-//!   - 05_network#server-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 03_storage#projection-locator-contract
+//!   - 07_network#server-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use super::{
     AppState, channel::DualChannel, handlers::sync::SyncHelloInput, security, session::WsSession,

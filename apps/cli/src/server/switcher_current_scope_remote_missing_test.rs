@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-scope-runtime
 
 use super::handlers::switcher::{handle_switch_branch, handle_switch_repo};
 use super::switcher_test_support::{browser_session, build_state, unicast_channel};

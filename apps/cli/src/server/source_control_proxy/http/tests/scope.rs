@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 use super::super::decode_error;
 use deve_core::protocol::ServerErrorCode;

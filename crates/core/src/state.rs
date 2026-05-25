@@ -1,8 +1,8 @@
 // crates\core\src
 //! # 文档状态管理
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 03_rendering#large-document-runtime
+//!   - 10_rendering#document-authority-bridge
+//!   - 10_rendering#large-document-runtime
 //!
 //! 本模块提供文档状态管理功能：
 //!

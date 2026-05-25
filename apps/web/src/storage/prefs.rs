@@ -1,7 +1,7 @@
 //! UI 偏好存储层。
 //! plan_ref:
-//!   - 08_ui_design_01_web#web-layout-persistence
-//!   - 13_settings#browser-ui-prefs
+//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 15_settings#browser-ui-prefs
 //!
 //! 该层只服务主题、布局、语言等无害偏好；当 `localStorage` 不可用时自动回退到内存态。
 

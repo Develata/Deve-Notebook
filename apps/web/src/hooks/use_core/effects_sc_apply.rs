@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 05_network#web-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 mod commit_refresh;
 mod doc_diff;

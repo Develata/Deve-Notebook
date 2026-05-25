@@ -1,8 +1,8 @@
 // apps/web/src/app.rs
 //! plan_ref:
-//!   - 09_auth#session-probe-policy
-//!   - 09_auth#unauthorized-disconnected-ui
-//!   - 11_i18n#i18n-resource-management
+//!   - 08_auth#session-probe-policy
+//!   - 08_auth#unauthorized-disconnected-ui
+//!   - 13_i18n#i18n-resource-management
 //!
 //! # App Component (App 组件)
 //!

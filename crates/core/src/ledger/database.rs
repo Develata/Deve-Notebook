@@ -1,8 +1,8 @@
 // crates/core/src/ledger/database.rs
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 04_storage#repo-runtime-layout
-//!   - 06_repository#repo-catalog-contract
+//!   - 03_storage#facts-partition
+//!   - 03_storage#repo-runtime-layout
+//!   - 04_repository#repo-catalog-contract
 //!
 //! # 数据库访问模块 (Database Access)
 //!

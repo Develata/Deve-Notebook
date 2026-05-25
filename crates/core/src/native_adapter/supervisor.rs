@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-service-supervisor-contract
-//!   - 08_ui_design_03_mobile#mobile-service-supervisor-contract
+//!   - 11_ui_design_02_desktop#desktop-service-supervisor-contract
+//!   - 11_ui_design_03_mobile#mobile-service-supervisor-contract
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

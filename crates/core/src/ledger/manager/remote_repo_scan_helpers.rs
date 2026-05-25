@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 06_repository#repo-catalog-contract
-//!   - 06_repository#repo-catalog-repair-contract
-//!   - 06_repository#repo-selector-resolution-contract
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-catalog-repair-contract
+//!   - 04_repository#repo-selector-resolution-contract
 
 use crate::ledger::manager::remote_repo_scan_entry::{RemoteRepoCatalogInfo, RemoteRepoEntry};
 use crate::ledger::manager::types::{RepoInfo, RepoManager};

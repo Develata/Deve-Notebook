@@ -1,7 +1,7 @@
 // apps\web\src\components
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#web-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 //! # Spectator Overlay 组件 (旁观者模式覆盖层)
 //!

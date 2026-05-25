@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 05_network#web-ws-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 07_network#web-ws-runtime
 //!
 //! Plaintext sync payload envelope header.
 

@@ -1,7 +1,7 @@
 // apps/web/src/components/dashboard/sync_card.rs
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 15_release#runtime-observability
+//!   - 07_network#web-ws-runtime
+//!   - 18_release#runtime-observability
 //!
 //! # Sync Card (同步状态卡片)
 //!

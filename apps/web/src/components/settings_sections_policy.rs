@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 13_settings#browser-ui-prefs
-//!   - 10_ai_agent#trusted-agent-bridge
+//!   - 15_settings#browser-ui-prefs
+//!   - 16_ai_agent#trusted-agent-bridge
 //!
 //! Pure Settings section UI policy helpers.
 

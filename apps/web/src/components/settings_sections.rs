@@ -1,7 +1,7 @@
 // apps/web/src/components/settings_sections.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
-//!   - 10_ai_agent#trusted-agent-bridge
+//!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#trusted-agent-bridge
 //!
 //! # Settings Modal — Section Components
 //!

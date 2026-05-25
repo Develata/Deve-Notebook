@@ -1,6 +1,6 @@
 // crates/core/src/security/auth/password.rs
 //! plan_ref:
-//!   - 09_auth#password-hashing
+//!   - 08_auth#password-hashing
 //!
 //! # Argon2 密码哈希 (Password Hashing)
 //!

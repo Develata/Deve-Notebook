@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#repo-runtime-layout
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#repo-runtime-layout
+//!   - 05_diff_logic#source-control-runtime
 
 use super::{STAGED_TABLE, StagedEntry, index};
 use crate::models::DocId;

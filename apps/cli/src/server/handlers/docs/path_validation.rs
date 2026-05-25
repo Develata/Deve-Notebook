@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#internal-path-normalization
-//!   - 03_rendering#document-authority-bridge
+//!   - 03_storage#internal-path-normalization
+//!   - 10_rendering#document-authority-bridge
 
 use super::errors;
 use crate::server::channel::DualChannel;

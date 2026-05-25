@@ -1,7 +1,7 @@
 // apps/web/src/editor/sync/snapshot.rs
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 05_network#web-ws-runtime
+//!   - 10_rendering#document-authority-bridge
+//!   - 07_network#web-ws-runtime
 //!
 //! Snapshot 消息处理: 接收文档快照并渐进式应用 delta ops
 

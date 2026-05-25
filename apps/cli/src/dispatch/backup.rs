@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 12_commands#cli-commands
-//!   - 18_backup#backup-command-output-contract
+//!   - 14_commands#cli-commands
+//!   - 06_backup#backup-command-output-contract
 //!
 //! Backup command dispatch boundary.
 

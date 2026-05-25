@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/content.rs
 //! plan_ref:
-//!   - 08_ui_design_03_mobile#mobile-responsive-layout
-//!   - 03_rendering#large-document-runtime
+//!   - 11_ui_design_03_mobile#mobile-responsive-layout
+//!   - 10_rendering#large-document-runtime
 //!
 //! # Mobile Content
 

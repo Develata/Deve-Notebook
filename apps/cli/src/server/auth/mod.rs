@@ -1,9 +1,9 @@
 // apps/cli/src/server/auth/mod.rs
 //! plan_ref:
-//!   - 09_auth#auth-http-endpoints
-//!   - 09_auth#jwt-cookie-contract
-//!   - 09_auth#auth-rate-limiting
-//!   - 09_auth#security-headers
+//!   - 08_auth#auth-http-endpoints
+//!   - 08_auth#jwt-cookie-contract
+//!   - 08_auth#auth-rate-limiting
+//!   - 08_auth#security-headers
 //!
 //! # HTTP 认证模块
 //!

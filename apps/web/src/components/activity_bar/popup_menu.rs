@@ -1,6 +1,6 @@
 // apps/web/src/components/activity_bar/popup_menu.rs
 //! plan_ref:
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 //! # ActivityBar Popup Menu
 //!

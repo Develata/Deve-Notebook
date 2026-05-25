@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 05_diff_logic#source-control-runtime
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use super::model::{LINE_HEIGHT_PX, LineKind, UnifiedLine};
 use super::unified::hunk_rows as collect_hunks;

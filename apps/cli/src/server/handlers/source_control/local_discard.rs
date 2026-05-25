@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 04_storage#watcher-contract
+//!   - 05_diff_logic#source-control-runtime
+//!   - 03_storage#watcher-contract
 
 use crate::server::AppState;
 use deve_core::ledger::traits::RepoSelector;

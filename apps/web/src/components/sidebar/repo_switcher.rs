@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
-//!   - 06_repository#repo-selector-resolution-contract
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#repo-selector-resolution-contract
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::BranchContext;

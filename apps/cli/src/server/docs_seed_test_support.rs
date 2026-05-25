@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#tree-projection-contract
+//!   - 04_repository#repo-scope-runtime
 
 use super::docs_test_support::DocsHarness;
 use deve_core::models::{LedgerEntry, Op, PeerId};

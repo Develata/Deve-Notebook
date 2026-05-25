@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 03_rendering#large-document-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 10_rendering#large-document-runtime
 //!
 use super::{LineKind, UnifiedLine};
 use std::collections::HashSet;

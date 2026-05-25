@@ -1,8 +1,8 @@
 //! plan_ref:
-//!   - 09_auth#auth-http-endpoints
-//!   - 09_auth#auth-rate-limiting
-//!   - 09_auth#jwt-cookie-contract
-//!   - 09_auth#password-hashing
+//!   - 08_auth#auth-http-endpoints
+//!   - 08_auth#auth-rate-limiting
+//!   - 08_auth#jwt-cookie-contract
+//!   - 08_auth#password-hashing
 
 use axum::{
     Extension, Json,

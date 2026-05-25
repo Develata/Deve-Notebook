@@ -1,7 +1,7 @@
 // apps\web\src\components\command_palette
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
-//!   - 06_repository#repo-scope-runtime
+//!   - 14_commands#command-palette-shortcuts
+//!   - 04_repository#repo-scope-runtime
 //!
 //! 命令面板的静态命令定义。
 

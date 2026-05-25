@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#browser-storage-layering
+//!   - 03_storage#browser-storage-layering
 
 use js_sys::{Promise, Uint8Array};
 use wasm_bindgen::prelude::*;

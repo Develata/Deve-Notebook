@@ -17,32 +17,32 @@
 - **[02_positioning.md](./02_positioning.md)**: 产品边界、Core MUST / MUST NOT、项目定位。
 
 ### B. Authority Core
-- **[04_storage.md](./04_storage.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
-- **[06_repository.md](./06_repository.md)**: repo identity、branch scope、tree projection、repo health。
-- **[07_diff_logic.md](./07_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
-- **[18_backup.md](./18_backup.md)**: repo/branch URL 的备份展开、加密 pack、WebDAV/S3 边界。
-- **[19_source_control_ui.md](./19_source_control_ui.md)**: Source Control view 的 VS Code-like UI contract。
+- **[03_storage.md](./03_storage.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
+- **[04_repository.md](./04_repository.md)**: repo identity、branch scope、tree projection、repo health。
+- **[05_diff_logic.md](./05_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
+- **[06_backup.md](./06_backup.md)**: repo/branch URL 的备份展开、加密 pack、WebDAV/S3 边界。
+- **[12_source_control_ui.md](./12_source_control_ui.md)**: Source Control view 的 VS Code-like UI contract。
 
 ### C. Runtime Protocols
-- **[05_network.md](./05_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
-- **[09_auth.md](./09_auth.md)**: user session、入口鉴权、cookie/JWT、安全头与 TLS 合同。
-- **[16_web_thin_client_ledger.md](./16_web_thin_client_ledger.md)**: Web 薄客户端 pending/ack/reject/write readiness。
+- **[07_network.md](./07_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
+- **[08_auth.md](./08_auth.md)**: user session、入口鉴权、cookie/JWT、安全头与 TLS 合同。
+- **[09_web_thin_client_ledger.md](./09_web_thin_client_ledger.md)**: Web 薄客户端 pending/ack/reject/write readiness。
 
 ### D. Application / UI Shell
-- **[03_rendering.md](./03_rendering.md)**: editor runtime、parser、widget、outline、source-first 渲染蓝图。
-- **[08_ui_design.md](./08_ui_design.md)**: shell/control/runtime 分层与多端共享控制接口。
-- **[08_ui_design_01_web.md](./08_ui_design_01_web.md)**: Web shell adapter 与布局约束。
-- **[08_ui_design_02_desktop.md](./08_ui_design_02_desktop.md)**: Desktop shell adapter 与原生边界。
-- **[08_ui_design_03_mobile.md](./08_ui_design_03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
-- **[11_i18n.md](./11_i18n.md)**: i18n facade、错误码映射、文案约束。
-- **[12_commands.md](./12_commands.md)**: command surface、palette、快捷键与 control 映射。
-- **[13_settings.md](./13_settings.md)**: 设置、配置、持久化与 UI prefs 边界。
+- **[10_rendering.md](./10_rendering.md)**: editor runtime、parser、widget、outline、source-first 渲染蓝图。
+- **[11_ui_design.md](./11_ui_design.md)**: shell/control/runtime 分层与多端共享控制接口。
+- **[11_ui_design_01_web.md](./11_ui_design_01_web.md)**: Web shell adapter 与布局约束。
+- **[11_ui_design_02_desktop.md](./11_ui_design_02_desktop.md)**: Desktop shell adapter 与原生边界。
+- **[11_ui_design_03_mobile.md](./11_ui_design_03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
+- **[13_i18n.md](./13_i18n.md)**: i18n facade、错误码映射、文案约束。
+- **[14_commands.md](./14_commands.md)**: command surface、palette、快捷键与 control 映射。
+- **[15_settings.md](./15_settings.md)**: 设置、配置、持久化与 UI prefs 边界。
 
 ### E. Peripheral / Deferred
-- **[10_ai_agent.md](./10_ai_agent.md)**: AI chat / trusted CLI / external runtime 的工程边界。
-- **[14_tech_stack.md](./14_tech_stack.md)**: 技术栈与端侧 adapter 选型。
-- **[15_release.md](./15_release.md)**: 构建、打包、发布、CI/CD。
-- **[17_plugins.md](./17_plugins.md)**: plugin / external runtime 接口保留。
+- **[16_ai_agent.md](./16_ai_agent.md)**: AI chat / trusted CLI / external runtime 的工程边界。
+- **[17_tech_stack.md](./17_tech_stack.md)**: 技术栈与端侧 adapter 选型。
+- **[18_release.md](./18_release.md)**: 构建、打包、发布、CI/CD。
+- **[19_plugins.md](./19_plugins.md)**: plugin / external runtime 接口保留。
 
 ### F. Implementation Blueprints
 - **[../tasks/18_infra_runtime.md](../tasks/18_infra_runtime.md)**: infra-first 模块拆分与运行时边界收敛蓝图。
@@ -76,29 +76,29 @@
 1. `01_terminology.md` → 确认术语与规范性用语。
 2. `00_engineering_constitution.md` → 确认骨架治理、层级模型与变更审批规则。
 3. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
-4. `04_storage.md`、`06_repository.md`、`07_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
-5. `05_network.md`、`09_auth.md`、`16_web_thin_client_ledger.md` → 确认协议、session、scope、pending write 的状态机。
-6. `03_rendering.md`、`08_ui_design*.md`、`19_source_control_ui.md`、`11_i18n.md`、`12_commands.md`、`13_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
+4. `03_storage.md`、`04_repository.md`、`05_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
+5. `07_network.md`、`08_auth.md`、`09_web_thin_client_ledger.md` → 确认协议、session、scope、pending write 的状态机。
+6. `10_rendering.md`、`11_ui_design*.md`、`12_source_control_ui.md`、`13_i18n.md`、`14_commands.md`、`15_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
 7. `docs/features/` 中对应章节 → 查看用户可见行为与 Chrome MCP 手工验收实例。
 8. `docs/acceptance-cases/` 中对应章节 → 查看自动化验证入口。
 
 ### 章节归属规则
 
-*   `04_storage.md`：Ledger、Projection、pending/staging、恢复与持久化边界。
+*   `03_storage.md`：Ledger、Projection、pending/staging、恢复与持久化边界。
     *   补充约束：`Content Facts + Structure Facts -> Projection`，`metadata/path/tree` 仅为投影结果，不是业务写入真值源。
-*   `05_network.md`：连接拓扑、WS/HTTP 路由契约、repo-scoped sync handshake。
-*   `06_repository.md`：`NodeId`、树结构、`Rename/Move/Create/Delete` 的结构事实写路径。
-*   `07_diff_logic.md`：外部文件系统变更在 Stage -> Commit 时如何拆成内容事实与结构事实。
-*   `18_backup.md`：repo/branch URL 如何扩展为 WebDAV/S3 backup locator；备份不得成为共享可写 sync authority。
-*   `19_source_control_ui.md`：Source Control view 如何参考 VS Code SCM mental model；不得复制 VS Code implementation 或改写 Source Control authority。
-*   `09_auth.md`：user session、token 生命周期、鉴权失败处理。
-*   `10_ai_agent.md`：原生 AI Chat 的产品边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。
-*   `11_i18n.md`：错误码目录与前端文案映射，不负责传输层协议。
-*   `16_web_thin_client_ledger.md`：Web thin-client 写入确认链、pending overlay、repo-scoped write readiness，以及 WS/HTTP 结构化错误契约在 Web 路径上的收敛。
+*   `07_network.md`：连接拓扑、WS/HTTP 路由契约、repo-scoped sync handshake。
+*   `04_repository.md`：`NodeId`、树结构、`Rename/Move/Create/Delete` 的结构事实写路径。
+*   `05_diff_logic.md`：外部文件系统变更在 Stage -> Commit 时如何拆成内容事实与结构事实。
+*   `06_backup.md`：repo/branch URL 如何扩展为 WebDAV/S3 backup locator；备份不得成为共享可写 sync authority。
+*   `12_source_control_ui.md`：Source Control view 如何参考 VS Code SCM mental model；不得复制 VS Code implementation 或改写 Source Control authority。
+*   `08_auth.md`：user session、token 生命周期、鉴权失败处理。
+*   `16_ai_agent.md`：原生 AI Chat 的产品边界、Trusted CLI Agent 的启用条件与 fail-closed 安全前提。
+*   `13_i18n.md`：错误码目录与前端文案映射，不负责传输层协议。
+*   `09_web_thin_client_ledger.md`：Web thin-client 写入确认链、pending overlay、repo-scoped write readiness，以及 WS/HTTP 结构化错误契约在 Web 路径上的收敛。
 
 ### 平台子章规则
 
-*   `08_ui_design.md` 是共享 shell/control/runtime 总章。
+*   `11_ui_design.md` 是共享 shell/control/runtime 总章。
 *   `08_ui_design_01/02/03` 只描述 Web / Desktop / Mobile 的 adapter 与 surface 差异。
 *   共享控制语义、authority 约束、runtime 归属不得在子章里重新定义或偏离总章。
 

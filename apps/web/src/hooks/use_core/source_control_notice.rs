@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 09_auth#unauthorized-handling
+//!   - 05_diff_logic#source-control-runtime
+//!   - 08_auth#unauthorized-handling
 //!
 use deve_core::protocol::{ServerError, ServerErrorCode};
 

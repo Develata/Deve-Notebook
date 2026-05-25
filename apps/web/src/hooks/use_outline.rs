@@ -1,6 +1,6 @@
 // apps/web/src/hooks/use_outline.rs
 //! plan_ref:
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 //! Persistent Outline visibility state management.
 //!

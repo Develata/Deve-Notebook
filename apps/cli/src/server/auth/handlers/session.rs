@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 09_auth#auth-http-endpoints
-//!   - 09_auth#audit
-//!   - 09_auth#jwt-cookie-contract
+//!   - 08_auth#auth-http-endpoints
+//!   - 08_auth#audit
+//!   - 08_auth#jwt-cookie-contract
 
 use axum::{
     Extension, Json,

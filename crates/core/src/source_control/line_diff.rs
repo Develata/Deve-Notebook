@@ -1,7 +1,7 @@
 // crates/core/src/source_control/line_diff.rs
 //! # 行级差异计算 (Line-Level Diff)
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! 基于 `similar` crate (Myers 算法) 计算两段文本的行级变更范围。
 //! 供前端 WASM 侧调用，驱动 CodeMirror 行内 Gutter 指示器。

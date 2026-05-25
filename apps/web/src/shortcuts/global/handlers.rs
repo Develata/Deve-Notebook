@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 12_commands#command-palette-shortcuts
-//!   - 13_settings#keyboard-shortcuts
+//!   - 14_commands#command-palette-shortcuts
+//!   - 15_settings#keyboard-shortcuts
 
 use crate::i18n::{Locale, persist_locale_preference};
 use leptos::prelude::*;

@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 05_network#web-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 10_rendering#document-authority-bridge
+//!   - 07_network#web-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;

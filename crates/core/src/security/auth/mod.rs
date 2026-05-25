@@ -1,8 +1,8 @@
 // crates/core/src/security/auth/mod.rs
 //! plan_ref:
-//!   - 09_auth#auth-config
-//!   - 09_auth#jwt-cookie-contract
-//!   - 09_auth#password-hashing
+//!   - 08_auth#auth-config
+//!   - 08_auth#jwt-cookie-contract
+//!   - 08_auth#password-hashing
 //!
 //! # 认证模块 (Authentication Module)
 //!

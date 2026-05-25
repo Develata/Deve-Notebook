@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#git-mirror-lifecycle
+//!   - 05_diff_logic#git-mirror-lifecycle
 //!
 //! Read-only Git mirror repair review API.
 

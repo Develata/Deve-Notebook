@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-remote-layout-contract
+//!   - 06_backup#backup-remote-layout-contract
 //!
 //! Backup remote layout diagnostics.
 //!

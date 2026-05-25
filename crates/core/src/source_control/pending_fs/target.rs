@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 04_storage#internal-path-normalization
-//!   - 04_storage#watcher-contract
-//!   - 07_diff_logic#source-control-runtime
+//!   - 03_storage#internal-path-normalization
+//!   - 03_storage#watcher-contract
+//!   - 05_diff_logic#source-control-runtime
 
 use super::{PendingFsEntry, list_all, list_for_doc, remove};
 use crate::models::DocId;

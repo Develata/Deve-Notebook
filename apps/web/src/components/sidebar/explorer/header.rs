@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 06_repository#repo-scope-runtime
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 04_repository#repo-scope-runtime
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use crate::components::icons::Plus;
 use crate::components::main_layout::SearchControl;

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 04_storage#watcher-contract
+//!   - 03_storage#watcher-contract
 
 use crate::models::RepoId;
 use std::collections::HashMap;

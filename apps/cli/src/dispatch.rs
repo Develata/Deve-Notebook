@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 12_commands#cli-commands
+//!   - 14_commands#cli-commands
 
 use crate::commands;
 use crate::{Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction};

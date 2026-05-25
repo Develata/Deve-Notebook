@@ -1,7 +1,7 @@
 // apps\web\src\components\search_box
 //! plan_ref:
-//!   - 14_tech_stack#search-baseline
-//!   - 12_commands#command-palette-shortcuts
+//!   - 17_tech_stack#search-baseline
+//!   - 14_commands#command-palette-shortcuts
 //!
 
 use crate::components::command_palette::Command;

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 //!
 use deve_core::tree::FileNode;
 use leptos::prelude::*;

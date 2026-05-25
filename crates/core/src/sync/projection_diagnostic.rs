@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 use super::{materialize, projection_plan};
 use crate::ledger::RepoManager;

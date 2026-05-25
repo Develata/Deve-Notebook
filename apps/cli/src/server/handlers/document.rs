@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 //! 文档消息处理器入口。
 

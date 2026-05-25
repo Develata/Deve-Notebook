@@ -1,8 +1,8 @@
 // apps\web\src\i18n
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
-//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
-//!   - 11_i18n#i18n-keys-reference
+//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 13_i18n#i18n-keys-reference
 //!
 //! # I18n Source Control Native Recovery
 

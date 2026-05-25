@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 04_storage#projection-contract
-//!   - 06_repository#tree-projection-contract
-//!   - 06_repository#repo-catalog-repair-contract
+//!   - 03_storage#projection-contract
+//!   - 04_repository#tree-projection-contract
+//!   - 04_repository#repo-catalog-repair-contract
 //!
 //! # Metadata Repair 操作
 //!

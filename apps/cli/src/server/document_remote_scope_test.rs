@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
 
 use super::handlers::document::{handle_open_doc, handle_request_history};
 use super::handlers::listing::handle_list_docs;

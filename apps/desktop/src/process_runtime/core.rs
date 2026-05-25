@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-process-adapter-decision
+//!   - 11_ui_design_02_desktop#desktop-process-adapter-decision
 
 use deve_core::native_adapter::{
     NativeEndpointReady, NativeProcessAdapterPolicy, NativeProcessExitStatus,

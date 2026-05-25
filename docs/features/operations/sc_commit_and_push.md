@@ -4,7 +4,7 @@
 
 - `Flow ID`: `flow.sc.commit-and-push`
 - `Domain`: `source-control`
-- `Related Feature Chapters`: `docs/features/07_diff_logic.md`, `docs/plan/12_commands.md`
+- `Related Feature Chapters`: `docs/features/07_diff_logic.md`, `docs/plan/14_commands.md`
 - `Related Acceptance Cases`: `DIFF-FEAT-02`
 
 ## Operations

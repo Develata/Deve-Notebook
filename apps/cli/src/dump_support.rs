@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 04_storage#facts-partition
-//!   - 12_commands#cli-commands
+//!   - 10_rendering#document-authority-bridge
+//!   - 03_storage#facts-partition
+//!   - 14_commands#cli-commands
 
 use crate::admin_api::DumpResponse;
 use deve_core::ledger::RepoManager;

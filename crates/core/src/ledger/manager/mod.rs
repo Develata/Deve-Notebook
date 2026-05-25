@@ -1,7 +1,7 @@
 // crates/core/src/ledger/manager/mod.rs
 //! plan_ref:
-//!   - 06_repository#repo-catalog-contract
-//!   - 06_repository#repo-scope-runtime
+//!   - 04_repository#repo-catalog-contract
+//!   - 04_repository#repo-scope-runtime
 //!
 //! # RepoManager 实现模块
 //!

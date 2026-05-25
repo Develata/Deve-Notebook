@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#projection-contract
-//!   - 07_diff_logic#authority-diff-core
+//!   - 03_storage#projection-contract
+//!   - 05_diff_logic#authority-diff-core
 
 use crate::ledger::RepoManager;
 use crate::models::{DocId, LedgerEntry, Op, PeerId};

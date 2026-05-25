@@ -1,6 +1,6 @@
 // apps/web/src/components/sidebar/tree.rs
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 //!
 //! # 文件树组件逻辑 (File Tree Logic)
 //!

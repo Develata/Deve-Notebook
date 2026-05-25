@@ -1,8 +1,8 @@
 //! plan_ref:
-//!   - 08_ui_design_02_desktop#desktop-native-adapter-contract
-//!   - 08_ui_design_03_mobile#mobile-native-adapter-contract
-//!   - 05_network#web-ws-runtime
-//!   - 15_release#runtime-observability
+//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 07_network#web-ws-runtime
+//!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::pending::{PendingScope, pending_count_for_doc_in_scope};

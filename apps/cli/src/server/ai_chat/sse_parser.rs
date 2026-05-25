@@ -1,6 +1,6 @@
 // apps/cli/src/server/ai_chat/sse_parser.rs
 //! plan_ref:
-//!   - 10_ai_agent#native-ai-chat-runtime
+//!   - 16_ai_agent#native-ai-chat-runtime
 //!
 //! # SSE 消息解析器
 //!

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 03_rendering#large-document-runtime
+//!   - 05_diff_logic#source-control-runtime
+//!   - 10_rendering#large-document-runtime
 //!
 pub mod hunk_fold;
 mod model_chunk;

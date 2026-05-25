@@ -1,8 +1,8 @@
 // crates\core\src\protocol
 //! 服务端 WebSocket 消息协议。
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#server-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 
 use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;

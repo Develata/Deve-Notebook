@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#backup-export
-//!   - 04_storage#facts-partition
+//!   - 03_storage#backup-export
+//!   - 03_storage#facts-partition
 
 use crate::dump_support;
 use crate::server::AppState;

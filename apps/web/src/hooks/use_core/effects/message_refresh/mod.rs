@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::write_gate::{RepoWriteGateState, repo_source_control_read_block};

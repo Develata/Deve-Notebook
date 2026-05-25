@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 07_network#server-ws-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 
 use serde::{Deserialize, Serialize};
 

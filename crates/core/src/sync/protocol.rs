@@ -1,7 +1,7 @@
 // crates\core\src\sync
 //! # P2P 同步协议定义 (P2P Sync Protocol)
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 //!
 //! **架构作用**:
 //! 定义 P2P 同步协议的消息结构与核心转换逻辑。

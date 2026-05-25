@@ -1,8 +1,8 @@
 //! plan_ref:
-//!   - 12_commands#cli-commands
-//!   - 18_backup#backup-restore-state-machine-contract
-//!   - 18_backup#backup-restore-candidate-contract
-//!   - 18_backup#backup-command-output-contract
+//!   - 14_commands#cli-commands
+//!   - 06_backup#backup-restore-state-machine-contract
+//!   - 06_backup#backup-restore-candidate-contract
+//!   - 06_backup#backup-command-output-contract
 //!
 //! Backup restore dry-run planning.
 //!

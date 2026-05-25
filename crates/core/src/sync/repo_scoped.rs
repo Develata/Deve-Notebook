@@ -1,8 +1,8 @@
 // crates/core/src/sync/repo_scoped.rs
 //! # Repo-Scoped 同步引擎管理器
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 //! 管理多个仓库的 SyncEngine 实例，每个仓库拥有独立的同步状态。
 mod hydration;

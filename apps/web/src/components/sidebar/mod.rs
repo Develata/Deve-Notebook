@@ -1,7 +1,7 @@
 // apps\web\src\components\sidebar
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 04_repository#tree-projection-contract
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 //! # Sidebar Component (侧边栏组件)
 //!

@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 05_network#web-ws-runtime
-//!   - 06_repository#repo-scope-runtime
+//!   - 07_network#web-ws-runtime
+//!   - 04_repository#repo-scope-runtime
 //!
 use crate::storage::identity::{note_handshake, save_repo_vector};
 use deve_core::models::{PeerId, VersionVector};

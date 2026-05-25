@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 12_commands#cli-commands
-//!   - 13_settings#configuration-settings
+//!   - 14_commands#cli-commands
+//!   - 15_settings#configuration-settings
 
 use anyhow::{Context, anyhow};
 use std::path::Path;

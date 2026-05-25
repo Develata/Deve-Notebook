@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 17_plugins#skills-cli-extension-boundary
+//!   - 19_plugins#skills-cli-extension-boundary
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

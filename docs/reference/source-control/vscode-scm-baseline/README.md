@@ -2,7 +2,7 @@
 
 This directory stores reference material for Deve Source Control UI planning.
 
-It does not copy VS Code implementation code, DOM, CSS, icon assets, or product UI as an implementation dependency. The stable contract lives in `docs/plan/19_source_control_ui.md`.
+It does not copy VS Code implementation code, DOM, CSS, icon assets, or product UI as an implementation dependency. The stable contract lives in `docs/plan/12_source_control_ui.md`.
 
 ## Baseline Sources
 
@@ -15,7 +15,7 @@ It does not copy VS Code implementation code, DOM, CSS, icon assets, or product 
 - Reference family: VS Code SCM / Source Control view
 - Current capture status: notes only
 - Last reviewed: 2026-05-23
-- Deve contract: `docs/plan/19_source_control_ui.md`
+- Deve contract: `docs/plan/12_source_control_ui.md`
 
 ## Storage Rules
 

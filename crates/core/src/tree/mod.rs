@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 06_repository#tree-projection-contract
+//!   - 04_repository#tree-projection-contract
 
 // crates/core/src/tree/mod.rs
 //! # 文件树模块 (File Tree Module)

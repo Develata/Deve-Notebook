@@ -1,7 +1,7 @@
 // apps\web\src\components
 //! plan_ref:
-//!   - 08_ui_design_01_web#web-layout-persistence
-//!   - 06_repository#repo-scope-runtime
+//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 04_repository#repo-scope-runtime
 //!
 //! # Header 组件 (Header Component)
 //!

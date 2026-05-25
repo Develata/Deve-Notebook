@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_rendering#large-document-runtime
-//!   - 15_release#runtime-observability
+//!   - 10_rendering#large-document-runtime
+//!   - 18_release#runtime-observability
 //!
 use crate::editor::EditorStats;
 use crate::i18n::{Locale, t};

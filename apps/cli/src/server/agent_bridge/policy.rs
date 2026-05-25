@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 10_ai_agent#trusted-agent-bridge
+//!   - 16_ai_agent#trusted-agent-bridge
 //!
 use deve_core::config::Config;
 use serde::Serialize;

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 18_backup#backup-artifact-protection-contract
+//!   - 06_backup#backup-artifact-protection-contract
 //!
 //! Backup artifact protection admission.
 //!

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 08_ui_design_01_web#single-binary-distribution
+//!   - 11_ui_design_01_web#single-binary-distribution
 //!
 //! Embedded SPA static asset fallback.
 

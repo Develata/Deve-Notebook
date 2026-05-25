@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
+//!   - 05_diff_logic#source-control-runtime
 
 use super::{resolve_target_path_strict, test_support::resolve_target_path};
 use deve_core::models::DocId;

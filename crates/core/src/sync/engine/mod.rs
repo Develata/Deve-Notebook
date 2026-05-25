@@ -1,7 +1,7 @@
 // crates\core\src\sync\engine
 //! # P2P 同步引擎 (Sync Engine)
 //! plan_ref:
-//!   - 05_network#server-ws-runtime
+//!   - 07_network#server-ws-runtime
 //!
 //! **架构作用**:
 //! 管理本地与远端 Peer 的数据同步，协调 Version Vector 状态、差异计算与数据应用。

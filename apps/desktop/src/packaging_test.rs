@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 14_tech_stack#native-packaging-dependency-gate
+//!   - 17_tech_stack#native-packaging-dependency-gate
 
 use serde_json::Value;
 

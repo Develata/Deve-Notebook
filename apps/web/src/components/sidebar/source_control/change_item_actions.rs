@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 07_diff_logic#source-control-runtime
-//!   - 16_web_thin_client_ledger#web-edit-intent
+//!   - 05_diff_logic#source-control-runtime
+//!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::icons::*;
 use crate::components::sidebar::source_control::change_item_conflict_actions::ChangeItemConflictActions;

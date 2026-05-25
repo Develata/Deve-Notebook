@@ -63,7 +63,7 @@
 
 ## Notes
 
-- `source_control_runtime -> Git mirror bridge` 仍以 `docs/plan/07_diff_logic.md#git-mirror-lifecycle` 为权威边界；本表只登记 runtime 当前承载。
+- `source_control_runtime -> Git mirror bridge` 仍以 `docs/plan/05_diff_logic.md#git-mirror-lifecycle` 为权威边界；本表只登记 runtime 当前承载。
 - `browser_peer_runtime -> browser_document_runtime -> pending_overlay_runtime -> write_confirmation_runtime` 是 Web write confirmation 主链；当前代码仍是分散承载。
 - `document_runtime -> render_projection_runtime -> widget_bridge_runtime / outline_projection_runtime` 必须保持 projection-only 边界。
 - `ui_shell -> application_control -> feature_runtime` 当前是抽象分层，不应为了满足表格而创建空模块。

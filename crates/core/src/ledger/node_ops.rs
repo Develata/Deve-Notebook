@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#facts-partition
+//!   - 04_repository#tree-projection-contract
 //!
 use crate::ledger::ops;
 use crate::ledger::schema::{LEDGER_OPS, NODE_OPS, NODE_PEER_SEQ};

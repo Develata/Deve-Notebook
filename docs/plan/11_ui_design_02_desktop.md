@@ -29,7 +29,7 @@
 
 Desktop native adapter 是进程与平台壳层，不是业务 authority；第一阶段只把 Web shell 绑定到已有受控 service，并向 Web/application control 交付结构化 runtime 状态。
 
-Packaging dependency gate 见 `14_tech_stack.md#native-packaging-dependency-gate`。
+Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate`。
 
 ### 1.2 Desktop Packaging Scaffold {#desktop-packaging-scaffold}
 
@@ -116,7 +116,7 @@ NativeColdStart
 *   Native 壳必须在 Web connection manager 启动前注入 `http_base/ws_base` 与 session 绑定状态；优先使用内存 bridge 或初始 HTML bootstrap。
 *   Native 壳可注入只含 `service_state` 的 recovery bootstrap；payload 只能表达 `service_offline`、`foreground_reprobe` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
 *   `?ws_port=` 只能作为开发期 fallback。native production 不得让 Web 端枚举、猜测或扫描本机端口。
-*   session 绑定完成前 Web shell 不得显示可写主界面；过期 session 必须走 `09_auth.md#unauthorized-disconnected-ui`。
+*   session 绑定完成前 Web shell 不得显示可写主界面；过期 session 必须走 `08_auth.md#unauthorized-disconnected-ui`。
 
 **Offline/readiness semantics**:
 
@@ -217,7 +217,7 @@ $$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{cha
 
 ## 4. Source Control UI
 
-Source Control view 的详细信息架构、resource group、row action、menu 与 VS Code-like reference policy 由 `19_source_control_ui.md` 定义。本节只保留 Desktop shell 下的可见性与布局约束。
+Source Control view 的详细信息架构、resource group、row action、menu 与 VS Code-like reference policy 由 `12_source_control_ui.md` 定义。本节只保留 Desktop shell 下的可见性与布局约束。
 
 ### 4.1 视图结构 (View Structure)
 定义源代码管理视图 $V_{sc}$ 为三个集合的并集：
@@ -251,7 +251,7 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 
 ### 6.2 Common Post-Gate Contract
 
-Desktop post-gate **MUST** 服从 `08_ui_design.md#native-post-gate-common-contract`。
+Desktop post-gate **MUST** 服从 `11_ui_design.md#native-post-gate-common-contract`。
 
 ### 6.3 Desktop Deltas
 

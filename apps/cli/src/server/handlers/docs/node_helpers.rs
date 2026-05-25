@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
-//!   - 06_repository#tree-projection-contract
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#tree-projection-contract
 //!
 //! # Docs 视图刷新辅助逻辑
 //!

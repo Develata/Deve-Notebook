@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 04_storage#projection-contract
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#projection-contract
+//!   - 04_repository#tree-projection-contract
 //!
 use crate::models::{DocId, NodeId, NodeMeta};
 use anyhow::{Result, anyhow};

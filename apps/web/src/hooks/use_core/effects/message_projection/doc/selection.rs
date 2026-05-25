@@ -1,7 +1,7 @@
 //! plan_ref:
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#repo-scope-runtime
-//!   - 08_ui_design_01_web#web-layout-persistence
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#repo-scope-runtime
+//!   - 11_ui_design_01_web#web-layout-persistence
 //!
 use crate::hooks::use_core::state::CoreSignals;
 use deve_core::models::DocId;

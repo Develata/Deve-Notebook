@@ -1,8 +1,8 @@
 // crates/core/src/ledger/manager/ops_ops.rs
 //! plan_ref:
-//!   - 04_storage#facts-partition
-//!   - 03_rendering#document-authority-bridge
-//!   - 06_repository#tree-projection-contract
+//!   - 03_storage#facts-partition
+//!   - 10_rendering#document-authority-bridge
+//!   - 04_repository#tree-projection-contract
 //!
 //! # 操作日志追加/读取
 //!
