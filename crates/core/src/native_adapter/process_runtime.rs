@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 11_ui_design_02_desktop#desktop-process-adapter-decision
-//!   - 11_ui_design_03_mobile#mobile-process-adapter-decision
+//!   - 11_ui_design/02_desktop#desktop-process-adapter-decision
+//!   - 11_ui_design/03_mobile#mobile-process-adapter-decision
 
 use std::fmt;
 use std::path::{Component, Path, PathBuf};

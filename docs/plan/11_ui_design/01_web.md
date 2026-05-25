@@ -1,4 +1,4 @@
-# 11_ui_design_01_web.md - Web 端设计 (Web UI)
+# 11_ui_design/01_web.md - Web 端设计 (Web UI)
 
 ## Metadata
 
@@ -14,7 +14,7 @@
 
 规范性用语继承 `01_terminology.md`。
 
-> Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，不承担 Native 完整离线能力。移动端/桌面端 **MUST** 采用 Tauri v2 原生外壳 + 内嵌 WebView；详见 `11_ui_design_02_desktop.md` §6.1 和 `11_ui_design_03_mobile.md` §9.1。
+> Web 端承担服务器侧 UI 与浏览器薄客户端写入界面，不承担 Native 完整离线能力。移动端/桌面端 **MUST** 采用 Tauri v2 原生外壳 + 内嵌 WebView；详见 `./02_desktop.md` §6.1 和 `./03_mobile.md` §9.1。
 
 ## 1. Single Binary Distribution (部署架构) {#single-binary-distribution}
 

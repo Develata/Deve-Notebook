@@ -19,10 +19,10 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `07_network.md` | P2P sync protocol, WebSocket transport, transfer engine |
 | `04_repository.md` | UUID-first repo identity, multi-repo catalog, shadow branches |
 | `05_diff_logic.md` | Source control diff, rename tracking, target resolution |
-| `11_ui_design.md` | Shared UI shell/control/runtime topology and native adapter gate registry |
-| `11_ui_design_01_web.md` | Web UI — layout, components, responsive design |
-| `11_ui_design_02_desktop.md` | Desktop UI — native integration |
-| `11_ui_design_03_mobile.md` | Mobile UI — touch gestures, drawers |
+| `11_ui_design/` | Shared UI shell/control/runtime topology and native adapter gate registry |
+| `11_ui_design/01_web.md` | Web UI — layout, components, responsive design |
+| `11_ui_design/02_desktop.md` | Desktop UI — native integration |
+| `11_ui_design/03_mobile.md` | Mobile UI — touch gestures, drawers |
 | `08_auth.md` | Authentication, E2E encryption, key exchange |
 | `16_ai_agent.md` | Native AI chat baseline and trusted external agent boundary |
 | `13_i18n.md` | Internationalization strategy and authoritative error code catalog |
@@ -55,7 +55,7 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 - `13_i18n.md#i18n-error-code-catalog` is the only authoritative error-code catalog; other chapters may classify failure domains but must not define parallel error-code lists.
 - `05_diff_logic.md#git-mirror-lifecycle` is the authoritative Git mirror lifecycle and command-boundary contract; storage and command chapters should reference it instead of duplicating preflight/import/export/push rules.
 - `pending overlay` is Web thin-client session runtime state; it must not be modeled as `pending_fs_ops` or cleared by watcher/scan semantics.
-- `11_ui_design.md#native-post-gate-common-contract` owns shared Desktop/Mobile post-gate native shell requirements; Desktop/Mobile subchapters should contain only platform deltas.
+- `11_ui_design/index.md#native-post-gate-common-contract` owns shared Desktop/Mobile post-gate native shell requirements; Desktop/Mobile subchapters should contain only platform deltas.
 - `docs/registry/runtime-skeleton-registry.md` owns the current Runtime Skeleton Registry status/path table; new refactor targets should be added there or explicitly marked as local-only before appearing in chapter tails.
 - 修改任一 plan 章节内容（typo 以上级别）后 MUST 刷新该章 Metadata 的 `Last Review` 字段；`Last Review` 仅由 plan review 行为更新，不与 git commit 时间挂钩。
 - Metadata 的 `Version` 仅表示章节自身版本（骨架级修改才 bump major）；MUST NOT 与 release version、protocol version (`WS_PROTOCOL_VERSION`)、redb schema version 或 HTTP API version 混用。`scripts/plan-coverage.sh --check-metadata-completeness` 强制校验每章 `Version` / `Last Review` 字段存在。
@@ -117,25 +117,25 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `05_diff_logic#git-mirror-lifecycle` | `### 2.3.1 Git Mirror Lifecycle` | Git mirror readiness、import/export/push 与只读 status 边界 |
 | `05_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `05_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
-| `11_ui_design#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |
-| `11_ui_design#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
-| `11_ui_design#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
-| `11_ui_design_01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
-| `11_ui_design_01_web#web-layout-persistence` | `## 6. Resizable Layout` | Web 布局尺寸、面板持久化与 local UI prefs 边界 |
-| `11_ui_design_02_desktop#desktop-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Desktop native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
-| `11_ui_design_02_desktop#desktop-packaging-scaffold` | `### 1.2 Desktop Packaging Scaffold` | Desktop packaging scaffold 与 no-packaging skeleton 边界 |
-| `11_ui_design_02_desktop#desktop-packaging-dependency-gate-decision` | `### 1.3 Desktop Packaging Dependency Gate` | Desktop native-packaging dependency spike 决策与默认关闭边界 |
-| `11_ui_design_02_desktop#desktop-service-supervisor-contract` | `### 1.4 Embedded Service Supervisor Contract` | Desktop embedded service supervisor 状态机与 readiness 分类 |
-| `11_ui_design_02_desktop#desktop-process-adapter-decision` | `### 1.5 Process Adapter Gate` | Desktop process adapter gate 的诊断、authority 与 packaging 前置条件 |
-| `11_ui_design_03_mobile#mobile-current-native-boundary` | `## 1. 原生适配器边界` | Mobile native adapter 当前边界与 post-gate 目标区分 |
-| `11_ui_design_03_mobile#mobile-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Mobile native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
-| `11_ui_design_03_mobile#mobile-service-supervisor-contract` | `### 1.2 Embedded Service Supervisor Contract` | Mobile embedded service supervisor、foreground reprobe 与 suspension 边界 |
-| `11_ui_design_03_mobile#mobile-process-adapter-decision` | `### 1.3 Process Adapter Gate` | Mobile process adapter gate 的诊断、authority 与 runtime 前置条件 |
-| `11_ui_design_03_mobile#mobile-packaging-dependency-gate-decision` | `### 1.5 Mobile Packaging Dependency Gate` | Mobile native-packaging dependency spike 决策与默认关闭边界 |
-| `11_ui_design_03_mobile#mobile-android-shell-package-execution-gate` | `### 1.6 Android Shell-only Package Execution Gate` | Android shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
-| `11_ui_design_03_mobile#mobile-ios-shell-package-execution-gate` | `### 1.7 iOS Shell-only Package Execution Gate` | iOS shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
-| `11_ui_design_03_mobile#mobile-responsive-layout` | `## 2. Responsive Architecture` | Mobile responsive layout、drawer 与 safe-area shell 合同 |
-| `11_ui_design_03_mobile#mobile-interaction-design` | `## 3. Interaction Design` | Mobile gesture、touch target、toolbar 与 interaction affordance 合同 |
+| `11_ui_design/index#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |
+| `11_ui_design/index#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
+| `11_ui_design/index#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
+| `11_ui_design/01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
+| `11_ui_design/01_web#web-layout-persistence` | `## 6. Resizable Layout` | Web 布局尺寸、面板持久化与 local UI prefs 边界 |
+| `11_ui_design/02_desktop#desktop-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Desktop native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
+| `11_ui_design/02_desktop#desktop-packaging-scaffold` | `### 1.2 Desktop Packaging Scaffold` | Desktop packaging scaffold 与 no-packaging skeleton 边界 |
+| `11_ui_design/02_desktop#desktop-packaging-dependency-gate-decision` | `### 1.3 Desktop Packaging Dependency Gate` | Desktop native-packaging dependency spike 决策与默认关闭边界 |
+| `11_ui_design/02_desktop#desktop-service-supervisor-contract` | `### 1.4 Embedded Service Supervisor Contract` | Desktop embedded service supervisor 状态机与 readiness 分类 |
+| `11_ui_design/02_desktop#desktop-process-adapter-decision` | `### 1.5 Process Adapter Gate` | Desktop process adapter gate 的诊断、authority 与 packaging 前置条件 |
+| `11_ui_design/03_mobile#mobile-current-native-boundary` | `## 1. 原生适配器边界` | Mobile native adapter 当前边界与 post-gate 目标区分 |
+| `11_ui_design/03_mobile#mobile-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Mobile native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
+| `11_ui_design/03_mobile#mobile-service-supervisor-contract` | `### 1.2 Embedded Service Supervisor Contract` | Mobile embedded service supervisor、foreground reprobe 与 suspension 边界 |
+| `11_ui_design/03_mobile#mobile-process-adapter-decision` | `### 1.3 Process Adapter Gate` | Mobile process adapter gate 的诊断、authority 与 runtime 前置条件 |
+| `11_ui_design/03_mobile#mobile-packaging-dependency-gate-decision` | `### 1.5 Mobile Packaging Dependency Gate` | Mobile native-packaging dependency spike 决策与默认关闭边界 |
+| `11_ui_design/03_mobile#mobile-android-shell-package-execution-gate` | `### 1.6 Android Shell-only Package Execution Gate` | Android shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
+| `11_ui_design/03_mobile#mobile-ios-shell-package-execution-gate` | `### 1.7 iOS Shell-only Package Execution Gate` | iOS shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
+| `11_ui_design/03_mobile#mobile-responsive-layout` | `## 2. Responsive Architecture` | Mobile responsive layout、drawer 与 safe-area shell 合同 |
+| `11_ui_design/03_mobile#mobile-interaction-design` | `## 3. Interaction Design` | Mobile gesture、touch target、toolbar 与 interaction affordance 合同 |
 | `08_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/status/me HTTP endpoint 合同 |
 | `08_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
 | `08_auth#password-hashing` | `### 5.5 Password Hashing` | Argon2 PHC 密码哈希与验证合同 |

@@ -1,4 +1,4 @@
-# 11_ui_design_02_desktop.md - 桌面端设计 (Desktop UI)
+# 11_ui_design/02_desktop.md - 桌面端设计 (Desktop UI)
 
 ## Metadata
 
@@ -253,7 +253,7 @@ $$ V_{sc} = S_{staged} \cup S_{unstaged} \cup H_{commits} $$
 
 ### 6.2 Common Post-Gate Contract
 
-Desktop post-gate **MUST** 服从 `11_ui_design.md#native-post-gate-common-contract`。
+Desktop post-gate **MUST** 服从 `./index.md#native-post-gate-common-contract`。
 
 ### 6.3 Desktop Deltas
 

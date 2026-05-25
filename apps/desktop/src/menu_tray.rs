@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 17_tech_stack#native-packaging-dependency-gate
-//!   - 11_ui_design_02_desktop#desktop-packaging-scaffold
+//!   - 11_ui_design/02_desktop#desktop-packaging-scaffold
 //!
 //! Tauri menu/tray binding for the desktop native-packaging feature.
 //!

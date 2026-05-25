@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 11_ui_design_02_desktop#desktop-service-supervisor-contract
+//!   - 11_ui_design/02_desktop#desktop-service-supervisor-contract
 
 use deve_core::native_adapter::{
     NativeProcessAdapterError, NativeProcessAdapterSnapshot, NativeServiceFailureKind,

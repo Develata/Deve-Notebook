@@ -30,10 +30,10 @@
 
 ### D. Application / UI Shell
 - **[10_rendering.md](./10_rendering.md)**: editor runtime、parser、widget、outline、source-first 渲染蓝图。
-- **[11_ui_design.md](./11_ui_design.md)**: shell/control/runtime 分层与多端共享控制接口。
-- **[11_ui_design_01_web.md](./11_ui_design_01_web.md)**: Web shell adapter 与布局约束。
-- **[11_ui_design_02_desktop.md](./11_ui_design_02_desktop.md)**: Desktop shell adapter 与原生边界。
-- **[11_ui_design_03_mobile.md](./11_ui_design_03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
+- **[11_ui_design/](./11_ui_design/index.md)**: shell/control/runtime 分层与多端共享控制接口。
+- **[11_ui_design/01_web.md](./11_ui_design/01_web.md)**: Web shell adapter 与布局约束。
+- **[11_ui_design/02_desktop.md](./11_ui_design/02_desktop.md)**: Desktop shell adapter 与原生边界。
+- **[11_ui_design/03_mobile.md](./11_ui_design/03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
 - **[13_i18n.md](./13_i18n.md)**: i18n facade、错误码映射、文案约束。
 - **[14_commands.md](./14_commands.md)**: command surface、palette、快捷键与 control 映射。
 - **[15_settings.md](./15_settings.md)**: 设置、配置、持久化与 UI prefs 边界。
@@ -78,7 +78,7 @@
 3. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
 4. `03_storage/`、`04_repository.md`、`05_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
 5. `07_network.md`、`08_auth.md`、`09_web_thin_client_ledger.md` → 确认协议、session、scope、pending write 的状态机。
-6. `10_rendering.md`、`11_ui_design*.md`、`12_source_control_ui.md`、`13_i18n.md`、`14_commands.md`、`15_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
+6. `10_rendering.md`、`11_ui_design/*`、`12_source_control_ui.md`、`13_i18n.md`、`14_commands.md`、`15_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
 7. `docs/features/` 中对应章节 → 查看用户可见行为与 Chrome MCP 手工验收实例。
 8. `docs/acceptance-cases/` 中对应章节 → 查看自动化验证入口。
 
@@ -98,7 +98,7 @@
 
 ### 平台子章规则
 
-*   `11_ui_design.md` 是共享 shell/control/runtime 总章。
+*   `11_ui_design/` 是共享 shell/control/runtime 总章。
 *   `08_ui_design_01/02/03` 只描述 Web / Desktop / Mobile 的 adapter 与 surface 差异。
 *   共享控制语义、authority 约束、runtime 归属不得在子章里重新定义或偏离总章。
 

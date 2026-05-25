@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#web-layout-persistence
 //!
 //! UI 辅助图标 (状态、文件操作、布局)
 #![allow(dead_code)]

@@ -1,4 +1,4 @@
-# 11_ui_design.md - UI Shell 与 Application Control 工程蓝图
+# 11_ui_design/index.md - UI Shell 与 Application Control 工程蓝图
 
 ## Metadata
 
@@ -10,7 +10,7 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
 
-> **Modules**: [Web](./11_ui_design_01_web.md) | [Desktop](./11_ui_design_02_desktop.md) | [Mobile](./11_ui_design_03_mobile.md)
+> **Modules**: [Web](././01_web.md) | [Desktop](././02_desktop.md) | [Mobile](././03_mobile.md)
 
 ## 1. Scope
 

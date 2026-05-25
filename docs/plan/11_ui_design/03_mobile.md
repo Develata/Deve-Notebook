@@ -1,4 +1,4 @@
-# 11_ui_design_03_mobile.md - 移动端设计 (Mobile UI)
+# 11_ui_design/03_mobile.md - 移动端设计 (Mobile UI)
 
 ## Metadata
 
@@ -29,7 +29,7 @@
 
 ### 1.1 Minimal Native Adapter Contract {#mobile-native-adapter-contract}
 
-Mobile native adapter 与 Desktop 共用 `11_ui_design_02_desktop.md#desktop-native-adapter-contract` 的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有 ledger/Projection Workspace/source-control/search 的业务真相。
+Mobile native adapter 与 Desktop 共用 `./02_desktop.md#desktop-native-adapter-contract` 的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有 ledger/Projection Workspace/source-control/search 的业务真相。
 
 Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate`。
 
@@ -93,7 +93,7 @@ MobileColdStart
 
 ### 1.2 Embedded Service Supervisor Contract {#mobile-service-supervisor-contract}
 
-Mobile 与 Desktop 共用 `11_ui_design_02_desktop.md#desktop-service-supervisor-contract`
+Mobile 与 Desktop 共用 `./02_desktop.md#desktop-service-supervisor-contract`
 的 supervisor 状态机，但 Mobile 额外保持生命周期约束：
 
 *   `EndpointHealthy` 和 `SessionHandoffReady` 不得绕过 `ForegroundReprobe`；从后台恢复后仍必须重新 probe auth、node role、WS repo handshake 与 current `scope_nonce`。
@@ -335,7 +335,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 
 ### 9.2 Common Post-Gate Contract
 
-Mobile post-gate **MUST** 服从 `11_ui_design.md#native-post-gate-common-contract`。
+Mobile post-gate **MUST** 服从 `./index.md#native-post-gate-common-contract`。
 
 ### 9.3 Mobile Deltas
 

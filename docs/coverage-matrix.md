@@ -24,10 +24,10 @@
 | `08_auth` | `09_auth` | `08_auth` | auth/security automation |
 | `09_web_thin_client_ledger` | `16_web_thin_client_ledger` | `06_network`, `07_storage_repo` | pending/ack/reject automation + Chrome MCP |
 | `10_rendering` | `03_rendering` | `03_rendering` | Chrome MCP + rendering automation |
-| `11_ui_design` | `08_ui_design` | `05_ui`, `13_ui_mobile_chat_regression` | Chrome MCP + UI automation |
-| `11_ui_design_01_web` | `08_ui_design_01_web` | `05_ui` | Web shell automation + Chrome MCP |
-| `11_ui_design_02_desktop` | `08_ui_design_02_desktop` | `05_ui` | desktop shell automation |
-| `11_ui_design_03_mobile` | `08_ui_design_03_mobile` | `05_ui`, `13_ui_mobile_chat_regression` | mobile shell automation + Chrome MCP |
+| `11_ui_design/index` | `08_ui_design` | `05_ui`, `13_ui_mobile_chat_regression` | Chrome MCP + UI automation |
+| `11_ui_design/01_web` | `08_ui_design_01_web` | `05_ui` | Web shell automation + Chrome MCP |
+| `11_ui_design/02_desktop` | `08_ui_design_02_desktop` | `05_ui` | desktop shell automation |
+| `11_ui_design/03_mobile` | `08_ui_design_03_mobile` | `05_ui`, `13_ui_mobile_chat_regression` | mobile shell automation + Chrome MCP |
 | `12_source_control_ui` | `07_diff_logic`, `08_ui_design_02_desktop` | `04_diff`, `05_ui` | Source Control UI reference + automation |
 | `13_i18n` | `11_i18n` | `09_i18n` | locale/error-code automation |
 | `14_commands` | `12_commands` | `11_commands_settings` | command/control automation |
@@ -63,5 +63,5 @@ The following documents exist under `docs/` but do not participate in the three-
   with a binding type and evidence document; `scripts/plan-coverage.sh` validates
   the case id, binding type, and evidence path.
 - A single acceptance file may cover multiple blueprint chapters, but the mapping must be explicit here.
-- `11_ui_design.md` remains the shared cross-surface feature chapter.
-- `11_ui_design_01/02/03` define Web / Desktop / Mobile shell behavior at the feature level and mirror the adapter split in `docs/plan/`.
+- `11_ui_design/index.md` remains the shared cross-surface feature chapter.
+- `11_ui_design/01_web`, `/02_desktop`, `/03_mobile` define Web / Desktop / Mobile shell behavior at the feature level and mirror the adapter split in `docs/plan/`.

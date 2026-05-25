@@ -1,6 +1,6 @@
 // apps/web/src/components/activity_bar/mod.rs
 //! plan_ref:
-//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#web-layout-persistence
 //!
 //! # ActivityBar 组件 (ActivityBar Component)
 //!

@@ -5,7 +5,7 @@
 //!   - 08_auth#jwt-cookie-contract
 //!   - 08_auth#auth-rate-limiting
 //!   - 08_auth#security-headers
-//!   - 11_ui_design_01_web#single-binary-distribution
+//!   - 11_ui_design/01_web#single-binary-distribution
 //!
 //! # 路由构建模块
 //!

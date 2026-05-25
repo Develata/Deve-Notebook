@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 17_tech_stack#search-baseline
-//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#web-layout-persistence
 //!
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;

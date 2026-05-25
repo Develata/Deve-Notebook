@@ -1,7 +1,7 @@
 // apps/web/src/components/search_box/result_item.rs
 //! plan_ref:
 //!   - 17_tech_stack#search-baseline
-//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#web-layout-persistence
 //!
 //! # 搜索结果项渲染组件
 //!

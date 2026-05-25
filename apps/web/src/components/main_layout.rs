@@ -1,6 +1,6 @@
 // apps/web/src/components/main_layout.rs
 //! plan_ref:
-//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#web-layout-persistence
 //!   - 04_repository#repo-scope-runtime
 //!
 //! # Main Layout

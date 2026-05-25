@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 11_ui_design#layout-navigation-and-focus
+//!   - 11_ui_design/index#layout-navigation-and-focus
 //!
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;

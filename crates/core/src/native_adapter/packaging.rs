@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 17_tech_stack#native-packaging-dependency-gate
-//!   - 11_ui_design_02_desktop#desktop-packaging-dependency-gate-decision
-//!   - 11_ui_design_03_mobile#mobile-packaging-dependency-gate-decision
+//!   - 11_ui_design/02_desktop#desktop-packaging-dependency-gate-decision
+//!   - 11_ui_design/03_mobile#mobile-packaging-dependency-gate-decision
 
 use serde::{Deserialize, Serialize};
 

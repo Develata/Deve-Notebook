@@ -1,6 +1,6 @@
 // apps/web/src/components/mobile_layout/header.rs
 //! plan_ref:
-//!   - 11_ui_design_03_mobile#mobile-responsive-layout
+//!   - 11_ui_design/03_mobile#mobile-responsive-layout
 //!   - 04_repository#repo-scope-runtime
 //!
 //! # Mobile Header

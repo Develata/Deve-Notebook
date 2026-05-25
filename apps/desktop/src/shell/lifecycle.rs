@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 
 use deve_core::native_adapter::{
     NativeAdapterPlatform, NativePlatformEventEffect, NativePlatformEventKind,

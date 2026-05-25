@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 11_ui_design_01_web#single-binary-distribution
+//!   - 11_ui_design/01_web#single-binary-distribution
 //!
 //! Build-time frontend asset embedding.
 

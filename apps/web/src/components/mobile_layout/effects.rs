@@ -1,7 +1,7 @@
 // apps/web/src/components/mobile_layout/effects.rs
 //! plan_ref:
-//!   - 11_ui_design_03_mobile#mobile-responsive-layout
-//!   - 11_ui_design_03_mobile#mobile-interaction-design
+//!   - 11_ui_design/03_mobile#mobile-responsive-layout
+//!   - 11_ui_design/03_mobile#mobile-interaction-design
 //!
 
 use js_sys::{Function, Reflect};

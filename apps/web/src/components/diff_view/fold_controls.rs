@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#web-layout-persistence
 //!
 use super::fold::FoldState;
 use crate::i18n::{Locale, t};

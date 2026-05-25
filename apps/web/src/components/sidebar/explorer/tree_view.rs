@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 11_ui_design_01_web#web-layout-persistence
+//!   - 11_ui_design/01_web#web-layout-persistence
 //!
 use crate::components::sidebar::item::FileTreeItem;
 use crate::components::sidebar::tree::build_file_tree;

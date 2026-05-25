@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 17_tech_stack#native-packaging-dependency-gate
-//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!
 //! Feature-gated desktop packaging scaffold.
 //!

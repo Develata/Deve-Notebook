@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
-//!   - 11_ui_design_02_desktop#desktop-native-adapter-contract
-//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
+//!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 
 use deve_core::native_adapter::NativeEndpointReady;
 #[cfg(test)]

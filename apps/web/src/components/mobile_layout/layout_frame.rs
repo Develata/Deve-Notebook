@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 11_ui_design_03_mobile#mobile-responsive-layout
-//!   - 11_ui_design_03_mobile#mobile-current-native-boundary
+//!   - 11_ui_design/03_mobile#mobile-responsive-layout
+//!   - 11_ui_design/03_mobile#mobile-current-native-boundary
 //!
 use super::chat_sheet::MobileChatSheet;
 use super::content::MobileContent;

@@ -1,8 +1,8 @@
 //! plan_ref:
 //!   - 17_tech_stack#native-packaging-dependency-gate
-//!   - 11_ui_design_03_mobile#mobile-native-adapter-contract
-//!   - 11_ui_design_03_mobile#mobile-android-shell-package-execution-gate
-//!   - 11_ui_design_03_mobile#mobile-ios-shell-package-execution-gate
+//!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
+//!   - 11_ui_design/03_mobile#mobile-android-shell-package-execution-gate
+//!   - 11_ui_design/03_mobile#mobile-ios-shell-package-execution-gate
 //!
 //! Feature-gated mobile packaging scaffold.
 //!
