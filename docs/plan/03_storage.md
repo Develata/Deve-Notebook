@@ -1,4 +1,4 @@
-# 04_storage.md - Ledger、Projection 与 Workspace 存储工程蓝图
+# 03_storage.md - Ledger、Projection 与 Workspace 存储工程蓝图
 
 ## Metadata
 

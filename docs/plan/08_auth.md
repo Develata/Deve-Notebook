@@ -1,4 +1,4 @@
-# 09_auth.md - User Session 与入口鉴权工程蓝图
+# 08_auth.md - User Session 与入口鉴权工程蓝图
 
 ## Metadata
 

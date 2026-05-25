@@ -1,4 +1,4 @@
-# 14_tech_stack.md - 技术栈篇 (Technology Stack)
+# 17_tech_stack.md - 技术栈篇 (Technology Stack)
 
 ## Metadata
 

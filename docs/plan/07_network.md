@@ -1,4 +1,4 @@
-# 05_network.md - P2P、WebLightPeer 与 Sync Protocol 工程蓝图
+# 07_network.md - P2P、WebLightPeer 与 Sync Protocol 工程蓝图
 
 ## Metadata
 
