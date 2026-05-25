@@ -1,6 +1,6 @@
 // apps\cli\src\commands
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 14_commands#cli-commands
 
 use deve_core::ledger::RepoManager;

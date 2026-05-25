@@ -3,8 +3,8 @@
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#repo-scope-runtime
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#watcher-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/watcher#watcher-contract
+//!   - 03_storage/index#internal-path-normalization
 //!
 //! # 删除文档处理器
 

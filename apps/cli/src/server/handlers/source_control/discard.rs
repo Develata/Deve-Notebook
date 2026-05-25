@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!
 //! # 放弃工作区偏差
 //!

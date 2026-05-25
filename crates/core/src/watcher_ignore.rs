@@ -1,6 +1,6 @@
 // crates/core/src/watcher_ignore.rs
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!
 //! # 用户自定义忽略规则
 //!

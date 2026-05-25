@@ -1,6 +1,6 @@
 // crates/core/src/ledger/ops.rs
 //! plan_ref:
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#tree-projection-contract
 //!

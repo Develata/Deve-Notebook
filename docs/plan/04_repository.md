@@ -93,7 +93,7 @@
 - `ledger/.host/projection-locators.toml`
 - `<projection_base>/<repo_name>/.notegit/`
 
-`projection_base` 与计算出的 workspace root 由 `03_storage.md#projection-locator-contract` 定义；本章只规定 repo identity 与 locator 绑定边界。
+`projection_base` 与计算出的 workspace root 由 `03_storage/projection.md#projection-locator-contract` 定义；本章只规定 repo identity 与 locator 绑定边界。
 
 ### 3.2 Collision Rule
 

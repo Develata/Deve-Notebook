@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#backup-export
+//!   - 03_storage/repair#backup-export
 //!   - 04_repository#tree-projection-contract
 
 use anyhow::{Context, Result, anyhow};

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 
 #[derive(Clone, Copy, Debug)]
 pub struct SnapshotPolicy {

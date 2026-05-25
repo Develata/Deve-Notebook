@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 10_rendering#document-authority-bridge
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!   - 14_commands#cli-commands
 
 use crate::admin_api::DumpResponse;

@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-scope-runtime
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!   - 04_repository#tree-projection-contract
 //!
 use anyhow::Result;

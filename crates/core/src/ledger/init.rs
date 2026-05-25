@@ -1,7 +1,7 @@
 // crates\core\src\ledger
 //! plan_ref:
-//!   - 03_storage#facts-partition
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/authority#facts-partition
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 04_repository#repo-catalog-contract
 //!
 //! # 仓库管理器初始化模块 (RepoManager Initialization)

@@ -1,6 +1,6 @@
 //! # Pending Rename 辅助
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#source-control-runtime
 //!
 //! Invariants:

@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 //!   - 14_commands#cli-commands
 
 use crate::commands::repo_arg::resolve_local_repo_args;

@@ -15,7 +15,7 @@ Comprehensive engineering blueprint for Deve-Notebook. `docs/plan/` defines how 
 | `01_terminology.md` | Core terms: ledger, projection, writer gate, pending overlay, WebLightPeer, scope nonce |
 | `02_positioning.md` | Product positioning and target audience |
 | `10_rendering.md` | Markdown rendering pipeline and extensions |
-| `03_storage.md` | Ledger-first storage, node-first model, projection system |
+| `03_storage/` | Ledger-first storage, node-first model, projection system |
 | `07_network.md` | P2P sync protocol, WebSocket transport, transfer engine |
 | `04_repository.md` | UUID-first repo identity, multi-repo catalog, shadow branches |
 | `05_diff_logic.md` | Source control diff, rename tracking, target resolution |
@@ -70,7 +70,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 
 ```rust
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 ```
 
 **规则**：
@@ -93,15 +93,15 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `10_rendering#markdown-render-whitelist` | `### 4.3 Whitelist Rule` | Markdown 渲染白名单、HTML 过滤与安全链接边界 |
 | `10_rendering#large-document-runtime` | `## 7. Large Document Strategy` | 大文档、UTF-16 index cache 与渲染/runtime 定位策略 |
 | `10_rendering#document-authority-bridge` | `### 12.4 Authority Bridge` | 文档 snapshot/history/edit/ack/reject 权威桥接合同 |
-| `03_storage#facts-partition` | `### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |
-| `03_storage#projection-contract` | `## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
-| `03_storage#watcher-contract` | `## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
-| `03_storage#backup-export` | `### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
-| `03_storage#repo-runtime-layout` | `### 3.2 Repo Runtime Layout` | `.notegit`、repo runtime metadata 与内部目录布局 |
-| `03_storage#projection-locator-contract` | `### 3.2.1 Projection Locator Layout` | repo-scoped projection base locator、computed workspace root 与冲突边界 |
-| `03_storage#git-ecosystem-coexistence` | `### 3.2.2 Git Mirror Storage Boundary` | Git mirror 存储边界与 `.git` / `.notegit` 共存约束 |
-| `03_storage#browser-storage-layering` | `### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
-| `03_storage#internal-path-normalization` | `### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
+| `03_storage/authority#facts-partition` | `authority.md ### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |
+| `03_storage/projection#projection-contract` | `projection.md ## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
+| `03_storage/watcher#watcher-contract` | `watcher.md ## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
+| `03_storage/repair#backup-export` | `repair.md ### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
+| `03_storage/index#repo-runtime-layout` | `index.md ### 3.2 Repo Runtime Layout` | `.notegit`、repo runtime metadata 与内部目录布局 |
+| `03_storage/projection#projection-locator-contract` | `projection.md ### 3.2.1 Projection Locator Layout` | repo-scoped projection base locator、computed workspace root 与冲突边界 |
+| `03_storage/index#git-ecosystem-coexistence` | `index.md ### 3.2.2 Git Mirror Storage Boundary` | Git mirror 存储边界与 `.git` / `.notegit` 共存约束 |
+| `03_storage/index#browser-storage-layering` | `index.md ### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
+| `03_storage/index#internal-path-normalization` | `index.md ### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
 | `07_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
 | `07_network#remote-shadow-apply-atomicity` | `### 10.4 Remote Shadow Apply Atomicity` | remote shadow apply、snapshot replay 与 local write fault 的原子性/隔离合同 |
 | `07_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |

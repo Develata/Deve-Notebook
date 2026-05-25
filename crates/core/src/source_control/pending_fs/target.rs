@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_storage#internal-path-normalization
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/index#internal-path-normalization
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#source-control-runtime
 
 use super::{PendingFsEntry, list_all, list_for_doc, remove};

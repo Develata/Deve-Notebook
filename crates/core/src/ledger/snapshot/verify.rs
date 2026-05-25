@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 10_rendering#document-authority-bridge
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 //!
 use crate::ledger::ops;
 use crate::models::DocId;

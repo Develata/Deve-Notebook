@@ -2,7 +2,7 @@
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-selector-resolution-contract
 //!   - 04_repository#repo-scope-runtime
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!
 use anyhow::{Result, anyhow};
 use std::path::{Path, PathBuf};

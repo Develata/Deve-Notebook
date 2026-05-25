@@ -1,6 +1,6 @@
 // apps\cli\src\commands
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 14_commands#cli-commands
 //!   - 15_settings#configuration-settings
 

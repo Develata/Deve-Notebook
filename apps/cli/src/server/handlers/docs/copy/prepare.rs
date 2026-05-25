@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 
 use super::super::copy::normalize_copy_dest_path;
 use super::super::node_target::resolve_node_target;

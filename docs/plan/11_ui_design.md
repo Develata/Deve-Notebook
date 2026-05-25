@@ -383,7 +383,7 @@ PinnedSetChanged
 - 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。
 - 本机 service **MUST NOT** 监听非回环地址。
 - 无公网时，本地读写能力 **MUST** 仍由 core/server authority 与 writer gate 决定。
-- 本地持久化、schema migration、repair、projection writeback、crash recovery 与本地内容落盘 **MUST** 服从 `03_storage.md`。
+- 本地持久化、schema migration、repair、projection writeback、crash recovery 与本地内容落盘 **MUST** 服从 `03_storage/`。
 - at-rest encryption、key rotation、key recovery 与进程级鉴权 **MUST** 服从 `08_auth.md`。
 - 备份、导出、关键操作审计与恢复演练 **MUST** 服从 `18_release.md`。
 - 本地存储安全、备份、导出、审计与恢复演练 **MUST NOT** 落入 UI view 层。

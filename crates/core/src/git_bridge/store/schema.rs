@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#git-ecosystem-coexistence
+//!   - 03_storage/index#git-ecosystem-coexistence
 //!   - 05_diff_logic#git-mirror-lifecycle
 //!
 //! Git mirror persistent record schema and failure-state taxonomy.

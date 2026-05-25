@@ -1,6 +1,6 @@
 // apps/cli/src/server/security.rs
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 07_network#server-ws-runtime
 //!   - 08_auth#key-and-file-permissions
 //!

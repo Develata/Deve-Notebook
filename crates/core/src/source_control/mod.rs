@@ -1,7 +1,7 @@
 // crates\core\src\source_control
 //! # Source Control 模块
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 05_diff_logic#source-control-runtime
 //!
 //! 提供版本控制功能，包括暂存区管理、提交历史和变更检测。

@@ -1,6 +1,6 @@
 // apps/web/src/components/dashboard/storage_card.rs
 //! plan_ref:
-//!   - 03_storage#browser-storage-layering
+//!   - 03_storage/index#browser-storage-layering
 //!   - 18_release#runtime-observability
 //!
 //! # Storage Card (存储状态卡片)

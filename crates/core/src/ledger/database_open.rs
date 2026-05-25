@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_storage#facts-partition
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/authority#facts-partition
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 04_repository#repo-catalog-contract
 //!
 //! Global Redb open/create helpers backed by the process-wide database cache.

@@ -2,7 +2,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!   - 04_repository#repo-selector-resolution-contract
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!
 //! # 版本控制集成
 //!

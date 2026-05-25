@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 //!   - 04_repository#tree-projection-contract
 
 use super::projection_plan;

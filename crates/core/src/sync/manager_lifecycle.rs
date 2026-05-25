@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 
 use super::{DirRefreshGuard, ProjectionHealth, SyncManager, materialize, scan};
 use crate::ledger::RepoManager;

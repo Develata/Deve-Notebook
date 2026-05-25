@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#browser-storage-layering
+//!   - 03_storage/index#browser-storage-layering
 //!   - 04_repository#repo-scope-runtime
 //!
 //! 浏览器存储初始化运行时。

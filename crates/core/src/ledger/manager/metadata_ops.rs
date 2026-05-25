@@ -1,9 +1,9 @@
 // crates/core/src/ledger/manager/metadata_ops.rs
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#projection-contract
-//!   - 03_storage#watcher-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/projection#projection-contract
+//!   - 03_storage/watcher#watcher-contract
+//!   - 03_storage/index#internal-path-normalization
 //!
 //! # Path/DocId 查询与绑定
 //!

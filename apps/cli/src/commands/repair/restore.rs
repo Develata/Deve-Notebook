@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_storage#backup-export
-//!   - 03_storage#projection-contract
+//!   - 03_storage/repair#backup-export
+//!   - 03_storage/projection#projection-contract
 //!   - 14_commands#cli-commands
 
 use anyhow::{Context, Result, bail};

@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 14_commands#cli-commands
-//!   - 03_storage#projection-locator-contract
+//!   - 03_storage/projection#projection-locator-contract
 
 use super::repo_arg::resolve_local_repo_arg;
 use anyhow::Result;

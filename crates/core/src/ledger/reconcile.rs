@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 //!   - 05_diff_logic#authority-diff-core
 
 use crate::ledger::RepoManager;

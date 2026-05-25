@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_storage#projection-contract
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/projection#projection-contract
+//!   - 03_storage/watcher#watcher-contract
 
 use super::WriteSuppressor;
 

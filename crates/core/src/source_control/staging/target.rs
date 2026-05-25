@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 //!   - 05_diff_logic#source-control-runtime
 
 use super::{StagedEntry, list_staged_entries, list_staged_entries_for_doc, take_staged};

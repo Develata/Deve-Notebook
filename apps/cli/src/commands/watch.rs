@@ -1,7 +1,7 @@
 // apps/cli/src/commands/watch.rs
 //! # Watch 命令
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 14_commands#cli-commands
 //!
 //! 启动文件系统监听，实时捕获变更并同步到 Ledger。

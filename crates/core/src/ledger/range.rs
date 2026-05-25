@@ -1,6 +1,6 @@
 ﻿// crates\core\src\ledger
 //! plan_ref:
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!   - 07_network#server-ws-runtime
 //!
 //! # 范围查询模块 (Range Query Operations)

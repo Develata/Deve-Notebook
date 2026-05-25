@@ -95,7 +95,7 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 规则：
 
 *   系统 **MUST NOT** 支持 `vault_path` / `DEVE_VAULT_PATH` 作为全局投影根。
-*   每个本地可写 repo 的 projection base 必须通过 host-local Projection Locator 绑定；最终 workspace root 必须计算为 `<projection_base>/<repo_name>/`。locator 存储边界见 `03_storage.md#projection-locator-contract`。
+*   每个本地可写 repo 的 projection base 必须通过 host-local Projection Locator 绑定；最终 workspace root 必须计算为 `<projection_base>/<repo_name>/`。locator 存储边界见 `03_storage/projection.md#projection-locator-contract`。
 *   `config.toml` 可以决定 `ledger_dir`，但不得通过 `ledger_dir` 推导 projection base 或 workspace root。
 *   Settings UI 或 CLI 可以展示、创建、替换 locator；写入前 **MUST** 校验 path 类型、canonical path、冲突与保留目录边界。
 *   locator 变更属于 repo runtime 操作，不是用户 UI 偏好，也不是 ledger authority。

@@ -17,7 +17,7 @@
 - **[02_positioning.md](./02_positioning.md)**: 产品边界、Core MUST / MUST NOT、项目定位。
 
 ### B. Authority Core
-- **[03_storage.md](./03_storage.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
+- **[03_storage/](./03_storage/index.md)**: ledger、projection、workspace、watcher、repair 的存储蓝图。
 - **[04_repository.md](./04_repository.md)**: repo identity、branch scope、tree projection、repo health。
 - **[05_diff_logic.md](./05_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
 - **[06_backup.md](./06_backup.md)**: repo/branch URL 的备份展开、加密 pack、WebDAV/S3 边界。
@@ -76,7 +76,7 @@
 1. `01_terminology.md` → 确认术语与规范性用语。
 2. `00_engineering_constitution.md` → 确认骨架治理、层级模型与变更审批规则。
 3. `02_positioning.md` → 确认当前阶段的 Core MUST / MUST NOT。
-4. `03_storage.md`、`04_repository.md`、`05_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
+4. `03_storage/`、`04_repository.md`、`05_diff_logic.md` → 确认 authority、projection、repo health、source control 的硬约束。
 5. `07_network.md`、`08_auth.md`、`09_web_thin_client_ledger.md` → 确认协议、session、scope、pending write 的状态机。
 6. `10_rendering.md`、`11_ui_design*.md`、`12_source_control_ui.md`、`13_i18n.md`、`14_commands.md`、`15_settings.md` → 在不改写权威规则的前提下定义 shell / control / rendering 行为。
 7. `docs/features/` 中对应章节 → 查看用户可见行为与 Chrome MCP 手工验收实例。
@@ -84,7 +84,7 @@
 
 ### 章节归属规则
 
-*   `03_storage.md`：Ledger、Projection、pending/staging、恢复与持久化边界。
+*   `03_storage/`：Ledger、Projection、pending/staging、恢复与持久化边界。
     *   补充约束：`Content Facts + Structure Facts -> Projection`，`metadata/path/tree` 仅为投影结果，不是业务写入真值源。
 *   `07_network.md`：连接拓扑、WS/HTTP 路由契约、repo-scoped sync handshake。
 *   `04_repository.md`：`NodeId`、树结构、`Rename/Move/Create/Delete` 的结构事实写路径。

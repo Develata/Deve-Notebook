@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 //!   - 05_diff_logic#source-control-runtime
 
 use crate::models::DocId;

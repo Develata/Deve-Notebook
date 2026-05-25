@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 
 pub(crate) mod backend;
 mod dispatch;

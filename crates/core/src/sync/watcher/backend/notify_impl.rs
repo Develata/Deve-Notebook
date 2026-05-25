@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 
 use super::{BackendBatch, FsWatcherBackend};
 use crate::sync::watcher::{WatcherError, filter};

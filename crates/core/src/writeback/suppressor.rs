@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 
 use crate::source_control::pending_fs;
 use std::collections::HashMap;

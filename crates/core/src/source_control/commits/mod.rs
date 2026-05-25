@@ -1,7 +1,7 @@
 // crates\core\src\source_control
 //! # 提交管理 (Commits Manager)
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 05_diff_logic#source-control-runtime
 //!
 //! 管理提交历史，持久化到数据库。

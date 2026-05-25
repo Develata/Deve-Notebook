@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_storage#facts-partition
-//!   - 03_storage#projection-contract
+//!   - 03_storage/authority#facts-partition
+//!   - 03_storage/projection#projection-contract
 //!
 use crate::models::{DocId, LedgerEntry, deserialize_ledger_entry};
 use crate::state::ContentOpValidator;

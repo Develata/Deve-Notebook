@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 //!   - 04_repository#tree-projection-contract
 //!   - 14_commands#cli-commands
 

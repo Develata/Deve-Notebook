@@ -1,6 +1,6 @@
 //! # 账本事件模型
 //! plan_ref:
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!
 //! Invariants:
 //! - `ContentOp` 只描述文本内容变化。

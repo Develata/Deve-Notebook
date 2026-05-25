@@ -1,6 +1,6 @@
 // apps/web/src/components/search_box/file_ops/path_utils.rs
 //! plan_ref:
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 //!
 //! 路径规范化、目录收集与模糊过滤
 

@@ -1,8 +1,8 @@
 // crates\core\src\ledger
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#projection-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/projection#projection-contract
+//!   - 03_storage/index#internal-path-normalization
 //!
 //! # 元数据映射模块 (Metadata Mapping)
 //!

@@ -1,7 +1,7 @@
 // crates\core\src\ledger
 //! plan_ref:
-//!   - 03_storage#facts-partition
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/authority#facts-partition
+//!   - 03_storage/index#repo-runtime-layout
 
 use redb::{MultimapTableDefinition, TableDefinition};
 

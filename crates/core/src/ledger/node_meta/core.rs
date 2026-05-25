@@ -1,8 +1,8 @@
 // crates/core/src/ledger/node_meta/core.rs
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#projection-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/projection#projection-contract
+//!   - 03_storage/index#internal-path-normalization
 //!
 //! # Node 元数据核心操作
 

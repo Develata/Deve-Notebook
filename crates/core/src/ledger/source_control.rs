@@ -1,8 +1,8 @@
 // crates\core\src\ledger
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 03_storage#watcher-contract
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/watcher#watcher-contract
+//!   - 03_storage/index#repo-runtime-layout
 //!
 //! # Source Control 集成 (RepoManager 扩展)
 //!

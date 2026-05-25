@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_storage#facts-partition
-//!   - 03_storage#projection-contract
+//!   - 03_storage/authority#facts-partition
+//!   - 03_storage/projection#projection-contract
 //!   - 10_rendering#document-authority-bridge
 
 use crate::ledger::manager::types::RepoManager;

@@ -1,6 +1,6 @@
 // crates\core\src\ledger\merge\diff.rs
 //! plan_ref:
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!   - 10_rendering#document-authority-bridge
 //!
 // ---------------------------------------------------------------

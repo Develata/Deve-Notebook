@@ -1,6 +1,6 @@
 // apps/web/src/components/search_box/file_ops/mod.rs
 //! plan_ref:
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 //! # FileOps 解析与候选生成

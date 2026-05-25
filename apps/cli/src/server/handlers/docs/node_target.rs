@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 
 use crate::server::AppState;
 use crate::server::repo_scope::{ResolvedRepo, local_repo_path, run_on_resolved_local_repo};

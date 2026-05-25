@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-catalog-repair-contract
 //!   - 05_diff_logic#source-control-runtime
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!
 use crate::ledger::database::cached_or_create_database;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;

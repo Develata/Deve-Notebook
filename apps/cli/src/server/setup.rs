@@ -1,6 +1,6 @@
 // apps/cli/src/server/setup.rs
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 08_auth#cors
 //!   - 08_auth#security-headers
 //!   - 18_release#runtime-observability

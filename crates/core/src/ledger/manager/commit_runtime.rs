@@ -1,8 +1,8 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!   - 10_rendering#document-authority-bridge
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 //!
 //! Source Control commit orchestration runtime.
 

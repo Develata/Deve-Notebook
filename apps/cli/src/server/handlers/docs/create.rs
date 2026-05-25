@@ -3,7 +3,7 @@
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#repo-scope-runtime
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 //!
 //! # 创建文档处理器
 

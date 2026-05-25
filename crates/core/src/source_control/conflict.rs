@@ -1,7 +1,7 @@
 // crates/core/src/source_control/conflict.rs
 //! # 冲突检测模块 (Conflict Detection)
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#source-control-runtime
 //!
 //! 当文件同时在文件系统和 Ledger 中存在未提交变更时，标记为冲突。

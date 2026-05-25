@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use super::*;

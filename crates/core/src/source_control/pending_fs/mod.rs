@@ -1,6 +1,6 @@
 // crates/core/src/source_control/pending_fs.rs
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!
 //! # 待确认文件变更管理 (Pending FS Ops)
 //!

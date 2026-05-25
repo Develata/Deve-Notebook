@@ -1,7 +1,7 @@
 // crates\core\src\source_control
 //! # 变更检测模块 (Change Detection)
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 05_diff_logic#source-control-runtime
 //!
 //! 对比当前 Ledger 状态与最后提交快照，检测文件变更。

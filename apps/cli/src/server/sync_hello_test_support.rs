@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#projection-locator-contract
+//!   - 03_storage/projection#projection-locator-contract
 //!   - 07_network#server-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 

@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-catalog-contract
 //!   - 04_repository#repo-scope-runtime
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!
 use crate::models::{PeerId, RepoId};
 use crate::writeback::PersistGuard;

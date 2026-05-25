@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!
 //! STORE-007: watcher maps create/modify/delete into pending_fs_ops only.
 

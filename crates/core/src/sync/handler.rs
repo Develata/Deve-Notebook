@@ -1,6 +1,6 @@
 //! # 文件系统事件处理器 (FS Event Handler)
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#source-control-runtime
 //!
 //! Invariants:

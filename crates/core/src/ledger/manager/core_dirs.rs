@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 04_repository#repo-catalog-contract
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!
 use anyhow::{Context, Result, anyhow};
 use std::path::{Path, PathBuf};

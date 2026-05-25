@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 
 use super::DriftKind;
 use crate::source_control::{ChangeStatus, pending_fs, staging};

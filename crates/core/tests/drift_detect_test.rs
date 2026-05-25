@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 
 use deve_core::ledger::RepoManager;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};

@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 
 use super::super::errors::{self, ScOp};
 use deve_core::ledger::traits::RepoSelector;

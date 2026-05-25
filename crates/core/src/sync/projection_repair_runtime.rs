@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-health-and-repair
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 
 use super::{ProjectionDiagnostic, SyncManager, projection_diagnostic, rebuild_projection};
 use crate::ledger::RepoManager;

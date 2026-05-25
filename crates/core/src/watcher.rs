@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 
 pub use crate::sync::watcher::{WatcherError, start_repo_watcher, stop_repo_watcher};
 

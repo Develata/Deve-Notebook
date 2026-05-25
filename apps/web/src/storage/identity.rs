@@ -1,6 +1,6 @@
 //! 浏览器 peer identity 持久化。
 //! plan_ref:
-//!   - 03_storage#browser-storage-layering
+//!   - 03_storage/index#browser-storage-layering
 //!   - 07_network#web-ws-runtime
 //!
 //! 私钥材料始终停留在 `WebCrypto` 的不可导出 `CryptoKey` 中；Rust 侧仅消费公钥与 repo 级元数据。

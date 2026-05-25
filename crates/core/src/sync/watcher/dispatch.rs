@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 
 use super::{WatcherCallback, WatcherError, filter};
 use crate::models::RepoId;

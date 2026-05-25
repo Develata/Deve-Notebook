@@ -1,7 +1,7 @@
 // crates\core\src\security
 //! # 安全模块 (Security Module)
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 07_network#server-ws-runtime
 //!   - 08_auth#jwt-cookie-contract
 //!

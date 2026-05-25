@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 
 use super::WatcherError;
 use notify_debouncer_full::DebouncedEvent;

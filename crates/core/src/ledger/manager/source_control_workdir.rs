@@ -1,8 +1,8 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/index#internal-path-normalization
 //!
 //! # Source Control 工作区辅助
 //!

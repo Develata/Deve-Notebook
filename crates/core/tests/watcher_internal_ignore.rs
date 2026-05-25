@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!
 //! POS-005: `.deveignore` applies to watcher events and startup scan.
 //! STORE-007: ignored directory scans do not create pending_fs_ops.

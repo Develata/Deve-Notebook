@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 05_diff_logic#source-control-runtime
 
 use crate::ledger::schema::STAGED_DOC_INDEX;

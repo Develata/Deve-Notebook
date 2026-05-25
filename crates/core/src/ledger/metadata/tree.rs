@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#projection-contract
-//!   - 03_storage#internal-path-normalization
+//!   - 03_storage/projection#projection-contract
+//!   - 03_storage/index#internal-path-normalization
 
 use crate::ledger::node_meta;
 use crate::ledger::schema::{DOCID_TO_PATH, PATH_TO_DOCID};

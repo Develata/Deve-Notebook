@@ -1,6 +1,6 @@
 //! # 全量扫描单文件处理
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 05_diff_logic#source-control-runtime
 //!
 //! Invariants:

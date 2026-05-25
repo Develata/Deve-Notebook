@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
+//!   - 03_storage/index#repo-runtime-layout
 //!   - 04_repository#repo-selector-resolution-contract
 
 use super::DatabaseHandle;

@@ -1,7 +1,7 @@
 // crates\core\src\models
 //! # 核心数据模型 (Core Data Models)
 //! plan_ref:
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!
 //! **架构作用**:
 //! 定义 Deve-Note 中使用的基础数据类型，包括文档标识、操作记录、节点标识等，

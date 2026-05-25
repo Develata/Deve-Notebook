@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!   - 04_repository#tree-projection-contract
 
 use crate::ledger::RepoManager;

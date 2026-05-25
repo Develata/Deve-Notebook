@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#watcher-contract
+//!   - 03_storage/watcher#watcher-contract
 //!
 //! 目录创建逻辑。
 

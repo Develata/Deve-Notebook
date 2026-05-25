@@ -1,5 +1,5 @@
 //! plan_ref:
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 
 use super::ledger_event::{ContentOp, LedgerEntry, LedgerEvent};
 use super::{DocId, PeerId};

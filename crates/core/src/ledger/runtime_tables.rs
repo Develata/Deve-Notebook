@@ -1,6 +1,6 @@
 //! plan_ref:
-//!   - 03_storage#repo-runtime-layout
-//!   - 03_storage#facts-partition
+//!   - 03_storage/index#repo-runtime-layout
+//!   - 03_storage/authority#facts-partition
 //!   - 05_diff_logic#source-control-runtime
 //!
 use crate::ledger::schema::{CLIENT_OP_INDEX, LEDGER_OPS};

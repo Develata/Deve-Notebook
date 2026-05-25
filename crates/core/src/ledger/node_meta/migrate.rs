@@ -1,7 +1,7 @@
 // crates/core/src/ledger/node_meta/migrate.rs
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 03_storage#projection-contract
+//!   - 03_storage/projection#projection-contract
 //!
 //! # Node 元数据迁移/查询
 

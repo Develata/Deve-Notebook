@@ -1,6 +1,6 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 03_storage#facts-partition
+//!   - 03_storage/authority#facts-partition
 //!
 //! # Source Control Commit Preflight
 //!
