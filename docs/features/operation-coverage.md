@@ -1,6 +1,11 @@
+<!-- This file is a projection of docs/plan/20_operations_catalog.md -->
+<!-- It binds flow IDs to acceptance cases; it MUST NOT define op semantics or introduce flow IDs absent from chapter 20 (the authoritative operation catalog). -->
+
 # Operation Coverage Registry
 
 This registry binds operation files to acceptance-case identifiers. It is a manual coverage index for the operation-level architecture slice; keep it aligned with `docs/features/operations/*.md` and `docs/overview/architecture-diff.md`.
+
+The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; this file is its acceptance-binding projection. The `Flow ID` set here and chapter 20's operation-flow catalog MUST stay strictly 1:1.
 
 `docs/features/operations/00_schema.md` defines the schema and is not itself a flow.
 
@@ -81,6 +86,7 @@ This registry binds operation files to acceptance-case identifiers. It is a manu
 
 ## Maintenance Rules
 
-1. Add a row here when adding an operation file.
-2. Keep `Acceptance Cases` equal to the operation file metadata line.
-3. Keep architecture flow labels in `docs/overview/architecture-diff.md`; this file tracks flow IDs and acceptance coverage.
+1. Register a new operation-flow (`Flow ID`) in `docs/plan/20_operations_catalog.md` first; only then add its row here. Never introduce a `Flow ID` that is absent from chapter 20.
+2. Add a row here when adding an operation file.
+3. Keep `Acceptance Cases` equal to the operation file metadata line.
+4. Keep architecture flow labels in `docs/overview/architecture-diff.md`; this file tracks flow IDs and acceptance coverage.
