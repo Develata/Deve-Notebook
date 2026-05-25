@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-05-26`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
@@ -98,6 +98,50 @@
     *   所有 repo-scoped server message、write intent 与 UI writable state **MUST** 绑定当前 `scope_nonce`。
 *   **switch_nonce (切换版本)**：客户端发起 repo / branch switch 时声明的候选 scope 版本。
     *   `switch_nonce` **MUST** 严格大于当前 `scope_nonce`；stale switch 必须 fail-closed。
+*   **Repo Health States (仓库健康状态)**：`Healthy` / `Degraded` / `Repairing` / `Quarantined` 的 glossary 级名称。
+    *   `Healthy`：通过完整性校验，authority 与 projection 一致，可正常读写。
+    *   `Degraded`：检测到非致命异常，部分能力受限，但 authority 未损坏。
+    *   `Repairing`：正在执行 repair 流程，写入受控。
+    *   `Quarantined`：检测到完整性风险，repo 被隔离，禁止常规写入直至修复。
+    *   **Authority Defers To**：`04_repository#repo-health-and-repair`。状态全集、状态迁移规则与准入/禁止条件唯一归该章；本条仅提供名称，不得在此扩展或偏离。
+
+## 2.bis Reliability Vocabulary (可靠性术语)
+
+> 以下术语支撑 Governance Contract 章节 `22_reliability_observability`（B3.3 规划中）；其权威定义归该章，本节仅登记 glossary 名称。
+
+*   **SLO (Service Level Objective，服务级目标)**：对某项服务质量指标设定的目标阈值（如 p99 latency ≤ X）。
+*   **SLI (Service Level Indicator，服务级指标)**：度量 SLO 达成情况的可观测量化指标。
+*   **Error Budget (错误预算)**：SLO 允许范围内可消耗的失败/降级额度；耗尽即触发治理动作。
+*   **Telemetry Schema (遥测模式)**：结构化日志/事件字段的标准定义。
+*   **Metrics Taxonomy (指标分类法)**：counter / gauge / histogram 等指标的命名与维度规则。
+*   **Tracing Span (追踪跨度)**：一次操作在异步/分布式链路中的可观测时间区间。
+
+## 2.ter Operations Vocabulary (运维与操作术语)
+
+> 以下术语支撑 Governance Contract 章节 `20_operations_catalog`（B3.1 规划中）。
+
+*   **OpId (操作标识)**：user operation 层的稳定标识（如 `op.editor.save_pending`）。
+    *   与 `14_commands#cli-commands` / `14_commands#command-palette-shortcuts` 的 `CommandId` **正交**：`OpId` 是 user operation 层标识，`CommandId` 是 instruction interface 层标识；二者 **MUST NOT** 混用。
+*   **Failure Family (错误码族)**：错误码族别名，引用 `13_i18n#i18n-error-code-catalog`；本条不定义具体错误码。
+*   **Extension Point (扩展点)**：暴露给 `19_plugins` / host function 的受控扩展位置。
+*   **Replacement Point (替换点)**：允许通过 feature flag 替换实现的位置。
+*   **Owning Boundary (归属边界)**：某 op 所属的 runtime boundary（沿各章 §Runtime Boundary）。
+*   **Gate (闸门)**：进入某 op 必须满足的前置条件。
+
+## 2.quater Threat Vocabulary (威胁建模术语)
+
+> 以下术语支撑 Governance Contract 章节 `23_threat_model`（B3.4 规划中），首次展开登记。
+
+*   **STRIDE**：Spoofing / Tampering / Repudiation / Information Disclosure / Denial of Service / Elevation of Privilege 的威胁分类法。
+*   **CVD (Coordinated Vulnerability Disclosure，协调披露)**：漏洞协调披露流程（embargo / SLA / SECURITY.md）。
+*   **SBOM (Software Bill of Materials，软件物料清单)**：构建产物的依赖与组件清单，用于供应链审计。
+
+## 2.quinquies Governance Vocabulary (治理术语)
+
+*   **Governance Contract (治理合同)**：与 A-E 模块层正交的合同切片，沿 Ownership Axis 表达跨层治理；不是 A-E 之外的第六层。
+*   **Authority Owns (权威拥有)**：Metadata 字段，声明本章唯一拥有、其他章节不得重定义的对象。
+*   **Authority Defers To (权威让渡)**：Metadata 字段，声明本章引用但不拥有的对象所在章节。
+*   **Decision History Slice (决策历史切片)**：`docs/adr/` 所在的切片，与 plan/governance、features/walkthrough、acceptance-cases/automation 切片并列。
 
 ## 3. Data Structure Terms (数据结构术语)
 

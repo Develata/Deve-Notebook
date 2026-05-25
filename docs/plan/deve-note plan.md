@@ -44,6 +44,35 @@
 - **[18_release.md](./18_release.md)**: 构建、打包、发布、CI/CD。
 - **[19_plugins.md](./19_plugins.md)**: plugin / external runtime 接口保留。
 
+### Governance Contracts (non-layer ownership-axis slice)
+
+Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership Axis 表达跨层治理。
+它们 **不是** A-E 之外的第六层；它们是 Ownership Axis 上的一个切片，与 §6 四层调用链平面正交。
+
+约束：
+
+- 不引入 §6 四层调用链之外的新调用层。
+- 不重定义 A-E 任一已有章节的 authority。
+- 每个 Governance Contract 章节的 Metadata 必须**同时**声明：
+  - `Authority Owns`：本章唯一拥有、其他章节不得重定义的对象。
+  - `Authority Defers To`：本章引用但不拥有的对象所在章节。
+- 章节内容只承载「索引 / 映射 / 度量 / 边界声明」，不承载状态全集或操作语义。
+
+四章骨架（B3.1–B3.4 落地，当前为预声明）：
+
+- **20_operations_catalog.md**（B3.1 新增）
+  - Owns：`OpId catalog` / `Extension Point Index` / `Replacement Point Index` / `Configuration Entry Index`（仅索引；具体配置项定义、默认值、环境变量名仍 Defers To 各原章节）。
+  - Defers To：`01_terminology`、`03_storage`、`06_backup`、`07_network`、`08_auth`、`13_i18n`（failure family codes）、`15_settings`（具体配置项定义），以及各章末尾「本章相关配置」段。
+- **21_perf_budget.md**（B3.2 新增）
+  - Owns：op 维度 latency / RSS budget；CI fuse 阈值。
+  - Defers To：`17_tech_stack#performance-profiles-and-feature-matrix`（profile 枚举与 feature matrix）。
+- **22_reliability_observability.md**（B3.3 新增）
+  - Owns：telemetry schema / metrics taxonomy / tracing span boundary / alerting tier 映射。
+  - Defers To：`04_repository#repo-health-and-repair`（degraded 状态全集与状态迁移）、`13_i18n#i18n-error-code-catalog`（错误码）、`17_tech_stack#performance-profiles-and-feature-matrix`（profile）、`18_release#runtime-observability`（运维观测 endpoint）。
+- **23_threat_model.md**（B3.4 新增）
+  - Owns：STRIDE catalog / key lifecycle（高层流程）/ algorithm deprecation / supply chain / CVD policy。
+  - Defers To：`07_network#trust-boundary`（trust boundary）、`08_auth`（auth runtime contract）、`06_backup#backup-secret-ref-contract`（key custody）。
+
 ### F. Implementation Blueprints
 - **[../tasks/18_infra_runtime.md](../tasks/18_infra_runtime.md)**: infra-first 模块拆分与运行时边界收敛蓝图。
 - **[../tasks/19_repo_refactor_blueprint.md](../tasks/19_repo_refactor_blueprint.md)**: 仓库重构迁移顺序与目录调整蓝图。
@@ -99,7 +128,7 @@
 ### 平台子章规则
 
 *   `11_ui_design/` 是共享 shell/control/runtime 总章。
-*   `08_ui_design_01/02/03` 只描述 Web / Desktop / Mobile 的 adapter 与 surface 差异。
+*   `11_ui_design/01_web`、`11_ui_design/02_desktop`、`11_ui_design/03_mobile` 只描述 Web / Desktop / Mobile 的 adapter 与 surface 差异。
 *   共享控制语义、authority 约束、runtime 归属不得在子章里重新定义或偏离总章。
 
 ### Route 2 Guardrail（Node/Path 一等事实护栏）
