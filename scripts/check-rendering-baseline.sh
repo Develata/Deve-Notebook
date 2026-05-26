@@ -24,13 +24,13 @@ absent() {
 }
 
 # Plan/features must keep the current renderer distinct from future hybrid work.
-contains docs/plan/03_rendering.md "Rendering Capability Boundary"
-contains docs/plan/03_rendering.md "Extended target"
-contains docs/plan/03_rendering.md "辅助 Markdown-to-HTML 渲染器"
-contains docs/plan/03_rendering.md "不得被视为主编辑器 hybrid engine"
-contains docs/plan/03_rendering.md "独立 Preview Projection / Live Preview / Milkdown"
-contains docs/plan/03_rendering.md "真正跨超大文档的完整 virtual rendering"
-contains docs/plan/03_rendering.md "rendering settings 的完整 GUI 持久化"
+contains docs/plan/10_rendering.md "Rendering Capability Boundary"
+contains docs/plan/10_rendering.md "Extended target"
+contains docs/plan/10_rendering.md "辅助 Markdown-to-HTML 渲染器"
+contains docs/plan/10_rendering.md "不得被视为主编辑器 hybrid engine"
+contains docs/plan/10_rendering.md "独立 Preview Projection / Live Preview / Milkdown"
+contains docs/plan/10_rendering.md "真正跨超大文档的完整 virtual rendering"
+contains docs/plan/10_rendering.md "rendering settings 的完整 GUI 持久化"
 contains docs/features/03_rendering.md "下列能力不得作为本功能篇的已完成验收目标"
 contains docs/features/03_rendering.md "不承担主编辑器职责"
 contains docs/features/03_rendering.md "不宣称完整 virtual rendering"

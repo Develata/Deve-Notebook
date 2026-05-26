@@ -80,9 +80,9 @@ assert_editor_bundle_is_current() {
 # UI-GEN-002: shell layers use the canonical z-index registry.
 contains docs/acceptance-cases/05_ui.md "case_id: UI-GEN-002"
 contains docs/acceptance-cases/05_ui.md "scripts/check-ui-z-index-baseline.sh"
-contains docs/plan/08_ui_design.md "shell 分层至少保留以下 z-index registry"
-contains docs/plan/08_ui_design.md "--z-editor"
-contains docs/plan/08_ui_design.md "--z-toast"
+contains docs/plan/11_ui_design/index.md "shell 分层至少保留以下 z-index registry"
+contains docs/plan/11_ui_design/index.md "--z-editor"
+contains docs/plan/11_ui_design/index.md "--z-toast"
 contains apps/web/style/_variables.css "--z-editor: 0;"
 contains apps/web/style/_variables.css "--z-toast: 120;"
 assert_lt "--z-editor" "--z-chrome"

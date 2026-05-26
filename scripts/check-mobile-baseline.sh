@@ -88,7 +88,7 @@ contains_case_block UI-MOB-004 "cli_assert: mobile_toolbar_visual_viewport_offse
 contains_case_block UI-MOB-004 "cli_assert: mobile_toolbar_dom_marker_bound true"
 contains_case_block UI-MOB-004 "ui_assert: toolbar_visible true"
 contains_case_block UI-MOB-004 "ui_assert: toolbar_not_overlapped_by_keyboard true"
-contains docs/plan/08_ui_design_03_mobile.md '必须使用 `visualViewport` API 监听键盘高度变化'
+contains docs/plan/11_ui_design/03_mobile.md '必须使用 `visualViewport` API 监听键盘高度变化'
 contains apps/web/src/components/mobile_layout/effects.rs "visual_viewport_keyboard_offset("
 contains apps/web/src/components/mobile_layout/effects.rs "fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap()"
 contains apps/web/src/components/mobile_layout/effects.rs "fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap()"
@@ -106,8 +106,8 @@ contains_case_block UI-MOB-005 "cli_assert: mobile_search_sheet_handle_marker_bo
 contains_case_block UI-MOB-005 "ui_assert: search_sheet_position \"top\""
 contains_case_block UI-MOB-005 "ui_swipe: \"search_sheet_handle\" (direction: \"up\", distance: 90)"
 contains_case_block UI-MOB-005 "ui_assert: search_sheet_closed true"
-contains docs/plan/08_ui_design_03_mobile.md "点击 Search -> Top Sheet 自上而下展开。"
-contains docs/plan/08_ui_design_03_mobile.md "关闭手势以顶部拖拽上滑为主"
+contains docs/plan/11_ui_design/03_mobile.md "点击 Search -> Top Sheet 自上而下展开。"
+contains docs/plan/11_ui_design/03_mobile.md "关闭手势以顶部拖拽上滑为主"
 contains apps/web/src/components/main_layout_runtime/overlays.rs "SearchUiMode::Sheet"
 contains apps/web/src/components/search_box/ui.rs "data-deve-search-sheet-position=move || ui_sheet::sheet_position(ui_mode.get())"
 rejects apps/web/src/components/search_box/ui.rs "data-deve-search-sheet-open"
@@ -126,7 +126,7 @@ contains_case_block UI-MOB-006 "cli_assert: mobile_search_results_swipe_does_not
 contains_case_block UI-MOB-006 "ui_scroll: \"search_results\" (delta: 200)"
 contains_case_block UI-MOB-006 "ui_swipe: \"search_results\" (direction: \"up\", distance: 80)"
 contains_case_block UI-MOB-006 "ui_assert: search_sheet_closed false"
-contains docs/plan/08_ui_design_03_mobile.md "避免与结果列表滚动冲突"
+contains docs/plan/11_ui_design/03_mobile.md "避免与结果列表滚动冲突"
 contains apps/web/src/components/search_box/ui_sections.rs "data-deve-search-results-scroll=move || search_results_scroll_marker(ui_mode.get())"
 contains apps/web/src/components/search_box/ui_sections.rs "SearchUiMode::Sheet => Some(\"isolated\")"
 contains apps/web/src/components/search_box/ui_sections.rs "SearchUiMode::Overlay => None"
@@ -150,7 +150,7 @@ contains_case_block UI-MOB-007 "cli_assert: mobile_bottom_bar_single_line_marker
 contains_case_block UI-MOB-007 "cli_assert: mobile_bottom_bar_col_placeholder_bound true"
 contains_case_block UI-MOB-007 "ui_assert: bottom_bar_collapsed true"
 contains_case_block UI-MOB-007 "ui_assert: bottom_bar_single_line true"
-contains docs/plan/08_ui_design_03_mobile.md '默认折叠态 **MUST** 仅显示一行：`Branch / Ready / Words / Lines / Col`。'
+contains docs/plan/11_ui_design/03_mobile.md '默认折叠态 **MUST** 仅显示一行：`Branch / Ready / Words / Lines / Col`。'
 contains apps/web/src/components/mobile_layout/footer.rs "data-deve-mobile-bottom-bar=move || bottom_bar_state_attrs(expanded.get()).0"
 contains apps/web/src/components/mobile_layout/footer.rs "data-deve-mobile-bottom-bar-lines=move || bottom_bar_state_attrs(expanded.get()).1"
 contains apps/web/src/components/mobile_layout/footer.rs "fn mobile_bottom_bar_collapsed_state_is_single_line()"
@@ -181,7 +181,7 @@ contains_case_block UI-MOB-008 "cli_assert: mobile_bottom_bar_outside_dismiss_ma
 contains_case_block UI-MOB-008 "cli_assert: mobile_bottom_bar_details_marker_bound true"
 contains_case_block UI-MOB-008 "cli_assert: mobile_bottom_bar_expand_state_transition_bound true"
 contains_case_block UI-MOB-008 "ui_assert: bottom_bar_collapsed true"
-contains docs/plan/08_ui_design_03_mobile.md "通过右侧箭头按钮展开详情；再次点击或点击状态栏外区域自动收起。"
+contains docs/plan/11_ui_design/03_mobile.md "通过右侧箭头按钮展开详情；再次点击或点击状态栏外区域自动收起。"
 contains apps/web/src/components/mobile_layout/footer.rs "data-deve-mobile-bottom-bar-dismiss=\"outside_bottom_bar\""
 contains apps/web/src/components/mobile_layout/footer.rs "pub(super) fn bottom_bar_after_outside_click("
 contains apps/web/src/components/mobile_layout/footer.rs "fn mobile_bottom_bar_expand_outside_click_collapses()"
@@ -477,7 +477,7 @@ contains_case_block UI-MOB-017 "cli_assert: mobile_diff_hides_accessory_toolbar_
 contains_case_block UI-MOB-017 "ui_assert: mobile_chat_chip_visible false"
 contains_case_block UI-MOB-017 "ui_assert: mobile_accessory_toolbar_visible false"
 contains docs/acceptance-bindings.tsv "UI-MOB-017|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff overlay workflow"
-contains docs/plan/08_ui_design_03_mobile.md "移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。"
+contains docs/plan/11_ui_design/03_mobile.md "移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。"
 contains apps/web/src/components/diff_view/mod.rs "pub(crate) fn diff_view_class(mobile: bool) -> &'static str"
 contains apps/web/src/components/diff_view/mod.rs "fn mobile_diff_uses_mobile_dom_marker()"
 contains apps/web/src/components/mobile_layout/chat_sheet.rs "fn mobile_diff_hides_chat_chip_and_expanded_chat()"
@@ -528,8 +528,8 @@ contains apps/web/index.html "if (view.state?.readOnly) return false;"
 # zoom the page when the CodeMirror content area receives input focus.
 contains apps/web/style/_base.css ".cm-content"
 contains apps/web/style/_base.css "font-size: 16px;"
-contains docs/plan/08_ui_design_03_mobile.md '**Font Size**: 默认字号 **SHOULD** 设为 `16px`'
-contains docs/plan/08_ui_design_03_mobile.md 'Font Size：移动端编辑器默认字号 **SHOULD** 设为 `16px` 或更高'
+contains docs/plan/11_ui_design/03_mobile.md '**Font Size**: 默认字号 **SHOULD** 设为 `16px`'
+contains docs/plan/11_ui_design/03_mobile.md 'Font Size：移动端编辑器默认字号 **SHOULD** 设为 `16px` 或更高'
 contains_case_block UI-MOB-020 "run: scripts/check-mobile-baseline.sh"
 contains_case_block UI-MOB-020 "cli_assert: mobile_editor_font_size_16px true"
 

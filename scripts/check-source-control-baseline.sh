@@ -38,10 +38,10 @@ check_case_block() {
 
 # DIFF-009: Command Palette Git actions remain Planned / Optional. Source Control panel
 # owns the current stage/commit/publish entry points.
-check_contains docs/plan/12_commands.md "Source Control / Git-like Workflow"
-check_contains docs/plan/12_commands.md 'AI: Switch to PLAN Mode'
-check_contains docs/plan/12_commands.md 'AI: Switch to BUILD Mode'
-check_contains docs/plan/12_commands.md '不负责切换 `native / trusted-cli` 后端'
+check_contains docs/plan/14_commands.md "Source Control / Git-like Workflow"
+check_contains docs/plan/14_commands.md 'AI: Switch to PLAN Mode'
+check_contains docs/plan/14_commands.md 'AI: Switch to BUILD Mode'
+check_contains docs/plan/14_commands.md '不负责切换 `native / trusted-cli` 后端'
 check_contains apps/web/src/components/command_palette/registry.rs "merge_peer_command"
 check_contains apps/web/src/components/command_palette/registry.rs "establish_branch_command(locale, set_show)"
 check_contains apps/web/src/components/command_palette/registry/branch.rs "Command::unavailable"
@@ -93,8 +93,8 @@ check_contains docs/acceptance-cases/11_commands_settings.md "case_id: CMD-004A"
 # push CLI be re-described as a Web Git writer or a background executor.
 check_contains docs/features/07_diff_logic.md "Git import/push/repair 写操作只允许通过显式 CLI surface 触发"
 check_contains docs/features/07_diff_logic.md "当前阶段不实现 Web 后端直接 Git import/push/repair，也不实现后台自动 Git mirror repair"
-check_contains docs/plan/14_tech_stack.md "Web/后台不得从只读 status/review surface 隐式升级为 Git writer"
-check_contains docs/plan/14_tech_stack.md "任何可执行 Git repair UI 都必须另立设计批次，并要求人工确认"
+check_contains docs/plan/17_tech_stack.md "Web/后台不得从只读 status/review surface 隐式升级为 Git writer"
+check_contains docs/plan/17_tech_stack.md "任何可执行 Git repair UI 都必须另立设计批次，并要求人工确认"
 check_contains docs/report/git-ecosystem-bridge-baseline-2026-05-01.md "Web 只提供 CLI-only notice 与只读 repair review"
 check_contains docs/report/git-ecosystem-bridge-baseline-2026-05-01.md "不得后台执行 Git，不得让 Command Palette 直接写 Git"
 check_contains apps/cli/src/server/router.rs '"/api/sc/git-mirror/repair-review"'
@@ -102,7 +102,7 @@ check_contains apps/web/src/components/sidebar/source_control/error_notice.rs 'd
 check_contains apps/web/src/i18n/source_control_git.rs "Git mirror repair is CLI-only"
 
 # Current Source Control panel operations are explicit and repo-scoped.
-check_contains docs/plan/07_diff_logic.md "CommitStaged"
+check_contains docs/plan/05_diff_logic.md "CommitStaged"
 check_contains docs/features/operations/sc_commit.md 'ClientMessage::Commit { scope_nonce }'
 check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "ClientMessage::Commit"
 check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "ClientMessage::CommitAndPush"
@@ -235,14 +235,14 @@ check_contains apps/cli/src/server/handlers/source_control/commits.rs "Commit & 
 check_absent apps/cli/src/server/handlers/source_control/commits.rs "SyncPush"
 
 # Commit diff must preserve canonical document identity instead of becoming path-only output.
-check_contains docs/plan/07_diff_logic.md "canonical targets"
+check_contains docs/plan/05_diff_logic.md "canonical targets"
 check_contains crates/core/src/source_control/types.rs "pub doc_id: Option<DocId>"
 check_contains crates/core/src/source_control/commit_diff.rs "doc_id: Some(doc_id)"
 check_contains crates/core/tests/commit_diff_node_projection_test.rs "assert_eq!(diffs[0].doc_id, Some(doc_id));"
 
 # Live doc diff responses must also preserve canonical document identity.
-check_contains docs/plan/07_diff_logic.md "- \`DocDiff\`"
-check_contains docs/plan/07_diff_logic.md "  - \`doc_id\`"
+check_contains docs/plan/05_diff_logic.md "- \`DocDiff\`"
+check_contains docs/plan/05_diff_logic.md "  - \`doc_id\`"
 check_contains crates/core/src/protocol/server.rs "DocDiff {"
 check_contains crates/core/src/protocol/server.rs "#[serde(default)] doc_id: Option<DocId>"
 check_contains apps/cli/src/server/handlers/source_control/diff/mod.rs "workdir_diff_payload_for_target_in_local_repo"
@@ -276,7 +276,7 @@ check_contains crates/core/src/ledger/manager/commit_preflight.rs "preflight_sta
 check_contains crates/core/src/ledger/manager/commit_preflight.rs "lacks rename evidence"
 check_contains crates/core/tests/source_control_commit_apply_error_test.rs "commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc"
 check_contains crates/core/tests/source_control_commit_apply_error_test.rs "commit_staged_rejects_upsert_move_without_rename_evidence"
-check_contains docs/plan/07_diff_logic.md "legacy \`Deleted + doc_id=None\` 的 exact delete selector"
+check_contains docs/plan/05_diff_logic.md "legacy \`Deleted + doc_id=None\` 的 exact delete selector"
 check_contains crates/core/src/ledger/manager/source_control_path_target.rs "has_legacy_docless_exact_delete"
 check_contains crates/core/src/ledger/manager/source_control_path_target/tests.rs "path_wrapper_promotes_docless_non_delete_to_tracked_identity"
 

@@ -29,7 +29,7 @@ contains docs/acceptance-cases/05_ui.md "scripts/check-ui-spa-routing-baseline.s
 contains docs/acceptance-cases/05_ui.md "cargo test -p deve_cli static_files -- --nocapture"
 contains docs/acceptance-cases/05_ui.md "spa_route_fallback_status_200 true"
 contains docs/acceptance-cases/05_ui.md "api_route_not_spa_fallback true"
-contains docs/plan/08_ui_design_01_web.md "Serve(path) \\to index.html"
+contains docs/plan/11_ui_design/01_web.md "Serve(path) \\to index.html"
 
 contains apps/cli/src/server/static_files.rs "is_spa_fallback_path"
 contains apps/cli/src/server/static_files.rs "ServeDir::new(&dir).fallback(fallback)"
