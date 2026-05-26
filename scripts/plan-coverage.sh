@@ -648,7 +648,18 @@ log "== Check 7: plan anchor registry drift =="
 agents_anchor_dangling=0
 agents_anchor_unused=0
 agents_anchor_missing=0
+agents_anchor_planned=0
 declare -A agents_anchor_map=()
+declare -A planned_anchor_map=()
+# B4.1 — registry rows trailing `planned/no-code-yet` (governance 先登记后落地)
+# or `no-rust-plan-ref` (shell/non-Rust contract, e.g. the perf-budget fuse)
+# carry no Rust plan_ref by design; the unused check and reverse-coverage skip
+# them. Only the row's first column (the anchor) is taken, so a backticked
+# defer ref in the description column is never mis-classified as planned.
+while IFS= read -r pref; do
+  [ -n "$pref" ] || continue
+  planned_anchor_map["$pref"]=1
+done < <(grep -E "^\| \`${PLAN_REF_CORE}\`.*(planned/no-code-yet|no-rust-plan-ref)" "$PLAN_DIR/AGENTS.md" | sed -E "s@^\| \`(${PLAN_REF_CORE})\`.*@\1@" | sort -u)
 
 while IFS= read -r ref; do
   [ -n "$ref" ] || continue
@@ -667,11 +678,14 @@ while IFS= read -r ref; do
 done < <(grep -oE "\`${PLAN_REF_CORE}\`" "$PLAN_DIR/AGENTS.md" | tr -d '`' | sort -u)
 
 for ref in "${!agents_anchor_map[@]}"; do
-  if [ -z "${plan_coverage_map[$ref]+x}" ]; then
-    log "agents-anchor-unused(soft): $ref"
-    agents_anchor_unused=$((agents_anchor_unused + 1))
-    soft_warnings=$((soft_warnings + 1))
+  [ -n "${plan_coverage_map[$ref]+x}" ] && continue
+  if [ -n "${planned_anchor_map[$ref]+x}" ]; then
+    agents_anchor_planned=$((agents_anchor_planned + 1))
+    continue
   fi
+  log "agents-anchor-unused(soft): $ref"
+  agents_anchor_unused=$((agents_anchor_unused + 1))
+  soft_warnings=$((soft_warnings + 1))
 done
 
 for ref in "${!plan_coverage_map[@]}"; do
@@ -684,6 +698,7 @@ done
 
 log "agents anchor dangling (blocking): $agents_anchor_dangling"
 log "agents anchor unused (soft): $agents_anchor_unused"
+log "agents anchor no-rust-plan-ref skip (info): $agents_anchor_planned"
 log "agents anchor missing from registry (soft): $agents_anchor_missing"
 log ""
 
