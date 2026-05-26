@@ -354,7 +354,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - fallback 必须绑定到明确 repo route
 - 禁止空 repo 占位符或跨 repo 复用 snapshot
 
-### 10.2 Trust Boundary
+### 10.2 Trust Boundary {#trust-boundary}
 
 - relay 只是传输管道，不改变来源归属
 - 间接同步时，数据写入路径必须由签名来源决定

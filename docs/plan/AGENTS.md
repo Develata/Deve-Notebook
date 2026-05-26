@@ -103,6 +103,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `03_storage/index#browser-storage-layering` | `index.md ### 3.4 Browser Storage Layering` | 浏览器 localStorage/IndexedDB/WebCrypto 分层与降级合同 |
 | `03_storage/index#internal-path-normalization` | `index.md ### 3.5 Internal Path Normalization` | ledger/projection/sync payload 路径 forward-slash 规范化 |
 | `07_network#repo-scoped-handshake` | `### 6.1 Repo-Scoped Handshake` | SyncHello、scope_nonce 与 repo-scoped handshake 合同 |
+| `07_network#trust-boundary` | `### 10.2 Trust Boundary` | trust boundary policy；relay 只转发、写入路径由签名来源决定 |
 | `07_network#remote-shadow-apply-atomicity` | `### 10.4 Remote Shadow Apply Atomicity` | remote shadow apply、snapshot replay 与 local write fault 的原子性/隔离合同 |
 | `07_network#relay-proxy-attribution-contract` | `### 10.5 Indirect Sync and Attribution` | relay/proxy 只转发、按 repo route 与 payload source peer 归属路由的合同 |
 | `07_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
