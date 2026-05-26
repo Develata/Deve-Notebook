@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-05-26`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
@@ -122,7 +122,9 @@ Gate 状态：
 *   **资产约定**：`asset://` <=> 导出图片引用。
 *   **回归用例**：CI 快照对比。
 
-## 3. Performance Budget & Profiles
+## 3. Performance Profiles & Feature Matrix {#performance-profiles-and-feature-matrix} {#performance-budget}
+
+> op 维度 latency / RSS budget 与 CI fuse 阈值归 `21_perf_budget.md`；本节只拥有 profile 枚举与 feature matrix。`{#performance-budget}` 为旧标题别名锚点（保留以兼容潜在外部链接；无存量引用，未登记入 AGENTS registry）。
 
 ### High/Low Profile
 *   **Low-Spec (≤768MB)**: CSR Only, No Search Index, Snapshot Pruning.
@@ -144,7 +146,7 @@ Gate 状态：
 
 ## 4. WASM Memory Constraints
 
-*   **Budget**: 前端 WASM 堆目标 < 64MB (Mobile), < 128MB (Desktop)。
+*   **Heap Target**: 前端 WASM 堆目标 < 64MB (Mobile), < 128MB (Desktop)。此为前端堆目标，非进程 RSS budget；op 维度 latency / RSS budget 归 `21_perf_budget.md`。
 *   **Large Doc Strategy**: 超过 100KB 的文档使用分段加载，不将全文存入 WASM 堆。
 *   **Monitoring**: 通过 `wasm_bindgen::memory()` 跟踪实际用量并在 DevTools 输出。
 

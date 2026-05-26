@@ -83,6 +83,58 @@ else
   fail=$((fail + 1))
 fi
 
+# ---------------------------------------------------------------------------
+# (d) --check-perf-budget enforcing: positive on current tree + negatives
+# ---------------------------------------------------------------------------
+echo "== (d) --check-perf-budget enforcing =="
+if out="$("$COVERAGE" --check-perf-budget 2>&1)" \
+   && printf '%s' "$out" | grep -q '^check-perf-budget: OK'; then
+  echo "ok        (positive: $out)"; pass=$((pass + 1))
+else
+  echo "FAIL: --check-perf-budget did not pass on current tree:"
+  printf '%s\n' "$out"
+  fail=$((fail + 1))
+fi
+
+perf_tmp="$(mktemp -d)"
+trap 'rm -rf "$perf_tmp"' EXIT
+
+assert_perf_reject() {  # <fixture-file> <label>
+  if "$COVERAGE" --check-perf-budget "$1" >/dev/null 2>&1; then
+    echo "FAIL (want reject): perf-budget $2"; fail=$((fail + 1))
+  else
+    echo "ok       (rejected): perf-budget $2"; pass=$((pass + 1))
+  fi
+}
+
+cat >"$perf_tmp/placeholder.md" <<'MD'
+## 2. Critical Path Budget
+| Critical Path | Profile | P50 | P99 | RSS Δ | Test |
+|---|---|---|---|---|---|
+| `flow.a` | `standard` | TBD | 80ms | +2MB | t |
+## 3. Next
+MD
+assert_perf_reject "$perf_tmp/placeholder.md" "TBD placeholder rejected"
+
+cat >"$perf_tmp/malformed.md" <<'MD'
+## 2. Critical Path Budget
+| Critical Path | Profile | P50 | P99 | RSS Δ | Test |
+|---|---|---|---|---|---|
+| `flow.a` | `standard` | fast | slow | +2MB | t |
+## 3. Next
+MD
+assert_perf_reject "$perf_tmp/malformed.md" "malformed P50/P99 rejected"
+
+cat >"$perf_tmp/sparse.md" <<'MD'
+## 2. Critical Path Budget
+| Critical Path | Profile | P50 | P99 | RSS Δ | Test |
+|---|---|---|---|---|---|
+| `flow.a` | `standard` | 10ms | 20ms | +1MB | t |
+| `flow.b` | `standard` | 10ms | 20ms | +1MB | t |
+## 3. Next
+MD
+assert_perf_reject "$perf_tmp/sparse.md" "too-few-numeric-rows rejected"
+
 echo "----"
 echo "selftest: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

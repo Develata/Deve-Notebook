@@ -71,9 +71,10 @@ SUMMARY_MISSING_PLAN_REF=0
 MISSING_PLAN_REF_SUMMARY_TOP=20
 
 # B0.5 Anchor Contract Upgrade — subcommand modes.
-# MODE: full (default) | rewrite | stub
+# MODE: full (default) | rewrite | stub | metadata-check | perf-budget-check
 MODE="full"
 STUB_NAME=""
+PERF_BUDGET_FILE=""
 REWRITE_FROM=""
 REWRITE_TO=""
 REWRITE_APPLY=0
@@ -89,7 +90,7 @@ usage: plan-coverage.sh [options]
                                   rewrite plan_ref chapter-path prefixes
                                   (dry-run unless --apply)
   --check-metadata-completeness   verify each plan chapter Metadata declares Version + Last Review
-  --check-perf-budget             [stub] not yet enforcing (升级: B3.2)
+  --check-perf-budget             verify 21_perf_budget.md budget table carries numeric P50/P99 (no TBD)
   --check-no-adr-plan-ref         [stub] not yet enforcing (升级: B4.3)
   --check-reverse-coverage        [stub] not yet enforcing (升级: B4)
   --check-md-links [dirs...]      [stub] not yet enforcing (升级: B3.4)
@@ -106,7 +107,8 @@ while [ "$#" -gt 0 ]; do
     --to) REWRITE_TO="${2:-}"; shift || true ;;
     --apply) REWRITE_APPLY=1 ;;
     --check-metadata-completeness) MODE="metadata-check" ;;
-    --check-perf-budget|--check-no-adr-plan-ref|--check-reverse-coverage|--check-md-links)
+    --check-perf-budget) MODE="perf-budget-check" ;;
+    --check-no-adr-plan-ref|--check-reverse-coverage|--check-md-links)
       MODE="stub"; STUB_NAME="$1" ;;
     -h|--help)
       usage; exit 0 ;;
@@ -114,6 +116,8 @@ while [ "$#" -gt 0 ]; do
       # In stub mode (notably --check-md-links) trailing positional dirs are accepted.
       if [ "$MODE" = "stub" ]; then
         : # ignore stub positional args
+      elif [ "$MODE" = "perf-budget-check" ]; then
+        PERF_BUDGET_FILE="$1"  # optional fixture path override (used by selftest negatives)
       else
         echo "ERROR: unknown argument: $1" >&2
         usage >&2
@@ -308,6 +312,57 @@ run_check_metadata_completeness() {
   return 0
 }
 
+# B3.2 — perf budget enforcing. 21_perf_budget.md MUST carry a critical-path
+# budget table with numeric P50/P99 latency cells and no TBD/TODO placeholder,
+# guaranteeing the budget contract never regresses to an empty shell. Runtime
+# regression itself is enforced by CI benchmarks (18_release), not here.
+run_check_perf_budget() {
+  local f="${PERF_BUDGET_FILE:-$PLAN_DIR/21_perf_budget.md}"
+  if [ ! -f "$f" ]; then
+    echo "check-perf-budget: FAIL — $f not found" >&2
+    return 1
+  fi
+  # Parse only the §2 Critical Path Budget table (## 2. … next ## ). Each data
+  # row's P50/P99 (cols 4/5) MUST be `<n>ms`, or both `—` for a feature-off row;
+  # reject placeholders (case-insensitive, incl. 待定/FIXME); require ≥6 numeric
+  # rows so the contract cannot regress to a near-empty shell. Runtime regression
+  # is enforced by CI benchmarks (18_release), not here.
+  local out num off bad ph
+  out="$(awk '
+    /^## 2\./ { intbl=1; next }
+    /^## 3\./ { intbl=0 }
+    intbl && /^\|/ {
+      line=$0
+      if (line ~ /Critical Path/) next             # header row
+      if (line ~ /^\|[[:space:]:|-]+$/) next        # separator row
+      low=tolower(line)
+      if (low ~ /tbd|todo|tba|fixme|待定/) { ph++ }
+      split(line, c, "|")
+      p50=c[4]; p99=c[5]
+      gsub(/^[ \t]+|[ \t]+$/, "", p50); gsub(/^[ \t]+|[ \t]+$/, "", p99)
+      if (p50 ~ /^[0-9]+ms$/ && p99 ~ /^[0-9]+ms$/) { num++ }
+      else if (p50 == "—" && p99 == "—") { off++ }
+      else { bad++ }
+    }
+    END { printf "%d %d %d %d", num+0, off+0, bad+0, ph+0 }
+  ' "$f")"
+  read -r num off bad ph <<<"$out"
+  if [ "${ph:-0}" -gt 0 ]; then
+    echo "check-perf-budget: FAIL — placeholder (TBD/TODO/TBA/FIXME/待定) in §2 budget table" >&2
+    return 1
+  fi
+  if [ "${bad:-0}" -gt 0 ]; then
+    echo "check-perf-budget: FAIL — ${bad} row(s) with malformed P50/P99 (need <n>ms, or feature-off —)" >&2
+    return 1
+  fi
+  if [ "${num:-0}" -lt 6 ]; then
+    echo "check-perf-budget: FAIL — only ${num:-0} numeric P50/P99 row(s) (<6); §2 budget table incomplete" >&2
+    return 1
+  fi
+  echo "check-perf-budget: OK — ${num} numeric P50/P99 budget row(s) (+${off} feature-off) in §2"
+  return 0
+}
+
 # B0.5 — subcommand dispatch. stub/rewrite modes exit before the full report.
 case "$MODE" in
   stub)
@@ -322,6 +377,11 @@ case "$MODE" in
   metadata-check)
     rc=0
     run_check_metadata_completeness || rc=$?
+    exit "$rc"
+    ;;
+  perf-budget-check)
+    rc=0
+    run_check_perf_budget || rc=$?
     exit "$rc"
     ;;
 esac

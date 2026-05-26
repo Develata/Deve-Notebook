@@ -163,6 +163,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `17_tech_stack#graph-visualization` | `### 1.1 图谱可视化` | Graph visualization baseline 与 graph projection 技术边界 |
 | `17_tech_stack#search-baseline` | `### 1.2 搜索基线` | repo-scoped baseline search、可禁用索引与 Tantivy feature-gated 实现 |
 | `17_tech_stack#native-packaging-dependency-gate` | `### 1.4 原生打包依赖门禁` | Desktop/Mobile native-packaging optional dependency 与 gate policy |
+| `17_tech_stack#performance-profiles-and-feature-matrix` | `## 3. Performance Profiles & Feature Matrix` | profile 枚举（standard/low-spec）与 feature matrix 权威；op 维度 budget 归 21_perf_budget |
 | `18_release#runtime-observability` | `### 5.4 Runtime Observability` | 运行时状态、连接角色与 release/debug 可观测性 |
 | `09_web_thin_client_ledger#write-readiness` | `### 2.3 Write Readiness` | Web thin client repo-scoped 写入就绪状态合同 |
 | `09_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
