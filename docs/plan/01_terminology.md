@@ -107,7 +107,7 @@
 
 ## 2.bis Reliability Vocabulary (可靠性术语)
 
-> 以下术语支撑 Governance Contract 章节 `22_reliability_observability`（B3.3 规划中）；其权威定义归该章，本节仅登记 glossary 名称。
+> 以下术语支撑 Governance Contract 章节 `22_reliability_observability`；其权威定义归该章，本节仅登记 glossary 名称。
 
 *   **SLO (Service Level Objective，服务级目标)**：对某项服务质量指标设定的目标阈值（如 p99 latency ≤ X）。
 *   **SLI (Service Level Indicator，服务级指标)**：度量 SLO 达成情况的可观测量化指标。
@@ -115,6 +115,8 @@
 *   **Telemetry Schema (遥测模式)**：结构化日志/事件字段的标准定义。
 *   **Metrics Taxonomy (指标分类法)**：counter / gauge / histogram 等指标的命名与维度规则。
 *   **Tracing Span (追踪跨度)**：一次操作在异步/分布式链路中的可观测时间区间。
+*   **Alerting Tier (告警等级)**：错误码族 / health 信号到告警严重度的分级映射；映射归 `22_reliability_observability`，错误码定义归 `13_i18n`、health 状态归 `04_repository#repo-health-and-repair`。
+*   **DR Playbook (灾难恢复手册)**：灾难恢复操作索引；权威恢复步骤归 `06_backup` 与 `04_repository#repo-health-and-repair`。
 
 ## 2.ter Operations Vocabulary (运维与操作术语)
 
