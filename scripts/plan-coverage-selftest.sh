@@ -135,6 +135,45 @@ cat >"$perf_tmp/sparse.md" <<'MD'
 MD
 assert_perf_reject "$perf_tmp/sparse.md" "too-few-numeric-rows rejected"
 
+# ---------------------------------------------------------------------------
+# (e) --check-no-adr-plan-ref: passes on current tree + detection sanity (B4.3)
+# ---------------------------------------------------------------------------
+echo "== (e) --check-no-adr-plan-ref enforcing =="
+if out="$("$COVERAGE" --check-no-adr-plan-ref 2>&1)" \
+   && printf '%s' "$out" | grep -q '^check-no-adr-plan-ref: OK'; then
+  echo "ok        (positive: $out)"; pass=$((pass + 1))
+else
+  echo "FAIL: --check-no-adr-plan-ref did not pass on current tree:"
+  printf '%s\n' "$out"
+  fail=$((fail + 1))
+fi
+adr_re='(^|[^[:alnum:]_])adr/'
+token_of() { printf '%s' "$1" | sed -E 's@^//![[:space:]]*-[[:space:]]*([^[:space:]]+).*@\1@'; }
+# entry target token referencing an ADR is detected
+if token_of '//!   - adr/0001-leptos-over-yew' | grep -qE "$adr_re"; then
+  echo "ok        (detects adr/ target token)"; pass=$((pass + 1))
+else
+  echo "FAIL: adr/ target token not detected"; fail=$((fail + 1))
+fi
+# normal chapter-path token is not flagged
+if token_of '//!   - 03_storage/authority#facts-partition' | grep -qE "$adr_re"; then
+  echo "FAIL: false-positive on chapter-path token"; fail=$((fail + 1))
+else
+  echo "ok        (no false-positive on chapter-path token)"; pass=$((pass + 1))
+fi
+# trailing comment mentioning adr/ must NOT false-positive (token excludes it)
+if token_of '//!   - 03_storage/authority#facts # see docs/adr/0001' | grep -qE "$adr_re"; then
+  echo "FAIL: trailing-comment adr false-positive"; fail=$((fail + 1))
+else
+  echo "ok        (trailing-comment adr not flagged)"; pass=$((pass + 1))
+fi
+# inline header form is caught by the header scan
+if printf '//! plan_ref: adr/0002\n' | grep -qE '^//![[:space:]]*plan_ref:.*adr/'; then
+  echo "ok        (detects inline-header adr)"; pass=$((pass + 1))
+else
+  echo "FAIL: inline-header adr not detected"; fail=$((fail + 1))
+fi
+
 echo "----"
 echo "selftest: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

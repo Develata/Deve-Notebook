@@ -16,6 +16,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `reference/`: versioned external reference baselines and design notes that inform but do not override plan contracts
 - `report/`: time-stamped gap analyses, audits, and progress snapshots (non-authoritative)
 - `tasks/`: implementation blueprints for infra-first restructuring and migration batches
+- `adr/`: decision history slice — time-ordered architecture decision records (parallel to plan; never referenced by `plan_ref`)
 
 ## Key Files
 
@@ -35,6 +36,7 @@ Project documentation for Deve-Notebook. Documentation is split into three disti
 - `docs/features/` answers: what the product does and how an agent can verify it via Chrome MCP.
 - `docs/acceptance-cases/` answers: what automated tests/scripts must prove without relying on manual browser interaction.
 - `docs/registry/` answers: where a named plan concept is currently carried in code, and what its convergence status is.
+- `docs/adr/` answers: why a significant architecture decision was made and when. It is a decision history slice (time attribute), parallel to `plan/governance`, `features/walkthrough`, and `acceptance-cases/automation`; it is never a `plan_ref` target.
 - `docs/reference/` answers: what external UI or protocol references informed a contract; reference material is non-authoritative unless cited by a plan chapter.
 
 <!-- MANUAL: -->

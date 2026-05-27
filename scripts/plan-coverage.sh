@@ -94,7 +94,7 @@ usage: plan-coverage.sh [options]
                                   (dry-run unless --apply)
   --check-metadata-completeness   verify each plan chapter Metadata declares Version + Last Review
   --check-perf-budget             verify 21_perf_budget.md budget table carries numeric P50/P99 (no TBD)
-  --check-no-adr-plan-ref         [stub] not yet enforcing (升级: B4.3)
+  --check-no-adr-plan-ref         fail if any code plan_ref targets an ADR (adr/...)
   --check-reverse-coverage        run full report, then fail if any stable anchor lacks a code plan_ref
   --check-md-links [dirs...]      [stub] not yet enforcing (升级: B3.4)
 EOF
@@ -112,7 +112,8 @@ while [ "$#" -gt 0 ]; do
     --check-metadata-completeness) MODE="metadata-check" ;;
     --check-perf-budget) MODE="perf-budget-check" ;;
     --check-reverse-coverage) REVERSE_ENFORCE=1 ;;
-    --check-no-adr-plan-ref|--check-md-links)
+    --check-no-adr-plan-ref) MODE="no-adr-check" ;;
+    --check-md-links)
       MODE="stub"; STUB_NAME="$1" ;;
     -h|--help)
       usage; exit 0 ;;
@@ -367,6 +368,38 @@ run_check_perf_budget() {
   return 0
 }
 
+# B4.3 — ADRs are a decision-history slice (time attribute), not blueprint
+# clauses; no code plan_ref may target them. Fail if any plan_ref entry
+# references `adr/` (a 2-digit chapter prefix is required elsewhere, so `adr/`
+# in a plan_ref line is unambiguously an ADR reference).
+run_check_no_adr_plan_ref() {
+  local hits=0 f line token
+  while IFS= read -r f; do
+    # (a) inline header form `//! plan_ref: adr/...` bypasses entry extraction,
+    #     so scan the header line itself.
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      echo "ERROR: no-adr-plan-ref: $f plan_ref header references an ADR: $line" >&2
+      hits=$((hits + 1))
+    done < <(grep -E '^//![[:space:]]*plan_ref:.*adr/' "$f" 2>/dev/null || true)
+    # (b) entry lines: judge only the target token (first field after `- `), so a
+    #     trailing comment that merely mentions adr/ is not a false positive.
+    while IFS= read -r line; do
+      token="$(printf '%s' "$line" | sed -E 's@^//![[:space:]]*-[[:space:]]*([^[:space:]]+).*@\1@')"
+      if printf '%s' "$token" | grep -qE '(^|[^[:alnum:]_])adr/'; then
+        echo "ERROR: no-adr-plan-ref: $f plan_ref targets an ADR: $token" >&2
+        hits=$((hits + 1))
+      fi
+    done < <(extract_plan_ref_blocks "$f")
+  done < <(tracked_rust_files)
+  if [ "$hits" -gt 0 ]; then
+    echo "check-no-adr-plan-ref: FAIL — ${hits} plan_ref(s) reference an ADR (ADRs are not plan_ref targets)"
+    return 1
+  fi
+  echo "check-no-adr-plan-ref: OK — no plan_ref references an ADR"
+  return 0
+}
+
 # B0.5 — subcommand dispatch. stub/rewrite modes exit before the full report.
 case "$MODE" in
   stub)
@@ -381,6 +414,11 @@ case "$MODE" in
   metadata-check)
     rc=0
     run_check_metadata_completeness || rc=$?
+    exit "$rc"
+    ;;
+  no-adr-check)
+    rc=0
+    run_check_no_adr_plan_ref || rc=$?
     exit "$rc"
     ;;
   perf-budget-check)
