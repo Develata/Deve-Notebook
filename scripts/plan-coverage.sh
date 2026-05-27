@@ -71,10 +71,10 @@ SUMMARY_MISSING_PLAN_REF=0
 MISSING_PLAN_REF_SUMMARY_TOP=20
 
 # B0.5 Anchor Contract Upgrade — subcommand modes.
-# MODE: full (default) | rewrite | stub | metadata-check | perf-budget-check
+# MODE: full (default) | rewrite | metadata-check | perf-budget-check | no-adr-check | md-links-check
 MODE="full"
-STUB_NAME=""
 PERF_BUDGET_FILE=""
+MD_LINKS_DIRS=()
 # B4.2 — when 1, run the full report then enforce reverse coverage (every stable,
 # non-skip registry anchor MUST have >=1 code-side plan_ref).
 REVERSE_ENFORCE=0
@@ -96,7 +96,7 @@ usage: plan-coverage.sh [options]
   --check-perf-budget             verify 21_perf_budget.md budget table carries numeric P50/P99 (no TBD)
   --check-no-adr-plan-ref         fail if any code plan_ref targets an ADR (adr/...)
   --check-reverse-coverage        run full report, then fail if any stable anchor lacks a code plan_ref
-  --check-md-links [dirs...]      [stub] not yet enforcing (升级: B3.4)
+  --check-md-links [dirs...]      verify relative markdown links + #anchors resolve in doc trees
 EOF
 }
 
@@ -113,14 +113,13 @@ while [ "$#" -gt 0 ]; do
     --check-perf-budget) MODE="perf-budget-check" ;;
     --check-reverse-coverage) REVERSE_ENFORCE=1 ;;
     --check-no-adr-plan-ref) MODE="no-adr-check" ;;
-    --check-md-links)
-      MODE="stub"; STUB_NAME="$1" ;;
+    --check-md-links) MODE="md-links-check" ;;
     -h|--help)
       usage; exit 0 ;;
     *)
-      # In stub mode (notably --check-md-links) trailing positional dirs are accepted.
-      if [ "$MODE" = "stub" ]; then
-        : # ignore stub positional args
+      # --check-md-links takes trailing positional dirs; --check-perf-budget an optional fixture path.
+      if [ "$MODE" = "md-links-check" ]; then
+        MD_LINKS_DIRS+=("$1")
       elif [ "$MODE" = "perf-budget-check" ]; then
         PERF_BUDGET_FILE="$1"  # optional fixture path override (used by selftest negatives)
       else
@@ -178,17 +177,17 @@ extract_plan_ref_blocks() {
   awk '/^\/\/! plan_ref:/{flag=1;next} flag && /^\/\/! *- /{print; next} flag {flag=0}' "$f"
 }
 
-# resolve_agents_anchor_ref <ref> -> echoes "chapter_ref<TAB>anchor<TAB>status".
-# Only parses the AGENTS registry cell string; it performs no file/anchor
+# resolve_agents_anchor_ref <ref> -> echoes "chapter_ref<TAB>anchor".
+# Only splits the AGENTS registry cell string; it performs no file/anchor
 # existence check. Callers that need validation must call resolve_plan_anchor
 # on the returned chapter_ref to avoid a second resolution implementation.
-# status defaults to `stable`; `planned` is reserved for B4 reverse-coverage
-# enforcing (registry rows trailing `planned/no-code-yet`).
+# Skip status (planned/no-code-yet | no-rust-plan-ref) is derived separately
+# from the registry row marker by Check 7's planned_anchor_map.
 resolve_agents_anchor_ref() {
   local ref="$1"
   local chapter="${ref%%#*}"
   local anchor="${ref#*#}"
-  printf '%s\t%s\t%s\n' "$chapter" "$anchor" "stable"
+  printf '%s\t%s\n' "$chapter" "$anchor"
 }
 
 log_missing_plan_ref_groups() {
@@ -297,10 +296,20 @@ run_rewrite_plan_ref() {
 run_check_metadata_completeness() {
   local missing=0 checked=0 f rel block miss
   while IFS= read -r f; do
-    grep -q '^## Metadata' "$f" || continue
+    rel="${f#"$ROOT/"}"
+    if ! grep -q '^## Metadata' "$f"; then
+      # A chapter file (docs/plan/NN_*) MUST carry a Metadata block; a deleted
+      # block must fail rather than silently pass. Non-chapter docs (AGENTS.md,
+      # master index, plugins/) are exempt.
+      case "$rel" in
+        docs/plan/[0-9][0-9]_*)
+          echo "ERROR: metadata-completeness: $rel is a chapter file but has no '## Metadata' block" >&2
+          missing=$((missing + 1)) ;;
+      esac
+      continue
+    fi
     checked=$((checked + 1))
     block="$(awk '/^## Metadata/{flag=1;next} flag && /^## /{flag=0} flag' "$f")"
-    rel="${f#"$ROOT/"}"
     miss=""
     printf '%s\n' "$block" | grep -q '^- `Version`:' || miss="${miss} Version"
     printf '%s\n' "$block" | grep -q '^- `Last Review`:' || miss="${miss} Last_Review"
@@ -368,6 +377,65 @@ run_check_perf_budget() {
   return 0
 }
 
+# B3.4 — emit every heading anchor of a markdown file: explicit `{#id}` plus a
+# GitHub-style slug of the heading text (best-effort; CJK is dropped).
+md_heading_slugs() {
+  awk '
+    /^#+[[:space:]]/ {
+      line = $0
+      while (match(line, /\{#[A-Za-z0-9_-]+\}/)) {
+        print substr(line, RSTART + 2, RLENGTH - 3)
+        line = substr(line, 1, RSTART - 1) substr(line, RSTART + RLENGTH)
+      }
+      sub(/^#+[[:space:]]+/, "", line)
+      s = tolower(line)
+      gsub(/[^a-z0-9 _-]/, "", s)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+      gsub(/ /, "-", s)
+      if (s != "") print s
+    }' "$1"
+}
+
+# B3.4 — relative markdown links in the doc trees must resolve: the target .md
+# file must exist (relative to the linking file), and any `#anchor` must match
+# an explicit `{#id}` or a heading slug. External/absolute/non-.md links skip.
+run_check_md_links() {
+  local dirs=("$@")
+  [ "${#dirs[@]}" -eq 0 ] && dirs=(docs/plan docs/features docs/acceptance-cases)
+  local broken=0 checked=0 f fdir raw target anchor tfile
+  local d
+  for d in "${dirs[@]}"; do
+    while IFS= read -r f; do
+      fdir="$(dirname "$f")"
+      while IFS= read -r raw; do
+        target="${raw%%#*}"; anchor=""
+        case "$raw" in *#*) anchor="${raw#*#}";; esac
+        case "$target" in http://*|https://*|//*|mailto:*|/*) continue;; esac
+        target="${target//%20/ }"
+        if [ -z "$target" ]; then tfile="$f"; else tfile="$fdir/$target"; fi
+        case "$tfile" in *.md) ;; *) continue;; esac
+        checked=$((checked + 1))
+        if [ ! -f "$tfile" ]; then
+          echo "ERROR: md-link: ${f#"$ROOT/"} -> $target (file not found)" >&2
+          broken=$((broken + 1)); continue
+        fi
+        if [ -n "$anchor" ]; then
+          md_heading_slugs "$tfile" | grep -Fxq "$anchor" || {
+            echo "ERROR: md-link: ${f#"$ROOT/"} -> $target#$anchor (anchor not found)" >&2
+            broken=$((broken + 1))
+          }
+        fi
+      done < <(grep -oE '\]\([^) ]+\)' "$f" | sed -E 's/^\]\(//; s/\)$//')
+    done < <({ case "$d" in /*) b="$d" ;; *) b="$ROOT/$d" ;; esac; [ -d "$b" ] && find "$b" -type f -name '*.md' 2>/dev/null | sort; })
+  done
+  if [ "$broken" -gt 0 ]; then
+    echo "check-md-links: FAIL — ${broken} broken link(s) of ${checked} checked"
+    return 1
+  fi
+  echo "check-md-links: OK — ${checked} local markdown link(s) resolve"
+  return 0
+}
+
 # B4.3 — ADRs are a decision-history slice (time attribute), not blueprint
 # clauses; no code plan_ref may target them. Fail if any plan_ref entry
 # references `adr/` (a 2-digit chapter prefix is required elsewhere, so `adr/`
@@ -402,10 +470,6 @@ run_check_no_adr_plan_ref() {
 
 # B0.5 — subcommand dispatch. stub/rewrite modes exit before the full report.
 case "$MODE" in
-  stub)
-    echo "$STUB_NAME: [stub] not yet enforcing"
-    exit 0
-    ;;
   rewrite)
     rc=0
     run_rewrite_plan_ref || rc=$?
@@ -419,6 +483,11 @@ case "$MODE" in
   no-adr-check)
     rc=0
     run_check_no_adr_plan_ref || rc=$?
+    exit "$rc"
+    ;;
+  md-links-check)
+    rc=0
+    run_check_md_links "${MD_LINKS_DIRS[@]+"${MD_LINKS_DIRS[@]}"}" || rc=$?
     exit "$rc"
     ;;
   perf-budget-check)
@@ -482,6 +551,15 @@ while IFS= read -r f; do
     continue
   fi
   annotated_refs=$((annotated_refs + 1))
+
+  # B3.4 guard: the `//! plan_ref:` header tail MUST be empty or exactly `infra`.
+  # Any other inline content (e.g. `//! plan_ref: 04_repository#x`) would bypass
+  # entry extraction so dangling / reverse-coverage / no-adr all skip it.
+  if grep -qE '^//![[:space:]]*plan_ref:[[:space:]]*[^[:space:]]' "$f" \
+     && ! grep -qE '^//![[:space:]]*plan_ref:[[:space:]]*infra[[:space:]]*$' "$f"; then
+    err "invalid-plan-ref-header: $rel — '//! plan_ref:' header tail must be empty or 'infra'"
+    blocking=$((blocking + 1))
+  fi
 
   # Extract `<chapter-path>#<stable-anchor-id>` refs and verify both parts.
   # chapter-path is either a single-file basename (`04_repository`) or a
@@ -707,7 +785,7 @@ done < <(grep -E "^\| \`${PLAN_REF_CORE}\`.*(planned/no-code-yet|no-rust-plan-re
 while IFS= read -r ref; do
   [ -n "$ref" ] || continue
   agents_anchor_map["$ref"]=1
-  IFS=$'\t' read -r chapter anchor _status < <(resolve_agents_anchor_ref "$ref") || true
+  IFS=$'\t' read -r chapter anchor < <(resolve_agents_anchor_ref "$ref") || true
   chapter_file="$(resolve_plan_anchor "$chapter")"
   if [ ! -f "$chapter_file" ]; then
     err "agents-anchor-dangling: $ref chapter not found"

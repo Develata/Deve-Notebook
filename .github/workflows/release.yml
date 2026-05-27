@@ -48,7 +48,13 @@ jobs:
         run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
 
       - name: Check plan coverage
-        run: scripts/plan-coverage.sh --write-report
+        run: |
+          scripts/plan-coverage.sh --write-report --check-reverse-coverage
+          scripts/plan-coverage.sh --check-metadata-completeness
+          scripts/plan-coverage.sh --check-perf-budget
+          scripts/plan-coverage.sh --check-no-adr-plan-ref
+          scripts/plan-coverage.sh --check-md-links
+          scripts/plan-coverage-selftest.sh
 
       - name: Check architecture registry
         run: scripts/check-architecture-registry.sh

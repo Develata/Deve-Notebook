@@ -174,6 +174,35 @@ else
   echo "FAIL: inline-header adr not detected"; fail=$((fail + 1))
 fi
 
+# ---------------------------------------------------------------------------
+# (f) --check-md-links enforcing: positive on tree + negative fixtures (B3.4)
+# ---------------------------------------------------------------------------
+echo "== (f) --check-md-links enforcing =="
+if out="$("$COVERAGE" --check-md-links 2>&1)" \
+   && printf '%s' "$out" | grep -q '^check-md-links: OK'; then
+  echo "ok        (positive: $out)"; pass=$((pass + 1))
+else
+  echo "FAIL: --check-md-links did not pass on current tree:"
+  printf '%s\n' "$out"; fail=$((fail + 1))
+fi
+mdl_tmp="$(mktemp -d)"
+trap 'rm -rf "$perf_tmp" "$mdl_tmp"' EXIT
+printf '# Target {#here}\n' > "$mdl_tmp/ok.md"
+printf '# A\n[x](./missing.md)\n' > "$mdl_tmp/bad_file.md"
+if "$COVERAGE" --check-md-links "$mdl_tmp" >/dev/null 2>&1; then
+  echo "FAIL (want reject): md-links broken file"; fail=$((fail + 1))
+else echo "ok       (rejected): md-links broken file link"; pass=$((pass + 1)); fi
+rm "$mdl_tmp/bad_file.md"
+printf '# B\n[x](./ok.md#nope)\n' > "$mdl_tmp/bad_anchor.md"
+if "$COVERAGE" --check-md-links "$mdl_tmp" >/dev/null 2>&1; then
+  echo "FAIL (want reject): md-links broken anchor"; fail=$((fail + 1))
+else echo "ok       (rejected): md-links broken anchor"; pass=$((pass + 1)); fi
+rm "$mdl_tmp/bad_anchor.md"
+printf '# C\n[x](./ok.md#here)\n' > "$mdl_tmp/good.md"
+if "$COVERAGE" --check-md-links "$mdl_tmp" >/dev/null 2>&1; then
+  echo "ok        (valid file+anchor accepted)"; pass=$((pass + 1))
+else echo "FAIL: md-links rejected valid link"; fail=$((fail + 1)); fi
+
 echo "----"
 echo "selftest: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
