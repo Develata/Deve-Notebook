@@ -121,8 +121,9 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `11_ui_design/index#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |
 | `11_ui_design/index#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
 | `11_ui_design/index#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
-| `11_ui_design/01_web#single-binary-distribution` | `## 2. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
+| `11_ui_design/01_web#single-binary-distribution` | `## 1. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |
 | `11_ui_design/01_web#web-layout-persistence` | `## 6. Resizable Layout` | Web 布局尺寸、面板持久化与 local UI prefs 边界 |
+| `11_ui_design/02_desktop#desktop-current-native-boundary` | `## 1. 原生适配器边界` | Desktop native adapter 当前边界与 post-gate 目标区分（check-native-track-boundary.sh 断言）; no-rust-plan-ref |
 | `11_ui_design/02_desktop#desktop-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Desktop native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
 | `11_ui_design/02_desktop#desktop-packaging-scaffold` | `### 1.2 Desktop Packaging Scaffold` | Desktop packaging scaffold 与 no-packaging skeleton 边界 |
 | `11_ui_design/02_desktop#desktop-packaging-dependency-gate-decision` | `### 1.3 Desktop Packaging Dependency Gate` | Desktop native-packaging dependency spike 决策与默认关闭边界 |
@@ -132,6 +133,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `11_ui_design/03_mobile#mobile-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Mobile native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
 | `11_ui_design/03_mobile#mobile-service-supervisor-contract` | `### 1.2 Embedded Service Supervisor Contract` | Mobile embedded service supervisor、foreground reprobe 与 suspension 边界 |
 | `11_ui_design/03_mobile#mobile-process-adapter-decision` | `### 1.3 Process Adapter Gate` | Mobile process adapter gate 的诊断、authority 与 runtime 前置条件 |
+| `11_ui_design/03_mobile#mobile-packaging-scaffold` | `### 1.4 Mobile Packaging Scaffold` | Mobile packaging scaffold 与 no-packaging skeleton 边界（check-native-track-boundary.sh 断言）; no-rust-plan-ref |
 | `11_ui_design/03_mobile#mobile-packaging-dependency-gate-decision` | `### 1.5 Mobile Packaging Dependency Gate` | Mobile native-packaging dependency spike 决策与默认关闭边界 |
 | `11_ui_design/03_mobile#mobile-android-shell-package-execution-gate` | `### 1.6 Android Shell-only Package Execution Gate` | Android shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
 | `11_ui_design/03_mobile#mobile-ios-shell-package-execution-gate` | `### 1.7 iOS Shell-only Package Execution Gate` | iOS shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
@@ -216,6 +218,15 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 测试文件、test support、bench、generated/vendor/dist/public glue 不计入缺失注解 warning；但这些文件一旦声明 `plan_ref`，仍会参与 dangling 校验和反向覆盖矩阵。普通 `src/bin` 和 runtime support 文件不默认豁免。
 
 CI 流水线 MUST 运行此脚本；产出的 `plan-coverage.txt` 作为 PR artifact 留存。
+
+**最终强制门禁（B4 后，CI/发布逐项运行，任一失败即阻断）**：除默认报告（`blocking violations: 0`，含 dangling/registry/inline-header 守卫）外，以下子命令均为 enforcing：
+
+- `--check-reverse-coverage`：每个 stable registry anchor 必须至少有一条代码侧 `plan_ref`；标 `planned/no-code-yet`（先登记后落地）或 `no-rust-plan-ref`（shell/脚本断言、无 Rust plan_ref）的 anchor 跳过。
+- `--check-metadata-completeness`：每个 `docs/plan/NN_*` 章节 Metadata 声明 `Version` + `Last Review`（缺整块 Metadata 亦失败）。
+- `--check-perf-budget`：`21_perf_budget` §2 预算表已写入数值（非 TBD）。
+- `--check-no-adr-plan-ref`：无 `plan_ref` 指向 ADR（`docs/adr/` 是 decision-history slice，不被 plan_ref 引用）。
+- `--check-md-links [dirs...]`：`docs/plan` / `docs/features` / `docs/acceptance-cases` 内相对 markdown 链接与 `#anchor` 全部解析。
+- `scripts/plan-coverage-selftest.sh`：脚本自身单元自测。
 
 ### Layer 3 — Acceptance Case Binding (验收用例绑定)
 

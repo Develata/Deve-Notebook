@@ -34,8 +34,8 @@
 | **MCP**      | **No runtime**   | Retired | 不规划、不保留 MCP runtime；相关需求由 Skills 调用受控 CLI 工具或 Trusted CLI path 承载。 |
 | **Graph**    | **Read-only projection + optional renderer gate** | Deferred Renderer | Core 只读派生 graph projection；高内存 renderer 必须作为独立性能批次启用。 |
 | **Search**   | **Repo-scoped baseline scan; Tantivy optional** | Baseline + Optional Index | 低配默认不得依赖常驻重型索引；Tantivy 仅作为 feature-gated 优化路径。 |
-| **Sync**     | **Axum + Tower**         | Core Runtime | HTTP/WS runtime 必须遵守第 5 章协议、repo scope 与结构化错误合同。 |
-| **Git Ecosystem** | **First-class mirror bridge** | Mirror Bridge | `.notegit/` 保持 authority；`.git/` 只作为生态镜像层，详见第 4 与第 7 章。 |
+| **Sync**     | **Axum + Tower**         | Core Runtime | HTTP/WS runtime 必须遵守 `07_network` 协议、repo scope 与结构化错误合同。 |
+| **Git Ecosystem** | **First-class mirror bridge** | Mirror Bridge | `.notegit/` 保持 authority；`.git/` 只作为生态镜像层，详见 `03_storage`（`#git-ecosystem-coexistence`）与 `05_diff_logic`。 |
 | **Build**    | **Tauri v2**             | Native Target / Deferred Packaging | Desktop/Mobile 目标采用 Tauri v2；真实 packaging 依赖必须经过 native-packaging gate。 |
 | **Plugins**  | **Compatibility Host + Interface Reserved** | Boundary Reserved | 保留 Rhai/plugin-host 兼容边界与 Trusted CLI/Calculation future 接口；不要求插件市场或完整扩展平台。 |
 

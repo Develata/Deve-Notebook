@@ -13,7 +13,7 @@
 本章汇总系统涉及的所有 CLI 命令与 Command Palette 指令。
 
 权威状态以 `docs/plan/deve-note plan.md` 为准：本章是规划/扩展契约，不能反向覆盖
-`01/02/04/05/06/07/09/11` 的硬约束章节。
+Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`04_repository`/`05_diff_logic`/`07_network`/`08_auth`/`13_i18n`）。
 
 命令面分为三类：
 
@@ -62,11 +62,11 @@
     *   `Source Control: Commit`: 提交 staged changes 到 ledger-backed commit anchor.
     *   `Source Control: Push`: 推送 Deve source-control state；不得被解释为 Web 直接执行 Git mirror push；Git mirror publish 只由显式 `deve git push` surface 承担。
     *   `Git: Status`: 只读查看 `.git` mirror readiness、repo-local `.gitignore` 是否保护 `.notegit/`，以及 `GitMirrorQueued / Committed / OutOfSync` 队列状态。
-    *   `Git: Mirror`: 显式执行 queued Git mirror commit；执行面 **MUST** 复用第 7 章 Git mirror preflight 与 out-of-sync 边界。
+    *   `Git: Mirror`: 显式执行 queued Git mirror commit；执行面 **MUST** 复用 `05_diff_logic` 的 Git mirror preflight 与 out-of-sync 边界。
     *   `Git: Export Mirror`: 将 queued Deve projection commits 导出到 Git mirror，并建立 Deve commit 到 Git commit 的映射。
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve stage/commit；该命令不得直接生成 ledger commit。
     *   `Git: Push Mirror`: 将已映射的 `.git` mirror HEAD 推送到远端；不得绕过 Deve authority。
-    *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于第 7 章定义的 blocker。
+    *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
     *   `Git:*` 文案 **MAY** 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:

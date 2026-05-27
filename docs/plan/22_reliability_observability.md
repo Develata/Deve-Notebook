@@ -6,8 +6,8 @@
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
 - `Last Review`: `2026-05-26`
-- `Authority Owns`: `telemetry schema / metrics taxonomy / tracing span boundary / alerting tier 映射`
-- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget)`
+- `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / DR playbook index`
+- `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (DR/恢复步骤)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
 - `Counterpart Acceptance`: `docs/acceptance-cases/00_index.md (REL-002)`
 - `Primary Code Areas`: `crates/core/src/` 各 runtime 的 tracing / log / metric 实现位置；`apps/cli/src/server/` observability endpoint
@@ -16,7 +16,7 @@
 
 本章是**可观测性契约唯一权威**：定义遥测/指标/追踪的结构标准与告警映射。
 
-- **Owns**：telemetry schema（§3）、metrics taxonomy（§4）、tracing span boundary（§5）、alerting tier 映射（§7）。
+- **Owns**：SLO/SLI catalog（§2）、telemetry schema（§3）、metrics taxonomy（§4）、tracing span boundary（§5）、observation-to-health mapping（§6）、alerting tier 映射（§7）、DR playbook index（§8）。
 - **Defers To**：health 状态全集与状态迁移规则归 `04_repository#repo-health-and-repair`（本章只做观测→health 的**映射**，§6）；错误码定义归 `13_i18n#i18n-error-code-catalog`（§7 只映射 tier）；latency/RSS 目标归 `21_perf_budget`；profile 归 `17_tech_stack`；运维观测 endpoint 归 `18_release#runtime-observability`。
 - **边界**：本章 **MUST NOT** 定义 health 状态、错误码、budget 数值或新增调用层；只承载观测/映射/边界声明。
 
@@ -94,9 +94,9 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 
 | Tier | 触发类别 | 示例码（13_i18n） | 动作 |
 |---|---|---|---|
-| `T1` 紧急 | 5xx；或显式列入的数据完整性/解密失败码 | `STORAGE_PERSIST_FAILED`(500)、`STORAGE_DB_LOCKED`(503)、`SYNC_DECRYPT_FAILED`(400，因数据完整性语义显式纳入) | 立即 page + 阻断发布 |
-| `T2` 警告 | 409 冲突 / 作用域失效 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH`（均 409） | 工单 + 观察 Error Budget |
-| `T3` 提示 | 4xx 客户端可纠正（含 404 not-found） | `AUTH_INVALID_PASSWORD`(401)、`DOC_NOT_FOUND`(404)、`SC_DOC_NOT_FOUND`(404)、`SC_COMMIT_NOT_FOUND`(404) | 仅记录，不告警 |
+| `T1` 紧急 | 5xx；或显式列入的数据完整性/解密失败码 | `STORAGE_PERSIST_FAILED`、`STORAGE_DB_LOCKED`、`SYNC_DECRYPT_FAILED`（数据完整性，显式纳入） | 立即 page + 阻断发布 |
+| `T2` 警告 | 409 冲突 / 作用域失效 | `SC_REPO_NOT_SELECTED`、`SC_STALE_SCOPE`、`SC_CONFLICT_TARGET_MISSING`、`SYNC_REPO_UNBOUND`、`SYNC_VERSION_MISMATCH` | 工单 + 观察 Error Budget |
+| `T3` 提示 | 4xx 客户端可纠正（含 not-found） | `AUTH_INVALID_PASSWORD`、`DOC_NOT_FOUND`、`SC_DOC_NOT_FOUND`、`SC_COMMIT_NOT_FOUND` | 仅记录，不告警 |
 
 某具体码的 HTTP 状态以 `13_i18n#i18n-error-code-catalog` 为准；本表按状态类归 tier，`SYNC_DECRYPT_FAILED` 为显式例外。**health 信号**（非错误码，来源 `04_repository#repo-health-and-repair`）单独映射：`Quarantined` → `T1`，其余 `Degraded*` → `T2`。
 

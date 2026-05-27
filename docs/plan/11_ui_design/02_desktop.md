@@ -6,7 +6,7 @@
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
 - `Last Review`: `2026-05-24`
-- `Counterpart Feature`: `docs/features/08_ui_design.md`
+- `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
 

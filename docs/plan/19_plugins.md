@@ -10,7 +10,7 @@
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
 
-> 本章不要求新增完整插件平台。AI Chat 归第 10 章；Rhai/plugin-host 只能作为外围兼容运行时。未来扩展仅保留 Trusted External Agent Runtime 与 Calculation Runtime。MCP 不作为插件/运行时方向。
+> 本章不要求新增完整插件平台。AI Chat 归 `16_ai_agent`；Rhai/plugin-host 只能作为外围兼容运行时。未来扩展仅保留 Trusted External Agent Runtime 与 Calculation Runtime。MCP 不作为插件/运行时方向。
 
 ## 1. 章节状态
 
@@ -24,7 +24,7 @@
 
 ### MCP Retirement Boundary {#skills-cli-extension-boundary}
 
-MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受控 CLI 工具，或第 10 章定义的 Trusted CLI path；两者都必须显式启用、资源受限、默认只读并 fail-closed。MCP 企划不得复用 Rhai/plugin-host 边界，也不得绕过 Native AI Chat 的 read-first 默认策略。
+MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受控 CLI 工具，或 `16_ai_agent` 定义的 Trusted CLI path；两者都必须显式启用、资源受限、默认只读并 fail-closed。MCP 企划不得复用 Rhai/plugin-host 边界，也不得绕过 Native AI Chat 的 read-first 默认策略。
 
 ## 2. Existing Rhai Plugin Host Boundary {#plugin-runtime-boundary}
 
@@ -41,7 +41,7 @@ MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受�
 *   **Fail-Closed RPC**：非法消息、未知插件、运行时错误、不可序列化结果都必须返回结构化错误，不得静默成功或 fallback 到核心命令。
 *   **Ledger-Managed Boundary**：托管笔记、`.notegit/` 与 ledger 对象不得通过裸文件写入绕过 authority；若需要写托管笔记，必须走 ledger-aware host functions。
 *   未引入认证层的 plugin-host satellite 必须绑定 loopback，不得默认监听 `0.0.0.0`。
-*   `agent-bridge` 的拦截属于第 10 章 Trusted External Agent Bridge，不得被重新包装成通用插件平台能力。
+*   `agent-bridge` 的拦截属于 `16_ai_agent` 的 Trusted External Agent Bridge，不得被重新包装成通用插件平台能力。
 
 ## 3. Trusted External Agent Runtime
 

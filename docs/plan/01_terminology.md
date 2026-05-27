@@ -122,8 +122,9 @@
 
 > 以下术语支撑 Governance Contract 章节 `20_operations_catalog`（B3.1 规划中）。
 
-*   **OpId (操作标识)**：user operation 层的稳定标识（如 `op.editor.save_pending`）。
+*   **OpId (操作标识)**：user operation 层的稳定标识，原子形式 `op.<domain>.<flow>.<verb>`（如 `op.editor.save_pending`）。
     *   与 `14_commands#cli-commands` / `14_commands#command-palette-shortcuts` 的 `CommandId` **正交**：`OpId` 是 user operation 层标识，`CommandId` 是 instruction interface 层标识；二者 **MUST NOT** 混用。
+*   **Flow ID (操作流标识)**：operation-flow 的稳定标识 `flow.<domain>.<flow>`，是 `20_operations_catalog` 目录的键；一个 Flow ID 聚合该 flow 内的全部原子 `OpId`，原子 OpId 由 `docs/features/operations/*.md` 投影文件枚举。`Flow ID` 与 `OpId` 不得混用。
 *   **Failure Family (错误码族)**：错误码族别名，引用 `13_i18n#i18n-error-code-catalog`；本条不定义具体错误码。
 *   **Extension Point (扩展点)**：暴露给 `19_plugins` / host function 的受控扩展位置。
 *   **Replacement Point (替换点)**：允许通过 feature flag 替换实现的位置。

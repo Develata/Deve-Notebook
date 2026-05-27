@@ -44,7 +44,7 @@
 | cold mount (repo open → ready) | `standard` | 300ms | 800ms | ≤128MB | `REL-002` startup bench |
 | cold mount (repo open → ready) | `low-spec` | 500ms | 1200ms | ≤64MB | `REL-002` startup bench |
 
-**RSS baseline（常驻基线，非 op 增量）**：`standard` ≤ 128MB（含 `MEM_CACHE_MB=128`），`low-spec` ≤ 64MB（含 `MEM_CACHE_MB=32`）。前端 WASM 堆目标见 `17_tech_stack` §4（Mobile < 64MB / Desktop < 128MB）；本章不重定义 WASM 堆约束。
+**RSS baseline（常驻基线，非 op 增量）**：`standard` ≤ 128MB，`low-spec` ≤ 64MB（各 profile 的 `MEM_CACHE_MB` 默认值定义见 `17_tech_stack`，本章不复制其数值）。前端 WASM 堆目标见 `17_tech_stack` §4（Mobile < 64MB / Desktop < 128MB）；本章不重定义 WASM 堆约束。
 
 ## 3. CI Fuse Thresholds {#perf-budget-fuse}
 

@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | `01_terminology` | `01_terminology` | `01_terminology` | glossary / lint / naming checks |
 | `02_positioning` | `02_positioning` | `02_positioning` | CLI + architecture boundary checks |
-| `03_storage` | `04_storage` | `07_storage_repo` | storage/runtime/repair automation |
+| `03_storage/index` | `04_storage` | `07_storage_repo` | storage/runtime/repair automation（index + authority/projection/watcher/repair 子文件） |
 | `04_repository` | `06_repository` | `07_storage_repo` | repo/scope automation + Chrome MCP |
 | `05_diff_logic` | `07_diff_logic` | `04_diff` | diff/merge/source-control automation |
 | `06_backup` | `06_repository` | `07_storage_repo` | backup/restore locator boundary automation |

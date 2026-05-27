@@ -31,7 +31,7 @@ Trusted Agent Bridge 的边界摘要：
 2. **受控可执行路径**：读取显式 `AGENT_CLI_PATH`，不退化为任意 PATH 搜索。
 3. **环境隔离**：子进程只接收 allowlist 环境变量。
 4. **资源上限**：具备超时、输出上限与并发上限。
-5. **只读默认**：默认只获得当前 Markdown / 显式上下文；写入路径回到第 10 章定义的 BUILD / controlled apply 边界。
+5. **只读默认**：默认只获得当前 Markdown / 显式上下文；写入路径回到 `16_ai_agent` 定义的 BUILD / controlled apply 边界。
 6. **失败回退**：trusted policy 不成立时回退 Native AI Chat，而不是静默放开外部 CLI。
 
 ## 3. 为什么保留 Trusted Agent Bridge 接口位？

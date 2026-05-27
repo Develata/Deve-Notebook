@@ -21,7 +21,7 @@ Adopt **Tauri v2** as the native packaging target, but gated: `tauri` /
 
 - Desktop/Mobile native-adapter contracts are written against a gated Tauri target.
 - A `native-packaging` dependency gate governs when real Tauri deps may enter.
-- Embedded service supervision follows a no-runtime contract (no real child process, no Tauri runtime capability) until explicitly opened.
+- Default surface is no-runtime (no real child process, no Tauri runtime capability). A desktop local service (e.g. `DEVE_DESKTOP_LOCAL_SERVICE`) may start a child process only under `native-packaging` + explicit opt-in, and still holds no ledger/projection/source-control authority.
 
 ## References
 

@@ -21,7 +21,6 @@
 - **[04_repository.md](./04_repository.md)**: repo identity、branch scope、tree projection、repo health。
 - **[05_diff_logic.md](./05_diff_logic.md)**: pending/staging/commit/diff/merge 的 authority 路径。
 - **[06_backup.md](./06_backup.md)**: repo/branch URL 的备份展开、加密 pack、WebDAV/S3 边界。
-- **[12_source_control_ui.md](./12_source_control_ui.md)**: Source Control view 的 VS Code-like UI contract。
 
 ### C. Runtime Protocols
 - **[07_network.md](./07_network.md)**: P2P / WebLightPeer / relay / ws-http protocol / reconnect。
@@ -34,6 +33,7 @@
 - **[11_ui_design/01_web.md](./11_ui_design/01_web.md)**: Web shell adapter 与布局约束。
 - **[11_ui_design/02_desktop.md](./11_ui_design/02_desktop.md)**: Desktop shell adapter 与原生边界。
 - **[11_ui_design/03_mobile.md](./11_ui_design/03_mobile.md)**: Mobile shell adapter、gesture、drawer 约束。
+- **[12_source_control_ui.md](./12_source_control_ui.md)**: Source Control view 的 VS Code-like UI contract。
 - **[13_i18n.md](./13_i18n.md)**: i18n facade、错误码映射、文案约束。
 - **[14_commands.md](./14_commands.md)**: command surface、palette、快捷键与 control 映射。
 - **[15_settings.md](./15_settings.md)**: 设置、配置、持久化与 UI prefs 边界。
@@ -61,14 +61,14 @@ Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership A
 四章骨架（B3.1–B3.4 落地，当前为预声明）：
 
 - **20_operations_catalog.md**（B3.1 新增）
-  - Owns：`OpId catalog` / `Extension Point Index` / `Replacement Point Index` / `Configuration Entry Index`（仅索引；具体配置项定义、默认值、环境变量名仍 Defers To 各原章节）。
+  - Owns：operation-flow 目录（Flow ID 键；atomic OpId 见 `01_terminology` §2.ter）/ `Extension Point Index` / `Replacement Point Index` / `Configuration Entry Index`（仅索引；具体配置项定义、默认值、环境变量名仍 Defers To 各原章节）。
   - Defers To：`01_terminology`、`03_storage`、`06_backup`、`07_network`、`08_auth`、`13_i18n`（failure family codes）、`15_settings`（具体配置项定义），以及各章末尾「本章相关配置」段。
 - **21_perf_budget.md**（B3.2 新增）
   - Owns：op 维度 latency / RSS budget；CI fuse 阈值。
   - Defers To：`17_tech_stack#performance-profiles-and-feature-matrix`（profile 枚举与 feature matrix）。
 - **22_reliability_observability.md**（B3.3 新增）
-  - Owns：telemetry schema / metrics taxonomy / tracing span boundary / alerting tier 映射。
-  - Defers To：`04_repository#repo-health-and-repair`（degraded 状态全集与状态迁移）、`13_i18n#i18n-error-code-catalog`（错误码）、`17_tech_stack#performance-profiles-and-feature-matrix`（profile）、`18_release#runtime-observability`（运维观测 endpoint）。
+  - Owns：SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / DR playbook index。
+  - Defers To：`04_repository#repo-health-and-repair`（degraded 状态全集与状态迁移）、`13_i18n#i18n-error-code-catalog`（错误码）、`17_tech_stack#performance-profiles-and-feature-matrix`（profile）、`18_release#runtime-observability`（运维观测 endpoint）、`21_perf_budget`（latency/RSS budget）、`06_backup`（DR/恢复步骤）。
 - **23_threat_model.md**（B3.4 新增）
   - Owns：STRIDE catalog / key lifecycle（高层流程）/ algorithm deprecation / supply chain / CVD policy。
   - Defers To：`07_network#trust-boundary`（trust boundary）、`08_auth`（auth runtime contract）、`06_backup#backup-secret-ref-contract`（key custody）。
@@ -84,12 +84,17 @@ Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership A
 
 本目录按以下状态解释：
 
-*   **Current MUST（当前硬约束）**：`01`、`02`、`04`、`05`、`06`、`07`、`09`、`11`。定义必须满足的不变量、协议约束与错误契约。
-*   **Current UI Contract（当前界面契约）**：`03`、`08`。定义交互与可见行为，但不得改写 Ledger / Auth / Network 权威规则。
-*   **Approved Runtime Architecture（已批准运行时架构）**：`16`，以及 `04/06/07` 中的 Node/Path Ledger Facts 收敛路线。当 `04/05/07/09/11` 在 Web 写路径上存在交叉时，以 `16` 的 Web 收敛规则为准；当路径、树结构与 Source Control commit 存在交叉时，以 `04/06/07` 的 Node-first 约束为准。
-*   **Optional Product Layer（可选产品层）**：`10` 定义 Native AI Chat 的启用后合同，以及 Trusted CLI Agent 的显式 opt-in 边界；它不得反向推翻 Current MUST，也不得成为核心数据路径的隐式依赖。
-*   **Planned / Optional（规划或扩展）**：`12`、`13`、`14`、`15`、`17`、`18`。可指导实现，但不得推翻 Current MUST。
-*   **Current View Contract（当前视图契约）**：`19` 定义 Source Control view 的 VS Code-like 信息架构与交互模型；它不得推翻 `07` 的 Source Control authority。
+> 以各章 Metadata `Status` 为权威；下表为汇总视图。
+
+*   **Governing Rule（治理规则）**：`00_engineering_constitution`。
+*   **Current MUST（当前硬约束）**：`01_terminology`、`02_positioning`、`03_storage/*`、`04_repository`、`05_diff_logic`、`07_network`、`08_auth`、`13_i18n`，以及 Governance Contracts `20_operations_catalog`、`21_perf_budget`、`22_reliability_observability`、`23_threat_model`。定义必须满足的不变量、协议约束与错误契约。
+*   **Current UI Contract（当前界面契约）**：`10_rendering`、`11_ui_design/*`、`12_source_control_ui`。定义交互与可见行为，但不得改写 Ledger / Auth / Network 权威规则。
+*   **Approved Runtime Architecture（已批准运行时架构）**：`09_web_thin_client_ledger`。Web 写路径 pending/ack/reject 与 repo-scoped write readiness 收敛；不得反向推翻 `03_storage` / `04_repository` / `05_diff_logic` / `07_network` / `08_auth` 的 Node-first 与权威约束。
+*   **Optional Product Layer（可选产品层）**：`16_ai_agent` 定义 Native AI Chat 启用后合同与 Trusted CLI Agent 显式 opt-in 边界；不得反向推翻 Current MUST，也不得成为核心数据路径的隐式依赖。
+*   **Planned Contract（规划合同）**：`06_backup`。repo/branch URL 备份展开、加密 pack、远端 locator 合同；备份不得成为共享可写 sync authority。
+*   **Planned / Optional（规划或扩展）**：`14_commands`、`15_settings`。可指导实现，但不得推翻 Current MUST。
+*   **Reference（参考）**：`17_tech_stack`、`18_release`。技术栈选型与构建/发布流程参考基线。
+*   **Deferred（外围保留）**：`19_plugins`。plugin / external runtime 接口保留，不得升级为默认插件平台。
 
 ### 文档分层
 

@@ -20,7 +20,7 @@ with frequent small deltas and the `low-spec` profile's CSR-only mode.
 ## Consequences
 
 - Reactivity is signal-driven; UI runtime exposes state and emits typed intents (Infra-First guardrail).
-- CSR/SSR split is profile-gated (CSR-only on `low-spec`, SSR on `standard`).
+- CSR is the current build (only the Leptos `csr` feature is enabled); SSR on `standard` is a reserved/planned target, not yet wired.
 - Commits the project to the Leptos signal model rather than a virtual-DOM mental model.
 
 ## References
