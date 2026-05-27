@@ -75,6 +75,9 @@ MISSING_PLAN_REF_SUMMARY_TOP=20
 MODE="full"
 STUB_NAME=""
 PERF_BUDGET_FILE=""
+# B4.2 — when 1, run the full report then enforce reverse coverage (every stable,
+# non-skip registry anchor MUST have >=1 code-side plan_ref).
+REVERSE_ENFORCE=0
 REWRITE_FROM=""
 REWRITE_TO=""
 REWRITE_APPLY=0
@@ -92,7 +95,7 @@ usage: plan-coverage.sh [options]
   --check-metadata-completeness   verify each plan chapter Metadata declares Version + Last Review
   --check-perf-budget             verify 21_perf_budget.md budget table carries numeric P50/P99 (no TBD)
   --check-no-adr-plan-ref         [stub] not yet enforcing (升级: B4.3)
-  --check-reverse-coverage        [stub] not yet enforcing (升级: B4)
+  --check-reverse-coverage        run full report, then fail if any stable anchor lacks a code plan_ref
   --check-md-links [dirs...]      [stub] not yet enforcing (升级: B3.4)
 EOF
 }
@@ -108,7 +111,8 @@ while [ "$#" -gt 0 ]; do
     --apply) REWRITE_APPLY=1 ;;
     --check-metadata-completeness) MODE="metadata-check" ;;
     --check-perf-budget) MODE="perf-budget-check" ;;
-    --check-no-adr-plan-ref|--check-reverse-coverage|--check-md-links)
+    --check-reverse-coverage) REVERSE_ENFORCE=1 ;;
+    --check-no-adr-plan-ref|--check-md-links)
       MODE="stub"; STUB_NAME="$1" ;;
     -h|--help)
       usage; exit 0 ;;
@@ -650,6 +654,7 @@ agents_anchor_unused=0
 agents_anchor_missing=0
 agents_anchor_planned=0
 declare -A agents_anchor_map=()
+declare -A dangling_anchor_map=()
 declare -A planned_anchor_map=()
 # B4.1 — registry rows trailing `planned/no-code-yet` (governance 先登记后落地)
 # or `no-rust-plan-ref` (shell/non-Rust contract, e.g. the perf-budget fuse)
@@ -670,15 +675,18 @@ while IFS= read -r ref; do
     err "agents-anchor-dangling: $ref chapter not found"
     agents_anchor_dangling=$((agents_anchor_dangling + 1))
     blocking=$((blocking + 1))
+    dangling_anchor_map["$ref"]=1
   elif ! grep -Fq "{#$anchor}" "$chapter_file"; then
     err "agents-anchor-dangling: $ref anchor not found"
     agents_anchor_dangling=$((agents_anchor_dangling + 1))
     blocking=$((blocking + 1))
+    dangling_anchor_map["$ref"]=1
   fi
 done < <(grep -oE "\`${PLAN_REF_CORE}\`" "$PLAN_DIR/AGENTS.md" | tr -d '`' | sort -u)
 
 for ref in "${!agents_anchor_map[@]}"; do
   [ -n "${plan_coverage_map[$ref]+x}" ] && continue
+  [ -n "${dangling_anchor_map[$ref]+x}" ] && continue  # dangling: reported via blocking only
   if [ -n "${planned_anchor_map[$ref]+x}" ]; then
     agents_anchor_planned=$((agents_anchor_planned + 1))
     continue
@@ -746,6 +754,15 @@ log "soft warnings: $((soft_warnings + missing_refs + unbound_cases))"
 if [ "$WRITE_REPORT" = "1" ]; then
   printf '%s' "$REPORT" > "$ROOT/scripts/plan-coverage.txt"
   echo "report written to scripts/plan-coverage.txt"
+fi
+
+if [ "$REVERSE_ENFORCE" = "1" ]; then
+  if [ "$blocking" -gt 0 ] || [ "$agents_anchor_unused" -gt 0 ]; then
+    echo "check-reverse-coverage: FAIL — ${agents_anchor_unused} stable anchor(s) without code plan_ref; ${blocking} blocking" >&2
+    exit 1
+  fi
+  echo "check-reverse-coverage: OK — every stable anchor has a code plan_ref (${agents_anchor_planned} skipped: planned/no-code-yet|no-rust-plan-ref)"
+  exit 0
 fi
 
 if [ "$blocking" -gt 0 ]; then

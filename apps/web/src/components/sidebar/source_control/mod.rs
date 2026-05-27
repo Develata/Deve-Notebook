@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!   - 04_repository#repo-scope-runtime
+//!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
 pub mod change_item;
 pub mod change_item_actions;

@@ -2,6 +2,7 @@
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 //!   - 11_ui_design/index#native-adapter-gate-registry
+//!   - 11_ui_design/index#native-post-gate-common-contract
 //!
 use serde::{Deserialize, Serialize};
 

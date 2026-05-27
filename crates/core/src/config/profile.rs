@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 15_settings#configuration-settings
+//!   - 17_tech_stack#performance-profiles-and-feature-matrix
 //!
 //! Runtime profile preset application.
 
