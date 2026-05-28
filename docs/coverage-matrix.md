@@ -45,13 +45,14 @@
 
 | Blueprint | Counterpart Feature | Counterpart Acceptance | Primary Verification |
 | --- | --- | --- | --- |
-| `20_operations_catalog` | `operation-coverage.md`（章 20 的投影） | `00_index`（op-flow ↔ case 绑定） | operation bijection（`check-architecture-registry.sh`）+ `--check-reverse-coverage` |
-| `21_perf_budget` | `operation-coverage.md`（perf-sensitive flows） | `00_index`（`PERF-001`，planned） | `plan-coverage.sh --check-perf-budget` |
-| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `00_index`（`REL-002`，planned） | `--check-reverse-coverage` + `--check-metadata-completeness` |
-| `23_threat_model` | `operation-coverage.md`（auth / security flows） | `00_index`（`AUTH-*`；`PLUG-001` planned） | `--check-no-adr-plan-ref` + auth/security automation |
+| `20_operations_catalog` | `operation-coverage.md`（章 20 的投影） | `14_operation_flow_refs` / `00_index`（op-flow ↔ case 绑定） | operation bijection（`check-architecture-registry.sh`）+ `--check-reverse-coverage` |
+| `21_perf_budget` | `operation-coverage.md`（perf-sensitive flows） | `12_tech_release`（`PERF-001`） | `plan-coverage.sh --check-perf-budget` |
+| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `12_tech_release`（`REL-002`） | `--check-reverse-coverage` + `--check-metadata-completeness` |
+| `23_threat_model` | `operation-coverage.md`（auth / security flows） | `10_plugins`（`PLUG-001`）、`08_auth`（`AUTH-*`） | `--check-no-adr-plan-ref` + auth/security automation |
 
-> `PERF-001` / `REL-002` / `PLUG-001` 为章 21/22/23 Metadata 声明的**计划中** acceptance 绑定，
-> 对应用例尚未在 `docs/acceptance-cases/` + `acceptance-bindings.tsv` 落地（属后续 features/acceptance 内容批次）。
+> 上述治理 acceptance 用例（`PERF-001` / `REL-002` / `PLUG-001` / `AUTH-*`）均已在所列
+> `docs/acceptance-cases/` 文件中定义并绑定（automated / walkthrough），由
+> `scripts/check-acceptance-bindings.sh` 校验（0 unbound）。
 
 ### Non-Matrix Documents
 
