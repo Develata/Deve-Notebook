@@ -1,5 +1,5 @@
         subgraph cluster_app_release_ci {
-            label="release / CI [15_release]";
+            label="release / CI [18_release]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";
@@ -11,7 +11,7 @@
         }
 
         subgraph cluster_app_cli_control {
-            label="CLI control commands [12_commands]";
+            label="CLI control commands [14_commands]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";
@@ -22,7 +22,7 @@
         }
 
         subgraph cluster_app_settings_update {
-            label="settings update [13_settings]";
+            label="settings update [15_settings]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";
@@ -33,7 +33,7 @@
         }
 
         subgraph cluster_app_rendering_expansion {
-            label="rendering source-first flows [03_rendering]";
+            label="rendering source-first flows [10_rendering]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";
@@ -47,7 +47,7 @@
         }
 
         subgraph cluster_app_i18n_locale_error {
-            label="i18n locale / error [11_i18n]";
+            label="i18n locale / error [13_i18n]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";
@@ -58,7 +58,7 @@
         }
 
         subgraph cluster_app_tech_runtime_budget {
-            label="tech-stack runtime budget [14_tech_stack]";
+            label="tech-stack runtime budget [17_tech_stack]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

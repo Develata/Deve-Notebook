@@ -1,5 +1,5 @@
             subgraph cluster_user_render_checkbox {
-                label="rendering checkbox writeback [03_rendering]";
+                label="rendering checkbox writeback [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -10,7 +10,7 @@
             }
 
             subgraph cluster_user_render_link_activation {
-                label="rendering link activation gate [03_rendering]";
+                label="rendering link activation gate [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -21,7 +21,7 @@
             }
 
             subgraph cluster_user_render_outline_navigation {
-                label="rendering outline navigation [03_rendering]";
+                label="rendering outline navigation [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

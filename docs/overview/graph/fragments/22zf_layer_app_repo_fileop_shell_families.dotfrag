@@ -1,5 +1,5 @@
         subgraph cluster_app_repo_fileop_shell {
-            label="repo file-op shell interfaces [06_repository + 08_ui_design + 12_commands]";
+            label="repo file-op shell interfaces [04_repository + 11_ui_design + 14_commands]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

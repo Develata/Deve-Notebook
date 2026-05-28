@@ -1,5 +1,5 @@
             subgraph cluster_user_repo_fileop_shell {
-                label="repo file-op shell routing [06_repository + 08_ui_design + 12_commands]";
+                label="repo file-op shell routing [04_repository + 11_ui_design + 14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

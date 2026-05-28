@@ -1,5 +1,5 @@
             subgraph cluster_user_cli_parse_detail {
-                label="CLI parse command [12_commands]";
+                label="CLI parse command [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -10,7 +10,7 @@
             }
 
             subgraph cluster_user_cli_help_detail {
-                label="CLI help surface [12_commands]";
+                label="CLI help surface [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -21,7 +21,7 @@
             }
 
             subgraph cluster_user_cli_guidance_detail {
-                label="CLI empty-command guidance [12_commands]";
+                label="CLI empty-command guidance [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -31,7 +31,7 @@
             }
 
             subgraph cluster_user_cli_runtime_detail {
-                label="CLI runtime handoff [12_commands]";
+                label="CLI runtime handoff [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

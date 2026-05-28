@@ -1,5 +1,5 @@
             subgraph cluster_user_settings_env {
-                label="settings env defaults [13_settings]";
+                label="settings env defaults [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -10,7 +10,7 @@
             }
 
             subgraph cluster_user_settings_file {
-                label="settings file config [13_settings]";
+                label="settings file config [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -21,7 +21,7 @@
             }
 
             subgraph cluster_user_settings_ui {
-                label="settings UI preferences [13_settings]";
+                label="settings UI preferences [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -32,7 +32,7 @@
             }
 
             subgraph cluster_user_settings_feedback {
-                label="settings runtime feedback [13_settings]";
+                label="settings runtime feedback [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

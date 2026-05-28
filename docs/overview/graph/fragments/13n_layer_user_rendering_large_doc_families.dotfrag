@@ -1,5 +1,5 @@
             subgraph cluster_user_render_large_doc_prefetch {
-                label="rendering large-doc prefetch [03_rendering]";
+                label="rendering large-doc prefetch [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -11,7 +11,7 @@
             }
 
             subgraph cluster_user_render_large_doc_search_gate {
-                label="rendering large-doc search gate [03_rendering]";
+                label="rendering large-doc search gate [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

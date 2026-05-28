@@ -1,5 +1,5 @@
         subgraph cluster_app_cli_families {
-            label="CLI command family interfaces [12_commands]";
+            label="CLI command family interfaces [14_commands]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

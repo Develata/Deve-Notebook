@@ -1,5 +1,5 @@
         subgraph cluster_mod_cli_families {
-            label="CLI command family coordination [12_commands]";
+            label="CLI command family coordination [14_commands]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

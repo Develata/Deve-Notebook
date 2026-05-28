@@ -1,5 +1,5 @@
         subgraph cluster_app_sc_merge_runtime {
-            label="merge runtime [07_diff_logic + 05_network]";
+            label="merge runtime [05_diff_logic + 07_network]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

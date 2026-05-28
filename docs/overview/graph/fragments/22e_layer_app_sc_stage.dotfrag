@@ -1,5 +1,5 @@
         subgraph cluster_app_sc_stage {
-            label="stage / unstage [07_diff_logic]";
+            label="stage / unstage [05_diff_logic]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

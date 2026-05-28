@@ -1,5 +1,5 @@
         subgraph cluster_app_command_surface {
-            label="command surface shared interfaces [12_commands]";
+            label="command surface shared interfaces [14_commands]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

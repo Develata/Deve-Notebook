@@ -1,5 +1,5 @@
         subgraph cluster_core_key_exchange {
-            label="repo-scoped key exchange [05_network + 04_storage]";
+            label="repo-scoped key exchange [07_network + 03_storage]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";

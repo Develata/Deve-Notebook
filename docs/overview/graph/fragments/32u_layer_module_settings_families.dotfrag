@@ -1,5 +1,5 @@
         subgraph cluster_mod_settings_families {
-            label="settings source coordination [13_settings]";
+            label="settings source coordination [15_settings]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

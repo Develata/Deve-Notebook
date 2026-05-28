@@ -1,5 +1,5 @@
         subgraph cluster_core_branch_switch {
-            label="branch-switch [06_repository]";
+            label="branch-switch [04_repository]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";

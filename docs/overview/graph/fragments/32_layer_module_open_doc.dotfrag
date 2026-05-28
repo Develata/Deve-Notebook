@@ -1,5 +1,5 @@
         subgraph cluster_mod_doc {
-            label="open-doc [06_repository + 16_web_thin_client_ledger]";
+            label="open-doc [04_repository + 09_web_thin_client_ledger]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

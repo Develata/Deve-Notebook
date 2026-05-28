@@ -1,5 +1,5 @@
             subgraph cluster_user_settings_surface {
-                label="settings surface open [13_settings]";
+                label="settings surface open [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -10,7 +10,7 @@
             }
 
             subgraph cluster_user_settings_mutation {
-                label="settings value mutation [13_settings]";
+                label="settings value mutation [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -21,7 +21,7 @@
             }
 
             subgraph cluster_user_settings_persist {
-                label="settings persistence / apply [13_settings]";
+                label="settings persistence / apply [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -32,7 +32,7 @@
             }
 
             subgraph cluster_user_settings_feedback_render {
-                label="settings feedback / render [13_settings]";
+                label="settings feedback / render [15_settings]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

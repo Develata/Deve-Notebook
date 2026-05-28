@@ -1,5 +1,5 @@
         subgraph cluster_mod_tech_stack_families {
-            label="tech-stack specific coordination [14_tech_stack + 15_release]";
+            label="tech-stack specific coordination [17_tech_stack + 18_release]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

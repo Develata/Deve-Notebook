@@ -1,5 +1,5 @@
         subgraph cluster_mod_sc_commit {
-            label="source-control commit [07_diff_logic]";
+            label="source-control commit [05_diff_logic]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

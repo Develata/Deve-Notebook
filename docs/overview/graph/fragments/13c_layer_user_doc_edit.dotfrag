@@ -1,5 +1,5 @@
             subgraph cluster_user_doc_edit {
-                label="document edit / confirmed op [03_rendering + 04_storage + 16_web_thin_client_ledger]";
+                label="document edit / confirmed op [10_rendering + 03_storage + 09_web_thin_client_ledger]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

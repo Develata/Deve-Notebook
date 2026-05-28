@@ -37,102 +37,102 @@
 <g id="clust6" class="cluster">
 <title>cluster_user_login</title>
 <path fill="#fff7d6" stroke="#d97706" d="M1588,-864C1588,-864 2042,-864 2042,-864 2048,-864 2054,-870 2054,-876 2054,-876 2054,-927 2054,-927 2054,-933 2048,-939 2042,-939 2042,-939 1588,-939 1588,-939 1582,-939 1576,-933 1576,-927 1576,-927 1576,-876 1576,-876 1576,-870 1582,-864 1588,-864"/>
-<text text-anchor="middle" x="1815" y="-923.8" font-family="Times,serif" font-size="14.00">login [09_auth]</text>
+<text text-anchor="middle" x="1815" y="-923.8" font-family="Times,serif" font-size="14.00">login [08_auth]</text>
 </g>
 <g id="clust7" class="cluster">
 <title>cluster_user_auth_session</title>
 <path fill="#fff7d6" stroke="#d97706" d="M2074,-864C2074,-864 2694,-864 2694,-864 2700,-864 2706,-870 2706,-876 2706,-876 2706,-927 2706,-927 2706,-933 2700,-939 2694,-939 2694,-939 2074,-939 2074,-939 2068,-939 2062,-933 2062,-927 2062,-927 2062,-876 2062,-876 2062,-870 2068,-864 2074,-864"/>
-<text text-anchor="middle" x="2384" y="-923.8" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [09_auth]</text>
+<text text-anchor="middle" x="2384" y="-923.8" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [08_auth]</text>
 </g>
 <g id="clust8" class="cluster">
 <title>cluster_user_sync_handshake</title>
 <path fill="#fff7d6" stroke="#d97706" d="M1046,-775C1046,-775 1556,-775 1556,-775 1562,-775 1568,-781 1568,-787 1568,-787 1568,-927 1568,-927 1568,-933 1562,-939 1556,-939 1556,-939 1046,-939 1046,-939 1040,-939 1034,-933 1034,-927 1034,-927 1034,-787 1034,-787 1034,-781 1040,-775 1046,-775"/>
-<text text-anchor="middle" x="1301" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [05_network + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="1301" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [07_network + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust9" class="cluster">
 <title>cluster_user_sync_transfer</title>
 <path fill="#fff7d6" stroke="#d97706" d="M446,-775C446,-775 1014,-775 1014,-775 1020,-775 1026,-781 1026,-787 1026,-787 1026,-927 1026,-927 1026,-933 1020,-939 1014,-939 1014,-939 446,-939 446,-939 440,-939 434,-933 434,-927 434,-927 434,-787 434,-787 434,-781 440,-775 446,-775"/>
-<text text-anchor="middle" x="730" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [05_network]</text>
+<text text-anchor="middle" x="730" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [07_network]</text>
 </g>
 <g id="clust10" class="cluster">
 <title>cluster_user_key_exchange</title>
 <path fill="#fff7d6" stroke="#d97706" d="M36,-775C36,-775 414,-775 414,-775 420,-775 426,-781 426,-787 426,-787 426,-927 426,-927 426,-933 420,-939 414,-939 414,-939 36,-939 36,-939 30,-939 24,-933 24,-927 24,-927 24,-787 24,-787 24,-781 30,-775 36,-775"/>
-<text text-anchor="middle" x="225" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [05_network + 04_storage]</text>
+<text text-anchor="middle" x="225" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [07_network + 03_storage]</text>
 </g>
 <g id="clust11" class="cluster">
 <title>cluster_user_palette</title>
 <path fill="#fff7d6" stroke="#d97706" d="M2726,-864C2726,-864 3436,-864 3436,-864 3442,-864 3448,-870 3448,-876 3448,-876 3448,-927 3448,-927 3448,-933 3442,-939 3436,-939 3436,-939 2726,-939 2726,-939 2720,-939 2714,-933 2714,-927 2714,-927 2714,-876 2714,-876 2714,-870 2720,-864 2726,-864"/>
-<text text-anchor="middle" x="3081" y="-923.8" font-family="Times,serif" font-size="14.00">command&#45;palette [12_commands]</text>
+<text text-anchor="middle" x="3081" y="-923.8" font-family="Times,serif" font-size="14.00">command&#45;palette [14_commands]</text>
 </g>
 <g id="clust12" class="cluster">
 <title>cluster_user_branch_switch</title>
 <path fill="#fff7d6" stroke="#d97706" d="M3476,-780.5C3476,-780.5 4022,-780.5 4022,-780.5 4028,-780.5 4034,-786.5 4034,-792.5 4034,-792.5 4034,-927 4034,-927 4034,-933 4028,-939 4022,-939 4022,-939 3476,-939 3476,-939 3470,-939 3464,-933 3464,-927 3464,-927 3464,-792.5 3464,-792.5 3464,-786.5 3470,-780.5 3476,-780.5"/>
-<text text-anchor="middle" x="3749" y="-923.8" font-family="Times,serif" font-size="14.00">branch&#45;switch [06_repository + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="3749" y="-923.8" font-family="Times,serif" font-size="14.00">branch&#45;switch [04_repository + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust13" class="cluster">
 <title>cluster_user_sc_commit</title>
 <path fill="#fff7d6" stroke="#d97706" d="M4054,-783C4054,-783 4567,-783 4567,-783 4573,-783 4579,-789 4579,-795 4579,-795 4579,-927 4579,-927 4579,-933 4573,-939 4567,-939 4567,-939 4054,-939 4054,-939 4048,-939 4042,-933 4042,-927 4042,-927 4042,-795 4042,-795 4042,-789 4048,-783 4054,-783"/>
-<text text-anchor="middle" x="4310.5" y="-923.8" font-family="Times,serif" font-size="14.00">source&#45;control commit [07_diff_logic]</text>
+<text text-anchor="middle" x="4310.5" y="-923.8" font-family="Times,serif" font-size="14.00">source&#45;control commit [05_diff_logic]</text>
 </g>
 <g id="clust14" class="cluster">
 <title>cluster_user_ai_chat</title>
 <path fill="#fff7d6" stroke="#d97706" d="M34296,-864C34296,-864 34751,-864 34751,-864 34757,-864 34763,-870 34763,-876 34763,-876 34763,-927 34763,-927 34763,-933 34757,-939 34751,-939 34751,-939 34296,-939 34296,-939 34290,-939 34284,-933 34284,-927 34284,-927 34284,-876 34284,-876 34284,-870 34290,-864 34296,-864"/>
-<text text-anchor="middle" x="34523.5" y="-923.8" font-family="Times,serif" font-size="14.00">native ai&#45;chat [10_ai_agent]</text>
+<text text-anchor="middle" x="34523.5" y="-923.8" font-family="Times,serif" font-size="14.00">native ai&#45;chat [16_ai_agent]</text>
 </g>
 <g id="clust15" class="cluster">
 <title>cluster_user_repo_switch</title>
 <path fill="#fff7d6" stroke="#d97706" d="M34783,-864C34783,-864 35329,-864 35329,-864 35335,-864 35341,-870 35341,-876 35341,-876 35341,-927 35341,-927 35341,-933 35335,-939 35329,-939 35329,-939 34783,-939 34783,-939 34777,-939 34771,-933 34771,-927 34771,-927 34771,-876 34771,-876 34771,-870 34777,-864 34783,-864"/>
-<text text-anchor="middle" x="35056" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;switch [06_repository]</text>
+<text text-anchor="middle" x="35056" y="-923.8" font-family="Times,serif" font-size="14.00">repo&#45;switch [04_repository]</text>
 </g>
 <g id="clust16" class="cluster">
 <title>cluster_user_sc_stage</title>
 <path fill="#fff7d6" stroke="#d97706" d="M35361,-864C35361,-864 35873,-864 35873,-864 35879,-864 35885,-870 35885,-876 35885,-876 35885,-927 35885,-927 35885,-933 35879,-939 35873,-939 35873,-939 35361,-939 35361,-939 35355,-939 35349,-933 35349,-927 35349,-927 35349,-876 35349,-876 35349,-870 35355,-864 35361,-864"/>
-<text text-anchor="middle" x="35617" y="-923.8" font-family="Times,serif" font-size="14.00">stage / unstage [07_diff_logic]</text>
+<text text-anchor="middle" x="35617" y="-923.8" font-family="Times,serif" font-size="14.00">stage / unstage [05_diff_logic]</text>
 </g>
 <g id="clust17" class="cluster">
 <title>cluster_user_sc_discard</title>
 <path fill="#fff7d6" stroke="#d97706" d="M35905,-864C35905,-864 36169,-864 36169,-864 36175,-864 36181,-870 36181,-876 36181,-876 36181,-927 36181,-927 36181,-933 36175,-939 36169,-939 36169,-939 35905,-939 35905,-939 35899,-939 35893,-933 35893,-927 35893,-927 35893,-876 35893,-876 35893,-870 35899,-864 35905,-864"/>
-<text text-anchor="middle" x="36037" y="-923.8" font-family="Times,serif" font-size="14.00">discard pending [07_diff_logic]</text>
+<text text-anchor="middle" x="36037" y="-923.8" font-family="Times,serif" font-size="14.00">discard pending [05_diff_logic]</text>
 </g>
 <g id="clust18" class="cluster">
 <title>cluster_user_sc_discard_file</title>
 <path fill="#fff7d6" stroke="#d97706" d="M36201,-864C36201,-864 36471,-864 36471,-864 36477,-864 36483,-870 36483,-876 36483,-876 36483,-927 36483,-927 36483,-933 36477,-939 36471,-939 36471,-939 36201,-939 36201,-939 36195,-939 36189,-933 36189,-927 36189,-927 36189,-876 36189,-876 36189,-870 36195,-864 36201,-864"/>
-<text text-anchor="middle" x="36336" y="-923.8" font-family="Times,serif" font-size="14.00">discard file [07_diff_logic]</text>
+<text text-anchor="middle" x="36336" y="-923.8" font-family="Times,serif" font-size="14.00">discard file [05_diff_logic]</text>
 </g>
 <g id="clust19" class="cluster">
 <title>cluster_user_sc_conflict</title>
 <path fill="#fff7d6" stroke="#d97706" d="M36503,-864C36503,-864 36879,-864 36879,-864 36885,-864 36891,-870 36891,-876 36891,-876 36891,-927 36891,-927 36891,-933 36885,-939 36879,-939 36879,-939 36503,-939 36503,-939 36497,-939 36491,-933 36491,-927 36491,-927 36491,-876 36491,-876 36491,-870 36497,-864 36503,-864"/>
-<text text-anchor="middle" x="36691" y="-923.8" font-family="Times,serif" font-size="14.00">resolve conflict [07_diff_logic]</text>
+<text text-anchor="middle" x="36691" y="-923.8" font-family="Times,serif" font-size="14.00">resolve conflict [05_diff_logic]</text>
 </g>
 <g id="clust20" class="cluster">
 <title>cluster_user_sc_merge_peer</title>
 <path fill="#fff7d6" stroke="#d97706" d="M5313,-775C5313,-775 5882,-775 5882,-775 5888,-775 5894,-781 5894,-787 5894,-787 5894,-927 5894,-927 5894,-933 5888,-939 5882,-939 5882,-939 5313,-939 5313,-939 5307,-939 5301,-933 5301,-927 5301,-927 5301,-787 5301,-787 5301,-781 5307,-775 5313,-775"/>
-<text text-anchor="middle" x="5597.5" y="-923.8" font-family="Times,serif" font-size="14.00">merge peer [07_diff_logic]</text>
+<text text-anchor="middle" x="5597.5" y="-923.8" font-family="Times,serif" font-size="14.00">merge peer [05_diff_logic]</text>
 </g>
 <g id="clust21" class="cluster">
 <title>cluster_user_sc_merge_runtime</title>
 <path fill="#fff7d6" stroke="#d97706" d="M4599,-775C4599,-775 5281,-775 5281,-775 5287,-775 5293,-781 5293,-787 5293,-787 5293,-927 5293,-927 5293,-933 5287,-939 5281,-939 5281,-939 4599,-939 4599,-939 4593,-939 4587,-933 4587,-927 4587,-927 4587,-787 4587,-787 4587,-781 4593,-775 4599,-775"/>
-<text text-anchor="middle" x="4940" y="-923.8" font-family="Times,serif" font-size="14.00">merge runtime [07_diff_logic + 05_network]</text>
+<text text-anchor="middle" x="4940" y="-923.8" font-family="Times,serif" font-size="14.00">merge runtime [05_diff_logic + 07_network]</text>
 </g>
 <g id="clust22" class="cluster">
 <title>cluster_user_sc_commit_publish</title>
 <path fill="#fff7d6" stroke="#d97706" d="M36911,-864C36911,-864 37568,-864 37568,-864 37574,-864 37580,-870 37580,-876 37580,-876 37580,-927 37580,-927 37580,-933 37574,-939 37568,-939 37568,-939 36911,-939 36911,-939 36905,-939 36899,-933 36899,-927 36899,-927 36899,-876 36899,-876 36899,-870 36905,-864 36911,-864"/>
-<text text-anchor="middle" x="37239.5" y="-923.8" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [07_diff_logic + 12_commands]</text>
+<text text-anchor="middle" x="37239.5" y="-923.8" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [05_diff_logic + 14_commands]</text>
 </g>
 <g id="clust23" class="cluster">
 <title>cluster_user_sc_history</title>
 <path fill="#fff7d6" stroke="#d97706" d="M37600,-864C37600,-864 38192,-864 38192,-864 38198,-864 38204,-870 38204,-876 38204,-876 38204,-927 38204,-927 38204,-933 38198,-939 38192,-939 38192,-939 37600,-939 37600,-939 37594,-939 37588,-933 37588,-927 37588,-927 37588,-876 37588,-876 37588,-870 37594,-864 37600,-864"/>
-<text text-anchor="middle" x="37896" y="-923.8" font-family="Times,serif" font-size="14.00">history / commit diff [07_diff_logic]</text>
+<text text-anchor="middle" x="37896" y="-923.8" font-family="Times,serif" font-size="14.00">history / commit diff [05_diff_logic]</text>
 </g>
 <g id="clust24" class="cluster">
 <title>cluster_user_plugin_runtime</title>
 <path fill="#fff7d6" stroke="#d97706" d="M38224,-864C38224,-864 38790,-864 38790,-864 38796,-864 38802,-870 38802,-876 38802,-876 38802,-927 38802,-927 38802,-933 38796,-939 38790,-939 38790,-939 38224,-939 38224,-939 38218,-939 38212,-933 38212,-927 38212,-927 38212,-876 38212,-876 38212,-870 38218,-864 38224,-864"/>
-<text text-anchor="middle" x="38507" y="-923.8" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [17_plugins]</text>
+<text text-anchor="middle" x="38507" y="-923.8" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [19_plugins]</text>
 </g>
 <g id="clust25" class="cluster">
 <title>cluster_user_trusted_agent</title>
 <path fill="#fff7d6" stroke="#d97706" d="M5914,-775C5914,-775 6483,-775 6483,-775 6489,-775 6495,-781 6495,-787 6495,-787 6495,-927 6495,-927 6495,-933 6489,-939 6483,-939 6483,-939 5914,-939 5914,-939 5908,-939 5902,-933 5902,-927 5902,-927 5902,-787 5902,-787 5902,-781 5908,-775 5914,-775"/>
-<text text-anchor="middle" x="6198.5" y="-923.8" font-family="Times,serif" font-size="14.00">trusted external agent boundary [10_ai_agent]</text>
+<text text-anchor="middle" x="6198.5" y="-923.8" font-family="Times,serif" font-size="14.00">trusted external agent boundary [16_ai_agent]</text>
 </g>
 <g id="clust26" class="cluster">
 <title>cluster_user_shared_all</title>
@@ -142,262 +142,262 @@
 <g id="clust27" class="cluster">
 <title>cluster_user_doc</title>
 <path fill="#fff7d6" stroke="#d97706" d="M12467,-775C12467,-775 13119,-775 13119,-775 13125,-775 13131,-781 13131,-787 13131,-787 13131,-927 13131,-927 13131,-933 13125,-939 13119,-939 13119,-939 12467,-939 12467,-939 12461,-939 12455,-933 12455,-927 12455,-927 12455,-787 12455,-787 12455,-781 12461,-775 12467,-775"/>
-<text text-anchor="middle" x="12793" y="-923.8" font-family="Times,serif" font-size="14.00">open&#45;doc [06_repository + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="12793" y="-923.8" font-family="Times,serif" font-size="14.00">open&#45;doc [04_repository + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust28" class="cluster">
 <title>cluster_user_search_query</title>
 <path fill="#fff7d6" stroke="#d97706" d="M11912,-775C11912,-775 12435,-775 12435,-775 12441,-775 12447,-781 12447,-787 12447,-787 12447,-927 12447,-927 12447,-933 12441,-939 12435,-939 12435,-939 11912,-939 11912,-939 11906,-939 11900,-933 11900,-927 11900,-927 11900,-787 11900,-787 11900,-781 11906,-775 11912,-775"/>
-<text text-anchor="middle" x="12173.5" y="-923.8" font-family="Times,serif" font-size="14.00">search/query [08_ui_design + 14_tech_stack]</text>
+<text text-anchor="middle" x="12173.5" y="-923.8" font-family="Times,serif" font-size="14.00">search/query [11_ui_design + 17_tech_stack]</text>
 </g>
 <g id="clust29" class="cluster">
 <title>cluster_user_repo_file_ops</title>
 <path fill="#fff7d6" stroke="#d97706" d="M11055,-775C11055,-775 11880,-775 11880,-775 11886,-775 11892,-781 11892,-787 11892,-787 11892,-927 11892,-927 11892,-933 11886,-939 11880,-939 11880,-939 11055,-939 11055,-939 11049,-939 11043,-933 11043,-927 11043,-927 11043,-787 11043,-787 11043,-781 11049,-775 11055,-775"/>
-<text text-anchor="middle" x="11467.5" y="-923.8" font-family="Times,serif" font-size="14.00">repo file operations [06_repository + 08_ui_design]</text>
+<text text-anchor="middle" x="11467.5" y="-923.8" font-family="Times,serif" font-size="14.00">repo file operations [04_repository + 11_ui_design]</text>
 </g>
 <g id="clust30" class="cluster">
 <title>cluster_user_doc_edit</title>
 <path fill="#fff7d6" stroke="#d97706" d="M10362,-775C10362,-775 11023,-775 11023,-775 11029,-775 11035,-781 11035,-787 11035,-787 11035,-927 11035,-927 11035,-933 11029,-939 11023,-939 11023,-939 10362,-939 10362,-939 10356,-939 10350,-933 10350,-927 10350,-927 10350,-787 10350,-787 10350,-781 10356,-775 10362,-775"/>
-<text text-anchor="middle" x="10692.5" y="-923.8" font-family="Times,serif" font-size="14.00">document edit / confirmed op [03_rendering + 04_storage + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="10692.5" y="-923.8" font-family="Times,serif" font-size="14.00">document edit / confirmed op [10_rendering + 03_storage + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust31" class="cluster">
 <title>cluster_user_pending_navigation</title>
 <path fill="#fff7d6" stroke="#d97706" d="M9658,-780.5C9658,-780.5 10330,-780.5 10330,-780.5 10336,-780.5 10342,-786.5 10342,-792.5 10342,-792.5 10342,-927 10342,-927 10342,-933 10336,-939 10330,-939 10330,-939 9658,-939 9658,-939 9652,-939 9646,-933 9646,-927 9646,-927 9646,-792.5 9646,-792.5 9646,-786.5 9652,-780.5 9658,-780.5"/>
-<text text-anchor="middle" x="9994" y="-923.8" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="9994" y="-923.8" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [09_web_thin_client_ledger]</text>
 </g>
 <g id="clust32" class="cluster">
 <title>cluster_user_release_ci</title>
 <path fill="#fff7d6" stroke="#d97706" d="M13151,-864C13151,-864 13734,-864 13734,-864 13740,-864 13746,-870 13746,-876 13746,-876 13746,-927 13746,-927 13746,-933 13740,-939 13734,-939 13734,-939 13151,-939 13151,-939 13145,-939 13139,-933 13139,-927 13139,-927 13139,-876 13139,-876 13139,-870 13145,-864 13151,-864"/>
-<text text-anchor="middle" x="13442.5" y="-923.8" font-family="Times,serif" font-size="14.00">release / CI [15_release]</text>
+<text text-anchor="middle" x="13442.5" y="-923.8" font-family="Times,serif" font-size="14.00">release / CI [18_release]</text>
 </g>
 <g id="clust33" class="cluster">
 <title>cluster_user_cli_control</title>
 <path fill="#fff7d6" stroke="#d97706" d="M13766,-864C13766,-864 14180,-864 14180,-864 14186,-864 14192,-870 14192,-876 14192,-876 14192,-927 14192,-927 14192,-933 14186,-939 14180,-939 14180,-939 13766,-939 13766,-939 13760,-939 13754,-933 13754,-927 13754,-927 13754,-876 13754,-876 13754,-870 13760,-864 13766,-864"/>
-<text text-anchor="middle" x="13973" y="-923.8" font-family="Times,serif" font-size="14.00">CLI control commands [12_commands]</text>
+<text text-anchor="middle" x="13973" y="-923.8" font-family="Times,serif" font-size="14.00">CLI control commands [14_commands]</text>
 </g>
 <g id="clust34" class="cluster">
 <title>cluster_user_settings_update</title>
 <path fill="#fff7d6" stroke="#d97706" d="M14212,-864C14212,-864 14631,-864 14631,-864 14637,-864 14643,-870 14643,-876 14643,-876 14643,-927 14643,-927 14643,-933 14637,-939 14631,-939 14631,-939 14212,-939 14212,-939 14206,-939 14200,-933 14200,-927 14200,-927 14200,-876 14200,-876 14200,-870 14206,-864 14212,-864"/>
-<text text-anchor="middle" x="14421.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings update [13_settings]</text>
+<text text-anchor="middle" x="14421.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings update [15_settings]</text>
 </g>
 <g id="clust35" class="cluster">
 <title>cluster_user_render_cursor</title>
 <path fill="#fff7d6" stroke="#d97706" d="M14663,-864C14663,-864 15059,-864 15059,-864 15065,-864 15071,-870 15071,-876 15071,-876 15071,-927 15071,-927 15071,-933 15065,-939 15059,-939 15059,-939 14663,-939 14663,-939 14657,-939 14651,-933 14651,-927 14651,-927 14651,-876 14651,-876 14651,-870 14657,-864 14663,-864"/>
-<text text-anchor="middle" x="14861" y="-923.8" font-family="Times,serif" font-size="14.00">rendering cursor reveal [03_rendering]</text>
+<text text-anchor="middle" x="14861" y="-923.8" font-family="Times,serif" font-size="14.00">rendering cursor reveal [10_rendering]</text>
 </g>
 <g id="clust36" class="cluster">
 <title>cluster_user_render_math_mermaid</title>
 <path fill="#fff7d6" stroke="#d97706" d="M15091,-864C15091,-864 15506,-864 15506,-864 15512,-864 15518,-870 15518,-876 15518,-876 15518,-927 15518,-927 15518,-933 15512,-939 15506,-939 15506,-939 15091,-939 15091,-939 15085,-939 15079,-933 15079,-927 15079,-927 15079,-876 15079,-876 15079,-870 15085,-864 15091,-864"/>
-<text text-anchor="middle" x="15298.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering math / mermaid [03_rendering]</text>
+<text text-anchor="middle" x="15298.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering math / mermaid [10_rendering]</text>
 </g>
 <g id="clust37" class="cluster">
 <title>cluster_user_i18n_locale_error</title>
 <path fill="#fff7d6" stroke="#d97706" d="M15538,-864C15538,-864 15901,-864 15901,-864 15907,-864 15913,-870 15913,-876 15913,-876 15913,-927 15913,-927 15913,-933 15907,-939 15901,-939 15901,-939 15538,-939 15538,-939 15532,-939 15526,-933 15526,-927 15526,-927 15526,-876 15526,-876 15526,-870 15532,-864 15538,-864"/>
-<text text-anchor="middle" x="15719.5" y="-923.8" font-family="Times,serif" font-size="14.00">i18n locale / error [11_i18n]</text>
+<text text-anchor="middle" x="15719.5" y="-923.8" font-family="Times,serif" font-size="14.00">i18n locale / error [13_i18n]</text>
 </g>
 <g id="clust38" class="cluster">
 <title>cluster_user_tech_runtime_budget</title>
 <path fill="#fff7d6" stroke="#d97706" d="M15933,-864C15933,-864 16387,-864 16387,-864 16393,-864 16399,-870 16399,-876 16399,-876 16399,-927 16399,-927 16399,-933 16393,-939 16387,-939 16387,-939 15933,-939 15933,-939 15927,-939 15921,-933 15921,-927 15921,-927 15921,-876 15921,-876 15921,-870 15927,-864 15933,-864"/>
-<text text-anchor="middle" x="16160" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack runtime budget [14_tech_stack]</text>
+<text text-anchor="middle" x="16160" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack runtime budget [17_tech_stack]</text>
 </g>
 <g id="clust39" class="cluster">
 <title>cluster_user_cli_projection</title>
 <path fill="#fff7d6" stroke="#d97706" d="M16419,-864C16419,-864 16850,-864 16850,-864 16856,-864 16862,-870 16862,-876 16862,-876 16862,-927 16862,-927 16862,-933 16856,-939 16850,-939 16850,-939 16419,-939 16419,-939 16413,-939 16407,-933 16407,-927 16407,-927 16407,-876 16407,-876 16407,-870 16413,-864 16419,-864"/>
-<text text-anchor="middle" x="16634.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI projection workspace indexing [12_commands]</text>
+<text text-anchor="middle" x="16634.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI projection workspace indexing [14_commands]</text>
 </g>
 <g id="clust40" class="cluster">
 <title>cluster_user_cli_server</title>
 <path fill="#fff7d6" stroke="#d97706" d="M16882,-864C16882,-864 17413,-864 17413,-864 17419,-864 17425,-870 17425,-876 17425,-876 17425,-927 17425,-927 17425,-933 17419,-939 17413,-939 17413,-939 16882,-939 16882,-939 16876,-939 16870,-933 16870,-927 16870,-927 16870,-876 16870,-876 16870,-870 16876,-864 16882,-864"/>
-<text text-anchor="middle" x="17147.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI server runtime [12_commands]</text>
+<text text-anchor="middle" x="17147.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI server runtime [14_commands]</text>
 </g>
 <g id="clust41" class="cluster">
 <title>cluster_user_cli_export</title>
 <path fill="#fff7d6" stroke="#d97706" d="M17445,-864C17445,-864 18014,-864 18014,-864 18020,-864 18026,-870 18026,-876 18026,-876 18026,-927 18026,-927 18026,-933 18020,-939 18014,-939 18014,-939 17445,-939 17445,-939 17439,-939 17433,-933 17433,-927 17433,-927 17433,-876 17433,-876 17433,-870 17439,-864 17445,-864"/>
-<text text-anchor="middle" x="17729.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI export / inspect [12_commands]</text>
+<text text-anchor="middle" x="17729.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI export / inspect [14_commands]</text>
 </g>
 <g id="clust42" class="cluster">
 <title>cluster_user_cli_repair</title>
 <path fill="#fff7d6" stroke="#d97706" d="M18046,-864C18046,-864 18780,-864 18780,-864 18786,-864 18792,-870 18792,-876 18792,-876 18792,-927 18792,-927 18792,-933 18786,-939 18780,-939 18780,-939 18046,-939 18046,-939 18040,-939 18034,-933 18034,-927 18034,-927 18034,-876 18034,-876 18034,-870 18040,-864 18046,-864"/>
-<text text-anchor="middle" x="18413" y="-923.8" font-family="Times,serif" font-size="14.00">CLI repair / admin [12_commands]</text>
+<text text-anchor="middle" x="18413" y="-923.8" font-family="Times,serif" font-size="14.00">CLI repair / admin [14_commands]</text>
 </g>
 <g id="clust43" class="cluster">
 <title>cluster_user_settings_env</title>
 <path fill="#fff7d6" stroke="#d97706" d="M18812,-864C18812,-864 19360,-864 19360,-864 19366,-864 19372,-870 19372,-876 19372,-876 19372,-927 19372,-927 19372,-933 19366,-939 19360,-939 19360,-939 18812,-939 18812,-939 18806,-939 18800,-933 18800,-927 18800,-927 18800,-876 18800,-876 18800,-870 18806,-864 18812,-864"/>
-<text text-anchor="middle" x="19086" y="-923.8" font-family="Times,serif" font-size="14.00">settings env defaults [13_settings]</text>
+<text text-anchor="middle" x="19086" y="-923.8" font-family="Times,serif" font-size="14.00">settings env defaults [15_settings]</text>
 </g>
 <g id="clust44" class="cluster">
 <title>cluster_user_settings_file</title>
 <path fill="#fff7d6" stroke="#d97706" d="M19392,-864C19392,-864 19866,-864 19866,-864 19872,-864 19878,-870 19878,-876 19878,-876 19878,-927 19878,-927 19878,-933 19872,-939 19866,-939 19866,-939 19392,-939 19392,-939 19386,-939 19380,-933 19380,-927 19380,-927 19380,-876 19380,-876 19380,-870 19386,-864 19392,-864"/>
-<text text-anchor="middle" x="19629" y="-923.8" font-family="Times,serif" font-size="14.00">settings file config [13_settings]</text>
+<text text-anchor="middle" x="19629" y="-923.8" font-family="Times,serif" font-size="14.00">settings file config [15_settings]</text>
 </g>
 <g id="clust45" class="cluster">
 <title>cluster_user_settings_ui</title>
 <path fill="#fff7d6" stroke="#d97706" d="M19898,-864C19898,-864 20278,-864 20278,-864 20284,-864 20290,-870 20290,-876 20290,-876 20290,-927 20290,-927 20290,-933 20284,-939 20278,-939 20278,-939 19898,-939 19898,-939 19892,-939 19886,-933 19886,-927 19886,-927 19886,-876 19886,-876 19886,-870 19892,-864 19898,-864"/>
-<text text-anchor="middle" x="20088" y="-923.8" font-family="Times,serif" font-size="14.00">settings UI preferences [13_settings]</text>
+<text text-anchor="middle" x="20088" y="-923.8" font-family="Times,serif" font-size="14.00">settings UI preferences [15_settings]</text>
 </g>
 <g id="clust46" class="cluster">
 <title>cluster_user_settings_feedback</title>
 <path fill="#fff7d6" stroke="#d97706" d="M20310,-864C20310,-864 20905,-864 20905,-864 20911,-864 20917,-870 20917,-876 20917,-876 20917,-927 20917,-927 20917,-933 20911,-939 20905,-939 20905,-939 20310,-939 20310,-939 20304,-939 20298,-933 20298,-927 20298,-927 20298,-876 20298,-876 20298,-870 20304,-864 20310,-864"/>
-<text text-anchor="middle" x="20607.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings runtime feedback [13_settings]</text>
+<text text-anchor="middle" x="20607.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings runtime feedback [15_settings]</text>
 </g>
 <g id="clust47" class="cluster">
 <title>cluster_user_i18n_locale</title>
 <path fill="#fff7d6" stroke="#d97706" d="M20937,-864C20937,-864 21365,-864 21365,-864 21371,-864 21377,-870 21377,-876 21377,-876 21377,-927 21377,-927 21377,-933 21371,-939 21365,-939 21365,-939 20937,-939 20937,-939 20931,-939 20925,-933 20925,-927 20925,-927 20925,-876 20925,-876 20925,-870 20931,-864 20937,-864"/>
-<text text-anchor="middle" x="21151" y="-923.8" font-family="Times,serif" font-size="14.00">i18n locale selection [11_i18n]</text>
+<text text-anchor="middle" x="21151" y="-923.8" font-family="Times,serif" font-size="14.00">i18n locale selection [13_i18n]</text>
 </g>
 <g id="clust48" class="cluster">
 <title>cluster_user_i18n_error</title>
 <path fill="#fff7d6" stroke="#d97706" d="M21397,-864C21397,-864 21935,-864 21935,-864 21941,-864 21947,-870 21947,-876 21947,-876 21947,-927 21947,-927 21947,-933 21941,-939 21935,-939 21935,-939 21397,-939 21397,-939 21391,-939 21385,-933 21385,-927 21385,-927 21385,-876 21385,-876 21385,-870 21391,-864 21397,-864"/>
-<text text-anchor="middle" x="21666" y="-923.8" font-family="Times,serif" font-size="14.00">i18n error mapping [11_i18n]</text>
+<text text-anchor="middle" x="21666" y="-923.8" font-family="Times,serif" font-size="14.00">i18n error mapping [13_i18n]</text>
 </g>
 <g id="clust49" class="cluster">
 <title>cluster_user_i18n_format</title>
 <path fill="#fff7d6" stroke="#d97706" d="M21967,-864C21967,-864 22483,-864 22483,-864 22489,-864 22495,-870 22495,-876 22495,-876 22495,-927 22495,-927 22495,-933 22489,-939 22483,-939 22483,-939 21967,-939 21967,-939 21961,-939 21955,-933 21955,-927 21955,-927 21955,-876 21955,-876 21955,-870 21961,-864 21967,-864"/>
-<text text-anchor="middle" x="22225" y="-923.8" font-family="Times,serif" font-size="14.00">i18n localized formatting [11_i18n]</text>
+<text text-anchor="middle" x="22225" y="-923.8" font-family="Times,serif" font-size="14.00">i18n localized formatting [13_i18n]</text>
 </g>
 <g id="clust50" class="cluster">
 <title>cluster_user_i18n_audit</title>
 <path fill="#fff7d6" stroke="#d97706" d="M22515,-864C22515,-864 22953,-864 22953,-864 22959,-864 22965,-870 22965,-876 22965,-876 22965,-927 22965,-927 22965,-933 22959,-939 22953,-939 22953,-939 22515,-939 22515,-939 22509,-939 22503,-933 22503,-927 22503,-927 22503,-876 22503,-876 22503,-870 22509,-864 22515,-864"/>
-<text text-anchor="middle" x="22734" y="-923.8" font-family="Times,serif" font-size="14.00">i18n hardcoded audit [11_i18n]</text>
+<text text-anchor="middle" x="22734" y="-923.8" font-family="Times,serif" font-size="14.00">i18n hardcoded audit [13_i18n]</text>
 </g>
 <g id="clust51" class="cluster">
 <title>cluster_user_tech_dependency</title>
 <path fill="#fff7d6" stroke="#d97706" d="M22985,-864C22985,-864 23514,-864 23514,-864 23520,-864 23526,-870 23526,-876 23526,-876 23526,-927 23526,-927 23526,-933 23520,-939 23514,-939 23514,-939 22985,-939 22985,-939 22979,-939 22973,-933 22973,-927 22973,-927 22973,-876 22973,-876 22973,-870 22979,-864 22985,-864"/>
-<text text-anchor="middle" x="23249.5" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack dependency policy [14_tech_stack]</text>
+<text text-anchor="middle" x="23249.5" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack dependency policy [17_tech_stack]</text>
 </g>
 <g id="clust52" class="cluster">
 <title>cluster_user_tech_budget</title>
 <path fill="#fff7d6" stroke="#d97706" d="M23546,-864C23546,-864 24026,-864 24026,-864 24032,-864 24038,-870 24038,-876 24038,-876 24038,-927 24038,-927 24038,-933 24032,-939 24026,-939 24026,-939 23546,-939 23546,-939 23540,-939 23534,-933 23534,-927 23534,-927 23534,-876 23534,-876 23534,-870 23540,-864 23546,-864"/>
-<text text-anchor="middle" x="23786" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack runtime budget check [14_tech_stack]</text>
+<text text-anchor="middle" x="23786" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack runtime budget check [17_tech_stack]</text>
 </g>
 <g id="clust53" class="cluster">
 <title>cluster_user_tech_platform</title>
 <path fill="#fff7d6" stroke="#d97706" d="M24058,-864C24058,-864 24710,-864 24710,-864 24716,-864 24722,-870 24722,-876 24722,-876 24722,-927 24722,-927 24722,-933 24716,-939 24710,-939 24710,-939 24058,-939 24058,-939 24052,-939 24046,-933 24046,-927 24046,-927 24046,-876 24046,-876 24046,-870 24052,-864 24058,-864"/>
-<text text-anchor="middle" x="24384" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack platform / release channel [14_tech_stack + 15_release]</text>
+<text text-anchor="middle" x="24384" y="-923.8" font-family="Times,serif" font-size="14.00">tech&#45;stack platform / release channel [17_tech_stack + 18_release]</text>
 </g>
 <g id="clust54" class="cluster">
 <title>cluster_user_release_tag</title>
 <path fill="#fff7d6" stroke="#d97706" d="M24742,-864C24742,-864 25248,-864 25248,-864 25254,-864 25260,-870 25260,-876 25260,-876 25260,-927 25260,-927 25260,-933 25254,-939 25248,-939 25248,-939 24742,-939 24742,-939 24736,-939 24730,-933 24730,-927 24730,-927 24730,-876 24730,-876 24730,-870 24736,-864 24742,-864"/>
-<text text-anchor="middle" x="24995" y="-923.8" font-family="Times,serif" font-size="14.00">release tag dispatch [15_release]</text>
+<text text-anchor="middle" x="24995" y="-923.8" font-family="Times,serif" font-size="14.00">release tag dispatch [18_release]</text>
 </g>
 <g id="clust55" class="cluster">
 <title>cluster_user_release_quality</title>
 <path fill="#fff7d6" stroke="#d97706" d="M25280,-864C25280,-864 25644,-864 25644,-864 25650,-864 25656,-870 25656,-876 25656,-876 25656,-927 25656,-927 25656,-933 25650,-939 25644,-939 25644,-939 25280,-939 25280,-939 25274,-939 25268,-933 25268,-927 25268,-927 25268,-876 25268,-876 25268,-870 25274,-864 25280,-864"/>
-<text text-anchor="middle" x="25462" y="-923.8" font-family="Times,serif" font-size="14.00">release quality gates [15_release]</text>
+<text text-anchor="middle" x="25462" y="-923.8" font-family="Times,serif" font-size="14.00">release quality gates [18_release]</text>
 </g>
 <g id="clust56" class="cluster">
 <title>cluster_user_release_publish</title>
 <path fill="#fff7d6" stroke="#d97706" d="M25676,-864C25676,-864 26123,-864 26123,-864 26129,-864 26135,-870 26135,-876 26135,-876 26135,-927 26135,-927 26135,-933 26129,-939 26123,-939 26123,-939 25676,-939 25676,-939 25670,-939 25664,-933 25664,-927 25664,-927 25664,-876 25664,-876 25664,-870 25670,-864 25676,-864"/>
-<text text-anchor="middle" x="25899.5" y="-923.8" font-family="Times,serif" font-size="14.00">release artifact publish [15_release]</text>
+<text text-anchor="middle" x="25899.5" y="-923.8" font-family="Times,serif" font-size="14.00">release artifact publish [18_release]</text>
 </g>
 <g id="clust57" class="cluster">
 <title>cluster_user_release_verify</title>
 <path fill="#fff7d6" stroke="#d97706" d="M26155,-864C26155,-864 26656,-864 26656,-864 26662,-864 26668,-870 26668,-876 26668,-876 26668,-927 26668,-927 26668,-933 26662,-939 26656,-939 26656,-939 26155,-939 26155,-939 26149,-939 26143,-933 26143,-927 26143,-927 26143,-876 26143,-876 26143,-870 26149,-864 26155,-864"/>
-<text text-anchor="middle" x="26405.5" y="-923.8" font-family="Times,serif" font-size="14.00">release delivery verification [15_release]</text>
+<text text-anchor="middle" x="26405.5" y="-923.8" font-family="Times,serif" font-size="14.00">release delivery verification [18_release]</text>
 </g>
 <g id="clust58" class="cluster">
 <title>cluster_user_settings_surface</title>
 <path fill="#fff7d6" stroke="#d97706" d="M26688,-864C26688,-864 27205,-864 27205,-864 27211,-864 27217,-870 27217,-876 27217,-876 27217,-927 27217,-927 27217,-933 27211,-939 27205,-939 27205,-939 26688,-939 26688,-939 26682,-939 26676,-933 26676,-927 26676,-927 26676,-876 26676,-876 26676,-870 26682,-864 26688,-864"/>
-<text text-anchor="middle" x="26946.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings surface open [13_settings]</text>
+<text text-anchor="middle" x="26946.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings surface open [15_settings]</text>
 </g>
 <g id="clust59" class="cluster">
 <title>cluster_user_settings_mutation</title>
 <path fill="#fff7d6" stroke="#d97706" d="M27237,-864C27237,-864 27710,-864 27710,-864 27716,-864 27722,-870 27722,-876 27722,-876 27722,-927 27722,-927 27722,-933 27716,-939 27710,-939 27710,-939 27237,-939 27237,-939 27231,-939 27225,-933 27225,-927 27225,-927 27225,-876 27225,-876 27225,-870 27231,-864 27237,-864"/>
-<text text-anchor="middle" x="27473.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings value mutation [13_settings]</text>
+<text text-anchor="middle" x="27473.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings value mutation [15_settings]</text>
 </g>
 <g id="clust60" class="cluster">
 <title>cluster_user_settings_persist</title>
 <path fill="#fff7d6" stroke="#d97706" d="M27742,-864C27742,-864 28290,-864 28290,-864 28296,-864 28302,-870 28302,-876 28302,-876 28302,-927 28302,-927 28302,-933 28296,-939 28290,-939 28290,-939 27742,-939 27742,-939 27736,-939 27730,-933 27730,-927 27730,-927 27730,-876 27730,-876 27730,-870 27736,-864 27742,-864"/>
-<text text-anchor="middle" x="28016" y="-923.8" font-family="Times,serif" font-size="14.00">settings persistence / apply [13_settings]</text>
+<text text-anchor="middle" x="28016" y="-923.8" font-family="Times,serif" font-size="14.00">settings persistence / apply [15_settings]</text>
 </g>
 <g id="clust61" class="cluster">
 <title>cluster_user_settings_feedback_render</title>
 <path fill="#fff7d6" stroke="#d97706" d="M28322,-864C28322,-864 28895,-864 28895,-864 28901,-864 28907,-870 28907,-876 28907,-876 28907,-927 28907,-927 28907,-933 28901,-939 28895,-939 28895,-939 28322,-939 28322,-939 28316,-939 28310,-933 28310,-927 28310,-927 28310,-876 28310,-876 28310,-870 28316,-864 28322,-864"/>
-<text text-anchor="middle" x="28608.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings feedback / render [13_settings]</text>
+<text text-anchor="middle" x="28608.5" y="-923.8" font-family="Times,serif" font-size="14.00">settings feedback / render [15_settings]</text>
 </g>
 <g id="clust62" class="cluster">
 <title>cluster_user_render_inline_source</title>
 <path fill="#fff7d6" stroke="#d97706" d="M28927,-864C28927,-864 29508,-864 29508,-864 29514,-864 29520,-870 29520,-876 29520,-876 29520,-927 29520,-927 29520,-933 29514,-939 29508,-939 29508,-939 28927,-939 28927,-939 28921,-939 28915,-933 28915,-927 28915,-927 28915,-876 28915,-876 28915,-870 28921,-864 28927,-864"/>
-<text text-anchor="middle" x="29217.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering inline source reveal [03_rendering]</text>
+<text text-anchor="middle" x="29217.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering inline source reveal [10_rendering]</text>
 </g>
 <g id="clust63" class="cluster">
 <title>cluster_user_render_projection_refresh</title>
 <path fill="#fff7d6" stroke="#d97706" d="M29540,-864C29540,-864 29989,-864 29989,-864 29995,-864 30001,-870 30001,-876 30001,-876 30001,-927 30001,-927 30001,-933 29995,-939 29989,-939 29989,-939 29540,-939 29540,-939 29534,-939 29528,-933 29528,-927 29528,-927 29528,-876 29528,-876 29528,-870 29534,-864 29540,-864"/>
-<text text-anchor="middle" x="29764.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering projection refresh [03_rendering]</text>
+<text text-anchor="middle" x="29764.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering projection refresh [10_rendering]</text>
 </g>
 <g id="clust64" class="cluster">
 <title>cluster_user_render_math_source</title>
 <path fill="#fff7d6" stroke="#d97706" d="M30021,-864C30021,-864 30537,-864 30537,-864 30543,-864 30549,-870 30549,-876 30549,-876 30549,-927 30549,-927 30549,-933 30543,-939 30537,-939 30537,-939 30021,-939 30021,-939 30015,-939 30009,-933 30009,-927 30009,-927 30009,-876 30009,-876 30009,-870 30015,-864 30021,-864"/>
-<text text-anchor="middle" x="30279" y="-923.8" font-family="Times,serif" font-size="14.00">rendering math source projection [03_rendering]</text>
+<text text-anchor="middle" x="30279" y="-923.8" font-family="Times,serif" font-size="14.00">rendering math source projection [10_rendering]</text>
 </g>
 <g id="clust65" class="cluster">
 <title>cluster_user_render_mermaid_source</title>
 <path fill="#fff7d6" stroke="#d97706" d="M30569,-864C30569,-864 31183,-864 31183,-864 31189,-864 31195,-870 31195,-876 31195,-876 31195,-927 31195,-927 31195,-933 31189,-939 31183,-939 31183,-939 30569,-939 30569,-939 30563,-939 30557,-933 30557,-927 30557,-927 30557,-876 30557,-876 30557,-870 30563,-864 30569,-864"/>
-<text text-anchor="middle" x="30876" y="-923.8" font-family="Times,serif" font-size="14.00">rendering mermaid source projection [03_rendering]</text>
+<text text-anchor="middle" x="30876" y="-923.8" font-family="Times,serif" font-size="14.00">rendering mermaid source projection [10_rendering]</text>
 </g>
 <g id="clust66" class="cluster">
 <title>cluster_user_render_checkbox</title>
 <path fill="#fff7d6" stroke="#d97706" d="M31215,-864C31215,-864 31739,-864 31739,-864 31745,-864 31751,-870 31751,-876 31751,-876 31751,-927 31751,-927 31751,-933 31745,-939 31739,-939 31739,-939 31215,-939 31215,-939 31209,-939 31203,-933 31203,-927 31203,-927 31203,-876 31203,-876 31203,-870 31209,-864 31215,-864"/>
-<text text-anchor="middle" x="31477" y="-923.8" font-family="Times,serif" font-size="14.00">rendering checkbox writeback [03_rendering]</text>
+<text text-anchor="middle" x="31477" y="-923.8" font-family="Times,serif" font-size="14.00">rendering checkbox writeback [10_rendering]</text>
 </g>
 <g id="clust67" class="cluster">
 <title>cluster_user_render_link_activation</title>
 <path fill="#fff7d6" stroke="#d97706" d="M31771,-864C31771,-864 32209,-864 32209,-864 32215,-864 32221,-870 32221,-876 32221,-876 32221,-927 32221,-927 32221,-933 32215,-939 32209,-939 32209,-939 31771,-939 31771,-939 31765,-939 31759,-933 31759,-927 31759,-927 31759,-876 31759,-876 31759,-870 31765,-864 31771,-864"/>
-<text text-anchor="middle" x="31990" y="-923.8" font-family="Times,serif" font-size="14.00">rendering link activation gate [03_rendering]</text>
+<text text-anchor="middle" x="31990" y="-923.8" font-family="Times,serif" font-size="14.00">rendering link activation gate [10_rendering]</text>
 </g>
 <g id="clust68" class="cluster">
 <title>cluster_user_render_outline_navigation</title>
 <path fill="#fff7d6" stroke="#d97706" d="M32241,-864C32241,-864 32728,-864 32728,-864 32734,-864 32740,-870 32740,-876 32740,-876 32740,-927 32740,-927 32740,-933 32734,-939 32728,-939 32728,-939 32241,-939 32241,-939 32235,-939 32229,-933 32229,-927 32229,-927 32229,-876 32229,-876 32229,-870 32235,-864 32241,-864"/>
-<text text-anchor="middle" x="32484.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering outline navigation [03_rendering]</text>
+<text text-anchor="middle" x="32484.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering outline navigation [10_rendering]</text>
 </g>
 <g id="clust69" class="cluster">
 <title>cluster_user_render_large_doc_prefetch</title>
 <path fill="#fff7d6" stroke="#d97706" d="M32760,-864C32760,-864 33581,-864 33581,-864 33587,-864 33593,-870 33593,-876 33593,-876 33593,-927 33593,-927 33593,-933 33587,-939 33581,-939 33581,-939 32760,-939 32760,-939 32754,-939 32748,-933 32748,-927 32748,-927 32748,-876 32748,-876 32748,-870 32754,-864 32760,-864"/>
-<text text-anchor="middle" x="33170.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering large&#45;doc prefetch [03_rendering]</text>
+<text text-anchor="middle" x="33170.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering large&#45;doc prefetch [10_rendering]</text>
 </g>
 <g id="clust70" class="cluster">
 <title>cluster_user_render_large_doc_search_gate</title>
 <path fill="#fff7d6" stroke="#d97706" d="M33613,-864C33613,-864 34256,-864 34256,-864 34262,-864 34268,-870 34268,-876 34268,-876 34268,-927 34268,-927 34268,-933 34262,-939 34256,-939 34256,-939 33613,-939 33613,-939 33607,-939 33601,-933 33601,-927 33601,-927 33601,-876 33601,-876 33601,-870 33607,-864 33613,-864"/>
-<text text-anchor="middle" x="33934.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering large&#45;doc search gate [03_rendering]</text>
+<text text-anchor="middle" x="33934.5" y="-923.8" font-family="Times,serif" font-size="14.00">rendering large&#45;doc search gate [10_rendering]</text>
 </g>
 <g id="clust71" class="cluster">
 <title>cluster_user_cli_parse_detail</title>
 <path fill="#fff7d6" stroke="#d97706" d="M6715,-641.5C6715,-641.5 6966,-641.5 6966,-641.5 6972,-641.5 6978,-647.5 6978,-653.5 6978,-653.5 6978,-927 6978,-927 6978,-933 6972,-939 6966,-939 6966,-939 6715,-939 6715,-939 6709,-939 6703,-933 6703,-927 6703,-927 6703,-653.5 6703,-653.5 6703,-647.5 6709,-641.5 6715,-641.5"/>
-<text text-anchor="middle" x="6840.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI parse command [12_commands]</text>
+<text text-anchor="middle" x="6840.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI parse command [14_commands]</text>
 </g>
 <g id="clust72" class="cluster">
 <title>cluster_user_cli_help_detail</title>
 <path fill="#fff7d6" stroke="#d97706" d="M6998,-641.5C6998,-641.5 7224,-641.5 7224,-641.5 7230,-641.5 7236,-647.5 7236,-653.5 7236,-653.5 7236,-927 7236,-927 7236,-933 7230,-939 7224,-939 7224,-939 6998,-939 6998,-939 6992,-939 6986,-933 6986,-927 6986,-927 6986,-653.5 6986,-653.5 6986,-647.5 6992,-641.5 6998,-641.5"/>
-<text text-anchor="middle" x="7111" y="-923.8" font-family="Times,serif" font-size="14.00">CLI help surface [12_commands]</text>
+<text text-anchor="middle" x="7111" y="-923.8" font-family="Times,serif" font-size="14.00">CLI help surface [14_commands]</text>
 </g>
 <g id="clust73" class="cluster">
 <title>cluster_user_cli_guidance_detail</title>
 <path fill="#fff7d6" stroke="#d97706" d="M7256,-783C7256,-783 7582,-783 7582,-783 7588,-783 7594,-789 7594,-795 7594,-795 7594,-927 7594,-927 7594,-933 7588,-939 7582,-939 7582,-939 7256,-939 7256,-939 7250,-939 7244,-933 7244,-927 7244,-927 7244,-795 7244,-795 7244,-789 7250,-783 7256,-783"/>
-<text text-anchor="middle" x="7419" y="-923.8" font-family="Times,serif" font-size="14.00">CLI empty&#45;command guidance [12_commands]</text>
+<text text-anchor="middle" x="7419" y="-923.8" font-family="Times,serif" font-size="14.00">CLI empty&#45;command guidance [14_commands]</text>
 </g>
 <g id="clust74" class="cluster">
 <title>cluster_user_cli_runtime_detail</title>
 <path fill="#fff7d6" stroke="#d97706" d="M7614,-641.5C7614,-641.5 7867,-641.5 7867,-641.5 7873,-641.5 7879,-647.5 7879,-653.5 7879,-653.5 7879,-927 7879,-927 7879,-933 7873,-939 7867,-939 7867,-939 7614,-939 7614,-939 7608,-939 7602,-933 7602,-927 7602,-927 7602,-653.5 7602,-653.5 7602,-647.5 7608,-641.5 7614,-641.5"/>
-<text text-anchor="middle" x="7740.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI runtime handoff [12_commands]</text>
+<text text-anchor="middle" x="7740.5" y="-923.8" font-family="Times,serif" font-size="14.00">CLI runtime handoff [14_commands]</text>
 </g>
 <g id="clust75" class="cluster">
 <title>cluster_user_command_surface_mode</title>
 <path fill="#fff7d6" stroke="#d97706" d="M7899,-641.5C7899,-641.5 8234,-641.5 8234,-641.5 8240,-641.5 8246,-647.5 8246,-653.5 8246,-653.5 8246,-927 8246,-927 8246,-933 8240,-939 8234,-939 8234,-939 7899,-939 7899,-939 7893,-939 7887,-933 7887,-927 7887,-927 7887,-653.5 7887,-653.5 7887,-647.5 7893,-641.5 7899,-641.5"/>
-<text text-anchor="middle" x="8066.5" y="-923.8" font-family="Times,serif" font-size="14.00">command surface mode routing [12_commands]</text>
+<text text-anchor="middle" x="8066.5" y="-923.8" font-family="Times,serif" font-size="14.00">command surface mode routing [14_commands]</text>
 </g>
 <g id="clust76" class="cluster">
 <title>cluster_user_command_surface_action</title>
 <path fill="#fff7d6" stroke="#d97706" d="M8266,-641.5C8266,-641.5 8606,-641.5 8606,-641.5 8612,-641.5 8618,-647.5 8618,-653.5 8618,-653.5 8618,-927 8618,-927 8618,-933 8612,-939 8606,-939 8606,-939 8266,-939 8266,-939 8260,-939 8254,-933 8254,-927 8254,-927 8254,-653.5 8254,-653.5 8254,-647.5 8260,-641.5 8266,-641.5"/>
-<text text-anchor="middle" x="8436" y="-923.8" font-family="Times,serif" font-size="14.00">command surface action routing [12_commands]</text>
+<text text-anchor="middle" x="8436" y="-923.8" font-family="Times,serif" font-size="14.00">command surface action routing [14_commands]</text>
 </g>
 <g id="clust77" class="cluster">
 <title>cluster_user_locale_surface_switch</title>
 <path fill="#fff7d6" stroke="#d97706" d="M8638,-514C8638,-514 9077,-514 9077,-514 9083,-514 9089,-520 9089,-526 9089,-526 9089,-927 9089,-927 9089,-933 9083,-939 9077,-939 9077,-939 8638,-939 8638,-939 8632,-939 8626,-933 8626,-927 8626,-927 8626,-526 8626,-526 8626,-520 8632,-514 8638,-514"/>
-<text text-anchor="middle" x="8857.5" y="-923.8" font-family="Times,serif" font-size="14.00">locale surface switch [11_i18n + 12_commands + 13_settings]</text>
+<text text-anchor="middle" x="8857.5" y="-923.8" font-family="Times,serif" font-size="14.00">locale surface switch [13_i18n + 14_commands + 15_settings]</text>
 </g>
 <g id="clust78" class="cluster">
 <title>cluster_user_repo_fileop_shell</title>
 <path fill="#fff7d6" stroke="#d97706" d="M9109,-514C9109,-514 9626,-514 9626,-514 9632,-514 9638,-520 9638,-526 9638,-526 9638,-927 9638,-927 9638,-933 9632,-939 9626,-939 9626,-939 9109,-939 9109,-939 9103,-939 9097,-933 9097,-927 9097,-927 9097,-526 9097,-526 9097,-520 9103,-514 9109,-514"/>
-<text text-anchor="middle" x="9367.5" y="-923.8" font-family="Times,serif" font-size="14.00">repo file&#45;op shell routing [06_repository + 08_ui_design + 12_commands]</text>
+<text text-anchor="middle" x="9367.5" y="-923.8" font-family="Times,serif" font-size="14.00">repo file&#45;op shell routing [04_repository + 11_ui_design + 14_commands]</text>
 </g>
 <g id="clust79" class="cluster">
 <title>cluster_app</title>
@@ -407,222 +407,222 @@
 <g id="clust80" class="cluster">
 <title>cluster_app_login</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M42304,-641.5C42304,-641.5 42678,-641.5 42678,-641.5 42684,-641.5 42690,-647.5 42690,-653.5 42690,-653.5 42690,-704.5 42690,-704.5 42690,-710.5 42684,-716.5 42678,-716.5 42678,-716.5 42304,-716.5 42304,-716.5 42298,-716.5 42292,-710.5 42292,-704.5 42292,-704.5 42292,-653.5 42292,-653.5 42292,-647.5 42298,-641.5 42304,-641.5"/>
-<text text-anchor="middle" x="42491" y="-701.3" font-family="Times,serif" font-size="14.00">login [09_auth]</text>
+<text text-anchor="middle" x="42491" y="-701.3" font-family="Times,serif" font-size="14.00">login [08_auth]</text>
 </g>
 <g id="clust81" class="cluster">
 <title>cluster_app_auth_session</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M42710,-641.5C42710,-641.5 43282,-641.5 43282,-641.5 43288,-641.5 43294,-647.5 43294,-653.5 43294,-653.5 43294,-704.5 43294,-704.5 43294,-710.5 43288,-716.5 43282,-716.5 43282,-716.5 42710,-716.5 42710,-716.5 42704,-716.5 42698,-710.5 42698,-704.5 42698,-704.5 42698,-653.5 42698,-653.5 42698,-647.5 42704,-641.5 42710,-641.5"/>
-<text text-anchor="middle" x="42996" y="-701.3" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [09_auth]</text>
+<text text-anchor="middle" x="42996" y="-701.3" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [08_auth]</text>
 </g>
 <g id="clust82" class="cluster">
 <title>cluster_app_sync_handshake</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M43314,-641.5C43314,-641.5 43930,-641.5 43930,-641.5 43936,-641.5 43942,-647.5 43942,-653.5 43942,-653.5 43942,-704.5 43942,-704.5 43942,-710.5 43936,-716.5 43930,-716.5 43930,-716.5 43314,-716.5 43314,-716.5 43308,-716.5 43302,-710.5 43302,-704.5 43302,-704.5 43302,-653.5 43302,-653.5 43302,-647.5 43308,-641.5 43314,-641.5"/>
-<text text-anchor="middle" x="43622" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [05_network + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="43622" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [07_network + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust83" class="cluster">
 <title>cluster_app_sync_transfer</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M43962,-641.5C43962,-641.5 44702,-641.5 44702,-641.5 44708,-641.5 44714,-647.5 44714,-653.5 44714,-653.5 44714,-704.5 44714,-704.5 44714,-710.5 44708,-716.5 44702,-716.5 44702,-716.5 43962,-716.5 43962,-716.5 43956,-716.5 43950,-710.5 43950,-704.5 43950,-704.5 43950,-653.5 43950,-653.5 43950,-647.5 43956,-641.5 43962,-641.5"/>
-<text text-anchor="middle" x="44332" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [05_network]</text>
+<text text-anchor="middle" x="44332" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [07_network]</text>
 </g>
 <g id="clust84" class="cluster">
 <title>cluster_app_key_exchange</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M44734,-641.5C44734,-641.5 45216,-641.5 45216,-641.5 45222,-641.5 45228,-647.5 45228,-653.5 45228,-653.5 45228,-704.5 45228,-704.5 45228,-710.5 45222,-716.5 45216,-716.5 45216,-716.5 44734,-716.5 44734,-716.5 44728,-716.5 44722,-710.5 44722,-704.5 44722,-704.5 44722,-653.5 44722,-653.5 44722,-647.5 44728,-641.5 44734,-641.5"/>
-<text text-anchor="middle" x="44975" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [05_network + 04_storage]</text>
+<text text-anchor="middle" x="44975" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [07_network + 03_storage]</text>
 </g>
 <g id="clust85" class="cluster">
 <title>cluster_app_palette</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M39430,-514C39430,-514 39766,-514 39766,-514 39772,-514 39778,-520 39778,-526 39778,-526 39778,-704.5 39778,-704.5 39778,-710.5 39772,-716.5 39766,-716.5 39766,-716.5 39430,-716.5 39430,-716.5 39424,-716.5 39418,-710.5 39418,-704.5 39418,-704.5 39418,-526 39418,-526 39418,-520 39424,-514 39430,-514"/>
-<text text-anchor="middle" x="39598" y="-701.3" font-family="Times,serif" font-size="14.00">command&#45;palette [12_commands]</text>
+<text text-anchor="middle" x="39598" y="-701.3" font-family="Times,serif" font-size="14.00">command&#45;palette [14_commands]</text>
 </g>
 <g id="clust86" class="cluster">
 <title>cluster_app_branch_switch</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M45248,-641.5C45248,-641.5 45782,-641.5 45782,-641.5 45788,-641.5 45794,-647.5 45794,-653.5 45794,-653.5 45794,-704.5 45794,-704.5 45794,-710.5 45788,-716.5 45782,-716.5 45782,-716.5 45248,-716.5 45248,-716.5 45242,-716.5 45236,-710.5 45236,-704.5 45236,-704.5 45236,-653.5 45236,-653.5 45236,-647.5 45242,-641.5 45248,-641.5"/>
-<text text-anchor="middle" x="45515" y="-701.3" font-family="Times,serif" font-size="14.00">branch&#45;switch [06_repository + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="45515" y="-701.3" font-family="Times,serif" font-size="14.00">branch&#45;switch [04_repository + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust87" class="cluster">
 <title>cluster_app_sc_commit</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M45814,-641.5C45814,-641.5 46219,-641.5 46219,-641.5 46225,-641.5 46231,-647.5 46231,-653.5 46231,-653.5 46231,-704.5 46231,-704.5 46231,-710.5 46225,-716.5 46219,-716.5 46219,-716.5 45814,-716.5 45814,-716.5 45808,-716.5 45802,-710.5 45802,-704.5 45802,-704.5 45802,-653.5 45802,-653.5 45802,-647.5 45808,-641.5 45814,-641.5"/>
-<text text-anchor="middle" x="46016.5" y="-701.3" font-family="Times,serif" font-size="14.00">source&#45;control commit [07_diff_logic]</text>
+<text text-anchor="middle" x="46016.5" y="-701.3" font-family="Times,serif" font-size="14.00">source&#45;control commit [05_diff_logic]</text>
 </g>
 <g id="clust88" class="cluster">
 <title>cluster_app_ai_chat</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M46251,-641.5C46251,-641.5 46589,-641.5 46589,-641.5 46595,-641.5 46601,-647.5 46601,-653.5 46601,-653.5 46601,-704.5 46601,-704.5 46601,-710.5 46595,-716.5 46589,-716.5 46589,-716.5 46251,-716.5 46251,-716.5 46245,-716.5 46239,-710.5 46239,-704.5 46239,-704.5 46239,-653.5 46239,-653.5 46239,-647.5 46245,-641.5 46251,-641.5"/>
-<text text-anchor="middle" x="46420" y="-701.3" font-family="Times,serif" font-size="14.00">native ai&#45;chat [10_ai_agent]</text>
+<text text-anchor="middle" x="46420" y="-701.3" font-family="Times,serif" font-size="14.00">native ai&#45;chat [16_ai_agent]</text>
 </g>
 <g id="clust89" class="cluster">
 <title>cluster_app_repo_switch</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M46621,-641.5C46621,-641.5 47135,-641.5 47135,-641.5 47141,-641.5 47147,-647.5 47147,-653.5 47147,-653.5 47147,-704.5 47147,-704.5 47147,-710.5 47141,-716.5 47135,-716.5 47135,-716.5 46621,-716.5 46621,-716.5 46615,-716.5 46609,-710.5 46609,-704.5 46609,-704.5 46609,-653.5 46609,-653.5 46609,-647.5 46615,-641.5 46621,-641.5"/>
-<text text-anchor="middle" x="46878" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;switch [06_repository]</text>
+<text text-anchor="middle" x="46878" y="-701.3" font-family="Times,serif" font-size="14.00">repo&#45;switch [04_repository]</text>
 </g>
 <g id="clust90" class="cluster">
 <title>cluster_app_sc_stage</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M47167,-641.5C47167,-641.5 47545,-641.5 47545,-641.5 47551,-641.5 47557,-647.5 47557,-653.5 47557,-653.5 47557,-704.5 47557,-704.5 47557,-710.5 47551,-716.5 47545,-716.5 47545,-716.5 47167,-716.5 47167,-716.5 47161,-716.5 47155,-710.5 47155,-704.5 47155,-704.5 47155,-653.5 47155,-653.5 47155,-647.5 47161,-641.5 47167,-641.5"/>
-<text text-anchor="middle" x="47356" y="-701.3" font-family="Times,serif" font-size="14.00">stage / unstage [07_diff_logic]</text>
+<text text-anchor="middle" x="47356" y="-701.3" font-family="Times,serif" font-size="14.00">stage / unstage [05_diff_logic]</text>
 </g>
 <g id="clust91" class="cluster">
 <title>cluster_app_sc_discard</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M47577,-641.5C47577,-641.5 47850,-641.5 47850,-641.5 47856,-641.5 47862,-647.5 47862,-653.5 47862,-653.5 47862,-704.5 47862,-704.5 47862,-710.5 47856,-716.5 47850,-716.5 47850,-716.5 47577,-716.5 47577,-716.5 47571,-716.5 47565,-710.5 47565,-704.5 47565,-704.5 47565,-653.5 47565,-653.5 47565,-647.5 47571,-641.5 47577,-641.5"/>
-<text text-anchor="middle" x="47713.5" y="-701.3" font-family="Times,serif" font-size="14.00">discard pending [07_diff_logic]</text>
+<text text-anchor="middle" x="47713.5" y="-701.3" font-family="Times,serif" font-size="14.00">discard pending [05_diff_logic]</text>
 </g>
 <g id="clust92" class="cluster">
 <title>cluster_app_sc_discard_file</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M47882,-641.5C47882,-641.5 48072,-641.5 48072,-641.5 48078,-641.5 48084,-647.5 48084,-653.5 48084,-653.5 48084,-704.5 48084,-704.5 48084,-710.5 48078,-716.5 48072,-716.5 48072,-716.5 47882,-716.5 47882,-716.5 47876,-716.5 47870,-710.5 47870,-704.5 47870,-704.5 47870,-653.5 47870,-653.5 47870,-647.5 47876,-641.5 47882,-641.5"/>
-<text text-anchor="middle" x="47977" y="-701.3" font-family="Times,serif" font-size="14.00">discard file [07_diff_logic]</text>
+<text text-anchor="middle" x="47977" y="-701.3" font-family="Times,serif" font-size="14.00">discard file [05_diff_logic]</text>
 </g>
 <g id="clust93" class="cluster">
 <title>cluster_app_sc_conflict</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M48104,-641.5C48104,-641.5 48494,-641.5 48494,-641.5 48500,-641.5 48506,-647.5 48506,-653.5 48506,-653.5 48506,-704.5 48506,-704.5 48506,-710.5 48500,-716.5 48494,-716.5 48494,-716.5 48104,-716.5 48104,-716.5 48098,-716.5 48092,-710.5 48092,-704.5 48092,-704.5 48092,-653.5 48092,-653.5 48092,-647.5 48098,-641.5 48104,-641.5"/>
-<text text-anchor="middle" x="48299" y="-701.3" font-family="Times,serif" font-size="14.00">resolve conflict [07_diff_logic]</text>
+<text text-anchor="middle" x="48299" y="-701.3" font-family="Times,serif" font-size="14.00">resolve conflict [05_diff_logic]</text>
 </g>
 <g id="clust94" class="cluster">
 <title>cluster_app_sc_merge_peer</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M39798,-514C39798,-514 40188,-514 40188,-514 40194,-514 40200,-520 40200,-526 40200,-526 40200,-704.5 40200,-704.5 40200,-710.5 40194,-716.5 40188,-716.5 40188,-716.5 39798,-716.5 39798,-716.5 39792,-716.5 39786,-710.5 39786,-704.5 39786,-704.5 39786,-526 39786,-526 39786,-520 39792,-514 39798,-514"/>
-<text text-anchor="middle" x="39993" y="-701.3" font-family="Times,serif" font-size="14.00">merge peer [07_diff_logic]</text>
+<text text-anchor="middle" x="39993" y="-701.3" font-family="Times,serif" font-size="14.00">merge peer [05_diff_logic]</text>
 </g>
 <g id="clust95" class="cluster">
 <title>cluster_app_sc_merge_runtime</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M48526,-639C48526,-639 49358,-639 49358,-639 49364,-639 49370,-645 49370,-651 49370,-651 49370,-707 49370,-707 49370,-713 49364,-719 49358,-719 49358,-719 48526,-719 48526,-719 48520,-719 48514,-713 48514,-707 48514,-707 48514,-651 48514,-651 48514,-645 48520,-639 48526,-639"/>
-<text text-anchor="middle" x="48942" y="-703.8" font-family="Times,serif" font-size="14.00">merge runtime [07_diff_logic + 05_network]</text>
+<text text-anchor="middle" x="48942" y="-703.8" font-family="Times,serif" font-size="14.00">merge runtime [05_diff_logic + 07_network]</text>
 </g>
 <g id="clust96" class="cluster">
 <title>cluster_app_sc_commit_publish</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M49390,-641.5C49390,-641.5 49945,-641.5 49945,-641.5 49951,-641.5 49957,-647.5 49957,-653.5 49957,-653.5 49957,-704.5 49957,-704.5 49957,-710.5 49951,-716.5 49945,-716.5 49945,-716.5 49390,-716.5 49390,-716.5 49384,-716.5 49378,-710.5 49378,-704.5 49378,-704.5 49378,-653.5 49378,-653.5 49378,-647.5 49384,-641.5 49390,-641.5"/>
-<text text-anchor="middle" x="49667.5" y="-701.3" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [07_diff_logic + 12_commands]</text>
+<text text-anchor="middle" x="49667.5" y="-701.3" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [05_diff_logic + 14_commands]</text>
 </g>
 <g id="clust97" class="cluster">
 <title>cluster_app_sc_history</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M49977,-641.5C49977,-641.5 50733,-641.5 50733,-641.5 50739,-641.5 50745,-647.5 50745,-653.5 50745,-653.5 50745,-704.5 50745,-704.5 50745,-710.5 50739,-716.5 50733,-716.5 50733,-716.5 49977,-716.5 49977,-716.5 49971,-716.5 49965,-710.5 49965,-704.5 49965,-704.5 49965,-653.5 49965,-653.5 49965,-647.5 49971,-641.5 49977,-641.5"/>
-<text text-anchor="middle" x="50355" y="-701.3" font-family="Times,serif" font-size="14.00">history / commit diff [07_diff_logic]</text>
+<text text-anchor="middle" x="50355" y="-701.3" font-family="Times,serif" font-size="14.00">history / commit diff [05_diff_logic]</text>
 </g>
 <g id="clust98" class="cluster">
 <title>cluster_app_plugin_runtime</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M50765,-641.5C50765,-641.5 51481,-641.5 51481,-641.5 51487,-641.5 51493,-647.5 51493,-653.5 51493,-653.5 51493,-704.5 51493,-704.5 51493,-710.5 51487,-716.5 51481,-716.5 51481,-716.5 50765,-716.5 50765,-716.5 50759,-716.5 50753,-710.5 50753,-704.5 50753,-704.5 50753,-653.5 50753,-653.5 50753,-647.5 50759,-641.5 50765,-641.5"/>
-<text text-anchor="middle" x="51123" y="-701.3" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [17_plugins]</text>
+<text text-anchor="middle" x="51123" y="-701.3" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [19_plugins]</text>
 </g>
 <g id="clust99" class="cluster">
 <title>cluster_app_trusted_agent</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M40220,-514C40220,-514 40721,-514 40721,-514 40727,-514 40733,-520 40733,-526 40733,-526 40733,-704.5 40733,-704.5 40733,-710.5 40727,-716.5 40721,-716.5 40721,-716.5 40220,-716.5 40220,-716.5 40214,-716.5 40208,-710.5 40208,-704.5 40208,-704.5 40208,-526 40208,-526 40208,-520 40214,-514 40220,-514"/>
-<text text-anchor="middle" x="40470.5" y="-701.3" font-family="Times,serif" font-size="14.00">trusted external agent boundary [10_ai_agent]</text>
+<text text-anchor="middle" x="40470.5" y="-701.3" font-family="Times,serif" font-size="14.00">trusted external agent boundary [16_ai_agent]</text>
 </g>
 <g id="clust100" class="cluster">
 <title>cluster_app_search_query</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M51513,-641.5C51513,-641.5 52214,-641.5 52214,-641.5 52220,-641.5 52226,-647.5 52226,-653.5 52226,-653.5 52226,-704.5 52226,-704.5 52226,-710.5 52220,-716.5 52214,-716.5 52214,-716.5 51513,-716.5 51513,-716.5 51507,-716.5 51501,-710.5 51501,-704.5 51501,-704.5 51501,-653.5 51501,-653.5 51501,-647.5 51507,-641.5 51513,-641.5"/>
-<text text-anchor="middle" x="51863.5" y="-701.3" font-family="Times,serif" font-size="14.00">search/query [08_ui_design + 14_tech_stack]</text>
+<text text-anchor="middle" x="51863.5" y="-701.3" font-family="Times,serif" font-size="14.00">search/query [11_ui_design + 17_tech_stack]</text>
 </g>
 <g id="clust101" class="cluster">
 <title>cluster_app_repo_file_ops</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M52246,-641.5C52246,-641.5 53292,-641.5 53292,-641.5 53298,-641.5 53304,-647.5 53304,-653.5 53304,-653.5 53304,-704.5 53304,-704.5 53304,-710.5 53298,-716.5 53292,-716.5 53292,-716.5 52246,-716.5 52246,-716.5 52240,-716.5 52234,-710.5 52234,-704.5 52234,-704.5 52234,-653.5 52234,-653.5 52234,-647.5 52240,-641.5 52246,-641.5"/>
-<text text-anchor="middle" x="52769" y="-701.3" font-family="Times,serif" font-size="14.00">repo file operations [06_repository]</text>
+<text text-anchor="middle" x="52769" y="-701.3" font-family="Times,serif" font-size="14.00">repo file operations [04_repository]</text>
 </g>
 <g id="clust102" class="cluster">
 <title>cluster_app_doc_edit</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M40753,-514C40753,-514 41710,-514 41710,-514 41716,-514 41722,-520 41722,-526 41722,-526 41722,-704.5 41722,-704.5 41722,-710.5 41716,-716.5 41710,-716.5 41710,-716.5 40753,-716.5 40753,-716.5 40747,-716.5 40741,-710.5 40741,-704.5 40741,-704.5 40741,-526 40741,-526 40741,-520 40747,-514 40753,-514"/>
-<text text-anchor="middle" x="41231.5" y="-701.3" font-family="Times,serif" font-size="14.00">document edit / confirmed op [03_rendering + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="41231.5" y="-701.3" font-family="Times,serif" font-size="14.00">document edit / confirmed op [10_rendering + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust103" class="cluster">
 <title>cluster_app_pending_navigation</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M53324,-641.5C53324,-641.5 54353,-641.5 54353,-641.5 54359,-641.5 54365,-647.5 54365,-653.5 54365,-653.5 54365,-704.5 54365,-704.5 54365,-710.5 54359,-716.5 54353,-716.5 54353,-716.5 53324,-716.5 53324,-716.5 53318,-716.5 53312,-710.5 53312,-704.5 53312,-704.5 53312,-653.5 53312,-653.5 53312,-647.5 53318,-641.5 53324,-641.5"/>
-<text text-anchor="middle" x="53838.5" y="-701.3" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="53838.5" y="-701.3" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [09_web_thin_client_ledger]</text>
 </g>
 <g id="clust104" class="cluster">
 <title>cluster_app_release_ci</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M54385,-641.5C54385,-641.5 54964,-641.5 54964,-641.5 54970,-641.5 54976,-647.5 54976,-653.5 54976,-653.5 54976,-704.5 54976,-704.5 54976,-710.5 54970,-716.5 54964,-716.5 54964,-716.5 54385,-716.5 54385,-716.5 54379,-716.5 54373,-710.5 54373,-704.5 54373,-704.5 54373,-653.5 54373,-653.5 54373,-647.5 54379,-641.5 54385,-641.5"/>
-<text text-anchor="middle" x="54674.5" y="-701.3" font-family="Times,serif" font-size="14.00">release / CI [15_release]</text>
+<text text-anchor="middle" x="54674.5" y="-701.3" font-family="Times,serif" font-size="14.00">release / CI [18_release]</text>
 </g>
 <g id="clust105" class="cluster">
 <title>cluster_app_cli_control</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M54996,-641.5C54996,-641.5 55332,-641.5 55332,-641.5 55338,-641.5 55344,-647.5 55344,-653.5 55344,-653.5 55344,-704.5 55344,-704.5 55344,-710.5 55338,-716.5 55332,-716.5 55332,-716.5 54996,-716.5 54996,-716.5 54990,-716.5 54984,-710.5 54984,-704.5 54984,-704.5 54984,-653.5 54984,-653.5 54984,-647.5 54990,-641.5 54996,-641.5"/>
-<text text-anchor="middle" x="55164" y="-701.3" font-family="Times,serif" font-size="14.00">CLI control commands [12_commands]</text>
+<text text-anchor="middle" x="55164" y="-701.3" font-family="Times,serif" font-size="14.00">CLI control commands [14_commands]</text>
 </g>
 <g id="clust106" class="cluster">
 <title>cluster_app_settings_update</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M55364,-641.5C55364,-641.5 55714,-641.5 55714,-641.5 55720,-641.5 55726,-647.5 55726,-653.5 55726,-653.5 55726,-704.5 55726,-704.5 55726,-710.5 55720,-716.5 55714,-716.5 55714,-716.5 55364,-716.5 55364,-716.5 55358,-716.5 55352,-710.5 55352,-704.5 55352,-704.5 55352,-653.5 55352,-653.5 55352,-647.5 55358,-641.5 55364,-641.5"/>
-<text text-anchor="middle" x="55539" y="-701.3" font-family="Times,serif" font-size="14.00">settings update [13_settings]</text>
+<text text-anchor="middle" x="55539" y="-701.3" font-family="Times,serif" font-size="14.00">settings update [15_settings]</text>
 </g>
 <g id="clust107" class="cluster">
 <title>cluster_app_rendering_expansion</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M55746,-641.5C55746,-641.5 56653,-641.5 56653,-641.5 56659,-641.5 56665,-647.5 56665,-653.5 56665,-653.5 56665,-704.5 56665,-704.5 56665,-710.5 56659,-716.5 56653,-716.5 56653,-716.5 55746,-716.5 55746,-716.5 55740,-716.5 55734,-710.5 55734,-704.5 55734,-704.5 55734,-653.5 55734,-653.5 55734,-647.5 55740,-641.5 55746,-641.5"/>
-<text text-anchor="middle" x="56199.5" y="-701.3" font-family="Times,serif" font-size="14.00">rendering source&#45;first flows [03_rendering]</text>
+<text text-anchor="middle" x="56199.5" y="-701.3" font-family="Times,serif" font-size="14.00">rendering source&#45;first flows [10_rendering]</text>
 </g>
 <g id="clust108" class="cluster">
 <title>cluster_app_i18n_locale_error</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M56685,-641.5C56685,-641.5 57089,-641.5 57089,-641.5 57095,-641.5 57101,-647.5 57101,-653.5 57101,-653.5 57101,-704.5 57101,-704.5 57101,-710.5 57095,-716.5 57089,-716.5 57089,-716.5 56685,-716.5 56685,-716.5 56679,-716.5 56673,-710.5 56673,-704.5 56673,-704.5 56673,-653.5 56673,-653.5 56673,-647.5 56679,-641.5 56685,-641.5"/>
-<text text-anchor="middle" x="56887" y="-701.3" font-family="Times,serif" font-size="14.00">i18n locale / error [11_i18n]</text>
+<text text-anchor="middle" x="56887" y="-701.3" font-family="Times,serif" font-size="14.00">i18n locale / error [13_i18n]</text>
 </g>
 <g id="clust109" class="cluster">
 <title>cluster_app_tech_runtime_budget</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M57121,-641.5C57121,-641.5 57606,-641.5 57606,-641.5 57612,-641.5 57618,-647.5 57618,-653.5 57618,-653.5 57618,-704.5 57618,-704.5 57618,-710.5 57612,-716.5 57606,-716.5 57606,-716.5 57121,-716.5 57121,-716.5 57115,-716.5 57109,-710.5 57109,-704.5 57109,-704.5 57109,-653.5 57109,-653.5 57109,-647.5 57115,-641.5 57121,-641.5"/>
-<text text-anchor="middle" x="57363.5" y="-701.3" font-family="Times,serif" font-size="14.00">tech&#45;stack runtime budget [14_tech_stack]</text>
+<text text-anchor="middle" x="57363.5" y="-701.3" font-family="Times,serif" font-size="14.00">tech&#45;stack runtime budget [17_tech_stack]</text>
 </g>
 <g id="clust110" class="cluster">
 <title>cluster_app_cli_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M57638,-641.5C57638,-641.5 59476,-641.5 59476,-641.5 59482,-641.5 59488,-647.5 59488,-653.5 59488,-653.5 59488,-704.5 59488,-704.5 59488,-710.5 59482,-716.5 59476,-716.5 59476,-716.5 57638,-716.5 57638,-716.5 57632,-716.5 57626,-710.5 57626,-704.5 57626,-704.5 57626,-653.5 57626,-653.5 57626,-647.5 57632,-641.5 57638,-641.5"/>
-<text text-anchor="middle" x="58557" y="-701.3" font-family="Times,serif" font-size="14.00">CLI command family interfaces [12_commands]</text>
+<text text-anchor="middle" x="58557" y="-701.3" font-family="Times,serif" font-size="14.00">CLI command family interfaces [14_commands]</text>
 </g>
 <g id="clust111" class="cluster">
 <title>cluster_app_settings_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M59508,-641.5C59508,-641.5 61226,-641.5 61226,-641.5 61232,-641.5 61238,-647.5 61238,-653.5 61238,-653.5 61238,-704.5 61238,-704.5 61238,-710.5 61232,-716.5 61226,-716.5 61226,-716.5 59508,-716.5 59508,-716.5 59502,-716.5 59496,-710.5 59496,-704.5 59496,-704.5 59496,-653.5 59496,-653.5 59496,-647.5 59502,-641.5 59508,-641.5"/>
-<text text-anchor="middle" x="60367" y="-701.3" font-family="Times,serif" font-size="14.00">settings source interfaces [13_settings]</text>
+<text text-anchor="middle" x="60367" y="-701.3" font-family="Times,serif" font-size="14.00">settings source interfaces [15_settings]</text>
 </g>
 <g id="clust112" class="cluster">
 <title>cluster_app_i18n_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M61258,-641.5C61258,-641.5 62876,-641.5 62876,-641.5 62882,-641.5 62888,-647.5 62888,-653.5 62888,-653.5 62888,-704.5 62888,-704.5 62888,-710.5 62882,-716.5 62876,-716.5 62876,-716.5 61258,-716.5 61258,-716.5 61252,-716.5 61246,-710.5 61246,-704.5 61246,-704.5 61246,-653.5 61246,-653.5 61246,-647.5 61252,-641.5 61258,-641.5"/>
-<text text-anchor="middle" x="62067" y="-701.3" font-family="Times,serif" font-size="14.00">i18n specific interfaces [11_i18n]</text>
+<text text-anchor="middle" x="62067" y="-701.3" font-family="Times,serif" font-size="14.00">i18n specific interfaces [13_i18n]</text>
 </g>
 <g id="clust113" class="cluster">
 <title>cluster_app_tech_stack_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M62908,-641.5C62908,-641.5 64412,-641.5 64412,-641.5 64418,-641.5 64424,-647.5 64424,-653.5 64424,-653.5 64424,-704.5 64424,-704.5 64424,-710.5 64418,-716.5 64412,-716.5 64412,-716.5 62908,-716.5 62908,-716.5 62902,-716.5 62896,-710.5 62896,-704.5 62896,-704.5 62896,-653.5 62896,-653.5 62896,-647.5 62902,-641.5 62908,-641.5"/>
-<text text-anchor="middle" x="63660" y="-701.3" font-family="Times,serif" font-size="14.00">tech&#45;stack specific interfaces [14_tech_stack + 15_release]</text>
+<text text-anchor="middle" x="63660" y="-701.3" font-family="Times,serif" font-size="14.00">tech&#45;stack specific interfaces [17_tech_stack + 18_release]</text>
 </g>
 <g id="clust114" class="cluster">
 <title>cluster_app_release_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M64444,-641.5C64444,-641.5 66284,-641.5 66284,-641.5 66290,-641.5 66296,-647.5 66296,-653.5 66296,-653.5 66296,-704.5 66296,-704.5 66296,-710.5 66290,-716.5 66284,-716.5 66284,-716.5 64444,-716.5 64444,-716.5 64438,-716.5 64432,-710.5 64432,-704.5 64432,-704.5 64432,-653.5 64432,-653.5 64432,-647.5 64438,-641.5 64444,-641.5"/>
-<text text-anchor="middle" x="65364" y="-701.3" font-family="Times,serif" font-size="14.00">release specific interfaces [15_release]</text>
+<text text-anchor="middle" x="65364" y="-701.3" font-family="Times,serif" font-size="14.00">release specific interfaces [18_release]</text>
 </g>
 <g id="clust115" class="cluster">
 <title>cluster_app_settings_update_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M66316,-641.5C66316,-641.5 68037,-641.5 68037,-641.5 68043,-641.5 68049,-647.5 68049,-653.5 68049,-653.5 68049,-704.5 68049,-704.5 68049,-710.5 68043,-716.5 68037,-716.5 68037,-716.5 66316,-716.5 66316,-716.5 66310,-716.5 66304,-710.5 66304,-704.5 66304,-704.5 66304,-653.5 66304,-653.5 66304,-647.5 66310,-641.5 66316,-641.5"/>
-<text text-anchor="middle" x="67176.5" y="-701.3" font-family="Times,serif" font-size="14.00">settings update specific interfaces [13_settings]</text>
+<text text-anchor="middle" x="67176.5" y="-701.3" font-family="Times,serif" font-size="14.00">settings update specific interfaces [15_settings]</text>
 </g>
 <g id="clust116" class="cluster">
 <title>cluster_app_rendering_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M68069,-641.5C68069,-641.5 69950,-641.5 69950,-641.5 69956,-641.5 69962,-647.5 69962,-653.5 69962,-653.5 69962,-704.5 69962,-704.5 69962,-710.5 69956,-716.5 69950,-716.5 69950,-716.5 68069,-716.5 68069,-716.5 68063,-716.5 68057,-710.5 68057,-704.5 68057,-704.5 68057,-653.5 68057,-653.5 68057,-647.5 68063,-641.5 68069,-641.5"/>
-<text text-anchor="middle" x="69009.5" y="-701.3" font-family="Times,serif" font-size="14.00">rendering source&#45;first detail [03_rendering]</text>
+<text text-anchor="middle" x="69009.5" y="-701.3" font-family="Times,serif" font-size="14.00">rendering source&#45;first detail [10_rendering]</text>
 </g>
 <g id="clust117" class="cluster">
 <title>cluster_app_rendering_interaction_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M69982,-641.5C69982,-641.5 71262,-641.5 71262,-641.5 71268,-641.5 71274,-647.5 71274,-653.5 71274,-653.5 71274,-704.5 71274,-704.5 71274,-710.5 71268,-716.5 71262,-716.5 71262,-716.5 69982,-716.5 69982,-716.5 69976,-716.5 69970,-710.5 69970,-704.5 69970,-704.5 69970,-653.5 69970,-653.5 69970,-647.5 69976,-641.5 69982,-641.5"/>
-<text text-anchor="middle" x="70622" y="-701.3" font-family="Times,serif" font-size="14.00">rendering interaction detail [03_rendering]</text>
+<text text-anchor="middle" x="70622" y="-701.3" font-family="Times,serif" font-size="14.00">rendering interaction detail [10_rendering]</text>
 </g>
 <g id="clust118" class="cluster">
 <title>cluster_app_rendering_large_doc_families</title>
 <path fill="#eff6ff" stroke="#2563eb" d="M71294,-641.5C71294,-641.5 72325,-641.5 72325,-641.5 72331,-641.5 72337,-647.5 72337,-653.5 72337,-653.5 72337,-704.5 72337,-704.5 72337,-710.5 72331,-716.5 72325,-716.5 72325,-716.5 71294,-716.5 71294,-716.5 71288,-716.5 71282,-710.5 71282,-704.5 71282,-704.5 71282,-653.5 71282,-653.5 71282,-647.5 71288,-641.5 71294,-641.5"/>
-<text text-anchor="middle" x="71809.5" y="-701.3" font-family="Times,serif" font-size="14.00">rendering large&#45;doc detail [03_rendering]</text>
+<text text-anchor="middle" x="71809.5" y="-701.3" font-family="Times,serif" font-size="14.00">rendering large&#45;doc detail [10_rendering]</text>
 </g>
 <g id="clust119" class="cluster">
 <title>cluster_app_cli_control_detail</title>
 <path fill="#eff6ff" stroke="#3b82f6" d="M72357,-641.5C72357,-641.5 73926,-641.5 73926,-641.5 73932,-641.5 73938,-647.5 73938,-653.5 73938,-653.5 73938,-704.5 73938,-704.5 73938,-710.5 73932,-716.5 73926,-716.5 73926,-716.5 72357,-716.5 72357,-716.5 72351,-716.5 72345,-710.5 72345,-704.5 72345,-704.5 72345,-653.5 72345,-653.5 72345,-647.5 72351,-641.5 72357,-641.5"/>
-<text text-anchor="middle" x="73141.5" y="-701.3" font-family="Times,serif" font-size="14.00">CLI control detail interfaces [12_commands]</text>
+<text text-anchor="middle" x="73141.5" y="-701.3" font-family="Times,serif" font-size="14.00">CLI control detail interfaces [14_commands]</text>
 </g>
 <g id="clust120" class="cluster">
 <title>cluster_app_command_surface</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M73958,-641.5C73958,-641.5 74935,-641.5 74935,-641.5 74941,-641.5 74947,-647.5 74947,-653.5 74947,-653.5 74947,-704.5 74947,-704.5 74947,-710.5 74941,-716.5 74935,-716.5 74935,-716.5 73958,-716.5 73958,-716.5 73952,-716.5 73946,-710.5 73946,-704.5 73946,-704.5 73946,-653.5 73946,-653.5 73946,-647.5 73952,-641.5 73958,-641.5"/>
-<text text-anchor="middle" x="74446.5" y="-701.3" font-family="Times,serif" font-size="14.00">command surface shared interfaces [12_commands]</text>
+<text text-anchor="middle" x="74446.5" y="-701.3" font-family="Times,serif" font-size="14.00">command surface shared interfaces [14_commands]</text>
 </g>
 <g id="clust121" class="cluster">
 <title>cluster_app_locale_surface_switch</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M74967,-641.5C74967,-641.5 75550,-641.5 75550,-641.5 75556,-641.5 75562,-647.5 75562,-653.5 75562,-653.5 75562,-704.5 75562,-704.5 75562,-710.5 75556,-716.5 75550,-716.5 75550,-716.5 74967,-716.5 74967,-716.5 74961,-716.5 74955,-710.5 74955,-704.5 74955,-704.5 74955,-653.5 74955,-653.5 74955,-647.5 74961,-641.5 74967,-641.5"/>
-<text text-anchor="middle" x="75258.5" y="-701.3" font-family="Times,serif" font-size="14.00">locale surface switch interfaces [11_i18n + 12_commands + 13_settings]</text>
+<text text-anchor="middle" x="75258.5" y="-701.3" font-family="Times,serif" font-size="14.00">locale surface switch interfaces [13_i18n + 14_commands + 15_settings]</text>
 </g>
 <g id="clust122" class="cluster">
 <title>cluster_app_repo_fileop_shell</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M75582,-641.5C75582,-641.5 76130,-641.5 76130,-641.5 76136,-641.5 76142,-647.5 76142,-653.5 76142,-653.5 76142,-704.5 76142,-704.5 76142,-710.5 76136,-716.5 76130,-716.5 76130,-716.5 75582,-716.5 75582,-716.5 75576,-716.5 75570,-710.5 75570,-704.5 75570,-704.5 75570,-653.5 75570,-653.5 75570,-647.5 75576,-641.5 75582,-641.5"/>
-<text text-anchor="middle" x="75856" y="-701.3" font-family="Times,serif" font-size="14.00">repo file&#45;op shell interfaces [06_repository + 08_ui_design + 12_commands]</text>
+<text text-anchor="middle" x="75856" y="-701.3" font-family="Times,serif" font-size="14.00">repo file&#45;op shell interfaces [04_repository + 11_ui_design + 14_commands]</text>
 </g>
 <g id="clust123" class="cluster">
 <title>cluster_app_doc</title>
 <path fill="#edf5ff" stroke="#2563eb" d="M41742,-514C41742,-514 42272,-514 42272,-514 42278,-514 42284,-520 42284,-526 42284,-526 42284,-704.5 42284,-704.5 42284,-710.5 42278,-716.5 42272,-716.5 42272,-716.5 41742,-716.5 41742,-716.5 41736,-716.5 41730,-710.5 41730,-704.5 41730,-704.5 41730,-526 41730,-526 41730,-520 41736,-514 41742,-514"/>
-<text text-anchor="middle" x="42007" y="-701.3" font-family="Times,serif" font-size="14.00">open&#45;doc [06_repository + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="42007" y="-701.3" font-family="Times,serif" font-size="14.00">open&#45;doc [04_repository + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust124" class="cluster">
 <title>cluster_mod</title>
@@ -632,122 +632,122 @@
 <g id="clust125" class="cluster">
 <title>cluster_mod_login</title>
 <path fill="#effef3" stroke="#16a34a" d="M76489,-514C76489,-514 76761,-514 76761,-514 76767,-514 76773,-520 76773,-526 76773,-526 76773,-577 76773,-577 76773,-583 76767,-589 76761,-589 76761,-589 76489,-589 76489,-589 76483,-589 76477,-583 76477,-577 76477,-577 76477,-526 76477,-526 76477,-520 76483,-514 76489,-514"/>
-<text text-anchor="middle" x="76625" y="-573.8" font-family="Times,serif" font-size="14.00">login [09_auth]</text>
+<text text-anchor="middle" x="76625" y="-573.8" font-family="Times,serif" font-size="14.00">login [08_auth]</text>
 </g>
 <g id="clust126" class="cluster">
 <title>cluster_mod_auth_session</title>
 <path fill="#effef3" stroke="#16a34a" d="M76793,-514C76793,-514 77077,-514 77077,-514 77083,-514 77089,-520 77089,-526 77089,-526 77089,-577 77089,-577 77089,-583 77083,-589 77077,-589 77077,-589 76793,-589 76793,-589 76787,-589 76781,-583 76781,-577 76781,-577 76781,-526 76781,-526 76781,-520 76787,-514 76793,-514"/>
-<text text-anchor="middle" x="76935" y="-573.8" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [09_auth]</text>
+<text text-anchor="middle" x="76935" y="-573.8" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [08_auth]</text>
 </g>
 <g id="clust127" class="cluster">
 <title>cluster_mod_sync_handshake</title>
 <path fill="#effef3" stroke="#16a34a" d="M77109,-514C77109,-514 77613,-514 77613,-514 77619,-514 77625,-520 77625,-526 77625,-526 77625,-577 77625,-577 77625,-583 77619,-589 77613,-589 77613,-589 77109,-589 77109,-589 77103,-589 77097,-583 77097,-577 77097,-577 77097,-526 77097,-526 77097,-520 77103,-514 77109,-514"/>
-<text text-anchor="middle" x="77361" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [05_network + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="77361" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [07_network + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust128" class="cluster">
 <title>cluster_mod_sync_transfer</title>
 <path fill="#effef3" stroke="#16a34a" d="M77645,-514C77645,-514 77921,-514 77921,-514 77927,-514 77933,-520 77933,-526 77933,-526 77933,-577 77933,-577 77933,-583 77927,-589 77921,-589 77921,-589 77645,-589 77645,-589 77639,-589 77633,-583 77633,-577 77633,-577 77633,-526 77633,-526 77633,-520 77639,-514 77645,-514"/>
-<text text-anchor="middle" x="77783" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [05_network]</text>
+<text text-anchor="middle" x="77783" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [07_network]</text>
 </g>
 <g id="clust129" class="cluster">
 <title>cluster_mod_key_exchange</title>
 <path fill="#effef3" stroke="#16a34a" d="M77953,-514C77953,-514 78331,-514 78331,-514 78337,-514 78343,-520 78343,-526 78343,-526 78343,-577 78343,-577 78343,-583 78337,-589 78331,-589 78331,-589 77953,-589 77953,-589 77947,-589 77941,-583 77941,-577 77941,-577 77941,-526 77941,-526 77941,-520 77947,-514 77953,-514"/>
-<text text-anchor="middle" x="78142" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [05_network + 04_storage]</text>
+<text text-anchor="middle" x="78142" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [07_network + 03_storage]</text>
 </g>
 <g id="clust130" class="cluster">
 <title>cluster_mod_doc</title>
 <path fill="#effef3" stroke="#16a34a" d="M96606,-514C96606,-514 96985,-514 96985,-514 96991,-514 96997,-520 96997,-526 96997,-526 96997,-577 96997,-577 96997,-583 96991,-589 96985,-589 96985,-589 96606,-589 96606,-589 96600,-589 96594,-583 96594,-577 96594,-577 96594,-526 96594,-526 96594,-520 96600,-514 96606,-514"/>
-<text text-anchor="middle" x="96795.5" y="-573.8" font-family="Times,serif" font-size="14.00">open&#45;doc [06_repository + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="96795.5" y="-573.8" font-family="Times,serif" font-size="14.00">open&#45;doc [04_repository + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust131" class="cluster">
 <title>cluster_mod_branch_switch</title>
 <path fill="#effef3" stroke="#16a34a" d="M78363,-514C78363,-514 78779,-514 78779,-514 78785,-514 78791,-520 78791,-526 78791,-526 78791,-577 78791,-577 78791,-583 78785,-589 78779,-589 78779,-589 78363,-589 78363,-589 78357,-589 78351,-583 78351,-577 78351,-577 78351,-526 78351,-526 78351,-520 78357,-514 78363,-514"/>
-<text text-anchor="middle" x="78571" y="-573.8" font-family="Times,serif" font-size="14.00">branch&#45;switch [06_repository + 16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="78571" y="-573.8" font-family="Times,serif" font-size="14.00">branch&#45;switch [04_repository + 09_web_thin_client_ledger]</text>
 </g>
 <g id="clust132" class="cluster">
 <title>cluster_mod_sc_commit</title>
 <path fill="#effef3" stroke="#16a34a" d="M78811,-514C78811,-514 79298,-514 79298,-514 79304,-514 79310,-520 79310,-526 79310,-526 79310,-577 79310,-577 79310,-583 79304,-589 79298,-589 79298,-589 78811,-589 78811,-589 78805,-589 78799,-583 78799,-577 78799,-577 78799,-526 78799,-526 78799,-520 78805,-514 78811,-514"/>
-<text text-anchor="middle" x="79054.5" y="-573.8" font-family="Times,serif" font-size="14.00">source&#45;control commit [07_diff_logic]</text>
+<text text-anchor="middle" x="79054.5" y="-573.8" font-family="Times,serif" font-size="14.00">source&#45;control commit [05_diff_logic]</text>
 </g>
 <g id="clust133" class="cluster">
 <title>cluster_mod_ai_chat</title>
 <path fill="#effef3" stroke="#16a34a" d="M79330,-514C79330,-514 79530,-514 79530,-514 79536,-514 79542,-520 79542,-526 79542,-526 79542,-577 79542,-577 79542,-583 79536,-589 79530,-589 79530,-589 79330,-589 79330,-589 79324,-589 79318,-583 79318,-577 79318,-577 79318,-526 79318,-526 79318,-520 79324,-514 79330,-514"/>
-<text text-anchor="middle" x="79430" y="-573.8" font-family="Times,serif" font-size="14.00">native ai&#45;chat [10_ai_agent]</text>
+<text text-anchor="middle" x="79430" y="-573.8" font-family="Times,serif" font-size="14.00">native ai&#45;chat [16_ai_agent]</text>
 </g>
 <g id="clust134" class="cluster">
 <title>cluster_mod_repo_switch</title>
 <path fill="#effef3" stroke="#16a34a" d="M79562,-514C79562,-514 79908,-514 79908,-514 79914,-514 79920,-520 79920,-526 79920,-526 79920,-577 79920,-577 79920,-583 79914,-589 79908,-589 79908,-589 79562,-589 79562,-589 79556,-589 79550,-583 79550,-577 79550,-577 79550,-526 79550,-526 79550,-520 79556,-514 79562,-514"/>
-<text text-anchor="middle" x="79735" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;switch [06_repository]</text>
+<text text-anchor="middle" x="79735" y="-573.8" font-family="Times,serif" font-size="14.00">repo&#45;switch [04_repository]</text>
 </g>
 <g id="clust135" class="cluster">
 <title>cluster_mod_sc_stage</title>
 <path fill="#effef3" stroke="#16a34a" d="M79940,-514C79940,-514 80322,-514 80322,-514 80328,-514 80334,-520 80334,-526 80334,-526 80334,-577 80334,-577 80334,-583 80328,-589 80322,-589 80322,-589 79940,-589 79940,-589 79934,-589 79928,-583 79928,-577 79928,-577 79928,-526 79928,-526 79928,-520 79934,-514 79940,-514"/>
-<text text-anchor="middle" x="80131" y="-573.8" font-family="Times,serif" font-size="14.00">stage / unstage [07_diff_logic]</text>
+<text text-anchor="middle" x="80131" y="-573.8" font-family="Times,serif" font-size="14.00">stage / unstage [05_diff_logic]</text>
 </g>
 <g id="clust136" class="cluster">
 <title>cluster_mod_sc_discard</title>
 <path fill="#effef3" stroke="#16a34a" d="M80354,-514C80354,-514 80656,-514 80656,-514 80662,-514 80668,-520 80668,-526 80668,-526 80668,-577 80668,-577 80668,-583 80662,-589 80656,-589 80656,-589 80354,-589 80354,-589 80348,-589 80342,-583 80342,-577 80342,-577 80342,-526 80342,-526 80342,-520 80348,-514 80354,-514"/>
-<text text-anchor="middle" x="80505" y="-573.8" font-family="Times,serif" font-size="14.00">discard pending [07_diff_logic]</text>
+<text text-anchor="middle" x="80505" y="-573.8" font-family="Times,serif" font-size="14.00">discard pending [05_diff_logic]</text>
 </g>
 <g id="clust137" class="cluster">
 <title>cluster_mod_sc_discard_file</title>
 <path fill="#effef3" stroke="#16a34a" d="M80688,-514C80688,-514 81156,-514 81156,-514 81162,-514 81168,-520 81168,-526 81168,-526 81168,-577 81168,-577 81168,-583 81162,-589 81156,-589 81156,-589 80688,-589 80688,-589 80682,-589 80676,-583 80676,-577 80676,-577 80676,-526 80676,-526 80676,-520 80682,-514 80688,-514"/>
-<text text-anchor="middle" x="80922" y="-573.8" font-family="Times,serif" font-size="14.00">discard file [07_diff_logic]</text>
+<text text-anchor="middle" x="80922" y="-573.8" font-family="Times,serif" font-size="14.00">discard file [05_diff_logic]</text>
 </g>
 <g id="clust138" class="cluster">
 <title>cluster_mod_sc_conflict</title>
 <path fill="#effef3" stroke="#16a34a" d="M81188,-514C81188,-514 81805,-514 81805,-514 81811,-514 81817,-520 81817,-526 81817,-526 81817,-577 81817,-577 81817,-583 81811,-589 81805,-589 81805,-589 81188,-589 81188,-589 81182,-589 81176,-583 81176,-577 81176,-577 81176,-526 81176,-526 81176,-520 81182,-514 81188,-514"/>
-<text text-anchor="middle" x="81496.5" y="-573.8" font-family="Times,serif" font-size="14.00">resolve conflict [07_diff_logic]</text>
+<text text-anchor="middle" x="81496.5" y="-573.8" font-family="Times,serif" font-size="14.00">resolve conflict [05_diff_logic]</text>
 </g>
 <g id="clust139" class="cluster">
 <title>cluster_mod_sc_merge_peer</title>
 <path fill="#effef3" stroke="#16a34a" d="M81837,-514C81837,-514 82125,-514 82125,-514 82131,-514 82137,-520 82137,-526 82137,-526 82137,-577 82137,-577 82137,-583 82131,-589 82125,-589 82125,-589 81837,-589 81837,-589 81831,-589 81825,-583 81825,-577 81825,-577 81825,-526 81825,-526 81825,-520 81831,-514 81837,-514"/>
-<text text-anchor="middle" x="81981" y="-573.8" font-family="Times,serif" font-size="14.00">merge peer [07_diff_logic]</text>
+<text text-anchor="middle" x="81981" y="-573.8" font-family="Times,serif" font-size="14.00">merge peer [05_diff_logic]</text>
 </g>
 <g id="clust140" class="cluster">
 <title>cluster_mod_sc_merge_runtime</title>
 <path fill="#effef3" stroke="#16a34a" d="M82157,-514C82157,-514 82465,-514 82465,-514 82471,-514 82477,-520 82477,-526 82477,-526 82477,-577 82477,-577 82477,-583 82471,-589 82465,-589 82465,-589 82157,-589 82157,-589 82151,-589 82145,-583 82145,-577 82145,-577 82145,-526 82145,-526 82145,-520 82151,-514 82157,-514"/>
-<text text-anchor="middle" x="82311" y="-573.8" font-family="Times,serif" font-size="14.00">merge runtime [07_diff_logic + 05_network]</text>
+<text text-anchor="middle" x="82311" y="-573.8" font-family="Times,serif" font-size="14.00">merge runtime [05_diff_logic + 07_network]</text>
 </g>
 <g id="clust141" class="cluster">
 <title>cluster_mod_sc_commit_publish</title>
 <path fill="#effef3" stroke="#16a34a" d="M82497,-514C82497,-514 82838,-514 82838,-514 82844,-514 82850,-520 82850,-526 82850,-526 82850,-577 82850,-577 82850,-583 82844,-589 82838,-589 82838,-589 82497,-589 82497,-589 82491,-589 82485,-583 82485,-577 82485,-577 82485,-526 82485,-526 82485,-520 82491,-514 82497,-514"/>
-<text text-anchor="middle" x="82667.5" y="-573.8" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [07_diff_logic + 12_commands]</text>
+<text text-anchor="middle" x="82667.5" y="-573.8" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [05_diff_logic + 14_commands]</text>
 </g>
 <g id="clust142" class="cluster">
 <title>cluster_mod_sc_history</title>
 <path fill="#effef3" stroke="#16a34a" d="M82870,-514C82870,-514 83111,-514 83111,-514 83117,-514 83123,-520 83123,-526 83123,-526 83123,-577 83123,-577 83123,-583 83117,-589 83111,-589 83111,-589 82870,-589 82870,-589 82864,-589 82858,-583 82858,-577 82858,-577 82858,-526 82858,-526 82858,-520 82864,-514 82870,-514"/>
-<text text-anchor="middle" x="82990.5" y="-573.8" font-family="Times,serif" font-size="14.00">history / commit diff [07_diff_logic]</text>
+<text text-anchor="middle" x="82990.5" y="-573.8" font-family="Times,serif" font-size="14.00">history / commit diff [05_diff_logic]</text>
 </g>
 <g id="clust143" class="cluster">
 <title>cluster_mod_plugin_runtime</title>
 <path fill="#effef3" stroke="#16a34a" d="M83143,-514C83143,-514 83601,-514 83601,-514 83607,-514 83613,-520 83613,-526 83613,-526 83613,-577 83613,-577 83613,-583 83607,-589 83601,-589 83601,-589 83143,-589 83143,-589 83137,-589 83131,-583 83131,-577 83131,-577 83131,-526 83131,-526 83131,-520 83137,-514 83143,-514"/>
-<text text-anchor="middle" x="83372" y="-573.8" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [17_plugins]</text>
+<text text-anchor="middle" x="83372" y="-573.8" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [19_plugins]</text>
 </g>
 <g id="clust144" class="cluster">
 <title>cluster_mod_trusted_agent</title>
 <path fill="#effef3" stroke="#16a34a" d="M83633,-514C83633,-514 83959,-514 83959,-514 83965,-514 83971,-520 83971,-526 83971,-526 83971,-577 83971,-577 83971,-583 83965,-589 83959,-589 83959,-589 83633,-589 83633,-589 83627,-589 83621,-583 83621,-577 83621,-577 83621,-526 83621,-526 83621,-520 83627,-514 83633,-514"/>
-<text text-anchor="middle" x="83796" y="-573.8" font-family="Times,serif" font-size="14.00">trusted external agent boundary [10_ai_agent]</text>
+<text text-anchor="middle" x="83796" y="-573.8" font-family="Times,serif" font-size="14.00">trusted external agent boundary [16_ai_agent]</text>
 </g>
 <g id="clust145" class="cluster">
 <title>cluster_mod_search_query</title>
 <path fill="#effef3" stroke="#16a34a" d="M83991,-514C83991,-514 84191,-514 84191,-514 84197,-514 84203,-520 84203,-526 84203,-526 84203,-577 84203,-577 84203,-583 84197,-589 84191,-589 84191,-589 83991,-589 83991,-589 83985,-589 83979,-583 83979,-577 83979,-577 83979,-526 83979,-526 83979,-520 83985,-514 83991,-514"/>
-<text text-anchor="middle" x="84091" y="-573.8" font-family="Times,serif" font-size="14.00">search/query [14_tech_stack]</text>
+<text text-anchor="middle" x="84091" y="-573.8" font-family="Times,serif" font-size="14.00">search/query [17_tech_stack]</text>
 </g>
 <g id="clust146" class="cluster">
 <title>cluster_mod_repo_file_ops</title>
 <path fill="#effef3" stroke="#16a34a" d="M84223,-514C84223,-514 84570,-514 84570,-514 84576,-514 84582,-520 84582,-526 84582,-526 84582,-577 84582,-577 84582,-583 84576,-589 84570,-589 84570,-589 84223,-589 84223,-589 84217,-589 84211,-583 84211,-577 84211,-577 84211,-526 84211,-526 84211,-520 84217,-514 84223,-514"/>
-<text text-anchor="middle" x="84396.5" y="-573.8" font-family="Times,serif" font-size="14.00">repo file operations [06_repository]</text>
+<text text-anchor="middle" x="84396.5" y="-573.8" font-family="Times,serif" font-size="14.00">repo file operations [04_repository]</text>
 </g>
 <g id="clust147" class="cluster">
 <title>cluster_mod_doc_edit</title>
 <path fill="#effef3" stroke="#16a34a" d="M84602,-514C84602,-514 84898,-514 84898,-514 84904,-514 84910,-520 84910,-526 84910,-526 84910,-577 84910,-577 84910,-583 84904,-589 84898,-589 84898,-589 84602,-589 84602,-589 84596,-589 84590,-583 84590,-577 84590,-577 84590,-526 84590,-526 84590,-520 84596,-514 84602,-514"/>
-<text text-anchor="middle" x="84750" y="-573.8" font-family="Times,serif" font-size="14.00">document edit / confirmed op [04_storage]</text>
+<text text-anchor="middle" x="84750" y="-573.8" font-family="Times,serif" font-size="14.00">document edit / confirmed op [03_storage]</text>
 </g>
 <g id="clust148" class="cluster">
 <title>cluster_mod_pending_navigation</title>
 <path fill="#effef3" stroke="#16a34a" d="M84930,-514C84930,-514 85449,-514 85449,-514 85455,-514 85461,-520 85461,-526 85461,-526 85461,-577 85461,-577 85461,-583 85455,-589 85449,-589 85449,-589 84930,-589 84930,-589 84924,-589 84918,-583 84918,-577 84918,-577 84918,-526 84918,-526 84918,-520 84924,-514 84930,-514"/>
-<text text-anchor="middle" x="85189.5" y="-573.8" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="85189.5" y="-573.8" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [09_web_thin_client_ledger]</text>
 </g>
 <g id="clust149" class="cluster">
 <title>cluster_mod_operation_expansion</title>
@@ -757,67 +757,67 @@
 <g id="clust150" class="cluster">
 <title>cluster_mod_cli_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M85481,-514C85481,-514 87983,-514 87983,-514 87989,-514 87995,-520 87995,-526 87995,-526 87995,-577 87995,-577 87995,-583 87989,-589 87983,-589 87983,-589 85481,-589 85481,-589 85475,-589 85469,-583 85469,-577 85469,-577 85469,-526 85469,-526 85469,-520 85475,-514 85481,-514"/>
-<text text-anchor="middle" x="86732" y="-573.8" font-family="Times,serif" font-size="14.00">CLI command family coordination [12_commands]</text>
+<text text-anchor="middle" x="86732" y="-573.8" font-family="Times,serif" font-size="14.00">CLI command family coordination [14_commands]</text>
 </g>
 <g id="clust151" class="cluster">
 <title>cluster_mod_settings_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M89994,-514C89994,-514 90810,-514 90810,-514 90816,-514 90822,-520 90822,-526 90822,-526 90822,-577 90822,-577 90822,-583 90816,-589 90810,-589 90810,-589 89994,-589 89994,-589 89988,-589 89982,-583 89982,-577 89982,-577 89982,-526 89982,-526 89982,-520 89988,-514 89994,-514"/>
-<text text-anchor="middle" x="90402" y="-573.8" font-family="Times,serif" font-size="14.00">settings source coordination [13_settings]</text>
+<text text-anchor="middle" x="90402" y="-573.8" font-family="Times,serif" font-size="14.00">settings source coordination [15_settings]</text>
 </g>
 <g id="clust152" class="cluster">
 <title>cluster_mod_i18n_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M90842,-514C90842,-514 91559,-514 91559,-514 91565,-514 91571,-520 91571,-526 91571,-526 91571,-577 91571,-577 91571,-583 91565,-589 91559,-589 91559,-589 90842,-589 90842,-589 90836,-589 90830,-583 90830,-577 90830,-577 90830,-526 90830,-526 90830,-520 90836,-514 90842,-514"/>
-<text text-anchor="middle" x="91200.5" y="-573.8" font-family="Times,serif" font-size="14.00">i18n specific coordination [11_i18n]</text>
+<text text-anchor="middle" x="91200.5" y="-573.8" font-family="Times,serif" font-size="14.00">i18n specific coordination [13_i18n]</text>
 </g>
 <g id="clust153" class="cluster">
 <title>cluster_mod_tech_stack_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M91591,-514C91591,-514 92800,-514 92800,-514 92806,-514 92812,-520 92812,-526 92812,-526 92812,-577 92812,-577 92812,-583 92806,-589 92800,-589 92800,-589 91591,-589 91591,-589 91585,-589 91579,-583 91579,-577 91579,-577 91579,-526 91579,-526 91579,-520 91585,-514 91591,-514"/>
-<text text-anchor="middle" x="92195.5" y="-573.8" font-family="Times,serif" font-size="14.00">tech&#45;stack specific coordination [14_tech_stack + 15_release]</text>
+<text text-anchor="middle" x="92195.5" y="-573.8" font-family="Times,serif" font-size="14.00">tech&#45;stack specific coordination [17_tech_stack + 18_release]</text>
 </g>
 <g id="clust154" class="cluster">
 <title>cluster_mod_release_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M92832,-514C92832,-514 93696,-514 93696,-514 93702,-514 93708,-520 93708,-526 93708,-526 93708,-577 93708,-577 93708,-583 93702,-589 93696,-589 93696,-589 92832,-589 92832,-589 92826,-589 92820,-583 92820,-577 92820,-577 92820,-526 92820,-526 92820,-520 92826,-514 92832,-514"/>
-<text text-anchor="middle" x="93264" y="-573.8" font-family="Times,serif" font-size="14.00">release specific coordination [15_release]</text>
+<text text-anchor="middle" x="93264" y="-573.8" font-family="Times,serif" font-size="14.00">release specific coordination [18_release]</text>
 </g>
 <g id="clust155" class="cluster">
 <title>cluster_mod_settings_update_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M93728,-514C93728,-514 94242,-514 94242,-514 94248,-514 94254,-520 94254,-526 94254,-526 94254,-577 94254,-577 94254,-583 94248,-589 94242,-589 94242,-589 93728,-589 93728,-589 93722,-589 93716,-583 93716,-577 93716,-577 93716,-526 93716,-526 93716,-520 93722,-514 93728,-514"/>
-<text text-anchor="middle" x="93985" y="-573.8" font-family="Times,serif" font-size="14.00">settings update specific coordination [13_settings]</text>
+<text text-anchor="middle" x="93985" y="-573.8" font-family="Times,serif" font-size="14.00">settings update specific coordination [15_settings]</text>
 </g>
 <g id="clust156" class="cluster">
 <title>cluster_mod_rendering_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M94274,-514C94274,-514 94603,-514 94603,-514 94609,-514 94615,-520 94615,-526 94615,-526 94615,-577 94615,-577 94615,-583 94609,-589 94603,-589 94603,-589 94274,-589 94274,-589 94268,-589 94262,-583 94262,-577 94262,-577 94262,-526 94262,-526 94262,-520 94268,-514 94274,-514"/>
-<text text-anchor="middle" x="94438.5" y="-573.8" font-family="Times,serif" font-size="14.00">rendering detailed coordination [03_rendering]</text>
+<text text-anchor="middle" x="94438.5" y="-573.8" font-family="Times,serif" font-size="14.00">rendering detailed coordination [10_rendering]</text>
 </g>
 <g id="clust157" class="cluster">
 <title>cluster_mod_rendering_interaction_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M94635,-514C94635,-514 94985,-514 94985,-514 94991,-514 94997,-520 94997,-526 94997,-526 94997,-577 94997,-577 94997,-583 94991,-589 94985,-589 94985,-589 94635,-589 94635,-589 94629,-589 94623,-583 94623,-577 94623,-577 94623,-526 94623,-526 94623,-520 94629,-514 94635,-514"/>
-<text text-anchor="middle" x="94810" y="-573.8" font-family="Times,serif" font-size="14.00">rendering interaction coordination [03_rendering]</text>
+<text text-anchor="middle" x="94810" y="-573.8" font-family="Times,serif" font-size="14.00">rendering interaction coordination [10_rendering]</text>
 </g>
 <g id="clust158" class="cluster">
 <title>cluster_mod_rendering_large_doc_families</title>
 <path fill="#effef3" stroke="#16a34a" d="M95017,-514C95017,-514 95710,-514 95710,-514 95716,-514 95722,-520 95722,-526 95722,-526 95722,-577 95722,-577 95722,-583 95716,-589 95710,-589 95710,-589 95017,-589 95017,-589 95011,-589 95005,-583 95005,-577 95005,-577 95005,-526 95005,-526 95005,-520 95011,-514 95017,-514"/>
-<text text-anchor="middle" x="95363.5" y="-573.8" font-family="Times,serif" font-size="14.00">rendering large&#45;doc coordination [03_rendering]</text>
+<text text-anchor="middle" x="95363.5" y="-573.8" font-family="Times,serif" font-size="14.00">rendering large&#45;doc coordination [10_rendering]</text>
 </g>
 <g id="clust159" class="cluster">
 <title>cluster_mod_cli_control_detail</title>
 <path fill="#effef3" stroke="#16a34a" d="M95742,-514C95742,-514 96160,-514 96160,-514 96166,-514 96172,-520 96172,-526 96172,-526 96172,-577 96172,-577 96172,-583 96166,-589 96160,-589 96160,-589 95742,-589 95742,-589 95736,-589 95730,-583 95730,-577 95730,-577 95730,-526 95730,-526 95730,-520 95736,-514 95742,-514"/>
-<text text-anchor="middle" x="95951" y="-573.8" font-family="Times,serif" font-size="14.00">CLI control detail coordination [12_commands]</text>
+<text text-anchor="middle" x="95951" y="-573.8" font-family="Times,serif" font-size="14.00">CLI control detail coordination [14_commands]</text>
 </g>
 <g id="clust160" class="cluster">
 <title>cluster_mod_command_surface</title>
 <path fill="#effef3" stroke="#16a34a" d="M96192,-514C96192,-514 96574,-514 96574,-514 96580,-514 96586,-520 96586,-526 96586,-526 96586,-577 96586,-577 96586,-583 96580,-589 96574,-589 96574,-589 96192,-589 96192,-589 96186,-589 96180,-583 96180,-577 96180,-577 96180,-526 96180,-526 96180,-520 96186,-514 96192,-514"/>
-<text text-anchor="middle" x="96383" y="-573.8" font-family="Times,serif" font-size="14.00">command surface shared coordination [12_commands]</text>
+<text text-anchor="middle" x="96383" y="-573.8" font-family="Times,serif" font-size="14.00">command surface shared coordination [14_commands]</text>
 </g>
 <g id="clust162" class="cluster">
 <title>cluster_mod_repo_fileop_shell</title>
 <path fill="#effef3" stroke="#16a34a" d="M97017,-514C97017,-514 97457,-514 97457,-514 97463,-514 97469,-520 97469,-526 97469,-526 97469,-577 97469,-577 97469,-583 97463,-589 97457,-589 97457,-589 97017,-589 97017,-589 97011,-589 97005,-583 97005,-577 97005,-577 97005,-526 97005,-526 97005,-520 97011,-514 97017,-514"/>
-<text text-anchor="middle" x="97237" y="-573.8" font-family="Times,serif" font-size="14.00">repo file&#45;op shell coordination [06_repository + 12_commands]</text>
+<text text-anchor="middle" x="97237" y="-573.8" font-family="Times,serif" font-size="14.00">repo file&#45;op shell coordination [04_repository + 14_commands]</text>
 </g>
 <g id="clust163" class="cluster">
 <title>cluster_mod_targets</title>
 <path fill="#effef3" stroke="#16a34a" d="M76178,-514C76178,-514 76457,-514 76457,-514 76463,-514 76469,-520 76469,-526 76469,-526 76469,-577 76469,-577 76469,-583 76463,-589 76457,-589 76457,-589 76178,-589 76178,-589 76172,-589 76166,-583 76166,-577 76166,-577 76166,-526 76166,-526 76166,-520 76172,-514 76178,-514"/>
-<text text-anchor="middle" x="76317.5" y="-573.8" font-family="Times,serif" font-size="14.00">command&#45;targets [12_commands]</text>
+<text text-anchor="middle" x="76317.5" y="-573.8" font-family="Times,serif" font-size="14.00">command&#45;targets [14_commands]</text>
 </g>
 <g id="clust164" class="cluster">
 <title>cluster_core</title>
@@ -827,122 +827,122 @@
 <g id="clust165" class="cluster">
 <title>cluster_core_login</title>
 <path fill="#fff0f7" stroke="#be185d" d="M85899,-169C85899,-169 86033,-169 86033,-169 86039,-169 86045,-175 86045,-181 86045,-181 86045,-232 86045,-232 86045,-238 86039,-244 86033,-244 86033,-244 85899,-244 85899,-244 85893,-244 85887,-238 85887,-232 85887,-232 85887,-181 85887,-181 85887,-175 85893,-169 85899,-169"/>
-<text text-anchor="middle" x="85966" y="-228.8" font-family="Times,serif" font-size="14.00">login [09_auth]</text>
+<text text-anchor="middle" x="85966" y="-228.8" font-family="Times,serif" font-size="14.00">login [08_auth]</text>
 </g>
 <g id="clust166" class="cluster">
 <title>cluster_core_auth_session</title>
 <path fill="#fff0f7" stroke="#be185d" d="M79360,-375C79360,-375 79644,-375 79644,-375 79650,-375 79656,-381 79656,-387 79656,-387 79656,-438 79656,-438 79656,-444 79650,-450 79644,-450 79644,-450 79360,-450 79360,-450 79354,-450 79348,-444 79348,-438 79348,-438 79348,-387 79348,-387 79348,-381 79354,-375 79360,-375"/>
-<text text-anchor="middle" x="79502" y="-434.8" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [09_auth]</text>
+<text text-anchor="middle" x="79502" y="-434.8" font-family="Times,serif" font-size="14.00">session&#45;expired / unauthorized [08_auth]</text>
 </g>
 <g id="clust167" class="cluster">
 <title>cluster_core_sync_handshake</title>
 <path fill="#fff0f7" stroke="#be185d" d="M79676,-375C79676,-375 79971,-375 79971,-375 79977,-375 79983,-381 79983,-387 79983,-387 79983,-438 79983,-438 79983,-444 79977,-450 79971,-450 79971,-450 79676,-450 79676,-450 79670,-450 79664,-444 79664,-438 79664,-438 79664,-387 79664,-387 79664,-381 79670,-375 79676,-375"/>
-<text text-anchor="middle" x="79823.5" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [05_network]</text>
+<text text-anchor="middle" x="79823.5" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync handshake [07_network]</text>
 </g>
 <g id="clust168" class="cluster">
 <title>cluster_core_sync_transfer</title>
 <path fill="#fff0f7" stroke="#be185d" d="M80003,-272C80003,-272 80279,-272 80279,-272 80285,-272 80291,-278 80291,-284 80291,-284 80291,-438 80291,-438 80291,-444 80285,-450 80279,-450 80279,-450 80003,-450 80003,-450 79997,-450 79991,-444 79991,-438 79991,-438 79991,-284 79991,-284 79991,-278 79997,-272 80003,-272"/>
-<text text-anchor="middle" x="80141" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [05_network]</text>
+<text text-anchor="middle" x="80141" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped sync transfer [07_network]</text>
 </g>
 <g id="clust169" class="cluster">
 <title>cluster_core_key_exchange</title>
 <path fill="#fff0f7" stroke="#be185d" d="M80311,-272C80311,-272 80689,-272 80689,-272 80695,-272 80701,-278 80701,-284 80701,-284 80701,-438 80701,-438 80701,-444 80695,-450 80689,-450 80689,-450 80311,-450 80311,-450 80305,-450 80299,-444 80299,-438 80299,-438 80299,-284 80299,-284 80299,-278 80305,-272 80311,-272"/>
-<text text-anchor="middle" x="80500" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [05_network + 04_storage]</text>
+<text text-anchor="middle" x="80500" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;scoped key exchange [07_network + 03_storage]</text>
 </g>
 <g id="clust170" class="cluster">
 <title>cluster_core_doc</title>
 <path fill="#fff0f7" stroke="#be185d" d="M86303,-87C86303,-87 86473,-87 86473,-87 86479,-87 86485,-93 86485,-99 86485,-99 86485,-232 86485,-232 86485,-238 86479,-244 86473,-244 86473,-244 86303,-244 86303,-244 86297,-244 86291,-238 86291,-232 86291,-232 86291,-99 86291,-99 86291,-93 86297,-87 86303,-87"/>
-<text text-anchor="middle" x="86388" y="-228.8" font-family="Times,serif" font-size="14.00">open&#45;doc [06_repository]</text>
+<text text-anchor="middle" x="86388" y="-228.8" font-family="Times,serif" font-size="14.00">open&#45;doc [04_repository]</text>
 </g>
 <g id="clust171" class="cluster">
 <title>cluster_core_branch_switch</title>
 <path fill="#fff0f7" stroke="#be185d" d="M86065,-169C86065,-169 86271,-169 86271,-169 86277,-169 86283,-175 86283,-181 86283,-181 86283,-232 86283,-232 86283,-238 86277,-244 86271,-244 86271,-244 86065,-244 86065,-244 86059,-244 86053,-238 86053,-232 86053,-232 86053,-181 86053,-181 86053,-175 86059,-169 86065,-169"/>
-<text text-anchor="middle" x="86168" y="-228.8" font-family="Times,serif" font-size="14.00">branch&#45;switch [06_repository]</text>
+<text text-anchor="middle" x="86168" y="-228.8" font-family="Times,serif" font-size="14.00">branch&#45;switch [04_repository]</text>
 </g>
 <g id="clust172" class="cluster">
 <title>cluster_core_sc_commit</title>
 <path fill="#fff0f7" stroke="#be185d" d="M80721,-272C80721,-272 80977,-272 80977,-272 80983,-272 80989,-278 80989,-284 80989,-284 80989,-438 80989,-438 80989,-444 80983,-450 80977,-450 80977,-450 80721,-450 80721,-450 80715,-450 80709,-444 80709,-438 80709,-438 80709,-284 80709,-284 80709,-278 80715,-272 80721,-272"/>
-<text text-anchor="middle" x="80849" y="-434.8" font-family="Times,serif" font-size="14.00">source&#45;control commit [07_diff_logic]</text>
+<text text-anchor="middle" x="80849" y="-434.8" font-family="Times,serif" font-size="14.00">source&#45;control commit [05_diff_logic]</text>
 </g>
 <g id="clust173" class="cluster">
 <title>cluster_core_ai_chat</title>
 <path fill="#fff0f7" stroke="#be185d" d="M81009,-375C81009,-375 81198,-375 81198,-375 81204,-375 81210,-381 81210,-387 81210,-387 81210,-438 81210,-438 81210,-444 81204,-450 81198,-450 81198,-450 81009,-450 81009,-450 81003,-450 80997,-444 80997,-438 80997,-438 80997,-387 80997,-387 80997,-381 81003,-375 81009,-375"/>
-<text text-anchor="middle" x="81103.5" y="-434.8" font-family="Times,serif" font-size="14.00">native ai&#45;chat [10_ai_agent]</text>
+<text text-anchor="middle" x="81103.5" y="-434.8" font-family="Times,serif" font-size="14.00">native ai&#45;chat [16_ai_agent]</text>
 </g>
 <g id="clust174" class="cluster">
 <title>cluster_core_repo_switch</title>
 <path fill="#fff0f7" stroke="#be185d" d="M81230,-272C81230,-272 81419,-272 81419,-272 81425,-272 81431,-278 81431,-284 81431,-284 81431,-438 81431,-438 81431,-444 81425,-450 81419,-450 81419,-450 81230,-450 81230,-450 81224,-450 81218,-444 81218,-438 81218,-438 81218,-284 81218,-284 81218,-278 81224,-272 81230,-272"/>
-<text text-anchor="middle" x="81324.5" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;switch [06_repository]</text>
+<text text-anchor="middle" x="81324.5" y="-434.8" font-family="Times,serif" font-size="14.00">repo&#45;switch [04_repository]</text>
 </g>
 <g id="clust175" class="cluster">
 <title>cluster_core_sc_stage</title>
 <path fill="#fff0f7" stroke="#be185d" d="M81451,-375C81451,-375 81657,-375 81657,-375 81663,-375 81669,-381 81669,-387 81669,-387 81669,-438 81669,-438 81669,-444 81663,-450 81657,-450 81657,-450 81451,-450 81451,-450 81445,-450 81439,-444 81439,-438 81439,-438 81439,-387 81439,-387 81439,-381 81445,-375 81451,-375"/>
-<text text-anchor="middle" x="81554" y="-434.8" font-family="Times,serif" font-size="14.00">stage / unstage [07_diff_logic]</text>
+<text text-anchor="middle" x="81554" y="-434.8" font-family="Times,serif" font-size="14.00">stage / unstage [05_diff_logic]</text>
 </g>
 <g id="clust176" class="cluster">
 <title>cluster_core_sc_discard</title>
 <path fill="#fff0f7" stroke="#be185d" d="M81689,-272C81689,-272 81900,-272 81900,-272 81906,-272 81912,-278 81912,-284 81912,-284 81912,-438 81912,-438 81912,-444 81906,-450 81900,-450 81900,-450 81689,-450 81689,-450 81683,-450 81677,-444 81677,-438 81677,-438 81677,-284 81677,-284 81677,-278 81683,-272 81689,-272"/>
-<text text-anchor="middle" x="81794.5" y="-434.8" font-family="Times,serif" font-size="14.00">discard pending [07_diff_logic]</text>
+<text text-anchor="middle" x="81794.5" y="-434.8" font-family="Times,serif" font-size="14.00">discard pending [05_diff_logic]</text>
 </g>
 <g id="clust177" class="cluster">
 <title>cluster_core_sc_discard_file</title>
 <path fill="#fff0f7" stroke="#be185d" d="M81932,-272C81932,-272 82170,-272 82170,-272 82176,-272 82182,-278 82182,-284 82182,-284 82182,-438 82182,-438 82182,-444 82176,-450 82170,-450 82170,-450 81932,-450 81932,-450 81926,-450 81920,-444 81920,-438 81920,-438 81920,-284 81920,-284 81920,-278 81926,-272 81932,-272"/>
-<text text-anchor="middle" x="82051" y="-434.8" font-family="Times,serif" font-size="14.00">discard file [07_diff_logic]</text>
+<text text-anchor="middle" x="82051" y="-434.8" font-family="Times,serif" font-size="14.00">discard file [05_diff_logic]</text>
 </g>
 <g id="clust178" class="cluster">
 <title>cluster_core_sc_conflict</title>
 <path fill="#fff0f7" stroke="#be185d" d="M82202,-272C82202,-272 82440,-272 82440,-272 82446,-272 82452,-278 82452,-284 82452,-284 82452,-438 82452,-438 82452,-444 82446,-450 82440,-450 82440,-450 82202,-450 82202,-450 82196,-450 82190,-444 82190,-438 82190,-438 82190,-284 82190,-284 82190,-278 82196,-272 82202,-272"/>
-<text text-anchor="middle" x="82321" y="-434.8" font-family="Times,serif" font-size="14.00">resolve conflict [07_diff_logic]</text>
+<text text-anchor="middle" x="82321" y="-434.8" font-family="Times,serif" font-size="14.00">resolve conflict [05_diff_logic]</text>
 </g>
 <g id="clust179" class="cluster">
 <title>cluster_core_sc_merge_peer</title>
 <path fill="#fff0f7" stroke="#be185d" d="M82472,-272C82472,-272 82651,-272 82651,-272 82657,-272 82663,-278 82663,-284 82663,-284 82663,-438 82663,-438 82663,-444 82657,-450 82651,-450 82651,-450 82472,-450 82472,-450 82466,-450 82460,-444 82460,-438 82460,-438 82460,-284 82460,-284 82460,-278 82466,-272 82472,-272"/>
-<text text-anchor="middle" x="82561.5" y="-434.8" font-family="Times,serif" font-size="14.00">merge peer [07_diff_logic]</text>
+<text text-anchor="middle" x="82561.5" y="-434.8" font-family="Times,serif" font-size="14.00">merge peer [05_diff_logic]</text>
 </g>
 <g id="clust180" class="cluster">
 <title>cluster_core_sc_merge_runtime</title>
 <path fill="#fff0f7" stroke="#be185d" d="M82683,-272C82683,-272 82991,-272 82991,-272 82997,-272 83003,-278 83003,-284 83003,-284 83003,-438 83003,-438 83003,-444 82997,-450 82991,-450 82991,-450 82683,-450 82683,-450 82677,-450 82671,-444 82671,-438 82671,-438 82671,-284 82671,-284 82671,-278 82677,-272 82683,-272"/>
-<text text-anchor="middle" x="82837" y="-434.8" font-family="Times,serif" font-size="14.00">merge runtime [07_diff_logic + 05_network]</text>
+<text text-anchor="middle" x="82837" y="-434.8" font-family="Times,serif" font-size="14.00">merge runtime [05_diff_logic + 07_network]</text>
 </g>
 <g id="clust181" class="cluster">
 <title>cluster_core_sc_commit_publish</title>
 <path fill="#fff0f7" stroke="#be185d" d="M83023,-272C83023,-272 83364,-272 83364,-272 83370,-272 83376,-278 83376,-284 83376,-284 83376,-438 83376,-438 83376,-444 83370,-450 83364,-450 83364,-450 83023,-450 83023,-450 83017,-450 83011,-444 83011,-438 83011,-438 83011,-284 83011,-284 83011,-278 83017,-272 83023,-272"/>
-<text text-anchor="middle" x="83193.5" y="-434.8" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [07_diff_logic + 12_commands]</text>
+<text text-anchor="middle" x="83193.5" y="-434.8" font-family="Times,serif" font-size="14.00">commit&#45;and&#45;push [05_diff_logic + 14_commands]</text>
 </g>
 <g id="clust182" class="cluster">
 <title>cluster_core_sc_history</title>
 <path fill="#fff0f7" stroke="#be185d" d="M83396,-375C83396,-375 83637,-375 83637,-375 83643,-375 83649,-381 83649,-387 83649,-387 83649,-438 83649,-438 83649,-444 83643,-450 83637,-450 83637,-450 83396,-450 83396,-450 83390,-450 83384,-444 83384,-438 83384,-438 83384,-387 83384,-387 83384,-381 83390,-375 83396,-375"/>
-<text text-anchor="middle" x="83516.5" y="-434.8" font-family="Times,serif" font-size="14.00">history / commit diff [07_diff_logic]</text>
+<text text-anchor="middle" x="83516.5" y="-434.8" font-family="Times,serif" font-size="14.00">history / commit diff [05_diff_logic]</text>
 </g>
 <g id="clust183" class="cluster">
 <title>cluster_core_plugin_runtime</title>
 <path fill="#fff0f7" stroke="#be185d" d="M83669,-375C83669,-375 83994,-375 83994,-375 84000,-375 84006,-381 84006,-387 84006,-387 84006,-438 84006,-438 84006,-444 84000,-450 83994,-450 83994,-450 83669,-450 83669,-450 83663,-450 83657,-444 83657,-438 83657,-438 83657,-387 83657,-387 83657,-381 83663,-375 83669,-375"/>
-<text text-anchor="middle" x="83831.5" y="-434.8" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [17_plugins]</text>
+<text text-anchor="middle" x="83831.5" y="-434.8" font-family="Times,serif" font-size="14.00">plugin&#45;host / plugin&#45;call boundary [19_plugins]</text>
 </g>
 <g id="clust184" class="cluster">
 <title>cluster_core_trusted_agent</title>
 <path fill="#fff0f7" stroke="#be185d" d="M84026,-375C84026,-375 84352,-375 84352,-375 84358,-375 84364,-381 84364,-387 84364,-387 84364,-438 84364,-438 84364,-444 84358,-450 84352,-450 84352,-450 84026,-450 84026,-450 84020,-450 84014,-444 84014,-438 84014,-438 84014,-387 84014,-387 84014,-381 84020,-375 84026,-375"/>
-<text text-anchor="middle" x="84189" y="-434.8" font-family="Times,serif" font-size="14.00">trusted external agent boundary [10_ai_agent]</text>
+<text text-anchor="middle" x="84189" y="-434.8" font-family="Times,serif" font-size="14.00">trusted external agent boundary [16_ai_agent]</text>
 </g>
 <g id="clust185" class="cluster">
 <title>cluster_core_search_query</title>
 <path fill="#fff0f7" stroke="#be185d" d="M85583,-272C85583,-272 85783,-272 85783,-272 85789,-272 85795,-278 85795,-284 85795,-284 85795,-438 85795,-438 85795,-444 85789,-450 85783,-450 85783,-450 85583,-450 85583,-450 85577,-450 85571,-444 85571,-438 85571,-438 85571,-284 85571,-284 85571,-278 85577,-272 85583,-272"/>
-<text text-anchor="middle" x="85683" y="-434.8" font-family="Times,serif" font-size="14.00">search/query [14_tech_stack]</text>
+<text text-anchor="middle" x="85683" y="-434.8" font-family="Times,serif" font-size="14.00">search/query [17_tech_stack]</text>
 </g>
 <g id="clust186" class="cluster">
 <title>cluster_core_repo_file_ops</title>
 <path fill="#fff0f7" stroke="#be185d" d="M84384,-272C84384,-272 84629,-272 84629,-272 84635,-272 84641,-278 84641,-284 84641,-284 84641,-438 84641,-438 84641,-444 84635,-450 84629,-450 84629,-450 84384,-450 84384,-450 84378,-450 84372,-444 84372,-438 84372,-438 84372,-284 84372,-284 84372,-278 84378,-272 84384,-272"/>
-<text text-anchor="middle" x="84506.5" y="-434.8" font-family="Times,serif" font-size="14.00">repo file operations [06_repository]</text>
+<text text-anchor="middle" x="84506.5" y="-434.8" font-family="Times,serif" font-size="14.00">repo file operations [04_repository]</text>
 </g>
 <g id="clust187" class="cluster">
 <title>cluster_core_doc_edit</title>
 <path fill="#fff0f7" stroke="#be185d" d="M84661,-272C84661,-272 85061,-272 85061,-272 85067,-272 85073,-278 85073,-284 85073,-284 85073,-438 85073,-438 85073,-444 85067,-450 85061,-450 85061,-450 84661,-450 84661,-450 84655,-450 84649,-444 84649,-438 84649,-438 84649,-284 84649,-284 84649,-278 84655,-272 84661,-272"/>
-<text text-anchor="middle" x="84861" y="-434.8" font-family="Times,serif" font-size="14.00">document edit / confirmed op [04_storage + 05_network]</text>
+<text text-anchor="middle" x="84861" y="-434.8" font-family="Times,serif" font-size="14.00">document edit / confirmed op [03_storage + 07_network]</text>
 </g>
 <g id="clust188" class="cluster">
 <title>cluster_core_pending_navigation</title>
 <path fill="#fff0f7" stroke="#be185d" d="M85093,-375C85093,-375 85551,-375 85551,-375 85557,-375 85563,-381 85563,-387 85563,-387 85563,-438 85563,-438 85563,-444 85557,-450 85551,-450 85551,-450 85093,-450 85093,-450 85087,-450 85081,-444 85081,-438 85081,-438 85081,-387 85081,-387 85081,-381 85087,-375 85093,-375"/>
-<text text-anchor="middle" x="85322" y="-434.8" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [16_web_thin_client_ledger]</text>
+<text text-anchor="middle" x="85322" y="-434.8" font-family="Times,serif" font-size="14.00">leave document / pending edit guard [09_web_thin_client_ledger]</text>
 </g>
 <g id="clust189" class="cluster">
 <title>cluster_core_operation_expansion</title>
@@ -952,7 +952,7 @@
 <g id="clust190" class="cluster">
 <title>cluster_core_targets</title>
 <path fill="#fff0f7" stroke="#be185d" d="M86239,-272C86239,-272 86473,-272 86473,-272 86479,-272 86485,-278 86485,-284 86485,-284 86485,-335 86485,-335 86485,-341 86479,-347 86473,-347 86473,-347 86239,-347 86239,-347 86233,-347 86227,-341 86227,-335 86227,-335 86227,-284 86227,-284 86227,-278 86233,-272 86239,-272"/>
-<text text-anchor="middle" x="86356" y="-331.8" font-family="Times,serif" font-size="14.00">command&#45;targets [12_commands]</text>
+<text text-anchor="middle" x="86356" y="-331.8" font-family="Times,serif" font-size="14.00">command&#45;targets [14_commands]</text>
 </g>
 <g id="clust191" class="cluster">
 <title>cluster_object_plane</title>

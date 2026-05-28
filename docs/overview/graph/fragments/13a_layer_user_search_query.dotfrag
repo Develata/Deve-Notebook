@@ -1,5 +1,5 @@
             subgraph cluster_user_search_query {
-                label="search/query [08_ui_design + 14_tech_stack]";
+                label="search/query [11_ui_design + 17_tech_stack]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

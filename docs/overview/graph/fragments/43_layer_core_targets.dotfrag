@@ -1,5 +1,5 @@
         subgraph cluster_core_targets {
-            label="command-targets [12_commands]";
+            label="command-targets [14_commands]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";

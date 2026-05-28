@@ -1,5 +1,5 @@
         subgraph cluster_mod_doc_edit {
-            label="document edit / confirmed op [04_storage]";
+            label="document edit / confirmed op [03_storage]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

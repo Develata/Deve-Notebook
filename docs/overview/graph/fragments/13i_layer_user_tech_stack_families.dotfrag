@@ -1,5 +1,5 @@
             subgraph cluster_user_tech_dependency {
-                label="tech-stack dependency policy [14_tech_stack]";
+                label="tech-stack dependency policy [17_tech_stack]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -10,7 +10,7 @@
             }
 
             subgraph cluster_user_tech_budget {
-                label="tech-stack runtime budget check [14_tech_stack]";
+                label="tech-stack runtime budget check [17_tech_stack]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -21,7 +21,7 @@
             }
 
             subgraph cluster_user_tech_platform {
-                label="tech-stack platform / release channel [14_tech_stack + 15_release]";
+                label="tech-stack platform / release channel [17_tech_stack + 18_release]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

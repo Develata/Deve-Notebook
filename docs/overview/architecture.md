@@ -79,7 +79,7 @@ The current generated artifacts keep the stable internal IDs `application`, `mod
 - `:calls (x y z)` lists downstream targets — always pointing toward a lower layer in the canonical call cascade.
 - Layer 1 node IDs should use `op.<domain>.<flow>.<verb>` naming.
 - `group` records define layer-internal bundles such as `login`, `session-expired / unauthorized`, `command-palette`, `branch-switch`, `repo-switch`, `stage / unstage`, `source-control commit`, `native ai-chat`, or `open-doc`.
-- `:chapter 04_storage#watcher-contract` references a stable plan anchor; `:code "path/to/file.rs"` references authoritative code.
+- `:chapter 03_storage/watcher#watcher-contract` references a stable plan anchor; `:code "path/to/file.rs"` references authoritative code.
 
 `Object Plane` is modeled with sidecar `object-plane` / `object` forms in the generated Lisp. `Ownership Axis` remains sidecar semantics expressed through module/core ownership metadata rather than a canonical call layer.
 

@@ -1,5 +1,5 @@
         subgraph cluster_mod_plugin_runtime {
-            label="plugin-host / plugin-call boundary [17_plugins]";
+            label="plugin-host / plugin-call boundary [19_plugins]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

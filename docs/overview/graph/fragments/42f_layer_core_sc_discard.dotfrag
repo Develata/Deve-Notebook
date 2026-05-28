@@ -1,5 +1,5 @@
         subgraph cluster_core_sc_discard {
-            label="discard pending [07_diff_logic]";
+            label="discard pending [05_diff_logic]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";

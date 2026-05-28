@@ -1,5 +1,5 @@
         subgraph cluster_mod_sync_transfer {
-            label="repo-scoped sync transfer [05_network]";
+            label="repo-scoped sync transfer [07_network]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

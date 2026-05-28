@@ -1,5 +1,5 @@
         subgraph cluster_app_settings_update_families {
-            label="settings update specific interfaces [13_settings]";
+            label="settings update specific interfaces [15_settings]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

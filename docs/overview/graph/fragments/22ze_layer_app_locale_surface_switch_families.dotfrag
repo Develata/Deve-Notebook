@@ -1,5 +1,5 @@
         subgraph cluster_app_locale_surface_switch {
-            label="locale surface switch interfaces [11_i18n + 12_commands + 13_settings]";
+            label="locale surface switch interfaces [13_i18n + 14_commands + 15_settings]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

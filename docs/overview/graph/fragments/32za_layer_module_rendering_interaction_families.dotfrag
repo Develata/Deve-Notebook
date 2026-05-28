@@ -1,5 +1,5 @@
         subgraph cluster_mod_rendering_interaction_families {
-            label="rendering interaction coordination [03_rendering]";
+            label="rendering interaction coordination [10_rendering]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

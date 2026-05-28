@@ -1,5 +1,5 @@
         subgraph cluster_app_tech_stack_families {
-            label="tech-stack specific interfaces [14_tech_stack + 15_release]";
+            label="tech-stack specific interfaces [17_tech_stack + 18_release]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

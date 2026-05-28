@@ -1,5 +1,5 @@
         subgraph cluster_mod_i18n_families {
-            label="i18n specific coordination [11_i18n]";
+            label="i18n specific coordination [13_i18n]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

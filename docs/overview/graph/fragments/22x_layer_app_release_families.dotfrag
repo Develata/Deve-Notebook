@@ -1,5 +1,5 @@
         subgraph cluster_app_release_families {
-            label="release specific interfaces [15_release]";
+            label="release specific interfaces [18_release]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

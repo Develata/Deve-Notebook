@@ -1,5 +1,5 @@
         subgraph cluster_core_repo_switch {
-            label="repo-switch [06_repository]";
+            label="repo-switch [04_repository]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";

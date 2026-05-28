@@ -1,5 +1,5 @@
         subgraph cluster_app_rendering_interaction_families {
-            label="rendering interaction detail [03_rendering]";
+            label="rendering interaction detail [10_rendering]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

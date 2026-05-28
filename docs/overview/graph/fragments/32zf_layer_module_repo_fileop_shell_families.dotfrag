@@ -1,5 +1,5 @@
         subgraph cluster_mod_repo_fileop_shell {
-            label="repo file-op shell coordination [06_repository + 12_commands]";
+            label="repo file-op shell coordination [04_repository + 14_commands]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

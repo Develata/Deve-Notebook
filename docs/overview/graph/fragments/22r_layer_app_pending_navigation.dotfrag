@@ -1,5 +1,5 @@
         subgraph cluster_app_pending_navigation {
-            label="leave document / pending edit guard [16_web_thin_client_ledger]";
+            label="leave document / pending edit guard [09_web_thin_client_ledger]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

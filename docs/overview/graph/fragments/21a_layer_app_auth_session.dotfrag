@@ -1,5 +1,5 @@
         subgraph cluster_app_auth_session {
-            label="session-expired / unauthorized [09_auth]";
+            label="session-expired / unauthorized [08_auth]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

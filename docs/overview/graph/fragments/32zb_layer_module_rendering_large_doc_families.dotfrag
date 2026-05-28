@@ -1,5 +1,5 @@
         subgraph cluster_mod_rendering_large_doc_families {
-            label="rendering large-doc coordination [03_rendering]";
+            label="rendering large-doc coordination [10_rendering]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

@@ -1,5 +1,5 @@
         subgraph cluster_app_settings_families {
-            label="settings source interfaces [13_settings]";
+            label="settings source interfaces [15_settings]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

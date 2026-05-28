@@ -1,5 +1,5 @@
         subgraph cluster_app_palette {
-            label="command-palette [12_commands]";
+            label="command-palette [14_commands]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

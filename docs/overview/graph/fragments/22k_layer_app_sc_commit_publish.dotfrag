@@ -1,5 +1,5 @@
         subgraph cluster_app_sc_commit_publish {
-            label="commit-and-push [07_diff_logic + 12_commands]";
+            label="commit-and-push [05_diff_logic + 14_commands]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

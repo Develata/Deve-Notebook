@@ -1,5 +1,5 @@
         subgraph cluster_core_repo_file_ops {
-            label="repo file operations [06_repository]";
+            label="repo file operations [04_repository]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";

@@ -1,5 +1,5 @@
             subgraph cluster_user_sc_history {
-                label="history / commit diff [07_diff_logic]";
+                label="history / commit diff [05_diff_logic]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

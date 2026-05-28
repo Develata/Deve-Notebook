@@ -1,5 +1,5 @@
         subgraph cluster_mod_settings_update_families {
-            label="settings update specific coordination [13_settings]";
+            label="settings update specific coordination [15_settings]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

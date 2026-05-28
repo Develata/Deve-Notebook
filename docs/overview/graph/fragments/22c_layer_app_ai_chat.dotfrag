@@ -1,5 +1,5 @@
         subgraph cluster_app_ai_chat {
-            label="native ai-chat [10_ai_agent]";
+            label="native ai-chat [16_ai_agent]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

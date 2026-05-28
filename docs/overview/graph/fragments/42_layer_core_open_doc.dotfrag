@@ -1,5 +1,5 @@
         subgraph cluster_core_doc {
-            label="open-doc [06_repository]";
+            label="open-doc [04_repository]";
             style="rounded,filled";
             fillcolor="#fff0f7";
             color="#be185d";

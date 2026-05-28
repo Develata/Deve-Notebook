@@ -1,5 +1,5 @@
         subgraph cluster_app_cli_control_detail {
-            label="CLI control detail interfaces [12_commands]";
+            label="CLI control detail interfaces [14_commands]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#3b82f6";

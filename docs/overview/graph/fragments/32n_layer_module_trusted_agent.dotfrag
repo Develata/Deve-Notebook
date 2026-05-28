@@ -1,5 +1,5 @@
         subgraph cluster_mod_trusted_agent {
-            label="trusted external agent boundary [10_ai_agent]";
+            label="trusted external agent boundary [16_ai_agent]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

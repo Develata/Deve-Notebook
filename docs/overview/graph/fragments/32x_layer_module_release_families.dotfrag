@@ -1,5 +1,5 @@
         subgraph cluster_mod_release_families {
-            label="release specific coordination [15_release]";
+            label="release specific coordination [18_release]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

@@ -1,5 +1,5 @@
         subgraph cluster_app_login {
-            label="login [09_auth]";
+            label="login [08_auth]";
             style="rounded,filled";
             fillcolor="#edf5ff";
             color="#2563eb";

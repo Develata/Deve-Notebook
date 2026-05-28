@@ -1,5 +1,5 @@
         subgraph cluster_mod_rendering_families {
-            label="rendering detailed coordination [03_rendering]";
+            label="rendering detailed coordination [10_rendering]";
             style="rounded,filled";
             fillcolor="#effef3";
             color="#16a34a";

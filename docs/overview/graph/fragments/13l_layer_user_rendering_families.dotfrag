@@ -1,5 +1,5 @@
             subgraph cluster_user_render_inline_source {
-                label="rendering inline source reveal [03_rendering]";
+                label="rendering inline source reveal [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -10,7 +10,7 @@
             }
 
             subgraph cluster_user_render_projection_refresh {
-                label="rendering projection refresh [03_rendering]";
+                label="rendering projection refresh [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -21,7 +21,7 @@
             }
 
             subgraph cluster_user_render_math_source {
-                label="rendering math source projection [03_rendering]";
+                label="rendering math source projection [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -32,7 +32,7 @@
             }
 
             subgraph cluster_user_render_mermaid_source {
-                label="rendering mermaid source projection [03_rendering]";
+                label="rendering mermaid source projection [10_rendering]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";

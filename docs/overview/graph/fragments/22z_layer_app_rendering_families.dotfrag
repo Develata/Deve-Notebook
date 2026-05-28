@@ -1,5 +1,5 @@
         subgraph cluster_app_rendering_families {
-            label="rendering source-first detail [03_rendering]";
+            label="rendering source-first detail [10_rendering]";
             style="rounded,filled";
             fillcolor="#eff6ff";
             color="#2563eb";

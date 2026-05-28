@@ -1,5 +1,5 @@
             subgraph cluster_user_cli_projection {
-                label="CLI projection workspace indexing [12_commands]";
+                label="CLI projection workspace indexing [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -10,7 +10,7 @@
             }
 
             subgraph cluster_user_cli_server {
-                label="CLI server runtime [12_commands]";
+                label="CLI server runtime [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -22,7 +22,7 @@
             }
 
             subgraph cluster_user_cli_export {
-                label="CLI export / inspect [12_commands]";
+                label="CLI export / inspect [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
@@ -34,7 +34,7 @@
             }
 
             subgraph cluster_user_cli_repair {
-                label="CLI repair / admin [12_commands]";
+                label="CLI repair / admin [14_commands]";
                 style="rounded,filled";
                 fillcolor="#fff7d6";
                 color="#d97706";
