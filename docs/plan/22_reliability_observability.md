@@ -17,7 +17,7 @@
 本章是**可观测性契约唯一权威**：定义遥测/指标/追踪的结构标准与告警映射。
 
 - **Owns**：SLO/SLI catalog（§2）、telemetry schema（§3）、metrics taxonomy（§4）、tracing span boundary（§5）、observation-to-health mapping（§6）、alerting tier 映射（§7）、DR playbook index（§8）。
-- **Defers To**：health 状态全集与状态迁移规则归 `04_repository#repo-health-and-repair`（本章只做观测→health 的**映射**，§6）；错误码定义归 `13_i18n#i18n-error-code-catalog`（§7 只映射 tier）；latency/RSS 目标归 `21_perf_budget`；profile 归 `17_tech_stack`；运维观测 endpoint 归 `18_release#runtime-observability`。
+- **Defers To**：health 状态全集与状态迁移规则归 `04_repository#repo-health-and-repair`（本章只做观测→health 的**映射**，§6）；错误码定义归 `13_i18n#i18n-error-code-catalog`（§7 只映射 tier）；latency/RSS 目标归 `21_perf_budget`；profile 归 `17_tech_stack`；运维观测 endpoint 归 `18_release#runtime-observability`；DR/恢复步骤归 `06_backup`（§8 DR Playbook Index）。
 - **边界**：本章 **MUST NOT** 定义 health 状态、错误码、budget 数值或新增调用层；只承载观测/映射/边界声明。
 
 ## 2. SLO / SLI Catalog {#slo-sli-catalog}

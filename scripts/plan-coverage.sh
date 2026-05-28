@@ -377,8 +377,13 @@ run_check_perf_budget() {
   return 0
 }
 
-# B3.4 — emit every heading anchor of a markdown file: explicit `{#id}` plus a
-# GitHub-style slug of the heading text (best-effort; CJK is dropped).
+# B3.4 — emit every heading anchor of a markdown file: explicit `{#id}` plus an
+# ASCII-only slug of the heading text. This is deliberately a best-effort slug,
+# not a full GitHub slugger: non-ASCII (e.g. CJK) is dropped and duplicate
+# headings get no `-N` suffix. Per the AGENTS plan-ref convention every linked
+# heading carries an explicit `{#kebab-id}`, so a cross-doc link to a CJK or
+# duplicate heading without an explicit id is a convention violation — failing
+# it here (anchor-not-found) is the intended enforcement, not a false positive.
 md_heading_slugs() {
   awk '
     /^#+[[:space:]]/ {
@@ -399,6 +404,11 @@ md_heading_slugs() {
 # B3.4 — relative markdown links in the doc trees must resolve: the target .md
 # file must exist (relative to the linking file), and any `#anchor` must match
 # an explicit `{#id}` or a heading slug. External/absolute/non-.md links skip.
+# Link extraction matches only the bare `](target)` form (target has no space
+# or `)`); the title `](t "x")`, angle-bracket `](<t>)`, and literal-space
+# forms are intentionally not matched (none occur in the doc trees) and would
+# be silently skipped rather than mis-validated — so this never yields a false
+# CI failure. `%20`-encoded spaces in the target are decoded and supported.
 run_check_md_links() {
   local dirs=("$@")
   [ "${#dirs[@]}" -eq 0 ] && dirs=(docs/plan docs/features docs/acceptance-cases)

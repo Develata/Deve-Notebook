@@ -128,14 +128,14 @@ Gate 状态：
 
 ### High/Low Profile
 *   **Low-Spec (≤768MB)**: CSR Only, No Search Index, Snapshot Pruning.
-*   **Standard (≥1GB)**: SSR, Search, Graph projection.
+*   **Standard (≥1GB)**: Search, Graph projection（SSR 为 reserved/planned 目标态，当前仅启用 Leptos `csr`、未接线；见 `docs/adr/0001-leptos-over-yew.md`）.
 
 ### Profile → Feature Matrix
 
 | Feature | `low-spec` (≤768MB) | `standard` (≥1GB) |
 |:---|:---|:---|
 | CSR | ✅ | ✅ |
-| SSR | ❌ | ✅ |
+| SSR | ❌ | Reserved / planned (not wired) |
 | Full-Text Search (Tantivy) | ❌ | ✅ |
 | Read-only Graph Projection | ✅ | ✅ |
 | High-performance Graph Renderer | ❌ | Default off / feature-gated |

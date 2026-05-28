@@ -58,7 +58,7 @@ Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership A
   - `Authority Defers To`：本章引用但不拥有的对象所在章节。
 - 章节内容只承载「索引 / 映射 / 度量 / 边界声明」，不承载状态全集或操作语义。
 
-四章骨架（B3.1–B3.4 落地，当前为预声明）：
+四章已落地（B3.1–B3.4，Status: Current MUST）：
 
 - **20_operations_catalog.md**（B3.1 新增）
   - Owns：operation-flow 目录（Flow ID 键；atomic OpId 见 `01_terminology` §2.ter）/ `Extension Point Index` / `Replacement Point Index` / `Configuration Entry Index`（仅索引；具体配置项定义、默认值、环境变量名仍 Defers To 各原章节）。
@@ -71,7 +71,7 @@ Governance Contracts 是与 A-E 模块层正交的合同切片，沿 Ownership A
   - Defers To：`04_repository#repo-health-and-repair`（degraded 状态全集与状态迁移）、`13_i18n#i18n-error-code-catalog`（错误码）、`17_tech_stack#performance-profiles-and-feature-matrix`（profile）、`18_release#runtime-observability`（运维观测 endpoint）、`21_perf_budget`（latency/RSS budget）、`06_backup`（DR/恢复步骤）。
 - **23_threat_model.md**（B3.4 新增）
   - Owns：STRIDE catalog / key lifecycle（高层流程）/ algorithm deprecation / supply chain / CVD policy。
-  - Defers To：`07_network#trust-boundary`（trust boundary）、`08_auth`（auth runtime contract）、`06_backup#backup-secret-ref-contract`（key custody）。
+  - Defers To：`07_network#trust-boundary`（trust boundary）、`08_auth`（auth runtime contract）、`06_backup#backup-secret-ref-contract`（key custody）、`03_storage/authority`（ledger append 校验）、`13_i18n#i18n-error-code-catalog`（错误码/限流码）、`17_tech_stack#native-packaging-dependency-gate`（供应链依赖门禁）、`18_release`（artifact 签名）、`19_plugins`（plugin capability gate）、`22_reliability_observability#alerting-tier`（告警等级）。
 
 ### F. Implementation Blueprints
 - **[../tasks/18_infra_runtime.md](../tasks/18_infra_runtime.md)**: infra-first 模块拆分与运行时边界收敛蓝图。

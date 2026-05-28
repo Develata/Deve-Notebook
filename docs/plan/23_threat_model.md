@@ -17,7 +17,7 @@
 本章是**威胁建模契约唯一权威**：登记 STRIDE 目录、密钥生命周期高层流程、算法退役预案、供应链与漏洞披露策略。
 
 - **Owns**：STRIDE catalog（§3）、key lifecycle 高层流程（§4）、algorithm deprecation（§5）、supply chain policy（§6）、CVD policy（§7）。
-- **Defers To**：信任边界定义归 `07_network#trust-boundary`（§2 引用）；auth runtime 合同（session/token/gate）归 `08_auth`；备份密钥托管归 `06_backup#backup-secret-ref-contract`。本章只承载威胁/边界/策略声明，不重定义这些合同。
+- **Defers To**：信任边界归 `07_network#trust-boundary`（§2 引用）；auth runtime 合同（session/token/gate）归 `08_auth`；备份密钥托管归 `06_backup#backup-secret-ref-contract`；ledger append 校验归 `03_storage/authority`（§3）；错误码/限流码归 `13_i18n#i18n-error-code-catalog`（§3/§4）；供应链依赖门禁归 `17_tech_stack#native-packaging-dependency-gate`、artifact 签名归 `18_release`（§6）；plugin capability gate 归 `19_plugins`（§3）；告警等级归 `22_reliability_observability#alerting-tier`（§7）。本章只承载威胁/边界/策略声明，不重定义这些合同。
 - **边界**：本章 **MUST NOT** 重写 auth/network/backup 的运行时合同，也不新增 §6 四层调用链之外的调用层。
 
 ## 2. Trust Boundaries {#trust-boundaries}
