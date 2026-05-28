@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-26`
+- `Last Review`: `2026-05-28`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)

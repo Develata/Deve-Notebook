@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-26`
+- `Last Review`: `2026-05-28`
 - `Authority Owns`: `STRIDE catalog / key lifecycle (高层流程) / algorithm deprecation / supply chain policy / CVD policy`
 - `Authority Defers To`: `07_network#trust-boundary (trust boundary), 08_auth (auth runtime contract), 06_backup#backup-secret-ref-contract (key custody), 03_storage/authority (ledger append validation), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (auth / trusted-agent security flows)`

@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-26`
+- `Last Review`: `2026-05-28`
 - `Authority Owns`: `op 维度 latency / RSS budget；CI fuse 阈值`
 - `Authority Defers To`: `17_tech_stack#performance-profiles-and-feature-matrix (profile 枚举与 feature matrix)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (perf-sensitive flows)`
