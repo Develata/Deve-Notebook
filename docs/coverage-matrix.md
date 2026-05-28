@@ -37,6 +37,22 @@
 | `18_release` | `15_release` | `12_tech_release` | packaging/CI/release automation |
 | `19_plugins` | `17_plugins` | `10_plugins` | plugin/runtime boundary automation |
 
+### Governance Contracts (20-23)
+
+20-23 是 **Governance Contracts**（与 A-E 模块层正交的 ownership-axis 切片，非产品 feature 章），
+不进入上面的 A-E 三层映射表。它们的对照与验证沿治理轴表达：feature 侧统一投影到
+`operation-coverage.md`，验证以 `scripts/plan-coverage.sh` 的治理子检查为主，而非 Chrome MCP walkthrough。
+
+| Blueprint | Counterpart Feature | Counterpart Acceptance | Primary Verification |
+| --- | --- | --- | --- |
+| `20_operations_catalog` | `operation-coverage.md`（章 20 的投影） | `00_index`（op-flow ↔ case 绑定） | operation bijection（`check-architecture-registry.sh`）+ `--check-reverse-coverage` |
+| `21_perf_budget` | `operation-coverage.md`（perf-sensitive flows） | `00_index`（`PERF-001`，planned） | `plan-coverage.sh --check-perf-budget` |
+| `22_reliability_observability` | `operation-coverage.md`（release / observability flows） | `00_index`（`REL-002`，planned） | `--check-reverse-coverage` + `--check-metadata-completeness` |
+| `23_threat_model` | `operation-coverage.md`（auth / security flows） | `00_index`（`AUTH-*`；`PLUG-001` planned） | `--check-no-adr-plan-ref` + auth/security automation |
+
+> `PERF-001` / `REL-002` / `PLUG-001` 为章 21/22/23 Metadata 声明的**计划中** acceptance 绑定，
+> 对应用例尚未在 `docs/acceptance-cases/` + `acceptance-bindings.tsv` 落地（属后续 features/acceptance 内容批次）。
+
 ### Non-Matrix Documents
 
 The following documents exist under `docs/` but do not participate in the three-layer matrix:
@@ -56,7 +72,7 @@ The following documents exist under `docs/` but do not participate in the three-
 
 ## Rules
 
-- Every `docs/plan/` chapter (01-19 + 11_ui sub-chapters) must have a corresponding row in the Chapter Mapping table.
+- Every `docs/plan/` chapter (01-19 + 11_ui sub-chapters) must have a corresponding row in the Chapter Mapping table; 20-23 Governance Contracts are mapped separately in the Governance Contracts table (ownership-axis slice, not A-E feature chapters).
 - Every `docs/features/` chapter must define at least one Chrome MCP walkthrough, **except** `01_terminology` and `02_positioning` which use `Verification: glossary-only / boundary-only`.
 - Every `docs/acceptance-cases/` file must map to at least one stable automation surface.
 - Non-automated acceptance cases must be listed in `docs/acceptance-bindings.tsv`
