@@ -17,6 +17,7 @@ write-confirmation logic converge onto the typed contracts below.
 | File | Description |
 |------|-------------|
 | `mod.rs` | Document band module entry |
+| `confirm.rs` | Typed write-confirmation resolution — maps server `Ack`/`EditRejected`/echoed ops onto `WriteConfirmation` and clears the pending overlay (single path for the three former ack/reject/echo sites) |
 | `pending.rs` | Pending local-edit overlay types and re-exports |
 | `write_state.rs` | Formal `WriteConfirmation` state machine (Waiting/Committed/Rejected/WritebackFailed) |
 

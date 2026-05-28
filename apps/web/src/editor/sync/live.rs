@@ -5,7 +5,7 @@
 use super::context::SyncContext;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteOp, getEditorContent};
-use crate::runtime::document::pending;
+use crate::runtime::document::confirm;
 use deve_core::models::RepoId;
 use leptos::prelude::{Callable, GetUntracked, Set, Update};
 
@@ -22,7 +22,7 @@ pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::Confi
         .origin
         .filter(|origin| Some(origin.client_id) == ctx.client_id);
     if let Some(origin) = echoed_origin {
-        clear_confirmed_pending_edit(ctx, origin.client_op_id);
+        clear_confirmed_pending_edit(ctx, origin.client_op_id, entry.seq);
     }
     if entry.seq <= ctx.local_version.get_untracked() {
         return;
@@ -50,7 +50,7 @@ pub(super) fn apply_live_op(ctx: &SyncContext, entry: deve_core::protocol::Confi
     }
 }
 
-fn clear_confirmed_pending_edit(ctx: &SyncContext, client_op_id: u64) {
+fn clear_confirmed_pending_edit(ctx: &SyncContext, client_op_id: u64, seq: u64) {
     let Some(repo_id) = ctx
         .current_repo_id
         .get_untracked()
@@ -61,14 +61,16 @@ fn clear_confirmed_pending_edit(ctx: &SyncContext, client_op_id: u64) {
     let scope_nonce = Some(ctx.current_scope_nonce.get_untracked());
     let mut clear_navigation = false;
     ctx.set_pending_local_edits.update(|pending_edits| {
-        clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
+        clear_navigation = confirm::commit_pending_edit(
             pending_edits,
             Some(ctx.doc_id),
             Some(repo_id),
             scope_nonce,
             ctx.doc_id,
             client_op_id,
-        );
+            seq,
+        )
+        .clear_navigation;
     });
     if clear_navigation {
         ctx.set_pending_navigation.set(None);

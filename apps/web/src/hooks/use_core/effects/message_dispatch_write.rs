@@ -5,7 +5,7 @@
 use deve_core::models::{DocId, PeerId, RepoId};
 use leptos::prelude::{GetUntracked, Set, Update};
 
-use crate::runtime::document::pending;
+use crate::runtime::document::{confirm, pending};
 use super::super::state::CoreSignals;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
 
@@ -29,6 +29,7 @@ pub fn handle_ack_message(
     branch: Option<PeerId>,
     scope_nonce: Option<u64>,
     doc_id: DocId,
+    seq: u64,
     client_op_id: u64,
     signals: CoreSignals,
 ) {
@@ -50,14 +51,16 @@ pub fn handle_ack_message(
         .flatten();
     let mut clear_navigation = false;
     signals.set_pending_local_edits.update(|pending_edits| {
-        clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
+        clear_navigation = confirm::commit_pending_edit(
             pending_edits,
             current_doc,
             Some(repo_id),
             scope_nonce,
             doc_id,
             client_op_id,
-        );
+            seq,
+        )
+        .clear_navigation;
     });
     if clear_navigation {
         signals.set_pending_navigation.set(None);

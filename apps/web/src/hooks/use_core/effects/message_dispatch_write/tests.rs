@@ -70,7 +70,7 @@ fn stale_ack_clears_matching_retained_pending_without_touching_navigation() {
         );
     });
 
-    handle_ack_message(repo_id, None, Some(7), doc_id, 13, signals);
+    handle_ack_message(repo_id, None, Some(7), doc_id, 1, 13, signals);
 
     assert_eq!(
         pending_count_for_doc(&signals.pending_local_edits.get_untracked(), doc_id),
@@ -109,7 +109,7 @@ fn ack_without_scope_does_not_clear_retained_pending() {
         );
     });
 
-    handle_ack_message(repo_id, None, None, doc_id, 13, signals);
+    handle_ack_message(repo_id, None, None, doc_id, 1, 13, signals);
 
     assert_eq!(
         pending_count_for_doc(&signals.pending_local_edits.get_untracked(), doc_id),

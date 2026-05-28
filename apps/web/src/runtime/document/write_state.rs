@@ -6,10 +6,15 @@
 //!
 //! Phase B of the runtime convergence (see
 //! `docs/report/runtime-convergence-audit-2026-05-28.md` and
-//! `docs/tasks/20_web_thin_client_ledger_migration.md`) introduces this typed
-//! contract first; the pending overlay, history resend, and ack/reject
-//! handling are migrated onto it in subsequent steps. Until then the type is
-//! scaffolding for those moves.
+//! `docs/tasks/20_web_thin_client_ledger_migration.md`) introduced this typed
+//! contract first. As of step 3 the live commit/reject flow resolves through it
+//! via `super::confirm` (`waiting`/`ack`/`reject`/`is_failed`). The remaining
+//! query and completion surface (`is_pending`, `is_committed`, `committed_seq`,
+//! and the `WritebackFailed` state with `writeback_failed`) is retained as the
+//! full edit lifecycle: it has no web producer/consumer yet — the thin client
+//! receives no per-edit workspace-writeback signal and surfaces no per-edit
+//! commit-seq UI — so the module-level allow stays until that telemetry/UI or
+//! server signal lands.
 #![allow(dead_code)]
 
 /// Lifecycle of one client edit intent in the thin-client write path.

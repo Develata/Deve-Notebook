@@ -12,7 +12,7 @@ use super::message_protocol::{
 };
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
 use crate::api::WsService;
-use crate::runtime::document::pending;
+use crate::runtime::document::{confirm, pending};
 use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::Locale;
 use deve_core::models::DocId;
@@ -74,16 +74,24 @@ pub fn handle_edit_rejected_message(
         .then(|| signals.current_doc.get_untracked())
         .flatten();
     let mut clear_navigation = false;
+    let mut rejected_waiting_edit = false;
     signals.set_pending_local_edits.update(|pending_edits| {
-        clear_navigation = pending::clear_pending_edit_and_check_current_doc_empty(
+        let resolution = confirm::reject_pending_edit(
             pending_edits,
             current_doc,
-            None,
             Some(scope_nonce),
             doc_id,
             client_op_id,
         );
+        clear_navigation = resolution.clear_navigation;
+        rejected_waiting_edit = resolution.confirmation.is_some_and(|c| c.is_failed());
     });
+    if rejected_waiting_edit {
+        leptos::logging::warn!(
+            "本地编辑被服务端拒绝并撤回: doc={doc_id} client_op_id={client_op_id} code={:?}",
+            error.code
+        );
+    }
     if clear_navigation {
         signals.set_pending_navigation.set(None);
     }

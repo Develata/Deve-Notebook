@@ -8,5 +8,6 @@
 //! still scattered across `hooks/use_core/callbacks_sync/write` and
 //! `editor/sync` converge here onto the typed contracts below.
 
+pub mod confirm;
 pub mod pending;
 pub mod write_state;
