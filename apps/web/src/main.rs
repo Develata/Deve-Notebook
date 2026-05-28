@@ -29,6 +29,7 @@ mod components;
 mod editor;
 mod hooks;
 mod i18n;
+mod runtime;
 mod shortcuts;
 mod storage;
 mod utils;
