@@ -6,7 +6,7 @@
 //! # Mobile Footer — Status & Load Indicators
 
 use crate::hooks::use_core::CoreState;
-use crate::hooks::use_core::pending::{
+use crate::runtime::document::pending::{
     PendingLocalEdits, PendingScope, pending_count_for_doc_in_scope,
 };
 use crate::hooks::use_core::status_summary::{SyncStatusInput, SyncStatusKind, derive_sync_status};
@@ -174,7 +174,7 @@ pub fn LoadStatus(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hooks::use_core::pending::{PendingLocalEditInput, push_pending_edit};
+    use crate::runtime::document::pending::{PendingLocalEditInput, push_pending_edit};
     use deve_core::models::{Op, RepoId};
 
     fn push_insert(

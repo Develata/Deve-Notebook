@@ -5,7 +5,7 @@
 //!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::CoreState;
-use crate::hooks::use_core::pending::{PendingScope, pending_count_for_doc_in_scope};
+use crate::runtime::document::pending::{PendingScope, pending_count_for_doc_in_scope};
 use crate::hooks::use_core::status_summary::{SyncStatusInput, SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;

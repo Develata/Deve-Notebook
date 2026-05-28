@@ -8,7 +8,7 @@ use leptos::prelude::*;
 
 use super::super::callbacks::DocCallbacks;
 use super::super::navigation::PendingNavigation;
-use super::super::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::state::CoreSignals;
 
 pub(super) struct DocStateSection {

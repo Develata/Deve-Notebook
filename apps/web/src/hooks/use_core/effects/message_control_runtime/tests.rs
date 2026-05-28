@@ -1,6 +1,6 @@
 use super::super::message_control_runtime_repo::{next_request_id, should_request_repo_sync_state};
 use crate::api::ConnectionStatus;
-use crate::hooks::use_core::pending::{
+use crate::runtime::document::pending::{
     PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
 };
 use crate::hooks::use_core::state::init_signals;

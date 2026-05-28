@@ -5,7 +5,7 @@
 use super::context::SyncContext;
 use super::live::apply_live_op;
 use crate::editor::ffi::applyRemoteOpsBatch;
-use crate::hooks::use_core::pending;
+use crate::runtime::document::pending;
 use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::GetUntracked;
 

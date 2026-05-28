@@ -5,7 +5,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;
 use crate::hooks::use_core::navigation::PendingNavigation;
-use crate::hooks::use_core::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use deve_core::models::DocId;
 use leptos::prelude::*;

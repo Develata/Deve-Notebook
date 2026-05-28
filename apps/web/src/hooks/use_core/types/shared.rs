@@ -8,7 +8,7 @@ use deve_core::models::{DocId, PeerId, VersionVector};
 use leptos::prelude::*;
 
 use super::super::navigation::PendingNavigation;
-use super::super::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PendingBranchTarget {

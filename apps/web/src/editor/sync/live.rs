@@ -5,7 +5,7 @@
 use super::context::SyncContext;
 use crate::editor::EditorStats;
 use crate::editor::ffi::{applyRemoteOp, getEditorContent};
-use crate::hooks::use_core::pending;
+use crate::runtime::document::pending;
 use deve_core::models::RepoId;
 use leptos::prelude::{Callable, GetUntracked, Set, Update};
 

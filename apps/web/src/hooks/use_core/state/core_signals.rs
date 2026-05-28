@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use super::super::contexts::SystemMetricsData;
 use super::super::diff_session::DiffSessionWire;
 use super::super::navigation::PendingNavigation;
-use super::super::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::types::{ChatMessage, PeerSession, PendingBranchTarget};
 use super::state_types::PluginResponse;

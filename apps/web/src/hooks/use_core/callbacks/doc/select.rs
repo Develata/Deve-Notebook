@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation, guard_navigation};
-use crate::hooks::use_core::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 

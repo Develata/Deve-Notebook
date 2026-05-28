@@ -28,7 +28,6 @@ mod effects_sc_scope;
 mod effects_sc_state;
 pub mod effects_switch;
 pub mod navigation;
-pub mod pending;
 mod provide;
 mod scope_prefs;
 pub(crate) mod source_control_notice;

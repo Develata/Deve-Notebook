@@ -8,7 +8,8 @@ use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_sc
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_action;
-use crate::hooks::use_core::{CoreState, pending};
+use crate::hooks::use_core::CoreState;
+use crate::runtime::document::pending;
 use deve_core::models::{Op, RepoId};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;

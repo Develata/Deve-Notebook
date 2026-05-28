@@ -6,7 +6,7 @@ use leptos::prelude::*;
 use std::collections::HashMap;
 
 use super::super::super::navigation::PendingNavigation;
-use super::super::super::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::super::types::PeerSession;
 
 #[derive(Clone, Copy)]

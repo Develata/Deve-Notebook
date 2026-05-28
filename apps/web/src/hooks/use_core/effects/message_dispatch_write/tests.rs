@@ -1,7 +1,7 @@
 use super::{handle_ack_message, handle_write_ready_message};
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation};
-use crate::hooks::use_core::pending::{
+use crate::runtime::document::pending::{
     PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
 };
 use crate::hooks::use_core::state::init_signals;

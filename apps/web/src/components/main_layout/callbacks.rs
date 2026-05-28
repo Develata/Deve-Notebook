@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
-use crate::hooks::use_core::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use leptos::prelude::*;
 
 pub fn toggle_search_callback(

@@ -5,7 +5,7 @@
 use deve_core::models::{DocId, PeerId, RepoId};
 use leptos::prelude::{GetUntracked, Set, Update};
 
-use super::super::pending;
+use crate::runtime::document::pending;
 use super::super::state::CoreSignals;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
 

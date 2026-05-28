@@ -64,7 +64,6 @@ Core application state management hub. The largest hook module — manages WebSo
 | Directory | Purpose |
 |-----------|---------|
 | `effects/` | Server message effects (handshake, dispatch, protocol) |
-| `pending/` | Pending operation tracking |
 
 ## For AI Agents
 

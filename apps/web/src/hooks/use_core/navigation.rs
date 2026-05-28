@@ -5,7 +5,7 @@
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
-use super::pending::{PendingLocalEdits, PendingScope, has_pending_edits_for_doc_in_scope};
+use crate::runtime::document::pending::{PendingLocalEdits, PendingScope, has_pending_edits_for_doc_in_scope};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavigationTarget {
@@ -60,7 +60,7 @@ fn has_pending_for_current_doc(
 #[cfg(test)]
 mod tests {
     use super::{NavigationTarget, guard_navigation};
-    use crate::hooks::use_core::pending::{
+    use crate::runtime::document::pending::{
         PendingLocalEditInput, PendingLocalEdits, push_pending_edit,
     };
     use deve_core::models::{DocId, Op, RepoId};

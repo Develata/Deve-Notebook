@@ -7,7 +7,7 @@ use deve_core::models::{DocId, PeerId};
 use leptos::prelude::*;
 
 use super::super::navigation::PendingNavigation;
-use super::super::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::types::PendingBranchTarget;
 
 #[derive(Clone)]

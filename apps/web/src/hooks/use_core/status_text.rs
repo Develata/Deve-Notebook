@@ -5,7 +5,7 @@
 use crate::api::WsService;
 use leptos::prelude::{Get, Signal};
 
-use super::pending::{PendingScope, pending_count_for_doc_in_scope};
+use crate::runtime::document::pending::{PendingScope, pending_count_for_doc_in_scope};
 use super::state::CoreSignals;
 use super::status_summary::{SyncStatusInput, derive_sync_status};
 

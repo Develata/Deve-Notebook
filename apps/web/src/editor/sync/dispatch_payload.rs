@@ -76,7 +76,7 @@ mod tests {
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::PendingBranchTarget;
     use crate::hooks::use_core::navigation::PendingNavigation;
-    use crate::hooks::use_core::pending::{
+    use crate::runtime::document::pending::{
         PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
     };
     use deve_core::models::{DocId, Op, RepoId};

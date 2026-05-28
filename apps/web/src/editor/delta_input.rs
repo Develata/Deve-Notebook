@@ -9,7 +9,7 @@ use super::delta_input_gate::can_send_delta;
 use super::delta_input_state::sync_local_state;
 use crate::api::WsService;
 use crate::hooks::use_core::PendingBranchTarget;
-use crate::hooks::use_core::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use deve_core::models::{DocId, PeerId};
 use leptos::prelude::*;

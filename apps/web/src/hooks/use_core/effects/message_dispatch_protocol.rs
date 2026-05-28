@@ -12,7 +12,7 @@ use super::message_protocol::{
 };
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
 use crate::api::WsService;
-use crate::hooks::use_core::pending;
+use crate::runtime::document::pending;
 use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::Locale;
 use deve_core::models::DocId;

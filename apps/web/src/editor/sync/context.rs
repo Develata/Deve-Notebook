@@ -9,7 +9,7 @@ use crate::api::WsService;
 use crate::editor::EditorStats;
 use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::navigation::PendingNavigation;
-use crate::hooks::use_core::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
 use deve_core::security::{EncryptedOp, RepoKey};

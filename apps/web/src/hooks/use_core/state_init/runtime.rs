@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use super::super::contexts::SystemMetricsData;
 use super::super::navigation::PendingNavigation;
-use super::super::pending::PendingLocalEdits;
+use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::state::PluginResponse;
 use super::super::types::{ChatMessage, PeerSession};
 mod ai;

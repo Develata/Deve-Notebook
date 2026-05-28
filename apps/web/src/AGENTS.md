@@ -24,6 +24,7 @@ Root source directory for the web frontend. Contains the app entry point, API la
 | `editor/` | Document editor — OT ops, handshake, sync, playback |
 | `hooks/` | Reactive hooks — layout, outline, core state management |
 | `i18n/` | Internationalization strings by feature |
+| `runtime/` | Thin-client runtime bands (document write path: pending overlay, write-confirmation) |
 | `shortcuts/` | Keyboard shortcut system |
 | `storage/` | Browser local storage and IndexedDB bridge |
 | `utils/` | Shared utility functions |
