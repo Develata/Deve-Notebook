@@ -4,7 +4,7 @@
 # server
 
 ## Purpose
-The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, SyncManager, broadcast channel, plugin runtime, sync engine, tree registry, identity key), builds the router with auth middleware, and handles all client connections. Contains ~40+ integration test files for scope binding, switcher, sync, and source control behavior.
+The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, SyncManager, broadcast channel, plugin runtime, sync engine, tree registry, identity key), builds the router with auth middleware, and handles all client connections. In-crate integration tests (scope binding, switcher, sync, source control, ws acceptance, …) live under `tests/<family>/`, declared flat via `#[path]` in `test_modules.rs`.
 
 ## Key Files
 | File | Description |
@@ -18,9 +18,6 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `channel/mod.rs` | `DualChannel` (broadcast + unicast) with delivery classification (must-deliver vs droppable) |
 | `repo_scope/mod.rs` | Repo scope facade: maps session state to active repo/branch with fail-closed validation |
 | `repo_scope/` | Repo scope implementation helpers for bootstrap, cleanup, error mapping, lookup, remote resolution, selector logic, sync, and workspace paths |
-| `repo_scope_test/` | Repo scope catalog, error mapping, local scope, and alias tests |
-| `repo_scope_recovery_test_extra/` | Repo scope recovery and local-counterpart tests |
-| `repo_scope*_test.rs` | Remaining repo scope runtime selector and recovery tests |
 | `shadow_scope.rs` | Shadow branch scope management and stale branch cleanup |
 | `error_classify.rs` | Error string classification into semantic error codes |
 | `error_classify/tests.rs` | Shared error classification tests |
@@ -35,28 +32,8 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `node_role.rs` | Node role state (main/proxy) |
 | `node_role_http.rs` | Node role HTTP endpoint |
 | `notegit.rs` | Host directory preparation (.notegit, host keys) |
-| `list_docs_scope_test/` | Repo-scoped document listing binding tests |
-| `listing_scope_binding_test/` | Listing bootstrap and stale runtime binding tests |
-| `listing_scope_cleanup_test/` | Listing stale scope cleanup tests |
-| `listing_shadow_scope_test/` | Shadow branch listing scope tests |
-| `listing_*_test.rs` | Remaining listing integration tests |
 | `source_control_proxy/` | Source control proxy facade and implementation modules for `RemoteSourceControlApi` |
-| `source_control_http_test/` | Source control HTTP roundtrip tests and helpers |
 | `source_control_proxy/http/tests/` | Source control proxy HTTP error decoding tests |
-| `source_control_changes_identity_test/` | Source control changes identity retention tests |
-| `source_control_local_commit_scope_test/` | Source control commit scope nonce and bootstrap tests |
-| `source_control_local_scope_test/` | Source control local scope/identity runtime tests |
-| `source_control_remote_scope_test/` | Source control remote scope/identity runtime tests |
-| `source_control_scope_binding_test/` | Source control scope binding runtime tests |
-| `source_control_git_import_conflict_test/` | Source control Git import conflict tests |
-| `source_control_scope_test/` | Source control scope binding and selector runtime tests |
-| `source_control_scope_test_support.rs` | Source control scope test support |
-| `switcher_branch_test/` | Branch switcher success, reject, and scope message tests |
-| `switcher_branch_scope_test/` | Branch switcher repo-scope fail-closed and selector binding tests |
-| `switcher_current_scope_test/` | Current local/remote scope validation tests for branch switching |
-| `switcher_exact_selector_test/` | Exact remote selector switcher collision and fail-closed tests |
-| `switcher_*_test.rs` | Remaining switcher integration tests |
-| `switcher_test_support.rs` | Shared switcher test harness for AppState/session/unicast setup |
 | `plugin_host/mod.rs` | Plugin host server mode for satellite processes |
 | `plugin_host/` | Plugin host HTTP routes and WebSocket handler |
 | `plugin_response.rs` | Plugin response formatting helpers |
@@ -72,6 +49,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 | `ai_chat/` | OpenAI-compatible streaming chat integration |
 | `agent_bridge/` | Default-off Trusted CLI bridge; policy-gated, not MCP and not a generic plugin authority |
 | `channel/tests/` | Integration tests for channel delivery guarantees |
+| `tests/` | In-crate `#[cfg(test)]` integration tests grouped by feature family (`docs/`, `document/`, `edit/`, `key_exchange/`, `listing/`, `open_doc/`, `repo_scope/`, `source_control/`, `switcher/`, `sync/`, `ws_acceptance/`). Declared flat as children of `server` via `#[path]` in `test_modules.rs`, so test bodies reach the code under test through `super::`. |
 
 ## For AI Agents
 
@@ -80,6 +58,6 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 - **Fail-closed**: Never mask a corrupted/stale scope as "no scope" or "empty". Return explicit `ServerError` with the appropriate `ServerErrorCode`.
 - **DualChannel delivery**: Protocol errors, scope switches, key messages, and sync control messages are classified as must-deliver and will be async-queued if the unicast channel is full. Regular messages (Pong, metrics) are dropped.
 - **Rate limiting**: Both per-IP HTTP rate limiting (`rate_limit.rs`) and per-connection WS rate limiting (`WsSession::record_incoming_message`) are enforced. Both fail closed on poisoned locks.
-- **Test files** (`*_test.rs`, `*_test_support.rs`) are `#[cfg(test)]` modules; there are ~40+ scope/binding/switcher/sync tests co-located here.
+- **Test files** (`*_test.rs`, `*_test_support.rs`) are `#[cfg(test)]` modules grouped under `tests/<family>/` and declared flat as `server` children via `#[path]` in `test_modules.rs` — so a test body still uses `super::Foo` (not `super::super::`) to reach the code under test. When adding a test, drop the file in the right family dir and add a `#[path]` + `mod` line to `test_modules.rs`.
 
 <!-- MANUAL: -->
