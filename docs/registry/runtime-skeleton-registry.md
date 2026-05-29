@@ -68,3 +68,4 @@
 - 头段的物理归带已按 §8 决议 **DEFER**（`docs/report/web-runtime-band-convergence-decision-2026-05-29.md`，经独立双 agent 评审）：`browser_document_runtime` 是「合同在 `runtime/document`、路由消费在 `editor/sync`」的**有意分离态**，`browser_peer_runtime` 逻辑已分层于 `effects/` 责任链、缺口仅目录命名——**均非未完成迁移**；重启条件见该报告 §4 证伪点。
 - `document_runtime -> render_projection_runtime -> widget_bridge_runtime / outline_projection_runtime` 必须保持 projection-only 边界。
 - `ui_shell -> application_control -> feature_runtime` 当前是抽象分层，不应为了满足表格而创建空模块。
+- cli server 结构(`handlers/scope/` 合并 / `server/runtime/` 带 / `server/services/projection_repair/`)经 §8 核对裁定:scope 合并与 projection_repair 带为**假缺口/空缺口**(REJECT)、`server/runtime/` 带 **DEFER**;`repo_scope_sync_runtime` / `session_runtime` / `auth_gateway` 维持 `部分承载` 是**按关切有意分离**,非收敛缺口——依据见 `docs/report/cli-server-structure-convergence-decision-2026-05-29.md`。
