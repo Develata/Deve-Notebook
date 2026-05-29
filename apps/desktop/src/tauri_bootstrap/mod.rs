@@ -6,8 +6,6 @@ use std::sync::Mutex;
 
 use deve_core::native_adapter::NativeProcessRuntimeSnapshot;
 use tauri::plugin::TauriPlugin;
-use tauri::webview::Cookie;
-use tauri::webview::cookie::SameSite;
 use thiserror::Error;
 
 use crate::{
@@ -17,6 +15,10 @@ use crate::{
     DesktopShellError, plan_desktop_local_service_entrypoint_from_env,
     run_desktop_local_service_bootstrap,
 };
+
+mod cookie;
+
+use cookie::{tauri_cookie_from_native_session, validate_tauri_bootstrap_source};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesktopTauriBootstrapScript {
@@ -212,58 +214,11 @@ pub fn try_desktop_tauri_local_service_bootstrap_from_env(
     }))
 }
 
-fn tauri_cookie_from_native_session(cookie: &DesktopNativeSessionCookie) -> Cookie<'static> {
-    Cookie::build((cookie.name().to_string(), cookie.value().to_string()))
-        .domain(cookie.domain().to_string())
-        .path(cookie.path().to_string())
-        .http_only(cookie.http_only())
-        .same_site(tauri_same_site_from_native_session(cookie.same_site()))
-        .secure(cookie.secure())
-        .build()
-}
-
-fn tauri_same_site_from_native_session(same_site: &str) -> SameSite {
-    match same_site.to_ascii_lowercase().as_str() {
-        "none" => SameSite::None,
-        "lax" => SameSite::Lax,
-        _ => SameSite::Strict,
-    }
-}
-
 fn recovery_bootstrap(
     script: DesktopTauriBootstrapScript,
 ) -> DesktopTauriLocalServiceBootstrap<DesktopCommandProcessLauncher> {
     DesktopTauriLocalServiceBootstrap {
         script,
         runtime: None,
-    }
-}
-
-fn validate_tauri_bootstrap_source(source: &str) -> Result<(), DesktopTauriBootstrapError> {
-    let source_lower = source.to_ascii_lowercase();
-    for marker in [
-        "<script",
-        "</script",
-        "token",
-        "secret",
-        "localstorage",
-        "location.href",
-        "auth_pass",
-        "auth_secret",
-    ] {
-        if source_lower.contains(marker) {
-            return Err(DesktopTauriBootstrapError::ForbiddenMaterial { marker });
-        }
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{SameSite, tauri_same_site_from_native_session};
-
-    #[test]
-    fn tauri_cookie_mapping_preserves_native_session_same_site_none() {
-        assert_eq!(tauri_same_site_from_native_session("None"), SameSite::None);
     }
 }
