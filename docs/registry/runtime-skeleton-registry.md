@@ -45,8 +45,8 @@
 | `browser_peer_runtime` | `部分承载` | `apps/web/src/hooks/use_core/effects/message_runtime_sync/`; `apps/web/src/hooks/use_core/effects/message_dispatch_runtime/` | `docs/tasks/19_repo_refactor_blueprint.md` | WebLightPeer state、browser message dispatch 与 repo-scoped protocol state。 |
 | `relay_proxy_runtime` | `部分承载` | `crates/core/src/protocol/relay_proxy.rs`; `apps/cli/src/server/handlers/sync/transfer.rs`; `apps/cli/src/server/handlers/sync/snapshot.rs` | `待分配` | Relay/proxy route admission only；不得改写 payload source attribution。 |
 | `browser_document_runtime` | `部分承载` | `apps/web/src/editor/sync/`; `apps/web/src/editor/hook_runtime.rs` | `docs/tasks/20_web_thin_client_ledger_migration.md` | Browser document snapshot、history、route payload 与 doc-scoped sync。 |
-| `pending_overlay_runtime` | `部分承载` | `apps/web/src/hooks/use_core/pending/`; `apps/web/src/editor/sync/history_replay.rs` | `docs/tasks/20_web_thin_client_ledger_migration.md` | Browser session pending overlay；不得写入 `pending_fs_ops`。 |
-| `write_confirmation_runtime` | `部分承载` | `apps/web/src/hooks/use_core/callbacks_sync/write.rs`; `apps/web/src/editor/sync/history_resend.rs`; `apps/cli/src/server/handlers/document/` | `docs/tasks/20_web_thin_client_ledger_migration.md` | Write readiness、ack、reject 与 committed-but-writeback-failed 分类。 |
+| `pending_overlay_runtime` | `已收敛` | `apps/web/src/runtime/document/pending/` | `docs/tasks/20_web_thin_client_ledger_migration.md` | Browser session pending overlay；不得写入 `pending_fs_ops`。 |
+| `write_confirmation_runtime` | `已收敛` | `apps/web/src/runtime/document/write_state.rs`; `apps/web/src/runtime/document/confirm.rs`; `apps/cli/src/server/handlers/document/write_confirmation.rs` | `docs/tasks/20_web_thin_client_ledger_migration.md` | Ack、reject 与 committed-but-writeback-failed 的生命周期分类合同；write readiness 由 handshake/scope 带前置门控，不在本带收口。 |
 | `source_control_runtime` | `已收敛` | `crates/core/src/ledger/manager/source_control_runtime.rs`; `crates/core/src/source_control/` | `docs/tasks/18_infra_runtime.md` | 消费 `pending_fs_ops` / `GitImportRequested` 并生成 Deve stage/commit intent。 |
 | `diff_session_runtime` | `部分承载` | `crates/core/src/source_control/diff.rs`; `apps/cli/src/server/handlers/source_control/diff/`; `apps/web/src/components/diff_view/` | `docs/tasks/18_infra_runtime.md` | Diff session 只通过 `source_control_runtime` 进入 ledger commit。 |
 | `merge_runtime` | `部分承载` | `crates/core/src/ledger/merge/`; `apps/cli/src/server/handlers/merge/` | `docs/tasks/18_infra_runtime.md` | Merge lifecycle 只通过 source-control authority path 收敛。 |
@@ -64,6 +64,6 @@
 ## Notes
 
 - `source_control_runtime -> Git mirror bridge` 仍以 `docs/plan/05_diff_logic.md#git-mirror-lifecycle` 为权威边界；本表只登记 runtime 当前承载。
-- `browser_peer_runtime -> browser_document_runtime -> pending_overlay_runtime -> write_confirmation_runtime` 是 Web write confirmation 主链；当前代码仍是分散承载。
+- `browser_peer_runtime -> browser_document_runtime -> pending_overlay_runtime -> write_confirmation_runtime` 是 Web write confirmation 主链；Phase B 后其尾段（`pending_overlay_runtime` / `write_confirmation_runtime`）已收敛到 `apps/web/src/runtime/document/` 与 `apps/cli/src/server/handlers/document/write_confirmation.rs`，头段（`browser_peer_runtime` / `browser_document_runtime`）仍为部分承载。
 - `document_runtime -> render_projection_runtime -> widget_bridge_runtime / outline_projection_runtime` 必须保持 projection-only 边界。
 - `ui_shell -> application_control -> feature_runtime` 当前是抽象分层，不应为了满足表格而创建空模块。
