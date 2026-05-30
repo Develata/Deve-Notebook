@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-28`
+- `Last Review`: `2026-05-30`
 - `Authority Owns`: `operation-flow catalog (Flow ID 键；atomic OpId 见 01_terminology §2.ter) / Extension Point Index / Replacement Point Index / Configuration Entry Index`
 - `Authority Defers To`: `01_terminology, 03_storage, 06_backup, 07_network, 08_auth, 13_i18n (failure family codes), 15_settings (具体配置项定义), 各章末尾「本章相关配置」段`
 - `Counterpart Feature`: `docs/features/operation-coverage.md`
@@ -88,7 +88,7 @@
 | `flow.sc.commit` | UO | L | Y | `SC_*` | N | N | `05_diff_logic` | staged-nonempty+writer-gate |
 | `flow.sc.commit-and-push` | FC | L | Y | `SC_*` | N | N | `05_diff_logic` | staged+connected |
 | `flow.sc.discard-file` | UO | FS+PW | Y | `SC_*` | N | N | `05_diff_logic` | file-pending |
-| `flow.sc.discard-pending` | UO | FS+PW | Y | `SC_*` | N | N | `05_diff_logic` | pending-present |
+| `flow.sc.discard-pending` | UO | — | Y | `SC_*` | N | N | `05_diff_logic` | pending-present |
 | `flow.sc.history-commit-diff` | UO | — | N | `SC_*` | N | N | `05_diff_logic` | commit-exists |
 | `flow.sc.merge-peer` | FC | L | Y | `SC_*` | N | N | `05_diff_logic` | peer-branch-available |
 | `flow.sc.merge-runtime` | FC | L | Y | `SYNC_*` | N | N | `05_diff_logic` | conflict-resolved |

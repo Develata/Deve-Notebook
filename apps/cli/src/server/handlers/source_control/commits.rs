@@ -90,7 +90,12 @@ pub async fn handle_get_commit_diff(
     }
 }
 
-/// 提交并推送到所有已连接的 Peer
+/// 提交已暂存变更 (保存快照)。
+///
+/// 当前阶段 web/WS 路径与 `handle_commit` 同体: 仅创建本地提交并广播
+/// `CommitAck`。"Push" 指 Git mirror 推送, 为 CLI-only (见
+/// `docs/features/07_diff_logic.md` 非目标「当前阶段不实现 Web 后端直接
+/// Git push」), 不在 web 后端直接执行; 主机有 git 时复用 git 功能。
 pub async fn handle_commit_and_push(
     state: &Arc<AppState>,
     ch: &DualChannel,
