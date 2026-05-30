@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-05-30`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/` (pending overlay + `write_state`/`confirm`), `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -65,6 +65,14 @@ State_auth = L_confirmed
 3. `Auth for Write` 与 `Handshake for Sync` 必须分离。
 4. 文件切换、重连、快照刷新都必须从 `confirmed + pending overlay` 重建。
 5. commit/delete/merge 的最终成立条件必须回到 ledger append / ledger anchor。
+
+### 3.1 Write Serialization and Merge Boundary
+
+- Web edit intent 不承担同文档并发 merge 协议；`client_id + client_op_id` 是幂等去重键，不是冲突检测键。
+- mounted writable path 必须通过本机 repo-scoped writer gate 串行进入 ledger append；同一 repo 的本机写入不得并发 fold。
+- 远端 peer 只提供 remote mirror / shadow input；它不会直接写入当前 local writable branch。
+- 需要合并远端副本时，只能由本机 writer 在 source-control merge flow 中显式读取远端 branch、生成本地 merge intent，并重新落入本机 writer gate。
+- 因此当前协议不引入 `base_revision`、OT 或 CRDT transform。若未来放宽为多写者同时写同一 local branch，必须先新增独立并发编辑协议，而不是扩展 `ClientMessage::Edit` 的隐含语义。
 
 ## 4. Protocol Contract
 

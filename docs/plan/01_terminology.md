@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-28`
+- `Last Review`: `2026-05-30`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
@@ -39,16 +39,23 @@
     *   Branch 表达持久 writer identity 作用域；browser tab / native shell 只能获得 repo-scoped transient writer identity。
 *   **Writer Gate (写入闸门)**：把 auth session、repo scope、branch role、`scope_nonce` 与 writer registration 合并后的写入许可。
     *   未通过 writer gate 的请求 **MUST NOT** append ledger、写入 staging、写入 pending/import 或确认 pending overlay。
+*   **RepoId (仓库身份)**：repo 的不可变机器身份，UUID-first。
+    *   所有 repo-scoped 业务算子在执行前都必须先解析并绑定 `RepoId`。
+    *   `RepoName`、URL、路径名与 selector 都只能作为输入别名、显示属性或恢复线索，不得替代 `RepoId`。
+*   **RepoNameBinding (仓库名绑定)**：`RepoId` 到当前可变显示名的 ledger-derived 绑定。
+    *   最小字段为 `repo_id / repo_name / name_epoch / changed_at_seq`。
+    *   repo rename 只能更新 `RepoNameBinding`，不得改变 `RepoId`。
+    *   `repo_name -> RepoId` 只能作为 catalog index；若解析不唯一或与 ledger header 不一致，必须 fail-closed。
 *   **Pending Overlay (待确认叠层)**：Web thin-client session 内的未确认本地编辑集合 $O_{session}$。
     *   Pending overlay 是 session runtime state，不是 `pending_fs_ops` side table 条目。
     *   Pending overlay 只能由 `Ack` / `Reject` / stale-scope recovery 清理，不得由 watcher 或 scan 清理。
 *   **pending_fs_ops (文件系统待处理队列)**：外部文件系统变化或显式 import 进入 Source Control 前的 repo runtime side table。
     *   `PendingFsEntry` 是 `pending_fs_ops` 中的一条 repo-scoped 文件系统/import pending 记录。
     *   `pending_fs_ops` 不承载 Web pending overlay，不是 ledger authority。
-*   **Projection Workspace / Vault (投影工作区 / 投影仓)**：宿主文件系统上绑定到单个本地 repo instance 的计算目录，形式为 `<projection_base>/<repo_name>/`。
+*   **Projection Workspace / Vault (投影工作区 / 投影仓)**：宿主文件系统上绑定到单个本地 repo instance 的计算目录，形式为 `<projection_base>/<safe_repo_name>--<repo_id>/`。
     *   `projection_base` 是用户通过 Projection Locator 指定的父目录；它本身不是 repo workspace。
     *   Projection Workspace 是该 repo 的 Markdown Projection 物理容器，不是全局共享仓库。
-    *   系统 **MUST NOT** 要求存在总 `vault` 根目录；旧模型中的 `vault` 在新模型下只是某个 locator base，因此最终目录自然是 `vault/<repo_name>/`。
+    *   系统 **MUST NOT** 要求存在总 `vault` 根目录；旧模型中的 `vault` 在新模型下只是某个 locator base，因此最终目录自然是 `vault/<safe_repo_name>--<repo_id>/`。
     *   Markdown 文件可以直接位于 repo workspace 根目录（如 `a.md`），也可以位于子目录（如 `notes/a.md`）；系统不得要求固定 `notes/` 子目录。
     *   **External Edit**：发生在 Projection Workspace 内但未经 Deve-authorized Write Path 产生的修改；不得直接成为权威状态。
 *   **Projection Locator (投影定位记录)**：host-local runtime state，描述 `RepoId -> Projection Base path` 的绑定。
@@ -151,7 +158,7 @@
 * **Three Stores (三库隔离)**：
     * **Store A (Projection Workspaces)**：一组 repo-scoped 用户工作区 $\{W_{repo}\}$。
         *   $W_{repo} \approx Project(L_{repo})$。允许包含未通过 Reconciliation 进入 Ledger 的脏数据（Dirty State）。
-        *   每个本地可写 repo **MUST** 通过 Projection Locator 绑定到一个 projection base，并派生出独立的 `<projection_base>/<repo_name>/` 物理目录。
+        *   每个本地可写 repo **MUST** 通过 Projection Locator 绑定到一个 projection base，并派生出独立的 `<projection_base>/<safe_repo_name>--<repo_id>/` 物理目录。
     * **Store B (Local Branch)**：本地权威分支 $B_{local}$。
         *   对应 `ledger/local/`，包含多个 `.redb` Repo 文件。
         *   $Write(B_{local})$ 仅允许通过 Command/System 写入。
@@ -163,12 +170,12 @@
         *   代表一个 Writer Identity 作用域；它不是 git-style feature branch。
         *   Local Branch 与 Remote Branch 数据结构同构；写权限由 branch role 决定。
     *   **Repo (仓库)**：逻辑聚合体 $U_{logical}$。
-        *   由 Characteristic Parameter（默认 URL）唯一标识；一个 Logical Repo 可对应多个 Branch 下的 Repo Instances。
+        *   由 `RepoId` 唯一标识；Characteristic Parameter（默认 URL）只作为协作发现、备份 locator 或恢复线索。
         *   Repo 表示逻辑集合，Branch 表示 writer identity 作用域；二者 **MUST NOT** 混用。
     *   **Repo Instance (仓库实例)**：物理存储单元 $U_{physical}$。
-        *   每个实例拥有独立 `InstanceUUID`（存于 file header）。
-        *   物理文件名 **MUST** 采用 `repo_name.redb`；路径为 `ledger/<branch_path>/<repo_name>.redb`。
-        *   同一 Branch 下 `repo_name` **MUST** 唯一；`InstanceUUID` 用于内部检索与去重。
+        *   每个实例拥有独立 `RepoId`（存于 file header / genesis metadata）。
+        *   物理文件名 **MUST** 采用 `<repo_id>.redb`；路径为 `ledger/<branch_path>/<repo_id>.redb`。
+        *   同一 Branch 下 `RepoName` 可以重复；selector by name 不唯一时必须要求显式 `RepoId`。
 
 ## 4. UI Terminology (界面术语)
 

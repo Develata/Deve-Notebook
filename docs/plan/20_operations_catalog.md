@@ -149,6 +149,20 @@ feature flag 名与默认值归各原章节与 `17_tech_stack` feature matrix；
 - 本表 Flow ID 集合与 operation-coverage flow 集合 **MUST** 严格 1:1。
 - 新增 user operation 时：先在本表登记 Flow ID 与九列属性，再在 operations 投影文件补 flow 与原子 op；顺序不得颠倒。
 
-## 8. Related Configuration (本章相关配置)
+## 8. Operational Action Matrix
+
+本节登记 repo rename / projection repair 的运维动作，不新增 operation-flow ID；若这些动作暴露为产品级 UI/CLI flow，必须先在 §3 登记新的 `flow.*` 并同步更新 `docs/features/operation-coverage.md`。
+
+| Action | Owning Boundary | Preconditions | Operator-visible Result |
+|---|---|---|---|
+| repo rename preflight | `04_repository#repo-health-and-repair` | `RepoId` 已解析；`expected_name_epoch` 匹配；目标 `<safe_repo_name>--<repo_id>` 可用；无 pending/staged/dirty/projection fault | 返回 rename plan 或结构化 reject |
+| repo rename realign | `03_storage/projection#projection-locator-contract` | rename fact 已提交；watcher 已停止；`.notegit` identity marker 匹配同一 `RepoId` | workspace root 从旧 segment 移到新 segment，locator/catalog hint 更新 |
+| projection degraded inspect | `22_reliability_observability#observation-to-health-mapping` | repo 处于 `DegradedProjection` 或 `DegradedLocator` | 输出 `repo_id`、当前 `RepoNameBinding`、workspace root、fault kind、可执行 repair action |
+| projection rebuild / rematerialize | `03_storage/projection#projection-contract` | repo 未处于 dirty/staged/pending gate；ledger authority 可读 | 从 ledger 重建 projection/workspace，成功后回到 `Healthy` |
+| failed realign recovery | `04_repository#repo-health-and-repair` | rename fact 已提交但 workspace realign 未完成 | 以 `RepoId` 为锚点重试 realign；不得用旧 repo name 或 URL 重新绑定身份 |
+
+运维输出的所有 repo 字段都必须同时包含 `repo_id` 与当前 `repo_name`；机器可判定字段以 `repo_id` 为准，`repo_name` 只供人工识别。
+
+## 9. Related Configuration (本章相关配置)
 
 - 本章自身无独立配置项；配置入口索引见 §6，权威定义归各原章节。

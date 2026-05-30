@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-28`
+- `Last Review`: `2026-05-30`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / DR playbook index`
 - `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (DR/恢复步骤)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
@@ -46,6 +46,8 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | `flow_id` | string | SHOULD | 对应 `20_operations_catalog` 的 operation-flow（如 `flow.doc.edit-confirmed-op`） |
 | `repo_scope` | string | SHOULD | 当前 repo scope（脱敏后） |
 | `scope_nonce` | int | SHOULD | 当前 `scope_nonce`（写路径事件 MUST） |
+| `repo_id` | string | SHOULD | repo 机器身份；repo 相关 degraded / repair / rename 事件 MUST |
+| `repo_name` | string | SHOULD | 当前 `RepoNameBinding.repo_name`；仅用于人工识别，不得作为机器身份 |
 | `error_code` | string | 条件 | 失败事件 MUST；取值唯一引用 `13_i18n#i18n-error-code-catalog`，本章不定义 |
 | `span_id` / `trace_id` | string | SHOULD | 关联 §4 tracing span |
 
@@ -84,9 +86,41 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 | Structure Facts authority 引用缺失 / cycle / identity mismatch | `DegradedProjection`（是否升级 `Quarantined` 由 04 repair/quarantine gate 决定） |
 | Projection Locator 缺失 / 冲突 | `DegradedLocator` |
 | catalog / name drift / duplicate metadata / blank selector | `DegradedCatalog` |
+| durable projection fault pending（writeback / workspace realign / rebuild interrupted） | `DegradedProjection` 或 `DegradedLocator`，按 fault kind 映射 |
 | 全部校验通过、authority 与 projection 一致 | `Healthy` |
 
 迁移条件（如何从 `Degraded*` 进入 `Repairing` 或 `Quarantined`）不在本章定义，唯一见 `04_repository#repo-health-and-repair` §4.3。
+
+### 6.1 DurableProjectionFault Boundary
+
+`DurableProjectionFault` 是 host-local recovery journal，用于记录“authority 已提交，但 projection/workspace 物理副作用尚未完成或完成状态未知”的可恢复故障。它的目标是让重启后的 repair runtime 能精确知道要重试什么，而不是从路径名、repo name 或 URL 猜测身份。
+
+它 **不是** ledger authority，不能新增、撤销或改写业务事实；所有重放动作都必须先重新验证 `RepoId`、当前 `RepoNameBinding` 与 `.notegit` identity marker。
+
+最小字段：
+
+```text
+DurableProjectionFault = {
+  repo_id,
+  repo_name_at_fault,
+  name_epoch,
+  fault_kind,
+  target_path,
+  source_path?,
+  ledger_seq_or_head,
+  first_seen_at,
+  last_error,
+  retry_count,
+  status,
+}
+```
+
+要求：
+
+- `ProjectionWritebackFailed`、`WorkspaceRealignFailed`、`ProjectionRebuildInterrupted` 这类 ledger-committed 后的物理故障 **SHOULD** 写入 durable fault journal。
+- 已实现 durable fault journal 的运行时，进程启动时必须先加载 durable fault journal，再执行 scan/materialize；两者不一致时以 `RepoId` admission 与 ledger authority 为准，保持 fail-closed。
+- repair 成功后必须把对应 fault 标记为 resolved 或删除；不得仅清内存 degraded gate。
+- 如果当前实现暂未持久化该 journal，启动 scan/materialize 必须能重新发现 drift，并且不得把未知完成状态暴露为 `Healthy`。
 
 ## 7. Alerting Tier {#alerting-tier}
 

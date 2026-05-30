@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-05-30`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -174,6 +174,8 @@ MergeRequested
 
 - merge 只允许发生在同一逻辑 repo 内。
 - cross-repo merge **MUST** fail-closed。
+- merge runtime 只能由本机 local writer 发起；remote mirror / shadow branch 是只读输入，不是并发写者。
+- `MergePeer` 产出的任何写入都必须重新进入本机 repo-scoped writer gate，并作为新的 local ledger facts 提交。
 
 冲突检测原则：
 
@@ -307,6 +309,7 @@ MergeRequested
 
 - `MergePeer` 的最终写入只能进入 Local Branch。
 - Remote mirror 自身不得因 merge 流程被直接改写。
+- merge 不是远端并发编辑协议；它是本机对 remote mirror snapshot 的显式读入、计算与本地提交。
 - merge result 若需要用户选择，结果必须在确认后才允许落 ledger。
 
 ## 6. Failure Modes

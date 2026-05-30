@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-05-30`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/tree/`, `crates/core/src/ledger/manager/structure_projection*.rs`, `apps/cli/src/server/handlers/switcher*.rs`, `apps/web/src/hooks/use_core/callbacks_switch.rs`, `apps/web/src/hooks/use_core/callbacks_switch/`
@@ -26,8 +26,29 @@
 ### 2.1 Repo Identity
 
 - `RepoId` 是仓库权威身份，UUID-first。
-- `RepoName`、`URL`、`Selector` 只允许作为输入别名或恢复线索。
+- `RepoName` 是绑定到 `RepoId` 的可变显示名 / workspace alias，不是身份。
+- `URL`、`Selector` 只允许作为输入别名或恢复线索。
 - 任何进入业务算子的 repo 输入，在执行前 **MUST** 解析为 `RepoId`。
+- 所有 repo instance admission 都必须反向验证 `ledger.repo_id == resolved RepoId`；任何 name/path/url 与 ledger identity 不一致的情况都必须 fail-closed。
+
+`RepoName` 与 `RepoId` 的绑定必须显式建模：
+
+```text
+RepoNameBinding = {
+  repo_id,
+  repo_name,
+  name_epoch,
+  changed_at_seq,
+}
+```
+
+约束：
+
+- `RepoNameBinding.repo_id` 必须等于 repo ledger header / genesis metadata 中的 `RepoId`。
+- `repo_name -> RepoId` 只能是 catalog index，不是 authority。
+- repo rename 必须是显式 authority write：`RenameRepo { repo_id, old_name, new_name, expected_name_epoch }`。
+- `expected_name_epoch` 校验失败表示 stale rename intent，必须 reject，不得以路径名或 URL 重试绑定。
+- repo rename 只改变 `RepoNameBinding` 与由其派生的 display/workspace segment；不得改变 `RepoId`、branch identity、shadow identity 或 remote attribution。
 
 ### 2.2 Branch Identity
 
@@ -74,12 +95,15 @@
 
 逻辑 repo 归类规则：
 
-- `URL / characteristic parameter` 匹配
-  - 视为同一逻辑 repo 协作。
+- `RepoId` 匹配
+  - 视为同一逻辑 repo 的本地 / remote / shadow 实例。
   - runtime 可以显示 shadow branches、remote mirrors、same-logical-repo peers。
-- `URL / characteristic parameter` 不匹配
-  - 视为不同逻辑 repo。
-  - 应进入 multi-root workspace，而不是混入同一 repo 的 branch/scope。
+- `RepoId` 不匹配
+  - 即使 `RepoName` 或 `URL / characteristic parameter` 相同，也必须视为不同 logical repo。
+  - 应进入 multi-root workspace、显式 import 或受控 recovery candidate，而不是混入同一 repo 的 branch/scope。
+- `RepoId` 缺失但 `URL / characteristic parameter` 匹配
+  - 只能作为发现 / 恢复候选，不能直接 admission 为同一 repo。
+  - 必须经过用户确认、ledger header 校验和 `RepoId` 绑定后，才允许进入 writable 或 merge-capable scope。
 - `Peer-only Repo`
   - 若只存在于远端且不匹配当前本地逻辑 repo，必须强制只读。
   - 仅允许 copy / inspect / diff / explicit import，禁止直接写入或错误绑定为 local writable repo。
@@ -88,26 +112,31 @@
 
 ### 3.1 Physical Layout
 
-- `ledger/local/<repo_name>.redb`
-- `ledger/remotes/<peer_name>/<repo_name>.redb`
+- `ledger/local/<repo_id>.redb`
+- `ledger/remotes/<peer_name>/<repo_id>.redb`
 - `ledger/.host/projection-locators.toml`
-- `<projection_base>/<repo_name>/.notegit/`
+- `<projection_base>/<safe_repo_name>--<repo_id>/.notegit/`
 
 `projection_base` 与计算出的 workspace root 由 `03_storage/projection.md#projection-locator-contract` 定义；本章只规定 repo identity 与 locator 绑定边界。
 
+其中 `<safe_repo_name>` 只是由当前 `RepoNameBinding.repo_name` 派生的人类可读路径段；完整 `<repo_id>` 必须参与物理路径命名，保证同名 repo 不发生路径碰撞。
+
 ### 3.2 Collision Rule
 
-- 同一 branch 下，如果 `RepoName` 相同但 `RepoId/URL` 不同，系统 **MUST** 自动分配新的物理文件名。
-- 物理文件名冲突的处理不得改变逻辑 repo identity。
+- 同一 branch 下，`RepoName` 相同但 `RepoId/URL` 不同的实例 **MAY** 共存；它们的物理 repo DB 与 workspace root 必须因完整 `RepoId` 后缀而不同。
+- `RepoName` selector 命中多个 `RepoId` 时必须 fail-closed，并要求用户选择明确 `RepoId`。
+- 物理文件名或 workspace segment 冲突的处理不得改变逻辑 repo identity；如果同一个 `<repo_id>` 同时指向多个不一致文件，必须进入 repair / quarantine。
 
 ### 3.3 Catalog Rule {#repo-catalog-contract}
 
 - local repo catalog 与 remote repo catalog 是 selector / listing / switcher 的输入层，不是业务真值层。
 - catalog 损坏时 **MUST** 进入 repair 或 fail-closed，不得静默把错误 repo 绑定到当前 scope。
-- catalog entry 必须是可读 repo DB 文件，且 repo metadata 的 `RepoId / RepoName / URL` 不得相互漂移或重复。
+- catalog entry 必须是可读 repo DB 文件，且文件名、repo header、repo metadata 中的 `RepoId` 必须一致。
+- catalog 中的 `RepoName` 只缓存当前 `RepoNameBinding`；缓存漂移时只能从 ledger authority 修复，不得反向改写 authority。
 - remote catalog 文件名冲突只能通过安全重命名或受控 repair 处理，不得合并不同 logical identity。
-- local repo catalog 不得承载 projection base 或 workspace root；projection base 必须通过 host-local Projection Locator 解析，workspace root 必须由 base 与当前 repo name 计算。
+- local repo catalog 不得承载 projection base 或 workspace root；projection base 必须通过 host-local Projection Locator 解析，workspace root 必须由 base、当前 safe repo name 与完整 `RepoId` 计算。
 - Projection Locator 的 `repo_name_hint` 只能作为诊断信息；不得替代 `RepoId` 绑定。
+- workspace admission 必须读取 `.notegit` identity marker 并验证其 `repo_id == resolved RepoId`；路径名匹配但 marker 缺失或不一致时不得进入 mounted write path。
 
 ### 3.4 Tree State Storage Model
 
@@ -151,7 +180,7 @@ Unresolved
 
 - `ResolvingSelector` 必须先完成 selector -> `RepoId` 解析。
 - `OpeningInstance` 必须验证 runtime tables、catalog、projection 依赖。
-- `ProjectionLocated` 必须完成 `RepoId -> projection_base -> <projection_base>/<repo_name>/` 解析、canonicalize 与冲突检查。
+- `ProjectionLocated` 必须完成 `RepoId -> projection_base -> <projection_base>/<safe_repo_name>--<repo_id>/` 解析、canonicalize、`.notegit` identity 校验与冲突检查。
 - `DegradedLocator` 禁止 watcher、scan、stage、commit、projection writeback。
 - `Repairing` 期间禁止把该 repo 作为默认可写 scope 暴露给 UI。
 
@@ -290,9 +319,9 @@ ReadonlyDegraded
 
 ### 7.2 Catalog Repair {#repo-catalog-repair-contract}
 
-- local / remote repo catalog repair 只能修复 catalog、name drift、blank selector、duplicate metadata。
+- local / remote repo catalog repair 只能修复 catalog、name hint drift、blank selector、duplicate metadata。
 - repair 不得修改 ledger authority 本身。
-- repair 可以补全缺失 URL、重写漂移的显示名、分配安全物理文件名；但如果会合并两个 logical repo，必须 fail-closed。
+- repair 可以补全缺失 URL、把 catalog display hint 纠正为 ledger 中的当前 `RepoNameBinding`、分配安全物理文件名；但如果会合并两个 logical repo，必须 fail-closed。
 - repair 后仍无法形成唯一 `RepoId / URL / filename` 映射时，repo 必须保持 degraded 或 quarantined。
 
 ### 7.3 Projection Repair
@@ -308,16 +337,24 @@ ReadonlyDegraded
 - locator repair 不得修改 repo ledger facts、repo URL、repo display name 或 shadow branch identity。
 - projection base 变更后，系统 **MUST** 先停止该 repo watcher，再执行 locator 更新、projection materialize / rebuild、watcher restart。
 - projection base 变更不需要移动旧 workspace；旧目录只能作为外部数据源，经显式 import / repair 流程进入 pending 或 rebuild。
-- repo rename / display name repair 不改变 projection base；但 workspace root 必须从 `<base>/<old_repo_name>/` realign / move 到 `<base>/<new_repo_name>/`。目标已存在、跨设备 move 不可安全完成或目录冲突时必须 fail-closed。
+- repo rename / display name repair 不改变 projection base；但 workspace root 必须从 `<base>/<old_safe_repo_name>--<repo_id>/` realign / move 到 `<base>/<new_safe_repo_name>--<repo_id>/`。目标已存在、跨设备 move 不可安全完成、`.notegit` identity 不一致或目录冲突时必须 fail-closed。
 - workspace root realign 前若存在 pending/staged/dirty workspace 或 projection fault，rename / display name repair **MUST** 先 fail-closed，并要求用户完成 commit、discard、repair 或显式 import。
 - locator 缺失或冲突必须保持 `DegradedLocator`，直到用户显式提供可用 base 且计算出的 workspace root 可用。
 
-### 7.5 Catalog Conflict Repair
+### 7.5 Repo Rename Contract
 
-- 同名 repo 文件但不同 logical identity 时，只允许修复 catalog/name drift，不得合并 authority。
+- repo rename 是本地可写 repo 的 authority operation，必须通过 writer gate 与 `RepoId` admission。
+- rename intent 必须携带 `repo_id`、`old_name`、`new_name` 与 `expected_name_epoch`。
+- ledger append 前必须完成：selector -> `RepoId`、当前 `RepoNameBinding` 校验、safe name 规范化、目标 workspace root 预检、dirty/staged/pending/projection fault gate。
+- ledger append 后，workspace realign、locator hint 更新、catalog hint 更新必须以同一个 `RepoId` 为锚点执行。
+- 如果 ledger 已提交但 workspace realign 失败，该 repo 必须进入 `DegradedLocator` 或 `DegradedProjection`，并通过 repair runtime 暴露可恢复动作；不得把 rename 回滚为基于旧路径名的隐式绑定。
+
+### 7.6 Catalog Conflict Repair
+
+- 同名 display repo 但不同 logical identity 时，只允许修复 catalog/name hint drift，不得合并 authority。
 - remote repo selector 若只能唯一解析到一个健康 remote repo，可做受控 fallback；一旦出现歧义，必须 fail-closed。
 
-### 7.6 Startup Scan Contract
+### 7.7 Startup Scan Contract
 
 - startup materialize 遇到坏 repo 时，不得拖垮整个服务。
 - 坏 repo 必须显式标记 degraded/quarantined。
@@ -331,7 +368,7 @@ ReadonlyDegraded
 - 让 metadata/path table 成为 rename/move/delete 的主写路径。
 - 让 UI 直接根据名字推断 repo identity。
 - 把 remote readonly repo 误暴露为可写 source。
-- 让 repo name、URL、全局 vault root 或 `ledger_dir` 推断 projection base；repo name 只能参与由 locator base 派生 workspace root。
+- 让 repo name、URL、全局 vault root 或 `ledger_dir` 推断 projection base；repo name 只能作为 `RepoNameBinding` 的显示属性参与 `<safe_repo_name>--<repo_id>` workspace segment 派生。
 
 ## 9. Runtime Boundary
 
