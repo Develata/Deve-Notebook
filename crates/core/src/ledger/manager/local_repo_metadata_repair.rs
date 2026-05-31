@@ -163,26 +163,26 @@ pub(crate) fn repair_local_repo_metadata(
             );
             info.url = Some(format!("urn:uuid:{}", info.uuid));
         }
+        let workspace_repair = if allow_workspace_root_rewrite {
+            prepare_workspace_root_repair(ledger_dir, info.uuid, &previous_name, &info.name)?
+        } else {
+            None
+        };
+        if let Some(plan) = workspace_repair.as_ref() {
+            let manager = repair_manager.ok_or_else(|| {
+                anyhow!(
+                    "Workspace root realign for {} refused: repair preflight manager missing",
+                    stem
+                )
+            })?;
+            preflight_workspace_root_repair(manager, plan)?;
+        }
         if info != original {
-            let workspace_repair = if allow_workspace_root_rewrite {
-                prepare_workspace_root_repair(ledger_dir, info.uuid, &previous_name, &stem)?
-            } else {
-                None
-            };
-            if let Some(plan) = workspace_repair.as_ref() {
-                let manager = repair_manager.ok_or_else(|| {
-                    anyhow!(
-                        "Workspace root realign for {} refused: repair preflight manager missing",
-                        stem
-                    )
-                })?;
-                preflight_workspace_root_repair(manager, plan)?;
-            }
             RepoManager::write_repo_info_to_db(db, &info)?;
-            if let Some(plan) = workspace_repair {
-                repair_workspace_root(plan)?;
-            }
             tracing::warn!("Repaired local repo metadata: {} -> {}", stem, info.uuid);
+        }
+        if let Some(plan) = workspace_repair {
+            repair_workspace_root(plan)?;
         }
     }
     Ok(())

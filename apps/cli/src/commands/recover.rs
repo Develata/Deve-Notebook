@@ -25,6 +25,8 @@ pub fn run(ledger_dir: &PathBuf, repo_name: Option<String>, snapshot_depth: usiz
     let mut skipped = 0u32;
 
     for rn in &repo_names {
+        let workspace_root = repo.ensure_local_repo_workspace_identity(rn)?;
+        deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
         let docs = repo.run_on_local_repo(rn, metadata::list_docs)?;
 
         for (doc_id, path) in docs {
@@ -90,9 +92,23 @@ mod tests {
 
         run(&ledger_dir, Some("default".into()), 8).expect("recover");
 
+        let workspace_path = repo
+            .local_repo_workspace_path("default", "notes/recovered.md")
+            .expect("workspace path");
+        let repo_id = repo
+            .get_repo_info()
+            .expect("repo info")
+            .expect("repo present")
+            .uuid;
+        deve_core::utils::notegit::validate_repo_identity_marker(
+            &repo
+                .local_repo_workspace_root("default")
+                .expect("workspace root"),
+            repo_id,
+        )
+        .expect("identity marker");
         assert_eq!(
-            std::fs::read_to_string(projection_base.join("default/notes/recovered.md"))
-                .expect("recovered file"),
+            std::fs::read_to_string(workspace_path).expect("recovered file"),
             "recovered from ledger"
         );
     }

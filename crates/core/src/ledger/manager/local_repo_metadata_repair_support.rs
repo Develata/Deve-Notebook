@@ -69,7 +69,7 @@ pub(super) fn prepare_workspace_root_repair(
     previous_name: &str,
     current_name: &str,
 ) -> Result<Option<WorkspaceRootRepairPlan>> {
-    if previous_name == current_name || previous_name.trim().is_empty() {
+    if previous_name.trim().is_empty() {
         return Ok(None);
     }
     let locator_path =
@@ -82,10 +82,6 @@ pub(super) fn prepare_workspace_root_repair(
     let Some(locator) = locator else {
         return Ok(None);
     };
-    let previous_name =
-        crate::ledger::manager::projection_locator::safe_repo_path_segment(previous_name)?;
-    let current_name =
-        crate::ledger::manager::projection_locator::safe_repo_path_segment(current_name)?;
     if !locator.projection_base_abs.is_absolute() {
         return Err(anyhow!(
             "Broken local repo {} while repairing local catalog: Projection Locator base must be absolute",
@@ -98,32 +94,66 @@ pub(super) fn prepare_workspace_root_repair(
             locator.projection_base_abs
         )
     })?;
-    let old_root = projection_base_abs.join(&previous_name);
-    let new_root = projection_base_abs.join(&current_name);
-    let old_exists = old_root.try_exists().with_context(|| {
-        format!(
-            "Failed to stat previous workspace root while repairing local catalog: {old_root:?}"
-        )
-    })?;
-    let new_exists = new_root.try_exists().with_context(|| {
-        format!("Failed to stat current workspace root while repairing local catalog: {new_root:?}")
-    })?;
-    if old_exists && new_exists {
+    let previous_segment =
+        crate::ledger::manager::projection_locator::repo_workspace_segment(previous_name, repo_id)?;
+    let current_segment =
+        crate::ledger::manager::projection_locator::repo_workspace_segment(current_name, repo_id)?;
+    let previous_legacy_segment =
+        crate::ledger::manager::projection_locator::safe_repo_path_segment(previous_name)?;
+    let current_legacy_segment =
+        crate::ledger::manager::projection_locator::safe_repo_path_segment(current_name)?;
+
+    let new_root = projection_base_abs.join(&current_segment);
+    let mut source_candidates = Vec::new();
+    if previous_name != current_name {
+        source_candidates.push(projection_base_abs.join(&previous_segment));
+        source_candidates.push(projection_base_abs.join(&previous_legacy_segment));
+    }
+    source_candidates.push(projection_base_abs.join(&current_legacy_segment));
+    source_candidates.sort();
+    source_candidates.dedup();
+
+    let new_exists = path_exists(&new_root, "current workspace root")?;
+    let existing_sources = source_candidates
+        .into_iter()
+        .filter(|path| path != &new_root)
+        .map(|path| {
+            path_exists(&path, "previous workspace root").map(|exists| exists.then_some(path))
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
+    if new_exists && !existing_sources.is_empty() {
         return Err(anyhow!(
             "Broken local repo {} while repairing local catalog: current workspace root {:?} already exists",
             current_name,
             new_root
         ));
     }
-    if !old_exists {
+    if new_exists || existing_sources.is_empty() {
         return Ok(None);
     }
+    if existing_sources.len() > 1 {
+        return Err(anyhow!(
+            "Broken local repo {} while repairing local catalog: multiple candidate workspace roots exist: {:?}",
+            current_name,
+            existing_sources
+        ));
+    }
+    let old_root = existing_sources.into_iter().next().expect("checked len");
     Ok(Some(WorkspaceRootRepairPlan {
         repo_id,
-        current_name,
+        current_name: current_name.to_string(),
         old_root,
         new_root,
     }))
+}
+
+fn path_exists(path: &Path, label: &str) -> Result<bool> {
+    path.try_exists()
+        .with_context(|| format!("Failed to stat {label} while repairing local catalog: {path:?}"))
 }
 
 pub(super) fn preflight_workspace_root_repair(
@@ -201,6 +231,11 @@ pub(super) fn repair_workspace_root(plan: WorkspaceRootRepairPlan) -> Result<()>
             plan.old_root, plan.new_root
         )
     })?;
+    crate::utils::notegit::ensure_repo_identity_marker(
+        &plan.new_root,
+        plan.repo_id,
+        &plan.current_name,
+    )?;
     tracing::warn!(
         "Realigned local workspace root: {} -> {}",
         previous_name,

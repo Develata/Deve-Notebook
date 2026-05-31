@@ -29,10 +29,12 @@ fn fixture_seeds_divergent_local_and_remote_content() -> anyhow::Result<()> {
     let docs = repo.list_local_docs(Some("default"))?;
     let (doc_id, path) = docs.first().expect("seeded doc");
     assert_eq!(path, "notes/conflict.md");
-    assert_eq!(
-        std::fs::read_to_string(projection_base.join("default/notes/conflict.md"))?,
-        "local"
-    );
+    deve_core::utils::notegit::validate_repo_identity_marker(
+        &repo.local_repo_workspace_root("default")?,
+        info.uuid,
+    )?;
+    let workspace_path = repo.local_repo_workspace_path("default", path)?;
+    assert_eq!(std::fs::read_to_string(workspace_path)?, "local");
     assert_eq!(
         repo.list_docs(&RepoType::Remote(PeerId::new("peer-a"), info.uuid))?,
         vec![(*doc_id, "notes/conflict.md".to_string())]

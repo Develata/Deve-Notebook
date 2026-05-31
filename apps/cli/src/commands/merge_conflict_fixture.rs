@@ -58,6 +58,8 @@ pub fn run(
         &options.base,
         &options.remote,
     )?;
+    let workspace_root = repo.ensure_local_repo_workspace_identity(&repo_name)?;
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
     let target = repo.local_repo_workspace_path(&repo_name, &options.path)?;
     if let Some(parent) = target.parent() {
         std::fs::create_dir_all(parent)?;

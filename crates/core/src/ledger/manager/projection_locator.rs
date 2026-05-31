@@ -55,7 +55,7 @@ impl RepoManager {
     /// 为所有当前本地 repo 设置同一个 Projection Locator base。
     ///
     /// Invariants:
-    /// - 参数是 projection base；最终 workspace root 仍为 `<base>/<repo_name>/`。
+    /// - 参数是 projection base；最终 workspace root 为 `<base>/<safe_repo_name>--<repo_id>/`。
     /// - 批量更新必须按最终 locator map 校验并一次写入，不能暴露或误判中间混合态。
     /// - 生产入口应优先通过 `set_projection_base_for_local_repo` 明确绑定目标 repo。
     pub fn set_projection_base_for_all_local_repos_checked(
@@ -180,14 +180,17 @@ impl RepoManager {
     pub fn check_projection_locator_for_local_repo(&self, repo_name: &str) -> Result<PathBuf> {
         let info = self.local_repo_info_for_locator(repo_name)?;
         let locator = self.validated_projection_locator_for_repo_id(info.uuid)?;
-        let safe_name = safe_repo_path_segment(&info.name)?;
-        let workspace_root = locator.projection_base_abs.join(safe_name);
-        std::fs::canonicalize(&workspace_root).with_context(|| {
+        let workspace_root = locator
+            .projection_base_abs
+            .join(repo_workspace_segment(&info.name, info.uuid)?);
+        let workspace_root = std::fs::canonicalize(&workspace_root).with_context(|| {
             format!(
                 "Failed to canonicalize Projection workspace root for local repo {}: {:?}",
                 info.name, workspace_root
             )
-        })
+        })?;
+        notegit::validate_repo_identity_marker(&workspace_root, info.uuid)?;
+        Ok(workspace_root)
     }
 
     fn local_repo_info_for_locator(&self, repo_name: &str) -> Result<RepoInfo> {
@@ -299,6 +302,14 @@ pub(crate) fn safe_repo_path_segment(repo_name: &str) -> Result<String> {
     Ok(segment.to_string())
 }
 
+pub(crate) fn repo_workspace_segment(repo_name: &str, repo_id: RepoId) -> Result<String> {
+    Ok(format!(
+        "{}--{}",
+        safe_repo_path_segment(repo_name)?,
+        repo_id
+    ))
+}
+
 fn is_windows_reserved_device_name(segment: &str) -> bool {
     let stem = segment
         .split_once('.')
@@ -376,8 +387,8 @@ fn validate_projection_locator_records(
                     repo_name, record.projection_base_abs
                 )
             })?;
-        let safe_name = safe_repo_path_segment(&info.name)?;
-        let root = projection_base_abs.join(&safe_name);
+        let workspace_segment = repo_workspace_segment(&info.name, info.uuid)?;
+        let root = projection_base_abs.join(&workspace_segment);
         if root.starts_with(&ledger_dir) {
             return Err(anyhow!(
                 "Projection workspace for {} must not be inside ledger_dir: {:?}",
@@ -398,7 +409,7 @@ fn validate_projection_locator_records(
         roots.push((
             info.uuid,
             root,
-            normalized_workspace_key(&projection_base_abs, &safe_name),
+            normalized_workspace_key(&projection_base_abs, &workspace_segment),
         ));
     }
 
@@ -426,8 +437,8 @@ fn validate_projection_locator_records(
     Ok(())
 }
 
-fn normalized_workspace_key(base: &Path, repo_name: &str) -> String {
-    crate::utils::path::path_to_forward_slash(&base.join(repo_name))
+fn normalized_workspace_key(base: &Path, workspace_segment: &str) -> String {
+    crate::utils::path::path_to_forward_slash(&base.join(workspace_segment))
         .nfc()
         .collect::<String>()
         .to_ascii_lowercase()

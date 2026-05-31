@@ -14,18 +14,19 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_root = projection_base.join("default");
+    let repo_root;
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        repo_root = repo.local_repo_workspace_root("default")?;
         init_git_repo(&repo_root);
-        commit_deve_file(&projection_base, &repo, "note.md", "hello\n")?;
+        commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
         git_cmd(&repo_root, &["commit", "--no-gpg-sign", "-m", "baseline"]);
     }
 
-    write_workspace_file(&projection_base, "note.md", "hello import\n");
-    write_workspace_file(&projection_base, "new.md", "new file\n");
+    write_workspace_file(&repo_root, "note.md", "hello import\n");
+    write_workspace_file(&repo_root, "new.md", "new file\n");
 
     git::import(&ledger_dir, Some("default"), false, 10)?;
     {
@@ -60,18 +61,19 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_root = projection_base.join("default");
+    let repo_root;
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        repo_root = repo.local_repo_workspace_root("default")?;
         init_git_repo(&repo_root);
-        commit_deve_file(&projection_base, &repo, "note.md", "hello\n")?;
+        commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
         git_cmd(&repo_root, &["commit", "--no-gpg-sign", "-m", "baseline"]);
     }
 
-    write_workspace_file(&projection_base, "note.md", "hello import\n");
-    write_workspace_file(&projection_base, "new.md", "new file\n");
+    write_workspace_file(&repo_root, "note.md", "hello import\n");
+    write_workspace_file(&repo_root, "new.md", "new file\n");
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
@@ -108,7 +110,12 @@ fn git_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_root = projection_base.join("default");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+    let repo_root = {
+        let mut repo = repo;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        repo.local_repo_workspace_root("default")?
+    };
     prepare_exported_baseline(&ledger_dir, &projection_base, &repo_root)?;
     let imported_commit_id =
         resolve_imported_change_to_queued_commit(&ledger_dir, &projection_base)?;
@@ -128,7 +135,12 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
     let projection_base = dir.path().join("notes");
-    let repo_root = projection_base.join("default");
+    let repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+    let repo_root = {
+        let mut repo = repo;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        repo.local_repo_workspace_root("default")?
+    };
     prepare_exported_baseline(&ledger_dir, &projection_base, &repo_root)?;
     let remote = dir.path().join("remote.git");
     init_bare_remote(&remote);
@@ -165,7 +177,7 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
         &imported_commit_id,
     )?;
 
-    write_workspace_file(&projection_base, "dirty.md", "dirty\n");
+    write_workspace_file(&repo_root, "dirty.md", "dirty\n");
     git::push(
         &ledger_dir,
         Some("default"),

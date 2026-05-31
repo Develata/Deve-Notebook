@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::{build_state, write_workspace_file};
+use super::support::{build_state, default_workspace_root, write_workspace_file};
 use crate::server::{
     channel::DualChannel, handlers::source_control::handle_get_doc_diff, session::WsSession,
 };
@@ -37,7 +37,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
         .get_docid("notes/a.md")?
         .expect("existing doc id");
 
-    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(default_workspace_root(&dir).join("notes/a.md"))?;
     write_workspace_file(&dir, "notes/b.md", "hello renamed");
     state
         .repo

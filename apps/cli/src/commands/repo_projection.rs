@@ -63,7 +63,18 @@ mod tests {
         let config = std::fs::read_to_string(root.join("config.toml"))?;
         assert!(!config.contains("vault_path"));
         assert!(root.join("ledger/.host/projection-locators.toml").is_file());
-        assert!(notes.join("default/.notegit").is_dir());
+        let mut workspaces = std::fs::read_dir(&notes)?
+            .map(|entry| entry.map(|entry| entry.path()))
+            .collect::<Result<Vec<_>, _>>()?;
+        workspaces.sort();
+        assert_eq!(workspaces.len(), 1);
+        assert!(
+            workspaces[0]
+                .file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("default--"))
+        );
+        assert!(workspaces[0].join(".notegit").is_dir());
         Ok(())
     }
 
@@ -81,12 +92,16 @@ mod tests {
         check(&ledger, "default", 8)?;
 
         let reopened = RepoManager::init(&ledger, 8, None, None)?;
+        let workspace = reopened.local_repo_workspace_root("default")?;
         assert_eq!(
-            reopened.local_repo_workspace_root("default")?,
-            std::fs::canonicalize(&second)?.join("default")
+            workspace,
+            std::fs::canonicalize(&second)?.join(format!(
+                "default--{}",
+                reopened.get_repo_info()?.expect("default repo").uuid
+            ))
         );
-        assert!(second.join("default/.notegit").is_dir());
-        assert!(second.join("default/.gitignore").is_file());
+        assert!(workspace.join(".notegit").is_dir());
+        assert!(workspace.join(".gitignore").is_file());
         Ok(())
     }
 

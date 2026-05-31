@@ -23,7 +23,12 @@ fn set_projection_base_for_all_local_repos_checked_restores_previous_root_when_c
     repo.set_projection_base_for_all_local_repos_checked(&first_projection_base)?;
     assert_eq!(
         repo.local_repo_workspace_root("default")?,
-        std::fs::canonicalize(&first_projection_base)?.join("default")
+        std::fs::canonicalize(&first_projection_base)?.join(
+            crate::ledger::manager::projection_locator::repo_workspace_segment(
+                "default",
+                repo.get_repo_info()?.expect("default repo").uuid,
+            )?
+        )
     );
 
     std::fs::remove_dir_all(ledger.join("local"))?;

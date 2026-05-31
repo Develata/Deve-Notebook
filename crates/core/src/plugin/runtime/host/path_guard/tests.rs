@@ -109,32 +109,21 @@ fn custom_projection_workspace_paths_are_protected_plugin_targets() -> anyhow::R
     let repo =
         crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
     repo.set_projection_base_for_local_repo("default", &projection_base)?;
-    std::fs::create_dir_all(projection_base.join("default/notes"))?;
-    std::fs::create_dir_all(projection_base.join("default/.notegit"))?;
-    std::fs::create_dir_all(projection_base.join("default/.git/objects"))?;
-    std::fs::write(projection_base.join("default/notes/a.md"), "note")?;
-    std::fs::write(
-        projection_base.join("default/.notegit/runtime.bin"),
-        "runtime",
-    )?;
-    std::fs::write(projection_base.join("default/.git/objects/x"), "git")?;
+    let workspace = repo.local_repo_workspace_root("default")?;
+    std::fs::create_dir_all(workspace.join("notes"))?;
+    std::fs::create_dir_all(workspace.join(".notegit"))?;
+    std::fs::create_dir_all(workspace.join(".git/objects"))?;
+    std::fs::write(workspace.join("notes/a.md"), "note")?;
+    std::fs::write(workspace.join(".notegit/runtime.bin"), "runtime")?;
+    std::fs::write(workspace.join(".git/objects/x"), "git")?;
 
+    assert!(is_managed_for(&repo, &workspace.join("notes/a.md"))?);
     assert!(is_managed_for(
         &repo,
-        &projection_base.join("default/notes/a.md")
+        &workspace.join(".notegit/runtime.bin")
     )?);
-    assert!(is_managed_for(
-        &repo,
-        &projection_base.join("default/.notegit/runtime.bin")
-    )?);
-    assert!(is_managed_for(
-        &repo,
-        &projection_base.join("default/.git/objects/x")
-    )?);
-    assert!(!is_managed_for(
-        &repo,
-        &projection_base.join("default/.gitignore")
-    )?);
+    assert!(is_managed_for(&repo, &workspace.join(".git/objects/x"))?);
+    assert!(!is_managed_for(&repo, &workspace.join(".gitignore"))?);
     Ok(())
 }
 
@@ -147,7 +136,7 @@ fn projection_base_sibling_markdown_is_not_a_plugin_managed_target() -> anyhow::
     let repo =
         crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
     repo.set_projection_base_for_local_repo("default", &projection_base)?;
-    std::fs::create_dir_all(projection_base.join("default"))?;
+    std::fs::create_dir_all(repo.local_repo_workspace_root("default")?)?;
     std::fs::write(projection_base.join("a.md"), "sibling")?;
 
     assert!(!is_managed_for(&repo, &projection_base.join("a.md"))?);
@@ -163,12 +152,13 @@ fn custom_projection_workspace_note_target_resolves_repo_scope() -> anyhow::Resu
     let repo =
         crate::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), Some("urn:default"))?;
     repo.set_projection_base_for_local_repo("default", &projection_base)?;
-    std::fs::create_dir_all(projection_base.join("default/notes"))?;
-    std::fs::write(projection_base.join("default/notes/a.md"), "note")?;
+    let workspace = repo.local_repo_workspace_root("default")?;
+    std::fs::create_dir_all(workspace.join("notes"))?;
+    std::fs::write(workspace.join("notes/a.md"), "note")?;
     std::fs::write(projection_base.join("a.md"), "sibling")?;
 
     assert_eq!(
-        note_target_parts_for(&repo, &projection_base.join("default/notes/a.md"))?,
+        note_target_parts_for(&repo, &workspace.join("notes/a.md"))?,
         Some(("default".into(), "notes/a.md".into()))
     );
     assert_eq!(

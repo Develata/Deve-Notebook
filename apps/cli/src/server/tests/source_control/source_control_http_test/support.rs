@@ -51,11 +51,32 @@ pub(super) fn path_target(path: &str) -> ScPathTarget {
 }
 
 pub(super) fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("notes").join("default").join(path);
+    let abs = default_workspace_root(dir).join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
     std::fs::write(abs, content).expect("write workspace file");
+}
+
+pub(super) fn default_workspace_root(dir: &TempDir) -> std::path::PathBuf {
+    workspace_root(dir, "default")
+}
+
+fn workspace_root(dir: &TempDir, repo_name: &str) -> std::path::PathBuf {
+    let base = dir.path().join("notes");
+    let content = std::fs::read_to_string(dir.path().join("ledger/.host/projection-locators.toml"))
+        .expect("projection locator file");
+    let value: toml::Value = toml::from_str(&content).expect("projection locator toml");
+    let locator = value["locators"]
+        .as_array()
+        .expect("projection locators")
+        .iter()
+        .find(|locator| locator["repo_name_hint"].as_str() == Some(repo_name))
+        .expect("repo locator");
+    base.join(format!(
+        "{repo_name}--{}",
+        locator["repo_id"].as_str().expect("repo id")
+    ))
 }
 
 fn seed_pending_entry(repo: &RepoManager, entry: PendingFsEntry) {

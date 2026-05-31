@@ -13,7 +13,7 @@
 //! ```text
 //! {ledger_dir}/
 //! ├── local/              # 本地权威库 (Store B)
-//! │   └── repo_name_1.redb
+//! │   └── repo_name_1.redb   # legacy: DB stem still follows local execution stem
 //! │   └── repo_name_3.redb
 //! │   └── repo_name_4.redb
 //! └── remotes/            # 影子库目录 (Store C)

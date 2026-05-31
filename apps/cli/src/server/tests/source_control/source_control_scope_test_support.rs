@@ -64,11 +64,25 @@ pub(super) fn seed_pending(repo: &RepoManager, repo_name: &str, path: &str, cont
 }
 
 pub(super) fn write_workspace_file(dir: &TempDir, repo_name: &str, path: &str, content: &str) {
-    let abs = dir.path().join("notes").join(repo_name).join(path);
+    let abs = workspace_root(dir, repo_name).join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
     std::fs::write(abs, content).expect("write workspace file");
+}
+
+fn workspace_root(dir: &TempDir, repo_name: &str) -> std::path::PathBuf {
+    let base = dir.path().join("notes");
+    let locator_path = dir.path().join("ledger/.host/projection-locators.toml");
+    let content = std::fs::read_to_string(&locator_path).expect("projection locator file");
+    let value: toml::Value = toml::from_str(&content).expect("projection locator toml");
+    let locators = value["locators"].as_array().expect("projection locators");
+    let locator = locators
+        .iter()
+        .find(|locator| locator["repo_name_hint"].as_str() == Some(repo_name))
+        .expect("repo locator");
+    let repo_id = locator["repo_id"].as_str().expect("repo id");
+    base.join(format!("{repo_name}--{repo_id}"))
 }
 
 pub(super) async fn recv_history(

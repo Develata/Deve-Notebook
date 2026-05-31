@@ -27,7 +27,7 @@ pub(super) fn rebuild_local_repo(
 ) -> Result<()> {
     let root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&root)?;
-    std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
+    repo.ensure_local_repo_workspace_identity(repo_name)?;
     crate::utils::notegit::ensure_gitignore_ignores_notegit(&root)?;
     let plan = projection_plan::build(repo, repo_name)?;
     rebuild_projection_state::rebuild_local_projection_state(repo, repo_name)?;

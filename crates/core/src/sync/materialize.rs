@@ -33,7 +33,7 @@ pub(super) fn prepare_local_workspaces(
     Ok(skipped)
 }
 
-/// 将指定本地 repo 的文档视图投影到 `<projection_base>/<repo_name>/`。
+/// 将指定本地 repo 的文档视图投影到 `<projection_base>/<safe_repo_name>--<repo_id>/`。
 ///
 /// Invariants:
 /// - 仅补齐缺失文件；已有工作区绝不覆盖用户文件。
@@ -45,7 +45,7 @@ pub(super) fn materialize_local_repo(
 ) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
-    std::fs::create_dir_all(repo.local_repo_notegit_root(repo_name)?)?;
+    repo.ensure_local_repo_workspace_identity(repo_name)?;
     crate::utils::notegit::ensure_gitignore_ignores_notegit(&repo_root)?;
     let plan = projection_plan::build(repo, repo_name)?;
     for dir in plan.dirs {

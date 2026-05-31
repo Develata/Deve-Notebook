@@ -2,7 +2,8 @@
 //!   - 05_diff_logic#source-control-runtime
 
 use super::support::{
-    ProxyHarness, path_target, seed_pending, seed_tracked_rename, write_workspace_file,
+    ProxyHarness, default_workspace_root, path_target, seed_pending, seed_tracked_rename,
+    write_workspace_file,
 };
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
@@ -44,7 +45,7 @@ async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Resu
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "hello");
-    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(default_workspace_root(dir).join("notes/a.md"))?;
     seed_tracked_rename(&repo, doc_id, "notes/a.md", "notes/b.md", "hello");
 
     let pending = proxy.list_pending_fs_in_repo(&selector)?;
@@ -77,7 +78,7 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "world");
-    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(default_workspace_root(dir).join("notes/a.md"))?;
     seed_tracked_rename(&repo, doc_id, "notes/a.md", "notes/b.md", "world");
 
     let response = harness

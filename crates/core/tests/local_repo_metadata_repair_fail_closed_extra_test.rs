@@ -11,6 +11,10 @@ use tempfile::TempDir;
 
 mod common;
 
+fn workspace_segment(name: &str, repo_id: uuid::Uuid) -> String {
+    format!("{name}--{repo_id}")
+}
+
 fn prepare_workspace_realign_case() -> anyhow::Result<(TempDir, RepoManager, RepoInfo)> {
     let dir = TempDir::new()?;
     let ledger_dir = dir.path().join("ledger");
@@ -167,13 +171,13 @@ fn repair_local_repo_catalog_blocks_workspace_realign_with_active_watcher() -> a
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let projection_base = dir.path().join("notes");
     main.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-    std::fs::create_dir_all(projection_base.join("wiki"))?;
+    std::fs::create_dir_all(projection_base.join(workspace_segment("wiki", wiki_info.uuid)))?;
 
     let repo = Arc::new(main);
     let sync = Arc::new(SyncManager::new_checked(repo.clone())?);
     let watcher_id = watcher::start_repo_watcher(sync, "wiki", None, None)?;
     let _stop = StopWatcher(watcher_id);
-    std::fs::remove_dir_all(projection_base.join("wiki"))?;
+    std::fs::remove_dir_all(projection_base.join(workspace_segment("wiki", wiki_info.uuid)))?;
     std::fs::create_dir_all(projection_base.join("notes"))?;
     let wiki_db = wiki_db(repo.as_ref())?;
     common::write_repo_metadata(
@@ -202,8 +206,9 @@ fn repair_local_repo_catalog_fails_closed_on_workspace_root_conflict() {
     let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let projection_base = dir.path().join("projection-base");
-    std::fs::create_dir_all(projection_base.join("wiki")).expect("old root");
-    std::fs::create_dir_all(projection_base.join("notes")).expect("new root");
+    std::fs::create_dir_all(projection_base.join("notes")).expect("old root");
+    std::fs::create_dir_all(projection_base.join(workspace_segment("wiki", wiki_info.uuid)))
+        .expect("new root");
     main.set_projection_base_for_all_local_repos_checked(&projection_base)
         .expect("mount projection base");
 

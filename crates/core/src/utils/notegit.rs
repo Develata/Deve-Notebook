@@ -1,15 +1,31 @@
 //! plan_ref:
 //!   - 03_storage/index#repo-runtime-layout
 
+use crate::models::RepoId;
+use anyhow::{Context, Result, anyhow};
+use serde::{Deserialize, Serialize};
 use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 
 pub const NOTE_GIT_DIR: &str = ".notegit";
 pub const GIT_DIR: &str = ".git";
 pub const NOTE_GIT_IGNORE_PATTERN: &str = ".notegit/";
+const IDENTITY_FILE: &str = "identity.toml";
+const IDENTITY_VERSION: u32 = 1;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct RepoIdentityMarker {
+    version: u32,
+    repo_id: RepoId,
+    repo_name: String,
+}
 
 pub fn repo_dir(repo_root: &Path) -> PathBuf {
     repo_root.join(NOTE_GIT_DIR)
+}
+
+pub fn repo_identity_path(repo_root: &Path) -> PathBuf {
+    repo_dir(repo_root).join(IDENTITY_FILE)
 }
 
 pub fn is_internal_repo_path(path: &str) -> bool {
@@ -24,6 +40,132 @@ pub fn is_internal_repo_segment(segment: &str) -> bool {
 
 pub fn repo_keys_dir(repo_root: &Path) -> PathBuf {
     repo_dir(repo_root).join("keys")
+}
+
+pub fn ensure_repo_identity_marker(
+    repo_root: &Path,
+    repo_id: RepoId,
+    repo_name: &str,
+) -> Result<()> {
+    let path = repo_identity_path(repo_root);
+    if let Some(marker) = read_repo_identity_marker(&path)? {
+        validate_repo_identity(repo_root, &marker, repo_id)?;
+        if marker.repo_name == repo_name {
+            return Ok(());
+        }
+    } else if workspace_has_external_content(repo_root)? {
+        return Err(anyhow!(
+            "Projection workspace {:?} is missing .notegit identity marker for repo {} and already contains non-internal content",
+            repo_root,
+            repo_id
+        ));
+    }
+    write_repo_identity_marker(repo_root, repo_id, repo_name)
+}
+
+pub fn validate_repo_identity_marker(repo_root: &Path, repo_id: RepoId) -> Result<()> {
+    let path = repo_identity_path(repo_root);
+    let marker = read_repo_identity_marker(&path)?.ok_or_else(|| {
+        anyhow!(
+            "Projection workspace {:?} is missing .notegit identity marker",
+            repo_root
+        )
+    })?;
+    validate_repo_identity(repo_root, &marker, repo_id)
+}
+
+fn write_repo_identity_marker(repo_root: &Path, repo_id: RepoId, repo_name: &str) -> Result<()> {
+    let dir = repo_dir(repo_root);
+    std::fs::create_dir_all(&dir)
+        .with_context(|| format!("Failed to create .notegit directory: {:?}", dir))?;
+    let marker = RepoIdentityMarker {
+        version: IDENTITY_VERSION,
+        repo_id,
+        repo_name: repo_name.to_string(),
+    };
+    let content =
+        toml::to_string_pretty(&marker).context("Failed to serialize repo identity marker")?;
+    let path = repo_identity_path(repo_root);
+    std::fs::write(&path, content)
+        .with_context(|| format!("Failed to write repo identity marker: {:?}", path))
+}
+
+fn read_repo_identity_marker(path: &Path) -> Result<Option<RepoIdentityMarker>> {
+    let meta = match std::fs::symlink_metadata(path) {
+        Ok(meta) => meta,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(None),
+        Err(err) => {
+            return Err(err)
+                .with_context(|| format!("Failed to stat repo identity marker: {:?}", path));
+        }
+    };
+    if meta.file_type().is_symlink() {
+        return Err(anyhow!(
+            "refusing to follow symlinked repo identity marker {:?}",
+            path
+        ));
+    }
+    if !meta.is_file() {
+        return Err(anyhow!(
+            "repo identity marker is not a regular file {:?}",
+            path
+        ));
+    }
+    let content = std::fs::read_to_string(path)
+        .with_context(|| format!("Failed to read repo identity marker: {:?}", path))?;
+    let marker: RepoIdentityMarker = toml::from_str(&content)
+        .with_context(|| format!("Failed to parse repo identity marker: {:?}", path))?;
+    if marker.version != IDENTITY_VERSION {
+        return Err(anyhow!(
+            "Unsupported repo identity marker version {} in {:?}",
+            marker.version,
+            path
+        ));
+    }
+    Ok(Some(marker))
+}
+
+fn validate_repo_identity(
+    repo_root: &Path,
+    marker: &RepoIdentityMarker,
+    expected_repo_id: RepoId,
+) -> Result<()> {
+    if marker.repo_id != expected_repo_id {
+        return Err(anyhow!(
+            "Projection workspace {:?} identity marker repo_id mismatch: expected {}, got {}",
+            repo_root,
+            expected_repo_id,
+            marker.repo_id
+        ));
+    }
+    Ok(())
+}
+
+fn workspace_has_external_content(repo_root: &Path) -> Result<bool> {
+    match repo_root.try_exists() {
+        Ok(false) => return Ok(false),
+        Ok(true) => {}
+        Err(err) => {
+            return Err(err).with_context(|| {
+                format!(
+                    "Failed to stat Projection workspace before writing identity marker: {:?}",
+                    repo_root
+                )
+            });
+        }
+    }
+    for entry in std::fs::read_dir(repo_root)
+        .with_context(|| format!("Failed to read Projection workspace: {:?}", repo_root))?
+    {
+        let entry = entry?;
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name == NOTE_GIT_DIR || name == ".gitignore" {
+            continue;
+        }
+        return Ok(true);
+    }
+    Ok(false)
 }
 
 pub fn host_dir(ledger_root: &Path) -> PathBuf {

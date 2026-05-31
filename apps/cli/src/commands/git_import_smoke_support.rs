@@ -64,8 +64,8 @@ pub(super) fn current_branch(repo_root: &Path) -> String {
         .to_string()
 }
 
-pub(super) fn write_workspace_file(projection_base: &Path, path: &str, content: &str) {
-    let abs = projection_base.join("default").join(path);
+pub(super) fn write_workspace_file(repo_root: &Path, path: &str, content: &str) {
+    let abs = repo_root.join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create parent");
     }
@@ -73,12 +73,12 @@ pub(super) fn write_workspace_file(projection_base: &Path, path: &str, content: 
 }
 
 pub(super) fn commit_deve_file(
-    projection_base: &Path,
+    repo_root: &Path,
     repo: &RepoManager,
     path: &str,
     content: &str,
 ) -> Result<()> {
-    write_workspace_file(projection_base, path, content);
+    write_workspace_file(repo_root, path, content);
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         pending_fs::upsert(
             db,
@@ -112,7 +112,7 @@ pub(super) fn prepare_exported_baseline(
     {
         let repo = open_repo(ledger_dir, projection_base)?;
         init_git_repo(repo_root);
-        commit_deve_file(projection_base, &repo, "note.md", "hello\n")?;
+        commit_deve_file(repo_root, &repo, "note.md", "hello\n")?;
     }
     git::export(ledger_dir, Some("default"), false, 10)?;
     assert_eq!(git_cmd(repo_root, &["show", "HEAD:note.md"]), "hello\n");
@@ -145,7 +145,9 @@ pub(super) fn resolve_imported_change_to_queued_commit(
         })?;
         doc_id
     };
-    write_workspace_file(projection_base, "note.md", "git import\n");
+    let repo = open_repo(ledger_dir, projection_base)?;
+    let repo_root = repo.local_repo_workspace_root("default")?;
+    write_workspace_file(&repo_root, "note.md", "git import\n");
     git::import(ledger_dir, Some("default"), true, 10)?;
 
     let repo = open_repo(ledger_dir, projection_base)?;

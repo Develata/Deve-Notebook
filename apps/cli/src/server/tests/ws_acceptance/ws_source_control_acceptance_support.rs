@@ -88,10 +88,14 @@ impl SourceControlWsHarness {
     }
 
     fn write_workspace_file(&self, path: &str, content: &str) -> anyhow::Result<()> {
+        let repo_name = self.state.repo.local_repo_name();
+        self.state
+            .repo
+            .ensure_local_repo_workspace_identity(repo_name)?;
         let abs = self
             .state
             .repo
-            .local_repo_workspace_path(self.state.repo.local_repo_name(), path)?;
+            .local_repo_workspace_path(repo_name, path)?;
         if let Some(parent) = abs.parent() {
             std::fs::create_dir_all(parent)?;
         }

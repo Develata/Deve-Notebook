@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 /// **参数**:
 /// * `ledger_dir`: 账本存储路径
 /// * `repo_name`: 本地 repo 名称
-/// * `projection_base`: repo projection base；最终 workspace 为 `<projection_base>/<repo_name>`
+/// * `projection_base`: repo projection base；最终 workspace 为 `<projection_base>/<safe_repo_name>--<repo_id>`
 /// * `path`: 指定的初始化根目录, config.toml 和 .env 将生成在此目录下
 /// * `snapshot_depth`: 快照深度配置
 pub fn run(
@@ -32,7 +32,7 @@ pub fn run(
     repo.set_projection_base_for_local_repo(repo_name, projection_base)?;
     let workspace_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&workspace_root)?;
-    std::fs::create_dir_all(deve_core::utils::notegit::repo_dir(&workspace_root))?;
+    repo.ensure_local_repo_workspace_identity(repo_name)?;
     deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
     std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(ledger_dir))?;
 
@@ -158,11 +158,24 @@ mod tests {
         assert!(root.join("ledger/local").is_dir());
         assert!(root.join("ledger/remotes").is_dir());
         assert!(root.join("ledger/.host/keys").is_dir());
-        assert!(root.join("notes/default").is_dir());
-        assert!(root.join("notes/default/.notegit").is_dir());
+        let mut workspaces = std::fs::read_dir(root.join("notes"))
+            .expect("notes dir")
+            .map(|entry| entry.expect("workspace entry").path())
+            .filter(|path| {
+                path.file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.starts_with("default--"))
+            })
+            .collect::<Vec<_>>();
+        workspaces.sort();
+        assert_eq!(workspaces.len(), 1);
+        let workspace = &workspaces[0];
+        assert!(workspace.is_dir());
+        assert!(workspace.join(".notegit").is_dir());
+        assert!(workspace.join(".notegit/identity.toml").is_file());
         assert!(root.join("ledger/.host/projection-locators.toml").is_file());
-        let gitignore = std::fs::read_to_string(root.join("notes/default/.gitignore"))
-            .expect("repo-local gitignore");
+        let gitignore =
+            std::fs::read_to_string(workspace.join(".gitignore")).expect("repo-local gitignore");
         assert!(gitignore.lines().any(|line| line.trim() == ".notegit/"));
     }
 

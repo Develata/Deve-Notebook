@@ -5,7 +5,8 @@
 
 use super::remote_content::{local_counterpart_content, resolve_tracked_doc_id};
 use super::remote_test_support::{
-    commit_added_file, new_repo, pending_entry, seed_pending_entry, write_workspace_file,
+    commit_added_file, default_workspace_root, new_repo, pending_entry, seed_pending_entry,
+    write_workspace_file,
 };
 use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 use deve_core::ledger::traits::RepoSelector;
@@ -18,7 +19,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
     let selector = RepoSelector::default();
     let doc_id = commit_added_file(&dir, &repo, "notes/a.md", "hello", "initial")?;
 
-    std::fs::remove_file(dir.path().join("notes").join("default").join("notes/a.md"))?;
+    std::fs::remove_file(default_workspace_root(&dir).join("notes/a.md"))?;
     write_workspace_file(&dir, "notes/b.md", "hello renamed");
     let mut added = pending_entry(
         "notes/b.md",

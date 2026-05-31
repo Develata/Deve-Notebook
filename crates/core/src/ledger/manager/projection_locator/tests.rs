@@ -68,11 +68,13 @@ fn projection_locator_custom_base_creates_repo_workspace_notegit() -> anyhow::Re
         Some("urn:default"),
     )?);
     repo.set_projection_base_for_local_repo("default", &base)?;
+    let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
 
     SyncManager::new_checked(repo.clone())?.scan()?;
 
-    let workspace = base.join("default");
+    let workspace = repo.local_repo_workspace_root("default")?;
     assert!(workspace.join(".notegit").is_dir());
+    crate::utils::notegit::validate_repo_identity_marker(&workspace, repo_id)?;
     assert!(workspace.join(".gitignore").is_file());
     Ok(())
 }
@@ -89,9 +91,10 @@ fn projection_locator_scan_uses_computed_workspace_only() -> anyhow::Result<()> 
         Some("urn:default"),
     )?);
     repo.set_projection_base_for_local_repo("default", &base)?;
-    std::fs::create_dir_all(base.join("default"))?;
+    let workspace = repo.ensure_local_repo_workspace_identity("default")?;
+    std::fs::create_dir_all(&workspace)?;
     std::fs::write(base.join("a.md"), "base sibling")?;
-    std::fs::write(base.join("default").join("a.md"), "workspace doc")?;
+    std::fs::write(workspace.join("a.md"), "workspace doc")?;
 
     SyncManager::new_checked(repo.clone())?.scan()?;
 
@@ -106,17 +109,65 @@ fn projection_locator_scan_uses_computed_workspace_only() -> anyhow::Result<()> 
 }
 
 #[test]
+fn projection_locator_check_rejects_identity_marker_mismatch() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let base = dir.path().join("notes");
+    let repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+    repo.set_projection_base_for_local_repo("default", &base)?;
+    let workspace = repo.local_repo_workspace_root("default")?;
+    std::fs::create_dir_all(crate::utils::notegit::repo_dir(&workspace))?;
+    crate::utils::notegit::ensure_repo_identity_marker(
+        &workspace,
+        uuid::Uuid::from_u128(99),
+        "foreign",
+    )?;
+
+    let err = repo
+        .check_projection_locator_for_local_repo("default")
+        .expect_err("mismatched identity marker must fail closed");
+
+    assert!(err.to_string().contains("identity marker repo_id mismatch"));
+    Ok(())
+}
+
+#[test]
+fn projection_materialize_rejects_nonempty_workspace_missing_identity_marker() -> anyhow::Result<()>
+{
+    let dir = tempfile::tempdir()?;
+    let ledger = dir.path().join("ledger");
+    let base = dir.path().join("notes");
+    let repo = Arc::new(RepoManager::init(
+        &ledger,
+        8,
+        Some("default"),
+        Some("urn:default"),
+    )?);
+    repo.set_projection_base_for_local_repo("default", &base)?;
+    let workspace = repo.local_repo_workspace_root("default")?;
+    std::fs::create_dir_all(&workspace)?;
+    std::fs::write(workspace.join("foreign.md"), "foreign")?;
+
+    let err = SyncManager::new_checked(repo.clone())?
+        .scan()
+        .expect_err("nonempty workspace without identity marker must fail closed");
+
+    assert!(err.to_string().contains("missing .notegit identity marker"));
+    Ok(())
+}
+
+#[test]
 fn projection_locator_runtime_check_validates_full_map_conflicts() -> anyhow::Result<()> {
     let _guard = crate::test_support::local_repo_catalog_test_guard();
     let dir = tempfile::tempdir()?;
     let ledger = dir.path().join("ledger");
     let base = dir.path().join("notes");
-    let nested_base = base.join("default");
     std::fs::create_dir_all(&base)?;
-    std::fs::create_dir_all(&nested_base)?;
     let main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
     let wiki = crate::test_support::create_initialized_local_repo(&ledger, "wiki", "urn:wiki");
     let default_id = main.get_repo_info()?.expect("default repo").uuid;
+    let nested_base = base.join(repo_workspace_segment("default", default_id)?);
+    std::fs::create_dir_all(&nested_base)?;
 
     write_projection_locator_file(
         &main.projection_locator_path(),
@@ -228,14 +279,19 @@ fn projection_locator_shared_base_allows_distinct_repo_roots() -> anyhow::Result
 
     main.set_projection_base_for_local_repo("default", &base)?;
     main.set_projection_base_for_local_repo("wiki", &base)?;
+    let default_id = main.get_repo_info()?.expect("default repo").uuid;
+    let wiki_id = main
+        .get_repo_info_for(None, Some("wiki"))?
+        .expect("wiki repo")
+        .uuid;
 
     assert_eq!(
         main.local_repo_workspace_root("default")?,
-        std::fs::canonicalize(&base)?.join("default")
+        std::fs::canonicalize(&base)?.join(repo_workspace_segment("default", default_id)?)
     );
     assert_eq!(
         main.local_repo_workspace_root("wiki")?,
-        std::fs::canonicalize(&base)?.join("wiki")
+        std::fs::canonicalize(&base)?.join(repo_workspace_segment("wiki", wiki_id)?)
     );
     Ok(())
 }
@@ -249,6 +305,11 @@ fn projection_locator_set_all_validates_final_map_not_intermediate_mix() -> anyh
     let new_base = old_base.join("wiki");
     let mut main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
     crate::test_support::create_initialized_local_repo(&ledger, "wiki", "urn:wiki");
+    let default_id = main.get_repo_info()?.expect("default repo").uuid;
+    let wiki_id = main
+        .get_repo_info_for(None, Some("wiki"))?
+        .expect("wiki repo")
+        .uuid;
 
     main.set_projection_base_for_all_local_repos_checked(&old_base)?;
     main.set_projection_base_for_all_local_repos_checked(&new_base)?;
@@ -256,11 +317,11 @@ fn projection_locator_set_all_validates_final_map_not_intermediate_mix() -> anyh
     let new_base = std::fs::canonicalize(&new_base)?;
     assert_eq!(
         main.local_repo_workspace_root("default")?,
-        new_base.join("default")
+        new_base.join(repo_workspace_segment("default", default_id)?)
     );
     assert_eq!(
         main.local_repo_workspace_root("wiki")?,
-        new_base.join("wiki")
+        new_base.join(repo_workspace_segment("wiki", wiki_id)?)
     );
     Ok(())
 }
@@ -273,10 +334,14 @@ fn projection_locator_nested_workspace_roots_fail_closed() -> anyhow::Result<()>
     let base = dir.path().join("notes");
     let main = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
     crate::test_support::create_initialized_local_repo(&ledger, "wiki", "urn:wiki");
+    let default_id = main.get_repo_info()?.expect("default repo").uuid;
 
     main.set_projection_base_for_local_repo("default", &base)?;
     let err = main
-        .set_projection_base_for_local_repo("wiki", base.join("default"))
+        .set_projection_base_for_local_repo(
+            "wiki",
+            base.join(repo_workspace_segment("default", default_id)?),
+        )
         .expect_err("nested workspace roots must fail closed");
 
     assert!(
@@ -339,7 +404,10 @@ fn projection_locator_preserves_redb_suffix_in_repo_name_segment() -> anyhow::Re
 
     assert_eq!(
         repo.local_repo_workspace_root("paper.redb")?,
-        std::fs::canonicalize(&base)?.join("paper.redb")
+        std::fs::canonicalize(&base)?.join(repo_workspace_segment(
+            "paper.redb",
+            repo.get_repo_info()?.expect("repo info").uuid
+        )?)
     );
     assert_eq!(
         repo.projection_locator_for_local_repo("paper.redb")?
@@ -352,14 +420,22 @@ fn projection_locator_preserves_redb_suffix_in_repo_name_segment() -> anyhow::Re
 #[test]
 fn projection_locator_normalized_workspace_key_detects_case_and_unicode_conflicts() {
     let base = PathBuf::from("notes");
+    let id = uuid::Uuid::from_u128(1);
 
     assert_eq!(
-        normalized_workspace_key(&base, "Default"),
-        normalized_workspace_key(&base, "default")
+        normalized_workspace_key(&base, &repo_workspace_segment("Default", id).unwrap()),
+        normalized_workspace_key(&base, &repo_workspace_segment("default", id).unwrap())
     );
     assert_eq!(
-        normalized_workspace_key(&base, "\u{00e9}"),
-        normalized_workspace_key(&base, "e\u{0301}")
+        normalized_workspace_key(&base, &repo_workspace_segment("\u{00e9}", id).unwrap()),
+        normalized_workspace_key(&base, &repo_workspace_segment("e\u{0301}", id).unwrap())
+    );
+    assert_ne!(
+        normalized_workspace_key(&base, &repo_workspace_segment("default", id).unwrap()),
+        normalized_workspace_key(
+            &base,
+            &repo_workspace_segment("default", uuid::Uuid::from_u128(2)).unwrap()
+        )
     );
 }
 
@@ -397,7 +473,7 @@ fn projection_locator_workspace_deveignore_filters_startup_scan() -> anyhow::Res
         Some("urn:default"),
     )?);
     repo.set_projection_base_for_local_repo("default", &base)?;
-    let workspace = base.join("default");
+    let workspace = repo.ensure_local_repo_workspace_identity("default")?;
     std::fs::create_dir_all(&workspace)?;
     std::fs::write(workspace.join(".deveignore"), "ignored.md\n")?;
     std::fs::write(workspace.join("ignored.md"), "ignored")?;

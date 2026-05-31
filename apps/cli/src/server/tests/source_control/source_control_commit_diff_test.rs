@@ -7,11 +7,28 @@ use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use tempfile::TempDir;
 
 fn write_workspace_file(dir: &TempDir, path: &str, content: &str) {
-    let abs = dir.path().join("notes").join("default").join(path);
+    let abs = default_workspace_root(dir).join(path);
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent).expect("create workspace parent");
     }
     std::fs::write(abs, content).expect("write workspace file");
+}
+
+fn default_workspace_root(dir: &TempDir) -> std::path::PathBuf {
+    let base = dir.path().join("notes");
+    let content = std::fs::read_to_string(dir.path().join("ledger/.host/projection-locators.toml"))
+        .expect("projection locator file");
+    let value: toml::Value = toml::from_str(&content).expect("projection locator toml");
+    let locator = value["locators"]
+        .as_array()
+        .expect("projection locators")
+        .iter()
+        .find(|locator| locator["repo_name_hint"].as_str() == Some("default"))
+        .expect("default repo locator");
+    base.join(format!(
+        "default--{}",
+        locator["repo_id"].as_str().expect("repo id")
+    ))
 }
 
 fn seed_pending(repo: &RepoManager, entry: PendingFsEntry) {
@@ -44,7 +61,7 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "hello");
-    std::fs::remove_file(dir.path().join("notes/default/notes/a.md"))?;
+    std::fs::remove_file(default_workspace_root(dir).join("notes/a.md"))?;
     seed_pending(
         &repo,
         PendingFsEntry {
