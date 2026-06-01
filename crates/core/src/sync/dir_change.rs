@@ -18,7 +18,7 @@ impl SyncManager {
         if !self.dir_refresh_guard.should_refresh(repo_id) {
             return Ok(None);
         }
-        super::scan::scan_local_repo(&self.repo, &self.vfs, &repo_name)?;
+        super::scan::scan_local_repo(&self.repo, &self.vfs, repo_name)?;
         Ok(Some((repo_id, repo_path.to_string())))
     }
 }

@@ -198,6 +198,7 @@
     - workspace projection writeback 失败
   steps:
     - run: cargo test -p deve_cli edit_acknowledges_ledger_commit_when_workspace_writeback_fails -- --nocapture
+    - run: cargo test -p deve_core --test durable_projection_fault_test -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: ack_sent_for_committed_ledger_edit true

@@ -8,15 +8,21 @@ use crate::ledger::RepoManager;
 use crate::utils::fs::checked_exists;
 use crate::writeback::PersistGuard;
 use anyhow::Result;
+use std::collections::HashSet;
 use tracing::warn;
 
 /// 启动时确保所有已绑定 locator 的本地 repo 都拥有独立的 Projection Workspace。
 pub(super) fn prepare_local_workspaces(
     repo: &RepoManager,
     guard: &PersistGuard,
+    skip_repo_names: &HashSet<String>,
 ) -> Result<Vec<String>> {
     let mut skipped = Vec::new();
     for repo_name in repo.list_local_repo_names_for_execution()? {
+        if skip_repo_names.contains(&repo_name) {
+            skipped.push(repo_name);
+            continue;
+        }
         if let Err(err) = materialize_local_repo(repo, guard, &repo_name) {
             if is_broken_structure_projection_error(&err) {
                 warn!(

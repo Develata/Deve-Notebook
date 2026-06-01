@@ -3,14 +3,35 @@
 //!   - 04_repository#tree-projection-contract
 //!   - 03_storage/projection#projection-contract
 
-use super::{ProjectionDiagnostic, SyncManager, projection_diagnostic, rebuild_projection};
+use super::{
+    ProjectionDiagnostic, SyncManager, projection_diagnostic, projection_fault_journal,
+    rebuild_projection,
+};
 use crate::ledger::RepoManager;
+use crate::models::DocId;
 use anyhow::Result;
 
 impl SyncManager {
     /// 显式强制重建指定 repo 的 Projection Workspace。
     pub fn rebuild_projection_local_repo(&self, repo_name: &str) -> Result<()> {
-        rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)?;
+        if let Err(err) =
+            rebuild_projection::rebuild_local_repo(&self.repo, &self.persist_guard, repo_name)
+        {
+            self.record_projection_fault(
+                repo_name,
+                projection_fault_journal::ProjectionFaultInput {
+                    fault_kind:
+                        projection_fault_journal::ProjectionFaultKind::ProjectionRebuildInterrupted,
+                    target_path: None,
+                    source_path: None,
+                    doc_id: None,
+                    ledger_seq_or_head: None,
+                    last_error: &err.to_string(),
+                },
+            );
+            return Err(err);
+        }
+        projection_fault_journal::clear_faults_for_repo(&self.repo, repo_name)?;
         self.clear_projection_degraded(repo_name);
         Ok(())
     }
@@ -24,7 +45,59 @@ impl SyncManager {
     }
 
     pub fn mark_projection_writeback_fault(&self, repo_name: &str) {
-        self.mark_projection_degraded(repo_name);
+        self.record_projection_fault(
+            repo_name,
+            projection_fault_journal::ProjectionFaultInput {
+                fault_kind:
+                    projection_fault_journal::ProjectionFaultKind::ProjectionWritebackFailed,
+                target_path: None,
+                source_path: None,
+                doc_id: None,
+                ledger_seq_or_head: None,
+                last_error: "projection writeback failed",
+            },
+        );
+    }
+
+    pub(super) fn mark_projection_writeback_fault_for_doc(
+        &self,
+        repo_name: &str,
+        doc_id: DocId,
+        target_path: Option<&str>,
+        err: &anyhow::Error,
+    ) {
+        self.record_projection_fault(
+            repo_name,
+            projection_fault_journal::ProjectionFaultInput {
+                fault_kind:
+                    projection_fault_journal::ProjectionFaultKind::ProjectionWritebackFailed,
+                target_path,
+                source_path: None,
+                doc_id: Some(doc_id),
+                ledger_seq_or_head: None,
+                last_error: &err.to_string(),
+            },
+        );
+    }
+
+    pub(super) fn mark_projection_writeback_fault_for_path(
+        &self,
+        repo_name: &str,
+        target_path: &str,
+        err: &anyhow::Error,
+    ) {
+        self.record_projection_fault(
+            repo_name,
+            projection_fault_journal::ProjectionFaultInput {
+                fault_kind:
+                    projection_fault_journal::ProjectionFaultKind::ProjectionWritebackFailed,
+                target_path: (!target_path.is_empty()).then_some(target_path),
+                source_path: None,
+                doc_id: None,
+                ledger_seq_or_head: None,
+                last_error: &err.to_string(),
+            },
+        );
     }
 
     pub fn healthy_local_repo_names_for_execution(&self) -> Result<Vec<String>> {
@@ -55,6 +128,21 @@ impl SyncManager {
 
     pub(super) fn clear_projection_degraded(&self, repo_name: &str) {
         self.projection_health.clear_degraded(repo_name);
+    }
+
+    fn record_projection_fault(
+        &self,
+        repo_name: &str,
+        input: projection_fault_journal::ProjectionFaultInput<'_>,
+    ) {
+        self.mark_projection_degraded(repo_name);
+        if let Err(err) = projection_fault_journal::record_fault(&self.repo, repo_name, input) {
+            tracing::error!(
+                repo_name = %repo_name,
+                error = %err,
+                "Failed to persist durable projection fault"
+            );
+        }
     }
 }
 

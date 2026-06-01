@@ -212,12 +212,8 @@ fn branch_manifest_writer_identity(
     branch_prefix: &str,
     diagnostics: &mut Vec<BackupBranchDiscoveryDiagnostic>,
 ) -> Option<String> {
-    let Some(rest) = path.strip_prefix(branch_prefix) else {
-        return None;
-    };
-    let Some(writer_identity) = rest.strip_suffix("/branch.manifest.enc") else {
-        return None;
-    };
+    let rest = path.strip_prefix(branch_prefix)?;
+    let writer_identity = rest.strip_suffix("/branch.manifest.enc")?;
     if writer_identity.contains('/') {
         diagnostics.push(BackupBranchDiscoveryDiagnostic::new(
             BackupBranchDiscoveryDiagnosticKind::UnsafeWriterIdentity,

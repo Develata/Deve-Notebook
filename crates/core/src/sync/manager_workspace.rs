@@ -25,15 +25,34 @@ impl SyncManager {
     }
 
     pub fn persist_doc_in_local_repo(&self, repo_name: &str, doc_id: DocId) -> Result<()> {
-        projection_io::persist_doc(self, repo_name, doc_id).inspect_err(|_| {
-            self.mark_projection_writeback_fault(repo_name);
-        })
+        let target_path = self
+            .repo
+            .get_file_meta_for_doc_in_local_repo(repo_name, doc_id)
+            .ok()
+            .flatten()
+            .map(|meta| meta.path);
+        match projection_io::persist_doc(self, repo_name, doc_id) {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                self.mark_projection_writeback_fault_for_doc(
+                    repo_name,
+                    doc_id,
+                    target_path.as_deref(),
+                    &err,
+                );
+                Err(err)
+            }
+        }
     }
 
     pub fn remove_projection_path_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
-        projection_io::remove_projection_path(self, repo_name, path).inspect_err(|_| {
-            self.mark_projection_writeback_fault(repo_name);
-        })
+        match projection_io::remove_projection_path(self, repo_name, path) {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                self.mark_projection_writeback_fault_for_path(repo_name, path, &err);
+                Err(err)
+            }
+        }
     }
 
     /// 应用操作并选择性持久化到 Projection Workspace。
@@ -87,7 +106,7 @@ impl SyncManager {
         repo_id: crate::models::RepoId,
         repo_path: &str,
     ) -> Result<Vec<ServerMessage>> {
-        if self.is_projection_degraded(&repo_name) {
+        if self.is_projection_degraded(repo_name) {
             tracing::warn!(
                 repo_name = %repo_name,
                 "Ignoring filesystem event for degraded local repo"
@@ -97,7 +116,7 @@ impl SyncManager {
         if repo_path.is_empty() {
             return Ok(vec![]);
         }
-        let handler = handler::FsEventHandler::new(&self.repo, &self.vfs, &repo_name, repo_id);
+        let handler = handler::FsEventHandler::new(&self.repo, &self.vfs, repo_name, repo_id);
         handler.handle_event(repo_path)
     }
 
