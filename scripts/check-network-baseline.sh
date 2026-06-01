@@ -32,7 +32,9 @@ check_contains apps/web/src/hooks/use_core/write_gate/logic.rs "ConnectionStatus
 
 # NET-002: production path is same-origin /ws; localhost fallbacks are debug-only.
 check_contains apps/web/src/api/connection_urls.rs "format!(\"{}://{}/ws\", ws_scheme, host)"
-check_contains apps/web/src/api/connection_urls.rs "if cfg!(debug_assertions)"
+check_contains apps/web/src/api/connection_urls.rs "cfg!(debug_assertions)"
+check_contains apps/web/src/api/connection_urls.rs "include_debug_fallbacks"
+check_contains apps/web/src/api/connection_urls.rs "if include_debug_fallbacks"
 check_contains apps/web/src/api/connection_urls.rs "ws_port"
 check_contains apps/web/src/api/connection_urls.rs "fn parse_ws_port(value: &str) -> Option<u16>"
 check_contains apps/web/src/api/connection_urls.rs "query_ws_port_rejects_invalid_or_zero_ports"
@@ -85,49 +87,49 @@ check_contains apps/cli/src/server/ws/route/mod.rs "session_proof"
 # and ShadowList to the active repo scope.
 check_contains scripts/smoke-runtime-happy-path.sh "run_test deve_cli ws_endpoint_sync_hello_uses_switched_repo_scope"
 check_contains scripts/smoke-runtime-happy-path.sh "run_test deve_cli ws_endpoint_register_writer_after_sync_hello_returns_write_ready"
-check_contains apps/cli/src/server/ws_sync_hello_acceptance_test.rs "async fn ws_endpoint_sync_hello_uses_switched_repo_scope"
-check_contains apps/cli/src/server/ws_register_writer_acceptance_test.rs "async fn ws_endpoint_register_writer_after_sync_hello_returns_write_ready"
+check_contains apps/cli/src/server/tests/ws_acceptance/ws_sync_hello_acceptance_test.rs "async fn ws_endpoint_sync_hello_uses_switched_repo_scope"
+check_contains apps/cli/src/server/tests/ws_acceptance/ws_register_writer_acceptance_test.rs "async fn ws_endpoint_register_writer_after_sync_hello_returns_write_ready"
 
 # NET-006: OpenDoc must remain snapshot-first and reject wrong or deleted docs
 # without fabricating an empty snapshot.
 check_contains scripts/smoke-runtime-happy-path.sh "run_test deve_cli ws_open_doc_and_history_read_back_registered_edit"
-check_contains apps/cli/src/server/ws_edit_readback_acceptance_test.rs "async fn ws_open_doc_and_history_read_back_registered_edit"
+check_contains apps/cli/src/server/tests/ws_acceptance/ws_edit_readback_acceptance_test.rs "async fn ws_open_doc_and_history_read_back_registered_edit"
 check_contains apps/cli/src/server/test_modules.rs "mod open_doc_scope_test;"
 check_contains scripts/check-storage-repo-baseline.sh "case_contains STORE-009 \"cargo test -p deve_cli open_doc_scope -- --nocapture\""
 
 # NET-007: missing-fact transfer must stay repo-scoped and preserve requested
 # source peer identity.
-check_contains apps/cli/src/server/sync_transfer_scope_test.rs "async fn non_browser_sync_request_uses_bound_sync_scope_nonce_for_push"
-check_contains apps/cli/src/server/sync_transfer_scope_test.rs "async fn sync_request_preserves_requested_source_peer_in_push"
-check_contains apps/cli/src/server/ws_sync_transfer_reject_acceptance_test.rs "async fn ws_sync_request_requires_sync_hello_scope"
-check_contains apps/cli/src/server/ws_sync_transfer_reject_acceptance_test.rs "async fn ws_sync_request_rejects_wrong_repo_after_sync_hello"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs "async fn non_browser_sync_request_uses_bound_sync_scope_nonce_for_push"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs "async fn sync_request_preserves_requested_source_peer_in_push"
+check_contains apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_acceptance_test.rs "async fn ws_sync_request_requires_sync_hello_scope"
+check_contains apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_acceptance_test.rs "async fn ws_sync_request_rejects_wrong_repo_after_sync_hello"
 
 # NET-008: snapshot fallback must preserve repo scope, requested source peer,
 # and structured rejection for unoffered sources.
-check_contains apps/cli/src/server/sync_transfer_scope_test.rs "async fn non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push"
-check_contains apps/cli/src/server/sync_transfer_snapshot_test.rs "async fn snapshot_request_exports_requested_shadow_source"
-check_contains apps/cli/src/server/sync_transfer_snapshot_test.rs "async fn snapshot_request_rejects_unoffered_source"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs "async fn non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs "async fn snapshot_request_exports_requested_shadow_source"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs "async fn snapshot_request_rejects_unoffered_source"
 check_contains apps/cli/src/server/handlers/sync/snapshot.rs "snapshot_kind: Some(\"full\".to_string())"
 
 # NET-009: multi-repo switching must reject stale scope and stale runtime
 # bindings after repo changes.
-check_contains apps/cli/src/server/sync_hello_browser_test.rs "async fn browser_sync_hello_rejects_stale_scope_nonce"
-check_contains apps/cli/src/server/sync_hello_browser_scope_test.rs "async fn browser_sync_hello_rejects_stale_active_db_binding"
-check_contains apps/cli/src/server/sync_hello_browser_scope_test.rs "async fn browser_sync_hello_rejects_stale_bound_repo_and_writer_identity"
+check_contains apps/cli/src/server/tests/sync/sync_hello_browser_test.rs "async fn browser_sync_hello_rejects_stale_scope_nonce"
+check_contains apps/cli/src/server/tests/sync/sync_hello_browser_scope_test.rs "async fn browser_sync_hello_rejects_stale_active_db_binding"
+check_contains apps/cli/src/server/tests/sync/sync_hello_browser_scope_test.rs "async fn browser_sync_hello_rejects_stale_bound_repo_and_writer_identity"
 
 # NET-010: inbound remote data must be buffered under the source peer shadow,
 # never under transport peer or local ledger authority.
-check_contains apps/cli/src/server/sync_transfer_push_test.rs "async fn manual_sync_push_buffers_without_applying_remote_ops"
-check_contains apps/cli/src/server/sync_transfer_push_test.rs "async fn sync_push_uses_message_source_peer_for_shadow_write"
-check_contains apps/cli/src/server/sync_transfer_push_test.rs "async fn sync_push_does_not_pollute_transport_or_local_ledger"
-check_contains apps/cli/src/server/sync_transfer_snapshot_test.rs "async fn sync_push_snapshot_uses_message_source_peer_for_shadow_replace"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_push_test.rs "async fn manual_sync_push_buffers_without_applying_remote_ops"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_push_test.rs "async fn sync_push_uses_message_source_peer_for_shadow_write"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_push_test.rs "async fn sync_push_does_not_pollute_transport_or_local_ledger"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs "async fn sync_push_snapshot_uses_message_source_peer_for_shadow_replace"
 
 # NET-011: indirect sync must reject unrequested sources and forged source
 # proofs before writing shadow data.
-check_contains apps/cli/src/server/ws_sync_transfer_reject_acceptance_test.rs "async fn ws_sync_push_rejects_unrequested_source"
-check_contains apps/cli/src/server/sync_transfer_push_test.rs "async fn sync_push_rejects_unrequested_relay_source"
-check_contains apps/cli/src/server/sync_transfer_push_test.rs "async fn sync_push_rejects_relay_forged_source_proof"
-check_contains apps/cli/src/server/sync_transfer_snapshot_test.rs "async fn sync_push_snapshot_rejects_relay_forged_source_proof"
+check_contains apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_acceptance_test.rs "async fn ws_sync_push_rejects_unrequested_source"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_push_test.rs "async fn sync_push_rejects_unrequested_relay_source"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_push_test.rs "async fn sync_push_rejects_relay_forged_source_proof"
+check_contains apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs "async fn sync_push_snapshot_rejects_relay_forged_source_proof"
 check_contains crates/core/src/protocol/sync_push_header/tests.rs "fn source_proof_rejects_payload_tamper"
 
 # NET-012: WebSocket failures must surface as structured ProtocolError values.

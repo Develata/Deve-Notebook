@@ -738,9 +738,36 @@ cargo test -p deve_core <filter> -- --nocapture
 cargo test -p deve_web <filter> -- --nocapture
 ```
 
+Use the local quick gate before handing off a normal implementation batch:
+
+```bash
+scripts/check-local-quick-gate.sh
+DEVE_QUICK_GATE_TESTS=0 scripts/check-local-quick-gate.sh
+```
+
+The quick gate runs diff hygiene, `deve_core`/`deve_cli` checks, focused
+governance checks, and focused storage/source-control tests. The second form
+keeps only the compile/governance subset for very small doc-only changes.
+
+Use the deep audit gate for broad architecture changes, release-prep, or after
+several related batches have landed:
+
+```bash
+scripts/check-deep-audit-gate.sh
+DEVE_DEEP_AUDIT_WRITE_REPORT=1 scripts/check-deep-audit-gate.sh
+DEVE_DEEP_AUDIT_FULL_TESTS=1 scripts/check-deep-audit-gate.sh
+DEVE_DEEP_AUDIT_DOCKER_SMOKE=1 scripts/check-deep-audit-gate.sh
+```
+
+The deep gate runs the plan/architecture governance suite, baseline scripts,
+runtime happy/recovery smokes, and optional plan report, full Cargo, or Docker
+verification.
+
 Current docs/code guard scripts:
 
 ```bash
+scripts/check-local-quick-gate.sh
+scripts/check-deep-audit-gate.sh
 scripts/check-acceptance-bindings.sh
 scripts/check-auth-baseline.sh
 scripts/check-auth-unauthorized-state.sh

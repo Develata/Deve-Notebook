@@ -22,7 +22,7 @@ MAIN="$ROOT_DIR/apps/cli/src/main.rs"
 MAIN_TEST="$ROOT_DIR/apps/cli/src/main_test.rs"
 DISPATCH="$ROOT_DIR/apps/cli/src/dispatch.rs"
 COMMAND="$ROOT_DIR/apps/cli/src/commands/sc_status.rs"
-FIXTURE_TEST="$ROOT_DIR/apps/cli/src/server/source_control_http_test/clean_fixture.rs"
+FIXTURE_TEST="$ROOT_DIR/apps/cli/src/server/tests/source_control/source_control_http_test/clean_fixture.rs"
 ACCEPTANCE="$ROOT_DIR/docs/acceptance-cases/04_diff.md"
 
 contains "$RUNBOOK" 'sc-status --repo <repo>'
