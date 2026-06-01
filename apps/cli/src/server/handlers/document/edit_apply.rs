@@ -11,6 +11,7 @@ use std::sync::Arc;
 use super::edit_checks::{ExistingClientOpCheck, confirm_existing_client_op};
 use super::edit_support::reject_edit;
 use super::write_confirmation::{CommitOutcome, CommittedWrite, emit_commit_outcome};
+use super::write_gate::with_repo_write_gate;
 
 pub(super) struct ClientEditAppend<'a> {
     pub(super) state: &'a Arc<AppState>,
@@ -25,6 +26,18 @@ pub(super) struct ClientEditAppend<'a> {
 }
 
 pub(super) fn append_client_edit(input: ClientEditAppend<'_>) {
+    let ch = input.ch;
+    let scope_nonce = input.scope_nonce;
+    let doc_id = input.doc_id;
+    let client_op_id = input.client_op_id;
+    let repo_id = input.scope.repo_id;
+
+    if let Err(error) = with_repo_write_gate(repo_id, || append_client_edit_locked(input)) {
+        reject_edit(ch, scope_nonce, doc_id, client_op_id, error);
+    }
+}
+
+fn append_client_edit_locked(input: ClientEditAppend<'_>) {
     let ClientEditAppend {
         state,
         scope,
