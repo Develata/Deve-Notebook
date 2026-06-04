@@ -119,6 +119,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `05_diff_logic#source-control-runtime` | `### 9.3 Server Runtime` | Source-control WS/HTTP handler 运行时 |
 | `05_diff_logic#merge-contract` | `### 3.3 Merge Lifecycle` | MergePeer / ResolveMergeConflict 的同 repo、冲突检测与确认输出合同 |
 | `11_ui_design/index#layout-navigation-and-focus` | `### 5.2 Focus State` | layout shell 的 focus trap、focus restore 与跨 surface focus state 合同 |
+| `11_ui_design/index#editor-group-tabstrip` | `### 3.6 Editor Group Tabs` | 主编辑区 doc/diff tab strip 的 view-local 状态、切换、关闭与 authority 边界 |
 | `11_ui_design/index#native-adapter-gate-registry` | `### 8.5 Native Adapter Gate Registry` | Desktop/Mobile native adapter 的 authority gate、no-packaging-runtime 默认构建与子章权限边界 |
 | `11_ui_design/index#native-post-gate-common-contract` | `### 8.6 Native Post-Gate Common Contract` | Desktop/Mobile post-gate 共用 service boot、本地通信、adapter feature scope 与性能预算合同 |
 | `11_ui_design/01_web#single-binary-distribution` | `## 1. Single Binary Distribution` | Web 静态资源构建、托管与 SPA fallback 合同 |

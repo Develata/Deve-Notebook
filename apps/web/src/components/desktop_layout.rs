@@ -17,8 +17,10 @@ use leptos::prelude::*;
 
 mod banner;
 mod content;
+mod editor_tabs;
 mod handles;
 mod sidebar;
+mod tab_runtime;
 
 #[component]
 pub fn DesktopLayout(

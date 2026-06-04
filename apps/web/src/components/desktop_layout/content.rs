@@ -1,7 +1,10 @@
 //! plan_ref:
 //!   - 11_ui_design/01_web#web-layout-persistence
+//!   - 11_ui_design/index#editor-group-tabstrip
 //!   - 18_release#runtime-observability
 //!
+use super::editor_tabs::EditorTabStrip;
+use super::tab_runtime::{create_current_editor_doc, create_editor_tab_runtime};
 use crate::components::dashboard::Dashboard;
 use crate::components::diff_view::DiffView;
 use crate::editor::Editor;
@@ -18,21 +21,20 @@ pub fn DesktopLayoutContent(core: CoreState) -> impl IntoView {
     let current_scope_nonce = core.current_scope_nonce;
     let is_spectator = core.is_spectator;
     let ws = core.ws.clone();
-    let current_editor_doc = Signal::derive({
-        let core = core.clone();
-        move || {
-            if core.pending_branch_switch.get().is_some()
-                || core.pending_repo_switch.get().is_some()
-            {
-                None
-            } else {
-                core.current_doc.get()
-            }
-        }
-    });
+    let current_editor_doc = create_current_editor_doc(&core);
+    let tabs = create_editor_tab_runtime(&core, current_editor_doc);
 
     view! {
         <div class="flex-1 bg-panel shadow-sm border border-default rounded-lg overflow-hidden relative flex flex-col min-w-0">
+            <EditorTabStrip
+                doc_tabs=tabs.doc_tabs
+                diff_tabs=tabs.diff_tabs
+                active_tab=tabs.active_tab
+                on_select_document=tabs.on_select_document
+                on_select_diff=tabs.on_select_diff
+                on_close_document=tabs.on_close_document
+                on_close_diff=tabs.on_close_diff
+            />
             <div class="flex-1 min-h-0 overflow-hidden">
                 {move || {
                     if let Some(session) = diff_content.get() {

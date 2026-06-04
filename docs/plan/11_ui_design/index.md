@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-02`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -134,6 +134,82 @@ application control 是连接 view 与 runtime 的稳定接口层，至少包含
   - `settings`
   - `diff`
 - 图标选择属于 shell design token contract，而不是单个 view 自由发挥。
+
+### 3.6 Editor Group Tabs {#editor-group-tabstrip}
+
+主编辑区上方必须支持 desktop-style editor group tab strip，用于在多个已打开 surface
+之间快速切换。该能力对齐 VS Code / Obsidian 的 workbench mental model，但只复用交互抽象，
+不得复制实现、DOM、CSS 或产品资产。
+
+Tab surface 类型：
+
+- `DocumentTab`
+  - 绑定稳定 `DocId`。
+  - title 来自当前 repo 的 document display path。
+  - 点击 tab 必须发出 `OpenDocument` / document navigation intent，并继续经过 pending
+    navigation guard。
+- `DiffTab`
+  - 绑定 `DiffSession` 的稳定 identity（优先 `doc_id`，否则使用 canonical path +
+    session timestamp 的 view-local key）。
+  - title 使用 `display_path`，canonical path 只作为 selector / tooltip 辅助信息。
+  - 点击 tab 只能恢复已有 view-local diff session；新的 diff 计算仍必须由
+    source-control runtime 输出驱动。
+
+状态边界：
+
+- open tab list 与 active tab 归 UI shell runtime / view-local state 所有，不是
+  document authority、source-control authority 或 repo scope authority。
+- repo / branch / scope 切换时，tab registry 必须清理或按 scope 隔离，禁止 stale tab
+  在新 scope 中重新打开旧 `DocId` / diff。
+- 关闭 active document tab 必须等价于一次受 guard 保护的离开当前文档；若仍有相邻
+  document tab，则切换到相邻 tab，否则回到 Dashboard。
+- 关闭 active diff tab 只关闭 diff surface，不得修改 staged / pending / commit state；
+  若仍有相邻 diff tab 可切换到相邻 diff，否则回到当前 document 或 Dashboard。
+- Diff view header 可保留 hunk navigation、edit/preview、read-only 等 diff-local
+  控件，但文件级切换必须归 editor group tab strip，不得在 diff header 中另起第二套
+  文件切换状态。
+
+最小工程蓝图：
+
+- `desktop_layout/content` 只组合 `EditorTabStrip`、`Editor`、`DiffView` 与 `Dashboard`，
+  不直接保存 tab registry 或实现关闭/切换状态机。
+- `desktop_layout/tab_runtime` 持有 view-local tab registry，订阅 `docs`、`current_doc`、
+  `diff_content`、`current_repo_id` 与 `scope_nonce`，并输出 typed callbacks。
+- `desktop_layout/editor_tabs/model` 只定义 tab identity、title / tooltip projection。
+- `desktop_layout/editor_tabs/ops` 只提供纯函数 upsert / remove / fallback neighbor 选择。
+- `desktop_layout/editor_tabs/strip` 只渲染 tablist 与 button semantics，不直接写 document、
+  source-control 或 repo authority。
+
+调用关系：
+
+```text
+DesktopLayoutContent
+  -> tab_runtime callbacks
+  -> navigation guard / existing core signals
+  -> document runtime or diff session restore
+
+DesktopLayoutContent
+  -> EditorTabStrip
+  -> typed select / close callbacks
+```
+
+输入输出与生命周期：
+
+- 输入：当前 repo/scope、document list、active document、active diff session、pending local edit
+  状态。
+- 输出：`OpenDocument` 等价的 guarded document navigation、已有 diff session restore、view-local
+  tab close。
+- repo / branch / scope 变化时 runtime 必须清理 tab registry 与 active diff session。
+- document 切换时 active diff session 必须退出，避免 diff surface 伪装成新 document authority。
+
+失败、配置与性能：
+
+- pending edit guard 阻止离开当前 active document 时，close / select 只能进入 pending navigation，
+  不得提前删除 active document tab。
+- 缺失 document projection 时不创建 document tab；diff session 只恢复已有 session，不触发新计算。
+- 不新增配置入口，不写 localStorage；reload 后 open tabs 可丢失。
+- upsert / remove 是 `O(open_tabs)`；open tabs 是小规模 view-local shell state，不在关键 authority
+  路径上。
 
 ## 4. Architecture Layers
 
