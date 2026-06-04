@@ -45,11 +45,39 @@ pub fn check(ledger_dir: &Path, repo_selector: &str, snapshot_depth: usize) -> R
     Ok(())
 }
 
+pub fn drift(
+    ledger_dir: &Path,
+    repo_selector: &str,
+    root: Option<&Path>,
+    snapshot_depth: usize,
+) -> Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo_name = resolve_local_repo_arg(&repo, Some(repo_selector))?;
+    let report = match root {
+        Some(root) => deve_core::sync::drift_detect::detect_repo_drift_at_workspace_root(
+            &repo, &repo_name, root,
+        )?,
+        None => deve_core::sync::drift_detect::detect_repo_drift(&repo, &repo_name)?,
+    };
+    println!(
+        "projection_drift[{}]: unexplained={} explained={}",
+        repo_name,
+        report.unexplained.len(),
+        report.explained_count
+    );
+    for entry in report.unexplained {
+        println!("  {:?} {}", entry.kind, entry.path);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{check, list, set};
+    use super::{check, drift, list, set};
     use crate::commands::init;
     use deve_core::ledger::RepoManager;
+    use deve_core::sync::SyncManager;
+    use std::sync::Arc;
 
     #[test]
     fn projection_locator_init_writes_locator_without_vault_path_config() -> anyhow::Result<()> {
@@ -120,6 +148,34 @@ mod tests {
                 .contains("Failed to canonicalize Projection workspace root"),
             "{err}"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn projection_drift_reports_unexplained_workspace_changes() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger = dir.path().join("ledger");
+        let base = dir.path().join("notes");
+        let repo = Arc::new(RepoManager::init(
+            &ledger,
+            8,
+            Some("default"),
+            Some("urn:default"),
+        )?);
+        repo.set_projection_base_for_local_repo("default", &base)?;
+        SyncManager::new_checked(repo.clone())?.materialize_local_repo("default")?;
+        let root = repo.local_repo_workspace_root("default")?;
+        std::fs::write(root.join("extra.md"), "extra\n")?;
+
+        let report = deve_core::sync::drift_detect::detect_repo_drift_at_workspace_root(
+            repo.as_ref(),
+            "default",
+            &root,
+        )?;
+        assert_eq!(report.unexplained.len(), 1);
+        assert_eq!(report.unexplained[0].path, "extra.md");
+
+        drift(&ledger, "default", Some(&root), 8)?;
         Ok(())
     }
 }

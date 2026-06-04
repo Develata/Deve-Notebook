@@ -48,7 +48,7 @@ pub fn detect_repo_drift(repo: &RepoManager, repo_name: &str) -> Result<DriftRep
     detect_repo_drift_from_entries(repo, repo_name, projection, workspace)
 }
 
-pub(crate) fn detect_repo_drift_at_workspace_root(
+pub fn detect_repo_drift_at_workspace_root(
     repo: &RepoManager,
     repo_name: &str,
     workspace_root: &Path,

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-04`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/components/command_palette/`
@@ -28,6 +28,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve repo projection set --repo <selector> --base <path>`: 为本地 repo 创建或替换 projection base；必须停止 watcher、校验 locator、重建 projection，再恢复 repo runtime。
     *   `deve repo projection list`: 列出本机 host-local Projection Locator。
     *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
+    *   `deve repo projection drift --repo <selector> [--root <path>]`: 只读列出 ledger projection 与指定 workspace root 的 unexplained drift；不得写 ledger、workspace、pending 或 staged state。
     *   `deve scan`: 扫描当前已绑定 workspace root 的 repo 并建立索引.
     *   `deve watch`: 监听已绑定 workspace root 的 repo 文件变更.
     *   `deve serve`: 启动 WebSocket 服务端.
@@ -38,6 +39,9 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve seed`: 种子节点数据注入.
     *   `deve node-check`: 节点一致性检查，可选修复；`--projection` 执行只读 Structure Facts / projection authority 诊断。
     *   `deve recover`: 从 ledger 数据恢复 repo projection workspace 文件。
+    *   `deve sc status --repo <selector>`: 只读输出 Deve Source Control staged / unstaged 状态；`deve sc-status` 可作为兼容别名保留。
+    *   `deve sc stage --repo <selector> --all`: 将当前 repo 的 pending / working changes 显式移入 staged；执行面必须复用 `05_diff_logic` 的 target resolution 与 stage 边界。
+    *   `deve sc commit --repo <selector> --message <message>`: 将 staged changes 提交为 Deve ledger-backed commit anchor；不得执行 Git mirror push，也不得直接写 Git index。
     *   `deve repair`: 修复已知本地损坏并可重建投影；当 Structure Facts authority 已损坏时必须输出诊断并 fail-closed。
     *   `deve config print`: 输出当前有效运行时配置。
     *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。

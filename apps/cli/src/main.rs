@@ -36,6 +36,7 @@ mod main_test;
 mod server;
 
 pub(crate) use commands::backup::BackupAction;
+pub(crate) use commands::sc::ScAction;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -148,6 +149,11 @@ pub(crate) enum Commands {
         #[arg(long)]
         repo: Option<String>,
     },
+    /// Inspect or mutate Deve Source Control state
+    Sc {
+        #[command(subcommand)]
+        action: ScAction,
+    },
     /// Inspect Git ecosystem mirror bridge state
     Git {
         #[command(subcommand)]
@@ -217,6 +223,13 @@ pub(crate) enum RepoProjectionAction {
     Check {
         #[arg(long)]
         repo: String,
+    },
+    /// List unexplained projection/workspace drift
+    Drift {
+        #[arg(long)]
+        repo: String,
+        #[arg(long)]
+        root: Option<PathBuf>,
     },
 }
 

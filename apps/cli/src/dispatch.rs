@@ -2,7 +2,7 @@
 //!   - 14_commands#cli-commands
 
 use crate::commands;
-use crate::{Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction};
+use crate::{Commands, ConfigAction, GitAction, RepoAction, RepoProjectionAction, ScAction};
 use std::path::PathBuf;
 
 mod backup;
@@ -85,6 +85,17 @@ pub async fn run(
         Some(Commands::ScStatus { repo }) => {
             commands::sc_status::run(ledger_dir, repo.as_deref(), config.snapshot_depth)?
         }
+        Some(Commands::Sc { action }) => match action {
+            ScAction::Status { repo } => {
+                commands::sc::status(ledger_dir, repo.as_deref(), config.snapshot_depth)?
+            }
+            ScAction::Stage { repo, all } => {
+                commands::sc::stage(ledger_dir, repo.as_deref(), all, config.snapshot_depth)?
+            }
+            ScAction::Commit { repo, message } => {
+                commands::sc::commit(ledger_dir, repo.as_deref(), &message, config.snapshot_depth)?
+            }
+        },
         Some(Commands::Git { action }) => match action {
             GitAction::Status { repo } => {
                 commands::git::status(ledger_dir, repo.as_deref(), config.snapshot_depth)?
@@ -181,6 +192,12 @@ pub async fn run(
                 RepoProjectionAction::Check { repo } => {
                     commands::repo_projection::check(ledger_dir, &repo, config.snapshot_depth)?
                 }
+                RepoProjectionAction::Drift { repo, root } => commands::repo_projection::drift(
+                    ledger_dir,
+                    &repo,
+                    root.as_deref(),
+                    config.snapshot_depth,
+                )?,
             },
         },
         Some(Commands::Config { action }) => match action {

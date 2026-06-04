@@ -1,7 +1,10 @@
 //! plan_ref:
 //!   - 14_commands#cli-commands
+//!   - 04_repository#repo-catalog-repair-contract
 //!   - 04_repository#tree-projection-contract
 
+#[cfg(test)]
+mod catalog_test;
 #[cfg(test)]
 mod check_test;
 mod path_fix;
@@ -32,6 +35,9 @@ pub fn run(ledger_dir: &Path, snapshot_depth: usize, options: RepairOptions<'_>)
         shadow::quarantine_nil_shadow_repos(&ledger_dir.join("remotes"))?
     };
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    if !options.check {
+        repo.repair_local_repo_catalog()?;
+    }
     let repo = Arc::new(repo);
 
     let repo_names = resolve_local_repo_args(&repo, options.target_repo)?;

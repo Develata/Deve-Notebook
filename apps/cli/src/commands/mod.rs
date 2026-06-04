@@ -23,6 +23,7 @@ pub mod recover;
 pub mod repair;
 mod repo_arg;
 pub mod repo_projection;
+pub mod sc;
 pub mod sc_status;
 pub mod scan;
 pub mod seed;
