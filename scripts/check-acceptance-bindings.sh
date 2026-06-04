@@ -15,6 +15,14 @@ manual=0
 unbound=0
 declare -A case_set=()
 declare -A manual_map=()
+declare -A automated_map=()
+declare -A feature_map=()
+case_pattern_file=""
+
+cleanup() {
+  [[ -n "$case_pattern_file" ]] && rm -f "$case_pattern_file"
+}
+trap cleanup EXIT
 
 record_error() {
   echo "ERROR: $*"
@@ -37,6 +45,9 @@ while IFS= read -r case_id; do
   [[ -n "$case_id" ]] || continue
   case_set["$case_id"]=1
 done < <(grep -RhoE 'case_id: [A-Z][A-Z0-9]*(-[A-Z0-9]+)*' "$ACCEPTANCE_DIR"/*.md 2>/dev/null | awk '{ print $2 }' | sort -u)
+
+case_pattern_file="$(mktemp)"
+printf '%s\n' "${!case_set[@]}" | sort > "$case_pattern_file"
 
 if [[ -f "$ACCEPTANCE_BINDINGS" ]]; then
   while IFS='|' read -r case_id binding evidence note; do
@@ -68,11 +79,25 @@ if [[ -f "$ACCEPTANCE_BINDINGS" ]]; then
 fi
 
 while IFS= read -r case_id; do
+  [[ -n "$case_id" && -n "${case_set[$case_id]:-}" ]] || continue
+  automated_map["$case_id"]=1
+done < <(rg --no-filename --only-matching --fixed-strings --file "$case_pattern_file" "${CODE_DIRS[@]}" "$ROOT/tests" "$ROOT/scripts" 2>/dev/null | sort -u || true)
+
+feature_targets=()
+[[ -f "$FEATURE_OP_COVERAGE" ]] && feature_targets+=("$FEATURE_OP_COVERAGE")
+[[ -d "$FEATURE_OP_DIR" ]] && feature_targets+=("$FEATURE_OP_DIR")
+if [[ "${#feature_targets[@]}" -gt 0 ]]; then
+  while IFS= read -r case_id; do
+    [[ -n "$case_id" && -n "${case_set[$case_id]:-}" ]] || continue
+    feature_map["$case_id"]=1
+  done < <(rg --no-filename --only-matching --fixed-strings --file "$case_pattern_file" "${feature_targets[@]}" 2>/dev/null | sort -u || true)
+fi
+
+while IFS= read -r case_id; do
   [[ -n "$case_id" ]] || continue
-  if rg --quiet --fixed-strings -- "$case_id" "${CODE_DIRS[@]}" "$ROOT/tests" "$ROOT/scripts" 2>/dev/null; then
+  if [[ -n "${automated_map[$case_id]:-}" ]]; then
     automated=$((automated + 1))
-  elif { [[ -f "$FEATURE_OP_COVERAGE" ]] && grep -qF "$case_id" "$FEATURE_OP_COVERAGE"; } \
-    || { [[ -d "$FEATURE_OP_DIR" ]] && grep -rqF "$case_id" "$FEATURE_OP_DIR"; }; then
+  elif [[ -n "${feature_map[$case_id]:-}" ]]; then
     feature=$((feature + 1))
   elif [[ -n "${manual_map[$case_id]:-}" ]]; then
     manual=$((manual + 1))
