@@ -1,7 +1,6 @@
 #[cfg(unix)]
 use super::{
-    is_ledger_managed_write_target, project_relative_path, resolve_capability_read_target,
-    resolve_capability_write_target,
+    is_ledger_managed_write_target, resolve_capability_read_target, resolve_capability_write_target,
 };
 use super::{is_ledger_managed_write_target_for, managed_note_target_parts_for};
 #[cfg(unix)]
@@ -47,26 +46,6 @@ fn ledger_managed_detection_fails_closed_through_symlink() {
     std::env::set_current_dir(cwd).expect("restore cwd");
 
     assert!(detected);
-}
-
-#[cfg(unix)]
-#[test]
-fn project_relative_path_uses_canonical_target_location() {
-    let dir = tempdir().expect("tempdir");
-    let workspace = dir.path().join("workspace/default/notes");
-    std::fs::create_dir_all(&workspace).expect("mkdir");
-    let target = workspace.join("a.md");
-    std::fs::write(&target, "hello").expect("write");
-    let alias_dir = dir.path().join("tmp");
-    std::fs::create_dir_all(&alias_dir).expect("mkdir alias");
-    let alias = alias_dir.join("alias.md");
-    symlink(&target, &alias).expect("symlink");
-
-    let rel = project_relative_path(dir.path(), Path::new("tmp/alias.md"))
-        .expect("canonical relative path")
-        .expect("inside project root");
-
-    assert_eq!(rel, "workspace/default/notes/a.md");
 }
 
 #[cfg(unix)]

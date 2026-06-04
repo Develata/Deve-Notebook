@@ -6,14 +6,6 @@ use crate::utils::path::path_to_forward_slash;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
-#[cfg(unix)]
-pub(super) fn project_relative_path(cwd: &Path, path: &Path) -> Result<Option<String>, String> {
-    let cwd = std::fs::canonicalize(cwd)
-        .map_err(|e| format!("Failed to canonicalize project root {:?}: {}", cwd, e))?;
-    let path = canonicalize_target(cwd.as_path(), path)?;
-    Ok(path.strip_prefix(&cwd).ok().map(path_to_forward_slash))
-}
-
 pub(super) fn is_ledger_managed_write_target(path: &Path) -> Result<bool, String> {
     let cwd = canonical_project_root()?;
     let target = canonicalize_target(&cwd, path)?;
