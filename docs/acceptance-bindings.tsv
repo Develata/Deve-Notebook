@@ -11,6 +11,8 @@ AUTH-008|manual-security|docs/features/09_auth.md|logout invalidation review
 AUTH-009|manual-security|docs/features/09_auth.md|secret handling review
 AUTH-010|manual-security|docs/features/09_auth.md|error disclosure review
 CMD-005|manual-cli|docs/features/12_commands.md|command behavior review
+CMD-007A|manual-chrome|docs/dev-runbook.md|embedded browser runtime smoke commands
+CMD-007B|manual-chrome|docs/dev-runbook.md|trunk browser dev runtime fallback commands
 DIFF-001|manual-chrome|docs/features/07_diff_logic.md|diff UI workflow
 DIFF-004|manual-chrome|docs/features/07_diff_logic.md|merge workflow
 DIFF-007|manual-chrome|docs/features/07_diff_logic.md|discard workflow

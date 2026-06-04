@@ -47,7 +47,12 @@ while IFS= read -r case_id; do
 done < <(grep -RhoE 'case_id: [A-Z][A-Z0-9]*(-[A-Z0-9]+)*' "$ACCEPTANCE_DIR"/*.md 2>/dev/null | awk '{ print $2 }' | sort -u)
 
 case_pattern_file="$(mktemp)"
-printf '%s\n' "${!case_set[@]}" | sort > "$case_pattern_file"
+# Longer IDs must be tried first: e.g. CMD-004 must not shadow CMD-004A.
+printf '%s\n' "${!case_set[@]}" \
+  | awk '{ print length($0) "\t" $0 }' \
+  | sort -r -n -k1,1 \
+  | cut -f2- \
+  > "$case_pattern_file"
 
 if [[ -f "$ACCEPTANCE_BINDINGS" ]]; then
   while IFS='|' read -r case_id binding evidence note; do

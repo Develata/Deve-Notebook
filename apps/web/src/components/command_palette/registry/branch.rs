@@ -97,7 +97,8 @@ mod tests {
     }
 
     #[test]
-    fn establish_branch_command_is_unavailable_notice_only() {
+    fn acc_cmd_004a_establish_branch_command_is_unavailable_notice_only() {
+        // CMD-004A: unimplemented P2P branch creation is an unavailable notice.
         let owner = Owner::new();
         owner.with(|| {
             let notice = provide_source_control_context();

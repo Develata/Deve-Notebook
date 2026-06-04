@@ -136,7 +136,8 @@ mod tests {
     }
 
     #[test]
-    fn global_shortcut_actions_toggle_layout_and_language_state() {
+    fn acc_cmd_004d_global_shortcut_actions_toggle_layout_and_language_state() {
+        // CMD-004D: settings shortcuts toggle locale, outline, and sidebar state.
         let owner = leptos::reactive::owner::Owner::new();
 
         owner.with(|| {

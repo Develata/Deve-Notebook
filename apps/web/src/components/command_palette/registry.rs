@@ -157,7 +157,8 @@ mod tests {
     use leptos::prelude::*;
 
     #[test]
-    fn static_commands_include_git_bridge_notices() {
+    fn acc_cmd_004b_static_commands_include_git_bridge_notices() {
+        // CMD-004B: Git mirror palette entries remain CLI-only command notices.
         let owner = leptos::reactive::owner::Owner::new();
 
         owner.with(|| {
@@ -185,7 +186,8 @@ mod tests {
     }
 
     #[test]
-    fn static_commands_partition_reserved_surfaces() {
+    fn acc_cmd_004c_reserved_commands_partition_reserved_surfaces() {
+        // CMD-004C: reserved Source Control and AI entries stay unavailable.
         let owner = leptos::reactive::owner::Owner::new();
 
         owner.with(|| {
