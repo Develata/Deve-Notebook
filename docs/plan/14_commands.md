@@ -84,6 +84,8 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   Command Palette 入口启用时 **MUST** 调用明确 backend contract；未启用时 **MUST** 显示 disabled/unavailable 状态。
     *   CLI-only notice 只能作为可发现性入口，**MUST NOT** 被解释为 Web 已能直接执行 Git import/push/repair。
     *   Git repair 的可点击 UI、完整 conflict UI 与后台自动 repair **MAY** 作为 future UI surface 另行设计；只读 notice 或 review surface **MUST NOT** 隐式升级为 Git writer。
+    *   每个 Command Palette entry **MUST** 暴露稳定 `id`、本地化 `title`、用户可见 `group`、启用条件说明、可选快捷键文本，以及 unavailable reason（若不可用）。
+    *   Command Palette 与 Unified Search 的 `>` 命令入口 **MUST** 使用同一 command registry metadata；不得让两个入口展示不同的可用性或 writer 边界。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

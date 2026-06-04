@@ -1,9 +1,13 @@
 use super::{
     BUTTON_CLASS_ACCENT_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE, SYNC_AUTO_CLASS_ACTIVE,
-    SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, language_button_state,
-    reserved_setting_state, sync_mode_button_state,
+    SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, editor_density_button_state,
+    editor_wrap_button_state, language_button_state, reserved_setting_state,
+    sync_mode_button_state, theme_button_state,
 };
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
+use crate::components::settings_prefs::{
+    EditorDensityPreference, EditorWrapPreference, ThemePreference,
+};
 use crate::i18n::Locale;
 
 #[test]
@@ -46,6 +50,29 @@ fn sync_mode_buttons_treat_unknown_mode_as_auto_safe_default() {
     let state = sync_mode_button_state("unexpected");
     assert_eq!(state.auto_class, SYNC_AUTO_CLASS_ACTIVE);
     assert_eq!(state.manual_class, BUTTON_CLASS_IDLE);
+}
+
+#[test]
+fn theme_buttons_reflect_browser_local_preference() {
+    let auto = theme_button_state(ThemePreference::Auto);
+    assert_eq!(auto.auto_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    assert_eq!(auto.light_class, BUTTON_CLASS_IDLE);
+    assert_eq!(auto.dark_class, BUTTON_CLASS_IDLE);
+
+    let dark = theme_button_state(ThemePreference::Dark);
+    assert_eq!(dark.auto_class, BUTTON_CLASS_IDLE);
+    assert_eq!(dark.dark_class, BUTTON_CLASS_ACCENT_ACTIVE);
+}
+
+#[test]
+fn editor_preference_buttons_reflect_local_feedback_state() {
+    let wrap = editor_wrap_button_state(EditorWrapPreference::Off);
+    assert_eq!(wrap.on_class, BUTTON_CLASS_IDLE);
+    assert_eq!(wrap.off_class, BUTTON_CLASS_ACCENT_ACTIVE);
+
+    let density = editor_density_button_state(EditorDensityPreference::Compact);
+    assert_eq!(density.comfortable_class, BUTTON_CLASS_IDLE);
+    assert_eq!(density.compact_class, BUTTON_CLASS_ACCENT_ACTIVE);
 }
 
 #[test]

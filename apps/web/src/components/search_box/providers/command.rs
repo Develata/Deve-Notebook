@@ -61,10 +61,30 @@ impl SearchProvider for CommandProvider {
 }
 
 fn command_result_detail(cmd: &Command, locale: Locale) -> String {
-    cmd.availability
+    let mut parts = Vec::new();
+    if !cmd.group.is_empty() {
+        parts.push(cmd.group.clone());
+    }
+    if let Some(shortcut) = cmd.shortcut.as_ref()
+        && !shortcut.is_empty()
+    {
+        parts.push(shortcut.clone());
+    }
+    let detail = cmd
+        .availability
         .reason()
         .map(str::to_string)
-        .unwrap_or_else(|| t::search::command_detail(locale).to_string())
+        .unwrap_or_else(|| {
+            if cmd.enabled_when.is_empty() {
+                t::search::command_detail(locale).to_string()
+            } else {
+                cmd.enabled_when.clone()
+            }
+        });
+    if !detail.is_empty() {
+        parts.push(detail);
+    }
+    parts.join(" · ")
 }
 
 fn command_match_score(query: &str, cmd: &Command) -> f32 {
@@ -75,7 +95,19 @@ fn command_match_score(query: &str, cmd: &Command) -> f32 {
     let id_score = sublime_fuzzy::best_match(query, &command_id)
         .map(|m| m.score() as f32)
         .unwrap_or(0.0);
-    title_score.max(id_score)
+    let group_score = sublime_fuzzy::best_match(query, &cmd.group)
+        .map(|m| m.score() as f32)
+        .unwrap_or(0.0);
+    let shortcut_score = cmd
+        .shortcut
+        .as_deref()
+        .and_then(|shortcut| sublime_fuzzy::best_match(query, shortcut))
+        .map(|m| m.score() as f32)
+        .unwrap_or(0.0);
+    title_score
+        .max(id_score)
+        .max(group_score)
+        .max(shortcut_score)
 }
 
 #[cfg(test)]
@@ -143,9 +175,33 @@ mod tests {
 
         let results = provider.search(">establish");
 
-        assert_eq!(
-            results.first().and_then(|result| result.detail.as_deref()),
-            Some("Unavailable: no branch creation backend")
+        let detail = results
+            .first()
+            .and_then(|result| result.detail.as_deref())
+            .expect("command detail");
+        assert!(detail.contains("Unavailable: no branch creation backend"));
+    }
+
+    #[test]
+    fn command_provider_detail_includes_group_shortcut_and_enabled_condition() {
+        let provider = CommandProvider::new(
+            vec![
+                command("open", "Open Document")
+                    .with_group("Navigation")
+                    .with_shortcut("Ctrl+P")
+                    .with_enabled_when("Opens the current search surface"),
+            ],
+            Locale::En,
         );
+
+        let results = provider.search(">navigation");
+        let detail = results
+            .first()
+            .and_then(|result| result.detail.as_deref())
+            .expect("command detail");
+
+        assert!(detail.contains("Navigation"));
+        assert!(detail.contains("Ctrl+P"));
+        assert!(detail.contains("search surface"));
     }
 }

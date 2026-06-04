@@ -100,16 +100,16 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                                             children=move |(idx, cmd)| {
                                                 let is_sel = idx == idx_sel;
                                                 let is_unavailable = cmd.availability.is_unavailable();
-                                                let unavailable_reason = cmd
-                                                    .availability
-                                                    .reason()
-                                                    .map(str::to_string);
                                                 let unavailable_attr = if is_unavailable {
                                                     cmd.id.clone()
                                                 } else {
                                                     String::new()
                                                 };
                                                 let title = cmd.title.clone();
+                                                let detail = cmd.detail_text();
+                                                let metadata = cmd.metadata_text();
+                                                let group = cmd.group.clone();
+                                                let shortcut = cmd.shortcut.clone();
                                                 view! {
                                                     <button
                                                         class=format!(
@@ -132,12 +132,21 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                                                         </div>
                                                         <div class="flex-1 min-w-0">
                                                             <span class="block truncate font-medium">{title}</span>
-                                                            {unavailable_reason
-                                                                .map(|reason| {
+                                                            <span class="mt-0.5 block truncate text-xs text-muted">
+                                                                {detail}
+                                                            </span>
+                                                            <span class="mt-0.5 block truncate text-[11px] text-muted opacity-80">
+                                                                {metadata}
+                                                            </span>
+                                                        </div>
+                                                        <div class="hidden sm:flex shrink-0 flex-col items-end gap-1 text-[11px] text-muted">
+                                                            <span class="max-w-28 truncate">{group}</span>
+                                                            {shortcut
+                                                                .map(|shortcut| {
                                                                     view! {
-                                                                        <span class="mt-0.5 block truncate text-xs text-muted">
-                                                                            {reason}
-                                                                        </span>
+                                                                        <kbd class="font-sans bg-panel px-1.5 py-0.5 rounded border border-default">
+                                                                            {shortcut}
+                                                                        </kbd>
                                                                     }
                                                                     .into_any()
                                                                 })

@@ -5,6 +5,9 @@
 //! Pure Settings section UI policy helpers.
 
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
+use crate::components::settings_prefs::{
+    EditorDensityPreference, EditorWrapPreference, ThemePreference,
+};
 use crate::i18n::{Locale, t};
 
 pub(super) const BUTTON_CLASS_DISABLED: &str =
@@ -75,6 +78,57 @@ pub(super) fn sync_mode_button_state(sync_mode: &str) -> SyncModeButtonState {
         } else {
             BUTTON_CLASS_IDLE
         },
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct ThemeButtonState {
+    pub auto_class: &'static str,
+    pub light_class: &'static str,
+    pub dark_class: &'static str,
+}
+
+pub(super) fn theme_button_state(pref: ThemePreference) -> ThemeButtonState {
+    ThemeButtonState {
+        auto_class: preference_button_class(pref == ThemePreference::Auto),
+        light_class: preference_button_class(pref == ThemePreference::Light),
+        dark_class: preference_button_class(pref == ThemePreference::Dark),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct EditorWrapButtonState {
+    pub on_class: &'static str,
+    pub off_class: &'static str,
+}
+
+pub(super) fn editor_wrap_button_state(pref: EditorWrapPreference) -> EditorWrapButtonState {
+    EditorWrapButtonState {
+        on_class: preference_button_class(pref == EditorWrapPreference::On),
+        off_class: preference_button_class(pref == EditorWrapPreference::Off),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct EditorDensityButtonState {
+    pub comfortable_class: &'static str,
+    pub compact_class: &'static str,
+}
+
+pub(super) fn editor_density_button_state(
+    pref: EditorDensityPreference,
+) -> EditorDensityButtonState {
+    EditorDensityButtonState {
+        comfortable_class: preference_button_class(pref == EditorDensityPreference::Comfortable),
+        compact_class: preference_button_class(pref == EditorDensityPreference::Compact),
+    }
+}
+
+fn preference_button_class(active: bool) -> &'static str {
+    if active {
+        BUTTON_CLASS_ACCENT_ACTIVE
+    } else {
+        BUTTON_CLASS_IDLE
     }
 }
 

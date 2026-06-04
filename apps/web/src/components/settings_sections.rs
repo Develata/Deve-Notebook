@@ -1,11 +1,12 @@
 // apps/web/src/components/settings_sections.rs
 //! plan_ref:
+//!   - 15_settings#browser-ui-prefs
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!   - 16_ai_agent#trusted-agent-bridge
 //!
 //! # Settings Modal — Section Components
 //!
-//! Extracted sub-sections: Sync Mode, AI Backend.
+//! Extracted sub-sections: local preferences, sync mode, AI backend.
 
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI};
 use crate::components::settings_sections_policy::{
@@ -14,6 +15,10 @@ use crate::components::settings_sections_policy::{
 use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
+
+mod local_prefs;
+
+pub use local_prefs::{AppearanceSection, EditorBasicsSection, RuntimeDiagnosticsSection};
 
 /// Sync mode toggle (auto / manual).
 #[component]

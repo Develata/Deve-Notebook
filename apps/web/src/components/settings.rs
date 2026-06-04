@@ -8,7 +8,10 @@
 //! 设置模态框，允许用户更改语言、同步模式等全局配置。
 //! 显示版本信息和未来功能占位符（如混合模式）。
 
-use crate::components::settings_sections::{AiBackendSection, SyncModeSection};
+use crate::components::settings_sections::{
+    AiBackendSection, AppearanceSection, EditorBasicsSection, RuntimeDiagnosticsSection,
+    SyncModeSection,
+};
 use crate::components::settings_sections_policy::{language_button_state, reserved_setting_state};
 use crate::components::{focus_scope, icons::X};
 use crate::i18n::{Locale, persist_locale_preference, t};
@@ -31,7 +34,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                     role="dialog"
                     aria-modal="true"
                     tabindex="-1"
-                    class="bg-panel rounded-xl shadow-2xl w-full max-w-md p-6 transform transition-all scale-100 opacity-100"
+                    class="bg-panel rounded-xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-6 transform transition-all scale-100 opacity-100"
                     on:keydown=move |ev| {
                         let _ = focus_scope::handle_focus_trap_keydown(&ev, panel_ref);
                     }
@@ -56,6 +59,9 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                                 <span class="font-mono text-primary">{env!("CARGO_PKG_VERSION")}</span>
                             </div>
                         </div>
+
+                        // 外观设置
+                        <AppearanceSection locale=locale />
 
                         // 语言设置
                         <div class="bg-sidebar p-4 rounded-lg border border-default flex justify-between items-center">
@@ -87,6 +93,12 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
 
                         // AI 后端设置
                         <AiBackendSection locale=locale />
+
+                        // 编辑器基础偏好
+                        <EditorBasicsSection locale=locale />
+
+                        // 开发运行诊断入口
+                        <RuntimeDiagnosticsSection locale=locale />
 
                         // 当前设置边界
                         <div class="bg-sidebar p-4 rounded-lg border border-default">

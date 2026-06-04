@@ -15,6 +15,8 @@ mod branch;
 mod git;
 mod merge;
 mod reserved;
+#[cfg(test)]
+mod tests;
 
 use branch::establish_branch_command;
 use git::{
@@ -49,7 +51,10 @@ pub fn create_static_commands(
                 on_open.run(());
                 // Do not close, as on_open re-purposes the search box
             }),
-        ),
+        )
+        .with_group((t::command_palette::group_navigation)(locale))
+        .with_shortcut(t::command_palette::shortcut_ctrl_p())
+        .with_enabled_when((t::command_palette::enabled_search_surface)(locale)),
         Command::available(
             "settings",
             (t::command_palette::open_settings)(locale),
@@ -57,7 +62,9 @@ pub fn create_static_commands(
                 on_settings.run(());
                 set_show.set(false);
             }),
-        ),
+        )
+        .with_group((t::command_palette::group_settings)(locale))
+        .with_enabled_when((t::command_palette::enabled_local_settings)(locale)),
         Command::available(
             "lang",
             (t::command_palette::toggle_language)(locale),
@@ -68,7 +75,10 @@ pub fn create_static_commands(
                 });
                 set_show.set(false);
             }),
-        ),
+        )
+        .with_group((t::command_palette::group_settings)(locale))
+        .with_shortcut(t::command_palette::shortcut_ctrl_l())
+        .with_enabled_when((t::command_palette::enabled_local_settings)(locale)),
         // P2P: Switch to Peer
         Command::available(
             "switch_peer",
@@ -80,20 +90,28 @@ pub fn create_static_commands(
                 }
                 set_show.set(false);
             }),
-        ),
+        )
+        .with_group((t::command_palette::group_peer)(locale))
+        .with_shortcut(t::command_palette::shortcut_ctrl_shift_k())
+        .with_enabled_when((t::command_palette::enabled_peer_surface)(locale)),
     ];
 
     if let Some(sidebar_control) = sidebar_control {
-        commands.push(Command::available(
-            "toggle_sidebar",
-            (t::command_palette::toggle_sidebar)(locale),
-            Callback::new(move |_| {
-                sidebar_control
-                    .set_visible
-                    .update(|visible| *visible = !*visible);
-                set_show.set(false);
-            }),
-        ));
+        commands.push(
+            Command::available(
+                "toggle_sidebar",
+                (t::command_palette::toggle_sidebar)(locale),
+                Callback::new(move |_| {
+                    sidebar_control
+                        .set_visible
+                        .update(|visible| *visible = !*visible);
+                    set_show.set(false);
+                }),
+            )
+            .with_group((t::command_palette::group_layout)(locale))
+            .with_shortcut(t::command_palette::shortcut_ctrl_b())
+            .with_enabled_when((t::command_palette::enabled_local_settings)(locale)),
+        );
     }
 
     commands.extend(source_control_reserved_commands(locale));
@@ -116,15 +134,19 @@ pub fn create_static_commands(
 
     // Add AI Chat toggle command if ChatControl is available
     if let Some(chat_ctrl) = chat_control {
-        commands.push(Command::available(
-            "toggle_ai_chat",
-            (t::command_palette::toggle_ai_chat)(locale),
-            Callback::new(move |_| {
-                let current = chat_ctrl.chat_visible.get_untracked();
-                chat_ctrl.set_chat_visible.set(!current);
-                set_show.set(false);
-            }),
-        ));
+        commands.push(
+            Command::available(
+                "toggle_ai_chat",
+                (t::command_palette::toggle_ai_chat)(locale),
+                Callback::new(move |_| {
+                    let current = chat_ctrl.chat_visible.get_untracked();
+                    chat_ctrl.set_chat_visible.set(!current);
+                    set_show.set(false);
+                }),
+            )
+            .with_group((t::command_palette::group_ai)(locale))
+            .with_enabled_when((t::command_palette::enabled_local_ui)(locale)),
+        );
     }
     commands.extend(ai_reserved_commands(locale));
 
@@ -137,7 +159,14 @@ pub fn filter_commands(query: &str, commands: Vec<Command>, max_results: usize) 
     let mut results = Vec::new();
 
     for cmd in commands {
-        if q.is_empty() || cmd.title.to_lowercase().contains(&q) || cmd.id.contains(&q) {
+        let shortcut = cmd.shortcut.as_deref().unwrap_or_default().to_lowercase();
+        if q.is_empty()
+            || cmd.title.to_lowercase().contains(&q)
+            || cmd.id.contains(&q)
+            || cmd.group.to_lowercase().contains(&q)
+            || shortcut.contains(&q)
+            || cmd.enabled_when.to_lowercase().contains(&q)
+        {
             results.push(cmd);
         }
     }
@@ -147,105 +176,4 @@ pub fn filter_commands(query: &str, commands: Vec<Command>, max_results: usize) 
     }
 
     results
-}
-
-#[cfg(test)]
-mod tests {
-    use super::create_static_commands;
-    use crate::components::layout_context::SidebarControl;
-    use crate::i18n::Locale;
-    use leptos::prelude::*;
-
-    #[test]
-    fn acc_cmd_004b_static_commands_include_git_bridge_notices() {
-        // CMD-004B: Git mirror palette entries remain CLI-only command notices.
-        let owner = leptos::reactive::owner::Owner::new();
-
-        owner.with(|| {
-            let (_, set_show) = signal(false);
-            let locale = RwSignal::new(Locale::En);
-            let commands = create_static_commands(
-                Locale::En,
-                Callback::new(|_| {}),
-                Callback::new(|_| {}),
-                set_show,
-                locale,
-            );
-            let ids = commands
-                .iter()
-                .map(|command| command.id.as_str())
-                .collect::<Vec<_>>();
-
-            assert!(ids.contains(&"git_import_changes"));
-            assert!(ids.contains(&"git_status"));
-            assert!(ids.contains(&"git_mirror"));
-            assert!(ids.contains(&"git_export_mirror"));
-            assert!(ids.contains(&"git_push_mirror"));
-            assert!(ids.contains(&"git_repair_mirror"));
-        });
-    }
-
-    #[test]
-    fn acc_cmd_004c_reserved_commands_partition_reserved_surfaces() {
-        // CMD-004C: reserved Source Control and AI entries stay unavailable.
-        let owner = leptos::reactive::owner::Owner::new();
-
-        owner.with(|| {
-            let (_, set_show) = signal(false);
-            let locale = RwSignal::new(Locale::En);
-            let commands = create_static_commands(
-                Locale::En,
-                Callback::new(|_| {}),
-                Callback::new(|_| {}),
-                set_show,
-                locale,
-            );
-
-            for id in [
-                "source_control_sync",
-                "source_control_commit",
-                "source_control_push",
-                "ai_retry_last_request",
-                "ai_switch_backend",
-                "ai_switch_plan",
-                "ai_switch_build",
-            ] {
-                let command = commands
-                    .iter()
-                    .find(|command| command.id == id)
-                    .unwrap_or_else(|| panic!("missing command {id}"));
-                assert!(
-                    command.availability.is_unavailable(),
-                    "{id} must remain unavailable until a backend contract is wired"
-                );
-            }
-        });
-    }
-
-    #[test]
-    fn static_commands_include_sidebar_toggle_when_control_is_available() {
-        let owner = leptos::reactive::owner::Owner::new();
-
-        owner.with(|| {
-            let (_, set_show) = signal(false);
-            let (visible, set_visible) = signal(true);
-            provide_context(SidebarControl { set_visible });
-            let locale = RwSignal::new(Locale::En);
-            let commands = create_static_commands(
-                Locale::En,
-                Callback::new(|_| {}),
-                Callback::new(|_| {}),
-                set_show,
-                locale,
-            );
-            let command = commands
-                .iter()
-                .find(|command| command.id == "toggle_sidebar")
-                .expect("toggle sidebar command");
-
-            command.action.run(());
-
-            assert!(!visible.get_untracked());
-        });
-    }
 }

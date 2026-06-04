@@ -31,6 +31,8 @@ pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) ->
             );
         }),
     )
+    .with_group((t::command_palette::group_git)(locale))
+    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
 }
 
 pub(super) fn git_status_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -47,6 +49,8 @@ pub(super) fn git_status_command(locale: Locale, set_show: WriteSignal<bool>) ->
             );
         }),
     )
+    .with_group((t::command_palette::group_git)(locale))
+    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
 }
 
 pub(super) fn git_mirror_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -63,6 +67,8 @@ pub(super) fn git_mirror_command(locale: Locale, set_show: WriteSignal<bool>) ->
             );
         }),
     )
+    .with_group((t::command_palette::group_git)(locale))
+    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
 }
 
 pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -79,6 +85,8 @@ pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) ->
             );
         }),
     )
+    .with_group((t::command_palette::group_git)(locale))
+    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
 }
 
 pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -94,6 +102,8 @@ pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> C
             );
         }),
     )
+    .with_group((t::command_palette::group_git)(locale))
+    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
 }
 
 pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -109,6 +119,8 @@ pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) ->
             );
         }),
     )
+    .with_group((t::command_palette::group_git)(locale))
+    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
 }
 
 #[cfg(test)]

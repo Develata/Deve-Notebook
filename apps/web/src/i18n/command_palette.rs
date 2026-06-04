@@ -8,6 +8,10 @@
 
 use super::Locale;
 
+mod metadata;
+
+pub use metadata::*;
+
 pub fn placeholder(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Type a command...",
@@ -24,8 +28,8 @@ pub fn no_results(locale: Locale) -> &'static str {
 
 pub fn open_settings(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Open Settings (config)",
-        Locale::Zh => "打开设置 (config)",
+        Locale::En => "Open Settings",
+        Locale::Zh => "打开设置",
     }
 }
 

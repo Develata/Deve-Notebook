@@ -15,8 +15,10 @@
 - `Surface`: `workspace-shell`
 - `Trigger`: language, layout, or panel preference changes
 - `Preconditions`: setting has a visible UI effect
-- `Immediate Result`: user sees changed labels, selection state, or layout
-- `Application Entry`: `apps/web/src/components/settings.rs`
+- `Immediate Result`: user sees changed labels, theme marker, editor marker,
+  selection state, or layout
+- `Application Entry`: `apps/web/src/components/settings.rs`,
+  `apps/web/src/components/settings_sections.rs`
 
 ### `op.settings.feedback.render-disabled`
 

@@ -66,6 +66,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-i18n-formatting-baseline.sh` | Verifies visible frontend time formatting goes through the locale-aware formatting utility |
 | `check-release-baseline.sh` | Verifies Docker, compose, and release workflow surfaces match the embedded-frontend release baseline |
 | `smoke-web-release-build.sh` | Builds the Web release assets with normalized Trunk/Browserslist environment |
+| `smoke-web-runtime-paths.sh` | Prints the repeatable CMD-007A/CMD-007B browser runtime smoke command sequence |
 | `smoke-runtime-happy-path.sh` | Runs temporary-repo Axum/WebSocket happy-path tests for switch, handshake, writer, edit, open, history, and reconnect bootstrap |
 | `smoke-runtime-recovery-path.sh` | Runs degraded-local, stale-scope, reconnect gate, status, and auth-probe recovery smoke tests |
 | `smoke-docker-release.sh` | Builds and runs the Docker release image smoke test when Docker is available |

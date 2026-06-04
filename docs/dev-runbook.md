@@ -61,6 +61,15 @@ the backend runtime boundary.
 For `CMD-007B`, the browser smoke must confirm the page reaches either `Ready`
 or `Login`, and network traffic includes `/api/node/role`.
 
+To print both runtime paths without starting servers:
+
+```bash
+scripts/smoke-web-runtime-paths.sh
+```
+
+Set `DEVE_WEB_RUNTIME_SMOKE_BUILD=1` to also run the embedded Web release build
+step before printing the browser smoke commands.
+
 ## Local Quality Gate
 
 Run this baseline before local commits that touch command/settings, CLI runtime,

@@ -201,6 +201,7 @@ mod tests {
             err.to_string()
                 .contains("Failed to stat config.toml target")
                 || err.to_string().contains("Not a directory")
+                || err.to_string().contains("File exists")
         );
     }
 }

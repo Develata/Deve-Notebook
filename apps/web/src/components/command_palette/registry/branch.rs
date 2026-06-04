@@ -21,6 +21,10 @@ pub(super) fn establish_branch_command(locale: Locale, set_show: WriteSignal<boo
             set_show.set(false);
         }),
     )
+    .with_group((t::command_palette::group_peer)(locale))
+    .with_enabled_when((t::command_palette::establish_branch_unavailable_reason)(
+        locale,
+    ))
 }
 
 #[cfg(test)]
@@ -106,6 +110,7 @@ mod tests {
             let command = establish_branch_command(Locale::En, set_show);
 
             assert!(command.availability.is_unavailable());
+            assert_eq!(command.group, "P2P / Branch");
 
             command.action.run(());
 

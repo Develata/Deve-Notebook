@@ -35,6 +35,8 @@ fi
 check_contains apps/web/src/hooks/use_layout/storage.rs "read_i32_pref"
 check_contains apps/web/src/hooks/use_outline.rs "read_bool_pref"
 check_contains apps/web/src/shortcuts/config.rs "read_pref"
+check_contains apps/web/src/components/settings_prefs.rs "read_pref"
+check_contains apps/web/src/components/settings_prefs.rs "write_pref"
 check_contains apps/web/src/i18n/mod.rs "write_pref"
 check_contains apps/web/src/storage/prefs.rs "typed_prefs_roundtrip_through_fallback_layer"
 check_contains apps/web/src/hooks/use_core/scope_prefs.rs "repo_name: String"

@@ -22,12 +22,14 @@
 ### 1. 设置分组
 
 - 设置项应按主题分组展示，如界面、语言、编辑体验、运行模式等。
+- 当前 v1 分组至少覆盖主题、自动换行、编辑器密度、语言、同步模式、AI 后端与运行诊断入口。
 - 用户不应在设置中迷失于无结构的长列表。
 - 细粒度来源链：[`settings_env_defaults.md`](./operations/settings_env_defaults.md)、[`settings_file_config.md`](./operations/settings_file_config.md)、[`settings_ui_preferences.md`](./operations/settings_ui_preferences.md)、[`settings_runtime_feedback.md`](./operations/settings_runtime_feedback.md)
 
 ### 2. 即时反馈
 
 - 修改主题、语言、面板显示等设置后，界面应出现即时变化。
+- 浏览器本地主题与编辑器基础偏好应通过根节点标记或可见按钮状态立即反馈；不得写入 repo authority。
 - 设置不应表现为“点了没反应”。
 
 ### 3. 当前有效 vs 预留能力

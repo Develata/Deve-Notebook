@@ -139,6 +139,12 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 浏览器本地 UI 偏好仅保存主题、布局、语言、最近命令等无害状态。`localStorage` 不可用时可以退回内存态，
 但不得把 repo authority、session secret、peer private key 或业务事实写入该层。
 
+Settings v1 最小 UI surface：
+
+*   外观：主题偏好 `auto` / `light` / `dark`，只写浏览器本地 `deve.ui.theme`，并通过根节点主题标记提供即时反馈。
+*   编辑器：自动换行与编辑器密度只作为本地 UI 标记，不写 server-backed settings，不改变 repo 文档事实。
+*   运行诊断：可展示 embedded browser 与 Trunk fallback smoke 入口；这些入口只指向本地 runbook/script，不启动后台 writer。
+
 所有前端 UI 偏好必须通过 browser storage prefs facade 进入浏览器存储 fallback 层。
 除该 facade 本身与底层能力探测外，不得在功能模块中直接调用
 `window.localStorage` / `sessionStorage`。布局宽度、Outline 可见性、语言偏好、快捷键覆盖等均属于

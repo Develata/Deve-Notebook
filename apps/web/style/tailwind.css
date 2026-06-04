@@ -110,6 +110,33 @@ body.is-ctrl-pressed .markdown-body a {
   overflow-wrap: anywhere;
 }
 
+html[data-deve-editor-wrap="off"] .markdown-body {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+html[data-deve-editor-wrap="off"] .cm-content,
+html[data-deve-editor-wrap="off"] .cm-line {
+  white-space: pre;
+}
+
+html[data-deve-editor-density="compact"] .markdown-body,
+html[data-deve-editor-density="compact"] .cm-content {
+  line-height: 1.45;
+}
+
+html[data-deve-editor-density="compact"] .cm-line {
+  padding-block: 0;
+}
+
+html[data-deve-theme-pref="light"] {
+  color-scheme: light;
+}
+
+html[data-deve-theme-pref="dark"] {
+  color-scheme: dark;
+}
+
 .markdown-body pre {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

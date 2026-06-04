@@ -6,6 +6,10 @@
 
 use super::Locale;
 
+mod local_prefs;
+
+pub use local_prefs::*;
+
 pub fn title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Settings",

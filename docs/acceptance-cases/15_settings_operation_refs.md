@@ -38,11 +38,17 @@
     - Settings 已打开
   steps:
     - ui_click: "中文"
+    - ui_click: "Dark"
+    - ui_click: "Off"
+    - ui_click: "Compact"
     - ui_click: "Manual"
     - ui_click: "Native"
     - run: scripts/check-settings-local-feedback-baseline.sh
   assertions:
     - ui_assert: locale_eq "zh-CN"
+    - ui_assert: theme_pref_eq "dark"
+    - ui_assert: editor_wrap_eq "off"
+    - ui_assert: editor_density_eq "compact"
     - ui_assert: sync_mode_eq "manual"
     - ui_assert: ai_backend_eq "native"
 

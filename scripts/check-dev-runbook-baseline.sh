@@ -22,6 +22,7 @@ contains() {
 contains "$RUNBOOK" 'cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001'
 contains "$RUNBOOK" 'cargo run -p deve_cli --features search --bin deve_cli -- serve --dev --port 3001'
 contains "$RUNBOOK" 'scripts/smoke-web-release-build.sh'
+contains "$RUNBOOK" 'scripts/smoke-web-runtime-paths.sh'
 contains "$RUNBOOK" "The wrapper normalizes Trunk's \`NO_COLOR\` parsing"
 contains "$RUNBOOK" 'NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080'
 contains "$RUNBOOK" 'AUTH_SECRET'

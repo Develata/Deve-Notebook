@@ -180,6 +180,7 @@
     - 已重新构建 CLI，使 `apps/web/dist` 被编译进二进制
     - 后端通过 `deve serve --dev --port 3001` 运行，且未设置 `DEVE_STATIC_DIR`
   steps:
+    - run: scripts/smoke-web-runtime-paths.sh
     - browser_open: "http://127.0.0.1:3001/"
   assertions:
     - ui_contains_any: ["Ready", "Login"]
@@ -193,6 +194,7 @@
     - 后端通过 `deve serve --dev --port 3001` 运行
     - 前端通过 `NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080` 从 `apps/web` 运行
   steps:
+    - run: scripts/smoke-web-runtime-paths.sh
     - browser_open: "http://127.0.0.1:8080/"
   assertions:
     - ui_contains_any: ["Ready", "Login"]

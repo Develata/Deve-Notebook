@@ -33,6 +33,8 @@ pub(super) fn merge_peer_command(
             set_show.set(false);
         }),
     )
+    .with_group((t::command_palette::group_peer)(locale))
+    .with_enabled_when((t::command_palette::enabled_peer_surface)(locale))
 }
 
 #[cfg(test)]
