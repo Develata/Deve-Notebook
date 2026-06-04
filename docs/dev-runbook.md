@@ -28,7 +28,7 @@ unavailable error.
 
 ## Local Frontend
 
-Preferred embedded path:
+Preferred embedded path (`CMD-007A` embedded browser runtime smoke):
 
 ```bash
 scripts/smoke-web-release-build.sh
@@ -40,8 +40,10 @@ after Web source changes you must rebuild `apps/web/dist` before rebuilding or
 running the CLI. Otherwise the embedded server can serve stale WASM.
 The wrapper normalizes Trunk's `NO_COLOR` parsing and suppresses non-actionable
 Browserslist database freshness noise from the Trunk Tailwind pipeline.
+For `CMD-007A`, the browser smoke must confirm the page reaches either `Ready`
+or `Login`, and network traffic includes `/api/auth/status` and `/api/node/role`.
 
-Fallback two-process path:
+Fallback two-process path (`CMD-007B` Trunk browser dev runtime smoke):
 
 ```bash
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
@@ -56,6 +58,28 @@ Open `http://127.0.0.1:8080/`. This path avoids embedded-asset staleness during
 UI work. Backend-only `serve --dev` may return 404 on `/` when neither embedded
 assets nor a valid `DEVE_STATIC_DIR` are available; API and WS routes are still
 the backend runtime boundary.
+For `CMD-007B`, the browser smoke must confirm the page reaches either `Ready`
+or `Login`, and network traffic includes `/api/node/role`.
+
+## Local Quality Gate
+
+Run this baseline before local commits that touch command/settings, CLI runtime,
+or Web shell behavior:
+
+```bash
+git diff --check
+rustfmt --edition 2024 --check <touched-rust-files>
+cargo test -p deve_web acc_cmd_004 -- --nocapture
+cargo test -p deve_cli commands::sc::tests -- --nocapture
+cargo check -p deve_cli
+cargo check -p deve_web --target wasm32-unknown-unknown
+scripts/check-acceptance-bindings.sh
+scripts/plan-coverage.sh --check-metadata-completeness
+scripts/plan-coverage.sh --check-reverse-coverage
+```
+
+Do not put `scripts/plan-coverage.sh --summary-missing-plan-ref` into the quick
+gate. It is an audit command and can be handled as a separate performance debt.
 
 ## Production Auth
 

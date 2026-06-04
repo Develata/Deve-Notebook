@@ -1,14 +1,14 @@
 # 当前下一步任务
 
-> 更新日期：2026-05-21
+> 更新日期：2026-06-04
 >
 > 本文件只记录 active execution queue。完成历史进入 `docs/report/*-baseline-YYYY-MM-DD.md`。
 
 ## 当前执行队列
 
-1. Local Desktop Native Source Fuse Follow-up：在当前 head 上继续只做 Desktop native 源码/测试组织层面的低风险拆分，优先评估 `apps/desktop/src/service_entrypoint.rs`、`apps/desktop/src/tauri_entry.rs`、`apps/desktop/src/tauri_bootstrap.rs` 三个仍处于 250 行以上软警告的文件；不得改变 native authority、process runtime 默认策略、signing/store/physical-device readiness 或 Apple evidence 状态。
-2. Real macOS Apple Target-host Evidence Refresh（暂停到真实 Apple host）：只能在真实 macOS target host（Xcode + simulator toolchain）或明确具备 macOS runner 的环境刷新 macOS Desktop package/startup/installer/native-session evidence 与 iOS shell package/install/startup evidence；普通 Codex Cloud Linux 不可用于声明 Apple closure。
-3. Local Post-Apple Evidence Integration：真实 Apple evidence report 返回后，本机 pull 最新 commit，运行 target-host evidence validator、相关 native/mobile gates 与必要的 local regression guard；跨端状态只通过 git commit、`docs/report/next-tasks.md` 与新 report 同步。
+1. Command / Settings Gate Closure：保持 `CMD-004A..004D`、`CMD-007A/B` 验收绑定为 0 unbound；新增或修改 command/settings surface 时必须同步 `acc_cmd_*` 自动测试、`docs/acceptance-bindings.tsv` 或 runbook smoke 证据。
+2. Local Release Smoke Baseline：以 `docs/dev-runbook.md#local-quality-gate` 为本地提交前基线；embedded browser runtime 使用 `CMD-007A` 路径，Trunk fallback 使用 `CMD-007B` 路径；`target/`、`ledger/`、`vault/` 与 quarantine 数据不得进入 Git。
+3. Planned Product Layer Sequencing：第一优先收敛 `14_commands` / `15_settings`；第二优先进入 `06_backup` dry-run / verify / restore admission；`16_ai_agent`、`19_plugins` 与 native packaging 深水区继续暂缓，直到核心门禁和 release smoke 保持稳定。
 
 ## 最近完成
 
