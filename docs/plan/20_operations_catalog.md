@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-30`
+- `Last Review`: `2026-06-04`
 - `Authority Owns`: `operation-flow catalog (Flow ID 键；atomic OpId 见 01_terminology §2.ter) / Extension Point Index / Replacement Point Index / Configuration Entry Index`
 - `Authority Defers To`: `01_terminology, 03_storage, 06_backup, 07_network, 08_auth, 13_i18n (failure family codes), 15_settings (具体配置项定义), 各章末尾「本章相关配置」段`
 - `Counterpart Feature`: `docs/features/operation-coverage.md`
@@ -109,6 +109,7 @@
 | `flow.tech-stack.runtime-budget` | ED | — | N | — | N | N | `17_tech_stack` | defers→21_perf_budget |
 | `flow.tech-stack.runtime-budget-check` | ED | — | N | — | N | N | `17_tech_stack` | ci-stage→21_perf_budget |
 | `flow.ui.command-palette` | UO | — | N | — | N | N | `14_commands#command-palette-shortcuts` | palette-open |
+| `flow.ui.context-action-routing` | II | — | N | — | N | N | `11_ui_design/index#context-action-surface` | action-registered |
 
 ## 4. Extension Point Index {#extension-point-index}
 

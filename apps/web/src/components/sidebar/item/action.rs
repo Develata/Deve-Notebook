@@ -1,10 +1,10 @@
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
-//!   - 11_ui_design/01_web#web-layout-persistence
+//!   - 11_ui_design/index#context-action-surface
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::dropdown::AnchorRect;
-use crate::components::sidebar_menu::MenuAction;
+use crate::context_action::{ContextActionId, context_action_by_id};
 use js_sys::encode_uri_component;
 use leptos::prelude::*;
 use leptos::reactive::traits::GetUntracked;
@@ -37,22 +37,31 @@ pub(super) fn create_action_handler(
     delete_req: Callback<String>,
     open_search: Callback<String>,
     path: String,
-) -> Callback<MenuAction> {
-    Callback::new(move |action: MenuAction| {
-        leptos::logging::log!("item.rs handle_action called: action={:?}", action);
-        if is_readonly.get_untracked() && !matches!(action, MenuAction::OpenInNewWindow) {
+) -> Callback<ContextActionId> {
+    Callback::new(move |action: ContextActionId| {
+        leptos::logging::log!(
+            "item.rs handle_action called: action_id={}",
+            action.stable_id(),
+        );
+        let Some(descriptor) = context_action_by_id(action) else {
+            return;
+        };
+        if !descriptor.is_web_projectable() {
+            return;
+        }
+        if is_readonly.get_untracked() && !descriptor.readonly_allowed {
             return;
         }
 
         match action {
-            MenuAction::Rename => {
+            ContextActionId::Rename => {
                 open_search.run(build_rename_prefill(&path));
             }
-            MenuAction::Delete => delete_req.run(path.clone()),
-            MenuAction::Copy => {
+            ContextActionId::Delete => delete_req.run(path.clone()),
+            ContextActionId::Copy => {
                 open_search.run(build_prefill_command("cp", &path, None));
             }
-            MenuAction::OpenInNewWindow => {
+            ContextActionId::OpenInNewWindow => {
                 if let Some(window) = web_sys::window()
                     && let Ok(href) = window.location().href()
                 {
@@ -61,9 +70,10 @@ pub(super) fn create_action_handler(
                     let _ = window.open_with_url_and_target(&url, "_blank");
                 }
             }
-            MenuAction::MoveTo => {
+            ContextActionId::MoveTo => {
                 open_search.run(build_prefill_command("mv", &path, None));
             }
+            ContextActionId::ExportPdf => {}
         }
     })
 }

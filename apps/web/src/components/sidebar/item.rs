@@ -18,6 +18,7 @@
 use crate::components::sidebar::types::FileActionsContext;
 use crate::components::sidebar_menu::SidebarMenu;
 use crate::components::touch_feedback::interactive_item_state_class;
+use crate::context_action::ContextActionTarget;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
@@ -31,6 +32,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
 
     let (is_expanded, set_expanded) = signal(true);
     let is_folder = node.doc_id.is_none();
+    let action_target = ContextActionTarget::from_file_tree_node(is_folder, &node.path);
 
     let padding = format!("padding-left: {}px", depth * 12 + 8);
 
@@ -101,6 +103,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
                     view! {
                         <SidebarMenu
                             is_readonly=is_readonly
+                            target=action_target.clone()
                             on_action=handle_action
                             on_close=on_close_clone
                             anchor=menu_anchor

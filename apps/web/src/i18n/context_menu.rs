@@ -42,3 +42,10 @@ pub fn delete(locale: Locale) -> &'static str {
         Locale::Zh => "删除",
     }
 }
+
+pub fn export_pdf(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Export PDF",
+        Locale::Zh => "导出 PDF",
+    }
+}

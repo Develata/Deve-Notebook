@@ -26,6 +26,7 @@
 mod api;
 mod app;
 mod components;
+mod context_action;
 mod editor;
 mod hooks;
 mod i18n;

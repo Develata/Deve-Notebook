@@ -86,6 +86,9 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   Git repair 的可点击 UI、完整 conflict UI 与后台自动 repair **MAY** 作为 future UI surface 另行设计；只读 notice 或 review surface **MUST NOT** 隐式升级为 Git writer。
     *   每个 Command Palette entry **MUST** 暴露稳定 `id`、本地化 `title`、用户可见 `group`、启用条件说明、可选快捷键文本，以及 unavailable reason（若不可用）。
     *   Command Palette 与 Unified Search 的 `>` 命令入口 **MUST** 使用同一 command registry metadata；不得让两个入口展示不同的可用性或 writer 边界。
+    *   File tree context menu、Command Palette、shortcut 与 toolbar 共享 `ContextAction` metadata；surface 只能投影和触发 action intent，不得各自发明执行语义。
+    *   External action 只能作为 unavailable 或经 server/native adapter 明确启用的 action 出现；Web MUST NOT 直接执行 exe、script 或 shell command。
+    *   `Export PDF` 若作为外部工具或脚本能力出现，默认只能注册为 dormant `ContextAction`；启用前 MUST 由后端/native adapter 提供 capability、绝对路径、timeout 与 output limit。
 
 *   **交互准则 (Command First)**:
     *   大多数功能必须通过命令面板触发，减少 UI 按钮密度。

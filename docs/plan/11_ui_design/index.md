@@ -5,10 +5,10 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-02`
+- `Last Review`: `2026-06-04`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
-- `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
+- `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
 
 > **Modules**: [Web](./01_web.md) | [Desktop](./02_desktop.md) | [Mobile](./03_mobile.md)
 
@@ -94,6 +94,29 @@ application control 是连接 view 与 runtime 的稳定接口层，至少包含
 - `ToggleDrawer`
 
 控件只能发出这些控制意图，不能绕过它们直接修改 runtime 内部信号。
+
+### 3.3.1 Context Action Surface {#context-action-surface}
+
+Context action 是 command/control 体系在具体对象上的投影，不是某个菜单自己的注册表。
+
+四层调用链：
+
+- `User Operation`：用户在 file tree、command palette、toolbar 或 shortcut 上选择动作。
+- `Instruction Interface`：surface 只展示 action metadata，收集 target 与用户输入。
+- `Flow Coordination`：统一解析 `action_id`、target、repo scope、readiness、request id、幂等与失败状态。
+- `Execution Domain`：后端、server runtime 或 native adapter 执行 authority write、shell-local action 或受控 external action。
+
+约束：
+
+- file tree context menu MUST 只消费 `ContextActionDescriptor` 的 projection，不得把业务执行逻辑写进菜单渲染层。
+- Web 端 `ContextAction` registry MUST 归属 application/control 层（当前为 `apps/web/src/context_action/`），不得归属 `sidebar_menu` 等单一 view 组件。
+- projection MUST 以 `surface + target + readonly` 请求建模；surface 只能消费 projection result，不能自行枚举完整能力表。
+- 同一用户能力在 file tree、command palette、shortcut 中出现时，MUST 共享稳定 `action_id` 与可用性语义。
+- Web surface MAY 进行纯展示过滤，例如 target kind、read-only display 与 external icon，但不得决定 external executable 是否可信。
+- `ExternalProcess` action MUST 默认不可用；启用前必须由 server/native adapter 根据配置、capability、绝对路径、timeout 与 output limit fail-closed。
+- `ExportPdf` 可作为 dormant `ExternalProcess` descriptor 注册在 Markdown target 上，但在 server/native adapter 明确启用前 MUST NOT 被 Web 投影为可执行 action。
+- 外部动作图标只是用户可见 provenance 信号，不是安全边界。
+- `ShellLocal` action 只能改变浏览器 shell 状态，例如打开新窗口；不得写 document、repo、source-control 或 projection authority。
 
 ### 3.4 Layout Tokens and Layer Registry
 
@@ -417,6 +440,7 @@ PinnedSetChanged
   - keyboard shortcut trigger（若适用）
   - command palette trigger
 - 这三个入口最终必须映射到同一 `CommandId` / application control。
+- file tree context menu trigger 属于同一 command/control 投影；新增 action 时必须先进入 `ContextActionDescriptor`，再由具体 surface 过滤展示。
 
 ## 8. Failure / Recovery
 
@@ -470,6 +494,7 @@ PinnedSetChanged
 
 - 组件直接写 `use_core` 内部信号以跳过 control 层。
 - 菜单项点击既改 view 又改 pin。
+- 为单个 file tree 菜单项绕过 context action/control 层直接绑定业务执行。
 - view 组件直接调用底层 repo/source control/storage API。
 - 把业务真相塞进 localStorage。
 - 让 shell 组件自行猜测 repo writable / readonly 状态。
