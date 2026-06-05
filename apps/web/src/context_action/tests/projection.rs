@@ -4,7 +4,7 @@ use super::*;
 fn file_tree_action_readonly_catalog_keeps_shell_local_open_only() {
     let ids = project_context_actions(file_tree_request(true, ContextActionTargetKind::AnyNode))
         .into_iter()
-        .map(|action| action.id)
+        .map(|action| action.descriptor.id)
         .collect::<Vec<_>>();
 
     assert_eq!(ids, vec![ContextActionId::OpenInNewWindow]);
@@ -68,14 +68,14 @@ fn file_tree_action_projection_keeps_target_specific_descriptors() {
         &file_tree_request(false, ContextActionTargetKind::MarkdownFile),
     )
     .into_iter()
-    .map(|action| action.id)
+    .map(|action| action.descriptor.id)
     .collect::<Vec<_>>();
     let folder_ids = project_context_actions_from_catalog(
         &actions,
         &file_tree_request(false, ContextActionTargetKind::Folder),
     )
     .into_iter()
-    .map(|action| action.id)
+    .map(|action| action.descriptor.id)
     .collect::<Vec<_>>();
 
     assert_eq!(
@@ -96,7 +96,7 @@ fn file_tree_action_export_pdf_is_registered_but_default_unavailable() {
         ContextActionTargetKind::MarkdownFile,
     ))
     .into_iter()
-    .map(|action| action.id)
+    .map(|action| action.descriptor.id)
     .collect::<Vec<_>>();
 
     assert_eq!(export.origin, ContextActionOrigin::ExternalProcess);
@@ -138,8 +138,27 @@ fn file_tree_action_external_process_is_not_projected_by_web() {
         &file_tree_request(false, ContextActionTargetKind::MarkdownFile),
     )
     .into_iter()
-    .map(|action| action.id)
+    .map(|action| action.descriptor.id)
     .collect::<Vec<_>>();
 
     assert_eq!(ids, vec![ContextActionId::Rename]);
+}
+
+#[test]
+fn file_tree_action_projected_intents_resolve_again() {
+    let projected = project_context_actions(file_tree_request(
+        false,
+        ContextActionTargetKind::MarkdownFile,
+    ));
+
+    for action in projected {
+        let resolved = resolve_context_action(ContextActionResolveRequest::new(
+            action.intent.clone(),
+            false,
+        ))
+        .expect("projected action should resolve");
+
+        assert_eq!(resolved.descriptor.id, action.descriptor.id);
+        assert_eq!(resolved.intent, action.intent);
+    }
 }

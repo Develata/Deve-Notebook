@@ -60,8 +60,7 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
     let delete_req = actions.on_delete.clone();
     let is_readonly = actions.is_readonly;
     let open_search = actions.on_open_search.clone();
-    let handle_action =
-        create_action_handler(is_readonly, delete_req, open_search, node.path.clone());
+    let handle_action = create_action_handler(is_readonly, delete_req, open_search);
 
     let on_close_clone = actions.on_menu_close.clone();
     let current_doc = actions.current_doc;

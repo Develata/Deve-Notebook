@@ -3,7 +3,7 @@
 //!
 use crate::components::icons;
 use crate::context_action::{
-    ContextActionIcon, ContextActionId, ContextActionProjectionRequest, ContextActionSurface,
+    ContextActionIcon, ContextActionIntent, ContextActionProjectionRequest, ContextActionSurface,
     ContextActionTarget, project_context_actions,
 };
 use crate::i18n::Locale;
@@ -14,7 +14,7 @@ pub(super) fn SidebarMenuItems(
     locale: RwSignal<Locale>,
     is_readonly: Signal<bool>,
     target: ContextActionTarget,
-    on_action: Callback<ContextActionId>,
+    on_action: Callback<ContextActionIntent>,
     on_close: Callback<()>,
 ) -> impl IntoView {
     view! {
@@ -24,9 +24,10 @@ pub(super) fn SidebarMenuItems(
                 is_readonly.get(),
             ))
             .into_iter()
-            .map(|action| {
-                let action_id = action.id;
-                let is_danger = action.is_destructive();
+            .map(|projected| {
+                let descriptor = projected.descriptor;
+                let intent = projected.intent;
+                let is_danger = descriptor.is_destructive();
                 let icon_cls = format!(
                     "w-4 h-4 {}",
                     if is_danger {
@@ -38,7 +39,7 @@ pub(super) fn SidebarMenuItems(
 
                 view! {
                     <>
-                        {if action.separator_before {
+                        {if descriptor.separator_before {
                             Some(view! { <div class="my-1 border-t border-default"></div> })
                         } else {
                             None
@@ -51,15 +52,15 @@ pub(super) fn SidebarMenuItems(
                             on:click=move |_| {
                                 leptos::logging::log!(
                                     "SidebarMenu: Button clicked, action_id={}",
-                                    action.stable_id(),
+                                    descriptor.stable_id(),
                                 );
-                                on_action.run(action_id);
+                                on_action.run(intent.clone());
                                 on_close.run(());
                             }
                         >
-                            {menu_icon(action.icon, &icon_cls)}
-                            {move || action.label(locale.get())}
-                            {if action.shows_external_provenance() {
+                            {menu_icon(descriptor.icon, &icon_cls)}
+                            {move || descriptor.label(locale.get())}
+                            {if descriptor.shows_external_provenance() {
                                 Some(view! { <icons::ExternalLink class="ml-auto h-3 w-3 text-muted"/> })
                             } else {
                                 None

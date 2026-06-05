@@ -81,7 +81,8 @@ pub const CONTEXT_ACTIONS: &[ContextActionDescriptor] = &[
     },
 ];
 
-pub fn context_action_by_id(id: ContextActionId) -> Option<ContextActionDescriptor> {
+#[cfg(test)]
+pub(crate) fn context_action_by_id(id: ContextActionId) -> Option<ContextActionDescriptor> {
     CONTEXT_ACTIONS
         .iter()
         .copied()

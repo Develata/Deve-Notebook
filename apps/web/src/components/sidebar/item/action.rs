@@ -4,7 +4,9 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::dropdown::AnchorRect;
-use crate::context_action::{ContextActionId, context_action_by_id};
+use crate::context_action::{
+    ContextActionId, ContextActionIntent, ContextActionResolveRequest, resolve_context_action,
+};
 use js_sys::encode_uri_component;
 use leptos::prelude::*;
 use leptos::reactive::traits::GetUntracked;
@@ -36,28 +38,23 @@ pub(super) fn create_action_handler(
     is_readonly: Signal<bool>,
     delete_req: Callback<String>,
     open_search: Callback<String>,
-    path: String,
-) -> Callback<ContextActionId> {
-    Callback::new(move |action: ContextActionId| {
+) -> Callback<ContextActionIntent> {
+    Callback::new(move |intent: ContextActionIntent| {
         leptos::logging::log!(
             "item.rs handle_action called: action_id={}",
-            action.stable_id(),
+            intent.action_id.stable_id(),
         );
-        let Some(descriptor) = context_action_by_id(action) else {
+        let resolve_request = ContextActionResolveRequest::new(intent, is_readonly.get_untracked());
+        let Some(resolved) = resolve_context_action(resolve_request) else {
             return;
         };
-        if !descriptor.is_web_projectable() {
-            return;
-        }
-        if is_readonly.get_untracked() && !descriptor.readonly_allowed {
-            return;
-        }
 
-        match action {
+        let path = resolved.intent.target.path;
+        match resolved.descriptor.id {
             ContextActionId::Rename => {
                 open_search.run(build_rename_prefill(&path));
             }
-            ContextActionId::Delete => delete_req.run(path.clone()),
+            ContextActionId::Delete => delete_req.run(path),
             ContextActionId::Copy => {
                 open_search.run(build_prefill_command("cp", &path, None));
             }

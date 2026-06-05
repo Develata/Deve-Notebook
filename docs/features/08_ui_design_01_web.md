@@ -31,6 +31,7 @@
 
 - `Home`、`Open`、`Command` 等入口应可用。
 - `Open in New Window` 应保留现有 query context，并正确追加文档参数。
+- 文件树右键菜单应由 Context Action registry 投影；触发时提交 action intent，并在 handler 中重新 resolve。
 
 ## 非目标
 
@@ -72,3 +73,21 @@
 
 - 用户能分辨 connected、reconnecting、readonly 等不同状态。
 - repo 切换期间不会出现无语义的空白状态。
+
+### WEB-UI-03: 文件树右键菜单来自 Context Action registry
+
+前置条件：
+
+- Web 端已运行并存在文件树节点。
+
+步骤：
+
+1. 打开文件树节点右键菜单。
+2. 检查菜单动作来自 Context Action registry projection。
+3. 在 readonly 状态或不匹配 surface/target 下触发动作。
+
+期望结果：
+
+- 菜单只展示 resolver 允许的动作。
+- handler 会重新 resolve intent；resolver miss fail-closed 且无副作用。
+- external action 默认不投影、不执行。

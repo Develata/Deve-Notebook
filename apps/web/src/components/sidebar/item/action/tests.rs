@@ -1,6 +1,24 @@
 use super::{build_new_window_url, build_rename_prefill, create_action_handler};
-use crate::context_action::ContextActionId;
-use leptos::prelude::{Callable, Callback, GetUntracked, Update, signal};
+use crate::context_action::{
+    ContextActionId, ContextActionIntent, ContextActionSurface, ContextActionTarget,
+};
+use leptos::prelude::{Callable, Callback, GetUntracked, Set, Update, signal};
+
+fn file_tree_intent(action_id: ContextActionId, path: &str) -> ContextActionIntent {
+    ContextActionIntent::new(
+        action_id,
+        ContextActionSurface::FileTree,
+        ContextActionTarget::from_file_tree_node(false, path),
+    )
+}
+
+fn command_palette_intent(action_id: ContextActionId, path: &str) -> ContextActionIntent {
+    ContextActionIntent::new(
+        action_id,
+        ContextActionSurface::CommandPalette,
+        ContextActionTarget::from_file_tree_node(false, path),
+    )
+}
 
 #[test]
 fn rename_prefill_keeps_file_in_same_dir() {
@@ -57,14 +75,56 @@ fn export_pdf_action_handler_is_fail_closed_without_side_effects() {
         set_search_count.update(|count| *count += 1);
     });
 
-    let handler = create_action_handler(
-        is_readonly.into(),
-        delete_req,
-        open_search,
-        "notes/readme.md".to_string(),
-    );
+    let handler = create_action_handler(is_readonly.into(), delete_req, open_search);
 
-    handler.run(ContextActionId::ExportPdf);
+    handler.run(file_tree_intent(
+        ContextActionId::ExportPdf,
+        "notes/readme.md",
+    ));
+
+    assert_eq!(delete_count.get_untracked(), 0);
+    assert_eq!(search_count.get_untracked(), 0);
+}
+
+#[test]
+fn surface_mismatch_action_handler_is_fail_closed_without_side_effects() {
+    let (is_readonly, _) = signal(false);
+    let (delete_count, set_delete_count) = signal(0);
+    let (search_count, set_search_count) = signal(0);
+    let delete_req = Callback::new(move |_: String| {
+        set_delete_count.update(|count| *count += 1);
+    });
+    let open_search = Callback::new(move |_: String| {
+        set_search_count.update(|count| *count += 1);
+    });
+
+    let handler = create_action_handler(is_readonly.into(), delete_req, open_search);
+
+    handler.run(command_palette_intent(
+        ContextActionId::Delete,
+        "notes/readme.md",
+    ));
+
+    assert_eq!(delete_count.get_untracked(), 0);
+    assert_eq!(search_count.get_untracked(), 0);
+}
+
+#[test]
+fn readonly_current_state_blocks_write_action_handler_side_effects() {
+    let (is_readonly, set_readonly) = signal(false);
+    let (delete_count, set_delete_count) = signal(0);
+    let (search_count, set_search_count) = signal(0);
+    let delete_req = Callback::new(move |_: String| {
+        set_delete_count.update(|count| *count += 1);
+    });
+    let open_search = Callback::new(move |_: String| {
+        set_search_count.update(|count| *count += 1);
+    });
+
+    let handler = create_action_handler(is_readonly.into(), delete_req, open_search);
+    set_readonly.set(true);
+
+    handler.run(file_tree_intent(ContextActionId::Rename, "notes/readme.md"));
 
     assert_eq!(delete_count.get_untracked(), 0);
     assert_eq!(search_count.get_untracked(), 0);

@@ -9,7 +9,7 @@
 use leptos::prelude::*;
 
 use crate::components::dropdown::{Align, AnchorRect, Dropdown};
-use crate::context_action::{ContextActionId, ContextActionTarget};
+use crate::context_action::{ContextActionIntent, ContextActionTarget};
 use crate::i18n::Locale;
 
 mod item;
@@ -20,7 +20,7 @@ use item::SidebarMenuItems;
 pub fn SidebarMenu(
     is_readonly: Signal<bool>,
     target: ContextActionTarget,
-    #[prop(into)] on_action: Callback<ContextActionId>,
+    #[prop(into)] on_action: Callback<ContextActionIntent>,
     #[prop(into)] on_close: Callback<()>,
     anchor: ReadSignal<Option<AnchorRect>>,
 ) -> impl IntoView {
