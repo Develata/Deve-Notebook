@@ -1,5 +1,7 @@
 use super::{
-    EditorDocumentTab, EditorTabKey, diff_tab_from_session,
+    EditorDocumentTab, EditorTabKey,
+    close::close_diff_tab,
+    diff_tab_from_session,
     model::display_name,
     ops::{remove_diff_tab, remove_document_tab, upsert_document_tab},
     policy::active_editor_tab_key,
@@ -8,6 +10,7 @@ use super::{
 };
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
+use leptos::prelude::{GetUntracked, signal};
 
 #[test]
 fn display_name_uses_last_path_segment() {
@@ -109,6 +112,48 @@ fn removing_diff_tab_returns_neighbor_session() {
             .expect("neighbor")
             .path,
         second_path
+    );
+}
+
+#[test]
+fn mobile_surface_close_diff_keeps_source_control_state() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let first = diff_tab_from_session(DiffSessionWire::new(
+        "a.md".into(),
+        "old-a".into(),
+        "new-a".into(),
+    ));
+    let second = diff_tab_from_session(DiffSessionWire::new(
+        "b.md".into(),
+        "old-b".into(),
+        "new-b".into(),
+    ));
+    let active_key = first.key.clone();
+    let source_control_state = (1usize, 2usize, "commit message".to_string());
+    let (source_control_state_signal, _set_source_control_state) =
+        signal(source_control_state.clone());
+    let (diff_content, set_diff_content) = signal(Some(first.session.clone()));
+    let (diff_tabs, set_diff_tabs) = signal(vec![first, second.clone()]);
+
+    close_diff_tab(
+        active_key,
+        diff_content,
+        set_diff_content,
+        diff_tabs,
+        set_diff_tabs,
+    );
+
+    assert_eq!(
+        diff_content
+            .get_untracked()
+            .as_ref()
+            .map(|session| session.path.as_str()),
+        Some(second.session.path.as_str())
+    );
+    assert_eq!(
+        source_control_state_signal.get_untracked(),
+        source_control_state
     );
 }
 

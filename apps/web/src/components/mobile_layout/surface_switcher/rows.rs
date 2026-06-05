@@ -23,6 +23,7 @@ pub(super) fn SurfaceDocumentRow(
         >
             <button
                 type="button"
+                data-deve-mobile-surface-action="mobile_surface_document_row"
                 class=move || mobile_surface_row_class(active.get())
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::document_tab(locale.get())
@@ -64,6 +65,7 @@ pub(super) fn SurfaceDiffRow(
         >
             <button
                 type="button"
+                data-deve-mobile-surface-action="mobile_surface_diff_row"
                 class=move || mobile_surface_row_class(active.get())
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::diff_tab(locale.get())
