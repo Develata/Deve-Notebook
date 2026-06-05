@@ -4,9 +4,9 @@
 //!   - 18_release#runtime-observability
 //!
 use super::editor_tabs::EditorTabStrip;
-use super::tab_runtime::{create_current_editor_doc, create_editor_tab_runtime};
 use crate::components::dashboard::Dashboard;
 use crate::components::diff_view::DiffView;
+use crate::components::editor_tabs::{create_current_editor_doc, create_editor_tab_runtime};
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;

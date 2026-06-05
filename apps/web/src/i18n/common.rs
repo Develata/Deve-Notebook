@@ -86,6 +86,34 @@ pub fn close_tab(locale: Locale) -> &'static str {
     }
 }
 
+pub fn open_tabs(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Open tabs",
+        Locale::Zh => "已打开标签",
+    }
+}
+
+pub fn switch_open_tabs(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Switch open tabs",
+        Locale::Zh => "切换已打开标签",
+    }
+}
+
+pub fn documents(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Documents",
+        Locale::Zh => "文档",
+    }
+}
+
+pub fn diffs(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Diffs",
+        Locale::Zh => "差异",
+    }
+}
+
 pub fn heading(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Heading",
@@ -176,5 +204,9 @@ mod tests {
         assert_eq!(document_tab(Locale::Zh), "文档标签");
         assert_eq!(diff_tab(Locale::En), "Diff tab");
         assert_eq!(close_tab(Locale::Zh), "关闭标签");
+        assert_eq!(open_tabs(Locale::En), "Open tabs");
+        assert_eq!(switch_open_tabs(Locale::Zh), "切换已打开标签");
+        assert_eq!(documents(Locale::Zh), "文档");
+        assert_eq!(diffs(Locale::En), "Diffs");
     }
 }

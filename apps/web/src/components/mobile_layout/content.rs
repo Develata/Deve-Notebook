@@ -9,14 +9,17 @@ use crate::components::dashboard::Dashboard;
 use crate::editor::Editor;
 use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
+use deve_core::models::DocId;
 use leptos::prelude::*;
 
+#[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum MobileContentSurface {
     Editor,
     Dashboard,
 }
 
+#[cfg(test)]
 pub(crate) fn mobile_content_surface_after_diff_close(
     has_current_doc: bool,
     pending_branch_switch: bool,
@@ -30,7 +33,11 @@ pub(crate) fn mobile_content_surface_after_diff_close(
 }
 
 #[component]
-pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoView {
+pub fn MobileContent(
+    core: CoreState,
+    drawer_open: Signal<bool>,
+    current_editor_doc: Signal<Option<DocId>>,
+) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let on_stats = core.on_stats;
     let diff_content = core.diff_content;
@@ -41,18 +48,6 @@ pub fn MobileContent(core: CoreState, drawer_open: Signal<bool>) -> impl IntoVie
     let is_spectator = core.is_spectator;
     let sync_banner = core.sync_banner;
     let ws = core.ws.clone();
-    let editor_doc_core = core.clone();
-    let current_editor_doc = Signal::derive(move || {
-        let current_doc = editor_doc_core.current_doc.get();
-        match mobile_content_surface_after_diff_close(
-            current_doc.is_some(),
-            editor_doc_core.pending_branch_switch.get().is_some(),
-            editor_doc_core.pending_repo_switch.get().is_some(),
-        ) {
-            MobileContentSurface::Editor => current_doc,
-            MobileContentSurface::Dashboard => None,
-        }
-    });
     view! {
         <div
             class="relative flex-1 overflow-hidden transition-opacity flex flex-col"

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-05`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -287,6 +287,23 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 *   **Mode**: 单列布局，支持全屏编辑。
 *   **Diff**: 强制 Unified View。
 *   **Selection**: 单指选区，长按弹出操作菜单。
+
+### 5.4.1 Mobile Surface Switcher {#mobile-surface-switcher}
+
+移动端必须复用 `index.md#editor-group-tabstrip` 定义的 document/diff tab identity 与
+view-local lifecycle，但不得直接复制桌面横向 tabstrip。
+
+*   顶部当前 surface 胶囊 **MUST** 位于 sync banner 与 content stack 之间，显示当前
+    document/diff 名称、surface 类型与已打开数量。
+*   点击胶囊 **MUST** 打开底部 sheet；sheet 分组显示 Documents 与 Diffs，并提供选择、
+    关闭与 active 标记。
+*   sheet 行与关闭按钮 **MUST** 满足移动端 44px touch target。
+*   选择 document 必须复用 guarded document navigation；选择 diff 只能恢复已有
+    view-local `DiffSession`，不得触发新的 diff 计算。
+*   关闭 active diff 只关闭 diff surface，不得修改 staged、pending 或 commit state。
+*   repo / branch / scope 切换、drawer 打开、选择条目或关闭当前 surface 时，sheet
+    **MUST** 自动收起。
+*   sheet 打开时 **MUST** 避免 AI Chat、辅助键盘栏与 Bottom Bar 遮挡。
 
 ### 5.5 快捷入口 (Quick Actions)
 *   **Search**: 打开 Quick Open / Command Palette（移动端应为底部抽屉）。

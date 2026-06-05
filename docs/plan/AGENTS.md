@@ -141,6 +141,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `11_ui_design/03_mobile#mobile-ios-shell-package-execution-gate` | `### 1.7 iOS Shell-only Package Execution Gate` | iOS shell-only package execution 的 target-host、authority 与 process-runtime 门禁 |
 | `11_ui_design/03_mobile#mobile-responsive-layout` | `## 2. Responsive Architecture` | Mobile responsive layout、drawer 与 safe-area shell 合同 |
 | `11_ui_design/03_mobile#mobile-interaction-design` | `## 3. Interaction Design` | Mobile gesture、touch target、toolbar 与 interaction affordance 合同 |
+| `11_ui_design/03_mobile#mobile-surface-switcher` | `### 5.4.1 Mobile Surface Switcher` | Mobile document/diff surface switcher、touch-safe bottom sheet 与 shared tab runtime 合同 |
 | `08_auth#auth-http-endpoints` | `### 4.1 HTTP Endpoints` | login/logout/status/me HTTP endpoint 合同 |
 | `08_auth#jwt-cookie-contract` | `## 5. JWT and Cookie Contract` | JWT claims、签发/验证、cookie 交付合同 |
 | `08_auth#password-hashing` | `### 5.5 Password Hashing` | Argon2 PHC 密码哈希与验证合同 |

@@ -19,6 +19,7 @@
 
 - Outline、Source Control、Search 等入口必须在移动端可达。
 - 移动端不应因为手势或边缘滑动吞掉关键按钮点击。
+- 顶部当前 surface 胶囊应显示当前文档或差异；点击后通过底部面板在已打开文档和差异之间切换。
 
 ### 3. Bottom Bar 与状态折叠
 
@@ -71,3 +72,24 @@
 
 - 移动端壳层服务于同一套核心工作流。
 - 关键状态与命令入口不会因为窄屏而丢失。
+
+### MOBILE-UI-03: Mobile 多文件与 Diff 切换
+
+前置条件：
+
+- 页面处于移动端视口。
+- 至少打开两个文档，并从 Source Control 打开一个 diff。
+
+步骤：
+
+1. 点击当前 surface 胶囊。
+2. 在底部面板中切换到另一个文档。
+3. 再次打开底部面板并切换回 diff。
+4. 关闭 active diff。
+
+期望结果：
+
+- 底部面板分组显示 Documents 与 Diffs。
+- 选择文档走受保护的文档导航；选择 diff 只恢复已有 diff session。
+- 移动端 diff 始终使用 Unified View。
+- 关闭 diff 不改变 staged、pending 或 commit state。

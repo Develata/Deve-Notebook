@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 11_ui_design/index#editor-group-tabstrip
 
-use super::model::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
+use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
 use crate::components::icons::{FileText, SourceControl, X};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::i18n::{Locale, t};
@@ -13,6 +13,17 @@ pub(crate) fn tab_button_class(active: bool) -> &'static str {
         "h-9 min-w-[120px] max-w-[240px] border-r border-default border-t-2 border-t-accent bg-editor text-primary"
     } else {
         "h-9 min-w-[120px] max-w-[220px] border-r border-default border-t-2 border-t-transparent bg-panel text-secondary hover:bg-hover hover:text-primary"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tab_button_class;
+
+    #[test]
+    fn active_tab_class_has_accent_top_border() {
+        assert!(tab_button_class(true).contains("border-t-accent"));
+        assert!(tab_button_class(false).contains("border-t-transparent"));
     }
 }
 

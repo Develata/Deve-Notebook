@@ -15,6 +15,7 @@ Mobile-responsive layout with touch gestures, swipeable drawers, and compact too
 | `header.rs` | Mobile header |
 | `footer.rs` | Mobile footer |
 | `content.rs` | Main content area |
+| `surface_switcher.rs` | Mobile current surface capsule and bottom-sheet tab switcher |
 | `toolbar.rs` | Mobile toolbar |
 | `gesture.rs` | Touch gesture handling |
 | `effects.rs` | Layout effects and breakpoints |

@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 11_ui_design/index#editor-group-tabstrip
+//!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
 use super::model::{EditorDiffTab, EditorDocumentTab};
 use crate::hooks::use_core::diff_session::DiffSessionWire;

@@ -10,16 +10,22 @@ use super::header::MobileHeader;
 use super::layout_backdrop::MobileDrawerBackdrop;
 use super::layout_banner::MobileSyncBanner;
 use super::outline_button::OutlineToggleButton;
+use super::surface_switcher::MobileSurfaceSwitcher;
 use super::toolbar::MobileAccessoryToolbar;
 use crate::components::activity_bar::SidebarView;
+use crate::components::editor_tabs::{create_current_editor_doc, create_editor_tab_runtime};
 use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
 use crate::i18n::Locale;
 use leptos::ev::TouchEvent;
 use leptos::prelude::*;
 
-pub(crate) fn mobile_bottom_bar_visible(keyboard_offset: i32, chat_expanded: bool) -> bool {
-    keyboard_offset <= 0 && !chat_expanded
+pub(crate) fn mobile_bottom_bar_visible(
+    keyboard_offset: i32,
+    chat_expanded: bool,
+    surface_switcher_open: bool,
+) -> bool {
+    keyboard_offset <= 0 && !chat_expanded && !surface_switcher_open
 }
 
 pub(crate) fn mobile_accessory_toolbar_visible(
@@ -28,8 +34,14 @@ pub(crate) fn mobile_accessory_toolbar_visible(
     drawer_open: bool,
     keyboard_offset: i32,
     chat_expanded: bool,
+    surface_switcher_open: bool,
 ) -> bool {
-    has_doc && !diff_open && !drawer_open && keyboard_offset > 0 && !chat_expanded
+    has_doc
+        && !diff_open
+        && !drawer_open
+        && keyboard_offset > 0
+        && !chat_expanded
+        && !surface_switcher_open
 }
 
 #[component]
@@ -65,6 +77,9 @@ pub fn MobileLayoutFrame(
     let current_doc = core.current_doc;
     let diff_content = core.diff_content;
     let toolbar_core = core.clone();
+    let current_editor_doc = create_current_editor_doc(&core);
+    let tabs = create_editor_tab_runtime(&core, current_editor_doc);
+    let (surface_switcher_open, set_surface_switcher_open) = signal(false);
 
     view! {
         <div
@@ -89,7 +104,24 @@ pub fn MobileLayoutFrame(
 
             <MobileSyncBanner banner_toggle=banner_toggle banner_text=banner_text />
 
-            <MobileContent core=core.clone() drawer_open=drawer_open />
+            <MobileSurfaceSwitcher
+                doc_tabs=tabs.doc_tabs
+                diff_tabs=tabs.diff_tabs
+                active_tab=tabs.active_tab
+                open=surface_switcher_open
+                set_open=set_surface_switcher_open
+                drawer_open=drawer_open
+                on_select_document=tabs.on_select_document
+                on_select_diff=tabs.on_select_diff
+                on_close_document=tabs.on_close_document
+                on_close_diff=tabs.on_close_diff
+            />
+
+            <MobileContent
+                core=core.clone()
+                drawer_open=drawer_open
+                current_editor_doc=current_editor_doc
+            />
 
             <Show when=move || current_doc.get().is_some() && diff_content.get().is_none() && !show_sidebar.get()>
                 <OutlineToggleButton
@@ -125,6 +157,7 @@ pub fn MobileLayoutFrame(
                         drawer_open.get(),
                         keyboard_offset.get(),
                         chat_expanded.get(),
+                        surface_switcher_open.get(),
                     )
                 })
             />
@@ -133,11 +166,18 @@ pub fn MobileLayoutFrame(
                 keyboard_offset=keyboard_offset
                 drawer_open=drawer_open
                 diff_open=Signal::derive(move || diff_content.get().is_some())
+                surface_switcher_open=surface_switcher_open
                 expanded=chat_expanded
                 set_expanded=set_chat_expanded
             />
 
-            <Show when=move || mobile_bottom_bar_visible(keyboard_offset.get(), chat_expanded.get())>
+            <Show when=move || {
+                mobile_bottom_bar_visible(
+                    keyboard_offset.get(),
+                    chat_expanded.get(),
+                    surface_switcher_open.get(),
+                )
+            }>
                 <MobileFooter core=core.clone() />
             </Show>
         </div>
@@ -150,35 +190,45 @@ mod tests {
 
     #[test]
     fn mobile_chat_keyboard_hides_bottom_bar() {
-        assert!(!mobile_bottom_bar_visible(280, true));
-        assert!(!mobile_bottom_bar_visible(280, false));
-        assert!(!mobile_bottom_bar_visible(0, true));
-        assert!(mobile_bottom_bar_visible(0, false));
+        assert!(!mobile_bottom_bar_visible(280, true, false));
+        assert!(!mobile_bottom_bar_visible(280, false, false));
+        assert!(!mobile_bottom_bar_visible(0, true, false));
+        assert!(mobile_bottom_bar_visible(0, false, false));
+        assert!(!mobile_bottom_bar_visible(0, false, true));
+    }
+
+    #[test]
+    fn mobile_surface_switcher_hides_bottom_bar() {
+        assert!(!mobile_bottom_bar_visible(0, false, true));
+        assert!(mobile_bottom_bar_visible(0, false, false));
     }
 
     #[test]
     fn mobile_diff_hides_accessory_toolbar() {
         assert!(mobile_accessory_toolbar_visible(
-            true, false, false, 280, false
+            true, false, false, 280, false, false
         ));
         assert!(!mobile_accessory_toolbar_visible(
-            true, true, false, 280, false
+            true, true, false, 280, false, false
         ));
     }
 
     #[test]
     fn mobile_diff_keeps_accessory_toolbar_gate_strict() {
         assert!(!mobile_accessory_toolbar_visible(
-            false, false, false, 280, false
+            false, false, false, 280, false, false
         ));
         assert!(!mobile_accessory_toolbar_visible(
-            true, false, true, 280, false
+            true, false, true, 280, false, false
         ));
         assert!(!mobile_accessory_toolbar_visible(
-            true, false, false, 0, false
+            true, false, false, 0, false, false
         ));
         assert!(!mobile_accessory_toolbar_visible(
-            true, false, false, 280, true
+            true, false, false, 280, true, false
+        ));
+        assert!(!mobile_accessory_toolbar_visible(
+            true, false, false, 280, false, true
         ));
     }
 }

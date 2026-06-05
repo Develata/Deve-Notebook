@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 11_ui_design/index#editor-group-tabstrip
+//!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use deve_core::models::DocId;

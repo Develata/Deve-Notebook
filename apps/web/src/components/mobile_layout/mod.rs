@@ -23,6 +23,7 @@ mod layout_banner;
 mod layout_frame;
 mod layout_runtime;
 mod outline_button;
+mod surface_switcher;
 mod toolbar;
 
 use crate::components::activity_bar::SidebarView;

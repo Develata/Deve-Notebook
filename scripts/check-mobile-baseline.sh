@@ -330,7 +330,7 @@ contains apps/web/src/components/chat/input_area.rs "fn mobile_chat_keyboard_mar
 contains apps/web/src/components/mobile_layout/chat_sheet.rs "data-deve-mobile-chat-keyboard-offset=move || keyboard_offset.get().to_string()"
 contains apps/web/src/components/mobile_layout/chat_sheet.rs "fn mobile_chat_keyboard_sheet_stays_above_keyboard()"
 contains apps/web/src/components/mobile_layout/layout_frame.rs "pub(crate) fn mobile_bottom_bar_visible("
-contains apps/web/src/components/mobile_layout/layout_frame.rs "mobile_bottom_bar_visible(keyboard_offset.get(), chat_expanded.get())"
+contains apps/web/src/components/mobile_layout/layout_frame.rs "surface_switcher_open.get()"
 contains apps/web/src/components/mobile_layout/layout_frame.rs "fn mobile_chat_keyboard_hides_bottom_bar()"
 
 # UI-MOB-013: mobile AI Chat messages keep long text readable, code blocks
@@ -523,6 +523,36 @@ contains apps/web/src/components/mobile_layout/toolbar.rs "fn run_mobile_toolbar
 contains apps/web/src/components/mobile_layout/toolbar.rs "run_mobile_toolbar_action(readonly, ffi::mobile_undo)"
 contains apps/web/src/components/mobile_layout/toolbar.rs "fn mobile_toolbar_write_gate_blocks_actions()"
 contains apps/web/index.html "if (view.state?.readOnly) return false;"
+
+# UI-MOB-021: mobile document/diff switching reuses shared editor tab runtime
+# and renders as a touch-safe top capsule plus bottom sheet.
+contains docs/acceptance-cases/17_mobile_surface_switcher.md "case_id: UI-MOB-021"
+contains_case_block_in_file docs/acceptance-cases/17_mobile_surface_switcher.md UI-MOB-021 "run: scripts/check-mobile-baseline.sh"
+contains_case_block_in_file docs/acceptance-cases/17_mobile_surface_switcher.md UI-MOB-021 "run: cargo test -p deve_web mobile_surface -- --nocapture"
+contains_case_block_in_file docs/acceptance-cases/17_mobile_surface_switcher.md UI-MOB-021 "cli_assert: mobile_surface_switcher_marker_bound true"
+contains_case_block_in_file docs/acceptance-cases/17_mobile_surface_switcher.md UI-MOB-021 "cli_assert: mobile_surface_sheet_marker_bound true"
+contains_case_block_in_file docs/acceptance-cases/17_mobile_surface_switcher.md UI-MOB-021 "cli_assert: mobile_surface_touch_targets_min_size_bound true"
+contains_case_block_in_file docs/acceptance-cases/17_mobile_surface_switcher.md UI-MOB-021 "cli_assert: mobile_surface_diff_restore_bound true"
+contains docs/acceptance-bindings.tsv "UI-MOB-021|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile document diff switcher workflow"
+contains docs/plan/11_ui_design/03_mobile.md "Mobile Surface Switcher {#mobile-surface-switcher}"
+contains docs/plan/11_ui_design/03_mobile.md "顶部当前 surface 胶囊 **MUST** 位于 sync banner 与 content stack 之间"
+contains docs/features/08_ui_design_03_mobile.md "顶部当前 surface 胶囊应显示当前文档或差异"
+contains apps/web/src/components/editor_tabs.rs "11_ui_design/03_mobile#mobile-surface-switcher"
+contains apps/web/src/components/editor_tabs/policy.rs "pub(crate) fn scope_changed("
+contains apps/web/src/components/editor_tabs/policy.rs "pub(crate) fn active_editor_tab_key("
+contains apps/web/src/components/editor_tabs/tests.rs "fn editor_tab_runtime_resets_on_repo_or_scope_change()"
+contains apps/web/src/components/editor_tabs/tests.rs "fn editor_tab_runtime_prefers_active_diff_over_document()"
+contains apps/web/src/components/mobile_layout/surface_switcher.rs "data-deve-mobile-surface-switcher=\"summary\""
+contains apps/web/src/components/mobile_layout/surface_switcher.rs "data-deve-mobile-surface-sheet=\"open\""
+contains apps/web/src/components/mobile_layout/surface_switcher.rs "data-deve-mobile-touch-target=\"surface_switcher\""
+contains apps/web/src/components/mobile_layout/surface_switcher/rows.rs "data-deve-mobile-surface-row=\"document\""
+contains apps/web/src/components/mobile_layout/surface_switcher/rows.rs "data-deve-mobile-surface-row=\"diff\""
+contains apps/web/src/components/mobile_layout/surface_switcher/model.rs "fn mobile_surface_summary_prefers_active_diff()"
+contains apps/web/src/components/mobile_layout/surface_switcher/model.rs "fn mobile_surface_sheet_gate_closes_for_drawer_or_empty_tabs()"
+contains apps/web/src/components/mobile_layout/surface_switcher/model.rs "fn mobile_surface_touch_targets_are_at_least_44px()"
+contains apps/web/src/components/mobile_layout/layout_frame.rs "surface_switcher_open"
+contains apps/web/src/components/mobile_layout/layout_frame.rs "fn mobile_surface_switcher_hides_bottom_bar()"
+contains apps/web/src/components/mobile_layout/chat_sheet.rs "fn mobile_surface_switcher_hides_chat_sheet()"
 
 # MOB-SHOULD-003: the editor text size must stay at 16px so iOS Safari does not
 # zoom the page when the CodeMirror content area receives input focus.

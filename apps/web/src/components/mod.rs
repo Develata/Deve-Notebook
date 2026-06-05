@@ -9,6 +9,7 @@
 pub mod bottom_bar;
 pub mod command_palette;
 pub mod dropdown;
+pub(crate) mod editor_tabs;
 pub mod header;
 pub mod icons;
 pub mod layout_context;

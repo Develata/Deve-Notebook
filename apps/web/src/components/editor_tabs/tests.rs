@@ -1,6 +1,10 @@
 use super::{
-    EditorDocumentTab, diff_tab_from_session, model::display_name, remove_diff_tab,
-    remove_document_tab, strip::tab_button_class, upsert_document_tab,
+    EditorDocumentTab, EditorTabKey, diff_tab_from_session,
+    model::display_name,
+    ops::{remove_diff_tab, remove_document_tab, upsert_document_tab},
+    policy::active_editor_tab_key,
+    policy::scope_changed,
+    policy::should_clear_diff_on_document_change,
 };
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
@@ -109,7 +113,36 @@ fn removing_diff_tab_returns_neighbor_session() {
 }
 
 #[test]
-fn active_tab_class_has_accent_top_border() {
-    assert!(tab_button_class(true).contains("border-t-accent"));
-    assert!(tab_button_class(false).contains("border-t-transparent"));
+fn editor_tab_runtime_resets_on_repo_or_scope_change() {
+    let original = (Some("repo-a".to_string()), 1);
+
+    assert!(!scope_changed(&original, &(Some("repo-a".to_string()), 1)));
+    assert!(scope_changed(&original, &(Some("repo-b".to_string()), 1)));
+    assert!(scope_changed(&original, &(Some("repo-a".to_string()), 2)));
+}
+
+#[test]
+fn editor_tab_runtime_clears_diff_only_when_document_changes() {
+    let first = Some(DocId::from_u128(1));
+    let second = Some(DocId::from_u128(2));
+
+    assert!(should_clear_diff_on_document_change(first, second, true));
+    assert!(!should_clear_diff_on_document_change(first, first, true));
+    assert!(!should_clear_diff_on_document_change(first, second, false));
+}
+
+#[test]
+fn editor_tab_runtime_prefers_active_diff_over_document() {
+    let doc_id = DocId::from_u128(10);
+    let session = DiffSessionWire::new("notes/a.md".into(), "old".into(), "new".into())
+        .with_doc_id(Some(doc_id));
+
+    assert_eq!(
+        active_editor_tab_key(Some(&session), Some(doc_id)),
+        Some(EditorTabKey::Diff(format!("doc:{doc_id}")))
+    );
+    assert_eq!(
+        active_editor_tab_key(None, Some(doc_id)),
+        Some(EditorTabKey::Document(doc_id))
+    );
 }
