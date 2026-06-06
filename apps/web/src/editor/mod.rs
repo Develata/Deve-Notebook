@@ -59,10 +59,11 @@ pub fn Editor(
     let doc_version = core.doc_version;
     let ws = use_context::<WsService>().expect("WsService should be provided");
     provide_context(EditorContentContext { content });
-    Effect::new(move |_| {
+    let readonly_ws = ws.clone();
+    let editor_readonly = Memo::new(move |_| {
         let is_pb = playback_version.get() < doc_version.get();
         let write_blocked = repo_write_block_tracked(
-            &ws,
+            &readonly_ws,
             RepoWriteSignals {
                 load_state: core.load_state,
                 is_spectator: core.is_spectator,
@@ -75,8 +76,10 @@ pub fn Editor(
             },
         )
         .is_some();
-        let should_readonly = should_editor_be_read_only(is_pb, write_blocked);
-        ffi::set_read_only(should_readonly);
+        should_editor_be_read_only(is_pb, write_blocked)
+    });
+    Effect::new(move |_| {
+        ffi::set_read_only(editor_readonly.get());
     });
     let (outline_pref, set_outline_pref) = use_context::<OutlineControl>()
         .map(|outline| (outline.visible, outline.set_visible))
@@ -90,10 +93,13 @@ pub fn Editor(
             <div class="flex-1 flex overflow-hidden relative">
                 <div
                     data-deve-desktop-col="3-editor"
+                    data-deve-editor-host="true"
+                    data-deve-editor-readonly=move || editor_readonly.get().to_string()
                     class="flex-1 relative border-r border-gray-200 bg-white shadow-sm overflow-hidden"
                 >
                     <div
                         node_ref=editor_ref
+                        data-deve-editor-codemirror-host="true"
                         class="absolute inset-0"
                         class:bg-gray-100=move || playback_version.get() < doc_version.get()
                     ></div>

@@ -11,7 +11,7 @@ use leptos::prelude::*;
 use web_sys::MouseEvent;
 
 use crate::components::search_box::logic;
-use crate::components::search_box::types::SearchResult;
+use crate::components::search_box::types::{SearchAction, SearchResult};
 use crate::components::touch_feedback::interactive_item_state_class;
 use crate::hooks::use_core::CoreState;
 
@@ -63,6 +63,8 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
 
     let action_clone = item.action.clone();
     let detail_clone = item.detail.clone();
+    let action_marker = search_action_marker(&item.action);
+    let title_marker = item.title.clone();
 
     view! {
         <button
@@ -71,6 +73,9 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
                 base,
                 interactive_item_state_class(is_sel, is_selectable)
             )
+            data-deve-search-result="true"
+            data-deve-search-result-action=action_marker
+            data-deve-search-result-title=title_marker
             on:click=move |_| {
                 if !is_selectable {
                     return;
@@ -115,4 +120,16 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
         </button>
     }
     .into_any()
+}
+
+fn search_action_marker(action: &SearchAction) -> &'static str {
+    match action {
+        SearchAction::OpenDoc(_) => "open-doc",
+        SearchAction::RunCommand(_) => "run-command",
+        SearchAction::SwitchBranch(_) => "switch-branch",
+        SearchAction::CreateDoc(_) => "create-doc",
+        SearchAction::FileOp(_) => "file-op",
+        SearchAction::InsertQuery(_) => "insert-query",
+        SearchAction::Noop => "noop",
+    }
 }

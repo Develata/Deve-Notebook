@@ -38,6 +38,13 @@ pub(super) async fn run_connected_session(
         if !signals.lifecycle.is_active() {
             return;
         }
+        if browser_reports_offline() {
+            leptos::logging::warn!("WS session ended because browser reports offline");
+            let _ = signals
+                .lifecycle
+                .try_set(signals.set_status, ConnectionStatus::Disconnected);
+            return;
+        }
         if socket.is_open() && !announced_open {
             leptos::logging::log!("WS: Socket opened, waiting for first message...");
             announced_open = true;
@@ -100,4 +107,16 @@ pub(super) async fn run_connected_session(
             _ = timer => {}
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn browser_reports_offline() -> bool {
+    web_sys::window()
+        .map(|window| !window.navigator().on_line())
+        .unwrap_or(false)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn browser_reports_offline() -> bool {
+    false
 }

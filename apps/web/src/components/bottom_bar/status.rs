@@ -5,9 +5,9 @@
 //!   - 18_release#runtime-observability
 //!
 use crate::hooks::use_core::CoreState;
-use crate::runtime::document::pending::{PendingScope, pending_count_for_doc_in_scope};
 use crate::hooks::use_core::status_summary::{SyncStatusInput, SyncStatusKind, derive_sync_status};
 use crate::i18n::{Locale, t};
+use crate::runtime::document::pending::{PendingScope, pending_count_for_doc_in_scope};
 use leptos::prelude::*;
 
 #[component]
@@ -112,7 +112,10 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
     };
 
     view! {
-        <div class="flex items-center gap-2 min-w-0">
+        <div
+            class="flex items-center gap-2 min-w-0"
+            data-deve-sync-status=move || sync_status_kind_marker(summary.get().kind)
+        >
             <div class=move || format!("w-2 h-2 rounded-full {}", color())></div>
             <span class="text-xs text-secondary font-medium">{text}</span>
             <Show when=move || matches!(summary.get().kind, SyncStatusKind::PeerNotRegistered)>
@@ -130,5 +133,23 @@ pub fn BottomBarStatus(core: CoreState, locale: RwSignal<Locale>) -> impl IntoVi
                 <span class="text-[10px] text-muted font-mono truncate">{repo_label}</span>
             </Show>
         </div>
+    }
+}
+
+fn sync_status_kind_marker(kind: SyncStatusKind) -> &'static str {
+    match kind {
+        SyncStatusKind::SessionExpired => "session-expired",
+        SyncStatusKind::NativeBootstrapInvalid => "native-bootstrap-invalid",
+        SyncStatusKind::NativeSessionPending => "native-session-pending",
+        SyncStatusKind::NativeServiceOffline => "native-service-offline",
+        SyncStatusKind::NativeReprobeRequired => "native-reprobe-required",
+        SyncStatusKind::Offline => "offline",
+        SyncStatusKind::Reconnecting => "reconnecting",
+        SyncStatusKind::SnapshotLoading => "snapshot-loading",
+        SyncStatusKind::ReadOnly => "read-only",
+        SyncStatusKind::HandshakingRepo => "handshaking-repo",
+        SyncStatusKind::PeerNotRegistered => "peer-not-registered",
+        SyncStatusKind::PendingAck => "pending-ack",
+        SyncStatusKind::Ready => "ready",
     }
 }

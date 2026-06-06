@@ -50,6 +50,7 @@ pub(super) fn ExplorerHeader(
                     <button
                         class="p-1 rounded hover:bg-hover text-secondary"
                         title=move || t::sidebar::new_doc(locale.get())
+                        data-deve-new-doc-button="true"
                         on:click=move |_| request_create.run(None)
                     >
                         <Plus />

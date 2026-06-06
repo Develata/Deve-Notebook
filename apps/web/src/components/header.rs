@@ -26,7 +26,12 @@ pub fn Header(
             // 左侧: 标题与状态
             <div class="flex items-center gap-2">
                 <span class="font-bold text-primary text-lg">{move || t::app_title(locale.get())}</span>
-                <span class="text-xs text-muted border border-default rounded px-1">{move || status_text.get()}</span>
+                <span
+                    class="text-xs text-muted border border-default rounded px-1"
+                    data-deve-header-status="true"
+                >
+                    {move || status_text.get()}
+                </span>
             </div>
 
             // 右侧: SB 风格操作 [Home] [Open] [Command]
@@ -44,6 +49,7 @@ pub fn Header(
                 <button
                     class="p-2 text-secondary hover:bg-hover rounded transition-colors"
                     title=move || t::header::open(locale.get())
+                    data-deve-open-search-button="true"
                     on:click=move |_| on_open.run(())
                 >
                     <Book class="w-[18px] h-[18px]"/>

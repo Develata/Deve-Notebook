@@ -40,6 +40,7 @@ pub fn header(
                 name="search-query"
                 node_ref=input_ref
                 type="text"
+                data-deve-search-input="true"
                 class="flex-1 outline-none text-sm bg-transparent text-primary placeholder:text-muted"
                 placeholder=move || placeholder_text.get()
                 prop:value=move || query.get()
@@ -86,6 +87,7 @@ pub fn results_panel(view: SearchResultsPanelView) -> impl IntoView {
         <div
             node_ref=results_ref
             data-sheet-results="1"
+            data-deve-search-results="true"
             data-deve-search-results-scroll=move || search_results_scroll_marker(ui_mode.get())
             class="overflow-y-auto p-2"
         >
