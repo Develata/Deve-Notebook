@@ -43,6 +43,7 @@
     - ui_click: "Compact"
     - ui_click: "Manual"
     - ui_click: "Native"
+    - manual_chrome: docs/dev-runbook.md#settings--command-ui-smoke
     - run: scripts/check-settings-local-feedback-baseline.sh
   assertions:
     - ui_assert: locale_eq "zh-CN"
@@ -61,6 +62,7 @@
     - ui_query: "Trusted CLI"
     - ui_hover: "Trusted CLI"
     - ui_query: "Hybrid Editing"
+    - manual_chrome: docs/dev-runbook.md#settings--command-ui-smoke
     - run: cargo test -p deve_web settings -- --nocapture
     - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh

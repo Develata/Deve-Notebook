@@ -70,6 +70,34 @@ scripts/smoke-web-runtime-paths.sh
 Set `DEVE_WEB_RUNTIME_SMOKE_BUILD=1` to also run the embedded Web release build
 step before printing the browser smoke commands.
 
+## Settings / Command UI Smoke
+
+Use the Trunk fallback path while iterating on Settings or Command Palette UI:
+
+```bash
+cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
+cd apps/web
+NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080
+```
+
+Open `http://127.0.0.1:8080/` in Chrome. Run the smoke once at desktop width
+and once at a narrow mobile viewport such as `390x844`.
+
+Required checks:
+
+- `Ctrl+Shift+P` opens Command Palette; searching `settings` shows `Open
+  Settings` with the Settings group and browser-local/runtime-feedback detail.
+- Invoking `Open Settings` closes the command surface and opens the Settings
+  modal without navigating away from the app shell.
+- The modal exposes `data-deve-settings-surface="modal"`, remains within the
+  viewport on mobile, supports `Escape` close, and its close controls remain
+  44px touch targets.
+- Clicking `Dark`, `Off`, and `Compact` updates the browser-local markers
+  `data-deve-settings-theme`, `data-deve-settings-editor-wrap`, and
+  `data-deve-settings-editor-density` without writing server settings.
+- Trusted CLI disabled state renders `data-deve-setting-disabled-reason`, and
+  Hybrid Editing exposes `data-deve-setting-disabled` plus `aria-disabled`.
+
 ## Local Quality Gate
 
 Run this baseline before local commits that touch command/settings, CLI runtime,

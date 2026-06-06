@@ -17,6 +17,19 @@ use crate::components::{focus_scope, icons::X};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
+const SETTINGS_OVERLAY_CLASS: &str = concat!(
+    "fixed inset-0 z-[var(--z-modal)] flex items-end justify-center ",
+    "bg-black/50 backdrop-blur-sm transition-opacity sm:items-center sm:p-4"
+);
+const SETTINGS_PANEL_CLASS: &str = concat!(
+    "bg-panel w-full max-h-[100dvh] overflow-y-auto rounded-t-xl p-4 shadow-2xl ",
+    "transform transition-all scale-100 opacity-100 sm:max-w-2xl sm:max-h-[88vh] ",
+    "sm:rounded-xl sm:p-6"
+);
+const SETTINGS_ICON_BUTTON_CLASS: &str =
+    "min-h-[44px] min-w-[44px] p-2 hover:bg-hover rounded-full text-muted";
+const SETTINGS_PRIMARY_BUTTON_CLASS: &str = "min-h-[44px] w-full py-2 bg-accent text-on-accent rounded-lg hover:opacity-90 transition-colors font-medium";
+
 #[component]
 pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
@@ -28,22 +41,30 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
 
     view! {
         <Show when=move || show.get()>
-            <div class="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+            <div class=SETTINGS_OVERLAY_CLASS data-deve-settings-overlay="true">
                 <div
                     node_ref=panel_ref
                     role="dialog"
                     aria-modal="true"
                     tabindex="-1"
-                    class="bg-panel rounded-xl shadow-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-6 transform transition-all scale-100 opacity-100"
+                    class=SETTINGS_PANEL_CLASS
+                    data-deve-settings-surface="modal"
                     on:keydown=move |ev| {
+                        if ev.key() == "Escape" {
+                            ev.prevent_default();
+                            set_show.set(false);
+                            return;
+                        }
                         let _ = focus_scope::handle_focus_trap_keydown(&ev, panel_ref);
                     }
                 >
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="mb-6 flex items-center justify-between gap-3">
                         <h2 class="text-xl font-bold text-primary">{move || t::settings::title(locale.get())}</h2>
                         <button
                             node_ref=close_button_ref
-                            class="p-1 hover:bg-hover rounded-full text-muted"
+                            class=SETTINGS_ICON_BUTTON_CLASS
+                            aria-label=move || t::settings::close(locale.get())
+                            data-deve-settings-close="icon"
                             on:click=move |_| set_show.set(false)
                         >
                             <X class="w-6 h-6"/>
@@ -54,7 +75,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                         // 版本信息
                         <div class="bg-sidebar p-4 rounded-lg border border-default">
                             <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-2">{move || t::settings::about(locale.get())}</h3>
-                            <div class="flex justify-between items-center text-sm">
+                            <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
                                 <span class="text-secondary">{move || t::settings::version(locale.get())}</span>
                                 <span class="font-mono text-primary">{env!("CARGO_PKG_VERSION")}</span>
                             </div>
@@ -64,9 +85,9 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                         <AppearanceSection locale=locale />
 
                         // 语言设置
-                        <div class="bg-sidebar p-4 rounded-lg border border-default flex justify-between items-center">
+                        <div class="bg-sidebar p-4 rounded-lg border border-default flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <span class="font-medium text-primary">{move || t::settings::language(locale.get())}</span>
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button
                                     class=move || language_state.get().english_class
                                     on:click=move |_| {
@@ -132,7 +153,8 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
 
                     <div class="mt-8 pt-4 border-t border-default text-center">
                         <button
-                            class="w-full py-2 bg-accent text-on-accent rounded-lg hover:opacity-90 transition-colors font-medium"
+                            class=SETTINGS_PRIMARY_BUTTON_CLASS
+                            data-deve-settings-close="primary"
                             on:click=move |_| set_show.set(false)
                         >
                             {move || t::settings::close(locale.get())}
@@ -141,5 +163,29 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                 </div>
             </div>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        SETTINGS_ICON_BUTTON_CLASS, SETTINGS_OVERLAY_CLASS, SETTINGS_PANEL_CLASS,
+        SETTINGS_PRIMARY_BUTTON_CLASS,
+    };
+
+    #[test]
+    fn settings_modal_classes_keep_narrow_viewport_constraints() {
+        assert!(SETTINGS_OVERLAY_CLASS.contains("items-end"));
+        assert!(SETTINGS_OVERLAY_CLASS.contains("sm:items-center"));
+        assert!(SETTINGS_PANEL_CLASS.contains("w-full"));
+        assert!(SETTINGS_PANEL_CLASS.contains("max-h-[100dvh]"));
+        assert!(SETTINGS_PANEL_CLASS.contains("sm:max-w-2xl"));
+    }
+
+    #[test]
+    fn settings_modal_close_controls_keep_touch_safe_targets() {
+        assert!(SETTINGS_ICON_BUTTON_CLASS.contains("min-h-[44px]"));
+        assert!(SETTINGS_ICON_BUTTON_CLASS.contains("min-w-[44px]"));
+        assert!(SETTINGS_PRIMARY_BUTTON_CLASS.contains("min-h-[44px]"));
     }
 }

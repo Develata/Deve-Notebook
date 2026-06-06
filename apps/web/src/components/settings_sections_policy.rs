@@ -11,15 +11,14 @@ use crate::components::settings_prefs::{
 use crate::i18n::{Locale, t};
 
 pub(super) const BUTTON_CLASS_DISABLED: &str =
-    "px-3 py-1 text-xs font-medium text-muted rounded opacity-50 cursor-not-allowed";
-pub(super) const BUTTON_CLASS_IDLE: &str =
-    "px-3 py-1 text-xs font-medium text-muted hover:bg-active rounded transition-colors";
+    "min-h-[44px] px-3 py-2 text-sm font-medium text-muted rounded opacity-50 cursor-not-allowed";
+pub(super) const BUTTON_CLASS_IDLE: &str = "min-h-[44px] px-3 py-2 text-sm font-medium text-muted hover:bg-active rounded transition-colors";
 const BUTTON_CLASS_ACCENT_ACTIVE: &str =
-    "px-3 py-1 text-xs font-bold bg-accent text-on-accent rounded transition-colors";
+    "min-h-[44px] px-3 py-2 text-sm font-bold bg-accent text-on-accent rounded transition-colors";
 const SYNC_AUTO_CLASS_ACTIVE: &str =
-    "px-3 py-1 text-xs font-bold bg-green-500 text-white rounded transition-colors";
+    "min-h-[44px] px-3 py-2 text-sm font-bold bg-green-500 text-white rounded transition-colors";
 const SYNC_MANUAL_CLASS_ACTIVE: &str =
-    "px-3 py-1 text-xs font-bold bg-yellow-500 text-white rounded transition-colors";
+    "min-h-[44px] px-3 py-2 text-sm font-bold bg-yellow-500 text-white rounded transition-colors";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct LanguageButtonState {
@@ -52,7 +51,7 @@ pub(super) struct ReservedSettingState {
 
 pub(super) fn reserved_setting_state(locale: Locale) -> ReservedSettingState {
     ReservedSettingState {
-        class: "opacity-50 grayscale cursor-not-allowed select-none",
+        class: "bg-sidebar p-4 rounded-lg border border-default opacity-80 cursor-not-allowed select-none",
         disabled_attr: "true",
         aria_disabled: "true",
         reason: t::settings::coming_soon(locale).to_string(),

@@ -127,3 +127,35 @@ fn static_commands_expose_group_shortcut_and_enabled_conditions() {
         assert!(settings.enabled_when.contains("browser-local"));
     });
 }
+
+#[test]
+fn settings_command_routes_to_settings_surface_and_closes_palette() {
+    let owner = leptos::reactive::owner::Owner::new();
+
+    owner.with(|| {
+        let (show_palette, set_show_palette) = signal(true);
+        let (settings_opened, set_settings_opened) = signal(false);
+        let locale = RwSignal::new(Locale::En);
+        let commands = create_static_commands(
+            Locale::En,
+            Callback::new(move |_| set_settings_opened.set(true)),
+            Callback::new(|_| {}),
+            set_show_palette,
+            locale,
+        );
+        let command = commands
+            .iter()
+            .find(|command| command.id == "settings")
+            .expect("settings command");
+
+        assert_eq!(command.title, "Open Settings");
+        assert_eq!(command.group, "Settings");
+        assert!(command.shortcut.is_none());
+        assert!(command.enabled_when.contains("browser-local"));
+
+        command.action.run(());
+
+        assert!(settings_opened.get_untracked());
+        assert!(!show_palette.get_untracked());
+    });
+}

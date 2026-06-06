@@ -37,12 +37,28 @@ fn reserved_setting_state_exposes_disabled_reason() {
     let state = reserved_setting_state(Locale::En);
     assert_eq!(
         state.class,
-        "opacity-50 grayscale cursor-not-allowed select-none"
+        "bg-sidebar p-4 rounded-lg border border-default opacity-80 cursor-not-allowed select-none"
     );
     assert_eq!(state.disabled_attr, "true");
     assert_eq!(state.aria_disabled, "true");
     assert!(state.reason.contains("Future setting"));
     assert!(state.reason.contains("current release"));
+}
+
+#[test]
+fn settings_buttons_keep_mobile_safe_touch_targets() {
+    for class in [
+        BUTTON_CLASS_IDLE,
+        BUTTON_CLASS_DISABLED,
+        BUTTON_CLASS_ACCENT_ACTIVE,
+        SYNC_AUTO_CLASS_ACTIVE,
+        SYNC_MANUAL_CLASS_ACTIVE,
+    ] {
+        assert!(
+            class.contains("min-h-[44px]"),
+            "{class} must preserve a 44px minimum touch target"
+        );
+    }
 }
 
 #[test]

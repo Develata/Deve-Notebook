@@ -22,7 +22,7 @@ pub fn AppearanceSection(locale: RwSignal<Locale>) -> impl IntoView {
 
     view! {
         <div class="bg-sidebar p-4 rounded-lg border border-default">
-            <div class="flex items-start justify-between gap-4">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div>
                     <h3 class="text-sm font-semibold text-muted uppercase tracking-wider mb-1">
                         {move || t::settings::appearance(locale.get())}
@@ -31,7 +31,7 @@ pub fn AppearanceSection(locale: RwSignal<Locale>) -> impl IntoView {
                         {move || t::settings::appearance_desc(locale.get())}
                     </p>
                 </div>
-                <div class="flex gap-2 shrink-0" data-deve-settings-theme=move || theme_pref.get().as_str()>
+                <div class="flex flex-wrap gap-2" data-deve-settings-theme=move || theme_pref.get().as_str()>
                     <button
                         class=move || button_state.get().auto_class
                         on:click=move |_| {
@@ -84,9 +84,9 @@ pub fn EditorBasicsSection(locale: RwSignal<Locale>) -> impl IntoView {
                 {move || t::settings::editor_basics_desc(locale.get())}
             </p>
             <div class="space-y-3">
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <span class="font-medium text-primary">{move || t::settings::word_wrap(locale.get())}</span>
-                    <div class="flex gap-2" data-deve-settings-editor-wrap=move || wrap_pref.get().as_str()>
+                    <div class="flex flex-wrap gap-2" data-deve-settings-editor-wrap=move || wrap_pref.get().as_str()>
                         <button
                             class=move || wrap_state.get().on_class
                             on:click=move |_| {
@@ -107,9 +107,9 @@ pub fn EditorBasicsSection(locale: RwSignal<Locale>) -> impl IntoView {
                         </button>
                     </div>
                 </div>
-                <div class="flex items-center justify-between gap-4">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <span class="font-medium text-primary">{move || t::settings::editor_density(locale.get())}</span>
-                    <div class="flex gap-2" data-deve-settings-editor-density=move || density_pref.get().as_str()>
+                    <div class="flex flex-wrap gap-2" data-deve-settings-editor-density=move || density_pref.get().as_str()>
                         <button
                             class=move || density_state.get().comfortable_class
                             on:click=move |_| {
@@ -149,13 +149,13 @@ pub fn RuntimeDiagnosticsSection(locale: RwSignal<Locale>) -> impl IntoView {
             <div class="space-y-2 text-xs">
                 <div data-deve-runtime-smoke="embedded">
                     <div class="text-secondary mb-1">{move || t::settings::embedded_runtime(locale.get())}</div>
-                    <code class="block rounded border border-default bg-panel px-2 py-1 font-mono text-primary">
+                    <code class="block overflow-x-auto whitespace-nowrap rounded border border-default bg-panel px-2 py-1 font-mono text-primary">
                         "scripts/smoke-web-release-build.sh"
                     </code>
                 </div>
                 <div data-deve-runtime-smoke="trunk">
                     <div class="text-secondary mb-1">{move || t::settings::trunk_runtime(locale.get())}</div>
-                    <code class="block rounded border border-default bg-panel px-2 py-1 font-mono text-primary">
+                    <code class="block overflow-x-auto whitespace-nowrap rounded border border-default bg-panel px-2 py-1 font-mono text-primary">
                         "NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080"
                     </code>
                 </div>

@@ -18,6 +18,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+GIT_BIN="${GIT_BIN:-git}"
+GIT_ROOT="$ROOT"
+if [[ "${GIT_BIN##*/}" == "git.exe" ]] && command -v wslpath >/dev/null 2>&1; then
+  GIT_ROOT="$(wslpath -w "$ROOT")"
+fi
 PLAN_DIR="$ROOT/docs/plan"
 RUNTIME_REGISTRY="$ROOT/docs/registry/runtime-skeleton-registry.md"
 CODE_DIRS=("$ROOT/crates" "$ROOT/apps")
@@ -156,7 +161,7 @@ path_or_glob_exists() {
 }
 
 tracked_rust_files() {
-  git -C "$ROOT" ls-files -- 'crates' 'apps' |
+  "$GIT_BIN" -C "$GIT_ROOT" ls-files -- 'crates' 'apps' |
     grep -E '\.rs$' |
     sed "s|^|$ROOT/|"
 }
@@ -317,7 +322,7 @@ run_check_metadata_completeness() {
       echo "ERROR: metadata-completeness: $rel missing fields:${miss}" >&2
       missing=$((missing + 1))
     fi
-  done < <(git -C "$ROOT" ls-files -- 'docs/plan' | grep -E '\.md$' | sed "s|^|$ROOT/|")
+  done < <("$GIT_BIN" -C "$GIT_ROOT" ls-files -- 'docs/plan' | grep -E '\.md$' | sed "s|^|$ROOT/|")
   if [ "$missing" -gt 0 ]; then
     echo "check-metadata-completeness: FAIL — $missing/$checked chapter(s) missing Version/Last Review"
     return 1

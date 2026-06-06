@@ -114,9 +114,10 @@ fn command_match_score(query: &str, cmd: &Command) -> f32 {
 mod tests {
     use super::CommandProvider;
     use crate::components::command_palette::Command;
+    use crate::components::command_palette::registry::create_static_commands;
     use crate::components::search_box::types::SearchProvider;
     use crate::i18n::{Locale, t};
-    use leptos::prelude::Callback;
+    use leptos::prelude::{Callback, RwSignal, signal};
 
     fn command(id: &str, title: &str) -> Command {
         Command::available(id, title, Callback::new(|_| {}))
@@ -203,5 +204,38 @@ mod tests {
         assert!(detail.contains("Navigation"));
         assert!(detail.contains("Ctrl+P"));
         assert!(detail.contains("search surface"));
+    }
+
+    #[test]
+    fn command_provider_uses_registry_metadata_for_settings_entry() {
+        let owner = leptos::reactive::owner::Owner::new();
+
+        owner.with(|| {
+            let (_, set_show) = signal(false);
+            let locale = RwSignal::new(Locale::En);
+            let commands = create_static_commands(
+                Locale::En,
+                Callback::new(|_| {}),
+                Callback::new(|_| {}),
+                set_show,
+                locale,
+            );
+            let provider = CommandProvider::new(commands, Locale::En);
+
+            let results = provider.search(">settings");
+            let settings = results
+                .iter()
+                .find(|result| result.id == "settings")
+                .expect("settings command result");
+            let detail = settings.detail.as_deref().expect("settings detail");
+
+            assert_eq!(
+                settings.title,
+                t::command_palette::open_settings(Locale::En)
+            );
+            assert!(detail.contains(t::command_palette::group_settings(Locale::En)));
+            assert!(detail.contains("browser-local"));
+            assert!(detail.contains("runtime feedback"));
+        });
     }
 }
