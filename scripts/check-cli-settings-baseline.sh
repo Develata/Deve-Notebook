@@ -110,6 +110,9 @@ check_absent docs/plan/15_settings.md "\`debug\` (调试)"
 check_contains docs/plan/15_settings.md "**Future Settings Surface**"
 check_contains docs/plan/15_settings.md "server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计"
 check_contains docs/plan/15_settings.md "启用前 **MUST** 更新本章、feature spec 与 acceptance case"
+check_contains docs/plan/15_settings.md "**Editor**"
+check_contains docs/plan/15_settings.md '`Cmd+Z` / `Ctrl+Z`'
+check_contains docs/plan/15_settings.md '`Cmd+Shift+Z` / `Ctrl+Y`'
 check_absent apps/cli/src/server/router.rs "/api/settings"
 
 # UI command surfaces remain reachable through the shortcut layer.

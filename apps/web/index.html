@@ -200,6 +200,29 @@
         view.contentDOM.dispatchEvent(evt);
         return true;
       };
+
+      window.mobileRedo = () => {
+        const view = window._debug_view;
+        if (!view) return false;
+        if (view.state?.readOnly) return false;
+        view.focus();
+        try {
+          if (document.queryCommandSupported?.("redo")) {
+            document.execCommand("redo");
+            return true;
+          }
+        } catch (_) {}
+        const isMac = /Mac|iPhone|iPad/i.test(navigator.platform || "");
+        const evt = new KeyboardEvent("keydown", {
+          key: isMac ? "z" : "y",
+          bubbles: true,
+          ctrlKey: !isMac,
+          metaKey: isMac,
+          shiftKey: isMac,
+        });
+        view.contentDOM.dispatchEvent(evt);
+        return true;
+      };
     </script>
 
     <!-- 3. Module Initialization -->

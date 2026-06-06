@@ -233,12 +233,14 @@ HTML Header **MUST** 适配刘海屏并禁止 iOS 自动缩放：
 
 **Key Layout (Visual Representation)**:
 
-| `⇥` Tab | `H`ead | `•` List | `☑` Task | `B`old | `I`talic | `<>` Code | `↩` Undo |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Indent | `#` | `-` | `[ ]` | `**` | `_` | \` | Cmd+Z |
+| `↩` Undo | `↪` Redo | `⇥` Tab | `H`ead | `•` List | `☑` Task | `B`old | `I`talic | `<>` Code |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Cmd+Z | Cmd+Shift+Z | Indent | `#` | `-` | `[ ]` | `**` | `_` | \` |
 
 **Technical Constraint**:
 必须使用 `visualViewport` API 监听键盘高度变化，动态调整 Toolbar 的 `bottom` 偏移量，防止被键盘遮挡。
+撤销与重做按钮 **MUST** 与其它写动作共用 repo writer gate；只读、握手中、快照加载中、writer 未就绪或 scope switching 时不得触发编辑器 history action。
+撤销与重做属于高频恢复操作，**MUST** 保持在移动工具栏前段，390px 宽度下无需横向滚动即可看到。
 Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状态栏可暂时让位以优先输入。
 
 ### 3.4 手势系统 (Gesture System)

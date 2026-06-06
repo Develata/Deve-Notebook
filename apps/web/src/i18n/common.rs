@@ -163,6 +163,13 @@ pub fn undo(locale: Locale) -> &'static str {
     }
 }
 
+pub fn redo(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Redo",
+        Locale::Zh => "重做",
+    }
+}
+
 pub fn read_only_watermark(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "READ ONLY",

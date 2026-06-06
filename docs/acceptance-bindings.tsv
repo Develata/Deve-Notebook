@@ -97,3 +97,4 @@ UI-WEB-001|manual-chrome|docs/features/08_ui_design_01_web.md|web shell workflow
 UI-WEB-002|manual-chrome|docs/features/08_ui_design_01_web.md|web layout workflow
 UI-WEB-003|manual-chrome|docs/features/08_ui_design_01_web.md|web reconnect workflow
 UI-WEB-007|manual-chrome|docs/features/08_ui_design_01_web.md|file tree context action registry workflow
+UI-WEB-008|manual-chrome|docs/features/03_rendering.md|editor undo redo workflow

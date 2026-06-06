@@ -2,8 +2,10 @@
 // 远程操作处理: applyRemoteContent / applyRemoteOp / applyRemoteOpsBatch / scroll / readonly
 
 import { EditorView } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Transaction } from "@codemirror/state";
 import { ctx } from "./editor_state.js";
+
+const remoteHistoryAnnotation = Transaction.addToHistory.of(false);
 
 export function getEditorContent() {
   return ctx.activeView ? ctx.activeView.state.doc.toString() : "";
@@ -19,6 +21,7 @@ export function applyRemoteContent(text) {
           to: ctx.activeView.state.doc.length,
           insert: text,
         },
+        annotations: remoteHistoryAnnotation,
       });
     } catch (e) {
       console.error("applyRemoteContent Error:", e);
@@ -36,6 +39,7 @@ export function applyRemoteOp(op_json) {
       if (op.Insert) {
         ctx.activeView.dispatch({
           changes: { from: op.Insert.pos, insert: op.Insert.content },
+          annotations: remoteHistoryAnnotation,
         });
       } else if (op.Delete) {
         ctx.activeView.dispatch({
@@ -44,6 +48,7 @@ export function applyRemoteOp(op_json) {
             to: op.Delete.pos + op.Delete.len,
             insert: "",
           },
+          annotations: remoteHistoryAnnotation,
         });
       }
     } catch (e) {
@@ -66,6 +71,7 @@ export function applyRemoteOpsBatch(ops_json) {
         ensureValidRange(pos, pos);
         ctx.activeView.dispatch({
           changes: { from: pos, insert: op.Insert.content },
+          annotations: remoteHistoryAnnotation,
         });
       } else if (op.Delete) {
         const from = op.Delete.pos;
@@ -77,6 +83,7 @@ export function applyRemoteOpsBatch(ops_json) {
             to,
             insert: "",
           },
+          annotations: remoteHistoryAnnotation,
         });
       } else {
         throw new TypeError(`Unsupported remote op: ${JSON.stringify(op)}`);

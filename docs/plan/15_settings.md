@@ -130,6 +130,8 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 |                       | `Cmd+Shift+O` / `Ctrl+Shift+O` | **Toggle Outline**: 开关右侧大纲栏      |
 |                       | `Cmd+B` / `Ctrl+B`             | **Toggle Sidebar**: 开关左侧侧边栏      |
 |                       | `Cmd+L` / `Ctrl+L`             | **Toggle Language**: 循环切换界面语言   |
+| **Editor**            | `Cmd+Z` / `Ctrl+Z`             | **Undo**: 撤销当前编辑器会话内一步编辑  |
+|                       | `Cmd+Shift+Z` / `Ctrl+Y`       | **Redo**: 重做当前编辑器会话内一步编辑  |
 | **Version Control**   | `Cmd+S` / `Ctrl+S`             | **Save**: 保存当前文件 (触发 Diff 计算) |
 |                       | `Cmd+Enter` / `Ctrl+Enter`     | **Commit**: 提交暂存区的更改            |
 |                       | `Cmd+A` / `Ctrl+A`             | **Select All**: 全选当前文件            |

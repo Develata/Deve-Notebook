@@ -16,7 +16,14 @@ import {
   syntaxHighlighting,
   bracketMatching,
 } from "@codemirror/language";
-import { defaultKeymap, history, historyKeymap, selectAll } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  redo,
+  selectAll,
+  undo,
+} from "@codemirror/commands";
 
 import { languages } from "@codemirror/language-data";
 import { mathStateField } from "./extensions/math.js";
@@ -147,6 +154,22 @@ export function syncEditorStateToRust() {
   }
 }
 
+function runMobileHistoryCommand(command) {
+  const view = ctx.activeView;
+  if (!view) return false;
+  if (view.state?.readOnly) return false;
+  view.focus();
+  return command(view);
+}
+
+export function mobileUndo() {
+  return runMobileHistoryCommand(undo);
+}
+
+export function mobileRedo() {
+  return runMobileHistoryCommand(redo);
+}
+
 // --- Re-export for window bindings ---
 function getEditorSelection() {
   const view = ctx.activeView;
@@ -183,3 +206,5 @@ window.scrollGlobal = scrollGlobal;
 window.setReadOnly = setReadOnly;
 window.updateGutterDiff = updateGutterDiff;
 window.getEditorSelection = getEditorSelection;
+window.mobileUndo = mobileUndo;
+window.mobileRedo = mobileRedo;

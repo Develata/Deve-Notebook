@@ -63,6 +63,10 @@ unsafe extern "C" {
     #[wasm_bindgen(js_namespace = window, js_name = mobileUndo)]
     pub fn mobile_undo();
 
+    /// Mobile: 重做一步
+    #[wasm_bindgen(js_namespace = window, js_name = mobileRedo)]
+    pub fn mobile_redo();
+
     /// 更新行内 Diff Gutter 指示器
     #[wasm_bindgen(js_namespace = window, js_name = updateGutterDiff)]
     pub fn update_gutter_diff(ranges_json: &str);
