@@ -13,6 +13,7 @@ deve-note plan/
 deve-note report/
 docs/
 *.md
+scripts/
 
 # IDE 和工具
 .vscode/
@@ -25,6 +26,20 @@ docs/
 # 前端构建输出
 apps/web/dist/
 apps/web/node_modules/
+apps/web/.sisyphus/
+
+# 移动端生成物和本地崩溃日志
+apps/mobile/gen/
+apps/mobile/hs_err_*.log
+apps/mobile/replay_*.log
+
+# 本地运行时数据
+ledger/
+vault/
+data/
+
+# 嵌套构建输出
+**/target/
 
 # 配置文件（本地）
 .env

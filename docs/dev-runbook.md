@@ -239,11 +239,14 @@ DEVE_DOCKER_BIN=/path/to/docker DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docke
 
 The script builds the local Dockerfile, starts the image with production
 `AUTH_SECRET` / `AUTH_PASS` material, waits for
-`http://127.0.0.1:3001/api/node/role`, verifies production login with the
+`http://127.0.0.1:3102/api/node/role`, verifies production login with the
 matching smoke password, then removes the smoke container and temporary Docker
 data volume. Without
 `DEVE_DOCKER_SMOKE_REQUIRED=1`, a machine that does not
 provide Docker reports a skip instead of failing the local baseline.
+Set `DEVE_DOCKER_SMOKE_PORT` to override the default host port. The script
+fails fast when the selected port already serves `/api/node/role`, so a local
+development server cannot be mistaken for the Docker smoke container.
 When Docker is missing or unreachable, the script prints the resolved Docker
 binary plus `DOCKER_HOST` / `DOCKER_CONTEXT` so WSL and remote daemon issues are
 diagnosable without changing the script.
@@ -258,6 +261,30 @@ gh run list --workflow docker-smoke.yml --limit 1
 This workflow is manual-only. It runs the same `scripts/smoke-docker-release.sh`
 on an Ubuntu runner with `DEVE_DOCKER_SMOKE_REQUIRED=1`; it does not publish a
 GHCR image and does not replace the tag-triggered `release.yml` channel.
+
+## Docker Multi-client Smoke
+
+Run a real multi-browser WebLightPeer smoke against one containerized server:
+
+```bash
+DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
+```
+
+The script uses `docker-compose.multiclient.yml` to build the local Dockerfile,
+start a single `deve-server` on `http://127.0.0.1:3101`, wait for
+`/api/node/role` and production login, then runs
+`scripts/smoke-docker-multiclient.mjs` with a Playwright package installed under
+`${TMPDIR:-/tmp}/deve-docker-multiclient-playwright` by default.
+The script also runs `playwright install chromium` for first-time browser setup.
+The Playwright harness creates isolated browser contexts, verifies relative
+`/ws`, logs in as `admin` / `password`, creates and edits a document in one
+client, opens it from a second client, and checks offline read-only plus
+reconnect recovery.
+
+Use `DEVE_DOCKER_MULTI_PORT=<port>` when 3101 is occupied. Set
+`DEVE_DOCKER_MULTI_KEEP=1` to keep the compose project running for Chrome MCP
+visual validation, then open `http://127.0.0.1:<port>/` and clean up with the
+command printed by the script.
 
 ## Docker Compose
 
@@ -877,6 +904,7 @@ scripts/plan-coverage.sh
 scripts/smoke-web-release-build.sh
 scripts/smoke-runtime-release-info.sh
 scripts/smoke-docker-release.sh
+scripts/smoke-docker-multiclient.sh
 ```
 
 Use full-suite checks as release/final verification, not as the default inner

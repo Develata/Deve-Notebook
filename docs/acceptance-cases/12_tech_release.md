@@ -165,4 +165,22 @@
     - server_assert: stale_sync_scope_cleanup_ok true
     - ui_assert: reconnect_and_read_only_gates_ok true
     - ui_assert: auth_failure_status_not_conflated_with_reconnect true
+
+- case_id: REL-009
+  goal: Docker 容器运行时可通过多浏览器 WebLightPeer 实际 smoke。
+  preconditions:
+    - Docker 与 Docker Compose 可用
+    - Node/npm 可用
+    - Playwright 可通过 npm 获取或已缓存
+  steps:
+    - run: DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
+    - note: use `DEVE_DOCKER_MULTI_KEEP=1` to keep the compose project running for Chrome MCP visual validation
+  assertions:
+    - docker_assert: one_containerized_server_ready true
+    - browser_assert: isolated_browser_contexts_login_independently true
+    - ws_assert: browser_clients_connect_relative_ws true
+    - ui_assert: client_a_create_edit_visible_on_client_b true
+    - ui_assert: client_b_offline_readonly_then_reconnect_ready true
+    - ui_assert: no_blank_page_or_framework_overlay true
+    - ui_assert: no_relevant_console_errors true
 ```

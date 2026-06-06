@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${DEVE_DOCKER_SMOKE_IMAGE:-deve-notebook:local-smoke}"
 CONTAINER_NAME="${DEVE_DOCKER_SMOKE_CONTAINER:-deve-docker-smoke-$$}"
-HOST_PORT="${DEVE_DOCKER_SMOKE_PORT:-3001}"
+HOST_PORT="${DEVE_DOCKER_SMOKE_PORT:-3102}"
 REQUIRED="${DEVE_DOCKER_SMOKE_REQUIRED:-0}"
 DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
 AUTH_SECRET="${DEVE_DOCKER_SMOKE_AUTH_SECRET:-deve_docker_smoke_secret_32_bytes_ok!!}"
@@ -35,6 +35,12 @@ docker_cmd() {
 
 curl_local() {
   curl --noproxy "127.0.0.1,localhost" "$@"
+}
+
+preflight_host_port() {
+  if curl_local -fsS "http://127.0.0.1:${HOST_PORT}/api/node/role" >/dev/null 2>&1; then
+    require_or_skip "host port $HOST_PORT already serves /api/node/role; set DEVE_DOCKER_SMOKE_PORT to an unused port"
+  fi
 }
 
 diagnose_container_endpoint() {
@@ -80,6 +86,7 @@ cleanup() {
 docker_bin_available || require_or_skip "docker command not found"
 command -v curl >/dev/null 2>&1 || require_or_skip "curl command not found"
 docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
+preflight_host_port
 
 if [[ -z "$DATA_VOLUME" ]]; then
   DATA_VOLUME="deve-docker-smoke-data-$$"
@@ -107,6 +114,11 @@ docker_cmd run -d \
   -e AUTH_USER="$AUTH_USER" \
   -e AUTH_PASS="$AUTH_PASS" \
   "$IMAGE" >/dev/null
+
+if ! docker_cmd port "$CONTAINER_NAME" 3001/tcp | grep -q ":${HOST_PORT}$"; then
+  diagnose_container_endpoint
+  fail "container did not publish port 3001 to host port $HOST_PORT"
+fi
 
 for _ in $(seq 1 60); do
   status="$(curl_local -fsS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/node/role" || true)"
