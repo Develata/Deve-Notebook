@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-05`
+- `Last Review`: `2026-06-06`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -110,9 +110,10 @@ Context action 是 command/control 体系在具体对象上的投影，不是某
 
 - file tree context menu MUST 只消费 `ContextActionDescriptor` 的 projection，不得把业务执行逻辑写进菜单渲染层。
 - Web 端 `ContextAction` registry MUST 归属 application/control 层（当前为 `apps/web/src/context_action/`），不得归属 `sidebar_menu` 等单一 view 组件。
-- projection MUST 以 `surface + target + readonly` 请求建模，并通过 resolver 生成 `ProjectedContextAction`；surface 只能消费 projection result，不能自行枚举完整能力表。
+- projection MUST 以 `surface + target + readonly + repo scope + write readiness` 请求建模，并通过 resolver 生成 `ProjectedContextAction`；surface 只能消费 projection result，不能自行枚举完整能力表。
 - UI surface MUST 只渲染 `ProjectedContextAction` 并在触发时提交 `ContextActionIntent`；不得向控制层提交裸 `action_id`。
-- handler / control bridge MUST 用当前 readiness / readonly 状态构造 resolve request 并调用 `resolve_context_action(...)` 二次裁决；resolve miss MUST fail-closed 且无副作用。
+- `ContextActionIntent` MUST 携带创建 projection 时的 repo scope；handler / control bridge MUST 用当前 readiness、readonly 与 repo scope 构造 resolve request 并调用 `resolve_context_action(...)` 二次裁决。
+- resolver MUST 拒绝 stale scope、surface mismatch、target mismatch、untrusted external origin 与当前 write gate blocked 的写操作；resolve miss MUST fail-closed 且无副作用。
 - Context Action resolver 属于 Flow Coordination，不属于 Execution Domain；它只裁决 intent 是否可分发，不执行 authority write、外部进程或脚本。
 - 同一用户能力在 file tree、command palette、shortcut 中出现时，MUST 共享稳定 `action_id` 与可用性语义。
 - Web surface MAY 进行纯展示过滤，例如 target kind、read-only display 与 external icon，但不得决定 external executable 是否可信。

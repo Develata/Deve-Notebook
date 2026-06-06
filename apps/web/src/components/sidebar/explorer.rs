@@ -9,7 +9,9 @@
 //! 管理文件树、顶部动作和上下文菜单状态。
 
 use crate::components::sidebar::types::FileActionsContext;
+use crate::context_action::{ContextActionReadiness, ContextActionScope};
 use crate::hooks::use_core::DocContext;
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::i18n::Locale;
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -35,6 +37,29 @@ pub(super) fn new_doc_search_query(
     format!("+{path}")
 }
 
+fn context_action_readiness_for_core(
+    core: &crate::hooks::use_core::CoreState,
+    readonly: bool,
+) -> ContextActionReadiness {
+    let scope = ContextActionScope::new(core.current_repo_id.get(), core.current_scope_nonce.get());
+    let write_blocked = repo_write_block_tracked(
+        &core.ws,
+        RepoWriteSignals {
+            load_state: core.load_state,
+            is_spectator: core.is_spectator,
+            handshake_ready: core.handshake_ready,
+            current_repo_id: core.current_repo_id,
+            current_scope_nonce: core.current_scope_nonce,
+            active_branch: core.active_branch,
+            pending_branch_switch: core.pending_branch_switch,
+            pending_repo_switch: core.pending_repo_switch,
+        },
+    )
+    .is_some();
+
+    ContextActionReadiness::new(scope, readonly, write_blocked)
+}
+
 #[component]
 pub fn ExplorerView(
     _docs: ReadSignal<Vec<(DocId, String)>>,
@@ -47,6 +72,10 @@ pub fn ExplorerView(
     let doc = expect_context::<DocContext>();
     let branch = expect_context::<crate::hooks::use_core::BranchContext>();
     let core = expect_context::<crate::hooks::use_core::CoreState>();
+    let core_for_context_action = core.clone();
+    let context_action_readiness = Signal::derive(move || {
+        context_action_readiness_for_core(&core_for_context_action, is_readonly.get())
+    });
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
     let (menu_anchor, set_menu_anchor) = signal(None::<AnchorRect>);
@@ -92,6 +121,7 @@ pub fn ExplorerView(
     let actions = FileActionsContext {
         current_doc,
         is_readonly,
+        context_action_readiness,
         on_select,
         on_create: request_create.clone(),
         on_open_search: open_search.clone(),

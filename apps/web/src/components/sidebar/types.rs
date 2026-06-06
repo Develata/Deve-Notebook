@@ -11,6 +11,7 @@ use deve_core::models::DocId;
 use leptos::prelude::*;
 
 use crate::components::dropdown::AnchorRect;
+use crate::context_action::ContextActionReadiness;
 
 /// 文件操作上下文
 ///
@@ -19,6 +20,7 @@ use crate::components::dropdown::AnchorRect;
 pub struct FileActionsContext {
     pub current_doc: ReadSignal<Option<DocId>>,
     pub is_readonly: Signal<bool>,
+    pub context_action_readiness: Signal<ContextActionReadiness>,
     pub on_select: Callback<DocId>,
     pub on_create: Callback<Option<String>>,
     pub on_open_search: Callback<String>,

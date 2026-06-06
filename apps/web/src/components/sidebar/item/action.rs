@@ -5,7 +5,8 @@
 //!
 use crate::components::dropdown::AnchorRect;
 use crate::context_action::{
-    ContextActionId, ContextActionIntent, ContextActionResolveRequest, resolve_context_action,
+    ContextActionId, ContextActionIntent, ContextActionReadiness, ContextActionResolveRequest,
+    resolve_context_action,
 };
 use js_sys::encode_uri_component;
 use leptos::prelude::*;
@@ -35,7 +36,7 @@ pub(super) fn create_menu_anchor(target: Option<web_sys::EventTarget>) -> Anchor
 }
 
 pub(super) fn create_action_handler(
-    is_readonly: Signal<bool>,
+    readiness: Signal<ContextActionReadiness>,
     delete_req: Callback<String>,
     open_search: Callback<String>,
 ) -> Callback<ContextActionIntent> {
@@ -44,7 +45,7 @@ pub(super) fn create_action_handler(
             "item.rs handle_action called: action_id={}",
             intent.action_id.stable_id(),
         );
-        let resolve_request = ContextActionResolveRequest::new(intent, is_readonly.get_untracked());
+        let resolve_request = ContextActionResolveRequest::new(intent, readiness.get_untracked());
         let Some(resolved) = resolve_context_action(resolve_request) else {
             return;
         };

@@ -145,20 +145,36 @@ fn file_tree_action_external_process_is_not_projected_by_web() {
 }
 
 #[test]
+fn context_action_readiness_write_gate_blocks_write_projection() {
+    let ids = project_context_actions(file_tree_request_with_readiness(
+        file_tree_readiness(false).with_write_blocked(true),
+        ContextActionTargetKind::AnyNode,
+    ))
+    .into_iter()
+    .map(|action| action.descriptor.id)
+    .collect::<Vec<_>>();
+
+    assert_eq!(ids, vec![ContextActionId::OpenInNewWindow]);
+}
+
+#[test]
 fn file_tree_action_projected_intents_resolve_again() {
-    let projected = project_context_actions(file_tree_request(
-        false,
+    let readiness = file_tree_readiness(false)
+        .with_scope(ContextActionScope::new(Some("repo-a".to_string()), 7));
+    let projected = project_context_actions(file_tree_request_with_readiness(
+        readiness.clone(),
         ContextActionTargetKind::MarkdownFile,
     ));
 
     for action in projected {
         let resolved = resolve_context_action(ContextActionResolveRequest::new(
             action.intent.clone(),
-            false,
+            readiness.clone(),
         ))
         .expect("projected action should resolve");
 
         assert_eq!(resolved.descriptor.id, action.descriptor.id);
         assert_eq!(resolved.intent, action.intent);
+        assert_eq!(resolved.intent.scope, readiness.scope);
     }
 }

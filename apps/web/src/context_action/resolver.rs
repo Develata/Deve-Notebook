@@ -5,7 +5,7 @@
 
 use super::catalog::CONTEXT_ACTIONS;
 use super::intent::{ContextActionResolveRequest, ResolvedContextAction};
-use super::types::ContextActionDescriptor;
+use super::types::{ContextActionDescriptor, ContextActionEffect};
 
 fn descriptor_matches_request(
     descriptor: ContextActionDescriptor,
@@ -14,7 +14,18 @@ fn descriptor_matches_request(
     descriptor.supports_surface(request.intent.surface)
         && descriptor.is_web_projectable()
         && descriptor.target_kind.accepts(request.intent.target.kind)
-        && (!request.readonly || descriptor.readonly_allowed)
+        && request.intent.scope == request.readiness.scope
+        && (!request.readiness.readonly || descriptor.readonly_allowed)
+        && (!request.readiness.write_blocked || !is_write_effect(descriptor.effect))
+}
+
+fn is_write_effect(effect: ContextActionEffect) -> bool {
+    matches!(
+        effect,
+        ContextActionEffect::AuthorityWrite
+            | ContextActionEffect::DestructiveWrite
+            | ContextActionEffect::ExternalSideEffect
+    )
 }
 
 pub(crate) fn context_action_descriptor_resolves(

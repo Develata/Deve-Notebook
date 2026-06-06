@@ -5,6 +5,7 @@
 
 use super::catalog::CONTEXT_ACTIONS;
 use super::intent::{ContextActionIntent, ContextActionResolveRequest, ProjectedContextAction};
+use super::readiness::ContextActionReadiness;
 use super::resolver::context_action_descriptor_resolves;
 use super::target::ContextActionTarget;
 use super::types::{ContextActionDescriptor, ContextActionSurface};
@@ -13,15 +14,19 @@ use super::types::{ContextActionDescriptor, ContextActionSurface};
 pub struct ContextActionProjectionRequest {
     pub surface: ContextActionSurface,
     pub target: ContextActionTarget,
-    pub readonly: bool,
+    pub readiness: ContextActionReadiness,
 }
 
 impl ContextActionProjectionRequest {
-    pub fn new(surface: ContextActionSurface, target: ContextActionTarget, readonly: bool) -> Self {
+    pub fn new(
+        surface: ContextActionSurface,
+        target: ContextActionTarget,
+        readiness: ContextActionReadiness,
+    ) -> Self {
         Self {
             surface,
             target,
-            readonly,
+            readiness,
         }
     }
 }
@@ -34,10 +39,14 @@ pub(crate) fn project_context_actions_from_catalog(
         .iter()
         .copied()
         .filter_map(|descriptor| {
-            let intent =
-                ContextActionIntent::new(descriptor.id, request.surface, request.target.clone());
+            let intent = ContextActionIntent::with_scope(
+                descriptor.id,
+                request.surface,
+                request.target.clone(),
+                request.readiness.scope.clone(),
+            );
             let resolve_request =
-                ContextActionResolveRequest::new(intent.clone(), request.readonly);
+                ContextActionResolveRequest::new(intent.clone(), request.readiness.clone());
 
             context_action_descriptor_resolves(descriptor, &resolve_request)
                 .then(|| ProjectedContextAction::new(descriptor, intent))

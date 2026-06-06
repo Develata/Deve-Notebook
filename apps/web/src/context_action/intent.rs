@@ -3,6 +3,7 @@
 //!
 //! Context action intents and resolver outputs.
 
+use super::readiness::{ContextActionReadiness, ContextActionScope};
 use super::target::ContextActionTarget;
 use super::types::{ContextActionDescriptor, ContextActionId, ContextActionSurface};
 
@@ -11,18 +12,30 @@ pub struct ContextActionIntent {
     pub action_id: ContextActionId,
     pub surface: ContextActionSurface,
     pub target: ContextActionTarget,
+    pub scope: ContextActionScope,
 }
 
 impl ContextActionIntent {
+    #[cfg(test)]
     pub fn new(
         action_id: ContextActionId,
         surface: ContextActionSurface,
         target: ContextActionTarget,
     ) -> Self {
+        Self::with_scope(action_id, surface, target, ContextActionScope::default())
+    }
+
+    pub fn with_scope(
+        action_id: ContextActionId,
+        surface: ContextActionSurface,
+        target: ContextActionTarget,
+        scope: ContextActionScope,
+    ) -> Self {
         Self {
             action_id,
             surface,
             target,
+            scope,
         }
     }
 }
@@ -30,12 +43,12 @@ impl ContextActionIntent {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ContextActionResolveRequest {
     pub intent: ContextActionIntent,
-    pub readonly: bool,
+    pub readiness: ContextActionReadiness,
 }
 
 impl ContextActionResolveRequest {
-    pub fn new(intent: ContextActionIntent, readonly: bool) -> Self {
-        Self { intent, readonly }
+    pub fn new(intent: ContextActionIntent, readiness: ContextActionReadiness) -> Self {
+        Self { intent, readiness }
     }
 }
 

@@ -3,8 +3,8 @@
 //!
 use crate::components::icons;
 use crate::context_action::{
-    ContextActionIcon, ContextActionIntent, ContextActionProjectionRequest, ContextActionSurface,
-    ContextActionTarget, project_context_actions,
+    ContextActionIcon, ContextActionIntent, ContextActionProjectionRequest, ContextActionReadiness,
+    ContextActionSurface, ContextActionTarget, project_context_actions,
 };
 use crate::i18n::Locale;
 use leptos::prelude::*;
@@ -12,7 +12,7 @@ use leptos::prelude::*;
 #[component]
 pub(super) fn SidebarMenuItems(
     locale: RwSignal<Locale>,
-    is_readonly: Signal<bool>,
+    readiness: Signal<ContextActionReadiness>,
     target: ContextActionTarget,
     on_action: Callback<ContextActionIntent>,
     on_close: Callback<()>,
@@ -21,7 +21,7 @@ pub(super) fn SidebarMenuItems(
         {move || project_context_actions(ContextActionProjectionRequest::new(
                 ContextActionSurface::FileTree,
                 target.clone(),
-                is_readonly.get(),
+                readiness.get(),
             ))
             .into_iter()
             .map(|projected| {

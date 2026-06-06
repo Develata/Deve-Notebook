@@ -9,7 +9,7 @@
 use leptos::prelude::*;
 
 use crate::components::dropdown::{Align, AnchorRect, Dropdown};
-use crate::context_action::{ContextActionIntent, ContextActionTarget};
+use crate::context_action::{ContextActionIntent, ContextActionReadiness, ContextActionTarget};
 use crate::i18n::Locale;
 
 mod item;
@@ -18,7 +18,7 @@ use item::SidebarMenuItems;
 
 #[component]
 pub fn SidebarMenu(
-    is_readonly: Signal<bool>,
+    readiness: Signal<ContextActionReadiness>,
     target: ContextActionTarget,
     #[prop(into)] on_action: Callback<ContextActionIntent>,
     #[prop(into)] on_close: Callback<()>,
@@ -28,7 +28,7 @@ pub fn SidebarMenu(
     view! {
         <Dropdown anchor=anchor.into() on_close=on_close align=Align::Right offset=6.0>
             <div class="w-48 bg-panel rounded-md shadow-lg border border-default py-1 text-sm text-primary select-none animate-in fade-in zoom-in-95 duration-100 ease-out origin-top-right">
-                <SidebarMenuItems locale is_readonly target on_action on_close />
+                <SidebarMenuItems locale readiness target on_action on_close />
             </div>
         </Dropdown>
     }
