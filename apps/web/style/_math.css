@@ -21,6 +21,18 @@
   text-align: center;
 }
 
+/* ==================== Chat 公式展示 ==================== */
+.chat-math {
+  display: inline-block;
+}
+
+.chat-math-block {
+  display: block;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  text-align: center;
+}
+
 /* ==================== 嵌套公式深度定义 ==================== */
 .cm-nested-math-depth-1  { --depth: 1;  --border-color: var(--bq-border-1); }
 .cm-nested-math-depth-2  { --depth: 2;  --border-color: var(--bq-border-2); }

@@ -226,4 +226,22 @@ mod tests {
         assert!(html.contains("==mark=="));
         assert!(!html.contains("<mark"));
     }
+
+    #[test]
+    fn chat_math_keeps_tex_delimiters_for_dom_projection() {
+        let html = render_markdown("inline $a^2$ and $$b^2$$", None);
+
+        assert!(html.contains("$a^2$"));
+        assert!(html.contains("$$b^2$$"));
+        assert!(!html.contains("katex"));
+    }
+
+    #[test]
+    fn chat_math_keeps_code_block_math_literal_inside_pre_code() {
+        let html = render_markdown("```text\n$not_math$\n```", None);
+
+        assert!(html.contains("markdown-code-block"));
+        assert!(html.contains("<pre><code class=\"language-text\">"));
+        assert!(html.contains("$not_math$"));
+    }
 }

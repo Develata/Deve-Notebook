@@ -1,13 +1,22 @@
 // apps/web/src/components/chat/message_item.rs
 //! plan_ref:
 //!   - 16_ai_agent#native-ai-chat-runtime
+//!   - 10_rendering#markdown-render-whitelist
 //!
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::{Locale, t};
 use crate::utils::{markdown::render_markdown, time::format_time_of_day};
+use leptos::html;
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+unsafe extern "C" {
+    #[wasm_bindgen(js_namespace = window, js_name = renderChatMath)]
+    fn render_chat_math(element: &web_sys::HtmlElement) -> bool;
+}
 
 pub(crate) fn should_show_apply_label(
     is_user_message: bool,
@@ -81,6 +90,8 @@ pub fn MessageItem(
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let is_user = msg.role == "user";
     let content = msg.content.clone();
+    let math_content = content.clone();
+    let body_ref = NodeRef::<html::Div>::new();
     let sender_text = move || {
         if is_user {
             t::chat::you(locale.get())
@@ -95,6 +106,14 @@ pub fn MessageItem(
     };
     let ts_ms = msg.ts_ms;
     let ts_text = move || format_time_of_day(ts_ms, locale.get());
+    Effect::new(move |_| {
+        session_mode.track();
+        locale.track();
+        let _ = math_content.len();
+        if let Some(el) = body_ref.get() {
+            let _ = render_chat_math(&el);
+        }
+    });
 
     view! {
         <div class="flex flex-col gap-1">
@@ -112,6 +131,7 @@ pub fn MessageItem(
                 data-deve-mobile-chat-message=move || mobile_chat_message_marker(mobile)
             >
                 <div
+                    node_ref=body_ref
                     class=move || chat_markdown_body_class(mobile)
                     data-deve-mobile-chat-wrap=move || mobile_chat_wrap_marker(mobile)
                     data-deve-mobile-chat-code-scroll=move || mobile_chat_code_scroll_marker(mobile)
