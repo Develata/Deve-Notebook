@@ -1,0 +1,110 @@
+# Deve-Notebook Docker P2P mesh smoke compose.
+# Local-only test entry: build the Dockerfile, run two isolated servers, and
+# connect them through static FullPeer /ws mesh configuration.
+
+services:
+  peer-a:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    command: >
+      sh -c 'if [ ! -f /data/ledger/.host/projection-locators.toml ]; then
+      deve_cli init --repo default --repo-id "$${DEVE_DOCKER_P2P_MESH_REPO_ID}"
+      --repo-url urn:mesh:default --projection-base /notes --path /data;
+      fi;
+      workspace="/notes/default--$${DEVE_DOCKER_P2P_MESH_REPO_ID}";
+      mkdir -p "$$workspace/.notegit/keys";
+      printf "%s" "$${DEVE_DOCKER_P2P_MESH_REPO_KEY}" > "$$workspace/.notegit/keys/repo.key";
+      chmod 600 "$$workspace/.notegit/keys/repo.key";
+      deve_cli serve --port 3001'
+    ports:
+      - "${DEVE_DOCKER_P2P_MESH_A_PORT:-3111}:3001"
+    volumes:
+      - deve-mesh-peer-a-data:/data
+      - deve-mesh-peer-a-notes:/notes
+    environment:
+      DEVE_BIND_ADDR: 0.0.0.0:3001
+      DEVE_LEDGER_DIR: /data/ledger
+      DEVE_DOCKER_P2P_MESH_REPO_ID: ${DEVE_DOCKER_P2P_MESH_REPO_ID:-11111111-1111-1111-1111-111111111111}
+      DEVE_DOCKER_P2P_MESH_REPO_KEY: ${DEVE_DOCKER_P2P_MESH_REPO_KEY:-deve_mesh_shared_repo_key_32!!!!}
+      DEVE_P2P_ENABLED: "true"
+      DEVE_P2P_CONNECT_INTERVAL_MS: "1000"
+      DEVE_P2P_MESH_PEER_0_LABEL: peer-b
+      DEVE_P2P_MESH_PEER_0_PEER_ID: peer-b
+      DEVE_P2P_MESH_PEER_0_REPO_ID: ${DEVE_DOCKER_P2P_MESH_REPO_ID:-11111111-1111-1111-1111-111111111111}
+      DEVE_P2P_MESH_PEER_0_WS_URL: ws://peer-b:3001/ws
+      DEVE_P2P_MESH_PEER_0_AUTH_TOKEN_ENV: DEVE_P2P_PEER_B_TOKEN
+      DEVE_P2P_MESH_PEER_0_ENABLED: "true"
+      DEVE_P2P_INBOUND_TOKEN: ${DEVE_DOCKER_P2P_MESH_TOKEN_A:-deve_mesh_peer_a_token}
+      DEVE_P2P_PEER_B_TOKEN: ${DEVE_DOCKER_P2P_MESH_TOKEN_B:-deve_mesh_peer_b_token}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET to at least 32 random bytes}
+      AUTH_USER: ${AUTH_USER:-admin}
+      AUTH_PASS: ${AUTH_PASS:?set AUTH_PASS to an Argon2 PHC password hash}
+    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3001/api/node/role"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  peer-b:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    command: >
+      sh -c 'if [ ! -f /data/ledger/.host/projection-locators.toml ]; then
+      deve_cli init --repo default --repo-id "$${DEVE_DOCKER_P2P_MESH_REPO_ID}"
+      --repo-url urn:mesh:default --projection-base /notes --path /data;
+      fi;
+      workspace="/notes/default--$${DEVE_DOCKER_P2P_MESH_REPO_ID}";
+      mkdir -p "$$workspace/.notegit/keys";
+      printf "%s" "$${DEVE_DOCKER_P2P_MESH_REPO_KEY}" > "$$workspace/.notegit/keys/repo.key";
+      chmod 600 "$$workspace/.notegit/keys/repo.key";
+      deve_cli serve --port 3001'
+    ports:
+      - "${DEVE_DOCKER_P2P_MESH_B_PORT:-3112}:3001"
+    volumes:
+      - deve-mesh-peer-b-data:/data
+      - deve-mesh-peer-b-notes:/notes
+    environment:
+      DEVE_BIND_ADDR: 0.0.0.0:3001
+      DEVE_LEDGER_DIR: /data/ledger
+      DEVE_DOCKER_P2P_MESH_REPO_ID: ${DEVE_DOCKER_P2P_MESH_REPO_ID:-11111111-1111-1111-1111-111111111111}
+      DEVE_DOCKER_P2P_MESH_REPO_KEY: ${DEVE_DOCKER_P2P_MESH_REPO_KEY:-deve_mesh_shared_repo_key_32!!!!}
+      DEVE_P2P_ENABLED: "true"
+      DEVE_P2P_CONNECT_INTERVAL_MS: "1000"
+      DEVE_P2P_MESH_PEER_0_LABEL: peer-a
+      DEVE_P2P_MESH_PEER_0_PEER_ID: peer-a
+      DEVE_P2P_MESH_PEER_0_REPO_ID: ${DEVE_DOCKER_P2P_MESH_REPO_ID:-11111111-1111-1111-1111-111111111111}
+      DEVE_P2P_MESH_PEER_0_WS_URL: ws://peer-a:3001/ws
+      DEVE_P2P_MESH_PEER_0_AUTH_TOKEN_ENV: DEVE_P2P_PEER_A_TOKEN
+      DEVE_P2P_MESH_PEER_0_ENABLED: "true"
+      DEVE_P2P_INBOUND_TOKEN: ${DEVE_DOCKER_P2P_MESH_TOKEN_B:-deve_mesh_peer_b_token}
+      DEVE_P2P_PEER_A_TOKEN: ${DEVE_DOCKER_P2P_MESH_TOKEN_A:-deve_mesh_peer_a_token}
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET to at least 32 random bytes}
+      AUTH_USER: ${AUTH_USER:-admin}
+      AUTH_PASS: ${AUTH_PASS:?set AUTH_PASS to an Argon2 PHC password hash}
+    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3001/api/node/role"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  deve-mesh-peer-a-data: {}
+  deve-mesh-peer-a-notes: {}
+  deve-mesh-peer-b-data: {}
+  deve-mesh-peer-b-notes: {}
