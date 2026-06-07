@@ -42,6 +42,12 @@ use super::schema::*;
 use super::source_control;
 use crate::utils::fs::checked_exists;
 
+#[derive(Debug, Clone, Default)]
+pub struct RepoInitOptions {
+    pub repo_id: Option<uuid::Uuid>,
+    pub repo_url: Option<String>,
+}
+
 /// 初始化 RepoManager 实例
 ///
 /// 创建账本目录结构，打开/创建本地数据库，并初始化所有必需的表。
@@ -62,9 +68,27 @@ pub fn init(
     repo_name: Option<&str>,
     repo_url: Option<&str>,
 ) -> Result<RepoManager> {
+    init_with_options(
+        ledger_dir,
+        snapshot_depth,
+        repo_name,
+        RepoInitOptions {
+            repo_id: None,
+            repo_url: repo_url.map(str::to_string),
+        },
+    )
+}
+
+pub fn init_with_options(
+    ledger_dir: impl AsRef<Path>,
+    snapshot_depth: usize,
+    repo_name: Option<&str>,
+    options: RepoInitOptions,
+) -> Result<RepoManager> {
     let ledger_dir = ledger_dir.as_ref().to_path_buf();
     let base_name =
         super::manager::projection_locator::safe_repo_path_segment(repo_name.unwrap_or("default"))?;
+    let repo_url = options.repo_url.as_deref();
 
     // 1. 创建目录结构
     std::fs::create_dir_all(&ledger_dir)
@@ -103,9 +127,24 @@ pub fn init(
                     if let Some(guard) = table.get(&0)? {
                         let val = guard.value();
                         let info: super::RepoInfo = bincode::deserialize(val)?;
+                        if let Some(requested_repo_id) = options.repo_id
+                            && info.uuid != requested_repo_id
+                        {
+                            anyhow::bail!(
+                                "Existing local repo {} has RepoId {}, expected {}; explicit repo-id init fails closed",
+                                final_name,
+                                info.uuid,
+                                requested_repo_id
+                            );
+                        }
                         if should_reuse_existing_repo(repo_url, &info) {
                             local_db = db;
                             break;
+                        } else if options.repo_id.is_some() {
+                            anyhow::bail!(
+                                "Existing local repo {} metadata does not match explicit init request",
+                                final_name
+                            );
                         } else {
                             counter += 1;
                             continue;
@@ -157,12 +196,13 @@ pub fn init(
 
     // 7. 写入 Metadata (如果是新库，或者旧库缺失)
     if is_new_repo || super::RepoManager::read_repo_info_from_db(local_db.as_ref())?.is_none() {
-        let repo_uuid = uuid::Uuid::new_v4();
+        let repo_uuid = options.repo_id.unwrap_or_else(uuid::Uuid::new_v4);
         let info = super::RepoInfo {
             uuid: repo_uuid,
             name: final_name.clone(),
-            url: repo_url
-                .map(|s| s.to_string())
+            url: options
+                .repo_url
+                .clone()
                 .or_else(|| Some(format!("urn:uuid:{}", repo_uuid))),
         };
         let write_txn = local_db.begin_write()?;

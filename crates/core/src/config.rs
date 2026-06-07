@@ -24,7 +24,8 @@ mod profile;
 mod schema;
 
 pub use schema::{
-    AgentBridgeConfig, AiConfig, AppProfile, Config, MergeStrategy, SyncMode, UiConfig,
+    AgentBridgeConfig, AiConfig, AppProfile, Config, MergeStrategy, P2pConfig, P2pPeerConfig,
+    SyncMode, UiConfig,
 };
 
 impl Config {

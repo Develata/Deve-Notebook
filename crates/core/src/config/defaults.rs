@@ -25,6 +25,14 @@ pub(super) fn concurrency() -> usize {
     4
 }
 
+pub(super) fn p2p_inbound_token_env() -> Option<String> {
+    Some("DEVE_P2P_INBOUND_TOKEN".to_string())
+}
+
+pub(super) fn p2p_connect_interval_ms() -> u64 {
+    5_000
+}
+
 pub(super) fn ui_locale() -> String {
     "auto".to_string()
 }

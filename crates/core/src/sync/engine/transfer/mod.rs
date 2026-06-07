@@ -31,8 +31,8 @@ impl SyncEngine {
             .ok_or_else(|| anyhow::anyhow!("RepoKey not configured, cannot encrypt ops"))?;
 
         let mut encrypted_ops = Vec::with_capacity(raw_ops.len());
-        for (seq, entry) in raw_ops {
-            encrypted_ops.push(repo_key.encrypt(&entry, seq)?);
+        for (_storage_seq, entry) in raw_ops {
+            encrypted_ops.push(repo_key.encrypt(&entry, entry.seq)?);
         }
 
         Ok(SyncResponse {
@@ -40,5 +40,60 @@ impl SyncEngine {
             repo_id: request.repo_id,
             ops: encrypted_ops,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::SyncMode;
+    use crate::ledger::RepoManager;
+    use crate::models::{DocId, LedgerEntry, Op, PeerId};
+    use crate::security::RepoKey;
+    use std::sync::Arc;
+
+    #[test]
+    fn get_ops_for_sync_envelope_uses_payload_peer_seq_not_storage_seq() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let repo = Arc::new(RepoManager::init(
+            dir.path().join("ledger"),
+            8,
+            Some("default"),
+            Some("urn:default"),
+        )?);
+        let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
+        let peer_id = PeerId::new("local-peer");
+        let repo_key = RepoKey::generate();
+        let engine = SyncEngine::new(
+            peer_id.clone(),
+            repo.clone(),
+            SyncMode::Auto,
+            Some(repo_key.clone()),
+        );
+        let entry = LedgerEntry::new_content(
+            DocId::new(),
+            Op::Insert {
+                pos: 0,
+                content: "hello".into(),
+            },
+            1,
+            peer_id.clone(),
+            7,
+            None,
+            None,
+        );
+        let storage_seq = repo.append_local_op_in_local_repo("default", &entry)?;
+
+        assert_ne!(storage_seq, entry.seq);
+        let response = engine.get_ops_for_sync(&SyncRequest {
+            peer_id,
+            repo_id,
+            range: (storage_seq, storage_seq + 1),
+        })?;
+
+        assert_eq!(response.ops.len(), 1);
+        assert_eq!(response.ops[0].seq, entry.seq);
+        assert_eq!(repo_key.decrypt(&response.ops[0])?.seq, entry.seq);
+        Ok(())
     }
 }

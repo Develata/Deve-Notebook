@@ -25,6 +25,15 @@ impl RepoManager {
         init::init(ledger_dir, snapshot_depth, repo_name, repo_url)
     }
 
+    pub fn init_with_options(
+        ledger_dir: impl AsRef<Path>,
+        snapshot_depth: usize,
+        repo_name: Option<&str>,
+        options: init::RepoInitOptions,
+    ) -> Result<Self> {
+        init::init_with_options(ledger_dir, snapshot_depth, repo_name, options)
+    }
+
     /// 执行闭包于指定的本地仓库 (按名称)
     ///
     /// * `repo_name`: 仓库名称 (e.g. "default", "wiki").

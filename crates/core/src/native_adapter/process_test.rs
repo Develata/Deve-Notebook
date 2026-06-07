@@ -39,6 +39,7 @@ fn current_policy_defers_real_process_runtime() {
 
     assert!(policy.is_deferred_no_runtime());
     assert!(!policy.child_process_runtime_enabled);
+    assert!(!policy.embedded_service_runtime_enabled);
     assert!(policy.packaging_gate_required);
     assert!(!policy.authority_writes_allowed);
 }
@@ -51,6 +52,40 @@ fn default_adapter_rejects_child_process_runtime() {
     assert!(adapter.ensure_child_process_runtime_enabled().is_err());
     assert!(snapshot.is_default_safe_boundary());
     assert_eq!(snapshot.state, NativeProcessAdapterState::Deferred);
+}
+
+#[test]
+fn desktop_native_authority_opt_in_requires_both_env_flags() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+    let _guard = EnvGuard::set(&[
+        ("DEVE_NATIVE_AUTHORITY", Some("1")),
+        ("DEVE_DESKTOP_LOCAL_SERVICE", Some("1")),
+        ("DEVE_MOBILE_EMBEDDED_SERVICE", None),
+    ]);
+
+    let policy = desktop_native_authority_policy_from_env();
+
+    assert!(policy.is_explicit_desktop_native_authority_opt_in());
+    assert!(policy.child_process_runtime_enabled);
+    assert!(!policy.embedded_service_runtime_enabled);
+    assert!(policy.authority_writes_allowed);
+}
+
+#[test]
+fn mobile_native_authority_opt_in_uses_embedded_service_without_child_process() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+    let _guard = EnvGuard::set(&[
+        ("DEVE_NATIVE_AUTHORITY", Some("1")),
+        ("DEVE_DESKTOP_LOCAL_SERVICE", None),
+        ("DEVE_MOBILE_EMBEDDED_SERVICE", Some("1")),
+    ]);
+
+    let policy = mobile_native_authority_policy_from_env();
+
+    assert!(policy.is_explicit_mobile_native_authority_opt_in());
+    assert!(!policy.child_process_runtime_enabled);
+    assert!(policy.embedded_service_runtime_enabled);
+    assert!(policy.authority_writes_allowed);
 }
 
 #[test]
@@ -202,4 +237,43 @@ fn process_runtime_failure_contract_marks_only_budgeted_failures_retryable() {
     assert!(!NativeProcessRuntimeFailureKind::SessionHandoffFailed.retryable_by_default());
     assert!(!NativeProcessRuntimeFailureKind::SpawnExecutableMissing.retryable_by_default());
     assert!(!NativeProcessRuntimeFailureKind::EnvironmentPolicyViolation.retryable_by_default());
+}
+
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+struct EnvGuard {
+    old: Vec<(&'static str, Option<String>)>,
+}
+
+impl EnvGuard {
+    fn set(vars: &[(&'static str, Option<&str>)]) -> Self {
+        let old = vars
+            .iter()
+            .map(|(key, _)| (*key, std::env::var(key).ok()))
+            .collect::<Vec<_>>();
+        for (key, value) in vars {
+            // SAFETY: tests serialize env mutation through ENV_LOCK and restore every key.
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+        Self { old }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for (key, value) in self.old.drain(..) {
+            // SAFETY: EnvGuard owns restoration for keys it changed while ENV_LOCK is held.
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+    }
 }

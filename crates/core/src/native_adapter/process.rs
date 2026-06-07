@@ -14,12 +14,14 @@ use super::{
 #[serde(rename_all = "snake_case")]
 pub enum NativeProcessAdapterDecision {
     DeferredUntilPackagingGate,
+    ExplicitNativeAuthorityOptIn,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NativeProcessAdapterPolicy {
     pub decision: NativeProcessAdapterDecision,
     pub child_process_runtime_enabled: bool,
+    pub embedded_service_runtime_enabled: bool,
     pub packaging_gate_required: bool,
     pub authority_writes_allowed: bool,
 }
@@ -28,8 +30,25 @@ impl NativeProcessAdapterPolicy {
     pub fn is_deferred_no_runtime(self) -> bool {
         self.decision == NativeProcessAdapterDecision::DeferredUntilPackagingGate
             && !self.child_process_runtime_enabled
+            && !self.embedded_service_runtime_enabled
             && self.packaging_gate_required
             && !self.authority_writes_allowed
+    }
+
+    pub fn is_explicit_desktop_native_authority_opt_in(self) -> bool {
+        self.decision == NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn
+            && self.child_process_runtime_enabled
+            && !self.embedded_service_runtime_enabled
+            && self.packaging_gate_required
+            && self.authority_writes_allowed
+    }
+
+    pub fn is_explicit_mobile_native_authority_opt_in(self) -> bool {
+        self.decision == NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn
+            && !self.child_process_runtime_enabled
+            && self.embedded_service_runtime_enabled
+            && self.packaging_gate_required
+            && self.authority_writes_allowed
     }
 }
 
@@ -37,9 +56,49 @@ pub const CURRENT_NATIVE_PROCESS_ADAPTER_POLICY: NativeProcessAdapterPolicy =
     NativeProcessAdapterPolicy {
         decision: NativeProcessAdapterDecision::DeferredUntilPackagingGate,
         child_process_runtime_enabled: false,
+        embedded_service_runtime_enabled: false,
         packaging_gate_required: true,
         authority_writes_allowed: false,
     };
+
+pub fn desktop_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
+    if env_flag("DEVE_NATIVE_AUTHORITY") && env_flag("DEVE_DESKTOP_LOCAL_SERVICE") {
+        NativeProcessAdapterPolicy {
+            decision: NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn,
+            child_process_runtime_enabled: true,
+            embedded_service_runtime_enabled: false,
+            packaging_gate_required: true,
+            authority_writes_allowed: true,
+        }
+    } else {
+        CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+    }
+}
+
+pub fn mobile_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
+    if env_flag("DEVE_NATIVE_AUTHORITY") && env_flag("DEVE_MOBILE_EMBEDDED_SERVICE") {
+        NativeProcessAdapterPolicy {
+            decision: NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn,
+            child_process_runtime_enabled: false,
+            embedded_service_runtime_enabled: true,
+            packaging_gate_required: true,
+            authority_writes_allowed: true,
+        }
+    } else {
+        CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+    }
+}
+
+fn env_flag(name: &str) -> bool {
+    std::env::var(name)
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -56,6 +115,7 @@ pub struct NativeProcessAdapterSnapshot {
     pub endpoint: Option<NativeEndpointReady>,
     pub health_probe: NativeServiceHealthProbe,
     pub child_process_runtime_enabled: bool,
+    pub embedded_service_runtime_enabled: bool,
     pub child_process_running: bool,
     pub authority_writes_allowed: bool,
 }
@@ -63,6 +123,7 @@ pub struct NativeProcessAdapterSnapshot {
 impl NativeProcessAdapterSnapshot {
     pub fn is_default_safe_boundary(&self) -> bool {
         !self.child_process_runtime_enabled
+            && !self.embedded_service_runtime_enabled
             && !self.child_process_running
             && !self.authority_writes_allowed
     }
@@ -182,6 +243,7 @@ impl NativeProcessAdapter {
             endpoint: self.endpoint.clone(),
             health_probe: self.health_probe,
             child_process_runtime_enabled: self.policy.child_process_runtime_enabled,
+            embedded_service_runtime_enabled: self.policy.embedded_service_runtime_enabled,
             child_process_running: self.child_process_running,
             authority_writes_allowed: self.policy.authority_writes_allowed,
         }

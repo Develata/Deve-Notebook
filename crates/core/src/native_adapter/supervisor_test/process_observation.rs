@@ -104,6 +104,7 @@ fn malformed_session_snapshot_is_fatal_offline() {
         endpoint: Some(service_endpoint()),
         health_probe: service_probe(),
         child_process_runtime_enabled: false,
+        embedded_service_runtime_enabled: false,
         child_process_running: false,
         authority_writes_allowed: false,
     };

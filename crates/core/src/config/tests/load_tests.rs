@@ -106,6 +106,41 @@ fn mem_cache_mb_compat_env_alias_overrides_prefixed_config() {
 }
 
 #[test]
+fn p2p_mesh_env_aliases_load_static_peer_config() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("DEVE_P2P__ENABLED", Some("true")),
+        ("DEVE_P2P__CONNECT_INTERVAL_MS", Some("1234")),
+        (
+            "DEVE_P2P__INBOUND_TOKEN_ENV",
+            Some("DEVE_P2P_INBOUND_TOKEN"),
+        ),
+        ("DEVE_P2P_MESH_PEER_0_LABEL", Some("peer-b")),
+        ("DEVE_P2P_MESH_PEER_0_PEER_ID", Some("peer-b")),
+        (
+            "DEVE_P2P_MESH_PEER_0_REPO_ID",
+            Some("11111111-1111-1111-1111-111111111111"),
+        ),
+        ("DEVE_P2P_MESH_PEER_0_WS_URL", Some("ws://peer-b:3001/ws")),
+        (
+            "DEVE_P2P_MESH_PEER_0_AUTH_TOKEN_ENV",
+            Some("DEVE_P2P_PEER_B_TOKEN"),
+        ),
+        ("DEVE_P2P_MESH_PEER_0_ENABLED", Some("true")),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+
+    let config = Config::load_checked().expect("p2p env config");
+
+    assert!(config.p2p.enabled);
+    assert_eq!(config.p2p.connect_interval_ms, 1234);
+    assert_eq!(config.p2p.peers.len(), 1);
+    assert_eq!(config.p2p.peers[0].label, "peer-b");
+    assert_eq!(config.p2p.peers[0].auth_token_env, "DEVE_P2P_PEER_B_TOKEN");
+}
+
+#[test]
 fn load_checked_fails_closed_on_invalid_mem_cache_env_alias() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[

@@ -119,6 +119,40 @@ impl FromStr for SyncMode {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct P2pPeerConfig {
+    pub label: String,
+    pub peer_id: String,
+    pub repo_id: String,
+    pub ws_url: String,
+    pub auth_token_env: String,
+    #[serde(default = "defaults::true_value")]
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct P2pConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "defaults::p2p_inbound_token_env")]
+    pub inbound_token_env: Option<String>,
+    #[serde(default = "defaults::p2p_connect_interval_ms")]
+    pub connect_interval_ms: u64,
+    #[serde(default)]
+    pub peers: Vec<P2pPeerConfig>,
+}
+
+impl Default for P2pConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            inbound_token_env: defaults::p2p_inbound_token_env(),
+            connect_interval_ms: defaults::p2p_connect_interval_ms(),
+            peers: Vec::new(),
+        }
+    }
+}
+
 /// 应用运行模式预设。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -184,6 +218,9 @@ pub struct Config {
     /// 合并策略。
     #[serde(default)]
     pub merge_strategy: MergeStrategy,
+    /// 静态 FullPeer mesh 配置，默认关闭。
+    #[serde(default)]
+    pub p2p: P2pConfig,
     /// 快照保留深度。
     #[serde(default = "defaults::snapshot_depth")]
     pub snapshot_depth: usize,
@@ -208,6 +245,7 @@ impl Default for Config {
             ledger_dir: defaults::ledger(),
             sync_mode: SyncMode::default(),
             merge_strategy: MergeStrategy::default(),
+            p2p: P2pConfig::default(),
             snapshot_depth: defaults::snapshot_depth(),
             mem_cache_mb: defaults::mem_cache_mb(),
             concurrency: defaults::concurrency(),

@@ -23,7 +23,8 @@ pub use packaging::{
 pub use process::{
     CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeProcessAdapter, NativeProcessAdapterDecision,
     NativeProcessAdapterError, NativeProcessAdapterPolicy, NativeProcessAdapterSnapshot,
-    NativeProcessAdapterState,
+    NativeProcessAdapterState, desktop_native_authority_policy_from_env,
+    mobile_native_authority_policy_from_env,
 };
 pub use process_runtime::{
     NativeProcessBindHints, NativeProcessEnvBinding, NativeProcessExitStatus,
