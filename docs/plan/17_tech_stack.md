@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-28`
+- `Last Review`: `2026-06-06`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
@@ -108,11 +108,13 @@ Gate 状态：
 - Mobile packaging scaffold 只记录 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；Android shell-only package execution 可由 `11_ui_design/03_mobile.md#mobile-android-shell-package-execution-gate` 单独打开。
 - iOS shell-only package execution 可由 `11_ui_design/03_mobile.md#mobile-ios-shell-package-execution-gate` 单独打开；Mobile runtime entrypoint、process runtime、native authority write path 与 release ready 不得由 Android/iOS package execution 隐式打开。
 - Mobile foreground/background reprobe 与 session/readiness correctness 继续由 no-packaging skeleton tests 保证。
-- Native embedded service supervision 按 no-runtime contract 处理；该 contract 不启动真实子进程、不依赖 Tauri runtime capability、不授予 native shell core authority。
+- Native embedded service / local service supervision 默认按 no-runtime contract 处理；显式 opt-in 后只允许 native shell 启动或绑定受控本机 service，业务写入仍必须经 server/core writer gate。
 - `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DesktopAndMobileDependencySpikeOpen`；
   Tauri dependency 只允许在对应 native crate 的 `native-packaging` scope 内出现。
-- `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY = DeferredUntilPackagingGate`；`child_process_runtime_enabled = false`、`packaging_gate_required = true`、`authority_writes_allowed = false`。
-- 后续 child-process runtime 必须在对应 native crate 的 `native-packaging` feature 后实现，并继续禁止 core authority writes。
+- 默认 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY = DeferredUntilPackagingGate`；`child_process_runtime_enabled = false`、`packaging_gate_required = true`、`authority_writes_allowed = false`。
+- Native authority 只能通过 explicit opt-in 打开，且只能在对应 native crate 的 `native-packaging` feature 后生效；Desktop 使用 child-process local service，Mobile 使用 embedded loopback service。
+- 显式 opt-in 可以让本机 service/core 获得 local full peer authority，但 native shell crate 仍不得直接写 ledger、Projection Workspace、source-control、search、`.git` 或 `.notegit`。
+- 默认 release、shell-only target-host package、Android/iOS shell-only package execution 不得被解释为 native authority 默认可用或 store/physical-device release ready。
 
 ## 2. Markdown Compatibility Checklist
 

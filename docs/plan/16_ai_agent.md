@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Optional Product Layer`
 - `Status`: `Optional Product Layer`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-07`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
@@ -129,6 +129,7 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 *   Settings 中的模式切换必须清楚提示当前后端类型。
 *   Native `PLAN / BUILD` 与 `Backend(native / trusted-cli)` 必须是两组独立概念，不得混用。
 *   移动端 Chat Sheet、Markdown 渲染、错误重试逻辑共享。
+*   Chat message Markdown rendering **MAY** include TeX display via the auxiliary KaTeX projection defined in `10_rendering`; this is presentation-only and **MUST NOT** expand context reads, tool calls, source-control writes, or workspace write permission.
 *   `Disconnected`、`Unauthorized`、`Session Expired` 与 AI 请求失败必须分开处理。
 
 ## 5. Resource Budget (资源开销)

@@ -5,9 +5,9 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-28`
+- `Last Review`: `2026-06-06`
 - `Authority Owns`: `STRIDE catalog / key lifecycle (高层流程) / algorithm deprecation / supply chain policy / CVD policy`
-- `Authority Defers To`: `07_network#trust-boundary (trust boundary), 08_auth (auth runtime contract), 06_backup#backup-secret-ref-contract (key custody), 03_storage/authority (ledger append validation), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
+- `Authority Defers To`: `07_network#trust-boundary (trust boundary), 07_network#full-peer-mesh-v1 (P2P mesh / FullPeer admission), 08_auth (auth runtime contract), 06_backup#backup-secret-ref-contract (key custody), 03_storage/authority (ledger append validation), 11_ui_design#native-adapter-gate-registry (native shell gate), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (auth / trusted-agent security flows)`
 - `Counterpart Acceptance`: `docs/acceptance-cases/00_index.md (AUTH-* / PLUG-001)`
 - `Primary Code Areas`: `crates/core/src/security/`；SECURITY.md（待建）；docs/adr/ 中安全相关 ADR（B4.3 后）
@@ -17,7 +17,7 @@
 本章是**威胁建模契约唯一权威**：登记 STRIDE 目录、密钥生命周期高层流程、算法退役预案、供应链与漏洞披露策略。
 
 - **Owns**：STRIDE catalog（§3）、key lifecycle 高层流程（§4）、algorithm deprecation（§5）、supply chain policy（§6）、CVD policy（§7）。
-- **Defers To**：信任边界归 `07_network#trust-boundary`（§2 引用）；auth runtime 合同（session/token/gate）归 `08_auth`；备份密钥托管归 `06_backup#backup-secret-ref-contract`；ledger append 校验归 `03_storage/authority`（§3）；错误码/限流码归 `13_i18n#i18n-error-code-catalog`（§3/§4）；供应链依赖门禁归 `17_tech_stack#native-packaging-dependency-gate`、artifact 签名归 `18_release`（§6）；plugin capability gate 归 `19_plugins`（§3）；告警等级归 `22_reliability_observability#alerting-tier`（§7）。本章只承载威胁/边界/策略声明，不重定义这些合同。
+- **Defers To**：信任边界归 `07_network#trust-boundary`（§2 引用）；P2P mesh、FullPeer `/ws` admission、source attribution 与 shadow-only apply 归 `07_network#full-peer-mesh-v1`；auth runtime 合同（session/token/gate）归 `08_auth`；备份密钥托管归 `06_backup#backup-secret-ref-contract`；ledger append 校验归 `03_storage/authority`（§3）；native shell / local service gate 归 `11_ui_design#native-adapter-gate-registry` 与 `17_tech_stack#native-packaging-dependency-gate`；错误码/限流码归 `13_i18n#i18n-error-code-catalog`（§3/§4）；供应链依赖门禁归 `17_tech_stack#native-packaging-dependency-gate`、artifact 签名归 `18_release`（§6）；plugin capability gate 归 `19_plugins`（§3）；告警等级归 `22_reliability_observability#alerting-tier`（§7）。本章只承载威胁/边界/策略声明，不重定义这些合同。
 - **边界**：本章 **MUST NOT** 重写 auth/network/backup 的运行时合同，也不新增 §6 四层调用链之外的调用层。
 
 ## 2. Trust Boundaries {#trust-boundaries}
@@ -25,7 +25,9 @@
 本章不定义信任边界规则，只引用既有定义作为 STRIDE 分析前提；规范性约束以各 owner 为准：
 
 - relay 转发与来源归属、间接同步写入路径由签名来源决定、relay blind storage：见 `07_network#trust-boundary` 与 `07_network` §10。
+- FullPeer mesh、server-to-server `/ws` admission、P2P token 环境变量、shadow-only apply 与显式 merge 边界：见 `07_network#full-peer-mesh-v1` 与 `07_network#full-peer-ws-admission`。
 - writer gate、Writer Identity、WebLightPeer（浏览器 repo-scoped transient writer identity）：见 `01_terminology`。
+- native local authority 的默认关闭、显式 opt-in、Desktop child-process local service、Mobile embedded loopback service 与 shell no-direct-authority：见 `11_ui_design#native-adapter-gate-registry`、`11_ui_design#native-post-gate-common-contract` 与 `17_tech_stack#native-packaging-dependency-gate`。
 
 以上 MUST/SHOULD 约束不在本章复述或扩展。
 
@@ -33,12 +35,12 @@
 
 | 类别 | 主要威胁面 | 缓解（权威归属） |
 |---|---|---|
-| Spoofing | 伪造 peer / 伪造 session | peer Ed25519 签名（`crates/core/src/security/`）；session 鉴权归 `08_auth` |
+| Spoofing | 伪造 peer / 伪造 session / 伪造 FullPeer transport | peer Ed25519 签名（`crates/core/src/security/`）；session 鉴权归 `08_auth`；FullPeer bearer token 只作为 `/ws` transport admission，不能替代 `SyncHello` peer signature 与 repo scope proof（`07_network#full-peer-ws-admission`） |
 | Tampering | 篡改 ledger / 同步数据 | ledger append-only 与 append validation 归 `03_storage/authority`；同步数据签名来源 / relay attribution 归 `07_network#trust-boundary` 与 §10.5 |
 | Repudiation | 否认写入 | ledger 因果链 `(PeerId, LedgerSeq)` 提供审计定位（非完整 per-entry 不可抵赖）；定义归 `01_terminology` 与 `03_storage/authority` |
-| Information Disclosure | relay 窥探 / 备份泄露 | relay blind storage；备份 pack 加密/认证归 `06_backup#backup-artifact-protection-contract`，密钥引用托管归 `06_backup#backup-secret-ref-contract` |
+| Information Disclosure | relay 窥探 / 备份泄露 / P2P 与 native bootstrap secret 泄露 | relay blind storage；备份 pack 加密/认证归 `06_backup#backup-artifact-protection-contract`，密钥引用托管归 `06_backup#backup-secret-ref-contract`；P2P token material 不得进入 config、日志、URL、browser storage 或 native bootstrap payload（`07_network#static-peer-config`） |
 | Denial of Service | 登录爆破 / 连接洪泛 | 速率限制（`AUTH_RATE_LIMITED`，归 `13_i18n`/`08_auth`）；malicious peer 隔离（`07_network` §10.3） |
-| Elevation of Privilege | 越权写 / 越权插件能力 | writer gate（`01_terminology`）；plugin capability gate（`19_plugins`） |
+| Elevation of Privilege | 越权写 / 越权插件能力 / native shell 越权成为 authority | writer gate（`01_terminology`）；plugin capability gate（`19_plugins`）；native shell 即使 opt-in 也不得直接写 ledger/source-control/search，所有写入仍经本地 server/core writer gate（`11_ui_design#native-post-gate-common-contract`） |
 
 ## 4. Key Lifecycle (高层流程) {#key-lifecycle}
 
@@ -47,6 +49,7 @@
 | 密钥 | 用途 | 生命周期要点 | 权威 |
 |---|---|---|---|
 | Auth token (JWT, HS256) | 会话鉴权 | 签发 / 过期 / 撤销（token_version）；运行时合同归 `08_auth`，错误码归 `13_i18n` | `08_auth` |
+| P2P admission token | server-to-server `/ws` transport admission | 只通过环境变量间接引用；token material 不写入 config、日志、bootstrap payload、browser storage 或 URL；失效与轮换策略由部署环境负责 | `07_network#full-peer-ws-admission` |
 | Password hash (Argon2) | 口令存储 | 加盐哈希、参数升级 | `08_auth` |
 | Peer keypair (Ed25519) | peer 身份与签名 | 现状：生成 / 持久化恢复 / 签名 / 验签（无轮转撤销协议）；轮转/撤销为本章高层策略，协议化 defer `07_network` | `crates/core/src/security/keypair.rs` |
 | Backup encryption key | 备份 pack 加密 | 托管 / 引用归 `06_backup#backup-secret-ref-contract`（轮转 / re-wrap 待该合同扩展协议后生效） | `06_backup#backup-secret-ref-contract` |
@@ -82,5 +85,7 @@
 ## 8. Related Configuration (本章相关配置)
 
 - 鉴权 / TLS / 速率限制配置：归 `08_auth` 与 `15_settings`。
+- P2P static peer 配置只保存 endpoint、repo/peer identity 与 token env 名称；token material 只在运行环境中提供：归 `07_network#static-peer-config`。
+- Native authority opt-in env（`DEVE_NATIVE_AUTHORITY=1` 以及平台 service env）只打开本地受控 service；不授予 shell 直接 authority：归 `11_ui_design#native-adapter-gate-registry` 与 `17_tech_stack#native-packaging-dependency-gate`。
 - 备份密钥引用配置：归 `06_backup#backup-secret-ref-contract`。
 - 本章自身无独立配置项。

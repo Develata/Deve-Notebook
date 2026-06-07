@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-07`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -33,7 +33,7 @@
 
 - **Source-first 主编辑器**：以 CodeMirror 编辑源文本，并通过 decoration/widget 提供局部增强；widget 不得成为第二真值。
 - **Rust/WASM editor runtime**：只负责 snapshot、history、live op、pending overlay、read-only gate 与批量调度；不得把 projection 当作 ledger authority 写回。
-- **辅助 Markdown-to-HTML 渲染器**：只服务聊天、只读摘要或辅助 HTML 区域；不得被视为主编辑器 hybrid engine。
+- **辅助 Markdown-to-HTML 渲染器**：只服务聊天、只读摘要或辅助 HTML 区域；AI chat / read-only HTML message body 可执行 KaTeX post-render math projection，但不得被视为主编辑器 hybrid engine。
 - **Editor undo / redo**：只属于当前 WebLightPeer editor session 的 CodeMirror edit history；不得解释为 ledger 回滚、source-control 回滚、repo switch 回滚或远端 peer 已提交事实撤销。
 - 远程 snapshot、history replay、live op 与批量 remote op **MUST NOT** 进入本地 CodeMirror undo stack；本地撤销/重做只能重放用户在当前可写 editor session 内产生的编辑事务。
 
@@ -165,6 +165,8 @@ rendering 层只能实现 plan 明确允许的 Markdown 子集。
 - `==highlight==` 不进入 baseline contract；只能按 extended target 单独规划
 - 任意 HTML 不得当成通用渲染通道
 
+辅助 Markdown-to-HTML 渲染器的 math projection 只允许识别 `$...$` 与 `$$...$$`。该 projection 必须跳过 `pre` / `code` 等源码区域；KaTeX 不可用或单个公式解析失败时必须保留可见文本，不得中断消息渲染。
+
 ### 4.4 Baseline Syntax Whitelist
 
 Baseline contract 的块级支持集合：
@@ -240,6 +242,7 @@ Baseline contract 的行内支持集合：
 - block / inline math 必须保持 source-first reveal。
 - 复制公式时应优先保留源码语义。
 - math widget 应优先使用 KaTeX；KaTeX 不可用时必须降级显示源码。
+- AI chat / read-only HTML message body 的 TeX 展示是 post-render projection，不提供 cursor reveal，不得扩展为 Mermaid、完整 preview 或富文本 authority。
 
 补充：
 

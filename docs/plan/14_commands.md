@@ -24,7 +24,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 ## 1. CLI Commands {#cli-commands}
 
 *   **Baseline CLI Contract**:
-    *   `deve init --repo <name> --projection-base <path>`: 初始化 ledger 与首个本地 repo，并注册该 repo 的 Projection Locator；最终 workspace root 为 `<path>/<name>/`。
+    *   `deve init --repo <name> --projection-base <path> [--repo-id <uuid>] [--repo-url <url>]`: 初始化 ledger 与首个本地 repo，并注册该 repo 的 Projection Locator；最终 workspace root 为 `<path>/<name>/`。`--repo-id` 只允许在创建新 repo 时写入；若既有 repo metadata 与传入 `RepoId` 不一致，必须 fail-closed。
     *   `deve repo projection set --repo <selector> --base <path>`: 为本地 repo 创建或替换 projection base；必须停止 watcher、校验 locator、重建 projection，再恢复 repo runtime。
     *   `deve repo projection list`: 列出本机 host-local Projection Locator。
     *   `deve repo projection check --repo <selector>`: 只读校验 projection base 与计算出的 workspace root 是否存在、可 canonicalize、无冲突。
@@ -35,7 +35,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve dump`: 调试工具 (Dump Ops).
     *   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
     *   `deve graph`: 输出当前 repo 的只读 `GraphProjection` JSON；默认要求健康 Structure Facts authority，显式 `--allow-degraded-projection` 才允许从 metadata fallback 导出。
-    *   `deve verify-p2p`: P2P 逻辑验证.
+    *   `deve verify-p2p`: P2P 逻辑验证；默认保留本地 shadow 隔离模拟，显式 mesh smoke 入口必须通过 Docker/运行时脚本验证真实 server-to-server `/ws`。
     *   `deve seed`: 种子节点数据注入.
     *   `deve node-check`: 节点一致性检查，可选修复；`--projection` 执行只读 Structure Facts / projection authority 诊断。
     *   `deve recover`: 从 ledger 数据恢复 repo projection workspace 文件。
@@ -77,6 +77,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支.
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
     *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
+    *   `P2P: Mesh Status`: 只读查看静态 peer connector 状态；不得执行 discovery 或自动 merge。
     *   `Repo: Set Projection Base`: 为本地 repo 绑定 projection base；执行面必须复用 CLI locator 校验合同。
     *   `Repo: Check Projection Workspace`: 只读检查 repo projection base 与 workspace root readiness。
 

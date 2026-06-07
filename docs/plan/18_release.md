@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-06`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`
@@ -50,6 +50,13 @@ CI/CD 基于 GitHub Actions。
         *   **Tags**: `latest`, `v1.2.3` (与 Release Tag 同步).
 
 Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续 delivery work；在对应 workflow 增加前，**MUST NOT** 被视为 `release.yml` 发布基线。
+
+Native authority opt-in 属于运行时能力门禁，不属于默认 release readiness。发布或 target-host 证据可以声明：
+
+- 默认 native process/native authority 关闭。
+- 显式 opt-in native authority smoke 通过。
+
+但不得在未完成签名、store、physical-device 与长期后台同步验收前声明 Desktop/Mobile release ready。
 
 ### 2.2 Deferred Workflows (推迟的工作流)
 
@@ -134,6 +141,20 @@ services:
 观测面。它 **MUST** 暴露 version、profile、delivery shape、environment、ports 与聚合 repo
 health counts。degraded repo 的细节仍只属于 CLI/admin diagnostics；公开 endpoint 只能返回
 聚合计数，以便运维发现 degraded startup，同时避免泄漏 repo name 或 corruption detail。
+
+### 5.5 Docker P2P Mesh Smoke
+
+发布前的本地 Docker mesh smoke **MAY** 使用独立 compose override 启动两个 `deve-server`
+实例。该 smoke 必须使用隔离 volume、显式共享 `RepoId`、静态 peer 配置与 env token，
+并验证：
+
+- 两个服务端各自拥有独立 local ledger。
+- A 的本地写入只进入 B 的 A-shadow。
+- B 的 local branch 在显式 merge 前不被污染。
+- 断线重连后重新 `SyncHello` 并按当前 vector 对齐。
+
+该 smoke 只证明 server-to-server mesh runtime；不等价于 native release、store readiness、
+公网 discovery 或 NAT traversal readiness。
 
 ## 6. Checklist for Release (发布清单)
 

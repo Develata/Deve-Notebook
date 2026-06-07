@@ -476,17 +476,21 @@ PinnedSetChanged
 - `native_adapter/` 是 shell adapter 层，不是 authority core。
 - Desktop / Mobile 子章 **MAY** 定义平台 endpoint、session handoff、lifecycle、foreground reprobe 与 process adapter 差异。
 - Desktop / Mobile 子章 **MUST NOT** 引入新的 ledger、Projection Workspace、source-control、sync、search 或 settings authority。
-- native adapter 通过 gate 前 **MUST** 保持 no-packaging-runtime 默认构建。
-- native adapter 通过 gate 后 **MUST** 继续服从 writer gate、repo scope gate 与本章 control/runtime 分层。
+- native adapter **MUST** 保持 no-packaging-runtime 默认构建；native authority 与本地 service 默认关闭。
+- native authority 只有在 `native-packaging` feature 与平台 opt-in env 同时成立时才可打开：Desktop 使用 child-process local service，Mobile 使用 embedded loopback service。
+- native adapter 通过 gate 后 **MUST** 继续服从 writer gate、repo scope gate 与本章 control/runtime 分层；shell 不得直接写 ledger、projection、source-control、sync、search 或 settings authority。
 
 ### 8.6 Native Post-Gate Common Contract {#native-post-gate-common-contract}
 
-- post-gate native shell **MUST** 先拉起受控本机 service，再启动 UI。
+- post-gate native shell **MUST** 先拉起受控本机 service，再启动 UI；未显式 opt-in 时不得启动 native authority service。
+- Desktop local service 与 Mobile embedded loopback service 都只是本机 full peer authority 的承载进程/循环，不改变业务写入入口。
 - service 端口 **MUST** 使用本机随机可用端口，并只保存在运行时内存中。
 - 端口占用时，service boot **MUST** 自动回退到新的可用端口并重新绑定。
 - 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。
 - 本机 service **MUST NOT** 监听非回环地址。
 - 无公网时，本地读写能力 **MUST** 仍由 core/server authority 与 writer gate 决定。
+- native shell **MUST NOT** 直接写 ledger、projection、source-control、search、`.git` 或 `.notegit`；所有写入仍经本地 server/core writer gate。
+- service port、session secret、P2P token material 与 bootstrap secret **MUST NOT** 写入 URL、日志、Web localStorage 或持久 config。
 - 本地持久化、schema migration、repair、projection writeback、crash recovery 与本地内容落盘 **MUST** 服从 `03_storage/`。
 - at-rest encryption、key rotation、key recovery 与进程级鉴权 **MUST** 服从 `08_auth.md`。
 - 备份、导出、关键操作审计与恢复演练 **MUST** 服从 `18_release.md`。

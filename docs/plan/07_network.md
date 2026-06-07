@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-06`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -60,6 +60,45 @@
 - Server 是 always-on relay。
 - Browser 不是 full peer，而是 WebLightPeer。
 
+### 3.1.1 Full Peer Mesh v1 {#full-peer-mesh-v1}
+
+Full Peer Mesh v1 是当前多服务端拓扑的最小可运行合同：
+
+- 参与者：Desktop Native Peer、Mobile Native Peer、Server Relay Peer 均可作为 full peer；Browser 仍只作为 WebLightPeer。
+- 传输：full peer 之间复用同一 `/ws` endpoint 与 versioned bincode frame，不新增独立 mesh 端口或 wire format。
+- 拓扑：v1 仅支持静态配置 peer endpoint；不做自动发现、NAT 穿透、DHT、公共 relay marketplace 或 gossip peer discovery。
+- Repo identity：同一逻辑 repo 的 full peer **MUST** 共享同一 `RepoId`；不同 `RepoId` 不得被自动合并为同一 mesh repo。
+- 写入语义：每个 full peer 只对自己的 local branch 拥有 writer authority；入站远端 facts 只能进入对应 `ledger/remotes/<peer>/<repo>` shadow repo。
+- 合并语义：remote shadow merge 到 local branch 必须通过显式 source-control merge flow；mesh 同步成功不得自动污染 local branch。
+- 资源策略：low-spec / 服务器环境中 connector 必须可关闭、可限频、可 backoff；不得要求常驻大内存索引或后台全量 replay。
+
+### 3.1.2 Static Peer Configuration {#static-peer-config}
+
+Full Peer Mesh v1 的配置面默认关闭：
+
+```toml
+[p2p]
+enabled = false
+inbound_token_env = "DEVE_P2P_INBOUND_TOKEN"
+connect_interval_ms = 5000
+
+[[p2p.peers]]
+label = "peer-b"
+peer_id = "<expected-peer-id>"
+repo_id = "<repo-uuid>"
+ws_url = "ws://127.0.0.1:3102/ws"
+auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
+enabled = true
+```
+
+约束：
+
+- `enabled = false` 时 runtime **MUST NOT** 启动 outbound mesh connector。
+- `inbound_token_env` / `auth_token_env` 只保存环境变量名；token material **MUST NOT** 写入 `config.toml`、日志、`/api/node/role`、native bootstrap payload 或 browser localStorage。
+- `peer_id`、`repo_id` 与 `ws_url` 都必须显式配置；缺失任一项必须 fail-closed。
+- `ws_url` 的 scheme 必须是 `ws://` 或 `wss://`；Docker/local smoke 可使用 loopback 或 compose service DNS，生产配置应使用受控私网或 TLS 终端。
+- connector 必须拒绝连接本机相同 `peer_id + repo_id + ws_url` 的明显 self-loop。
+
 ### 3.2 Mobile Participation
 
 - foreground = full peer
@@ -106,6 +145,21 @@
 - ws 是主实时协议
 - http 用于 auth / bootstrapping / role probing / 部分代理接口
 - browser 默认连接 `relative /ws`
+- full peer 默认连接静态配置的 peer `/ws`
+
+### 4.1.1 Full Peer `/ws` Admission {#full-peer-ws-admission}
+
+`/ws` admission 必须区分两类 session：
+
+- `Browser`：沿用 cookie/JWT 与 localhost dev policy；升级后标记为 WebLightPeer browser session。
+- `FullPeer`：使用 `Authorization: Bearer <token>` 或等价受控 header 与 inbound token env 比对；升级后不得标记为 browser session。
+
+规则：
+
+- FullPeer admission 只证明 transport 可进入 P2P handshake；真正 repo/peer authority 仍由 `SyncHello` 的 peer signature、`repo_id`、scope 与 source proof 决定。
+- token 比对失败必须在 WebSocket upgrade 前返回结构化 unauthorized response，不能进入普通 sync handler。
+- FullPeer session 不允许走 browser writer registration shortcut；writer gate 仍只对当前 local authority branch 生效。
+- Browser 与 FullPeer 复用 `ClientMessage` / `ServerMessage` schema；除非 enum/wire shape 改变，否则不得 bump `WS_PROTOCOL_VERSION`。
 
 ### 4.2 Serialization
 
@@ -310,6 +364,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 
 1. 必须重新发送当前 repo 的 `SyncHello`
 2. 若 repo 已切换，必须按新 `repo_id` 建立新的 handshake context
+3. FullPeer connector 必须刷新当前 repo ledger heads 后再计算 diff / snapshot fallback
 
 细则：
 
@@ -317,6 +372,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
   - `1s -> 2s -> 4s -> 8s -> 16s -> 30s(cap)`
 - 每次重连尝试 **SHOULD** 记录结构化日志和 UI retry counter。
 - `Unauthorized`、`repo route mismatch`、`malformed session proof` 不得继续普通无限重连。
+- full peer connector backoff 与 browser reconnect backoff 可以共用节奏，但必须按 peer endpoint 独立计数；单个 peer 失败不得阻塞其他 peer connector。
 
 ## 9. Failure Modes
 
@@ -392,6 +448,9 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 把 `Unauthorized` 包装成普通 `Disconnected`。
 - 让 Proxy 伪装自己拥有 ledger authority。
 - 使用空 repo 占位符完成 snapshot / sync 路由。
+- 把静态 mesh token 写入 config、日志、browser storage、native bootstrap payload 或 URL。
+- 把 mesh sync 成功解释为自动 merge 到 local branch。
+- 用 browser `/ws` cookie admission 伪装 full peer server-to-server admission。
 
 ## 12. Runtime Boundary
 
@@ -409,11 +468,20 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 
 - 负责 ws upgrade、session gate、scope guard、server outbound fanout 与 sync handler 编排。
 - unauthorized、protocol error、stale scope 与 disconnected 必须走不同结构化错误路径。
+- 负责 Browser / FullPeer admission 分类；FullPeer admission 通过后仍必须走 peer signature、repo scope 与 source attribution 校验。
+- 负责按静态 peer 配置启动 outbound connector，但 connector 只能调用 protocol/runtime surface，不得绕过 sync handler 直接写 shadow repo。
 
 ### 12.4 Web Runtime {#web-ws-runtime}
 
 - 负责 browser peer identity、repo-scoped handshake、client-side durable state probe 与 stale message discard。
 - Web runtime 不得在 disconnected、unauthorized 或 peer identity 缺失时保持可写。
+
+### 12.5 Native Full Peer Runtime {#native-full-peer-runtime}
+
+- Desktop / Mobile native full peer runtime 只在 native packaging + 显式 opt-in 后打开。
+- Native shell 不拥有 ledger/source-control/search authority；它只能启动或绑定本机 service，并把 endpoint/session/readiness 交给共享 Web shell。
+- Desktop full peer v1 使用受控 child-process local service；Mobile full peer v1 使用 in-process embedded loopback service。
+- 两者必须通过本机 server/core writer gate 完成业务写入；shell lifecycle、foreground、network online 事件不得直接授予可写状态。
 
 ## 13. Refactor Target
 
@@ -435,3 +503,6 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - `SYNC_MODE`
 - `ws endpoint / public endpoint`
 - relay / proxy 相关端口配置
+- `[p2p] enabled`, `connect_interval_ms`, `inbound_token_env`
+- `[[p2p.peers]] label`, `peer_id`, `repo_id`, `ws_url`, `auth_token_env`, `enabled`
+- Native opt-in env：`DEVE_NATIVE_AUTHORITY=1`，Desktop 还要求 `DEVE_DESKTOP_LOCAL_SERVICE=1`，Mobile 还要求 `DEVE_MOBILE_EMBEDDED_SERVICE=1`

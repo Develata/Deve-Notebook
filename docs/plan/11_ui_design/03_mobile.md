@@ -5,15 +5,15 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-05`
+- `Last Review`: `2026-06-06`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
 
 本章定义 Mobile content-first 适配策略。规范性用语继承 `01_terminology.md`。
 
-> **Current Native Boundary**：Mobile native 是壳层、生命周期与本机 service 绑定层，只表达 service readiness/offline，不拥有业务 authority。
-> **Post-Gate Target**：Mobile 端目标采用 **Tauri v2 Mobile packaging** 外壳，共享 Web 前端；完整离线 packaging/readiness 必须等 native-packaging 与 process adapter gate 打开后验收。
+> **Current Native Boundary**：Mobile native 默认是壳层、生命周期与本机 service 绑定层；未显式 opt-in 时只表达 service readiness/offline，不拥有业务 authority。
+> **Post-Gate Target**：Mobile 端目标采用 **Tauri v2 Mobile packaging** 外壳，共享 Web 前端；native-packaging + 显式 opt-in 后可启动 embedded loopback full peer service，但写入仍必须经 server/core writer gate。
 
 > **Web 映射**：当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
@@ -22,9 +22,9 @@
 *   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
 *   Mobile native adapter 第一阶段只允许承担：绑定/探测已有受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件。
 *   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；`tauri` / `tauri-build` dependency 只能作为 `apps/mobile` 的 optional dependency 挂在 `native-packaging` feature 后。
-*   mobile process adapter **MUST** 等 process adapter gate 显式打开后才能启动、持有或重启后端子进程。
+*   mobile process adapter 默认关闭；Mobile v1 full peer 不使用子进程，而是在 `native-packaging` feature 且 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_MOBILE_EMBEDDED_SERVICE=1` 同时成立时启动 in-process embedded loopback service。
 *   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；后台恢复失败 **MUST NOT** 被伪装成普通断网。
-*   Mobile native adapter **MUST NOT** 自行定义 Ledger / Projection Workspace authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。
+*   Mobile native adapter **MUST NOT** 自行定义 Ledger / Projection Workspace authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。显式 opt-in 只允许 native 壳启动/绑定本机 embedded full peer service，不授予 shell 直接写 authority。
 *   UI readiness **MUST** 等待受控 service 完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
 
 ### 1.1 Minimal Native Adapter Contract {#mobile-native-adapter-contract}
@@ -104,17 +104,26 @@ Mobile 与 Desktop 共用 `./02_desktop.md#desktop-service-supervisor-contract`
 
 ### 1.3 Process Adapter Gate {#mobile-process-adapter-decision}
 
-Mobile process adapter gate 默认关闭；在 gate 未经单独设计、评审与验收前，真实 mobile child-process runtime **MUST NOT** 进入默认 no-Tauri Mobile skeleton。
+Mobile process adapter gate 默认关闭；真实 mobile child-process runtime **MUST NOT** 进入默认 no-Tauri Mobile skeleton。Mobile full peer v1 使用 embedded loopback service，不使用移动端子进程。
 
 Gate policy 必须满足：
 
-*   `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
+*   默认 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
     DeferredUntilPackagingGate`
-*   `child_process_runtime_enabled = false`
+*   默认 `child_process_runtime_enabled = false`
 *   `packaging_gate_required = true`
-*   `authority_writes_allowed = false`
+*   默认 `authority_writes_allowed = false`
 
-真实 mobile process adapter 必须位于 Mobile native adapter 的 `native-packaging` feature 后，只做受控 spawn/probe/session/restart wiring；不得绕过 foreground reprobe、writer-ready 或 repo scope gate。
+显式 opt-in policy 必须满足：
+
+*   `decision = ExplicitNativeAuthorityOptIn`
+*   `child_process_runtime_enabled = false`
+*   `embedded_service_runtime_enabled = true`
+*   `packaging_gate_required = true`
+*   `authority_writes_allowed = true`
+*   环境条件同时包含 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_MOBILE_EMBEDDED_SERVICE=1`
+
+真实 mobile embedded service runtime 必须位于 Mobile native adapter 的 `native-packaging` feature 后，只做 loopback endpoint、session handoff、foreground reprobe 与 runtime readiness wiring；不得绕过 writer-ready 或 repo scope gate。
 
 ### 1.4 Mobile Packaging Scaffold {#mobile-packaging-scaffold}
 
