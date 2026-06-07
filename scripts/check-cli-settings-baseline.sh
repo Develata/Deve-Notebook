@@ -28,6 +28,9 @@ check_absent() {
 
 # CLI command surface.
 check_contains apps/cli/src/main.rs "Init {"
+check_contains apps/cli/src/main.rs "repo_id: Option<uuid::Uuid>"
+check_contains apps/cli/src/main.rs "repo_url: Option<String>"
+check_contains apps/cli/src/main.rs "repo-id"
 check_contains apps/cli/src/main.rs "Scan,"
 check_contains apps/cli/src/main.rs "Watch {"
 check_contains apps/cli/src/main.rs "Serve {"
@@ -85,11 +88,19 @@ check_contains apps/cli/src/commands/config/tests.rs "supported_config_keys_matc
 check_contains apps/cli/src/commands/config/tests.rs "supported_config_schema_matches_settings_plan_type_and_choices"
 check_contains apps/cli/src/commands/init.rs "init_config_template_matches_current_settings_schema"
 check_contains apps/cli/src/commands/init.rs "Projection Locator"
+check_contains apps/cli/src/commands/init.rs "RepoInitOptions"
 check_contains apps/cli/src/commands/init.rs "[ai.agent_bridge]"
 check_contains apps/cli/src/commands/config/schema.rs "Unsupported config key"
 check_absent apps/cli/src/commands/config/schema.rs "\"vault_path\""
 check_contains apps/cli/src/commands/config/schema.rs "\"ui.sidebar_width\""
+check_contains apps/cli/src/commands/config/schema.rs "\"p2p.enabled\""
+check_contains apps/cli/src/commands/config/schema.rs "\"p2p.connect_interval_ms\""
+check_contains apps/cli/src/commands/config/schema.rs "\"p2p.inbound_token_env\""
 check_contains apps/cli/src/commands/config/schema.rs "\"ai.mode\""
+check_contains crates/core/src/config/schema.rs "pub struct P2pConfig"
+check_contains crates/core/src/config/schema.rs "pub struct P2pPeerConfig"
+check_contains crates/core/src/config/env_alias.rs "DEVE_P2P_MESH_PEER_{index}_"
+check_contains crates/core/src/config/tests/load_tests.rs "p2p_mesh_env_aliases_load_static_peer_config"
 check_contains apps/cli/src/commands/config.rs "Updated config.toml is not compatible with runtime config"
 check_contains crates/core/src/config/tests.rs "mod agent_bridge_tests;"
 check_contains crates/core/src/config/tests.rs "mod load_tests;"
@@ -105,6 +116,10 @@ check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_EN
 check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/15_settings.md "DEVE_AI_AGENT_BRIDGE_ENABLED"
 check_contains docs/plan/15_settings.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
+check_contains docs/plan/15_settings.md 'p2p.enabled'
+check_contains docs/plan/15_settings.md 'p2p.inbound_token_env'
+check_contains docs/plan/15_settings.md 'p2p.connect_interval_ms'
+check_contains docs/plan/15_settings.md 'MUST NOT** 保存 token material'
 check_contains docs/plan/15_settings.md "运行模式预设: \`standard\` (默认), \`low-spec\` (低配)."
 check_absent docs/plan/15_settings.md "\`debug\` (调试)"
 check_contains docs/plan/15_settings.md "**Future Settings Surface**"

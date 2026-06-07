@@ -20,6 +20,36 @@ is_windows_bash_host() {
   esac
 }
 
+is_wsl_mounted_workspace() {
+  [[ "$ROOT_DIR" == /mnt/* ]] \
+    && grep -qi microsoft /proc/version 2>/dev/null
+}
+
+select_cargo_bin() {
+  if [[ -n "${CARGO_BIN:-}" ]]; then
+    command -v "$CARGO_BIN" >/dev/null 2>&1 \
+      || fail "configured CARGO_BIN '$CARGO_BIN' was not found"
+    return
+  fi
+  if is_wsl_mounted_workspace && command -v cargo.exe >/dev/null 2>&1; then
+    CARGO_BIN="$(command -v cargo.exe)"
+  elif command -v cargo >/dev/null 2>&1; then
+    CARGO_BIN="$(command -v cargo)"
+  else
+    fail "cargo command not found"
+  fi
+}
+
+configure_cargo_target_dir() {
+  CARGO_TARGET_ARG="${CARGO_TARGET_DIR:-target/native-process-gate}"
+}
+
+run_cargo() {
+  local subcommand="$1"
+  shift
+  run "$CARGO_BIN" "$subcommand" --target-dir "$CARGO_TARGET_ARG" "$@"
+}
+
 can_use_rg_for_paths() {
   command -v rg >/dev/null 2>&1 && ! is_windows_bash_host
 }
@@ -162,16 +192,32 @@ check_no_process_runtime_leak() {
 }
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
+select_cargo_bin
+configure_cargo_target_dir
 
 check_contains crates/core/src/native_adapter/process.rs "DeferredUntilPackagingGate"
+check_contains crates/core/src/native_adapter/process.rs "ExplicitNativeAuthorityOptIn"
 check_contains crates/core/src/native_adapter/process.rs "child_process_runtime_enabled: false"
+check_contains crates/core/src/native_adapter/process.rs "embedded_service_runtime_enabled: false"
 check_contains crates/core/src/native_adapter/process.rs "packaging_gate_required: true"
 check_contains crates/core/src/native_adapter/process.rs "authority_writes_allowed: false"
+check_contains crates/core/src/native_adapter/process.rs "desktop_native_authority_policy_from_env"
+check_contains crates/core/src/native_adapter/process.rs "mobile_native_authority_policy_from_env"
+check_contains crates/core/src/native_adapter/process.rs "DEVE_NATIVE_AUTHORITY"
+check_contains crates/core/src/native_adapter/process.rs "DEVE_DESKTOP_LOCAL_SERVICE"
+check_contains crates/core/src/native_adapter/process.rs "DEVE_MOBILE_EMBEDDED_SERVICE"
 check_contains crates/core/src/native_adapter/process.rs "ChildProcessRuntimeDisabled"
 check_contains crates/core/src/native_adapter/process.rs "bind_existing_endpoint"
 check_contains crates/core/src/native_adapter/process.rs "bind_session"
 check_contains crates/core/src/native_adapter/process.rs "record_probe_timeout"
 check_contains crates/core/src/native_adapter/process.rs "record_process_stopped"
+check_contains docs/plan/11_ui_design/index.md "native authority 与本地 service 默认关闭"
+check_contains docs/plan/11_ui_design/02_desktop.md "DEVE_NATIVE_AUTHORITY=1"
+check_contains docs/plan/11_ui_design/02_desktop.md "DEVE_DESKTOP_LOCAL_SERVICE=1"
+check_contains docs/plan/11_ui_design/03_mobile.md "DEVE_MOBILE_EMBEDDED_SERVICE=1"
+check_contains docs/features/08_ui_design_02_desktop.md "Native Local Service Opt-in"
+check_contains docs/features/08_ui_design_03_mobile.md "Native Embedded Service Opt-in"
+check_contains docs/dev-runbook.md "Native Authority Opt-in"
 check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessSpawnSpec"
 check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessRuntimeSnapshot"
 check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessRuntimeError"
@@ -192,14 +238,14 @@ check_contains docs/report/process-runtime-gate-decision-after-target-host-closu
 
 check_no_process_runtime_leak
 
-run cargo test --locked -p deve_core native_adapter::process_test -- --nocapture
-run cargo test --locked -p deve_desktop desktop_default_build_defers_real_process_adapter -- --nocapture
-run cargo test --locked -p deve_mobile mobile_default_build_defers_real_process_adapter -- --nocapture
-run cargo test --locked -p deve_cli native_session -- --nocapture
+run_cargo test --locked -p deve_core --lib native_adapter::process_test -- --nocapture
+run_cargo test --locked -p deve_desktop desktop_default_build_defers_real_process_adapter -- --nocapture
+run_cargo test --locked -p deve_mobile mobile_default_build_defers_real_process_adapter -- --nocapture
+run_cargo test --locked -p deve_cli native_session -- --nocapture
 case "$RUN_DESKTOP_NATIVE_PACKAGING_TESTS" in
   1|true|TRUE|yes|YES)
-    run cargo test --locked -p deve_desktop --features native-packaging service_entrypoint -- --nocapture
-    run cargo test --locked -p deve_desktop --features native-packaging service_bootstrap -- --nocapture
+    run_cargo test --locked -p deve_desktop --features native-packaging service_entrypoint -- --nocapture
+    run_cargo test --locked -p deve_desktop --features native-packaging service_bootstrap -- --nocapture
     ;;
   0|false|FALSE|no|NO)
     echo "native-process-adapter-gate-check: skip Desktop native-packaging tests for scoped target-host run"
@@ -208,7 +254,7 @@ case "$RUN_DESKTOP_NATIVE_PACKAGING_TESTS" in
     fail "invalid DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS: $RUN_DESKTOP_NATIVE_PACKAGING_TESTS"
     ;;
 esac
-run cargo test --locked -p deve_desktop process_observation -- --nocapture
-run cargo test --locked -p deve_mobile process_observation -- --nocapture
+run_cargo test --locked -p deve_desktop process_observation -- --nocapture
+run_cargo test --locked -p deve_mobile process_observation -- --nocapture
 
 echo "native-process-adapter-gate-check: ok"
