@@ -31,12 +31,13 @@ pub async fn ws_handler(
     axum::Extension(config): axum::Extension<Arc<AuthConfig>>,
     req: axum::http::request::Parts,
 ) -> impl IntoResponse {
-    if let Err(code) = auth::browser_session_admission(&config, &req) {
-        return unauthorized_ws_response(code);
-    }
+    let admission = match auth::session_admission(&config, &req) {
+        Ok(admission) => admission,
+        Err(code) => return unauthorized_ws_response(code),
+    };
 
     let peer_id = uuid::Uuid::new_v4().to_string();
-    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, true))
+    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, admission.is_browser()))
         .into_response()
 }
 

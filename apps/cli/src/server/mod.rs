@@ -17,6 +17,7 @@ pub mod metrics;
 pub mod node_role;
 pub mod node_role_http;
 mod notegit;
+mod p2p;
 pub mod plugin_host;
 pub mod plugin_response;
 pub mod prewarm;

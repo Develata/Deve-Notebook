@@ -86,7 +86,15 @@ mod tests {
         let ledger = root.join("ledger");
         let notes = root.join("notes");
 
-        init::run(&ledger, "default", &notes, root.to_path_buf(), 8)?;
+        init::run(
+            &ledger,
+            "default",
+            &notes,
+            root.to_path_buf(),
+            8,
+            None,
+            None,
+        )?;
 
         let config = std::fs::read_to_string(root.join("config.toml"))?;
         assert!(!config.contains("vault_path"));

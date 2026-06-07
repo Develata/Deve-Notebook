@@ -23,8 +23,9 @@ use deve_core::security::AuthConfig;
 /// 构建完整的 Axum 应用路由
 ///
 /// ## 路由结构
-/// - **protected**: 需要 JWT Cookie 认证的路由 (`/ws`, `/api/sc/*`, `/api/repo/*`, `/api/auth/me`)
+/// - **protected**: 需要 JWT Cookie 认证的路由 (`/api/sc/*`, `/api/repo/*`, `/api/auth/me`)
 /// - **public**: 无需认证的路由 (`/api/auth/login`, `/api/auth/status`, `/api/node/role`)
+/// - `/ws`: upgrade handler performs Browser cookie admission or FullPeer bearer admission before upgrade.
 /// ## 中间件层叠顺序（外 → 内）
 /// CORS → 速率限制 → 安全头 → Extension 注入
 pub fn build_app(
@@ -46,7 +47,6 @@ pub fn build_app_with_native_session(
     let api_limiter = rate_limit::RateLimiter::new(120, std::time::Duration::from_secs(60));
 
     let protected = Router::new()
-        .route("/ws", get(ws::ws_handler))
         .route(
             "/api/sc/pending",
             get(handlers::source_control::http::pending),
@@ -123,6 +123,7 @@ pub fn build_app_with_native_session(
     };
 
     let public = Router::new()
+        .route("/ws", get(ws::ws_handler))
         .route("/api/node/role", get(node_role_http::role))
         .route("/api/auth/status", get(auth::handlers::status))
         .route(

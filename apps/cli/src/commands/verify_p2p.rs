@@ -15,12 +15,21 @@
 //! 3. 模拟 "Gossip" 过程：手动交换 Op。
 //! 4. 验证数据一致性。
 
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow, bail, ensure};
 use deve_core::ledger::RepoManager;
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoId};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tracing::{info, warn};
+
+pub struct LiveShadowCheckOptions {
+    pub ledger_dir: PathBuf,
+    pub repo_id: Option<uuid::Uuid>,
+    pub peer_id: Option<String>,
+    pub doc_id: Option<uuid::Uuid>,
+    pub contains: Option<String>,
+    pub local_must_not_contain: Option<String>,
+}
 
 pub fn run(snapshot_depth: usize) -> Result<()> {
     info!("Starting P2P Verification Simulation...");
@@ -141,6 +150,63 @@ pub fn run(snapshot_depth: usize) -> Result<()> {
     cleanup(&temp_dir);
 
     info!("P2P Verification Completed Successfully.");
+    Ok(())
+}
+
+pub fn run_live_shadow_check(options: LiveShadowCheckOptions, snapshot_depth: usize) -> Result<()> {
+    let repo_id: RepoId = options
+        .repo_id
+        .ok_or_else(|| anyhow!("--repo-id is required with --live-ledger-dir"))?;
+    let peer_id = PeerId::new(
+        options
+            .peer_id
+            .ok_or_else(|| anyhow!("--peer-id is required with --live-ledger-dir"))?,
+    );
+    let doc_id = DocId(
+        options
+            .doc_id
+            .ok_or_else(|| anyhow!("--doc-id is required with --live-ledger-dir"))?,
+    );
+    let expected = options
+        .contains
+        .ok_or_else(|| anyhow!("--contains is required with --live-ledger-dir"))?;
+
+    let repo = RepoManager::init(&options.ledger_dir, snapshot_depth, None, None)
+        .with_context(|| format!("failed to open live ledger at {:?}", options.ledger_dir))?;
+    let repo_name = repo
+        .find_local_repo_name_by_id(repo_id)?
+        .ok_or_else(|| anyhow!("local repo metadata missing for repo_id {repo_id}"))?;
+
+    let shadow_ops = repo
+        .get_shadow_ops(&peer_id, &repo_id, doc_id)
+        .with_context(|| format!("failed to read shadow ops for peer {peer_id} repo {repo_id}"))?;
+    ensure!(
+        !shadow_ops.is_empty(),
+        "shadow repo for peer {peer_id} has no ops for doc {doc_id}"
+    );
+    let shadow_entries: Vec<LedgerEntry> = shadow_ops.into_iter().map(|(_, entry)| entry).collect();
+    let shadow_content = deve_core::state::reconstruct_content(&shadow_entries);
+    ensure!(
+        shadow_content.contains(&expected),
+        "shadow content for doc {doc_id} did not contain expected text"
+    );
+
+    let local_content = repo
+        .resolve_local_content(&repo_name, doc_id)
+        .with_context(|| format!("failed to read local content for doc {doc_id}"))?;
+    if let Some(forbidden) = options.local_must_not_contain {
+        if local_content.contains(&forbidden) {
+            bail!("local repo unexpectedly contained remote text for doc {doc_id}");
+        }
+    }
+
+    println!(
+        "p2p-live-shadow-check: ok repo_id={} peer_id={} doc_id={} shadow_ops={}",
+        repo_id,
+        peer_id,
+        doc_id,
+        shadow_entries.len()
+    );
     Ok(())
 }
 

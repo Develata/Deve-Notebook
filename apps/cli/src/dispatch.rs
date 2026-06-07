@@ -17,12 +17,16 @@ pub async fn run(
             path,
             repo,
             projection_base,
+            repo_id,
+            repo_url,
         }) => commands::init::run(
             ledger_dir,
             &repo,
             &projection_base,
             path,
             config.snapshot_depth,
+            repo_id,
+            repo_url,
         )?,
         Some(Commands::Scan) => commands::scan::run(ledger_dir, config.snapshot_depth)?,
         Some(Commands::Watch { dry_run }) => {
@@ -46,6 +50,7 @@ pub async fn run(
                     dry_run,
                     profile: config.profile,
                     sync_mode: config.sync_mode,
+                    p2p: config.p2p.clone(),
                     native_loopback,
                 },
             )
@@ -134,7 +139,27 @@ pub async fn run(
             )?,
         },
         Some(Commands::Backup { action }) => backup::run(action)?,
-        Some(Commands::VerifyP2P) => commands::verify_p2p::run(config.snapshot_depth)?,
+        Some(Commands::VerifyP2P {
+            live_ledger_dir,
+            repo_id,
+            peer_id,
+            doc_id,
+            contains,
+            local_must_not_contain,
+        }) => match live_ledger_dir {
+            Some(ledger_dir) => commands::verify_p2p::run_live_shadow_check(
+                commands::verify_p2p::LiveShadowCheckOptions {
+                    ledger_dir,
+                    repo_id,
+                    peer_id,
+                    doc_id,
+                    contains,
+                    local_must_not_contain,
+                },
+                config.snapshot_depth,
+            )?,
+            None => commands::verify_p2p::run(config.snapshot_depth)?,
+        },
         Some(Commands::Seed { peer, repo }) => {
             commands::seed::run(ledger_dir, peer, repo, config.snapshot_depth)?
         }

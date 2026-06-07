@@ -10,7 +10,7 @@ use super::{
     static_files, tree_state::RepoTreeRegistry,
 };
 use crate::server::launch::ServerLaunchOptions;
-use deve_core::config::{AppProfile, SyncMode};
+use deve_core::config::{AppProfile, P2pConfig, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::{PluginRuntime, host};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
@@ -25,6 +25,7 @@ pub async fn start_server(
     plugins: Vec<Box<dyn PluginRuntime>>,
     #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
     sync_mode: SyncMode,
+    p2p: P2pConfig,
 ) -> anyhow::Result<()> {
     start_server_with_options(
         repo,
@@ -32,6 +33,7 @@ pub async fn start_server(
         plugins,
         profile,
         sync_mode,
+        p2p,
     )
     .await
 }
@@ -42,6 +44,7 @@ pub async fn start_server_with_options(
     plugins: Vec<Box<dyn PluginRuntime>>,
     #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
     sync_mode: SyncMode,
+    p2p: P2pConfig,
 ) -> anyhow::Result<()> {
     let port = launch.port();
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = repo.clone();
@@ -107,6 +110,7 @@ pub async fn start_server_with_options(
     });
 
     metrics::spawn_broadcaster(app_state.clone());
+    super::p2p::spawn_mesh_connectors(p2p, app_state.clone());
 
     static_files::validate_static_dir_override()?;
     let app = match native_session_bridge {

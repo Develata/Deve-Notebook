@@ -55,6 +55,10 @@ pub(crate) enum Commands {
         repo: String,
         #[arg(long = "projection-base")]
         projection_base: PathBuf,
+        #[arg(long = "repo-id")]
+        repo_id: Option<uuid::Uuid>,
+        #[arg(long = "repo-url")]
+        repo_url: Option<String>,
     },
     /// Scan repo projection workspaces
     Scan,
@@ -105,8 +109,21 @@ pub(crate) enum Commands {
         #[arg(long)]
         allow_degraded_projection: bool,
     },
-    /// Verify P2P Sync Logic (Simulation)
-    VerifyP2P,
+    /// Verify P2P Sync Logic (Simulation or live shadow check)
+    VerifyP2P {
+        #[arg(long = "live-ledger-dir")]
+        live_ledger_dir: Option<PathBuf>,
+        #[arg(long = "repo-id")]
+        repo_id: Option<uuid::Uuid>,
+        #[arg(long = "peer-id")]
+        peer_id: Option<String>,
+        #[arg(long = "doc-id")]
+        doc_id: Option<uuid::Uuid>,
+        #[arg(long = "contains")]
+        contains: Option<String>,
+        #[arg(long = "local-must-not-contain")]
+        local_must_not_contain: Option<String>,
+    },
     /// Seed a shadow repo with local data
     Seed {
         #[arg(short, long)]
@@ -303,6 +320,8 @@ fn run_pre_config_command(command: &Option<Commands>) -> anyhow::Result<bool> {
         path,
         repo,
         projection_base,
+        repo_id,
+        repo_url,
     }) = command
     {
         commands::init::run(
@@ -311,6 +330,8 @@ fn run_pre_config_command(command: &Option<Commands>) -> anyhow::Result<bool> {
             projection_base,
             path.to_path_buf(),
             100,
+            *repo_id,
+            repo_url.clone(),
         )?;
         return Ok(true);
     }
