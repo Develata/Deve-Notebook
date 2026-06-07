@@ -18,7 +18,7 @@
 - 标题、强调、引用、链接、frontmatter 等语法标记可以在非编辑焦点下隐藏或美化，但光标进入时必须显示真实源码。
 - Math、Mermaid、task checkbox、frontmatter styling、table/image/list/blockquote/code toolbar、Ctrl/Cmd link activation 必须通过 Chrome MCP 手工走查确认具体浏览器行为。
 - Outline 必须支持标题扫描、点击跳转、inline code/math/strong/em/del 的轻量显示，并把不支持语法按普通文本保留。
-- 辅助 HTML 区域只承担轻量 Markdown 展示与操作入口职责；支持 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` allowlist 与安全链接降级；不承担主编辑器职责。
+- 辅助 HTML 区域只承担轻量 Markdown 展示与操作入口职责；支持 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` allowlist 与安全链接降级；AI chat 消息体额外支持 KaTeX TeX 展示；不承担主编辑器职责。
 - 长文档体验只验收首屏响应、批量应用、渐进调度与重操作 gating；不宣称完整 virtual rendering。
 
 下列能力不得作为本功能篇的已完成验收目标：
@@ -46,7 +46,7 @@
 
 ### 3. 数学公式
 
-- 非主编辑器 HTML 渲染路径不承诺公式渲染。
+- AI chat 消息体支持 `$...$` 行内公式与 `$$...$$` 块公式的 KaTeX 展示；其他非主编辑器 HTML 渲染路径不因此自动承诺公式渲染。
 - 支持行内公式与块级公式。
 - 用户输入 LaTeX 时可以看到正确渲染结果。
 - 公式块在编辑与阅读之间切换时，不应破坏源码。

@@ -20,6 +20,7 @@
 
 - 用户可以看到统一的 AI 入口或聊天面板。
 - AI 能力是外围辅助，不应抢占核心工作流。
+- AI Chat 消息体支持 Markdown 展示，并可把 `$...$` / `$$...$$` 公式显示为 KaTeX 结果。
 
 ### 2. 当前暴露边界
 
@@ -28,6 +29,7 @@
 - Native AI 后端默认拒绝 tools payload 与 provider tool calls；当前 BUILD 只允许后续受控 Markdown Apply 路径。
 - 后端产品语义使用 `native` / `trusted-cli`；`ai-chat` / `agent-bridge` 只是当前兼容层 runtime plugin id，不应出现在 Settings 持久化语义中。
 - AI 未配置、API key 缺失或 Trusted CLI policy fail-closed 时，必须显示明确文本/错误并结束 loading，不得卡住聊天面板。
+- Chat 公式渲染只是展示层能力；不得扩大 AI 上下文读取范围、工具调用范围或 Markdown 写入权限。
 
 ### 3. 与核心功能的隔离
 

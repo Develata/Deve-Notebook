@@ -44,6 +44,20 @@
 - 会话失效
 - 权限不足
 
+### 6. Full Peer Mesh v1
+
+- 多个服务端可以通过静态配置组成 P2P mesh。
+- Browser/WebLightPeer 仍然只连接当前服务端；server-to-server 同步使用 FullPeer `/ws` admission。
+- 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
+- Mesh v1 不做自动发现、NAT 穿透或自动拓扑修复。
+
+### 7. Shadow 与显式合并边界
+
+- 远端 peer 写入成功同步后，必须先落到该 peer 的 shadow repo。
+- 本地当前 branch 不得因为“同步成功”而被隐式污染。
+- 用户必须通过显式 merge/import 流程把远端 shadow 内容合并到本地 branch。
+- 断线重连后应重新握手并对齐 vector；对齐成功只说明 shadow 可读，不代表自动合并完成。
+
 ## Operation 示例
 
 - Repo-scoped sync handshake 原子操作示例见 `docs/features/operations/net_sync_handshake.md`。
@@ -58,6 +72,7 @@
 - 当前阶段不要求 Web 端离线可写。
 - 当前阶段不要求浏览器持有完整 ledger。
 - 当前阶段不通过显示层直接操控同步核心逻辑。
+- 当前阶段不要求 P2P 自动发现、NAT 穿透、自动 local merge 或移动端后台长时同步。
 
 ## Chrome MCP 验收实例
 
@@ -111,3 +126,22 @@
 
 - 同步状态始终跟随当前 repo scope。
 - 不出现跨 repo 的脏状态继承。
+
+### NET-FEAT-04: 多服务端 Mesh Shadow 可见
+
+前置条件：
+
+- 两个服务端使用同一 `RepoId` 与静态 peer 配置启动。
+
+步骤：
+
+1. 在 peer A 的本地 branch 创建或编辑文档。
+2. 等待 peer B 的 mesh 状态进入 connected。
+3. 在 peer B 查看来自 peer A 的 shadow 内容。
+4. 在 peer B 执行显式 merge/import，再查看本地 branch。
+
+期望结果：
+
+- peer B 可以看到 peer A 的 shadow 更新。
+- 显式 merge 前，peer B 的本地 branch 不被自动修改。
+- 断线重连后状态重新进入 connected，vector 对齐不要求刷新页面。

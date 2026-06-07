@@ -183,4 +183,43 @@
     - ui_assert: client_b_offline_readonly_then_reconnect_ready true
     - ui_assert: no_blank_page_or_framework_overlay true
     - ui_assert: no_relevant_console_errors true
+
+- case_id: REL-010
+  goal: Docker 双服务端 FullPeer mesh 可通过隔离 volume smoke。
+  preconditions:
+    - Docker 与 Docker Compose 可用
+    - 两个服务端使用相同 `RepoId`
+    - 两端 ledger/data/notes volume 隔离
+    - P2P token 只通过环境变量注入
+  steps:
+    - run: DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
+    - note: use `DEVE_DOCKER_P2P_MESH_KEEP=1` to keep both peers running for manual diagnostics
+  assertions:
+    - docker_assert: peer_a_and_peer_b_ready true
+    - p2p_assert: full_peer_ws_admission_uses_bearer_token true
+    - p2p_assert: peer_b_shadow_contains_peer_a_write true
+    - p2p_assert: peer_b_local_branch_unchanged_before_explicit_merge true
+    - p2p_assert: explicit_merge_makes_remote_content_local_visible true
+    - p2p_assert: reconnect_vector_aligned true
+    - security_assert: p2p_token_material_not_logged_or_written_to_config true
+
+- case_id: REL-011
+  goal: Native authority 显式 opt-in 可验收，默认 release 不声明 native authority 默认可用。
+  preconditions:
+    - native-packaging 构建可用
+    - 默认环境不设置 native authority opt-in env
+  steps:
+    - run: scripts/check-native-process-adapter-gate.sh
+    - run: scripts/check-native-packaging-gate.sh
+    - run: cargo test -p deve_core native_adapter -- --nocapture
+    - run: cargo test -p deve_desktop --features native-packaging native_authority -- --nocapture
+    - run: cargo test -p deve_mobile --features native-packaging embedded_service -- --nocapture
+  assertions:
+    - native_assert: default_native_authority_closed true
+    - native_assert: desktop_opt_in_requires_native_authority_and_desktop_local_service_env true
+    - native_assert: mobile_opt_in_requires_native_authority_and_mobile_embedded_service_env true
+    - native_assert: native_shell_has_no_direct_ledger_source_control_search_writes true
+    - release_assert: signed_release_readiness_not_claimed true
+    - release_assert: store_distribution_readiness_not_claimed true
+    - release_assert: physical_device_readiness_not_claimed true
 ```

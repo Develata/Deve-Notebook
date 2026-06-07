@@ -39,10 +39,18 @@
 - 生产服务器/容器运行必须显式提供 `AUTH_SECRET` 和 `AUTH_PASS`；本地开发应使用 `deve serve --dev` 或 `DEVE_ENV=development`。
 - degraded repo 必须被显示为运行状态，而不是伪装为全局启动失败或静默健康。
 
+### 4. Mesh 与 Native Opt-in 成熟度提示
+
+- Docker multi-client smoke 验证“单服务端 + 多 WebLightPeer”。
+- Docker P2P mesh smoke 验证“两服务端 + 静态 FullPeer mesh + shadow-only apply”。
+- Native authority 只在 explicit opt-in 下可用；默认 Desktop/Mobile 包仍不声明 native authority 默认可用。
+- Native opt-in smoke 可以作为功能证据，但不能替代签名、store、physical-device 或后台同步 release readiness。
+
 ## 非目标
 
 - 当前阶段不要求在 Web UI 内完整实现发布渠道管理。
 - 当前阶段不要求把运维流程全部暴露给普通终端用户。
+- 当前阶段不把 P2P 自动发现、NAT 穿透、自动 merge 或 native authority 默认启用作为 release 承诺。
 
 ## Chrome MCP 验收实例
 
@@ -61,3 +69,20 @@
 
 - 版本或运行信息可被用户/部署者理解。
 - 不会把实验构建、未来渠道或未完成交付方式误导成稳定主通道。
+
+### RELEASE-FEAT-02: Mesh 与 Native Opt-in 证据边界可理解
+
+前置条件：
+
+- 已运行 Docker multi-client、Docker P2P mesh 或 native opt-in smoke 之一。
+
+步骤：
+
+1. 查看 runbook、验收用例和 smoke 输出说明。
+2. 对照当前运行形态和启用的环境变量。
+
+期望结果：
+
+- 文档能区分单服务端 WebLightPeer smoke 与多服务端 FullPeer mesh smoke。
+- 文档明确 native authority 默认关闭，只能显式 opt-in。
+- 文档不把 opt-in smoke 误写为签名、store、physical-device 或后台同步 ready。

@@ -19,6 +19,28 @@
     - ui_assert: chat_response_mentions_current_doc true
     - ui_assert: plugin_text_response_stops_loading true
 
+- case_id: AI-009
+  goal: AI Chat 消息体支持 TeX 展示且不误渲染代码块。
+  preconditions:
+    - 聊天面板可用
+    - KaTeX 静态资源已加载
+  steps:
+    - ui_open: ai_chat
+    - assistant_message: |
+        inline $a^2+b^2=c^2$
+
+        $$\int_0^1 x^2 dx$$
+
+        ```text
+        $not_math$
+        ```
+    - run: cargo test -p deve_web chat_math -- --nocapture
+  assertions:
+    - ui_assert: chat_inline_math_rendered true
+    - ui_assert: chat_block_math_rendered true
+    - ui_assert: chat_code_block_contains_literal "$not_math$"
+    - ui_assert: chat_streaming_not_blocked_by_math_render_error true
+
 - case_id: AI-002
   goal: `/plan` 进入原生 PLAN 模式，且 slash command 本身不会调用任何工具。
   preconditions:

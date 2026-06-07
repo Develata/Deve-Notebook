@@ -286,6 +286,29 @@ Use `DEVE_DOCKER_MULTI_PORT=<port>` when 3101 is occupied. Set
 visual validation, then open `http://127.0.0.1:<port>/` and clean up with the
 command printed by the script.
 
+## Docker P2P Mesh Smoke
+
+Run a two-server FullPeer mesh smoke with isolated Docker volumes:
+
+```bash
+DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
+```
+
+The script uses `docker-compose.mesh.yml` to start `peer-a` and `peer-b` with
+independent data/notes volumes, a shared `RepoId`, static peer configuration,
+and P2P admission tokens supplied only through environment variables. It
+verifies that peer A can write locally, peer B receives the update under peer
+A's shadow repo, peer B's local branch remains unchanged until an explicit
+merge/import step, and reconnect aligns vectors without implying automatic
+local merge.
+
+Use `DEVE_DOCKER_P2P_MESH_A_PORT=<port>` and
+`DEVE_DOCKER_P2P_MESH_B_PORT=<port>` when the defaults are occupied. Set
+`DEVE_DOCKER_P2P_MESH_KEEP=1` to keep both peers running for manual diagnostics;
+the script prints the cleanup command. Tokens must not be written into
+`config.toml`, compose files, logs, URLs, browser storage, or native bootstrap
+payloads.
+
 ## Docker Compose
 
 `docker-compose.yml` is the production compose entry. It runs the published
@@ -791,17 +814,46 @@ simulator, install the generated `.app`, and launch the shell.
 
 ## Native Process Adapter Gate
 
-Validate that the native process adapter remains gate-closed and state-machine
-only:
+Validate that the native process adapter remains default-closed and that opt-in
+runtime paths stay behind explicit gates:
 
 ```bash
 scripts/check-native-process-adapter-gate.sh
 ```
 
-The script checks the process adapter policy, rejects `std::process`,
-`Command::new`, `tokio::process`, or direct spawn usage in Desktop/Mobile/native
-adapter code, and runs targeted process-observation tests. It does not open the
-child-process runtime.
+The script checks the process adapter policy, rejects unauthorized
+`std::process`, `Command::new`, `tokio::process`, or direct spawn usage in
+Desktop/Mobile/native adapter code, and runs targeted process-observation tests.
+It does not open native authority unless the explicit opt-in smoke sets the
+required env flags.
+
+## Native Authority Opt-in
+
+Default Desktop/Mobile builds and native-packaging builds without explicit env
+must keep native authority closed. The opt-in flags are:
+
+```bash
+DEVE_NATIVE_AUTHORITY=1 DEVE_DESKTOP_LOCAL_SERVICE=1
+DEVE_NATIVE_AUTHORITY=1 DEVE_MOBILE_EMBEDDED_SERVICE=1
+```
+
+Desktop opt-in may start a controlled child-process local service. Mobile opt-in
+may start an in-process embedded loopback service; Mobile v1 must not use a
+child process. In both cases the shell handles endpoint/session/readiness only.
+Ledger, source-control, search, repo writes, `.git`, and `.notegit` writes still
+go through the local server/core writer gate.
+
+Diagnostics:
+
+```bash
+scripts/check-native-process-adapter-gate.sh
+scripts/check-native-packaging-gate.sh
+cargo test -p deve_desktop --features native-packaging native_authority -- --nocapture
+cargo test -p deve_mobile --features native-packaging embedded_service -- --nocapture
+```
+
+Do not record service ports, session secrets, P2P token material, or bootstrap
+secrets in URLs, logs, Web localStorage, persistent config, or crash reports.
 
 ## Chrome MCP Smoke
 
@@ -905,6 +957,7 @@ scripts/smoke-web-release-build.sh
 scripts/smoke-runtime-release-info.sh
 scripts/smoke-docker-release.sh
 scripts/smoke-docker-multiclient.sh
+scripts/smoke-docker-p2p-mesh.sh
 ```
 
 Use full-suite checks as release/final verification, not as the default inner

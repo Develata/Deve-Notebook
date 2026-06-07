@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.ai.chat`
 - `Domain`: `ai`
 - `Related Feature Chapters`: `docs/features/10_ai_agent.md`
-- `Related Acceptance Cases`: `AI-FEAT-01`, `AI-002`, `AI-003`, `AI-008`
+- `Related Acceptance Cases`: `AI-FEAT-01`, `AI-002`, `AI-003`, `AI-008`, `AI-009`
 
 ## Operations
 
@@ -60,7 +60,7 @@
 - `Surface`: `chat-panel`
 - `Trigger`: 服务端返回 `ChatChunk` 或 plugin response
 - `Preconditions`: `op.ai.chat.submit` 已执行
-- `Immediate Result`: assistant 消息增量更新，或显示明确失败
+- `Immediate Result`: assistant 消息增量更新，Markdown 与 TeX 展示投影刷新，或显示明确失败
 - `Application Entry`: `apps/web/src/components/chat/panel/effects.rs`, `apps/cli/src/server/ai_chat/mod.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
 
 ### `op.ai.chat.reject-native-tools`
@@ -87,3 +87,4 @@
 - 发送 chat prompt 前必须按 server capability 决定实际 backend；不可用 backend 必须显示原因并停止 loading，不得直接按本地残留模式发起 plugin call。
 - `ai.native_enabled=false` 时，server 不注册 Native AI provider 且 `ai-chat` RPC 必须 fail-closed 并结束 loading。
 - 多轮上下文只携带前端已显示的 bounded user/assistant history；不得由插件自行扩大读取范围或扫描 workspace。
+- Chat message TeX rendering only applies to visible Markdown message bodies after receive-stream updates; it must skip code blocks and must not alter chat history text, apply payloads, backend mode, or write permission.

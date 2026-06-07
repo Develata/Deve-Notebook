@@ -32,10 +32,19 @@
 - Search / Command 入口在移动端应以适合窄屏的方式呈现。
 - 打开与关闭 sheet 时，不应和滚动、drawer、outline 产生语义冲突。
 
+### 5. Native Embedded Service Opt-in
+
+- 默认 Mobile shell 不启动 native authority service。
+- Mobile v1 不使用 child process；只有 native-packaging 构建且同时设置 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_MOBILE_EMBEDDED_SERVICE=1` 时，才可启动 in-process embedded loopback service。
+- Mobile shell 负责 loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复。
+- 后台或系统暂停期间不承诺长时同步；回到前台后必须重新探测 service 与 writer gate。
+- 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
+
 ## 非目标
 
 - 当前阶段不要求移动端提供完整原生系统分享、推送、相机等功能说明。
 - 当前阶段不要求 Chrome MCP 覆盖真正的 Android/iOS 原生容器能力。
+- 当前阶段不要求移动端后台长时 P2P 同步，也不把 native authority 作为默认移动 release readiness。
 
 ## Chrome MCP 验收实例
 
@@ -93,3 +102,24 @@
 - 选择文档走受保护的文档导航；选择 diff 只恢复已有 diff session。
 - 移动端 diff 始终使用 Unified View。
 - 关闭 diff 不改变 staged、pending 或 commit state。
+
+### MOBILE-UI-04: Native Embedded Service Opt-in 边界
+
+前置条件：
+
+- 已构建 native-packaging Mobile shell。
+- 分别准备默认环境与 `DEVE_NATIVE_AUTHORITY=1 DEVE_MOBILE_EMBEDDED_SERVICE=1` 环境。
+
+步骤：
+
+1. 默认环境启动 Mobile shell。
+2. 观察是否启动 embedded authority service。
+3. 在 opt-in 环境启动 Mobile shell。
+4. 模拟 foreground reprobe，并检查 writer gate 状态。
+
+期望结果：
+
+- 默认环境不启动 native authority service。
+- opt-in 环境可以启动 embedded loopback service。
+- 前台恢复后 UI 重新探测 service；写入仍受 repo writer gate 控制。
+- 后台长时同步不可被 UI 暗示为已支持。

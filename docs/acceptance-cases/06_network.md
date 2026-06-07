@@ -199,4 +199,52 @@
     - auth_probe_401_403_or_auth_error_eq_invalid: true
     - websocket_send_failure_does_not_force_disconnected_before_auth_probe: true
     - unauthorized_status_triggers_session_expired: true
+
+- case_id: NET-014
+  goal: server-to-server FullPeer `/ws` admission 必须独立于 Browser session admission。
+  preconditions:
+    - 两个服务端使用静态 P2P peer 配置
+    - 入站服务端设置 `DEVE_P2P_INBOUND_TOKEN`
+  steps:
+    - ws_connect: { role: "FullPeer", authorization: "Bearer <token>", path: "/ws" }
+    - ws_send: { type: "SyncHello", peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111", vector: {}, source_proof: "signed" }
+    - run: cargo test -p deve_cli ws_acceptance -- --nocapture
+    - run: cargo test -p deve_cli p2p_mesh -- --nocapture
+    - run: scripts/check-network-baseline.sh
+  assertions:
+    - full_peer_session_browser_flag_eq: false
+    - bad_or_missing_full_peer_token_rejected_before_upgrade: true
+    - browser_cookie_admission_not_accepted_as_full_peer: true
+    - sync_hello_signature_and_repo_scope_still_required: true
+    - writer_registration_not_granted_by_full_peer_admission: true
+
+- case_id: NET-015
+  goal: FullPeer mesh 入站远端 facts 只写 shadow repo，不自动污染本地 branch。
+  preconditions:
+    - peer-a 与 peer-b 使用相同 `RepoId`
+    - 两端 ledger volume 独立
+    - P2P static peer 配置启用
+  steps:
+    - run: DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
+    - run: cargo test -p deve_cli sync -- --nocapture
+    - run: cargo test -p deve_cli p2p_mesh -- --nocapture
+  assertions:
+    - peer_b_shadow_contains_peer_a_write: true
+    - peer_b_local_branch_unchanged_before_explicit_merge: true
+    - explicit_merge_makes_remote_content_local_visible: true
+    - source_attribution_uses_origin_peer_not_transport_peer: true
+
+- case_id: NET-016
+  goal: FullPeer mesh 断线重连后必须重新握手并对齐 vector。
+  preconditions:
+    - peer-a 与 peer-b 已完成一次 mesh 同步
+  steps:
+    - docker_network_disconnect: "peer-b"
+    - docker_network_reconnect: "peer-b"
+    - run: DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
+  assertions:
+    - reconnect_uses_backoff_not_busy_loop: true
+    - reconnect_sends_fresh_sync_hello: true
+    - vector_aligned_after_reconnect: true
+    - no_automatic_local_merge_after_reconnect: true
 ```
