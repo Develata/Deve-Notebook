@@ -4,7 +4,7 @@
 
 use crate::server::AppState;
 use anyhow::{Context, Result, anyhow};
-use deve_core::config::{P2pConfig, P2pPeerConfig};
+use deve_core::config::P2pPeerConfig;
 use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::frame::{decode_server_binary, decode_server_json, encode_client_binary};
 use deve_core::protocol::{
@@ -26,30 +26,12 @@ const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(5);
 const EXCHANGE_IDLE_TIMEOUT: Duration = Duration::from_millis(750);
 const MAX_EXCHANGE_FRAMES: usize = 64;
 
-pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
-    if !config.enabled {
-        return;
-    }
+pub(super) use crate::server::p2p_connector::spawn_mesh_connectors;
 
-    let interval = Duration::from_millis(config.connect_interval_ms.max(1_000));
-    for peer in config.peers.into_iter().filter(|peer| peer.enabled) {
-        let state = state.clone();
-        tokio::spawn(async move {
-            loop {
-                if let Err(err) = connect_peer_once(&peer, state.clone()).await {
-                    tracing::warn!(
-                        peer_label = %peer.label,
-                        peer_id = %peer.peer_id,
-                        "P2P mesh connector attempt failed: {err}"
-                    );
-                }
-                tokio::time::sleep(interval).await;
-            }
-        });
-    }
-}
-
-async fn connect_peer_once(peer: &P2pPeerConfig, state: Arc<AppState>) -> Result<()> {
+pub(super) async fn connect_peer_once(
+    peer: &P2pPeerConfig,
+    state: Arc<AppState>,
+) -> Result<ExchangeStats> {
     let token = std::env::var(&peer.auth_token_env)
         .with_context(|| format!("P2P token env is missing for peer {}", peer.label))?;
     if token.is_empty() {
@@ -93,17 +75,17 @@ async fn connect_peer_once(peer: &P2pPeerConfig, state: Arc<AppState>) -> Result
         applied_snapshots = stats.applied_snapshots,
         "P2P mesh connector handshake completed"
     );
-    Ok(())
+    Ok(stats)
 }
 
-#[derive(Default)]
-struct ExchangeStats {
-    saw_hello: bool,
-    authenticated_peer_id: Option<PeerId>,
-    sent_pushes: u64,
-    sent_snapshots: u64,
-    applied_pushes: u64,
-    applied_snapshots: u64,
+#[derive(Debug, Default)]
+pub(super) struct ExchangeStats {
+    pub(super) saw_hello: bool,
+    pub(super) authenticated_peer_id: Option<PeerId>,
+    pub(super) sent_pushes: u64,
+    pub(super) sent_snapshots: u64,
+    pub(super) applied_pushes: u64,
+    pub(super) applied_snapshots: u64,
 }
 
 async fn drive_sync_exchange<S>(
@@ -136,7 +118,11 @@ where
             .with_context(|| format!("Failed to decode P2P server frame {frame_index}"))?;
         handle_server_message(peer, repo_id, &state, socket, message, &mut stats).await?;
     }
-    Ok(stats)
+    if stats.saw_hello {
+        Ok(stats)
+    } else {
+        Err(anyhow!("P2P handshake ended before SyncHello"))
+    }
 }
 
 fn decode_server_message(frame: Message) -> Result<ServerMessage> {
@@ -172,6 +158,12 @@ where
                     peer.label,
                     hello_repo_id,
                     repo_id
+                ));
+            }
+            if peer_id == state.identity_key.peer_id() {
+                return Err(anyhow!(
+                    "P2P self-loop rejected after handshake for peer {}",
+                    peer.label
                 ));
             }
             if peer_id.as_str() != peer.peer_id {
@@ -460,11 +452,103 @@ fn signed_sync_hello(
 
 #[cfg(test)]
 mod tests {
-    use super::signed_sync_hello;
+    use super::{
+        MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message, signed_sync_hello,
+    };
+    use crate::server::{AppState, tree_state::RepoTreeRegistry};
+    use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
+    use deve_core::ledger::RepoManager;
     use deve_core::models::VersionVector;
-    use deve_core::protocol::ClientMessage;
+    use deve_core::protocol::frame::encode_server_binary;
+    use deve_core::protocol::{ClientMessage, ScopeNonce, ServerMessage};
     use deve_core::security::IdentityKeyPair;
     use deve_core::security::keypair::verify_signature;
+    use deve_core::sync::{SyncManager, repo_scoped::RepoScopedSyncEngine};
+    use futures::{Sink, Stream};
+    use std::collections::VecDeque;
+    use std::pin::Pin;
+    use std::sync::Arc;
+    use std::task::{Context, Poll};
+    use tokio_tungstenite::tungstenite::{Error as WsError, Message};
+
+    struct MockSocket {
+        incoming: VecDeque<Result<Message, WsError>>,
+        sent: Vec<Message>,
+    }
+
+    impl MockSocket {
+        fn new(incoming: Vec<Message>) -> Self {
+            Self {
+                incoming: incoming.into_iter().map(Ok).collect(),
+                sent: Vec::new(),
+            }
+        }
+    }
+
+    impl Stream for MockSocket {
+        type Item = Result<Message, WsError>;
+
+        fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            Poll::Ready(self.incoming.pop_front())
+        }
+    }
+
+    impl Sink<Message> for MockSocket {
+        type Error = WsError;
+
+        fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn start_send(mut self: Pin<&mut Self>, item: Message) -> Result<(), Self::Error> {
+            self.sent.push(item);
+            Ok(())
+        }
+
+        fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+    }
+
+    fn test_state(identity: Arc<IdentityKeyPair>) -> anyhow::Result<Arc<AppState>> {
+        let dir = tempfile::tempdir()?;
+        let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
+        repo.set_projection_base_for_all_local_repos_checked(dir.path().join("vault"))?;
+        let repo = Arc::new(repo);
+        let (tx, _rx) = tokio::sync::broadcast::channel(8);
+        let sync_manager = Arc::new(SyncManager::new_checked(repo.clone())?);
+        Ok(Arc::new(AppState {
+            repo: repo.clone(),
+            sync_manager,
+            tx,
+            plugins: Vec::new(),
+            sync_engine: Arc::new(RepoScopedSyncEngine::new(
+                identity.peer_id(),
+                repo,
+                SyncMode::Auto,
+            )),
+            tree_manager: Arc::new(RepoTreeRegistry::new()),
+            #[cfg(feature = "search")]
+            search_available: false,
+            identity_key: identity,
+            git_bridge: GitBridgeMode::Mirror,
+        }))
+    }
+
+    fn peer(repo_id: uuid::Uuid) -> P2pPeerConfig {
+        P2pPeerConfig {
+            label: "peer-b".into(),
+            peer_id: "peer-b".into(),
+            repo_id: repo_id.to_string(),
+            ws_url: "ws://127.0.0.1:3002/ws".into(),
+            auth_token_env: "DEVE_TEST_TOKEN".into(),
+            enabled: true,
+        }
+    }
 
     #[test]
     fn p2p_mesh_sync_hello_is_signed_for_full_peer_admission_path() {
@@ -498,5 +582,53 @@ mod tests {
             }
             other => panic!("expected SyncHello, got {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_frame_limit_without_sync_hello() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let pong = Message::Binary(encode_server_binary(&ServerMessage::Pong)?.into());
+        let mut socket = MockSocket::new(vec![pong; MAX_EXCHANGE_FRAMES]);
+
+        let err = drive_sync_exchange(&peer(repo_id), repo_id, state, &mut socket)
+            .await
+            .expect_err("missing SyncHello must fail");
+
+        assert!(err.to_string().contains("before SyncHello"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_authenticated_self_loop() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let self_peer_id = identity.peer_id();
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let message = ServerMessage::SyncHello {
+            peer_id: self_peer_id,
+            repo_id,
+            scope_nonce: ScopeNonce::new(0),
+            pub_key: Vec::new(),
+            signature: Vec::new(),
+            vector: VersionVector::new(),
+        };
+        let mut stats = super::ExchangeStats::default();
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("authenticated self-loop must fail");
+
+        assert!(err.to_string().contains("self-loop"));
+        Ok(())
     }
 }

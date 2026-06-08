@@ -1,3 +1,4 @@
+use deve_core::config::GitBridgeMode;
 use deve_core::git_bridge::{self, GitMirrorCommitState};
 use deve_core::ledger::RepoManager;
 use deve_core::source_control::ChangeStatus;
@@ -92,6 +93,35 @@ fn commit_without_git_mirror_keeps_no_mirror_record() {
         })
         .expect("read mirror record");
     assert!(record.is_none());
+}
+
+#[test]
+fn source_control_git_bridge_off_skips_mirror_queue_when_git_ready() {
+    let (_dir, repo) = new_repo();
+    let root = repo_root(&repo);
+    std::fs::create_dir_all(root.join(".git")).expect("mkdir git");
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&root).expect("gitignore");
+    write_workspace_file(&repo, "notes/a.md", "hello");
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+    repo.stage_pending("notes/a.md").expect("stage");
+
+    let commit = repo
+        .commit_staged_with_git_bridge("initial", GitBridgeMode::Off)
+        .expect("commit");
+
+    let record = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            Ok(git_bridge::get_record(db, &commit.id)?)
+        })
+        .expect("read mirror record");
+    assert!(record.is_none());
+    assert!(repo.list_staged().expect("staged after commit").is_empty());
+    assert!(
+        repo.list_commits(10)
+            .expect("commits")
+            .iter()
+            .any(|item| item.id == commit.id)
+    );
 }
 
 #[test]

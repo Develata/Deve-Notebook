@@ -28,19 +28,27 @@ use deve_core::security::AuthConfig;
 /// - `/ws`: upgrade handler performs Browser cookie admission or FullPeer bearer admission before upgrade.
 /// ## 中间件层叠顺序（外 → 内）
 /// CORS → 速率限制 → 安全头 → Extension 注入
+#[cfg(test)]
 pub fn build_app(
     app_state: Arc<AppState>,
     port: u16,
     auth_config: Arc<AuthConfig>,
 ) -> Result<Router> {
-    build_app_with_native_session(app_state, port, auth_config, None)
+    build_app_with_native_session_and_p2p(
+        app_state,
+        port,
+        auth_config,
+        None,
+        ws::WsAdmissionConfig::default().p2p_inbound_token_env,
+    )
 }
 
-pub fn build_app_with_native_session(
+pub fn build_app_with_native_session_and_p2p(
     app_state: Arc<AppState>,
     port: u16,
     auth_config: Arc<AuthConfig>,
     native_session_bridge: Option<Arc<auth::handlers::NativeSessionBridge>>,
+    p2p_inbound_token_env: Option<String>,
 ) -> Result<Router> {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
@@ -141,6 +149,9 @@ pub fn build_app_with_native_session(
         .layer(axum::middleware::from_fn(auth::headers::security_headers))
         .layer(axum::middleware::from_fn(rate_limit::rate_limit_middleware))
         .layer(axum::Extension(auth_config))
+        .layer(axum::Extension(Arc::new(ws::WsAdmissionConfig::new(
+            p2p_inbound_token_env,
+        ))))
         .layer(axum::Extension(brute_force))
         .layer(axum::Extension(api_limiter))
         .layer(setup::build_cors_layer(port)?))

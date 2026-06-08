@@ -4,6 +4,7 @@
 //!
 //! Source Control write/commit runtime.
 
+use crate::config::GitBridgeMode;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
 use crate::protocol::ScPathTarget;
@@ -32,15 +33,24 @@ impl<'a> SourceControlWriteRuntime<'a> {
         repo_name: &str,
         message: &str,
     ) -> Result<CommitInfo> {
+        self.commit_staged_in_local_repo_with_git_bridge(repo_name, message, GitBridgeMode::Mirror)
+    }
+
+    pub(crate) fn commit_staged_in_local_repo_with_git_bridge(
+        &self,
+        repo_name: &str,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
         if repo_name == self.manager.local_repo_name() {
             return self
                 .manager
                 .commit_runtime()
-                .commit_staged_with_ops(message);
+                .commit_staged_with_ops_with_git_bridge(message, git_bridge);
         }
         self.manager
             .commit_runtime()
-            .commit_staged_with_ops_in_local_repo(repo_name, message)
+            .commit_staged_with_ops_in_local_repo_with_git_bridge(repo_name, message, git_bridge)
     }
 
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

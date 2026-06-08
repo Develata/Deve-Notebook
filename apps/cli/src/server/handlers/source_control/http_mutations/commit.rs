@@ -26,7 +26,12 @@ pub async fn commit(
     if let Err(error) = super::ensure_http_selector_writable(&state, &payload.repo) {
         return errors::http(error);
     }
-    match service::commit_staged(state.repo.as_ref(), &payload.repo, &payload.message) {
+    match service::commit_staged_with_git_bridge(
+        state.repo.as_ref(),
+        &payload.repo,
+        &payload.message,
+        state.git_bridge,
+    ) {
         Ok(info) => Json::<CommitInfo>(info).into_response(),
         Err(e) => errors::http(e),
     }

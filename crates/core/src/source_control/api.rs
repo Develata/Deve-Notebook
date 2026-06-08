@@ -4,6 +4,7 @@
 //!   - 04_repository#repo-selector-resolution-contract
 //!   - 05_diff_logic#source-control-runtime
 
+use crate::config::GitBridgeMode;
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
@@ -25,4 +26,12 @@ pub trait SourceControlApi: Send + Sync {
         commit_b_id: &str,
     ) -> Result<Vec<CommitFileDiff>>;
     fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo>;
+    fn commit_staged_in_repo_with_git_bridge(
+        &self,
+        repo: &RepoSelector,
+        message: &str,
+        _git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        self.commit_staged_in_repo(repo, message)
+    }
 }

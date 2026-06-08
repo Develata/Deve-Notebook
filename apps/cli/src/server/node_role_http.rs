@@ -29,7 +29,30 @@ fn role_payload(r: &node_role::NodeRole) -> serde_json::Value {
             "healthy": r.repo_health.healthy,
             "degraded": r.repo_health.degraded,
         },
+        "source_control": {
+            "git_bridge": r.source_control.git_bridge,
+        },
+        "p2p": p2p_payload(&r.p2p),
         "native_service": r.native_service.as_ref().map(native_service_payload),
+    })
+}
+
+fn p2p_payload(p2p: &node_role::P2pSummary) -> serde_json::Value {
+    serde_json::json!({
+        "enabled": p2p.enabled,
+        "peers": p2p.peers.iter().map(|peer| serde_json::json!({
+            "label": peer.label,
+            "peer_id": peer.peer_id,
+            "repo_id": peer.repo_id,
+            "state": peer.state,
+            "attempts": peer.attempts,
+            "handshakes": peer.handshakes,
+            "sent_pushes": peer.sent_pushes,
+            "sent_snapshots": peer.sent_snapshots,
+            "applied_pushes": peer.applied_pushes,
+            "applied_snapshots": peer.applied_snapshots,
+            "last_error_code": peer.last_error_code,
+        })).collect::<Vec<_>>(),
     })
 }
 
@@ -64,6 +87,10 @@ mod tests {
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
             repo_health: node_role::RepoHealthSummary::from_degraded_count(2, 1),
+            source_control: node_role::SourceControlSummary::from_git_bridge(
+                deve_core::config::GitBridgeMode::Mirror,
+            ),
+            p2p: node_role::P2pSummary::disabled(),
             native_service: None,
         });
 
@@ -76,6 +103,7 @@ mod tests {
         assert_eq!(payload["repo_health"]["local_total"], 2);
         assert_eq!(payload["repo_health"]["healthy"], 1);
         assert_eq!(payload["repo_health"]["degraded"], 1);
+        assert_eq!(payload["source_control"]["git_bridge"], "mirror");
         assert_eq!(payload["native_service"], serde_json::Value::Null);
     }
 
@@ -90,6 +118,10 @@ mod tests {
             delivery: "embedded-frontend".into(),
             environment: "development".into(),
             repo_health: node_role::RepoHealthSummary::unknown(),
+            source_control: node_role::SourceControlSummary::from_git_bridge(
+                deve_core::config::GitBridgeMode::Mirror,
+            ),
+            p2p: node_role::P2pSummary::disabled(),
             native_service: Some(node_role::NativeServiceSummary {
                 state: "endpoint_ready".into(),
                 endpoint: Some(deve_core::native_adapter::NativeEndpointReady {
@@ -109,5 +141,46 @@ mod tests {
             "http://127.0.0.1:3001"
         );
         assert_eq!(payload["native_service"]["endpoint"]["session_bound"], true);
+    }
+
+    #[test]
+    fn p2p_node_role_summary_omits_token_material() {
+        let payload = role_payload(&node_role::NodeRole {
+            role: "main".into(),
+            ws_port: 3001,
+            main_port: 3001,
+            version: "0.0.1".into(),
+            profile: "standard".into(),
+            delivery: "embedded-frontend".into(),
+            environment: "development".into(),
+            repo_health: node_role::RepoHealthSummary::unknown(),
+            source_control: node_role::SourceControlSummary::from_git_bridge(
+                deve_core::config::GitBridgeMode::Off,
+            ),
+            p2p: node_role::P2pSummary {
+                enabled: true,
+                peers: vec![node_role::P2pPeerSummary {
+                    label: "peer-b".into(),
+                    peer_id: "peer-b".into(),
+                    repo_id: "11111111-1111-1111-1111-111111111111".into(),
+                    state: "connected".into(),
+                    attempts: 2,
+                    handshakes: 1,
+                    sent_pushes: 1,
+                    sent_snapshots: 0,
+                    applied_pushes: 1,
+                    applied_snapshots: 0,
+                    last_error_code: None,
+                }],
+            },
+            native_service: None,
+        });
+
+        assert_eq!(payload["p2p"]["enabled"], true);
+        assert_eq!(payload["source_control"]["git_bridge"], "off");
+        assert_eq!(payload["p2p"]["peers"][0]["label"], "peer-b");
+        assert_eq!(payload["p2p"]["peers"][0]["state"], "connected");
+        assert!(payload.to_string().find("token").is_none());
+        assert!(payload.to_string().find("auth_token_env").is_none());
     }
 }

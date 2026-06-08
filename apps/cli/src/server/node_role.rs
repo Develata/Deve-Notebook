@@ -6,6 +6,7 @@
 //!
 //! # Node Role State
 
+use deve_core::config::GitBridgeMode;
 use deve_core::native_adapter::{NativeEndpointReady, NativeServiceOffline};
 use std::sync::{Arc, OnceLock, RwLock};
 
@@ -19,6 +20,8 @@ pub struct NodeRole {
     pub delivery: String,
     pub environment: String,
     pub repo_health: RepoHealthSummary,
+    pub source_control: SourceControlSummary,
+    pub p2p: P2pSummary,
     pub native_service: Option<NativeServiceSummary>,
 }
 
@@ -35,6 +38,32 @@ pub struct NativeServiceSummary {
     pub state: String,
     pub endpoint: Option<NativeEndpointReady>,
     pub offline: Option<NativeServiceOffline>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceControlSummary {
+    pub git_bridge: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct P2pSummary {
+    pub enabled: bool,
+    pub peers: Vec<P2pPeerSummary>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct P2pPeerSummary {
+    pub label: String,
+    pub peer_id: String,
+    pub repo_id: String,
+    pub state: String,
+    pub attempts: u64,
+    pub handshakes: u64,
+    pub sent_pushes: u64,
+    pub sent_snapshots: u64,
+    pub applied_pushes: u64,
+    pub applied_snapshots: u64,
+    pub last_error_code: Option<String>,
 }
 
 impl RepoHealthSummary {
@@ -60,6 +89,27 @@ impl RepoHealthSummary {
     }
 }
 
+impl SourceControlSummary {
+    pub fn from_git_bridge(mode: GitBridgeMode) -> Self {
+        let git_bridge = match mode {
+            GitBridgeMode::Mirror => "mirror",
+            GitBridgeMode::Off => "off",
+        };
+        Self {
+            git_bridge: git_bridge.into(),
+        }
+    }
+}
+
+impl P2pSummary {
+    pub fn disabled() -> Self {
+        Self {
+            enabled: false,
+            peers: Vec::new(),
+        }
+    }
+}
+
 static NODE_ROLE: OnceLock<Arc<RwLock<NodeRole>>> = OnceLock::new();
 
 pub fn set_node_role(role: NodeRole) {
@@ -75,6 +125,14 @@ pub fn update_repo_health(repo_health: RepoHealthSummary) {
     match cell.write() {
         Ok(mut current) => current.repo_health = repo_health,
         Err(_) => tracing::warn!("NodeRole lock poisoned, ignoring repo health update"),
+    }
+}
+
+pub fn update_p2p_summary(p2p: P2pSummary) {
+    let cell = role_cell();
+    match cell.write() {
+        Ok(mut current) => current.p2p = p2p,
+        Err(_) => tracing::warn!("NodeRole lock poisoned, ignoring P2P summary update"),
     }
 }
 
@@ -124,6 +182,8 @@ fn default_node_role() -> NodeRole {
         delivery: "unknown".into(),
         environment: runtime_environment(),
         repo_health: RepoHealthSummary::unknown(),
+        source_control: SourceControlSummary::from_git_bridge(GitBridgeMode::Mirror),
+        p2p: P2pSummary::disabled(),
         native_service: None,
     }
 }

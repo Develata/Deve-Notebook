@@ -7,7 +7,7 @@
 use anyhow::anyhow;
 use std::env::VarError;
 
-use super::{Config, P2pPeerConfig};
+use super::{Config, GitBridgeMode, P2pPeerConfig};
 
 pub(super) fn apply_env_aliases(config: &mut Config) -> anyhow::Result<()> {
     if let Some(value) = env_bool("DEVE_AI_AGENT_BRIDGE_ENABLED")? {
@@ -19,7 +19,20 @@ pub(super) fn apply_env_aliases(config: &mut Config) -> anyhow::Result<()> {
     if let Some(value) = env_usize("MEM_CACHE_MB")? {
         config.mem_cache_mb = value;
     }
+    apply_source_control_env_aliases(config)?;
     apply_p2p_env_aliases(config)?;
+    Ok(())
+}
+
+fn apply_source_control_env_aliases(config: &mut Config) -> anyhow::Result<()> {
+    if let Some(value) = env_string_any(&[
+        "DEVE_SOURCE_CONTROL__GIT_BRIDGE",
+        "DEVE_SOURCE_CONTROL_GIT_BRIDGE",
+    ])? {
+        config.source_control.git_bridge = value
+            .parse::<GitBridgeMode>()
+            .map_err(|_| anyhow!("Invalid source_control.git_bridge environment value: {value}"))?;
+    }
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 use super::{CWD_LOCK, CwdGuard, EnvGuard};
-use crate::config::{AppProfile, Config, MergeStrategy, SyncMode};
+use crate::config::{AppProfile, Config, GitBridgeMode, MergeStrategy, SyncMode};
 
 #[test]
 fn test_default_config() {
@@ -15,6 +15,8 @@ fn test_default_config() {
         ("DEVE_SNAPSHOT_DEPTH", None),
         ("DEVE_MEM_CACHE_MB", None),
         ("MEM_CACHE_MB", None),
+        ("DEVE_SOURCE_CONTROL__GIT_BRIDGE", None),
+        ("DEVE_SOURCE_CONTROL_GIT_BRIDGE", None),
         ("AGENT_CLI_PATH", None),
     ]);
     let dir = tempfile::tempdir().expect("tempdir");
@@ -38,6 +40,7 @@ fn default_config_matches_settings_plan_defaults() {
     assert_eq!(config.ledger_dir, "ledger");
     assert_eq!(config.sync_mode, SyncMode::Auto);
     assert_eq!(config.merge_strategy, MergeStrategy::Manual);
+    assert_eq!(config.source_control.git_bridge, GitBridgeMode::Mirror);
     assert_eq!(config.snapshot_depth, 100);
     assert_eq!(config.mem_cache_mb, 128);
     assert_eq!(config.concurrency, 4);
@@ -48,6 +51,66 @@ fn default_config_matches_settings_plan_defaults() {
     assert!(!config.ai.agent_bridge.enabled);
     assert!(!config.ai.agent_bridge.trusted);
     assert_eq!(config.ai.agent_bridge.timeout_ms, 30_000);
+}
+
+#[test]
+fn source_control_git_bridge_config_file_accepts_mirror_and_off() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("DEVE_SOURCE_CONTROL__GIT_BRIDGE", None),
+        ("DEVE_SOURCE_CONTROL_GIT_BRIDGE", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        "[source_control]\ngit_bridge = \"off\"\n",
+    )
+    .expect("config");
+
+    let config = Config::load_checked().expect("source control config");
+
+    assert_eq!(config.source_control.git_bridge, GitBridgeMode::Off);
+}
+
+#[test]
+fn source_control_git_bridge_env_alias_overrides_config_file() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("DEVE_SOURCE_CONTROL__GIT_BRIDGE", Some("off")),
+        ("DEVE_SOURCE_CONTROL_GIT_BRIDGE", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        "[source_control]\ngit_bridge = \"mirror\"\n",
+    )
+    .expect("config");
+
+    let config = Config::load_checked().expect("source control env config");
+
+    assert_eq!(config.source_control.git_bridge, GitBridgeMode::Off);
+}
+
+#[test]
+fn source_control_git_bridge_fails_closed_on_invalid_value() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("DEVE_SOURCE_CONTROL__GIT_BRIDGE", None),
+        ("DEVE_SOURCE_CONTROL_GIT_BRIDGE", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        "[source_control]\ngit_bridge = \"native\"\n",
+    )
+    .expect("bad config");
+
+    let err = Config::load_checked().expect_err("invalid git bridge mode");
+
+    assert!(err.to_string().contains("Failed to parse configuration"));
 }
 
 #[test]
@@ -172,6 +235,10 @@ fn runtime_config_value_parsers_reject_unknown_values() {
     assert!("manual".parse::<MergeStrategy>().is_ok());
     assert!("auto".parse::<MergeStrategy>().is_ok());
     assert!("crdt".parse::<MergeStrategy>().is_err());
+
+    assert!("mirror".parse::<GitBridgeMode>().is_ok());
+    assert!("off".parse::<GitBridgeMode>().is_ok());
+    assert!("native".parse::<GitBridgeMode>().is_err());
 }
 
 #[test]

@@ -171,6 +171,7 @@ fn format_node_role_summary(json: &serde_json::Value) -> String {
     let delivery = str_field(json, "delivery", "unknown-delivery");
     let environment = str_field(json, "environment", "unknown-env");
     let repo_health = format_repo_health(json);
+    let source_control = format_source_control(json);
 
     let role_text = if role == "proxy" && main_port > 0 {
         format!("proxy -> {} (ws:{})", main_port, ws_port)
@@ -180,8 +181,8 @@ fn format_node_role_summary(json: &serde_json::Value) -> String {
         role.to_string()
     };
     format!(
-        "{} | v{} | {} | {} | {} | repos:{}",
-        role_text, version, profile, delivery, environment, repo_health
+        "{} | v{} | {} | {} | {} | repos:{} | {}",
+        role_text, version, profile, delivery, environment, repo_health, source_control
     )
 }
 
@@ -203,6 +204,14 @@ fn format_repo_health(json: &serde_json::Value) -> String {
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
     format!("{} ({}/{})", status, degraded, total)
+}
+
+fn format_source_control(json: &serde_json::Value) -> String {
+    let Some(source_control) = json.get("source_control") else {
+        return "git:unknown".into();
+    };
+    let git_bridge = str_field(source_control, "git_bridge", "unknown");
+    format!("git:{git_bridge}")
 }
 
 #[cfg(test)]

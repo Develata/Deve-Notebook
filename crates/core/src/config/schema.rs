@@ -119,6 +119,45 @@ impl FromStr for SyncMode {
     }
 }
 
+/// Git bridge mode for Source Control.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GitBridgeMode {
+    /// Queue and execute explicit Git mirror/import/export/push bridge operations.
+    #[default]
+    Mirror,
+    /// Keep Deve Source Control active but disable Git mirror queueing and Git bridge writes.
+    Off,
+}
+
+impl FromStr for GitBridgeMode {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.eq_ignore_ascii_case("mirror") {
+            Ok(GitBridgeMode::Mirror)
+        } else if s.eq_ignore_ascii_case("off") {
+            Ok(GitBridgeMode::Off)
+        } else {
+            Err("invalid git bridge mode")
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceControlConfig {
+    #[serde(default)]
+    pub git_bridge: GitBridgeMode,
+}
+
+impl Default for SourceControlConfig {
+    fn default() -> Self {
+        Self {
+            git_bridge: GitBridgeMode::Mirror,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct P2pPeerConfig {
     pub label: String,
@@ -218,6 +257,9 @@ pub struct Config {
     /// 合并策略。
     #[serde(default)]
     pub merge_strategy: MergeStrategy,
+    /// Source Control bridge policy.
+    #[serde(default)]
+    pub source_control: SourceControlConfig,
     /// 静态 FullPeer mesh 配置，默认关闭。
     #[serde(default)]
     pub p2p: P2pConfig,
@@ -245,6 +287,7 @@ impl Default for Config {
             ledger_dir: defaults::ledger(),
             sync_mode: SyncMode::default(),
             merge_strategy: MergeStrategy::default(),
+            source_control: SourceControlConfig::default(),
             p2p: P2pConfig::default(),
             snapshot_depth: defaults::snapshot_depth(),
             mem_cache_mb: defaults::mem_cache_mb(),

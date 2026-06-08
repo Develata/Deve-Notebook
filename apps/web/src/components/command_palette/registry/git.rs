@@ -5,6 +5,7 @@
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::{SourceControlContext, source_control_notice::SourceControlNotice};
 use crate::i18n::{Locale, t};
+use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 fn show_source_control_notice(
@@ -16,6 +17,28 @@ fn show_source_control_notice(
         source_control.set_notice.set(Some(notice));
     }
     set_show.set(false);
+}
+
+fn git_bridge_enabled_when(locale: Locale) -> String {
+    let mode = use_context::<SessionClient>()
+        .and_then(|session| git_bridge_mode_from_node_role(&session.ws.node_role.get()))
+        .unwrap_or("unknown");
+    format!(
+        "{}; source_control.git_bridge={mode}",
+        (t::command_palette::enabled_cli_only_notice)(locale)
+    )
+}
+
+fn git_bridge_mode_from_node_role(summary: &str) -> Option<&'static str> {
+    summary.split('|').find_map(|segment| {
+        let mode = segment.trim().strip_prefix("git:")?;
+        match mode {
+            "mirror" => Some("mirror"),
+            "off" => Some("off"),
+            "unknown" => Some("unknown"),
+            _ => None,
+        }
+    })
 }
 
 pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -32,7 +55,7 @@ pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) ->
         }),
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
+    .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
 pub(super) fn git_status_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -50,7 +73,7 @@ pub(super) fn git_status_command(locale: Locale, set_show: WriteSignal<bool>) ->
         }),
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
+    .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
 pub(super) fn git_mirror_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -68,7 +91,7 @@ pub(super) fn git_mirror_command(locale: Locale, set_show: WriteSignal<bool>) ->
         }),
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
+    .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
 pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -86,7 +109,7 @@ pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) ->
         }),
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
+    .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
 pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -103,7 +126,7 @@ pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> C
         }),
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
+    .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
 pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
@@ -120,7 +143,7 @@ pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) ->
         }),
     )
     .with_group((t::command_palette::group_git)(locale))
-    .with_enabled_when((t::command_palette::enabled_cli_only_notice)(locale))
+    .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
 #[cfg(test)]

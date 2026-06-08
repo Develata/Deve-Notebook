@@ -6,6 +6,7 @@
 //!
 //! Source Control commit orchestration runtime.
 
+use crate::config::GitBridgeMode;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::manager::git_mirror_queue_runtime;
 use crate::ledger::manager::types::RepoManager;
@@ -23,14 +24,23 @@ impl<'a> CommitRuntime<'a> {
         Self { manager }
     }
 
-    pub(crate) fn commit_staged_with_ops(&self, message: &str) -> Result<CommitInfo> {
-        self.commit_staged_with_ops_in_local_repo(self.manager.local_repo_name(), message)
+    pub(crate) fn commit_staged_with_ops_with_git_bridge(
+        &self,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        self.commit_staged_with_ops_in_local_repo_with_git_bridge(
+            self.manager.local_repo_name(),
+            message,
+            git_bridge,
+        )
     }
 
-    pub(crate) fn commit_staged_with_ops_in_local_repo(
+    pub(crate) fn commit_staged_with_ops_in_local_repo_with_git_bridge(
         &self,
         repo_name: &str,
         message: &str,
+        git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
         let staged = self
             .manager
@@ -42,7 +52,11 @@ impl<'a> CommitRuntime<'a> {
         targets.sort_by_key(|target| target.delete_only);
         commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &targets)?;
         #[cfg(not(target_arch = "wasm32"))]
-        let git_mirror_repo_id = git_mirror_queue_runtime::queue_repo_id(self.manager, repo_name);
+        let git_mirror_repo_id = if git_bridge == GitBridgeMode::Mirror {
+            git_mirror_queue_runtime::queue_repo_id(self.manager, repo_name)
+        } else {
+            None
+        };
 
         let doc_count = targets.len() as u32;
         for target in &targets {

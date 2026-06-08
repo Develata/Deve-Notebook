@@ -12,6 +12,9 @@ PORT_B="${DEVE_DOCKER_P2P_MESH_B_PORT:-3112}"
 REQUIRED="${DEVE_DOCKER_P2P_MESH_REQUIRED:-0}"
 KEEP="${DEVE_DOCKER_P2P_MESH_KEEP:-0}"
 DOCKER_BIN="${DEVE_DOCKER_BIN:-docker}"
+DOCKER_BUILDKIT_MODE="${DEVE_DOCKER_P2P_MESH_BUILDKIT:-0}"
+COMPOSE_DOCKER_CLI_BUILD_MODE="${DEVE_DOCKER_P2P_MESH_COMPOSE_DOCKER_CLI_BUILD:-0}"
+COMPOSE_PARALLEL_LIMIT_MODE="${DEVE_DOCKER_P2P_MESH_COMPOSE_PARALLEL_LIMIT:-1}"
 AUTH_SECRET="${DEVE_DOCKER_P2P_MESH_AUTH_SECRET:-deve_docker_p2p_mesh_secret_32_bytes_ok!!}"
 AUTH_USER="${DEVE_DOCKER_P2P_MESH_AUTH_USER:-admin}"
 AUTH_PASS="${DEVE_DOCKER_P2P_MESH_AUTH_PASS:-\$argon2id\$v=19\$m=65536,t=2,p=1\$c29tZXNhbHQ\$CTFhFdXPJO1aFaMaO6Mm5c8y7cJHAph8ArZWb2GRPPc}"
@@ -23,6 +26,14 @@ TOKEN_B="${DEVE_DOCKER_P2P_MESH_TOKEN_B:-deve_mesh_peer_b_token}"
 PYTHON_BIN="${DEVE_DOCKER_P2P_MESH_PYTHON_BIN:-}"
 COOKIE_A="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-a.cookie"
 COOKIE_B="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-b.cookie"
+
+if [[ ";${MSYS2_ARG_CONV_EXCL:-};" == *";*;"* || ";${MSYS2_ARG_CONV_EXCL:-};" == *";/data/ledger;"* ]]; then
+  MSYS_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL:-}"
+elif [ -n "${MSYS2_ARG_CONV_EXCL:-}" ]; then
+  MSYS_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL};/data/ledger"
+else
+  MSYS_ARG_CONV_EXCL="/data/ledger"
+fi
 
 fail() {
   echo "docker-p2p-mesh-smoke: $*" >&2
@@ -48,6 +59,10 @@ docker_compose() {
   DEVE_DOCKER_P2P_MESH_TOKEN_B="$TOKEN_B" \
   DEVE_DOCKER_P2P_MESH_A_PORT="$PORT_A" \
   DEVE_DOCKER_P2P_MESH_B_PORT="$PORT_B" \
+  DOCKER_BUILDKIT="$DOCKER_BUILDKIT_MODE" \
+  COMPOSE_DOCKER_CLI_BUILD="$COMPOSE_DOCKER_CLI_BUILD_MODE" \
+  COMPOSE_PARALLEL_LIMIT="$COMPOSE_PARALLEL_LIMIT_MODE" \
+  MSYS2_ARG_CONV_EXCL="$MSYS_ARG_CONV_EXCL" \
     docker_cmd compose -f "$COMPOSE_FILE" -p "$PROJECT" "$@"
 }
 
@@ -301,6 +316,10 @@ wait_for_remote_ops_handled() {
     if grep -q "Handled .* remote ops from ${peer_id} for repo ${REPO_ID}" <<<"$logs"; then
       return 0
     fi
+    if grep -q "authenticated_peer_id=\"${peer_id}\"" <<<"$logs" \
+      && grep -Eq "applied_pushes=[1-9][0-9]*" <<<"$logs"; then
+      return 0
+    fi
     sleep 1
   done
   return 1
@@ -310,15 +329,20 @@ run_offline_shadow_check() {
   local peer_id="$1"
   local doc_id="$2"
   local expected_content="$3"
+  local output
   docker_compose stop peer-b >/dev/null
-  docker_compose run --rm --no-deps --entrypoint deve_cli peer-b verify-p2p \
+  if ! output="$(docker_compose run --rm --no-deps --entrypoint deve_cli peer-b verify-p2p \
     --live-ledger-dir /data/ledger \
     --repo-id "$REPO_ID" \
     --peer-id "$peer_id" \
     --doc-id "$doc_id" \
     --contains "$expected_content" \
     --local-must-not-contain "$expected_content" \
-    >/dev/null
+    2>&1)"; then
+    printf '%s\n' "$output" >&2
+    return 1
+  fi
+  printf '%s\n' "$output"
 }
 
 restart_peer_b_and_wait_reconnect() {
@@ -349,7 +373,8 @@ preflight_port "$PORT_B"
 
 trap cleanup EXIT
 
-docker_compose up -d --build
+docker_compose build peer-a
+docker_compose up -d --no-build
 
 if ! wait_for_peer "$PORT_A"; then
   diagnose

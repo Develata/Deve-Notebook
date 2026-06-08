@@ -8,7 +8,7 @@
 //!   - 18_release#runtime-observability
 
 use crate::server;
-use deve_core::config::{AppProfile, P2pConfig, SyncMode};
+use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
 use deve_core::plugin::runtime::host;
 use reqwest::Client;
 use std::net::TcpListener;
@@ -28,6 +28,7 @@ pub struct ServeOptions {
     pub dry_run: bool,
     pub profile: AppProfile,
     pub sync_mode: SyncMode,
+    pub git_bridge: GitBridgeMode,
     pub p2p: P2pConfig,
     pub native_loopback: bool,
 }
@@ -47,6 +48,7 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         dry_run,
         profile,
         sync_mode,
+        git_bridge,
         p2p,
         native_loopback,
     } = options;
@@ -89,10 +91,12 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
 
     if native_loopback {
         tracing::info!("Native loopback serve mode enabled on {}", bind_addr);
-        server::start_server_with_options(repo_arc, launch, plugins, profile, sync_mode, p2p)
-            .await?;
+        server::start_server_with_options(
+            repo_arc, launch, plugins, profile, sync_mode, git_bridge, p2p,
+        )
+        .await?;
     } else {
-        server::start_server(repo_arc, port, plugins, profile, sync_mode, p2p).await?;
+        server::start_server(repo_arc, port, plugins, profile, sync_mode, git_bridge, p2p).await?;
     }
     Ok(())
 }
@@ -130,6 +134,10 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
         delivery: "plugin-host-proxy".into(),
         environment: crate::server::node_role::runtime_environment(),
         repo_health: crate::server::node_role::RepoHealthSummary::unknown(),
+        source_control: crate::server::node_role::SourceControlSummary::from_git_bridge(
+            GitBridgeMode::Mirror,
+        ),
+        p2p: crate::server::node_role::P2pSummary::disabled(),
         native_service: None,
     });
     server::start_plugin_host_only(plugins, plugin_port).await

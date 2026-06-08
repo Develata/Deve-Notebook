@@ -20,6 +20,7 @@ const CONFIG_KEY_SPECS: &[ConfigKeySpec] = &[
     ConfigKeySpec::bool("p2p.enabled"),
     ConfigKeySpec::string("p2p.inbound_token_env", &[]),
     ConfigKeySpec::string("profile", &["standard", "low-spec"]),
+    ConfigKeySpec::string("source_control.git_bridge", &["mirror", "off"]),
     ConfigKeySpec::integer("snapshot_depth"),
     ConfigKeySpec::string("sync_mode", &["auto", "manual"]),
     ConfigKeySpec::string("ui.locale", &["auto", "en-US", "zh-CN"]),

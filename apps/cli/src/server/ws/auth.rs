@@ -7,7 +7,7 @@ use axum::http::request::Parts;
 use deve_core::protocol::auth::AuthErrorCode;
 use deve_core::security::auth::{config::AuthConfig, jwt};
 
-const P2P_INBOUND_TOKEN_ENV: &str = "DEVE_P2P_INBOUND_TOKEN";
+pub(super) const P2P_INBOUND_TOKEN_ENV: &str = "DEVE_P2P_INBOUND_TOKEN";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum WsAdmission {
@@ -24,9 +24,10 @@ impl WsAdmission {
 pub(super) fn session_admission(
     config: &AuthConfig,
     req: &Parts,
+    p2p_inbound_token_env: Option<&str>,
 ) -> Result<WsAdmission, AuthErrorCode> {
     if has_authorization_header(req) {
-        full_peer_admission(req)?;
+        full_peer_admission(req, p2p_inbound_token_env)?;
         return Ok(WsAdmission::FullPeer);
     }
 
@@ -65,10 +66,12 @@ fn has_authorization_header(req: &Parts) -> bool {
     req.headers.get("authorization").is_some()
 }
 
-fn full_peer_admission(req: &Parts) -> Result<(), AuthErrorCode> {
+fn full_peer_admission(
+    req: &Parts,
+    p2p_inbound_token_env: Option<&str>,
+) -> Result<(), AuthErrorCode> {
     let token = bearer_token(req).ok_or(AuthErrorCode::TokenMissing)?;
-    let token_env = std::env::var("DEVE_P2P_INBOUND_TOKEN_ENV")
-        .unwrap_or_else(|_| P2P_INBOUND_TOKEN_ENV.into());
+    let token_env = p2p_inbound_token_env.ok_or(AuthErrorCode::TokenMissing)?;
     let expected = std::env::var(token_env).map_err(|_| AuthErrorCode::TokenMissing)?;
     if expected.is_empty() {
         return Err(AuthErrorCode::TokenMissing);
@@ -127,9 +130,12 @@ mod tests {
     fn bearer_token_admits_full_peer_without_browser_session() {
         let _lock = ENV_LOCK.lock().expect("env lock");
         let _guard = EnvGuard::set(P2P_INBOUND_TOKEN_ENV, Some("mesh-token"));
-        let admission =
-            session_admission(&auth_config(), &parts_with_auth(Some("Bearer mesh-token")))
-                .expect("admission");
+        let admission = session_admission(
+            &auth_config(),
+            &parts_with_auth(Some("Bearer mesh-token")),
+            Some(P2P_INBOUND_TOKEN_ENV),
+        )
+        .expect("admission");
 
         assert_eq!(admission, WsAdmission::FullPeer);
         assert!(!admission.is_browser());
@@ -140,7 +146,30 @@ mod tests {
         let _lock = ENV_LOCK.lock().expect("env lock");
         let _guard = EnvGuard::set(P2P_INBOUND_TOKEN_ENV, Some("mesh-token"));
 
-        assert!(session_admission(&auth_config(), &parts_with_auth(Some("Bearer wrong"))).is_err());
+        assert!(
+            session_admission(
+                &auth_config(),
+                &parts_with_auth(Some("Bearer wrong")),
+                Some(P2P_INBOUND_TOKEN_ENV),
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn bearer_token_uses_configured_inbound_token_env() {
+        const CUSTOM_TOKEN_ENV: &str = "DEVE_TEST_P2P_CUSTOM_TOKEN";
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        let _guard = EnvGuard::set(CUSTOM_TOKEN_ENV, Some("custom-token"));
+
+        let admission = session_admission(
+            &auth_config(),
+            &parts_with_auth(Some("Bearer custom-token")),
+            Some(CUSTOM_TOKEN_ENV),
+        )
+        .expect("admission");
+
+        assert_eq!(admission, WsAdmission::FullPeer);
     }
 
     struct EnvGuard {

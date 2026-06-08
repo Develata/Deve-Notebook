@@ -1,6 +1,6 @@
 use super::{ServeOptions, detect_main_port, run};
 use axum::{Router, routing::get};
-use deve_core::config::{AppProfile, P2pConfig, SyncMode};
+use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
 use std::net::{SocketAddr, TcpListener};
 use tempfile::TempDir;
 
@@ -61,6 +61,7 @@ async fn serve_dry_run_validates_runtime_without_binding() {
             dry_run: true,
             profile: AppProfile::Standard,
             sync_mode: SyncMode::Auto,
+            git_bridge: GitBridgeMode::Mirror,
             p2p: P2pConfig::default(),
             native_loopback: false,
         },
@@ -85,6 +86,7 @@ async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
             dry_run: false,
             profile: AppProfile::Standard,
             sync_mode: SyncMode::Auto,
+            git_bridge: GitBridgeMode::Mirror,
             p2p: P2pConfig::default(),
             native_loopback: true,
         },

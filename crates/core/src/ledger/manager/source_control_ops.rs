@@ -8,6 +8,7 @@
 //!
 //! 实现 `RepoManager` 的 repo-scoped 暂存、提交、丢弃等写路径方法。
 
+use crate::config::GitBridgeMode;
 use crate::ledger::RepoManager;
 use crate::source_control::CommitInfo;
 use anyhow::Result;
@@ -25,6 +26,16 @@ impl RepoManager {
     ) -> Result<CommitInfo> {
         self.source_control_runtime()
             .commit_staged_in_local_repo(repo_name, message)
+    }
+
+    pub fn commit_staged_in_local_repo_with_git_bridge(
+        &self,
+        repo_name: &str,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        self.source_control_runtime()
+            .commit_staged_in_local_repo_with_git_bridge(repo_name, message, git_bridge)
     }
 
     // === Pending FS Ops (Working Directory) ===

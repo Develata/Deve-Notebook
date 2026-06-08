@@ -4,6 +4,7 @@
 //! Shared Axum/WebSocket runtime state.
 
 use super::tree_state::RepoTreeRegistry;
+use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::ServerMessage;
@@ -22,4 +23,5 @@ pub struct AppState {
     #[cfg(feature = "search")]
     pub search_available: bool,
     pub identity_key: Arc<deve_core::security::IdentityKeyPair>,
+    pub git_bridge: GitBridgeMode,
 }

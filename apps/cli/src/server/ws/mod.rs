@@ -22,6 +22,27 @@ mod receive;
 mod route;
 pub(crate) mod send;
 
+#[derive(Debug, Clone)]
+pub struct WsAdmissionConfig {
+    pub p2p_inbound_token_env: Option<String>,
+}
+
+impl Default for WsAdmissionConfig {
+    fn default() -> Self {
+        Self {
+            p2p_inbound_token_env: Some(auth::P2P_INBOUND_TOKEN_ENV.into()),
+        }
+    }
+}
+
+impl WsAdmissionConfig {
+    pub fn new(p2p_inbound_token_env: Option<String>) -> Self {
+        Self {
+            p2p_inbound_token_env,
+        }
+    }
+}
+
 /// HTTP/WebSocket 入口 (含鉴权)。
 ///
 /// 09_auth.md: "WebSocket Auth: 必须在握手阶段验证 Ticket/Token"
@@ -29,9 +50,14 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
     axum::Extension(config): axum::Extension<Arc<AuthConfig>>,
+    axum::Extension(admission_config): axum::Extension<Arc<WsAdmissionConfig>>,
     req: axum::http::request::Parts,
 ) -> impl IntoResponse {
-    let admission = match auth::session_admission(&config, &req) {
+    let admission = match auth::session_admission(
+        &config,
+        &req,
+        admission_config.p2p_inbound_token_env.as_deref(),
+    ) {
         Ok(admission) => admission,
         Err(code) => return unauthorized_ws_response(code),
     };

@@ -6,6 +6,7 @@
 //!
 //! 把历史单 repo 便捷方法与 repo-scoped 执行路径隔离。
 
+use crate::config::GitBridgeMode;
 use crate::ledger::RepoManager;
 use crate::source_control::{ChangeEntry, CommitInfo};
 use anyhow::Result;
@@ -32,6 +33,18 @@ impl RepoManager {
     /// **Invariant**: repo Projection Locator 必须存在；不存在即为配置错误。
     pub fn commit_staged(&self, message: &str) -> Result<CommitInfo> {
         self.commit_staged_in_local_repo(self.local_repo_name(), message)
+    }
+
+    pub fn commit_staged_with_git_bridge(
+        &self,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        self.commit_staged_in_local_repo_with_git_bridge(
+            self.local_repo_name(),
+            message,
+            git_bridge,
+        )
     }
 
     /// 获取所有待确认的文件变更

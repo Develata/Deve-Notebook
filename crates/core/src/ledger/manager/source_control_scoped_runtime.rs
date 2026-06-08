@@ -4,6 +4,7 @@
 //!
 //! Repo-selector Source Control runtime.
 
+use crate::config::GitBridgeMode;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
@@ -118,10 +119,19 @@ impl<'a> SourceControlScopedRuntime<'a> {
         repo: &RepoSelector,
         message: &str,
     ) -> Result<CommitInfo> {
+        self.commit_staged_in_repo_with_git_bridge(repo, message, GitBridgeMode::Mirror)
+    }
+
+    pub(crate) fn commit_staged_in_repo_with_git_bridge(
+        &self,
+        repo: &RepoSelector,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
         let repo_name = self.resolve_local_repo_for_execution(repo)?;
         self.manager
             .source_control_runtime()
-            .commit_staged_in_local_repo(&repo_name, message)
+            .commit_staged_in_local_repo_with_git_bridge(&repo_name, message, git_bridge)
     }
 }
 

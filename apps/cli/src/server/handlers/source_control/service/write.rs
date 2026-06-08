@@ -3,6 +3,7 @@
 //!   - 03_storage/index#repo-runtime-layout
 
 use super::super::errors::{self, ScOp};
+use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{CommitInfo, SourceControlApi};
@@ -108,5 +109,15 @@ pub fn commit_staged(
     message: &str,
 ) -> super::ScResult<CommitInfo> {
     repo.commit_staged_in_repo(selector, message)
+        .map_err(|e| errors::map_repo_error(ScOp::Commit, e))
+}
+
+pub fn commit_staged_with_git_bridge(
+    repo: &dyn SourceControlApi,
+    selector: &RepoSelector,
+    message: &str,
+    git_bridge: GitBridgeMode,
+) -> super::ScResult<CommitInfo> {
+    repo.commit_staged_in_repo_with_git_bridge(selector, message, git_bridge)
         .map_err(|e| errors::map_repo_error(ScOp::Commit, e))
 }

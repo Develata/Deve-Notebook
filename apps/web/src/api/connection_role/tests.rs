@@ -11,6 +11,9 @@ fn formats_main_runtime_summary() {
         "profile": "standard",
         "delivery": "embedded-frontend",
         "environment": "development",
+        "source_control": {
+            "git_bridge": "mirror"
+        },
         "repo_health": {
             "status": "healthy",
             "local_total": 1,
@@ -21,7 +24,7 @@ fn formats_main_runtime_summary() {
 
     assert_eq!(
         summary,
-        "main (ws:3001) | v0.0.1 | standard | embedded-frontend | development | repos:healthy (0/1)"
+        "main (ws:3001) | v0.0.1 | standard | embedded-frontend | development | repos:healthy (0/1) | git:mirror"
     );
 }
 
@@ -39,7 +42,7 @@ fn formats_proxy_runtime_summary() {
 
     assert_eq!(
         summary,
-        "proxy -> 3001 (ws:3002) | v0.0.1 | proxy | plugin-host-proxy | production | repos:unknown"
+        "proxy -> 3001 (ws:3002) | v0.0.1 | proxy | plugin-host-proxy | production | repos:unknown | git:unknown"
     );
 }
 
@@ -53,6 +56,9 @@ fn formats_degraded_repo_health() {
         "profile": "standard",
         "delivery": "embedded-frontend",
         "environment": "development",
+        "source_control": {
+            "git_bridge": "off"
+        },
         "repo_health": {
             "status": "degraded",
             "local_total": 2,
@@ -62,6 +68,7 @@ fn formats_degraded_repo_health() {
     }));
 
     assert!(summary.contains("repos:degraded (1/2)"));
+    assert!(summary.contains("git:off"));
 }
 
 #[test]

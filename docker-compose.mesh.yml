@@ -4,6 +4,7 @@
 
 services:
   peer-a:
+    image: ${DEVE_DOCKER_P2P_MESH_IMAGE:-deve-p2p-mesh-smoke:local}
     build:
       context: .
       dockerfile: Dockerfile
@@ -54,6 +55,7 @@ services:
       start_period: 10s
 
   peer-b:
+    image: ${DEVE_DOCKER_P2P_MESH_IMAGE:-deve-p2p-mesh-smoke:local}
     build:
       context: .
       dockerfile: Dockerfile

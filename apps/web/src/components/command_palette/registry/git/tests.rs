@@ -1,6 +1,6 @@
 use super::{
-    git_export_command, git_import_command, git_mirror_command, git_push_command,
-    git_repair_command, git_status_command,
+    git_bridge_mode_from_node_role, git_export_command, git_import_command, git_mirror_command,
+    git_push_command, git_repair_command, git_status_command,
 };
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -113,6 +113,11 @@ fn git_status_command_sets_cli_only_notice() {
         let command = git_status_command(Locale::En, set_show);
 
         assert!(command.availability.is_unavailable());
+        assert!(
+            command
+                .enabled_when
+                .contains("source_control.git_bridge=unknown")
+        );
         assert_cli_notice_command(command, show, notice, is_git_status_cli_notice);
     });
 }
@@ -173,4 +178,21 @@ fn git_repair_command_sets_cli_only_notice() {
             is_git_repair_cli_notice,
         );
     });
+}
+
+#[test]
+fn git_bridge_mode_is_extracted_from_node_role_summary() {
+    assert_eq!(
+        git_bridge_mode_from_node_role(
+            "main (ws:3001) | v0.0.1 | standard | repos:healthy (0/1) | git:mirror",
+        ),
+        Some("mirror")
+    );
+    assert_eq!(
+        git_bridge_mode_from_node_role(
+            "main (ws:3001) | v0.0.1 | standard | repos:healthy (0/1) | git:off",
+        ),
+        Some("off")
+    );
+    assert_eq!(git_bridge_mode_from_node_role("main | no git mode"), None);
 }

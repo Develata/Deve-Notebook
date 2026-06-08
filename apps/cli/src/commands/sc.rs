@@ -7,6 +7,7 @@
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::{Result, bail};
 use clap::Subcommand;
+use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeEntry;
@@ -62,6 +63,7 @@ pub fn commit(
     target_repo: Option<&str>,
     message: &str,
     snapshot_depth: usize,
+    git_bridge: GitBridgeMode,
 ) -> Result<()> {
     let message = message.trim();
     if message.is_empty() {
@@ -70,7 +72,8 @@ pub fn commit(
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
-        let commit = repo.commit_staged_in_local_repo(&repo_name, message)?;
+        let commit =
+            repo.commit_staged_in_local_repo_with_git_bridge(&repo_name, message, git_bridge)?;
         println!(
             "sc_commit[{repo_name}]: id={} ledger_seq={} files={}",
             commit.id, commit.ledger_seq, commit.doc_count
