@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-08`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -98,6 +98,12 @@ enabled = true
 - `peer_id`、`repo_id` 与 `ws_url` 都必须显式配置；缺失任一项必须 fail-closed。
 - `ws_url` 的 scheme 必须是 `ws://` 或 `wss://`；Docker/local smoke 可使用 loopback 或 compose service DNS，生产配置应使用受控私网或 TLS 终端。
 - connector 必须拒绝连接本机相同 `peer_id + repo_id + ws_url` 的明显 self-loop。
+- FullPeer `/ws` admission **MUST** 使用 effective `p2p.inbound_token_env` 读取入站 token
+  环境变量；不得只依赖硬编码 env 间接项。`inbound_token_env = null` 或 token 缺失时必须 fail-closed。
+- connector 必须维护 peer-local runtime state：`configured/connecting/connected/reconnecting/unauthorized/error/self_loop/disabled`、
+  attempts、handshakes、last_error_code 与已发送/已应用统计；单 peer 状态不得阻塞其他 peer。
+- `/api/node/role` 可暴露不含 token material 的只读 `p2p` 摘要：只允许 label、peer_id、repo_id、
+  state、attempt/handshake 计数、push/snapshot 计数与 last_error_code。
 
 ### 3.2 Mobile Participation
 

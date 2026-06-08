@@ -59,6 +59,13 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - 任何可执行 repair flow 都必须 fail-closed 于 remote/spectator scope、未绑定 repo、writer not ready、dirty Deve Source Control、dirty Git worktree、`.notegit` Git tracking leak 与 stale scope nonce。
 - 后台自动 Git writer 不是该 UI 的一部分；`.git` 仍只是 projection mirror，`.notegit` / ledger source-control state 仍是 authority。
 
+### 6. Git Bridge Mode
+
+- 默认 `source_control.git_bridge = "mirror"` 时，Deve commit 后仍可排队 Git mirror record，Git mirror/import/export/push 只通过显式 CLI bridge 执行。
+- `source_control.git_bridge = "off"` 时，Source Control 的 stage、commit、diff、history 与 merge 仍可用，但不会自动排队 Git mirror。
+- `off` 模式下，Git status 与 import dry-run 只能作为诊断；Git mirror/export/import apply/push 必须明确显示 disabled blocker。
+- Web Command Palette 与 Source Control UI 只展示当前 mode 与 CLI-only notice，不直接执行 Git writer。
+
 ## 非目标
 
 - 当前阶段不支持跨 repo 自动 merge。

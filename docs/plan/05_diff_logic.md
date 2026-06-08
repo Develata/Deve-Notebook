@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-30`
+- `Last Review`: `2026-06-08`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -79,6 +79,15 @@ DeveStaged
 ```
 
 - `DeveLedgerCommit` 一旦成功，不得因为 Git mirror 失败而回滚。
+- `source_control.git_bridge = "mirror"` 是兼容默认值：`DeveLedgerCommit` 成功后，
+  如果 `.git` mirror ready，则 **MAY** 排队 `GitMirrorQueued` record；后续显式
+  `deve git mirror/export/push` 仍必须经过本节 preflight。
+- `source_control.git_bridge = "off"` 表示 Deve-only / NoteGit-only 运行：stage、
+  commit、diff、history 与 merge 仍完全走 ledger authority；commit 成功后
+  **MUST NOT** 排队 Git mirror record，也不得执行 Git bridge 写操作。
+- `off` 模式下，`deve git status` 与 `deve git import` dry-run 可作为只读诊断；
+  `deve git mirror/export/import --apply/push` 必须返回结构化 disabled blocker，并提示
+  需要将 `source_control.git_bridge` 切回 `mirror`。
 - `GitMirrorOutOfSync` 必须能被 `status` / `repair` / retry 路径观测。
 - 外部 Git 操作造成的工作区变化进入 `pending_fs_ops` 或显式 `GitImportRequested`，
   不得直接修改 `CommitAnchor`、`StagedEntry` 或 ledger facts。

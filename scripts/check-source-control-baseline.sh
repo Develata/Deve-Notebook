@@ -223,6 +223,12 @@ check_contains apps/web/src/components/diff_view/cache.rs "fn diff_cache_key_is_
 check_contains apps/web/src/components/diff_view/metrics.rs "fn diff_cache_ratio_updates_from_samples()"
 check_contains apps/web/src/components/diff_view/metrics.rs "fn diff_elapsed_ms_saturates_for_clock_skew()"
 check_contains apps/web/src/components/diff_view/state/compute/helpers/tests.rs "fn diff_algorithm_label_names_are_stable()"
+check_contains apps/web/src/components/diff_view/header.rs "t::diff::cache_state_help"
+check_contains apps/web/src/components/diff_view/header.rs "t::diff::cache_ratio_help"
+check_contains apps/web/src/components/diff_view/header.rs "t::diff::compute_ms_help"
+check_contains apps/web/src/i18n/diff.rs "pub fn cache_state_help"
+check_contains apps/web/src/i18n/diff.rs "pub fn cache_ratio_help"
+check_contains apps/web/src/i18n/diff.rs "pub fn compute_ms_help"
 check_absent apps/web/src/components/diff_view '"Diff:"'
 check_absent apps/web/src/components/diff_view '"Read Only"'
 check_absent apps/web/src/components/diff_view '"Preview Diff"'
@@ -247,7 +253,7 @@ check_contains crates/core/src/protocol/server.rs "DocDiff {"
 check_contains crates/core/src/protocol/server.rs "#[serde(default)] doc_id: Option<DocId>"
 check_contains apps/cli/src/server/handlers/source_control/diff/mod.rs "workdir_diff_payload_for_target_in_local_repo"
 check_contains apps/cli/src/server/handlers/source_control/diff/remote.rs "doc_id: Some(doc_id)"
-check_contains apps/web/src/hooks/use_core/diff_session.rs "pub doc_id: Option<DocId>"
+check_contains apps/web/src/runtime/source_control_client/diff_session.rs "pub doc_id: Option<DocId>"
 check_contains apps/web/src/hooks/use_core/effects_sc_apply/tests.rs "apply_doc_diff_preserves_doc_identity"
 
 # Doc-id source-control targets are strict: exact path or rename successor only.

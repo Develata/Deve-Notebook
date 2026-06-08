@@ -96,6 +96,7 @@ check_contains apps/cli/src/commands/config/schema.rs "\"ui.sidebar_width\""
 check_contains apps/cli/src/commands/config/schema.rs "\"p2p.enabled\""
 check_contains apps/cli/src/commands/config/schema.rs "\"p2p.connect_interval_ms\""
 check_contains apps/cli/src/commands/config/schema.rs "\"p2p.inbound_token_env\""
+check_contains apps/cli/src/commands/config/schema.rs "\"source_control.git_bridge\""
 check_contains apps/cli/src/commands/config/schema.rs "\"ai.mode\""
 check_contains crates/core/src/config/schema.rs "pub struct P2pConfig"
 check_contains crates/core/src/config/schema.rs "pub struct P2pPeerConfig"
@@ -119,6 +120,7 @@ check_contains docs/plan/15_settings.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/15_settings.md 'p2p.enabled'
 check_contains docs/plan/15_settings.md 'p2p.inbound_token_env'
 check_contains docs/plan/15_settings.md 'p2p.connect_interval_ms'
+check_contains docs/plan/15_settings.md 'source_control.git_bridge'
 check_contains docs/plan/15_settings.md 'MUST NOT** 保存 token material'
 check_contains docs/plan/15_settings.md "运行模式预设: \`standard\` (默认), \`low-spec\` (低配)."
 check_absent docs/plan/15_settings.md "\`debug\` (调试)"

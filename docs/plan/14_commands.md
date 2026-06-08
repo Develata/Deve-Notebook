@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-08`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -47,6 +47,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve config set <key> <value>`: 写入受支持的 `config.toml` 键。
 *   **Optional Bridge Contract**:
     *   Git mirror 命令的 lifecycle、preflight、import/export/push blocker 与 repair 语义以 `05_diff_logic.md#git-mirror-lifecycle` 为唯一权威。
+    *   Git mirror 命令必须读取 `source_control.git_bridge`：`mirror` 保持兼容行为；`off` 下只读 status 与 import dry-run 可用，所有 Git bridge 写命令返回 disabled blocker。
     *   `deve git status`: 只读检查 Git mirror readiness 与 queue/out-of-sync summary。
     *   `deve git mirror`: 显式执行 queued/out-of-sync Git mirror records。
     *   `deve git export`: 显式导出 Deve commits 到 Git mirror。
@@ -71,6 +72,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `Git: Import Changes`: 将外部 Git/worktree 变化转成 pending/import，再进入 Deve stage/commit；该命令不得直接生成 ledger commit。
     *   `Git: Push Mirror`: 将已映射的 `.git` mirror HEAD 推送到远端；不得绕过 Deve authority。
     *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
+    *   Command Palette / Source Control UI 可展示当前 `source_control.git_bridge` mode 与 CLI-only Git bridge notice；Web surface **MUST NOT** 直接执行 Git writer。
     *   `Git:*` 文案 **MAY** 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:

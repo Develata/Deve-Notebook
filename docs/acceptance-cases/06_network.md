@@ -210,6 +210,10 @@
     - ws_send: { type: "SyncHello", peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111", vector: {}, source_proof: "signed" }
     - run: cargo test -p deve_cli ws_acceptance -- --nocapture
     - run: cargo test -p deve_cli p2p_mesh -- --nocapture
+    - run: cargo test -p deve_cli p2p_node_role_summary -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
+    - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
     - run: scripts/check-network-baseline.sh
   assertions:
     - full_peer_session_browser_flag_eq: false
@@ -217,6 +221,10 @@
     - browser_cookie_admission_not_accepted_as_full_peer: true
     - sync_hello_signature_and_repo_scope_still_required: true
     - writer_registration_not_granted_by_full_peer_admission: true
+    - api_assert: p2p_node_role_summary_omits_token_material true
+    - api_assert: full_peer_exchange_requires_sync_hello true
+    - api_assert: authenticated_self_loop_rejected true
+    - api_assert: self_loop_status_is_not_reconnecting true
 
 - case_id: NET-015
   goal: FullPeer mesh 入站远端 facts 只写 shadow repo，不自动污染本地 branch。

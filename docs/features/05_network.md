@@ -49,6 +49,7 @@
 - 多个服务端可以通过静态配置组成 P2P mesh。
 - Browser/WebLightPeer 仍然只连接当前服务端；server-to-server 同步使用 FullPeer `/ws` admission。
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
+- `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。
 - Mesh v1 不做自动发现、NAT 穿透或自动拓扑修复。
 
 ### 7. Shadow 与显式合并边界

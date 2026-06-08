@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-08`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -49,6 +49,8 @@
 | **TLS (可选)**                   |                  |                                                                     |
 | `TLS_CERT_PATH`                  | *(none)*         | PEM 证书路径. 设置后启用 HTTPS.                                     |
 | `TLS_KEY_PATH`                   | *(none)*         | PEM 私钥路径.                                                       |
+| **Source Control**               |                  |                                                                     |
+| `DEVE_SOURCE_CONTROL__GIT_BRIDGE` | `mirror`        | Git bridge 模式: `mirror` 或 `off`。                                |
 | **Paths**                        |                  |                                                                     |
 | `DEVE_DATA_DIR`                  | `~/.deve-note`   | 数据存储根目录.                                                     |
 
@@ -85,6 +87,7 @@
 | `mem_cache_mb`          | Number | `128`      | 内存缓存上限 (MB).                                      |
 | `concurrency`           | Number | `4`        | 后台任务并发数 (Compression/GC).                       |
 | `merge_strategy`        | String | `manual`   | 冲突合并策略: `manual` (用户选择) \| `auto` (自动合并)。权威语义见 `05_diff_logic.md §Conflict Resolution`。 |
+| `source_control.git_bridge` | String | `mirror` | Git bridge 模式: `mirror` 排队/执行显式 bridge；`off` 保留 Deve Source Control 并阻止 Git 写命令。 |
 | `p2p.enabled`           | Bool   | `false`    | 静态 FullPeer mesh 开关；默认关闭，启用边界见 `07_network.md#static-peer-config`。 |
 | `p2p.inbound_token_env` | String | `DEVE_P2P_INBOUND_TOKEN` | 入站 FullPeer bearer token 的环境变量名；配置只保存 env 名称，**MUST NOT** 保存 token material。 |
 | `p2p.connect_interval_ms` | Number | `5000`   | 静态 peer connector 重连间隔；实现 **MUST** 避免 busy loop。 |
@@ -147,7 +150,12 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 Settings v1 最小 UI surface：
 
 *   外观：主题偏好 `auto` / `light` / `dark`，只写浏览器本地 `deve.ui.theme`，并通过根节点主题标记提供即时反馈。
-*   编辑器：自动换行与编辑器密度只作为本地 UI 标记，不写 server-backed settings，不改变 repo 文档事实。
+*   编辑器：自动换行、编辑器密度与最大文档 tab 数只作为本地 UI 标记，不写 server-backed settings，不改变 repo 文档事实。
+    *   最大文档 tab 数 key 为 `deve.ui.max_document_tabs`，默认值 `8`，有效范围 `1..=20`。
+    *   非法值必须回退默认值；合法但越界的用户输入必须 clamp 到有效范围。
+    *   数字输入编辑过程使用 draft value；只有 blur / Enter / change 这类显式提交点才能更新
+        `MaxDocumentTabs` runtime state，避免两位数输入过程短暂触发过小上限并自动淘汰 tab。
+    *   该值只控制 UI shell tab registry 的 `DocumentTab` 自动淘汰，不持久化打开文档列表、visible tab order 或 document access order。
 *   运行诊断：可展示 embedded browser 与 Trunk fallback smoke 入口；这些入口只指向本地 runbook/script，不启动后台 writer。
 
 所有前端 UI 偏好必须通过 browser storage prefs facade 进入浏览器存储 fallback 层。
@@ -156,3 +164,5 @@ Settings v1 最小 UI surface：
 无害 UI prefs；repo identity、sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。
 `deve.ui.last_scope` 只允许保存最后打开的 `repo_name` 显示别名，用于请求 server 重新解析；不得保存
 `repo_id`、remote branch / peer id、`scope_nonce` 或任何可被当作 repo authority 的身份字段。
+AI Chat 面板可见性属于 browser-local UI pref（当前 key 为 `deve.ui.ai_chat_visible`）；Settings 隐藏 AI Chat 时只影响 Chat surface 与分界线是否渲染，
+不得关闭 Native AI provider、修改 `ai.mode`、清空聊天历史或改变 repo/document/source-control authority。
