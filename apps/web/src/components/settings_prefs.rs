@@ -4,11 +4,12 @@
 //! Browser-local Settings preferences. These values are UI hints only and must
 //! not carry repo authority, secrets, sync vectors, or business facts.
 
-use crate::storage::prefs::{read_pref, write_pref};
+use crate::storage::prefs::{read_bool_pref, read_pref, write_bool_pref, write_pref};
 
 const THEME_PREF_KEY: &str = "deve.ui.theme";
 const EDITOR_WRAP_PREF_KEY: &str = "deve.editor.word_wrap";
 const EDITOR_DENSITY_PREF_KEY: &str = "deve.editor.density";
+pub(crate) const AI_CHAT_VISIBLE_PREF_KEY: &str = "deve.ui.ai_chat_visible";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ThemePreference {
@@ -130,6 +131,14 @@ pub(super) fn apply_editor_density_preference(pref: EditorDensityPreference) {
     set_root_attr("data-deve-editor-density", pref.as_str());
 }
 
+pub(crate) fn read_ai_chat_visible_preference() -> bool {
+    read_bool_pref(AI_CHAT_VISIBLE_PREF_KEY).unwrap_or(true)
+}
+
+pub(crate) fn persist_ai_chat_visible_preference(visible: bool) {
+    let _ = write_bool_pref(AI_CHAT_VISIBLE_PREF_KEY, visible);
+}
+
 #[cfg(target_arch = "wasm32")]
 fn apply_theme_preference_to_document(pref: ThemePreference) {
     let Some(window) = web_sys::window() else {
@@ -208,5 +217,17 @@ mod tests {
             read_editor_density_preference(),
             EditorDensityPreference::Compact
         );
+    }
+
+    #[test]
+    fn ai_chat_visibility_preference_defaults_visible_and_roundtrips() {
+        remove_pref(AI_CHAT_VISIBLE_PREF_KEY);
+        assert!(read_ai_chat_visible_preference());
+
+        persist_ai_chat_visible_preference(false);
+        assert!(!read_ai_chat_visible_preference());
+
+        persist_ai_chat_visible_preference(true);
+        assert!(read_ai_chat_visible_preference());
     }
 }

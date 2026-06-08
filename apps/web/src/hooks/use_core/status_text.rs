@@ -5,9 +5,9 @@
 use crate::api::WsService;
 use leptos::prelude::{Get, Signal};
 
-use crate::runtime::document::pending::{PendingScope, pending_count_for_doc_in_scope};
 use super::state::CoreSignals;
 use super::status_summary::{SyncStatusInput, derive_sync_status};
+use crate::runtime::document::pending::{PendingScope, pending_count_for_doc_in_scope};
 
 pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal<String> {
     let status_signal_for_text = ws.status;

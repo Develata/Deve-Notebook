@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 07_network#web-ws-runtime
+//!   - 10_rendering#document-authority-bridge
+//!
 //! 回调函数导出层。
 //!
 //! 文档、杂项、同步、切换和 Source Control 回调分别在各自模块实现，

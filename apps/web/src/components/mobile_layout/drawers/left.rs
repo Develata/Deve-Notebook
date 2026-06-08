@@ -6,8 +6,8 @@
 
 use crate::components::activity_bar::SidebarView;
 use crate::components::sidebar::Sidebar;
-use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
+use crate::runtime::{document_client::DocumentClient, scope_client::ScopeClient};
 use leptos::prelude::*;
 
 use super::drawer_class;
@@ -20,7 +20,6 @@ use tabs::LeftDrawerTabs;
 
 #[component]
 pub fn LeftDrawer(
-    core: CoreState,
     active_view: ReadSignal<SidebarView>,
     set_active_view: WriteSignal<SidebarView>,
     pinned_views: ReadSignal<Vec<SidebarView>>,
@@ -31,6 +30,8 @@ pub fn LeftDrawer(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let search_control = expect_context::<crate::components::main_layout::SearchControl>();
+    let document = expect_context::<DocumentClient>();
+    let scope = expect_context::<ScopeClient>();
 
     let title = Signal::derive(move || match active_view.get() {
         SidebarView::Explorer => t::sidebar::explorer(locale.get()).to_string(),
@@ -66,14 +67,14 @@ pub fn LeftDrawer(
                     <div class="h-full overflow-y-auto">
                         <Sidebar
                             active_view=active_view
-                            docs=core.docs
-                            current_doc=core.current_doc
-                            is_readonly=core.is_spectator
+                            docs=document.docs
+                            current_doc=document.current_doc
+                            is_readonly=scope.is_spectator
                             on_select=Callback::new(move |id| {
                                 on_doc_select.run(id);
                                 on_close.run(())
                             })
-                            on_delete=core.on_doc_delete
+                            on_delete=document.on_doc_delete
                         />
                     </div>
                 </div>

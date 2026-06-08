@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-07`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -182,39 +182,42 @@ Gate policy 必须满足：
 ## 3. Dynamic Grid System
 
 ### 3.1 布局定义 (Layout Definition)
-系统采用 5 列动态网格布局。形式化定义如下：
+桌面外层采用 3 区域动态 splitter。形式化定义如下：
 
-$$ Grid = [Col_{sidebar}, Col_{diff\_old}, Col_{editor}, Col_{outline}, Col_{chat}] $$
+$$ Splitter = [Region_{sidebar}, Region_{display\_editor}, Region_{chat}] $$
 
-*   **Constraint**: $Col_{editor}$ (Col 3) 总是占据剩余空间 (`1fr`)。
+*   **Constraint**: $Region_{display\_editor}$ 由左右两条分界线共同决定；宽度可为 `0px`，但分界线不得因此消失。
+*   **Internal Surfaces**: diff old/new、editor、outline 等仍属于 `Region_{display_editor}` 内部 surface；它们不得反向改写外层 splitter 状态。
 *   **CSS Implementation**:
     ```css
     display: grid;
-    grid-template-columns: var(--w-sidebar) var(--w-diff) 1fr var(--w-outline) var(--w-chat);
+    grid-template-columns: var(--w-sidebar) var(--divider) minmax(0, 1fr) var(--divider) var(--w-chat);
     ```
 
 ### 3.2 布局可视化 (Visualization)
 
 **Main Workbench Structure**:
 
-| Layer      | Col 1 (Resizable) | Col 2 (Fixed) | Col 3 (Flex) | Col 4 (Fixed) | Col 5 (Resizable) |
-| :--------- | :---------------- | :------------ | :----------- | :------------ | :---------------- |
-| **Top**    | `[Explorer]`      | `Old.rs`      | `New.rs`     | `Outline`     | `AI Chat`         |
-| **Body**   | File Tree         | Read-Only     | Writable     | H1..H6        | Chat Log          |
-| **Resize** | `[||]` Handle     | -             | -            | -             | `[||]` Handle     |
+| Layer      | Sidebar Region | Display / Editor Region | Chat Region |
+| :--------- | :------------- | :---------------------- | :---------- |
+| **Top**    | `[Explorer]`   | Editor / Diff / Outline | `AI Chat`   |
+| **Body**   | File Tree      | Writable / Read-only surfaces | Chat Log |
+| **Resize** | right edge divider | left and right edge dividers | left edge divider |
 
 ### 3.3 组件规范 (Component Specs)
 
 *   **Primary Sidebar (Col 1)**:
-    *   **Behavior**: **MUST** 支持拖拽调整宽度 (`180px` ~ `500px`)。
+    *   **Behavior**: **MUST** 支持拖拽调整宽度，最小可折叠到 `0px`。
     *   **Persistence**: **MUST** 记住用户设置。
-*   **Right Panel (Col 5)**:
-    *   **Behavior**: **MUST** 支持拖拽调整宽度 (`240px` ~ `520px`)。
+    *   **Divider**: 宽度为 `0px` 时，Sidebar 与 Display / Editor 之间的分界线仍必须可见并可拖回。
+*   **Display / Editor Region**:
+    *   **Behavior**: **MUST** 由左右两条分界线共同调整宽度，最小可折叠到 `0px`。
+    *   **State**: 折叠只改变 UI layout size，不得清理当前文档、diff session、pending navigation 或 source-control 状态。
+*   **AI Chat Region (Right Panel)**:
+    *   **Behavior**: **MUST** 支持拖拽调整宽度，最小可折叠到 `0px`。
     *   **Persistence**: **MUST** 记住用户设置。
-*   **Outer Gutter**:
-    *   **Behavior**: **MUST** 支持拖拽调整主区域左右边距。
-    *   **Persistence**: **MUST** 记住用户设置。
-    *   **State**: 包含 `ActivityBar` (Icon Strip) 与 `SideView` (Content)。
+    *   **Divider**: 普通拖拽折叠到 `0px` 时，Chat 左侧分界线仍必须可见并可拖回。
+    *   **Settings Visibility**: Settings 隐藏 AI Chat 时，Chat 区域与 Chat 左侧分界线必须同时不渲染；该行为不得复用 `0px` 折叠状态。
 *   **Editor Area (Col 2 & 3)**:
     *   **Single Mode**: $Width(Col_2) = 0$。
     *   **Diff Mode**: $Width(Col_2) = 50\%$。

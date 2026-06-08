@@ -6,41 +6,46 @@
 //!
 //! 提供 "New Doc" 和 "Sync Now" 按钮。
 
-use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::doc_name::next_untitled_doc_name;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
-use crate::hooks::use_core::write_gate::{
-    RepoWriteSignals, repo_write_allowed_for_core_tracked, repo_write_block_tracked,
-};
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::hooks::use_core::write_gate_banner::cannot_create_document;
+use crate::hooks::use_core::{DocContext, EditorContext, SyncMergeContext};
 use crate::i18n::{Locale, t};
+use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 #[component]
 pub fn ActionsCard() -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let document = expect_context::<DocContext>();
+    let editor = expect_context::<EditorContext>();
+    let session = expect_context::<SessionClient>();
+    let sync = expect_context::<SyncMergeContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let core_for_create = core.clone();
-    let core_for_disabled = core.clone();
+    let document_for_create = document.clone();
+    let editor_for_create = editor.clone();
+    let session_for_create = session.clone();
+    let editor_for_disabled = editor.clone();
+    let session_for_disabled = session.clone();
 
     let on_new_doc = move |_| {
-        if let Some(reason) = create_block_reason(&core_for_create) {
+        if let Some(reason) = create_block_reason(&session_for_create, &editor_for_create) {
             let message = cannot_create_document(reason);
-            warn_sync_banner(core_for_create.set_sync_banner, message);
+            warn_sync_banner(session_for_create.set_sync_banner, message);
             return;
         }
         let name = next_untitled_doc_name(
-            core_for_create
+            document_for_create
                 .docs
                 .get_untracked()
                 .iter()
                 .map(|(_, path)| path.as_str()),
         );
-        core_for_create.on_doc_create.run(name);
+        document_for_create.on_doc_create.run(name);
     };
 
     let on_sync = move |_| {
-        core.on_get_sync_mode.run(());
+        sync.on_get_sync_mode.run(());
     };
 
     view! {
@@ -53,7 +58,7 @@ pub fn ActionsCard() -> impl IntoView {
                 <button
                     class="flex-1 px-3 py-2 text-xs font-medium rounded-md \
                            bg-accent text-on-accent hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled=move || !repo_write_allowed_for_core_tracked(&core_for_disabled)
+                    disabled=move || create_block_reason(&session_for_disabled, &editor_for_disabled).is_some()
                     on:click=on_new_doc
                 >
                     {move || t::dashboard::new_doc(locale.get())}
@@ -70,18 +75,18 @@ pub fn ActionsCard() -> impl IntoView {
     }
 }
 
-fn create_block_reason(core: &CoreState) -> Option<&'static str> {
+fn create_block_reason(session: &SessionClient, editor: &EditorContext) -> Option<&'static str> {
     repo_write_block_tracked(
-        &core.ws,
+        &session.ws,
         RepoWriteSignals {
-            load_state: core.load_state,
-            is_spectator: core.is_spectator,
-            handshake_ready: core.handshake_ready,
-            current_repo_id: core.current_repo_id,
-            current_scope_nonce: core.current_scope_nonce,
-            active_branch: core.active_branch,
-            pending_branch_switch: core.pending_branch_switch,
-            pending_repo_switch: core.pending_repo_switch,
+            load_state: editor.load_state,
+            is_spectator: editor.is_spectator,
+            handshake_ready: editor.handshake_ready,
+            current_repo_id: editor.current_repo_id,
+            current_scope_nonce: editor.current_scope_nonce,
+            active_branch: editor.active_branch,
+            pending_branch_switch: editor.pending_branch_switch,
+            pending_repo_switch: editor.pending_repo_switch,
         },
     )
     .map(|block| block.label())

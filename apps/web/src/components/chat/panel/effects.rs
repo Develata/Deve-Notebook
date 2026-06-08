@@ -2,22 +2,24 @@
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!   - 07_network#web-ws-runtime
 //!
-use crate::hooks::use_core::{ChatMessage, CoreState};
+use crate::hooks::use_core::{ChatContext, ChatMessage, EditorContext};
+use crate::runtime::scope_client::ScopeClient;
 use deve_core::protocol::ServerErrorCode;
 use leptos::prelude::*;
 
 pub fn attach_scope_reset_effect(
-    core: CoreState,
+    scope: ScopeClient,
+    editor: EditorContext,
     set_pending_reqs: WriteSignal<Vec<String>>,
     set_error_code: WriteSignal<Option<ServerErrorCode>>,
     set_last_prompt: WriteSignal<String>,
 ) {
     Effect::new(move |_| {
         let _ = (
-            core.current_repo.get(),
-            core.active_branch.get(),
-            core.pending_repo_switch.get(),
-            core.pending_branch_switch.get(),
+            scope.current_repo.get(),
+            editor.active_branch.get(),
+            editor.pending_repo_switch.get(),
+            editor.pending_branch_switch.get(),
         );
         set_pending_reqs.set(Vec::new());
         set_error_code.set(None);
@@ -26,14 +28,14 @@ pub fn attach_scope_reset_effect(
 }
 
 pub fn attach_plugin_response_effect(
-    core: CoreState,
+    chat: ChatContext,
     pending_reqs: ReadSignal<Vec<String>>,
     set_pending_reqs: WriteSignal<Vec<String>>,
     set_error_code: WriteSignal<Option<ServerErrorCode>>,
 ) {
     let (last_handled_req, set_last_handled_req) = signal(None::<String>);
     Effect::new(move |_| {
-        let Some((req_id, _result, error)) = core.plugin_last_response.get() else {
+        let Some((req_id, _result, error)) = chat.plugin_last_response.get() else {
             return;
         };
         if last_handled_req.get_untracked().as_deref() == Some(req_id.as_str()) {
@@ -42,7 +44,7 @@ pub fn attach_plugin_response_effect(
         let matched = chat_response_matches_panel(
             &req_id,
             &pending_reqs.get_untracked(),
-            &core.chat_messages.get(),
+            &chat.messages.get(),
         );
         if !matched {
             return;

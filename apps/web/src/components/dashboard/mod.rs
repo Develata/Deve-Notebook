@@ -16,9 +16,11 @@ mod storage_card;
 mod sync_card;
 
 use crate::api::ConnectionStatus;
-use crate::hooks::use_core::CoreState;
 use crate::hooks::use_core::DashboardContext;
 use crate::i18n::{Locale, t};
+use crate::runtime::{
+    document_client::DocumentClient, scope_client::ScopeClient, session_client::SessionClient,
+};
 use leptos::prelude::*;
 
 use self::actions_card::ActionsCard;
@@ -30,16 +32,19 @@ use self::sync_card::SyncCard;
 #[component]
 pub fn Dashboard() -> impl IntoView {
     let ctx = expect_context::<DashboardContext>();
-    let core = expect_context::<CoreState>();
+    let session = expect_context::<SessionClient>();
+    let scope = expect_context::<ScopeClient>();
+    let document = expect_context::<DocumentClient>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let ws_status = core.ws.status;
-    let runtime_summary = core.ws.node_role;
+    let ws_status = session.connection_status;
+    let runtime_summary = session.ws.node_role;
     let repo_name = Signal::derive(move || {
-        core.current_repo
+        scope
+            .current_repo
             .get()
             .unwrap_or_else(|| t::dashboard::no_repo_selected(locale.get()).to_string())
     });
-    let doc_count = Signal::derive(move || core.docs.get().len());
+    let doc_count = Signal::derive(move || document.docs.get().len());
     let metrics_state = Signal::derive(move || {
         dashboard_metrics_state(
             ctx.metrics.get().is_some(),

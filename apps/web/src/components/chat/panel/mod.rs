@@ -12,8 +12,11 @@ use crate::components::chat::header::ChatHeader;
 use crate::components::chat::input_area::InputArea;
 use crate::components::chat::message_list::MessageList;
 use crate::components::chat::slash_commands::ChatSessionMode;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::{ChatContext, EditorContext};
 use crate::i18n::Locale;
+use crate::runtime::{
+    document_client::DocumentClient, scope_client::ScopeClient, session_client::SessionClient,
+};
 use deve_core::protocol::ServerErrorCode;
 use leptos::prelude::*;
 
@@ -30,7 +33,11 @@ pub(crate) fn chat_retry_prompt(last_prompt: &str) -> Option<String> {
 
 #[component]
 pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl IntoView {
-    let core = expect_context::<CoreState>();
+    let chat = expect_context::<ChatContext>();
+    let document = expect_context::<DocumentClient>();
+    let editor = expect_context::<EditorContext>();
+    let scope = expect_context::<ScopeClient>();
+    let session = expect_context::<SessionClient>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (input, set_input) = signal(String::new());
     let (is_drag_over, set_is_drag_over) = signal(false);
@@ -39,8 +46,8 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     let (pending_reqs, set_pending_reqs) = signal(Vec::<String>::new());
     let (session_mode, set_session_mode) = signal(ChatSessionMode::Plan);
 
-    let messages = core.chat_messages;
-    let is_streaming = core.is_chat_streaming;
+    let messages = chat.messages;
+    let is_streaming = chat.is_streaming;
 
     let on_req_id = Callback::new(move |req_id: String| {
         set_error_code.set(None);
@@ -49,7 +56,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     let on_user_text = Callback::new(move |msg: String| {
         set_last_prompt.set(msg);
     });
-    let mode_core = core.clone();
+    let mode_chat = chat.clone();
     let on_mode_change = Callback::new(move |mode: ChatSessionMode| {
         let content = match mode {
             ChatSessionMode::Plan => crate::i18n::t::chat::switched_to_plan(locale.get_untracked()),
@@ -57,11 +64,14 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
                 crate::i18n::t::chat::switched_to_build(locale.get_untracked())
             }
         };
-        mode_core.append_chat_message("assistant", content, None);
+        append_chat_message(&mode_chat, "assistant", content.to_string(), None);
     });
 
     let send_text = make_send_text(
-        core.clone(),
+        crate::components::chat::actions::ChatSendRuntime {
+            chat: chat.clone(),
+            document: document.clone(),
+        },
         is_streaming,
         session_mode,
         set_session_mode,
@@ -71,7 +81,10 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     );
     let send_message = make_send_message(input, set_input, is_streaming, send_text.clone());
     let send_example = make_send_example(send_text.clone(), set_input);
-    let on_apply = make_on_apply(core.clone());
+    let on_apply = make_on_apply(crate::components::chat::actions::ChatApplyRuntime {
+        session: session.clone(),
+        editor: editor.clone(),
+    });
     let retry = Callback::new(move |_| {
         if let Some(prompt) = chat_retry_prompt(&last_prompt.get_untracked()) {
             send_text.run(prompt);
@@ -79,12 +92,13 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
     });
 
     attach_scope_reset_effect(
-        core.clone(),
+        scope,
+        editor,
         set_pending_reqs,
         set_error_code,
         set_last_prompt,
     );
-    attach_plugin_response_effect(core.clone(), pending_reqs, set_pending_reqs, set_error_code);
+    attach_plugin_response_effect(chat.clone(), pending_reqs, set_pending_reqs, set_error_code);
 
     let loading = Signal::derive(move || is_streaming.get() || !pending_reqs.get().is_empty());
 
@@ -97,7 +111,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             }
             on:dragover=on_drag_over(set_is_drag_over)
             on:dragleave=on_drag_leave(set_is_drag_over)
-            on:drop=on_drop(set_input, set_is_drag_over, core.set_sync_banner)
+            on:drop=on_drop(set_input, set_is_drag_over, session.set_sync_banner)
         >
             <DragOverlay is_drag_over=is_drag_over />
             <ChatHeader mobile=mobile on_close=on_close session_mode=session_mode />
@@ -120,6 +134,17 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             />
         </div>
     }
+}
+
+fn append_chat_message(chat: &ChatContext, role: &str, content: String, req_id: Option<String>) {
+    chat.set_messages.update(|msgs| {
+        msgs.push(crate::hooks::use_core::ChatMessage {
+            role: role.to_string(),
+            content,
+            req_id,
+            ts_ms: js_sys::Date::now() as u64,
+        });
+    });
 }
 
 #[cfg(test)]

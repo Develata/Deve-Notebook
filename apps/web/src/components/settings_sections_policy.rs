@@ -132,6 +132,19 @@ fn preference_button_class(active: bool) -> &'static str {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct AiChatVisibilityButtonState {
+    pub show_class: &'static str,
+    pub hide_class: &'static str,
+}
+
+pub(super) fn ai_chat_visibility_button_state(visible: bool) -> AiChatVisibilityButtonState {
+    AiChatVisibilityButtonState {
+        show_class: preference_button_class(visible),
+        hide_class: preference_button_class(!visible),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AiBackendButtonState {
     pub native_class: &'static str,
     pub native_disabled: bool,

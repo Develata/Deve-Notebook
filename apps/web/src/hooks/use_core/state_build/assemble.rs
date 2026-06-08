@@ -3,6 +3,11 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::runtime::{
+    CoreRuntimeClients, document_client::DocumentClient, rendering_client::RenderingClient,
+    scope_client::ScopeClient, session_client::SessionClient,
+    source_control_client::SourceControlClient,
+};
 use leptos::prelude::{Callback, Set, Update, WriteSignal};
 
 use super::super::CoreState;
@@ -31,9 +36,88 @@ pub(super) fn assemble_core_state(
             set_tree_request_id: sync.set_tree_request_id,
         },
     );
+    let runtime_clients = CoreRuntimeClients {
+        session: SessionClient {
+            ws: ws.clone(),
+            connection_status: ws.status,
+            status_text: runtime.status_text,
+            sync_banner: runtime.sync_banner,
+            set_sync_banner: runtime.set_sync_banner,
+            handshake_ready: sync.handshake_ready,
+            handshake_scope_nonce: sync.handshake_scope_nonce,
+            on_retry_peer_registration: on_retry_peer_registration.clone(),
+        },
+        scope: ScopeClient {
+            current_doc: doc.current_doc,
+            current_repo: sync.current_repo,
+            current_repo_id: sync.current_repo_id,
+            current_scope_nonce: sync.current_scope_nonce,
+            active_branch: sync.active_branch,
+            set_active_branch: sync.set_active_branch,
+            pending_repo_switch: sync.pending_repo_switch,
+            on_switch_repo: switch.on_switch_repo.clone(),
+            on_switch_branch: switch.on_switch_branch.clone(),
+            set_current_repo: sync.set_current_repo,
+            set_current_repo_id: sync.set_current_repo_id,
+            shadow_repos: sync.shadow_repos,
+            on_list_shadows: sync.on_list_shadows,
+            repo_list: sync.repo_list,
+            is_spectator: sync.is_spectator,
+        },
+        document: DocumentClient {
+            docs: doc.docs,
+            current_doc: doc.current_doc,
+            set_current_doc: doc.set_current_doc,
+            set_explicit_home: doc.set_explicit_home,
+            pending_local_edits: doc.pending_local_edits,
+            set_pending_local_edits: doc.set_pending_local_edits,
+            on_doc_select: doc.on_doc_select.clone(),
+            on_doc_create: doc.on_doc_create.clone(),
+            on_doc_rename: doc.on_doc_rename.clone(),
+            on_doc_delete: doc.on_doc_delete.clone(),
+            on_doc_copy: doc.on_doc_copy.clone(),
+            on_doc_move: doc.on_doc_move.clone(),
+            tree_nodes: doc.tree_nodes,
+        },
+        source_control: SourceControlClient {
+            staged_changes: sc.staged_changes,
+            unstaged_changes: sc.unstaged_changes,
+            commit_history: sc.commit_history,
+            commit_history_request_id: sc.commit_history_request_id,
+            commit_diff_request_id: sc.commit_diff_request_id,
+            set_commit_diff_request_id: sc.set_commit_diff_request_id,
+            on_get_changes: sc.on_get_changes.clone(),
+            on_stage_file: sc.on_stage_file.clone(),
+            on_stage_files: sc.on_stage_files.clone(),
+            on_unstage_file: sc.on_unstage_file.clone(),
+            on_unstage_files: sc.on_unstage_files.clone(),
+            on_discard_file: sc.on_discard_file.clone(),
+            on_commit: sc.on_commit.clone(),
+            on_get_history: sc.on_get_history.clone(),
+            diff_content: sc.diff_content,
+            set_diff_content: sc.set_diff_content,
+            on_get_doc_diff: sc.on_get_doc_diff.clone(),
+            commit_diff_result: sc.commit_diff_result,
+            set_commit_diff_result: sc.set_commit_diff_result,
+            on_resolve_conflict: sc.on_resolve_conflict.clone(),
+            on_get_commit_diff: sc.on_get_commit_diff.clone(),
+            on_commit_and_push: sc.on_commit_and_push.clone(),
+        },
+        rendering: RenderingClient {
+            stats: runtime.stats,
+            on_stats: runtime.on_stats.clone(),
+            load_state: runtime.load_state,
+            set_load_state: runtime.set_load_state,
+            load_progress: runtime.load_progress,
+            set_load_progress: runtime.set_load_progress,
+            load_eta_ms: runtime.load_eta_ms,
+            set_load_eta_ms: runtime.set_load_eta_ms,
+        },
+    };
 
     CoreState {
         ws,
+        runtime_clients,
         docs: doc.docs,
         current_doc: doc.current_doc,
         set_current_doc: doc.set_current_doc,

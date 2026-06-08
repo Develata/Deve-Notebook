@@ -11,6 +11,7 @@ pub mod types;
 mod effects;
 mod file_ops;
 mod logic;
+mod runtime;
 mod score;
 mod sheet_gesture;
 mod ui;
@@ -18,8 +19,9 @@ mod ui_footer;
 mod ui_sections;
 mod ui_sheet;
 
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::{BranchContext, DocContext, EditorContext};
 use crate::i18n::Locale;
+use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -42,7 +44,12 @@ pub fn UnifiedSearch(
     on_open: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let core = use_context::<CoreState>().expect("CoreState context");
+    let runtime = runtime::SearchRuntime {
+        session: expect_context::<SessionClient>(),
+        document: expect_context::<DocContext>(),
+        editor: expect_context::<EditorContext>(),
+        branch: expect_context::<BranchContext>(),
+    };
 
     let (query, set_query) = signal(String::new());
     let (selected_index, set_selected_index) = signal(0);
@@ -77,7 +84,7 @@ pub fn UnifiedSearch(
     }
 
     {
-        let core_search = core.clone();
+        let runtime_search = runtime.clone();
         let last_full_text_query: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
         Effect::new(move |_| {
             if !show.get() {
@@ -98,7 +105,7 @@ pub fn UnifiedSearch(
                 return;
             }
             *last_full_text_query.borrow_mut() = Some(search_query.clone());
-            core_search.on_search.run(search_query);
+            runtime_search.document.on_search.run(search_query);
         });
     }
 
@@ -107,7 +114,7 @@ pub fn UnifiedSearch(
         show,
         query: debounced_query.into(),
         locale,
-        core: core.clone(),
+        runtime: runtime.clone(),
         recent_move_dirs: recent_move_dirs.into(),
         on_settings,
         on_open,
@@ -130,7 +137,7 @@ pub fn UnifiedSearch(
             active_index: active_index.clone(),
             input_ref,
             set_show,
-            core: core.clone(),
+            runtime: runtime.clone(),
             set_recent_move_dirs,
         },
     ));
@@ -150,7 +157,7 @@ pub fn UnifiedSearch(
         set_selected_index,
         active_index: active_index.clone(),
         input_ref,
-        core,
+        runtime,
         locale,
         set_recent_move_dirs,
         ui_mode,

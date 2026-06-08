@@ -11,8 +11,9 @@
 use super::footer_details::FooterDetails;
 use super::footer_summary::FooterSummaryRow;
 use crate::editor::EditorStats;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::EditorContext;
 use crate::i18n::Locale;
+use crate::runtime::{document_client::DocumentClient, rendering_client::RenderingClient};
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
@@ -29,13 +30,16 @@ pub(super) fn bottom_bar_after_outside_click(_expanded: bool) -> bool {
 }
 
 #[component]
-pub fn MobileFooter(core: CoreState) -> impl IntoView {
+pub fn MobileFooter() -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let max_ver = core.doc_version;
-    let curr_ver = core.playback_version;
-    let set_ver = core.set_playback_version;
-    let current_doc = core.current_doc;
-    let stats = core.stats;
+    let document = expect_context::<DocumentClient>();
+    let editor = expect_context::<EditorContext>();
+    let rendering = expect_context::<RenderingClient>();
+    let max_ver = editor.doc_version;
+    let curr_ver = editor.playback_version;
+    let set_ver = editor.set_playback_version;
+    let current_doc = document.current_doc;
+    let stats = rendering.stats;
     let (is_narrow, set_is_narrow) = signal(false);
     let (expanded, set_expanded) = signal(false);
     let displayed_stats = Signal::derive(move || {
@@ -106,7 +110,6 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
             style="padding-bottom: env(safe-area-inset-bottom);"
         >
             <FooterSummaryRow
-                core=core.clone()
                 locale=locale
                 is_narrow=is_narrow
                 expanded=expanded
@@ -116,9 +119,9 @@ pub fn MobileFooter(core: CoreState) -> impl IntoView {
 
             <Show when=move || expanded.get()>
                 <FooterDetails
-                    load_state=core.load_state
-                    load_progress=core.load_progress
-                    load_eta_ms=core.load_eta_ms
+                    load_state=rendering.load_state
+                    load_progress=rendering.load_progress
+                    load_eta_ms=rendering.load_eta_ms
                     is_narrow=is_narrow
                     locale=locale
                     displayed_curr_ver=displayed_curr_ver

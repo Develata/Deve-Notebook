@@ -54,7 +54,8 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 - `ledger/` 保存权威 repo facts。
 - `ledger/.host/projection-locators.toml` 保存 host-local
   `RepoId -> projection_base` 绑定。
-- `<projection_base>/<repo_name>/` 保存单个本地 repo 的用户可见 Markdown projection。
+- `<projection_base>/<safe_repo_name>--<repo_id>/` 保存单个本地 repo 的用户可见
+  Markdown projection；repo 名称只是显示别名，`RepoId` 才是权威身份。
 - 文件系统变化先进入 `pending_fs_ops`；只有显式 stage/commit 才会追加 ledger facts。
 - `.notegit/` 是 Deve 拥有的 repo runtime state。
 - `.git/` 只是 Git ecosystem mirror bridge。

@@ -3,14 +3,14 @@
 //!   - 11_ui_design/03_mobile#mobile-current-native-boundary
 //!
 use crate::components::layout_context::EditorContentContext;
-use crate::hooks::use_core::CoreState;
+use crate::runtime::document_client::DocumentClient;
 use leptos::prelude::*;
 
-pub(super) fn build_mobile_title(core: CoreState) -> Memo<String> {
+pub(super) fn build_mobile_title(document: DocumentClient) -> Memo<String> {
     Memo::new(move |_| {
-        let current = core.current_doc.get();
+        let current = document.current_doc.get();
         if let Some(id) = current {
-            let docs = core.docs.get();
+            let docs = document.docs.get();
             if let Some((_, path)) = docs.iter().find(|(doc_id, _)| *doc_id == id) {
                 return path.clone();
             }

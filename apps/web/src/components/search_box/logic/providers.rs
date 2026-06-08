@@ -7,8 +7,8 @@ use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::{
     self, CommandProvider, FileProvider, LOCAL_BRANCH_LABEL,
 };
+use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
-use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -58,7 +58,7 @@ pub struct SearchResultsMemoInput {
     pub show: Signal<bool>,
     pub query: Signal<String>,
     pub locale: RwSignal<Locale>,
-    pub core: CoreState,
+    pub runtime: SearchRuntime,
     pub recent_move_dirs: Signal<Vec<String>>,
     pub on_settings: Callback<()>,
     pub on_open: Callback<()>,
@@ -70,7 +70,7 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
         show,
         query,
         locale,
-        core,
+        runtime,
         recent_move_dirs,
         on_settings,
         on_open,
@@ -81,7 +81,7 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
             return Vec::new();
         }
         let q = query.get();
-        let docs = core.docs.get();
+        let docs = runtime.document.docs.get();
         let now_locale = locale.get();
 
         match search_surface_mode(&q) {
@@ -98,17 +98,22 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
                 CommandProvider::new(cmds, now_locale).search(&q)
             }
             SearchSurfaceMode::Branch => {
-                let current = core
+                let current = runtime
+                    .branch
                     .active_branch
                     .get()
                     .map(|p| p.to_string())
                     .or(Some(LOCAL_BRANCH_LABEL.to_string()));
-                providers::BranchProvider::new(core.shadow_repos.get(), current, now_locale)
-                    .search(&q)
+                providers::BranchProvider::new(
+                    runtime.branch.shadow_repos.get(),
+                    current,
+                    now_locale,
+                )
+                .search(&q)
             }
             SearchSurfaceMode::FullText => {
                 let stripped = q.strip_prefix('?').unwrap_or_default();
-                full_text_results(stripped, core.search_results.get(), now_locale)
+                full_text_results(stripped, runtime.document.search_results.get(), now_locale)
             }
             SearchSurfaceMode::CreateFile => {
                 let path = q.strip_prefix('+').unwrap_or_default().trim();

@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_repository#repo-runtime-layout
+//!   - 05_diff_logic#git-ecosystem-coexistence
+//!
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use std::path::PathBuf;

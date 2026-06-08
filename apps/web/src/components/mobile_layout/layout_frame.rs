@@ -13,10 +13,16 @@ use super::outline_button::OutlineToggleButton;
 use super::surface_switcher::MobileSurfaceSwitcher;
 use super::toolbar::MobileAccessoryToolbar;
 use crate::components::activity_bar::SidebarView;
-use crate::components::editor_tabs::{create_current_editor_doc, create_editor_tab_runtime};
-use crate::hooks::use_core::CoreState;
-use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
+use crate::components::editor_tabs::{
+    EditorTabRuntimeInputs, create_current_editor_doc, create_editor_tab_runtime,
+};
+use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::i18n::Locale;
+use crate::runtime::{
+    document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
+    session_client::SessionClient, source_control_client::SourceControlClient,
+};
 use leptos::ev::TouchEvent;
 use leptos::prelude::*;
 
@@ -46,7 +52,6 @@ pub(crate) fn mobile_accessory_toolbar_visible(
 
 #[component]
 pub fn MobileLayoutFrame(
-    core: CoreState,
     locale: RwSignal<Locale>,
     title: Memo<String>,
     active_view: ReadSignal<SidebarView>,
@@ -67,18 +72,29 @@ pub fn MobileLayoutFrame(
     on_logout: Callback<()>,
     on_doc_select: Callback<deve_core::models::DocId>,
     on_close_drawers: Callback<()>,
-    banner_toggle: CoreState,
-    banner_text: CoreState,
     content_signal: Option<ReadSignal<String>>,
     on_touch_start: Callback<TouchEvent>,
     on_touch_end: Callback<TouchEvent>,
     on_touch_cancel: Callback<()>,
 ) -> impl IntoView {
-    let current_doc = core.current_doc;
-    let diff_content = core.diff_content;
-    let toolbar_core = core.clone();
-    let current_editor_doc = create_current_editor_doc(&core);
-    let tabs = create_editor_tab_runtime(&core, current_editor_doc);
+    let document = expect_context::<DocumentClient>();
+    let editor = expect_context::<EditorContext>();
+    let source_control = expect_context::<SourceControlClient>();
+    let scope = expect_context::<ScopeClient>();
+    let session = expect_context::<SessionClient>();
+    let rendering = expect_context::<RenderingClient>();
+    let current_doc = document.current_doc;
+    let diff_content = source_control.diff_content;
+    let current_editor_doc = create_current_editor_doc(&document, &editor);
+    let tabs = create_editor_tab_runtime(
+        EditorTabRuntimeInputs {
+            document: document.clone(),
+            editor: editor.clone(),
+            scope: scope.clone(),
+            source_control: source_control.clone(),
+        },
+        current_editor_doc,
+    );
     let (surface_switcher_open, set_surface_switcher_open) = signal(false);
 
     view! {
@@ -102,7 +118,7 @@ pub fn MobileLayoutFrame(
                 on_logout=on_logout
             />
 
-            <MobileSyncBanner banner_toggle=banner_toggle banner_text=banner_text />
+            <MobileSyncBanner />
 
             <MobileSurfaceSwitcher
                 doc_tabs=tabs.doc_tabs
@@ -118,7 +134,6 @@ pub fn MobileLayoutFrame(
             />
 
             <MobileContent
-                core=core.clone()
                 drawer_open=drawer_open
                 current_editor_doc=current_editor_doc
             />
@@ -135,7 +150,6 @@ pub fn MobileLayoutFrame(
             <MobileDrawerBackdrop drawer_open=drawer_open on_close=on_close_drawers />
 
             <MobileDrawers
-                core=core.clone()
                 active_view=active_view
                 set_active_view=set_active_view
                 pinned_views=pinned_views
@@ -149,7 +163,22 @@ pub fn MobileLayoutFrame(
 
             <MobileAccessoryToolbar
                 keyboard_offset=keyboard_offset
-                readonly=Signal::derive(move || !repo_write_allowed_for_core_tracked(&toolbar_core))
+                readonly=Signal::derive(move || {
+                    repo_write_block_tracked(
+                        &session.ws,
+                        RepoWriteSignals {
+                            load_state: rendering.load_state,
+                            is_spectator: scope.is_spectator,
+                            handshake_ready: session.handshake_ready,
+                            current_repo_id: scope.current_repo_id,
+                            current_scope_nonce: scope.current_scope_nonce,
+                            active_branch: scope.active_branch,
+                            pending_branch_switch: editor.pending_branch_switch,
+                            pending_repo_switch: scope.pending_repo_switch,
+                        },
+                    )
+                    .is_some()
+                })
                 visible=Signal::derive(move || {
                     mobile_accessory_toolbar_visible(
                         current_doc.get().is_some(),
@@ -178,7 +207,7 @@ pub fn MobileLayoutFrame(
                     surface_switcher_open.get(),
                 )
             }>
-                <MobileFooter core=core.clone() />
+                <MobileFooter />
             </Show>
         </div>
     }

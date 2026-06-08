@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-07`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -72,6 +72,8 @@
 
 - `SidebarWidth`
 - `RightPanelWidth`
+- `DisplayEditorWidth`
+- `AiChatVisibility`
 - `OuterGutterWidth`
 - `ActivityBarPinState`
 - `FocusedSurface`
@@ -390,6 +392,7 @@ PinnedSetChanged
   - theme
   - sidebar visibility
   - widths
+  - AI Chat panel visibility
   - language
   - recent active view
 - `deve_config` MUST NOT 持有：
@@ -405,7 +408,9 @@ PinnedSetChanged
 - 所有 layout 持久化都属于 `deve_config` / local UI prefs。
 - localStorage 中只允许保存：
   - 侧栏宽度
+  - 中间显示/编辑区宽度
   - 面板宽度
+  - AI Chat 面板可见性
   - 主题
   - 最近活动 view
   - 语言

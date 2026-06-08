@@ -6,8 +6,8 @@ use leptos::prelude::*;
 use std::collections::HashMap;
 
 use super::super::super::navigation::PendingNavigation;
-use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::super::types::PeerSession;
+use crate::runtime::document::pending::PendingLocalEdits;
 
 #[derive(Clone, Copy)]
 pub(super) struct ConnectionRuntimeSignals {

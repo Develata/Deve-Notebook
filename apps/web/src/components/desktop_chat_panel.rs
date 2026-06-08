@@ -14,7 +14,7 @@ use wasm_bindgen::JsCast;
 #[component]
 pub fn DesktopChatPanel(
     chat_visible: ReadSignal<bool>,
-    right_width: ReadSignal<i32>,
+    right_width: Signal<i32>,
     start_resize_right: Callback<web_sys::PointerEvent>,
 ) -> impl IntoView {
     move || {
@@ -22,8 +22,9 @@ pub fn DesktopChatPanel(
             return view! {}.into_any();
         }
         view! {
-            <div class="flex items-stretch ml-4">
+            <div class="contents" data-deve-desktop-chat-region="visible">
                 <div
+                    data-deve-desktop-resizer="right-divider"
                     class="resizer-handle w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
                     on:pointerdown=move |ev| {
                         if let Some(target) = ev.target()
@@ -38,8 +39,16 @@ pub fn DesktopChatPanel(
                 </div>
                 <div
                     data-deve-desktop-col="5-chat"
-                    class="flex-none bg-panel shadow-sm border border-default rounded-lg overflow-hidden flex flex-col"
-                    style=move || format!("width: {}px", right_width.get())
+                    data-deve-desktop-col-width=move || right_width.get().to_string()
+                    aria-hidden=move || (right_width.get() == 0).to_string()
+                    class="min-w-0 bg-panel shadow-sm border border-default rounded-lg overflow-hidden flex flex-col"
+                    style=move || {
+                        if right_width.get() == 0 {
+                            "visibility: hidden; pointer-events: none;".to_string()
+                        } else {
+                            String::new()
+                        }
+                    }
                 >
                     <ChatPanel on_close=Callback::new(move |_| ()) />
                 </div>

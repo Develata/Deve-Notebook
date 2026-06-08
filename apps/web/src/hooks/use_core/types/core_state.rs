@@ -4,6 +4,7 @@
 //!
 use crate::api::WsService;
 use crate::editor::EditorStats;
+use crate::runtime::CoreRuntimeClients;
 use deve_core::models::{DocId, PeerId};
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 use deve_core::tree::FileNode;
@@ -12,14 +13,15 @@ use std::collections::HashMap;
 
 use super::super::diff_session::DiffSessionWire;
 use super::super::navigation::PendingNavigation;
-use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::PluginResponse;
 use super::shared::{ChatMessage, PeerSession, PendingBranchTarget};
+use crate::runtime::document::pending::PendingLocalEdits;
 
 #[derive(Clone)]
 pub struct CoreState {
     pub ws: WsService,
+    pub runtime_clients: CoreRuntimeClients,
     pub docs: ReadSignal<Vec<(DocId, String)>>,
     pub current_doc: ReadSignal<Option<DocId>>,
     pub set_current_doc: WriteSignal<Option<DocId>>,

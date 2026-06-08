@@ -13,8 +13,9 @@ mod time_travel;
 
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::editor::EditorStats;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::EditorContext;
 use crate::i18n::Locale;
+use crate::runtime::{document_client::DocumentClient, rendering_client::RenderingClient};
 use leptos::prelude::*;
 
 use self::stats::BottomBarStats;
@@ -22,16 +23,19 @@ use self::status::BottomBarStatus;
 use self::time_travel::BottomBarTimeTravel;
 
 #[component]
-pub fn BottomBar(core: CoreState) -> impl IntoView {
+pub fn BottomBar() -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let stats = core.stats;
-    let max_ver = core.doc_version;
-    let curr_ver = core.playback_version;
-    let set_ver = core.set_playback_version;
-    let current_doc = core.current_doc;
-    let load_state = core.load_state;
-    let load_progress = core.load_progress;
-    let load_eta_ms = core.load_eta_ms;
+    let rendering = expect_context::<RenderingClient>();
+    let editor = expect_context::<EditorContext>();
+    let document = expect_context::<DocumentClient>();
+    let stats = rendering.stats;
+    let max_ver = editor.doc_version;
+    let curr_ver = editor.playback_version;
+    let set_ver = editor.set_playback_version;
+    let current_doc = document.current_doc;
+    let load_state = rendering.load_state;
+    let load_progress = rendering.load_progress;
+    let load_eta_ms = rendering.load_eta_ms;
     let displayed_stats = Signal::derive(move || {
         if current_doc.get().is_some() {
             stats.get()
@@ -59,7 +63,7 @@ pub fn BottomBar(core: CoreState) -> impl IntoView {
             <div class="flex items-center gap-3">
                 <BranchSwitcher />
                 <div class="w-px h-4 bg-active"></div>
-                <BottomBarStatus core=core.clone() locale />
+                <BottomBarStatus locale />
             </div>
 
             <BottomBarTimeTravel

@@ -8,9 +8,13 @@ use super::policy::{active_editor_tab_key, scope_changed, should_clear_diff_on_d
 use super::{
     EditorDiffTab, EditorDocumentTab, EditorTabKey, diff_tab_from_session, document_tab_from_docs,
 };
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
+use crate::runtime::{
+    document_client::DocumentClient, scope_client::ScopeClient,
+    source_control_client::SourceControlClient,
+};
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
@@ -24,10 +28,21 @@ pub(crate) struct EditorTabRuntime {
     pub on_close_diff: Callback<String>,
 }
 
-pub(crate) fn create_current_editor_doc(core: &CoreState) -> Signal<Option<DocId>> {
-    let current_doc = core.current_doc;
-    let pending_branch_switch = core.pending_branch_switch;
-    let pending_repo_switch = core.pending_repo_switch;
+#[derive(Clone)]
+pub(crate) struct EditorTabRuntimeInputs {
+    pub document: DocumentClient,
+    pub editor: EditorContext,
+    pub scope: ScopeClient,
+    pub source_control: SourceControlClient,
+}
+
+pub(crate) fn create_current_editor_doc(
+    document: &DocumentClient,
+    editor: &EditorContext,
+) -> Signal<Option<DocId>> {
+    let current_doc = document.current_doc;
+    let pending_branch_switch = editor.pending_branch_switch;
+    let pending_repo_switch = editor.pending_repo_switch;
     Signal::derive(move || {
         if pending_branch_switch.get().is_some() || pending_repo_switch.get().is_some() {
             None
@@ -38,16 +53,16 @@ pub(crate) fn create_current_editor_doc(core: &CoreState) -> Signal<Option<DocId
 }
 
 pub(crate) fn create_editor_tab_runtime(
-    core: &CoreState,
+    inputs: EditorTabRuntimeInputs,
     current_editor_doc: Signal<Option<DocId>>,
 ) -> EditorTabRuntime {
     let (doc_tabs, set_doc_tabs) = signal(Vec::<EditorDocumentTab>::new());
     let (diff_tabs, set_diff_tabs) = signal(Vec::<EditorDiffTab>::new());
-    let diff_content = core.diff_content;
-    let set_diff_content = core.set_diff_content;
-    let current_repo_id = core.current_repo_id;
-    let current_scope_nonce = core.current_scope_nonce;
-    let current_doc = core.current_doc;
+    let diff_content = inputs.source_control.diff_content;
+    let set_diff_content = inputs.source_control.set_diff_content;
+    let current_repo_id = inputs.scope.current_repo_id;
+    let current_scope_nonce = inputs.scope.current_scope_nonce;
+    let current_doc = inputs.document.current_doc;
     let last_scope = StoredValue::new((
         current_repo_id.get_untracked(),
         current_scope_nonce.get_untracked(),
@@ -81,7 +96,7 @@ pub(crate) fn create_editor_tab_runtime(
         }
     });
 
-    let docs = core.docs;
+    let docs = inputs.document.docs;
     Effect::new(move |_| {
         if let Some(doc_id) = current_editor_doc.get()
             && let Some(tab) = document_tab_from_docs(&docs.get(), doc_id)
@@ -104,9 +119,22 @@ pub(crate) fn create_editor_tab_runtime(
         doc_tabs,
         diff_tabs,
         active_tab,
-        on_select_document: build_select_document_callback(core),
+        on_select_document: build_select_document_callback(
+            &inputs.document,
+            &inputs.editor,
+            &inputs.scope,
+            &inputs.source_control,
+        ),
         on_select_diff: Callback::new(move |session| set_diff_content.set(Some(session))),
-        on_close_document: build_close_document_callback(core, doc_tabs, set_doc_tabs, diff_tabs),
+        on_close_document: build_close_document_callback(
+            &inputs.document,
+            &inputs.editor,
+            &inputs.scope,
+            &inputs.source_control,
+            doc_tabs,
+            set_doc_tabs,
+            diff_tabs,
+        ),
         on_close_diff: Callback::new(move |key| {
             close_diff_tab(
                 key,
@@ -119,15 +147,20 @@ pub(crate) fn create_editor_tab_runtime(
     }
 }
 
-fn build_select_document_callback(core: &CoreState) -> Callback<DocId> {
-    let current_doc = core.current_doc;
-    let current_repo_id = core.current_repo_id;
-    let current_scope_nonce = core.current_scope_nonce;
-    let pending_local_edits = core.pending_local_edits;
-    let set_pending_navigation = core.set_pending_navigation;
-    let set_current_doc = core.set_current_doc;
-    let set_explicit_home = core.set_explicit_home;
-    let set_diff_content = core.set_diff_content;
+fn build_select_document_callback(
+    document: &DocumentClient,
+    editor: &EditorContext,
+    scope: &ScopeClient,
+    source_control: &SourceControlClient,
+) -> Callback<DocId> {
+    let current_doc = document.current_doc;
+    let current_repo_id = scope.current_repo_id;
+    let current_scope_nonce = scope.current_scope_nonce;
+    let pending_local_edits = document.pending_local_edits;
+    let set_pending_navigation = editor.set_pending_navigation;
+    let set_current_doc = document.set_current_doc;
+    let set_explicit_home = document.set_explicit_home;
+    let set_diff_content = source_control.set_diff_content;
 
     Callback::new(move |doc_id| {
         let action = Callback::new(move |_| {

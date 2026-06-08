@@ -8,8 +8,8 @@ use leptos::prelude::*;
 
 use super::super::callbacks::DocCallbacks;
 use super::super::navigation::PendingNavigation;
-use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::state::CoreSignals;
+use crate::runtime::document::pending::PendingLocalEdits;
 
 pub(super) struct DocStateSection {
     pub docs: ReadSignal<Vec<(DocId, String)>>,

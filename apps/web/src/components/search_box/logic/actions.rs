@@ -2,8 +2,8 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 14_commands#command-palette-shortcuts
 //!
+use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::SearchResult;
-use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;
 use std::sync::Arc;
 use web_sys::KeyboardEvent;
@@ -20,7 +20,7 @@ pub struct SearchKeydownHandlerInput {
     pub active_index: Arc<dyn Fn() -> usize + Send + Sync>,
     pub input_ref: NodeRef<leptos::html::Input>,
     pub set_show: WriteSignal<bool>,
-    pub core: CoreState,
+    pub runtime: SearchRuntime,
     pub set_recent_move_dirs: WriteSignal<Vec<String>>,
 }
 
@@ -36,7 +36,7 @@ pub fn build_keydown_handler(
         active_index,
         input_ref,
         set_show,
-        core,
+        runtime,
         set_recent_move_dirs,
     } = input;
     move |ev: KeyboardEvent| {
@@ -76,7 +76,7 @@ pub fn build_keydown_handler(
                 if let Some(res) = results.get(idx) {
                     execute_action(
                         &res.action,
-                        &core,
+                        &runtime,
                         set_show,
                         set_query,
                         set_selected_index,

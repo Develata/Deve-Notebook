@@ -90,6 +90,12 @@
 * “已写入 ledger 但后续持久化失败” 与 “明确 reject” 必须是不同状态。
 * UI 不得把“继续离开视图”误导成“写入已提交”。
 
+Web 端的 document runtime 只能是 client-side coordination adapter：
+
+* 可持有 pending overlay、navigation guard、`client_op_id` 与 ack/reject 投影状态。
+* 不得拥有 ledger authority，不得复刻 server/core 的 append validation。
+* 所有最终业务事实仍必须经由 server/core 的 ledger authority 路径确认。
+
 ### 3.5 Source Control Runtime
 
 职责：
@@ -105,6 +111,12 @@
 * Source Control 不得直接拥有 repo scope 真相，只能消费 scope runtime 暴露的当前作用域。
 * remote / spectator 只读约束必须由 runtime 与 server 双边 enforce。
 
+Web 端的 source-control runtime 只能是当前 scope 下的 client adapter：
+
+* 可发出 stage / unstage / commit / diff typed intent。
+* 不得直接决定 working tree、ledger stage 或 commit authority。
+* 不得跨过 scope runtime 缓存 repo/branch 真相。
+
 ### 3.6 UI Shell & Feature Views
 
 职责：
@@ -119,6 +131,16 @@
 * 组件不得直接持有 authority 状态。
 * 组件不得绕过 runtime 直接操作业务写路径。
 * “页面切换 / 菜单展开 / drawer 状态” 属于 UI shell，本地即可；repo/doc/pending/sync 不属于 UI shell。
+
+Web client runtime 命名必须显式表达其客户端性质。推荐命名：
+
+* `session_client`
+* `scope_client`
+* `document_client`
+* `source_control_client`
+* `rendering_client`
+
+这些模块落在 Flow Coordination / Object Plane adapter 边界内，不得被理解为 Execution Domain。
 
 ### 3.7 Peripheral Systems
 

@@ -7,8 +7,8 @@ use web_sys::PointerEvent;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ResizeTarget {
-    Left,
-    Right,
+    LeftDivider,
+    RightDivider,
     OuterLeft,
     OuterRight,
 }
@@ -18,35 +18,103 @@ pub(crate) struct ResizeStateSignals {
     pub is_resizing: ReadSignal<bool>,
     pub active_pointer: ReadSignal<Option<i32>>,
     pub start_x: ReadSignal<i32>,
-    pub start_width: ReadSignal<i32>,
+    pub start_left_width: ReadSignal<i32>,
+    pub start_right_width: ReadSignal<i32>,
+    pub start_effective_left_width: ReadSignal<i32>,
+    pub start_effective_right_width: ReadSignal<i32>,
+    pub start_outer_gutter: ReadSignal<i32>,
     pub active_resize: ReadSignal<Option<ResizeTarget>>,
+    pub available_panel_width: Signal<i32>,
 }
 
 #[derive(Clone, Copy)]
 pub(crate) struct ResizeOutputSignals {
-    pub set_sidebar_width: WriteSignal<i32>,
+    pub set_left_width: WriteSignal<i32>,
     pub set_right_width: WriteSignal<i32>,
     pub set_outer_gutter: WriteSignal<i32>,
 }
 
 #[derive(Clone, Copy)]
 pub(crate) struct ResizeBounds {
-    pub sidebar: (i32, i32),
-    pub right: (i32, i32),
+    pub panel_width: (i32, i32),
     pub outer: (i32, i32),
 }
 
-fn resized_width_for_target(
+#[cfg(test)]
+fn panel_center_width(left_width: i32, right_width: i32, available_width: i32) -> i32 {
+    (available_width - left_width - right_width).max(0)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ResizeResult {
+    left_width: i32,
+    right_width: i32,
+    outer_gutter: i32,
+}
+
+#[cfg(test)]
+fn resized_values_for_target(
     target: ResizeTarget,
-    start_width: i32,
+    start_left_width: i32,
+    start_right_width: i32,
+    start_outer_gutter: i32,
     delta: i32,
+    available_width: i32,
     bounds: ResizeBounds,
-) -> i32 {
+) -> ResizeResult {
+    resized_values_for_target_with_constraints(
+        target,
+        start_left_width,
+        start_right_width,
+        start_left_width,
+        start_right_width,
+        start_outer_gutter,
+        delta,
+        available_width,
+        bounds,
+    )
+}
+
+fn resized_values_for_target_with_constraints(
+    target: ResizeTarget,
+    start_left_width: i32,
+    start_right_width: i32,
+    start_effective_left_width: i32,
+    start_effective_right_width: i32,
+    start_outer_gutter: i32,
+    delta: i32,
+    available_width: i32,
+    bounds: ResizeBounds,
+) -> ResizeResult {
+    let available_width = clamp(available_width, bounds.panel_width.0, bounds.panel_width.1);
+
     match target {
-        ResizeTarget::Left => clamp(start_width + delta, bounds.sidebar.0, bounds.sidebar.1),
-        ResizeTarget::Right => clamp(start_width - delta, bounds.right.0, bounds.right.1),
-        ResizeTarget::OuterLeft => clamp(start_width + delta, bounds.outer.0, bounds.outer.1),
-        ResizeTarget::OuterRight => clamp(start_width - delta, bounds.outer.0, bounds.outer.1),
+        ResizeTarget::LeftDivider => {
+            let max_left = (available_width - start_effective_right_width).max(0);
+            ResizeResult {
+                left_width: clamp(start_left_width + delta, 0, max_left),
+                right_width: start_right_width,
+                outer_gutter: start_outer_gutter,
+            }
+        }
+        ResizeTarget::RightDivider => {
+            let max_right = (available_width - start_effective_left_width).max(0);
+            ResizeResult {
+                left_width: start_left_width,
+                right_width: clamp(start_right_width - delta, 0, max_right),
+                outer_gutter: start_outer_gutter,
+            }
+        }
+        ResizeTarget::OuterLeft => ResizeResult {
+            left_width: start_left_width,
+            right_width: start_right_width,
+            outer_gutter: clamp(start_outer_gutter + delta, bounds.outer.0, bounds.outer.1),
+        },
+        ResizeTarget::OuterRight => ResizeResult {
+            left_width: start_left_width,
+            right_width: start_right_width,
+            outer_gutter: clamp(start_outer_gutter - delta, bounds.outer.0, bounds.outer.1),
+        },
     }
 }
 
@@ -54,9 +122,17 @@ pub(crate) fn start_resize_callback(
     set_is_resizing: WriteSignal<bool>,
     set_active_resize: WriteSignal<Option<ResizeTarget>>,
     set_start_x: WriteSignal<i32>,
-    set_start_width: WriteSignal<i32>,
+    set_start_left_width: WriteSignal<i32>,
+    set_start_right_width: WriteSignal<i32>,
+    set_start_effective_left_width: WriteSignal<i32>,
+    set_start_effective_right_width: WriteSignal<i32>,
+    set_start_outer_gutter: WriteSignal<i32>,
     set_active_pointer: WriteSignal<Option<i32>>,
-    current_width: ReadSignal<i32>,
+    current_left_width: Signal<i32>,
+    current_right_width: Signal<i32>,
+    current_effective_left_width: Signal<i32>,
+    current_effective_right_width: Signal<i32>,
+    current_outer_gutter: Signal<i32>,
     target: ResizeTarget,
 ) -> Callback<PointerEvent> {
     Callback::new(move |ev: PointerEvent| {
@@ -64,7 +140,11 @@ pub(crate) fn start_resize_callback(
         set_is_resizing.set(true);
         set_active_resize.set(Some(target));
         set_start_x.set(ev.client_x());
-        set_start_width.set(current_width.get_untracked());
+        set_start_left_width.set(current_left_width.get_untracked());
+        set_start_right_width.set(current_right_width.get_untracked());
+        set_start_effective_left_width.set(current_effective_left_width.get_untracked());
+        set_start_effective_right_width.set(current_effective_right_width.get_untracked());
+        set_start_outer_gutter.set(current_outer_gutter.get_untracked());
         set_active_pointer.set(Some(ev.pointer_id()));
     })
 }
@@ -96,44 +176,21 @@ pub(crate) fn do_resize_callback(
             return;
         }
         let delta = ev.client_x() - state.start_x.get_untracked();
-        match state.active_resize.get_untracked() {
-            Some(ResizeTarget::Left) => {
-                let width = resized_width_for_target(
-                    ResizeTarget::Left,
-                    state.start_width.get_untracked(),
-                    delta,
-                    bounds,
-                );
-                outputs.set_sidebar_width.set(width);
-            }
-            Some(ResizeTarget::Right) => {
-                let width = resized_width_for_target(
-                    ResizeTarget::Right,
-                    state.start_width.get_untracked(),
-                    delta,
-                    bounds,
-                );
-                outputs.set_right_width.set(width);
-            }
-            Some(ResizeTarget::OuterLeft) => {
-                let width = resized_width_for_target(
-                    ResizeTarget::OuterLeft,
-                    state.start_width.get_untracked(),
-                    delta,
-                    bounds,
-                );
-                outputs.set_outer_gutter.set(width);
-            }
-            Some(ResizeTarget::OuterRight) => {
-                let width = resized_width_for_target(
-                    ResizeTarget::OuterRight,
-                    state.start_width.get_untracked(),
-                    delta,
-                    bounds,
-                );
-                outputs.set_outer_gutter.set(width);
-            }
-            None => {}
+        if let Some(target) = state.active_resize.get_untracked() {
+            let result = resized_values_for_target_with_constraints(
+                target,
+                state.start_left_width.get_untracked(),
+                state.start_right_width.get_untracked(),
+                state.start_effective_left_width.get_untracked(),
+                state.start_effective_right_width.get_untracked(),
+                state.start_outer_gutter.get_untracked(),
+                delta,
+                state.available_panel_width.get_untracked(),
+                bounds,
+            );
+            outputs.set_left_width.set(result.left_width);
+            outputs.set_right_width.set(result.right_width);
+            outputs.set_outer_gutter.set(result.outer_gutter);
         }
     })
 }
@@ -144,45 +201,134 @@ mod tests {
 
     fn desktop_bounds() -> ResizeBounds {
         ResizeBounds {
-            sidebar: (180, 500),
-            right: (240, 520),
+            panel_width: (0, i32::MAX),
             outer: (0, 120),
         }
     }
 
     #[test]
-    fn desktop_layout_resize_sidebar_clamps_to_bounds() {
+    fn desktop_layout_resize_left_divider_collapses_sidebar_or_center() {
         let bounds = desktop_bounds();
 
         assert_eq!(
-            resized_width_for_target(ResizeTarget::Left, 260, 40, bounds),
-            300
+            resized_values_for_target(ResizeTarget::LeftDivider, 260, 320, 16, 40, 1000, bounds),
+            ResizeResult {
+                left_width: 300,
+                right_width: 320,
+                outer_gutter: 16,
+            }
         );
         assert_eq!(
-            resized_width_for_target(ResizeTarget::Left, 260, -200, bounds),
-            180
+            resized_values_for_target(ResizeTarget::LeftDivider, 260, 320, 16, -400, 1000, bounds,),
+            ResizeResult {
+                left_width: 0,
+                right_width: 320,
+                outer_gutter: 16,
+            }
         );
         assert_eq!(
-            resized_width_for_target(ResizeTarget::Left, 260, 400, bounds),
-            500
+            resized_values_for_target(ResizeTarget::LeftDivider, 260, 320, 16, 900, 1000, bounds),
+            ResizeResult {
+                left_width: 680,
+                right_width: 320,
+                outer_gutter: 16,
+            }
+        );
+        assert_eq!(panel_center_width(680, 320, 1000), 0);
+    }
+
+    #[test]
+    fn desktop_layout_resize_right_divider_collapses_chat_or_center() {
+        let bounds = desktop_bounds();
+
+        assert_eq!(
+            resized_values_for_target(ResizeTarget::RightDivider, 260, 320, 16, -60, 1000, bounds),
+            ResizeResult {
+                left_width: 260,
+                right_width: 380,
+                outer_gutter: 16,
+            }
+        );
+        assert_eq!(
+            resized_values_for_target(ResizeTarget::RightDivider, 260, 320, 16, 500, 1000, bounds),
+            ResizeResult {
+                left_width: 260,
+                right_width: 0,
+                outer_gutter: 16,
+            }
+        );
+        assert_eq!(
+            resized_values_for_target(ResizeTarget::RightDivider, 260, 320, 16, -900, 1000, bounds,),
+            ResizeResult {
+                left_width: 260,
+                right_width: 740,
+                outer_gutter: 16,
+            }
+        );
+        assert_eq!(panel_center_width(260, 740, 1000), 0);
+    }
+
+    #[test]
+    fn desktop_layout_resize_preserves_existing_opposite_panel_width() {
+        let bounds = desktop_bounds();
+
+        assert_eq!(
+            resized_values_for_target(ResizeTarget::LeftDivider, 250, 350, 16, 125, 1000, bounds),
+            ResizeResult {
+                left_width: 375,
+                right_width: 350,
+                outer_gutter: 16,
+            }
+        );
+        assert_eq!(
+            resized_values_for_target(ResizeTarget::RightDivider, 250, 350, 16, 125, 1000, bounds),
+            ResizeResult {
+                left_width: 250,
+                right_width: 225,
+                outer_gutter: 16,
+            }
         );
     }
 
     #[test]
-    fn desktop_layout_resize_right_panel_uses_inverse_delta_and_clamps() {
+    fn desktop_layout_resize_hidden_regions_only_affect_constraints() {
         let bounds = desktop_bounds();
 
         assert_eq!(
-            resized_width_for_target(ResizeTarget::Right, 320, -60, bounds),
-            380
+            resized_values_for_target_with_constraints(
+                ResizeTarget::LeftDivider,
+                260,
+                320,
+                260,
+                0,
+                16,
+                900,
+                1000,
+                bounds,
+            ),
+            ResizeResult {
+                left_width: 1000,
+                right_width: 320,
+                outer_gutter: 16,
+            }
         );
         assert_eq!(
-            resized_width_for_target(ResizeTarget::Right, 320, 200, bounds),
-            240
-        );
-        assert_eq!(
-            resized_width_for_target(ResizeTarget::Right, 320, -300, bounds),
-            520
+            resized_values_for_target_with_constraints(
+                ResizeTarget::RightDivider,
+                260,
+                320,
+                0,
+                320,
+                16,
+                -900,
+                1000,
+                bounds,
+            ),
+            ResizeResult {
+                left_width: 260,
+                right_width: 1000,
+                outer_gutter: 16,
+            }
         );
     }
 
@@ -191,28 +337,36 @@ mod tests {
         let bounds = desktop_bounds();
 
         assert_eq!(
-            resized_width_for_target(ResizeTarget::OuterLeft, 48, 30, bounds),
-            78
+            resized_values_for_target(ResizeTarget::OuterLeft, 250, 350, 48, 30, 1000, bounds),
+            ResizeResult {
+                left_width: 250,
+                right_width: 350,
+                outer_gutter: 78,
+            }
         );
         assert_eq!(
-            resized_width_for_target(ResizeTarget::OuterLeft, 48, -80, bounds),
-            0
+            resized_values_for_target(ResizeTarget::OuterLeft, 250, 350, 48, -80, 1000, bounds),
+            ResizeResult {
+                left_width: 250,
+                right_width: 350,
+                outer_gutter: 0,
+            }
         );
         assert_eq!(
-            resized_width_for_target(ResizeTarget::OuterLeft, 48, 200, bounds),
-            120
+            resized_values_for_target(ResizeTarget::OuterRight, 250, 350, 48, -30, 1000, bounds),
+            ResizeResult {
+                left_width: 250,
+                right_width: 350,
+                outer_gutter: 78,
+            }
         );
         assert_eq!(
-            resized_width_for_target(ResizeTarget::OuterRight, 48, -30, bounds),
-            78
-        );
-        assert_eq!(
-            resized_width_for_target(ResizeTarget::OuterRight, 48, 80, bounds),
-            0
-        );
-        assert_eq!(
-            resized_width_for_target(ResizeTarget::OuterRight, 48, -200, bounds),
-            120
+            resized_values_for_target(ResizeTarget::OuterRight, 250, 350, 48, 80, 1000, bounds),
+            ResizeResult {
+                left_width: 250,
+                right_width: 350,
+                outer_gutter: 0,
+            }
         );
     }
 }

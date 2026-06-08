@@ -56,15 +56,25 @@
 - `Immediate Result`: AI mode updates or disabled state explains why it cannot
 - `Application Entry`: `apps/web/src/components/settings_sections.rs`
 
+### `op.settings.ui.toggle-ai-chat-panel`
+
+- `Name`: `Toggle AI Chat Panel Visibility`
+- `Surface`: `settings-modal`
+- `Trigger`: click Show or Hide in the AI Chat panel visibility control
+- `Preconditions`: settings modal is open and ChatControl is available
+- `Immediate Result`: browser-local AI Chat visibility updates; hidden state removes the desktop Chat panel and its divider without changing AI backend config
+- `Application Entry`: `apps/web/src/components/settings_sections.rs`,
+  `apps/web/src/components/settings_prefs.rs`
+
 ## Response Flow
 
 1. User changes a visible settings control.
 2. Instruction interface is the settings modal callback.
 3. Flow coordination updates local UI state or delegates to core callbacks.
-4. Execution domains are settings, i18n, browser prefs, sync, and plugin/agent capability.
+4. Execution domains are settings, i18n, browser prefs, sync, layout shell, and plugin/agent capability.
 
 ## Notes
 
 - UI preferences must not directly mutate ledger authority state.
 - Settings 中的语言切换与 command palette 中的 `lang` 命令共用一条跨表面 locale 切换链，见 `locale_surface_switch.md`。
-- Main objects: `ui::preference`, `locale::selection`, `editor::local-preference`, `ai::backend-capability`.
+- Main objects: `ui::preference`, `locale::selection`, `editor::local-preference`, `ai::backend-capability`, `ai::chat-panel-visibility`.

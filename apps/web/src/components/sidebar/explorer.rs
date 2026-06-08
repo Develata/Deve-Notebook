@@ -10,9 +10,13 @@
 
 use crate::components::sidebar::types::FileActionsContext;
 use crate::context_action::{ContextActionReadiness, ContextActionScope};
-use crate::hooks::use_core::DocContext;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
+use crate::hooks::use_core::{DocContext, EditorContext};
 use crate::i18n::Locale;
+use crate::runtime::{
+    document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
+    session_client::SessionClient,
+};
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
@@ -24,40 +28,41 @@ use header::ExplorerHeader;
 use tree_view::ExplorerTree;
 
 pub(super) fn new_doc_search_query(
-    core: &crate::hooks::use_core::CoreState,
+    docs: ReadSignal<Vec<(DocId, String)>>,
     parent: Option<&str>,
 ) -> String {
     let path = crate::hooks::use_core::doc_name::next_untitled_doc_path(
-        core.docs
-            .get_untracked()
-            .iter()
-            .map(|(_, path)| path.as_str()),
+        docs.get_untracked().iter().map(|(_, path)| path.as_str()),
         parent,
     );
     format!("+{path}")
 }
 
-fn context_action_readiness_for_core(
-    core: &crate::hooks::use_core::CoreState,
+fn context_action_readiness_for_runtime(
+    session: &SessionClient,
+    rendering: &RenderingClient,
+    scope: &ScopeClient,
+    editor: &EditorContext,
     readonly: bool,
 ) -> ContextActionReadiness {
-    let scope = ContextActionScope::new(core.current_repo_id.get(), core.current_scope_nonce.get());
+    let action_scope =
+        ContextActionScope::new(scope.current_repo_id.get(), scope.current_scope_nonce.get());
     let write_blocked = repo_write_block_tracked(
-        &core.ws,
+        &session.ws,
         RepoWriteSignals {
-            load_state: core.load_state,
-            is_spectator: core.is_spectator,
-            handshake_ready: core.handshake_ready,
-            current_repo_id: core.current_repo_id,
-            current_scope_nonce: core.current_scope_nonce,
-            active_branch: core.active_branch,
-            pending_branch_switch: core.pending_branch_switch,
-            pending_repo_switch: core.pending_repo_switch,
+            load_state: rendering.load_state,
+            is_spectator: scope.is_spectator,
+            handshake_ready: session.handshake_ready,
+            current_repo_id: scope.current_repo_id,
+            current_scope_nonce: scope.current_scope_nonce,
+            active_branch: scope.active_branch,
+            pending_branch_switch: editor.pending_branch_switch,
+            pending_repo_switch: scope.pending_repo_switch,
         },
     )
     .is_some();
 
-    ContextActionReadiness::new(scope, readonly, write_blocked)
+    ContextActionReadiness::new(action_scope, readonly, write_blocked)
 }
 
 #[component]
@@ -70,11 +75,23 @@ pub fn ExplorerView(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let doc = expect_context::<DocContext>();
-    let branch = expect_context::<crate::hooks::use_core::BranchContext>();
-    let core = expect_context::<crate::hooks::use_core::CoreState>();
-    let core_for_context_action = core.clone();
+    let document = expect_context::<DocumentClient>();
+    let session = expect_context::<SessionClient>();
+    let rendering = expect_context::<RenderingClient>();
+    let scope = expect_context::<ScopeClient>();
+    let editor = expect_context::<EditorContext>();
+    let session_for_context_action = session.clone();
+    let rendering_for_context_action = rendering.clone();
+    let scope_for_context_action = scope.clone();
+    let editor_for_context_action = editor.clone();
     let context_action_readiness = Signal::derive(move || {
-        context_action_readiness_for_core(&core_for_context_action, is_readonly.get())
+        context_action_readiness_for_runtime(
+            &session_for_context_action,
+            &rendering_for_context_action,
+            &scope_for_context_action,
+            &editor_for_context_action,
+            is_readonly.get(),
+        )
     });
     // 上下文菜单状态
     let (active_menu, set_active_menu) = signal(None::<String>);
@@ -87,9 +104,9 @@ pub fn ExplorerView(
         search_control.set_show.set(true);
     });
 
-    let core_for_create = core.clone();
+    let docs_for_create = document.docs;
     let request_create = Callback::new(move |parent: Option<String>| {
-        open_search.run(new_doc_search_query(&core_for_create, parent.as_deref()));
+        open_search.run(new_doc_search_query(docs_for_create, parent.as_deref()));
     });
 
     let request_delete = Callback::new(move |path: String| {
@@ -137,8 +154,6 @@ pub fn ExplorerView(
         <div class="h-full w-full bg-sidebar flex flex-col font-sans select-none relative">
             <ExplorerHeader
                 locale
-                branch
-                core
                 search_control
                 is_readonly
             />

@@ -11,9 +11,9 @@ use leptos::prelude::*;
 use web_sys::MouseEvent;
 
 use crate::components::search_box::logic;
+use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{SearchAction, SearchResult};
 use crate::components::touch_feedback::interactive_item_state_class;
-use crate::hooks::use_core::CoreState;
 
 mod sections;
 mod state;
@@ -27,7 +27,7 @@ pub struct SearchResultItemView {
     pub set_show: WriteSignal<bool>,
     pub set_query: WriteSignal<String>,
     pub input_ref: NodeRef<leptos::html::Input>,
-    pub core: CoreState,
+    pub runtime: SearchRuntime,
     pub set_recent_move_dirs: WriteSignal<Vec<String>>,
 }
 
@@ -42,7 +42,7 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
         set_show,
         set_query,
         input_ref,
-        core,
+        runtime,
         set_recent_move_dirs,
     } = view;
     let is_mobile = state::is_mobile();
@@ -81,11 +81,11 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
                     return;
                 }
                 let action = item.action.clone();
-                let core_clone = core.clone();
+                let runtime_clone = runtime.clone();
                 request_animation_frame(move || {
                     logic::execute_action(
                         &action,
-                        &core_clone,
+                        &runtime_clone,
                         set_show,
                         set_query,
                         set_selected_index,

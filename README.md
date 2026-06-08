@@ -67,8 +67,9 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 - `ledger/` stores authoritative repo facts.
 - `ledger/.host/projection-locators.toml` stores host-local
   `RepoId -> projection_base` bindings.
-- `<projection_base>/<repo_name>/` stores the user-visible Markdown projection
-  for one local repo.
+- `<projection_base>/<safe_repo_name>--<repo_id>/` stores the user-visible
+  Markdown projection for one local repo; repo names are display aliases, while
+  `RepoId` is the authority identity.
 - File-system changes enter `pending_fs_ops` first; they do not mutate authority
   until an explicit stage/commit path appends ledger facts.
 - `.notegit/` is Deve-owned repo runtime state.

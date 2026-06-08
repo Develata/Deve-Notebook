@@ -3,23 +3,33 @@
 //!
 use crate::components::activity_bar::{ActivityBar, SidebarView};
 use crate::components::sidebar::Sidebar;
-use crate::hooks::use_core::CoreState;
+use crate::runtime::{document_client::DocumentClient, scope_client::ScopeClient};
 use leptos::prelude::*;
 
 #[component]
 pub fn DesktopSidebar(
-    core: CoreState,
-    sidebar_width: ReadSignal<i32>,
+    sidebar_width: Signal<i32>,
     active_view: ReadSignal<SidebarView>,
     set_active_view: WriteSignal<SidebarView>,
     pinned_views: ReadSignal<Vec<SidebarView>>,
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
 ) -> impl IntoView {
+    let document = expect_context::<DocumentClient>();
+    let scope = expect_context::<ScopeClient>();
+
     view! {
         <aside
             data-deve-desktop-col="1-sidebar"
-            class="flex-none bg-panel rounded-lg shadow-sm border border-default flex flex-col z-[var(--z-panels)]"
-            style=move || format!("width: {}px", sidebar_width.get())
+            data-deve-desktop-col-width=move || sidebar_width.get().to_string()
+            aria-hidden=move || (sidebar_width.get() == 0).to_string()
+            class="min-w-0 bg-panel rounded-lg shadow-sm border border-default flex flex-col z-[var(--z-panels)] overflow-hidden"
+            style=move || {
+                if sidebar_width.get() == 0 {
+                    "visibility: hidden; pointer-events: none;".to_string()
+                } else {
+                    String::new()
+                }
+            }
         >
             <ActivityBar
                 active_view=active_view
@@ -30,11 +40,11 @@ pub fn DesktopSidebar(
             <div class="flex-1 overflow-hidden">
                 <Sidebar
                     active_view=active_view
-                    docs=core.docs
-                    current_doc=core.current_doc
-                    is_readonly=core.is_spectator
-                    on_select=core.on_doc_select
-                    on_delete=core.on_doc_delete
+                    docs=document.docs
+                    current_doc=document.current_doc
+                    is_readonly=scope.is_spectator
+                    on_select=document.on_doc_select
+                    on_delete=document.on_doc_delete
                 />
             </div>
         </aside>

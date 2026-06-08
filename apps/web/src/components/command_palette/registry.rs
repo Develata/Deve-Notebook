@@ -7,8 +7,9 @@
 
 use super::types::Command;
 use crate::components::main_layout::{ChatControl, SearchControl, SidebarControl};
-use crate::hooks::use_core::{BranchContext, CoreState, SyncMergeContext};
+use crate::hooks::use_core::{BranchContext, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
+use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 mod branch;
@@ -40,7 +41,7 @@ pub fn create_static_commands(
     let sidebar_control = use_context::<SidebarControl>();
     let branch_context = use_context::<BranchContext>();
     let sync_merge_context = use_context::<SyncMergeContext>();
-    let core_state = use_context::<CoreState>();
+    let session_client = use_context::<SessionClient>();
 
     let mut commands = vec![
         // 打开文档命令 - 打开文档模态框
@@ -122,7 +123,7 @@ pub fn create_static_commands(
             set_show,
             branch_context,
             sync_merge_context,
-            core_state,
+            session_client,
         ),
         git_status_command(locale, set_show),
         git_mirror_command(locale, set_show),

@@ -5,7 +5,9 @@
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
-use crate::runtime::document::pending::{PendingLocalEdits, PendingScope, has_pending_edits_for_doc_in_scope};
+use crate::runtime::document::pending::{
+    PendingLocalEdits, PendingScope, has_pending_edits_for_doc_in_scope,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NavigationTarget {

@@ -148,6 +148,34 @@ pub fn trusted_cli_backend(locale: Locale) -> &'static str {
     }
 }
 
+pub fn ai_chat_panel(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "AI Chat Panel",
+        Locale::Zh => "AI Chat 面板",
+    }
+}
+
+pub fn ai_chat_panel_desc(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Show or hide the chat surface without changing the AI backend.",
+        Locale::Zh => "显示或隐藏聊天面板，不改变 AI 后端配置。",
+    }
+}
+
+pub fn show_ai_chat(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Show AI Chat",
+        Locale::Zh => "显示 AI Chat",
+    }
+}
+
+pub fn hide_ai_chat(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Hide AI Chat",
+        Locale::Zh => "隐藏 AI Chat",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Locale, chinese_language_label, current_boundary_desc, english_language_label};

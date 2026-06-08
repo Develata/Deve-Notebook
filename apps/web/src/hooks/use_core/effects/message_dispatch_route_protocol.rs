@@ -60,7 +60,15 @@ pub fn route_protocol_and_write_message(
             seq,
             client_op_id,
         } => {
-            handle_ack_message(repo_id, branch, scope_nonce, doc_id, seq, client_op_id, signals);
+            handle_ack_message(
+                repo_id,
+                branch,
+                scope_nonce,
+                doc_id,
+                seq,
+                client_op_id,
+                signals,
+            );
             None
         }
         other => Some(other),

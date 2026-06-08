@@ -7,8 +7,11 @@
 
 use crate::components::dashboard::Dashboard;
 use crate::editor::Editor;
-use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
+use crate::runtime::{
+    rendering_client::RenderingClient, scope_client::ScopeClient, session_client::SessionClient,
+    source_control_client::SourceControlClient,
+};
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
@@ -34,20 +37,23 @@ pub(crate) fn mobile_content_surface_after_diff_close(
 
 #[component]
 pub fn MobileContent(
-    core: CoreState,
     drawer_open: Signal<bool>,
     current_editor_doc: Signal<Option<DocId>>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let on_stats = core.on_stats;
-    let diff_content = core.diff_content;
-    let set_diff_content = core.set_diff_content;
-    let current_repo_id = core.current_repo_id;
-    let current_repo = core.current_repo;
-    let current_scope_nonce = core.current_scope_nonce;
-    let is_spectator = core.is_spectator;
-    let sync_banner = core.sync_banner;
-    let ws = core.ws.clone();
+    let rendering = expect_context::<RenderingClient>();
+    let source_control = expect_context::<SourceControlClient>();
+    let scope = expect_context::<ScopeClient>();
+    let session = expect_context::<SessionClient>();
+    let on_stats = rendering.on_stats;
+    let diff_content = source_control.diff_content;
+    let set_diff_content = source_control.set_diff_content;
+    let current_repo_id = scope.current_repo_id;
+    let current_repo = scope.current_repo;
+    let current_scope_nonce = scope.current_scope_nonce;
+    let is_spectator = scope.is_spectator;
+    let sync_banner = session.sync_banner;
+    let ws = session.ws.clone();
     view! {
         <div
             class="relative flex-1 overflow-hidden transition-opacity flex flex-col"

@@ -7,6 +7,9 @@ use super::contexts::{
 };
 use crate::api::ConnectionStatus;
 use crate::components::activity_bar::SidebarView;
+use crate::components::settings_prefs::{
+    persist_ai_chat_visible_preference, read_ai_chat_visible_preference,
+};
 use crate::hooks::use_outline::use_outline;
 use crate::i18n::Locale;
 use crate::shortcuts::create_global_shortcut_handler;
@@ -73,7 +76,7 @@ pub fn init_sidebar_ui_state() -> SidebarUiState {
     let (show_settings, set_show_settings) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
     let (pinned_views, set_pinned_views) = signal(SidebarView::all());
-    let (chat_visible, set_chat_visible) = signal(true);
+    let (chat_visible, set_chat_visible) = use_chat_visibility();
     let (visible, set_visible) = use_sidebar_visibility();
     provide_chat_control(chat_visible, set_chat_visible);
     provide_sidebar_control(set_visible);
@@ -115,6 +118,17 @@ fn use_sidebar_visibility() -> (ReadSignal<bool>, WriteSignal<bool>) {
 
     Effect::new(move |_| {
         let _ = write_bool_pref(SIDEBAR_VISIBLE_STORAGE_KEY, visible.get());
+    });
+
+    (visible, set_visible)
+}
+
+fn use_chat_visibility() -> (ReadSignal<bool>, WriteSignal<bool>) {
+    let initial = read_ai_chat_visible_preference();
+    let (visible, set_visible) = signal(initial);
+
+    Effect::new(move |_| {
+        persist_ai_chat_visible_preference(visible.get());
     });
 
     (visible, set_visible)

@@ -6,7 +6,6 @@ use super::footer_status::StatusView;
 use crate::components::branch_switcher::BranchSwitcher;
 use crate::components::icons::{ChevronDown, ChevronUp};
 use crate::editor::EditorStats;
-use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -45,7 +44,6 @@ pub(super) fn collapsed_summary_fields(is_narrow: bool, locale: Locale) -> Vec<&
 
 #[component]
 pub fn FooterSummaryRow(
-    core: CoreState,
     locale: RwSignal<Locale>,
     is_narrow: ReadSignal<bool>,
     expanded: ReadSignal<bool>,
@@ -72,7 +70,7 @@ pub fn FooterSummaryRow(
                     <BranchSwitcher compact=true />
                 </div>
                 <div data-deve-mobile-bottom-bar-field="status" class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
-                    {move || view! { <StatusView core=core.clone() locale=locale /> }}
+                    {move || view! { <StatusView locale=locale /> }}
                 </div>
                 <div data-deve-mobile-bottom-bar-field="words" class="shrink-0 h-6 rounded-md bg-sidebar border border-default px-1.5 flex items-center gap-1 text-[10px] text-muted">
                     <span>{stat_label("W", t::bottom_bar::words)}</span>

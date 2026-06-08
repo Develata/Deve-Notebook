@@ -4,15 +4,15 @@
 //!
 use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::LOCAL_BRANCH_LABEL;
+use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{InsertQuery, SearchAction};
-use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;
 
 use super::write_gate_feedback::allow_repo_write;
 
 pub(crate) fn execute_action(
     action: &SearchAction,
-    core: &CoreState,
+    runtime: &SearchRuntime,
     set_show: WriteSignal<bool>,
     set_query: WriteSignal<String>,
     set_selected_index: WriteSignal<usize>,
@@ -21,20 +21,20 @@ pub(crate) fn execute_action(
 ) {
     match action {
         SearchAction::OpenDoc(id) => {
-            core.on_doc_select.run(*id);
+            runtime.document.on_doc_select.run(*id);
             set_show.set(false);
         }
         SearchAction::RunCommand(cmd) => cmd.action.run(()),
         SearchAction::SwitchBranch(branch) => {
             if branch == LOCAL_BRANCH_LABEL {
-                core.on_switch_branch.run(None);
+                runtime.branch.on_switch_branch.run(None);
             } else {
-                core.on_switch_branch.run(Some(branch.clone()));
+                runtime.branch.on_switch_branch.run(Some(branch.clone()));
             }
             set_show.set(false);
         }
         SearchAction::CreateDoc(path) => {
-            if !allow_repo_write(core, "create document") {
+            if !allow_repo_write(runtime, "create document") {
                 return;
             }
             let path = path.trim();
@@ -44,34 +44,43 @@ pub(crate) fn execute_action(
             if file_ops::validate_doc_shell_path(path).is_some() {
                 return;
             }
-            core.on_doc_create.run(file_ops::normalize_doc_path(path));
+            runtime
+                .document
+                .on_doc_create
+                .run(file_ops::normalize_doc_path(path));
             set_show.set(false);
         }
         SearchAction::FileOp(op) => match op.kind {
             crate::components::search_box::types::FileOpKind::Move => {
-                if !allow_repo_write(core, "move document") {
+                if !allow_repo_write(runtime, "move document") {
                     return;
                 }
                 if let Some(dst) = &op.dst {
-                    core.on_doc_move.run((op.src.clone(), dst.clone()));
+                    runtime
+                        .document
+                        .on_doc_move
+                        .run((op.src.clone(), dst.clone()));
                     update_recent_move_dirs(set_recent_move_dirs, dst);
                     set_show.set(false);
                 }
             }
             crate::components::search_box::types::FileOpKind::Copy => {
-                if !allow_repo_write(core, "copy document") {
+                if !allow_repo_write(runtime, "copy document") {
                     return;
                 }
                 if let Some(dst) = &op.dst {
-                    core.on_doc_copy.run((op.src.clone(), dst.clone()));
+                    runtime
+                        .document
+                        .on_doc_copy
+                        .run((op.src.clone(), dst.clone()));
                     set_show.set(false);
                 }
             }
             crate::components::search_box::types::FileOpKind::Remove => {
-                if !allow_repo_write(core, "delete document") {
+                if !allow_repo_write(runtime, "delete document") {
                     return;
                 }
-                core.on_doc_delete.run(op.src.clone());
+                runtime.document.on_doc_delete.run(op.src.clone());
                 set_show.set(false);
             }
         },

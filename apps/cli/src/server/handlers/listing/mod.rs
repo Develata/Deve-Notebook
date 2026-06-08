@@ -1,4 +1,8 @@
 // apps/cli/src/server/handlers/listing/mod.rs
+//! plan_ref:
+//!   - 04_repository#repo-scope-runtime
+//!   - 07_network#server-ws-runtime
+//!
 //! # 列表查询处理器
 //!
 //! 处理各类列表查询请求: ListDocs, ListShadows, ListRepos

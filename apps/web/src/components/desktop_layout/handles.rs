@@ -15,7 +15,7 @@ fn capture_pointer(ev: &web_sys::PointerEvent) {
 #[component]
 pub fn DesktopOuterResizeHandle(
     side: &'static str,
-    outer_gutter: ReadSignal<i32>,
+    outer_gutter: Signal<i32>,
     on_resize: Callback<web_sys::PointerEvent>,
 ) -> impl IntoView {
     let transform = if side == "left" {
@@ -26,6 +26,7 @@ pub fn DesktopOuterResizeHandle(
 
     view! {
         <div
+            data-deve-desktop-resizer=move || format!("outer-{side}")
             class="resizer-handle absolute top-0 h-full w-3 cursor-col-resize touch-none"
             style=move || {
                 format!(
@@ -42,9 +43,13 @@ pub fn DesktopOuterResizeHandle(
 }
 
 #[component]
-pub fn DesktopInnerResizeHandle(on_resize: Callback<web_sys::PointerEvent>) -> impl IntoView {
+pub fn DesktopInnerResizeHandle(
+    marker: &'static str,
+    on_resize: Callback<web_sys::PointerEvent>,
+) -> impl IntoView {
     view! {
         <div
+            data-deve-desktop-resizer=marker
             class="resizer-handle w-4 flex-none cursor-col-resize flex items-center justify-center hover:bg-accent-subtle group transition-colors touch-none"
             on:pointerdown=move |ev| {
                 capture_pointer(&ev);

@@ -43,6 +43,8 @@
     - ui_click: "Compact"
     - ui_click: "Manual"
     - ui_click: "Native"
+    - ui_click: "Hide AI Chat"
+    - ui_click: "Show AI Chat"
     - manual_chrome: docs/dev-runbook.md#settings--command-ui-smoke
     - run: scripts/check-settings-local-feedback-baseline.sh
   assertions:
@@ -52,6 +54,10 @@
     - ui_assert: editor_density_eq "compact"
     - ui_assert: sync_mode_eq "manual"
     - ui_assert: ai_backend_eq "native"
+    - ui_assert: ai_chat_panel_visible true
+    - ui_assert: ai_chat_divider_hidden_when_setting_hidden true
+    - ui_assert: display_editor_visible_when_ai_chat_setting_hidden true
+    - ui_assert: hidden_ai_chat_preserves_layout_width_pref true
 
 - case_id: SET-006
   goal: Settings 中不可用或预留能力必须显示明确、可访问的反馈。

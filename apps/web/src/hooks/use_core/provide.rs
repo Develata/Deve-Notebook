@@ -19,6 +19,12 @@ use leptos::prelude::*;
 /// ## Invariant
 /// 子上下文与 CoreState 共享同一组 Signal —— 无额外分配。
 pub fn provide_sub_contexts(state: &CoreState) {
+    provide_context(state.runtime_clients.clone());
+    provide_context(state.runtime_clients.session.clone());
+    provide_context(state.runtime_clients.scope.clone());
+    provide_context(state.runtime_clients.document.clone());
+    provide_context(state.runtime_clients.source_control.clone());
+    provide_context(state.runtime_clients.rendering.clone());
     provide_context(doc::build_doc_context(state));
     provide_context(editor::build_editor_context(state));
     provide_context(chat::build_chat_context(state));

@@ -5,11 +5,12 @@
 use crate::editor::ffi::{applyRemoteOp, getEditorContent, sync_editor_state_to_rust};
 use crate::editor::op_id::next_client_op_id;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
+use crate::hooks::use_core::contexts::EditorContext;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_action;
-use crate::hooks::use_core::CoreState;
 use crate::runtime::document::pending;
+use crate::runtime::session_client::SessionClient;
 use deve_core::models::{Op, RepoId};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -19,80 +20,90 @@ enum ApplyEditPlanError {
     DocumentTooLarge,
 }
 
-pub fn make_on_apply(core: CoreState) -> Callback<String> {
+#[derive(Clone)]
+pub struct ChatApplyRuntime {
+    pub session: SessionClient,
+    pub editor: EditorContext,
+}
+
+pub fn make_on_apply(runtime: ChatApplyRuntime) -> Callback<String> {
     Callback::new(move |code: String| {
-        let Some(doc_id) = core.current_doc.get_untracked() else {
-            show_apply_block(&core, "no active document");
+        let Some(doc_id) = runtime.editor.current_doc.get_untracked() else {
+            show_apply_block(&runtime.session, "no active document");
             return;
         };
         if let Some(block) = repo_write_block_untracked(
-            &core.ws,
+            &runtime.session.ws,
             RepoWriteSignals {
-                load_state: core.load_state,
-                is_spectator: core.is_spectator,
-                handshake_ready: core.handshake_ready,
-                current_repo_id: core.current_repo_id,
-                current_scope_nonce: core.current_scope_nonce,
-                active_branch: core.active_branch,
-                pending_branch_switch: core.pending_branch_switch,
-                pending_repo_switch: core.pending_repo_switch,
+                load_state: runtime.editor.load_state,
+                is_spectator: runtime.editor.is_spectator,
+                handshake_ready: runtime.editor.handshake_ready,
+                current_repo_id: runtime.editor.current_repo_id,
+                current_scope_nonce: runtime.editor.current_scope_nonce,
+                active_branch: runtime.editor.active_branch,
+                pending_branch_switch: runtime.editor.pending_branch_switch,
+                pending_repo_switch: runtime.editor.pending_repo_switch,
             },
         ) {
-            show_apply_block(&core, block.label());
+            show_apply_block(&runtime.session, block.label());
             return;
         }
         let op = match build_append_markdown_op(&getEditorContent(), code) {
             Ok(op) => op,
             Err(ApplyEditPlanError::DocumentTooLarge) => {
-                show_apply_block(&core, "document is too large");
+                show_apply_block(&runtime.session, "document is too large");
                 return;
             }
         };
         let Some(scope_nonce) = stable_local_scope_nonce(LocalScopeSignals {
-            current_repo_id: core.current_repo_id,
-            current_scope_nonce: core.current_scope_nonce,
-            active_branch: core.active_branch,
-            pending_branch_switch: core.pending_branch_switch,
-            pending_repo_switch: core.pending_repo_switch,
+            current_repo_id: runtime.editor.current_repo_id,
+            current_scope_nonce: runtime.editor.current_scope_nonce,
+            active_branch: runtime.editor.active_branch,
+            pending_branch_switch: runtime.editor.pending_branch_switch,
+            pending_repo_switch: runtime.editor.pending_repo_switch,
         }) else {
-            show_apply_block(&core, "local repo scope is not stable");
+            show_apply_block(&runtime.session, "local repo scope is not stable");
             return;
         };
-        let Some(client_id) = core.ws.writer_client_id_for(
-            core.current_repo_id.get_untracked().as_deref(),
+        let Some(client_id) = runtime.session.ws.writer_client_id_for(
+            runtime.editor.current_repo_id.get_untracked().as_deref(),
             Some(scope_nonce),
         ) else {
-            show_apply_block(&core, "writer client id unavailable");
+            show_apply_block(&runtime.session, "writer client id unavailable");
             return;
         };
-        let Some(repo_id) = core
+        let Some(repo_id) = runtime
+            .editor
             .current_repo_id
             .get_untracked()
             .and_then(|repo_id| repo_id.parse::<RepoId>().ok())
         else {
-            show_apply_block(&core, "current repo id unavailable");
+            show_apply_block(&runtime.session, "current repo id unavailable");
             return;
         };
         if !apply_local_programmatic_op(&op) {
-            show_apply_block(&core, "failed to apply code locally");
+            show_apply_block(&runtime.session, "failed to apply code locally");
             return;
         }
         let client_op_id = next_client_op_id();
-        core.set_pending_local_edits.update(|pending_edits| {
-            pending::push_pending_edit(
-                pending_edits,
-                pending::PendingLocalEditInput {
-                    repo_id,
-                    doc_id,
-                    scope_nonce,
-                    client_id,
-                    client_op_id,
-                    base_version: core.doc_version.get_untracked(),
-                    op: op.clone(),
-                },
-            );
-        });
-        core.ws.send(build_apply_edit_message(
+        runtime
+            .editor
+            .set_pending_local_edits
+            .update(|pending_edits| {
+                pending::push_pending_edit(
+                    pending_edits,
+                    pending::PendingLocalEditInput {
+                        repo_id,
+                        doc_id,
+                        scope_nonce,
+                        client_id,
+                        client_op_id,
+                        base_version: runtime.editor.doc_version.get_untracked(),
+                        op: op.clone(),
+                    },
+                );
+            });
+        runtime.session.ws.send(build_apply_edit_message(
             doc_id,
             op,
             client_id,
@@ -111,9 +122,9 @@ fn apply_local_programmatic_op(op: &Op) -> bool {
     true
 }
 
-fn show_apply_block(core: &CoreState, reason: &str) {
+fn show_apply_block(session: &SessionClient, reason: &str) {
     let message = cannot_action("apply code", reason);
-    warn_sync_banner(core.set_sync_banner, message);
+    warn_sync_banner(session.set_sync_banner, message);
 }
 
 fn build_append_markdown_op(current_content: &str, code: String) -> Result<Op, ApplyEditPlanError> {

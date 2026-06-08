@@ -152,7 +152,7 @@
     node.parentNode.replaceChild(fragment, node);
   }
 
-  window.renderChatMath = function renderChatMath(root) {
+  function renderChatMath(root) {
     if (!root) return false;
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -165,9 +165,20 @@
       replaceTextNode(node);
     }
     return true;
-  };
+  }
 
-  window.__deveChatMath = {
-    splitMath,
-  };
+  const bridge = window.__deveWebBridge;
+  if (bridge && typeof bridge.register === "function") {
+    bridge.register("renderChatMath", renderChatMath, {
+      runtime: "rendering_client",
+      boundary: "object-plane-adapter",
+    });
+    bridge.register("__deveChatMath", { splitMath }, {
+      runtime: "rendering_client",
+      boundary: "test-support",
+    });
+  } else {
+    window.renderChatMath = renderChatMath;
+    window.__deveChatMath = { splitMath };
+  }
 })();

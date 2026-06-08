@@ -1,4 +1,7 @@
 ﻿// apps\cli\src\server\handlers
+//! plan_ref:
+//!   - 07_network#server-ws-runtime
+//!
 //! 消息处理器模块
 //!
 //! 包含各类 ClientMessage 的处理逻辑，按功能领域划分。

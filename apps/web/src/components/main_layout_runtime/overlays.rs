@@ -2,12 +2,11 @@
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::navigation::PendingNavigation;
 use leptos::prelude::*;
 
 #[component]
 pub fn MainLayoutOverlays(
-    core: CoreState,
     is_mobile: ReadSignal<bool>,
     show_search: ReadSignal<bool>,
     set_show_search: WriteSignal<bool>,
@@ -16,6 +15,8 @@ pub fn MainLayoutOverlays(
     set_show_settings: WriteSignal<bool>,
     on_settings: Callback<()>,
     on_open: Callback<()>,
+    pending_navigation: ReadSignal<Option<PendingNavigation>>,
+    set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
 ) -> impl IntoView {
     view! {
         <crate::components::search_box::UnifiedSearch
@@ -40,8 +41,8 @@ pub fn MainLayoutOverlays(
 
         <crate::components::merge_modal_slot::MergeModalSlot />
         <crate::components::pending_navigation_modal::PendingNavigationModal
-            pending=core.pending_navigation
-            set_pending=core.set_pending_navigation
+            pending=pending_navigation
+            set_pending=set_pending_navigation
         />
     }
 }

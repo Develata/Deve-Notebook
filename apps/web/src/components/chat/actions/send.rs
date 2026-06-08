@@ -5,7 +5,8 @@
 use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_runtime};
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
-use crate::hooks::use_core::{ChatMessage, CoreState};
+use crate::hooks::use_core::{ChatContext, ChatMessage};
+use crate::runtime::document_client::DocumentClient;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
@@ -15,8 +16,14 @@ const MAX_CHAT_CONTEXT_CHARS: usize = 16_000;
 const MAX_CHAT_HISTORY_MESSAGES: usize = 8;
 const MAX_CHAT_HISTORY_CHARS: usize = 8_000;
 
+#[derive(Clone)]
+pub struct ChatSendRuntime {
+    pub chat: ChatContext,
+    pub document: DocumentClient,
+}
+
 pub fn make_send_text(
-    core: CoreState,
+    runtime: ChatSendRuntime,
     is_streaming: ReadSignal<bool>,
     session_mode: ReadSignal<ChatSessionMode>,
     set_session_mode: WriteSignal<ChatSessionMode>,
@@ -38,16 +45,18 @@ pub fn make_send_text(
             }
             return;
         }
-        core.set_is_chat_streaming.set(true);
+        runtime.chat.set_is_streaming.set(true);
         let req_id = uuid::Uuid::new_v4().to_string();
-        let history = bounded_chat_history(core.chat_messages.get_untracked());
-        let core_for_send = core.clone();
+        let history = bounded_chat_history(runtime.chat.messages.get_untracked());
+        let runtime_for_send = runtime.clone();
         let on_user_text = on_user_text.clone();
         let on_req_id = on_req_id.clone();
         spawn_local(async move {
             let cap = fetch_ai_backend_capabilities().await;
-            let decision =
-                resolve_backend_for_send(core_for_send.ai_mode.get_untracked().as_str(), &cap);
+            let decision = resolve_backend_for_send(
+                runtime_for_send.chat.ai_mode.get_untracked().as_str(),
+                &cap,
+            );
             let ChatSendRuntimePlan {
                 plugin_id,
                 switch_backend,
@@ -56,16 +65,16 @@ pub fn make_send_text(
                 stop_streaming,
             } = plan_chat_send_runtime(decision);
             if let Some(backend) = switch_backend {
-                core_for_send.set_ai_mode.set(backend.to_string());
+                runtime_for_send.chat.set_ai_mode.set(backend.to_string());
             }
             for message in messages {
-                append_planned_chat_message(&core_for_send, &msg, &req_id, message);
+                append_planned_chat_message(&runtime_for_send.chat, &msg, &req_id, message);
             }
             if let Some(cb) = on_user_text.as_ref() {
                 cb.run(msg.clone());
             }
             if stop_streaming {
-                core_for_send.set_is_chat_streaming.set(false);
+                runtime_for_send.chat.set_is_streaming.set(false);
                 return;
             };
             if register_pending_req && let Some(cb) = on_req_id.as_ref() {
@@ -74,11 +83,13 @@ pub fn make_send_text(
             let Some(plugin_id) = plugin_id else {
                 return;
             };
-            let current_doc_path = core_for_send
+            let current_doc_path = runtime_for_send
+                .document
                 .current_doc
                 .get_untracked()
                 .and_then(|doc_id| {
-                    core_for_send
+                    runtime_for_send
+                        .document
                         .docs
                         .get_untracked()
                         .iter()
@@ -105,7 +116,7 @@ pub fn make_send_text(
                 context,
                 serde_json::json!(history),
             ];
-            core_for_send.on_plugin_call.run((
+            runtime_for_send.chat.on_plugin_call.run((
                 req_id,
                 plugin_id.to_string(),
                 "chat".to_string(),
@@ -116,23 +127,34 @@ pub fn make_send_text(
 }
 
 fn append_planned_chat_message(
-    core: &CoreState,
+    chat: &ChatContext,
     msg: &str,
     req_id: &str,
     message: ChatMessagePlan,
 ) {
     match message {
-        ChatMessagePlan::UserInput => core.append_chat_message("user", msg, None),
+        ChatMessagePlan::UserInput => append_chat_message(chat, "user", msg, None),
         ChatMessagePlan::AssistantNotice(notice) => {
-            core.append_chat_message("assistant", &notice, None);
+            append_chat_message(chat, "assistant", &notice, None);
         }
         ChatMessagePlan::AssistantPlaceholder => {
-            core.append_chat_message("assistant", "", Some(req_id.to_string()));
+            append_chat_message(chat, "assistant", "", Some(req_id.to_string()));
         }
         ChatMessagePlan::AssistantError(reason) => {
-            core.append_chat_message("assistant", &reason, None);
+            append_chat_message(chat, "assistant", &reason, None);
         }
     }
+}
+
+fn append_chat_message(chat: &ChatContext, role: &str, content: &str, req_id: Option<String>) {
+    chat.set_messages.update(|msgs: &mut Vec<ChatMessage>| {
+        msgs.push(ChatMessage {
+            role: role.to_string(),
+            content: content.to_string(),
+            req_id,
+            ts_ms: js_sys::Date::now() as u64,
+        });
+    });
 }
 
 fn truncate_markdown_context(content: String) -> String {

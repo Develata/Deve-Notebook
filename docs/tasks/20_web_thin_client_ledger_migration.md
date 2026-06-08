@@ -12,6 +12,18 @@
 6. `History / NewOp / Snapshot delta` 补齐 origin metadata。
 7. WS / HTTP / Source Control 写入口统一回到同一 ledger authority。
 
+## 1.1 Client Runtime Boundary
+
+Web 端迁移目标必须使用 client runtime 命名与边界：
+
+* `document_client` 只管理 pending overlay、`client_op_id`、ack/reject 显示状态与 navigation guard。
+* `scope_client` 只管理当前 repo/branch/doc scope、`scope_nonce` 与 stale-scope recovery。
+* `session_client` 只管理 transport/session readiness，不保存业务真相。
+* `source_control_client` 只发出 source-control typed intent，不拥有 stage/commit authority。
+* `rendering_client` 只封装 editor/Markdown/KaTeX/DOM object adapters。
+
+这些 client runtime 均属于 Flow Coordination 或 Object Plane adapter；最终业务事实只能由 server/core ledger authority 追溯。
+
 ## 2. 验证目标
 
 1. Web 切文件不再出现“改动消失但无提示”。

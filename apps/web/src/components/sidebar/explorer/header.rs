@@ -4,23 +4,31 @@
 //!
 use crate::components::icons::Plus;
 use crate::components::main_layout::SearchControl;
-use crate::hooks::use_core::write_gate::repo_write_allowed_for_core_tracked;
-use crate::hooks::use_core::{BranchContext, CoreState};
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
+use crate::hooks::use_core::{BranchContext, EditorContext};
 use crate::i18n::{Locale, t};
+use crate::runtime::{
+    document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
+    session_client::SessionClient,
+};
 use leptos::prelude::*;
 
 #[component]
 pub(super) fn ExplorerHeader(
     locale: RwSignal<Locale>,
-    branch: BranchContext,
-    core: CoreState,
     search_control: SearchControl,
     is_readonly: Signal<bool>,
 ) -> impl IntoView {
-    let core_for_create = core.clone();
+    let branch = expect_context::<BranchContext>();
+    let document = expect_context::<DocumentClient>();
+    let session = expect_context::<SessionClient>();
+    let rendering = expect_context::<RenderingClient>();
+    let scope = expect_context::<ScopeClient>();
+    let editor = expect_context::<EditorContext>();
+    let docs_for_create = document.docs;
     let request_create = Callback::new(move |parent: Option<String>| {
         search_control.set_mode.set(super::new_doc_search_query(
-            &core_for_create,
+            docs_for_create,
             parent.as_deref(),
         ));
         search_control.set_show.set(true);
@@ -32,7 +40,22 @@ pub(super) fn ExplorerHeader(
             .get()
             .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
     });
-    let can_write = Signal::derive(move || repo_write_allowed_for_core_tracked(&core));
+    let can_write = Signal::derive(move || {
+        repo_write_block_tracked(
+            &session.ws,
+            RepoWriteSignals {
+                load_state: rendering.load_state,
+                is_spectator: scope.is_spectator,
+                handshake_ready: session.handshake_ready,
+                current_repo_id: scope.current_repo_id,
+                current_scope_nonce: scope.current_scope_nonce,
+                active_branch: scope.active_branch,
+                pending_branch_switch: editor.pending_branch_switch,
+                pending_repo_switch: scope.pending_repo_switch,
+            },
+        )
+        .is_none()
+    });
 
     view! {
         <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-default hover:bg-hover transition-colors group">

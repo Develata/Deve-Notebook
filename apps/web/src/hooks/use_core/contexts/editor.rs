@@ -7,8 +7,8 @@ use deve_core::models::{DocId, PeerId};
 use leptos::prelude::*;
 
 use super::super::navigation::PendingNavigation;
-use crate::runtime::document::pending::PendingLocalEdits;
 use super::super::types::PendingBranchTarget;
+use crate::runtime::document::pending::PendingLocalEdits;
 
 #[derive(Clone)]
 pub struct EditorContext {

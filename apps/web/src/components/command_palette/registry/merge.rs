@@ -4,8 +4,9 @@
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_send;
-use crate::hooks::use_core::{BranchContext, CoreState, SyncMergeContext};
+use crate::hooks::use_core::{BranchContext, SyncMergeContext};
 use crate::i18n::{Locale, t};
+use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 pub(super) fn merge_peer_command(
@@ -13,7 +14,7 @@ pub(super) fn merge_peer_command(
     set_show: WriteSignal<bool>,
     branch: Option<BranchContext>,
     sync: Option<SyncMergeContext>,
-    core: Option<CoreState>,
+    session: Option<SessionClient>,
 ) -> Command {
     Command::available(
         "merge_peer",
@@ -22,9 +23,9 @@ pub(super) fn merge_peer_command(
             if let (Some(branch), Some(sync)) = (branch.as_ref(), sync.as_ref()) {
                 if let Some(peer_id) = branch.active_branch.get_untracked() {
                     sync.on_merge_peer.run(peer_id.to_string());
-                } else if let Some(core) = core.as_ref() {
+                } else if let Some(session) = session.as_ref() {
                     let message = cannot_send("MergePeer", "no active peer selected");
-                    warn_sync_banner(core.set_sync_banner, message);
+                    warn_sync_banner(session.set_sync_banner, message);
                 }
             } else {
                 set_show.set(false);

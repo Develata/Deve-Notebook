@@ -4,27 +4,34 @@
 
 use super::model::{EditorDiffTab, EditorDocumentTab, diff_tab_key};
 use super::ops::{remove_diff_tab, remove_document_tab};
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
+use crate::runtime::{
+    document_client::DocumentClient, scope_client::ScopeClient,
+    source_control_client::SourceControlClient,
+};
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
 pub(super) fn build_close_document_callback(
-    core: &CoreState,
+    document: &DocumentClient,
+    editor: &EditorContext,
+    scope: &ScopeClient,
+    source_control: &SourceControlClient,
     doc_tabs: ReadSignal<Vec<EditorDocumentTab>>,
     set_doc_tabs: WriteSignal<Vec<EditorDocumentTab>>,
     diff_tabs: ReadSignal<Vec<EditorDiffTab>>,
 ) -> Callback<DocId> {
-    let current_doc = core.current_doc;
-    let current_repo_id = core.current_repo_id;
-    let current_scope_nonce = core.current_scope_nonce;
-    let pending_local_edits = core.pending_local_edits;
-    let set_pending_navigation = core.set_pending_navigation;
-    let set_current_doc = core.set_current_doc;
-    let set_explicit_home = core.set_explicit_home;
-    let diff_content = core.diff_content;
-    let set_diff_content = core.set_diff_content;
+    let current_doc = document.current_doc;
+    let current_repo_id = scope.current_repo_id;
+    let current_scope_nonce = scope.current_scope_nonce;
+    let pending_local_edits = document.pending_local_edits;
+    let set_pending_navigation = editor.set_pending_navigation;
+    let set_current_doc = document.set_current_doc;
+    let set_explicit_home = document.set_explicit_home;
+    let diff_content = source_control.diff_content;
+    let set_diff_content = source_control.set_diff_content;
 
     Callback::new(move |doc_id| {
         if current_doc.get_untracked() != Some(doc_id) {

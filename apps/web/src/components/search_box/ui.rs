@@ -5,11 +5,11 @@
 //!
 use crate::components::focus_scope;
 use crate::components::search_box::SearchUiMode;
+use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::SearchResult;
 use crate::components::search_box::ui_footer::footer;
 use crate::components::search_box::ui_sections;
 use crate::components::search_box::ui_sheet;
-use crate::hooks::use_core::CoreState;
 use crate::i18n::Locale;
 use leptos::prelude::*;
 use std::sync::Arc;
@@ -27,7 +27,7 @@ pub struct SearchOverlayView {
     pub set_selected_index: WriteSignal<usize>,
     pub active_index: Arc<dyn Fn() -> usize + Send + Sync>,
     pub input_ref: NodeRef<leptos::html::Input>,
-    pub core: CoreState,
+    pub runtime: SearchRuntime,
     pub locale: RwSignal<Locale>,
     pub set_recent_move_dirs: WriteSignal<Vec<String>>,
     pub ui_mode: Signal<SearchUiMode>,
@@ -47,7 +47,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
         set_selected_index,
         active_index,
         input_ref,
-        core,
+        runtime,
         locale,
         set_recent_move_dirs,
         ui_mode,
@@ -149,7 +149,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                         set_show,
                         set_query,
                         input_ref,
-                        core: core.clone(),
+                        runtime: runtime.clone(),
                         locale,
                         set_recent_move_dirs,
                         results_ref,

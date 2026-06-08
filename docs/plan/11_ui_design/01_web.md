@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-07`
 - `Counterpart Feature`: `docs/features/08_ui_design_01_web.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/cli/src/server/static_files.rs`
@@ -97,12 +97,19 @@ Web 端 **SHOULD** 提供 `manifest.json` 以支持安装到主屏幕：
 
 ## 6. Resizable Layout {#web-layout-persistence}
 
-*   **Scope**: 左侧 Sidebar 与主编辑区之间、主编辑区与右侧面板之间。
-*   **Constraints**:
-    *   Sidebar Width: `180px` ~ `500px`。
-    *   Right Panel Width: `240px` ~ `520px`。
-*   **Persistence**: 伸缩宽度 **MUST** 通过 `localStorage` 持久化。
-*   **Outer Gutter**: 主区域左右边距 **MUST** 支持拖拽调整，并持久化。
+*   **Scope**: 大屏 Web shell 的三栏区域：
+    `file tree/sidebar | display-editor | ai-chat`。
+*   **Resizable Dividers**:
+    *   左分界线位于 `file tree/sidebar` 与 `display-editor` 之间。
+    *   右分界线位于 `display-editor` 与 `ai-chat` 之间。
+*   **Collapse by Size**:
+    *   普通拖拽属于 layout size 行为，任一相邻区域宽度 **MAY** 被拖到 `0px`。
+    *   区域被拖到 `0px` 时视为折叠，但对应分界线 **MUST** 保留在边缘或相邻分界线处，以便用户从边缘拉回。
+    *   `display-editor` 的宽度由两条分界线共同决定；两条分界线相邻时 `display-editor` 可为 `0px`。
+*   **Visibility by Settings**:
+    *   Settings 隐藏 AI Chat 属于 visibility 行为，不得复用普通拖拽折叠语义。
+    *   `ai-chat` 被 Settings 隐藏时，右侧 Chat 区域及其左侧分界线 **MUST** 同时不渲染。
+*   **Persistence**: 三栏 layout size 与 AI Chat 可见性 **MUST** 作为 browser-local UI prefs 持久化，不得写入 repo authority、session secret、peer identity 或业务事实。
 
 ### 6.1 Sync State Presentation
 

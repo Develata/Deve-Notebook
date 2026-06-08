@@ -31,36 +31,15 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
     let core = use_core();
     watch_session_expired(core.ws.status, on_session_expired);
 
-    let (
-        sidebar_width,
-        right_width,
-        outer_gutter,
-        start_resize_left,
-        start_resize_right,
-        start_resize_outer_left,
-        start_resize_outer_right,
-        stop_resize,
-        do_resize,
-        is_resizing,
-    ) = use_layout();
-    let desktop_layout = (
-        sidebar_width,
-        right_width,
-        outer_gutter,
-        start_resize_left,
-        start_resize_right,
-        start_resize_outer_left,
-        start_resize_outer_right,
-        stop_resize,
-        do_resize,
-        is_resizing,
-    );
-
     use_ctrl_key();
 
     let search = init_search_ui_state();
     let outline = init_outline_ui_state();
     let sidebar = init_sidebar_ui_state();
+    let desktop_layout = use_layout(sidebar.visible, sidebar.chat_visible);
+    let stop_resize = desktop_layout.stop_resize;
+    let do_resize = desktop_layout.do_resize;
+    let is_resizing = desktop_layout.is_resizing;
     bind_global_shortcuts(&search, &outline, &sidebar, locale);
 
     let is_mobile = use_mobile_breakpoint();
@@ -91,7 +70,6 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
 
     view! {
         <MainLayoutRuntime
-            core=core
             desktop_layout=desktop_layout
             is_mobile=is_mobile
             is_resizing=is_resizing
@@ -113,6 +91,8 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
             on_command=on_command
             on_settings=on_settings
             on_logout=on_logout
+            pending_navigation=core.pending_navigation
+            set_pending_navigation=core.set_pending_navigation
         />
     }
     .into_any()

@@ -8,7 +8,6 @@ mod left;
 mod right;
 
 use crate::components::activity_bar::SidebarView;
-use crate::hooks::use_core::CoreState;
 use leptos::prelude::*;
 
 use left::LeftDrawer;
@@ -16,7 +15,6 @@ use right::RightDrawer;
 
 #[component]
 pub fn MobileDrawers(
-    core: CoreState,
     active_view: ReadSignal<SidebarView>,
     set_active_view: WriteSignal<SidebarView>,
     pinned_views: ReadSignal<Vec<SidebarView>>,
@@ -29,7 +27,6 @@ pub fn MobileDrawers(
 ) -> impl IntoView {
     view! {
         <LeftDrawer
-            core=core.clone()
             active_view=active_view
             set_active_view=set_active_view
             pinned_views=pinned_views

@@ -12,9 +12,9 @@ use super::message_protocol::{
 };
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
 use crate::api::WsService;
-use crate::runtime::document::{confirm, pending};
 use crate::hooks::use_core::types::ChatMessage;
 use crate::i18n::Locale;
+use crate::runtime::document::{confirm, pending};
 use deve_core::models::DocId;
 use deve_core::protocol::ServerError;
 use leptos::prelude::{GetUntracked, Set, Update};

@@ -62,7 +62,7 @@ The following documents exist under `docs/` but do not participate in the three-
 | --- | --- | --- |
 | `docs/plan/00_engineering_constitution.md` | Governing Rule | Cross-chapter skeleton governance; not a feature chapter |
 | `docs/tasks/18_infra_runtime.md` | Implementation Blueprint | Infra-first module boundaries; guided by but does not override A/B/C layer chapters |
-| `docs/tasks/19_repo_refactor_blueprint.md` | Implementation Blueprint | Repo restructuring migration order |
+| `docs/tasks/19_repo_refactor_blueprint.md` | Implementation Blueprint | Repo restructuring migration order; Web client runtime naming and composition-root migration |
 | `docs/overview/architecture.md` | Architecture Overview | Cross-layer 4-layer cascade map, human entry point |
 | `docs/overview/architecture-doc.lisp` | Architecture View | Doc-derived view; references plan anchors |
 | `docs/overview/architecture-code.lisp` | Architecture View | Code-derived view; references source tree |

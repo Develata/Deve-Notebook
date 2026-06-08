@@ -9,8 +9,9 @@
 //! Extracted sub-sections: local preferences, sync mode, AI backend.
 
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI};
+use crate::components::layout_context::ChatControl;
 use crate::components::settings_sections_policy::{
-    ai_backend_button_state, sync_mode_button_state,
+    ai_backend_button_state, ai_chat_visibility_button_state, sync_mode_button_state,
 };
 use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
 use crate::i18n::{Locale, t};
@@ -120,5 +121,42 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 </Show>
             </div>
         }
+    }
+}
+
+/// AI Chat panel visibility toggle. This is a browser-local UI preference,
+/// separate from backend selection.
+#[component]
+pub fn AiChatVisibilitySection(locale: RwSignal<Locale>) -> impl IntoView {
+    let chat = expect_context::<ChatControl>();
+    let button_state =
+        Signal::derive(move || ai_chat_visibility_button_state(chat.chat_visible.get()));
+
+    view! {
+        <div class="bg-sidebar p-4 rounded-lg border border-default">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <span class="font-medium text-primary">{move || t::settings::ai_chat_panel(locale.get())}</span>
+                    <p class="text-xs text-muted">{move || t::settings::ai_chat_panel_desc(locale.get())}</p>
+                </div>
+                <div
+                    class="flex flex-wrap gap-2"
+                    data-deve-settings-ai-chat-visible=move || chat.chat_visible.get().to_string()
+                >
+                    <button
+                        class=move || button_state.get().show_class
+                        on:click=move |_| chat.set_chat_visible.set(true)
+                    >
+                        {move || t::settings::show_ai_chat(locale.get())}
+                    </button>
+                    <button
+                        class=move || button_state.get().hide_class
+                        on:click=move |_| chat.set_chat_visible.set(false)
+                    >
+                        {move || t::settings::hide_ai_chat(locale.get())}
+                    </button>
+                </div>
+            </div>
+        </div>
     }
 }

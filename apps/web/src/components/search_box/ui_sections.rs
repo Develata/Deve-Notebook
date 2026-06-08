@@ -5,8 +5,8 @@
 use crate::components::icons::{GitBranch, Search, Terminal};
 use crate::components::search_box::SearchUiMode;
 use crate::components::search_box::result_item::{SearchResultItemView, result_item};
+use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::SearchResult;
-use crate::hooks::use_core::CoreState;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use std::sync::Arc;
@@ -61,7 +61,7 @@ pub struct SearchResultsPanelView {
     pub set_show: WriteSignal<bool>,
     pub set_query: WriteSignal<String>,
     pub input_ref: NodeRef<leptos::html::Input>,
-    pub core: CoreState,
+    pub runtime: SearchRuntime,
     pub locale: RwSignal<Locale>,
     pub set_recent_move_dirs: WriteSignal<Vec<String>>,
     pub results_ref: NodeRef<leptos::html::Div>,
@@ -77,7 +77,7 @@ pub fn results_panel(view: SearchResultsPanelView) -> impl IntoView {
         set_show,
         set_query,
         input_ref,
-        core,
+        runtime,
         locale,
         set_recent_move_dirs,
         results_ref,
@@ -92,10 +92,10 @@ pub fn results_panel(view: SearchResultsPanelView) -> impl IntoView {
             class="overflow-y-auto p-2"
         >
             {
-                let core = core.clone();
+                let runtime = runtime.clone();
                 move || {
                     let res = providers_results.get();
-                    let core = core.clone();
+                    let runtime = runtime.clone();
                     if res.is_empty() {
                         view! {
                             <div class="p-4 text-center text-muted text-sm">
@@ -121,7 +121,7 @@ pub fn results_panel(view: SearchResultsPanelView) -> impl IntoView {
                                             set_show,
                                             set_query,
                                             input_ref,
-                                            core: core.clone(),
+                                            runtime: runtime.clone(),
                                             set_recent_move_dirs,
                                         })
                                     }

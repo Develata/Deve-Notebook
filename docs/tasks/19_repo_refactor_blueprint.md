@@ -75,6 +75,11 @@
 * `server/runtime/`
   * AppState
   * startup / setup / router assembly
+  * auth / native session assembly
+  * plugin host API assembly
+  * sync / watcher / tree assembly
+  * metrics / prewarm / p2p peripheral assembly
+  * static-file validation and router build admission
   * session lifecycle
 * `server/handlers/document/`
   * open/edit/create/delete
@@ -94,24 +99,28 @@
 
 建议逐步收敛为：
 
-* `runtime/session/`
+* `runtime/session_client/`
   * ws lifecycle
   * reconnect
   * auth/session gating
-* `runtime/scope/`
+* `runtime/scope_client/`
   * repo scope
   * branch scope
   * scope prefs
   * stale scope recovery
-* `runtime/document/`
+* `runtime/document_client/`
   * open doc
   * pending ops
   * ack/reject
   * navigation guard
-* `runtime/source_control/`
+* `runtime/source_control_client/`
   * staged/unstaged
   * diff sessions
   * graph/history
+* `runtime/rendering_client/`
+  * Markdown / editor bridge
+  * render hints
+  * CodeMirror / KaTeX object adapters
 * `features/`
   * editor
   * explorer
@@ -120,7 +129,9 @@
 
 说明：
 
-* 当前 `use_core` 目录不必立刻消失，但应逐步按 runtime 切分，而不是继续扩展 `effects_*` 前缀家族。
+* 当前 `use_core` 目录不必立刻消失，但必须降级为 composition root，逐步按 client runtime 切分，而不是继续扩展 `effects_*` 前缀家族。
+* Web client runtime 只能编排 UI intent、transport state、pending overlay 与 Object Plane adapter，不得拥有 ledger/source-control authority。
+* UI 组件只能通过 typed handle 消费 client runtime，不得直接读写跨 runtime 的混合 signal 集合。
 
 ## 4. 优先迁移顺序 (Migration Order)
 
@@ -136,6 +147,10 @@
 
 * 把 repair 从 scattered fallback 收成正式服务
 * 明确 degraded / quarantined repo 的行为
+
+Server startup 同步开始收敛到 `server/runtime/`：`start_server_with_options`
+只保留顺序编排、bind/serve 与错误传播，auth、plugin、sync、watcher、tree、
+metrics、static/router 装配必须迁入 runtime parts。
 
 ### Phase B — Document Pending / Ack / Reject
 
@@ -165,6 +180,12 @@
 ### Phase E — Markdown / Rendering Runtime
 
 第五优先。把现有 Markdown 体验补完，但不新增超前模式；优先完善 plan 中已经存在的 Source-first / Cursor Reveal / Widget 行为。
+
+目标：
+
+* 将 `index.html` 中的 editor/mobile/rendering 全局桥接迁入 `runtime/rendering_client` 对应的 JS bridge。
+* `window.*` 只作为短期 compatibility surface，由单一 registry 集中挂载。
+* DOM、CodeMirror、KaTeX 只属于 Object Plane adapter，不得清理 pending 或决定写入成功。
 
 ### Phase F — Peripheral Systems
 

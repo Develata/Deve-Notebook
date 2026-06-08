@@ -1,8 +1,8 @@
 use super::{
     BUTTON_CLASS_ACCENT_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE, SYNC_AUTO_CLASS_ACTIVE,
-    SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, editor_density_button_state,
-    editor_wrap_button_state, language_button_state, reserved_setting_state,
-    sync_mode_button_state, theme_button_state,
+    SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, ai_chat_visibility_button_state,
+    editor_density_button_state, editor_wrap_button_state, language_button_state,
+    reserved_setting_state, sync_mode_button_state, theme_button_state,
 };
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
 use crate::components::settings_prefs::{
@@ -89,6 +89,17 @@ fn editor_preference_buttons_reflect_local_feedback_state() {
     let density = editor_density_button_state(EditorDensityPreference::Compact);
     assert_eq!(density.comfortable_class, BUTTON_CLASS_IDLE);
     assert_eq!(density.compact_class, BUTTON_CLASS_ACCENT_ACTIVE);
+}
+
+#[test]
+fn ai_chat_visibility_buttons_reflect_local_feedback_state() {
+    let visible = ai_chat_visibility_button_state(true);
+    assert_eq!(visible.show_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    assert_eq!(visible.hide_class, BUTTON_CLASS_IDLE);
+
+    let hidden = ai_chat_visibility_button_state(false);
+    assert_eq!(hidden.show_class, BUTTON_CLASS_IDLE);
+    assert_eq!(hidden.hide_class, BUTTON_CLASS_ACCENT_ACTIVE);
 }
 
 #[test]

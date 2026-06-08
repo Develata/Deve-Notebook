@@ -4,8 +4,9 @@
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::components::disconnect_overlay::DisconnectedOverlay;
-use crate::hooks::use_core::CoreState;
+use crate::hooks::use_core::navigation::PendingNavigation;
 use crate::hooks::use_layout::LayoutHookReturn;
+use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 mod body;
@@ -16,7 +17,6 @@ use self::overlays::MainLayoutOverlays;
 
 #[component]
 pub fn MainLayoutRuntime(
-    core: CoreState,
     desktop_layout: LayoutHookReturn,
     is_mobile: ReadSignal<bool>,
     is_resizing: ReadSignal<bool>,
@@ -38,7 +38,11 @@ pub fn MainLayoutRuntime(
     on_command: Callback<()>,
     on_settings: Callback<()>,
     on_logout: Callback<()>,
+    pending_navigation: ReadSignal<Option<PendingNavigation>>,
+    set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
 ) -> impl IntoView {
+    let session = expect_context::<SessionClient>();
+
     view! {
         <div
             class="h-screen w-screen flex flex-col bg-sidebar text-primary font-sans"
@@ -50,7 +54,6 @@ pub fn MainLayoutRuntime(
             style=move || if is_resizing.get() { "cursor: col-resize; user-select: none;" } else { "" }
         >
             <MainLayoutOverlays
-                core=core.clone()
                 is_mobile=is_mobile
                 show_search=show_search
                 set_show_search=set_show_search
@@ -59,10 +62,11 @@ pub fn MainLayoutRuntime(
                 set_show_settings=set_show_settings
                 on_settings=on_settings
                 on_open=on_open
+                pending_navigation=pending_navigation
+                set_pending_navigation=set_pending_navigation
             />
 
             <MainLayoutBody
-                core=core.clone()
                 desktop_layout=desktop_layout
                 is_mobile=is_mobile
                 active_view=active_view
@@ -76,7 +80,7 @@ pub fn MainLayoutRuntime(
                 on_command=on_command
                 on_logout=on_logout
             />
-            <DisconnectedOverlay status=core.ws.status.into() />
+            <DisconnectedOverlay status=session.connection_status.into() />
         </div>
     }
 }
