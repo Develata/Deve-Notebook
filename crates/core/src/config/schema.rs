@@ -257,12 +257,6 @@ pub struct Config {
     /// 合并策略。
     #[serde(default)]
     pub merge_strategy: MergeStrategy,
-    /// Source Control bridge policy.
-    #[serde(default)]
-    pub source_control: SourceControlConfig,
-    /// 静态 FullPeer mesh 配置，默认关闭。
-    #[serde(default)]
-    pub p2p: P2pConfig,
     /// 快照保留深度。
     #[serde(default = "defaults::snapshot_depth")]
     pub snapshot_depth: usize,
@@ -272,6 +266,12 @@ pub struct Config {
     /// 后台压缩并发度。
     #[serde(default = "defaults::concurrency")]
     pub concurrency: usize,
+    /// Source Control bridge policy.
+    #[serde(default)]
+    pub source_control: SourceControlConfig,
+    /// 静态 FullPeer mesh 配置，默认关闭。
+    #[serde(default)]
+    pub p2p: P2pConfig,
     /// UI 默认值与无害浏览器偏好种子。
     #[serde(default)]
     pub ui: UiConfig,
@@ -287,11 +287,11 @@ impl Default for Config {
             ledger_dir: defaults::ledger(),
             sync_mode: SyncMode::default(),
             merge_strategy: MergeStrategy::default(),
-            source_control: SourceControlConfig::default(),
-            p2p: P2pConfig::default(),
             snapshot_depth: defaults::snapshot_depth(),
             mem_cache_mb: defaults::mem_cache_mb(),
             concurrency: defaults::concurrency(),
+            source_control: SourceControlConfig::default(),
+            p2p: P2pConfig::default(),
             ui: UiConfig::default(),
             ai: AiConfig::default(),
         }

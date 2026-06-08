@@ -54,6 +54,21 @@ fn default_config_matches_settings_plan_defaults() {
 }
 
 #[test]
+fn default_config_serializes_for_config_print() {
+    let output =
+        toml::to_string_pretty(&Config::default()).expect("default config serializes to toml");
+
+    assert!(output.contains("snapshot_depth = 100"));
+    assert!(output.contains("[source_control]"));
+    assert!(output.contains("git_bridge = "));
+    assert!(output.contains("[p2p]"));
+
+    let config = toml::from_str::<Config>(&output).expect("printed config roundtrips");
+    assert_eq!(config.source_control.git_bridge, GitBridgeMode::Mirror);
+    assert_eq!(config.snapshot_depth, 100);
+}
+
+#[test]
 fn source_control_git_bridge_config_file_accepts_mirror_and_off() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[
