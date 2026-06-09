@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 07_network#web-ws-runtime
+//!
 use super::SocketMessage;
 use js_sys::{ArrayBuffer, JsString, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue};

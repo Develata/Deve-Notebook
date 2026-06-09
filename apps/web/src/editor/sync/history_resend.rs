@@ -4,8 +4,8 @@
 //!
 use super::context::SyncContext;
 use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
-use crate::runtime::document::pending;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::runtime::document::pending;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::GetUntracked;
 

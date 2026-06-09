@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 10_rendering#document-authority-bridge
+//!
 use std::sync::{Arc, Mutex};
 
 /// 清空编辑器侧的内存缓冲；锁损坏时仅记录并 fail-closed。

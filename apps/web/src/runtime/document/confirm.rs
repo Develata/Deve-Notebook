@@ -108,8 +108,8 @@ fn resolve(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::pending::{PendingLocalEditInput, push_pending_edit};
+    use super::*;
     use deve_core::models::Op;
 
     fn repo_id() -> RepoId {
@@ -150,7 +150,10 @@ mod tests {
             42,
         );
 
-        assert_eq!(res.confirmation, Some(WriteConfirmation::Committed { seq: 42 }));
+        assert_eq!(
+            res.confirmation,
+            Some(WriteConfirmation::Committed { seq: 42 })
+        );
         assert!(res.clear_navigation);
         assert!(!pending.contains_key(&doc_id));
     }
@@ -208,7 +211,10 @@ mod tests {
             42,
         );
 
-        assert_eq!(res.confirmation, Some(WriteConfirmation::Committed { seq: 42 }));
+        assert_eq!(
+            res.confirmation,
+            Some(WriteConfirmation::Committed { seq: 42 })
+        );
         // still one in-scope edit pending -> guard stays
         assert!(!res.clear_navigation);
         assert_eq!(pending.get(&doc_id).map(Vec::len), Some(1));

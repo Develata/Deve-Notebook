@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 10_rendering#document-authority-bridge
+//!
 //! Document runtime band — open / pending / ack-reject / navigation for the
 //! thin-client write path.
 //!

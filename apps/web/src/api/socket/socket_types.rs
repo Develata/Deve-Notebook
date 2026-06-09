@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 07_network#web-ws-runtime
+//!
 pub enum SocketEvent {
     Opened,
     Message(SocketMessage),

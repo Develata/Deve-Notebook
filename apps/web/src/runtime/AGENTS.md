@@ -1,27 +1,14 @@
-<!-- Parent: ../AGENTS.md -->
-<!-- Generated: 2026-05-28 -->
+# apps/web/src/runtime
 
-# runtime
+## Boundary
 
-## Purpose
+This directory contains Web client runtime adapters. They are Flow Coordination
+or Object Plane adapter code, not Execution Domain authority.
 
-Web client runtime bands. Infra-first runtime convergence (Phase B+) per
-`docs/tasks/19_repo_refactor_blueprint.md` §3.3 and
-`docs/report/runtime-convergence-audit-2026-05-28.md`: scattered runtime
-logic under `hooks/use_core/` (the `effects_*` / `callbacks_*` prefix
-families) is migrated here into typed `runtime/{session,scope,document,...}`
-bands. `document` is the first band.
+## Rules
 
-## Key Files
-
-| File | Description |
-|------|-------------|
-| `mod.rs` | Runtime band module entry |
-
-## Subdirectories
-
-| Directory | Purpose |
-|-----------|---------|
-| `document/` | Document runtime band — pending overlay + write-confirmation for the thin-client write path |
-
-<!-- MANUAL: -->
+- Do not append ledger facts or decide source-control authority here.
+- Do not import from `apps/web/src/hooks/use_core` internals.
+- Expose typed client handles and pure client-side helpers only.
+- DOM, CodeMirror, KaTeX, and browser globals belong under rendering client
+  adapters and must not clear pending writes or mark writes successful.

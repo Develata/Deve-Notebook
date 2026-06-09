@@ -302,6 +302,10 @@ A's shadow repo, peer B's local branch remains unchanged until an explicit
 merge/import step, and reconnect aligns vectors without implying automatic
 local merge.
 
+For Windows/WSL stability, the smoke builds a single shared local image
+serially and defaults `DEVE_DOCKER_P2P_MESH_BUILDKIT=0`; set it to `1` only
+when the local Docker build context handles extended attributes reliably.
+
 Use `DEVE_DOCKER_P2P_MESH_A_PORT=<port>` and
 `DEVE_DOCKER_P2P_MESH_B_PORT=<port>` when the defaults are occupied. Set
 `DEVE_DOCKER_P2P_MESH_KEEP=1` to keep both peers running for manual diagnostics;
