@@ -5,6 +5,7 @@
 use crate::components::sidebar::source_control::commit_ai::{
     build_generate_callback, sync_generated_commit_message,
 };
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::hooks::use_core::{ChatContext, SourceControlContext};
 use crate::i18n::Locale;
@@ -30,6 +31,10 @@ fn can_submit_commit_now(core: &SourceControlContext, message: &str) -> bool {
     core.can_write.get_untracked()
         && !core.staged_changes.get_untracked().is_empty()
         && !message.trim().is_empty()
+}
+
+fn show_git_push_cli_only_notice(set_notice: WriteSignal<Option<SourceControlNotice>>) {
+    set_notice.set(Some(SourceControlNotice::git_push_cli_only()));
 }
 
 pub fn use_commit_controller(
@@ -93,9 +98,7 @@ pub fn use_commit_controller(
                 return;
             }
             dropdown_open.set(false);
-            core.clear_notice.run(());
-            core.on_commit_and_push.run(msg.get_untracked());
-            set_msg.set(String::new());
+            show_git_push_cli_only_notice(core.set_notice);
         }
     });
 
@@ -120,5 +123,26 @@ pub fn use_commit_controller(
         on_generate,
         on_commit,
         on_commit_and_push,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::show_git_push_cli_only_notice;
+    use crate::hooks::use_core::source_control_notice::is_git_push_cli_notice;
+    use leptos::prelude::{GetUntracked, signal};
+
+    #[test]
+    fn commit_and_push_sets_git_push_cli_only_notice() {
+        let (notice, set_notice) = signal(None);
+
+        show_git_push_cli_only_notice(set_notice);
+
+        assert!(
+            notice
+                .get_untracked()
+                .as_ref()
+                .is_some_and(is_git_push_cli_notice)
+        );
     }
 }

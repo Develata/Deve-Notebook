@@ -57,17 +57,17 @@ pub(super) fn item_content(
     is_mobile: bool,
 ) -> impl IntoView {
     let detail_class = if is_mobile {
-        "text-[11px] opacity-60 font-mono"
+        "w-full text-[11px] opacity-60 font-mono leading-snug whitespace-normal break-words"
     } else {
-        "text-xs opacity-60 font-mono"
+        "w-full text-xs opacity-60 font-mono leading-snug whitespace-normal break-words"
     };
     let detail_view = detail_text
         .map(|detail| view! { <span class=detail_class>{detail}</span> }.into_any())
         .unwrap_or_else(|| view! {}.into_any());
 
     view! {
-        <div class="flex-1 truncate flex flex-col items-start gap-0.5">
-            <span class="font-medium">{title}</span>
+        <div class="min-w-0 flex-1 flex flex-col items-start gap-0.5">
+            <span class="w-full truncate font-medium">{title}</span>
             {detail_view}
         </div>
     }
