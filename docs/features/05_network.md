@@ -51,6 +51,7 @@
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
 - `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。
 - FullPeer 收到的 push / snapshot push 只能按 authenticated peer 或有效 source proof 写入对应 shadow；伪造另一个 source peer 的 payload 必须被拒绝。
+- peer A 通过 Source Control commit 确认的本地投影变更，应在下一次 FullPeer handshake/diff 后出现在 peer B 的 peer A shadow 中；peer B 本地 branch 仍保持不变，直到用户显式 merge/import。
 - Mesh v1 不做自动发现、NAT 穿透或自动拓扑修复。
 
 ### 7. Shadow 与显式合并边界

@@ -329,6 +329,9 @@ Vector authority 规则：
 - `SyncHello.vector` 必须由当前 `repo_id` 的 ledger heads 重建或刷新，不得只信任进程内缓存。
 - local branch 水位来自本地 repo ledger head；remote branch 水位来自对应 `ledger/remotes/<peer>/<repo>` shadow ledger head。
 - 服务重启、engine lazy-load、或已有 engine 之后发生本地写入时，下次 strict sync 访问必须先刷新 vector，再计算 diff 或签名回包。
+- Deve-authorized local writes, including Source Control stage/commit flows, MUST be visible to the next FullPeer
+  `SyncHello` diff. A committed local Projection Workspace change on peer A must produce either an incremental
+  `SyncPush` or snapshot response for peer B, and peer B must write it only to peer A's shadow repo.
 
 ### 7.2 Envelope Pattern
 

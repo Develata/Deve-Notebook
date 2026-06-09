@@ -8,10 +8,14 @@ use super::sync_hello_test_support::{
     recv_protocol_error, signed_hello, signed_hello_for_repo, signed_hello_for_scope,
     unicast_channel,
 };
+use deve_core::config::GitBridgeMode;
 use deve_core::ledger::listing::RepoListing;
+use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::{DocId, LedgerEntry, Op, VersionVector};
-use deve_core::protocol::{ServerErrorCode, ServerMessage, SessionProof};
+use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage, SessionProof};
 use deve_core::security::IdentityKeyPair;
+use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::{ChangeStatus, SourceControlApi};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_hello_creates_repo_scoped_shadow_without_borrowing_local_metadata()
@@ -140,6 +144,68 @@ async fn sync_hello_followup_request_carries_known_vector() -> anyhow::Result<()
         .expect("sync request follow-up");
 
     assert_eq!(known_vector.get(&local_peer), 1);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_pushes_source_control_commit_to_full_peer() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let repo_name = state.repo.local_repo_name().to_string();
+    let local_peer = state.identity_key.peer_id();
+    let path = "p2p-mesh/source-control.md";
+    let content = "source-control mesh payload";
+    let abs = state.repo.local_repo_workspace_path(&repo_name, path)?;
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&abs, content)?;
+    state.repo.run_on_local_repo(&repo_name, |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: path.into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash(content),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })?;
+    let selector = RepoSelector::default();
+    state
+        .repo
+        .stage_pending_in_repo(&selector, &ScPathTarget::from_path(path))?;
+    state.repo.commit_staged_in_repo_with_git_bridge(
+        &selector,
+        "source control mesh commit",
+        GitBridgeMode::Off,
+    )?;
+
+    let remote = IdentityKeyPair::generate();
+    let hello = signed_hello_for_repo(&remote, repo_id);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = empty_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut rx).await?;
+    let push = messages
+        .iter()
+        .find_map(|msg| match msg {
+            ServerMessage::SyncPush {
+                source_peer_id,
+                repo_id,
+                encrypted_payload,
+                ..
+            } => Some((source_peer_id, repo_id, encrypted_payload)),
+            _ => None,
+        })
+        .expect("source-control commit should be offered as SyncPush");
+
+    assert_eq!(push.0, &local_peer);
+    assert_eq!(push.1, &repo_id);
+    assert!(!push.2.is_empty());
     Ok(())
 }
 

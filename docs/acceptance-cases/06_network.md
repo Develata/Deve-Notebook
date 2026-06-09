@@ -238,6 +238,7 @@
     - P2P static peer 配置启用
   steps:
     - run: DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
+    - run: cargo test -p deve_cli sync_hello_pushes_source_control_commit_to_full_peer -- --nocapture
     - run: cargo test -p deve_cli sync -- --nocapture
     - run: cargo test -p deve_cli p2p_mesh -- --nocapture
   assertions:
