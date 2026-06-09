@@ -12,6 +12,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::models::VersionVector;
 use deve_core::protocol::{ServerError, ServerMessage, SessionProof};
 use deve_core::security::IdentityKeyPair;
+use deve_core::sync::handshake_proof::sign_sync_hello;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -51,16 +52,11 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
 
 pub(super) fn signed_hello(remote: &IdentityKeyPair, vector: &VersionVector) -> SyncHelloInput {
     let peer_id = remote.peer_id();
-    let sorted_map: std::collections::BTreeMap<_, _> = vector.iter().collect();
-    let vec_bytes = serde_json::to_vec(&sorted_map).expect("serialize vector");
-    let mut msg = Vec::new();
-    msg.extend_from_slice(b"deve-handshake");
-    msg.extend_from_slice(peer_id.as_str().as_bytes());
-    msg.extend_from_slice(&vec_bytes);
+    let signature = sign_sync_hello(remote, vector).expect("serialize vector");
     SyncHelloInput {
         peer_id,
         peer_pubkey: remote.public_key_bytes().to_vec(),
-        session_proof: SessionProof::new(remote.sign(&msg)),
+        session_proof: SessionProof::new(signature),
         remote_vector: vector.clone(),
         repo_id: uuid::Uuid::nil(),
         scope_nonce: 1,

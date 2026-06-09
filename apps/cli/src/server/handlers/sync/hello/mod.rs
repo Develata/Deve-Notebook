@@ -53,7 +53,6 @@ pub(super) async fn handle(
     }
 
     let Some(handshake) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {
-        let local_peer_id = engine.local_peer_id.clone();
         let local_vector = engine.version_vector().clone();
         engine
             .handshake(
@@ -63,12 +62,12 @@ pub(super) async fn handle(
                 session_proof.signature(),
                 remote_vector,
             )
-            .map(|result| (local_peer_id, local_vector, engine.clone(), result))
+            .map(|result| (local_vector, engine.clone(), result))
     }) else {
         clear_sync_hello_scope_failure(session, false);
         return;
     };
-    let (local_peer_id, local_vector, outbound_engine, result) = match handshake {
+    let (local_vector, outbound_engine, result) = match handshake {
         Ok(result) => result,
         Err(e) => {
             clear_sync_hello_scope_failure(session, false);
@@ -117,7 +116,7 @@ pub(super) async fn handle(
     session.set_offered_sync_sources(result.to_send.iter().map(|req| req.peer_id.clone()));
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 
-    match response::send(state, ch, repo_id, scope_nonce, local_peer_id, local_vector) {
+    match response::send(state, ch, repo_id, scope_nonce, local_vector) {
         Ok(()) => {}
         Err(err) => {
             clear_sync_hello_scope_failure(session, false);

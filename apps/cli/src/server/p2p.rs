@@ -13,6 +13,7 @@ use deve_core::protocol::{
 };
 use deve_core::security::EncryptedOp;
 use deve_core::security::IdentityKeyPair;
+use deve_core::sync::handshake_proof::{sign_sync_hello, verify_sync_hello_proof};
 use deve_core::sync::protocol as sync_proto;
 use futures::{SinkExt, StreamExt};
 use std::sync::Arc;
@@ -150,6 +151,9 @@ where
         ServerMessage::SyncHello {
             peer_id,
             repo_id: hello_repo_id,
+            pub_key,
+            signature,
+            vector,
             ..
         } => {
             if hello_repo_id != repo_id {
@@ -174,6 +178,9 @@ where
                     peer.peer_id
                 ));
             }
+            verify_sync_hello_proof(&peer_id, &pub_key, &signature, &vector).map_err(|err| {
+                anyhow!("P2P peer {} SyncHello proof rejected: {err}", peer.label)
+            })?;
             stats.authenticated_peer_id = Some(peer_id);
             stats.saw_hello = true;
             Ok(())
@@ -572,17 +579,12 @@ fn signed_sync_hello(
     vector: VersionVector,
 ) -> ClientMessage {
     let peer_id = identity.peer_id();
-    let sorted_map: std::collections::BTreeMap<_, _> = vector.iter().collect();
-    let vec_bytes = serde_json::to_vec(&sorted_map).expect("version vector serializes");
-    let mut msg = Vec::new();
-    msg.extend_from_slice(b"deve-handshake");
-    msg.extend_from_slice(peer_id.as_str().as_bytes());
-    msg.extend_from_slice(&vec_bytes);
+    let signature = sign_sync_hello(identity, &vector).expect("version vector serializes");
 
     ClientMessage::SyncHello {
         peer_id,
         peer_pubkey: identity.public_key_bytes().to_vec(),
-        session_proof: SessionProof::new(identity.sign(&msg)),
+        session_proof: SessionProof::new(signature),
         vector,
         repo_id,
         scope_nonce: ScopeNonce::new(0),
@@ -600,8 +602,10 @@ mod tests {
     use deve_core::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
     use deve_core::protocol::frame::encode_server_binary;
     use deve_core::protocol::{ClientMessage, ScopeNonce, ServerMessage, SyncPushHeader};
-    use deve_core::security::keypair::verify_signature;
     use deve_core::security::{EncryptedOp, IdentityKeyPair};
+    use deve_core::sync::handshake_proof::{
+        sign_sync_hello, sync_hello_transcript, verify_sync_hello_proof,
+    };
     use deve_core::sync::{SyncManager, repo_scoped::RepoScopedSyncEngine};
     use futures::{Sink, Stream};
     use std::collections::VecDeque;
@@ -818,6 +822,24 @@ mod tests {
         }
     }
 
+    fn signed_server_hello(
+        identity: &IdentityKeyPair,
+        repo_id: uuid::Uuid,
+        vector: VersionVector,
+    ) -> ServerMessage {
+        let peer_id = identity.peer_id();
+        let signature = sign_sync_hello(identity, &vector).expect("version vector serializes");
+
+        ServerMessage::SyncHello {
+            peer_id,
+            repo_id,
+            scope_nonce: ScopeNonce::new(0),
+            pub_key: identity.public_key_bytes().to_vec(),
+            signature,
+            vector,
+        }
+    }
+
     #[test]
     fn p2p_mesh_sync_hello_is_signed_for_full_peer_admission_path() {
         let identity = IdentityKeyPair::generate();
@@ -833,20 +855,10 @@ mod tests {
                 repo_id: decoded_repo,
                 scope_nonce,
             } => {
-                let sorted_map: std::collections::BTreeMap<_, _> = vector.iter().collect();
-                let vec_bytes = serde_json::to_vec(&sorted_map).expect("vector");
-                let mut msg = Vec::new();
-                msg.extend_from_slice(b"deve-handshake");
-                msg.extend_from_slice(peer_id.as_str().as_bytes());
-                msg.extend_from_slice(&vec_bytes);
-
                 assert_eq!(decoded_repo, repo_id);
                 assert_eq!(scope_nonce.get(), 0);
-                assert!(verify_signature(
-                    &peer_pubkey,
-                    &msg,
-                    session_proof.signature()
-                ));
+                verify_sync_hello_proof(&peer_id, &peer_pubkey, session_proof.signature(), &vector)
+                    .expect("client SyncHello proof verifies");
             }
             other => panic!("expected SyncHello, got {other:?}"),
         }
@@ -932,6 +944,78 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn p2p_exchange_rejects_invalid_sync_hello_signature() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let (_dir, state) = test_state_with_dir(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let remote = IdentityKeyPair::generate();
+        let remote_peer = remote.peer_id();
+        let message = ServerMessage::SyncHello {
+            peer_id: remote_peer.clone(),
+            repo_id,
+            scope_nonce: ScopeNonce::new(0),
+            pub_key: remote.public_key_bytes().to_vec(),
+            signature: vec![0; 64],
+            vector: VersionVector::new(),
+        };
+        let mut stats = super::ExchangeStats::default();
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer_with_id(repo_id, remote_peer.as_str()),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("invalid SyncHello signature must fail closed");
+
+        assert!(err.to_string().contains("Handshake Signature"));
+        assert!(!stats.saw_hello);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_sync_hello_pubkey_peer_id_mismatch() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let (_dir, state) = test_state_with_dir(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let claimed = IdentityKeyPair::generate();
+        let signer = IdentityKeyPair::generate();
+        let claimed_peer = claimed.peer_id();
+        let vector = VersionVector::new();
+        let transcript =
+            sync_hello_transcript(&claimed_peer, &vector).expect("version vector serializes");
+        let message = ServerMessage::SyncHello {
+            peer_id: claimed_peer.clone(),
+            repo_id,
+            scope_nonce: ScopeNonce::new(0),
+            pub_key: signer.public_key_bytes().to_vec(),
+            signature: signer.sign(&transcript),
+            vector,
+        };
+        let mut stats = super::ExchangeStats::default();
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer_with_id(repo_id, claimed_peer.as_str()),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("SyncHello pubkey/peer_id mismatch must fail closed");
+
+        assert!(err.to_string().contains("PeerID mismatch"));
+        assert!(!stats.saw_hello);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn p2p_exchange_rejects_repo_mismatch_after_sync_hello() -> anyhow::Result<()> {
         let identity = Arc::new(IdentityKeyPair::generate());
         let state = test_state(identity)?;
@@ -1006,17 +1090,11 @@ mod tests {
             .expect("repo info")
             .uuid;
         append_local_op(&state, repo_id)?;
-        let remote_peer = PeerId::new("peer-b");
+        let remote = IdentityKeyPair::generate();
+        let remote_peer = remote.peer_id();
         let hello = Message::Binary(
-            encode_server_binary(&ServerMessage::SyncHello {
-                peer_id: remote_peer,
-                repo_id,
-                scope_nonce: ScopeNonce::new(0),
-                pub_key: Vec::new(),
-                signature: Vec::new(),
-                vector: VersionVector::new(),
-            })?
-            .into(),
+            encode_server_binary(&signed_server_hello(&remote, repo_id, VersionVector::new()))?
+                .into(),
         );
         let request = Message::Binary(
             encode_server_binary(&ServerMessage::SyncRequest {
@@ -1035,7 +1113,13 @@ mod tests {
             },
         ]);
 
-        let stats = drive_sync_exchange(&peer(repo_id), repo_id, state, &mut socket).await?;
+        let stats = drive_sync_exchange(
+            &peer_with_id(repo_id, remote_peer.as_str()),
+            repo_id,
+            state,
+            &mut socket,
+        )
+        .await?;
 
         assert_eq!(stats.sent_pushes, 1);
         assert_eq!(socket.sent.len(), 1);

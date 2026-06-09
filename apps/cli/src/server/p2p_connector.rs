@@ -113,6 +113,7 @@ fn is_terminal_p2p_error(error_code: &str) -> bool {
             | "self_loop"
             | "repo_mismatch"
             | "peer_id_mismatch"
+            | "malformed_session_proof"
             | "token_missing"
             | "token_empty"
             | "invalid_url"
@@ -141,8 +142,12 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "invalid_url"
     } else if message.contains("invalid p2p repo_id") {
         "invalid_repo_id"
-    } else if message.contains("configured peer_id") {
+    } else if message.contains("configured peer_id") || message.contains("peerid mismatch") {
         "peer_id_mismatch"
+    } else if message.contains("invalid handshake signature")
+        || message.contains("synchello proof rejected")
+    {
+        "malformed_session_proof"
     } else if message.contains("401")
         || message.contains("403")
         || message.contains("unauthorized")
@@ -202,11 +207,24 @@ mod tests {
             )),
             "peer_id_mismatch"
         );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer peer-b SyncHello proof rejected: Invalid Handshake Signature"
+            )),
+            "malformed_session_proof"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer peer-b SyncHello proof rejected: PeerID mismatch: claimed a, derived b"
+            )),
+            "peer_id_mismatch"
+        );
     }
 
     #[test]
     fn p2p_connector_identity_mismatch_is_terminal() {
         assert!(is_terminal_p2p_error("peer_id_mismatch"));
+        assert!(is_terminal_p2p_error("malformed_session_proof"));
         assert!(is_terminal_p2p_error("repo_mismatch"));
         assert!(is_terminal_p2p_error("unauthorized"));
         assert!(is_terminal_p2p_error("self_loop"));

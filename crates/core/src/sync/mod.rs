@@ -14,6 +14,7 @@ pub mod drift_detect;
 pub mod engine;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod handler;
+pub mod handshake_proof;
 #[cfg(not(target_arch = "wasm32"))]
 mod manager_lifecycle;
 #[cfg(not(target_arch = "wasm32"))]

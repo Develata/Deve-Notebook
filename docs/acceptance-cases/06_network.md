@@ -215,6 +215,8 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_request_before_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_configured_peer_id_mismatch -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_invalid_sync_hello_signature -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_sync_hello_pubkey_peer_id_mismatch -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_repo_mismatch_after_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
@@ -234,6 +236,8 @@
     - api_assert: full_peer_exchange_requires_sync_hello true
     - api_assert: pre_hello_sync_request_rejected true
     - api_assert: configured_peer_id_is_expected_authenticated_identity true
+    - api_assert: full_peer_connector_verifies_sync_hello_proof true
+    - api_assert: sync_hello_pubkey_peer_id_mismatch_rejected true
     - api_assert: configured_peer_id_mismatch_not_reconnecting true
     - api_assert: static_p2p_config_errors_not_reconnecting true
     - api_assert: post_hello_repo_mismatch_rejected true

@@ -6,8 +6,7 @@ use super::SyncEngine;
 use crate::config::SyncMode;
 use crate::models::VersionVector;
 use crate::models::{PeerId, RepoId};
-use crate::security::hashing::sha256_hex;
-use crate::security::keypair::verify_signature;
+use crate::sync::handshake_proof::{SyncHelloProofError, verify_sync_hello_proof};
 use crate::sync::protocol::{self, HandshakeResult};
 use thiserror::Error;
 
@@ -29,6 +28,20 @@ impl HandshakeError {
             self,
             HandshakeError::PeerIdMismatch { .. } | HandshakeError::InvalidSignature
         )
+    }
+}
+
+impl From<SyncHelloProofError> for HandshakeError {
+    fn from(err: SyncHelloProofError) -> Self {
+        match err {
+            SyncHelloProofError::PeerIdMismatch { claimed, derived } => {
+                HandshakeError::PeerIdMismatch { claimed, derived }
+            }
+            SyncHelloProofError::InvalidSignature => HandshakeError::InvalidSignature,
+            SyncHelloProofError::VectorSerialization(err) => {
+                HandshakeError::VectorSerialization(err)
+            }
+        }
     }
 }
 
@@ -61,32 +74,7 @@ impl SyncEngine {
         signature: &[u8],
         remote_vector: VersionVector,
     ) -> Result<HandshakeResult, HandshakeError> {
-        // 1. Verify PeerID (Hash of PubKey)
-        // 这里的 12 是截取长度，需与 IdentityKeyPair::peer_id 保持一致
-        let hash = sha256_hex(pub_key);
-        let derived_id = &hash[0..12];
-
-        if remote_peer_id.as_str() != derived_id {
-            return Err(HandshakeError::PeerIdMismatch {
-                claimed: remote_peer_id,
-                derived: derived_id.to_owned(),
-            });
-        }
-
-        // 2. Verify Signature
-        // Message = "deve-handshake" + peer_id + json(vector)
-        // Fix (Deterministic Serialization): Convert HashMap to BTreeMap (sorted keys)
-        let sorted_map: std::collections::BTreeMap<_, _> = remote_vector.iter().collect();
-        let vec_bytes = serde_json::to_vec(&sorted_map)?;
-
-        let mut msg = Vec::new();
-        msg.extend_from_slice(b"deve-handshake");
-        msg.extend_from_slice(remote_peer_id.as_str().as_bytes());
-        msg.extend_from_slice(&vec_bytes);
-
-        if !verify_signature(pub_key, &msg, signature) {
-            return Err(HandshakeError::InvalidSignature);
-        }
+        verify_sync_hello_proof(&remote_peer_id, pub_key, signature, &remote_vector)?;
 
         let mut remote_vector = remote_vector;
         remote_vector.normalize();
@@ -111,6 +99,7 @@ mod tests {
     use crate::models::VersionVector;
     use crate::models::{PeerId, RepoId};
     use crate::security::IdentityKeyPair;
+    use crate::sync::handshake_proof::sign_sync_hello;
     use std::sync::Arc;
 
     fn build_engine() -> anyhow::Result<(tempfile::TempDir, SyncEngine, RepoId)> {
@@ -126,13 +115,7 @@ mod tests {
     }
 
     fn handshake_signature(remote: &IdentityKeyPair, vector: &VersionVector) -> Vec<u8> {
-        let sorted_map: std::collections::BTreeMap<_, _> = vector.iter().collect();
-        let vec_bytes = serde_json::to_vec(&sorted_map).expect("serialize vector");
-        let mut msg = Vec::new();
-        msg.extend_from_slice(b"deve-handshake");
-        msg.extend_from_slice(remote.peer_id().as_str().as_bytes());
-        msg.extend_from_slice(&vec_bytes);
-        remote.sign(&msg)
+        sign_sync_hello(remote, vector).expect("serialize vector")
     }
 
     #[test]
