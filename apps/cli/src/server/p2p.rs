@@ -200,7 +200,14 @@ where
             encrypted_payload,
             ..
         } => {
-            validate_inbound_push(peer, repo_id, stats, &source_peer_id, &header, &encrypted_payload)?;
+            validate_inbound_push(
+                peer,
+                repo_id,
+                stats,
+                &source_peer_id,
+                &header,
+                &encrypted_payload,
+            )?;
             let count = receive_remote_ops(state, source_peer_id, repo_id, encrypted_payload)?;
             stats.applied_pushes += u64::from(count > 0);
             Ok(())
@@ -560,8 +567,8 @@ mod tests {
     use deve_core::models::{PeerId, VersionVector};
     use deve_core::protocol::frame::encode_server_binary;
     use deve_core::protocol::{ClientMessage, ScopeNonce, ServerMessage, SyncPushHeader};
-    use deve_core::security::{EncryptedOp, IdentityKeyPair};
     use deve_core::security::keypair::verify_signature;
+    use deve_core::security::{EncryptedOp, IdentityKeyPair};
     use deve_core::sync::{SyncManager, repo_scoped::RepoScopedSyncEngine};
     use futures::{Sink, Stream};
     use std::collections::VecDeque;
