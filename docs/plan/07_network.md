@@ -96,6 +96,8 @@ enabled = true
 - `enabled = false` 时 runtime **MUST NOT** 启动 outbound mesh connector。
 - `inbound_token_env` / `auth_token_env` 只保存环境变量名；token material **MUST NOT** 写入 `config.toml`、日志、`/api/node/role`、native bootstrap payload 或 browser localStorage。
 - `peer_id`、`repo_id` 与 `ws_url` 都必须显式配置；缺失任一项必须 fail-closed。
+- `peer_id` 是 expected authenticated peer identity，**不是** display label；FullPeer connector 收到对端 `SyncHello` 后，返回的 authenticated `peer_id`
+  必须与静态配置完全一致，否则必须 fail-closed 并记录结构化错误。
 - `ws_url` 的 scheme 必须是 `ws://` 或 `wss://`；Docker/local smoke 可使用 loopback 或 compose service DNS，生产配置应使用受控私网或 TLS 终端。
 - connector 必须拒绝连接本机相同 `peer_id + repo_id + ws_url` 的明显 self-loop。
 - FullPeer `/ws` admission **MUST** 使用 effective `p2p.inbound_token_env` 读取入站 token
@@ -485,6 +487,8 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - unauthorized、protocol error、stale scope 与 disconnected 必须走不同结构化错误路径。
 - 负责 Browser / FullPeer admission 分类；FullPeer admission 通过后仍必须走 peer signature、repo scope 与 source attribution 校验。
 - 负责按静态 peer 配置启动 outbound connector；connector 可以复用独立的 P2P handler，但该 handler 必须执行与普通 sync handler 等价的 repo/source attribution 校验，不得在校验前直接写 shadow repo。
+- P2P handler 在收到并接受 `SyncHello` 前，不得处理 `SyncRequest`、`SyncSnapshotRequest`、`SyncPush` 或 `SyncPushSnapshot`；
+  握手后的所有 sync frame 必须沿用同一 configured `repo_id`。
 
 ### 12.4 Web Runtime {#web-ws-runtime}
 

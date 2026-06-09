@@ -212,6 +212,9 @@
     - run: cargo test -p deve_cli p2p_mesh -- --nocapture
     - run: cargo test -p deve_cli p2p_node_role_summary -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_request_before_sync_hello -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_configured_peer_id_mismatch -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_repo_mismatch_after_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_sync_push_source -- --nocapture
@@ -225,6 +228,9 @@
     - writer_registration_not_granted_by_full_peer_admission: true
     - api_assert: p2p_node_role_summary_omits_token_material true
     - api_assert: full_peer_exchange_requires_sync_hello true
+    - api_assert: pre_hello_sync_request_rejected true
+    - api_assert: configured_peer_id_is_expected_authenticated_identity true
+    - api_assert: post_hello_repo_mismatch_rejected true
     - api_assert: authenticated_self_loop_rejected true
     - api_assert: self_loop_status_is_not_reconnecting true
     - api_assert: p2p_inbound_sync_push_source_attribution_checked true
