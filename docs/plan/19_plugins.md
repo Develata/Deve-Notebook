@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Deferred`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-09`
 - `Counterpart Feature`: `docs/features/17_plugins.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
@@ -40,6 +40,7 @@ MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受�
 *   **Capabilities Default Deny**：manifest capability 未声明时，host API 必须拒绝对应能力。
 *   **Fail-Closed RPC**：非法消息、未知插件、运行时错误、不可序列化结果都必须返回结构化错误，不得静默成功或 fallback 到核心命令。
 *   **Ledger-Managed Boundary**：托管笔记、`.notegit/` 与 ledger 对象不得通过裸文件写入绕过 authority；若需要写托管笔记，必须走 ledger-aware host functions。
+*   **Source-Control Writer Gate**：plugin-host 暴露 source-control writer host functions 时，必须显式接入当前 repo/sync writer gate 与 `source_control.git_bridge` effective policy；缺少本地 gate 依赖时必须 fail-closed，除非调用目标是明确的 remote proxy delegated API。
 *   未引入认证层的 plugin-host satellite 必须绑定 loopback，不得默认监听 `0.0.0.0`。
 *   `agent-bridge` 的拦截属于 `16_ai_agent` 的 Trusted External Agent Bridge，不得被重新包装成通用插件平台能力。
 

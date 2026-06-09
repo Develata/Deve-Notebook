@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-08`
+- `Last Review`: `2026-06-09`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -444,6 +444,12 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 同一个 push payload 只能包含一个 source peer 的 ledger facts；不同 source peer 必须拆成多个 push。
 - Snapshot request 若请求 shadow source，响应必须导出对应 shadow，而不能回退到本地 ledger。
 - 入站 push / snapshot push 的 source 必须来自本端在当前 SyncHello diff 中请求过的 peer；入站 request / snapshot request 的 source 必须来自本端在当前 SyncHello diff 中声明可发送的 peer。
+- FullPeer connector 接收到 `ServerMessage::SyncPush` 时，必须在 shadow apply 之前校验
+  `source_peer_id`、`repo_id`、`SyncPushHeader.repo_id`、`SyncPushHeader.peer_id` 与
+  `SyncPushHeader.payload_kind` 一致，并按 direct / indirect route 规则验证 `source_proof`。
+- FullPeer connector 接收到 `ServerMessage::SyncPushSnapshot` 时，必须在 shadow reset / replay
+  之前校验 source、repo、server vector 与 snapshot `source_proof`；静态 FullPeer v1 不实现多跳 relay
+  时，声明的 `source_peer_id` 必须等于已完成 `SyncHello` 的 authenticated peer。
 - 若 B 未与 A 建立信任或缺少 repo key，则 B 必须丢弃 A 的 payload。
 - relay 可以转发 offer，但不得越权强制接收。
 
@@ -475,7 +481,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 负责 ws upgrade、session gate、scope guard、server outbound fanout 与 sync handler 编排。
 - unauthorized、protocol error、stale scope 与 disconnected 必须走不同结构化错误路径。
 - 负责 Browser / FullPeer admission 分类；FullPeer admission 通过后仍必须走 peer signature、repo scope 与 source attribution 校验。
-- 负责按静态 peer 配置启动 outbound connector，但 connector 只能调用 protocol/runtime surface，不得绕过 sync handler 直接写 shadow repo。
+- 负责按静态 peer 配置启动 outbound connector；connector 可以复用独立的 P2P handler，但该 handler 必须执行与普通 sync handler 等价的 repo/source attribution 校验，不得在校验前直接写 shadow repo。
 
 ### 12.4 Web Runtime {#web-ws-runtime}
 

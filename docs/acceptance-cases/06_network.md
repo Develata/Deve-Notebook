@@ -214,6 +214,8 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_forged_sync_push_source -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_forged_snapshot_source -- --nocapture
     - run: scripts/check-network-baseline.sh
   assertions:
     - full_peer_session_browser_flag_eq: false
@@ -225,6 +227,8 @@
     - api_assert: full_peer_exchange_requires_sync_hello true
     - api_assert: authenticated_self_loop_rejected true
     - api_assert: self_loop_status_is_not_reconnecting true
+    - api_assert: p2p_inbound_sync_push_source_attribution_checked true
+    - api_assert: p2p_inbound_snapshot_source_attribution_checked true
 
 - case_id: NET-015
   goal: FullPeer mesh 入站远端 facts 只写 shadow repo，不自动污染本地 branch。

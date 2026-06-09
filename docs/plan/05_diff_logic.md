@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-08`
+- `Last Review`: `2026-06-09`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -85,6 +85,9 @@ DeveStaged
 - `source_control.git_bridge = "off"` 表示 Deve-only / NoteGit-only 运行：stage、
   commit、diff、history 与 merge 仍完全走 ledger authority；commit 成功后
   **MUST NOT** 排队 Git mirror record，也不得执行 Git bridge 写操作。
+- `source_control.git_bridge` 是 source-control writer 的显式 runtime policy；CLI `sc commit`、
+  HTTP commit、plugin-host HTTP mutation 与 Rhai `sc_commit` 等所有 commit writer surface
+  必须接收同一个 effective policy，不能通过默认 `mirror` 入口绕过 `off`。
 - `off` 模式下，`deve git status` 与 `deve git import` dry-run 可作为只读诊断；
   `deve git mirror/export/import --apply/push` 必须返回结构化 disabled blocker，并提示
   需要将 `source_control.git_bridge` 切回 `mirror`。
@@ -101,6 +104,8 @@ Git mirror 命令面必须遵守以下边界：
 - `git push` 只能发布已映射的 `.git` mirror HEAD；它 **MUST** fail-closed 于 mirror 未 ready、Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit` tracked 泄漏或 Git HEAD 未映射到最新 Deve commit。
 - repair action schema 只能用于诊断、人工修复指引和显式 retry；**MUST NOT** 被 Web、后台任务或 Command Palette 解释为自动 Git 写入授权。
 - 自动后台执行、可点击 repair UI 与 Web 后端直接执行 Git 写入 **MUST** 作为独立设计批次处理，不能从只读 status/review surface 隐式升级。
+- Proxy / plugin-host node role 摘要必须展示主进程 effective `source_control.git_bridge`
+  或明确的 delegated/unknown 状态，不得硬编码为 `mirror` 并误导 Web surface。
 
 ### 2.4 Diff Identity Model
 

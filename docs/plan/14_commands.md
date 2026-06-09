@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-08`
+- `Last Review`: `2026-06-09`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -73,6 +73,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `Git: Push Mirror`: 将已映射的 `.git` mirror HEAD 推送到远端；不得绕过 Deve authority。
     *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
     *   Command Palette / Source Control UI 可展示当前 `source_control.git_bridge` mode 与 CLI-only Git bridge notice；Web surface **MUST NOT** 直接执行 Git writer。
+    *   代理 / plugin-host 模式下，Command Palette 读取到的 node role mode 必须来自主进程 effective mode 或明确标记为 delegated/unknown，不得把缺省值当成 mirror mode。
     *   `Git:*` 文案 **MAY** 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 
 *   **P2P / Branch**:

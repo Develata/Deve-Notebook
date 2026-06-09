@@ -218,8 +218,10 @@
   steps:
     - doc_read: "docs/plan/19_plugins.md"
     - run: cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture
+    - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
   assertions:
     - doc_contains: "<projection_base>/<repo>/**/*.md"
     - doc_contains: ".notegit"
     - doc_contains: "ledger-aware host functions"
+    - plugin_assert: source_control_writer_gate_fail_closed_without_local_gate true
 ```
