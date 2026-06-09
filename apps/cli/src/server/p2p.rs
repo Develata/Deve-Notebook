@@ -167,69 +167,77 @@ where
                 ));
             }
             if peer_id.as_str() != peer.peer_id {
-                tracing::debug!(
-                    peer_label = %peer.label,
-                    configured_peer_id = %peer.peer_id,
-                    authenticated_peer_id = %peer_id,
-                    "P2P mesh peer_id differs from static label"
-                );
+                return Err(anyhow!(
+                    "P2P peer {} authenticated peer_id {} did not match configured peer_id {}",
+                    peer.label,
+                    peer_id,
+                    peer.peer_id
+                ));
             }
             stats.authenticated_peer_id = Some(peer_id);
             stats.saw_hello = true;
             Ok(())
         }
         ServerMessage::SyncRequest {
-            repo_id, requests, ..
+            repo_id: frame_repo_id,
+            requests,
+            ..
         } => {
-            send_requested_ops(state, socket, repo_id, requests, stats).await?;
+            validate_authenticated_frame(peer, repo_id, stats, frame_repo_id)?;
+            send_requested_ops(state, socket, frame_repo_id, requests, stats).await?;
             Ok(())
         }
         ServerMessage::SyncSnapshotRequest {
             source_peer_id,
-            repo_id,
+            repo_id: frame_repo_id,
             reason,
             ..
         } => {
-            send_requested_snapshot(state, socket, source_peer_id, repo_id, reason, stats).await?;
+            validate_authenticated_frame(peer, repo_id, stats, frame_repo_id)?;
+            send_requested_snapshot(state, socket, source_peer_id, frame_repo_id, reason, stats)
+                .await?;
             Ok(())
         }
         ServerMessage::SyncPush {
             source_peer_id,
-            repo_id,
+            repo_id: frame_repo_id,
             header,
             encrypted_payload,
             ..
         } => {
+            validate_authenticated_frame(peer, repo_id, stats, frame_repo_id)?;
             validate_inbound_push(
                 peer,
-                repo_id,
+                frame_repo_id,
                 stats,
                 &source_peer_id,
                 &header,
                 &encrypted_payload,
             )?;
-            let count = receive_remote_ops(state, source_peer_id, repo_id, encrypted_payload)?;
+            let count =
+                receive_remote_ops(state, source_peer_id, frame_repo_id, encrypted_payload)?;
             stats.applied_pushes += u64::from(count > 0);
             Ok(())
         }
         ServerMessage::SyncPushSnapshot {
             source_peer_id,
-            repo_id,
+            repo_id: frame_repo_id,
             server_vector,
             source_proof,
             payload,
             ..
         } => {
+            validate_authenticated_frame(peer, repo_id, stats, frame_repo_id)?;
             validate_inbound_snapshot(
                 peer,
-                repo_id,
+                frame_repo_id,
                 stats,
                 &source_peer_id,
                 &server_vector,
                 source_proof.as_ref(),
                 &payload,
             )?;
-            let count = receive_remote_snapshot(state, source_peer_id, repo_id, payload)?;
+            let count = receive_remote_snapshot(state, source_peer_id, frame_repo_id, payload)?;
             stats.applied_snapshots += u64::from(count > 0);
             Ok(())
         }
@@ -240,24 +248,49 @@ where
     }
 }
 
-fn validate_authenticated_direct_source(
+fn validate_authenticated_frame(
     peer: &P2pPeerConfig,
-    repo_id: RepoId,
+    expected_repo_id: RepoId,
     stats: &ExchangeStats,
-    source_peer_id: &PeerId,
+    frame_repo_id: RepoId,
 ) -> Result<()> {
-    let authenticated_peer = stats.authenticated_peer_id.as_ref().ok_or_else(|| {
-        anyhow!(
-            "P2P peer {} sent sync payload before authenticated SyncHello",
-            peer.label
-        )
-    })?;
+    validate_authenticated_exchange(peer, stats)?;
+    if frame_repo_id != expected_repo_id {
+        return Err(anyhow!(
+            "P2P peer {} sent repo {} after handshake for configured repo {}",
+            peer.label,
+            frame_repo_id,
+            expected_repo_id
+        ));
+    }
+    Ok(())
+}
+
+fn validate_authenticated_exchange<'a>(
+    peer: &P2pPeerConfig,
+    stats: &'a ExchangeStats,
+) -> Result<&'a PeerId> {
     if !stats.saw_hello {
         return Err(anyhow!(
             "P2P peer {} sent sync payload before SyncHello",
             peer.label
         ));
     }
+    stats.authenticated_peer_id.as_ref().ok_or_else(|| {
+        anyhow!(
+            "P2P peer {} sent sync payload before authenticated SyncHello",
+            peer.label
+        )
+    })
+}
+
+fn validate_authenticated_direct_source(
+    peer: &P2pPeerConfig,
+    repo_id: RepoId,
+    stats: &ExchangeStats,
+    source_peer_id: &PeerId,
+) -> Result<()> {
+    let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
     if source_peer_id != authenticated_peer {
         return Err(anyhow!(
             "P2P source attribution rejected for peer {} repo {}: source {} does not match authenticated peer {}",
@@ -728,9 +761,13 @@ mod tests {
     }
 
     fn peer(repo_id: uuid::Uuid) -> P2pPeerConfig {
+        peer_with_id(repo_id, "peer-b")
+    }
+
+    fn peer_with_id(repo_id: uuid::Uuid, peer_id: &str) -> P2pPeerConfig {
         P2pPeerConfig {
             label: "peer-b".into(),
-            peer_id: "peer-b".into(),
+            peer_id: peer_id.into(),
             repo_id: repo_id.to_string(),
             ws_url: "ws://127.0.0.1:3002/ws".into(),
             auth_token_env: "DEVE_TEST_TOKEN".into(),
@@ -832,6 +869,101 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn p2p_exchange_rejects_request_before_sync_hello() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let message = ServerMessage::SyncRequest {
+            repo_id,
+            branch: None,
+            known_vector: VersionVector::new(),
+            requests: Vec::new(),
+        };
+        let mut stats = super::ExchangeStats::default();
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("pre-hello SyncRequest must fail closed");
+
+        assert!(err.to_string().contains("before SyncHello"));
+        assert!(socket.sent.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_configured_peer_id_mismatch() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let (_dir, state) = test_state_with_dir(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let actual_peer = PeerId::new("actual-peer");
+        let message = ServerMessage::SyncHello {
+            peer_id: actual_peer,
+            repo_id,
+            scope_nonce: ScopeNonce::new(0),
+            pub_key: Vec::new(),
+            signature: Vec::new(),
+            vector: VersionVector::new(),
+        };
+        let mut stats = super::ExchangeStats::default();
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer_with_id(repo_id, "expected-peer"),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("configured peer_id mismatch must fail closed");
+
+        assert!(err.to_string().contains("configured peer_id"));
+        assert!(!stats.saw_hello);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_repo_mismatch_after_sync_hello() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let other_repo_id = uuid::Uuid::new_v4();
+        let authenticated_peer = PeerId::new("peer-b");
+        let message = ServerMessage::SyncRequest {
+            repo_id: other_repo_id,
+            branch: None,
+            known_vector: VersionVector::new(),
+            requests: Vec::new(),
+        };
+        let mut stats = authenticated_stats(authenticated_peer);
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("post-hello repo mismatch must fail closed");
+
+        assert!(err.to_string().contains("repo"));
+        assert!(socket.sent.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn p2p_exchange_rejects_authenticated_self_loop() -> anyhow::Result<()> {
         let identity = Arc::new(IdentityKeyPair::generate());
         let self_peer_id = identity.peer_id();
@@ -874,7 +1006,7 @@ mod tests {
             .expect("repo info")
             .uuid;
         append_local_op(&state, repo_id)?;
-        let remote_peer = PeerId::new("remote-peer");
+        let remote_peer = PeerId::new("peer-b");
         let hello = Message::Binary(
             encode_server_binary(&ServerMessage::SyncHello {
                 peer_id: remote_peer,

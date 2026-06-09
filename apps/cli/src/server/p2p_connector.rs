@@ -125,6 +125,8 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "token_empty"
     } else if message.contains("invalid p2p ws_url") {
         "invalid_url"
+    } else if message.contains("configured peer_id") {
+        "peer_id_mismatch"
     } else if message.contains("401")
         || message.contains("403")
         || message.contains("unauthorized")
@@ -177,6 +179,12 @@ mod tests {
         assert_eq!(
             classify_p2p_error(&anyhow::anyhow!("P2P self-loop rejected after handshake")),
             "self_loop"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "authenticated peer_id actual did not match configured peer_id expected"
+            )),
+            "peer_id_mismatch"
         );
     }
 }
