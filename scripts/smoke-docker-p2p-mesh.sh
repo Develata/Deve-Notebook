@@ -226,12 +226,13 @@ authenticated_peer_id_from_logs() {
   local label="$2"
   local logs
   logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
-MESH_LOGS="$logs" "$PYTHON_BIN" - "$label" <<'PY'
+MESH_LOGS="$logs" REPO_ID="$REPO_ID" "$PYTHON_BIN" - "$label" <<'PY'
 import os
 import re
 import sys
 
 label = sys.argv[1]
+repo_id = os.environ["REPO_ID"]
 ansi = re.compile(r"\x1b\[[0-9;]*m")
 pattern = re.compile(r"authenticated_peer_id=([^ ]+)")
 for line in reversed(os.environ["MESH_LOGS"].splitlines()):
@@ -241,6 +242,18 @@ for line in reversed(os.environ["MESH_LOGS"].splitlines()):
     if f"peer_label={label}" not in line:
         continue
     match = pattern.search(line)
+    if match:
+        print(match.group(1).strip('"'))
+        raise SystemExit(0)
+# The two-peer smoke has exactly one remote per service. If the outbound
+# connector keeps the socket open, the completion log can lag behind inbound
+# admission; the SyncHello log is still emitted after peer authentication.
+hello_pattern = re.compile(
+    r"Handling SyncHello from ([^ ]+) for repo " + re.escape(repo_id)
+)
+for line in reversed(os.environ["MESH_LOGS"].splitlines()):
+    line = ansi.sub("", line)
+    match = hello_pattern.search(line)
     if match:
         print(match.group(1).strip('"'))
         raise SystemExit(0)
