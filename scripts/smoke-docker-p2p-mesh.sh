@@ -326,11 +326,37 @@ wait_for_remote_ops_handled() {
   local logs
   for _ in $(seq 1 90); do
     logs="$(docker_compose logs --no-color peer-b 2>/dev/null || true)"
-    if grep -q "Handled .* remote ops from ${peer_id} for repo ${REPO_ID}" <<<"$logs"; then
-      return 0
-    fi
-    if grep -q "authenticated_peer_id=\"${peer_id}\"" <<<"$logs" \
-      && grep -Eq "applied_pushes=[1-9][0-9]*" <<<"$logs"; then
+    if REMOTE_LOGS="$logs" REPO_ID="$REPO_ID" "$PYTHON_BIN" - "$peer_id" <<'PY'
+import os
+import re
+import sys
+
+peer_id = sys.argv[1]
+repo_id = os.environ["REPO_ID"]
+ansi = re.compile(r"\x1b\[[0-9;]*m")
+handled_pattern = re.compile(
+    r"Handled [1-9][0-9]* remote ops from "
+    + re.escape(peer_id)
+    + r" for repo "
+    + re.escape(repo_id)
+)
+authenticated = f'authenticated_peer_id="{peer_id}"'
+applied_pattern = re.compile(r"applied_pushes=([0-9]+)")
+
+for raw_line in os.environ["REMOTE_LOGS"].splitlines():
+    line = ansi.sub("", raw_line)
+    if handled_pattern.search(line):
+        raise SystemExit(0)
+    if "P2P mesh connector handshake completed" not in line:
+        continue
+    if authenticated not in line:
+        continue
+    match = applied_pattern.search(line)
+    if match and int(match.group(1)) > 0:
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+    then
       return 0
     fi
     sleep 1
