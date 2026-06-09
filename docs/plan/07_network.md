@@ -104,6 +104,8 @@ enabled = true
   环境变量；不得只依赖硬编码 env 间接项。`inbound_token_env = null` 或 token 缺失时必须 fail-closed。
 - connector 必须维护 peer-local runtime state：`configured/connecting/connected/reconnecting/unauthorized/error/self_loop/disabled`、
   attempts、handshakes、last_error_code 与已发送/已应用统计；单 peer 状态不得阻塞其他 peer。
+- peer-local runtime state 的更新键必须来自静态 peer identity tuple（至少包含 `peer_id + repo_id + ws_url`），不得只用 display `label`；
+  重复 label 只能影响显示，不得导致 attempts、handshake、last_error_code 或统计串扰。
 - `/api/node/role` 可暴露不含 token material 的只读 `p2p` 摘要：只允许 label、peer_id、repo_id、
   state、attempt/handshake 计数、push/snapshot 计数与 last_error_code。
 

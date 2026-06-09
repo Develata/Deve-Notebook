@@ -21,7 +21,7 @@ pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
     for peer in config.peers.into_iter().filter(|peer| peer.enabled) {
         let state = state.clone();
         if is_self_loop(&peer, &state) {
-            p2p_status::record_failure(&peer.label, "self_loop", "self_loop");
+            p2p_status::record_failure(&peer, "self_loop", "self_loop");
             tracing::warn!(
                 peer_label = %peer.label,
                 peer_id = %peer.peer_id,
@@ -33,17 +33,17 @@ pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
         tokio::spawn(async move {
             let mut backoff = interval;
             loop {
-                let attempt = p2p_status::record_attempt(&peer.label);
+                let attempt = p2p_status::record_attempt(&peer);
                 match p2p::connect_peer_once(&peer, state.clone()).await {
                     Ok(stats) => {
-                        p2p_status::record_success(&peer.label, outcome_from_stats(&stats));
+                        p2p_status::record_success(&peer, outcome_from_stats(&stats));
                         backoff = interval;
                         tokio::time::sleep(interval).await;
                     }
                     Err(err) => {
                         let error_code = classify_p2p_error(&err);
                         let state_name = failure_state(error_code);
-                        p2p_status::record_failure(&peer.label, state_name, error_code);
+                        p2p_status::record_failure(&peer, state_name, error_code);
                         tracing::warn!(
                             peer_label = %peer.label,
                             peer_id = %peer.peer_id,
