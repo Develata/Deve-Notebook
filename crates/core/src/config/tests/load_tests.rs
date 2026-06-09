@@ -194,7 +194,7 @@ fn p2p_mesh_env_aliases_load_static_peer_config() {
             Some("DEVE_P2P_INBOUND_TOKEN"),
         ),
         ("DEVE_P2P_MESH_PEER_0_LABEL", Some("peer-b")),
-        ("DEVE_P2P_MESH_PEER_0_PEER_ID", Some("peer-b")),
+        ("DEVE_P2P_MESH_PEER_0_PEER_ID", Some("0123456789ab")),
         (
             "DEVE_P2P_MESH_PEER_0_REPO_ID",
             Some("11111111-1111-1111-1111-111111111111"),
@@ -215,6 +215,7 @@ fn p2p_mesh_env_aliases_load_static_peer_config() {
     assert_eq!(config.p2p.connect_interval_ms, 1234);
     assert_eq!(config.p2p.peers.len(), 1);
     assert_eq!(config.p2p.peers[0].label, "peer-b");
+    assert_eq!(config.p2p.peers[0].peer_id, "0123456789ab");
     assert_eq!(config.p2p.peers[0].auth_token_env, "DEVE_P2P_PEER_B_TOKEN");
 }
 

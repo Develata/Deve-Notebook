@@ -84,7 +84,7 @@ inbound_token_env = "DEVE_P2P_INBOUND_TOKEN"
 connect_interval_ms = 5000
 # [[p2p.peers]]
 # label = "peer-b"
-# peer_id = "peer-b"
+# peer_id = "<expected-peer-id-from-peer-b-startup-log>"
 # repo_id = "11111111-1111-1111-1111-111111111111"
 # ws_url = "ws://127.0.0.1:3102/ws"
 # auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
@@ -166,6 +166,8 @@ mod tests {
         assert!(config.contains("[p2p]"));
         assert!(config.contains("enabled = false"));
         assert!(config.contains("inbound_token_env = \"DEVE_P2P_INBOUND_TOKEN\""));
+        assert!(config.contains("# peer_id = \"<expected-peer-id-from-peer-b-startup-log>\""));
+        assert!(!config.contains("# peer_id = \"peer-b\""));
         assert!(config.contains("mem_cache_mb = 128"));
         assert!(config.contains("[ui]"));
         assert!(config.contains("recent_docs_count = 10"));

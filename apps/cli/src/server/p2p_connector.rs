@@ -51,7 +51,7 @@ pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
                             error_code,
                             "P2P mesh connector attempt failed: {err}"
                         );
-                        if matches!(error_code, "unauthorized" | "self_loop") {
+                        if is_terminal_p2p_error(error_code) {
                             break;
                         }
                         tokio::time::sleep(backoff + jitter_for_attempt(&peer, attempt)).await;
@@ -104,6 +104,13 @@ fn failure_state(error_code: &str) -> &'static str {
     } else {
         "error"
     }
+}
+
+fn is_terminal_p2p_error(error_code: &str) -> bool {
+    matches!(
+        error_code,
+        "unauthorized" | "self_loop" | "repo_mismatch" | "peer_id_mismatch"
+    )
 }
 
 fn next_backoff(current: Duration) -> Duration {
@@ -186,5 +193,15 @@ mod tests {
             )),
             "peer_id_mismatch"
         );
+    }
+
+    #[test]
+    fn p2p_connector_identity_mismatch_is_terminal() {
+        assert!(is_terminal_p2p_error("peer_id_mismatch"));
+        assert!(is_terminal_p2p_error("repo_mismatch"));
+        assert!(is_terminal_p2p_error("unauthorized"));
+        assert!(is_terminal_p2p_error("self_loop"));
+        assert!(!is_terminal_p2p_error("connect_failed"));
+        assert_eq!(failure_state("peer_id_mismatch"), "error");
     }
 }

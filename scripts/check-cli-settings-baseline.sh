@@ -90,6 +90,10 @@ check_contains apps/cli/src/commands/init.rs "init_config_template_matches_curre
 check_contains apps/cli/src/commands/init.rs "Projection Locator"
 check_contains apps/cli/src/commands/init.rs "RepoInitOptions"
 check_contains apps/cli/src/commands/init.rs "[ai.agent_bridge]"
+check_contains apps/cli/src/commands/init.rs 'peer_id = "<expected-peer-id-from-peer-b-startup-log>"'
+check_absent apps/cli/src/commands/init.rs 'peer_id = "peer-b"'
+check_contains config.example.toml 'peer_id = "<expected-peer-id-from-peer-b-startup-log>"'
+check_absent config.example.toml 'peer_id = "peer-b"'
 check_contains apps/cli/src/commands/config/schema.rs "Unsupported config key"
 check_absent apps/cli/src/commands/config/schema.rs "\"vault_path\""
 check_contains apps/cli/src/commands/config/schema.rs "\"ui.sidebar_width\""
@@ -120,6 +124,8 @@ check_contains docs/plan/15_settings.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/15_settings.md 'p2p.enabled'
 check_contains docs/plan/15_settings.md 'p2p.inbound_token_env'
 check_contains docs/plan/15_settings.md 'p2p.connect_interval_ms'
+check_contains docs/plan/15_settings.md 'p2p.peers[].peer_id'
+check_contains docs/plan/15_settings.md 'expected authenticated peer identity'
 check_contains docs/plan/15_settings.md 'source_control.git_bridge'
 check_contains docs/plan/15_settings.md 'MUST NOT** 保存 token material'
 check_contains docs/plan/15_settings.md "运行模式预设: \`standard\` (默认), \`low-spec\` (低配)."

@@ -270,4 +270,17 @@
   assertions:
     - route_absent: "/api/settings"
     - unsupported_key_rejected: "server.settings.api_enabled"
+
+- case_id: SET-008
+  goal: 静态 P2P peer 配置必须把 peer_id 表达为 expected authenticated identity，而不是显示 label。
+  preconditions:
+    - FullPeer Mesh v1 使用静态 peer 配置
+  steps:
+    - run: scripts/check-cli-settings-baseline.sh
+    - run: cargo test -p deve_core p2p_mesh_env_aliases_load_static_peer_config -- --nocapture
+    - run: cargo test -p deve_cli init_config_template_matches_current_settings_schema -- --nocapture
+  assertions:
+    - config_example_peer_id_placeholder_not_label: true
+    - init_template_peer_id_placeholder_not_label: true
+    - p2p_env_peer_id_preserved_as_expected_identity: true
 ```
