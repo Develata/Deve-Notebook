@@ -27,6 +27,7 @@ pub(super) fn app_state(repo: Arc<RepoManager>) -> anyhow::Result<Arc<AppState>>
         #[cfg(feature = "search")]
         search_available: false,
         identity_key: Arc::new(deve_core::security::IdentityKeyPair::generate()),
+        git_bridge: deve_core::config::GitBridgeMode::Mirror,
     }))
 }
 

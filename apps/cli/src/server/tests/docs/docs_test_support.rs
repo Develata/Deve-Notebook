@@ -55,6 +55,7 @@ pub(crate) fn docs_harness() -> anyhow::Result<DocsHarness> {
             #[cfg(feature = "search")]
             search_available: false,
             identity_key,
+            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         }),
         repo_id,
     })

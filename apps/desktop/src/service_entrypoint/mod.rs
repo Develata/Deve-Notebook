@@ -46,6 +46,7 @@ impl DesktopLocalServiceEntrypointPolicy {
         NativeProcessAdapterPolicy {
             decision: NativeProcessAdapterDecision::DeferredUntilPackagingGate,
             child_process_runtime_enabled: self.child_process_runtime_enabled,
+            embedded_service_runtime_enabled: false,
             packaging_gate_required: true,
             authority_writes_allowed: false,
         }

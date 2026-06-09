@@ -31,6 +31,7 @@ pub(crate) fn reopen_state(root: &Path) -> anyhow::Result<Arc<AppState>> {
         #[cfg(feature = "search")]
         search_available: false,
         identity_key,
+        git_bridge: deve_core::config::GitBridgeMode::Mirror,
     }))
 }
 

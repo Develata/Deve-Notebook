@@ -54,6 +54,7 @@ async fn switch_branch_returns_to_last_local_repo_when_leaving_remote_scope() ->
         #[cfg(feature = "search")]
         search_available: false,
         identity_key,
+        git_bridge: deve_core::config::GitBridgeMode::Mirror,
     });
     let (uni_tx, mut uni_rx) = mpsc::channel(32);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);

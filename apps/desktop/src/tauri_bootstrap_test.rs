@@ -116,6 +116,7 @@ fn tauri_state_keeps_successful_runtime_observable() {
         NativeProcessAdapterPolicy {
             decision: NativeProcessAdapterDecision::DeferredUntilPackagingGate,
             child_process_runtime_enabled: true,
+            embedded_service_runtime_enabled: false,
             packaging_gate_required: true,
             authority_writes_allowed: false,
         },

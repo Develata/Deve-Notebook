@@ -56,6 +56,7 @@ pub(crate) fn app_state_with_tree(
         #[cfg(feature = "search")]
         search_available: false,
         identity_key,
+        git_bridge: deve_core::config::GitBridgeMode::Mirror,
     }))
 }
 

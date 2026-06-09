@@ -38,6 +38,7 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, RepoId)> 
             #[cfg(feature = "search")]
             search_available: false,
             identity_key,
+            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         }),
         test_id,
     ))
@@ -68,6 +69,7 @@ pub(super) fn build_single_repo_state() -> anyhow::Result<(TempDir, Arc<AppState
             #[cfg(feature = "search")]
             search_available: false,
             identity_key,
+            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         }),
         repo_id,
     ))

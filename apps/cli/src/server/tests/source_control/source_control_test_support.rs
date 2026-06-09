@@ -45,6 +45,7 @@ impl ProxyHarness {
             #[cfg(feature = "search")]
             search_available: false,
             identity_key: security::load_or_generate_identity_key(&dir.path().join("host"))?,
+            git_bridge: deve_core::config::GitBridgeMode::Mirror,
         });
         let mut auth_config = AuthConfig::dev_default()?;
         auth_config.allow_anonymous_localhost = true;
