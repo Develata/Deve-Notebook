@@ -99,6 +99,12 @@ impl SourceControlSummary {
             git_bridge: git_bridge.into(),
         }
     }
+
+    pub fn unknown() -> Self {
+        Self {
+            git_bridge: "unknown".into(),
+        }
+    }
 }
 
 impl P2pSummary {
@@ -182,7 +188,7 @@ fn default_node_role() -> NodeRole {
         delivery: "unknown".into(),
         environment: runtime_environment(),
         repo_health: RepoHealthSummary::unknown(),
-        source_control: SourceControlSummary::from_git_bridge(GitBridgeMode::Mirror),
+        source_control: SourceControlSummary::unknown(),
         p2p: P2pSummary::disabled(),
         native_service: None,
     }
@@ -190,7 +196,8 @@ fn default_node_role() -> NodeRole {
 
 #[cfg(test)]
 mod tests {
-    use super::RepoHealthSummary;
+    use super::{RepoHealthSummary, SourceControlSummary};
+    use deve_core::config::GitBridgeMode;
 
     #[test]
     fn unknown_repo_health_uses_zero_counts() {
@@ -242,5 +249,18 @@ mod tests {
                 degraded: 2,
             }
         );
+    }
+
+    #[test]
+    fn source_control_summary_supports_explicit_unknown_mode() {
+        assert_eq!(
+            SourceControlSummary::from_git_bridge(GitBridgeMode::Mirror).git_bridge,
+            "mirror"
+        );
+        assert_eq!(
+            SourceControlSummary::from_git_bridge(GitBridgeMode::Off).git_bridge,
+            "off"
+        );
+        assert_eq!(SourceControlSummary::unknown().git_bridge, "unknown");
     }
 }

@@ -7,9 +7,17 @@ use std::sync::Arc;
 use tempfile::tempdir;
 
 #[test]
-fn source_control_write_gate_allows_proxy_without_local_projection_state() {
-    ensure_source_control_write_allowed(&RepoSelector::default())
-        .expect("plugin-host proxy should delegate write checks to the main process");
+fn source_control_write_gate_missing_dependencies_fail_closed() {
+    let error = ensure_source_control_write_allowed(&RepoSelector::default())
+        .expect_err("plugin source-control writes must fail closed without host setup");
+
+    assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+    assert!(
+        error
+            .detail
+            .as_deref()
+            .is_some_and(|detail| detail.contains("write gate"))
+    );
 }
 
 #[test]

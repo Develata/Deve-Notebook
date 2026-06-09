@@ -36,11 +36,15 @@ use crate::plugin::manifest::PluginManifest;
 use rhai::Engine;
 
 #[cfg(not(target_arch = "wasm32"))]
+use crate::config::GitBridgeMode;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::RepoManager;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::traits::{RepoSelector, Repository};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::protocol::{ServerError, ServerErrorCode};
+#[cfg(not(target_arch = "wasm32"))]
+use crate::source_control::CommitInfo;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::source_control::SourceControlApi;
 #[cfg(not(target_arch = "wasm32"))]
@@ -53,9 +57,18 @@ static REPOSITORY: OnceLock<Arc<dyn Repository>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
 static SOURCE_CONTROL_API: OnceLock<Arc<dyn SourceControlApi>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
+static SOURCE_CONTROL_MODE: OnceLock<SourceControlHostMode> = OnceLock::new();
+#[cfg(not(target_arch = "wasm32"))]
 static REPO_MANAGER: OnceLock<Arc<RepoManager>> = OnceLock::new();
 #[cfg(not(target_arch = "wasm32"))]
 static SYNC_MANAGER: OnceLock<Arc<SyncManager>> = OnceLock::new();
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SourceControlHostMode {
+    Local { git_bridge: GitBridgeMode },
+    RemoteDelegated,
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn set_repository(repo: Arc<dyn Repository>) -> Result<(), anyhow::Error> {
@@ -65,10 +78,31 @@ pub fn set_repository(repo: Arc<dyn Repository>) -> Result<(), anyhow::Error> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn set_source_control_api(api: Arc<dyn SourceControlApi>) -> Result<(), anyhow::Error> {
+pub fn set_source_control_api(
+    api: Arc<dyn SourceControlApi>,
+    git_bridge: GitBridgeMode,
+) -> Result<(), anyhow::Error> {
+    set_source_control_api_with_mode(api, SourceControlHostMode::Local { git_bridge })
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn set_delegated_source_control_api(
+    api: Arc<dyn SourceControlApi>,
+) -> Result<(), anyhow::Error> {
+    set_source_control_api_with_mode(api, SourceControlHostMode::RemoteDelegated)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn set_source_control_api_with_mode(
+    api: Arc<dyn SourceControlApi>,
+    mode: SourceControlHostMode,
+) -> Result<(), anyhow::Error> {
     SOURCE_CONTROL_API
         .set(api)
-        .map_err(|_| anyhow::anyhow!("SourceControlApi already set"))
+        .map_err(|_| anyhow::anyhow!("SourceControlApi already set"))?;
+    SOURCE_CONTROL_MODE
+        .set(mode)
+        .map_err(|_| anyhow::anyhow!("SourceControl host mode already set"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -103,11 +137,46 @@ pub fn source_control_api() -> Result<Arc<dyn SourceControlApi>, anyhow::Error> 
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn ensure_source_control_write_allowed(selector: &RepoSelector) -> Result<(), ServerError> {
+    match SOURCE_CONTROL_MODE.get().copied() {
+        Some(SourceControlHostMode::RemoteDelegated) => return Ok(()),
+        Some(SourceControlHostMode::Local { .. }) => {}
+        None => {
+            return Err(ServerError::with_detail(
+                ServerErrorCode::ScRepoContextInvalid,
+                "Plugin source-control write gate is not configured",
+            ));
+        }
+    }
     let (Some(repo), Some(sync)) = (REPO_MANAGER.get().cloned(), SYNC_MANAGER.get().cloned())
     else {
-        return Ok(());
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            "Plugin source-control write gate missing local RepoManager or SyncManager",
+        ));
     };
     ensure_source_control_write_allowed_for(repo.as_ref(), sync.as_ref(), selector)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn commit_staged_in_repo(
+    repo: &dyn SourceControlApi,
+    selector: &RepoSelector,
+    message: &str,
+) -> Result<CommitInfo, anyhow::Error> {
+    match source_control_mode()? {
+        SourceControlHostMode::Local { git_bridge } => {
+            repo.commit_staged_in_repo_with_git_bridge(selector, message, git_bridge)
+        }
+        SourceControlHostMode::RemoteDelegated => repo.commit_staged_in_repo(selector, message),
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn source_control_mode() -> Result<SourceControlHostMode, anyhow::Error> {
+    SOURCE_CONTROL_MODE
+        .get()
+        .copied()
+        .ok_or_else(|| anyhow::anyhow!("SourceControl host mode not configured"))
 }
 
 #[cfg(not(target_arch = "wasm32"))]

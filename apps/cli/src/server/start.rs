@@ -45,7 +45,7 @@ pub async fn start_server_with_options(
     p2p: P2pConfig,
 ) -> anyhow::Result<()> {
     let port = launch.port();
-    runtime::install_repo_host_apis(&repo)?;
+    runtime::install_repo_host_apis(&repo, git_bridge)?;
     runtime::init_node_role(&launch, profile, git_bridge);
     runtime::init_observability_runtime()?;
     let host_dir = runtime::prepare_host_layout(repo.as_ref(), port)?;

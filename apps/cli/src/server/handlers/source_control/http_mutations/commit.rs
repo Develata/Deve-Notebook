@@ -48,10 +48,12 @@ pub async fn commit_plugin_host(
         return errors::http(error);
     }
     match host::source_control_api() {
-        Ok(repo) => match service::commit_staged(repo.as_ref(), &payload.repo, &payload.message) {
-            Ok(info) => Json::<CommitInfo>(info).into_response(),
-            Err(e) => errors::http(e),
-        },
+        Ok(repo) => {
+            match host::commit_staged_in_repo(repo.as_ref(), &payload.repo, &payload.message) {
+                Ok(info) => Json::<CommitInfo>(info).into_response(),
+                Err(e) => errors::http(errors::map_repo_error(errors::ScOp::Commit, e)),
+            }
+        }
         Err(e) => errors::http(errors::unsupported(e.to_string())),
     }
 }

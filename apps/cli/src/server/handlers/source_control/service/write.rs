@@ -103,15 +103,6 @@ pub fn unstage_many(
     Ok(visible_paths)
 }
 
-pub fn commit_staged(
-    repo: &dyn SourceControlApi,
-    selector: &RepoSelector,
-    message: &str,
-) -> super::ScResult<CommitInfo> {
-    repo.commit_staged_in_repo(selector, message)
-        .map_err(|e| errors::map_repo_error(ScOp::Commit, e))
-}
-
 pub fn commit_staged_with_git_bridge(
     repo: &dyn SourceControlApi,
     selector: &RepoSelector,

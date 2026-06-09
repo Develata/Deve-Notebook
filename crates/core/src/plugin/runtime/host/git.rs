@@ -112,8 +112,7 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
             let repo = super::source_control_api().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             ensure_write_allowed(&selector)?;
-            let commit = repo
-                .commit_staged_in_repo(&selector, message)
+            let commit = super::commit_staged_in_repo(repo.as_ref(), &selector, message)
                 .map_err(|e| e.to_string())?;
             let json = serde_json::to_value(&commit).map_err(|e| e.to_string())?;
             rhai::serde::to_dynamic(&json).map_err(|e| e.to_string().into())

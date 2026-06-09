@@ -119,13 +119,18 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = remote.clone();
     host::set_repository(repo_api)?;
     let source_control_api: Arc<dyn deve_core::source_control::SourceControlApi> = remote;
-    host::set_source_control_api(source_control_api)?;
+    host::set_delegated_source_control_api(source_control_api)?;
 
     let plugins = load_plugins()?;
 
     let plugin_port = find_free_port(main_port + 1, 5).unwrap_or(main_port + 1);
     tracing::info!("Plugin host will listen on port {}", plugin_port);
-    crate::server::node_role::set_node_role(crate::server::node_role::NodeRole {
+    crate::server::node_role::set_node_role(proxy_node_role(plugin_port, main_port));
+    server::start_plugin_host_only(plugins, plugin_port).await
+}
+
+fn proxy_node_role(plugin_port: u16, main_port: u16) -> crate::server::node_role::NodeRole {
+    crate::server::node_role::NodeRole {
         role: "proxy".into(),
         ws_port: plugin_port,
         main_port,
@@ -134,13 +139,10 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
         delivery: "plugin-host-proxy".into(),
         environment: crate::server::node_role::runtime_environment(),
         repo_health: crate::server::node_role::RepoHealthSummary::unknown(),
-        source_control: crate::server::node_role::SourceControlSummary::from_git_bridge(
-            GitBridgeMode::Mirror,
-        ),
+        source_control: crate::server::node_role::SourceControlSummary::unknown(),
         p2p: crate::server::node_role::P2pSummary::disabled(),
         native_service: None,
-    });
-    server::start_plugin_host_only(plugins, plugin_port).await
+    }
 }
 
 async fn detect_main_port(port: u16) -> Option<u16> {

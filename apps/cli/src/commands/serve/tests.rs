@@ -1,4 +1,4 @@
-use super::{ServeOptions, detect_main_port, run};
+use super::{ServeOptions, detect_main_port, proxy_node_role, run};
 use axum::{Router, routing::get};
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
 use std::net::{SocketAddr, TcpListener};
@@ -40,6 +40,17 @@ async fn detect_main_port_finds_deve_process_via_node_role() {
 async fn detect_main_port_accepts_non_success_status() {
     let addr = spawn_status_server(axum::http::StatusCode::UNAUTHORIZED).await;
     assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
+}
+
+#[test]
+fn proxy_node_role_uses_unknown_git_bridge_mode() {
+    let role = proxy_node_role(3002, 3001);
+
+    assert_eq!(role.role, "proxy");
+    assert_eq!(role.ws_port, 3002);
+    assert_eq!(role.main_port, 3001);
+    assert_eq!(role.delivery, "plugin-host-proxy");
+    assert_eq!(role.source_control.git_bridge, "unknown");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
