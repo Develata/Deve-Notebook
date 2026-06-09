@@ -11,6 +11,28 @@ pub(crate) enum EditorTabKey {
     Diff(String),
 }
 
+impl EditorTabKey {
+    pub(crate) fn marker(&self) -> String {
+        match self {
+            Self::Document(doc_id) => format!("doc:{doc_id}"),
+            Self::Diff(key) => format!("diff:{key}"),
+        }
+    }
+
+    pub(crate) fn kind(&self) -> &'static str {
+        match self {
+            Self::Document(_) => "document",
+            Self::Diff(_) => "diff",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum DropPosition {
+    Before,
+    After,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct EditorDocumentTab {
     pub doc_id: DocId,
@@ -24,6 +46,21 @@ pub(crate) struct EditorDiffTab {
     pub title: String,
     pub tooltip: String,
     pub session: DiffSessionWire,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum EditorTabItem {
+    Document(EditorDocumentTab),
+    Diff(EditorDiffTab),
+}
+
+impl EditorTabItem {
+    pub(crate) fn key(&self) -> EditorTabKey {
+        match self {
+            Self::Document(tab) => EditorTabKey::Document(tab.doc_id),
+            Self::Diff(tab) => EditorTabKey::Diff(tab.key.clone()),
+        }
+    }
 }
 
 pub(crate) fn display_name(path: &str) -> String {

@@ -8,11 +8,11 @@
 use self::callbacks::{build_home_callback, build_open_callback, toggle_search_callback};
 use self::contexts::use_mobile_breakpoint;
 use self::setup::{
-    bind_global_shortcuts, init_outline_ui_state, init_search_ui_state, init_sidebar_ui_state,
-    watch_session_expired,
+    bind_global_shortcuts, init_editor_tab_limit_ui_state, init_outline_ui_state,
+    init_search_ui_state, init_sidebar_ui_state, watch_session_expired,
 };
 pub use crate::components::layout_context::{
-    ChatControl, OutlineControl, SearchControl, SidebarControl,
+    ChatControl, EditorTabLimitControl, OutlineControl, SearchControl, SidebarControl,
 };
 use crate::components::main_layout_runtime::MainLayoutRuntime;
 use crate::hooks::use_core::use_core;
@@ -36,6 +36,7 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
     let search = init_search_ui_state();
     let outline = init_outline_ui_state();
     let sidebar = init_sidebar_ui_state();
+    let _max_document_tabs = init_editor_tab_limit_ui_state();
     let desktop_layout = use_layout(sidebar.visible, sidebar.chat_visible);
     let stop_resize = desktop_layout.stop_resize;
     let do_resize = desktop_layout.do_resize;

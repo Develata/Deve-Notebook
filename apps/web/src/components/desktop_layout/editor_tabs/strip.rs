@@ -1,12 +1,13 @@
 //! plan_ref:
 //!   - 11_ui_design/index#editor-group-tabstrip
 
-use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
+use crate::components::editor_tabs::{DropPosition, EditorTabItem, EditorTabKey};
 use crate::components::icons::{FileText, SourceControl, X};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 
 pub(crate) fn tab_button_class(active: bool) -> &'static str {
     if active {
@@ -18,105 +19,196 @@ pub(crate) fn tab_button_class(active: bool) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::tab_button_class;
+    use super::{tab_button_class, trailing_blank_drop_target};
+    use crate::components::editor_tabs::{
+        DropPosition, EditorDocumentTab, EditorTabItem, EditorTabKey,
+    };
+    use deve_core::models::DocId;
 
     #[test]
     fn active_tab_class_has_accent_top_border() {
         assert!(tab_button_class(true).contains("border-t-accent"));
         assert!(tab_button_class(false).contains("border-t-transparent"));
     }
+
+    #[test]
+    fn trailing_blank_drop_targets_after_last_visible_tab() {
+        let first = DocId::from_u128(1);
+        let second = DocId::from_u128(2);
+        let tabs = vec![
+            EditorTabItem::Document(EditorDocumentTab {
+                doc_id: first,
+                title: "a.md".into(),
+                tooltip: "a.md".into(),
+            }),
+            EditorTabItem::Document(EditorDocumentTab {
+                doc_id: second,
+                title: "b.md".into(),
+                tooltip: "b.md".into(),
+            }),
+        ];
+
+        assert_eq!(
+            trailing_blank_drop_target(&tabs),
+            Some((EditorTabKey::Document(second), DropPosition::After))
+        );
+        assert_eq!(trailing_blank_drop_target(&[]), None);
+    }
 }
 
 #[component]
 pub(crate) fn EditorTabStrip(
-    doc_tabs: ReadSignal<Vec<EditorDocumentTab>>,
-    diff_tabs: ReadSignal<Vec<EditorDiffTab>>,
+    ordered_tabs: Signal<Vec<EditorTabItem>>,
     active_tab: Signal<Option<EditorTabKey>>,
     on_select_document: Callback<DocId>,
     on_select_diff: Callback<DiffSessionWire>,
     on_close_document: Callback<DocId>,
     on_close_diff: Callback<String>,
+    on_reorder_tab: Callback<(EditorTabKey, EditorTabKey, DropPosition)>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
-    let has_tabs =
-        Signal::derive(move || !doc_tabs.get().is_empty() || !diff_tabs.get().is_empty());
+    let has_tabs = Signal::derive(move || !ordered_tabs.get().is_empty());
+    let trailing_drop_target =
+        Signal::derive(move || trailing_blank_drop_target(&ordered_tabs.get()));
+    let (dragging_tab, set_dragging_tab) = signal(None::<EditorTabKey>);
 
     view! {
         <Show when=move || has_tabs.get()>
-            <div class="flex-none h-9 bg-panel border-b border-default overflow-x-auto overflow-y-hidden" role="tablist">
+            <div
+                class="flex-none h-9 bg-panel border-b border-default overflow-x-auto overflow-y-hidden"
+                role="tablist"
+                data-deve-editor-tabstrip-trailing-drop="after-last"
+                on:dragover=move |ev| ev.prevent_default()
+                on:drop=move |ev| {
+                    ev.prevent_default();
+                    if let Some(dragged) = dragging_tab.get_untracked()
+                        && let Some((target, position)) = trailing_drop_target.get_untracked()
+                    {
+                        on_reorder_tab.run((dragged, target, position));
+                    }
+                    set_dragging_tab.set(None);
+                }
+            >
                 <div class="flex h-9 min-w-max items-end">
-                    <For each=move || doc_tabs.get() key=|tab| tab.doc_id children=move |tab| {
-                        let doc_id = tab.doc_id;
-                        let select_doc = on_select_document;
-                        let close_doc = on_close_document;
-                        let active = Signal::derive(move || active_tab.get() == Some(EditorTabKey::Document(doc_id)));
+                    <For each=move || ordered_tabs.get() key=|item| item.key().marker() children=move |item| {
+                        let tab_key = item.key();
+                        let active_key = tab_key.clone();
+                        let drag_key = tab_key.clone();
+                        let drop_target = tab_key.clone();
+                        let marker = tab_key.marker();
+                        let kind = tab_key.kind();
+                        let active = Signal::derive(move || active_tab.get() == Some(active_key.clone()));
+                        let body = match item {
+                            EditorTabItem::Document(tab) => {
+                                let doc_id = tab.doc_id;
+                                let select_doc = on_select_document;
+                                let close_doc = on_close_document;
+                                view! {
+                                    <div class="flex h-full min-w-0 items-center">
+                                        <button
+                                            type="button"
+                                            class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
+                                            title=tab.tooltip.clone()
+                                            aria-label=move || t::common::document_tab(locale.get())
+                                            on:click=move |_| select_doc.run(doc_id)
+                                        >
+                                            <FileText class="h-3.5 w-3.5 shrink-0"/>
+                                            <span class="min-w-0 truncate text-[13px]">{tab.title.clone()}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
+                                            title=move || t::common::close_tab(locale.get())
+                                            aria-label=move || t::common::close_tab(locale.get())
+                                            on:click=move |ev| {
+                                                ev.stop_propagation();
+                                                close_doc.run(doc_id);
+                                            }
+                                        >
+                                            <X class="h-3.5 w-3.5"/>
+                                        </button>
+                                    </div>
+                                }.into_any()
+                            }
+                            EditorTabItem::Diff(tab) => {
+                                let key_for_close = tab.key.clone();
+                                let session = tab.session.clone();
+                                let select_diff = on_select_diff;
+                                let close_diff = on_close_diff;
+                                view! {
+                                    <div class="flex h-full min-w-0 items-center">
+                                        <button
+                                            type="button"
+                                            class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
+                                            title=tab.tooltip.clone()
+                                            aria-label=move || t::common::diff_tab(locale.get())
+                                            on:click=move |_| select_diff.run(session.clone())
+                                        >
+                                            <SourceControl class="h-3.5 w-3.5 shrink-0"/>
+                                            <span class="min-w-0 truncate text-[13px]">{tab.title.clone()}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
+                                            title=move || t::common::close_tab(locale.get())
+                                            aria-label=move || t::common::close_tab(locale.get())
+                                            on:click=move |ev| {
+                                                ev.stop_propagation();
+                                                close_diff.run(key_for_close.clone());
+                                            }
+                                        >
+                                            <X class="h-3.5 w-3.5"/>
+                                        </button>
+                                    </div>
+                                }.into_any()
+                            }
+                        };
                         view! {
-                            <div class=move || tab_button_class(active.get()) role="tab" aria-selected=move || active.get().to_string()>
-                                <div class="flex h-full min-w-0 items-center">
-                                    <button
-                                        type="button"
-                                        class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
-                                        title=tab.tooltip.clone()
-                                        aria-label=move || t::common::document_tab(locale.get())
-                                        on:click=move |_| select_doc.run(doc_id)
-                                    >
-                                        <FileText class="h-3.5 w-3.5 shrink-0"/>
-                                        <span class="min-w-0 truncate text-[13px]">{tab.title.clone()}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
-                                        title=move || t::common::close_tab(locale.get())
-                                        aria-label=move || t::common::close_tab(locale.get())
-                                        on:click=move |ev| {
-                                            ev.stop_propagation();
-                                            close_doc.run(doc_id);
-                                        }
-                                    >
-                                        <X class="h-3.5 w-3.5"/>
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                    }/>
-                    <For each=move || diff_tabs.get() key=|tab| tab.key.clone() children=move |tab| {
-                        let key = tab.key.clone();
-                        let key_for_close = tab.key.clone();
-                        let session = tab.session.clone();
-                        let select_diff = on_select_diff;
-                        let close_diff = on_close_diff;
-                        let active = Signal::derive(move || active_tab.get() == Some(EditorTabKey::Diff(key.clone())));
-                        view! {
-                            <div class=move || tab_button_class(active.get()) role="tab" aria-selected=move || active.get().to_string()>
-                                <div class="flex h-full min-w-0 items-center">
-                                    <button
-                                        type="button"
-                                        class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
-                                        title=tab.tooltip.clone()
-                                        aria-label=move || t::common::diff_tab(locale.get())
-                                        on:click=move |_| select_diff.run(session.clone())
-                                    >
-                                        <SourceControl class="h-3.5 w-3.5 shrink-0"/>
-                                        <span class="min-w-0 truncate text-[13px]">{tab.title.clone()}</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
-                                        title=move || t::common::close_tab(locale.get())
-                                        aria-label=move || t::common::close_tab(locale.get())
-                                        on:click=move |ev| {
-                                            ev.stop_propagation();
-                                            close_diff.run(key_for_close.clone());
-                                        }
-                                    >
-                                        <X class="h-3.5 w-3.5"/>
-                                    </button>
-                                </div>
+                            <div
+                                class=move || tab_button_class(active.get())
+                                role="tab"
+                                aria-selected=move || active.get().to_string()
+                                draggable="true"
+                                data-deve-editor-tab-key=marker
+                                data-deve-editor-tab-kind=kind
+                                on:dragstart=move |_| set_dragging_tab.set(Some(drag_key.clone()))
+                                on:dragover=move |ev| ev.prevent_default()
+                                on:drop=move |ev| {
+                                    ev.prevent_default();
+                                    ev.stop_propagation();
+                                    if let Some(dragged) = dragging_tab.get_untracked() {
+                                        let position = drop_position_from_drag_event(&ev);
+                                        on_reorder_tab.run((dragged, drop_target.clone(), position));
+                                    }
+                                    set_dragging_tab.set(None);
+                                }
+                                on:dragend=move |_| set_dragging_tab.set(None)
+                            >
+                                {body}
                             </div>
                         }
                     }/>
                 </div>
             </div>
         </Show>
+    }
+}
+
+fn trailing_blank_drop_target(tabs: &[EditorTabItem]) -> Option<(EditorTabKey, DropPosition)> {
+    tabs.last().map(|item| (item.key(), DropPosition::After))
+}
+
+fn drop_position_from_drag_event(ev: &web_sys::DragEvent) -> DropPosition {
+    let Some(target) = ev.current_target() else {
+        return DropPosition::Before;
+    };
+    let Ok(element) = target.dyn_into::<web_sys::Element>() else {
+        return DropPosition::Before;
+    };
+    let rect = element.get_bounding_client_rect();
+    if f64::from(ev.client_x()) > rect.left() + rect.width() / 2.0 {
+        DropPosition::After
+    } else {
+        DropPosition::Before
     }
 }

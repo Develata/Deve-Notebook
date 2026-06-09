@@ -1,9 +1,13 @@
 use super::{
-    EditorDocumentTab, EditorTabKey,
+    DropPosition, EditorDocumentTab, EditorTabItem, EditorTabKey,
     close::close_diff_tab,
     diff_tab_from_session,
     model::display_name,
-    ops::{remove_diff_tab, remove_document_tab, upsert_document_tab},
+    ops::{
+        evict_lru_document_tab, ordered_editor_tab_items, remove_diff_tab, remove_document_tab,
+        reorder_visible_tab, touch_document_access_order, upsert_document_tab,
+        upsert_visible_tab_order,
+    },
     policy::active_editor_tab_key,
     policy::scope_changed,
     policy::should_clear_diff_on_document_change,
@@ -73,6 +77,107 @@ fn removing_tab_returns_right_neighbor_then_left_neighbor() {
 }
 
 #[test]
+fn editor_tab_visible_order_tracks_docs_and_diffs_without_touching_lru() {
+    let doc_id = DocId::from_u128(1);
+    let diff = diff_tab_from_session(DiffSessionWire::new(
+        "a.md".into(),
+        "old".into(),
+        "new".into(),
+    ));
+    let diff_key = diff.key.clone();
+    let doc_tabs = vec![EditorDocumentTab {
+        doc_id,
+        title: "a.md".into(),
+        tooltip: "a.md".into(),
+    }];
+    let diff_tabs = vec![diff];
+    let mut visible_order = Vec::new();
+    let mut access_order = Vec::new();
+
+    upsert_visible_tab_order(&mut visible_order, EditorTabKey::Document(doc_id));
+    upsert_visible_tab_order(&mut visible_order, EditorTabKey::Diff(diff_key.clone()));
+    touch_document_access_order(&mut access_order, doc_id);
+    assert!(reorder_visible_tab(
+        &mut visible_order,
+        &EditorTabKey::Diff(diff_key.clone()),
+        &EditorTabKey::Document(doc_id),
+        DropPosition::Before,
+    ));
+
+    let items = ordered_editor_tab_items(&visible_order, &doc_tabs, &diff_tabs);
+    assert!(matches!(items[0], EditorTabItem::Diff(_)));
+    assert_eq!(access_order, vec![doc_id]);
+}
+
+#[test]
+fn editor_tab_document_lru_evicts_oldest_non_active_document_only() {
+    let first = DocId::from_u128(1);
+    let second = DocId::from_u128(2);
+    let third = DocId::from_u128(3);
+    let diff = diff_tab_from_session(DiffSessionWire::new(
+        "diff.md".into(),
+        "old".into(),
+        "new".into(),
+    ));
+    let diff_key = diff.key.clone();
+    let mut tabs = vec![
+        EditorDocumentTab {
+            doc_id: first,
+            title: "a.md".into(),
+            tooltip: "a.md".into(),
+        },
+        EditorDocumentTab {
+            doc_id: second,
+            title: "b.md".into(),
+            tooltip: "b.md".into(),
+        },
+        EditorDocumentTab {
+            doc_id: third,
+            title: "c.md".into(),
+            tooltip: "c.md".into(),
+        },
+    ];
+    let mut visible_order = vec![
+        EditorTabKey::Document(first),
+        EditorTabKey::Document(second),
+        EditorTabKey::Diff(diff_key.clone()),
+        EditorTabKey::Document(third),
+    ];
+    let mut access_order = vec![third, second, first];
+
+    let evicted = evict_lru_document_tab(
+        &mut tabs,
+        &mut visible_order,
+        &mut access_order,
+        Some(first),
+        2,
+    );
+
+    assert_eq!(evicted, vec![second]);
+    assert!(tabs.iter().any(|tab| tab.doc_id == first));
+    assert!(tabs.iter().any(|tab| tab.doc_id == third));
+    assert!(visible_order.contains(&EditorTabKey::Diff(diff_key)));
+    assert!(!access_order.contains(&second));
+}
+
+#[test]
+fn editor_tab_reorder_visible_tab_supports_after_last_position() {
+    let first = EditorTabKey::Document(DocId::from_u128(1));
+    let second = EditorTabKey::Document(DocId::from_u128(2));
+    let third = EditorTabKey::Document(DocId::from_u128(3));
+    let mut order = vec![first.clone(), second.clone(), third.clone()];
+
+    assert!(reorder_visible_tab(
+        &mut order,
+        &first,
+        &third,
+        DropPosition::After,
+    ));
+
+    assert_eq!(order, vec![second, third, first]);
+}
+
+#[test]
 fn diff_tabs_use_display_path_for_title_and_stable_doc_key() {
     let doc_id = DocId::from_u128(7);
     let tab = diff_tab_from_session(
@@ -134,7 +239,12 @@ fn mobile_surface_close_diff_keeps_source_control_state() {
     let (source_control_state_signal, _set_source_control_state) =
         signal(source_control_state.clone());
     let (diff_content, set_diff_content) = signal(Some(first.session.clone()));
+    let first_key = first.key.clone();
     let (diff_tabs, set_diff_tabs) = signal(vec![first, second.clone()]);
+    let (tab_order, set_tab_order) = signal(vec![
+        EditorTabKey::Diff(first_key.clone()),
+        EditorTabKey::Diff(second.key.clone()),
+    ]);
 
     close_diff_tab(
         active_key,
@@ -142,6 +252,8 @@ fn mobile_surface_close_diff_keeps_source_control_state() {
         set_diff_content,
         diff_tabs,
         set_diff_tabs,
+        tab_order,
+        set_tab_order,
     );
 
     assert_eq!(

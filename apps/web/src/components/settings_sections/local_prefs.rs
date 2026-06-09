@@ -1,9 +1,11 @@
 //! plan_ref:
 //!   - 15_settings#browser-ui-prefs
 
+use crate::components::layout_context::EditorTabLimitControl;
 use crate::components::settings_prefs::{
-    EditorDensityPreference, EditorWrapPreference, ThemePreference,
-    apply_editor_density_preference, apply_editor_wrap_preference, apply_theme_preference,
+    DEFAULT_MAX_DOCUMENT_TABS, EditorDensityPreference, EditorWrapPreference,
+    MAX_MAX_DOCUMENT_TABS, MIN_MAX_DOCUMENT_TABS, ThemePreference, apply_editor_density_preference,
+    apply_editor_wrap_preference, apply_theme_preference, clamp_max_document_tabs,
     persist_editor_density_preference, persist_editor_wrap_preference, persist_theme_preference,
     read_editor_density_preference, read_editor_wrap_preference, read_theme_preference,
 };
@@ -12,6 +14,13 @@ use crate::components::settings_sections_policy::{
 };
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
+
+fn submitted_max_document_tabs(raw: &str) -> usize {
+    raw.trim()
+        .parse::<usize>()
+        .map(clamp_max_document_tabs)
+        .unwrap_or(DEFAULT_MAX_DOCUMENT_TABS)
+}
 
 /// Browser-local theme preference.
 #[component]
@@ -70,10 +79,26 @@ pub fn AppearanceSection(locale: RwSignal<Locale>) -> impl IntoView {
 pub fn EditorBasicsSection(locale: RwSignal<Locale>) -> impl IntoView {
     let (wrap_pref, set_wrap_pref) = signal(read_editor_wrap_preference());
     let (density_pref, set_density_pref) = signal(read_editor_density_preference());
+    let tab_limit = expect_context::<EditorTabLimitControl>();
     Effect::new(move |_| apply_editor_wrap_preference(wrap_pref.get()));
     Effect::new(move |_| apply_editor_density_preference(density_pref.get()));
     let wrap_state = Signal::derive(move || editor_wrap_button_state(wrap_pref.get()));
     let density_state = Signal::derive(move || editor_density_button_state(density_pref.get()));
+    let max_document_tabs = tab_limit.max_document_tabs;
+    let set_max_document_tabs = tab_limit.set_max_document_tabs;
+    let (max_document_tabs_draft, set_max_document_tabs_draft) =
+        signal(max_document_tabs.get_untracked().to_string());
+    Effect::new(move |_| {
+        let committed = max_document_tabs.get().to_string();
+        if max_document_tabs_draft.get_untracked() != committed {
+            set_max_document_tabs_draft.set(committed);
+        }
+    });
+    let commit_max_document_tabs = Callback::new(move |raw: String| {
+        let next = submitted_max_document_tabs(&raw);
+        set_max_document_tabs.set(next);
+        set_max_document_tabs_draft.set(next.to_string());
+    });
 
     view! {
         <div class="bg-sidebar p-4 rounded-lg border border-default">
@@ -130,8 +155,58 @@ pub fn EditorBasicsSection(locale: RwSignal<Locale>) -> impl IntoView {
                         </button>
                     </div>
                 </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div class="min-w-0">
+                        <label for="deve-settings-max-document-tabs" class="font-medium text-primary">
+                            {move || t::settings::max_document_tabs(locale.get())}
+                        </label>
+                        <p class="text-xs text-muted">
+                            {move || t::settings::max_document_tabs_desc(locale.get())}
+                        </p>
+                    </div>
+                    <input
+                        id="deve-settings-max-document-tabs"
+                        type="number"
+                        min=MIN_MAX_DOCUMENT_TABS.to_string()
+                        max=MAX_MAX_DOCUMENT_TABS.to_string()
+                        step="1"
+                        class="min-h-[44px] w-24 rounded border border-default bg-panel px-3 py-2 text-sm text-primary"
+                        title=move || t::settings::max_document_tabs_hint(locale.get())
+                        aria-label=move || t::settings::max_document_tabs(locale.get())
+                        data-deve-settings-max-document-tabs=move || max_document_tabs.get().to_string()
+                        value=move || max_document_tabs_draft.get()
+                        on:input=move |ev| set_max_document_tabs_draft.set(event_target_value(&ev))
+                        on:change=move |ev| commit_max_document_tabs.run(event_target_value(&ev))
+                        on:blur=move |_| commit_max_document_tabs.run(max_document_tabs_draft.get_untracked())
+                        on:keydown=move |ev| {
+                            if ev.key() == "Enter" {
+                                commit_max_document_tabs.run(max_document_tabs_draft.get_untracked());
+                            }
+                        }
+                    />
+                </div>
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::submitted_max_document_tabs;
+    use crate::components::settings_prefs::{
+        DEFAULT_MAX_DOCUMENT_TABS, MAX_MAX_DOCUMENT_TABS, MIN_MAX_DOCUMENT_TABS,
+    };
+
+    #[test]
+    fn submitted_max_document_tabs_defaults_and_clamps() {
+        assert_eq!(submitted_max_document_tabs(""), DEFAULT_MAX_DOCUMENT_TABS);
+        assert_eq!(
+            submitted_max_document_tabs("invalid"),
+            DEFAULT_MAX_DOCUMENT_TABS
+        );
+        assert_eq!(submitted_max_document_tabs("0"), MIN_MAX_DOCUMENT_TABS);
+        assert_eq!(submitted_max_document_tabs("99"), MAX_MAX_DOCUMENT_TABS);
+        assert_eq!(submitted_max_document_tabs("12"), 12);
     }
 }
 

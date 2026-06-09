@@ -3,12 +3,14 @@
 //!
 
 use super::contexts::{
-    provide_chat_control, provide_outline_control, provide_search_control, provide_sidebar_control,
+    provide_chat_control, provide_editor_tab_limit_control, provide_outline_control,
+    provide_search_control, provide_sidebar_control,
 };
 use crate::api::ConnectionStatus;
 use crate::components::activity_bar::SidebarView;
 use crate::components::settings_prefs::{
-    persist_ai_chat_visible_preference, read_ai_chat_visible_preference,
+    persist_ai_chat_visible_preference, persist_max_document_tabs_preference,
+    read_ai_chat_visible_preference, read_max_document_tabs_preference,
 };
 use crate::hooks::use_outline::use_outline;
 use crate::i18n::Locale;
@@ -94,6 +96,13 @@ pub fn init_sidebar_ui_state() -> SidebarUiState {
     }
 }
 
+pub fn init_editor_tab_limit_ui_state() -> ReadSignal<usize> {
+    let (max_document_tabs, set_max_document_tabs) = use_editor_tab_limit();
+    provide_editor_tab_limit_control(max_document_tabs, set_max_document_tabs);
+
+    max_document_tabs
+}
+
 pub fn bind_global_shortcuts(
     search: &SearchUiState,
     outline: &OutlineUiState,
@@ -132,4 +141,15 @@ fn use_chat_visibility() -> (ReadSignal<bool>, WriteSignal<bool>) {
     });
 
     (visible, set_visible)
+}
+
+fn use_editor_tab_limit() -> (ReadSignal<usize>, WriteSignal<usize>) {
+    let initial = read_max_document_tabs_preference();
+    let (max_document_tabs, set_max_document_tabs) = signal(initial);
+
+    Effect::new(move |_| {
+        persist_max_document_tabs_preference(max_document_tabs.get());
+    });
+
+    (max_document_tabs, set_max_document_tabs)
 }

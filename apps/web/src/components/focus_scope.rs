@@ -48,6 +48,24 @@ pub(crate) fn active_element() -> Option<Element> {
         .and_then(|document| document.active_element())
 }
 
+pub(crate) fn should_blur_active_element_for_hidden_surface(active_inside_surface: bool) -> bool {
+    active_inside_surface
+}
+
+pub(crate) fn blur_active_element_inside(root: &Element) -> bool {
+    let Some(active) = active_element() else {
+        return false;
+    };
+    if !should_blur_active_element_for_hidden_surface(element_contains(root, &active)) {
+        return false;
+    }
+    let Ok(active) = active.dyn_into::<HtmlElement>() else {
+        return false;
+    };
+    let _ = active.blur();
+    true
+}
+
 pub(crate) fn focus_input_next_frame(input_ref: NodeRef<leptos::html::Input>) {
     request_animation_frame(move || {
         if let Some(input) = input_ref.get_untracked() {
@@ -163,6 +181,12 @@ fn same_element(left: &HtmlElement, right: &Element) -> bool {
     left.is_same_node(Some(right))
 }
 
+fn element_contains(root: &Element, element: &Element) -> bool {
+    let root: &web_sys::Node = root.as_ref();
+    let element: &web_sys::Node = element.as_ref();
+    root.contains(Some(element))
+}
+
 fn active_html_element_is(element: &HtmlElement) -> bool {
     active_element().is_some_and(|active| same_element(element, &active))
 }
@@ -210,5 +234,11 @@ mod tests {
         assert!(!should_trap_tab_key("Tab", false, true, false));
         assert!(!should_trap_tab_key("Tab", false, false, true));
         assert!(!should_trap_tab_key("Enter", false, false, false));
+    }
+
+    #[test]
+    fn focus_scope_blurs_only_when_active_element_is_inside_surface() {
+        assert!(super::should_blur_active_element_for_hidden_surface(true));
+        assert!(!super::should_blur_active_element_for_hidden_surface(false));
     }
 }

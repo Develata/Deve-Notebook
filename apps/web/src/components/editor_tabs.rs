@@ -14,7 +14,8 @@ mod runtime;
 mod tests;
 
 pub(crate) use model::{
-    EditorDiffTab, EditorDocumentTab, EditorTabKey, diff_tab_from_session, document_tab_from_docs,
+    DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey,
+    diff_tab_from_session, document_tab_from_docs,
 };
 pub(crate) use runtime::{
     EditorTabRuntimeInputs, create_current_editor_doc, create_editor_tab_runtime,

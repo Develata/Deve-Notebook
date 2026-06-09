@@ -4,12 +4,18 @@
 //! Browser-local Settings preferences. These values are UI hints only and must
 //! not carry repo authority, secrets, sync vectors, or business facts.
 
-use crate::storage::prefs::{read_bool_pref, read_pref, write_bool_pref, write_pref};
+use crate::storage::prefs::{
+    read_bool_pref, read_i32_pref, read_pref, write_bool_pref, write_i32_pref, write_pref,
+};
 
 const THEME_PREF_KEY: &str = "deve.ui.theme";
 const EDITOR_WRAP_PREF_KEY: &str = "deve.editor.word_wrap";
 const EDITOR_DENSITY_PREF_KEY: &str = "deve.editor.density";
 pub(crate) const AI_CHAT_VISIBLE_PREF_KEY: &str = "deve.ui.ai_chat_visible";
+pub(crate) const MAX_DOCUMENT_TABS_PREF_KEY: &str = "deve.ui.max_document_tabs";
+pub(crate) const DEFAULT_MAX_DOCUMENT_TABS: usize = 8;
+pub(crate) const MIN_MAX_DOCUMENT_TABS: usize = 1;
+pub(crate) const MAX_MAX_DOCUMENT_TABS: usize = 20;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ThemePreference {
@@ -139,6 +145,24 @@ pub(crate) fn persist_ai_chat_visible_preference(visible: bool) {
     let _ = write_bool_pref(AI_CHAT_VISIBLE_PREF_KEY, visible);
 }
 
+pub(crate) fn clamp_max_document_tabs(value: usize) -> usize {
+    value.clamp(MIN_MAX_DOCUMENT_TABS, MAX_MAX_DOCUMENT_TABS)
+}
+
+pub(crate) fn read_max_document_tabs_preference() -> usize {
+    read_i32_pref(MAX_DOCUMENT_TABS_PREF_KEY)
+        .and_then(|value| usize::try_from(value).ok())
+        .filter(|value| (MIN_MAX_DOCUMENT_TABS..=MAX_MAX_DOCUMENT_TABS).contains(value))
+        .unwrap_or(DEFAULT_MAX_DOCUMENT_TABS)
+}
+
+pub(crate) fn persist_max_document_tabs_preference(value: usize) {
+    let _ = write_i32_pref(
+        MAX_DOCUMENT_TABS_PREF_KEY,
+        clamp_max_document_tabs(value) as i32,
+    );
+}
+
 #[cfg(target_arch = "wasm32")]
 fn apply_theme_preference_to_document(pref: ThemePreference) {
     let Some(window) = web_sys::window() else {
@@ -229,5 +253,29 @@ mod tests {
 
         persist_ai_chat_visible_preference(true);
         assert!(read_ai_chat_visible_preference());
+    }
+
+    #[test]
+    fn max_document_tabs_preference_defaults_clamps_and_roundtrips() {
+        remove_pref(MAX_DOCUMENT_TABS_PREF_KEY);
+        assert_eq!(
+            read_max_document_tabs_preference(),
+            DEFAULT_MAX_DOCUMENT_TABS
+        );
+
+        persist_max_document_tabs_preference(12);
+        assert_eq!(read_max_document_tabs_preference(), 12);
+
+        persist_max_document_tabs_preference(0);
+        assert_eq!(read_max_document_tabs_preference(), MIN_MAX_DOCUMENT_TABS);
+
+        persist_max_document_tabs_preference(99);
+        assert_eq!(read_max_document_tabs_preference(), MAX_MAX_DOCUMENT_TABS);
+
+        write_pref(MAX_DOCUMENT_TABS_PREF_KEY, "invalid").expect("write invalid tab limit");
+        assert_eq!(
+            read_max_document_tabs_preference(),
+            DEFAULT_MAX_DOCUMENT_TABS
+        );
     }
 }

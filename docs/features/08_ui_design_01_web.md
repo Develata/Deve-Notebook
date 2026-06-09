@@ -25,6 +25,9 @@
 
 - 大屏下应提供 desktop-style workbench。
 - 大屏下文件树、显示/编辑区、AI Chat 三个区域之间的分界线应可拖到边缘；普通拖拽折叠区域时分界线仍保留，可从边缘拉回。
+- 大屏主编辑区顶部应显示已打开 surface 的 tab；Markdown 文档 tab 超过用户设置的上限时，应自动关闭最早访问且不是当前 active 的文档 tab。
+- 大屏 tab strip 中的可见 tab 应可拖拽到任意显式可见位置，包括拖到最后一个 tab 之后的可见空白区域；拖拽只改变可见顺序，不改变后台文档访问 LRU。
+- Diff tab 不参与 Markdown 文档 tab 上限；打开 diff 不应挤掉文档 tab，也不应被文档上限自动关闭。
 - 窄屏下应映射到 mobile-style shell。
 - URL、刷新、打开新窗口后，页面应保持可解释的工作台状态。
 

@@ -2,6 +2,7 @@
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
 use crate::components::activity_bar::{ActivityBar, SidebarView};
+use crate::components::focus_scope;
 use crate::components::sidebar::Sidebar;
 use crate::runtime::{document_client::DocumentClient, scope_client::ScopeClient};
 use leptos::prelude::*;
@@ -16,15 +17,31 @@ pub fn DesktopSidebar(
 ) -> impl IntoView {
     let document = expect_context::<DocumentClient>();
     let scope = expect_context::<ScopeClient>();
+    let panel_ref = NodeRef::<leptos::html::Aside>::new();
+    let (surface_hidden, set_surface_hidden) = signal(sidebar_width.get_untracked() == 0);
+
+    Effect::new(move |_| {
+        let hidden = sidebar_width.get() == 0;
+        if !hidden {
+            set_surface_hidden.set(false);
+            return;
+        }
+        if let Some(panel) = panel_ref.get_untracked() {
+            let root: &web_sys::Element = panel.as_ref();
+            let _ = focus_scope::blur_active_element_inside(root);
+        }
+        set_surface_hidden.set(true);
+    });
 
     view! {
         <aside
+            node_ref=panel_ref
             data-deve-desktop-col="1-sidebar"
             data-deve-desktop-col-width=move || sidebar_width.get().to_string()
-            aria-hidden=move || (sidebar_width.get() == 0).to_string()
+            aria-hidden=move || surface_hidden.get().to_string()
             class="min-w-0 bg-panel rounded-lg shadow-sm border border-default flex flex-col z-[var(--z-panels)] overflow-hidden"
             style=move || {
-                if sidebar_width.get() == 0 {
+                if surface_hidden.get() {
                     "visibility: hidden; pointer-events: none;".to_string()
                 } else {
                     String::new()

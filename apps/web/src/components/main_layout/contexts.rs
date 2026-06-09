@@ -3,7 +3,7 @@
 //!   - 11_ui_design/03_mobile#mobile-responsive-layout
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!
-use super::{ChatControl, OutlineControl, SearchControl, SidebarControl};
+use super::{ChatControl, EditorTabLimitControl, OutlineControl, SearchControl, SidebarControl};
 use leptos::prelude::*;
 use web_sys::UiEvent;
 
@@ -23,6 +23,16 @@ pub fn provide_chat_control(chat_visible: ReadSignal<bool>, set_chat_visible: Wr
     provide_context(ChatControl {
         chat_visible,
         set_chat_visible,
+    });
+}
+
+pub fn provide_editor_tab_limit_control(
+    max_document_tabs: ReadSignal<usize>,
+    set_max_document_tabs: WriteSignal<usize>,
+) {
+    provide_context(EditorTabLimitControl {
+        max_document_tabs,
+        set_max_document_tabs,
     });
 }
 

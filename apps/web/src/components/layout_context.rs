@@ -24,6 +24,13 @@ pub struct ChatControl {
     pub set_chat_visible: WriteSignal<bool>,
 }
 
+/// Editor tab limit control context.
+#[derive(Clone, Copy)]
+pub struct EditorTabLimitControl {
+    pub max_document_tabs: ReadSignal<usize>,
+    pub set_max_document_tabs: WriteSignal<usize>,
+}
+
 /// Outline panel visibility control context.
 #[derive(Clone, Copy)]
 pub struct OutlineControl {

@@ -83,16 +83,16 @@ pub fn DiffHeader(
                             {move || if is_editing.get() { t::diff::preview_diff(locale.get()) } else { t::diff::edit(locale.get()) }}
                         </button>
                     </Show>
-                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]" title=move || t::diff::cache_state_help(locale.get())>
                         {move || if cache_hit.get() { t::diff::cache_hit(locale.get()) } else { t::diff::cache_miss(locale.get()) }}
                     </span>
-                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]" title=move || t::diff::cache_ratio_help(locale.get())>
                         {move || t::diff::cache_ratio(locale.get(), cache_hit_ratio.get())}
                     </span>
-                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]" title=move || t::diff::algorithm_help(locale.get())>
                         {move || t::diff::algorithm(locale.get(), &algorithm.get())}
                     </span>
-                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]">
+                    <span class="shrink-0 rounded border border-[var(--diff-border)] px-1.5 py-0.5 text-[11px] text-[var(--diff-muted)]" title=move || t::diff::compute_ms_help(locale.get())>
                         {move || t::diff::compute_ms(locale.get(), compute_ms.get())}
                     </span>
                     <Show when=move || has_hunks.get()>
@@ -140,16 +140,16 @@ pub fn DiffHeader(
                 <span class="text-[11px] px-1.5 py-0.5 rounded bg-[var(--diff-line-del)] text-[var(--diff-fg)]" title=move || t::diff::deleted(locale.get())>
                     {move || format!("-{}", deleted_count.get())}
                 </span>
-                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]">
+                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]" title=move || t::diff::cache_state_help(locale.get())>
                     {move || if cache_hit.get() { t::diff::cache_hit(locale.get()) } else { t::diff::cache_miss(locale.get()) }}
                 </span>
-                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]">
+                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]" title=move || t::diff::cache_ratio_help(locale.get())>
                     {move || t::diff::cache_ratio(locale.get(), cache_hit_ratio.get())}
                 </span>
                 <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]" title=move || t::diff::algorithm_help(locale.get())>
                     {move || t::diff::algorithm(locale.get(), &algorithm.get())}
                 </span>
-                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]">
+                <span class="text-[11px] px-1.5 py-0.5 rounded border border-[var(--diff-border)] text-[var(--diff-muted)]" title=move || t::diff::compute_ms_help(locale.get())>
                     {move || t::diff::compute_ms(locale.get(), compute_ms.get())}
                 </span>
                 <Show when=move || has_hunks.get()>

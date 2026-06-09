@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-07`
+- `Last Review`: `2026-06-08`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -74,6 +74,7 @@
 - `RightPanelWidth`
 - `DisplayEditorWidth`
 - `AiChatVisibility`
+- `MaxDocumentTabs`
 - `OuterGutterWidth`
 - `ActivityBarPinState`
 - `FocusedSurface`
@@ -188,8 +189,16 @@ Tab surface 类型：
 
 - open tab list 与 active tab 归 UI shell runtime / view-local state 所有，不是
   document authority、source-control authority 或 repo scope authority。
+- editor group 必须区分显式可见顺序与文档访问顺序：
+  - visible tab order 只决定 desktop tab strip 的渲染和拖拽排序。
+  - document access order 是隐藏 LRU 顺序，只用于文档 tab 上限淘汰。
+  - 点击或打开 `DocumentTab` 必须 touch document access order；拖拽 tab 只改变 visible tab order。
+  - visible tab order 的拖拽目标包括可见 tab 本身与 tab strip 末尾的可见空白区域；末尾空白 drop
+    必须等价于移动到最后一个可见 tab 之后。
 - repo / branch / scope 切换时，tab registry 必须清理或按 scope 隔离，禁止 stale tab
   在新 scope 中重新打开旧 `DocId` / diff。
+- `DocumentTab` 数量超过 browser-local `MaxDocumentTabs` 时，必须自动关闭 LRU 最旧且非 active
+  的 document tab；`DiffTab` 不参与该上限，也不得被 document tab 上限淘汰。
 - 关闭 active document tab 必须等价于一次受 guard 保护的离开当前文档；若仍有相邻
   document tab，则切换到相邻 tab，否则回到 Dashboard。
 - 关闭 active diff tab 只关闭 diff surface，不得修改 staged / pending / commit state；
@@ -202,10 +211,12 @@ Tab surface 类型：
 
 - `desktop_layout/content` 只组合 `EditorTabStrip`、`Editor`、`DiffView` 与 `Dashboard`，
   不直接保存 tab registry 或实现关闭/切换状态机。
-- `desktop_layout/tab_runtime` 持有 view-local tab registry，订阅 `docs`、`current_doc`、
-  `diff_content`、`current_repo_id` 与 `scope_nonce`，并输出 typed callbacks。
-- `desktop_layout/editor_tabs/model` 只定义 tab identity、title / tooltip projection。
-- `desktop_layout/editor_tabs/ops` 只提供纯函数 upsert / remove / fallback neighbor 选择。
+- `components/editor_tabs/runtime` 持有 view-local tab registry、visible tab order 与 document
+  access order，订阅 `docs`、`current_doc`、`diff_content`、`current_repo_id`、
+  `scope_nonce` 与 `MaxDocumentTabs`，并输出 typed callbacks。
+- `components/editor_tabs/model` 只定义 tab identity、title / tooltip projection。
+- `components/editor_tabs/ops` 只提供纯函数 upsert / remove / fallback neighbor 选择、
+  visible order reorder 与 document LRU eviction。
 - `desktop_layout/editor_tabs/strip` 只渲染 tablist 与 button semantics，不直接写 document、
   source-control 或 repo authority。
 
@@ -236,7 +247,8 @@ DesktopLayoutContent
 - pending edit guard 阻止离开当前 active document 时，close / select 只能进入 pending navigation，
   不得提前删除 active document tab。
 - 缺失 document projection 时不创建 document tab；diff session 只恢复已有 session，不触发新计算。
-- 不新增配置入口，不写 localStorage；reload 后 open tabs 可丢失。
+- 只持久化 `MaxDocumentTabs` browser-local UI pref；open tab list、visible order 与
+  document access order 仍是 view-local state，reload 后可丢失。
 - upsert / remove 是 `O(open_tabs)`；open tabs 是小规模 view-local shell state，不在关键 authority
   路径上。
 
@@ -351,6 +363,10 @@ Drawer
 - Modal MUST trap focus。
 - 关闭 Modal 后 MUST restore previous focus target。
 - 移动端 drawer 与 desktop sidebar 是不同 focus surface。
+- 任一 surface 在被折叠到 `aria-hidden=true` 前，如果当前 active element 位于该 surface 内部，
+  shell 必须先释放或迁移焦点，禁止隐藏区域保留焦点。
+- 折叠 surface 的 DOM 隐藏必须使用两阶段状态：layout size 可先到 `0px`，但 `aria-hidden` /
+  `visibility:hidden` 只能在焦点释放或确认焦点不在该 surface 内之后切换。
 
 补充：
 
@@ -393,6 +409,7 @@ PinnedSetChanged
   - sidebar visibility
   - widths
   - AI Chat panel visibility
+  - maximum document tabs
   - language
   - recent active view
 - `deve_config` MUST NOT 持有：
@@ -411,6 +428,7 @@ PinnedSetChanged
   - 中间显示/编辑区宽度
   - 面板宽度
   - AI Chat 面板可见性
+  - 最大文档 tab 数
   - 主题
   - 最近活动 view
   - 语言

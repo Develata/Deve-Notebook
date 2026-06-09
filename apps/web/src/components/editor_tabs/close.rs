@@ -2,8 +2,9 @@
 //!   - 11_ui_design/index#editor-group-tabstrip
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
+use super::EditorTabKey;
 use super::model::{EditorDiffTab, EditorDocumentTab, diff_tab_key};
-use super::ops::{remove_diff_tab, remove_document_tab};
+use super::ops::{remove_diff_tab_with_order, remove_document_tab_with_order};
 use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
@@ -22,6 +23,10 @@ pub(super) fn build_close_document_callback(
     doc_tabs: ReadSignal<Vec<EditorDocumentTab>>,
     set_doc_tabs: WriteSignal<Vec<EditorDocumentTab>>,
     diff_tabs: ReadSignal<Vec<EditorDiffTab>>,
+    tab_order: ReadSignal<Vec<EditorTabKey>>,
+    set_tab_order: WriteSignal<Vec<EditorTabKey>>,
+    doc_access_order: ReadSignal<Vec<DocId>>,
+    set_doc_access_order: WriteSignal<Vec<DocId>>,
 ) -> Callback<DocId> {
     let current_doc = document.current_doc;
     let current_repo_id = scope.current_repo_id;
@@ -35,25 +40,30 @@ pub(super) fn build_close_document_callback(
 
     Callback::new(move |doc_id| {
         if current_doc.get_untracked() != Some(doc_id) {
-            set_doc_tabs.update(|tabs| {
-                let _ = remove_document_tab(tabs, doc_id);
-            });
+            let mut next_tabs = doc_tabs.get_untracked();
+            let mut next_order = tab_order.get_untracked();
+            let _ = remove_document_tab_with_order(&mut next_tabs, &mut next_order, doc_id);
+            set_doc_tabs.set(next_tabs);
+            set_tab_order.set(next_order);
+            set_doc_access_order.update(|order| order.retain(|existing| *existing != doc_id));
             return;
         }
 
         let mut next_tabs = doc_tabs.get_untracked();
-        let next_doc = remove_document_tab(&mut next_tabs, doc_id);
+        let mut next_order = tab_order.get_untracked();
+        let mut next_access_order = doc_access_order.get_untracked();
+        let next_doc = remove_document_tab_with_order(&mut next_tabs, &mut next_order, doc_id);
+        next_access_order.retain(|existing| *existing != doc_id);
         let active_diff = diff_content.get_untracked();
         let fallback_diff = if active_diff.is_none() {
-            diff_tabs
-                .get_untracked()
-                .first()
-                .map(|tab| tab.session.clone())
+            first_diff_session(&next_order, &diff_tabs.get_untracked())
         } else {
             None
         };
         let action = Callback::new(move |_| {
             set_doc_tabs.set(next_tabs.clone());
+            set_tab_order.set(next_order.clone());
+            set_doc_access_order.set(next_access_order.clone());
             apply_document_close_result(
                 active_diff.clone(),
                 next_doc,
@@ -119,14 +129,36 @@ pub(super) fn close_diff_tab(
     set_diff_content: WriteSignal<Option<DiffSessionWire>>,
     diff_tabs: ReadSignal<Vec<EditorDiffTab>>,
     set_diff_tabs: WriteSignal<Vec<EditorDiffTab>>,
+    tab_order: ReadSignal<Vec<EditorTabKey>>,
+    set_tab_order: WriteSignal<Vec<EditorTabKey>>,
 ) {
     let is_active = diff_content
         .get_untracked()
         .is_some_and(|session| diff_tab_key(&session) == key);
     let mut next_tabs = diff_tabs.get_untracked();
-    let next_session = remove_diff_tab(&mut next_tabs, &key);
+    let mut next_order = tab_order.get_untracked();
+    let next_session = remove_diff_tab_with_order(&mut next_tabs, &mut next_order, &key);
     set_diff_tabs.set(next_tabs);
+    set_tab_order.set(next_order);
     if is_active {
         set_diff_content.set(next_session);
     }
+}
+
+fn first_diff_session(
+    visible_order: &[EditorTabKey],
+    diff_tabs: &[EditorDiffTab],
+) -> Option<DiffSessionWire> {
+    visible_order
+        .iter()
+        .find_map(|key| {
+            let EditorTabKey::Diff(diff_key) = key else {
+                return None;
+            };
+            diff_tabs
+                .iter()
+                .find(|tab| tab.key == *diff_key)
+                .map(|tab| tab.session.clone())
+        })
+        .or_else(|| diff_tabs.first().map(|tab| tab.session.clone()))
 }

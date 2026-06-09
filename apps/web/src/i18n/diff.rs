@@ -130,10 +130,26 @@ pub fn cache_miss(locale: Locale) -> &'static str {
     }
 }
 
+pub fn cache_state_help(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Shows whether the current diff reused a result from the frontend DiffCache.",
+        Locale::Zh => "表示当前 diff 是否复用了前端 DiffCache 的计算结果。",
+    }
+}
+
 pub fn compute_ms(locale: Locale, ms: u32) -> String {
     match locale {
         Locale::En => format!("{} ms", ms),
         Locale::Zh => format!("{} 毫秒", ms),
+    }
+}
+
+pub fn compute_ms_help(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Elapsed time for the latest frontend diff computation; small files or cached paths can show 0 ms."
+        }
+        Locale::Zh => "最近一次前端 diff 计算耗时；小文件或缓存路径可能显示 0 毫秒。",
     }
 }
 
@@ -156,8 +172,10 @@ pub fn algorithm(locale: Locale, value: &str) -> String {
 
 pub fn algorithm_help(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Patience+Myers is preferred for stable hunk alignment.",
-        Locale::Zh => "优先使用耐心法+Myers以获得更稳定的变更块对齐。",
+        Locale::En => {
+            "Current line diff algorithm. Myers is the default; complex inputs may use Patience+Myers."
+        }
+        Locale::Zh => "当前行级 diff 算法。默认 Myers，复杂场景可能使用耐心法+Myers。",
     }
 }
 
@@ -165,6 +183,13 @@ pub fn cache_ratio(locale: Locale, ratio: u32) -> String {
     match locale {
         Locale::En => format!("Hit: {}%", ratio),
         Locale::Zh => format!("命中率: {}%", ratio),
+    }
+}
+
+pub fn cache_ratio_help(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Percentage of sampled diff computations on this page that hit the cache.",
+        Locale::Zh => "本页 diff 计算采样中命中缓存的百分比。",
     }
 }
 

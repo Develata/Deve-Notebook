@@ -9,6 +9,7 @@ use crate::components::diff_view::DiffView;
 use crate::components::editor_tabs::{
     EditorTabRuntimeInputs, create_current_editor_doc, create_editor_tab_runtime,
 };
+use crate::components::focus_scope;
 use crate::editor::Editor;
 use crate::hooks::use_core::EditorContext;
 use crate::runtime::{
@@ -34,6 +35,8 @@ pub fn DesktopLayoutContent(center_width: Signal<i32>) -> impl IntoView {
     let is_spectator = scope.is_spectator;
     let ws = session.ws.clone();
     let current_editor_doc = create_current_editor_doc(&document, &editor);
+    let content_ref = NodeRef::<leptos::html::Div>::new();
+    let (surface_hidden, set_surface_hidden) = signal(center_width.get_untracked() == 0);
     let tabs = create_editor_tab_runtime(
         EditorTabRuntimeInputs {
             document,
@@ -43,15 +46,28 @@ pub fn DesktopLayoutContent(center_width: Signal<i32>) -> impl IntoView {
         },
         current_editor_doc,
     );
+    Effect::new(move |_| {
+        let hidden = center_width.get() == 0;
+        if !hidden {
+            set_surface_hidden.set(false);
+            return;
+        }
+        if let Some(content) = content_ref.get_untracked() {
+            let root: &web_sys::Element = content.as_ref();
+            let _ = focus_scope::blur_active_element_inside(root);
+        }
+        set_surface_hidden.set(true);
+    });
 
     view! {
         <div
+            node_ref=content_ref
             data-deve-desktop-col="3-display-editor"
             data-deve-desktop-col-width=move || center_width.get().to_string()
-            aria-hidden=move || (center_width.get() == 0).to_string()
+            aria-hidden=move || surface_hidden.get().to_string()
             class="bg-panel shadow-sm border border-default rounded-lg overflow-hidden relative flex flex-col min-w-0"
             style=move || {
-                if center_width.get() == 0 {
+                if surface_hidden.get() {
                     "visibility: hidden; pointer-events: none;".to_string()
                 } else {
                     String::new()
@@ -59,13 +75,13 @@ pub fn DesktopLayoutContent(center_width: Signal<i32>) -> impl IntoView {
             }
         >
             <EditorTabStrip
-                doc_tabs=tabs.doc_tabs
-                diff_tabs=tabs.diff_tabs
+                ordered_tabs=tabs.ordered_tabs
                 active_tab=tabs.active_tab
                 on_select_document=tabs.on_select_document
                 on_select_diff=tabs.on_select_diff
                 on_close_document=tabs.on_close_document
                 on_close_diff=tabs.on_close_diff
+                on_reorder_tab=tabs.on_reorder_tab
             />
             <div class="flex-1 min-h-0 overflow-hidden">
                 {move || {

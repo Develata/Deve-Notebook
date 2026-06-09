@@ -34,41 +34,32 @@ pub(super) fn ExplorerHeader(
         search_control.set_show.set(true);
     });
 
-    let active_repo_label = Signal::derive(move || {
-        branch
-            .current_repo
-            .get()
-            .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
-    });
-    let can_write = Signal::derive(move || {
-        repo_write_block_tracked(
-            &session.ws,
-            RepoWriteSignals {
-                load_state: rendering.load_state,
-                is_spectator: scope.is_spectator,
-                handshake_ready: session.handshake_ready,
-                current_repo_id: scope.current_repo_id,
-                current_scope_nonce: scope.current_scope_nonce,
-                active_branch: scope.active_branch,
-                pending_branch_switch: editor.pending_branch_switch,
-                pending_repo_switch: scope.pending_repo_switch,
-            },
-        )
-        .is_none()
-    });
+    let branch_for_title = branch.clone();
+    let branch_for_label = branch.clone();
+    let session_for_write = session.clone();
+    let rendering_for_write = rendering.clone();
+    let scope_for_write = scope.clone();
+    let editor_for_write = editor.clone();
 
     view! {
         <div class="flex-none h-12 flex items-center justify-between px-3 border-b border-default hover:bg-hover transition-colors group">
             <div class="flex items-center gap-2 flex-1 min-w-0 text-primary">
                 <crate::components::sidebar::repo_switcher::RepoSwitcher />
                 <div class="overflow-hidden flex-1">
-                    <span class="font-medium text-sm truncate block" title=move || active_repo_label.get()>
-                        {move || active_repo_label.get()}
+                    <span class="font-medium text-sm truncate block" title=move || explorer_active_repo_label(&branch_for_title, locale)>
+                        {move || explorer_active_repo_label(&branch_for_label, locale)}
                     </span>
                 </div>
             </div>
 
-            <Show when=move || can_write.get() && !is_readonly.get()>
+            <Show when=move || {
+                explorer_can_write(
+                    &session_for_write,
+                    &rendering_for_write,
+                    &scope_for_write,
+                    &editor_for_write,
+                ) && !is_readonly.get()
+            }>
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                         class="p-1 rounded hover:bg-hover text-secondary"
@@ -82,4 +73,33 @@ pub(super) fn ExplorerHeader(
             </Show>
         </div>
     }
+}
+
+fn explorer_active_repo_label(branch: &BranchContext, locale: RwSignal<Locale>) -> String {
+    branch
+        .current_repo
+        .get()
+        .unwrap_or_else(|| t::sidebar::knowledge_base(locale.get()).to_string())
+}
+
+fn explorer_can_write(
+    session: &SessionClient,
+    rendering: &RenderingClient,
+    scope: &ScopeClient,
+    editor: &EditorContext,
+) -> bool {
+    repo_write_block_tracked(
+        &session.ws,
+        RepoWriteSignals {
+            load_state: rendering.load_state,
+            is_spectator: scope.is_spectator,
+            handshake_ready: session.handshake_ready,
+            current_repo_id: scope.current_repo_id,
+            current_scope_nonce: scope.current_scope_nonce,
+            active_branch: scope.active_branch,
+            pending_branch_switch: editor.pending_branch_switch,
+            pending_repo_switch: scope.pending_repo_switch,
+        },
+    )
+    .is_none()
 }

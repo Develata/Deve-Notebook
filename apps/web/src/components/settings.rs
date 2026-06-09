@@ -28,7 +28,6 @@ const SETTINGS_PANEL_CLASS: &str = concat!(
 );
 const SETTINGS_ICON_BUTTON_CLASS: &str =
     "min-h-[44px] min-w-[44px] p-2 hover:bg-hover rounded-full text-muted";
-const SETTINGS_PRIMARY_BUTTON_CLASS: &str = "min-h-[44px] w-full py-2 bg-accent text-on-accent rounded-lg hover:opacity-90 transition-colors font-medium";
 
 #[component]
 pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl IntoView {
@@ -154,15 +153,6 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
                         </div>
                     </div>
 
-                    <div class="mt-8 pt-4 border-t border-default text-center">
-                        <button
-                            class=SETTINGS_PRIMARY_BUTTON_CLASS
-                            data-deve-settings-close="primary"
-                            on:click=move |_| set_show.set(false)
-                        >
-                            {move || t::settings::close(locale.get())}
-                        </button>
-                    </div>
                 </div>
             </div>
         </Show>
@@ -171,10 +161,7 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        SETTINGS_ICON_BUTTON_CLASS, SETTINGS_OVERLAY_CLASS, SETTINGS_PANEL_CLASS,
-        SETTINGS_PRIMARY_BUTTON_CLASS,
-    };
+    use super::{SETTINGS_ICON_BUTTON_CLASS, SETTINGS_OVERLAY_CLASS, SETTINGS_PANEL_CLASS};
 
     #[test]
     fn settings_modal_classes_keep_narrow_viewport_constraints() {
@@ -189,6 +176,13 @@ mod tests {
     fn settings_modal_close_controls_keep_touch_safe_targets() {
         assert!(SETTINGS_ICON_BUTTON_CLASS.contains("min-h-[44px]"));
         assert!(SETTINGS_ICON_BUTTON_CLASS.contains("min-w-[44px]"));
-        assert!(SETTINGS_PRIMARY_BUTTON_CLASS.contains("min-h-[44px]"));
+    }
+
+    #[test]
+    fn settings_modal_uses_icon_close_only() {
+        assert_eq!(
+            SETTINGS_ICON_BUTTON_CLASS.matches("min-h-[44px]").count(),
+            1
+        );
     }
 }

@@ -45,6 +45,9 @@
     - ui_click: "Native"
     - ui_click: "Hide AI Chat"
     - ui_click: "Show AI Chat"
+    - ui_type_number_draft: "max_document_tabs" (value: 12)
+    - ui_assert: max_document_tabs_pref_unchanged_before_submit true
+    - ui_submit_number: "max_document_tabs" (value: 8)
     - manual_chrome: docs/dev-runbook.md#settings--command-ui-smoke
     - run: scripts/check-settings-local-feedback-baseline.sh
   assertions:
@@ -55,6 +58,10 @@
     - ui_assert: sync_mode_eq "manual"
     - ui_assert: ai_backend_eq "native"
     - ui_assert: ai_chat_panel_visible true
+    - ui_assert: max_document_tabs_eq 8
+    - ui_assert: max_document_tabs_pref_applies_after_submit true
+    - ui_assert: settings_primary_close_absent true
+    - ui_assert: settings_icon_close_visible true
     - ui_assert: ai_chat_divider_hidden_when_setting_hidden true
     - ui_assert: display_editor_visible_when_ai_chat_setting_hidden true
     - ui_assert: hidden_ai_chat_preserves_layout_width_pref true
