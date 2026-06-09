@@ -23,6 +23,8 @@ REPO_ID="${DEVE_DOCKER_P2P_MESH_REPO_ID:-11111111-1111-1111-1111-111111111111}"
 REPO_KEY="${DEVE_DOCKER_P2P_MESH_REPO_KEY:-deve_mesh_shared_repo_key_32!!!!}"
 TOKEN_A="${DEVE_DOCKER_P2P_MESH_TOKEN_A:-deve_mesh_peer_a_token}"
 TOKEN_B="${DEVE_DOCKER_P2P_MESH_TOKEN_B:-deve_mesh_peer_b_token}"
+PEER_A_EXPECTED_ID="${DEVE_DOCKER_P2P_MESH_PEER_A_ID:-}"
+PEER_B_EXPECTED_ID="${DEVE_DOCKER_P2P_MESH_PEER_B_ID:-}"
 PYTHON_BIN="${DEVE_DOCKER_P2P_MESH_PYTHON_BIN:-}"
 COOKIE_A="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-a.cookie"
 COOKIE_B="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-b.cookie"
@@ -57,6 +59,8 @@ docker_compose() {
   DEVE_DOCKER_P2P_MESH_REPO_KEY="$REPO_KEY" \
   DEVE_DOCKER_P2P_MESH_TOKEN_A="$TOKEN_A" \
   DEVE_DOCKER_P2P_MESH_TOKEN_B="$TOKEN_B" \
+  DEVE_DOCKER_P2P_MESH_PEER_A_ID="$PEER_A_EXPECTED_ID" \
+  DEVE_DOCKER_P2P_MESH_PEER_B_ID="$PEER_B_EXPECTED_ID" \
   DEVE_DOCKER_P2P_MESH_A_PORT="$PORT_A" \
   DEVE_DOCKER_P2P_MESH_B_PORT="$PORT_B" \
   DOCKER_BUILDKIT="$DOCKER_BUILDKIT_MODE" \
@@ -169,6 +173,63 @@ mesh_handshake_count() {
   local logs
   logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
   grep -c "P2P mesh connector handshake completed" <<<"$logs" || true
+}
+
+server_peer_id_from_logs() {
+  local service="$1"
+  local logs
+  logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
+MESH_LOGS="$logs" "$PYTHON_BIN" - <<'PY'
+import os
+import re
+
+ansi = re.compile(r"\x1b\[[0-9;]*m")
+pattern = re.compile(r"Server PeerID: ([^ ]+)")
+for line in reversed(os.environ["MESH_LOGS"].splitlines()):
+    line = ansi.sub("", line)
+    match = pattern.search(line)
+    if match:
+        print(match.group(1).strip('"'))
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+}
+
+wait_for_server_peer_id() {
+  local service="$1"
+  local peer_id
+  for _ in $(seq 1 60); do
+    peer_id="$(server_peer_id_from_logs "$service" || true)"
+    if [[ -n "$peer_id" ]]; then
+      printf '%s\n' "$peer_id"
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+ensure_static_peer_ids() {
+  local discovered_a
+  local discovered_b
+  discovered_a="$(wait_for_server_peer_id peer-a)" || return 1
+  discovered_b="$(wait_for_server_peer_id peer-b)" || return 1
+
+  if [[ -n "${DEVE_DOCKER_P2P_MESH_PEER_A_ID:-}" && "$PEER_A_EXPECTED_ID" != "$discovered_a" ]]; then
+    fail "configured peer-a expected id ${PEER_A_EXPECTED_ID} did not match actual ${discovered_a}"
+  fi
+  if [[ -n "${DEVE_DOCKER_P2P_MESH_PEER_B_ID:-}" && "$PEER_B_EXPECTED_ID" != "$discovered_b" ]]; then
+    fail "configured peer-b expected id ${PEER_B_EXPECTED_ID} did not match actual ${discovered_b}"
+  fi
+  if [[ "$PEER_A_EXPECTED_ID" == "$discovered_a" && "$PEER_B_EXPECTED_ID" == "$discovered_b" ]]; then
+    return 0
+  fi
+
+  PEER_A_EXPECTED_ID="$discovered_a"
+  PEER_B_EXPECTED_ID="$discovered_b"
+  echo "docker-p2p-mesh-smoke: discovered static peer ids peer-a=${PEER_A_EXPECTED_ID} peer-b=${PEER_B_EXPECTED_ID}"
+  docker_compose up -d --force-recreate --no-build >/dev/null
+  wait_for_peer "$PORT_A" && wait_for_peer "$PORT_B"
 }
 
 login_peer() {
@@ -422,6 +483,10 @@ fi
 if ! wait_for_peer "$PORT_B"; then
   diagnose
   fail "peer-b did not become login-ready at http://127.0.0.1:${PORT_B}"
+fi
+if ! ensure_static_peer_ids; then
+  diagnose
+  fail "could not configure static expected peer ids"
 fi
 if ! wait_for_mesh_handshake; then
   diagnose
