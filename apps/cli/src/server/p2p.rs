@@ -196,9 +196,11 @@ where
         ServerMessage::SyncPush {
             source_peer_id,
             repo_id,
+            header,
             encrypted_payload,
             ..
         } => {
+            validate_inbound_push(peer, repo_id, stats, &source_peer_id, &header, &encrypted_payload)?;
             let count = receive_remote_ops(state, source_peer_id, repo_id, encrypted_payload)?;
             stats.applied_pushes += u64::from(count > 0);
             Ok(())
@@ -206,9 +208,20 @@ where
         ServerMessage::SyncPushSnapshot {
             source_peer_id,
             repo_id,
+            server_vector,
+            source_proof,
             payload,
             ..
         } => {
+            validate_inbound_snapshot(
+                peer,
+                repo_id,
+                stats,
+                &source_peer_id,
+                &server_vector,
+                source_proof.as_ref(),
+                &payload,
+            )?;
             let count = receive_remote_snapshot(state, source_peer_id, repo_id, payload)?;
             stats.applied_snapshots += u64::from(count > 0);
             Ok(())
@@ -218,6 +231,92 @@ where
         }
         _ => Ok(()),
     }
+}
+
+fn validate_authenticated_direct_source(
+    peer: &P2pPeerConfig,
+    repo_id: RepoId,
+    stats: &ExchangeStats,
+    source_peer_id: &PeerId,
+) -> Result<()> {
+    let authenticated_peer = stats.authenticated_peer_id.as_ref().ok_or_else(|| {
+        anyhow!(
+            "P2P peer {} sent sync payload before authenticated SyncHello",
+            peer.label
+        )
+    })?;
+    if !stats.saw_hello {
+        return Err(anyhow!(
+            "P2P peer {} sent sync payload before SyncHello",
+            peer.label
+        ));
+    }
+    if source_peer_id != authenticated_peer {
+        return Err(anyhow!(
+            "P2P source attribution rejected for peer {} repo {}: source {} does not match authenticated peer {}",
+            peer.label,
+            repo_id,
+            source_peer_id,
+            authenticated_peer
+        ));
+    }
+    Ok(())
+}
+
+fn validate_inbound_push(
+    peer: &P2pPeerConfig,
+    repo_id: RepoId,
+    stats: &ExchangeStats,
+    source_peer_id: &PeerId,
+    header: &SyncPushHeader,
+    payload: &[EncryptedOp],
+) -> Result<()> {
+    validate_authenticated_direct_source(peer, repo_id, stats, source_peer_id)?;
+    if header.repo_id != repo_id {
+        return Err(anyhow!(
+            "P2P SyncPush header repo {} did not match envelope repo {}",
+            header.repo_id,
+            repo_id
+        ));
+    }
+    if &header.peer_id != source_peer_id {
+        return Err(anyhow!(
+            "P2P SyncPush header source {} did not match envelope source {}",
+            header.peer_id,
+            source_peer_id
+        ));
+    }
+    if header.payload_kind != SyncPayloadKind::Diff {
+        return Err(anyhow!("P2P SyncPush header payload kind must be diff"));
+    }
+    header
+        .validate_source_proof(payload, false)
+        .context("P2P SyncPush source proof rejected")?;
+    Ok(())
+}
+
+fn validate_inbound_snapshot(
+    peer: &P2pPeerConfig,
+    repo_id: RepoId,
+    stats: &ExchangeStats,
+    source_peer_id: &PeerId,
+    server_vector: &VersionVector,
+    source_proof: Option<&SyncSourceProof>,
+    payload: &[EncryptedOp],
+) -> Result<()> {
+    validate_authenticated_direct_source(peer, repo_id, stats, source_peer_id)?;
+    if let Some(proof) = source_proof {
+        proof
+            .verify(
+                repo_id,
+                source_peer_id,
+                server_vector,
+                SyncPayloadKind::Snapshot,
+                payload,
+            )
+            .context("P2P SyncPushSnapshot source proof rejected")?;
+    }
+    Ok(())
 }
 
 async fn send_requested_ops<S>(
@@ -458,10 +557,10 @@ mod tests {
     use crate::server::{AppState, tree_state::RepoTreeRegistry};
     use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
     use deve_core::ledger::RepoManager;
-    use deve_core::models::VersionVector;
+    use deve_core::models::{PeerId, VersionVector};
     use deve_core::protocol::frame::encode_server_binary;
-    use deve_core::protocol::{ClientMessage, ScopeNonce, ServerMessage};
-    use deve_core::security::IdentityKeyPair;
+    use deve_core::protocol::{ClientMessage, ScopeNonce, ServerMessage, SyncPushHeader};
+    use deve_core::security::{EncryptedOp, IdentityKeyPair};
     use deve_core::security::keypair::verify_signature;
     use deve_core::sync::{SyncManager, repo_scoped::RepoScopedSyncEngine};
     use futures::{Sink, Stream};
@@ -550,6 +649,23 @@ mod tests {
         }
     }
 
+    fn dummy_payload() -> Vec<EncryptedOp> {
+        vec![EncryptedOp {
+            doc_id: None,
+            seq: 1,
+            ciphertext: vec![1, 2, 3],
+            nonce: vec![0; 12],
+        }]
+    }
+
+    fn authenticated_stats(peer_id: PeerId) -> super::ExchangeStats {
+        super::ExchangeStats {
+            saw_hello: true,
+            authenticated_peer_id: Some(peer_id),
+            ..Default::default()
+        }
+    }
+
     #[test]
     fn p2p_mesh_sync_hello_is_signed_for_full_peer_admission_path() {
         let identity = IdentityKeyPair::generate();
@@ -629,6 +745,77 @@ mod tests {
         .expect_err("authenticated self-loop must fail");
 
         assert!(err.to_string().contains("self-loop"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_forged_sync_push_source() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let authenticated_peer = PeerId::new("peer-b");
+        let forged_source = PeerId::new("peer-a");
+        let payload = dummy_payload();
+        let message = ServerMessage::SyncPush {
+            source_peer_id: forged_source.clone(),
+            repo_id,
+            header: SyncPushHeader::diff(repo_id, forged_source, VersionVector::new()),
+            scope_nonce: ScopeNonce::new(0),
+            branch: None,
+            encrypted_payload: payload,
+        };
+        let mut stats = authenticated_stats(authenticated_peer);
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("forged P2P SyncPush source must fail");
+
+        assert!(err.to_string().contains("source attribution"));
+        assert_eq!(stats.applied_pushes, 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_forged_snapshot_source() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let authenticated_peer = PeerId::new("peer-b");
+        let forged_source = PeerId::new("peer-a");
+        let message = ServerMessage::SyncPushSnapshot {
+            source_peer_id: forged_source,
+            repo_id,
+            scope_nonce: ScopeNonce::new(0),
+            branch: None,
+            server_vector: VersionVector::new(),
+            snapshot_kind: Some("full".into()),
+            source_proof: None,
+            payload: dummy_payload(),
+        };
+        let mut stats = authenticated_stats(authenticated_peer);
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("forged P2P snapshot source must fail");
+
+        assert!(err.to_string().contains("source attribution"));
+        assert_eq!(stats.applied_snapshots, 0);
         Ok(())
     }
 }
