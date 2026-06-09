@@ -218,6 +218,7 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_identity_mismatch_is_terminal -- --nocapture
+    - run: cargo test -p deve_cli p2p_connector_static_config_errors_are_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_sync_push_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_snapshot_source -- --nocapture
     - run: scripts/check-network-baseline.sh
@@ -232,6 +233,7 @@
     - api_assert: pre_hello_sync_request_rejected true
     - api_assert: configured_peer_id_is_expected_authenticated_identity true
     - api_assert: configured_peer_id_mismatch_not_reconnecting true
+    - api_assert: static_p2p_config_errors_not_reconnecting true
     - api_assert: post_hello_repo_mismatch_rejected true
     - api_assert: authenticated_self_loop_rejected true
     - api_assert: self_loop_status_is_not_reconnecting true

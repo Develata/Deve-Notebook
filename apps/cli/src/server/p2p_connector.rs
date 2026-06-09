@@ -109,7 +109,14 @@ fn failure_state(error_code: &str) -> &'static str {
 fn is_terminal_p2p_error(error_code: &str) -> bool {
     matches!(
         error_code,
-        "unauthorized" | "self_loop" | "repo_mismatch" | "peer_id_mismatch"
+        "unauthorized"
+            | "self_loop"
+            | "repo_mismatch"
+            | "peer_id_mismatch"
+            | "token_missing"
+            | "token_empty"
+            | "invalid_url"
+            | "invalid_repo_id"
     )
 }
 
@@ -132,6 +139,8 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "token_empty"
     } else if message.contains("invalid p2p ws_url") {
         "invalid_url"
+    } else if message.contains("invalid p2p repo_id") {
+        "invalid_repo_id"
     } else if message.contains("configured peer_id") {
         "peer_id_mismatch"
     } else if message.contains("401")
@@ -203,5 +212,29 @@ mod tests {
         assert!(is_terminal_p2p_error("self_loop"));
         assert!(!is_terminal_p2p_error("connect_failed"));
         assert_eq!(failure_state("peer_id_mismatch"), "error");
+    }
+
+    #[test]
+    fn p2p_connector_static_config_errors_are_terminal() {
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!("P2P token env is missing for peer peer-b")),
+            "token_missing"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!("P2P token env is empty for peer peer-b")),
+            "token_empty"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!("Invalid P2P ws_url for peer peer-b")),
+            "invalid_url"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!("Invalid P2P repo_id for peer peer-b")),
+            "invalid_repo_id"
+        );
+        assert!(is_terminal_p2p_error("token_missing"));
+        assert!(is_terminal_p2p_error("token_empty"));
+        assert!(is_terminal_p2p_error("invalid_url"));
+        assert!(is_terminal_p2p_error("invalid_repo_id"));
     }
 }
