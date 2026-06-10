@@ -58,7 +58,7 @@ pub(super) async fn connect_peer_once(
         .await
         .with_context(|| format!("Failed to connect P2P peer {}", peer.label))?;
     socket
-        .send(Message::Binary(encoded.into()))
+        .send(Message::Binary(encoded))
         .await
         .with_context(|| format!("Failed to send SyncHello to P2P peer {}", peer.label))?;
 
@@ -253,15 +253,18 @@ where
             ..
         } => {
             validate_authenticated_frame(peer, repo_id, stats, frame_repo_id)?;
+            let target_peer = state.identity_key.peer_id();
             validate_inbound_snapshot(
                 peer,
                 frame_repo_id,
                 stats,
-                &state.identity_key.peer_id(),
-                &source_peer_id,
-                &server_vector,
-                source_proof.as_ref(),
-                &payload,
+                InboundSnapshotValidation {
+                    target_peer: &target_peer,
+                    source_peer_id: &source_peer_id,
+                    server_vector: &server_vector,
+                    source_proof: source_proof.as_ref(),
+                    payload: &payload,
+                },
             )?;
             let count = receive_remote_snapshot(state, source_peer_id, frame_repo_id, payload)?;
             stats.applied_snapshots += u64::from(count > 0);
@@ -358,25 +361,29 @@ fn validate_inbound_push(
     Ok(())
 }
 
+struct InboundSnapshotValidation<'a> {
+    target_peer: &'a PeerId,
+    source_peer_id: &'a PeerId,
+    server_vector: &'a VersionVector,
+    source_proof: Option<&'a SyncSourceProof>,
+    payload: &'a [EncryptedOp],
+}
+
 fn validate_inbound_snapshot(
     peer: &P2pPeerConfig,
     repo_id: RepoId,
     stats: &ExchangeStats,
-    target_peer: &PeerId,
-    source_peer_id: &PeerId,
-    server_vector: &VersionVector,
-    source_proof: Option<&SyncSourceProof>,
-    payload: &[EncryptedOp],
+    input: InboundSnapshotValidation<'_>,
 ) -> Result<()> {
     let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
     validate_direct_sync_snapshot_attribution(DirectSyncSnapshotAttributionInput {
         expected_repo_id: repo_id,
         authenticated_peer,
-        declared_source_peer: source_peer_id,
-        target_peer,
-        server_vector,
-        source_proof,
-        payload,
+        declared_source_peer: input.source_peer_id,
+        target_peer: input.target_peer,
+        server_vector: input.server_vector,
+        source_proof: input.source_proof,
+        payload: input.payload,
         source_proof_requirement: SourceProofRequirement::Always,
     })
     .with_context(|| {
@@ -497,7 +504,7 @@ where
 {
     let encoded = encode_client_binary(&message).context("Failed to encode P2P client frame")?;
     socket
-        .send(Message::Binary(encoded.into()))
+        .send(Message::Binary(encoded))
         .await
         .context("Failed to send P2P client frame")
 }
@@ -637,8 +644,8 @@ fn signed_sync_hello(
 #[cfg(test)]
 mod tests {
     use super::{
-        MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message, signed_sync_hello,
-        validate_inbound_snapshot,
+        InboundSnapshotValidation, MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message,
+        signed_sync_hello, validate_inbound_snapshot,
     };
     use crate::server::{AppState, tree_state::RepoTreeRegistry};
     use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
@@ -913,7 +920,7 @@ mod tests {
         let identity = Arc::new(IdentityKeyPair::generate());
         let (_dir, state) = test_state_with_dir(identity)?;
         let repo_id = uuid::Uuid::new_v4();
-        let pong = Message::Binary(encode_server_binary(&ServerMessage::Pong)?.into());
+        let pong = Message::Binary(encode_server_binary(&ServerMessage::Pong)?);
         let mut socket = MockSocket::new(vec![pong; MAX_EXCHANGE_FRAMES]);
 
         let err = drive_sync_exchange(&peer(repo_id), repo_id, state, &mut socket)
@@ -1197,19 +1204,17 @@ mod tests {
         append_local_op(&state, repo_id)?;
         let remote = IdentityKeyPair::generate();
         let remote_peer = remote.peer_id();
-        let hello = Message::Binary(
-            encode_server_binary(&signed_server_hello(&remote, repo_id, VersionVector::new()))?
-                .into(),
-        );
-        let request = Message::Binary(
-            encode_server_binary(&ServerMessage::SyncRequest {
-                repo_id,
-                branch: None,
-                known_vector: VersionVector::new(),
-                requests: vec![(local_peer, (1, 2))],
-            })?
-            .into(),
-        );
+        let hello = Message::Binary(encode_server_binary(&signed_server_hello(
+            &remote,
+            repo_id,
+            VersionVector::new(),
+        ))?);
+        let request = Message::Binary(encode_server_binary(&ServerMessage::SyncRequest {
+            repo_id,
+            branch: None,
+            known_vector: VersionVector::new(),
+            requests: vec![(local_peer, (1, 2))],
+        })?);
         let mut socket = DelayedSocket::new(vec![
             DelayedFrame::Ready(hello),
             DelayedFrame::After {
@@ -1312,11 +1317,13 @@ mod tests {
             &peer(repo_id),
             repo_id,
             &stats,
-            &PeerId::new("local-target"),
-            &authenticated_peer,
-            &VersionVector::new(),
-            None,
-            &dummy_payload(),
+            InboundSnapshotValidation {
+                target_peer: &PeerId::new("local-target"),
+                source_peer_id: &authenticated_peer,
+                server_vector: &VersionVector::new(),
+                source_proof: None,
+                payload: &dummy_payload(),
+            },
         )
         .expect_err("missing snapshot source proof must fail closed");
 

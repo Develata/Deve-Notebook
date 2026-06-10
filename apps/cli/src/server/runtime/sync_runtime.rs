@@ -30,7 +30,5 @@ pub(crate) fn build_sync_engine(
 }
 
 pub(crate) fn load_identity_key(host_dir: &Path) -> anyhow::Result<Arc<IdentityKeyPair>> {
-    Ok(crate::server::security::load_or_generate_identity_key(
-        host_dir,
-    )?)
+    crate::server::security::load_or_generate_identity_key(host_dir)
 }

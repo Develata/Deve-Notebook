@@ -154,25 +154,6 @@ fn run_executor(
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::ensure_git_bridge_write_enabled;
-    use deve_core::config::GitBridgeMode;
-
-    #[test]
-    fn git_bridge_off_blocks_writer_commands() {
-        let err = ensure_git_bridge_write_enabled(GitBridgeMode::Off, "git mirror")
-            .expect_err("disabled writer");
-
-        assert!(err.to_string().contains("source_control.git_bridge=off"));
-    }
-
-    #[test]
-    fn git_bridge_mirror_allows_writer_commands() {
-        assert!(ensure_git_bridge_write_enabled(GitBridgeMode::Mirror, "git mirror").is_ok());
-    }
-}
-
 fn run_mirror_for_repo(
     repo: &RepoManager,
     repo_name: &str,
@@ -205,4 +186,23 @@ fn run_export_for_repo(
             GitMirrorRunOptions { retry_out_of_sync },
         )?)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ensure_git_bridge_write_enabled;
+    use deve_core::config::GitBridgeMode;
+
+    #[test]
+    fn git_bridge_off_blocks_writer_commands() {
+        let err = ensure_git_bridge_write_enabled(GitBridgeMode::Off, "git mirror")
+            .expect_err("disabled writer");
+
+        assert!(err.to_string().contains("source_control.git_bridge=off"));
+    }
+
+    #[test]
+    fn git_bridge_mirror_allows_writer_commands() {
+        assert!(ensure_git_bridge_write_enabled(GitBridgeMode::Mirror, "git mirror").is_ok());
+    }
 }

@@ -16,7 +16,9 @@ pub(crate) mod router_runtime;
 pub(crate) mod sync_runtime;
 pub(crate) mod watcher_runtime;
 
-pub(crate) use app_runtime::{build_app_state, build_tree_registry, new_server_broadcast_channel};
+pub(crate) use app_runtime::{
+    AppStateParts, build_app_state, build_tree_registry, new_server_broadcast_channel,
+};
 pub(crate) use auth_runtime::init_auth_runtime;
 pub(crate) use host_runtime::{install_repo_host_apis, install_sync_host_api, prepare_host_layout};
 pub(crate) use node_role_runtime::{init_node_role, update_repo_health};

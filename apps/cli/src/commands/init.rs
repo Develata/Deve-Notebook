@@ -235,7 +235,7 @@ mod tests {
         .expect("init");
 
         let repo = RepoManager::init(
-            &root.join("ledger"),
+            root.join("ledger"),
             8,
             Some("default"),
             Some("urn:test:default"),

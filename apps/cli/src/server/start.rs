@@ -69,8 +69,8 @@ pub async fn start_server_with_options(
     let tree_manager = runtime::build_tree_registry();
     let _watchers = runtime::start_file_watchers(sync_manager.clone(), tx.clone())?;
 
-    let app_state = runtime::build_app_state(
-        repo.clone(),
+    let app_state = runtime::build_app_state(runtime::AppStateParts {
+        repo: repo.clone(),
         sync_manager,
         tx,
         plugins,
@@ -78,9 +78,9 @@ pub async fn start_server_with_options(
         tree_manager,
         #[cfg(feature = "search")]
         search_available,
-        key_pair,
+        identity_key: key_pair,
         git_bridge,
-    );
+    });
 
     let p2p_inbound_token_env = p2p.inbound_token_env.clone();
     runtime::spawn_background_runtime_tasks(p2p, app_state.clone());

@@ -23,27 +23,30 @@ pub(crate) fn build_tree_registry() -> Arc<RepoTreeRegistry> {
     Arc::new(RepoTreeRegistry::new())
 }
 
-pub(crate) fn build_app_state(
-    repo: Arc<RepoManager>,
-    sync_manager: Arc<SyncManager>,
-    tx: broadcast::Sender<ServerMessage>,
-    plugins: Vec<Box<dyn PluginRuntime>>,
-    sync_engine: Arc<RepoScopedSyncEngine>,
-    tree_manager: Arc<RepoTreeRegistry>,
-    #[cfg(feature = "search")] search_available: bool,
-    identity_key: Arc<IdentityKeyPair>,
-    git_bridge: GitBridgeMode,
-) -> Arc<AppState> {
+pub(crate) struct AppStateParts {
+    pub repo: Arc<RepoManager>,
+    pub sync_manager: Arc<SyncManager>,
+    pub tx: broadcast::Sender<ServerMessage>,
+    pub plugins: Vec<Box<dyn PluginRuntime>>,
+    pub sync_engine: Arc<RepoScopedSyncEngine>,
+    pub tree_manager: Arc<RepoTreeRegistry>,
+    #[cfg(feature = "search")]
+    pub search_available: bool,
+    pub identity_key: Arc<IdentityKeyPair>,
+    pub git_bridge: GitBridgeMode,
+}
+
+pub(crate) fn build_app_state(parts: AppStateParts) -> Arc<AppState> {
     Arc::new(AppState {
-        repo,
-        sync_manager,
-        tx,
-        plugins,
-        sync_engine,
-        tree_manager,
+        repo: parts.repo,
+        sync_manager: parts.sync_manager,
+        tx: parts.tx,
+        plugins: parts.plugins,
+        sync_engine: parts.sync_engine,
+        tree_manager: parts.tree_manager,
         #[cfg(feature = "search")]
-        search_available,
-        identity_key,
-        git_bridge,
+        search_available: parts.search_available,
+        identity_key: parts.identity_key,
+        git_bridge: parts.git_bridge,
     })
 }

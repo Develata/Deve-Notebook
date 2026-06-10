@@ -194,10 +194,10 @@ pub fn run_live_shadow_check(options: LiveShadowCheckOptions, snapshot_depth: us
     let local_content = repo
         .resolve_local_content(&repo_name, doc_id)
         .with_context(|| format!("failed to read local content for doc {doc_id}"))?;
-    if let Some(forbidden) = options.local_must_not_contain {
-        if local_content.contains(&forbidden) {
-            bail!("local repo unexpectedly contained remote text for doc {doc_id}");
-        }
+    if let Some(forbidden) = options.local_must_not_contain
+        && local_content.contains(&forbidden)
+    {
+        bail!("local repo unexpectedly contained remote text for doc {doc_id}");
     }
 
     println!(
