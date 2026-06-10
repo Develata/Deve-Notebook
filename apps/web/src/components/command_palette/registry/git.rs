@@ -43,9 +43,10 @@ fn git_bridge_mode_from_node_role(summary: &str) -> Option<&'static str> {
 
 pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
     let source_control = use_context::<SourceControlContext>();
-    Command::available(
+    Command::unavailable(
         "git_import_changes",
         (t::command_palette::git_import_changes)(locale),
+        (t::command_palette::git_cli_only_reason)(locale),
         Callback::new(move |_| {
             show_source_control_notice(
                 source_control.clone(),
@@ -114,9 +115,10 @@ pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) ->
 
 pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
     let source_control = use_context::<SourceControlContext>();
-    Command::available(
+    Command::unavailable(
         "git_push_mirror",
         (t::command_palette::git_push_mirror)(locale),
+        (t::command_palette::git_cli_only_reason)(locale),
         Callback::new(move |_| {
             show_source_control_notice(
                 source_control.clone(),
@@ -131,9 +133,10 @@ pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> C
 
 pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
     let source_control = use_context::<SourceControlContext>();
-    Command::available(
+    Command::unavailable(
         "git_repair_mirror",
         (t::command_palette::git_repair_mirror)(locale),
+        (t::command_palette::git_cli_only_reason)(locale),
         Callback::new(move |_| {
             show_source_control_notice(
                 source_control.clone(),

@@ -94,13 +94,10 @@ fn git_import_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
+        let command = git_import_command(Locale::En, set_show);
 
-        assert_cli_notice_command(
-            git_import_command(Locale::En, set_show),
-            show,
-            notice,
-            is_git_import_cli_notice,
-        );
+        assert!(command.availability.is_unavailable());
+        assert_cli_notice_command(command, show, notice, is_git_import_cli_notice);
     });
 }
 
@@ -154,13 +151,10 @@ fn git_push_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
+        let command = git_push_command(Locale::En, set_show);
 
-        assert_cli_notice_command(
-            git_push_command(Locale::En, set_show),
-            show,
-            notice,
-            is_git_push_cli_notice,
-        );
+        assert!(command.availability.is_unavailable());
+        assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
     });
 }
 
@@ -170,13 +164,10 @@ fn git_repair_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
+        let command = git_repair_command(Locale::En, set_show);
 
-        assert_cli_notice_command(
-            git_repair_command(Locale::En, set_show),
-            show,
-            notice,
-            is_git_repair_cli_notice,
-        );
+        assert!(command.availability.is_unavailable());
+        assert_cli_notice_command(command, show, notice, is_git_repair_cli_notice);
     });
 }
 
