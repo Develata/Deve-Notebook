@@ -114,6 +114,7 @@ fn is_terminal_p2p_error(error_code: &str) -> bool {
             | "repo_mismatch"
             | "peer_id_mismatch"
             | "malformed_session_proof"
+            | "unoffered_source"
             | "token_missing"
             | "token_empty"
             | "invalid_url"
@@ -156,6 +157,8 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "unauthorized"
     } else if message.contains("repo") && message.contains("expected") {
         "repo_mismatch"
+    } else if message.contains("request source") && message.contains("not offered") {
+        "unoffered_source"
     } else if message.contains("timed out") {
         "handshake_timeout"
     } else if message.contains("decode") {
@@ -228,6 +231,7 @@ mod tests {
         assert!(is_terminal_p2p_error("repo_mismatch"));
         assert!(is_terminal_p2p_error("unauthorized"));
         assert!(is_terminal_p2p_error("self_loop"));
+        assert!(is_terminal_p2p_error("unoffered_source"));
         assert!(!is_terminal_p2p_error("connect_failed"));
         assert_eq!(failure_state("peer_id_mismatch"), "error");
     }
@@ -254,5 +258,17 @@ mod tests {
         assert!(is_terminal_p2p_error("token_empty"));
         assert!(is_terminal_p2p_error("invalid_url"));
         assert!(is_terminal_p2p_error("invalid_repo_id"));
+    }
+
+    #[test]
+    fn p2p_connector_unoffered_source_is_terminal() {
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P request source peer-a was not offered to peer peer-b for repo 11111111-1111-1111-1111-111111111111"
+            )),
+            "unoffered_source"
+        );
+        assert!(is_terminal_p2p_error("unoffered_source"));
+        assert_eq!(failure_state("unoffered_source"), "error");
     }
 }

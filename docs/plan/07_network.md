@@ -459,6 +459,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 同一个 push payload 只能包含一个 source peer 的 ledger facts；不同 source peer 必须拆成多个 push。
 - Snapshot request 若请求 shadow source，响应必须导出对应 shadow，而不能回退到本地 ledger。
 - 入站 push / snapshot push 的 source 必须来自本端在当前 SyncHello diff 中请求过的 peer；入站 request / snapshot request 的 source 必须来自本端在当前 SyncHello diff 中声明可发送的 peer。
+- request / snapshot request 请求未 offer source 属于确定性协议/source-boundary 错误；FullPeer connector 诊断必须暴露 `unoffered_source`，并停止把该错误当作普通断线持续重连。
 - FullPeer connector 接收到 `ServerMessage::SyncPush` 时，必须在 shadow apply 之前校验
   `source_peer_id`、`repo_id`、`SyncPushHeader.repo_id`、`SyncPushHeader.peer_id` 与
   `SyncPushHeader.payload_kind` 一致，并按 direct / indirect route 规则验证 `source_proof`。
