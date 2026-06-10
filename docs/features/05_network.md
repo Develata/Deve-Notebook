@@ -56,7 +56,7 @@
 - `peer_id` mismatch 属于确定性身份/配置错误，不应作为普通断线持续重连；诊断中应保留 last error code。
 - 静态 `repo_id` / `ws_url` 无效或 outbound token env 缺失/为空时，也应停在 error/unauthorized 诊断态，而不是持续重连。
 - FullPeer 收到的 request / snapshot request 只能请求本次 handshake diff 中本端向对端声明可发送的 source；请求未 offer 的 source 必须被拒绝，并在 connector 诊断中作为 `unoffered_source` 终止错误暴露。
-- FullPeer 收到的 push / snapshot push 只能按 authenticated peer 或有效 source proof 写入对应 shadow；伪造另一个 source peer 的 payload 必须被拒绝。
+- FullPeer 收到的 push / snapshot push 只能按 authenticated peer 或有效 source proof 写入对应 shadow；伪造另一个 source peer 的 payload 必须被拒绝，并在 connector 诊断中作为 `source_proof_rejected` 终止错误暴露。
 - peer A 通过 Source Control commit 确认的本地投影变更，应在下一次 FullPeer handshake/diff 后出现在 peer B 的 peer A shadow 中；peer B 本地 branch 仍保持不变，直到用户显式 merge/import。
 - Mesh v1 不做自动发现、NAT 穿透或自动拓扑修复。
 

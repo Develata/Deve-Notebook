@@ -115,6 +115,7 @@ fn is_terminal_p2p_error(error_code: &str) -> bool {
             | "peer_id_mismatch"
             | "malformed_session_proof"
             | "unoffered_source"
+            | "source_proof_rejected"
             | "token_missing"
             | "token_empty"
             | "invalid_url"
@@ -159,6 +160,8 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "repo_mismatch"
     } else if message.contains("request source") && message.contains("not offered") {
         "unoffered_source"
+    } else if message.contains("source proof rejected") {
+        "source_proof_rejected"
     } else if message.contains("timed out") {
         "handshake_timeout"
     } else if message.contains("decode") {
@@ -232,6 +235,7 @@ mod tests {
         assert!(is_terminal_p2p_error("unauthorized"));
         assert!(is_terminal_p2p_error("self_loop"));
         assert!(is_terminal_p2p_error("unoffered_source"));
+        assert!(is_terminal_p2p_error("source_proof_rejected"));
         assert!(!is_terminal_p2p_error("connect_failed"));
         assert_eq!(failure_state("peer_id_mismatch"), "error");
     }
@@ -270,5 +274,21 @@ mod tests {
         );
         assert!(is_terminal_p2p_error("unoffered_source"));
         assert_eq!(failure_state("unoffered_source"), "error");
+    }
+
+    #[test]
+    fn p2p_connector_source_proof_rejection_is_terminal() {
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!("P2P SyncPush source proof rejected")),
+            "source_proof_rejected"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P SyncPushSnapshot source proof rejected"
+            )),
+            "source_proof_rejected"
+        );
+        assert!(is_terminal_p2p_error("source_proof_rejected"));
+        assert_eq!(failure_state("source_proof_rejected"), "error");
     }
 }
