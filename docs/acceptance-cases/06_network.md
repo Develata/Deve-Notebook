@@ -224,6 +224,8 @@
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_identity_mismatch_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_static_config_errors_are_terminal -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_unoffered_sync_request_source -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_unoffered_snapshot_request_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_sync_push_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_snapshot_source -- --nocapture
     - run: scripts/check-network-baseline.sh
@@ -245,6 +247,8 @@
     - api_assert: post_hello_repo_mismatch_rejected true
     - api_assert: authenticated_self_loop_rejected true
     - api_assert: self_loop_status_is_not_reconnecting true
+    - api_assert: p2p_sync_request_source_must_be_offered true
+    - api_assert: p2p_snapshot_request_source_must_be_offered true
     - api_assert: p2p_inbound_sync_push_source_attribution_checked true
     - api_assert: p2p_inbound_snapshot_source_attribution_checked true
 

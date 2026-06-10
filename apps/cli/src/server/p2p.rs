@@ -83,6 +83,7 @@ pub(super) async fn connect_peer_once(
 pub(super) struct ExchangeStats {
     pub(super) saw_hello: bool,
     pub(super) authenticated_peer_id: Option<PeerId>,
+    pub(super) allowed_export_sources: Vec<PeerId>,
     pub(super) sent_pushes: u64,
     pub(super) sent_snapshots: u64,
     pub(super) applied_pushes: u64,
@@ -181,6 +182,8 @@ where
             verify_sync_hello_proof(&peer_id, &pub_key, &signature, &vector).map_err(|err| {
                 anyhow!("P2P peer {} SyncHello proof rejected: {err}", peer.label)
             })?;
+            stats.allowed_export_sources =
+                allowed_export_sources_for_hello(state, repo_id, &vector)?;
             stats.authenticated_peer_id = Some(peer_id);
             stats.saw_hello = true;
             Ok(())
@@ -191,6 +194,12 @@ where
             ..
         } => {
             validate_authenticated_frame(peer, repo_id, stats, frame_repo_id)?;
+            validate_requested_sources(
+                peer,
+                frame_repo_id,
+                stats,
+                requests.iter().map(|(peer_id, _)| peer_id),
+            )?;
             send_requested_ops(state, socket, frame_repo_id, requests, stats).await?;
             Ok(())
         }
@@ -201,6 +210,12 @@ where
             ..
         } => {
             validate_authenticated_frame(peer, repo_id, stats, frame_repo_id)?;
+            validate_requested_sources(
+                peer,
+                frame_repo_id,
+                stats,
+                std::iter::once(&source_peer_id),
+            )?;
             send_requested_snapshot(state, socket, source_peer_id, frame_repo_id, reason, stats)
                 .await?;
             Ok(())
@@ -306,6 +321,26 @@ fn validate_authenticated_direct_source(
             source_peer_id,
             authenticated_peer
         ));
+    }
+    Ok(())
+}
+
+fn validate_requested_sources<'a>(
+    peer: &P2pPeerConfig,
+    repo_id: RepoId,
+    stats: &ExchangeStats,
+    sources: impl IntoIterator<Item = &'a PeerId>,
+) -> Result<()> {
+    validate_authenticated_exchange(peer, stats)?;
+    for source in sources {
+        if !stats.allowed_export_sources.contains(source) {
+            return Err(anyhow!(
+                "P2P request source {} was not offered to peer {} for repo {}",
+                source,
+                peer.label,
+                repo_id
+            ));
+        }
     }
     Ok(())
 }
@@ -571,6 +606,27 @@ fn build_sync_hello(state: &Arc<AppState>, repo_id: RepoId) -> Result<ClientMess
         repo_id,
         vector,
     ))
+}
+
+fn allowed_export_sources_for_hello(
+    state: &Arc<AppState>,
+    repo_id: RepoId,
+    remote_vector: &VersionVector,
+) -> Result<Vec<PeerId>> {
+    state
+        .sync_engine
+        .with_strict_engine(repo_id, |engine| {
+            let (to_send, _, _) =
+                sync_proto::compute_diff_requests(engine.version_vector(), remote_vector, repo_id);
+            let mut sources = Vec::new();
+            for request in to_send {
+                if !sources.contains(&request.peer_id) {
+                    sources.push(request.peer_id);
+                }
+            }
+            sources
+        })
+        .with_context(|| format!("Failed to compute P2P offered sources for {repo_id}"))
 }
 
 fn signed_sync_hello(
@@ -1043,6 +1099,67 @@ mod tests {
         .expect_err("post-hello repo mismatch must fail closed");
 
         assert!(err.to_string().contains("repo"));
+        assert!(socket.sent.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_unoffered_sync_request_source() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let unoffered_source = PeerId::new("unoffered-source");
+        let message = ServerMessage::SyncRequest {
+            repo_id,
+            branch: None,
+            known_vector: VersionVector::new(),
+            requests: vec![(unoffered_source, (1, 2))],
+        };
+        let mut stats = authenticated_stats(PeerId::new("peer-b"));
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("unoffered SyncRequest source must fail closed");
+
+        assert!(err.to_string().contains("not offered"));
+        assert!(socket.sent.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_rejects_unoffered_snapshot_request_source() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let message = ServerMessage::SyncSnapshotRequest {
+            source_peer_id: PeerId::new("unoffered-source"),
+            repo_id,
+            known_vector: VersionVector::new(),
+            reason: Some("source-boundary-check".into()),
+        };
+        let mut stats = authenticated_stats(PeerId::new("peer-b"));
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("unoffered SyncSnapshotRequest source must fail closed");
+
+        assert!(err.to_string().contains("not offered"));
         assert!(socket.sent.is_empty());
         Ok(())
     }
