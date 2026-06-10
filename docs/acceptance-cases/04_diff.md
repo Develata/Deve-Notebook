@@ -126,6 +126,7 @@
     - run: cargo test -p deve_cli readonly_remote_source_control_writes -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_is_allowed -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_reports_rename_projection -- --nocapture
+    - run: cargo test -p deve_web change_item_read_gate -- --nocapture
     - run: cargo test -p deve_core discard_docless_added_on_tracked_path -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
@@ -155,6 +156,8 @@
     - ui_assert: command_palette_git_push_cli_notice_available true
     - ui_assert: source_control_git_push_blocker_details_available true
     - api_assert: readonly_remote_source_control_writes_rejected true
+    - ui_assert: readonly_remote_change_diff_uses_read_gate true
+    - ui_assert: readonly_remote_change_write_actions_disabled true
     - ui_assert: command_palette_git_direct_executor_absent true
     - cli_assert: git_mirror_failure_metadata_available true
     - cli_assert: git_mirror_repair_action_cli_only true

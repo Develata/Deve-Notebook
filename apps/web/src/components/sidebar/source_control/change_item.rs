@@ -11,6 +11,7 @@
 use crate::components::sidebar::source_control::change_item_actions::ChangeItemActions;
 use crate::components::sidebar::source_control::change_item_content::ChangeItemContent;
 use crate::components::sidebar::source_control::change_item_meta::build_change_item_meta;
+use crate::components::sidebar::source_control::change_item_read_gate::can_open_change_item_diff;
 use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::Locale;
 use deve_core::source_control::ChangeEntry;
@@ -30,7 +31,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let current_repo_id = core.current_repo_id;
     let pending_branch_switch = core.pending_branch_switch;
     let pending_repo_switch = core.pending_repo_switch;
-    let write_block = core.write_block;
+    let read_block = core.read_block;
     let action_busy = StoredValue::new(Arc::new(AtomicBool::new(false)));
 
     let has_conflict = entry.has_conflict;
@@ -56,11 +57,12 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 if can_open_diff { "cursor-pointer" } else { "cursor-help" }
             )
             on:click=move |_| {
-                if current_repo_id.get().is_none()
-                    || pending_branch_switch.get().is_some()
-                    || pending_repo_switch.get().is_some()
-                    || write_block.get().is_some()
-                {
+                if !can_open_change_item_diff(
+                    current_repo_id.get().is_some(),
+                    pending_branch_switch.get().is_some(),
+                    pending_repo_switch.get().is_some(),
+                    read_block.get().is_some(),
+                ) {
                     return;
                 }
                 // Diff 不可用的条目会在回调里写入明确的 Source Control notice。

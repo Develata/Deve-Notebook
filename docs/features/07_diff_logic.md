@@ -37,6 +37,8 @@
 - 用户可以打开 diff 查看变更内容。
 - 用户可以查看 commit history / graph。
 - 这些视图必须与当前 repo scope 一致。
+- remote / spectator scope 下，diff / history / graph 仍作为只读视图可用；
+  stage、unstage、discard、commit、resolve conflict 等写操作必须被隐藏或禁用。
 - Graph 数据面是只读 projection，不写 ledger、workspace、search index 或 source-control state。
 - Web 只验收 repo-scoped nodes / edges / unresolved counts，以及 loading / failed / empty / local-only fallback。
 - 本功能篇不承诺高性能 Web graph renderer、force simulation、Canvas layout、d3-force/Pixi renderer 或 graph interaction state。
@@ -124,4 +126,5 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 期望结果：
 
 - 页面明确显示只读或不可写。
+- diff / history / graph 仍可按当前 scope 只读打开。
 - 不会假装提交成功。

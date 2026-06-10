@@ -9,6 +9,7 @@ pub mod change_item_conflict_actions;
 pub mod change_item_content;
 pub mod change_item_counterpart;
 pub mod change_item_meta;
+mod change_item_read_gate;
 pub mod change_item_workspace_actions;
 pub mod changes;
 pub mod changes_panel;

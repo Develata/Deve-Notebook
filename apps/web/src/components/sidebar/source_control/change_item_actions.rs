@@ -26,9 +26,7 @@ pub fn ChangeItemActions(
 
     view! {
         {move || {
-            if core.write_block.get().is_some() {
-                view! {}.into_any()
-            } else if is_staged {
+            if is_staged {
                 view! {
                     <button
                         class="p-0.5 hover:bg-active rounded text-secondary"
