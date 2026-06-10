@@ -231,6 +231,7 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_unoffered_snapshot_request_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_sync_push_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_snapshot_source -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_snapshot_missing_source_proof -- --nocapture
     - run: scripts/check-network-baseline.sh
   assertions:
     - full_peer_session_browser_flag_eq: false
@@ -255,6 +256,7 @@
     - api_assert: p2p_unoffered_source_status_is_not_reconnecting true
     - api_assert: p2p_inbound_sync_push_source_attribution_checked true
     - api_assert: p2p_inbound_snapshot_source_attribution_checked true
+    - api_assert: p2p_inbound_snapshot_source_proof_required true
     - api_assert: p2p_source_proof_rejected_status_is_not_reconnecting true
 
 - case_id: NET-015

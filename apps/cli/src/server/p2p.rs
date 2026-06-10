@@ -387,17 +387,18 @@ fn validate_inbound_snapshot(
     payload: &[EncryptedOp],
 ) -> Result<()> {
     validate_authenticated_direct_source(peer, repo_id, stats, source_peer_id)?;
-    if let Some(proof) = source_proof {
-        proof
-            .verify(
-                repo_id,
-                source_peer_id,
-                server_vector,
-                SyncPayloadKind::Snapshot,
-                payload,
-            )
-            .context("P2P SyncPushSnapshot source proof rejected")?;
-    }
+    let proof = source_proof
+        .ok_or_else(|| anyhow!("missing snapshot source proof"))
+        .context("P2P SyncPushSnapshot source proof rejected")?;
+    proof
+        .verify(
+            repo_id,
+            source_peer_id,
+            server_vector,
+            SyncPayloadKind::Snapshot,
+            payload,
+        )
+        .context("P2P SyncPushSnapshot source proof rejected")?;
     Ok(())
 }
 
@@ -651,6 +652,7 @@ fn signed_sync_hello(
 mod tests {
     use super::{
         MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message, signed_sync_hello,
+        validate_inbound_snapshot,
     };
     use crate::server::{AppState, tree_state::RepoTreeRegistry};
     use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
@@ -1312,5 +1314,25 @@ mod tests {
         assert!(err.to_string().contains("source attribution"));
         assert_eq!(stats.applied_snapshots, 0);
         Ok(())
+    }
+
+    #[test]
+    fn p2p_exchange_rejects_snapshot_missing_source_proof() {
+        let repo_id = uuid::Uuid::new_v4();
+        let authenticated_peer = PeerId::new("peer-b");
+        let stats = authenticated_stats(authenticated_peer.clone());
+
+        let err = validate_inbound_snapshot(
+            &peer(repo_id),
+            repo_id,
+            &stats,
+            &authenticated_peer,
+            &VersionVector::new(),
+            None,
+            &dummy_payload(),
+        )
+        .expect_err("missing snapshot source proof must fail closed");
+
+        assert!(err.to_string().contains("source proof"));
     }
 }
