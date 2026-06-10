@@ -208,7 +208,9 @@
   steps:
     - ws_connect: { role: "FullPeer", authorization: "Bearer <token>", path: "/ws" }
     - ws_send: { type: "SyncHello", peer_id: "peer-a", repo_id: "11111111-1111-1111-1111-111111111111", vector: {}, source_proof: "signed" }
-    - run: cargo test -p deve_cli ws_acceptance -- --nocapture
+    - run: cargo test -p deve_cli bearer_token_admits_full_peer_without_browser_session -- --nocapture
+    - run: cargo test -p deve_cli bearer_token_uses_configured_inbound_token_env -- --nocapture
+    - run: cargo test -p deve_cli invalid_bearer_token_rejects_full_peer -- --nocapture
     - run: cargo test -p deve_cli p2p_mesh -- --nocapture
     - run: cargo test -p deve_cli p2p_node_role_summary -- --nocapture
     - run: cargo test -p deve_cli p2p_status_duplicate_labels_do_not_share_state -- --nocapture
