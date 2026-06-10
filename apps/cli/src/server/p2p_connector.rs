@@ -162,7 +162,9 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "repo_mismatch"
     } else if message.contains("request source") && message.contains("not offered") {
         "unoffered_source"
-    } else if message.contains("source proof rejected") {
+    } else if message.contains("source proof rejected")
+        || message.contains("source attribution rejected")
+    {
         "source_proof_rejected"
     } else if message.contains("timed out") {
         "handshake_timeout"
@@ -305,6 +307,10 @@ mod tests {
             classify_p2p_error(&anyhow::anyhow!(
                 "P2P SyncPushSnapshot source proof rejected"
             )),
+            "source_proof_rejected"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!("P2P SyncPush source attribution rejected")),
             "source_proof_rejected"
         );
         assert!(is_terminal_p2p_error("source_proof_rejected"));

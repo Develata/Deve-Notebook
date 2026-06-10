@@ -43,8 +43,12 @@ pub use error::{ServerError, ServerErrorCode};
 pub use frame::{MAX_WS_FRAME_BYTES, MIN_SUPPORTED_WS_PROTOCOL_VERSION, WS_PROTOCOL_VERSION};
 pub use merge_conflict::{ConflictHunk, MergeConflictAction};
 pub use relay_proxy::{
-    RelayProxyRoute, RelayProxyRouteError, RelayProxyRouteInput, RelayProxySnapshotRouteInput,
-    plan_relay_proxy_route, plan_relay_proxy_snapshot_route,
+    DirectSyncPushAttributionInput, DirectSyncSnapshotAttributionInput, RelayProxyRoute,
+    RelayProxyRouteError, RelayProxyRouteInput, RelayProxySnapshotRouteInput,
+    SourceProofRequirement, SyncAttributionError, SyncPushAttributionInput,
+    SyncSnapshotAttributionInput, plan_relay_proxy_route, plan_relay_proxy_snapshot_route,
+    validate_direct_sync_push_attribution, validate_direct_sync_snapshot_attribution,
+    validate_sync_push_attribution, validate_sync_snapshot_attribution,
 };
 pub use sc_path_target::ScPathTarget;
 pub use scope_nonce::{ScopeNonce, SwitchNonce};

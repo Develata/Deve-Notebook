@@ -1,9 +1,14 @@
 use super::{
-    RelayProxyRouteError, RelayProxyRouteInput, RelayProxySnapshotRouteInput,
-    plan_relay_proxy_route, plan_relay_proxy_snapshot_route,
+    DirectSyncPushAttributionInput, DirectSyncSnapshotAttributionInput, RelayProxyRouteError,
+    RelayProxyRouteInput, RelayProxySnapshotRouteInput, SourceProofRequirement,
+    SyncPushAttributionInput, SyncSnapshotAttributionInput, plan_relay_proxy_route,
+    plan_relay_proxy_snapshot_route, validate_direct_sync_push_attribution,
+    validate_direct_sync_snapshot_attribution, validate_sync_push_attribution,
+    validate_sync_snapshot_attribution,
 };
 use crate::models::{PeerId, RepoId, VersionVector};
 use crate::protocol::{SyncPayloadKind, SyncPushHeader, SyncSourceProof};
+use crate::security::{EncryptedOp, IdentityKeyPair};
 
 fn repo_id() -> RepoId {
     uuid::Uuid::from_u128(11)
@@ -25,6 +30,19 @@ fn source_proof() -> SyncSourceProof {
         payload_digest: vec![2; 32],
         signature: vec![3; 64],
     }
+}
+
+fn payload() -> Vec<EncryptedOp> {
+    vec![EncryptedOp {
+        doc_id: None,
+        seq: 1,
+        ciphertext: vec![1, 2, 3],
+        nonce: vec![0; 12],
+    }]
+}
+
+fn target_peer() -> PeerId {
+    PeerId::new("target-peer")
 }
 
 fn input() -> RelayProxyRouteInput {
@@ -160,4 +178,123 @@ fn rejects_empty_route_peers() {
             field: "target_peer"
         })
     ));
+}
+
+#[test]
+fn shared_push_attribution_accepts_direct_without_source_proof() {
+    let source = PeerId::new("source-peer");
+    let target = target_peer();
+    let header = header(source.as_str());
+    let payload = payload();
+
+    let route = validate_sync_push_attribution(SyncPushAttributionInput {
+        expected_repo_id: repo_id(),
+        authenticated_transport_peer: &source,
+        declared_source_peer: &source,
+        target_peer: &target,
+        header: &header,
+        payload: &payload,
+        source_proof_requirement: SourceProofRequirement::IndirectOnly,
+    })
+    .unwrap();
+
+    assert!(!route.indirect_transport);
+}
+
+#[test]
+fn shared_push_attribution_rejects_direct_source_mismatch() {
+    let authenticated = PeerId::new("transport-peer");
+    let source = PeerId::new("source-peer");
+    let target = target_peer();
+    let header = header(source.as_str());
+    let payload = payload();
+
+    let err = validate_direct_sync_push_attribution(DirectSyncPushAttributionInput {
+        expected_repo_id: repo_id(),
+        authenticated_peer: &authenticated,
+        declared_source_peer: &source,
+        target_peer: &target,
+        header: &header,
+        payload: &payload,
+        source_proof_requirement: SourceProofRequirement::IndirectOnly,
+    })
+    .expect_err("direct FullPeer route must reject forged source");
+
+    assert!(err.to_string().contains("source attribution"));
+}
+
+#[test]
+fn shared_snapshot_attribution_requires_proof_when_policy_is_always() {
+    let source = PeerId::new("source-peer");
+    let target = target_peer();
+    let vector = VersionVector::new();
+    let payload = payload();
+
+    let err = validate_direct_sync_snapshot_attribution(DirectSyncSnapshotAttributionInput {
+        expected_repo_id: repo_id(),
+        authenticated_peer: &source,
+        declared_source_peer: &source,
+        target_peer: &target,
+        server_vector: &vector,
+        source_proof: None,
+        payload: &payload,
+        source_proof_requirement: SourceProofRequirement::Always,
+    })
+    .expect_err("static FullPeer snapshot push must require proof");
+
+    assert!(err.to_string().contains("source proof"));
+}
+
+#[test]
+fn shared_snapshot_attribution_allows_direct_without_proof_when_policy_is_indirect_only() {
+    let source = PeerId::new("source-peer");
+    let target = target_peer();
+    let vector = VersionVector::new();
+    let payload = payload();
+
+    let route = validate_sync_snapshot_attribution(SyncSnapshotAttributionInput {
+        expected_repo_id: repo_id(),
+        authenticated_transport_peer: &source,
+        declared_source_peer: &source,
+        target_peer: &target,
+        server_vector: &vector,
+        source_proof: None,
+        payload: &payload,
+        source_proof_requirement: SourceProofRequirement::IndirectOnly,
+    })
+    .unwrap();
+
+    assert!(!route.indirect_transport);
+}
+
+#[test]
+fn shared_snapshot_attribution_accepts_valid_required_proof() {
+    let identity = IdentityKeyPair::generate();
+    let source = identity.peer_id();
+    let target = target_peer();
+    let vector = VersionVector::new();
+    let payload = payload();
+    let proof = SyncSourceProof::sign(
+        repo_id(),
+        &source,
+        &vector,
+        SyncPayloadKind::Snapshot,
+        &payload,
+        &identity,
+    )
+    .unwrap();
+
+    let route = validate_direct_sync_snapshot_attribution(DirectSyncSnapshotAttributionInput {
+        expected_repo_id: repo_id(),
+        authenticated_peer: &source,
+        declared_source_peer: &source,
+        target_peer: &target,
+        server_vector: &vector,
+        source_proof: Some(&proof),
+        payload: &payload,
+        source_proof_requirement: SourceProofRequirement::Always,
+    })
+    .unwrap();
+
+    assert!(!route.indirect_transport);
 }

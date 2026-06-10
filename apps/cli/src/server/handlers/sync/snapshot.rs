@@ -8,8 +8,8 @@ use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::{
-    RelayProxySnapshotRouteInput, ServerMessage, SyncPayloadKind, SyncSourceProof,
-    plan_relay_proxy_snapshot_route,
+    ServerMessage, SourceProofRequirement, SyncPayloadKind, SyncSnapshotAttributionInput,
+    SyncSourceProof, validate_sync_snapshot_attribution,
 };
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
@@ -135,38 +135,27 @@ pub(super) async fn handle_push(
         );
         return;
     }
-    let route = match plan_relay_proxy_snapshot_route(RelayProxySnapshotRouteInput {
+    let target_peer = state.identity_key.peer_id();
+    let route = match validate_sync_snapshot_attribution(SyncSnapshotAttributionInput {
         expected_repo_id: repo_id,
-        authenticated_transport_peer: transport_peer.clone(),
-        declared_source_peer: peer_id.clone(),
-        target_peer: state.identity_key.peer_id(),
-        source_proof_present: source_proof.is_some(),
+        authenticated_transport_peer: &transport_peer,
+        declared_source_peer: &peer_id,
+        target_peer: &target_peer,
+        server_vector: &server_vector,
+        source_proof: source_proof.as_ref(),
+        payload: &payload,
+        source_proof_requirement: SourceProofRequirement::IndirectOnly,
     }) {
         Ok(route) => route,
         Err(err) => {
             errors::sync_invalid_payload(
                 ch,
-                format!("invalid sync snapshot relay/proxy route: {}", err),
+                format!("invalid sync snapshot source attribution: {}", err),
                 scope,
             );
             return;
         }
     };
-    if let Err(err) = validate_snapshot_source_proof(
-        repo_id,
-        &peer_id,
-        &server_vector,
-        source_proof.as_ref(),
-        &payload,
-        route.indirect_transport,
-    ) {
-        errors::sync_invalid_payload(
-            ch,
-            format!("invalid sync snapshot source proof: {}", err),
-            scope,
-        );
-        return;
-    }
 
     tracing::info!(
         "Handling PushSnapshot source {} via transport {} ({} ops)",
@@ -219,26 +208,5 @@ fn snapshot_source_proof(
             tracing::warn!("Failed to sign local sync snapshot source proof: {}", err);
             None
         }
-    }
-}
-
-fn validate_snapshot_source_proof(
-    repo_id: RepoId,
-    peer_id: &PeerId,
-    server_vector: &VersionVector,
-    source_proof: Option<&SyncSourceProof>,
-    payload: &[EncryptedOp],
-    required: bool,
-) -> Result<(), deve_core::protocol::SyncSourceProofError> {
-    match source_proof {
-        Some(proof) => proof.verify(
-            repo_id,
-            peer_id,
-            server_vector,
-            SyncPayloadKind::Snapshot,
-            payload,
-        ),
-        None if required => Err(deve_core::protocol::SyncSourceProofError::Missing),
-        None => Ok(()),
     }
 }

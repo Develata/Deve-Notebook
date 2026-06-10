@@ -8,7 +8,8 @@ use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{
-    RelayProxyRouteInput, ServerMessage, SyncPayloadKind, SyncPushHeader, plan_relay_proxy_route,
+    ServerMessage, SourceProofRequirement, SyncPushAttributionInput, SyncPushHeader,
+    validate_sync_push_attribution,
 };
 use deve_core::security::EncryptedOp;
 use deve_core::sync::protocol as sync_proto;
@@ -148,28 +149,26 @@ pub(super) async fn handle_push(
         );
         return;
     }
-    let route = match plan_relay_proxy_route(RelayProxyRouteInput {
+    let target_peer = state.identity_key.peer_id();
+    let route = match validate_sync_push_attribution(SyncPushAttributionInput {
         expected_repo_id: repo_id,
-        authenticated_transport_peer: transport_peer.clone(),
-        declared_source_peer: peer_id.clone(),
-        target_peer: state.identity_key.peer_id(),
-        expected_payload_kind: SyncPayloadKind::Diff,
-        header: header.clone(),
+        authenticated_transport_peer: &transport_peer,
+        declared_source_peer: &peer_id,
+        target_peer: &target_peer,
+        header: &header,
+        payload: &encrypted_payload,
+        source_proof_requirement: SourceProofRequirement::IndirectOnly,
     }) {
         Ok(route) => route,
         Err(err) => {
             errors::sync_invalid_payload(
                 ch,
-                format!("invalid sync relay/proxy route: {}", err),
+                format!("invalid sync source attribution: {}", err),
                 scope,
             );
             return;
         }
     };
-    if let Err(err) = header.validate_source_proof(&encrypted_payload, route.indirect_transport) {
-        errors::sync_invalid_payload(ch, format!("invalid sync source proof: {}", err), scope);
-        return;
-    }
     tracing::debug!(
         "Handling SyncPush source {} via transport {}",
         route.source_peer,

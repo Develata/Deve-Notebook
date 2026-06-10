@@ -8,8 +8,10 @@ use deve_core::config::P2pPeerConfig;
 use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::frame::{decode_server_binary, decode_server_json, encode_client_binary};
 use deve_core::protocol::{
-    ClientMessage, ScopeNonce, ServerMessage, SessionProof, SyncPayloadKind, SyncPushHeader,
-    SyncSourceProof,
+    ClientMessage, DirectSyncPushAttributionInput, DirectSyncSnapshotAttributionInput, ScopeNonce,
+    ServerMessage, SessionProof, SourceProofRequirement, SyncPayloadKind, SyncPushHeader,
+    SyncSourceProof, validate_direct_sync_push_attribution,
+    validate_direct_sync_snapshot_attribution,
 };
 use deve_core::security::EncryptedOp;
 use deve_core::security::IdentityKeyPair;
@@ -232,6 +234,7 @@ where
                 peer,
                 frame_repo_id,
                 stats,
+                &state.identity_key.peer_id(),
                 &source_peer_id,
                 &header,
                 &encrypted_payload,
@@ -254,6 +257,7 @@ where
                 peer,
                 frame_repo_id,
                 stats,
+                &state.identity_key.peer_id(),
                 &source_peer_id,
                 &server_vector,
                 source_proof.as_ref(),
@@ -306,25 +310,6 @@ fn validate_authenticated_exchange<'a>(
     })
 }
 
-fn validate_authenticated_direct_source(
-    peer: &P2pPeerConfig,
-    repo_id: RepoId,
-    stats: &ExchangeStats,
-    source_peer_id: &PeerId,
-) -> Result<()> {
-    let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
-    if source_peer_id != authenticated_peer {
-        return Err(anyhow!(
-            "P2P source attribution rejected for peer {} repo {}: source {} does not match authenticated peer {}",
-            peer.label,
-            repo_id,
-            source_peer_id,
-            authenticated_peer
-        ));
-    }
-    Ok(())
-}
-
 fn validate_requested_sources<'a>(
     peer: &P2pPeerConfig,
     repo_id: RepoId,
@@ -349,31 +334,27 @@ fn validate_inbound_push(
     peer: &P2pPeerConfig,
     repo_id: RepoId,
     stats: &ExchangeStats,
+    target_peer: &PeerId,
     source_peer_id: &PeerId,
     header: &SyncPushHeader,
     payload: &[EncryptedOp],
 ) -> Result<()> {
-    validate_authenticated_direct_source(peer, repo_id, stats, source_peer_id)?;
-    if header.repo_id != repo_id {
-        return Err(anyhow!(
-            "P2P SyncPush header repo {} did not match envelope repo {}",
-            header.repo_id,
-            repo_id
-        ));
-    }
-    if &header.peer_id != source_peer_id {
-        return Err(anyhow!(
-            "P2P SyncPush header source {} did not match envelope source {}",
-            header.peer_id,
-            source_peer_id
-        ));
-    }
-    if header.payload_kind != SyncPayloadKind::Diff {
-        return Err(anyhow!("P2P SyncPush header payload kind must be diff"));
-    }
-    header
-        .validate_source_proof(payload, false)
-        .context("P2P SyncPush source proof rejected")?;
+    let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
+    validate_direct_sync_push_attribution(DirectSyncPushAttributionInput {
+        expected_repo_id: repo_id,
+        authenticated_peer,
+        declared_source_peer: source_peer_id,
+        target_peer,
+        header,
+        payload,
+        source_proof_requirement: SourceProofRequirement::IndirectOnly,
+    })
+    .with_context(|| {
+        format!(
+            "P2P SyncPush source attribution rejected (source proof rejected) for peer {} repo {}",
+            peer.label, repo_id
+        )
+    })?;
     Ok(())
 }
 
@@ -381,24 +362,29 @@ fn validate_inbound_snapshot(
     peer: &P2pPeerConfig,
     repo_id: RepoId,
     stats: &ExchangeStats,
+    target_peer: &PeerId,
     source_peer_id: &PeerId,
     server_vector: &VersionVector,
     source_proof: Option<&SyncSourceProof>,
     payload: &[EncryptedOp],
 ) -> Result<()> {
-    validate_authenticated_direct_source(peer, repo_id, stats, source_peer_id)?;
-    let proof = source_proof
-        .ok_or_else(|| anyhow!("missing snapshot source proof"))
-        .context("P2P SyncPushSnapshot source proof rejected")?;
-    proof
-        .verify(
-            repo_id,
-            source_peer_id,
-            server_vector,
-            SyncPayloadKind::Snapshot,
-            payload,
+    let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
+    validate_direct_sync_snapshot_attribution(DirectSyncSnapshotAttributionInput {
+        expected_repo_id: repo_id,
+        authenticated_peer,
+        declared_source_peer: source_peer_id,
+        target_peer,
+        server_vector,
+        source_proof,
+        payload,
+        source_proof_requirement: SourceProofRequirement::Always,
+    })
+    .with_context(|| {
+        format!(
+            "P2P SyncPushSnapshot source attribution rejected (source proof rejected) for peer {} repo {}",
+            peer.label, repo_id
         )
-        .context("P2P SyncPushSnapshot source proof rejected")?;
+    })?;
     Ok(())
 }
 
@@ -1326,6 +1312,7 @@ mod tests {
             &peer(repo_id),
             repo_id,
             &stats,
+            &PeerId::new("local-target"),
             &authenticated_peer,
             &VersionVector::new(),
             None,

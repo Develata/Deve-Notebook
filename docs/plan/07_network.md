@@ -467,6 +467,9 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - FullPeer connector 接收到 `ServerMessage::SyncPushSnapshot` 时，必须在 shadow reset / replay
   之前校验 source、repo、server vector 与 snapshot `source_proof`；静态 FullPeer v1 不实现多跳 relay
   时，声明的 `source_peer_id` 必须等于已完成 `SyncHello` 的 authenticated peer。
+- `source_peer_id`、authenticated transport peer、repo route、payload kind 与 `source_proof` 的组合校验
+  必须由 core protocol 层提供共享 helper；Server WS sync handler 与 FullPeer connector 不得各自维护
+  可漂移的 repo/source/proof 判定矩阵。
 - 若 B 未与 A 建立信任或缺少 repo key，则 B 必须丢弃 A 的 payload。
 - relay 可以转发 offer，但不得越权强制接收。
 
@@ -498,7 +501,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 负责 ws upgrade、session gate、scope guard、server outbound fanout 与 sync handler 编排。
 - unauthorized、protocol error、stale scope 与 disconnected 必须走不同结构化错误路径。
 - 负责 Browser / FullPeer admission 分类；FullPeer admission 通过后仍必须走 peer signature、repo scope 与 source attribution 校验。
-- 负责按静态 peer 配置启动 outbound connector；connector 可以复用独立的 P2P handler，但该 handler 必须执行与普通 sync handler 等价的 repo/source attribution 校验，不得在校验前直接写 shadow repo。
+- 负责按静态 peer 配置启动 outbound connector；connector 可以复用独立的 P2P handler，但该 handler 必须执行与普通 sync handler 等价的 repo/source attribution 校验，不得在校验前直接写 shadow repo；等价校验必须复用 core protocol 共享 helper。
 - P2P handler 在收到并接受 `SyncHello` 前，不得处理 `SyncRequest`、`SyncSnapshotRequest`、`SyncPush` 或 `SyncPushSnapshot`；
   握手后的所有 sync frame 必须沿用同一 configured `repo_id`。
 
