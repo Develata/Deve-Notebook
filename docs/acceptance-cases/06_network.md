@@ -223,6 +223,7 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_identity_mismatch_is_terminal -- --nocapture
+    - run: cargo test -p deve_cli p2p_connector_repo_mismatch_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_static_config_errors_are_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_unoffered_source_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_source_proof_rejection_is_terminal -- --nocapture

@@ -156,7 +156,9 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         || message.contains("forbidden")
     {
         "unauthorized"
-    } else if message.contains("repo") && message.contains("expected") {
+    } else if message.contains("repo") && message.contains("expected")
+        || message.contains("sent repo") && message.contains("configured repo")
+    {
         "repo_mismatch"
     } else if message.contains("request source") && message.contains("not offered") {
         "unoffered_source"
@@ -231,13 +233,30 @@ mod tests {
     fn p2p_connector_identity_mismatch_is_terminal() {
         assert!(is_terminal_p2p_error("peer_id_mismatch"));
         assert!(is_terminal_p2p_error("malformed_session_proof"));
-        assert!(is_terminal_p2p_error("repo_mismatch"));
         assert!(is_terminal_p2p_error("unauthorized"));
         assert!(is_terminal_p2p_error("self_loop"));
         assert!(is_terminal_p2p_error("unoffered_source"));
         assert!(is_terminal_p2p_error("source_proof_rejected"));
         assert!(!is_terminal_p2p_error("connect_failed"));
         assert_eq!(failure_state("peer_id_mismatch"), "error");
+    }
+
+    #[test]
+    fn p2p_connector_repo_mismatch_is_terminal() {
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer peer-b sent repo 22222222-2222-2222-2222-222222222222 after handshake for configured repo 11111111-1111-1111-1111-111111111111"
+            )),
+            "repo_mismatch"
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer peer-b repo route mismatch: expected 11111111-1111-1111-1111-111111111111"
+            )),
+            "repo_mismatch"
+        );
+        assert!(is_terminal_p2p_error("repo_mismatch"));
+        assert_eq!(failure_state("repo_mismatch"), "error");
     }
 
     #[test]
