@@ -1,5 +1,7 @@
 use super::source_control_proxy::RemoteSourceControlApi;
-use super::{AppState, router, security, tree_state::RepoTreeRegistry};
+use super::{
+    AppState, router, security, source_control_grants::AuthSessionId, tree_state::RepoTreeRegistry,
+};
 use deve_core::config::{GitBridgeMode, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
@@ -15,6 +17,8 @@ pub(super) struct ProxyHarness {
     pub dir: TempDir,
     pub repo: Arc<RepoManager>,
     pub sync_manager: Arc<deve_core::sync::SyncManager>,
+    pub state: Arc<AppState>,
+    pub auth_session_id: AuthSessionId,
     pub base_url: String,
     pub client: reqwest::Client,
     pub proxy: RemoteSourceControlApi,
@@ -53,7 +57,9 @@ impl ProxyHarness {
         });
         let mut auth_config = AuthConfig::dev_default()?;
         auth_config.allow_anonymous_localhost = true;
-        let app = router::build_app(state, 3001, Arc::new(auth_config))?
+        let auth_session_id =
+            AuthSessionId::anonymous_localhost(&auth_config.username, auth_config.token_version);
+        let app = router::build_app(state.clone(), 3001, Arc::new(auth_config))?
             .into_make_service_with_connect_info::<std::net::SocketAddr>();
         let listener = TcpListener::bind("127.0.0.1:0").await?;
         let base_url = format!("http://{}", listener.local_addr()?);
@@ -70,6 +76,8 @@ impl ProxyHarness {
             dir,
             repo,
             sync_manager,
+            state,
+            auth_session_id,
             base_url: base_url.clone(),
             client: local_client(),
             proxy: RemoteSourceControlApi::new(base_url)?,
@@ -83,6 +91,22 @@ impl ProxyHarness {
             let _ = tx.send(());
         }
         let _ = self.task.await;
+    }
+
+    pub(super) fn grant_browser_write(&self, scope_nonce: u64) -> anyhow::Result<()> {
+        let repo_name = self.repo.local_repo_name();
+        let repo_id = self
+            .repo
+            .get_repo_info_for(None, Some(repo_name))?
+            .ok_or_else(|| anyhow::anyhow!("missing local repo info"))?
+            .uuid;
+        self.state.source_control_write_grants().grant(
+            self.auth_session_id.clone(),
+            repo_id,
+            PeerId::new("test-peer"),
+            scope_nonce,
+        );
+        Ok(())
     }
 }
 

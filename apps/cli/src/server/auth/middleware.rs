@@ -24,6 +24,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, Once};
 
 use crate::server::rate_limit::RateLimiter;
+use crate::server::source_control_grants::AuthSessionId;
 use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, LoginResponse};
 use deve_core::security::auth::{config::AuthConfig, jwt};
 
@@ -51,6 +52,11 @@ pub async fn auth_middleware(
             exp: i64::MAX,
             ver: config.token_version,
         };
+        req.extensions_mut()
+            .insert(AuthSessionId::anonymous_localhost(
+                &config.username,
+                config.token_version,
+            ));
         req.extensions_mut().insert(anonymous_claims);
         return next.run(req).await;
     }
@@ -69,6 +75,8 @@ pub async fn auth_middleware(
     // 验证 JWT
     match jwt::validate_token(&config.secret, &token, config.token_version) {
         Ok(claims) => {
+            req.extensions_mut()
+                .insert(AuthSessionId::from_cookie_token(&token));
             req.extensions_mut().insert(claims);
             next.run(req).await
         }

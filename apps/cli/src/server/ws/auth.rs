@@ -3,21 +3,30 @@
 //!
 //! WebSocket Browser / FullPeer admission policy.
 
+use crate::server::source_control_grants::AuthSessionId;
 use axum::http::request::Parts;
 use deve_core::protocol::auth::AuthErrorCode;
 use deve_core::security::auth::{config::AuthConfig, jwt};
 
 pub(super) const P2P_INBOUND_TOKEN_ENV: &str = "DEVE_P2P_INBOUND_TOKEN";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum WsAdmission {
-    Browser,
+    Browser(AuthSessionId),
     FullPeer,
 }
 
 impl WsAdmission {
-    pub(super) fn is_browser(self) -> bool {
-        matches!(self, Self::Browser)
+    #[cfg(test)]
+    pub(super) fn is_browser(&self) -> bool {
+        matches!(self, Self::Browser(_))
+    }
+
+    pub(super) fn browser_auth_session(&self) -> Option<&AuthSessionId> {
+        match self {
+            Self::Browser(auth_session_id) => Some(auth_session_id),
+            Self::FullPeer => None,
+        }
     }
 }
 
@@ -32,15 +41,22 @@ pub(super) fn session_admission(
     }
 
     let token = cookie_token(req);
-    let authed = token.as_deref().is_some_and(|token| {
-        jwt::validate_token(&config.secret, token, config.token_version).is_ok()
-    });
+    if let Some(token) = token.as_deref()
+        && jwt::validate_token(&config.secret, token, config.token_version).is_ok()
+    {
+        return Ok(WsAdmission::Browser(AuthSessionId::from_cookie_token(
+            token,
+        )));
+    }
     if is_browser_session_connection(
-        authed,
+        false,
         config.allow_anonymous_localhost,
         is_local_request(req),
     ) {
-        return Ok(WsAdmission::Browser);
+        return Ok(WsAdmission::Browser(AuthSessionId::anonymous_localhost(
+            &config.username,
+            config.token_version,
+        )));
     }
     Err(token
         .map(|_| AuthErrorCode::TokenExpired)

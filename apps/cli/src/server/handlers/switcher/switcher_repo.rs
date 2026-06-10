@@ -108,6 +108,11 @@ pub(super) async fn handle_switch_repo(
             return;
         }
     };
+    if let Some(auth_session_id) = session.auth_session_id() {
+        state
+            .source_control_write_grants()
+            .revoke_session(auth_session_id);
+    }
     commit_session_switch(
         session,
         branch.map(|peer| peer.to_string()),

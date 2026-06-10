@@ -2,6 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 04_repository#repo-scope-runtime
 
+use axum::Extension;
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -11,19 +12,54 @@ use crate::server::AppState;
 use crate::server::handlers::source_control::errors;
 use crate::server::handlers::source_control::service;
 use crate::server::plugin_host::PluginHostState;
+use crate::server::source_control_grants::AuthSessionId;
 use deve_core::plugin::runtime::host;
 use deve_core::source_control::CommitInfo;
 
-use super::CommitPayload;
+use super::{CommitPayload, SourceControlWriteAuthority};
 
 pub async fn commit(
     State(state): State<Arc<AppState>>,
+    Extension(auth_session_id): Extension<AuthSessionId>,
     Json(payload): Json<CommitPayload>,
 ) -> impl IntoResponse {
-    if let Err(error) = super::super::http_scope::require(payload.scope_nonce) {
+    let scope_nonce = match super::super::http_scope::require(payload.scope_nonce) {
+        Ok(scope_nonce) => scope_nonce,
+        Err(error) => return errors::http(error),
+    };
+    if let Err(error) = super::authorize_http_write(
+        &state,
+        &payload.repo,
+        scope_nonce,
+        SourceControlWriteAuthority::BrowserSessionGrant(&auth_session_id),
+    ) {
         return errors::http(error);
     }
-    if let Err(error) = super::ensure_http_selector_writable(&state, &payload.repo) {
+    match service::commit_staged_with_git_bridge(
+        state.repo.as_ref(),
+        &payload.repo,
+        &payload.message,
+        state.git_bridge,
+    ) {
+        Ok(info) => Json::<CommitInfo>(info).into_response(),
+        Err(e) => errors::http(e),
+    }
+}
+
+pub async fn commit_delegated(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<CommitPayload>,
+) -> impl IntoResponse {
+    let scope_nonce = match super::super::http_scope::require(payload.scope_nonce) {
+        Ok(scope_nonce) => scope_nonce,
+        Err(error) => return errors::http(error),
+    };
+    if let Err(error) = super::authorize_http_write(
+        &state,
+        &payload.repo,
+        scope_nonce,
+        SourceControlWriteAuthority::DelegatedRemoteProxy,
+    ) {
         return errors::http(error);
     }
     match service::commit_staged_with_git_bridge(

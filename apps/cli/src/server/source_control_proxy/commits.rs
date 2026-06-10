@@ -49,7 +49,7 @@ pub(super) fn commit_staged(
     repo: &RepoSelector,
     message: &str,
 ) -> Result<CommitInfo> {
-    let url = format!("{}/api/sc/commit", api.base_url);
+    let url = format!("{}/api/delegated/sc/commit", api.base_url);
     let res = super::block_on_safe(async {
         http::send_json(api.client.post(&url).json(&json!({
             "scope_nonce": REMOTE_PROXY_SCOPE_NONCE,

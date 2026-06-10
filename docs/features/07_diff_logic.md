@@ -69,6 +69,13 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - Web Command Palette 与 Source Control UI 只展示当前 mode 与 CLI-only notice，不直接执行 Git writer。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须遵守同一个 mode；代理模式必须展示主进程 mode 或 delegated/unknown，而不能硬编码为 mirror。
 
+### 7. HTTP Source Control Write Grant
+
+- Browser 通过 WebSocket 完成 `SyncHello + RegisterWriter` 后，HTTP stage/discard/unstage/commit 才能使用同一 session 的短生命周期 write grant。
+- 普通 HTTP mutation 的 `scope_nonce` 必须匹配 server-side active grant；任意非零 nonce 或 remote proxy 固定 nonce 不能绕过 writer gate。
+- WS 断开、repo/branch 切换、session 失效或 writer 重新注册后，旧 grant 必须失效。
+- remote proxy delegated API 是独立 authority path；它不能被 Web Source Control UI 或普通主进程 HTTP mutation 复用。
+
 ## 非目标
 
 - 当前阶段不支持跨 repo 自动 merge。

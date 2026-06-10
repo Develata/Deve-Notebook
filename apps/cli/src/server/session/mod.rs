@@ -12,6 +12,7 @@ use std::time::Instant;
 
 mod writer;
 
+use crate::server::source_control_grants::AuthSessionId;
 pub use writer::WriterIdentity;
 
 #[derive(Clone, Debug)]
@@ -49,6 +50,13 @@ pub struct WsSession {
     /// - JWT 认证通过的 Web Thin Client 置为 `true`。
     /// - 浏览器 SyncHello 仅用于 repo-scoped thin-client 协商，不应被当作 shadow branch 物化。
     pub browser_session: bool,
+
+    /// 当前 browser HTTP/WS auth session id。
+    ///
+    /// Invariant:
+    /// - 只保存 token/session 派生的不可逆 id，不保存 cookie/JWT material。
+    /// - HTTP Source Control write grant 必须与该 id 匹配。
+    pub auth_session_id: Option<AuthSessionId>,
 
     /// 已认证的对端 Peer ID，用于后续 SyncPush 验证。
     pub authenticated_peer_id: Option<PeerId>,
@@ -116,6 +124,7 @@ impl Default for WsSession {
             bound_repo_id: None,
             writer_identity: None,
             browser_session: false,
+            auth_session_id: None,
             active_branch: None,
             active_repo: None,
             active_repo_id: None,

@@ -31,6 +31,7 @@ pub mod security;
 pub mod session;
 mod setup;
 mod shadow_scope;
+mod source_control_grants;
 pub mod source_control_proxy;
 mod start;
 mod state;

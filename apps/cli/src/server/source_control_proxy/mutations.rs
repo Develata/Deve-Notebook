@@ -19,7 +19,7 @@ pub(super) fn stage_pending(
     post_target(
         api,
         repo,
-        "/api/sc/stage-pending",
+        "/api/delegated/sc/stage-pending",
         target,
         ProxyScOp::StagePending(target.path.clone()),
     )
@@ -33,7 +33,7 @@ pub(super) fn discard_pending(
     post_target(
         api,
         repo,
-        "/api/sc/discard-pending",
+        "/api/delegated/sc/discard-pending",
         target,
         ProxyScOp::DiscardPending(target.path.clone()),
     )
@@ -47,7 +47,7 @@ pub(super) fn unstage_file(
     post_target(
         api,
         repo,
-        "/api/sc/unstage",
+        "/api/delegated/sc/unstage",
         target,
         ProxyScOp::Unstage(target.path.clone()),
     )

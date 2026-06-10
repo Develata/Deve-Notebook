@@ -80,6 +80,7 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
     write_workspace_file(dir, "notes/b.md", "world");
     std::fs::remove_file(default_workspace_root(dir).join("notes/a.md"))?;
     seed_tracked_rename(&repo, doc_id, "notes/a.md", "notes/b.md", "world");
+    harness.grant_browser_write(1)?;
 
     let response = harness
         .client
@@ -124,6 +125,67 @@ async fn test_http_stage_rejects_missing_scope_nonce_before_mutation() -> anyhow
     );
     assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
     assert!(repo.list_staged_in_repo(&selector)?.is_empty());
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_source_control_mutations_require_browser_write_grant() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(
+        body.code,
+        deve_core::protocol::ServerErrorCode::ScStaleScope
+    );
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
+
+    repo.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
+    repo.unstage_file_in_repo(&selector, &path_target("notes/a.md"))?;
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn delegated_remote_proxy_scope_nonce_is_not_main_http_grant() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    assert_eq!(response.status(), reqwest::StatusCode::CONFLICT);
+
+    harness
+        .proxy
+        .stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
+    assert!(repo.list_pending_fs_in_repo(&selector)?.is_empty());
+    assert_eq!(repo.list_staged_in_repo(&selector)?.len(), 1);
     harness.shutdown().await;
     Ok(())
 }

@@ -137,6 +137,8 @@
     - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
     - run: cargo test -p deve_cli git_bridge_off -- --nocapture
     - run: cargo test -p deve_cli http_source_control_commit_respects_git_bridge_off -- --nocapture
+    - run: cargo test -p deve_cli http_source_control_mutations_require_browser_write_grant -- --nocapture
+    - run: cargo test -p deve_cli http_source_control_write_grant_revoked_on_ws_disconnect -- --nocapture
     - run: cargo test -p deve_core plugin_sc_commit_respects_git_bridge_off -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
     - run: cargo test -p deve_cli proxy_node_role_uses_delegated_git_bridge_mode -- --nocapture
@@ -176,6 +178,8 @@
     - cli_assert: source_control_git_bridge_off_skips_mirror_queue true
     - cli_assert: git_bridge_off_blocks_writer_commands true
     - api_assert: http_source_control_commit_respects_git_bridge_off true
+    - api_assert: browser_http_source_control_requires_session_bound_grant true
+    - api_assert: delegated_remote_proxy_scope_nonce_not_accepted_by_main_http_mutation true
     - api_assert: discard_docless_added_on_tracked_path_fails_closed true
     - plugin_assert: sc_commit_respects_git_bridge_off true
     - plugin_assert: missing_local_write_gate_fails_closed true

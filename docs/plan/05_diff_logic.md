@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-09`
+- `Last Review`: `2026-06-10`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -232,6 +232,9 @@ MergeRequested
 ### 4.3 Input Safety
 
 - 所有 source control 请求 **MUST** 带 `scope_nonce`。
+- Browser HTTP source-control mutation 请求仅携带非零 `scope_nonce` 不构成写授权；`scope_nonce`
+  必须匹配当前 authenticated browser session 通过 `SyncHello + RegisterWriter` 获得的
+  server-side `SourceControlWriteGrant`。
 - 所有 remote branch source control 请求 **MUST** 经过 readonly gate。
 - Web Source Control 的只读 diff / history / graph 入口 **MUST** 使用 read gate；
   remote / spectator scope 只能隐藏或禁用写操作，不得用 write gate 阻断只读 diff 查看。
@@ -426,6 +429,31 @@ MergeRequested
 - ws/http dispatch
 - scope guard
 - readonly gating
+- browser HTTP mutation write grant
+
+`SourceControlWriteGrant` 是 server runtime 内部状态，不是 wire protocol 字段。Browser WebSocket 在同一
+authenticated session 内完成 `SyncHello` 与 `RegisterWriter` 后，server 必须生成短生命周期 grant，至少绑定：
+
+- `auth_session_id`（由当前 cookie/JWT session 的不可逆 digest 或 localhost dev session key 派生，不暴露 token material）
+- `repo_id`
+- local writable branch / local-only target
+- registered `writer_peer_id`
+- `scope_nonce`
+- expiry
+
+主进程 `/api/sc/stage-pending`、`/api/sc/discard-pending`、`/api/sc/unstage` 与 `/api/sc/commit`
+等 HTTP mutation 在执行 ledger/source-control 写入前，必须同时验证：
+
+- HTTP JWT/session 有效；
+- repo selector 解析到 grant 绑定的同一 `repo_id`；
+- 目标是 local writable branch；
+- 请求 `scope_nonce` 与 active grant 完全匹配；
+- grant 仍属于当前 browser session 的 active writer grant，且未过期。
+
+WS repo switch、branch switch、disconnect、session invalid、writer unregister 或重新绑定 writer 时，server 必须撤销或替换对应 grant。
+remote proxy delegated API 不得复用主进程 browser HTTP mutation 语义；它必须走显式 delegated path /
+`SourceControlWriteAuthority::DelegatedRemoteProxy` 等等价枚举。`REMOTE_PROXY_SCOPE_NONCE = 1`
+只能在 delegated API 内解释，普通主进程 HTTP mutation 不得因为 scope nonce 为 1 而接受写入。
 
 ### 9.4 Web Runtime
 

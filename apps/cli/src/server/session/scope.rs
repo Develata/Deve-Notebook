@@ -4,6 +4,7 @@
 //! Session branch and runtime database scope helpers.
 
 use super::{WriterIdentity, WsSession};
+use crate::server::source_control_grants::AuthSessionId;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::{PeerId, RepoId};
 
@@ -19,6 +20,14 @@ impl WsSession {
 
     pub fn mark_browser_session(&mut self) {
         self.browser_session = true;
+    }
+
+    pub fn bind_auth_session(&mut self, auth_session_id: AuthSessionId) {
+        self.auth_session_id = Some(auth_session_id);
+    }
+
+    pub fn auth_session_id(&self) -> Option<&AuthSessionId> {
+        self.auth_session_id.as_ref()
     }
 
     pub fn is_browser_session(&self) -> bool {

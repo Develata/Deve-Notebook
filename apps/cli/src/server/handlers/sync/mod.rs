@@ -37,6 +37,13 @@ pub async fn handle_sync_hello(
     session: &mut WsSession,
     hello: SyncHelloInput,
 ) {
+    if session.is_browser_session()
+        && let Some(auth_session_id) = session.auth_session_id()
+    {
+        state
+            .source_control_write_grants()
+            .revoke_session(auth_session_id);
+    }
     hello::handle(state, ch, session, hello).await;
 }
 
@@ -111,9 +118,19 @@ pub async fn handle_delete_peer(
                 session.clear_active_repo();
                 session.clear_active_db();
                 session.clear_sync_binding();
+                if let Some(auth_session_id) = session.auth_session_id() {
+                    state
+                        .source_control_write_grants()
+                        .revoke_session(auth_session_id);
+                }
             }
             if session.authenticated_peer_id.as_ref() == Some(&peer_id) {
                 session.clear_sync_binding();
+                if let Some(auth_session_id) = session.auth_session_id() {
+                    state
+                        .source_control_write_grants()
+                        .revoke_session(auth_session_id);
+                }
             }
             ch.broadcast(deve_core::protocol::ServerMessage::PeerDeleted {
                 peer_id: peer_id_str,

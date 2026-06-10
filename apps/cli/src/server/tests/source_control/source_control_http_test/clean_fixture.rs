@@ -89,6 +89,7 @@ async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow
     harness
         .sync_manager
         .mark_projection_writeback_fault(repo_name);
+    harness.grant_browser_write(1)?;
 
     let response = harness
         .client
@@ -153,6 +154,7 @@ async fn http_status(harness: &ProxyHarness) -> anyhow::Result<Vec<ChangeEntry>>
 }
 
 async fn post_path(harness: &ProxyHarness, endpoint: &str, path: &str) -> anyhow::Result<()> {
+    harness.grant_browser_write(1)?;
     let response = harness
         .client
         .post(format!("{}{}", harness.base_url, endpoint))
@@ -167,6 +169,7 @@ async fn post_path(harness: &ProxyHarness, endpoint: &str, path: &str) -> anyhow
 }
 
 async fn post_commit(harness: &ProxyHarness, message: &str) -> anyhow::Result<CommitInfo> {
+    harness.grant_browser_write(1)?;
     let response = harness
         .client
         .post(format!("{}/api/sc/commit", harness.base_url))

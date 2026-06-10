@@ -63,7 +63,8 @@ pub async fn ws_handler(
     };
 
     let peer_id = uuid::Uuid::new_v4().to_string();
-    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, admission.is_browser()))
+    let browser_auth_session = admission.browser_auth_session().cloned();
+    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, browser_auth_session))
         .into_response()
 }
 
@@ -84,12 +85,13 @@ pub async fn handle_socket(
     state: Arc<AppState>,
     socket: axum::extract::ws::WebSocket,
     peer_id: String,
-    browser_session: bool,
+    browser_auth_session: Option<crate::server::source_control_grants::AuthSessionId>,
 ) {
     let (sender, mut receiver) = socket.split();
     let mut session = WsSession::new();
-    if browser_session {
+    if let Some(auth_session_id) = browser_auth_session.clone() {
         session.mark_browser_session();
+        session.bind_auth_session(auth_session_id);
     }
 
     // 为每个连接创建有界单播队列，避免慢客户端导致无界内存增长。
@@ -130,6 +132,12 @@ pub async fn handle_socket(
         ) {
             break;
         }
+    }
+
+    if let Some(auth_session_id) = browser_auth_session {
+        state
+            .source_control_write_grants()
+            .revoke_session(&auth_session_id);
     }
 }
 
