@@ -43,7 +43,7 @@ async fn detect_main_port_accepts_non_success_status() {
 }
 
 #[test]
-fn proxy_node_role_uses_unknown_git_bridge_mode() {
+fn proxy_node_role_uses_delegated_git_bridge_mode() {
     let role = proxy_node_role(3002, 3001);
 
     assert_eq!(role.role, "proxy");

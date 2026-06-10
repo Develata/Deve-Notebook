@@ -4,6 +4,7 @@
 //! Source-control read service tests.
 
 use super::diff_doc_target;
+use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::{
@@ -69,6 +70,15 @@ impl SourceControlApi for FakeRepo {
     }
 
     fn commit_staged_in_repo(&self, _: &RepoSelector, _: &str) -> anyhow::Result<CommitInfo> {
+        unreachable!("unused in this test")
+    }
+
+    fn commit_staged_in_repo_with_git_bridge(
+        &self,
+        _: &RepoSelector,
+        _: &str,
+        _: GitBridgeMode,
+    ) -> anyhow::Result<CommitInfo> {
         unreachable!("unused in this test")
     }
 }

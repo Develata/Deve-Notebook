@@ -30,8 +30,6 @@ pub trait SourceControlApi: Send + Sync {
         &self,
         repo: &RepoSelector,
         message: &str,
-        _git_bridge: GitBridgeMode,
-    ) -> Result<CommitInfo> {
-        self.commit_staged_in_repo(repo, message)
-    }
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo>;
 }

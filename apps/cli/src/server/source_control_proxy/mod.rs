@@ -10,6 +10,7 @@ mod mutations;
 mod queries;
 
 use anyhow::Result;
+use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
@@ -108,6 +109,16 @@ impl SourceControlApi for RemoteSourceControlApi {
     }
 
     fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
+        commits::commit_staged(self, repo, message)
+    }
+
+    fn commit_staged_in_repo_with_git_bridge(
+        &self,
+        repo: &RepoSelector,
+        message: &str,
+        _git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        // Delegated proxy commits run on the authoritative main process; its runtime mode applies.
         commits::commit_staged(self, repo, message)
     }
 }
