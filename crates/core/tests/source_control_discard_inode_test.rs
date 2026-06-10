@@ -1,8 +1,9 @@
 use deve_core::ledger::RepoManager;
 use deve_core::models::FileNodeId;
+use deve_core::protocol::ScPathTarget;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
-use deve_core::sync::scan;
+use deve_core::sync::{SyncManager, scan};
 use deve_core::utils::hash::StableHasher;
 use deve_core::vfs::Vfs;
 use std::hash::{Hash, Hasher};
@@ -31,6 +32,60 @@ fn inode_for(path: &std::path::Path) -> FileNodeId {
     FileNodeId {
         id: hasher.finish() as u128,
     }
+}
+
+fn commit_initial_file(repo: RepoManager, path: &str, content: &str) -> Arc<RepoManager> {
+    let file = workspace_path(&repo, path);
+    std::fs::create_dir_all(file.parent().expect("parent")).expect("mkdir");
+    std::fs::write(&file, content).expect("write file");
+    let repo_root = repo
+        .local_repo_workspace_root("default")
+        .expect("workspace root");
+    let repo = Arc::new(repo);
+    let vfs = Vfs::new(repo_root);
+    scan::scan_projection_workspaces(&repo, &vfs).expect("scan initial");
+    repo.stage_pending(path).expect("stage file");
+    repo.commit_staged("initial").expect("commit file");
+    repo
+}
+
+fn seed_docless_added_pending(repo: &RepoManager, path: &str, content: &str) {
+    let file = workspace_path(repo, path);
+    std::fs::write(&file, content).expect("write replacement");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: path.into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash(content),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed docless added pending entry");
+}
+
+fn assert_docless_added_guard(err: &anyhow::Error) {
+    assert!(
+        err.to_string()
+            .contains("Docless added pending entry points at tracked path"),
+        "{err}"
+    );
+}
+
+fn assert_pending_and_file_preserved(repo: &RepoManager, path: &str, content: &str) {
+    assert_eq!(
+        std::fs::read_to_string(workspace_path(repo, path)).expect("read workspace file"),
+        content
+    );
+    let pending = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| pending_fs::get(db, path))
+        .expect("load pending entry");
+    assert!(pending.is_some());
 }
 
 #[test]
@@ -80,6 +135,41 @@ fn discard_tracked_add_rebinds_workspace_inode() {
             .expect("load inode binding"),
         Some(doc_id)
     );
+}
+
+#[test]
+fn repo_discard_docless_added_on_tracked_path_fails_closed_before_delete() {
+    let (_dir, repo) = new_repo();
+    let repo = commit_initial_file(repo, "notes/a.md", "committed");
+    seed_docless_added_pending(&repo, "notes/a.md", "replacement");
+
+    let err = repo
+        .discard_pending_target_in_local_repo(
+            repo.local_repo_name(),
+            &ScPathTarget::from_path("notes/a.md"),
+        )
+        .expect_err("docless added entry at tracked path must fail closed");
+
+    assert_docless_added_guard(&err);
+    assert_pending_and_file_preserved(&repo, "notes/a.md", "replacement");
+}
+
+#[test]
+fn sync_discard_docless_added_on_tracked_path_fails_closed_before_delete() {
+    let (_dir, repo) = new_repo();
+    let repo = commit_initial_file(repo, "notes/a.md", "committed");
+    seed_docless_added_pending(&repo, "notes/a.md", "replacement");
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
+
+    let err = sync
+        .discard_pending_target_in_local_repo(
+            repo.local_repo_name(),
+            &ScPathTarget::from_path("notes/a.md"),
+        )
+        .expect_err("docless added entry at tracked path must fail closed");
+
+    assert_docless_added_guard(&err);
+    assert_pending_and_file_preserved(&repo, "notes/a.md", "replacement");
 }
 
 #[cfg(unix)]

@@ -126,6 +126,7 @@
     - run: cargo test -p deve_cli readonly_remote_source_control_writes -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_is_allowed -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_commit_diff_reports_rename_projection -- --nocapture
+    - run: cargo test -p deve_core discard_docless_added_on_tracked_path -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_guidance_for_all_repair_actions -- --nocapture
@@ -170,6 +171,7 @@
     - ui_assert: git_mirror_web_repair_writer_absent true
     - cli_assert: source_control_git_bridge_off_skips_mirror_queue true
     - cli_assert: git_bridge_off_blocks_writer_commands true
+    - api_assert: discard_docless_added_on_tracked_path_fails_closed true
     - plugin_assert: sc_commit_respects_git_bridge_off true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - api_assert: proxy_node_role_git_bridge_not_hardcoded_mirror true

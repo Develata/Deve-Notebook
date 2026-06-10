@@ -66,6 +66,8 @@ fn discard_entry(
 }
 
 fn discard_added(sync: &SyncManager, repo_name: &str, path: &str) -> Result<()> {
+    sync.repo
+        .ensure_untracked_pending_add_path_in_local_repo(repo_name, path)?;
     projection_io::remove_projection_path(sync, repo_name, path)?;
     sync.repo
         .discard_untracked_pending_add_in_local_repo(repo_name, path)

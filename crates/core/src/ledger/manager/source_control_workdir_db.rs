@@ -16,12 +16,27 @@ impl RepoManager {
         repo_name: &str,
         path: &str,
     ) -> Result<()> {
-        self.get_tracked_docid_in_local_repo(repo_name, path)?;
+        self.ensure_untracked_pending_add_path_in_local_repo(repo_name, path)?;
         self.run_on_local_repo(repo_name, |db| {
             pending_fs::remove(db, path)?;
             drop_unanchored_projection_path(db, path)?;
             Ok(())
         })
+    }
+
+    pub(crate) fn ensure_untracked_pending_add_path_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+    ) -> Result<()> {
+        if let Some(doc_id) = self.get_tracked_docid_in_local_repo(repo_name, path)? {
+            anyhow::bail!(
+                "Docless added pending entry points at tracked path {} ({})",
+                path,
+                doc_id
+            );
+        }
+        Ok(())
     }
 
     pub(crate) fn clear_pending_for_doc_in_local_repo(
