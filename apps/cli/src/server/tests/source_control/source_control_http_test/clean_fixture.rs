@@ -5,6 +5,8 @@
 //! state.
 
 use super::support::{ProxyHarness, seed_pending, write_workspace_file};
+use deve_core::config::GitBridgeMode;
+use deve_core::git_bridge::get_record;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use deve_core::source_control::{ChangeEntry, ChangeStatus, CommitInfo};
 
@@ -107,6 +109,34 @@ async fn http_source_control_write_rejects_degraded_local_projection() -> anyhow
         1
     );
     assert!(harness.repo.list_staged_in_local_repo(repo_name)?.is_empty());
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_source_control_commit_respects_git_bridge_off() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn_with_git_bridge(GitBridgeMode::Off).await?;
+    let repo_name = harness.repo.local_repo_name();
+    let repo_root = harness.repo.local_repo_workspace_root(repo_name)?;
+    std::fs::create_dir_all(repo_root.join(".git"))?;
+    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&repo_root)?;
+
+    write_workspace_file(&harness.dir, "smoke/off.md", "hello");
+    seed_pending(&harness.repo, "smoke/off.md", ChangeStatus::Added, "hello");
+    post_path(&harness, "/api/sc/stage-pending", "smoke/off.md").await?;
+
+    let commit = post_commit(&harness, "git bridge off").await?;
+    let record = harness
+        .repo
+        .run_on_local_repo(repo_name, |db| Ok(get_record(db, &commit.id)?))?;
+
+    assert!(record.is_none());
+    assert!(
+        harness
+            .repo
+            .list_staged_in_local_repo(repo_name)?
+            .is_empty()
+    );
     harness.shutdown().await;
     Ok(())
 }

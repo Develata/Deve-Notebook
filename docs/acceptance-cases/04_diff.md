@@ -136,6 +136,7 @@
     - run: cargo test -p deve_cli git_import_export_push_resolved_publish_roundtrip -- --nocapture
     - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
     - run: cargo test -p deve_cli git_bridge_off -- --nocapture
+    - run: cargo test -p deve_cli http_source_control_commit_respects_git_bridge_off -- --nocapture
     - run: cargo test -p deve_core plugin_sc_commit_respects_git_bridge_off -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
     - run: cargo test -p deve_cli proxy_node_role_uses_delegated_git_bridge_mode -- --nocapture
@@ -174,6 +175,7 @@
     - ui_assert: git_mirror_web_repair_writer_absent true
     - cli_assert: source_control_git_bridge_off_skips_mirror_queue true
     - cli_assert: git_bridge_off_blocks_writer_commands true
+    - api_assert: http_source_control_commit_respects_git_bridge_off true
     - api_assert: discard_docless_added_on_tracked_path_fails_closed true
     - plugin_assert: sc_commit_respects_git_bridge_off true
     - plugin_assert: missing_local_write_gate_fails_closed true

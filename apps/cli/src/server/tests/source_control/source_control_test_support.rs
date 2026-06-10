@@ -1,6 +1,6 @@
 use super::source_control_proxy::RemoteSourceControlApi;
 use super::{AppState, router, security, tree_state::RepoTreeRegistry};
-use deve_core::config::SyncMode;
+use deve_core::config::{GitBridgeMode, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::security::AuthConfig;
@@ -24,6 +24,10 @@ pub(super) struct ProxyHarness {
 
 impl ProxyHarness {
     pub(super) async fn spawn() -> anyhow::Result<Self> {
+        Self::spawn_with_git_bridge(GitBridgeMode::Mirror).await
+    }
+
+    pub(super) async fn spawn_with_git_bridge(git_bridge: GitBridgeMode) -> anyhow::Result<Self> {
         let dir = tempdir()?;
         let projection_base = dir.path().join("notes");
         let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
@@ -45,7 +49,7 @@ impl ProxyHarness {
             #[cfg(feature = "search")]
             search_available: false,
             identity_key: security::load_or_generate_identity_key(&dir.path().join("host"))?,
-            git_bridge: deve_core::config::GitBridgeMode::Mirror,
+            git_bridge,
         });
         let mut auth_config = AuthConfig::dev_default()?;
         auth_config.allow_anonymous_localhost = true;
