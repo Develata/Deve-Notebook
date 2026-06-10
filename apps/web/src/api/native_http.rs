@@ -5,7 +5,9 @@
 
 use super::native_bootstrap::read_native_bootstrap;
 
+#[cfg(any(target_arch = "wasm32", test))]
 const PACKAGED_SHELL_HOST: &str = "tauri.localhost";
+#[cfg(any(target_arch = "wasm32", test))]
 const LOOPBACK_DEV_HTTP_BASE: &str = "http://127.0.0.1:3001";
 #[cfg(target_arch = "wasm32")]
 const LOOPBACK_DEV_WS_URL: &str = "ws://127.0.0.1:3001/ws";
@@ -44,6 +46,7 @@ fn packaged_shell_loopback_http_base() -> Option<String> {
     None
 }
 
+#[cfg(any(target_arch = "wasm32", test))]
 fn packaged_shell_loopback_http_base_for_hostname(hostname: &str) -> Option<&'static str> {
     (hostname == PACKAGED_SHELL_HOST).then_some(LOOPBACK_DEV_HTTP_BASE)
 }
