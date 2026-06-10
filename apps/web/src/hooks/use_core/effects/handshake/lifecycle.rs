@@ -3,7 +3,7 @@
 //!   - 09_web_thin_client_ledger#write-readiness
 //!
 use crate::api::{
-    ConnectionStatus, WsService, http_base_from_ws_url, probe_node_role_summary_for_http_base,
+    ConnectionStatus, WsService, http_base_from_ws_url, probe_node_role_for_http_base,
 };
 use crate::hooks::use_core::types::HandshakeSignals;
 use leptos::prelude::GetUntracked;
@@ -79,14 +79,17 @@ fn spawn_node_role_reprobe(ws: WsService) {
 
     let http_base = http_base_from_ws_url(&endpoint);
     spawn_local(async move {
-        let summary = probe_node_role_summary_for_http_base(http_base).await;
+        let result = probe_node_role_for_http_base(http_base).await;
         if ws.endpoint.get_untracked() != endpoint
             || ws.connection_epoch.get_untracked() != connection_epoch
         {
             return;
         }
-        match summary {
-            Some(summary) => ws.complete_foreground_node_role_reprobe(summary),
+        match result {
+            Some(result) => ws.complete_foreground_node_role_reprobe(
+                result.summary,
+                result.source_control_git_bridge,
+            ),
             None => ws.fail_foreground_node_role_reprobe(),
         }
     });
@@ -162,6 +165,7 @@ mod tests {
         assert!(signals.handshake_scope_nonce.get_untracked().is_none());
         assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
         assert_eq!(ws.node_role.get_untracked(), "");
+        assert_eq!(ws.source_control_git_bridge.get_untracked(), "unknown");
         assert!(ws.node_role_probe_failed.get_untracked());
     }
 

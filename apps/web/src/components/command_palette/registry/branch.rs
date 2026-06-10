@@ -56,6 +56,7 @@ mod tests {
         let (active_branch, _) = signal(None::<PeerId>);
         let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
         let (pending_repo_switch, _) = signal(None::<String>);
+        let (git_bridge_mode, _) = signal("unknown".to_string());
         let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
         let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
         let clear_notice = Callback::new(move |_| set_notice.set(None));
@@ -70,6 +71,7 @@ mod tests {
             can_write: Signal::derive(|| true),
             write_block: Signal::derive(|| None::<RepoWriteBlock>),
             read_block: Signal::derive(|| None::<RepoWriteBlock>),
+            git_bridge_mode,
             notice,
             set_notice,
             clear_notice,

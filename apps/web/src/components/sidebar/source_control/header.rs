@@ -11,6 +11,7 @@ use leptos::prelude::*;
 #[component]
 pub fn SourceControlHeader(
     locale: RwSignal<Locale>,
+    git_bridge_mode: ReadSignal<String>,
     show_menu: RwSignal<bool>,
     show_repos: RwSignal<bool>,
     show_changes: RwSignal<bool>,
@@ -26,6 +27,17 @@ pub fn SourceControlHeader(
             <div class="flex items-center gap-2 overflow-hidden">
                 <span class="font-normal text-[11px] text-secondary uppercase whitespace-nowrap">
                     {move || t::source_control::title(locale.get())}
+                </span>
+                <span
+                    class="text-[10px] leading-none px-1.5 py-0.5 rounded border border-default text-muted whitespace-nowrap"
+                    title=move || t::source_control::git_bridge_mode_title(locale.get())
+                >
+                    {move || {
+                        t::source_control::git_bridge_mode_badge(
+                            locale.get(),
+                            &git_bridge_mode.get(),
+                        )
+                    }}
                 </span>
             </div>
 

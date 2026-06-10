@@ -47,6 +47,7 @@ pub(super) struct ConnectionManagerSignals {
     pub set_connection_epoch: WriteSignal<u64>,
     pub set_endpoint: WriteSignal<String>,
     pub set_node_role: WriteSignal<String>,
+    pub set_source_control_git_bridge: WriteSignal<String>,
     pub set_node_role_probe_failed: WriteSignal<bool>,
 }
 
@@ -103,6 +104,9 @@ pub fn spawn_connection_manager(
                             .try_set(signals.set_node_role, String::new())
                         || !signals
                             .lifecycle
+                            .try_set(signals.set_source_control_git_bridge, "unknown".to_string())
+                        || !signals
+                            .lifecycle
                             .try_set(signals.set_node_role_probe_failed, false)
                     {
                         return;
@@ -112,6 +116,7 @@ pub fn spawn_connection_manager(
                             signals.lifecycle.clone(),
                             http_base,
                             signals.set_node_role,
+                            signals.set_source_control_git_bridge,
                             signals.set_node_role_probe_failed,
                             signals.current_connection_epoch,
                             connection_epoch,
@@ -121,6 +126,7 @@ pub fn spawn_connection_manager(
                             signals.lifecycle.clone(),
                             url.clone(),
                             signals.set_node_role,
+                            signals.set_source_control_git_bridge,
                             signals.set_node_role_probe_failed,
                             signals.current_connection_epoch,
                             connection_epoch,

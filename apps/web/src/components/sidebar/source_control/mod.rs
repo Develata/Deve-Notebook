@@ -74,6 +74,7 @@ pub fn SourceControlView() -> impl IntoView {
         >
             <SourceControlHeader
                 locale
+                git_bridge_mode=core.git_bridge_mode
                 show_menu
                 show_repos
                 show_changes

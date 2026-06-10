@@ -9,6 +9,23 @@ mod repair;
 
 pub use repair::*;
 
+pub fn git_bridge_mode_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Git bridge mode",
+        Locale::Zh => "Git bridge 模式",
+    }
+}
+
+pub fn git_bridge_mode_badge(_locale: Locale, mode: &str) -> String {
+    let mode = match mode {
+        "mirror" => "mirror",
+        "off" => "off",
+        "unknown" => "unknown",
+        _ => "unknown",
+    };
+    format!("Git: {mode}")
+}
+
 pub fn git_status_cli_only_title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Git status is CLI-only",
@@ -131,6 +148,8 @@ mod tests {
 
     #[test]
     fn git_bridge_source_control_copy_is_localized() {
+        assert_eq!(git_bridge_mode_title(Locale::En), "Git bridge mode");
+        assert_eq!(git_bridge_mode_badge(Locale::Zh, "mirror"), "Git: mirror");
         assert_eq!(
             git_status_cli_only_title(Locale::En),
             "Git status is CLI-only"
@@ -196,5 +215,12 @@ mod tests {
             git_import_conflict_title(Locale::Zh),
             "导入冲突：暂存前请选择保留文件系统版本或账本版本。"
         );
+    }
+
+    #[test]
+    fn source_control_header_git_bridge_mode_badge() {
+        assert_eq!(git_bridge_mode_badge(Locale::En, "off"), "Git: off");
+        assert_eq!(git_bridge_mode_badge(Locale::Zh, "mirror"), "Git: mirror");
+        assert_eq!(git_bridge_mode_badge(Locale::En, "native"), "Git: unknown");
     }
 }

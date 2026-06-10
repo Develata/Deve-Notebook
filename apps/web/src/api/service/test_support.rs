@@ -31,6 +31,8 @@ impl WsService {
         let (msg_queue, _set_msg_queue) = signal(messages);
         let (endpoint, _set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
+        let (source_control_git_bridge, set_source_control_git_bridge) =
+            signal("unknown".to_string());
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (tx, rx) = unbounded::<ClientMessage>();
 
@@ -46,6 +48,8 @@ impl WsService {
             endpoint,
             node_role,
             set_node_role,
+            source_control_git_bridge,
+            set_source_control_git_bridge,
             node_role_probe_failed,
             set_node_role_probe_failed,
             msg_seq,
@@ -64,6 +68,8 @@ impl WsService {
 
     pub(crate) fn set_node_role_probe_failed_for_test(&self) {
         self.set_node_role.set(String::new());
+        self.set_source_control_git_bridge
+            .set("unknown".to_string());
         self.set_node_role_probe_failed.set(true);
     }
 

@@ -30,9 +30,7 @@ pub use self::ai_backend::{
     fetch_ai_backend_capabilities, resolve_backend_for_effective_state, resolve_backend_for_send,
 };
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
-pub(crate) use self::connection_role::{
-    http_base_from_ws_url, probe_node_role_summary_for_http_base,
-};
+pub(crate) use self::connection_role::{http_base_from_ws_url, probe_node_role_for_http_base};
 #[cfg(test)]
 pub use self::git_mirror::GitMirrorRepairReviewRecord;
 pub use self::git_mirror::{GitMirrorRepairReview, fetch_git_mirror_repair_review};

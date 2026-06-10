@@ -62,6 +62,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
                 },
             )
         }),
+        git_bridge_mode: state.ws.source_control_git_bridge,
         notice: state.source_control_notice,
         set_notice: state.set_source_control_notice,
         clear_notice,

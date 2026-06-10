@@ -40,6 +40,8 @@ pub struct WsService {
     pub endpoint: ReadSignal<String>,
     pub node_role: ReadSignal<String>,
     set_node_role: WriteSignal<String>,
+    pub source_control_git_bridge: ReadSignal<String>,
+    set_source_control_git_bridge: WriteSignal<String>,
     pub node_role_probe_failed: ReadSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
     pub msg_seq: ReadSignal<u64>,
@@ -62,6 +64,8 @@ impl WsService {
         let (msg_queue, set_msg_queue) = signal(VecDeque::<(u64, u64, ServerMessage)>::new());
         let (endpoint, set_endpoint) = signal(String::new());
         let (node_role, set_node_role) = signal(String::new());
+        let (source_control_git_bridge, set_source_control_git_bridge) =
+            signal("unknown".to_string());
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (tx, rx) = unbounded::<ClientMessage>();
         let lifecycle = ConnectionLifecycle::new();
@@ -79,6 +83,7 @@ impl WsService {
                 set_connection_epoch,
                 set_endpoint,
                 set_node_role,
+                set_source_control_git_bridge,
                 set_node_role_probe_failed,
             },
         );
@@ -97,6 +102,8 @@ impl WsService {
             endpoint,
             node_role,
             set_node_role,
+            source_control_git_bridge,
+            set_source_control_git_bridge,
             node_role_probe_failed,
             set_node_role_probe_failed,
             msg_seq,
@@ -138,16 +145,26 @@ impl WsService {
     pub(crate) fn begin_foreground_reprobe(&self) {
         self.clear_writer_ready();
         self.set_node_role.set(String::new());
+        self.set_source_control_git_bridge
+            .set("unknown".to_string());
         self.set_node_role_probe_failed.set(true);
     }
 
-    pub(crate) fn complete_foreground_node_role_reprobe(&self, summary: impl Into<String>) {
+    pub(crate) fn complete_foreground_node_role_reprobe(
+        &self,
+        summary: impl Into<String>,
+        source_control_git_bridge: impl Into<String>,
+    ) {
         self.set_node_role.set(summary.into());
+        self.set_source_control_git_bridge
+            .set(source_control_git_bridge.into());
         self.set_node_role_probe_failed.set(false);
     }
 
     pub(crate) fn fail_foreground_node_role_reprobe(&self) {
         self.set_node_role.set(String::new());
+        self.set_source_control_git_bridge
+            .set("unknown".to_string());
         self.set_node_role_probe_failed.set(true);
     }
 

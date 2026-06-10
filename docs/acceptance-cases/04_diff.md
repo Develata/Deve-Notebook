@@ -139,6 +139,7 @@
     - run: cargo test -p deve_cli proxy_node_role_uses_delegated_git_bridge_mode -- --nocapture
     - run: cargo test -p deve_cli role_payload_exposes_runtime_release_shape -- --nocapture
     - run: cargo test -p deve_web git_bridge_mode_is_extracted_from_node_role_summary -- --nocapture
+    - run: cargo test -p deve_web source_control_header_git_bridge_mode_badge -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
   assertions:
@@ -174,6 +175,7 @@
     - api_assert: proxy_node_role_git_bridge_not_hardcoded_mirror true
     - api_assert: node_role_exposes_source_control_git_bridge true
     - ui_assert: command_palette_git_bridge_mode_visible true
+    - ui_assert: source_control_git_bridge_mode_visible true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。

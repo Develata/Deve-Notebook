@@ -17,6 +17,7 @@ pub(super) async fn fetch_node_role(
     lifecycle: ConnectionLifecycle,
     ws_url: String,
     set_node_role: WriteSignal<String>,
+    set_source_control_git_bridge: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
@@ -25,6 +26,7 @@ pub(super) async fn fetch_node_role(
         lifecycle,
         http_base_from_ws_url(&ws_url),
         set_node_role,
+        set_source_control_git_bridge,
         set_node_role_probe_failed,
         current_connection_epoch,
         probe_connection_epoch,
@@ -36,6 +38,7 @@ pub(super) async fn fetch_node_role_for_http_base(
     lifecycle: ConnectionLifecycle,
     http_base: String,
     set_node_role: WriteSignal<String>,
+    set_source_control_git_bridge: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
@@ -50,6 +53,7 @@ pub(super) async fn fetch_node_role_for_http_base(
         apply_node_role_probe_success(
             &lifecycle,
             set_node_role,
+            set_source_control_git_bridge,
             set_node_role_probe_failed,
             current_connection_epoch,
             probe_connection_epoch,
@@ -61,27 +65,45 @@ pub(super) async fn fetch_node_role_for_http_base(
     apply_node_role_probe_failure(
         &lifecycle,
         set_node_role,
+        set_source_control_git_bridge,
         set_node_role_probe_failed,
         current_connection_epoch,
         probe_connection_epoch,
     );
 }
 
-pub(crate) async fn probe_node_role_summary_for_http_base(http_base: String) -> Option<String> {
+pub(crate) async fn probe_node_role_for_http_base(
+    http_base: String,
+) -> Option<NodeRoleProbeResult> {
     let url = node_role_url_for_http_base(&http_base);
     probe_node_role_summary_with_retries(&url, || true).await
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct NodeRoleProbeResult {
+    pub summary: String,
+    pub source_control_git_bridge: String,
+}
+
+impl NodeRoleProbeResult {
+    fn from_json(json: &serde_json::Value) -> Self {
+        Self {
+            summary: format_node_role_summary(json),
+            source_control_git_bridge: source_control_git_bridge(json).to_string(),
+        }
+    }
 }
 
 async fn probe_node_role_summary_with_retries(
     url: &str,
     mut should_continue: impl FnMut() -> bool,
-) -> Option<String> {
+) -> Option<NodeRoleProbeResult> {
     for attempt in 0..NODE_ROLE_PROBE_RETRIES {
         if !should_continue() {
             return None;
         }
         if let Some(json) = fetch_node_role_json_with_timeout(url).await {
-            return Some(format_node_role_summary(&json));
+            return Some(NodeRoleProbeResult::from_json(&json));
         }
         if attempt + 1 < NODE_ROLE_PROBE_RETRIES {
             TimeoutFuture::new(NODE_ROLE_PROBE_RETRY_DELAY_MS).await;
@@ -111,21 +133,27 @@ async fn fetch_node_role_json_with_timeout(url: &str) -> Option<serde_json::Valu
 fn apply_node_role_probe_success(
     lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
+    set_source_control_git_bridge: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
-    summary: String,
+    result: NodeRoleProbeResult,
 ) -> bool {
     if lifecycle.try_get(current_connection_epoch) != Some(probe_connection_epoch) {
         return false;
     }
-    lifecycle.try_set(set_node_role, summary)
+    lifecycle.try_set(set_node_role, result.summary)
+        && lifecycle.try_set(
+            set_source_control_git_bridge,
+            result.source_control_git_bridge,
+        )
         && lifecycle.try_set(set_node_role_probe_failed, false)
 }
 
 fn apply_node_role_probe_failure(
     lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
+    set_source_control_git_bridge: WriteSignal<String>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
@@ -134,6 +162,7 @@ fn apply_node_role_probe_failure(
         return false;
     }
     lifecycle.try_set(set_node_role, String::new())
+        && lifecycle.try_set(set_source_control_git_bridge, "unknown".to_string())
         && lifecycle.try_set(set_node_role_probe_failed, true)
 }
 
@@ -207,11 +236,14 @@ fn format_repo_health(json: &serde_json::Value) -> String {
 }
 
 fn format_source_control(json: &serde_json::Value) -> String {
+    format!("git:{}", source_control_git_bridge(json))
+}
+
+fn source_control_git_bridge(json: &serde_json::Value) -> &str {
     let Some(source_control) = json.get("source_control") else {
-        return "git:unknown".into();
+        return "unknown";
     };
-    let git_bridge = str_field(source_control, "git_bridge", "unknown");
-    format!("git:{git_bridge}")
+    str_field(source_control, "git_bridge", "unknown")
 }
 
 #[cfg(test)]
