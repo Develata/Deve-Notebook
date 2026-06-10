@@ -1,7 +1,8 @@
 use super::{
-    git_bridge_mode_from_node_role, git_export_command, git_import_command, git_mirror_command,
-    git_push_command, git_repair_command, git_status_command,
+    git_export_command, git_import_command, git_mirror_command, git_push_command,
+    git_repair_command, git_status_command,
 };
+use crate::api::{ConnectionStatus, WsService};
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::{
@@ -12,6 +13,7 @@ use crate::hooks::use_core::source_control_notice::{
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::hooks::use_core::{PendingBranchTarget, SourceControlContext};
 use crate::i18n::Locale;
+use crate::runtime::session_client::SessionClient;
 use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 use leptos::prelude::{
@@ -174,18 +176,33 @@ fn git_repair_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn git_bridge_mode_is_extracted_from_node_role_summary() {
-    assert_eq!(
-        git_bridge_mode_from_node_role(
-            "main (ws:3001) | v0.0.1 | standard | repos:healthy (0/1) | git:mirror",
-        ),
-        Some("mirror")
-    );
-    assert_eq!(
-        git_bridge_mode_from_node_role(
-            "main (ws:3001) | v0.0.1 | standard | repos:healthy (0/1) | git:off",
-        ),
-        Some("off")
-    );
-    assert_eq!(git_bridge_mode_from_node_role("main | no git mode"), None);
+fn command_palette_git_bridge_mode_reads_session_signal() {
+    let owner = Owner::new();
+    owner.with(|| {
+        provide_source_control_context();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        ws.complete_foreground_node_role_reprobe("main", "off");
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+        let (handshake_ready, _) = signal(true);
+        let (handshake_scope_nonce, _) = signal(Some(1u64));
+        provide_context(SessionClient {
+            ws: ws.clone(),
+            connection_status: ws.status,
+            status_text: Signal::derive(|| "connected".to_string()),
+            sync_banner: sync_banner.into(),
+            set_sync_banner,
+            handshake_ready,
+            handshake_scope_nonce,
+            on_retry_peer_registration: Callback::new(|_| {}),
+        });
+        let (_, set_show) = signal(true);
+
+        let command = git_status_command(Locale::En, set_show);
+
+        assert!(
+            command
+                .enabled_when
+                .contains("source_control.git_bridge=off")
+        );
+    });
 }

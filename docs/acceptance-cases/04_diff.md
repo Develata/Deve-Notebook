@@ -141,7 +141,7 @@
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
     - run: cargo test -p deve_cli proxy_node_role_uses_delegated_git_bridge_mode -- --nocapture
     - run: cargo test -p deve_cli role_payload_exposes_runtime_release_shape -- --nocapture
-    - run: cargo test -p deve_web git_bridge_mode_is_extracted_from_node_role_summary -- --nocapture
+    - run: cargo test -p deve_web command_palette_git_bridge_mode_reads_session_signal -- --nocapture
     - run: cargo test -p deve_web source_control_header_git_bridge_mode_badge -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture

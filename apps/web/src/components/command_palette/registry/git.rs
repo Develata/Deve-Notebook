@@ -21,7 +21,9 @@ fn show_source_control_notice(
 
 fn git_bridge_enabled_when(locale: Locale) -> String {
     let mode = use_context::<SessionClient>()
-        .map(|session| git_bridge_mode_from_value(&session.ws.source_control_git_bridge.get()))
+        .map(|session| {
+            git_bridge_mode_from_value(&session.ws.source_control_git_bridge.get_untracked())
+        })
         .unwrap_or("unknown");
     format!(
         "{}; source_control.git_bridge={mode}",
@@ -36,13 +38,6 @@ fn git_bridge_mode_from_value(mode: &str) -> &'static str {
         "unknown" => "unknown",
         _ => "unknown",
     }
-}
-
-fn git_bridge_mode_from_node_role(summary: &str) -> Option<&'static str> {
-    summary.split('|').find_map(|segment| {
-        let mode = segment.trim().strip_prefix("git:")?;
-        Some(git_bridge_mode_from_value(mode))
-    })
 }
 
 pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
