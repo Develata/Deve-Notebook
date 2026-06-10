@@ -51,6 +51,7 @@
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
 - `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。
 - 重复 peer label 只影响显示，不得导致 `/api/node/role` 中不同 peer 的连接状态、attempt 或 last error 互相覆盖。
+- 普通重连尝试不应清空上一条 last error code；只有连接/同步成功或配置重新初始化后，诊断面才应清除它。
 - 静态 peer 配置中的 `peer_id` 是 expected authenticated peer identity，不是显示 label；握手返回的 peer id 不一致时必须拒绝连接。
 - FullPeer connector 必须验证对端 `SyncHello` 的 pubkey、peer id 与 signature；无效签名或 pubkey 无法推出声明 peer id 时必须拒绝连接。
 - `peer_id` mismatch 属于确定性身份/配置错误，不应作为普通断线持续重连；诊断中应保留 last error code。

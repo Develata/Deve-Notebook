@@ -53,7 +53,6 @@ pub(crate) fn record_attempt(peer: &P2pPeerConfig) -> u64 {
     update_peer(peer, |peer| {
         peer.attempts = peer.attempts.saturating_add(1);
         peer.state = "connecting".into();
-        peer.last_error_code = None;
         peer.attempts
     })
     .unwrap_or(0)
@@ -239,5 +238,51 @@ mod tests {
             payload.peers[1].last_error_code.as_deref(),
             Some("peer_id_mismatch")
         );
+    }
+
+    #[test]
+    fn p2p_status_retry_preserves_last_error_until_success() {
+        let _guard = TEST_LOCK.lock().expect("p2p status test lock");
+        let peer = P2pPeerConfig {
+            label: "peer-b".into(),
+            peer_id: "peer-b".into(),
+            repo_id: "11111111-1111-1111-1111-111111111111".into(),
+            ws_url: "ws://127.0.0.1:3102/ws".into(),
+            auth_token_env: "AUTH_SECRET_ENV".into(),
+            enabled: true,
+        };
+        initialize(&P2pConfig {
+            enabled: true,
+            inbound_token_env: Some("SECRET_ENV".into()),
+            connect_interval_ms: 1000,
+            peers: vec![peer.clone()],
+        });
+
+        record_attempt(&peer);
+        record_failure(&peer, "reconnecting", "connect_failed");
+        record_attempt(&peer);
+
+        let payload = node_role::get_node_role().p2p;
+        assert_eq!(payload.peers[0].state, "connecting");
+        assert_eq!(payload.peers[0].attempts, 2);
+        assert_eq!(
+            payload.peers[0].last_error_code.as_deref(),
+            Some("connect_failed")
+        );
+
+        record_success(
+            &peer,
+            P2pExchangeOutcome {
+                sent_pushes: 0,
+                sent_snapshots: 0,
+                applied_pushes: 0,
+                applied_snapshots: 0,
+            },
+        );
+
+        let payload = node_role::get_node_role().p2p;
+        assert_eq!(payload.peers[0].state, "connected");
+        assert_eq!(payload.peers[0].handshakes, 1);
+        assert_eq!(payload.peers[0].last_error_code.as_deref(), None);
     }
 }
