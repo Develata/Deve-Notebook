@@ -18,7 +18,7 @@ const CONFIG_KEY_SPECS: &[ConfigKeySpec] = &[
     ConfigKeySpec::string("merge_strategy", &["manual", "auto"]),
     ConfigKeySpec::integer("p2p.connect_interval_ms"),
     ConfigKeySpec::bool("p2p.enabled"),
-    ConfigKeySpec::string("p2p.inbound_token_env", &[]),
+    ConfigKeySpec::env_name("p2p.inbound_token_env"),
     ConfigKeySpec::string("profile", &["standard", "low-spec"]),
     ConfigKeySpec::string("source_control.git_bridge", &["mirror", "off"]),
     ConfigKeySpec::integer("snapshot_depth"),
@@ -63,11 +63,19 @@ impl ConfigKeySpec {
             kind: ValueKind::Integer,
         }
     }
+
+    const fn env_name(key: &'static str) -> Self {
+        Self {
+            key,
+            kind: ValueKind::EnvName,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
 enum ValueKind {
     String { choices: &'static [&'static str] },
+    EnvName,
     Bool,
     Integer,
 }
@@ -76,7 +84,7 @@ enum ValueKind {
 impl ValueKind {
     fn plan_type(self) -> &'static str {
         match self {
-            Self::String { .. } => "String",
+            Self::String { .. } | Self::EnvName => "String",
             Self::Bool => "Bool",
             Self::Integer => "Number",
         }
@@ -85,7 +93,7 @@ impl ValueKind {
     fn choices(self) -> &'static [&'static str] {
         match self {
             Self::String { choices } => choices,
-            Self::Bool | Self::Integer => &[],
+            Self::EnvName | Self::Bool | Self::Integer => &[],
         }
     }
 }
@@ -93,6 +101,7 @@ impl ValueKind {
 pub(super) fn parse_whitelisted_value(key: &str, value: &str) -> anyhow::Result<Value> {
     match value_kind(key)? {
         ValueKind::String { choices } => parse_string(value, choices),
+        ValueKind::EnvName => parse_env_name(value),
         ValueKind::Bool => parse_bool(value),
         ValueKind::Integer => parse_integer(value),
     }
@@ -113,6 +122,16 @@ fn parse_string(value: &str, choices: &[&str]) -> anyhow::Result<Value> {
             "Invalid value '{}'; expected one of {:?}",
             value,
             choices
+        ));
+    }
+    Ok(Value::String(value))
+}
+
+fn parse_env_name(value: &str) -> anyhow::Result<Value> {
+    let value = value.trim().trim_matches('"').to_string();
+    if value.trim().is_empty() {
+        return Err(anyhow!(
+            "Invalid environment variable reference: expected non-empty environment variable name"
         ));
     }
     Ok(Value::String(value))

@@ -254,10 +254,12 @@
     - run: scripts/check-settings-local-feedback-baseline.sh
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
+    - run: cargo test -p deve_cli set_rejects_empty_env_reference_without_rewriting_config -- --nocapture
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:
     - file_contains: config.toml "sidebar_width = 300"
     - file_contains: config.toml 'git_bridge = "off"'
+    - config_assert: empty_env_reference_rejected_without_rewrite true
 
 - case_id: SET-007
   goal: Server-backed Settings API 仍按 future 边界处理。

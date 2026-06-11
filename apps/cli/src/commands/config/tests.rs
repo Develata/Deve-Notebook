@@ -73,6 +73,26 @@ fn set_rejects_invalid_value_without_rewriting_config() {
 }
 
 #[test]
+fn set_rejects_empty_env_reference_without_rewriting_config() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("config.toml");
+    let original = "[p2p]\ninbound_token_env = \"DEVE_P2P_INBOUND_TOKEN\"\n";
+    std::fs::write(&path, original).expect("seed config");
+
+    let err = set_in_file(&path, "p2p.inbound_token_env", "\"\"")
+        .expect_err("empty env reference must fail closed");
+
+    assert!(
+        err.to_string()
+            .contains("non-empty environment variable name")
+    );
+    assert_eq!(
+        std::fs::read_to_string(&path).expect("read config"),
+        original
+    );
+}
+
+#[test]
 fn set_rejects_nested_key_when_parent_is_scalar() {
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("config.toml");
@@ -159,7 +179,7 @@ fn extract_documented_config_rows(docs: &str) -> BTreeMap<&str, DocumentedConfig
         };
         for key in key_cell.split("<br>").flat_map(|cell| cell.split('/')) {
             let key = key.trim().trim_matches('`');
-            if key.starts_with("DEVE_") || key.is_empty() {
+            if key.starts_with("DEVE_") || key.is_empty() || key.contains("[]") {
                 continue;
             }
             rows.insert(
