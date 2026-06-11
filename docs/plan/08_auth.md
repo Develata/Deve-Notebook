@@ -163,7 +163,7 @@ WsConnecting
 约束：
 
 - dev session cookie 只能在 anonymous localhost policy 下签发和接受，不得作为生产 auth credential。
-- cookie value 必须包含 server 生成的不可预测 session nonce 与 server 可校验签名；`AuthSessionId`
+- cookie value 必须包含 server 生成的不可预测 session nonce 与 server 可校验的 HMAC-SHA256 签名；`AuthSessionId`
   只能由已通过签名校验的 nonce 的不可逆 digest 派生，不得只由 username / token_version
   这类 dev-wide 固定值派生，也不得接受客户端自选的未签名 nonce。
 - `/api/auth/status` 作为公开安静 probe，可在 anonymous localhost 下返回 `Set-Cookie`

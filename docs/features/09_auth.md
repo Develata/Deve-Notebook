@@ -35,7 +35,7 @@
 ### 4. Anonymous Localhost Dev Session
 
 - 显式开启 anonymous localhost 后，浏览器仍应获得 per-session dev cookie。
-- 该 cookie 只用于本地开发会话隔离，不等同于生产 JWT；cookie value 必须由 server 签名。
+- 该 cookie 只用于本地开发会话隔离，不等同于生产 JWT；cookie value 必须由 server 以 HMAC-SHA256 签名。
 - Source Control HTTP write grant 必须绑定到同一个 dev browser session；另一个 localhost browser/profile/script
   缺少相同且签名有效的 dev session cookie 时，不应复用该 grant。
 
