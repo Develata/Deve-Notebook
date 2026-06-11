@@ -5,6 +5,7 @@
 use super::handlers::sync::{
     handle_register_writer, handle_sync_request, handle_sync_snapshot_request,
 };
+use super::source_control_grants::AuthSessionId;
 use super::sync_scope_cleanup_test_support::{
     assert_runtime_binding_cleared, browser_session_without_sync_scope, build_state,
     recv_protocol_error, try_recv_protocol_error, unicast_channel,
@@ -40,6 +41,40 @@ async fn browser_sync_request_rejects_stale_sync_scope_nonce() -> anyhow::Result
     assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     assert_eq!(scope_nonce, Some(23));
     assert_runtime_binding_cleared(&session);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_guard_scope_cleanup_revokes_source_control_write_grant() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (ch, mut rx) = unicast_channel(&state);
+    let auth_session_id = AuthSessionId::for_test("sync-guard-cleanup");
+    let mut session = browser_session_without_sync_scope(&state, repo_id, 23)?;
+    session.bind_auth_session(auth_session_id.clone());
+    session.set_sync_scope_nonce(19);
+    state.source_control_write_grants().grant(
+        auth_session_id.clone(),
+        repo_id,
+        PeerId::new("browser"),
+        19,
+    );
+    assert!(
+        state
+            .source_control_write_grants()
+            .authorize(&auth_session_id, repo_id, 19)
+            .is_ok()
+    );
+
+    handle_sync_request(&state, &ch, &mut session, repo_id, vec![]).await;
+
+    let (error, scope_nonce) = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
+    assert_eq!(scope_nonce, Some(23));
+    assert_runtime_binding_cleared(&session);
+    state
+        .source_control_write_grants()
+        .authorize(&auth_session_id, repo_id, 19)
+        .expect_err("sync guard cleanup must revoke stale source control write grant");
     Ok(())
 }
 

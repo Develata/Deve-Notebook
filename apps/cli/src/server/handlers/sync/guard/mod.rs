@@ -3,14 +3,17 @@
 //!
 //! Sync message scope and peer guards.
 
+use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode};
+use std::sync::Arc;
 
 use super::cleanup::{clear_remote_unbound_state, clear_stale_browser_sync_scope};
 
 pub(super) fn require_current_sync_scope(
+    state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
 ) -> Option<Option<u64>> {
@@ -20,6 +23,7 @@ pub(super) fn require_current_sync_scope(
     match validate_browser_sync_scope_state(session) {
         Ok(scope_nonce) => Some(Some(scope_nonce)),
         Err(error) => {
+            state.revoke_source_control_write_grant_for_session(session);
             ch.send_protocol_error_with_scope_nonce(
                 error.into_request_error(),
                 Some(session.scope_nonce()),
@@ -30,6 +34,7 @@ pub(super) fn require_current_sync_scope(
 }
 
 pub(super) fn require_bound_peer(
+    state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
     repo_id: RepoId,
@@ -45,6 +50,7 @@ pub(super) fn require_bound_peer(
         } else {
             ServerErrorCode::SyncRepoRouteMismatch
         };
+        state.revoke_source_control_write_grant_for_session(session);
         clear_remote_unbound_state(session);
         tracing::warn!(
             "Sync repo mismatch: session bound to {:?}, got {}",
@@ -56,6 +62,7 @@ pub(super) fn require_bound_peer(
     }
 
     let Some(peer_id) = session.authenticated_peer_id.clone() else {
+        state.revoke_source_control_write_grant_for_session(session);
         clear_remote_unbound_state(session);
         tracing::error!("Sync message without authenticated peer");
         ch.send_protocol_error_with_scope_nonce(
@@ -68,6 +75,7 @@ pub(super) fn require_bound_peer(
 }
 
 pub(super) fn require_delivery_scope_nonce(
+    state: &Arc<AppState>,
     ch: &DualChannel,
     session: &mut WsSession,
     scope_nonce: Option<u64>,
@@ -78,6 +86,7 @@ pub(super) fn require_delivery_scope_nonce(
     match session.sync_scope_nonce() {
         Some(scope_nonce) => Some(scope_nonce),
         None => {
+            state.revoke_source_control_write_grant_for_session(session);
             clear_remote_unbound_state(session);
             ch.send_protocol_error_with_scope_nonce(
                 ServerError::with_detail(

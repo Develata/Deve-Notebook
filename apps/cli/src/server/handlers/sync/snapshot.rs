@@ -26,10 +26,10 @@ pub(super) async fn handle_request(
     repo_id: RepoId,
     reason: Option<String>,
 ) {
-    let Some(scope) = require_current_sync_scope(ch, session) else {
+    let Some(scope) = require_current_sync_scope(state, ch, session) else {
         return;
     };
-    let Some(transport_peer) = require_bound_peer(ch, session, repo_id, scope) else {
+    let Some(transport_peer) = require_bound_peer(state, ch, session, repo_id, scope) else {
         return;
     };
     if !session.allows_sync_export_source(&peer_id) {
@@ -67,7 +67,8 @@ pub(super) async fn handle_request(
 
     match snapshot {
         Ok((server_vector, response)) => {
-            let Some(delivery_scope_nonce) = require_delivery_scope_nonce(ch, session, scope)
+            let Some(delivery_scope_nonce) =
+                require_delivery_scope_nonce(state, ch, session, scope)
             else {
                 return;
             };
@@ -118,10 +119,10 @@ pub(super) async fn handle_push(
         source_proof,
         ops: payload,
     } = input;
-    let Some(scope) = require_current_sync_scope(ch, session) else {
+    let Some(scope) = require_current_sync_scope(state, ch, session) else {
         return;
     };
-    let Some(transport_peer) = require_bound_peer(ch, session, repo_id, scope) else {
+    let Some(transport_peer) = require_bound_peer(state, ch, session, repo_id, scope) else {
         return;
     };
     if !session.allows_sync_source(&peer_id) {

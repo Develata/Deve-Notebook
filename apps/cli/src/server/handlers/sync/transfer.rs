@@ -26,10 +26,10 @@ pub(super) async fn handle_request(
     repo_id: RepoId,
     requests: Vec<(PeerId, (u64, u64))>,
 ) {
-    let Some(scope) = require_current_sync_scope(ch, session) else {
+    let Some(scope) = require_current_sync_scope(state, ch, session) else {
         return;
     };
-    if require_bound_peer(ch, session, repo_id, scope).is_none() {
+    if require_bound_peer(state, ch, session, repo_id, scope).is_none() {
         return;
     }
     if let Some(peer_id) = requests
@@ -89,7 +89,7 @@ pub(super) async fn handle_request(
         return;
     }
 
-    let Some(delivery_scope_nonce) = require_delivery_scope_nonce(ch, session, scope) else {
+    let Some(delivery_scope_nonce) = require_delivery_scope_nonce(state, ch, session, scope) else {
         return;
     };
     for response in non_empty {
@@ -132,10 +132,10 @@ pub(super) async fn handle_push(
     header: SyncPushHeader,
     encrypted_payload: Vec<EncryptedOp>,
 ) {
-    let Some(scope) = require_current_sync_scope(ch, session) else {
+    let Some(scope) = require_current_sync_scope(state, ch, session) else {
         return;
     };
-    let Some(transport_peer) = require_bound_peer(ch, session, repo_id, scope) else {
+    let Some(transport_peer) = require_bound_peer(state, ch, session, repo_id, scope) else {
         return;
     };
     if !session.allows_sync_source(&peer_id) {
