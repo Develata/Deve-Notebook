@@ -1,6 +1,8 @@
 use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};
-use deve_core::source_control::{changes, conflict, pending_fs};
+use deve_core::protocol::ScPathTarget;
+use deve_core::source_control::pending_fs::PendingFsEntry;
+use deve_core::source_control::{ChangeStatus, changes, conflict, pending_fs, staging};
 use tempfile::TempDir;
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -87,4 +89,51 @@ fn check_conflict_is_false_without_ledger_divergence() {
         })
         .expect("check conflict");
     assert!(!has_conflict);
+}
+
+#[test]
+fn stage_pending_rejects_unresolved_conflict() {
+    let (_dir, repo) = new_repo();
+    let doc_id = seed_doc(&repo, "notes/a.md", "hello");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Modified,
+                content_hash: pending_fs::content_hash("hello fs"),
+                detected_at: 1,
+                has_conflict: true,
+            },
+        )
+    })
+    .expect("seed conflict pending");
+
+    let err = repo
+        .stage_pending_target_in_local_repo(
+            repo.local_repo_name(),
+            &ScPathTarget {
+                path: "notes/a.md".into(),
+                doc_id: Some(doc_id),
+            },
+        )
+        .expect_err("unresolved conflict must not stage");
+
+    assert!(
+        err.to_string()
+            .contains("unresolved source control conflict"),
+        "unexpected error: {}",
+        err
+    );
+    let pending = repo
+        .run_on_local_repo(repo.local_repo_name(), pending_fs::list_all)
+        .expect("pending retained");
+    let staged = repo
+        .run_on_local_repo(repo.local_repo_name(), staging::list_staged_entries)
+        .expect("staged empty");
+    assert_eq!(pending.len(), 1);
+    assert!(pending[0].has_conflict);
+    assert!(staged.is_empty());
 }

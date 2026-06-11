@@ -142,6 +142,8 @@ Staged -> Unstaged
 - Watcher 检测到的变更 **MUST NOT** 直接写入 ledger。
 - `Stage` 是 repo-scoped side-table 迁移，不是 UI 样式变化。
 - `Discard` 的语义是恢复 workspace 到当前规范 projection。
+- 普通 `Stage` **MUST** fail-closed 于 `has_conflict=true` 的 pending entry；
+  只有显式 `ResolveConflict(KeepFs)` flow 可以通过 resolved-stage 路径清除 conflict 标记并移入 staged。
 
 补充：
 

@@ -73,11 +73,10 @@ impl<'a> SourceControlWriteRuntime<'a> {
         target: &ScPathTarget,
     ) -> Result<()> {
         self.manager.run_on_local_repo(repo_name, |db| {
-            let entry = if let Some(entry) = pending_fs::take_for_target(db, target)? {
-                entry
-            } else {
-                anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
-            };
+            let entry = pending_fs::get_for_target(db, target)?
+                .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path))?;
+            ensure_pending_entry_stageable(&entry)?;
+            pending_fs::remove(db, &entry.path)?;
             source_control::stage_pending_entry(db, &entry)
         })
     }
@@ -152,4 +151,11 @@ impl<'a> SourceControlWriteRuntime<'a> {
             )
         })
     }
+}
+
+fn ensure_pending_entry_stageable(entry: &pending_fs::PendingFsEntry) -> Result<()> {
+    if entry.has_conflict {
+        anyhow::bail!("unresolved source control conflict: {}", entry.path);
+    }
+    Ok(())
 }

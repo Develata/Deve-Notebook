@@ -39,4 +39,4 @@
 ## Notes
 
 - 这条 flow 只建模显式 conflict resolution，不重复普通 discard / stage。
-- `KeepFs` 走 `stage_pending`，`KeepLedger` 走 `discard_via_sync_manager`。
+- `KeepFs` 走 resolved-stage 路径，清除 conflict 标记后移入 staged；`KeepLedger` 走 `discard_via_sync_manager`。

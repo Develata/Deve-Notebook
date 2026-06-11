@@ -51,6 +51,7 @@ pub fn stage(
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
+        ensure_no_unresolved_conflicts(&pending)?;
         let targets = targets_from_entries(&pending);
         repo.stage_resolved_pending_targets_in_local_repo(&repo_name, &targets)?;
         println!("sc_stage[{repo_name}]: staged={}", targets.len());
@@ -89,6 +90,13 @@ fn require_stage_all(all: bool) -> Result<()> {
     Ok(())
 }
 
+fn ensure_no_unresolved_conflicts(entries: &[ChangeEntry]) -> Result<()> {
+    if let Some(entry) = entries.iter().find(|entry| entry.has_conflict) {
+        bail!("unresolved source control conflict: {}", entry.path);
+    }
+    Ok(())
+}
+
 fn targets_from_entries(entries: &[ChangeEntry]) -> Vec<ScPathTarget> {
     entries
         .iter()
@@ -101,8 +109,11 @@ fn targets_from_entries(entries: &[ChangeEntry]) -> Vec<ScPathTarget> {
 
 #[cfg(test)]
 mod tests {
-    use super::{require_stage_all, targets_from_entries};
+    use super::{require_stage_all, stage, targets_from_entries};
+    use deve_core::ledger::RepoManager;
     use deve_core::models::DocId;
+    use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+    use deve_core::source_control::staging;
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
 
     #[test]
@@ -124,5 +135,52 @@ mod tests {
 
         assert_eq!(targets[0].path, "gone.md");
         assert_eq!(targets[0].doc_id, Some(doc_id));
+    }
+
+    #[test]
+    fn sc_stage_all_rejects_unresolved_conflict() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger_dir = dir.path().join("ledger");
+        let projection_base = dir.path().join("notes");
+        let doc_id = {
+            let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+            repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+            let (doc_id, _ops) =
+                repo.apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")?;
+            repo.run_on_local_repo("default", |db| {
+                pending_fs::upsert(
+                    db,
+                    &PendingFsEntry {
+                        path: "notes/a.md".into(),
+                        renamed_from: None,
+                        doc_id: Some(doc_id),
+                        change_type: ChangeStatus::Modified,
+                        content_hash: pending_fs::content_hash("dirty"),
+                        detected_at: 1,
+                        has_conflict: true,
+                    },
+                )
+            })?;
+            doc_id
+        };
+
+        let err = stage(&ledger_dir, Some("default"), true, 10)
+            .expect_err("stage --all must reject unresolved conflicts");
+
+        assert!(
+            err.to_string()
+                .contains("unresolved source control conflict"),
+            "unexpected error: {}",
+            err
+        );
+        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        let pending = repo.run_on_local_repo("default", pending_fs::list_all)?;
+        let staged = repo.run_on_local_repo("default", staging::list_staged_entries)?;
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].doc_id, Some(doc_id));
+        assert!(pending[0].has_conflict);
+        assert!(staged.is_empty());
+        Ok(())
     }
 }

@@ -26,6 +26,16 @@ fn maps_pending_ambiguity_to_storage_conflict() {
 }
 
 #[test]
+fn maps_unresolved_pending_conflict_to_storage_conflict() {
+    let err = map_repo_error(
+        ScOp::StagePending("notes/a.md".into()),
+        anyhow::anyhow!("unresolved source control conflict: notes/a.md"),
+    );
+    assert_eq!(err.code, ServerErrorCode::StorageConflict);
+    assert_eq!(err.detail.as_deref(), Some("notes/a.md"));
+}
+
+#[test]
 fn maps_staged_ambiguity_to_storage_conflict() {
     let err = map_repo_error(
         ScOp::Unstage("notes/a.md".into()),

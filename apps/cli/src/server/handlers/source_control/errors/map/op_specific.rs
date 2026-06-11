@@ -40,6 +40,7 @@ fn is_pending_conflict(detail: &str) -> bool {
         &[
             "Ambiguous pending_fs target",
             "Tracked source control target requires document identity",
+            "unresolved source control conflict",
         ],
     )
 }
