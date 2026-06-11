@@ -171,6 +171,8 @@ enabled = true
 
 - FullPeer admission 只证明 transport 可进入 P2P handshake；真正 repo/peer authority 仍由 `SyncHello` 的 peer signature、`repo_id`、scope 与 source proof 决定。
 - token 比对失败必须在 WebSocket upgrade 前返回结构化 unauthorized response，不能进入普通 sync handler。
+- FullPeer connector 必须把 WebSocket `Ping` / `Pong` 作为 transport control frame 处理：`Ping` 需回应 `Pong`，
+  `Pong` 需忽略；二者不得被解释为 sync protocol frame，也不得中断 `SyncHello` handshake。
 - FullPeer session 不允许走 browser writer registration shortcut；writer gate 仍只对当前 local authority branch 生效。
 - Browser 与 FullPeer 复用 `ClientMessage` / `ServerMessage` schema；除非 enum/wire shape 改变，否则不得 bump `WS_PROTOCOL_VERSION`。
 

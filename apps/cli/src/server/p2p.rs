@@ -118,6 +118,9 @@ where
             Err(_) if stats.saw_hello => return Ok(stats),
             Err(_) => return Err(anyhow!("P2P handshake timed out")),
         };
+        let Some(frame) = handle_transport_control_frame(socket, frame).await? else {
+            continue;
+        };
         let message = decode_server_message(frame)
             .with_context(|| format!("Failed to decode P2P server frame {frame_index}"))?;
         handle_server_message(peer, repo_id, &state, socket, message, &mut stats).await?;
@@ -126,6 +129,26 @@ where
         Ok(stats)
     } else {
         Err(anyhow!("P2P handshake ended before SyncHello"))
+    }
+}
+
+async fn handle_transport_control_frame<S>(
+    socket: &mut S,
+    frame: Message,
+) -> Result<Option<Message>>
+where
+    S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    match frame {
+        Message::Ping(payload) => {
+            socket
+                .send(Message::Pong(payload))
+                .await
+                .context("Failed to send P2P Pong frame")?;
+            Ok(None)
+        }
+        Message::Pong(_) => Ok(None),
+        other => Ok(Some(other)),
     }
 }
 
@@ -978,6 +1001,37 @@ mod tests {
             .expect_err("missing SyncHello must fail");
 
         assert!(err.to_string().contains("before SyncHello"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn p2p_exchange_responds_to_ping_without_aborting_handshake() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let (_dir, state) = test_state_with_dir(identity)?;
+        let repo_id = state
+            .repo
+            .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
+            .expect("repo info")
+            .uuid;
+        let remote = IdentityKeyPair::generate();
+        let remote_peer = remote.peer_id();
+        let hello = Message::Binary(encode_server_binary(&signed_server_hello(
+            &remote,
+            repo_id,
+            VersionVector::new(),
+        ))?);
+        let mut socket = MockSocket::new(vec![Message::Ping(vec![1, 2, 3]), hello]);
+
+        let stats = drive_sync_exchange(
+            &peer_with_id(repo_id, remote_peer.as_str()),
+            repo_id,
+            state,
+            &mut socket,
+        )
+        .await?;
+
+        assert!(stats.saw_hello);
+        assert_eq!(socket.sent, vec![Message::Pong(vec![1, 2, 3])]);
         Ok(())
     }
 

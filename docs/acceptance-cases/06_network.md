@@ -217,6 +217,7 @@
     - run: cargo test -p deve_cli p2p_status_duplicate_labels_do_not_share_state -- --nocapture
     - run: cargo test -p deve_cli p2p_status_retry_preserves_last_error_until_success -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_responds_to_ping_without_aborting_handshake -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_request_before_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_configured_peer_id_mismatch -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_invalid_sync_hello_signature -- --nocapture
@@ -248,6 +249,7 @@
     - api_assert: p2p_status_global_disabled_marks_peers_disabled true
     - api_assert: p2p_status_keyed_by_peer_identity_not_label true
     - api_assert: p2p_status_retry_preserves_last_error_until_success true
+    - api_assert: full_peer_control_frames_do_not_abort_handshake true
     - api_assert: full_peer_exchange_requires_sync_hello true
     - api_assert: pre_hello_sync_request_rejected true
     - api_assert: configured_peer_id_is_expected_authenticated_identity true
