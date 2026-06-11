@@ -22,12 +22,17 @@ const REMOTE_PROXY_SCOPE_NONCE: u64 = 1;
 pub struct RemoteSourceControlApi {
     base_url: String,
     client: reqwest::Client,
+    delegated_secret: String,
 }
 
 impl RemoteSourceControlApi {
-    pub fn new(base_url: String) -> Result<Self> {
+    pub fn new_with_delegation_secret(base_url: String, delegated_secret: String) -> Result<Self> {
         let client = client::build_client(&base_url)?;
-        Ok(Self { base_url, client })
+        Ok(Self {
+            base_url,
+            client,
+            delegated_secret,
+        })
     }
 
     fn with_repo_query(
@@ -42,6 +47,13 @@ impl RemoteSourceControlApi {
             req = req.query(&[("repo_name", repo_name)]);
         }
         req
+    }
+
+    fn delegated_post(&self, url: &str) -> reqwest::RequestBuilder {
+        self.client.post(url).header(
+            crate::server::auth::delegated_source_control::DELEGATED_SC_HEADER,
+            crate::server::auth::delegated_source_control::header_value(&self.delegated_secret),
+        )
     }
 }
 

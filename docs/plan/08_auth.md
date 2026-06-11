@@ -173,6 +173,9 @@ WsConnecting
 - protected HTTP middleware 在 anonymous localhost 下必须解析同一个 dev session cookie，并把
   派生出的 `AuthSessionId` 注入 request extension；缺失时可补发 cookie，但该新 session 不得匹配
   其他 browser session 已建立的 Source Control grant。
+- remote proxy delegated Source Control API 不是 browser cookie authority；它必须使用单独的
+  server-verifiable delegated capability。普通 JWT cookie、anonymous localhost dev cookie 或
+  `REMOTE_PROXY_SCOPE_NONCE` 本身都不得授权 `/api/delegated/sc/*` 写入口。
 
 ### 5.3 Revocation
 

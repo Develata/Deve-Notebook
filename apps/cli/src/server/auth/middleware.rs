@@ -119,6 +119,17 @@ pub async fn login_rate_limit_middleware(
     next.run(req).await
 }
 
+pub async fn delegated_source_control_middleware(
+    Extension(config): Extension<Arc<AuthConfig>>,
+    req: Request<Body>,
+    next: Next,
+) -> Response {
+    match super::delegated_source_control::validate_headers(req.headers(), &config.secret) {
+        Ok(()) => next.run(req).await,
+        Err(error) => (StatusCode::FORBIDDEN, Json(error)).into_response(),
+    }
+}
+
 fn is_localhost(ip: &IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => v4.is_loopback(),

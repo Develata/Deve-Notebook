@@ -96,22 +96,6 @@ pub fn build_app_with_native_session_and_p2p(
             "/api/sc/commit",
             post(handlers::source_control::http_mutations::commit),
         )
-        .route(
-            "/api/delegated/sc/stage-pending",
-            post(handlers::source_control::http_mutations::stage_delegated),
-        )
-        .route(
-            "/api/delegated/sc/unstage",
-            post(handlers::source_control::http_mutations::unstage_delegated),
-        )
-        .route(
-            "/api/delegated/sc/discard-pending",
-            post(handlers::source_control::http_mutations::discard_pending_delegated),
-        )
-        .route(
-            "/api/delegated/sc/commit",
-            post(handlers::source_control::http_mutations::commit_delegated),
-        )
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .route(
@@ -128,6 +112,27 @@ pub fn build_app_with_native_session_and_p2p(
             get(handlers::admin::projection_check),
         )
         .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
+
+    let delegated = Router::new()
+        .route(
+            "/api/delegated/sc/stage-pending",
+            post(handlers::source_control::http_mutations::stage_delegated),
+        )
+        .route(
+            "/api/delegated/sc/unstage",
+            post(handlers::source_control::http_mutations::unstage_delegated),
+        )
+        .route(
+            "/api/delegated/sc/discard-pending",
+            post(handlers::source_control::http_mutations::discard_pending_delegated),
+        )
+        .route(
+            "/api/delegated/sc/commit",
+            post(handlers::source_control::http_mutations::commit_delegated),
+        )
+        .layer(axum::middleware::from_fn(
+            auth::middleware::delegated_source_control_middleware,
+        ));
 
     let login_route = Router::new()
         .route("/api/auth/login", post(auth::handlers::login))
@@ -157,6 +162,7 @@ pub fn build_app_with_native_session_and_p2p(
 
     Ok(Router::new()
         .merge(protected)
+        .merge(delegated)
         .merge(public)
         .merge(login_route)
         .merge(native_session_route)

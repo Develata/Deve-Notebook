@@ -10,6 +10,7 @@
 use crate::server;
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
 use deve_core::plugin::runtime::host;
+use deve_core::security::AuthConfig;
 use reqwest::Client;
 use std::net::TcpListener;
 use std::path::Path;
@@ -114,8 +115,13 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
         main_port
     );
     let base_url = format!("http://127.0.0.1:{}", main_port);
-    let remote =
-        Arc::new(crate::server::source_control_proxy::RemoteSourceControlApi::new(base_url)?);
+    let delegated_secret = AuthConfig::from_env()?.secret;
+    let remote = Arc::new(
+        crate::server::source_control_proxy::RemoteSourceControlApi::new_with_delegation_secret(
+            base_url,
+            delegated_secret,
+        )?,
+    );
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = remote.clone();
     host::set_repository(repo_api)?;
     let source_control_api: Arc<dyn deve_core::source_control::SourceControlApi> = remote;

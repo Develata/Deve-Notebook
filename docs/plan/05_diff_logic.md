@@ -457,6 +457,9 @@ WS repo switch、branch switch、disconnect、session invalid、writer unregiste
 remote proxy delegated API 不得复用主进程 browser HTTP mutation 语义；它必须走显式 delegated path /
 `SourceControlWriteAuthority::DelegatedRemoteProxy` 等等价枚举。`REMOTE_PROXY_SCOPE_NONCE = 1`
 只能在 delegated API 内解释，普通主进程 HTTP mutation 不得因为 scope nonce 为 1 而接受写入。
+delegated API 还必须具备独立于 browser/JWT cookie 的 server-verifiable capability；
+普通 authenticated browser request 即使知道 `/api/delegated/sc/*` 路径，也不得仅凭 cookie/session
+触发 delegated writer。
 
 ### 9.4 Web Runtime
 

@@ -6,7 +6,6 @@
 
 use axum::http::{HeaderMap, HeaderValue, header::SET_COOKIE};
 use axum_extra::extract::cookie::{Cookie, SameSite};
-use deve_core::security::hashing::sha256_bytes;
 
 pub(crate) const DEV_SESSION_COOKIE_NAME: &str = "deve_dev_session";
 const DEV_SESSION_COOKIE_VERSION: &str = "v1";
@@ -109,10 +108,10 @@ fn verify_dev_session_cookie_value(value: &str, signing_secret: &str) -> Option<
 }
 
 fn dev_session_signature(nonce: &str, signing_secret: &str) -> String {
-    hex_encode(&hmac_sha256(
+    super::signing::hmac_sha256_hex(
         signing_secret.as_bytes(),
         format!("deve-dev-session:{DEV_SESSION_COOKIE_VERSION}:{nonce}").as_bytes(),
-    ))
+    )
 }
 
 fn is_valid_dev_session_nonce(value: &str) -> bool {
@@ -124,63 +123,16 @@ fn is_valid_dev_session_nonce(value: &str) -> bool {
 }
 
 fn is_valid_dev_session_signature(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
-}
-
-fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
-    const BLOCK_LEN: usize = 64;
-    let mut key_block = [0_u8; BLOCK_LEN];
-    if key.len() > BLOCK_LEN {
-        key_block[..32].copy_from_slice(&sha256_bytes(key));
-    } else {
-        key_block[..key.len()].copy_from_slice(key);
-    }
-
-    let mut outer_pad = [0x5c_u8; BLOCK_LEN];
-    let mut inner_pad = [0x36_u8; BLOCK_LEN];
-    for index in 0..BLOCK_LEN {
-        outer_pad[index] ^= key_block[index];
-        inner_pad[index] ^= key_block[index];
-    }
-
-    let mut inner = Vec::with_capacity(BLOCK_LEN + message.len());
-    inner.extend_from_slice(&inner_pad);
-    inner.extend_from_slice(message);
-    let inner_hash = sha256_bytes(&inner);
-
-    let mut outer = Vec::with_capacity(BLOCK_LEN + inner_hash.len());
-    outer.extend_from_slice(&outer_pad);
-    outer.extend_from_slice(&inner_hash);
-    sha256_bytes(&outer)
-}
-
-fn hex_encode(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    out
+    super::signing::is_hex_digest(value)
 }
 
 fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
-    if left.len() != right.len() {
-        return false;
-    }
-    let mut diff = 0_u8;
-    for (left, right) in left.iter().zip(right) {
-        diff |= left ^ right;
-    }
-    diff == 0
+    super::signing::constant_time_eq(left, right)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        DEV_SESSION_COOKIE_NAME, cookie_header_for_test, hex_encode, hmac_sha256,
-        resolve_from_cookie_header,
-    };
+    use super::{DEV_SESSION_COOKIE_NAME, cookie_header_for_test, resolve_from_cookie_header};
 
     const SECRET: &str = "test_secret_key_at_least_32_bytes_long!";
 
@@ -223,16 +175,5 @@ mod tests {
 
         assert_ne!(session.value(), "abc_123");
         assert!(session.set_cookie().is_some());
-    }
-
-    #[test]
-    fn hmac_sha256_matches_rfc_4231_test_vector() {
-        let key = [0x0b_u8; 20];
-        let digest = hmac_sha256(&key, b"Hi There");
-
-        assert_eq!(
-            hex_encode(&digest),
-            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
-        );
     }
 }

@@ -63,7 +63,7 @@ fn post_target(
     let url = format!("{}{}", api.base_url, route);
     super::block_on_safe(async {
         http::send_empty_with_op(
-            api.client.post(&url).json(&json!({
+            api.delegated_post(&url).json(&json!({
                 "scope_nonce": REMOTE_PROXY_SCOPE_NONCE,
                 "path": target.path,
                 "doc_id": target.doc_id.map(|id| id.to_string()),

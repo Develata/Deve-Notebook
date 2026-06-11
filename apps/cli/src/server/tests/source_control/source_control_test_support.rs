@@ -88,7 +88,10 @@ impl ProxyHarness {
             auth_session_id,
             base_url: base_url.clone(),
             client: local_client(&dev_session_cookie_header),
-            proxy: RemoteSourceControlApi::new(base_url)?,
+            proxy: RemoteSourceControlApi::new_with_delegation_secret(
+                base_url,
+                dev_session_secret.clone(),
+            )?,
             dev_session_secret,
             shutdown: Some(shutdown_tx),
             task,
