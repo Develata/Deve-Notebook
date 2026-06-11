@@ -27,6 +27,9 @@ pub(super) fn classify_op_specific_error(op: &ScOp, detail: &str) -> Option<Serv
                 commit_id.clone(),
             ))
         }
+        ScOp::CommitDiff(commit_id) if detail.contains("Commit diff invalid order") => Some(
+            ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, commit_id.clone()),
+        ),
         ScOp::Commit if detail.to_ascii_lowercase().contains("nothing to commit") => {
             Some(ServerError::new(ServerErrorCode::ScNothingToCommit))
         }

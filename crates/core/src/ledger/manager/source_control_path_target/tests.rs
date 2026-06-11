@@ -148,6 +148,61 @@ fn stage_wrapper_stages_renamed_entry_from_old_path() -> anyhow::Result<()> {
 }
 
 #[test]
+fn stage_wrapper_stages_tracked_rename_pair_from_old_path() -> anyhow::Result<()> {
+    let dir = tempfile::tempdir()?;
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))?;
+    let (doc_id, _ops) = repo.apply_file_structure_in_local_repo(
+        repo.local_repo_name(),
+        "notes/a.md",
+        None,
+        "test",
+    )?;
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Deleted,
+                content_hash: String::new(),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )?;
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "docs/a.md".into(),
+                renamed_from: Some("notes/a.md".into()),
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("hello"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })?;
+
+    repo.stage_pending_in_local_repo(repo.local_repo_name(), "notes/a.md")?;
+    repo.stage_pending_in_local_repo(repo.local_repo_name(), "docs/a.md")?;
+
+    repo.run_on_local_repo(repo.local_repo_name(), |db| -> anyhow::Result<()> {
+        let old = staging::get_staged(db, "notes/a.md")?.expect("old delete staged");
+        let new = staging::get_staged(db, "docs/a.md")?.expect("new add staged");
+        assert_eq!(old.doc_id, Some(doc_id));
+        assert_eq!(old.status, ChangeStatus::Deleted);
+        assert_eq!(new.doc_id, Some(doc_id));
+        assert_eq!(new.status, ChangeStatus::Added);
+        assert_eq!(new.renamed_from.as_deref(), Some("notes/a.md"));
+        assert!(pending_fs::list_all(db)?.is_empty());
+        Ok(())
+    })?;
+    Ok(())
+}
+
+#[test]
 fn path_wrapper_keeps_docless_exact_delete_path_only() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;

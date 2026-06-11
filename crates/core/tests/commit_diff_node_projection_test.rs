@@ -207,6 +207,59 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
 }
 
 #[test]
+fn commit_diff_rejects_reversed_commit_order() {
+    let (_dir, repo) = new_repo();
+    write_workspace_file(&repo, "notes/a.md", "v1");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("v1"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed initial add");
+    repo.stage_pending("notes/a.md").expect("stage first");
+    let first = repo.commit_staged("first").expect("commit first");
+    let doc_id = repo.get_docid("notes/a.md").expect("lookup").expect("doc");
+
+    write_workspace_file(&repo, "notes/a.md", "v2");
+    repo.run_on_local_repo(repo.local_repo_name(), |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: Some(doc_id),
+                change_type: ChangeStatus::Modified,
+                content_hash: pending_fs::content_hash("v2"),
+                detected_at: 2,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed modify");
+    repo.stage_pending("notes/a.md").expect("stage second");
+    let second = repo.commit_staged("second").expect("commit second");
+
+    let err = repo
+        .diff_commits(Some(&second.id), &first.id)
+        .expect_err("reversed commit order must fail closed");
+
+    assert!(
+        err.to_string().contains("invalid order"),
+        "unexpected error: {}",
+        err
+    );
+}
+
+#[test]
 fn commit_diff_reports_rename_from_structure_facts() {
     let (_dir, repo) = new_repo();
     write_workspace_file(&repo, "notes/a.md", "v1");

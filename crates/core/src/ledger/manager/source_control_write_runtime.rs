@@ -8,7 +8,7 @@ use crate::config::GitBridgeMode;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{CommitInfo, pending_fs, staging};
+use crate::source_control::{ChangeStatus, CommitInfo, pending_fs, staging};
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -73,11 +73,21 @@ impl<'a> SourceControlWriteRuntime<'a> {
         target: &ScPathTarget,
     ) -> Result<()> {
         self.manager.run_on_local_repo(repo_name, |db| {
-            let entry = pending_fs::get_for_target(db, target)?
-                .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path))?;
-            ensure_pending_entry_stageable(&entry)?;
-            pending_fs::remove(db, &entry.path)?;
-            source_control::stage_pending_entry(db, &entry)
+            let Some(entry) = pending_fs::get_for_target(db, target)? else {
+                if staging::get_staged_for_target(db, target)?.is_some() {
+                    return Ok(());
+                }
+                anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
+            };
+            let entries = collect_stage_entries_for_pending_target(db, entry)?;
+            for entry in &entries {
+                ensure_pending_entry_stageable(entry)?;
+            }
+            for entry in entries {
+                pending_fs::remove(db, &entry.path)?;
+                source_control::stage_pending_entry(db, &entry)?;
+            }
+            Ok(())
         })
     }
 
@@ -98,11 +108,16 @@ impl<'a> SourceControlWriteRuntime<'a> {
             let mut selected = Vec::new();
             let mut seen_paths = HashSet::new();
             for target in targets {
-                let entry = pending_fs::get_for_target(db, target)?.ok_or_else(|| {
-                    anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path)
-                })?;
-                if seen_paths.insert(entry.path.clone()) {
-                    selected.push(entry);
+                let Some(entry) = pending_fs::get_for_target(db, target)? else {
+                    if staging::get_staged_for_target(db, target)?.is_some() {
+                        continue;
+                    }
+                    anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
+                };
+                for entry in collect_stage_entries_for_pending_target(db, entry)? {
+                    if seen_paths.insert(entry.path.clone()) {
+                        selected.push(entry);
+                    }
                 }
             }
             for mut entry in selected {
@@ -158,4 +173,27 @@ fn ensure_pending_entry_stageable(entry: &pending_fs::PendingFsEntry) -> Result<
         anyhow::bail!("unresolved source control conflict: {}", entry.path);
     }
     Ok(())
+}
+
+fn collect_stage_entries_for_pending_target(
+    db: &redb::Database,
+    entry: pending_fs::PendingFsEntry,
+) -> Result<Vec<pending_fs::PendingFsEntry>> {
+    let mut entries = vec![entry.clone()];
+    let Some(renamed_from) = entry.renamed_from.as_deref() else {
+        return Ok(entries);
+    };
+
+    for candidate in pending_fs::list_all(db)? {
+        if candidate.path == renamed_from
+            && candidate.doc_id == entry.doc_id
+            && candidate.change_type == ChangeStatus::Deleted
+            && !entries
+                .iter()
+                .any(|existing| existing.path == candidate.path)
+        {
+            entries.push(candidate);
+        }
+    }
+    Ok(entries)
 }

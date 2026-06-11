@@ -114,3 +114,13 @@ fn maps_commit_diff_projection_gap_to_sc_commit_diff_unprojectable() {
     assert_eq!(err.code, ServerErrorCode::ScCommitDiffUnprojectable);
     assert_eq!(err.detail.as_deref(), Some("387cc45d"));
 }
+
+#[test]
+fn maps_commit_diff_invalid_order_to_context_invalid() {
+    let err = map_repo_error(
+        ScOp::CommitDiff("head".into()),
+        anyhow::anyhow!("Commit diff invalid order: base seq 7 must be older than target seq 3"),
+    );
+    assert_eq!(err.code, ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(err.detail.as_deref(), Some("head"));
+}

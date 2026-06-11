@@ -27,6 +27,8 @@ pub(crate) enum CommitDiffError {
         end: u64,
         message: String,
     },
+    #[error("Commit diff invalid order: base seq {seq_a} must be older than target seq {seq_b}")]
+    InvalidOrder { seq_a: u64, seq_b: u64 },
     #[error("failed to reconstruct doc {doc_id} at seq {max_seq}: {message}")]
     ContentLoad {
         doc_id: DocId,

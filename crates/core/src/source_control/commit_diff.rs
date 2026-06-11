@@ -47,6 +47,9 @@ pub(crate) fn compare_commits_checked(
     let seq_a = resolve_seq(db, commit_a_id)?;
     let commit_b = load_commit(db, commit_b_id)?;
     let seq_b = commit_b.ledger_seq;
+    if seq_a >= seq_b {
+        return Err(CommitDiffError::InvalidOrder { seq_a, seq_b });
+    }
 
     let range_start = seq_a + 1;
     let range_end = seq_b + 1;
