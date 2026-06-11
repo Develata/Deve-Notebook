@@ -14,9 +14,6 @@ use std::{net::SocketAddr, sync::Arc};
 
 use deve_core::protocol::auth::{AuthStatusResponse, LoginResponse, MeResponse};
 use deve_core::security::AuthConfig;
-use deve_core::security::auth::jwt;
-
-use crate::server::auth::dev_session;
 
 const COOKIE_NAME: &str = "token";
 const UNKNOWN_USER_AGENT: &str = "unknown";
@@ -41,19 +38,22 @@ pub async fn status(
     Extension(config): Extension<Arc<AuthConfig>>,
 ) -> Response {
     let cookie_header = headers.get("cookie").and_then(|value| value.to_str().ok());
-    if config.allow_anonymous_localhost && addr.ip().is_loopback() {
-        let dev_session = dev_session::resolve_from_cookie_header(cookie_header, &config.secret);
+    if let Some(session) = super::super::browser_session::resolve_optional(
+        &config,
+        cookie_header,
+        addr.ip().is_loopback(),
+    ) {
         let mut response = Json(AuthStatusResponse::authenticated()).into_response();
-        dev_session::append_set_cookie(response.headers_mut(), &dev_session);
+        if let Some(set_cookie) = session.set_cookie.as_deref()
+            && let Ok(value) = axum::http::HeaderValue::from_str(set_cookie)
+        {
+            response
+                .headers_mut()
+                .append(axum::http::header::SET_COOKIE, value);
+        }
         return response;
     }
-    let authenticated = auth_status_from_cookie_header(cookie_header, &config);
-    Json(if authenticated {
-        AuthStatusResponse::authenticated()
-    } else {
-        AuthStatusResponse::unauthenticated()
-    })
-    .into_response()
+    Json(AuthStatusResponse::unauthenticated()).into_response()
 }
 
 pub(super) fn build_auth_cookie(token: &str) -> [(String, String); 1] {
@@ -150,13 +150,9 @@ fn normalized_user_agent(user_agent: Option<&str>) -> String {
         .to_string()
 }
 
+#[cfg(test)]
 fn auth_status_from_cookie_header(cookie_header: Option<&str>, config: &AuthConfig) -> bool {
-    let Some(token) =
-        cookie_header.and_then(super::super::cookie::extract_token_from_cookie_header)
-    else {
-        return false;
-    };
-    jwt::validate_token(&config.secret, &token, config.token_version).is_ok()
+    super::super::browser_session::resolve_optional(config, cookie_header, false).is_some()
 }
 
 #[cfg(test)]

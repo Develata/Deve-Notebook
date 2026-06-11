@@ -6,7 +6,7 @@
 use crate::server::source_control_grants::AuthSessionId;
 use axum::http::request::Parts;
 use deve_core::protocol::auth::AuthErrorCode;
-use deve_core::security::auth::{config::AuthConfig, jwt};
+use deve_core::security::auth::config::AuthConfig;
 
 pub(super) const P2P_INBOUND_TOKEN_ENV: &str = "DEVE_P2P_INBOUND_TOKEN";
 
@@ -53,53 +53,28 @@ pub(super) fn session_admission(
         return Ok(WsAdmission::FullPeer);
     }
 
-    let token = cookie_token(req);
-    if let Some(token) = token.as_deref()
-        && jwt::validate_token(&config.secret, token, config.token_version).is_ok()
-    {
-        return Ok(WsAdmission::Browser(BrowserAdmission {
-            auth_session_id: AuthSessionId::from_cookie_token(token),
-            set_cookie: None,
-        }));
-    }
-    if is_browser_session_connection(
-        false,
-        config.allow_anonymous_localhost,
+    let cookie_header = req
+        .headers
+        .get("cookie")
+        .and_then(|value| value.to_str().ok());
+    let session = crate::server::auth::browser_session::resolve_required(
+        config,
+        cookie_header,
         is_local_request(req),
-    ) {
-        let dev_session = crate::server::auth::dev_session::resolve_from_cookie_header(
-            req.headers
-                .get("cookie")
-                .and_then(|value| value.to_str().ok()),
-            &config.secret,
-        );
-        return Ok(WsAdmission::Browser(BrowserAdmission {
-            auth_session_id: AuthSessionId::from_dev_session_cookie(
-                &config.username,
-                config.token_version,
-                dev_session.value(),
-            ),
-            set_cookie: dev_session.set_cookie().map(ToOwned::to_owned),
-        }));
-    }
-    Err(token
-        .map(|_| AuthErrorCode::TokenExpired)
-        .unwrap_or(AuthErrorCode::TokenMissing))
+    )?;
+    Ok(WsAdmission::Browser(BrowserAdmission {
+        auth_session_id: session.auth_session_id,
+        set_cookie: session.set_cookie,
+    }))
 }
 
+#[cfg(test)]
 pub(super) fn is_browser_session_connection(
     authed: bool,
     allow_anonymous_localhost: bool,
     is_local: bool,
 ) -> bool {
     authed || (allow_anonymous_localhost && is_local)
-}
-
-fn cookie_token(req: &Parts) -> Option<String> {
-    req.headers
-        .get("cookie")
-        .and_then(|v| v.to_str().ok())
-        .and_then(crate::server::auth::cookie::extract_token_from_cookie_header)
 }
 
 fn has_authorization_header(req: &Parts) -> bool {

@@ -13,6 +13,7 @@
 //! - `brute_force`: IP 级暴力破解防护 (5 次/15 分钟)
 //! - `headers`: 安全响应头中间件
 
+pub(crate) mod browser_session;
 pub mod brute_force;
 pub mod cookie;
 pub mod delegated_source_control;

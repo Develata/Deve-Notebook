@@ -74,6 +74,7 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - Browser 通过 WebSocket 完成 `SyncHello + RegisterWriter` 后，HTTP stage/discard/unstage/commit 才能使用同一 session 的短生命周期 write grant。
 - 普通 HTTP mutation 的 `scope_nonce` 必须匹配 server-side active grant；任意非零 nonce 或 remote proxy 固定 nonce 不能绕过 writer gate。
 - anonymous localhost 模式下的“同一 session”由 dev session cookie 区分；不能把所有 localhost 请求视为同一个 dev-wide writer grant identity。
+- 如果请求同时携带有效 JWT 与 dev session cookie，HTTP/WS Source Control grant 必须共同绑定 JWT session，不能由 dev cookie 覆盖。
 - WS 断开、repo/branch 切换、repo scope recovery 或 sync guard 清理当前 runtime binding、session 失效或 writer 重新注册后，旧 grant 必须失效。
 - remote proxy delegated API 是独立 authority path；它不能被 Web Source Control UI 或普通主进程 HTTP mutation 复用。
 - `/api/delegated/sc/*` 还必须要求显式 delegated capability；普通已登录浏览器或 anonymous localhost dev session

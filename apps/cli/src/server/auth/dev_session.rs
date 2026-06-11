@@ -4,7 +4,6 @@
 //!
 //! Anonymous localhost dev-session cookie helpers.
 
-use axum::http::{HeaderMap, HeaderValue, header::SET_COOKIE};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 
 pub(crate) const DEV_SESSION_COOKIE_NAME: &str = "deve_dev_session";
@@ -48,15 +47,6 @@ pub(crate) fn resolve_from_cookie_header(
         signing_secret,
     )));
     DevSessionCookie { value, set_cookie }
-}
-
-pub(crate) fn append_set_cookie(headers: &mut HeaderMap, cookie: &DevSessionCookie) {
-    let Some(set_cookie) = cookie.set_cookie() else {
-        return;
-    };
-    if let Ok(value) = HeaderValue::from_str(set_cookie) {
-        headers.append(SET_COOKIE, value);
-    }
 }
 
 #[cfg(test)]

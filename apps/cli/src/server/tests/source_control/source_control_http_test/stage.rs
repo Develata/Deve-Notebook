@@ -339,6 +339,39 @@ async fn anonymous_localhost_source_control_write_grant_roundtrips_status_ws_and
     Ok(())
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_source_control_jwt_grant_is_not_shadowed_by_dev_session_cookie(
+) -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    let scope_nonce = 1;
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let (jwt_cookie, jwt_auth_session_id) = harness.jwt_cookie_header_and_auth_session()?;
+    harness.grant_browser_write_for_auth_session(jwt_auth_session_id, scope_nonce)?;
+    let dev_cookie = harness.dev_session_cookie_header_for("same-browser-dev-cookie");
+    let combined_cookie = format!("{jwt_cookie}; {dev_cookie}");
+
+    let response = reqwest::Client::builder()
+        .no_proxy()
+        .build()?
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .header(HTTP_COOKIE, combined_cookie)
+        .json(&serde_json::json!({
+            "scope_nonce": scope_nonce,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+
+    assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
+    assert!(repo.list_pending_fs_in_repo(&selector)?.is_empty());
+    assert_eq!(repo.list_staged_in_repo(&selector)?.len(), 1);
+    harness.shutdown().await;
+    Ok(())
+}
+
 async fn fetch_dev_session_cookie(harness: &ProxyHarness) -> anyhow::Result<String> {
     let response = reqwest::Client::builder()
         .no_proxy()

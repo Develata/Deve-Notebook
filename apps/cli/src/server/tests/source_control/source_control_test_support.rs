@@ -7,6 +7,7 @@ use deve_core::config::{GitBridgeMode, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
 use deve_core::security::AuthConfig;
+use deve_core::security::auth::jwt;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -24,6 +25,8 @@ pub(super) struct ProxyHarness {
     pub client: reqwest::Client,
     pub proxy: RemoteSourceControlApi,
     dev_session_secret: String,
+    auth_username: String,
+    auth_token_version: u32,
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
 }
@@ -60,6 +63,8 @@ impl ProxyHarness {
         let mut auth_config = AuthConfig::dev_default()?;
         auth_config.allow_anonymous_localhost = true;
         let dev_session_secret = auth_config.secret.clone();
+        let auth_username = auth_config.username.clone();
+        let auth_token_version = auth_config.token_version;
         let dev_session_cookie_header =
             auth::dev_session::cookie_header_for_test(&dev_session_secret, "source-control-harness");
         let auth_session_id = AuthSessionId::from_dev_session_cookie(
@@ -93,6 +98,8 @@ impl ProxyHarness {
                 dev_session_secret.clone(),
             )?,
             dev_session_secret,
+            auth_username,
+            auth_token_version,
             shutdown: Some(shutdown_tx),
             task,
         })
@@ -106,6 +113,14 @@ impl ProxyHarness {
     }
 
     pub(super) fn grant_browser_write(&self, scope_nonce: u64) -> anyhow::Result<()> {
+        self.grant_browser_write_for_auth_session(self.auth_session_id.clone(), scope_nonce)
+    }
+
+    pub(super) fn grant_browser_write_for_auth_session(
+        &self,
+        auth_session_id: AuthSessionId,
+        scope_nonce: u64,
+    ) -> anyhow::Result<()> {
         let repo_name = self.repo.local_repo_name();
         let repo_id = self
             .repo
@@ -113,7 +128,7 @@ impl ProxyHarness {
             .ok_or_else(|| anyhow::anyhow!("missing local repo info"))?
             .uuid;
         self.state.source_control_write_grants().grant(
-            self.auth_session_id.clone(),
+            auth_session_id,
             repo_id,
             PeerId::new("test-peer"),
             scope_nonce,
@@ -123,6 +138,18 @@ impl ProxyHarness {
 
     pub(super) fn dev_session_cookie_header_for(&self, nonce: &str) -> String {
         auth::dev_session::cookie_header_for_test(&self.dev_session_secret, nonce)
+    }
+
+    pub(super) fn jwt_cookie_header_and_auth_session(
+        &self,
+    ) -> anyhow::Result<(String, AuthSessionId)> {
+        let token = jwt::issue_token(
+            &self.dev_session_secret,
+            &self.auth_username,
+            self.auth_token_version,
+        )?;
+        let auth_session_id = AuthSessionId::from_cookie_token(&token);
+        Ok((format!("token={token}"), auth_session_id))
     }
 }
 

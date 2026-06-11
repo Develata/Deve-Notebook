@@ -166,6 +166,8 @@ WsConnecting
 - cookie value 必须包含 server 生成的不可预测 session nonce 与 server 可校验的 HMAC-SHA256 签名；`AuthSessionId`
   只能由已通过签名校验的 nonce 的不可逆 digest 派生，不得只由 username / token_version
   这类 dev-wide 固定值派生，也不得接受客户端自选的未签名 nonce。
+- 同一请求同时携带有效 JWT cookie 与 anonymous localhost dev session cookie 时，JWT session
+  必须优先成为 `AuthSessionId` 来源；dev session cookie 只作为无有效 JWT 时的本地开发 fallback。
 - `/api/auth/status` 作为公开安静 probe，可在 anonymous localhost 下返回 `Set-Cookie`
   以建立 dev session；无有效 JWT 时仍必须返回 `200`，不得制造未登录 401 噪音。
 - WebSocket Browser admission 在 anonymous localhost 下必须解析同一个 dev session cookie；

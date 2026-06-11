@@ -16,18 +16,16 @@ use axum::{
     Extension, Json,
     body::Body,
     extract::ConnectInfo,
-    http::{Request, StatusCode},
+    http::{HeaderValue, Request, StatusCode, header::SET_COOKIE},
     middleware::Next,
     response::{IntoResponse, Response},
 };
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, Once};
 
-use crate::server::auth::dev_session;
 use crate::server::rate_limit::RateLimiter;
-use crate::server::source_control_grants::AuthSessionId;
 use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, LoginResponse};
-use deve_core::security::auth::{config::AuthConfig, jwt};
+use deve_core::security::auth::config::AuthConfig;
 
 static AUTH_BYPASS_WARNING: Once = Once::new();
 
@@ -44,53 +42,28 @@ pub async fn auth_middleware(
     mut req: Request<Body>,
     next: Next,
 ) -> Response {
-    // localhost 免密策略
-    if config.allow_anonymous_localhost && is_localhost(&addr.ip()) {
-        warn_dev_auth_bypass_once();
-        let cookie_header = req.headers().get("cookie").and_then(|v| v.to_str().ok());
-        let dev_session = dev_session::resolve_from_cookie_header(cookie_header, &config.secret);
-        let anonymous_claims = deve_core::security::Claims {
-            sub: config.username.clone(),
-            iat: 0,
-            exp: i64::MAX,
-            ver: config.token_version,
-        };
-        req.extensions_mut()
-            .insert(AuthSessionId::from_dev_session_cookie(
-                &config.username,
-                config.token_version,
-                dev_session.value(),
-            ));
-        req.extensions_mut().insert(anonymous_claims);
-        let mut response = next.run(req).await;
-        dev_session::append_set_cookie(response.headers_mut(), &dev_session);
-        return response;
-    }
-
-    // 提取 Cookie
-    let token = req
-        .headers()
-        .get("cookie")
-        .and_then(|v| v.to_str().ok())
-        .and_then(super::cookie::extract_token_from_cookie_header);
-    let token = match token {
-        Some(t) => t,
-        None => return unauthorized(AuthErrorCode::TokenMissing),
+    let cookie_header = req.headers().get("cookie").and_then(|v| v.to_str().ok());
+    let session = match super::browser_session::resolve_required(
+        &config,
+        cookie_header,
+        is_localhost(&addr.ip()),
+    ) {
+        Ok(session) => session,
+        Err(code) => return unauthorized(code),
     };
 
-    // 验证 JWT
-    match jwt::validate_token(&config.secret, &token, config.token_version) {
-        Ok(claims) => {
-            req.extensions_mut()
-                .insert(AuthSessionId::from_cookie_token(&token));
-            req.extensions_mut().insert(claims);
-            next.run(req).await
-        }
-        Err(e) => {
-            tracing::debug!("JWT rejected: {:?}", e);
-            unauthorized(AuthErrorCode::TokenExpired)
-        }
+    if session.is_anonymous_localhost_dev() {
+        warn_dev_auth_bypass_once();
     }
+    req.extensions_mut().insert(session.auth_session_id.clone());
+    req.extensions_mut().insert(session.claims.clone());
+    let mut response = next.run(req).await;
+    if let Some(set_cookie) = session.set_cookie.as_deref()
+        && let Ok(value) = HeaderValue::from_str(set_cookie)
+    {
+        response.headers_mut().append(SET_COOKIE, value);
+    }
+    response
 }
 
 fn warn_dev_auth_bypass_once() {
