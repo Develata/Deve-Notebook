@@ -133,7 +133,11 @@ fn jitter_for_attempt(peer: &P2pPeerConfig, attempt: u64) -> Duration {
 }
 
 fn classify_p2p_error(err: &Error) -> &'static str {
-    let message = err.to_string().to_ascii_lowercase();
+    let message = err
+        .chain()
+        .map(|cause| cause.to_string().to_ascii_lowercase())
+        .collect::<Vec<_>>()
+        .join(": ");
     if message.contains("token env is missing") {
         "token_missing"
     } else if message.contains("self-loop") {
@@ -229,6 +233,15 @@ mod tests {
             )),
             "peer_id_mismatch"
         );
+    }
+
+    #[test]
+    fn p2p_connector_error_classifier_scans_error_chain() {
+        let err =
+            anyhow::anyhow!("HTTP 401 Unauthorized").context("Failed to connect P2P peer peer-b");
+
+        assert_eq!(classify_p2p_error(&err), "unauthorized");
+        assert!(is_terminal_p2p_error(classify_p2p_error(&err)));
     }
 
     #[test]
