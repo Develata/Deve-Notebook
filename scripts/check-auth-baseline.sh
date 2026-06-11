@@ -36,7 +36,9 @@ check_contains apps/cli/src/server/security.rs "identity_key_permissions_fail_cl
 check_contains crates/core/src/security/auth/config.rs "ERROR: Production mode requires AUTH_SECRET and AUTH_PASS"
 check_contains crates/core/src/security/auth/config.rs "AUTH_SECRET must be >= 32 bytes"
 check_contains crates/core/src/security/auth/config.rs "AUTH_PASS must be a valid Argon2 PHC hash"
+check_contains crates/core/src/security/auth/config.rs "AUTH_TOKEN_VERSION must be a valid u32 integer"
 check_contains crates/core/src/security/auth/config.rs "missing_secret_or_password_fails_closed_in_production"
+check_contains crates/core/src/security/auth/config.rs "invalid_auth_token_version_fails_closed"
 check_absent crates/core/src/security/auth/config.rs 'expect("checked above")'
 check_contains apps/cli/src/server/router.rs "WARNING: development-only auth defaults active"
 

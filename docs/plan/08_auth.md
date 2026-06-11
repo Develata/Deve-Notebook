@@ -183,6 +183,8 @@ WsConnecting
 
 - `token_version` 变更后，旧 token 立即失效
 - 密码修改必须触发该版本递增
+- `AUTH_TOKEN_VERSION` 如显式设置，必须解析为有效 `u32` 版本号；非法值必须在启动配置加载阶段 fail-closed，
+  不得静默回退到默认版本。
 
 ### 5.4 JWT Payload and Delivery
 

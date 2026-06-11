@@ -69,10 +69,7 @@ impl AuthConfig {
 
         let allow_anon = env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false);
 
-        let token_version = std::env::var("AUTH_TOKEN_VERSION")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(1);
+        let token_version = parse_token_version_env()?;
 
         Ok(Self {
             secret,
@@ -107,6 +104,16 @@ fn env_flag(name: &str, default: bool) -> bool {
             )
         })
         .unwrap_or(default)
+}
+
+fn parse_token_version_env() -> Result<u32> {
+    match std::env::var("AUTH_TOKEN_VERSION") {
+        Ok(value) => value
+            .parse::<u32>()
+            .map_err(|_| anyhow!("AUTH_TOKEN_VERSION must be a valid u32 integer: {}", value)),
+        Err(std::env::VarError::NotPresent) => Ok(1),
+        Err(err) => Err(anyhow!("Failed to read AUTH_TOKEN_VERSION: {}", err)),
+    }
 }
 
 #[cfg(test)]
@@ -164,6 +171,31 @@ mod tests {
             err.to_string()
                 .contains("Production mode requires AUTH_SECRET and AUTH_PASS")
         );
+        drop(env);
+    }
+
+    #[test]
+    fn invalid_auth_token_version_fails_closed() {
+        let _lock = ENV_LOCK.lock().expect("env test lock");
+        let env = EnvGuard::set(&[
+            ("DEVE_ENV", Some("production")),
+            (
+                "AUTH_SECRET",
+                Some("test_secret_key_at_least_32_bytes_long!"),
+            ),
+            (
+                "AUTH_PASS",
+                Some(
+                    "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$MLt1KZB+74lpz3bB5FzWzWgfz8Q1nXWJ7HfLqF6QL0M",
+                ),
+            ),
+            ("AUTH_USER", Some("alice")),
+            ("AUTH_ALLOW_ANONYMOUS_LOCALHOST", None),
+            ("AUTH_TOKEN_VERSION", Some("not-a-number")),
+        ]);
+
+        let err = AuthConfig::from_env().expect_err("invalid token version must fail closed");
+        assert!(err.to_string().contains("AUTH_TOKEN_VERSION"));
         drop(env);
     }
 

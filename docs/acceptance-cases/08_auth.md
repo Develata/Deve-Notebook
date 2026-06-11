@@ -103,9 +103,11 @@
   steps:
     - run: scripts/check-auth-baseline.sh
     - run: cargo test -p deve_core issue_token_preserves_subject -- --nocapture
+    - run: cargo test -p deve_core invalid_auth_token_version_fails_closed -- --nocapture
     - run: cargo test -p deve_core auth -- --nocapture
   assertions:
     - jwt_claims_eq: ["sub", "iat", "exp", "ver"]
+    - config_assert: invalid_AUTH_TOKEN_VERSION_fails_closed true
 
 - case_id: AUTH-010
   goal: WebSocket 握手鉴权。
