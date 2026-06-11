@@ -118,13 +118,32 @@ fn browser_writer_registration_rejects_degraded_local_projection() -> anyhow::Re
         .mark_projection_writeback_fault("default");
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = browser_session_without_sync_scope(&state, repo_id, 37)?;
+    let auth_session_id = AuthSessionId::for_test("degraded-writer-registration");
+    let writer = PeerId::new("browser");
+    session.bind_auth_session(auth_session_id.clone());
     session.set_sync_scope_nonce(37);
+    state.source_control_write_grants().grant(
+        auth_session_id.clone(),
+        repo_id,
+        writer.clone(),
+        37,
+    );
+    assert!(
+        state
+            .source_control_write_grants()
+            .authorize(&auth_session_id, repo_id, 37)
+            .is_ok()
+    );
 
-    handle_register_writer(&state, &ch, &mut session, repo_id, PeerId::new("browser"), 37);
+    handle_register_writer(&state, &ch, &mut session, repo_id, writer, 37);
 
     let (error, scope_nonce) = try_recv_protocol_error(&mut rx);
     assert_eq!(error.code, ServerErrorCode::StoragePersistFailed);
     assert_eq!(scope_nonce, Some(37));
     assert!(session.writer_identity.is_none());
+    state
+        .source_control_write_grants()
+        .authorize(&auth_session_id, repo_id, 37)
+        .expect_err("degraded writer registration must revoke source control write grant");
     Ok(())
 }

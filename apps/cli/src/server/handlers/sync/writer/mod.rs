@@ -40,10 +40,13 @@ pub(super) fn handle(
                     branch: session.active_branch.clone(),
                 });
             }
-            Err(error) => ch.send_protocol_error_with_scope_nonce(
-                error,
-                session.is_browser_session().then_some(scope_nonce),
-            ),
+            Err(error) => {
+                state.revoke_source_control_write_grant_for_session(session);
+                ch.send_protocol_error_with_scope_nonce(
+                    error,
+                    session.is_browser_session().then_some(scope_nonce),
+                );
+            }
         },
         Err(error) => {
             if let Some(auth_session_id) = session.auth_session_id() {

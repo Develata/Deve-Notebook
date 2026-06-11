@@ -146,6 +146,7 @@
     - run: cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture
     - run: cargo test -p deve_cli repo_scope_runtime_cleanup_revokes_source_control_write_grant -- --nocapture
     - run: cargo test -p deve_cli sync_guard_scope_cleanup_revokes_source_control_write_grant -- --nocapture
+    - run: cargo test -p deve_cli browser_writer_registration_rejects_degraded_local_projection -- --nocapture
     - run: cargo test -p deve_cli anonymous_localhost_source_control_grant_is_not_dev_wide -- --nocapture
     - run: cargo test -p deve_cli anonymous_localhost_source_control_write_grant_roundtrips_status_ws_and_http -- --nocapture
     - run: cargo test -p deve_cli delegated_source_control_requires_proxy_capability -- --nocapture
@@ -197,6 +198,7 @@
     - api_assert: source_control_scope_cleanup_revokes_write_grant true
     - api_assert: repo_scope_runtime_cleanup_revokes_source_control_write_grant true
     - api_assert: sync_guard_scope_cleanup_revokes_source_control_write_grant true
+    - api_assert: degraded_writer_registration_revokes_source_control_write_grant true
     - api_assert: anonymous_localhost_source_control_grant_is_session_cookie_bound true
     - api_assert: anonymous_localhost_source_control_grant_roundtrips_status_ws_and_http true
     - api_assert: delegated_remote_proxy_scope_nonce_not_accepted_by_main_http_mutation true
