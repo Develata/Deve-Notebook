@@ -213,6 +213,7 @@
     - run: cargo test -p deve_cli invalid_bearer_token_rejects_full_peer -- --nocapture
     - run: cargo test -p deve_cli p2p_mesh -- --nocapture
     - run: cargo test -p deve_cli p2p_node_role_summary -- --nocapture
+    - run: cargo test -p deve_cli p2p_status_marks_peers_disabled_when_mesh_disabled -- --nocapture
     - run: cargo test -p deve_cli p2p_status_duplicate_labels_do_not_share_state -- --nocapture
     - run: cargo test -p deve_cli p2p_status_retry_preserves_last_error_until_success -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
@@ -244,6 +245,7 @@
     - sync_hello_signature_and_repo_scope_still_required: true
     - writer_registration_not_granted_by_full_peer_admission: true
     - api_assert: p2p_node_role_summary_omits_token_material true
+    - api_assert: p2p_status_global_disabled_marks_peers_disabled true
     - api_assert: p2p_status_keyed_by_peer_identity_not_label true
     - api_assert: p2p_status_retry_preserves_last_error_until_success true
     - api_assert: full_peer_exchange_requires_sync_hello true

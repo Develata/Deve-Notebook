@@ -41,7 +41,7 @@ pub(crate) fn initialize(config: &P2pConfig) {
     let peers = config
         .peers
         .iter()
-        .map(summary_from_config)
+        .map(|peer| summary_from_config(config.enabled, peer))
         .collect::<Vec<_>>();
     replace(P2pStatusState {
         enabled: config.enabled,
@@ -79,14 +79,14 @@ pub(crate) fn record_failure(peer: &P2pPeerConfig, state: &str, error_code: &str
     });
 }
 
-fn summary_from_config(peer: &P2pPeerConfig) -> P2pPeerStatus {
+fn summary_from_config(mesh_enabled: bool, peer: &P2pPeerConfig) -> P2pPeerStatus {
     P2pPeerStatus {
         key: key_from_config(peer),
         summary: P2pPeerSummary {
             label: peer.label.clone(),
             peer_id: peer.peer_id.clone(),
             repo_id: peer.repo_id.clone(),
-            state: if peer.enabled {
+            state: if mesh_enabled && peer.enabled {
                 "configured".into()
             } else {
                 "disabled".into()
@@ -197,6 +197,29 @@ mod tests {
             Some("connect_failed")
         );
         assert!(!format!("{payload:?}").contains("SECRET_ENV"));
+    }
+
+    #[test]
+    fn p2p_status_marks_peers_disabled_when_mesh_disabled() {
+        let _guard = TEST_LOCK.lock().expect("p2p status test lock");
+        let peer = P2pPeerConfig {
+            label: "peer-b".into(),
+            peer_id: "peer-b".into(),
+            repo_id: "11111111-1111-1111-1111-111111111111".into(),
+            ws_url: "ws://127.0.0.1:3102/ws".into(),
+            auth_token_env: "AUTH_SECRET_ENV".into(),
+            enabled: true,
+        };
+        initialize(&P2pConfig {
+            enabled: false,
+            inbound_token_env: Some("SECRET_ENV".into()),
+            connect_interval_ms: 1000,
+            peers: vec![peer],
+        });
+
+        let payload = node_role::get_node_role().p2p;
+        assert!(!payload.enabled);
+        assert_eq!(payload.peers[0].state, "disabled");
     }
 
     #[test]
