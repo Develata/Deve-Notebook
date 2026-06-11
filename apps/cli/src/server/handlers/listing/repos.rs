@@ -23,7 +23,7 @@ pub async fn handle_list_repos(
     request_id: Option<String>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    clear_local_unbound_runtime_binding(session);
+    clear_local_unbound_runtime_binding(state, session);
     if precheck_remote_unbound_scope(state, ch, session, scope_nonce) {
         return;
     }

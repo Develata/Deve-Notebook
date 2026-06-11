@@ -3,6 +3,7 @@
 //!
 //! Shared Axum/WebSocket runtime state.
 
+use super::session::WsSession;
 use super::source_control_grants::SourceControlWriteGrants;
 use super::tree_state::RepoTreeRegistry;
 use deve_core::config::GitBridgeMode;
@@ -30,6 +31,13 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub(crate) fn revoke_source_control_write_grant_for_session(&self, session: &WsSession) {
+        if let Some(auth_session_id) = session.auth_session_id() {
+            self.source_control_write_grants()
+                .revoke_session(auth_session_id);
+        }
+    }
+
     #[cfg(not(test))]
     pub(crate) fn source_control_write_grants(&self) -> Arc<SourceControlWriteGrants> {
         self.source_control_write_grants.clone()

@@ -47,11 +47,11 @@ pub(super) fn precheck_remote_scope(
     }
     if let Err(error) = shadow_scope::ensure_remote_branch_available(state, &branch) {
         let error = if error.is_remote_branch_unavailable() {
+            state.revoke_source_control_write_grant_for_session(session);
             shadow_scope::clear_stale_remote_branch(session);
             ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail())
         } else {
-            session.clear_active_db();
-            session.clear_sync_binding();
+            clear_runtime_binding_and_revoke(state, session);
             ServerError::from(error)
         };
         ch.send_protocol_error_with_scope_and_switch_nonce(error, scope_nonce, switch_nonce);
@@ -60,8 +60,7 @@ pub(super) fn precheck_remote_scope(
     if !session.has_runtime_scope_binding() {
         return false;
     }
-    session.clear_active_db();
-    session.clear_sync_binding();
+    clear_runtime_binding_and_revoke(state, session);
     ch.send_protocol_error_with_scope_and_switch_nonce(
         ServerError::with_detail(
             ServerErrorCode::ScRepoContextInvalid,
@@ -71,6 +70,12 @@ pub(super) fn precheck_remote_scope(
         switch_nonce,
     );
     true
+}
+
+fn clear_runtime_binding_and_revoke(state: &Arc<AppState>, session: &mut WsSession) {
+    state.revoke_source_control_write_grant_for_session(session);
+    session.clear_active_db();
+    session.clear_sync_binding();
 }
 
 pub(super) fn load_docs(

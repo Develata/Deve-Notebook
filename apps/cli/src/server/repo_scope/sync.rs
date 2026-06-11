@@ -21,26 +21,30 @@ pub fn resolve_session_repo_and_sync(
 ) -> Result<ResolvedRepo> {
     let scope = match resolve_session_repo(state, session) {
         Ok(scope) => scope,
-        Err(err) => return handle_resolution_error(session, err),
+        Err(err) => return handle_resolution_error(state, session, err),
     };
-    sync_runtime_binding(session, &scope);
+    sync_runtime_binding(state, session, &scope);
     Ok(scope)
 }
 
-fn handle_resolution_error(session: &mut WsSession, err: anyhow::Error) -> Result<ResolvedRepo> {
+fn handle_resolution_error(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+    err: anyhow::Error,
+) -> Result<ResolvedRepo> {
     let err = normalize_unbound_remote_scope_error(session, err);
     let mapped = map_repo_scope_error_ref(&err);
     if session.active_branch.is_some()
         && RepoScopeFailure::from_anyhow(&err)
             .is_some_and(RepoScopeFailure::is_remote_branch_unavailable)
     {
+        state.revoke_source_control_write_grant_for_session(session);
         shadow_scope::clear_stale_remote_branch(session);
         return Err(err);
     }
     if should_clear_stale_scope(session, &mapped) {
+        clear_runtime_binding_and_revoke(state, session);
         session.clear_active_repo();
-        session.clear_active_db();
-        session.clear_sync_binding();
     }
     Err(err)
 }
@@ -68,10 +72,9 @@ fn should_clear_stale_scope(
         || (mapped.code == ServerErrorCode::SyncRepoUnbound && session.has_runtime_scope_binding())
 }
 
-fn sync_runtime_binding(session: &mut WsSession, scope: &ResolvedRepo) {
+fn sync_runtime_binding(state: &Arc<AppState>, session: &mut WsSession, scope: &ResolvedRepo) {
     if runtime_binding_mismatch(session, scope) {
-        session.clear_active_db();
-        session.clear_sync_binding();
+        clear_runtime_binding_and_revoke(state, session);
     }
     if session.active_repo.as_deref() != Some(scope.repo_name.as_str())
         || session.active_repo_id != Some(scope.repo_id)
@@ -93,4 +96,10 @@ fn runtime_binding_mismatch(session: &WsSession, scope: &ResolvedRepo) -> bool {
         .as_ref()
         .is_some_and(|writer| writer.repo_id != scope.repo_id);
     active_db_mismatch || bound_repo_mismatch || writer_mismatch
+}
+
+fn clear_runtime_binding_and_revoke(state: &Arc<AppState>, session: &mut WsSession) {
+    state.revoke_source_control_write_grant_for_session(session);
+    session.clear_active_db();
+    session.clear_sync_binding();
 }

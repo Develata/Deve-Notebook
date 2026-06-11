@@ -453,8 +453,8 @@ authenticated session 内完成 `SyncHello` 与 `RegisterWriter` 后，server �
 - 请求 `scope_nonce` 与 active grant 完全匹配；
 - grant 仍属于当前 browser session 的 active writer grant，且未过期。
 
-WS repo switch、branch switch、disconnect、session invalid、writer unregister、重新绑定 writer，或 switch
-失败导致当前 scope runtime binding 被清理时，server 必须撤销或替换对应 grant。
+WS repo switch、branch switch、disconnect、session invalid、writer unregister、重新绑定 writer，或任何
+repo/scope recovery 失败路径导致当前 scope runtime binding 被清理时，server 必须撤销或替换对应 grant。
 remote proxy delegated API 不得复用主进程 browser HTTP mutation 语义；它必须走显式 delegated path /
 `SourceControlWriteAuthority::DelegatedRemoteProxy` 等等价枚举。`REMOTE_PROXY_SCOPE_NONCE = 1`
 只能在 delegated API 内解释，普通主进程 HTTP mutation 不得因为 scope nonce 为 1 而接受写入。

@@ -12,14 +12,13 @@ use anyhow::anyhow;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::sync::Arc;
 
-pub(super) fn clear_local_unbound_runtime_binding(session: &mut WsSession) {
+pub(super) fn clear_local_unbound_runtime_binding(state: &Arc<AppState>, session: &mut WsSession) {
     if session.active_branch.is_none()
         && session.active_repo.is_none()
         && session.active_repo_id.is_none()
         && session.has_runtime_scope_binding()
     {
-        session.clear_active_db();
-        session.clear_sync_binding();
+        clear_runtime_binding_and_revoke(state, session);
     }
 }
 
@@ -37,19 +36,18 @@ pub(super) fn precheck_remote_unbound_scope(
     }
     if let Err(error) = shadow_scope::ensure_remote_branch_available(state, &branch) {
         let error = if error.is_remote_branch_unavailable() {
+            state.revoke_source_control_write_grant_for_session(session);
             shadow_scope::clear_stale_remote_branch(session);
             ServerError::with_detail(ServerErrorCode::ScRepoContextInvalid, error.detail())
         } else {
-            session.clear_active_db();
-            session.clear_sync_binding();
+            clear_runtime_binding_and_revoke(state, session);
             ServerError::from(error)
         };
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return true;
     }
     if session.has_runtime_scope_binding() {
-        session.clear_active_db();
-        session.clear_sync_binding();
+        clear_runtime_binding_and_revoke(state, session);
         ch.send_protocol_error_with_scope_nonce(
             ServerError::with_detail(
                 ServerErrorCode::ScRepoContextInvalid,
@@ -60,6 +58,12 @@ pub(super) fn precheck_remote_unbound_scope(
         return true;
     }
     false
+}
+
+fn clear_runtime_binding_and_revoke(state: &Arc<AppState>, session: &mut WsSession) {
+    state.revoke_source_control_write_grant_for_session(session);
+    session.clear_active_db();
+    session.clear_sync_binding();
 }
 
 pub(super) fn send_listing_error(

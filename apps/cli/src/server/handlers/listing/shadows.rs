@@ -25,7 +25,7 @@ pub async fn handle_list_shadows(
 ) {
     let scope_nonce = browser_scope_nonce(session.as_deref());
     if let Some(session) = session.as_deref_mut() {
-        clear_local_unbound_runtime_binding(session);
+        clear_local_unbound_runtime_binding(state, session);
         if precheck_remote_unbound_scope(state, ch, session, scope_nonce) {
             return;
         }
