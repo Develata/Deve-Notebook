@@ -143,6 +143,7 @@
     - run: cargo test -p deve_cli http_source_control_mutations_require_browser_write_grant -- --nocapture
     - run: cargo test -p deve_cli http_source_control_write_grant_revoked_on_ws_disconnect -- --nocapture
     - run: cargo test -p deve_cli switch_branch_failure_revokes_source_control_write_grant -- --nocapture
+    - run: cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture
     - run: cargo test -p deve_cli anonymous_localhost_source_control_grant_is_not_dev_wide -- --nocapture
     - run: cargo test -p deve_cli delegated_source_control_requires_proxy_capability -- --nocapture
     - run: cargo test -p deve_core plugin_sc_commit_respects_git_bridge_off -- --nocapture
@@ -190,6 +191,7 @@
     - api_assert: http_source_control_commit_respects_git_bridge_off true
     - api_assert: browser_http_source_control_requires_session_bound_grant true
     - api_assert: source_control_write_grant_revoked_on_failed_scope_cleanup true
+    - api_assert: source_control_scope_cleanup_revokes_write_grant true
     - api_assert: anonymous_localhost_source_control_grant_is_session_cookie_bound true
     - api_assert: delegated_remote_proxy_scope_nonce_not_accepted_by_main_http_mutation true
     - api_assert: delegated_source_control_requires_proxy_capability true

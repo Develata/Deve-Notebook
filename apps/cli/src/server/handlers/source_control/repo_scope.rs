@@ -21,34 +21,31 @@ pub fn resolve_current_repo_scope(
         {
             if shadow_scope::should_clear_missing_remote_branch(&error) {
                 shadow_scope::clear_stale_remote_branch(session);
+                revoke_source_control_write_grant(state, session);
                 return Err(ServerError {
                     code: ServerErrorCode::ScRepoContextInvalid,
                     detail: error.detail,
                 });
             } else {
-                session.clear_active_db();
-                session.clear_sync_binding();
+                clear_runtime_binding_and_revoke(state, session);
             }
             return Err(error);
         }
         if let Some(branch) = session.active_branch.clone()
             && session.has_runtime_scope_binding()
         {
-            session.clear_active_db();
-            session.clear_sync_binding();
+            clear_runtime_binding_and_revoke(state, session);
             return Err(ServerError::with_detail(
                 ServerErrorCode::ScStaleScope,
                 stale_unbound_remote_scope_detail(&branch),
             ));
         }
         if session.active_branch.is_some() {
-            session.clear_active_db();
-            session.clear_sync_binding();
+            clear_runtime_binding_and_revoke(state, session);
             return Err(ServerError::new(ServerErrorCode::ScRepoNotSelected));
         }
         if session.has_runtime_scope_binding() {
-            session.clear_active_db();
-            session.clear_sync_binding();
+            clear_runtime_binding_and_revoke(state, session);
         }
         let scope =
             bootstrap_local_repo(state, session).map_err(super::errors::map_repo_scope_error)?;
@@ -79,4 +76,18 @@ pub fn resolve_current_writable_local_repo(
     let scope = resolve_current_local_repo(state, session)?;
     ensure_resolved_local_repo_writable(state, &scope)?;
     Ok(scope)
+}
+
+fn clear_runtime_binding_and_revoke(state: &Arc<AppState>, session: &mut WsSession) {
+    session.clear_active_db();
+    session.clear_sync_binding();
+    revoke_source_control_write_grant(state, session);
+}
+
+fn revoke_source_control_write_grant(state: &Arc<AppState>, session: &WsSession) {
+    if let Some(auth_session_id) = session.auth_session_id() {
+        state
+            .source_control_write_grants()
+            .revoke_session(auth_session_id);
+    }
 }
