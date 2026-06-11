@@ -607,6 +607,7 @@ fn allowed_export_sources_for_hello(
     repo_id: RepoId,
     remote_vector: &VersionVector,
 ) -> Result<Vec<PeerId>> {
+    let local_peer = state.identity_key.peer_id();
     state
         .sync_engine
         .with_strict_engine(repo_id, |engine| {
@@ -614,7 +615,7 @@ fn allowed_export_sources_for_hello(
                 sync_proto::compute_diff_requests(engine.version_vector(), remote_vector, repo_id);
             let mut sources = Vec::new();
             for request in to_send {
-                if !sources.contains(&request.peer_id) {
+                if request.peer_id == local_peer && !sources.contains(&request.peer_id) {
                     sources.push(request.peer_id);
                 }
             }
@@ -644,8 +645,8 @@ fn signed_sync_hello(
 #[cfg(test)]
 mod tests {
     use super::{
-        InboundSnapshotValidation, MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message,
-        signed_sync_hello, validate_inbound_snapshot,
+        InboundSnapshotValidation, MAX_EXCHANGE_FRAMES, allowed_export_sources_for_hello,
+        drive_sync_exchange, handle_server_message, signed_sync_hello, validate_inbound_snapshot,
     };
     use crate::server::{AppState, tree_state::RepoTreeRegistry};
     use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
@@ -865,6 +866,30 @@ mod tests {
         Ok(())
     }
 
+    fn append_remote_shadow_op(
+        state: &Arc<AppState>,
+        repo_id: uuid::Uuid,
+        remote_peer: &PeerId,
+    ) -> anyhow::Result<()> {
+        let doc_id = DocId::new();
+        let entry = LedgerEntry::new_content(
+            doc_id,
+            Op::Insert {
+                pos: 0,
+                content: "remote-shadow".into(),
+            },
+            1,
+            remote_peer.clone(),
+            1,
+            None,
+            None,
+        );
+        state
+            .repo
+            .append_remote_ops(remote_peer, &repo_id, &[entry])?;
+        Ok(())
+    }
+
     fn authenticated_stats(peer_id: PeerId) -> super::ExchangeStats {
         super::ExchangeStats {
             saw_hello: true,
@@ -913,6 +938,31 @@ mod tests {
             }
             other => panic!("expected SyncHello, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn p2p_fullpeer_offer_set_excludes_third_party_shadow_sources() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let local_peer = identity.peer_id();
+        let (_dir, state) = test_state_with_dir(identity)?;
+        let repo_id = state
+            .repo
+            .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
+            .expect("repo info")
+            .uuid;
+        let third_party = PeerId::new("peer-a");
+
+        append_local_op(&state, repo_id)?;
+        append_remote_shadow_op(&state, repo_id, &third_party)?;
+
+        let offered = allowed_export_sources_for_hello(&state, repo_id, &VersionVector::new())?;
+
+        assert!(offered.contains(&local_peer));
+        assert!(
+            !offered.contains(&third_party),
+            "FullPeer v1 must not advertise shadow sources without retained origin proof"
+        );
+        Ok(())
     }
 
     #[tokio::test]
