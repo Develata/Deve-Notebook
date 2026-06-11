@@ -57,10 +57,23 @@ impl Hash for AuthSessionId {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum SourceControlGrantBranch {
+    Local,
+    Remote(PeerId),
+}
+
+impl SourceControlGrantBranch {
+    pub(crate) fn from_active_branch(branch: Option<&PeerId>) -> Self {
+        branch.cloned().map(Self::Remote).unwrap_or(Self::Local)
+    }
+}
+
 #[derive(Clone, Debug)]
 struct SourceControlWriteGrant {
     auth_session_id: AuthSessionId,
     repo_id: RepoId,
+    branch: SourceControlGrantBranch,
     writer_peer_id: PeerId,
     scope_nonce: u64,
     expires_at: Instant,
@@ -94,6 +107,7 @@ impl SourceControlWriteGrants {
         &self,
         auth_session_id: AuthSessionId,
         repo_id: RepoId,
+        branch: SourceControlGrantBranch,
         writer_peer_id: PeerId,
         scope_nonce: u64,
     ) {
@@ -111,6 +125,7 @@ impl SourceControlWriteGrants {
             SourceControlWriteGrant {
                 auth_session_id,
                 repo_id,
+                branch,
                 writer_peer_id,
                 scope_nonce,
                 expires_at: Instant::now() + self.ttl,
@@ -118,10 +133,25 @@ impl SourceControlWriteGrants {
         );
     }
 
-    pub(crate) fn authorize(
+    pub(crate) fn authorize_browser_local(
         &self,
         auth_session_id: &AuthSessionId,
         repo_id: RepoId,
+        scope_nonce: u64,
+    ) -> Result<PeerId, ServerError> {
+        self.authorize_for_branch(
+            auth_session_id,
+            repo_id,
+            SourceControlGrantBranch::Local,
+            scope_nonce,
+        )
+    }
+
+    fn authorize_for_branch(
+        &self,
+        auth_session_id: &AuthSessionId,
+        repo_id: RepoId,
+        branch: SourceControlGrantBranch,
         scope_nonce: u64,
     ) -> Result<PeerId, ServerError> {
         let Ok(mut grants) = self.grants.lock() else {
@@ -137,6 +167,7 @@ impl SourceControlWriteGrants {
         };
         if grant.auth_session_id != *auth_session_id
             || grant.repo_id != repo_id
+            || grant.branch != branch
             || grant.scope_nonce != scope_nonce
         {
             return Err(stale_grant("source control write grant mismatch"));
@@ -167,7 +198,7 @@ fn stale_grant(detail: impl Into<String>) -> ServerError {
 
 #[cfg(test)]
 mod tests {
-    use super::{AuthSessionId, SourceControlWriteGrants};
+    use super::{AuthSessionId, SourceControlGrantBranch, SourceControlWriteGrants};
     use deve_core::models::PeerId;
     use deve_core::protocol::ServerErrorCode;
     use std::time::Duration;
@@ -178,9 +209,18 @@ mod tests {
         let auth = AuthSessionId::for_test("session");
         let repo_id = uuid::Uuid::new_v4();
         let writer = PeerId::new("writer");
-        grants.grant(auth.clone(), repo_id, writer.clone(), 7);
+        grants.grant(
+            auth.clone(),
+            repo_id,
+            SourceControlGrantBranch::Local,
+            writer.clone(),
+            7,
+        );
 
-        assert_eq!(grants.authorize(&auth, repo_id, 7).unwrap(), writer);
+        assert_eq!(
+            grants.authorize_browser_local(&auth, repo_id, 7).unwrap(),
+            writer
+        );
     }
 
     #[test]
@@ -188,13 +228,43 @@ mod tests {
         let grants = SourceControlWriteGrants::new();
         let auth = AuthSessionId::for_test("session");
         let repo_id = uuid::Uuid::new_v4();
-        grants.grant(auth.clone(), repo_id, PeerId::new("writer"), 7);
+        grants.grant(
+            auth.clone(),
+            repo_id,
+            SourceControlGrantBranch::Local,
+            PeerId::new("writer"),
+            7,
+        );
 
-        let err = grants.authorize(&auth, repo_id, 8).unwrap_err();
+        let err = grants
+            .authorize_browser_local(&auth, repo_id, 8)
+            .unwrap_err();
         assert_eq!(err.code, ServerErrorCode::ScStaleScope);
 
         let other = AuthSessionId::for_test("other");
-        let err = grants.authorize(&other, repo_id, 7).unwrap_err();
+        let err = grants
+            .authorize_browser_local(&other, repo_id, 7)
+            .unwrap_err();
+        assert_eq!(err.code, ServerErrorCode::ScStaleScope);
+    }
+
+    #[test]
+    fn grant_rejects_remote_branch_for_browser_local_authority() {
+        let grants = SourceControlWriteGrants::new();
+        let auth = AuthSessionId::for_test("session");
+        let repo_id = uuid::Uuid::new_v4();
+        grants.grant(
+            auth.clone(),
+            repo_id,
+            SourceControlGrantBranch::Remote(PeerId::new("remote-peer")),
+            PeerId::new("writer"),
+            7,
+        );
+
+        let err = grants
+            .authorize_browser_local(&auth, repo_id, 7)
+            .unwrap_err();
+
         assert_eq!(err.code, ServerErrorCode::ScStaleScope);
     }
 
@@ -204,12 +274,30 @@ mod tests {
         let auth = AuthSessionId::for_test("session");
         let first_repo = uuid::Uuid::new_v4();
         let second_repo = uuid::Uuid::new_v4();
-        grants.grant(auth.clone(), first_repo, PeerId::new("first"), 1);
-        grants.grant(auth.clone(), second_repo, PeerId::new("second"), 2);
+        grants.grant(
+            auth.clone(),
+            first_repo,
+            SourceControlGrantBranch::Local,
+            PeerId::new("first"),
+            1,
+        );
+        grants.grant(
+            auth.clone(),
+            second_repo,
+            SourceControlGrantBranch::Local,
+            PeerId::new("second"),
+            2,
+        );
 
-        assert!(grants.authorize(&auth, first_repo, 1).is_err());
+        assert!(
+            grants
+                .authorize_browser_local(&auth, first_repo, 1)
+                .is_err()
+        );
         assert_eq!(
-            grants.authorize(&auth, second_repo, 2).unwrap(),
+            grants
+                .authorize_browser_local(&auth, second_repo, 2)
+                .unwrap(),
             PeerId::new("second")
         );
     }
@@ -219,12 +307,24 @@ mod tests {
         let grants = SourceControlWriteGrants::with_ttl(Duration::from_millis(0));
         let auth = AuthSessionId::for_test("session");
         let repo_id = uuid::Uuid::new_v4();
-        grants.grant(auth.clone(), repo_id, PeerId::new("writer"), 7);
-        assert!(grants.authorize(&auth, repo_id, 7).is_err());
+        grants.grant(
+            auth.clone(),
+            repo_id,
+            SourceControlGrantBranch::Local,
+            PeerId::new("writer"),
+            7,
+        );
+        assert!(grants.authorize_browser_local(&auth, repo_id, 7).is_err());
 
         let grants = SourceControlWriteGrants::new();
-        grants.grant(auth.clone(), repo_id, PeerId::new("writer"), 7);
+        grants.grant(
+            auth.clone(),
+            repo_id,
+            SourceControlGrantBranch::Local,
+            PeerId::new("writer"),
+            7,
+        );
         grants.revoke_session(&auth);
-        assert!(grants.authorize(&auth, repo_id, 7).is_err());
+        assert!(grants.authorize_browser_local(&auth, repo_id, 7).is_err());
     }
 }

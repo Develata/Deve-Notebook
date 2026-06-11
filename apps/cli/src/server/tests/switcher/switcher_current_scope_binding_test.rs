@@ -2,7 +2,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::handlers::switcher::handle_switch_branch;
-use super::source_control_grants::AuthSessionId;
+use super::source_control_grants::{AuthSessionId, SourceControlGrantBranch};
 use super::switcher_test_support::{app_state, browser_session, unicast_channel};
 use super::{AppState, session::WsSession};
 use deve_core::ledger::RepoManager;
@@ -86,13 +86,14 @@ async fn switch_branch_failure_revokes_source_control_write_grant() -> anyhow::R
     state.source_control_write_grants().grant(
         auth_session_id.clone(),
         repo_id,
+        SourceControlGrantBranch::Local,
         PeerId::new("writer"),
         80,
     );
     assert!(
         state
             .source_control_write_grants()
-            .authorize(&auth_session_id, repo_id, 80)
+            .authorize_browser_local(&auth_session_id, repo_id, 80)
             .is_ok()
     );
 
@@ -119,7 +120,7 @@ async fn switch_branch_failure_revokes_source_control_write_grant() -> anyhow::R
     assert!(session.writer_identity.is_none());
     let error = state
         .source_control_write_grants()
-        .authorize(&auth_session_id, repo_id, 80)
+        .authorize_browser_local(&auth_session_id, repo_id, 80)
         .expect_err("grant must be revoked with failed scope cleanup");
     assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     Ok(())

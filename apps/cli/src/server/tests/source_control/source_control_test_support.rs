@@ -1,6 +1,7 @@
 use super::source_control_proxy::RemoteSourceControlApi;
 use super::{
     AppState, auth, router, security, source_control_grants::AuthSessionId,
+    source_control_grants::SourceControlGrantBranch,
     tree_state::RepoTreeRegistry,
 };
 use deve_core::config::{GitBridgeMode, SyncMode};
@@ -130,6 +131,7 @@ impl ProxyHarness {
         self.state.source_control_write_grants().grant(
             auth_session_id,
             repo_id,
+            SourceControlGrantBranch::Local,
             PeerId::new("test-peer"),
             scope_nonce,
         );

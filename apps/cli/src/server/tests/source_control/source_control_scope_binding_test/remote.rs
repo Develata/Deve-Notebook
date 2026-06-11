@@ -4,7 +4,7 @@
 use super::support::build_state;
 use crate::server::{
     channel::DualChannel, handlers::source_control::handle_get_changes, session::WsSession,
-    source_control_grants::AuthSessionId,
+    source_control_grants::{AuthSessionId, SourceControlGrantBranch},
 };
 use deve_core::ledger::RepoInfo;
 use deve_core::models::PeerId;
@@ -91,13 +91,14 @@ async fn source_control_scope_cleanup_revokes_write_grant() -> anyhow::Result<()
     state.source_control_write_grants().grant(
         auth_session_id.clone(),
         repo_id,
+        SourceControlGrantBranch::Local,
         PeerId::new("writer"),
         13,
     );
     assert!(
         state
             .source_control_write_grants()
-            .authorize(&auth_session_id, repo_id, 13)
+            .authorize_browser_local(&auth_session_id, repo_id, 13)
             .is_ok()
     );
 
@@ -118,7 +119,7 @@ async fn source_control_scope_cleanup_revokes_write_grant() -> anyhow::Result<()
     assert!(session.bound_repo_id.is_none());
     let error = state
         .source_control_write_grants()
-        .authorize(&auth_session_id, repo_id, 13)
+        .authorize_browser_local(&auth_session_id, repo_id, 13)
         .expect_err("grant must be revoked when source control clears scope binding");
     assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     Ok(())

@@ -6,8 +6,10 @@ use super::support::{
     write_workspace_file,
 };
 use super::super::sync_hello_test_support::signed_hello_for_scope;
+use super::super::source_control_grants::SourceControlGrantBranch;
 use super::super::ws_protocol_acceptance_support::{recv_server_message, send_client_message};
 use deve_core::ledger::traits::RepoSelector;
+use deve_core::models::PeerId;
 use deve_core::protocol::{ClientMessage, ScPathTarget, ServerMessage};
 use deve_core::security::IdentityKeyPair;
 use deve_core::source_control::{ChangeStatus, SourceControlApi};
@@ -196,6 +198,47 @@ async fn delegated_remote_proxy_scope_nonce_is_not_main_http_grant() -> anyhow::
         .stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
     assert!(repo.list_pending_fs_in_repo(&selector)?.is_empty());
     assert_eq!(repo.list_staged_in_repo(&selector)?.len(), 1);
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn http_source_control_write_grant_requires_local_branch() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+    let repo_id = repo
+        .get_repo_info_for(None, Some(repo.local_repo_name()))?
+        .ok_or_else(|| anyhow::anyhow!("missing local repo info"))?
+        .uuid;
+    harness.state.source_control_write_grants().grant(
+        harness.auth_session_id.clone(),
+        repo_id,
+        SourceControlGrantBranch::Remote(PeerId::new("remote-peer")),
+        PeerId::new("test-peer"),
+        1,
+    );
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(
+        body.code,
+        deve_core::protocol::ServerErrorCode::ScStaleScope
+    );
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
     harness.shutdown().await;
     Ok(())
 }

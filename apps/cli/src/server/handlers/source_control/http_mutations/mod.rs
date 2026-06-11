@@ -269,11 +269,9 @@ pub(super) fn authorize_http_write(
     let writable_repo = resolve_http_writable_repo(state, selector)?;
     match authority {
         SourceControlWriteAuthority::BrowserSessionGrant(auth_session_id) => {
-            state.source_control_write_grants().authorize(
-                auth_session_id,
-                writable_repo.repo_id,
-                scope_nonce,
-            )?;
+            state
+                .source_control_write_grants()
+                .authorize_browser_local(auth_session_id, writable_repo.repo_id, scope_nonce)?;
         }
         SourceControlWriteAuthority::DelegatedRemoteProxy => {}
     }

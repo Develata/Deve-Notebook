@@ -123,6 +123,7 @@ check_contains apps/cli/src/server/auth/delegated_source_control.rs "delegated s
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli switch_branch_failure_revokes_source_control_write_grant -- --nocapture"
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "delegated_source_control_requires_proxy_capability"
+check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "http_source_control_write_grant_requires_local_branch"
 check_contains apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs "source_control_scope_cleanup_revokes_write_grant"
 check_contains apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs "switch_branch_failure_revokes_source_control_write_grant"
 check_absent apps/cli/src/server/source_control_proxy/client.rs 'expect("build source control HTTP client")'

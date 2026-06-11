@@ -5,7 +5,7 @@
 use super::handlers::sync::{
     handle_register_writer, handle_sync_request, handle_sync_snapshot_request,
 };
-use super::source_control_grants::AuthSessionId;
+use super::source_control_grants::{AuthSessionId, SourceControlGrantBranch};
 use super::sync_scope_cleanup_test_support::{
     assert_runtime_binding_cleared, browser_session_without_sync_scope, build_state,
     recv_protocol_error, try_recv_protocol_error, unicast_channel,
@@ -55,13 +55,14 @@ async fn sync_guard_scope_cleanup_revokes_source_control_write_grant() -> anyhow
     state.source_control_write_grants().grant(
         auth_session_id.clone(),
         repo_id,
+        SourceControlGrantBranch::Local,
         PeerId::new("browser"),
         19,
     );
     assert!(
         state
             .source_control_write_grants()
-            .authorize(&auth_session_id, repo_id, 19)
+            .authorize_browser_local(&auth_session_id, repo_id, 19)
             .is_ok()
     );
 
@@ -73,7 +74,7 @@ async fn sync_guard_scope_cleanup_revokes_source_control_write_grant() -> anyhow
     assert_runtime_binding_cleared(&session);
     state
         .source_control_write_grants()
-        .authorize(&auth_session_id, repo_id, 19)
+        .authorize_browser_local(&auth_session_id, repo_id, 19)
         .expect_err("sync guard cleanup must revoke stale source control write grant");
     Ok(())
 }
@@ -125,13 +126,14 @@ fn browser_writer_registration_rejects_degraded_local_projection() -> anyhow::Re
     state.source_control_write_grants().grant(
         auth_session_id.clone(),
         repo_id,
+        SourceControlGrantBranch::Local,
         writer.clone(),
         37,
     );
     assert!(
         state
             .source_control_write_grants()
-            .authorize(&auth_session_id, repo_id, 37)
+            .authorize_browser_local(&auth_session_id, repo_id, 37)
             .is_ok()
     );
 
@@ -143,7 +145,7 @@ fn browser_writer_registration_rejects_degraded_local_projection() -> anyhow::Re
     assert!(session.writer_identity.is_none());
     state
         .source_control_write_grants()
-        .authorize(&auth_session_id, repo_id, 37)
+        .authorize_browser_local(&auth_session_id, repo_id, 37)
         .expect_err("degraded writer registration must revoke source control write grant");
     Ok(())
 }

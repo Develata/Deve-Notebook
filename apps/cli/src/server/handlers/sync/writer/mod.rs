@@ -7,6 +7,7 @@ use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::ensure_local_repo_projection_writable;
 use crate::server::session::WsSession;
+use crate::server::source_control_grants::SourceControlGrantBranch;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
 use std::sync::Arc;
@@ -29,6 +30,9 @@ pub(super) fn handle(
                     state.source_control_write_grants().grant(
                         auth_session_id,
                         repo_id,
+                        SourceControlGrantBranch::from_active_branch(
+                            session.active_branch.as_ref(),
+                        ),
                         peer_id.clone(),
                         scope_nonce,
                     );

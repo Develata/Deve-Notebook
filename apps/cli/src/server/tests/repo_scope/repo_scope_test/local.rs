@@ -4,7 +4,7 @@
 use super::support::build_state;
 use crate::server::{
     repo_scope::{bootstrap_local_repo, resolve_session_repo, resolve_session_repo_and_sync},
-    source_control_grants::AuthSessionId,
+    source_control_grants::{AuthSessionId, SourceControlGrantBranch},
     session::WsSession,
 };
 use deve_core::models::PeerId;
@@ -82,13 +82,14 @@ fn repo_scope_runtime_cleanup_revokes_source_control_write_grant() -> anyhow::Re
     state.source_control_write_grants().grant(
         auth_session_id.clone(),
         default_id,
+        SourceControlGrantBranch::Local,
         PeerId::new("stale-writer"),
         17,
     );
     assert!(
         state
             .source_control_write_grants()
-            .authorize(&auth_session_id, default_id, 17)
+            .authorize_browser_local(&auth_session_id, default_id, 17)
             .is_ok()
     );
 
@@ -98,7 +99,7 @@ fn repo_scope_runtime_cleanup_revokes_source_control_write_grant() -> anyhow::Re
 
     state
         .source_control_write_grants()
-        .authorize(&auth_session_id, default_id, 17)
+        .authorize_browser_local(&auth_session_id, default_id, 17)
         .expect_err("repo scope cleanup must revoke stale source control write grant");
     Ok(())
 }
