@@ -76,14 +76,24 @@ fn build_removal_cookie() -> [(String, String); 1] {
 }
 
 fn https_enabled() -> bool {
-    std::env::var("HTTPS_ENABLED")
-        .map(|value| {
-            matches!(
-                value.trim().to_ascii_lowercase().as_str(),
-                "1" | "true" | "yes" | "on"
-            )
-        })
-        .unwrap_or(true)
+    match std::env::var("HTTPS_ENABLED") {
+        Ok(value) => match value.trim().to_ascii_lowercase().as_str() {
+            "1" | "true" | "yes" | "on" => true,
+            "0" | "false" | "no" | "off" => false,
+            _ => {
+                tracing::warn!(
+                    "Invalid HTTPS_ENABLED value '{}'; keeping Secure cookies enabled",
+                    value
+                );
+                true
+            }
+        },
+        Err(std::env::VarError::NotPresent) => true,
+        Err(err) => {
+            tracing::warn!("Failed to read HTTPS_ENABLED: {err}; keeping Secure cookies enabled");
+            true
+        }
+    }
 }
 
 pub(super) fn build_empty_cookie() -> [(String, String); 1] {
@@ -157,10 +167,15 @@ fn auth_status_from_cookie_header(cookie_header: Option<&str>, config: &AuthConf
 
 #[cfg(test)]
 mod tests {
-    use super::{UNKNOWN_USER_AGENT, auth_status_from_cookie_header, login_audit_event};
+    use super::{
+        UNKNOWN_USER_AGENT, auth_status_from_cookie_header, https_enabled, login_audit_event,
+    };
     use deve_core::security::AuthConfig;
     use deve_core::security::auth::jwt;
     use std::net::{IpAddr, Ipv4Addr};
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn status_is_false_without_token() {
@@ -184,6 +199,53 @@ mod tests {
             jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
         let cookie = format!("token_csrf={token}");
         assert!(!auth_status_from_cookie_header(Some(&cookie), &config));
+    }
+
+    #[test]
+    fn https_enabled_invalid_value_fails_secure() {
+        let _guard = ENV_LOCK.lock().expect("env lock");
+        let _env = EnvGuard::set("HTTPS_ENABLED", Some("maybe"));
+
+        assert!(https_enabled());
+    }
+
+    #[test]
+    fn https_enabled_explicit_false_disables_secure_cookie() {
+        let _guard = ENV_LOCK.lock().expect("env lock");
+        let _env = EnvGuard::set("HTTPS_ENABLED", Some("false"));
+
+        assert!(!https_enabled());
+    }
+
+    struct EnvGuard {
+        key: &'static str,
+        old: Option<String>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: Option<&str>) -> Self {
+            let old = std::env::var(key).ok();
+            // SAFETY: tests serialize environment mutation through ENV_LOCK.
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+            Self { key, old }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            // SAFETY: EnvGuard restores only the key it changed while ENV_LOCK is held.
+            unsafe {
+                match &self.old {
+                    Some(value) => std::env::set_var(self.key, value),
+                    None => std::env::remove_var(self.key),
+                }
+            }
+        }
     }
 
     #[test]

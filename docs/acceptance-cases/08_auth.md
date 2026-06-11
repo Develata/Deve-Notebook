@@ -33,12 +33,14 @@
   steps:
     - run: curl -i -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"secret\"}"
     - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_cli https_enabled_invalid_value_fails_secure -- --nocapture
     - run: cargo test -p deve_cli auth -- --nocapture
   assertions:
     - header_contains: "Set-Cookie: token="
     - header_contains: "Secure"
     - header_contains: "SameSite=Strict"
     - header_contains: "HttpOnly"
+    - config_assert: invalid_HTTPS_ENABLED_fails_secure true
 
 - case_id: AUTH-004
   goal: CORS 环境驱动配置 (H1 收口)。

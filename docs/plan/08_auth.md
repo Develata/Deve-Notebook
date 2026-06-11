@@ -153,7 +153,8 @@ WsConnecting
 - `HttpOnly`
 - `SameSite=Strict`
 - `Path=/`
-- `Secure` 由 `HTTPS_ENABLED` 控制，但生产默认必须开启
+- `Secure` 由 `HTTPS_ENABLED` 控制，但生产默认必须开启；只有显式 `0` / `false` / `no` / `off`
+  才可关闭，非法值必须 fail-secure 为开启状态，不得静默降级为 insecure cookie。
 
 ### 5.2.1 Anonymous Localhost Dev Session Cookie
 
