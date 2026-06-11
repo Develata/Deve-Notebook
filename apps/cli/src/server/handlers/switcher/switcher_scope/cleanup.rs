@@ -8,17 +8,18 @@ use crate::server::session::WsSession;
 use crate::server::shadow_scope;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
-pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) {
+pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) -> bool {
     if !should_clear_failed_current_scope(session, error) {
-        return;
+        return false;
     }
     if session.active_branch.is_some() && shadow_scope::should_clear_missing_remote_branch(error) {
         shadow_scope::clear_stale_remote_branch(session);
-        return;
+        return true;
     }
     session.clear_active_repo();
     session.clear_active_db();
     session.clear_sync_binding();
+    true
 }
 
 fn should_clear_failed_current_scope(session: &WsSession, error: &ServerError) -> bool {

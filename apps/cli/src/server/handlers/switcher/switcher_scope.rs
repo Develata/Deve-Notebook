@@ -21,8 +21,16 @@ pub(super) struct CurrentBranchSwitchContext {
     pub(super) repo_url: Option<String>,
 }
 
-pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) {
-    cleanup::clear_failed_current_scope(session, error);
+pub(super) fn clear_failed_current_scope(session: &mut WsSession, error: &ServerError) -> bool {
+    cleanup::clear_failed_current_scope(session, error)
+}
+
+pub(super) fn revoke_source_control_write_grant(state: &Arc<AppState>, session: &WsSession) {
+    if let Some(auth_session_id) = session.auth_session_id() {
+        state
+            .source_control_write_grants()
+            .revoke_session(auth_session_id);
+    }
 }
 
 pub(super) fn resolve_current_branch_switch_context(

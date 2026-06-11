@@ -64,6 +64,7 @@ pub(super) async fn handle_switch_repo(
             let error = map_requested_repo_resolution_error(err);
             if shadow_scope::should_clear_missing_remote_branch(&error) {
                 shadow_scope::clear_stale_remote_branch(session);
+                super::switcher_scope::revoke_source_control_write_grant(state, session);
             }
             ch.send_protocol_error_with_switch_nonce(error, switch_nonce);
             return;

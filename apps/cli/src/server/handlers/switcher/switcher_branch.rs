@@ -42,7 +42,9 @@ pub(super) async fn handle_switch_branch(
     let current = match switcher_scope::resolve_current_branch_switch_context(state, session) {
         Ok(current) => current,
         Err(err) => {
-            switcher_scope::clear_failed_current_scope(session, &err);
+            if switcher_scope::clear_failed_current_scope(session, &err) {
+                switcher_scope::revoke_source_control_write_grant(state, session);
+            }
             ch.send_protocol_error_with_switch_nonce(err, switch_nonce);
             return;
         }

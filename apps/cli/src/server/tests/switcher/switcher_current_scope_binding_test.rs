@@ -2,6 +2,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::handlers::switcher::handle_switch_branch;
+use super::source_control_grants::AuthSessionId;
 use super::switcher_test_support::{app_state, browser_session, unicast_channel};
 use super::{AppState, session::WsSession};
 use deve_core::ledger::RepoManager;
@@ -71,6 +72,56 @@ async fn switch_branch_rejects_unbound_local_scope_with_stale_runtime_binding() 
     assert!(session.authenticated_peer_id.is_none());
     assert!(session.bound_repo_id.is_none());
     assert!(session.sync_scope_nonce().is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn switch_branch_failure_revokes_source_control_write_grant() -> anyhow::Result<()> {
+    let (_dir, state, repo_id, peer_id) = build_state()?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(80);
+    let auth_session_id = AuthSessionId::for_test("switch-branch-failure");
+    session.bind_auth_session(auth_session_id.clone());
+    seed_stale_runtime_binding(&mut session, &state, repo_id);
+    state.source_control_write_grants().grant(
+        auth_session_id.clone(),
+        repo_id,
+        PeerId::new("writer"),
+        80,
+    );
+    assert!(
+        state
+            .source_control_write_grants()
+            .authorize(&auth_session_id, repo_id, 80)
+            .is_ok()
+    );
+
+    handle_switch_branch(
+        &state,
+        &ch,
+        &mut session,
+        Some(peer_id.to_string()),
+        Some(81),
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error,
+            switch_nonce,
+            ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
+            assert_eq!(switch_nonce, Some(81));
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(session.writer_identity.is_none());
+    let error = state
+        .source_control_write_grants()
+        .authorize(&auth_session_id, repo_id, 80)
+        .expect_err("grant must be revoked with failed scope cleanup");
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
     Ok(())
 }
 

@@ -120,7 +120,9 @@ check_contains apps/cli/src/server/source_control_proxy/client.rs "pub(super) fn
 check_contains apps/cli/src/commands/serve.rs "RemoteSourceControlApi::new_with_delegation_secret"
 check_contains apps/cli/src/server/router.rs "delegated_source_control_middleware"
 check_contains apps/cli/src/server/auth/delegated_source_control.rs "delegated source control capability missing"
+check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli switch_branch_failure_revokes_source_control_write_grant -- --nocapture"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "delegated_source_control_requires_proxy_capability"
+check_contains apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs "switch_branch_failure_revokes_source_control_write_grant"
 check_absent apps/cli/src/server/source_control_proxy/client.rs 'expect("build source control HTTP client")'
 check_absent apps/cli/src/server/handlers/source_control/repo_scope.rs 'expect("checked active branch")'
 check_absent apps/cli/src/server/repo_scope/sync.rs 'expect("checked active branch")'
