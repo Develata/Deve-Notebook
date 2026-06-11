@@ -64,7 +64,10 @@ fn select_entry_for_doc(
         .iter()
         .find(|(entry_path, entry)| entry_path == path && entry.doc_id == Some(doc_id))
         .cloned();
-    if exact.is_some() {
+    if exact
+        .as_ref()
+        .is_some_and(|(_, entry)| entry.status != ChangeStatus::Deleted)
+    {
         return exact;
     }
     entries

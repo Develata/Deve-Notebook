@@ -118,7 +118,7 @@ fn fails_closed_when_path_only_target_matches_tracked_entries() {
 }
 
 #[test]
-fn doc_target_prefers_exact_deleted_half_of_rename_pair() {
+fn pending_doc_target_prefers_live_successor_over_exact_deleted_doc_path() {
     let doc_id = DocId(uuid::Uuid::nil());
     let entries = vec![
         PendingFsEntry {
@@ -143,9 +143,9 @@ fn doc_target_prefers_exact_deleted_half_of_rename_pair() {
 
     assert_eq!(
         select_entry_for_doc(entries, "notes/old.md", doc_id)
-            .expect("exact deleted half should win")
+            .expect("live successor should win")
             .path,
-        "notes/old.md"
+        "notes/new.md"
     );
 }
 

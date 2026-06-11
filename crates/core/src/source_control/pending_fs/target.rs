@@ -55,7 +55,10 @@ fn select_entry_for_doc(
         .iter()
         .find(|entry| entry.path == path && entry.doc_id == Some(doc_id))
         .cloned();
-    if exact.is_some() {
+    if exact
+        .as_ref()
+        .is_some_and(PendingEntryStatus::status_is_live)
+    {
         return exact;
     }
     entries

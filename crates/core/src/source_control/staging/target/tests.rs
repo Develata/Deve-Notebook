@@ -154,6 +154,42 @@ fn doc_target_rejects_unrelated_same_doc_live_entry() {
 }
 
 #[test]
+fn staged_doc_target_prefers_live_successor_over_exact_deleted_doc_path() {
+    let doc_id = DocId(uuid::Uuid::nil());
+    let entries = vec![
+        (
+            "notes/old.md".into(),
+            StagedEntry {
+                timestamp: 1,
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Deleted,
+                content_hash: String::new(),
+                has_conflict: false,
+                renamed_from: None,
+            },
+        ),
+        (
+            "notes/new.md".into(),
+            StagedEntry {
+                timestamp: 2,
+                doc_id: Some(doc_id),
+                status: ChangeStatus::Added,
+                content_hash: String::new(),
+                has_conflict: false,
+                renamed_from: Some("notes/old.md".into()),
+            },
+        ),
+    ];
+
+    assert_eq!(
+        select_entry_for_doc(entries, "notes/old.md", doc_id)
+            .expect("live successor should win")
+            .0,
+        "notes/new.md"
+    );
+}
+
+#[test]
 fn get_staged_for_target_fails_closed_when_exact_path_and_rename_successor_conflict() {
     let (_dir, db) = new_db();
     staging::stage_pending_entry(

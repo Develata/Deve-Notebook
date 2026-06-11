@@ -259,6 +259,8 @@ check_contains apps/web/src/hooks/use_core/effects_sc_apply/tests.rs "apply_doc_
 # Doc-id source-control targets are strict: exact path or rename successor only.
 check_absent crates/core/src/ledger/manager/source_control_target_lookup.rs "resolve_canonical_path"
 check_contains crates/core/src/ledger/manager/source_control_target_resolution/tests.rs "resolve_from_entries_rejects_unrelated_same_doc_live_entry"
+check_contains crates/core/src/source_control/pending_fs/target/tests.rs "pending_doc_target_prefers_live_successor_over_exact_deleted_doc_path"
+check_contains crates/core/src/source_control/staging/target/tests.rs "staged_doc_target_prefers_live_successor_over_exact_deleted_doc_path"
 check_contains crates/core/src/source_control/pending_fs/target/tests.rs "doc_target_rejects_unrelated_same_doc_live_entry"
 check_contains crates/core/src/source_control/staging/target/tests.rs "doc_target_rejects_unrelated_same_doc_live_entry"
 check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs "workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set"
