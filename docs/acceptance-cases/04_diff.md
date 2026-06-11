@@ -128,6 +128,7 @@
     - run: cargo test -p deve_cli readonly_remote_commit_diff_reports_rename_projection -- --nocapture
     - run: cargo test -p deve_web change_item_read_gate -- --nocapture
     - run: cargo test -p deve_core discard_docless_added_on_tracked_path -- --nocapture
+    - run: cargo test -p deve_core commit_staged_rejects_docless_upsert_on_tracked_path -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_guidance_for_all_repair_actions -- --nocapture
@@ -185,6 +186,7 @@
     - api_assert: anonymous_localhost_source_control_grant_is_session_cookie_bound true
     - api_assert: delegated_remote_proxy_scope_nonce_not_accepted_by_main_http_mutation true
     - api_assert: discard_docless_added_on_tracked_path_fails_closed true
+    - api_assert: commit_docless_upsert_on_tracked_path_fails_closed true
     - plugin_assert: sc_commit_respects_git_bridge_off true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - api_assert: proxy_node_role_git_bridge_not_hardcoded_mirror true

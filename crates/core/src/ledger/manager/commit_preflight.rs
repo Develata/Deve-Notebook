@@ -35,6 +35,13 @@ fn preflight_staged_upsert_identity(
     target: &CommitTarget,
 ) -> Result<()> {
     let Some(doc_id) = target.doc_id else {
+        if let Some(bound_doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, &target.path)? {
+            anyhow::bail!(
+                "source control docless upsert target points at tracked path: staged path {} is bound to {}",
+                target.path,
+                bound_doc_id
+            );
+        }
         return Ok(());
     };
     if let Some(bound_doc_id) = repo.get_tracked_docid_in_local_repo(repo_name, &target.path)?

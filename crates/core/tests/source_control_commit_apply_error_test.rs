@@ -321,3 +321,62 @@ fn commit_staged_rejects_upsert_move_without_rename_evidence() {
     assert_eq!(after_seq, before_seq);
     assert_eq!(staged.len(), 1);
 }
+
+#[test]
+fn commit_staged_rejects_docless_upsert_on_tracked_path() {
+    let dir = tempdir().expect("tempdir");
+    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
+    repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
+        .expect("projection locator");
+    let (doc_id, _ops) = repo
+        .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
+        .expect("doc a");
+    let disk_path = repo
+        .local_repo_workspace_path("default", "notes/a.md")
+        .expect("workspace path");
+    std::fs::create_dir_all(disk_path.parent().expect("parent")).expect("create parent");
+    std::fs::write(&disk_path, "corrupt").expect("write staged file");
+    repo.run_on_local_repo("default", |db| {
+        staging::stage_pending_entry(
+            db,
+            &PendingFsEntry {
+                path: "notes/a.md".into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("corrupt"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })
+    .expect("seed docless staged upsert");
+    let before_seq = repo
+        .run_on_local_repo("default", range::get_max_seq)
+        .expect("before seq");
+
+    let err = repo
+        .commit_staged("docless tracked corrupt")
+        .expect_err("docless upsert on tracked path must fail closed");
+
+    let after_seq = repo
+        .run_on_local_repo("default", range::get_max_seq)
+        .expect("after seq");
+    let staged = repo
+        .run_on_local_repo("default", staging::list_staged_entries)
+        .expect("staged retained");
+    assert!(
+        err.to_string()
+            .contains("docless upsert target points at tracked path"),
+        "unexpected error: {}",
+        err
+    );
+    assert_eq!(after_seq, before_seq);
+    assert_eq!(staged.len(), 1);
+    assert_eq!(staged[0].1.doc_id, None);
+    assert_eq!(
+        repo.get_tracked_docid_in_local_repo("default", "notes/a.md")
+            .expect("tracked doc"),
+        Some(doc_id)
+    );
+}
