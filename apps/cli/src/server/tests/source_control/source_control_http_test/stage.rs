@@ -189,3 +189,52 @@ async fn delegated_remote_proxy_scope_nonce_is_not_main_http_grant() -> anyhow::
     harness.shutdown().await;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn anonymous_localhost_source_control_grant_is_not_dev_wide() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+    harness.grant_browser_write(1)?;
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .header(
+            reqwest::header::COOKIE,
+            harness.dev_session_cookie_header_for("other-browser-session"),
+        )
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(
+        body.code,
+        deve_core::protocol::ServerErrorCode::ScStaleScope
+    );
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
+
+    let response = harness
+        .client
+        .post(format!("{}/api/sc/stage-pending", harness.base_url))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+
+    assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
+    assert!(repo.list_pending_fs_in_repo(&selector)?.is_empty());
+    assert_eq!(repo.list_staged_in_repo(&selector)?.len(), 1);
+    harness.shutdown().await;
+    Ok(())
+}

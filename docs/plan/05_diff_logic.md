@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-10`
+- `Last Review`: `2026-06-11`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -434,7 +434,8 @@ MergeRequested
 `SourceControlWriteGrant` 是 server runtime 内部状态，不是 wire protocol 字段。Browser WebSocket 在同一
 authenticated session 内完成 `SyncHello` 与 `RegisterWriter` 后，server 必须生成短生命周期 grant，至少绑定：
 
-- `auth_session_id`（由当前 cookie/JWT session 的不可逆 digest 或 localhost dev session key 派生，不暴露 token material）
+- `auth_session_id`（由当前 cookie/JWT session 的不可逆 digest，或 anonymous localhost dev session
+  cookie nonce 的不可逆 digest 派生，不暴露 token material；不得只由 dev-wide 固定值派生）
 - `repo_id`
 - local writable branch / local-only target
 - registered `writer_peer_id`

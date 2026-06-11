@@ -25,10 +25,17 @@ impl AuthSessionId {
         ))
     }
 
-    pub(crate) fn anonymous_localhost(username: &str, token_version: u32) -> Self {
+    pub(crate) fn from_dev_session_cookie(
+        username: &str,
+        token_version: u32,
+        dev_session: &str,
+    ) -> Self {
         Self(format!(
             "localhost-dev:{}",
-            sha256_hex(format!("deve-localhost-session:{username}:{token_version}").as_bytes())
+            sha256_hex(
+                format!("deve-localhost-session:{username}:{token_version}:{dev_session}")
+                    .as_bytes()
+            )
         ))
     }
 

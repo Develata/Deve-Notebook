@@ -61,6 +61,19 @@ check_contains apps/cli/src/server/auth/handlers/session.rs "user_agent"
 check_contains apps/cli/src/server/auth/handlers/session.rs "AuthStatusResponse::unauthenticated()"
 check_contains apps/cli/src/server/router.rs ".route(\"/api/auth/status\", get(auth::handlers::status))"
 
+# AUTH-014: anonymous localhost remains dev-only but uses a per-browser
+# dev-session cookie for HTTP/WS grant binding.
+check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-014"
+check_contains docs/acceptance-cases/08_auth.md "anonymous_localhost_status_sets_dev_session_cookie"
+check_contains docs/acceptance-cases/08_auth.md "anonymous_localhost_ws_uses_dev_session_cookie"
+check_contains docs/acceptance-cases/08_auth.md "rejects_forged_dev_session_cookie"
+check_contains apps/cli/src/server/auth/dev_session.rs "DEV_SESSION_COOKIE_NAME"
+check_contains apps/cli/src/server/auth/dev_session.rs "deve_dev_session"
+check_contains apps/cli/src/server/auth/dev_session.rs "sign_dev_session_cookie_value"
+check_contains apps/cli/src/server/auth/middleware.rs "AuthSessionId::from_dev_session_cookie"
+check_contains apps/cli/src/server/ws/auth.rs "AuthSessionId::from_dev_session_cookie"
+check_contains apps/cli/src/server/ws/mod.rs "admission.set_cookie()"
+
 # AUTH-005: auth cookie extraction must match the exact token name and reject
 # token_csrf/tokenBackup prefix traps.
 check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-005"

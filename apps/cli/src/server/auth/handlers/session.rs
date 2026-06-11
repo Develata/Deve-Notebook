@@ -7,7 +7,7 @@ use axum::{
     Extension, Json,
     extract::ConnectInfo,
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use std::{net::SocketAddr, sync::Arc};
@@ -15,6 +15,8 @@ use std::{net::SocketAddr, sync::Arc};
 use deve_core::protocol::auth::{AuthStatusResponse, LoginResponse, MeResponse};
 use deve_core::security::AuthConfig;
 use deve_core::security::auth::jwt;
+
+use crate::server::auth::dev_session;
 
 const COOKIE_NAME: &str = "token";
 const UNKNOWN_USER_AGENT: &str = "unknown";
@@ -37,17 +39,21 @@ pub async fn status(
     headers: HeaderMap,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(config): Extension<Arc<AuthConfig>>,
-) -> impl IntoResponse {
-    let authenticated = auth_status_from_cookie_header(
-        headers.get("cookie").and_then(|value| value.to_str().ok()),
-        addr,
-        &config,
-    );
+) -> Response {
+    let cookie_header = headers.get("cookie").and_then(|value| value.to_str().ok());
+    if config.allow_anonymous_localhost && addr.ip().is_loopback() {
+        let dev_session = dev_session::resolve_from_cookie_header(cookie_header, &config.secret);
+        let mut response = Json(AuthStatusResponse::authenticated()).into_response();
+        dev_session::append_set_cookie(response.headers_mut(), &dev_session);
+        return response;
+    }
+    let authenticated = auth_status_from_cookie_header(cookie_header, &config);
     Json(if authenticated {
         AuthStatusResponse::authenticated()
     } else {
         AuthStatusResponse::unauthenticated()
     })
+    .into_response()
 }
 
 pub(super) fn build_auth_cookie(token: &str) -> [(String, String); 1] {
@@ -144,14 +150,7 @@ fn normalized_user_agent(user_agent: Option<&str>) -> String {
         .to_string()
 }
 
-fn auth_status_from_cookie_header(
-    cookie_header: Option<&str>,
-    addr: SocketAddr,
-    config: &AuthConfig,
-) -> bool {
-    if config.allow_anonymous_localhost && addr.ip().is_loopback() {
-        return true;
-    }
+fn auth_status_from_cookie_header(cookie_header: Option<&str>, config: &AuthConfig) -> bool {
     let Some(token) =
         cookie_header.and_then(super::super::cookie::extract_token_from_cookie_header)
     else {
@@ -165,13 +164,12 @@ mod tests {
     use super::{UNKNOWN_USER_AGENT, auth_status_from_cookie_header, login_audit_event};
     use deve_core::security::AuthConfig;
     use deve_core::security::auth::jwt;
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use std::net::{IpAddr, Ipv4Addr};
 
     #[test]
     fn status_is_false_without_token() {
         let config = AuthConfig::dev_default().unwrap();
-        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 3001);
-        assert!(!auth_status_from_cookie_header(None, addr, &config));
+        assert!(!auth_status_from_cookie_header(None, &config));
     }
 
     #[test]
@@ -180,8 +178,7 @@ mod tests {
         let token =
             jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
         let cookie = format!("token={token}");
-        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 3001);
-        assert!(auth_status_from_cookie_header(Some(&cookie), addr, &config));
+        assert!(auth_status_from_cookie_header(Some(&cookie), &config));
     }
 
     #[test]
@@ -190,12 +187,7 @@ mod tests {
         let token =
             jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
         let cookie = format!("token_csrf={token}");
-        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 3001);
-        assert!(!auth_status_from_cookie_header(
-            Some(&cookie),
-            addr,
-            &config
-        ));
+        assert!(!auth_status_from_cookie_header(Some(&cookie), &config));
     }
 
     #[test]

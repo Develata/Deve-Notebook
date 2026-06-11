@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-11`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -155,6 +155,25 @@ WsConnecting
 - `Path=/`
 - `Secure` 由 `HTTPS_ENABLED` 控制，但生产默认必须开启
 
+### 5.2.1 Anonymous Localhost Dev Session Cookie
+
+当 `AUTH_ALLOW_ANONYMOUS_LOCALHOST=true` 且请求来自 loopback 地址时，server MAY 签发
+匿名开发会话 cookie，用于把 HTTP 与 WebSocket runtime 绑定到同一个 browser session。
+
+约束：
+
+- dev session cookie 只能在 anonymous localhost policy 下签发和接受，不得作为生产 auth credential。
+- cookie value 必须包含 server 生成的不可预测 session nonce 与 server 可校验签名；`AuthSessionId`
+  只能由已通过签名校验的 nonce 的不可逆 digest 派生，不得只由 username / token_version
+  这类 dev-wide 固定值派生，也不得接受客户端自选的未签名 nonce。
+- `/api/auth/status` 作为公开安静 probe，可在 anonymous localhost 下返回 `Set-Cookie`
+  以建立 dev session；无有效 JWT 时仍必须返回 `200`，不得制造未登录 401 噪音。
+- WebSocket Browser admission 在 anonymous localhost 下必须解析同一个 dev session cookie；
+  若缺失，可在 upgrade response 中补发 cookie，但 FullPeer bearer admission 不得接受或签发该 cookie。
+- protected HTTP middleware 在 anonymous localhost 下必须解析同一个 dev session cookie，并把
+  派生出的 `AuthSessionId` 注入 request extension；缺失时可补发 cookie，但该新 session 不得匹配
+  其他 browser session 已建立的 Source Control grant。
+
 ### 5.3 Revocation
 
 - `token_version` 变更后，旧 token 立即失效
@@ -251,6 +270,8 @@ WsConnecting
 - `AUTH_ALLOW_ANONYMOUS_LOCALHOST` 只能显式开启。
 - 仅允许 `localhost` / `127.0.0.1` 的本地开发场景使用。
 - 开启时 **MUST** 在日志中显著标记 dev-only auth bypass。
+- anonymous localhost 虽绕过密码认证，但 browser session 隔离仍必须通过 dev session cookie 保持；
+  Source Control write grant 不得退化为整个 localhost dev environment 共享的固定身份。
 
 ### 6.9 TLS Deployment Contract
 

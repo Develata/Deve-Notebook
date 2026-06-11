@@ -1,6 +1,7 @@
 use super::source_control_proxy::RemoteSourceControlApi;
 use super::{
-    AppState, router, security, source_control_grants::AuthSessionId, tree_state::RepoTreeRegistry,
+    AppState, auth, router, security, source_control_grants::AuthSessionId,
+    tree_state::RepoTreeRegistry,
 };
 use deve_core::config::{GitBridgeMode, SyncMode};
 use deve_core::ledger::RepoManager;
@@ -22,6 +23,7 @@ pub(super) struct ProxyHarness {
     pub base_url: String,
     pub client: reqwest::Client,
     pub proxy: RemoteSourceControlApi,
+    dev_session_secret: String,
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
 }
@@ -57,8 +59,14 @@ impl ProxyHarness {
         });
         let mut auth_config = AuthConfig::dev_default()?;
         auth_config.allow_anonymous_localhost = true;
-        let auth_session_id =
-            AuthSessionId::anonymous_localhost(&auth_config.username, auth_config.token_version);
+        let dev_session_secret = auth_config.secret.clone();
+        let dev_session_cookie_header =
+            auth::dev_session::cookie_header_for_test(&dev_session_secret, "source-control-harness");
+        let auth_session_id = AuthSessionId::from_dev_session_cookie(
+            &auth_config.username,
+            auth_config.token_version,
+            "source-control-harness",
+        );
         let app = router::build_app(state.clone(), 3001, Arc::new(auth_config))?
             .into_make_service_with_connect_info::<std::net::SocketAddr>();
         let listener = TcpListener::bind("127.0.0.1:0").await?;
@@ -79,8 +87,9 @@ impl ProxyHarness {
             state,
             auth_session_id,
             base_url: base_url.clone(),
-            client: local_client(),
+            client: local_client(&dev_session_cookie_header),
             proxy: RemoteSourceControlApi::new(base_url)?,
+            dev_session_secret,
             shutdown: Some(shutdown_tx),
             task,
         })
@@ -108,10 +117,21 @@ impl ProxyHarness {
         );
         Ok(())
     }
+
+    pub(super) fn dev_session_cookie_header_for(&self, nonce: &str) -> String {
+        auth::dev_session::cookie_header_for_test(&self.dev_session_secret, nonce)
+    }
 }
 
-fn local_client() -> reqwest::Client {
+fn local_client(cookie_header: &str) -> reqwest::Client {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::COOKIE,
+        reqwest::header::HeaderValue::from_str(cookie_header)
+            .expect("test dev session cookie header"),
+    );
     reqwest::Client::builder()
+        .default_headers(headers)
         .no_proxy()
         .build()
         .expect("build local test HTTP client")

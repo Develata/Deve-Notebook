@@ -12,8 +12,14 @@ pub(super) const P2P_INBOUND_TOKEN_ENV: &str = "DEVE_P2P_INBOUND_TOKEN";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum WsAdmission {
-    Browser(AuthSessionId),
+    Browser(BrowserAdmission),
     FullPeer,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct BrowserAdmission {
+    auth_session_id: AuthSessionId,
+    set_cookie: Option<String>,
 }
 
 impl WsAdmission {
@@ -24,7 +30,14 @@ impl WsAdmission {
 
     pub(super) fn browser_auth_session(&self) -> Option<&AuthSessionId> {
         match self {
-            Self::Browser(auth_session_id) => Some(auth_session_id),
+            Self::Browser(admission) => Some(&admission.auth_session_id),
+            Self::FullPeer => None,
+        }
+    }
+
+    pub(super) fn set_cookie(&self) -> Option<&str> {
+        match self {
+            Self::Browser(admission) => admission.set_cookie.as_deref(),
             Self::FullPeer => None,
         }
     }
@@ -44,19 +57,30 @@ pub(super) fn session_admission(
     if let Some(token) = token.as_deref()
         && jwt::validate_token(&config.secret, token, config.token_version).is_ok()
     {
-        return Ok(WsAdmission::Browser(AuthSessionId::from_cookie_token(
-            token,
-        )));
+        return Ok(WsAdmission::Browser(BrowserAdmission {
+            auth_session_id: AuthSessionId::from_cookie_token(token),
+            set_cookie: None,
+        }));
     }
     if is_browser_session_connection(
         false,
         config.allow_anonymous_localhost,
         is_local_request(req),
     ) {
-        return Ok(WsAdmission::Browser(AuthSessionId::anonymous_localhost(
-            &config.username,
-            config.token_version,
-        )));
+        let dev_session = crate::server::auth::dev_session::resolve_from_cookie_header(
+            req.headers
+                .get("cookie")
+                .and_then(|value| value.to_str().ok()),
+            &config.secret,
+        );
+        return Ok(WsAdmission::Browser(BrowserAdmission {
+            auth_session_id: AuthSessionId::from_dev_session_cookie(
+                &config.username,
+                config.token_version,
+                dev_session.value(),
+            ),
+            set_cookie: dev_session.set_cookie().map(ToOwned::to_owned),
+        }));
     }
     Err(token
         .map(|_| AuthErrorCode::TokenExpired)
@@ -117,8 +141,11 @@ fn is_local_request(req: &Parts) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{P2P_INBOUND_TOKEN_ENV, WsAdmission, session_admission};
+    use crate::server::auth::dev_session;
+    use crate::server::source_control_grants::AuthSessionId;
     use axum::http::Request;
     use deve_core::security::auth::config::AuthConfig;
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -140,6 +167,22 @@ mod tests {
         }
         let request = builder.body(()).expect("request");
         request.into_parts().0
+    }
+
+    fn local_parts_with_cookie(cookie: Option<String>) -> axum::http::request::Parts {
+        let mut builder = Request::builder().uri("/ws");
+        if let Some(cookie) = cookie {
+            builder = builder.header("cookie", cookie);
+        }
+        let request = builder.body(()).expect("request");
+        let (mut parts, _) = request.into_parts();
+        parts
+            .extensions
+            .insert(axum::extract::ConnectInfo(SocketAddr::new(
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
+                3001,
+            )));
+        parts
     }
 
     #[test]
@@ -186,6 +229,28 @@ mod tests {
         .expect("admission");
 
         assert_eq!(admission, WsAdmission::FullPeer);
+    }
+
+    #[test]
+    fn anonymous_localhost_ws_uses_dev_session_cookie() {
+        let mut config = auth_config();
+        config.allow_anonymous_localhost = true;
+        let cookie = dev_session::cookie_header_for_test(&config.secret, "ws-browser-session");
+        let admission = session_admission(&config, &local_parts_with_cookie(Some(cookie)), None)
+            .expect("anonymous localhost admission");
+        let expected = AuthSessionId::from_dev_session_cookie(
+            &config.username,
+            config.token_version,
+            "ws-browser-session",
+        );
+
+        assert_eq!(admission.browser_auth_session(), Some(&expected));
+        assert!(admission.set_cookie().is_none());
+
+        let admission = session_admission(&config, &local_parts_with_cookie(None), None)
+            .expect("anonymous localhost admission");
+        assert!(admission.browser_auth_session().is_some());
+        assert!(admission.set_cookie().is_some());
     }
 
     struct EnvGuard {

@@ -15,6 +15,7 @@
 
 pub mod brute_force;
 pub mod cookie;
+pub mod dev_session;
 pub mod handlers;
 pub mod headers;
 pub mod middleware;

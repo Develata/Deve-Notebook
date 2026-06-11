@@ -6,6 +6,7 @@
 
 use axum::Json;
 use axum::extract::{State, WebSocketUpgrade};
+use axum::http::{HeaderValue, header::SET_COOKIE};
 use axum::response::IntoResponse;
 use futures::StreamExt;
 use std::sync::Arc;
@@ -64,8 +65,16 @@ pub async fn ws_handler(
 
     let peer_id = uuid::Uuid::new_v4().to_string();
     let browser_auth_session = admission.browser_auth_session().cloned();
-    ws.on_upgrade(move |socket| handle_socket(state, socket, peer_id, browser_auth_session))
-        .into_response()
+    let set_cookie = admission.set_cookie().map(ToOwned::to_owned);
+    let mut response = ws
+        .on_upgrade(move |socket| handle_socket(state, socket, peer_id, browser_auth_session))
+        .into_response();
+    if let Some(set_cookie) = set_cookie
+        && let Ok(value) = HeaderValue::from_str(&set_cookie)
+    {
+        response.headers_mut().append(SET_COOKIE, value);
+    }
+    response
 }
 
 fn unauthorized_ws_response(code: AuthErrorCode) -> axum::response::Response {

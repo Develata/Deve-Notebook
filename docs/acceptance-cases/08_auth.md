@@ -146,6 +146,22 @@
     - http_status_eq: 200
     - json_field_eq: ["authenticated", false]
 
+- case_id: AUTH-014
+  goal: Anonymous localhost dev session cookie 绑定 HTTP 与 WS 会话。
+  preconditions:
+    - AUTH_ALLOW_ANONYMOUS_LOCALHOST=true
+    - 请求来自 loopback 地址
+  steps:
+    - run: cargo test -p deve_cli anonymous_localhost_status_sets_dev_session_cookie -- --nocapture
+    - run: cargo test -p deve_cli anonymous_localhost_ws_uses_dev_session_cookie -- --nocapture
+    - run: cargo test -p deve_cli rejects_forged_dev_session_cookie -- --nocapture
+    - run: scripts/check-auth-baseline.sh
+  assertions:
+    - http_status_eq: 200
+    - header_contains: "Set-Cookie: deve_dev_session="
+    - api_assert: anonymous_localhost_dev_session_cookie_is_per_browser_session true
+    - api_assert: forged_dev_session_cookie_is_replaced true
+
 - case_id: AUTH-013
   goal: Host identity key owner-only 权限。
   preconditions:

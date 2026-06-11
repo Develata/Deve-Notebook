@@ -23,6 +23,7 @@ use axum::{
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, Once};
 
+use crate::server::auth::dev_session;
 use crate::server::rate_limit::RateLimiter;
 use crate::server::source_control_grants::AuthSessionId;
 use deve_core::protocol::auth::{AuthErrorCode, AuthErrorResponse, LoginResponse};
@@ -46,6 +47,8 @@ pub async fn auth_middleware(
     // localhost 免密策略
     if config.allow_anonymous_localhost && is_localhost(&addr.ip()) {
         warn_dev_auth_bypass_once();
+        let cookie_header = req.headers().get("cookie").and_then(|v| v.to_str().ok());
+        let dev_session = dev_session::resolve_from_cookie_header(cookie_header, &config.secret);
         let anonymous_claims = deve_core::security::Claims {
             sub: config.username.clone(),
             iat: 0,
@@ -53,12 +56,15 @@ pub async fn auth_middleware(
             ver: config.token_version,
         };
         req.extensions_mut()
-            .insert(AuthSessionId::anonymous_localhost(
+            .insert(AuthSessionId::from_dev_session_cookie(
                 &config.username,
                 config.token_version,
+                dev_session.value(),
             ));
         req.extensions_mut().insert(anonymous_claims);
-        return next.run(req).await;
+        let mut response = next.run(req).await;
+        dev_session::append_set_cookie(response.headers_mut(), &dev_session);
+        return response;
     }
 
     // 提取 Cookie

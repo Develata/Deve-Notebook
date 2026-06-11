@@ -18,7 +18,11 @@ const COOKIE_NAME: &str = "token";
 /// 遍历 `;` 分隔的 cookie 对，trim 后检查 `name=` 前缀（含等号），
 /// 确保不会误匹配 `token_csrf` 等以 "token" 开头的 cookie。
 pub fn extract_token_from_cookie_header(header: &str) -> Option<String> {
-    let prefix = format!("{}=", COOKIE_NAME);
+    extract_named_cookie_from_header(header, COOKIE_NAME)
+}
+
+pub(crate) fn extract_named_cookie_from_header(header: &str, name: &str) -> Option<String> {
+    let prefix = format!("{name}=");
     for pair in header.split(';') {
         let pair = pair.trim();
         if let Some(value) = pair.strip_prefix(&prefix)
