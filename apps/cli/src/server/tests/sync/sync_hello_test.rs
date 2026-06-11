@@ -11,7 +11,7 @@ use super::sync_hello_test_support::{
 use deve_core::config::GitBridgeMode;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::traits::RepoSelector;
-use deve_core::models::{DocId, LedgerEntry, Op, VersionVector};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
 use deve_core::protocol::{ScPathTarget, ServerErrorCode, ServerMessage, SessionProof};
 use deve_core::security::IdentityKeyPair;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
@@ -210,6 +210,35 @@ async fn sync_hello_pushes_source_control_commit_to_full_peer() -> anyhow::Resul
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_fullpeer_offer_set_excludes_third_party_shadow_sources() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let local_peer = state.identity_key.peer_id();
+    append_local_op(&state, repo_id)?;
+    let third_party = PeerId::new("peer-a");
+    append_remote_shadow_op(&state, repo_id, &third_party)?;
+    let remote = IdentityKeyPair::generate();
+    let hello = signed_hello_for_repo(&remote, repo_id);
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = empty_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut rx).await?;
+    let offered_pushes: Vec<_> = messages
+        .iter()
+        .filter_map(|msg| match msg {
+            ServerMessage::SyncPush { source_peer_id, .. } => Some(source_peer_id.clone()),
+            _ => None,
+        })
+        .collect();
+
+    assert!(offered_pushes.contains(&local_peer));
+    assert!(!offered_pushes.contains(&third_party));
+    assert!(session.allows_sync_export_source(&local_peer));
+    assert!(!session.allows_sync_export_source(&third_party));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Result<()> {
     let (_dir, state, _repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
@@ -231,6 +260,56 @@ async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Res
             .join(remote.peer_id().to_filename())
             .try_exists()?
     );
+    Ok(())
+}
+
+fn append_local_op(state: &std::sync::Arc<super::AppState>, repo_id: uuid::Uuid) -> anyhow::Result<()> {
+    state.sync_engine.get_or_create_strict(repo_id)?;
+    let doc_id = DocId::new();
+    let local_peer = state.identity_key.peer_id();
+    state.repo.append_generated_op_in_local_repo(
+        state.repo.local_repo_name(),
+        doc_id,
+        local_peer.clone(),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "local".into(),
+                },
+                1,
+                local_peer.clone(),
+                seq,
+                None,
+                None,
+            )
+        },
+    )?;
+    Ok(())
+}
+
+fn append_remote_shadow_op(
+    state: &std::sync::Arc<super::AppState>,
+    repo_id: uuid::Uuid,
+    remote_peer: &PeerId,
+) -> anyhow::Result<()> {
+    let doc_id = DocId::new();
+    let entry = LedgerEntry::new_content(
+        doc_id,
+        Op::Insert {
+            pos: 0,
+            content: "remote-shadow".into(),
+        },
+        1,
+        remote_peer.clone(),
+        1,
+        None,
+        None,
+    );
+    state
+        .repo
+        .append_remote_ops(remote_peer, &repo_id, &[entry])?;
     Ok(())
 }
 

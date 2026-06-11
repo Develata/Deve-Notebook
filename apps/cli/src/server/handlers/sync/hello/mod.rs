@@ -67,7 +67,7 @@ pub(super) async fn handle(
         clear_sync_hello_scope_failure(session, false);
         return;
     };
-    let (local_vector, outbound_engine, result) = match handshake {
+    let (local_vector, outbound_engine, mut result) = match handshake {
         Ok(result) => result,
         Err(e) => {
             clear_sync_hello_scope_failure(session, false);
@@ -98,6 +98,7 @@ pub(super) async fn handle(
         return;
     }
 
+    filter_static_fullpeer_export_sources(state, session, &mut result);
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(scope_nonce);
@@ -141,4 +142,18 @@ pub(super) async fn handle(
         },
         result,
     );
+}
+
+fn filter_static_fullpeer_export_sources(
+    state: &Arc<AppState>,
+    session: &WsSession,
+    result: &mut deve_core::sync::protocol::HandshakeResult,
+) {
+    if session.is_browser_session() {
+        return;
+    }
+    let local_peer = state.identity_key.peer_id();
+    result
+        .to_send
+        .retain(|request| request.peer_id == local_peer);
 }

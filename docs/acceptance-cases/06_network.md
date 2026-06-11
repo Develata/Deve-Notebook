@@ -234,6 +234,7 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_snapshot_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_snapshot_missing_source_proof -- --nocapture
     - run: cargo test -p deve_cli p2p_fullpeer_offer_set_excludes_third_party_shadow_sources -- --nocapture
+    - run: cargo test -p deve_cli sync_hello_fullpeer_offer_set_excludes_third_party_shadow_sources -- --nocapture
     - run: cargo test -p deve_core relay_proxy -- --nocapture
     - run: scripts/check-network-baseline.sh
   assertions:
@@ -262,6 +263,7 @@
     - api_assert: p2p_inbound_snapshot_source_attribution_checked true
     - api_assert: p2p_inbound_snapshot_source_proof_required true
     - api_assert: p2p_fullpeer_does_not_offer_unprovable_third_party_shadow_source true
+    - api_assert: server_sync_hello_does_not_offer_unprovable_third_party_shadow_source true
     - api_assert: p2p_source_attribution_helper_shared_by_server_and_connector true
     - api_assert: p2p_source_proof_rejected_status_is_not_reconnecting true
 
