@@ -235,6 +235,8 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_unoffered_snapshot_request_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_sync_push_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_snapshot_source -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_unrequested_direct_sync_push_source -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_unrequested_direct_snapshot_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_snapshot_missing_source_proof -- --nocapture
     - run: cargo test -p deve_cli p2p_fullpeer_offer_set_excludes_third_party_shadow_sources -- --nocapture
     - run: cargo test -p deve_cli sync_hello_fullpeer_offer_set_excludes_third_party_shadow_sources -- --nocapture
@@ -267,6 +269,8 @@
     - api_assert: p2p_unoffered_source_status_is_not_reconnecting true
     - api_assert: p2p_inbound_sync_push_source_attribution_checked true
     - api_assert: p2p_inbound_snapshot_source_attribution_checked true
+    - api_assert: p2p_inbound_sync_push_source_must_be_requested true
+    - api_assert: p2p_inbound_snapshot_source_must_be_requested true
     - api_assert: p2p_inbound_snapshot_source_proof_required true
     - api_assert: p2p_fullpeer_does_not_offer_unprovable_third_party_shadow_source true
     - api_assert: server_sync_hello_does_not_offer_unprovable_third_party_shadow_source true

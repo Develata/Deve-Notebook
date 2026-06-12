@@ -86,6 +86,7 @@ pub(super) struct ExchangeStats {
     pub(super) saw_hello: bool,
     pub(super) authenticated_peer_id: Option<PeerId>,
     pub(super) allowed_export_sources: Vec<PeerId>,
+    pub(super) requested_import_sources: Vec<PeerId>,
     pub(super) sent_pushes: u64,
     pub(super) sent_snapshots: u64,
     pub(super) applied_pushes: u64,
@@ -207,8 +208,9 @@ where
             verify_sync_hello_proof(&peer_id, &pub_key, &signature, &vector).map_err(|err| {
                 anyhow!("P2P peer {} SyncHello proof rejected: {err}", peer.label)
             })?;
-            stats.allowed_export_sources =
-                allowed_export_sources_for_hello(state, repo_id, &vector)?;
+            let source_sets = sync_source_sets_for_hello(state, repo_id, &vector)?;
+            stats.allowed_export_sources = source_sets.allowed_export_sources;
+            stats.requested_import_sources = source_sets.requested_import_sources;
             stats.authenticated_peer_id = Some(peer_id);
             stats.saw_hello = true;
             Ok(())
@@ -365,7 +367,8 @@ fn validate_inbound_push(
     header: &SyncPushHeader,
     payload: &[EncryptedOp],
 ) -> Result<()> {
-    let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
+    let authenticated_peer =
+        validate_requested_import_source(peer, repo_id, stats, source_peer_id)?;
     validate_direct_sync_push_attribution(DirectSyncPushAttributionInput {
         expected_repo_id: repo_id,
         authenticated_peer,
@@ -398,7 +401,8 @@ fn validate_inbound_snapshot(
     stats: &ExchangeStats,
     input: InboundSnapshotValidation<'_>,
 ) -> Result<()> {
-    let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
+    let authenticated_peer =
+        validate_requested_import_source(peer, repo_id, stats, input.source_peer_id)?;
     validate_direct_sync_snapshot_attribution(DirectSyncSnapshotAttributionInput {
         expected_repo_id: repo_id,
         authenticated_peer,
@@ -416,6 +420,24 @@ fn validate_inbound_snapshot(
         )
     })?;
     Ok(())
+}
+
+fn validate_requested_import_source<'a>(
+    peer: &P2pPeerConfig,
+    repo_id: RepoId,
+    stats: &'a ExchangeStats,
+    source_peer_id: &PeerId,
+) -> Result<&'a PeerId> {
+    let authenticated_peer = validate_authenticated_exchange(peer, stats)?;
+    if !stats.requested_import_sources.contains(source_peer_id) {
+        return Err(anyhow!(
+            "P2P inbound source {} was not requested from peer {} for repo {}",
+            source_peer_id,
+            peer.label,
+            repo_id
+        ));
+    }
+    Ok(authenticated_peer)
 }
 
 async fn send_requested_ops<S>(
@@ -625,26 +647,46 @@ fn build_sync_hello(state: &Arc<AppState>, repo_id: RepoId) -> Result<ClientMess
     ))
 }
 
-fn allowed_export_sources_for_hello(
+struct SyncSourceSets {
+    allowed_export_sources: Vec<PeerId>,
+    requested_import_sources: Vec<PeerId>,
+}
+
+fn sync_source_sets_for_hello(
     state: &Arc<AppState>,
     repo_id: RepoId,
     remote_vector: &VersionVector,
-) -> Result<Vec<PeerId>> {
+) -> Result<SyncSourceSets> {
     let local_peer = state.identity_key.peer_id();
     state
         .sync_engine
         .with_strict_engine(repo_id, |engine| {
-            let (to_send, _, _) =
+            let (to_send, to_request, snapshot_requests) =
                 sync_proto::compute_diff_requests(engine.version_vector(), remote_vector, repo_id);
-            let mut sources = Vec::new();
+            let mut allowed_export_sources = Vec::new();
             for request in to_send {
-                if request.peer_id == local_peer && !sources.contains(&request.peer_id) {
-                    sources.push(request.peer_id);
+                if request.peer_id == local_peer
+                    && !allowed_export_sources.contains(&request.peer_id)
+                {
+                    allowed_export_sources.push(request.peer_id);
                 }
             }
-            sources
+            let mut requested_import_sources = Vec::new();
+            for peer_id in to_request
+                .into_iter()
+                .map(|request| request.peer_id)
+                .chain(snapshot_requests.into_iter().map(|request| request.peer_id))
+            {
+                if !requested_import_sources.contains(&peer_id) {
+                    requested_import_sources.push(peer_id);
+                }
+            }
+            SyncSourceSets {
+                allowed_export_sources,
+                requested_import_sources,
+            }
         })
-        .with_context(|| format!("Failed to compute P2P offered sources for {repo_id}"))
+        .with_context(|| format!("Failed to compute P2P source sets for {repo_id}"))
 }
 
 fn signed_sync_hello(
@@ -668,15 +710,17 @@ fn signed_sync_hello(
 #[cfg(test)]
 mod tests {
     use super::{
-        InboundSnapshotValidation, MAX_EXCHANGE_FRAMES, allowed_export_sources_for_hello,
-        drive_sync_exchange, handle_server_message, signed_sync_hello, validate_inbound_snapshot,
+        InboundSnapshotValidation, MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message,
+        signed_sync_hello, sync_source_sets_for_hello, validate_inbound_snapshot,
     };
     use crate::server::{AppState, tree_state::RepoTreeRegistry};
     use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
     use deve_core::ledger::RepoManager;
     use deve_core::models::{DocId, LedgerEntry, Op, PeerId, VersionVector};
     use deve_core::protocol::frame::encode_server_binary;
-    use deve_core::protocol::{ClientMessage, ScopeNonce, ServerMessage, SyncPushHeader};
+    use deve_core::protocol::{
+        ClientMessage, ScopeNonce, ServerMessage, SyncPayloadKind, SyncPushHeader, SyncSourceProof,
+    };
     use deve_core::security::{EncryptedOp, IdentityKeyPair};
     use deve_core::sync::handshake_proof::{
         sign_sync_hello, sync_hello_transcript, verify_sync_hello_proof,
@@ -978,7 +1022,8 @@ mod tests {
         append_local_op(&state, repo_id)?;
         append_remote_shadow_op(&state, repo_id, &third_party)?;
 
-        let offered = allowed_export_sources_for_hello(&state, repo_id, &VersionVector::new())?;
+        let offered = sync_source_sets_for_hello(&state, repo_id, &VersionVector::new())?
+            .allowed_export_sources;
 
         assert!(offered.contains(&local_peer));
         assert!(
@@ -1351,12 +1396,13 @@ mod tests {
         let message = ServerMessage::SyncPush {
             source_peer_id: forged_source.clone(),
             repo_id,
-            header: SyncPushHeader::diff(repo_id, forged_source, VersionVector::new()),
+            header: SyncPushHeader::diff(repo_id, forged_source.clone(), VersionVector::new()),
             scope_nonce: ScopeNonce::new(0),
             branch: None,
             encrypted_payload: payload,
         };
         let mut stats = authenticated_stats(authenticated_peer);
+        stats.requested_import_sources.push(forged_source);
         let mut socket = MockSocket::new(Vec::new());
 
         let err = handle_server_message(
@@ -1376,6 +1422,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn p2p_exchange_rejects_unrequested_direct_sync_push_source() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let authenticated_peer = PeerId::new("peer-b");
+        let payload = dummy_payload();
+        let message = ServerMessage::SyncPush {
+            source_peer_id: authenticated_peer.clone(),
+            repo_id,
+            header: SyncPushHeader::diff(repo_id, authenticated_peer.clone(), VersionVector::new()),
+            scope_nonce: ScopeNonce::new(0),
+            branch: None,
+            encrypted_payload: payload,
+        };
+        let mut stats = authenticated_stats(authenticated_peer);
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer(repo_id),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("unrequested direct P2P SyncPush source must fail closed");
+
+        assert!(err.to_string().contains("not requested"));
+        assert_eq!(stats.applied_pushes, 0);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn p2p_exchange_rejects_forged_snapshot_source() -> anyhow::Result<()> {
         let identity = Arc::new(IdentityKeyPair::generate());
         let state = test_state(identity)?;
@@ -1383,7 +1463,7 @@ mod tests {
         let authenticated_peer = PeerId::new("peer-b");
         let forged_source = PeerId::new("peer-a");
         let message = ServerMessage::SyncPushSnapshot {
-            source_peer_id: forged_source,
+            source_peer_id: forged_source.clone(),
             repo_id,
             scope_nonce: ScopeNonce::new(0),
             branch: None,
@@ -1393,6 +1473,7 @@ mod tests {
             payload: dummy_payload(),
         };
         let mut stats = authenticated_stats(authenticated_peer);
+        stats.requested_import_sources.push(forged_source);
         let mut socket = MockSocket::new(Vec::new());
 
         let err = handle_server_message(
@@ -1411,11 +1492,60 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn p2p_exchange_rejects_unrequested_direct_snapshot_source() -> anyhow::Result<()> {
+        let identity = Arc::new(IdentityKeyPair::generate());
+        let state = test_state(identity)?;
+        let repo_id = uuid::Uuid::new_v4();
+        let remote = IdentityKeyPair::generate();
+        let authenticated_peer = remote.peer_id();
+        let server_vector = VersionVector::new();
+        let payload = dummy_payload();
+        let source_proof = SyncSourceProof::sign(
+            repo_id,
+            &authenticated_peer,
+            &server_vector,
+            SyncPayloadKind::Snapshot,
+            &payload,
+            &remote,
+        )?;
+        let message = ServerMessage::SyncPushSnapshot {
+            source_peer_id: authenticated_peer.clone(),
+            repo_id,
+            scope_nonce: ScopeNonce::new(0),
+            branch: None,
+            server_vector,
+            snapshot_kind: Some("full".into()),
+            source_proof: Some(source_proof),
+            payload,
+        };
+        let mut stats = authenticated_stats(authenticated_peer.clone());
+        let mut socket = MockSocket::new(Vec::new());
+
+        let err = handle_server_message(
+            &peer_with_id(repo_id, authenticated_peer.as_str()),
+            repo_id,
+            &state,
+            &mut socket,
+            message,
+            &mut stats,
+        )
+        .await
+        .expect_err("unrequested direct P2P snapshot source must fail closed");
+
+        assert!(err.to_string().contains("not requested"));
+        assert_eq!(stats.applied_snapshots, 0);
+        Ok(())
+    }
+
     #[test]
     fn p2p_exchange_rejects_snapshot_missing_source_proof() {
         let repo_id = uuid::Uuid::new_v4();
         let authenticated_peer = PeerId::new("peer-b");
-        let stats = authenticated_stats(authenticated_peer.clone());
+        let mut stats = authenticated_stats(authenticated_peer.clone());
+        stats
+            .requested_import_sources
+            .push(authenticated_peer.clone());
 
         let err = validate_inbound_snapshot(
             &peer(repo_id),
