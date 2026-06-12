@@ -166,6 +166,7 @@
     - local repo 已被标记为 projection degraded
   steps:
     - run: cargo test -p deve_cli degraded_local -- --nocapture
+    - run: cargo test -p deve_cli browser_writer_registration_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate -- --nocapture
     - run: scripts/check-repo-file-ops-baseline.sh
   assertions:
@@ -176,6 +177,7 @@
     - degraded_projection_blocks_merge_mutations: true
     - degraded_projection_blocks_http_source_control_mutations: true
     - degraded_projection_blocks_plugin_host_source_control_mutations: true
+    - broken_workspace_identity_blocks_RegisterWriter: true
     - cli_assert: repo_file_ops_baseline_bound true
 
 - case_id: STORE-014

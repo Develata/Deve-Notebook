@@ -45,6 +45,7 @@ impl ProxyHarness {
         let repo = Arc::new(repo);
         let (tx, _rx) = broadcast::channel(16);
         let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
+        sync_manager.scan()?;
         let state = Arc::new(AppState {
             repo: repo.clone(),
             sync_manager: sync_manager.clone(),

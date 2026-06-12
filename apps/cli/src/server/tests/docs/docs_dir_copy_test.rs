@@ -20,11 +20,13 @@ fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let (tx, _rx) = broadcast::channel(32);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    let sync_manager = Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?);
+    sync_manager.scan()?;
     Ok((
         dir,
         Arc::new(AppState {
             repo: repo.clone(),
-            sync_manager: Arc::new(deve_core::sync::SyncManager::new_checked(repo.clone())?),
+            sync_manager,
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(

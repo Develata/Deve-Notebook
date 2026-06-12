@@ -37,6 +37,7 @@ run_filter deve_cli "server::handlers::docs::create::tests"
 run_filter deve_cli "server::handlers::docs::delete::tests"
 run_filter deve_cli copy_rejects_traversal_source_before_resolving_target
 run_filter deve_cli degraded_local
+run_filter deve_cli browser_writer_registration_rejects_broken_workspace_identity
 run_filter deve_core source_control_write_gate
 
 echo "repo-file-ops-baseline: ok"

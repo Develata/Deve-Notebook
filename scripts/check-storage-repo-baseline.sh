@@ -68,6 +68,7 @@ case_contains STORE-010 "cargo test -p deve_core --test path_normalize_structure
 case_contains STORE-012 "cargo test -p deve_cli docs_scope_nonce_gate -- --nocapture"
 case_contains STORE-012 "run: scripts/check-repo-file-ops-baseline.sh"
 case_contains STORE-013 "cargo test -p deve_cli degraded_local -- --nocapture"
+case_contains STORE-013 "cargo test -p deve_cli browser_writer_registration_rejects_broken_workspace_identity -- --nocapture"
 case_contains STORE-013 "cargo test -p deve_core source_control_write_gate -- --nocapture"
 case_contains STORE-013 "run: scripts/check-repo-file-ops-baseline.sh"
 case_contains STORE-014 "cargo test -p deve_cli jsonl_roundtrip_is_monotonic_and_line_stable -- --nocapture"
@@ -130,6 +131,7 @@ contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cl
 contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli docs_dir_copy"
 contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli docs_projection_repair"
 contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli degraded_local"
+contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_cli browser_writer_registration_rejects_broken_workspace_identity"
 contains "$ROOT_DIR/scripts/check-repo-file-ops-baseline.sh" "run_filter deve_core source_control_write_gate"
 not_contains "$ROOT_DIR/crates/core/src/ledger/manager/remote_repo_select.rs" "expect(\"validated readable\")"
 

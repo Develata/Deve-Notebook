@@ -32,7 +32,7 @@
 - `Name`: `Submit CreateDoc`
 - `Surface`: `search-box-or-explorer`
 - `Trigger`: choose `CreateDoc` candidate or create control
-- `Preconditions`: repo write gate allows local write
+- `Preconditions`: repo write gate allows local write and Projection Workspace identity is valid
 - `Immediate Result`: sends `ClientMessage::CreateDoc`
 - `Application Entry`: `apps/web/src/hooks/use_core/callbacks/doc/write/create.rs`
 
@@ -41,7 +41,7 @@
 - `Name`: `Submit Rename Copy Move Delete`
 - `Surface`: `search-box-or-explorer`
 - `Trigger`: choose file op candidate or context-menu action
-- `Preconditions`: repo write gate allows local write and target path is scoped
+- `Preconditions`: repo write gate allows local write, Projection Workspace identity is valid, and target path is scoped
 - `Immediate Result`: sends `RenameDoc`, `CopyDoc`, `MoveDoc`, or `DeleteDoc`
 - `Application Entry`: `apps/web/src/hooks/use_core/callbacks/doc/write/path.rs`
 
@@ -69,3 +69,4 @@
 - Shared command-shell parsing, destination prefill, and action construction are modeled separately in `repo_file_op_shell_routing.md`.
 - These operations mutate document structure, not document text content.
 - Spectator / remote views must fail closed before sending structure writes.
+- Broken Projection Locator or `.notegit` identity marker state must keep the repo out of writable file operations until repair succeeds.

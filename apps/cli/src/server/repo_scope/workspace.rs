@@ -72,6 +72,10 @@ pub fn ensure_local_repo_projection_writable(
     if state.sync_manager.is_projection_degraded(repo_name) {
         return Err(degraded_local_repo_write_error(repo_name));
     }
+    state
+        .repo
+        .check_projection_locator_for_local_repo(repo_name)
+        .map_err(|err| invalid_local_repo_workspace_identity_error(repo_name, err))?;
     Ok(())
 }
 
@@ -79,5 +83,14 @@ pub fn degraded_local_repo_write_error(repo_name: &str) -> ServerError {
     ServerError::with_detail(
         ServerErrorCode::StoragePersistFailed,
         format!("Local repo projection is degraded; repair before writing: {repo_name}"),
+    )
+}
+
+fn invalid_local_repo_workspace_identity_error(repo_name: &str, err: anyhow::Error) -> ServerError {
+    ServerError::with_detail(
+        ServerErrorCode::StoragePersistFailed,
+        format!(
+            "Local repo Projection workspace identity is invalid; repair before writing: {repo_name}: {err}"
+        ),
     )
 }
