@@ -73,6 +73,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `Git: Push Mirror`: 将已映射的 `.git` mirror HEAD 推送到远端；不得绕过 Deve authority。
     *   `Git: Repair Mirror`: 可展示 repair/retry 指引；任何 Git write **MUST** 经过显式确认，并 fail-closed 于 `05_diff_logic` 定义的 blocker。
     *   Command Palette / Source Control UI 可展示当前 `source_control.git_bridge` mode 与 CLI-only Git bridge notice；Source Control header 的 mode copy **MUST** 明确 `.notegit` / Deve 仍是 authority、Git 只是 bridge；Web surface **MUST NOT** 直接执行 Git writer。
+    *   兼容期内若旧客户端仍发送 `ClientMessage::CommitAndPush`，服务端 **MUST** 先复用当前 Source Control write gate，然后返回结构化 CLI-only blocker；不得创建 Deve commit、排队 Git mirror record 或执行 Git push。
     *   代理 / plugin-host 模式下，Command Palette 读取到的 node role mode 必须来自主进程 effective mode 或明确标记为 delegated/unknown，不得把缺省值当成 mirror mode。
     *   `Git:*` 文案 **MAY** 作为兼容 alias 出现，但不得被解释为 `.git/` 是 Deve runtime authority。
 

@@ -105,11 +105,15 @@ check_contains apps/web/src/i18n/source_control_git.rs "Git mirror repair is CLI
 check_contains docs/plan/05_diff_logic.md "CommitStaged"
 check_contains docs/features/operations/sc_commit.md 'ClientMessage::Commit { scope_nonce }'
 check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "ClientMessage::Commit"
-check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "ClientMessage::CommitAndPush"
+check_absent apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "ClientMessage::CommitAndPush"
+check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "Commit & Push is CLI-only"
 check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "source_control_scope_nonce(scope)"
 check_contains apps/cli/src/server/ws/route/source_control.rs "ClientMessage::CommitAndPush { message, .. }"
 check_contains apps/cli/src/server/ws/route/source_control.rs "source_control::handle_commit_and_push"
+check_contains apps/cli/src/server/handlers/source_control/commits.rs "COMMIT_AND_PUSH_CLI_ONLY_DETAIL"
+check_contains apps/cli/src/server/handlers/source_control/commits.rs "resolve_current_writable_local_repo"
 check_contains apps/cli/src/server/ws/route/source_control/tests.rs "source_control_scope_nonce_gate_rejects_missing_scope_before_handler"
+check_contains apps/cli/src/server/tests/source_control/source_control_scope_test/write_extra.rs "commit_and_push_ws_returns_cli_only_blocker_without_commit"
 check_contains apps/cli/src/server/handlers/source_control/http_scope.rs "source control scope nonce missing"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/status.rs "test_http_status_rejects_missing_scope_nonce"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "test_http_stage_rejects_missing_scope_nonce_before_mutation"
@@ -251,10 +255,12 @@ check_absent apps/web/src/components/diff_view '"Read Only"'
 check_absent apps/web/src/components/diff_view '"Preview Diff"'
 check_absent apps/web/src/components/diff_view '"Close Diff View"'
 
-# CommitAndPush is a publish entry point that currently completes as CommitAck,
-# not a separate user-visible SyncPush result flow.
-check_contains docs/features/operations/sc_commit_and_push.md "CommitAck"
+# CommitAndPush is a legacy publish wire frame that now returns a structured
+# CLI-only blocker after the normal Source Control write gate; it must not
+# masquerade as a local commit or a separate user-visible SyncPush result flow.
+check_contains docs/features/operations/sc_commit_and_push.md "结构化 CLI-only blocker"
 check_contains apps/cli/src/server/handlers/source_control/commits.rs "Commit & Push"
+check_absent apps/cli/src/server/handlers/source_control/commits.rs "Commit & Push failed"
 check_absent apps/cli/src/server/handlers/source_control/commits.rs "SyncPush"
 
 # Commit diff must preserve canonical document identity instead of becoming path-only output.

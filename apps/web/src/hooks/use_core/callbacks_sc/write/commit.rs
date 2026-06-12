@@ -40,6 +40,13 @@ fn show_write_block(
     warn_sync_banner(set_sync_banner, message);
 }
 
+fn show_commit_and_push_cli_only(set_sync_banner: WriteSignal<Option<String>>) {
+    warn_sync_banner(
+        set_sync_banner,
+        "Commit & Push is CLI-only; create a commit first, then run `deve git push`.".to_string(),
+    );
+}
+
 pub(super) fn create_commit_write_callbacks(
     ws: &WsService,
     scope: SourceControlScopeSignals,
@@ -78,24 +85,19 @@ pub(super) fn create_commit_write_callbacks(
         });
     });
     let ws_commit_and_push = ws.clone();
-    let on_commit_and_push = Callback::new(move |message: String| {
+    let on_commit_and_push = Callback::new(move |_message: String| {
         if let Some(label) = write_block_label(&ws_commit_and_push, gate) {
             show_write_block(set_sync_banner, "CommitAndPush", label);
             return;
         }
-        send_scoped(scope, &ws_commit_and_push, move |scope_nonce| {
-            ClientMessage::CommitAndPush {
-                message,
-                scope_nonce: Some(scope_nonce),
-            }
-        });
+        show_commit_and_push_cli_only(set_sync_banner);
     });
     (on_commit, on_resolve_conflict, on_commit_and_push)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::show_write_block;
+    use super::{show_commit_and_push_cli_only, show_write_block};
     use leptos::prelude::{GetUntracked, signal};
 
     #[test]
@@ -119,6 +121,18 @@ mod tests {
         assert_eq!(
             sync_banner.get_untracked().as_deref(),
             Some("Cannot send ResolveConflict: scope switching")
+        );
+    }
+
+    #[test]
+    fn commit_and_push_callback_uses_cli_only_banner() {
+        let (sync_banner, set_sync_banner) = signal(None::<String>);
+
+        show_commit_and_push_cli_only(set_sync_banner);
+
+        assert_eq!(
+            sync_banner.get_untracked().as_deref(),
+            Some("Commit & Push is CLI-only; create a commit first, then run `deve git push`.")
         );
     }
 }

@@ -155,6 +155,44 @@ async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> 
     Ok(())
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn commit_and_push_ws_returns_cli_only_blocker_without_commit() -> anyhow::Result<()> {
+    let (dir, state, _default_id, test_id) = build_state()?;
+    state.repo.ensure_local_repo_workspace_identity("test")?;
+    write_workspace_file(&dir, "test", "notes/publish.md", "pending");
+    seed_pending(state.repo.as_ref(), "test", "notes/publish.md", "pending");
+    state
+        .repo
+        .stage_pending_in_local_repo("test", "notes/publish.md")?;
+    let expected_local_state = local_source_control_counts(state.repo.as_ref(), "test")?;
+    assert_eq!(expected_local_state.1, 1);
+    assert_eq!(expected_local_state.2, 0);
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("test".into(), Some(test_id));
+    session.set_scope_nonce(Some(47));
+
+    handle_commit_and_push(&state, &ch, &mut session, "publish".into()).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScRepoContextInvalid);
+            assert!(error.detail.as_deref().is_some_and(|detail| {
+                detail.contains("CLI-only") && detail.contains("deve git push")
+            }));
+            assert_eq!(scope_nonce, Some(47));
+        }
+        other => panic!("expected CommitAndPush CLI-only ProtocolError, got {other:?}"),
+    }
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    Ok(())
+}
+
 async fn expect_remote_readonly_error(rx: &mut mpsc::Receiver<ServerMessage>, nonce: u64) {
     match rx.recv().await {
         Some(ServerMessage::ProtocolError {

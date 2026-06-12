@@ -120,6 +120,7 @@
     - run: cargo test -p deve_web commit_diff_read_gate -- --nocapture
     - run: cargo test -p deve_web commit_diff_dispatch -- --nocapture
     - run: cargo test -p deve_cli source_control_scope_nonce_gate -- --nocapture
+    - run: cargo test -p deve_cli commit_and_push_ws_returns_cli_only_blocker_without_commit -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_uses_shadow_projection -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_missing_target -- --nocapture
     - run: cargo test -p deve_cli readonly_remote_doc_diff_path_mismatch -- --nocapture
@@ -171,7 +172,7 @@
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
   assertions:
     - ui_assert: source_control_commit_available true
-    - ui_assert: source_control_commit_and_push_available true
+    - ui_assert: source_control_commit_and_push_cli_only_notice true
     - ui_assert: command_palette_git_sync_absent true
     - cli_assert: git_import_apply_pending_only true
     - cli_assert: git_bridge_writes_reject_broken_workspace_identity true
@@ -219,6 +220,7 @@
     - cli_assert: sc_write_rejects_broken_workspace_identity true
     - plugin_assert: sc_commit_respects_git_bridge_off true
     - api_assert: source_control_commit_writer_requires_explicit_git_bridge_policy true
+    - api_assert: commit_and_push_ws_legacy_frame_has_no_write_side_effect true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - plugin_assert: broken_workspace_identity_write_gate_fails_closed true
     - api_assert: proxy_node_role_git_bridge_not_hardcoded_mirror true

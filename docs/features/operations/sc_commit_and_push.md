@@ -29,23 +29,23 @@
 
 ### `op.sc.commit-publish.submit`
 
-- `Name`: `Submit CommitAndPush`
+- `Name`: `Show CommitAndPush CLI-only Notice`
 - `Surface`: `source-control-panel`
 - `Trigger`: 用户点击 `Commit & Push`
 - `Preconditions`: write gate 未阻塞，当前是 local repo scope
-- `Immediate Result`: 发送 `ClientMessage::CommitAndPush`
-- `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
+- `Immediate Result`: 展示 Git push CLI-only notice；Web 不发送 Git writer intent
+- `Application Entry`: `apps/web/src/components/sidebar/source_control/commit_controller.rs`
 
 ### `op.sc.commit-publish.receive-result`
 
-- `Name`: `Receive Publish Commit Ack`
+- `Name`: `Reject Legacy CommitAndPush Frame`
 - `Surface`: `source-control-panel`
-- `Trigger`: 服务端返回 `CommitAck`
-- `Preconditions`: `CommitAndPush` 请求已成功进入处理链
-- `Immediate Result`: 刷新 changes / commit history，并清空当前 notice
-- `Application Entry`: `apps/web/src/hooks/use_core/effects_sc/dispatch_acks.rs`
+- `Trigger`: 旧客户端仍发送 `ClientMessage::CommitAndPush`
+- `Preconditions`: 请求已通过 scope gate
+- `Immediate Result`: 服务端返回结构化 CLI-only blocker；不创建 commit、不排队 Git mirror、不执行 Git push
+- `Application Entry`: `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
 
 ## Notes
 
-- 当前示例只覆盖代码里已存在的 `CommitAndPush` 入口。
-- 它目前仍以 `CommitAck` 为主要完成信号，不额外建模独立 `SyncPush` 用户结果流。
+- `CommitAndPush` wire frame 仅作为兼容入口保留，避免协议枚举形状变化；它不是可执行 Git push 能力。
+- 正常发布流程是先执行 Web `Commit` 或 CLI `deve sc commit`，再通过显式 CLI `deve git push` 发布 Git mirror。
