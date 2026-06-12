@@ -139,6 +139,7 @@
     - run: cargo test -p deve_cli test_git_mirror_repair_review_is_readonly_record_source -- --nocapture
     - run: cargo test -p deve_cli git_import_apply_resolved_commit_exports_roundtrip -- --nocapture
     - run: cargo test -p deve_cli git_import_export_push_resolved_publish_roundtrip -- --nocapture
+    - run: cargo test -p deve_cli git_import_apply_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
     - run: cargo test -p deve_cli git_bridge_off -- --nocapture
     - run: cargo test -p deve_cli http_source_control_commit_respects_git_bridge_off -- --nocapture
@@ -172,6 +173,7 @@
     - ui_assert: source_control_commit_and_push_available true
     - ui_assert: command_palette_git_sync_absent true
     - cli_assert: git_import_apply_pending_only true
+    - cli_assert: git_bridge_writes_reject_broken_workspace_identity true
     - cli_assert: git_push_dirty_worktree_blocker true
     - cli_assert: git_push_unexported_queue_blocker true
     - ui_assert: command_palette_git_commit_absent true

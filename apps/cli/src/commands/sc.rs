@@ -5,7 +5,8 @@
 //! Minimal Deve Source Control CLI surface.
 
 use crate::commands::repo_arg::resolve_local_repo_args;
-use anyhow::{Result, anyhow, bail};
+use crate::commands::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
+use anyhow::{Result, bail};
 use clap::Subcommand;
 use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
@@ -53,7 +54,7 @@ pub fn stage(
         let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
         ensure_no_unresolved_conflicts(&pending)?;
         let targets = targets_from_entries(&pending);
-        ensure_cli_sc_write_workspace(&repo, &repo_name)?;
+        ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "source-control write")?;
         repo.stage_resolved_pending_targets_in_local_repo(&repo_name, &targets)?;
         println!("sc_stage[{repo_name}]: staged={}", targets.len());
     }
@@ -74,7 +75,7 @@ pub fn commit(
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
-        ensure_cli_sc_write_workspace(&repo, &repo_name)?;
+        ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "source-control write")?;
         let commit =
             repo.commit_staged_in_local_repo_with_git_bridge(&repo_name, message, git_bridge)?;
         println!(
@@ -83,16 +84,6 @@ pub fn commit(
         );
     }
     Ok(())
-}
-
-fn ensure_cli_sc_write_workspace(repo: &RepoManager, repo_name: &str) -> Result<()> {
-    repo.check_projection_locator_for_local_repo(repo_name)
-        .map(|_| ())
-        .map_err(|err| {
-            anyhow!(
-                "Local repo Projection workspace identity marker is invalid; repair before source-control write: {repo_name}: {err}"
-            )
-        })
 }
 
 fn require_stage_all(all: bool) -> Result<()> {

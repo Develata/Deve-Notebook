@@ -9,6 +9,7 @@ use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use uuid::Uuid;
 
 #[test]
 fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<()> {
@@ -19,7 +20,7 @@ fn git_import_command_dry_run_is_read_only_and_apply_writes_pending() -> Result<
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo_root = repo.local_repo_workspace_root("default")?;
+        repo_root = repo.ensure_local_repo_workspace_identity("default")?;
         init_git_repo(&repo_root);
         commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -78,7 +79,7 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
     {
         let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo_root = repo.local_repo_workspace_root("default")?;
+        repo_root = repo.ensure_local_repo_workspace_identity("default")?;
         init_git_repo(&repo_root);
         commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
         git_cmd(&repo_root, &["add", "."]);
@@ -125,6 +126,42 @@ fn git_import_command_apply_blocker_prevents_partial_pending_writes() -> Result<
 }
 
 #[test]
+fn git_import_apply_rejects_broken_workspace_identity() -> Result<()> {
+    let dir = tempfile::tempdir()?;
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let repo_root;
+    {
+        let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+        repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        repo_root = repo.ensure_local_repo_workspace_identity("default")?;
+        init_git_repo(&repo_root);
+        commit_deve_file(&repo_root, &repo, "note.md", "hello\n")?;
+        git_cmd(&repo_root, &["add", "."]);
+        git_cmd(&repo_root, &["commit", "--no-gpg-sign", "-m", "baseline"]);
+    }
+
+    write_workspace_file(&repo_root, "note.md", "hello import\n");
+    corrupt_workspace_identity(&repo_root)?;
+
+    let err = git::import(
+        &ledger_dir,
+        Some("default"),
+        true,
+        10,
+        GitBridgeMode::Mirror,
+    )
+    .expect_err("git import --apply must reject a broken workspace identity");
+
+    assert_identity_gate_error(&err);
+    let mut repo = RepoManager::init(&ledger_dir, 10, None, None)?;
+    repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    let pending = repo.list_pending_fs_in_local_repo("default")?;
+    assert!(pending.is_empty(), "{pending:?}");
+    Ok(())
+}
+
+#[test]
 fn git_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let ledger_dir = dir.path().join("ledger");
@@ -133,7 +170,7 @@ fn git_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     let repo_root = {
         let mut repo = repo;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo.local_repo_workspace_root("default")?
+        repo.ensure_local_repo_workspace_identity("default")?
     };
     prepare_exported_baseline(&ledger_dir, &projection_base, &repo_root)?;
     let imported_commit_id =
@@ -155,6 +192,26 @@ fn git_import_apply_resolved_commit_exports_roundtrip() -> Result<()> {
     Ok(())
 }
 
+fn corrupt_workspace_identity(workspace: &std::path::Path) -> Result<()> {
+    std::fs::write(
+        deve_core::utils::notegit::repo_identity_path(workspace),
+        format!(
+            "version = 1\nrepo_id = \"{}\"\nrepo_name = \"default\"\n",
+            Uuid::new_v4()
+        ),
+    )?;
+    Ok(())
+}
+
+fn assert_identity_gate_error(err: &anyhow::Error) {
+    let message = err.to_string();
+    assert!(
+        message.contains("identity marker") || message.contains("workspace identity"),
+        "unexpected error: {}",
+        message
+    );
+}
+
 #[test]
 fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     let dir = tempfile::tempdir()?;
@@ -164,7 +221,7 @@ fn git_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     let repo_root = {
         let mut repo = repo;
         repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
-        repo.local_repo_workspace_root("default")?
+        repo.ensure_local_repo_workspace_identity("default")?
     };
     prepare_exported_baseline(&ledger_dir, &projection_base, &repo_root)?;
     let remote = dir.path().join("remote.git");

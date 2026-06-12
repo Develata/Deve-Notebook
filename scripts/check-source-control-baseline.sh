@@ -124,6 +124,7 @@ check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli switch_b
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture"
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli sc_stage_all_rejects_broken_workspace_identity -- --nocapture"
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli sc_commit_rejects_broken_workspace_identity -- --nocapture"
+check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli git_import_apply_rejects_broken_workspace_identity -- --nocapture"
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_core source_control_write_gate_rejects_broken_workspace_identity -- --nocapture"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "delegated_source_control_requires_proxy_capability"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "http_source_control_write_grant_requires_local_branch"
@@ -131,6 +132,7 @@ check_contains apps/cli/src/server/tests/source_control/source_control_scope_bin
 check_contains apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs "switch_branch_failure_revokes_source_control_write_grant"
 check_contains apps/cli/src/commands/sc.rs "sc_stage_all_rejects_broken_workspace_identity"
 check_contains apps/cli/src/commands/sc.rs "sc_commit_rejects_broken_workspace_identity"
+check_contains apps/cli/src/commands/git_import_smoke_test.rs "git_import_apply_rejects_broken_workspace_identity"
 check_absent apps/cli/src/server/source_control_proxy/client.rs 'expect("build source control HTTP client")'
 check_absent apps/cli/src/server/handlers/source_control/repo_scope.rs 'expect("checked active branch")'
 check_absent apps/cli/src/server/repo_scope/sync.rs 'expect("checked active branch")'

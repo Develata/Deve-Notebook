@@ -60,7 +60,7 @@ pub(super) fn init_git_repo(path: &Path) {
 pub(super) fn create_imported_conflict_fixture() -> anyhow::Result<ImportedConflictFixture> {
     let (dir, state, repo_id, _test_id) = build_state()?;
     let repo_name = state.repo.local_repo_name().to_string();
-    let repo_root = state.repo.local_repo_workspace_root(&repo_name)?;
+    let repo_root = state.repo.ensure_local_repo_workspace_identity(&repo_name)?;
     init_git_repo(&repo_root);
     seed_note_baseline(&dir, &state, &repo_name, "hello\n")?;
     git(&repo_root, &["add", "."]);
@@ -72,7 +72,7 @@ pub(super) fn create_imported_conflict_fixture() -> anyhow::Result<ImportedConfl
 pub(super) fn create_mapped_imported_conflict_fixture() -> anyhow::Result<ImportedConflictFixture> {
     let (dir, state, repo_id, _test_id) = build_state()?;
     let repo_name = state.repo.local_repo_name().to_string();
-    let repo_root = state.repo.local_repo_workspace_root(&repo_name)?;
+    let repo_root = state.repo.ensure_local_repo_workspace_identity(&repo_name)?;
     init_git_repo(&repo_root);
     let baseline_commit = seed_note_baseline(&dir, &state, &repo_name, "hello\n")?;
     let baseline_report = state.repo.run_on_local_repo(&repo_name, |db| {

@@ -124,6 +124,7 @@ async fn imported_conflict_keep_ledger_discards_import_without_staging() -> anyh
 async fn resolve_conflict_rejects_non_conflict_pending_entry() -> anyhow::Result<()> {
     let (dir, state, _repo_id, _test_id) = build_state()?;
     let repo_name = state.repo.local_repo_name().to_string();
+    state.repo.ensure_local_repo_workspace_identity(&repo_name)?;
     write_workspace_file(&dir, &repo_name, "note.md", "plain pending\n");
     state.repo.run_on_local_repo(&repo_name, |db| {
         pending_fs::upsert(

@@ -9,6 +9,7 @@ use super::git_output::{
     print_export_report, print_import_apply_report, print_import_plan, print_mirror_report,
     print_push_report, print_status,
 };
+use super::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
 use deve_core::config::GitBridgeMode;
@@ -84,6 +85,7 @@ pub fn import(
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
         if apply {
+            ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "Git bridge write")?;
             let report = deve_core::git_bridge::apply_import(&repo, &repo_name, &repo_root)?;
             print_import_apply_report(&repo_name, &report);
         } else {
@@ -107,6 +109,7 @@ pub fn push(
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
+        ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "Git bridge write")?;
         let report = repo.run_on_local_repo(&repo_name, |db| {
             Ok(deve_core::git_bridge::push_mirror(
                 db,
@@ -148,6 +151,7 @@ fn run_executor(
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
+        ensure_local_repo_workspace_identity_for_write(&repo, &repo_name, "Git bridge write")?;
         let report = run_report(&repo, &repo_name, &repo_root, retry_out_of_sync)?;
         print_report(&repo_name, &report);
     }

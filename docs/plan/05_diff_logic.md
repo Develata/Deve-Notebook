@@ -101,6 +101,9 @@ Git mirror 命令面必须遵守以下边界：
 - `git mirror` / `git export` **MAY** 把已完成的 Deve commit projection 导出为 Git commit；导出失败只能产生 `GitMirrorOutOfSync`，**MUST NOT** 回滚 Deve commit。
 - `git import` dry-run 只能生成 change/blocker plan；默认 **MUST NOT** 写 ledger、`pending_fs_ops`、`StagedEntry`、`CommitAnchor` 或 `.notegit/`。
 - `git import --apply` 只能把安全 changes 写入 pending/import，并保留冲突标记；后续 **MUST** 通过 Deve stage/commit 生成 ledger facts。
+- Git bridge 写命令（`git mirror/export/import --apply/push`）在写 pending/import、`.git` mirror
+  或发布 mirror HEAD 之前 **MUST** 复用本地 Projection Workspace identity gate；
+  Projection Locator 或 `.notegit` identity marker 破损时必须 fail-closed。
 - `git push` 只能发布已映射的 `.git` mirror HEAD；它 **MUST** fail-closed 于 mirror 未 ready、Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit` tracked 泄漏或 Git HEAD 未映射到最新 Deve commit。
 - repair action schema 只能用于诊断、人工修复指引和显式 retry；**MUST NOT** 被 Web、后台任务或 Command Palette 解释为自动 Git 写入授权。
 - 自动后台执行、可点击 repair UI 与 Web 后端直接执行 Git 写入 **MUST** 作为独立设计批次处理，不能从只读 status/review surface 隐式升级。

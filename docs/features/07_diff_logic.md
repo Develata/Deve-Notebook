@@ -66,6 +66,8 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - 默认 `source_control.git_bridge = "mirror"` 时，Deve commit 后仍可排队 Git mirror record，Git mirror/import/export/push 只通过显式 CLI bridge 执行。
 - `source_control.git_bridge = "off"` 时，Source Control 的 stage、commit、diff、history 与 merge 仍可用，但不会自动排队 Git mirror。
 - `off` 模式下，Git status 与 import dry-run 只能作为诊断；Git mirror/export/import apply/push 必须明确显示 disabled blocker。
+- Git bridge 写命令在执行 import apply、mirror/export 或 push 前必须复用本地 Projection Workspace identity gate；
+  `.notegit` identity marker 或 Projection Locator 破损时不得写 pending/import、`.git` mirror 或发布 mirror HEAD。
 - Web Command Palette 与 Source Control UI 只展示当前 mode 与 CLI-only notice，不直接执行 Git writer。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须遵守同一个 mode；代理模式必须展示主进程 mode 或 delegated/unknown，而不能硬编码为 mirror。
 
