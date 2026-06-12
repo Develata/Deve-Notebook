@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-11`
+- `Last Review`: `2026-06-12`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -99,6 +99,9 @@
 | `p2p.peers[].ws_url`    | String | *(none)*   | 对端 FullPeer `/ws` endpoint；scheme 必须为 `ws://` 或 `wss://`。 |
 | `p2p.peers[].auth_token_env` | String | *(none)* | 出站 bearer token 的环境变量名；配置只保存 env 名称，**MUST NOT** 保存 token material。 |
 | `p2p.peers[].enabled`   | Bool   | `true`     | 单个静态 peer connector 开关。 |
+
+`p2p.peers[]` 中 `peer_id + repo_id + ws_url` 组成静态 peer identity tuple；重复 tuple 必须在
+runtime config 加载时 fail-closed，避免多个 peer entry 共享同一 connector 诊断状态。
 
 `profile` 只提供默认预设。显式 `config.toml` 或环境变量 **MUST** 覆盖 profile preset；未显式设置时，`low-spec` **MUST** 使用 `snapshot_depth = 10`、`MEM_CACHE_MB = 32`，`standard` **MUST** 使用 `snapshot_depth = 100`、`MEM_CACHE_MB = 128`。
 
