@@ -156,6 +156,7 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "peer_id_mismatch"
     } else if message.contains("invalid handshake signature")
         || message.contains("synchello proof rejected")
+        || compact.contains("syncpeerunauthenticated")
     {
         "malformed_session_proof"
     } else if message.contains("401")
@@ -359,6 +360,16 @@ mod tests {
                 source_error
             )),
             "source_proof_rejected"
+        );
+
+        let peer_auth_error =
+            ServerError::with_detail(ServerErrorCode::SyncPeerUnauthenticated, "Handshake failed");
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer returned protocol error: {:?}",
+                peer_auth_error
+            )),
+            "malformed_session_proof"
         );
     }
 }
