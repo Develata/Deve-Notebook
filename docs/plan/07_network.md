@@ -466,7 +466,9 @@ Relay 节点不得依赖解密 payload 才能完成路由。
   Static FullPeer connector v1 例外：在没有持久化 origin `source_proof` 或 canonical ledger proof
   之前，connector 的 `SyncHello` offer set 只能包含当前节点 identity 可签名的 local source；不得
   advertise 本机保存的 third-party shadow source。
-- 入站 push / snapshot push 的 source 必须来自本端在当前 SyncHello diff 中请求过的 peer；入站 request / snapshot request 的 source 必须来自本端在当前 SyncHello diff 中声明可发送的 peer。
+- 入站 push / snapshot push 的 source 必须来自本端在当前 SyncHello diff 中请求过的 peer；未请求的 inbound source 属于确定性
+  source-boundary 错误，FullPeer connector 诊断必须暴露 `unrequested_source`，并停止把该错误当作普通断线持续重连。
+- 入站 request / snapshot request 的 source 必须来自本端在当前 SyncHello diff 中声明可发送的 peer。
 - request / snapshot request 请求未 offer source 属于确定性协议/source-boundary 错误；FullPeer connector 诊断必须暴露 `unoffered_source`，并停止把该错误当作普通断线持续重连。
 - push / snapshot push 的 source proof 拒绝属于确定性 source-attribution 错误；FullPeer connector 诊断必须暴露 `source_proof_rejected`，并停止把该错误当作普通断线持续重连。
 - FullPeer connector 接收到 `ServerMessage::SyncPush` 时，必须在 shadow apply 之前校验

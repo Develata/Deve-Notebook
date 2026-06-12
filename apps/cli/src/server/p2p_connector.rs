@@ -115,6 +115,7 @@ fn is_terminal_p2p_error(error_code: &str) -> bool {
             | "peer_id_mismatch"
             | "malformed_session_proof"
             | "unoffered_source"
+            | "unrequested_source"
             | "source_proof_rejected"
             | "token_missing"
             | "token_empty"
@@ -174,6 +175,10 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         || compact.contains("unofferedsource")
     {
         "unoffered_source"
+    } else if message.contains("inbound source") && message.contains("not requested")
+        || compact.contains("unrequestedsource")
+    {
+        "unrequested_source"
     } else if message.contains("source proof rejected")
         || message.contains("source attribution rejected")
         || compact.contains("sourceproofrejected")
@@ -319,6 +324,18 @@ mod tests {
         );
         assert!(is_terminal_p2p_error("unoffered_source"));
         assert_eq!(failure_state("unoffered_source"), "error");
+    }
+
+    #[test]
+    fn p2p_connector_unrequested_source_is_terminal() {
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P inbound source peer-a was not requested from peer peer-b for repo 11111111-1111-1111-1111-111111111111"
+            )),
+            "unrequested_source"
+        );
+        assert!(is_terminal_p2p_error("unrequested_source"));
+        assert_eq!(failure_state("unrequested_source"), "error");
     }
 
     #[test]
