@@ -377,6 +377,33 @@ auth_token_env = "DEVE_P2P_PEER_B_TOKEN_ALT"
 }
 
 #[test]
+fn load_checked_rejects_sparse_p2p_peer_env_alias_indices() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("DEVE_P2P__ENABLED", Some("true")),
+        ("DEVE_P2P_MESH_PEER_0_LABEL", None),
+        ("DEVE_P2P_MESH_PEER_1_LABEL", Some("peer-b")),
+        ("DEVE_P2P_MESH_PEER_1_PEER_ID", Some("peer-b-id")),
+        (
+            "DEVE_P2P_MESH_PEER_1_REPO_ID",
+            Some("11111111-1111-1111-1111-111111111111"),
+        ),
+        ("DEVE_P2P_MESH_PEER_1_WS_URL", Some("ws://peer-b:3001/ws")),
+        (
+            "DEVE_P2P_MESH_PEER_1_AUTH_TOKEN_ENV",
+            Some("DEVE_P2P_PEER_B_TOKEN"),
+        ),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+
+    let err = Config::load_checked().expect_err("sparse p2p peer env index must fail closed");
+
+    assert!(err.to_string().contains("P2P peer environment indices"));
+    assert!(err.to_string().contains("1"));
+}
+
+#[test]
 fn runtime_config_value_parsers_reject_unknown_values() {
     assert!("standard".parse::<AppProfile>().is_ok());
     assert!("low-spec".parse::<AppProfile>().is_ok());

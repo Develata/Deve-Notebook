@@ -280,9 +280,11 @@
   steps:
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_core p2p_mesh_env_aliases_load_static_peer_config -- --nocapture
+    - run: cargo test -p deve_core --lib load_checked_rejects_sparse_p2p_peer_env_alias_indices -- --nocapture
     - run: cargo test -p deve_cli init_config_template_matches_current_settings_schema -- --nocapture
   assertions:
     - config_example_peer_id_placeholder_not_label: true
     - init_template_peer_id_placeholder_not_label: true
     - p2p_env_peer_id_preserved_as_expected_identity: true
+    - p2p_env_peer_indices_contiguous_from_zero: true
 ```

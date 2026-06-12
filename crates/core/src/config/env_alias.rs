@@ -108,16 +108,23 @@ fn env_string_any(keys: &[&str]) -> anyhow::Result<Option<String>> {
 
 fn p2p_peers_from_env() -> anyhow::Result<Vec<P2pPeerConfig>> {
     let mut peers = Vec::new();
+    let mut saw_missing_index = false;
     for index in 0..32 {
         let safe_prefix = format!("DEVE_P2P_MESH_PEER_{index}_");
         let nested_prefix = format!("DEVE_P2P__PEERS__{index}__");
-        let Some(label) = env_string_any(&[
+        if !p2p_peer_env_present(&safe_prefix, &nested_prefix)? {
+            saw_missing_index = true;
+            continue;
+        }
+        if saw_missing_index {
+            return Err(anyhow!(
+                "P2P peer environment indices must be contiguous from 0; found index {index} after a missing lower index"
+            ));
+        }
+        let label = required_env_string_any(&[
             &format!("{safe_prefix}LABEL"),
             &format!("{nested_prefix}LABEL"),
-        ])?
-        else {
-            break;
-        };
+        ])?;
         let peer_id = required_env_string_any(&[
             &format!("{safe_prefix}PEER_ID"),
             &format!("{nested_prefix}PEER_ID"),
@@ -149,6 +156,34 @@ fn p2p_peers_from_env() -> anyhow::Result<Vec<P2pPeerConfig>> {
         });
     }
     Ok(peers)
+}
+
+fn p2p_peer_env_present(safe_prefix: &str, nested_prefix: &str) -> anyhow::Result<bool> {
+    env_any_present(&[
+        format!("{safe_prefix}LABEL"),
+        format!("{nested_prefix}LABEL"),
+        format!("{safe_prefix}PEER_ID"),
+        format!("{nested_prefix}PEER_ID"),
+        format!("{safe_prefix}REPO_ID"),
+        format!("{nested_prefix}REPO_ID"),
+        format!("{safe_prefix}WS_URL"),
+        format!("{nested_prefix}WS_URL"),
+        format!("{safe_prefix}AUTH_TOKEN_ENV"),
+        format!("{nested_prefix}AUTH_TOKEN_ENV"),
+        format!("{safe_prefix}ENABLED"),
+        format!("{nested_prefix}ENABLED"),
+    ])
+}
+
+fn env_any_present(keys: &[String]) -> anyhow::Result<bool> {
+    for key in keys {
+        match std::env::var(key) {
+            Ok(_) => return Ok(true),
+            Err(VarError::NotPresent) => {}
+            Err(err) => return Err(anyhow!("Failed to read environment variable {key}: {err}")),
+        }
+    }
+    Ok(false)
 }
 
 fn required_env_string_any(keys: &[&str]) -> anyhow::Result<String> {

@@ -102,6 +102,8 @@
 
 `p2p.peers[]` 中 `peer_id + repo_id + ws_url` 组成静态 peer identity tuple；重复 tuple 必须在
 runtime config 加载时 fail-closed，避免多个 peer entry 共享同一 connector 诊断状态。
+通过环境变量声明 `p2p.peers[]` 时，peer index 必须从 `0` 连续递增；出现稀疏 index 或只有部分字段的
+peer entry 必须在配置加载时 fail-closed，不能静默忽略后续 peer。
 
 `profile` 只提供默认预设。显式 `config.toml` 或环境变量 **MUST** 覆盖 profile preset；未显式设置时，`low-spec` **MUST** 使用 `snapshot_depth = 10`、`MEM_CACHE_MB = 32`，`standard` **MUST** 使用 `snapshot_depth = 100`、`MEM_CACHE_MB = 128`。
 
