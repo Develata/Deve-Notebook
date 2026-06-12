@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-11`
+- `Last Review`: `2026-06-12`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -88,6 +88,9 @@ DeveStaged
 - `source_control.git_bridge` 是 source-control writer 的显式 runtime policy；CLI `sc commit`、
   HTTP commit、plugin-host HTTP mutation 与 Rhai `sc_commit` 等所有 commit writer surface
   必须接收同一个 effective policy，不能通过默认 `mirror` 入口绕过 `off`。
+- Core Source Control writer API **MUST NOT** 暴露无 policy 的 commit 方法；新增或重构的
+  commit writer 必须在编译期显式选择 `GitBridgeMode`，delegated remote proxy 只能在独立
+  delegated path 内转发到主进程 effective policy。
 - `off` 模式下，`deve git status` 与 `deve git import` dry-run 可作为只读诊断；
   `deve git mirror/export/import --apply/push` 必须返回结构化 disabled blocker，并提示
   需要将 `source_control.git_bridge` 切回 `mirror`。

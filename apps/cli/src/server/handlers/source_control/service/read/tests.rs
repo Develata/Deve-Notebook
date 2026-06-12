@@ -69,10 +69,6 @@ impl SourceControlApi for FakeRepo {
         Ok(vec![])
     }
 
-    fn commit_staged_in_repo(&self, _: &RepoSelector, _: &str) -> anyhow::Result<CommitInfo> {
-        unreachable!("unused in this test")
-    }
-
     fn commit_staged_in_repo_with_git_bridge(
         &self,
         _: &RepoSelector,

@@ -63,11 +63,6 @@ impl SourceControlApi for RepoManager {
             .diff_commits_in_repo(repo, commit_a_id, commit_b_id)
     }
 
-    fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
-        self.source_control_scoped_runtime()
-            .commit_staged_in_repo(repo, message)
-    }
-
     fn commit_staged_in_repo_with_git_bridge(
         &self,
         repo: &RepoSelector,

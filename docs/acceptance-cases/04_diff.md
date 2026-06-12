@@ -156,6 +156,7 @@
     - run: cargo test -p deve_cli http_source_control_jwt_grant_is_not_shadowed_by_dev_session_cookie -- --nocapture
     - run: cargo test -p deve_cli delegated_source_control_requires_proxy_capability -- --nocapture
     - run: cargo test -p deve_core plugin_sc_commit_respects_git_bridge_off -- --nocapture
+    - run: cargo check -p deve_core --tests
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_cli proxy_node_role_uses_delegated_git_bridge_mode -- --nocapture
@@ -217,6 +218,7 @@
     - cli_assert: sc_stage_all_unresolved_conflict_fails_closed true
     - cli_assert: sc_write_rejects_broken_workspace_identity true
     - plugin_assert: sc_commit_respects_git_bridge_off true
+    - api_assert: source_control_commit_writer_requires_explicit_git_bridge_policy true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - plugin_assert: broken_workspace_identity_write_gate_fails_closed true
     - api_assert: proxy_node_role_git_bridge_not_hardcoded_mirror true

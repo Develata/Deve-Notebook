@@ -114,14 +114,6 @@ impl<'a> SourceControlScopedRuntime<'a> {
             .diff_commits_in_local_repo(&repo_name, commit_a_id, commit_b_id)
     }
 
-    pub(crate) fn commit_staged_in_repo(
-        &self,
-        repo: &RepoSelector,
-        message: &str,
-    ) -> Result<CommitInfo> {
-        self.commit_staged_in_repo_with_git_bridge(repo, message, GitBridgeMode::Mirror)
-    }
-
     pub(crate) fn commit_staged_in_repo_with_git_bridge(
         &self,
         repo: &RepoSelector,

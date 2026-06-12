@@ -70,6 +70,7 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
   `.notegit` identity marker 或 Projection Locator 破损时不得写 pending/import、`.git` mirror 或发布 mirror HEAD。
 - Web Command Palette 与 Source Control UI 只展示当前 mode 与 CLI-only notice，不直接执行 Git writer。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须遵守同一个 mode；代理模式必须展示主进程 mode 或 delegated/unknown，而不能硬编码为 mirror。
+- 后端 commit writer API 不提供无策略默认 `mirror` 入口；新增 CLI、HTTP、WS 或插件提交路径时必须显式传入当前 Git bridge mode，代理路径只能转发到主进程策略。
 
 ### 7. HTTP Source Control Write Grant
 

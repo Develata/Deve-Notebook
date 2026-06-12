@@ -25,7 +25,6 @@ pub trait SourceControlApi: Send + Sync {
         commit_a_id: Option<&str>,
         commit_b_id: &str,
     ) -> Result<Vec<CommitFileDiff>>;
-    fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo>;
     fn commit_staged_in_repo_with_git_bridge(
         &self,
         repo: &RepoSelector,

@@ -86,15 +86,6 @@ impl SourceControlApi for RecordingSourceControlApi {
         self.unused()
     }
 
-    fn commit_staged_in_repo(
-        &self,
-        _repo: &RepoSelector,
-        message: &str,
-    ) -> anyhow::Result<CommitInfo> {
-        *self.commit_mode.lock().expect("commit mode lock") = Some(GitBridgeMode::Mirror);
-        Ok(commit_info(message))
-    }
-
     fn commit_staged_in_repo_with_git_bridge(
         &self,
         _repo: &RepoSelector,

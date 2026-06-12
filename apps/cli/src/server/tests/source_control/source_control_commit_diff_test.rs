@@ -57,7 +57,11 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
         },
     );
     proxy.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
-    let first = proxy.commit_staged_in_repo(&selector, "initial")?;
+    let first = proxy.commit_staged_in_repo_with_git_bridge(
+        &selector,
+        "initial",
+        deve_core::config::GitBridgeMode::Mirror,
+    )?;
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "hello");
@@ -93,7 +97,11 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
             doc_id: Some(doc_id),
         },
     )?;
-    let second = proxy.commit_staged_in_repo(&selector, "rename")?;
+    let second = proxy.commit_staged_in_repo_with_git_bridge(
+        &selector,
+        "rename",
+        deve_core::config::GitBridgeMode::Mirror,
+    )?;
 
     let diffs = proxy.diff_commits_in_repo(&selector, Some(&first.id), &second.id)?;
     assert_eq!(diffs.len(), 1);

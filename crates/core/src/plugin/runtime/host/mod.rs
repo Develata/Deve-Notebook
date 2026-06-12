@@ -167,7 +167,11 @@ pub fn commit_staged_in_repo(
         SourceControlHostMode::Local { git_bridge } => {
             repo.commit_staged_in_repo_with_git_bridge(selector, message, git_bridge)
         }
-        SourceControlHostMode::RemoteDelegated => repo.commit_staged_in_repo(selector, message),
+        SourceControlHostMode::RemoteDelegated => {
+            // RemoteSourceControlApi forwards to the authoritative main process;
+            // if a non-proxy implementation is miswired here, fail closed for Git writes.
+            repo.commit_staged_in_repo_with_git_bridge(selector, message, GitBridgeMode::Off)
+        }
     }
 }
 

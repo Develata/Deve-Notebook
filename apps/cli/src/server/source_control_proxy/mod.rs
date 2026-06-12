@@ -120,10 +120,6 @@ impl SourceControlApi for RemoteSourceControlApi {
         commits::diff_commits(self, repo, commit_a_id, commit_b_id)
     }
 
-    fn commit_staged_in_repo(&self, repo: &RepoSelector, message: &str) -> Result<CommitInfo> {
-        commits::commit_staged(self, repo, message)
-    }
-
     fn commit_staged_in_repo_with_git_bridge(
         &self,
         repo: &RepoSelector,

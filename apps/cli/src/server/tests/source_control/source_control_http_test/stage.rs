@@ -53,7 +53,11 @@ async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Resu
     write_workspace_file(dir, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     proxy.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
-    proxy.commit_staged_in_repo(&selector, "initial")?;
+    proxy.commit_staged_in_repo_with_git_bridge(
+        &selector,
+        "initial",
+        deve_core::config::GitBridgeMode::Mirror,
+    )?;
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "hello");
@@ -86,7 +90,11 @@ async fn test_http_stage_prefers_doc_id_over_stale_path() -> anyhow::Result<()> 
     write_workspace_file(dir, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
-    repo.commit_staged_in_repo(&selector, "initial")?;
+    repo.commit_staged_in_repo_with_git_bridge(
+        &selector,
+        "initial",
+        deve_core::config::GitBridgeMode::Mirror,
+    )?;
     let doc_id = repo.get_docid("notes/a.md")?.expect("existing doc id");
 
     write_workspace_file(dir, "notes/b.md", "world");
