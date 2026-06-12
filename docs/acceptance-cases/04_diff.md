@@ -131,6 +131,8 @@
     - run: cargo test -p deve_core commit_staged_rejects_docless_upsert_on_tracked_path -- --nocapture
     - run: cargo test -p deve_core stage_pending_rejects_unresolved_conflict -- --nocapture
     - run: cargo test -p deve_cli sc_stage_all_rejects_unresolved_conflict -- --nocapture
+    - run: cargo test -p deve_cli sc_stage_all_rejects_broken_workspace_identity -- --nocapture
+    - run: cargo test -p deve_cli sc_commit_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_git_mirror_failure_metadata -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_cli_only_repair_action -- --nocapture
     - run: cargo test -p deve_cli status_lines_include_guidance_for_all_repair_actions -- --nocapture
@@ -211,6 +213,7 @@
     - api_assert: commit_docless_upsert_on_tracked_path_fails_closed true
     - api_assert: stage_unresolved_conflict_fails_closed true
     - cli_assert: sc_stage_all_unresolved_conflict_fails_closed true
+    - cli_assert: sc_write_rejects_broken_workspace_identity true
     - plugin_assert: sc_commit_respects_git_bridge_off true
     - plugin_assert: missing_local_write_gate_fails_closed true
     - plugin_assert: broken_workspace_identity_write_gate_fails_closed true
