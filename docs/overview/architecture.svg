@@ -2252,7 +2252,7 @@
 <g id="node73" class="node">
 <title>op_sc_publish_submit</title>
 <path fill="#fde68a" stroke="black" d="M37384.5,-908C37384.5,-908 37273.5,-908 37273.5,-908 37267.5,-908 37261.5,-902 37261.5,-896 37261.5,-896 37261.5,-884 37261.5,-884 37261.5,-878 37267.5,-872 37273.5,-872 37273.5,-872 37384.5,-872 37384.5,-872 37390.5,-872 37396.5,-878 37396.5,-884 37396.5,-884 37396.5,-896 37396.5,-896 37396.5,-902 37390.5,-908 37384.5,-908"/>
-<text text-anchor="middle" x="37329" y="-887.5" font-family="sans-serif" font-size="10.00">Submit CommitAndPush</text>
+<text text-anchor="middle" x="37329" y="-887.5" font-family="sans-serif" font-size="10.00">CLI-only Notice</text>
 </g>
 <!-- app_sc_publish_gate -->
 <g id="node325" class="node">
@@ -2270,7 +2270,7 @@
 <g id="node326" class="node">
 <title>app_sc_publish_submit</title>
 <path fill="#bfdbfe" stroke="black" d="M49845,-685.5C49845,-685.5 49693,-685.5 49693,-685.5 49687,-685.5 49681,-679.5 49681,-673.5 49681,-673.5 49681,-661.5 49681,-661.5 49681,-655.5 49687,-649.5 49693,-649.5 49693,-649.5 49845,-649.5 49845,-649.5 49851,-649.5 49857,-655.5 49857,-661.5 49857,-661.5 49857,-673.5 49857,-673.5 49857,-679.5 49851,-685.5 49845,-685.5"/>
-<text text-anchor="middle" x="49769" y="-665" font-family="sans-serif" font-size="10.00">ClientMessage::CommitAndPush</text>
+<text text-anchor="middle" x="49769" y="-665" font-family="sans-serif" font-size="10.00">SC blocker</text>
 </g>
 <!-- op_sc_publish_submit&#45;&gt;app_sc_publish_submit -->
 <g id="edge71" class="edge">
@@ -2282,13 +2282,13 @@
 <g id="node74" class="node">
 <title>op_sc_publish_result</title>
 <path fill="#fef9c3" stroke="black" d="M37559.5,-908C37559.5,-908 37426.5,-908 37426.5,-908 37420.5,-908 37414.5,-902 37414.5,-896 37414.5,-896 37414.5,-884 37414.5,-884 37414.5,-878 37420.5,-872 37426.5,-872 37426.5,-872 37559.5,-872 37559.5,-872 37565.5,-872 37571.5,-878 37571.5,-884 37571.5,-884 37571.5,-896 37571.5,-896 37571.5,-902 37565.5,-908 37559.5,-908"/>
-<text text-anchor="middle" x="37493" y="-887.5" font-family="sans-serif" font-size="10.00">Receive Publish Commit Ack</text>
+<text text-anchor="middle" x="37493" y="-887.5" font-family="sans-serif" font-size="10.00">Reject Legacy Frame</text>
 </g>
 <!-- app_sc_publish_result -->
 <g id="node327" class="node">
 <title>app_sc_publish_result</title>
 <path fill="#eff6ff" stroke="black" d="M49937,-685.5C49937,-685.5 49887,-685.5 49887,-685.5 49881,-685.5 49875,-679.5 49875,-673.5 49875,-673.5 49875,-661.5 49875,-661.5 49875,-655.5 49881,-649.5 49887,-649.5 49887,-649.5 49937,-649.5 49937,-649.5 49943,-649.5 49949,-655.5 49949,-661.5 49949,-661.5 49949,-673.5 49949,-673.5 49949,-679.5 49943,-685.5 49937,-685.5"/>
-<text text-anchor="middle" x="49912" y="-665" font-family="sans-serif" font-size="10.00">CommitAck</text>
+<text text-anchor="middle" x="49912" y="-665" font-family="sans-serif" font-size="10.00">SC blocker</text>
 </g>
 <!-- op_sc_publish_result&#45;&gt;app_sc_publish_result -->
 <g id="edge72" class="edge">

@@ -6,6 +6,6 @@
 
                 op_sc_publish_focus [label="Focus Publish Commit Input", fillcolor="#fef9c3"];
                 op_sc_publish_type [label="Type Publish Commit Message", fillcolor="#fef9c3"];
-                op_sc_publish_submit [label="Submit CommitAndPush", fillcolor="#fde68a"];
-                op_sc_publish_result [label="Receive Publish Commit Ack", fillcolor="#fef9c3"];
+                op_sc_publish_submit [label="CLI-only Notice", fillcolor="#fde68a"];
+                op_sc_publish_result [label="Reject Legacy Frame", fillcolor="#fef9c3"];
             }

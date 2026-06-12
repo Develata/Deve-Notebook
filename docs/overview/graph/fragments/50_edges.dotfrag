@@ -185,9 +185,6 @@
     app_sc_commit_diff_request -> mod_proto_ws_history;
     app_sc_commit_diff_receive -> mod_sc_history;
     app_sc_commit_diff_receive -> mod_proto_ws_history;
-    app_sc_publish_submit -> mod_sc_commit_publish;
-    app_sc_publish_submit -> mod_ledger_publish;
-    app_sc_publish_submit -> mod_proto_ws_publish;
     app_sc_publish_result -> mod_sc_commit_publish;
     app_sc_publish_result -> mod_proto_ws_publish;
     app_sc_merge_select -> app_sc_merge_request;

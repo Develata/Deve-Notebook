@@ -253,8 +253,8 @@ digraph DeveNoteArchitecture {
 
                 op_sc_publish_focus [label="Focus Publish Commit Input", fillcolor="#fef9c3"];
                 op_sc_publish_type [label="Type Publish Commit Message", fillcolor="#fef9c3"];
-                op_sc_publish_submit [label="Submit CommitAndPush", fillcolor="#fde68a"];
-                op_sc_publish_result [label="Receive Publish Commit Ack", fillcolor="#fef9c3"];
+                op_sc_publish_submit [label="CLI-only Notice", fillcolor="#fde68a"];
+                op_sc_publish_result [label="Reject Legacy Frame", fillcolor="#fef9c3"];
             }
 
             subgraph cluster_user_sc_history {
@@ -1103,8 +1103,8 @@ digraph DeveNoteArchitecture {
 
             app_sc_publish_draft [label="publish draft state", fillcolor="#eff6ff"];
             app_sc_publish_gate [label="repo_write_block_untracked", fillcolor="#eff6ff"];
-            app_sc_publish_submit [label="ClientMessage::CommitAndPush", fillcolor="#bfdbfe"];
-            app_sc_publish_result [label="CommitAck", fillcolor="#eff6ff"];
+            app_sc_publish_submit [label="CLI-only notice", fillcolor="#bfdbfe"];
+            app_sc_publish_result [label="SC blocker", fillcolor="#eff6ff"];
         }
 
         subgraph cluster_app_sc_history {
@@ -2605,9 +2605,6 @@ digraph DeveNoteArchitecture {
     app_sc_commit_diff_request -> mod_proto_ws_history;
     app_sc_commit_diff_receive -> mod_sc_history;
     app_sc_commit_diff_receive -> mod_proto_ws_history;
-    app_sc_publish_submit -> mod_sc_commit_publish;
-    app_sc_publish_submit -> mod_ledger_publish;
-    app_sc_publish_submit -> mod_proto_ws_publish;
     app_sc_publish_result -> mod_sc_commit_publish;
     app_sc_publish_result -> mod_proto_ws_publish;
     app_sc_merge_select -> app_sc_merge_request;
@@ -4183,8 +4180,7 @@ digraph DeveNoteArchitecture {
         legend_core [label="execution domain", fillcolor="#fdf2f8"];
         legend_object [label="object plane (sidecar)", fillcolor="#f8fafc"];
         legend_owner [label="ownership axis (sidecar)", fillcolor="#f1f5f9"];
-        legend_note [label="clean shared baseline;
-no active drift markers", fillcolor="#e2e8f0"];
+        legend_note [label="clean shared baseline;\nno active drift markers", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];
@@ -4192,4 +4188,3 @@ no active drift markers", fillcolor="#e2e8f0"];
     }
 
 }
-

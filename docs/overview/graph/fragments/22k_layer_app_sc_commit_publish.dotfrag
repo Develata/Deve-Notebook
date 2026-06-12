@@ -6,6 +6,6 @@
 
             app_sc_publish_draft [label="publish draft state", fillcolor="#eff6ff"];
             app_sc_publish_gate [label="repo_write_block_untracked", fillcolor="#eff6ff"];
-            app_sc_publish_submit [label="ClientMessage::CommitAndPush", fillcolor="#bfdbfe"];
-            app_sc_publish_result [label="CommitAck", fillcolor="#eff6ff"];
+            app_sc_publish_submit [label="CLI-only notice", fillcolor="#bfdbfe"];
+            app_sc_publish_result [label="SC blocker", fillcolor="#eff6ff"];
         }
