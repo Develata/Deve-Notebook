@@ -122,6 +122,7 @@ check_contains apps/cli/src/server/router.rs "delegated_source_control_middlewar
 check_contains apps/cli/src/server/auth/delegated_source_control.rs "delegated source control capability missing"
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli switch_branch_failure_revokes_source_control_write_grant -- --nocapture"
 check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture"
+check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_core source_control_write_gate_rejects_broken_workspace_identity -- --nocapture"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "delegated_source_control_requires_proxy_capability"
 check_contains apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs "http_source_control_write_grant_requires_local_branch"
 check_contains apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs "source_control_scope_cleanup_revokes_write_grant"
@@ -273,6 +274,7 @@ check_contains crates/core/src/source_control/pending_fs/target/tests.rs "pendin
 check_contains crates/core/src/source_control/staging/target/tests.rs "staged_doc_target_prefers_live_successor_over_exact_deleted_doc_path"
 check_contains crates/core/src/source_control/pending_fs/target/tests.rs "doc_target_rejects_unrelated_same_doc_live_entry"
 check_contains crates/core/src/source_control/staging/target/tests.rs "doc_target_rejects_unrelated_same_doc_live_entry"
+check_contains crates/core/src/plugin/runtime/host/tests.rs "source_control_write_gate_rejects_broken_workspace_identity"
 check_contains crates/core/tests/source_control_target_lookup_canonical_test.rs "workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set"
 
 # Local repo execution selectors must fail closed on repo_id/repo_name mismatch.

@@ -154,6 +154,7 @@
     - run: cargo test -p deve_cli delegated_source_control_requires_proxy_capability -- --nocapture
     - run: cargo test -p deve_core plugin_sc_commit_respects_git_bridge_off -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
+    - run: cargo test -p deve_core source_control_write_gate_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_cli proxy_node_role_uses_delegated_git_bridge_mode -- --nocapture
     - run: cargo test -p deve_cli role_payload_exposes_runtime_release_shape -- --nocapture
     - run: cargo test -p deve_core pending_doc_target_prefers_live_successor_over_exact_deleted_doc_path -- --nocapture
@@ -212,6 +213,7 @@
     - cli_assert: sc_stage_all_unresolved_conflict_fails_closed true
     - plugin_assert: sc_commit_respects_git_bridge_off true
     - plugin_assert: missing_local_write_gate_fails_closed true
+    - plugin_assert: broken_workspace_identity_write_gate_fails_closed true
     - api_assert: proxy_node_role_git_bridge_not_hardcoded_mirror true
     - api_assert: node_role_exposes_source_control_git_bridge true
     - api_assert: doc_id_source_control_targets_prefer_live_rename_successor true

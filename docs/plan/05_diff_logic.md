@@ -238,6 +238,9 @@ MergeRequested
   必须匹配当前 authenticated browser session 通过 `SyncHello + RegisterWriter` 获得的
   server-side `SourceControlWriteGrant`。
 - 所有 remote branch source control 请求 **MUST** 经过 readonly gate。
+- 本地 source-control 写入口（包括 plugin-host HTTP mutation 与 Rhai `sc_commit`）
+  在写 pending/staging/commit 之前 **MUST** 验证 Projection Locator 与 `.notegit`
+  identity marker 仍绑定同一 local repo；破损或漂移时必须 fail-closed。
 - Web Source Control 的只读 diff / history / graph 入口 **MUST** 使用 read gate；
   remote / spectator scope 只能隐藏或禁用写操作，不得用 write gate 阻断只读 diff 查看。
 - path-only target 仅允许作为 selector 输入，落到算子前必须解析为文档/节点 identity。

@@ -79,6 +79,8 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - remote proxy delegated API 是独立 authority path；它不能被 Web Source Control UI 或普通主进程 HTTP mutation 复用。
 - `/api/delegated/sc/*` 还必须要求显式 delegated capability；普通已登录浏览器或 anonymous localhost dev session
   不能直接调用 delegated 写入口绕过 browser write grant。
+- Plugin-host HTTP mutation 与 Rhai `sc_commit` 也必须复用本地 Projection Workspace identity gate；
+  `.notegit` identity marker 或 Projection Locator 破损时不得写 pending/staging/commit。
 
 ## 非目标
 

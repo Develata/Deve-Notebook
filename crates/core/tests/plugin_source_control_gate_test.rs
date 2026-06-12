@@ -126,6 +126,8 @@ fn plugin_sc_commit_respects_git_bridge_off() {
         RepoManager::init(&ledger, 10, Some("default"), Some("urn:default")).expect("repo init");
     repo.set_projection_base_for_all_local_repos_checked(&projection)
         .expect("projection base");
+    repo.ensure_local_repo_workspace_identity("default")
+        .expect("workspace identity");
     let repo = Arc::new(repo);
     let sync = Arc::new(SyncManager::new_checked(repo.clone()).expect("sync manager"));
     let api = Arc::new(RecordingSourceControlApi::default());

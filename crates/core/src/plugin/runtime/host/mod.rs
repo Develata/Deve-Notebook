@@ -196,6 +196,15 @@ fn ensure_source_control_write_allowed_for(
             format!("Local repo projection is degraded; repair before writing: {repo_name}"),
         ));
     }
+    repo.check_projection_locator_for_local_repo(&repo_name)
+        .map_err(|err| {
+            ServerError::with_detail(
+                ServerErrorCode::StoragePersistFailed,
+                format!(
+                    "Local repo Projection workspace identity is invalid; repair before writing: {repo_name}: {err}"
+                ),
+            )
+        })?;
     Ok(())
 }
 
