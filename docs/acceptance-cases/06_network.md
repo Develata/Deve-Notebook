@@ -226,6 +226,7 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_repo_mismatch_after_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
+    - run: cargo test -p deve_cli p2p_connector_classifies_structured_protocol_errors -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_identity_mismatch_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_repo_mismatch_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_static_config_errors_are_terminal -- --nocapture
@@ -269,6 +270,7 @@
     - api_assert: p2p_snapshot_request_source_must_be_offered true
     - api_assert: p2p_unoffered_source_status_is_not_reconnecting true
     - api_assert: p2p_unrequested_source_status_is_not_reconnecting true
+    - api_assert: p2p_structured_source_boundary_error_not_masked_as_handshake_failure true
     - api_assert: p2p_inbound_sync_push_source_attribution_checked true
     - api_assert: p2p_inbound_snapshot_source_attribution_checked true
     - api_assert: p2p_inbound_sync_push_source_must_be_requested true

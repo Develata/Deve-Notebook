@@ -155,11 +155,6 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "invalid_repo_id"
     } else if message.contains("configured peer_id") || message.contains("peerid mismatch") {
         "peer_id_mismatch"
-    } else if message.contains("invalid handshake signature")
-        || message.contains("synchello proof rejected")
-        || compact.contains("syncpeerunauthenticated")
-    {
-        "malformed_session_proof"
     } else if message.contains("401")
         || message.contains("403")
         || message.contains("unauthorized")
@@ -185,6 +180,11 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         || compact.contains("sourceattributionrejected")
     {
         "source_proof_rejected"
+    } else if message.contains("invalid handshake signature")
+        || message.contains("synchello proof rejected")
+        || compact.contains("syncpeerunauthenticated")
+    {
+        "malformed_session_proof"
     } else if message.contains("timed out") {
         "handshake_timeout"
     } else if message.contains("decode") {
@@ -387,6 +387,28 @@ mod tests {
                 peer_auth_error
             )),
             "malformed_session_proof"
+        );
+
+        let unoffered_source_error =
+            ServerError::with_detail(ServerErrorCode::SyncPeerUnauthenticated, "unoffered_source");
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer returned protocol error: {:?}",
+                unoffered_source_error
+            )),
+            "unoffered_source"
+        );
+
+        let unrequested_source_error = ServerError::with_detail(
+            ServerErrorCode::SyncPeerUnauthenticated,
+            "unrequested_source",
+        );
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer returned protocol error: {:?}",
+                unrequested_source_error
+            )),
+            "unrequested_source"
         );
     }
 }
