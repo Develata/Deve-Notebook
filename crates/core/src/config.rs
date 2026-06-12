@@ -22,6 +22,7 @@ mod defaults;
 mod env_alias;
 mod profile;
 mod schema;
+mod validation;
 
 pub use schema::{
     AgentBridgeConfig, AiConfig, AppProfile, Config, GitBridgeMode, MergeStrategy, P2pConfig,
@@ -63,6 +64,7 @@ impl Config {
             .context("Failed to parse configuration")?;
         profile::apply_profile_presets(&settings, &mut config);
         env_alias::apply_env_aliases(&mut config)?;
+        validation::validate(&config)?;
         Ok(config)
     }
 

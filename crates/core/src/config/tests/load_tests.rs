@@ -239,6 +239,109 @@ fn load_checked_fails_closed_on_invalid_mem_cache_env_alias() {
 }
 
 #[test]
+fn load_checked_fails_closed_on_invalid_p2p_static_config() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[
+        ("DEVE_P2P__INBOUND_TOKEN_ENV", None),
+        ("DEVE_P2P_MESH_PEER_0_LABEL", None),
+    ]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[p2p]
+enabled = true
+inbound_token_env = ""
+
+[[p2p.peers]]
+label = "peer-b"
+peer_id = "peer-b-id"
+repo_id = "11111111-1111-1111-1111-111111111111"
+ws_url = "http://peer-b:3001/ws"
+auth_token_env = ""
+"#,
+    )
+    .expect("bad p2p config");
+
+    let err = Config::load_checked().expect_err("invalid p2p static config");
+
+    assert!(err.to_string().contains("p2p.inbound_token_env"));
+}
+
+#[test]
+fn load_checked_fails_closed_on_invalid_p2p_peer_ws_url() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_P2P_MESH_PEER_0_LABEL", None)]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[[p2p.peers]]
+label = "peer-b"
+peer_id = "peer-b-id"
+repo_id = "11111111-1111-1111-1111-111111111111"
+ws_url = "http://peer-b:3001/ws"
+auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
+"#,
+    )
+    .expect("bad p2p peer config");
+
+    let err = Config::load_checked().expect_err("invalid p2p peer ws_url");
+
+    assert!(err.to_string().contains("p2p.peers[0].ws_url"));
+}
+
+#[test]
+fn load_checked_fails_closed_on_invalid_p2p_peer_repo_id() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_P2P_MESH_PEER_0_LABEL", None)]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[[p2p.peers]]
+label = "peer-b"
+peer_id = "peer-b-id"
+repo_id = "not-a-uuid"
+ws_url = "ws://peer-b:3001/ws"
+auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
+"#,
+    )
+    .expect("bad p2p peer config");
+
+    let err = Config::load_checked().expect_err("invalid p2p peer repo_id");
+
+    assert!(err.to_string().contains("p2p.peers[0].repo_id"));
+}
+
+#[test]
+fn load_checked_fails_closed_on_empty_p2p_peer_auth_token_env() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_P2P_MESH_PEER_0_LABEL", None)]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[[p2p.peers]]
+label = "peer-b"
+peer_id = "peer-b-id"
+repo_id = "11111111-1111-1111-1111-111111111111"
+ws_url = "ws://peer-b:3001/ws"
+auth_token_env = ""
+"#,
+    )
+    .expect("bad p2p peer config");
+
+    let err = Config::load_checked().expect_err("empty p2p peer auth_token_env");
+
+    assert!(err.to_string().contains("p2p.peers[0].auth_token_env"));
+}
+
+#[test]
 fn runtime_config_value_parsers_reject_unknown_values() {
     assert!("standard".parse::<AppProfile>().is_ok());
     assert!("low-spec".parse::<AppProfile>().is_ok());
