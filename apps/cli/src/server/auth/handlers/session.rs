@@ -5,20 +5,27 @@
 
 use axum::{
     Extension, Json,
-    extract::ConnectInfo,
+    extract::{ConnectInfo, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use std::{net::SocketAddr, sync::Arc};
 
+use crate::server::{AppState, source_control_grants::AuthSessionId};
 use deve_core::protocol::auth::{AuthStatusResponse, LoginResponse, MeResponse};
 use deve_core::security::AuthConfig;
 
 const COOKIE_NAME: &str = "token";
 const UNKNOWN_USER_AGENT: &str = "unknown";
 
-pub async fn logout() -> impl IntoResponse {
+pub async fn logout(
+    State(state): State<Arc<AppState>>,
+    Extension(auth_session_id): Extension<AuthSessionId>,
+) -> impl IntoResponse {
+    state
+        .source_control_write_grants()
+        .revoke_session(&auth_session_id);
     (
         StatusCode::OK,
         build_removal_cookie(),
