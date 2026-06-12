@@ -138,6 +138,10 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         .map(|cause| cause.to_string().to_ascii_lowercase())
         .collect::<Vec<_>>()
         .join(": ");
+    let compact = message
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect::<String>();
     if message.contains("token env is missing") {
         "token_missing"
     } else if message.contains("self-loop") {
@@ -162,12 +166,17 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "unauthorized"
     } else if message.contains("repo") && message.contains("expected")
         || message.contains("sent repo") && message.contains("configured repo")
+        || compact.contains("syncreporoutemismatch")
     {
         "repo_mismatch"
-    } else if message.contains("request source") && message.contains("not offered") {
+    } else if message.contains("request source") && message.contains("not offered")
+        || compact.contains("unofferedsource")
+    {
         "unoffered_source"
     } else if message.contains("source proof rejected")
         || message.contains("source attribution rejected")
+        || compact.contains("sourceproofrejected")
+        || compact.contains("sourceattributionrejected")
     {
         "source_proof_rejected"
     } else if message.contains("timed out") {
@@ -188,6 +197,7 @@ fn classify_p2p_error(err: &Error) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use deve_core::protocol::{ServerError, ServerErrorCode};
 
     #[test]
     fn p2p_connector_backoff_caps_at_thirty_seconds() {
@@ -328,5 +338,27 @@ mod tests {
         );
         assert!(is_terminal_p2p_error("source_proof_rejected"));
         assert_eq!(failure_state("source_proof_rejected"), "error");
+    }
+
+    #[test]
+    fn p2p_connector_classifies_structured_protocol_errors() {
+        let repo_error = ServerError::new(ServerErrorCode::SyncRepoRouteMismatch);
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer returned protocol error: {:?}",
+                repo_error
+            )),
+            "repo_mismatch"
+        );
+
+        let source_error =
+            ServerError::with_detail(ServerErrorCode::SyncInvalidPayload, "source_proof_rejected");
+        assert_eq!(
+            classify_p2p_error(&anyhow::anyhow!(
+                "P2P peer returned protocol error: {:?}",
+                source_error
+            )),
+            "source_proof_rejected"
+        );
     }
 }
