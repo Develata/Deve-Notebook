@@ -11,19 +11,18 @@ pub use repair::*;
 
 pub fn git_bridge_mode_title(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Git bridge mode",
-        Locale::Zh => "Git bridge 模式",
+        Locale::En => "NoteGit authority; Git is an optional bridge",
+        Locale::Zh => "NoteGit 是 authority；Git 是可选 bridge",
     }
 }
 
 pub fn git_bridge_mode_badge(_locale: Locale, mode: &str) -> String {
-    let mode = match mode {
-        "mirror" => "mirror",
-        "off" => "off",
-        "unknown" => "unknown",
-        _ => "unknown",
-    };
-    format!("Git: {mode}")
+    match mode {
+        "mirror" => "NoteGit + Git mirror".to_string(),
+        "off" => "NoteGit only".to_string(),
+        "unknown" => "NoteGit + Git unknown".to_string(),
+        _ => "NoteGit + Git unknown".to_string(),
+    }
 }
 
 pub fn git_status_cli_only_title(locale: Locale) -> &'static str {
@@ -148,8 +147,14 @@ mod tests {
 
     #[test]
     fn git_bridge_source_control_copy_is_localized() {
-        assert_eq!(git_bridge_mode_title(Locale::En), "Git bridge mode");
-        assert_eq!(git_bridge_mode_badge(Locale::Zh, "mirror"), "Git: mirror");
+        assert_eq!(
+            git_bridge_mode_title(Locale::En),
+            "NoteGit authority; Git is an optional bridge"
+        );
+        assert_eq!(
+            git_bridge_mode_badge(Locale::Zh, "mirror"),
+            "NoteGit + Git mirror"
+        );
         assert_eq!(
             git_status_cli_only_title(Locale::En),
             "Git status is CLI-only"
@@ -219,8 +224,14 @@ mod tests {
 
     #[test]
     fn source_control_header_git_bridge_mode_badge() {
-        assert_eq!(git_bridge_mode_badge(Locale::En, "off"), "Git: off");
-        assert_eq!(git_bridge_mode_badge(Locale::Zh, "mirror"), "Git: mirror");
-        assert_eq!(git_bridge_mode_badge(Locale::En, "native"), "Git: unknown");
+        assert_eq!(git_bridge_mode_badge(Locale::En, "off"), "NoteGit only");
+        assert_eq!(
+            git_bridge_mode_badge(Locale::Zh, "mirror"),
+            "NoteGit + Git mirror"
+        );
+        assert_eq!(
+            git_bridge_mode_badge(Locale::En, "native"),
+            "NoteGit + Git unknown"
+        );
     }
 }

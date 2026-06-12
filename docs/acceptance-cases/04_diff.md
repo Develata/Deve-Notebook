@@ -228,6 +228,7 @@
     - api_assert: commit_diff_reversed_order_fails_closed true
     - ui_assert: command_palette_git_bridge_mode_visible true
     - ui_assert: source_control_git_bridge_mode_visible true
+    - ui_assert: source_control_git_bridge_badge_authority_first true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。
