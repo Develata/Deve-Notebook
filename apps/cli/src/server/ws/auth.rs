@@ -91,11 +91,22 @@ fn full_peer_admission(
     if expected.is_empty() {
         return Err(AuthErrorCode::TokenMissing);
     }
-    if token == expected {
+    if bearer_token_matches(token, &expected) {
         Ok(())
     } else {
         Err(AuthErrorCode::TokenExpired)
     }
+}
+
+fn bearer_token_matches(token: &str, expected: &str) -> bool {
+    if token.len() != expected.len() {
+        return false;
+    }
+    let mut diff = 0_u8;
+    for (left, right) in token.as_bytes().iter().zip(expected.as_bytes()) {
+        diff |= left ^ right;
+    }
+    diff == 0
 }
 
 fn bearer_token(req: &Parts) -> Option<&str> {
