@@ -1,4 +1,6 @@
-use super::{build_new_window_url, build_rename_prefill, create_action_handler};
+use super::{
+    build_new_window_url, build_prefill_command, build_rename_prefill, create_action_handler,
+};
 use crate::context_action::{
     ContextActionId, ContextActionIntent, ContextActionReadiness, ContextActionScope,
     ContextActionSurface, ContextActionTarget,
@@ -37,16 +39,30 @@ fn scoped_file_tree_intent(
 #[test]
 fn rename_prefill_keeps_file_in_same_dir() {
     assert_eq!(
-        build_rename_prefill("123/324.md"),
-        ">mv \"123/324.md\" \"123/324|.md\""
+        build_rename_prefill("123/324.md").as_deref(),
+        Some(">mv \"123/324.md\" \"123/324|.md\"")
     );
 }
 
 #[test]
 fn rename_prefill_keeps_folder_without_extension() {
     assert_eq!(
-        build_rename_prefill("ABC/modals"),
-        ">mv \"ABC/modals\" \"ABC/modals|\""
+        build_rename_prefill("ABC/modals").as_deref(),
+        Some(">mv \"ABC/modals\" \"ABC/modals|\"")
+    );
+}
+
+#[test]
+fn rename_prefill_rejects_unrepresentable_shell_path() {
+    assert_eq!(build_rename_prefill("notes/a|b.md"), None);
+    assert_eq!(build_rename_prefill("notes/a\"b.md"), None);
+}
+
+#[test]
+fn prefill_command_rejects_ambiguous_cursor_marker() {
+    assert_eq!(
+        build_prefill_command("mv", "notes/a.md", Some("notes/a||.md".to_string())),
+        None
     );
 }
 
@@ -188,6 +204,26 @@ fn scope_change_blocks_stale_action_handler_intent_side_effects() {
         "notes/readme.md",
         projected_scope,
     ));
+
+    assert_eq!(delete_count.get_untracked(), 0);
+    assert_eq!(search_count.get_untracked(), 0);
+}
+
+#[test]
+fn unrepresentable_path_blocks_search_prefill_side_effects() {
+    let (readiness, _) = signal(ContextActionReadiness::from_readonly(false));
+    let (delete_count, set_delete_count) = signal(0);
+    let (search_count, set_search_count) = signal(0);
+    let delete_req = Callback::new(move |_: String| {
+        set_delete_count.update(|count| *count += 1);
+    });
+    let open_search = Callback::new(move |_: String| {
+        set_search_count.update(|count| *count += 1);
+    });
+
+    let handler = create_action_handler(readiness.into(), delete_req, open_search);
+
+    handler.run(file_tree_intent(ContextActionId::Rename, "notes/a|b.md"));
 
     assert_eq!(delete_count.get_untracked(), 0);
     assert_eq!(search_count.get_untracked(), 0);

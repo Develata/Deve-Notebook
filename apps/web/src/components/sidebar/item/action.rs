@@ -3,6 +3,7 @@
 //!   - 11_ui_design/index#context-action-surface
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
+use crate::components::doc_shell_path::is_doc_shell_path_representable;
 use crate::components::dropdown::AnchorRect;
 use crate::context_action::{
     ContextActionId, ContextActionIntent, ContextActionReadiness, ContextActionResolveRequest,
@@ -53,11 +54,15 @@ pub(super) fn create_action_handler(
         let path = resolved.intent.target.path;
         match resolved.descriptor.id {
             ContextActionId::Rename => {
-                open_search.run(build_rename_prefill(&path));
+                if let Some(prefill) = build_rename_prefill(&path) {
+                    open_search.run(prefill);
+                }
             }
             ContextActionId::Delete => delete_req.run(path),
             ContextActionId::Copy => {
-                open_search.run(build_prefill_command("cp", &path, None));
+                if let Some(prefill) = build_prefill_command("cp", &path, None) {
+                    open_search.run(prefill);
+                }
             }
             ContextActionId::OpenInNewWindow => {
                 if let Some(window) = web_sys::window()
@@ -69,24 +74,29 @@ pub(super) fn create_action_handler(
                 }
             }
             ContextActionId::MoveTo => {
-                open_search.run(build_prefill_command("mv", &path, None));
+                if let Some(prefill) = build_prefill_command("mv", &path, None) {
+                    open_search.run(prefill);
+                }
             }
             ContextActionId::ExportPdf => {}
         }
     })
 }
 
-fn build_prefill_command(cmd: &str, src: &str, dst_with_cursor: Option<String>) -> String {
-    let src_text = quote_arg(src);
+fn build_prefill_command(cmd: &str, src: &str, dst_with_cursor: Option<String>) -> Option<String> {
+    let src_text = quote_arg(src)?;
     let dst_text = match dst_with_cursor {
-        Some(dst) => format!("\"{}\"", sanitize_arg(&dst)),
+        Some(dst) => quote_arg_with_cursor(&dst)?,
         None => "\"|\"".to_string(),
     };
-    format!(">{} {} {}", cmd, src_text, dst_text)
+    Some(format!(">{} {} {}", cmd, src_text, dst_text))
 }
 
-fn build_rename_prefill(path: &str) -> String {
+fn build_rename_prefill(path: &str) -> Option<String> {
     let normalized = path.replace('\\', "/");
+    if !is_doc_shell_path_representable(&normalized) {
+        return None;
+    }
     let path_ref = Path::new(&normalized);
     let parent = path_ref
         .parent()
@@ -141,12 +151,16 @@ fn replace_doc_query_param(query: &str, doc_param: &str) -> String {
     pairs.join("&")
 }
 
-fn quote_arg(arg: &str) -> String {
-    format!("\"{}\"", sanitize_arg(arg))
+fn quote_arg(arg: &str) -> Option<String> {
+    is_doc_shell_path_representable(arg).then(|| format!("\"{}\"", arg))
 }
 
-fn sanitize_arg(arg: &str) -> String {
-    arg.replace('"', "'")
+fn quote_arg_with_cursor(arg: &str) -> Option<String> {
+    if arg.chars().filter(|ch| *ch == '|').count() > 1 {
+        return None;
+    }
+    let without_cursor = arg.replace('|', "");
+    is_doc_shell_path_representable(&without_cursor).then(|| format!("\"{}\"", arg))
 }
 
 #[cfg(test)]

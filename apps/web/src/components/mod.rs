@@ -8,6 +8,7 @@
 //! 结构遵循 "Activity Bar + Resizable Slot" 布局。
 pub mod bottom_bar;
 pub mod command_palette;
+pub(crate) mod doc_shell_path;
 pub mod dropdown;
 pub(crate) mod editor_tabs;
 pub mod header;

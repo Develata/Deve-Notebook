@@ -10,6 +10,7 @@ use deve_core::utils::path::{path_to_forward_slash, to_forward_slash};
 use std::collections::HashSet;
 use std::path::Path;
 
+use crate::components::doc_shell_path::is_doc_shell_path_representable;
 use crate::components::search_box::score::score_desc;
 
 const MAX_DEPTH: usize = 10;
@@ -30,6 +31,9 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
     let path = normalized.trim();
     if path.is_empty() {
         return Some(path_err::INVALID_EMPTY_PATH);
+    }
+    if !is_doc_shell_path_representable(path) {
+        return Some(path_err::INVALID_PATH);
     }
     if path.contains("..") || path.starts_with('/') {
         return Some(path_err::INVALID_PATH);
@@ -152,5 +156,21 @@ mod tests {
             dirs,
             vec!["folder/".to_string(), "folder/nested/".to_string()]
         );
+    }
+
+    #[test]
+    fn validate_doc_shell_path_rejects_command_reserved_chars() {
+        for path in [
+            "notes/a|b.md",
+            "notes/a\"b.md",
+            "notes/a?b.md",
+            "notes/a*b.md",
+            "notes/a:b.md",
+            "notes/a<b.md",
+            "notes/a>b.md",
+            "notes/a\nb.md",
+        ] {
+            assert_eq!(validate_doc_shell_path(path), Some(path_err::INVALID_PATH));
+        }
     }
 }
