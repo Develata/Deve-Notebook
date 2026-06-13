@@ -1,13 +1,14 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::ProxyHarness;
+use super::support::{ProxyHarness, seed_pending};
 use deve_core::git_bridge::{
     GitMirrorRepairReview, init_table, mark_out_of_sync, queue_deve_commit,
 };
+use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::ledger::RepoManager;
 use deve_core::protocol::ServerErrorCode;
-use deve_core::source_control::CommitInfo;
+use deve_core::source_control::{ChangeStatus, CommitInfo, SourceControlApi};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_http_status_requires_repo_selector_when_multiple_local_repos_exist()
@@ -159,6 +160,39 @@ async fn test_http_status_rejects_missing_scope_nonce() -> anyhow::Result<()> {
         body.detail.as_deref(),
         Some("source control scope nonce missing")
     );
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn remote_source_control_proxy_reads_use_delegated_capability() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn_without_anonymous_localhost().await?;
+    let selector = RepoSelector::default();
+    seed_pending(&harness.repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let response = harness
+        .client
+        .get(format!("{}/api/sc/status", harness.base_url))
+        .query(&[("scope_nonce", "1")])
+        .send()
+        .await?;
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    let response = reqwest::Client::builder()
+        .no_proxy()
+        .build()?
+        .get(format!("{}/api/delegated/sc/status", harness.base_url))
+        .query(&[("scope_nonce", "1")])
+        .send()
+        .await?;
+    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+
+    let changes = harness.proxy.list_changes_in_repo(&selector)?;
+    assert_eq!(changes.len(), 1);
+    let pending = harness.proxy.list_pending_fs_in_repo(&selector)?;
+    assert_eq!(pending.len(), 1);
+    let docs = harness.proxy.list_docs_in_repo(&selector)?;
+    assert!(docs.is_empty());
     harness.shutdown().await;
     Ok(())
 }

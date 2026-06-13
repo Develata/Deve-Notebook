@@ -15,10 +15,10 @@ pub(super) fn list_docs(
     api: &RemoteSourceControlApi,
     repo: &RepoSelector,
 ) -> Result<Vec<(DocId, String)>> {
-    let url = format!("{}/api/repo/docs", api.base_url);
+    let url = format!("{}/api/delegated/repo/docs", api.base_url);
     let res = super::block_on_safe(async {
         http::send_json(RemoteSourceControlApi::with_repo_query(
-            api.client.get(&url),
+            api.delegated_get(&url),
             repo,
         ))
         .await
@@ -31,10 +31,10 @@ pub(super) fn get_doc_content(
     repo: &RepoSelector,
     doc_id: DocId,
 ) -> Result<String> {
-    let url = format!("{}/api/repo/doc", api.base_url);
+    let url = format!("{}/api/delegated/repo/doc", api.base_url);
     let res = super::block_on_safe(async {
         http::send_text(
-            RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+            RemoteSourceControlApi::with_repo_query(api.delegated_get(&url), repo)
                 .query(&[("doc_id", doc_id.to_string())]),
         )
         .await
@@ -68,9 +68,9 @@ pub(super) fn diff_doc_path(
     repo: &RepoSelector,
     target: &ScPathTarget,
 ) -> Result<String> {
-    let url = format!("{}/api/sc/diff", api.base_url);
+    let url = format!("{}/api/delegated/sc/diff", api.base_url);
     let res = super::block_on_safe(async {
-        let mut req = RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+        let mut req = RemoteSourceControlApi::with_repo_query(api.delegated_get(&url), repo)
             .query(&[("path", target.path.clone())]);
         if let Some(doc_id) = target.doc_id {
             req = req.query(&[("doc_id", doc_id.to_string())]);
@@ -85,10 +85,11 @@ fn get_changes(
     repo: &RepoSelector,
     route: &str,
 ) -> Result<Vec<ChangeEntry>> {
-    let url = format!("{}{}", api.base_url, route);
+    let route = route.strip_prefix("/api").unwrap_or(route);
+    let url = format!("{}/api/delegated{}", api.base_url, route);
     let res = super::block_on_safe(async {
         http::send_json(RemoteSourceControlApi::with_repo_query(
-            api.client.get(&url),
+            api.delegated_get(&url),
             repo,
         ))
         .await

@@ -55,6 +55,13 @@ impl RemoteSourceControlApi {
             crate::server::auth::delegated_source_control::header_value(&self.delegated_secret),
         )
     }
+
+    fn delegated_get(&self, url: &str) -> reqwest::RequestBuilder {
+        self.client.get(url).header(
+            crate::server::auth::delegated_source_control::DELEGATED_SC_HEADER,
+            crate::server::auth::delegated_source_control::header_value(&self.delegated_secret),
+        )
+    }
 }
 
 /// 在异步上下文中安全执行阻塞 HTTP 请求

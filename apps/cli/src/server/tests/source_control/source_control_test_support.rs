@@ -38,6 +38,17 @@ impl ProxyHarness {
     }
 
     pub(super) async fn spawn_with_git_bridge(git_bridge: GitBridgeMode) -> anyhow::Result<Self> {
+        Self::spawn_with_options(git_bridge, true).await
+    }
+
+    pub(super) async fn spawn_without_anonymous_localhost() -> anyhow::Result<Self> {
+        Self::spawn_with_options(GitBridgeMode::Mirror, false).await
+    }
+
+    async fn spawn_with_options(
+        git_bridge: GitBridgeMode,
+        allow_anonymous_localhost: bool,
+    ) -> anyhow::Result<Self> {
         let dir = tempdir()?;
         let projection_base = dir.path().join("notes");
         let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None)?;
@@ -63,7 +74,7 @@ impl ProxyHarness {
             git_bridge,
         });
         let mut auth_config = AuthConfig::dev_default()?;
-        auth_config.allow_anonymous_localhost = true;
+        auth_config.allow_anonymous_localhost = allow_anonymous_localhost;
         let dev_session_secret = auth_config.secret.clone();
         let auth_username = auth_config.username.clone();
         let auth_token_version = auth_config.token_version;

@@ -470,6 +470,9 @@ remote proxy delegated API 不得复用主进程 browser HTTP mutation 语义；
 delegated API 还必须具备独立于 browser/JWT cookie 的 server-verifiable capability；
 普通 authenticated browser request 即使知道 `/api/delegated/sc/*` 路径，也不得仅凭 cookie/session
 触发 delegated writer。
+remote proxy 的只读 repo/source-control 查询同样不得依赖 browser JWT 或 anonymous localhost dev
+session；它们必须走显式 delegated read path，复用只读 handler，但只授予 query authority，不得隐式
+升级为 writer grant。
 若同一 browser request 同时携带有效 JWT cookie 与 anonymous localhost dev session cookie，HTTP 与 WS
 Source Control grant 校验必须共同使用 JWT 派生的 `auth_session_id`；dev session cookie 不能覆盖已登录 session。
 

@@ -156,6 +156,7 @@
     - run: cargo test -p deve_cli anonymous_localhost_source_control_write_grant_roundtrips_status_ws_and_http -- --nocapture
     - run: cargo test -p deve_cli http_source_control_jwt_grant_is_not_shadowed_by_dev_session_cookie -- --nocapture
     - run: cargo test -p deve_cli delegated_source_control_requires_proxy_capability -- --nocapture
+    - run: cargo test -p deve_cli remote_source_control_proxy_reads_use_delegated_capability -- --nocapture
     - run: cargo test -p deve_core plugin_sc_commit_respects_git_bridge_off -- --nocapture
     - run: cargo check -p deve_core --tests
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
@@ -213,6 +214,7 @@
     - api_assert: http_source_control_jwt_grant_is_not_shadowed_by_dev_session_cookie true
     - api_assert: delegated_remote_proxy_scope_nonce_not_accepted_by_main_http_mutation true
     - api_assert: delegated_source_control_requires_proxy_capability true
+    - api_assert: remote_source_control_proxy_reads_use_delegated_capability true
     - api_assert: discard_docless_added_on_tracked_path_fails_closed true
     - api_assert: commit_docless_upsert_on_tracked_path_fails_closed true
     - api_assert: stage_unresolved_conflict_fails_closed true

@@ -15,10 +15,10 @@ pub(super) fn list_commits(
     repo: &RepoSelector,
     limit: u32,
 ) -> Result<Vec<CommitInfo>> {
-    let url = format!("{}/api/sc/commits", api.base_url);
+    let url = format!("{}/api/delegated/sc/commits", api.base_url);
     let res = super::block_on_safe(async {
         http::send_json(
-            RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+            RemoteSourceControlApi::with_repo_query(api.delegated_get(&url), repo)
                 .query(&[("limit", limit.to_string())]),
         )
         .await
@@ -32,9 +32,9 @@ pub(super) fn diff_commits(
     commit_a_id: Option<&str>,
     commit_b_id: &str,
 ) -> Result<Vec<CommitFileDiff>> {
-    let url = format!("{}/api/sc/commit-diff", api.base_url);
+    let url = format!("{}/api/delegated/sc/commit-diff", api.base_url);
     let res = super::block_on_safe(async {
-        let mut req = RemoteSourceControlApi::with_repo_query(api.client.get(&url), repo)
+        let mut req = RemoteSourceControlApi::with_repo_query(api.delegated_get(&url), repo)
             .query(&[("commit_b", commit_b_id)]);
         if let Some(commit_a) = commit_a_id {
             req = req.query(&[("commit_a", commit_a)]);

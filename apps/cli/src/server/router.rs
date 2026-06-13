@@ -115,6 +115,38 @@ pub fn build_app_with_native_session_and_p2p(
 
     let delegated = Router::new()
         .route(
+            "/api/delegated/repo/docs",
+            get(handlers::repo::http::list_docs),
+        )
+        .route(
+            "/api/delegated/repo/doc",
+            get(handlers::repo::http::doc_content),
+        )
+        .route(
+            "/api/delegated/sc/pending",
+            get(handlers::source_control::http::pending),
+        )
+        .route(
+            "/api/delegated/sc/status",
+            get(handlers::source_control::http::status),
+        )
+        .route(
+            "/api/delegated/sc/staged",
+            get(handlers::source_control::http::staged),
+        )
+        .route(
+            "/api/delegated/sc/diff",
+            get(handlers::source_control::http::diff),
+        )
+        .route(
+            "/api/delegated/sc/commits",
+            get(handlers::source_control::http_commits::commit_history),
+        )
+        .route(
+            "/api/delegated/sc/commit-diff",
+            get(handlers::source_control::http_commits::commit_diff),
+        )
+        .route(
             "/api/delegated/sc/stage-pending",
             post(handlers::source_control::http_mutations::stage_delegated),
         )
