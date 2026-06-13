@@ -145,6 +145,7 @@
     - IndexedDB_missing_enters_DegradedSyncMode: true
     - ui_prefs_use_fallback_layer_only: true
     - ui_prefs_last_scope_stores_repo_name_alias_only: true
+    - shortcut_prefs_new_writes_use_structured_json: true
     - degraded_mode_blocks_RegisterWriter_and_SyncPush: true
     - degraded_mode_allows_read_and_snapshot_pull: true
 

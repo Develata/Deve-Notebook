@@ -175,6 +175,7 @@ Settings v1 最小 UI surface：
 除该 facade 本身与底层能力探测外，不得在功能模块中直接调用
 `window.localStorage` / `sessionStorage`。布局宽度、Outline 可见性、语言偏好、快捷键覆盖等均属于
 无害 UI prefs；repo identity、sync vector、writer readiness、scope nonce、auth secret 仍不得写入该层。
+快捷键覆盖这类结构化 UI prefs 的新写入必须使用 JSON 序列化/反序列化 API；不得用手写字符串拼接或分隔符协议保存结构化偏好。旧版分隔符格式只能作为读取迁移兼容。
 `deve.ui.last_scope` 只允许保存最后打开的 `repo_name` 显示别名，用于请求 server 重新解析；不得保存
 `repo_id`、remote branch / peer id、`scope_nonce` 或任何可被当作 repo authority 的身份字段。
 AI Chat 面板可见性属于 browser-local UI pref（当前 key 为 `deve.ui.ai_chat_visible`）；Settings 隐藏 AI Chat 时只影响 Chat surface 与分界线是否渲染，
