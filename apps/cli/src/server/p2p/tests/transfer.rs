@@ -56,6 +56,40 @@ async fn p2p_send_requested_ops_signs_local_diff_source() -> anyhow::Result<()> 
 }
 
 #[tokio::test]
+async fn p2p_send_requested_ops_rejects_unsigned_non_local_source() -> anyhow::Result<()> {
+    let identity = Arc::new(IdentityKeyPair::generate());
+    let (_dir, state) = test_state_with_dir(identity)?;
+    let repo_id = state
+        .repo
+        .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
+        .expect("repo info")
+        .uuid;
+    let third_party = PeerId::new("peer-a");
+    state.sync_engine.get_or_create_strict(repo_id)?;
+    append_remote_shadow_op(&state, repo_id, &third_party)?;
+    let mut socket = MockSocket::new(Vec::new());
+    let mut stats = ExchangeStats::default();
+
+    let err = send_requested_ops(
+        &state,
+        &mut socket,
+        repo_id,
+        vec![(third_party, (1, 2))],
+        &mut stats,
+    )
+    .await
+    .expect_err("P2P v1 must not send unsigned third-party diff sources");
+
+    assert!(
+        err.to_string()
+            .contains("cannot sign non-local diff source")
+    );
+    assert!(socket.sent.is_empty());
+    assert_eq!(stats.sent_pushes, 0);
+    Ok(())
+}
+
+#[tokio::test]
 async fn p2p_send_requested_snapshot_rejects_unsigned_non_local_source() -> anyhow::Result<()> {
     let identity = Arc::new(IdentityKeyPair::generate());
     let (_dir, state) = test_state_with_dir(identity)?;
