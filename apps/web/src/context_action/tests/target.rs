@@ -24,6 +24,17 @@ fn file_tree_action_target_kind_derives_from_file_tree_node() {
 }
 
 #[test]
+fn context_action_target_new_normalizes_paths() {
+    assert_eq!(
+        ContextActionTarget::new(ContextActionTargetKind::File, "notes\\readme.md"),
+        ContextActionTarget {
+            kind: ContextActionTargetKind::File,
+            path: "notes/readme.md".to_string(),
+        }
+    );
+}
+
+#[test]
 fn file_tree_action_target_kind_matching_keeps_markdown_as_file_but_not_folder() {
     assert!(ContextActionTargetKind::File.accepts(ContextActionTargetKind::MarkdownFile));
     assert!(ContextActionTargetKind::AnyNode.accepts(ContextActionTargetKind::Folder));

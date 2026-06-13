@@ -34,9 +34,10 @@ pub struct ContextActionTarget {
 
 impl ContextActionTarget {
     pub fn new(kind: ContextActionTargetKind, path: impl Into<String>) -> Self {
+        let path = path.into();
         Self {
             kind,
-            path: path.into(),
+            path: to_forward_slash(&path),
         }
     }
 
