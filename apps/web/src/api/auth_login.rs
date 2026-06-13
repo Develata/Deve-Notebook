@@ -2,27 +2,28 @@
 //!   - 08_auth#auth-http-endpoints
 //!   - 08_auth#auth-rate-limiting
 //!
+//! Login/logout HTTP API facade for the Web thin client.
 
 use deve_core::protocol::auth::{AuthErrorCode, LoginRequest, LoginResponse};
 use gloo_net::http::Request;
 use web_sys::RequestCredentials;
 
-use crate::api::{AuthProbe, api_url, probe_auth_status};
+use super::{AuthProbe, api_url, probe_auth_status};
 
 #[derive(Debug)]
-pub(super) enum LoginAttemptError {
+pub(crate) enum LoginAttemptError {
     Rejected(AuthErrorCode),
     InvalidResponse,
     Transport(LoginTransportError),
 }
 
 #[derive(Debug)]
-pub(super) enum LoginTransportError {
+pub(crate) enum LoginTransportError {
     RequestBuild(String),
     Network(String),
 }
 
-pub(super) async fn attempt_login(
+pub(crate) async fn attempt_login(
     username: String,
     password: String,
 ) -> Result<(), LoginAttemptError> {
@@ -62,7 +63,7 @@ pub(super) async fn attempt_login(
     }
 }
 
-pub async fn logout() -> Result<(), String> {
+pub(crate) async fn logout() -> Result<(), String> {
     let api = api_url("/api/auth/logout");
     let mut request = Request::post(&api.url);
     if api.include_credentials {

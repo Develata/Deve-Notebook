@@ -13,7 +13,8 @@ Login page and authentication state management.
 |------|-------------|
 | `mod.rs` | Module entry and AuthState |
 | `page.rs` | LoginPage component |
-| `api.rs` | Login API calls |
 | `state.rs` | Auth state |
+
+Login/logout HTTP calls live in `apps/web/src/api/auth_login.rs`; this component layer must not create its own HTTP client.
 
 <!-- MANUAL: -->
