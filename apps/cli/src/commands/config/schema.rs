@@ -134,7 +134,21 @@ fn parse_env_name(value: &str) -> anyhow::Result<Value> {
             "Invalid environment variable reference: expected non-empty environment variable name"
         ));
     }
+    if !is_valid_env_name(&value) {
+        return Err(anyhow!(
+            "Invalid environment variable reference: expected a valid environment variable name"
+        ));
+    }
     Ok(Value::String(value))
+}
+
+fn is_valid_env_name(value: &str) -> bool {
+    let mut bytes = value.bytes();
+    let Some(first) = bytes.next() else {
+        return false;
+    };
+    (first.is_ascii_alphabetic() || first == b'_')
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }
 
 fn parse_bool(value: &str) -> anyhow::Result<Value> {

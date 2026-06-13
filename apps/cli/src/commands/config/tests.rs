@@ -93,6 +93,23 @@ fn set_rejects_empty_env_reference_without_rewriting_config() {
 }
 
 #[test]
+fn set_rejects_invalid_env_reference_name_without_rewriting_config() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("config.toml");
+    let original = "[p2p]\ninbound_token_env = \"DEVE_P2P_INBOUND_TOKEN\"\n";
+    std::fs::write(&path, original).expect("seed config");
+
+    let err = set_in_file(&path, "p2p.inbound_token_env", "1BAD")
+        .expect_err("invalid env name must fail closed");
+
+    assert!(err.to_string().contains("valid environment variable name"));
+    assert_eq!(
+        std::fs::read_to_string(&path).expect("read config"),
+        original
+    );
+}
+
+#[test]
 fn set_rejects_nested_key_when_parent_is_scalar() {
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("config.toml");
