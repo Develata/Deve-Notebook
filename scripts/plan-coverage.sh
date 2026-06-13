@@ -160,8 +160,20 @@ path_or_glob_exists() {
   compgen -G "$ROOT/$rel" >/dev/null
 }
 
+git_in_repo() {
+  "$GIT_BIN" -c safe.directory="$GIT_ROOT" -C "$GIT_ROOT" "$@"
+}
+
+ensure_git_repo_readable() {
+  if ! git_in_repo ls-files --error-unmatch Cargo.toml >/dev/null 2>&1; then
+    echo "ERROR: plan-coverage: git repository is not readable at $GIT_ROOT" >&2
+    echo "ERROR: plan-coverage: refusing to continue because coverage would be incomplete" >&2
+    exit 2
+  fi
+}
+
 tracked_rust_files() {
-  "$GIT_BIN" -C "$GIT_ROOT" ls-files -- 'crates' 'apps' |
+  git_in_repo ls-files -- 'crates' 'apps' |
     grep -E '\.rs$' |
     sed "s|^|$ROOT/|"
 }
@@ -322,7 +334,7 @@ run_check_metadata_completeness() {
       echo "ERROR: metadata-completeness: $rel missing fields:${miss}" >&2
       missing=$((missing + 1))
     fi
-  done < <("$GIT_BIN" -C "$GIT_ROOT" ls-files -- 'docs/plan' | grep -E '\.md$' | sed "s|^|$ROOT/|")
+  done < <(git_in_repo ls-files -- 'docs/plan' | grep -E '\.md$' | sed "s|^|$ROOT/|")
   if [ "$missing" -gt 0 ]; then
     echo "check-metadata-completeness: FAIL — $missing/$checked chapter(s) missing Version/Last Review"
     return 1
@@ -484,6 +496,8 @@ run_check_no_adr_plan_ref() {
 }
 
 # B0.5 — subcommand dispatch. stub/rewrite modes exit before the full report.
+ensure_git_repo_readable
+
 case "$MODE" in
   rewrite)
     rc=0

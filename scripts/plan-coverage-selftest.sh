@@ -16,6 +16,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 COVERAGE="$SCRIPT_DIR/plan-coverage.sh"
+git_in_repo() {
+  git -c safe.directory="$ROOT" -C "$ROOT" "$@"
+}
 
 pass=0
 fail=0
@@ -59,9 +62,9 @@ assert_reject "03_storage/authority"                                     "missin
 # (b) --rewrite-plan-ref dry-run must not modify tracked files
 # ---------------------------------------------------------------------------
 echo "== (b) --rewrite-plan-ref dry-run leaves files untouched =="
-before="$(git -C "$ROOT" status --porcelain | sort)"
+before="$(git_in_repo status --porcelain | sort)"
 "$COVERAGE" --rewrite-plan-ref --from 04_storage# --to 04_storage/authority# >/dev/null 2>&1
-after="$(git -C "$ROOT" status --porcelain | sort)"
+after="$(git_in_repo status --porcelain | sort)"
 if [ "$before" = "$after" ]; then
   echo "ok        (dry-run wrote no changes)"; pass=$((pass + 1))
 else
