@@ -21,6 +21,7 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 type TestWs = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 mod basic;
+mod authority;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_http_stage_rejects_missing_scope_nonce_before_mutation() -> anyhow::Result<()> {
