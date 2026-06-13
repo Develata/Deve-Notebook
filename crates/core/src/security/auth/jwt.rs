@@ -20,9 +20,9 @@ const TOKEN_LIFETIME_SECS: i64 = 86_400;
 
 /// JWT Payload (Claims)
 ///
-/// 遵循 `09_auth.md` 规范:
+/// 遵循 `08_auth.md` 规范:
 /// ```json
-/// { "sub": "<current-user>", "iat": ..., "exp": ..., "ver": 1 }
+/// { "sub": "<current-user>", "iat": ..., "exp": ..., "ver": 1, "sid": "..." }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Claims {
@@ -34,6 +34,9 @@ pub struct Claims {
     pub exp: i64,
     /// Token Version — 用于 Revocation
     pub ver: u32,
+    /// Per-login session id. Optional so tokens minted before this field still validate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sid: Option<String>,
 }
 
 /// 签发 JWT Token
@@ -52,6 +55,7 @@ pub fn issue_token(secret: &str, subject: &str, token_version: u32) -> Result<St
         iat: now,
         exp: now + TOKEN_LIFETIME_SECS,
         ver: token_version,
+        sid: Some(uuid::Uuid::new_v4().simple().to_string()),
     };
     let key = EncodingKey::from_secret(secret.as_bytes());
     jsonwebtoken::encode(&Header::default(), &claims, &key)
@@ -92,6 +96,7 @@ mod tests {
         let claims = validate_token(secret, &token, 1).unwrap();
         assert_eq!(claims.sub, "admin");
         assert_eq!(claims.ver, 1);
+        assert!(claims.sid.is_some());
     }
 
     #[test]
@@ -101,6 +106,43 @@ mod tests {
         let claims = validate_token(secret, &token, 7).unwrap();
         assert_eq!(claims.sub, "alice");
         assert_eq!(claims.ver, 7);
+    }
+
+    #[test]
+    fn issue_token_mints_unique_session_id_per_login() {
+        let secret = "test_secret_key_at_least_32_bytes_long!";
+
+        let first = issue_token(secret, "admin", 1).unwrap();
+        let second = issue_token(secret, "admin", 1).unwrap();
+        let first_claims = validate_token(secret, &first, 1).unwrap();
+        let second_claims = validate_token(secret, &second, 1).unwrap();
+
+        assert_ne!(first, second);
+        assert_ne!(first_claims.sid, second_claims.sid);
+    }
+
+    #[test]
+    fn validate_token_accepts_legacy_payload_without_session_id() {
+        let secret = "test_secret_key_at_least_32_bytes_long!";
+        let now = chrono::Utc::now().timestamp();
+        let claims = Claims {
+            sub: "admin".to_string(),
+            iat: now,
+            exp: now + TOKEN_LIFETIME_SECS,
+            ver: 1,
+            sid: None,
+        };
+        let token = jsonwebtoken::encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(secret.as_bytes()),
+        )
+        .unwrap();
+
+        let decoded = validate_token(secret, &token, 1).unwrap();
+
+        assert_eq!(decoded.sub, "admin");
+        assert_eq!(decoded.sid, None);
     }
 
     #[test]

@@ -99,16 +99,20 @@
     - http_status_in: [429]
 
 - case_id: AUTH-009
-  goal: JWT payload 最小化。
+  goal: JWT payload 受控且每次登录 session 可区分。
   preconditions:
     - 登录成功获得 JWT
   steps:
     - run: scripts/check-auth-baseline.sh
     - run: cargo test -p deve_core issue_token_preserves_subject -- --nocapture
+    - run: cargo test -p deve_core issue_token_mints_unique_session_id_per_login -- --nocapture
+    - run: cargo test -p deve_core validate_token_accepts_legacy_payload_without_session_id -- --nocapture
     - run: cargo test -p deve_core invalid_auth_token_version_fails_closed -- --nocapture
     - run: cargo test -p deve_core auth -- --nocapture
   assertions:
-    - jwt_claims_eq: ["sub", "iat", "exp", "ver"]
+    - jwt_claims_eq: ["sub", "iat", "exp", "ver", "sid"]
+    - jwt_session_id_unique_per_login: true
+    - legacy_jwt_without_sid_still_validates: true
     - config_assert: invalid_AUTH_TOKEN_VERSION_fails_closed true
 
 - case_id: AUTH-010

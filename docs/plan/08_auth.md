@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-11`
+- `Last Review`: `2026-06-13`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -147,6 +147,8 @@ WsConnecting
   - `iat`
   - `exp`
   - `ver`
+- 新签发 token **MUST** 额外包含每次登录唯一、不可预测的 `sid`。验证器 **MUST** 继续接受缺失
+  `sid` 的旧 token；`sid` 只用于区分 browser auth session，不替代 `ver`、cookie 策略或 peer identity。
 
 ### 5.2 Cookie
 
@@ -194,6 +196,8 @@ WsConnecting
   - `iat`
   - `exp`
   - `ver`
+- 新签发 token 还必须包含 per-login `sid`；旧 token 缺失 `sid` 时仍按 `sub` / `iat` /
+  `exp` / `ver` 兼容验证。
 - 推荐 payload 形状：
 
 ```json
@@ -201,7 +205,8 @@ WsConnecting
   "sub": "admin",
   "iat": 1700000000,
   "exp": 1700086400,
-  "ver": 1
+  "ver": 1,
+  "sid": "<per-login-random-session-id>"
 }
 ```
 

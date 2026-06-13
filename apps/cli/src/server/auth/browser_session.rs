@@ -90,6 +90,7 @@ fn anonymous_localhost_claims(config: &AuthConfig) -> Claims {
         iat: 0,
         exp: i64::MAX,
         ver: config.token_version,
+        sid: None,
     }
 }
 
@@ -118,6 +119,20 @@ mod tests {
         );
         assert_eq!(session.kind, BrowserSessionKind::Jwt);
         assert!(session.set_cookie.is_none());
+    }
+
+    #[test]
+    fn jwt_login_tokens_derive_distinct_auth_session_ids() {
+        let config = AuthConfig::dev_default().expect("auth config");
+        let first =
+            jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
+        let second =
+            jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
+
+        assert_ne!(
+            AuthSessionId::from_cookie_token(&first),
+            AuthSessionId::from_cookie_token(&second)
+        );
     }
 
     #[test]

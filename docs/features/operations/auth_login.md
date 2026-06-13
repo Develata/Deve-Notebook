@@ -34,7 +34,7 @@
 - `Trigger`: 点击 Login 按钮或在表单中按 Enter
 - `Preconditions`: 用户名与密码字段已存在输入值
 - `Immediate Result`: 进入 `Authenticating` 状态并发起 `POST /api/auth/login`
-- `Application Entry`: `apps/web/src/components/login/page.rs`, `apps/web/src/components/login/api.rs`, `apps/cli/src/server/auth/handlers/login.rs`
+- `Application Entry`: `apps/web/src/components/login/page.rs`, `apps/web/src/api/auth_login.rs`, `apps/cli/src/server/auth/handlers/login.rs`
 
 ### `op.auth.login.receive-result`
 
@@ -43,7 +43,7 @@
 - `Trigger`: 登录请求返回
 - `Preconditions`: `op.auth.login.submit` 已执行
 - `Immediate Result`: 前端切换到 `Authenticated` 或 `Failed`
-- `Application Entry`: `apps/web/src/components/login/api.rs`, `apps/web/src/components/login/page.rs`
+- `Application Entry`: `apps/web/src/api/auth_login.rs`, `apps/web/src/components/login/page.rs`
 
 ## Response Flows
 
@@ -67,7 +67,7 @@
 2. `Application Response`: 表单 `on:submit` 阻止默认行为，先检查空字段，再把 `AuthState` 置为 `Authenticating`，随后调用 `attempt_login`。
 3. `Concrete Modules`:
    - `apps/web/src/components/login/page.rs`
-   - `apps/web/src/components/login/api.rs`
+   - `apps/web/src/api/auth_login.rs`
    - `apps/cli/src/server/auth/handlers/login.rs`
    - `apps/cli/src/server/auth/handlers/session.rs`
    - `crates/core/src/security/auth/config.rs`
@@ -83,7 +83,7 @@
 2. `Application Response`: 成功时进入 `Authenticated`；失败时映射为结构化错误文案；服务端成功时写入 auth cookie，失败时返回结构化 auth error。
 3. `Concrete Modules`:
    - `apps/web/src/components/login/page.rs`
-   - `apps/web/src/components/login/api.rs`
+   - `apps/web/src/api/auth_login.rs`
    - `apps/cli/src/server/auth/handlers/login.rs`
    - `apps/cli/src/server/auth/handlers/session.rs`
 4. `Core Subsystems`:
