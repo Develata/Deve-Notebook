@@ -188,7 +188,7 @@ impl SourceControlWriteGrants {
 
     fn retain_live(grants: &mut HashMap<GrantKey, SourceControlWriteGrant>) {
         let now = Instant::now();
-        grants.retain(|_, grant| now <= grant.expires_at);
+        grants.retain(|_, grant| now < grant.expires_at);
     }
 }
 

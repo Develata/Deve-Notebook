@@ -120,6 +120,7 @@ mod tests {
     use crate::server::source_control_grants::AuthSessionId;
     use axum::http::Request;
     use deve_core::security::auth::config::AuthConfig;
+    use deve_core::security::auth::jwt;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::sync::Mutex;
 
@@ -226,6 +227,23 @@ mod tests {
             .expect("anonymous localhost admission");
         assert!(admission.browser_auth_session().is_some());
         assert!(admission.set_cookie().is_some());
+    }
+
+    #[test]
+    fn anonymous_localhost_ws_prefers_valid_jwt_over_dev_session_cookie() {
+        let mut config = auth_config();
+        config.allow_anonymous_localhost = true;
+        let token =
+            jwt::issue_token(&config.secret, &config.username, config.token_version).unwrap();
+        let dev_cookie = dev_session::cookie_header_for_test(&config.secret, "ws-browser-session");
+        let cookie_header = format!("{dev_cookie}; token={token}");
+        let admission =
+            session_admission(&config, &local_parts_with_cookie(Some(cookie_header)), None)
+                .expect("anonymous localhost admission");
+        let expected = AuthSessionId::from_cookie_token(&token);
+
+        assert_eq!(admission.browser_auth_session(), Some(&expected));
+        assert!(admission.set_cookie().is_none());
     }
 
     struct EnvGuard {
