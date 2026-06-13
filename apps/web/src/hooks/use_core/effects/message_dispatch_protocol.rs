@@ -7,7 +7,7 @@ use super::super::state::CoreSignals;
 use super::message_control_runtime_repo::{clear_repo_scoped_runtime, request_repo_list};
 use super::message_protocol::ProtocolControlSignals;
 use super::message_protocol::{
-    clear_failed_scope_switch, handle_protocol_error,
+    clear_failed_scope_switch, handle_protocol_error, is_session_auth_error,
     should_recover_scope_pref_after_failed_repo_switch,
 };
 use super::message_repo_scope::{accepts_edit_rejected_message, accepts_protocol_error_message};
@@ -108,7 +108,9 @@ pub fn handle_protocol_error_message(
     locale: Locale,
     signals: CoreSignals,
 ) {
-    if !accepts_protocol_error_message(scope_nonce, switch_nonce, signals) {
+    if !is_session_auth_error(error.code)
+        && !accepts_protocol_error_message(scope_nonce, switch_nonce, signals)
+    {
         return;
     }
     if should_recover_scope_pref_after_failed_repo_switch(

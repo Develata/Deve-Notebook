@@ -13,6 +13,10 @@ mod control;
 use self::control::is_auth_error;
 pub(crate) use self::control::should_recover_scope_pref_after_failed_repo_switch;
 
+pub(crate) fn is_session_auth_error(code: ServerErrorCode) -> bool {
+    is_auth_error(code)
+}
+
 #[derive(Clone, Copy)]
 pub struct ProtocolControlSignals {
     pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,

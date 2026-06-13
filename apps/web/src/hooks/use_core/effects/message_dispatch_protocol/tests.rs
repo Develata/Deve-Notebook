@@ -1,4 +1,7 @@
-use super::{finish_pending_chat_on_protocol_error, handle_edit_rejected_message};
+use super::{
+    finish_pending_chat_on_protocol_error, handle_edit_rejected_message,
+    handle_protocol_error_message,
+};
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::navigation::{NavigationTarget, PendingNavigation};
 use crate::hooks::use_core::state::init_signals;
@@ -100,6 +103,50 @@ fn protocol_error_does_not_clear_unmatched_chat_request() {
         signals.plugin_request_ids.get_untracked(),
         vec!["req-1".to_string()]
     );
+}
+
+#[test]
+fn unscoped_auth_protocol_error_marks_unauthorized() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (connection_status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(connection_status);
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    handle_protocol_error_message(
+        ServerError::new(ServerErrorCode::AuthTokenExpired),
+        None,
+        None,
+        &ws,
+        Locale::En,
+        signals,
+    );
+
+    assert_eq!(ws.status.get_untracked(), ConnectionStatus::Unauthorized);
+    assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+    assert!(ws.writer_client_id.get_untracked().is_none());
+}
+
+#[test]
+fn unscoped_non_auth_protocol_error_without_switch_is_ignored() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let (connection_status, _) = signal(ConnectionStatus::Connected);
+    let signals = init_signals(connection_status);
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+
+    handle_protocol_error_message(
+        ServerError::new(ServerErrorCode::RequestFailed),
+        None,
+        None,
+        &ws,
+        Locale::En,
+        signals,
+    );
+
+    assert_eq!(ws.status.get_untracked(), ConnectionStatus::Connected);
+    assert_eq!(signals.sync_banner.get_untracked(), None);
 }
 
 #[test]
