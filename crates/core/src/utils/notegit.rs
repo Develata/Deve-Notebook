@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 pub const NOTE_GIT_DIR: &str = ".notegit";
 pub const GIT_DIR: &str = ".git";
 pub const NOTE_GIT_IGNORE_PATTERN: &str = ".notegit/";
+const DEVE_IGNORE_FILE: &str = ".deveignore";
 const IDENTITY_FILE: &str = "identity.toml";
 const IDENTITY_VERSION: u32 = 1;
 
@@ -160,7 +161,7 @@ fn workspace_has_external_content(repo_root: &Path) -> Result<bool> {
         let entry = entry?;
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if name == NOTE_GIT_DIR || name == ".gitignore" {
+        if name == NOTE_GIT_DIR || name == ".gitignore" || name == DEVE_IGNORE_FILE {
             continue;
         }
         return Ok(true);
@@ -252,7 +253,8 @@ fn gitignore_pattern_mentions_notegit(pattern: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        ensure_gitignore_ignores_notegit, gitignore_ignores_notegit, is_internal_repo_path,
+        ensure_gitignore_ignores_notegit, ensure_repo_identity_marker, gitignore_ignores_notegit,
+        is_internal_repo_path, validate_repo_identity_marker,
     };
 
     #[cfg(unix)]
@@ -304,6 +306,30 @@ mod tests {
         let content = std::fs::read_to_string(dir.path().join(".gitignore")).expect("read");
         assert_eq!(content.lines().last(), Some(".notegit/"));
         assert!(gitignore_ignores_notegit(dir.path()).expect("status"));
+    }
+
+    #[test]
+    fn deveignore_only_workspace_allows_identity_bootstrap() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo_id = uuid::Uuid::new_v4();
+        std::fs::write(dir.path().join(".deveignore"), "ignored/*.md\n").expect("deveignore");
+
+        ensure_repo_identity_marker(dir.path(), repo_id, "default").expect("identity marker");
+
+        validate_repo_identity_marker(dir.path(), repo_id).expect("identity marker validation");
+    }
+
+    #[test]
+    fn deveignore_does_not_hide_external_workspace_content_from_identity_gate() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo_id = uuid::Uuid::new_v4();
+        std::fs::write(dir.path().join(".deveignore"), "foreign.md\n").expect("deveignore");
+        std::fs::write(dir.path().join("foreign.md"), "foreign").expect("foreign");
+
+        let err = ensure_repo_identity_marker(dir.path(), repo_id, "default")
+            .expect_err("foreign content must still block identity bootstrap");
+
+        assert!(err.to_string().contains("non-internal content"));
     }
 
     #[cfg(unix)]
