@@ -87,6 +87,12 @@ where
             vector,
             ..
         } => {
+            if stats.saw_hello {
+                return Err(anyhow!(
+                    "P2P peer {} sent duplicate SyncHello during one exchange",
+                    peer.label
+                ));
+            }
             if hello_repo_id != repo_id {
                 return Err(anyhow!(
                     "P2P peer {} returned repo {} during hello, expected {}",

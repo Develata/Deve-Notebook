@@ -117,6 +117,7 @@ fn is_terminal_p2p_error(error_code: &str) -> bool {
             | "unoffered_source"
             | "unrequested_source"
             | "source_proof_rejected"
+            | "duplicate_sync_hello"
             | "token_missing"
             | "token_empty"
             | "token_invalid"
@@ -184,6 +185,8 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         || compact.contains("sourceattributionrejected")
     {
         "source_proof_rejected"
+    } else if compact.contains("duplicatesynchello") {
+        "duplicate_sync_hello"
     } else if message.contains("invalid handshake signature")
         || message.contains("synchello proof rejected")
         || compact.contains("syncpeerunauthenticated")

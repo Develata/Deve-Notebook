@@ -175,6 +175,9 @@ enabled = true
 - token 比对失败必须在 WebSocket upgrade 前返回结构化 unauthorized response，不能进入普通 sync handler。
 - FullPeer connector 必须把 WebSocket `Ping` / `Pong` 作为 transport control frame 处理：`Ping` 需回应 `Pong`，
   `Pong` 需忽略；二者不得被解释为 sync protocol frame，也不得中断 `SyncHello` handshake。
+- FullPeer connector 在同一个 WebSocket exchange 中只能接受一次 `SyncHello`；重复 `SyncHello` 必须 fail-closed，
+  不得重置已认证 peer、repo route 或本次 handshake 的 source offer/request 集合；诊断必须暴露 `duplicate_sync_hello`
+  并停止把该状态机错误当作普通断线持续重连。断线重连必须建立新的 WebSocket。
 - FullPeer session 不允许走 browser writer registration shortcut；writer gate 仍只对当前 local authority branch 生效。
 - Browser 与 FullPeer 复用 `ClientMessage` / `ServerMessage` schema；除非 enum/wire shape 改变，否则不得 bump `WS_PROTOCOL_VERSION`。
 

@@ -172,6 +172,18 @@ fn p2p_connector_source_proof_rejection_is_terminal() {
 }
 
 #[test]
+fn p2p_connector_duplicate_sync_hello_is_terminal() {
+    assert_eq!(
+        classify_p2p_error(&anyhow::anyhow!(
+            "P2P peer peer-b sent duplicate SyncHello during one exchange"
+        )),
+        "duplicate_sync_hello"
+    );
+    assert!(is_terminal_p2p_error("duplicate_sync_hello"));
+    assert_eq!(failure_state("duplicate_sync_hello"), "error");
+}
+
+#[test]
 fn p2p_connector_classifies_structured_protocol_errors() {
     let repo_error = ServerError::new(ServerErrorCode::SyncRepoRouteMismatch);
     assert_eq!(

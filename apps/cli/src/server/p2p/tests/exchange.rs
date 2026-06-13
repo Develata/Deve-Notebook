@@ -90,6 +90,51 @@ async fn p2p_exchange_rejects_request_before_sync_hello() -> anyhow::Result<()> 
 }
 
 #[tokio::test]
+async fn p2p_exchange_rejects_duplicate_sync_hello() -> anyhow::Result<()> {
+    let identity = Arc::new(IdentityKeyPair::generate());
+    let (_dir, state) = test_state_with_dir(identity)?;
+    let repo_id = state
+        .repo
+        .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
+        .expect("repo info")
+        .uuid;
+    let remote = IdentityKeyPair::generate();
+    let remote_peer = remote.peer_id();
+    let message = signed_server_hello(&remote, repo_id, VersionVector::new());
+    let mut stats = authenticated_stats(remote_peer.clone());
+    stats.allowed_export_sources = vec![state.identity_key.peer_id()];
+    stats.requested_import_sources = vec![remote_peer.clone()];
+    let original_allowed_export_sources = stats.allowed_export_sources.clone();
+    let original_requested_import_sources = stats.requested_import_sources.clone();
+    let original_authenticated_peer_id = stats.authenticated_peer_id.clone();
+    let mut socket = MockSocket::new(Vec::new());
+
+    let err = handle_server_message(
+        &peer_with_id(repo_id, remote_peer.as_str()),
+        repo_id,
+        &state,
+        &mut socket,
+        message,
+        &mut stats,
+    )
+    .await
+    .expect_err("duplicate SyncHello must fail closed");
+
+    assert!(err.to_string().contains("duplicate SyncHello"));
+    assert_eq!(
+        stats.allowed_export_sources,
+        original_allowed_export_sources
+    );
+    assert_eq!(
+        stats.requested_import_sources,
+        original_requested_import_sources
+    );
+    assert_eq!(stats.authenticated_peer_id, original_authenticated_peer_id);
+    assert!(socket.sent.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
 async fn p2p_exchange_rejects_repo_mismatch_after_sync_hello() -> anyhow::Result<()> {
     let identity = Arc::new(IdentityKeyPair::generate());
     let state = test_state(identity)?;

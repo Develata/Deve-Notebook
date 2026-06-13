@@ -224,6 +224,7 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_responds_to_ping_without_aborting_handshake -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_request_before_sync_hello -- --nocapture
+    - run: cargo test -p deve_cli p2p_exchange_rejects_duplicate_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_configured_peer_id_mismatch -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_invalid_sync_hello_signature -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_sync_hello_pubkey_peer_id_mismatch -- --nocapture
@@ -238,6 +239,7 @@
     - run: cargo test -p deve_cli p2p_connector_unoffered_source_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_unrequested_source_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_source_proof_rejection_is_terminal -- --nocapture
+    - run: cargo test -p deve_cli p2p_connector_duplicate_sync_hello_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_unoffered_sync_request_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_unoffered_snapshot_request_source -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_forged_sync_push_source -- --nocapture
@@ -263,6 +265,7 @@
     - api_assert: full_peer_control_frames_do_not_abort_handshake true
     - api_assert: full_peer_exchange_requires_sync_hello true
     - api_assert: pre_hello_sync_request_rejected true
+    - api_assert: duplicate_sync_hello_does_not_reset_p2p_source_sets true
     - api_assert: configured_peer_id_is_expected_authenticated_identity true
     - api_assert: full_peer_connector_verifies_sync_hello_proof true
     - api_assert: sync_hello_pubkey_peer_id_mismatch_rejected true
@@ -286,6 +289,7 @@
     - api_assert: server_sync_hello_does_not_offer_unprovable_third_party_shadow_source true
     - api_assert: p2p_source_attribution_helper_shared_by_server_and_connector true
     - api_assert: p2p_source_proof_rejected_status_is_not_reconnecting true
+    - api_assert: p2p_duplicate_sync_hello_status_is_not_reconnecting true
 
 - case_id: NET-015
   goal: FullPeer mesh 入站远端 facts 只写 shadow repo，不自动污染本地 branch。
