@@ -44,7 +44,18 @@ fn validate_non_empty(key: &str, value: &str) -> Result<()> {
 }
 
 fn validate_env_name(key: &str, value: &str) -> Result<()> {
-    validate_non_empty(key, value)
+    validate_non_empty(key, value)?;
+    let mut bytes = value.bytes();
+    let Some(first) = bytes.next() else {
+        bail!("{key} must be non-empty");
+    };
+    if !(first.is_ascii_alphabetic() || first == b'_') {
+        bail!("{key} must be a valid environment variable name");
+    }
+    if !bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_') {
+        bail!("{key} must be a valid environment variable name");
+    }
+    Ok(())
 }
 
 fn validate_repo_id(key: &str, value: &str) -> Result<()> {
