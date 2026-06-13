@@ -255,11 +255,13 @@
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
     - run: cargo test -p deve_cli set_rejects_empty_env_reference_without_rewriting_config -- --nocapture
+    - run: cargo test -p deve_cli set_rejects_zero_p2p_connect_interval_without_rewriting_config -- --nocapture
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:
     - file_contains: config.toml "sidebar_width = 300"
     - file_contains: config.toml 'git_bridge = "off"'
     - config_assert: empty_env_reference_rejected_without_rewrite true
+    - config_assert: zero_p2p_connect_interval_rejected_without_rewrite true
 
 - case_id: SET-007
   goal: Server-backed Settings API 仍按 future 边界处理。
@@ -280,11 +282,13 @@
   steps:
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_core p2p_mesh_env_aliases_load_static_peer_config -- --nocapture
+    - run: cargo test -p deve_core load_checked_fails_closed_on_zero_p2p_connect_interval_ms -- --nocapture
     - run: cargo test -p deve_core --lib load_checked_rejects_sparse_p2p_peer_env_alias_indices -- --nocapture
     - run: cargo test -p deve_cli init_config_template_matches_current_settings_schema -- --nocapture
   assertions:
     - config_example_peer_id_placeholder_not_label: true
     - init_template_peer_id_placeholder_not_label: true
     - p2p_env_peer_id_preserved_as_expected_identity: true
+    - p2p_connect_interval_zero_rejected: true
     - p2p_env_peer_indices_contiguous_from_zero: true
 ```

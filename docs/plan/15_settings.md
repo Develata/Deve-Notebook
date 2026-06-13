@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-12`
+- `Last Review`: `2026-06-13`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -92,7 +92,7 @@
 | `source_control.git_bridge` | String | `mirror` | Git bridge 模式: `mirror` 排队/执行显式 bridge；`off` 保留 Deve Source Control 并阻止 Git 写命令。 |
 | `p2p.enabled`           | Bool   | `false`    | 静态 FullPeer mesh 开关；默认关闭，启用边界见 `07_network.md#static-peer-config`。 |
 | `p2p.inbound_token_env` | String | `DEVE_P2P_INBOUND_TOKEN` | 入站 FullPeer bearer token 的环境变量名；配置只保存非空 env 名称，**MUST NOT** 保存 token material。 |
-| `p2p.connect_interval_ms` | Number | `5000`   | 静态 peer connector 重连间隔；实现 **MUST** 避免 busy loop。 |
+| `p2p.connect_interval_ms` | Number | `5000`   | 静态 peer connector 重连间隔；配置值 **MUST** 大于 0，否则运行配置加载与 `deve config set` **MUST** fail-closed；实现 **MUST** 避免 busy loop。 |
 | `p2p.peers[].label`     | String | *(none)*   | 运维可读显示名，只用于日志与 `/api/node/role` 诊断。不得作为身份校验输入。 |
 | `p2p.peers[].peer_id`   | String | *(none)*   | expected authenticated peer identity；必须来自对端 PeerID 诊断/启动日志，不得填显示 label。 |
 | `p2p.peers[].repo_id`   | UUID String | *(none)* | 静态 peer 共享的逻辑 `RepoId`；不同 repo 必须 fail-closed。 |

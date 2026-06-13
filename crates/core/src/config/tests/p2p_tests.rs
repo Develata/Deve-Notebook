@@ -93,6 +93,27 @@ inbound_token_env = "1BAD_TOKEN_ENV"
 }
 
 #[test]
+fn load_checked_fails_closed_on_zero_p2p_connect_interval_ms() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_P2P__CONNECT_INTERVAL_MS", None)]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[p2p]
+connect_interval_ms = 0
+"#,
+    )
+    .expect("bad p2p config");
+
+    let err = Config::load_checked().expect_err("zero p2p connect interval must fail closed");
+
+    assert!(err.to_string().contains("p2p.connect_interval_ms"));
+    assert!(err.to_string().contains("greater than 0"));
+}
+
+#[test]
 fn load_checked_fails_closed_on_invalid_p2p_peer_ws_url() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[("DEVE_P2P_MESH_PEER_0_LABEL", None)]);

@@ -16,7 +16,7 @@ const CONFIG_KEY_SPECS: &[ConfigKeySpec] = &[
     ConfigKeySpec::string("ledger_dir", &[]),
     ConfigKeySpec::integer("mem_cache_mb"),
     ConfigKeySpec::string("merge_strategy", &["manual", "auto"]),
-    ConfigKeySpec::integer("p2p.connect_interval_ms"),
+    ConfigKeySpec::positive_integer("p2p.connect_interval_ms"),
     ConfigKeySpec::bool("p2p.enabled"),
     ConfigKeySpec::env_name("p2p.inbound_token_env"),
     ConfigKeySpec::string("profile", &["standard", "low-spec"]),
@@ -60,7 +60,14 @@ impl ConfigKeySpec {
     const fn integer(key: &'static str) -> Self {
         Self {
             key,
-            kind: ValueKind::Integer,
+            kind: ValueKind::Integer { min: 0 },
+        }
+    }
+
+    const fn positive_integer(key: &'static str) -> Self {
+        Self {
+            key,
+            kind: ValueKind::Integer { min: 1 },
         }
     }
 
@@ -77,7 +84,7 @@ enum ValueKind {
     String { choices: &'static [&'static str] },
     EnvName,
     Bool,
-    Integer,
+    Integer { min: i64 },
 }
 
 #[cfg(test)]
@@ -86,14 +93,14 @@ impl ValueKind {
         match self {
             Self::String { .. } | Self::EnvName => "String",
             Self::Bool => "Bool",
-            Self::Integer => "Number",
+            Self::Integer { .. } => "Number",
         }
     }
 
     fn choices(self) -> &'static [&'static str] {
         match self {
             Self::String { choices } => choices,
-            Self::EnvName | Self::Bool | Self::Integer => &[],
+            Self::EnvName | Self::Bool | Self::Integer { .. } => &[],
         }
     }
 }
@@ -103,7 +110,7 @@ pub(super) fn parse_whitelisted_value(key: &str, value: &str) -> anyhow::Result<
         ValueKind::String { choices } => parse_string(value, choices),
         ValueKind::EnvName => parse_env_name(value),
         ValueKind::Bool => parse_bool(value),
-        ValueKind::Integer => parse_integer(value),
+        ValueKind::Integer { min } => parse_integer(value, min),
     }
 }
 
@@ -159,13 +166,16 @@ fn parse_bool(value: &str) -> anyhow::Result<Value> {
     }
 }
 
-fn parse_integer(value: &str) -> anyhow::Result<Value> {
+fn parse_integer(value: &str, min: i64) -> anyhow::Result<Value> {
     let parsed = value
         .trim()
         .parse::<i64>()
         .map_err(|_| anyhow!("Invalid integer value: {}", value))?;
-    if parsed < 0 {
-        return Err(anyhow!("Integer config values must be non-negative"));
+    if parsed < min {
+        if min == 0 {
+            return Err(anyhow!("Integer config values must be non-negative"));
+        }
+        return Err(anyhow!("Integer config value must be >= {min}"));
     }
     Ok(Value::Integer(parsed))
 }

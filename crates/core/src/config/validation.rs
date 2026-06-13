@@ -9,7 +9,15 @@ use anyhow::{Result, bail};
 use std::collections::HashSet;
 
 pub(super) fn validate(config: &Config) -> Result<()> {
+    validate_runtime_numbers(config)?;
     validate_p2p(config)
+}
+
+fn validate_runtime_numbers(config: &Config) -> Result<()> {
+    if config.p2p.connect_interval_ms == 0 {
+        bail!("p2p.connect_interval_ms must be greater than 0");
+    }
+    Ok(())
 }
 
 fn validate_p2p(config: &Config) -> Result<()> {

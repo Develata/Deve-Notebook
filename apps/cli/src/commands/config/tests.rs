@@ -93,6 +93,23 @@ fn set_rejects_empty_env_reference_without_rewriting_config() {
 }
 
 #[test]
+fn set_rejects_zero_p2p_connect_interval_without_rewriting_config() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("config.toml");
+    let original = "[p2p]\nconnect_interval_ms = 5000\n";
+    std::fs::write(&path, original).expect("seed config");
+
+    let err = set_in_file(&path, "p2p.connect_interval_ms", "0")
+        .expect_err("zero p2p connect interval must fail closed");
+
+    assert!(err.to_string().contains(">= 1"));
+    assert_eq!(
+        std::fs::read_to_string(&path).expect("read config"),
+        original
+    );
+}
+
+#[test]
 fn set_rejects_invalid_env_reference_name_without_rewriting_config() {
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("config.toml");

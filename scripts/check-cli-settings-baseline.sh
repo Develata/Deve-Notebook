@@ -99,13 +99,14 @@ check_absent apps/cli/src/commands/config/schema.rs "\"vault_path\""
 check_contains apps/cli/src/commands/config/schema.rs "\"ui.sidebar_width\""
 check_contains apps/cli/src/commands/config/schema.rs "\"p2p.enabled\""
 check_contains apps/cli/src/commands/config/schema.rs "\"p2p.connect_interval_ms\""
+check_contains apps/cli/src/commands/config/schema.rs "positive_integer(\"p2p.connect_interval_ms\")"
 check_contains apps/cli/src/commands/config/schema.rs "\"p2p.inbound_token_env\""
 check_contains apps/cli/src/commands/config/schema.rs "\"source_control.git_bridge\""
 check_contains apps/cli/src/commands/config/schema.rs "\"ai.mode\""
 check_contains crates/core/src/config/schema.rs "pub struct P2pConfig"
 check_contains crates/core/src/config/schema.rs "pub struct P2pPeerConfig"
 check_contains crates/core/src/config/env_alias.rs "DEVE_P2P_MESH_PEER_{index}_"
-check_contains crates/core/src/config/tests/load_tests.rs "p2p_mesh_env_aliases_load_static_peer_config"
+check_contains crates/core/src/config/tests/p2p_tests.rs "p2p_mesh_env_aliases_load_static_peer_config"
 check_contains apps/cli/src/commands/config.rs "Updated config.toml is not compatible with runtime config"
 check_contains crates/core/src/config/tests.rs "mod agent_bridge_tests;"
 check_contains crates/core/src/config/tests.rs "mod load_tests;"
@@ -117,6 +118,8 @@ check_contains crates/core/src/config/tests/agent_bridge_tests.rs "trusted_cli_m
 check_contains crates/core/src/config/tests/load_tests.rs "load_checked_fails_closed_on_invalid_agent_bridge_alias_bool"
 check_contains crates/core/src/config/tests/load_tests.rs "load_checked_fails_closed_on_invalid_runtime_enum_value"
 check_contains crates/core/src/config/tests/load_tests.rs "runtime_config_value_parsers_reject_unknown_values"
+check_contains crates/core/src/config/tests/p2p_tests.rs "load_checked_fails_closed_on_zero_p2p_connect_interval_ms"
+check_contains apps/cli/src/commands/config/tests.rs "set_rejects_zero_p2p_connect_interval_without_rewriting_config"
 check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_ENABLED"
 check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/15_settings.md "DEVE_AI_AGENT_BRIDGE_ENABLED"
@@ -124,6 +127,7 @@ check_contains docs/plan/15_settings.md "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/15_settings.md 'p2p.enabled'
 check_contains docs/plan/15_settings.md 'p2p.inbound_token_env'
 check_contains docs/plan/15_settings.md 'p2p.connect_interval_ms'
+check_contains docs/plan/15_settings.md '配置值 **MUST** 大于 0'
 check_contains docs/plan/15_settings.md 'p2p.peers[].peer_id'
 check_contains docs/plan/15_settings.md 'expected authenticated peer identity'
 check_contains docs/plan/15_settings.md 'source_control.git_bridge'
