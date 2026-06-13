@@ -119,6 +119,7 @@ fn is_terminal_p2p_error(error_code: &str) -> bool {
             | "source_proof_rejected"
             | "token_missing"
             | "token_empty"
+            | "token_invalid"
             | "invalid_url"
             | "invalid_repo_id"
     )
@@ -149,6 +150,8 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "self_loop"
     } else if message.contains("token env is empty") {
         "token_empty"
+    } else if message.contains("invalid p2p bearer header") {
+        "token_invalid"
     } else if message.contains("invalid p2p ws_url") {
         "invalid_url"
     } else if message.contains("invalid p2p repo_id") {

@@ -181,5 +181,8 @@ check_contains apps/cli/src/server/p2p.rs "spawn_mesh_connectors"
 check_contains apps/cli/src/server/p2p/connect.rs "P2P mesh connector handshake completed"
 check_contains apps/cli/src/server/p2p/connect.rs "encode_client_binary(&hello)"
 check_contains apps/cli/src/server/p2p/source_sets.rs "with_strict_engine(repo_id"
+check_contains docs/acceptance-cases/06_network.md "p2p_connector_static_token_header_errors_are_terminal"
+check_contains apps/cli/src/server/p2p_connector.rs "\"token_invalid\""
+check_contains apps/cli/src/server/p2p_connector/tests.rs "fn p2p_connector_static_token_header_errors_are_terminal"
 
 echo "network-baseline-check: ok"

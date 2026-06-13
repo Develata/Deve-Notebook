@@ -397,7 +397,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - backoff 序列：
   - `1s -> 2s -> 4s -> 8s -> 16s -> 30s(cap)`
 - 每次重连尝试 **SHOULD** 记录结构化日志和 UI retry counter。
-- `Unauthorized`、`repo route mismatch`、configured `peer_id` mismatch、invalid static `repo_id` / `ws_url`、missing or empty outbound token env、`malformed session proof` 不得继续普通无限重连。
+- `Unauthorized`、`repo route mismatch`、configured `peer_id` mismatch、invalid static `repo_id` / `ws_url`、missing / empty / header-invalid outbound token env、`malformed session proof` 不得继续普通无限重连。
 - full peer connector backoff 与 browser reconnect backoff 可以共用节奏，但必须按 peer endpoint 独立计数；单个 peer 失败不得阻塞其他 peer connector。
 
 ## 9. Failure Modes

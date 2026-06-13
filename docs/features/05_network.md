@@ -56,7 +56,7 @@
 - 静态 peer 配置中的 `peer_id` 是 expected authenticated peer identity，不是显示 label；握手返回的 peer id 不一致时必须拒绝连接。
 - FullPeer connector 必须验证对端 `SyncHello` 的 pubkey、peer id 与 signature；无效签名或 pubkey 无法推出声明 peer id 时必须拒绝连接。
 - `peer_id` mismatch 属于确定性身份/配置错误，不应作为普通断线持续重连；诊断中应保留 last error code。
-- 静态 `repo_id` / `ws_url` 无效或 outbound token env 缺失/为空时，也应停在 error/unauthorized 诊断态，而不是持续重连。
+- 静态 `repo_id` / `ws_url` 无效或 outbound token env 缺失、为空、无法形成合法 `Authorization` header 时，也应停在 error/unauthorized 诊断态，而不是持续重连。
 - FullPeer 收到的 request / snapshot request 只能请求本次 handshake diff 中本端向对端声明可发送的 source；请求未 offer 的 source 必须被拒绝，并在 connector 诊断中作为 `unoffered_source` 终止错误暴露。
 - 静态 FullPeer v1 不 advertise 本机缓存的第三方 shadow source；这些 source 在没有 origin proof retention 前不可由当前节点重新证明。
 - FullPeer 收到的 push / snapshot push 必须来自本端在本次 handshake 中请求过的 source；未请求的 source 必须被拒绝，并在 connector 诊断中作为 `unrequested_source` 终止错误暴露。

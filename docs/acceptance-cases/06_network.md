@@ -234,6 +234,7 @@
     - run: cargo test -p deve_cli p2p_connector_identity_mismatch_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_repo_mismatch_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_static_config_errors_are_terminal -- --nocapture
+    - run: cargo test -p deve_cli p2p_connector_static_token_header_errors_are_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_unoffered_source_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_unrequested_source_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_source_proof_rejection_is_terminal -- --nocapture
@@ -267,6 +268,7 @@
     - api_assert: sync_hello_pubkey_peer_id_mismatch_rejected true
     - api_assert: configured_peer_id_mismatch_not_reconnecting true
     - api_assert: static_p2p_config_errors_not_reconnecting true
+    - api_assert: static_p2p_invalid_token_header_not_reconnecting true
     - api_assert: post_hello_repo_mismatch_rejected true
     - api_assert: authenticated_self_loop_rejected true
     - api_assert: self_loop_status_is_not_reconnecting true

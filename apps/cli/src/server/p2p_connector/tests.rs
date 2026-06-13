@@ -110,6 +110,18 @@ fn p2p_connector_static_config_errors_are_terminal() {
 }
 
 #[test]
+fn p2p_connector_static_token_header_errors_are_terminal() {
+    assert_eq!(
+        classify_p2p_error(&anyhow::anyhow!(
+            "Invalid P2P bearer header for peer peer-b"
+        )),
+        "token_invalid"
+    );
+    assert!(is_terminal_p2p_error("token_invalid"));
+    assert_eq!(failure_state("token_invalid"), "error");
+}
+
+#[test]
 fn p2p_connector_unoffered_source_is_terminal() {
     assert_eq!(
         classify_p2p_error(&anyhow::anyhow!(
