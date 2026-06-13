@@ -2,10 +2,13 @@ use super::*;
 
 #[test]
 fn scope_pref_persists_only_repo_name_alias() {
-    assert!(matches!(
-        next_scope_pref_json(Some("default".into()), false),
-        ScopePrefUpdate::Persist(_)
-    ));
+    let ScopePrefUpdate::Persist(json) = next_scope_pref_json(Some("default".into()), false) else {
+        panic!("repo name should persist");
+    };
+    assert!(json.contains("\"repo_name\":\"default\""));
+    assert!(!json.contains("repo_id"));
+    assert!(!json.contains("active_branch"));
+    assert!(!json.contains("scope_nonce"));
     assert!(matches!(
         next_scope_pref_json(None, false),
         ScopePrefUpdate::Clear
