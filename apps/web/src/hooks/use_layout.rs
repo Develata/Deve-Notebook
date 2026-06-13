@@ -319,19 +319,26 @@ fn initial_side_widths(
     right_width: i32,
     available_width: i32,
 ) -> (i32, i32) {
-    let left = left_width.max(0);
-    let right = right_width.max(0);
-    let center = center_width.unwrap_or_else(|| panel_center_width(left, right, available_width));
-    let total = left + center.max(0) + right;
+    let left = i64::from(left_width.max(0));
+    let right = i64::from(right_width.max(0));
+    let center = i64::from(
+        center_width
+            .unwrap_or_else(|| {
+                panel_center_width(left_width.max(0), right_width.max(0), available_width)
+            })
+            .max(0),
+    );
+    let available = i64::from(available_width.max(0));
+    let total = left + center + right;
 
-    if total <= 0 || available_width <= 0 {
+    if total <= 0 || available <= 0 {
         return (0, 0);
     }
 
-    let scaled_left = left.saturating_mul(available_width) / total;
-    let mut scaled_right = right.saturating_mul(available_width) / total;
-    if scaled_left + scaled_right > available_width {
-        scaled_right = (available_width - scaled_left).max(0);
+    let scaled_left = ((left * available) / total) as i32;
+    let mut scaled_right = ((right * available) / total) as i32;
+    if scaled_left.saturating_add(scaled_right) > available_width {
+        scaled_right = available_width.saturating_sub(scaled_left).max(0);
     }
 
     (scaled_left, scaled_right)
@@ -406,5 +413,14 @@ mod tests {
             initial_side_widths(DEFAULT_LEFT_WIDTH, None, DEFAULT_RIGHT_WIDTH, 1168);
         assert_eq!(default_left, DEFAULT_LEFT_WIDTH);
         assert_eq!(default_right, DEFAULT_RIGHT_WIDTH);
+    }
+
+    #[test]
+    fn desktop_layout_resize_initial_widths_tolerate_extreme_persisted_values() {
+        let (left, right) = initial_side_widths(i32::MAX, Some(0), i32::MAX, 1000);
+        assert_eq!((left, right), (500, 500));
+
+        let (left, right) = initial_side_widths(i32::MAX, Some(i32::MAX), i32::MAX, 1000);
+        assert!((left as i64 + right as i64) <= 1000);
     }
 }

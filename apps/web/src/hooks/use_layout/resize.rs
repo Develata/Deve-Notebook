@@ -90,30 +90,42 @@ fn resized_values_for_target_with_constraints(
 
     match target {
         ResizeTarget::LeftDivider => {
-            let max_left = (available_width - start_effective_right_width).max(0);
+            let max_left = available_width
+                .saturating_sub(start_effective_right_width)
+                .max(0);
             ResizeResult {
-                left_width: clamp(start_left_width + delta, 0, max_left),
+                left_width: clamp(start_left_width.saturating_add(delta), 0, max_left),
                 right_width: start_right_width,
                 outer_gutter: start_outer_gutter,
             }
         }
         ResizeTarget::RightDivider => {
-            let max_right = (available_width - start_effective_left_width).max(0);
+            let max_right = available_width
+                .saturating_sub(start_effective_left_width)
+                .max(0);
             ResizeResult {
                 left_width: start_left_width,
-                right_width: clamp(start_right_width - delta, 0, max_right),
+                right_width: clamp(start_right_width.saturating_sub(delta), 0, max_right),
                 outer_gutter: start_outer_gutter,
             }
         }
         ResizeTarget::OuterLeft => ResizeResult {
             left_width: start_left_width,
             right_width: start_right_width,
-            outer_gutter: clamp(start_outer_gutter + delta, bounds.outer.0, bounds.outer.1),
+            outer_gutter: clamp(
+                start_outer_gutter.saturating_add(delta),
+                bounds.outer.0,
+                bounds.outer.1,
+            ),
         },
         ResizeTarget::OuterRight => ResizeResult {
             left_width: start_left_width,
             right_width: start_right_width,
-            outer_gutter: clamp(start_outer_gutter - delta, bounds.outer.0, bounds.outer.1),
+            outer_gutter: clamp(
+                start_outer_gutter.saturating_sub(delta),
+                bounds.outer.0,
+                bounds.outer.1,
+            ),
         },
     }
 }
@@ -367,6 +379,70 @@ mod tests {
                 right_width: 350,
                 outer_gutter: 0,
             }
+        );
+    }
+
+    #[test]
+    fn desktop_layout_resize_extreme_inputs_do_not_overflow() {
+        let bounds = desktop_bounds();
+
+        assert_eq!(
+            resized_values_for_target(
+                ResizeTarget::LeftDivider,
+                i32::MAX,
+                0,
+                16,
+                i32::MAX,
+                1000,
+                bounds,
+            ),
+            ResizeResult {
+                left_width: 1000,
+                right_width: 0,
+                outer_gutter: 16,
+            }
+        );
+        assert_eq!(
+            resized_values_for_target(
+                ResizeTarget::RightDivider,
+                0,
+                i32::MAX,
+                16,
+                i32::MIN,
+                1000,
+                bounds,
+            ),
+            ResizeResult {
+                left_width: 0,
+                right_width: 1000,
+                outer_gutter: 16,
+            }
+        );
+        assert_eq!(
+            resized_values_for_target(
+                ResizeTarget::OuterLeft,
+                250,
+                350,
+                i32::MAX,
+                i32::MAX,
+                1000,
+                bounds,
+            )
+            .outer_gutter,
+            120
+        );
+        assert_eq!(
+            resized_values_for_target(
+                ResizeTarget::OuterRight,
+                250,
+                350,
+                i32::MAX,
+                i32::MIN,
+                1000,
+                bounds,
+            )
+            .outer_gutter,
+            120
         );
     }
 }
