@@ -37,6 +37,9 @@ fn validate_non_empty(key: &str, value: &str) -> Result<()> {
     if value.trim().is_empty() {
         bail!("{key} must be non-empty");
     }
+    if value != value.trim() {
+        bail!("{key} must not contain outer whitespace");
+    }
     Ok(())
 }
 

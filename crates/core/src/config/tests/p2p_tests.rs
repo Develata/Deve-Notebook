@@ -141,6 +141,31 @@ auth_token_env = ""
 }
 
 #[test]
+fn load_checked_fails_closed_on_p2p_peer_id_outer_whitespace() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_P2P_MESH_PEER_0_LABEL", None)]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[[p2p.peers]]
+label = "peer-b"
+peer_id = " peer-b-id"
+repo_id = "11111111-1111-1111-1111-111111111111"
+ws_url = "ws://peer-b:3001/ws"
+auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
+"#,
+    )
+    .expect("bad p2p peer config");
+
+    let err = Config::load_checked().expect_err("p2p peer_id whitespace must fail closed");
+
+    assert!(err.to_string().contains("p2p.peers[0].peer_id"));
+    assert!(err.to_string().contains("outer whitespace"));
+}
+
+#[test]
 fn load_checked_fails_closed_on_duplicate_p2p_peer_identity_tuple() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[
