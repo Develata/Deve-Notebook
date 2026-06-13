@@ -14,6 +14,7 @@
 
 use deve_core::models::DocId;
 use deve_core::protocol::{ClientMessage, MergeConflictAction};
+use deve_core::utils::path::to_forward_slash;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DiffSessionWire {
@@ -61,6 +62,7 @@ fn now_ms() -> u64 {
 
 impl DiffSessionWire {
     pub fn new(path: String, old_content: String, new_content: String) -> Self {
+        let path = normalize_path(path);
         let display_path = path.clone();
         Self::with_display_path(path, display_path, old_content, new_content)
     }
@@ -73,7 +75,7 @@ impl DiffSessionWire {
     ) -> Self {
         Self {
             doc_id: None,
-            path,
+            path: normalize_path(path),
             display_path,
             old_content,
             new_content,
@@ -93,6 +95,10 @@ impl DiffSessionWire {
     }
 }
 
+fn normalize_path(path: String) -> String {
+    to_forward_slash(&path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{DiffSessionWire, MergeConflictSession};
@@ -108,9 +114,16 @@ mod tests {
     }
 
     #[test]
+    fn normalizes_canonical_path_on_construction() {
+        let session = DiffSessionWire::new("notes\\new.md".into(), "old".into(), "new".into());
+        assert_eq!(session.path, "notes/new.md");
+        assert_eq!(session.display_path, "notes/new.md");
+    }
+
+    #[test]
     fn keeps_display_label_separate_from_canonical_path() {
         let session = DiffSessionWire::with_display_path(
-            "notes/new.md".into(),
+            "notes\\new.md".into(),
             "notes/old.md -> notes/new.md".into(),
             "old".into(),
             "new".into(),
