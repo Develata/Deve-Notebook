@@ -66,8 +66,100 @@ fn validate_repo_id(key: &str, value: &str) -> Result<()> {
 
 fn validate_ws_url(key: &str, value: &str) -> Result<()> {
     validate_non_empty(key, value)?;
-    if !(value.starts_with("ws://") || value.starts_with("wss://")) {
+    let rest = if let Some(rest) = value.strip_prefix("ws://") {
+        rest
+    } else if let Some(rest) = value.strip_prefix("wss://") {
+        rest
+    } else {
         bail!("{key} must use ws:// or wss://");
+    };
+    if value
+        .bytes()
+        .any(|byte| byte.is_ascii_whitespace() || byte.is_ascii_control())
+    {
+        bail!("{key} must not contain whitespace or control characters");
+    }
+    if rest.contains('#') {
+        bail!("{key} must not include a fragment");
+    }
+    let authority_end = rest.find(['/', '?']).unwrap_or(rest.len());
+    let authority = &rest[..authority_end];
+    if authority.is_empty() {
+        bail!("{key} must include a URL authority");
+    }
+    if authority.contains('@') {
+        bail!("{key} must not include userinfo");
+    }
+    validate_ws_authority(key, authority)?;
+    Ok(())
+}
+
+fn validate_ws_authority(key: &str, authority: &str) -> Result<()> {
+    if let Some(rest) = authority.strip_prefix('[') {
+        let Some((host, suffix)) = rest.split_once(']') else {
+            bail!("{key} has invalid IPv6 authority");
+        };
+        if host.is_empty() {
+            bail!("{key} host must be non-empty");
+        }
+        if let Some(port) = suffix.strip_prefix(':') {
+            validate_port(key, port)?;
+        } else if !suffix.is_empty() {
+            bail!("{key} has invalid authority");
+        }
+        return Ok(());
+    }
+
+    let (host, port) = authority
+        .rsplit_once(':')
+        .filter(|(host, _)| !host.contains(':'))
+        .map_or((authority, None), |(host, port)| (host, Some(port)));
+    if host.is_empty() {
+        bail!("{key} host must be non-empty");
+    }
+    if let Some(port) = port {
+        validate_port(key, port)?;
     }
     Ok(())
+}
+
+fn validate_port(key: &str, port: &str) -> Result<()> {
+    match port.parse::<u16>() {
+        Ok(port) if port > 0 => Ok(()),
+        _ => bail!("{key} port must be a non-zero TCP port"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_ws_url;
+
+    #[test]
+    fn p2p_ws_url_requires_structured_authority() {
+        for value in [
+            "ws://",
+            "ws:///ws",
+            "ws://:3001/ws",
+            "ws://peer-b:0/ws",
+            "ws://peer-b:bad/ws",
+            "ws://user:pass@peer-b:3001/ws",
+            "ws://peer-b:3001/ws#fragment",
+            "ws://peer b:3001/ws",
+        ] {
+            validate_ws_url("p2p.peers[0].ws_url", value)
+                .expect_err("invalid ws_url must fail closed");
+        }
+    }
+
+    #[test]
+    fn p2p_ws_url_accepts_static_peer_endpoint_shapes() {
+        for value in [
+            "ws://peer-b:3001/ws",
+            "wss://mesh.example.test/ws",
+            "ws://[::1]:3001/ws",
+            "ws://peer-b:3001/ws?role=fullpeer",
+        ] {
+            validate_ws_url("p2p.peers[0].ws_url", value).expect("valid ws_url should be accepted");
+        }
+    }
 }
