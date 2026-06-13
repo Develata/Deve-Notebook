@@ -376,7 +376,7 @@ fn validate_inbound_push(
         target_peer,
         header,
         payload,
-        source_proof_requirement: SourceProofRequirement::IndirectOnly,
+        source_proof_requirement: SourceProofRequirement::Always,
     })
     .with_context(|| {
         format!(
@@ -711,7 +711,8 @@ fn signed_sync_hello(
 mod tests {
     use super::{
         InboundSnapshotValidation, MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message,
-        signed_sync_hello, sync_source_sets_for_hello, validate_inbound_snapshot,
+        signed_sync_hello, sync_source_sets_for_hello, validate_inbound_push,
+        validate_inbound_snapshot,
     };
     use crate::server::{AppState, tree_state::RepoTreeRegistry};
     use deve_core::config::{GitBridgeMode, P2pPeerConfig, SyncMode};
@@ -1560,6 +1561,29 @@ mod tests {
             },
         )
         .expect_err("missing snapshot source proof must fail closed");
+
+        assert!(err.to_string().contains("source proof"));
+    }
+
+    #[test]
+    fn p2p_exchange_rejects_sync_push_missing_source_proof() {
+        let repo_id = uuid::Uuid::new_v4();
+        let authenticated_peer = PeerId::new("peer-b");
+        let mut stats = authenticated_stats(authenticated_peer.clone());
+        stats
+            .requested_import_sources
+            .push(authenticated_peer.clone());
+
+        let err = validate_inbound_push(
+            &peer(repo_id),
+            repo_id,
+            &stats,
+            &PeerId::new("local-target"),
+            &authenticated_peer,
+            &SyncPushHeader::diff(repo_id, authenticated_peer.clone(), VersionVector::new()),
+            &dummy_payload(),
+        )
+        .expect_err("missing sync push source proof must fail closed");
 
         assert!(err.to_string().contains("source proof"));
     }
