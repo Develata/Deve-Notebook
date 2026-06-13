@@ -9,7 +9,7 @@ use gloo_net::http::Request;
 use serde_json::Value;
 use web_sys::RequestCredentials;
 
-use super::native_http::preferred_http_base;
+use super::native_http::{api_url, api_url_for_http_base};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AuthProbe {
@@ -19,13 +19,16 @@ pub enum AuthProbe {
 }
 
 pub async fn probe_auth_status() -> AuthProbe {
-    let http_base = preferred_http_base();
-    probe_auth_status_with_http_base(http_base.as_deref()).await
+    probe_auth_status_with_api_url(api_url("/api/auth/status")).await
 }
 
 pub async fn probe_auth_status_with_http_base(http_base: Option<&str>) -> AuthProbe {
-    let mut request = Request::get(&auth_status_url(http_base));
-    if http_base.is_some() {
+    probe_auth_status_with_api_url(api_url_for_http_base("/api/auth/status", http_base)).await
+}
+
+async fn probe_auth_status_with_api_url(api: super::native_http::ApiUrl) -> AuthProbe {
+    let mut request = Request::get(&api.url);
+    if api.include_credentials {
         request = request.credentials(RequestCredentials::Include);
     }
 
@@ -48,13 +51,6 @@ pub async fn probe_auth_status_with_http_base(http_base: Option<&str>) -> AuthPr
     }
 }
 
-fn auth_status_url(http_base: Option<&str>) -> String {
-    http_base.map_or_else(
-        || "/api/auth/status".to_string(),
-        |base| format!("{}/api/auth/status", base.trim_end_matches('/')),
-    )
-}
-
 fn classify_auth_probe_failure(status: u16, has_auth_error_code: bool) -> AuthProbe {
     if matches!(status, 401 | 403) || has_auth_error_code {
         AuthProbe::Invalid
@@ -72,7 +68,9 @@ fn has_auth_error_code(payload: &Value) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{AuthProbe, auth_status_url, classify_auth_probe_failure, has_auth_error_code};
+    use super::{
+        AuthProbe, api_url_for_http_base, classify_auth_probe_failure, has_auth_error_code,
+    };
     use serde_json::json;
 
     #[test]
@@ -96,11 +94,13 @@ mod tests {
     }
 
     #[test]
-    fn auth_status_url_uses_native_http_base_when_present() {
-        assert_eq!(
-            auth_status_url(Some("http://127.0.0.1:3001/")),
-            "http://127.0.0.1:3001/api/auth/status"
-        );
-        assert_eq!(auth_status_url(None), "/api/auth/status");
+    fn auth_status_url_uses_shared_native_http_policy() {
+        let api = api_url_for_http_base("/api/auth/status", Some("http://127.0.0.1:3001/"));
+        assert_eq!(api.url, "http://127.0.0.1:3001/api/auth/status");
+        assert!(api.include_credentials);
+
+        let api = api_url_for_http_base("/api/auth/status", None);
+        assert_eq!(api.url, "/api/auth/status");
+        assert!(!api.include_credentials);
     }
 }

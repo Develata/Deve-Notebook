@@ -51,7 +51,7 @@ fn packaged_shell_loopback_http_base_for_hostname(hostname: &str) -> Option<&'st
     (hostname == PACKAGED_SHELL_HOST).then_some(LOOPBACK_DEV_HTTP_BASE)
 }
 
-fn api_url_for_http_base(path: &str, http_base: Option<&str>) -> ApiUrl {
+pub(super) fn api_url_for_http_base(path: &str, http_base: Option<&str>) -> ApiUrl {
     match http_base {
         Some(base) => ApiUrl {
             url: format!(
