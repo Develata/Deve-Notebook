@@ -3,7 +3,7 @@
 
 use crate::server::AppState;
 use crate::server::p2p::stats::ExchangeStats;
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::frame::encode_client_binary;
 use deve_core::protocol::{ClientMessage, SyncPayloadKind, SyncPushHeader, SyncSourceProof};
@@ -46,12 +46,13 @@ where
         if response.ops.is_empty() {
             continue;
         }
-        let mut header = SyncPushHeader::diff(
+        let header = signed_local_diff_header(
+            state,
             response.repo_id,
-            response.peer_id.clone(),
+            &response.peer_id,
             header_vector.clone(),
-        );
-        sign_local_diff_source(state, &mut header, &response.ops);
+            &response.ops,
+        )?;
         send_client_message(
             socket,
             ClientMessage::SyncPush {
@@ -99,7 +100,7 @@ where
         &response.peer_id,
         &server_vector,
         &response.ops,
-    );
+    )?;
     send_client_message(
         socket,
         ClientMessage::SyncPushSnapshot {
@@ -107,7 +108,7 @@ where
             repo_id: response.repo_id,
             server_vector,
             snapshot_kind: Some("full".to_string()),
-            source_proof,
+            source_proof: Some(source_proof),
             payload: response.ops,
         },
     )
@@ -167,16 +168,25 @@ where
         .context("Failed to send P2P client frame")
 }
 
-fn sign_local_diff_source(
+fn signed_local_diff_header(
     state: &Arc<AppState>,
-    header: &mut SyncPushHeader,
+    repo_id: RepoId,
+    peer_id: &PeerId,
+    vector: VersionVector,
     payload: &[EncryptedOp],
-) {
-    if header.peer_id == state.identity_key.peer_id()
-        && let Err(err) = header.sign_source(payload, &state.identity_key)
-    {
-        tracing::warn!("Failed to sign P2P diff source proof: {}", err);
+) -> Result<SyncPushHeader> {
+    if peer_id != &state.identity_key.peer_id() {
+        return Err(anyhow!(
+            "P2P cannot sign non-local diff source {} for repo {}",
+            peer_id,
+            repo_id
+        ));
     }
+    let mut header = SyncPushHeader::diff(repo_id, peer_id.clone(), vector);
+    header
+        .sign_source(payload, &state.identity_key)
+        .context("Failed to sign P2P diff source proof")?;
+    Ok(header)
 }
 
 fn snapshot_source_proof(
@@ -185,22 +195,21 @@ fn snapshot_source_proof(
     peer_id: &PeerId,
     server_vector: &VersionVector,
     payload: &[EncryptedOp],
-) -> Option<SyncSourceProof> {
+) -> Result<SyncSourceProof> {
     if peer_id != &state.identity_key.peer_id() {
-        return None;
+        return Err(anyhow!(
+            "P2P cannot sign non-local snapshot source {} for repo {}",
+            peer_id,
+            repo_id
+        ));
     }
-    match SyncSourceProof::sign(
+    SyncSourceProof::sign(
         repo_id,
         peer_id,
         server_vector,
         SyncPayloadKind::Snapshot,
         payload,
         &state.identity_key,
-    ) {
-        Ok(proof) => Some(proof),
-        Err(err) => {
-            tracing::warn!("Failed to sign P2P snapshot source proof: {}", err);
-            None
-        }
-    }
+    )
+    .context("Failed to sign P2P snapshot source proof")
 }
