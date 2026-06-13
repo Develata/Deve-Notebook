@@ -4,6 +4,7 @@ use std::sync::Mutex;
 
 mod agent_bridge_tests;
 mod load_tests;
+mod p2p_tests;
 
 static CWD_LOCK: Mutex<()> = Mutex::new(());
 
