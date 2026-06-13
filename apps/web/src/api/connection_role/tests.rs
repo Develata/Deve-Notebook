@@ -91,6 +91,19 @@ fn node_role_probe_result_carries_source_control_git_bridge() {
 }
 
 #[test]
+fn node_role_probe_result_normalizes_unknown_source_control_git_bridge() {
+    let result = NodeRoleProbeResult::from_json(&json!({
+        "role": "main",
+        "source_control": {
+            "git_bridge": "native"
+        }
+    }));
+
+    assert!(result.summary.contains("git:unknown"));
+    assert_eq!(result.source_control_git_bridge, "unknown");
+}
+
+#[test]
 fn derives_http_base_from_ws_url() {
     assert_eq!(
         http_base_from_ws_url("ws://127.0.0.1:3001/ws"),

@@ -243,7 +243,16 @@ fn source_control_git_bridge(json: &serde_json::Value) -> &str {
     let Some(source_control) = json.get("source_control") else {
         return "unknown";
     };
-    str_field(source_control, "git_bridge", "unknown")
+    normalize_git_bridge_mode(str_field(source_control, "git_bridge", "unknown"))
+}
+
+fn normalize_git_bridge_mode(mode: &str) -> &'static str {
+    match mode {
+        "mirror" => "mirror",
+        "off" => "off",
+        "unknown" => "unknown",
+        _ => "unknown",
+    }
 }
 
 #[cfg(test)]
