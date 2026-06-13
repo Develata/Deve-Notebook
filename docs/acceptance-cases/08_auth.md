@@ -167,14 +167,17 @@
     - run: cargo test -p deve_cli anonymous_localhost_auth_prefers_valid_jwt_over_dev_session_cookie -- --nocapture
     - run: cargo test -p deve_cli rejects_forged_dev_session_cookie -- --nocapture
     - run: cargo test -p deve_cli dev_session_cookie_is_bound_to_signing_secret -- --nocapture
+    - run: cargo test -p deve_cli dev_session_cookie_secure_follows_policy -- --nocapture
     - run: scripts/check-auth-baseline.sh
   assertions:
     - http_status_eq: 200
     - header_contains: "Set-Cookie: deve_dev_session="
+    - header_contains_unless_explicit_http: "Secure"
     - api_assert: anonymous_localhost_dev_session_cookie_is_per_browser_session true
     - api_assert: valid_jwt_session_takes_precedence_over_dev_session_cookie true
     - api_assert: forged_dev_session_cookie_is_replaced true
     - api_assert: dev_session_cookie_is_bound_to_server_secret true
+    - api_assert: dev_session_cookie_secure_policy_matches_auth_cookie true
 
 - case_id: AUTH-013
   goal: Host identity key owner-only 权限。

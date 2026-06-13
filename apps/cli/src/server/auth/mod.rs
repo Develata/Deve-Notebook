@@ -16,6 +16,7 @@
 pub(crate) mod browser_session;
 pub mod brute_force;
 pub mod cookie;
+mod cookie_policy;
 pub mod delegated_source_control;
 pub mod dev_session;
 pub mod handlers;

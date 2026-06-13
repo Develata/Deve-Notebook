@@ -28,6 +28,7 @@ impl DevSessionCookie {
 pub(crate) fn resolve_from_cookie_header(
     cookie_header: Option<&str>,
     signing_secret: &str,
+    secure_cookie: bool,
 ) -> DevSessionCookie {
     if let Some(value) = cookie_header
         .and_then(|header| {
@@ -42,10 +43,10 @@ pub(crate) fn resolve_from_cookie_header(
     }
 
     let value = issue_dev_session_value();
-    let set_cookie = Some(build_dev_session_cookie(&sign_dev_session_cookie_value(
-        &value,
-        signing_secret,
-    )));
+    let set_cookie = Some(build_dev_session_cookie(
+        &sign_dev_session_cookie_value(&value, signing_secret),
+        secure_cookie,
+    ));
     DevSessionCookie { value, set_cookie }
 }
 
@@ -61,11 +62,12 @@ fn issue_dev_session_value() -> String {
     uuid::Uuid::new_v4().simple().to_string()
 }
 
-fn build_dev_session_cookie(value: &str) -> String {
+fn build_dev_session_cookie(value: &str, secure_cookie: bool) -> String {
     Cookie::build((DEV_SESSION_COOKIE_NAME, value.to_string()))
         .path("/")
         .http_only(true)
         .same_site(SameSite::Strict)
+        .secure(secure_cookie)
         .build()
         .to_string()
 }
@@ -128,8 +130,11 @@ mod tests {
 
     #[test]
     fn resolves_existing_dev_session_cookie_without_reissuing() {
-        let session =
-            resolve_from_cookie_header(Some(&cookie_header_for_test(SECRET, "abc_123")), SECRET);
+        let session = resolve_from_cookie_header(
+            Some(&cookie_header_for_test(SECRET, "abc_123")),
+            SECRET,
+            true,
+        );
 
         assert_eq!(session.value(), "abc_123");
         assert!(session.set_cookie().is_none());
@@ -137,7 +142,7 @@ mod tests {
 
     #[test]
     fn missing_dev_session_cookie_issues_http_only_cookie() {
-        let session = resolve_from_cookie_header(None, SECRET);
+        let session = resolve_from_cookie_header(None, SECRET, true);
         let set_cookie = session.set_cookie().expect("set-cookie");
 
         assert!(set_cookie.starts_with(&format!("{DEV_SESSION_COOKIE_NAME}=")));
@@ -145,13 +150,33 @@ mod tests {
         assert!(set_cookie.contains("HttpOnly"));
         assert!(set_cookie.contains("SameSite=Strict"));
         assert!(set_cookie.contains("Path=/"));
+        assert!(set_cookie.contains("Secure"));
         assert!(!session.value().is_empty());
+    }
+
+    #[test]
+    fn dev_session_cookie_secure_follows_policy() {
+        let secure_session = resolve_from_cookie_header(None, SECRET, true);
+        assert!(
+            secure_session
+                .set_cookie()
+                .expect("secure set-cookie")
+                .contains("Secure")
+        );
+
+        let insecure_session = resolve_from_cookie_header(None, SECRET, false);
+        assert!(
+            !insecure_session
+                .set_cookie()
+                .expect("insecure set-cookie")
+                .contains("Secure")
+        );
     }
 
     #[test]
     fn rejects_forged_dev_session_cookie() {
         let forged = format!("deve_dev_session=v1.forged.{}", "0".repeat(64));
-        let session = resolve_from_cookie_header(Some(&forged), SECRET);
+        let session = resolve_from_cookie_header(Some(&forged), SECRET, true);
 
         assert_ne!(session.value(), "forged");
         assert!(session.set_cookie().is_some());
@@ -161,7 +186,7 @@ mod tests {
     fn dev_session_cookie_is_bound_to_signing_secret() {
         let cookie = cookie_header_for_test(SECRET, "abc_123");
         let rotated_secret = "rotated_test_secret_at_least_32_bytes!";
-        let session = resolve_from_cookie_header(Some(&cookie), rotated_secret);
+        let session = resolve_from_cookie_header(Some(&cookie), rotated_secret, true);
 
         assert_ne!(session.value(), "abc_123");
         assert!(session.set_cookie().is_some());

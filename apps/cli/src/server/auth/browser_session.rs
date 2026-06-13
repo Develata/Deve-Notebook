@@ -44,8 +44,11 @@ pub(crate) fn resolve_optional(
     }
 
     if config.allow_anonymous_localhost && is_loopback {
-        let dev_session =
-            super::dev_session::resolve_from_cookie_header(cookie_header, &config.secret);
+        let dev_session = super::dev_session::resolve_from_cookie_header(
+            cookie_header,
+            &config.secret,
+            super::cookie_policy::secure_cookies_enabled(),
+        );
         return Some(BrowserSession {
             auth_session_id: AuthSessionId::from_dev_session_cookie(
                 &config.username,
