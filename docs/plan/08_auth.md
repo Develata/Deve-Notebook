@@ -324,6 +324,7 @@ WsConnecting
 ### 9.2 Disconnect Handling
 
 - 纯网络断开只进入 `Disconnected`
+- 客户端必须撤销当前连接派生的 writer-ready / write grant 状态；重连前不得继续使用旧 `WriteReady`
 - 可以自动重连
 - 重连成功后仍需重新验证 session 与 repo handshake
 
@@ -340,6 +341,7 @@ WsConnecting
   - 显示登录 / 认证失效界面
 - `Disconnected`
   - 保留 session 语义
+  - 撤销当前连接派生的写态
   - 允许自动重连
   - 重连后重新执行 session probe + repo handshake
 

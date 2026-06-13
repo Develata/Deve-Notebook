@@ -7,6 +7,7 @@ use super::super::ConnectionStatus;
 use super::super::incoming::handle_socket_event;
 use super::super::output::{is_write_message, send_or_requeue};
 use super::super::socket::{BrowserSocket, SocketEvent};
+use super::super::write_gate::{WriterReadyResetSignals, set_status_and_revoke_writer_ready};
 use super::ConnectionLifecycle;
 use futures::FutureExt;
 use futures::StreamExt;
@@ -21,6 +22,7 @@ pub(super) struct ConnectedSessionSignals {
     pub set_status: WriteSignal<ConnectionStatus>,
     pub set_msg_seq: WriteSignal<u64>,
     pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
+    pub writer_ready_reset: WriterReadyResetSignals,
     pub connection_epoch: u64,
 }
 
@@ -40,9 +42,7 @@ pub(super) async fn run_connected_session(
         }
         if browser_reports_offline() {
             leptos::logging::warn!("WS session ended because browser reports offline");
-            let _ = signals
-                .lifecycle
-                .try_set(signals.set_status, ConnectionStatus::Disconnected);
+            let _ = try_set_session_status(&signals, ConnectionStatus::Disconnected);
             return;
         }
         if socket.is_open() && !announced_open {
@@ -107,6 +107,15 @@ pub(super) async fn run_connected_session(
             _ = timer => {}
         }
     }
+}
+
+fn try_set_session_status(signals: &ConnectedSessionSignals, status: ConnectionStatus) -> bool {
+    signals.lifecycle.is_active()
+        && set_status_and_revoke_writer_ready(
+            signals.set_status,
+            signals.writer_ready_reset,
+            status,
+        )
 }
 
 #[cfg(target_arch = "wasm32")]

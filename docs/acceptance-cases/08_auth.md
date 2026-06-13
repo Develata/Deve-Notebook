@@ -133,10 +133,12 @@
     - browser_wait_ws_event: true
     - run: scripts/check-auth-baseline.sh
     - run: scripts/check-auth-unauthorized-state.sh
+    - run: cargo test -p deve_web writer_ready -- --nocapture
     - run: cargo test -p deve_web status_summary -- --nocapture
   assertions:
     - ui_assert: login_screen_visible true
     - ui_assert: overlay_text_not_eq "Reconnecting..."
+    - writer_ready_cleared_on_unauthorized: true
 
 - case_id: AUTH-012
   goal: 公开 session status 不产生未登录 401 噪音。

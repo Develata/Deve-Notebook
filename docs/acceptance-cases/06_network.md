@@ -9,10 +9,12 @@
     - net_block_ws: true
     - run: scripts/check-network-baseline.sh
     - run: cargo test -p deve_web write_gate -- --nocapture
+    - run: cargo test -p deve_web writer_ready -- --nocapture
     - run: cargo test -p deve_web message_refresh -- --nocapture
   assertions:
     - ui_assert: overlay_text "Reconnecting..."
     - ui_assert: editing_disabled true
+    - writer_ready_cleared_on_disconnected: true
 
 - case_id: NET-002
   goal: 生产连接必须走 relative /ws 或单一配置端点。
@@ -192,6 +194,7 @@
     - browser_wait_ws_event: true
     - run: scripts/check-auth-unauthorized-state.sh
     - run: cargo test -p deve_web auth_probe -- --nocapture
+    - run: cargo test -p deve_web writer_ready -- --nocapture
     - run: cargo test -p deve_web status_summary -- --nocapture
   assertions:
     - ui_assert: login_screen_visible true
@@ -199,6 +202,7 @@
     - auth_probe_401_403_or_auth_error_eq_invalid: true
     - websocket_send_failure_does_not_force_disconnected_before_auth_probe: true
     - unauthorized_status_triggers_session_expired: true
+    - writer_ready_cleared_on_unauthorized: true
 
 - case_id: NET-014
   goal: server-to-server FullPeer `/ws` admission 必须独立于 Browser session admission。

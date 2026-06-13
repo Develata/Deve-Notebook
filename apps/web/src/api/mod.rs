@@ -22,6 +22,7 @@ mod query;
 mod service;
 mod socket;
 mod status;
+mod write_gate;
 mod writer_id;
 
 pub use self::ai_backend::{

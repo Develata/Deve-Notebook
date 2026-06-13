@@ -24,8 +24,13 @@ check_absent() {
 }
 
 # NET-001: reconnect UI and write gate must distinguish network states.
-check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, ConnectionStatus::Connecting)"
-check_contains apps/web/src/api/connection.rs ".try_set(signals.set_status, ConnectionStatus::Disconnected)"
+check_contains apps/web/src/api/connection.rs "try_set_connection_status(&signals, ConnectionStatus::Connecting)"
+check_contains apps/web/src/api/connection.rs "try_set_connection_status(&signals, ConnectionStatus::Disconnected)"
+check_contains apps/web/src/api/connection/session.rs "try_set_session_status(&signals, ConnectionStatus::Disconnected)"
+check_contains apps/web/src/api/write_gate.rs "fn status_revokes_writer_ready(status: ConnectionStatus) -> bool"
+check_contains apps/web/src/api/write_gate.rs "!matches!(status, ConnectionStatus::Connected)"
+check_contains apps/web/src/api/service/tests.rs "writer_ready_is_cleared_on_disconnected_status"
+check_contains apps/web/src/api/service/tests.rs "writer_ready_is_cleared_on_unauthorized_status"
 check_contains apps/web/src/components/disconnect_overlay.rs "ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None"
 check_contains apps/web/src/hooks/use_core/write_gate/logic.rs "ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline)"
 check_contains apps/web/src/hooks/use_core/write_gate/logic.rs "ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting)"

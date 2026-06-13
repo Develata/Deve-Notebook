@@ -1,5 +1,7 @@
 use super::readiness::{is_current_connection_message, writer_ready_matches};
 use super::{ConnectionStatus, WsService};
+use crate::api::write_gate::{set_status_and_revoke_writer_ready, status_revokes_writer_ready};
+use leptos::prelude::GetUntracked;
 
 #[test]
 fn dashboard_metrics_stale_connection_epoch_is_not_current() {
@@ -65,4 +67,94 @@ fn native_runtime_readiness_requires_node_role_writer_and_current_scope() {
     assert!(!stale_scope.scope_nonce_current);
     assert!(!stale_scope.writer_ready);
     assert!(!stale_scope.is_runtime_ready());
+}
+
+#[test]
+fn writer_ready_transport_status_policy_matches_connection_contract() {
+    for status in [
+        ConnectionStatus::Disconnected,
+        ConnectionStatus::Connecting,
+        ConnectionStatus::Unauthorized,
+        ConnectionStatus::NativeBootstrapInvalid,
+        ConnectionStatus::NativeSessionPending,
+        ConnectionStatus::NativeServiceOffline,
+        ConnectionStatus::NativeReprobeRequired,
+    ] {
+        assert!(status_revokes_writer_ready(status));
+    }
+    assert!(!status_revokes_writer_ready(ConnectionStatus::Connected));
+}
+
+#[test]
+fn writer_ready_is_cleared_on_disconnected_status() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    assert!(set_status_and_revoke_writer_ready(
+        ws.set_status,
+        ws.writer_ready_reset_signals(),
+        ConnectionStatus::Disconnected,
+    ));
+
+    assert_eq!(ws.status.get_untracked(), ConnectionStatus::Disconnected);
+    assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+    assert!(ws.writer_client_id.get_untracked().is_none());
+}
+
+#[test]
+fn writer_ready_is_cleared_on_unauthorized_status() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    assert!(set_status_and_revoke_writer_ready(
+        ws.set_status,
+        ws.writer_ready_reset_signals(),
+        ConnectionStatus::Unauthorized,
+    ));
+
+    assert_eq!(ws.status.get_untracked(), ConnectionStatus::Unauthorized);
+    assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+    assert!(ws.writer_client_id.get_untracked().is_none());
+}
+
+#[test]
+fn writer_ready_is_cleared_on_native_blocked_status() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    assert!(set_status_and_revoke_writer_ready(
+        ws.set_status,
+        ws.writer_ready_reset_signals(),
+        ConnectionStatus::NativeSessionPending,
+    ));
+
+    assert_eq!(
+        ws.status.get_untracked(),
+        ConnectionStatus::NativeSessionPending
+    );
+    assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+    assert!(ws.writer_client_id.get_untracked().is_none());
+}
+
+#[test]
+fn connected_status_does_not_clear_existing_writer_ready() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    assert!(set_status_and_revoke_writer_ready(
+        ws.set_status,
+        ws.writer_ready_reset_signals(),
+        ConnectionStatus::Connected,
+    ));
+
+    assert!(ws.writer_ready_for(Some("repo-a"), Some(7)));
+    assert!(ws.writer_client_id.get_untracked().is_some());
 }

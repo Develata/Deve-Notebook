@@ -302,6 +302,8 @@ overlay state row 至少需要：
 ### 8.2 Reconnect Recovery
 
 - 重连后必须按当前 `repo_id` 重新握手。
+- 进入 `Disconnected` / `Unauthorized` / native bootstrap blocked 等非 `Connected` 连接态时，前端必须清除当前
+  writer-ready 状态；旧 `WriteReady(repo_id, scope_nonce)` 不得跨断线、认证失效或 native session 失效继续授权写入。
 - 旧 scope 的 ack / newop / snapshot 不得污染当前 repo scope。
 
 补充：

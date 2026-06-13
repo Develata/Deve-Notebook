@@ -25,6 +25,7 @@
 
 - 当前 repo 未握手完成时，页面不能假装可写。
 - 切 repo、切 branch、重连后，写入状态必须随当前 scope 切换。
+- 断线、未授权或 native session 阻塞时必须撤销旧 writer-ready，直到新连接完成当前 scope 的握手与 writer registration。
 
 ### 4. 离开文档保护
 

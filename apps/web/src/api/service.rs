@@ -20,6 +20,7 @@ use self::readiness::{
 use self::service_ping::spawn_ping_loop;
 use super::connection::{ConnectionLifecycle, ConnectionManagerSignals, spawn_connection_manager};
 use super::status::ConnectionStatus;
+use super::write_gate::WriterReadyResetSignals;
 use super::writer_id::{derive_writer_client_id, new_writer_session_nonce};
 
 mod readiness;
@@ -71,6 +72,11 @@ impl WsService {
         let lifecycle = ConnectionLifecycle::new();
         let cleanup_lifecycle = lifecycle.clone();
         on_cleanup(move || cleanup_lifecycle.shutdown());
+        let writer_ready_reset = WriterReadyResetSignals::new(
+            set_writer_ready_repo_id,
+            set_writer_ready_scope_nonce,
+            set_writer_client_id,
+        );
 
         spawn_connection_manager(
             rx,
@@ -85,6 +91,7 @@ impl WsService {
                 set_node_role,
                 set_source_control_git_bridge,
                 set_node_role_probe_failed,
+                writer_ready_reset,
             },
         );
 
@@ -137,9 +144,7 @@ impl WsService {
     }
 
     pub fn clear_writer_ready(&self) {
-        self.set_writer_ready_repo_id.set(None);
-        self.set_writer_ready_scope_nonce.set(None);
-        self.set_writer_client_id.set(None);
+        let _ = self.writer_ready_reset_signals().clear();
     }
 
     pub(crate) fn begin_foreground_reprobe(&self) {
@@ -243,6 +248,14 @@ impl WsService {
             .into_iter()
             .filter(|(seq, _, _)| *seq > after_seq)
             .collect()
+    }
+
+    fn writer_ready_reset_signals(&self) -> WriterReadyResetSignals {
+        WriterReadyResetSignals::new(
+            self.set_writer_ready_repo_id,
+            self.set_writer_ready_scope_nonce,
+            self.set_writer_client_id,
+        )
     }
 }
 
