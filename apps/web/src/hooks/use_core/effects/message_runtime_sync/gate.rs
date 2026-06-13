@@ -15,7 +15,8 @@ pub fn accepts_runtime_message(
     scope_nonce: Option<u64>,
     signals: CoreSignals,
 ) -> bool {
-    matches_current_message_scope(repo_id, branch, signals)
+    repo_id.is_some()
+        && matches_current_message_scope(repo_id, branch, signals)
         && accepts_system_or_matching_request(
             None,
             None,
@@ -32,7 +33,8 @@ pub fn accepts_runtime_request(
     scope_nonce: Option<u64>,
     signals: CoreSignals,
 ) -> bool {
-    matches_current_message_scope(repo_id, branch, signals)
+    repo_id.is_some()
+        && matches_current_message_scope(repo_id, branch, signals)
         && accepts_system_or_matching_request(
             request_id,
             tracked_request_id.get_untracked().as_deref(),

@@ -7,6 +7,8 @@ use deve_core::models::{PeerId, RepoId};
 use leptos::prelude::Set;
 
 mod gate;
+#[cfg(test)]
+mod tests;
 
 pub fn handle_sync_mode_status(
     request_id: Option<String>,
