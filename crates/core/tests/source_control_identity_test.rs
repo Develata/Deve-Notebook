@@ -52,7 +52,8 @@ fn diff_uses_pending_doc_identity_for_renamed_file() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", None, ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage a");
-    repo.commit_staged("initial").expect("commit a");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit a");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup doc id")
@@ -100,7 +101,8 @@ fn commit_preserves_doc_id_for_rename_candidate() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", None, ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage a");
-    repo.commit_staged("initial").expect("commit a");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit a");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup doc id")
@@ -122,7 +124,9 @@ fn commit_preserves_doc_id_for_rename_candidate() {
     );
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("notes/b.md").expect("stage add");
-    let commit = repo.commit_staged("rename").expect("commit rename");
+    let commit = repo
+        .commit_staged_with_git_bridge("rename", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit rename");
 
     assert_eq!(
         repo.get_docid("notes/b.md").expect("new path"),

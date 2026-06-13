@@ -95,7 +95,7 @@ pub(super) fn commit_deve_file(
         )
     })?;
     repo.stage_pending(path)?;
-    repo.commit_staged("initial")?;
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)?;
     Ok(())
 }
 
@@ -173,7 +173,11 @@ pub(super) fn resolve_imported_change_to_queued_commit(
     assert_eq!(staged.len(), 1, "{staged:?}");
     assert_eq!(staged[0].path, "note.md");
     assert!(!staged[0].has_conflict, "{staged:?}");
-    let commit = repo.commit_staged_in_local_repo("default", "accept imported git content")?;
+    let commit = repo.commit_staged_in_local_repo_with_git_bridge(
+        "default",
+        "accept imported git content",
+        deve_core::config::GitBridgeMode::Mirror,
+    )?;
     assert!(repo.list_pending_fs_in_local_repo("default")?.is_empty());
     assert!(repo.list_staged_in_local_repo("default")?.is_empty());
     repo.run_on_local_repo("default", |db| {

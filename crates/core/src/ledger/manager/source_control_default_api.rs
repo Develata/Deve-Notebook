@@ -27,14 +27,7 @@ impl RepoManager {
         self.list_commits_in_local_repo(self.local_repo_name(), limit)
     }
 
-    /// 提交已暂存文件（三阶段工作流的唯一入口）
-    ///
-    /// **流程**: 读取暂存文件 → 读磁盘内容 → diff 快照 → 生成 Op → 追加 Ledger → 快照更新 → 创建提交
-    /// **Invariant**: repo Projection Locator 必须存在；不存在即为配置错误。
-    pub fn commit_staged(&self, message: &str) -> Result<CommitInfo> {
-        self.commit_staged_in_local_repo(self.local_repo_name(), message)
-    }
-
+    /// 提交已暂存文件；调用方必须显式选择 Git bridge policy。
     pub fn commit_staged_with_git_bridge(
         &self,
         message: &str,

@@ -42,7 +42,8 @@ fn commit_doc(_dir: &TempDir, repo: &RepoManager, path: &str, content: &str) -> 
     })
     .expect("seed pending");
     repo.stage_pending(path).expect("stage doc");
-    repo.commit_staged("commit doc").expect("commit doc");
+    repo.commit_staged_with_git_bridge("commit doc", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit doc");
     repo.get_docid(path).expect("lookup").expect("existing")
 }
 

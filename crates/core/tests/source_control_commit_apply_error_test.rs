@@ -96,7 +96,9 @@ fn commit_staged_fails_when_workspace_file_is_missing() {
 
     repo.stage_pending("notes/missing.md")
         .expect("stage pending");
-    let err = repo.commit_staged("commit missing").expect_err("must fail");
+    let err = repo
+        .commit_staged_with_git_bridge("commit missing", deve_core::config::GitBridgeMode::Mirror)
+        .expect_err("must fail");
     let msg = err.to_string();
     assert!(msg.contains("Failed to read staged workspace file"));
     assert!(msg.contains("notes/missing.md"));
@@ -149,7 +151,7 @@ fn commit_staged_preflights_all_workspace_files_before_ledger_append() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged("commit mixed")
+        .commit_staged_with_git_bridge("commit mixed", deve_core::config::GitBridgeMode::Mirror)
         .expect_err("preflight must reject missing file");
 
     let after_seq = repo
@@ -196,7 +198,7 @@ fn commit_staged_rejects_delete_target_when_doc_id_path_mismatches() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged("delete corrupt")
+        .commit_staged_with_git_bridge("delete corrupt", deve_core::config::GitBridgeMode::Mirror)
         .expect_err("delete target mismatch must fail closed");
 
     let after_seq = repo
@@ -252,7 +254,7 @@ fn commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged("upsert corrupt")
+        .commit_staged_with_git_bridge("upsert corrupt", deve_core::config::GitBridgeMode::Mirror)
         .expect_err("upsert target bound to another doc must fail closed");
 
     let after_seq = repo
@@ -304,7 +306,7 @@ fn commit_staged_rejects_upsert_move_without_rename_evidence() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged("move corrupt")
+        .commit_staged_with_git_bridge("move corrupt", deve_core::config::GitBridgeMode::Mirror)
         .expect_err("upsert move without rename evidence must fail closed");
 
     let after_seq = repo
@@ -356,7 +358,10 @@ fn commit_staged_rejects_docless_upsert_on_tracked_path() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged("docless tracked corrupt")
+        .commit_staged_with_git_bridge(
+            "docless tracked corrupt",
+            deve_core::config::GitBridgeMode::Mirror,
+        )
         .expect_err("docless upsert on tracked path must fail closed");
 
     let after_seq = repo

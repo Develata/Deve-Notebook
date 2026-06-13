@@ -120,7 +120,8 @@ fn commit_deve_file(repo: &RepoManager, path: &str, content: &str) -> CommitInfo
     write_workspace_file(repo, path, content);
     seed_pending(repo, path, ChangeStatus::Added, content);
     repo.stage_pending(path).expect("stage");
-    repo.commit_staged("initial").expect("commit")
+    repo.commit_staged_with_git_bridge("initial", crate::config::GitBridgeMode::Mirror)
+        .expect("commit")
 }
 
 fn commit_deve_modification(repo: &RepoManager, path: &str, content: &str) -> CommitInfo {
@@ -128,7 +129,8 @@ fn commit_deve_modification(repo: &RepoManager, path: &str, content: &str) -> Co
     write_workspace_file(repo, path, content);
     seed_pending_with_doc(repo, path, Some(doc_id), ChangeStatus::Modified, content);
     repo.stage_pending(path).expect("stage");
-    repo.commit_staged("modify").expect("commit")
+    repo.commit_staged_with_git_bridge("modify", crate::config::GitBridgeMode::Mirror)
+        .expect("commit")
 }
 
 fn run_for_default_repo(repo: &RepoManager, repo_root: &Path) -> super::GitMirrorRunReport {

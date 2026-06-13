@@ -28,14 +28,6 @@ impl<'a> SourceControlWriteRuntime<'a> {
         self.unstage_file_target_in_local_repo(repo_name, &target)
     }
 
-    pub(crate) fn commit_staged_in_local_repo(
-        &self,
-        repo_name: &str,
-        message: &str,
-    ) -> Result<CommitInfo> {
-        self.commit_staged_in_local_repo_with_git_bridge(repo_name, message, GitBridgeMode::Mirror)
-    }
-
     pub(crate) fn commit_staged_in_local_repo_with_git_bridge(
         &self,
         repo_name: &str,

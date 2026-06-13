@@ -42,7 +42,8 @@ fn workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set()
     })
     .expect("seed add");
     repo.stage_pending("notes/a.md").expect("stage add");
-    repo.commit_staged("initial").expect("commit add");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit add");
 
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -83,7 +84,8 @@ fn workdir_diff_target_accepts_current_projection_path_without_change_entry() {
     })
     .expect("seed add");
     repo.stage_pending("notes/a.md").expect("stage add");
-    repo.commit_staged("initial").expect("commit add");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit add");
 
     let doc_id = repo
         .get_docid("notes/a.md")
@@ -126,7 +128,8 @@ fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
     })
     .expect("seed a");
     repo.stage_pending("notes/a.md").expect("stage a");
-    repo.commit_staged("commit a").expect("commit a");
+    repo.commit_staged_with_git_bridge("commit a", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit a");
     let doc_a = repo
         .get_docid("notes/a.md")
         .expect("lookup a")
@@ -149,7 +152,8 @@ fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
     })
     .expect("seed b");
     repo.stage_pending("notes/b.md").expect("stage b");
-    repo.commit_staged("commit b").expect("commit b");
+    repo.commit_staged_with_git_bridge("commit b", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit b");
     let doc_b = repo
         .get_docid("notes/b.md")
         .expect("lookup b")

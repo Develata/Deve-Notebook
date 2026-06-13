@@ -118,7 +118,9 @@ mod tests {
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_pending("notes/a.md").expect("stage a");
         repo.stage_pending("notes/b.md").expect("stage b");
-        let c = repo.commit_staged("test commit").expect("commit staged");
+        let c = repo
+            .commit_staged_with_git_bridge("test commit", deve_core::config::GitBridgeMode::Mirror)
+            .expect("commit staged");
         assert!(!c.id.is_empty());
         assert_eq!(c.message, "test commit");
         assert_eq!(c.doc_count, 2);
@@ -133,11 +135,15 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
-        let c1 = repo.commit_staged("c1").expect("commit 1");
+        let c1 = repo
+            .commit_staged_with_git_bridge("c1", deve_core::config::GitBridgeMode::Mirror)
+            .expect("commit 1");
         write_workspace_file(&repo, "notes/b.md", "world");
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_pending("notes/b.md").expect("stage b");
-        let c2 = repo.commit_staged("c2").expect("commit 2");
+        let c2 = repo
+            .commit_staged_with_git_bridge("c2", deve_core::config::GitBridgeMode::Mirror)
+            .expect("commit 2");
         let commits = repo.list_commits(10).expect("list commits");
         assert_eq!(commits.len(), 2);
         assert_eq!(commits[0].id, c2.id);
@@ -186,7 +192,8 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
-        repo.commit_staged("initial").expect("commit a");
+        repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+            .expect("commit a");
 
         write_workspace_file(&repo, "notes/a.md", "world");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Modified, "world");
@@ -209,7 +216,8 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
-        repo.commit_staged("initial").expect("commit a");
+        repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+            .expect("commit a");
 
         write_workspace_file(&repo, "notes/a.md", "world");
         let diff = repo.diff_doc_path("notes/a.md").expect("workdir diff");
@@ -223,7 +231,8 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
-        repo.commit_staged("initial").expect("commit a");
+        repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+            .expect("commit a");
         std::fs::remove_file(workspace_path(&repo, "notes/a.md")).expect("remove workspace file");
 
         let repo_root = repo

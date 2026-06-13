@@ -122,7 +122,11 @@ fn seed_note_baseline(
         .stage_pending_in_local_repo(repo_name, "note.md")?;
     Ok(state
         .repo
-        .commit_staged_in_local_repo(repo_name, "baseline")?
+        .commit_staged_in_local_repo_with_git_bridge(
+            repo_name,
+            "baseline",
+            deve_core::config::GitBridgeMode::Mirror,
+        )?
         .id)
 }
 

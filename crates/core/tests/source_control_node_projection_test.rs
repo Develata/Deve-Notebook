@@ -60,7 +60,8 @@ fn discard_tracked_add_prefers_node_projection_path() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     let repo = scan_initial(repo, &dir);
     repo.stage_pending("notes/a.md").expect("stage file");
-    repo.commit_staged("initial").expect("commit file");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit file");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup")
@@ -99,7 +100,8 @@ fn scan_rename_prefers_node_projection_path() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     let repo = scan_initial(repo, &dir);
     repo.stage_pending("notes/a.md").expect("stage file");
-    repo.commit_staged("initial").expect("commit file");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit file");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup")

@@ -51,7 +51,9 @@ fn commit_diff_reports_child_rename_after_directory_move() {
     write_workspace_file(&workspace_root, "notes/a.md", "hello");
     seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage initial");
-    let first = repo.commit_staged("initial").expect("commit initial");
+    let first = repo
+        .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit initial");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup doc")
@@ -69,7 +71,9 @@ fn commit_diff_reports_child_rename_after_directory_move() {
         .expect("repo-scoped result");
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("docs/a.md").expect("stage add");
-    let second = repo.commit_staged("rename dir").expect("commit rename");
+    let second = repo
+        .commit_staged_with_git_bridge("rename dir", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit rename");
 
     let diffs = repo
         .diff_commits(Some(&first.id), &second.id)

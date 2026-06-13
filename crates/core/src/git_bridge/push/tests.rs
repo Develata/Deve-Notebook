@@ -93,7 +93,8 @@ fn commit_deve_file(repo: &RepoManager, path: &str, content: &str) -> CommitInfo
     })
     .expect("seed pending");
     repo.stage_pending(path).expect("stage");
-    repo.commit_staged("initial").expect("commit")
+    repo.commit_staged_with_git_bridge("initial", crate::config::GitBridgeMode::Mirror)
+        .expect("commit")
 }
 
 fn mirror_queued(repo: &RepoManager, repo_root: &Path) {

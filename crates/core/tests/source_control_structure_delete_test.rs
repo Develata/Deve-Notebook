@@ -42,7 +42,8 @@ fn delete_commit_emits_delete_structure_fact() {
     })
     .expect("seed add");
     repo.stage_pending("notes/a.md").expect("stage add");
-    repo.commit_staged("initial").expect("commit add");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit add");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup")
@@ -68,7 +69,8 @@ fn delete_commit_emits_delete_structure_fact() {
     })
     .expect("seed delete");
     repo.stage_pending("notes/a.md").expect("stage delete");
-    repo.commit_staged("delete").expect("commit delete");
+    repo.commit_staged_with_git_bridge("delete", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit delete");
     let facts = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
             ops::get_structure_ops_for_node_from_db(db, NodeId::from_doc_id(doc_id))

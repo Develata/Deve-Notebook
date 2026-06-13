@@ -63,7 +63,9 @@ fn commit_queues_git_mirror_record_when_mirror_is_ready() {
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
 
-    let commit = repo.commit_staged("initial").expect("commit");
+    let commit = repo
+        .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit");
     let repo_info = repo.get_repo_info().expect("repo info").expect("metadata");
 
     let record = repo
@@ -85,7 +87,9 @@ fn commit_without_git_mirror_keeps_no_mirror_record() {
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
 
-    let commit = repo.commit_staged("initial").expect("commit");
+    let commit = repo
+        .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit");
 
     let record = repo
         .run_on_local_repo(repo.local_repo_name(), |db| {
@@ -144,7 +148,10 @@ fn git_mirror_queue_failure_does_not_rollback_deve_commit() {
     repo.stage_pending("notes/a.md").expect("stage");
 
     let commit = repo
-        .commit_staged("initial despite mirror queue failure")
+        .commit_staged_with_git_bridge(
+            "initial despite mirror queue failure",
+            deve_core::config::GitBridgeMode::Mirror,
+        )
         .expect("commit must not roll back on mirror queue failure");
 
     assert!(repo.list_staged().expect("staged after commit").is_empty());

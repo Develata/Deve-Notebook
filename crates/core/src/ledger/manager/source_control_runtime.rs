@@ -95,14 +95,6 @@ impl<'a> SourceControlRuntime<'a> {
         self.write().unstage_file_in_local_repo(repo_name, path)
     }
 
-    pub(crate) fn commit_staged_in_local_repo(
-        &self,
-        repo_name: &str,
-        message: &str,
-    ) -> Result<CommitInfo> {
-        self.write().commit_staged_in_local_repo(repo_name, message)
-    }
-
     pub(crate) fn commit_staged_in_local_repo_with_git_bridge(
         &self,
         repo_name: &str,

@@ -161,7 +161,9 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
     })
     .expect("seed initial add");
     repo.stage_pending("notes/a.md").expect("stage first");
-    let first = repo.commit_staged("first").expect("commit first");
+    let first = repo
+        .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit first");
     let doc_id = repo.get_docid("notes/a.md").expect("lookup").expect("doc");
 
     write_workspace_file(&repo, "notes/a.md", "v2");
@@ -181,7 +183,9 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
     })
     .expect("seed modify");
     repo.stage_pending("notes/a.md").expect("stage second");
-    let second = repo.commit_staged("second").expect("commit second");
+    let second = repo
+        .commit_staged_with_git_bridge("second", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit second");
 
     repo.run_on_local_repo(repo.local_repo_name(), |db| {
         let write_txn = db.begin_write()?;
@@ -226,7 +230,9 @@ fn commit_diff_rejects_reversed_commit_order() {
     })
     .expect("seed initial add");
     repo.stage_pending("notes/a.md").expect("stage first");
-    let first = repo.commit_staged("first").expect("commit first");
+    let first = repo
+        .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit first");
     let doc_id = repo.get_docid("notes/a.md").expect("lookup").expect("doc");
 
     write_workspace_file(&repo, "notes/a.md", "v2");
@@ -246,7 +252,9 @@ fn commit_diff_rejects_reversed_commit_order() {
     })
     .expect("seed modify");
     repo.stage_pending("notes/a.md").expect("stage second");
-    let second = repo.commit_staged("second").expect("commit second");
+    let second = repo
+        .commit_staged_with_git_bridge("second", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit second");
 
     let err = repo
         .diff_commits(Some(&second.id), &first.id)
@@ -279,7 +287,9 @@ fn commit_diff_reports_rename_from_structure_facts() {
     })
     .expect("seed initial add");
     repo.stage_pending("notes/a.md").expect("stage first");
-    let first = repo.commit_staged("first").expect("commit first");
+    let first = repo
+        .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit first");
     let doc_id = repo.get_docid("notes/a.md").expect("lookup").expect("doc");
 
     write_workspace_file(&repo, "notes/b.md", "v1");
@@ -317,7 +327,9 @@ fn commit_diff_reports_rename_from_structure_facts() {
     .expect("seed rename");
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("notes/b.md").expect("stage add");
-    let second = repo.commit_staged("rename").expect("commit rename");
+    let second = repo
+        .commit_staged_with_git_bridge("rename", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit rename");
 
     let diffs = repo
         .diff_commits(Some(&first.id), &second.id)

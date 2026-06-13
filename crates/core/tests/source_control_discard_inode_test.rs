@@ -45,7 +45,8 @@ fn commit_initial_file(repo: RepoManager, path: &str, content: &str) -> Arc<Repo
     let vfs = Vfs::new(repo_root);
     scan::scan_projection_workspaces(&repo, &vfs).expect("scan initial");
     repo.stage_pending(path).expect("stage file");
-    repo.commit_staged("initial").expect("commit file");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit file");
     repo
 }
 
@@ -101,7 +102,8 @@ fn discard_tracked_add_rebinds_workspace_inode() {
     let vfs = Vfs::new(repo_root);
     scan::scan_projection_workspaces(&repo, &vfs).expect("scan initial");
     repo.stage_pending("notes/a.md").expect("stage file");
-    repo.commit_staged("initial").expect("commit file");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit file");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup")
@@ -186,7 +188,8 @@ fn discard_tracked_add_fails_closed_on_unstatable_workspace_path() {
     let vfs = Vfs::new(repo_root);
     scan::scan_projection_workspaces(&repo, &vfs).expect("scan initial");
     repo.stage_pending("notes/a.md").expect("stage file");
-    repo.commit_staged("initial").expect("commit file");
+    repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit file");
     let doc_id = repo
         .get_docid("notes/a.md")
         .expect("lookup")
