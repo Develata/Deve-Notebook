@@ -640,11 +640,8 @@ fn build_sync_hello(state: &Arc<AppState>, repo_id: RepoId) -> Result<ClientMess
         .with_context(|| {
             format!("Failed to refresh local vector before P2P hello for {repo_id}")
         })?;
-    Ok(signed_sync_hello(
-        state.identity_key.as_ref(),
-        repo_id,
-        vector,
-    ))
+    signed_sync_hello(state.identity_key.as_ref(), repo_id, vector)
+        .with_context(|| format!("Failed to sign P2P SyncHello for {repo_id}"))
 }
 
 struct SyncSourceSets {
@@ -694,18 +691,18 @@ fn signed_sync_hello(
     identity: &IdentityKeyPair,
     repo_id: RepoId,
     vector: VersionVector,
-) -> ClientMessage {
+) -> Result<ClientMessage> {
     let peer_id = identity.peer_id();
-    let signature = sign_sync_hello(identity, &vector).expect("version vector serializes");
+    let signature = sign_sync_hello(identity, &vector)?;
 
-    ClientMessage::SyncHello {
+    Ok(ClientMessage::SyncHello {
         peer_id,
         peer_pubkey: identity.public_key_bytes().to_vec(),
         session_proof: SessionProof::new(signature),
         vector,
         repo_id,
         scope_nonce: ScopeNonce::new(0),
-    }
+    })
 }
 
 #[cfg(test)]
@@ -989,7 +986,8 @@ mod tests {
     fn p2p_mesh_sync_hello_is_signed_for_full_peer_admission_path() {
         let identity = IdentityKeyPair::generate();
         let repo_id = uuid::Uuid::new_v4();
-        let hello = signed_sync_hello(&identity, repo_id, VersionVector::new());
+        let hello =
+            signed_sync_hello(&identity, repo_id, VersionVector::new()).expect("signed hello");
 
         match hello {
             ClientMessage::SyncHello {
