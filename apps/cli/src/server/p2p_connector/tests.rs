@@ -14,6 +14,24 @@ fn p2p_connector_backoff_caps_at_thirty_seconds() {
 }
 
 #[test]
+fn p2p_connector_retry_backoff_starts_at_one_second() {
+    let mut backoff = INITIAL_RECONNECT_BACKOFF;
+    assert_eq!(backoff, Duration::from_secs(1));
+    backoff = next_backoff(backoff);
+    assert_eq!(backoff, Duration::from_secs(2));
+    backoff = next_backoff(backoff);
+    assert_eq!(backoff, Duration::from_secs(4));
+    backoff = next_backoff(backoff);
+    assert_eq!(backoff, Duration::from_secs(8));
+    backoff = next_backoff(backoff);
+    assert_eq!(backoff, Duration::from_secs(16));
+    backoff = next_backoff(backoff);
+    assert_eq!(backoff, Duration::from_secs(30));
+    backoff = next_backoff(backoff);
+    assert_eq!(backoff, Duration::from_secs(30));
+}
+
+#[test]
 fn p2p_connector_error_classifier_keeps_auth_separate() {
     assert_eq!(
         classify_p2p_error(&anyhow::anyhow!("HTTP 401")),

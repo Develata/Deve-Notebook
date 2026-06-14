@@ -10,6 +10,7 @@ use std::sync::Arc;
 use tokio::time::Duration;
 
 const MAX_RECONNECT_BACKOFF: Duration = Duration::from_secs(30);
+const INITIAL_RECONNECT_BACKOFF: Duration = Duration::from_secs(1);
 
 pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
     p2p_status::initialize(&config);
@@ -17,7 +18,7 @@ pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
         return;
     }
 
-    let interval = Duration::from_millis(config.connect_interval_ms.clamp(1_000, 30_000));
+    let success_interval = Duration::from_millis(config.connect_interval_ms.clamp(1_000, 30_000));
     for peer in config.peers.into_iter().filter(|peer| peer.enabled) {
         let state = state.clone();
         if is_self_loop(&peer, &state) {
@@ -31,14 +32,14 @@ pub(super) fn spawn_mesh_connectors(config: P2pConfig, state: Arc<AppState>) {
             continue;
         }
         tokio::spawn(async move {
-            let mut backoff = interval;
+            let mut backoff = INITIAL_RECONNECT_BACKOFF;
             loop {
                 let attempt = p2p_status::record_attempt(&peer);
                 match p2p::connect_peer_once(&peer, state.clone()).await {
                     Ok(stats) => {
                         p2p_status::record_success(&peer, outcome_from_stats(&stats));
-                        backoff = interval;
-                        tokio::time::sleep(interval).await;
+                        backoff = INITIAL_RECONNECT_BACKOFF;
+                        tokio::time::sleep(success_interval).await;
                     }
                     Err(err) => {
                         let error_code = classify_p2p_error(&err);

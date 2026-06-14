@@ -58,6 +58,8 @@
 - 同一个 FullPeer WebSocket exchange 中重复出现的 `SyncHello` 必须被拒绝并在诊断中保留 `duplicate_sync_hello`；重连应表现为新的连接与新的握手，而不是在已认证 exchange 内重置 source 集合。
 - `peer_id` mismatch 属于确定性身份/配置错误，不应作为普通断线持续重连；诊断中应保留 last error code。
 - 静态 `repo_id` / `ws_url` 无效或 outbound token env 缺失、为空、无法形成合法 `Authorization` header 时，也应停在 error/unauthorized 诊断态，而不是持续重连。
+- 普通 FullPeer 断线重连应使用 `1s -> 2s -> 4s -> 8s -> 16s -> 30s` 的指数 backoff；
+  `connect_interval_ms` 只控制成功 exchange 后的下一轮连接间隔，不能把首次失败重试推迟到默认 5s。
 - FullPeer 收到的 request / snapshot request 只能请求本次 handshake diff 中本端向对端声明可发送的 source；请求未 offer 的 source 必须被拒绝，并在 connector 诊断中作为 `unoffered_source` 终止错误暴露。
 - 静态 FullPeer v1 不 advertise 本机缓存的第三方 shadow source；这些 source 在没有 origin proof retention 前不可由当前节点重新证明。
 - FullPeer 收到的 push / snapshot push 必须来自本端在本次 handshake 中请求过的 source；未请求的 source 必须被拒绝，并在 connector 诊断中作为 `unrequested_source` 终止错误暴露。

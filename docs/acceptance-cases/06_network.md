@@ -231,6 +231,7 @@
     - run: cargo test -p deve_cli p2p_exchange_rejects_repo_mismatch_after_sync_hello -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_authenticated_self_loop -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_error_classifier_keeps_auth_separate -- --nocapture
+    - run: cargo test -p deve_cli p2p_connector_retry_backoff_starts_at_one_second -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_classifies_structured_protocol_errors -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_identity_mismatch_is_terminal -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_repo_mismatch_is_terminal -- --nocapture
@@ -268,6 +269,7 @@
     - api_assert: duplicate_sync_hello_does_not_reset_p2p_source_sets true
     - api_assert: configured_peer_id_is_expected_authenticated_identity true
     - api_assert: full_peer_connector_verifies_sync_hello_proof true
+    - api_assert: p2p_connector_retry_backoff_starts_at_one_second true
     - api_assert: sync_hello_pubkey_peer_id_mismatch_rejected true
     - api_assert: configured_peer_id_mismatch_not_reconnecting true
     - api_assert: static_p2p_config_errors_not_reconnecting true
