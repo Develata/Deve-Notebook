@@ -69,17 +69,8 @@ fn is_self_loop(peer: &P2pPeerConfig, state: &Arc<AppState>) -> bool {
         && uuid::Uuid::parse_str(&peer.repo_id).is_ok_and(|repo_id| {
             state
                 .repo
-                .list_local_repo_names_for_execution()
-                .is_ok_and(|names| {
-                    names.into_iter().any(|name| {
-                        state
-                            .repo
-                            .get_repo_info_for(None, Some(&name))
-                            .ok()
-                            .flatten()
-                            .is_some_and(|info| info.uuid == repo_id)
-                    })
-                })
+                .get_local_repo_info_by_id(repo_id)
+                .is_ok_and(|info| info.is_some())
         })
 }
 
