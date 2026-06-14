@@ -32,6 +32,37 @@ fn p2p_connector_retry_backoff_starts_at_one_second() {
 }
 
 #[test]
+fn p2p_connector_jitter_uses_peer_identity_not_label() {
+    let peer_a = P2pPeerConfig {
+        label: "edge".into(),
+        peer_id: "peer-a".into(),
+        repo_id: "11111111-1111-1111-1111-111111111111".into(),
+        ws_url: "ws://127.0.0.1:3101/ws".into(),
+        auth_token_env: "PEER_A_TOKEN".into(),
+        enabled: true,
+    };
+    let peer_b = P2pPeerConfig {
+        label: "edge".into(),
+        peer_id: "peer-b".into(),
+        repo_id: "22222222-2222-2222-2222-222222222222".into(),
+        ws_url: "ws://127.0.0.1:3102/ws".into(),
+        auth_token_env: "PEER_B_TOKEN".into(),
+        enabled: true,
+    };
+    let mut peer_a_renamed = peer_a.clone();
+    peer_a_renamed.label = "display-only".into();
+
+    assert_ne!(
+        jitter_for_attempt(&peer_a, 1),
+        jitter_for_attempt(&peer_b, 1)
+    );
+    assert_eq!(
+        jitter_for_attempt(&peer_a, 1),
+        jitter_for_attempt(&peer_a_renamed, 1)
+    );
+}
+
+#[test]
 fn p2p_connector_error_classifier_keeps_auth_separate() {
     assert_eq!(
         classify_p2p_error(&anyhow::anyhow!("HTTP 401")),

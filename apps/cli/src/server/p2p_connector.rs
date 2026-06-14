@@ -123,8 +123,24 @@ fn next_backoff(current: Duration) -> Duration {
 }
 
 fn jitter_for_attempt(peer: &P2pPeerConfig, attempt: u64) -> Duration {
-    let label = peer.label.len() as u64;
-    Duration::from_millis((attempt.saturating_mul(97) + label.saturating_mul(53)) % 250)
+    let seed = peer_identity_jitter_seed(peer);
+    Duration::from_millis((attempt.saturating_mul(97) + seed) % 250)
+}
+
+fn peer_identity_jitter_seed(peer: &P2pPeerConfig) -> u64 {
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+
+    let mut hash = FNV_OFFSET;
+    for part in [&peer.peer_id, &peer.repo_id, &peer.ws_url] {
+        for byte in part.as_bytes() {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(FNV_PRIME);
+        }
+        hash ^= 0xff;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
 }
 
 fn classify_p2p_error(err: &Error) -> &'static str {

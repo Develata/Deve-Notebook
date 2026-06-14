@@ -51,6 +51,7 @@
 - 用户或运维者应能看到 peer 连接是 configured、connected、reconnecting、unauthorized 还是 disabled。
 - `/api/node/role` 的 P2P 摘要可用于只读诊断：展示 peer label、peer/repo id、连接状态、attempt/handshake 计数与 last error code，但不暴露 token env 内容或 token material。
 - 重复 peer label 只影响显示，不得导致 `/api/node/role` 中不同 peer 的连接状态、attempt 或 last error 互相覆盖。
+- 重复或同长度 peer label 也不得让不同 peer 共用相同 retry jitter 输入；重连抖动应从 peer identity tuple 派生。
 - 重复的静态 peer identity tuple（`peer_id + repo_id + ws_url`）应被配置加载拒绝；同一个 tuple 不能对应多个诊断 entry。
 - 普通重连尝试不应清空上一条 last error code；只有连接/同步成功或配置重新初始化后，诊断面才应清除它。
 - 静态 peer 配置中的 `peer_id` 是 expected authenticated peer identity，不是显示 label；握手返回的 peer id 不一致时必须拒绝连接。

@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-13`
+- `Last Review`: `2026-06-14`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -108,6 +108,8 @@ enabled = true
   attempts、handshakes、last_error_code 与已发送/已应用统计；单 peer 状态不得阻塞其他 peer。
 - peer-local runtime state 的更新键必须来自静态 peer identity tuple（至少包含 `peer_id + repo_id + ws_url`），不得只用 display `label`；
   重复 label 只能影响显示，不得导致 attempts、handshake、last_error_code 或统计串扰。
+- connector retry jitter 也必须由静态 peer identity tuple 派生，不得只由 display `label` 或 label 长度决定；
+  重复或同长度 label 的不同 peer 仍必须具备不同的 retry 抖动输入。
 - 静态配置中重复的 `peer_id + repo_id + ws_url` identity tuple 必须在配置加载时 fail-closed；否则 connector 与
   `/api/node/role` 无法把 attempt、handshake、last_error_code 和统计唯一归属到一个 peer entry。
 - `last_error_code` 是最近一次失败的诊断事实；普通重连 attempt **MUST NOT** 提前清空它，只有成功 handshake/apply 周期或重新初始化静态配置时才能清空。
