@@ -102,6 +102,8 @@ check_contains apps/cli/src/commands/config/schema.rs "\"p2p.connect_interval_ms
 check_contains apps/cli/src/commands/config/schema.rs "positive_integer(\"p2p.connect_interval_ms\")"
 check_contains apps/cli/src/commands/config/schema.rs "\"p2p.inbound_token_env\""
 check_contains apps/cli/src/commands/config/schema.rs "\"source_control.git_bridge\""
+check_contains .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"
+check_contains docs/acceptance-cases/11_commands_settings.md 'file_contains: .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"'
 check_contains apps/cli/src/commands/config/schema.rs "\"ai.mode\""
 check_contains crates/core/src/config/schema.rs "pub struct P2pConfig"
 check_contains crates/core/src/config/schema.rs "pub struct P2pPeerConfig"

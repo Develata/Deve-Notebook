@@ -260,6 +260,7 @@
   assertions:
     - file_contains: config.toml "sidebar_width = 300"
     - file_contains: config.toml 'git_bridge = "off"'
+    - file_contains: .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"
     - config_assert: empty_env_reference_rejected_without_rewrite true
     - config_assert: zero_p2p_connect_interval_rejected_without_rewrite true
 
