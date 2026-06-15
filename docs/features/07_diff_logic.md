@@ -83,6 +83,8 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - remote proxy delegated API 是独立 authority path；它不能被 Web Source Control UI 或普通主进程 HTTP mutation 复用。
 - `/api/delegated/sc/*` 还必须要求显式 delegated capability；普通已登录浏览器或 anonymous localhost dev session
   不能直接调用 delegated 写入口绕过 browser write grant。
+- plugin-host remote delegated Source Control API 必须由显式 delegated proxy 类型注册；普通本地
+  SourceControlApi 不能被误登记为 delegated mode 并绕过本地写门。
 - proxy 模式的只读 repo/source-control 查询必须走 delegated read capability；不能依赖 browser JWT、anonymous
   localhost dev session，或把只读代理查询升级成 writer grant。
 - CLI `deve sc stage/commit`、plugin-host HTTP mutation 与 Rhai `sc_commit`

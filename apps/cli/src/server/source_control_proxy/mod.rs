@@ -14,7 +14,9 @@ use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::{RepoSelector, Repository};
 use deve_core::models::DocId;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, SourceControlApi};
+use deve_core::source_control::{
+    ChangeEntry, CommitFileDiff, CommitInfo, DelegatedSourceControlApi, SourceControlApi,
+};
 
 const REMOTE_PROXY_SCOPE_NONCE: u64 = 1;
 
@@ -135,5 +137,20 @@ impl SourceControlApi for RemoteSourceControlApi {
     ) -> Result<CommitInfo> {
         // Delegated proxy commits run on the authoritative main process; its runtime mode applies.
         commits::commit_staged(self, repo, message)
+    }
+}
+
+impl DelegatedSourceControlApi for RemoteSourceControlApi {}
+
+#[cfg(test)]
+mod tests {
+    use super::RemoteSourceControlApi;
+    use deve_core::source_control::DelegatedSourceControlApi;
+
+    fn assert_delegated_proxy<T: DelegatedSourceControlApi>() {}
+
+    #[test]
+    fn delegated_source_control_proxy_api_is_type_marked() {
+        assert_delegated_proxy::<RemoteSourceControlApi>();
     }
 }

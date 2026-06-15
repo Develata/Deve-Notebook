@@ -46,7 +46,7 @@ use crate::protocol::{ServerError, ServerErrorCode};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::source_control::CommitInfo;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::source_control::SourceControlApi;
+use crate::source_control::{DelegatedSourceControlApi, SourceControlApi};
 #[cfg(not(target_arch = "wasm32"))]
 use crate::sync::SyncManager;
 #[cfg(not(target_arch = "wasm32"))]
@@ -87,7 +87,7 @@ pub fn set_source_control_api(
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn set_delegated_source_control_api(
-    api: Arc<dyn SourceControlApi>,
+    api: Arc<dyn DelegatedSourceControlApi>,
 ) -> Result<(), anyhow::Error> {
     set_source_control_api_with_mode(api, SourceControlHostMode::RemoteDelegated)
 }

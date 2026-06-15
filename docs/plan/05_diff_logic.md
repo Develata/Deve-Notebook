@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-12`
+- `Last Review`: `2026-06-15`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -473,6 +473,9 @@ delegated API 还必须具备独立于 browser/JWT cookie 的 server-verifiable 
 remote proxy 的只读 repo/source-control 查询同样不得依赖 browser JWT 或 anonymous localhost dev
 session；它们必须走显式 delegated read path，复用只读 handler，但只授予 query authority，不得隐式
 升级为 writer grant。
+plugin-host remote delegated Source Control API 必须通过显式 delegated proxy 类型边界注册；普通
+`SourceControlApi` 或本地 `RepoManager` 实现不得被登记为 delegated mode，以免跳过本地 Projection
+Workspace identity gate 后直接写本地 staging/ledger。
 若同一 browser request 同时携带有效 JWT cookie 与 anonymous localhost dev session cookie，HTTP 与 WS
 Source Control grant 校验必须共同使用 JWT 派生的 `auth_session_id`；dev session cookie 不能覆盖已登录 session。
 

@@ -124,7 +124,7 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
     );
     let repo_api: Arc<dyn deve_core::ledger::traits::Repository> = remote.clone();
     host::set_repository(repo_api)?;
-    let source_control_api: Arc<dyn deve_core::source_control::SourceControlApi> = remote;
+    let source_control_api: Arc<dyn deve_core::source_control::DelegatedSourceControlApi> = remote;
     host::set_delegated_source_control_api(source_control_api)?;
 
     let plugins = load_plugins()?;

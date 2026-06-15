@@ -39,7 +39,7 @@ pub mod staging;
 
 // 重新导出常用类型
 #[cfg(not(target_arch = "wasm32"))]
-pub use api::SourceControlApi;
+pub use api::{DelegatedSourceControlApi, SourceControlApi};
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use commit_diff_error::CommitDiffError;
 pub use line_diff::ChangeRange;

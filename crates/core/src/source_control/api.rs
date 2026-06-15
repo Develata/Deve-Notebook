@@ -32,3 +32,5 @@ pub trait SourceControlApi: Send + Sync {
         git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo>;
 }
+
+pub trait DelegatedSourceControlApi: SourceControlApi {}
