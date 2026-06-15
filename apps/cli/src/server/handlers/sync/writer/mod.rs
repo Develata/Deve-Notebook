@@ -25,9 +25,8 @@ pub(super) fn handle(
     match validate(session, repo_id, &peer_id, scope_nonce) {
         Ok(()) => match validate_local_projection_writable(state, session, repo_id) {
             Ok(()) => {
-                session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce);
                 if let Some(auth_session_id) = session.auth_session_id().cloned() {
-                    state.source_control_write_grants().grant(
+                    if let Err(error) = state.source_control_write_grants().grant(
                         auth_session_id,
                         repo_id,
                         SourceControlGrantBranch::from_active_branch(
@@ -35,8 +34,15 @@ pub(super) fn handle(
                         ),
                         peer_id.clone(),
                         scope_nonce,
-                    );
+                    ) {
+                        ch.send_protocol_error_with_scope_nonce(
+                            error,
+                            session.is_browser_session().then_some(scope_nonce),
+                        );
+                        return;
+                    }
                 }
+                session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce);
                 ch.unicast(ServerMessage::WriteReady {
                     peer_id,
                     repo_id,

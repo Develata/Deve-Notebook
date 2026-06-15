@@ -146,7 +146,8 @@ impl ProxyHarness {
             SourceControlGrantBranch::Local,
             PeerId::new("test-peer"),
             scope_nonce,
-        );
+        )
+        .map_err(|err| anyhow::anyhow!("source-control write grant failed: {err:?}"))?;
         Ok(())
     }
 

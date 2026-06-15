@@ -89,7 +89,8 @@ async fn switch_branch_failure_revokes_source_control_write_grant() -> anyhow::R
         SourceControlGrantBranch::Local,
         PeerId::new("writer"),
         80,
-    );
+    )
+    .expect("source-control write grant");
     assert!(
         state
             .source_control_write_grants()

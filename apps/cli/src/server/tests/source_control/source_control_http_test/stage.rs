@@ -130,7 +130,8 @@ async fn http_source_control_write_grant_requires_local_branch() -> anyhow::Resu
         SourceControlGrantBranch::Remote(PeerId::new("remote-peer")),
         PeerId::new("test-peer"),
         1,
-    );
+    )
+    .expect("source-control write grant");
 
     let response = harness
         .client

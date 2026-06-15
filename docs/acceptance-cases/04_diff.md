@@ -146,6 +146,7 @@
     - run: cargo test -p deve_cli http_source_control_commit_respects_git_bridge_off -- --nocapture
     - run: cargo test -p deve_cli http_source_control_mutations_require_browser_write_grant -- --nocapture
     - run: cargo test -p deve_cli http_source_control_write_grant_revoked_on_ws_disconnect -- --nocapture
+    - run: cargo test -p deve_cli source_control_write_grant_creation_fails_closed -- --nocapture
     - run: cargo test -p deve_cli switch_branch_failure_revokes_source_control_write_grant -- --nocapture
     - run: cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture
     - run: cargo test -p deve_cli repo_scope_runtime_cleanup_revokes_source_control_write_grant -- --nocapture
@@ -204,6 +205,7 @@
     - cli_assert: git_bridge_off_blocks_writer_commands true
     - api_assert: http_source_control_commit_respects_git_bridge_off true
     - api_assert: browser_http_source_control_requires_session_bound_grant true
+    - api_assert: source_control_write_grant_creation_fails_closed true
     - api_assert: source_control_write_grant_revoked_on_failed_scope_cleanup true
     - api_assert: source_control_scope_cleanup_revokes_write_grant true
     - api_assert: repo_scope_runtime_cleanup_revokes_source_control_write_grant true

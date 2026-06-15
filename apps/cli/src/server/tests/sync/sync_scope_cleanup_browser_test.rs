@@ -58,7 +58,8 @@ async fn sync_guard_scope_cleanup_revokes_source_control_write_grant() -> anyhow
         SourceControlGrantBranch::Local,
         PeerId::new("browser"),
         19,
-    );
+    )
+    .expect("source-control write grant");
     assert!(
         state
             .source_control_write_grants()
@@ -129,7 +130,8 @@ fn browser_writer_registration_rejects_degraded_local_projection() -> anyhow::Re
         SourceControlGrantBranch::Local,
         writer.clone(),
         37,
-    );
+    )
+    .expect("source-control write grant");
     assert!(
         state
             .source_control_write_grants()
@@ -173,7 +175,8 @@ fn browser_writer_registration_rejects_broken_workspace_identity() -> anyhow::Re
         SourceControlGrantBranch::Local,
         writer.clone(),
         41,
-    );
+    )
+    .expect("source-control write grant");
 
     handle_register_writer(&state, &ch, &mut session, repo_id, writer, 41);
 

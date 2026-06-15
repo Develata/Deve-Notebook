@@ -110,9 +110,9 @@ impl SourceControlWriteGrants {
         branch: SourceControlGrantBranch,
         writer_peer_id: PeerId,
         scope_nonce: u64,
-    ) {
+    ) -> Result<(), ServerError> {
         let Ok(mut grants) = self.grants.lock() else {
-            return;
+            return Err(stale_grant("source control write grant unavailable"));
         };
         Self::retain_live(&mut grants);
         grants.retain(|key, _| key.auth_session_id != auth_session_id);
@@ -131,6 +131,7 @@ impl SourceControlWriteGrants {
                 expires_at: Instant::now() + self.ttl,
             },
         );
+        Ok(())
     }
 
     pub(crate) fn authorize_browser_local(

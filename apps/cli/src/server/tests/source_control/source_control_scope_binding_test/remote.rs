@@ -94,7 +94,8 @@ async fn source_control_scope_cleanup_revokes_write_grant() -> anyhow::Result<()
         SourceControlGrantBranch::Local,
         PeerId::new("writer"),
         13,
-    );
+    )
+    .expect("source-control write grant");
     assert!(
         state
             .source_control_write_grants()

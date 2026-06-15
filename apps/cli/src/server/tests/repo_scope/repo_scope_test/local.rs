@@ -85,7 +85,8 @@ fn repo_scope_runtime_cleanup_revokes_source_control_write_grant() -> anyhow::Re
         SourceControlGrantBranch::Local,
         PeerId::new("stale-writer"),
         17,
-    );
+    )
+    .expect("source-control write grant");
     assert!(
         state
             .source_control_write_grants()
