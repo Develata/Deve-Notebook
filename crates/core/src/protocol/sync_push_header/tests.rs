@@ -46,15 +46,39 @@ fn source_proof_rejects_payload_tamper() {
 }
 
 #[test]
-fn source_proof_rejects_wrong_source_key() {
+fn source_proof_signing_rejects_wrong_source_key() {
     let claimed_key = IdentityKeyPair::generate();
     let relay_key = IdentityKeyPair::generate();
     let repo_id = Uuid::new_v4();
     let payload = encrypted_payload();
     let mut header = SyncPushHeader::diff(repo_id, claimed_key.peer_id(), VersionVector::new());
-    header
-        .sign_source(&payload, &relay_key)
-        .expect("relay source proof signs");
+
+    assert!(matches!(
+        header.sign_source(&payload, &relay_key),
+        Err(SyncSourceProofError::SignerPeerMismatch { .. })
+    ));
+}
+
+#[test]
+fn source_proof_rejects_forged_source_identity() {
+    let claimed_key = IdentityKeyPair::generate();
+    let relay_key = IdentityKeyPair::generate();
+    let relay_peer = relay_key.peer_id();
+    let repo_id = Uuid::new_v4();
+    let vector = VersionVector::new();
+    let payload = encrypted_payload();
+    let mut header = SyncPushHeader::diff(repo_id, claimed_key.peer_id(), vector.clone());
+    header.source_proof = Some(
+        SyncSourceProof::sign(
+            repo_id,
+            &relay_peer,
+            &vector,
+            SyncPayloadKind::Diff,
+            &payload,
+            &relay_key,
+        )
+        .expect("relay proof signs for relay source"),
+    );
 
     assert!(matches!(
         header.validate_source_proof(&payload, true),

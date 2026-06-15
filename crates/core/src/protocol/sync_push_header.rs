@@ -44,6 +44,8 @@ pub enum SyncSourceProofError {
     PayloadDigestMismatch,
     #[error("source proof peer mismatch: claimed {claimed}, derived {derived}")]
     PeerIdMismatch { claimed: PeerId, derived: String },
+    #[error("source proof signer peer mismatch: claimed {claimed}, signer {signer}")]
+    SignerPeerMismatch { claimed: PeerId, signer: PeerId },
     #[error("invalid source proof public key length: {0}")]
     InvalidPubkeyLength(usize),
     #[error("invalid source proof signature")]
@@ -121,6 +123,13 @@ impl SyncSourceProof {
         payload: &[crate::security::EncryptedOp],
         source_key: &IdentityKeyPair,
     ) -> Result<Self, SyncSourceProofError> {
+        let signer_peer_id = source_key.peer_id();
+        if &signer_peer_id != source_peer_id {
+            return Err(SyncSourceProofError::SignerPeerMismatch {
+                claimed: source_peer_id.clone(),
+                signer: signer_peer_id,
+            });
+        }
         let payload_digest = encrypted_payload_digest(payload)?;
         let message = source_proof_message(
             repo_id,

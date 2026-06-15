@@ -65,6 +65,7 @@
 - 静态 FullPeer v1 不 advertise 本机缓存的第三方 shadow source；这些 source 在没有 origin proof retention 前不可由当前节点重新证明。
 - FullPeer 收到的 push / snapshot push 必须来自本端在本次 handshake 中请求过的 source；未请求的 source 必须被拒绝，并在 connector 诊断中作为 `unrequested_source` 终止错误暴露。
 - 已请求的 push / snapshot push 只能按 authenticated peer 或有效 source proof 写入对应 shadow；伪造另一个 source peer 的 payload 必须被拒绝，并在 connector 诊断中作为 `source_proof_rejected` 终止错误暴露。
+- source proof 生成端也必须拒绝错 key 签名，避免生成只能由接收端再拒绝的自失效 payload。
 - FullPeer connector 与普通 Server WS sync handler 必须复用 core 的 source attribution/proof 校验规则，避免两条入站路径对同一 payload 给出不同结论。
 - peer A 通过 Source Control commit 确认的本地投影变更，应在下一次 FullPeer handshake/diff 后出现在 peer B 的 peer A shadow 中；peer B 本地 branch 仍保持不变，直到用户显式 merge/import。
 - Mesh v1 不做自动发现、NAT 穿透或自动拓扑修复。

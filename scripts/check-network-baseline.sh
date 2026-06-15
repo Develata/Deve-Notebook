@@ -139,6 +139,7 @@ check_contains apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_a
 check_contains apps/cli/src/server/tests/sync/sync_transfer_push_test.rs "async fn sync_push_rejects_unrequested_relay_source"
 check_contains apps/cli/src/server/tests/sync/sync_transfer_push_test.rs "async fn sync_push_rejects_relay_forged_source_proof"
 check_contains apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs "async fn sync_push_snapshot_rejects_relay_forged_source_proof"
+check_contains crates/core/src/protocol/sync_push_header/tests.rs "fn source_proof_signing_rejects_wrong_source_key"
 check_contains crates/core/src/protocol/sync_push_header/tests.rs "fn source_proof_rejects_payload_tamper"
 
 # NET-012: WebSocket failures must surface as structured ProtocolError values.

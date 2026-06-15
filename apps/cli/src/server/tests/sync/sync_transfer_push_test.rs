@@ -118,7 +118,14 @@ async fn sync_push_rejects_relay_forged_source_proof() -> anyhow::Result<()> {
     let source_peer = source_key.peer_id();
     let op = encrypted_insert_for_author(&state, repo_id, &source_peer, 1)?;
     let mut header = sync_push_header(repo_id, &source_peer);
-    header.sign_source(std::slice::from_ref(&op), &relay_key)?;
+    header.source_proof = Some(deve_core::protocol::SyncSourceProof::sign(
+        repo_id,
+        &relay_peer,
+        &VersionVector::new(),
+        SyncPayloadKind::Diff,
+        std::slice::from_ref(&op),
+        &relay_key,
+    )?);
     let (ch, mut rx) = unicast_channel(&state);
     let mut session = bound_session(repo_id, Some(relay_peer), Some(41));
     session.set_requested_sync_sources([source_peer.clone()]);

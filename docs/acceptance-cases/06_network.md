@@ -169,6 +169,7 @@
     - ws_receive_contains: { type: "ProtocolError", code: "SyncPeerUnauthenticated", scope_nonce: 1 }
     - unrequested_source_not_written: true
     - forged_source_proof_returns_invalid_payload: true
+    - source_proof_signing_rejects_wrong_source_key: true
     - relay_cannot_force_receive: true
     - note: "GossipOffer/FetchRequest relay offer protocol is not implemented in the current protocol surface; this case validates the current fail-closed source authorization boundary."
 

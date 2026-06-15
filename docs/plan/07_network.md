@@ -478,6 +478,7 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - push / snapshot push 的 source proof 拒绝属于确定性 source-attribution 错误；FullPeer connector 诊断必须暴露 `source_proof_rejected`，并停止把该错误当作普通断线持续重连。
 - 远端 `ProtocolError` 若同时携带通用 peer unauthenticated code 与 source-boundary detail，connector 诊断必须优先保留
   `unoffered_source` / `unrequested_source` / `source_proof_rejected`，不得泛化成 `malformed_session_proof`。
+- source proof 生成端必须先验证 signing key 推导出的 peer id 等于声明的 `source_peer_id`；错 key 不得生成“等待接收端拒绝”的自失效 proof。
 - FullPeer connector 接收到 `ServerMessage::SyncPush` 时，必须在 shadow apply 之前校验
   `source_peer_id`、`repo_id`、`SyncPushHeader.repo_id`、`SyncPushHeader.peer_id` 与
   `SyncPushHeader.payload_kind` 一致，并按 direct / indirect route 规则验证 `source_proof`。
