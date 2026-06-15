@@ -90,9 +90,9 @@ check_contains apps/cli/src/commands/init.rs "init_config_template_matches_curre
 check_contains apps/cli/src/commands/init.rs "Projection Locator"
 check_contains apps/cli/src/commands/init.rs "RepoInitOptions"
 check_contains apps/cli/src/commands/init.rs "[ai.agent_bridge]"
-check_contains apps/cli/src/commands/init.rs 'peer_id = "<expected-peer-id-from-peer-b-startup-log>"'
+check_contains apps/cli/src/commands/init.rs 'peer_id = "<12-lowercase-hex-peer-id-from-peer-b-startup-log>"'
 check_absent apps/cli/src/commands/init.rs 'peer_id = "peer-b"'
-check_contains config.example.toml 'peer_id = "<expected-peer-id-from-peer-b-startup-log>"'
+check_contains config.example.toml 'peer_id = "<12-lowercase-hex-peer-id-from-peer-b-startup-log>"'
 check_absent config.example.toml 'peer_id = "peer-b"'
 check_contains apps/cli/src/commands/config/schema.rs "Unsupported config key"
 check_absent apps/cli/src/commands/config/schema.rs "\"vault_path\""

@@ -27,7 +27,7 @@ fn validate_p2p(config: &Config) -> Result<()> {
     let mut peer_keys = HashSet::new();
     for (index, peer) in config.p2p.peers.iter().enumerate() {
         let prefix = format!("p2p.peers[{index}]");
-        validate_non_empty(&format!("{prefix}.peer_id"), &peer.peer_id)?;
+        validate_peer_id_identity(&format!("{prefix}.peer_id"), &peer.peer_id)?;
         validate_repo_id(&format!("{prefix}.repo_id"), &peer.repo_id)?;
         validate_ws_url(&format!("{prefix}.ws_url"), &peer.ws_url)?;
         validate_env_name(&format!("{prefix}.auth_token_env"), &peer.auth_token_env)?;
@@ -62,6 +62,20 @@ fn validate_env_name(key: &str, value: &str) -> Result<()> {
     }
     if !bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_') {
         bail!("{key} must be a valid environment variable name");
+    }
+    Ok(())
+}
+
+fn validate_peer_id_identity(key: &str, value: &str) -> Result<()> {
+    validate_non_empty(key, value)?;
+    let is_canonical_identity = value.len() == 12
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte));
+    if !is_canonical_identity {
+        bail!(
+            "{key} must be a canonical identity peer id: 12 lowercase hex characters from the peer startup log"
+        );
     }
     Ok(())
 }

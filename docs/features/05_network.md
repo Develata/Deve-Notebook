@@ -54,7 +54,7 @@
 - 重复或同长度 peer label 也不得让不同 peer 共用相同 retry jitter 输入；重连抖动应从 peer identity tuple 派生。
 - 重复的静态 peer identity tuple（`peer_id + repo_id + ws_url`）应被配置加载拒绝；同一个 tuple 不能对应多个诊断 entry。
 - 普通重连尝试不应清空上一条 last error code；只有连接/同步成功或配置重新初始化后，诊断面才应清除它。
-- 静态 peer 配置中的 `peer_id` 是 expected authenticated peer identity，不是显示 label；握手返回的 peer id 不一致时必须拒绝连接。
+- 静态 peer 配置中的 `peer_id` 是 expected authenticated peer identity，不是显示 label；配置加载应拒绝 `peer-b` 这类 human label，并要求使用启动日志中的 canonical peer id。握手返回的 peer id 不一致时必须拒绝连接。
 - FullPeer connector 必须验证对端 `SyncHello` 的 pubkey、peer id 与 signature；无效签名或 pubkey 无法推出声明 peer id 时必须拒绝连接。
 - 同一个 FullPeer WebSocket exchange 中重复出现的 `SyncHello` 必须被拒绝并在诊断中保留 `duplicate_sync_hello`；重连应表现为新的连接与新的握手，而不是在已认证 exchange 内重置 source 集合。
 - `peer_id` mismatch 属于确定性身份/配置错误，不应作为普通断线持续重连；诊断中应保留 last error code。

@@ -55,7 +55,7 @@ inbound_token_env = ""
 
 [[p2p.peers]]
 label = "peer-b"
-peer_id = "peer-b-id"
+peer_id = "0123456789ab"
 repo_id = "11111111-1111-1111-1111-111111111111"
 ws_url = "http://peer-b:3001/ws"
 auth_token_env = ""
@@ -124,7 +124,7 @@ fn load_checked_fails_closed_on_invalid_p2p_peer_ws_url() {
         r#"
 [[p2p.peers]]
 label = "peer-b"
-peer_id = "peer-b-id"
+peer_id = "0123456789ab"
 repo_id = "11111111-1111-1111-1111-111111111111"
 ws_url = "http://peer-b:3001/ws"
 auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
@@ -138,6 +138,31 @@ auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
 }
 
 #[test]
+fn load_checked_fails_closed_on_invalid_p2p_peer_id_identity() {
+    let _guard = CWD_LOCK.lock().expect("lock cwd");
+    let _env = EnvGuard::set_optional(&[("DEVE_P2P_MESH_PEER_0_LABEL", None)]);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let _cwd = CwdGuard::enter(dir.path());
+    std::fs::write(
+        dir.path().join("config.toml"),
+        r#"
+[[p2p.peers]]
+label = "peer-b"
+peer_id = "peer-b"
+repo_id = "11111111-1111-1111-1111-111111111111"
+ws_url = "ws://peer-b:3001/ws"
+auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
+"#,
+    )
+    .expect("bad p2p peer config");
+
+    let err = Config::load_checked().expect_err("human label peer_id must fail closed");
+
+    assert!(err.to_string().contains("p2p.peers[0].peer_id"));
+    assert!(err.to_string().contains("canonical identity peer id"));
+}
+
+#[test]
 fn load_checked_fails_closed_on_invalid_p2p_peer_repo_id() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[("DEVE_P2P_MESH_PEER_0_LABEL", None)]);
@@ -148,7 +173,7 @@ fn load_checked_fails_closed_on_invalid_p2p_peer_repo_id() {
         r#"
 [[p2p.peers]]
 label = "peer-b"
-peer_id = "peer-b-id"
+peer_id = "0123456789ab"
 repo_id = "not-a-uuid"
 ws_url = "ws://peer-b:3001/ws"
 auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
@@ -172,7 +197,7 @@ fn load_checked_fails_closed_on_empty_p2p_peer_auth_token_env() {
         r#"
 [[p2p.peers]]
 label = "peer-b"
-peer_id = "peer-b-id"
+peer_id = "0123456789ab"
 repo_id = "11111111-1111-1111-1111-111111111111"
 ws_url = "ws://peer-b:3001/ws"
 auth_token_env = ""
@@ -196,7 +221,7 @@ fn load_checked_fails_closed_on_invalid_p2p_peer_auth_token_env_name() {
         r#"
 [[p2p.peers]]
 label = "peer-b"
-peer_id = "peer-b-id"
+peer_id = "0123456789ab"
 repo_id = "11111111-1111-1111-1111-111111111111"
 ws_url = "ws://peer-b:3001/ws"
 auth_token_env = "DEVE BAD TOKEN"
@@ -221,7 +246,7 @@ fn load_checked_fails_closed_on_p2p_peer_id_outer_whitespace() {
         r#"
 [[p2p.peers]]
 label = "peer-b"
-peer_id = " peer-b-id"
+peer_id = " 0123456789ab"
 repo_id = "11111111-1111-1111-1111-111111111111"
 ws_url = "ws://peer-b:3001/ws"
 auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
@@ -249,14 +274,14 @@ fn load_checked_fails_closed_on_duplicate_p2p_peer_identity_tuple() {
         r#"
 [[p2p.peers]]
 label = "edge-a"
-peer_id = "peer-b-id"
+peer_id = "0123456789ab"
 repo_id = "11111111-1111-1111-1111-111111111111"
 ws_url = "ws://peer-b:3001/ws"
 auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
 
 [[p2p.peers]]
 label = "edge-b"
-peer_id = "peer-b-id"
+peer_id = "0123456789ab"
 repo_id = "11111111-1111-1111-1111-111111111111"
 ws_url = "ws://peer-b:3001/ws"
 auth_token_env = "DEVE_P2P_PEER_B_TOKEN_ALT"
@@ -277,7 +302,7 @@ fn load_checked_rejects_sparse_p2p_peer_env_alias_indices() {
         ("DEVE_P2P__ENABLED", Some("true")),
         ("DEVE_P2P_MESH_PEER_0_LABEL", None),
         ("DEVE_P2P_MESH_PEER_1_LABEL", Some("peer-b")),
-        ("DEVE_P2P_MESH_PEER_1_PEER_ID", Some("peer-b-id")),
+        ("DEVE_P2P_MESH_PEER_1_PEER_ID", Some("0123456789ab")),
         (
             "DEVE_P2P_MESH_PEER_1_REPO_ID",
             Some("11111111-1111-1111-1111-111111111111"),

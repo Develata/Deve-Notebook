@@ -96,8 +96,9 @@ enabled = true
 - `enabled = false` 时 runtime **MUST NOT** 启动 outbound mesh connector。
 - `inbound_token_env` / `auth_token_env` 只保存环境变量名；token material **MUST NOT** 写入 `config.toml`、日志、`/api/node/role`、native bootstrap payload 或 browser localStorage。
 - `peer_id`、`repo_id` 与 `ws_url` 都必须显式配置；缺失任一项必须 fail-closed。
-- `peer_id` 是 expected authenticated peer identity，**不是** display label；FullPeer connector 收到对端 `SyncHello` 后，返回的 authenticated `peer_id`
-  必须与静态配置完全一致，否则必须 fail-closed 并记录结构化错误。
+- `peer_id` 是 expected authenticated peer identity，**不是** display label；当前 identity key 生成的 canonical
+  peer id 是启动日志中的 12 位小写十六进制 hash 前缀。静态配置加载必须拒绝 human label 或非 canonical peer id；
+  FullPeer connector 收到对端 `SyncHello` 后，返回的 authenticated `peer_id` 必须与静态配置完全一致，否则必须 fail-closed 并记录结构化错误。
 - FullPeer connector 接受对端 `SyncHello` 前，必须验证 `peer_id` 可由 `pub_key` 推导，且 `signature` 能验证当前 `SyncHello.vector`
   的 v1 handshake transcript；验证失败不得设置 authenticated peer，不得处理后续 sync frame。
 - `ws_url` 的 scheme 必须是 `ws://` 或 `wss://`；Docker/local smoke 可使用 loopback 或 compose service DNS，生产配置应使用受控私网或 TLS 终端。

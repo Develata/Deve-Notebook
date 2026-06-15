@@ -221,6 +221,7 @@
     - run: cargo test -p deve_cli p2p_status_marks_peers_disabled_when_mesh_disabled -- --nocapture
     - run: cargo test -p deve_cli p2p_status_duplicate_labels_do_not_share_state -- --nocapture
     - run: cargo test -p deve_cli p2p_connector_jitter_uses_peer_identity_not_label -- --nocapture
+    - run: cargo test -p deve_core --lib load_checked_fails_closed_on_invalid_p2p_peer_id_identity -- --nocapture
     - run: cargo test -p deve_core --lib load_checked_fails_closed_on_duplicate_p2p_peer_identity_tuple -- --nocapture
     - run: cargo test -p deve_cli p2p_status_retry_preserves_last_error_until_success -- --nocapture
     - run: cargo test -p deve_cli p2p_exchange_rejects_frame_limit_without_sync_hello -- --nocapture
@@ -264,6 +265,7 @@
     - api_assert: p2p_status_global_disabled_marks_peers_disabled true
     - api_assert: p2p_status_keyed_by_peer_identity_not_label true
     - api_assert: p2p_connector_jitter_keyed_by_peer_identity_not_label true
+    - api_assert: static_p2p_peer_id_human_label_rejected true
     - api_assert: duplicate_static_p2p_peer_identity_tuple_rejected true
     - api_assert: p2p_status_retry_preserves_last_error_until_success true
     - api_assert: full_peer_control_frames_do_not_abort_handshake true
