@@ -48,7 +48,7 @@
 
 - 当前 resolved import 发布链路必须通过 CLI 显式执行：`deve_cli git import --apply` 只写 pending/import；Source Control resolved stage/commit 生成 Deve commit；`deve_cli git export` 建立 Git mirror mapping；`deve_cli git push` 发布已映射 Git HEAD。
 - `deve_cli git push` 必须 fail-closed 于未导出的 queued/out_of_sync mirror record、dirty Git worktree、dirty Deve Source Control、未映射 Git HEAD 或 remote/branch 配置错误。
-- Web Command Palette 只能显示 Git import / push / repair 的 CLI-only notice，不得直接触发 Git writer。
+- Web Command Palette 只能显示 Git import / push / repair 的 CLI-only notice，不得直接触发 Git writer；notice metadata 中的 `source_control.git_bridge` 必须跟随当前 node role / session mode 更新。
 
 ## 非目标
 

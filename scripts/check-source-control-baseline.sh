@@ -142,6 +142,8 @@ check_contains apps/cli/src/server/source_control_grants/tests.rs "source_contro
 check_contains apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs "source_control_scope_cleanup_revokes_write_grant"
 check_contains apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs "switch_branch_failure_revokes_source_control_write_grant"
 check_contains docs/acceptance-cases/04_diff.md "source_control_commit_writer_requires_explicit_git_bridge_policy"
+check_contains docs/acceptance-cases/04_diff.md "cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture"
+check_contains docs/acceptance-cases/04_diff.md "command_palette_git_bridge_mode_reactive_after_node_role_probe"
 check_absent crates/core/src/ledger/manager/source_control_default_api.rs "pub fn commit_staged("
 check_absent crates/core/src/ledger/manager/source_control_ops.rs "pub fn commit_staged_in_local_repo("
 check_absent crates/core/src/ledger/manager/source_control_runtime.rs "fn commit_staged_in_local_repo("

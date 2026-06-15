@@ -169,6 +169,7 @@
     - run: cargo test -p deve_core stage_wrapper_stages_tracked_rename_pair_from_old_path -- --nocapture
     - run: cargo test -p deve_core commit_diff_rejects_reversed_commit_order -- --nocapture
     - run: cargo test -p deve_web command_palette_git_bridge_mode_reads_session_signal -- --nocapture
+    - run: cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture
     - run: cargo test -p deve_web source_control_header_git_bridge_mode_badge -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
@@ -233,6 +234,7 @@
     - api_assert: source_control_rename_pair_stage_is_atomic_and_idempotent true
     - api_assert: commit_diff_reversed_order_fails_closed true
     - ui_assert: command_palette_git_bridge_mode_visible true
+    - ui_assert: command_palette_git_bridge_mode_reactive_after_node_role_probe true
     - ui_assert: source_control_git_bridge_mode_visible true
     - ui_assert: source_control_git_bridge_badge_authority_first true
 

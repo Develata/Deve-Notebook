@@ -21,9 +21,7 @@ fn show_source_control_notice(
 
 fn git_bridge_enabled_when(locale: Locale) -> String {
     let mode = use_context::<SessionClient>()
-        .map(|session| {
-            git_bridge_mode_from_value(&session.ws.source_control_git_bridge.get_untracked())
-        })
+        .map(|session| git_bridge_mode_from_value(&session.ws.source_control_git_bridge.get()))
         .unwrap_or("unknown");
     format!(
         "{}; source_control.git_bridge={mode}",

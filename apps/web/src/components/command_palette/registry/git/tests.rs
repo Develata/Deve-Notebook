@@ -3,6 +3,7 @@ use super::{
     git_repair_command, git_status_command,
 };
 use crate::api::{ConnectionStatus, WsService};
+use crate::components::command_palette::logic::create_filtered_commands_memo;
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::{
@@ -17,7 +18,8 @@ use crate::runtime::session_client::SessionClient;
 use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 use leptos::prelude::{
-    Callable, Callback, GetUntracked, ReadSignal, Set, Signal, provide_context, signal,
+    Callable, Callback, GetUntracked, Memo, ReadSignal, RwSignal, Set, Signal, WriteSignal,
+    provide_context, signal,
 };
 use leptos::reactive::owner::Owner;
 
@@ -90,6 +92,42 @@ fn assert_cli_notice_command(
     assert!(!show.get_untracked());
     let notice = notice.get_untracked().expect("source control notice");
     assert!(is_expected_notice(&notice));
+}
+
+fn provide_session_client(ws: WsService) {
+    let (sync_banner, set_sync_banner) = signal(None::<String>);
+    let (handshake_ready, _) = signal(true);
+    let (handshake_scope_nonce, _) = signal(Some(1u64));
+    provide_context(SessionClient {
+        ws: ws.clone(),
+        connection_status: ws.status,
+        status_text: Signal::derive(|| "connected".to_string()),
+        sync_banner: sync_banner.into(),
+        set_sync_banner,
+        handshake_ready,
+        handshake_scope_nonce,
+        on_retry_peer_registration: Callback::new(|_| {}),
+    });
+}
+
+fn create_commands(set_show: WriteSignal<bool>) -> Memo<Vec<Command>> {
+    let (query, _) = signal(String::new());
+    create_filtered_commands_memo(
+        query.into(),
+        RwSignal::new(Locale::En),
+        Callback::new(|_| {}),
+        Callback::new(|_| {}),
+        set_show,
+    )
+}
+
+fn git_status_enabled_when(commands: Memo<Vec<Command>>) -> String {
+    commands
+        .get_untracked()
+        .into_iter()
+        .find(|command| command.id == "git_status")
+        .expect("git status command")
+        .enabled_when
 }
 
 #[test]
@@ -182,27 +220,29 @@ fn command_palette_git_bridge_mode_reads_session_signal() {
         provide_source_control_context();
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
         ws.complete_foreground_node_role_reprobe("main", "off");
-        let (sync_banner, set_sync_banner) = signal(None::<String>);
-        let (handshake_ready, _) = signal(true);
-        let (handshake_scope_nonce, _) = signal(Some(1u64));
-        provide_context(SessionClient {
-            ws: ws.clone(),
-            connection_status: ws.status,
-            status_text: Signal::derive(|| "connected".to_string()),
-            sync_banner: sync_banner.into(),
-            set_sync_banner,
-            handshake_ready,
-            handshake_scope_nonce,
-            on_retry_peer_registration: Callback::new(|_| {}),
-        });
+        provide_session_client(ws);
         let (_, set_show) = signal(true);
 
-        let command = git_status_command(Locale::En, set_show);
+        let enabled_when = git_status_enabled_when(create_commands(set_show));
 
-        assert!(
-            command
-                .enabled_when
-                .contains("source_control.git_bridge=off")
-        );
+        assert!(enabled_when.contains("source_control.git_bridge=off"));
+    });
+}
+
+#[test]
+fn command_palette_git_bridge_mode_updates_after_node_role_probe() {
+    let owner = Owner::new();
+    owner.with(|| {
+        provide_source_control_context();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        provide_session_client(ws.clone());
+        let (_, set_show) = signal(true);
+        let commands = create_commands(set_show);
+
+        assert!(git_status_enabled_when(commands).contains("source_control.git_bridge=unknown"));
+
+        ws.complete_foreground_node_role_reprobe("main", "off");
+
+        assert!(git_status_enabled_when(commands).contains("source_control.git_bridge=off"));
     });
 }
