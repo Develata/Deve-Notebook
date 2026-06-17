@@ -86,6 +86,8 @@ pub(crate) fn repo_source_control_read_block_untracked(
     let repo_id = signals.current_repo_id.get_untracked();
     let load_state = signals.load_state.get_untracked();
     let scope_nonce = signals.current_scope_nonce.get_untracked();
+    let is_read_only =
+        signals.is_spectator.get_untracked() || signals.active_branch.get_untracked().is_some();
     let readiness = ws.native_runtime_readiness_for_untracked(
         repo_id.as_deref(),
         Some(scope_nonce),
@@ -94,7 +96,7 @@ pub(crate) fn repo_source_control_read_block_untracked(
     repo_source_control_read_block(RepoWriteGateState {
         connection_status: ws.status.get_untracked(),
         load_state: &load_state,
-        is_read_only: signals.is_spectator.get_untracked(),
+        is_read_only,
         node_role_probe_failed: ws.node_role_probe_failed.get_untracked(),
         node_role_readable: readiness.node_role_readable,
         handshake_ready: readiness.repo_handshake_complete,
@@ -112,6 +114,7 @@ pub(crate) fn repo_source_control_read_block_tracked(
     let repo_id = signals.current_repo_id.get();
     let load_state = signals.load_state.get();
     let scope_nonce = signals.current_scope_nonce.get();
+    let is_read_only = signals.is_spectator.get() || signals.active_branch.get().is_some();
     let readiness = ws.native_runtime_readiness_for(
         repo_id.as_deref(),
         Some(scope_nonce),
@@ -120,7 +123,7 @@ pub(crate) fn repo_source_control_read_block_tracked(
     repo_source_control_read_block(RepoWriteGateState {
         connection_status: ws.status.get(),
         load_state: &load_state,
-        is_read_only: signals.is_spectator.get(),
+        is_read_only,
         node_role_probe_failed: ws.node_role_probe_failed.get(),
         node_role_readable: readiness.node_role_readable,
         handshake_ready: readiness.repo_handshake_complete,

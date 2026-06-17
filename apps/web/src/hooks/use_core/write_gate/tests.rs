@@ -2,8 +2,15 @@
 //!   - 07_network#web-ws-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use super::{RepoWriteBlock, RepoWriteGateState, repo_source_control_read_block, repo_write_block};
-use crate::api::ConnectionStatus;
+use super::{
+    RepoWriteBlock, RepoWriteGateState, RepoWriteSignals, repo_source_control_read_block,
+    repo_source_control_read_block_tracked, repo_source_control_read_block_untracked,
+    repo_write_block,
+};
+use crate::api::{ConnectionStatus, WsService};
+use crate::hooks::use_core::PendingBranchTarget;
+use deve_core::models::PeerId;
+use leptos::prelude::{GetUntracked, ReadSignal, Signal, signal};
 
 fn gate_state(
     is_read_only: bool,
@@ -36,6 +43,26 @@ fn gate_state_with_status(connection_status: ConnectionStatus) -> RepoWriteGateS
         has_repo: true,
         pending_branch_switch: false,
         pending_repo_switch: false,
+    }
+}
+
+fn read_signals(active_branch: ReadSignal<Option<PeerId>>, is_spectator: bool) -> RepoWriteSignals {
+    let (load_state, _) = signal("ready".to_string());
+    let (handshake_ready, _) = signal(false);
+    let (current_repo_id, _) = signal(Some("repo-a".to_string()));
+    let (current_scope_nonce, _) = signal(7u64);
+    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+    let (pending_repo_switch, _) = signal(None::<String>);
+
+    RepoWriteSignals {
+        load_state,
+        is_spectator: Signal::derive(move || is_spectator),
+        handshake_ready,
+        current_repo_id,
+        current_scope_nonce,
+        active_branch,
+        pending_branch_switch,
+        pending_repo_switch,
     }
 }
 
@@ -181,6 +208,31 @@ fn repo_source_control_read_gate_allows_remote_branch_reads_without_node_role() 
         }),
         None
     );
+}
+
+#[test]
+fn source_control_read_wrapper_treats_active_branch_as_readonly_untracked() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    let (active_branch, _) = signal(Some(PeerId::new("remote-peer")));
+
+    assert_eq!(
+        repo_source_control_read_block_untracked(&ws, read_signals(active_branch, false)),
+        None
+    );
+}
+
+#[test]
+fn source_control_read_wrapper_treats_active_branch_as_readonly_tracked() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    let (active_branch, _) = signal(Some(PeerId::new("remote-peer")));
+    let signals = read_signals(active_branch, false);
+    let read_block = Signal::derive(move || repo_source_control_read_block_tracked(&ws, signals));
+
+    assert_eq!(read_block.get_untracked(), None);
 }
 
 #[test]
