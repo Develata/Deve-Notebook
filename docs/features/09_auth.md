@@ -36,8 +36,9 @@
 
 ### 4. Anonymous Localhost Dev Session
 
-- 显式开启 anonymous localhost 后，浏览器仍应获得 per-session dev cookie。
+- 在 `DEVE_ENV=development` 中显式开启 anonymous localhost 后，浏览器仍应获得 per-session dev cookie。
 - 该 cookie 只用于本地开发会话隔离，不等同于生产 JWT；cookie value 必须由 server 以 HMAC-SHA256 签名。
+- 生产环境或未显式进入 development 时设置 anonymous localhost 必须 fail-closed，不能形成生产免密登录。
 - 该 cookie 与 JWT auth cookie 使用同一个 `HTTPS_ENABLED` Secure 策略；除非显式关闭，否则应带 `Secure`。
 - 已登录浏览器同时携带有效 JWT 与 dev cookie 时，JWT session 必须优先；dev cookie 不能把已登录 HTTP
   请求降级成另一个 anonymous dev session。

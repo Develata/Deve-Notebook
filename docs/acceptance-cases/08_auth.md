@@ -159,6 +159,7 @@
 - case_id: AUTH-014
   goal: Anonymous localhost dev session cookie 绑定 HTTP 与 WS 会话。
   preconditions:
+    - DEVE_ENV=development
     - AUTH_ALLOW_ANONYMOUS_LOCALHOST=true
     - 请求来自 loopback 地址
   steps:
@@ -178,6 +179,18 @@
     - api_assert: forged_dev_session_cookie_is_replaced true
     - api_assert: dev_session_cookie_is_bound_to_server_secret true
     - api_assert: dev_session_cookie_secure_policy_matches_auth_cookie true
+
+- case_id: AUTH-015
+  goal: Anonymous localhost 不能在 production / unset DEVE_ENV 中启用。
+  preconditions:
+    - DEVE_ENV=production 或未设置
+    - AUTH_SECRET 与 AUTH_PASS 均有效
+    - AUTH_ALLOW_ANONYMOUS_LOCALHOST=true
+  steps:
+    - run: scripts/check-auth-baseline.sh
+    - run: cargo test -p deve_core anonymous_localhost_requires_development_env -- --nocapture
+  assertions:
+    - config_assert: production_AUTH_ALLOW_ANONYMOUS_LOCALHOST_fails_closed true
 
 - case_id: AUTH-013
   goal: Host identity key owner-only 权限。

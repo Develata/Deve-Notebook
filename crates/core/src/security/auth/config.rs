@@ -37,7 +37,7 @@ impl AuthConfig {
     /// 注意：不再自动根据 debug/release 构建模式切换。
     pub fn from_env() -> Result<Self> {
         let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
-        let is_dev_mode = env.eq_ignore_ascii_case("development");
+        let is_dev_mode = env.trim().eq_ignore_ascii_case("development");
         let secret = std::env::var("AUTH_SECRET").ok();
         let password_hash = std::env::var("AUTH_PASS").ok();
 
@@ -67,7 +67,7 @@ impl AuthConfig {
         password::validate_argon2_phc(&password_hash)
             .map_err(|err| anyhow!("AUTH_PASS must be a valid Argon2 PHC hash: {}", err))?;
 
-        let allow_anon = env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false);
+        let allow_anon = parse_allow_anonymous_localhost_env(is_dev_mode)?;
 
         let token_version = parse_token_version_env()?;
 
@@ -106,6 +106,16 @@ fn env_flag(name: &str, default: bool) -> bool {
         .unwrap_or(default)
 }
 
+fn parse_allow_anonymous_localhost_env(is_dev_mode: bool) -> Result<bool> {
+    let allow_anon = env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false);
+    if allow_anon && !is_dev_mode {
+        return Err(anyhow!(
+            "AUTH_ALLOW_ANONYMOUS_LOCALHOST requires DEVE_ENV=development"
+        ));
+    }
+    Ok(allow_anon)
+}
+
 fn parse_token_version_env() -> Result<u32> {
     match std::env::var("AUTH_TOKEN_VERSION") {
         Ok(value) => value
@@ -117,122 +127,4 @@ fn parse_token_version_env() -> Result<u32> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-    #[test]
-    fn test_dev_default() {
-        let cfg = AuthConfig::dev_default().unwrap();
-        assert_eq!(cfg.username, "admin");
-        assert!(!cfg.allow_anonymous_localhost);
-        assert!(cfg.secret.len() >= 32);
-    }
-
-    #[test]
-    fn invalid_auth_pass_phc_fails_closed_at_config_load() {
-        let _lock = ENV_LOCK.lock().expect("env test lock");
-        let env = EnvGuard::set(&[
-            ("DEVE_ENV", Some("production")),
-            (
-                "AUTH_SECRET",
-                Some("test_secret_key_at_least_32_bytes_long!"),
-            ),
-            ("AUTH_PASS", Some("not-a-valid-phc-hash")),
-            ("AUTH_USER", Some("alice")),
-            ("AUTH_ALLOW_ANONYMOUS_LOCALHOST", None),
-            ("AUTH_TOKEN_VERSION", None),
-        ]);
-
-        let err = AuthConfig::from_env().expect_err("invalid PHC must fail closed");
-        assert!(
-            err.to_string()
-                .contains("AUTH_PASS must be a valid Argon2 PHC hash")
-        );
-        drop(env);
-    }
-
-    #[test]
-    fn missing_secret_or_password_fails_closed_in_production() {
-        let _lock = ENV_LOCK.lock().expect("env test lock");
-        let env = EnvGuard::set(&[
-            ("DEVE_ENV", Some("production")),
-            ("AUTH_SECRET", None),
-            ("AUTH_PASS", None),
-            ("AUTH_USER", None),
-            ("AUTH_ALLOW_ANONYMOUS_LOCALHOST", None),
-            ("AUTH_TOKEN_VERSION", None),
-        ]);
-
-        let err = AuthConfig::from_env().expect_err("missing production auth must fail closed");
-        assert!(
-            err.to_string()
-                .contains("Production mode requires AUTH_SECRET and AUTH_PASS")
-        );
-        drop(env);
-    }
-
-    #[test]
-    fn invalid_auth_token_version_fails_closed() {
-        let _lock = ENV_LOCK.lock().expect("env test lock");
-        let env = EnvGuard::set(&[
-            ("DEVE_ENV", Some("production")),
-            (
-                "AUTH_SECRET",
-                Some("test_secret_key_at_least_32_bytes_long!"),
-            ),
-            (
-                "AUTH_PASS",
-                Some(
-                    "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$MLt1KZB+74lpz3bB5FzWzWgfz8Q1nXWJ7HfLqF6QL0M",
-                ),
-            ),
-            ("AUTH_USER", Some("alice")),
-            ("AUTH_ALLOW_ANONYMOUS_LOCALHOST", None),
-            ("AUTH_TOKEN_VERSION", Some("not-a-number")),
-        ]);
-
-        let err = AuthConfig::from_env().expect_err("invalid token version must fail closed");
-        assert!(err.to_string().contains("AUTH_TOKEN_VERSION"));
-        drop(env);
-    }
-
-    struct EnvGuard {
-        old: Vec<(&'static str, Option<String>)>,
-    }
-
-    impl EnvGuard {
-        fn set(vars: &[(&'static str, Option<&str>)]) -> Self {
-            let old = vars
-                .iter()
-                .map(|(key, _)| (*key, std::env::var(key).ok()))
-                .collect::<Vec<_>>();
-            for (key, value) in vars {
-                // SAFETY: this test holds ENV_LOCK while mutating process env.
-                unsafe {
-                    match value {
-                        Some(value) => std::env::set_var(key, value),
-                        None => std::env::remove_var(key),
-                    }
-                }
-            }
-            Self { old }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            for (key, value) in self.old.drain(..) {
-                // SAFETY: EnvGuard restores only keys it changed while ENV_LOCK is held.
-                unsafe {
-                    match value {
-                        Some(value) => std::env::set_var(key, value),
-                        None => std::env::remove_var(key),
-                    }
-                }
-            }
-        }
-    }
-}
+mod tests;

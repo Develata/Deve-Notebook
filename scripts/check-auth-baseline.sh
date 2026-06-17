@@ -37,8 +37,10 @@ check_contains crates/core/src/security/auth/config.rs "ERROR: Production mode r
 check_contains crates/core/src/security/auth/config.rs "AUTH_SECRET must be >= 32 bytes"
 check_contains crates/core/src/security/auth/config.rs "AUTH_PASS must be a valid Argon2 PHC hash"
 check_contains crates/core/src/security/auth/config.rs "AUTH_TOKEN_VERSION must be a valid u32 integer"
-check_contains crates/core/src/security/auth/config.rs "missing_secret_or_password_fails_closed_in_production"
-check_contains crates/core/src/security/auth/config.rs "invalid_auth_token_version_fails_closed"
+check_contains crates/core/src/security/auth/config.rs "AUTH_ALLOW_ANONYMOUS_LOCALHOST requires DEVE_ENV=development"
+check_contains crates/core/src/security/auth/config/tests.rs "missing_secret_or_password_fails_closed_in_production"
+check_contains crates/core/src/security/auth/config/tests.rs "invalid_auth_token_version_fails_closed"
+check_contains crates/core/src/security/auth/config/tests.rs "anonymous_localhost_requires_development_env"
 check_absent crates/core/src/security/auth/config.rs 'expect("checked above")'
 check_contains apps/cli/src/server/router.rs "WARNING: development-only auth defaults active"
 
@@ -49,9 +51,12 @@ check_contains crates/core/src/security/auth/jwt.rs "sub"
 check_contains crates/core/src/security/auth/jwt.rs "iat"
 check_contains crates/core/src/security/auth/jwt.rs "exp"
 check_contains crates/core/src/security/auth/jwt.rs "ver"
+check_contains crates/core/src/security/auth/jwt.rs "sid"
 check_contains crates/core/src/security/auth/jwt.rs "subject: &str"
 check_contains crates/core/src/security/auth/jwt.rs "sub: subject.to_string()"
 check_contains crates/core/src/security/auth/jwt.rs "fn issue_token_preserves_subject()"
+check_contains crates/core/src/security/auth/jwt.rs "fn issue_token_mints_unique_session_id_per_login()"
+check_contains crates/core/src/security/auth/jwt.rs "fn validate_token_accepts_legacy_payload_without_session_id()"
 check_absent docs/acceptance-cases/08_auth.md "deve auth decode-jwt"
 
 # AUTH-003/012: cookie session and status endpoint contract.
@@ -67,6 +72,8 @@ check_contains apps/cli/src/server/router.rs ".route(\"/api/auth/status\", get(a
 # AUTH-014: anonymous localhost remains dev-only but uses a per-browser
 # dev-session cookie for HTTP/WS grant binding.
 check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-014"
+check_contains docs/acceptance-cases/08_auth.md "case_id: AUTH-015"
+check_contains docs/acceptance-cases/08_auth.md "anonymous_localhost_requires_development_env"
 check_contains docs/acceptance-cases/08_auth.md "anonymous_localhost_status_sets_dev_session_cookie"
 check_contains docs/acceptance-cases/08_auth.md "anonymous_localhost_ws_uses_dev_session_cookie"
 check_contains docs/acceptance-cases/08_auth.md "anonymous_localhost_auth_prefers_valid_jwt_over_dev_session_cookie"

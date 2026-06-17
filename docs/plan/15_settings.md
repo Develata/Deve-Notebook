@@ -36,7 +36,7 @@
 | `AUTH_SECRET`                    | *(Random)*       | Session/JWT 签名密钥。生产环境 **MUST** 设置。                       |
 | `AUTH_USER`                      | `admin`          | 默认超管用户名.                                                     |
 | `AUTH_PASS`                      | *(none)*         | Argon2 哈希后的管理员密码（PHC 格式）。生产环境 **MUST** 设置。          |
-| `AUTH_ALLOW_ANONYMOUS_LOCALHOST` | `false`          | 是否允许 Localhost / LAN 免密访问 (`true` / `false`).               |
+| `AUTH_ALLOW_ANONYMOUS_LOCALHOST` | `false`          | development-only loopback 免密访问 (`true` / `false`)；仅在 `DEVE_ENV=development` 下可开启。 |
 | `ALLOWED_ORIGINS`                | *(none)*         | 允许的 CORS Origin 列表 (逗号分隔)。生产环境 **MUST** 显式设置。        |
 | **AI**                           |                  |                                                                     |
 | `AI_API_KEY`                     | *(none)*         | Native AI Chat 的服务密钥。                                         |

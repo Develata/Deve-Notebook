@@ -160,8 +160,10 @@ WsConnecting
 
 ### 5.2.1 Anonymous Localhost Dev Session Cookie
 
-当 `AUTH_ALLOW_ANONYMOUS_LOCALHOST=true` 且请求来自 loopback 地址时，server MAY 签发
-匿名开发会话 cookie，用于把 HTTP 与 WebSocket runtime 绑定到同一个 browser session。
+当 `DEVE_ENV=development`、`AUTH_ALLOW_ANONYMOUS_LOCALHOST=true` 且请求来自 loopback 地址时，
+server MAY 签发匿名开发会话 cookie，用于把 HTTP 与 WebSocket runtime 绑定到同一个 browser
+session。生产环境或未显式进入 development 时设置该开关必须 fail-closed，不能把 localhost
+免密扩大成生产 credential。
 
 约束：
 
@@ -282,7 +284,8 @@ WsConnecting
 
 ### 6.8 Localhost / Dev Policy {#localhost-dev-policy}
 
-- `AUTH_ALLOW_ANONYMOUS_LOCALHOST` 只能显式开启。
+- `AUTH_ALLOW_ANONYMOUS_LOCALHOST` 只能在显式 development mode 中开启；production / unset
+  `DEVE_ENV` 中设置为 true 必须 fail-closed。
 - 仅允许 `localhost` / `127.0.0.1` 的本地开发场景使用。
 - 开启时 **MUST** 在日志中显著标记 dev-only auth bypass。
 - anonymous localhost 虽绕过密码认证，但 browser session 隔离仍必须通过 dev session cookie 保持；
