@@ -98,7 +98,7 @@ pub(super) async fn handle(
         return;
     }
 
-    filter_static_fullpeer_export_sources(state, session, &mut result);
+    filter_static_fullpeer_source_sets(state, session, &peer_id, &mut result);
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
     session.set_sync_scope_nonce(scope_nonce);
@@ -144,9 +144,10 @@ pub(super) async fn handle(
     );
 }
 
-fn filter_static_fullpeer_export_sources(
+fn filter_static_fullpeer_source_sets(
     state: &Arc<AppState>,
     session: &WsSession,
+    authenticated_peer: &PeerId,
     result: &mut deve_core::sync::protocol::HandshakeResult,
 ) {
     if session.is_browser_session() {
@@ -156,4 +157,10 @@ fn filter_static_fullpeer_export_sources(
     result
         .to_send
         .retain(|request| request.peer_id == local_peer);
+    result
+        .to_request
+        .retain(|request| &request.peer_id == authenticated_peer);
+    result
+        .snapshot_requests
+        .retain(|request| &request.peer_id == authenticated_peer);
 }

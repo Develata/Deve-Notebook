@@ -239,6 +239,41 @@ async fn sync_hello_fullpeer_offer_set_excludes_third_party_shadow_sources() -> 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_fullpeer_request_set_excludes_third_party_shadow_sources(
+) -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    state.sync_engine.get_or_create_strict(repo_id)?;
+    let remote = IdentityKeyPair::generate();
+    let third_party = PeerId::new("peer-a");
+    let mut remote_vector = VersionVector::new();
+    remote_vector.update(remote.peer_id(), 1);
+    remote_vector.update(third_party.clone(), 1);
+    let mut hello = signed_hello(&remote, &remote_vector);
+    hello.repo_id = repo_id;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = empty_session();
+
+    handle_sync_hello(&state, &ch, &mut session, hello).await;
+    let messages = collect_unicast_messages(&mut rx).await?;
+    let requested_sources: Vec<_> = messages
+        .iter()
+        .flat_map(|msg| match msg {
+            ServerMessage::SyncRequest { requests, .. } => requests
+                .iter()
+                .map(|(peer_id, _)| peer_id.clone())
+                .collect::<Vec<_>>(),
+            _ => Vec::new(),
+        })
+        .collect();
+
+    assert!(requested_sources.contains(&remote.peer_id()));
+    assert!(!requested_sources.contains(&third_party));
+    assert!(session.allows_sync_source(&remote.peer_id()));
+    assert!(!session.allows_sync_source(&third_party));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Result<()> {
     let (_dir, state, _repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();
