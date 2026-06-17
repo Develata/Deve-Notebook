@@ -1,7 +1,7 @@
 use super::super::exchange::{MAX_EXCHANGE_FRAMES, drive_sync_exchange, handle_server_message};
 use super::support::{
-    DelayedFrame, DelayedSocket, MockSocket, append_local_op, authenticated_stats, peer,
-    peer_with_id, signed_server_hello, test_state, test_state_with_dir,
+    DelayedFrame, DelayedSocket, MockSocket, REMOTE_PEER_ID, THIRD_PARTY_PEER_ID, append_local_op,
+    authenticated_stats, peer, peer_with_id, signed_server_hello, test_state, test_state_with_dir,
 };
 use crate::server::p2p::ExchangeStats;
 use deve_core::models::{PeerId, VersionVector};
@@ -140,7 +140,7 @@ async fn p2p_exchange_rejects_repo_mismatch_after_sync_hello() -> anyhow::Result
     let state = test_state(identity)?;
     let repo_id = uuid::Uuid::new_v4();
     let other_repo_id = uuid::Uuid::new_v4();
-    let authenticated_peer = PeerId::new("peer-b");
+    let authenticated_peer = PeerId::new(REMOTE_PEER_ID);
     let message = ServerMessage::SyncRequest {
         repo_id: other_repo_id,
         branch: None,
@@ -171,14 +171,14 @@ async fn p2p_exchange_rejects_unoffered_sync_request_source() -> anyhow::Result<
     let identity = Arc::new(IdentityKeyPair::generate());
     let state = test_state(identity)?;
     let repo_id = uuid::Uuid::new_v4();
-    let unoffered_source = PeerId::new("unoffered-source");
+    let unoffered_source = PeerId::new(THIRD_PARTY_PEER_ID);
     let message = ServerMessage::SyncRequest {
         repo_id,
         branch: None,
         known_vector: VersionVector::new(),
         requests: vec![(unoffered_source, (1, 2))],
     };
-    let mut stats = authenticated_stats(PeerId::new("peer-b"));
+    let mut stats = authenticated_stats(PeerId::new(REMOTE_PEER_ID));
     let mut socket = MockSocket::new(Vec::new());
 
     let err = handle_server_message(
@@ -203,12 +203,12 @@ async fn p2p_exchange_rejects_unoffered_snapshot_request_source() -> anyhow::Res
     let state = test_state(identity)?;
     let repo_id = uuid::Uuid::new_v4();
     let message = ServerMessage::SyncSnapshotRequest {
-        source_peer_id: PeerId::new("unoffered-source"),
+        source_peer_id: PeerId::new(THIRD_PARTY_PEER_ID),
         repo_id,
         known_vector: VersionVector::new(),
         reason: Some("source-boundary-check".into()),
     };
-    let mut stats = authenticated_stats(PeerId::new("peer-b"));
+    let mut stats = authenticated_stats(PeerId::new(REMOTE_PEER_ID));
     let mut socket = MockSocket::new(Vec::new());
 
     let err = handle_server_message(

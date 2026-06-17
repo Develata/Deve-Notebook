@@ -1,5 +1,6 @@
 // apps/cli/src/server/node_role_http.rs
 //! plan_ref:
+//!   - 07_network#full-peer-mesh-v1
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 //!   - 18_release#runtime-observability
@@ -161,7 +162,7 @@ mod tests {
                 enabled: true,
                 peers: vec![node_role::P2pPeerSummary {
                     label: "peer-b".into(),
-                    peer_id: "peer-b".into(),
+                    peer_id: "bbbbbbbbbbbb".into(),
                     repo_id: "11111111-1111-1111-1111-111111111111".into(),
                     state: "connected".into(),
                     attempts: 2,

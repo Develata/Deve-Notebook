@@ -10,6 +10,10 @@ use deve_core::sync::handshake_proof::sign_sync_hello;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 
+pub(crate) const REMOTE_PEER_ID: &str = "bbbbbbbbbbbb";
+pub(crate) const THIRD_PARTY_PEER_ID: &str = "aaaaaaaaaaaa";
+pub(crate) const LOCAL_TARGET_PEER_ID: &str = "cccccccccccc";
+
 pub(crate) fn test_state(identity: Arc<IdentityKeyPair>) -> anyhow::Result<Arc<AppState>> {
     Ok(test_state_with_dir(identity)?.1)
 }
@@ -50,7 +54,7 @@ pub(crate) fn test_state_with_dir(
 }
 
 pub(crate) fn peer(repo_id: uuid::Uuid) -> P2pPeerConfig {
-    peer_with_id(repo_id, "peer-b")
+    peer_with_id(repo_id, REMOTE_PEER_ID)
 }
 
 pub(crate) fn peer_with_id(repo_id: uuid::Uuid, peer_id: &str) -> P2pPeerConfig {

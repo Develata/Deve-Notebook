@@ -3,7 +3,8 @@ use super::super::validation::{
     InboundSnapshotValidation, validate_inbound_push, validate_inbound_snapshot,
 };
 use super::support::{
-    MockSocket, authenticated_stats, dummy_payload, peer, peer_with_id, test_state,
+    LOCAL_TARGET_PEER_ID, MockSocket, REMOTE_PEER_ID, THIRD_PARTY_PEER_ID, authenticated_stats,
+    dummy_payload, peer, peer_with_id, test_state,
 };
 use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::{
@@ -17,8 +18,8 @@ async fn p2p_exchange_rejects_forged_sync_push_source() -> anyhow::Result<()> {
     let identity = Arc::new(IdentityKeyPair::generate());
     let state = test_state(identity)?;
     let repo_id = uuid::Uuid::new_v4();
-    let authenticated_peer = PeerId::new("peer-b");
-    let forged_source = PeerId::new("peer-a");
+    let authenticated_peer = PeerId::new(REMOTE_PEER_ID);
+    let forged_source = PeerId::new(THIRD_PARTY_PEER_ID);
     let payload = dummy_payload();
     let message = ServerMessage::SyncPush {
         source_peer_id: forged_source.clone(),
@@ -53,7 +54,7 @@ async fn p2p_exchange_rejects_unrequested_direct_sync_push_source() -> anyhow::R
     let identity = Arc::new(IdentityKeyPair::generate());
     let state = test_state(identity)?;
     let repo_id = uuid::Uuid::new_v4();
-    let authenticated_peer = PeerId::new("peer-b");
+    let authenticated_peer = PeerId::new(REMOTE_PEER_ID);
     let payload = dummy_payload();
     let message = ServerMessage::SyncPush {
         source_peer_id: authenticated_peer.clone(),
@@ -87,8 +88,8 @@ async fn p2p_exchange_rejects_forged_snapshot_source() -> anyhow::Result<()> {
     let identity = Arc::new(IdentityKeyPair::generate());
     let state = test_state(identity)?;
     let repo_id = uuid::Uuid::new_v4();
-    let authenticated_peer = PeerId::new("peer-b");
-    let forged_source = PeerId::new("peer-a");
+    let authenticated_peer = PeerId::new(REMOTE_PEER_ID);
+    let forged_source = PeerId::new(THIRD_PARTY_PEER_ID);
     let message = ServerMessage::SyncPushSnapshot {
         source_peer_id: forged_source.clone(),
         repo_id,
@@ -168,7 +169,7 @@ async fn p2p_exchange_rejects_unrequested_direct_snapshot_source() -> anyhow::Re
 #[test]
 fn p2p_exchange_rejects_snapshot_missing_source_proof() {
     let repo_id = uuid::Uuid::new_v4();
-    let authenticated_peer = PeerId::new("peer-b");
+    let authenticated_peer = PeerId::new(REMOTE_PEER_ID);
     let mut stats = authenticated_stats(authenticated_peer.clone());
     stats
         .requested_import_sources
@@ -179,7 +180,7 @@ fn p2p_exchange_rejects_snapshot_missing_source_proof() {
         repo_id,
         &stats,
         InboundSnapshotValidation {
-            target_peer: &PeerId::new("local-target"),
+            target_peer: &PeerId::new(LOCAL_TARGET_PEER_ID),
             source_peer_id: &authenticated_peer,
             server_vector: &VersionVector::new(),
             source_proof: None,
@@ -194,7 +195,7 @@ fn p2p_exchange_rejects_snapshot_missing_source_proof() {
 #[test]
 fn p2p_exchange_rejects_sync_push_missing_source_proof() {
     let repo_id = uuid::Uuid::new_v4();
-    let authenticated_peer = PeerId::new("peer-b");
+    let authenticated_peer = PeerId::new(REMOTE_PEER_ID);
     let mut stats = authenticated_stats(authenticated_peer.clone());
     stats
         .requested_import_sources
@@ -204,7 +205,7 @@ fn p2p_exchange_rejects_sync_push_missing_source_proof() {
         &peer(repo_id),
         repo_id,
         &stats,
-        &PeerId::new("local-target"),
+        &PeerId::new(LOCAL_TARGET_PEER_ID),
         &authenticated_peer,
         &SyncPushHeader::diff(repo_id, authenticated_peer.clone(), VersionVector::new()),
         &dummy_payload(),

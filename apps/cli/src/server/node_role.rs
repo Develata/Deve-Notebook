@@ -1,5 +1,6 @@
 // apps/cli/src/server/node_role.rs
 //! plan_ref:
+//!   - 07_network#full-peer-mesh-v1
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 //!   - 18_release#runtime-observability

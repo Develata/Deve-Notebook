@@ -1,5 +1,7 @@
 use super::super::transfer::{send_requested_ops, send_requested_snapshot};
-use super::support::{MockSocket, append_local_op, append_remote_shadow_op, test_state_with_dir};
+use super::support::{
+    MockSocket, THIRD_PARTY_PEER_ID, append_local_op, append_remote_shadow_op, test_state_with_dir,
+};
 use crate::server::p2p::ExchangeStats;
 use deve_core::models::PeerId;
 use deve_core::protocol::frame::decode_client_binary;
@@ -64,7 +66,7 @@ async fn p2p_send_requested_ops_rejects_unsigned_non_local_source() -> anyhow::R
         .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
         .expect("repo info")
         .uuid;
-    let third_party = PeerId::new("peer-a");
+    let third_party = PeerId::new(THIRD_PARTY_PEER_ID);
     state.sync_engine.get_or_create_strict(repo_id)?;
     append_remote_shadow_op(&state, repo_id, &third_party)?;
     let mut socket = MockSocket::new(Vec::new());
@@ -98,7 +100,7 @@ async fn p2p_send_requested_snapshot_rejects_unsigned_non_local_source() -> anyh
         .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
         .expect("repo info")
         .uuid;
-    let third_party = PeerId::new("peer-a");
+    let third_party = PeerId::new(THIRD_PARTY_PEER_ID);
     state.sync_engine.get_or_create_strict(repo_id)?;
     append_remote_shadow_op(&state, repo_id, &third_party)?;
     let mut socket = MockSocket::new(Vec::new());

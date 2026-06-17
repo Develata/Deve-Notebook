@@ -2,13 +2,15 @@ use super::*;
 use std::sync::Mutex;
 
 static TEST_LOCK: Mutex<()> = Mutex::new(());
+const PEER_A_ID: &str = "aaaaaaaaaaaa";
+const PEER_B_ID: &str = "bbbbbbbbbbbb";
 
 #[test]
 fn p2p_status_initializes_without_token_material() {
     let _guard = TEST_LOCK.lock().expect("p2p status test lock");
     let peer = P2pPeerConfig {
         label: "peer-b".into(),
-        peer_id: "peer-b".into(),
+        peer_id: PEER_B_ID.into(),
         repo_id: "11111111-1111-1111-1111-111111111111".into(),
         ws_url: "ws://127.0.0.1:3102/ws".into(),
         auth_token_env: "AUTH_SECRET_ENV".into(),
@@ -38,7 +40,7 @@ fn p2p_status_marks_peers_disabled_when_mesh_disabled() {
     let _guard = TEST_LOCK.lock().expect("p2p status test lock");
     let peer = P2pPeerConfig {
         label: "peer-b".into(),
-        peer_id: "peer-b".into(),
+        peer_id: PEER_B_ID.into(),
         repo_id: "11111111-1111-1111-1111-111111111111".into(),
         ws_url: "ws://127.0.0.1:3102/ws".into(),
         auth_token_env: "AUTH_SECRET_ENV".into(),
@@ -61,7 +63,7 @@ fn p2p_status_duplicate_labels_do_not_share_state() {
     let _guard = TEST_LOCK.lock().expect("p2p status test lock");
     let peer_a = P2pPeerConfig {
         label: "edge".into(),
-        peer_id: "peer-a".into(),
+        peer_id: PEER_A_ID.into(),
         repo_id: "11111111-1111-1111-1111-111111111111".into(),
         ws_url: "ws://127.0.0.1:3101/ws".into(),
         auth_token_env: "PEER_A_TOKEN".into(),
@@ -69,7 +71,7 @@ fn p2p_status_duplicate_labels_do_not_share_state() {
     };
     let peer_b = P2pPeerConfig {
         label: "edge".into(),
-        peer_id: "peer-b".into(),
+        peer_id: PEER_B_ID.into(),
         repo_id: "22222222-2222-2222-2222-222222222222".into(),
         ws_url: "ws://127.0.0.1:3102/ws".into(),
         auth_token_env: "PEER_B_TOKEN".into(),
@@ -102,7 +104,7 @@ fn p2p_status_retry_preserves_last_error_until_success() {
     let _guard = TEST_LOCK.lock().expect("p2p status test lock");
     let peer = P2pPeerConfig {
         label: "peer-b".into(),
-        peer_id: "peer-b".into(),
+        peer_id: PEER_B_ID.into(),
         repo_id: "11111111-1111-1111-1111-111111111111".into(),
         ws_url: "ws://127.0.0.1:3102/ws".into(),
         auth_token_env: "AUTH_SECRET_ENV".into(),

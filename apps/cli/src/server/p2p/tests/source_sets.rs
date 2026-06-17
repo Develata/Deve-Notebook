@@ -1,5 +1,8 @@
 use super::super::source_sets::sync_source_sets_for_hello;
-use super::support::{append_local_op, append_remote_shadow_op, test_state_with_dir};
+use super::support::{
+    REMOTE_PEER_ID, THIRD_PARTY_PEER_ID, append_local_op, append_remote_shadow_op,
+    test_state_with_dir,
+};
 use deve_core::models::{PeerId, VersionVector};
 use deve_core::security::IdentityKeyPair;
 use std::sync::Arc;
@@ -14,7 +17,7 @@ fn p2p_fullpeer_offer_set_excludes_third_party_shadow_sources() -> anyhow::Resul
         .get_repo_info_for(None, Some(state.repo.local_repo_name()))?
         .expect("repo info")
         .uuid;
-    let third_party = PeerId::new("peer-a");
+    let third_party = PeerId::new(THIRD_PARTY_PEER_ID);
 
     append_local_op(&state, repo_id)?;
     append_remote_shadow_op(&state, repo_id, &third_party)?;
@@ -22,7 +25,7 @@ fn p2p_fullpeer_offer_set_excludes_third_party_shadow_sources() -> anyhow::Resul
     let offered = sync_source_sets_for_hello(
         &state,
         repo_id,
-        &PeerId::new("peer-b"),
+        &PeerId::new(REMOTE_PEER_ID),
         &VersionVector::new(),
     )?
     .allowed_export_sources;
@@ -45,8 +48,8 @@ fn p2p_fullpeer_request_set_excludes_third_party_shadow_sources() -> anyhow::Res
         .expect("repo info")
         .uuid;
     state.sync_engine.get_or_create_strict(repo_id)?;
-    let authenticated_peer = PeerId::new("peer-b");
-    let third_party = PeerId::new("peer-a");
+    let authenticated_peer = PeerId::new(REMOTE_PEER_ID);
+    let third_party = PeerId::new(THIRD_PARTY_PEER_ID);
     let mut remote_vector = VersionVector::new();
     remote_vector.update(authenticated_peer.clone(), 1);
     remote_vector.update(third_party.clone(), 1);
