@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::handlers::sync::handle_sync_hello;
+use super::source_control_grants::{AuthSessionId, SourceControlGrantBranch};
 use super::sync_hello_test_support::{
     build_state, empty_session, signed_hello_for_scope, unicast_channel,
 };
@@ -52,6 +53,47 @@ async fn browser_sync_hello_rejects_stale_bound_repo_and_writer_identity() -> an
     assert_runtime_mismatch(recv_protocol_error(&mut rx).await);
     assert_browser_sync_binding_cleared(&session);
     assert!(session.writer_identity.is_none());
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn browser_sync_hello_failure_revokes_source_control_write_grant() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let remote = IdentityKeyPair::generate();
+    let auth_session = AuthSessionId::for_test("browser-sync-hello-failure");
+    let mut session = browser_session(repo_id, &remote);
+    session.bind_auth_session(auth_session.clone());
+    state
+        .source_control_write_grants()
+        .grant(
+            auth_session.clone(),
+            repo_id,
+            SourceControlGrantBranch::Local,
+            remote.peer_id(),
+            9,
+        )
+        .expect("grant setup");
+    assert!(
+        state
+            .source_control_write_grants()
+            .authorize_browser_local(&auth_session, repo_id, 9)
+            .is_ok()
+    );
+
+    let stale_hello = signed_hello_for_scope(&remote, repo_id, 8);
+    let (ch, mut rx) = unicast_channel(&state);
+
+    handle_sync_hello(&state, &ch, &mut session, stale_hello).await;
+
+    let (error, scope_nonce) = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::ScStaleScope);
+    assert_eq!(scope_nonce, Some(8));
+    assert_browser_sync_binding_cleared(&session);
+    let err = state
+        .source_control_write_grants()
+        .authorize_browser_local(&auth_session, repo_id, 9)
+        .expect_err("Browser SyncHello failure must revoke the active HTTP write grant");
+    assert_eq!(err.code, ServerErrorCode::ScStaleScope);
     Ok(())
 }
 

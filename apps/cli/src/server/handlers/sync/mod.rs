@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
 //!   - 04_repository#repo-scope-runtime
+//!   - 05_diff_logic#source-control-runtime
 //!
 //! P2P 同步消息处理器入口。
 
