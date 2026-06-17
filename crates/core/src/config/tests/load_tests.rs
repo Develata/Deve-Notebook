@@ -69,6 +69,19 @@ fn default_config_serializes_for_config_print() {
 }
 
 #[test]
+fn from_toml_str_checked_runs_static_runtime_validation() {
+    let err = Config::from_toml_str_checked(
+        r#"
+[p2p]
+connect_interval_ms = 0
+"#,
+    )
+    .expect_err("writer-side config validation must reject invalid runtime values");
+
+    assert!(err.to_string().contains("p2p.connect_interval_ms"));
+}
+
+#[test]
 fn source_control_git_bridge_config_file_accepts_mirror_and_off() {
     let _guard = CWD_LOCK.lock().expect("lock cwd");
     let _env = EnvGuard::set_optional(&[

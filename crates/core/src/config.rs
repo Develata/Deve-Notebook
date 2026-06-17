@@ -30,6 +30,21 @@ pub use schema::{
 };
 
 impl Config {
+    /// Parse and validate a `config.toml` payload without reading environment aliases.
+    ///
+    /// This is the shared writer-side validation path for tools that prepare a new
+    /// config file and need the same static runtime checks as `load_checked`.
+    pub fn from_toml_str_checked(input: &str) -> anyhow::Result<Self> {
+        let settings = config::Config::builder()
+            .add_source(config::File::from_str(input, config::FileFormat::Toml))
+            .build()
+            .context("Failed to build configuration")?;
+        reject_removed_projection_root_keys(&settings)?;
+        let config = Self::deserialize_settings_with_profile(&settings)?;
+        validation::validate(&config)?;
+        Ok(config)
+    }
+
     /// 严格加载配置 (Env > .env > config.toml > Default)。
     ///
     /// Invariants:
@@ -54,15 +69,9 @@ impl Config {
             )
             .build()
             .context("Failed to build configuration")?;
-        if settings.get::<config::Value>("vault_path").is_ok() {
-            bail!("vault_path is no longer supported; configure repo Projection Locators instead");
-        }
+        reject_removed_projection_root_keys(&settings)?;
 
-        let mut config = settings
-            .clone()
-            .try_deserialize::<Self>()
-            .context("Failed to parse configuration")?;
-        profile::apply_profile_presets(&settings, &mut config);
+        let mut config = Self::deserialize_settings_with_profile(&settings)?;
         env_alias::apply_env_aliases(&mut config)?;
         validation::validate(&config)?;
         Ok(config)
@@ -75,6 +84,22 @@ impl Config {
             Config::default()
         })
     }
+
+    fn deserialize_settings_with_profile(settings: &config::Config) -> anyhow::Result<Self> {
+        let mut config = settings
+            .clone()
+            .try_deserialize::<Self>()
+            .context("Failed to parse configuration")?;
+        profile::apply_profile_presets(settings, &mut config);
+        Ok(config)
+    }
+}
+
+fn reject_removed_projection_root_keys(settings: &config::Config) -> anyhow::Result<()> {
+    if settings.get::<config::Value>("vault_path").is_ok() {
+        bail!("vault_path is no longer supported; configure repo Projection Locators instead");
+    }
+    Ok(())
 }
 
 #[cfg(test)]

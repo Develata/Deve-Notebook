@@ -256,6 +256,7 @@
     - run: cargo test -p deve_core source_control_git_bridge -- --nocapture
     - run: cargo test -p deve_cli set_rejects_empty_env_reference_without_rewriting_config -- --nocapture
     - run: cargo test -p deve_cli set_rejects_zero_p2p_connect_interval_without_rewriting_config -- --nocapture
+    - run: cargo test -p deve_cli set_rejects_existing_invalid_runtime_config_without_rewriting -- --nocapture
     - run: cargo test -p deve_cli config -- --nocapture
   assertions:
     - file_contains: config.toml "sidebar_width = 300"
@@ -263,6 +264,7 @@
     - file_contains: .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"
     - config_assert: empty_env_reference_rejected_without_rewrite true
     - config_assert: zero_p2p_connect_interval_rejected_without_rewrite true
+    - config_assert: existing_invalid_runtime_config_rejected_without_rewrite true
 
 - case_id: SET-007
   goal: Server-backed Settings API 仍按 future 边界处理。

@@ -82,8 +82,9 @@ fn insert_value(table: &mut Table, parts: &[&str], value: Value) -> anyhow::Resu
 }
 
 fn validate_config(output: &str) -> anyhow::Result<()> {
-    toml::from_str::<deve_core::config::Config>(output)
-        .context("Updated config.toml is not compatible with runtime config")?;
+    deve_core::config::Config::from_toml_str_checked(output).map_err(|err| {
+        anyhow!("Updated config.toml is not compatible with runtime config: {err:#}")
+    })?;
     Ok(())
 }
 

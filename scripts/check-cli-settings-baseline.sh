@@ -122,6 +122,8 @@ check_contains crates/core/src/config/tests/load_tests.rs "load_checked_fails_cl
 check_contains crates/core/src/config/tests/load_tests.rs "runtime_config_value_parsers_reject_unknown_values"
 check_contains crates/core/src/config/tests/p2p_tests.rs "load_checked_fails_closed_on_zero_p2p_connect_interval_ms"
 check_contains apps/cli/src/commands/config/tests.rs "set_rejects_zero_p2p_connect_interval_without_rewriting_config"
+check_contains apps/cli/src/commands/config/tests.rs "set_rejects_existing_invalid_runtime_config_without_rewriting"
+check_contains docs/acceptance-cases/11_commands_settings.md "existing_invalid_runtime_config_rejected_without_rewrite"
 check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_ENABLED"
 check_absent apps/cli/src/server/agent_bridge/policy.rs "DEVE_AI_AGENT_BRIDGE_TRUSTED"
 check_contains docs/plan/15_settings.md "DEVE_AI_AGENT_BRIDGE_ENABLED"

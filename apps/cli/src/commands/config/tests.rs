@@ -110,6 +110,29 @@ fn set_rejects_zero_p2p_connect_interval_without_rewriting_config() {
 }
 
 #[test]
+fn set_rejects_existing_invalid_runtime_config_without_rewriting() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let path = dir.path().join("config.toml");
+    let original = r#"[[p2p.peers]]
+label = "peer-b"
+peer_id = "peer-b"
+repo_id = "11111111-1111-1111-1111-111111111111"
+ws_url = "ws://peer-b:3001/ws"
+auth_token_env = "DEVE_P2P_PEER_B_TOKEN"
+"#;
+    std::fs::write(&path, original).expect("seed config");
+
+    let err = set_in_file(&path, "ui.sidebar_width", "300")
+        .expect_err("existing invalid runtime config must fail closed");
+
+    assert!(err.to_string().contains("p2p.peers[0].peer_id"));
+    assert_eq!(
+        std::fs::read_to_string(&path).expect("read config"),
+        original
+    );
+}
+
+#[test]
 fn set_rejects_invalid_env_reference_name_without_rewriting_config() {
     let dir = tempfile::tempdir().expect("tempdir");
     let path = dir.path().join("config.toml");
