@@ -363,6 +363,14 @@ contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-release-basel
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-track-boundary.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-packaging-gate.sh"
 contains "docs/acceptance-cases/12_tech_release.md" "scripts/check-native-process-adapter-gate.sh"
+contains "docs/acceptance-cases/12_tech_release.md" "cargo test -p deve_desktop --features native-packaging -- --nocapture"
+contains "docs/acceptance-cases/12_tech_release.md" "cargo test -p deve_mobile --features native-packaging -- --nocapture"
+not_contains "docs/acceptance-cases/12_tech_release.md" "native-packaging native_authority"
+not_contains "docs/acceptance-cases/12_tech_release.md" "native-packaging embedded_service"
+contains "docs/dev-runbook.md" "cargo test -p deve_desktop --features native-packaging -- --nocapture"
+contains "docs/dev-runbook.md" "cargo test -p deve_mobile --features native-packaging -- --nocapture"
+not_contains "docs/dev-runbook.md" "native-packaging native_authority"
+not_contains "docs/dev-runbook.md" "native-packaging embedded_service"
 contains "docs/acceptance-cases/12_tech_release.md" "target_host_platform_evidence_shell_only true"
 contains "docs/acceptance-cases/12_tech_release.md" "signed_release_readiness_not_claimed true"
 contains "docs/acceptance-cases/12_tech_release.md" "store_distribution_readiness_not_claimed true"
@@ -514,7 +522,8 @@ contains "apps/cli/src/server/node_role_http.rs" '"delivery": r.delivery'
 contains "apps/cli/src/server/node_role_http.rs" '"environment": r.environment'
 contains "apps/cli/src/server/node_role_http.rs" '"repo_health":'
 contains "apps/cli/src/server/node_role.rs" "from_degraded_count_clamps_degraded_count_to_local_total"
-contains "apps/cli/src/server/start.rs" "repo_health_summary"
+contains "apps/cli/src/server/start.rs" "runtime::update_repo_health"
+contains "apps/cli/src/server/runtime/node_role_runtime.rs" "repo_health_summary"
 contains "apps/cli/src/server/static_files.rs" '"embedded-frontend"'
 contains "apps/web/src/api/connection_role.rs" "format_node_role_summary"
 contains "apps/web/src/api/connection_role.rs" "format_repo_health"
