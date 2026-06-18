@@ -1,6 +1,9 @@
 //! plan_ref:
 //!   - 08_auth#unauthorized-handling
 //!   - 08_auth#unauthorized-disconnected-ui
+//!   - 09_web_thin_client_ledger#write-readiness
+//!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
+//!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 //!
 
 use deve_core::native_adapter::NativeRuntimeReadiness;
@@ -41,6 +44,15 @@ pub(super) fn writer_ready_matches(
     }
 }
 
+fn scope_nonce_current_matches(
+    ready_repo_id: Option<&str>,
+    ready_scope_nonce: Option<u64>,
+    repo_id: Option<&str>,
+    scope_nonce: Option<u64>,
+) -> bool {
+    writer_ready_matches(ready_repo_id, ready_scope_nonce, repo_id, scope_nonce)
+}
+
 pub(super) fn native_runtime_readiness_from_parts(
     state: NativeRuntimeConnectionState,
     target: NativeRuntimeReadinessTarget<'_>,
@@ -61,9 +73,11 @@ pub(super) fn native_runtime_readiness_from_parts(
             target.repo_id,
             target.scope_nonce,
         ),
-        scope_nonce_current: matches!(
-            (state.ready_scope_nonce, target.scope_nonce),
-            (Some(ready_scope_nonce), Some(scope_nonce)) if ready_scope_nonce == scope_nonce
+        scope_nonce_current: scope_nonce_current_matches(
+            state.ready_repo_id.as_deref(),
+            state.ready_scope_nonce,
+            target.repo_id,
+            target.scope_nonce,
         ),
     }
 }

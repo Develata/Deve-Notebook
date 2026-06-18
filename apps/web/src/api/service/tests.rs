@@ -60,6 +60,7 @@ fn native_runtime_readiness_requires_node_role_writer_and_current_scope() {
     ws.set_node_role_for_test("main");
 
     let wrong_repo = ws.native_runtime_readiness_for_untracked(Some("repo-b"), Some(7), true);
+    assert!(!wrong_repo.scope_nonce_current);
     assert!(!wrong_repo.writer_ready);
     assert!(!wrong_repo.is_runtime_ready());
 
