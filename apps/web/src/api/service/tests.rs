@@ -123,6 +123,23 @@ fn writer_ready_is_cleared_on_unauthorized_status() {
 }
 
 #[test]
+fn mark_unauthorized_resets_stale_node_role_runtime_summary() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_for_test(ConnectionStatus::Connected);
+    ws.complete_foreground_node_role_reprobe("main | git:mirror", "mirror");
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    ws.mark_unauthorized();
+
+    assert_eq!(ws.status.get_untracked(), ConnectionStatus::Unauthorized);
+    assert_eq!(ws.node_role.get_untracked(), "");
+    assert_eq!(ws.source_control_git_bridge.get_untracked(), "unknown");
+    assert!(!ws.node_role_probe_failed.get_untracked());
+    assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+}
+
+#[test]
 fn writer_ready_is_cleared_on_native_blocked_status() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();

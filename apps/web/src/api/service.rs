@@ -131,6 +131,7 @@ impl WsService {
 
     pub fn mark_unauthorized(&self) {
         self.clear_writer_ready();
+        self.reset_node_role_state(false);
         self.set_status.set(ConnectionStatus::Unauthorized);
     }
 
@@ -149,10 +150,7 @@ impl WsService {
 
     pub(crate) fn begin_foreground_reprobe(&self) {
         self.clear_writer_ready();
-        self.set_node_role.set(String::new());
-        self.set_source_control_git_bridge
-            .set("unknown".to_string());
-        self.set_node_role_probe_failed.set(true);
+        self.reset_node_role_state(true);
     }
 
     pub(crate) fn complete_foreground_node_role_reprobe(
@@ -167,10 +165,14 @@ impl WsService {
     }
 
     pub(crate) fn fail_foreground_node_role_reprobe(&self) {
+        self.reset_node_role_state(true);
+    }
+
+    fn reset_node_role_state(&self, probe_failed: bool) {
         self.set_node_role.set(String::new());
         self.set_source_control_git_bridge
             .set("unknown".to_string());
-        self.set_node_role_probe_failed.set(true);
+        self.set_node_role_probe_failed.set(probe_failed);
     }
 
     pub fn writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>) -> bool {
