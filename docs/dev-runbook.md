@@ -852,8 +852,8 @@ Diagnostics:
 ```bash
 scripts/check-native-process-adapter-gate.sh
 scripts/check-native-packaging-gate.sh
-cargo test -p deve_desktop --features native-packaging native_authority -- --nocapture
-cargo test -p deve_mobile --features native-packaging embedded_service -- --nocapture
+cargo test -p deve_desktop --features native-packaging -- --nocapture
+cargo test -p deve_mobile --features native-packaging -- --nocapture
 ```
 
 Do not record service ports, session secrets, P2P token material, or bootstrap

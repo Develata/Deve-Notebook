@@ -212,8 +212,8 @@
     - run: scripts/check-native-process-adapter-gate.sh
     - run: scripts/check-native-packaging-gate.sh
     - run: cargo test -p deve_core native_adapter -- --nocapture
-    - run: cargo test -p deve_desktop --features native-packaging native_authority -- --nocapture
-    - run: cargo test -p deve_mobile --features native-packaging embedded_service -- --nocapture
+    - run: cargo test -p deve_desktop --features native-packaging -- --nocapture
+    - run: cargo test -p deve_mobile --features native-packaging -- --nocapture
   assertions:
     - native_assert: default_native_authority_closed true
     - native_assert: desktop_opt_in_requires_native_authority_and_desktop_local_service_env true
