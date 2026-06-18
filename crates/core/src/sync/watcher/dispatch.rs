@@ -84,6 +84,23 @@ fn dispatch_rename(
         )?;
         return Ok(());
     }
+    let old_self_write = sync.should_ignore_fs_event(repo_name, &old_path);
+    let new_self_write = sync.should_ignore_fs_event(repo_name, &new_path);
+    if old_self_write && new_self_write {
+        return Ok(());
+    }
+    if old_self_write || new_self_write {
+        dispatch_rename_as_path_events(
+            sync,
+            repo_name,
+            repo_id,
+            repo_root,
+            ignore_rules.as_ref(),
+            paths,
+            callback,
+        )?;
+        return Ok(());
+    }
     if !filter::allows_repo_path(&old_path) || !filter::allows_repo_path(&new_path) {
         dispatch_rename_as_path_events(
             sync,

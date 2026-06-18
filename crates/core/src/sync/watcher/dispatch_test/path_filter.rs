@@ -139,6 +139,33 @@ fn dispatch_batch_degrades_untracked_rename_pair_to_added_path() -> anyhow::Resu
 }
 
 #[test]
+fn dispatch_batch_suppresses_self_write_rename_pair() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    commit_doc(&repo, &sync, &repo_name, "notes/a.md", "base")?;
+    let old = repo_root.join("notes").join("a.md");
+    let new = repo_root.join("notes").join("b.md");
+
+    repo.record_projection_delete(&repo_name, "notes/a.md");
+    repo.record_projection_write(&repo_name, "notes/b.md", "base");
+    std::fs::rename(&old, &new)?;
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![rename_event(old, new)],
+        None,
+    )?;
+
+    assert!(
+        repo.list_pending_fs_in_local_repo(&repo_name)?.is_empty(),
+        "projection self-write rename pair must not become pending external change"
+    );
+    Ok(())
+}
+
+#[test]
 fn dispatch_batch_degrades_rename_from_non_markdown_to_markdown_as_add() -> anyhow::Result<()> {
     let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
     let old = repo_root.join("notes").join("draft.txt");
