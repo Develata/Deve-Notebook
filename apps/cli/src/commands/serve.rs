@@ -54,11 +54,9 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         native_loopback,
     } = options;
     if dev {
-        if std::env::var("DEVE_ENV").is_err() {
-            // 仅对当前 serve 进程显式开启开发模式；不恢复全局隐式 debug 授权。
-            unsafe {
-                std::env::set_var("DEVE_ENV", "development");
-            }
+        // 仅对当前 serve 进程显式开启开发模式；不恢复全局隐式 debug 授权。
+        unsafe {
+            std::env::set_var("DEVE_ENV", "development");
         }
         tracing::warn!("Serve dev mode enabled via --dev");
     }

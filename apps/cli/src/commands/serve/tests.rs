@@ -1,8 +1,12 @@
 use super::{ServeOptions, detect_main_port, proxy_node_role, run};
 use axum::{Router, routing::get};
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
+use std::ffi::OsString;
 use std::net::{SocketAddr, TcpListener};
+use std::sync::Mutex;
 use tempfile::TempDir;
+
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 fn free_port() -> u16 {
     TcpListener::bind("127.0.0.1:0")
@@ -106,4 +110,66 @@ async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
     .expect_err("native loopback must fail closed on occupied port");
 
     assert!(err.to_string().contains("refusing proxy fallback"), "{err}");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn serve_dev_overrides_existing_deve_env_for_current_process() {
+    let _guard = ENV_LOCK.lock().expect("env lock");
+    let _env = EnvGuard::set("DEVE_ENV", Some("production"));
+    let dir = TempDir::new().expect("tempdir");
+    let ledger_dir = dir.path().join("ledger");
+    let projection_base = dir.path().join("notes");
+    let repo = deve_core::ledger::RepoManager::init(&ledger_dir, 8, Some("default"), None)
+        .expect("init repo");
+    repo.set_projection_base_for_local_repo("default", &projection_base)
+        .expect("locator");
+
+    run(
+        &ledger_dir,
+        ServeOptions {
+            port: free_port(),
+            snapshot_depth: 8,
+            dev: true,
+            dry_run: true,
+            profile: AppProfile::Standard,
+            sync_mode: SyncMode::Auto,
+            git_bridge: GitBridgeMode::Mirror,
+            p2p: P2pConfig::default(),
+            native_loopback: false,
+        },
+    )
+    .await
+    .expect("serve dev dry-run");
+
+    assert_eq!(std::env::var("DEVE_ENV").as_deref(), Ok("development"));
+}
+
+struct EnvGuard {
+    key: &'static str,
+    previous: Option<OsString>,
+}
+
+impl EnvGuard {
+    fn set(key: &'static str, value: Option<&str>) -> Self {
+        let previous = std::env::var_os(key);
+        unsafe {
+            match value {
+                Some(value) => std::env::set_var(key, value),
+                None => std::env::remove_var(key),
+            }
+        }
+        Self { key, previous }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        unsafe {
+            if let Some(previous) = self.previous.as_ref() {
+                std::env::set_var(self.key, previous);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
 }

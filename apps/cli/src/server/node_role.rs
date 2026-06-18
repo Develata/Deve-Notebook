@@ -170,7 +170,14 @@ pub fn get_node_role() -> NodeRole {
 }
 
 pub fn runtime_environment() -> String {
-    std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".into())
+    runtime_environment_label(std::env::var("DEVE_ENV").ok().as_deref()).into()
+}
+
+fn runtime_environment_label(env: Option<&str>) -> &'static str {
+    match env {
+        Some(value) if value.trim().eq_ignore_ascii_case("development") => "development",
+        _ => "production",
+    }
 }
 
 fn role_cell() -> Arc<RwLock<NodeRole>> {
@@ -197,7 +204,7 @@ fn default_node_role() -> NodeRole {
 
 #[cfg(test)]
 mod tests {
-    use super::{RepoHealthSummary, SourceControlSummary};
+    use super::{RepoHealthSummary, SourceControlSummary, runtime_environment_label};
     use deve_core::config::GitBridgeMode;
 
     #[test]
@@ -263,5 +270,20 @@ mod tests {
             "off"
         );
         assert_eq!(SourceControlSummary::unknown().git_bridge, "unknown");
+    }
+
+    #[test]
+    fn runtime_environment_label_reports_effective_mode() {
+        assert_eq!(
+            runtime_environment_label(Some("development")),
+            "development"
+        );
+        assert_eq!(
+            runtime_environment_label(Some(" Development ")),
+            "development"
+        );
+        assert_eq!(runtime_environment_label(Some("production")), "production");
+        assert_eq!(runtime_environment_label(Some("staging")), "production");
+        assert_eq!(runtime_environment_label(None), "production");
     }
 }
