@@ -266,11 +266,14 @@ fn source_control_git_bridge(json: &serde_json::Value) -> &str {
 fn is_repo_health_payload(json: &serde_json::Value) -> bool {
     has_str_field(json, "status")
         && has_u64_field(json, "local_total")
+        && has_u64_field(json, "healthy")
         && has_u64_field(json, "degraded")
 }
 
 fn is_source_control_payload(json: &serde_json::Value) -> bool {
-    has_str_field(json, "git_bridge")
+    json.get("git_bridge")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|mode| matches!(mode, "mirror" | "off" | "unknown"))
 }
 
 fn has_str_field(json: &serde_json::Value, key: &str) -> bool {
