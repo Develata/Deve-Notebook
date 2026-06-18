@@ -46,6 +46,28 @@ async fn spawn_json_server(payload: serde_json::Value) -> SocketAddr {
     addr
 }
 
+async fn spawn_node_role_server(role: &'static str) -> SocketAddr {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind test server");
+    let addr = listener.local_addr().expect("server addr");
+    let port = addr.port();
+    let app = Router::new().route(
+        "/api/node/role",
+        get(move || async move {
+            Json(serde_json::json!({
+                "role": role,
+                "ws_port": port,
+                "main_port": port,
+            }))
+        }),
+    );
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.expect("serve test app");
+    });
+    addr
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn detect_main_port_returns_none_without_healthy_server() {
     let port = free_port();
@@ -54,12 +76,13 @@ async fn detect_main_port_returns_none_without_healthy_server() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn detect_main_port_finds_deve_process_via_node_role() {
-    let addr = spawn_json_server(serde_json::json!({
-        "role": "main",
-        "ws_port": 3001,
-        "main_port": 3001,
-    }))
-    .await;
+    let addr = spawn_node_role_server("main").await;
+    assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn detect_main_port_accepts_native_main_node_role() {
+    let addr = spawn_node_role_server("native-main").await;
     assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
 }
 
@@ -73,6 +96,30 @@ async fn detect_main_port_rejects_non_success_status() {
 async fn detect_main_port_rejects_non_node_role_payload() {
     let addr = spawn_json_server(serde_json::json!({
         "status": "ok",
+    }))
+    .await;
+
+    assert_eq!(detect_main_port(addr.port()).await, None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn detect_main_port_rejects_proxy_node_role_payload() {
+    let addr = spawn_json_server(serde_json::json!({
+        "role": "proxy",
+        "ws_port": 3002,
+        "main_port": 3001,
+    }))
+    .await;
+
+    assert_eq!(detect_main_port(addr.port()).await, None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn detect_main_port_rejects_node_role_for_different_port() {
+    let addr = spawn_json_server(serde_json::json!({
+        "role": "main",
+        "ws_port": 3001,
+        "main_port": 3001,
     }))
     .await;
 

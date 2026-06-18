@@ -151,7 +151,7 @@ fn proxy_node_role(plugin_port: u16, main_port: u16) -> crate::server::node_role
 
 async fn detect_main_port(port: u16) -> Option<u16> {
     let mut ports = vec![port];
-    for p in port.saturating_sub(2)..=port + 4 {
+    for p in port.saturating_sub(2)..=port.saturating_add(4) {
         if !ports.contains(&p) {
             ports.push(p);
         }
@@ -177,7 +177,7 @@ async fn probe_node_role(client: &Client, port: u16) -> bool {
                     .await
                     .ok()
                     .as_ref()
-                    .is_some_and(is_node_role_payload)
+                    .is_some_and(|payload| is_main_node_role_payload(payload, port))
                 {
                     return true;
                 }
@@ -191,17 +191,18 @@ async fn probe_node_role(client: &Client, port: u16) -> bool {
     false
 }
 
-fn is_node_role_payload(payload: &serde_json::Value) -> bool {
-    payload
+fn is_main_node_role_payload(payload: &serde_json::Value, probed_port: u16) -> bool {
+    let role = payload
         .get("role")
         .and_then(serde_json::Value::as_str)
-        .is_some()
+        .unwrap_or_default();
+    matches!(role, "main" | "native-main")
         && payload
             .get("ws_port")
             .and_then(serde_json::Value::as_u64)
-            .is_some()
+            .is_some_and(|port| port == u64::from(probed_port))
         && payload
             .get("main_port")
             .and_then(serde_json::Value::as_u64)
-            .is_some()
+            .is_some_and(|port| port == u64::from(probed_port))
 }
