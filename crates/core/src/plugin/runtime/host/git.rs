@@ -11,6 +11,8 @@ mod target;
 
 use crate::ledger::traits::RepoSelector;
 use crate::plugin::manifest::Capability;
+use crate::protocol::ScPathTarget;
+use crate::utils::path::to_forward_slash;
 use rhai::{Engine, EvalAltResult};
 use std::sync::Arc;
 
@@ -77,9 +79,8 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 return Err("Permission denied: source control access not allowed.".into());
             }
             let repo = super::source_control_api().map_err(|e| e.to_string())?;
-            let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
-            let target = target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
+            let target = resolve_sc_target_for_host(path)?;
             let diff = repo
                 .diff_doc_path_in_repo(&selector, &target)
                 .map_err(|e| e.to_string())?;
@@ -94,10 +95,9 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                 return Err("Permission denied: source control access not allowed.".into());
             }
             let repo = super::source_control_api().map_err(|e| e.to_string())?;
-            let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
             let selector = RepoSelector::default();
             ensure_write_allowed(&selector)?;
-            let target = target::resolve_local_sc_target(repo_manager.as_ref(), path)?;
+            let target = resolve_sc_target_for_host(path)?;
             repo.stage_pending_in_repo(&selector, &target)
                 .map_err(|e| e.to_string().into())
         },
@@ -123,6 +123,19 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
 fn ensure_write_allowed(selector: &RepoSelector) -> Result<(), Box<EvalAltResult>> {
     super::ensure_source_control_write_allowed(selector)
         .map_err(|error| plugin_error_text(error).into())
+}
+
+fn resolve_sc_target_for_host(path: &str) -> Result<ScPathTarget, Box<EvalAltResult>> {
+    match super::source_control_mode() {
+        Ok(super::SourceControlHostMode::RemoteDelegated) => Ok(ScPathTarget {
+            path: to_forward_slash(path),
+            doc_id: None,
+        }),
+        Ok(super::SourceControlHostMode::Local { .. }) | Err(_) => {
+            let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;
+            target::resolve_local_sc_target(repo_manager.as_ref(), path)
+        }
+    }
 }
 
 fn plugin_error_text(error: crate::protocol::ServerError) -> String {
