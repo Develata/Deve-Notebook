@@ -28,27 +28,15 @@ pub(crate) fn dispatch_batch(
             continue;
         }
         for path in &event.paths {
-            let Some(repo_path) = repo_path(repo_root, path) else {
-                continue;
-            };
-            let root_relative = sync
-                .repo
-                .local_repo_workspace_relative(repo_name, &repo_path);
-            if ignored_by_rules(ignore_rules.as_ref(), &root_relative, &repo_path) {
-                continue;
-            }
-            if !filter::allows_repo_path(&repo_path) {
-                dispatch_dir_change(sync, repo_name, repo_id, &root_relative, &repo_path, path)?;
-                continue;
-            }
-            if sync.should_ignore_fs_event(repo_name, &repo_path) {
-                continue;
-            }
-            for msg in sync.handle_fs_event(repo_name, repo_id, &repo_path)? {
-                if let Some(cb) = callback {
-                    cb(msg);
-                }
-            }
+            dispatch_path(
+                sync,
+                repo_name,
+                repo_id,
+                repo_root,
+                ignore_rules.as_ref(),
+                path,
+                callback,
+            )?;
         }
     }
     Ok(())
@@ -73,20 +61,38 @@ fn dispatch_rename(
         return Ok(());
     };
     let ignore_rules = Some(IgnoreRules::load(repo_root));
+    let old_root_relative = sync
+        .repo
+        .local_repo_workspace_relative(repo_name, &old_path);
     let new_root_relative = sync
         .repo
         .local_repo_workspace_relative(repo_name, &new_path);
-    if ignored_by_rules(ignore_rules.as_ref(), &new_root_relative, &new_path) {
+    let old_ignored = ignored_by_rules(ignore_rules.as_ref(), &old_root_relative, &old_path);
+    let new_ignored = ignored_by_rules(ignore_rules.as_ref(), &new_root_relative, &new_path);
+    if old_ignored && new_ignored {
         return Ok(());
     }
-    if !filter::allows_repo_path(&old_path) || !filter::allows_repo_path(&new_path) {
-        dispatch_dir_change(
+    if old_ignored || new_ignored {
+        dispatch_rename_as_path_events(
             sync,
             repo_name,
             repo_id,
-            &new_root_relative,
-            &new_path,
-            &paths[1],
+            repo_root,
+            ignore_rules.as_ref(),
+            paths,
+            callback,
+        )?;
+        return Ok(());
+    }
+    if !filter::allows_repo_path(&old_path) || !filter::allows_repo_path(&new_path) {
+        dispatch_rename_as_path_events(
+            sync,
+            repo_name,
+            repo_id,
+            repo_root,
+            ignore_rules.as_ref(),
+            paths,
+            callback,
         )?;
         return Ok(());
     }
@@ -110,6 +116,78 @@ fn dispatch_rename(
             cb(pending::message(
                 &sync.repo, repo_name, repo_id, &new_path, "added",
             )?);
+        }
+    } else {
+        dispatch_rename_as_path_events(
+            sync,
+            repo_name,
+            repo_id,
+            repo_root,
+            ignore_rules.as_ref(),
+            paths,
+            callback,
+        )?;
+    }
+    Ok(())
+}
+
+fn dispatch_rename_as_path_events(
+    sync: &Arc<SyncManager>,
+    repo_name: &str,
+    repo_id: RepoId,
+    repo_root: &Path,
+    ignore_rules: Option<&IgnoreRules>,
+    paths: &[std::path::PathBuf],
+    callback: Option<&WatcherCallback>,
+) -> Result<(), WatcherError> {
+    dispatch_path(
+        sync,
+        repo_name,
+        repo_id,
+        repo_root,
+        ignore_rules,
+        &paths[0],
+        callback,
+    )?;
+    dispatch_path(
+        sync,
+        repo_name,
+        repo_id,
+        repo_root,
+        ignore_rules,
+        &paths[1],
+        callback,
+    )
+}
+
+fn dispatch_path(
+    sync: &Arc<SyncManager>,
+    repo_name: &str,
+    repo_id: RepoId,
+    repo_root: &Path,
+    ignore_rules: Option<&IgnoreRules>,
+    path: &Path,
+    callback: Option<&WatcherCallback>,
+) -> Result<(), WatcherError> {
+    let Some(repo_path) = repo_path(repo_root, path) else {
+        return Ok(());
+    };
+    let root_relative = sync
+        .repo
+        .local_repo_workspace_relative(repo_name, &repo_path);
+    if ignored_by_rules(ignore_rules, &root_relative, &repo_path) {
+        return Ok(());
+    }
+    if !filter::allows_repo_path(&repo_path) {
+        dispatch_dir_change(sync, repo_name, repo_id, &root_relative, &repo_path, path)?;
+        return Ok(());
+    }
+    if sync.should_ignore_fs_event(repo_name, &repo_path) {
+        return Ok(());
+    }
+    for msg in sync.handle_fs_event(repo_name, repo_id, &repo_path)? {
+        if let Some(cb) = callback {
+            cb(msg);
         }
     }
     Ok(())
