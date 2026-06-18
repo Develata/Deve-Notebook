@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 07_network#server-ws-runtime
 //!   - 14_commands#cli-commands
 //!   - 18_release#runtime-observability
 
@@ -13,6 +14,8 @@ const DEFAULT_MAIN_PORT: u16 = 3001;
 
 #[derive(Debug, Deserialize)]
 struct NodeRoleResponse {
+    role: String,
+    ws_port: u16,
     main_port: u16,
 }
 
@@ -25,7 +28,7 @@ pub fn is_db_lock_error(err: &anyhow::Error) -> bool {
 
 pub fn dump(ledger_dir: &Path, path: &str, repo_name: Option<&str>) -> Result<DumpResponse> {
     let base = main_base_url(ledger_dir)?;
-    let client = Client::new();
+    let client = local_client()?;
     block_on_safe(async move {
         let response = client
             .get(format!("{base}/api/admin/dump"))
@@ -39,7 +42,7 @@ pub fn dump(ledger_dir: &Path, path: &str, repo_name: Option<&str>) -> Result<Du
 
 pub fn export(ledger_dir: &Path, repo_name: Option<&str>) -> Result<Vec<ExportEntry>> {
     let base = main_base_url(ledger_dir)?;
-    let client = Client::new();
+    let client = local_client()?;
     block_on_safe(async move {
         let response = client
             .get(format!("{base}/api/admin/export"))
@@ -56,7 +59,7 @@ pub fn node_check(
     repair: bool,
 ) -> Result<Vec<NodeCheckResponse>> {
     let base = main_base_url(ledger_dir)?;
-    let client = Client::new();
+    let client = local_client()?;
     block_on_safe(async move {
         let response = client
             .get(format!("{base}/api/admin/node-check"))
@@ -73,7 +76,7 @@ pub fn projection_check(
     repo_name: Option<&str>,
 ) -> Result<Vec<ProjectionCheckResponse>> {
     let base = main_base_url(ledger_dir)?;
-    let client = Client::new();
+    let client = local_client()?;
     block_on_safe(async move {
         let response = client
             .get(format!("{base}/api/admin/projection-check"))
@@ -114,7 +117,7 @@ fn read_main_port_hint(ledger_dir: &Path) -> Result<Option<u16>> {
 }
 
 async fn detect_main_port() -> Result<u16> {
-    let client = Client::new();
+    let client = local_client()?;
     for port in candidate_ports() {
         let url = format!("http://127.0.0.1:{port}/api/node/role");
         let Ok(response) = client.get(&url).send().await else {
@@ -123,14 +126,37 @@ async fn detect_main_port() -> Result<u16> {
         if !response.status().is_success() {
             continue;
         }
-        let role = response.json::<NodeRoleResponse>().await?;
-        return Ok(if role.main_port == 0 {
-            port
-        } else {
-            role.main_port
-        });
+        let Ok(role) = response.json::<NodeRoleResponse>().await else {
+            continue;
+        };
+        if let Some(main_port) = trusted_main_port(&role, port) {
+            return Ok(main_port);
+        }
     }
     Err(anyhow!("Main process not detected on localhost"))
+}
+
+fn local_client() -> Result<Client> {
+    Client::builder()
+        .no_proxy()
+        .build()
+        .context("Failed to build localhost proxy client")
+}
+
+fn trusted_main_port(role: &NodeRoleResponse, probed_port: u16) -> Option<u16> {
+    match role.role.as_str() {
+        "main" | "native-main" if role.ws_port == probed_port && role.main_port == probed_port => {
+            Some(probed_port)
+        }
+        "proxy"
+            if role.ws_port == probed_port
+                && role.main_port != 0
+                && role.main_port != probed_port =>
+        {
+            Some(role.main_port)
+        }
+        _ => None,
+    }
 }
 
 async fn parse_json<T: for<'de> Deserialize<'de>>(response: reqwest::Response) -> Result<T> {
