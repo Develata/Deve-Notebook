@@ -170,15 +170,38 @@ async fn probe_node_role(client: &Client, port: u16) -> bool {
     let url = format!("http://127.0.0.1:{}/api/node/role", port);
     for attempt in 0..3 {
         let req = client.get(&url);
-        if matches!(
-            timeout(Duration::from_millis(300), req.send()).await,
-            Ok(Ok(_))
-        ) {
-            return true;
+        match timeout(Duration::from_millis(300), req.send()).await {
+            Ok(Ok(response)) if response.status().is_success() => {
+                if response
+                    .json::<serde_json::Value>()
+                    .await
+                    .ok()
+                    .as_ref()
+                    .is_some_and(is_node_role_payload)
+                {
+                    return true;
+                }
+            }
+            _ => {}
         }
         if attempt < 2 {
             sleep(Duration::from_millis(25)).await;
         }
     }
     false
+}
+
+fn is_node_role_payload(payload: &serde_json::Value) -> bool {
+    payload
+        .get("role")
+        .and_then(serde_json::Value::as_str)
+        .is_some()
+        && payload
+            .get("ws_port")
+            .and_then(serde_json::Value::as_u64)
+            .is_some()
+        && payload
+            .get("main_port")
+            .and_then(serde_json::Value::as_u64)
+            .is_some()
 }
