@@ -15,6 +15,7 @@ mod spawn_spec;
 
 use spawn_spec::build_spawn_spec;
 
+pub const DEVE_NATIVE_AUTHORITY_ENV: &str = "DEVE_NATIVE_AUTHORITY";
 pub const DEVE_DESKTOP_LOCAL_SERVICE_ENV: &str = "DEVE_DESKTOP_LOCAL_SERVICE";
 const DESKTOP_SERVICE_MAX_RESTART_ATTEMPTS: u32 = 2;
 
@@ -74,8 +75,8 @@ pub struct DesktopLocalServiceEntrypointPlan {
 
 #[derive(Debug, Error)]
 pub enum DesktopLocalServiceEntrypointError {
-    #[error("desktop local service opt-in value is invalid: {value}")]
-    InvalidOptInValue { value: String },
+    #[error("desktop local service opt-in env {env} has invalid value: {value}")]
+    InvalidOptInValue { env: &'static str, value: String },
     #[error("desktop executable path has no parent directory")]
     MissingExecutableParent,
     #[error("failed to resolve desktop process path")]
@@ -92,10 +93,13 @@ pub enum DesktopLocalServiceEntrypointError {
 
 pub fn desktop_local_service_entrypoint_policy_from_env()
 -> Result<DesktopLocalServiceEntrypointPolicy, DesktopLocalServiceEntrypointError> {
-    let Some(value) = std::env::var_os(DEVE_DESKTOP_LOCAL_SERVICE_ENV) else {
-        return Ok(DesktopLocalServiceEntrypointPolicy::disabled());
-    };
-    parse_opt_in_value(&value.to_string_lossy())
+    let native_authority = opt_in_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?;
+    let desktop_local_service = opt_in_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?;
+    if native_authority && desktop_local_service {
+        Ok(DesktopLocalServiceEntrypointPolicy::opt_in_enabled())
+    } else {
+        Ok(DesktopLocalServiceEntrypointPolicy::disabled())
+    }
 }
 
 pub fn plan_desktop_local_service_entrypoint(
@@ -142,13 +146,22 @@ pub fn plan_desktop_local_service_entrypoint_from_env()
     )
 }
 
+fn opt_in_env_flag(env: &'static str) -> Result<bool, DesktopLocalServiceEntrypointError> {
+    let Some(value) = std::env::var_os(env) else {
+        return Ok(false);
+    };
+    parse_opt_in_value(env, &value.to_string_lossy())
+}
+
 fn parse_opt_in_value(
+    env: &'static str,
     value: &str,
-) -> Result<DesktopLocalServiceEntrypointPolicy, DesktopLocalServiceEntrypointError> {
+) -> Result<bool, DesktopLocalServiceEntrypointError> {
     match value.trim().to_ascii_lowercase().as_str() {
-        "1" | "true" | "yes" | "on" => Ok(DesktopLocalServiceEntrypointPolicy::opt_in_enabled()),
-        "0" | "false" | "no" | "off" => Ok(DesktopLocalServiceEntrypointPolicy::disabled()),
+        "1" | "true" | "yes" | "on" => Ok(true),
+        "0" | "false" | "no" | "off" => Ok(false),
         _ => Err(DesktopLocalServiceEntrypointError::InvalidOptInValue {
+            env,
             value: value.to_string(),
         }),
     }

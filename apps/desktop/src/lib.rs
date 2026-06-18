@@ -73,7 +73,7 @@ pub use service_bootstrap::{
 };
 #[cfg(feature = "native-packaging")]
 pub use service_entrypoint::{
-    DEVE_DESKTOP_LOCAL_SERVICE_ENV, DesktopLocalServiceEntrypointError,
+    DEVE_DESKTOP_LOCAL_SERVICE_ENV, DEVE_NATIVE_AUTHORITY_ENV, DesktopLocalServiceEntrypointError,
     DesktopLocalServiceEntrypointInput, DesktopLocalServiceEntrypointPlan,
     DesktopLocalServiceEntrypointPolicy, desktop_local_service_entrypoint_policy_from_env,
     plan_desktop_local_service_entrypoint, plan_desktop_local_service_entrypoint_from_env,

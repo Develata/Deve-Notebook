@@ -4,8 +4,9 @@ use deve_core::config::AppProfile;
 use deve_core::native_adapter::NATIVE_SESSION_BOOTSTRAP_SECRET_ENV;
 
 use crate::{
-    DesktopLocalServiceEntrypointError, DesktopLocalServiceEntrypointInput,
-    DesktopLocalServiceEntrypointPolicy, plan_desktop_local_service_entrypoint,
+    DEVE_DESKTOP_LOCAL_SERVICE_ENV, DEVE_NATIVE_AUTHORITY_ENV, DesktopLocalServiceEntrypointError,
+    DesktopLocalServiceEntrypointInput, DesktopLocalServiceEntrypointPolicy,
+    desktop_local_service_entrypoint_policy_from_env, plan_desktop_local_service_entrypoint,
 };
 
 fn abs(path: &str) -> PathBuf {
@@ -31,6 +32,64 @@ fn desktop_local_service_entrypoint_is_disabled_without_opt_in() {
     .expect("plan");
 
     assert!(plan.is_none());
+}
+
+#[test]
+fn desktop_local_service_entrypoint_env_requires_native_authority_and_local_service() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+
+    {
+        let _guard = EnvGuard::set(&[
+            (DEVE_NATIVE_AUTHORITY_ENV, None),
+            (DEVE_DESKTOP_LOCAL_SERVICE_ENV, Some("1")),
+        ]);
+        assert_eq!(
+            desktop_local_service_entrypoint_policy_from_env().expect("policy"),
+            DesktopLocalServiceEntrypointPolicy::disabled()
+        );
+    }
+
+    {
+        let _guard = EnvGuard::set(&[
+            (DEVE_NATIVE_AUTHORITY_ENV, Some("1")),
+            (DEVE_DESKTOP_LOCAL_SERVICE_ENV, None),
+        ]);
+        assert_eq!(
+            desktop_local_service_entrypoint_policy_from_env().expect("policy"),
+            DesktopLocalServiceEntrypointPolicy::disabled()
+        );
+    }
+
+    {
+        let _guard = EnvGuard::set(&[
+            (DEVE_NATIVE_AUTHORITY_ENV, Some("1")),
+            (DEVE_DESKTOP_LOCAL_SERVICE_ENV, Some("1")),
+        ]);
+        assert_eq!(
+            desktop_local_service_entrypoint_policy_from_env().expect("policy"),
+            DesktopLocalServiceEntrypointPolicy::opt_in_enabled()
+        );
+    }
+}
+
+#[test]
+fn desktop_local_service_entrypoint_env_rejects_invalid_opt_in_value() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+    let _guard = EnvGuard::set(&[
+        (DEVE_NATIVE_AUTHORITY_ENV, Some("maybe")),
+        (DEVE_DESKTOP_LOCAL_SERVICE_ENV, Some("1")),
+    ]);
+
+    let error = desktop_local_service_entrypoint_policy_from_env()
+        .expect_err("invalid native authority opt-in fails closed");
+
+    assert!(matches!(
+        error,
+        DesktopLocalServiceEntrypointError::InvalidOptInValue {
+            env: DEVE_NATIVE_AUTHORITY_ENV,
+            ..
+        }
+    ));
 }
 
 #[test]
@@ -166,4 +225,43 @@ fn desktop_local_service_entrypoint_missing_executable_parent_fails_closed() {
         error,
         DesktopLocalServiceEntrypointError::MissingExecutableParent
     ));
+}
+
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+struct EnvGuard {
+    old: Vec<(&'static str, Option<String>)>,
+}
+
+impl EnvGuard {
+    fn set(vars: &[(&'static str, Option<&str>)]) -> Self {
+        let old = vars
+            .iter()
+            .map(|(key, _)| (*key, std::env::var(key).ok()))
+            .collect::<Vec<_>>();
+        for (key, value) in vars {
+            // SAFETY: tests serialize env mutation through ENV_LOCK and restore every key.
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+        Self { old }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for (key, value) in self.old.drain(..) {
+            // SAFETY: EnvGuard owns restoration for keys it changed while ENV_LOCK is held.
+            unsafe {
+                match value {
+                    Some(value) => std::env::set_var(key, value),
+                    None => std::env::remove_var(key),
+                }
+            }
+        }
+    }
 }
