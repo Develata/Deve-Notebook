@@ -1,6 +1,27 @@
 use super::*;
 use serde_json::json;
 
+fn complete_node_role_payload(git_bridge: &str) -> serde_json::Value {
+    json!({
+        "role": "main",
+        "ws_port": 3001,
+        "main_port": 3001,
+        "version": "0.0.1",
+        "profile": "standard",
+        "delivery": "embedded-frontend",
+        "environment": "development",
+        "source_control": {
+            "git_bridge": git_bridge
+        },
+        "repo_health": {
+            "status": "healthy",
+            "local_total": 1,
+            "healthy": 1,
+            "degraded": 0
+        }
+    })
+}
+
 #[test]
 fn formats_main_runtime_summary() {
     let summary = format_node_role_summary(&json!({
@@ -73,19 +94,8 @@ fn formats_degraded_repo_health() {
 
 #[test]
 fn node_role_probe_result_carries_source_control_git_bridge() {
-    let result = NodeRoleProbeResult::from_json(&json!({
-        "role": "main",
-        "ws_port": 3001,
-        "main_port": 3001,
-        "version": "0.0.1",
-        "profile": "standard",
-        "delivery": "embedded-frontend",
-        "environment": "development",
-        "source_control": {
-            "git_bridge": "off"
-        }
-    }))
-    .expect("valid node role payload");
+    let result = NodeRoleProbeResult::from_json(&complete_node_role_payload("off"))
+        .expect("valid node role payload");
 
     assert!(result.summary.contains("git:off"));
     assert_eq!(result.source_control_git_bridge, "off");
@@ -93,15 +103,8 @@ fn node_role_probe_result_carries_source_control_git_bridge() {
 
 #[test]
 fn node_role_probe_result_normalizes_unknown_source_control_git_bridge() {
-    let result = NodeRoleProbeResult::from_json(&json!({
-        "role": "main",
-        "ws_port": 3001,
-        "main_port": 3001,
-        "source_control": {
-            "git_bridge": "native"
-        }
-    }))
-    .expect("valid node role payload");
+    let result = NodeRoleProbeResult::from_json(&complete_node_role_payload("native"))
+        .expect("valid node role payload");
 
     assert!(result.summary.contains("git:unknown"));
     assert_eq!(result.source_control_git_bridge, "unknown");
@@ -114,6 +117,61 @@ fn node_role_probe_result_rejects_non_node_role_payload() {
         NodeRoleProbeResult::from_json(&json!({
             "role": "main",
             "ws_port": 3001
+        }))
+        .is_none()
+    );
+}
+
+#[test]
+fn node_role_probe_result_rejects_partial_release_runtime_shape() {
+    assert!(
+        NodeRoleProbeResult::from_json(&json!({
+            "role": "main",
+            "ws_port": 3001,
+            "main_port": 3001,
+            "version": "0.0.1",
+            "profile": "standard",
+            "delivery": "embedded-frontend",
+            "environment": "development",
+            "source_control": {
+                "git_bridge": "mirror"
+            }
+        }))
+        .is_none()
+    );
+    assert!(
+        NodeRoleProbeResult::from_json(&json!({
+            "role": "main",
+            "ws_port": 3001,
+            "main_port": 3001,
+            "version": "0.0.1",
+            "profile": "standard",
+            "delivery": "embedded-frontend",
+            "environment": "development",
+            "repo_health": {
+                "status": "healthy",
+                "local_total": 1
+            },
+            "source_control": {
+                "git_bridge": "mirror"
+            }
+        }))
+        .is_none()
+    );
+    assert!(
+        NodeRoleProbeResult::from_json(&json!({
+            "role": "main",
+            "ws_port": 3001,
+            "main_port": 3001,
+            "version": "0.0.1",
+            "profile": "standard",
+            "delivery": "embedded-frontend",
+            "environment": "development",
+            "repo_health": {
+                "status": "healthy",
+                "local_total": 1,
+                "degraded": 0
+            }
         }))
         .is_none()
     );

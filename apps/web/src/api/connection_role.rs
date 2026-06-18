@@ -223,17 +223,17 @@ fn str_field<'a>(json: &'a serde_json::Value, key: &str, fallback: &'a str) -> &
 }
 
 fn is_node_role_payload(json: &serde_json::Value) -> bool {
-    json.get("role")
-        .and_then(serde_json::Value::as_str)
-        .is_some()
+    has_str_field(json, "role")
+        && has_u64_field(json, "ws_port")
+        && has_u64_field(json, "main_port")
+        && has_str_field(json, "version")
+        && has_str_field(json, "profile")
+        && has_str_field(json, "delivery")
+        && has_str_field(json, "environment")
+        && json.get("repo_health").is_some_and(is_repo_health_payload)
         && json
-            .get("ws_port")
-            .and_then(serde_json::Value::as_u64)
-            .is_some()
-        && json
-            .get("main_port")
-            .and_then(serde_json::Value::as_u64)
-            .is_some()
+            .get("source_control")
+            .is_some_and(is_source_control_payload)
 }
 
 fn format_repo_health(json: &serde_json::Value) -> String {
@@ -261,6 +261,24 @@ fn source_control_git_bridge(json: &serde_json::Value) -> &str {
         return "unknown";
     };
     normalize_git_bridge_mode(str_field(source_control, "git_bridge", "unknown"))
+}
+
+fn is_repo_health_payload(json: &serde_json::Value) -> bool {
+    has_str_field(json, "status")
+        && has_u64_field(json, "local_total")
+        && has_u64_field(json, "degraded")
+}
+
+fn is_source_control_payload(json: &serde_json::Value) -> bool {
+    has_str_field(json, "git_bridge")
+}
+
+fn has_str_field(json: &serde_json::Value, key: &str) -> bool {
+    json.get(key).and_then(serde_json::Value::as_str).is_some()
+}
+
+fn has_u64_field(json: &serde_json::Value, key: &str) -> bool {
+    json.get(key).and_then(serde_json::Value::as_u64).is_some()
 }
 
 fn normalize_git_bridge_mode(mode: &str) -> &'static str {
