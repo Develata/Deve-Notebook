@@ -111,7 +111,7 @@ check_contains apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs "source_
 check_contains apps/cli/src/server/ws/route/source_control.rs "ClientMessage::CommitAndPush { message, .. }"
 check_contains apps/cli/src/server/ws/route/source_control.rs "source_control::handle_commit_and_push"
 check_contains apps/cli/src/server/handlers/source_control/commits.rs "COMMIT_AND_PUSH_CLI_ONLY_DETAIL"
-check_contains apps/cli/src/server/handlers/source_control/commits.rs "resolve_current_writable_local_repo"
+check_contains apps/cli/src/server/handlers/source_control/commits.rs "resolve_current_authorized_writable_local_repo"
 check_contains apps/cli/src/server/ws/route/source_control/tests.rs "source_control_scope_nonce_gate_rejects_missing_scope_before_handler"
 check_contains apps/cli/src/server/tests/source_control/source_control_scope_test/write_extra.rs "commit_and_push_ws_returns_cli_only_blocker_without_commit"
 check_contains apps/cli/src/server/handlers/source_control/http_scope.rs "source control scope nonce missing"

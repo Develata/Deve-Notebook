@@ -205,4 +205,46 @@ fn is_main_node_role_payload(payload: &serde_json::Value, probed_port: u16) -> b
             .get("main_port")
             .and_then(serde_json::Value::as_u64)
             .is_some_and(|port| port == u64::from(probed_port))
+        && has_release_node_role_shape(payload)
+}
+
+fn has_release_node_role_shape(payload: &serde_json::Value) -> bool {
+    has_str_field(payload, "version")
+        && has_str_field(payload, "profile")
+        && has_str_field(payload, "delivery")
+        && has_str_field(payload, "environment")
+        && payload
+            .get("repo_health")
+            .is_some_and(has_repo_health_shape)
+        && payload
+            .get("source_control")
+            .is_some_and(has_source_control_shape)
+}
+
+fn has_repo_health_shape(payload: &serde_json::Value) -> bool {
+    has_str_field(payload, "status")
+        && has_u64_field(payload, "local_total")
+        && has_u64_field(payload, "healthy")
+        && has_u64_field(payload, "degraded")
+}
+
+fn has_source_control_shape(payload: &serde_json::Value) -> bool {
+    payload
+        .get("git_bridge")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|mode| matches!(mode, "mirror" | "off" | "unknown"))
+}
+
+fn has_str_field(payload: &serde_json::Value, key: &str) -> bool {
+    payload
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .is_some()
+}
+
+fn has_u64_field(payload: &serde_json::Value, key: &str) -> bool {
+    payload
+        .get(key)
+        .and_then(serde_json::Value::as_u64)
+        .is_some()
 }
