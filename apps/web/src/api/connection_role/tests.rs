@@ -84,7 +84,8 @@ fn node_role_probe_result_carries_source_control_git_bridge() {
         "source_control": {
             "git_bridge": "off"
         }
-    }));
+    }))
+    .expect("valid node role payload");
 
     assert!(result.summary.contains("git:off"));
     assert_eq!(result.source_control_git_bridge, "off");
@@ -94,13 +95,28 @@ fn node_role_probe_result_carries_source_control_git_bridge() {
 fn node_role_probe_result_normalizes_unknown_source_control_git_bridge() {
     let result = NodeRoleProbeResult::from_json(&json!({
         "role": "main",
+        "ws_port": 3001,
+        "main_port": 3001,
         "source_control": {
             "git_bridge": "native"
         }
-    }));
+    }))
+    .expect("valid node role payload");
 
     assert!(result.summary.contains("git:unknown"));
     assert_eq!(result.source_control_git_bridge, "unknown");
+}
+
+#[test]
+fn node_role_probe_result_rejects_non_node_role_payload() {
+    assert!(NodeRoleProbeResult::from_json(&json!({ "status": "ok" })).is_none());
+    assert!(
+        NodeRoleProbeResult::from_json(&json!({
+            "role": "main",
+            "ws_port": 3001
+        }))
+        .is_none()
+    );
 }
 
 #[test]

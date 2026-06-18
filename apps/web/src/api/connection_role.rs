@@ -86,11 +86,11 @@ pub(crate) struct NodeRoleProbeResult {
 }
 
 impl NodeRoleProbeResult {
-    fn from_json(json: &serde_json::Value) -> Self {
-        Self {
+    fn from_json(json: &serde_json::Value) -> Option<Self> {
+        is_node_role_payload(json).then(|| Self {
             summary: format_node_role_summary(json),
             source_control_git_bridge: source_control_git_bridge(json).to_string(),
-        }
+        })
     }
 }
 
@@ -102,8 +102,10 @@ async fn probe_node_role_summary_with_retries(
         if !should_continue() {
             return None;
         }
-        if let Some(json) = fetch_node_role_json_with_timeout(url).await {
-            return Some(NodeRoleProbeResult::from_json(&json));
+        if let Some(json) = fetch_node_role_json_with_timeout(url).await
+            && let Some(result) = NodeRoleProbeResult::from_json(&json)
+        {
+            return Some(result);
         }
         if attempt + 1 < NODE_ROLE_PROBE_RETRIES {
             TimeoutFuture::new(NODE_ROLE_PROBE_RETRY_DELAY_MS).await;
@@ -218,6 +220,20 @@ fn format_node_role_summary(json: &serde_json::Value) -> String {
 
 fn str_field<'a>(json: &'a serde_json::Value, key: &str, fallback: &'a str) -> &'a str {
     json.get(key).and_then(|v| v.as_str()).unwrap_or(fallback)
+}
+
+fn is_node_role_payload(json: &serde_json::Value) -> bool {
+    json.get("role")
+        .and_then(serde_json::Value::as_str)
+        .is_some()
+        && json
+            .get("ws_port")
+            .and_then(serde_json::Value::as_u64)
+            .is_some()
+        && json
+            .get("main_port")
+            .and_then(serde_json::Value::as_u64)
+            .is_some()
 }
 
 fn format_repo_health(json: &serde_json::Value) -> String {
