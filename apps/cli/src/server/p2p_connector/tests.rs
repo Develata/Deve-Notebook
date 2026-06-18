@@ -285,3 +285,25 @@ fn p2p_connector_classifies_structured_protocol_errors() {
         "unrequested_source"
     );
 }
+
+#[test]
+fn p2p_connector_source_boundary_detail_wins_over_generic_auth_text() {
+    assert_eq!(
+        classify_p2p_error(&anyhow::anyhow!(
+            "P2P peer returned protocol error: forbidden SyncPeerUnauthenticated detail=unoffered_source"
+        )),
+        "unoffered_source"
+    );
+    assert_eq!(
+        classify_p2p_error(&anyhow::anyhow!(
+            "P2P peer returned protocol error: unauthorized SyncPeerUnauthenticated detail=unrequested_source"
+        )),
+        "unrequested_source"
+    );
+    assert_eq!(
+        classify_p2p_error(&anyhow::anyhow!(
+            "P2P peer returned protocol error: unauthorized SyncPeerUnauthenticated detail=source_proof_rejected"
+        )),
+        "source_proof_rejected"
+    );
+}

@@ -167,17 +167,6 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         "invalid_repo_id"
     } else if message.contains("configured peer_id") || message.contains("peerid mismatch") {
         "peer_id_mismatch"
-    } else if message.contains("401")
-        || message.contains("403")
-        || message.contains("unauthorized")
-        || message.contains("forbidden")
-    {
-        "unauthorized"
-    } else if message.contains("repo") && message.contains("expected")
-        || message.contains("sent repo") && message.contains("configured repo")
-        || compact.contains("syncreporoutemismatch")
-    {
-        "repo_mismatch"
     } else if message.contains("request source") && message.contains("not offered")
         || compact.contains("unofferedsource")
     {
@@ -193,6 +182,17 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         || compact.contains("sourceattributionrejected")
     {
         "source_proof_rejected"
+    } else if message.contains("401")
+        || message.contains("403")
+        || message.contains("unauthorized")
+        || message.contains("forbidden")
+    {
+        "unauthorized"
+    } else if message.contains("repo") && message.contains("expected")
+        || message.contains("sent repo") && message.contains("configured repo")
+        || compact.contains("syncreporoutemismatch")
+    {
+        "repo_mismatch"
     } else if compact.contains("duplicatesynchello") {
         "duplicate_sync_hello"
     } else if message.contains("invalid handshake signature")
