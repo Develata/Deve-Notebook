@@ -52,6 +52,24 @@ pub(super) async fn handle(
         return;
     }
 
+    if !session.is_browser_session() && session.has_accepted_sync_hello() {
+        tracing::warn!(
+            "Rejected duplicate SyncHello from {} for repo {} scope {}",
+            peer_id,
+            repo_id,
+            scope_nonce
+        );
+        errors::sync_invalid_payload(
+            ch,
+            format!(
+                "duplicate SyncHello: session already accepted peer {} repo {} scope_nonce {}",
+                peer_id, repo_id, scope_nonce
+            ),
+            scope,
+        );
+        return;
+    }
+
     let Some(handshake) = engine::with_strict_mut(state, ch, repo_id, scope, |engine| {
         let local_vector = engine.version_vector().clone();
         engine
@@ -115,6 +133,7 @@ pub(super) async fn handle(
             ),
     );
     session.set_offered_sync_sources(result.to_send.iter().map(|req| req.peer_id.clone()));
+    session.mark_sync_hello_accepted();
     tracing::info!("Session bound to peer {} and repo {}", peer_id, repo_id);
 
     match response::send(state, ch, repo_id, scope_nonce, local_vector) {

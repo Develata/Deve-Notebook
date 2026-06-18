@@ -274,6 +274,44 @@ async fn sync_hello_fullpeer_request_set_excludes_third_party_shadow_sources(
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sync_hello_rejects_duplicate_fullpeer_hello_preserving_sources() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let local_peer = state.identity_key.peer_id();
+    append_local_op(&state, repo_id)?;
+    let remote = IdentityKeyPair::generate();
+    let mut remote_vector = VersionVector::new();
+    remote_vector.update(remote.peer_id(), 1);
+    let mut first_hello = signed_hello(&remote, &remote_vector);
+    first_hello.repo_id = repo_id;
+    first_hello.scope_nonce = 11;
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = empty_session();
+
+    handle_sync_hello(&state, &ch, &mut session, first_hello).await;
+    let _ = collect_unicast_messages(&mut rx).await?;
+    assert!(session.allows_sync_source(&remote.peer_id()));
+    assert!(session.allows_sync_export_source(&local_peer));
+
+    let duplicate_hello = signed_hello_for_scope(&remote, repo_id, 11);
+    handle_sync_hello(&state, &ch, &mut session, duplicate_hello).await;
+
+    let error = recv_protocol_error(&mut rx).await;
+    assert_eq!(error.code, ServerErrorCode::SyncInvalidPayload);
+    assert!(
+        error
+            .detail
+            .as_deref()
+            .is_some_and(|detail| detail.contains("duplicate SyncHello"))
+    );
+    assert_eq!(session.authenticated_peer_id.as_ref(), Some(&remote.peer_id()));
+    assert_eq!(session.bound_repo_id, Some(repo_id));
+    assert_eq!(session.sync_scope_nonce(), Some(11));
+    assert!(session.allows_sync_source(&remote.peer_id()));
+    assert!(session.allows_sync_export_source(&local_peer));
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sync_hello_rejects_unknown_repo_before_binding_session() -> anyhow::Result<()> {
     let (_dir, state, _repo_id) = build_state()?;
     let remote = IdentityKeyPair::generate();

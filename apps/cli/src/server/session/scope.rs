@@ -14,6 +14,7 @@ impl WsSession {
             self.writer_identity = None;
             self.requested_sync_sources.clear();
             self.offered_sync_sources.clear();
+            self.sync_hello_accepted = false;
         }
         self.authenticated_peer_id = Some(peer_id);
     }
@@ -39,6 +40,7 @@ impl WsSession {
             self.writer_identity = None;
             self.requested_sync_sources.clear();
             self.offered_sync_sources.clear();
+            self.sync_hello_accepted = false;
         }
         self.bound_repo_id = Some(repo_id);
     }
@@ -68,6 +70,7 @@ impl WsSession {
         self.current_sync_scope_nonce = None;
         self.requested_sync_sources.clear();
         self.offered_sync_sources.clear();
+        self.sync_hello_accepted = false;
     }
 
     pub fn is_repo_bound(&self, repo_id: &RepoId) -> bool {
@@ -94,6 +97,14 @@ impl WsSession {
 
     pub fn sync_scope_nonce(&self) -> Option<u64> {
         self.current_sync_scope_nonce
+    }
+
+    pub fn mark_sync_hello_accepted(&mut self) {
+        self.sync_hello_accepted = true;
+    }
+
+    pub fn has_accepted_sync_hello(&self) -> bool {
+        self.sync_hello_accepted
     }
 
     pub fn set_requested_sync_sources<I>(&mut self, sources: I)

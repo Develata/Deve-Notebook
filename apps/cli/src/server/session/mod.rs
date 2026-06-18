@@ -67,6 +67,13 @@ pub struct WsSession {
     /// 当前 SyncHello 中本端可向对端发送的 source peer。
     pub offered_sync_sources: Vec<PeerId>,
 
+    /// 当前连接是否已成功接受过 SyncHello。
+    ///
+    /// Invariant:
+    /// - 非浏览器 FullPeer 连接只能接受一次 SyncHello。
+    /// - repo/peer 绑定清理时必须同步归零，避免旧绑定误判为已完成握手。
+    pub sync_hello_accepted: bool,
+
     /// 当前绑定的仓库 ID，用于后续同步消息的 repo 一致性校验。
     pub bound_repo_id: Option<RepoId>,
 
@@ -121,6 +128,7 @@ impl Default for WsSession {
             authenticated_peer_id: None,
             requested_sync_sources: Vec::new(),
             offered_sync_sources: Vec::new(),
+            sync_hello_accepted: false,
             bound_repo_id: None,
             writer_identity: None,
             browser_session: false,
