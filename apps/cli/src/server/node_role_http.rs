@@ -67,7 +67,6 @@ fn native_service_payload(service: &node_role::NativeServiceSummary) -> serde_js
             "session_bound": endpoint.session_bound,
         })),
         "offline": service.offline.as_ref().map(|offline| serde_json::json!({
-            "reason": offline.reason,
             "retryable": offline.retryable,
         })),
     })
@@ -183,5 +182,36 @@ mod tests {
         assert_eq!(payload["p2p"]["peers"][0]["state"], "connected");
         assert!(payload.to_string().find("token").is_none());
         assert!(payload.to_string().find("auth_token_env").is_none());
+    }
+
+    #[test]
+    fn native_service_payload_omits_internal_offline_reason() {
+        let payload = role_payload(&node_role::NodeRole {
+            role: "native-main".into(),
+            ws_port: 3001,
+            main_port: 3001,
+            version: "0.0.1".into(),
+            profile: "standard".into(),
+            delivery: "embedded-frontend".into(),
+            environment: "development".into(),
+            repo_health: node_role::RepoHealthSummary::unknown(),
+            source_control: node_role::SourceControlSummary::from_git_bridge(
+                deve_core::config::GitBridgeMode::Mirror,
+            ),
+            p2p: node_role::P2pSummary::disabled(),
+            native_service: Some(node_role::NativeServiceSummary {
+                state: "service_offline".into(),
+                endpoint: None,
+                offline: Some(deve_core::native_adapter::NativeServiceOffline {
+                    reason: "C:/Users/user/AppData/Local/deve/service.log".into(),
+                    retryable: true,
+                }),
+            }),
+        });
+
+        assert_eq!(payload["native_service"]["state"], "service_offline");
+        assert_eq!(payload["native_service"]["offline"]["retryable"], true);
+        assert!(payload["native_service"]["offline"].get("reason").is_none());
+        assert!(!payload.to_string().contains("AppData"));
     }
 }
