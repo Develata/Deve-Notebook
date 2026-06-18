@@ -10,7 +10,9 @@
 use super::create_file::handle_file_create;
 use super::create_folder::handle_folder_create;
 use super::errors;
-use super::{resolve_local_write_scope, validate_file_path, validate_folder_path};
+use super::{
+    normalize_repo_path_input, resolve_local_write_scope, validate_file_path, validate_folder_path,
+};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::local_repo_path;
@@ -70,10 +72,7 @@ pub async fn handle_create_doc(
 }
 
 fn normalize_name(name: String) -> Option<String> {
-    let mut name = name.trim().to_string();
-    if name.is_empty() {
-        return None;
-    }
+    let mut name = normalize_repo_path_input(&name)?;
     if !name.ends_with('/') && !name.ends_with(".md") {
         name.push_str(".md");
     }

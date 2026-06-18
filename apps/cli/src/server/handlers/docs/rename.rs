@@ -12,7 +12,10 @@ use super::errors;
 use super::node_target::resolve_node_target;
 use super::rename_dir::handle_dir_rename;
 use super::rename_file::handle_file_rename;
-use super::{checked_exists, resolve_local_write_scope, validate_file_path, validate_folder_path};
+use super::{
+    checked_exists, normalize_repo_path_input, resolve_local_write_scope, validate_file_path,
+    validate_folder_path,
+};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::local_repo_path;
@@ -33,17 +36,19 @@ pub async fn handle_rename_doc(
         return;
     };
 
-    let old_path = old_path.trim();
-    let new_path = new_path.trim();
-    if old_path.is_empty() || new_path.is_empty() {
+    let Some(old_path) = normalize_repo_path_input(&old_path) else {
         errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return;
-    }
-    if !validate_file_path(old_path, ch, scope_nonce) {
+    };
+    let Some(new_path) = normalize_repo_path_input(&new_path) else {
+        errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
+        return;
+    };
+    if !validate_file_path(&old_path, ch, scope_nonce) {
         return;
     }
 
-    let src = match resolve_node_target(state, &scope, old_path) {
+    let src = match resolve_node_target(state, &scope, &old_path) {
         Ok(Some(target)) => target,
         Ok(None) => {
             errors::storage_not_found_scoped(
@@ -60,7 +65,7 @@ pub async fn handle_rename_doc(
     };
 
     // 1. 确保目标路径以 .md 结尾 (如果源是 .md)
-    let mut dst_name = new_path.to_string();
+    let mut dst_name = new_path;
     if src.kind == NodeKind::File && !dst_name.ends_with(".md") {
         dst_name.push_str(".md");
     }

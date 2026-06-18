@@ -85,3 +85,53 @@ async fn create_trims_outer_whitespace_before_appending_md() -> anyhow::Result<(
     );
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_normalizes_backslash_path_before_storage() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (uni_tx, _uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+
+    handle_create_doc(&state, &ch, &mut session, "notes\\win".into()).await;
+
+    assert!(state.repo.get_docid("notes/win.md")?.is_some());
+    assert!(
+        state
+            .repo
+            .local_repo_workspace_path("default", "notes/win.md")?
+            .exists()
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn create_rejects_backslash_internal_segment_before_ledger() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.switch_repo(state.repo.local_repo_name().to_string(), Some(repo_id));
+
+    handle_create_doc(&state, &ch, &mut session, "notes\\.notegit\\hidden".into()).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ProtocolError { error, .. }) => {
+            assert_eq!(error.code, ServerErrorCode::RequestFailed);
+            assert_eq!(
+                error.detail.as_deref(),
+                Some("Reserved internal path: notes/.notegit/hidden.md")
+            );
+        }
+        other => panic!("expected ProtocolError, got {:?}", other),
+    }
+    assert!(state.repo.get_docid("notes/.notegit/hidden.md")?.is_none());
+    assert!(
+        !state
+            .repo
+            .local_repo_workspace_path("default", "notes/.notegit/hidden.md")?
+            .exists()
+    );
+    Ok(())
+}

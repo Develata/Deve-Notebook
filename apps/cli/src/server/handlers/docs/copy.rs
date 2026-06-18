@@ -19,7 +19,7 @@ use super::copy_utils::copy_dir_assets_only;
 use super::errors;
 use super::node_helpers::broadcast_local_projection_refresh;
 use super::notify_fs_refresh;
-use super::{resolve_local_write_scope, validate_file_path};
+use super::{normalize_repo_path_input, resolve_local_write_scope, validate_file_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
@@ -41,17 +41,19 @@ pub async fn handle_copy_doc(
         return;
     };
 
-    let src_path = src_path.trim();
-    let dest_path = dest_path.trim();
-    if src_path.is_empty() || dest_path.is_empty() {
+    let Some(src_path) = normalize_repo_path_input(&src_path) else {
         errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return;
-    }
-    if !validate_file_path(src_path, ch, scope_nonce) {
+    };
+    let Some(dest_path) = normalize_repo_path_input(&dest_path) else {
+        errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
+        return;
+    };
+    if !validate_file_path(&src_path, ch, scope_nonce) {
         return;
     }
 
-    let paths = match prepare_copy_paths(state, ch, &scope, src_path, dest_path, scope_nonce) {
+    let paths = match prepare_copy_paths(state, ch, &scope, &src_path, &dest_path, scope_nonce) {
         Some(paths) => paths,
         None => return,
     };
@@ -67,7 +69,7 @@ pub async fn handle_copy_doc(
             },
             &paths.src,
             &paths.dst,
-            src_path,
+            &src_path,
             dst_repo_path,
         )
     } else {
@@ -79,7 +81,7 @@ pub async fn handle_copy_doc(
                 scope_nonce,
             },
             &paths,
-            src_path,
+            &src_path,
             dst_repo_path,
         )
     };

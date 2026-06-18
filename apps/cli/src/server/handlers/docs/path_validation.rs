@@ -5,8 +5,14 @@
 use super::errors;
 use crate::server::channel::DualChannel;
 use deve_core::protocol::doc_file_op_errors as path_err;
+use deve_core::utils::path::to_forward_slash;
 
 pub const MAX_DEPTH: usize = 10;
+
+pub fn normalize_repo_path_input(path: &str) -> Option<String> {
+    let path = to_forward_slash(path).trim().to_string();
+    (!path.is_empty()).then_some(path)
+}
 
 pub fn validate_file_path(path: &str, ch: &DualChannel, scope_nonce: Option<u64>) -> bool {
     validate_path_kind(path, true, ch, scope_nonce)
@@ -22,27 +28,36 @@ fn validate_path_kind(
     ch: &DualChannel,
     scope_nonce: Option<u64>,
 ) -> bool {
-    if path.contains("..") || path.starts_with('/') || path.starts_with('\\') {
+    let Some(path) = normalize_repo_path_input(path) else {
+        errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
+        return false;
+    };
+    if path.contains("..") || path.starts_with('/') || has_windows_drive_prefix(&path) {
         tracing::error!("路径校验失败 (遍历攻击): {}", path);
-        errors::request_failed_scoped(ch, path_err::invalid_path(path), scope_nonce);
+        errors::request_failed_scoped(ch, path_err::invalid_path(&path), scope_nonce);
         return false;
     }
-    if std::path::Path::new(path).components().count() > MAX_DEPTH {
-        tracing::error!("路径校验失败 (深度超限): {}", path);
-        errors::request_failed_scoped(ch, path_err::depth_limit_exceeded(MAX_DEPTH), scope_nonce);
-        return false;
-    }
-
     let segments: Vec<_> = path
         .trim_end_matches('/')
         .split('/')
         .filter(|segment| !segment.is_empty())
         .collect();
+    if segments.len() > MAX_DEPTH {
+        tracing::error!("路径校验失败 (深度超限): {}", path);
+        errors::request_failed_scoped(ch, path_err::depth_limit_exceeded(MAX_DEPTH), scope_nonce);
+        return false;
+    }
+
     if segments.is_empty() {
         errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return false;
     }
-    validate_segments(path, allow_file_leaf, &segments, ch, scope_nonce)
+    validate_segments(&path, allow_file_leaf, &segments, ch, scope_nonce)
+}
+
+fn has_windows_drive_prefix(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
 fn validate_segments(

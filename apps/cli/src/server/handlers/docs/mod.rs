@@ -32,7 +32,7 @@ mod rename_file;
 pub use copy::handle_copy_doc;
 pub use create::handle_create_doc;
 pub use delete::handle_delete_doc;
-pub use path_validation::{validate_file_path, validate_folder_path};
+pub use path_validation::{normalize_repo_path_input, validate_file_path, validate_folder_path};
 pub use rename::{handle_move_doc, handle_rename_doc};
 
 use crate::server::AppState;

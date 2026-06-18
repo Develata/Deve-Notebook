@@ -12,7 +12,7 @@ use super::errors;
 use super::node_helpers::broadcast_local_projection_refresh;
 use super::node_target::resolve_node_target;
 use super::notify_fs_refresh;
-use super::{resolve_local_write_scope, validate_file_path};
+use super::{normalize_repo_path_input, resolve_local_write_scope, validate_file_path};
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
@@ -34,17 +34,16 @@ pub async fn handle_delete_doc(
         return;
     };
 
-    let path = path.trim();
-    if path.is_empty() {
+    let Some(path) = normalize_repo_path_input(&path) else {
         errors::request_failed_scoped(ch, path_err::INVALID_EMPTY_PATH, scope_nonce);
         return;
-    }
-    if !validate_file_path(path, ch, scope_nonce) {
+    };
+    if !validate_file_path(&path, ch, scope_nonce) {
         return;
     }
 
     tracing::info!("handle_delete_doc: path={}", path);
-    let target = match resolve_node_target(state, &scope, path) {
+    let target = match resolve_node_target(state, &scope, &path) {
         Ok(Some(target)) => target,
         Ok(None) => {
             errors::storage_not_found_scoped(

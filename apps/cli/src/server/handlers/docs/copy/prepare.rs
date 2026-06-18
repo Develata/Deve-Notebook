@@ -48,6 +48,13 @@ pub(super) fn prepare_copy_paths(
         errors::request_failed_scoped(ch, path_err::DESTINATION_MUST_DIFFER, scope_nonce);
         return None;
     }
+    if !(if src.kind == NodeKind::Dir {
+        validate_folder_path(&dst_repo_path, ch, scope_nonce)
+    } else {
+        validate_file_path(&dst_repo_path, ch, scope_nonce)
+    }) {
+        return None;
+    }
     let dst = match local_repo_path(state, scope, &dst_repo_path) {
         Ok(path) => path,
         Err(err) => {
@@ -72,13 +79,6 @@ pub(super) fn prepare_copy_paths(
             format!("Destination exists: {}", dst_repo_path),
             scope_nonce,
         );
-        return None;
-    }
-    if !(if src.kind == NodeKind::Dir {
-        validate_folder_path(&dst_repo_path, ch, scope_nonce)
-    } else {
-        validate_file_path(&dst_repo_path, ch, scope_nonce)
-    }) {
         return None;
     }
     let mut src_exists = match checked_exists(&src.abs_path, "copy source projection") {
