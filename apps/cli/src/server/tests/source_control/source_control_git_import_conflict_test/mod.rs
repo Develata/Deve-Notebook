@@ -14,7 +14,8 @@ use tokio::sync::mpsc;
 
 use super::source_control_git_import_test_support as support;
 use support::{
-    build_state, create_imported_conflict_fixture, git, init_git_repo, write_workspace_file,
+    build_state, create_imported_conflict_fixture, git, grant_browser_write, init_git_repo,
+    write_workspace_file,
 };
 
 mod resolution;

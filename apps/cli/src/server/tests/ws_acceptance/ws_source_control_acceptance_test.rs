@@ -3,12 +3,15 @@
 //!   - 05_diff_logic#source-control-runtime
 
 use super::ws_protocol_acceptance_support::{
-    recv_server_message, send_client_message, switch_to_notes_repo,
+    expect_sync_hello_and_shadow_list, recv_server_message, send_client_message,
+    switch_to_notes_repo,
 };
 use super::ws_source_control_acceptance_support::{
     SourceControlWsHarness, TestWs, send_scoped,
 };
+use super::sync_hello_test_support::signed_hello_for_scope;
 use deve_core::protocol::{ClientMessage, ScPathTarget, ServerErrorCode, ServerMessage};
+use deve_core::security::IdentityKeyPair;
 use deve_core::source_control::ChangeEntry;
 
 const SCOPE: u64 = 1;
@@ -23,6 +26,7 @@ async fn ws_source_control_stage_commit_history_roundtrip() -> anyhow::Result<()
     let mut ws = harness.connect().await?;
 
     switch_to_notes_repo(&mut ws, harness.repo_id, SCOPE).await?;
+    register_writer(&mut ws, &harness).await?;
     request_changes(&mut ws, "before").await?;
     assert_changes(
         recv_server_message(&mut ws).await?,
@@ -117,6 +121,45 @@ async fn request_changes(ws: &mut TestWs, request_id: &str) -> anyhow::Result<()
     .await
 }
 
+async fn register_writer(
+    ws: &mut TestWs,
+    harness: &SourceControlWsHarness,
+) -> anyhow::Result<()> {
+    let remote = IdentityKeyPair::generate();
+    let hello = signed_hello_for_scope(&remote, harness.repo_id, SCOPE);
+    send_client_message(
+        ws,
+        ClientMessage::SyncHello {
+            peer_id: hello.peer_id,
+            peer_pubkey: hello.peer_pubkey,
+            session_proof: hello.session_proof,
+            vector: hello.remote_vector,
+            repo_id: hello.repo_id,
+            scope_nonce: hello.scope_nonce.into(),
+        },
+    )
+    .await?;
+    expect_sync_hello_and_shadow_list(
+        ws,
+        harness.repo_id,
+        SCOPE,
+        &harness.local_peer_id,
+        &remote,
+    )
+    .await?;
+    send_client_message(
+        ws,
+        ClientMessage::RegisterWriter {
+            peer_id: remote.peer_id(),
+            repo_id: harness.repo_id,
+            scope_nonce: SCOPE.into(),
+        },
+    )
+    .await?;
+    assert_write_ready(recv_server_message(ws).await?, harness.repo_id, &remote);
+    Ok(())
+}
+
 async fn request_history(ws: &mut TestWs) -> anyhow::Result<()> {
     send_client_message(
         ws,
@@ -166,6 +209,23 @@ fn assert_stage_ack(message: ServerMessage, repo_id: uuid::Uuid) {
             assert_eq!(path, PATH);
         }
         other => panic!("expected StageAck, got {other:?}"),
+    }
+}
+
+fn assert_write_ready(message: ServerMessage, repo_id: uuid::Uuid, remote: &IdentityKeyPair) {
+    match message {
+        ServerMessage::WriteReady {
+            peer_id,
+            repo_id: actual,
+            scope_nonce,
+            branch,
+        } => {
+            assert_eq!(
+                (peer_id, actual, scope_nonce, branch),
+                (remote.peer_id(), repo_id, SCOPE.into(), None)
+            );
+        }
+        other => panic!("expected WriteReady, got {other:?}"),
     }
 }
 

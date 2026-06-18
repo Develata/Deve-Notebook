@@ -7,9 +7,8 @@ async fn imported_conflict_keep_fs_resolves_to_clean_staged_entry() -> anyhow::R
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(fixture.state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.mark_browser_session();
     session.switch_repo(fixture.repo_name.clone(), None);
-    session.set_scope_nonce(Some(31));
+    grant_browser_write(&fixture.state, &mut session, fixture.repo_id, 31)?;
 
     handle_resolve_conflict(
         &fixture.state,
@@ -67,9 +66,8 @@ async fn imported_conflict_keep_ledger_discards_import_without_staging() -> anyh
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(fixture.state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.mark_browser_session();
     session.switch_repo(fixture.repo_name.clone(), None);
-    session.set_scope_nonce(Some(32));
+    grant_browser_write(&fixture.state, &mut session, fixture.repo_id, 32)?;
 
     handle_resolve_conflict(
         &fixture.state,
@@ -144,9 +142,13 @@ async fn resolve_conflict_rejects_non_conflict_pending_entry() -> anyhow::Result
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.mark_browser_session();
     session.switch_repo(repo_name.clone(), None);
-    session.set_scope_nonce(Some(35));
+    let repo_id = state
+        .repo
+        .get_repo_info_for(None, Some(&repo_name))?
+        .ok_or_else(|| anyhow::anyhow!("missing repo info"))?
+        .uuid;
+    grant_browser_write(&state, &mut session, repo_id, 35)?;
 
     handle_resolve_conflict(
         &state,

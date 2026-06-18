@@ -14,7 +14,7 @@ use deve_core::source_control::ConflictResolution;
 use tokio::sync::mpsc;
 
 use super::source_control_git_import_test_support as support;
-use support::{create_mapped_imported_conflict_fixture, git};
+use support::{create_mapped_imported_conflict_fixture, git, grant_browser_write};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn resolved_import_keep_fs_commits_and_exports_to_git() -> anyhow::Result<()> {
@@ -23,9 +23,8 @@ async fn resolved_import_keep_fs_commits_and_exports_to_git() -> anyhow::Result<
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(fixture.state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.mark_browser_session();
     session.switch_repo(fixture.repo_name.clone(), None);
-    session.set_scope_nonce(Some(36));
+    grant_browser_write(&fixture.state, &mut session, fixture.repo_id, 36)?;
 
     handle_resolve_conflict(
         &fixture.state,

@@ -156,6 +156,69 @@ async fn degraded_local_source_control_writes_are_rejected_before_mutation() -> 
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn local_browser_source_control_writes_require_session_grant() -> anyhow::Result<()> {
+    let (dir, state, _default_id, test_id) = build_state()?;
+    state.repo.ensure_local_repo_workspace_identity("test")?;
+    write_workspace_file(&dir, "test", "notes/pending.md", "pending");
+    write_workspace_file(&dir, "test", "notes/staged.md", "staged");
+    seed_pending(state.repo.as_ref(), "test", "notes/pending.md", "pending");
+    seed_pending(state.repo.as_ref(), "test", "notes/staged.md", "staged");
+    state
+        .repo
+        .stage_pending_in_local_repo("test", "notes/staged.md")?;
+    let expected_local_state = local_source_control_counts(state.repo.as_ref(), "test")?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(16);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("test".into(), Some(test_id));
+    session.set_scope_nonce(Some(45));
+    let pending_target = || ScPathTarget::from_path("notes/pending.md");
+    let staged_target = || ScPathTarget::from_path("notes/staged.md");
+
+    handle_stage_file(&state, &ch, &mut session, pending_target()).await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+
+    handle_stage_files(&state, &ch, &mut session, vec![pending_target()]).await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+
+    handle_unstage_file(&state, &ch, &mut session, staged_target()).await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+
+    handle_unstage_files(&state, &ch, &mut session, vec![staged_target()]).await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+
+    handle_discard_file(&state, &ch, &mut session, pending_target()).await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+
+    handle_resolve_conflict(
+        &state,
+        &ch,
+        &mut session,
+        pending_target(),
+        ConflictResolution::KeepLedger,
+    )
+    .await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+
+    handle_commit(&state, &ch, &mut session, "unauthorized write".into()).await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+
+    handle_commit_and_push(&state, &ch, &mut session, "unauthorized write".into()).await;
+    expect_stale_grant_error(&mut uni_rx, 45).await;
+    assert_local_source_control_counts(state.repo.as_ref(), "test", expected_local_state);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn commit_and_push_ws_returns_cli_only_blocker_without_commit() -> anyhow::Result<()> {
     let (dir, state, _default_id, test_id) = build_state()?;
     state.repo.ensure_local_repo_workspace_identity("test")?;
@@ -173,7 +236,7 @@ async fn commit_and_push_ws_returns_cli_only_blocker_without_commit() -> anyhow:
     let mut session = WsSession::new();
     session.mark_browser_session();
     session.switch_repo("test".into(), Some(test_id));
-    session.set_scope_nonce(Some(47));
+    grant_browser_write(&state, &mut session, test_id, 47)?;
 
     handle_commit_and_push(&state, &ch, &mut session, "publish".into()).await;
 
@@ -221,6 +284,24 @@ async fn expect_degraded_projection_error(rx: &mut mpsc::Receiver<ServerMessage>
             assert_eq!(scope_nonce, Some(nonce));
         }
         other => panic!("expected degraded projection ProtocolError, got {:?}", other),
+    }
+}
+
+async fn expect_stale_grant_error(rx: &mut mpsc::Receiver<ServerMessage>, nonce: u64) {
+    match rx.recv().await {
+        Some(ServerMessage::ProtocolError {
+            error, scope_nonce, ..
+        }) => {
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("source control write grant"))
+            );
+            assert_eq!(scope_nonce, Some(nonce));
+        }
+        other => panic!("expected stale grant ProtocolError, got {:?}", other),
     }
 }
 

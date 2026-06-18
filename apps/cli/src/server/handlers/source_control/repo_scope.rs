@@ -78,6 +78,35 @@ pub fn resolve_current_writable_local_repo(
     Ok(scope)
 }
 
+pub fn resolve_current_authorized_writable_local_repo(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> Result<ResolvedRepo, ServerError> {
+    let scope = resolve_current_writable_local_repo(state, session)?;
+    authorize_browser_local_write(state, session, scope.repo_id)?;
+    Ok(scope)
+}
+
+fn authorize_browser_local_write(
+    state: &Arc<AppState>,
+    session: &WsSession,
+    repo_id: deve_core::models::RepoId,
+) -> Result<(), ServerError> {
+    if !session.is_browser_session() {
+        return Ok(());
+    }
+    let Some(auth_session_id) = session.auth_session_id() else {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScStaleScope,
+            "source control write grant missing",
+        ));
+    };
+    state
+        .source_control_write_grants()
+        .authorize_browser_local(auth_session_id, repo_id, session.scope_nonce())?;
+    Ok(())
+}
+
 fn clear_runtime_binding_and_revoke(state: &Arc<AppState>, session: &mut WsSession) {
     session.clear_active_db();
     session.clear_sync_binding();

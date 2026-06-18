@@ -18,10 +18,11 @@ pub(super) async fn commit_with_ack(
     error_label: &str,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let scope = match super::repo_scope::resolve_current_writable_local_repo(state, session) {
-        Ok(scope) => scope,
-        Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
-    };
+    let scope =
+        match super::repo_scope::resolve_current_authorized_writable_local_repo(state, session) {
+            Ok(scope) => scope,
+            Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
+        };
     let selector = super::service::selector_from_scope(&scope);
     match super::service::commit_staged_with_git_bridge(
         state.repo.as_ref(),

@@ -76,9 +76,8 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.mark_browser_session();
     session.switch_repo(repo_name.clone(), None);
-    session.set_scope_nonce(Some(34));
+    grant_browser_write(&state, &mut session, repo_id, 34)?;
 
     handle_resolve_conflict(
         &state,
@@ -188,9 +187,8 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
     let mut session = WsSession::new();
-    session.mark_browser_session();
     session.switch_repo(repo_name.clone(), None);
-    session.set_scope_nonce(Some(33));
+    grant_browser_write(&state, &mut session, repo_id, 33)?;
 
     handle_resolve_conflict(
         &state,

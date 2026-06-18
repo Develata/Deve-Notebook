@@ -4,6 +4,7 @@
 
 use super::{router, sync_hello_test_support::build_state};
 use crate::server::AppState;
+use deve_core::models::PeerId;
 use deve_core::protocol::ClientMessage;
 use deve_core::security::AuthConfig;
 use deve_core::source_control::ChangeStatus;
@@ -22,6 +23,7 @@ pub(super) struct SourceControlWsHarness {
     _dir: TempDir,
     state: Arc<AppState>,
     pub(super) repo_id: uuid::Uuid,
+    pub(super) local_peer_id: PeerId,
     ws_url: String,
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
@@ -30,6 +32,7 @@ pub(super) struct SourceControlWsHarness {
 impl SourceControlWsHarness {
     pub(super) async fn spawn() -> anyhow::Result<Self> {
         let (dir, state, repo_id) = build_state()?;
+        let local_peer_id = state.identity_key.peer_id();
         let listener = TcpListener::bind("127.0.0.1:0").await?;
         let addr = listener.local_addr()?;
         let mut auth_config = AuthConfig::dev_default()?;
@@ -49,6 +52,7 @@ impl SourceControlWsHarness {
             _dir: dir,
             state,
             repo_id,
+            local_peer_id,
             ws_url: format!("ws://{addr}/ws"),
             shutdown: Some(shutdown_tx),
             task,

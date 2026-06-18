@@ -104,7 +104,9 @@ pub async fn handle_commit_and_push(
     _message: String,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    if let Err(e) = super::repo_scope::resolve_current_writable_local_repo(state, session) {
+    if let Err(e) =
+        super::repo_scope::resolve_current_authorized_writable_local_repo(state, session)
+    {
         return super::errors::send_ws_scoped(ch, e, scope_nonce);
     }
     super::errors::send_ws_code_scoped(

@@ -1,13 +1,13 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::{build_state, write_workspace_file};
+use super::support::{build_state, grant_default_browser_write, write_workspace_file};
 use crate::server::{
     channel::DualChannel, handlers::source_control::handle_commit, session::WsSession,
 };
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::source_control::ChangeStatus;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use std::sync::Arc;
@@ -16,6 +16,9 @@ use tokio::sync::mpsc;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyhow::Result<()> {
     let (dir, state) = build_state()?;
+    state
+        .repo
+        .ensure_local_repo_workspace_identity(state.repo.local_repo_name())?;
     write_workspace_file(&dir, "notes/stale.md", "hello");
     state
         .repo
@@ -36,12 +39,11 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
     state.repo.stage_pending("notes/stale.md")?;
 
     let stale_db = Arc::new(redb::Database::create(dir.path().join("stale-local.redb"))?);
-    let (uni_tx, _uni_rx) = mpsc::channel(8);
+    let before_commits = state.repo.list_commits(10)?.len();
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
-    let mut rx = state.tx.subscribe();
     let mut session = WsSession::new();
-    session.mark_browser_session();
-    session.set_scope_nonce(Some(29));
+    grant_default_browser_write(&state, &mut session, 29)?;
     session.set_active_db(DatabaseHandle {
         db: stale_db,
         readonly: false,
@@ -55,17 +57,24 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
 
     handle_commit(&state, &ch, &mut session, "stale".into()).await;
 
-    match rx.recv().await.expect("broadcast ack") {
-        ServerMessage::CommitAck {
-            repo_id,
+    match uni_rx.recv().await.expect("stale scope error") {
+        ServerMessage::ProtocolError {
+            error,
             scope_nonce,
             ..
         } => {
-            assert_eq!(repo_id, state.repo.get_repo_info()?.map(|info| info.uuid));
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
+            assert!(
+                error
+                    .detail
+                    .as_deref()
+                    .is_some_and(|detail| detail.contains("source control write grant"))
+            );
             assert_eq!(scope_nonce, Some(29));
         }
-        other => panic!("expected CommitAck, got {:?}", other),
+        other => panic!("expected ProtocolError, got {:?}", other),
     }
+    assert_eq!(state.repo.list_commits(10)?.len(), before_commits);
     let default_id = state.repo.get_repo_info()?.expect("default info").uuid;
     assert_eq!(session.active_repo.as_deref(), Some("default"));
     assert_eq!(session.active_repo_id, Some(default_id));

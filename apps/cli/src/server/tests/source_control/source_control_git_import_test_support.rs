@@ -1,6 +1,6 @@
 //! Shared Git import source-control test fixtures.
 
-use crate::server::AppState;
+use crate::server::{AppState, session::WsSession};
 use deve_core::git_bridge::{
     GitMirrorCommitState, GitMirrorRunOptions, apply_import, export_mirror, get_record,
 };
@@ -31,6 +31,15 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
 
 pub(super) fn write_workspace_file(dir: &TempDir, repo_name: &str, path: &str, content: &str) {
     scope_support::write_workspace_file(dir, repo_name, path, content);
+}
+
+pub(super) fn grant_browser_write(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+    repo_id: uuid::Uuid,
+    scope_nonce: u64,
+) -> anyhow::Result<()> {
+    scope_support::grant_browser_write(state, session, repo_id, scope_nonce)
 }
 
 pub(super) fn git(path: &Path, args: &[&str]) -> String {
