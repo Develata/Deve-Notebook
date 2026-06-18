@@ -179,15 +179,16 @@ pub(crate) fn http_base_from_ws_url(ws_url: &str) -> String {
 
 fn strip_ws_path_suffix(http_url: &str) -> String {
     let split_idx = http_url.find(['?', '#']).unwrap_or(http_url.len());
-    let (base, suffix) = http_url.split_at(split_idx);
+    let base = &http_url[..split_idx];
     match base.strip_suffix("/ws") {
-        Some(base) => format!("{base}{suffix}"),
-        None => http_url.to_string(),
+        Some(base) => base.to_string(),
+        None => base.to_string(),
     }
 }
 
 fn node_role_url_for_http_base(http_base: &str) -> String {
-    let http_url = http_base.trim_end_matches('/');
+    let split_idx = http_base.find(['?', '#']).unwrap_or(http_base.len());
+    let http_url = http_base[..split_idx].trim_end_matches('/');
     format!("{}/api/node/role", http_url)
 }
 
