@@ -31,7 +31,8 @@ check_contains docs/acceptance-cases/05_ui.md "ui_assert: system_health_refreshe
 check_contains docs/acceptance-cases/05_ui.md "ui_assert: sync_status_updates_via_ws true"
 
 check_contains apps/cli/src/server/metrics.rs "std::time::Duration::from_secs(5)"
-check_contains apps/cli/src/server/start.rs "metrics::spawn_broadcaster(app_state.clone());"
+check_contains apps/cli/src/server/start.rs "runtime::spawn_background_runtime_tasks(p2p, app_state.clone());"
+check_contains apps/cli/src/server/runtime/peripheral_runtime.rs "metrics::spawn_broadcaster(app_state.clone());"
 check_contains crates/core/src/protocol/server.rs "SystemMetrics"
 
 check_contains apps/web/src/hooks/use_core/dashboard_context.rs "pub sample_seq: u64"
