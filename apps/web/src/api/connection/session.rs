@@ -22,6 +22,9 @@ pub(super) struct ConnectedSessionSignals {
     pub set_status: WriteSignal<ConnectionStatus>,
     pub set_msg_seq: WriteSignal<u64>,
     pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
+    pub set_node_role: WriteSignal<String>,
+    pub set_source_control_git_bridge: WriteSignal<String>,
+    pub set_node_role_probe_failed: WriteSignal<bool>,
     pub writer_ready_reset: WriterReadyResetSignals,
     pub connection_epoch: u64,
 }
@@ -110,12 +113,25 @@ pub(super) async fn run_connected_session(
 }
 
 fn try_set_session_status(signals: &ConnectedSessionSignals, status: ConnectionStatus) -> bool {
-    signals.lifecycle.is_active()
-        && set_status_and_revoke_writer_ready(
-            signals.set_status,
-            signals.writer_ready_reset,
-            status,
-        )
+    if !signals.lifecycle.is_active() {
+        return false;
+    }
+    if status != ConnectionStatus::Connected && !reset_node_role_runtime(signals) {
+        return false;
+    }
+    set_status_and_revoke_writer_ready(signals.set_status, signals.writer_ready_reset, status)
+}
+
+fn reset_node_role_runtime(signals: &ConnectedSessionSignals) -> bool {
+    signals
+        .lifecycle
+        .try_set(signals.set_node_role, String::new())
+        && signals
+            .lifecycle
+            .try_set(signals.set_source_control_git_bridge, "unknown".to_string())
+        && signals
+            .lifecycle
+            .try_set(signals.set_node_role_probe_failed, false)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -128,4 +144,57 @@ fn browser_reports_offline() -> bool {
 #[cfg(not(target_arch = "wasm32"))]
 fn browser_reports_offline() -> bool {
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::write_gate::WriterReadyResetSignals;
+    use leptos::prelude::GetUntracked;
+
+    #[test]
+    fn disconnected_session_status_resets_node_role_runtime_summary() {
+        let runtime = leptos::reactive::owner::Owner::new();
+        runtime.set();
+        let (status, set_status) = signal(ConnectionStatus::Connected);
+        let (_msg_seq, set_msg_seq) = signal(0u64);
+        let (_msg_queue, set_msg_queue) =
+            signal(VecDeque::<(u64, u64, deve_core::protocol::ServerMessage)>::new());
+        let (node_role, set_node_role) = signal("main".to_string());
+        let (source_control_git_bridge, set_source_control_git_bridge) =
+            signal("mirror".to_string());
+        let (node_role_probe_failed, set_node_role_probe_failed) = signal(true);
+        let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(Some("repo-a".to_string()));
+        let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(Some(7u64));
+        let (writer_client_id, set_writer_client_id) = signal(Some(9u64));
+
+        let signals = ConnectedSessionSignals {
+            lifecycle: ConnectionLifecycle::new(),
+            set_status,
+            set_msg_seq,
+            set_msg_queue,
+            set_node_role,
+            set_source_control_git_bridge,
+            set_node_role_probe_failed,
+            writer_ready_reset: WriterReadyResetSignals::new(
+                set_writer_ready_repo_id,
+                set_writer_ready_scope_nonce,
+                set_writer_client_id,
+            ),
+            connection_epoch: 1,
+        };
+
+        assert!(try_set_session_status(
+            &signals,
+            ConnectionStatus::Disconnected
+        ));
+
+        assert_eq!(status.get_untracked(), ConnectionStatus::Disconnected);
+        assert_eq!(node_role.get_untracked(), "");
+        assert_eq!(source_control_git_bridge.get_untracked(), "unknown");
+        assert!(!node_role_probe_failed.get_untracked());
+        assert!(writer_ready_repo_id.get_untracked().is_none());
+        assert!(writer_ready_scope_nonce.get_untracked().is_none());
+        assert!(writer_client_id.get_untracked().is_none());
+    }
 }
