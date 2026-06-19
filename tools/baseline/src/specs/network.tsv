@@ -1,0 +1,140 @@
+contains	apps/web/src/api/connection.rs	try_set_connection_status(&signals, ConnectionStatus::Connecting)
+contains	apps/web/src/api/connection.rs	try_set_connection_status(&signals, ConnectionStatus::Disconnected)
+contains	apps/web/src/api/connection/session.rs	try_set_session_status(&signals, ConnectionStatus::Disconnected)
+contains	apps/web/src/api/write_gate.rs	fn status_revokes_writer_ready(status: ConnectionStatus) -> bool
+contains	apps/web/src/api/write_gate.rs	!matches!(status, ConnectionStatus::Connected)
+contains	apps/web/src/api/service/tests.rs	writer_ready_is_cleared_on_disconnected_status
+contains	apps/web/src/api/service/tests.rs	writer_ready_is_cleared_on_unauthorized_status
+contains	apps/web/src/components/disconnect_overlay.rs	ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None
+contains	apps/web/src/hooks/use_core/write_gate/logic.rs	ConnectionStatus::Disconnected => Some(RepoWriteBlock::Offline)
+contains	apps/web/src/hooks/use_core/write_gate/logic.rs	ConnectionStatus::Connecting => Some(RepoWriteBlock::Reconnecting)
+contains	apps/web/src/api/connection_urls.rs	format!("{}://{}/ws", ws_scheme, host)
+contains	apps/web/src/api/connection_urls.rs	cfg!(debug_assertions)
+contains	apps/web/src/api/connection_urls.rs	include_debug_fallbacks
+contains	apps/web/src/api/connection_urls.rs	if include_debug_fallbacks
+contains	apps/web/src/api/connection_urls.rs	ws_port
+contains	apps/web/src/api/connection_urls.rs	fn parse_ws_port(value: &str) -> Option<u16>
+contains	apps/web/src/api/connection_urls.rs	query_ws_port_rejects_invalid_or_zero_ports
+contains	apps/cli/src/server/router.rs	.route("/api/node/role", get(node_role_http::role))
+contains	apps/cli/src/server/router.rs	public = Router::new()
+contains	apps/cli/src/server/node_role_http.rs	"role": r.role
+contains	apps/cli/src/server/node_role_http.rs	"ws_port": r.ws_port
+contains	apps/cli/src/server/node_role_http.rs	"main_port": r.main_port
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 9;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 9;
+contains	crates/core/src/protocol/frame.rs	pub const WS_FRAME_MAGIC: &[u8] = b"DEVEWSF3";
+contains	crates/core/src/protocol/frame.rs	missing WS frame magic
+contains	apps/cli/src/server/ws/receive/mod.rs	MISSING_WS_FRAME_MAGIC
+contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	Some("missing WS frame magic")
+contains	apps/cli/src/server/ws/receive/mod.rs	JSON WS text frames are disabled outside development debug mode
+contains	apps/cli/src/server/ws/receive/mod.rs	allow_ws_json_text_debug
+contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncVersionMismatch
+contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncInvalidPayload
+contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ALLOW_WS_JSON_TEXT
+contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ALLOW_LEGACY_WS_JSON
+contains	apps/cli/src/server/ws/receive/mod.rs	DEVE_ENV
+contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	unsupported_versioned_json_reports_version_mismatch
+contains	apps/cli/src/server/ws/receive/tests/frame_errors.rs	malformed_versioned_binary_reports_invalid_payload
+contains	apps/web/src/api/incoming/tests.rs	binary_malformed_versioned_payload_surfaces_protocol_error
+contains	apps/web/src/api/service.rs	writer_ready_scope_nonce
+contains	apps/web/src/api/service.rs	writer_ready_for(&self, repo_id: Option<&str>, scope_nonce: Option<u64>)
+contains	apps/web/src/hooks/use_core/effects/message_dispatch_write.rs	ws.mark_writer_ready(repo_id, scope_nonce, peer_id.as_str())
+contains	apps/web/src/hooks/use_core/status_summary.rs	PeerNotRegistered
+contains	apps/web/src/components/bottom_bar/status.rs	data-deve-peer-registration-retry="true"
+contains	apps/web/src/components/mobile_layout/footer_status.rs	data-deve-peer-registration-retry="mobile"
+contains	apps/web/src/hooks/use_core/effects/handshake/mod.rs	handshake_retry_nonce
+contains	apps/web/src/hooks/use_core/state_build/assemble.rs	build_retry_peer_registration_callback
+contains	apps/cli/src/server/session/writer.rs	pub scope_nonce: u64
+contains	apps/cli/src/server/session/scope.rs	writer_peer_id_for(&self, repo_id: &RepoId, scope_nonce: Option<u64>)
+contains	apps/cli/src/server/handlers/sync/writer/mod.rs	session.set_writer_identity(repo_id, peer_id.clone(), scope_nonce)
+contains	apps/cli/src/server/handlers/document/edit_checks.rs	.writer_peer_id_for(repo_id, requested_scope_nonce)
+contains	apps/cli/src/server/handlers/document/edit_apply.rs	with_repo_write_gate(repo_id, || append_client_edit_locked(input))
+contains	apps/cli/src/server/handlers/document/write_gate.rs	HashMap<RepoId, Arc<Mutex<()>>
+contains	apps/cli/src/server/handlers/document/write_gate.rs	fn repo_write_gate_serializes_same_repo()
+contains	docs/acceptance-cases/14_operation_flow_refs.md	cargo test -p deve_cli repo_write_gate_serializes_same_repo -- --nocapture
+contains	apps/cli/src/server/ws/route/core_scoped.rs	document::handle_edit(
+contains	apps/cli/src/server/handlers/sync/snapshot.rs	snapshot_kind: Some("full".to_string())
+contains	crates/core/src/protocol/session_proof.rs	pub struct SessionProof
+contains	crates/core/src/protocol/client.rs	peer_pubkey: Vec<u8>
+contains	crates/core/src/protocol/client.rs	session_proof: SessionProof
+contains	apps/cli/src/server/ws/route/mod.rs	session_proof
+contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli ws_endpoint_sync_hello_uses_switched_repo_scope
+contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli ws_endpoint_register_writer_after_sync_hello_returns_write_ready
+contains	apps/cli/src/server/tests/ws_acceptance/ws_sync_hello_acceptance_test.rs	async fn ws_endpoint_sync_hello_uses_switched_repo_scope
+contains	apps/cli/src/server/tests/ws_acceptance/ws_register_writer_acceptance_test.rs	async fn ws_endpoint_register_writer_after_sync_hello_returns_write_ready
+contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli ws_open_doc_and_history_read_back_registered_edit
+contains	apps/cli/src/server/tests/ws_acceptance/ws_edit_readback_acceptance_test.rs	async fn ws_open_doc_and_history_read_back_registered_edit
+contains	apps/cli/src/server/test_modules.rs	mod open_doc_scope_test;
+contains	scripts/check-storage-repo-baseline.sh	case_contains STORE-009 "cargo test -p deve_cli open_doc_scope -- --nocapture"
+contains	apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs	async fn non_browser_sync_request_uses_bound_sync_scope_nonce_for_push
+contains	apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs	async fn sync_request_preserves_requested_source_peer_in_push
+contains	apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_acceptance_test.rs	async fn ws_sync_request_requires_sync_hello_scope
+contains	apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_acceptance_test.rs	async fn ws_sync_request_rejects_wrong_repo_after_sync_hello
+contains	apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs	async fn non_browser_snapshot_request_uses_bound_sync_scope_nonce_for_push
+contains	apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs	async fn snapshot_request_exports_requested_shadow_source
+contains	apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs	async fn snapshot_request_rejects_unoffered_source
+contains	apps/cli/src/server/handlers/sync/snapshot.rs	snapshot_kind: Some("full".to_string())
+contains	apps/cli/src/server/tests/sync/sync_hello_browser_test.rs	async fn browser_sync_hello_rejects_stale_scope_nonce
+contains	apps/cli/src/server/tests/sync/sync_hello_browser_scope_test.rs	async fn browser_sync_hello_rejects_stale_active_db_binding
+contains	apps/cli/src/server/tests/sync/sync_hello_browser_scope_test.rs	async fn browser_sync_hello_rejects_stale_bound_repo_and_writer_identity
+contains	apps/cli/src/server/tests/sync/sync_transfer_push_test.rs	async fn manual_sync_push_buffers_without_applying_remote_ops
+contains	apps/cli/src/server/tests/sync/sync_transfer_push_test.rs	async fn sync_push_uses_message_source_peer_for_shadow_write
+contains	apps/cli/src/server/tests/sync/sync_transfer_push_test.rs	async fn sync_push_does_not_pollute_transport_or_local_ledger
+contains	apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs	async fn sync_push_snapshot_uses_message_source_peer_for_shadow_replace
+contains	apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_acceptance_test.rs	async fn ws_sync_push_rejects_unrequested_source
+contains	apps/cli/src/server/tests/sync/sync_transfer_push_test.rs	async fn sync_push_rejects_unrequested_relay_source
+contains	apps/cli/src/server/tests/sync/sync_transfer_push_test.rs	async fn sync_push_rejects_relay_forged_source_proof
+contains	apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs	async fn sync_push_snapshot_rejects_relay_forged_source_proof
+contains	crates/core/src/protocol/sync_push_header/tests.rs	fn source_proof_signing_rejects_wrong_source_key
+contains	crates/core/src/protocol/sync_push_header/tests.rs	fn source_proof_rejects_payload_tamper
+contains	scripts/check-ws-structured-errors.sh	ws-structured-errors-check: ok
+contains	apps/cli/src/server/ws/route/core_scoped/tests.rs	core_scoped_scope_nonce_gate_rejects_missing_scope_before_handler
+contains	apps/cli/src/server/ws/route/core_scoped/tests.rs	core_scoped_scope_nonce_gate_rejects_stale_scope_before_handler
+contains	scripts/check-auth-unauthorized-state.sh	auth-unauthorized-check: ok
+contains	scripts/smoke-runtime-recovery-path.sh	deve_web \
+contains	scripts/smoke-runtime-recovery-path.sh	status_summary \
+contains	scripts/smoke-runtime-recovery-path.sh	auth_probe \
+contains	docs/plan/07_network.md	Full Peer Mesh v1
+contains	docs/plan/07_network.md	FullPeer
+contains	docs/plan/07_network.md	Admission
+contains	docs/plan/07_network.md	shadow repo
+contains	docs/features/05_network.md	Full Peer Mesh v1
+contains	docs/features/05_network.md	Shadow 与显式合并边界
+contains	docs/acceptance-cases/06_network.md	case_id: NET-014
+contains	docs/acceptance-cases/06_network.md	case_id: NET-015
+contains	docs/acceptance-cases/06_network.md	case_id: NET-016
+contains	docs/acceptance-bindings.tsv	NET-014|manual-network|docs/features/05_network.md
+contains	docs/acceptance-bindings.tsv	NET-015|manual-network|docs/features/05_network.md
+contains	docs/acceptance-bindings.tsv	NET-016|manual-network|docs/features/05_network.md
+contains	apps/cli/src/server/ws/auth.rs	pub(super) enum WsAdmission
+contains	apps/cli/src/server/ws/auth.rs	FullPeer
+contains	apps/cli/src/server/ws/auth.rs	DEVE_P2P_INBOUND_TOKEN
+contains	apps/cli/src/server/ws/auth.rs	fn bearer_token_matches(token: &str, expected: &str) -> bool
+contains	apps/cli/src/server/ws/auth.rs	if bearer_token_matches(token, &expected)
+contains	apps/cli/src/server/ws/mod.rs	admission.browser_auth_session().cloned()
+contains	apps/cli/src/server/ws/mod.rs	session.mark_browser_session()
+contains	apps/cli/src/server/ws/mod.rs	session.bind_auth_session(auth_session_id)
+contains	apps/cli/src/server/router.rs	.route("/ws", get(ws::ws_handler))
+contains	apps/cli/src/server/p2p.rs	spawn_mesh_connectors
+contains	apps/cli/src/server/p2p/connect.rs	P2P mesh connector handshake completed
+contains	apps/cli/src/server/p2p/connect.rs	encode_client_binary(&hello)
+contains	apps/cli/src/server/p2p/source_sets.rs	with_strict_engine(repo_id
+contains	docs/acceptance-cases/06_network.md	p2p_connector_static_token_header_errors_are_terminal
+contains	docs/acceptance-cases/06_network.md	p2p_connector_retry_backoff_starts_at_one_second
+contains	docs/acceptance-cases/06_network.md	p2p_connector_jitter_uses_peer_identity_not_label
+contains	docs/acceptance-cases/06_network.md	load_checked_fails_closed_on_invalid_p2p_peer_id_identity
+contains	docs/acceptance-cases/06_network.md	static_p2p_peer_id_human_label_rejected
+contains	crates/core/src/config/validation.rs	canonical identity peer id
+contains	docker-compose.mesh.yml	00000000000a
+contains	docker-compose.mesh.yml	00000000000b
+contains	docs/acceptance-cases/06_network.md	p2p_exchange_rejects_duplicate_sync_hello
+contains	docs/acceptance-cases/06_network.md	p2p_connector_duplicate_sync_hello_is_terminal
+contains	apps/cli/src/server/p2p/tests/exchange.rs	async fn p2p_exchange_rejects_duplicate_sync_hello
+contains	apps/cli/src/server/p2p_connector/tests.rs	fn p2p_connector_duplicate_sync_hello_is_terminal
+contains	apps/cli/src/server/p2p_connector/tests.rs	fn p2p_connector_retry_backoff_starts_at_one_second
+contains	apps/cli/src/server/p2p_connector/tests.rs	fn p2p_connector_jitter_uses_peer_identity_not_label
+contains	apps/cli/src/server/p2p_connector.rs	"token_invalid"
+contains	apps/cli/src/server/p2p_connector.rs	"duplicate_sync_hello"
+contains	apps/cli/src/server/p2p_connector/tests.rs	fn p2p_connector_static_token_header_errors_are_terminal
+absent	apps/web/src/api/connection_urls.rs	Scanning ports
+absent	apps/cli/src/server/ws/auth.rs	token == expected

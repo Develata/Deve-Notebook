@@ -36,8 +36,10 @@
     - `.github/workflows/release.yml` 可读
   steps:
     - run: scripts/check-release-baseline.sh
+    - run: cargo run -p deve_baseline -- release
     - run: rg -n "tags: \\['v\\*'\\]|type=semver,pattern=\\{\\{version\\}\\}|type=raw,value=latest|ghcr.io/\\$\\{\\{ github.repository \\}\\}" .github/workflows/release.yml
   assertions:
+    - stdout_contains: "release-baseline-check: ok"
     - stdout_contains: "tags: ['v*']"
     - stdout_contains: "type=semver,pattern={{version}}"
     - stdout_contains: "type=raw,value=latest"
@@ -63,7 +65,7 @@
   steps:
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
-    - run: cargo run -p deve_cli --bin deve_baseline -- all
+    - run: cargo run -p deve_baseline -- all
     - run: cargo test -p deve_core ledger_entry_format -- --nocapture
     - run: cargo test -p deve_core redb_schema_version -- --nocapture
     - run: cargo test --locked
@@ -72,6 +74,7 @@
     - exit_code_all_eq: 0
     - stdout_contains: "storage-repo-baseline-check: ok"
     - stdout_contains: "network-baseline-check: ok"
+    - stdout_contains: "release-baseline-check: ok"
     - release_assert: stable_data_format_v1_gates_present true
 
 - case_id: REL-004
@@ -91,6 +94,7 @@
     - platform evidence 不声明 signed release、store distribution、physical-device readiness、native process runtime 或 native authority writes
   steps:
     - run: scripts/check-release-baseline.sh
+    - run: cargo run -p deve_baseline -- release
     - run: scripts/check-native-track-boundary.sh
     - run: scripts/check-native-packaging-gate.sh
     - run: scripts/check-native-process-adapter-gate.sh
@@ -113,6 +117,7 @@
     - run: cargo test -p deve_cli graph -- --nocapture
   assertions:
     - exit_code_eq: 0
+    - stdout_contains: "release-baseline-check: ok"
     - release_assert: embedded_frontend_single_binary_boundary true
     - release_assert: target_host_platform_evidence_shell_only true
     - release_assert: signed_release_readiness_not_claimed true
@@ -142,8 +147,10 @@
   steps:
     - run: DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
     - run: scripts/check-release-baseline.sh
+    - run: cargo run -p deve_baseline -- release
     - chrome_mcp: open dashboard
   assertions:
+    - stdout_contains: "release-baseline-check: ok"
     - json_fields_present: ["version", "profile", "delivery", "environment"]
     - json_fields_present: ["repo_health.status", "repo_health.local_total", "repo_health.degraded"]
     - ui_text_visible_any_of: ["embedded-frontend", "static-dir", "api-only", "plugin-host-proxy"]

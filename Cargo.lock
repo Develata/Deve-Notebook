@@ -1235,6 +1235,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "deve_baseline"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
 name = "deve_cli"
 version = "0.0.1"
 dependencies = [

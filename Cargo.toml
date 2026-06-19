@@ -5,6 +5,7 @@ members = [
     "apps/mobile",
     "apps/web",
     "crates/core",
+    "tools/baseline",
 ]
 resolver = "2"
 
