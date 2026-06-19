@@ -54,6 +54,18 @@ async fn spawn_node_role_server_with_git_bridge(
     role: &'static str,
     git_bridge: &'static str,
 ) -> SocketAddr {
+    spawn_node_role_server_with_git_bridge_and_repo_health(role, git_bridge, "healthy", 1, 1, 0)
+        .await
+}
+
+async fn spawn_node_role_server_with_git_bridge_and_repo_health(
+    role: &'static str,
+    git_bridge: &'static str,
+    repo_health_status: &'static str,
+    local_total: u64,
+    healthy: u64,
+    degraded: u64,
+) -> SocketAddr {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind test server");
@@ -61,7 +73,17 @@ async fn spawn_node_role_server_with_git_bridge(
     let port = addr.port();
     let app = Router::new().route(
         "/api/node/role",
-        get(move || async move { Json(node_role_payload(role, port, git_bridge)) }),
+        get(move || async move {
+            Json(node_role_payload_with_repo_health(
+                role,
+                port,
+                git_bridge,
+                repo_health_status,
+                local_total,
+                healthy,
+                degraded,
+            ))
+        }),
     );
     tokio::spawn(async move {
         axum::serve(listener, app).await.expect("serve test app");
@@ -69,7 +91,15 @@ async fn spawn_node_role_server_with_git_bridge(
     addr
 }
 
-fn node_role_payload(role: &str, port: u16, git_bridge: &str) -> serde_json::Value {
+fn node_role_payload_with_repo_health(
+    role: &str,
+    port: u16,
+    git_bridge: &str,
+    repo_health_status: &str,
+    local_total: u64,
+    healthy: u64,
+    degraded: u64,
+) -> serde_json::Value {
     serde_json::json!({
         "role": role,
         "ws_port": port,
@@ -79,10 +109,10 @@ fn node_role_payload(role: &str, port: u16, git_bridge: &str) -> serde_json::Val
         "delivery": "embedded-frontend",
         "environment": "development",
         "repo_health": {
-            "status": "healthy",
-            "local_total": 1,
-            "healthy": 1,
-            "degraded": 0,
+            "status": repo_health_status,
+            "local_total": local_total,
+            "healthy": healthy,
+            "degraded": degraded,
         },
         "source_control": {
             "git_bridge": git_bridge,
@@ -117,6 +147,23 @@ async fn detect_main_node_role_preserves_source_control_git_bridge_mode() {
 
     assert_eq!(detected.port, addr.port());
     assert_eq!(detected.source_control.git_bridge, "off");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn detect_main_node_role_preserves_repo_health_summary() {
+    let addr = spawn_node_role_server_with_git_bridge_and_repo_health(
+        "main", "mirror", "degraded", 3, 2, 1,
+    )
+    .await;
+
+    let detected = detect_main_node_role(addr.port())
+        .await
+        .expect("main node role");
+
+    assert_eq!(detected.repo_health.status, "degraded");
+    assert_eq!(detected.repo_health.local_total, 3);
+    assert_eq!(detected.repo_health.healthy, 2);
+    assert_eq!(detected.repo_health.degraded, 1);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -176,6 +223,7 @@ fn proxy_node_role_uses_delegated_git_bridge_mode() {
     let role = proxy_node_role(
         3002,
         3001,
+        crate::server::node_role::RepoHealthSummary::from_degraded_count(2, 1),
         crate::server::node_role::SourceControlSummary {
             git_bridge: "off".into(),
         },
@@ -186,6 +234,9 @@ fn proxy_node_role_uses_delegated_git_bridge_mode() {
     assert_eq!(role.main_port, 3001);
     assert_eq!(role.delivery, "plugin-host-proxy");
     assert_eq!(role.source_control.git_bridge, "off");
+    assert_eq!(role.repo_health.status, "degraded");
+    assert_eq!(role.repo_health.local_total, 2);
+    assert_eq!(role.repo_health.degraded, 1);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -131,6 +131,7 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
     crate::server::node_role::set_node_role(proxy_node_role(
         plugin_port,
         main_port,
+        main.repo_health,
         main.source_control,
     ));
     server::start_plugin_host_only(plugins, plugin_port).await
@@ -139,6 +140,7 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
 fn proxy_node_role(
     plugin_port: u16,
     main_port: u16,
+    repo_health: crate::server::node_role::RepoHealthSummary,
     source_control: crate::server::node_role::SourceControlSummary,
 ) -> crate::server::node_role::NodeRole {
     crate::server::node_role::NodeRole {
@@ -149,7 +151,7 @@ fn proxy_node_role(
         profile: "proxy".into(),
         delivery: "plugin-host-proxy".into(),
         environment: crate::server::node_role::runtime_environment(),
-        repo_health: crate::server::node_role::RepoHealthSummary::unknown(),
+        repo_health,
         source_control,
         p2p: crate::server::node_role::P2pSummary::disabled(),
         native_service: None,
@@ -164,6 +166,7 @@ async fn detect_main_port(port: u16) -> Option<u16> {
 #[derive(Debug, Clone)]
 struct MainNodeRoleProbe {
     port: u16,
+    repo_health: crate::server::node_role::RepoHealthSummary,
     source_control: crate::server::node_role::SourceControlSummary,
 }
 
@@ -217,8 +220,33 @@ fn main_node_role_probe(
     }
     Some(MainNodeRoleProbe {
         port: probed_port,
+        repo_health: repo_health_summary_from_payload(payload),
         source_control: source_control_summary_from_payload(payload),
     })
+}
+
+fn repo_health_summary_from_payload(
+    payload: &serde_json::Value,
+) -> crate::server::node_role::RepoHealthSummary {
+    let repo_health = payload.get("repo_health");
+    crate::server::node_role::RepoHealthSummary {
+        status: repo_health
+            .and_then(|repo_health| repo_health.get("status"))
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("unknown")
+            .into(),
+        local_total: repo_health_usize_field(repo_health, "local_total"),
+        healthy: repo_health_usize_field(repo_health, "healthy"),
+        degraded: repo_health_usize_field(repo_health, "degraded"),
+    }
+}
+
+fn repo_health_usize_field(repo_health: Option<&serde_json::Value>, key: &str) -> usize {
+    repo_health
+        .and_then(|repo_health| repo_health.get(key))
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .unwrap_or(0)
 }
 
 fn source_control_summary_from_payload(
