@@ -161,7 +161,10 @@ fn workspace_has_external_content(repo_root: &Path) -> Result<bool> {
         let entry = entry?;
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if name == NOTE_GIT_DIR || name == ".gitignore" || name == DEVE_IGNORE_FILE {
+        if is_internal_repo_segment(name.as_ref())
+            || name == ".gitignore"
+            || name == DEVE_IGNORE_FILE
+        {
             continue;
         }
         return Ok(true);
@@ -313,6 +316,19 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let repo_id = uuid::Uuid::new_v4();
         std::fs::write(dir.path().join(".deveignore"), "ignored/*.md\n").expect("deveignore");
+
+        ensure_repo_identity_marker(dir.path(), repo_id, "default").expect("identity marker");
+
+        validate_repo_identity_marker(dir.path(), repo_id).expect("identity marker validation");
+    }
+
+    #[test]
+    fn git_internal_workspace_allows_identity_bootstrap() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo_id = uuid::Uuid::new_v4();
+        let object = dir.path().join(".git/objects/x");
+        std::fs::create_dir_all(object.parent().expect("parent")).expect("mkdir");
+        std::fs::write(&object, "git object").expect("git object");
 
         ensure_repo_identity_marker(dir.path(), repo_id, "default").expect("identity marker");
 

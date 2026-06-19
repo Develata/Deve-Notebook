@@ -114,6 +114,10 @@ pub(crate) fn scan_local_repo(repo: &Arc<RepoManager>, vfs: &Vfs, repo_name: &st
     }
 
     for pending in repo.list_pending_fs_in_local_repo(repo_name)? {
+        if ignored_by_rules(repo, repo_name, &pending.path, ignore_rules.as_ref()) {
+            clear_scan_pending(repo, repo_name, &pending.path)?;
+            continue;
+        }
         if pending.status == ChangeStatus::Added && !on_disk.contains(&pending.path) {
             clear_scan_pending(repo, repo_name, &pending.path)?;
         }
