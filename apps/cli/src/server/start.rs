@@ -44,6 +44,25 @@ pub async fn start_server_with_options(
     git_bridge: GitBridgeMode,
     p2p: P2pConfig,
 ) -> anyhow::Result<()> {
+    let listener = tokio::net::TcpListener::bind(launch.bind_addr()).await?;
+    start_server_with_bound_listener(
+        repo, launch, plugins, profile, sync_mode, git_bridge, p2p, listener,
+    )
+    .await
+}
+
+pub async fn start_server_with_bound_listener(
+    repo: Arc<RepoManager>,
+    launch: ServerLaunchOptions,
+    plugins: Vec<Box<dyn PluginRuntime>>,
+    #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
+    sync_mode: SyncMode,
+    git_bridge: GitBridgeMode,
+    p2p: P2pConfig,
+    listener: tokio::net::TcpListener,
+) -> anyhow::Result<()> {
+    let bound_port = listener.local_addr()?.port();
+    let launch = launch.with_port(bound_port);
     let port = launch.port();
     runtime::install_repo_host_apis(&repo, git_bridge)?;
     runtime::init_node_role(&launch, profile, git_bridge);
@@ -94,8 +113,7 @@ pub async fn start_server_with_options(
     )?;
     let addr = launch.bind_addr();
     println!("Server running on {}", launch.ws_display_base());
-
-    let listener = tokio::net::TcpListener::bind(addr).await?;
+    debug_assert_eq!(listener.local_addr()?, addr);
     let result = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),

@@ -6,8 +6,9 @@ use std::path::PathBuf;
 
 use deve_core::config::AppProfile;
 use deve_core::native_adapter::{
-    NativeProcessAdapterDecision, NativeProcessAdapterPolicy, NativeProcessRuntimeError,
-    NativeProcessSpawnSpec, desktop_local_backend_policy,
+    NativeProcessAdapterDecision, NativeProcessAdapterPolicy, NativeProcessEnvPolicyError,
+    NativeProcessRuntimeError, NativeProcessSpawnSpec, NativeRuntimeEnvConfig,
+    NativeRuntimeEnvPolicy, desktop_local_backend_policy, parse_optional_env_flag,
 };
 use thiserror::Error;
 
@@ -15,8 +16,8 @@ mod spawn_spec;
 
 use spawn_spec::build_spawn_spec;
 
-pub const DEVE_NATIVE_AUTHORITY_ENV: &str = "DEVE_NATIVE_AUTHORITY";
-pub const DEVE_DESKTOP_LOCAL_SERVICE_ENV: &str = "DEVE_DESKTOP_LOCAL_SERVICE";
+pub use deve_core::native_adapter::{DEVE_DESKTOP_LOCAL_SERVICE_ENV, DEVE_NATIVE_AUTHORITY_ENV};
+
 const DESKTOP_SERVICE_MAX_RESTART_ATTEMPTS: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,12 +102,16 @@ pub enum DesktopLocalServiceEntrypointError {
 
 pub fn desktop_local_service_entrypoint_policy_from_env()
 -> Result<DesktopLocalServiceEntrypointPolicy, DesktopLocalServiceEntrypointError> {
-    let native_authority = optional_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?;
-    let desktop_local_service = optional_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?;
-    if matches!(native_authority, Some(false)) || matches!(desktop_local_service, Some(false)) {
-        Ok(DesktopLocalServiceEntrypointPolicy::disabled())
-    } else {
+    let config = NativeRuntimeEnvConfig {
+        native_authority: parse_optional_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?,
+        desktop_local_service: parse_optional_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?,
+        mobile_embedded_service: None,
+    };
+    let env_policy = NativeRuntimeEnvPolicy::from_config(config);
+    if env_policy.desktop_local_backend_enabled {
         Ok(DesktopLocalServiceEntrypointPolicy::local_backend_default())
+    } else {
+        Ok(DesktopLocalServiceEntrypointPolicy::disabled())
     }
 }
 
@@ -154,29 +159,6 @@ pub fn plan_desktop_local_service_entrypoint_from_env()
     )
 }
 
-fn optional_env_flag(
-    env: &'static str,
-) -> Result<Option<bool>, DesktopLocalServiceEntrypointError> {
-    let Some(value) = std::env::var_os(env) else {
-        return Ok(None);
-    };
-    parse_opt_in_value(env, &value.to_string_lossy()).map(Some)
-}
-
-fn parse_opt_in_value(
-    env: &'static str,
-    value: &str,
-) -> Result<bool, DesktopLocalServiceEntrypointError> {
-    match value.trim().to_ascii_lowercase().as_str() {
-        "1" | "true" | "yes" | "on" => Ok(true),
-        "0" | "false" | "no" | "off" => Ok(false),
-        _ => Err(DesktopLocalServiceEntrypointError::InvalidOptInValue {
-            env,
-            value: value.to_string(),
-        }),
-    }
-}
-
 fn allocate_loopback_port() -> Result<u16, DesktopLocalServiceEntrypointError> {
     let listener = TcpListener::bind(("127.0.0.1", 0))
         .map_err(DesktopLocalServiceEntrypointError::PortAllocationFailed)?;
@@ -184,4 +166,14 @@ fn allocate_loopback_port() -> Result<u16, DesktopLocalServiceEntrypointError> {
         .local_addr()
         .map(|addr| addr.port())
         .map_err(DesktopLocalServiceEntrypointError::PortAllocationFailed)
+}
+
+impl From<NativeProcessEnvPolicyError> for DesktopLocalServiceEntrypointError {
+    fn from(error: NativeProcessEnvPolicyError) -> Self {
+        match error {
+            NativeProcessEnvPolicyError::InvalidFlag { env, value } => {
+                Self::InvalidOptInValue { env, value }
+            }
+        }
+    }
 }

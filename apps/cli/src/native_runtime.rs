@@ -5,13 +5,16 @@
 //!
 //! Native local backend assembly shared by Desktop and Mobile shells.
 
-use crate::server::{NativeLoopbackAuthMaterial, ServerLaunchOptions, start_server_with_options};
+use crate::server::{
+    NativeLoopbackAuthMaterial, ServerLaunchOptions, start_server_with_bound_listener,
+};
 use anyhow::Context;
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::init::RepoInitOptions;
 use deve_core::plugin::loader::PluginLoader;
 use deve_core::plugin::runtime::PluginRuntime;
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -37,6 +40,23 @@ pub struct NativeLocalBackendOptions {
     pub p2p: P2pConfig,
     pub session_bound: bool,
     pub auth_material: Option<NativeLoopbackAuthMaterial>,
+}
+
+#[derive(Debug)]
+pub struct NativeLoopbackListener {
+    listener: TcpListener,
+    port: u16,
+}
+
+impl NativeLoopbackListener {
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    fn into_tokio_listener(self) -> std::io::Result<tokio::net::TcpListener> {
+        self.listener.set_nonblocking(true)?;
+        tokio::net::TcpListener::from_std(self.listener)
+    }
 }
 
 impl NativeLocalBackendOptions {
@@ -106,6 +126,19 @@ pub fn init_default_native_backend(
 pub async fn start_native_loopback_backend(
     options: NativeLocalBackendOptions,
 ) -> anyhow::Result<()> {
+    let listener = bind_native_loopback_listener_exact(options.port)
+        .with_context(|| format!("Failed to bind native loopback port {}", options.port))?;
+    start_native_loopback_backend_with_listener(options, listener).await
+}
+
+pub async fn start_native_loopback_backend_with_listener(
+    mut options: NativeLocalBackendOptions,
+    listener: NativeLoopbackListener,
+) -> anyhow::Result<()> {
+    options.port = listener.port();
+    let listener = listener
+        .into_tokio_listener()
+        .context("Failed to prepare native loopback listener")?;
     let (repo, _) = init_default_native_backend(&options.app_data_dir, options.snapshot_depth)?;
     let plugins = load_native_plugins()?;
     let launch = match options.auth_material {
@@ -116,7 +149,7 @@ pub async fn start_native_loopback_backend(
         ),
         None => ServerLaunchOptions::native_loopback(options.port, options.session_bound),
     };
-    start_server_with_options(
+    start_server_with_bound_listener(
         repo,
         launch,
         plugins,
@@ -124,8 +157,32 @@ pub async fn start_native_loopback_backend(
         options.sync_mode,
         options.git_bridge,
         options.p2p,
+        listener,
     )
     .await
+}
+
+pub fn bind_native_loopback_listener(
+    preferred_port: Option<u16>,
+) -> std::io::Result<NativeLoopbackListener> {
+    let preferred_port = preferred_port.unwrap_or(0);
+    match bind_loopback_listener_on_port(preferred_port) {
+        Ok(listener) => Ok(listener),
+        Err(error) if preferred_port != 0 && error.kind() == std::io::ErrorKind::AddrInUse => {
+            bind_loopback_listener_on_port(0)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+pub fn bind_native_loopback_listener_exact(port: u16) -> std::io::Result<NativeLoopbackListener> {
+    bind_loopback_listener_on_port(port)
+}
+
+fn bind_loopback_listener_on_port(port: u16) -> std::io::Result<NativeLoopbackListener> {
+    let listener = TcpListener::bind(("127.0.0.1", port))?;
+    let port = listener.local_addr()?.port();
+    Ok(NativeLoopbackListener { listener, port })
 }
 
 pub fn load_native_plugins() -> anyhow::Result<Vec<Box<dyn PluginRuntime>>> {
@@ -177,7 +234,10 @@ fn default_native_plugin_dir_candidates() -> Vec<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::{NATIVE_DEFAULT_REPO_NAME, NativeLocalBackendOptions, init_default_native_backend};
+    use super::{
+        NATIVE_DEFAULT_REPO_NAME, NativeLocalBackendOptions, bind_native_loopback_listener,
+        bind_native_loopback_listener_exact, init_default_native_backend,
+    };
 
     #[test]
     fn native_default_backend_initializes_repo_projection_and_notegit() {
@@ -218,5 +278,28 @@ mod tests {
         assert!(!options.session_bound);
         assert!(options.auth_material.is_none());
         assert!(!options.p2p.enabled);
+    }
+
+    #[test]
+    fn native_loopback_listener_falls_back_when_preferred_port_is_occupied() {
+        let occupied = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("occupy port");
+        let occupied_port = occupied.local_addr().expect("addr").port();
+
+        let listener =
+            bind_native_loopback_listener(Some(occupied_port)).expect("fallback listener");
+
+        assert_ne!(listener.port(), occupied_port);
+        assert!(listener.port() > 0);
+    }
+
+    #[test]
+    fn native_loopback_listener_exact_rejects_occupied_port() {
+        let occupied = std::net::TcpListener::bind(("127.0.0.1", 0)).expect("occupy port");
+        let occupied_port = occupied.local_addr().expect("addr").port();
+
+        let error =
+            bind_native_loopback_listener_exact(occupied_port).expect_err("exact bind fails");
+
+        assert_eq!(error.kind(), std::io::ErrorKind::AddrInUse);
     }
 }

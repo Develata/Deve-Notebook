@@ -27,7 +27,7 @@ mod types;
 #[cfg(feature = "native-packaging")]
 pub use embedded_backend::{
     MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError, MobileEmbeddedBackendPlan,
-    MobileEmbeddedBackendScript, allocate_mobile_loopback_port, plan_mobile_embedded_backend,
+    MobileEmbeddedBackendScript, plan_mobile_embedded_backend,
 };
 #[cfg(feature = "native-packaging")]
 pub use packaging::{

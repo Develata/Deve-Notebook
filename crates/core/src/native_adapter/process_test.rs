@@ -105,6 +105,31 @@ fn local_backend_default_policies_enable_runtime_without_shell_authority_writes(
 }
 
 #[test]
+fn runtime_env_policy_keeps_local_backend_enable_separate_from_authority_flag() {
+    let policy = NativeRuntimeEnvPolicy::from_config(NativeRuntimeEnvConfig {
+        native_authority: Some(false),
+        desktop_local_service: None,
+        mobile_embedded_service: None,
+    });
+
+    assert!(policy.desktop_local_backend_enabled);
+    assert!(policy.mobile_embedded_backend_enabled);
+    assert!(policy.desktop_authority_policy.is_deferred_no_runtime());
+    assert!(policy.mobile_authority_policy.is_deferred_no_runtime());
+
+    let disabled = NativeRuntimeEnvPolicy::from_config(NativeRuntimeEnvConfig {
+        native_authority: Some(true),
+        desktop_local_service: Some(false),
+        mobile_embedded_service: Some(false),
+    });
+
+    assert!(!disabled.desktop_local_backend_enabled);
+    assert!(!disabled.mobile_embedded_backend_enabled);
+    assert!(disabled.desktop_authority_policy.is_deferred_no_runtime());
+    assert!(disabled.mobile_authority_policy.is_deferred_no_runtime());
+}
+
+#[test]
 fn default_adapter_binds_existing_loopback_service_without_runtime() {
     let mut adapter = NativeProcessAdapter::default();
 

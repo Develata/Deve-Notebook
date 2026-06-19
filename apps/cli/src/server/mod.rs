@@ -43,5 +43,9 @@ pub mod ws;
 #[allow(unused_imports)]
 pub use launch::NativeLoopbackAuthMaterial;
 pub use launch::ServerLaunchOptions;
-pub use start::{start_plugin_host_only, start_server, start_server_with_options};
+#[allow(unused_imports)]
+pub use start::{
+    start_plugin_host_only, start_server, start_server_with_bound_listener,
+    start_server_with_options,
+};
 pub use state::AppState;

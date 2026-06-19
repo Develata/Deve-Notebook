@@ -854,6 +854,11 @@ DEVE_NATIVE_REMOTE_URL=https://example.invalid
 The URL must be exactly an HTTPS origin: no userinfo, query, fragment, or
 application subpath.
 
+LocalBackend runtime enablement and native shell direct-authority experiments
+are separate knobs. `DEVE_DESKTOP_LOCAL_SERVICE=0` disables the Desktop
+LocalBackend runtime; `DEVE_NATIVE_AUTHORITY=0` does not. Direct native
+authority remains off by default and only participates in explicit test gates.
+
 Desktop LocalBackend starts a controlled child-process local service.
 Mobile LocalBackend starts an in-process embedded loopback service; Mobile v1
 must not use a child process. In both cases the shell handles

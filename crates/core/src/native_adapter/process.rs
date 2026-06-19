@@ -10,6 +10,10 @@ use super::{
     validate_native_endpoint_bases, validate_native_endpoint_ready,
 };
 
+pub const DEVE_NATIVE_AUTHORITY_ENV: &str = "DEVE_NATIVE_AUTHORITY";
+pub const DEVE_DESKTOP_LOCAL_SERVICE_ENV: &str = "DEVE_DESKTOP_LOCAL_SERVICE";
+pub const DEVE_MOBILE_EMBEDDED_SERVICE_ENV: &str = "DEVE_MOBILE_EMBEDDED_SERVICE";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NativeProcessAdapterDecision {
@@ -78,32 +82,87 @@ pub const CURRENT_NATIVE_PROCESS_ADAPTER_POLICY: NativeProcessAdapterPolicy =
         authority_writes_allowed: false,
     };
 
-pub fn desktop_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
-    if env_flag("DEVE_NATIVE_AUTHORITY") && env_flag("DEVE_DESKTOP_LOCAL_SERVICE") {
-        NativeProcessAdapterPolicy {
-            decision: NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn,
-            child_process_runtime_enabled: true,
-            embedded_service_runtime_enabled: false,
-            packaging_gate_required: true,
-            authority_writes_allowed: true,
-        }
-    } else {
-        CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NativeRuntimeEnvConfig {
+    pub native_authority: Option<bool>,
+    pub desktop_local_service: Option<bool>,
+    pub mobile_embedded_service: Option<bool>,
+}
+
+impl NativeRuntimeEnvConfig {
+    pub fn from_env() -> Result<Self, NativeProcessEnvPolicyError> {
+        Ok(Self {
+            native_authority: parse_optional_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?,
+            desktop_local_service: parse_optional_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?,
+            mobile_embedded_service: parse_optional_env_flag(DEVE_MOBILE_EMBEDDED_SERVICE_ENV)?,
+        })
     }
 }
 
-pub fn mobile_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
-    if env_flag("DEVE_NATIVE_AUTHORITY") && env_flag("DEVE_MOBILE_EMBEDDED_SERVICE") {
-        NativeProcessAdapterPolicy {
-            decision: NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn,
-            child_process_runtime_enabled: false,
-            embedded_service_runtime_enabled: true,
-            packaging_gate_required: true,
-            authority_writes_allowed: true,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NativeRuntimeEnvPolicy {
+    pub desktop_local_backend_enabled: bool,
+    pub mobile_embedded_backend_enabled: bool,
+    pub desktop_authority_policy: NativeProcessAdapterPolicy,
+    pub mobile_authority_policy: NativeProcessAdapterPolicy,
+}
+
+impl NativeRuntimeEnvPolicy {
+    pub fn from_config(config: NativeRuntimeEnvConfig) -> Self {
+        let desktop_local_backend_enabled = config.desktop_local_service != Some(false);
+        let mobile_embedded_backend_enabled = config.mobile_embedded_service != Some(false);
+        let desktop_authority_explicit =
+            config.native_authority == Some(true) && config.desktop_local_service == Some(true);
+        let mobile_authority_explicit =
+            config.native_authority == Some(true) && config.mobile_embedded_service == Some(true);
+
+        Self {
+            desktop_local_backend_enabled,
+            mobile_embedded_backend_enabled,
+            desktop_authority_policy: if desktop_authority_explicit {
+                NativeProcessAdapterPolicy {
+                    decision: NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn,
+                    child_process_runtime_enabled: true,
+                    embedded_service_runtime_enabled: false,
+                    packaging_gate_required: true,
+                    authority_writes_allowed: true,
+                }
+            } else {
+                CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+            },
+            mobile_authority_policy: if mobile_authority_explicit {
+                NativeProcessAdapterPolicy {
+                    decision: NativeProcessAdapterDecision::ExplicitNativeAuthorityOptIn,
+                    child_process_runtime_enabled: false,
+                    embedded_service_runtime_enabled: true,
+                    packaging_gate_required: true,
+                    authority_writes_allowed: true,
+                }
+            } else {
+                CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+            },
         }
-    } else {
-        CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum NativeProcessEnvPolicyError {
+    #[error("native environment flag {env} has invalid value: {value}")]
+    InvalidFlag { env: &'static str, value: String },
+}
+
+pub fn desktop_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
+    NativeRuntimeEnvConfig::from_env()
+        .map(NativeRuntimeEnvPolicy::from_config)
+        .map(|policy| policy.desktop_authority_policy)
+        .unwrap_or(CURRENT_NATIVE_PROCESS_ADAPTER_POLICY)
+}
+
+pub fn mobile_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
+    NativeRuntimeEnvConfig::from_env()
+        .map(NativeRuntimeEnvPolicy::from_config)
+        .map(|policy| policy.mobile_authority_policy)
+        .unwrap_or(CURRENT_NATIVE_PROCESS_ADAPTER_POLICY)
 }
 
 pub fn desktop_local_backend_policy() -> NativeProcessAdapterPolicy {
@@ -126,15 +185,27 @@ pub fn mobile_local_backend_policy() -> NativeProcessAdapterPolicy {
     }
 }
 
-fn env_flag(name: &str) -> bool {
-    std::env::var(name)
-        .map(|value| {
-            matches!(
-                value.trim().to_ascii_lowercase().as_str(),
-                "1" | "true" | "yes" | "on"
-            )
-        })
-        .unwrap_or(false)
+pub fn parse_optional_env_flag(
+    env: &'static str,
+) -> Result<Option<bool>, NativeProcessEnvPolicyError> {
+    let Some(value) = std::env::var_os(env) else {
+        return Ok(None);
+    };
+    parse_optional_flag_value(env, &value.to_string_lossy()).map(Some)
+}
+
+pub fn parse_optional_flag_value(
+    env: &'static str,
+    value: &str,
+) -> Result<bool, NativeProcessEnvPolicyError> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Ok(true),
+        "0" | "false" | "no" | "off" => Ok(false),
+        _ => Err(NativeProcessEnvPolicyError::InvalidFlag {
+            env,
+            value: value.to_string(),
+        }),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

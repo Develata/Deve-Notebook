@@ -8,6 +8,8 @@
 //! local service. It is not allowed to become authority for ledger, Projection Locator,
 //! source-control, search, or repo-scope write decisions.
 
+#[cfg(not(target_arch = "wasm32"))]
+mod loopback_http;
 mod packaging;
 mod process;
 mod process_runtime;
@@ -16,16 +18,25 @@ mod supervisor;
 mod types;
 mod validation;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub use loopback_http::{
+    DEFAULT_LOOPBACK_HTTP_RETRY_INTERVAL, DEFAULT_LOOPBACK_HTTP_STARTUP_GRACE,
+    DEFAULT_LOOPBACK_HTTP_TIMEOUT, DEFAULT_MAX_LOOPBACK_RESPONSE_BYTES, NativeLoopbackHttpError,
+    NativeLoopbackHttpProbe, NativeLoopbackHttpResponse, NativeLoopbackHttpTarget,
+    is_retryable_startup_probe_error, loopback_host_from_http_base, parse_loopback_http_url,
+};
 pub use packaging::{
     CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY, NativePackagingDependencyGateDecision,
     NativePackagingDependencyGatePolicy,
 };
 pub use process::{
-    CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeProcessAdapter, NativeProcessAdapterDecision,
-    NativeProcessAdapterError, NativeProcessAdapterPolicy, NativeProcessAdapterSnapshot,
-    NativeProcessAdapterState, desktop_local_backend_policy,
+    CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, DEVE_DESKTOP_LOCAL_SERVICE_ENV,
+    DEVE_MOBILE_EMBEDDED_SERVICE_ENV, DEVE_NATIVE_AUTHORITY_ENV, NativeProcessAdapter,
+    NativeProcessAdapterDecision, NativeProcessAdapterError, NativeProcessAdapterPolicy,
+    NativeProcessAdapterSnapshot, NativeProcessAdapterState, NativeProcessEnvPolicyError,
+    NativeRuntimeEnvConfig, NativeRuntimeEnvPolicy, desktop_local_backend_policy,
     desktop_native_authority_policy_from_env, mobile_local_backend_policy,
-    mobile_native_authority_policy_from_env,
+    mobile_native_authority_policy_from_env, parse_optional_env_flag, parse_optional_flag_value,
 };
 pub use process_runtime::{
     NativeProcessBindHints, NativeProcessEnvBinding, NativeProcessExitStatus,

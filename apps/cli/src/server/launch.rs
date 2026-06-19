@@ -132,6 +132,11 @@ impl ServerLaunchOptions {
         self.port
     }
 
+    pub fn with_port(mut self, port: u16) -> Self {
+        self.port = port;
+        self
+    }
+
     pub fn bind_addr(&self) -> SocketAddr {
         SocketAddr::new(self.bind_host, self.port)
     }

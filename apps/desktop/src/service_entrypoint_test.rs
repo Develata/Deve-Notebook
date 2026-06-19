@@ -58,7 +58,7 @@ fn desktop_local_service_entrypoint_env_defaults_to_local_backend_and_allows_exp
         ]);
         assert_eq!(
             desktop_local_service_entrypoint_policy_from_env().expect("policy"),
-            DesktopLocalServiceEntrypointPolicy::disabled()
+            DesktopLocalServiceEntrypointPolicy::local_backend_default()
         );
     }
 

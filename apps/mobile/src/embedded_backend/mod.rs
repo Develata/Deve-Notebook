@@ -5,10 +5,13 @@
 //! Mobile LocalBackend assembly. This module starts the embedded backend and
 //! performs native-session handoff; business authority stays in server/core.
 
+use std::fmt;
 use std::path::PathBuf;
-use std::{fmt, net::TcpListener};
 
-use deve_cli::native_runtime::{NativeLocalBackendOptions, start_native_loopback_backend};
+use deve_cli::native_runtime::{
+    NativeLocalBackendOptions, NativeLoopbackListener, bind_native_loopback_listener,
+    start_native_loopback_backend_with_listener,
+};
 use deve_cli::server::NativeLoopbackAuthMaterial;
 use deve_core::config::AppProfile;
 use deve_core::native_adapter::{NativeAdapterError, native_tauri_allowed_origins};
@@ -94,15 +97,6 @@ pub enum MobileEmbeddedBackendError {
     BootstrapSerialize(#[from] serde_json::Error),
 }
 
-pub fn allocate_mobile_loopback_port() -> Result<u16, MobileEmbeddedBackendError> {
-    let listener = TcpListener::bind(("127.0.0.1", 0))
-        .map_err(MobileEmbeddedBackendError::PortAllocationFailed)?;
-    listener
-        .local_addr()
-        .map(|addr| addr.port())
-        .map_err(MobileEmbeddedBackendError::PortAllocationFailed)
-}
-
 pub fn plan_mobile_embedded_backend(
     app_data_dir: impl Into<PathBuf>,
     port: u16,
@@ -124,12 +118,13 @@ pub fn plan_mobile_embedded_backend(
     })
 }
 
-pub fn run_mobile_embedded_backend_bootstrap(
+fn run_mobile_embedded_backend_bootstrap_with_listener(
     plan: MobileEmbeddedBackendPlan,
+    listener: NativeLoopbackListener,
 ) -> Result<MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError> {
     let auth = MobileNativeAuthMaterial::generate()?;
     let native_session_secret = auth.native_session_secret.clone();
-    spawn_embedded_backend(&plan, auth.into_native_loopback_auth_material());
+    spawn_embedded_backend(&plan, listener, auth.into_native_loopback_auth_material());
 
     let mut shell = MobileShell::new();
     shell.start_service();
@@ -151,9 +146,11 @@ pub fn run_mobile_embedded_backend_bootstrap_with_port_retry(
 ) -> Result<MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError> {
     let app_data_dir = app_data_dir.into();
     for attempt in 0..MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS {
-        let port = allocate_mobile_loopback_port()?;
+        let listener = bind_native_loopback_listener(None)
+            .map_err(MobileEmbeddedBackendError::PortAllocationFailed)?;
+        let port = listener.port();
         let plan = plan_mobile_embedded_backend(app_data_dir.clone(), port)?;
-        match run_mobile_embedded_backend_bootstrap(plan) {
+        match run_mobile_embedded_backend_bootstrap_with_listener(plan, listener) {
             Ok(bootstrap) => return Ok(bootstrap),
             Err(error)
                 if attempt + 1 < MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS
@@ -187,6 +184,7 @@ pub fn mobile_embedded_backend_plugin<R: tauri::Runtime>(
 
 fn spawn_embedded_backend(
     plan: &MobileEmbeddedBackendPlan,
+    listener: NativeLoopbackListener,
     auth_material: NativeLoopbackAuthMaterial,
 ) {
     let mut options = NativeLocalBackendOptions::new(plan.app_data_dir.clone(), plan.port)
@@ -194,7 +192,7 @@ fn spawn_embedded_backend(
     options.profile = AppProfile::Standard;
     options.session_bound = false;
     tauri::async_runtime::spawn(async move {
-        if let Err(error) = start_native_loopback_backend(options).await {
+        if let Err(error) = start_native_loopback_backend_with_listener(options, listener).await {
             eprintln!("deve_mobile LocalBackend exited with error: {error}");
         }
     });

@@ -2,7 +2,6 @@
 //!   - 11_ui_design/02_desktop#desktop-service-supervisor-contract
 //!   - 11_ui_design/02_desktop#desktop-process-adapter-decision
 
-mod loopback_http;
 mod probe;
 
 use deve_core::native_adapter::{
