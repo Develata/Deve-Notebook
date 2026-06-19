@@ -1,5 +1,6 @@
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
+//!   - 09_web_thin_client_ledger#write-readiness
 //!
 //! Sync writer readiness registration.
 
@@ -78,32 +79,36 @@ fn validate(
     peer_id: &PeerId,
     scope_nonce: u64,
 ) -> Result<(), ServerError> {
-    if session.is_browser_session() {
-        if session.active_branch.is_some() {
-            clear_stale_browser_sync_scope(session);
-            return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
-        }
-        if session.active_repo_id != Some(repo_id) {
-            clear_stale_browser_sync_scope(session);
-            return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
-                "writer scope does not match active repo",
-            ));
-        }
-        if browser_active_db_mismatch(session, repo_id) {
-            clear_stale_browser_sync_scope(session);
-            return Err(ServerError::with_detail(
-                ServerErrorCode::ScRepoContextInvalid,
-                "writer active db does not match active repo",
-            ));
-        }
-        if session.scope_nonce() != scope_nonce || session.sync_scope_nonce() != Some(scope_nonce) {
-            clear_stale_browser_sync_scope(session);
-            return Err(ServerError::with_detail(
-                ServerErrorCode::ScStaleScope,
-                "writer scope nonce is stale",
-            ));
-        }
+    if !session.is_browser_session() {
+        return Err(ServerError::with_detail(
+            ServerErrorCode::SyncPeerUnauthenticated,
+            "writer registration requires browser session",
+        ));
+    }
+    if session.active_branch.is_some() {
+        clear_stale_browser_sync_scope(session);
+        return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));
+    }
+    if session.active_repo_id != Some(repo_id) {
+        clear_stale_browser_sync_scope(session);
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            "writer scope does not match active repo",
+        ));
+    }
+    if browser_active_db_mismatch(session, repo_id) {
+        clear_stale_browser_sync_scope(session);
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScRepoContextInvalid,
+            "writer active db does not match active repo",
+        ));
+    }
+    if session.scope_nonce() != scope_nonce || session.sync_scope_nonce() != Some(scope_nonce) {
+        clear_stale_browser_sync_scope(session);
+        return Err(ServerError::with_detail(
+            ServerErrorCode::ScStaleScope,
+            "writer scope nonce is stale",
+        ));
     }
     if session.is_readonly() {
         return Err(ServerError::new(ServerErrorCode::ScRemoteBranchReadonly));

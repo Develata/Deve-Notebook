@@ -7,47 +7,55 @@ use std::sync::Arc;
 
 #[test]
 fn rejects_unbound_repo() {
-    let mut session = WsSession::new();
-    let error = validate(&mut session, uuid::Uuid::nil(), &PeerId::new("browser"), 1).unwrap_err();
+    let repo_id = new_repo_id();
+    let peer_id = PeerId::new("browser");
+    let mut session = browser_session_without_repo_binding(repo_id, peer_id.clone());
+    let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
     assert_eq!(error.code, ServerErrorCode::SyncRepoUnbound);
 }
 
 #[test]
 fn rejects_readonly_writer_registration() {
-    let mut session = WsSession::new();
-    let repo_id = uuid::Uuid::new_v4();
-    let peer_id = PeerId::new("browser");
-    set_db(
-        &mut session,
-        true,
-        Some(PeerId::new("remote")),
-        None,
-        "repo",
-    );
-    session.set_authenticated(peer_id.clone());
-    let error = validate(&mut session, repo_id, &peer_id, 1).unwrap_err();
+    let (mut session, repo_id, peer_id) = browser_session(new_repo_id());
+    set_db(&mut session, true, None, Some(repo_id), "notes");
+    let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
     assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
 }
 
 #[test]
 fn rejects_mismatched_peer() {
-    let mut session = WsSession::new();
-    let repo_id = uuid::Uuid::new_v4();
-    session.set_authenticated(PeerId::new("browser-a"));
-    session.bind_repo(repo_id);
-    let error = validate(&mut session, repo_id, &PeerId::new("browser-b"), 1).unwrap_err();
+    let (mut session, repo_id, _) = browser_session(new_repo_id());
+    let error = validate(&mut session, repo_id, &PeerId::new("browser-b"), 9).unwrap_err();
     assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
     assert_sync_cleared(&session);
 }
 
 #[test]
 fn accepts_bound_matching_peer() {
+    let (mut session, repo_id, peer_id) = browser_session(new_repo_id());
+    assert!(validate(&mut session, repo_id, &peer_id, 9).is_ok());
+}
+
+#[test]
+fn rejects_fullpeer_writer_registration_without_browser_session() {
     let mut session = WsSession::new();
-    let repo_id = uuid::Uuid::new_v4();
-    let peer_id = PeerId::new("browser-a");
+    let repo_id = new_repo_id();
+    let peer_id = PeerId::new("full-peer");
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
-    assert!(validate(&mut session, repo_id, &peer_id, 1).is_ok());
+    session.set_sync_scope_nonce(9);
+
+    let error = validate(&mut session, repo_id, &peer_id, 9).unwrap_err();
+
+    assert_eq!(error.code, ServerErrorCode::SyncPeerUnauthenticated);
+    assert_eq!(
+        error.detail.as_deref(),
+        Some("writer registration requires browser session")
+    );
+    assert_eq!(session.authenticated_peer_id.as_ref(), Some(&peer_id));
+    assert_eq!(session.bound_repo_id, Some(repo_id));
+    assert_eq!(session.sync_scope_nonce(), Some(9));
+    assert!(session.writer_identity.is_none());
 }
 
 #[test]
@@ -122,6 +130,16 @@ fn browser_session(repo_id: RepoId) -> (WsSession, RepoId, PeerId) {
     session.set_authenticated(peer_id.clone());
     session.bind_repo(repo_id);
     (session, repo_id, peer_id)
+}
+
+fn browser_session_without_repo_binding(repo_id: RepoId, peer_id: PeerId) -> WsSession {
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_scope_nonce(Some(9));
+    session.set_sync_scope_nonce(9);
+    session.set_authenticated(peer_id);
+    session
 }
 
 fn set_db(
