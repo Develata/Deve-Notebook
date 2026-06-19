@@ -9,7 +9,6 @@ use super::types::Command;
 use crate::components::main_layout::{ChatControl, SearchControl, SidebarControl};
 use crate::hooks::use_core::{BranchContext, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
-use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 mod branch;
@@ -24,7 +23,7 @@ use git::{
     git_export_command, git_import_command, git_mirror_command, git_push_command,
     git_repair_command, git_status_command,
 };
-use merge::merge_peer_command;
+use merge::merge_peer_commands;
 use reserved::{ai_reserved_commands, source_control_reserved_commands};
 
 /// 创建静态命令列表。
@@ -41,7 +40,6 @@ pub fn create_static_commands(
     let sidebar_control = use_context::<SidebarControl>();
     let branch_context = use_context::<BranchContext>();
     let sync_merge_context = use_context::<SyncMergeContext>();
-    let session_client = use_context::<SessionClient>();
 
     let mut commands = vec![
         // 打开文档命令 - 打开文档模态框
@@ -116,15 +114,14 @@ pub fn create_static_commands(
     }
 
     commands.extend(source_control_reserved_commands(locale));
+    commands.push(establish_branch_command(locale, set_show));
+    commands.extend(merge_peer_commands(
+        locale,
+        set_show,
+        branch_context,
+        sync_merge_context,
+    ));
     commands.extend(vec![
-        establish_branch_command(locale, set_show),
-        merge_peer_command(
-            locale,
-            set_show,
-            branch_context,
-            sync_merge_context,
-            session_client,
-        ),
         git_status_command(locale, set_show),
         git_mirror_command(locale, set_show),
         git_export_command(locale, set_show),

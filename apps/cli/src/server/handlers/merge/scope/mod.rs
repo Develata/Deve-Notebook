@@ -5,8 +5,8 @@
 
 use crate::server::channel::DualChannel;
 use crate::server::repo_scope::{
-    ensure_resolved_local_repo_writable, map_repo_scope_error, resolve_local_counterpart_repo,
-    resolve_session_repo_or_bootstrap_local,
+    ResolvedRepo, ensure_resolved_local_repo_writable, map_repo_scope_error,
+    resolve_local_counterpart_repo, resolve_session_repo_or_bootstrap_local,
 };
 use crate::server::{AppState, session::WsSession};
 use deve_core::models::RepoId;
@@ -48,6 +48,15 @@ pub(super) fn resolve_write_repo_id(
     session: &mut WsSession,
     scope_nonce: Option<u64>,
 ) -> Option<RepoId> {
+    Some(resolve_local_write_scope(state, ch, session, scope_nonce)?.repo_id)
+}
+
+pub(super) fn resolve_local_write_scope(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    scope_nonce: Option<u64>,
+) -> Option<ResolvedRepo> {
     let scope = resolve_merge_scope(state, ch, session, scope_nonce)?;
     if scope.branch.is_some() {
         ch.send_protocol_error_with_scope_nonce(
@@ -60,7 +69,7 @@ pub(super) fn resolve_write_repo_id(
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return None;
     }
-    Some(scope.repo_id)
+    Some(scope)
 }
 
 pub(super) fn resolve_merge_scope(

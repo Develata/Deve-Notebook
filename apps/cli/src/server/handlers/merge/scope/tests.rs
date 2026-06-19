@@ -50,6 +50,7 @@ fn read_repo_id_bootstraps_single_local_repo() -> anyhow::Result<()> {
 #[test]
 fn write_repo_id_bootstraps_single_local_repo() -> anyhow::Result<()> {
     let (_dir, state, default_id) = build_state()?;
+    state.repo.ensure_local_repo_workspace_identity("default")?;
     let ch = test_channel();
     let mut session = WsSession::new();
 

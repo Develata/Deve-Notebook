@@ -133,10 +133,10 @@ pub fn establish_branch_unavailable_title(locale: Locale) -> &'static str {
 pub fn establish_branch_unavailable_hint(locale: Locale) -> &'static str {
     match locale {
         Locale::En => {
-            "Current Web runtime can switch to peer branches and run P2P: Merge Peer; creating a new local branch from a peer branch has no backend contract yet."
+            "Current Web runtime can switch to peer branches for read-only inspection and run P2P: Merge Peer from the local branch; creating a new local branch from a peer branch has no backend contract yet."
         }
         Locale::Zh => {
-            "当前 Web runtime 可以切换到 peer 分支并执行 P2P: Merge Peer；从 peer 分支创建本地分支尚无后端合同。"
+            "当前 Web runtime 可以切换到 peer 分支做只读查看，并从本地分支执行 P2P: Merge Peer；从 peer 分支创建本地分支尚无后端合同。"
         }
     }
 }

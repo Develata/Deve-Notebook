@@ -1,7 +1,7 @@
 use super::route_merge;
 use crate::server::session::PendingMergeConflict;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
-use deve_core::models::{DocId, PeerId, RepoId};
+use deve_core::models::{DocId, RepoId};
 use deve_core::protocol::{ClientMessage, MergeConflictAction, ServerErrorCode, ServerMessage};
 use tokio::time::{Duration, timeout};
 
@@ -76,7 +76,7 @@ async fn resolve_merge_conflict_routes_accept_current_to_merge_complete() -> any
             merged_count,
         } => {
             assert_eq!(actual_repo, Some(repo_id));
-            assert_eq!(branch, Some(PeerId::new("remote-a")));
+            assert_eq!(branch, None);
             assert_eq!(scope_nonce, Some(17));
             assert_eq!(merged_count, 0);
         }
@@ -184,8 +184,7 @@ fn browser_session_with_pending_conflict(
     let mut session = browser_session(scope_nonce);
     session.pending_merge_conflict = Some(PendingMergeConflict {
         repo_id,
-        repo_name: "notes".into(),
-        branch: Some(PeerId::new("remote-a")),
+        branch: None,
         doc_id,
         scope_nonce: Some(scope_nonce),
         local_content: "local".into(),

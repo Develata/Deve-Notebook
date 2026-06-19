@@ -5,6 +5,7 @@
 
 use super::errors;
 use super::peer_apply::{broadcast_merge_complete, write_merged_content};
+use super::scope::resolve_local_write_scope;
 use crate::server::repo_scope::ResolvedRepo;
 use crate::server::{AppState, channel::DualChannel, session::PendingMergeConflict};
 use deve_core::models::DocId;
@@ -20,22 +21,20 @@ pub(super) async fn handle_resolve_merge_conflict(
     result_content: Option<String>,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    let Some(scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
+        return;
+    };
     let Some(pending) = session.pending_merge_conflict.take() else {
         errors::storage_not_found(ch, "No pending merge conflict", scope_nonce);
         return;
     };
 
-    if !matches_pending_conflict(&pending, doc_id, scope_nonce) {
+    if !matches_pending_conflict(&pending, &scope, doc_id, scope_nonce) {
         session.pending_merge_conflict = Some(pending);
         errors::storage_conflict(ch, "Pending merge conflict target mismatch", scope_nonce);
         return;
     }
 
-    let scope = ResolvedRepo {
-        repo_id: pending.repo_id,
-        repo_name: pending.repo_name.clone(),
-        branch: pending.branch.clone(),
-    };
     let content = resolved_content(&pending, action, result_content);
     if content == pending.local_content {
         broadcast_merge_complete(ch, &scope, 0, scope_nonce);
@@ -48,10 +47,14 @@ pub(super) async fn handle_resolve_merge_conflict(
 
 fn matches_pending_conflict(
     pending: &PendingMergeConflict,
+    scope: &ResolvedRepo,
     doc_id: DocId,
     scope_nonce: Option<u64>,
 ) -> bool {
-    pending.doc_id == doc_id && pending.scope_nonce == scope_nonce
+    pending.repo_id == scope.repo_id
+        && pending.branch == scope.branch
+        && pending.doc_id == doc_id
+        && pending.scope_nonce == scope_nonce
 }
 
 fn resolved_content(
@@ -78,7 +81,6 @@ fn accept_both(current: &str, incoming: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use deve_core::models::PeerId;
 
     #[test]
     fn resolved_content_uses_selected_side_or_custom_result() {
@@ -112,20 +114,45 @@ mod tests {
     #[test]
     fn pending_conflict_match_requires_doc_and_scope() {
         let pending = pending_conflict("local", "incoming");
-        assert!(matches_pending_conflict(&pending, pending.doc_id, Some(11)));
-        assert!(!matches_pending_conflict(&pending, DocId::new(), Some(11)));
+        let scope = ResolvedRepo {
+            repo_id: pending.repo_id,
+            repo_name: "notes".into(),
+            branch: pending.branch.clone(),
+        };
+        assert!(matches_pending_conflict(
+            &pending,
+            &scope,
+            pending.doc_id,
+            Some(11)
+        ));
         assert!(!matches_pending_conflict(
             &pending,
+            &scope,
+            DocId::new(),
+            Some(11)
+        ));
+        assert!(!matches_pending_conflict(
+            &pending,
+            &scope,
             pending.doc_id,
             Some(12)
+        ));
+        assert!(!matches_pending_conflict(
+            &pending,
+            &ResolvedRepo {
+                repo_id: uuid::Uuid::new_v4(),
+                repo_name: "notes".into(),
+                branch: pending.branch.clone(),
+            },
+            pending.doc_id,
+            Some(11)
         ));
     }
 
     fn pending_conflict(local_content: &str, incoming_content: &str) -> PendingMergeConflict {
         PendingMergeConflict {
             repo_id: uuid::Uuid::new_v4(),
-            repo_name: "notes".into(),
-            branch: Some(PeerId::new("remote-a")),
+            branch: None,
             doc_id: DocId::new(),
             scope_nonce: Some(11),
             local_content: local_content.into(),

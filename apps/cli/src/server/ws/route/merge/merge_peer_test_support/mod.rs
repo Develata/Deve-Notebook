@@ -12,5 +12,6 @@ pub(super) use ledger::{
     seed_local_replace, seed_remote_insert, seed_remote_replace, seed_shared_base,
 };
 pub(super) use state::{
-    browser_remote_session, ensure_remote_repo, reopen_state, request_merge_peer,
+    browser_local_session, browser_remote_session, ensure_local_writer_ready, ensure_remote_repo,
+    reopen_state, request_merge_peer,
 };

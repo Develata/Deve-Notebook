@@ -5,17 +5,13 @@
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
-use crate::hooks::use_core::write_gate::{
-    RepoWriteSignals, repo_source_control_read_block_untracked, repo_write_block_untracked,
-};
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_send;
-use deve_core::models::{DocId, PeerId};
+use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
-use super::super::callbacks_scope::{
-    LocalScopeSignals, stable_local_scope_nonce, stable_peer_branch_scope_nonce,
-};
+use super::super::callbacks_scope::{LocalScopeSignals, stable_local_scope_nonce};
 
 pub(super) struct SyncWriteCallbacks {
     pub(super) on_set_sync_mode: Callback<String>,
@@ -82,19 +78,21 @@ pub(super) fn create_sync_write_callbacks(
 
     let ws4 = ws.clone();
     let on_merge_peer = Callback::new(move |peer_id: String| {
-        let target_peer = PeerId::new(&peer_id);
         let Some(scope_nonce) =
-            merge_peer_scope_nonce(&ws4, local_scope, write_gate, set_sync_banner, &target_peer)
+            sync_write_scope_nonce(&ws4, local_scope, write_gate, set_sync_banner, "MergePeer")
         else {
             return;
         };
-        if let Some(doc_id) = current_doc.get_untracked() {
-            ws4.send(ClientMessage::MergePeer {
-                peer_id,
-                doc_id,
-                scope_nonce: Some(scope_nonce),
-            });
-        }
+        let Some(doc_id) = current_doc.get_untracked() else {
+            let message = cannot_send("MergePeer", "no current document selected");
+            warn_sync_banner(set_sync_banner, message);
+            return;
+        };
+        ws4.send(ClientMessage::MergePeer {
+            peer_id,
+            doc_id,
+            scope_nonce: Some(scope_nonce),
+        });
     });
 
     SyncWriteCallbacks {
@@ -125,22 +123,116 @@ fn sync_write_scope_nonce(
     Some(scope_nonce)
 }
 
-fn merge_peer_scope_nonce(
-    ws: &WsService,
-    local_scope: LocalScopeSignals,
-    write_gate: RepoWriteSignals,
-    set_sync_banner: WriteSignal<Option<String>>,
-    peer_id: &PeerId,
-) -> Option<u64> {
-    if let Some(block) = repo_source_control_read_block_untracked(ws, write_gate) {
-        let message = cannot_send("MergePeer", block.label());
-        warn_sync_banner(set_sync_banner, message);
-        return None;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::api::ConnectionStatus;
+    use crate::hooks::use_core::PendingBranchTarget;
+    use deve_core::models::PeerId;
+    use leptos::prelude::{GetUntracked, Signal, signal};
+
+    #[test]
+    fn merge_peer_sends_local_scope_when_writer_ready() {
+        let owner = leptos::reactive::owner::Owner::new();
+        owner.with(|| {
+            let ws = ready_ws();
+            let doc_id = DocId::new();
+            let (current_doc, _) = signal(Some(doc_id));
+            let (banner, set_banner) = signal(None::<String>);
+            let callbacks = create_sync_write_callbacks(
+                &ws,
+                current_doc,
+                local_scope_signals(None),
+                write_signals(None),
+                set_banner,
+            );
+
+            callbacks.on_merge_peer.run("peer-a".into());
+
+            let sent = ws.drain_sent_for_test();
+            assert_eq!(banner.get_untracked(), None);
+            match sent.as_slice() {
+                [
+                    ClientMessage::MergePeer {
+                        peer_id,
+                        doc_id: actual_doc_id,
+                        scope_nonce,
+                    },
+                ] => {
+                    assert_eq!(peer_id, "peer-a");
+                    assert_eq!(*actual_doc_id, doc_id);
+                    assert_eq!(*scope_nonce, Some(7));
+                }
+                other => panic!("expected one MergePeer message, got {other:?}"),
+            }
+        });
     }
-    let Some(scope_nonce) = stable_peer_branch_scope_nonce(local_scope, peer_id) else {
-        let message = cannot_send("MergePeer", "selected peer scope is not stable");
-        warn_sync_banner(set_sync_banner, message);
-        return None;
-    };
-    Some(scope_nonce)
+
+    #[test]
+    fn merge_peer_does_not_send_from_remote_branch_scope() {
+        let owner = leptos::reactive::owner::Owner::new();
+        owner.with(|| {
+            let ws = ready_ws();
+            let (current_doc, _) = signal(Some(DocId::new()));
+            let (banner, set_banner) = signal(None::<String>);
+            let active_branch = Some(PeerId::new("peer-a"));
+            let callbacks = create_sync_write_callbacks(
+                &ws,
+                current_doc,
+                local_scope_signals(active_branch.clone()),
+                write_signals(active_branch),
+                set_banner,
+            );
+
+            callbacks.on_merge_peer.run("peer-a".into());
+
+            assert!(ws.drain_sent_for_test().is_empty());
+            assert_eq!(
+                banner.get_untracked().as_deref(),
+                Some("Cannot send MergePeer: read-only")
+            );
+        });
+    }
+
+    fn ready_ws() -> WsService {
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        ws.set_node_role_for_test("main");
+        ws.mark_writer_ready("repo-1", 7, "browser-peer");
+        ws
+    }
+
+    fn local_scope_signals(active_branch_value: Option<PeerId>) -> LocalScopeSignals {
+        let (current_repo_id, _) = signal(Some("repo-1".to_string()));
+        let (current_scope_nonce, _) = signal(7u64);
+        let (active_branch, _) = signal(active_branch_value);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_repo_switch, _) = signal(None::<String>);
+        LocalScopeSignals {
+            current_repo_id,
+            current_scope_nonce,
+            active_branch,
+            pending_branch_switch,
+            pending_repo_switch,
+        }
+    }
+
+    fn write_signals(active_branch_value: Option<PeerId>) -> RepoWriteSignals {
+        let (load_state, _) = signal("ready".to_string());
+        let (handshake_ready, _) = signal(true);
+        let (current_repo_id, _) = signal(Some("repo-1".to_string()));
+        let (current_scope_nonce, _) = signal(7u64);
+        let (active_branch, _) = signal(active_branch_value);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_repo_switch, _) = signal(None::<String>);
+        RepoWriteSignals {
+            load_state,
+            is_spectator: Signal::derive(|| false),
+            handshake_ready,
+            current_repo_id,
+            current_scope_nonce,
+            active_branch,
+            pending_branch_switch,
+            pending_repo_switch,
+        }
+    }
 }

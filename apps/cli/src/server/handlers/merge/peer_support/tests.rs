@@ -35,41 +35,6 @@ fn app_state(repo: Arc<RepoManager>) -> Arc<AppState> {
 }
 
 #[test]
-fn resolves_local_merge_scope_from_remote_repo_id() {
-    let dir = tempdir().expect("tempdir");
-    let projection_base = dir.path().join("notes");
-    let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
-    repo.set_projection_base_for_all_local_repos_checked(&projection_base)
-        .expect("locator");
-    let repo = Arc::new(repo);
-    let info = repo
-        .get_repo_info_for(None, Some(repo.local_repo_name()))
-        .expect("repo info")
-        .expect("repo info exists");
-    let state = app_state(repo.clone());
-    let ch = DualChannel::new(
-        broadcast::channel(8).0,
-        crate::server::ws::send::new_unicast_channel().0,
-    );
-
-    let resolved = resolve_local_merge_scope(
-        &state,
-        ResolvedRepo {
-            repo_id: info.uuid,
-            repo_name: "shadow-repo".into(),
-            branch: Some(PeerId::new("remote-peer")),
-        },
-        &ch,
-        None,
-    )
-    .expect("resolved scope");
-
-    assert_eq!(resolved.repo_name, repo.local_repo_name());
-    assert_eq!(resolved.repo_id, info.uuid);
-    assert!(resolved.branch.is_none());
-}
-
-#[test]
 fn resolve_doc_path_fails_closed_on_legacy_only_projection() {
     let dir = tempdir().expect("tempdir");
     let projection_base = dir.path().join("notes");

@@ -11,8 +11,7 @@ use std::sync::Arc;
 
 use super::errors;
 use super::peer_apply::{MergeConflictPayload, send_merge_conflict, write_merged_content};
-use super::peer_support::resolve_local_merge_scope;
-use super::scope::resolve_merge_scope;
+use super::scope::resolve_local_write_scope;
 
 /// Invariants:
 /// - 合并目标必须是当前会话解析出的本地 repo。
@@ -25,10 +24,7 @@ pub(super) async fn handle_merge_peer(
     doc_id: DocId,
 ) {
     let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
-    let Some(scope) = resolve_merge_scope(state, ch, session, scope_nonce) else {
-        return;
-    };
-    let Some(local_scope) = resolve_local_merge_scope(state, scope.clone(), ch, scope_nonce) else {
+    let Some(local_scope) = resolve_local_write_scope(state, ch, session, scope_nonce) else {
         return;
     };
     let peer_id = PeerId::new(peer_id);
@@ -50,7 +46,6 @@ pub(super) async fn handle_merge_peer(
         }) => {
             let pending = PendingMergeConflict {
                 repo_id: local_scope.repo_id,
-                repo_name: local_scope.repo_name.clone(),
                 branch: local_scope.branch.clone(),
                 doc_id,
                 scope_nonce,
@@ -61,7 +56,7 @@ pub(super) async fn handle_merge_peer(
                 state,
                 ch,
                 &local_scope,
-                &scope,
+                &local_scope,
                 MergeConflictPayload {
                     doc_id,
                     base,

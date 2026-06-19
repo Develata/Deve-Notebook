@@ -18,7 +18,6 @@ pub use writer::WriterIdentity;
 #[derive(Clone, Debug)]
 pub struct PendingMergeConflict {
     pub repo_id: RepoId,
-    pub repo_name: String,
     pub branch: Option<PeerId>,
     pub doc_id: DocId,
     pub scope_nonce: Option<u64>,

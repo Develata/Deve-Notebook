@@ -81,6 +81,13 @@ pub fn enabled_peer_surface(locale: Locale) -> &'static str {
     }
 }
 
+pub fn enabled_peer_merge_source(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Merges the selected read-only peer mirror into the local branch",
+        Locale::Zh => "将选中的只读 peer mirror 合并到本地分支",
+    }
+}
+
 pub fn enabled_cli_only_notice(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Shows a CLI-only notice; Web does not run the writer",

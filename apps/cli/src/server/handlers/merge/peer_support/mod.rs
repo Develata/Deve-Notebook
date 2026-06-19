@@ -3,7 +3,6 @@
 //!
 //! Peer merge support helpers for repository-scoped sessions.
 
-use crate::server::repo_scope::{ResolvedRepo, resolve_local_counterpart_repo};
 use crate::server::{AppState, channel::DualChannel};
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::DOCID_TO_PATH;
@@ -70,33 +69,6 @@ fn legacy_doc_path(
             .get(doc_id.as_u128())?
             .map(|path| path.value().to_string()))
     })
-}
-
-pub(super) fn resolve_local_merge_scope(
-    state: &Arc<AppState>,
-    scope: ResolvedRepo,
-    ch: &DualChannel,
-    scope_nonce: Option<u64>,
-) -> Option<ResolvedRepo> {
-    match resolve_local_counterpart_repo(state, &scope) {
-        Ok(Some(local_scope)) => Some(local_scope),
-        Ok(None) => {
-            errors::storage_not_found(
-                ch,
-                "No local repository matched the active remote repository",
-                scope_nonce,
-            );
-            None
-        }
-        Err(err) => {
-            errors::classified_failure(
-                ch,
-                format!("Failed to resolve local merge scope: {}", err),
-                scope_nonce,
-            );
-            None
-        }
-    }
 }
 
 #[cfg(test)]
