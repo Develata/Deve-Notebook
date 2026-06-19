@@ -90,7 +90,7 @@ fn unauthorized_ws_response(code: AuthErrorCode) -> axum::response::Response {
 /// ## 协议策略
 /// - **优先二进制 (Bincode)**: 体积更小，解析更快，零字符串分配。
 /// - **降级 JSON**: 向后兼容旧版客户端或调试场景。
-pub async fn handle_socket(
+pub(crate) async fn handle_socket(
     state: Arc<AppState>,
     socket: axum::extract::ws::WebSocket,
     peer_id: String,

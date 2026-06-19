@@ -27,7 +27,7 @@ pub struct AppState {
     pub identity_key: Arc<deve_core::security::IdentityKeyPair>,
     pub git_bridge: GitBridgeMode,
     #[cfg(not(test))]
-    pub source_control_write_grants: Arc<SourceControlWriteGrants>,
+    pub(crate) source_control_write_grants: Arc<SourceControlWriteGrants>,
 }
 
 impl AppState {

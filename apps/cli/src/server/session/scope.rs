@@ -23,11 +23,11 @@ impl WsSession {
         self.browser_session = true;
     }
 
-    pub fn bind_auth_session(&mut self, auth_session_id: AuthSessionId) {
+    pub(crate) fn bind_auth_session(&mut self, auth_session_id: AuthSessionId) {
         self.auth_session_id = Some(auth_session_id);
     }
 
-    pub fn auth_session_id(&self) -> Option<&AuthSessionId> {
+    pub(crate) fn auth_session_id(&self) -> Option<&AuthSessionId> {
         self.auth_session_id.as_ref()
     }
 

@@ -19,7 +19,7 @@ use deve_core::security::AuthConfig;
 const COOKIE_NAME: &str = "token";
 const UNKNOWN_USER_AGENT: &str = "unknown";
 
-pub async fn logout(
+pub(crate) async fn logout(
     State(state): State<Arc<AppState>>,
     Extension(auth_session_id): Extension<AuthSessionId>,
 ) -> impl IntoResponse {

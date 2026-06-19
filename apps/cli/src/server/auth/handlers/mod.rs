@@ -8,4 +8,5 @@ mod session;
 
 pub use login::login;
 pub use native_session::{NativeSessionBridge, native_session};
-pub use session::{logout, me, status};
+pub(crate) use session::logout;
+pub use session::{me, status};

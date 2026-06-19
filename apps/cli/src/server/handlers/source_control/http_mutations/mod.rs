@@ -23,7 +23,8 @@ use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
 
 use authority::{SourceControlWriteAuthority, authorize_http_write};
-pub use commit::{commit, commit_delegated, commit_plugin_host};
+pub(crate) use commit::commit;
+pub use commit::{commit_delegated, commit_plugin_host};
 pub use plugin_host::{discard_pending_plugin_host, stage_plugin_host, unstage_plugin_host};
 
 #[derive(Deserialize)]
@@ -55,7 +56,7 @@ pub struct CommitPayload {
     pub repo: RepoSelector,
 }
 
-pub async fn stage(
+pub(crate) async fn stage(
     State(state): State<Arc<AppState>>,
     Extension(auth_session_id): Extension<AuthSessionId>,
     Json(payload): Json<PathPayload>,
@@ -102,7 +103,7 @@ pub async fn stage_delegated(
     }
 }
 
-pub async fn discard_pending(
+pub(crate) async fn discard_pending(
     State(state): State<Arc<AppState>>,
     Extension(auth_session_id): Extension<AuthSessionId>,
     Json(payload): Json<PathPayload>,
@@ -149,7 +150,7 @@ pub async fn discard_pending_delegated(
     }
 }
 
-pub async fn unstage(
+pub(crate) async fn unstage(
     State(state): State<Arc<AppState>>,
     Extension(auth_session_id): Extension<AuthSessionId>,
     Json(payload): Json<PathPayload>,

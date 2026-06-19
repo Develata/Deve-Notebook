@@ -18,7 +18,7 @@ use deve_core::source_control::CommitInfo;
 
 use super::{CommitPayload, SourceControlWriteAuthority};
 
-pub async fn commit(
+pub(crate) async fn commit(
     State(state): State<Arc<AppState>>,
     Extension(auth_session_id): Extension<AuthSessionId>,
     Json(payload): Json<CommitPayload>,

@@ -55,7 +55,7 @@ pub struct WsSession {
     /// Invariant:
     /// - 只保存 token/session 派生的不可逆 id，不保存 cookie/JWT material。
     /// - HTTP Source Control write grant 必须与该 id 匹配。
-    pub auth_session_id: Option<AuthSessionId>,
+    pub(crate) auth_session_id: Option<AuthSessionId>,
 
     /// 已认证的对端 Peer ID，用于后续 SyncPush 验证。
     pub authenticated_peer_id: Option<PeerId>,
