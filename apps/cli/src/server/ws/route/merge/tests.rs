@@ -1,7 +1,7 @@
 use super::route_merge;
 use crate::server::session::PendingMergeConflict;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
-use deve_core::models::{DocId, RepoId};
+use deve_core::models::{DocId, PeerId, RepoId};
 use deve_core::protocol::{ClientMessage, MergeConflictAction, ServerErrorCode, ServerMessage};
 use tokio::time::{Duration, timeout};
 
@@ -50,6 +50,7 @@ fn extracts_scope_nonce_from_merge_messages() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn resolve_merge_conflict_routes_accept_current_to_merge_complete() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
+    state.repo.ensure_local_repo_workspace_identity("notes")?;
     let (ch, _uni_rx) = unicast_channel(&state);
     let mut broadcast_rx = state.tx.subscribe();
     let doc_id = DocId::new();
@@ -182,6 +183,8 @@ fn browser_session_with_pending_conflict(
     scope_nonce: u64,
 ) -> crate::server::session::WsSession {
     let mut session = browser_session(scope_nonce);
+    session.switch_repo("notes".into(), Some(repo_id));
+    session.set_writer_identity(repo_id, PeerId::new("browser-peer"), scope_nonce);
     session.pending_merge_conflict = Some(PendingMergeConflict {
         repo_id,
         branch: None,

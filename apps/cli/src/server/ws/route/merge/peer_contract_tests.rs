@@ -5,10 +5,10 @@
 //! Merge peer local-branch authority contract tests.
 
 use super::merge_peer_test_support::{
-    MergeConflictExpectation, browser_local_session, browser_remote_session, doc_content,
-    ensure_local_writer_ready, ensure_remote_repo, expect_merge_complete, expect_merge_conflict,
-    local_doc_content, seed_local_doc, seed_local_replace, seed_remote_insert, seed_remote_replace,
-    seed_shared_base,
+    MergeConflictExpectation, browser_local_session, browser_remote_session,
+    browser_writer_ready_session, doc_content, ensure_local_projection_ready, ensure_remote_repo,
+    expect_merge_complete, expect_merge_conflict, local_doc_content, seed_local_doc,
+    seed_local_replace, seed_remote_insert, seed_remote_replace, seed_shared_base,
 };
 use super::route_merge;
 use crate::server::session::PendingMergeConflict;
@@ -21,7 +21,7 @@ use tokio::time::{Duration, timeout};
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn merge_peer_local_branch_contract_writes_local_only() -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
-    ensure_local_writer_ready(&state)?;
+    ensure_local_projection_ready(&state)?;
     let peer_id = ensure_remote_repo(&state, repo_id)?;
     let doc_id = seed_local_doc(&state, "notes/a.md")?;
     seed_remote_insert(&state, &peer_id, repo_id, doc_id, "incoming")?;
@@ -29,7 +29,7 @@ async fn merge_peer_local_branch_contract_writes_local_only() -> anyhow::Result<
     let local_before = local_doc_content(&state, doc_id)?;
     let (ch, _uni_rx) = unicast_channel(&state);
     let mut broadcast_rx = state.tx.subscribe();
-    let mut session = browser_local_session(repo_id, 41);
+    let mut session = browser_writer_ready_session(repo_id, 41);
 
     route_merge(
         &state,
@@ -46,6 +46,39 @@ async fn merge_peer_local_branch_contract_writes_local_only() -> anyhow::Result<
     expect_merge_complete(&mut broadcast_rx, repo_id, None, Some(41), 1).await?;
     assert_eq!(local_before, (0, String::new()));
     assert_eq!(local_doc_content(&state, doc_id)?.1, "incoming");
+    assert_eq!(
+        doc_content(&state, RepoType::Remote(peer_id, repo_id), doc_id)?,
+        remote_before
+    );
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn merge_peer_rejects_local_branch_without_writer_ready() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    ensure_local_projection_ready(&state)?;
+    let peer_id = ensure_remote_repo(&state, repo_id)?;
+    let doc_id = seed_local_doc(&state, "notes/local-writer-reject.md")?;
+    seed_remote_insert(&state, &peer_id, repo_id, doc_id, "incoming")?;
+    let remote_before = doc_content(&state, RepoType::Remote(peer_id.clone(), repo_id), doc_id)?;
+    let local_before = local_doc_content(&state, doc_id)?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_local_session(repo_id, 45);
+
+    route_merge(
+        &state,
+        &ch,
+        &mut session,
+        ClientMessage::MergePeer {
+            peer_id: peer_id.to_string(),
+            doc_id,
+            scope_nonce: Some(45),
+        },
+    )
+    .await;
+
+    expect_protocol_error(&mut uni_rx, ServerErrorCode::SyncPeerUnauthenticated, 45).await?;
+    assert_eq!(local_doc_content(&state, doc_id)?, local_before);
     assert_eq!(
         doc_content(&state, RepoType::Remote(peer_id, repo_id), doc_id)?,
         remote_before
@@ -133,6 +166,42 @@ async fn resolve_merge_conflict_rejects_remote_branch_scope_without_consuming_pe
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn resolve_merge_conflict_rejects_local_branch_without_writer_ready_without_consuming_pending()
+-> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    ensure_local_projection_ready(&state)?;
+    let doc_id = seed_local_doc(&state, "notes/local-resolve-writer-reject.md")?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_local_session(repo_id, 59);
+    session.pending_merge_conflict = Some(PendingMergeConflict {
+        repo_id,
+        branch: None,
+        doc_id,
+        scope_nonce: Some(59),
+        local_content: "local".into(),
+        incoming_content: "incoming".into(),
+    });
+
+    route_merge(
+        &state,
+        &ch,
+        &mut session,
+        ClientMessage::ResolveMergeConflict {
+            doc_id,
+            action: MergeConflictAction::AcceptIncoming,
+            result_content: None,
+            scope_nonce: Some(59),
+        },
+    )
+    .await;
+
+    expect_protocol_error(&mut uni_rx, ServerErrorCode::SyncPeerUnauthenticated, 59).await?;
+    assert!(session.pending_merge_conflict.is_some());
+    assert_eq!(local_doc_content(&state, doc_id)?.1, "");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn resolve_merge_conflict_accept_current_keeps_local_branch_without_write()
 -> anyhow::Result<()> {
     assert_resolve_merge_conflict_strategy(ResolveStrategyCase {
@@ -167,7 +236,7 @@ struct ResolveStrategyCase {
 
 async fn assert_resolve_merge_conflict_strategy(case: ResolveStrategyCase) -> anyhow::Result<()> {
     let (_dir, state, repo_id) = build_state()?;
-    ensure_local_writer_ready(&state)?;
+    ensure_local_projection_ready(&state)?;
     let peer_id = ensure_remote_repo(&state, repo_id)?;
     let doc_id = seed_local_doc(&state, "notes/conflict.md")?;
     seed_shared_base(&state, &peer_id, repo_id, doc_id, "base")?;
@@ -177,7 +246,7 @@ async fn assert_resolve_merge_conflict_strategy(case: ResolveStrategyCase) -> an
     let local_before = local_doc_content(&state, doc_id)?;
     let (ch, mut uni_rx) = unicast_channel(&state);
     let mut broadcast_rx = state.tx.subscribe();
-    let mut session = browser_local_session(repo_id, case.scope_nonce);
+    let mut session = browser_writer_ready_session(repo_id, case.scope_nonce);
 
     route_merge(
         &state,
@@ -268,6 +337,14 @@ async fn expect_remote_readonly_error(
     uni_rx: &mut mpsc::Receiver<ServerMessage>,
     scope_nonce: u64,
 ) -> anyhow::Result<()> {
+    expect_protocol_error(uni_rx, ServerErrorCode::ScRemoteBranchReadonly, scope_nonce).await
+}
+
+async fn expect_protocol_error(
+    uni_rx: &mut mpsc::Receiver<ServerMessage>,
+    expected_code: ServerErrorCode,
+    scope_nonce: u64,
+) -> anyhow::Result<()> {
     match timeout(Duration::from_secs(2), uni_rx.recv())
         .await?
         .expect("protocol error")
@@ -277,7 +354,7 @@ async fn expect_remote_readonly_error(
             scope_nonce: actual_scope_nonce,
             ..
         } => {
-            assert_eq!(error.code, ServerErrorCode::ScRemoteBranchReadonly);
+            assert_eq!(error.code, expected_code);
             assert_eq!(actual_scope_nonce, Some(scope_nonce));
         }
         other => panic!("expected ProtocolError, got {other:?}"),

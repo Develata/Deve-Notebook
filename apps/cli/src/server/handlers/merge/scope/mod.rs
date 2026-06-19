@@ -69,6 +69,19 @@ pub(super) fn resolve_local_write_scope(
         ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
         return None;
     }
+    if session
+        .writer_peer_id_for(&scope.repo_id, scope_nonce)
+        .is_none()
+    {
+        ch.send_protocol_error_with_scope_nonce(
+            ServerError::with_detail(
+                ServerErrorCode::SyncPeerUnauthenticated,
+                "merge requires writer-ready local scope",
+            ),
+            scope_nonce,
+        );
+        return None;
+    }
     Some(scope)
 }
 

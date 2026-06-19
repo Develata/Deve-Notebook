@@ -5,10 +5,10 @@
 //! Merge peer interruption and deterministic replay tests.
 
 use super::merge_peer_test_support::{
-    MergeConflictExpectation, browser_local_session, doc_content, doc_entry_count,
-    ensure_local_writer_ready, ensure_remote_repo, expect_merge_complete, expect_merge_conflict,
-    local_doc_content, local_doc_entry_count, reopen_state, request_merge_peer, seed_local_doc,
-    seed_local_replace, seed_remote_replace, seed_shared_base,
+    MergeConflictExpectation, browser_writer_ready_session, doc_content, doc_entry_count,
+    ensure_local_projection_ready, ensure_remote_repo, expect_merge_complete,
+    expect_merge_conflict, local_doc_content, local_doc_entry_count, reopen_state,
+    request_merge_peer, seed_local_doc, seed_local_replace, seed_remote_replace, seed_shared_base,
 };
 use super::route_merge;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
@@ -18,7 +18,7 @@ use deve_core::protocol::{ClientMessage, MergeConflictAction};
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn merge_peer_conflict_replays_after_state_reopen_without_losing_ops() -> anyhow::Result<()> {
     let (dir, state, repo_id) = build_state()?;
-    ensure_local_writer_ready(&state)?;
+    ensure_local_projection_ready(&state)?;
     let peer_id = ensure_remote_repo(&state, repo_id)?;
     let doc_id = seed_local_doc(&state, "resume.md")?;
     seed_shared_base(&state, &peer_id, repo_id, doc_id, "base")?;
@@ -31,7 +31,7 @@ async fn merge_peer_conflict_replays_after_state_reopen_without_losing_ops() -> 
         doc_entry_count(&state, RepoType::Remote(peer_id.clone(), repo_id), doc_id)?;
 
     let (first_ch, mut first_rx) = unicast_channel(&state);
-    let mut interrupted = browser_local_session(repo_id, 61);
+    let mut interrupted = browser_writer_ready_session(repo_id, 61);
     request_merge_peer(&state, &first_ch, &mut interrupted, &peer_id, doc_id, 61).await;
     expect_merge_conflict(
         &mut first_rx,
@@ -69,7 +69,7 @@ async fn merge_peer_conflict_replays_after_state_reopen_without_losing_ops() -> 
     );
     let (resume_ch, mut resume_rx) = unicast_channel(&state);
     let mut broadcast_rx = state.tx.subscribe();
-    let mut resumed = browser_local_session(repo_id, 62);
+    let mut resumed = browser_writer_ready_session(repo_id, 62);
     request_merge_peer(&state, &resume_ch, &mut resumed, &peer_id, doc_id, 62).await;
     expect_merge_conflict(
         &mut resume_rx,

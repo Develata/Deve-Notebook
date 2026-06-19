@@ -72,7 +72,7 @@ pub(crate) fn ensure_remote_repo(
     Ok(peer_id)
 }
 
-pub(crate) fn ensure_local_writer_ready(state: &Arc<AppState>) -> anyhow::Result<()> {
+pub(crate) fn ensure_local_projection_ready(state: &Arc<AppState>) -> anyhow::Result<()> {
     state.repo.ensure_local_repo_workspace_identity("notes")?;
     Ok(())
 }
@@ -95,5 +95,11 @@ pub(crate) fn browser_local_session(repo_id: uuid::Uuid, scope_nonce: u64) -> Ws
     session.mark_browser_session();
     session.switch_repo("notes".into(), Some(repo_id));
     session.set_scope_nonce(Some(scope_nonce));
+    session
+}
+
+pub(crate) fn browser_writer_ready_session(repo_id: uuid::Uuid, scope_nonce: u64) -> WsSession {
+    let mut session = browser_local_session(repo_id, scope_nonce);
+    session.set_writer_identity(repo_id, PeerId::new("browser-peer"), scope_nonce);
     session
 }
