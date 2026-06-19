@@ -63,12 +63,15 @@
   steps:
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
+    - run: cargo run -p deve_cli --bin deve_baseline -- all
     - run: cargo test -p deve_core ledger_entry_format -- --nocapture
     - run: cargo test -p deve_core redb_schema_version -- --nocapture
     - run: cargo test --locked
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
   assertions:
     - exit_code_all_eq: 0
+    - stdout_contains: "storage-repo-baseline-check: ok"
+    - stdout_contains: "network-baseline-check: ok"
     - release_assert: stable_data_format_v1_gates_present true
 
 - case_id: REL-004
