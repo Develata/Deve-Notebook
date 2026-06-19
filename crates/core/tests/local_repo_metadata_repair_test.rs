@@ -175,10 +175,9 @@ fn init_fails_closed_on_existing_local_repo_without_metadata() {
         Ok(_) => panic!("missing repo metadata must fail closed"),
         Err(err) => err,
     };
-    assert!(
-        err.to_string()
-            .contains("repository metadata table missing")
-    );
+    assert!(err
+        .to_string()
+        .contains("repository metadata missing in existing database"));
 }
 
 #[test]

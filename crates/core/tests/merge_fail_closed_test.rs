@@ -55,8 +55,10 @@ fn merge_peer_fails_closed_when_remote_ops_are_corrupted() -> anyhow::Result<()>
     assert!(
         detail.contains("decode")
             || detail.contains("deserialize")
-            || detail.contains("unsupported ledger entry schema")
-            || detail.contains("unexpected end")
+            || detail.contains("unsupported ledger entry format")
+            || detail.contains("missing develdg1 magic")
+            || detail.contains("unexpected end"),
+        "unexpected merge fail-closed message: {detail}"
     );
     Ok(())
 }
