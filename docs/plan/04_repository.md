@@ -56,6 +56,14 @@ RepoNameBinding = {
 - `Remote Branch` = `ledger/remotes/<PeerId>/*.redb` 中的远端镜像事实集合。
 - Branch 是 writer identity 的作用域，不是任意命名的 git-style feature branch。
 
+### 2.2.1 Remote Branch Readonly Contract {#remote-branch-readonly-contract}
+
+- Remote Branch 是本机保存的 peer force-mirror / shadow 输入，不是可写工作分支。
+- Remote Branch 对所有用户操作、Editor、Source Control、Merge、plugin-host writer 与 Web UI action **MUST** 保持纯只读语义。
+- 唯一允许改变 Remote Branch 存储内容的路径是经认证同步协议 ingest peer facts / snapshot；该路径只维护 mirror authority，不是用户写入、不是 merge target，也不得由 Source Control writer 复用。
+- 任何会 append ledger facts、写 pending/staging/commit、确认 pending overlay、应用 merge result 或修改 projection 的操作，若当前 branch 是 Remote Branch，必须 fail-closed 或在 UI 中禁用。
+- 需要从 Remote Branch 合并内容时，Remote Branch 只能作为只读 source；用户必须处于 matching Local Branch，并通过 Local Branch writer gate 后选择 peer source。
+
 ### 2.3 Tree Identity
 
 - `NodeId` 是文件树节点的权威主键。
@@ -300,7 +308,7 @@ ReadonlyDegraded
 
 - `Local -> Remote`
   - 输入：`PeerId + RepoSelector`
-  - 输出：remote repo bound in readonly mode
+  - 输出：remote repo bound in readonly mode；所有写入、merge apply 与 Source Control mutation 必须禁用或 fail-closed
 - `Remote -> Local`
   - **SHOULD** 优先恢复最近稳定本地 repo
   - 恢复失败时 **MUST** 回到 UUID-first 解析

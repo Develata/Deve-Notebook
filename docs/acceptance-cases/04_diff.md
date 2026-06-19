@@ -16,6 +16,7 @@
   goal: 3-Way Merge 使用 LCA。
   preconditions:
     - Local 与 Remote 均基于同一 Base 修改
+    - 用户当前处于 Local Branch，并显式选择 peer force-mirror 作为只读 source
   steps:
     - ui_command: "P2P: Merge Peer"
     - run: cargo test -p deve_cli merge_scope_nonce_gate -- --nocapture
@@ -25,6 +26,7 @@
     - log_contains: "LCA"
     - api_assert: merge_manual_writes_reject_remote_readonly true
     - api_assert: merge_peer_writes_local_branch_only true
+    - api_assert: merge_peer_rejects_remote_branch_scope true
 
 - case_id: DIFF-003
   goal: 冲突检测按 Hunk 触发。

@@ -39,6 +39,7 @@
     *   Branch 表达持久 writer identity 作用域；browser tab / native shell 只能获得 repo-scoped transient writer identity。
 *   **Writer Gate (写入闸门)**：把 auth session、repo scope、branch role、`scope_nonce` 与 writer registration 合并后的写入许可。
     *   未通过 writer gate 的请求 **MUST NOT** append ledger、写入 staging、写入 pending/import 或确认 pending overlay。
+    *   Writer Gate 只授予 Local Branch 写入；Remote Branch 不得因 merge、Source Control、editor 或 UI action 获得写入语义。
 *   **RepoId (仓库身份)**：repo 的不可变机器身份，UUID-first。
     *   所有 repo-scoped 业务算子在执行前都必须先解析并绑定 `RepoId`。
     *   `RepoName`、URL、路径名与 selector 都只能作为输入别名、显示属性或恢复线索，不得替代 `RepoId`。
@@ -164,7 +165,8 @@
         *   $Write(B_{local})$ 仅允许通过 Command/System 写入。
     *   **Store C (Remote Branches)**：远端影子分支集合 $\Sigma_{remote} = \{ B_{peer_1}, B_{peer_2}, ... \}$。
         *   物理路径：`ledger/remotes/<PeerName>/`，按 PeerUUID 检索。
-        *   $\forall B \in \Sigma_{remote}, ReadOnly(B)$（Editor View），但 Gossip Protocol 可写入同步数据。
+        *   $\forall B \in \Sigma_{remote}, ReadOnly(B)$ 对所有用户操作、Editor、Source Control、Merge 与 plugin writer 均为硬性约束。
+        *   Remote Branch 只能由经认证的同步 ingest 维护本机 force-mirror / shadow 内容；该维护路径不是 Local Writer Gate，不授予 UI 或 Source Control 写权限，也不得被 merge 结果写回。
     *   **Branch (分支)**：以节点为单位的数据集合 $B_{peer}$。
         *   1 Branch $\leftrightarrow$ 1 OS Folder（如 `ledger/local` 或 `ledger/remotes/ipad`）。
         *   代表一个 Writer Identity 作用域；它不是 git-style feature branch。

@@ -197,7 +197,9 @@ MergeRequested
 - merge 只允许发生在同一逻辑 repo 内。
 - cross-repo merge **MUST** fail-closed。
 - merge runtime 只能由本机 local writer 发起；remote mirror / shadow branch 是只读输入，不是并发写者。
-- `MergePeer` 产出的任何写入都必须重新进入本机 repo-scoped writer gate，并作为新的 local ledger facts 提交。
+- `MergePeer` **MUST** 从 Local Branch 发起；用户选择 peer force-mirror / shadow branch 作为只读 source。
+- Remote Branch UI / scope **MUST NOT** 发起 `MergePeer`、`ResolveMergeConflict` 或任何会产生 local ledger facts 的 merge apply；应禁用入口或 fail-closed。
+- `MergePeer` 产出的任何写入都必须重新进入本机 repo-scoped writer gate，并作为新的 Local Branch ledger facts 提交。
 
 冲突检测原则：
 
@@ -244,6 +246,7 @@ MergeRequested
   必须匹配当前 authenticated browser session 通过 `SyncHello + RegisterWriter` 获得的
   server-side `SourceControlWriteGrant`。
 - 所有 remote branch source control 请求 **MUST** 经过 readonly gate。
+- Remote Branch readonly gate **MUST** 禁止 stage、discard、unstage、commit、merge apply、conflict resolve 与任何 plugin-host writer；允许的 Source Control 能力仅限 diff / history / graph / inspect 这类只读派生查询。
 - 本地 source-control 写入口（包括 CLI `deve sc stage/commit`、plugin-host HTTP mutation 与 Rhai `sc_commit`）
   在写 pending/staging/commit 之前 **MUST** 验证 Projection Locator 与 `.notegit`
   identity marker 仍绑定同一 local repo；破损或漂移时必须 fail-closed。
