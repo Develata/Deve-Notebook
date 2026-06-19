@@ -34,6 +34,7 @@ pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
             | ClientMessage::DiscardFile { .. }
             | ClientMessage::ResolveConflict { .. }
             | ClientMessage::ResolveMergeConflict { .. }
+            | ClientMessage::MergePeer { .. }
             | ClientMessage::DeletePeer { .. }
             | ClientMessage::SwitchBranch { .. }
             | ClientMessage::SwitchRepo { .. }

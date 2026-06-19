@@ -1,7 +1,7 @@
 use super::enqueue_with_limit;
 use super::is_write_message;
 use super::prepare_queue_for_new_connection;
-use deve_core::models::{PeerId, VersionVector};
+use deve_core::models::{DocId, PeerId, VersionVector};
 use deve_core::protocol::ClientMessage;
 use deve_core::protocol::ScPathTarget;
 use std::collections::VecDeque;
@@ -79,6 +79,11 @@ fn output_write_classification_distinguishes_reads_from_writes() {
         snapshot_kind: None,
         source_proof: None,
         payload: vec![],
+    }));
+    assert!(is_write_message(&ClientMessage::MergePeer {
+        peer_id: "remote-peer".into(),
+        doc_id: DocId::from_u128(7),
+        scope_nonce: Some(1),
     }));
     assert!(!is_write_message(&ClientMessage::Ping));
     assert!(!is_write_message(&ClientMessage::SyncRequest {
