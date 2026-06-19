@@ -171,7 +171,10 @@ fn classify_p2p_error(err: &Error) -> &'static str {
         || compact.contains("unofferedsource")
     {
         "unoffered_source"
-    } else if message.contains("inbound source") && message.contains("not requested")
+    } else if (message.contains("inbound source")
+        || message.contains("syncpush source")
+        || message.contains("syncpushsnapshot source"))
+        && message.contains("not requested")
         || compact.contains("unrequestedsource")
     {
         "unrequested_source"

@@ -307,3 +307,21 @@ fn p2p_connector_source_boundary_detail_wins_over_generic_auth_text() {
         "source_proof_rejected"
     );
 }
+
+#[test]
+fn p2p_connector_protocol_not_requested_detail_is_unrequested_source() {
+    assert_eq!(
+        classify_p2p_error(&anyhow::anyhow!(
+            "{}",
+            "P2P peer returned protocol error: ServerError { code: SyncPeerUnauthenticated, detail: Some(\"SyncPush source peer-a was not requested from transport peer-b\") }"
+        )),
+        "unrequested_source"
+    );
+    assert_eq!(
+        classify_p2p_error(&anyhow::anyhow!(
+            "{}",
+            "P2P peer returned protocol error: ServerError { code: SyncPeerUnauthenticated, detail: Some(\"SyncPushSnapshot source peer-a was not requested from transport peer-b\") }"
+        )),
+        "unrequested_source"
+    );
+}
