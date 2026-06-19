@@ -89,6 +89,40 @@ fn mobile_native_authority_opt_in_uses_embedded_service_without_child_process() 
 }
 
 #[test]
+fn desktop_native_authority_policy_ignores_invalid_mobile_env() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+    let _guard = EnvGuard::set(&[
+        ("DEVE_NATIVE_AUTHORITY", Some("1")),
+        ("DEVE_DESKTOP_LOCAL_SERVICE", Some("1")),
+        ("DEVE_MOBILE_EMBEDDED_SERVICE", Some("invalid")),
+    ]);
+
+    let policy = desktop_native_authority_policy_from_env();
+
+    assert!(policy.is_explicit_desktop_native_authority_opt_in());
+    assert!(policy.child_process_runtime_enabled);
+    assert!(!policy.embedded_service_runtime_enabled);
+    assert!(policy.authority_writes_allowed);
+}
+
+#[test]
+fn mobile_native_authority_policy_ignores_invalid_desktop_env() {
+    let _lock = ENV_LOCK.lock().expect("env lock");
+    let _guard = EnvGuard::set(&[
+        ("DEVE_NATIVE_AUTHORITY", Some("1")),
+        ("DEVE_DESKTOP_LOCAL_SERVICE", Some("invalid")),
+        ("DEVE_MOBILE_EMBEDDED_SERVICE", Some("1")),
+    ]);
+
+    let policy = mobile_native_authority_policy_from_env();
+
+    assert!(policy.is_explicit_mobile_native_authority_opt_in());
+    assert!(!policy.child_process_runtime_enabled);
+    assert!(policy.embedded_service_runtime_enabled);
+    assert!(policy.authority_writes_allowed);
+}
+
+#[test]
 fn local_backend_default_policies_enable_runtime_without_shell_authority_writes() {
     let desktop = desktop_local_backend_policy();
     let mobile = mobile_local_backend_policy();

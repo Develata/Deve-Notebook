@@ -1,13 +1,15 @@
 use deve_core::native_adapter::{
     NativeAdapterError, NativeProcessAdapterDecision, NativeProcessAdapterPolicy,
-    NativeProcessRuntimeState, NativeRemoteTarget,
+    NativeProcessRuntimeFailureKind, NativeProcessRuntimeState, NativeRemoteTarget,
 };
 
+use crate::tauri_bootstrap::desktop_local_service_error_allows_port_replan;
 use crate::{
-    DesktopBootstrap, DesktopCommandProcessLauncher, DesktopLocalServiceRuntime,
-    DesktopLocalServiceTauriState, DesktopNativeSessionCookie, DesktopTauriBootstrapError,
-    DesktopTauriBootstrapScript, desktop_tauri_remote_browser_init_script,
-    desktop_tauri_session_invalid_init_script, desktop_tauri_success_init_script,
+    DesktopBootstrap, DesktopCommandProcessLauncher, DesktopLocalServiceBootstrapError,
+    DesktopLocalServiceRuntime, DesktopLocalServiceTauriState, DesktopNativeSessionCookie,
+    DesktopProcessRuntimeError, DesktopTauriBootstrapError, DesktopTauriBootstrapScript,
+    desktop_tauri_remote_browser_init_script, desktop_tauri_session_invalid_init_script,
+    desktop_tauri_success_init_script,
 };
 
 fn success_bootstrap() -> DesktopBootstrap {
@@ -141,6 +143,31 @@ fn tauri_bootstrap_source_rejects_secret_bearing_material() {
     assert!(matches!(
         result,
         Err(DesktopTauriBootstrapError::ForbiddenMaterial { marker: "token" })
+    ));
+}
+
+#[test]
+fn tauri_local_service_replans_port_only_for_retryable_startup_failures() {
+    assert!(desktop_local_service_error_allows_port_replan(
+        &DesktopLocalServiceBootstrapError::Runtime(DesktopProcessRuntimeError::SpawnFailed {
+            kind: NativeProcessRuntimeFailureKind::BindFailed,
+            source: std::io::Error::new(std::io::ErrorKind::AddrInUse, "port occupied"),
+        })
+    ));
+    assert!(desktop_local_service_error_allows_port_replan(
+        &DesktopLocalServiceBootstrapError::ProbeIo(std::io::Error::new(
+            std::io::ErrorKind::ConnectionRefused,
+            "service not reachable",
+        ))
+    ));
+    assert!(desktop_local_service_error_allows_port_replan(
+        &DesktopLocalServiceBootstrapError::HealthProbeFailed
+    ));
+    assert!(!desktop_local_service_error_allows_port_replan(
+        &DesktopLocalServiceBootstrapError::SessionHandoffFailed
+    ));
+    assert!(!desktop_local_service_error_allows_port_replan(
+        &DesktopLocalServiceBootstrapError::NativeSessionCookieInvalid
     ));
 }
 

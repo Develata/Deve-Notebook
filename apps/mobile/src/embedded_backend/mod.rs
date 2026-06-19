@@ -27,8 +27,6 @@ mod http;
 use cookie::{MobileNativeSessionCookie, tauri_cookie_from_native_session};
 use http::MobileLoopbackHttpProbe;
 
-const MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS: usize = 3;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MobileEmbeddedBackendPlan {
     pub app_data_dir: PathBuf,
@@ -141,29 +139,15 @@ fn run_mobile_embedded_backend_bootstrap_with_listener(
     Ok(MobileEmbeddedBackendBootstrap { plan, script })
 }
 
-pub fn run_mobile_embedded_backend_bootstrap_with_port_retry(
+pub fn run_mobile_embedded_backend_bootstrap(
     app_data_dir: impl Into<PathBuf>,
 ) -> Result<MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError> {
     let app_data_dir = app_data_dir.into();
-    for attempt in 0..MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS {
-        let listener = bind_native_loopback_listener(None)
-            .map_err(MobileEmbeddedBackendError::PortAllocationFailed)?;
-        let port = listener.port();
-        let plan = plan_mobile_embedded_backend(app_data_dir.clone(), port)?;
-        match run_mobile_embedded_backend_bootstrap_with_listener(plan, listener) {
-            Ok(bootstrap) => return Ok(bootstrap),
-            Err(error)
-                if attempt + 1 < MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS
-                    && mobile_embedded_backend_error_allows_port_replan(&error) =>
-            {
-                continue;
-            }
-            Err(error) => return Err(error),
-        }
-    }
-    Err(MobileEmbeddedBackendError::PortAllocationFailed(
-        std::io::Error::other("mobile LocalBackend exhausted port retry budget"),
-    ))
+    let listener = bind_native_loopback_listener(None)
+        .map_err(MobileEmbeddedBackendError::PortAllocationFailed)?;
+    let port = listener.port();
+    let plan = plan_mobile_embedded_backend(app_data_dir, port)?;
+    run_mobile_embedded_backend_bootstrap_with_listener(plan, listener)
 }
 
 pub fn mobile_embedded_backend_plugin<R: tauri::Runtime>(
@@ -272,10 +256,6 @@ impl MobileNativeAuthMaterial {
     }
 }
 
-fn mobile_embedded_backend_error_allows_port_replan(error: &MobileEmbeddedBackendError) -> bool {
-    matches!(error, MobileEmbeddedBackendError::ProbeIo(_))
-}
-
 fn generate_secret() -> Result<String, MobileEmbeddedBackendError> {
     let mut bytes = [0u8; 32];
     getrandom::fill(&mut bytes).map_err(|_| MobileEmbeddedBackendError::SecretGenerationFailed)?;
@@ -376,21 +356,17 @@ mod tests {
     }
 
     #[test]
-    fn mobile_embedded_bootstrap_replans_port_for_unbound_probe_io_only() {
-        assert!(mobile_embedded_backend_error_allows_port_replan(
-            &MobileEmbeddedBackendError::ProbeIo(std::io::Error::new(
-                std::io::ErrorKind::ConnectionRefused,
-                "port not bound"
-            ))
-        ));
-        assert!(!mobile_embedded_backend_error_allows_port_replan(
-            &MobileEmbeddedBackendError::ProbeInvalidResponse
-        ));
-        assert!(!mobile_embedded_backend_error_allows_port_replan(
-            &MobileEmbeddedBackendError::ProbeHttpStatus { status: 500 }
-        ));
-        assert!(!mobile_embedded_backend_error_allows_port_replan(
-            &MobileEmbeddedBackendError::NativeSessionHandoffFailed
-        ));
+    fn mobile_embedded_bootstrap_keeps_listener_port_as_single_backend_target() {
+        let listener = bind_native_loopback_listener(None).expect("listener");
+        let port = listener.port();
+        let root = std::env::current_dir()
+            .expect("cwd")
+            .join("target/mobile-test-data");
+        let plan = plan_mobile_embedded_backend(root, port).expect("plan");
+
+        assert_eq!(plan.port, port);
+        assert_eq!(plan.http_base, format!("http://127.0.0.1:{port}"));
+        assert_eq!(plan.ws_base, format!("ws://127.0.0.1:{port}"));
+        drop(listener);
     }
 }

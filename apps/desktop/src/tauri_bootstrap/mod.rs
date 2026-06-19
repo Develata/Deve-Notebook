@@ -263,7 +263,7 @@ pub fn try_desktop_tauri_local_service_bootstrap_from_env(
     Ok(None)
 }
 
-fn desktop_local_service_error_allows_port_replan(
+pub(crate) fn desktop_local_service_error_allows_port_replan(
     error: &DesktopLocalServiceBootstrapError,
 ) -> bool {
     match error {

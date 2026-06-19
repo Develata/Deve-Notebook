@@ -8,7 +8,7 @@ use deve_core::config::AppProfile;
 use deve_core::native_adapter::{
     NativeProcessAdapterDecision, NativeProcessAdapterPolicy, NativeProcessEnvPolicyError,
     NativeProcessRuntimeError, NativeProcessSpawnSpec, NativeRuntimeEnvConfig,
-    NativeRuntimeEnvPolicy, desktop_local_backend_policy, parse_optional_env_flag,
+    NativeRuntimeEnvPolicy, desktop_local_backend_policy,
 };
 use thiserror::Error;
 
@@ -102,12 +102,8 @@ pub enum DesktopLocalServiceEntrypointError {
 
 pub fn desktop_local_service_entrypoint_policy_from_env()
 -> Result<DesktopLocalServiceEntrypointPolicy, DesktopLocalServiceEntrypointError> {
-    let config = NativeRuntimeEnvConfig {
-        native_authority: parse_optional_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?,
-        desktop_local_service: parse_optional_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?,
-        mobile_embedded_service: None,
-    };
-    let env_policy = NativeRuntimeEnvPolicy::from_config(config);
+    let env_policy =
+        NativeRuntimeEnvPolicy::from_config(NativeRuntimeEnvConfig::from_desktop_env()?);
     if env_policy.desktop_local_backend_enabled {
         Ok(DesktopLocalServiceEntrypointPolicy::local_backend_default())
     } else {

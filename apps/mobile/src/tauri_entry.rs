@@ -17,7 +17,7 @@ use tauri::{Manager, WebviewWindowBuilder};
 use thiserror::Error;
 
 use crate::embedded_backend::{
-    mobile_embedded_backend_plugin, run_mobile_embedded_backend_bootstrap_with_port_retry,
+    mobile_embedded_backend_plugin, run_mobile_embedded_backend_bootstrap,
 };
 
 const MOBILE_TAURI_MAIN_WINDOW_LABEL: &str = "main";
@@ -156,7 +156,7 @@ pub fn run_mobile_tauri_app() {
                     return Ok(());
                 }
             };
-            match run_mobile_embedded_backend_bootstrap_with_port_retry(app_data_dir) {
+            match run_mobile_embedded_backend_bootstrap(app_data_dir) {
                 Ok(bootstrap) => {
                     if let Err(error) = app
                         .handle()

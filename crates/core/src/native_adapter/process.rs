@@ -97,6 +97,22 @@ impl NativeRuntimeEnvConfig {
             mobile_embedded_service: parse_optional_env_flag(DEVE_MOBILE_EMBEDDED_SERVICE_ENV)?,
         })
     }
+
+    pub fn from_desktop_env() -> Result<Self, NativeProcessEnvPolicyError> {
+        Ok(Self {
+            native_authority: parse_optional_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?,
+            desktop_local_service: parse_optional_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?,
+            mobile_embedded_service: None,
+        })
+    }
+
+    pub fn from_mobile_env() -> Result<Self, NativeProcessEnvPolicyError> {
+        Ok(Self {
+            native_authority: parse_optional_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?,
+            desktop_local_service: None,
+            mobile_embedded_service: parse_optional_env_flag(DEVE_MOBILE_EMBEDDED_SERVICE_ENV)?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -152,14 +168,14 @@ pub enum NativeProcessEnvPolicyError {
 }
 
 pub fn desktop_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
-    NativeRuntimeEnvConfig::from_env()
+    NativeRuntimeEnvConfig::from_desktop_env()
         .map(NativeRuntimeEnvPolicy::from_config)
         .map(|policy| policy.desktop_authority_policy)
         .unwrap_or(CURRENT_NATIVE_PROCESS_ADAPTER_POLICY)
 }
 
 pub fn mobile_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
-    NativeRuntimeEnvConfig::from_env()
+    NativeRuntimeEnvConfig::from_mobile_env()
         .map(NativeRuntimeEnvPolicy::from_config)
         .map(|policy| policy.mobile_authority_policy)
         .unwrap_or(CURRENT_NATIVE_PROCESS_ADAPTER_POLICY)
