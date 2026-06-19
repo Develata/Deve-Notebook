@@ -32,11 +32,12 @@
 - activity bar、更多菜单、repo switcher、command palette 都应能稳定工作。
 - `Pin/Unpin` 与“切换视图”的语义应严格分离。
 
-### 5. Native Local Service Opt-in
+### 5. Native 双模式
 
-- 默认 Desktop shell 不启动 native authority service。
-- 只有 native-packaging 构建且同时设置 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_DESKTOP_LOCAL_SERVICE=1` 时，Desktop 才可启动受控 child-process local service。
-- Desktop shell 只负责 service bootstrap、loopback endpoint、session handoff、健康探测和重启协调。
+- Desktop native-packaging 默认以 `LocalBackend` 模式启动，包含本地受控后端、默认 repo/projection 初始化、loopback endpoint、session handoff、健康探测和重启协调。
+- Desktop 可显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
+- `RemoteBrowser` 不启动本地后端，不注入本地 endpoint/session bootstrap，不把远端 URL 保存为本地 writer authority。
+- `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过本地 server/core writer gate。
 - service 端口、session secret 与 P2P token material 不应出现在 URL、日志、Web localStorage 或可见 bootstrap payload。
 
@@ -44,7 +45,7 @@
 
 - 当前阶段不在本章定义 Tauri 原生托盘、系统菜单等平台整合细节。
 - 当前阶段不要求 Chrome MCP 覆盖真正的原生窗口管理能力。
-- 当前阶段不把 native authority 作为默认 Desktop release readiness；它必须显式 opt-in 并通过独立 smoke 验收。
+- 当前阶段不把 Desktop native packaging 解释为签名 release readiness；LocalBackend 与 RemoteBrowser 仍需各自独立 smoke 验收。
 
 ## Chrome MCP 验收实例
 
@@ -82,22 +83,22 @@
 - view 切换只切换 view。
 - `Pin/Unpin` 只修改固定状态，不会误触发其他动作。
 
-### DESKTOP-UI-03: Native Local Service Opt-in 边界
+### DESKTOP-UI-03: Native 双模式边界
 
 前置条件：
 
 - 已构建 native-packaging Desktop 包。
-- 分别准备默认环境与 `DEVE_NATIVE_AUTHORITY=1 DEVE_DESKTOP_LOCAL_SERVICE=1` 环境。
+- 准备默认 `LocalBackend` 启动与显式 `RemoteBrowser` HTTPS origin。
 
 步骤：
 
 1. 默认环境启动 Desktop shell。
-2. 观察是否启动本地 authority service。
-3. 在 opt-in 环境启动 Desktop shell。
-4. 检查 loopback service health、native session handoff 与 Web shell 可用性。
+2. 检查本地 loopback service health、native session handoff 与 Web shell 可用性。
+3. 切换到 RemoteBrowser HTTPS origin。
+4. 检查壳层只加载远端 origin，且不启动本地 service 或注入本地 bootstrap。
 
 期望结果：
 
-- 默认环境不启动 native authority service。
-- opt-in 环境可以启动受控 local service，并且 UI 写入仍经过本地 server/core writer gate。
+- 默认 LocalBackend 可以启动受控 local service，并且 UI 写入仍经过本地 server/core writer gate。
+- RemoteBrowser 等价于浏览器连接远端 Docker/Web URL。
 - URL、日志、localStorage 与 bootstrap payload 不暴露 service secret 或 P2P token material。

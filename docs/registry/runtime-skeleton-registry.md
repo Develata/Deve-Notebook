@@ -63,6 +63,7 @@
 | `ui_shell` | `抽象分层` | `apps/web/src/components/`; `apps/desktop/src/shell/`; `apps/mobile/src/shell/` | `docs/tasks/18_infra_runtime.md` | View intent、layout shell、panel/focus/stacking 管理。 |
 | `application_control` | `抽象分层` | `apps/web/src/hooks/use_core/`; `apps/web/src/runtime/session_client/`; `apps/web/src/runtime/scope_client/`; `apps/web/src/runtime/document_client/`; `apps/web/src/runtime/source_control_client/`; `apps/web/src/runtime/rendering_client/`; `apps/desktop/src/shell/`; `apps/mobile/src/shell/` | `docs/tasks/19_repo_refactor_blueprint.md` | Control 编排、typed intent routing 与 runtime 状态汇聚；Web `use_core` 必须降级为 composition root。 |
 | `feature_runtime` | `抽象分层` | `apps/web/src/components/sidebar/source_control/`; `apps/web/src/components/command_palette/`; `apps/web/src/components/dashboard/` | `docs/tasks/19_repo_refactor_blueprint.md` | Feature-local state machines，不直接持有 authority。 |
+| `native_shell_mode_runtime` | `部分承载` | `crates/core/src/native_adapter/`; `apps/desktop/src/service_entrypoint/`; `apps/desktop/src/tauri_bootstrap/`; `apps/mobile/src/tauri_entry.rs`; `apps/mobile/src/embedded_backend/`; `apps/cli/src/native_runtime.rs` | `待分配` | Desktop/Android/Mobile `LocalBackend` 与 `RemoteBrowser` 模式选择、URL 验证、本地 loopback/embedded 后端装配入口；shell 不直接写 authority。 |
 
 ## Notes
 

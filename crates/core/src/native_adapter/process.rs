@@ -15,6 +15,7 @@ use super::{
 pub enum NativeProcessAdapterDecision {
     DeferredUntilPackagingGate,
     ExplicitNativeAuthorityOptIn,
+    LocalBackendDefault,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -49,6 +50,22 @@ impl NativeProcessAdapterPolicy {
             && self.embedded_service_runtime_enabled
             && self.packaging_gate_required
             && self.authority_writes_allowed
+    }
+
+    pub fn is_desktop_local_backend_default(self) -> bool {
+        self.decision == NativeProcessAdapterDecision::LocalBackendDefault
+            && self.child_process_runtime_enabled
+            && !self.embedded_service_runtime_enabled
+            && self.packaging_gate_required
+            && !self.authority_writes_allowed
+    }
+
+    pub fn is_mobile_local_backend_default(self) -> bool {
+        self.decision == NativeProcessAdapterDecision::LocalBackendDefault
+            && !self.child_process_runtime_enabled
+            && self.embedded_service_runtime_enabled
+            && self.packaging_gate_required
+            && !self.authority_writes_allowed
     }
 }
 
@@ -86,6 +103,26 @@ pub fn mobile_native_authority_policy_from_env() -> NativeProcessAdapterPolicy {
         }
     } else {
         CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+    }
+}
+
+pub fn desktop_local_backend_policy() -> NativeProcessAdapterPolicy {
+    NativeProcessAdapterPolicy {
+        decision: NativeProcessAdapterDecision::LocalBackendDefault,
+        child_process_runtime_enabled: true,
+        embedded_service_runtime_enabled: false,
+        packaging_gate_required: true,
+        authority_writes_allowed: false,
+    }
+}
+
+pub fn mobile_local_backend_policy() -> NativeProcessAdapterPolicy {
+    NativeProcessAdapterPolicy {
+        decision: NativeProcessAdapterDecision::LocalBackendDefault,
+        child_process_runtime_enabled: false,
+        embedded_service_runtime_enabled: true,
+        packaging_gate_required: true,
+        authority_writes_allowed: false,
     }
 }
 

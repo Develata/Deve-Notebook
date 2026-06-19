@@ -15,6 +15,7 @@ pub(crate) fn build_runtime_router(
     port: u16,
     auth: AuthRuntimeParts,
     p2p_inbound_token_env: Option<String>,
+    allowed_origins_override: Option<&[String]>,
 ) -> anyhow::Result<Router> {
     static_files::validate_static_dir_override()?;
     match auth.native_session_bridge {
@@ -24,6 +25,7 @@ pub(crate) fn build_runtime_router(
             auth.auth_config,
             Some(bridge),
             p2p_inbound_token_env,
+            allowed_origins_override,
         ),
         None => router::build_app_with_native_session_and_p2p(
             app_state,
@@ -31,6 +33,7 @@ pub(crate) fn build_runtime_router(
             auth.auth_config,
             None,
             p2p_inbound_token_env,
+            allowed_origins_override,
         ),
     }
 }

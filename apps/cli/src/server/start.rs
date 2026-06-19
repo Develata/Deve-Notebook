@@ -85,7 +85,13 @@ pub async fn start_server_with_options(
     let p2p_inbound_token_env = p2p.inbound_token_env.clone();
     runtime::spawn_background_runtime_tasks(p2p, app_state.clone());
 
-    let app = runtime::build_runtime_router(app_state, port, auth, p2p_inbound_token_env)?;
+    let app = runtime::build_runtime_router(
+        app_state,
+        port,
+        auth,
+        p2p_inbound_token_env,
+        launch.native_allowed_origins(),
+    )?;
     let addr = launch.bind_addr();
     println!("Server running on {}", launch.ws_display_base());
 

@@ -5,26 +5,27 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-20`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
 
 本章定义 Mobile content-first 适配策略。规范性用语继承 `01_terminology.md`。
 
-> **Current Native Boundary**：Mobile native 默认是壳层、生命周期与本机 service 绑定层；未显式 opt-in 时只表达 service readiness/offline，不拥有业务 authority。
-> **Post-Gate Target**：Mobile 端目标采用 **Tauri v2 Mobile packaging** 外壳，共享 Web 前端；native-packaging + 显式 opt-in 后可启动 embedded loopback full peer service，但写入仍必须经 server/core writer gate。
+> **Current Native Boundary**：Mobile native 是与 Web/Docker 等价的 peer 外壳，支持 `LocalBackend` 与 `RemoteBrowser` 两种互斥模式；壳层本身不拥有业务 authority。
+> **Post-Gate Target**：Mobile 端目标采用 **Tauri v2 Mobile packaging** 外壳，共享 Web 前端；Android/Mobile `LocalBackend` 默认启动 embedded loopback full peer service，写入仍必须经 server/core writer gate。`RemoteBrowser` 只作为 HTTPS 远端 Web 壳层。
 
 > **Web 映射**：当 Web 端 $W_{view} \le 768px$ 时，界面 **MUST** 遵循本章 Mobile 规范。
 
 ## 1. 原生适配器边界 {#mobile-current-native-boundary}
 
 *   Web 端小屏视口 **MUST** 映射到 Mobile 交互规范。
-*   Mobile native adapter 第一阶段只允许承担：绑定/探测已有受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件。
+*   Mobile native adapter 第一阶段只允许承担：选择 shell 模式、启动或绑定本机受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发前后台、安全区域与软键盘等有限平台事件，或在 `RemoteBrowser` 中导航到远端 HTTPS origin。
 *   默认构建 **MUST** 保持 no-Tauri Mobile skeleton；`tauri` / `tauri-build` dependency 只能作为 `apps/mobile` 的 optional dependency 挂在 `native-packaging` feature 后。
-*   mobile process adapter 默认关闭；Mobile v1 full peer 不使用子进程，而是在 `native-packaging` feature 且 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_MOBILE_EMBEDDED_SERVICE=1` 同时成立时启动 in-process embedded loopback service。
+*   `native-packaging` Android/Mobile 默认模式是 `LocalBackend`；Mobile v1 full peer 不使用子进程，而是启动 in-process embedded loopback service，并在 app-private ledger/repo/projection 上自动初始化默认本地 workspace，不依赖 Docker、外部 CLI 或用户手工 init。
+*   `RemoteBrowser` **MUST** 显式选择，且只接受远端 `https://host[:port]` origin。URL 不得包含 userinfo、query、fragment 或业务子路径；壳层不得注入本地 endpoint/session bootstrap，不得启动 embedded service。
 *   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；后台恢复失败 **MUST NOT** 被伪装成普通断网。
-*   Mobile native adapter **MUST NOT** 自行定义 Ledger / Projection Workspace authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。显式 opt-in 只允许 native 壳启动/绑定本机 embedded full peer service，不授予 shell 直接写 authority。
+*   Mobile native adapter **MUST NOT** 自行定义 Ledger / Projection Workspace authority、schema migration、source-control 语义、同步合并语义或搜索索引语义；这些仍归 core/server。`LocalBackend` 只允许 native 壳启动/绑定本机 embedded full peer service，不授予 shell 直接写 authority。
 *   UI readiness **MUST** 等待受控 service 完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；后台/离线状态不得导致本地编辑进入未声明的半可写状态。
 
 ### 1.1 Minimal Native Adapter Contract {#mobile-native-adapter-contract}
@@ -32,6 +33,17 @@
 Mobile native adapter 与 Desktop 共用 `./02_desktop.md#desktop-native-adapter-contract` 的 authority 边界：native 壳层只负责进程、平台能力与本机 service 绑定，不拥有 ledger/Projection Workspace/source-control/search 的业务真相。
 
 Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate`。
+
+### 1.1.1 Mobile Native Shell Modes {#mobile-native-shell-modes}
+
+`NativeShellMode` 的 Mobile 语义如下：
+
+*   `LocalBackend` 是 native-packaging Android/Mobile 默认模式。Mobile 壳层只负责 embedded loopback lifecycle、endpoint/session bootstrap、foreground reprobe、readiness 展示与失败恢复。
+*   `LocalBackend` 的本地数据根位于 app-private data root；后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
+*   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。
+*   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff、bootstrap plugin 与 cookie 注册之后创建；不得先创建无 session/bootstrap 的主 WebView。
+*   `RemoteBrowser { https_origin }` 是显式远端模式。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
+*   从后台恢复时，`LocalBackend` 必须重新 probe session、node role、WS repo handshake 与 current `scope_nonce`；`RemoteBrowser` 的恢复语义等价于浏览器页面恢复，不得伪装本地 authority。
 
 **Adapter inputs**:
 
@@ -104,24 +116,23 @@ Mobile 与 Desktop 共用 `./02_desktop.md#desktop-service-supervisor-contract`
 
 ### 1.3 Process Adapter Gate {#mobile-process-adapter-decision}
 
-Mobile process adapter gate 默认关闭；真实 mobile child-process runtime **MUST NOT** 进入默认 no-Tauri Mobile skeleton。Mobile full peer v1 使用 embedded loopback service，不使用移动端子进程。
+Mobile process adapter gate 对默认 no-Tauri Mobile skeleton 仍关闭；真实 mobile child-process runtime **MUST NOT** 进入默认 no-Tauri Mobile skeleton。Android/Mobile `LocalBackend` 使用 embedded loopback service，不使用移动端子进程；`RemoteBrowser` 关闭 embedded service。
 
 Gate policy 必须满足：
 
-*   默认 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
+*   默认 no-Tauri `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
     DeferredUntilPackagingGate`
-*   默认 `child_process_runtime_enabled = false`
+*   默认 no-Tauri `child_process_runtime_enabled = false`
 *   `packaging_gate_required = true`
-*   默认 `authority_writes_allowed = false`
+*   native shell 直接 `authority_writes_allowed = false`
 
-显式 opt-in policy 必须满足：
+Mobile `LocalBackend` policy 必须满足：
 
-*   `decision = ExplicitNativeAuthorityOptIn`
+*   `decision = LocalBackendDefault`
 *   `child_process_runtime_enabled = false`
 *   `embedded_service_runtime_enabled = true`
 *   `packaging_gate_required = true`
-*   `authority_writes_allowed = true`
-*   环境条件同时包含 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_MOBILE_EMBEDDED_SERVICE=1`
+*   native shell 直接 `authority_writes_allowed = false`
 
 真实 mobile embedded service runtime 必须位于 Mobile native adapter 的 `native-packaging` feature 后，只做 loopback endpoint、session handoff、foreground reprobe 与 runtime readiness wiring；不得绕过 writer-ready 或 repo scope gate。
 
@@ -161,7 +172,7 @@ Gate policy 必须满足：
     的 optional dependency 存在。
 *   Android shell-only package execution 可按 §1.6 单独打开。
 *   iOS shell-only package execution 可按 §1.7 单独打开。
-*   Mobile process runtime、child-process supervision 与 native authority write path 仍未打开。
+*   Mobile child-process supervision 与 native shell direct authority write path 仍未打开；Android/Mobile `LocalBackend` 只打开 embedded loopback service 承载。
 
 Foreground reprobe、writer-ready 与 repo scope gate **MUST NOT** 被 native runtime 绕过。
 
@@ -174,8 +185,8 @@ Gate policy 必须满足：
 *   Android required preflight **MUST** 先通过。
 *   Android project generation 与 package build **MAY** 只在 `apps/mobile` 的 `native-packaging`
     feature 与显式 target-host script 下执行。
-*   Android package build **MUST** 只声明 WebView shell、manifest、permission bridge、
-    deeplink/share/file/store package 等壳层能力。
+*   Android package build **MUST** 声明 WebView shell、manifest、permission bridge、
+    deeplink/share/file/store package 等壳层能力；`LocalBackend` 只通过 embedded loopback service 承载本机 full peer，不得使用子进程。
 *   Android package build **MUST NOT** 启动、持有、重启后端子进程。
 *   Android package build **MUST NOT** 写 ledger/Projection Workspace/source-control/search index/`.git`/`.notegit`。
 *   Android package build **MUST NOT** 绕过 foreground reprobe、session handoff、node-role

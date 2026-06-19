@@ -32,19 +32,23 @@
 - Search / Command 入口在移动端应以适合窄屏的方式呈现。
 - 打开与关闭 sheet 时，不应和滚动、drawer、outline 产生语义冲突。
 
-### 5. Native Embedded Service Opt-in
+### 5. Native 双模式
 
-- 默认 Mobile shell 不启动 native authority service。
-- Mobile v1 不使用 child process；只有 native-packaging 构建且同时设置 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_MOBILE_EMBEDDED_SERVICE=1` 时，才可启动 in-process embedded loopback service。
-- Mobile shell 负责 loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复。
+- Android/Mobile native-packaging 默认以 `LocalBackend` 模式启动，包含 in-process embedded loopback service、默认 repo/projection 初始化、loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复。
+- `LocalBackend` 必须在主 WebView 创建前完成 native session handoff、bootstrap 注入与 cookie 注册。
+- Mobile v1 不使用 child process。
+- Mobile 可显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
+- `RemoteBrowser` 不启动 embedded service，不注入本地 endpoint/session bootstrap，不把远端 URL 保存为本地 writer authority。
+- `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - 后台或系统暂停期间不承诺长时同步；回到前台后必须重新探测 service 与 writer gate。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
+- in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
 
 ## 非目标
 
 - 当前阶段不要求移动端提供完整原生系统分享、推送、相机等功能说明。
 - 当前阶段不要求 Chrome MCP 覆盖真正的 Android/iOS 原生容器能力。
-- 当前阶段不要求移动端后台长时 P2P 同步，也不把 native authority 作为默认移动 release readiness。
+- 当前阶段不要求移动端后台长时 P2P 同步，也不把 native packaging 解释为签名/商店/物理设备 release readiness。
 
 ## Chrome MCP 验收实例
 
@@ -103,23 +107,23 @@
 - 移动端 diff 始终使用 Unified View。
 - 关闭 diff 不改变 staged、pending 或 commit state。
 
-### MOBILE-UI-04: Native Embedded Service Opt-in 边界
+### MOBILE-UI-04: Native 双模式边界
 
 前置条件：
 
 - 已构建 native-packaging Mobile shell。
-- 分别准备默认环境与 `DEVE_NATIVE_AUTHORITY=1 DEVE_MOBILE_EMBEDDED_SERVICE=1` 环境。
+- 准备默认 `LocalBackend` 启动与显式 `RemoteBrowser` HTTPS origin。
 
 步骤：
 
 1. 默认环境启动 Mobile shell。
-2. 观察是否启动 embedded authority service。
-3. 在 opt-in 环境启动 Mobile shell。
-4. 模拟 foreground reprobe，并检查 writer gate 状态。
+2. 检查 embedded loopback service、session handoff 与 Web shell 可用性。
+3. 模拟 foreground reprobe，并检查 writer gate 状态。
+4. 切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin。
 
 期望结果：
 
-- 默认环境不启动 native authority service。
-- opt-in 环境可以启动 embedded loopback service。
+- 默认 LocalBackend 可以启动 embedded loopback service。
+- RemoteBrowser 等价于浏览器连接远端 Docker/Web URL。
 - 前台恢复后 UI 重新探测 service；写入仍受 repo writer gate 控制。
 - 后台长时同步不可被 UI 暗示为已支持。

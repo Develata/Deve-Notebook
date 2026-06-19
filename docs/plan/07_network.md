@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-14`
+- `Last Review`: `2026-06-19`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -531,9 +531,10 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 
 ### 12.5 Native Full Peer Runtime {#native-full-peer-runtime}
 
-- Desktop / Mobile native full peer runtime 只在 native packaging + 显式 opt-in 后打开。
+- Desktop / Android / Mobile native full peer runtime 在 native-packaging `LocalBackend` 模式默认打开。
+- `RemoteBrowser` 模式等价于浏览器连接远端 Docker/Web HTTPS origin，不拥有本地 FullPeer runtime。
 - Native shell 不拥有 ledger/source-control/search authority；它只能启动或绑定本机 service，并把 endpoint/session/readiness 交给共享 Web shell。
-- Desktop full peer v1 使用受控 child-process local service；Mobile full peer v1 使用 in-process embedded loopback service。
+- Desktop full peer v1 使用受控 child-process local service；Android/Mobile full peer v1 使用 in-process embedded loopback service。
 - 两者必须通过本机 server/core writer gate 完成业务写入；shell lifecycle、foreground、network online 事件不得直接授予可写状态。
 
 ## 13. Refactor Target
@@ -558,4 +559,4 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - relay / proxy 相关端口配置
 - `[p2p] enabled`, `connect_interval_ms`, `inbound_token_env`
 - `[[p2p.peers]] label`, `peer_id`, `repo_id`, `ws_url`, `auth_token_env`, `enabled`
-- Native opt-in env：`DEVE_NATIVE_AUTHORITY=1`，Desktop 还要求 `DEVE_DESKTOP_LOCAL_SERVICE=1`，Mobile 还要求 `DEVE_MOBILE_EMBEDDED_SERVICE=1`
+- Native shell mode：默认 `LocalBackend`；显式 `RemoteBrowser` 使用 `DEVE_NATIVE_REMOTE_URL=https://...`

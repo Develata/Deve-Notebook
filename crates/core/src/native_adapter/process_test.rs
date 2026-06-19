@@ -89,6 +89,22 @@ fn mobile_native_authority_opt_in_uses_embedded_service_without_child_process() 
 }
 
 #[test]
+fn local_backend_default_policies_enable_runtime_without_shell_authority_writes() {
+    let desktop = desktop_local_backend_policy();
+    let mobile = mobile_local_backend_policy();
+
+    assert!(desktop.is_desktop_local_backend_default());
+    assert!(desktop.child_process_runtime_enabled);
+    assert!(!desktop.embedded_service_runtime_enabled);
+    assert!(!desktop.authority_writes_allowed);
+
+    assert!(mobile.is_mobile_local_backend_default());
+    assert!(!mobile.child_process_runtime_enabled);
+    assert!(mobile.embedded_service_runtime_enabled);
+    assert!(!mobile.authority_writes_allowed);
+}
+
+#[test]
 fn default_adapter_binds_existing_loopback_service_without_runtime() {
     let mut adapter = NativeProcessAdapter::default();
 

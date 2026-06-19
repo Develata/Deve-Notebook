@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use deve_core::config::AppProfile;
 use deve_core::native_adapter::{
     NativeProcessAdapterDecision, NativeProcessAdapterPolicy, NativeProcessRuntimeError,
-    NativeProcessSpawnSpec,
+    NativeProcessSpawnSpec, desktop_local_backend_policy,
 };
 use thiserror::Error;
 
@@ -43,13 +43,21 @@ impl DesktopLocalServiceEntrypointPolicy {
         }
     }
 
+    pub fn local_backend_default() -> Self {
+        Self::opt_in_enabled()
+    }
+
     pub fn native_policy(self) -> NativeProcessAdapterPolicy {
-        NativeProcessAdapterPolicy {
-            decision: NativeProcessAdapterDecision::DeferredUntilPackagingGate,
-            child_process_runtime_enabled: self.child_process_runtime_enabled,
-            embedded_service_runtime_enabled: false,
-            packaging_gate_required: true,
-            authority_writes_allowed: false,
+        if self.child_process_runtime_enabled {
+            desktop_local_backend_policy()
+        } else {
+            NativeProcessAdapterPolicy {
+                decision: NativeProcessAdapterDecision::DeferredUntilPackagingGate,
+                child_process_runtime_enabled: false,
+                embedded_service_runtime_enabled: false,
+                packaging_gate_required: true,
+                authority_writes_allowed: false,
+            }
         }
     }
 }
@@ -75,7 +83,7 @@ pub struct DesktopLocalServiceEntrypointPlan {
 
 #[derive(Debug, Error)]
 pub enum DesktopLocalServiceEntrypointError {
-    #[error("desktop local service opt-in env {env} has invalid value: {value}")]
+    #[error("desktop local service env {env} has invalid value: {value}")]
     InvalidOptInValue { env: &'static str, value: String },
     #[error("desktop executable path has no parent directory")]
     MissingExecutableParent,
@@ -93,12 +101,12 @@ pub enum DesktopLocalServiceEntrypointError {
 
 pub fn desktop_local_service_entrypoint_policy_from_env()
 -> Result<DesktopLocalServiceEntrypointPolicy, DesktopLocalServiceEntrypointError> {
-    let native_authority = opt_in_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?;
-    let desktop_local_service = opt_in_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?;
-    if native_authority && desktop_local_service {
-        Ok(DesktopLocalServiceEntrypointPolicy::opt_in_enabled())
-    } else {
+    let native_authority = optional_env_flag(DEVE_NATIVE_AUTHORITY_ENV)?;
+    let desktop_local_service = optional_env_flag(DEVE_DESKTOP_LOCAL_SERVICE_ENV)?;
+    if matches!(native_authority, Some(false)) || matches!(desktop_local_service, Some(false)) {
         Ok(DesktopLocalServiceEntrypointPolicy::disabled())
+    } else {
+        Ok(DesktopLocalServiceEntrypointPolicy::local_backend_default())
     }
 }
 
@@ -146,11 +154,13 @@ pub fn plan_desktop_local_service_entrypoint_from_env()
     )
 }
 
-fn opt_in_env_flag(env: &'static str) -> Result<bool, DesktopLocalServiceEntrypointError> {
+fn optional_env_flag(
+    env: &'static str,
+) -> Result<Option<bool>, DesktopLocalServiceEntrypointError> {
     let Some(value) = std::env::var_os(env) else {
-        return Ok(false);
+        return Ok(None);
     };
-    parse_opt_in_value(env, &value.to_string_lossy())
+    parse_opt_in_value(env, &value.to_string_lossy()).map(Some)
 }
 
 fn parse_opt_in_value(

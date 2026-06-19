@@ -7,7 +7,8 @@
 //! Feature-gated mobile packaging scaffold.
 //!
 //! This module records the mobile packaging dependency batch plus shell-only
-//! package gates without starting a backend process.
+//! package gates. Android/Mobile LocalBackend uses embedded loopback service;
+//! the shell still does not own authority writes.
 
 pub const MOBILE_TAURI_CONFIG_PATH: &str = "apps/mobile/tauri.conf.json";
 pub const MOBILE_TAURI_PRODUCT_NAME: &str = "Deve Notebook";
@@ -76,6 +77,7 @@ pub struct MobileShellPackagingAcceptance {
     pub platform_package_build_declared: bool,
     pub session_handoff_required_before_writable_ui: bool,
     pub foreground_reprobe_required: bool,
+    pub embedded_service_runtime_enabled: bool,
     pub child_process_runtime_enabled: bool,
     pub release_ready_claimed: bool,
 }
@@ -87,6 +89,7 @@ pub struct MobileAndroidShellPackageExecution {
     pub project_generation_allowed: bool,
     pub package_build_allowed: bool,
     pub ios_package_build_allowed: bool,
+    pub embedded_service_runtime_enabled: bool,
     pub child_process_runtime_enabled: bool,
     pub opens_authority_write_path: bool,
     pub release_ready_claimed: bool,
@@ -97,6 +100,7 @@ impl MobileAndroidShellPackageExecution {
         self.project_generation_allowed
             && self.package_build_allowed
             && !self.ios_package_build_allowed
+            && self.embedded_service_runtime_enabled
             && !self.child_process_runtime_enabled
             && !self.opens_authority_write_path
             && !self.release_ready_claimed
@@ -110,6 +114,7 @@ pub struct MobileIosShellPackageExecution {
     pub project_generation_allowed: bool,
     pub package_build_allowed: bool,
     pub android_package_build_allowed: bool,
+    pub embedded_service_runtime_enabled: bool,
     pub child_process_runtime_enabled: bool,
     pub opens_authority_write_path: bool,
     pub release_ready_claimed: bool,
@@ -120,6 +125,7 @@ impl MobileIosShellPackageExecution {
         self.project_generation_allowed
             && self.package_build_allowed
             && !self.android_package_build_allowed
+            && self.embedded_service_runtime_enabled
             && !self.child_process_runtime_enabled
             && !self.opens_authority_write_path
             && !self.release_ready_claimed
@@ -154,6 +160,7 @@ impl MobilePackagingScaffold {
                 .shell
                 .session_handoff_required_before_writable_ui
             && self.acceptance.shell.foreground_reprobe_required
+            && self.acceptance.shell.embedded_service_runtime_enabled
             && !self.acceptance.shell.child_process_runtime_enabled
             && !self.acceptance.shell.release_ready_claimed
             && self.acceptance.android_shell_package.is_shell_only_open()
@@ -196,6 +203,7 @@ const SHELL_ACCEPTANCE: MobileShellPackagingAcceptance = MobileShellPackagingAcc
     platform_package_build_declared: true,
     session_handoff_required_before_writable_ui: true,
     foreground_reprobe_required: true,
+    embedded_service_runtime_enabled: true,
     child_process_runtime_enabled: false,
     release_ready_claimed: false,
 };
@@ -207,6 +215,7 @@ const ANDROID_SHELL_PACKAGE_EXECUTION: MobileAndroidShellPackageExecution =
         project_generation_allowed: true,
         package_build_allowed: true,
         ios_package_build_allowed: false,
+        embedded_service_runtime_enabled: true,
         child_process_runtime_enabled: false,
         opens_authority_write_path: false,
         release_ready_claimed: false,
@@ -219,6 +228,7 @@ const IOS_SHELL_PACKAGE_EXECUTION: MobileIosShellPackageExecution =
         project_generation_allowed: true,
         package_build_allowed: true,
         android_package_build_allowed: false,
+        embedded_service_runtime_enabled: true,
         child_process_runtime_enabled: false,
         opens_authority_write_path: false,
         release_ready_claimed: false,

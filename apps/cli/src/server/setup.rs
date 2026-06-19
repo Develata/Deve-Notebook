@@ -15,9 +15,15 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-/// 按环境变量构建 CORS 层；默认不信任任何跨站来源，禁止生产硬编码 localhost。
-pub(super) fn build_cors_layer(_port: u16) -> Result<CorsLayer> {
-    let origins = allowed_origins_from_env()?;
+/// 按显式 runtime override 或环境变量构建 CORS 层；默认不信任任何跨站来源。
+pub(super) fn build_cors_layer(
+    _port: u16,
+    allowed_origins_override: Option<&[String]>,
+) -> Result<CorsLayer> {
+    let origins = match allowed_origins_override {
+        Some(origins) => allowed_origins_from_values(origins.iter().map(String::as_str))?,
+        None => allowed_origins_from_env()?,
+    };
     if is_development() && !origins.is_empty() {
         tracing::warn!(
             "WARNING: development-only CORS allow list active; never use this as production origin policy"
@@ -42,8 +48,14 @@ fn allowed_origins_from_env() -> Result<Vec<axum::http::HeaderValue>> {
         return Ok(Vec::new());
     };
 
+    allowed_origins_from_values(origins.split(',').map(str::trim))
+}
+
+fn allowed_origins_from_values<'a>(
+    origins: impl IntoIterator<Item = &'a str>,
+) -> Result<Vec<axum::http::HeaderValue>> {
     origins
-        .split(',')
+        .into_iter()
         .map(str::trim)
         .filter(|origin| !origin.is_empty())
         .map(|origin| {
@@ -112,7 +124,10 @@ fn validate_file_watcher_startup(workspace_root: &std::path::Path) -> Result<()>
 
 #[cfg(test)]
 mod tests {
-    use super::{allowed_origins_from_env, validate_file_watcher_startup, write_main_port_hint};
+    use super::{
+        allowed_origins_from_env, allowed_origins_from_values, validate_file_watcher_startup,
+        write_main_port_hint,
+    };
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -187,5 +202,17 @@ mod tests {
         assert_eq!(origins.len(), 2);
         assert_eq!(origins[0], "https://app.deve.com");
         assert_eq!(origins[1], "http://127.0.0.1:3000");
+    }
+
+    #[test]
+    fn allowed_origins_from_values_accepts_runtime_override() {
+        let origins = allowed_origins_from_values(
+            ["http://tauri.localhost", "tauri://localhost"].into_iter(),
+        )
+        .expect("runtime origin override");
+
+        assert_eq!(origins.len(), 2);
+        assert_eq!(origins[0], "http://tauri.localhost");
+        assert_eq!(origins[1], "tauri://localhost");
     }
 }

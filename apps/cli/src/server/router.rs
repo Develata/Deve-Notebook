@@ -40,6 +40,7 @@ pub fn build_app(
         auth_config,
         None,
         ws::WsAdmissionConfig::default().p2p_inbound_token_env,
+        None,
     )
 }
 
@@ -49,6 +50,7 @@ pub fn build_app_with_native_session_and_p2p(
     auth_config: Arc<AuthConfig>,
     native_session_bridge: Option<Arc<auth::handlers::NativeSessionBridge>>,
     p2p_inbound_token_env: Option<String>,
+    allowed_origins_override: Option<&[String]>,
 ) -> Result<Router> {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
     let login_limiter = rate_limit::RateLimiter::new(5, std::time::Duration::from_secs(60));
@@ -208,7 +210,7 @@ pub fn build_app_with_native_session_and_p2p(
         ))))
         .layer(axum::Extension(brute_force))
         .layer(axum::Extension(api_limiter))
-        .layer(setup::build_cors_layer(port)?))
+        .layer(setup::build_cors_layer(port, allowed_origins_override)?))
 }
 
 /// 按环境驱动契约加载认证配置；生产缺失密钥时直接以非零退出失败。

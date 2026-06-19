@@ -8,6 +8,8 @@ license.workspace = true
 [features]
 default = []
 native-packaging = [
+  "dep:deve_cli",
+  "dep:getrandom",
   "dep:indexmap_1",
   "dep:tauri",
   "dep:tauri-build",
@@ -18,7 +20,9 @@ native-packaging = [
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [dependencies]
+deve_cli = { path = "../cli", optional = true }
 deve_core.workspace = true
+getrandom = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

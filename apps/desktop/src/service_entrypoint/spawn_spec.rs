@@ -3,13 +3,12 @@ use std::path::{Path, PathBuf};
 use deve_core::config::AppProfile;
 use deve_core::native_adapter::{
     NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeProcessBindHints, NativeProcessEnvBinding,
-    NativeProcessPathResolution, NativeProcessSpawnSpec,
+    NativeProcessPathResolution, NativeProcessSpawnSpec, native_tauri_allowed_origins,
 };
 use deve_core::security::auth::password;
 
 use super::{DesktopLocalServiceEntrypointError, DesktopLocalServiceEntrypointInput};
 
-const DESKTOP_TAURI_ORIGIN: &str = "http://tauri.localhost";
 const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
 
 pub(super) fn build_spawn_spec(
@@ -61,7 +60,7 @@ pub(super) fn build_spawn_spec(
         },
         NativeProcessEnvBinding {
             key: "ALLOWED_ORIGINS".to_string(),
-            value: DESKTOP_TAURI_ORIGIN.to_string(),
+            value: native_tauri_allowed_origins().join(","),
         },
         NativeProcessEnvBinding {
             key: DEVE_PLUGIN_DIR_ENV.to_string(),

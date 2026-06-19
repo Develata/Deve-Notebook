@@ -6,6 +6,7 @@ pub struct DesktopTauriRuntimeSurface {
     pub build_script_declared: bool,
     pub window_shell_runtime_declared: bool,
     pub menu_tray_runtime_bound: bool,
+    pub local_backend_default_enabled: bool,
     pub child_process_runtime_enabled: bool,
     pub opens_authority_write_path: bool,
 }
@@ -16,7 +17,8 @@ impl DesktopTauriRuntimeSurface {
             && self.build_script_declared
             && self.window_shell_runtime_declared
             && self.menu_tray_runtime_bound
-            && !self.child_process_runtime_enabled
+            && self.local_backend_default_enabled
+            && self.child_process_runtime_enabled
             && !self.opens_authority_write_path
     }
 }
@@ -25,6 +27,7 @@ impl DesktopTauriRuntimeSurface {
 pub struct DesktopTauriStartupSmoke {
     pub packaged_binary_started: bool,
     pub shell_only_runtime: bool,
+    pub local_backend_default_enabled: bool,
     pub child_process_runtime_enabled: bool,
     pub opens_authority_write_path: bool,
 }
@@ -33,7 +36,8 @@ impl DesktopTauriStartupSmoke {
     pub fn passed(self) -> bool {
         self.packaged_binary_started
             && self.shell_only_runtime
-            && !self.child_process_runtime_enabled
+            && self.local_backend_default_enabled
+            && self.child_process_runtime_enabled
             && !self.opens_authority_write_path
     }
 }
@@ -64,7 +68,8 @@ pub fn desktop_tauri_runtime_surface() -> DesktopTauriRuntimeSurface {
         build_script_declared: true,
         window_shell_runtime_declared: true,
         menu_tray_runtime_bound: true,
-        child_process_runtime_enabled: false,
+        local_backend_default_enabled: true,
+        child_process_runtime_enabled: true,
         opens_authority_write_path: false,
     }
 }
@@ -74,6 +79,7 @@ pub fn desktop_tauri_startup_smoke() -> DesktopTauriStartupSmoke {
     DesktopTauriStartupSmoke {
         packaged_binary_started: true,
         shell_only_runtime: surface.is_shell_only(),
+        local_backend_default_enabled: surface.local_backend_default_enabled,
         child_process_runtime_enabled: surface.child_process_runtime_enabled,
         opens_authority_write_path: surface.opens_authority_write_path,
     }

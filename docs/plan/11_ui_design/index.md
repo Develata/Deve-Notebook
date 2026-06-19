@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-08`
+- `Last Review`: `2026-06-20`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -497,21 +497,27 @@ PinnedSetChanged
 ### 8.5 Native Adapter Gate Registry {#native-adapter-gate-registry}
 
 - `native_adapter/` 是 shell adapter 层，不是 authority core。
-- Desktop / Mobile 子章 **MAY** 定义平台 endpoint、session handoff、lifecycle、foreground reprobe 与 process adapter 差异。
+- Desktop / Mobile native shell **MUST** 支持两个互斥模式：
+  - `LocalBackend`：native-packaging 运行时默认模式。壳层启动或持有本机受控后端，并在 app-private ledger/repo/projection 上完成初始化；所有读写仍经本机 server/core writer gate。
+  - `RemoteBrowser`：显式远端模式。壳层只把 WebView 导航到远端 Docker/Web 的 HTTPS origin，行为等价于浏览器访问该站点；不得注入本地 endpoint/session bootstrap，不得启动本机后端。
+- Desktop / Mobile 子章 **MAY** 定义平台 endpoint、session handoff、lifecycle、foreground reprobe 与 local backend 承载差异。
 - Desktop / Mobile 子章 **MUST NOT** 引入新的 ledger、Projection Workspace、source-control、sync、search 或 settings authority。
-- native adapter **MUST** 保持 no-packaging-runtime 默认构建；native authority 与本地 service 默认关闭。
-- native authority 只有在 `native-packaging` feature 与平台 opt-in env 同时成立时才可打开：Desktop 使用 child-process local service，Mobile 使用 embedded loopback service。
+- native adapter **MUST** 保持 no-packaging-runtime 默认构建；`native-packaging` 构建进入 `LocalBackend` 默认模式，而默认 workspace/no-Tauri 构建仍不含 packaging runtime。
+- Desktop `LocalBackend` 使用受控 child-process local service；Mobile/Android `LocalBackend` 使用 embedded loopback service，Mobile v1 不使用子进程。
 - native adapter 通过 gate 后 **MUST** 继续服从 writer gate、repo scope gate 与本章 control/runtime 分层；shell 不得直接写 ledger、projection、source-control、sync、search 或 settings authority。
 
 ### 8.6 Native Post-Gate Common Contract {#native-post-gate-common-contract}
 
-- post-gate native shell **MUST** 先拉起受控本机 service，再启动 UI；未显式 opt-in 时不得启动 native authority service。
-- Desktop local service 与 Mobile embedded loopback service 都只是本机 full peer authority 的承载进程/循环，不改变业务写入入口。
+- post-gate native shell **MUST** 先解析 `NativeShellMode`，再启动 UI。
+- `LocalBackend` **MUST** 先拉起受控本机 service 并完成 native session handoff；Desktop local service 与 Mobile embedded loopback service 都只是本机 full peer authority 的承载进程/循环，不改变业务写入入口。
+- `RemoteBrowser` **MUST** 只接受 HTTPS origin URL；不接受 userinfo、query、fragment 或业务子路径。RemoteBrowser 壳层不拥有本机 repo、ledger 或 writer gate，只消费远端 Web 同源 `/api` 与 `/ws`。
 - service 端口 **MUST** 使用本机随机可用端口，并只保存在运行时内存中。
 - 端口占用时，service boot **MUST** 自动回退到新的可用端口并重新绑定。
 - 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。
+- Tauri custom-protocol CORS allowlist **MUST** 覆盖 Windows/Android 的 `http://tauri.localhost` 与 macOS/iOS/Linux 的 `tauri://localhost` 两种 origin 形式，不得只按单平台 origin 放行。
+- Mobile embedded same-process `LocalBackend` **MUST** 通过 typed runtime launch options 传递 auth/session bootstrap material；**MUST NOT** 通过修改进程级环境变量把密钥交给同进程后端。
 - 本机 service **MUST NOT** 监听非回环地址。
-- 无公网时，本地读写能力 **MUST** 仍由 core/server authority 与 writer gate 决定。
+- 无公网时，`LocalBackend` 本地读写能力 **MUST** 仍由 core/server authority 与 writer gate 决定；`RemoteBrowser` 则等价于普通浏览器断连。
 - native shell **MUST NOT** 直接写 ledger、projection、source-control、search、`.git` 或 `.notegit`；所有写入仍经本地 server/core writer gate。
 - service port、session secret、P2P token material 与 bootstrap secret **MUST NOT** 写入 URL、日志、Web localStorage 或持久 config。
 - 本地持久化、schema migration、repair、projection writeback、crash recovery 与本地内容落盘 **MUST** 服从 `03_storage/`。

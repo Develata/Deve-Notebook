@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-19`
 - `Authority Owns`: `STRIDE catalog / key lifecycle (高层流程) / algorithm deprecation / supply chain policy / CVD policy`
 - `Authority Defers To`: `07_network#trust-boundary (trust boundary), 07_network#full-peer-mesh-v1 (P2P mesh / FullPeer admission), 08_auth (auth runtime contract), 06_backup#backup-secret-ref-contract (key custody), 03_storage/authority (ledger append validation), 11_ui_design#native-adapter-gate-registry (native shell gate), 13_i18n#i18n-error-code-catalog (错误码/限流码), 17_tech_stack#native-packaging-dependency-gate (供应链依赖门禁), 18_release (artifact 签名), 19_plugins (plugin capability gate), 22_reliability_observability#alerting-tier (告警等级)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (auth / trusted-agent security flows)`
@@ -27,7 +27,7 @@
 - relay 转发与来源归属、间接同步写入路径由签名来源决定、relay blind storage：见 `07_network#trust-boundary` 与 `07_network` §10。
 - FullPeer mesh、server-to-server `/ws` admission、P2P token 环境变量、shadow-only apply 与显式 merge 边界：见 `07_network#full-peer-mesh-v1` 与 `07_network#full-peer-ws-admission`。
 - writer gate、Writer Identity、WebLightPeer（浏览器 repo-scoped transient writer identity）：见 `01_terminology`。
-- native local authority 的默认关闭、显式 opt-in、Desktop child-process local service、Mobile embedded loopback service 与 shell no-direct-authority：见 `11_ui_design#native-adapter-gate-registry`、`11_ui_design#native-post-gate-common-contract` 与 `17_tech_stack#native-packaging-dependency-gate`。
+- native `LocalBackend` / `RemoteBrowser` 双模式、Desktop child-process local service、Mobile embedded loopback service 与 shell no-direct-authority：见 `11_ui_design#native-adapter-gate-registry`、`11_ui_design#native-post-gate-common-contract` 与 `17_tech_stack#native-packaging-dependency-gate`。
 
 以上 MUST/SHOULD 约束不在本章复述或扩展。
 
@@ -40,7 +40,7 @@
 | Repudiation | 否认写入 | ledger 因果链 `(PeerId, LedgerSeq)` 提供审计定位（非完整 per-entry 不可抵赖）；定义归 `01_terminology` 与 `03_storage/authority` |
 | Information Disclosure | relay 窥探 / 备份泄露 / P2P 与 native bootstrap secret 泄露 | relay blind storage；备份 pack 加密/认证归 `06_backup#backup-artifact-protection-contract`，密钥引用托管归 `06_backup#backup-secret-ref-contract`；P2P token material 不得进入 config、日志、URL、browser storage 或 native bootstrap payload（`07_network#static-peer-config`） |
 | Denial of Service | 登录爆破 / 连接洪泛 | 速率限制（`AUTH_RATE_LIMITED`，归 `13_i18n`/`08_auth`）；malicious peer 隔离（`07_network` §10.3） |
-| Elevation of Privilege | 越权写 / 越权插件能力 / native shell 越权成为 authority | writer gate（`01_terminology`）；plugin capability gate（`19_plugins`）；native shell 即使 opt-in 也不得直接写 ledger/source-control/search，所有写入仍经本地 server/core writer gate（`11_ui_design#native-post-gate-common-contract`） |
+| Elevation of Privilege | 越权写 / 越权插件能力 / native shell 越权成为 authority | writer gate（`01_terminology`）；plugin capability gate（`19_plugins`）；native shell 即使在 `LocalBackend` 模式也不得直接写 ledger/source-control/search，所有写入仍经本地 server/core writer gate（`11_ui_design#native-post-gate-common-contract`） |
 
 ## 4. Key Lifecycle (高层流程) {#key-lifecycle}
 
@@ -86,6 +86,6 @@
 
 - 鉴权 / TLS / 速率限制配置：归 `08_auth` 与 `15_settings`。
 - P2P static peer 配置只保存 endpoint、repo/peer identity 与 token env 名称；token material 只在运行环境中提供：归 `07_network#static-peer-config`。
-- Native authority opt-in env（`DEVE_NATIVE_AUTHORITY=1` 以及平台 service env）只打开本地受控 service；不授予 shell 直接 authority：归 `11_ui_design#native-adapter-gate-registry` 与 `17_tech_stack#native-packaging-dependency-gate`。
+- Native `LocalBackend` 只打开本地受控 service；`RemoteBrowser` 只加载远端 HTTPS origin。两者都不授予 shell 直接 authority：归 `11_ui_design#native-adapter-gate-registry` 与 `17_tech_stack#native-packaging-dependency-gate`。
 - 备份密钥引用配置：归 `06_backup#backup-secret-ref-contract`。
 - 本章自身无独立配置项。

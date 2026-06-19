@@ -140,7 +140,7 @@ impl DesktopPackagingScaffold {
                 .acceptance
                 .shell
                 .session_handoff_required_before_writable_ui
-            && !self.acceptance.shell.child_process_runtime_enabled
+            && self.acceptance.shell.child_process_runtime_enabled
             && !self.acceptance.shell.release_ready_claimed
             && self.acceptance.menu_tray.is_runtime_bound_authority_free()
             && self.is_authority_free()
@@ -179,7 +179,7 @@ const SHELL_ACCEPTANCE: DesktopShellPackagingAcceptance = DesktopShellPackagingA
     installer_metadata_declared: true,
     auto_update_artifacts_enabled: false,
     session_handoff_required_before_writable_ui: true,
-    child_process_runtime_enabled: false,
+    child_process_runtime_enabled: true,
     release_ready_claimed: false,
 };
 

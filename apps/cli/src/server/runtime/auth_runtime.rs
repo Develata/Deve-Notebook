@@ -14,10 +14,17 @@ pub(crate) struct AuthRuntimeParts {
 }
 
 pub(crate) fn init_auth_runtime(launch: &ServerLaunchOptions) -> anyhow::Result<AuthRuntimeParts> {
-    let auth_config = Arc::new(router::load_auth_config());
-    let native_session_bridge =
-        auth::handlers::NativeSessionBridge::from_env(launch.is_native_loopback())
-            .map(|bridge| bridge.map(Arc::new))?;
+    let auth_config = Arc::new(match launch.native_auth_material() {
+        Some(material) => material.auth_config()?,
+        None => router::load_auth_config(),
+    });
+    let native_session_bridge = match launch.native_auth_material() {
+        Some(material) => Some(Arc::new(auth::handlers::NativeSessionBridge::new(
+            material.session_bootstrap_secret().to_string(),
+        )?)),
+        None => auth::handlers::NativeSessionBridge::from_env(launch.is_native_loopback())
+            .map(|bridge| bridge.map(Arc::new))?,
+    };
     Ok(AuthRuntimeParts {
         auth_config,
         native_session_bridge,

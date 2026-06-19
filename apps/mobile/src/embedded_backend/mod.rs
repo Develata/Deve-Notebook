@@ -1,0 +1,398 @@
+//! plan_ref:
+//!   - 11_ui_design/03_mobile#mobile-native-shell-modes
+//!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
+//!
+//! Mobile LocalBackend assembly. This module starts the embedded backend and
+//! performs native-session handoff; business authority stays in server/core.
+
+use std::path::PathBuf;
+use std::{fmt, net::TcpListener};
+
+use deve_cli::native_runtime::{NativeLocalBackendOptions, start_native_loopback_backend};
+use deve_cli::server::NativeLoopbackAuthMaterial;
+use deve_core::config::AppProfile;
+use deve_core::native_adapter::{NativeAdapterError, native_tauri_allowed_origins};
+use deve_core::security::auth::password;
+use tauri::plugin::TauriPlugin;
+use thiserror::Error;
+
+use crate::{MobileBootstrap, MobileSessionMaterial, MobileShell, MobileShellError};
+
+mod cookie;
+mod http;
+
+use cookie::{MobileNativeSessionCookie, tauri_cookie_from_native_session};
+use http::MobileLoopbackHttpProbe;
+
+const MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS: usize = 3;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MobileEmbeddedBackendPlan {
+    pub app_data_dir: PathBuf,
+    pub port: u16,
+    pub http_base: String,
+    pub ws_base: String,
+    pub embedded_service_runtime_enabled: bool,
+    pub opens_authority_write_path: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MobileEmbeddedBackendBootstrap {
+    pub plan: MobileEmbeddedBackendPlan,
+    pub script: MobileEmbeddedBackendScript,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MobileEmbeddedBackendScript {
+    source: String,
+    native_session_cookie: MobileNativeSessionCookie,
+}
+
+impl MobileEmbeddedBackendScript {
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    pub fn has_native_session_cookie(&self) -> bool {
+        self.native_session_cookie.has_value()
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum MobileEmbeddedBackendError {
+    #[error("mobile LocalBackend app data dir must be absolute")]
+    RelativeAppDataDir,
+    #[error("mobile LocalBackend port must be non-zero")]
+    InvalidPort,
+    #[error("failed to allocate mobile LocalBackend loopback port")]
+    PortAllocationFailed(#[source] std::io::Error),
+    #[error("failed to generate mobile native session material")]
+    SecretGenerationFailed,
+    #[error("failed to generate mobile native auth material")]
+    AuthMaterialGenerationFailed,
+    #[error("mobile LocalBackend probe URL is invalid")]
+    InvalidProbeUrl,
+    #[error("mobile LocalBackend endpoint is invalid")]
+    InvalidEndpoint(#[from] NativeAdapterError),
+    #[error("mobile LocalBackend probe HTTP status is not successful: {status}")]
+    ProbeHttpStatus { status: u16 },
+    #[error("mobile LocalBackend probe response is too large")]
+    ProbeResponseTooLarge,
+    #[error("mobile LocalBackend probe response is invalid")]
+    ProbeInvalidResponse,
+    #[error("mobile LocalBackend probe IO failed")]
+    ProbeIo(#[source] std::io::Error),
+    #[error("mobile native session handoff failed")]
+    NativeSessionHandoffFailed,
+    #[error("mobile native session cookie is invalid")]
+    NativeSessionCookieInvalid,
+    #[error("mobile LocalBackend bootstrap source contains forbidden material: {marker}")]
+    ForbiddenMaterial { marker: &'static str },
+    #[error(transparent)]
+    Shell(#[from] MobileShellError),
+    #[error("failed to serialize mobile LocalBackend bootstrap: {0}")]
+    BootstrapSerialize(#[from] serde_json::Error),
+}
+
+pub fn allocate_mobile_loopback_port() -> Result<u16, MobileEmbeddedBackendError> {
+    let listener = TcpListener::bind(("127.0.0.1", 0))
+        .map_err(MobileEmbeddedBackendError::PortAllocationFailed)?;
+    listener
+        .local_addr()
+        .map(|addr| addr.port())
+        .map_err(MobileEmbeddedBackendError::PortAllocationFailed)
+}
+
+pub fn plan_mobile_embedded_backend(
+    app_data_dir: impl Into<PathBuf>,
+    port: u16,
+) -> Result<MobileEmbeddedBackendPlan, MobileEmbeddedBackendError> {
+    if port == 0 {
+        return Err(MobileEmbeddedBackendError::InvalidPort);
+    }
+    let app_data_dir = app_data_dir.into();
+    if !app_data_dir.is_absolute() {
+        return Err(MobileEmbeddedBackendError::RelativeAppDataDir);
+    }
+    Ok(MobileEmbeddedBackendPlan {
+        app_data_dir,
+        port,
+        http_base: format!("http://127.0.0.1:{port}"),
+        ws_base: format!("ws://127.0.0.1:{port}"),
+        embedded_service_runtime_enabled: true,
+        opens_authority_write_path: false,
+    })
+}
+
+pub fn run_mobile_embedded_backend_bootstrap(
+    plan: MobileEmbeddedBackendPlan,
+) -> Result<MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError> {
+    let auth = MobileNativeAuthMaterial::generate()?;
+    let native_session_secret = auth.native_session_secret.clone();
+    spawn_embedded_backend(&plan, auth.into_native_loopback_auth_material());
+
+    let mut shell = MobileShell::new();
+    shell.start_service();
+
+    let probe = MobileLoopbackHttpProbe::default();
+    let mut endpoint = probe.probe_node_role(&plan)?;
+    let cookie = probe.bind_native_session(&plan, &endpoint, &native_session_secret)?;
+    endpoint.session_bound = true;
+    shell.bind_endpoint(endpoint)?;
+    shell.bind_session(MobileSessionMaterial::bound())?;
+
+    let bootstrap = shell.bootstrap_for_web()?;
+    let script = mobile_embedded_backend_script(bootstrap, cookie)?;
+    Ok(MobileEmbeddedBackendBootstrap { plan, script })
+}
+
+pub fn run_mobile_embedded_backend_bootstrap_with_port_retry(
+    app_data_dir: impl Into<PathBuf>,
+) -> Result<MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError> {
+    let app_data_dir = app_data_dir.into();
+    for attempt in 0..MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS {
+        let port = allocate_mobile_loopback_port()?;
+        let plan = plan_mobile_embedded_backend(app_data_dir.clone(), port)?;
+        match run_mobile_embedded_backend_bootstrap(plan) {
+            Ok(bootstrap) => return Ok(bootstrap),
+            Err(error)
+                if attempt + 1 < MOBILE_LOCAL_BACKEND_PORT_ATTEMPTS
+                    && mobile_embedded_backend_error_allows_port_replan(&error) =>
+            {
+                continue;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    Err(MobileEmbeddedBackendError::PortAllocationFailed(
+        std::io::Error::other("mobile LocalBackend exhausted port retry budget"),
+    ))
+}
+
+pub fn mobile_embedded_backend_plugin<R: tauri::Runtime>(
+    script: &MobileEmbeddedBackendScript,
+) -> TauriPlugin<R> {
+    let native_session_cookie = script.native_session_cookie.clone();
+    tauri::plugin::Builder::<R, ()>::new("deve-mobile-local-backend")
+        .js_init_script(script.source.clone())
+        .on_webview_ready(move |webview| {
+            if let Err(error) =
+                webview.set_cookie(tauri_cookie_from_native_session(&native_session_cookie))
+            {
+                eprintln!("deve_mobile native session cookie install failed closed: {error}");
+            }
+        })
+        .build()
+}
+
+fn spawn_embedded_backend(
+    plan: &MobileEmbeddedBackendPlan,
+    auth_material: NativeLoopbackAuthMaterial,
+) {
+    let mut options = NativeLocalBackendOptions::new(plan.app_data_dir.clone(), plan.port)
+        .with_auth_material(auth_material);
+    options.profile = AppProfile::Standard;
+    options.session_bound = false;
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = start_native_loopback_backend(options).await {
+            eprintln!("deve_mobile LocalBackend exited with error: {error}");
+        }
+    });
+}
+
+fn mobile_embedded_backend_script(
+    bootstrap: MobileBootstrap,
+    native_session_cookie: MobileNativeSessionCookie,
+) -> Result<MobileEmbeddedBackendScript, MobileEmbeddedBackendError> {
+    let payload = serde_json::to_string(&bootstrap)?;
+    let source = format!("window.__DEVE_NATIVE_BOOTSTRAP={payload};");
+    validate_mobile_embedded_script_source(&source)?;
+    Ok(MobileEmbeddedBackendScript {
+        source,
+        native_session_cookie,
+    })
+}
+
+fn validate_mobile_embedded_script_source(source: &str) -> Result<(), MobileEmbeddedBackendError> {
+    let source_lower = source.to_ascii_lowercase();
+    for marker in [
+        "<script",
+        "</script",
+        "token",
+        "secret",
+        "localstorage",
+        "location.href",
+        "auth_pass",
+        "auth_secret",
+    ] {
+        if source_lower.contains(marker) {
+            return Err(MobileEmbeddedBackendError::ForbiddenMaterial { marker });
+        }
+    }
+    Ok(())
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct MobileNativeAuthMaterial {
+    native_session_secret: String,
+    auth_secret: String,
+    auth_password_hash: String,
+}
+
+impl fmt::Debug for MobileNativeAuthMaterial {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MobileNativeAuthMaterial")
+            .field("native_session_secret", &"<redacted>")
+            .field("auth_secret", &"<redacted>")
+            .field("auth_password_hash", &"<redacted>")
+            .finish()
+    }
+}
+
+impl MobileNativeAuthMaterial {
+    fn generate() -> Result<Self, MobileEmbeddedBackendError> {
+        let native_session_secret = generate_secret()?;
+        let auth_secret = generate_secret()?;
+        let auth_password = generate_secret()?;
+        let auth_password_hash = password::hash_password(&auth_password)
+            .map_err(|_| MobileEmbeddedBackendError::AuthMaterialGenerationFailed)?;
+        Ok(Self {
+            native_session_secret,
+            auth_secret,
+            auth_password_hash,
+        })
+    }
+
+    fn into_native_loopback_auth_material(self) -> NativeLoopbackAuthMaterial {
+        NativeLoopbackAuthMaterial::new(
+            self.native_session_secret,
+            self.auth_secret,
+            "native",
+            self.auth_password_hash,
+            native_tauri_allowed_origins(),
+        )
+    }
+}
+
+fn mobile_embedded_backend_error_allows_port_replan(error: &MobileEmbeddedBackendError) -> bool {
+    matches!(error, MobileEmbeddedBackendError::ProbeIo(_))
+}
+
+fn generate_secret() -> Result<String, MobileEmbeddedBackendError> {
+    let mut bytes = [0u8; 32];
+    getrandom::fill(&mut bytes).map_err(|_| MobileEmbeddedBackendError::SecretGenerationFailed)?;
+    Ok(hex_encode(&bytes))
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mobile_embedded_backend_plan_is_local_authority_free_runtime() {
+        let root = std::env::current_dir()
+            .expect("cwd")
+            .join("target/mobile-test-data");
+        let plan = plan_mobile_embedded_backend(root.clone(), 40123).expect("plan");
+
+        assert_eq!(plan.app_data_dir, root);
+        assert_eq!(plan.http_base, "http://127.0.0.1:40123");
+        assert_eq!(plan.ws_base, "ws://127.0.0.1:40123");
+        assert!(plan.embedded_service_runtime_enabled);
+        assert!(!plan.opens_authority_write_path);
+    }
+
+    #[test]
+    fn mobile_embedded_backend_plan_rejects_relative_root_and_zero_port() {
+        assert!(matches!(
+            plan_mobile_embedded_backend("relative", 40123),
+            Err(MobileEmbeddedBackendError::RelativeAppDataDir)
+        ));
+        assert!(matches!(
+            plan_mobile_embedded_backend(
+                std::env::current_dir()
+                    .expect("cwd")
+                    .join("target/mobile-test-data"),
+                0
+            ),
+            Err(MobileEmbeddedBackendError::InvalidPort)
+        ));
+    }
+
+    #[test]
+    fn mobile_embedded_backend_script_exposes_endpoint_without_cookie_material() {
+        let cookie = MobileNativeSessionCookie::from_set_cookie(
+            "token=cookie-value; Path=/; HttpOnly; Secure; SameSite=None",
+            "127.0.0.1",
+        )
+        .expect("cookie");
+        let script = mobile_embedded_backend_script(
+            MobileBootstrap {
+                http_base: "http://127.0.0.1:40123".to_string(),
+                ws_base: "ws://127.0.0.1:40123".to_string(),
+                node_role: "main".to_string(),
+                session_bound: true,
+            },
+            cookie,
+        )
+        .expect("script");
+
+        assert!(script.has_native_session_cookie());
+        assert!(
+            script
+                .source()
+                .starts_with("window.__DEVE_NATIVE_BOOTSTRAP=")
+        );
+        assert!(script.source().contains("http://127.0.0.1:40123"));
+        assert!(!script.source().contains("secret"));
+        assert!(!script.source().contains("token"));
+        assert!(!script.source().contains("cookie-value"));
+    }
+
+    #[test]
+    fn mobile_embedded_auth_material_uses_runtime_launch_options() {
+        let auth = MobileNativeAuthMaterial::generate().expect("auth material");
+        let debug = format!("{auth:?}");
+        assert!(!debug.contains(&auth.native_session_secret));
+        assert!(!debug.contains(&auth.auth_secret));
+        assert!(!debug.contains(&auth.auth_password_hash));
+
+        let material = auth.into_native_loopback_auth_material();
+        let expected_origins = native_tauri_allowed_origins();
+
+        assert_eq!(material.allowed_origins(), expected_origins.as_slice());
+        assert_eq!(
+            material.auth_config().expect("auth config").username,
+            "native"
+        );
+    }
+
+    #[test]
+    fn mobile_embedded_bootstrap_replans_port_for_unbound_probe_io_only() {
+        assert!(mobile_embedded_backend_error_allows_port_replan(
+            &MobileEmbeddedBackendError::ProbeIo(std::io::Error::new(
+                std::io::ErrorKind::ConnectionRefused,
+                "port not bound"
+            ))
+        ));
+        assert!(!mobile_embedded_backend_error_allows_port_replan(
+            &MobileEmbeddedBackendError::ProbeInvalidResponse
+        ));
+        assert!(!mobile_embedded_backend_error_allows_port_replan(
+            &MobileEmbeddedBackendError::ProbeHttpStatus { status: 500 }
+        ));
+        assert!(!mobile_embedded_backend_error_allows_port_replan(
+            &MobileEmbeddedBackendError::NativeSessionHandoffFailed
+        ));
+    }
+}

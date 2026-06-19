@@ -23,7 +23,8 @@ pub use packaging::{
 pub use process::{
     CURRENT_NATIVE_PROCESS_ADAPTER_POLICY, NativeProcessAdapter, NativeProcessAdapterDecision,
     NativeProcessAdapterError, NativeProcessAdapterPolicy, NativeProcessAdapterSnapshot,
-    NativeProcessAdapterState, desktop_native_authority_policy_from_env,
+    NativeProcessAdapterState, desktop_local_backend_policy,
+    desktop_native_authority_policy_from_env, mobile_local_backend_policy,
     mobile_native_authority_policy_from_env,
 };
 pub use process_runtime::{
@@ -39,15 +40,16 @@ pub use supervisor::{
     NativeServiceSupervisorSnapshot, NativeServiceSupervisorState,
 };
 pub use types::{
-    NATIVE_SESSION_BOOTSTRAP_HEADER, NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, NativeAdapterPlatform,
+    NATIVE_SESSION_BOOTSTRAP_HEADER, NATIVE_SESSION_BOOTSTRAP_SECRET_ENV,
+    NATIVE_TAURI_CUSTOM_PROTOCOL_ORIGIN, NATIVE_TAURI_HTTP_LOCALHOST_ORIGIN, NativeAdapterPlatform,
     NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady, NativePlatformEvent,
-    NativePlatformEventEffect, NativePlatformEventKind, NativeRuntimeReadiness,
-    NativeServiceOffline, NativeServiceRestarting, NativeServiceSuspended,
-    classify_native_platform_event, platform_event_can_grant_write,
+    NativePlatformEventEffect, NativePlatformEventKind, NativeRemoteTarget, NativeRuntimeReadiness,
+    NativeServiceOffline, NativeServiceRestarting, NativeServiceSuspended, NativeShellMode,
+    classify_native_platform_event, native_tauri_allowed_origins, platform_event_can_grant_write,
 };
 pub use validation::{
     NativeAdapterError, can_load_native_web_shell, can_show_native_writable_shell,
-    validate_native_endpoint_bases, validate_native_endpoint_ready,
+    validate_native_endpoint_bases, validate_native_endpoint_ready, validate_native_remote_target,
 };
 
 #[cfg(test)]

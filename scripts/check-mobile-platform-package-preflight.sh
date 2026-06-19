@@ -105,6 +105,9 @@ require_file "apps/mobile/tauri.conf.json"
 require_file "apps/mobile/icons/icon.png"
 require_file "apps/mobile/build.rs"
 require_file "apps/mobile/src/tauri_entry.rs"
+require_file "apps/mobile/src/embedded_backend/mod.rs"
+require_file "apps/mobile/src/embedded_backend/http.rs"
+require_file "apps/mobile/src/embedded_backend/cookie.rs"
 forbid_path "apps/mobile/src/main.rs"
 forbid_path "apps/mobile/gen/apple"
 forbid_path "apps/mobile/src-tauri"
@@ -120,6 +123,7 @@ run cargo check --locked -p deve_mobile --no-default-features
 if [[ "$HOST_NATIVE_PACKAGING_CHECK" == "1" ]]; then
   run cargo check --locked -p deve_mobile --features native-packaging
   run cargo test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
+  run cargo test --locked -p deve_mobile --features native-packaging mobile_embedded_backend -- --nocapture
 else
   echo "mobile-platform-package-preflight-check: host native-packaging cargo check skipped by DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK=0"
   echo "mobile-platform-package-preflight-check: host native-packaging packaging tests skipped by DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK=0"

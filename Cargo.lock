@@ -1327,7 +1327,9 @@ dependencies = [
 name = "deve_mobile"
 version = "0.0.1"
 dependencies = [
+ "deve_cli",
  "deve_core",
+ "getrandom 0.3.4",
  "indexmap 1.9.3",
  "serde",
  "serde_json",

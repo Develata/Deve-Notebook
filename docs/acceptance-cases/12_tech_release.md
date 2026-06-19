@@ -204,10 +204,11 @@
     - security_assert: p2p_token_material_not_logged_or_written_to_config true
 
 - case_id: REL-011
-  goal: Native authority 显式 opt-in 可验收，默认 release 不声明 native authority 默认可用。
+  goal: Desktop/Android/Mobile native 双模式可验收，native shell 不直接拥有业务 authority。
   preconditions:
     - native-packaging 构建可用
-    - 默认环境不设置 native authority opt-in env
+    - 默认 native-packaging 启动使用 LocalBackend
+    - RemoteBrowser 使用显式 HTTPS origin
   steps:
     - run: scripts/check-native-process-adapter-gate.sh
     - run: scripts/check-native-packaging-gate.sh
@@ -215,9 +216,11 @@
     - run: cargo test -p deve_desktop --features native-packaging -- --nocapture
     - run: cargo test -p deve_mobile --features native-packaging -- --nocapture
   assertions:
-    - native_assert: default_native_authority_closed true
-    - native_assert: desktop_opt_in_requires_native_authority_and_desktop_local_service_env true
-    - native_assert: mobile_opt_in_requires_native_authority_and_mobile_embedded_service_env true
+    - native_assert: desktop_local_backend_default_starts_controlled_loopback_service true
+    - native_assert: mobile_local_backend_default_uses_embedded_loopback_service true
+    - native_assert: mobile_embedded_backend_uses_typed_runtime_auth_material true
+    - native_assert: remote_browser_accepts_https_origin_only true
+    - native_assert: remote_browser_does_not_start_local_backend_or_inject_native_bootstrap true
     - native_assert: native_shell_has_no_direct_ledger_source_control_search_writes true
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

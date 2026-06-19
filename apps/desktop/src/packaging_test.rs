@@ -100,7 +100,7 @@ fn desktop_shell_acceptance_keeps_runtime_authority_closed() {
     assert!(shell.installer_metadata_declared);
     assert!(!shell.auto_update_artifacts_enabled);
     assert!(shell.session_handoff_required_before_writable_ui);
-    assert!(!shell.child_process_runtime_enabled);
+    assert!(shell.child_process_runtime_enabled);
     assert!(!shell.release_ready_claimed);
 }
 

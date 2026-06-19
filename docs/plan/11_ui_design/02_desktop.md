@@ -5,31 +5,41 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-07`
+- `Last Review`: `2026-06-19`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
 
 本章定义 Desktop 布局与交互。规范性用语继承 `01_terminology.md`。
 
-> **Current Native Boundary**：Desktop native 默认仍是壳层与本机 service 绑定层；未显式 opt-in 时只表达 service readiness/offline，不拥有业务 authority。
-> **Post-Gate Target**：Desktop 端目标采用 **Tauri v2 native packaging** 外壳，共享 Web 前端；native-packaging + 显式 opt-in 后可启动受控本机 full peer service，但写入仍必须经 server/core writer gate。
+> **Current Native Boundary**：Desktop native 是与 Web/Docker 等价的 peer 外壳，支持 `LocalBackend` 与 `RemoteBrowser` 两种互斥模式；壳层本身不拥有业务 authority。
+> **Post-Gate Target**：Desktop 端目标采用 **Tauri v2 native packaging** 外壳，共享 Web 前端；native-packaging 默认进入 `LocalBackend`，启动受控本机 full peer service 并经 server/core writer gate 写入。`RemoteBrowser` 只作为 HTTPS 远端 Web 壳层。
 
 > **Web 映射**：当 Web 端 $W_{view} > 768px$ 时，界面 **MUST** 遵循本章 Desktop 规范。
 
 ## 1. 原生适配器边界 {#desktop-current-native-boundary}
 
 *   Web 端大屏视口 **MUST** 映射到 Desktop 交互规范。
-*   Native adapter 第一阶段只允许承担：绑定/探测已有受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发有限平台事件。
+*   Native adapter 第一阶段只允许承担：选择 shell 模式、启动或绑定本机受控 service endpoint、注入 service endpoint/session、报告 readiness/offline 状态、转发有限平台事件，或在 `RemoteBrowser` 中导航到远端 HTTPS origin。
 *   默认构建 **MUST** 保持 no-Tauri skeleton；真实 `tauri` / `tauri-build` dependency 只能在 `native-packaging` feature 与独立 gate 打开后引入。
-*   child-process adapter 默认关闭；只有在 `native-packaging` feature 且 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_DESKTOP_LOCAL_SERVICE=1` 同时成立时才可启动、持有或重启受控后端子进程。
+*   `native-packaging` Desktop 默认模式是 `LocalBackend`；它 **MUST** 启动、持有或重启受控后端子进程，并在 app-private ledger/repo/projection 上自动初始化默认本地 workspace，不依赖 Docker、外部 CLI 或用户手工 init。
+*   `RemoteBrowser` **MUST** 显式选择，且只接受远端 `https://host[:port]` origin。URL 不得包含 userinfo、query、fragment 或业务子路径；壳层不得注入本地 endpoint/session bootstrap，不得启动本机 service。
 *   recovery bootstrap 只能表达 `service_offline`、`foreground_reprobe` 与 `session_invalid` 等结构化状态；无效 endpoint 或 session-pending **MUST NOT** 退化为端口扫描。
-*   Native adapter **MUST NOT** 重新定义 Ledger / Projection Workspace authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。显式 opt-in 只允许 native 壳启动/绑定本机 server full peer，不授予 shell 直接写 authority。
+*   Native adapter **MUST NOT** 重新定义 Ledger / Projection Workspace authority、schema migration、source-control 语义或搜索索引语义；这些仍归 core/server。`LocalBackend` 只允许 native 壳启动/绑定本机 server full peer，不授予 shell 直接写 authority。
 *   UI readiness **MUST** 等待受控 service 完成 loopback/IPC endpoint 与认证会话绑定后再打开主界面；失败时显示恢复入口而不是进入半可写状态。
 
 ### 1.1 Minimal Native Adapter Contract {#desktop-native-adapter-contract}
 
-Desktop native adapter 是进程与平台壳层，不是业务 authority；第一阶段只把 Web shell 绑定到已有受控 service，并向 Web/application control 交付结构化 runtime 状态。
+Desktop native adapter 是进程与平台壳层，不是业务 authority；第一阶段把 Web shell 绑定到本机受控 service，或以 RemoteBrowser 方式导航到远端 HTTPS origin，并向 Web/application control 交付结构化 runtime 状态。
+
+### 1.1.1 Desktop Native Shell Modes {#desktop-native-shell-modes}
+
+`NativeShellMode` 的 Desktop 语义如下：
+
+*   `LocalBackend` 是 native-packaging 默认模式。Desktop 壳层只负责 sidecar 生命周期、loopback endpoint、native session handoff、health probe、restart budget、bootstrap/recovery 注入与窗口/菜单/托盘事件。
+*   `LocalBackend` 的本地数据根位于 app-private data root；后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
+*   `RemoteBrowser { https_origin }` 是显式远端模式。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
+*   模式切换不得复用旧 session、旧 endpoint 或旧 `scope_nonce`。从 `RemoteBrowser` 回到 `LocalBackend` 必须重新启动本机 service 并完成完整 session handoff。
 
 Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate`。
 
@@ -63,7 +73,7 @@ Gate policy 必须满足：
 *   `native_feature_gate_required = true`
 *   `authority_writes_allowed = false`
 
-当前 gate 允许 Desktop 与 Mobile dependency spike：packaging 默认不获得 ledger/Projection Workspace/source-control/search/`.git`/`.notegit` authority，不启动后端子进程，不声明 macOS/Windows/Android/iOS release ready。Desktop native authority 只能通过 §1.5 的显式 opt-in path 打开。
+当前 gate 允许 Desktop 与 Mobile dependency spike：packaging 默认不获得 shell direct ledger/Projection Workspace/source-control/search/`.git`/`.notegit` authority，不声明 macOS/Windows/Android/iOS release ready。Desktop `LocalBackend` 后端子进程只能作为本机 full peer 承载路径打开，shell 仍不得直接写 authority。
 
 ### 1.4 Embedded Service Supervisor Contract {#desktop-service-supervisor-contract}
 
@@ -142,23 +152,22 @@ NativeColdStart
 
 ### 1.5 Process Adapter Gate {#desktop-process-adapter-decision}
 
-Desktop process adapter gate 默认关闭；真实 desktop child-process runtime **MUST NOT** 进入默认 no-Tauri skeleton。native-packaging 构建只有在显式 opt-in 后才能打开受控 local service runtime。
+Desktop process adapter gate 对默认 no-Tauri skeleton 仍关闭；真实 desktop child-process runtime **MUST NOT** 进入默认 no-Tauri skeleton。`native-packaging` Desktop 的 `LocalBackend` 默认打开受控 local service runtime；`RemoteBrowser` 关闭本机 runtime。
 
 Gate policy 必须满足：
 
-*   默认 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
+*   默认 no-Tauri `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY.decision =
     DeferredUntilPackagingGate`
-*   默认 `child_process_runtime_enabled = false`
+*   默认 no-Tauri `child_process_runtime_enabled = false`
 *   `packaging_gate_required = true`
-*   默认 `authority_writes_allowed = false`
+*   native shell 直接 `authority_writes_allowed = false`
 
-显式 opt-in policy 必须满足：
+Desktop `LocalBackend` policy 必须满足：
 
-*   `decision = ExplicitNativeAuthorityOptIn`
+*   `decision = LocalBackendDefault`
 *   `child_process_runtime_enabled = true`
 *   `packaging_gate_required = true`
-*   `authority_writes_allowed = true`
-*   环境条件同时包含 `DEVE_NATIVE_AUTHORITY=1` 与 `DEVE_DESKTOP_LOCAL_SERVICE=1`
+*   native shell 直接 `authority_writes_allowed = false`
 
 真实 process adapter 打开时必须满足：
 

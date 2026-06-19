@@ -10,6 +10,8 @@
 //! foreground reprobe after mobile lifecycle transitions.
 
 #[cfg(feature = "native-packaging")]
+mod embedded_backend;
+#[cfg(feature = "native-packaging")]
 mod packaging;
 #[cfg(all(test, feature = "native-packaging"))]
 mod packaging_test;
@@ -23,6 +25,11 @@ mod tauri_entry;
 mod types;
 
 #[cfg(feature = "native-packaging")]
+pub use embedded_backend::{
+    MobileEmbeddedBackendBootstrap, MobileEmbeddedBackendError, MobileEmbeddedBackendPlan,
+    MobileEmbeddedBackendScript, allocate_mobile_loopback_port, plan_mobile_embedded_backend,
+};
+#[cfg(feature = "native-packaging")]
 pub use packaging::{
     MOBILE_ANDROID_PACKAGE_GATE_ANCHOR, MOBILE_ANDROID_PACKAGE_SCRIPT,
     MOBILE_IOS_PACKAGE_GATE_ANCHOR, MOBILE_IOS_PACKAGE_SCRIPT, MOBILE_TAURI_CONFIG_PATH,
@@ -35,7 +42,8 @@ pub use packaging::{
 pub use shell::MobileShell;
 #[cfg(feature = "native-packaging")]
 pub use tauri_entry::{
-    MobileTauriRuntimeSurface, mobile_tauri_runtime_surface, run_mobile_tauri_app,
+    MobileTauriModeError, MobileTauriRemoteBrowserScript, MobileTauriRuntimeSurface,
+    mobile_tauri_remote_browser_init_script, mobile_tauri_runtime_surface, run_mobile_tauri_app,
 };
 pub use types::{
     MobileBootstrap, MobileLifecycleEvent, MobileRecoveryBootstrap, MobileServiceState,

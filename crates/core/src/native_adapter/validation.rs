@@ -2,7 +2,7 @@
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 
-use super::{NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady};
+use super::{NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady, NativeRemoteTarget};
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -26,6 +26,8 @@ pub enum NativeAdapterError {
     EmptyNodeRole,
     #[error("session must be bound before the native web shell can become ready")]
     SessionNotBound,
+    #[error("remote_browser target must be an https origin")]
+    RemoteTargetMustBeHttpsOrigin,
 }
 
 pub fn validate_native_endpoint_bases(
@@ -47,6 +49,12 @@ pub fn validate_native_endpoint_ready(
         return Err(NativeAdapterError::SessionNotBound);
     }
     Ok(())
+}
+
+pub fn validate_native_remote_target(
+    target: &NativeRemoteTarget,
+) -> Result<(), NativeAdapterError> {
+    validate_https_origin_url("https_origin", &target.https_origin)
 }
 
 pub fn can_load_native_web_shell(snapshot: &NativeAdapterSnapshot) -> bool {
@@ -106,6 +114,117 @@ fn validate_loopback_base_url(
     }
     if let Some(port) = port {
         validate_port(field, port)?;
+    }
+    Ok(())
+}
+
+fn validate_https_origin_url(field: &'static str, value: &str) -> Result<(), NativeAdapterError> {
+    if value.trim() != value {
+        return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+    }
+    let Some(rest) = value.strip_prefix("https://") else {
+        return Err(NativeAdapterError::WrongScheme {
+            field,
+            expected_scheme: "https",
+        });
+    };
+    if rest.is_empty() {
+        return Err(NativeAdapterError::MissingAuthority { field });
+    }
+    if rest.contains('?')
+        || rest.contains('#')
+        || rest.contains('\\')
+        || rest
+            .chars()
+            .any(|ch| ch.is_ascii_control() || ch.is_whitespace())
+    {
+        return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+    }
+
+    let slash_idx = rest.find('/').unwrap_or(rest.len());
+    let authority = &rest[..slash_idx];
+    let path = &rest[slash_idx..];
+    if authority.is_empty() {
+        return Err(NativeAdapterError::MissingAuthority { field });
+    }
+    if authority.contains('@') {
+        return Err(NativeAdapterError::UserInfoForbidden { field });
+    }
+    if !path.is_empty() && path != "/" {
+        return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+    }
+
+    let (host, port) = split_https_authority(field, authority)?;
+    validate_https_host(field, host)?;
+    if let Some(port) = port {
+        validate_port(field, port)?;
+    }
+    Ok(())
+}
+
+fn split_https_authority<'a>(
+    field: &'static str,
+    authority: &'a str,
+) -> Result<(&'a str, Option<&'a str>), NativeAdapterError> {
+    if authority.starts_with('[') {
+        let Some(close_idx) = authority.find(']') else {
+            return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+        };
+        let host = &authority[..=close_idx];
+        let suffix = &authority[close_idx + 1..];
+        return if suffix.is_empty() {
+            Ok((host, None))
+        } else if let Some(port) = suffix.strip_prefix(':') {
+            if port.is_empty() {
+                Err(NativeAdapterError::InvalidPort { field })
+            } else {
+                Ok((host, Some(port)))
+            }
+        } else {
+            Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin)
+        };
+    }
+
+    if authority.contains('[') || authority.contains(']') || authority.matches(':').count() > 1 {
+        return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+    }
+    match authority.rsplit_once(':') {
+        Some((_host, port)) if port.is_empty() => Err(NativeAdapterError::InvalidPort { field }),
+        Some((host, port)) => Ok((host, Some(port))),
+        None => Ok((authority, None)),
+    }
+}
+
+fn validate_https_host(field: &'static str, host: &str) -> Result<(), NativeAdapterError> {
+    if host.is_empty() {
+        return Err(NativeAdapterError::MissingAuthority { field });
+    }
+    if host.starts_with('[') {
+        if !host.ends_with(']') || host.len() <= 2 {
+            return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+        }
+        let inner = &host[1..host.len() - 1];
+        if !inner.contains(':')
+            || inner
+                .bytes()
+                .any(|byte| !(byte.is_ascii_hexdigit() || matches!(byte, b':' | b'.')))
+        {
+            return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+        }
+        return Ok(());
+    }
+
+    for label in host.split('.') {
+        if label.is_empty()
+            || label.len() > 63
+            || label.starts_with('-')
+            || label.ends_with('-')
+            || !label
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        {
+            return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
+        }
     }
     Ok(())
 }

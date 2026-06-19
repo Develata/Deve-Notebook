@@ -6,6 +6,15 @@ use serde::{Deserialize, Serialize};
 
 pub const NATIVE_SESSION_BOOTSTRAP_SECRET_ENV: &str = "DEVE_NATIVE_SESSION_BOOTSTRAP_SECRET";
 pub const NATIVE_SESSION_BOOTSTRAP_HEADER: &str = "x-deve-native-session-secret";
+pub const NATIVE_TAURI_HTTP_LOCALHOST_ORIGIN: &str = "http://tauri.localhost";
+pub const NATIVE_TAURI_CUSTOM_PROTOCOL_ORIGIN: &str = "tauri://localhost";
+
+pub fn native_tauri_allowed_origins() -> Vec<String> {
+    vec![
+        NATIVE_TAURI_HTTP_LOCALHOST_ORIGIN.to_string(),
+        NATIVE_TAURI_CUSTOM_PROTOCOL_ORIGIN.to_string(),
+    ]
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -28,6 +37,36 @@ pub enum NativeAdapterState {
     SessionInvalid,
     BackgroundSuspended,
     ForegroundReprobe,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "mode")]
+pub enum NativeShellMode {
+    LocalBackend,
+    RemoteBrowser { target: NativeRemoteTarget },
+}
+
+impl NativeShellMode {
+    pub fn local_backend_default() -> Self {
+        Self::LocalBackend
+    }
+
+    pub fn remote_browser(https_origin: impl Into<String>) -> Self {
+        Self::RemoteBrowser {
+            target: NativeRemoteTarget {
+                https_origin: https_origin.into(),
+            },
+        }
+    }
+
+    pub fn starts_local_backend(&self) -> bool {
+        matches!(self, Self::LocalBackend)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NativeRemoteTarget {
+    pub https_origin: String,
 }
 
 impl NativeAdapterState {

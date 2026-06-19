@@ -84,6 +84,7 @@ pub use tauri_bootstrap::{
     DesktopLocalServiceTauriState, DesktopTauriBootstrapError, DesktopTauriBootstrapScript,
     DesktopTauriLocalServiceBootstrap, desktop_tauri_bootstrap_plugin,
     desktop_tauri_local_service_bootstrap_from_env, desktop_tauri_recovery_init_script,
+    desktop_tauri_remote_browser_bootstrap_from_env, desktop_tauri_remote_browser_init_script,
     desktop_tauri_service_offline_init_script, desktop_tauri_session_invalid_init_script,
     desktop_tauri_success_init_script, try_desktop_tauri_local_service_bootstrap_from_env,
 };

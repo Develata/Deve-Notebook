@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use deve_core::config::AppProfile;
-use deve_core::native_adapter::NATIVE_SESSION_BOOTSTRAP_SECRET_ENV;
+use deve_core::native_adapter::{
+    NATIVE_SESSION_BOOTSTRAP_SECRET_ENV, native_tauri_allowed_origins,
+};
 
 use crate::{
     DEVE_DESKTOP_LOCAL_SERVICE_ENV, DEVE_NATIVE_AUTHORITY_ENV, DesktopLocalServiceEntrypointError,
@@ -24,34 +26,34 @@ fn input() -> DesktopLocalServiceEntrypointInput {
 }
 
 #[test]
-fn desktop_local_service_entrypoint_is_disabled_without_opt_in() {
+fn desktop_local_service_entrypoint_is_local_backend_by_default() {
     let plan = plan_desktop_local_service_entrypoint(
-        DesktopLocalServiceEntrypointPolicy::disabled(),
+        DesktopLocalServiceEntrypointPolicy::local_backend_default(),
         input(),
     )
     .expect("plan");
 
-    assert!(plan.is_none());
+    assert!(plan.is_some());
 }
 
 #[test]
-fn desktop_local_service_entrypoint_env_requires_native_authority_and_local_service() {
+fn desktop_local_service_entrypoint_env_defaults_to_local_backend_and_allows_explicit_disable() {
     let _lock = ENV_LOCK.lock().expect("env lock");
 
     {
         let _guard = EnvGuard::set(&[
             (DEVE_NATIVE_AUTHORITY_ENV, None),
-            (DEVE_DESKTOP_LOCAL_SERVICE_ENV, Some("1")),
+            (DEVE_DESKTOP_LOCAL_SERVICE_ENV, None),
         ]);
         assert_eq!(
             desktop_local_service_entrypoint_policy_from_env().expect("policy"),
-            DesktopLocalServiceEntrypointPolicy::disabled()
+            DesktopLocalServiceEntrypointPolicy::local_backend_default()
         );
     }
 
     {
         let _guard = EnvGuard::set(&[
-            (DEVE_NATIVE_AUTHORITY_ENV, Some("1")),
+            (DEVE_NATIVE_AUTHORITY_ENV, Some("0")),
             (DEVE_DESKTOP_LOCAL_SERVICE_ENV, None),
         ]);
         assert_eq!(
@@ -62,12 +64,12 @@ fn desktop_local_service_entrypoint_env_requires_native_authority_and_local_serv
 
     {
         let _guard = EnvGuard::set(&[
-            (DEVE_NATIVE_AUTHORITY_ENV, Some("1")),
-            (DEVE_DESKTOP_LOCAL_SERVICE_ENV, Some("1")),
+            (DEVE_NATIVE_AUTHORITY_ENV, None),
+            (DEVE_DESKTOP_LOCAL_SERVICE_ENV, Some("0")),
         ]);
         assert_eq!(
             desktop_local_service_entrypoint_policy_from_env().expect("policy"),
-            DesktopLocalServiceEntrypointPolicy::opt_in_enabled()
+            DesktopLocalServiceEntrypointPolicy::disabled()
         );
     }
 }
@@ -80,8 +82,8 @@ fn desktop_local_service_entrypoint_env_rejects_invalid_opt_in_value() {
         (DEVE_DESKTOP_LOCAL_SERVICE_ENV, Some("1")),
     ]);
 
-    let error = desktop_local_service_entrypoint_policy_from_env()
-        .expect_err("invalid native authority opt-in fails closed");
+    let error =
+        desktop_local_service_entrypoint_policy_from_env().expect_err("invalid env fails closed");
 
     assert!(matches!(
         error,
@@ -165,12 +167,13 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
             .map(|binding| binding.value.as_str()),
         Some("native")
     );
+    let expected_tauri_origins = native_tauri_allowed_origins().join(",");
     assert_eq!(
         spec.env
             .iter()
             .find(|binding| binding.key == "ALLOWED_ORIGINS")
             .map(|binding| binding.value.as_str()),
-        Some("http://tauri.localhost")
+        Some(expected_tauri_origins.as_str())
     );
     assert_eq!(
         spec.env
@@ -190,6 +193,11 @@ fn desktop_local_service_entrypoint_builds_controlled_deve_cli_serve_spec() {
     assert!(plan.session_handoff_required_before_bootstrap);
     assert!(!plan.opens_authority_write_path);
     assert!(plan.policy.native_policy().child_process_runtime_enabled);
+    assert!(
+        plan.policy
+            .native_policy()
+            .is_desktop_local_backend_default()
+    );
     assert!(!plan.policy.native_policy().authority_writes_allowed);
 }
 

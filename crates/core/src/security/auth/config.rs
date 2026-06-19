@@ -17,7 +17,7 @@ use super::password;
 use anyhow::{Result, anyhow};
 
 /// 认证配置 (不可变，加载后冻结)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthConfig {
     /// JWT 签名密钥
     pub secret: String,
@@ -56,16 +56,8 @@ impl AuthConfig {
             }
         };
 
-        if secret.len() < 32 {
-            return Err(anyhow!(
-                "AUTH_SECRET must be >= 32 bytes (got {})",
-                secret.len()
-            ));
-        }
-
         let username = std::env::var("AUTH_USER").unwrap_or_else(|_| "admin".into());
-        password::validate_argon2_phc(&password_hash)
-            .map_err(|err| anyhow!("AUTH_PASS must be a valid Argon2 PHC hash: {}", err))?;
+        validate_auth_material(&secret, &password_hash)?;
 
         let allow_anon = parse_allow_anonymous_localhost_env(is_dev_mode)?;
 
@@ -89,6 +81,24 @@ impl AuthConfig {
             username: "admin".into(),
             password_hash,
             allow_anonymous_localhost: env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false),
+            token_version: 1,
+        })
+    }
+
+    pub fn from_material(
+        secret: impl Into<String>,
+        username: impl Into<String>,
+        password_hash: impl Into<String>,
+    ) -> Result<Self> {
+        let secret = secret.into();
+        let username = username.into();
+        let password_hash = password_hash.into();
+        validate_auth_material(&secret, &password_hash)?;
+        Ok(Self {
+            secret,
+            username,
+            password_hash,
+            allow_anonymous_localhost: false,
             token_version: 1,
         })
     }
@@ -124,6 +134,18 @@ fn parse_token_version_env() -> Result<u32> {
         Err(std::env::VarError::NotPresent) => Ok(1),
         Err(err) => Err(anyhow!("Failed to read AUTH_TOKEN_VERSION: {}", err)),
     }
+}
+
+fn validate_auth_material(secret: &str, password_hash: &str) -> Result<()> {
+    if secret.len() < 32 {
+        return Err(anyhow!(
+            "AUTH_SECRET must be >= 32 bytes (got {})",
+            secret.len()
+        ));
+    }
+    password::validate_argon2_phc(password_hash)
+        .map_err(|err| anyhow!("AUTH_PASS must be a valid Argon2 PHC hash: {}", err))?;
+    Ok(())
 }
 
 #[cfg(test)]

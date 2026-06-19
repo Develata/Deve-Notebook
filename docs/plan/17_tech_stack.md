@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-19`
 - `Counterpart Feature`: `docs/features/14_tech_stack.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `Cargo.toml`, `apps/web/Cargo.toml`, `apps/cli/Cargo.toml`, `apps/desktop/Cargo.toml`, `apps/mobile/Cargo.toml`, `scripts/check-native-track-boundary.sh`
@@ -108,13 +108,15 @@ Gate 状态：
 - Mobile packaging scaffold 只记录 WebView shell/permission bridge/share sheet/deeplink/file picker/push notification/store package acceptance；Android shell-only package execution 可由 `11_ui_design/03_mobile.md#mobile-android-shell-package-execution-gate` 单独打开。
 - iOS shell-only package execution 可由 `11_ui_design/03_mobile.md#mobile-ios-shell-package-execution-gate` 单独打开；Mobile runtime entrypoint、process runtime、native authority write path 与 release ready 不得由 Android/iOS package execution 隐式打开。
 - Mobile foreground/background reprobe 与 session/readiness correctness 继续由 no-packaging skeleton tests 保证。
-- Native embedded service / local service supervision 默认按 no-runtime contract 处理；显式 opt-in 后只允许 native shell 启动或绑定受控本机 service，业务写入仍必须经 server/core writer gate。
+- Native shell runtime 分为 `LocalBackend` 与 `RemoteBrowser` 两种互斥模式。`LocalBackend` 是 Desktop/Android/Mobile native-packaging 默认模式，启动受控本机 service 并自动初始化 app-private ledger/repo/projection；业务写入仍必须经 server/core writer gate。
+- `RemoteBrowser` 是显式远端 HTTPS origin 壳层模式，只把 WebView 导航到远端 Docker/Web URL；不得启动本机 service，不得注入本地 endpoint/session bootstrap。
 - `CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY = DesktopAndMobileDependencySpikeOpen`；
   Tauri dependency 只允许在对应 native crate 的 `native-packaging` scope 内出现。
+- Android/Mobile `LocalBackend` **MAY** 在 `apps/mobile` 的 `native-packaging` scope 内依赖内部 `deve_cli` library entrypoint，以启动 in-process embedded loopback backend；这不允许 native shell 直接调用 ledger/source-control/search writer API。
 - 默认 `CURRENT_NATIVE_PROCESS_ADAPTER_POLICY = DeferredUntilPackagingGate`；`child_process_runtime_enabled = false`、`packaging_gate_required = true`、`authority_writes_allowed = false`。
-- Native authority 只能通过 explicit opt-in 打开，且只能在对应 native crate 的 `native-packaging` feature 后生效；Desktop 使用 child-process local service，Mobile 使用 embedded loopback service。
-- 显式 opt-in 可以让本机 service/core 获得 local full peer authority，但 native shell crate 仍不得直接写 ledger、Projection Workspace、source-control、search、`.git` 或 `.notegit`。
-- 默认 release、shell-only target-host package、Android/iOS shell-only package execution 不得被解释为 native authority 默认可用或 store/physical-device release ready。
+- Desktop `LocalBackend` 使用 child-process local service；Android/Mobile `LocalBackend` 使用 embedded loopback service，Mobile v1 不使用子进程。
+- `LocalBackend` 可以让本机 service/core 获得 local full peer authority，但 native shell crate 仍不得直接写 ledger、Projection Workspace、source-control、search、`.git` 或 `.notegit`。
+- 默认 release、target-host package、Android/iOS package execution 不得被解释为 store/physical-device release ready；native 本地后端可用性只表示 LocalBackend peer 语义通过对应 smoke，不代表签名/商店/物理设备发布就绪。
 
 ## 2. Markdown Compatibility Checklist
 

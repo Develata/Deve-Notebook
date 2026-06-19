@@ -828,22 +828,39 @@ scripts/check-native-process-adapter-gate.sh
 The script checks the process adapter policy, rejects unauthorized
 `std::process`, `Command::new`, `tokio::process`, or direct spawn usage in
 Desktop/Mobile/native adapter code, and runs targeted process-observation tests.
-It does not open native authority unless the explicit opt-in smoke sets the
-required env flags.
+It validates both native shell modes without granting native shell direct
+authority writes.
 
-## Native Authority Opt-in
+## Native Shell Modes
 
-Default Desktop/Mobile builds and native-packaging builds without explicit env
-must keep native authority closed. The opt-in flags are:
+Desktop/Android/Mobile native-packaging shells support two mutually exclusive
+modes:
+
+- `LocalBackend`: default. Desktop starts a controlled child-process local
+  service. Android/Mobile starts an in-process embedded loopback service. Both
+  initialize app-private ledger/repo/projection state through the server/CLI
+  runtime and keep all writes behind the server/core writer gate.
+- `RemoteBrowser`: explicit. The shell acts like a browser and loads a remote
+  Docker/Web HTTPS origin. It does not start the local backend and does not
+  inject native endpoint/session bootstrap.
+
+Use the default environment for LocalBackend. For RemoteBrowser, configure a
+validated HTTPS origin:
 
 ```bash
-DEVE_NATIVE_AUTHORITY=1 DEVE_DESKTOP_LOCAL_SERVICE=1
-DEVE_NATIVE_AUTHORITY=1 DEVE_MOBILE_EMBEDDED_SERVICE=1
+DEVE_NATIVE_REMOTE_URL=https://example.invalid
 ```
 
-Desktop opt-in may start a controlled child-process local service. Mobile opt-in
-may start an in-process embedded loopback service; Mobile v1 must not use a
-child process. In both cases the shell handles endpoint/session/readiness only.
+The URL must be exactly an HTTPS origin: no userinfo, query, fragment, or
+application subpath.
+
+Desktop LocalBackend starts a controlled child-process local service.
+Mobile LocalBackend starts an in-process embedded loopback service; Mobile v1
+must not use a child process. In both cases the shell handles
+endpoint/session/readiness only.
+Native LocalBackend CORS must allow both Tauri origin forms:
+`http://tauri.localhost` for Windows/Android and `tauri://localhost` for
+macOS/iOS/Linux.
 Ledger, source-control, search, repo writes, `.git`, and `.notegit` writes still
 go through the local server/core writer gate.
 

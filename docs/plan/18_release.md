@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-06`
+- `Last Review`: `2026-06-19`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`
@@ -51,10 +51,10 @@ CI/CD 基于 GitHub Actions。
 
 Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续 delivery work；在对应 workflow 增加前，**MUST NOT** 被视为 `release.yml` 发布基线。
 
-Native authority opt-in 属于运行时能力门禁，不属于默认 release readiness。发布或 target-host 证据可以声明：
+Native 双模式属于运行时能力门禁，不属于签名/store/physical-device release readiness。发布或 target-host 证据可以声明：
 
-- 默认 native process/native authority 关闭。
-- 显式 opt-in native authority smoke 通过。
+- LocalBackend 本地后端 smoke 通过。
+- RemoteBrowser HTTPS origin 壳层 smoke 通过。
 
 但不得在未完成签名、store、physical-device 与长期后台同步验收前声明 Desktop/Mobile release ready。
 

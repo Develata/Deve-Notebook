@@ -119,6 +119,7 @@ fn mobile_shell_acceptance_keeps_runtime_authority_closed() {
     assert!(shell.platform_package_build_declared);
     assert!(shell.session_handoff_required_before_writable_ui);
     assert!(shell.foreground_reprobe_required);
+    assert!(shell.embedded_service_runtime_enabled);
     assert!(!shell.child_process_runtime_enabled);
     assert!(!shell.release_ready_claimed);
 }
@@ -133,6 +134,7 @@ fn mobile_android_shell_package_gate_is_shell_only() {
     assert!(android.project_generation_allowed);
     assert!(android.package_build_allowed);
     assert!(!android.ios_package_build_allowed);
+    assert!(android.embedded_service_runtime_enabled);
     assert!(!android.child_process_runtime_enabled);
     assert!(!android.opens_authority_write_path);
     assert!(!android.release_ready_claimed);
@@ -150,6 +152,7 @@ fn mobile_ios_shell_package_gate_is_shell_only() {
     assert!(ios.project_generation_allowed);
     assert!(ios.package_build_allowed);
     assert!(!ios.android_package_build_allowed);
+    assert!(ios.embedded_service_runtime_enabled);
     assert!(!ios.child_process_runtime_enabled);
     assert!(!ios.opens_authority_write_path);
     assert!(!ios.release_ready_claimed);

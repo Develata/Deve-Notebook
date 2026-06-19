@@ -132,12 +132,14 @@ check_mobile_feature_tree_includes_tauri() {
 select_cargo_bin
 configure_cargo_target_dir
 bash -n "$ROOT_DIR/scripts/check-desktop-native-session-package-smoke.sh"
-path_contains_regex 'explicit opt-in' "$ROOT_DIR/docs/plan/17_tech_stack.md" \
-  || fail "native authority opt-in boundary must be documented in tech stack plan"
-path_contains_regex 'Native authority 只在 explicit opt-in 下可用' "$ROOT_DIR/docs/features/15_release.md" \
-  || fail "release feature must keep native authority as explicit opt-in"
-path_contains_regex 'DEVE_NATIVE_AUTHORITY=1' "$ROOT_DIR/docs/dev-runbook.md" \
-  || fail "runbook must document native authority opt-in env"
+path_contains_regex 'LocalBackend' "$ROOT_DIR/docs/plan/17_tech_stack.md" \
+  || fail "native LocalBackend boundary must be documented in tech stack plan"
+path_contains_regex 'RemoteBrowser' "$ROOT_DIR/docs/plan/17_tech_stack.md" \
+  || fail "native RemoteBrowser boundary must be documented in tech stack plan"
+path_contains_regex 'Native 双模式' "$ROOT_DIR/docs/features/15_release.md" \
+  || fail "release feature must document native dual-mode boundary"
+path_contains_regex 'Native Shell Modes' "$ROOT_DIR/docs/dev-runbook.md" \
+  || fail "runbook must document native shell modes"
 check_desktop_tauri_lock_entries
 check_mobile_tauri_lock_entries
 check_default_desktop_tree_excludes_tauri
@@ -155,6 +157,7 @@ run_cargo_target test --locked -p deve_desktop --features native-packaging tauri
 run_cargo_target test --locked -p deve_desktop --features native-packaging menu_tray -- --nocapture
 run_cargo_target test --locked -p deve_desktop --features native-packaging packaging -- --nocapture
 run_cargo_target test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
+run_cargo_target test --locked -p deve_mobile --features native-packaging mobile_embedded_backend -- --nocapture
 run_cargo_target test --locked -p deve_cli native_session -- --nocapture
 "$ROOT_DIR/scripts/check-desktop-native-session-package-smoke.sh"
 

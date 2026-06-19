@@ -3,12 +3,15 @@
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 
-use deve_core::native_adapter::NativeEndpointReady;
 #[cfg(test)]
 use deve_core::native_adapter::{
     NativeProcessAdapter, NativeServiceSupervisor, NativeServiceSupervisorSnapshot,
 };
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use deve_core::{native_adapter::NativeEndpointReady, security::AuthConfig};
+use std::{
+    fmt,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+};
 
 use super::node_role::NativeServiceSummary;
 
@@ -23,6 +26,67 @@ pub struct ServerLaunchOptions {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct NativeLaunchSession {
     session_bound: bool,
+    auth_material: Option<NativeLoopbackAuthMaterial>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct NativeLoopbackAuthMaterial {
+    session_bootstrap_secret: String,
+    auth_secret: String,
+    auth_user: String,
+    auth_password_hash: String,
+    allowed_origins: Vec<String>,
+}
+
+impl fmt::Debug for NativeLoopbackAuthMaterial {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NativeLoopbackAuthMaterial")
+            .field("session_bootstrap_secret", &"<redacted>")
+            .field("auth_secret", &"<redacted>")
+            .field("auth_user", &self.auth_user)
+            .field("auth_password_hash", &"<redacted>")
+            .field("allowed_origins", &self.allowed_origins)
+            .finish()
+    }
+}
+
+impl NativeLoopbackAuthMaterial {
+    // Used by the deve_cli library entrypoint consumed by native shells; the
+    // deve_cli bin target compiles this module without native_runtime.
+    #[allow(dead_code)]
+    pub fn new(
+        session_bootstrap_secret: impl Into<String>,
+        auth_secret: impl Into<String>,
+        auth_user: impl Into<String>,
+        auth_password_hash: impl Into<String>,
+        allowed_origins: Vec<String>,
+    ) -> Self {
+        Self {
+            session_bootstrap_secret: session_bootstrap_secret.into(),
+            auth_secret: auth_secret.into(),
+            auth_user: auth_user.into(),
+            auth_password_hash: auth_password_hash.into(),
+            allowed_origins,
+        }
+    }
+
+    pub fn session_bootstrap_secret(&self) -> &str {
+        &self.session_bootstrap_secret
+    }
+
+    #[allow(dead_code)]
+    pub fn auth_config(&self) -> anyhow::Result<AuthConfig> {
+        AuthConfig::from_material(
+            self.auth_secret.clone(),
+            self.auth_user.clone(),
+            self.auth_password_hash.clone(),
+        )
+    }
+
+    #[allow(dead_code)]
+    pub fn allowed_origins(&self) -> &[String] {
+        &self.allowed_origins
+    }
 }
 
 impl ServerLaunchOptions {
@@ -40,7 +104,27 @@ impl ServerLaunchOptions {
             port,
             bind_host: IpAddr::V4(Ipv4Addr::LOCALHOST),
             advertised_host: "127.0.0.1",
-            native: Some(NativeLaunchSession { session_bound }),
+            native: Some(NativeLaunchSession {
+                session_bound,
+                auth_material: None,
+            }),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn native_loopback_with_auth_material(
+        port: u16,
+        session_bound: bool,
+        auth_material: NativeLoopbackAuthMaterial,
+    ) -> Self {
+        Self {
+            port,
+            bind_host: IpAddr::V4(Ipv4Addr::LOCALHOST),
+            advertised_host: "127.0.0.1",
+            native: Some(NativeLaunchSession {
+                session_bound,
+                auth_material: Some(auth_material),
+            }),
         }
     }
 
@@ -80,6 +164,17 @@ impl ServerLaunchOptions {
 
     pub fn is_native_loopback(&self) -> bool {
         self.native.is_some()
+    }
+
+    pub fn native_auth_material(&self) -> Option<&NativeLoopbackAuthMaterial> {
+        self.native
+            .as_ref()
+            .and_then(|native| native.auth_material.as_ref())
+    }
+
+    pub fn native_allowed_origins(&self) -> Option<&[String]> {
+        self.native_auth_material()
+            .map(NativeLoopbackAuthMaterial::allowed_origins)
     }
 
     fn native_endpoint(&self, session_bound: bool) -> NativeEndpointReady {
@@ -155,6 +250,40 @@ mod tests {
             validate_native_endpoint_ready(endpoint),
             Err(NativeAdapterError::SessionNotBound)
         );
+    }
+
+    #[test]
+    fn native_launch_can_carry_runtime_auth_material_without_debug_leak() {
+        let session_secret = "session_secret_key_at_least_32_bytes".to_string();
+        let auth_secret = "auth_secret_key_at_least_32_bytes!!".to_string();
+        let password_hash = deve_core::security::auth::password::hash_password("runtime-password")
+            .expect("password hash");
+        let launch = ServerLaunchOptions::native_loopback_with_auth_material(
+            3001,
+            false,
+            NativeLoopbackAuthMaterial::new(
+                session_secret.clone(),
+                auth_secret.clone(),
+                "native",
+                password_hash,
+                vec!["http://tauri.localhost".to_string()],
+            ),
+        );
+
+        let material = launch.native_auth_material().expect("auth material");
+        assert_eq!(material.session_bootstrap_secret(), session_secret);
+        assert_eq!(
+            material.auth_config().expect("auth config").username,
+            "native"
+        );
+        assert_eq!(
+            launch.native_allowed_origins().expect("allowed origins"),
+            ["http://tauri.localhost".to_string()].as_slice()
+        );
+
+        let debug = format!("{launch:?}");
+        assert!(!debug.contains(&session_secret));
+        assert!(!debug.contains(&auth_secret));
     }
 
     #[test]

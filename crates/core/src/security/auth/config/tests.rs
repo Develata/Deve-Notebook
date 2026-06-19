@@ -119,6 +119,28 @@ fn invalid_auth_token_version_fails_closed() {
     drop(env);
 }
 
+#[test]
+fn runtime_material_builds_auth_config_without_env() {
+    let config = AuthConfig::from_material(
+        "runtime_secret_key_at_least_32_bytes!",
+        "native",
+        valid_argon2_hash(),
+    )
+    .expect("runtime auth material");
+
+    assert_eq!(config.username, "native");
+    assert!(!config.allow_anonymous_localhost);
+    assert_eq!(config.token_version, 1);
+}
+
+#[test]
+fn runtime_material_reuses_auth_validation() {
+    let err = AuthConfig::from_material("short", "native", "not-a-valid-phc-hash")
+        .expect_err("runtime material must fail closed");
+
+    assert!(err.to_string().contains("AUTH_SECRET must be >= 32 bytes"));
+}
+
 fn valid_argon2_hash() -> &'static str {
     "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$MLt1KZB+74lpz3bB5FzWzWgfz8Q1nXWJ7HfLqF6QL0M"
 }

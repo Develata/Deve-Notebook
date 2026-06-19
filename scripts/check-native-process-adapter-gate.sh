@@ -144,7 +144,7 @@ check_no_process_runtime_leak() {
   check_contains apps/desktop/src/process_runtime/validation.rs "argv port must match loopback bind hints"
   check_contains apps/desktop/src/service_entrypoint/mod.rs "DEVE_DESKTOP_LOCAL_SERVICE"
   check_contains apps/desktop/src/service_entrypoint/mod.rs "DEVE_NATIVE_AUTHORITY"
-  check_contains apps/desktop/src/service_entrypoint_test.rs "desktop_local_service_entrypoint_env_requires_native_authority_and_local_service"
+  check_contains apps/desktop/src/service_entrypoint_test.rs "desktop_local_service_entrypoint_env_defaults_to_local_backend_and_allows_explicit_disable"
   check_contains apps/desktop/src/service_entrypoint_test.rs "desktop_local_service_entrypoint_env_rejects_invalid_opt_in_value"
   check_contains apps/desktop/src/service_entrypoint/spawn_spec.rs "\"--native-loopback\""
   check_contains apps/desktop/src/service_entrypoint/spawn_spec.rs "NATIVE_SESSION_BOOTSTRAP_SECRET_ENV"
@@ -207,6 +207,8 @@ check_contains crates/core/src/native_adapter/process.rs "packaging_gate_require
 check_contains crates/core/src/native_adapter/process.rs "authority_writes_allowed: false"
 check_contains crates/core/src/native_adapter/process.rs "desktop_native_authority_policy_from_env"
 check_contains crates/core/src/native_adapter/process.rs "mobile_native_authority_policy_from_env"
+check_contains crates/core/src/native_adapter/process.rs "desktop_local_backend_policy"
+check_contains crates/core/src/native_adapter/process.rs "mobile_local_backend_policy"
 check_contains crates/core/src/native_adapter/process.rs "DEVE_NATIVE_AUTHORITY"
 check_contains crates/core/src/native_adapter/process.rs "DEVE_DESKTOP_LOCAL_SERVICE"
 check_contains crates/core/src/native_adapter/process.rs "DEVE_MOBILE_EMBEDDED_SERVICE"
@@ -215,13 +217,22 @@ check_contains crates/core/src/native_adapter/process.rs "bind_existing_endpoint
 check_contains crates/core/src/native_adapter/process.rs "bind_session"
 check_contains crates/core/src/native_adapter/process.rs "record_probe_timeout"
 check_contains crates/core/src/native_adapter/process.rs "record_process_stopped"
-check_contains docs/plan/11_ui_design/index.md "native authority 与本地 service 默认关闭"
-check_contains docs/plan/11_ui_design/02_desktop.md "DEVE_NATIVE_AUTHORITY=1"
-check_contains docs/plan/11_ui_design/02_desktop.md "DEVE_DESKTOP_LOCAL_SERVICE=1"
-check_contains docs/plan/11_ui_design/03_mobile.md "DEVE_MOBILE_EMBEDDED_SERVICE=1"
-check_contains docs/features/08_ui_design_02_desktop.md "Native Local Service Opt-in"
-check_contains docs/features/08_ui_design_03_mobile.md "Native Embedded Service Opt-in"
-check_contains docs/dev-runbook.md "Native Authority Opt-in"
+check_contains docs/plan/11_ui_design/index.md "LocalBackend"
+check_contains docs/plan/11_ui_design/index.md "RemoteBrowser"
+check_contains docs/plan/11_ui_design/02_desktop.md "{#desktop-native-shell-modes}"
+check_contains docs/plan/11_ui_design/03_mobile.md "{#mobile-native-shell-modes}"
+check_contains docs/features/08_ui_design_02_desktop.md "Native 双模式"
+check_contains docs/features/08_ui_design_03_mobile.md "Native 双模式"
+check_contains docs/dev-runbook.md "Native Shell Modes"
+check_contains apps/mobile/src/lib.rs "mod embedded_backend;"
+check_contains apps/mobile/src/embedded_backend/mod.rs "start_native_loopback_backend"
+check_contains apps/mobile/src/embedded_backend/mod.rs "run_mobile_embedded_backend_bootstrap"
+check_contains apps/mobile/src/embedded_backend/mod.rs "NativeLoopbackAuthMaterial"
+check_contains apps/mobile/src/embedded_backend/mod.rs "native_tauri_allowed_origins"
+check_not_contains apps/mobile/src/embedded_backend/mod.rs "std::env::set_var"
+check_not_contains apps/mobile/src/embedded_backend/mod.rs "NATIVE_SESSION_BOOTSTRAP_SECRET_ENV"
+check_contains apps/mobile/src/embedded_backend/http.rs "/api/auth/native-session"
+check_contains apps/mobile/src/embedded_backend/cookie.rs "MobileNativeSessionCookie"
 check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessSpawnSpec"
 check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessRuntimeSnapshot"
 check_contains crates/core/src/native_adapter/process_runtime.rs "NativeProcessRuntimeError"
@@ -245,6 +256,7 @@ check_no_process_runtime_leak
 run_cargo test --locked -p deve_core --lib native_adapter::process_test -- --nocapture
 run_cargo test --locked -p deve_desktop desktop_default_build_defers_real_process_adapter -- --nocapture
 run_cargo test --locked -p deve_mobile mobile_default_build_defers_real_process_adapter -- --nocapture
+run_cargo test --locked -p deve_mobile --features native-packaging mobile_embedded_backend -- --nocapture
 run_cargo test --locked -p deve_cli native_session -- --nocapture
 case "$RUN_DESKTOP_NATIVE_PACKAGING_TESTS" in
   1|true|TRUE|yes|YES)
