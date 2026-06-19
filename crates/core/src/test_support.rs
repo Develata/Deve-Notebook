@@ -2,7 +2,10 @@
 //!
 use std::sync::{LazyLock, Mutex, MutexGuard};
 
-use crate::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use crate::ledger::{
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+    RepoInfo, RepoManager,
+};
 use std::path::Path;
 
 static LOCAL_REPO_CATALOG_TEST_MUTEX: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
@@ -32,8 +35,13 @@ pub(crate) fn create_initialized_local_repo_with_depth(
 
 pub(crate) fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) -> anyhow::Result<()> {
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?
-        .insert(&0, bincode::serialize(info)?.as_slice())?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        let bytes = bincode::serialize(info)?;
+        table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
+    }
     txn.commit()?;
     Ok(())
 }
@@ -47,8 +55,12 @@ pub(crate) fn delete_repo_metadata(db: &redb::Database) -> anyhow::Result<()> {
 
 pub(crate) fn poison_repo_metadata_invalid_bincode(db: &redb::Database) -> anyhow::Result<()> {
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?
-        .insert(&0, b"not-bincode".as_slice())?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        table.insert(&REPO_INFO_METADATA_KEY, b"not-bincode".as_slice())?;
+    }
     txn.commit()?;
     Ok(())
 }

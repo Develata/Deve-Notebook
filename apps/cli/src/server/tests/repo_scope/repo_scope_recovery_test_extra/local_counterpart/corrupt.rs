@@ -3,7 +3,10 @@
 
 use super::support::{build_state, remote_scope};
 use crate::server::repo_scope::resolve_local_counterpart_repo;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+    RepoInfo, RepoManager,
+};
 use deve_core::models::PeerId;
 
 #[test]
@@ -23,7 +26,7 @@ fn resolve_local_counterpart_repo_fails_closed_on_duplicate_local_url_matches() 
         .expect("mirror info");
     let txn = mirror_db.begin_write()?;
     txn.open_table(REPO_METADATA)?.insert(
-        &0,
+        &REPO_INFO_METADATA_KEY,
         bincode::serialize(&RepoInfo {
             uuid: mirror_info.uuid,
             name: "mirror".into(),
@@ -62,8 +65,12 @@ fn find_local_repo_name_by_url_fails_closed_when_candidate_metadata_is_unreadabl
     let (_dir, state, _default_id, _test_id) = build_state()?;
     let db = state.repo.open_database(None, "default")?.db;
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?
-        .insert(&0, [0_u8, 1, 2, 3].as_slice())?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        table.insert(&REPO_INFO_METADATA_KEY, [0_u8, 1, 2, 3].as_slice())?;
+    }
     txn.commit()?;
 
     let err = state

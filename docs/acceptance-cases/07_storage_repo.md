@@ -32,9 +32,12 @@
     - 至少一个 .redb 文件
   steps:
     - run: cargo test -p deve_core required_redb_tables_exist_after_init -- --nocapture
+    - run: cargo test -p deve_core redb_schema_version -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: required_storage_tables_reachable true
+    - cli_assert: redb_schema_version_gate_present true
+    - cli_assert: unversioned_redb_schema_fails_closed true
 
 - case_id: STORE-004
   goal: Snapshot 双表与修剪。
@@ -54,10 +57,13 @@
   steps:
     - run: cargo test -p deve_core edit_round_trip_reconstructs_content -- --nocapture
     - run: cargo test -p deve_core global_seq_increases -- --nocapture
+    - run: cargo test -p deve_core ledger_entry_format -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: ledger_seq_increases true
     - cli_assert: reconstructed_content_matches true
+    - cli_assert: ledger_entry_format_versioned true
+    - cli_assert: unversioned_ledger_entry_rejected true
 
 - case_id: STORE-006
   goal: Clean File Policy。

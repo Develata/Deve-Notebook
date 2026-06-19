@@ -1,6 +1,7 @@
 // crates\core\src\ledger
 //! plan_ref:
 //!   - 03_storage/authority#facts-partition
+//!   - 03_storage/authority#redb-schema-version-contract
 //!   - 03_storage/index#repo-runtime-layout
 
 use redb::{MultimapTableDefinition, TableDefinition};
@@ -47,7 +48,12 @@ pub const SNAPSHOT_INDEX: MultimapTableDefinition<u128, u64> =
 pub const SNAPSHOT_DATA: TableDefinition<u64, &[u8]> = TableDefinition::new("snapshot_data");
 
 // Metadata Key (u8) -> Metadata Value (Bytes - JSON/Bincode)
+pub const REPO_INFO_METADATA_KEY: u8 = 0;
+pub const REPO_SCHEMA_VERSION_METADATA_KEY: u8 = 1;
+pub const REDB_SCHEMA_VERSION: u16 = 1;
+
 // Key 0: RepoInfo (UUID, Name, URL)
+// Key 1: REDB_SCHEMA_VERSION
 pub const REPO_METADATA: TableDefinition<u8, &[u8]> = TableDefinition::new("repo_metadata");
 
 // (DocId (u128), PeerId (&str)) -> MaxSeq (u64)

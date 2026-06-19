@@ -1,7 +1,9 @@
 use super::run;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
-use deve_core::models::{DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp};
+use deve_core::models::{
+    DocId, LedgerEntry, NodeId, Op, PeerId, StructureOp, serialize_ledger_entry,
+};
 use redb::ReadableTable;
 use tempfile::TempDir;
 
@@ -41,7 +43,7 @@ fn append_unvalidated(repo: &RepoManager, entry: &LedgerEntry) {
             let mut node_ops = write.open_multimap_table(NODE_OPS)?;
             let mut peer_seqs = write.open_table(PEER_DOC_SEQ)?;
             let next_seq = ops.last()?.map(|(key, _)| key.value() + 1).unwrap_or(1);
-            let bytes = bincode::serialize(entry)?;
+            let bytes = serialize_ledger_entry(entry)?;
             ops.insert(next_seq, bytes.as_slice())?;
             if let Some(doc_id) = entry.doc_id {
                 doc_ops.insert(doc_id.as_u128(), next_seq)?;

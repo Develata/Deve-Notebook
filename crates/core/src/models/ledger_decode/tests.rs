@@ -1,80 +1,67 @@
 use super::{
-    LegacyLedgerEntryV1, LegacyLedgerEntryV2, LegacyLedgerEntryV4, LegacyOpV1, LegacyOpV3,
-    LegacyOpV4, deserialize_ledger_entry,
+    LEDGER_ENTRY_FORMAT_MAGIC, LEDGER_ENTRY_FORMAT_VERSION, LedgerEntryEnvelope,
+    deserialize_ledger_entry, serialize_ledger_entry,
 };
-use crate::models::{ContentOp, DocId, PeerId};
+use crate::models::{ContentOp, DocId, LedgerEntry, PeerId};
+
+fn entry() -> LedgerEntry {
+    LedgerEntry::new_content(
+        DocId::from_u128(7),
+        ContentOp::Insert {
+            pos: 0,
+            content: "v1".into(),
+        },
+        1,
+        PeerId::new("peer-a"),
+        9,
+        Some(2),
+        Some(3),
+    )
+}
 
 #[test]
-fn deserializes_latest_legacy_content_entry() -> anyhow::Result<()> {
-    let legacy = LegacyLedgerEntryV4 {
-        doc_id: DocId::from_u128(7),
-        op: LegacyOpV4::Insert {
-            pos: 0,
-            content: "legacy".into(),
-        },
-        timestamp: 1,
-        peer_id: PeerId::new("legacy"),
-        seq: 9,
-        client_id: Some(2),
-        client_op_id: Some(3),
-    };
-    let bytes = bincode::serialize(&legacy)?;
-    let entry = deserialize_ledger_entry(&bytes)?;
-    assert_eq!(entry.doc_id, Some(legacy.doc_id));
-    assert_eq!(entry.client_id, Some(2));
-    assert_eq!(entry.client_op_id, Some(3));
-    assert_eq!(
-        entry.content_op(),
-        Some(&ContentOp::Insert {
-            pos: 0,
-            content: "legacy".into(),
-        })
-    );
+fn ledger_entry_format_roundtrips_v1_envelope() -> anyhow::Result<()> {
+    let entry = entry();
+    let bytes = serialize_ledger_entry(&entry)?;
+
+    assert!(bytes.starts_with(LEDGER_ENTRY_FORMAT_MAGIC));
+    let decoded = deserialize_ledger_entry(&bytes)?;
+    assert_eq!(decoded.doc_id, entry.doc_id);
+    assert_eq!(decoded.event, entry.event);
+    assert_eq!(decoded.peer_id, entry.peer_id);
+    assert_eq!(decoded.seq, entry.seq);
+    assert_eq!(decoded.client_id, entry.client_id);
+    assert_eq!(decoded.client_op_id, entry.client_op_id);
     Ok(())
 }
 
 #[test]
-fn deserializes_peer_seq_legacy_entry() -> anyhow::Result<()> {
-    let legacy = LegacyLedgerEntryV2 {
-        doc_id: DocId::from_u128(8),
-        op: LegacyOpV3::Delete { pos: 4, len: 2 },
-        timestamp: 2,
-        peer_id: PeerId::new("peer"),
-        seq: 11,
-    };
-    let bytes = bincode::serialize(&legacy)?;
-    let entry = deserialize_ledger_entry(&bytes)?;
-    assert_eq!(entry.doc_id, Some(legacy.doc_id));
-    assert_eq!(entry.peer_id, legacy.peer_id);
-    assert_eq!(entry.seq, legacy.seq);
-    assert_eq!(
-        entry.content_op(),
-        Some(&ContentOp::Delete { pos: 4, len: 2 })
-    );
+fn ledger_entry_format_rejects_unversioned_bincode() -> anyhow::Result<()> {
+    let bytes = bincode::serialize(&entry())?;
+
+    let err = deserialize_ledger_entry(&bytes).expect_err("unversioned entry must fail closed");
+
+    assert!(err.to_string().contains("missing DEVELDG1 magic"));
     Ok(())
 }
 
 #[test]
-fn deserializes_oldest_legacy_entry() -> anyhow::Result<()> {
-    let legacy = LegacyLedgerEntryV1 {
-        doc_id: DocId::from_u128(9),
-        op: LegacyOpV1::Insert {
-            pos: 1,
-            content: "oldest".to_string(),
-        },
-        timestamp: 3,
+fn ledger_entry_format_rejects_unsupported_version() -> anyhow::Result<()> {
+    let envelope = LedgerEntryEnvelope {
+        format_version: LEDGER_ENTRY_FORMAT_VERSION + 1,
+        entry: entry(),
     };
-    let bytes = bincode::serialize(&legacy)?;
-    let entry = deserialize_ledger_entry(&bytes)?;
-    assert_eq!(entry.doc_id, Some(legacy.doc_id));
-    assert_eq!(entry.seq, 0);
-    assert_eq!(entry.peer_id.as_str(), "legacy_local");
-    assert_eq!(
-        entry.content_op(),
-        Some(&ContentOp::Insert {
-            pos: 1,
-            content: "oldest".into(),
-        })
+    let payload = bincode::serialize(&envelope)?;
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(LEDGER_ENTRY_FORMAT_MAGIC);
+    bytes.extend(payload);
+
+    let err =
+        deserialize_ledger_entry(&bytes).expect_err("unsupported entry version must fail closed");
+
+    assert!(
+        err.to_string()
+            .contains("unsupported ledger entry format version")
     );
     Ok(())
 }

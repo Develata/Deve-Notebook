@@ -31,6 +31,7 @@
 
 - 某个 repo 损坏时，应进入明确的降级或恢复路径。
 - 其它健康 repo 不应被一起拖死。
+- 缺失 ledger entry 格式信封、缺失 redb schema version 或 schema version 不匹配时，系统应明确报告该 repo 需要 reset / repair / migration，不应猜测旧格式继续打开。
 
 ## 非目标
 
@@ -78,6 +79,7 @@
 前置条件：
 
 - 存在一个损坏 repo 和一个健康 repo。
+- 损坏 repo 可表现为无版本 ledger entry 或无 redb schema version 的开发期旧库。
 
 步骤：
 

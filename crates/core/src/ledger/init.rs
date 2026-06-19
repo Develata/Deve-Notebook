@@ -120,49 +120,34 @@ pub fn init_with_options(
             let db = cached_or_create_database(&db_path)
                 .with_context(|| format!("无法打开现有数据库以检查元数据: {:?}", db_path))?;
 
-            // 检查 URL
-            let read_txn = db.begin_read()?;
-            match read_txn.open_table(REPO_METADATA) {
-                Ok(table) => {
-                    if let Some(guard) = table.get(&0)? {
-                        let val = guard.value();
-                        let info: super::RepoInfo = bincode::deserialize(val)?;
-                        if let Some(requested_repo_id) = options.repo_id
-                            && info.uuid != requested_repo_id
-                        {
-                            anyhow::bail!(
-                                "Existing local repo {} has RepoId {}, expected {}; explicit repo-id init fails closed",
-                                final_name,
-                                info.uuid,
-                                requested_repo_id
-                            );
-                        }
-                        if should_reuse_existing_repo(repo_url, &info) {
-                            local_db = db;
-                            break;
-                        } else if options.repo_id.is_some() {
-                            anyhow::bail!(
-                                "Existing local repo {} metadata does not match explicit init request",
-                                final_name
-                            );
-                        } else {
-                            counter += 1;
-                            continue;
-                        }
-                    }
-                    anyhow::bail!(
-                        "Broken local repo {} during init: repository metadata missing in existing database {:?}",
-                        final_name,
-                        db_path
-                    );
-                }
-                Err(_) => {
-                    anyhow::bail!(
-                        "Broken local repo {} during init: repository metadata table missing in existing database {:?}",
-                        final_name,
-                        db_path
-                    );
-                }
+            let Some(info) = super::RepoManager::read_repo_info_from_db(db.as_ref())? else {
+                anyhow::bail!(
+                    "Broken local repo {} during init: repository metadata missing in existing database {:?}",
+                    final_name,
+                    db_path
+                );
+            };
+            if let Some(requested_repo_id) = options.repo_id
+                && info.uuid != requested_repo_id
+            {
+                anyhow::bail!(
+                    "Existing local repo {} has RepoId {}, expected {}; explicit repo-id init fails closed",
+                    final_name,
+                    info.uuid,
+                    requested_repo_id
+                );
+            }
+            if should_reuse_existing_repo(repo_url, &info) {
+                local_db = db;
+                break;
+            } else if options.repo_id.is_some() {
+                anyhow::bail!(
+                    "Existing local repo {} metadata does not match explicit init request",
+                    final_name
+                );
+            } else {
+                counter += 1;
+                continue;
             }
         } else {
             // 文件不存在，创建新库
@@ -205,13 +190,7 @@ pub fn init_with_options(
                 .clone()
                 .or_else(|| Some(format!("urn:uuid:{}", repo_uuid))),
         };
-        let write_txn = local_db.begin_write()?;
-        {
-            let mut table = write_txn.open_table(REPO_METADATA)?;
-            let bytes = bincode::serialize(&info)?;
-            table.insert(&0, bytes.as_slice())?;
-        }
-        write_txn.commit()?;
+        super::RepoManager::write_repo_info_to_db(local_db.as_ref(), &info)?;
     }
 
     repair_local_repo_metadata(&ledger_dir, &final_name, local_db.as_ref(), false, None)?;

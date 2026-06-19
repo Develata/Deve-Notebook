@@ -4,7 +4,7 @@
 
 use super::{AppState, session::WsSession};
 use deve_core::ledger::{RepoInfo, schema::{DOC_OPS, LEDGER_OPS}};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoId};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, RepoId, serialize_ledger_entry};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -40,7 +40,7 @@ pub(super) fn seed_shadow_doc(
             None,
             None,
         );
-        let bytes = bincode::serialize(&entry)?;
+        let bytes = serialize_ledger_entry(&entry)?;
         let write = db.begin_write()?;
         write.open_table(LEDGER_OPS)?.insert(1u64, bytes.as_slice())?;
         write.open_multimap_table(DOC_OPS)?.insert(doc_id.as_u128(), 1u64)?;

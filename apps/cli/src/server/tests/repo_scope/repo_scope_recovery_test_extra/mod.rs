@@ -1,8 +1,26 @@
 use super::repo_scope::resolve_session_repo_and_sync;
 use super::repo_scope_recovery_support::{build_state, seed_remote_shadow};
 use super::session::WsSession;
-use deve_core::ledger::REPO_METADATA;
+use deve_core::ledger::{
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+};
 use deve_core::models::PeerId;
+
+fn write_repo_metadata(
+    db: &redb::Database,
+    info: &deve_core::ledger::RepoInfo,
+) -> anyhow::Result<()> {
+    let write = db.begin_write()?;
+    {
+        let mut table = write.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        let bytes = bincode::serialize(info)?;
+        table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
+    }
+    write.commit()?;
+    Ok(())
+}
 
 #[test]
 fn resolve_session_repo_recovers_collision_safe_remote_selector_from_uuid() -> anyhow::Result<()> {
@@ -116,17 +134,14 @@ fn resolve_session_repo_rejects_uuid_shaped_remote_display_name_with_stale_uuid(
         ("shadow-notes", stale_uuid, "shadow-notes".into()),
     ] {
         let db = redb::Database::create(peer_dir.join(format!("{stem}.redb")))?;
-        let write = db.begin_write()?;
-        write.open_table(REPO_METADATA)?.insert(
-            &0,
-            bincode::serialize(&deve_core::ledger::RepoInfo {
+        write_repo_metadata(
+            &db,
+            &deve_core::ledger::RepoInfo {
                 uuid,
                 name,
                 url: None,
-            })?
-            .as_slice(),
+            },
         )?;
-        write.commit()?;
     }
 
     let mut session = WsSession::new();

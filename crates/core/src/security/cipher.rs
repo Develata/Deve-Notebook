@@ -12,7 +12,7 @@
 //! - `RepoKey`: 32 字节对称密钥。
 //! - `EncryptedOp`: 加密后的操作载荷结构。
 
-use crate::models::{DocId, LedgerEntry, deserialize_ledger_entry};
+use crate::models::{DocId, LedgerEntry, deserialize_ledger_entry, serialize_ledger_entry};
 use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},
@@ -67,8 +67,7 @@ impl RepoKey {
     pub fn encrypt(&self, entry: &LedgerEntry, seq: u64) -> anyhow::Result<EncryptedOp> {
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng); // 96-bits; unique per message
 
-        // Use bincode for consistency and efficiency
-        let plaintext = bincode::serialize(entry)?;
+        let plaintext = serialize_ledger_entry(entry)?;
 
         let ciphertext = self
             .cipher
@@ -143,7 +142,7 @@ mod tests {
         let enc = key.encrypt(&entry, 100).unwrap();
         assert!(!enc.ciphertext.is_empty());
         assert_eq!(enc.seq, 100);
-        assert_ne!(enc.ciphertext, bincode::serialize(&entry).unwrap()); // Ciphertext != Plaintext
+        assert_ne!(enc.ciphertext, serialize_ledger_entry(&entry).unwrap());
 
         // Decrypt
         let dec = key.decrypt(&enc).unwrap();

@@ -53,6 +53,13 @@ pub fn load_shadow_db(
     repo_id: &RepoId,
     db_path: &Path,
 ) -> Result<()> {
+    let db_existed = db_path.try_exists().with_context(|| {
+        format!(
+            "Failed to stat shadow database for peer {} repo {}",
+            peer_id, repo_id
+        )
+    })?;
+
     // Check if already loaded (Read Lock)
     {
         let dbs = read_shadow_dbs(shadow_dbs)?;
@@ -90,14 +97,43 @@ pub fn load_shadow_db(
     let write_txn = db.begin_write()?;
     {
         let mut repo_meta = write_txn.open_table(REPO_METADATA)?;
-        if repo_meta.get(&0)?.is_none() {
+        if db_existed {
+            let Some(version_guard) = repo_meta.get(&REPO_SCHEMA_VERSION_METADATA_KEY)? else {
+                anyhow::bail!(
+                    "Unsupported redb schema while loading shadow repo {}/{}: schema version missing; reset, repair, or migrate this pre-stable repo explicitly",
+                    peer_id,
+                    repo_id
+                );
+            };
+            let schema_version: u16 = bincode::deserialize(version_guard.value())?;
+            if schema_version != REDB_SCHEMA_VERSION {
+                anyhow::bail!(
+                    "Unsupported redb schema version {} while loading shadow repo {}/{}; expected {}",
+                    schema_version,
+                    peer_id,
+                    repo_id,
+                    REDB_SCHEMA_VERSION
+                );
+            }
+        } else {
+            let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+            repo_meta.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        }
+        if repo_meta.get(&REPO_INFO_METADATA_KEY)?.is_none() {
+            if db_existed {
+                anyhow::bail!(
+                    "Broken shadow repo {}/{} while loading database: repository metadata missing",
+                    peer_id,
+                    repo_id
+                );
+            }
             let info = RepoInfo {
                 uuid: *repo_id,
                 name: repo_id.to_string(),
                 url: None,
             };
             let bytes = bincode::serialize(&info)?;
-            repo_meta.insert(&0, bytes.as_slice())?;
+            repo_meta.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
         }
         let _ = write_txn.open_table(LEDGER_OPS)?;
         let _ = write_txn.open_multimap_table(DOC_OPS)?;

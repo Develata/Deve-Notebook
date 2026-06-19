@@ -31,6 +31,7 @@
 - 用户应能知道当前运行的大致版本或构建来源。
 - 当前 `/api/node/role` 与 Web dashboard 应暴露只读运行摘要，包括版本、profile、环境、交付形态和 repo health 聚合状态。
 - 升级后核心数据与核心工作流不应无提示地断裂。
+- 首个 stable 前产生的无版本开发期 ledger / `.redb` 不属于兼容承诺；正式运行时应 fail-closed 并提示显式 reset / repair / migration。
 
 ### 3. 运行环境提示
 

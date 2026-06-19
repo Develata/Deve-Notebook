@@ -1,4 +1,4 @@
-use super::{REPO_METADATA, RepoInfo, build_state, resolve_requested_repo_name};
+use super::{RepoInfo, build_state, resolve_requested_repo_name, write_repo_metadata};
 use deve_core::models::PeerId;
 
 #[test]
@@ -20,11 +20,7 @@ fn resolve_requested_repo_name_fails_closed_when_remote_display_name_is_ambiguou
     };
     for (stem, info) in [("wiki-a", &first), ("wiki-b", &second)] {
         let db = redb::Database::create(peer_dir.join(format!("{stem}.redb")))?;
-        let write = db.begin_write()?;
-        write
-            .open_table(REPO_METADATA)?
-            .insert(&0, bincode::serialize(info)?.as_slice())?;
-        write.commit()?;
+        write_repo_metadata(&db, info)?;
     }
 
     let err = resolve_requested_repo_name(&state, Some(&peer_id), "wiki", Some(second.uuid))

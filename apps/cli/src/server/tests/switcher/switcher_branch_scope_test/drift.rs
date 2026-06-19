@@ -3,7 +3,7 @@
 
 use crate::server::handlers::switcher::handle_switch_branch;
 use crate::server::switcher_test_support::{app_state, browser_session, unicast_channel};
-use deve_core::ledger::schema::REPO_METADATA;
+use deve_core::ledger::schema::{REPO_INFO_METADATA_KEY, REPO_METADATA};
 use deve_core::ledger::{RepoInfo, RepoManager};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
@@ -23,7 +23,7 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
     local.run_on_local_repo("notes", |db| {
         let read = db.begin_read()?;
         let table = read.open_table(REPO_METADATA)?;
-        let raw = table.get(&0)?.expect("repo info");
+        let raw = table.get(&REPO_INFO_METADATA_KEY)?.expect("repo info");
         let mut info: RepoInfo = bincode::deserialize(raw.value())?;
         info.name = "peer-remote".into();
         drop(table);
@@ -31,7 +31,10 @@ async fn switch_branch_fails_closed_when_local_display_name_drift_matches_shadow
         let write = db.begin_write()?;
         {
             let mut table = write.open_table(REPO_METADATA)?;
-            table.insert(&0, bincode::serialize(&info)?.as_slice())?;
+            table.insert(
+                &REPO_INFO_METADATA_KEY,
+                bincode::serialize(&info)?.as_slice(),
+            )?;
         }
         write.commit()?;
         Ok(())

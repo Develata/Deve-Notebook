@@ -54,6 +54,7 @@
     - binary_packet_magic_eq: "DEVEWSF3"
     - versioned_packet_protocol_version_eq: 9
     - min_supported_packet_protocol_version_eq: 9
+    - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - text_legacy_json_debug_only: true
     - production_rejects_text_legacy_json: true
     - reject_binary_without_magic: true

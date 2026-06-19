@@ -4,7 +4,9 @@
 use super::handlers::switcher::handle_switch_branch;
 use super::switcher_test_support::{app_state, browser_session, unicast_channel};
 use deve_core::ledger::RepoManager;
-use deve_core::ledger::schema::REPO_METADATA;
+use deve_core::ledger::schema::{
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+};
 use deve_core::models::PeerId;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use tempfile::tempdir;
@@ -78,8 +80,12 @@ async fn switch_branch_fails_closed_when_current_local_scope_metadata_is_broken(
     state.repo.ensure_shadow_repo_info(&peer_id, &local_info)?;
     let db = state.repo.open_database(None, "default")?.db;
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?
-        .insert(&0, [0_u8, 1, 2, 3].as_slice())?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        table.insert(&REPO_INFO_METADATA_KEY, [0_u8, 1, 2, 3].as_slice())?;
+    }
     txn.commit()?;
 
     let (ch, mut uni_rx) = unicast_channel(&state);

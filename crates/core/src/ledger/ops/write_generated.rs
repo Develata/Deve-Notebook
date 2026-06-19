@@ -2,7 +2,9 @@ use super::validate;
 use crate::ledger::runtime_tables;
 use crate::ledger::schema::{CLIENT_OP_INDEX, DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
 use crate::ledger::{GlobalSeq, seq::checked_next_local_seq};
-use crate::models::{DocId, LedgerEntry, LedgerEvent, PeerId, deserialize_ledger_entry};
+use crate::models::{
+    DocId, LedgerEntry, LedgerEvent, PeerId, deserialize_ledger_entry, serialize_ledger_entry,
+};
 use anyhow::{Result, anyhow};
 use redb::{Database, ReadableMultimapTable, ReadableTable};
 
@@ -75,7 +77,7 @@ fn append_generated_op_inner(
         .next()
         .ok_or_else(|| anyhow!("GlobalSeq overflow"))?;
     let new_global_seq_key = new_global_seq.storage_key();
-    let bytes = bincode::serialize(&entry)?;
+    let bytes = serialize_ledger_entry(&entry)?;
 
     ops.insert(new_global_seq_key, bytes.as_slice())?;
     if let Some(doc_id) = entry.doc_id {

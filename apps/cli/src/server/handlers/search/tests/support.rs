@@ -3,7 +3,7 @@ use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 use deve_core::ledger::RepoInfo;
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, serialize_ledger_entry};
 use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -51,7 +51,7 @@ pub(crate) fn seed_remote_doc_with_content(
                 None,
                 None,
             );
-            let bytes = bincode::serialize(&entry)?;
+            let bytes = serialize_ledger_entry(&entry)?;
             let write = db.begin_write()?;
             write
                 .open_table(LEDGER_OPS)?

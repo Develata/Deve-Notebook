@@ -27,7 +27,10 @@ mod ledger_decode;
 mod ledger_event;
 pub mod version_vector;
 
-pub use ledger_decode::deserialize_ledger_entry;
+pub use ledger_decode::{
+    LEDGER_ENTRY_FORMAT_MAGIC, LEDGER_ENTRY_FORMAT_VERSION, deserialize_ledger_entry,
+    serialize_ledger_entry,
+};
 pub use ledger_event::{ContentOp, LedgerEntry, LedgerEvent, Op, StructureOp};
 pub use version_vector::VersionVector;
 

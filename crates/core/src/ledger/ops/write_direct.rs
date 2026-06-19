@@ -6,7 +6,7 @@
 use super::validate;
 use crate::ledger::GlobalSeq;
 use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS, PEER_DOC_SEQ};
-use crate::models::LedgerEntry;
+use crate::models::{LedgerEntry, serialize_ledger_entry};
 use anyhow::Result;
 use redb::{Database, ReadableTable, WriteTransaction};
 
@@ -35,7 +35,7 @@ pub(crate) fn append_op_to_txn(
             .next()
             .ok_or_else(|| anyhow::anyhow!("GlobalSeq overflow"))?;
         let new_seq_key = new_seq.storage_key();
-        let bytes = bincode::serialize(entry)?;
+        let bytes = serialize_ledger_entry(entry)?;
         ops.insert(new_seq_key, bytes.as_slice())?;
         if let Some(doc_id) = entry.doc_id {
             doc_ops.insert(doc_id.as_u128(), new_seq_key)?;

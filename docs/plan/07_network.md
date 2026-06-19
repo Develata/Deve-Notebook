@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-19`
+- `Last Review`: `2026-06-20`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -188,6 +188,8 @@ enabled = true
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF3` magic header、`protocol_version` 与 bincode payload。
 - `protocol_version` 当前固定为 `9`；当前兼容窗口为 `9..=9`；任何破坏兼容的 schema 变更 **MUST** bump 版本，并同步更新收发端兼容窗口。
+- FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
+- 未来若支持滚动升级，必须为每个仍支持的旧 `protocol_version` 维护显式 decode/upgrade adapter，并在 `MIN_SUPPORTED_WS_PROTOCOL_VERSION..=WS_PROTOCOL_VERSION` 区间内逐版本测试。
 - 服务端到服务端、服务端到客户端 **MUST** 默认使用 versioned bincode frame。
 - 浏览器客户端到服务端 **SHOULD** 优先使用 versioned bincode frame；text-frame versioned JSON 只能作为调试入口保留。
 - 旧式 JSON text frame **MAY** 在显式 development/debug 兼容开关下解析，**MUST NOT** 成为生产默认运行时合同。

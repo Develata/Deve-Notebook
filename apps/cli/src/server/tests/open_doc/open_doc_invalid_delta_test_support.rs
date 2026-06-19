@@ -1,6 +1,6 @@
 use super::AppState;
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS, PEER_DOC_SEQ};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, serialize_ledger_entry};
 use redb::ReadableTable;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ pub(super) fn inject_legacy_invalid_insert(
             None,
             None,
         );
-        let bytes = bincode::serialize(&entry)?;
+        let bytes = serialize_ledger_entry(&entry)?;
         write
             .open_table(LEDGER_OPS)?
             .insert(next_global_seq, bytes.as_slice())?;

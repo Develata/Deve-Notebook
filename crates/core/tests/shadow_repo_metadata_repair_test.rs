@@ -1,6 +1,6 @@
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::listing::RepoListing;
-use deve_core::ledger::schema::REPO_METADATA;
+use deve_core::ledger::schema::{REPO_INFO_METADATA_KEY, REPO_METADATA};
 use deve_core::models::PeerId;
 use tempfile::TempDir;
 
@@ -9,7 +9,7 @@ mod common;
 fn read_repo_info(db: &redb::Database) -> Option<deve_core::ledger::RepoInfo> {
     let read = db.begin_read().expect("read txn");
     let table = read.open_table(REPO_METADATA).expect("repo metadata");
-    let raw = table.get(&0).expect("read metadata")?;
+    let raw = table.get(&REPO_INFO_METADATA_KEY).expect("read metadata")?;
     Some(bincode::deserialize(raw.value()).expect("deserialize repo info"))
 }
 

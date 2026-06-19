@@ -4,7 +4,9 @@
 use crate::ledger::RepoManager;
 use crate::ledger::database::cached_database;
 use crate::ledger::manager::types::RepoInfo;
-use crate::ledger::schema::REPO_METADATA;
+use crate::ledger::schema::{
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+};
 use anyhow::{Result, anyhow};
 use redb::Database;
 use std::path::Path;
@@ -21,7 +23,20 @@ impl RepoManager {
             Err(redb::TableError::TableDoesNotExist(_)) => return Ok(None),
             Err(err) => return Err(err.into()),
         };
-        if let Some(guard) = table.get(&0)? {
+        let Some(version_guard) = table.get(&REPO_SCHEMA_VERSION_METADATA_KEY)? else {
+            anyhow::bail!(
+                "Unsupported redb schema while reading repo metadata: schema version missing; reset, repair, or migrate this pre-stable repo explicitly"
+            );
+        };
+        let schema_version: u16 = bincode::deserialize(version_guard.value())?;
+        if schema_version != REDB_SCHEMA_VERSION {
+            anyhow::bail!(
+                "Unsupported redb schema version {} while reading repo metadata; expected {}",
+                schema_version,
+                REDB_SCHEMA_VERSION
+            );
+        }
+        if let Some(guard) = table.get(&REPO_INFO_METADATA_KEY)? {
             let info: RepoInfo = bincode::deserialize(guard.value())?;
             return Ok(Some(info));
         }
@@ -65,8 +80,10 @@ impl RepoManager {
         let write_txn = db.begin_write()?;
         {
             let mut table = write_txn.open_table(REPO_METADATA)?;
+            let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+            table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
             let bytes = bincode::serialize(info)?;
-            table.insert(&0, bytes.as_slice())?;
+            table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
         }
         write_txn.commit()?;
         Ok(())

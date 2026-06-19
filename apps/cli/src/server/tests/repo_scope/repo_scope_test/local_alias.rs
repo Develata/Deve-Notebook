@@ -6,7 +6,10 @@ use crate::server::{
     repo_scope::{map_repo_scope_error, resolve_session_repo_and_sync},
     session::WsSession,
 };
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+    RepoInfo, RepoManager,
+};
 use deve_core::protocol::ServerErrorCode;
 
 fn rewrite_local_metadata(
@@ -16,8 +19,13 @@ fn rewrite_local_metadata(
 ) -> anyhow::Result<()> {
     let db = repo.open_database(None, repo_name)?.db;
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?
-        .insert(&0, bincode::serialize(&info)?.as_slice())?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        let bytes = bincode::serialize(&info)?;
+        table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
+    }
     txn.commit()?;
     Ok(())
 }

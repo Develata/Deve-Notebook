@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-20`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
 
@@ -60,6 +60,18 @@
 - `SNAPSHOT_INDEX: DocId -> [SeqNo]`
 - `SNAPSHOT_DATA: SeqNo -> ContentBlob`
 
+### 4.1.1 Ledger Entry Format Contract {#ledger-entry-format-contract}
+
+`LEDGER_OPS` 的 value 是 repo authority 的事实载荷，不得依赖 Rust struct 形状探测来判定版本。
+
+规则：
+
+- 每条 `LedgerEntry` 落盘 **MUST** 使用显式格式信封：固定 magic header + `ledger_entry_format_version` + bincode payload。
+- 当前首版格式为 `LEDGER_ENTRY_FORMAT_VERSION = 1`。
+- 读取路径 **MUST** 先验证 magic header，再按显式 `ledger_entry_format_version` dispatch。
+- 运行时 **MUST NOT** 通过“尝试当前结构、再尝试若干 legacy 结构”的 bincode 形状探测作为 authority decode 路径。
+- 缺失 magic header、缺失版本或版本不受支持时，repo 必须 fail-closed；pre-1.0 未发布开发期旧 ledger 可要求显式 reset / repair / migration，不进入生产透明兼容承诺。
+
 ### 4.2 Sequence Contract
 
 - `GlobalSeq`
@@ -94,6 +106,21 @@
     - value: suppressor fingerprints, overflow marker, last_full_scan_at
 - 这些 side tables **MUST** 明确标记为 workflow/runtime state，不得被上层误当成 authority state。
 - `pending_fs_ops` 与 pending overlay **MUST** 分属不同状态域；二者不得复用同一 row、key space 或清理规则。
+
+### 4.3.1 Redb Schema Version Gate {#redb-schema-version-contract}
+
+每个 repo `.redb` **MUST** 在 `REPO_METADATA` 中携带顶层 schema version gate：
+
+- `REPO_METADATA[0] = RepoInfo`
+- `REPO_METADATA[1] = redb_schema_version`
+- 当前首版 schema 为 `REDB_SCHEMA_VERSION = 1`。
+
+规则：
+
+- 新建 local repo 与 remote shadow repo **MUST** 写入当前 `REDB_SCHEMA_VERSION`。
+- 打开已有 repo 时，运行时 **MUST** 先校验 `REDB_SCHEMA_VERSION`，再读取 `RepoInfo` 或进入 ledger/query 路径。
+- 缺失 schema version 或版本不匹配 **MUST** fail-closed，并暴露“需要显式迁移、reset 或重建”的诊断。
+- 表名后缀（如 `client_op_index_v2`）只能表达单个 side table 的内部演进，不得替代顶层 redb schema version gate。
 
 ### 4.4 Snapshot Storage Contract
 

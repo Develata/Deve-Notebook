@@ -91,7 +91,7 @@ mod tests {
     use super::*;
     use crate::ledger::schema::{DOC_OPS, LEDGER_OPS, NODE_OPS};
     use crate::ledger::shadow::management::ensure_shadow_db;
-    use crate::models::{Op, StructureOp};
+    use crate::models::{Op, StructureOp, serialize_ledger_entry};
     use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
     use tempfile::TempDir;
@@ -135,7 +135,7 @@ mod tests {
             let write_txn = db.begin_write()?;
             {
                 let mut table = write_txn.open_table(LEDGER_OPS)?;
-                let bytes = bincode::serialize(&entry)?;
+                let bytes = serialize_ledger_entry(&entry)?;
                 table.insert(1u64, bytes.as_slice())?;
 
                 let mut doc_ops = write_txn.open_multimap_table(DOC_OPS)?;
@@ -188,7 +188,7 @@ mod tests {
             let dbs = shadow_dbs.read().unwrap();
             let db = dbs.get(&peer_id).unwrap().get(&repo_id).unwrap();
             let write_txn = db.begin_write()?;
-            let bytes = bincode::serialize(&entry)?;
+            let bytes = serialize_ledger_entry(&entry)?;
             write_txn
                 .open_table(LEDGER_OPS)?
                 .insert(1u64, bytes.as_slice())?;

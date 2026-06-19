@@ -6,7 +6,7 @@ use deve_core::config::SyncMode;
 use deve_core::ledger::RepoInfo;
 use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, serialize_ledger_entry};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
@@ -84,7 +84,7 @@ pub(super) fn seed_shadow_doc_with_url(
             None,
             None,
         );
-        let bytes = bincode::serialize(&entry)?;
+        let bytes = serialize_ledger_entry(&entry)?;
         let write = db.begin_write()?;
         write
             .open_table(LEDGER_OPS)?

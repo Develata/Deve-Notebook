@@ -2,7 +2,7 @@ use deve_core::ledger::RepoManager;
 use deve_core::ledger::node_meta::{ensure_file_node, remove_node_by_path};
 use deve_core::ledger::schema::{DOC_OPS, LEDGER_OPS};
 use deve_core::ledger::traits::{RepoSelector, Repository};
-use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId, serialize_ledger_entry};
 use tempfile::TempDir;
 
 #[test]
@@ -25,7 +25,7 @@ fn repo_doc_content_rejects_deleted_docs_even_if_ops_remain() {
             None,
             None,
         );
-        let bytes = bincode::serialize(&entry)?;
+        let bytes = serialize_ledger_entry(&entry)?;
         let write = db.begin_write()?;
         write
             .open_table(LEDGER_OPS)?

@@ -2,7 +2,10 @@ use super::switcher_prepare::prepare_repo_switch;
 use super::switcher_selector::{resolve_requested_repo_name, select_target_repo};
 use crate::server::{AppState, security, tree_state::RepoTreeRegistry};
 use deve_core::config::SyncMode;
-use deve_core::ledger::{REPO_METADATA, RepoInfo, RepoManager};
+use deve_core::ledger::{
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
+    RepoInfo, RepoManager,
+};
 use deve_core::models::PeerId;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -11,6 +14,31 @@ use tokio::sync::broadcast;
 
 mod remote;
 mod remote_fail_closed;
+
+pub(super) fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) -> anyhow::Result<()> {
+    let txn = db.begin_write()?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        let bytes = bincode::serialize(info)?;
+        table.insert(&REPO_INFO_METADATA_KEY, bytes.as_slice())?;
+    }
+    txn.commit()?;
+    Ok(())
+}
+
+fn write_invalid_repo_metadata(db: &redb::Database) -> anyhow::Result<()> {
+    let txn = db.begin_write()?;
+    {
+        let mut table = txn.open_table(REPO_METADATA)?;
+        let version = bincode::serialize(&REDB_SCHEMA_VERSION)?;
+        table.insert(&REPO_SCHEMA_VERSION_METADATA_KEY, version.as_slice())?;
+        table.insert(&REPO_INFO_METADATA_KEY, [0_u8, 1, 2, 3].as_slice())?;
+    }
+    txn.commit()?;
+    Ok(())
+}
 
 pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>)> {
     let dir = tempdir()?;
@@ -116,17 +144,14 @@ fn resolve_requested_repo_name_fails_closed_on_stale_local_alias_after_metadata_
     let wiki = init_local_repo(&dir, "wiki", "urn:wiki")?;
     let wiki_info = wiki.get_repo_info()?.expect("wiki info");
     let wiki_db = state.repo.open_database(None, "wiki")?.db;
-    let txn = wiki_db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(
-        &0,
-        bincode::serialize(&RepoInfo {
+    write_repo_metadata(
+        &wiki_db,
+        &RepoInfo {
             uuid: wiki_info.uuid,
             name: "legacy-wiki".into(),
             url: wiki_info.url.clone(),
-        })?
-        .as_slice(),
+        },
     )?;
-    txn.commit()?;
 
     let err = resolve_requested_repo_name(&state, None, "legacy-wiki", None)
         .expect_err("stale local alias must fail closed");
@@ -144,17 +169,14 @@ fn select_target_repo_fails_closed_on_stale_local_alias_after_metadata_drift() -
     let wiki = init_local_repo(&dir, "wiki", "urn:wiki")?;
     let wiki_info = wiki.get_repo_info()?.expect("wiki info");
     let wiki_db = state.repo.open_database(None, "wiki")?.db;
-    let txn = wiki_db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.insert(
-        &0,
-        bincode::serialize(&RepoInfo {
+    write_repo_metadata(
+        &wiki_db,
+        &RepoInfo {
             uuid: wiki_info.uuid,
             name: "legacy-wiki".into(),
             url: wiki_info.url.clone(),
-        })?
-        .as_slice(),
+        },
     )?;
-    txn.commit()?;
 
     let err = select_target_repo(&state, false, None, Some("legacy-wiki"), None, None)
         .expect_err("stale local alias must fail closed");
@@ -193,17 +215,14 @@ fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<
             .expect("repo info")
             .uuid;
         let db = state.repo.open_database(None, repo_name)?.db;
-        let txn = db.begin_write()?;
-        txn.open_table(REPO_METADATA)?.insert(
-            &0,
-            bincode::serialize(&RepoInfo {
+        write_repo_metadata(
+            &db,
+            &RepoInfo {
                 uuid: repo_uuid,
                 name: "wiki".into(),
                 url: Some(format!("urn:{repo_name}")),
-            })?
-            .as_slice(),
+            },
         )?;
-        txn.commit()?;
     }
 
     let err = select_target_repo(&state, false, None, Some("wiki"), None, None)
@@ -216,10 +235,7 @@ fn select_target_repo_fails_closed_on_ambiguous_local_alias() -> anyhow::Result<
 fn select_target_repo_fails_closed_when_local_url_candidate_is_unreadable() -> anyhow::Result<()> {
     let (_dir, state) = build_state()?;
     let db = state.repo.open_database(None, "default")?.db;
-    let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?
-        .insert(&0, [0_u8, 1, 2, 3].as_slice())?;
-    txn.commit()?;
+    write_invalid_repo_metadata(&db)?;
 
     let err = select_target_repo(&state, false, None, None, Some("urn:default".into()), None)
         .expect_err("broken local repo metadata must fail closed during URL recovery");
@@ -237,7 +253,8 @@ fn prepare_repo_switch_rejects_local_repo_without_uuid_metadata() -> anyhow::Res
     init_local_repo(&dir, "test", "urn:test")?;
     let db = state.repo.open_database(None, "test")?.db;
     let txn = db.begin_write()?;
-    txn.open_table(REPO_METADATA)?.remove(&0)?;
+    txn.open_table(REPO_METADATA)?
+        .remove(&REPO_INFO_METADATA_KEY)?;
     txn.commit()?;
 
     let err = match prepare_repo_switch(&state, None, "test".into()) {

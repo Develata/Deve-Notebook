@@ -2,11 +2,12 @@
 
 use deve_core::ledger::schema::{
     CLIENT_OP_INDEX, DOC_OPS, DOCID_TO_PATH, INODE_TO_DOCID, INODE_TO_NODEID, LEDGER_OPS, NODE_OPS,
-    NODE_PEER_SEQ, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID, PEER_DOC_SEQ, REPO_METADATA,
+    NODE_PEER_SEQ, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID, PEER_DOC_SEQ,
+    REDB_SCHEMA_VERSION, REPO_INFO_METADATA_KEY, REPO_METADATA, REPO_SCHEMA_VERSION_METADATA_KEY,
     SNAPSHOT_DATA, SNAPSHOT_INDEX,
 };
 use deve_core::ledger::{RepoInfo, RepoManager};
-use deve_core::models::{LedgerEntry, PeerId};
+use deve_core::models::{LedgerEntry, PeerId, serialize_ledger_entry};
 use redb::ReadableTable;
 use std::path::{Path, PathBuf};
 
@@ -37,10 +38,23 @@ pub fn try_create_initialized_local_repo_with_depth(
 
 pub fn write_repo_metadata(db: &redb::Database, info: &RepoInfo) {
     let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, bincode::serialize(info).expect("serialize").as_slice())
-        .expect("write metadata");
+    {
+        let mut table = txn.open_table(REPO_METADATA).expect("repo metadata");
+        table
+            .insert(
+                &REPO_SCHEMA_VERSION_METADATA_KEY,
+                bincode::serialize(&REDB_SCHEMA_VERSION)
+                    .expect("serialize schema version")
+                    .as_slice(),
+            )
+            .expect("write schema version");
+        table
+            .insert(
+                &REPO_INFO_METADATA_KEY,
+                bincode::serialize(info).expect("serialize").as_slice(),
+            )
+            .expect("write metadata");
+    }
     txn.commit().expect("commit metadata");
 }
 
@@ -52,10 +66,20 @@ pub fn delete_repo_metadata(db: &redb::Database) {
 
 pub fn poison_repo_metadata_invalid_bincode(db: &redb::Database) {
     let txn = db.begin_write().expect("write txn");
-    txn.open_table(REPO_METADATA)
-        .expect("repo metadata")
-        .insert(&0, [0_u8, 1, 2, 3].as_slice())
-        .expect("write broken metadata");
+    {
+        let mut table = txn.open_table(REPO_METADATA).expect("repo metadata");
+        table
+            .insert(
+                &REPO_SCHEMA_VERSION_METADATA_KEY,
+                bincode::serialize(&REDB_SCHEMA_VERSION)
+                    .expect("serialize schema version")
+                    .as_slice(),
+            )
+            .expect("write schema version");
+        table
+            .insert(&REPO_INFO_METADATA_KEY, [0_u8, 1, 2, 3].as_slice())
+            .expect("write broken metadata");
+    }
     txn.commit().expect("commit broken metadata");
 }
 
@@ -163,7 +187,15 @@ pub fn seed_shadow_without_metadata_row(repo: &RepoManager, peer_id: &PeerId, re
     let db = redb::Database::create(peer_dir.join(format!("{repo_id}.redb")))
         .expect("legacy shadow repo");
     let txn = db.begin_write().expect("write txn");
-    let _ = txn.open_table(REPO_METADATA).expect("repo metadata");
+    txn.open_table(REPO_METADATA)
+        .expect("repo metadata")
+        .insert(
+            &REPO_SCHEMA_VERSION_METADATA_KEY,
+            bincode::serialize(&REDB_SCHEMA_VERSION)
+                .expect("serialize schema version")
+                .as_slice(),
+        )
+        .expect("write schema version");
     txn.commit().expect("commit legacy shadow");
 }
 
@@ -180,7 +212,7 @@ pub fn append_unvalidated_local_op(
             let mut node_ops = write.open_multimap_table(NODE_OPS)?;
             let mut peer_seqs = write.open_table(PEER_DOC_SEQ)?;
             let next_seq = ops.last()?.map(|(key, _)| key.value() + 1).unwrap_or(1);
-            let bytes = bincode::serialize(entry)?;
+            let bytes = serialize_ledger_entry(entry)?;
             ops.insert(next_seq, bytes.as_slice())?;
             if let Some(doc_id) = entry.doc_id {
                 doc_ops.insert(doc_id.as_u128(), next_seq)?;

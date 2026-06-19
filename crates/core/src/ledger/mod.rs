@@ -84,6 +84,8 @@ mod ops_write_validation_test;
 #[cfg(test)]
 mod runtime_tables_test;
 #[cfg(test)]
+mod schema_version_test;
+#[cfg(test)]
 mod structure_write_validation_test;
 #[cfg(test)]
 mod tests;
