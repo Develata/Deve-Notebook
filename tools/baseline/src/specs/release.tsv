@@ -502,7 +502,12 @@ contains	scripts/check-release-audit-gate.sh	npm --prefix
 contains	scripts/check-release-audit-gate.sh	DEVE_RELEASE_AUDIT_REQUIRED
 contains	scripts/check-release-audit-gate.sh	skip cargo audit
 contains	docs/features/operations/release_quality_gates.md	runtime happy-path and recovery smokes remain explicit local/CI script gates
+contains	scripts/check-release-baseline.sh	cargo run -p deve_baseline -- release
+contains	scripts/check-release-baseline.sh	release-baseline-check:
+absent	scripts/check-release-baseline.sh	contains ".github/workflows/release.yml"
+absent	scripts/check-release-baseline.sh	assert_before "Dockerfile"
 contains	docs/plan/18_release.md	`tools/baseline`（package `deve_baseline`）
+contains	docs/plan/18_release.md	确定性 release baseline 规格的唯一维护位置是 Rust checker 的 TSV spec
 contains	docs/features/15_release.md	`cargo run -p deve_baseline -- all`
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- all
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release
