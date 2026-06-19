@@ -1,4 +1,4 @@
-use super::{ServeOptions, detect_main_port, proxy_node_role, run};
+use super::{ServeOptions, detect_main_node_role, detect_main_port, proxy_node_role, run};
 use axum::{Json, Router, routing::get};
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
 use std::ffi::OsString;
@@ -47,6 +47,13 @@ async fn spawn_json_server(payload: serde_json::Value) -> SocketAddr {
 }
 
 async fn spawn_node_role_server(role: &'static str) -> SocketAddr {
+    spawn_node_role_server_with_git_bridge(role, "mirror").await
+}
+
+async fn spawn_node_role_server_with_git_bridge(
+    role: &'static str,
+    git_bridge: &'static str,
+) -> SocketAddr {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("bind test server");
@@ -54,7 +61,7 @@ async fn spawn_node_role_server(role: &'static str) -> SocketAddr {
     let port = addr.port();
     let app = Router::new().route(
         "/api/node/role",
-        get(move || async move { Json(node_role_payload(role, port)) }),
+        get(move || async move { Json(node_role_payload(role, port, git_bridge)) }),
     );
     tokio::spawn(async move {
         axum::serve(listener, app).await.expect("serve test app");
@@ -62,7 +69,7 @@ async fn spawn_node_role_server(role: &'static str) -> SocketAddr {
     addr
 }
 
-fn node_role_payload(role: &str, port: u16) -> serde_json::Value {
+fn node_role_payload(role: &str, port: u16, git_bridge: &str) -> serde_json::Value {
     serde_json::json!({
         "role": role,
         "ws_port": port,
@@ -78,7 +85,7 @@ fn node_role_payload(role: &str, port: u16) -> serde_json::Value {
             "degraded": 0,
         },
         "source_control": {
-            "git_bridge": "mirror",
+            "git_bridge": git_bridge,
         },
     })
 }
@@ -99,6 +106,17 @@ async fn detect_main_port_finds_deve_process_via_node_role() {
 async fn detect_main_port_accepts_native_main_node_role() {
     let addr = spawn_node_role_server("native-main").await;
     assert_eq!(detect_main_port(addr.port()).await, Some(addr.port()));
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn detect_main_node_role_preserves_source_control_git_bridge_mode() {
+    let addr = spawn_node_role_server_with_git_bridge("main", "off").await;
+    let detected = detect_main_node_role(addr.port())
+        .await
+        .expect("main node role");
+
+    assert_eq!(detected.port, addr.port());
+    assert_eq!(detected.source_control.git_bridge, "off");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -155,13 +173,19 @@ async fn detect_main_port_rejects_node_role_for_different_port() {
 
 #[test]
 fn proxy_node_role_uses_delegated_git_bridge_mode() {
-    let role = proxy_node_role(3002, 3001);
+    let role = proxy_node_role(
+        3002,
+        3001,
+        crate::server::node_role::SourceControlSummary {
+            git_bridge: "off".into(),
+        },
+    );
 
     assert_eq!(role.role, "proxy");
     assert_eq!(role.ws_port, 3002);
     assert_eq!(role.main_port, 3001);
     assert_eq!(role.delivery, "plugin-host-proxy");
-    assert_eq!(role.source_control.git_bridge, "unknown");
+    assert_eq!(role.source_control.git_bridge, "off");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

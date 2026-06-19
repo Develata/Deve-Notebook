@@ -102,12 +102,13 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
 
 /// 代理模式: 检测已运行的主进程并以 plugin-host 方式启动
 async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
-    let Some(main_port) = detect_main_port(port).await else {
+    let Some(main) = detect_main_node_role(port).await else {
         anyhow::bail!(
             "Serve port {} is already in use, but no healthy Deve main process was detected",
             port
         );
     };
+    let main_port = main.port;
     tracing::info!(
         "Main process detected on port {}. Switching to client proxy mode...",
         main_port
@@ -129,11 +130,19 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
 
     let plugin_port = find_free_port(main_port + 1, 5).unwrap_or(main_port + 1);
     tracing::info!("Plugin host will listen on port {}", plugin_port);
-    crate::server::node_role::set_node_role(proxy_node_role(plugin_port, main_port));
+    crate::server::node_role::set_node_role(proxy_node_role(
+        plugin_port,
+        main_port,
+        main.source_control,
+    ));
     server::start_plugin_host_only(plugins, plugin_port).await
 }
 
-fn proxy_node_role(plugin_port: u16, main_port: u16) -> crate::server::node_role::NodeRole {
+fn proxy_node_role(
+    plugin_port: u16,
+    main_port: u16,
+    source_control: crate::server::node_role::SourceControlSummary,
+) -> crate::server::node_role::NodeRole {
     crate::server::node_role::NodeRole {
         role: "proxy".into(),
         ws_port: plugin_port,
@@ -143,13 +152,24 @@ fn proxy_node_role(plugin_port: u16, main_port: u16) -> crate::server::node_role
         delivery: "plugin-host-proxy".into(),
         environment: crate::server::node_role::runtime_environment(),
         repo_health: crate::server::node_role::RepoHealthSummary::unknown(),
-        source_control: crate::server::node_role::SourceControlSummary::unknown(),
+        source_control,
         p2p: crate::server::node_role::P2pSummary::disabled(),
         native_service: None,
     }
 }
 
+#[cfg(test)]
 async fn detect_main_port(port: u16) -> Option<u16> {
+    detect_main_node_role(port).await.map(|main| main.port)
+}
+
+#[derive(Debug, Clone)]
+struct MainNodeRoleProbe {
+    port: u16,
+    source_control: crate::server::node_role::SourceControlSummary,
+}
+
+async fn detect_main_node_role(port: u16) -> Option<MainNodeRoleProbe> {
     let mut ports = vec![port];
     for p in port.saturating_sub(2)..=port.saturating_add(4) {
         if !ports.contains(&p) {
@@ -159,27 +179,26 @@ async fn detect_main_port(port: u16) -> Option<u16> {
 
     let client = Client::builder().no_proxy().build().ok()?;
     for p in ports {
-        if probe_node_role(&client, p).await {
-            return Some(p);
+        if let Some(main) = probe_node_role(&client, p).await {
+            return Some(main);
         }
     }
     None
 }
 
-async fn probe_node_role(client: &Client, port: u16) -> bool {
+async fn probe_node_role(client: &Client, port: u16) -> Option<MainNodeRoleProbe> {
     let url = format!("http://127.0.0.1:{}/api/node/role", port);
     for attempt in 0..3 {
         let req = client.get(&url);
         match timeout(Duration::from_millis(300), req.send()).await {
             Ok(Ok(response)) if response.status().is_success() => {
-                if response
+                if let Some(main) = response
                     .json::<serde_json::Value>()
                     .await
                     .ok()
-                    .as_ref()
-                    .is_some_and(|payload| is_main_node_role_payload(payload, port))
+                    .and_then(|payload| main_node_role_probe(&payload, port))
                 {
-                    return true;
+                    return Some(main);
                 }
             }
             _ => {}
@@ -188,7 +207,34 @@ async fn probe_node_role(client: &Client, port: u16) -> bool {
             sleep(Duration::from_millis(25)).await;
         }
     }
-    false
+    None
+}
+
+fn main_node_role_probe(
+    payload: &serde_json::Value,
+    probed_port: u16,
+) -> Option<MainNodeRoleProbe> {
+    if !is_main_node_role_payload(payload, probed_port) {
+        return None;
+    }
+    Some(MainNodeRoleProbe {
+        port: probed_port,
+        source_control: source_control_summary_from_payload(payload),
+    })
+}
+
+fn source_control_summary_from_payload(
+    payload: &serde_json::Value,
+) -> crate::server::node_role::SourceControlSummary {
+    let git_bridge = payload
+        .get("source_control")
+        .and_then(|source_control| source_control.get("git_bridge"))
+        .and_then(serde_json::Value::as_str)
+        .filter(|mode| matches!(*mode, "mirror" | "off" | "unknown"))
+        .unwrap_or("unknown");
+    crate::server::node_role::SourceControlSummary {
+        git_bridge: git_bridge.into(),
+    }
 }
 
 fn is_main_node_role_payload(payload: &serde_json::Value, probed_port: u16) -> bool {
