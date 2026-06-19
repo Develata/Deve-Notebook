@@ -87,7 +87,7 @@ fn dir_change_rescan_records_child_rename_candidates() {
 }
 
 #[test]
-fn dir_change_ignores_repo_root_refresh() {
+fn dir_change_scans_repo_root_refresh() {
     let (_dir, repo) = new_repo();
     write_workspace_file(repo.as_ref(), "notes/a.md", "hello");
     let repo_id = repo
@@ -95,11 +95,19 @@ fn dir_change_ignores_repo_root_refresh() {
         .expect("repo info lookup")
         .expect("repo info")
         .uuid;
-    let sync = SyncManager::new_checked(repo).expect("sync manager");
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
 
     assert!(
         sync.handle_dir_change("default", repo_id, "")
             .expect("handle repo root dir change")
-            .is_none()
+            .is_some()
+    );
+    let pending = repo
+        .list_pending_fs()
+        .expect("pending after repo root dir change");
+    assert!(
+        pending
+            .iter()
+            .any(|entry| { entry.path == "notes/a.md" && entry.status == ChangeStatus::Added })
     );
 }

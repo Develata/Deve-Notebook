@@ -88,6 +88,27 @@ fn dispatch_batch_respects_deveignore_during_dir_rescan() -> anyhow::Result<()> 
 }
 
 #[test]
+fn dispatch_batch_scans_repo_root_directory_event() -> anyhow::Result<()> {
+    let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
+    std::fs::write(repo_root.join("root.md"), "root")?;
+
+    dispatch_batch(
+        &sync,
+        &repo_name,
+        repo_id,
+        &repo_root,
+        vec![event_for(repo_root.clone())],
+        None,
+    )?;
+
+    let pending = repo.list_pending_fs_in_local_repo(&repo_name)?;
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].path, "root.md");
+    assert_eq!(pending[0].status, ChangeStatus::Added);
+    Ok(())
+}
+
+#[test]
 fn dispatch_batch_allows_deveignore_non_matching_markdown() -> anyhow::Result<()> {
     let (_dir, repo, sync, repo_name, repo_id, repo_root) = new_sync()?;
     std::fs::write(repo_root.join(".deveignore"), "ignored/*.md\n")?;

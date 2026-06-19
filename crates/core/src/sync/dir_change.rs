@@ -12,9 +12,6 @@ impl SyncManager {
         repo_id: RepoId,
         repo_path: &str,
     ) -> Result<Option<(RepoId, String)>> {
-        if repo_path.is_empty() {
-            return Ok(None);
-        }
         if !self.dir_refresh_guard.should_refresh(repo_id) {
             return Ok(None);
         }
