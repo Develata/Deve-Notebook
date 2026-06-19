@@ -6,9 +6,9 @@ use crate::sync::watcher::{WatcherError, filter};
 use crate::utils::path::to_forward_slash;
 use notify_debouncer_full::{
     DebounceEventResult, Debouncer, RecommendedCache, new_debouncer,
-    notify::{RecommendedWatcher, RecursiveMode},
+    notify::{EventKind, RecommendedWatcher, RecursiveMode, event::RemoveKind},
 };
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::time::Duration;
 
@@ -64,18 +64,23 @@ fn normalize(repo_root: &Path, result: DebounceEventResult) -> Result<BackendBat
     }
     let events: Vec<_> = events
         .into_iter()
-        .filter(|event| keep_event(repo_root, &event.paths))
+        .filter(|event| keep_event(repo_root, event))
         .collect();
     Ok(BackendBatch::Events(events))
 }
 
-fn keep_event(repo_root: &Path, paths: &[PathBuf]) -> bool {
-    paths.iter().any(|path| {
+fn keep_event(repo_root: &Path, event: &notify_debouncer_full::DebouncedEvent) -> bool {
+    let keep_removed_dir_candidate = matches!(
+        &event.kind,
+        EventKind::Remove(kind) if !matches!(kind, RemoveKind::File)
+    );
+    event.paths.iter().any(|path| {
         let Ok(rel) = path.strip_prefix(repo_root) else {
             return false;
         };
         let rel = to_forward_slash(&rel.to_string_lossy());
-        filter::allows_repo_path(&rel) || (filter::allows_repo_dir_path(&rel) && path.is_dir())
+        filter::allows_repo_path(&rel)
+            || (filter::allows_repo_dir_path(&rel) && (path.is_dir() || keep_removed_dir_candidate))
     })
 }
 
@@ -84,7 +89,10 @@ mod tests {
     use super::{BackendBatch, normalize};
     use notify_debouncer_full::{
         DebouncedEvent,
-        notify::{Error, Event, EventKind, event::Flag},
+        notify::{
+            Error, Event, EventKind,
+            event::{Flag, RemoveKind},
+        },
     };
     use std::path::Path;
     use std::time::Instant;
@@ -107,5 +115,39 @@ mod tests {
         .expect("batch");
 
         assert!(matches!(batch, BackendBatch::Rescan));
+    }
+
+    #[test]
+    fn notify_removed_directory_path_is_kept_for_rescan() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let removed_dir = dir.path().join("notes");
+        let event = Event::new(EventKind::Remove(RemoveKind::Folder)).add_path(removed_dir);
+        let batch = normalize(
+            dir.path(),
+            Ok(vec![DebouncedEvent::new(event, Instant::now())]),
+        )
+        .expect("batch");
+
+        match batch {
+            BackendBatch::Events(events) => assert_eq!(events.len(), 1),
+            BackendBatch::Rescan => panic!("remove dir should stay an incremental dir scan event"),
+        }
+    }
+
+    #[test]
+    fn notify_removed_non_markdown_file_path_is_filtered() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let removed_file = dir.path().join("scratch.tmp");
+        let event = Event::new(EventKind::Remove(RemoveKind::File)).add_path(removed_file);
+        let batch = normalize(
+            dir.path(),
+            Ok(vec![DebouncedEvent::new(event, Instant::now())]),
+        )
+        .expect("batch");
+
+        match batch {
+            BackendBatch::Events(events) => assert!(events.is_empty()),
+            BackendBatch::Rescan => panic!("non-markdown file remove should not request rescan"),
+        }
     }
 }
