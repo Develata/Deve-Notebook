@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-09`
+- `Last Review`: `2026-06-19`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -80,7 +80,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
 *   **P2P / Branch**:
     *   `P2P: Switch to Peer`: 切换到指定 Peer 的影子分支.
     *   `P2P: Establish Branch`: 从当前查看的 Peer 分支创建本地分支.
-    *   `P2P: Merge Peer`: 将当前 Spectator Mode 查看的 Peer 分支合并入本地.
+    *   `P2P: Merge Peer`: 仅在 Local Branch 下可执行；用户显式选择只读 peer mirror / shadow source，并将结果合并写入本地 ledger。
     *   `P2P: Mesh Status`: 只读查看静态 peer connector 状态；不得执行 discovery 或自动 merge。
     *   `Repo: Set Projection Base`: 为本地 repo 绑定 projection base；执行面必须复用 CLI locator 校验合同。
     *   `Repo: Check Projection Workspace`: 只读检查 repo projection base 与 workspace root readiness。
