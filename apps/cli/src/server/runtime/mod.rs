@@ -5,7 +5,7 @@
 //! Server runtime assembly parts.
 //!
 //! This module keeps startup orchestration out of handlers and narrows
-//! `start_server_with_options` toward a composition root.
+//! `start_server_with_bound_listener` toward a composition root.
 
 pub(crate) mod app_runtime;
 pub(crate) mod auth_runtime;

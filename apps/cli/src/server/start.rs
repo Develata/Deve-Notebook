@@ -14,43 +14,6 @@ use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 
-pub async fn start_server(
-    repo: Arc<RepoManager>,
-    port: u16,
-    plugins: Vec<Box<dyn PluginRuntime>>,
-    #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
-    sync_mode: SyncMode,
-    git_bridge: GitBridgeMode,
-    p2p: P2pConfig,
-) -> anyhow::Result<()> {
-    start_server_with_options(
-        repo,
-        ServerLaunchOptions::release(port),
-        plugins,
-        profile,
-        sync_mode,
-        git_bridge,
-        p2p,
-    )
-    .await
-}
-
-pub async fn start_server_with_options(
-    repo: Arc<RepoManager>,
-    launch: ServerLaunchOptions,
-    plugins: Vec<Box<dyn PluginRuntime>>,
-    #[cfg_attr(not(feature = "search"), allow(unused_variables))] profile: AppProfile,
-    sync_mode: SyncMode,
-    git_bridge: GitBridgeMode,
-    p2p: P2pConfig,
-) -> anyhow::Result<()> {
-    let listener = tokio::net::TcpListener::bind(launch.bind_addr()).await?;
-    start_server_with_bound_listener(
-        repo, launch, plugins, profile, sync_mode, git_bridge, p2p, listener,
-    )
-    .await
-}
-
 pub async fn start_server_with_bound_listener(
     repo: Arc<RepoManager>,
     launch: ServerLaunchOptions,

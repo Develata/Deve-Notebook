@@ -148,9 +148,11 @@
 * 把 repair 从 scattered fallback 收成正式服务
 * 明确 degraded / quarantined repo 的行为
 
-Server startup 同步开始收敛到 `server/runtime/`：`start_server_with_options`
-只保留顺序编排、bind/serve 与错误传播，auth、plugin、sync、watcher、tree、
-metrics、static/router 装配必须迁入 runtime parts。
+Server startup 同步开始收敛到 `server/runtime/`：当前入口接收已绑定的
+`start_server_with_bound_listener`，端口绑定归 command/native launcher，
+server start 只保留 listener handoff、顺序编排、serve 与错误传播；
+auth、plugin、sync、watcher、tree、metrics、static/router 装配必须迁入
+runtime parts。
 
 ### Phase B — Document Pending / Ack / Reject
 

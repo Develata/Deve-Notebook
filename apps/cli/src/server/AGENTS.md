@@ -9,7 +9,7 @@ The main Axum HTTP/WebSocket server runtime. Manages `AppState` (RepoManager, Sy
 ## Key Files
 | File | Description |
 |------|-------------|
-| `mod.rs` | `AppState` struct definition, `start_server()` and `start_plugin_host_only()` entry points |
+| `mod.rs` | `AppState` struct definition, bound-listener server startup and `start_plugin_host_only()` entry points |
 | `router.rs` | Axum router construction: protected routes (JWT), public routes, login, static fallback |
 | `setup.rs` | Server init helpers: CORS config, file watcher spawn, port hint writing |
 | `start/tests.rs` | Server startup helper tests |

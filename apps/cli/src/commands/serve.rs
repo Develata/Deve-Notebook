@@ -12,7 +12,6 @@ use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
 use deve_core::plugin::runtime::host;
 use deve_core::security::AuthConfig;
 use reqwest::Client;
-use std::net::TcpListener;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::time::{Duration, sleep, timeout};
@@ -72,8 +71,9 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         server::ServerLaunchOptions::release(port)
     };
     let bind_addr = launch.bind_addr();
-    if let Err(err) = TcpListener::bind(bind_addr) {
-        if err.kind() == std::io::ErrorKind::AddrInUse {
+    let listener = match tokio::net::TcpListener::bind(bind_addr).await {
+        Ok(listener) => listener,
+        Err(err) if err.kind() == std::io::ErrorKind::AddrInUse => {
             if native_loopback {
                 anyhow::bail!(
                     "Native loopback serve port {} is already in use; refusing proxy fallback",
@@ -82,21 +82,19 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
             }
             return start_proxy_mode(port).await;
         }
-        return Err(err.into());
-    }
+        Err(err) => return Err(err.into()),
+    };
 
     let repo_arc = init_runtime(ledger_dir, snapshot_depth)?;
     let plugins = load_plugins()?;
 
     if native_loopback {
         tracing::info!("Native loopback serve mode enabled on {}", bind_addr);
-        server::start_server_with_options(
-            repo_arc, launch, plugins, profile, sync_mode, git_bridge, p2p,
-        )
-        .await?;
-    } else {
-        server::start_server(repo_arc, port, plugins, profile, sync_mode, git_bridge, p2p).await?;
     }
+    server::start_server_with_bound_listener(
+        repo_arc, launch, plugins, profile, sync_mode, git_bridge, p2p, listener,
+    )
+    .await?;
     Ok(())
 }
 
