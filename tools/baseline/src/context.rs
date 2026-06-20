@@ -142,16 +142,16 @@ fn first_line_no(content: &str, text: &str) -> Option<usize> {
 }
 
 fn case_block(content: &str, case_id: &str) -> Result<String> {
-    let needle = format!("case_id: {case_id}");
     let mut in_case = false;
     let mut block = String::new();
 
     for line in content.lines() {
-        if line.contains(&needle) {
-            in_case = true;
-        }
-        if in_case && line.starts_with("- case_id: ") && !line.contains(&needle) {
-            break;
+        if let Some(current_case_id) = line_case_id(line) {
+            if current_case_id == case_id {
+                in_case = true;
+            } else if in_case {
+                break;
+            }
         }
         if in_case {
             block.push_str(line);
@@ -163,6 +163,10 @@ fn case_block(content: &str, case_id: &str) -> Result<String> {
         bail!("case block not found")
     }
     Ok(block)
+}
+
+fn line_case_id(line: &str) -> Option<&str> {
+    line.trim_start().strip_prefix("- case_id: ").map(str::trim)
 }
 
 #[cfg(test)]
@@ -181,5 +185,23 @@ mod tests {
     #[test]
     fn baseline_case_block_reports_missing_case() {
         assert!(case_block("- case_id: STORE-001\n", "STORE-999").is_err());
+    }
+
+    #[test]
+    fn baseline_case_block_requires_exact_case_id() {
+        let content = "- case_id: STORE-010\n  steps:\n    - run: wrong\n- case_id: STORE-01\n  steps:\n    - run: right\n";
+        let block = case_block(content, "STORE-01").expect("case block");
+
+        assert!(block.contains("run: right"));
+        assert!(!block.contains("run: wrong"));
+    }
+
+    #[test]
+    fn baseline_case_block_stops_at_prefixed_next_case_id() {
+        let content = "- case_id: STORE-01\n  steps:\n    - run: one\n- case_id: STORE-010\n  steps:\n    - run: two\n";
+        let block = case_block(content, "STORE-01").expect("case block");
+
+        assert!(block.contains("run: one"));
+        assert!(!block.contains("run: two"));
     }
 }
