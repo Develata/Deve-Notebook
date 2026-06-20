@@ -28,10 +28,45 @@ pub fn metrics_live(locale: Locale) -> &'static str {
     }
 }
 
+pub fn metrics_stale_connected(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Connected; waiting for the next metrics sample.",
+        Locale::Zh => "已连接；等待下一次指标样本。",
+    }
+}
+
+pub fn metrics_reconnecting(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Reconnecting; showing last metrics snapshot.",
+        Locale::Zh => "正在重连；显示最后一次指标快照。",
+    }
+}
+
 pub fn metrics_disconnected(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Disconnected; showing last metrics snapshot.",
         Locale::Zh => "已断开连接；显示最后一次指标快照。",
+    }
+}
+
+pub fn metrics_offline(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Disconnected; metrics unavailable.",
+        Locale::Zh => "已断开连接；指标不可用。",
+    }
+}
+
+pub fn metrics_session_expired(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Session expired; metrics paused.",
+        Locale::Zh => "会话已过期；指标已暂停。",
+    }
+}
+
+pub fn metrics_native_runtime_blocked(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Native runtime unavailable; metrics paused.",
+        Locale::Zh => "本机运行时不可用；指标已暂停。",
     }
 }
 

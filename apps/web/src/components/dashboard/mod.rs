@@ -57,7 +57,14 @@ pub fn Dashboard() -> impl IntoView {
         match metrics_state.get() {
             DashboardMetricsState::Waiting => t::dashboard::waiting_metrics(locale),
             DashboardMetricsState::Live => t::dashboard::metrics_live(locale),
+            DashboardMetricsState::StaleConnected => t::dashboard::metrics_stale_connected(locale),
+            DashboardMetricsState::FrozenReconnecting => t::dashboard::metrics_reconnecting(locale),
             DashboardMetricsState::FrozenDisconnected => t::dashboard::metrics_disconnected(locale),
+            DashboardMetricsState::Offline => t::dashboard::metrics_offline(locale),
+            DashboardMetricsState::SessionExpired => t::dashboard::metrics_session_expired(locale),
+            DashboardMetricsState::NativeRuntimeBlocked => {
+                t::dashboard::metrics_native_runtime_blocked(locale)
+            }
         }
     });
 
@@ -115,7 +122,12 @@ pub fn Dashboard() -> impl IntoView {
 enum DashboardMetricsState {
     Waiting,
     Live,
+    StaleConnected,
+    FrozenReconnecting,
     FrozenDisconnected,
+    Offline,
+    SessionExpired,
+    NativeRuntimeBlocked,
 }
 
 impl DashboardMetricsState {
@@ -123,7 +135,12 @@ impl DashboardMetricsState {
         match self {
             DashboardMetricsState::Waiting => "waiting",
             DashboardMetricsState::Live => "live",
+            DashboardMetricsState::StaleConnected => "stale-connected",
+            DashboardMetricsState::FrozenReconnecting => "frozen-reconnecting",
             DashboardMetricsState::FrozenDisconnected => "frozen-disconnected",
+            DashboardMetricsState::Offline => "offline",
+            DashboardMetricsState::SessionExpired => "session-expired",
+            DashboardMetricsState::NativeRuntimeBlocked => "native-runtime-blocked",
         }
     }
 }
@@ -133,12 +150,21 @@ fn dashboard_metrics_state(
     metrics_live: bool,
     connection_status: ConnectionStatus,
 ) -> DashboardMetricsState {
-    if !metrics_available {
-        DashboardMetricsState::Waiting
-    } else if connection_status == ConnectionStatus::Connected && metrics_live {
-        DashboardMetricsState::Live
-    } else {
-        DashboardMetricsState::FrozenDisconnected
+    match connection_status {
+        ConnectionStatus::Connected if metrics_live => DashboardMetricsState::Live,
+        ConnectionStatus::Connected if metrics_available => DashboardMetricsState::StaleConnected,
+        ConnectionStatus::Connected => DashboardMetricsState::Waiting,
+        ConnectionStatus::Connecting if !metrics_available => DashboardMetricsState::Waiting,
+        ConnectionStatus::Connecting => DashboardMetricsState::FrozenReconnecting,
+        ConnectionStatus::Disconnected if metrics_available => {
+            DashboardMetricsState::FrozenDisconnected
+        }
+        ConnectionStatus::Disconnected => DashboardMetricsState::Offline,
+        ConnectionStatus::Unauthorized => DashboardMetricsState::SessionExpired,
+        ConnectionStatus::NativeBootstrapInvalid
+        | ConnectionStatus::NativeSessionPending
+        | ConnectionStatus::NativeServiceOffline
+        | ConnectionStatus::NativeReprobeRequired => DashboardMetricsState::NativeRuntimeBlocked,
     }
 }
 
@@ -159,15 +185,31 @@ mod tests {
         );
         assert_eq!(
             dashboard_metrics_state(true, false, ConnectionStatus::Connected),
-            DashboardMetricsState::FrozenDisconnected
+            DashboardMetricsState::StaleConnected
+        );
+        assert_eq!(
+            dashboard_metrics_state(false, false, ConnectionStatus::Connecting),
+            DashboardMetricsState::Waiting
+        );
+        assert_eq!(
+            dashboard_metrics_state(true, false, ConnectionStatus::Connecting),
+            DashboardMetricsState::FrozenReconnecting
         );
         assert_eq!(
             dashboard_metrics_state(true, true, ConnectionStatus::Disconnected),
             DashboardMetricsState::FrozenDisconnected
         );
         assert_eq!(
-            dashboard_metrics_state(true, true, ConnectionStatus::Connecting),
-            DashboardMetricsState::FrozenDisconnected
+            dashboard_metrics_state(false, false, ConnectionStatus::Disconnected),
+            DashboardMetricsState::Offline
+        );
+        assert_eq!(
+            dashboard_metrics_state(true, true, ConnectionStatus::Unauthorized),
+            DashboardMetricsState::SessionExpired
+        );
+        assert_eq!(
+            dashboard_metrics_state(true, true, ConnectionStatus::NativeServiceOffline),
+            DashboardMetricsState::NativeRuntimeBlocked
         );
     }
 }
