@@ -92,6 +92,7 @@ UI-MOB-017|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff ove
 UI-MOB-018|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile diff close workflow
 UI-MOB-019|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile accessory toolbar write gate
 UI-MOB-021|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile document diff switcher workflow
+UI-MOB-022|manual-cli|docs/features/08_ui_design_03_mobile.md|mobile native dual-mode boundary
 UI-MOB-CHAT-REG-001|manual-chrome|docs/features/10_ai_agent.md|mobile chat regression
 UI-MOB-CHAT-REG-002|manual-chrome|docs/features/10_ai_agent.md|mobile chat streaming regression
 UI-MOB-CHAT-REG-003|manual-chrome|docs/features/10_ai_agent.md|mobile chat recovery regression

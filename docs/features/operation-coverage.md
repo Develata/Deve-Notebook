@@ -11,7 +11,7 @@ The authoritative operation catalog is `docs/plan/20_operations_catalog.md`; thi
 
 | Flow ID | Operation File | Acceptance Cases |
 |---|---|---|
-| `flow.ai.chat` | [`ai_chat.md`](./operations/ai_chat.md) | `AI-FEAT-01`, `AI-002`, `AI-003`, `AI-008` |
+| `flow.ai.chat` | [`ai_chat.md`](./operations/ai_chat.md) | `AI-FEAT-01`, `AI-002`, `AI-003`, `AI-008`, `AI-009` |
 | `flow.ai.trusted-external-agent-boundary` | [`trusted_external_agent_boundary.md`](./operations/trusted_external_agent_boundary.md) | `AI-005`, `AI-006`, `PLUG-001` |
 | `flow.auth.login` | [`auth_login.md`](./operations/auth_login.md) | `AUTH-001`, `AUTH-006`, `AUTH-011` |
 | `flow.auth.session-unauthorized` | [`auth_session_unauthorized.md`](./operations/auth_session_unauthorized.md) | `AUTH-002`, `AUTH-003`, `AUTH-011`, `AUTH-012` |
