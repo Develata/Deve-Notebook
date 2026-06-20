@@ -43,8 +43,19 @@ fn writer_registration_on_unbound_remote_clears_stale_db_and_sync_binding() -> a
     let (_dir, state, repo_id) = build_state()?;
     let (ch, _rx) = unicast_channel(&state);
     let mut session = stale_unbound_session(&state, true, 11)?;
+    // Writer registration is browser-only (see writer::validate's first gate);
+    // a realistic stale writer-registration attempt comes from a browser session,
+    // which is what drives the remote-unbound runtime-binding cleanup.
+    session.mark_browser_session();
 
-    handle_register_writer(&state, &ch, &mut session, repo_id, PeerId::new("stale-peer"), 11);
+    handle_register_writer(
+        &state,
+        &ch,
+        &mut session,
+        repo_id,
+        PeerId::new("stale-peer"),
+        11,
+    );
 
     assert_runtime_binding_cleared(&session);
     Ok(())
