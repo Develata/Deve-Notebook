@@ -26,11 +26,11 @@ pub(super) fn merge_peer_commands(
             t::command_palette::merge_peer_context_unavailable_reason(locale),
         )];
     };
-    if branch.active_branch.get_untracked().is_some() {
+    if branch.active_branch.get().is_some() {
         return Vec::new();
     }
 
-    let peers = branch.shadow_repos.get_untracked();
+    let peers = branch.shadow_repos.get();
     if peers.is_empty() {
         return vec![merge_peer_unavailable_command(
             locale,
@@ -85,7 +85,8 @@ fn merge_peer_unavailable_command(
 #[cfg(test)]
 mod tests {
     use super::merge_peer_commands;
-    use crate::components::command_palette::types::CommandAvailability;
+    use crate::components::command_palette::logic::create_filtered_commands_memo;
+    use crate::components::command_palette::types::{Command, CommandAvailability};
     use crate::hooks::use_core::{BranchContext, SyncMergeContext};
     use crate::i18n::Locale;
     use deve_core::models::PeerId;
@@ -99,11 +100,11 @@ mod tests {
         owner.with(|| {
             let (show, set_show) = signal(true);
             let calls = Arc::new(Mutex::new(Vec::<String>::new()));
-            let commands = merge_peer_commands(
+            let commands = tracked_merge_peer_commands(
                 Locale::En,
                 set_show,
-                Some(branch_context(None, vec!["peer-a", "peer-b"])),
-                Some(sync_context(calls.clone())),
+                branch_context(None, vec!["peer-a", "peer-b"]),
+                sync_context(calls.clone()),
             );
 
             assert_eq!(commands.len(), 2);
@@ -125,14 +126,53 @@ mod tests {
         owner.with(|| {
             let (_, set_show) = signal(true);
             let calls = Arc::new(Mutex::new(Vec::<String>::new()));
-            let commands = merge_peer_commands(
+            let commands = tracked_merge_peer_commands(
                 Locale::En,
                 set_show,
-                Some(branch_context(Some(PeerId::new("peer-a")), vec!["peer-a"])),
-                Some(sync_context(calls)),
+                branch_context(Some(PeerId::new("peer-a")), vec!["peer-a"]),
+                sync_context(calls),
             );
 
             assert!(commands.is_empty());
+        });
+    }
+
+    #[test]
+    fn command_palette_merge_peer_commands_follow_branch_signal() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let (_, set_show) = signal(true);
+            let (query, _) = signal(String::new());
+            let (active_branch, set_active_branch) = signal(None::<PeerId>);
+            let branch =
+                branch_context_from_signals(active_branch, set_active_branch, vec!["peer-a"]);
+            let calls = Arc::new(Mutex::new(Vec::<String>::new()));
+            provide_context(branch);
+            provide_context(sync_context(calls));
+
+            let commands = create_filtered_commands_memo(
+                query.into(),
+                RwSignal::new(Locale::En),
+                Callback::new(|_| {}),
+                Callback::new(|_| {}),
+                set_show,
+            );
+
+            assert!(
+                commands
+                    .get_untracked()
+                    .iter()
+                    .any(|command| command.id == "merge_peer_peer-a")
+            );
+
+            set_active_branch.set(Some(PeerId::new("peer-a")));
+
+            assert!(
+                commands
+                    .get_untracked()
+                    .iter()
+                    .all(|command| !command.id.starts_with("merge_peer"))
+            );
         });
     }
 
@@ -142,11 +182,11 @@ mod tests {
         owner.with(|| {
             let (_, set_show) = signal(true);
             let calls = Arc::new(Mutex::new(Vec::<String>::new()));
-            let commands = merge_peer_commands(
+            let commands = tracked_merge_peer_commands(
                 Locale::En,
                 set_show,
-                Some(branch_context(None, Vec::new())),
-                Some(sync_context(calls)),
+                branch_context(None, Vec::new()),
+                sync_context(calls),
             );
 
             assert_eq!(commands.len(), 1);
@@ -158,15 +198,35 @@ mod tests {
         });
     }
 
+    fn tracked_merge_peer_commands(
+        locale: Locale,
+        set_show: WriteSignal<bool>,
+        branch: BranchContext,
+        sync: SyncMergeContext,
+    ) -> Vec<Command> {
+        Memo::new(move |_| {
+            merge_peer_commands(locale, set_show, Some(branch.clone()), Some(sync.clone()))
+        })
+        .get_untracked()
+    }
+
     fn branch_context(active: Option<PeerId>, shadows: Vec<&str>) -> BranchContext {
         let (active_branch, _) = signal(active);
+        branch_context_from_signals(active_branch, signal(None::<PeerId>).1, shadows)
+    }
+
+    fn branch_context_from_signals(
+        active_branch: ReadSignal<Option<PeerId>>,
+        set_active_branch: WriteSignal<Option<PeerId>>,
+        shadows: Vec<&str>,
+    ) -> BranchContext {
         let (current_repo, set_current_repo) = signal(Some("default".to_string()));
         let (current_repo_id, set_current_repo_id) = signal(Some("repo-1".to_string()));
         let (shadow_repos, _) = signal(shadows.into_iter().map(str::to_string).collect::<Vec<_>>());
         let (repo_list, _) = signal(vec!["default".to_string()]);
         BranchContext {
             active_branch,
-            set_active_branch: signal(None::<PeerId>).1,
+            set_active_branch,
             on_switch_branch: Callback::new(|_: Option<String>| {}),
             current_repo,
             set_current_repo,
