@@ -212,7 +212,7 @@ impl BaselineContext {
     }
 
     pub fn git_not_ignored(&self, rel: &str) -> Result<()> {
-        let status = self.git(["check-ignore", "-q", rel])?;
+        let status = self.git(git_check_ignore_args(rel))?;
         match status.code() {
             Some(1) => Ok(()),
             _ if status.success() => bail!("{}: {} must not be ignored", self.label, rel),
@@ -416,9 +416,13 @@ fn line_case_id(line: &str) -> Option<&str> {
     line.trim_start().strip_prefix("- case_id: ").map(str::trim)
 }
 
+fn git_check_ignore_args(rel: &str) -> [&str; 4] {
+    ["check-ignore", "-q", "--no-index", rel]
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{case_block, css_number_value, is_test_file};
+    use super::{case_block, css_number_value, git_check_ignore_args, is_test_file};
     use std::path::Path;
 
     #[test]
@@ -468,5 +472,13 @@ mod tests {
         assert!(is_test_file(Path::new("components/foo_test.rs")));
         assert!(is_test_file(Path::new("components/tests.rs")));
         assert!(!is_test_file(Path::new("components/foo.rs")));
+    }
+
+    #[test]
+    fn git_not_ignored_checks_ignore_rules_for_tracked_paths() {
+        assert_eq!(
+            git_check_ignore_args("Cargo.lock"),
+            ["check-ignore", "-q", "--no-index", "Cargo.lock"]
+        );
     }
 }
