@@ -8,6 +8,7 @@
 //! 服务器启动辅助: CORS 配置、文件监视器
 
 use anyhow::{Context, Result, anyhow};
+use deve_core::config::RuntimeEnvironment;
 use deve_core::protocol::ServerMessage;
 
 use axum::http::{Method, header};
@@ -19,12 +20,13 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 pub(super) fn build_cors_layer(
     _port: u16,
     allowed_origins_override: Option<&[String]>,
+    runtime_environment: RuntimeEnvironment,
 ) -> Result<CorsLayer> {
     let origins = match allowed_origins_override {
         Some(origins) => allowed_origins_from_values(origins.iter().map(String::as_str))?,
         None => allowed_origins_from_env()?,
     };
-    if is_development() && !origins.is_empty() {
+    if runtime_environment.is_development() && !origins.is_empty() {
         tracing::warn!(
             "WARNING: development-only CORS allow list active; never use this as production origin policy"
         );
@@ -77,11 +79,6 @@ fn allowed_origins_from_values<'a>(
         .collect()
 }
 
-/// 判断当前是否为开发模式；仅显式 `DEVE_ENV=development` 视为开发环境。
-fn is_development() -> bool {
-    matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"))
-}
-
 pub(super) fn write_main_port_hint(host_dir: &std::path::Path, port: u16) -> Result<()> {
     let Some(host_root) = host_dir.parent() else {
         return Err(anyhow!(
@@ -125,9 +122,10 @@ fn validate_file_watcher_startup(workspace_root: &std::path::Path) -> Result<()>
 #[cfg(test)]
 mod tests {
     use super::{
-        allowed_origins_from_env, allowed_origins_from_values, validate_file_watcher_startup,
-        write_main_port_hint,
+        allowed_origins_from_env, allowed_origins_from_values, build_cors_layer,
+        validate_file_watcher_startup, write_main_port_hint,
     };
+    use deve_core::config::RuntimeEnvironment;
     use std::sync::Mutex;
 
     static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -214,5 +212,21 @@ mod tests {
         assert_eq!(origins.len(), 2);
         assert_eq!(origins[0], "http://tauri.localhost");
         assert_eq!(origins[1], "tauri://localhost");
+    }
+
+    #[test]
+    fn cors_layer_accepts_development_runtime_without_reading_deve_env() {
+        let _guard = ENV_LOCK.lock().expect("env lock");
+        unsafe { std::env::set_var("DEVE_ENV", "production") };
+
+        let _ = build_cors_layer(
+            3001,
+            Some(&["http://127.0.0.1:8080".to_string()]),
+            RuntimeEnvironment::Development,
+        )
+        .expect("explicit dev runtime cors");
+
+        assert_eq!(std::env::var("DEVE_ENV").as_deref(), Ok("production"));
+        unsafe { std::env::remove_var("DEVE_ENV") };
     }
 }

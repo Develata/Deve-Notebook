@@ -8,7 +8,7 @@
 //!   - 18_release#runtime-observability
 
 use crate::server;
-use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
+use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, RuntimeEnvironment, SyncMode};
 use deve_core::plugin::runtime::host;
 use deve_core::security::AuthConfig;
 use reqwest::Client;
@@ -52,11 +52,8 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         p2p,
         native_loopback,
     } = options;
+    let runtime_environment = RuntimeEnvironment::for_serve(dev);
     if dev {
-        // 仅对当前 serve 进程显式开启开发模式；不恢复全局隐式 debug 授权。
-        unsafe {
-            std::env::set_var("DEVE_ENV", "development");
-        }
         tracing::warn!("Serve dev mode enabled via --dev");
     }
     if dry_run {
@@ -69,7 +66,8 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         server::ServerLaunchOptions::native_loopback(port, false)
     } else {
         server::ServerLaunchOptions::release(port)
-    };
+    }
+    .with_runtime_environment(runtime_environment);
     let bind_addr = launch.bind_addr();
     let listener = match tokio::net::TcpListener::bind(bind_addr).await {
         Ok(listener) => listener,
@@ -80,7 +78,7 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
                     port
                 );
             }
-            return start_proxy_mode(port).await;
+            return start_proxy_mode(port, runtime_environment).await;
         }
         Err(err) => return Err(err.into()),
     };
@@ -99,7 +97,10 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
 }
 
 /// 代理模式: 检测已运行的主进程并以 plugin-host 方式启动
-async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
+async fn start_proxy_mode(
+    port: u16,
+    runtime_environment: RuntimeEnvironment,
+) -> anyhow::Result<()> {
     let Some(main) = detect_main_node_role(port).await else {
         anyhow::bail!(
             "Serve port {} is already in use, but no healthy Deve main process was detected",
@@ -133,6 +134,7 @@ async fn start_proxy_mode(port: u16) -> anyhow::Result<()> {
         main_port,
         main.repo_health,
         main.source_control,
+        runtime_environment,
     ));
     server::start_plugin_host_only(plugins, plugin_port).await
 }
@@ -142,6 +144,7 @@ fn proxy_node_role(
     main_port: u16,
     repo_health: crate::server::node_role::RepoHealthSummary,
     source_control: crate::server::node_role::SourceControlSummary,
+    runtime_environment: RuntimeEnvironment,
 ) -> crate::server::node_role::NodeRole {
     crate::server::node_role::NodeRole {
         role: "proxy".into(),
@@ -150,7 +153,7 @@ fn proxy_node_role(
         version: env!("CARGO_PKG_VERSION").into(),
         profile: "proxy".into(),
         delivery: "plugin-host-proxy".into(),
-        environment: crate::server::node_role::runtime_environment(),
+        environment: runtime_environment.as_str().into(),
         repo_health,
         source_control,
         p2p: crate::server::node_role::P2pSummary::disabled(),

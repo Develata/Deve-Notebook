@@ -12,9 +12,9 @@ Use explicit development mode for local runs:
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
 
-`--dev` sets `DEVE_ENV=development` for the current serve process when the
-environment variable is unset. The default development login is `admin` /
-`admin`. These defaults are only valid for `--dev` or explicit
+`--dev` selects the development runtime environment for the current serve
+startup without mutating process-wide `DEVE_ENV`. The default development login
+is `admin` / `admin`. These defaults are only valid for `--dev` or explicit
 `DEVE_ENV=development`.
 
 To include the current lightweight search runtime gate:

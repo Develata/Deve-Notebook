@@ -8,6 +8,7 @@
 //! # Node Role State
 
 use deve_core::config::GitBridgeMode;
+use deve_core::config::RuntimeEnvironment;
 use deve_core::native_adapter::{NativeEndpointReady, NativeServiceOffline};
 use std::sync::{Arc, OnceLock, RwLock};
 
@@ -170,14 +171,12 @@ pub fn get_node_role() -> NodeRole {
 }
 
 pub fn runtime_environment() -> String {
-    runtime_environment_label(std::env::var("DEVE_ENV").ok().as_deref()).into()
+    RuntimeEnvironment::from_env().as_str().into()
 }
 
+#[cfg(test)]
 fn runtime_environment_label(env: Option<&str>) -> &'static str {
-    match env {
-        Some(value) if value.trim().eq_ignore_ascii_case("development") => "development",
-        _ => "production",
-    }
+    RuntimeEnvironment::from_deve_env(env).as_str()
 }
 
 fn role_cell() -> Arc<RwLock<NodeRole>> {

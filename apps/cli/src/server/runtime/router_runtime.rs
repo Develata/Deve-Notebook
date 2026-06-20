@@ -6,6 +6,7 @@
 
 use crate::server::{AppState, router, static_files};
 use axum::Router;
+use deve_core::config::RuntimeEnvironment;
 use std::sync::Arc;
 
 use super::auth_runtime::AuthRuntimeParts;
@@ -15,6 +16,7 @@ pub(crate) fn build_runtime_router(
     port: u16,
     auth: AuthRuntimeParts,
     p2p_inbound_token_env: Option<String>,
+    runtime_environment: RuntimeEnvironment,
     allowed_origins_override: Option<&[String]>,
 ) -> anyhow::Result<Router> {
     static_files::validate_static_dir_override()?;
@@ -25,6 +27,7 @@ pub(crate) fn build_runtime_router(
             auth.auth_config,
             Some(bridge),
             p2p_inbound_token_env,
+            runtime_environment,
             allowed_origins_override,
         ),
         None => router::build_app_with_native_session_and_p2p(
@@ -33,6 +36,7 @@ pub(crate) fn build_runtime_router(
             auth.auth_config,
             None,
             p2p_inbound_token_env,
+            runtime_environment,
             allowed_origins_override,
         ),
     }

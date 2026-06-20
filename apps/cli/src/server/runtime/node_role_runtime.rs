@@ -21,7 +21,7 @@ pub(crate) fn init_node_role(
         version: env!("CARGO_PKG_VERSION").into(),
         profile: profile_label(profile).into(),
         delivery: static_files::delivery_shape().into(),
-        environment: node_role::runtime_environment(),
+        environment: launch.runtime_environment().as_str().into(),
         repo_health: node_role::RepoHealthSummary::unknown(),
         source_control: node_role::SourceControlSummary::from_git_bridge(git_bridge),
         p2p: node_role::P2pSummary::disabled(),

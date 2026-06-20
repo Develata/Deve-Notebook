@@ -72,6 +72,7 @@ pub async fn start_server_with_bound_listener(
         port,
         auth,
         p2p_inbound_token_env,
+        launch.runtime_environment(),
         launch.native_allowed_origins(),
     )?;
     let addr = launch.bind_addr();

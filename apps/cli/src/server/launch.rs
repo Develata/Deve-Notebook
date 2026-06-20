@@ -7,7 +7,9 @@
 use deve_core::native_adapter::{
     NativeProcessAdapter, NativeServiceSupervisor, NativeServiceSupervisorSnapshot,
 };
-use deve_core::{native_adapter::NativeEndpointReady, security::AuthConfig};
+use deve_core::{
+    config::RuntimeEnvironment, native_adapter::NativeEndpointReady, security::AuthConfig,
+};
 use std::{
     fmt,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -20,6 +22,7 @@ pub struct ServerLaunchOptions {
     port: u16,
     bind_host: IpAddr,
     advertised_host: &'static str,
+    runtime_environment: RuntimeEnvironment,
     native: Option<NativeLaunchSession>,
 }
 
@@ -95,6 +98,7 @@ impl ServerLaunchOptions {
             port,
             bind_host: IpAddr::V4(Ipv4Addr::UNSPECIFIED),
             advertised_host: "0.0.0.0",
+            runtime_environment: RuntimeEnvironment::from_env(),
             native: None,
         }
     }
@@ -104,6 +108,7 @@ impl ServerLaunchOptions {
             port,
             bind_host: IpAddr::V4(Ipv4Addr::LOCALHOST),
             advertised_host: "127.0.0.1",
+            runtime_environment: RuntimeEnvironment::from_env(),
             native: Some(NativeLaunchSession {
                 session_bound,
                 auth_material: None,
@@ -121,6 +126,7 @@ impl ServerLaunchOptions {
             port,
             bind_host: IpAddr::V4(Ipv4Addr::LOCALHOST),
             advertised_host: "127.0.0.1",
+            runtime_environment: RuntimeEnvironment::from_env(),
             native: Some(NativeLaunchSession {
                 session_bound,
                 auth_material: Some(auth_material),
@@ -135,6 +141,15 @@ impl ServerLaunchOptions {
     pub fn with_port(mut self, port: u16) -> Self {
         self.port = port;
         self
+    }
+
+    pub fn with_runtime_environment(mut self, environment: RuntimeEnvironment) -> Self {
+        self.runtime_environment = environment;
+        self
+    }
+
+    pub fn runtime_environment(&self) -> RuntimeEnvironment {
+        self.runtime_environment
     }
 
     pub fn bind_addr(&self) -> SocketAddr {
@@ -223,6 +238,20 @@ mod tests {
 
         assert_eq!(launch.bind_addr(), SocketAddr::from(([0, 0, 0, 0], 3001)));
         assert_eq!(launch.node_role_label(), "main");
+        assert_eq!(launch.runtime_environment(), RuntimeEnvironment::from_env());
+        assert_eq!(launch.native_service_summary(), None);
+    }
+
+    #[test]
+    fn launch_can_carry_explicit_runtime_environment() {
+        let launch = ServerLaunchOptions::release(3001)
+            .with_runtime_environment(RuntimeEnvironment::Development);
+
+        assert_eq!(
+            launch.runtime_environment(),
+            RuntimeEnvironment::Development
+        );
+        assert_eq!(launch.bind_addr(), SocketAddr::from(([0, 0, 0, 0], 3001)));
         assert_eq!(launch.native_service_summary(), None);
     }
 

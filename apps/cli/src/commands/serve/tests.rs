@@ -1,6 +1,6 @@
 use super::{ServeOptions, detect_main_node_role, detect_main_port, proxy_node_role, run};
 use axum::{Json, Router, routing::get};
-use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, SyncMode};
+use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, RuntimeEnvironment, SyncMode};
 use std::ffi::OsString;
 use std::net::{SocketAddr, TcpListener};
 use std::sync::Mutex;
@@ -227,12 +227,14 @@ fn proxy_node_role_uses_delegated_git_bridge_mode() {
         crate::server::node_role::SourceControlSummary {
             git_bridge: "off".into(),
         },
+        RuntimeEnvironment::Development,
     );
 
     assert_eq!(role.role, "proxy");
     assert_eq!(role.ws_port, 3002);
     assert_eq!(role.main_port, 3001);
     assert_eq!(role.delivery, "plugin-host-proxy");
+    assert_eq!(role.environment, "development");
     assert_eq!(role.source_control.git_bridge, "off");
     assert_eq!(role.repo_health.status, "degraded");
     assert_eq!(role.repo_health.local_total, 2);
@@ -295,7 +297,7 @@ async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn serve_dev_overrides_existing_deve_env_for_current_process() {
+async fn serve_dev_does_not_mutate_existing_deve_env() {
     let _guard = ENV_LOCK.lock().expect("env lock");
     let _env = EnvGuard::set("DEVE_ENV", Some("production"));
     let dir = TempDir::new().expect("tempdir");
@@ -323,7 +325,7 @@ async fn serve_dev_overrides_existing_deve_env_for_current_process() {
     .await
     .expect("serve dev dry-run");
 
-    assert_eq!(std::env::var("DEVE_ENV").as_deref(), Ok("development"));
+    assert_eq!(std::env::var("DEVE_ENV").as_deref(), Ok("production"));
 }
 
 struct EnvGuard {

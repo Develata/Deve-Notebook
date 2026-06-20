@@ -19,6 +19,7 @@ use axum::{
 use std::sync::Arc;
 
 use super::{AppState, auth, handlers, node_role_http, rate_limit, setup, static_files, ws};
+use deve_core::config::RuntimeEnvironment;
 use deve_core::security::AuthConfig;
 /// 构建完整的 Axum 应用路由
 ///
@@ -40,6 +41,7 @@ pub fn build_app(
         auth_config,
         None,
         ws::WsAdmissionConfig::default().p2p_inbound_token_env,
+        RuntimeEnvironment::from_env(),
         None,
     )
 }
@@ -50,6 +52,7 @@ pub fn build_app_with_native_session_and_p2p(
     auth_config: Arc<AuthConfig>,
     native_session_bridge: Option<Arc<auth::handlers::NativeSessionBridge>>,
     p2p_inbound_token_env: Option<String>,
+    runtime_environment: RuntimeEnvironment,
     allowed_origins_override: Option<&[String]>,
 ) -> Result<Router> {
     let brute_force = Arc::new(auth::brute_force::BruteForceGuard::new());
@@ -210,18 +213,20 @@ pub fn build_app_with_native_session_and_p2p(
         ))))
         .layer(axum::Extension(brute_force))
         .layer(axum::Extension(api_limiter))
-        .layer(setup::build_cors_layer(port, allowed_origins_override)?))
+        .layer(setup::build_cors_layer(
+            port,
+            allowed_origins_override,
+            runtime_environment,
+        )?))
 }
 
-/// 按环境驱动契约加载认证配置；生产缺失密钥时直接以非零退出失败。
-/// 开发模式必须显式设置 DEVE_ENV=development（不再自动根据构建模式切换）。
-pub(super) fn load_auth_config() -> AuthConfig {
-    let is_dev_mode =
-        matches!(std::env::var("DEVE_ENV"), Ok(value) if value.eq_ignore_ascii_case("development"));
-    let using_dev_defaults = is_dev_mode
+/// 按有效 runtime environment 加载认证配置；生产缺失密钥时直接以非零退出失败。
+/// 开发模式必须由 `deve serve --dev` 或 `DEVE_ENV=development` 显式进入。
+pub(super) fn load_auth_config(runtime_environment: RuntimeEnvironment) -> AuthConfig {
+    let using_dev_defaults = runtime_environment.is_development()
         && (std::env::var("AUTH_SECRET").is_err() || std::env::var("AUTH_PASS").is_err());
 
-    match AuthConfig::from_env() {
+    match AuthConfig::from_env_with_runtime_environment(runtime_environment) {
         Ok(cfg) => {
             if using_dev_defaults {
                 tracing::warn!(

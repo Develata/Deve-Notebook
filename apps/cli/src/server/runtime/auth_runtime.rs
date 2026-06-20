@@ -16,7 +16,7 @@ pub(crate) struct AuthRuntimeParts {
 pub(crate) fn init_auth_runtime(launch: &ServerLaunchOptions) -> anyhow::Result<AuthRuntimeParts> {
     let auth_config = Arc::new(match launch.native_auth_material() {
         Some(material) => material.auth_config()?,
-        None => router::load_auth_config(),
+        None => router::load_auth_config(launch.runtime_environment()),
     });
     let native_session_bridge = match launch.native_auth_material() {
         Some(material) => Some(Arc::new(auth::handlers::NativeSessionBridge::new(

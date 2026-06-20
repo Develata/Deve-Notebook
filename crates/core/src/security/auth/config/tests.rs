@@ -31,7 +31,7 @@ fn anonymous_localhost_requires_development_env() {
     let err = AuthConfig::from_env().expect_err("anonymous localhost must stay development-only");
     assert!(
         err.to_string()
-            .contains("AUTH_ALLOW_ANONYMOUS_LOCALHOST requires DEVE_ENV=development")
+            .contains("AUTH_ALLOW_ANONYMOUS_LOCALHOST requires explicit development mode")
     );
     drop(env);
 }
@@ -52,6 +52,27 @@ fn anonymous_localhost_is_allowed_in_development_env() {
     ]);
 
     let config = AuthConfig::from_env().expect("development anonymous localhost should load");
+    assert!(config.allow_anonymous_localhost);
+    drop(env);
+}
+
+#[test]
+fn explicit_runtime_development_allows_dev_defaults_without_mutating_deve_env() {
+    let _lock = ENV_LOCK.lock().expect("env test lock");
+    let env = EnvGuard::set(&[
+        ("DEVE_ENV", Some("production")),
+        ("AUTH_SECRET", None),
+        ("AUTH_PASS", None),
+        ("AUTH_USER", None),
+        ("AUTH_ALLOW_ANONYMOUS_LOCALHOST", Some("true")),
+        ("AUTH_TOKEN_VERSION", None),
+    ]);
+
+    let config = AuthConfig::from_env_with_runtime_environment(RuntimeEnvironment::Development)
+        .expect("explicit dev runtime should use dev defaults");
+
+    assert_eq!(std::env::var("DEVE_ENV").as_deref(), Ok("production"));
+    assert_eq!(config.username, "admin");
     assert!(config.allow_anonymous_localhost);
     drop(env);
 }

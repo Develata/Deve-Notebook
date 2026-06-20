@@ -14,6 +14,7 @@
 //! - `DEVE_ENV`: 部署环境 (`production` / `development`)
 
 use super::password;
+use crate::config::RuntimeEnvironment;
 use anyhow::{Result, anyhow};
 
 /// 认证配置 (不可变，加载后冻结)
@@ -36,8 +37,15 @@ impl AuthConfig {
     /// 开发模式触发条件：`DEVE_ENV=development`（必须显式设置）。
     /// 注意：不再自动根据 debug/release 构建模式切换。
     pub fn from_env() -> Result<Self> {
-        let env = std::env::var("DEVE_ENV").unwrap_or_else(|_| "production".to_string());
-        let is_dev_mode = env.trim().eq_ignore_ascii_case("development");
+        Self::from_env_with_runtime_environment(RuntimeEnvironment::from_env())
+    }
+
+    /// 从环境变量加载 auth material，并使用调用方已解析的有效 runtime environment。
+    ///
+    /// `deve serve --dev` 等入口应通过该方法传入显式 development mode，避免为了
+    /// 协调 auth/CORS/node-role 而写入进程全局 `DEVE_ENV`。
+    pub fn from_env_with_runtime_environment(environment: RuntimeEnvironment) -> Result<Self> {
+        let is_dev_mode = environment.is_development();
         let secret = std::env::var("AUTH_SECRET").ok();
         let password_hash = std::env::var("AUTH_PASS").ok();
 
@@ -120,7 +128,7 @@ fn parse_allow_anonymous_localhost_env(is_dev_mode: bool) -> Result<bool> {
     let allow_anon = env_flag("AUTH_ALLOW_ANONYMOUS_LOCALHOST", false);
     if allow_anon && !is_dev_mode {
         return Err(anyhow!(
-            "AUTH_ALLOW_ANONYMOUS_LOCALHOST requires DEVE_ENV=development"
+            "AUTH_ALLOW_ANONYMOUS_LOCALHOST requires explicit development mode"
         ));
     }
     Ok(allow_anon)
