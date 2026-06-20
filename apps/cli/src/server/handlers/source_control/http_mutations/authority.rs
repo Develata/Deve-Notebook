@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use crate::server::AppState;
+use crate::server::auth::delegated_source_control::DELEGATED_SC_SCOPE_NONCE;
 use crate::server::source_control_grants::AuthSessionId;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::RepoId;
@@ -16,8 +17,6 @@ pub(super) enum SourceControlWriteAuthority<'a> {
     BrowserSessionGrant(&'a AuthSessionId),
     DelegatedRemoteProxy,
 }
-
-const DELEGATED_REMOTE_PROXY_SCOPE_NONCE: u64 = 1;
 
 pub(super) fn authorize_http_write(
     state: &Arc<AppState>,
@@ -33,7 +32,7 @@ pub(super) fn authorize_http_write(
                 .authorize_browser_local(auth_session_id, writable_repo.repo_id, scope_nonce)?;
         }
         SourceControlWriteAuthority::DelegatedRemoteProxy => {
-            if scope_nonce != DELEGATED_REMOTE_PROXY_SCOPE_NONCE {
+            if scope_nonce != DELEGATED_SC_SCOPE_NONCE {
                 return Err(ServerError::with_detail(
                     ServerErrorCode::ScStaleScope,
                     "delegated source control scope nonce mismatch",

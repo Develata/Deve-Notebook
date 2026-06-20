@@ -8,6 +8,7 @@ use axum::http::HeaderMap;
 use deve_core::protocol::{ServerError, ServerErrorCode};
 
 pub(crate) const DELEGATED_SC_HEADER: &str = "x-deve-source-control-delegation";
+pub(crate) const DELEGATED_SC_SCOPE_NONCE: u64 = 1;
 
 const DELEGATED_SC_VERSION: &str = "v1";
 const DELEGATED_SC_TRANSCRIPT: &str = "deve-source-control-delegation:v1";

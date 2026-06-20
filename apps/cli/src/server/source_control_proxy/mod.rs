@@ -9,6 +9,7 @@ mod http;
 mod mutations;
 mod queries;
 
+use crate::server::auth::delegated_source_control::DELEGATED_SC_SCOPE_NONCE;
 use anyhow::Result;
 use deve_core::config::GitBridgeMode;
 use deve_core::ledger::traits::{RepoSelector, Repository};
@@ -18,7 +19,7 @@ use deve_core::source_control::{
     ChangeEntry, CommitFileDiff, CommitInfo, DelegatedSourceControlApi, SourceControlApi,
 };
 
-const REMOTE_PROXY_SCOPE_NONCE: u64 = 1;
+const REMOTE_PROXY_SCOPE_NONCE: u64 = DELEGATED_SC_SCOPE_NONCE;
 
 #[derive(Clone)]
 pub struct RemoteSourceControlApi {
