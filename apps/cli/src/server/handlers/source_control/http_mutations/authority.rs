@@ -17,6 +17,8 @@ pub(super) enum SourceControlWriteAuthority<'a> {
     DelegatedRemoteProxy,
 }
 
+const DELEGATED_REMOTE_PROXY_SCOPE_NONCE: u64 = 1;
+
 pub(super) fn authorize_http_write(
     state: &Arc<AppState>,
     selector: &RepoSelector,
@@ -30,7 +32,14 @@ pub(super) fn authorize_http_write(
                 .source_control_write_grants()
                 .authorize_browser_local(auth_session_id, writable_repo.repo_id, scope_nonce)?;
         }
-        SourceControlWriteAuthority::DelegatedRemoteProxy => {}
+        SourceControlWriteAuthority::DelegatedRemoteProxy => {
+            if scope_nonce != DELEGATED_REMOTE_PROXY_SCOPE_NONCE {
+                return Err(ServerError::with_detail(
+                    ServerErrorCode::ScStaleScope,
+                    "delegated source control scope nonce mismatch",
+                ));
+            }
+        }
     }
     Ok(())
 }

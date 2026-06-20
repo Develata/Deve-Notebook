@@ -155,6 +155,10 @@ impl ProxyHarness {
         auth::dev_session::cookie_header_for_test(&self.dev_session_secret, nonce)
     }
 
+    pub(super) fn delegated_source_control_header_value(&self) -> String {
+        auth::delegated_source_control::header_value(&self.dev_session_secret)
+    }
+
     pub(super) fn jwt_cookie_header_and_auth_session(
         &self,
     ) -> anyhow::Result<(String, AuthSessionId)> {

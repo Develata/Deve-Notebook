@@ -6,6 +6,7 @@ use super::support::{
 };
 use super::super::sync_hello_test_support::signed_hello_for_scope;
 use super::super::source_control_grants::SourceControlGrantBranch;
+use super::super::auth::delegated_source_control::DELEGATED_SC_HEADER;
 use super::super::ws_protocol_acceptance_support::{recv_server_message, send_client_message};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::PeerId;
@@ -229,6 +230,47 @@ async fn delegated_source_control_requires_proxy_capability() -> anyhow::Result<
         .stage_pending_in_repo(&selector, &path_target("notes/a.md"))?;
     assert!(repo.list_pending_fs_in_repo(&selector)?.is_empty());
     assert_eq!(repo.list_staged_in_repo(&selector)?.len(), 1);
+    harness.shutdown().await;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn delegated_source_control_rejects_unexpected_scope_nonce() -> anyhow::Result<()> {
+    let harness = ProxyHarness::spawn().await?;
+    let repo = harness.repo.clone();
+    let selector = RepoSelector::default();
+    seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
+
+    let response = harness
+        .client
+        .post(format!(
+            "{}/api/delegated/sc/stage-pending",
+            harness.base_url
+        ))
+        .header(
+            DELEGATED_SC_HEADER,
+            harness.delegated_source_control_header_value(),
+        )
+        .json(&serde_json::json!({
+            "scope_nonce": 9,
+            "path": "notes/a.md",
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body: deve_core::protocol::ServerError = response.json().await?;
+
+    assert_eq!(status, reqwest::StatusCode::CONFLICT);
+    assert_eq!(
+        body.code,
+        deve_core::protocol::ServerErrorCode::ScStaleScope
+    );
+    assert_eq!(
+        body.detail.as_deref(),
+        Some("delegated source control scope nonce mismatch")
+    );
+    assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
+    assert!(repo.list_staged_in_repo(&selector)?.is_empty());
     harness.shutdown().await;
     Ok(())
 }
