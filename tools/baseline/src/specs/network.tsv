@@ -15,7 +15,7 @@ contains	apps/web/src/api/connection_urls.rs	if include_debug_fallbacks
 contains	apps/web/src/api/connection_urls.rs	ws_port
 contains	apps/web/src/api/connection_urls.rs	fn parse_ws_port(value: &str) -> Option<u16>
 contains	apps/web/src/api/connection_urls.rs	query_ws_port_rejects_invalid_or_zero_ports
-contains	apps/cli/src/server/router.rs	.route("/api/node/role", get(node_role_http::role))
+contains	apps/cli/src/server/router.rs	.route("/api/node/role", get(node_role_http::role_with_app_state))
 contains	apps/cli/src/server/router.rs	public = Router::new()
 contains	apps/cli/src/server/node_role_http.rs	"role": r.role
 contains	apps/cli/src/server/node_role_http.rs	"ws_port": r.ws_port
@@ -65,7 +65,7 @@ contains	apps/cli/src/server/tests/ws_acceptance/ws_register_writer_acceptance_t
 contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli ws_open_doc_and_history_read_back_registered_edit
 contains	apps/cli/src/server/tests/ws_acceptance/ws_edit_readback_acceptance_test.rs	async fn ws_open_doc_and_history_read_back_registered_edit
 contains	apps/cli/src/server/test_modules.rs	mod open_doc_scope_test;
-contains	scripts/check-storage-repo-baseline.sh	case_contains STORE-009 "cargo test -p deve_cli open_doc_scope -- --nocapture"
+contains	tools/baseline/src/specs/storage_repo.tsv	cargo test -p deve_cli open_doc_scope -- --nocapture
 contains	apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs	async fn non_browser_sync_request_uses_bound_sync_scope_nonce_for_push
 contains	apps/cli/src/server/tests/sync/sync_transfer_scope_test.rs	async fn sync_request_preserves_requested_source_peer_in_push
 contains	apps/cli/src/server/tests/ws_acceptance/ws_sync_transfer_reject_acceptance_test.rs	async fn ws_sync_request_requires_sync_hello_scope
