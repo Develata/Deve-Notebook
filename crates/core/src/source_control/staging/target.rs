@@ -2,12 +2,12 @@
 //!   - 03_storage/index#internal-path-normalization
 //!   - 05_diff_logic#source-control-runtime
 
-use super::{list_staged_entries, list_staged_entries_for_doc, take_staged, StagedEntry};
+use super::{StagedEntry, list_staged_entries, list_staged_entries_for_doc, take_staged};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::to_forward_slash;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use redb::Database;
 
 pub fn get_staged_for_target(

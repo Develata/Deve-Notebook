@@ -1,5 +1,5 @@
-use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 use deve_core::ledger::RepoManager;
+use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::sync::SyncManager;
 use redb::ReadableTable;
@@ -133,9 +133,11 @@ fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     assert!(root.join("notes/ghost/keep.bin").exists());
     assert!(root.join(".notegit/state.json").exists());
     assert!(root.join(".git/objects/loose.md").exists());
-    assert!(std::fs::read_to_string(root.join(".gitignore"))
-        .expect("read gitignore")
-        .contains(".notegit/"));
+    assert!(
+        std::fs::read_to_string(root.join(".gitignore"))
+            .expect("read gitignore")
+            .contains(".notegit/")
+    );
     assert!(root.join("notes/empty").is_dir());
 }
 

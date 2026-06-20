@@ -84,10 +84,12 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
         .expect("main doc"),
         "ok"
     );
-    assert!(!repo
-        .local_repo_workspace_path("wiki", "orphan.md")
-        .expect("wiki orphan path")
-        .exists());
+    assert!(
+        !repo
+            .local_repo_workspace_path("wiki", "orphan.md")
+            .expect("wiki orphan path")
+            .exists()
+    );
     assert!(sync.is_projection_degraded("wiki"));
     assert!(!sync.is_projection_degraded("main"));
     assert_eq!(
@@ -100,12 +102,13 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             .expect("degraded repos"),
         vec![String::from("wiki")]
     );
-    assert!(repo
-        .list_pending_fs_in_local_repo("wiki")
-        .unwrap()
-        .is_empty());
-    assert!(sync
-        .handle_fs_event(
+    assert!(
+        repo.list_pending_fs_in_local_repo("wiki")
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        sync.handle_fs_event(
             "wiki",
             repo.get_repo_info_for(None, Some("wiki"))
                 .expect("wiki info lookup")
@@ -114,9 +117,11 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             "untracked.md"
         )
         .expect("ignored event")
-        .is_empty());
-    assert!(repo
-        .list_pending_fs_in_local_repo("wiki")
-        .unwrap()
-        .is_empty());
+        .is_empty()
+    );
+    assert!(
+        repo.list_pending_fs_in_local_repo("wiki")
+            .unwrap()
+            .is_empty()
+    );
 }
