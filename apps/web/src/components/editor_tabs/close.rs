@@ -2,12 +2,12 @@
 //!   - 11_ui_design/index#editor-group-tabstrip
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
-use super::EditorTabKey;
-use super::model::{EditorDiffTab, EditorDocumentTab, diff_tab_key};
+use super::model::{diff_tab_key, EditorDiffTab, EditorDocumentTab};
 use super::ops::{remove_diff_tab_with_order, remove_document_tab_with_order};
-use crate::hooks::use_core::EditorContext;
+use super::EditorTabKey;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
-use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
+use crate::hooks::use_core::navigation::{guard_navigation, NavigationTarget};
+use crate::hooks::use_core::EditorContext;
 use crate::runtime::{
     document_client::DocumentClient, scope_client::ScopeClient,
     source_control_client::SourceControlClient,
@@ -15,6 +15,7 @@ use crate::runtime::{
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn build_close_document_callback(
     document: &DocumentClient,
     editor: &EditorContext,

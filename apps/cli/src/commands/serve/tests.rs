@@ -1,5 +1,5 @@
-use super::{ServeOptions, detect_main_node_role, detect_main_port, proxy_node_role, run};
-use axum::{Json, Router, routing::get};
+use super::{detect_main_node_role, detect_main_port, proxy_node_role, run, ServeOptions};
+use axum::{routing::get, Json, Router};
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, RuntimeEnvironment, SyncMode};
 use std::ffi::OsString;
 use std::net::{SocketAddr, TcpListener};
@@ -296,6 +296,9 @@ async fn native_loopback_refuses_proxy_fallback_when_port_is_occupied() {
     assert!(err.to_string().contains("refusing proxy fallback"), "{err}");
 }
 
+// ENV_LOCK serializes tests that mutate process-wide env; it must stay held across
+// the run().await below, so the await-holding-lock lint does not apply here.
+#[allow(clippy::await_holding_lock)]
 #[tokio::test(flavor = "current_thread")]
 async fn serve_dev_does_not_mutate_existing_deve_env() {
     let _guard = ENV_LOCK.lock().expect("env lock");

@@ -205,6 +205,7 @@ pub(crate) fn create_editor_tab_runtime(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn enforce_document_tab_limit(
     doc_tabs: ReadSignal<Vec<EditorDocumentTab>>,
     set_doc_tabs: WriteSignal<Vec<EditorDocumentTab>>,

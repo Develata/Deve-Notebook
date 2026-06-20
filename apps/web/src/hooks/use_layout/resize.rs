@@ -75,6 +75,7 @@ fn resized_values_for_target(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn resized_values_for_target_with_constraints(
     target: ResizeTarget,
     start_left_width: i32,
@@ -130,6 +131,7 @@ fn resized_values_for_target_with_constraints(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn start_resize_callback(
     set_is_resizing: WriteSignal<bool>,
     set_active_resize: WriteSignal<Option<ResizeTarget>>,

@@ -14,6 +14,7 @@ use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn start_server_with_bound_listener(
     repo: Arc<RepoManager>,
     launch: ServerLaunchOptions,

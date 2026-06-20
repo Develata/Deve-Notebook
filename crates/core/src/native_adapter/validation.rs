@@ -189,7 +189,7 @@ fn split_https_authority<'a>(
         return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
     }
     match authority.rsplit_once(':') {
-        Some((_host, port)) if port.is_empty() => Err(NativeAdapterError::InvalidPort { field }),
+        Some((_host, "")) => Err(NativeAdapterError::InvalidPort { field }),
         Some((host, port)) => Ok((host, Some(port))),
         None => Ok((authority, None)),
     }

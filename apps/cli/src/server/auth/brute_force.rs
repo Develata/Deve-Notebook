@@ -28,6 +28,7 @@ struct IpRecord {
     last_failure: Instant,
 }
 
+#[derive(Default)]
 pub struct BruteForceGuard {
     records: Mutex<HashMap<IpAddr, IpRecord>>,
 }
@@ -40,9 +41,7 @@ impl BruteForceGuard {
     }
 
     pub fn new() -> Self {
-        Self {
-            records: Mutex::new(HashMap::new()),
-        }
+        Self::default()
     }
 
     /// 检查 IP 是否被封禁

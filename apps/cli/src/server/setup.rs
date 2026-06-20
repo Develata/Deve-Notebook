@@ -7,11 +7,11 @@
 //!
 //! 服务器启动辅助: CORS 配置、文件监视器
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use deve_core::config::RuntimeEnvironment;
 use deve_core::protocol::ServerMessage;
 
-use axum::http::{Method, header};
+use axum::http::{header, Method};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -179,10 +179,9 @@ mod tests {
             Err(err) => err,
         };
         unsafe { std::env::remove_var("ALLOWED_ORIGINS") };
-        assert!(
-            err.to_string()
-                .contains("Wildcard CORS origin is forbidden")
-        );
+        assert!(err
+            .to_string()
+            .contains("Wildcard CORS origin is forbidden"));
     }
 
     #[test]
@@ -204,10 +203,8 @@ mod tests {
 
     #[test]
     fn allowed_origins_from_values_accepts_runtime_override() {
-        let origins = allowed_origins_from_values(
-            ["http://tauri.localhost", "tauri://localhost"].into_iter(),
-        )
-        .expect("runtime origin override");
+        let origins = allowed_origins_from_values(["http://tauri.localhost", "tauri://localhost"])
+            .expect("runtime origin override");
 
         assert_eq!(origins.len(), 2);
         assert_eq!(origins[0], "http://tauri.localhost");
