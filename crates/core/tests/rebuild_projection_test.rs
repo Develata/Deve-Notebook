@@ -1,5 +1,5 @@
-use deve_core::ledger::RepoManager;
 use deve_core::ledger::schema::{DOCID_TO_PATH, NODEID_TO_META, PATH_TO_DOCID, PATH_TO_NODEID};
+use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::sync::SyncManager;
 use redb::ReadableTable;
@@ -12,6 +12,10 @@ fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init");
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
         .expect("projection base");
+    // Mirror production init order: establish the workspace identity marker before
+    // any projection content exists, so later rebuilds pass the identity gate.
+    repo.ensure_local_repo_workspace_identity("default")
+        .expect("establish workspace identity");
     (dir, std::sync::Arc::new(repo))
 }
 
@@ -129,11 +133,9 @@ fn rebuild_projection_force_overwrites_and_prunes_stale_markdown() {
     assert!(root.join("notes/ghost/keep.bin").exists());
     assert!(root.join(".notegit/state.json").exists());
     assert!(root.join(".git/objects/loose.md").exists());
-    assert!(
-        std::fs::read_to_string(root.join(".gitignore"))
-            .expect("read gitignore")
-            .contains(".notegit/")
-    );
+    assert!(std::fs::read_to_string(root.join(".gitignore"))
+        .expect("read gitignore")
+        .contains(".notegit/"));
     assert!(root.join("notes/empty").is_dir());
 }
 

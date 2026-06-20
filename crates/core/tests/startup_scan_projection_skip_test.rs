@@ -14,6 +14,13 @@ fn setup_repos() -> (TempDir, Arc<RepoManager>) {
     common::create_initialized_local_repo_with_depth(&ledger, 10, "wiki", "urn:wiki");
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)
         .expect("projection base");
+    // Mirror production init order: establish workspace identity markers before any
+    // projection content exists, so the scan's identity gate is exercised against
+    // legitimately-owned workspaces rather than tripping on missing markers.
+    repo.ensure_local_repo_workspace_identity("main")
+        .expect("main workspace identity");
+    repo.ensure_local_repo_workspace_identity("wiki")
+        .expect("wiki workspace identity");
     (dir, Arc::new(repo))
 }
 
@@ -77,12 +84,10 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
         .expect("main doc"),
         "ok"
     );
-    assert!(
-        !repo
-            .local_repo_workspace_path("wiki", "orphan.md")
-            .expect("wiki orphan path")
-            .exists()
-    );
+    assert!(!repo
+        .local_repo_workspace_path("wiki", "orphan.md")
+        .expect("wiki orphan path")
+        .exists());
     assert!(sync.is_projection_degraded("wiki"));
     assert!(!sync.is_projection_degraded("main"));
     assert_eq!(
@@ -95,13 +100,12 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             .expect("degraded repos"),
         vec![String::from("wiki")]
     );
-    assert!(
-        repo.list_pending_fs_in_local_repo("wiki")
-            .unwrap()
-            .is_empty()
-    );
-    assert!(
-        sync.handle_fs_event(
+    assert!(repo
+        .list_pending_fs_in_local_repo("wiki")
+        .unwrap()
+        .is_empty());
+    assert!(sync
+        .handle_fs_event(
             "wiki",
             repo.get_repo_info_for(None, Some("wiki"))
                 .expect("wiki info lookup")
@@ -110,11 +114,9 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             "untracked.md"
         )
         .expect("ignored event")
-        .is_empty()
-    );
-    assert!(
-        repo.list_pending_fs_in_local_repo("wiki")
-            .unwrap()
-            .is_empty()
-    );
+        .is_empty());
+    assert!(repo
+        .list_pending_fs_in_local_repo("wiki")
+        .unwrap()
+        .is_empty());
 }

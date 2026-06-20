@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::{
-    AppState, channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry,
+    channel::DualChannel, security, session::WsSession, tree_state::RepoTreeRegistry, AppState,
 };
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
@@ -11,7 +11,7 @@ use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::protocol::ServerMessage;
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::sync::{broadcast, mpsc};
 
 pub(crate) struct EditHarness {
@@ -27,10 +27,15 @@ pub(crate) fn edit_harness(with_test_repo: bool) -> anyhow::Result<EditHarness> 
     let projection_base = dir.path().join("notes");
     let mut repo = RepoManager::init(&ledger, 10, Some("default"), Some("urn:default"))?;
     repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+    // Mirror production init order: establish the workspace identity marker before any
+    // edit drives projection writeback, so edits exercise the real authority path
+    // instead of failing closed on a missing identity gate.
+    repo.ensure_local_repo_workspace_identity("default")?;
     let default_repo_id = repo.get_repo_info()?.expect("repo info").uuid;
     let test_repo_id = if with_test_repo {
         let mut test_repo = RepoManager::init(&ledger, 10, Some("test"), Some("urn:test"))?;
         test_repo.set_projection_base_for_all_local_repos_checked(&projection_base)?;
+        test_repo.ensure_local_repo_workspace_identity("test")?;
         Some(test_repo.get_repo_info()?.expect("test info").uuid)
     } else {
         None
