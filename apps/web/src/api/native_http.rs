@@ -3,7 +3,7 @@
 //!
 //! Native shell HTTP URL helpers.
 
-use super::native_bootstrap::read_native_bootstrap;
+use super::native_bootstrap::{NativeBootstrapState, read_native_bootstrap};
 
 #[cfg(any(target_arch = "wasm32", test))]
 const PACKAGED_SHELL_HOST: &str = "tauri.localhost";
@@ -23,10 +23,18 @@ pub(crate) fn api_url(path: &str) -> ApiUrl {
 }
 
 pub(crate) fn preferred_http_base() -> Option<String> {
-    read_native_bootstrap()
-        .http_base()
-        .map(str::to_string)
-        .or_else(packaged_shell_loopback_http_base)
+    preferred_http_base_from_state(read_native_bootstrap(), packaged_shell_loopback_http_base())
+}
+
+fn preferred_http_base_from_state(
+    state: NativeBootstrapState,
+    dev_loopback_fallback: Option<String>,
+) -> Option<String> {
+    match state {
+        NativeBootstrapState::Ready(bootstrap) => Some(bootstrap.http_base),
+        NativeBootstrapState::Blocked(_) => None,
+        NativeBootstrapState::Absent => dev_loopback_fallback,
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -70,7 +78,11 @@ pub(super) fn api_url_for_http_base(path: &str, http_base: Option<&str>) -> ApiU
 
 #[cfg(test)]
 mod tests {
-    use super::{api_url_for_http_base, packaged_shell_loopback_http_base_for_hostname};
+    use super::{
+        api_url_for_http_base, packaged_shell_loopback_http_base_for_hostname,
+        preferred_http_base_from_state,
+    };
+    use crate::api::native_bootstrap::{NativeBootstrapBlocker, NativeBootstrapState};
 
     #[test]
     fn api_url_uses_native_http_base_when_available() {
@@ -103,6 +115,17 @@ mod tests {
         );
         assert_eq!(
             packaged_shell_loopback_http_base_for_hostname("example.test"),
+            None
+        );
+    }
+
+    #[test]
+    fn preferred_http_base_does_not_fallback_when_native_bootstrap_is_blocked() {
+        assert_eq!(
+            preferred_http_base_from_state(
+                NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape),
+                Some("http://127.0.0.1:3001".to_string()),
+            ),
             None
         );
     }

@@ -37,13 +37,6 @@ pub(super) enum NativeBootstrapBlocker {
 }
 
 impl NativeBootstrapState {
-    pub(super) fn http_base(&self) -> Option<&str> {
-        match self {
-            Self::Ready(bootstrap) => Some(&bootstrap.http_base),
-            Self::Absent | Self::Blocked(_) => None,
-        }
-    }
-
     pub(super) fn blocked_status(&self) -> Option<ConnectionStatus> {
         match self {
             Self::Blocked(NativeBootstrapBlocker::InvalidShape)
@@ -75,12 +68,15 @@ pub(super) fn read_native_bootstrap() -> NativeBootstrapState {
     let Some(window) = web_sys::window() else {
         return NativeBootstrapState::Absent;
     };
+    let location = window.location();
+    let hostname = location.hostname().ok();
+    let protocol = location.protocol().ok();
     let Ok(value) = Reflect::get(window.as_ref(), &JsValue::from_str(NATIVE_BOOTSTRAP_GLOBAL))
     else {
-        return NativeBootstrapState::Absent;
+        return absent_native_bootstrap_state(hostname.as_deref(), protocol.as_deref());
     };
     if value.is_undefined() || value.is_null() {
-        return NativeBootstrapState::Absent;
+        return absent_native_bootstrap_state(hostname.as_deref(), protocol.as_deref());
     }
 
     parse_native_bootstrap_fields(
@@ -167,6 +163,24 @@ fn parse_native_bootstrap_fields(
         http_base: trim_base(endpoint.http_base),
         ws_url: format!("{}/ws", trim_base(endpoint.ws_base)),
     })
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+fn absent_native_bootstrap_state(
+    hostname: Option<&str>,
+    protocol: Option<&str>,
+) -> NativeBootstrapState {
+    if is_native_shell_origin(hostname.unwrap_or_default(), protocol.unwrap_or_default()) {
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
+    } else {
+        NativeBootstrapState::Absent
+    }
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+fn is_native_shell_origin(hostname: &str, protocol: &str) -> bool {
+    (protocol == "http:" && hostname == "tauri.localhost")
+        || (protocol == "tauri:" && hostname == "localhost")
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]

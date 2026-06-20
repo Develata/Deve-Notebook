@@ -64,6 +64,30 @@ fn rejects_missing_native_bootstrap_fields() {
 }
 
 #[test]
+fn native_shell_origin_without_bootstrap_is_invalid() {
+    assert_eq!(
+        absent_native_bootstrap_state(Some("tauri.localhost"), Some("http:")),
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
+    );
+    assert_eq!(
+        absent_native_bootstrap_state(Some("localhost"), Some("tauri:")),
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
+    );
+}
+
+#[test]
+fn browser_origin_without_bootstrap_remains_absent() {
+    assert_eq!(
+        absent_native_bootstrap_state(Some("127.0.0.1"), Some("http:")),
+        NativeBootstrapState::Absent
+    );
+    assert_eq!(
+        absent_native_bootstrap_state(Some("example.test"), Some("https:")),
+        NativeBootstrapState::Absent
+    );
+}
+
+#[test]
 fn maps_native_service_offline_to_blocked_state() {
     assert_eq!(
         parse_native_bootstrap_fields(None, None, None, None, Some("service_offline".into())),
