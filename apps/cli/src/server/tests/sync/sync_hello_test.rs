@@ -196,16 +196,19 @@ async fn sync_hello_pushes_source_control_commit_to_full_peer() -> anyhow::Resul
             ServerMessage::SyncPush {
                 source_peer_id,
                 repo_id,
+                header,
                 encrypted_payload,
                 ..
-            } => Some((source_peer_id, repo_id, encrypted_payload)),
+            } => Some((source_peer_id, repo_id, header, encrypted_payload)),
             _ => None,
         })
         .expect("source-control commit should be offered as SyncPush");
 
     assert_eq!(push.0, &local_peer);
     assert_eq!(push.1, &repo_id);
-    assert!(!push.2.is_empty());
+    assert!(push.2.source_proof.is_some());
+    push.2.validate_source_proof(push.3, true)?;
+    assert!(!push.3.is_empty());
     Ok(())
 }
 

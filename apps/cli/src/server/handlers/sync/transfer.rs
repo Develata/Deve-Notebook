@@ -9,7 +9,7 @@ use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::{
     ServerMessage, SourceProofRequirement, SyncPushAttributionInput, SyncPushHeader,
-    validate_sync_push_attribution,
+    SyncSourceProofError, validate_sync_push_attribution,
 };
 use deve_core::security::EncryptedOp;
 use deve_core::sync::protocol as sync_proto;
@@ -98,7 +98,17 @@ pub(super) async fn handle_request(
             response.peer_id.clone(),
             header_vector.clone(),
         );
-        let header = attach_local_source_proof(state, header, &response.ops);
+        let header = match attach_local_source_proof(state, header, &response.ops) {
+            Ok(header) => header,
+            Err(err) => {
+                errors::sync_payload_build_failed(
+                    ch,
+                    format!("Failed to sign local sync source proof for repo {repo_id}: {err}"),
+                    scope,
+                );
+                return;
+            }
+        };
         ch.unicast(ServerMessage::SyncPush {
             source_peer_id: response.peer_id,
             repo_id: response.repo_id,
@@ -114,13 +124,11 @@ pub(super) fn attach_local_source_proof(
     state: &Arc<AppState>,
     mut header: SyncPushHeader,
     payload: &[EncryptedOp],
-) -> SyncPushHeader {
-    if header.peer_id == state.identity_key.peer_id()
-        && let Err(err) = header.sign_source(payload, &state.identity_key)
-    {
-        tracing::warn!("Failed to sign local sync source proof: {}", err);
+) -> Result<SyncPushHeader, SyncSourceProofError> {
+    if header.peer_id == state.identity_key.peer_id() {
+        header.sign_source(payload, &state.identity_key)?;
     }
-    header
+    Ok(header)
 }
 
 pub(super) async fn handle_push(

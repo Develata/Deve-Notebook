@@ -88,11 +88,25 @@ fn send_pushes(
                     response.peer_id.clone(),
                     ctx.engine.version_vector().clone(),
                 );
-                let header = super::super::transfer::attach_local_source_proof(
+                let header = match super::super::transfer::attach_local_source_proof(
                     ctx.state,
                     header,
                     &response.ops,
-                );
+                ) {
+                    Ok(header) => header,
+                    Err(err) => {
+                        clear_sync_hello_scope_failure(ctx.session, false);
+                        errors::sync_payload_build_failed(
+                            ctx.ch,
+                            format!(
+                                "Failed to sign local sync source proof for repo {}: {}",
+                                ctx.repo_id, err
+                            ),
+                            ctx.scope,
+                        );
+                        return;
+                    }
+                };
                 ctx.ch.unicast(ServerMessage::SyncPush {
                     source_peer_id: response.peer_id,
                     repo_id: response.repo_id,
