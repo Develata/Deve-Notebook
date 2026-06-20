@@ -30,7 +30,7 @@ pub(crate) fn init_node_role(
 }
 
 pub(crate) fn update_repo_health(repo: &RepoManager, sync_manager: &deve_core::sync::SyncManager) {
-    node_role::update_repo_health(repo_health_summary(repo, sync_manager));
+    node_role::update_repo_health(current_repo_health(repo, sync_manager));
 }
 
 fn profile_label(profile: AppProfile) -> &'static str {
@@ -40,7 +40,7 @@ fn profile_label(profile: AppProfile) -> &'static str {
     }
 }
 
-fn repo_health_summary(
+pub(crate) fn current_repo_health(
     repo: &RepoManager,
     sync_manager: &deve_core::sync::SyncManager,
 ) -> node_role::RepoHealthSummary {

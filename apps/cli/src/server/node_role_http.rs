@@ -5,14 +5,39 @@
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 //!   - 18_release#runtime-observability
 
-use axum::Json;
 use axum::response::IntoResponse;
+use axum::{Json, extract::State};
+use std::sync::Arc;
 
-use crate::server::node_role;
+use crate::server::{AppState, node_role, runtime};
 
 pub async fn role() -> impl IntoResponse {
-    let r = node_role::get_node_role();
-    Json(role_payload(&r))
+    Json(current_role_payload(None))
+}
+
+pub async fn role_with_app_state(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let repo_health =
+        runtime::current_repo_health(state.repo.as_ref(), state.sync_manager.as_ref());
+    Json(current_role_payload(Some(repo_health)))
+}
+
+fn current_role_payload(repo_health: Option<node_role::RepoHealthSummary>) -> serde_json::Value {
+    let role = node_role::get_node_role();
+    role_payload_with_repo_health(&role, repo_health)
+}
+
+fn role_payload_with_repo_health(
+    role: &node_role::NodeRole,
+    repo_health: Option<node_role::RepoHealthSummary>,
+) -> serde_json::Value {
+    match repo_health {
+        Some(repo_health) => {
+            let mut role = role.clone();
+            role.repo_health = repo_health;
+            role_payload(&role)
+        }
+        None => role_payload(role),
+    }
 }
 
 fn role_payload(r: &node_role::NodeRole) -> serde_json::Value {
@@ -105,6 +130,33 @@ mod tests {
         assert_eq!(payload["repo_health"]["degraded"], 1);
         assert_eq!(payload["source_control"]["git_bridge"], "mirror");
         assert_eq!(payload["native_service"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn role_payload_can_use_current_repo_health_snapshot() {
+        let payload = role_payload_with_repo_health(
+            &node_role::NodeRole {
+                role: "main".into(),
+                ws_port: 3001,
+                main_port: 3001,
+                version: "0.0.1".into(),
+                profile: "standard".into(),
+                delivery: "embedded-frontend".into(),
+                environment: "development".into(),
+                repo_health: node_role::RepoHealthSummary::from_degraded_count(1, 0),
+                source_control: node_role::SourceControlSummary::from_git_bridge(
+                    deve_core::config::GitBridgeMode::Mirror,
+                ),
+                p2p: node_role::P2pSummary::disabled(),
+                native_service: None,
+            },
+            Some(node_role::RepoHealthSummary::from_degraded_count(2, 1)),
+        );
+
+        assert_eq!(payload["repo_health"]["status"], "degraded");
+        assert_eq!(payload["repo_health"]["local_total"], 2);
+        assert_eq!(payload["repo_health"]["healthy"], 1);
+        assert_eq!(payload["repo_health"]["degraded"], 1);
     }
 
     #[test]

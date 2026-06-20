@@ -190,7 +190,7 @@ pub fn build_app_with_native_session_and_p2p(
 
     let public = Router::new()
         .route("/ws", get(ws::ws_handler))
-        .route("/api/node/role", get(node_role_http::role))
+        .route("/api/node/role", get(node_role_http::role_with_app_state))
         .route("/api/auth/status", get(auth::handlers::status))
         .route(
             "/api/ai/backend-capabilities",
