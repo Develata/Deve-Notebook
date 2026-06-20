@@ -46,7 +46,7 @@
 - Docker P2P mesh smoke 验证“两服务端 + 静态 FullPeer mesh + shadow-only apply”。
 - Desktop/Android/Mobile native-packaging 默认 LocalBackend 可作为本机 FullPeer；RemoteBrowser 显式连接远端 Docker/Web HTTPS origin。
 - Native 双模式 smoke 可以作为功能证据，但不能替代签名、store、physical-device 或后台同步 release readiness。
-- 对纯文本 baseline 合同，开发者可以使用独立 Rust CLI mirror（例如 `cargo run -p deve_baseline -- all`）做本地验收，减少 Windows/WSL 环境对 bash/awk/rg runtime 的依赖；这不改变普通用户可见命令面。
+- 对纯文本 baseline 合同，开发者可以使用独立 Rust CLI mirror（例如 `cargo run -p deve_baseline -- all`）做本地验收；需要覆盖历史 baseline shell 中的确定性 `cargo test` 调度时，可以显式运行 `cargo run -p deve_baseline -- full`。这些入口减少 Windows/WSL 环境对 bash/awk/rg runtime 的依赖，不改变普通用户可见命令面。
 
 ## 非目标
 

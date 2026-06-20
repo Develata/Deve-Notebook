@@ -1,0 +1,18 @@
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-002
+contains	docs/acceptance-cases/05_ui.md	run: scripts/check-ui-disconnect-baseline.sh
+contains	docs/acceptance-cases/05_ui.md	run: cargo test -p deve_web disconnected_lockdown -- --nocapture
+contains	docs/acceptance-cases/05_ui.md	ui_assert: overlay_text "Reconnecting..."
+contains	docs/acceptance-cases/05_ui.md	ui_assert: editing_disabled true
+contains	apps/web/src/components/disconnect_overlay.rs	data-deve-disconnect-overlay="lockdown"
+contains	apps/web/src/components/disconnect_overlay.rs	data-deve-editing-disabled="true"
+contains	apps/web/src/components/disconnect_overlay.rs	fn overlay_copy(locale: Locale, status: ConnectionStatus) -> Option
+contains	apps/web/src/components/disconnect_overlay.rs	ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None
+contains	apps/web/src/i18n/common.rs	Locale::En => "Reconnecting..."
+contains	apps/web/src/hooks/use_core/state_init/build/spectator.rs	connection_status.get() != ConnectionStatus::Connected
+contains	apps/web/src/hooks/use_core/state_init.rs	fn disconnected_lockdown_marks_core_as_spectator()
+contains	apps/web/src/hooks/use_core/state_init.rs	fn disconnected_lockdown_releases_when_connection_is_ready()
+contains	apps/web/src/hooks/use_core/write_gate.rs	is_read_only: signals.is_spectator.get() || signals.active_branch.get().is_some()
+contains	apps/web/src/hooks/use_core/write_gate/tests.rs	fn repo_write_gate_blocks_remote_branches_as_read_only()
+contains	apps/web/src/editor/mod.rs	fn should_editor_be_read_only(
+contains	apps/web/src/editor/mod.rs	fn editor_read_only_gate_blocks_native_runtime_write_gate()
+contains	apps/web/src/editor/mod.rs	ffi::set_read_only(editor_readonly.get());

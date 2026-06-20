@@ -1,0 +1,191 @@
+contains	apps/cli/src/main.rs	Init {
+contains	apps/cli/src/main.rs	repo_id: Option<uuid::Uuid>
+contains	apps/cli/src/main.rs	repo_url: Option<String>
+contains	apps/cli/src/main.rs	repo-id
+contains	apps/cli/src/main.rs	Scan,
+contains	apps/cli/src/main.rs	Watch {
+contains	apps/cli/src/main.rs	Serve {
+contains	apps/cli/src/main.rs	Dump {
+contains	apps/cli/src/main.rs	Export {
+contains	apps/cli/src/main.rs	Graph {
+contains	apps/cli/src/main.rs	VerifyP2P
+contains	apps/cli/src/main.rs	Seed {
+contains	apps/cli/src/main.rs	NodeCheck {
+contains	apps/cli/src/main.rs	Recover {
+contains	apps/cli/src/main.rs	Repair {
+contains	apps/cli/src/main.rs	ScStatus {
+contains	apps/cli/src/main.rs	Git {
+contains	apps/cli/src/main.rs	Repo {
+contains	apps/cli/src/main.rs	RepoProjectionAction
+contains	apps/cli/src/main.rs	Config {
+contains	apps/cli/src/dispatch.rs	ConfigAction::Print => commands::config::print(config)?
+contains	apps/cli/src/dispatch.rs	ConfigAction::Set { key, value } => commands::config::set(&key, &value)?
+contains	apps/cli/src/dispatch.rs	Commands::Graph
+contains	apps/cli/src/dispatch.rs	Commands::VerifyP2P
+contains	apps/cli/src/dispatch.rs	Commands::Seed
+contains	apps/cli/src/dispatch.rs	Commands::NodeCheck
+contains	apps/cli/src/dispatch.rs	Commands::ScStatus
+contains	apps/cli/src/dispatch.rs	Commands::Git
+contains	apps/cli/src/dispatch.rs	GitAction::Status
+contains	apps/cli/src/dispatch.rs	GitAction::Mirror
+contains	apps/cli/src/dispatch.rs	GitAction::Export
+contains	apps/cli/src/dispatch.rs	GitAction::Import
+contains	apps/cli/src/dispatch.rs	GitAction::Push
+contains	apps/cli/src/dispatch.rs	RepoAction::Projection
+contains	apps/cli/src/dispatch.rs	commands::repo_projection::set
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-007A
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-007B
+contains	docs/acceptance-cases/11_commands_settings.md	scripts/smoke-web-runtime-paths.sh
+contains	scripts/smoke-web-release-build.sh	CMD-007A Web release build smoke.
+absent	scripts/smoke-web-release-build.sh	REL-004 Web release build smoke.
+contains	docs/acceptance-cases/11_commands_settings.md	deve graph --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve sc-status --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve git status --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve git mirror --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve git export --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve git import --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve git push --help
+contains	docs/acceptance-cases/11_commands_settings.md	deve repo projection set --help
+contains	apps/cli/src/commands/watch.rs	install_shutdown_handler()?
+contains	apps/cli/src/commands/watch.rs	Failed to set Ctrl-C handler
+absent	apps/cli/src/commands/watch.rs	无法设置 Ctrl+C 处理器
+contains	apps/cli/src/commands/config.rs	const CONFIG_FILE: &str = "config.toml";
+contains	apps/cli/src/commands/config.rs	mod tests;
+contains	apps/cli/src/commands/config.rs	toml::to_string_pretty(config)
+contains	apps/cli/src/commands/config.rs	parse_whitelisted_value
+contains	apps/cli/src/commands/config/tests.rs	supported_config_keys_match_settings_plan_tables
+contains	apps/cli/src/commands/config/tests.rs	supported_config_schema_matches_settings_plan_type_and_choices
+contains	apps/cli/src/commands/init.rs	init_config_template_matches_current_settings_schema
+contains	apps/cli/src/commands/init.rs	Projection Locator
+contains	apps/cli/src/commands/init.rs	RepoInitOptions
+contains	apps/cli/src/commands/init.rs	[ai.agent_bridge]
+contains	apps/cli/src/commands/init.rs	peer_id = "<12-lowercase-hex-peer-id-from-peer-b-startup-log>"
+absent	apps/cli/src/commands/init.rs	peer_id = "peer-b"
+contains	config.example.toml	peer_id = "<12-lowercase-hex-peer-id-from-peer-b-startup-log>"
+absent	config.example.toml	peer_id = "peer-b"
+contains	apps/cli/src/commands/config/schema.rs	Unsupported config key
+absent	apps/cli/src/commands/config/schema.rs	"vault_path"
+contains	apps/cli/src/commands/config/schema.rs	"ui.sidebar_width"
+contains	apps/cli/src/commands/config/schema.rs	"p2p.enabled"
+contains	apps/cli/src/commands/config/schema.rs	"p2p.connect_interval_ms"
+contains	apps/cli/src/commands/config/schema.rs	positive_integer("p2p.connect_interval_ms")
+contains	apps/cli/src/commands/config/schema.rs	"p2p.inbound_token_env"
+contains	apps/cli/src/commands/config/schema.rs	"source_control.git_bridge"
+contains	.env.example	DEVE_SOURCE_CONTROL__GIT_BRIDGE
+contains	docs/acceptance-cases/11_commands_settings.md	file_contains: .env.example "DEVE_SOURCE_CONTROL__GIT_BRIDGE"
+contains	apps/cli/src/commands/config/schema.rs	"ai.mode"
+contains	crates/core/src/config/schema.rs	pub struct P2pConfig
+contains	crates/core/src/config/schema.rs	pub struct P2pPeerConfig
+contains	crates/core/src/config/env_alias.rs	DEVE_P2P_MESH_PEER_{index}_
+contains	crates/core/src/config/tests/p2p_tests.rs	p2p_mesh_env_aliases_load_static_peer_config
+contains	apps/cli/src/commands/config.rs	Updated config.toml is not compatible with runtime config
+contains	crates/core/src/config/tests.rs	mod agent_bridge_tests;
+contains	crates/core/src/config/tests.rs	mod load_tests;
+contains	crates/core/src/config/tests/agent_bridge_tests.rs	trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_missing
+contains	crates/core/src/config/tests/agent_bridge_tests.rs	trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_relative
+contains	crates/core/src/config/tests/agent_bridge_tests.rs	trusted_cli_requested_mode_is_preserved_when_agent_cli_path_is_not_executable
+contains	crates/core/src/config/tests/agent_bridge_tests.rs	trusted_cli_mode_is_kept_when_policy_conditions_are_satisfied
+contains	crates/core/src/config/tests/agent_bridge_tests.rs	trusted_cli_mode_honors_agent_bridge_env_aliases
+contains	crates/core/src/config/tests/load_tests.rs	load_checked_fails_closed_on_invalid_agent_bridge_alias_bool
+contains	crates/core/src/config/tests/load_tests.rs	load_checked_fails_closed_on_invalid_runtime_enum_value
+contains	crates/core/src/config/tests/load_tests.rs	runtime_config_value_parsers_reject_unknown_values
+contains	crates/core/src/config/tests/p2p_tests.rs	load_checked_fails_closed_on_zero_p2p_connect_interval_ms
+contains	apps/cli/src/commands/config/tests.rs	set_rejects_zero_p2p_connect_interval_without_rewriting_config
+contains	apps/cli/src/commands/config/tests.rs	set_rejects_existing_invalid_runtime_config_without_rewriting
+contains	docs/acceptance-cases/11_commands_settings.md	existing_invalid_runtime_config_rejected_without_rewrite
+absent	apps/cli/src/server/agent_bridge/policy.rs	DEVE_AI_AGENT_BRIDGE_ENABLED
+absent	apps/cli/src/server/agent_bridge/policy.rs	DEVE_AI_AGENT_BRIDGE_TRUSTED
+contains	docs/plan/15_settings.md	DEVE_AI_AGENT_BRIDGE_ENABLED
+contains	docs/plan/15_settings.md	DEVE_AI_AGENT_BRIDGE_TRUSTED
+contains	docs/plan/15_settings.md	p2p.enabled
+contains	docs/plan/15_settings.md	p2p.inbound_token_env
+contains	docs/plan/15_settings.md	p2p.connect_interval_ms
+contains	docs/plan/15_settings.md	配置值 **MUST** 大于 0
+contains	docs/plan/15_settings.md	p2p.peers[].peer_id
+contains	docs/plan/15_settings.md	expected authenticated peer identity
+contains	docs/plan/15_settings.md	source_control.git_bridge
+contains	docs/plan/15_settings.md	MUST NOT** 保存 token material
+contains	docs/plan/15_settings.md	运行模式预设: `standard` (默认), `low-spec` (低配).
+absent	docs/plan/15_settings.md	`debug` (调试)
+contains	docs/plan/15_settings.md	**Future Settings Surface**
+contains	docs/plan/15_settings.md	server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计
+contains	docs/plan/15_settings.md	启用前 **MUST** 更新本章、feature spec 与 acceptance case
+contains	docs/plan/15_settings.md	**Editor**
+contains	docs/plan/15_settings.md	`Cmd+Z` / `Ctrl+Z`
+contains	docs/plan/15_settings.md	`Cmd+Shift+Z` / `Ctrl+Y`
+absent	apps/cli/src/server/router.rs	/api/settings
+contains	apps/web/src/shortcuts/global.rs	Ctrl+P
+contains	apps/web/src/shortcuts/global.rs	Ctrl+Shift+P
+contains	apps/web/src/shortcuts/global.rs	Ctrl+Shift+K
+contains	apps/web/src/shortcuts/global.rs	Ctrl+L
+contains	apps/web/src/shortcuts/global.rs	Ctrl+Shift+O
+contains	apps/web/src/shortcuts/global.rs	Ctrl+B
+contains	apps/web/src/shortcuts/global/handlers.rs	GlobalShortcutAction::BranchSwitcher
+contains	apps/web/src/shortcuts/global/handlers.rs	toggle_search_mode(signals, "@");
+contains	apps/web/src/shortcuts/global/handlers.rs	GlobalShortcutAction::ToggleLanguage
+contains	apps/web/src/shortcuts/global/handlers.rs	GlobalShortcutAction::ToggleOutline
+contains	apps/web/src/shortcuts/global/handlers.rs	GlobalShortcutAction::ToggleSidebar
+contains	apps/web/src/components/command_palette/mod.rs	CommandPalette
+contains	apps/web/src/components/command_palette/registry.rs	"toggle_sidebar"
+contains	apps/web/src/components/command_palette/types.rs	pub group: String
+contains	apps/web/src/components/command_palette/types.rs	pub shortcut: Option<String>
+contains	apps/web/src/components/command_palette/types.rs	pub enabled_when: String
+contains	apps/web/src/components/command_palette/registry/tests.rs	static_commands_expose_group_shortcut_and_enabled_conditions
+contains	apps/web/src/components/command_palette/registry/tests.rs	settings_command_routes_to_settings_surface_and_closes_palette
+contains	apps/web/src/components/search_box/providers/command.rs	command_provider_detail_includes_group_shortcut_and_enabled_condition
+contains	apps/web/src/components/search_box/providers/command.rs	command_provider_uses_registry_metadata_for_settings_entry
+contains	apps/web/src/components/command_palette/registry/tests.rs	static_commands_include_sidebar_toggle_when_control_is_available
+contains	apps/web/src/components/command_palette/registry/reserved.rs	source_control_reserved_commands
+contains	apps/web/src/components/command_palette/registry/reserved.rs	ai_reserved_commands
+contains	apps/web/src/components/command_palette/registry/tests.rs	static_commands_partition_reserved_surfaces
+contains	apps/web/src/i18n/command_palette.rs	Source Control: Commit
+contains	apps/web/src/i18n/command_palette.rs	AI: Switch to BUILD Mode
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004C
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004D
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web reserved_commands -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web global_shortcut -- --nocapture
+contains	apps/web/src/components/branch_switcher/mod.rs	BranchSwitcher
+contains	apps/web/src/i18n/sidebar.rs	Switch Branch (Ctrl+Shift+K)
+contains	apps/web/src/components/settings.rs	current_boundary_desc
+contains	apps/web/src/components/settings.rs	data-deve-settings-surface="modal"
+contains	apps/web/src/components/settings.rs	max-h-[100dvh]
+contains	apps/web/src/components/settings.rs	ev.key() == "Escape"
+contains	apps/web/src/components/settings.rs	AppearanceSection
+contains	apps/web/src/components/settings.rs	EditorBasicsSection
+contains	apps/web/src/components/settings.rs	RuntimeDiagnosticsSection
+contains	apps/web/src/components/settings_prefs.rs	const THEME_PREF_KEY: &str = "deve.ui.theme";
+contains	apps/web/src/components/settings_prefs.rs	const EDITOR_WRAP_PREF_KEY: &str = "deve.editor.word_wrap";
+contains	apps/web/src/components/settings_prefs.rs	const EDITOR_DENSITY_PREF_KEY: &str = "deve.editor.density";
+contains	apps/web/src/components/settings_prefs.rs	theme_preference_defaults_to_auto_and_roundtrips
+contains	apps/web/src/components/settings_sections/local_prefs.rs	data-deve-settings-theme
+contains	apps/web/src/components/settings_sections/local_prefs.rs	data-deve-runtime-diagnostics
+contains	apps/web/src/components/settings.rs	language_button_state
+contains	apps/web/src/components/settings.rs	reserved_setting_state
+contains	apps/web/src/components/settings.rs	data-deve-setting-disabled
+contains	apps/web/src/components/settings.rs	aria-disabled
+contains	apps/web/src/components/settings_sections.rs	data-deve-setting-disabled-reason="ai_backend"
+contains	apps/web/src/components/settings_sections_policy/tests.rs	settings_buttons_keep_mobile_safe_touch_targets
+contains	apps/web/src/i18n/settings.rs	deve config set
+contains	apps/web/src/i18n/settings.rs	config.toml
+contains	apps/web/src/i18n/settings/local_prefs.rs	Runtime Diagnostics
+contains	apps/web/src/i18n/settings/local_prefs.rs	settings_v1_copy_marks_local_browser_boundaries_and_runtime_smoke
+contains	apps/web/src/i18n/settings.rs	Future setting: not available in the current release
+contains	apps/web/src/i18n/settings.rs	reserved_setting_copy_marks_future_boundary
+absent	apps/web/src/i18n/settings.rs	Coming in Phase 6
+contains	apps/web/src/components/settings_sections_policy/tests.rs	language_buttons_reflect_current_locale
+contains	apps/web/src/components/settings_sections_policy/tests.rs	theme_buttons_reflect_browser_local_preference
+contains	apps/web/src/components/settings_sections_policy/tests.rs	editor_preference_buttons_reflect_local_feedback_state
+contains	apps/web/src/components/settings_sections_policy/tests.rs	reserved_setting_state_exposes_disabled_reason
+absent	apps/web/src/components/settings_sections_policy.rs	pointer-events-none grayscale
+contains	apps/web/src/components/settings_sections.rs	sync_mode_button_state
+contains	apps/web/src/components/settings_sections_policy/tests.rs	sync_mode_buttons_reflect_current_mode
+contains	apps/web/src/components/settings_sections_policy/tests.rs	sync_mode_buttons_treat_unknown_mode_as_auto_safe_default
+contains	docs/acceptance-cases/15_settings_operation_refs.md	reserved_setting_has_marker
+contains	docs/acceptance-cases/15_settings_operation_refs.md	reserved_setting_has_aria_disabled true
+contains	docs/acceptance-cases/15_settings_operation_refs.md	cargo test -p deve_web settings -- --nocapture
+contains	docs/features/operations/settings_feedback_render.md	aria-disabled
+contains	docs/features/operations/settings_runtime_feedback.md	aria-disabled
+contains	scripts/smoke-web-runtime-paths.sh	CMD-007A embedded browser path
+contains	scripts/smoke-web-runtime-paths.sh	CMD-007B Trunk fallback path
+contains	docs/dev-runbook.md	Settings / Command UI Smoke
+contains	docs/dev-runbook.md	data-deve-settings-surface

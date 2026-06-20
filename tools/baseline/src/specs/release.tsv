@@ -502,12 +502,70 @@ contains	scripts/check-release-audit-gate.sh	npm --prefix
 contains	scripts/check-release-audit-gate.sh	DEVE_RELEASE_AUDIT_REQUIRED
 contains	scripts/check-release-audit-gate.sh	skip cargo audit
 contains	docs/features/operations/release_quality_gates.md	runtime happy-path and recovery smokes remain explicit local/CI script gates
-contains	scripts/check-release-baseline.sh	cargo run -p deve_baseline -- release
-contains	scripts/check-release-baseline.sh	release-baseline-check:
+contains	scripts/baseline-wrapper.sh	resolve_baseline_cargo()
+contains	scripts/baseline-wrapper.sh	run_deve_baseline()
+contains	scripts/check-storage-repo-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-storage-repo-baseline.sh	run_deve_baseline "$ROOT_DIR" "storage-repo" "storage-repo-baseline-check"
+contains	scripts/check-network-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-network-baseline.sh	run_deve_baseline "$ROOT_DIR" "network" "network-baseline-check"
+contains	scripts/check-release-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-release-baseline.sh	run_deve_baseline "$ROOT_DIR" "release" "release-baseline-check"
 absent	scripts/check-release-baseline.sh	contains ".github/workflows/release.yml"
 absent	scripts/check-release-baseline.sh	assert_before "Dockerfile"
+contains	scripts/check-dev-runbook-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-dev-runbook-baseline.sh	run_deve_baseline "$ROOT_DIR" "dev-runbook" "check-dev-runbook-baseline"
+contains	scripts/check-diff-color-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-diff-color-baseline.sh	run_deve_baseline "$ROOT_DIR" "diff-color" "diff-color-baseline-check"
+contains	scripts/check-graph-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-graph-baseline.sh	run_deve_baseline "$ROOT_DIR" "graph" "graph-baseline-check"
+contains	scripts/check-i18n-formatting-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-i18n-formatting-baseline.sh	run_deve_baseline "$ROOT_DIR" "i18n-formatting" "i18n-formatting-baseline-check"
+contains	scripts/check-i18n-hardcoded-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-i18n-hardcoded-baseline.sh	run_deve_baseline "$ROOT_DIR" "i18n-hardcoded" "i18n-hardcoded-baseline-check"
+contains	scripts/check-rendering-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-rendering-baseline.sh	run_deve_baseline "$ROOT_DIR" "rendering" "rendering-baseline-check"
+contains	scripts/check-search-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-search-baseline.sh	run_deve_baseline "$ROOT_DIR" "search" "search-baseline-check"
+contains	scripts/check-ui-token-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ui-token-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-token" "ui-token-baseline-check"
+contains	scripts/check-ui-z-index-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ui-z-index-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-z-index" "ui-z-index-baseline-check"
+contains	scripts/check-ui-focus-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ui-focus-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-focus" "ui-focus-baseline-check"
 contains	docs/plan/18_release.md	`tools/baseline`（package `deve_baseline`）
-contains	docs/plan/18_release.md	确定性 release baseline 规格的唯一维护位置是 Rust checker 的 TSV spec
+contains	docs/plan/18_release.md	baseline 规格的唯一维护位置是 Rust checker 的 TSV spec
 contains	docs/features/15_release.md	`cargo run -p deve_baseline -- all`
+contains	docs/features/15_release.md	`cargo run -p deve_baseline -- full`
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- all
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- full
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release
+contains	tools/baseline/src/main.rs	"full" => run_full_baselines()
+contains	tools/baseline/src/spec.rs	cargo_test
+contains	scripts/check-auth-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-auth-baseline.sh	run_deve_baseline "$ROOT_DIR" "auth" "auth-baseline-check"
+contains	scripts/check-ai-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ai-baseline.sh	run_deve_baseline "$ROOT_DIR" "ai" "ai-baseline-check"
+contains	scripts/check-cli-settings-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-cli-settings-baseline.sh	run_deve_baseline "$ROOT_DIR" "cli-settings" "cli-settings-baseline-check"
+contains	scripts/check-dev-data-health-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-dev-data-health-baseline.sh	run_deve_baseline "$ROOT_DIR" "dev-data-health" "check-dev-data-health-baseline"
+contains	scripts/check-foundation-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-foundation-baseline.sh	run_deve_baseline "$ROOT_DIR" "foundation" "foundation-baseline-check"
+contains	scripts/check-large-doc-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-large-doc-baseline.sh	run_deve_baseline "$ROOT_DIR" "large-doc" "large-doc-baseline-check"
+contains	scripts/check-mobile-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-baseline.sh	run_deve_baseline "$ROOT_DIR" "mobile" "mobile-baseline-check"
+contains	scripts/check-repo-file-ops-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-repo-file-ops-baseline.sh	run_deve_baseline "$ROOT_DIR" "repo-file-ops" "repo-file-ops-baseline"
+contains	scripts/check-settings-local-feedback-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-settings-local-feedback-baseline.sh	run_deve_baseline "$ROOT_DIR" "settings-local-feedback" "settings-local-feedback-baseline-check"
+contains	scripts/check-source-control-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-source-control-baseline.sh	run_deve_baseline "$ROOT_DIR" "source-control" "source-control-baseline-check"
+contains	scripts/check-ui-dashboard-refresh-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ui-dashboard-refresh-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-dashboard-refresh" "ui-dashboard-refresh-baseline-check"
+contains	scripts/check-ui-desktop-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ui-desktop-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-desktop" "ui-desktop-baseline-check"
+contains	scripts/check-ui-disconnect-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ui-disconnect-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-disconnect" "ui-disconnect-baseline-check"
+contains	scripts/check-ui-spa-routing-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ui-spa-routing-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-spa-routing" "ui-spa-routing-baseline-check"

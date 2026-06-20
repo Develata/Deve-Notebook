@@ -1,0 +1,20 @@
+contains	docs/dev-runbook.md	node-check --projection --repo <repo>
+contains	docs/dev-runbook.md	repair --check --repo <repo>
+contains	docs/dev-runbook.md	status=authority_corrupt
+contains	docs/dev-runbook.md	rebuild_supported=false
+contains	docs/dev-runbook.md	issue_code=missing_parent
+contains	docs/dev-runbook.md	repair_hint
+contains	docs/dev-runbook.md	repair-step preflight
+contains	docs/dev-runbook.md	byte-for-byte immutability
+contains	docs/dev-runbook.md	repair --repo <repo> --rebuild-projection
+contains	crates/core/src/sync/projection_diagnostic.rs	repair_hint
+contains	crates/core/src/sync/projection_diagnostic.rs	projection rebuild is unsupported
+contains	apps/cli/src/admin_api.rs	pub repair_hint: String
+contains	apps/cli/src/commands/node_check.rs	repair_hint:
+contains	apps/cli/src/commands/node_check.rs	SyncManager::new_checked
+contains	apps/cli/src/commands/repair/mod.rs	repair-check
+contains	docs/acceptance-cases/11_commands_settings.md	scripts/check-dev-data-health-baseline.sh
+contains	docs/acceptance-cases/11_commands_settings.md	deve repair --check --help
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_cli repair_check -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_cli node_check -- --nocapture
+

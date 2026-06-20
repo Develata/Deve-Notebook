@@ -86,16 +86,24 @@ contains	crates/core/tests/durable_projection_fault_test.rs	fn durable_projectio
 contains	crates/core/tests/remote_repo_catalog_missing_test.rs	fn remote_repo_catalog_calls_fail_closed_when_remotes_dir_is_missing()
 contains	crates/core/tests/repo_catalog_entry_fail_closed_test.rs	fn remote_repo_listing_fails_closed_on_unexpected_non_redb_entry()
 contains	apps/cli/src/commands/repair/shadow.rs	fn quarantines_nil_shadow_repo_into_invalid_peer_dir()
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_web file_ops
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_web file_provider
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_cli docs_scope_nonce_gate
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_cli docs_create_test
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_cli docs_copy_contract
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_cli docs_dir_copy
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_cli docs_projection_repair
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_cli degraded_local
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_cli browser_writer_registration_rejects_broken_workspace_identity
-contains	scripts/check-repo-file-ops-baseline.sh	run_filter deve_core source_control_write_gate
+contains	scripts/check-repo-file-ops-baseline.sh	cargo run -p deve_baseline -- repo-file-ops
+contains	tools/baseline/src/specs/repo_file_ops.tsv	cargo_test
+contains	tools/baseline/src/specs/repo_file_ops.tsv	deve_web
+contains	tools/baseline/src/specs/repo_file_ops.tsv	deve_cli
+contains	tools/baseline/src/specs/repo_file_ops.tsv	deve_core
+contains	tools/baseline/src/specs/repo_file_ops.tsv	file_ops
+contains	tools/baseline/src/specs/repo_file_ops.tsv	file_provider
+contains	tools/baseline/src/specs/repo_file_ops.tsv	docs_scope_nonce_gate
+contains	tools/baseline/src/specs/repo_file_ops.tsv	docs_create_test
+contains	tools/baseline/src/specs/repo_file_ops.tsv	docs_copy_contract
+contains	tools/baseline/src/specs/repo_file_ops.tsv	docs_dir_copy
+contains	tools/baseline/src/specs/repo_file_ops.tsv	docs_projection_repair
+contains	tools/baseline/src/specs/repo_file_ops.tsv	server::handlers::docs::create::tests
+contains	tools/baseline/src/specs/repo_file_ops.tsv	server::handlers::docs::delete::tests
+contains	tools/baseline/src/specs/repo_file_ops.tsv	copy_rejects_traversal_source_before_resolving_target
+contains	tools/baseline/src/specs/repo_file_ops.tsv	degraded_local
+contains	tools/baseline/src/specs/repo_file_ops.tsv	browser_writer_registration_rejects_broken_workspace_identity
+contains	tools/baseline/src/specs/repo_file_ops.tsv	source_control_write_gate
 absent	crates/core/src/ledger/manager/remote_repo_select.rs	expect("validated readable")
 absent	docs/acceptance-cases/07_storage_repo.md	deve repo create
 absent	docs/acceptance-cases/07_storage_repo.md	deve db inspect

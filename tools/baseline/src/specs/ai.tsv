@@ -1,0 +1,131 @@
+contains	docs/plan/14_commands.md	Future UI Surface
+contains	apps/web/src/components/command_palette/registry.rs	toggle_ai_chat
+absent	apps/web/src/components/command_palette/registry.rs	Retry Last Request
+absent	apps/web/src/components/command_palette/registry.rs	Switch Backend
+absent	apps/web/src/components/command_palette/registry.rs	Switch to PLAN
+absent	apps/web/src/components/command_palette/registry.rs	Switch to BUILD
+contains	docs/acceptance-cases/10_plugins.md	case_id: AI-004
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-005
+contains	docs/acceptance-cases/11_commands_settings.md	ui_type: "/plan"
+contains	docs/acceptance-cases/11_commands_settings.md	ui_type: "/build"
+contains	docs/acceptance-cases/11_commands_settings.md	ui_type: "/agents"
+contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_web slash_commands_preserve_backend_mode -- --nocapture
+contains	docs/plan/16_ai_agent.md	用作后端切换命令
+contains	docs/plan/14_commands.md	`/agents`: 在原生 `PLAN ↔ BUILD` 之间顺序切换。
+contains	docs/features/operations/ai_chat.md	不切换 backend，不发起 plugin call
+contains	apps/web/src/components/chat/slash_commands.rs	"/plan" => Some(SlashCommand::Plan)
+contains	apps/web/src/components/chat/slash_commands.rs	"/build" => Some(SlashCommand::Build)
+contains	apps/web/src/components/chat/slash_commands.rs	"/agents" => Some(SlashCommand::Agents)
+contains	apps/web/src/components/chat/slash_commands.rs	agents_toggles_only_native_session_modes
+contains	apps/web/src/components/chat/slash_commands.rs	slash_commands_are_consumed_without_plugin_call
+contains	apps/web/src/components/chat/slash_commands.rs	slash_commands_preserve_backend_mode
+contains	apps/web/src/components/chat/slash_commands.rs	change_backend: false
+absent	apps/web/src/components/chat/slash_commands.rs	agent-bridge
+absent	apps/web/src/components/chat/slash_commands.rs	trusted-cli
+contains	apps/web/src/api/ai_backend.rs	AI_BACKEND_NATIVE
+contains	apps/web/src/api/ai_backend.rs	AI_BACKEND_TRUSTED_CLI
+contains	apps/web/src/api/ai_backend.rs	ai_backend_to_plugin_id
+contains	apps/web/src/components/chat/actions/send.rs	if let Some(command) = consume_slash_command(&msg
+contains	apps/web/src/components/chat/actions/send_backend.rs	ai_backend_to_plugin_id
+contains	apps/web/src/components/chat/actions/send.rs	build_chat_context
+contains	apps/web/src/components/chat/actions/send.rs	bounded_chat_history
+contains	plugins/ai-chat/main.rhai	system_prompt_base
+contains	plugins/ai-chat/main.rhai	append_prior_history
+contains	docs/acceptance-cases/10_plugins.md	case_id: AI-001
+contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_core --test ai_chat_plugin_test -- --nocapture
+contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_web chat_context -- --nocapture
+contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_web plugin_text_response -- --nocapture
+contains	crates/core/tests/ai_chat_plugin_test.rs	test_chat_with_api_key_reaches_stream_bridge
+contains	apps/web/src/components/chat/actions/send/tests.rs	chat_context_includes_current_doc_markdown_selection_and_mode
+contains	apps/web/src/components/chat/actions/send.rs	chat.on_plugin_call.run
+contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_finishes_matching_chat_placeholder
+contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_does_not_duplicate_streamed_chat_content
+contains	apps/web/src/components/chat/actions/send_backend/tests.rs	trusted_cli_untrusted_send_uses_native_plugin_and_visible_notice
+contains	apps/web/src/components/chat/actions/apply.rs	chat_apply_append_markdown_op_uses_utf16_end_position
+contains	apps/web/src/components/chat/actions/apply.rs	chat_apply_edit_message_carries_current_scope_nonce
+contains	apps/web/src/components/chat/actions/apply.rs	apply_local_programmatic_op
+contains	apps/web/src/components/chat/actions/apply.rs	sync_editor_state_to_rust
+contains	apps/web/js/editor_adapter.js	window.syncEditorStateToRust = syncEditorStateToRust
+contains	apps/web/src/components/chat/message_item.rs	chat_apply_label_is_build_only_for_assistant_messages
+contains	apps/web/src/components/chat/message_list.rs	chat_apply_click_is_consumed_only_in_build_mode
+contains	apps/web/src/components/chat/drop_handler.rs	file reader is unavailable
+contains	apps/web/src/components/chat/drop_handler.rs	file read failed
+contains	apps/web/src/components/chat/drop_handler.rs	attach_file_errors_are_visible_banner_copy
+absent	apps/web/src/components/chat/drop_handler.rs	FileReader::new().unwrap()
+absent	apps/web/src/components/chat/drop_handler.rs	let _ = reader.read_as_text(&file);
+contains	docs/features/operations/ai_chat.md	Native AI 默认拒绝请求侧
+contains	docs/features/operations/ai_chat.md	/api/ai/backend-capabilities
+contains	docs/acceptance-cases/10_plugins.md	AI-007
+contains	apps/web/src/hooks/use_core/effects/message_dispatch_runtime/mod.rs	finish_chat_request_from_plugin_response
+contains	apps/cli/src/server/ai_chat/mod.rs	Native AI Chat tools are disabled by default
+contains	apps/cli/src/server/ai_chat/mod.rs	native_ai_rejects_request_tools_before_provider_call
+contains	apps/cli/src/server/ai_chat/stream.rs	Native AI Chat provider tool calls are disabled by default
+contains	apps/cli/src/server/ai_chat/stream.rs	pub fn get_http_client() -> Result<&'static reqwest::Client>
+contains	apps/cli/src/server/ai_chat/stream.rs	let client = get_http_client()?
+absent	apps/cli/src/server/ai_chat/stream.rs	expect("Failed to create HTTP client")
+contains	apps/cli/src/server/ai_chat/stream/tests.rs	native_ai_http_client_creation_is_result_based
+contains	apps/cli/src/server/ai_chat/stream/tests.rs	finalize_stream_response_rejects_provider_tool_calls
+contains	apps/cli/src/server/ai_chat/stream/tests.rs	provider_tool_call_rejection_does_not_send_finish_chunk
+contains	apps/cli/src/server/ai_chat/stream/tests.rs	provider_tool_call_delta_is_rejected_immediately
+contains	apps/cli/src/server/ai_chat/stream/tests.rs	provider_tool_call_payload_is_rejected_before_content_chunk
+contains	docs/plan/16_ai_agent.md	default-off、policy-gated 的 Trusted CLI path
+contains	docs/plan/16_ai_agent.md	DEVE_AI_AGENT_BRIDGE_ENABLED
+contains	docs/plan/16_ai_agent.md	DEVE_AI_AGENT_BRIDGE_TRUSTED
+contains	docs/plan/17_tech_stack.md	Native Baseline
+contains	docs/plan/17_tech_stack.md	Optional Trusted Path
+contains	docs/plan/17_tech_stack.md	Compatibility Host + Interface Reserved
+contains	docs/plan/plugins/agent_bridge/01_agent_bridge.md	enabled + trusted + explicit executable path
+contains	docs/plan/plugins/agent_bridge/01_agent_bridge.md	MCP 不作为产品运行时方向
+contains	apps/cli/src/server/agent_bridge/policy.rs	external agent disabled
+contains	apps/cli/src/server/agent_bridge/policy.rs	trusted mode required
+contains	apps/cli/src/server/agent_bridge/policy.rs	AGENT_CLI_PATH required
+contains	apps/cli/src/server/agent_bridge/policy.rs	AGENT_CLI_PATH must be absolute
+contains	apps/cli/src/server/agent_bridge/policy.rs	AGENT_CLI_PATH must point to an executable file
+contains	apps/cli/src/server/agent_bridge/policy/tests.rs	trusted_cli_default_off_policy_fails_closed
+contains	apps/cli/src/server/agent_bridge/policy/tests.rs	trusted_cli_untrusted_policy_falls_back_to_native_without_spawn_path
+contains	apps/cli/src/server/ai_chat/mod.rs	Native AI Chat disabled by config
+contains	apps/cli/src/server/handlers/plugin.rs	NATIVE_AI_DISABLED_ERROR
+contains	apps/cli/src/server/handlers/plugin/tests.rs	native_ai_disabled_blocks_ai_chat_rpc_and_finishes_chat
+contains	apps/web/src/api/ai_backend.rs	native_available
+contains	apps/web/src/api/ai_backend/tests.rs	trusted_cli_default_off_capabilities_default_to_native_backend
+contains	apps/web/src/hooks/use_ai_backend.rs	select_backend_fallback
+contains	apps/web/src/hooks/use_ai_backend.rs	native_does_not_auto_promote_to_trusted_cli_when_native_is_disabled
+contains	apps/cli/src/server/agent_bridge/policy/tests.rs	capabilities_do_not_promote_native_mode_to_trusted_cli_when_native_is_disabled
+contains	apps/cli/src/server/agent_bridge/policy/tests.rs	capabilities_keep_requested_trusted_cli_reason_when_policy_blocks_it
+contains	apps/web/src/i18n/extensions.rs	ai_backend_fallback
+contains	apps/cli/src/server/agent_bridge/stream.rs	Agent CLI exited with status
+contains	apps/cli/src/server/agent_bridge/stream.rs	Check AGENT_CLI_PATH points to an existing absolute executable path
+contains	apps/cli/src/server/agent_bridge/AGENTS.md	default-off
+contains	crates/core/src/plugin/runtime/module_resolver.rs	GuardedFileModuleResolver
+contains	crates/core/src/plugin/runtime/module_resolver.rs	parent_traversal_import_is_rejected
+contains	crates/core/src/plugin/runtime/module_resolver.rs	symlinked_module_escape_is_rejected
+contains	crates/core/src/plugin/runtime/rhai_v1.rs	GuardedFileModuleResolver
+contains	crates/core/src/plugin/runtime/chat_stream.rs	Native AI Chat currently rejects
+contains	docs/acceptance-cases/10_plugins.md	case_id: PLUG-002
+contains	docs/acceptance-cases/10_plugins.md	text_visible "Calculation Runtime"
+contains	docs/plan/19_plugins.md	Calculation Runtime 仍然是长期能力，但本章**不要求代码实现**
+contains	apps/web/src/components/sidebar/extensions.rs	calculation_runtime_title
+contains	apps/web/src/components/sidebar/extensions.rs	code_execution_disabled
+contains	apps/web/src/components/sidebar/extensions.rs	data-deve-extension-reserved
+contains	apps/web/src/components/sidebar/extensions.rs	aria-disabled="true"
+contains	apps/web/src/i18n/extensions.rs	Calculation Runtime
+contains	apps/web/src/i18n/extensions.rs	default off
+contains	apps/web/src/i18n/extensions.rs	Code execution disabled
+contains	docs/acceptance-cases/10_plugins.md	case_id: PLUG-003
+contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture
+contains	docs/plan/19_plugins.md	<projection_base>/<repo_name>/**/*.md
+contains	docs/plan/19_plugins.md	.notegit
+contains	docs/plan/19_plugins.md	ledger-aware host functions
+contains	crates/core/src/plugin/runtime/module_resolver.rs	fn parent_traversal_import_is_rejected()
+contains	crates/core/src/plugin/runtime/module_resolver.rs	fn symlinked_module_escape_is_rejected()
+contains	apps/web/src/components/settings_sections.rs	disabled=move || button_state.get().native_disabled
+contains	apps/web/src/components/settings_sections.rs	disabled=move || button_state.get().trusted_disabled
+contains	apps/web/src/components/settings_sections.rs	if !button_state.get_untracked().native_disabled
+contains	apps/web/src/components/settings_sections.rs	if !button_state.get_untracked().trusted_disabled
+contains	apps/web/src/components/settings_sections_policy.rs	ai_backend_button_state
+contains	apps/web/src/components/settings_sections_policy.rs	native_disabled
+contains	apps/web/src/components/settings_sections_policy.rs	trusted_disabled
+contains	apps/web/src/components/settings_sections_policy/tests.rs	trusted_cli_default_off_keeps_native_visible_and_disables_trusted_backend
+contains	apps/web/src/components/settings_sections_policy/tests.rs	ai_backend_buttons_disable_only_unavailable_backends
+contains	apps/web/src/components/settings_sections_policy/tests.rs	ai_backend_buttons_show_disabled_reason_only_for_disabled_native
+contains	apps/web/src/hooks/use_ai_backend.rs	backend: AI_BACKEND_NATIVE

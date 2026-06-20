@@ -2,12 +2,12 @@
 //!   - 11_ui_design/index#editor-group-tabstrip
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
-use super::model::{diff_tab_key, EditorDiffTab, EditorDocumentTab};
-use super::ops::{remove_diff_tab_with_order, remove_document_tab_with_order};
 use super::EditorTabKey;
-use crate::hooks::use_core::diff_session::DiffSessionWire;
-use crate::hooks::use_core::navigation::{guard_navigation, NavigationTarget};
+use super::model::{EditorDiffTab, EditorDocumentTab, diff_tab_key};
+use super::ops::{remove_diff_tab_with_order, remove_document_tab_with_order};
 use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::diff_session::DiffSessionWire;
+use crate::hooks::use_core::navigation::{NavigationTarget, guard_navigation};
 use crate::runtime::{
     document_client::DocumentClient, scope_client::ScopeClient,
     source_control_client::SourceControlClient,

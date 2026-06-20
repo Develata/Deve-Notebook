@@ -1,50 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Compatibility wrapper for existing CI/runbook calls.
+# The ui-spa-routing baseline spec lives in tools/baseline/src/specs/ui_spa_routing.tsv.
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 
-fail() {
-  echo "ui-spa-routing-baseline-check: $*" >&2
-  exit 1
-}
-
-contains() {
-  local file="$1"
-  local pattern="$2"
-  rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file" \
-    || fail "missing '$pattern' in $file"
-}
-
-not_contains() {
-  local file="$1"
-  local pattern="$2"
-  if rg -q --fixed-strings -- "$pattern" "$ROOT_DIR/$file"; then
-    fail "unexpected '$pattern' in $file"
-  fi
-}
-
-# UI-WEB-001: non-runtime Web routes fall back to SPA index; API/WS do not.
-contains docs/acceptance-cases/05_ui.md "case_id: UI-WEB-001"
-contains docs/acceptance-cases/05_ui.md "scripts/check-ui-spa-routing-baseline.sh"
-contains docs/acceptance-cases/05_ui.md "cargo test -p deve_cli static_files -- --nocapture"
-contains docs/acceptance-cases/05_ui.md "spa_route_fallback_status_200 true"
-contains docs/acceptance-cases/05_ui.md "api_route_not_spa_fallback true"
-contains docs/plan/11_ui_design/01_web.md "Serve(path) \\to index.html"
-
-contains apps/cli/src/server/static_files.rs "is_spa_fallback_path"
-contains apps/cli/src/server/static_files.rs "ServeDir::new(&dir).fallback(fallback)"
-contains apps/cli/src/server/static_files.rs "Response::new(Body::from(bytes))"
-not_contains apps/cli/src/server/static_files.rs "expect(\"spa index response\")"
-not_contains apps/cli/src/server/static_files.rs "expect(\"spa fallback error response\")"
-contains apps/cli/src/server/static_files/tests.rs "static_dir_spa_route_returns_index_with_ok_status"
-contains apps/cli/src/server/static_files/tests.rs "static_dir_unknown_api_route_does_not_fallback_to_index"
-contains apps/cli/src/server/static_files/tests.rs "static_dir_unknown_ws_route_does_not_fallback_to_index"
-contains apps/cli/src/server/static_files/tests.rs "static_dir_serves_existing_asset_without_spa_fallback"
-contains apps/cli/src/server/static_files_embed.rs "asset_for_request_path_in"
-contains apps/cli/src/server/static_files_embed.rs "HeaderValue::from_static(mime_for_path(asset.path))"
-not_contains apps/cli/src/server/static_files_embed.rs "expect(\"embedded asset response\")"
-not_contains apps/cli/src/server/static_files_embed.rs "expect(\"not found response\")"
-contains apps/cli/src/server/static_files_embed.rs "embedded_lookup_rejects_api_route_before_spa_fallback"
-contains apps/cli/src/server/static_files_embed.rs "embedded_lookup_rejects_ws_route_before_spa_fallback"
-
-echo "ui-spa-routing-baseline-check: ok"
+# Delegates to: cargo run -p deve_baseline -- ui-spa-routing
+run_deve_baseline "$ROOT_DIR" "ui-spa-routing" "ui-spa-routing-baseline-check"

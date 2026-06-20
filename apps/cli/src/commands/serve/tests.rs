@@ -1,5 +1,5 @@
-use super::{detect_main_node_role, detect_main_port, proxy_node_role, run, ServeOptions};
-use axum::{routing::get, Json, Router};
+use super::{ServeOptions, detect_main_node_role, detect_main_port, proxy_node_role, run};
+use axum::{Json, Router, routing::get};
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, RuntimeEnvironment, SyncMode};
 use std::ffi::OsString;
 use std::net::{SocketAddr, TcpListener};

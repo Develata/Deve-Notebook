@@ -3,7 +3,17 @@
 use crate::context::BaselineContext;
 use anyhow::{Result, bail};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RunMode {
+    TextOnly,
+    Full,
+}
+
 pub fn run_tsv(ctx: &BaselineContext, spec: &str) -> Result<()> {
+    run_tsv_with_mode(ctx, spec, RunMode::Full)
+}
+
+pub fn run_tsv_with_mode(ctx: &BaselineContext, spec: &str, mode: RunMode) -> Result<()> {
     for (line_no, raw_line) in spec.lines().enumerate() {
         let line = raw_line.trim_end_matches('\r');
         if line.trim().is_empty() || line.trim_start().starts_with('#') {
@@ -34,6 +44,11 @@ pub fn run_tsv(ctx: &BaselineContext, spec: &str) -> Result<()> {
             Operation::CssNumberLt { rel, left, right } => ctx.css_number_lt(rel, left, right)?,
             Operation::GitTracked { rel } => ctx.git_tracked(rel)?,
             Operation::GitNotIgnored { rel } => ctx.git_not_ignored(rel)?,
+            Operation::CargoTest { package, filter } => {
+                if mode == RunMode::Full {
+                    ctx.cargo_test(package, filter)?;
+                }
+            }
         }
     }
     Ok(())
@@ -95,6 +110,10 @@ enum Operation<'a> {
     GitNotIgnored {
         rel: &'a str,
     },
+    CargoTest {
+        package: &'a str,
+        filter: &'a str,
+    },
 }
 
 fn parse_operation(line_no: usize, line: &str) -> Result<Operation<'_>> {
@@ -146,6 +165,7 @@ fn parse_operation(line_no: usize, line: &str) -> Result<Operation<'_>> {
         ["css_number_lt", rel, left, right] => Ok(Operation::CssNumberLt { rel, left, right }),
         ["git_tracked", rel] => Ok(Operation::GitTracked { rel }),
         ["git_not_ignored", rel] => Ok(Operation::GitNotIgnored { rel }),
+        ["cargo_test", package, filter] => Ok(Operation::CargoTest { package, filter }),
         [op, ..] => bail!("invalid baseline spec at line {line_no}: unsupported op '{op}'"),
         [] => bail!("invalid baseline spec at line {line_no}: empty line"),
     }
@@ -196,5 +216,16 @@ mod tests {
     #[test]
     fn split_list_ignores_empty_items() {
         assert_eq!(split_list("a||b|"), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn parses_cargo_test_operation() {
+        assert_eq!(
+            parse_operation(1, "cargo_test\tdeve_web\tsettings").expect("operation"),
+            Operation::CargoTest {
+                package: "deve_web",
+                filter: "settings",
+            }
+        );
     }
 }

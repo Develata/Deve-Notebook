@@ -1,6 +1,6 @@
 use super::super::transport::decode_server_message;
-use deve_core::protocol::frame::encode_server_binary;
 use deve_core::protocol::ServerMessage;
+use deve_core::protocol::frame::encode_server_binary;
 use tokio_tungstenite::tungstenite::Message;
 
 #[test]

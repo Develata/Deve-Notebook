@@ -1,0 +1,267 @@
+contains	docs/plan/14_commands.md	Source Control / Git-like Workflow
+contains	docs/plan/14_commands.md	AI: Switch to PLAN Mode
+contains	docs/plan/14_commands.md	AI: Switch to BUILD Mode
+contains	docs/plan/14_commands.md	不负责切换 `native / trusted-cli` 后端
+contains	apps/web/src/components/command_palette/registry.rs	merge_peer_command
+contains	apps/web/src/components/command_palette/registry.rs	establish_branch_command(locale, set_show)
+contains	apps/web/src/components/command_palette/registry/branch.rs	Command::unavailable
+contains	apps/web/src/components/command_palette/registry/branch.rs	establish_branch_command_is_unavailable_notice_only
+contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_status_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_mirror_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_export_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/ui.rs	data-deve-command-unavailable
+contains	apps/web/src/hooks/use_core/source_control_notice.rs	ESTABLISH_BRANCH_UNAVAILABLE_DETAIL
+contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_STATUS_CLI_NOTICE_DETAIL
+contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_MIRROR_CLI_NOTICE_DETAIL
+contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_EXPORT_CLI_NOTICE_DETAIL
+contains	apps/web/src/components/sidebar/source_control/error_notice_copy.rs	is_establish_branch_unavailable_notice
+contains	apps/web/src/i18n/command_palette.rs	establish_branch_unavailable_reason
+contains	apps/web/src/i18n/command_palette.rs	git_status
+contains	apps/web/src/i18n/command_palette.rs	git_mirror
+contains	apps/web/src/i18n/command_palette.rs	git_export_mirror
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web establish_branch_command -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004B
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web git_status_command -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web git_mirror_command -- --nocapture
+contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web git_export_command -- --nocapture
+absent	apps/web/src/components/command_palette/registry.rs	P2P: Establish Branch (Placeholder)
+absent	docs/acceptance-cases/04_diff.md	deve merge --peer
+absent	docs/acceptance-cases/04_diff.md	deve dump --doc
+absent	docs/acceptance-cases/04_diff.md	--field last_op
+absent	apps/web/src/components/command_palette/registry.rs	Git: Sync
+absent	apps/web/src/components/command_palette/registry.rs	Git: Commit
+absent	apps/web/src/i18n/command_palette.rs	Git: Sync
+absent	apps/web/src/i18n/command_palette.rs	Git: Commit
+contains	apps/web/src/i18n/command_palette.rs	Git: Status
+contains	apps/web/src/i18n/command_palette.rs	Git: Mirror
+contains	apps/web/src/i18n/command_palette.rs	Git: Export Mirror
+contains	apps/web/src/i18n/command_palette.rs	Git: Push Mirror
+contains	apps/web/src/components/command_palette/registry/git.rs	git_status_command
+contains	apps/web/src/components/command_palette/registry/git.rs	git_mirror_command
+contains	apps/web/src/components/command_palette/registry/git.rs	git_export_command
+contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_import_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_push_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_repair_command_sets_cli_only_notice
+contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004A
+contains	docs/features/07_diff_logic.md	Git import/push/repair 写操作只允许通过显式 CLI surface 触发
+contains	docs/features/07_diff_logic.md	当前阶段不实现 Web 后端直接 Git import/push/repair，也不实现后台自动 Git mirror repair
+contains	docs/plan/17_tech_stack.md	Web/后台不得从只读 status/review surface 隐式升级为 Git writer
+contains	docs/plan/17_tech_stack.md	任何可执行 Git repair UI 都必须另立设计批次，并要求人工确认
+contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	Web 只提供 CLI-only notice 与只读 repair review
+contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	不得后台执行 Git，不得让 Command Palette 直接写 Git
+contains	apps/cli/src/server/router.rs	"/api/sc/git-mirror/repair-review"
+contains	apps/web/src/components/sidebar/source_control/error_notice.rs	data-deve-git-repair-review="readonly"
+contains	apps/web/src/i18n/source_control_git.rs	Git mirror repair is CLI-only
+contains	docs/plan/05_diff_logic.md	CommitStaged
+contains	docs/features/operations/sc_commit.md	ClientMessage::Commit { scope_nonce }
+contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::Commit
+absent	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::CommitAndPush
+contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	Commit & Push is CLI-only
+contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	source_control_scope_nonce(scope)
+contains	apps/cli/src/server/ws/route/source_control.rs	ClientMessage::CommitAndPush { message, .. }
+contains	apps/cli/src/server/ws/route/source_control.rs	source_control::handle_commit_and_push
+contains	apps/cli/src/server/handlers/source_control/commits.rs	COMMIT_AND_PUSH_CLI_ONLY_DETAIL
+contains	apps/cli/src/server/handlers/source_control/commits.rs	resolve_current_authorized_writable_local_repo
+contains	apps/cli/src/server/ws/route/source_control/tests.rs	source_control_scope_nonce_gate_rejects_missing_scope_before_handler
+contains	apps/cli/src/server/tests/source_control/source_control_scope_test/write_extra.rs	commit_and_push_ws_returns_cli_only_blocker_without_commit
+contains	apps/cli/src/server/handlers/source_control/http_scope.rs	source control scope nonce missing
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	test_http_status_rejects_missing_scope_nonce
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs	test_http_stage_rejects_missing_scope_nonce_before_mutation
+contains	apps/cli/src/server/source_control_proxy/mod.rs	REMOTE_PROXY_SCOPE_NONCE
+contains	apps/cli/src/server/source_control_proxy/mod.rs	new_with_delegation_secret
+contains	apps/cli/src/server/source_control_proxy/mod.rs	DELEGATED_SC_HEADER
+contains	apps/cli/src/server/source_control_proxy/mod.rs	delegated_get
+contains	apps/cli/src/server/source_control_proxy/mod.rs	impl DelegatedSourceControlApi for RemoteSourceControlApi
+contains	apps/cli/src/server/source_control_proxy/mod.rs	delegated_source_control_proxy_api_is_type_marked
+contains	apps/cli/src/server/source_control_proxy/client.rs	pub(super) fn build_client(base_url: &str) -> Result<reqwest::Client>
+contains	apps/cli/src/commands/serve.rs	RemoteSourceControlApi::new_with_delegation_secret
+contains	apps/cli/src/commands/serve.rs	Arc<dyn deve_core::source_control::DelegatedSourceControlApi>
+contains	apps/cli/src/server/router.rs	delegated_source_control_middleware
+contains	apps/cli/src/server/router.rs	"/api/delegated/sc/status"
+contains	apps/cli/src/server/auth/delegated_source_control.rs	delegated source control capability missing
+contains	docs/features/07_diff_logic.md	proxy 模式的只读 repo/source-control 查询必须走 delegated read capability
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli switch_branch_failure_revokes_source_control_write_grant -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli source_control_write_grant_creation_fails_closed -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli source_control_scope_cleanup_revokes_write_grant -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli sc_stage_all_rejects_broken_workspace_identity -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli sc_commit_rejects_broken_workspace_identity -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli git_import_apply_rejects_broken_workspace_identity -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --lib source_control_write_gate_rejects_broken_workspace_identity -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_core --test plugin_source_control_gate_test plugin_sc_commit_respects_git_bridge_off -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli remote_source_control_proxy_reads_use_delegated_capability -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_cli delegated_source_control_proxy_api_is_type_marked -- --nocapture
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs	delegated_source_control_requires_proxy_capability
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	remote_source_control_proxy_reads_use_delegated_capability
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/stage.rs	http_source_control_write_grant_requires_local_branch
+contains	apps/cli/src/server/source_control_grants/tests.rs	source_control_write_grant_creation_fails_closed
+contains	apps/cli/src/server/tests/source_control/source_control_scope_binding_test/remote.rs	source_control_scope_cleanup_revokes_write_grant
+contains	apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.rs	switch_branch_failure_revokes_source_control_write_grant
+contains	docs/acceptance-cases/04_diff.md	source_control_commit_writer_requires_explicit_git_bridge_policy
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	command_palette_git_bridge_mode_reactive_after_node_role_probe
+absent	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_staged(
+absent	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_staged_in_local_repo(
+absent	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_staged_in_local_repo(
+absent	crates/core/src/ledger/manager/source_control_write_runtime.rs	fn commit_staged_in_local_repo(
+absent_tree	crates/core/src	.commit_staged(
+absent_tree	crates/core/tests	.commit_staged(
+absent_tree	apps/cli/src	.commit_staged(
+contains	apps/cli/src/commands/sc.rs	sc_stage_all_rejects_broken_workspace_identity
+contains	apps/cli/src/commands/sc.rs	sc_commit_rejects_broken_workspace_identity
+contains	apps/cli/src/commands/git_import_smoke_test.rs	git_import_apply_rejects_broken_workspace_identity
+absent	apps/cli/src/server/source_control_proxy/client.rs	expect("build source control HTTP client")
+absent	apps/cli/src/server/handlers/source_control/repo_scope.rs	expect("checked active branch")
+absent	apps/cli/src/server/repo_scope/sync.rs	expect("checked active branch")
+absent	apps/cli/src/server/handlers/switcher/switcher_scope.rs	expect("checked active branch")
+absent	apps/cli/src/commands/git_output/status.rs	expect("lagging record rendered retry command")
+absent	crates/core/src/git_bridge/push.rs	expect("remote resolved")
+absent	crates/core/src/git_bridge/push.rs	expect("branch resolved")
+contains	crates/core/src/git_bridge/push/tests.rs	unresolved_push_target_becomes_blocker_instead_of_panic
+contains	apps/cli/src/commands/git_output/status.rs	let retry_command = git_command("export", repo_name, true);
+contains	apps/web/src/api/git_mirror.rs	scope_nonce={scope_nonce}
+contains	apps/web/src/api/git_mirror.rs	encode_query_component(repo_id)
+contains	apps/web/src/api/git_mirror.rs	repair_review_url_encodes_repo_id_query_component
+contains	apps/web/src/components/sidebar/source_control/error_notice.rs	current_scope_nonce.get_untracked() == scope_nonce
+contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	on_commit_and_push.run(())
+contains	apps/web/src/i18n/source_control/actions.rs	Commit & Push
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-DIFF-001
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: scripts/check-source-control-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: cargo test -p deve_web diff_first_viewport -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_window_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_spacer_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_initial_compute_deferred true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	cli_assert: diff_first_viewport_full_compute_chunked true
+contains	docs/acceptance-bindings.tsv	UI-DIFF-001|manual-chrome|docs/features/07_diff_logic.md|diff first viewport workflow
+contains	apps/web/src/components/diff_view/unified.rs	pub const DIFF_VIEWPORT_CHUNK_SIZE: usize = 80;
+contains	apps/web/src/components/diff_view/unified.rs	fn diff_first_viewport_initial_window_is_bounded_for_long_doc()
+contains	apps/web/src/components/diff_view/unified.rs	fn diff_first_viewport_spacers_preserve_scroll_extent()
+contains	apps/web/src/components/diff_view/unified.rs	fn diff_first_viewport_clamps_stale_scroll_after_shorter_doc()
+contains	apps/web/src/components/diff_view/model/model_chunk.rs	pub struct DiffChunkJob
+contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_preview_bounds_initial_compute_rows()
+contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_chunk_job_matches_sync_chunked_output()
+contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_chunk_job_handles_insert_only_document()
+contains	apps/web/src/components/diff_view/model/model_chunk.rs	fn diff_first_viewport_chunk_job_handles_delete_only_document()
+contains	apps/web/src/components/diff_view/state/compute/mod.rs	start_chunked_diff(
+contains	apps/web/src/components/diff_view/state/compute/mod.rs	ComputePhase::PartialReady
+contains	apps/web/src/components/diff_view/state/compute/mod.rs	preview_diff(old_content_ref.as_str(), &text)
+contains	apps/web/src/components/diff_view/state/compute/helpers.rs	pub key: Option<String>
+contains	apps/web/src/components/diff_view/state/compute/helpers.rs	initial_cached_or_preview(
+contains	apps/web/src/components/diff_view/state/compute/helpers.rs	preview_diff(
+contains	apps/web/src/components/diff_view/state/compute/helpers.rs	pub const INITIAL_DIFF_PREVIEW_BYTES
+contains	apps/web/src/components/diff_view/state/compute/helpers.rs	fn exceeds_preview_window(
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_initial_cache_miss_uses_preview()
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_long_initial_defers_cache_key()
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_short_initial_builds_cache_key()
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_large_single_line_defers_cache_key()
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_large_single_line_preview_is_byte_bounded()
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_preview_respects_utf8_byte_boundary()
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_first_viewport_initial_short_cache_miss_is_complete()
+contains	apps/web/src/components/diff_view/viewport.rs	pub const DEFAULT_DIFF_VIEWPORT_HEIGHT_PX: i32 = 600;
+contains	apps/web/src/components/diff_view/viewport.rs	fn diff_first_viewport_default_height_is_stable()
+contains	apps/web/src/components/diff_view/unified_pane.rs	data-deve-diff-first-viewport=move ||
+contains	apps/web/src/components/diff_view/unified_pane.rs	fn diff_first_viewport_marker_requires_ready_visible_rows()
+contains	docs/acceptance-bindings.tsv	UI-DIFF-002|manual-chrome|docs/features/07_diff_logic.md|mobile diff edit debounce workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-003|manual-chrome|docs/features/07_diff_logic.md|desktop diff chat coexistence workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-004|manual-chrome|docs/features/07_diff_logic.md|diff i18n copy workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-005|manual-chrome|docs/features/07_diff_logic.md|diff compute indicator workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-006|manual-chrome|docs/features/07_diff_logic.md|diff hunk button navigation workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-007|manual-chrome|docs/features/07_diff_logic.md|diff word-level replace highlight workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-008|manual-chrome|docs/features/07_diff_logic.md|diff bracket and alt-key navigation workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-009|manual-chrome|docs/features/07_diff_logic.md|diff header change stats workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-010|manual-chrome|docs/features/07_diff_logic.md|diff unchanged-region folding workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-011|manual-chrome|docs/features/07_diff_logic.md|diff context-lines switch workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-012|manual-chrome|docs/features/07_diff_logic.md|diff semantic anchor restore workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-013|manual-chrome|docs/features/07_diff_logic.md|diff cache badge and compute time workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-014|manual-chrome|docs/features/07_diff_logic.md|diff cache invalidation workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-015|manual-chrome|docs/features/07_diff_logic.md|diff algorithm label workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-016|manual-chrome|docs/features/07_diff_logic.md|diff F7 navigation workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-017|manual-chrome|docs/features/07_diff_logic.md|diff cache ratio workflow
+contains	docs/acceptance-bindings.tsv	UI-DIFF-018|manual-chrome|docs/features/07_diff_logic.md|diff repo-scope cache isolation workflow
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-002	run: cargo test -p deve_web diff_edit_debounce -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-004	run: scripts/check-source-control-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-004	cli_assert: diff_hardcoded_copy_absent true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-005	run: cargo test -p deve_web diff_compute_indicator -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-006	run: cargo test -p deve_web diff_hunk_navigation -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-007	run: cargo test -p deve_web diff_replace_lines -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-008	run: cargo test -p deve_web diff_hunk_navigation -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-009	run: cargo test -p deve_web diff_header_change_stats -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-010	run: cargo test -p deve_web diff_fold_rows -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-011	run: cargo test -p deve_web diff_context_lines -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-012	run: cargo test -p deve_web diff_semantic_anchor -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-013	run: cargo test -p deve_web diff_cache -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-013	run: cargo test -p deve_web diff_elapsed_ms -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-014	run: cargo test -p deve_web diff_cache -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-015	run: cargo test -p deve_web diff_algorithm_label -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-016	run: cargo test -p deve_web diff_hunk_navigation -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-017	run: cargo test -p deve_web diff_cache_ratio -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-018	run: cargo test -p deve_web diff_cache_key -- --nocapture
+contains	apps/web/src/components/diff_view/state/compute/mod.rs	pub const DIFF_EDIT_DEBOUNCE_MS: u32 = 150;
+contains	apps/web/src/components/diff_view/state/compute/mod.rs	fn diff_edit_debounce_matches_acceptance_contract()
+contains	apps/web/src/components/diff_view/state/mod.rs	fn diff_compute_indicator_tracks_non_ready_phases()
+contains	apps/web/src/components/diff_view/navigation.rs	fn diff_hunk_navigation_indices_wrap()
+contains	apps/web/src/components/diff_view/navigation.rs	fn diff_header_change_stats_count_added_and_deleted_lines()
+contains	apps/web/src/components/diff_view/model.rs	fn diff_replace_lines_emit_word_level_ranges()
+contains	apps/web/src/components/diff_view/model/hunk_fold.rs	fn diff_fold_rows_collapse_and_expand_unchanged_region()
+contains	apps/web/src/components/diff_view/model/hunk_fold.rs	fn diff_context_lines_change_fold_count()
+contains	apps/web/src/components/diff_view/anchor.rs	fn diff_semantic_anchor_delta_preserves_original_offset()
+contains	apps/web/src/components/diff_view/cache.rs	fn diff_cache_key_is_scoped_by_repo_path_mode_and_context()
+contains	apps/web/src/components/diff_view/metrics.rs	fn diff_cache_ratio_updates_from_samples()
+contains	apps/web/src/components/diff_view/metrics.rs	fn diff_elapsed_ms_saturates_for_clock_skew()
+contains	apps/web/src/components/diff_view/state/compute/helpers/tests.rs	fn diff_algorithm_label_names_are_stable()
+contains	apps/web/src/components/diff_view/header.rs	t::diff::cache_state_help
+contains	apps/web/src/components/diff_view/header.rs	t::diff::cache_ratio_help
+contains	apps/web/src/components/diff_view/header.rs	t::diff::compute_ms_help
+contains	apps/web/src/i18n/diff.rs	pub fn cache_state_help
+contains	apps/web/src/i18n/diff.rs	pub fn cache_ratio_help
+contains	apps/web/src/i18n/diff.rs	pub fn compute_ms_help
+absent_tree	apps/web/src/components/diff_view	"Diff:"
+absent_tree	apps/web/src/components/diff_view	"Read Only"
+absent_tree	apps/web/src/components/diff_view	"Preview Diff"
+absent_tree	apps/web/src/components/diff_view	"Close Diff View"
+contains	docs/features/operations/sc_commit_and_push.md	结构化 CLI-only blocker
+contains	apps/cli/src/server/handlers/source_control/commits.rs	Commit & Push
+absent	apps/cli/src/server/handlers/source_control/commits.rs	Commit & Push failed
+absent	apps/cli/src/server/handlers/source_control/commits.rs	SyncPush
+contains	docs/plan/05_diff_logic.md	canonical targets
+contains	crates/core/src/source_control/types.rs	pub doc_id: Option<DocId>
+contains	crates/core/src/source_control/commit_diff.rs	doc_id: Some(doc_id)
+contains	crates/core/tests/commit_diff_node_projection_test.rs	assert_eq!(diffs[0].doc_id, Some(doc_id));
+contains	docs/plan/05_diff_logic.md	- `DocDiff`
+contains	docs/plan/05_diff_logic.md	  - `doc_id`
+contains	crates/core/src/protocol/server.rs	DocDiff {
+contains	crates/core/src/protocol/server.rs	#[serde(default)] doc_id: Option<DocId>
+contains	apps/cli/src/server/handlers/source_control/diff/mod.rs	workdir_diff_payload_for_target_in_local_repo
+contains	apps/cli/src/server/handlers/source_control/diff/remote.rs	doc_id: Some(doc_id)
+contains	apps/web/src/runtime/source_control_client/diff_session.rs	pub doc_id: Option<DocId>
+contains	apps/web/src/hooks/use_core/effects_sc_apply/tests.rs	apply_doc_diff_preserves_doc_identity
+absent	crates/core/src/ledger/manager/source_control_target_lookup.rs	resolve_canonical_path
+contains	crates/core/src/ledger/manager/source_control_target_resolution/tests.rs	resolve_from_entries_rejects_unrelated_same_doc_live_entry
+contains	crates/core/src/source_control/pending_fs/target/tests.rs	pending_doc_target_prefers_live_successor_over_exact_deleted_doc_path
+contains	crates/core/src/source_control/staging/target/tests.rs	staged_doc_target_prefers_live_successor_over_exact_deleted_doc_path
+contains	crates/core/src/source_control/pending_fs/target/tests.rs	doc_target_rejects_unrelated_same_doc_live_entry
+contains	crates/core/src/source_control/staging/target/tests.rs	doc_target_rejects_unrelated_same_doc_live_entry
+contains	crates/core/src/plugin/runtime/host/tests.rs	source_control_write_gate_rejects_broken_workspace_identity
+contains	crates/core/tests/source_control_target_lookup_canonical_test.rs	workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set
+absent	crates/core/src/ledger/manager/repo_scope_selector_runtime.rs	ignored stale repo_name
+contains	crates/core/src/ledger/manager/repo_scope_selector_runtime.rs	select_local_repo_name_for_execution(&candidates)
+contains	crates/core/tests/local_repo_selector_heal_test.rs	resolve_local_repo_name_for_execution_rejects_selector_mismatch
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	test_http_status_rejects_selector_mismatch
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/status.rs	ServerErrorCode::ScRepoContextInvalid
+contains	apps/cli/src/server/handlers/source_control/present/resolve.rs	matched multiple doc rename successors
+contains	apps/cli/src/server/handlers/source_control/present/resolve_extra_tests.rs	resolve_target_fails_closed_when_doc_id_has_multiple_rename_successors
+contains	apps/cli/src/server/handlers/source_control/present/resolve_extra_tests.rs	resolve_target_fails_closed_when_doc_id_matches_exact_and_successor
+contains	apps/cli/src/server/handlers/source_control/service/target.rs	current_entry(entries, resolved)
+contains	apps/cli/src/server/handlers/source_control/service/target/tests/related.rs	related_targets_keep_resolved_doc_id_when_old_path_is_reused
+contains	crates/core/src/ledger/manager/source_control_workdir_diff.rs	workdir_diff_inputs_for_resolved_target
+contains	crates/core/tests/source_control_target_lookup_canonical_test.rs	workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused
+contains	apps/cli/src/server/handlers/source_control/diff/remote_content.rs	Remote document target path mismatch
+contains	apps/cli/src/server/handlers/source_control/diff/remote_test_extra.rs	remote_diff_rejects_doc_id_path_mismatch
+contains	crates/core/src/ledger/manager/commit_preflight.rs	preflight_staged_upsert_identity
+contains	crates/core/src/ledger/manager/commit_preflight.rs	lacks rename evidence
+contains	crates/core/tests/source_control_commit_apply_error_test.rs	commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc
+contains	crates/core/tests/source_control_commit_apply_error_test.rs	commit_staged_rejects_upsert_move_without_rename_evidence
+contains	docs/plan/05_diff_logic.md	legacy `Deleted + doc_id=None` 的 exact delete selector
+contains	crates/core/src/ledger/manager/source_control_path_target.rs	has_legacy_docless_exact_delete
+contains	crates/core/src/ledger/manager/source_control_path_target/tests.rs	path_wrapper_promotes_docless_non_delete_to_tracked_identity

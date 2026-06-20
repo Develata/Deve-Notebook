@@ -1,0 +1,202 @@
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-DESK-001
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	run: cargo test -p deve_web desktop_diff_scroll -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	cli_assert: desktop_canonical_column_markers_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-001	cli_assert: desktop_diff_scroll_sync_ratio_bound true
+contains	apps/web/src/components/desktop_layout/sidebar.rs	data-deve-desktop-col="1-sidebar"
+contains	apps/web/src/components/diff_view/split_pane.rs	data-deve-desktop-col="2-diff-old"
+contains	apps/web/src/components/diff_view/split_pane.rs	data-deve-desktop-col="3-editor"
+contains	apps/web/src/editor/mod.rs	data-deve-desktop-col="4-outline"
+contains	apps/web/src/components/desktop_chat_panel.rs	data-deve-desktop-col="5-chat"
+contains	apps/web/src/components/diff_view/split_pane.rs	synced_scroll_top(
+contains	apps/web/src/components/diff_view/split_pane.rs	source_top as f64 / source_max as f64
+contains	apps/web/src/components/diff_view/split_pane.rs	right.set_scroll_top(target_top);
+contains	apps/web/src/components/diff_view/split_pane.rs	left.set_scroll_top(target_top);
+contains	apps/web/src/components/diff_view/split_pane.rs	set_syncing_left.set(false);
+contains	apps/web/src/components/diff_view/split_pane.rs	set_syncing_right.set(false);
+contains	apps/web/src/components/diff_view/split_pane.rs	fn desktop_diff_scroll_syncs_col3_to_col2_by_ratio()
+contains	apps/web/src/components/diff_view/split_pane.rs	fn desktop_diff_scroll_sync_skips_noop_target_update()
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-DESK-002
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	run: cargo test -p deve_web desktop_layout_resize -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	cli_assert: desktop_layout_resize_bounds_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	cli_assert: desktop_layout_width_persistence_keys_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	cli_assert: desktop_layout_divider_markers_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	ui_assert: display_editor_width_can_eq 0
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	ui_assert: available_width_tracks_visible_dividers true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-002	ui_assert: divider_visible_after_size_collapse true
+contains	apps/web/src/hooks/use_layout.rs	pub(crate) const DESKTOP_DIVIDER_WIDTH: i32 = 16;
+contains	apps/web/src/hooks/use_layout.rs	read_width("ui_sidebar_width")
+contains	apps/web/src/hooks/use_layout.rs	read_width("ui_center_panel_width")
+contains	apps/web/src/hooks/use_layout.rs	read_width("ui_right_panel_width")
+contains	apps/web/src/hooks/use_layout.rs	write_width("ui_sidebar_width",
+contains	apps/web/src/hooks/use_layout.rs	write_width("ui_center_panel_width",
+contains	apps/web/src/hooks/use_layout.rs	write_width("ui_right_panel_width",
+contains	apps/web/src/hooks/use_layout.rs	fn panel_center_width(
+contains	apps/web/src/hooks/use_layout.rs	fn visible_divider_count(
+contains	apps/web/src/hooks/use_layout.rs	fn clamped_side_widths_for_visibility(
+contains	apps/web/src/hooks/use_layout/resize.rs	fn resized_values_for_target(
+contains	apps/web/src/hooks/use_layout/resize.rs	fn desktop_layout_resize_hidden_regions_only_affect_constraints()
+contains	apps/web/src/hooks/use_layout/resize.rs	fn desktop_layout_resize_left_divider_collapses_sidebar_or_center()
+contains	apps/web/src/hooks/use_layout/resize.rs	fn desktop_layout_resize_right_divider_collapses_chat_or_center()
+contains	apps/web/src/components/desktop_layout/handles.rs	data-deve-desktop-resizer=marker
+contains	apps/web/src/components/desktop_layout.rs	marker="left-divider"
+contains	apps/web/src/components/desktop_chat_panel.rs	data-deve-desktop-resizer="right-divider"
+contains	apps/web/src/components/desktop_layout/content.rs	data-deve-desktop-col="3-display-editor"
+contains	apps/web/src/components/desktop_layout.rs	fn desktop_layout_resize_grid_hides_chat_divider_when_chat_visibility_is_off()
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-DESK-003
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	run: cargo test -p deve_web unified_search_mode -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	run: scripts/check-repo-file-ops-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	cli_assert: unified_search_mode_prefix_routing_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	cli_assert: unified_search_mode_dom_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	cli_assert: repo_file_ops_baseline_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	ui_assert: mode_eq "command"
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	ui_assert: mode_eq "file-op"
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	ui_assert: mode_eq "branch"
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-003	ui_assert: mode_eq "file"
+contains	apps/web/src/components/search_box/logic/providers.rs	pub(crate) enum SearchSurfaceMode
+contains	apps/web/src/components/search_box/logic/providers.rs	pub(crate) fn search_surface_mode(query: &str) -> SearchSurfaceMode
+contains	apps/web/src/components/search_box/logic/providers.rs	SearchSurfaceMode::Command
+contains	apps/web/src/components/search_box/logic/providers.rs	SearchSurfaceMode::Branch
+contains	apps/web/src/components/search_box/logic/providers.rs	SearchSurfaceMode::File
+contains	apps/web/src/components/search_box/logic/providers/tests.rs	fn unified_search_mode_routes_command_branch_file_prefixes()
+contains	apps/web/src/components/search_box/logic/providers/tests.rs	fn unified_search_mode_routes_extended_prefixes()
+contains	apps/web/src/components/search_box/logic/providers/tests.rs	fn unified_search_mode_exposes_stable_dom_values()
+contains	apps/web/src/components/search_box/logic/providers/tests.rs	SearchSurfaceMode::FileOp
+contains	apps/web/src/components/search_box/ui_sections.rs	data-deve-search-mode=move || search_surface_mode(&query.get()).as_str()
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-DESK-004
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	run: cargo test -p deve_web editor_tab -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	cli_assert: editor_tab_visible_order_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	cli_assert: editor_tab_document_lru_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	cli_assert: editor_tab_reorder_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	ui_assert: editor_tab_trailing_blank_drop_moves_to_end true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	ui_assert: diff_tab_not_counted_against_document_limit true
+contains	docs/plan/11_ui_design/index.md	visible tab order
+contains	docs/plan/11_ui_design/index.md	document access order
+contains	docs/plan/11_ui_design/index.md	components/editor_tabs/runtime
+contains	docs/features/08_ui_design_01_web.md	Markdown 文档 tab 超过用户设置的上限
+contains	docs/features/08_ui_design_01_web.md	可见空白区域
+contains	apps/web/src/components/editor_tabs/model.rs	pub(crate) enum EditorTabItem
+contains	apps/web/src/components/editor_tabs/model.rs	pub(crate) enum DropPosition
+contains	apps/web/src/components/editor_tabs/ops.rs	pub(crate) fn touch_document_access_order
+contains	apps/web/src/components/editor_tabs/ops.rs	pub(crate) fn evict_lru_document_tab
+contains	apps/web/src/components/editor_tabs/ops.rs	pub(crate) fn reorder_visible_tab
+contains	apps/web/src/components/editor_tabs/runtime.rs	doc_access_order
+contains	apps/web/src/components/editor_tabs/runtime.rs	ordered_tabs
+contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	data-deve-editor-tab-key
+contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	draggable="true"
+contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	data-deve-editor-tabstrip-trailing-drop="after-last"
+contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	trailing_blank_drop_target
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-004
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	run: cargo test -p deve_web activity_more -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	ui_click: "activity-more-button"
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	ui_click: "activity_more_item_explorer"
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	ui_click: "activity_more_pin_search"
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	cli_assert: activity_more_button_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	cli_assert: activity_more_item_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	cli_assert: activity_more_pin_action_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	cli_assert: activity_more_item_close_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	cli_assert: activity_more_pin_keeps_menu_open_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	ui_assert: more_menu_visible false
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-004	ui_assert: pinned_state_updated true
+contains	docs/report/web-activity-more-browser-smoke-2026-05-17.md	Browser smoke result: pass.
+contains	docs/report/web-activity-more-browser-smoke-2026-05-17.md	menuStillOpen=true
+contains	docs/report/web-activity-more-browser-smoke-2026-05-17.md	Row click and Pin/Unpin are separate in the actual DOM event path.
+contains	apps/web/src/components/activity_bar/mod.rs	data-deve-activity-more-button=activity_more_button_marker()
+contains	apps/web/src/components/activity_bar/mod.rs	fn activity_more_button_marker_is_stable()
+contains	apps/web/src/components/activity_bar/popup_menu.rs	data-deve-activity-more-item=activity_more_item_marker(item)
+contains	apps/web/src/components/activity_bar/popup_menu.rs	data-deve-activity-more-pin-action=activity_more_pin_action_marker(item)
+contains	apps/web/src/components/activity_bar/popup_menu.rs	pub(super) fn activity_more_after_item_click() -> bool
+contains	apps/web/src/components/activity_bar/popup_menu.rs	pub(super) fn activity_more_after_pin_click(open: bool) -> bool
+contains	apps/web/src/components/activity_bar/popup_menu.rs	pub(super) fn toggle_activity_more_pin(
+contains	apps/web/src/components/activity_bar/popup_menu/tests.rs	fn activity_more_menu_items_cover_sidebar_entries()
+contains	apps/web/src/components/activity_bar/popup_menu/tests.rs	fn activity_more_pin_actions_cover_sidebar_entries()
+contains	apps/web/src/components/activity_bar/popup_menu/tests.rs	fn activity_more_item_click_closes_menu()
+contains	apps/web/src/components/activity_bar/popup_menu/tests.rs	fn activity_more_pin_click_keeps_menu_state()
+contains	apps/web/src/components/activity_bar/popup_menu/tests.rs	fn activity_more_pin_toggle_adds_unpinned_view()
+contains	apps/web/src/components/activity_bar/popup_menu/tests.rs	fn activity_more_pin_toggle_removes_pinned_view()
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-005
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	run: cargo test -p deve_web repo_switcher -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	ui_click: "repo-switcher-trigger"
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	ui_click: "repo-switcher-outside"
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	cli_assert: repo_switcher_trigger_button_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	cli_assert: repo_switcher_menu_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	cli_assert: repo_switcher_item_button_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	cli_assert: repo_switcher_outside_dismiss_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	ui_assert: repo_switcher_menu_visible true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-005	ui_assert: repo_switcher_menu_visible false
+contains	docs/report/web-repo-switcher-browser-smoke-2026-05-17.md	Browser smoke result: pass.
+contains	docs/report/web-repo-switcher-browser-smoke-2026-05-17.md	Repo Switcher trigger/menu/item/outside-click behavior matches the Web shell contract in the actual DOM event path.
+contains	docs/report/web-repo-switcher-browser-smoke-2026-05-17.md	Browser console `error` / `warn` count after the final reload was `0`.
+contains	docs/report/web-repo-switcher-browser-smoke-2026-05-17.md	focus_scope::attach_modal_focus_restore_effect
+contains	apps/web/src/components/sidebar/repo_switcher.rs	11_ui_design/01_web#web-layout-persistence
+contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-trigger=repo_switcher_trigger_marker()
+contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-backdrop=repo_switcher_backdrop_marker()
+contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-menu=move || repo_switcher_menu_marker(show_menu.get())
+contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-item=repo_switcher_item_marker()
+contains	apps/web/src/components/sidebar/repo_switcher.rs	type="button"
+contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menu"
+contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menuitem"
+contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_trigger_click_toggles_menu()
+contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_outside_click_closes_menu()
+contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_item_click_closes_menu()
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-006
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	run: cd apps/web && NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk build
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	cli_assert: pwa_manifest_link_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	cli_assert: pwa_manifest_copied_to_dist true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	cli_assert: pwa_manifest_standalone_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	cli_assert: pwa_theme_color_bound true
+contains	apps/web/index.html	<meta name="theme-color" content="#1e1e1e" />
+contains	apps/web/index.html	<link rel="manifest" href="/manifest.json" />
+contains	apps/web/index.html	<link data-trunk rel="copy-file" href="public/manifest.json" />
+contains	apps/web/public/manifest.json	"display": "standalone"
+contains	apps/web/public/manifest.json	"theme_color": "#1e1e1e"
+contains	apps/web/public/manifest.json	"start_url": "/"
+contains	apps/web/public/manifest.json	"scope": "/"
+contains	apps/web/public/manifest.json	"src": "/favicon.svg"
+contains	docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md	Browser smoke result: pass.
+contains	docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md	PWA manifest metadata is available through the actual static-file serving path.
+contains	docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md	Browser console `error` / `warn` count was `0`.
+contains	docs/report/web-pwa-manifest-browser-smoke-2026-05-17.md	content-type: application/json
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-007
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	run: scripts/check-ui-desktop-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	run: cargo test -p deve_web file_tree_action -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_action_catalog_order_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_registry_outside_sidebar_menu true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_action_readonly_filter_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_action_target_kind_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_projection_uses_resolver true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_handler_re_resolves_intent true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_surface_target_mismatch_no_side_effect true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_readonly_current_state_blocks_writes true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_external_action_provenance_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_external_action_default_unavailable true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_export_pdf_default_unavailable true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_export_pdf_default_not_resolved true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_export_pdf_markdown_target_bound true
+contains	docs/acceptance-bindings.tsv	UI-WEB-007|manual-chrome|docs/features/08_ui_design_01_web.md|file tree context action registry workflow
+contains	docs/features/08_ui_design_01_web.md	文件树右键菜单应由 Context Action registry 投影
+contains	docs/plan/11_ui_design/index.md	Context Action resolver 属于 Flow Coordination
+contains	docs/plan/14_commands.md	ContextActionIntent
+contains	apps/web/src/context_action/mod.rs	pub use intent::{ContextActionIntent, ContextActionResolveRequest};
+contains	apps/web/src/context_action/projection.rs	context_action_descriptor_resolves
+contains	apps/web/src/context_action/projection.rs	ProjectedContextAction::new
+contains	apps/web/src/context_action/resolver.rs	pub(crate) fn context_action_descriptor_resolves(
+contains	apps/web/src/context_action/resolver.rs	pub fn resolve_context_action(
+contains	apps/web/src/components/sidebar_menu/item.rs	on_action.run(intent.clone());
+contains	apps/web/src/components/sidebar/item/action.rs	ContextActionResolveRequest::new(intent, readiness.get_untracked())
+contains	apps/web/src/components/sidebar/item/action.rs	resolve_context_action(resolve_request)
+contains	apps/web/src/components/sidebar/item/action/tests.rs	fn surface_mismatch_action_handler_is_fail_closed_without_side_effects()
+contains	apps/web/src/components/sidebar/item/action/tests.rs	fn readonly_current_state_blocks_write_action_handler_side_effects()
+contains	apps/web/src/context_action/tests/catalog.rs	fn file_tree_action_catalog_preserves_existing_order()
+contains	apps/web/src/context_action/tests/catalog.rs	fn file_tree_action_registry_lives_outside_sidebar_menu()
+contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_readonly_catalog_keeps_shell_local_open_only()
+contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_target_projection_accepts_file_and_folder_nodes()
+contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_projected_intents_resolve_again()
+contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_export_pdf_is_registered_but_default_unavailable()
+contains	apps/web/src/context_action/tests/resolver.rs	fn file_tree_action_export_pdf_default_not_resolved()

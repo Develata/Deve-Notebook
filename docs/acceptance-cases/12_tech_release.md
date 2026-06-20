@@ -66,6 +66,7 @@
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
     - run: cargo run -p deve_baseline -- all
+    - run: cargo run -p deve_baseline -- full
     - run: cargo test -p deve_core ledger_entry_format -- --nocapture
     - run: cargo test -p deve_core redb_schema_version -- --nocapture
     - run: cargo test --locked
@@ -75,6 +76,7 @@
     - stdout_contains: "storage-repo-baseline-check: ok"
     - stdout_contains: "network-baseline-check: ok"
     - stdout_contains: "release-baseline-check: ok"
+    - stdout_contains: "repo-file-ops-baseline: ok"
     - release_assert: stable_data_format_v1_gates_present true
 
 - case_id: REL-004

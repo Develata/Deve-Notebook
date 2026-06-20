@@ -1,0 +1,88 @@
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-013
+contains	docs/acceptance-cases/08_auth.md	cargo test -p deve_cli identity_key_permissions_are_corrected_to_owner_only -- --nocapture
+contains	docs/acceptance-cases/08_auth.md	cargo test -p deve_cli identity_key_permissions_fail_closed_for_non_file -- --nocapture
+contains	apps/cli/src/server/security.rs	enforce_owner_only_identity_key
+contains	apps/cli/src/server/security.rs	permissions.set_mode(0o600)
+contains	apps/cli/src/server/security.rs	identity_key_permissions_are_corrected_to_owner_only
+contains	apps/cli/src/server/security.rs	identity_key_permissions_fail_closed_for_non_file
+contains	crates/core/src/security/auth/config.rs	ERROR: Production mode requires AUTH_SECRET and AUTH_PASS
+contains	crates/core/src/security/auth/config.rs	AUTH_SECRET must be >= 32 bytes
+contains	crates/core/src/security/auth/config.rs	AUTH_PASS must be a valid Argon2 PHC hash
+contains	crates/core/src/security/auth/config.rs	AUTH_TOKEN_VERSION must be a valid u32 integer
+contains	crates/core/src/security/auth/config.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST requires explicit development mode
+contains	docs/plan/08_auth.md	DEVE_ENV=development
+contains	crates/core/src/security/auth/config/tests.rs	missing_secret_or_password_fails_closed_in_production
+contains	crates/core/src/security/auth/config/tests.rs	invalid_auth_token_version_fails_closed
+contains	crates/core/src/security/auth/config/tests.rs	anonymous_localhost_requires_development_env
+absent	crates/core/src/security/auth/config.rs	expect("checked above")
+contains	apps/cli/src/server/router.rs	WARNING: development-only auth defaults active
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-009
+contains	docs/acceptance-cases/08_auth.md	cargo test -p deve_core issue_token_preserves_subject -- --nocapture
+contains	crates/core/src/security/auth/jwt.rs	sub
+contains	crates/core/src/security/auth/jwt.rs	iat
+contains	crates/core/src/security/auth/jwt.rs	exp
+contains	crates/core/src/security/auth/jwt.rs	ver
+contains	crates/core/src/security/auth/jwt.rs	sid
+contains	crates/core/src/security/auth/jwt.rs	subject: &str
+contains	crates/core/src/security/auth/jwt.rs	sub: subject.to_string()
+contains	crates/core/src/security/auth/jwt.rs	fn issue_token_preserves_subject()
+contains	crates/core/src/security/auth/jwt.rs	fn issue_token_mints_unique_session_id_per_login()
+contains	crates/core/src/security/auth/jwt.rs	fn validate_token_accepts_legacy_payload_without_session_id()
+absent	docs/acceptance-cases/08_auth.md	deve auth decode-jwt
+contains	apps/cli/src/server/auth/handlers/session.rs	.http_only(true)
+contains	apps/cli/src/server/auth/handlers/session.rs	.same_site(SameSite::Strict)
+contains	apps/cli/src/server/auth/handlers/session.rs	secure_cookies_enabled()
+contains	apps/cli/src/server/auth/cookie_policy.rs	https_enabled_invalid_value_fails_secure
+contains	apps/cli/src/server/auth/handlers/session.rs	Login audit
+contains	apps/cli/src/server/auth/handlers/session.rs	user_agent
+contains	apps/cli/src/server/auth/handlers/session.rs	AuthStatusResponse::unauthenticated()
+contains	apps/cli/src/server/router.rs	.route("/api/auth/status", get(auth::handlers::status))
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-014
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-015
+contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_requires_development_env
+contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_status_sets_dev_session_cookie
+contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_ws_uses_dev_session_cookie
+contains	docs/acceptance-cases/08_auth.md	anonymous_localhost_auth_prefers_valid_jwt_over_dev_session_cookie
+contains	docs/acceptance-cases/08_auth.md	rejects_forged_dev_session_cookie
+contains	docs/acceptance-cases/08_auth.md	dev_session_cookie_is_bound_to_signing_secret
+contains	docs/acceptance-cases/08_auth.md	dev_session_cookie_secure_follows_policy
+contains	apps/cli/src/server/auth/dev_session.rs	DEV_SESSION_COOKIE_NAME
+contains	apps/cli/src/server/auth/dev_session.rs	deve_dev_session
+contains	apps/cli/src/server/auth/dev_session.rs	hmac_sha256
+contains	apps/cli/src/server/auth/dev_session.rs	.secure(secure_cookie)
+contains	apps/cli/src/server/auth/dev_session.rs	fn dev_session_cookie_secure_follows_policy()
+contains	apps/cli/src/server/auth/browser_session.rs	secure_cookies_enabled()
+contains	apps/cli/src/server/auth/browser_session.rs	AuthSessionId::from_cookie_token
+contains	apps/cli/src/server/auth/browser_session.rs	AuthSessionId::from_dev_session_cookie
+contains	apps/cli/src/server/auth/browser_session.rs	anonymous_localhost_auth_prefers_valid_jwt_over_dev_session_cookie
+contains	apps/cli/src/server/auth/middleware.rs	browser_session::resolve_required
+contains	apps/cli/src/server/ws/auth.rs	browser_session::resolve_required
+contains	apps/cli/src/server/ws/mod.rs	admission.set_cookie()
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-005
+contains	apps/cli/src/server/auth/cookie.rs	token_csrf
+contains	apps/cli/src/server/auth/cookie.rs	tokenBackup=bad
+contains	apps/cli/src/server/auth/handlers/session.rs	fn status_rejects_token_cookie_prefixes()
+contains	apps/cli/src/server/auth/middleware.rs	Json(AuthErrorResponse::new(code))
+contains	apps/cli/src/server/auth/middleware.rs	development-only anonymous localhost auth bypass active
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-008
+contains	apps/cli/src/server/auth/middleware.rs	StatusCode::TOO_MANY_REQUESTS
+contains	apps/cli/src/server/auth/handlers/login.rs	Login blocked (brute force)
+contains	apps/cli/src/server/auth/brute_force.rs	BruteForceGuard lock poisoned; failing closed
+contains	apps/cli/src/server/auth/brute_force/tests.rs	fn test_blocked_after_max_failures()
+contains	apps/cli/src/server/auth/brute_force/tests.rs	fn poisoned_lock_blocks_ip_fail_closed()
+contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-010
+contains	apps/cli/src/server/ws/mod.rs	Json(AuthErrorResponse::new(code))
+contains	apps/cli/src/server/ws/mod.rs	StatusCode::UNAUTHORIZED
+contains	apps/cli/src/server/ws/mod.rs	async fn unauthorized_ws_response_is_structured_json()
+contains	apps/cli/src/server/ws/auth.rs	AuthErrorCode::TokenMissing
+contains	apps/cli/src/server/setup.rs	Wildcard CORS origin is forbidden
+contains	apps/cli/src/server/setup.rs	development-only CORS allow list active
+contains	apps/cli/src/server/auth/headers.rs	X-Content-Type-Options
+contains	apps/cli/src/server/auth/headers.rs	X-Frame-Options
+contains	apps/cli/src/server/auth/headers.rs	Content-Security-Policy
+contains	apps/cli/src/server/auth/headers.rs	HeaderValue::from_static(CSP_POLICY)
+absent	apps/cli/src/server/auth/headers.rs	.parse().unwrap()
+contains	apps/web/src/api/auth_probe.rs	matches!(status, 401 | 403) || has_auth_error_code
+contains	apps/web/src/api/connection.rs	try_set_connection_status(&signals, ConnectionStatus::Unauthorized)
+contains	apps/web/src/api/connection.rs	set_status_and_revoke_writer_ready(
+contains	apps/web/src/components/disconnect_overlay.rs	ConnectionStatus::Unauthorized | ConnectionStatus::Connected => None

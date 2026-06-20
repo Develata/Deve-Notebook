@@ -1,0 +1,47 @@
+case_contains	docs/acceptance-cases/01_terminology.md	TERM-001	MUST / 必须
+case_contains	docs/acceptance-cases/01_terminology.md	TERM-001	SHOULD / 应
+case_contains	docs/acceptance-cases/01_terminology.md	TERM-001	MAY / 可选
+case_contains	docs/acceptance-cases/01_terminology.md	TERM-002	Ledger
+case_contains	docs/acceptance-cases/01_terminology.md	TERM-002	Projection
+case_contains	docs/acceptance-cases/01_terminology.md	TERM-002	Vector Clock
+case_contains	docs/acceptance-cases/01_terminology.md	TERM-003	唯一真值源
+contains	docs/plan/01_terminology.md	**MUST / 必须**
+contains	docs/plan/01_terminology.md	**SHOULD / 应**
+contains	docs/plan/01_terminology.md	**MAY / 可选**
+contains	docs/plan/01_terminology.md	**Ledger (账本)**
+contains	docs/plan/01_terminology.md	**Snapshot (快照)**
+contains	docs/plan/01_terminology.md	**Projection (投影)**
+contains	docs/plan/01_terminology.md	**Projection Workspace / Vault (投影工作区 / 投影仓)**
+contains	docs/plan/01_terminology.md	**DocId**
+contains	docs/plan/01_terminology.md	**Path Mapping (路径映射)**
+contains	docs/plan/01_terminology.md	**Peer (节点)**
+contains	docs/plan/01_terminology.md	**Vector Clock (向量时钟)**
+contains	docs/plan/01_terminology.md	系统唯一真值源（Source of Truth）
+case_contains	docs/acceptance-cases/02_positioning.md	POS-001	deve init
+case_contains	docs/acceptance-cases/02_positioning.md	POS-001	fs_exists:
+case_contains	docs/acceptance-cases/02_positioning.md	POS-001	ledger/local
+case_contains	docs/acceptance-cases/02_positioning.md	POS-001	ledger/remotes
+contains	apps/cli/src/commands/init.rs	fn init_creates_trinity_workspace_layout()
+case_contains	docs/acceptance-cases/02_positioning.md	POS-002	pending_fs_ops_contains: "test.md"
+case_contains	docs/acceptance-cases/02_positioning.md	POS-002	ledger_op_not_appended: "test.md"
+case_contains	docs/acceptance-cases/02_positioning.md	POS-003	pending_fs_ops_count_increases_by: 1
+contains	crates/core/tests/watcher_create_modify_delete.rs	fn watcher_records_create_modify_delete_candidates()
+contains	crates/core/tests/watcher_create_modify_delete.rs	h.wait_pending("main", "notes/live.md", ChangeStatus::Modified)?
+contains	crates/core/tests/watcher_writeback_loop.rs	fn projection_writeback_events_are_suppressed()
+contains	crates/core/tests/watcher_writeback_loop.rs	list_pending_fs_in_local_repo("main")?.is_empty()
+case_contains	docs/acceptance-cases/02_positioning.md	POS-004	watcher_pairs_rename_and_preserves_doc_identity
+contains	crates/core/tests/watcher_rename_pairing.rs	fn watcher_pairs_rename_and_preserves_doc_identity()
+contains	crates/core/tests/watcher_rename_pairing.rs	assert_eq!(added.doc_id, Some(doc_id));
+contains	crates/core/tests/watcher_rename_pairing.rs	assert_eq!(deleted.doc_id, Some(doc_id));
+case_contains	docs/acceptance-cases/02_positioning.md	POS-005	pending_fs_ops_not_contains
+contains	crates/core/tests/watcher_internal_ignore.rs	fn watcher_respects_deveignore_for_matching_markdown()
+contains	crates/core/tests/watcher_internal_ignore.rs	fn watcher_startup_scan_respects_deveignore()
+case_contains	docs/acceptance-cases/02_positioning.md	POS-006	Core MUST NOT
+contains	docs/plan/02_positioning.md	Core MUST NOT
+contains	docs/plan/02_positioning.md	AI 推理
+contains	docs/plan/02_positioning.md	Full-Text Search
+contains	docs/plan/02_positioning.md	Code Execution
+contains	docs/features/02_positioning.md	默认不把 AI、全文索引、代码执行、复杂媒体处理作为核心必选能力
+absent	docs/features/02_positioning.md	AI 是当前核心必选能力
+absent	docs/features/02_positioning.md	代码执行是当前核心必选能力
+
