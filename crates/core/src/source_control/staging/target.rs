@@ -2,12 +2,12 @@
 //!   - 03_storage/index#internal-path-normalization
 //!   - 05_diff_logic#source-control-runtime
 
-use super::{StagedEntry, list_staged_entries, list_staged_entries_for_doc, take_staged};
+use super::{list_staged_entries, list_staged_entries_for_doc, take_staged, StagedEntry};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::ChangeStatus;
 use crate::utils::path::to_forward_slash;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use redb::Database;
 
 pub fn get_staged_for_target(
@@ -25,11 +25,36 @@ pub fn take_staged_for_target(
     db: &Database,
     target: &ScPathTarget,
 ) -> Result<Option<(String, StagedEntry)>> {
-    let Some((path, entry)) = get_staged_for_target(db, target)? else {
+    // Unstage precisely consumes a staged entry: an exact staged path match for
+    // this target wins over rename-successor resolution, so unstaging the deleted
+    // side of a rename keeps its exact path/status instead of consuming the added
+    // counterpart (which would risk a non-atomic half-migration). Stage and
+    // read paths keep "live successor wins" via get_staged_for_target.
+    let resolved = match exact_staged_for_target(db, target)? {
+        Some(hit) => Some(hit),
+        None => get_staged_for_target(db, target)?,
+    };
+    let Some((path, entry)) = resolved else {
         return Ok(None);
     };
     let _ = take_staged(db, &path)?;
     Ok(Some((path, entry)))
+}
+
+fn exact_staged_for_target(
+    db: &Database,
+    target: &ScPathTarget,
+) -> Result<Option<(String, StagedEntry)>> {
+    // Only doc-scoped targets get exact-path preference: the caller has precisely
+    // identified the entry by (path, doc_id). Path-only targets keep ambiguity
+    // fail-closed via get_staged_for_target.
+    let Some(doc_id) = target.doc_id else {
+        return Ok(None);
+    };
+    let path = to_forward_slash(&target.path);
+    Ok(list_staged_entries_for_doc(db, doc_id)?
+        .into_iter()
+        .find(|(entry_path, _)| *entry_path == path))
 }
 
 fn resolve_for_doc(
