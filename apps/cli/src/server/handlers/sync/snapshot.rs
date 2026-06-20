@@ -9,7 +9,7 @@ use crate::server::session::WsSession;
 use deve_core::models::{PeerId, RepoId, VersionVector};
 use deve_core::protocol::{
     ServerMessage, SourceProofRequirement, SyncPayloadKind, SyncSnapshotAttributionInput,
-    SyncSourceProof, validate_sync_snapshot_attribution,
+    SyncSourceProof, SyncSourceProofError, validate_sync_snapshot_attribution,
 };
 use deve_core::security::EncryptedOp;
 use std::sync::Arc;
@@ -78,6 +78,26 @@ pub(super) async fn handle_request(
                 response.peer_id
             );
             let source_peer_id = response.peer_id.clone();
+            let source_proof = match snapshot_source_proof(
+                state,
+                response.repo_id,
+                &response.peer_id,
+                &server_vector,
+                &response.ops,
+            ) {
+                Ok(proof) => proof,
+                Err(err) => {
+                    errors::sync_payload_build_failed(
+                        ch,
+                        format!(
+                            "Failed to sign local sync snapshot source proof for repo {}: {}",
+                            response.repo_id, err
+                        ),
+                        scope,
+                    );
+                    return;
+                }
+            };
             ch.unicast(ServerMessage::SyncPushSnapshot {
                 source_peer_id,
                 repo_id: response.repo_id,
@@ -85,13 +105,7 @@ pub(super) async fn handle_request(
                 branch: session.active_branch.clone(),
                 server_vector: server_vector.clone(),
                 snapshot_kind: Some("full".to_string()),
-                source_proof: snapshot_source_proof(
-                    state,
-                    response.repo_id,
-                    &response.peer_id,
-                    &server_vector,
-                    &response.ops,
-                ),
+                source_proof,
                 payload: response.ops,
             });
         }
@@ -192,22 +206,17 @@ fn snapshot_source_proof(
     peer_id: &PeerId,
     server_vector: &VersionVector,
     payload: &[EncryptedOp],
-) -> Option<SyncSourceProof> {
+) -> Result<Option<SyncSourceProof>, SyncSourceProofError> {
     if peer_id != &state.identity_key.peer_id() {
-        return None;
+        return Ok(None);
     }
-    match SyncSourceProof::sign(
+    SyncSourceProof::sign(
         repo_id,
         peer_id,
         server_vector,
         SyncPayloadKind::Snapshot,
         payload,
         &state.identity_key,
-    ) {
-        Ok(proof) => Some(proof),
-        Err(err) => {
-            tracing::warn!("Failed to sign local sync snapshot source proof: {}", err);
-            None
-        }
-    }
+    )
+    .map(Some)
 }

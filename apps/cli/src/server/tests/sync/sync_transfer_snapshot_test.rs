@@ -6,8 +6,8 @@ use super::handlers::sync::{
     SyncPushSnapshotInput, handle_sync_push_snapshot, handle_sync_snapshot_request,
 };
 use super::sync_transfer_scope_test_support::{
-    bound_session, build_state, encrypted_insert_for_author, recv_protocol_error,
-    remote_insert_entry, unicast_channel,
+    append_local_doc, bound_session, build_state, build_state_with_identity_peer,
+    encrypted_insert_for_author, recv_protocol_error, remote_insert_entry, unicast_channel,
 };
 use deve_core::models::{PeerId, VersionVector};
 use deve_core::protocol::{ServerErrorCode, SyncPayloadKind, SyncSourceProof};
@@ -158,6 +158,49 @@ async fn snapshot_request_exports_requested_shadow_source() -> anyhow::Result<()
             assert_eq!(server_vector.get(&source_peer), 1);
             assert_eq!(snapshot_kind.as_deref(), Some("full"));
             assert_eq!(payload.len(), 1);
+        }
+        other => panic!("expected SyncPushSnapshot, got {:?}", other),
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn snapshot_request_signs_local_source_proof() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state_with_identity_peer()?;
+    append_local_doc(&state)?;
+    let request_peer = PeerId::new("request-peer");
+    let local_peer = state.identity_key.peer_id();
+    let (ch, mut rx) = unicast_channel(&state);
+    let mut session = bound_session(repo_id, Some(request_peer), Some(48));
+    session.set_offered_sync_sources([local_peer.clone()]);
+
+    handle_sync_snapshot_request(
+        &state,
+        &ch,
+        &mut session,
+        local_peer.clone(),
+        repo_id,
+        Some("client-requested-local-snapshot".to_string()),
+    )
+    .await;
+
+    match rx.recv().await {
+        Some(deve_core::protocol::ServerMessage::SyncPushSnapshot {
+            source_peer_id,
+            server_vector,
+            source_proof,
+            payload,
+            ..
+        }) => {
+            assert_eq!(source_peer_id, local_peer);
+            let source_proof = source_proof.expect("local snapshot source proof");
+            source_proof.verify(
+                repo_id,
+                &source_peer_id,
+                &server_vector,
+                SyncPayloadKind::Snapshot,
+                &payload,
+            )?;
         }
         other => panic!("expected SyncPushSnapshot, got {:?}", other),
     }

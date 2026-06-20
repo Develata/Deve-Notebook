@@ -20,8 +20,19 @@ pub(super) fn build_state() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uui
     build_state_with_mode(SyncMode::Auto)
 }
 
+pub(super) fn build_state_with_identity_peer() -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
+    build_state_inner(SyncMode::Auto, true)
+}
+
 pub(super) fn build_state_with_mode(
     sync_mode: SyncMode,
+) -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
+    build_state_inner(sync_mode, false)
+}
+
+fn build_state_inner(
+    sync_mode: SyncMode,
+    use_identity_peer: bool,
 ) -> anyhow::Result<(TempDir, Arc<AppState>, uuid::Uuid)> {
     let dir = tempdir()?;
     let ledger_dir = dir.path().join("ledger");
@@ -32,6 +43,11 @@ pub(super) fn build_state_with_mode(
     let repo = Arc::new(repo);
     let (tx, _rx) = broadcast::channel(16);
     let identity_key = security::load_or_generate_identity_key(&dir.path().join("host"))?;
+    let local_peer = if use_identity_peer {
+        identity_key.peer_id()
+    } else {
+        PeerId::new("test-peer")
+    };
     Ok((
         dir,
         Arc::new(AppState {
@@ -40,7 +56,7 @@ pub(super) fn build_state_with_mode(
             tx,
             plugins: vec![],
             sync_engine: Arc::new(RepoScopedSyncEngine::new(
-                PeerId::new("test-peer"),
+                local_peer,
                 repo,
                 sync_mode,
             )),
