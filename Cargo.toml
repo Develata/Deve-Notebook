@@ -32,6 +32,7 @@ getrandom = { version = "0.3", features = ["wasm_js"] }
 getrandom_02 = { package = "getrandom", version = "0.2", features = ["js"] }
 uuid = { version = "1.0", features = ["v4", "serde", "js"] }
 chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
 
 # Storage & CRDT
 redb = "2.0"

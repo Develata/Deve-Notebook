@@ -1,0 +1,38 @@
+contains	docs/dev-runbook.md	cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
+contains	docs/dev-runbook.md	cargo run -p deve_cli --features search --bin deve_cli -- serve --dev --port 3001
+contains	docs/dev-runbook.md	scripts/smoke-web-release-build.sh
+contains	docs/dev-runbook.md	scripts/smoke-web-runtime-paths.sh
+contains	docs/dev-runbook.md	The wrapper normalizes Trunk's `NO_COLOR` parsing
+contains	docs/dev-runbook.md	NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080
+contains	docs/dev-runbook.md	AUTH_SECRET
+contains	docs/dev-runbook.md	AUTH_PASS
+contains	docs/dev-runbook.md	admin` /
+contains	docs/dev-runbook.md	chrome-mcp http://127.0.0.1:8080/
+check_scripts_listed	docs/dev-runbook.md
+contains	docs/dev-runbook.md	scripts/plan-coverage.sh
+contains	docs/dev-runbook.md	DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
+contains	docs/dev-runbook.md	repo switch, `SyncHello`, `RegisterWriter`, document create, edit ack
+contains	docs/dev-runbook.md	scripts/smoke-runtime-recovery-path.sh
+contains	docs/dev-runbook.md	degraded local projection write gates
+contains	docs/dev-runbook.md	repo_health.status=degraded
+contains	docs/dev-runbook.md	/api/admin/projection-check
+contains	docs/dev-runbook.md	DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
+contains	docs/dev-runbook.md	DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
+contains	docs/dev-runbook.md	scripts/smoke-docker-multiclient.mjs
+contains	docs/dev-runbook.md	DEVE_DOCKER_MULTI_KEEP=1
+contains	docs/dev-runbook.md	DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
+contains	docs/dev-runbook.md	scripts/smoke-docker-p2p-mesh.sh
+contains	docs/dev-runbook.md	docker-compose.mesh.yml
+contains	docs/dev-runbook.md	DEVE_DOCKER_P2P_MESH_KEEP=1
+contains	docs/dev-runbook.md	docker-compose.yml` is the production compose entry
+contains	docs/dev-runbook.md	ghcr.io/develata/deve-notebook:latest
+contains	docs/dev-runbook.md	docker compose -f docker-compose.dev.yml up --build
+contains	docs/dev-runbook.md	Native Shell Modes
+contains	docs/dev-runbook.md	LocalBackend
+contains	docs/dev-runbook.md	RemoteBrowser
+contains	docs/dev-runbook.md	DEVE_NATIVE_REMOTE_URL=https://example.invalid
+contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-004
+contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-009
+contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-010
+contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-011
+contains	docs/acceptance-cases/12_tech_release.md	scripts/check-dev-runbook-baseline.sh

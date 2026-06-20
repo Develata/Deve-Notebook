@@ -1239,6 +1239,7 @@ name = "deve_baseline"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "regex",
 ]
 
 [[package]]

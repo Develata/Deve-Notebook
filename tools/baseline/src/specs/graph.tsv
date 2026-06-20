@@ -1,0 +1,47 @@
+contains	crates/core/src/graph/mod.rs	pub struct GraphDocument
+contains	crates/core/src/graph/mod.rs	pub struct GraphProjection
+contains	crates/core/src/graph/mod.rs	pub fn project_documents
+contains	crates/core/src/graph/links.rs	GraphLinkKind::Wiki
+contains	crates/core/src/graph/links.rs	GraphLinkKind::Markdown
+contains	crates/core/src/lib.rs	pub mod graph;
+contains	docs/plan/17_tech_stack.md	Core graph projection
+contains	docs/plan/17_tech_stack.md	CLI/HTTP adapter
+contains	docs/plan/14_commands.md	deve graph
+contains	apps/cli/src/main.rs	Graph {
+contains	apps/cli/src/dispatch.rs	commands::graph::run
+contains	apps/cli/src/commands/graph.rs	project_repo_graph
+contains	apps/cli/src/graph_projection.rs	project_documents
+contains	apps/cli/src/graph_projection.rs	diagnose_projection_local_repo
+contains	apps/cli/src/graph_projection.rs	GraphProjectionError::DegradedProjectionRequired
+contains	apps/cli/src/graph_projection.rs	is_degraded_projection_required
+contains	crates/core/src/protocol/error.rs	GRAPH_DEGRADED_PROJECTION_REQUIRED
+contains	apps/cli/src/server/handlers/repo/http.rs	ServerErrorCode::GraphDegradedProjectionRequired
+contains	apps/web/src/i18n/server_error.rs	ServerErrorCode::GraphDegradedProjectionRequired
+contains	apps/cli/src/server/router.rs	/api/repo/graph
+contains	apps/cli/src/graph_projection.rs	--allow-degraded-projection
+contains	apps/web/src/api/graph.rs	DegradedProjectionRequired
+contains	apps/web/src/api/graph.rs	ServerErrorCode::GraphDegradedProjectionRequired
+contains	apps/web/src/api/graph.rs	graph_projection_error_from_server_error
+contains	apps/web/src/api/graph.rs	encode_query_component(repo_id)
+contains	apps/web/src/api/graph.rs	graph_projection_url_encodes_repo_id_query_component
+contains	apps/web/src/api/graph.rs	--allow-degraded-projection
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	GraphProjectionFetchState::LocalOnly
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	GraphProjectionFetchState::Degraded
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-graph-state
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-graph-panel="readonly"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-graph-projection-mode="readonly-summary"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-graph-renderer-gate="closed"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-graph-stat-value
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	"local-only"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	"blocked"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	"degraded"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	"error"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	"empty"
+contains	apps/web/src/i18n/source_control_graph.rs	graph_projection_blocked
+contains	apps/web/src/i18n/source_control_graph.rs	graph_projection_degraded
+contains	docs/report/graph-baseline-2026-05-01.md	Graph 当前停靠在只读 projection data surface
+absent_tree	crates/core/src/graph	crate::ledger
+absent_tree	crates/core/src/graph	std::fs
+absent_tree	crates/core/src/graph	redb
+absent_tree	crates/core/src/graph	source_control
+absent_tree	crates/core/src/graph	search::

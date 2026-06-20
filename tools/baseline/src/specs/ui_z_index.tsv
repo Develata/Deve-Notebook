@@ -1,0 +1,47 @@
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-GEN-002
+contains	docs/acceptance-cases/05_ui.md	scripts/check-ui-z-index-baseline.sh
+contains	docs/plan/11_ui_design/index.md	shell 分层至少保留以下 z-index registry
+contains	docs/plan/11_ui_design/index.md	--z-editor
+contains	docs/plan/11_ui_design/index.md	--z-toast
+contains	apps/web/style/_variables.css	--z-editor: 0;
+contains	apps/web/style/_variables.css	--z-toast: 120;
+css_number_lt	apps/web/style/_variables.css	--z-editor	--z-chrome
+css_number_lt	apps/web/style/_variables.css	--z-chrome	--z-panels
+css_number_lt	apps/web/style/_variables.css	--z-panels	--z-floating
+css_number_lt	apps/web/style/_variables.css	--z-floating	--z-overlay
+css_number_lt	apps/web/style/_variables.css	--z-overlay	--z-modal
+css_number_lt	apps/web/style/_variables.css	--z-modal	--z-toast
+contains	apps/web/src/components/search_box/ui_sheet/style.rs	z-[var(--z-overlay)]
+contains	apps/web/src/components/command_palette/ui.rs	z-[var(--z-modal)]
+contains	apps/web/src/components/disconnect_overlay.rs	z-[var(--z-toast)]
+contains	apps/web/src/components/dropdown.rs	z-[calc(var(--z-floating)_+_1)]
+contains	apps/web/src/components/dropdown/position.rs	fn viewport_height() -> f64
+contains	apps/web/src/components/dropdown/position.rs	.and_then(|window| window.inner_height().ok())
+absent	apps/web/src/components/dropdown/position.rs	expect("window")
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	z-[calc(var(--z-floating)_+_1)]
+contains	apps/web/src/components/mobile_layout/drawers/mod.rs	z-[calc(var(--z-overlay)_+_1)]
+contains	apps/web/index.html	z-[var(--z-toast)]
+contains	apps/web/js/extensions/code_menu.js	menu.style.zIndex = "var(--z-floating)"
+contains	apps/web/js/extensions/code_toolbar.js	container.style.zIndex = "calc(var(--z-editor) + 1)"
+contains	apps/web/style/tailwind.css	z-index: var(--z-modal);
+contains	apps/web/style/_base.css	z-index: var(--z-toast);
+regex_absent_tree_skip	apps/web/index.html	z-index[[:space:]]*:[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/js	z-index[[:space:]]*:[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/src	z-index[[:space:]]*:[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/style	z-index[[:space:]]*:[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/index.html	zIndex[[:space:]]*=[[:space:]]*["']?[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/js	zIndex[[:space:]]*=[[:space:]]*["']?[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/src	zIndex[[:space:]]*=[[:space:]]*["']?[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/style	zIndex[[:space:]]*=[[:space:]]*["']?[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/index.html	z-\[[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/js	z-\[[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/src	z-\[[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/style	z-\[[[:space:]]*[0-9]	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/index.html	\bz-[0-9]+\b	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/js	\bz-[0-9]+\b	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/src	\bz-[0-9]+\b	editor.bundle.js|editor.bundle.js.map
+regex_absent_tree_skip	apps/web/style	\bz-[0-9]+\b	editor.bundle.js|editor.bundle.js.map
+absent_optional	apps/web/js/editor.bundle.js	z-50 min-w-[120px]
+absent_optional	apps/web/js/editor.bundle.js.map	z-50 min-w-[120px]
+absent_optional	apps/web/js/editor.bundle.js	z-20 p-0.5
+absent_optional	apps/web/js/editor.bundle.js.map	z-20 p-0.5

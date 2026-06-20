@@ -1,0 +1,50 @@
+contains	docs/acceptance-cases/09_i18n.md	scripts/check-i18n-hardcoded-baseline.sh
+contains	apps/web/src/i18n/command_palette.rs	pub fn keyboard_navigate_hint
+contains	apps/web/src/i18n/search.rs	pub fn command_detail
+contains	apps/web/src/i18n/search.rs	pub fn file_op_detail
+contains	apps/web/src/i18n/common.rs	pub fn status
+contains	apps/web/src/i18n/extensions.rs	pub fn editor_copy_code
+contains	apps/web/src/i18n/js_bridge.rs	publish_browser_i18n
+contains	apps/web/js/i18n.js	export function editorCopy
+absent_tree_skip_tests	apps/web/src/components/command_palette	to navigate
+absent_tree_skip_tests	apps/web/src/components/search_box	to navigate
+absent_tree_skip_tests	apps/web/src/components/command_palette	to select
+absent_tree_skip_tests	apps/web/src/components/search_box	to select
+absent_tree_skip_tests	apps/web/src/components/command_palette	to close
+absent_tree_skip_tests	apps/web/src/components/search_box	to close
+absent_tree_skip_tests	apps/web/src/components/command_palette	Some("Command".to_string())
+absent_tree_skip_tests	apps/web/src/components/search_box	Some("Command".to_string())
+absent_tree_skip_tests	apps/web/src/components/command_palette	Some("Current Branch".to_string())
+absent_tree_skip_tests	apps/web/src/components/search_box	Some("Current Branch".to_string())
+absent_tree_skip_tests	apps/web/src/components/command_palette	Some("Remote Branch".to_string())
+absent_tree_skip_tests	apps/web/src/components/search_box	Some("Remote Branch".to_string())
+absent_tree_skip_tests	apps/web/src/components/command_palette	format!("Create/Open
+absent_tree_skip_tests	apps/web/src/components/search_box	format!("Create/Open
+absent_tree_skip_tests	apps/web/src/components/command_palette	Some("New File".to_string())
+absent_tree_skip_tests	apps/web/src/components/search_box	Some("New File".to_string())
+absent_tree_skip_tests	apps/web/src/components/command_palette	Some("FileOp".to_string())
+absent_tree_skip_tests	apps/web/src/components/search_box	Some("FileOp".to_string())
+absent_tree_skip_tests	apps/web/src/components/command_palette	Some("Group".to_string())
+absent_tree_skip_tests	apps/web/src/components/search_box	Some("Group".to_string())
+absent_tree_skip_tests	apps/web/src/components/command_palette	Some("Error".to_string())
+absent_tree_skip_tests	apps/web/src/components/search_box	Some("Error".to_string())
+absent_tree_skip_tests	apps/web/src/components/command_palette	"Paths with spaces must be quoted".to_string()
+absent_tree_skip_tests	apps/web/src/components/search_box	"Paths with spaces must be quoted".to_string()
+absent_tree_skip_tests	apps/web/src/components/command_palette	"Unclosed quote".to_string()
+absent_tree_skip_tests	apps/web/src/components/search_box	"Unclosed quote".to_string()
+absent_tree_skip_tests	apps/web/src/components/command_palette	"Usage: >rm <path>".to_string()
+absent_tree_skip_tests	apps/web/src/components/search_box	"Usage: >rm <path>".to_string()
+absent_tree_skip_tests	apps/web/src/components/command_palette	format!("Move:
+absent_tree_skip_tests	apps/web/src/components/search_box	format!("Move:
+absent_tree_skip_tests	apps/web/src/components/command_palette	format!("Copy:
+absent_tree_skip_tests	apps/web/src/components/search_box	format!("Copy:
+absent_tree_skip_tests	apps/web/src/components/command_palette	format!("Remove:
+absent_tree_skip_tests	apps/web/src/components/search_box	format!("Remove:
+absent_tree_skip_tests	apps/web/src/components/activity_bar	title="More..."
+absent_tree_skip_tests	apps/web/src/components/sidebar	title="More"
+absent_tree_skip_tests	apps/web/src/components/sidebar	title="New File"
+absent_tree_skip_tests	apps/web/src/components/disconnect_overlay.rs	format!("Status: {}", status)
+absent_tree_skip_tests	apps/web/js/extensions	"Copy Code"
+absent_tree_skip_tests	apps/web/js/extensions	"More Actions"
+absent_tree_skip_tests	apps/web/js/extensions	"No actions available"
+absent_tree_skip_tests	apps/web/js/extensions	"Mermaid Error
