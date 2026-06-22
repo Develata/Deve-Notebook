@@ -68,6 +68,8 @@
     - run: cargo run -p deve_baseline -- release
     - run: cargo run -p deve_baseline -- all
     - run: cargo run -p deve_baseline -- full
+    - run: cargo run -p deve_baseline -- local-quick-gate
+    - run: cargo run -p deve_baseline -- deep-audit-gate
     - run: cargo test -p deve_core ledger_entry_format -- --nocapture
     - run: cargo test -p deve_core redb_schema_version -- --nocapture
     - run: cargo test --locked
@@ -106,13 +108,19 @@
     - run: scripts/check-native-target-host-evidence.sh
     - run: scripts/install-native-target-host-tools.sh
     - run: scripts/check-desktop-package-preflight.sh
+    - run: cargo run -p deve_baseline -- desktop-platform-package-build
     - run: scripts/check-desktop-platform-package-build.sh
+    - run: cargo run -p deve_baseline -- desktop-package-startup-smoke
     - run: scripts/check-desktop-package-startup-smoke.sh
+    - run: cargo run -p deve_baseline -- desktop-native-session-package-smoke
+    - run: scripts/check-desktop-native-session-package-smoke.sh
+    - run: cargo run -p deve_baseline -- desktop-installer-smoke
     - run: scripts/check-desktop-installer-smoke.sh
     - run: scripts/check-desktop-target-host-preflight.sh
     - run: cargo run -p deve_baseline -- desktop-target-host-preflight
     - run: scripts/check-mobile-platform-package-preflight.sh
     - run: scripts/check-mobile-android-shell-package-build.sh
+    - run: cargo run -p deve_baseline -- mobile-android-emulator-install-startup-smoke
     - run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
     - run: scripts/check-mobile-ios-shell-package-build.sh
     - run: scripts/check-mobile-android-install-startup-smoke.sh

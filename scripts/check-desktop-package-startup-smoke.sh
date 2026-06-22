@@ -6,6 +6,9 @@ REQUIRED="${DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED:-0}"
 BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
 TIMEOUT_SECS="${DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS:-20}"
 
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+run_deve_baseline "$ROOT_DIR" "desktop-package-startup-smoke" "desktop-package-startup-smoke-check"
+
 fail() {
   echo "desktop-package-startup-smoke-check: $*" >&2
   exit 1

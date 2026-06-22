@@ -6,6 +6,9 @@ REQUIRED="${DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED:-0}"
 BUNDLES="${DEVE_DESKTOP_PACKAGE_BUNDLES:-}"
 TIMEOUT_SECS="${DEVE_DESKTOP_NATIVE_SESSION_SMOKE_TIMEOUT_SECS:-${DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS:-30}}"
 
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+run_deve_baseline "$ROOT_DIR" "desktop-native-session-package-smoke" "desktop-native-session-package-smoke-check"
+
 fail() {
   echo "desktop-native-session-package-smoke-check: $*" >&2
   exit 1

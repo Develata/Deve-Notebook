@@ -10,6 +10,9 @@ export GIT_CONFIG_KEY_0="${GIT_CONFIG_KEY_0:-safe.directory}"
 export GIT_CONFIG_VALUE_0="${GIT_CONFIG_VALUE_0:-$ROOT_DIR}"
 TOOL_SHIM_DIR="${DEVE_GATE_TOOL_SHIM_DIR:-${TMPDIR:-/tmp}/deve-gate-tools-${UID:-user}/bin}"
 
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+run_deve_baseline "$ROOT_DIR" "local-quick-gate" "local-quick-gate"
+
 fail() {
   echo "local-quick-gate: $*" >&2
   exit 1

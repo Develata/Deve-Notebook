@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-source "$ROOT_DIR/scripts/lib/android-tools.sh"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-35}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-default}"
@@ -14,6 +14,9 @@ ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-120}"
 PACKAGE_TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-x86_64}"
 LOG_DIR="${DEVE_MOBILE_ANDROID_EMULATOR_LOG_DIR:-$ROOT_DIR/target/mobile-android-emulator-smoke}"
 AVD_HOME="${DEVE_MOBILE_ANDROID_AVD_HOME:-$ROOT_DIR/target/mobile-android-avd}"
+
+run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
+source "$ROOT_DIR/scripts/lib/android-tools.sh"
 
 # This gate owns only target-host emulator orchestration. It delegates package
 # build and install/startup checks to the narrower Android shell gates.
@@ -27,13 +30,6 @@ fail() {
 run() {
   echo "+ $*"
   "$@"
-}
-
-assert_positive_integer() {
-  local name="$1"
-  local value="$2"
-
-  [[ "$value" =~ ^[1-9][0-9]*$ ]] || fail "$name must be a positive integer"
 }
 
 require_command() {
@@ -171,9 +167,6 @@ ensure_emulator_process_alive() {
     fail "Android emulator process exited before boot completed"
   fi
 }
-
-assert_positive_integer "DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS" "$BOOT_TIMEOUT_SECS"
-assert_positive_integer "DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS" "$ADB_TIMEOUT_SECS"
 
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 

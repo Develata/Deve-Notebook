@@ -10,6 +10,9 @@ TIMEOUT_KILL_AFTER_SECS="${DEVE_DESKTOP_INSTALLER_SMOKE_KILL_AFTER_SECS:-10}"
 WORK_ROOT="${DEVE_DESKTOP_INSTALLER_SMOKE_WORK_DIR:-$ROOT_DIR/target/desktop-installer-smoke}"
 SMOKE_ROOT_NAME="DeveNotebookInstallerSmoke"
 
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+run_deve_baseline "$ROOT_DIR" "desktop-installer-smoke" "desktop-installer-smoke-check"
+
 cleanup_paths=()
 cleanup_mounts=()
 preserved_paths=()
@@ -58,20 +61,6 @@ requires_bundle() {
   local bundle="$1"
   [[ -z "$BUNDLES" ]] && return 0
   [[ ",${BUNDLES// /,}," == *",$bundle,"* ]]
-}
-
-validate_bundles() {
-  local bundle
-  [[ -n "$BUNDLES" ]] || return 0
-  IFS=',' read -ra bundle_parts <<< "$BUNDLES"
-  for bundle in "${bundle_parts[@]}"; do
-    bundle="${bundle//[[:space:]]/}"
-    case "$bundle" in
-      app|dmg|msi|nsis) ;;
-      "") fail "empty desktop installer bundle selector in DEVE_DESKTOP_PACKAGE_BUNDLES" ;;
-      *) fail "unsupported desktop installer bundle selector: $bundle" ;;
-    esac
-  done
 }
 
 first_match() {
@@ -549,7 +538,6 @@ run_windows_smoke() {
 }
 
 echo "desktop-installer-smoke-check: host_os=$(host_os)"
-validate_bundles
 
 case "$(host_os)" in
   Darwin)

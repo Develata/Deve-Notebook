@@ -43,6 +43,7 @@ mod release;
 mod release_audit_gate;
 mod rendering;
 mod repo_file_ops;
+mod script_gate_preflight;
 mod search;
 mod settings_local_feedback;
 mod source_control;
@@ -96,13 +97,28 @@ fn run() -> Result<()> {
         "ai" => ai::run(),
         "cli-settings" => cli_settings::run(),
         "dev-data-health" => dev_data_health::run(),
+        "deep-audit-gate" => script_gate_preflight::run_deep_audit_gate(),
         "desktop-package-preflight" => desktop_package_preflight::run(),
         "desktop-signing-preflight" => desktop_signing_preflight::run(),
         "desktop-target-host-preflight" => desktop_target_host_preflight::run(),
+        "desktop-platform-package-build" => {
+            script_gate_preflight::run_desktop_platform_package_build()
+        }
+        "desktop-package-startup-smoke" => {
+            script_gate_preflight::run_desktop_package_startup_smoke()
+        }
+        "desktop-native-session-package-smoke" => {
+            script_gate_preflight::run_desktop_native_session_package_smoke()
+        }
+        "desktop-installer-smoke" => script_gate_preflight::run_desktop_installer_smoke(),
         "foundation" => foundation::run(),
         "large-doc" => large_doc::run(),
+        "local-quick-gate" => script_gate_preflight::run_local_quick_gate(),
         "mobile" => mobile::run(),
         "mobile-android-release-preflight" => mobile_android_release_preflight::run(),
+        "mobile-android-emulator-install-startup-smoke" => {
+            script_gate_preflight::run_mobile_android_emulator_install_startup_smoke()
+        }
         "mobile-android-install-startup-smoke" => mobile_android_install_startup_smoke::run(),
         "mobile-android-shell-package-build" => mobile_android_shell_package_build::run(),
         "mobile-ios-install-startup-smoke" => mobile_ios_install_startup_smoke::run(),
@@ -126,7 +142,7 @@ fn run() -> Result<()> {
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|foundation|large-doc|mobile|mobile-android-release-preflight|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
             );
             Ok(())
         }

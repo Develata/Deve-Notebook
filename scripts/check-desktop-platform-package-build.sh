@@ -8,6 +8,9 @@ NO_SIGN="${DEVE_DESKTOP_PACKAGE_NO_SIGN:-0}"
 FEATURES="${DEVE_DESKTOP_PACKAGE_FEATURES:-native-packaging}"
 SIDECAR_CONFIG="$ROOT_DIR/target/desktop-tauri-sidecar-config.json"
 
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+run_deve_baseline "$ROOT_DIR" "desktop-platform-package-build" "desktop-platform-package-build-check"
+
 fail() {
   echo "desktop-platform-package-build-check: $*" >&2
   exit 1

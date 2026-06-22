@@ -726,3 +726,69 @@ contains	docs/acceptance-cases/07_storage_repo.md	cargo run -p deve_baseline -- 
 contains	docs/acceptance-cases/04_diff.md	cargo run -p deve_baseline -- source-control-smoke-hygiene
 contains	docs/plan/18_release.md	确定性边界检查脚本
 contains	docs/features/15_release.md	确定性边界检查合同
+contains	tools/baseline/src/main.rs	mod script_gate_preflight;
+contains	tools/baseline/src/main.rs	"local-quick-gate" => script_gate_preflight::run_local_quick_gate()
+contains	tools/baseline/src/main.rs	"deep-audit-gate" => script_gate_preflight::run_deep_audit_gate()
+contains	tools/baseline/src/main.rs	"desktop-platform-package-build" => {
+contains	tools/baseline/src/main.rs	script_gate_preflight::run_desktop_platform_package_build()
+contains	tools/baseline/src/main.rs	"desktop-package-startup-smoke" => {
+contains	tools/baseline/src/main.rs	script_gate_preflight::run_desktop_package_startup_smoke()
+contains	tools/baseline/src/main.rs	"desktop-native-session-package-smoke" => {
+contains	tools/baseline/src/main.rs	script_gate_preflight::run_desktop_native_session_package_smoke()
+contains	tools/baseline/src/main.rs	"desktop-installer-smoke" => script_gate_preflight::run_desktop_installer_smoke()
+contains	tools/baseline/src/main.rs	"mobile-android-emulator-install-startup-smoke" => {
+contains	tools/baseline/src/main.rs	script_gate_preflight::run_mobile_android_emulator_install_startup_smoke()
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_QUICK_GATE_TESTS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DEEP_AUDIT_WRITE_REPORT
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DEEP_AUDIT_FULL_TESTS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DEEP_AUDIT_DOCKER_SMOKE
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_NO_SIGN
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_BUNDLES
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_FEATURES
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_NATIVE_SESSION_SMOKE_TIMEOUT_SECS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_INSTALLER_SMOKE_TIMEOUT_SECS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_INSTALLER_SMOKE_KILL_AFTER_SECS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_INSTALLER_SMOKE_WORK_DIR
+contains	tools/baseline/src/script_gate_preflight.rs	empty desktop package bundle selector
+contains	tools/baseline/src/script_gate_preflight.rs	unsupported desktop package bundle selector
+contains	tools/baseline/src/script_gate_preflight.rs	empty desktop installer bundle selector
+contains	tools/baseline/src/script_gate_preflight.rs	unsupported desktop installer bundle selector
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_ARCH
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_AVD_NAME
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_DEVICE
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_EMULATOR_BOOT_TIMEOUT_SECS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_PACKAGE_TARGET
+contains	tools/baseline/src/script_gate_preflight.rs	unsupported Android target
+contains	scripts/check-local-quick-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-local-quick-gate.sh	run_deve_baseline "$ROOT_DIR" "local-quick-gate" "local-quick-gate"
+contains	scripts/check-deep-audit-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-deep-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "deep-audit-gate" "deep-audit-gate"
+contains	scripts/check-desktop-platform-package-build.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-desktop-platform-package-build.sh	run_deve_baseline "$ROOT_DIR" "desktop-platform-package-build" "desktop-platform-package-build-check"
+contains	scripts/check-desktop-package-startup-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-desktop-package-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "desktop-package-startup-smoke" "desktop-package-startup-smoke-check"
+contains	scripts/check-desktop-native-session-package-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-desktop-native-session-package-smoke.sh	run_deve_baseline "$ROOT_DIR" "desktop-native-session-package-smoke" "desktop-native-session-package-smoke-check"
+contains	scripts/check-desktop-installer-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-desktop-installer-smoke.sh	run_deve_baseline "$ROOT_DIR" "desktop-installer-smoke" "desktop-installer-smoke-check"
+absent	scripts/check-desktop-installer-smoke.sh	validate_bundles()
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
+absent	scripts/check-mobile-android-emulator-install-startup-smoke.sh	assert_positive_integer()
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- local-quick-gate
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- deep-audit-gate
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- desktop-platform-package-build
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- desktop-package-startup-smoke
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- desktop-native-session-package-smoke
+contains	docs/acceptance-cases/12_tech_release.md	scripts/check-desktop-native-session-package-smoke.sh
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- desktop-installer-smoke
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- mobile-android-emulator-install-startup-smoke
