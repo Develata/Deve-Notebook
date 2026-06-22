@@ -8,12 +8,16 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 run_test() {
   local package="$1"
-  local filter="$2"
+  shift
+  local -a cargo_args=("$@")
+  local last_index=$(( ${#cargo_args[@]} - 1 ))
+  local filter="${cargo_args[$last_index]}"
   local output
   local total
+  unset "cargo_args[$last_index]"
 
-  echo "runtime-happy-path-smoke: run: cargo test -p $package $filter -- --nocapture"
-  if ! output="$(cd "$ROOT_DIR" && cargo test -p "$package" "$filter" -- --nocapture 2>&1)"; then
+  echo "runtime-happy-path-smoke: run: cargo test -p $package ${cargo_args[*]} $filter -- --nocapture"
+  if ! output="$(cd "$ROOT_DIR" && cargo test -p "$package" "${cargo_args[@]}" "$filter" -- --nocapture 2>&1)"; then
     printf '%s\n' "$output"
     return 1
   fi
@@ -30,10 +34,10 @@ run_test() {
   fi
 }
 
-run_test deve_cli ws_endpoint_sync_hello_uses_switched_repo_scope
-run_test deve_cli ws_endpoint_register_writer_after_sync_hello_returns_write_ready
-run_test deve_cli ws_edit_after_register_writer_emits_new_op_and_ack
-run_test deve_cli ws_open_doc_and_history_read_back_registered_edit
-run_test deve_web restore_runs_only_on_clean_reconnect_edge
+run_test deve_cli --lib ws_endpoint_sync_hello_uses_switched_repo_scope
+run_test deve_cli --lib ws_endpoint_register_writer_after_sync_hello_returns_write_ready
+run_test deve_cli --lib ws_edit_after_register_writer_emits_new_op_and_ack
+run_test deve_cli --lib ws_open_doc_and_history_read_back_registered_edit
+run_test deve_web --bin deve_web restore_runs_only_on_clean_reconnect_edge
 
 echo "runtime-happy-path-smoke: ok"

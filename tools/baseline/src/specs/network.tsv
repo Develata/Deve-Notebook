@@ -58,11 +58,11 @@ contains	crates/core/src/protocol/session_proof.rs	pub struct SessionProof
 contains	crates/core/src/protocol/client.rs	peer_pubkey: Vec<u8>
 contains	crates/core/src/protocol/client.rs	session_proof: SessionProof
 contains	apps/cli/src/server/ws/route/mod.rs	session_proof
-contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli ws_endpoint_sync_hello_uses_switched_repo_scope
-contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli ws_endpoint_register_writer_after_sync_hello_returns_write_ready
+contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli --lib ws_endpoint_sync_hello_uses_switched_repo_scope
+contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli --lib ws_endpoint_register_writer_after_sync_hello_returns_write_ready
 contains	apps/cli/src/server/tests/ws_acceptance/ws_sync_hello_acceptance_test.rs	async fn ws_endpoint_sync_hello_uses_switched_repo_scope
 contains	apps/cli/src/server/tests/ws_acceptance/ws_register_writer_acceptance_test.rs	async fn ws_endpoint_register_writer_after_sync_hello_returns_write_ready
-contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli ws_open_doc_and_history_read_back_registered_edit
+contains	scripts/smoke-runtime-happy-path.sh	run_test deve_cli --lib ws_open_doc_and_history_read_back_registered_edit
 contains	apps/cli/src/server/tests/ws_acceptance/ws_edit_readback_acceptance_test.rs	async fn ws_open_doc_and_history_read_back_registered_edit
 contains	apps/cli/src/server/test_modules.rs	mod open_doc_scope_test;
 contains	tools/baseline/src/specs/storage_repo.tsv	cargo test -p deve_cli open_doc_scope -- --nocapture
