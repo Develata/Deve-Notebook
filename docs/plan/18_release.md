@@ -64,6 +64,16 @@ Native 双模式属于运行时能力门禁，不属于签名/store/physical-dev
 
 Rust baseline checker 的默认聚合入口 `cargo run -p deve_baseline -- all` 只承载确定性的仓库文件检查：固定字符串存在/缺失、顺序检查、验收 case block 绑定、协议/文档常量钉扎，以及 `Cargo.lock` tracked / not ignored 这类轻量 git baseline。对于历史上已经作为 baseline shell 存在的确定性 `cargo test` 调度脚本，Rust checker MAY 提供 `cargo_test` TSV operation，并由 `cargo run -p deve_baseline -- full` 显式执行；该入口仍属于 developer/release tooling，不得启动产品 server、Docker/native packaging、平台 smoke、外部工具安装或 network runtime。Docker/native packaging、平台 smoke、外部工具安装与 network runtime 检查在未被显式建模前仍由 shell 脚本或 CI job 承担。Rust mirror 也 MAY 承载验收用例中已有的确定性边界检查脚本（例如结构化 WS 错误、browser prefs 边界、source-control smoke hygiene），前提是检查内容仍能表达为仓库文件合同而非运行时 smoke。Rust mirror 与 shell script 并存期间，确定性规格的唯一维护位置是 Rust checker 的 TSV spec；同名 shell 脚本只能作为兼容入口转发到 Rust checker，并输出相同风格的 fail-closed 诊断（`<name>-baseline-check: ...` 或既有脚本标签），避免 Windows/WSL bash runtime 不可用时失去本地验收入口，也避免长期双份规格漂移。
 
+### 2.1.2 Validation Script Ownership
+
+test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CLI 拥有”，不是机械删除所有 shell 文件。新增或迁移脚本时必须先分类：
+
+1.  **必须 Rust 化**：固定文本/文件合同检查、acceptance binding、registry、路径漂移、结构化错误、边界守卫、env 参数合法性、target 列表与 fail-closed 前置条件。这类检查 SHOULD 进入 `tools/baseline`；同名 shell 只能作为兼容 wrapper 调用 `run_deve_baseline`。
+2.  **优先 Rust 化但允许 shell 编排**：`check-*-preflight.sh`、`check-local-quick-gate.sh`、`check-deep-audit-gate.sh`、`check-release-audit-gate.sh` 这类聚合或 preflight 入口。Rust/CLI SHOULD 拥有分类、参数校验、诊断格式与 fail-closed 判断；shell MAY 保留外部命令串联、CI glue 与宿主工具调用。
+3.  **暂不强行纯 Rust**：Docker smoke、runtime server/browser smoke、adb/xcrun/installer/native package build、GitHub workflow dispatch 与 artifact collect。此类脚本 MAY 增加 Rust/CLI 前置校验或报告规范，但真实平台动作仍可由 shell/CI 编排；它们 MUST NOT 被并入 `deve_baseline -- all` 的轻量确定性聚合。
+
+任何迁移不得形成双份长期规格：确定性规则的唯一维护位置应是 Rust checker / TSV spec；shell wrapper 不得复制同一批固定字符串、路径漂移或边界判定。
+
 ### 2.2 Deferred Workflows (推迟的工作流)
 
 以下 workflow 不属于权威 release / CI 基线：

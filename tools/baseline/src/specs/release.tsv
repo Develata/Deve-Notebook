@@ -579,11 +579,21 @@ contains	scripts/check-ui-focus-baseline.sh	source "$ROOT_DIR/scripts/baseline-w
 contains	scripts/check-ui-focus-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-focus" "ui-focus-baseline-check"
 contains	docs/plan/18_release.md	`tools/baseline`（package `deve_baseline`）
 contains	docs/plan/18_release.md	确定性规格的唯一维护位置是 Rust checker 的 TSV spec
+contains	docs/plan/18_release.md	Validation Script Ownership
+contains	docs/plan/18_release.md	验证逻辑尽可能由 Rust/CLI 拥有
+contains	docs/plan/18_release.md	必须 Rust 化
+contains	docs/plan/18_release.md	优先 Rust 化但允许 shell 编排
+contains	docs/plan/18_release.md	暂不强行纯 Rust
+contains	docs/plan/18_release.md	MUST NOT 被并入 `deve_baseline -- all`
+contains	docs/plan/18_release.md	shell wrapper 不得复制同一批固定字符串
 contains	docs/features/15_release.md	`cargo run -p deve_baseline -- all`
 contains	docs/features/15_release.md	`cargo run -p deve_baseline -- full`
+contains	docs/features/15_release.md	validation script ownership policy
+contains	docs/features/15_release.md	Docker、runtime、native install/package 与 GitHub artifact smoke 不被强行塞进 `deve_baseline -- all`
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- all
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- full
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release
+contains	docs/acceptance-cases/12_tech_release.md	validation_script_ownership_policy_classified true
 contains	tools/baseline/src/main.rs	"full" => run_full_baselines()
 contains	tools/baseline/src/main.rs	"acceptance-bindings" => acceptance_bindings::run()
 contains	tools/baseline/src/main.rs	"architecture-registry" => architecture_registry::run()

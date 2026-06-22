@@ -65,6 +65,7 @@
   steps:
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
+    - run: cargo run -p deve_baseline -- release
     - run: cargo run -p deve_baseline -- all
     - run: cargo run -p deve_baseline -- full
     - run: cargo test -p deve_core ledger_entry_format -- --nocapture
@@ -78,6 +79,7 @@
     - stdout_contains: "release-baseline-check: ok"
     - stdout_contains: "repo-file-ops-baseline: ok"
     - release_assert: stable_data_format_v1_gates_present true
+    - release_assert: validation_script_ownership_policy_classified true
 
 - case_id: REL-004
   goal: 当前运行与测试入口文档和实现边界保持一致。
