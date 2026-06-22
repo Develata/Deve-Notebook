@@ -34,6 +34,26 @@ target_enabled() {
   return 1
 }
 
+validate_targets() {
+  local part target has_target=0
+  IFS=',' read -ra parts <<<"$TARGETS"
+  for part in "${parts[@]}"; do
+    target="${part//[[:space:]]/}"
+    case "$target" in
+      macos|windows)
+        has_target=1
+        ;;
+      "")
+        fail "DEVE_DESKTOP_TARGET_HOSTS must list macos or windows"
+        ;;
+      *)
+        fail "DEVE_DESKTOP_TARGET_HOSTS must list only macos or windows; invalid target: $target"
+        ;;
+    esac
+  done
+  [[ "$has_target" == "1" ]] || fail "DEVE_DESKTOP_TARGET_HOSTS must list macos or windows"
+}
+
 hard_missing=()
 target_missing=()
 
@@ -103,6 +123,7 @@ diagnose_rust_target() {
   fi
 }
 
+validate_targets
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 require_file "apps/desktop/tauri.conf.json"

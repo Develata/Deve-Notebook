@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
@@ -23,22 +24,6 @@ fail() {
 run() {
   echo "+ $*"
   "$@"
-}
-
-assert_android_shell_boundary() {
-  [[ ! -e "$ROOT_DIR/apps/mobile/gen/apple" ]] \
-    || fail "iOS generated project is not allowed in the Android install/startup gate"
-  [[ ! -e "$ROOT_DIR/apps/mobile/src-tauri" ]] \
-    || fail "legacy src-tauri layout is not allowed for apps/mobile"
-  [[ ! -e "$ROOT_DIR/apps/mobile/src/main.rs" ]] \
-    || fail "mobile shell must expose the Tauri mobile entrypoint from lib.rs, not src/main.rs"
-}
-
-assert_positive_integer() {
-  local name="$1"
-  local value="$2"
-
-  [[ "$value" =~ ^[1-9][0-9]*$ ]] || fail "$name must be a positive integer"
 }
 
 adb_cmd() {
@@ -77,7 +62,7 @@ cleanup() {
   adb_timed uninstall "$APP_ID" >/dev/null 2>&1 || true
 }
 
-assert_android_shell_boundary
+run_deve_baseline "$ROOT_DIR" "mobile-android-install-startup-smoke" "mobile-android-install-startup-smoke-check"
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 if [[ "$REQUIRED" != "1" ]]; then
@@ -94,9 +79,6 @@ fi
 if [[ -f "$ROOT_DIR/$APK_PATH" ]]; then
   APK_PATH="$ROOT_DIR/$APK_PATH"
 fi
-
-assert_positive_integer "DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS" "$ADB_TIMEOUT_SECS"
-assert_positive_integer "DEVE_MOBILE_ANDROID_STARTUP_WAIT_SECS" "$STARTUP_WAIT_SECS"
 
 run adb_timed start-server
 run adb_timed wait-for-device

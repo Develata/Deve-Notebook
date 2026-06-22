@@ -228,6 +228,10 @@ impl BaselineContext {
         crate::cargo_test::run(&self.root, self.label, package, filter)
     }
 
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
     pub fn ok(&self) {
         println!("{}: ok", self.label);
     }

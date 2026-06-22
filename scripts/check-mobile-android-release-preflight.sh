@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 SIGNING_REQUIRED="${DEVE_MOBILE_ANDROID_RELEASE_PREFLIGHT_REQUIRED:-0}"
 DEVICE_REQUIRED="${DEVE_MOBILE_ANDROID_PHYSICAL_DEVICE_PREFLIGHT_REQUIRED:-0}"
@@ -23,15 +24,6 @@ run() {
 
 missing_signing=()
 missing_device=()
-
-assert_android_shell_boundary() {
-  [[ ! -e "$ROOT_DIR/apps/mobile/gen/apple" ]] \
-    || fail "iOS generated project is not allowed in the Android release preflight"
-  [[ ! -e "$ROOT_DIR/apps/mobile/src-tauri" ]] \
-    || fail "legacy src-tauri layout is not allowed for apps/mobile"
-  [[ ! -e "$ROOT_DIR/apps/mobile/src/main.rs" ]] \
-    || fail "mobile shell must expose the Tauri mobile entrypoint from lib.rs, not src/main.rs"
-}
 
 diagnose_env() {
   local name="$1"
@@ -59,13 +51,6 @@ diagnose_command_name() {
     command -v "$command_name" >/dev/null 2>&1 && return 0
   done
   missing_device+=("$label")
-}
-
-validate_artifact_kind() {
-  case "$ARTIFACT_KIND" in
-    apk|aab) ;;
-    *) fail "DEVE_MOBILE_ANDROID_RELEASE_ARTIFACT_KIND must be apk or aab" ;;
-  esac
 }
 
 adb_lines() {
@@ -103,8 +88,7 @@ diagnose_physical_device() {
   fi
 }
 
-validate_artifact_kind
-assert_android_shell_boundary
+run_deve_baseline "$ROOT_DIR" "mobile-android-release-preflight" "mobile-android-release-preflight-check"
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 DEVE_MOBILE_PACKAGE_TARGETS=android \

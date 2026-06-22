@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED:-0}"
 TARGET="${DEVE_MOBILE_ANDROID_PACKAGE_TARGET:-aarch64}"
@@ -19,31 +20,6 @@ fail() {
 run() {
   echo "+ $*"
   "$@"
-}
-
-validate_target() {
-  case "$TARGET" in
-    aarch64|armv7|i686|x86_64) ;;
-    *) fail "unsupported Android target: $TARGET" ;;
-  esac
-}
-
-validate_artifact_kind() {
-  if [[ "$BUILD_APK" != "1" && "$BUILD_AAB" != "1" ]]; then
-    fail "at least one of DEVE_MOBILE_ANDROID_PACKAGE_APK or DEVE_MOBILE_ANDROID_PACKAGE_AAB must be 1"
-  fi
-  if [[ "$BUILD_DEBUG" == "1" && "$BUILD_AAB" == "1" ]]; then
-    fail "debug Android install-smoke builds must produce APK only; AAB is release/store packaging"
-  fi
-}
-
-assert_android_shell_boundary() {
-  [[ ! -e "$ROOT_DIR/apps/mobile/gen/apple" ]] \
-    || fail "iOS generated project is not allowed in the Android shell package gate"
-  [[ ! -e "$ROOT_DIR/apps/mobile/src-tauri" ]] \
-    || fail "legacy src-tauri layout is not allowed for apps/mobile"
-  [[ ! -e "$ROOT_DIR/apps/mobile/src/main.rs" ]] \
-    || fail "mobile shell must expose the Tauri mobile entrypoint from lib.rs, not src/main.rs"
 }
 
 configure_gradle_proxy_from_env() {
@@ -98,9 +74,7 @@ configure_kotlin_incremental_workaround() {
   echo "mobile-android-shell-package-build-check: Kotlin incremental disabled for Windows cross-drive Gradle sources"
 }
 
-validate_target
-validate_artifact_kind
-assert_android_shell_boundary
+run_deve_baseline "$ROOT_DIR" "mobile-android-shell-package-build" "mobile-android-shell-package-build-check"
 configure_android_build_java
 configure_kotlin_incremental_workaround
 
@@ -144,7 +118,7 @@ fi
   run "${build_args[@]}"
 )
 
-assert_android_shell_boundary
+run_deve_baseline "$ROOT_DIR" "mobile-android-shell-package-build" "mobile-android-shell-package-build-check"
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 echo "mobile-android-shell-package-build-check: ok"

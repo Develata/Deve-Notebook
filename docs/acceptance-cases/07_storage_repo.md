@@ -145,6 +145,7 @@
     - run: cargo test -p deve_web shortcut_config_roundtrips -- --nocapture
     - run: cargo test -p deve_web locale_preference_uses_ui_prefs -- --nocapture
     - run: scripts/check-browser-prefs-boundary.sh
+    - run: cargo run -p deve_baseline -- browser-prefs-boundary
     - run: cargo test -p deve_web output_write_classification -- --nocapture
   assertions:
     - WebCrypto_Ed25519_key_extractable_false: true

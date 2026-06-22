@@ -137,6 +137,7 @@
     - browser_wait_ws_event: true
     - run: scripts/check-auth-baseline.sh
     - run: scripts/check-auth-unauthorized-state.sh
+    - run: cargo run -p deve_baseline -- auth-unauthorized-state
     - run: cargo test -p deve_web writer_ready -- --nocapture
     - run: cargo test -p deve_web status_summary -- --nocapture
   assertions:

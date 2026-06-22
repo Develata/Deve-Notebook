@@ -241,8 +241,6 @@ jobs:
 
   desktop-linux:
     runs-on: ubuntu-latest
-    env:
-      DEVE_DESKTOP_TARGET_HOSTS: linux
     steps:
       - uses: actions/checkout@v6
 

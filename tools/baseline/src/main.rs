@@ -4,20 +4,39 @@ use anyhow::{Result, bail};
 use std::env;
 use std::process::ExitCode;
 
+mod acceptance_bindings;
 mod ai;
+mod architecture_registry;
 mod auth;
+mod auth_unauthorized_state;
+mod browser_prefs_boundary;
+mod cargo_gate;
 mod cargo_test;
 mod cli_settings;
 mod context;
+mod desktop_package_preflight;
+mod desktop_signing_preflight;
 mod dev_data_health;
 mod dev_runbook;
 mod diff_color;
+mod feature_operation_paths;
 mod foundation;
 mod graph;
 mod i18n_formatting;
 mod i18n_hardcoded;
 mod large_doc;
 mod mobile;
+mod mobile_android_install_startup_smoke;
+mod mobile_android_release_preflight;
+mod mobile_android_shell_package_build;
+mod mobile_ios_install_startup_smoke;
+mod mobile_ios_shell_package_build;
+mod mobile_platform_package_preflight;
+mod mobile_shell_gate;
+mod native_packaging_gate;
+mod native_process_adapter_gate;
+mod native_target_host_evidence;
+mod native_track_boundary;
 mod network;
 mod release;
 mod rendering;
@@ -25,6 +44,7 @@ mod repo_file_ops;
 mod search;
 mod settings_local_feedback;
 mod source_control;
+mod source_control_smoke_hygiene;
 mod spec;
 mod storage_repo;
 mod ui_dashboard_refresh;
@@ -34,6 +54,7 @@ mod ui_focus;
 mod ui_spa_routing;
 mod ui_token;
 mod ui_z_index;
+mod ws_structured_errors;
 
 fn main() -> ExitCode {
     match run() {
@@ -46,14 +67,19 @@ fn main() -> ExitCode {
 }
 
 fn run() -> Result<()> {
-    let command = env::args().nth(1).unwrap_or_else(|| "--help".to_string());
+    let mut args = env::args().skip(1);
+    let command = args.next().unwrap_or_else(|| "--help".to_string());
+    let command_args: Vec<String> = args.collect();
 
     match command.as_str() {
         "storage-repo" => storage_repo::run(),
+        "acceptance-bindings" => acceptance_bindings::run(),
+        "architecture-registry" => architecture_registry::run(),
         "network" => network::run(),
         "release" => release::run(),
         "dev-runbook" => dev_runbook::run(),
         "diff-color" => diff_color::run(),
+        "feature-operation-paths" => feature_operation_paths::run(),
         "graph" => graph::run(),
         "i18n-formatting" => i18n_formatting::run(),
         "i18n-hardcoded" => i18n_hardcoded::run(),
@@ -63,24 +89,40 @@ fn run() -> Result<()> {
         "ui-z-index" => ui_z_index::run(),
         "ui-focus" => ui_focus::run(),
         "auth" => auth::run(),
+        "auth-unauthorized-state" => auth_unauthorized_state::run(),
+        "browser-prefs-boundary" => browser_prefs_boundary::run(),
         "ai" => ai::run(),
         "cli-settings" => cli_settings::run(),
         "dev-data-health" => dev_data_health::run(),
+        "desktop-package-preflight" => desktop_package_preflight::run(),
+        "desktop-signing-preflight" => desktop_signing_preflight::run(),
         "foundation" => foundation::run(),
         "large-doc" => large_doc::run(),
         "mobile" => mobile::run(),
+        "mobile-android-release-preflight" => mobile_android_release_preflight::run(),
+        "mobile-android-install-startup-smoke" => mobile_android_install_startup_smoke::run(),
+        "mobile-android-shell-package-build" => mobile_android_shell_package_build::run(),
+        "mobile-ios-install-startup-smoke" => mobile_ios_install_startup_smoke::run(),
+        "mobile-ios-shell-package-build" => mobile_ios_shell_package_build::run(),
+        "mobile-platform-package-preflight" => mobile_platform_package_preflight::run(),
+        "native-packaging-gate" => native_packaging_gate::run(),
+        "native-process-adapter-gate" => native_process_adapter_gate::run(),
+        "native-track-boundary" => native_track_boundary::run(),
+        "native-target-host-evidence" => native_target_host_evidence::run(&command_args),
         "repo-file-ops" => repo_file_ops::run(),
         "settings-local-feedback" => settings_local_feedback::run(),
         "source-control" => source_control::run(),
+        "source-control-smoke-hygiene" => source_control_smoke_hygiene::run(),
         "ui-dashboard-refresh" => ui_dashboard_refresh::run(),
         "ui-desktop" => ui_desktop::run(),
         "ui-disconnect" => ui_disconnect::run(),
         "ui-spa-routing" => ui_spa_routing::run(),
+        "ws-structured-errors" => ws_structured_errors::run(),
         "all" => run_text_baselines(),
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|network|release|dev-runbook|diff-color|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|ai|cli-settings|dev-data-health|foundation|large-doc|mobile|repo-file-ops|settings-local-feedback|source-control|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|desktop-package-preflight|desktop-signing-preflight|foundation|large-doc|mobile|mobile-android-release-preflight|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
             );
             Ok(())
         }
@@ -94,10 +136,13 @@ fn run() -> Result<()> {
 
 fn run_text_baselines() -> Result<()> {
     storage_repo::run()?;
+    acceptance_bindings::run()?;
+    architecture_registry::run()?;
     network::run()?;
     release::run()?;
     dev_runbook::run()?;
     diff_color::run()?;
+    feature_operation_paths::run()?;
     graph::run()?;
     i18n_formatting::run()?;
     i18n_hardcoded::run()?;
@@ -107,26 +152,35 @@ fn run_text_baselines() -> Result<()> {
     ui_z_index::run()?;
     ui_focus::run()?;
     auth::run_text()?;
+    auth_unauthorized_state::run()?;
+    browser_prefs_boundary::run()?;
     ai::run_text()?;
     cli_settings::run_text()?;
     dev_data_health::run_text()?;
     foundation::run_text()?;
     large_doc::run_text()?;
     mobile::run_text()?;
+    native_track_boundary::run()?;
+    native_target_host_evidence::run(&[])?;
     settings_local_feedback::run_text()?;
     source_control::run_text()?;
+    source_control_smoke_hygiene::run()?;
     ui_dashboard_refresh::run_text()?;
     ui_desktop::run_text()?;
     ui_disconnect::run_text()?;
-    ui_spa_routing::run_text()
+    ui_spa_routing::run_text()?;
+    ws_structured_errors::run()
 }
 
 fn run_full_baselines() -> Result<()> {
     storage_repo::run()?;
+    acceptance_bindings::run()?;
+    architecture_registry::run()?;
     network::run()?;
     release::run()?;
     dev_runbook::run()?;
     diff_color::run()?;
+    feature_operation_paths::run()?;
     graph::run()?;
     i18n_formatting::run()?;
     i18n_hardcoded::run()?;
@@ -136,17 +190,25 @@ fn run_full_baselines() -> Result<()> {
     ui_z_index::run()?;
     ui_focus::run()?;
     auth::run()?;
+    auth_unauthorized_state::run()?;
+    browser_prefs_boundary::run()?;
     ai::run()?;
     cli_settings::run()?;
     dev_data_health::run()?;
+    desktop_package_preflight::run()?;
     foundation::run()?;
     large_doc::run()?;
     mobile::run()?;
+    native_packaging_gate::run()?;
+    native_process_adapter_gate::run()?;
+    native_target_host_evidence::run(&[])?;
     repo_file_ops::run()?;
     settings_local_feedback::run()?;
     source_control::run()?;
+    source_control_smoke_hygiene::run()?;
     ui_dashboard_refresh::run()?;
     ui_desktop::run()?;
     ui_disconnect::run()?;
-    ui_spa_routing::run()
+    ui_spa_routing::run()?;
+    ws_structured_errors::run()
 }

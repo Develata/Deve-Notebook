@@ -1,0 +1,19 @@
+regex_absent_tree_ext_skip	apps/web/src	rs	window\(\)\.local_storage|\.local_storage\(|globalThis\.localStorage|sessionStorage	apps/web/src/storage/prefs.rs|apps/web/src/storage/js_bridge.rs
+contains	apps/web/src/hooks/use_layout/storage.rs	read_i32_pref
+contains	apps/web/src/hooks/use_outline.rs	read_bool_pref
+contains	apps/web/src/shortcuts/config.rs	read_pref
+contains	apps/web/src/components/settings_prefs.rs	read_pref
+contains	apps/web/src/components/settings_prefs.rs	write_pref
+contains	apps/web/src/components/settings_prefs.rs	read_i32_pref
+contains	apps/web/src/components/settings_prefs.rs	write_i32_pref
+contains	apps/web/src/components/settings_prefs.rs	read_bool_pref
+contains	apps/web/src/components/settings_prefs.rs	write_bool_pref
+contains	apps/web/src/components/settings_prefs.rs	deve.ui.ai_chat_visible
+contains	apps/web/src/components/settings_prefs.rs	deve.ui.max_document_tabs
+contains	apps/web/src/i18n/mod.rs	write_pref
+contains	apps/web/src/storage/prefs.rs	typed_prefs_roundtrip_through_fallback_layer
+contains	apps/web/src/hooks/use_core/scope_prefs.rs	repo_name: String
+contains	apps/web/src/hooks/use_core/scope_prefs.rs	fn serialize_scope_pref(repo_name: String) -> Option<String>
+absent	apps/web/src/hooks/use_core/scope_prefs.rs	expect("scope pref should serialize")
+absent	apps/web/src/hooks/use_core/scope_prefs.rs	repo_id:
+absent	apps/web/src/hooks/use_core/scope_prefs.rs	active_branch:

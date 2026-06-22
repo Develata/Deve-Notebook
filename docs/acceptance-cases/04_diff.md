@@ -251,6 +251,7 @@
   steps:
     - run: deve sc-status --repo default
     - run: scripts/check-source-control-smoke-hygiene.sh
+    - run: cargo run -p deve_baseline -- source-control-smoke-hygiene
     - run: cargo test -p deve_cli sc_status -- --nocapture
     - run: cargo test -p deve_cli clean_source_control_smoke_fixture -- --nocapture
   assertions:

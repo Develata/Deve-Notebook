@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 REQUIRED="${DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED:-0}"
 TARGETS="${DEVE_DESKTOP_SIGNING_TARGETS:-macos,windows}"
 
@@ -85,6 +86,7 @@ diagnose_apple_notarization_credentials() {
   missing+=("Apple notarization credentials: APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID or APPLE_API_KEY/APPLE_API_KEY_ID/APPLE_API_ISSUER")
 }
 
+run_deve_baseline "$ROOT_DIR" "desktop-signing-preflight" "desktop-signing-preflight-check"
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 echo "desktop-signing-preflight-check: host_os=$(host_os)"

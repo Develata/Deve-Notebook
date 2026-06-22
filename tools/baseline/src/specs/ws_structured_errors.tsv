@@ -1,0 +1,17 @@
+regex_absent_tree_ext	crates/core/src/protocol	rs	Error\(String\)
+regex_absent_tree_ext	apps/cli/src/server	rs	Error\(String\)
+regex_absent_tree_ext	apps/web/src/api	rs	Error\(String\)
+regex_absent_tree_ext	apps/web/src/hooks/use_core/effects	rs	Error\(String\)
+regex_absent_tree_ext	apps/web/src/editor/sync	rs	Error\(String\)
+regex_absent_tree_ext	crates/core/src/protocol	rs	(^|[^[:alnum:]_])error:\s*(Option<)?String
+regex_absent_tree_ext	apps/cli/src/server	rs	(^|[^[:alnum:]_])error:\s*(Option<)?String
+regex_absent_tree_ext	apps/web/src/api	rs	(^|[^[:alnum:]_])error:\s*(Option<)?String
+regex_absent_tree_ext	apps/web/src/hooks/use_core/effects	rs	(^|[^[:alnum:]_])error:\s*(Option<)?String
+regex_absent_tree_ext	apps/web/src/editor/sync	rs	(^|[^[:alnum:]_])error:\s*(Option<)?String
+contains	crates/core/src/protocol/server.rs	ProtocolError { error: ServerError
+contains	crates/core/src/protocol/server.rs	error: Option<ServerError>
+contains	apps/web/src/hooks/use_core/effects/message_dispatch_route_protocol.rs	ServerMessage::ProtocolError
+contains	apps/web/src/i18n/server_error.rs	ServerErrorCode
+contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncVersionMismatch
+contains	apps/cli/src/server/ws/receive/mod.rs	ServerErrorCode::SyncInvalidPayload
+contains	apps/web/src/api/incoming/decode.rs	ServerErrorCode::SyncInvalidPayload

@@ -181,6 +181,7 @@
     - 触发 source control 错误（如暂存不存在的 pending）
   steps:
     - run: scripts/check-ws-structured-errors.sh
+    - run: cargo run -p deve_baseline -- ws-structured-errors
     - run: cargo test -p deve_cli core_scoped_scope_nonce_gate -- --nocapture
   assertions:
     - stdout_contains: "ws-structured-errors-check: ok"
@@ -195,6 +196,7 @@
     - run: curl -s -X POST http://127.0.0.1:3000/api/auth/logout
     - browser_wait_ws_event: true
     - run: scripts/check-auth-unauthorized-state.sh
+    - run: cargo run -p deve_baseline -- auth-unauthorized-state
     - run: cargo test -p deve_web auth_probe -- --nocapture
     - run: cargo test -p deve_web writer_ready -- --nocapture
     - run: cargo test -p deve_web status_summary -- --nocapture

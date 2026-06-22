@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 REQUIRED="${DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED:-0}"
 TARGETS="${DEVE_MOBILE_PACKAGE_TARGETS:-android,ios}"
@@ -99,6 +100,13 @@ android_rust_target() {
   esac
 }
 
+cargo_bin="${CARGO_BIN:-${CARGO:-}}"
+if [[ -z "$cargo_bin" ]]; then
+  cargo_bin="$(resolve_baseline_cargo "$ROOT_DIR" || true)"
+fi
+[[ -n "$cargo_bin" ]] || fail "cargo is required for mobile platform package preflight"
+
+run_deve_baseline "$ROOT_DIR" "mobile-platform-package-preflight" "mobile-platform-package-preflight-check"
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
 require_file "apps/mobile/tauri.conf.json"
@@ -119,11 +127,11 @@ if ((${#hard_missing[@]} > 0)); then
   fail "mobile shell/package boundary is not in the expected preflight state"
 fi
 
-run cargo check --locked -p deve_mobile --no-default-features
+run "$cargo_bin" check --locked -p deve_mobile --no-default-features
 if [[ "$HOST_NATIVE_PACKAGING_CHECK" == "1" ]]; then
-  run cargo check --locked -p deve_mobile --features native-packaging
-  run cargo test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
-  run cargo test --locked -p deve_mobile --features native-packaging mobile_embedded_backend -- --nocapture
+  run "$cargo_bin" check --locked -p deve_mobile --features native-packaging
+  run "$cargo_bin" test --locked -p deve_mobile --features native-packaging packaging -- --nocapture
+  run "$cargo_bin" test --locked -p deve_mobile --features native-packaging mobile_embedded_backend -- --nocapture
 else
   echo "mobile-platform-package-preflight-check: host native-packaging cargo check skipped by DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK=0"
   echo "mobile-platform-package-preflight-check: host native-packaging packaging tests skipped by DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK=0"
@@ -133,14 +141,14 @@ echo "mobile-platform-package-preflight-check: host_os=$(host_os)"
 echo "mobile-platform-package-preflight-check: targets=$TARGETS"
 
 diagnose_file "apps/web/dist/index.html"
-diagnose_command "cargo tauri CLI" cargo tauri --version
+diagnose_command "cargo tauri CLI" "$cargo_bin" tauri --version
 
-if cargo tauri --version >/dev/null 2>&1; then
+if "$cargo_bin" tauri --version >/dev/null 2>&1; then
   if target_enabled android; then
-    diagnose_command "cargo tauri android subcommand" cargo tauri android --help
+    diagnose_command "cargo tauri android subcommand" "$cargo_bin" tauri android --help
   fi
   if target_enabled ios; then
-    diagnose_command "cargo tauri ios subcommand" cargo tauri ios --help
+    diagnose_command "cargo tauri ios subcommand" "$cargo_bin" tauri ios --help
   fi
 fi
 

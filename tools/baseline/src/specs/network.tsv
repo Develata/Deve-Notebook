@@ -87,10 +87,12 @@ contains	apps/cli/src/server/tests/sync/sync_transfer_push_test.rs	async fn sync
 contains	apps/cli/src/server/tests/sync/sync_transfer_snapshot_test.rs	async fn sync_push_snapshot_rejects_relay_forged_source_proof
 contains	crates/core/src/protocol/sync_push_header/tests.rs	fn source_proof_signing_rejects_wrong_source_key
 contains	crates/core/src/protocol/sync_push_header/tests.rs	fn source_proof_rejects_payload_tamper
-contains	scripts/check-ws-structured-errors.sh	ws-structured-errors-check: ok
+contains	scripts/check-ws-structured-errors.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ws-structured-errors.sh	run_deve_baseline "$ROOT_DIR" "ws-structured-errors" "ws-structured-errors-check"
 contains	apps/cli/src/server/ws/route/core_scoped/tests.rs	core_scoped_scope_nonce_gate_rejects_missing_scope_before_handler
 contains	apps/cli/src/server/ws/route/core_scoped/tests.rs	core_scoped_scope_nonce_gate_rejects_stale_scope_before_handler
-contains	scripts/check-auth-unauthorized-state.sh	auth-unauthorized-check: ok
+contains	scripts/check-auth-unauthorized-state.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-auth-unauthorized-state.sh	run_deve_baseline "$ROOT_DIR" "auth-unauthorized-state" "auth-unauthorized-check"
 contains	scripts/smoke-runtime-recovery-path.sh	deve_web \
 contains	scripts/smoke-runtime-recovery-path.sh	status_summary \
 contains	scripts/smoke-runtime-recovery-path.sh	auth_probe \

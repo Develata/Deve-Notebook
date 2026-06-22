@@ -1,0 +1,17 @@
+contains	docs/dev-runbook.md	sc-status --repo <repo>
+contains	docs/dev-runbook.md	Source Control state lives in Deve
+contains	docs/dev-runbook.md	checked-in local `default` ledger being clean
+contains	apps/cli/src/main.rs	ScStatus
+contains	apps/cli/src/main_test.rs	sc_status_accepts_repo_selector
+contains	apps/cli/src/dispatch.rs	commands::sc_status::run
+contains	apps/cli/src/commands/sc_status.rs	list_staged_in_local_repo
+contains	apps/cli/src/commands/sc_status.rs	list_pending_fs_in_local_repo
+contains	apps/cli/src/commands/sc_status.rs	sc_status[
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/clean_fixture.rs	clean_source_control_smoke_fixture_stage_unstage_commit
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/clean_fixture.rs	ProxyHarness::spawn
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/clean_fixture.rs	/api/sc/stage-pending
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/clean_fixture.rs	/api/sc/unstage
+contains	apps/cli/src/server/tests/source_control/source_control_http_test/clean_fixture.rs	/api/sc/commit
+contains	docs/acceptance-cases/04_diff.md	case_id: DIFF-010
+contains	docs/acceptance-cases/04_diff.md	scripts/check-source-control-smoke-hygiene.sh
+contains	docs/acceptance-cases/04_diff.md	clean_source_control_smoke_fixture

@@ -1,16 +1,14 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use super::support::{
-    ProxyHarness, path_target, seed_pending,
-};
-use super::super::sync_hello_test_support::signed_hello_for_scope;
-use super::super::source_control_grants::SourceControlGrantBranch;
 use super::super::auth::delegated_source_control::DELEGATED_SC_HEADER;
+use super::super::source_control_grants::SourceControlGrantBranch;
+use super::super::sync_hello_test_support::signed_hello_for_scope;
 use super::super::ws_protocol_acceptance_support::{recv_server_message, send_client_message};
+use super::support::{ProxyHarness, path_target, seed_pending};
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::PeerId;
-use deve_core::protocol::{ClientMessage, ServerMessage};
+use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
 use deve_core::security::IdentityKeyPair;
 use deve_core::source_control::{ChangeStatus, SourceControlApi};
 use reqwest::header::{COOKIE as HTTP_COOKIE, SET_COOKIE};
@@ -43,7 +41,7 @@ async fn test_http_stage_rejects_missing_scope_nonce_before_mutation() -> anyhow
     let body: deve_core::protocol::ServerError = response.json().await?;
 
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
-    assert_eq!(body.code, deve_core::protocol::ServerErrorCode::ScRepoContextInvalid);
+    assert_eq!(body.code, ServerErrorCode::ScRepoContextInvalid);
     assert_eq!(
         body.detail.as_deref(),
         Some("source control scope nonce missing")
@@ -74,10 +72,7 @@ async fn http_source_control_mutations_require_browser_write_grant() -> anyhow::
     let body: deve_core::protocol::ServerError = response.json().await?;
 
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
-    assert_eq!(
-        body.code,
-        deve_core::protocol::ServerErrorCode::ScStaleScope
-    );
+    assert_eq!(body.code, ServerErrorCode::ScStaleScope);
     assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
     assert!(repo.list_staged_in_repo(&selector)?.is_empty());
 
@@ -147,10 +142,7 @@ async fn http_source_control_write_grant_requires_local_branch() -> anyhow::Resu
     let body: deve_core::protocol::ServerError = response.json().await?;
 
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
-    assert_eq!(
-        body.code,
-        deve_core::protocol::ServerErrorCode::ScStaleScope
-    );
+    assert_eq!(body.code, ServerErrorCode::ScStaleScope);
     assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
     assert!(repo.list_staged_in_repo(&selector)?.is_empty());
     harness.shutdown().await;
@@ -185,10 +177,7 @@ async fn logout_revokes_source_control_write_grant() -> anyhow::Result<()> {
     let body: deve_core::protocol::ServerError = response.json().await?;
 
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
-    assert_eq!(
-        body.code,
-        deve_core::protocol::ServerErrorCode::ScStaleScope
-    );
+    assert_eq!(body.code, ServerErrorCode::ScStaleScope);
     assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
     assert!(repo.list_staged_in_repo(&selector)?.is_empty());
     harness.shutdown().await;
@@ -204,10 +193,7 @@ async fn delegated_source_control_requires_proxy_capability() -> anyhow::Result<
 
     let response = harness
         .client
-        .post(format!(
-            "{}/api/delegated/sc/stage-pending",
-            harness.base_url
-        ))
+        .post(format!("{}/api/delegated/sc/stage-pending", harness.base_url))
         .json(&serde_json::json!({
             "scope_nonce": 1,
             "path": "notes/a.md",
@@ -218,10 +204,7 @@ async fn delegated_source_control_requires_proxy_capability() -> anyhow::Result<
     let body: deve_core::protocol::ServerError = response.json().await?;
 
     assert_eq!(status, reqwest::StatusCode::FORBIDDEN);
-    assert_eq!(
-        body.code,
-        deve_core::protocol::ServerErrorCode::PluginCapabilityDenied
-    );
+    assert_eq!(body.code, ServerErrorCode::PluginCapabilityDenied);
     assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
     assert!(repo.list_staged_in_repo(&selector)?.is_empty());
 
@@ -243,14 +226,8 @@ async fn delegated_source_control_rejects_unexpected_scope_nonce() -> anyhow::Re
 
     let response = harness
         .client
-        .post(format!(
-            "{}/api/delegated/sc/stage-pending",
-            harness.base_url
-        ))
-        .header(
-            DELEGATED_SC_HEADER,
-            harness.delegated_source_control_header_value(),
-        )
+        .post(format!("{}/api/delegated/sc/stage-pending", harness.base_url))
+        .header(DELEGATED_SC_HEADER, harness.delegated_source_control_header_value())
         .json(&serde_json::json!({
             "scope_nonce": 9,
             "path": "notes/a.md",
@@ -261,10 +238,7 @@ async fn delegated_source_control_rejects_unexpected_scope_nonce() -> anyhow::Re
     let body: deve_core::protocol::ServerError = response.json().await?;
 
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
-    assert_eq!(
-        body.code,
-        deve_core::protocol::ServerErrorCode::ScStaleScope
-    );
+    assert_eq!(body.code, ServerErrorCode::ScStaleScope);
     assert_eq!(
         body.detail.as_deref(),
         Some("delegated source control scope nonce mismatch")
@@ -300,10 +274,7 @@ async fn anonymous_localhost_source_control_grant_is_not_dev_wide() -> anyhow::R
     let body: deve_core::protocol::ServerError = response.json().await?;
 
     assert_eq!(status, reqwest::StatusCode::CONFLICT);
-    assert_eq!(
-        body.code,
-        deve_core::protocol::ServerErrorCode::ScStaleScope
-    );
+    assert_eq!(body.code, ServerErrorCode::ScStaleScope);
     assert_eq!(repo.list_pending_fs_in_repo(&selector)?.len(), 1);
     assert!(repo.list_staged_in_repo(&selector)?.is_empty());
 

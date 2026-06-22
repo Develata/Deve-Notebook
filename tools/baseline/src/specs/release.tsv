@@ -123,10 +123,10 @@ contains	scripts/collect-native-target-host-evidence.sh	check-native-target-host
 contains	scripts/collect-native-target-host-evidence.sh	validate_artifact_name
 contains	scripts/collect-native-target-host-evidence.sh	prepare_artifact_dir
 contains	scripts/collect-native-target-host-evidence.sh	invalid artifact name
-contains	scripts/check-native-target-host-evidence.sh	Process runtime gate: closed
-contains	scripts/check-native-target-host-evidence.sh	Native authority writes: closed
-contains	scripts/check-native-target-host-evidence.sh	installer_smoke=
-contains	scripts/check-native-target-host-evidence.sh	invalid_installer_request=
+contains	tools/baseline/src/native_target_host_evidence.rs	Process runtime gate: closed
+contains	tools/baseline/src/native_target_host_evidence.rs	Native authority writes: closed
+contains	tools/baseline/src/native_target_host_evidence.rs	installer_smoke=
+contains	tools/baseline/src/native_target_host_evidence.rs	invalid_installer_request=
 contains	scripts/write-native-target-host-evidence.sh	Process runtime gate: closed
 contains	scripts/write-native-target-host-evidence.sh	Native authority writes: closed
 contains	scripts/write-native-target-host-evidence.sh	Command results:
@@ -372,6 +372,7 @@ contains	docs/report/native-target-host-handoff-2026-05-14.md	Mobile iOS
 contains	docs/report/native-target-host-handoff-2026-05-14.md	Process runtime gate remains closed
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOSTS
+contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOSTS must list only macos or windows
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_PACKAGE_NO_SIGN
 contains	scripts/check-desktop-target-host-preflight.sh	macOS target-host requires Darwin
 contains	scripts/check-desktop-target-host-preflight.sh	Windows target-host requires Windows
@@ -384,24 +385,35 @@ contains	scripts/check-mobile-platform-package-preflight.sh	DEVE_MOBILE_PACKAGE_
 contains	scripts/check-mobile-platform-package-preflight.sh	DEVE_MOBILE_PACKAGE_TARGETS
 contains	scripts/check-mobile-platform-package-preflight.sh	DEVE_MOBILE_ANDROID_PACKAGE_TARGET
 contains	scripts/check-mobile-platform-package-preflight.sh	DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK
+contains	scripts/check-mobile-platform-package-preflight.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-platform-package-preflight.sh	cargo_bin="$(resolve_baseline_cargo "$ROOT_DIR" || true)"
+contains	scripts/check-mobile-platform-package-preflight.sh	run_deve_baseline "$ROOT_DIR" "mobile-platform-package-preflight" "mobile-platform-package-preflight-check"
+contains	scripts/check-mobile-platform-package-preflight.sh	run "$cargo_bin" check --locked -p deve_mobile --no-default-features
+contains	scripts/check-mobile-platform-package-preflight.sh	diagnose_command "cargo tauri CLI" "$cargo_bin" tauri --version
 contains	scripts/check-mobile-platform-package-preflight.sh	x86_64-linux-android
-contains	scripts/check-mobile-platform-package-preflight.sh	cargo tauri android --help
-contains	scripts/check-mobile-platform-package-preflight.sh	cargo tauri ios --help
+contains	scripts/check-mobile-platform-package-preflight.sh	"$cargo_bin" tauri android --help
+contains	scripts/check-mobile-platform-package-preflight.sh	"$cargo_bin" tauri ios --help
 contains	scripts/check-mobile-platform-package-preflight.sh	Android shell package build is allowed only through scripts/check-mobile-android-shell-package-build.sh
 contains	scripts/check-mobile-android-shell-package-build.sh	DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED
 contains	scripts/check-mobile-android-shell-package-build.sh	DEVE_MOBILE_ANDROID_PACKAGE_DEBUG
+contains	scripts/check-mobile-android-shell-package-build.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-android-shell-package-build.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-shell-package-build" "mobile-android-shell-package-build-check"
 contains	scripts/check-mobile-android-shell-package-build.sh	--debug
 contains	scripts/check-mobile-android-shell-package-build.sh	cargo tauri android init --ci --skip-targets-install
 contains	scripts/check-mobile-android-shell-package-build.sh	cargo tauri android build --ci --features native-packaging
 contains	scripts/check-mobile-android-shell-package-build.sh	child-process runtime
 contains	scripts/check-mobile-ios-shell-package-build.sh	DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED
 contains	scripts/check-mobile-ios-shell-package-build.sh	DEVE_MOBILE_IOS_PACKAGE_TARGET:-aarch64-sim
+contains	scripts/check-mobile-ios-shell-package-build.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-ios-shell-package-build.sh	run_deve_baseline "$ROOT_DIR" "mobile-ios-shell-package-build" "mobile-ios-shell-package-build-check"
 contains	scripts/check-mobile-ios-shell-package-build.sh	cargo tauri ios init --ci --skip-targets-install
 contains	scripts/check-mobile-ios-shell-package-build.sh	cargo tauri ios build --ci --features native-packaging
 contains	scripts/check-mobile-ios-shell-package-build.sh	child-process runtime
 contains	scripts/check-mobile-android-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED
 contains	scripts/check-mobile-android-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_SERIAL
 contains	scripts/check-mobile-android-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS
+contains	scripts/check-mobile-android-install-startup-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-android-install-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-install-startup-smoke" "mobile-android-install-startup-smoke-check"
 contains	scripts/check-mobile-android-install-startup-smoke.sh	app-universal-debug.apk
 contains	scripts/check-mobile-android-install-startup-smoke.sh	adb_timed install -r
 contains	scripts/check-mobile-android-install-startup-smoke.sh	android.intent.category.LAUNCHER
@@ -419,23 +431,31 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	check-mo
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	check-mobile-android-install-startup-smoke.sh
 contains	scripts/check-mobile-ios-install-startup-smoke.sh	DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED
 contains	scripts/check-mobile-ios-install-startup-smoke.sh	DEVE_MOBILE_IOS_BOOT_SIMULATOR
+contains	scripts/check-mobile-ios-install-startup-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-ios-install-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "mobile-ios-install-startup-smoke" "mobile-ios-install-startup-smoke-check"
 contains	scripts/check-mobile-ios-install-startup-smoke.sh	xcrun_cmd simctl install
 contains	scripts/check-mobile-ios-install-startup-smoke.sh	xcrun_cmd simctl launch
 contains	scripts/check-mobile-ios-install-startup-smoke.sh	child-process runtime
 contains	scripts/check-desktop-signing-preflight.sh	DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED
 contains	scripts/check-desktop-signing-preflight.sh	DEVE_DESKTOP_SIGNING_TARGETS
+contains	scripts/check-desktop-signing-preflight.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-desktop-signing-preflight.sh	run_deve_baseline "$ROOT_DIR" "desktop-signing-preflight" "desktop-signing-preflight-check"
 contains	scripts/check-desktop-signing-preflight.sh	APPLE_PROVIDER_SHORT_NAME
 contains	scripts/check-desktop-signing-preflight.sh	WINDOWS_SIGNING_CERT_BASE64
 contains	scripts/check-desktop-signing-preflight.sh	signing/notarization not executed
 contains	scripts/check-mobile-android-release-preflight.sh	DEVE_MOBILE_ANDROID_RELEASE_PREFLIGHT_REQUIRED
 contains	scripts/check-mobile-android-release-preflight.sh	DEVE_MOBILE_ANDROID_PHYSICAL_DEVICE_PREFLIGHT_REQUIRED
+contains	scripts/check-mobile-android-release-preflight.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-mobile-android-release-preflight.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-release-preflight" "mobile-android-release-preflight-check"
 contains	scripts/check-mobile-android-release-preflight.sh	DEVE_ANDROID_KEYSTORE_BASE64
 contains	scripts/check-mobile-android-release-preflight.sh	physical Android device
 contains	scripts/check-mobile-android-release-preflight.sh	signed release and physical-device smoke not executed
-contains	scripts/check-native-process-adapter-gate.sh	DeferredUntilPackagingGate
-contains	scripts/check-native-process-adapter-gate.sh	check_no_process_runtime_leak
-contains	scripts/check-native-process-adapter-gate.sh	DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS
-contains	scripts/check-native-process-adapter-gate.sh	process_observation
+contains	tools/baseline/src/main.rs	mod mobile_android_release_preflight;
+contains	tools/baseline/src/main.rs	"mobile-android-release-preflight" => mobile_android_release_preflight::run()
+contains	tools/baseline/src/mobile_android_release_preflight.rs	DEVE_MOBILE_ANDROID_RELEASE_ARTIFACT_KIND
+contains	tools/baseline/src/mobile_android_release_preflight.rs	iOS generated project is not allowed in the Android release preflight
+contains	scripts/check-native-process-adapter-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-native-process-adapter-gate.sh	run_deve_baseline "$ROOT_DIR" "native-process-adapter-gate" "native-process-adapter-gate-check"
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Decision: `KeepClosedUntilExplicitRuntimeFeature`
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	No real child-process runtime was opened.
 contains	docs/report/process-runtime-gate-decision-after-target-host-closure-2026-05-15.md	Desktop macOS
@@ -503,7 +523,32 @@ contains	scripts/check-release-audit-gate.sh	DEVE_RELEASE_AUDIT_REQUIRED
 contains	scripts/check-release-audit-gate.sh	skip cargo audit
 contains	docs/features/operations/release_quality_gates.md	runtime happy-path and recovery smokes remain explicit local/CI script gates
 contains	scripts/baseline-wrapper.sh	resolve_baseline_cargo()
+contains	scripts/baseline-wrapper.sh	baseline_repo_on_wsl_windows_mount()
+contains	scripts/baseline-wrapper.sh	[[ "$root_dir" == /mnt/* ]] && grep -qi microsoft /proc/version
+contains	scripts/baseline-wrapper.sh	login_cargo="$(bash -lc 'command -v cargo' 2>/dev/null | head -n 1)"
+contains	scripts/baseline-wrapper.sh	bash -lc 'command -v cargo || command -v cargo.exe'
+contains	scripts/baseline-wrapper.sh	baseline_deve_wslenv()
+contains	scripts/baseline-wrapper.sh	WSLENV="$(baseline_deve_wslenv)" "$cargo_bin" run --quiet -p deve_baseline
+contains	scripts/baseline-wrapper.sh	cargo_bin="$(resolve_baseline_cargo "$root_dir" || true)"
 contains	scripts/baseline-wrapper.sh	run_deve_baseline()
+contains	scripts/baseline-wrapper.sh	"$baseline" "$@"
+contains	scripts/baseline-wrapper.sh	local cargo_bin="${CARGO_BIN:-${CARGO:-}}"
+contains	scripts/check-acceptance-bindings.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-acceptance-bindings.sh	run_deve_baseline "$ROOT_DIR" "acceptance-bindings" "acceptance-bindings-check"
+contains	scripts/check-architecture-registry.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-architecture-registry.sh	run_deve_baseline "$ROOT_DIR" "architecture-registry" "architecture-registry-check"
+contains	scripts/check-native-target-host-evidence.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-native-target-host-evidence.sh	run_deve_baseline "$ROOT_DIR" "native-target-host-evidence" "native-target-host-evidence-check" "$@"
+contains	scripts/check-native-track-boundary.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-native-track-boundary.sh	run_deve_baseline "$ROOT_DIR" "native-track-boundary" "native-track-boundary-check"
+contains	scripts/check-native-process-adapter-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-native-process-adapter-gate.sh	run_deve_baseline "$ROOT_DIR" "native-process-adapter-gate" "native-process-adapter-gate-check"
+contains	scripts/check-native-packaging-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-native-packaging-gate.sh	run_deve_baseline "$ROOT_DIR" "native-packaging-gate" "native-packaging-gate-check"
+absent	scripts/check-native-packaging-gate.sh	run_cargo_target check
+absent	scripts/check-native-packaging-gate.sh	cargo_tree_contains
+contains	scripts/check-desktop-package-preflight.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-desktop-package-preflight.sh	run_deve_baseline "$ROOT_DIR" "desktop-package-preflight" "desktop-package-preflight-check"
 contains	scripts/check-storage-repo-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-storage-repo-baseline.sh	run_deve_baseline "$ROOT_DIR" "storage-repo" "storage-repo-baseline-check"
 contains	scripts/check-network-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
@@ -533,13 +578,67 @@ contains	scripts/check-ui-z-index-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-
 contains	scripts/check-ui-focus-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-ui-focus-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-focus" "ui-focus-baseline-check"
 contains	docs/plan/18_release.md	`tools/baseline`（package `deve_baseline`）
-contains	docs/plan/18_release.md	baseline 规格的唯一维护位置是 Rust checker 的 TSV spec
+contains	docs/plan/18_release.md	确定性规格的唯一维护位置是 Rust checker 的 TSV spec
 contains	docs/features/15_release.md	`cargo run -p deve_baseline -- all`
 contains	docs/features/15_release.md	`cargo run -p deve_baseline -- full`
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- all
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- full
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release
 contains	tools/baseline/src/main.rs	"full" => run_full_baselines()
+contains	tools/baseline/src/main.rs	"acceptance-bindings" => acceptance_bindings::run()
+contains	tools/baseline/src/main.rs	"architecture-registry" => architecture_registry::run()
+contains	tools/baseline/src/main.rs	mod cargo_gate;
+contains	tools/baseline/src/main.rs	mod desktop_package_preflight;
+contains	tools/baseline/src/main.rs	"desktop-package-preflight" => desktop_package_preflight::run()
+contains	tools/baseline/src/main.rs	mod desktop_signing_preflight;
+contains	tools/baseline/src/main.rs	"desktop-signing-preflight" => desktop_signing_preflight::run()
+contains	tools/baseline/src/desktop_signing_preflight.rs	DEVE_DESKTOP_SIGNING_TARGETS
+contains	tools/baseline/src/desktop_signing_preflight.rs	unsupported desktop signing target
+contains	tools/baseline/src/main.rs	mod native_process_adapter_gate;
+contains	tools/baseline/src/main.rs	mod native_packaging_gate;
+contains	tools/baseline/src/main.rs	"native-packaging-gate" => native_packaging_gate::run()
+contains	tools/baseline/src/main.rs	"native-process-adapter-gate" => native_process_adapter_gate::run()
+contains	tools/baseline/src/main.rs	"native-track-boundary" => native_track_boundary::run()
+contains	tools/baseline/src/main.rs	"native-target-host-evidence" => native_target_host_evidence::run(&command_args)
+contains	tools/baseline/src/main.rs	mod mobile_android_shell_package_build;
+contains	tools/baseline/src/main.rs	"mobile-android-shell-package-build" => mobile_android_shell_package_build::run()
+contains	tools/baseline/src/main.rs	mod mobile_android_install_startup_smoke;
+contains	tools/baseline/src/main.rs	"mobile-android-install-startup-smoke" => mobile_android_install_startup_smoke::run()
+contains	tools/baseline/src/main.rs	mod mobile_ios_install_startup_smoke;
+contains	tools/baseline/src/main.rs	"mobile-ios-install-startup-smoke" => mobile_ios_install_startup_smoke::run()
+contains	tools/baseline/src/mobile_android_shell_package_build.rs	DEVE_MOBILE_ANDROID_PACKAGE_TARGET
+contains	tools/baseline/src/mobile_android_shell_package_build.rs	at least one of DEVE_MOBILE_ANDROID_PACKAGE_APK
+contains	tools/baseline/src/mobile_android_shell_package_build.rs	iOS generated project is not allowed in the Android shell package gate
+contains	tools/baseline/src/mobile_android_install_startup_smoke.rs	DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED
+contains	tools/baseline/src/mobile_android_install_startup_smoke.rs	DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS
+contains	tools/baseline/src/mobile_android_install_startup_smoke.rs	iOS generated project is not allowed in the Android install/startup gate
+contains	tools/baseline/src/mobile_ios_install_startup_smoke.rs	mobile-ios-install-startup-smoke-check
+contains	tools/baseline/src/mobile_shell_gate.rs	legacy src-tauri layout is not allowed for apps/mobile
+contains	tools/baseline/src/mobile_shell_gate.rs	mobile shell must expose the Tauri mobile entrypoint from lib.rs
+contains	tools/baseline/src/main.rs	mod mobile_ios_shell_package_build;
+contains	tools/baseline/src/main.rs	"mobile-ios-shell-package-build" => mobile_ios_shell_package_build::run()
+contains	tools/baseline/src/mobile_ios_shell_package_build.rs	DEVE_MOBILE_IOS_PACKAGE_TARGET
+contains	tools/baseline/src/main.rs	mod mobile_platform_package_preflight;
+contains	tools/baseline/src/main.rs	"mobile-platform-package-preflight" => mobile_platform_package_preflight::run()
+contains	tools/baseline/src/mobile_platform_package_preflight.rs	DEVE_MOBILE_PACKAGE_TARGETS
+contains	tools/baseline/src/mobile_platform_package_preflight.rs	unsupported mobile package target
+contains	tools/baseline/src/cargo_gate.rs	CargoRunner
+contains	tools/baseline/src/cargo_gate.rs	CARGO_BIN
+contains	tools/baseline/src/cargo_gate.rs	tree_contains_regex
+contains	tools/baseline/src/desktop_package_preflight.rs	check_default_desktop_tree_excludes_tauri
+contains	tools/baseline/src/desktop_package_preflight.rs	desktop native-packaging tree must include tauri-runtime-wry
+contains	tools/baseline/src/native_packaging_gate.rs	check_default_dependency_tree_excludes_tauri
+contains	tools/baseline/src/native_packaging_gate.rs	mobile native-packaging feature must include tauri-runtime-wry
+contains	tools/baseline/src/native_packaging_gate.rs	DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED
+contains	tools/baseline/src/native_process_adapter_gate.rs	check_no_process_runtime_leak
+contains	tools/baseline/src/native_process_adapter_gate.rs	DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS
+contains	tools/baseline/src/native_process_adapter_gate.rs	process_observation
+contains	tools/baseline/src/specs/native_process_adapter_gate.tsv	ExplicitNativeAuthorityOptIn
+contains	tools/baseline/src/native_track_boundary.rs	check_no_packaging_dependency_leak
+contains	tools/baseline/src/native_track_boundary.rs	check_no_process_runtime_leak
+contains	tools/baseline/src/native_track_boundary.rs	desktop process runtime must remain authority-free
+contains	tools/baseline/src/specs/native_track_boundary.tsv	runtime_crate: "tauri"
+contains	tools/baseline/src/specs/native_track_boundary.tsv	embedded_service_runtime_enabled: true
 contains	tools/baseline/src/spec.rs	cargo_test
 contains	scripts/check-auth-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-auth-baseline.sh	run_deve_baseline "$ROOT_DIR" "auth" "auth-baseline-check"
@@ -569,3 +668,25 @@ contains	scripts/check-ui-disconnect-baseline.sh	source "$ROOT_DIR/scripts/basel
 contains	scripts/check-ui-disconnect-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-disconnect" "ui-disconnect-baseline-check"
 contains	scripts/check-ui-spa-routing-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-ui-spa-routing-baseline.sh	run_deve_baseline "$ROOT_DIR" "ui-spa-routing" "ui-spa-routing-baseline-check"
+contains	scripts/check-ws-structured-errors.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-ws-structured-errors.sh	run_deve_baseline "$ROOT_DIR" "ws-structured-errors" "ws-structured-errors-check"
+contains	scripts/check-auth-unauthorized-state.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-auth-unauthorized-state.sh	run_deve_baseline "$ROOT_DIR" "auth-unauthorized-state" "auth-unauthorized-check"
+contains	scripts/check-browser-prefs-boundary.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-browser-prefs-boundary.sh	run_deve_baseline "$ROOT_DIR" "browser-prefs-boundary" "browser-prefs-boundary-check"
+contains	scripts/check-source-control-smoke-hygiene.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-source-control-smoke-hygiene.sh	run_deve_baseline "$ROOT_DIR" "source-control-smoke-hygiene" "check-source-control-smoke-hygiene"
+contains	scripts/check-feature-operation-paths.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-feature-operation-paths.sh	run_deve_baseline "$ROOT_DIR" "feature-operation-paths" "feature-operation-path-check"
+contains	tools/baseline/src/main.rs	"ws-structured-errors" => ws_structured_errors::run()
+contains	tools/baseline/src/main.rs	"auth-unauthorized-state" => auth_unauthorized_state::run()
+contains	tools/baseline/src/main.rs	"browser-prefs-boundary" => browser_prefs_boundary::run()
+contains	tools/baseline/src/main.rs	"source-control-smoke-hygiene" => source_control_smoke_hygiene::run()
+contains	tools/baseline/src/main.rs	"feature-operation-paths" => feature_operation_paths::run()
+contains	docs/acceptance-cases/06_network.md	cargo run -p deve_baseline -- ws-structured-errors
+contains	docs/acceptance-cases/06_network.md	cargo run -p deve_baseline -- auth-unauthorized-state
+contains	docs/acceptance-cases/08_auth.md	cargo run -p deve_baseline -- auth-unauthorized-state
+contains	docs/acceptance-cases/07_storage_repo.md	cargo run -p deve_baseline -- browser-prefs-boundary
+contains	docs/acceptance-cases/04_diff.md	cargo run -p deve_baseline -- source-control-smoke-hygiene
+contains	docs/plan/18_release.md	确定性边界检查脚本
+contains	docs/features/15_release.md	确定性边界检查合同

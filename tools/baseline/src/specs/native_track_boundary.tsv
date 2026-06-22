@@ -1,0 +1,310 @@
+# Generated from scripts/check-native-track-boundary.sh fixed-string assertions. Dynamic allowlist checks live in native_track_boundary.rs.
+contains	apps/desktop/src/lib.rs	#[cfg(feature = "native-packaging")]
+contains	apps/desktop/src/lib.rs	mod process_runtime;
+contains	apps/desktop/src/lib.rs	mod service_bootstrap;
+contains	apps/desktop/src/lib.rs	mod service_entrypoint;
+contains	apps/desktop/src/lib.rs	mod tauri_bootstrap;
+contains	apps/desktop/src/process_runtime.rs	DesktopLocalServiceRuntime
+contains	apps/desktop/src/process_runtime.rs	DesktopCommandProcessLauncher
+contains	apps/desktop/src/process_runtime.rs	validate_desktop_service_command
+contains	apps/desktop/src/process_runtime.rs	stop_service
+contains	apps/desktop/src/process_runtime/launcher.rs	env_clear()
+contains	apps/desktop/src/process_runtime/launcher.rs	command.env(&binding.key, &binding.value)
+contains	apps/desktop/src/process_runtime/validation.rs	executable must be deve_cli
+contains	apps/desktop/src/process_runtime/validation.rs	first argv must be serve
+contains	apps/desktop/src/process_runtime/validation.rs	argv must be exactly serve --native-loopback --port <port>
+contains	apps/desktop/src/process_runtime/validation.rs	argv port must match loopback bind hints
+contains	apps/desktop/src/service_entrypoint/mod.rs	DEVE_DESKTOP_LOCAL_SERVICE
+contains	apps/desktop/src/service_entrypoint/mod.rs	DEVE_NATIVE_AUTHORITY
+contains	apps/desktop/src/service_entrypoint_test.rs	desktop_local_service_entrypoint_env_defaults_to_local_backend_and_allows_explicit_disable
+contains	apps/desktop/src/service_entrypoint_test.rs	desktop_local_service_entrypoint_env_rejects_invalid_opt_in_value
+contains	apps/desktop/src/service_entrypoint/mod.rs	plan_desktop_local_service_entrypoint_from_env
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	packaged_cli_sibling
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	"--native-loopback"
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	NATIVE_SESSION_BOOTSTRAP_SECRET_ENV
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	generate_native_session_bootstrap_secret
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	getrandom::fill
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	"AUTH_SECRET"
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	"AUTH_PASS"
+contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	password::hash_password
+contains	apps/desktop/src/service_entrypoint/mod.rs	health_probe_required_before_bootstrap: true
+contains	apps/desktop/src/service_entrypoint/mod.rs	session_handoff_required_before_bootstrap: true
+contains	apps/desktop/src/service_entrypoint/mod.rs	opens_authority_write_path: false
+contains	apps/desktop/src/service_bootstrap.rs	run_desktop_local_service_bootstrap
+contains	apps/desktop/src/service_bootstrap.rs	DesktopLoopbackHttpProbe
+contains	apps/desktop/src/service_bootstrap/probe.rs	/api/node/role
+contains	apps/desktop/src/service_bootstrap/probe.rs	/api/auth/status
+contains	apps/desktop/src/service_bootstrap/probe.rs	/api/auth/native-session
+contains	apps/desktop/src/service_bootstrap/probe.rs	NATIVE_SESSION_BOOTSTRAP_HEADER
+contains	apps/desktop/src/service_bootstrap.rs	MissingNativeSessionBootstrapSecret
+contains	apps/desktop/src/service_bootstrap/probe.rs	DesktopNativeSessionCookie::from_set_cookie
+contains	apps/desktop/src/service_bootstrap/probe.rs	NativeLoopbackHttpProbe
+contains	crates/core/src/native_adapter/loopback_http.rs	NativeLoopbackHttpProbe
+contains	crates/core/src/native_adapter/loopback_http.rs	Cookie:
+absent	apps/desktop/src/service_bootstrap/probe.rs	TcpStream::connect_timeout
+absent	apps/mobile/src/embedded_backend/http.rs	TcpStream::connect_timeout
+contains	apps/desktop/src/service_bootstrap.rs	bootstrap_for_web
+contains	apps/desktop/src/service_bootstrap.rs	SessionHandoffFailed
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	desktop_tauri_bootstrap_plugin
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	js_init_script
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	on_webview_ready
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	set_cookie
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	NativeSessionCookieRequired
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	desktop native session cookie install failed before bootstrap
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	has_native_session_cookie
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	desktop_tauri_session_invalid_init_script
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	ForbiddenMaterial
+contains	apps/desktop/src/tauri_entry/mod.rs	desktop_tauri_local_service_bootstrap_from_env
+contains	apps/desktop/src/tauri_entry/mod.rs	desktop_tauri_native_session_smoke
+contains	apps/desktop/src/tauri_entry/smoke.rs	desktop-native-session-smoke: ok
+contains	apps/desktop/src/tauri_entry/mod.rs	DesktopLocalServiceTauriState::new
+contains	apps/desktop/src/main.rs	DEVE_DESKTOP_NATIVE_SESSION_SMOKE
+contains	apps/cli/src/server/auth/handlers/native_session.rs	NativeSessionBridge
+contains	apps/cli/src/server/auth/handlers/native_session.rs	NATIVE_SESSION_BOOTSTRAP_HEADER
+contains	apps/cli/src/server/auth/handlers/native_session.rs	issue_once
+contains	apps/cli/src/server/auth/handlers/native_session.rs	HttpOnly
+contains	apps/cli/src/server/router.rs	/api/auth/native-session
+contains	apps/cli/src/server/start.rs	runtime::init_auth_runtime
+contains	apps/cli/src/server/runtime/auth_runtime.rs	NativeSessionBridge::from_env
+absent	apps/desktop/src/tauri_entry/mod.rs	start_desktop_local_service_if_enabled
+absent	apps/desktop/src/tauri_entry/mod.rs	plan_desktop_local_service_entrypoint_from_env
+absent	apps/desktop/src/tauri_entry/mod.rs	app.manage(Mutex::new(runtime))
+absent	apps/desktop/src/service_entrypoint/mod.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST
+absent	apps/desktop/src/service_entrypoint/spawn_spec.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST
+absent	apps/desktop/src/service_bootstrap.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST
+absent	apps/desktop/src/service_bootstrap/probe.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST
+absent	apps/desktop/src/tauri_bootstrap/mod.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST
+absent	apps/cli/src/server/auth/handlers/native_session.rs	AUTH_ALLOW_ANONYMOUS_LOCALHOST
+absent	apps/desktop/src/tauri_bootstrap/mod.rs	localStorage
+contains	Cargo.toml	"apps/desktop"
+contains	Cargo.toml	"apps/mobile"
+contains	apps/desktop/Cargo.toml	native-packaging = [
+contains	apps/desktop/Cargo.toml	"dep:indexmap_1"
+contains	apps/desktop/Cargo.toml	"dep:tauri"
+contains	apps/desktop/Cargo.toml	"dep:tauri-build"
+contains	apps/desktop/Cargo.toml	"tauri/tray-icon"
+contains	apps/desktop/Cargo.toml	"tauri/wry"
+contains	apps/desktop/Cargo.toml	features = ["std"]
+contains	apps/desktop/build.rs	tauri_build::build()
+contains	apps/desktop/src/main.rs	run_desktop_tauri_app
+contains	apps/desktop/tauri.conf.json	"identifier": "dev.deve.notebook"
+contains	apps/desktop/tauri.conf.json	"productName": "Deve Notebook"
+contains	apps/desktop/tauri.conf.json	"icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]
+contains	apps/desktop/tauri.conf.json	"createUpdaterArtifacts": false
+contains	apps/mobile/Cargo.toml	native-packaging = [
+contains	apps/mobile/Cargo.toml	"dep:deve_cli"
+contains	apps/mobile/Cargo.toml	"dep:getrandom"
+contains	apps/mobile/Cargo.toml	"dep:indexmap_1"
+contains	apps/mobile/Cargo.toml	"dep:tauri"
+contains	apps/mobile/Cargo.toml	"dep:tauri-build"
+contains	apps/mobile/Cargo.toml	"tauri/wry"
+contains	apps/mobile/Cargo.toml	crate-type = ["staticlib", "cdylib", "rlib"]
+contains	apps/mobile/Cargo.toml	features = ["std"]
+contains	apps/mobile/tauri.conf.json	"identifier": "dev.deve.notebook.mobile"
+contains	apps/mobile/tauri.conf.json	"productName": "Deve Notebook"
+contains	apps/mobile/tauri.conf.json	"icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]
+contains	apps/mobile/tauri.conf.json	"createUpdaterArtifacts": false
+contains	apps/mobile/build.rs	tauri_build::build()
+contains	apps/mobile/gen/android/settings.gradle	include ':app'
+contains	apps/mobile/gen/android/app/src/main/AndroidManifest.xml	android:name=".MainActivity"
+contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt	class MainActivity : TauriActivity()
+contains	apps/mobile/gen/android/gradle/wrapper/gradle-wrapper.properties	gradle-8.14.3-bin.zip
+contains	apps/desktop/src/lib.rs	#[cfg(feature = "native-packaging")]
+contains	apps/desktop/src/packaging.rs	runtime_crate: "tauri"
+contains	apps/desktop/src/packaging.rs	build_crate: "tauri-build"
+contains	apps/desktop/src/packaging.rs	status: "dependency-spike-open"
+contains	apps/desktop/src/packaging.rs	DesktopShellPackagingAcceptance
+contains	apps/desktop/src/packaging.rs	DesktopMenuTraySurface
+contains	apps/desktop/src/packaging.rs	runtime_entrypoint_declared: true
+contains	apps/desktop/src/packaging.rs	build_script_declared: true
+contains	apps/desktop/src/packaging.rs	session_handoff_required_before_writable_ui: true
+contains	apps/desktop/src/packaging.rs	menu_bar_runtime_declared: true
+contains	apps/desktop/src/packaging.rs	system_tray_runtime_declared: true
+contains	apps/desktop/src/packaging.rs	menu_and_tray_runtime_deferred: false
+contains	apps/desktop/src/packaging.rs	menu_runtime_imported: true
+contains	apps/desktop/src/packaging.rs	tray_runtime_imported: true
+contains	apps/desktop/src/packaging.rs	actions_are_ui_intents_only: true
+contains	apps/desktop/src/packaging.rs	opens_process_runtime: false
+contains	apps/desktop/src/packaging.rs	opens_authority_write_path: false
+contains	apps/desktop/src/menu_tray.rs	tauri::menu
+contains	apps/desktop/src/menu_tray.rs	tauri::tray
+contains	apps/desktop/src/menu_tray.rs	build_desktop_menu
+contains	apps/desktop/src/menu_tray.rs	build_desktop_tray_icon
+contains	apps/desktop/src/menu_tray.rs	resolve_desktop_menu_action_id
+contains	apps/desktop/src/tauri_entry/mod.rs	tauri::Builder::default()
+contains	apps/desktop/src/tauri_entry/mod.rs	tauri::generate_context!()
+contains	apps/desktop/src/tauri_entry/smoke.rs	DesktopTauriRuntimeSurface
+contains	apps/desktop/src/tauri_entry/smoke.rs	local_backend_default_enabled: true
+contains	apps/desktop/src/tauri_entry/smoke.rs	child_process_runtime_enabled: true
+contains	apps/desktop/src/tauri_entry/smoke.rs	opens_authority_write_path: false
+contains	apps/desktop/src/packaging.rs	child_process_runtime_enabled: true
+contains	apps/desktop/src/packaging.rs	release_ready_claimed: false
+contains	apps/desktop/src/packaging.rs	DesktopPackagingAuthority::Ledger
+contains	apps/desktop/src/packaging.rs	DesktopPackagingAuthority::ProjectionWorkspace
+contains	apps/desktop/src/packaging.rs	DesktopPackagingCapability::Installer
+contains	apps/desktop/src/packaging_test.rs	desktop_packaging_dependency_spike_is_feature_gated
+contains	apps/desktop/src/packaging_test.rs	desktop_tauri_manifest_declares_shell_metadata_only
+contains	apps/desktop/src/packaging_test.rs	desktop_menu_tray_runtime_binding_declares_ui_intents_only
+contains	apps/desktop/src/shell_test/policy.rs	CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY
+contains	apps/desktop/src/shell_test/policy.rs	CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+contains	apps/mobile/src/lib.rs	#[cfg(feature = "native-packaging")]
+contains	apps/mobile/src/lib.rs	mod embedded_backend;
+contains	apps/mobile/src/packaging.rs	runtime_crate: "tauri"
+contains	apps/mobile/src/packaging.rs	build_crate: "tauri-build"
+contains	apps/mobile/src/packaging.rs	status: "dependency-spike-open"
+contains	apps/mobile/src/packaging.rs	MobileShellPackagingAcceptance
+contains	apps/mobile/src/packaging.rs	MobileAndroidShellPackageExecution
+contains	apps/mobile/src/packaging.rs	MobileIosShellPackageExecution
+contains	apps/mobile/src/packaging.rs	manifest_declared: true
+contains	apps/mobile/src/packaging.rs	build_script_declared: true
+contains	apps/mobile/src/packaging.rs	android_project_generated: true
+contains	apps/mobile/src/packaging.rs	ios_project_generated: false
+contains	apps/mobile/src/packaging.rs	runtime_entrypoint_declared: true
+contains	apps/mobile/src/packaging.rs	platform_package_build_declared: true
+contains	apps/mobile/src/packaging.rs	target_host_script: MOBILE_ANDROID_PACKAGE_SCRIPT
+contains	apps/mobile/src/packaging.rs	target_host_script: MOBILE_IOS_PACKAGE_SCRIPT
+contains	apps/mobile/src/packaging.rs	project_generation_allowed: true
+contains	apps/mobile/src/packaging.rs	package_build_allowed: true
+contains	apps/mobile/src/packaging.rs	ios_package_build_allowed: false
+contains	apps/mobile/src/packaging.rs	android_package_build_allowed: false
+contains	apps/mobile/src/packaging.rs	session_handoff_required_before_writable_ui: true
+contains	apps/mobile/src/packaging.rs	foreground_reprobe_required: true
+contains	apps/mobile/src/packaging.rs	embedded_service_runtime_enabled: true
+contains	apps/mobile/src/packaging.rs	child_process_runtime_enabled: false
+contains	apps/mobile/src/packaging.rs	release_ready_claimed: false
+contains	apps/mobile/src/packaging.rs	MobilePackagingAuthority::Ledger
+contains	apps/mobile/src/packaging.rs	MobilePackagingAuthority::ProjectionWorkspace
+contains	apps/mobile/src/packaging.rs	MobilePackagingCapability::PermissionBridge
+contains	apps/mobile/src/packaging.rs	MobilePackagingCapability::StorePackage
+contains	apps/mobile/src/packaging_test.rs	mobile_packaging_dependency_spike_is_feature_gated
+contains	apps/mobile/src/packaging_test.rs	mobile_tauri_manifest_declares_shell_metadata_only
+contains	apps/mobile/src/packaging_test.rs	mobile_shell_acceptance_keeps_runtime_authority_closed
+contains	apps/mobile/src/packaging_test.rs	mobile_android_shell_package_gate_is_shell_only
+contains	apps/mobile/src/packaging_test.rs	mobile_ios_shell_package_gate_is_shell_only
+contains	apps/mobile/src/tauri_entry.rs	tauri::Builder::default()
+contains	apps/mobile/src/tauri_entry.rs	tauri::generate_context!()
+contains	apps/mobile/src/tauri_entry.rs	MobileTauriRuntimeSurface
+contains	apps/mobile/src/tauri_entry.rs	embedded_service_runtime_enabled: true
+contains	apps/mobile/src/tauri_entry.rs	child_process_runtime_enabled: false
+contains	apps/mobile/src/tauri_entry.rs	opens_authority_write_path: false
+contains	apps/mobile/src/embedded_backend/mod.rs	start_native_loopback_backend
+contains	apps/mobile/src/embedded_backend/mod.rs	start_native_loopback_backend_with_listener
+contains	apps/mobile/src/embedded_backend/mod.rs	run_mobile_embedded_backend_bootstrap
+contains	apps/mobile/src/embedded_backend/mod.rs	mobile_embedded_backend_plugin
+contains	apps/mobile/src/embedded_backend/mod.rs	NativeLoopbackAuthMaterial
+contains	apps/mobile/src/embedded_backend/mod.rs	into_native_loopback_auth_material
+contains	apps/mobile/src/embedded_backend/mod.rs	native_tauri_allowed_origins
+absent	apps/mobile/src/embedded_backend/mod.rs	std::env::set_var
+absent	apps/mobile/src/embedded_backend/mod.rs	NATIVE_SESSION_BOOTSTRAP_SECRET_ENV
+contains	apps/mobile/src/embedded_backend/mod.rs	opens_authority_write_path: false
+contains	apps/mobile/src/embedded_backend/http.rs	/api/auth/native-session
+contains	apps/mobile/src/embedded_backend/http.rs	NATIVE_SESSION_BOOTSTRAP_HEADER
+contains	apps/mobile/src/embedded_backend/cookie.rs	HttpOnly
+contains	apps/mobile/src/shell_test/policy.rs	CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY
+contains	apps/mobile/src/shell_test/policy.rs	CURRENT_NATIVE_PROCESS_ADAPTER_POLICY
+contains	crates/core/src/native_adapter/packaging.rs	DesktopDependencySpikeOpen
+contains	crates/core/src/native_adapter/packaging.rs	desktop_tauri_dependencies_allowed: true
+contains	crates/core/src/native_adapter/packaging.rs	DesktopAndMobileDependencySpikeOpen
+contains	crates/core/src/native_adapter/packaging.rs	mobile_tauri_dependencies_allowed: true
+contains	crates/core/src/native_adapter/process.rs	DeferredUntilPackagingGate
+contains	crates/core/src/native_adapter/process.rs	child_process_runtime_enabled: false
+contains	crates/core/src/native_adapter/process.rs	record_probe_timeout
+contains	crates/core/src/native_adapter/process.rs	record_process_stopped
+contains	crates/core/src/native_adapter/supervisor.rs	record_process_snapshot
+contains	crates/core/src/native_adapter/supervisor_test/process_observation.rs	process_snapshot_drives_health_and_session_handoff
+contains	crates/core/src/native_adapter/supervisor_test/process_observation.rs	process_probe_timeout_snapshot_consumes_retry_budget
+contains	crates/core/src/native_adapter/supervisor_test/process_observation.rs	process_shutdown_snapshot_enters_restart_path
+contains	crates/core/src/native_adapter/validation.rs	fn validate_port(field: &'static str, port: &str) -> Result<(), NativeAdapterError>
+contains	crates/core/src/native_adapter/contract_test.rs	native_endpoint_validation_rejects_invalid_or_zero_ports
+contains	crates/core/src/native_adapter/contract_test.rs	native_reprobe_before_write_requires_full_runtime_readiness
+contains	apps/web/src/api/service/tests.rs	native_runtime_readiness_requires_node_role_writer_and_current_scope
+contains	apps/web/src/api/native_bootstrap/tests.rs	rejects_native_bootstrap_with_invalid_or_zero_port
+contains	apps/web/src/api/service.rs	begin_foreground_reprobe
+contains	apps/web/src/api/service.rs	native_runtime_readiness_for_untracked
+contains	apps/web/src/api/connection_role.rs	NODE_ROLE_PROBE_RETRIES
+contains	apps/web/src/api/connection_role.rs	NODE_ROLE_PROBE_TIMEOUT_MS
+contains	apps/web/src/api/connection_role.rs	probe_node_role_for_http_base
+contains	apps/web/src/api/connection_role.rs	strip_prefix("wss://")
+contains	apps/web/src/api/connection_role/tests.rs	ws_url_to_http_base_only_rewrites_leading_scheme_and_ws_suffix
+contains	apps/web/src/api/connection_role/tests.rs	stale_node_role_probe_results_do_not_mutate_current_connection
+contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	foreground_reprobe_resets_stale_writer_scope_and_node_role
+contains	apps/desktop/src/shell.rs	observe_process_snapshot
+contains	apps/desktop/src/shell_recovery_test/process_observation.rs	desktop_probe_timeout_observation_uses_process_snapshot
+contains	apps/desktop/src/shell_recovery_test/process_observation.rs	desktop_process_shutdown_observation_uses_process_snapshot
+contains	apps/desktop/src/shell_test/lifecycle.rs	missing_node_role
+contains	apps/mobile/src/shell.rs	observe_process_snapshot
+contains	apps/mobile/src/shell_recovery_test/process_observation.rs	mobile_probe_timeout_observation_uses_process_snapshot
+contains	apps/mobile/src/shell_recovery_test/process_observation.rs	mobile_process_shutdown_observation_uses_process_snapshot
+contains	apps/mobile/src/shell_test/lifecycle.rs	missing_node_role
+contains	apps/web/src/hooks/use_core/write_gate/logic.rs	node_role_readable
+contains	apps/web/src/hooks/use_core/write_gate/tests.rs	repo_write_gate_requires_node_role_readable
+contains	apps/web/src/hooks/use_core/write_gate/tests.rs	repo_source_control_read_gate_reports_node_role_probe_failure_before_read_only
+contains	apps/web/src/hooks/use_core/write_gate/tests.rs	repo_source_control_read_gate_requires_node_role_for_local_refresh
+contains	apps/web/src/hooks/use_core/write_gate/tests.rs	repo_source_control_read_gate_allows_remote_branch_reads_without_node_role
+contains	apps/web/src/hooks/use_core/write_gate/tests.rs	repo_write_gate_reports_node_role_probe_failure_before_snapshot_loading
+contains	apps/web/src/hooks/use_core/status_summary/tests.rs	reports_repo_handshake_until_node_role_is_readable
+contains	apps/web/src/hooks/use_core/status_summary/tests.rs	reports_native_reprobe_when_node_role_probe_failed
+contains	apps/web/src/hooks/use_core/status_summary/tests.rs	reports_native_reprobe_before_snapshot_loading_when_node_role_probe_failed
+contains	apps/web/src/editor/delta_input_gate.rs	blocks_delta_when_runtime_write_gate_blocks
+contains	apps/web/src/editor/mod.rs	editor_read_only_gate_blocks_native_runtime_write_gate
+contains	apps/web/src/editor/hook_playback.rs	playback_read_only_gate_blocks_native_runtime_write_gate
+contains	apps/web/src/editor/delta_input.rs	repo_write_block_untracked
+contains	apps/web/src/editor/sync/history_resend.rs	repo_write_block_untracked
+contains	apps/web/src/editor/sync/dispatch_payload.rs	write_ready_resend_blocks_when_native_runtime_readiness_fails
+contains	apps/web/src/components/chat/actions/apply.rs	repo_write_block_untracked
+contains	docs/plan/11_ui_design/02_desktop.md	{#desktop-current-native-boundary}
+contains	docs/plan/11_ui_design/02_desktop.md	**Current Native Boundary**
+contains	docs/plan/11_ui_design/02_desktop.md	**Post-Gate Target**
+contains	docs/plan/11_ui_design/02_desktop.md	post-gate normative target
+contains	docs/plan/11_ui_design/02_desktop.md	Tauri v2 native packaging
+contains	docs/plan/11_ui_design/02_desktop.md	native-packaging
+contains	docs/plan/11_ui_design/02_desktop.md	{#desktop-packaging-scaffold}
+contains	docs/plan/11_ui_design/02_desktop.md	{#desktop-packaging-dependency-gate-decision}
+contains	docs/plan/11_ui_design/02_desktop.md	Native adapter **MUST NOT**
+contains	docs/plan/11_ui_design/02_desktop.md	readiness/offline 状态
+contains	docs/plan/11_ui_design/02_desktop.md	loopback/IPC endpoint
+contains	docs/plan/11_ui_design/02_desktop.md	{#desktop-native-adapter-contract}
+contains	docs/plan/11_ui_design/02_desktop.md	NativeEndpointReady { http_base, ws_base, node_role, session_bound }
+contains	docs/plan/11_ui_design/02_desktop.md	writer_ready(repo_id, scope_nonce)
+contains	docs/plan/11_ui_design/02_desktop.md	08_auth.md#unauthorized-disconnected-ui
+contains	docs/plan/11_ui_design/02_desktop.md	native 层不得直接写 ledger/Projection Workspace/source-control/search index
+contains	docs/plan/11_ui_design/03_mobile.md	{#mobile-current-native-boundary}
+contains	docs/plan/11_ui_design/03_mobile.md	**Current Native Boundary**
+contains	docs/plan/11_ui_design/03_mobile.md	**Post-Gate Target**
+contains	docs/plan/11_ui_design/03_mobile.md	post-gate normative target
+contains	docs/plan/11_ui_design/03_mobile.md	Tauri v2 Mobile packaging
+contains	docs/plan/11_ui_design/03_mobile.md	native-packaging
+contains	docs/plan/11_ui_design/03_mobile.md	{#mobile-packaging-scaffold}
+contains	docs/plan/11_ui_design/03_mobile.md	{#mobile-packaging-dependency-gate-decision}
+contains	docs/plan/11_ui_design/03_mobile.md	{#mobile-android-shell-package-execution-gate}
+contains	docs/plan/11_ui_design/03_mobile.md	{#mobile-ios-shell-package-execution-gate}
+contains	docs/plan/11_ui_design/03_mobile.md	Mobile native adapter **MUST NOT**
+contains	docs/plan/11_ui_design/03_mobile.md	readiness/offline 状态
+contains	docs/plan/11_ui_design/03_mobile.md	loopback/IPC endpoint
+contains	docs/plan/11_ui_design/03_mobile.md	{#mobile-native-adapter-contract}
+contains	docs/plan/11_ui_design/03_mobile.md	NativeEndpointReady { http_base, ws_base, node_role, session_bound }
+contains	docs/plan/11_ui_design/03_mobile.md	BackgroundSuspended
+contains	docs/plan/11_ui_design/03_mobile.md	ForegroundReprobe
+contains	docs/plan/11_ui_design/03_mobile.md	writer_ready(repo_id, scope_nonce)
+contains	docs/plan/11_ui_design/03_mobile.md	safe-area、keyboard、foreground/background、network online/offline
+contains	docs/plan/11_ui_design/03_mobile.md	Android shell-only package execution gate
+contains	docs/plan/11_ui_design/03_mobile.md	Android package build **MUST NOT** 启动、持有、重启后端子进程
+contains	docs/plan/11_ui_design/03_mobile.md	iOS shell-only package execution gate
+contains	docs/plan/11_ui_design/03_mobile.md	iOS package build **MUST NOT** 启动、持有、重启后端子进程
+contains	docs/plan/17_tech_stack.md	{#native-packaging-dependency-gate}
+contains	docs/plan/17_tech_stack.md	native-packaging
+contains	docs/plan/17_tech_stack.md	CURRENT_NATIVE_PACKAGING_DEPENDENCY_GATE_POLICY
+contains	docs/plan/17_tech_stack.md	不得进入 workspace root
+contains	docs/plan/17_tech_stack.md	Desktop packaging dependency spike
+contains	docs/plan/17_tech_stack.md	Mobile packaging dependency spike
+contains	docs/report/README.md	## Current Baselines
+contains	docs/report/README.md	| Native shell |
+contains	docs/report/README.md	native-shell-baseline-
+absent	docs/report/next-tasks.md	Desktop / Mobile native adapter plan | P3-10
+contains	docs/features/operations/tech_stack_platform_release_channel.md	native::adapter_boundary
+contains	docs/features/operations/tech_stack_platform_release_channel.md	native::shell_mode
+contains	docs/features/operations/tech_stack_platform_release_channel.md	native::service_recovery
+contains	docs/overview/architecture-code.lisp	native::adapter_boundary
+contains	docs/overview/architecture-code.lisp	native::service_recovery
+contains	docs/overview/architecture-doc.lisp	native::adapter_boundary
+contains	docs/overview/architecture-doc.lisp	native::service_recovery
