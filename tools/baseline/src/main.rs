@@ -40,6 +40,7 @@ mod native_target_host_evidence;
 mod native_track_boundary;
 mod network;
 mod release;
+mod release_audit_gate;
 mod rendering;
 mod repo_file_ops;
 mod search;
@@ -111,6 +112,7 @@ fn run() -> Result<()> {
         "native-process-adapter-gate" => native_process_adapter_gate::run(),
         "native-track-boundary" => native_track_boundary::run(),
         "native-target-host-evidence" => native_target_host_evidence::run(&command_args),
+        "release-audit-gate" => release_audit_gate::run(&command_args),
         "repo-file-ops" => repo_file_ops::run(),
         "settings-local-feedback" => settings_local_feedback::run(),
         "source-control" => source_control::run(),
@@ -124,7 +126,7 @@ fn run() -> Result<()> {
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|foundation|large-doc|mobile|mobile-android-release-preflight|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|foundation|large-doc|mobile|mobile-android-release-preflight|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
             );
             Ok(())
         }

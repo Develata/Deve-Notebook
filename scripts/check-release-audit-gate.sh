@@ -6,15 +6,7 @@ set -euo pipefail
 # missing tools fail closed.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-fail() {
-  echo "release-audit-gate: $*" >&2
-  exit 1
-}
-
-is_required() {
-  [[ "${DEVE_RELEASE_AUDIT_REQUIRED:-0}" == "1" || "${1:-0}" == "1" ]]
-}
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 
 run_cargo_audit() {
   if cargo audit --version >/dev/null 2>&1; then
@@ -22,11 +14,7 @@ run_cargo_audit() {
     return
   fi
 
-  local msg="cargo-audit unavailable; install with 'cargo install cargo-audit --locked' or set DEVE_CARGO_AUDIT_REQUIRED=0 for local diagnostic-only runs"
-  if is_required "${DEVE_CARGO_AUDIT_REQUIRED:-0}"; then
-    fail "$msg"
-  fi
-  echo "release-audit-gate: skip cargo audit: $msg" >&2
+  run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-missing"
 }
 
 run_npm_audit() {
@@ -37,13 +25,10 @@ run_npm_audit() {
     return
   fi
 
-  local msg="npm unavailable; install Node.js/npm or set DEVE_NPM_AUDIT_REQUIRED=0 for local diagnostic-only runs"
-  if is_required "${DEVE_NPM_AUDIT_REQUIRED:-0}"; then
-    fail "$msg"
-  fi
-  echo "release-audit-gate: skip npm audit: $msg" >&2
+  run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "npm-audit-missing"
 }
 
+run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate"
 run_cargo_audit
 run_npm_audit
 

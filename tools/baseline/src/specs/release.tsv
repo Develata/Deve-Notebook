@@ -288,6 +288,7 @@ contains	docs/acceptance-cases/12_tech_release.md	type=raw,value=latest
 contains	docs/acceptance-cases/12_tech_release.md	ghcr.io/${{ github.repository }}
 absent	docs/acceptance-cases/12_tech_release.md	run: ls dist
 absent	docs/acceptance-cases/12_tech_release.md	stdout_contains: "v1.0.0"
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- release-audit-gate
 contains	docs/acceptance-cases/12_tech_release.md	DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-006
 contains	docs/acceptance-cases/12_tech_release.md	case_id: REL-007
@@ -524,8 +525,11 @@ contains	scripts/smoke-runtime-recovery-path.sh	auth_probe
 contains	scripts/smoke-runtime-recovery-path.sh	expected at least one test
 contains	scripts/check-release-audit-gate.sh	cargo audit
 contains	scripts/check-release-audit-gate.sh	npm --prefix
+contains	scripts/check-release-audit-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate"
+contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-missing"
+contains	scripts/check-release-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "npm-audit-missing"
 contains	scripts/check-release-audit-gate.sh	DEVE_RELEASE_AUDIT_REQUIRED
-contains	scripts/check-release-audit-gate.sh	skip cargo audit
 contains	docs/features/operations/release_quality_gates.md	runtime happy-path and recovery smokes remain explicit local/CI script gates
 contains	scripts/baseline-wrapper.sh	resolve_baseline_cargo()
 contains	scripts/baseline-wrapper.sh	baseline_repo_on_wsl_windows_mount()
@@ -624,6 +628,14 @@ contains	tools/baseline/src/main.rs	"native-packaging-gate" => native_packaging_
 contains	tools/baseline/src/main.rs	"native-process-adapter-gate" => native_process_adapter_gate::run()
 contains	tools/baseline/src/main.rs	"native-track-boundary" => native_track_boundary::run()
 contains	tools/baseline/src/main.rs	"native-target-host-evidence" => native_target_host_evidence::run(&command_args)
+contains	tools/baseline/src/main.rs	mod release_audit_gate;
+contains	tools/baseline/src/main.rs	"release-audit-gate" => release_audit_gate::run(&command_args)
+contains	tools/baseline/src/release_audit_gate.rs	DEVE_RELEASE_AUDIT_REQUIRED
+contains	tools/baseline/src/release_audit_gate.rs	DEVE_CARGO_AUDIT_REQUIRED
+contains	tools/baseline/src/release_audit_gate.rs	DEVE_NPM_AUDIT_REQUIRED
+contains	tools/baseline/src/release_audit_gate.rs	must be 0 or 1
+contains	tools/baseline/src/release_audit_gate.rs	cargo-audit-missing
+contains	tools/baseline/src/release_audit_gate.rs	npm-audit-missing
 contains	tools/baseline/src/main.rs	mod mobile_android_shell_package_build;
 contains	tools/baseline/src/main.rs	"mobile-android-shell-package-build" => mobile_android_shell_package_build::run()
 contains	tools/baseline/src/main.rs	mod mobile_android_install_startup_smoke;
