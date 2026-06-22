@@ -329,6 +329,7 @@ contains	docs/acceptance-cases/12_tech_release.md	scripts/check-desktop-platform
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-desktop-package-startup-smoke.sh
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-desktop-installer-smoke.sh
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-desktop-target-host-preflight.sh
+contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- desktop-target-host-preflight
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-mobile-platform-package-preflight.sh
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-mobile-android-shell-package-build.sh
 contains	docs/acceptance-cases/12_tech_release.md	scripts/check-mobile-android-install-startup-smoke.sh
@@ -372,7 +373,11 @@ contains	docs/report/native-target-host-handoff-2026-05-14.md	Mobile iOS
 contains	docs/report/native-target-host-handoff-2026-05-14.md	Process runtime gate remains closed
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOSTS
-contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_TARGET_HOSTS must list only macos or windows
+contains	scripts/check-desktop-target-host-preflight.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-desktop-target-host-preflight.sh	cargo_bin="$(resolve_baseline_cargo "$ROOT_DIR" || true)"
+contains	scripts/check-desktop-target-host-preflight.sh	run_deve_baseline "$ROOT_DIR" "desktop-target-host-preflight" "desktop-target-host-preflight-check"
+contains	scripts/check-desktop-target-host-preflight.sh	run "$cargo_bin" check --locked -p deve_desktop --no-default-features
+contains	scripts/check-desktop-target-host-preflight.sh	diagnose_command "cargo tauri CLI" "$cargo_bin" tauri --version
 contains	scripts/check-desktop-target-host-preflight.sh	DEVE_DESKTOP_PACKAGE_NO_SIGN
 contains	scripts/check-desktop-target-host-preflight.sh	macOS target-host requires Darwin
 contains	scripts/check-desktop-target-host-preflight.sh	Windows target-host requires Windows
@@ -602,6 +607,15 @@ contains	tools/baseline/src/main.rs	mod desktop_package_preflight;
 contains	tools/baseline/src/main.rs	"desktop-package-preflight" => desktop_package_preflight::run()
 contains	tools/baseline/src/main.rs	mod desktop_signing_preflight;
 contains	tools/baseline/src/main.rs	"desktop-signing-preflight" => desktop_signing_preflight::run()
+contains	tools/baseline/src/main.rs	mod desktop_target_host_preflight;
+contains	tools/baseline/src/main.rs	"desktop-target-host-preflight" => desktop_target_host_preflight::run()
+contains	tools/baseline/src/desktop_target_host_preflight.rs	DEVE_DESKTOP_TARGET_HOSTS
+contains	tools/baseline/src/desktop_target_host_preflight.rs	DEVE_DESKTOP_TARGET_HOSTS must list macos or windows
+contains	tools/baseline/src/desktop_target_host_preflight.rs	DEVE_DESKTOP_TARGET_HOSTS must list only macos or windows
+contains	tools/baseline/src/desktop_target_host_preflight.rs	apps/desktop/tauri.conf.json
+contains	tools/baseline/src/desktop_target_host_preflight.rs	apps/desktop/src/main.rs
+contains	tools/baseline/src/desktop_target_host_preflight.rs	apps/desktop/build.rs
+contains	tools/baseline/src/desktop_target_host_preflight.rs	apps/desktop/icons/icon.png
 contains	tools/baseline/src/desktop_signing_preflight.rs	DEVE_DESKTOP_SIGNING_TARGETS
 contains	tools/baseline/src/desktop_signing_preflight.rs	unsupported desktop signing target
 contains	tools/baseline/src/main.rs	mod native_process_adapter_gate;

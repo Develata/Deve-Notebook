@@ -16,6 +16,7 @@ mod cli_settings;
 mod context;
 mod desktop_package_preflight;
 mod desktop_signing_preflight;
+mod desktop_target_host_preflight;
 mod dev_data_health;
 mod dev_runbook;
 mod diff_color;
@@ -96,6 +97,7 @@ fn run() -> Result<()> {
         "dev-data-health" => dev_data_health::run(),
         "desktop-package-preflight" => desktop_package_preflight::run(),
         "desktop-signing-preflight" => desktop_signing_preflight::run(),
+        "desktop-target-host-preflight" => desktop_target_host_preflight::run(),
         "foundation" => foundation::run(),
         "large-doc" => large_doc::run(),
         "mobile" => mobile::run(),
@@ -122,7 +124,7 @@ fn run() -> Result<()> {
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|desktop-package-preflight|desktop-signing-preflight|foundation|large-doc|mobile|mobile-android-release-preflight|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|foundation|large-doc|mobile|mobile-android-release-preflight|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|ws-structured-errors|all|full>"
             );
             Ok(())
         }

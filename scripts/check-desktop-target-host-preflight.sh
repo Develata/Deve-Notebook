@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 REQUIRED="${DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED:-0}"
 TARGETS="${DEVE_DESKTOP_TARGET_HOSTS:-macos,windows}"
 NO_SIGN="${DEVE_DESKTOP_PACKAGE_NO_SIGN:-0}"
@@ -34,33 +35,7 @@ target_enabled() {
   return 1
 }
 
-validate_targets() {
-  local part target has_target=0
-  IFS=',' read -ra parts <<<"$TARGETS"
-  for part in "${parts[@]}"; do
-    target="${part//[[:space:]]/}"
-    case "$target" in
-      macos|windows)
-        has_target=1
-        ;;
-      "")
-        fail "DEVE_DESKTOP_TARGET_HOSTS must list macos or windows"
-        ;;
-      *)
-        fail "DEVE_DESKTOP_TARGET_HOSTS must list only macos or windows; invalid target: $target"
-        ;;
-    esac
-  done
-  [[ "$has_target" == "1" ]] || fail "DEVE_DESKTOP_TARGET_HOSTS must list macos or windows"
-}
-
-hard_missing=()
 target_missing=()
-
-require_file() {
-  local path="$1"
-  [[ -f "$ROOT_DIR/$path" ]] || hard_missing+=("$path")
-}
 
 diagnose_file() {
   local path="$1"
@@ -123,30 +98,24 @@ diagnose_rust_target() {
   fi
 }
 
-validate_targets
+cargo_bin="${CARGO_BIN:-${CARGO:-}}"
+if [[ -z "$cargo_bin" ]]; then
+  cargo_bin="$(resolve_baseline_cargo "$ROOT_DIR" || true)"
+fi
+[[ -n "$cargo_bin" ]] || fail "cargo is required for desktop target-host preflight"
+
+run_deve_baseline "$ROOT_DIR" "desktop-target-host-preflight" "desktop-target-host-preflight-check"
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
 
-require_file "apps/desktop/tauri.conf.json"
-require_file "apps/desktop/src/main.rs"
-require_file "apps/desktop/build.rs"
-require_file "apps/desktop/icons/icon.png"
-
-if ((${#hard_missing[@]} > 0)); then
-  for item in "${hard_missing[@]}"; do
-    echo "desktop-target-host-preflight-check: invalid $item" >&2
-  done
-  fail "desktop shell/package boundary is not in the expected preflight state"
-fi
-
-run cargo check --locked -p deve_desktop --no-default-features
-run cargo check --locked -p deve_desktop --features native-packaging
-run cargo test --locked -p deve_desktop --features native-packaging packaging -- --nocapture
+run "$cargo_bin" check --locked -p deve_desktop --no-default-features
+run "$cargo_bin" check --locked -p deve_desktop --features native-packaging
+run "$cargo_bin" test --locked -p deve_desktop --features native-packaging packaging -- --nocapture
 
 echo "desktop-target-host-preflight-check: host_os=$(host_os)"
 echo "desktop-target-host-preflight-check: targets=$TARGETS"
 
 diagnose_file "apps/web/dist/index.html"
-diagnose_command "cargo tauri CLI" cargo tauri --version
+diagnose_command "cargo tauri CLI" "$cargo_bin" tauri --version
 
 if target_enabled macos; then
   if [[ "$(host_os)" != "Darwin" ]]; then
