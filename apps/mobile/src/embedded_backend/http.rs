@@ -8,17 +8,9 @@ use serde_json::Value;
 use super::cookie::MobileNativeSessionCookie;
 use super::{MobileEmbeddedBackendError, MobileEmbeddedBackendPlan};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(super) struct MobileLoopbackHttpProbe {
     probe: CoreLoopbackHttpProbe,
-}
-
-impl Default for MobileLoopbackHttpProbe {
-    fn default() -> Self {
-        Self {
-            probe: CoreLoopbackHttpProbe::default(),
-        }
-    }
 }
 
 impl MobileLoopbackHttpProbe {

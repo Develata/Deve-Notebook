@@ -19,17 +19,9 @@ use super::{
     session_material_from_auth_status_json,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct DesktopLoopbackHttpProbe {
     probe: NativeLoopbackHttpProbe,
-}
-
-impl Default for DesktopLoopbackHttpProbe {
-    fn default() -> Self {
-        Self {
-            probe: NativeLoopbackHttpProbe::default(),
-        }
-    }
 }
 
 impl DesktopLoopbackHttpProbe {
