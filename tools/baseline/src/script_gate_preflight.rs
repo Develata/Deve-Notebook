@@ -176,13 +176,11 @@ fn positive_integer_from_env(label: &str, name: &str, default: &str) -> Result<u
 }
 
 fn parse_positive_integer(label: &str, name: &str, value: &str) -> Result<u64> {
-    if value.chars().all(|ch| ch.is_ascii_digit()) {
+    if matches!(value.as_bytes(), [b'1'..=b'9', rest @ ..] if rest.iter().all(u8::is_ascii_digit)) {
         let parsed: u64 = value
             .parse()
             .map_err(|_| anyhow::anyhow!("{label}: {name} must be a positive integer"))?;
-        if parsed > 0 {
-            return Ok(parsed);
-        }
+        return Ok(parsed);
     }
     bail!("{label}: {name} must be a positive integer")
 }
@@ -327,7 +325,7 @@ mod tests {
             120
         );
 
-        for value in ["", "0", "-1", "1.5", "ten"] {
+        for value in ["", "0", "01", "08", "-1", "1.5", "ten"] {
             assert!(parse_positive_integer("gate", "DEVE_TIMEOUT", value).is_err());
         }
     }
