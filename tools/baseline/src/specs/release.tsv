@@ -633,7 +633,8 @@ contains	tools/baseline/src/main.rs	"release-audit-gate" => release_audit_gate::
 contains	tools/baseline/src/release_audit_gate.rs	DEVE_RELEASE_AUDIT_REQUIRED
 contains	tools/baseline/src/release_audit_gate.rs	DEVE_CARGO_AUDIT_REQUIRED
 contains	tools/baseline/src/release_audit_gate.rs	DEVE_NPM_AUDIT_REQUIRED
-contains	tools/baseline/src/release_audit_gate.rs	must be 0 or 1
+contains	tools/baseline/src/release_audit_gate.rs	binary_flag_from_env
+contains	tools/baseline/src/env_gate.rs	must be 0 or 1
 contains	tools/baseline/src/release_audit_gate.rs	cargo-audit-missing
 contains	tools/baseline/src/release_audit_gate.rs	npm-audit-missing
 contains	tools/baseline/src/main.rs	mod mobile_android_shell_package_build;

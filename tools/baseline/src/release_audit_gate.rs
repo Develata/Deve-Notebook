@@ -1,8 +1,8 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
+use crate::env_gate::binary_flag_from_env;
 use anyhow::{Result, bail};
-use std::env;
 
 const LABEL: &str = "release-audit-gate";
 const CARGO_AUDIT_UNAVAILABLE: &str = "cargo-audit unavailable; install with 'cargo install cargo-audit --locked' or set DEVE_CARGO_AUDIT_REQUIRED=0 for local diagnostic-only runs";
@@ -49,9 +49,9 @@ struct AuditFlags {
 impl AuditFlags {
     fn from_env() -> Result<Self> {
         Ok(Self {
-            release_required: env_flag("DEVE_RELEASE_AUDIT_REQUIRED")?,
-            cargo_required: env_flag("DEVE_CARGO_AUDIT_REQUIRED")?,
-            npm_required: env_flag("DEVE_NPM_AUDIT_REQUIRED")?,
+            release_required: binary_flag_from_env(LABEL, "DEVE_RELEASE_AUDIT_REQUIRED", false)?,
+            cargo_required: binary_flag_from_env(LABEL, "DEVE_CARGO_AUDIT_REQUIRED", false)?,
+            npm_required: binary_flag_from_env(LABEL, "DEVE_NPM_AUDIT_REQUIRED", false)?,
         })
     }
 
@@ -64,36 +64,21 @@ impl AuditFlags {
     }
 }
 
-fn env_flag(name: &str) -> Result<bool> {
-    match env::var(name) {
-        Ok(value) => parse_flag(name, &value),
-        Err(env::VarError::NotPresent) => Ok(false),
-        Err(env::VarError::NotUnicode(_)) => bail!("{LABEL}: {name} must be valid Unicode"),
-    }
-}
-
-fn parse_flag(name: &str, value: &str) -> Result<bool> {
-    match value {
-        "0" => Ok(false),
-        "1" => Ok(true),
-        _ => bail!("{LABEL}: {name} must be 0 or 1"),
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{AuditFlags, parse_flag};
+    use super::{AuditFlags, LABEL};
+    use crate::env_gate::parse_binary_flag;
 
     #[test]
     fn parses_release_audit_required_flags() {
-        assert!(!parse_flag("DEVE_RELEASE_AUDIT_REQUIRED", "0").expect("flag"));
-        assert!(parse_flag("DEVE_RELEASE_AUDIT_REQUIRED", "1").expect("flag"));
+        assert!(!parse_binary_flag(LABEL, "DEVE_RELEASE_AUDIT_REQUIRED", "0").expect("flag"));
+        assert!(parse_binary_flag(LABEL, "DEVE_RELEASE_AUDIT_REQUIRED", "1").expect("flag"));
     }
 
     #[test]
     fn rejects_non_binary_release_audit_flags() {
         for value in ["", "true", "false", "yes", "2"] {
-            assert!(parse_flag("DEVE_RELEASE_AUDIT_REQUIRED", value).is_err());
+            assert!(parse_binary_flag(LABEL, "DEVE_RELEASE_AUDIT_REQUIRED", value).is_err());
         }
     }
 
