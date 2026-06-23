@@ -6,6 +6,7 @@ mod watcher_test_support;
 
 use deve_core::models::NodeId;
 use deve_core::source_control::ChangeStatus;
+use deve_core::sync::watcher::DEFAULT_DEBOUNCE;
 use watcher_test_support::Harness;
 
 #[test]
@@ -13,6 +14,7 @@ fn watcher_pairs_rename_and_preserves_doc_identity() -> anyhow::Result<()> {
     let mut h = Harness::new(None)?;
     let doc_id = h.commit_doc("main", "notes/a.md", "base")?;
     h.start_watchers()?;
+    std::thread::sleep(DEFAULT_DEBOUNCE * 2);
 
     std::fs::rename(
         h.workspace_path("main", "notes/a.md")?,

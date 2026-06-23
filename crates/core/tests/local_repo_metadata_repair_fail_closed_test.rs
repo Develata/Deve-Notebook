@@ -203,9 +203,12 @@ fn repair_local_repo_catalog_fails_closed_on_unstatable_workspace_root() {
         .expect_err("unstatable workspace root must fail closed");
 
     std::fs::set_permissions(&projection_base, original).expect("restore perms");
+    let err_text = err.to_string();
     assert!(
-        err.to_string()
-            .contains("Failed to stat previous workspace root while repairing local catalog")
-            || err.to_string().contains("Permission denied")
+        err_text.contains("Failed to stat current workspace root while repairing local catalog")
+            || err_text
+                .contains("Failed to stat previous workspace root while repairing local catalog")
+            || err_text.contains("Permission denied"),
+        "{err_text}"
     );
 }

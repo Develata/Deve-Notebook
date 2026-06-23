@@ -87,14 +87,22 @@ impl Harness {
         path: &str,
         status: ChangeStatus,
     ) -> Result<ChangeEntry> {
-        self.wait_until(Duration::from_secs(5), || {
+        let result = self.wait_until(Duration::from_secs(5), || {
             self.repo
                 .list_pending_fs_in_local_repo(repo_name)
                 .ok()?
                 .into_iter()
                 .find(|entry| entry.path == path && entry.status == status)
+        });
+        result.map_err(|err| {
+            let pending = self
+                .repo
+                .list_pending_fs_in_local_repo(repo_name)
+                .unwrap_or_default();
+            anyhow!(
+                "pending {repo_name}/{path} {status:?} not observed: {err}; pending={pending:?}"
+            )
         })
-        .map_err(|err| anyhow!("pending {repo_name}/{path} {status:?} not observed: {err}"))
     }
 
     pub fn workspace_root(&self, repo_name: &str) -> Result<PathBuf> {

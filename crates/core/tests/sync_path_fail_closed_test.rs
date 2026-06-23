@@ -57,6 +57,8 @@ fn block_dir(path: &std::path::Path) -> std::fs::Permissions {
 fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
     let (_dir, repo) = new_repo();
     seed_file(repo.as_ref(), "notes/a.md", "ledger");
+    repo.ensure_local_repo_workspace_identity("default")
+        .expect("identity marker");
     let blocked = repo
         .local_repo_workspace_path("default", "notes")
         .expect("workspace path");
@@ -69,10 +71,11 @@ fn materialize_local_repo_fails_closed_when_workspace_path_is_unstatable() {
         .expect_err("unstatable workspace path must fail closed");
 
     std::fs::set_permissions(&blocked, original).expect("restore perms");
+    let err_text = err.to_string();
     assert!(
-        err.to_string()
-            .contains("Failed to stat workspace path while materializing projection")
-            || err.to_string().contains("Permission denied")
+        err_text.contains("Failed to stat workspace path while materializing projection")
+            || err_text.contains("Permission denied"),
+        "{err_text}"
     );
 }
 
