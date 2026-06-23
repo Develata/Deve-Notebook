@@ -68,7 +68,8 @@ mod tests {
     fn delete_guard_fails_closed_when_target_is_unstatable() {
         let guard = PersistGuard::new();
         let dir = tempdir().expect("tempdir");
-        let notes = dir.path().join("default").join("notes");
+        let repo_root = dir.path().join("default");
+        let notes = repo_root.join("notes");
         std::fs::create_dir_all(&notes).expect("mkdir");
         std::fs::write(notes.join("a.md"), "content").expect("write");
         let original = std::fs::metadata(&notes).expect("metadata").permissions();
@@ -77,7 +78,7 @@ mod tests {
         guard.record_delete("default/notes/a.md");
         std::fs::set_permissions(&notes, blocked).expect("chmod 000");
 
-        let ignored = guard.should_ignore(dir.path(), "default/notes/a.md");
+        let ignored = guard.should_ignore(&repo_root, "default/notes/a.md");
 
         std::fs::set_permissions(&notes, original).expect("restore perms");
         assert!(!ignored);
