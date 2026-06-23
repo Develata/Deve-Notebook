@@ -14,6 +14,12 @@ run_cargo_audit() {
     return
   fi
 
+  local cargo_audit_bin
+  if cargo_audit_bin="$(baseline_resolve_tool cargo-audit cargo-audit.exe 2>/dev/null)"; then
+    "$cargo_audit_bin" audit
+    return
+  fi
+
   run_deve_baseline "$ROOT_DIR" "release-audit-gate" "release-audit-gate" "cargo-audit-missing"
 }
 

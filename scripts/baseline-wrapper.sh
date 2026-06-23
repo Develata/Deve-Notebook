@@ -50,6 +50,57 @@ baseline_windows_exe() {
   [[ "$path" == *.exe ]]
 }
 
+baseline_windows_path_to_unix() {
+  local path="$1"
+  local drive rest lower
+  if [[ "$path" =~ ^([A-Za-z]):\\(.*)$ ]]; then
+    drive="${BASH_REMATCH[1]}"
+    rest="${BASH_REMATCH[2]//\\//}"
+    lower="$(printf '%s' "$drive" | tr '[:upper:]' '[:lower:]')"
+    printf '/mnt/%s/%s\n' "$lower" "$rest"
+    printf '/%s/%s\n' "$lower" "$rest"
+  fi
+}
+
+baseline_is_runnable_tool() {
+  local path="$1"
+  [[ -n "$path" ]] || return 1
+  [[ -f "$path" || -x "$path" ]] || return 1
+  "$path" --version >/dev/null 2>&1
+}
+
+baseline_resolve_tool() {
+  local tool_name="$1"
+  shift
+  local candidate candidate_path converted
+
+  for candidate in "$tool_name" "$@"; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      candidate_path="$(command -v "$candidate")"
+      if baseline_is_runnable_tool "$candidate_path"; then
+        printf '%s\n' "$candidate_path"
+        return 0
+      fi
+    fi
+
+    if command -v where.exe >/dev/null 2>&1; then
+      candidate_path="$(where.exe "$candidate" 2>/dev/null | tr -d '\r' | head -n1 || true)"
+      if baseline_is_runnable_tool "$candidate_path"; then
+        printf '%s\n' "$candidate_path"
+        return 0
+      fi
+      while IFS= read -r converted; do
+        if baseline_is_runnable_tool "$converted"; then
+          printf '%s\n' "$converted"
+          return 0
+        fi
+      done < <(baseline_windows_path_to_unix "$candidate_path")
+    fi
+  done
+
+  return 1
+}
+
 baseline_wslenv_has_name() {
   local wslenv="$1"
   local name="$2"

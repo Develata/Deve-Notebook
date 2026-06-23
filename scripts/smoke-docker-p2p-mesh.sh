@@ -28,6 +28,7 @@ PEER_B_EXPECTED_ID="${DEVE_DOCKER_P2P_MESH_PEER_B_ID:-}"
 PYTHON_BIN="${DEVE_DOCKER_P2P_MESH_PYTHON_BIN:-}"
 COOKIE_A="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-a.cookie"
 COOKIE_B="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-b.cookie"
+DELEGATED_SC_HEADER_VALUE=""
 
 if [[ ";${MSYS2_ARG_CONV_EXCL:-};" == *";*;"* || ";${MSYS2_ARG_CONV_EXCL:-};" == *";/data/ledger;"* ]]; then
   MSYS_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL:-}"
@@ -88,6 +89,19 @@ find_python() {
     return 0
   fi
   return 1
+}
+
+delegated_sc_header_value() {
+  AUTH_SECRET="$AUTH_SECRET" "$PYTHON_BIN" - <<'PY'
+import hashlib
+import hmac
+import os
+
+secret = os.environ["AUTH_SECRET"].encode("utf-8")
+transcript = b"deve-source-control-delegation:v1"
+signature = hmac.new(secret, transcript, hashlib.sha256).hexdigest()
+print(f"v1.{signature}")
+PY
 }
 
 docker_bin_available() {
@@ -173,6 +187,35 @@ mesh_handshake_count() {
   local logs
   logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
   grep -c "P2P mesh connector handshake completed" <<<"$logs" || true
+}
+
+mesh_connection_count() {
+  local service="$1"
+  local peer_id="$2"
+  local logs
+  logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
+MESH_LOGS="$logs" REPO_ID="$REPO_ID" "$PYTHON_BIN" - "$peer_id" <<'PY'
+import os
+import re
+import sys
+
+peer_id = sys.argv[1]
+repo_id = os.environ["REPO_ID"]
+ansi = re.compile(r"\x1b\[[0-9;]*m")
+hello_pattern = re.compile(
+    r"Handling SyncHello from " + re.escape(peer_id) + r" for repo " + re.escape(repo_id)
+)
+authenticated = f'authenticated_peer_id="{peer_id}"'
+
+count = 0
+for raw_line in os.environ["MESH_LOGS"].splitlines():
+    line = ansi.sub("", raw_line)
+    if "P2P mesh connector handshake completed" in line and authenticated in line:
+        count += 1
+    elif hello_pattern.search(line):
+        count += 1
+print(count)
+PY
 }
 
 server_peer_id_from_logs() {
@@ -343,19 +386,28 @@ wait_for_pending_path() {
 
 stage_and_commit_path() {
   local port="$1"
-  local cookie="$2"
-  local doc_path="$3"
-  local message="$4"
-  curl_local -fsS -b "$cookie" \
-    -X POST "http://127.0.0.1:${port}/api/sc/stage-pending" \
+  local doc_path="$2"
+  local message="$3"
+  local stage_output
+  local commit_output
+  if ! stage_output="$(curl_local -fsS \
+    -X POST "http://127.0.0.1:${port}/api/delegated/sc/stage-pending" \
+    -H "x-deve-source-control-delegation: ${DELEGATED_SC_HEADER_VALUE}" \
     -H 'Content-Type: application/json' \
     --data "{\"scope_nonce\":1,\"repo_id\":\"${REPO_ID}\",\"path\":\"${doc_path}\"}" \
-    >/dev/null
-  curl_local -fsS -b "$cookie" \
-    -X POST "http://127.0.0.1:${port}/api/sc/commit" \
+    2>&1)"; then
+    printf '%s\n' "$stage_output" >&2
+    return 1
+  fi
+  if ! commit_output="$(curl_local -fsS \
+    -X POST "http://127.0.0.1:${port}/api/delegated/sc/commit" \
+    -H "x-deve-source-control-delegation: ${DELEGATED_SC_HEADER_VALUE}" \
     -H 'Content-Type: application/json' \
     --data "{\"scope_nonce\":1,\"repo_id\":\"${REPO_ID}\",\"message\":\"${message}\"}" \
-    >/dev/null
+    2>&1)"; then
+    printf '%s\n' "$commit_output" >&2
+    return 1
+  fi
 }
 
 create_peer_a_fixture() {
@@ -372,7 +424,7 @@ create_peer_a_fixture() {
     diagnose
     fail "peer-a source-control status did not observe pending path ${doc_path}"
   fi
-  stage_and_commit_path "$PORT_A" "$COOKIE_A" "$doc_path" "docker p2p mesh smoke ${fixture_id}"
+  stage_and_commit_path "$PORT_A" "$doc_path" "docker p2p mesh smoke ${fixture_id}"
 
   local docs_json
   local doc_id
@@ -446,15 +498,16 @@ run_offline_shadow_check() {
 }
 
 restart_peer_b_and_wait_reconnect() {
-  local previous_handshakes="$1"
-  local current_handshakes
+  local previous_connections="$1"
+  local peer_id="$2"
+  local current_connections
   docker_compose up -d peer-b >/dev/null
   if ! wait_for_peer "$PORT_B"; then
     return 1
   fi
   for _ in $(seq 1 60); do
-    current_handshakes="$(mesh_handshake_count peer-b)"
-    if (( current_handshakes > previous_handshakes )); then
+    current_connections="$(mesh_connection_count peer-b "$peer_id")"
+    if (( current_connections > previous_connections )); then
       return 0
     fi
     sleep 1
@@ -465,6 +518,7 @@ restart_peer_b_and_wait_reconnect() {
 docker_bin_available || require_or_skip "docker command not found"
 command -v curl >/dev/null 2>&1 || require_or_skip "curl command not found"
 find_python || require_or_skip "python3/python command not found"
+DELEGATED_SC_HEADER_VALUE="$(delegated_sc_header_value)" || fail "could not compute delegated source-control header"
 [[ ${#REPO_KEY} -eq 32 ]] || fail "DEVE_DOCKER_P2P_MESH_REPO_KEY must be exactly 32 ASCII bytes"
 docker_cmd info >/dev/null 2>&1 || require_or_skip "docker daemon is not reachable"
 [[ -f "$COMPOSE_FILE" ]] || fail "compose file not found: $COMPOSE_FILE"
@@ -511,13 +565,13 @@ if ! wait_for_remote_ops_handled "$PEER_A_ID"; then
   fail "peer-b did not handle peer-a remote ops"
 fi
 
-HANDSHAKES_BEFORE="$(mesh_handshake_count peer-b)"
+CONNECTIONS_BEFORE="$(mesh_connection_count peer-b "$PEER_A_ID")"
 if ! run_offline_shadow_check "$PEER_A_ID" "$DOC_ID" "$DOC_CONTENT"; then
   diagnose
   fail "peer-b shadow repo did not contain peer-a content or local repo was polluted"
 fi
 
-if ! restart_peer_b_and_wait_reconnect "$HANDSHAKES_BEFORE"; then
+if ! restart_peer_b_and_wait_reconnect "$CONNECTIONS_BEFORE" "$PEER_A_ID"; then
   diagnose
   fail "peer-b did not reconnect to the mesh after offline shadow verification"
 fi
