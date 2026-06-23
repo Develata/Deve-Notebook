@@ -5,6 +5,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-23
+
 ### Added
 - **Docker 部署**: 多阶段 Dockerfile（rust:1.85 + trunk + esbuild → debian:bookworm-slim）
 - **Docker Compose**: 单服务配置，512m 内存限制，命名卷持久化

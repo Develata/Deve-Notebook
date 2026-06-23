@@ -1236,7 +1236,7 @@ dependencies = [
 
 [[package]]
 name = "deve_baseline"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "regex",
@@ -1244,7 +1244,7 @@ dependencies = [
 
 [[package]]
 name = "deve_cli"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -1274,7 +1274,7 @@ dependencies = [
 
 [[package]]
 name = "deve_core"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1319,7 +1319,7 @@ dependencies = [
 
 [[package]]
 name = "deve_desktop"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "deve_core",
  "getrandom 0.3.4",
@@ -1333,7 +1333,7 @@ dependencies = [
 
 [[package]]
 name = "deve_mobile"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "deve_cli",
  "deve_core",
@@ -1348,7 +1348,7 @@ dependencies = [
 
 [[package]]
 name = "deve_web"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "base64 0.22.1",
  "bincode",
