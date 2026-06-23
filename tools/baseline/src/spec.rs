@@ -166,9 +166,35 @@ fn parse_operation(line_no: usize, line: &str) -> Result<Operation<'_>> {
         ["git_tracked", rel] => Ok(Operation::GitTracked { rel }),
         ["git_not_ignored", rel] => Ok(Operation::GitNotIgnored { rel }),
         ["cargo_test", package, filter] => Ok(Operation::CargoTest { package, filter }),
-        [op, ..] => bail!("invalid baseline spec at line {line_no}: unsupported op '{op}'"),
+        [op, ..] => {
+            if let Some(expected) = expected_field_count(op) {
+                bail!(
+                    "invalid baseline spec at line {line_no}: op '{op}' expected {expected} tab-separated fields, got {}",
+                    fields.len()
+                )
+            }
+            bail!("invalid baseline spec at line {line_no}: unsupported op '{op}'")
+        }
         [] => bail!("invalid baseline spec at line {line_no}: empty line"),
     }
+}
+
+fn expected_field_count(op: &str) -> Option<usize> {
+    Some(match op {
+        "contains"
+        | "absent"
+        | "absent_optional"
+        | "absent_tree"
+        | "absent_tree_skip_tests"
+        | "regex_absent"
+        | "regex_absent_tree" => 3,
+        "before" | "case_contains" | "regex_absent_tree_ext" | "css_number_lt" => 4,
+        "check_scripts_listed" | "git_tracked" | "git_not_ignored" => 2,
+        "regex_absent_tree_skip" => 4,
+        "regex_absent_tree_ext_skip" => 5,
+        "cargo_test" => 3,
+        _ => return None,
+    })
 }
 
 fn split_list(value: &str) -> Vec<&str> {
@@ -193,7 +219,17 @@ mod tests {
     #[test]
     fn rejects_wrong_arity() {
         let error = parse_operation(1, "contains\tCargo.toml").expect_err("invalid");
-        assert!(error.to_string().contains("unsupported op"));
+        assert!(
+            error
+                .to_string()
+                .contains("op 'contains' expected 3 tab-separated fields, got 2")
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_operation() {
+        let error = parse_operation(1, "unknown_op\tCargo.toml").expect_err("invalid");
+        assert!(error.to_string().contains("unsupported op 'unknown_op'"));
     }
 
     #[test]
