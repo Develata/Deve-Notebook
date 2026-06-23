@@ -14,59 +14,6 @@ TOOL_SHIM_DIR="${DEVE_GATE_TOOL_SHIM_DIR:-${TMPDIR:-/tmp}/deve-gate-tools-${UID:
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 run_deve_baseline "$ROOT_DIR" "deep-audit-gate" "deep-audit-gate"
 
-fail() {
-  echo "deep-audit-gate: $*" >&2
-  exit 1
-}
-
-windows_path_to_unix() {
-  local path="$1"
-  local drive rest lower
-  if [[ "$path" =~ ^([A-Za-z]):\\(.*)$ ]]; then
-    drive="${BASH_REMATCH[1]}"
-    rest="${BASH_REMATCH[2]//\\//}"
-    lower="$(printf '%s' "$drive" | tr '[:upper:]' '[:lower:]')"
-    printf '/mnt/%s/%s\n' "$lower" "$rest"
-    printf '/%s/%s\n' "$lower" "$rest"
-  fi
-}
-
-is_runnable_tool() {
-  local path="$1"
-  [[ -n "$path" ]] || return 1
-  [[ -f "$path" || -x "$path" ]] || return 1
-  "$path" --version >/dev/null 2>&1
-}
-
-resolve_tool() {
-  local tool_name="$1"
-  shift
-  local candidate candidate_path converted
-  for candidate in "$tool_name" "$@"; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      candidate_path="$(command -v "$candidate")"
-      if is_runnable_tool "$candidate_path"; then
-        printf '%s\n' "$candidate_path"
-        return 0
-      fi
-    fi
-    if command -v where.exe >/dev/null 2>&1; then
-      candidate_path="$(where.exe "$candidate" 2>/dev/null | tr -d '\r' | head -n1 || true)"
-      if is_runnable_tool "$candidate_path"; then
-        printf '%s\n' "$candidate_path"
-        return 0
-      fi
-      while IFS= read -r converted; do
-        if is_runnable_tool "$converted"; then
-          printf '%s\n' "$converted"
-          return 0
-        fi
-      done < <(windows_path_to_unix "$candidate_path")
-    fi
-  done
-  fail "missing required tool '$tool_name'"
-}
-
 install_tool_shim() {
   local name="$1"
   local target="$2"
@@ -78,7 +25,11 @@ EOF
   chmod +x "$TOOL_SHIM_DIR/$name"
 }
 
-cargo_bin="$(resolve_tool cargo cargo.exe)"
+cargo_bin="$(baseline_resolve_tool cargo cargo.exe || true)"
+if [[ -z "$cargo_bin" ]]; then
+  echo "deep-audit-gate: missing required tool 'cargo'" >&2
+  exit 1
+fi
 install_tool_shim cargo "$cargo_bin"
 export PATH="$TOOL_SHIM_DIR:$PATH"
 
