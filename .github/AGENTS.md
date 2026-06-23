@@ -20,6 +20,7 @@ not required repo metadata.
 
 | File | Description |
 |------|-------------|
+| `workflows/check.yml` | Branch push / PR check-only CI; no packaging, publishing, GHCR, or production actions |
 | `workflows/release.yml` | Required release quality gates and Docker publishing |
 | `workflows/docker-smoke.yml` | Optional manual Docker release smoke on a GitHub-hosted Linux runner |
 | `workflows/native-target-host.yml` | Optional manual Desktop/Mobile target-host diagnostics |

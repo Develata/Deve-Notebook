@@ -1,0 +1,85 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Guard check-only boundary
+        run: |
+          forbidden=(
+            "packages: ""write"
+            "docker/""login-action"
+            "docker/""metadata-action"
+            "docker/""build-push-action"
+            "actions/""upload-artifact"
+            "push: ""true"
+            "ghcr"".io"
+            "tags: ""['v*']"
+          )
+          for pattern in "${forbidden[@]}"; do
+            if grep -nF "$pattern" .github/workflows/check.yml; then
+              echo "check.yml must stay check-only: no package publish, Docker publish, artifacts, registry publish, or tag release trigger."
+              exit 1
+            fi
+          done
+
+      - name: Install Rust 1.92
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92
+          targets: wasm32-unknown-unknown
+          components: clippy,rustfmt
+
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-check-
+            ${{ runner.os }}-cargo-
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Check Rust baseline contracts
+        run: cargo run --quiet -p deve_baseline -- all
+
+      - name: Check plan coverage
+        run: |
+          scripts/plan-coverage.sh --check-reverse-coverage
+          scripts/plan-coverage.sh --check-metadata-completeness
+          scripts/plan-coverage.sh --check-perf-budget
+          scripts/plan-coverage.sh --check-no-adr-plan-ref
+          scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
+          scripts/plan-coverage-selftest.sh
+
+      - name: Run clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Check web WASM target
+        run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
+
+      - name: Run tests
+        run: cargo test --locked

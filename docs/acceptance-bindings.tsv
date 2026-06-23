@@ -104,4 +104,5 @@ UI-WEB-007|manual-chrome|docs/features/08_ui_design_01_web.md|file tree context 
 UI-WEB-008|manual-chrome|docs/features/03_rendering.md|editor undo redo workflow
 REL-010|manual-network|docs/dev-runbook.md|docker p2p mesh smoke workflow
 REL-011|manual-cli|docs/dev-runbook.md|native authority opt-in workflow
+REL-012|manual-cli|.github/workflows/check.yml|branch check-only CI boundary
 SET-008|manual-cli|docs/features/13_settings.md|p2p static peer expected identity config review

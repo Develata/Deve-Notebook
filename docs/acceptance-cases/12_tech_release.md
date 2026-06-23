@@ -252,4 +252,21 @@
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true
     - release_assert: physical_device_readiness_not_claimed true
+
+- case_id: REL-012
+  goal: branch push / pull request CI 只做检查，不执行 package、publish 或 production 动作。
+  preconditions:
+    - `.github/workflows/check.yml` 可读
+  steps:
+    - run: rg -n "branches: \\[main\\]|pull_request:|cargo fmt --check|cargo clippy --locked --all-targets|cargo test --locked|deve_baseline -- all" .github/workflows/check.yml
+    - run: "! rg -n \"packages: write|docker/(login|metadata|build-push)-action|actions/upload-artifact|push: true|ghcr\\.io|tags: \\['v\\*'\\]\" .github/workflows/check.yml"
+  assertions:
+    - stdout_contains: "branches: [main]"
+    - stdout_contains: "pull_request:"
+    - stdout_contains: "cargo fmt --check"
+    - stdout_contains: "cargo clippy --locked --all-targets"
+    - stdout_contains: "cargo test --locked"
+    - stdout_contains: "deve_baseline -- all"
+    - release_assert: push_ci_check_only true
+    - release_assert: push_ci_no_package_publish_or_production true
 ```

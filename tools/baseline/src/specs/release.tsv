@@ -22,6 +22,24 @@ contains	.github/workflows/release.yml	cargo test --locked
 contains	.github/workflows/release.yml	docker/build-push-action@v6
 contains	.github/workflows/release.yml	platforms: linux/amd64
 contains	.github/workflows/release.yml	type=raw,value=latest
+contains	.github/workflows/check.yml	name: Check
+contains	.github/workflows/check.yml	branches: [main]
+contains	.github/workflows/check.yml	pull_request:
+contains	.github/workflows/check.yml	workflow_dispatch:
+contains	.github/workflows/check.yml	contents: read
+contains	.github/workflows/check.yml	cargo fmt --check
+contains	.github/workflows/check.yml	cargo run --quiet -p deve_baseline -- all
+contains	.github/workflows/check.yml	cargo clippy --locked --all-targets -- -D warnings
+contains	.github/workflows/check.yml	cargo check --locked -p deve_web --target wasm32-unknown-unknown
+contains	.github/workflows/check.yml	cargo test --locked
+absent	.github/workflows/check.yml	packages: write
+absent	.github/workflows/check.yml	docker/login-action
+absent	.github/workflows/check.yml	docker/metadata-action
+absent	.github/workflows/check.yml	docker/build-push-action
+absent	.github/workflows/check.yml	actions/upload-artifact
+absent	.github/workflows/check.yml	push: true
+absent	.github/workflows/check.yml	ghcr.io
+absent	.github/workflows/check.yml	tags: ['v*']
 contains	.github/workflows/docker-smoke.yml	workflow_dispatch:
 contains	.github/workflows/docker-smoke.yml	actions/checkout@v6
 contains	.github/workflows/docker-smoke.yml	docker version

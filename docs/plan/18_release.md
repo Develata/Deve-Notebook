@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-22`
+- `Last Review`: `2026-06-23`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -73,6 +73,18 @@ test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CL
 3.  **暂不强行纯 Rust**：Docker smoke、runtime server/browser smoke、adb/xcrun/installer/native package build、GitHub workflow dispatch 与 artifact collect。此类脚本 MAY 增加 Rust/CLI 前置校验或报告规范，但真实平台动作仍可由 shell/CI 编排；它们 MUST NOT 被并入 `deve_baseline -- all` 的轻量确定性聚合。
 
 任何迁移不得形成双份长期规格：确定性规则的唯一维护位置应是 Rust checker / TSV spec；shell wrapper 不得复制同一批固定字符串、路径漂移或边界判定。
+
+### 2.1.3 Workflow: `check.yml`
+
+普通 branch push / pull request 可以运行一个 **check-only** CI workflow，用于在 tag release 前尽早发现格式、Rust 编译、WASM 编译、测试与文档合同漂移。该 workflow 不属于发布通道，也不得替代 `release.yml` 的 tag-triggered 发布基线。
+
+`check.yml` **MUST** 保持以下边界：
+
+- Trigger 仅限 branch push / pull request / 可选手动诊断；不得监听 `v*` tag。
+- Permissions 只允许 `contents: read`；不得声明 `packages: write`。
+- 不得登录 GHCR、不得执行 Docker build/push、不得 upload release artifact。
+- 不得运行 native package build、installer smoke、store distribution、physical-device 或 production deploy。
+- MAY 运行 `cargo fmt --check`、`cargo clippy --locked --all-targets -- -D warnings`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`、`cargo test --locked`、`cargo run -p deve_baseline -- all` 与 plan coverage enforcing checks。
 
 ### 2.2 Deferred Workflows (推迟的工作流)
 
