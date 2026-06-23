@@ -2,61 +2,62 @@ English | [中文](README.zh.md)
 
 # Deve Notebook
 
+[![Check](https://github.com/Develata/Deve-Notebook/actions/workflows/check.yml/badge.svg)](https://github.com/Develata/Deve-Notebook/actions/workflows/check.yml)
+[![Release](https://github.com/Develata/Deve-Notebook/actions/workflows/release.yml/badge.svg)](https://github.com/Develata/Deve-Notebook/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Deve Notebook is a Rust workspace for a self-hosted personal Markdown notebook.
-It is built around a ledger-first storage model: the ledger is the authority,
-and each visible Markdown workspace is a repo-scoped projection.
+Deve Notebook is a Rust workspace for a self-hosted collaborative Markdown
+notebook. It targets private, low-resource deployments and uses a ledger-first
+storage model: the ledger is the authority, and every visible Markdown
+workspace is a repo-scoped projection.
 
-This repository is in active development. It is useful as an engineering
-prototype with substantial implemented runtime paths and regression evidence,
-but it is not yet a polished end-user release.
+The workspace version is `0.1.0`. This repository is suitable for engineering
+validation, source review, and Docker-oriented preview usage. It is not yet a
+polished end-user application, hosted SaaS product, or signed native app
+release.
 
-## Current Status
+## What Works Today
 
-Implemented and exercised today:
-
-- Rust workspace with `deve_core`, `deve_cli`, `deve_web`, `deve_desktop`, and
-  `deve_mobile`.
-- CLI/server runtime based on Clap, Tokio, Axum, HTTP, and WebSocket.
+- Rust workspace with `deve_core`, `deve_cli`, `deve_web`, `deve_desktop`,
+  `deve_mobile`, and the developer checker crate `deve_baseline`.
+- Clap/Tokio/Axum CLI server with HTTP, WebSocket, authentication, runtime
+  status, admin diagnostics, and embedded frontend delivery.
 - Leptos CSR Web frontend with login/session handling, document operations,
-  command surfaces, source-control UI, merge/conflict flows, graph/read-only
+  command surfaces, source-control UI, merge/conflict flows, read-only graph
   views, settings surfaces, and i18n coverage.
-- Ledger-backed local repo state, repo-scoped projection workspaces, watcher-to-pending external
-  edit ingestion, stage/commit/discard/merge workflows, and projection health
+- Ledger-backed repo state, repo-scoped projection workspaces, external file
+  watcher ingestion, stage/commit/discard/merge workflows, and projection health
   diagnostics.
 - Repo-scoped sync protocol with browser WebLightPeer identity, scope nonce
   gates, structured protocol errors, and recovery paths.
 - Production auth fail-closed behavior using `AUTH_SECRET` and `AUTH_PASS`;
   `--dev` mode provides the local `admin` / `admin` login only for development.
-- Dockerfile, production `docker-compose.yml`, Web release build smoke, runtime
-  smoke scripts, acceptance/baseline guards, and architecture registry checks.
-- Desktop and mobile native shell crates using optional Tauri v2
-  `native-packaging` features.
-- Recent target-host evidence covers Windows Desktop no-sign MSI/NSIS package
-  build/startup/installer smoke, Android shell APK emulator smoke, and iOS shell
-  simulator smoke.
+- Dockerfile, production `docker-compose.yml`, embedded Web release build
+  smoke, runtime smoke scripts, release/baseline guards, and architecture
+  registry checks.
+- Desktop and mobile native shell crates with optional Tauri v2
+  `native-packaging` gates. Current evidence is shell/package/startup oriented,
+  not signed store readiness.
 
-Not implemented or not claimed:
+## Explicit Boundaries
 
-- No hosted multi-tenant SaaS mode.
-- No browser offline-first full local ledger; browser is a WebLightPeer and
-  depends on the server for authority.
-- No server-backed Settings API; current settings are file/config/runtime
-  surfaces.
-- No default full-text index. Tantivy is optional and feature-gated.
-- No high-performance graph renderer; the current graph path is read-only
-  projection and summary/review UI.
-- No MCP product runtime. MCP references are historical or developer-tooling
-  related, not a runtime direction.
-- No general plugin marketplace or arbitrary plugin authority. The current
-  boundary is Rhai/plugin compatibility plus explicit capability gates.
-- No default trusted external agent execution. Native AI chat exists, while the
-  trusted CLI bridge is explicit and default-off.
-- No Web Git writer and no Git authority. Git is a mirror/import/export/publish
-  bridge around Deve's own source-control authority.
-- No signing, app-store readiness, physical-device readiness, native authority
-  writes, Mobile process runtime, or Android process runtime claim.
+The current release does not claim:
+
+- hosted multi-tenant SaaS;
+- browser offline-first full local ledger;
+- server-backed Settings API;
+- default full-text indexing;
+- high-performance graph rendering;
+- product runtime MCP integration;
+- general plugin marketplace or arbitrary plugin authority;
+- default trusted external agent execution;
+- Web Git writer or Git authority;
+- signed desktop installers, app-store readiness, physical-device readiness,
+  native authority writes, Mobile process runtime, or Android process runtime.
+
+Git remains a mirror/import/export/publish bridge around Deve's own
+source-control authority. The ledger and `.notegit/` remain Deve-owned runtime
+state.
 
 ## Authority Model
 
@@ -68,12 +69,11 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 - `ledger/.host/projection-locators.toml` stores host-local
   `RepoId -> projection_base` bindings.
 - `<projection_base>/<safe_repo_name>--<repo_id>/` stores the user-visible
-  Markdown projection for one local repo; repo names are display aliases, while
-  `RepoId` is the authority identity.
-- File-system changes enter `pending_fs_ops` first; they do not mutate authority
-  until an explicit stage/commit path appends ledger facts.
+  Markdown projection for one local repo.
+- File-system changes enter `pending_fs_ops` first. They do not mutate
+  authority until an explicit stage/commit path appends ledger facts.
 - `.notegit/` is Deve-owned repo runtime state.
-- `.git/` is only a Git ecosystem mirror bridge.
+- `.git/` is only a Git ecosystem bridge.
 
 The authoritative design source is `docs/plan/`. Feature docs and acceptance
 cases refine it. Reports under `docs/report/` are dated evidence, not live
@@ -88,6 +88,7 @@ contracts.
 | `apps/web` | Leptos CSR browser frontend |
 | `apps/desktop` | Desktop native shell and Tauri packaging gate |
 | `apps/mobile` | Mobile native shell and Android/iOS packaging gates |
+| `tools/baseline` | Rust developer/release checker CLI |
 | `docs/plan` | Authoritative engineering blueprint |
 | `docs/features` | User-facing feature and operation specifications |
 | `docs/acceptance-cases` | Acceptance and regression case registry |
@@ -99,8 +100,9 @@ contracts.
 
 Main development path:
 
-- Rust toolchain compatible with Edition 2024.
-- Node.js and npm.
+- Rust 1.92 or a compatible Edition 2024 toolchain.
+- `wasm32-unknown-unknown` target for Web checks.
+- Node.js 24 and npm for CI parity.
 - Trunk for the WebAssembly frontend.
 - Git.
 - POSIX-like shell for `scripts/*.sh`; Git Bash is the usual Windows path.
@@ -110,13 +112,14 @@ Optional paths:
 - Docker / Docker Compose for container smoke tests.
 - Tauri CLI and platform packaging tools for Desktop/Mobile target-host checks.
 - Android Studio / Android SDK for Android emulator/package checks.
+- Xcode on macOS for iOS simulator/package checks.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/develeta/deve-note.git
-cd deve-note
-scripts/smoke-web-release-build.sh
+git clone https://github.com/Develata/Deve-Notebook.git
+cd Deve-Notebook
+bash scripts/smoke-web-release-build.sh
 cargo run -p deve_cli --bin deve_cli -- init --path . --repo default --projection-base notes
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
@@ -134,7 +137,7 @@ username: admin
 password: admin
 ```
 
-For UI iteration, run the backend and Trunk separately:
+For frontend iteration, run the backend and Trunk separately:
 
 ```bash
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
@@ -188,46 +191,89 @@ Common commands:
 | `git status/export/import/push` | Operate the Git mirror bridge |
 | `config print/set` | Inspect or update whitelisted config keys |
 
-## Verification
+## Docker
 
-Targeted Rust test:
+Production compose uses the published image:
 
 ```bash
-cargo test --package <pkg> --lib <test_fn> -- --nocapture
+docker compose up -d
 ```
 
-General checks:
+Required environment:
+
+```bash
+AUTH_SECRET=<32-plus-byte-random-secret>
+AUTH_PASS='<argon2-phc-password-hash>'
+AUTH_USER=admin
+```
+
+Local Docker release smoke:
+
+```bash
+DEVE_DOCKER_SMOKE_REQUIRED=1 bash scripts/smoke-docker-release.sh
+```
+
+The image serves a single embedded frontend binary and stores runtime data under
+mounted `/data` and `/notes` paths. Projection roots are still configured
+through Projection Locators; `/notes` is not global authority.
+
+## Verification
+
+The branch workflow `.github/workflows/check.yml` is check-only: it runs
+formatting, baseline contracts, plan coverage, clippy, WASM check, and tests.
+It does not publish packages, push Docker images, upload artifacts, or deploy
+production services.
+
+Equivalent local checks:
 
 ```bash
 cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
+cargo run --quiet -p deve_baseline -- all
+bash scripts/plan-coverage.sh --check-reverse-coverage
+bash scripts/plan-coverage.sh --check-metadata-completeness
+bash scripts/plan-coverage.sh --check-perf-budget
+bash scripts/plan-coverage.sh --check-no-adr-plan-ref
+bash scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
+bash scripts/plan-coverage-selftest.sh
+cargo clippy --locked --all-targets -- -D warnings
+cargo check --locked -p deve_web --target wasm32-unknown-unknown
+cargo test --locked
 ```
 
-Representative script gates:
+Release-oriented checks:
 
 ```bash
-bash scripts/check-foundation-baseline.sh
-bash scripts/check-network-baseline.sh
-bash scripts/check-source-control-baseline.sh
-bash scripts/check-native-track-boundary.sh
-bash scripts/check-release-baseline.sh
+DEVE_RELEASE_AUDIT_REQUIRED=1 bash scripts/check-release-audit-gate.sh
+DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
+DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
 ```
 
-Docker smoke, only on Docker-capable hosts:
+Use full release and Docker smoke commands on machines that have the required
+tooling. Missing Docker, Android, iOS, signing, or target-host tools should be
+treated as a release evidence gap, not as a reason to weaken checks.
 
-```bash
-DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
-```
+## Release Workflows
+
+- `check.yml`: branch push / pull request checks only.
+- `release.yml`: tag `v*` quality gates and GHCR Docker publishing.
+- `release-native.yml`: tag `v*` native package workflow. Current native
+  artifacts remain shell/package evidence and do not imply signing, store, or
+  physical-device readiness.
+- `native-target-host.yml`: manual target-host diagnostics and evidence
+  collection.
+
+Do not create or move release tags until branch CI is green and the intended
+tag-triggered workflows are explicitly accepted.
 
 ## Documentation
 
 - `docs/plan/deve-note plan.md`: blueprint index.
+- `docs/plan/18_release.md`: release and CI/CD contract.
 - `docs/overview/architecture.md`: architecture view.
 - `docs/overview/architecture-diff.md`: current plan/code drift registry.
 - `docs/features/operation-coverage.md`: operation coverage registry.
 - `docs/acceptance-cases/00_index.md`: acceptance case index.
-- `docs/dev-runbook.md`: current startup, diagnostics, and release runbook.
+- `docs/dev-runbook.md`: startup, diagnostics, and release runbook.
 - `docs/report/README.md`: report reading rules.
 
 ## License

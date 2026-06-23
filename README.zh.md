@@ -2,48 +2,53 @@
 
 # Deve Notebook
 
+[![Check](https://github.com/Develata/Deve-Notebook/actions/workflows/check.yml/badge.svg)](https://github.com/Develata/Deve-Notebook/actions/workflows/check.yml)
+[![Release](https://github.com/Develata/Deve-Notebook/actions/workflows/release.yml/badge.svg)](https://github.com/Develata/Deve-Notebook/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Deve Notebook 是一个 Rust workspace，用于构建自托管的个人 Markdown
-笔记系统。它采用 ledger-first 存储模型：ledger 是权威源，用户可见的
-Markdown workspace 是 repo-scoped projection。
+Deve Notebook 是一个 Rust workspace，用于构建自托管的协作型 Markdown
+笔记系统。它面向私有、低资源部署，采用 ledger-first 存储模型：ledger 是权威源，
+用户可见的 Markdown workspace 是 repo-scoped projection。
 
-本仓库仍处于活跃开发阶段。当前更准确的定位是：已有大量 runtime 路径和回归证据的
-工程原型，而不是已经打磨完成的终端用户发行版。
+当前 workspace 版本是 `0.1.0`。本仓库适合工程验收、源码审查和 Docker 预览使用；
+它还不是已经完整打磨的终端用户应用、hosted SaaS 产品或已签名 native app release。
 
-## 当前状态
-
-已经实现并有测试或 smoke 证据覆盖：
+## 当前可用能力
 
 - Rust workspace：`deve_core`、`deve_cli`、`deve_web`、`deve_desktop`、
-  `deve_mobile`。
-- 基于 Clap、Tokio、Axum、HTTP、WebSocket 的 CLI/server runtime。
+  `deve_mobile`，以及 developer checker crate `deve_baseline`。
+- 基于 Clap/Tokio/Axum 的 CLI server，提供 HTTP、WebSocket、认证、runtime
+  status、admin diagnostics 和 embedded frontend delivery。
 - Leptos CSR Web 前端：登录/会话、文档操作、命令入口、Source Control UI、
-  merge/conflict 流程、只读 graph 视图、settings surface、i18n。
-- ledger-backed local repo state、repo-scoped projection workspace、watcher-to-pending 外部编辑摄入、
-  stage/commit/discard/merge 工作流，以及 projection health 诊断。
+  merge/conflict 流程、只读 graph 视图、settings surface 与 i18n 覆盖。
+- ledger-backed repo state、repo-scoped projection workspace、外部文件 watcher
+  摄入、stage/commit/discard/merge 工作流，以及 projection health 诊断。
 - repo-scoped sync protocol，包含浏览器 WebLightPeer identity、scope nonce gate、
   structured protocol error 与 recovery path。
 - 生产认证 fail-closed；`--dev` 模式才提供本地 `admin` / `admin` 登录。
-- Dockerfile、生产 `docker-compose.yml`、Web release build smoke、runtime smoke、
-  acceptance/baseline guard 与 architecture registry check。
-- Desktop/Mobile native shell crate，Tauri v2 仅在可选 `native-packaging` feature 后启用。
-- 最新 target-host evidence 覆盖 Windows Desktop no-sign MSI/NSIS package
-  build/startup/installer smoke、Android shell APK emulator smoke、iOS shell simulator smoke。
+- Dockerfile、生产 `docker-compose.yml`、embedded Web release build smoke、
+  runtime smoke、release/baseline guard 与 architecture registry check。
+- Desktop/Mobile native shell crate，Tauri v2 仅在可选 `native-packaging` gate
+  后启用。当前证据是 shell/package/startup 方向，不是已签名 store readiness。
 
-未实现或不声明为当前能力：
+## 明确边界
 
-- 不是 hosted multi-tenant SaaS。
-- 浏览器不是 offline-first full local ledger；浏览器是 WebLightPeer，authority 依赖 server。
-- 没有 server-backed Settings API；当前是文件/config/runtime surface。
-- 没有默认全文索引；Tantivy 是 optional feature-gated 路线。
-- 没有高性能 graph renderer；当前 graph 是只读 projection 和 summary/review UI。
-- 没有产品内 MCP runtime。MCP 只保留为历史说明或开发验收工具语境。
-- 没有通用 plugin marketplace，也不声明任意插件 authority；当前是 Rhai/plugin 兼容边界和显式 capability gate。
-- 没有默认 trusted external agent 执行。Native AI chat 已存在，trusted CLI bridge 必须显式启用且默认关闭。
-- 没有 Web Git writer，也不把 Git 当 authority；Git 只是 Deve Source Control 外侧的 mirror/import/export/publish bridge。
-- 不声明 signing、store readiness、physical-device readiness、native authority writes、
-  Mobile process runtime 或 Android process runtime。
+当前 release 不声明：
+
+- hosted multi-tenant SaaS；
+- 浏览器 offline-first full local ledger；
+- server-backed Settings API；
+- 默认全文索引；
+- 高性能 graph renderer；
+- 产品内 MCP runtime；
+- 通用 plugin marketplace 或任意插件 authority；
+- 默认 trusted external agent 执行；
+- Web Git writer 或 Git authority；
+- 已签名桌面安装包、app-store readiness、physical-device readiness、native
+  authority writes、Mobile process runtime 或 Android process runtime。
+
+Git 只是 Deve 自身 source-control authority 外侧的 mirror/import/export/publish
+bridge。ledger 和 `.notegit/` 仍是 Deve 拥有的 runtime state。
 
 ## 权威模型
 
@@ -55,10 +60,10 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 - `ledger/.host/projection-locators.toml` 保存 host-local
   `RepoId -> projection_base` 绑定。
 - `<projection_base>/<safe_repo_name>--<repo_id>/` 保存单个本地 repo 的用户可见
-  Markdown projection；repo 名称只是显示别名，`RepoId` 才是权威身份。
+  Markdown projection。
 - 文件系统变化先进入 `pending_fs_ops`；只有显式 stage/commit 才会追加 ledger facts。
 - `.notegit/` 是 Deve 拥有的 repo runtime state。
-- `.git/` 只是 Git ecosystem mirror bridge。
+- `.git/` 只是 Git ecosystem bridge。
 
 `docs/plan/` 是权威设计来源。`docs/features/` 和 `docs/acceptance-cases/`
 细化行为与验收。`docs/report/` 是带日期的历史证据，不是实时契约。
@@ -72,6 +77,7 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 | `apps/web` | Leptos CSR 浏览器前端 |
 | `apps/desktop` | Desktop native shell 与 Tauri packaging gate |
 | `apps/mobile` | Mobile native shell 与 Android/iOS packaging gate |
+| `tools/baseline` | Rust developer/release checker CLI |
 | `docs/plan` | 权威工程蓝图 |
 | `docs/features` | 用户可见 feature 与 operation 规格 |
 | `docs/acceptance-cases` | 验收与回归用例 registry |
@@ -83,8 +89,9 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 
 主开发路径需要：
 
-- 兼容 Edition 2024 的 Rust toolchain。
-- Node.js 与 npm。
+- Rust 1.92 或兼容 Edition 2024 的 toolchain。
+- Web 检查需要 `wasm32-unknown-unknown` target。
+- Node.js 24 与 npm，用于和 CI 保持一致。
 - 用于 WebAssembly 前端的 Trunk。
 - Git。
 - 能执行 `scripts/*.sh` 的 POSIX-like shell；Windows 通常使用 Git Bash。
@@ -94,13 +101,14 @@ Ledger -> Folded State -> Projection -> Projection Workspace
 - Docker / Docker Compose，用于 container smoke。
 - Tauri CLI 和平台 packaging 工具，用于 Desktop/Mobile target-host check。
 - Android Studio / Android SDK，用于 Android emulator/package check。
+- macOS/Xcode，用于 iOS simulator/package check。
 
 ## 快速开始
 
 ```bash
-git clone https://github.com/develeta/deve-note.git
-cd deve-note
-scripts/smoke-web-release-build.sh
+git clone https://github.com/Develata/Deve-Notebook.git
+cd Deve-Notebook
+bash scripts/smoke-web-release-build.sh
 cargo run -p deve_cli --bin deve_cli -- init --path . --repo default --projection-base notes
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
 ```
@@ -118,7 +126,7 @@ username: admin
 password: admin
 ```
 
-做 UI 迭代时，可以分开运行后端和 Trunk：
+做前端迭代时，可以分开运行后端和 Trunk：
 
 ```bash
 cargo run -p deve_cli --bin deve_cli -- serve --dev --port 3001
@@ -171,46 +179,84 @@ cargo run -p deve_cli --bin deve_cli -- <command>
 | `git status/export/import/push` | 操作 Git mirror bridge |
 | `config print/set` | 查看或更新白名单配置项 |
 
-## 验证
+## Docker
 
-Targeted Rust test：
+生产 compose 使用已发布镜像：
 
 ```bash
-cargo test --package <pkg> --lib <test_fn> -- --nocapture
+docker compose up -d
 ```
 
-通用检查：
+必需环境变量：
+
+```bash
+AUTH_SECRET=<32-plus-byte-random-secret>
+AUTH_PASS='<argon2-phc-password-hash>'
+AUTH_USER=admin
+```
+
+本地 Docker release smoke：
+
+```bash
+DEVE_DOCKER_SMOKE_REQUIRED=1 bash scripts/smoke-docker-release.sh
+```
+
+镜像交付单个 embedded frontend binary，并把 runtime data 放在挂载的 `/data`
+和 `/notes`。Projection root 仍通过 Projection Locator 配置；`/notes` 不是全局
+authority。
+
+## 验证
+
+branch workflow `.github/workflows/check.yml` 是 check-only：它运行 formatting、
+baseline contracts、plan coverage、clippy、WASM check 和 tests；不会发布 package、
+push Docker image、upload artifact 或部署 production service。
+
+等价本地检查：
 
 ```bash
 cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
+cargo run --quiet -p deve_baseline -- all
+bash scripts/plan-coverage.sh --check-reverse-coverage
+bash scripts/plan-coverage.sh --check-metadata-completeness
+bash scripts/plan-coverage.sh --check-perf-budget
+bash scripts/plan-coverage.sh --check-no-adr-plan-ref
+bash scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
+bash scripts/plan-coverage-selftest.sh
+cargo clippy --locked --all-targets -- -D warnings
+cargo check --locked -p deve_web --target wasm32-unknown-unknown
+cargo test --locked
 ```
 
-常用脚本 gate：
+release 方向检查：
 
 ```bash
-bash scripts/check-foundation-baseline.sh
-bash scripts/check-network-baseline.sh
-bash scripts/check-source-control-baseline.sh
-bash scripts/check-native-track-boundary.sh
-bash scripts/check-release-baseline.sh
+DEVE_RELEASE_AUDIT_REQUIRED=1 bash scripts/check-release-audit-gate.sh
+DEVE_DOCKER_MULTI_REQUIRED=1 bash scripts/smoke-docker-multiclient.sh
+DEVE_DOCKER_P2P_MESH_REQUIRED=1 bash scripts/smoke-docker-p2p-mesh.sh
 ```
 
-Docker smoke 只在具备 Docker 的主机上启用：
+完整 release 和 Docker smoke 应在具备对应工具的机器上运行。缺失 Docker、Android、
+iOS、签名或 target-host 工具时，应记录为 release evidence gap，而不是削弱检查。
 
-```bash
-DEVE_DOCKER_SMOKE_REQUIRED=1 scripts/smoke-docker-release.sh
-```
+## Release Workflows
+
+- `check.yml`：branch push / pull request check-only。
+- `release.yml`：tag `v*` quality gates 与 GHCR Docker publishing。
+- `release-native.yml`：tag `v*` native package workflow。当前 native artifacts
+  仍是 shell/package evidence，不表示 signing、store 或 physical-device readiness。
+- `native-target-host.yml`：manual target-host diagnostics 与 evidence collection。
+
+只有 branch CI 变绿且明确接受 tag-triggered workflow 范围后，才应创建或移动 release tag。
 
 ## 文档
 
 - `docs/plan/deve-note plan.md`：蓝图索引。
+- `docs/plan/18_release.md`：release 与 CI/CD 契约。
 - `docs/overview/architecture.md`：架构视图。
 - `docs/overview/architecture-diff.md`：当前 plan/code drift registry。
 - `docs/features/operation-coverage.md`：operation coverage registry。
 - `docs/acceptance-cases/00_index.md`：验收用例索引。
-- `docs/dev-runbook.md`：当前启动、诊断与 release runbook。
+- `docs/dev-runbook.md`：启动、诊断与 release runbook。
 - `docs/report/README.md`：历史 report 阅读规则。
 
 ## License
