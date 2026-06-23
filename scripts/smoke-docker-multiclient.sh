@@ -5,6 +5,8 @@ set -euo pipefail
 # and exercise it from multiple isolated Playwright browser contexts.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/baseline-wrapper.sh
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 COMPOSE_FILE="${DEVE_DOCKER_MULTI_COMPOSE_FILE:-$ROOT_DIR/docker-compose.multiclient.yml}"
 PROJECT="${DEVE_DOCKER_MULTI_PROJECT:-deve-multiclient-$$}"
 HOST_PORT="${DEVE_DOCKER_MULTI_PORT:-3101}"
@@ -19,6 +21,8 @@ AUTH_PASSWORD="${DEVE_DOCKER_MULTI_AUTH_PASSWORD:-password}"
 PLAYWRIGHT_PACKAGE="${DEVE_DOCKER_MULTI_PLAYWRIGHT_PACKAGE:-playwright}"
 PLAYWRIGHT_WORK_DIR="${DEVE_DOCKER_MULTI_PLAYWRIGHT_WORK_DIR:-${TMPDIR:-/tmp}/deve-docker-multiclient-playwright}"
 NODE_SCRIPT="${DEVE_DOCKER_MULTI_NODE_SCRIPT:-$ROOT_DIR/scripts/smoke-docker-multiclient.mjs}"
+
+run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-multiclient-smoke" "multiclient"
 
 fail() {
   echo "docker-multiclient-smoke: $*" >&2

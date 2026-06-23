@@ -5,6 +5,8 @@ set -euo pipefail
 # material, and verify the public node-role health endpoint responds.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/baseline-wrapper.sh
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 IMAGE="${DEVE_DOCKER_SMOKE_IMAGE:-deve-notebook:local-smoke}"
 CONTAINER_NAME="${DEVE_DOCKER_SMOKE_CONTAINER:-deve-docker-smoke-$$}"
 HOST_PORT="${DEVE_DOCKER_SMOKE_PORT:-3102}"
@@ -18,6 +20,8 @@ DATA_VOLUME="${DEVE_DOCKER_SMOKE_DATA_VOLUME:-}"
 NOTES_VOLUME="${DEVE_DOCKER_SMOKE_NOTES_VOLUME:-}"
 REMOVE_DATA_VOLUME=0
 REMOVE_NOTES_VOLUME=0
+
+run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-release-smoke" "release"
 
 fail() {
   echo "docker-release-smoke: $*" >&2

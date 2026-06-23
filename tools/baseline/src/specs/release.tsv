@@ -249,6 +249,7 @@ contains	docs/acceptance-cases/11_commands_settings.md	scripts/smoke-web-release
 absent	docs/features/12_commands.md	NO_COLOR=true trunk build --release
 absent	docs/acceptance-cases/11_commands_settings.md	NO_COLOR=true trunk build --release
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_REQUIRED
+contains	scripts/smoke-docker-release.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-release-smoke" "release"
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_PORT:-3102
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_BIN
 contains	scripts/smoke-docker-release.sh	docker_cmd build -t
@@ -265,6 +266,7 @@ contains	scripts/smoke-docker-release.sh	docker_cmd port "$CONTAINER_NAME" 3001/
 contains	scripts/smoke-docker-release.sh	DEVE_DOCKER_SMOKE_AUTH_PASSWORD
 contains	scripts/smoke-docker-release.sh	http://127.0.0.1:${HOST_PORT}/api/auth/login
 contains	scripts/smoke-docker-multiclient.sh	docker-compose.multiclient.yml
+contains	scripts/smoke-docker-multiclient.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-multiclient-smoke" "multiclient"
 contains	scripts/smoke-docker-multiclient.sh	DEVE_DOCKER_MULTI_KEEP
 contains	scripts/smoke-docker-multiclient.sh	deve-docker-multiclient-playwright
 contains	scripts/smoke-docker-multiclient.sh	npm --prefix "$PLAYWRIGHT_WORK_DIR" install --no-audit --no-fund "$PLAYWRIGHT_PACKAGE"
@@ -276,6 +278,7 @@ contains	scripts/smoke-docker-multiclient.mjs	data-deve-search-result-action="cr
 contains	scripts/smoke-docker-multiclient.mjs	context.setOffline(true)
 contains	scripts/smoke-docker-multiclient.mjs	new URL(url).pathname === "/ws"
 contains	scripts/smoke-docker-p2p-mesh.sh	docker-compose.mesh.yml
+contains	scripts/smoke-docker-p2p-mesh.sh	run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_REQUIRED
 contains	scripts/smoke-docker-p2p-mesh.sh	DEVE_DOCKER_P2P_MESH_KEEP
 contains	scripts/smoke-docker-p2p-mesh.sh	P2P mesh connector handshake completed
@@ -630,6 +633,13 @@ contains	tools/baseline/src/main.rs	"native-track-boundary" => native_track_boun
 contains	tools/baseline/src/main.rs	"native-target-host-evidence" => native_target_host_evidence::run(&command_args)
 contains	tools/baseline/src/main.rs	mod release_audit_gate;
 contains	tools/baseline/src/main.rs	"release-audit-gate" => release_audit_gate::run(&command_args)
+contains	tools/baseline/src/main.rs	mod docker_smoke_preflight;
+contains	tools/baseline/src/main.rs	"docker-smoke-preflight" => docker_smoke_preflight::run(&command_args)
+contains	tools/baseline/src/docker_smoke_preflight.rs	DEVE_DOCKER_SMOKE_REQUIRED
+contains	tools/baseline/src/docker_smoke_preflight.rs	DEVE_DOCKER_MULTI_TIMEOUT_MS
+contains	tools/baseline/src/docker_smoke_preflight.rs	DEVE_DOCKER_P2P_MESH_REPO_KEY
+contains	tools/baseline/src/docker_smoke_preflight.rs	must be a TCP port in 1..=65535
+contains	tools/baseline/src/docker_smoke_preflight.rs	must be 0, 1, true, or false
 contains	tools/baseline/src/release_audit_gate.rs	DEVE_RELEASE_AUDIT_REQUIRED
 contains	tools/baseline/src/release_audit_gate.rs	DEVE_CARGO_AUDIT_REQUIRED
 contains	tools/baseline/src/release_audit_gate.rs	DEVE_NPM_AUDIT_REQUIRED

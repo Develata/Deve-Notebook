@@ -5,6 +5,8 @@ set -euo pipefail
 # verify static FullPeer /ws mesh admission plus handshake diagnostics.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=scripts/baseline-wrapper.sh
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 COMPOSE_FILE="${DEVE_DOCKER_P2P_MESH_COMPOSE_FILE:-$ROOT_DIR/docker-compose.mesh.yml}"
 PROJECT="${DEVE_DOCKER_P2P_MESH_PROJECT:-deve-p2p-mesh-$$}"
 PORT_A="${DEVE_DOCKER_P2P_MESH_A_PORT:-3111}"
@@ -29,6 +31,8 @@ PYTHON_BIN="${DEVE_DOCKER_P2P_MESH_PYTHON_BIN:-}"
 COOKIE_A="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-a.cookie"
 COOKIE_B="${TMPDIR:-/tmp}/deve-p2p-mesh-${PROJECT}-b.cookie"
 DELEGATED_SC_HEADER_VALUE=""
+
+run_deve_baseline "$ROOT_DIR" "docker-smoke-preflight" "docker-p2p-mesh-smoke" "p2p-mesh"
 
 if [[ ";${MSYS2_ARG_CONV_EXCL:-};" == *";*;"* || ";${MSYS2_ARG_CONV_EXCL:-};" == *";/data/ledger;"* ]]; then
   MSYS_ARG_CONV_EXCL="${MSYS2_ARG_CONV_EXCL:-}"
