@@ -14,9 +14,12 @@
 - **静态文件服务**: Axum ServeDir 模块，SPA fallback 支持
 - **安全审计**: cargo-audit + npm audit 集成到 nightly CI
 - **GHCR 推送**: Docker 镜像自动推送到 ghcr.io
+- **Baseline Rust CLI**: release/local/deep gate、acceptance binding、env/target/preflight 等确定性检查迁入 `deve_baseline`
+- **Docker smoke preflight**: release、multiclient、P2P mesh smoke 在真实 Docker 动作前统一执行 Rust CLI 参数和环境校验
 
 ### Changed
 - **Rust 1.85+**: 升级最低要求以支持 Edition 2024
+- **Runtime smoke**: runtime happy/recovery smoke 复用 baseline wrapper 的 cargo 解析逻辑，提高 WSL/Git Bash/Windows 入口稳定性
 
 ### Removed
 - **MCP runtime**: 移除产品内 MCP manager、client executor、plugin host tool 入口；后续工具扩展走 Skills + controlled CLI / Trusted CLI path。

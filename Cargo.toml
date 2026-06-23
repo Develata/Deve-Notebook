@@ -14,7 +14,7 @@ version = "0.2.0"
 edition = "2024"
 authors = ["Deve-Note Contributors"]
 license = "MIT"
-repository = "https://github.com/develeta/deve-note"
+repository = "https://github.com/Develata/Deve-Notebook.git"
 
 [workspace.dependencies]
 # Intra-workspace dependencies

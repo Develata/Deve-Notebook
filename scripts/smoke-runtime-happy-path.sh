@@ -6,6 +6,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# shellcheck source=scripts/baseline-wrapper.sh
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+
 run_test() {
   local package="$1"
   shift
@@ -17,7 +20,7 @@ run_test() {
   unset "cargo_args[$last_index]"
 
   echo "runtime-happy-path-smoke: run: cargo test -p $package ${cargo_args[*]} $filter -- --nocapture"
-  if ! output="$(cd "$ROOT_DIR" && cargo test -p "$package" "${cargo_args[@]}" "$filter" -- --nocapture 2>&1)"; then
+  if ! output="$(run_baseline_cargo "$ROOT_DIR" runtime-happy-path-smoke test -p "$package" "${cargo_args[@]}" "$filter" -- --nocapture 2>&1)"; then
     printf '%s\n' "$output"
     return 1
   fi

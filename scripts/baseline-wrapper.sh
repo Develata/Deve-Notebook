@@ -45,6 +45,31 @@ resolve_baseline_cargo() {
   fi
 }
 
+run_baseline_cargo() {
+  local root_dir="$1"
+  local label="$2"
+  local cargo_bin="${CARGO_BIN:-${CARGO:-}}"
+  shift 2
+
+  if [[ -z "$cargo_bin" ]]; then
+    cargo_bin="$(resolve_baseline_cargo "$root_dir" || true)"
+  fi
+
+  if [[ -z "$cargo_bin" ]]; then
+    echo "$label: cargo is required to run cargo $*" >&2
+    return 1
+  fi
+
+  (
+    cd "$root_dir"
+    if baseline_repo_on_wsl_windows_mount "$root_dir" && baseline_windows_exe "$cargo_bin"; then
+      WSLENV="$(baseline_deve_wslenv)" "$cargo_bin" "$@"
+    else
+      "$cargo_bin" "$@"
+    fi
+  )
+}
+
 baseline_windows_exe() {
   local path="${1,,}"
   [[ "$path" == *.exe ]]

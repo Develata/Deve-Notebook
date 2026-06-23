@@ -7,6 +7,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# shellcheck source=scripts/baseline-wrapper.sh
+source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+
 run_filter() {
   local package="$1"
   local filter="$2"
@@ -16,7 +19,7 @@ run_filter() {
   local total
 
   echo "runtime-recovery-smoke: run: cargo test -p $package $filter -- --nocapture"
-  if ! output="$(cd "$ROOT_DIR" && cargo test -p "$package" "$filter" -- --nocapture 2>&1)"; then
+  if ! output="$(run_baseline_cargo "$ROOT_DIR" runtime-recovery-smoke test -p "$package" "$filter" -- --nocapture 2>&1)"; then
     printf '%s\n' "$output"
     return 1
   fi
