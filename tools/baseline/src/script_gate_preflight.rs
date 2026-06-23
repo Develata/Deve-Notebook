@@ -1,6 +1,7 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
+use crate::env_gate::binary_flag_from_env;
 use anyhow::{Result, bail};
 use std::env;
 
@@ -152,19 +153,7 @@ fn ok(label: &'static str) -> Result<()> {
 }
 
 fn flag_from_env(label: &str, name: &str, default: bool) -> Result<bool> {
-    match env::var(name) {
-        Ok(value) => parse_flag(label, name, &value),
-        Err(env::VarError::NotPresent) => Ok(default),
-        Err(env::VarError::NotUnicode(_)) => bail!("{label}: {name} must be valid Unicode"),
-    }
-}
-
-fn parse_flag(label: &str, name: &str, value: &str) -> Result<bool> {
-    match value {
-        "0" => Ok(false),
-        "1" => Ok(true),
-        _ => bail!("{label}: {name} must be 0 or 1"),
-    }
+    binary_flag_from_env(label, name, default)
 }
 
 fn positive_integer_from_env(label: &str, name: &str, default: &str) -> Result<u64> {
@@ -304,17 +293,17 @@ fn validate_android_package_target(label: &str, target: &str) -> Result<String> 
 mod tests {
     use super::{
         ANDROID_EMULATOR_LABEL, BundlePolicy, DESKTOP_INSTALLER_LABEL, DESKTOP_PLATFORM_LABEL,
-        parse_flag, parse_positive_integer, validate_android_package_target,
-        validate_desktop_bundles,
+        parse_positive_integer, validate_android_package_target, validate_desktop_bundles,
     };
+    use crate::env_gate::parse_binary_flag;
 
     #[test]
     fn gate_flags_accept_only_binary_values() {
-        assert!(!parse_flag("gate", "DEVE_FLAG", "0").expect("flag"));
-        assert!(parse_flag("gate", "DEVE_FLAG", "1").expect("flag"));
+        assert!(!parse_binary_flag("gate", "DEVE_FLAG", "0").expect("flag"));
+        assert!(parse_binary_flag("gate", "DEVE_FLAG", "1").expect("flag"));
 
         for value in ["", "true", "false", "yes", "2"] {
-            assert!(parse_flag("gate", "DEVE_FLAG", value).is_err());
+            assert!(parse_binary_flag("gate", "DEVE_FLAG", value).is_err());
         }
     }
 

@@ -1,7 +1,7 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
-use crate::mobile_shell_gate::binary_flag_from_env;
+use crate::env_gate::binary_flag_from_env;
 use anyhow::{Result, bail};
 use std::env;
 
@@ -65,7 +65,7 @@ fn validate_android_target(target: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{LABEL, validate_android_target, validate_targets};
-    use crate::mobile_shell_gate::parse_binary_flag;
+    use crate::env_gate::parse_binary_flag;
 
     #[test]
     fn accepts_binary_mobile_package_preflight_flags() {

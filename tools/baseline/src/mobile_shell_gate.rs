@@ -1,7 +1,6 @@
 //! plan_ref: infra
 
 use anyhow::{Context, Result, bail};
-use std::env;
 use std::path::Path;
 
 pub fn assert_android_shell_boundary(
@@ -28,22 +27,6 @@ pub fn assert_positive_integer(label: &str, name: &str, value: &str) -> Result<(
     }
 
     bail!("{label}: {name} must be a positive integer");
-}
-
-pub fn parse_binary_flag(label: &str, name: &str, value: &str) -> Result<bool> {
-    match value {
-        "0" => Ok(false),
-        "1" => Ok(true),
-        _ => bail!("{label}: {name} must be 0 or 1"),
-    }
-}
-
-pub fn binary_flag_from_env(label: &str, name: &str, default: bool) -> Result<bool> {
-    match env::var(name) {
-        Ok(value) => parse_binary_flag(label, name, &value),
-        Err(env::VarError::NotPresent) => Ok(default),
-        Err(env::VarError::NotUnicode(_)) => bail!("{label}: {name} must be valid Unicode"),
-    }
 }
 
 fn assert_common_mobile_shell_boundary(root: &Path, label: &str) -> Result<()> {
@@ -79,7 +62,7 @@ fn is_positive_integer(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{assert_positive_integer, parse_binary_flag};
+    use super::assert_positive_integer;
 
     #[test]
     fn accepts_positive_integer_values() {
@@ -92,19 +75,6 @@ mod tests {
     fn rejects_non_positive_integer_values() {
         for value in ["", "0", "00", "-1", "1.5", "abc"] {
             assert!(assert_positive_integer("test-check", "TEST_VALUE", value).is_err());
-        }
-    }
-
-    #[test]
-    fn parses_binary_flags() {
-        assert!(!parse_binary_flag("test-check", "TEST_FLAG", "0").expect("flag"));
-        assert!(parse_binary_flag("test-check", "TEST_FLAG", "1").expect("flag"));
-    }
-
-    #[test]
-    fn rejects_non_binary_flags() {
-        for value in ["", "true", "false", "yes", "2"] {
-            assert!(parse_binary_flag("test-check", "TEST_FLAG", value).is_err());
         }
     }
 }

@@ -1,7 +1,8 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
-use crate::mobile_shell_gate::{assert_android_shell_boundary, binary_flag_from_env};
+use crate::env_gate::binary_flag_from_env;
+use crate::mobile_shell_gate::assert_android_shell_boundary;
 use anyhow::{Result, bail};
 use std::env;
 
@@ -42,7 +43,7 @@ fn validate_artifact_kind(kind: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::{LABEL, validate_artifact_kind};
-    use crate::mobile_shell_gate::parse_binary_flag;
+    use crate::env_gate::parse_binary_flag;
 
     #[test]
     fn accepts_binary_android_release_preflight_flags() {

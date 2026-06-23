@@ -20,6 +20,7 @@ mod desktop_target_host_preflight;
 mod dev_data_health;
 mod dev_runbook;
 mod diff_color;
+mod env_gate;
 mod feature_operation_paths;
 mod foundation;
 mod graph;

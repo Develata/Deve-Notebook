@@ -1,9 +1,8 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
-use crate::mobile_shell_gate::{
-    assert_android_shell_boundary, assert_positive_integer, binary_flag_from_env,
-};
+use crate::env_gate::binary_flag_from_env;
+use crate::mobile_shell_gate::{assert_android_shell_boundary, assert_positive_integer};
 use anyhow::Result;
 use std::env;
 

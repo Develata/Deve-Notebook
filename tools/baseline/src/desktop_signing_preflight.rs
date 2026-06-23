@@ -1,12 +1,14 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
+use crate::env_gate::binary_flag_from_env;
 use anyhow::{Result, bail};
 use std::env;
 
 const LABEL: &str = "desktop-signing-preflight-check";
 
 pub fn run() -> Result<()> {
+    binary_flag_from_env(LABEL, "DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED", false)?;
     let targets =
         env::var("DEVE_DESKTOP_SIGNING_TARGETS").unwrap_or_else(|_| "macos,windows".to_string());
     validate_targets(&targets)?;
@@ -39,7 +41,25 @@ fn validate_targets(targets: &str) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_targets;
+    use super::{LABEL, validate_targets};
+    use crate::env_gate::parse_binary_flag;
+
+    #[test]
+    fn accepts_binary_desktop_signing_preflight_flag() {
+        for value in ["0", "1"] {
+            parse_binary_flag(LABEL, "DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED", value)
+                .expect("binary flag");
+        }
+    }
+
+    #[test]
+    fn rejects_non_binary_desktop_signing_preflight_flag() {
+        for value in ["", "true", "yes", "2"] {
+            assert!(
+                parse_binary_flag(LABEL, "DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED", value).is_err()
+            );
+        }
+    }
 
     #[test]
     fn accepts_supported_desktop_signing_targets() {

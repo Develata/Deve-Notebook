@@ -1,7 +1,8 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
-use crate::mobile_shell_gate::{assert_ios_shell_boundary, binary_flag_from_env};
+use crate::env_gate::binary_flag_from_env;
+use crate::mobile_shell_gate::assert_ios_shell_boundary;
 use anyhow::Result;
 
 const LABEL: &str = "mobile-ios-install-startup-smoke-check";

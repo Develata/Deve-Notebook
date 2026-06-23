@@ -1,6 +1,7 @@
 //! plan_ref: infra
 
 use crate::context::BaselineContext;
+use crate::env_gate::binary_flag_from_env;
 use anyhow::{Context, Result, bail};
 use std::env;
 
@@ -13,6 +14,8 @@ const REQUIRED_FILES: &[&str] = &[
 ];
 
 pub fn run() -> Result<()> {
+    binary_flag_from_env(LABEL, "DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED", false)?;
+    binary_flag_from_env(LABEL, "DEVE_DESKTOP_PACKAGE_NO_SIGN", false)?;
     let targets =
         env::var("DEVE_DESKTOP_TARGET_HOSTS").unwrap_or_else(|_| "macos,windows".to_string());
     validate_targets(&targets)?;
@@ -45,7 +48,7 @@ fn validate_targets(targets: &str) -> Result<()> {
 }
 
 fn normalize_target(target: &str) -> String {
-    target.chars().filter(|ch| !ch.is_whitespace()).collect()
+    target.trim().to_string()
 }
 
 fn validate_required_files(ctx: &BaselineContext) -> Result<()> {
@@ -64,7 +67,31 @@ fn validate_required_files(ctx: &BaselineContext) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::validate_targets;
+    use super::{LABEL, validate_targets};
+    use crate::env_gate::parse_binary_flag;
+
+    #[test]
+    fn accepts_binary_desktop_target_host_flags() {
+        for (name, value) in [
+            ("DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED", "0"),
+            ("DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED", "1"),
+            ("DEVE_DESKTOP_PACKAGE_NO_SIGN", "0"),
+            ("DEVE_DESKTOP_PACKAGE_NO_SIGN", "1"),
+        ] {
+            parse_binary_flag(LABEL, name, value).expect("binary flag");
+        }
+    }
+
+    #[test]
+    fn rejects_non_binary_desktop_target_host_flags() {
+        for (name, value) in [
+            ("DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED", "yes"),
+            ("DEVE_DESKTOP_PACKAGE_NO_SIGN", "maybe"),
+            ("DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED", "2"),
+        ] {
+            assert!(parse_binary_flag(LABEL, name, value).is_err());
+        }
+    }
 
     #[test]
     fn accepts_supported_desktop_target_hosts() {
@@ -81,7 +108,9 @@ mod tests {
     }
 
     #[test]
-    fn preserves_existing_shell_whitespace_normalization() {
-        validate_targets("ma cos, win dows").expect("shell-compatible whitespace normalization");
+    fn rejects_internal_whitespace_in_desktop_target_hosts() {
+        for targets in ["ma cos", "win dows", "macos, win dows"] {
+            assert!(validate_targets(targets).is_err());
+        }
     }
 }
