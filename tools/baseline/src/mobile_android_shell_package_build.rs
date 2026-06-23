@@ -36,13 +36,17 @@ fn validate_target(target: &str) -> Result<()> {
 }
 
 fn validate_artifact_kind(build_apk: &str, build_aab: &str, build_debug: &str) -> Result<()> {
-    if !is_enabled(build_apk) && !is_enabled(build_aab) {
+    let build_apk = parse_binary_flag("DEVE_MOBILE_ANDROID_PACKAGE_APK", build_apk)?;
+    let build_aab = parse_binary_flag("DEVE_MOBILE_ANDROID_PACKAGE_AAB", build_aab)?;
+    let build_debug = parse_binary_flag("DEVE_MOBILE_ANDROID_PACKAGE_DEBUG", build_debug)?;
+
+    if !build_apk && !build_aab {
         bail!(
             "{LABEL}: at least one of DEVE_MOBILE_ANDROID_PACKAGE_APK or DEVE_MOBILE_ANDROID_PACKAGE_AAB must be 1"
         );
     }
 
-    if is_enabled(build_debug) && is_enabled(build_aab) {
+    if build_debug && build_aab {
         bail!(
             "{LABEL}: debug Android install-smoke builds must produce APK only; AAB is release/store packaging"
         );
@@ -51,8 +55,12 @@ fn validate_artifact_kind(build_apk: &str, build_aab: &str, build_debug: &str) -
     Ok(())
 }
 
-fn is_enabled(value: &str) -> bool {
-    value == "1"
+fn parse_binary_flag(name: &str, value: &str) -> Result<bool> {
+    match value {
+        "0" => Ok(false),
+        "1" => Ok(true),
+        _ => bail!("{LABEL}: {name} must be 0 or 1"),
+    }
 }
 
 #[cfg(test)]
@@ -79,5 +87,14 @@ mod tests {
     #[test]
     fn rejects_debug_android_package_with_aab() {
         assert!(validate_artifact_kind("1", "1", "1").is_err());
+    }
+
+    #[test]
+    fn rejects_non_binary_android_package_flags() {
+        for (build_apk, build_aab, build_debug) in
+            [("2", "1", "0"), ("1", "true", "0"), ("1", "0", "yes")]
+        {
+            assert!(validate_artifact_kind(build_apk, build_aab, build_debug).is_err());
+        }
     }
 }
