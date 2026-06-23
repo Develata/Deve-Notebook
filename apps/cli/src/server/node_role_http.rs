@@ -232,8 +232,9 @@ mod tests {
         assert_eq!(payload["source_control"]["git_bridge"], "off");
         assert_eq!(payload["p2p"]["peers"][0]["label"], "peer-b");
         assert_eq!(payload["p2p"]["peers"][0]["state"], "connected");
-        assert!(payload.to_string().find("token").is_none());
-        assert!(payload.to_string().find("auth_token_env").is_none());
+        let serialized = payload.to_string();
+        assert!(!serialized.contains("token"));
+        assert!(!serialized.contains("auth_token_env"));
     }
 
     #[test]
