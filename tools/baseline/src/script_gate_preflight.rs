@@ -280,7 +280,7 @@ fn validate_desktop_bundles(
 }
 
 fn normalize_selector(value: &str) -> String {
-    value.chars().filter(|ch| !ch.is_whitespace()).collect()
+    value.trim().to_string()
 }
 
 fn android_package_target_from_env(label: &str) -> Result<String> {
@@ -358,6 +358,20 @@ mod tests {
     #[test]
     fn bundle_policy_rejects_empty_or_unknown_selectors() {
         for bundles in ["app,", ",msi", "bogus"] {
+            assert!(
+                validate_desktop_bundles(
+                    DESKTOP_PLATFORM_LABEL,
+                    BundlePolicy::PackageBuild,
+                    bundles
+                )
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn bundle_policy_rejects_internal_whitespace_selectors() {
+        for bundles in ["app image", "n s i s"] {
             assert!(
                 validate_desktop_bundles(
                     DESKTOP_PLATFORM_LABEL,
