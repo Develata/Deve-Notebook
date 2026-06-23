@@ -1,6 +1,7 @@
 //! plan_ref: infra
 
 use anyhow::{Context, Result, bail};
+use std::env;
 use std::path::Path;
 
 pub fn assert_android_shell_boundary(
@@ -34,6 +35,14 @@ pub fn parse_binary_flag(label: &str, name: &str, value: &str) -> Result<bool> {
         "0" => Ok(false),
         "1" => Ok(true),
         _ => bail!("{label}: {name} must be 0 or 1"),
+    }
+}
+
+pub fn binary_flag_from_env(label: &str, name: &str, default: bool) -> Result<bool> {
+    match env::var(name) {
+        Ok(value) => parse_binary_flag(label, name, &value),
+        Err(env::VarError::NotPresent) => Ok(default),
+        Err(env::VarError::NotUnicode(_)) => bail!("{label}: {name} must be valid Unicode"),
     }
 }
 
