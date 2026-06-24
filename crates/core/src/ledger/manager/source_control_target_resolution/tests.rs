@@ -11,6 +11,9 @@ fn resolve_from_entries_matches_renamed_from_without_doc_id() {
             doc_id: None,
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -18,6 +21,9 @@ fn resolve_from_entries_matches_renamed_from_without_doc_id() {
             doc_id: None,
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -36,6 +42,9 @@ fn resolve_from_entries_prefers_doc_id_when_available() {
         doc_id: Some(doc_id),
         status: ChangeStatus::Added,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }];
 
     assert_eq!(
@@ -54,6 +63,9 @@ fn resolve_from_entries_prefers_live_successor_over_exact_deleted_doc_path() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -61,6 +73,9 @@ fn resolve_from_entries_prefers_live_successor_over_exact_deleted_doc_path() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -79,6 +94,9 @@ fn resolve_from_entries_rejects_unrelated_same_doc_live_entry() {
         doc_id: Some(doc_id),
         status: ChangeStatus::Modified,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }];
 
     assert_eq!(
@@ -98,6 +116,9 @@ fn resolve_from_entries_prefers_rename_successor_when_old_path_reused() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -105,6 +126,9 @@ fn resolve_from_entries_prefers_rename_successor_when_old_path_reused() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/old.md".into(),
@@ -112,6 +136,9 @@ fn resolve_from_entries_prefers_rename_successor_when_old_path_reused() {
             doc_id: Some(new_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -127,6 +154,9 @@ fn resolve_from_entries_fails_closed_when_path_only_target_is_ambiguous() {
             doc_id: None,
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -134,6 +164,9 @@ fn resolve_from_entries_fails_closed_when_path_only_target_is_ambiguous() {
             doc_id: None,
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -151,6 +184,9 @@ fn resolve_from_entries_fails_closed_when_same_path_maps_to_distinct_docs() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/reused.md".into(),
@@ -158,6 +194,9 @@ fn resolve_from_entries_fails_closed_when_same_path_maps_to_distinct_docs() {
             doc_id: Some(new_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 

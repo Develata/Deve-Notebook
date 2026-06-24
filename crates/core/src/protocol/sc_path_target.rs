@@ -3,6 +3,7 @@
 //!   - 05_diff_logic#source-control-runtime
 
 use crate::models::DocId;
+use crate::source_control::ChangeDomain;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -10,6 +11,8 @@ pub struct ScPathTarget {
     pub path: String,
     #[serde(default)]
     pub doc_id: Option<DocId>,
+    #[serde(default)]
+    pub domain: Option<ChangeDomain>,
 }
 
 impl ScPathTarget {
@@ -17,6 +20,7 @@ impl ScPathTarget {
         Self {
             path: path.into(),
             doc_id: None,
+            domain: None,
         }
     }
 }

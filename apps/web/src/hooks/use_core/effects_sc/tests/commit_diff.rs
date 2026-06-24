@@ -41,6 +41,7 @@ fn dispatch_commit_diff_from_repo(
     let ws = WsService::new_for_test(ConnectionStatus::Connected);
     let (staged, set_staged) = signal(Vec::<ChangeEntry>::new());
     let (unstaged, set_unstaged) = signal(Vec::<ChangeEntry>::new());
+    let (confirmed, set_confirmed) = signal(Vec::<ChangeEntry>::new());
     let (changes_request_id, set_changes_request_id) = signal(None::<String>);
     let (history, set_history) = signal(Vec::<CommitInfo>::new());
     let (history_request_id, set_history_request_id) = signal(None::<String>);
@@ -69,6 +70,7 @@ fn dispatch_commit_diff_from_repo(
     let ctx = ScMessageContext {
         set_staged,
         set_unstaged,
+        set_confirmed,
         changes_request_id,
         set_changes_request_id,
         set_history,
@@ -118,6 +120,7 @@ fn dispatch_commit_diff_from_repo(
 
     assert!(staged.get_untracked().is_empty());
     assert!(unstaged.get_untracked().is_empty());
+    assert!(confirmed.get_untracked().is_empty());
     assert!(history.get_untracked().is_empty());
     assert_eq!(diff.get_untracked(), None);
 

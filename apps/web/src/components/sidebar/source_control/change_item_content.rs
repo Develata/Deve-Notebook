@@ -7,7 +7,7 @@ use crate::components::sidebar::source_control::change_item_counterpart::{
 };
 use crate::components::sidebar::source_control::change_item_meta::ChangeItemMeta;
 use crate::i18n::{Locale, t};
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::{ChangeDomain, ChangeEntry};
 use leptos::prelude::*;
 
 #[component]
@@ -34,7 +34,7 @@ pub fn ChangeItemContent(
                     is_staged,
                     &staged_changes.get(),
                     &unstaged_changes.get(),
-                );
+                ).filter(|_| entry_for_counterpart.domain != ChangeDomain::ConfirmedLedger);
                 counterpart.map(|kind| {
                     let locale_value = locale.get();
                     view! {

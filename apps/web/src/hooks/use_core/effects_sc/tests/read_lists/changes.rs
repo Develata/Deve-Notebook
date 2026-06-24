@@ -17,8 +17,24 @@ fn read_list_dispatch_accepts_changes_remote_branch_scope() {
     assert_eq!(result.notice, None);
     assert_eq!(result.staged[0].path, "fresh-staged.md");
     assert_eq!(result.unstaged[0].path, "fresh-unstaged.md");
+    assert_eq!(result.confirmed[0].path, "fresh-confirmed.md");
+    assert_eq!(result.confirmed[0].domain, ChangeDomain::ConfirmedLedger);
     assert_eq!(result.history_request_id.as_deref(), Some("history-req-1"));
     assert_eq!(result.history[0].id, "stale");
+}
+
+#[test]
+fn confirmed_ledger_changes_dispatch_to_confirmed_signal() {
+    let repo_id = uuid::Uuid::new_v4();
+    let result = dispatch_read_list(ReadListKind::Changes, repo_id, None, None, Some(17));
+
+    assert!(result.handled);
+    assert_eq!(result.changes_request_id, None);
+    assert_eq!(result.confirmed.len(), 1);
+    assert_eq!(result.confirmed[0].path, "fresh-confirmed.md");
+    assert_eq!(result.confirmed[0].domain, ChangeDomain::ConfirmedLedger);
+    assert_eq!(result.staged[0].domain, ChangeDomain::WorkingDirectory);
+    assert_eq!(result.unstaged[0].domain, ChangeDomain::WorkingDirectory);
 }
 
 #[test]

@@ -26,6 +26,7 @@ use leptos::reactive::owner::Owner;
 fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
     let (staged_changes, _) = signal(Vec::<ChangeEntry>::new());
     let (unstaged_changes, _) = signal(Vec::<ChangeEntry>::new());
+    let (confirmed_changes, _) = signal(Vec::<ChangeEntry>::new());
     let (commit_history, _) = signal(Vec::<CommitInfo>::new());
     let (commit_history_request_id, _) = signal(None::<String>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
@@ -43,6 +44,7 @@ fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
     provide_context(SourceControlContext {
         staged_changes,
         unstaged_changes,
+        confirmed_changes,
         commit_history,
         commit_history_request_id,
         commit_diff_request_id,

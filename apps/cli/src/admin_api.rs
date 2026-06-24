@@ -50,6 +50,8 @@ pub struct ScStatusResponse {
     pub repo_name: String,
     pub staged: Vec<ChangeEntry>,
     pub unstaged: Vec<ChangeEntry>,
+    #[serde(default)]
+    pub confirmed: Vec<ChangeEntry>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

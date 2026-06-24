@@ -27,6 +27,7 @@ pub(crate) fn handle_sc_list_message(
             scope_nonce,
             staged,
             unstaged,
+            confirmed,
         } => {
             if !ctx.in_scope(repo_id, branch) {
                 return true;
@@ -43,6 +44,7 @@ pub(crate) fn handle_sc_list_message(
             ctx.set_changes_request_id.set(None);
             ctx.set_staged.set(staged.clone());
             ctx.set_unstaged.set(unstaged.clone());
+            ctx.set_confirmed.set(confirmed.clone());
             true
         }
         ServerMessage::CommitHistory {

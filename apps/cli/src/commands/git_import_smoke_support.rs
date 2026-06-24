@@ -167,6 +167,7 @@ pub(super) fn resolve_imported_change_to_queued_commit(
         &ScPathTarget {
             path: "note.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )?;
     let staged = repo.list_staged_in_local_repo("default")?;

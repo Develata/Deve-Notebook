@@ -11,6 +11,7 @@ use leptos::prelude::*;
 pub(crate) struct ScStateResetSignals {
     pub set_staged: WriteSignal<Vec<ChangeEntry>>,
     pub set_unstaged: WriteSignal<Vec<ChangeEntry>>,
+    pub set_confirmed: WriteSignal<Vec<ChangeEntry>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
     pub set_history: WriteSignal<Vec<CommitInfo>>,
     pub set_commit_history_request_id: WriteSignal<Option<String>>,
@@ -24,6 +25,7 @@ pub(crate) struct ScStateResetSignals {
 pub(crate) fn clear_repo_scoped_state(signals: ScStateResetSignals) {
     signals.set_staged.set(Vec::new());
     signals.set_unstaged.set(Vec::new());
+    signals.set_confirmed.set(Vec::new());
     signals.set_changes_request_id.set(None);
     signals.set_history.set(Vec::new());
     signals.set_commit_history_request_id.set(None);

@@ -1,0 +1,100 @@
+//! plan_ref:
+//!   - 05_diff_logic#source-control-runtime
+//!   - 12_source_control_ui#resource-groups
+
+use super::support::build_state;
+use crate::server::{
+    channel::DualChannel, handlers::source_control::handle_get_changes, session::WsSession,
+};
+use deve_core::config::GitBridgeMode;
+use deve_core::models::{LedgerEntry, Op, PeerId};
+use deve_core::protocol::ServerMessage;
+use deve_core::source_control::pending_fs::{self, PendingFsEntry};
+use deve_core::source_control::{ChangeDomain, ChangeStatus};
+use tokio::sync::mpsc;
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let path = "notes/a.md";
+    let abs = state.repo.local_repo_workspace_path("default", path)?;
+    if let Some(parent) = abs.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&abs, "hello")?;
+
+    state.repo.run_on_local_repo("default", |db| {
+        pending_fs::upsert(
+            db,
+            &PendingFsEntry {
+                path: path.into(),
+                renamed_from: None,
+                doc_id: None,
+                change_type: ChangeStatus::Added,
+                content_hash: pending_fs::content_hash("hello"),
+                detected_at: 1,
+                has_conflict: false,
+            },
+        )
+    })?;
+    state.repo.stage_pending(path)?;
+    state
+        .repo
+        .commit_staged_with_git_bridge("initial", GitBridgeMode::Off)?;
+
+    let doc_id = state
+        .repo
+        .get_tracked_docid_in_local_repo("default", path)?
+        .expect("tracked doc id after initial commit");
+    let peer_id = PeerId::new("editor");
+    state.repo.append_generated_op_in_local_repo(
+        "default",
+        doc_id,
+        peer_id.clone(),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 5,
+                    content: " world".into(),
+                },
+                1000,
+                peer_id.clone(),
+                seq,
+                None,
+                None,
+            )
+        },
+    )?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(31));
+    session.switch_repo("default".into(), None);
+    handle_get_changes(&state, &ch, &mut session, Some("req-confirmed".into())).await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::ChangesList {
+            scope_nonce,
+            staged,
+            unstaged,
+            confirmed,
+            ..
+        }) => {
+            assert_eq!(scope_nonce, Some(31));
+            assert!(staged.is_empty());
+            assert!(unstaged.is_empty());
+            assert_eq!(confirmed.len(), 1);
+            assert_eq!(confirmed[0].domain, ChangeDomain::ConfirmedLedger);
+            assert_eq!(confirmed[0].status, ChangeStatus::Modified);
+            assert_eq!(confirmed[0].path, path);
+            assert_eq!(confirmed[0].doc_id, Some(doc_id));
+            assert!(confirmed[0].base_seq.is_some());
+            assert!(confirmed[0].target_seq.is_some());
+        }
+        other => panic!("expected ChangesList, got {:?}", other),
+    }
+    Ok(())
+}

@@ -53,6 +53,7 @@ fn workdir_diff_target_rejects_doc_id_when_requested_path_is_not_in_change_set()
     let target = ScPathTarget {
         path: "stale/a.md".into(),
         doc_id: Some(doc_id),
+        domain: None,
     };
     let err = repo
         .workdir_diff_inputs_for_target_in_local_repo(repo.local_repo_name(), &target)
@@ -99,6 +100,7 @@ fn workdir_diff_target_accepts_current_projection_path_without_change_entry() {
             &ScPathTarget {
                 path: "notes/a.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
         )
         .expect("current projection target should resolve without pending row");
@@ -183,6 +185,7 @@ fn workdir_diff_payload_preserves_doc_id_when_resolved_path_is_reused() {
             &ScPathTarget {
                 path: "notes/a.md".into(),
                 doc_id: Some(doc_b),
+                domain: None,
             },
         )
         .expect("payload should preserve requested doc identity");

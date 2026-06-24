@@ -16,6 +16,7 @@ use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, Conflic
 pub struct SourceControlContext {
     pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
+    pub confirmed_changes: ReadSignal<Vec<ChangeEntry>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub commit_history_request_id: ReadSignal<Option<String>>,
     pub commit_diff_request_id: ReadSignal<Option<String>>,

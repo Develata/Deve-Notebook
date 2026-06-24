@@ -5,7 +5,7 @@
 ## 功能目标
 
 - 用户应能看清当前有哪些工作区变化。
-- 用户应能明确区分 unstaged、staged、committed。
+- 用户应能明确区分 working directory、staged、confirmed ledger dirty、committed。
 - 冲突与只读场景不能伪装成正常提交。
 
 ## Operation 示例
@@ -31,6 +31,13 @@
 
 - 用户可以把候选变化移入或移出 staged 区域。
 - staged 与 unstaged 必须可见区分。
+
+### 2.1 Confirmed Ledger Changes
+
+- 程序内编辑或 CLI 受控写入 ack 后，变化已经进入 ledger，不应出现在工作区 pending 列表。
+- 若这些变化尚未被最新 Source Control commit anchor 覆盖，Source Control 应展示 `Confirmed Ledger Changes`。
+- 该分组不提供 Stage / Discard；首版 commit 一次性覆盖全部 confirmed ledger changes。
+- confirmed-only commit 成功后，该分组应清空并刷新 history。
 
 ### 3. Diff / History / Graph
 
@@ -150,3 +157,23 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - 页面明确显示只读或不可写。
 - diff / history / graph 仍可按当前 scope 只读打开。
 - 不会假装提交成功。
+
+### DIFF-FEAT-04: Confirmed Ledger Changes
+
+前置条件：
+
+- 当前 repo 可写，且存在一个通过编辑器或 CLI 受控写入确认的 ledger change。
+- 该 change 尚未被最新 Source Control commit anchor 覆盖。
+
+步骤：
+
+1. 打开 Source Control。
+2. 观察 `Confirmed Ledger Changes` 列表。
+3. 点击 confirmed row 打开 diff。
+4. 输入 commit message 并执行 commit。
+
+期望结果：
+
+- confirmed row 不显示 Stage / Discard。
+- diff 基于 latest commit anchor 与当前 ledger head。
+- commit 成功后 `Confirmed Ledger Changes` 清空，history 增加新 commit。

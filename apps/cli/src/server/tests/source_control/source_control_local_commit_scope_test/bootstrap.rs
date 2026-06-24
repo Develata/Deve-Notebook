@@ -32,8 +32,7 @@ async fn local_commit_bootstraps_after_clearing_stale_runtime_binding() -> anyho
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello"),
                     detected_at: 1,
-                    has_conflict: false,
-                },
+                    has_conflict: false,                },
             )
         })?;
     state.repo.stage_pending("notes/stale.md")?;

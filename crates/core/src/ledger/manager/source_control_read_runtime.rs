@@ -9,7 +9,8 @@ use crate::ledger::source_control;
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, diff, pending_fs,
+    ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, diff, ledger_dirty,
+    pending_fs,
 };
 use anyhow::Result;
 use std::collections::HashSet;
@@ -44,9 +45,20 @@ impl<'a> SourceControlReadRuntime<'a> {
                     doc_id: entry.doc_id,
                     status: entry.change_type,
                     has_conflict: entry.has_conflict,
+                    domain: ChangeDomain::WorkingDirectory,
+                    base_seq: None,
+                    target_seq: None,
                 })
                 .collect())
         })
+    }
+
+    pub(crate) fn list_confirmed_ledger_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        self.manager
+            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)
     }
 
     pub(crate) fn list_changes_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
@@ -58,6 +70,7 @@ impl<'a> SourceControlReadRuntime<'a> {
                 .into_iter()
                 .filter(|entry| !staged_keys.contains(&change_identity_key(entry))),
         );
+        changes.extend(self.list_confirmed_ledger_in_local_repo(repo_name)?);
         Ok(changes)
     }
 
@@ -77,6 +90,11 @@ impl<'a> SourceControlReadRuntime<'a> {
         repo_name: &str,
         target: &ScPathTarget,
     ) -> Result<String> {
+        if target.domain == Some(ChangeDomain::ConfirmedLedger) {
+            return self.manager.run_on_local_repo(repo_name, |db| {
+                ledger_dirty::diff_confirmed_target(db, target)
+            });
+        }
         let (path, old_content, new_content) = self
             .manager
             .workdir_diff_inputs_for_target_in_local_repo(repo_name, target)?;

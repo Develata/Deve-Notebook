@@ -18,6 +18,13 @@ pub fn staged_changes(locale: Locale) -> &'static str {
     }
 }
 
+pub fn confirmed_ledger_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Confirmed Ledger Changes",
+        Locale::Zh => "已确认账本更改",
+    }
+}
+
 pub fn no_changes(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "No changes",
@@ -146,8 +153,8 @@ pub fn keep_ledger(locale: Locale) -> &'static str {
 
 pub fn generate_prompt(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Generate a concise git commit message for these staged changes:",
-        Locale::Zh => "为以下暂存的更改生成简洁的 Git 提交信息：",
+        Locale::En => "Generate a concise git commit message for these changes:",
+        Locale::Zh => "为以下更改生成简洁的 Git 提交信息：",
     }
 }
 

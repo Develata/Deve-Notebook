@@ -7,7 +7,7 @@ use crate::components::sidebar::source_control::change_item_conflict_actions::Ch
 use crate::components::sidebar::source_control::change_item_workspace_actions::ChangeItemWorkspaceActions;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::{ChangeDomain, ChangeEntry};
 use leptos::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -26,7 +26,9 @@ pub fn ChangeItemActions(
 
     view! {
         {move || {
-            if is_staged {
+            if entry.domain == ChangeDomain::ConfirmedLedger {
+                view! {}.into_any()
+            } else if is_staged {
                 view! {
                     <button
                         class="p-0.5 hover:bg-active rounded text-secondary"

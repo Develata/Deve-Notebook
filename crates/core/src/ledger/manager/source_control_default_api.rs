@@ -45,6 +45,11 @@ impl RepoManager {
         self.list_pending_fs_in_local_repo(self.local_repo_name())
     }
 
+    /// 获取已进 ledger 但尚未被最新 commit anchor 覆盖的变更
+    pub fn list_confirmed_ledger_changes(&self) -> Result<Vec<ChangeEntry>> {
+        self.list_confirmed_ledger_changes_in_local_repo(self.local_repo_name())
+    }
+
     /// 将待确认变更移入暂存区 (Working Dir → Staging)
     pub fn stage_pending(&self, path: &str) -> Result<()> {
         self.stage_pending_in_local_repo(self.local_repo_name(), path)

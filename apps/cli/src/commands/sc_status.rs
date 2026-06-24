@@ -36,18 +36,21 @@ fn collect_repo_status(repo: &RepoManager, repo_name: &str) -> Result<ScStatusRe
         repo_name: repo_name.to_string(),
         staged: repo.list_staged_in_local_repo(repo_name)?,
         unstaged: repo.list_pending_fs_in_local_repo(repo_name)?,
+        confirmed: repo.list_confirmed_ledger_changes_in_local_repo(repo_name)?,
     })
 }
 
 pub(crate) fn print_repo_status(report: &ScStatusResponse) {
     println!(
-        "sc_status[{}]: staged={} unstaged={}",
+        "sc_status[{}]: staged={} unstaged={} confirmed={}",
         report.repo_name,
         report.staged.len(),
-        report.unstaged.len()
+        report.unstaged.len(),
+        report.confirmed.len()
     );
     print_entries("staged", &report.staged);
     print_entries("unstaged", &report.unstaged);
+    print_entries("confirmed", &report.confirmed);
 }
 
 fn print_entries(label: &str, entries: &[ChangeEntry]) {
@@ -72,6 +75,7 @@ mod tests {
             repo_name: "default".into(),
             staged: vec![],
             unstaged: vec![],
+            confirmed: vec![],
         });
     }
 
@@ -81,10 +85,12 @@ mod tests {
             repo_name: "default".into(),
             staged: vec![entry("a.md", ChangeStatus::Added)],
             unstaged: vec![entry("b.md", ChangeStatus::Modified)],
+            confirmed: vec![entry("c.md", ChangeStatus::Modified)],
         };
 
         assert_eq!(report.staged.len(), 1);
         assert_eq!(report.unstaged.len(), 1);
+        assert_eq!(report.confirmed.len(), 1);
     }
 
     fn entry(path: &str, status: ChangeStatus) -> ChangeEntry {
@@ -94,6 +100,9 @@ mod tests {
             doc_id: None,
             status,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         }
     }
 }

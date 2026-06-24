@@ -44,6 +44,9 @@ impl SourceControlApi for FakeRepo {
             doc_id: None,
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         }])
     }
 

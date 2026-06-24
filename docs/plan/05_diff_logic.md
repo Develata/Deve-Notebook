@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-15`
+- `Last Review`: `2026-06-24`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -45,6 +45,9 @@ authority 仍是 ledger facts 与 commit anchors。
 - `Working Directory Domain`
   - 来源：repo Projection Workspace 与当前规范 projection 的偏差
   - 状态：`pending_fs_ops`
+- `Confirmed Ledger Domain`
+  - 来源：最新 commit anchor 之后已经确认的 ledger facts
+  - 状态：只读派生 `ConfirmedLedgerChange`
 - `Ledger Commit Domain`
   - 来源：已确认 ledger facts 与 commit anchors
   - 状态：`staged`, `commits`, `commit_diff`
@@ -55,6 +58,7 @@ authority 仍是 ledger facts 与 commit anchors。
 - `StagedEntry`
 - `CommitInfo`
 - `CommitAnchor(ledger_seq)`
+- `ConfirmedLedgerChange`
 - `DiffSession`
 - `MergeBase`
 - `ConflictSet`
@@ -64,6 +68,7 @@ authority 仍是 ledger facts 与 commit anchors。
 - 文本差异最终必须收敛为 `Content Facts`。
 - rename / move / create / delete 最终必须收敛为 `Structure Facts`。
 - `pending_fs_ops`、`staging`、`diff cache` 都不是 authority。
+- `ConfirmedLedgerChange` 不是 runtime side table；它只能由 commit anchor 与 ledger head 派生。
 - Git mirror commit 不是 authority；它只是已确认 Deve commit 的外部生态映射。
 
 ### 2.3.1 Git Mirror Lifecycle {#git-mirror-lifecycle}
@@ -158,6 +163,23 @@ Staged -> Unstaged
 - `pending_fs_ops` **MUST** 表示 Working Directory Domain
 - `staging` **MUST** 表示用户确认后的过渡域，而非已提交历史
 
+### 3.1.1 Confirmed Ledger Dirty Lifecycle
+
+```text
+EditorOrCliLedgerWrite
+  -> LedgerCommitted
+  -> ConfirmedLedgerChange
+  -> CommitAnchorCovered
+  -> Clean
+```
+
+约束：
+
+- confirmed ledger dirty 只表示“已进 ledger、未被最新 Source Control commit anchor 覆盖”。
+- 它不得进入 `pending_fs_ops`、staging、pending overlay 或 watcher 清理流程。
+- 首版采用整锚提交：一次 commit 覆盖 latest commit anchor 到当前 ledger head 的全部 confirmed ledger changes。
+- 首版不支持逐文件 include/exclude，也不开放 confirmed revert。未来若开放 Revert，必须通过追加反向 ledger facts 完成。
+
 ### 3.2 Commit Diff Lifecycle
 
 ```text
@@ -218,6 +240,7 @@ MergeRequested
 - `DiscardFile`
 - `DiscardPending`
 - `CommitStaged`
+- `CommitSourceControlChanges`
 - `RequestChanges`
 - `RequestCommitHistory`
 - `RequestCommitDiff`
@@ -261,7 +284,7 @@ MergeRequested
   - `repo_id`
   - `branch`
   - `scope_nonce`
-  - `pending/staged entries`
+  - `pending/staged/confirmed entries`
 - `CommitDiffResult`
   - `repo_id`
   - `commit_id`
@@ -320,15 +343,21 @@ MergeRequested
 
 ### 5.3 Commit Contract
 
-`CommitStaged` **MUST** 以如下路径完成：
+`CommitSourceControlChanges` **MUST** 以如下路径完成：
 
 1. 读取当前 repo 的 confirmed projection。
-2. 对 staged entries 计算内容与结构差异。
-3. 生成 `Content Facts` / `Structure Facts`。
-4. 追加到 ledger。
-5. 生成 commit record，锚定结果 `ledger_seq`。
+2. 若存在 staged entries，对 staged entries 计算内容与结构差异。
+3. 若存在 staged entries，生成并追加 `Content Facts` / `Structure Facts`。
+4. 若 staged 为空但存在 confirmed ledger dirty，不追加新 facts。
+5. 生成 commit record，锚定最终 `ledger_seq`。
 6. 清理已消费的 staged / pending 条目。
 7. 重建或增量更新 projection。
+
+规则：
+
+- staged 非空或 confirmed ledger dirty 非空时才允许 commit。
+- 两者都为空时必须返回 `SC_NOTHING_TO_COMMIT`。
+- confirmed-only commit **MUST NOT** 重放、复制或改写已存在的 ledger facts。
 
 ### 5.4 Merge Contract
 
@@ -362,6 +391,7 @@ MergeRequested
 - structure diff cannot resolve stable identity
 - ledger append rejected
 - projection writeback failed
+- confirmed ledger diff cannot be derived from commit anchor
 
 ### 6.3 Merge Failures
 
@@ -416,6 +446,7 @@ MergeRequested
 - 让 commit diff 与 doc diff 走两套不兼容 identity 规则。
 - 让 remote readonly branch 暴露可写 source control 行为。
 - 把外部编辑三阶段流程误套用到 Web thin client 默认编辑路径。
+- 把 confirmed ledger dirty 回灌成 `pending_fs_ops` 或 staging。
 
 ## 9. Runtime Boundary
 
@@ -424,6 +455,7 @@ MergeRequested
 职责：
 
 - pending/staging/commit indexes
+- confirmed ledger dirty derivation
 - diff algorithms
 - commit anchors
 - source control errors
@@ -508,7 +540,7 @@ Source Control grant 校验必须共同使用 JWT 派生的 `auth_session_id`；
 - `diff_session_runtime`
 - `merge_runtime`
 
-未来重构必须分离 workspace diff 与 confirmed ledger diff；core manager、CLI proxy 与 `use_core` 回调不得共享隐式 source-control 状态。
+workspace diff 与 confirmed ledger diff 必须分离；core manager、CLI proxy 与 `use_core` 回调不得共享隐式 source-control 状态。
 
 ## 本章相关命令
 

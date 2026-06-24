@@ -117,6 +117,7 @@ fn stage_pending_rejects_unresolved_conflict() {
             &ScPathTarget {
                 path: "notes/a.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
         )
         .expect_err("unresolved conflict must not stage");

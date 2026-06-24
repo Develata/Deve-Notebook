@@ -1,15 +1,16 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 
-use deve_core::source_control::{ChangeEntry, ChangeStatus};
+use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
 use std::collections::HashSet;
 
 pub fn collapse_rename_candidates(entries: Vec<ChangeEntry>) -> Vec<ChangeEntry> {
-    let hidden: HashSet<(Option<deve_core::models::DocId>, String)> = entries
+    let hidden: HashSet<(ChangeDomain, Option<deve_core::models::DocId>, String)> = entries
         .iter()
         .filter_map(|entry| {
             entry.renamed_from.as_ref().map(|old_path| {
                 (
+                    entry.domain,
                     entry.doc_id,
                     deve_core::utils::path::to_forward_slash(old_path),
                 )
@@ -21,7 +22,7 @@ pub fn collapse_rename_candidates(entries: Vec<ChangeEntry>) -> Vec<ChangeEntry>
         .into_iter()
         .filter(|entry| {
             !(entry.status == ChangeStatus::Deleted
-                && hidden.contains(&(entry.doc_id, normalized(&entry.path))))
+                && hidden.contains(&(entry.domain, entry.doc_id, normalized(&entry.path))))
         })
         .collect()
 }

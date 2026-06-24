@@ -53,8 +53,7 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
             change_type: ChangeStatus::Added,
             content_hash: pending_fs::content_hash("hello"),
             detected_at: 1,
-            has_conflict: false,
-        },
+            has_conflict: false,        },
     );
     proxy.stage_pending_in_repo(&selector, &ScPathTarget::from_path("notes/a.md"))?;
     let first = proxy.commit_staged_in_repo_with_git_bridge(
@@ -75,8 +74,7 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
             change_type: ChangeStatus::Deleted,
             content_hash: String::new(),
             detected_at: 2,
-            has_conflict: false,
-        },
+            has_conflict: false,        },
     );
     seed_pending(
         &repo,
@@ -87,14 +85,14 @@ async fn test_proxy_commit_diff_reports_rename() -> anyhow::Result<()> {
             change_type: ChangeStatus::Added,
             content_hash: pending_fs::content_hash("hello"),
             detected_at: 2,
-            has_conflict: false,
-        },
+            has_conflict: false,        },
     );
     proxy.stage_pending_in_repo(
         &selector,
         &ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
     )?;
     let second = proxy.commit_staged_in_repo_with_git_bridge(

@@ -29,7 +29,8 @@ pub struct CommitController {
 
 fn can_submit_commit_now(core: &SourceControlContext, message: &str) -> bool {
     core.can_write.get_untracked()
-        && !core.staged_changes.get_untracked().is_empty()
+        && (!core.staged_changes.get_untracked().is_empty()
+            || !core.confirmed_changes.get_untracked().is_empty())
         && !message.trim().is_empty()
 }
 
@@ -49,8 +50,11 @@ pub fn use_commit_controller(
     let saw_streaming = RwSignal::new(false);
     let write_block = core.write_block;
     let show_write_actions = Signal::derive(move || write_block.get().is_none());
-    let has_staged = Signal::derive(move || !core.staged_changes.get().is_empty());
-    let can_prepare_commit = Signal::derive(move || core.can_write.get() && has_staged.get());
+    let has_commit_source = Signal::derive(move || {
+        !core.staged_changes.get().is_empty() || !core.confirmed_changes.get().is_empty()
+    });
+    let can_prepare_commit =
+        Signal::derive(move || core.can_write.get() && has_commit_source.get());
     let can_commit_now =
         Signal::derive(move || can_prepare_commit.get() && !msg.get().trim().is_empty());
 

@@ -35,6 +35,7 @@ async fn remote_diff_fails_closed_when_no_local_counterpart_repo_exists() -> any
         ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
     )
     .await;

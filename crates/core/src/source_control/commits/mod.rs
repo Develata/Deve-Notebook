@@ -90,6 +90,20 @@ pub fn get_latest_id(db: &Database) -> Result<Option<String>> {
     }
 }
 
+pub fn get(db: &Database, commit_id: &str) -> Result<CommitInfo> {
+    let read_txn = db.begin_read()?;
+    let table = read_txn
+        .open_table(COMMITS_TABLE)
+        .map_err(|err| broken_commit_history("opening commit payload table", err))?;
+    let json = table.get(commit_id)?.ok_or_else(|| {
+        anyhow!(
+            "Broken commit history while reading commit payload: missing commit payload for {}",
+            commit_id
+        )
+    })?;
+    serde_json::from_str::<CommitInfo>(json.value()).map_err(Into::into)
+}
+
 /// 获取提交历史 (最新的在前)
 pub fn list(db: &Database, limit: u32) -> Result<Vec<CommitInfo>> {
     let read_txn = db.begin_read()?;

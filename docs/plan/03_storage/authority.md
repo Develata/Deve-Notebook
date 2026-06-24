@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-20`
+- `Last Review`: `2026-06-24`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/authority_storage_runtime.rs`, `crates/core/src/ledger/append_validate/`
 
@@ -29,6 +29,7 @@
 - `pending_fs_ops` (`PendingFsEntry` rows)
 - `staging`
 - `commit_index`
+- `confirmed ledger dirty projection`
 - `snapshot_index`
 - `tree cache`
 - `path_cache`
@@ -106,6 +107,7 @@
     - value: suppressor fingerprints, overflow marker, last_full_scan_at
 - 这些 side tables **MUST** 明确标记为 workflow/runtime state，不得被上层误当成 authority state。
 - `pending_fs_ops` 与 pending overlay **MUST** 分属不同状态域；二者不得复用同一 row、key space 或清理规则。
+- confirmed ledger dirty projection **MUST** 只由 commit anchor 与 ledger head 派生；不得新增 side table 作为第二真源。
 
 ### 4.3.1 Redb Schema Version Gate {#redb-schema-version-contract}
 
@@ -184,10 +186,12 @@ LedgerCommitted -> ProjectionWritebackFailed -> RecoverableProjectionFault
 4. 追加到 ledger。
 5. 重建或增量更新 projection。
 6. 持久化回 workspace。
+7. 该写入成为 `ConfirmedLedgerChange`，直到 Source Control commit anchor 覆盖当前 ledger head。
 
 规则：
 
 - **MUST NOT** 先改 Projection Workspace 再补 ledger。
+- Path A 写入成功后 **MUST NOT** 回灌到 `pending_fs_ops` 或 staging；Source Control 只能通过 confirmed ledger dirty projection 展示它。
 
 ### 6.3 Path C: Stage -> Commit
 
@@ -204,6 +208,8 @@ LedgerCommitted -> ProjectionWritebackFailed -> RecoverableProjectionFault
 - stage 是真实迁移，不是 UI 布尔标记。
 - commit 生成 diff 时 base **MUST** 是当前 confirmed projection，而不是当前 vault 内容快照。
 - discard 的语义只能是“恢复 vault 到 projection + 清理 pending/staging”，不得触碰 ledger history。
+- 当 staged 为空但存在 `ConfirmedLedgerChange` 时，commit **MUST** 只创建覆盖当前 ledger head 的 commit anchor，不得重复追加内容或结构 facts。
+- 当 staged 与 `ConfirmedLedgerChange` 同时存在时，commit 必须先完成 staged preflight 与 ledger append，再以最终 ledger head 创建单个 commit anchor 覆盖两类变化。
 
 ## 10. Forbidden Patterns（authority）
 

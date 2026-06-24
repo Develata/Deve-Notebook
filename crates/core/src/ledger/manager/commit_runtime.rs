@@ -12,8 +12,10 @@ use crate::ledger::manager::git_mirror_queue_runtime;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::manager::{commit_plan, commit_preflight};
 use crate::ledger::range;
-use crate::source_control::{CommitInfo, commits, staging};
+use crate::models::DocId;
+use crate::source_control::{ChangeEntry, CommitInfo, commits, ledger_dirty, staging};
 use anyhow::Result;
+use std::collections::HashSet;
 
 pub(crate) struct CommitRuntime<'a> {
     manager: &'a RepoManager,
@@ -24,19 +26,19 @@ impl<'a> CommitRuntime<'a> {
         Self { manager }
     }
 
-    pub(crate) fn commit_staged_with_ops_with_git_bridge(
+    pub(crate) fn commit_source_control_changes_with_git_bridge(
         &self,
         message: &str,
         git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
-        self.commit_staged_with_ops_in_local_repo_with_git_bridge(
+        self.commit_source_control_changes_in_local_repo_with_git_bridge(
             self.manager.local_repo_name(),
             message,
             git_bridge,
         )
     }
 
-    pub(crate) fn commit_staged_with_ops_in_local_repo_with_git_bridge(
+    pub(crate) fn commit_source_control_changes_in_local_repo_with_git_bridge(
         &self,
         repo_name: &str,
         message: &str,
@@ -45,12 +47,17 @@ impl<'a> CommitRuntime<'a> {
         let staged = self
             .manager
             .run_on_local_repo(repo_name, staging::list_staged_entries)?;
-        if staged.is_empty() {
-            anyhow::bail!("Nothing to commit: staging area is empty");
-        }
+        let confirmed = self
+            .manager
+            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
         let mut targets = commit_plan::build_targets(staged);
+        if targets.is_empty() && confirmed.is_empty() {
+            anyhow::bail!("Nothing to commit: staging and confirmed ledger changes are empty");
+        }
         targets.sort_by_key(|target| target.delete_only);
-        commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &targets)?;
+        if !targets.is_empty() {
+            commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &targets)?;
+        }
         #[cfg(not(target_arch = "wasm32"))]
         let git_mirror_repo_id = if git_bridge == GitBridgeMode::Mirror {
             git_mirror_queue_runtime::queue_repo_id(self.manager, repo_name)
@@ -58,7 +65,7 @@ impl<'a> CommitRuntime<'a> {
             None
         };
 
-        let doc_count = targets.len() as u32;
+        let doc_count = covered_doc_count(&targets, &confirmed);
         for target in &targets {
             if target.delete_only {
                 self.manager.commit_delete_snapshot_in_local_repo(
@@ -100,6 +107,25 @@ impl<'a> CommitRuntime<'a> {
         );
         Ok(commit)
     }
+}
+
+fn covered_doc_count(targets: &[commit_plan::CommitTarget], confirmed: &[ChangeEntry]) -> u32 {
+    let mut keys = HashSet::new();
+    for target in targets {
+        insert_covered_key(&mut keys, target.doc_id, &target.path);
+    }
+    for entry in confirmed {
+        insert_covered_key(&mut keys, entry.doc_id, &entry.path);
+    }
+    keys.len() as u32
+}
+
+fn insert_covered_key(keys: &mut HashSet<String>, doc_id: Option<DocId>, path: &str) {
+    let key = match doc_id {
+        Some(doc_id) => format!("doc:{doc_id}"),
+        None => format!("path:{path}"),
+    };
+    keys.insert(key);
 }
 
 impl RepoManager {

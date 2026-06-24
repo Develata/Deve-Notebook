@@ -16,6 +16,9 @@ fn resolve_target_fails_closed_when_path_only_resolution_is_ambiguous() {
             doc_id: None,
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -23,6 +26,9 @@ fn resolve_target_fails_closed_when_path_only_resolution_is_ambiguous() {
             doc_id: None,
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -43,6 +49,9 @@ fn resolve_target_fails_closed_when_same_path_maps_to_distinct_docs() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/reused.md".into(),
@@ -50,6 +59,9 @@ fn resolve_target_fails_closed_when_same_path_maps_to_distinct_docs() {
             doc_id: Some(new_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -69,6 +81,9 @@ fn resolve_target_fails_closed_when_doc_id_has_multiple_rename_successors() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new-b.md".into(),
@@ -76,6 +91,9 @@ fn resolve_target_fails_closed_when_doc_id_has_multiple_rename_successors() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -84,6 +102,7 @@ fn resolve_target_fails_closed_when_doc_id_has_multiple_rename_successors() {
         &ScPathTarget {
             path: "notes/old.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )
     .expect_err("multiple doc rename successors must fail closed");
@@ -104,6 +123,9 @@ fn resolve_target_fails_closed_when_doc_id_matches_exact_and_successor() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Modified,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -111,6 +133,9 @@ fn resolve_target_fails_closed_when_doc_id_matches_exact_and_successor() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -119,6 +144,7 @@ fn resolve_target_fails_closed_when_doc_id_matches_exact_and_successor() {
         &ScPathTarget {
             path: "notes/old.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )
     .expect_err("exact doc entry plus rename successor must fail closed");

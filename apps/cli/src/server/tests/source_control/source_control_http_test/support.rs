@@ -19,8 +19,7 @@ pub(super) fn seed_pending(repo: &RepoManager, path: &str, status: ChangeStatus,
             change_type: status,
             content_hash: pending_fs::content_hash(content),
             detected_at: 1,
-            has_conflict: false,
-        },
+            has_conflict: false,        },
     );
 }
 
@@ -41,8 +40,7 @@ pub(super) fn seed_tracked_rename(
             change_type: ChangeStatus::Added,
             content_hash: pending_fs::content_hash(content),
             detected_at: 1,
-            has_conflict: false,
-        },
+            has_conflict: false,        },
     );
 }
 
@@ -92,6 +90,5 @@ fn rename_deleted_entry(doc_id: DocId, path: &str) -> PendingFsEntry {
         change_type: ChangeStatus::Deleted,
         content_hash: String::new(),
         detected_at: 1,
-        has_conflict: false,
-    }
+        has_conflict: false,    }
 }

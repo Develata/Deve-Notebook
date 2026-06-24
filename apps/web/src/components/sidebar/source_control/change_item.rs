@@ -43,6 +43,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     Effect::new(move |_| {
         let _ = core.staged_changes.get();
         let _ = core.unstaged_changes.get();
+        let _ = core.confirmed_changes.get();
         let _ = core.notice.get();
         action_busy_reset
             .get_value()

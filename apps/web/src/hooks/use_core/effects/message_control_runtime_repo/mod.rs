@@ -42,6 +42,7 @@ pub(super) fn clear_repo_scoped_runtime(signals: CoreSignals) {
     clear_repo_scoped_state(effects_sc_state::ScStateResetSignals {
         set_staged: signals.set_staged_changes,
         set_unstaged: signals.set_unstaged_changes,
+        set_confirmed: signals.set_confirmed_changes,
         set_changes_request_id: signals.set_changes_request_id,
         set_history: signals.set_commit_history,
         set_commit_history_request_id: signals.set_commit_history_request_id,

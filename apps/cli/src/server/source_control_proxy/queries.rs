@@ -75,6 +75,9 @@ pub(super) fn diff_doc_path(
         if let Some(doc_id) = target.doc_id {
             req = req.query(&[("doc_id", doc_id.to_string())]);
         }
+        if let Some(domain) = target.domain {
+            req = req.query(&[("domain", format!("{domain:?}"))]);
+        }
         http::send_text_with_op(req, ProxyScOp::DiffDoc(target.path.clone())).await
     })?;
     Ok(res)

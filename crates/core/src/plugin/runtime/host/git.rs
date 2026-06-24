@@ -65,6 +65,9 @@ pub fn register_git_api(engine: &mut Engine, caps: Arc<Capability>) {
                     doc_id: None,
                     status: crate::source_control::ChangeStatus::Modified,
                     has_conflict: false,
+                    domain: Default::default(),
+                    base_seq: None,
+                    target_seq: None,
                 });
             }
             let json = serde_json::to_value(&changes).map_err(|e| e.to_string())?;
@@ -130,6 +133,7 @@ fn resolve_sc_target_for_host(path: &str) -> Result<ScPathTarget, Box<EvalAltRes
         Ok(super::SourceControlHostMode::RemoteDelegated) => Ok(ScPathTarget {
             path: to_forward_slash(path),
             doc_id: None,
+            domain: None,
         }),
         Ok(super::SourceControlHostMode::Local { .. }) | Err(_) => {
             let repo_manager = super::repo_manager().map_err(|e| e.to_string())?;

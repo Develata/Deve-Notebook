@@ -62,6 +62,9 @@ mod tests {
             doc_id,
             status: ChangeStatus::Modified,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         }
     }
 

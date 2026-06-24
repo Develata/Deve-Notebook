@@ -17,6 +17,7 @@ async fn imported_conflict_keep_fs_resolves_to_clean_staged_entry() -> anyhow::R
         ScPathTarget {
             path: "note.md".into(),
             doc_id: Some(fixture.doc_id),
+        domain: None,
         },
         ConflictResolution::KeepFs,
     )
@@ -76,6 +77,7 @@ async fn imported_conflict_keep_ledger_discards_import_without_staging() -> anyh
         ScPathTarget {
             path: "note.md".into(),
             doc_id: Some(fixture.doc_id),
+        domain: None,
         },
         ConflictResolution::KeepLedger,
     )
@@ -134,8 +136,7 @@ async fn resolve_conflict_rejects_non_conflict_pending_entry() -> anyhow::Result
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash("plain pending\n"),
                 detected_at: 1,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )
     })?;
 
@@ -157,6 +158,7 @@ async fn resolve_conflict_rejects_non_conflict_pending_entry() -> anyhow::Result
         ScPathTarget {
             path: "note.md".into(),
             doc_id: None,
+        domain: None,
         },
         ConflictResolution::KeepFs,
     )

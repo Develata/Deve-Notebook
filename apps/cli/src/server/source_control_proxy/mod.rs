@@ -139,6 +139,16 @@ impl SourceControlApi for RemoteSourceControlApi {
         // Delegated proxy commits run on the authoritative main process; its runtime mode applies.
         commits::commit_staged(self, repo, message)
     }
+
+    fn commit_source_control_changes_in_repo_with_git_bridge(
+        &self,
+        repo: &RepoSelector,
+        message: &str,
+        _git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        // Delegated proxy commits run on the authoritative main process; its runtime mode applies.
+        commits::commit_staged(self, repo, message)
+    }
 }
 
 impl DelegatedSourceControlApi for RemoteSourceControlApi {}

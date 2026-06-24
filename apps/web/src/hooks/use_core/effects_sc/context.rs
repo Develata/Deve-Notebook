@@ -18,6 +18,7 @@ use super::super::types::PendingBranchTarget;
 pub(crate) struct ScMessageContext<'a> {
     pub(crate) set_staged: WriteSignal<Vec<ChangeEntry>>,
     pub(crate) set_unstaged: WriteSignal<Vec<ChangeEntry>>,
+    pub(crate) set_confirmed: WriteSignal<Vec<ChangeEntry>>,
     pub(crate) changes_request_id: ReadSignal<Option<String>>,
     pub(crate) set_changes_request_id: WriteSignal<Option<String>>,
     pub(crate) set_history: WriteSignal<Vec<CommitInfo>>,
@@ -57,6 +58,7 @@ impl ScMessageContext<'_> {
         ScMessageContext {
             set_staged: signals.set_staged_changes,
             set_unstaged: signals.set_unstaged_changes,
+            set_confirmed: signals.set_confirmed_changes,
             changes_request_id: signals.changes_request_id,
             set_changes_request_id: signals.set_changes_request_id,
             set_history: signals.set_commit_history,

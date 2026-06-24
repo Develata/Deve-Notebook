@@ -10,6 +10,7 @@ pub(super) fn to_target(entry: &ChangeEntry) -> ScPathTarget {
     ScPathTarget {
         path: normalized(&entry.path),
         doc_id: entry.doc_id,
+        domain: Some(entry.domain),
     }
 }
 
@@ -23,7 +24,7 @@ pub(super) fn to_targets(entries: Vec<ChangeEntry>) -> Vec<ScPathTarget> {
         .into_iter()
         .map(|entry| to_target(&entry))
         .filter(|target| !target.path.is_empty())
-        .filter(|target| seen.insert((target.doc_id, target.path.clone())))
+        .filter(|target| seen.insert((target.domain, target.doc_id, target.path.clone())))
         .collect()
 }
 

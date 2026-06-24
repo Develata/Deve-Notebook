@@ -5,7 +5,7 @@
 - `Layer`: `Foundation`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-30`
+- `Last Review`: `2026-06-24`
 - `Counterpart Feature`: `docs/features/01_terminology.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/01_terminology.md`
 - `Primary Code Areas`: `crates/core/src/models/`, `docs/plan/01_terminology.md` (self-referential glossary)
@@ -53,6 +53,10 @@
 *   **pending_fs_ops (文件系统待处理队列)**：外部文件系统变化或显式 import 进入 Source Control 前的 repo runtime side table。
     *   `PendingFsEntry` 是 `pending_fs_ops` 中的一条 repo-scoped 文件系统/import pending 记录。
     *   `pending_fs_ops` 不承载 Web pending overlay，不是 ledger authority。
+*   **ConfirmedLedgerChange / LedgerDirtyChange (已确认账本脏变更)**：已追加进 Ledger、但尚未被最新 Source Control commit anchor 覆盖的 repo-scoped 变化。
+    *   它由 `latest CommitAnchor.ledger_seq -> ledger head` 的 range 唯一派生，不写入 `pending_fs_ops`，也不是 Web pending overlay。
+    *   Source Control 可以把它展示为 `Confirmed Ledger Changes`，并允许通过整锚 commit 创建新的 commit anchor 覆盖这些变化。
+    *   撤销这类变化不得删除或改写既有 ledger facts；若未来开放 Revert，必须追加反向 `Content Facts` / `Structure Facts`。
 *   **Projection Workspace / Vault (投影工作区 / 投影仓)**：宿主文件系统上绑定到单个本地 repo instance 的计算目录，形式为 `<projection_base>/<safe_repo_name>--<repo_id>/`。
     *   `projection_base` 是用户通过 Projection Locator 指定的父目录；它本身不是 repo workspace。
     *   Projection Workspace 是该 repo 的 Markdown Projection 物理容器，不是全局共享仓库。

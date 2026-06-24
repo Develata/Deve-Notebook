@@ -27,7 +27,11 @@ pub(crate) fn expand_related_targets(
             .find(|entry| deve_core::utils::path::to_forward_slash(&entry.path) == path)
             .and_then(|entry| entry.doc_id)
             .or(resolved.doc_id);
-        let candidate = ScPathTarget { path, doc_id };
+        let candidate = ScPathTarget {
+            path,
+            doc_id,
+            domain: None,
+        };
         if !targets.contains(&candidate) {
             targets.push(candidate);
         }
@@ -45,5 +49,9 @@ fn resolve_target(entries: &[ChangeEntry], target: &ScPathTarget) -> ScPathTarge
             .find(|entry| deve_core::utils::path::to_forward_slash(&entry.path) == path)
             .and_then(|entry| entry.doc_id)
     });
-    ScPathTarget { path, doc_id }
+    ScPathTarget {
+        path,
+        doc_id,
+        domain: None,
+    }
 }

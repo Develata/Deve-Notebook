@@ -29,8 +29,7 @@ async fn local_commit_ack_carries_scope_nonce() -> anyhow::Result<()> {
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello"),
                     detected_at: 1,
-                    has_conflict: false,
-                },
+                    has_conflict: false,                },
             )
         })?;
     state.repo.stage_pending("notes/a.md")?;

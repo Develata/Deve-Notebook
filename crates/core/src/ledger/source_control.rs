@@ -16,7 +16,7 @@
 use crate::ledger::schema::{PENDING_FS_DOC_INDEX, PENDING_FS_OPS, STAGED_DOC_INDEX};
 use crate::models::DocId;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, changes, commits, pending_fs, staging,
+    ChangeDomain, ChangeEntry, ChangeStatus, CommitInfo, changes, commits, pending_fs, staging,
 };
 use anyhow::Result;
 use redb::Database;
@@ -64,6 +64,9 @@ pub fn list_staged(db: &Database) -> Result<Vec<ChangeEntry>> {
             doc_id: entry.doc_id,
             status: entry.status,
             has_conflict: entry.has_conflict,
+            domain: ChangeDomain::Staged,
+            base_seq: None,
+            target_seq: None,
         })
         .collect())
 }

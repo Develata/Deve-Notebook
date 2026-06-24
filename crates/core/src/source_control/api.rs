@@ -31,6 +31,15 @@ pub trait SourceControlApi: Send + Sync {
         message: &str,
         git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo>;
+
+    fn commit_source_control_changes_in_repo_with_git_bridge(
+        &self,
+        repo: &RepoSelector,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        self.commit_staged_in_repo_with_git_bridge(repo, message, git_bridge)
+    }
 }
 
 pub trait DelegatedSourceControlApi: SourceControlApi {}

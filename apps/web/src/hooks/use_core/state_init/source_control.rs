@@ -13,6 +13,8 @@ pub(super) struct SourceControlSignals {
     pub set_staged_changes: WriteSignal<Vec<deve_core::source_control::ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<deve_core::source_control::ChangeEntry>>,
     pub set_unstaged_changes: WriteSignal<Vec<deve_core::source_control::ChangeEntry>>,
+    pub confirmed_changes: ReadSignal<Vec<deve_core::source_control::ChangeEntry>>,
+    pub set_confirmed_changes: WriteSignal<Vec<deve_core::source_control::ChangeEntry>>,
     pub changes_request_id: ReadSignal<Option<String>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
     pub commit_history: ReadSignal<Vec<deve_core::source_control::CommitInfo>>,
@@ -34,6 +36,7 @@ pub(super) struct SourceControlSignals {
 pub(super) fn init_source_control_signals() -> SourceControlSignals {
     let (staged_changes, set_staged_changes) = signal(Vec::new());
     let (unstaged_changes, set_unstaged_changes) = signal(Vec::new());
+    let (confirmed_changes, set_confirmed_changes) = signal(Vec::new());
     let (changes_request_id, set_changes_request_id) = signal(None::<String>);
     let (commit_history, set_commit_history) = signal(Vec::new());
     let (commit_history_request_id, set_commit_history_request_id) = signal(None::<String>);
@@ -48,6 +51,8 @@ pub(super) fn init_source_control_signals() -> SourceControlSignals {
         set_staged_changes,
         unstaged_changes,
         set_unstaged_changes,
+        confirmed_changes,
+        set_confirmed_changes,
         changes_request_id,
         set_changes_request_id,
         commit_history,

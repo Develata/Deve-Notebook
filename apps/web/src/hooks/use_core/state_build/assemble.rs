@@ -86,6 +86,7 @@ pub(super) fn assemble_core_state(
         source_control: SourceControlClient {
             staged_changes: sc.staged_changes,
             unstaged_changes: sc.unstaged_changes,
+            confirmed_changes: sc.confirmed_changes,
             commit_history: sc.commit_history,
             commit_history_request_id: sc.commit_history_request_id,
             commit_diff_request_id: sc.commit_diff_request_id,
@@ -188,6 +189,7 @@ pub(super) fn assemble_core_state(
         is_spectator: sync.is_spectator,
         staged_changes: sc.staged_changes,
         unstaged_changes: sc.unstaged_changes,
+        confirmed_changes: sc.confirmed_changes,
         commit_history: sc.commit_history,
         commit_history_request_id: sc.commit_history_request_id,
         commit_diff_request_id: sc.commit_diff_request_id,

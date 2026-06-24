@@ -30,6 +30,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     Effect::new(move |_| {
         let _ = core.unstaged_changes.get();
         let _ = core.staged_changes.get();
+        let _ = core.confirmed_changes.get();
         set_bulk_busy.set(false);
     });
 

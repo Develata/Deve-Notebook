@@ -140,6 +140,7 @@ fn plugin_sc_stage_and_diff_use_delegated_path_target_without_local_repo_manager
         Some(ScPathTarget {
             path: "notes/a.md".to_string(),
             doc_id: None,
+            domain: None,
         })
     );
     assert_eq!(
@@ -147,6 +148,7 @@ fn plugin_sc_stage_and_diff_use_delegated_path_target_without_local_repo_manager
         Some(ScPathTarget {
             path: "notes/a.md".to_string(),
             doc_id: None,
+            domain: None,
         })
     );
 }

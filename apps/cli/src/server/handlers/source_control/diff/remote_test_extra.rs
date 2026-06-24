@@ -53,6 +53,7 @@ fn remote_diff_rejects_deleted_doc_even_with_doc_id_hint() -> anyhow::Result<()>
             &ScPathTarget {
                 path: "notes/a.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
         )
     })?;
@@ -150,6 +151,7 @@ fn remote_diff_rejects_doc_id_path_mismatch() -> anyhow::Result<()> {
                 &ScPathTarget {
                     path: "notes/a.md".into(),
                     doc_id: Some(doc_b),
+                    domain: None,
                 },
             )
         })

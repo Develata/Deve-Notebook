@@ -21,6 +21,7 @@ use crate::server::handlers::source_control::service;
 use crate::server::source_control_grants::AuthSessionId;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::protocol::ScPathTarget;
+use deve_core::source_control::ChangeDomain;
 
 use authority::{SourceControlWriteAuthority, authorize_http_write};
 pub(crate) use commit::commit;
@@ -34,6 +35,8 @@ pub struct PathPayload {
     pub path: String,
     #[serde(default)]
     pub doc_id: Option<deve_core::models::DocId>,
+    #[serde(default)]
+    pub domain: Option<ChangeDomain>,
     #[serde(flatten)]
     pub repo: RepoSelector,
 }
@@ -43,6 +46,7 @@ impl PathPayload {
         ScPathTarget {
             path: self.path.clone(),
             doc_id: self.doc_id,
+            domain: self.domain,
         }
     }
 }

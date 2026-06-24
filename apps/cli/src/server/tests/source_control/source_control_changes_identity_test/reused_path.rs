@@ -26,8 +26,7 @@ async fn get_changes_keeps_same_path_entries_for_distinct_doc_ids() -> anyhow::R
                 change_type: ChangeStatus::Deleted,
                 content_hash: String::new(),
                 detected_at: 1,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )?;
         pending_fs::upsert(
             db,
@@ -38,8 +37,7 @@ async fn get_changes_keeps_same_path_entries_for_distinct_doc_ids() -> anyhow::R
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash("new"),
                 detected_at: 2,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )
     })?;
 

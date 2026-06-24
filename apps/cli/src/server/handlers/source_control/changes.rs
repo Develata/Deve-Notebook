@@ -29,6 +29,7 @@ pub async fn handle_get_changes(
             scope_nonce,
             staged: vec![],
             unstaged: vec![],
+            confirmed: vec![],
         });
         return;
     }
@@ -55,6 +56,20 @@ pub async fn handle_get_changes(
             return super::errors::send_ws_scoped(ch, e, scope_nonce);
         }
     };
+    let confirmed = match state
+        .repo
+        .list_confirmed_ledger_changes_in_local_repo(&scope.repo_name)
+    {
+        Ok(list) => super::present::collapse_rename_candidates(list),
+        Err(e) => {
+            tracing::error!("Failed to list confirmed ledger changes: {:?}", e);
+            return super::errors::send_ws_scoped(
+                ch,
+                super::errors::map_repo_error(super::errors::ScOp::ListChanges, e),
+                scope_nonce,
+            );
+        }
+    };
     ch.unicast(ServerMessage::ChangesList {
         request_id,
         repo_id: Some(scope.repo_id),
@@ -62,6 +77,7 @@ pub async fn handle_get_changes(
         scope_nonce,
         staged,
         unstaged,
+        confirmed,
     });
 }
 

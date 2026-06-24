@@ -21,6 +21,9 @@ fn deleted_docless_entry_reports_unavailable_diff_notice() {
         doc_id: None,
         status: ChangeStatus::Deleted,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     };
     let notice = unavailable_doc_diff_notice(&entry).expect("notice");
     assert_eq!(notice.code, ServerErrorCode::ScDocNotFound);
@@ -111,6 +114,9 @@ fn doc_diff_read_gate_allows_remote_branch_spectator_reads() {
         doc_id: Some(doc_id),
         status: ChangeStatus::Modified,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     });
 
     let request_id = request_id.get_untracked().expect("doc diff request");

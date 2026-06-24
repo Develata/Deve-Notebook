@@ -12,6 +12,7 @@ use super::super::state::CoreSignals;
 pub(super) struct SourceControlStateSection {
     pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
+    pub confirmed_changes: ReadSignal<Vec<ChangeEntry>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,
     pub commit_history_request_id: ReadSignal<Option<String>>,
     pub commit_diff_request_id: ReadSignal<Option<String>>,
@@ -43,6 +44,7 @@ pub(super) fn build_source_control_section(
     SourceControlStateSection {
         staged_changes: signals.staged_changes,
         unstaged_changes: signals.unstaged_changes,
+        confirmed_changes: signals.confirmed_changes,
         commit_history: signals.commit_history,
         commit_history_request_id: signals.commit_history_request_id,
         commit_diff_request_id: signals.commit_diff_request_id,

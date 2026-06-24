@@ -31,6 +31,7 @@ async fn readonly_remote_doc_diff_uses_shadow_projection() -> anyhow::Result<()>
         ScPathTarget {
             path: "note.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
     )
     .await;
@@ -81,6 +82,7 @@ async fn readonly_remote_doc_diff_missing_target_returns_scoped_error() -> anyho
         ScPathTarget {
             path: "missing.md".into(),
             doc_id: None,
+        domain: None,
         },
     )
     .await;
@@ -131,6 +133,7 @@ async fn readonly_remote_doc_diff_path_mismatch_returns_scoped_error() -> anyhow
         ScPathTarget {
             path: "other.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
     )
     .await;

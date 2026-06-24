@@ -169,8 +169,7 @@ async fn sync_hello_pushes_source_control_commit_to_full_peer() -> anyhow::Resul
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash(content),
                 detected_at: 1,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )
     })?;
     let selector = RepoSelector::default();

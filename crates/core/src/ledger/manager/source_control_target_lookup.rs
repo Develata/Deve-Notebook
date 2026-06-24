@@ -6,7 +6,7 @@
 use crate::ledger::RepoManager;
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeEntry, pending_fs, staging};
+use crate::source_control::{ChangeDomain, ChangeEntry, pending_fs, staging};
 use crate::utils::path::to_forward_slash;
 use anyhow::{Result, anyhow};
 use redb::Database;
@@ -64,6 +64,9 @@ fn pending_entries(db: &Database, doc_id: DocId) -> Result<Vec<ChangeEntry>> {
             doc_id: entry.doc_id,
             status: entry.change_type,
             has_conflict: entry.has_conflict,
+            domain: ChangeDomain::WorkingDirectory,
+            base_seq: None,
+            target_seq: None,
         })
         .collect())
 }
@@ -77,6 +80,9 @@ fn staged_entries(db: &Database, doc_id: DocId) -> Result<Vec<ChangeEntry>> {
             doc_id: entry.doc_id,
             status: entry.status,
             has_conflict: entry.has_conflict,
+            domain: ChangeDomain::Staged,
+            base_seq: None,
+            target_seq: None,
         })
         .collect())
 }

@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-30`
+- `Last Review`: `2026-06-24`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/` (pending overlay + `write_state`/`confirm`), `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -119,6 +119,7 @@ State_auth = L_confirmed
 
 - 若 ledger 已提交但后续 workspace/projection 写回失败，仍然 MUST 返回能够标识该写入已确认的 `Ack`，并通过独立 fault 通道报告 writeback error。
 - 同一个 `(client_id, client_op_id)` 重发时，服务端 SHOULD 返回第一次成功写入的同一 ack 内容，而不是再次落 ledger。
+- Ack 清理 pending overlay 后，该变化 MAY 出现在 Source Control 的 `Confirmed Ledger Changes`；它仍然不得重新进入 pending overlay 或 `pending_fs_ops`。
 
 ### 4.3 Reject Contract
 
@@ -288,6 +289,7 @@ overlay state row 至少需要：
 - 如果 ledger 已提交但 workspace 写回失败，系统不得把该操作继续当成“等待 Ack”。
 - 这类错误属于 projection / writeback fault，不属于 pending confirmation fault。
 - 这类错误 **MUST NOT** 回滚 ledger append、重开 pending overlay 或写入 `pending_fs_ops`。
+- 这类错误 MAY 仍形成 confirmed ledger dirty；Source Control 展示时必须标识为已确认 ledger 变化，而不是工作区 pending。
 
 - 前端可以显示 warning / degraded notice
 - 但必须把该 op 视为 confirmed，而不是无限 pending

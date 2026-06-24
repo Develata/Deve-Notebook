@@ -20,17 +20,26 @@ pub fn build_generate_callback(
     set_is_generating: WriteSignal<bool>,
 ) -> Callback<()> {
     Callback::new(move |_| {
-        if !core.can_write.get_untracked() || core.staged_changes.get_untracked().is_empty() {
+        if !core.can_write.get_untracked()
+            || (core.staged_changes.get_untracked().is_empty()
+                && core.confirmed_changes.get_untracked().is_empty())
+        {
             return;
         }
         let req_id = uuid::Uuid::new_v4().to_string();
-        let joined_paths = core
+        let mut paths = core
             .staged_changes
             .get()
             .into_iter()
             .map(|entry| entry.path)
-            .collect::<Vec<_>>()
-            .join("\n");
+            .collect::<Vec<_>>();
+        paths.extend(
+            core.confirmed_changes
+                .get()
+                .into_iter()
+                .map(|entry| entry.path),
+        );
+        let joined_paths = paths.join("\n");
         let prompt = format!(
             "{}\n{}",
             t::source_control::generate_prompt(locale.get()),

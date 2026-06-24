@@ -42,6 +42,22 @@ pub enum ChangeStatus {
     Renamed,
 }
 
+/// 用户可见变更所属的差异域。
+///
+/// `ConfirmedLedger` 表示内容已经进入 ledger authority，但尚未被最新
+/// source-control commit anchor 覆盖；它不是 pending_fs_ops，也不能进入
+/// staging/pending overlay。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ChangeDomain {
+    /// 外部文件/import 变化，由 pending_fs_ops 表达。
+    #[default]
+    WorkingDirectory,
+    /// 已暂存的工作区变化。
+    Staged,
+    /// 已确认 ledger 变化，但尚未被 commit anchor 覆盖。
+    ConfirmedLedger,
+}
+
 /// 冲突解决策略
 ///
 /// 当文件同时在 FS 和 Ledger 中有未提交变更时，用户可选择保留哪一方。
@@ -71,6 +87,15 @@ pub struct ChangeEntry {
     /// 是否存在冲突 (仅 unstaged 条目可能为 true)
     #[serde(default)]
     pub has_conflict: bool,
+    /// 该条目所属差异域；旧客户端缺省解析为 Working Directory。
+    #[serde(default)]
+    pub domain: ChangeDomain,
+    /// confirmed ledger diff 的基准 ledger seq；其它域为空。
+    #[serde(default)]
+    pub base_seq: Option<u64>,
+    /// confirmed ledger diff 的目标 ledger seq；其它域为空。
+    #[serde(default)]
+    pub target_seq: Option<u64>,
 }
 
 /// 提交间文件差异

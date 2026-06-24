@@ -26,6 +26,14 @@ impl RepoManager {
             .list_pending_fs_in_local_repo(repo_name)
     }
 
+    pub fn list_confirmed_ledger_changes_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        self.source_control_runtime()
+            .list_confirmed_ledger_in_local_repo(repo_name)
+    }
+
     pub fn list_changes(&self) -> Result<Vec<ChangeEntry>> {
         self.list_changes_in_local_repo(self.local_repo_name())
     }

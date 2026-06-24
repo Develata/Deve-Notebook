@@ -17,6 +17,9 @@ fn related_targets_rejects_tracked_path_only_ambiguity_as_conflict() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -24,6 +27,9 @@ fn related_targets_rejects_tracked_path_only_ambiguity_as_conflict() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
     let err = related_targets(&entries, &ScPathTarget::from_path("notes/old.md"))
@@ -42,6 +48,9 @@ fn related_targets_keep_resolved_doc_id_when_old_path_is_reused() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -49,6 +58,9 @@ fn related_targets_keep_resolved_doc_id_when_old_path_is_reused() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/old.md".into(),
@@ -56,6 +68,9 @@ fn related_targets_keep_resolved_doc_id_when_old_path_is_reused() {
             doc_id: Some(new_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -64,6 +79,7 @@ fn related_targets_keep_resolved_doc_id_when_old_path_is_reused() {
         &ScPathTarget {
             path: "notes/old.md".into(),
             doc_id: Some(old_doc),
+            domain: None,
         },
     )
     .expect("doc-id target should expand only within the resolved document");
@@ -74,10 +90,12 @@ fn related_targets_keep_resolved_doc_id_when_old_path_is_reused() {
             ScPathTarget {
                 path: "notes/new.md".into(),
                 doc_id: Some(old_doc),
+                domain: None,
             },
             ScPathTarget {
                 path: "notes/old.md".into(),
                 doc_id: Some(old_doc),
+                domain: None,
             },
         ]
     );

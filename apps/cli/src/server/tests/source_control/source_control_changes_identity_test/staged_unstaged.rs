@@ -25,8 +25,7 @@ async fn get_changes_keeps_unstaged_entry_after_staging_same_doc_path() -> anyho
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash("staged"),
                 detected_at: 1,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )?;
         pending_fs::upsert(
             db,
@@ -37,8 +36,7 @@ async fn get_changes_keeps_unstaged_entry_after_staging_same_doc_path() -> anyho
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash("edited-again"),
                 detected_at: 2,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )
     })?;
 

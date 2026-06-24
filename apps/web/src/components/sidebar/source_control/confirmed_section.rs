@@ -1,40 +1,24 @@
-// apps\web\src\components\sidebar\source_control
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
-//! # UnstagedSection 组件 (工作区组件)
-//!
-//! 渲染工作区 (Unstaged Changes) 的文件列表。
+//! Confirmed ledger changes are already authoritative ledger facts, not
+//! pending_fs_ops. First batch exposes diff + whole-anchor commit only.
 
 use super::change_item::ChangeItem;
-use super::unstaged_section_actions::UnstagedSectionActions;
 use crate::components::icons::ChevronRight;
-use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 
-/// 工作区组件
 #[component]
-pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
-    let core = expect_context::<SourceControlContext>();
+pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let (bulk_busy, set_bulk_busy) = signal(false);
     let expanded = RwSignal::new(true);
+    let confirmed_count = confirmed.len();
+    let confirmed_list = StoredValue::new(confirmed);
 
-    let unstaged_count = unstaged.len();
-    let unstaged_list = StoredValue::new(unstaged.clone());
-    let unstaged_list_for_stage = StoredValue::new(unstaged.clone());
-
-    Effect::new(move |_| {
-        let _ = core.unstaged_changes.get();
-        let _ = core.staged_changes.get();
-        let _ = core.confirmed_changes.get();
-        set_bulk_busy.set(false);
-    });
-
-    if unstaged_count == 0 {
+    if confirmed_count == 0 {
         return view! {}.into_any();
     }
 
@@ -49,30 +33,28 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                         <ChevronRight class="w-3 h-3" />
                     </span>
                     <span class="text-[11px] font-bold text-primary uppercase">
-                        {move || t::source_control::changes(locale.get())}
+                        {move || t::source_control::confirmed_ledger_changes(locale.get())}
                     </span>
                 </div>
-                <UnstagedSectionActions
-                    count=unstaged_count
-                    bulk_busy=bulk_busy
-                    set_bulk_busy=set_bulk_busy
-                    entries_for_stage=unstaged_list_for_stage
-                />
+                <span class="text-[11px] text-muted pr-2">{confirmed_count}</span>
             </div>
 
             {move || if expanded.get() {
                 view! {
                     <For
-                        each=move || unstaged_list.get_value()
+                        each=move || confirmed_list.get_value()
                         key=|e| {
                             format!(
-                                "{}:{}:{:?}:{}",
+                                "{:?}:{}:{}:{:?}:{}:{}:{}",
+                                e.domain,
                                 e.doc_id
                                     .map(|doc_id| doc_id.to_string())
                                     .unwrap_or_default(),
                                 e.path,
                                 e.status,
-                                e.renamed_from.clone().unwrap_or_default()
+                                e.renamed_from.clone().unwrap_or_default(),
+                                e.base_seq.unwrap_or_default(),
+                                e.target_seq.unwrap_or_default()
                             )
                         }
                         children=move |e| view! { <ChangeItem entry=e is_staged=false /> }

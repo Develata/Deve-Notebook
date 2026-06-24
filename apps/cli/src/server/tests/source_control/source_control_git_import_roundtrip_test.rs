@@ -33,6 +33,7 @@ async fn resolved_import_keep_fs_commits_and_exports_to_git() -> anyhow::Result<
         ScPathTarget {
             path: "note.md".into(),
             doc_id: Some(fixture.doc_id),
+        domain: None,
         },
         ConflictResolution::KeepFs,
     )

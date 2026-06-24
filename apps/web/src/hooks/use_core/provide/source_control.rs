@@ -25,6 +25,7 @@ pub(super) fn build_source_control_context(state: &CoreState) -> SourceControlCo
     SourceControlContext {
         staged_changes: source_control.staged_changes,
         unstaged_changes: source_control.unstaged_changes,
+        confirmed_changes: source_control.confirmed_changes,
         commit_history: source_control.commit_history,
         commit_history_request_id: source_control.commit_history_request_id,
         commit_diff_request_id: source_control.commit_diff_request_id,

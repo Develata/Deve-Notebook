@@ -62,8 +62,7 @@ pub(super) fn seed_pending(repo: &RepoManager, repo_name: &str, path: &str, cont
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash(content),
                 detected_at: 1,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )
     })
     .expect("seed pending");

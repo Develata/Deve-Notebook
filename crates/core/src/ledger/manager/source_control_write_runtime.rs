@@ -28,7 +28,7 @@ impl<'a> SourceControlWriteRuntime<'a> {
         self.unstage_file_target_in_local_repo(repo_name, &target)
     }
 
-    pub(crate) fn commit_staged_in_local_repo_with_git_bridge(
+    pub(crate) fn commit_source_control_changes_in_local_repo_with_git_bridge(
         &self,
         repo_name: &str,
         message: &str,
@@ -38,11 +38,13 @@ impl<'a> SourceControlWriteRuntime<'a> {
             return self
                 .manager
                 .commit_runtime()
-                .commit_staged_with_ops_with_git_bridge(message, git_bridge);
+                .commit_source_control_changes_with_git_bridge(message, git_bridge);
         }
         self.manager
             .commit_runtime()
-            .commit_staged_with_ops_in_local_repo_with_git_bridge(repo_name, message, git_bridge)
+            .commit_source_control_changes_in_local_repo_with_git_bridge(
+                repo_name, message, git_bridge,
+            )
     }
 
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

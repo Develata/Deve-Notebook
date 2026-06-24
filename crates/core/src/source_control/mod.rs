@@ -12,6 +12,7 @@
 //! - `commits`: 提交管理函数 [仅后端]
 //! - `changes`: 变更检测函数 [仅后端]
 //! - `pending_fs`: 待确认文件变更管理 (Working Directory) [仅后端]
+//! - `ledger_dirty`: confirmed ledger dirty 派生 [仅后端]
 //! - `commit_diff`: 提交间差异计算 [仅后端]
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -33,6 +34,8 @@ pub mod commits;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod conflict;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod ledger_dirty;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod pending_fs;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod staging;
@@ -43,4 +46,6 @@ pub use api::{DelegatedSourceControlApi, SourceControlApi};
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use commit_diff_error::CommitDiffError;
 pub use line_diff::ChangeRange;
-pub use types::{ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution};
+pub use types::{
+    ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, ConflictResolution,
+};

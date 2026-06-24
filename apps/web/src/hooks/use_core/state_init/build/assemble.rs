@@ -107,6 +107,8 @@ pub(super) fn assemble_core_signals_with_spectator(
         set_staged_changes: source_control.set_staged_changes,
         unstaged_changes: source_control.unstaged_changes,
         set_unstaged_changes: source_control.set_unstaged_changes,
+        confirmed_changes: source_control.confirmed_changes,
+        set_confirmed_changes: source_control.set_confirmed_changes,
         changes_request_id: source_control.changes_request_id,
         set_changes_request_id: source_control.set_changes_request_id,
         commit_history: source_control.commit_history,

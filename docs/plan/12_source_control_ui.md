@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-24`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`, `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`, `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/sidebar/source_control/`, `apps/web/src/hooks/use_core/`
@@ -78,14 +78,17 @@ HistoryOrGraphSecondary
 
 - `Staged Changes`
 - `Changes`
+- `Confirmed Ledger Changes`
 - `Merge Changes` / conflict group（仅存在冲突时）
 - optional read-only diagnostics group
 
 规则：
 
-- `Staged Changes` 与 `Changes` 必须可见区分，并显示 count。
+- `Staged Changes`、`Changes` 与 `Confirmed Ledger Changes` 必须可见区分，并显示 count。
 - `Changes` 中的条目表示 pending / working changes。
 - `Staged Changes` 中的条目表示即将进入 commit 的 staged entries。
+- `Confirmed Ledger Changes` 中的条目表示已进入 ledger、但未被最新 Source Control commit anchor 覆盖的 changes。
+- 首版 `Confirmed Ledger Changes` 只能整体随 commit anchor 覆盖，不提供逐文件 include/exclude。
 - conflict group 出现时必须优先展示，不能伪装成普通 modified row。
 - empty state 必须说明当前 scope clean、readonly、blocked 或 unavailable，不能只显示空白。
 
@@ -103,6 +106,7 @@ HistoryOrGraphSecondary
 - 点击 row 默认打开 diff。
 - unstaged row 的 inline action 是 `Stage`；可提供 `Discard`。
 - staged row 的 inline action 是 `Unstage`。
+- confirmed ledger row 的 inline action 不得使用 `Stage` / `Discard` 文案；首版只提供打开 diff。
 - section header 可提供 `Stage All` / `Unstage All` / `Discard All`。
 - destructive actions 必须经 source-control runtime gate；必要时需要 explicit confirmation。
 - remote readonly branch 中，row actions 必须 disabled 或替换为 read-only explanation。
@@ -115,7 +119,8 @@ Commit surface 规则：
 - primary action 是 `Commit` 或当前 gate 允许的等价 commit action。
 - `Commit & Push` 是 secondary action；它不得暗示 Web Git mirror push authority。
 - AI-generated commit message 是辅助输入，必须服从 `16_ai_agent.md` 的 capability gate。
-- message empty、staged empty、readonly、writer-not-ready、scope switching、service offline 都必须显示结构化 disabled reason。
+- message empty、staged empty and confirmed empty、readonly、writer-not-ready、scope switching、service offline 都必须显示结构化 disabled reason。
+- commit button 在 staged changes 或 confirmed ledger changes 非空时可用；confirmed-only commit 采用整锚提交。
 
 ## 7. Menus and Commands
 
@@ -133,6 +138,10 @@ Commit surface 规则：
 - `source_control.open_diff`
 - `source_control.open_history`
 - `source_control.open_graph`
+
+Future command id（首批不启用）：
+
+- `source_control.revert_confirmed_ledger`
 
 Git mirror command ids 必须保持独立：
 

@@ -77,6 +77,7 @@ fn stage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
         &ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_a),
+            domain: None,
         },
     )
     .expect_err("mismatched doc target must fail");
@@ -109,6 +110,7 @@ fn unstage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
             &ScPathTarget {
                 path: "notes/b.md".into(),
                 doc_id: Some(doc_b),
+                domain: None,
             },
         )?
         .expect("pending b");
@@ -122,6 +124,7 @@ fn unstage_target_with_doc_id_does_not_fall_back_to_other_doc_path() {
         &ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_a),
+            domain: None,
         },
     )
     .expect_err("mismatched staged doc target must fail");
@@ -186,6 +189,7 @@ fn unstage_path_only_target_fails_closed_for_tracked_entry() {
             &ScPathTarget {
                 path: "notes/b.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
         )?
         .expect("pending b");

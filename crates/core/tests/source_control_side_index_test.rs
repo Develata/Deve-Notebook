@@ -116,6 +116,7 @@ fn target_resolution_keeps_exact_deleted_path() {
         &ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )
     .expect("unstage deleted path");
@@ -166,6 +167,7 @@ fn stage_target_uses_doc_id_when_only_rename_successor_exists() {
         &ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )
     .expect("stage via stale path");
@@ -187,6 +189,7 @@ fn stage_target_keeps_exact_deleted_half_of_rename_pair() {
         &ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )
     .expect("stage successor");
@@ -196,6 +199,7 @@ fn stage_target_keeps_exact_deleted_half_of_rename_pair() {
         &ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )
     .expect("stage deleted half");

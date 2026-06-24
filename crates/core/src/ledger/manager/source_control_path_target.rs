@@ -30,7 +30,11 @@ impl RepoManager {
                 None => tracked_doc_id_from_changes(&changes, &path)?,
             }
         };
-        Ok(ScPathTarget { doc_id, path })
+        Ok(ScPathTarget {
+            doc_id,
+            path,
+            domain: None,
+        })
     }
 }
 

@@ -83,6 +83,9 @@ mod tests {
             doc_id: None,
             status: ChangeStatus::Renamed,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         }
     }
 

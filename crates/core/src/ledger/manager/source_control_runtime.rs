@@ -41,6 +41,13 @@ impl<'a> SourceControlRuntime<'a> {
         self.read().list_pending_fs_in_local_repo(repo_name)
     }
 
+    pub(crate) fn list_confirmed_ledger_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        self.read().list_confirmed_ledger_in_local_repo(repo_name)
+    }
+
     pub(crate) fn list_changes_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
         self.read().list_changes_in_local_repo(repo_name)
     }
@@ -101,8 +108,21 @@ impl<'a> SourceControlRuntime<'a> {
         message: &str,
         git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
+        self.commit_source_control_changes_in_local_repo_with_git_bridge(
+            repo_name, message, git_bridge,
+        )
+    }
+
+    pub(crate) fn commit_source_control_changes_in_local_repo_with_git_bridge(
+        &self,
+        repo_name: &str,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
         self.write()
-            .commit_staged_in_local_repo_with_git_bridge(repo_name, message, git_bridge)
+            .commit_source_control_changes_in_local_repo_with_git_bridge(
+                repo_name, message, git_bridge,
+            )
     }
 
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

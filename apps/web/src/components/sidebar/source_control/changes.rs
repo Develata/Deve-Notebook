@@ -12,6 +12,7 @@ use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+use super::confirmed_section::ConfirmedSection;
 use super::staged_section::StagedSection;
 use super::unstaged_section::UnstagedSection;
 
@@ -43,10 +44,11 @@ pub fn Changes() -> impl IntoView {
             {move || {
                 let staged = core.staged_changes.get();
                 let unstaged = core.unstaged_changes.get();
+                let confirmed = core.confirmed_changes.get();
 
                 view! {
                     <div>
-                        {if staged.is_empty() && unstaged.is_empty() {
+                        {if staged.is_empty() && unstaged.is_empty() && confirmed.is_empty() {
                             view! {
                                 <div class="px-3 py-6 text-xs text-muted text-center">
                                     {t::source_control::no_changes(locale.get())}
@@ -56,6 +58,7 @@ pub fn Changes() -> impl IntoView {
                             view! {
                                 <StagedSection staged=staged />
                                 <UnstagedSection unstaged=unstaged />
+                                <ConfirmedSection confirmed=confirmed />
                             }.into_any()
                         }}
                     </div>

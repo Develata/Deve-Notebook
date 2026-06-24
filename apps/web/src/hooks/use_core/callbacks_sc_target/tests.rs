@@ -11,6 +11,9 @@ fn to_target_preserves_doc_id_and_normalizes_path() {
         doc_id: Some(doc_id),
         status: ChangeStatus::Modified,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     });
 
     assert_eq!(target.path, "notes/a.md");
@@ -28,6 +31,9 @@ fn to_targets_keeps_distinct_doc_ids_for_same_path() {
             doc_id: Some(first),
             status: ChangeStatus::Modified,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/a.md".into(),
@@ -35,6 +41,9 @@ fn to_targets_keeps_distinct_doc_ids_for_same_path() {
             doc_id: Some(second),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/a.md".into(),
@@ -42,6 +51,9 @@ fn to_targets_keeps_distinct_doc_ids_for_same_path() {
             doc_id: Some(second),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ]);
 
@@ -58,6 +70,9 @@ fn doc_diff_is_blocked_for_docless_deleted_entry() {
         doc_id: None,
         status: ChangeStatus::Deleted,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }));
 }
 
@@ -69,5 +84,8 @@ fn doc_diff_is_allowed_for_deleted_entry_with_doc_id() {
         doc_id: Some(DocId::new()),
         status: ChangeStatus::Deleted,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }));
 }

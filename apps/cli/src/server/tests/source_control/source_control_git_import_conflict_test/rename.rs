@@ -18,8 +18,7 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash(baseline),
                 detected_at: 1,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )
     })?;
     state
@@ -86,6 +85,7 @@ async fn imported_rename_conflict_keep_fs_stages_single_clean_entry() -> anyhow:
         ScPathTarget {
             path: "renamed.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
         ConflictResolution::KeepFs,
     )
@@ -135,8 +135,7 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
                 change_type: ChangeStatus::Added,
                 content_hash: pending_fs::content_hash("hello\n"),
                 detected_at: 1,
-                has_conflict: false,
-            },
+                has_conflict: false,            },
         )
     })?;
     state
@@ -197,6 +196,7 @@ async fn keep_fs_resolves_rename_pair_by_staging_all_related_entries() -> anyhow
         ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
         ConflictResolution::KeepFs,
     )

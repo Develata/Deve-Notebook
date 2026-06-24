@@ -26,8 +26,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello"),
                     detected_at: 1,
-                    has_conflict: false,
-                },
+                    has_conflict: false,                },
             )
         })?;
     state.repo.stage_pending("notes/a.md")?;
@@ -51,8 +50,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
                     change_type: ChangeStatus::Deleted,
                     content_hash: String::new(),
                     detected_at: 2,
-                    has_conflict: false,
-                },
+                    has_conflict: false,                },
             )?;
             pending_fs::upsert(
                 db,
@@ -63,8 +61,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
                     change_type: ChangeStatus::Added,
                     content_hash: pending_fs::content_hash("hello renamed"),
                     detected_at: 2,
-                    has_conflict: false,
-                },
+                    has_conflict: false,                },
             )
         })?;
 
@@ -83,6 +80,7 @@ async fn local_diff_resolves_renamed_target_before_reading_workspace() -> anyhow
         ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
     )
     .await;

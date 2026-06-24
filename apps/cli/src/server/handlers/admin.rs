@@ -131,10 +131,18 @@ pub async fn sc_status(
             Ok(unstaged) => unstaged,
             Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
         };
+        let confirmed = match state
+            .repo
+            .list_confirmed_ledger_changes_in_local_repo(&repo_name)
+        {
+            Ok(confirmed) => confirmed,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
         reports.push(ScStatusResponse {
             repo_name,
             staged,
             unstaged,
+            confirmed,
         });
     }
     Json(reports).into_response()

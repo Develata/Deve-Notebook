@@ -110,6 +110,8 @@ pub struct CoreSignals {
     pub set_staged_changes: WriteSignal<Vec<ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub set_unstaged_changes: WriteSignal<Vec<ChangeEntry>>,
+    pub confirmed_changes: ReadSignal<Vec<ChangeEntry>>,
+    pub set_confirmed_changes: WriteSignal<Vec<ChangeEntry>>,
     pub changes_request_id: ReadSignal<Option<String>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
     pub commit_history: ReadSignal<Vec<CommitInfo>>,

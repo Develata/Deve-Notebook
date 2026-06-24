@@ -16,10 +16,14 @@ fn resolve_target_prefers_doc_id_over_stale_path() {
         doc_id: Some(doc_id),
         status: ChangeStatus::Added,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }];
     let target = ScPathTarget {
         path: "notes/old.md".into(),
         doc_id: Some(doc_id),
+        domain: None,
     };
 
     assert_eq!(
@@ -37,6 +41,9 @@ fn resolve_target_matches_renamed_from_without_doc_id() {
             doc_id: None,
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -44,6 +51,9 @@ fn resolve_target_matches_renamed_from_without_doc_id() {
             doc_id: None,
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -64,6 +74,9 @@ fn resolve_target_prefers_rename_successor_over_reused_old_path() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -71,6 +84,9 @@ fn resolve_target_prefers_rename_successor_over_reused_old_path() {
             doc_id: Some(old_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/old.md".into(),
@@ -78,6 +94,9 @@ fn resolve_target_prefers_rename_successor_over_reused_old_path() {
             doc_id: Some(new_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -97,6 +116,9 @@ fn resolve_target_keeps_requested_path_when_doc_id_does_not_match_reused_path() 
             doc_id: Some(new_doc),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -104,6 +126,9 @@ fn resolve_target_keeps_requested_path_when_doc_id_does_not_match_reused_path() 
             doc_id: Some(DocId(Uuid::from_u128(2))),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -113,6 +138,7 @@ fn resolve_target_keeps_requested_path_when_doc_id_does_not_match_reused_path() 
             &ScPathTarget {
                 path: "notes/reused.md".into(),
                 doc_id: Some(DocId(Uuid::nil())),
+                domain: None,
             },
         ),
         None
@@ -128,6 +154,9 @@ fn resolve_target_rejects_unrelated_path_even_when_doc_id_matches() {
         doc_id: Some(doc_id),
         status: ChangeStatus::Modified,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }];
 
     assert_eq!(
@@ -136,6 +165,7 @@ fn resolve_target_rejects_unrelated_path_even_when_doc_id_matches() {
             &ScPathTarget {
                 path: "notes/unrelated.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
         ),
         None

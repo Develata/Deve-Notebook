@@ -34,10 +34,13 @@ pub fn related_targets(
         doc_id: target.doc_id.or_else(|| {
             entries
                 .iter()
-                .find(|entry| to_forward_slash(&entry.path) == path)
+                .find(|entry| {
+                    domain_matches(entry, target) && to_forward_slash(&entry.path) == path
+                })
                 .and_then(|entry| entry.doc_id)
         }),
         path,
+        domain: target.domain,
     };
     related_paths(entries, &resolved)?
         .into_iter()
@@ -45,6 +48,7 @@ pub fn related_targets(
             Ok(ScPathTarget {
                 doc_id: resolved.doc_id,
                 path,
+                domain: resolved.domain,
             })
         })
         .collect()
@@ -76,10 +80,13 @@ pub fn resolve_target(
         doc_id: target.doc_id.or_else(|| {
             entries
                 .iter()
-                .find(|entry| to_forward_slash(&entry.path) == path)
+                .find(|entry| {
+                    domain_matches(entry, target) && to_forward_slash(&entry.path) == path
+                })
                 .and_then(|entry| entry.doc_id)
         }),
         path,
+        domain: target.domain,
     };
     if target_exists(entries, &resolved) {
         return Ok(resolved);
@@ -112,14 +119,15 @@ pub fn resolve_targets(
     Ok(resolved
         .into_iter()
         .filter(|target| !target.path.is_empty())
-        .filter(|target| seen.insert((target.doc_id, target.path.clone())))
+        .filter(|target| seen.insert((target.domain, target.doc_id, target.path.clone())))
         .collect())
 }
 
 fn target_exists(entries: &[ChangeEntry], target: &ScPathTarget) -> bool {
     let target_path = to_forward_slash(&target.path);
     entries.iter().any(|entry| {
-        to_forward_slash(&entry.path) == target_path
+        domain_matches(entry, target)
+            && to_forward_slash(&entry.path) == target_path
             && match target.doc_id {
                 Some(doc_id) => entry.doc_id == Some(doc_id),
                 None => entry.doc_id.is_none(),
@@ -134,7 +142,8 @@ fn related_paths(entries: &[ChangeEntry], resolved: &ScPathTarget) -> super::ScR
         paths.push(to_forward_slash(old_path));
     } else if current.status == ChangeStatus::Deleted
         && let Some(doc_id) = current.doc_id
-        && let Some(added) = unique_added_rename_successor(entries, doc_id, &current.path)?
+        && let Some(added) =
+            unique_added_rename_successor(entries, doc_id, &current.path, resolved.domain)?
     {
         paths.push(to_forward_slash(&added.path));
     }
@@ -151,7 +160,8 @@ fn current_entry<'a>(
     let matches = entries
         .iter()
         .filter(|entry| {
-            to_forward_slash(&entry.path) == path
+            domain_matches(entry, resolved)
+                && to_forward_slash(&entry.path) == path
                 && match resolved.doc_id {
                     Some(doc_id) => entry.doc_id == Some(doc_id),
                     None => entry.doc_id.is_none(),
@@ -161,16 +171,25 @@ fn current_entry<'a>(
     unique_match(matches, "current source control target", &path)
 }
 
+fn domain_matches(entry: &ChangeEntry, target: &ScPathTarget) -> bool {
+    match target.domain {
+        Some(domain) => entry.domain == domain,
+        None => true,
+    }
+}
+
 fn unique_added_rename_successor<'a>(
     entries: &'a [ChangeEntry],
     doc_id: DocId,
     old_path: &str,
+    domain: Option<deve_core::source_control::ChangeDomain>,
 ) -> super::ScResult<Option<&'a ChangeEntry>> {
     let old_path = to_forward_slash(old_path);
     let matches = entries
         .iter()
         .filter(|entry| {
-            entry.status == ChangeStatus::Added
+            domain_value_matches(entry, domain)
+                && entry.status == ChangeStatus::Added
                 && entry.doc_id == Some(doc_id)
                 && entry.renamed_from.as_deref().map(to_forward_slash) == Some(old_path.clone())
         })
@@ -183,6 +202,16 @@ fn unique_added_rename_successor<'a>(
         "source control rename successor",
         &old_path,
     )?))
+}
+
+fn domain_value_matches(
+    entry: &ChangeEntry,
+    domain: Option<deve_core::source_control::ChangeDomain>,
+) -> bool {
+    match domain {
+        Some(domain) => entry.domain == domain,
+        None => true,
+    }
 }
 
 fn unique_match<'a>(

@@ -62,6 +62,7 @@ async fn test_proxy_rename_candidate_collapses_and_stages_pair() -> anyhow::Resu
         &ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_id),
+        domain: None,
         },
     )?;
     assert!(proxy.list_pending_fs_in_repo(&selector)?.is_empty());

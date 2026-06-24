@@ -35,6 +35,7 @@ fn repo_discard_target_fails_closed_when_doc_id_does_not_match() -> anyhow::Resu
             &ScPathTarget {
                 path: "notes/live.md".into(),
                 doc_id: Some(DocId::new()),
+                domain: None,
             },
         )
         .expect_err("mismatched doc target must fail closed");
@@ -75,6 +76,7 @@ fn repo_discard_target_does_not_fallback_to_docless_pending_when_doc_id_misses()
             &ScPathTarget {
                 path: "notes/live.md".into(),
                 doc_id: Some(wrong_doc_id),
+                domain: None,
             },
         )
         .expect_err("doc_id miss must not fall back to path-only pending");

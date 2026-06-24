@@ -15,6 +15,9 @@ fn target_exists_rejects_docless_match_against_tracked_entry() {
         doc_id: Some(DocId(Uuid::nil())),
         status: ChangeStatus::Modified,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }];
     assert!(!target_exists(
         &entries,
@@ -30,6 +33,9 @@ fn target_exists_accepts_docless_match_for_untracked_entry() {
         doc_id: None,
         status: ChangeStatus::Added,
         has_conflict: false,
+        domain: Default::default(),
+        base_seq: None,
+        target_seq: None,
     }];
     assert!(target_exists(
         &entries,

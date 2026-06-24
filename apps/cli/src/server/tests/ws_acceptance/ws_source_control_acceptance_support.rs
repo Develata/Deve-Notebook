@@ -78,8 +78,7 @@ impl SourceControlWsHarness {
                         change_type: ChangeStatus::Added,
                         content_hash: pending_fs::content_hash(content),
                         detected_at: 1,
-                        has_conflict: false,
-                    },
+                        has_conflict: false,                    },
                 )
             })
     }

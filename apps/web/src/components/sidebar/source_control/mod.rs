@@ -19,6 +19,7 @@ pub mod commit_ai;
 mod commit_ai_runtime;
 pub mod commit_controller;
 pub mod commit_message_box;
+pub mod confirmed_section;
 pub mod context_menu;
 pub mod error_notice;
 pub mod error_notice_copy;

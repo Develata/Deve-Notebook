@@ -18,7 +18,7 @@ use deve_core::git_bridge::GitMirrorRepairReview;
 use deve_core::ledger::traits::RepoSelector;
 use deve_core::plugin::runtime::host;
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::{ChangeDomain, ChangeEntry};
 
 #[derive(Deserialize, Default)]
 pub struct RepoQuery {
@@ -35,6 +35,8 @@ pub struct DiffQuery {
     pub path: String,
     #[serde(default)]
     pub doc_id: Option<deve_core::models::DocId>,
+    #[serde(default)]
+    pub domain: Option<ChangeDomain>,
     #[serde(flatten)]
     pub repo: RepoSelector,
 }
@@ -44,6 +46,7 @@ impl DiffQuery {
         ScPathTarget {
             path: self.path.clone(),
             doc_id: self.doc_id,
+            domain: self.domain,
         }
     }
 }

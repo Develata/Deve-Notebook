@@ -139,6 +139,7 @@ fn discard_target_resolves_renamed_pending_by_doc_id() -> anyhow::Result<()> {
         &ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )?;
 

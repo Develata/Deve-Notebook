@@ -27,6 +27,7 @@ fn doc_target_rejects_exact_docless_delete_by_path() {
         &ScPathTarget {
             doc_id: Some(doc_id),
             path: "notes/a.md".into(),
+            domain: None,
         },
     )
     .expect("doc target lookup should succeed");
@@ -59,6 +60,7 @@ fn doc_target_rejects_exact_docless_modified_by_path() {
         &ScPathTarget {
             doc_id: Some(doc_id),
             path: "notes/a.md".into(),
+            domain: None,
         },
     )
     .expect("doc target lookup should succeed");

@@ -84,6 +84,7 @@ async fn local_diff_rejects_reused_path_when_doc_id_misses() -> anyhow::Result<(
         ScPathTarget {
             path: "notes/a.md".into(),
             doc_id: Some(tracked_doc_id),
+        domain: None,
         },
     )
     .await;

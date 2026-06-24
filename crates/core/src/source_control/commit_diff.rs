@@ -46,7 +46,14 @@ pub(crate) fn compare_commits_checked(
 ) -> CommitDiffResult<Vec<CommitFileDiff>> {
     let seq_a = resolve_seq(db, commit_a_id)?;
     let commit_b = load_commit(db, commit_b_id)?;
-    let seq_b = commit_b.ledger_seq;
+    compare_seq_range_checked(db, seq_a, commit_b.ledger_seq)
+}
+
+pub(crate) fn compare_seq_range_checked(
+    db: &Database,
+    seq_a: u64,
+    seq_b: u64,
+) -> CommitDiffResult<Vec<CommitFileDiff>> {
     if seq_a >= seq_b {
         return Err(CommitDiffError::InvalidOrder { seq_a, seq_b });
     }
@@ -105,6 +112,14 @@ pub(crate) fn compare_commits_checked(
     }
     diffs.sort_by(|a, b| a.path.cmp(&b.path));
     Ok(diffs)
+}
+
+pub(crate) fn compare_seq_range(
+    db: &Database,
+    seq_a: u64,
+    seq_b: u64,
+) -> Result<Vec<CommitFileDiff>> {
+    compare_seq_range_checked(db, seq_a, seq_b).map_err(Into::into)
 }
 
 pub(crate) fn projection_files_at_commit(

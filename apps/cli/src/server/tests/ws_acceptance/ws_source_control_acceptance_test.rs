@@ -187,6 +187,7 @@ fn assert_changes(
             scope_nonce,
             staged,
             unstaged,
+            confirmed: _,
         } => {
             assert_eq!((actual_repo, branch, scope_nonce), (repo_id, None, Some(SCOPE)));
             assert_eq!(actual_request, request_id);

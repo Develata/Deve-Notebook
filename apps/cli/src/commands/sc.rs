@@ -106,6 +106,7 @@ fn targets_from_entries(entries: &[ChangeEntry]) -> Vec<ScPathTarget> {
         .map(|entry| ScPathTarget {
             path: entry.path.clone(),
             doc_id: entry.doc_id,
+            domain: Some(entry.domain),
         })
         .collect()
 }
@@ -136,6 +137,9 @@ mod tests {
             doc_id: Some(doc_id),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         }]);
 
         assert_eq!(targets[0].path, "gone.md");

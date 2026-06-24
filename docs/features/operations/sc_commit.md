@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.sc.commit`
 - `Domain`: `source-control`
 - `Related Feature Chapters`: `docs/features/07_diff_logic.md`, `docs/features/10_ai_agent.md`
-- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-03`, `AI-007`
+- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-03`, `DIFF-FEAT-04`, `AI-007`
 
 ## Operations
 
@@ -32,7 +32,7 @@
 - `Name`: `Submit Commit`
 - `Surface`: `source-control-panel`
 - `Trigger`: 点击 commit 按钮，或执行等价命令
-- `Preconditions`: staged changes 非空，message 非空，write gate 未阻塞
+- `Preconditions`: staged changes 或 confirmed ledger changes 非空，message 非空，write gate 未阻塞
 - `Immediate Result`: 前端发送 `ClientMessage::Commit { scope_nonce }`
 - `Application Entry`: `apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs`, `apps/cli/src/server/ws/route/source_control.rs`, `apps/cli/src/server/handlers/source_control/commits.rs`
 
@@ -41,7 +41,7 @@
 - `Name`: `Generate Commit Message`
 - `Surface`: `source-control-panel`
 - `Trigger`: 点击 commit message 区域的 generate 按钮
-- `Preconditions`: staged changes 非空，write gate 未阻塞
+- `Preconditions`: staged changes 或 confirmed ledger changes 非空，write gate 未阻塞
 - `Immediate Result`: 按 server AI backend capability gate 选择可用后端；不可用时显示原因并停止 generating/loading，不发起 plugin call
 - `Application Entry`: `apps/web/src/components/sidebar/source_control/commit_ai.rs`, `apps/cli/src/server/handlers/plugin.rs`
 
@@ -104,7 +104,7 @@
 ### `op.sc.commit.receive-result`
 
 1. `User Operation`: 用户观察 commit 返回结果。
-2. `Application Response`: 成功时刷新 `changes / history` 并清空 staged；失败时进入 source control notice 或 protocol error surface。
+2. `Application Response`: 成功时刷新 `changes / history` 并清空 staged 与 confirmed ledger changes；失败时进入 source control notice 或 protocol error surface。
 3. `Concrete Modules`:
    - `apps/web/src/hooks/use_core/effects_sc.rs`
    - `apps/web/src/hooks/use_core/effects/message_protocol/mod.rs`
@@ -117,6 +117,7 @@
 ## Notes
 
 - 这条 flow 只描述 commit，不重复 stage / unstage。
+- 首版 confirmed ledger changes 采用整锚 commit，不提供逐文件 include/exclude。
 - commit 的关键 gate 不是按钮本身，而是 `write gate + scope_nonce + repo-scoped authority`。
 - AI 生成提交说明只是辅助输入，不得绕过 AI backend capability gate，也不得在失败时写入 commit message。
 - 成功 commit 的最终成立条件仍是 ledger append 与 commit anchor，而不是 UI 列表刷新。

@@ -17,6 +17,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
 
     let (staged, set_staged) = signal(Vec::<ChangeEntry>::new());
     let (unstaged, set_unstaged) = signal(Vec::<ChangeEntry>::new());
+    let (confirmed, set_confirmed) = signal(Vec::<ChangeEntry>::new());
     let (changes_request_id, set_changes_request_id) = signal(None::<String>);
     let (history, set_history) = signal(Vec::<CommitInfo>::new());
     let (history_request_id, set_history_request_id) = signal(None::<String>);
@@ -42,6 +43,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     let ctx = ScMessageContext {
         set_staged,
         set_unstaged,
+        set_confirmed,
         changes_request_id,
         set_changes_request_id,
         set_history,
@@ -93,6 +95,7 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     assert_eq!(notice.get_untracked(), None);
     assert!(staged.get_untracked().is_empty());
     assert!(unstaged.get_untracked().is_empty());
+    assert!(confirmed.get_untracked().is_empty());
     assert!(history.get_untracked().is_empty());
     assert_eq!(diff.get_untracked(), None);
     assert!(commit_diff.get_untracked().is_empty());
@@ -153,6 +156,7 @@ fn commit_ack_clears_open_source_control_diffs() {
 
     let (_staged, set_staged) = signal(Vec::<ChangeEntry>::new());
     let (_unstaged, set_unstaged) = signal(Vec::<ChangeEntry>::new());
+    let (_confirmed, set_confirmed) = signal(Vec::<ChangeEntry>::new());
     let (_changes_request_id, set_changes_request_id) = signal(None::<String>);
     let (_history, set_history) = signal(Vec::<CommitInfo>::new());
     let (history_request_id, set_history_request_id) = signal(None::<String>);
@@ -189,6 +193,7 @@ fn commit_ack_clears_open_source_control_diffs() {
     let ctx = ScMessageContext {
         set_staged,
         set_unstaged,
+        set_confirmed,
         changes_request_id: _changes_request_id,
         set_changes_request_id,
         set_history,

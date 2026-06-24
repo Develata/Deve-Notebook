@@ -39,6 +39,7 @@ fn remote_diff_prefers_doc_id_for_local_counterpart() -> anyhow::Result<()> {
         &ScPathTarget {
             path: "notes/b.md".into(),
             doc_id: Some(doc_id),
+            domain: None,
         },
     )?;
     repo.commit_staged_in_repo_with_git_bridge(

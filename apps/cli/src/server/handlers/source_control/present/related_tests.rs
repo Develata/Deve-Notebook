@@ -17,6 +17,9 @@ fn expand_related_targets_preserves_doc_id_for_rename_pair() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Deleted,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
         ChangeEntry {
             path: "notes/new.md".into(),
@@ -24,6 +27,9 @@ fn expand_related_targets_preserves_doc_id_for_rename_pair() {
             doc_id: Some(doc_id),
             status: ChangeStatus::Added,
             has_conflict: false,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
         },
     ];
 
@@ -33,16 +39,19 @@ fn expand_related_targets_preserves_doc_id_for_rename_pair() {
             &ScPathTarget {
                 path: "notes/new.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
         ),
         vec![
             ScPathTarget {
                 path: "notes/new.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
             ScPathTarget {
                 path: "notes/old.md".into(),
                 doc_id: Some(doc_id),
+                domain: None,
             },
         ]
     );

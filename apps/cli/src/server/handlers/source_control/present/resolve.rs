@@ -3,7 +3,7 @@
 
 use anyhow::{Result, anyhow};
 use deve_core::protocol::ScPathTarget;
-use deve_core::source_control::{ChangeEntry, ChangeStatus};
+use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
 
 pub(crate) fn resolve_target_path_strict(
     entries: &[ChangeEntry],
@@ -11,21 +11,25 @@ pub(crate) fn resolve_target_path_strict(
 ) -> Result<Option<String>> {
     let path = normalized(&target.path);
     if let Some(doc_id) = target.doc_id {
-        return Ok(
-            resolve_with_doc_id(entries, &path, doc_id)?.map(|entry| normalized(&entry.path))
-        );
+        return Ok(resolve_with_doc_id(entries, &path, doc_id, target.domain)?
+            .map(|entry| normalized(&entry.path)));
     }
-    Ok(resolve_without_doc_id(entries, &path)?.map(|entry| normalized(&entry.path)))
+    Ok(resolve_without_doc_id(entries, &path, target.domain)?.map(|entry| normalized(&entry.path)))
 }
 
 fn resolve_with_doc_id<'a>(
     entries: &'a [ChangeEntry],
     path: &str,
     doc_id: deve_core::models::DocId,
+    domain: Option<ChangeDomain>,
 ) -> Result<Option<&'a ChangeEntry>> {
     let exact = entries
         .iter()
-        .filter(|entry| entry.doc_id == Some(doc_id) && normalized(&entry.path) == path)
+        .filter(|entry| {
+            domain_matches(entry, domain)
+                && entry.doc_id == Some(doc_id)
+                && normalized(&entry.path) == path
+        })
         .collect::<Vec<_>>();
     let live_exact = exact
         .iter()
@@ -34,7 +38,7 @@ fn resolve_with_doc_id<'a>(
         .collect::<Vec<_>>();
     let renamed = entries
         .iter()
-        .filter(|entry| matches_doc_rename_successor(entry, path, doc_id))
+        .filter(|entry| matches_doc_rename_successor(entry, path, doc_id, domain))
         .collect::<Vec<_>>();
 
     if live_exact.len() > 1 {
@@ -74,8 +78,10 @@ fn matches_doc_rename_successor(
     entry: &ChangeEntry,
     path: &str,
     doc_id: deve_core::models::DocId,
+    domain: Option<ChangeDomain>,
 ) -> bool {
-    entry.doc_id == Some(doc_id)
+    domain_matches(entry, domain)
+        && entry.doc_id == Some(doc_id)
         && entry.status != ChangeStatus::Deleted
         && entry
             .renamed_from
@@ -86,15 +92,17 @@ fn matches_doc_rename_successor(
 fn resolve_without_doc_id<'a>(
     entries: &'a [ChangeEntry],
     path: &str,
+    domain: Option<ChangeDomain>,
 ) -> Result<Option<&'a ChangeEntry>> {
     let exact = entries
         .iter()
-        .filter(|entry| normalized(&entry.path) == path)
+        .filter(|entry| domain_matches(entry, domain) && normalized(&entry.path) == path)
         .collect::<Vec<_>>();
     let renamed = entries
         .iter()
         .filter(|entry| {
-            entry.status != ChangeStatus::Deleted
+            domain_matches(entry, domain)
+                && entry.status != ChangeStatus::Deleted
                 && entry
                     .renamed_from
                     .as_ref()
@@ -164,6 +172,13 @@ fn resolve_untracked_path<'a>(
             .next()
             .or_else(|| (exact.len() == 1).then(|| exact[0]))
     }))
+}
+
+fn domain_matches(entry: &ChangeEntry, domain: Option<ChangeDomain>) -> bool {
+    match domain {
+        Some(domain) => entry.domain == domain,
+        None => true,
+    }
 }
 
 fn normalized(path: &str) -> String {

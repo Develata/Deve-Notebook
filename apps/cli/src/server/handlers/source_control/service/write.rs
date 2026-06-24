@@ -109,6 +109,6 @@ pub fn commit_staged_with_git_bridge(
     message: &str,
     git_bridge: GitBridgeMode,
 ) -> super::ScResult<CommitInfo> {
-    repo.commit_staged_in_repo_with_git_bridge(selector, message, git_bridge)
+    repo.commit_source_control_changes_in_repo_with_git_bridge(selector, message, git_bridge)
         .map_err(|e| errors::map_repo_error(ScOp::Commit, e))
 }
