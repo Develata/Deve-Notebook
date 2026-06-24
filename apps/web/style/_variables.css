@@ -4,6 +4,10 @@
  * 遵循 08_ui_design.md §3.4: 颜色字面量只允许在 token 文件定义,
  * 其它样式与组件 MUST 通过 CSS 变量引用颜色。
  *
+ * 设计方向: "Calm document tool" — 暖中性纸面 + 单一低饱和鼠尾草绿强调色 +
+ * 柔和投影。遵守"对比预算": 多数界面处于窄而协调的色带, 仅在真正需要强调
+ * (主操作按钮 / 选区 / 破坏性操作 / 未读角标) 时才允许高饱和与强对比。
+ *
  * 变量命名约定:
  *   --bg-*   背景色 (background)
  *   --fg-*   前景/文字色 (foreground)
@@ -12,121 +16,127 @@
  *   --bq-*   引用块
  *   --diff-*   Diff 视图
  *   --code-*   代码块
+ *   --shadow-* 高度/投影
  *
  * Dark theme overrides → _variables-dark.css
  */
 
 :root {
   /* ==================== Layout Backgrounds ==================== */
-  --bg-app: #ffffff;              /* 主容器背景 */
-  --bg-sidebar: #f9fafb;         /* 侧边栏 (gray-50) */
-  --bg-editor: #ffffff;          /* 编辑器区域 */
-  --bg-panel: #f3f4f6;           /* 面板/区块 (gray-100) */
-  --bg-statusbar: #007acc;       /* 状态栏 (正常) */
-  --bg-statusbar-ro: #e06c75;    /* 状态栏 (只读) */
+  --bg-app: #faf9f5;             /* 主容器背景 (暖纸面) */
+  --bg-sidebar: #f2efe7;         /* 侧边栏 */
+  --bg-editor: #faf9f5;          /* 编辑器区域 (与主背景一致, 无缝) */
+  --bg-panel: #efece3;           /* 面板/区块 */
+  --bg-statusbar: #f2efe7;       /* 状态栏 (中性 chrome, 不再是 VSCode 蓝) */
+  --bg-statusbar-ro: #f4ead4;    /* 状态栏 (只读: 低对比暖琥珀, 非告警红) */
 
   /* ==================== Component Backgrounds ==================== */
-  --bg-input: #f3f4f6;           /* 输入框 (gray-100) */
-  --bg-hover: #f3f4f6;           /* 悬停 (gray-100) */
-  --bg-active: #e5e7eb;          /* 选中/激活 (gray-200) */
-  --bg-accent: #3b82f6;          /* 主强调色 (blue-500) */
-  --bg-accent-hover: #2563eb;     /* 强调悬停 (blue-600) */
-  --bg-accent-subtle: #eff6ff;   /* 浅强调背景 (blue-50) */
-  --bg-overlay: rgba(0, 0, 0, 0.4); /* 遮罩层 */
-  --bg-tooltip: #1f2937;         /* 工具提示 (gray-800) */
-  --bg-badge: #ef4444;           /* 角标 (red-500) */
-  --bg-badge-count: #c4c4c4;     /* 计数徽章 (gray-400) */
+  --bg-input: #efece3;           /* 输入框 */
+  --bg-hover: #f1ede4;           /* 悬停 (极轻) */
+  --bg-active: #e9e4d8;          /* 选中/激活 */
+  --bg-accent: #5b8a7d;          /* 主强调色 (低饱和鼠尾草绿) */
+  --bg-accent-hover: #4e7a6e;    /* 强调悬停 */
+  --bg-accent-subtle: #e8efe9;   /* 浅强调背景 (鼠尾草微染) */
+  --bg-overlay: rgba(40, 36, 28, 0.28); /* 遮罩层 (暖, 柔) */
+  --bg-tooltip: #3c3830;         /* 工具提示 (暖墨) */
+  --bg-badge: #b5685f;           /* 角标 (强调: 柔化红) */
+  --bg-badge-count: #cdc6b8;     /* 计数徽章 (暖灰) */
 
   /* ==================== Chat ==================== */
-  --bg-chat-user: #e1f0fa;       /* 用户消息气泡 */
-  --bg-badge-success: #dff0d8;   /* 成功徽章背景 */
-  --fg-badge-success: #3c763d;   /* 成功徽章文字 */
-  --border-badge-success: #d6e9c6; /* 成功徽章边框 */
+  --bg-chat-user: #e7efe9;       /* 用户消息气泡 (鼠尾草微染) */
+  --bg-badge-success: #e3ecd9;   /* 成功徽章背景 */
+  --fg-badge-success: #5a7043;   /* 成功徽章文字 */
+  --border-badge-success: #d2dcc0; /* 成功徽章边框 */
 
   /* ==================== Foreground / Text ==================== */
-  --fg-primary: #374151;         /* 主文字 (gray-700) */
-  --fg-secondary: #6b7280;       /* 次要文字 (gray-500) */
-  --fg-muted: #9ca3af;           /* 禁用/占位 (gray-400) */
-  --fg-accent: #2563eb;          /* 链接/强调 (blue-600) */
-  --fg-on-accent: #ffffff;       /* 强调色上的文字 */
-  --fg-on-tooltip: #ffffff;      /* 工具提示文字 */
+  --fg-primary: #3c3830;         /* 主文字 (暖墨, 已柔化避免纯黑) */
+  --fg-secondary: #756f63;       /* 次要文字 */
+  --fg-muted: #a39b8c;           /* 禁用/占位 (whisper) */
+  --fg-accent: #4a7567;          /* 链接/强调 (鼠尾草) */
+  --fg-on-accent: #ffffff;       /* 强调色上的文字 (emphasis tier) */
+  --fg-on-tooltip: #f2efe7;      /* 工具提示文字 */
 
   /* ==================== Borders ==================== */
-  --border-default: #e5e7eb;     /* 默认边框 (gray-200) */
-  --border-hover: #d1d5db;       /* 悬停边框 (gray-300) */
-  --border-active: #9ca3af;      /* 激活边框 (gray-400) */
-  --border-accent: #3b82f6;      /* 强调边框 (blue-500) */
+  --border-default: #e7e2d6;     /* 默认边框 (whisper) */
+  --border-hover: #d8d2c4;       /* 悬停边框 */
+  --border-active: #b3ab9b;      /* 激活边框 */
+  --border-accent: #5b8a7d;      /* 强调边框 (= accent) */
 
-  /* ==================== Semantic Colors (Git) ==================== */
-  --color-added: #22c55e;        /* 新增 (green-500) */
-  --color-added-bg: #dcfce7;     /* 新增背景 (green-100) */
-  --color-modified: #eab308;     /* 修改 (yellow-500) */
-  --color-modified-bg: #fef9c3;  /* 修改背景 (yellow-100) */
-  --color-deleted: #ef4444;      /* 删除 (red-500) */
-  --color-deleted-bg: #fee2e2;   /* 删除背景 (red-100) */
-  --color-warning: #f97316;      /* 警告 (orange-500) */
-  --color-info: #3b82f6;         /* 信息 (blue-500) */
+  /* ==================== Semantic Colors (Git) — 已去饱和: 信号而非警笛 ==================== */
+  --color-added: #6f9c6a;        /* 新增 (柔绿) */
+  --color-added-bg: #e4ecdc;     /* 新增背景 */
+  --color-modified: #b89b5a;     /* 修改 (暖琥珀, 与方案同温) */
+  --color-modified-bg: #efe8d3;  /* 修改背景 */
+  --color-deleted: #b5685f;      /* 删除 (柔化红, 仍可读为危险) */
+  --color-deleted-bg: #f0e0dc;   /* 删除背景 */
+  --color-warning: #bd8a4f;      /* 警告 (暖橙) */
+  --color-info: #5b8a7d;         /* 信息 (= accent, 不再用蓝) */
 
   /* ==================== Editor (CodeMirror) ==================== */
-  --editor-bg: #ffffff;
-  --editor-text: #1e293b;        /* slate-800 */
-  --editor-muted: #64748b;       /* slate-500 */
-  --editor-border: #e2e8f0;      /* slate-200 */
+  --editor-bg: #faf9f5;
+  --editor-text: #3c3830;        /* = 暖墨 (原为冷 slate) */
+  --editor-muted: #8a8273;
+  --editor-border: #e7e2d6;
 
-  /* ==================== Blockquote ==================== */
+  /* ==================== Blockquote (暖 taupe 渐变, 低对比) ==================== */
   --bq-indent-step: 1.5rem;
   --bq-border-width: 3px;
-  --bq-bg-color: #f8fafc;
-  --bq-border-1: #cbd5e1;
-  --bq-border-2: #94a3b8;
-  --bq-border-3: #64748b;
-  --bq-border-4: #475569;
-  --bq-border-5: #334155;
-  --bq-border-6: #1e293b;
-  --bq-border-7: #0f172a;
-  --bq-border-8: #000000;
-  --bq-border-9: #000000;
-  --bq-border-10: #000000;
+  --bq-bg-color: #f4f2ec;
+  --bq-border-1: #d8d2c4;
+  --bq-border-2: #c4bdaa;
+  --bq-border-3: #b0a892;
+  --bq-border-4: #9c937b;
+  --bq-border-5: #877e66;
+  --bq-border-6: #726a54;
+  --bq-border-7: #5d5644;
+  --bq-border-8: #494334;
+  --bq-border-9: #3c3830;
+  --bq-border-10: #3c3830;
 
   /* ==================== Code Block ==================== */
-  --code-bg-color: rgb(229, 231, 232);
+  --code-bg-color: #efece3;      /* 暖染填充 (boxed, 但平静) */
   --code-font: "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
 
   /* ==================== Links ==================== */
-  --link-color: #2563eb;
-  --link-hover: #1d4ed8;
+  --link-color: #4a7567;
+  --link-hover: #3d6457;
 
-  /* ==================== Selection ==================== */
-  --selection-bg: rgba(59, 130, 246, 0.4);
-  --selection-bg-block: rgba(59, 130, 246, 0.5);
+  /* ==================== Selection (鼠尾草微染, 低对比) ==================== */
+  --selection-bg: rgba(91, 138, 125, 0.22);
+  --selection-bg-block: rgba(91, 138, 125, 0.30);
 
   /* ==================== Diff View ==================== */
-  --diff-bg: #ffffff;
-  --diff-header-bg: #f3f3f3;
-  --diff-border: #e5e5e5;
-  --diff-fg: #3b3b3b;
-  --diff-muted: #616161;
-  --diff-filename: #237893;
-  --diff-pill-bg: #e5e7eb;
-  --diff-pill-fg: #6b7280;
-  --diff-btn-hover: #e1e1e1;
-  --diff-gutter-bg: #f8f8f8;
-  --diff-gutter-fg: #a3a3a3;
-  --diff-line-add: #dcfce7;
-  --diff-line-del: #fee2e2;
-  --diff-line-empty: #f3f4f6;
-  --diff-word-add: #86efac;
-  --diff-word-del: #fca5a5;
+  --diff-bg: #faf9f5;
+  --diff-header-bg: #f2efe7;
+  --diff-border: #e7e2d6;
+  --diff-fg: #3c3830;
+  --diff-muted: #756f63;
+  --diff-filename: #4a7567;
+  --diff-pill-bg: #e9e4d8;
+  --diff-pill-fg: #756f63;
+  --diff-btn-hover: #e9e4d8;
+  --diff-gutter-bg: #f4f2ec;
+  --diff-gutter-fg: #a39b8c;
+  --diff-line-add: #e4ecdc;
+  --diff-line-del: #f0e0dc;
+  --diff-line-empty: #efece3;
+  --diff-word-add: #c2d6b4;
+  --diff-word-del: #e3c5bf;
 
   /* ==================== Scrollbar ==================== */
-  --scrollbar-thumb: #cbd5e1;
-  --scrollbar-thumb-hover: #94a3b8;
+  --scrollbar-thumb: #d8d2c4;
+  --scrollbar-thumb-hover: #b3ab9b;
   --scrollbar-track: transparent;
-  --scrollbar-border: #f8fafc;
+  --scrollbar-border: #faf9f5;
 
   /* ==================== Modal / Search ==================== */
-  --bg-modal: #ffffff;             /* 模态框/搜索面板背景 */
-  --shadow-modal: rgba(0, 0, 0, 0.3); /* 模态框阴影 */
+  --bg-modal: #faf9f5;             /* 模态框/搜索面板背景 */
+  --shadow-modal: rgba(40, 36, 28, 0.18); /* 模态框阴影色 (暖, 柔) */
+
+  /* ==================== Elevation (柔和投影, 替代浮层硬边框) ==================== */
+  --shadow-sm: 0 1px 2px rgba(40, 36, 28, 0.06);
+  --shadow-md: 0 4px 12px rgba(40, 36, 28, 0.10);
+  --shadow-pop: 0 8px 28px rgba(40, 36, 28, 0.16);
 
   /* ==================== Shell Z-Index Registry ==================== */
   --z-editor: 0;
@@ -138,23 +148,23 @@
   --z-toast: 120;
 
   /* ==================== Inline Code & Frontmatter ==================== */
-  --code-inline-bg: #f1f5f9;      /* 行内代码背景 (slate-100) */
-  --bg-frontmatter: #f8f9fa;      /* Frontmatter 块背景 */
-  --fg-frontmatter-delim: #cbd5e1; /* Frontmatter 分隔符色 */
+  --code-inline-bg: #efece3;      /* 行内代码背景 */
+  --bg-frontmatter: #f4f2ec;      /* Frontmatter 块背景 */
+  --fg-frontmatter-delim: #c4bdaa; /* Frontmatter 分隔符色 */
 
   /* ==================== Table ==================== */
-  --bg-table-header: #f1f5f9;     /* 表格 th 背景 */
-  --bg-table-hover: #e0f2fe;      /* 表格行悬停 (sky-100) */
+  --bg-table-header: #efece3;     /* 表格 th 背景 */
+  --bg-table-hover: #eaefe9;      /* 表格行悬停 (鼠尾草微染) */
 
   /* ==================== Typography extras ==================== */
-  --fg-blockquote: #475569;        /* 引用块文字 (slate-600) */
-  --fg-url: #94a3b8;              /* URL 显示色 (slate-400) */
-  --fg-hr: #cbd5e1;               /* 水平线色 (slate-300) */
-  --fg-caret: #333333;            /* 编辑器光标 */
+  --fg-blockquote: #6b6456;        /* 引用块文字 */
+  --fg-url: #a39b8c;              /* URL 显示色 */
+  --fg-hr: #d8d2c4;               /* 水平线色 */
+  --fg-caret: #5b8a7d;            /* 编辑器光标 (强调色, 微妙身份) */
 
   /* ==================== Math ==================== */
-  --bg-math-widget: #eeeeee;      /* 数学公式块背景 */
+  --bg-math-widget: rgba(91, 138, 125, 0.06); /* 行内公式: 极轻鼠尾草染, 通透 */
 
   /* ==================== File type colors ==================== */
-  --color-file-rust: #dea584;     /* Rust 文件图标色 */
+  --color-file-rust: #c08a5a;     /* Rust 文件图标色 */
 }

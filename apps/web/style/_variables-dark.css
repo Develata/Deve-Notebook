@@ -3,135 +3,143 @@
  *
  * Overrides :root variables defined in _variables.css.
  * Applied when <html class="dark"> or ancestor has .dark class.
+ *
+ * 设计方向 "Calm document tool" 的暖暗版: 暖近黑表面 (非 VSCode 冷蓝黑) +
+ * 同一鼠尾草绿强调色 + 柔和投影。同样遵守"对比预算"。
  */
 
 .dark {
   /* Layout Backgrounds */
-  --bg-app: #1e1e1e;
-  --bg-sidebar: #252526;
-  --bg-editor: #1e1e1e;
-  --bg-panel: #2d2d2d;
-  --bg-statusbar: #007acc;
-  --bg-statusbar-ro: #e06c75;
+  --bg-app: #1a1917;
+  --bg-sidebar: #201e1a;
+  --bg-editor: #1a1917;
+  --bg-panel: #242119;
+  --bg-statusbar: #201e1a;       /* 中性 chrome, 不再是 VSCode 蓝 */
+  --bg-statusbar-ro: #332b1c;    /* 只读: 低对比暖琥珀, 非告警红 */
 
   /* Component Backgrounds */
-  --bg-input: #3c3c3c;
-  --bg-hover: #2a2d2e;
-  --bg-active: #37373d;
-  --bg-accent: #0078d4;
-  --bg-accent-hover: #006ab1;
-  --bg-accent-subtle: #264f78;
-  --bg-overlay: rgba(0, 0, 0, 0.6);
-  --bg-tooltip: #383838;
-  --bg-badge: #e06c75;
-  --bg-badge-count: #454545;
+  --bg-input: #2a2721;
+  --bg-hover: #252118;
+  --bg-active: #2f2b22;
+  --bg-accent: #6f9c8e;          /* 鼠尾草绿 (暗版略亮) */
+  --bg-accent-hover: #7faa9c;
+  --bg-accent-subtle: #28332f;
+  --bg-overlay: rgba(0, 0, 0, 0.55);
+  --bg-tooltip: #2f2b24;
+  --bg-badge: #c98079;
+  --bg-badge-count: #3a362d;
 
   /* Chat */
-  --bg-chat-user: #0e2a3f;
-  --bg-badge-success: #2a3a2a;
-  --fg-badge-success: #8bc34a;
-  --border-badge-success: #4a5a3a;
+  --bg-chat-user: #20302b;
+  --bg-badge-success: #28321f;
+  --fg-badge-success: #9bb583;
+  --border-badge-success: #41502f;
 
   /* Foreground / Text */
-  --fg-primary: #cccccc;
-  --fg-secondary: #969696;
-  --fg-muted: #5a5a5a;
-  --fg-accent: #4fc1ff;
-  --fg-on-accent: #ffffff;
-  --fg-on-tooltip: #cccccc;
+  --fg-primary: #d2cdc2;         /* 柔暖白, 非纯白 */
+  --fg-secondary: #978f82;
+  --fg-muted: #645d52;
+  --fg-accent: #88b3a7;
+  --fg-on-accent: #15201d;       /* 鼠尾草按钮上用深暖墨 (暗版强调色偏亮) */
+  --fg-on-tooltip: #d2cdc2;
 
   /* Borders */
-  --border-default: #454545;
-  --border-hover: #6b6b6b;
-  --border-active: #888888;
-  --border-accent: #0078d4;
+  --border-default: #302d26;     /* whisper */
+  --border-hover: #423e34;
+  --border-active: #5a5447;
+  --border-accent: #6f9c8e;
 
-  /* Semantic (Git) */
-  --color-added: #81b88b;
-  --color-added-bg: #143d20;
-  --color-modified: #e2c08d;
-  --color-modified-bg: #3d3520;
-  --color-deleted: #e06c75;
-  --color-deleted-bg: #4b1818;
-  --color-warning: #d19a66;
-  --color-info: #4fc1ff;
+  /* Semantic (Git) — 去饱和 */
+  --color-added: #8aa882;
+  --color-added-bg: #20301f;
+  --color-modified: #c2a878;
+  --color-modified-bg: #332b1c;
+  --color-deleted: #c98079;
+  --color-deleted-bg: #3a221f;
+  --color-warning: #c2a06a;
+  --color-info: #6f9c8e;
 
   /* Editor */
-  --editor-bg: #1e1e1e;
-  --editor-text: #cccccc;
-  --editor-muted: #969696;
-  --editor-border: #454545;
+  --editor-bg: #1a1917;
+  --editor-text: #d2cdc2;
+  --editor-muted: #978f82;
+  --editor-border: #302d26;
 
-  /* Blockquote */
-  --bq-bg-color: #252526;
-  --bq-border-1: #555555;
-  --bq-border-2: #666666;
-  --bq-border-3: #777777;
-  --bq-border-4: #888888;
-  --bq-border-5: #999999;
-  --bq-border-6: #aaaaaa;
-  --bq-border-7: #bbbbbb;
-  --bq-border-8: #cccccc;
-  --bq-border-9: #cccccc;
-  --bq-border-10: #cccccc;
+  /* Blockquote (暖灰渐变) */
+  --bq-bg-color: #201e1a;
+  --bq-border-1: #3a362d;
+  --bq-border-2: #474236;
+  --bq-border-3: #545040;
+  --bq-border-4: #635d4d;
+  --bq-border-5: #726b59;
+  --bq-border-6: #837b67;
+  --bq-border-7: #948b76;
+  --bq-border-8: #a59c86;
+  --bq-border-9: #b6ad96;
+  --bq-border-10: #b6ad96;
 
   /* Code Block */
-  --code-bg-color: #2d2d2d;
+  --code-bg-color: #242119;
 
   /* Links */
-  --link-color: #4fc1ff;
-  --link-hover: #74d0ff;
+  --link-color: #88b3a7;
+  --link-hover: #9cc3b8;
 
   /* Selection */
-  --selection-bg: rgba(38, 79, 120, 0.6);
-  --selection-bg-block: rgba(38, 79, 120, 0.7);
+  --selection-bg: rgba(111, 156, 142, 0.24);
+  --selection-bg-block: rgba(111, 156, 142, 0.32);
 
   /* Diff View */
-  --diff-bg: #1e1e1e;
-  --diff-header-bg: #2d2d2d;
-  --diff-border: #454545;
-  --diff-fg: #cccccc;
-  --diff-muted: #9ca3af;
-  --diff-filename: #4fc1ff;
-  --diff-pill-bg: #374151;
-  --diff-pill-fg: #d1d5db;
-  --diff-btn-hover: #3e3e42;
-  --diff-gutter-bg: #1e1e1e;
-  --diff-gutter-fg: #9ca3af;
-  --diff-line-add: #143d20;
-  --diff-line-del: #4b1818;
-  --diff-line-empty: #252526;
-  --diff-word-add: #166534;
-  --diff-word-del: #7f1d1d;
+  --diff-bg: #1a1917;
+  --diff-header-bg: #242119;
+  --diff-border: #302d26;
+  --diff-fg: #d2cdc2;
+  --diff-muted: #978f82;
+  --diff-filename: #88b3a7;
+  --diff-pill-bg: #2f2b22;
+  --diff-pill-fg: #c3bcaf;
+  --diff-btn-hover: #2f2b22;
+  --diff-gutter-bg: #1a1917;
+  --diff-gutter-fg: #645d52;
+  --diff-line-add: #20301f;
+  --diff-line-del: #3a221f;
+  --diff-line-empty: #201e1a;
+  --diff-word-add: #2f5530;
+  --diff-word-del: #6e3530;
 
   /* Scrollbar */
-  --scrollbar-thumb: #555555;
-  --scrollbar-thumb-hover: #777777;
+  --scrollbar-thumb: #3a362d;
+  --scrollbar-thumb-hover: #4f4a3e;
   --scrollbar-track: transparent;
-  --scrollbar-border: #1e1e1e;
+  --scrollbar-border: #1a1917;
 
   /* Modal / Search */
-  --bg-modal: #1e1e2e;
+  --bg-modal: #201e1a;
   --shadow-modal: rgba(0, 0, 0, 0.5);
 
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 10px 32px rgba(0, 0, 0, 0.6);
+
   /* Inline Code & Frontmatter */
-  --code-inline-bg: #2d2d2d;
-  --bg-frontmatter: #252526;
-  --fg-frontmatter-delim: #555555;
+  --code-inline-bg: #242119;
+  --bg-frontmatter: #201e1a;
+  --fg-frontmatter-delim: #4f4a3e;
 
   /* Table */
-  --bg-table-header: #2d2d2d;
-  --bg-table-hover: #264f78;
+  --bg-table-header: #242119;
+  --bg-table-hover: #28332f;
 
   /* Typography extras */
-  --fg-blockquote: #a0a0a0;
-  --fg-url: #6b7280;
-  --fg-hr: #555555;
-  --fg-caret: #cccccc;
+  --fg-blockquote: #a89f8f;
+  --fg-url: #645d52;
+  --fg-hr: #3a362d;
+  --fg-caret: #88b3a7;
 
   /* Math */
-  --bg-math-widget: #3c3c3c;
+  --bg-math-widget: rgba(111, 156, 142, 0.10);
 
   /* File type colors */
-  --color-file-rust: #dea584;
+  --color-file-rust: #c08a5a;
 }

@@ -41,7 +41,7 @@
   border-radius: 8px;
   width: 600px;
   max-width: 90vw;
-  box-shadow: 0 4px 20px var(--shadow-modal);
+  box-shadow: var(--shadow-pop);
 }
 
 .search-input {
