@@ -13,8 +13,11 @@ pub(super) fn build_branch_context(state: &CoreState) -> BranchContext {
         set_current_repo_id: scope.set_current_repo_id,
         on_switch_repo: scope.on_switch_repo,
         on_create_repo: scope.on_create_repo,
+        on_rename_repo: scope.on_rename_repo,
+        on_remove_repo: scope.on_remove_repo,
         shadow_repos: scope.shadow_repos,
         on_list_shadows: scope.on_list_shadows,
         repo_list: scope.repo_list,
+        repo_entries: scope.repo_entries,
     }
 }

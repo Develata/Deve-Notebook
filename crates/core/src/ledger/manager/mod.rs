@@ -49,6 +49,7 @@ mod repo_catalog_runtime;
 mod repo_catalog_shadow_runtime;
 mod repo_db;
 mod repo_info;
+mod repo_lifecycle;
 mod repo_lookup;
 mod repo_scope_lookup_runtime;
 mod repo_scope_runtime;

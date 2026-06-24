@@ -201,6 +201,24 @@
     - cli_assert: jsonl_global_seq_monotonic true
     - cli_assert: jsonl_export_includes_structure_facts true
 
+- case_id: STORE-014A
+  goal: 本地 Repo 新增、重命名与安全移除。
+  preconditions:
+    - WebLightPeer 已认证并处于 local writable scope
+    - 至少存在两个 local repo
+  steps:
+    - run: cargo test -p deve_cli create_repo -- --nocapture
+    - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
+    - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
+    - chrome_mcp: 点击 repo 行更多菜单并执行重命名
+    - chrome_mcp: 点击非当前 repo 行更多菜单并执行移除
+  assertions:
+    - ui_assert: repo_switcher_create_button_visible true
+    - ui_assert: repo_row_more_menu_contains_rename_and_remove true
+    - ui_assert: renamed_repo_visible_and_bound true
+    - ui_assert: removed_repo_hidden_from_normal_list true
+    - cli_assert: removed_repo_authority_not_physically_deleted true
+
 - case_id: STORE-015
   goal: Writeback failure 后 Ledger Ack 仍成立。
   preconditions:

@@ -37,6 +37,7 @@ impl<'a> RepoScopeLookupRuntime<'a> {
                 )
             })?
             && info.uuid == target_id
+            && !self.manager.is_local_repo_removed(info.uuid)?
         {
             return Ok(Some(self.manager.local_repo_name.clone()));
         }
@@ -52,23 +53,23 @@ impl<'a> RepoScopeLookupRuntime<'a> {
             if file_stem == self.manager.local_repo_name {
                 continue;
             }
-            let repo_uuid = Some(
-                RepoManager::read_required_repo_info_from_path(
-                    &path,
-                    &file_stem,
-                    "resolving UUID without repair",
+            let info = RepoManager::read_required_repo_info_from_path(
+                &path,
+                &file_stem,
+                "resolving UUID without repair",
+            )
+            .map_err(|err| {
+                anyhow::anyhow!(
+                    "Broken local repo {} while resolving UUID {} without repair: {}",
+                    file_stem,
+                    target_id,
+                    err
                 )
-                .map_err(|err| {
-                    anyhow::anyhow!(
-                        "Broken local repo {} while resolving UUID {} without repair: {}",
-                        file_stem,
-                        target_id,
-                        err
-                    )
-                })?
-                .uuid,
-            );
-            if repo_uuid == Some(target_id) {
+            })?;
+            if self.manager.is_local_repo_removed(info.uuid)? {
+                continue;
+            }
+            if info.uuid == target_id {
                 return Ok(Some(file_stem));
             }
         }

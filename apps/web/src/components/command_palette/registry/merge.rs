@@ -224,6 +224,7 @@ mod tests {
         let (current_repo_id, set_current_repo_id) = signal(Some("repo-1".to_string()));
         let (shadow_repos, _) = signal(shadows.into_iter().map(str::to_string).collect::<Vec<_>>());
         let (repo_list, _) = signal(vec!["default".to_string()]);
+        let (repo_entries, _) = signal(Vec::new());
         BranchContext {
             active_branch,
             set_active_branch,
@@ -234,9 +235,12 @@ mod tests {
             set_current_repo_id,
             on_switch_repo: Callback::new(|_: String| {}),
             on_create_repo: Callback::new(|_: String| {}),
+            on_rename_repo: Callback::new(|_| {}),
+            on_remove_repo: Callback::new(|_| {}),
             shadow_repos,
             on_list_shadows: Callback::new(|_| {}),
             repo_list,
+            repo_entries,
         }
     }
 

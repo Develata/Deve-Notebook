@@ -40,6 +40,8 @@ pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
             | ClientMessage::SwitchRepo { .. }
             | ClientMessage::SwitchRepoExact { .. }
             | ClientMessage::CreateRepo { .. }
+            | ClientMessage::RenameRepo { .. }
+            | ClientMessage::RemoveRepo { .. }
             | ClientMessage::ConfirmMerge { .. }
             | ClientMessage::DiscardPending { .. }
             | ClientMessage::SetSyncMode { .. }

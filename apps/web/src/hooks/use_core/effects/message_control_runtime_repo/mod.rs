@@ -30,6 +30,7 @@ pub(super) fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_is_chat_streaming.set(false);
     signals.set_shadow_list_request_id.set(None);
     signals.set_repo_list_request_id.set(None);
+    signals.set_repo_entries.set(Vec::new());
     signals.set_doc_list_request_id.set(None);
     signals.set_tree_request_id.set(None);
     signals.set_search_request_id.set(None);

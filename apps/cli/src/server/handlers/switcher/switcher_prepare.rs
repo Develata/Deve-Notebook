@@ -26,26 +26,25 @@ pub(super) fn prepare_repo_switch(
     branch: Option<&deve_core::models::PeerId>,
     repo_name: String,
 ) -> anyhow::Result<PreparedRepoSwitch> {
-    let repo_info = state
-        .repo
-        .get_repo_info_for(branch, Some(&repo_name))?
-        .map(|info| info.uuid);
-    if repo_info.is_none() {
+    let repo_info = state.repo.get_repo_info_for(branch, Some(&repo_name))?;
+    let Some(repo_info) = repo_info else {
         let scope = if branch.is_some() { "Remote" } else { "Local" };
         return Err(anyhow::anyhow!(
             "{scope} repository UUID not resolved for selector: {}",
             repo_name
         ));
-    }
+    };
+    let repo_id = Some(repo_info.uuid);
     if branch.is_some() {
         let handle = state.repo.open_database(branch, &repo_name)?;
         return Ok(PreparedRepoSwitch {
             repo_name,
-            repo_id: repo_info,
+            repo_id,
             db: Some(handle),
             degraded_docs_only: false,
         });
     }
+    let display_name = repo_info.name;
     let degraded_docs_only = match state.sync_manager.materialize_local_repo(&repo_name) {
         Ok(()) => false,
         Err(err) if recovery::should_degrade_local_projection(&err) => {
@@ -59,8 +58,8 @@ pub(super) fn prepare_repo_switch(
         Err(err) => return Err(err),
     };
     Ok(PreparedRepoSwitch {
-        repo_name,
-        repo_id: repo_info,
+        repo_name: display_name,
+        repo_id,
         db: None,
         degraded_docs_only,
     })

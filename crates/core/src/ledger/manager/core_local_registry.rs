@@ -62,17 +62,21 @@ impl RepoManager {
             .ok_or_else(|| anyhow!("Failed into cache repo"))
     }
     pub(crate) fn resolve_local_repo_stem(&self, selector: &str) -> Result<Option<String>> {
+        let mut display_matches = Vec::new();
         if selector == self.local_repo_name {
+            let Some(info) = Self::read_repo_info_from_db(&self.local_db)? else {
+                return Ok(Some(self.local_repo_name.clone()));
+            };
+            if self.is_local_repo_removed(info.uuid)? {
+                return Ok(None);
+            }
             return Ok(Some(self.local_repo_name.clone()));
         }
         if let Some(info) = Self::read_repo_info_from_db(&self.local_db)?
+            && !self.is_local_repo_removed(info.uuid)?
             && info.name == selector
         {
-            return Err(local_selector_metadata_drift(
-                &self.local_repo_name,
-                selector,
-                &info.name,
-            ));
+            display_matches.push(self.local_repo_name.clone());
         }
         let local_dir = Self::checked_local_dir_for(&self.ledger_dir, "resolving local selector")?;
         for (path, stem) in redb_repo_entries(&local_dir, "resolving local selector")? {
@@ -89,14 +93,24 @@ impl RepoManager {
                         err
                     )
                 })?;
-            if stem != selector && info.name == selector {
-                return Err(local_selector_metadata_drift(&stem, selector, &info.name));
+            if self.is_local_repo_removed(info.uuid)? {
+                continue;
             }
             if stem == selector {
                 return Ok(Some(stem));
             }
+            if info.name == selector {
+                display_matches.push(stem);
+            }
         }
-        Ok(None)
+        match display_matches.len() {
+            0 => Ok(None),
+            1 => Ok(display_matches.into_iter().next()),
+            _ => {
+                display_matches.sort();
+                Err(ambiguous_local_selector(selector, &display_matches))
+            }
+        }
     }
 
     fn read_extra_local_dbs(&self) -> Result<RwLockReadGuard<'_, HashMap<String, Arc<Database>>>> {
@@ -114,11 +128,10 @@ impl RepoManager {
     }
 }
 
-fn local_selector_metadata_drift(stem: &str, selector: &str, name: &str) -> anyhow::Error {
+fn ambiguous_local_selector(selector: &str, matches: &[String]) -> anyhow::Error {
     anyhow!(
-        "Broken local repo {} while resolving selector {}: metadata name drifted to {}",
-        stem,
+        "Ambiguous local repository selector {} matched {:?}",
         selector,
-        name
+        matches
     )
 }

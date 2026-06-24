@@ -65,7 +65,10 @@ fn local_repo_listing_fails_closed_on_duplicate_name_drift_until_repair() {
     let err = main
         .list_repos(None)
         .expect_err("duplicate local name drift must fail closed");
-    assert!(err.to_string().contains("metadata name drifted to wiki"));
+    assert!(
+        err.to_string()
+            .contains("duplicate local repository display name wiki")
+    );
 
     main.repair_local_repo_catalog()
         .expect("repair local catalog");

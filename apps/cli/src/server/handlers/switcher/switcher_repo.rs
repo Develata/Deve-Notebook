@@ -120,10 +120,12 @@ pub(super) async fn handle_switch_repo(
         Some(prepared),
         switch_nonce,
     );
+    let repo_display_name = session.active_repo.as_deref().unwrap_or(repo_name.as_str());
     tracing::info!(
-        "Client switched to repo: {} (Branch: {:?})",
-        repo_name,
-        session.active_branch
+        repo_display_name,
+        repo_execution_name = %repo_name,
+        branch = ?session.active_branch,
+        "Client switched repo"
     );
     emit_repo_view(ch, repo_view);
 }

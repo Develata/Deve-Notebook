@@ -13,7 +13,7 @@ mod editor;
 mod source_control;
 mod sync;
 
-pub use branch::BranchContext;
+pub use branch::{BranchContext, RepoRemoveRequest, RepoRenameRequest};
 pub use chat::ChatContext;
 pub use dashboard::{DashboardContext, SystemMetricsData};
 pub use doc::DocContext;

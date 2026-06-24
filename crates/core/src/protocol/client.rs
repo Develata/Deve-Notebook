@@ -194,6 +194,17 @@ pub enum ClientMessage {
         #[serde(default)]
         switch_nonce: Option<u64>,
     },
+    RenameRepo {
+        repo_id: crate::models::RepoId,
+        name: String,
+        #[serde(default)]
+        switch_nonce: Option<u64>,
+    },
+    RemoveRepo {
+        repo_id: crate::models::RepoId,
+        #[serde(default)]
+        switch_nonce: Option<u64>,
+    },
     DeletePeer {
         peer_id: String,
         #[serde(default)]

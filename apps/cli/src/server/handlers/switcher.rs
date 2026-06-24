@@ -18,6 +18,7 @@ mod switcher_prepare;
 #[cfg(test)]
 mod switcher_prepare_test;
 mod switcher_repo;
+mod switcher_repo_lifecycle;
 mod switcher_scope;
 mod switcher_selector;
 #[cfg(test)]
@@ -59,6 +60,28 @@ pub async fn handle_create_repo(
     switch_nonce: Option<u64>,
 ) {
     switcher_create_repo::handle_create_repo(state, ch, session, name, switch_nonce).await;
+}
+
+pub async fn handle_rename_repo(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    repo_id: RepoId,
+    name: String,
+    switch_nonce: Option<u64>,
+) {
+    switcher_repo_lifecycle::handle_rename_repo(state, ch, session, repo_id, name, switch_nonce)
+        .await;
+}
+
+pub async fn handle_remove_repo(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    repo_id: RepoId,
+    switch_nonce: Option<u64>,
+) {
+    switcher_repo_lifecycle::handle_remove_repo(state, ch, session, repo_id, switch_nonce).await;
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
+use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest};
 use leptos::prelude::*;
 
 mod branch;
@@ -18,6 +19,8 @@ pub struct SwitchCallbacks {
     pub on_switch_branch: Callback<Option<String>>,
     pub on_switch_repo: Callback<String>,
     pub on_create_repo: Callback<String>,
+    pub on_rename_repo: Callback<RepoRenameRequest>,
+    pub on_remove_repo: Callback<RepoRemoveRequest>,
 }
 
 pub(super) fn show_switch_block(
@@ -38,10 +41,14 @@ pub fn create_switch_callbacks(
         branch::build_switch_branch_callback(ws.clone(), signals, set_sync_banner);
     let on_switch_repo = repo::build_switch_repo_callback(ws.clone(), signals, set_sync_banner);
     let on_create_repo = repo::build_create_repo_callback(ws.clone(), signals, set_sync_banner);
+    let on_rename_repo = repo::build_rename_repo_callback(ws.clone(), signals, set_sync_banner);
+    let on_remove_repo = repo::build_remove_repo_callback(ws.clone(), signals, set_sync_banner);
 
     SwitchCallbacks {
         on_switch_branch,
         on_switch_repo,
         on_create_repo,
+        on_rename_repo,
+        on_remove_repo,
     }
 }

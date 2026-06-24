@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#tree-projection-contract
 //!
+use deve_core::protocol::RepoListEntry;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
@@ -12,6 +13,8 @@ pub(super) struct RepoProjectionSignals {
     pub set_shadow_list_request_id: WriteSignal<Option<String>>,
     pub repo_list: ReadSignal<Vec<String>>,
     pub set_repo_list: WriteSignal<Vec<String>>,
+    pub repo_entries: ReadSignal<Vec<RepoListEntry>>,
+    pub set_repo_entries: WriteSignal<Vec<RepoListEntry>>,
     pub repo_list_request_id: ReadSignal<Option<String>>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub doc_list_request_id: ReadSignal<Option<String>>,
@@ -26,6 +29,7 @@ pub(super) fn init_repo_projection_signals() -> RepoProjectionSignals {
     let (shadow_repos, set_shadow_repos) = signal(Vec::new());
     let (shadow_list_request_id, set_shadow_list_request_id) = signal(None::<String>);
     let (repo_list, set_repo_list) = signal(Vec::new());
+    let (repo_entries, set_repo_entries) = signal(Vec::new());
     let (repo_list_request_id, set_repo_list_request_id) = signal(None::<String>);
     let (doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);
     let (tree_request_id, set_tree_request_id) = signal(None::<String>);
@@ -38,6 +42,8 @@ pub(super) fn init_repo_projection_signals() -> RepoProjectionSignals {
         set_shadow_list_request_id,
         repo_list,
         set_repo_list,
+        repo_entries,
+        set_repo_entries,
         repo_list_request_id,
         set_repo_list_request_id,
         doc_list_request_id,

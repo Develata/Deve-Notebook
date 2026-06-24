@@ -30,8 +30,17 @@ pub fn route_control_message(
             branch,
             scope_nonce,
             repos,
+            repo_entries,
         } => {
-            handle_repo_list_message(request_id, branch, scope_nonce, repos, ws, signals);
+            handle_repo_list_message(
+                request_id,
+                branch,
+                scope_nonce,
+                repos,
+                repo_entries,
+                ws,
+                signals,
+            );
             None
         }
         ServerMessage::BranchSwitched {

@@ -15,6 +15,13 @@ use crate::security::EncryptedOp;
 use crate::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RepoListEntry {
+    pub repo_id: RepoId,
+    pub name: String,
+    pub execution_name: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[rustfmt::skip]
 pub enum ServerMessage {
@@ -38,7 +45,7 @@ pub enum ServerMessage {
     MergeComplete { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, merged_count: u32 },
     PendingDiscarded { #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64> },
     ShadowList { #[serde(default)] request_id: Option<String>, #[serde(default)] scope_nonce: Option<u64>, shadows: Vec<String> },
-    RepoList { #[serde(default)] request_id: Option<String>, #[serde(default)] branch: Option<String>, #[serde(default)] scope_nonce: Option<u64>, repos: Vec<String> },
+    RepoList { #[serde(default)] request_id: Option<String>, #[serde(default)] branch: Option<String>, #[serde(default)] scope_nonce: Option<u64>, repos: Vec<String>, #[serde(default)] repo_entries: Vec<RepoListEntry> },
     BranchSwitched { peer_id: Option<String>, success: bool, #[serde(default)] switch_nonce: Option<u64> },
     RepoSwitched { #[serde(default)] branch: Option<String>, name: String, uuid: String, #[serde(default)] switch_nonce: Option<u64> },
     PeerDeleted { peer_id: String, #[serde(default)] scope_nonce: Option<u64> },

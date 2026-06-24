@@ -49,6 +49,7 @@ STORE-002|manual-cli|docs/features/04_storage.md|repo naming conflict workflow
 STORE-006|manual-cli|docs/features/04_storage.md|clean file policy review
 STORE-007|manual-cli|docs/features/04_storage.md|watcher event mapping workflow
 STORE-008|manual-cli|docs/features/04_storage.md|ledger recovery workflow
+STORE-014A|manual-chrome|docs/acceptance-cases/07_storage_repo.md|repo lifecycle create/rename/remove browser smoke plus targeted core/cli/web tests
 TERM-001|manual-doc|docs/features/01_terminology.md|glossary consistency
 TERM-002|manual-doc|docs/features/01_terminology.md|normative language review
 TERM-003|manual-doc|docs/features/01_terminology.md|forbidden term review

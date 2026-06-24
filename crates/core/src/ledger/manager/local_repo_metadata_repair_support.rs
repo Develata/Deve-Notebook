@@ -9,10 +9,11 @@ use std::path::{Path, PathBuf};
 
 pub(super) fn validate_local_repo_info(
     stem: &str,
-    expected_name: &str,
+    _expected_name: &str,
     info: Option<RepoInfo>,
     seen: &mut HashMap<uuid::Uuid, String>,
     seen_urls: &mut HashMap<String, String>,
+    seen_names: &mut HashMap<String, String>,
 ) -> Result<()> {
     let info = info.ok_or_else(|| {
         anyhow!(
@@ -20,13 +21,6 @@ pub(super) fn validate_local_repo_info(
             stem
         )
     })?;
-    if info.name != expected_name {
-        return Err(anyhow!(
-            "Broken local repo {} while validating catalog: metadata name drifted to {}",
-            stem,
-            info.name
-        ));
-    }
     if let Some(owner) = seen.insert(info.uuid, stem.to_string())
         && owner != stem
     {
@@ -50,6 +44,16 @@ pub(super) fn validate_local_repo_info(
             "Broken local repo {} while validating catalog: duplicate local repository URL {} also used by {}",
             stem,
             url,
+            owner
+        ));
+    }
+    if let Some(owner) = seen_names.insert(info.name.clone(), stem.to_string())
+        && owner != stem
+    {
+        return Err(anyhow!(
+            "Broken local repo {} while validating catalog: duplicate local repository display name {} also used by {}",
+            stem,
+            info.name,
             owner
         ));
     }

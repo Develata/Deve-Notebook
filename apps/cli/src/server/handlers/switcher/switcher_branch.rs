@@ -128,6 +128,7 @@ pub(super) async fn handle_switch_branch(
         scope_nonce,
         switch_nonce,
         payload.repo_list,
+        payload.repo_entries,
         repo_view,
     );
 }

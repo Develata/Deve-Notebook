@@ -22,6 +22,13 @@ pub struct RepoInfo {
     pub url: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LocalRepoSummary {
+    pub repo_id: RepoId,
+    pub name: String,
+    pub execution_name: String,
+}
+
 /// 仓库管理器 (Repository Manager)
 ///
 /// 管理本地唯一的 Local Repo (Store B) 和多个 Shadow Repos (Store C)。

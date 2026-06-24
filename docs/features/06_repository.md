@@ -27,6 +27,8 @@
 - 用户可以切换当前激活 repo。
 - Source Control、Explorer、当前文档作用域应随 repo 切换而同步变化。
 - 界面不应同时把所有 repo 混成一个全局工作区。
+- 仓库展开界面应提供新增、重命名与移除本地 repo 的入口：顶部新增按钮用于创建 repo，每个 repo 行的更多菜单用于重命名或移除该 repo。
+- 普通移除仓库不应直接销毁 ledger 或 Projection Workspace；用户可见文案必须避免暗示已经物理擦除数据。
 
 ### 2. 本地分支
 
@@ -112,3 +114,23 @@
 
 - 优先回到最近一次稳定使用的本地 repo。
 - 若该 repo 已不可用，系统显式走受控回退而不是静默绑定任意 repo。
+
+### REPO-FEAT-04: 本地 Repo 管理菜单
+
+前置条件：
+
+- 至少存在两个本地 repo。
+- 当前处于 local writable scope。
+
+步骤：
+
+1. 展开仓库切换界面。
+2. 点击顶部新增按钮，创建一个新 repo。
+3. 点击某个 repo 行右侧更多菜单，执行重命名。
+4. 点击非当前 repo 行右侧更多菜单，执行移除。
+
+期望结果：
+
+- 新增 repo 后自动切换到新 repo。
+- 重命名后列表、标题与当前 scope 显示新名称，`RepoId` 不变。
+- 移除后目标 repo 从普通列表消失，ledger authority 与 Projection Workspace 未被物理删除。

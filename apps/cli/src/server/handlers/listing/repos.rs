@@ -4,10 +4,9 @@
 
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::handlers::repo_list::repo_list_message;
 use crate::server::repo_scope::resolve_session_repo_and_sync;
 use crate::server::session::WsSession;
-use deve_core::ledger::listing::RepoListing;
-use deve_core::protocol::ServerMessage;
 use std::sync::Arc;
 
 use super::scope::{
@@ -36,15 +35,8 @@ pub async fn handle_list_repos(
         return;
     }
     let active_branch = session.active_branch.as_ref();
-    match state.repo.list_repos(active_branch) {
-        Ok(repos) => {
-            ch.unicast(ServerMessage::RepoList {
-                request_id,
-                branch: active_branch.map(ToString::to_string),
-                scope_nonce,
-                repos,
-            });
-        }
+    match repo_list_message(state, request_id, active_branch, scope_nonce) {
+        Ok(message) => ch.unicast(message),
         Err(e) => {
             tracing::error!("Failed to list repos: {:?}", e);
             send_listing_error(ch, format!("Failed to list repos: {}", e), scope_nonce);

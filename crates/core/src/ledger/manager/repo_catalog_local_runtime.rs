@@ -15,24 +15,23 @@ impl<'a> RepoCatalogRuntime<'a> {
 
         let mut named = Vec::new();
         for (path, stem) in redb_repo_entries(&target_dir, "listing repos")? {
-            let display = if stem == self.manager.local_repo_name {
-                self.manager
-                    .get_repo_info()?
-                    .ok_or_else(|| {
-                        anyhow!(
-                            "Broken local repo {} while listing repos: repository metadata missing",
-                            stem
-                        )
-                    })?
-                    .name
+            let info = if stem == self.manager.local_repo_name {
+                self.manager.get_repo_info()?.ok_or_else(|| {
+                    anyhow!(
+                        "Broken local repo {} while listing repos: repository metadata missing",
+                        stem
+                    )
+                })?
             } else {
                 RepoManager::read_required_repo_info_from_path(&path, &stem, "listing repos")
                     .map_err(|err| {
                         anyhow!("Broken local repo {} while listing repos: {}", stem, err)
                     })?
-                    .name
             };
-            named.push((stem, display));
+            if self.manager.is_local_repo_removed(info.uuid)? {
+                continue;
+            }
+            named.push((stem, info.name));
         }
 
         let mut counts = std::collections::HashMap::<String, usize>::new();
@@ -64,23 +63,33 @@ impl<'a> RepoCatalogRuntime<'a> {
         let mut repos = Vec::new();
         for (path, stem) in redb_repo_entries(&local_dir, "listing execution names")? {
             if stem == self.manager.local_repo_name {
-                self.manager.get_repo_info()?.ok_or_else(|| {
+                let info = self.manager.get_repo_info()?.ok_or_else(|| {
                     anyhow!(
                         "Broken local repo {} while listing execution names: repository metadata missing",
                         stem
                     )
                 })?;
+                if self.manager.is_local_repo_removed(info.uuid)? {
+                    continue;
+                }
                 repos.push(stem);
                 continue;
             }
-            RepoManager::read_required_repo_info_from_path(&path, &stem, "listing execution names")
-                .map_err(|err| {
-                    anyhow!(
-                        "Broken local repo {} while listing execution names: {}",
-                        stem,
-                        err
-                    )
-                })?;
+            let info = RepoManager::read_required_repo_info_from_path(
+                &path,
+                &stem,
+                "listing execution names",
+            )
+            .map_err(|err| {
+                anyhow!(
+                    "Broken local repo {} while listing execution names: {}",
+                    stem,
+                    err
+                )
+            })?;
+            if self.manager.is_local_repo_removed(info.uuid)? {
+                continue;
+            }
             repos.push(stem);
         }
         repos.sort();

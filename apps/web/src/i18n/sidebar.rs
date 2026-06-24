@@ -139,6 +139,34 @@ pub fn repository_name_placeholder(locale: Locale) -> &'static str {
     }
 }
 
+pub fn repository_actions(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Repository actions",
+        Locale::Zh => "存储库操作",
+    }
+}
+
+pub fn rename_repository(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Rename",
+        Locale::Zh => "重命名",
+    }
+}
+
+pub fn remove_repository(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Remove",
+        Locale::Zh => "移除",
+    }
+}
+
+pub fn remove_repository_confirm(locale: Locale, name: &str) -> String {
+    match locale {
+        Locale::En => format!("Remove repository \"{name}\" from the local switcher?"),
+        Locale::Zh => format!("从本地切换列表移除存储库“{name}”？"),
+    }
+}
+
 pub fn switch_branch_hint(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Switch Branch (Ctrl+Shift+K)",

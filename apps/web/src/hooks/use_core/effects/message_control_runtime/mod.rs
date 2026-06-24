@@ -27,6 +27,7 @@ pub fn refresh_after_branch_switch(
     signals.set_docs.set(Vec::new());
     signals.set_tree_nodes.set(Vec::new());
     signals.set_repo_list.set(Vec::new());
+    signals.set_repo_entries.set(Vec::new());
     clear_repo_scoped_runtime(signals);
     request_repo_list(ws, signals);
 }

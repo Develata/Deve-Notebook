@@ -10,6 +10,7 @@ use super::super::callbacks_switch::SwitchCallbacks;
 use super::super::callbacks_sync::SyncCallbacks;
 use super::super::state::CoreSignals;
 use super::super::types::{PeerSession, PendingBranchTarget};
+use deve_core::protocol::RepoListEntry;
 
 pub(super) struct SyncStateSection {
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,
@@ -41,6 +42,7 @@ pub(super) struct SyncStateSection {
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,
+    pub repo_entries: ReadSignal<Vec<RepoListEntry>>,
     pub doc_version: ReadSignal<u64>,
     pub set_doc_version: WriteSignal<u64>,
     pub playback_version: ReadSignal<u64>,
@@ -84,6 +86,7 @@ pub(super) fn build_sync_section(
         shadow_repos: signals.shadow_repos,
         on_list_shadows: sync.on_list_shadows,
         repo_list: signals.repo_list,
+        repo_entries: signals.repo_entries,
         doc_version: signals.doc_version,
         set_doc_version: signals.set_doc_version,
         playback_version: signals.playback_version,

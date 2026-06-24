@@ -5,7 +5,7 @@
 
 use super::super::switcher_payload::{RepoViewMessages, emit_repo_view};
 use crate::server::channel::DualChannel;
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{RepoListEntry, ServerMessage};
 
 pub(super) fn emit_branch_switch_messages(
     ch: &DualChannel,
@@ -13,6 +13,7 @@ pub(super) fn emit_branch_switch_messages(
     scope_nonce: Option<u64>,
     switch_nonce: Option<u64>,
     repos: Vec<String>,
+    repo_entries: Vec<RepoListEntry>,
     repo_view: Option<RepoViewMessages>,
 ) {
     ch.unicast(ServerMessage::BranchSwitched {
@@ -25,6 +26,7 @@ pub(super) fn emit_branch_switch_messages(
         branch: final_branch,
         scope_nonce,
         repos,
+        repo_entries,
     });
     emit_repo_view(ch, repo_view);
 }

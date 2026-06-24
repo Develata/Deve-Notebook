@@ -8,9 +8,9 @@
 use crate::repo_init::initialize_local_repo_workspace;
 use crate::server::AppState;
 use crate::server::channel::DualChannel;
+use crate::server::handlers::repo_list::repo_list_message;
 use crate::server::session::WsSession;
-use deve_core::ledger::listing::RepoListing;
-use deve_core::protocol::{ServerError, ServerErrorCode, ServerMessage};
+use deve_core::protocol::{ServerError, ServerErrorCode};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -99,13 +99,13 @@ pub(super) async fn handle_create_repo(
         "Created local repository from browser session"
     );
 
-    match state.repo.list_repos(None) {
-        Ok(repos) => ch.unicast(ServerMessage::RepoList {
-            request_id: None,
-            branch: None,
-            scope_nonce: session.is_browser_session().then(|| session.scope_nonce()),
-            repos,
-        }),
+    match repo_list_message(
+        state,
+        None,
+        None,
+        session.is_browser_session().then(|| session.scope_nonce()),
+    ) {
+        Ok(message) => ch.unicast(message),
         Err(err) => {
             ch.send_protocol_error_with_switch_nonce(
                 invalid_repo_context(format!("Repository created but list refresh failed: {err}")),

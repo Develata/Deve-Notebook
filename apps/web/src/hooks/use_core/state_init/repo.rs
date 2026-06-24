@@ -3,6 +3,7 @@
 //!
 use crate::storage::DegradedSyncMode;
 use deve_core::models::PeerId;
+use deve_core::protocol::RepoListEntry;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
@@ -36,6 +37,8 @@ pub(super) struct RepoSignals {
     pub set_shadow_list_request_id: WriteSignal<Option<String>>,
     pub repo_list: ReadSignal<Vec<String>>,
     pub set_repo_list: WriteSignal<Vec<String>>,
+    pub repo_entries: ReadSignal<Vec<RepoListEntry>>,
+    pub set_repo_entries: WriteSignal<Vec<RepoListEntry>>,
     pub repo_list_request_id: ReadSignal<Option<String>>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub doc_list_request_id: ReadSignal<Option<String>>,
@@ -77,6 +80,8 @@ pub(super) fn init_repo_signals() -> RepoSignals {
         set_shadow_list_request_id: projection.set_shadow_list_request_id,
         repo_list: projection.repo_list,
         set_repo_list: projection.set_repo_list,
+        repo_entries: projection.repo_entries,
+        set_repo_entries: projection.set_repo_entries,
         repo_list_request_id: projection.repo_list_request_id,
         set_repo_list_request_id: projection.set_repo_list_request_id,
         doc_list_request_id: projection.doc_list_request_id,

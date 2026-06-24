@@ -5,6 +5,7 @@
 use crate::editor::EditorStats;
 use crate::storage::DegradedSyncMode;
 use deve_core::models::{DocId, PeerId};
+use deve_core::protocol::RepoListEntry;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
@@ -92,6 +93,8 @@ pub struct CoreSignals {
     pub set_shadow_list_request_id: WriteSignal<Option<String>>,
     pub repo_list: ReadSignal<Vec<String>>,
     pub set_repo_list: WriteSignal<Vec<String>>,
+    pub repo_entries: ReadSignal<Vec<RepoListEntry>>,
+    pub set_repo_entries: WriteSignal<Vec<RepoListEntry>>,
     pub repo_list_request_id: ReadSignal<Option<String>>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub doc_list_request_id: ReadSignal<Option<String>>,

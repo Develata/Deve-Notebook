@@ -7,7 +7,9 @@
 //! This adapter coordinates repo/branch scope and stale-scope recovery inputs.
 //! Server/core remain the authority for repo identity and writable state.
 
+use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest};
 use deve_core::models::{DocId, PeerId};
+use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;
 
 #[allow(dead_code)]
@@ -22,11 +24,14 @@ pub struct ScopeClient {
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub on_switch_repo: Callback<String>,
     pub on_create_repo: Callback<String>,
+    pub on_rename_repo: Callback<RepoRenameRequest>,
+    pub on_remove_repo: Callback<RepoRemoveRequest>,
     pub on_switch_branch: Callback<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,
+    pub repo_entries: ReadSignal<Vec<RepoListEntry>>,
     pub is_spectator: Signal<bool>,
 }

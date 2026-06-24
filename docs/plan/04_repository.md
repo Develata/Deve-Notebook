@@ -292,6 +292,9 @@ ReadonlyDegraded
 - `SwitchRepo`
 - `SwitchBranch`
 - `ListRepos`
+- `CreateRepo`
+- `RenameRepo`
+- `RemoveLocalRepo`
 - `ListShadows`
 - `ResolveCurrentScope`
 - `RepairLocalRepoCatalog`
@@ -357,12 +360,20 @@ ReadonlyDegraded
 - ledger append 后，workspace realign、locator hint 更新、catalog hint 更新必须以同一个 `RepoId` 为锚点执行。
 - 如果 ledger 已提交但 workspace realign 失败，该 repo 必须进入 `DegradedLocator` 或 `DegradedProjection`，并通过 repair runtime 暴露可恢复动作；不得把 rename 回滚为基于旧路径名的隐式绑定。
 
-### 7.6 Catalog Conflict Repair
+### 7.6 Local Repo Removal Contract
+
+- Web/CLI 的普通“删除仓库”入口在当前阶段必须实现为 `RemoveLocalRepo`：从正常 switcher/listing、last scope recovery 与自动默认绑定中移除本地 repo，但保留 `.redb` authority 与 Projection Workspace 文件。
+- `RemoveLocalRepo` 必须解析到唯一 `RepoId`，只能作用于 Local Branch，remote/spectator scope 必须 fail-closed。
+- 移除当前 active repo 前必须先解析并切换到另一个健康 local repo；不存在替代 repo 时必须拒绝，不得让 session 落入无可写 repo 的隐式状态。
+- 移除操作不得删除 ledger authority、不得删除 `.notegit`、不得删除用户 Markdown workspace；真正物理销毁必须另有显式 destroy/export-after-confirm 流程，并要求独立验收。
+- 被移除 repo 不得参与正常 repo list、自动恢复和默认选择；恢复入口必须通过 repair/import/recover 类受控流程重新 admission。
+
+### 7.7 Catalog Conflict Repair
 
 - 同名 display repo 但不同 logical identity 时，只允许修复 catalog/name hint drift，不得合并 authority。
 - remote repo selector 若只能唯一解析到一个健康 remote repo，可做受控 fallback；一旦出现歧义，必须 fail-closed。
 
-### 7.7 Startup Scan Contract
+### 7.8 Startup Scan Contract
 
 - startup materialize 遇到坏 repo 时，不得拖垮整个服务。
 - 坏 repo 必须显式标记 degraded/quarantined。

@@ -4,8 +4,10 @@
 //!
 use crate::api::WsService;
 use crate::editor::EditorStats;
+use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest};
 use crate::runtime::CoreRuntimeClients;
 use deve_core::models::{DocId, PeerId};
+use deve_core::protocol::RepoListEntry;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
@@ -81,9 +83,12 @@ pub struct CoreState {
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub on_switch_repo: Callback<String>,
     pub on_create_repo: Callback<String>,
+    pub on_rename_repo: Callback<RepoRenameRequest>,
+    pub on_remove_repo: Callback<RepoRemoveRequest>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,
+    pub repo_entries: ReadSignal<Vec<RepoListEntry>>,
     pub doc_version: ReadSignal<u64>,
     pub set_doc_version: WriteSignal<u64>,
     pub playback_version: ReadSignal<u64>,

@@ -172,6 +172,13 @@ impl RepoManager {
         Ok(locators)
     }
 
+    pub fn remove_projection_locator_for_repo_id(&self, repo_id: RepoId) -> Result<()> {
+        let mut file = self.read_projection_locator_file()?;
+        file.locators.retain(|item| item.repo_id != repo_id);
+        self.validate_projection_locator_records(&file.locators, false)?;
+        self.write_projection_locator_file(&file)
+    }
+
     pub fn validate_projection_locator_map(&self) -> Result<()> {
         let file = self.read_projection_locator_file()?;
         self.validate_projection_locator_records(&file.locators, true)

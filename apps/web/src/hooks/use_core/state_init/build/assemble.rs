@@ -90,6 +90,8 @@ pub(super) fn assemble_core_signals_with_spectator(
         set_shadow_list_request_id: repo.set_shadow_list_request_id,
         repo_list: repo.repo_list,
         set_repo_list: repo.set_repo_list,
+        repo_entries: repo.repo_entries,
+        set_repo_entries: repo.set_repo_entries,
         repo_list_request_id: repo.repo_list_request_id,
         set_repo_list_request_id: repo.set_repo_list_request_id,
         doc_list_request_id: repo.doc_list_request_id,

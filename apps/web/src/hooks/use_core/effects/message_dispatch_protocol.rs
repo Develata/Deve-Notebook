@@ -201,6 +201,7 @@ fn recover_from_failed_scope_restore(ws: &WsService, signals: CoreSignals) {
     signals.set_docs.set(Vec::new());
     signals.set_tree_nodes.set(Vec::new());
     signals.set_repo_list.set(Vec::new());
+    signals.set_repo_entries.set(Vec::new());
     clear_repo_scoped_runtime(signals);
     request_repo_list(ws, signals);
 }

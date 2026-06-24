@@ -24,12 +24,14 @@ pub(super) fn validate_local_repo_metadata(
 
     let mut seen = HashMap::new();
     let mut seen_urls = HashMap::new();
+    let mut seen_names = HashMap::new();
     validate_local_repo_info(
         main_repo_name,
         main_repo_name,
         RepoManager::read_repo_info_from_db(main_db)?,
         &mut seen,
         &mut seen_urls,
+        &mut seen_names,
     )?;
 
     let mut entries = redb_repo_entries(&local_dir, "validating local catalog")?;
@@ -53,7 +55,14 @@ pub(super) fn validate_local_repo_metadata(
                 err
             )
         })?;
-        validate_local_repo_info(&stem, &stem, info, &mut seen, &mut seen_urls)?;
+        validate_local_repo_info(
+            &stem,
+            &stem,
+            info,
+            &mut seen,
+            &mut seen_urls,
+            &mut seen_names,
+        )?;
     }
     Ok(())
 }
@@ -102,6 +111,7 @@ pub(crate) fn repair_local_repo_metadata(
 
     let mut seen = HashMap::new();
     let mut seen_urls = HashMap::new();
+    let mut seen_names = HashMap::new();
     for (path, stem) in entries {
         let db = if stem == main_repo_name {
             None
@@ -137,9 +147,11 @@ pub(crate) fn repair_local_repo_metadata(
         });
         let original = info.clone();
         let previous_name = info.name.clone();
-        if info.name != stem {
+        let display_name_owner = seen_names.get(&info.name).cloned();
+        if info.name.trim().is_empty() || display_name_owner.is_some_and(|owner| owner != stem) {
             info.name = stem.clone();
         }
+        seen_names.insert(info.name.clone(), stem.clone());
         if seen.insert(info.uuid, stem.clone()).is_some() {
             let old_uuid = info.uuid;
             info.uuid = uuid::Uuid::new_v4();

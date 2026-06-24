@@ -206,7 +206,8 @@ fn repair_local_repo_catalog_fails_closed_on_workspace_root_conflict() {
     let mut main = RepoManager::init(&ledger_dir, 8, Some("main"), Some("urn:main")).expect("main");
     let wiki_info = common::create_initialized_local_repo(&ledger_dir, "wiki", "urn:wiki");
     let projection_base = dir.path().join("projection-base");
-    std::fs::create_dir_all(projection_base.join("notes")).expect("old root");
+    std::fs::create_dir_all(projection_base.join(workspace_segment("main", wiki_info.uuid)))
+        .expect("old root");
     std::fs::create_dir_all(projection_base.join(workspace_segment("wiki", wiki_info.uuid)))
         .expect("new root");
     main.set_projection_base_for_all_local_repos_checked(&projection_base)
@@ -217,7 +218,7 @@ fn repair_local_repo_catalog_fails_closed_on_workspace_root_conflict() {
         wiki_db.as_ref(),
         &RepoInfo {
             uuid: wiki_info.uuid,
-            name: "notes".into(),
+            name: "main".into(),
             url: wiki_info.url.clone(),
         },
     );

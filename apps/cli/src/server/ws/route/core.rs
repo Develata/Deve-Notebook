@@ -55,6 +55,19 @@ async fn route_unscoped_core(
         ClientMessage::CreateRepo { name, switch_nonce } => {
             switcher::handle_create_repo(state, ch, session, name, switch_nonce).await;
         }
+        ClientMessage::RenameRepo {
+            repo_id,
+            name,
+            switch_nonce,
+        } => {
+            switcher::handle_rename_repo(state, ch, session, repo_id, name, switch_nonce).await;
+        }
+        ClientMessage::RemoveRepo {
+            repo_id,
+            switch_nonce,
+        } => {
+            switcher::handle_remove_repo(state, ch, session, repo_id, switch_nonce).await;
+        }
         ClientMessage::SyncSnapshotRequest {
             source_peer_id,
             repo_id,

@@ -8,7 +8,7 @@ use crate::server::AppState;
 use deve_core::ledger::listing::RepoListing;
 use deve_core::ledger::node_meta;
 use deve_core::models::{DocId, NodeId, NodeMeta, PeerId, RepoId, RepoType};
-use deve_core::protocol::ServerMessage;
+use deve_core::protocol::{RepoListEntry, ServerMessage};
 use std::sync::Arc;
 
 mod emit;
@@ -29,6 +29,7 @@ pub(crate) struct RepoViewMessages {
 
 pub(super) struct SwitchPayload {
     pub repo_list: Vec<String>,
+    pub repo_entries: Vec<RepoListEntry>,
     pub repo_view: Option<RepoViewPayload>,
 }
 
@@ -38,11 +39,26 @@ pub(super) fn preload_branch_switch(
     prepared: Option<&PreparedRepoSwitch>,
 ) -> anyhow::Result<SwitchPayload> {
     let repo_list = state.repo.list_repos(branch)?;
+    let repo_entries = if branch.is_none() {
+        state
+            .repo
+            .list_local_repo_summaries()?
+            .into_iter()
+            .map(|summary| RepoListEntry {
+                repo_id: summary.repo_id,
+                name: summary.name,
+                execution_name: summary.execution_name,
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
     let repo_view = prepared
         .map(|prepared| load_repo_view(state, branch, prepared))
         .transpose()?;
     Ok(SwitchPayload {
         repo_list,
+        repo_entries,
         repo_view,
     })
 }

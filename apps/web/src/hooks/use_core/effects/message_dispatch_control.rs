@@ -2,6 +2,7 @@
 //!   - 07_network#web-ws-runtime
 //!
 use crate::api::WsService;
+use deve_core::protocol::RepoListEntry;
 use leptos::prelude::{GetUntracked, Set};
 
 use super::super::state::CoreSignals;
@@ -17,6 +18,7 @@ pub fn handle_repo_list_message(
     branch: Option<String>,
     scope_nonce: Option<u64>,
     repos: Vec<String>,
+    repo_entries: Vec<RepoListEntry>,
     ws: &WsService,
     signals: CoreSignals,
 ) {
@@ -41,6 +43,7 @@ pub fn handle_repo_list_message(
         signals.set_repo_list_request_id.set(None);
     }
     signals.set_repo_list.set(repos.clone());
+    signals.set_repo_entries.set(repo_entries);
     maybe_switch_to_first_repo(&repos, ws, signals);
 }
 
