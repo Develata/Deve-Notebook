@@ -154,6 +154,12 @@ contains	scripts/check-desktop-platform-package-build.sh	"externalBin": ["binari
 contains	scripts/check-desktop-native-session-package-smoke.sh	DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1
 contains	scripts/check-desktop-native-session-package-smoke.sh	DEVE_DESKTOP_LOCAL_SERVICE=1
 contains	scripts/check-desktop-native-session-package-smoke.sh	desktop-native-session-smoke: ok
+contains	scripts/check-desktop-package-startup-smoke.sh	explicit_bundle exe
+contains	scripts/check-desktop-native-session-package-smoke.sh	explicit_bundle exe
+contains	scripts/check-desktop-package-startup-smoke.sh	WSLENV="$wslenv" DEVE_DESKTOP_STARTUP_SMOKE=1
+contains	scripts/check-desktop-native-session-package-smoke.sh	WSLENV="$wslenv" DEVE_DESKTOP_LOCAL_SERVICE=1
+contains	scripts/check-desktop-native-session-package-smoke.sh	target/desktop-native-session-smoke
+contains	docs/plan/18_release.md	DEVE_DESKTOP_PACKAGE_BUNDLES=exe
 contains	docs/report/native-target-host-evidence-template.md	# Native Target-host Evidence
 contains	docs/report/native-target-host-evidence-template.md	Command results:
 contains	docs/report/native-target-host-evidence-template.md	Artifact paths:
@@ -369,6 +375,7 @@ contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_BUNDLES=app,dmg
 contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_NO_SIGN=1
 contains	docs/dev-runbook.md	cargo tauri build --features native-packaging
 contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis
+contains	docs/dev-runbook.md	DEVE_DESKTOP_PACKAGE_BUNDLES=exe
 contains	docs/dev-runbook.md	DEVE_MOBILE_PACKAGE_TARGETS=ios
 contains	docs/dev-runbook.md	DEVE_MOBILE_IOS_PACKAGE_BUILD_REQUIRED=1
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1
@@ -774,6 +781,8 @@ contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DEEP_AUDIT_DOCKER_SMOK
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_NO_SIGN
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_BUNDLES
+contains	tools/baseline/src/script_gate_preflight.rs	PackageSmoke
+contains	tools/baseline/src/script_gate_preflight.rs	"exe"
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_PACKAGE_FEATURES
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS

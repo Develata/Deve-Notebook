@@ -41,7 +41,7 @@ pub async fn handle_get_doc_diff(
     };
     let (doc_id, normalized, old_content, new_content) = match state
         .repo
-        .workdir_diff_payload_for_target_in_local_repo(&scope.repo_name, &target)
+        .doc_diff_payload_for_target_in_local_repo(&scope.repo_name, &target)
     {
         Ok(payload) => payload,
         Err(e) => {

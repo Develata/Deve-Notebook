@@ -68,6 +68,15 @@ impl<'a> SourceControlRuntime<'a> {
         self.read().diff_doc_target_in_local_repo(repo_name, target)
     }
 
+    pub(crate) fn doc_diff_payload_for_target_in_local_repo(
+        &self,
+        repo_name: &str,
+        target: &ScPathTarget,
+    ) -> Result<(Option<DocId>, String, String, String)> {
+        self.read()
+            .doc_diff_payload_for_target_in_local_repo(repo_name, target)
+    }
+
     pub(crate) fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
         self.read().get_committed_content(doc_id)
     }

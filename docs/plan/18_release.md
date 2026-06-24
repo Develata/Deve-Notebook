@@ -52,6 +52,13 @@ CI/CD 基于 GitHub Actions。
 
 Native Tauri bundling、OS signing 与 GitHub Release binary upload 属于后续 delivery work；在对应 workflow 增加前，**MUST NOT** 被视为 `release.yml` 发布基线。
 
+Desktop startup / native-session smoke MAY accept `DEVE_DESKTOP_PACKAGE_BUNDLES=exe`
+as a target-host release-binary-only probe after `target/release/deve_desktop.exe`
+and its sibling `deve_cli.exe` have been built. This selector MUST NOT be
+accepted by package-build or installer smoke gates, and MUST NOT be used as
+evidence for MSI/NSIS package readiness, install/uninstall readiness, signing
+readiness, store readiness, or physical-device readiness.
+
 Native 双模式属于运行时能力门禁，不属于签名/store/physical-device release readiness。发布或 target-host 证据可以声明：
 
 - LocalBackend 本地后端 smoke 通过。

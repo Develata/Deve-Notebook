@@ -29,6 +29,11 @@ requires_bundle() {
   [[ ",${BUNDLES// /,}," == *",$bundle,"* ]]
 }
 
+explicit_bundle() {
+  local bundle="$1"
+  [[ -n "$BUNDLES" ]] && [[ ",${BUNDLES// /,}," == *",$bundle,"* ]]
+}
+
 first_match() {
   local root="$1"
   shift
@@ -40,18 +45,50 @@ record_missing() {
   missing+=("$1")
 }
 
+is_windows_exe_path() {
+  local path="${1,,}"
+  [[ "$path" == *.exe ]]
+}
+
+append_wslenv_name() {
+  local wslenv="$1"
+  local name="$2"
+  local entry
+  IFS=':' read -ra entries <<<"$wslenv"
+  for entry in "${entries[@]}"; do
+    [[ "${entry%%/*}" == "$name" ]] && {
+      printf '%s\n' "$wslenv"
+      return
+    }
+  done
+  printf '%s\n' "${wslenv:+$wslenv:}$name"
+}
+
+run_startup_env() {
+  local binary="$1"
+  local wslenv
+  shift
+
+  if is_windows_exe_path "$binary"; then
+    wslenv="$(append_wslenv_name "${WSLENV:-}" "DEVE_DESKTOP_STARTUP_SMOKE")"
+    WSLENV="$wslenv" DEVE_DESKTOP_STARTUP_SMOKE=1 "$@"
+  else
+    DEVE_DESKTOP_STARTUP_SMOKE=1 "$@"
+  fi
+}
+
 run_with_timeout() {
   local binary="$1"
 
   if command -v gtimeout >/dev/null 2>&1; then
-    DEVE_DESKTOP_STARTUP_SMOKE=1 gtimeout "${TIMEOUT_SECS}s" "$binary"
+    run_startup_env "$binary" gtimeout "${TIMEOUT_SECS}s" "$binary"
     return
   fi
   if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
-    DEVE_DESKTOP_STARTUP_SMOKE=1 timeout "${TIMEOUT_SECS}s" "$binary"
+    run_startup_env "$binary" timeout "${TIMEOUT_SECS}s" "$binary"
     return
   fi
-  DEVE_DESKTOP_STARTUP_SMOKE=1 "$binary"
+  run_startup_env "$binary" "$binary"
 }
 
 run_startup_probe() {
@@ -117,7 +154,10 @@ case "$(host_os)" in
     fi
     ;;
   *)
-    if is_windows_host; then
+    if explicit_bundle exe; then
+      startup_binary="$ROOT_DIR/target/release/deve_desktop.exe"
+      [[ -f "$startup_binary" ]] || record_missing "Windows release binary target/release/deve_desktop.exe"
+    elif is_windows_host; then
       if requires_bundle msi; then
         msi="$(
           first_match "$ROOT_DIR/target/release/bundle/msi" \

@@ -101,6 +101,21 @@ impl<'a> SourceControlReadRuntime<'a> {
         Ok(diff::unified_diff(&old_content, &new_content, &path))
     }
 
+    pub(crate) fn doc_diff_payload_for_target_in_local_repo(
+        &self,
+        repo_name: &str,
+        target: &ScPathTarget,
+    ) -> Result<(Option<DocId>, String, String, String)> {
+        if target.domain == Some(ChangeDomain::ConfirmedLedger) {
+            let file = self.manager.run_on_local_repo(repo_name, |db| {
+                ledger_dirty::confirmed_target_file(db, target)
+            })?;
+            return Ok((file.doc_id, file.path, file.old_content, file.new_content));
+        }
+        self.manager
+            .workdir_diff_payload_for_target_in_local_repo(repo_name, target)
+    }
+
     pub(crate) fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
         source_control::validate_tables(self.manager.local_db.as_ref()).map_err(|err| {
             anyhow::anyhow!(

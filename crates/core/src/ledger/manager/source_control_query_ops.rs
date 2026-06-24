@@ -61,6 +61,15 @@ impl RepoManager {
             .diff_doc_target_in_local_repo(repo_name, target)
     }
 
+    pub fn doc_diff_payload_for_target_in_local_repo(
+        &self,
+        repo_name: &str,
+        target: &ScPathTarget,
+    ) -> Result<(Option<DocId>, String, String, String)> {
+        self.source_control_runtime()
+            .doc_diff_payload_for_target_in_local_repo(repo_name, target)
+    }
+
     /// 获取文档的已提交内容 (用于 Diff)
     pub fn get_committed_content(&self, doc_id: DocId) -> Result<Option<String>> {
         self.source_control_runtime().get_committed_content(doc_id)

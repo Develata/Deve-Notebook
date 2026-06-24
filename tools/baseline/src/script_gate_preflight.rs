@@ -51,7 +51,7 @@ pub fn run_desktop_package_startup_smoke() -> Result<()> {
         "DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED",
         false,
     )?;
-    desktop_bundles_from_env(DESKTOP_STARTUP_LABEL, BundlePolicy::PackageBuild)?;
+    desktop_bundles_from_env(DESKTOP_STARTUP_LABEL, BundlePolicy::PackageSmoke)?;
     positive_integer_from_env(
         DESKTOP_STARTUP_LABEL,
         "DEVE_DESKTOP_STARTUP_SMOKE_TIMEOUT_SECS",
@@ -66,7 +66,7 @@ pub fn run_desktop_native_session_package_smoke() -> Result<()> {
         "DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED",
         false,
     )?;
-    desktop_bundles_from_env(DESKTOP_NATIVE_SESSION_LABEL, BundlePolicy::PackageBuild)?;
+    desktop_bundles_from_env(DESKTOP_NATIVE_SESSION_LABEL, BundlePolicy::PackageSmoke)?;
     native_session_timeout_from_env()?;
     ok(DESKTOP_NATIVE_SESSION_LABEL)
 }
@@ -210,6 +210,7 @@ fn native_session_timeout_from_env() -> Result<u64> {
 #[derive(Clone, Copy)]
 enum BundlePolicy {
     PackageBuild,
+    PackageSmoke,
     InstallerSmoke,
 }
 
@@ -240,11 +241,15 @@ fn validate_desktop_bundles(
                 BundlePolicy::PackageBuild,
                 "app" | "dmg" | "msi" | "nsis" | "deb" | "rpm" | "appimage",
             )
+            | (
+                BundlePolicy::PackageSmoke,
+                "app" | "dmg" | "msi" | "nsis" | "deb" | "rpm" | "appimage" | "exe",
+            )
             | (BundlePolicy::InstallerSmoke, "app" | "dmg" | "msi" | "nsis") => {
                 parsed.push(bundle);
             }
             (_, "") => match policy {
-                BundlePolicy::PackageBuild => {
+                BundlePolicy::PackageBuild | BundlePolicy::PackageSmoke => {
                     bail!(
                         "{label}: empty desktop package bundle selector in DEVE_DESKTOP_PACKAGE_BUNDLES"
                     )
@@ -256,7 +261,7 @@ fn validate_desktop_bundles(
                 }
             },
             _ => match policy {
-                BundlePolicy::PackageBuild => {
+                BundlePolicy::PackageBuild | BundlePolicy::PackageSmoke => {
                     bail!("{label}: unsupported desktop package bundle selector: {bundle}")
                 }
                 BundlePolicy::InstallerSmoke => {
@@ -293,7 +298,8 @@ fn validate_android_package_target(label: &str, target: &str) -> Result<String> 
 mod tests {
     use super::{
         ANDROID_EMULATOR_LABEL, BundlePolicy, DESKTOP_INSTALLER_LABEL, DESKTOP_PLATFORM_LABEL,
-        parse_positive_integer, validate_android_package_target, validate_desktop_bundles,
+        DESKTOP_STARTUP_LABEL, parse_positive_integer, validate_android_package_target,
+        validate_desktop_bundles,
     };
     use crate::env_gate::parse_binary_flag;
 
@@ -327,6 +333,21 @@ mod tests {
             " app, dmg ,msi,nsis,deb,rpm,appimage ",
         )
         .expect("supported bundles");
+
+        assert!(
+            validate_desktop_bundles(DESKTOP_PLATFORM_LABEL, BundlePolicy::PackageBuild, "exe")
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn package_smoke_bundle_policy_accepts_release_binary_probe() {
+        validate_desktop_bundles(
+            DESKTOP_STARTUP_LABEL,
+            BundlePolicy::PackageSmoke,
+            " exe, msi,nsis ",
+        )
+        .expect("startup smoke supports release binary and package probes");
     }
 
     #[test]
@@ -340,6 +361,10 @@ mod tests {
 
         assert!(
             validate_desktop_bundles(DESKTOP_INSTALLER_LABEL, BundlePolicy::InstallerSmoke, "deb")
+                .is_err()
+        );
+        assert!(
+            validate_desktop_bundles(DESKTOP_INSTALLER_LABEL, BundlePolicy::InstallerSmoke, "exe")
                 .is_err()
         );
     }

@@ -471,6 +471,21 @@ DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,ns
 DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=msi,nsis scripts/check-desktop-installer-smoke.sh
 ```
 
+For local Windows release-binary smoke without MSI/NSIS artifacts, build the
+release binaries first and use the `exe` selector only with startup and
+native-session smoke:
+
+```bash
+cargo build --release --locked -p deve_cli --bin deve_cli
+cargo build --release --locked -p deve_desktop --features native-packaging
+DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=exe scripts/check-desktop-package-startup-smoke.sh
+DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED=1 DEVE_DESKTOP_PACKAGE_BUNDLES=exe scripts/check-desktop-native-session-package-smoke.sh
+```
+
+The `exe` selector is not a package-build or installer selector. It proves only
+that `target/release/deve_desktop.exe` and the sibling `deve_cli.exe` can run the
+native smoke probes on the current target host.
+
 The startup smoke runs the packaged Desktop binary with
 `DEVE_DESKTOP_STARTUP_SMOKE=1`. It validates that the binary can start and
 report a shell-only runtime surface, then exits before opening a GUI window,

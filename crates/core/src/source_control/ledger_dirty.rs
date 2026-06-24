@@ -52,21 +52,25 @@ pub fn has_confirmed_dirty(db: &Database) -> Result<bool> {
 }
 
 pub fn diff_confirmed_target(db: &Database, target: &ScPathTarget) -> Result<String> {
+    let file = confirmed_target_file(db, target)?;
+    Ok(diff::unified_diff(
+        &file.old_content,
+        &file.new_content,
+        &file.path,
+    ))
+}
+
+pub fn confirmed_target_file(db: &Database, target: &ScPathTarget) -> Result<CommitFileDiff> {
     let base_seq = latest_commit_seq(db)?;
     let target_seq = ledger_head_seq(db)?;
     if target_seq <= base_seq {
         anyhow::bail!("No confirmed ledger changes");
     }
     let diffs = commit_diff::compare_seq_range(db, base_seq, target_seq)?;
-    let file = diffs
+    diffs
         .into_iter()
         .find(|file| matches_target(file, target))
-        .ok_or_else(|| anyhow!("Path is not in confirmed ledger changes: {}", target.path))?;
-    Ok(diff::unified_diff(
-        &file.old_content,
-        &file.new_content,
-        &file.path,
-    ))
+        .ok_or_else(|| anyhow!("Path is not in confirmed ledger changes: {}", target.path))
 }
 
 fn confirmed_entry(file: CommitFileDiff, base_seq: u64, target_seq: u64) -> ChangeEntry {

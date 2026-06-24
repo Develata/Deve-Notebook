@@ -3,20 +3,21 @@
 
 use super::support::build_state;
 use crate::server::{
-    channel::DualChannel, handlers::source_control::handle_get_changes, session::WsSession,
+    AppState, channel::DualChannel,
+    handlers::source_control::{handle_get_changes, handle_get_doc_diff},
+    session::WsSession,
 };
 use deve_core::config::GitBridgeMode;
-use deve_core::models::{LedgerEntry, Op, PeerId};
-use deve_core::protocol::ServerMessage;
+use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
+use deve_core::protocol::{ScPathTarget, ServerMessage};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeDomain, ChangeStatus};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyhow::Result<()> {
-    let (_dir, state) = build_state()?;
-    let path = "notes/a.md";
-    let abs = state.repo.local_repo_workspace_path("default", path)?;
+fn seed_confirmed_modified_change(state: &Arc<AppState>) -> anyhow::Result<(String, DocId)> {
+    let path = "notes/a.md".to_string();
+    let abs = state.repo.local_repo_workspace_path("default", &path)?;
     if let Some(parent) = abs.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -26,7 +27,7 @@ async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyho
         pending_fs::upsert(
             db,
             &PendingFsEntry {
-                path: path.into(),
+                path: path.clone(),
                 renamed_from: None,
                 doc_id: None,
                 change_type: ChangeStatus::Added,
@@ -36,14 +37,14 @@ async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyho
             },
         )
     })?;
-    state.repo.stage_pending(path)?;
+    state.repo.stage_pending(&path)?;
     state
         .repo
         .commit_staged_with_git_bridge("initial", GitBridgeMode::Off)?;
 
     let doc_id = state
         .repo
-        .get_tracked_docid_in_local_repo("default", path)?
+        .get_tracked_docid_in_local_repo("default", &path)?
         .expect("tracked doc id after initial commit");
     let peer_id = PeerId::new("editor");
     state.repo.append_generated_op_in_local_repo(
@@ -65,6 +66,13 @@ async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyho
             )
         },
     )?;
+    Ok((path, doc_id))
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (path, doc_id) = seed_confirmed_modified_change(&state)?;
 
     let (uni_tx, mut uni_rx) = mpsc::channel(8);
     let ch = DualChannel::new(state.tx.clone(), uni_tx);
@@ -94,6 +102,53 @@ async fn confirmed_ledger_changes_are_sent_as_separate_resource_group() -> anyho
             assert!(confirmed[0].target_seq.is_some());
         }
         other => panic!("expected ChangesList, got {:?}", other),
+    }
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn confirmed_ledger_doc_diff_uses_commit_anchor_as_left_side() -> anyhow::Result<()> {
+    let (_dir, state) = build_state()?;
+    let (path, doc_id) = seed_confirmed_modified_change(&state)?;
+
+    let (uni_tx, mut uni_rx) = mpsc::channel(8);
+    let ch = DualChannel::new(state.tx.clone(), uni_tx);
+    let mut session = WsSession::new();
+    session.mark_browser_session();
+    session.set_scope_nonce(Some(41));
+    session.switch_repo("default".into(), None);
+
+    handle_get_doc_diff(
+        &state,
+        &ch,
+        &mut session,
+        "req-confirmed-diff".into(),
+        ScPathTarget {
+            path: path.clone(),
+            doc_id: Some(doc_id),
+            domain: Some(ChangeDomain::ConfirmedLedger),
+        },
+    )
+    .await;
+
+    match uni_rx.recv().await {
+        Some(ServerMessage::DocDiff {
+            request_id,
+            scope_nonce,
+            doc_id: actual_doc_id,
+            path: actual_path,
+            old_content,
+            new_content,
+            ..
+        }) => {
+            assert_eq!(request_id.as_deref(), Some("req-confirmed-diff"));
+            assert_eq!(scope_nonce, Some(41));
+            assert_eq!(actual_doc_id, Some(doc_id));
+            assert_eq!(actual_path, path);
+            assert_eq!(old_content, "hello");
+            assert_eq!(new_content, "hello world");
+        }
+        other => panic!("expected DocDiff, got {:?}", other),
     }
     Ok(())
 }

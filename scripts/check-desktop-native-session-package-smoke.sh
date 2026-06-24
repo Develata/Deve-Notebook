@@ -29,6 +29,11 @@ requires_bundle() {
   [[ ",${BUNDLES// /,}," == *",$bundle,"* ]]
 }
 
+explicit_bundle() {
+  local bundle="$1"
+  [[ -n "$BUNDLES" ]] && [[ ",${BUNDLES// /,}," == *",$bundle,"* ]]
+}
+
 first_match() {
   local root="$1"
   shift
@@ -40,6 +45,57 @@ record_missing() {
   missing+=("$1")
 }
 
+is_windows_exe_path() {
+  local path="${1,,}"
+  [[ "$path" == *.exe ]]
+}
+
+append_wslenv_name() {
+  local wslenv="$1"
+  local name="$2"
+  local entry
+  IFS=':' read -ra entries <<<"$wslenv"
+  for entry in "${entries[@]}"; do
+    [[ "${entry%%/*}" == "$name" ]] && {
+      printf '%s\n' "$wslenv"
+      return
+    }
+  done
+  printf '%s\n' "${wslenv:+$wslenv:}$name"
+}
+
+native_session_wslenv() {
+  local wslenv="${WSLENV:-}"
+  wslenv="$(append_wslenv_name "$wslenv" "DEVE_DESKTOP_LOCAL_SERVICE")"
+  wslenv="$(append_wslenv_name "$wslenv" "DEVE_DESKTOP_NATIVE_SESSION_SMOKE")"
+  wslenv="$(append_wslenv_name "$wslenv" "DEVE_DESKTOP_SERVICE_STDIO_INHERIT")"
+  printf '%s\n' "$wslenv"
+}
+
+run_native_session_env() {
+  local binary="$1"
+  local wslenv
+  shift
+
+  if is_windows_exe_path "$binary"; then
+    wslenv="$(native_session_wslenv)"
+    WSLENV="$wslenv" DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$@"
+  else
+    DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$@"
+  fi
+}
+
+make_smoke_root() {
+  local binary="$1"
+
+  if is_windows_exe_path "$binary"; then
+    mkdir -p "$ROOT_DIR/target"
+    mktemp -d "$ROOT_DIR/target/desktop-native-session-smoke.XXXXXX"
+    return
+  fi
+  mktemp -d
+}
+
 run_with_timeout() {
   local binary="$1"
   local smoke_root="$2"
@@ -47,22 +103,20 @@ run_with_timeout() {
   if command -v gtimeout >/dev/null 2>&1; then
 	    (
 	      cd "$smoke_root"
-	      DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 \
-	        gtimeout "${TIMEOUT_SECS}s" "$binary"
+	      run_native_session_env "$binary" gtimeout "${TIMEOUT_SECS}s" "$binary"
 	    )
     return
   fi
   if command -v timeout >/dev/null 2>&1 && timeout --version >/dev/null 2>&1; then
 	  (
 	    cd "$smoke_root"
-	    DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 \
-	      timeout "${TIMEOUT_SECS}s" "$binary"
+	    run_native_session_env "$binary" timeout "${TIMEOUT_SECS}s" "$binary"
 	  )
     return
   fi
 	  (
 	    cd "$smoke_root"
-	    DEVE_DESKTOP_LOCAL_SERVICE=1 DEVE_DESKTOP_NATIVE_SESSION_SMOKE=1 DEVE_DESKTOP_SERVICE_STDIO_INHERIT=1 "$binary"
+	    run_native_session_env "$binary" "$binary"
 	  )
 }
 
@@ -80,7 +134,7 @@ run_native_session_probe() {
     return 2
   fi
 
-  smoke_root="$(mktemp -d)"
+  smoke_root="$(make_smoke_root "$binary")"
   set +e
   output="$(run_with_timeout "$binary" "$smoke_root" 2>&1)"
   status=$?
@@ -116,7 +170,11 @@ case "$(host_os)" in
     fi
     ;;
   *)
-    if is_windows_host; then
+    if explicit_bundle exe; then
+      startup_binary="$ROOT_DIR/target/release/deve_desktop.exe"
+      [[ -f "$startup_binary" ]] || record_missing "Windows release binary target/release/deve_desktop.exe"
+      [[ -f "$ROOT_DIR/target/release/deve_cli.exe" ]] || record_missing "Windows sidecar target/release/deve_cli.exe"
+    elif is_windows_host; then
       startup_binary="$ROOT_DIR/target/release/deve_desktop.exe"
       [[ -f "$startup_binary" ]] || record_missing "Windows release binary target/release/deve_desktop.exe"
       [[ -f "$ROOT_DIR/target/release/deve_cli.exe" ]] || record_missing "Windows sidecar target/release/deve_cli.exe"
