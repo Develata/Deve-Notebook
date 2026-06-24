@@ -189,6 +189,11 @@ pub enum ClientMessage {
         #[serde(default)]
         switch_nonce: Option<u64>,
     },
+    CreateRepo {
+        name: String,
+        #[serde(default)]
+        switch_nonce: Option<u64>,
+    },
     DeletePeer {
         peer_id: String,
         #[serde(default)]

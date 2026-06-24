@@ -118,6 +118,27 @@ pub fn switch_repository(locale: Locale) -> &'static str {
     }
 }
 
+pub fn new_repository(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "New Repository",
+        Locale::Zh => "新增存储库",
+    }
+}
+
+pub fn create_repository(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Create Repository",
+        Locale::Zh => "创建存储库",
+    }
+}
+
+pub fn repository_name_placeholder(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Repository name",
+        Locale::Zh => "存储库名称",
+    }
+}
+
 pub fn switch_branch_hint(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Switch Branch (Ctrl+Shift+K)",

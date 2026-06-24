@@ -85,6 +85,10 @@ fn output_write_classification_distinguishes_reads_from_writes() {
         doc_id: DocId::from_u128(7),
         scope_nonce: Some(1),
     }));
+    assert!(is_write_message(&ClientMessage::CreateRepo {
+        name: "new-repo".into(),
+        switch_nonce: Some(2),
+    }));
     assert!(!is_write_message(&ClientMessage::Ping));
     assert!(!is_write_message(&ClientMessage::SyncRequest {
         repo_id: uuid::Uuid::nil(),

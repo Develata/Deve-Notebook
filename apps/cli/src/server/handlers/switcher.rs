@@ -8,6 +8,7 @@ use crate::server::channel::DualChannel;
 use crate::server::session::WsSession;
 mod switcher_branch;
 mod switcher_branch_hint;
+mod switcher_create_repo;
 mod switcher_error;
 mod switcher_guard;
 #[cfg(test)]
@@ -48,6 +49,16 @@ pub async fn handle_switch_repo(
     switch_nonce: Option<u64>,
 ) {
     switcher_repo::handle_switch_repo(state, ch, session, name, repo_id, switch_nonce).await;
+}
+
+pub async fn handle_create_repo(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+    name: String,
+    switch_nonce: Option<u64>,
+) {
+    switcher_create_repo::handle_create_repo(state, ch, session, name, switch_nonce).await;
 }
 
 #[cfg(test)]

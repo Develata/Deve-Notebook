@@ -2,7 +2,8 @@
 //!   - 14_commands#cli-commands
 //!   - 03_storage/projection#projection-locator-contract
 
-use super::repo_arg::resolve_local_repo_arg;
+use super::{live_proxy, repo_arg::resolve_local_repo_arg};
+use crate::admin_api::ProjectionCheckResponse;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
 use std::path::Path;
@@ -38,11 +39,36 @@ pub fn list(ledger_dir: &Path, snapshot_depth: usize) -> Result<()> {
 }
 
 pub fn check(ledger_dir: &Path, repo_selector: &str, snapshot_depth: usize) -> Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
+        Ok(repo) => repo,
+        Err(err) if live_proxy::is_db_lock_error(&err) => {
+            for report in live_proxy::projection_check(ledger_dir, Some(repo_selector))? {
+                print_projection_check_report(&report);
+            }
+            return Ok(());
+        }
+        Err(err) => return Err(err),
+    };
     let repo_name = resolve_local_repo_arg(&repo, Some(repo_selector))?;
     let workspace = repo.check_projection_locator_for_local_repo(&repo_name)?;
     println!("Projection workspace OK: {} -> {:?}", repo_name, workspace);
     Ok(())
+}
+
+fn print_projection_check_report(report: &ProjectionCheckResponse) {
+    println!(
+        "projection_check[{}]: status={} rebuild_supported={}",
+        report.repo_name, report.status, report.rebuild_supported
+    );
+    if let Some(code) = report.issue_code.as_deref() {
+        println!("  issue_code={code}");
+    }
+    if let Some(detail) = report.issue_detail.as_deref() {
+        println!("  issue_detail={detail}");
+    }
+    if !report.repair_hint.is_empty() {
+        println!("  repair_hint={}", report.repair_hint);
+    }
 }
 
 pub fn drift(

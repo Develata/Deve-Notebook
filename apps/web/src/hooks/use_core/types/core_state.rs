@@ -80,6 +80,7 @@ pub struct CoreState {
     pub current_scope_nonce: ReadSignal<u64>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub on_switch_repo: Callback<String>,
+    pub on_create_repo: Callback<String>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,

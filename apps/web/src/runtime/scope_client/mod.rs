@@ -21,6 +21,7 @@ pub struct ScopeClient {
     pub set_active_branch: WriteSignal<Option<PeerId>>,
     pub pending_repo_switch: ReadSignal<Option<String>>,
     pub on_switch_repo: Callback<String>,
+    pub on_create_repo: Callback<String>,
     pub on_switch_branch: Callback<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,

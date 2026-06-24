@@ -11,6 +11,7 @@ pub struct BranchContext {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
     pub on_switch_repo: Callback<String>,
+    pub on_create_repo: Callback<String>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,

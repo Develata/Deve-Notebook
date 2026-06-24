@@ -4,8 +4,7 @@
 //!   - 14_commands#cli-commands
 //!   - 15_settings#configuration-settings
 
-use deve_core::ledger::RepoManager;
-use deve_core::ledger::init::RepoInitOptions;
+use crate::repo_init::initialize_local_repo_workspace;
 use deve_core::utils::fs::checked_exists;
 use std::path::{Path, PathBuf};
 
@@ -33,18 +32,18 @@ pub fn run(
 ) -> anyhow::Result<()> {
     println!("Initializing ledger at {:?}...", ledger_dir);
     std::fs::create_dir_all(&path)?;
-    let repo = RepoManager::init_with_options(
+    let report = initialize_local_repo_workspace(
         ledger_dir,
+        repo_name,
+        projection_base,
         snapshot_depth,
-        Some(repo_name),
-        RepoInitOptions { repo_id, repo_url },
+        repo_id,
+        repo_url,
     )?;
-    repo.set_projection_base_for_local_repo(repo_name, projection_base)?;
-    let workspace_root = repo.local_repo_workspace_root(repo_name)?;
-    std::fs::create_dir_all(&workspace_root)?;
-    repo.ensure_local_repo_workspace_identity(repo_name)?;
-    deve_core::utils::notegit::ensure_gitignore_ignores_notegit(&workspace_root)?;
-    std::fs::create_dir_all(deve_core::utils::notegit::host_keys_dir(ledger_dir))?;
+    println!(
+        "Initialized repo '{}' at {:?}",
+        report.repo_name, report.workspace_root
+    );
 
     // 2. Generate default config.toml
     let config_path = path.join("config.toml");

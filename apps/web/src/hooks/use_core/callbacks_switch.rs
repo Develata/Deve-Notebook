@@ -17,6 +17,7 @@ pub(super) use scope::{can_start_scope_switch, prepare_scope_switch};
 pub struct SwitchCallbacks {
     pub on_switch_branch: Callback<Option<String>>,
     pub on_switch_repo: Callback<String>,
+    pub on_create_repo: Callback<String>,
 }
 
 pub(super) fn show_switch_block(
@@ -36,9 +37,11 @@ pub fn create_switch_callbacks(
     let on_switch_branch =
         branch::build_switch_branch_callback(ws.clone(), signals, set_sync_banner);
     let on_switch_repo = repo::build_switch_repo_callback(ws.clone(), signals, set_sync_banner);
+    let on_create_repo = repo::build_create_repo_callback(ws.clone(), signals, set_sync_banner);
 
     SwitchCallbacks {
         on_switch_branch,
         on_switch_repo,
+        on_create_repo,
     }
 }

@@ -12,6 +12,7 @@ pub(super) fn build_branch_context(state: &CoreState) -> BranchContext {
         current_repo_id: scope.current_repo_id,
         set_current_repo_id: scope.set_current_repo_id,
         on_switch_repo: scope.on_switch_repo,
+        on_create_repo: scope.on_create_repo,
         shadow_repos: scope.shadow_repos,
         on_list_shadows: scope.on_list_shadows,
         repo_list: scope.repo_list,

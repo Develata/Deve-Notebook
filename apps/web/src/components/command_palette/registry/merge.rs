@@ -233,6 +233,7 @@ mod tests {
             current_repo_id,
             set_current_repo_id,
             on_switch_repo: Callback::new(|_: String| {}),
+            on_create_repo: Callback::new(|_: String| {}),
             shadow_repos,
             on_list_shadows: Callback::new(|_| {}),
             repo_list,

@@ -78,6 +78,10 @@ impl RepoManager {
         &self.ledger_dir
     }
 
+    pub fn snapshot_depth(&self) -> usize {
+        self.snapshot_depth
+    }
+
     /// 获取影子库目录路径
     pub fn remotes_dir(&self) -> PathBuf {
         self.ledger_dir.join("remotes")

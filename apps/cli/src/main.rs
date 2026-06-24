@@ -33,6 +33,7 @@ mod export_entries;
 mod graph_projection;
 #[cfg(test)]
 mod main_test;
+mod repo_init;
 mod server;
 
 pub(crate) use commands::backup::BackupAction;

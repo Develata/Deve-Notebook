@@ -10,4 +10,5 @@ mod dump_support;
 mod export_entries;
 mod graph_projection;
 pub mod native_runtime;
+mod repo_init;
 pub mod server;

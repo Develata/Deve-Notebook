@@ -22,6 +22,13 @@ pub fn create(locale: Locale) -> &'static str {
     }
 }
 
+pub fn cancel(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Cancel",
+        Locale::Zh => "取消",
+    }
+}
+
 /// 新建文件
 pub fn new_file(locale: Locale) -> &'static str {
     match locale {
