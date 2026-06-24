@@ -1,6 +1,5 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
-//!   - 12_source_control_ui#resource-groups
 
 use super::support::build_state;
 use crate::server::{

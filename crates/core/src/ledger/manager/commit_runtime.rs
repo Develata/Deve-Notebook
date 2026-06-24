@@ -44,6 +44,10 @@ impl<'a> CommitRuntime<'a> {
         message: &str,
         git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
+        let message = message.trim();
+        if message.is_empty() {
+            anyhow::bail!("source control commit requires a non-empty message");
+        }
         let staged = self
             .manager
             .run_on_local_repo(repo_name, staging::list_staged_entries)?;

@@ -136,6 +136,36 @@ fn source_control_confirmed_only_commit_creates_anchor_without_new_ledger_facts(
 }
 
 #[test]
+fn source_control_confirmed_only_commit_rejects_empty_message() {
+    let (_dir, repo) = new_repo();
+    let doc_id = seed_initial_commit(&repo);
+    append_confirmed_ledger_edit(&repo, doc_id);
+    let dirty_head = ledger_head(&repo);
+
+    let err = repo
+        .commit_staged_with_git_bridge("   ", GitBridgeMode::Off)
+        .expect_err("empty confirmed-only commit message must fail");
+
+    assert!(
+        err.to_string().contains("non-empty message"),
+        "unexpected error: {err}"
+    );
+    assert_eq!(ledger_head(&repo), dirty_head);
+    assert_eq!(
+        repo.list_commits_in_local_repo(repo.local_repo_name(), 10)
+            .expect("commit history")
+            .len(),
+        1
+    );
+    assert_eq!(
+        repo.list_confirmed_ledger_changes()
+            .expect("confirmed remains dirty")
+            .len(),
+        1
+    );
+}
+
+#[test]
 fn source_control_diff_routes_working_and_confirmed_domains_independently() {
     let (_dir, repo) = new_repo();
     let doc_id = seed_initial_commit(&repo);
