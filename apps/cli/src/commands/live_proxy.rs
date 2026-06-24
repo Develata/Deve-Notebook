@@ -1,11 +1,17 @@
 //! plan_ref:
 //!   - 07_network#server-ws-runtime
+//!   - 08_auth#jwt-cookie-contract
 //!   - 14_commands#cli-commands
 //!   - 18_release#runtime-observability
 
-use crate::admin_api::{DumpResponse, ExportEntry, NodeCheckResponse, ProjectionCheckResponse};
+use crate::admin_api::{
+    DumpResponse, ExportEntry, GitStatusResponse, NodeCheckResponse, ProjectionCheckResponse,
+    ScStatusResponse,
+};
 use anyhow::{Context, Result, anyhow};
-use reqwest::Client;
+use deve_core::config::RuntimeEnvironment;
+use deve_core::security::AuthConfig;
+use reqwest::{Client, RequestBuilder, header};
 use serde::Deserialize;
 use std::future::Future;
 use std::path::Path;
@@ -17,6 +23,8 @@ struct NodeRoleResponse {
     role: String,
     ws_port: u16,
     main_port: u16,
+    #[serde(default)]
+    environment: Option<String>,
 }
 
 pub fn is_db_lock_error(err: &anyhow::Error) -> bool {
@@ -33,7 +41,9 @@ pub fn dump(ledger_dir: &Path, path: &str, repo_name: Option<&str>) -> Result<Du
         let response = client
             .get(format!("{base}/api/admin/dump"))
             .query(&[("path", path)])
-            .query(&repo_query(repo_name))
+            .query(&repo_query(repo_name));
+        let response = with_proxy_auth(response, &client, &base)
+            .await?
             .send()
             .await?;
         parse_json(response).await
@@ -46,7 +56,9 @@ pub fn export(ledger_dir: &Path, repo_name: Option<&str>) -> Result<Vec<ExportEn
     block_on_safe(async move {
         let response = client
             .get(format!("{base}/api/admin/export"))
-            .query(&repo_query(repo_name))
+            .query(&repo_query(repo_name));
+        let response = with_proxy_auth(response, &client, &base)
+            .await?
             .send()
             .await?;
         parse_json(response).await
@@ -64,7 +76,9 @@ pub fn node_check(
         let response = client
             .get(format!("{base}/api/admin/node-check"))
             .query(&[("repair", repair)])
-            .query(&repo_query(repo_name))
+            .query(&repo_query(repo_name));
+        let response = with_proxy_auth(response, &client, &base)
+            .await?
             .send()
             .await?;
         parse_json(response).await
@@ -80,7 +94,39 @@ pub fn projection_check(
     block_on_safe(async move {
         let response = client
             .get(format!("{base}/api/admin/projection-check"))
-            .query(&repo_query(repo_name))
+            .query(&repo_query(repo_name));
+        let response = with_proxy_auth(response, &client, &base)
+            .await?
+            .send()
+            .await?;
+        parse_json(response).await
+    })
+}
+
+pub fn sc_status(ledger_dir: &Path, repo_name: Option<&str>) -> Result<Vec<ScStatusResponse>> {
+    let base = main_base_url(ledger_dir)?;
+    let client = local_client()?;
+    block_on_safe(async move {
+        let response = client
+            .get(format!("{base}/api/admin/sc-status"))
+            .query(&repo_query(repo_name));
+        let response = with_proxy_auth(response, &client, &base)
+            .await?
+            .send()
+            .await?;
+        parse_json(response).await
+    })
+}
+
+pub fn git_status(ledger_dir: &Path, repo_name: Option<&str>) -> Result<Vec<GitStatusResponse>> {
+    let base = main_base_url(ledger_dir)?;
+    let client = local_client()?;
+    block_on_safe(async move {
+        let response = client
+            .get(format!("{base}/api/admin/git-status"))
+            .query(&repo_query(repo_name));
+        let response = with_proxy_auth(response, &client, &base)
+            .await?
             .send()
             .await?;
         parse_json(response).await
@@ -134,6 +180,56 @@ async fn detect_main_port() -> Result<u16> {
         }
     }
     Err(anyhow!("Main process not detected on localhost"))
+}
+
+async fn with_proxy_auth(
+    request: RequestBuilder,
+    client: &Client,
+    base: &str,
+) -> Result<RequestBuilder> {
+    let Some(cookie) = proxy_auth_cookie(client, base).await? else {
+        return Ok(request);
+    };
+    Ok(request.header(header::COOKIE, cookie))
+}
+
+async fn proxy_auth_cookie(client: &Client, base: &str) -> Result<Option<String>> {
+    let role = fetch_node_role(client, base).await.ok();
+    let config = match proxy_auth_config(role.as_ref().and_then(|role| role.environment.as_deref()))
+    {
+        Ok(config) => config,
+        Err(_) => return Ok(None),
+    };
+    let token = deve_core::security::auth::jwt::issue_token(
+        &config.secret,
+        &config.username,
+        config.token_version,
+    )
+    .context("Failed to issue live-proxy auth token")?;
+    Ok(Some(format!("token={token}")))
+}
+
+async fn fetch_node_role(client: &Client, base: &str) -> Result<NodeRoleResponse> {
+    let response = client
+        .get(format!("{base}/api/node/role"))
+        .send()
+        .await?
+        .error_for_status()?;
+    Ok(response.json::<NodeRoleResponse>().await?)
+}
+
+fn proxy_auth_config(role_environment: Option<&str>) -> Result<AuthConfig> {
+    if let Ok(config) =
+        AuthConfig::from_env_with_runtime_environment(RuntimeEnvironment::from_env())
+    {
+        return Ok(config);
+    }
+    if role_environment.is_some_and(|environment| environment.eq_ignore_ascii_case("development")) {
+        return AuthConfig::dev_default();
+    }
+    Err(anyhow!(
+        "Live proxy authentication requires AUTH_SECRET/AUTH_PASS in this CLI environment"
+    ))
 }
 
 fn local_client() -> Result<Client> {

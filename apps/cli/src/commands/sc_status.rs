@@ -4,6 +4,8 @@
 //!
 //! Read-only Source Control status diagnostics for local smoke-test hygiene.
 
+use crate::admin_api::ScStatusResponse;
+use crate::commands::live_proxy;
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
 use deve_core::ledger::RepoManager;
@@ -11,7 +13,16 @@ use deve_core::source_control::ChangeEntry;
 use std::path::Path;
 
 pub fn run(ledger_dir: &Path, target_repo: Option<&str>, snapshot_depth: usize) -> Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
+        Ok(repo) => repo,
+        Err(err) if live_proxy::is_db_lock_error(&err) => {
+            for report in live_proxy::sc_status(ledger_dir, target_repo)? {
+                print_repo_status(&report);
+            }
+            return Ok(());
+        }
+        Err(err) => return Err(err),
+    };
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let status = collect_repo_status(&repo, &repo_name)?;
@@ -20,22 +31,15 @@ pub fn run(ledger_dir: &Path, target_repo: Option<&str>, snapshot_depth: usize) 
     Ok(())
 }
 
-#[derive(Debug, Clone)]
-struct ScStatusReport {
-    repo_name: String,
-    staged: Vec<ChangeEntry>,
-    unstaged: Vec<ChangeEntry>,
-}
-
-fn collect_repo_status(repo: &RepoManager, repo_name: &str) -> Result<ScStatusReport> {
-    Ok(ScStatusReport {
+fn collect_repo_status(repo: &RepoManager, repo_name: &str) -> Result<ScStatusResponse> {
+    Ok(ScStatusResponse {
         repo_name: repo_name.to_string(),
         staged: repo.list_staged_in_local_repo(repo_name)?,
         unstaged: repo.list_pending_fs_in_local_repo(repo_name)?,
     })
 }
 
-fn print_repo_status(report: &ScStatusReport) {
+pub(crate) fn print_repo_status(report: &ScStatusResponse) {
     println!(
         "sc_status[{}]: staged={} unstaged={}",
         report.repo_name,
@@ -58,12 +62,13 @@ fn print_entries(label: &str, entries: &[ChangeEntry]) {
 
 #[cfg(test)]
 mod tests {
-    use super::{ScStatusReport, print_repo_status};
+    use super::print_repo_status;
+    use crate::admin_api::ScStatusResponse;
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
 
     #[test]
     fn print_status_handles_clean_repo() {
-        print_repo_status(&ScStatusReport {
+        print_repo_status(&ScStatusResponse {
             repo_name: "default".into(),
             staged: vec![],
             unstaged: vec![],
@@ -72,7 +77,7 @@ mod tests {
 
     #[test]
     fn status_report_keeps_staged_and_unstaged_separate() {
-        let report = ScStatusReport {
+        let report = ScStatusResponse {
             repo_name: "default".into(),
             staged: vec![entry("a.md", ChangeStatus::Added)],
             unstaged: vec![entry("b.md", ChangeStatus::Modified)],

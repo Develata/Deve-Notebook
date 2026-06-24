@@ -116,6 +116,8 @@ pub fn build_app_with_native_session_and_p2p(
             "/api/admin/projection-check",
             get(handlers::admin::projection_check),
         )
+        .route("/api/admin/sc-status", get(handlers::admin::sc_status))
+        .route("/api/admin/git-status", get(handlers::admin::git_status))
         .layer(axum::middleware::from_fn(auth::middleware::auth_middleware));
 
     let delegated = Router::new()

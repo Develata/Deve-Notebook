@@ -1,9 +1,12 @@
 //! plan_ref:
+//!   - 03_storage/index#git-ecosystem-coexistence
 //!   - 03_storage/repair#backup-export
 //!   - 04_repository#tree-projection-contract
+//!   - 05_diff_logic#source-control-runtime
 //!   - 14_commands#cli-commands
 
 use deve_core::models::{DocId, LedgerEntry, NodeId, NodeMeta};
+use deve_core::source_control::ChangeEntry;
 use deve_core::sync::{ProjectionDiagnostic, ProjectionDiagnosticStatus};
 use serde::{Deserialize, Serialize};
 
@@ -40,6 +43,21 @@ pub struct ProjectionCheckResponse {
     pub rebuild_supported: bool,
     #[serde(default)]
     pub repair_hint: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScStatusResponse {
+    pub repo_name: String,
+    pub staged: Vec<ChangeEntry>,
+    pub unstaged: Vec<ChangeEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitStatusResponse {
+    pub repo_name: String,
+    pub status: deve_core::git_bridge::GitMirrorStatus,
+    pub summary: deve_core::git_bridge::GitMirrorSummary,
+    pub records: Vec<deve_core::git_bridge::GitMirrorRecord>,
 }
 
 impl ProjectionCheckResponse {

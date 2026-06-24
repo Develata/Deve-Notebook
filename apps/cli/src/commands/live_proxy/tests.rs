@@ -1,5 +1,14 @@
 use super::{NodeRoleResponse, read_main_port_hint, trusted_main_port};
 
+fn node_role(role: &str, ws_port: u16, main_port: u16) -> NodeRoleResponse {
+    NodeRoleResponse {
+        role: role.into(),
+        ws_port,
+        main_port,
+        environment: None,
+    }
+}
+
 #[test]
 fn missing_main_port_hint_is_absent() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -21,36 +30,15 @@ fn invalid_main_port_hint_fails_closed() {
 #[test]
 fn trusted_main_port_accepts_main_and_proxy_node_roles() {
     assert_eq!(
-        trusted_main_port(
-            &NodeRoleResponse {
-                role: "main".into(),
-                ws_port: 3001,
-                main_port: 3001,
-            },
-            3001,
-        ),
+        trusted_main_port(&node_role("main", 3001, 3001), 3001,),
         Some(3001)
     );
     assert_eq!(
-        trusted_main_port(
-            &NodeRoleResponse {
-                role: "native-main".into(),
-                ws_port: 3002,
-                main_port: 3002,
-            },
-            3002,
-        ),
+        trusted_main_port(&node_role("native-main", 3002, 3002), 3002,),
         Some(3002)
     );
     assert_eq!(
-        trusted_main_port(
-            &NodeRoleResponse {
-                role: "proxy".into(),
-                ws_port: 3002,
-                main_port: 3001,
-            },
-            3002,
-        ),
+        trusted_main_port(&node_role("proxy", 3002, 3001), 3002,),
         Some(3001)
     );
 }
@@ -58,26 +46,10 @@ fn trusted_main_port_accepts_main_and_proxy_node_roles() {
 #[test]
 fn trusted_main_port_rejects_foreign_or_mismatched_node_role_payloads() {
     for role in [
-        NodeRoleResponse {
-            role: "unknown".into(),
-            ws_port: 3001,
-            main_port: 3001,
-        },
-        NodeRoleResponse {
-            role: "main".into(),
-            ws_port: 3002,
-            main_port: 3001,
-        },
-        NodeRoleResponse {
-            role: "proxy".into(),
-            ws_port: 3002,
-            main_port: 0,
-        },
-        NodeRoleResponse {
-            role: "proxy".into(),
-            ws_port: 3001,
-            main_port: 3001,
-        },
+        node_role("unknown", 3001, 3001),
+        node_role("main", 3002, 3001),
+        node_role("proxy", 3002, 0),
+        node_role("proxy", 3001, 3001),
     ] {
         assert_eq!(trusted_main_port(&role, 3001), None);
     }

@@ -1,9 +1,13 @@
 //! plan_ref:
+//!   - 03_storage/index#git-ecosystem-coexistence
 //!   - 03_storage/repair#backup-export
 //!   - 03_storage/projection#projection-contract
 //!   - 04_repository#tree-projection-contract
+//!   - 05_diff_logic#source-control-runtime
 
-use crate::admin_api::{NodeCheckResponse, ProjectionCheckResponse};
+use crate::admin_api::{
+    GitStatusResponse, NodeCheckResponse, ProjectionCheckResponse, ScStatusResponse,
+};
 use crate::export_entries;
 use crate::server::AppState;
 use crate::server::error_classify::{
@@ -105,6 +109,73 @@ pub async fn projection_check(
             Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
         };
         reports.push(ProjectionCheckResponse::from_diagnostic(diagnostic));
+    }
+    Json(reports).into_response()
+}
+
+pub async fn sc_status(
+    State(state): State<Arc<AppState>>,
+    Query(repo): Query<RepoSelector>,
+) -> impl IntoResponse {
+    let repo_names = match resolve_target_repos(state.as_ref(), &repo, false) {
+        Ok(names) => names,
+        Err(err) => return admin_error_response(err, StatusCode::BAD_REQUEST),
+    };
+    let mut reports = Vec::with_capacity(repo_names.len());
+    for repo_name in repo_names {
+        let staged = match state.repo.list_staged_in_local_repo(&repo_name) {
+            Ok(staged) => staged,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
+        let unstaged = match state.repo.list_pending_fs_in_local_repo(&repo_name) {
+            Ok(unstaged) => unstaged,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
+        reports.push(ScStatusResponse {
+            repo_name,
+            staged,
+            unstaged,
+        });
+    }
+    Json(reports).into_response()
+}
+
+pub async fn git_status(
+    State(state): State<Arc<AppState>>,
+    Query(repo): Query<RepoSelector>,
+) -> impl IntoResponse {
+    let repo_names = match resolve_target_repos(state.as_ref(), &repo, false) {
+        Ok(names) => names,
+        Err(err) => return admin_error_response(err, StatusCode::BAD_REQUEST),
+    };
+    let mut reports = Vec::with_capacity(repo_names.len());
+    for repo_name in repo_names {
+        let repo_root = match state.repo.local_repo_workspace_root(&repo_name) {
+            Ok(root) => root,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
+        let status = match deve_core::git_bridge::inspect_repo_root(&repo_root) {
+            Ok(status) => status,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
+        let summary = match state.repo.run_on_local_repo(&repo_name, |db| {
+            Ok(deve_core::git_bridge::summarize_records(db)?)
+        }) {
+            Ok(summary) => summary,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
+        let records = match state.repo.run_on_local_repo(&repo_name, |db| {
+            Ok(deve_core::git_bridge::list_records(db)?)
+        }) {
+            Ok(records) => records,
+            Err(err) => return admin_error_response(err, StatusCode::INTERNAL_SERVER_ERROR),
+        };
+        reports.push(GitStatusResponse {
+            repo_name,
+            status,
+            summary,
+            records,
+        });
     }
     Json(reports).into_response()
 }

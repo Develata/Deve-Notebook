@@ -10,6 +10,7 @@ use super::git_output::{
     print_push_report, print_status,
 };
 use super::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
+use crate::commands::live_proxy;
 use crate::commands::repo_arg::resolve_local_repo_args;
 use anyhow::Result;
 use deve_core::config::GitBridgeMode;
@@ -18,7 +19,21 @@ use deve_core::ledger::RepoManager;
 use std::path::Path;
 
 pub fn status(ledger_dir: &Path, target_repo: Option<&str>, snapshot_depth: usize) -> Result<()> {
-    let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
+    let repo = match RepoManager::init(ledger_dir, snapshot_depth, None, None) {
+        Ok(repo) => repo,
+        Err(err) if live_proxy::is_db_lock_error(&err) => {
+            for report in live_proxy::git_status(ledger_dir, target_repo)? {
+                print_status(
+                    &report.repo_name,
+                    &report.status,
+                    &report.summary,
+                    &report.records,
+                );
+            }
+            return Ok(());
+        }
+        Err(err) => return Err(err),
+    };
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
         let repo_root = repo.local_repo_workspace_root(&repo_name)?;
