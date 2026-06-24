@@ -1,6 +1,11 @@
 //! plan_ref:
+//!   - 03_storage/index#repo-runtime-layout
+//!   - 03_storage/projection#projection-locator-contract
+//!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 19_plugins#plugin-runtime-boundary
 //!
+use crate::commands;
+use anyhow::Context;
 use deve_core::ledger::RepoManager;
 use deve_core::plugin::loader::PluginLoader;
 use std::net::TcpListener;
@@ -8,6 +13,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 const DEVE_PLUGIN_DIR_ENV: &str = "DEVE_PLUGIN_DIR";
+const NATIVE_DEFAULT_REPO: &str = "default";
+const NATIVE_DEFAULT_PROJECTION_BASE: &str = "notes";
 
 pub(super) fn init_runtime(
     ledger_dir: &Path,
@@ -16,6 +23,49 @@ pub(super) fn init_runtime(
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     repo.validate_projection_locator_map()?;
     Ok(Arc::new(repo))
+}
+
+pub(super) fn ensure_native_loopback_default_workspace(
+    ledger_dir: &Path,
+    snapshot_depth: usize,
+) -> anyhow::Result<()> {
+    let repo = RepoManager::init(ledger_dir, snapshot_depth, Some(NATIVE_DEFAULT_REPO), None)?;
+    if repo.validate_projection_locator_map().is_ok() {
+        return Ok(());
+    }
+
+    let locators = repo.list_projection_locators()?;
+    if !locators.is_empty() {
+        repo.validate_projection_locator_map()?;
+        return Ok(());
+    }
+
+    let data_root = native_loopback_data_root(ledger_dir)?;
+    let projection_base = data_root.join(NATIVE_DEFAULT_PROJECTION_BASE);
+    commands::init::run(
+        ledger_dir,
+        NATIVE_DEFAULT_REPO,
+        &projection_base,
+        data_root,
+        snapshot_depth,
+        None,
+        None,
+    )
+}
+
+fn native_loopback_data_root(ledger_dir: &Path) -> anyhow::Result<PathBuf> {
+    if ledger_dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("ledger"))
+        && let Some(parent) = ledger_dir
+            .parent()
+            .filter(|path| !path.as_os_str().is_empty())
+    {
+        return Ok(parent.to_path_buf());
+    }
+
+    std::env::current_dir().context("Failed to resolve native loopback data root")
 }
 
 pub(super) fn load_plugins()

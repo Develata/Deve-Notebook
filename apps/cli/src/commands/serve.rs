@@ -18,8 +18,12 @@ use tokio::time::{Duration, sleep, timeout};
 
 mod support;
 #[cfg(test)]
+mod support_tests;
+#[cfg(test)]
 mod tests;
-use support::{find_free_port, init_runtime, load_plugins};
+use support::{
+    ensure_native_loopback_default_workspace, find_free_port, init_runtime, load_plugins,
+};
 
 pub struct ServeOptions {
     pub port: u16,
@@ -83,6 +87,9 @@ pub async fn run(ledger_dir: &Path, options: ServeOptions) -> anyhow::Result<()>
         Err(err) => return Err(err.into()),
     };
 
+    if native_loopback {
+        ensure_native_loopback_default_workspace(ledger_dir, snapshot_depth)?;
+    }
     let repo_arc = init_runtime(ledger_dir, snapshot_depth)?;
     let plugins = load_plugins()?;
 
