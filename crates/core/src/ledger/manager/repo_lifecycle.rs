@@ -60,6 +60,12 @@ impl RepoManager {
 
     pub fn rename_local_repo(&self, repo_id: RepoId, new_name: &str) -> Result<LocalRepoSummary> {
         let new_name = safe_repo_path_segment(new_name.trim())?;
+        if self.is_local_repo_removed(repo_id)? {
+            return Err(anyhow!(
+                "Cannot rename removed local repository {}",
+                repo_id
+            ));
+        }
         let stem = self
             .repo_scope_runtime()
             .find_local_repo_name_by_id(repo_id)?
@@ -305,6 +311,41 @@ mod tests {
         let summaries = repo.list_local_repo_summaries()?;
         assert!(!summaries.iter().any(|item| item.repo_id == summary.repo_id));
         assert!(repo.get_local_repo_info_by_id(summary.repo_id)?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn rename_local_repo_rejects_removed_repo_id() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let ledger = dir.path().join("ledger");
+        let notes = dir.path().join("notes");
+        let mut repo = RepoManager::init(&ledger, 8, Some("default"), Some("urn:default"))?;
+        RepoManager::init(&ledger, 8, Some("research"), Some("urn:research"))?;
+        repo.set_projection_base_for_all_local_repos_checked(&notes)?;
+        let repo = std::sync::Arc::new(repo);
+        let sync = crate::sync::SyncManager::new_checked(repo.clone())?;
+        sync.materialize_local_repo("default")?;
+        sync.materialize_local_repo("research")?;
+        let removed_id = repo
+            .get_repo_info_for(None, Some("research"))?
+            .expect("research repo")
+            .uuid;
+
+        repo.remove_local_repo(removed_id)?;
+        let err = repo
+            .rename_local_repo(removed_id, "restored")
+            .expect_err("removed repo rename must fail closed");
+
+        assert!(
+            err.to_string()
+                .contains("Cannot rename removed local repository"),
+            "{err}"
+        );
+        assert!(
+            repo.list_local_repo_summaries()?
+                .iter()
+                .all(|summary| summary.repo_id != removed_id)
+        );
         Ok(())
     }
 }
