@@ -4,8 +4,8 @@
 
 - `Layer`: Foundation
 - `Status`: Governing Rule
-- `Version`: 0.0.1
-- `Last Review`: 2026-05-24
+- `Version`: 0.0.2
+- `Last Review`: 2026-06-24
 - `Scope`: architecture, plan, operation, acceptance, and implementation work
 - `Counterpart Overview`: `docs/overview/architecture.md`
 
@@ -92,3 +92,14 @@
 ## 9. AI 执行规则
 
 AI 处理本项目时必须遵守本宪法。若局部任务、旧 report 或代码习惯与本宪法冲突，先说明冲突，再按管理员 / USER 批准路径执行。
+
+每次 work item 必须按以下顺序执行：
+
+1. 认真阅读 `docs/plan/00_engineering_constitution.md`。
+2. 认真阅读 `docs/plan/01_terminology.md`。
+3. 阅读并定位相关 `docs/plan/` 章节，确认骨架、边界、唯一真值源、失败路径与验证入口。
+4. 阅读并定位相关 `docs/` 投影文档，包括 feature、acceptance、registry、overview 或 task 文档中与本次变更直接相关的部分。
+5. 只在上述文档约束清楚后进入 code 实现；代码必须作为文档合同的投影，不得反向削弱 plan。
+6. 实现后必须 review 一遍，重点检查高内聚、低耦合、职责边界、文件尺寸、错误路径、验证覆盖与是否引入结构性债务。
+
+若某次 work 不需要修改代码，也仍须完成前四步，并对不修改代码的理由与剩余风险做一次简短 review。

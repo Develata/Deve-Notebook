@@ -45,6 +45,7 @@ Rust workspace for a self-hosted collaborative Markdown notebook targeting low-r
 ### Working In This Directory
 
 - Read the nearest applicable `AGENTS.md` before editing a subdirectory; narrower files override this root file.
+- Every work item MUST follow the project execution flow: read [00_engineering_constitution.md](docs/plan/00_engineering_constitution.md) and [01_terminology.md](docs/plan/01_terminology.md) first, then inspect the matching `docs/plan/` contract, then the matching `docs/` feature/acceptance/registry/overview/task documents, then implement code only as a projection of those contracts, then review the result for cohesion, coupling, boundary drift, file size, failure paths, and verification coverage.
 - Changes MUST proceed in this order: `docs/plan/` -> `docs/` -> code. Code is a strict projection of `docs/`, not an independent source of design authority. If a change requires modifying `docs/plan/`, first read [00_engineering_constitution.md](docs/plan/00_engineering_constitution.md) and [01_terminology.md](docs/plan/01_terminology.md), then make only local edits that preserve the original chapter style.
 - `docs/plan/` is the authoritative engineering blueprint. `docs/features/` describes user-visible behavior, `docs/acceptance-cases/` describes automation-oriented proof, and `docs/report/` is dated evidence rather than a live contract.
 - Use `docs/coverage-matrix.md` to find the matching plan/features/acceptance documents before implementing or moving behavior.
