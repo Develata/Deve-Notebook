@@ -3,10 +3,62 @@ use deve_core::plugin::runtime::chat_stream::ToolCallInfo;
 use deve_core::protocol::ServerMessage;
 use std::sync::{Arc, Mutex};
 
+fn provider_request_builder() -> reqwest::RequestBuilder {
+    reqwest::Client::new()
+        .post("https://api.example.test/v1/chat/completions")
+        .bearer_auth("api-key")
+        .json(&serde_json::json!({ "model": "test" }))
+}
+
 #[test]
 fn native_ai_http_client_creation_is_result_based() {
     let client = get_http_client().expect("native AI HTTP client should build");
     let _ = client.clone();
+}
+
+#[test]
+fn configured_headers_reject_reserved_request_headers() {
+    let mut headers = std::collections::HashMap::new();
+    headers.insert("Authorization".to_string(), "Bearer injected".to_string());
+
+    let err = apply_configured_headers(provider_request_builder(), &headers)
+        .expect_err("configured authorization header must fail closed");
+
+    assert_eq!(
+        err.to_string(),
+        "AI custom headers must not include authorization, host, content-length, or transfer-encoding"
+    );
+}
+
+#[test]
+fn configured_headers_keep_provider_metadata_and_bearer_auth() {
+    let mut headers = std::collections::HashMap::new();
+    headers.insert("OpenAI-Organization".to_string(), "org_test".to_string());
+    headers.insert("X-Provider-Beta".to_string(), "enabled".to_string());
+
+    let request = apply_configured_headers(provider_request_builder(), &headers)
+        .expect("provider metadata headers should be accepted")
+        .build()
+        .expect("request should remain buildable");
+
+    assert_eq!(
+        request
+            .headers()
+            .get("OpenAI-Organization")
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "org_test"
+    );
+    assert_eq!(
+        request
+            .headers()
+            .get(reqwest::header::AUTHORIZATION)
+            .unwrap()
+            .to_str()
+            .unwrap(),
+        "Bearer api-key"
+    );
 }
 
 #[test]

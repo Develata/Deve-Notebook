@@ -23,6 +23,7 @@ pub struct SseChoice {
 #[derive(Debug, Deserialize)]
 pub struct SseDelta {
     pub content: Option<String>,
+    pub function_call: Option<serde_json::Value>,
     pub tool_calls: Option<Vec<serde_json::Value>>,
 }
 

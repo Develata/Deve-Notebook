@@ -8,7 +8,7 @@
 
 use super::sse_parser::parse_sse_message;
 use super::types::ParsedSseEvent;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use deve_core::plugin::runtime::chat_stream::{ChatStreamResponse, ChatStreamSink};
 use futures::StreamExt;
 use reqwest_eventsource::{Error as EventSourceError, Event, EventSource};
@@ -33,6 +33,35 @@ pub fn get_http_client() -> Result<&'static reqwest::Client> {
         .map_err(|err| anyhow!("Failed to create HTTP client: {}", err))
 }
 
+/// Headers callers must not set through AI custom headers: they are owned by the
+/// request pipeline (bearer auth) or the transport (host / message framing).
+/// Permitting them would enable auth override and request-smuggling vectors, so
+/// we fail closed rather than silently applying or dropping them.
+const RESERVED_AI_HEADERS: &[&str] = &[
+    "authorization",
+    "host",
+    "content-length",
+    "transfer-encoding",
+];
+
+fn apply_configured_headers(
+    mut req: reqwest::RequestBuilder,
+    headers: &HashMap<String, String>,
+) -> Result<reqwest::RequestBuilder> {
+    // Fail closed on any reserved header before mutating the request builder.
+    for key in headers.keys() {
+        if RESERVED_AI_HEADERS.contains(&key.trim().to_ascii_lowercase().as_str()) {
+            return Err(anyhow!(
+                "AI custom headers must not include authorization, host, content-length, or transfer-encoding"
+            ));
+        }
+    }
+    for (key, value) in headers {
+        req = req.header(key.as_str(), value.as_str());
+    }
+    Ok(req)
+}
+
 /// 执行流式请求
 pub async fn execute_stream(
     req_id: &str,
@@ -43,11 +72,8 @@ pub async fn execute_stream(
     sink: &ChatStreamSink,
 ) -> Result<ChatStreamResponse> {
     let client = get_http_client()?;
-    let mut req = client.post(endpoint).bearer_auth(api_key).json(&body);
-
-    for (key, value) in headers {
-        req = req.header(key.as_str(), value.as_str());
-    }
+    let req = client.post(endpoint).bearer_auth(api_key).json(&body);
+    let req = apply_configured_headers(req, headers)?;
 
     let mut stream =
         EventSource::new(req).map_err(|e| anyhow!("Failed to create SSE stream: {}", e))?;

@@ -22,7 +22,7 @@ pub fn parse_sse_message(data: &str) -> Result<ParsedSseEvent, String> {
         .ok_or_else(|| "Missing choices in SSE payload".to_string())?;
 
     // Native AI Chat 不支持工具调用；任何工具调用信号都必须优先拒绝。
-    if choice.finish_reason.as_deref() == Some("tool_calls") {
+    if response.choices.iter().any(choice_has_tool_call_signal) {
         return Ok(ParsedSseEvent::ToolCallDelta);
     }
 
@@ -32,13 +32,6 @@ pub fn parse_sse_message(data: &str) -> Result<ParsedSseEvent, String> {
         }
         return Ok(ParsedSseEvent::Empty);
     };
-
-    // 处理工具调用
-    if let Some(tool_calls) = &delta.tool_calls
-        && !tool_calls.is_empty()
-    {
-        return Ok(ParsedSseEvent::ToolCallDelta);
-    }
 
     if let Some(reason) = &choice.finish_reason {
         return Ok(ParsedSseEvent::Finished(reason.clone()));
@@ -52,6 +45,28 @@ pub fn parse_sse_message(data: &str) -> Result<ParsedSseEvent, String> {
     }
 
     Ok(ParsedSseEvent::Empty)
+}
+
+fn choice_has_tool_call_signal(choice: &super::types::SseChoice) -> bool {
+    if matches!(
+        choice.finish_reason.as_deref(),
+        Some("tool_calls" | "function_call")
+    ) {
+        return true;
+    }
+
+    let Some(delta) = choice.delta.as_ref() else {
+        return false;
+    };
+
+    if delta.function_call.is_some() {
+        return true;
+    }
+
+    delta
+        .tool_calls
+        .as_ref()
+        .is_some_and(|tool_calls| !tool_calls.is_empty())
 }
 
 #[cfg(test)]
@@ -93,6 +108,21 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_legacy_function_call_delta_as_tool_call_signal() {
+        let data =
+            r#"{"choices":[{"delta":{"function_call":{"name":"write_file","arguments":"{}"}}}]}"#;
+        let event = parse_sse_message(data).unwrap();
+        assert!(matches!(event, ParsedSseEvent::ToolCallDelta));
+    }
+
+    #[test]
+    fn test_parse_legacy_function_call_finish_reason_as_tool_call_signal() {
+        let data = r#"{"choices":[{"finish_reason":"function_call","delta":{}}]}"#;
+        let event = parse_sse_message(data).unwrap();
+        assert!(matches!(event, ParsedSseEvent::ToolCallDelta));
+    }
+
+    #[test]
     fn test_parse_tool_calls_take_priority_over_content() {
         let data =
             r#"{"choices":[{"delta":{"content":"unsafe partial","tool_calls":[{"index":0}]}}]}"#;
@@ -103,6 +133,14 @@ mod tests {
     #[test]
     fn test_parse_tool_calls_take_priority_over_finish_reason() {
         let data = r#"{"choices":[{"finish_reason":"stop","delta":{"tool_calls":[{"index":0}]}}]}"#;
+        let event = parse_sse_message(data).unwrap();
+        assert!(matches!(event, ParsedSseEvent::ToolCallDelta));
+    }
+
+    #[test]
+    fn test_parse_tool_calls_from_any_choice_fail_closed() {
+        let data =
+            r#"{"choices":[{"delta":{"content":"safe"}},{"delta":{"tool_calls":[{"index":0}]}}]}"#;
         let event = parse_sse_message(data).unwrap();
         assert!(matches!(event, ParsedSseEvent::ToolCallDelta));
     }

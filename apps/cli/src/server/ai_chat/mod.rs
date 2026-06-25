@@ -84,7 +84,7 @@ impl ChatStreamHandler for AiChatStreamHandler {
             .clone();
 
         let body = json!({
-            "model": config.model,
+            "model": config.model.trim(),
             "messages": history,
             "stream": true,
             "max_tokens": config.max_tokens,
@@ -93,7 +93,7 @@ impl ChatStreamHandler for AiChatStreamHandler {
         let req_id = request.req_id.clone();
         let endpoint = config.endpoint();
         let headers = config.headers.clone();
-        let api_key = config.api_key.clone();
+        let api_key = config.api_key.trim().to_string();
 
         tokio::runtime::Handle::current().block_on(async move {
             execute_stream(&req_id, &endpoint, &api_key, &headers, body, &sink).await
