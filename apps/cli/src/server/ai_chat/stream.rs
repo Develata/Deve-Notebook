@@ -8,7 +8,7 @@
 
 use super::sse_parser::parse_sse_message;
 use super::types::ParsedSseEvent;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use deve_core::plugin::runtime::chat_stream::{ChatStreamResponse, ChatStreamSink};
 use futures::StreamExt;
 use reqwest_eventsource::{Error as EventSourceError, Event, EventSource};
