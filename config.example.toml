@@ -41,7 +41,7 @@ connect_interval_ms = 5000
 
 [ui]
 locale = "auto"
-theme = "auto"
+theme = "warm"
 sidebar_visible = true
 statusbar_visible = true
 outline_visible = true

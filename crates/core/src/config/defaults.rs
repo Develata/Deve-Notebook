@@ -38,7 +38,7 @@ pub(super) fn ui_locale() -> String {
 }
 
 pub(super) fn ui_theme() -> String {
-    "auto".to_string()
+    "warm".to_string()
 }
 
 pub(super) fn true_value() -> bool {

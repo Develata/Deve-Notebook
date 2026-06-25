@@ -1,4 +1,12 @@
 regex_absent_tree_ext_skip	apps/web/src	rs	window\(\)\.local_storage|\.local_storage\(|globalThis\.localStorage|sessionStorage	apps/web/src/storage/prefs.rs|apps/web/src/storage/js_bridge.rs
+contains	apps/web/index.html	window.localStorage?.getItem("deve.ui.theme")
+contains	apps/web/index.html	data-deve-theme-pref
+absent	apps/web/index.html	localStorage?.setItem
+absent	apps/web/index.html	sessionStorage
+absent	apps/web/index.html	AUTH_SECRET
+absent	apps/web/index.html	AUTH_PASS
+absent	apps/web/index.html	repo_id
+absent	apps/web/index.html	scope_nonce
 contains	apps/web/src/hooks/use_layout/storage.rs	read_i32_pref
 contains	apps/web/src/hooks/use_outline.rs	read_bool_pref
 contains	apps/web/src/shortcuts/config.rs	read_pref
