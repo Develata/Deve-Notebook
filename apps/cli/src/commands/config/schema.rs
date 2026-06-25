@@ -33,7 +33,7 @@ const CONFIG_KEY_SPECS: &[ConfigKeySpec] = &[
     ConfigKeySpec::bool("ui.sidebar_visible"),
     ConfigKeySpec::integer("ui.sidebar_width"),
     ConfigKeySpec::bool("ui.statusbar_visible"),
-    ConfigKeySpec::string("ui.theme", &["auto", "light", "dark"]),
+    ConfigKeySpec::string("ui.theme", &["warm", "cold", "night"]),
 ];
 
 #[derive(Debug, Clone, Copy)]

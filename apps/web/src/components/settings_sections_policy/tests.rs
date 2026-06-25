@@ -70,14 +70,18 @@ fn sync_mode_buttons_treat_unknown_mode_as_auto_safe_default() {
 
 #[test]
 fn theme_buttons_reflect_browser_local_preference() {
-    let auto = theme_button_state(ThemePreference::Auto);
-    assert_eq!(auto.auto_class, BUTTON_CLASS_ACCENT_ACTIVE);
-    assert_eq!(auto.light_class, BUTTON_CLASS_IDLE);
-    assert_eq!(auto.dark_class, BUTTON_CLASS_IDLE);
+    let warm = theme_button_state(ThemePreference::Warm);
+    assert_eq!(warm.warm_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    assert_eq!(warm.cold_class, BUTTON_CLASS_IDLE);
+    assert_eq!(warm.night_class, BUTTON_CLASS_IDLE);
 
-    let dark = theme_button_state(ThemePreference::Dark);
-    assert_eq!(dark.auto_class, BUTTON_CLASS_IDLE);
-    assert_eq!(dark.dark_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    let cold = theme_button_state(ThemePreference::Cold);
+    assert_eq!(cold.cold_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    assert_eq!(cold.warm_class, BUTTON_CLASS_IDLE);
+
+    let night = theme_button_state(ThemePreference::Night);
+    assert_eq!(night.warm_class, BUTTON_CLASS_IDLE);
+    assert_eq!(night.night_class, BUTTON_CLASS_ACCENT_ACTIVE);
 }
 
 #[test]

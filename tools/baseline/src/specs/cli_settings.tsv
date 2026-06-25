@@ -57,7 +57,7 @@ contains	apps/cli/src/commands/config/tests.rs	supported_config_keys_match_setti
 contains	apps/cli/src/commands/config/tests.rs	supported_config_schema_matches_settings_plan_type_and_choices
 contains	apps/cli/src/commands/init.rs	init_config_template_matches_current_settings_schema
 contains	apps/cli/src/commands/init.rs	Projection Locator
-contains	apps/cli/src/commands/init.rs	RepoInitOptions
+contains	apps/cli/src/commands/init.rs	initialize_local_repo_workspace
 contains	apps/cli/src/commands/init.rs	[ai.agent_bridge]
 contains	apps/cli/src/commands/init.rs	peer_id = "<12-lowercase-hex-peer-id-from-peer-b-startup-log>"
 absent	apps/cli/src/commands/init.rs	peer_id = "peer-b"
@@ -156,7 +156,7 @@ contains	apps/web/src/components/settings.rs	RuntimeDiagnosticsSection
 contains	apps/web/src/components/settings_prefs.rs	const THEME_PREF_KEY: &str = "deve.ui.theme";
 contains	apps/web/src/components/settings_prefs.rs	const EDITOR_WRAP_PREF_KEY: &str = "deve.editor.word_wrap";
 contains	apps/web/src/components/settings_prefs.rs	const EDITOR_DENSITY_PREF_KEY: &str = "deve.editor.density";
-contains	apps/web/src/components/settings_prefs.rs	theme_preference_defaults_to_auto_and_roundtrips
+contains	apps/web/src/components/settings_prefs.rs	theme_preference_defaults_to_warm_and_roundtrips
 contains	apps/web/src/components/settings_sections/local_prefs.rs	data-deve-settings-theme
 contains	apps/web/src/components/settings_sections/local_prefs.rs	data-deve-runtime-diagnostics
 contains	apps/web/src/components/settings.rs	language_button_state

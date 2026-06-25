@@ -92,7 +92,7 @@ Required checks:
 - The modal exposes `data-deve-settings-surface="modal"`, remains within the
   viewport on mobile, supports `Escape` close, and its close controls remain
   44px touch targets.
-- Clicking `Dark`, `Off`, and `Compact` updates the browser-local markers
+- Clicking `Night`, `Off`, and `Compact` updates the browser-local markers
   `data-deve-settings-theme`, `data-deve-settings-editor-wrap`, and
   `data-deve-settings-editor-density` without writing server settings.
 - Trusted CLI disabled state renders `data-deve-setting-disabled-reason`, and

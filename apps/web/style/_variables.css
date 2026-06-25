@@ -1,8 +1,13 @@
 /**
- * _variables.css — Design Tokens (Light Theme)
+ * _variables.css — Design Tokens (Warm 视觉风格 / 默认 + 结构基线)
  *
  * 遵循 08_ui_design.md §3.4: 颜色字面量只允许在 token 文件定义,
  * 其它样式与组件 MUST 通过 CSS 变量引用颜色。
+ *
+ * 三种平级视觉风格 (15_settings §2.1): warm (默认) / cold / night。
+ * `:root` 同时承载结构性 token (z-index / 间距 / 字体) 与 warm 默认色;
+ * warm 在无 `data-deve-theme-pref` 标记时即生效 (避免主题闪烁)。
+ * cold / night 只覆盖颜色 token, 结构性 token 继承自此 `:root`。
  *
  * 设计方向: "Calm document tool" — 暖中性纸面 + 单一低饱和鼠尾草绿强调色 +
  * 柔和投影。遵守"对比预算": 多数界面处于窄而协调的色带, 仅在真正需要强调
@@ -18,7 +23,8 @@
  *   --code-*   代码块
  *   --shadow-* 高度/投影
  *
- * Dark theme overrides → _variables-dark.css
+ * Cold 风格覆盖 → _variables-cold.css
+ * Night 风格覆盖 → _variables-night.css
  */
 
 :root {

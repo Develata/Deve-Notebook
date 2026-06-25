@@ -42,31 +42,31 @@ pub fn AppearanceSection(locale: RwSignal<Locale>) -> impl IntoView {
                 </div>
                 <div class="flex flex-wrap gap-2" data-deve-settings-theme=move || theme_pref.get().as_str()>
                     <button
-                        class=move || button_state.get().auto_class
+                        class=move || button_state.get().warm_class
                         on:click=move |_| {
-                            persist_theme_preference(ThemePreference::Auto);
-                            set_theme_pref.set(ThemePreference::Auto);
+                            persist_theme_preference(ThemePreference::Warm);
+                            set_theme_pref.set(ThemePreference::Warm);
                         }
                     >
-                        {move || t::settings::theme_auto(locale.get())}
+                        {move || t::settings::theme_warm(locale.get())}
                     </button>
                     <button
-                        class=move || button_state.get().light_class
+                        class=move || button_state.get().cold_class
                         on:click=move |_| {
-                            persist_theme_preference(ThemePreference::Light);
-                            set_theme_pref.set(ThemePreference::Light);
+                            persist_theme_preference(ThemePreference::Cold);
+                            set_theme_pref.set(ThemePreference::Cold);
                         }
                     >
-                        {move || t::settings::theme_light(locale.get())}
+                        {move || t::settings::theme_cold(locale.get())}
                     </button>
                     <button
-                        class=move || button_state.get().dark_class
+                        class=move || button_state.get().night_class
                         on:click=move |_| {
-                            persist_theme_preference(ThemePreference::Dark);
-                            set_theme_pref.set(ThemePreference::Dark);
+                            persist_theme_preference(ThemePreference::Night);
+                            set_theme_pref.set(ThemePreference::Night);
                         }
                     >
-                        {move || t::settings::theme_dark(locale.get())}
+                        {move || t::settings::theme_night(locale.get())}
                     </button>
                 </div>
             </div>

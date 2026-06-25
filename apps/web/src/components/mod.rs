@@ -43,6 +43,6 @@ pub mod desktop_layout;
 pub mod diff_view;
 pub mod main_layout_runtime;
 pub mod mobile_layout;
-mod settings_prefs;
+pub(crate) mod settings_prefs;
 pub mod settings_sections;
 mod settings_sections_policy;

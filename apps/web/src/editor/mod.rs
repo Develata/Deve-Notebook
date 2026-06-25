@@ -7,10 +7,10 @@
 use crate::api::WsService;
 use crate::components::icons::PanelLeft;
 use crate::components::layout_context::{EditorContentContext, OutlineControl};
+use crate::hooks::use_core::write_gate::{repo_write_block_tracked, RepoWriteSignals};
 use crate::hooks::use_core::EditorContext;
-use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::hooks::use_outline::use_outline;
-use crate::i18n::{Locale, t};
+use crate::i18n::{t, Locale};
 use deve_core::models::DocId;
 use leptos::html::Div;
 use leptos::prelude::*;
@@ -95,13 +95,13 @@ pub fn Editor(
                     data-deve-desktop-col="3-editor"
                     data-deve-editor-host="true"
                     data-deve-editor-readonly=move || editor_readonly.get().to_string()
-                    class="flex-1 relative border-r border-gray-200 bg-white shadow-sm overflow-hidden"
+                    class="flex-1 relative border-r border-[var(--border-default)] bg-[var(--bg-editor)] shadow-sm overflow-hidden"
                 >
                     <div
                         node_ref=editor_ref
                         data-deve-editor-codemirror-host="true"
                         class="absolute inset-0"
-                        class:bg-gray-100=move || playback_version.get() < doc_version.get()
+                        class=("bg-[var(--bg-active)]", move || playback_version.get() < doc_version.get())
                     ></div>
                     {move || if !embedded && playback_version.get() < doc_version.get() {
                         view! {
@@ -116,7 +116,7 @@ pub fn Editor(
                          view! {
                              <button
                                 on:click=move |_| on_toggle_outline.run(())
-                                class="absolute top-2 right-4 z-[var(--z-floating)] p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-white/90 border border-gray-200 rounded shadow-sm transition-all"
+                                class="absolute top-2 right-4 z-[var(--z-floating)] p-1.5 text-[var(--fg-secondary)] hover:text-[var(--fg-primary)] hover:bg-[var(--bg-hover)] bg-[var(--bg-panel)] border border-[var(--border-default)] rounded shadow-sm transition-all"
                                 title=move || t::header::toggle_outline(locale.get())
                              >
                                 <PanelLeft class="w-5 h-5"/>
@@ -130,7 +130,7 @@ pub fn Editor(
                     view! {
                         <div
                             data-deve-desktop-col="4-outline"
-                            class="bg-[var(--bg-sidebar)] border-l border-gray-200 transition-all duration-300 ease-in-out overflow-hidden"
+                            class="bg-[var(--bg-sidebar)] border-l border-[var(--border-default)] transition-all duration-300 ease-in-out overflow-hidden"
                             style=move || if show_outline.get() { "width: 250px; opacity: 1;" } else { "width: 0px; opacity: 0;" }
                         >
                             <crate::components::outline::Outline

@@ -82,16 +82,16 @@ pub(super) fn sync_mode_button_state(sync_mode: &str) -> SyncModeButtonState {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct ThemeButtonState {
-    pub auto_class: &'static str,
-    pub light_class: &'static str,
-    pub dark_class: &'static str,
+    pub warm_class: &'static str,
+    pub cold_class: &'static str,
+    pub night_class: &'static str,
 }
 
 pub(super) fn theme_button_state(pref: ThemePreference) -> ThemeButtonState {
     ThemeButtonState {
-        auto_class: preference_button_class(pref == ThemePreference::Auto),
-        light_class: preference_button_class(pref == ThemePreference::Light),
-        dark_class: preference_button_class(pref == ThemePreference::Dark),
+        warm_class: preference_button_class(pref == ThemePreference::Warm),
+        cold_class: preference_button_class(pref == ThemePreference::Cold),
+        night_class: preference_button_class(pref == ThemePreference::Night),
     }
 }
 

@@ -1,0 +1,147 @@
+/**
+ * _variables-cold.css — Design Tokens (Cold 视觉风格)
+ *
+ * 三种平级视觉风格之一 (warm / cold / night)。覆盖 _variables.css `:root`
+ * 中的 warm 默认色 token，当 `<html data-deve-theme-pref="cold">` 时生效。
+ * 结构性 token (z-index / 间距 / 字体) 仍继承自 `:root`，此处只覆盖颜色。
+ *
+ * 设计方向: 经典冷蓝白 (VSCode 风) 的克制版 —— 干净白面 + 蓝色强调，
+ * 但遵守与 warm 同一套"对比预算": 柔化纯黑引用边框、降低选区饱和、
+ * 浮层用柔投影替代硬边框；状态栏蓝与只读红作为风格标识/强调保留。
+ */
+
+:root[data-deve-theme-pref="cold"] {
+  /* ==================== Layout Backgrounds ==================== */
+  --bg-app: #ffffff;             /* 主容器背景 (干净白) */
+  --bg-sidebar: #f7f8fa;         /* 侧边栏 (冷灰白) */
+  --bg-editor: #ffffff;          /* 编辑器区域 */
+  --bg-panel: #eef1f5;           /* 面板/区块 */
+  --bg-statusbar: #1f6fb2;       /* 状态栏 (VSCode 蓝, 略柔) */
+  --bg-statusbar-ro: #d98089;    /* 状态栏 (只读: 柔化红, 仍可读为警示) */
+
+  /* ==================== Component Backgrounds ==================== */
+  --bg-input: #eef1f5;
+  --bg-hover: #eff2f6;
+  --bg-active: #e2e8f0;          /* slate-200 */
+  --bg-accent: #3b82f6;          /* 主强调色 (blue-500) */
+  --bg-accent-hover: #2563eb;    /* blue-600 */
+  --bg-accent-subtle: #eaf1fe;   /* 浅蓝染 */
+  --bg-overlay: rgba(15, 23, 42, 0.30); /* 遮罩层 (冷, 柔) */
+  --bg-tooltip: #1f2937;         /* gray-800 */
+  --bg-badge: #e2685f;           /* 角标 (柔化红) */
+  --bg-badge-count: #c7ccd4;     /* 计数徽章 (冷灰) */
+
+  /* ==================== Chat ==================== */
+  --bg-chat-user: #e6f0fb;       /* 用户消息气泡 (浅蓝) */
+  --bg-badge-success: #e1efda;
+  --fg-badge-success: #45733e;
+  --border-badge-success: #cfe3c2;
+
+  /* ==================== Foreground / Text ==================== */
+  --fg-primary: #2f3a47;         /* 主文字 (冷墨, 柔化避免纯黑) */
+  --fg-secondary: #647082;       /* 次要文字 */
+  --fg-muted: #9aa4b2;           /* 禁用/占位 */
+  --fg-accent: #2563eb;          /* 链接/强调 (blue-600) */
+  --fg-on-accent: #ffffff;       /* 强调色上的文字 (emphasis tier) */
+  --fg-on-tooltip: #f3f4f6;
+
+  /* ==================== Borders ==================== */
+  --border-default: #e3e8ee;     /* 默认边框 (柔) */
+  --border-hover: #d3dae3;
+  --border-active: #aab4c2;
+  --border-accent: #3b82f6;
+
+  /* ==================== Semantic Colors (Git) — 信号而非警笛 ==================== */
+  --color-added: #3f9d57;        /* 新增 (柔绿) */
+  --color-added-bg: #e2f1e4;
+  --color-modified: #c79a2e;     /* 修改 (柔琥珀) */
+  --color-modified-bg: #f6eecd;
+  --color-deleted: #d9534f;      /* 删除 (柔红) */
+  --color-deleted-bg: #f6e0df;
+  --color-warning: #e08a3c;      /* 警告 (橙) */
+  --color-info: #3b82f6;         /* 信息 (蓝) */
+
+  /* ==================== Editor (CodeMirror) ==================== */
+  --editor-bg: #ffffff;
+  --editor-text: #2f3a47;
+  --editor-muted: #647082;
+  --editor-border: #e3e8ee;
+
+  /* ==================== Blockquote (冷灰渐变, 柔化深端) ==================== */
+  --bq-bg-color: #f6f8fb;
+  --bq-border-1: #cbd5e1;
+  --bq-border-2: #abb8c9;
+  --bq-border-3: #8c9cb0;
+  --bq-border-4: #6f8097;
+  --bq-border-5: #56657c;
+  --bq-border-6: #404d61;
+  --bq-border-7: #2f3a4a;
+  --bq-border-8: #233040;
+  --bq-border-9: #1b2636;
+  --bq-border-10: #1b2636;
+
+  /* ==================== Code Block ==================== */
+  --code-bg-color: #eef1f5;      /* 冷灰填充 (boxed) */
+
+  /* ==================== Links ==================== */
+  --link-color: #2563eb;
+  --link-hover: #1d4ed8;
+
+  /* ==================== Selection (蓝染, 降饱和) ==================== */
+  --selection-bg: rgba(59, 130, 246, 0.20);
+  --selection-bg-block: rgba(59, 130, 246, 0.28);
+
+  /* ==================== Diff View ==================== */
+  --diff-bg: #ffffff;
+  --diff-header-bg: #f1f4f8;
+  --diff-border: #e3e8ee;
+  --diff-fg: #2f3a47;
+  --diff-muted: #647082;
+  --diff-filename: #2563eb;
+  --diff-pill-bg: #e2e8f0;
+  --diff-pill-fg: #647082;
+  --diff-btn-hover: #e2e8f0;
+  --diff-gutter-bg: #f6f8fb;
+  --diff-gutter-fg: #9aa4b2;
+  --diff-line-add: #e2f1e4;
+  --diff-line-del: #f6e0df;
+  --diff-line-empty: #eef1f5;
+  --diff-word-add: #b9e0c0;
+  --diff-word-del: #f0c3c1;
+
+  /* ==================== Scrollbar ==================== */
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #aab4c2;
+  --scrollbar-track: transparent;
+  --scrollbar-border: #ffffff;
+
+  /* ==================== Modal / Search ==================== */
+  --bg-modal: #ffffff;
+  --shadow-modal: rgba(15, 23, 42, 0.18);
+
+  /* ==================== Elevation (柔投影, 冷调) ==================== */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.10);
+  --shadow-pop: 0 8px 28px rgba(15, 23, 42, 0.16);
+
+  /* ==================== Inline Code & Frontmatter ==================== */
+  --code-inline-bg: #eef1f5;
+  --bg-frontmatter: #f6f8fb;
+  --fg-frontmatter-delim: #cbd5e1;
+
+  /* ==================== Table ==================== */
+  --bg-table-header: #eef1f5;
+  --bg-table-hover: #e6f0fb;     /* 行悬停 (浅蓝染) */
+
+  /* ==================== Typography extras ==================== */
+  --fg-blockquote: #56657c;
+  --fg-url: #9aa4b2;
+  --fg-hr: #d3dae3;
+  --fg-caret: #3b82f6;           /* 编辑器光标 (蓝, 微妙身份) */
+
+  /* ==================== Math ==================== */
+  --bg-math-widget: rgba(59, 130, 246, 0.06); /* 行内公式: 极轻蓝染, 通透 */
+
+  /* ==================== File type colors ==================== */
+  --color-file-rust: #c08a5a;
+}

@@ -18,24 +18,24 @@ pub fn appearance_desc(locale: Locale) -> &'static str {
     }
 }
 
-pub fn theme_auto(locale: Locale) -> &'static str {
+pub fn theme_warm(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Auto",
-        Locale::Zh => "自动",
+        Locale::En => "Warm",
+        Locale::Zh => "暖色",
     }
 }
 
-pub fn theme_light(locale: Locale) -> &'static str {
+pub fn theme_cold(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Light",
-        Locale::Zh => "浅色",
+        Locale::En => "Cold",
+        Locale::Zh => "冷色",
     }
 }
 
-pub fn theme_dark(locale: Locale) -> &'static str {
+pub fn theme_night(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Dark",
-        Locale::Zh => "深色",
+        Locale::En => "Night",
+        Locale::Zh => "夜间",
     }
 }
 

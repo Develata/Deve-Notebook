@@ -1,14 +1,15 @@
 /**
- * _variables-dark.css — Design Tokens (Dark Theme)
+ * _variables-night.css — Design Tokens (Night 视觉风格)
  *
- * Overrides :root variables defined in _variables.css.
- * Applied when <html class="dark"> or ancestor has .dark class.
+ * 三种平级视觉风格之一 (warm / cold / night)。覆盖 _variables.css `:root`
+ * 中的 warm 默认色 token，当 `<html data-deve-theme-pref="night">` 时生效。
+ * 结构性 token (z-index / 间距 / 字体) 仍继承自 `:root`，此处只覆盖颜色。
  *
  * 设计方向 "Calm document tool" 的暖暗版: 暖近黑表面 (非 VSCode 冷蓝黑) +
  * 同一鼠尾草绿强调色 + 柔和投影。同样遵守"对比预算"。
  */
 
-.dark {
+:root[data-deve-theme-pref="night"] {
   /* Layout Backgrounds */
   --bg-app: #1a1917;
   --bg-sidebar: #201e1a;

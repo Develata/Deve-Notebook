@@ -17,27 +17,34 @@ pub(crate) const DEFAULT_MAX_DOCUMENT_TABS: usize = 8;
 pub(crate) const MIN_MAX_DOCUMENT_TABS: usize = 1;
 pub(crate) const MAX_MAX_DOCUMENT_TABS: usize = 20;
 
+/// Browser-local visual style. Three flat named styles (15_settings §2.1):
+/// `warm` (default) / `cold` / `night`. Supersedes the legacy `auto/light/dark`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ThemePreference {
-    Auto,
-    Light,
-    Dark,
+    Warm,
+    Cold,
+    Night,
 }
 
 impl ThemePreference {
     pub(super) fn as_str(self) -> &'static str {
         match self {
-            Self::Auto => "auto",
-            Self::Light => "light",
-            Self::Dark => "dark",
+            Self::Warm => "warm",
+            Self::Cold => "cold",
+            Self::Night => "night",
         }
     }
 
+    /// Parse a stored value, migrating legacy markers: `dark -> night`,
+    /// `light`/`auto -> warm`. Unknown values return `None` so the caller
+    /// falls back to the default (`warm`).
     fn parse(value: &str) -> Option<Self> {
         match value {
-            "auto" => Some(Self::Auto),
-            "light" => Some(Self::Light),
-            "dark" => Some(Self::Dark),
+            "warm" => Some(Self::Warm),
+            "cold" => Some(Self::Cold),
+            "night" => Some(Self::Night),
+            "dark" => Some(Self::Night),
+            "light" | "auto" => Some(Self::Warm),
             _ => None,
         }
     }
@@ -93,7 +100,14 @@ pub(super) fn read_theme_preference() -> ThemePreference {
     read_pref(THEME_PREF_KEY)
         .as_deref()
         .and_then(ThemePreference::parse)
-        .unwrap_or(ThemePreference::Auto)
+        .unwrap_or(ThemePreference::Warm)
+}
+
+/// Apply the persisted visual style on app boot so a saved theme survives a
+/// reload even before the Settings panel mounts. The inline bootstrap in
+/// `index.html` sets the marker pre-paint; this keeps the Rust pref authoritative.
+pub(crate) fn apply_persisted_theme() {
+    apply_theme_preference(read_theme_preference());
 }
 
 pub(super) fn persist_theme_preference(pref: ThemePreference) {
@@ -165,24 +179,10 @@ pub(crate) fn persist_max_document_tabs_preference(value: usize) {
 
 #[cfg(target_arch = "wasm32")]
 fn apply_theme_preference_to_document(pref: ThemePreference) {
-    let Some(window) = web_sys::window() else {
-        return;
-    };
-    let Some(document) = window.document() else {
-        return;
-    };
-    let Some(root) = document.document_element() else {
-        return;
-    };
-
-    let _ = root.set_attribute("data-deve-theme-pref", pref.as_str());
-    let dark = matches!(pref, ThemePreference::Dark);
-
-    if dark {
-        let _ = root.class_list().add_1("dark");
-    } else {
-        let _ = root.class_list().remove_1("dark");
-    }
+    // The `data-deve-theme-pref` marker is the single selector that drives all
+    // three token blocks (_variables.css `:root` warm default,
+    // _variables-cold.css, _variables-night.css). No `.dark` class is involved.
+    set_root_attr("data-deve-theme-pref", pref.as_str());
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -211,15 +211,26 @@ mod tests {
     use crate::storage::prefs::{remove_pref, write_pref};
 
     #[test]
-    fn theme_preference_defaults_to_auto_and_roundtrips() {
+    fn theme_preference_defaults_to_warm_and_roundtrips() {
         remove_pref(THEME_PREF_KEY);
-        assert_eq!(read_theme_preference(), ThemePreference::Auto);
+        assert_eq!(read_theme_preference(), ThemePreference::Warm);
 
-        persist_theme_preference(ThemePreference::Dark);
-        assert_eq!(read_theme_preference(), ThemePreference::Dark);
+        persist_theme_preference(ThemePreference::Night);
+        assert_eq!(read_theme_preference(), ThemePreference::Night);
+
+        persist_theme_preference(ThemePreference::Cold);
+        assert_eq!(read_theme_preference(), ThemePreference::Cold);
+
+        // Legacy markers migrate: dark -> night, light/auto -> warm.
+        write_pref(THEME_PREF_KEY, "dark").expect("write legacy dark");
+        assert_eq!(read_theme_preference(), ThemePreference::Night);
+        write_pref(THEME_PREF_KEY, "light").expect("write legacy light");
+        assert_eq!(read_theme_preference(), ThemePreference::Warm);
+        write_pref(THEME_PREF_KEY, "auto").expect("write legacy auto");
+        assert_eq!(read_theme_preference(), ThemePreference::Warm);
 
         write_pref(THEME_PREF_KEY, "unknown").expect("write invalid theme");
-        assert_eq!(read_theme_preference(), ThemePreference::Auto);
+        assert_eq!(read_theme_preference(), ThemePreference::Warm);
     }
 
     #[test]

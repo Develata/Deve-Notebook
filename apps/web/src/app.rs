@@ -42,6 +42,11 @@ pub fn App() -> impl IntoView {
     publish_browser_i18n(locale.get_untracked());
     Effect::new(move |_| publish_browser_i18n(locale.get()));
 
+    // Replay the persisted visual style on boot so a saved theme survives a
+    // reload (the index.html inline bootstrap sets the marker pre-paint; this
+    // keeps the Rust pref authoritative). See 15_settings#browser-ui-prefs.
+    crate::components::settings_prefs::apply_persisted_theme();
+
     // 认证状态
     let (auth_state, set_auth_state) = signal(AuthState::Checking);
     let page_active = RwSignal::new(current_page_active());

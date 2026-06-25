@@ -22,7 +22,7 @@
 
 - `Name`: `Select Theme Preference`
 - `Surface`: `settings-modal`
-- `Trigger`: click Auto, Light, or Dark in Settings
+- `Trigger`: click Warm, Cold, or Night visual style in Settings
 - `Preconditions`: settings modal is open
 - `Immediate Result`: browser-local theme preference updates and root theme marker re-renders
 - `Application Entry`: `apps/web/src/components/settings_sections.rs`,

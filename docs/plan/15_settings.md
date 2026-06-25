@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-13`
+- `Last Review`: `2026-06-25`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -68,7 +68,7 @@
 | Key                        | Type   | Default | Description                                         |
 | :------------------------- | :----- | :------ | :-------------------------------------------------- |
 | `ui.locale`                | String | `auto`  | 界面语言. 支持 `en-US`, `zh-CN`. `auto` 跟随浏览器. |
-| `ui.theme`                 | String | `auto`  | 主题模式. `light`, `dark`, `auto`.                  |
+| `ui.theme`                 | String | `warm`  | 视觉风格. `warm` (暖中性, 默认), `cold` (冷蓝白), `night` (夜间深色). 旧值迁移: dark→night, light/auto→warm. |
 | `ui.sidebar_visible`       | Bool   | `true`  | 是否显示 Primary Sidebar (左侧栏).                  |
 | `ui.statusbar_visible`     | Bool   | `true`  | 是否显示 Status Bar (底部状态栏).                   |
 | `ui.outline_visible`       | Bool   | `true`  | 是否显示 Outline Panel (右侧大纲).                  |
@@ -114,7 +114,7 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 规则：
 
 *   系统 **MUST NOT** 支持 `vault_path` / `DEVE_VAULT_PATH` 作为全局投影根。
-*   每个本地可写 repo 的 projection base 必须通过 host-local Projection Locator 绑定；最终 workspace root 必须计算为 `<projection_base>/<repo_name>/`。locator 存储边界见 `03_storage/projection.md#projection-locator-contract`。
+*   每个本地可写 repo 的 projection base 必须通过 host-local Projection Locator 绑定；最终 workspace root 必须计算为 `<projection_base>/<safe_repo_name>--<repo_id>/`。locator 存储边界见 `03_storage/projection.md#projection-locator-contract`。
 *   `config.toml` 可以决定 `ledger_dir`，但不得通过 `ledger_dir` 推导 projection base 或 workspace root。
 *   Settings UI 或 CLI 可以展示、创建、替换 locator；写入前 **MUST** 校验 path 类型、canonical path、冲突与保留目录边界。
 *   locator 变更属于 repo runtime 操作，不是用户 UI 偏好，也不是 ledger authority。
@@ -162,7 +162,7 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 
 Settings v1 最小 UI surface：
 
-*   外观：主题偏好 `auto` / `light` / `dark`，只写浏览器本地 `deve.ui.theme`，并通过根节点主题标记提供即时反馈。
+*   外观：视觉风格 `warm` / `cold` / `night`（默认 `warm`），只写浏览器本地 `deve.ui.theme`，并通过根节点主题标记 `data-deve-theme-pref` 提供即时反馈。三种风格是平级命名风格而非 light/dark 二元开关：`warm` 暖中性纸面、`cold` 冷蓝白、`night` 夜间深色；`night` 同时设置 `color-scheme: dark`。启动期 MUST 在 CSS 绘制前由内联 bootstrap 设置该标记以避免主题闪烁，WASM 启动后仍以浏览器本地 `deve.ui.theme` 为准重放。旧值按 `dark→night`、`light`/`auto→warm` 迁移；未知值回退默认 `warm`。
 *   编辑器：自动换行、编辑器密度与最大文档 tab 数只作为本地 UI 标记，不写 server-backed settings，不改变 repo 文档事实。
     *   最大文档 tab 数 key 为 `deve.ui.max_document_tabs`，默认值 `8`，有效范围 `1..=20`。
     *   非法值必须回退默认值；合法但越界的用户输入必须 clamp 到有效范围。

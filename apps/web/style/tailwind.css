@@ -18,7 +18,7 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
-/* Dark Mode Scrollbar — now handled by CSS variables in .dark scope */
+/* Theme scrollbars are handled by CSS variables selected via data-deve-theme-pref. */
 
 /* Search Modal (搜索模态框) */
 .search-modal-overlay {
@@ -129,11 +129,12 @@ html[data-deve-editor-density="compact"] .cm-line {
   padding-block: 0;
 }
 
-html[data-deve-theme-pref="light"] {
+html[data-deve-theme-pref="warm"],
+html[data-deve-theme-pref="cold"] {
   color-scheme: light;
 }
 
-html[data-deve-theme-pref="dark"] {
+html[data-deve-theme-pref="night"] {
   color-scheme: dark;
 }
 
