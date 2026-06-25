@@ -31,6 +31,12 @@ impl GuardedFileModuleResolver {
                 path
             ));
         }
+        if looks_like_windows_drive_path(path) {
+            return Err(format!(
+                "Invalid plugin module import '{}': drive prefixes are not allowed",
+                path
+            ));
+        }
 
         let module_path = Path::new(path);
         if module_path.is_absolute() {
@@ -92,6 +98,13 @@ impl ModuleResolver for GuardedFileModuleResolver {
             .map_err(|err| -> Box<rhai::EvalAltResult> { err.into() })?;
         self.inner.resolve(engine, source, path, pos)
     }
+}
+
+fn looks_like_windows_drive_path(path: &str) -> bool {
+    matches!(
+        path.as_bytes(),
+        [drive, b':', ..] if drive.is_ascii_alphabetic()
+    )
 }
 
 fn canonicalize_existing_ancestor(path: &Path) -> Result<PathBuf, String> {
@@ -189,6 +202,23 @@ mod tests {
             .expect_err("parent traversal import must fail");
 
         assert!(err.to_string().contains("Invalid plugin module import"));
+    }
+
+    #[test]
+    fn windows_drive_prefix_import_is_rejected() {
+        let dir = tempdir().expect("tempdir");
+        let engine = engine_with_resolver(dir.path().to_path_buf());
+
+        let err = engine
+            .eval::<i64>(
+                r#"
+                    import "C:/outside" as outside;
+                    outside::value()
+                "#,
+            )
+            .expect_err("drive-prefixed module import must fail");
+
+        assert!(err.to_string().contains("drive prefixes are not allowed"));
     }
 
     #[cfg(unix)]

@@ -10,7 +10,10 @@ use rhai::{Engine, EvalAltResult};
 use std::path::Path;
 use std::sync::Arc;
 
-use super::path_guard::{is_ledger_managed_write_target, managed_note_target_parts};
+use super::path_guard::{
+    is_ledger_managed_write_target, managed_note_target_parts, resolve_capability_read_target,
+    resolve_capability_write_target,
+};
 
 pub fn register_note_api(engine: &mut Engine, caps: Arc<Capability>) {
     let caps_read = caps.clone();
@@ -19,28 +22,32 @@ pub fn register_note_api(engine: &mut Engine, caps: Arc<Capability>) {
         "note_read",
         move |path: &str| -> Result<String, Box<EvalAltResult>> {
             let target = Path::new(path);
-            if !caps_read.check_read(target) {
-                return Err(format!(
-                    "Permission denied: read access to '{}' is not allowed by manifest.",
-                    path
-                )
-                .into());
-            }
-            read_managed_note(target).map_err(|e| e.to_string().into())
+            let target = resolve_capability_read_target(caps_read.as_ref(), target)
+                .map_err(|e| -> Box<EvalAltResult> { e.into() })?
+                .ok_or_else(|| -> Box<EvalAltResult> {
+                    format!(
+                        "Permission denied: read access to '{}' is not allowed by manifest.",
+                        path
+                    )
+                    .into()
+                })?;
+            read_managed_note(&target).map_err(|e| e.to_string().into())
         },
     );
     engine.register_fn(
         "note_write",
         move |path: &str, content: &str| -> Result<(), Box<EvalAltResult>> {
             let target = Path::new(path);
-            if !caps_write.check_write(target) {
-                return Err(format!(
-                    "Permission denied: write access to '{}' is not allowed by manifest.",
-                    path
-                )
-                .into());
-            }
-            write_managed_note(target, content).map_err(|e| e.to_string().into())
+            let target = resolve_capability_write_target(caps_write.as_ref(), target)
+                .map_err(|e| -> Box<EvalAltResult> { e.into() })?
+                .ok_or_else(|| -> Box<EvalAltResult> {
+                    format!(
+                        "Permission denied: write access to '{}' is not allowed by manifest.",
+                        path
+                    )
+                    .into()
+                })?;
+            write_managed_note(&target, content).map_err(|e| e.to_string().into())
         },
     );
 }
@@ -94,6 +101,30 @@ fn managed_target_parts(path: &Path) -> Result<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rhai::Engine;
+    use std::path::PathBuf;
+    use std::sync::{Arc, Mutex};
+    use tempfile::tempdir;
+
+    static CWD_LOCK: Mutex<()> = Mutex::new(());
+
+    struct CwdGuard {
+        old: PathBuf,
+    }
+
+    impl CwdGuard {
+        fn enter(path: &Path) -> Self {
+            let old = std::env::current_dir().expect("cwd");
+            std::env::set_current_dir(path).expect("set cwd");
+            Self { old }
+        }
+    }
+
+    impl Drop for CwdGuard {
+        fn drop(&mut self) {
+            let _ = std::env::set_current_dir(&self.old);
+        }
+    }
 
     #[test]
     fn rejects_non_managed_targets() {
@@ -101,5 +132,33 @@ mod tests {
         assert!(err.to_string().contains("ledger-managed markdown"));
         let err = read_managed_note(Path::new("tmp/out.txt")).expect_err("must fail");
         assert!(err.to_string().contains("ledger-managed markdown"));
+    }
+
+    #[test]
+    fn note_api_denies_parent_escape_before_managed_note_resolution() {
+        let _guard = CWD_LOCK.lock().expect("lock cwd");
+        let dir = tempdir().expect("tempdir");
+        let app_root = dir.path().join("app");
+        std::fs::create_dir_all(app_root.join("allowed")).expect("mkdir app allowed");
+        std::fs::create_dir_all(dir.path().join("allowed")).expect("mkdir outside allowed");
+        let _cwd = CwdGuard::enter(&app_root);
+
+        let mut engine = Engine::new();
+        let caps = Arc::new(Capability {
+            allow_fs_read: vec![PathBuf::from("allowed")],
+            allow_fs_write: vec![PathBuf::from("allowed")],
+            ..Default::default()
+        });
+        register_note_api(&mut engine, caps);
+
+        let err = engine
+            .eval::<String>(r#"note_read("../allowed/secret.md")"#)
+            .expect_err("parent escape read must fail at capability gate");
+        assert!(err.to_string().contains("Permission denied"));
+
+        let err = engine
+            .eval::<()>(r#"note_write("../allowed/secret.md", "x")"#)
+            .expect_err("parent escape write must fail at capability gate");
+        assert!(err.to_string().contains("Permission denied"));
     }
 }

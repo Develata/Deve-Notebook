@@ -25,12 +25,63 @@ type ValidatedContext = (Arc<dyn ChatStreamHandler>, ChatStreamSink, Value, Valu
 
 /// 从 URL 提取域名
 ///
-/// **Pre-condition**: url 格式为 `scheme://host[:port]/path`
-/// **Post-condition**: 返回 host 部分（不含端口）
+/// **Pre-condition**: url 格式为 `http(s)://host[:port]/path`
+/// **Post-condition**: 返回 host 部分（不含端口）；无效 authority fail-closed。
 fn extract_domain(url: &str) -> Option<&str> {
-    let without_scheme = url.split("://").nth(1).unwrap_or(url);
-    let host = without_scheme.split('/').next()?;
-    host.split(':').next()
+    let trimmed = url.trim();
+    if trimmed.is_empty()
+        || trimmed
+            .bytes()
+            .any(|byte| byte.is_ascii_control() || byte == b'\\')
+    {
+        return None;
+    }
+
+    let without_scheme = trimmed
+        .strip_prefix("https://")
+        .or_else(|| trimmed.strip_prefix("http://"))?;
+    let authority_end = without_scheme
+        .find(['/', '?', '#'])
+        .unwrap_or(without_scheme.len());
+    let authority = &without_scheme[..authority_end];
+    if authority.is_empty() || authority.contains('@') {
+        return None;
+    }
+
+    extract_host_from_authority(authority)
+}
+
+fn extract_host_from_authority(authority: &str) -> Option<&str> {
+    if let Some(bracketed) = authority.strip_prefix('[') {
+        let end = bracketed.find(']')?;
+        let host = &bracketed[..end];
+        let port_suffix = &bracketed[end + 1..];
+        return (!host.is_empty() && valid_port_suffix(port_suffix)).then_some(host);
+    }
+
+    let (host, port_suffix) = authority
+        .split_once(':')
+        .map_or((authority, ""), |(host, port)| (host, port));
+    if host.is_empty() || host.contains(':') || host.bytes().any(|byte| byte.is_ascii_whitespace())
+    {
+        return None;
+    }
+    if !port_suffix.is_empty()
+        && (port_suffix.contains(':') || !port_suffix.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        return None;
+    }
+    Some(host)
+}
+
+fn valid_port_suffix(suffix: &str) -> bool {
+    if suffix.is_empty() {
+        return true;
+    }
+    let Some(port) = suffix.strip_prefix(':') else {
+        return false;
+    };
+    !port.is_empty() && port.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 /// 验证请求并准备执行环境
@@ -133,4 +184,39 @@ pub fn register_chat_api(engine: &mut Engine, caps: Arc<Capability>) {
             )
         },
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_domain;
+
+    #[test]
+    fn extract_domain_accepts_http_hosts_and_strips_ports() {
+        assert_eq!(
+            extract_domain("https://api.openai.com/v1"),
+            Some("api.openai.com")
+        );
+        assert_eq!(
+            extract_domain("http://127.0.0.1:11434/v1"),
+            Some("127.0.0.1")
+        );
+        assert_eq!(extract_domain("http://[::1]:11434/v1"), Some("::1"));
+    }
+
+    #[test]
+    fn extract_domain_rejects_ambiguous_or_invalid_authority() {
+        assert_eq!(extract_domain("api.openai.com/v1"), None);
+        assert_eq!(extract_domain("https:///v1"), None);
+        assert_eq!(extract_domain("https://:443/v1"), None);
+        assert_eq!(
+            extract_domain("https://api.openai.com@evil.example/v1"),
+            None
+        );
+        assert_eq!(extract_domain("https://api.openai.com:abc/v1"), None);
+        assert_eq!(extract_domain("http://::1/v1"), None);
+        assert_eq!(
+            extract_domain("https://api.openai.com\\evil.example/v1"),
+            None
+        );
+    }
 }

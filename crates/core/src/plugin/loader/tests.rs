@@ -163,7 +163,37 @@ fn load_plugin_rejects_absolute_entry_path() {
         Err(err) => err,
     };
 
-    assert!(err.to_string().contains("absolute paths are not allowed"));
+    let err = err.to_string();
+    assert!(
+        err.contains("absolute paths are not allowed")
+            || err.contains("drive prefixes are not allowed")
+    );
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn load_plugin_rejects_windows_drive_prefix_entry_path() {
+    let dir = tempdir().expect("tempdir");
+    let plugin_dir = dir.path().join("bad-plugin");
+    fs::create_dir(&plugin_dir).expect("mkdir plugin");
+    fs::write(
+        plugin_dir.join("manifest.json"),
+        r#"{
+            "id": "bad-plugin",
+            "name": "Bad Plugin",
+            "version": "1.0.0",
+            "entry": "C:/outside.rhai"
+        }"#,
+    )
+    .expect("write manifest");
+
+    let loader = PluginLoader::new(dir.path().to_path_buf());
+    let err = match loader.load_plugin(&plugin_dir) {
+        Ok(_) => panic!("drive-prefixed entry path must be rejected"),
+        Err(err) => err,
+    };
+
+    assert!(err.to_string().contains("drive prefixes are not allowed"));
 }
 
 #[test]

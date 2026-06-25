@@ -45,6 +45,20 @@ fn test_capability_does_not_match_sibling_prefixes() {
 }
 
 #[test]
+fn test_capability_root_prefix_matches_descendants() {
+    let cap = Capability {
+        allow_fs_read: vec![PathBuf::from("/"), PathBuf::from("C:\\")],
+        allow_fs_write: vec![PathBuf::from("/"), PathBuf::from("C:/")],
+        ..Default::default()
+    };
+
+    assert!(cap.check_read(Path::new("/notes/default/notes.md")));
+    assert!(cap.check_write(Path::new("/tmp/output.md")));
+    assert!(cap.check_read(Path::new("C:\\Notes\\file.txt")));
+    assert!(cap.check_write(Path::new("C:/Notes/Public/log.txt")));
+}
+
+#[test]
 fn test_capability_empty_prefix_does_not_match_absolute_paths() {
     let cap = Capability {
         allow_fs_read: vec![PathBuf::from("."), PathBuf::from("")],

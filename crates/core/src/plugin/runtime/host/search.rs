@@ -65,7 +65,7 @@ fn register_search_files(engine: &mut Engine, caps: Arc<Capability>) {
                 let Some(entry) = walk::next_walk_entry(entry, &root, "Search walk")? else {
                     continue;
                 };
-                if !entry.path().is_file() {
+                if !walk::is_regular_walk_file(&entry) {
                     continue;
                 }
                 let rel = scope::relative_search_path(&root, entry.path())?;
@@ -105,7 +105,7 @@ fn register_grep_files(engine: &mut Engine, caps: Arc<Capability>) {
                     continue;
                 };
                 let p = entry.path();
-                if !p.is_file() {
+                if !walk::is_regular_walk_file(&entry) {
                     continue;
                 }
                 let Some(content) = walk::read_searchable_text(p)? else {

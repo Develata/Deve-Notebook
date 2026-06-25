@@ -4,6 +4,12 @@
 use rhai::EvalAltResult;
 use std::path::Path;
 
+pub(super) fn is_regular_walk_file(entry: &ignore::DirEntry) -> bool {
+    entry
+        .file_type()
+        .is_some_and(|file_type| file_type.is_file())
+}
+
 pub(super) fn next_walk_entry(
     entry: Result<ignore::DirEntry, ignore::Error>,
     root: &Path,

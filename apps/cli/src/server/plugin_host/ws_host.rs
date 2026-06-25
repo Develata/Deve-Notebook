@@ -2,6 +2,7 @@
 //!   - 19_plugins#plugin-runtime-boundary
 //!
 use super::PluginHostState;
+use axum::extract::ws::Message;
 use axum::extract::{State, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use futures::StreamExt;
@@ -10,6 +11,7 @@ use std::sync::Arc;
 use crate::server::channel::DualChannel;
 use crate::server::handlers::plugin::handle_plugin_call_with_plugins;
 use crate::server::ws::send;
+use deve_core::plugin::runtime::PluginRuntime;
 use deve_core::protocol::{ClientMessage, ServerError, ServerErrorCode};
 
 pub async fn ws_handler(
@@ -47,7 +49,19 @@ async fn handle_socket(
             }
         };
 
-        if let axum::extract::ws::Message::Text(text) = msg {
+        if !handle_client_message(state.plugins.as_ref(), &ch, msg).await {
+            break;
+        }
+    }
+}
+
+async fn handle_client_message(
+    plugins: &[Box<dyn PluginRuntime>],
+    ch: &DualChannel,
+    msg: Message,
+) -> bool {
+    match msg {
+        Message::Text(text) => {
             match serde_json::from_str::<ClientMessage>(&text) {
                 Ok(ClientMessage::PluginCall {
                     req_id,
@@ -55,15 +69,8 @@ async fn handle_socket(
                     fn_name,
                     args,
                 }) => {
-                    handle_plugin_call_with_plugins(
-                        state.plugins.as_ref(),
-                        &ch,
-                        req_id,
-                        plugin_id,
-                        fn_name,
-                        args,
-                    )
-                    .await;
+                    handle_plugin_call_with_plugins(plugins, ch, req_id, plugin_id, fn_name, args)
+                        .await;
                 }
                 Ok(_) => {
                     ch.send_protocol_error(ServerError::new(
@@ -74,6 +81,40 @@ async fn handle_socket(
                     ch.send_protocol_error(ServerError::new(ServerErrorCode::PluginInvalidMessage));
                 }
             }
+            true
+        }
+        Message::Binary(_) => {
+            ch.send_protocol_error(ServerError::new(ServerErrorCode::PluginInvalidMessage));
+            true
+        }
+        Message::Ping(_) | Message::Pong(_) => true,
+        Message::Close(_) => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::handle_client_message;
+    use crate::server::channel::DualChannel;
+    use axum::extract::ws::Message;
+    use deve_core::plugin::runtime::PluginRuntime;
+    use deve_core::protocol::{ServerErrorCode, ServerMessage};
+    use tokio::sync::{broadcast, mpsc};
+
+    #[tokio::test]
+    async fn binary_plugin_host_message_fails_closed() {
+        let plugins: Vec<Box<dyn PluginRuntime>> = Vec::new();
+        let (tx, _) = broadcast::channel(4);
+        let (uni_tx, mut uni_rx) = mpsc::channel(4);
+        let ch = DualChannel::new(tx, uni_tx);
+
+        assert!(handle_client_message(&plugins, &ch, Message::Binary(vec![1, 2, 3])).await);
+
+        match uni_rx.recv().await.expect("protocol error") {
+            ServerMessage::ProtocolError { error, .. } => {
+                assert_eq!(error.code, ServerErrorCode::PluginInvalidMessage);
+            }
+            other => panic!("unexpected message: {other:?}"),
         }
     }
 }

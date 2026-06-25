@@ -95,6 +95,19 @@ impl Capability {
         if prefix.is_empty() {
             return false;
         }
+        if prefix == "/" {
+            return path.starts_with('/');
+        }
+        if prefix.len() == 3
+            && prefix.as_bytes()[1] == b':'
+            && prefix.as_bytes()[2] == b'/'
+            && prefix.as_bytes()[0].is_ascii_alphabetic()
+        {
+            return path == prefix
+                || path
+                    .strip_prefix(prefix)
+                    .is_some_and(|rest| !rest.is_empty());
+        }
         path == prefix
             || path
                 .strip_prefix(prefix)

@@ -1,6 +1,6 @@
-#[cfg(unix)]
-use super::walk::next_walk_entry;
 use super::walk::read_searchable_text;
+#[cfg(unix)]
+use super::walk::{is_regular_walk_file, next_walk_entry};
 #[cfg(unix)]
 use ignore::WalkBuilder;
 #[cfg(unix)]
@@ -15,6 +15,32 @@ fn read_searchable_text_skips_invalid_utf8_files() {
 
     let text = read_searchable_text(&path).expect("binary files are skipped");
     assert!(text.is_none());
+}
+
+#[cfg(unix)]
+#[test]
+fn walk_file_filter_rejects_symlinked_files() {
+    let dir = tempdir().expect("tempdir");
+    let project = dir.path().join("project");
+    std::fs::create_dir_all(&project).expect("mkdir project");
+    let outside = dir.path().join("outside.md");
+    std::fs::write(&outside, "outside secret").expect("write outside");
+    std::os::unix::fs::symlink(&outside, project.join("linked.md")).expect("symlink");
+
+    let walker = WalkBuilder::new(&project)
+        .hidden(true)
+        .git_ignore(true)
+        .build();
+    let linked = walker
+        .into_iter()
+        .filter_map(Result::ok)
+        .find(|entry| entry.file_name() == "linked.md")
+        .expect("walk should surface symlink without following it");
+
+    assert!(
+        !is_regular_walk_file(&linked),
+        "search host must not treat symlinked files as readable regular files"
+    );
 }
 
 #[cfg(unix)]

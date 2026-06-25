@@ -120,6 +120,12 @@ fn validate_plugin_entry(plugin_root: &Path, entry: &str) -> Result<PathBuf> {
             entry
         );
     }
+    if looks_like_windows_drive_path(entry) {
+        bail!(
+            "Invalid plugin entry '{}': drive prefixes are not allowed",
+            entry
+        );
+    }
 
     let entry_path = Path::new(entry);
     if entry_path.is_absolute() {
@@ -174,6 +180,14 @@ fn validate_plugin_entry(plugin_root: &Path, entry: &str) -> Result<PathBuf> {
         );
     }
     Ok(canonical_entry)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn looks_like_windows_drive_path(path: &str) -> bool {
+    matches!(
+        path.as_bytes(),
+        [drive, b':', ..] if drive.is_ascii_alphabetic()
+    )
 }
 
 #[cfg(test)]
