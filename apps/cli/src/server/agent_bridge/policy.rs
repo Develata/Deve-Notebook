@@ -129,10 +129,27 @@ fn is_executable_file(path: &Path) -> bool {
     {
         metadata.permissions().mode() & 0o111 != 0
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        has_windows_executable_extension(path)
+    }
+    #[cfg(not(any(unix, windows)))]
     {
         true
     }
+}
+
+#[cfg(windows)]
+fn has_windows_executable_extension(path: &Path) -> bool {
+    let Some(extension) = path.extension().and_then(|value| value.to_str()) else {
+        return false;
+    };
+
+    // PATHEXT is host process environment, not policy authority.
+    const EXECUTABLE_EXTENSIONS: &[&str] = &["COM", "EXE", "BAT", "CMD"];
+    EXECUTABLE_EXTENSIONS
+        .iter()
+        .any(|expected| extension.eq_ignore_ascii_case(expected))
 }
 
 #[cfg(test)]
