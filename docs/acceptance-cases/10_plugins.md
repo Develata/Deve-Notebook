@@ -220,7 +220,7 @@
     - run: cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
   assertions:
-    - doc_contains: "<projection_base>/<repo>/**/*.md"
+    - doc_contains: "<projection_base>/<safe_repo_name>--<repo_id>/**/*.md"
     - doc_contains: ".notegit"
     - doc_contains: "ledger-aware host functions"
     - plugin_assert: source_control_writer_gate_fail_closed_without_local_gate true

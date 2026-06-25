@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-05-24`
+- `Last Review`: `2026-06-25`
 - `Counterpart Feature`: `docs/features/04_storage.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/ledger/`, `crates/core/src/ledger/manager/`, `crates/core/src/sync/watcher/`, `crates/core/src/sync/materialize.rs`
@@ -30,7 +30,7 @@
 
 - `Store A: Projection Workspaces`
   - `ProjectionLocator(RepoId) -> projection_base`
-  - `ProjectionWorkspaceRoot(RepoId) = projection_base/<repo_name>/`
+  - `ProjectionWorkspaceRoot(RepoId) = projection_base/<safe_repo_name>--<repo_id>/`
   - 是 repo-scoped workspace projection 的物理容器，不是 authority。
   - 系统不再定义总 `vault` 根目录；每个本地可写 repo 必须显式绑定 projection base，再计算 repo workspace root。
 - `Store B: Local Branch Ledger`
@@ -72,7 +72,7 @@ Workspace_r = P_r ⊕ D_r
 
 ### 3.2 Repo Runtime Layout {#repo-runtime-layout}
 
-- `<projection_base>/<repo_name>/.notegit/`
+- `<projection_base>/<safe_repo_name>--<repo_id>/.notegit/`
   - repo keys
   - pending/staged side tables
   - commit/runtime metadata

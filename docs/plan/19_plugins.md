@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Deferred`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-10`
+- `Last Review`: `2026-06-25`
 - `Counterpart Feature`: `docs/features/17_plugins.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
@@ -94,8 +94,8 @@ Calculation Runtime 仍然是长期能力，但本章**不要求代码实现**�
 
 *   **Capabilities Default Deny**
 *   **Ledger-Managed Boundary**：
-    - `<projection_base>/<repo_name>/**/*.md`
-    - `<projection_base>/<repo_name>/.notegit/**`
+    - `<projection_base>/<safe_repo_name>--<repo_id>/**/*.md`
+    - `<projection_base>/<safe_repo_name>--<repo_id>/.notegit/**`
     - `ledger/**`
     这些对象不得通过原始文件写入直接修改。
 *   若未来需要写托管笔记，**MUST** 走 ledger-aware host functions，而不是裸 `fs_write`。

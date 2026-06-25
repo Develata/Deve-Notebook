@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Reference`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-23`
+- `Last Review`: `2026-06-25`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -164,7 +164,8 @@ services:
 
 容器部署 **MUST NOT** 假设 `/data/vault` 是全局投影根。每个本地 repo 的 projection base 必须先通过
 `deve init --repo <name> --projection-base <path>` 或 `deve repo projection set --repo <selector> --base <path>`
-写入 host-local Projection Locator；实际 workspace root 为 `<path>/<repo_name>/`。例如 `--projection-base /notes --repo default` 对应 `/notes/default/`。
+写入 host-local Projection Locator；实际 workspace root 为 `<path>/<safe_repo_name>--<repo_id>/`。
+例如 `--projection-base /notes --repo default` 对应 `/notes/default--<repo_id>/`。
 
 ### 5.3 Build Strategy
 *   **Base Image**: `debian:bookworm-slim` 或 `gcr.io/distroless/cc-debian12` (Runtime).
