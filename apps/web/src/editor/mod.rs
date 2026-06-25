@@ -7,10 +7,10 @@
 use crate::api::WsService;
 use crate::components::icons::PanelLeft;
 use crate::components::layout_context::{EditorContentContext, OutlineControl};
-use crate::hooks::use_core::write_gate::{repo_write_block_tracked, RepoWriteSignals};
 use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
 use crate::hooks::use_outline::use_outline;
-use crate::i18n::{t, Locale};
+use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::html::Div;
 use leptos::prelude::*;
