@@ -120,7 +120,7 @@ async fn start_proxy_mode(
         main_port
     );
     let base_url = format!("http://127.0.0.1:{}", main_port);
-    let delegated_secret = AuthConfig::from_env()?.secret;
+    let delegated_secret = proxy_auth_config(runtime_environment)?.secret;
     let remote = Arc::new(
         crate::server::source_control_proxy::RemoteSourceControlApi::new_with_delegation_secret(
             base_url,
@@ -144,6 +144,10 @@ async fn start_proxy_mode(
         runtime_environment,
     ));
     server::start_plugin_host_only(plugins, plugin_port).await
+}
+
+fn proxy_auth_config(runtime_environment: RuntimeEnvironment) -> anyhow::Result<AuthConfig> {
+    AuthConfig::from_env_with_runtime_environment(runtime_environment)
 }
 
 fn proxy_node_role(

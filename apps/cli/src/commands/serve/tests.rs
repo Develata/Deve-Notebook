@@ -1,4 +1,6 @@
-use super::{ServeOptions, detect_main_node_role, detect_main_port, proxy_node_role, run};
+use super::{
+    ServeOptions, detect_main_node_role, detect_main_port, proxy_auth_config, proxy_node_role, run,
+};
 use axum::{Json, Router, routing::get};
 use deve_core::config::{AppProfile, GitBridgeMode, P2pConfig, RuntimeEnvironment, SyncMode};
 use std::ffi::OsString;
@@ -239,6 +241,19 @@ fn proxy_node_role_uses_delegated_git_bridge_mode() {
     assert_eq!(role.repo_health.status, "degraded");
     assert_eq!(role.repo_health.local_total, 2);
     assert_eq!(role.repo_health.degraded, 1);
+}
+
+#[test]
+fn proxy_auth_config_uses_serve_dev_runtime_environment() {
+    let _guard = ENV_LOCK.lock().expect("env lock");
+    let _secret = EnvGuard::set("AUTH_SECRET", None);
+    let _pass = EnvGuard::set("AUTH_PASS", None);
+    let _deve_env = EnvGuard::set("DEVE_ENV", Some("production"));
+
+    let auth = proxy_auth_config(RuntimeEnvironment::Development)
+        .expect("proxy dev mode should use development auth defaults");
+
+    assert_eq!(auth.secret, "deve_dev_secret_key_32bytes_ok!!");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
