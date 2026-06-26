@@ -60,6 +60,21 @@ impl<L: DesktopProcessLauncher> DesktopLocalServiceTauriState<L> {
     pub fn runtime_snapshot(&self) -> Option<NativeProcessRuntimeSnapshot> {
         self.runtime.lock().ok().map(|runtime| runtime.snapshot())
     }
+
+    pub fn stop(
+        &self,
+        timestamp_unix_ms: i64,
+    ) -> Result<NativeProcessRuntimeSnapshot, DesktopProcessRuntimeError> {
+        let mut runtime =
+            self.runtime
+                .lock()
+                .map_err(|_| DesktopProcessRuntimeError::StopFailed {
+                    source: std::io::Error::other(
+                        "desktop local service runtime state is poisoned",
+                    ),
+                })?;
+        runtime.stop(timestamp_unix_ms)
+    }
 }
 
 #[derive(Debug, Error)]

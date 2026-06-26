@@ -78,7 +78,7 @@ fn mobile_tauri_manifest_declares_shell_metadata_only() {
     assert_eq!(shell.tauri_config_path, MOBILE_TAURI_CONFIG_PATH);
     assert_eq!(config["productName"], MOBILE_TAURI_PRODUCT_NAME);
     assert_eq!(config["identifier"], MOBILE_TAURI_IDENTIFIER);
-    assert_eq!(config["build"]["devUrl"], "http://127.0.0.1:3001");
+    assert!(config["build"].get("devUrl").is_none());
     assert_eq!(config["build"]["frontendDist"], "../web/dist");
     assert_eq!(window["label"], MOBILE_TAURI_MAIN_WINDOW_LABEL);
     assert_eq!(window["title"], MOBILE_TAURI_MAIN_WINDOW_TITLE);

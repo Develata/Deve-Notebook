@@ -53,13 +53,15 @@ pub use supervisor::{
 pub use types::{
     NATIVE_SESSION_BOOTSTRAP_HEADER, NATIVE_SESSION_BOOTSTRAP_SECRET_ENV,
     NATIVE_TAURI_CUSTOM_PROTOCOL_ORIGIN, NATIVE_TAURI_HTTP_LOCALHOST_ORIGIN, NativeAdapterPlatform,
-    NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady, NativePlatformEvent,
+    NativeAdapterSnapshot, NativeAdapterState, NativeBackendMode, NativeBackendPreference,
+    NativeBackendValidationResult, NativeEndpointReady, NativePlatformEvent,
     NativePlatformEventEffect, NativePlatformEventKind, NativeRemoteTarget, NativeRuntimeReadiness,
     NativeServiceOffline, NativeServiceRestarting, NativeServiceSuspended, NativeShellMode,
     classify_native_platform_event, native_tauri_allowed_origins, platform_event_can_grant_write,
 };
 pub use validation::{
     NativeAdapterError, can_load_native_web_shell, can_show_native_writable_shell,
+    native_shell_mode_for_backend_preference, validate_native_backend_preference,
     validate_native_endpoint_bases, validate_native_endpoint_ready, validate_native_remote_target,
 };
 

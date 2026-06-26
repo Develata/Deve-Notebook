@@ -12,6 +12,8 @@
 #[cfg(feature = "native-packaging")]
 mod menu_tray;
 #[cfg(feature = "native-packaging")]
+mod native_backend;
+#[cfg(feature = "native-packaging")]
 mod packaging;
 #[cfg(all(test, feature = "native-packaging"))]
 mod packaging_test;
@@ -49,6 +51,12 @@ pub use menu_tray::{
     DESKTOP_TRAY_SHOW_MAIN_WINDOW_ID, DESKTOP_TRAY_TOGGLE_WINDOW_VISIBILITY_ID, build_desktop_menu,
     build_desktop_tray_icon, build_desktop_tray_menu, resolve_desktop_menu_action_id,
     resolve_desktop_tray_action_id,
+};
+#[cfg(feature = "native-packaging")]
+pub use native_backend::{
+    DesktopNativeBackendError, DesktopNativeBackendState, desktop_native_backend_config_path,
+    load_desktop_native_backend_preference, normalized_native_remote_origin,
+    probe_desktop_native_remote_backend, save_desktop_native_backend_preference,
 };
 #[cfg(feature = "native-packaging")]
 pub use packaging::{

@@ -278,6 +278,28 @@
     - route_absent: "/api/settings"
     - unsupported_key_rejected: "server.settings.api_enabled"
 
+- case_id: SET-007A
+  goal: Native backend preference 是 host-local shell 配置，不是 browser 或 server-backed Settings。
+  preconditions:
+    - Settings 已打开
+    - 普通浏览器与 native shell 都可执行 Settings smoke
+  steps:
+    - run: scripts/check-settings-local-feedback-baseline.sh
+    - run: cargo test -p deve_core native_adapter -- --nocapture
+    - run: cargo test -p deve_web settings native_backend -- --nocapture
+    - run: cargo test -p deve_desktop --features native-packaging native_backend -- --nocapture
+    - run: cargo test -p deve_mobile --features native-packaging native_backend -- --nocapture
+    - browser_open: "Settings"
+    - ui_assert: native_backend_section_unavailable_in_browser true
+    - native_validate_remote_backend: "https://example.invalid"
+    - native_switch_backend: "local"
+  assertions:
+    - route_absent: "/api/settings/native-backend"
+    - browser_storage_absent: "deve.native.backend"
+    - config_assert: native_backend_preference_not_written_to_config_toml true
+    - native_assert: remote_backend_save_requires_node_role_probe true
+    - native_assert: use_local_backend_saves_host_local_preference true
+
 - case_id: SET-008
   goal: 静态 P2P peer 配置必须把 peer_id 表达为 expected authenticated identity，而不是显示 label。
   preconditions:

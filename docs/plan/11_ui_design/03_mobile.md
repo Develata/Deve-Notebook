@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-20`
+- `Last Review`: `2026-06-26`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -43,6 +43,10 @@ Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate
 *   `LocalBackend` 必须复用 server native-session bridge 完成 session handoff，并以 HttpOnly native session cookie 与 `window.__DEVE_NATIVE_BOOTSTRAP` endpoint payload 启动 Web；bootstrap source 不得包含 token、secret 或 auth material。
 *   Tauri `main` WebView **MUST** 延迟到 embedded service 完成 probe、native session handoff、bootstrap plugin 与 cookie 注册之后创建；不得先创建无 session/bootstrap 的主 WebView。
 *   `RemoteBrowser { https_origin }` 是显式远端模式。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
+*   Mobile Settings 必须与 Desktop 共用 native backend preference 语义：默认 `local`；选择 `remote` 时必须先由 Mobile native 侧短超时探测 `<origin>/api/node/role` 并确认结构化 Deve node role，成功后才写入 app-private `native-backend.json`。
+*   Mobile `remote` preference 只保存 HTTPS origin，不保存远端凭证、session、token、repo scope 或 writer readiness。启动参数/环境覆盖只用于诊断和脚本启动，不得回写 preference。
+*   Mobile Tauri bundle 必须加载 `frontendDist` 资产，并通过 native bootstrap 或 RemoteBrowser 导航决定后端；不得把主 WebView 固定到开发服务 `devUrl = http://127.0.0.1:3001`。
+*   Mobile 在 `RemoteBrowser` 失联时沿用普通浏览器锁屏/只读语义；native 锁屏或 Settings 可提供“Use local backend”入口。该入口必须保存 `local` preference、启动 embedded loopback service，并重载 bundled Web shell。
 *   从后台恢复时，`LocalBackend` 必须重新 probe session、node role、WS repo handshake 与 current `scope_nonce`；`RemoteBrowser` 的恢复语义等价于浏览器页面恢复，不得伪装本地 authority。
 
 **Adapter inputs**:

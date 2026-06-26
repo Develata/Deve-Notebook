@@ -143,6 +143,64 @@ fn remote_browser_accepts_https_origin_only() {
 }
 
 #[test]
+fn native_backend_preference_defaults_to_local_backend() {
+    let preference = NativeBackendPreference::default();
+
+    assert_eq!(preference, NativeBackendPreference::local());
+    assert_eq!(
+        native_shell_mode_for_backend_preference(&preference),
+        Ok(NativeShellMode::LocalBackend)
+    );
+    assert_eq!(validate_native_backend_preference(&preference), Ok(()));
+}
+
+#[test]
+fn native_backend_preference_remote_maps_to_remote_browser() {
+    let preference = NativeBackendPreference::remote("https://deve.example:8443");
+
+    let shell_mode =
+        native_shell_mode_for_backend_preference(&preference).expect("remote preference");
+    let NativeShellMode::RemoteBrowser { target } = shell_mode else {
+        panic!("remote preference must map to RemoteBrowser");
+    };
+
+    assert_eq!(target.https_origin, "https://deve.example:8443");
+    assert_eq!(validate_native_backend_preference(&preference), Ok(()));
+}
+
+#[test]
+fn native_backend_preference_remote_requires_valid_https_origin() {
+    for preference in [
+        NativeBackendPreference {
+            mode: NativeBackendMode::Remote,
+            remote_url: None,
+        },
+        NativeBackendPreference {
+            mode: NativeBackendMode::Remote,
+            remote_url: Some(String::new()),
+        },
+        NativeBackendPreference::remote("http://deve.example"),
+        NativeBackendPreference::remote("https://deve.example/app"),
+    ] {
+        assert!(
+            validate_native_backend_preference(&preference).is_err(),
+            "invalid preference accepted: {preference:?}"
+        );
+    }
+}
+
+#[test]
+fn native_backend_validation_result_serializes_without_secret_fields() {
+    let ok = NativeBackendValidationResult::success("https://deve.example", "full-peer");
+    let json = serde_json::to_string(&ok).expect("validation result json");
+
+    assert!(json.contains("https://deve.example"));
+    assert!(json.contains("full-peer"));
+    assert!(!json.to_ascii_lowercase().contains("token"));
+    assert!(!json.to_ascii_lowercase().contains("secret"));
+}
+
+#[test]
 fn writable_shell_requires_runtime_ready_writer_and_current_scope() {
     let snapshot = NativeAdapterSnapshot {
         platform: NativeAdapterPlatform::Desktop,

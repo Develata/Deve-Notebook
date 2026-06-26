@@ -11,16 +11,19 @@
 //! source-control, search, Git, or `.notegit` authority.
 
 use deve_core::native_adapter::{
-    NativeAdapterError, NativeRemoteTarget, validate_native_remote_target,
+    NativeAdapterError, NativeBackendPreference, NativeBackendValidationResult, NativeRemoteTarget,
+    NativeShellMode, native_shell_mode_for_backend_preference, validate_native_remote_target,
 };
-use tauri::{Manager, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, State, WebviewWindowBuilder, Wry};
 use thiserror::Error;
 
+use crate::MobileNativeBackendState;
 use crate::embedded_backend::{
     mobile_embedded_backend_plugin, run_mobile_embedded_backend_bootstrap,
 };
 
 const MOBILE_TAURI_MAIN_WINDOW_LABEL: &str = "main";
+pub const DEVE_NATIVE_REMOTE_URL_ENV: &str = "DEVE_NATIVE_REMOTE_URL";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MobileTauriRuntimeSurface {
@@ -82,6 +85,73 @@ pub enum MobileTauriModeError {
     ForbiddenMaterial { marker: &'static str },
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MobileTauriLaunchOptions {
+    pub remote_url: Option<String>,
+    pub local_backend: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum MobileTauriLaunchOptionsError {
+    #[error("mobile remote browser URL argument requires a value")]
+    MissingRemoteUrlValue,
+    #[error("mobile remote browser URL must be an HTTPS origin")]
+    InvalidRemoteUrl,
+    #[error("mobile remote browser mode conflicts with forced local backend mode")]
+    ConflictingModes,
+}
+
+impl MobileTauriLaunchOptions {
+    pub fn from_args<I, S>(args: I) -> Result<Self, MobileTauriLaunchOptionsError>
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let mut options = Self::default();
+        let mut iter = args.into_iter().map(Into::into);
+
+        while let Some(arg) = iter.next() {
+            match arg.as_str() {
+                "--remote-url" | "--remote" => {
+                    let value = iter
+                        .next()
+                        .filter(|value| is_non_flag_value(value))
+                        .ok_or(MobileTauriLaunchOptionsError::MissingRemoteUrlValue)?;
+                    options.remote_url = Some(value);
+                }
+                "--local-backend" => options.local_backend = Some(true),
+                "--no-local-backend" => options.local_backend = Some(false),
+                _ if arg.starts_with("--remote-url=") => {
+                    let value = arg.trim_start_matches("--remote-url=");
+                    if !is_non_flag_value(value) {
+                        return Err(MobileTauriLaunchOptionsError::MissingRemoteUrlValue);
+                    }
+                    options.remote_url = Some(value.to_string());
+                }
+                _ if arg.starts_with("--remote=") => {
+                    let value = arg.trim_start_matches("--remote=");
+                    if !is_non_flag_value(value) {
+                        return Err(MobileTauriLaunchOptionsError::MissingRemoteUrlValue);
+                    }
+                    options.remote_url = Some(value.to_string());
+                }
+                _ => {}
+            }
+        }
+
+        if options.remote_url.is_some() && options.local_backend == Some(true) {
+            return Err(MobileTauriLaunchOptionsError::ConflictingModes);
+        }
+        if let Some(remote_url) = options.remote_url.as_deref() {
+            mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
+                https_origin: remote_url.to_string(),
+            })
+            .map_err(|_| MobileTauriLaunchOptionsError::InvalidRemoteUrl)?;
+        }
+        Ok(options)
+    }
+}
+
 pub fn mobile_tauri_remote_browser_init_script(
     target: &NativeRemoteTarget,
 ) -> Result<MobileTauriRemoteBrowserScript, MobileTauriModeError> {
@@ -95,7 +165,7 @@ pub fn mobile_tauri_remote_browser_init_script(
 
 fn mobile_tauri_remote_browser_script_from_env()
 -> Result<Option<MobileTauriRemoteBrowserScript>, MobileTauriModeError> {
-    let Some(value) = std::env::var_os("DEVE_NATIVE_REMOTE_URL") else {
+    let Some(value) = std::env::var_os(DEVE_NATIVE_REMOTE_URL_ENV) else {
         return Ok(None);
     };
     if value.is_empty() {
@@ -134,52 +204,176 @@ fn mobile_tauri_remote_browser_plugin<R: tauri::Runtime>(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run_mobile_tauri_app() {
-    let mut builder = tauri::Builder::default();
-    let remote_browser_script = match mobile_tauri_remote_browser_script_from_env() {
-        Ok(script) => script,
+    let options = match MobileTauriLaunchOptions::from_args(std::env::args().skip(1)) {
+        Ok(options) => options,
         Err(error) => {
-            eprintln!("deve_mobile RemoteBrowser config failed closed: {error}");
+            eprintln!("deve_mobile launch options failed closed: {error}");
             return;
         }
     };
-    let start_local_backend = remote_browser_script.is_none();
-    if let Some(script) = remote_browser_script {
-        builder = builder.plugin(mobile_tauri_remote_browser_plugin(script));
-    }
+    run_mobile_tauri_app_with_launch_options(options)
+}
 
-    builder = builder.setup(move |app| {
-        if start_local_backend {
-            let app_data_dir = match app.path().app_data_dir() {
-                Ok(path) => path,
+pub fn run_mobile_tauri_app_with_launch_options(options: MobileTauriLaunchOptions) {
+    let mut builder = tauri::Builder::default();
+
+    builder = builder
+        .invoke_handler(tauri::generate_handler![
+            native_backend_get_config,
+            native_backend_validate_remote,
+            native_backend_save_remote,
+            native_backend_switch_local,
+        ])
+        .setup(move |app| {
+            let app_data_dir_result = app.path().app_data_dir().map_err(|error| error.to_string());
+            let host_backend_preference = load_host_backend_preference(&app_data_dir_result);
+            let remote_browser_script = match remote_browser_script_for_launch_options(
+                &options,
+                &host_backend_preference,
+            ) {
+                Ok(script) => script,
                 Err(error) => {
-                    eprintln!("deve_mobile LocalBackend app data dir failed closed: {error}");
+                    eprintln!("deve_mobile RemoteBrowser config failed closed: {error}");
                     return Ok(());
                 }
             };
-            match run_mobile_embedded_backend_bootstrap(app_data_dir) {
-                Ok(bootstrap) => {
-                    if let Err(error) = app
-                        .handle()
-                        .plugin(mobile_embedded_backend_plugin(&bootstrap.script))
-                    {
-                        eprintln!("deve_mobile LocalBackend plugin failed closed: {error}");
+            app.manage(MobileNativeBackendState::from_data_root(
+                app_data_dir_result.clone(),
+            ));
+
+            if let Some(script) = remote_browser_script {
+                if let Err(error) = app
+                    .handle()
+                    .plugin(mobile_tauri_remote_browser_plugin(script))
+                {
+                    eprintln!("deve_mobile RemoteBrowser plugin failed closed: {error}");
+                    return Ok(());
+                }
+            } else if options.local_backend != Some(false) {
+                let app_data_dir = match app_data_dir_result {
+                    Ok(path) => path,
+                    Err(error) => {
+                        eprintln!("deve_mobile LocalBackend app data dir failed closed: {error}");
+                        return Ok(());
+                    }
+                };
+                match run_mobile_embedded_backend_bootstrap(app_data_dir) {
+                    Ok(bootstrap) => {
+                        if let Err(error) = app
+                            .handle()
+                            .plugin(mobile_embedded_backend_plugin(&bootstrap.script))
+                        {
+                            eprintln!("deve_mobile LocalBackend plugin failed closed: {error}");
+                            return Ok(());
+                        }
+                    }
+                    Err(error) => {
+                        eprintln!("deve_mobile LocalBackend bootstrap failed closed: {error}");
                         return Ok(());
                     }
                 }
-                Err(error) => {
-                    eprintln!("deve_mobile LocalBackend bootstrap failed closed: {error}");
-                    return Ok(());
-                }
             }
-        }
-        create_mobile_main_window(app);
-        Ok(())
-    });
+            create_mobile_main_window(app);
+            Ok(())
+        });
 
     let result = builder.run(tauri::generate_context!());
     if let Err(error) = result {
         eprintln!("deve_mobile Tauri shell exited with error: {error}");
     }
+}
+
+fn remote_browser_script_for_launch_options(
+    options: &MobileTauriLaunchOptions,
+    host_backend_preference: &NativeBackendPreference,
+) -> Result<Option<MobileTauriRemoteBrowserScript>, MobileTauriModeError> {
+    if let Some(remote_url) = options.remote_url.as_deref() {
+        return mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
+            https_origin: remote_url.to_string(),
+        })
+        .map(Some);
+    }
+    if options.local_backend == Some(true) {
+        return Ok(None);
+    }
+    if let Some(script) = mobile_tauri_remote_browser_script_from_env()? {
+        return Ok(Some(script));
+    }
+    if options.local_backend == Some(false) {
+        return Ok(None);
+    }
+    match native_shell_mode_for_backend_preference(host_backend_preference) {
+        Ok(NativeShellMode::RemoteBrowser { target }) => {
+            mobile_tauri_remote_browser_init_script(&target).map(Some)
+        }
+        Ok(NativeShellMode::LocalBackend) => Ok(None),
+        Err(error) => Err(MobileTauriModeError::RemoteTarget(error)),
+    }
+}
+
+fn load_host_backend_preference(
+    app_data_dir_result: &Result<std::path::PathBuf, String>,
+) -> NativeBackendPreference {
+    let Some(app_data_dir) = app_data_dir_result.as_ref().ok() else {
+        return NativeBackendPreference::local();
+    };
+    match crate::load_mobile_native_backend_preference(app_data_dir) {
+        Ok(preference) => preference,
+        Err(error) => {
+            eprintln!("mobile native backend preference ignored: {error}");
+            NativeBackendPreference::local()
+        }
+    }
+}
+
+fn is_non_flag_value(value: &str) -> bool {
+    !value.trim().is_empty() && !value.starts_with("--")
+}
+
+#[tauri::command]
+async fn native_backend_get_config(
+    state: State<'_, MobileNativeBackendState>,
+) -> Result<NativeBackendPreference, String> {
+    state.preference().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn native_backend_validate_remote(remote_url: String) -> NativeBackendValidationResult {
+    crate::probe_mobile_native_remote_backend(&remote_url).await
+}
+
+#[tauri::command]
+async fn native_backend_save_remote(
+    app: AppHandle<Wry>,
+    state: State<'_, MobileNativeBackendState>,
+    remote_url: String,
+) -> Result<NativeBackendValidationResult, String> {
+    let result = crate::probe_mobile_native_remote_backend(&remote_url).await;
+    if !result.ok {
+        return Ok(result);
+    }
+    let origin = result
+        .https_origin
+        .as_deref()
+        .ok_or_else(|| crate::MobileNativeBackendError::InvalidNodeRolePayload.to_string())?;
+    state
+        .save_preference(NativeBackendPreference::remote(origin))
+        .map_err(|error| error.to_string())?;
+    app.request_restart();
+    Ok(result)
+}
+
+#[tauri::command]
+async fn native_backend_switch_local(
+    app: AppHandle<Wry>,
+    state: State<'_, MobileNativeBackendState>,
+) -> Result<NativeBackendPreference, String> {
+    let preference = NativeBackendPreference::local();
+    state
+        .save_preference(preference.clone())
+        .map_err(|error| error.to_string())?;
+    app.request_restart();
+    Ok(preference)
 }
 
 fn create_mobile_main_window<R: tauri::Runtime>(app: &tauri::App<R>) {
@@ -207,70 +401,4 @@ fn create_mobile_main_window<R: tauri::Runtime>(app: &tauri::App<R>) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn mobile_tauri_runtime_surface_is_shell_only() {
-        let surface = mobile_tauri_runtime_surface();
-
-        assert!(surface.is_shell_only());
-        assert!(surface.android_shell_package_entrypoint_declared);
-        assert!(surface.ios_shell_package_entrypoint_declared);
-        assert!(surface.build_script_declared);
-        assert!(surface.webview_shell_runtime_declared);
-        assert!(surface.local_backend_default_enabled);
-        assert!(surface.embedded_service_runtime_enabled);
-        assert!(!surface.child_process_runtime_enabled);
-        assert!(!surface.opens_authority_write_path);
-        assert!(!surface.release_ready_claimed);
-    }
-
-    #[test]
-    fn mobile_tauri_remote_browser_accepts_https_origin_without_native_bootstrap() {
-        let script = mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
-            https_origin: "https://deve.example".to_string(),
-        })
-        .expect("remote script");
-
-        assert!(script.source().contains("window.location.replace"));
-        assert!(script.source().contains("https://deve.example"));
-        assert!(!script.source().contains("__DEVE_NATIVE_BOOTSTRAP"));
-        assert!(!script.source().contains("http_base"));
-        assert!(!script.source().contains("ws_base"));
-    }
-
-    #[test]
-    fn mobile_tauri_remote_browser_rejects_non_https_origin() {
-        let error = mobile_tauri_remote_browser_init_script(&NativeRemoteTarget {
-            https_origin: "http://deve.example".to_string(),
-        })
-        .expect_err("http remote target must fail");
-
-        assert!(matches!(
-            error,
-            MobileTauriModeError::RemoteTarget(NativeAdapterError::WrongScheme {
-                expected_scheme: "https",
-                ..
-            })
-        ));
-    }
-
-    #[test]
-    fn mobile_tauri_main_window_creation_is_deferred_until_bootstrap() {
-        let config: serde_json::Value =
-            serde_json::from_str(include_str!("../tauri.conf.json")).expect("tauri config");
-        assert_eq!(
-            config
-                .pointer("/app/windows/0/label")
-                .and_then(|value| value.as_str()),
-            Some(MOBILE_TAURI_MAIN_WINDOW_LABEL)
-        );
-        assert_eq!(
-            config
-                .pointer("/app/windows/0/create")
-                .and_then(|value| value.as_bool()),
-            Some(false)
-        );
-    }
-}
+mod tests;

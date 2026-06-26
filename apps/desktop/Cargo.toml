@@ -9,6 +9,7 @@ license.workspace = true
 default = []
 native-packaging = [
   "dep:indexmap_1",
+  "dep:reqwest",
   "dep:tauri",
   "dep:tauri-build",
   "tauri/tray-icon",
@@ -21,6 +22,7 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 getrandom.workspace = true
+reqwest = { version = "0.12", optional = true, default-features = false, features = ["json", "rustls-tls-webpki-roots"] }
 # Tauri's schema path reaches schemars 0.8 -> indexmap 1.x; Linux native packaging
 # needs indexmap/std explicit because indexmap 1.x only auto-detects std via autocfg.
 indexmap_1 = { package = "indexmap", version = "1.9.3", optional = true, default-features = false, features = ["std"] }

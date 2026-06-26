@@ -2,7 +2,10 @@
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 
-use super::{NativeAdapterSnapshot, NativeAdapterState, NativeEndpointReady, NativeRemoteTarget};
+use super::{
+    NativeAdapterSnapshot, NativeAdapterState, NativeBackendMode, NativeBackendPreference,
+    NativeEndpointReady, NativeRemoteTarget, NativeShellMode,
+};
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -28,6 +31,8 @@ pub enum NativeAdapterError {
     SessionNotBound,
     #[error("remote_browser target must be an https origin")]
     RemoteTargetMustBeHttpsOrigin,
+    #[error("remote backend preference requires a remote_url")]
+    MissingRemoteBackendUrl,
 }
 
 pub fn validate_native_endpoint_bases(
@@ -55,6 +60,32 @@ pub fn validate_native_remote_target(
     target: &NativeRemoteTarget,
 ) -> Result<(), NativeAdapterError> {
     validate_https_origin_url("https_origin", &target.https_origin)
+}
+
+pub fn validate_native_backend_preference(
+    preference: &NativeBackendPreference,
+) -> Result<(), NativeAdapterError> {
+    native_shell_mode_for_backend_preference(preference).map(|_| ())
+}
+
+pub fn native_shell_mode_for_backend_preference(
+    preference: &NativeBackendPreference,
+) -> Result<NativeShellMode, NativeAdapterError> {
+    match preference.mode {
+        NativeBackendMode::Local => Ok(NativeShellMode::LocalBackend),
+        NativeBackendMode::Remote => {
+            let remote_url = preference
+                .remote_url
+                .as_deref()
+                .filter(|value| !value.trim().is_empty())
+                .ok_or(NativeAdapterError::MissingRemoteBackendUrl)?;
+            let target = NativeRemoteTarget {
+                https_origin: remote_url.to_string(),
+            };
+            validate_native_remote_target(&target)?;
+            Ok(NativeShellMode::RemoteBrowser { target })
+        }
+    }
 }
 
 pub fn can_load_native_web_shell(snapshot: &NativeAdapterSnapshot) -> bool {

@@ -12,6 +12,8 @@
 #[cfg(feature = "native-packaging")]
 mod embedded_backend;
 #[cfg(feature = "native-packaging")]
+mod native_backend;
+#[cfg(feature = "native-packaging")]
 mod packaging;
 #[cfg(all(test, feature = "native-packaging"))]
 mod packaging_test;
@@ -30,6 +32,12 @@ pub use embedded_backend::{
     MobileEmbeddedBackendScript, plan_mobile_embedded_backend,
 };
 #[cfg(feature = "native-packaging")]
+pub use native_backend::{
+    MobileNativeBackendError, MobileNativeBackendState, load_mobile_native_backend_preference,
+    mobile_native_backend_config_path, normalized_native_remote_origin,
+    probe_mobile_native_remote_backend, save_mobile_native_backend_preference,
+};
+#[cfg(feature = "native-packaging")]
 pub use packaging::{
     MOBILE_ANDROID_PACKAGE_GATE_ANCHOR, MOBILE_ANDROID_PACKAGE_SCRIPT,
     MOBILE_IOS_PACKAGE_GATE_ANCHOR, MOBILE_IOS_PACKAGE_SCRIPT, MOBILE_TAURI_CONFIG_PATH,
@@ -42,8 +50,10 @@ pub use packaging::{
 pub use shell::MobileShell;
 #[cfg(feature = "native-packaging")]
 pub use tauri_entry::{
-    MobileTauriModeError, MobileTauriRemoteBrowserScript, MobileTauriRuntimeSurface,
+    MobileTauriLaunchOptions, MobileTauriLaunchOptionsError, MobileTauriModeError,
+    MobileTauriRemoteBrowserScript, MobileTauriRuntimeSurface,
     mobile_tauri_remote_browser_init_script, mobile_tauri_runtime_surface, run_mobile_tauri_app,
+    run_mobile_tauri_app_with_launch_options,
 };
 pub use types::{
     MobileBootstrap, MobileLifecycleEvent, MobileRecoveryBootstrap, MobileServiceState,

@@ -29,9 +29,9 @@ Deve Notebook 是一个 Rust workspace，用于构建自托管的协作型 Markd
 - Dockerfile、生产 `docker-compose.yml`、embedded Web release build smoke、
   runtime smoke、release/baseline guard 与 architecture registry check。
 - Desktop/Mobile native shell crate，Tauri v2 仅在可选 `native-packaging` gate
-  后启用。Desktop native-packaging 默认进入 LocalBackend，也可以显式作为
-  RemoteBrowser HTTPS shell 运行。当前证据是 shell/package/startup 方向，不是已签名
-  store readiness。
+  后启用。Native shell 默认进入 LocalBackend，也可以在 Settings 中切换到
+  已校验的 RemoteBackend HTTPS origin。当前证据是 shell/package/startup 方向，
+  不是已签名 store readiness。
 
 ## 明确边界
 
@@ -163,6 +163,26 @@ cargo run -p deve_desktop --features native-packaging -- --remote-url https://ex
 packaged 或脚本化启动也可以使用
 `DEVE_NATIVE_REMOTE_URL=https://example.invalid`。RemoteBrowser URL 必须是 HTTPS
 origin：不得包含 userinfo、query、fragment 或业务子路径。
+
+native app 的 Settings 会显示 Backend section：
+
+- Local Backend 会自动启动 app 自有本地服务。
+- Remote Backend 必须填写 HTTPS origin，并由 native 侧探测
+  `<origin>/api/node/role` 成功后才能保存。
+- 保存的选择是 host-local app-private JSON，不是 `config.toml`、ledger state、
+  Projection Locator state 或浏览器 localStorage。
+- 远端凭证与登录态仍由远端 Web origin 自己管理。remote 失联时，native 的
+  lock/read-only surface 可以切回 Local Backend。
+
+### Mobile Native Packaging
+
+Mobile `native-packaging` 与 Desktop 使用同一套 Backend settings contract。
+Local Backend 在 mobile shell 内启动 embedded loopback service，不要求外部
+`3001` 端口上已经有 server。Remote Backend 只加载已校验的 HTTPS origin，
+不注入本地 session/bootstrap。
+
+Mobile Tauri bundle 在生产 shell 运行中加载 bundled `frontendDist` assets；
+后端由 native 启动覆盖项或 host-local Backend preference 决定。
 
 ## 配置
 

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-25`
+- `Last Review`: `2026-06-26`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -18,6 +18,7 @@
 
 *   **Runtime Config Contract**：`config.toml` 与环境变量共同决定服务端运行时配置；受支持键 **MUST** 可由 CLI/runtime 读取，写入入口 **MUST** 校验 key、type 与敏感字段边界。
 *   **Browser Preference Contract**：主题、布局、语言、最近命令等 UI 偏好 **MAY** 存入浏览器本地存储，但 **MUST NOT** 承载 repo authority、session secret、peer private key 或业务事实。
+*   **Native Host-local Backend Preference Contract**：Desktop/Mobile native shell 的 backend 选择只允许存入 app-private data root 下的 host-local JSON 文件。它不是 `config.toml`、server-backed Settings API、Projection Locator、ledger fact 或 browser storage。
 *   **Future Settings Surface**：server-backed Settings API、独立设置文件或统一 GUI 持久化 **MAY** 另行设计；启用前 **MUST** 更新本章、feature spec 与 acceptance case。
 
 ## 1. Environment Variables (环境变量)
@@ -118,6 +119,21 @@ Projection base / workspace root 不属于 `config.toml` 的全局键。
 *   `config.toml` 可以决定 `ledger_dir`，但不得通过 `ledger_dir` 推导 projection base 或 workspace root。
 *   Settings UI 或 CLI 可以展示、创建、替换 locator；写入前 **MUST** 校验 path 类型、canonical path、冲突与保留目录边界。
 *   locator 变更属于 repo runtime 操作，不是用户 UI 偏好，也不是 ledger authority。
+
+### 2.2.2 Native Host-local Backend Preference {#native-host-local-backend-preference}
+
+Desktop/Mobile native shell 可以在 Settings 暴露 Backend section，但其持久化边界独立于服务端 Settings、浏览器 UI 偏好与 repo authority。
+
+规则：
+
+*   持久化模型为 `NativeBackendPreference { mode: local | remote, remote_url }`，默认 `local`。
+*   持久化位置必须是 app-private data root 下的 host-local JSON 文件，例如 `native-backend.json`；不得写入 `config.toml`、ledger、Projection Locator、projection workspace、browser `localStorage` 或 `sessionStorage`。
+*   `local` 模式不得要求用户手动启动后端：Desktop 启动受控 `deve_cli serve --native-loopback` 子进程，Android/Mobile 启动 embedded loopback service。
+*   `remote` 模式只保存已校验 HTTPS origin，并且不得启动本机后端或注入本地 endpoint/session bootstrap。
+*   保存 `remote` 前必须由 native 侧短超时请求 `<origin>/api/node/role`，确认响应是结构化 Deve node role；校验失败不得保存。远端认证、cookie 与登录态由远端 Web 自行处理。
+*   该 preference 不得保存远端凭证、session/token、native session material、P2P token、repo id、branch、`scope_nonce`、writer readiness 或任何 authority fact。
+*   普通浏览器中的 Settings 必须把 Backend section 标为 native-only unavailable，不提供伪保存、伪校验或写浏览器存储的替代路径。
+*   native `RemoteBrowser` 失联时仍按浏览器断连锁屏/只读语义处理；native-only “Use local backend” 入口只允许切回 `local` preference、启动本机后端并重载 Web shell。
 
 ### 2.3 AI (人工智能)
 | Key                        | Type   | Default      | Description |

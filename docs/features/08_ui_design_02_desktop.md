@@ -36,6 +36,9 @@
 
 - Desktop native-packaging 默认以 `LocalBackend` 模式启动，包含本地受控后端、默认 repo/projection 初始化、loopback endpoint、session handoff、健康探测和重启协调。
 - Desktop 可通过启动参数 `--remote-url https://host[:port]` 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin；脚本化/诊断启动仍可使用 `DEVE_NATIVE_REMOTE_URL`。
+- Desktop Settings 提供 Backend section，可在 Local Backend 与 Remote Backend 之间切换。默认 Local Backend 不要求用户单独启动后端。
+- Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
+- RemoteBackend 失联时 UI 沿用浏览器锁屏/只读语义；native-only “Use local backend” 入口可切回 Local Backend、启动本机后端并重载 bundled Web shell。
 - `RemoteBrowser` 不启动本地后端，不注入本地 endpoint/session bootstrap，不把远端 URL 保存为本地 writer authority。
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过本地 server/core writer gate。
@@ -95,10 +98,13 @@
 1. 默认环境启动 Desktop shell。
 2. 检查本地 loopback service health、native session handoff 与 Web shell 可用性。
 3. 切换到 RemoteBrowser HTTPS origin。
-4. 检查壳层只加载远端 origin，且不启动本地 service 或注入本地 bootstrap。
+4. 在 Settings 中切回 Local Backend。
+5. 检查壳层只加载远端 origin，且不启动本地 service 或注入本地 bootstrap；切回 local 后重新启动本地 service 并重载 bundled Web shell。
 
 期望结果：
 
 - 默认 LocalBackend 可以启动受控 local service，并且 UI 写入仍经过本地 server/core writer gate。
 - RemoteBrowser 等价于浏览器连接远端 Docker/Web URL。
+- Settings 保存 remote 前必须完成 node-role 校验，校验失败不能写入 preference。
+- RemoteBrowser 失联时 native-only 入口可切回 LocalBackend。
 - URL、日志、localStorage 与 bootstrap payload 不暴露 service secret 或 P2P token material。

@@ -69,6 +69,73 @@ pub struct NativeRemoteTarget {
     pub https_origin: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NativeBackendMode {
+    Local,
+    Remote,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NativeBackendPreference {
+    pub mode: NativeBackendMode,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote_url: Option<String>,
+}
+
+impl Default for NativeBackendPreference {
+    fn default() -> Self {
+        Self::local()
+    }
+}
+
+impl NativeBackendPreference {
+    pub fn local() -> Self {
+        Self {
+            mode: NativeBackendMode::Local,
+            remote_url: None,
+        }
+    }
+
+    pub fn remote(https_origin: impl Into<String>) -> Self {
+        Self {
+            mode: NativeBackendMode::Remote,
+            remote_url: Some(https_origin.into()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NativeBackendValidationResult {
+    pub ok: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub https_origin: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_role: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl NativeBackendValidationResult {
+    pub fn success(https_origin: impl Into<String>, node_role: impl Into<String>) -> Self {
+        Self {
+            ok: true,
+            https_origin: Some(https_origin.into()),
+            node_role: Some(node_role.into()),
+            error: None,
+        }
+    }
+
+    pub fn failure(error: impl Into<String>) -> Self {
+        Self {
+            ok: false,
+            https_origin: None,
+            node_role: None,
+            error: Some(error.into()),
+        }
+    }
+}
+
 impl NativeAdapterState {
     pub fn is_writable_candidate(self) -> bool {
         self == Self::RuntimeReady

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-20`
+- `Last Review`: `2026-06-26`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -500,6 +500,8 @@ PinnedSetChanged
 - Desktop / Mobile native shell **MUST** 支持两个互斥模式：
   - `LocalBackend`：native-packaging 运行时默认模式。壳层启动或持有本机受控后端，并在 app-private ledger/repo/projection 上完成初始化；所有读写仍经本机 server/core writer gate。
   - `RemoteBrowser`：显式远端模式。壳层只把 WebView 导航到远端 Docker/Web 的 HTTPS origin，行为等价于浏览器访问该站点；不得注入本地 endpoint/session bootstrap，不得启动本机后端。
+- Desktop / Mobile native shell **MUST** 共用同一套 `NativeBackendPreference` 语义：默认 `local`；Settings 可切换 `local` / `remote`；`remote` 必须保存已校验 HTTPS origin；该偏好只允许持久化在 app-private data root 下的 host-local JSON 文件（例如 `native-backend.json`）。
+- native backend preference 不是 repo authority、不是 `config.toml`、不是 Projection Locator，也不是 browser `localStorage` / `sessionStorage`；它不得保存 session、token、`scope_nonce`、peer secret 或 writer readiness。
 - Desktop / Mobile 子章 **MAY** 定义平台 endpoint、session handoff、lifecycle、foreground reprobe 与 local backend 承载差异。
 - Desktop / Mobile 子章 **MUST NOT** 引入新的 ledger、Projection Workspace、source-control、sync、search 或 settings authority。
 - native adapter **MUST** 保持 no-packaging-runtime 默认构建；`native-packaging` 构建进入 `LocalBackend` 默认模式，而默认 workspace/no-Tauri 构建仍不含 packaging runtime。
@@ -509,8 +511,12 @@ PinnedSetChanged
 ### 8.6 Native Post-Gate Common Contract {#native-post-gate-common-contract}
 
 - post-gate native shell **MUST** 先解析 `NativeShellMode`，再启动 UI。
+- native shell **MUST** 先读取启动覆盖项与 host-local backend preference，再解析 `NativeShellMode`：CLI `--remote-url` / `DEVE_NATIVE_REMOTE_URL` 仅作为诊断或脚本覆盖；无覆盖时使用 host-local preference；无配置时默认 `LocalBackend`。
 - `LocalBackend` **MUST** 先拉起受控本机 service 并完成 native session handoff；Desktop local service 与 Mobile embedded loopback service 都只是本机 full peer authority 的承载进程/循环，不改变业务写入入口。
 - `RemoteBrowser` **MUST** 只接受 HTTPS origin URL；不接受 userinfo、query、fragment 或业务子路径。RemoteBrowser 壳层不拥有本机 repo、ledger 或 writer gate，只消费远端 Web 同源 `/api` 与 `/ws`。
+- Settings 保存 `RemoteBrowser` 前 **MUST** 由 native 侧短超时探测 `<origin>/api/node/role` 并取得结构化 Deve node role；校验失败不得写入 host-local preference。远端登录态仍由远端 Web 自行管理，native bridge 不保存远端凭证。
+- native Settings bridge **MUST** 只暴露窄接口：读取当前 backend preference、校验 remote origin、保存 remote preference、切回 local preference。普通浏览器必须显示 native-only unavailable，不提供伪操作。
+- `RemoteBrowser` 失联时 UI 语义等价浏览器断连锁屏/只读；native shell 可以额外提供“Use local backend”入口，触发 host-local preference 切回 `LocalBackend`、启动本机 service，并重载 Web shell。切换过程不得复用旧 endpoint、旧 session、旧 repo scope 或旧 `scope_nonce`。
 - service 端口 **MUST** 使用本机随机可用端口，并只保存在运行时内存中。
 - 端口占用时，service boot **MUST** 自动回退到新的可用端口并重新绑定。
 - 本机通信 **MUST** 使用 loopback HTTP/WS 或显式 IPC，并具备进程级鉴权与 session 绑定。

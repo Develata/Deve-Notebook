@@ -37,9 +37,12 @@
 - Android/Mobile native-packaging 默认以 `LocalBackend` 模式启动，包含 in-process embedded loopback service、默认 repo/projection 初始化、loopback endpoint、session handoff、foreground reprobe、readiness 展示和失败恢复。
 - `LocalBackend` 必须在主 WebView 创建前完成 native session handoff、bootstrap 注入与 cookie 注册。
 - Mobile v1 不使用 child process。
-- Mobile 可显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
+- Mobile 可显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin；Settings 中的 Backend section 与 Desktop 使用同一套 Local Backend / Remote Backend 语义。
+- Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
+- RemoteBrowser 失联时 UI 沿用浏览器锁屏/只读语义；native-only “Use local backend” 入口可切回 Local Backend、启动 embedded loopback service 并重载 bundled Web shell。
 - `RemoteBrowser` 不启动 embedded service，不注入本地 endpoint/session bootstrap，不把远端 URL 保存为本地 writer authority。
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
+- Mobile native bundle 不应固定依赖开发期 `http://127.0.0.1:3001` devUrl；生产 shell 加载 bundled frontendDist，并由 native backend mode 决定连接 local 或 remote。
 - 后台或系统暂停期间不承诺长时同步；回到前台后必须重新探测 service 与 writer gate。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
 - in-process embedded loopback service 的 auth/session bootstrap material 必须经 typed runtime launch options 传递，不得通过进程级环境变量写入/读回。
@@ -119,11 +122,14 @@
 1. 默认环境启动 Mobile shell。
 2. 检查 embedded loopback service、session handoff 与 Web shell 可用性。
 3. 模拟 foreground reprobe，并检查 writer gate 状态。
-4. 切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin。
+4. 在 Settings 中切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin。
+5. 模拟 RemoteBrowser 失联，并使用 native-only “Use local backend” 切回 local。
 
 期望结果：
 
 - 默认 LocalBackend 可以启动 embedded loopback service。
 - RemoteBrowser 等价于浏览器连接远端 Docker/Web URL。
+- Settings 保存 remote 前必须完成 node-role 校验，校验失败不能写入 preference。
+- RemoteBrowser 失联时 native-only 入口可切回 LocalBackend。
 - 前台恢复后 UI 重新探测 service；写入仍受 repo writer gate 控制。
 - 后台长时同步不可被 UI 暗示为已支持。

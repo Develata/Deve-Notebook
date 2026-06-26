@@ -170,10 +170,10 @@ pub fn plan_desktop_local_service_entrypoint_for_current_process(
 
 pub fn resolve_desktop_local_service_data_root()
 -> Result<PathBuf, DesktopLocalServiceEntrypointError> {
-    if let Some(value) = std::env::var_os(DEVE_DESKTOP_DATA_DIR_ENV) {
-        if !value.is_empty() {
-            return Ok(PathBuf::from(value));
-        }
+    if let Some(value) = std::env::var_os(DEVE_DESKTOP_DATA_DIR_ENV)
+        && !value.is_empty()
+    {
+        return Ok(PathBuf::from(value));
     }
 
     platform_app_private_data_root().ok_or_else(|| {

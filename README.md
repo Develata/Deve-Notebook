@@ -36,9 +36,9 @@ release.
   smoke, runtime smoke scripts, release/baseline guards, and architecture
   registry checks.
 - Desktop and mobile native shell crates with optional Tauri v2
-  `native-packaging` gates. Desktop native-packaging defaults to LocalBackend
-  and can explicitly run as a RemoteBrowser HTTPS shell. Current evidence is
-  shell/package/startup oriented, not signed store readiness.
+  `native-packaging` gates. Native shells default to LocalBackend and can
+  switch to a validated RemoteBackend HTTPS origin from Settings. Current
+  evidence is shell/package/startup oriented, not signed store readiness.
 
 ## Explicit Boundaries
 
@@ -176,6 +176,28 @@ cargo run -p deve_desktop --features native-packaging -- --remote-url https://ex
 Packaged or scripted launches may also use
 `DEVE_NATIVE_REMOTE_URL=https://example.invalid`. RemoteBrowser URLs must be
 HTTPS origins: no userinfo, query, fragment, or application subpath.
+
+In the native app, Settings exposes a Backend section:
+
+- Local Backend starts the app-owned local service automatically.
+- Remote Backend requires an HTTPS origin and must pass a native
+  `<origin>/api/node/role` probe before it can be saved.
+- The saved choice is host-local app-private JSON, not `config.toml`, ledger
+  state, Projection Locator state, or browser localStorage.
+- Remote credentials and login state remain owned by the remote Web origin.
+  If the remote becomes unavailable, the native lock/read-only surface can
+  switch back to Local Backend.
+
+### Mobile Native Packaging
+
+Mobile `native-packaging` uses the same Backend settings contract as Desktop.
+Local Backend starts the embedded loopback service inside the mobile shell and
+does not require an external server on port `3001`. Remote Backend loads only a
+validated HTTPS origin and does not inject local session/bootstrap data.
+
+The mobile Tauri bundle loads bundled `frontendDist` assets for production
+shell runs; the backend is selected by native launch options or the host-local
+Backend preference.
 
 ## Configuration
 

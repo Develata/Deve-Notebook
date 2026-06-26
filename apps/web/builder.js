@@ -79,6 +79,29 @@ async function build() {
                 : 'Build unchanged: js/editor.bundle.js'
         );
 
+        console.log('Building native backend bridge bundle...');
+        const nativeBackendResult = await esbuild.build({
+            entryPoints: ['js/native_backend_bridge.js'],
+            bundle: true,
+            outfile: 'js/native_backend_bridge.bundle.js',
+            format: 'esm',
+            minify: true,
+            sourcemap: true,
+            sourcesContent: false,
+            write: false,
+            target: ['es2020'],
+            external: [],
+        });
+        let nativeBridgeChanged = false;
+        for (const file of nativeBackendResult.outputFiles || []) {
+            nativeBridgeChanged = (await writeIfChanged(file.path, file.contents)) || nativeBridgeChanged;
+        }
+        console.log(
+            nativeBridgeChanged
+                ? 'Build complete: js/native_backend_bridge.bundle.js'
+                : 'Build unchanged: js/native_backend_bridge.bundle.js'
+        );
+
         await copyAssets();
         
     } catch (e) {

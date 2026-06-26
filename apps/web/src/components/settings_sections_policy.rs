@@ -145,6 +145,19 @@ pub(super) fn ai_chat_visibility_button_state(visible: bool) -> AiChatVisibility
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct NativeBackendButtonState {
+    pub local_class: &'static str,
+    pub remote_class: &'static str,
+}
+
+pub(super) fn native_backend_button_state(mode: &str) -> NativeBackendButtonState {
+    NativeBackendButtonState {
+        local_class: preference_button_class(mode != "remote"),
+        remote_class: preference_button_class(mode == "remote"),
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AiBackendButtonState {
     pub native_class: &'static str,
     pub native_disabled: bool,

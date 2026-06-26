@@ -2,7 +2,8 @@ use super::{
     BUTTON_CLASS_ACCENT_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE, SYNC_AUTO_CLASS_ACTIVE,
     SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, ai_chat_visibility_button_state,
     editor_density_button_state, editor_wrap_button_state, language_button_state,
-    reserved_setting_state, sync_mode_button_state, theme_button_state,
+    native_backend_button_state, reserved_setting_state, sync_mode_button_state,
+    theme_button_state,
 };
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
 use crate::components::settings_prefs::{
@@ -104,6 +105,21 @@ fn ai_chat_visibility_buttons_reflect_local_feedback_state() {
     let hidden = ai_chat_visibility_button_state(false);
     assert_eq!(hidden.show_class, BUTTON_CLASS_IDLE);
     assert_eq!(hidden.hide_class, BUTTON_CLASS_ACCENT_ACTIVE);
+}
+
+#[test]
+fn native_backend_buttons_reflect_local_remote_mode() {
+    let local = native_backend_button_state("local");
+    assert_eq!(local.local_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    assert_eq!(local.remote_class, BUTTON_CLASS_IDLE);
+
+    let remote = native_backend_button_state("remote");
+    assert_eq!(remote.local_class, BUTTON_CLASS_IDLE);
+    assert_eq!(remote.remote_class, BUTTON_CLASS_ACCENT_ACTIVE);
+
+    let unknown = native_backend_button_state("unexpected");
+    assert_eq!(unknown.local_class, BUTTON_CLASS_ACCENT_ACTIVE);
+    assert_eq!(unknown.remote_class, BUTTON_CLASS_IDLE);
 }
 
 #[test]

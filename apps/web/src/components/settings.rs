@@ -10,7 +10,7 @@
 
 use crate::components::settings_sections::{
     AiBackendSection, AiChatVisibilitySection, AppearanceSection, EditorBasicsSection,
-    RuntimeDiagnosticsSection, SyncModeSection,
+    NativeBackendSection, RuntimeDiagnosticsSection, SyncModeSection,
 };
 use crate::components::settings_sections_policy::{language_button_state, reserved_setting_state};
 use crate::components::{focus_scope, icons::X};
@@ -116,6 +116,9 @@ pub fn SettingsModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> imp
 
                         // AI Chat 面板显示设置
                         <AiChatVisibilitySection locale=locale />
+
+                        // Native 后端选择
+                        <NativeBackendSection locale=locale />
 
                         // 编辑器基础偏好
                         <EditorBasicsSection locale=locale />
