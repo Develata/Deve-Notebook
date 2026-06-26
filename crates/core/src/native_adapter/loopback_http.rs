@@ -197,6 +197,9 @@ pub fn parse_loopback_http_url(
     let Some(rest) = url.strip_prefix("http://") else {
         return Err(NativeLoopbackHttpError::InvalidUrl);
     };
+    if contains_forbidden_loopback_http_url_char(rest) {
+        return Err(NativeLoopbackHttpError::InvalidUrl);
+    }
     let (authority, path) = rest
         .split_once('/')
         .map(|(authority, path)| (authority, format!("/{path}")))
@@ -222,6 +225,11 @@ pub fn parse_loopback_http_url(
 
 pub fn loopback_host_from_http_base(url: &str) -> Result<String, NativeLoopbackHttpError> {
     Ok(parse_loopback_http_url(url)?.host)
+}
+
+fn contains_forbidden_loopback_http_url_char(rest: &str) -> bool {
+    rest.chars()
+        .any(|ch| ch.is_ascii_control() || ch.is_whitespace() || matches!(ch, '\\' | '#'))
 }
 
 fn read_capped_response(
@@ -306,6 +314,21 @@ mod tests {
             parse_loopback_http_url("http://127.0.0.1:0"),
             Err(NativeLoopbackHttpError::InvalidUrl)
         ));
+    }
+
+    #[test]
+    fn native_loopback_http_url_rejects_request_line_injection_material() {
+        for url in [
+            "http://127.0.0.1:3001/api/node/role\r\nX-Evil: yes",
+            "http://127.0.0.1:3001/api/node/role with-space",
+            "http://127.0.0.1:3001/api/node/role#fragment",
+            "http://127.0.0.1:3001\\api\\node\\role",
+        ] {
+            assert!(matches!(
+                parse_loopback_http_url(url),
+                Err(NativeLoopbackHttpError::InvalidUrl)
+            ));
+        }
     }
 
     #[test]
