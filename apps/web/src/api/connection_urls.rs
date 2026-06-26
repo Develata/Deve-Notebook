@@ -73,11 +73,13 @@ fn build_inferred_ws_urls_from_parts(
     let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
     let mut urls = Vec::new();
 
-    if let Some(port) = query_port {
-        push_ws_url(
-            &mut urls,
-            format!("{}://{}:{}/ws", ws_scheme, hostname, port),
-        );
+    if include_debug_fallbacks {
+        if let Some(port) = query_port {
+            push_ws_url(
+                &mut urls,
+                format!("{}://{}:{}/ws", ws_scheme, hostname, port),
+            );
+        }
     }
 
     if let Some(url) = packaged_shell_loopback_ws_url {
@@ -192,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn explicit_query_port_still_precedes_packaged_shell_loopback() {
+    fn release_inference_ignores_query_ws_port() {
         let urls = build_inferred_ws_urls_from_parts(
             "tauri.localhost".to_string(),
             "tauri.localhost".to_string(),
@@ -200,6 +202,26 @@ mod tests {
             Some(4010),
             Some("ws://127.0.0.1:3001/ws".to_string()),
             false,
+        );
+
+        assert_eq!(
+            urls,
+            vec![
+                "ws://127.0.0.1:3001/ws".to_string(),
+                "ws://tauri.localhost/ws".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn debug_inference_keeps_query_ws_port_as_dev_fallback() {
+        let urls = build_inferred_ws_urls_from_parts(
+            "tauri.localhost".to_string(),
+            "tauri.localhost".to_string(),
+            "http:".to_string(),
+            Some(4010),
+            Some("ws://127.0.0.1:3001/ws".to_string()),
+            true,
         );
 
         assert_eq!(urls[0], "ws://tauri.localhost:4010/ws");
