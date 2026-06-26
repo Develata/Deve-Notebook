@@ -2,7 +2,7 @@
 //!   - 15_settings#native-host-local-backend-preference
 
 use crate::components::settings_sections_policy::{
-    native_backend_button_state, native_backend_can_switch_local,
+    native_backend_button_state, native_backend_can_switch_local, native_backend_validation_state,
 };
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -14,9 +14,9 @@ use leptos::task::spawn_local;
 pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
     let (available, set_available) = signal(false);
     let (mode, set_mode) = signal("local".to_string());
-    let (remote_url, set_remote_url) = signal(String::new());
     let (remote_draft, set_remote_draft) = signal(String::new());
     let (feedback, set_feedback) = signal(String::new());
+    let (remote_validation_succeeded, set_remote_validation_succeeded) = signal(false);
     let (busy, set_busy) = signal(false);
 
     spawn_local(async move {
@@ -24,10 +24,11 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
         set_available.set(config.available);
         if config.available {
             set_mode.set(config.mode);
-            set_remote_url.set(config.remote_url.clone());
             set_remote_draft.set(config.remote_url);
+            set_remote_validation_succeeded.set(false);
             set_feedback.set(String::new());
         } else {
+            set_remote_validation_succeeded.set(false);
             set_feedback.set(config.error.unwrap_or_else(|| {
                 t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
             }));
@@ -47,6 +48,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             return;
         }
         set_busy.set(true);
+        set_remote_validation_succeeded.set(false);
         set_feedback
             .set(t::settings::validating_remote_backend(locale.get_untracked()).to_string());
         spawn_local(async move {
@@ -55,6 +57,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             set_busy.set(false);
             if !result.available {
                 set_available.set(false);
+                set_remote_validation_succeeded.set(false);
                 set_feedback.set(result.error.unwrap_or_else(|| {
                     t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
                 }));
@@ -63,11 +66,12 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             if result.ok {
                 set_available.set(true);
                 set_mode.set("remote".to_string());
-                set_remote_url.set(result.https_origin.clone());
                 set_remote_draft.set(result.https_origin);
+                set_remote_validation_succeeded.set(true);
                 set_feedback
                     .set(t::settings::remote_backend_saved(locale.get_untracked()).to_string());
             } else {
+                set_remote_validation_succeeded.set(false);
                 set_feedback.set(result.error.unwrap_or_else(|| {
                     t::settings::remote_backend_requires_validation(locale.get_untracked())
                         .to_string()
@@ -84,6 +88,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             return;
         }
         set_busy.set(true);
+        set_remote_validation_succeeded.set(false);
         set_feedback.set(t::settings::local_backend_switching(locale.get_untracked()).to_string());
         spawn_local(async move {
             let config: crate::api::NativeBackendConfig =
@@ -92,12 +97,13 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             if config.available {
                 set_available.set(true);
                 set_mode.set("local".to_string());
-                set_remote_url.set(config.remote_url.clone());
                 set_remote_draft.set(config.remote_url);
+                set_remote_validation_succeeded.set(false);
                 set_feedback
                     .set(t::settings::local_backend_saved(locale.get_untracked()).to_string());
             } else {
                 set_available.set(false);
+                set_remote_validation_succeeded.set(false);
                 set_feedback.set(config.error.unwrap_or_else(|| {
                     t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
                 }));
@@ -128,7 +134,11 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                     <button
                         class=move || button_state.get().remote_class
                         disabled=move || !available.get() || busy.get()
-                        on:click=move |_| set_mode.set("remote".to_string())
+                        on:click=move |_| {
+                            set_remote_validation_succeeded.set(false);
+                            set_feedback.set(String::new());
+                            set_mode.set("remote".to_string());
+                        }
                     >
                         {move || t::settings::remote_backend_label(locale.get())}
                     </button>
@@ -161,7 +171,11 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                             inputmode="url"
                             placeholder="https://deve.example"
                             prop:value=move || remote_draft.get()
-                            on:input=move |ev| set_remote_draft.set(event_target_value(&ev))
+                            on:input=move |ev| {
+                                set_remote_validation_succeeded.set(false);
+                                set_feedback.set(String::new());
+                                set_remote_draft.set(event_target_value(&ev));
+                            }
                             disabled=move || busy.get()
                             data-deve-native-backend-remote-url="true"
                         />
@@ -187,15 +201,14 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                     <p
                         class="text-xs text-muted"
                         data-deve-native-backend-validation=move || {
-                            if busy.get() {
-                                "pending".to_string()
-                            } else if feedback.get().is_empty() {
-                                "idle".to_string()
-                            } else if mode.get() == "remote" && !remote_url.get().is_empty() {
-                                "success".to_string()
-                            } else {
-                                "failed".to_string()
-                            }
+                            let feedback = feedback.get();
+                            native_backend_validation_state(
+                                busy.get(),
+                                &feedback,
+                                &mode.get(),
+                                remote_validation_succeeded.get(),
+                            )
+                            .to_string()
                         }
                     >
                         {move || {

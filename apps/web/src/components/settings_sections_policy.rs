@@ -161,6 +161,23 @@ pub(super) fn native_backend_can_switch_local(mode: &str) -> bool {
     mode == "remote"
 }
 
+pub(super) fn native_backend_validation_state(
+    busy: bool,
+    feedback: &str,
+    mode: &str,
+    remote_validation_succeeded: bool,
+) -> &'static str {
+    if busy {
+        "pending"
+    } else if mode != "remote" || feedback.is_empty() {
+        "idle"
+    } else if remote_validation_succeeded {
+        "success"
+    } else {
+        "failed"
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AiBackendButtonState {
     pub native_class: &'static str,
