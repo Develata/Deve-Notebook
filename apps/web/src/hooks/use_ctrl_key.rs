@@ -21,7 +21,7 @@ use leptos::prelude::*;
 pub fn use_ctrl_key() {
     // Keydown: Add class when Ctrl/Meta pressed
     window_event_listener(leptos::ev::keydown, move |ev: web_sys::KeyboardEvent| {
-        if (ev.ctrl_key() || ev.meta_key())
+        if should_mark_ctrl_pressed(ev.ctrl_key(), ev.meta_key())
             && let Some(body) = body()
         {
             let _ = body.class_list().add_1("is-ctrl-pressed");
@@ -31,7 +31,7 @@ pub fn use_ctrl_key() {
     // Keyup: Remove class when Ctrl/Meta released
     window_event_listener(leptos::ev::keyup, move |ev: web_sys::KeyboardEvent| {
         let key = ev.key();
-        if (key == "Control" || key == "Meta")
+        if should_clear_ctrl_pressed_on_keyup(&key, ev.ctrl_key(), ev.meta_key())
             && let Some(body) = body()
         {
             let _ = body.class_list().remove_1("is-ctrl-pressed");
@@ -44,6 +44,14 @@ pub fn use_ctrl_key() {
             let _ = body.class_list().remove_1("is-ctrl-pressed");
         }
     });
+}
+
+fn should_mark_ctrl_pressed(ctrl: bool, meta: bool) -> bool {
+    ctrl || meta
+}
+
+fn should_clear_ctrl_pressed_on_keyup(key: &str, ctrl: bool, meta: bool) -> bool {
+    (key == "Control" || key == "Meta") && !should_mark_ctrl_pressed(ctrl, meta)
 }
 
 fn body() -> Option<web_sys::HtmlElement> {
@@ -66,11 +74,27 @@ fn browser_window() -> Option<web_sys::Window> {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
-    use super::{body, document};
+    use super::{body, document, should_clear_ctrl_pressed_on_keyup, should_mark_ctrl_pressed};
 
     #[test]
     fn ctrl_key_dom_helpers_fail_soft_without_browser_window() {
         assert!(document().is_none());
         assert!(body().is_none());
+    }
+
+    #[test]
+    fn ctrl_key_marker_tracks_either_modifier() {
+        assert!(!should_mark_ctrl_pressed(false, false));
+        assert!(should_mark_ctrl_pressed(true, false));
+        assert!(should_mark_ctrl_pressed(false, true));
+    }
+
+    #[test]
+    fn ctrl_key_keyup_keeps_marker_while_other_modifier_is_still_pressed() {
+        assert!(should_clear_ctrl_pressed_on_keyup("Control", false, false));
+        assert!(should_clear_ctrl_pressed_on_keyup("Meta", false, false));
+        assert!(!should_clear_ctrl_pressed_on_keyup("Control", false, true));
+        assert!(!should_clear_ctrl_pressed_on_keyup("Meta", true, false));
+        assert!(!should_clear_ctrl_pressed_on_keyup("Shift", false, false));
     }
 }
