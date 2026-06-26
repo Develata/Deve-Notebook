@@ -131,6 +131,8 @@ fn unique_path(path: PathBuf) -> Result<PathBuf> {
             return Ok(candidate);
         }
     }
+    // 不可达：`1..` 在 2^63 个候选耗尽前必有一个未占用路径触发上面的 return；
+    // 文件系统不可能容纳那么多同名候选，循环必然提前返回。
     unreachable!()
 }
 
