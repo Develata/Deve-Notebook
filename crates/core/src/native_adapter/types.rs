@@ -103,6 +103,13 @@ impl NativeBackendPreference {
             remote_url: Some(https_origin.into()),
         }
     }
+
+    pub fn canonicalized(&self) -> Self {
+        match self.mode {
+            NativeBackendMode::Local => Self::local(),
+            NativeBackendMode::Remote => self.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

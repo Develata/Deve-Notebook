@@ -156,6 +156,16 @@ fn native_backend_preference_defaults_to_local_backend() {
 }
 
 #[test]
+fn native_backend_preference_canonicalizes_local_without_remote_url() {
+    let preference = NativeBackendPreference {
+        mode: NativeBackendMode::Local,
+        remote_url: Some("https://deve.example".into()),
+    };
+
+    assert_eq!(preference.canonicalized(), NativeBackendPreference::local());
+}
+
+#[test]
 fn native_backend_preference_remote_maps_to_remote_browser() {
     let preference = NativeBackendPreference::remote("https://deve.example:8443");
 

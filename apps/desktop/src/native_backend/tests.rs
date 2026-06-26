@@ -29,6 +29,10 @@ fn desktop_native_backend_local_preference_drops_remote_url() {
     let loaded = load_desktop_native_backend_preference(&root).expect("load preference");
 
     assert_eq!(loaded, NativeBackendPreference::local());
+    let contents = std::fs::read_to_string(desktop_native_backend_config_path(&root))
+        .expect("config contents");
+    assert!(!contents.contains("remote_url"));
+    assert!(!contents.contains("https://deve.example"));
     let _ = std::fs::remove_dir_all(root);
 }
 

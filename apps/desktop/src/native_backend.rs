@@ -91,6 +91,7 @@ impl DesktopNativeBackendState {
                 "app-private config path is unavailable".into(),
             )
         })?;
+        let preference = preference.canonicalized();
         save_desktop_native_backend_preference_to_path(config_path, &preference)?;
         let mut current = self.preference.lock().map_err(|_| {
             DesktopNativeBackendError::ConfigRootUnavailable("state poisoned".into())
@@ -143,10 +144,11 @@ fn save_desktop_native_backend_preference_to_path(
 ) -> Result<(), DesktopNativeBackendError> {
     native_shell_mode_for_backend_preference(preference)
         .map_err(|error| DesktopNativeBackendError::InvalidPreference(error.to_string()))?;
+    let preference = preference.canonicalized();
     if let Some(parent) = config_path.parent() {
         std::fs::create_dir_all(parent).map_err(DesktopNativeBackendError::WriteFailed)?;
     }
-    let payload = serde_json::to_vec_pretty(preference).map_err(|error| {
+    let payload = serde_json::to_vec_pretty(&preference).map_err(|error| {
         DesktopNativeBackendError::WriteFailed(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             error,

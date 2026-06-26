@@ -89,6 +89,7 @@ impl MobileNativeBackendState {
                 "app-private config path is unavailable".into(),
             )
         })?;
+        let preference = preference.canonicalized();
         save_mobile_native_backend_preference_to_path(config_path, &preference)?;
         let mut current = self.preference.lock().map_err(|_| {
             MobileNativeBackendError::ConfigRootUnavailable("state poisoned".into())
@@ -141,10 +142,11 @@ fn save_mobile_native_backend_preference_to_path(
 ) -> Result<(), MobileNativeBackendError> {
     native_shell_mode_for_backend_preference(preference)
         .map_err(|error| MobileNativeBackendError::InvalidPreference(error.to_string()))?;
+    let preference = preference.canonicalized();
     if let Some(parent) = config_path.parent() {
         std::fs::create_dir_all(parent).map_err(MobileNativeBackendError::WriteFailed)?;
     }
-    let payload = serde_json::to_vec_pretty(preference).map_err(|error| {
+    let payload = serde_json::to_vec_pretty(&preference).map_err(|error| {
         MobileNativeBackendError::WriteFailed(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             error,
