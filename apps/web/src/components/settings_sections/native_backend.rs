@@ -1,7 +1,9 @@
 //! plan_ref:
 //!   - 15_settings#native-host-local-backend-preference
 
-use crate::components::settings_sections_policy::native_backend_button_state;
+use crate::components::settings_sections_policy::{
+    native_backend_button_state, native_backend_can_switch_local,
+};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -78,6 +80,9 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
         if busy.get_untracked() {
             return;
         }
+        if !native_backend_can_switch_local(&mode.get_untracked()) {
+            return;
+        }
         set_busy.set(true);
         set_feedback.set(t::settings::local_backend_switching(locale.get_untracked()).to_string());
         spawn_local(async move {
@@ -87,6 +92,8 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             if config.available {
                 set_available.set(true);
                 set_mode.set("local".to_string());
+                set_remote_url.set(config.remote_url.clone());
+                set_remote_draft.set(config.remote_url);
                 set_feedback
                     .set(t::settings::local_backend_saved(locale.get_untracked()).to_string());
             } else {

@@ -157,6 +157,10 @@ pub(super) fn native_backend_button_state(mode: &str) -> NativeBackendButtonStat
     }
 }
 
+pub(super) fn native_backend_can_switch_local(mode: &str) -> bool {
+    mode == "remote"
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AiBackendButtonState {
     pub native_class: &'static str,
