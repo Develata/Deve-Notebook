@@ -107,3 +107,20 @@ REL-010|manual-network|docs/dev-runbook.md|docker p2p mesh smoke workflow
 REL-011|manual-cli|docs/dev-runbook.md|native authority opt-in workflow
 REL-012|manual-cli|.github/workflows/check.yml|branch check-only CI boundary
 SET-008|manual-cli|docs/features/13_settings.md|p2p static peer expected identity config review
+AUTH-013|manual-security|docs/features/09_auth.md|host identity key owner-only permission review
+AUTH-015|manual-security|docs/features/09_auth.md|anonymous localhost gated out of production env review
+DIFF-009|manual-chrome|docs/features/07_diff_logic.md|source control entry vs git palette CLI-only notice layering
+DIFF-010|manual-cli|docs/features/07_diff_logic.md|source control smoke independent of checked-in dev ledger state
+REL-004|manual-doc|docs/features/15_release.md|runtime/test entrypoint docs match implementation boundary
+REL-005|manual-doc|docs/features/15_release.md|docker/compose/release embedded-frontend shell-only boundary
+SET-007|manual-cli|docs/features/13_settings.md|server-backed settings api future boundary review
+STORE-014|manual-cli|docs/features/04_storage.md|ledger json lines export
+STORE-015|manual-cli|docs/features/04_storage.md|ledger ack holds after writeback failure
+STORE-016|manual-cli|docs/features/04_storage.md|watcher overflow/reconcile/debounce boundary
+STORE-017|manual-cli|docs/features/04_storage.md|repo catalog hard-fail / quarantine
+UI-DESK-004|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop editor tab cap, drag reorder, difftab boundary
+UI-DESK-005|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop native dual-mode boundary
+UI-MOB-020|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile editor 16px font avoids ios focus zoom
+UI-WEB-004|manual-chrome|docs/features/08_ui_design_01_web.md|activity bar more menu row click and pin/unpin independence
+UI-WEB-005|manual-chrome|docs/features/08_ui_design_01_web.md|repo switcher button semantics and click-outside dismiss
+UI-WEB-006|manual-chrome|docs/features/08_ui_design_01_web.md|web pwa manifest standalone install contract
