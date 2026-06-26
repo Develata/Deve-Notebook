@@ -137,7 +137,8 @@ fn parse_native_bootstrap_fields(
         }
     }
 
-    let (Some(http_base), Some(ws_base), Some(session_bound)) = (http_base, ws_base, session_bound)
+    let (Some(http_base), Some(ws_base), Some(node_role), Some(session_bound)) =
+        (http_base, ws_base, node_role, session_bound)
     else {
         return NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape);
     };
@@ -145,7 +146,7 @@ fn parse_native_bootstrap_fields(
     let endpoint = NativeEndpointReady {
         http_base,
         ws_base,
-        node_role: node_role.unwrap_or_else(|| "native".to_string()),
+        node_role,
         session_bound,
     };
 

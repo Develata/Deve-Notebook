@@ -64,6 +64,20 @@ fn rejects_missing_native_bootstrap_fields() {
 }
 
 #[test]
+fn rejects_native_bootstrap_without_node_role() {
+    assert_eq!(
+        parse_native_bootstrap_fields(
+            Some("http://127.0.0.1:3001".to_string()),
+            Some("ws://127.0.0.1:3001".to_string()),
+            None,
+            Some(true),
+            None,
+        ),
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
+    );
+}
+
+#[test]
 fn native_shell_origin_without_bootstrap_is_invalid() {
     assert_eq!(
         absent_native_bootstrap_state(Some("tauri.localhost"), Some("http:")),

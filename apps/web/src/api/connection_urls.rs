@@ -73,13 +73,11 @@ fn build_inferred_ws_urls_from_parts(
     let ws_scheme = if protocol == "https:" { "wss" } else { "ws" };
     let mut urls = Vec::new();
 
-    if include_debug_fallbacks {
-        if let Some(port) = query_port {
-            push_ws_url(
-                &mut urls,
-                format!("{}://{}:{}/ws", ws_scheme, hostname, port),
-            );
-        }
+    if include_debug_fallbacks && let Some(port) = query_port {
+        push_ws_url(
+            &mut urls,
+            format!("{}://{}:{}/ws", ws_scheme, hostname, port),
+        );
     }
 
     if let Some(url) = packaged_shell_loopback_ws_url {
