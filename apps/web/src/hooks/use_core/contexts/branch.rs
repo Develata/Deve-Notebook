@@ -1,3 +1,6 @@
+//! plan_ref:
+//!   - 04_repository#repo-scope-runtime
+//!
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;

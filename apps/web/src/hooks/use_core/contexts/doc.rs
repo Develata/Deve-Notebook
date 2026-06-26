@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 04_repository#repo-scope-runtime
+//!   - 04_repository#tree-projection-contract
+//!
 use deve_core::models::DocId;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
