@@ -121,19 +121,21 @@ fn parse_native_bootstrap_fields(
     session_bound: Option<bool>,
     service_state: Option<String>,
 ) -> NativeBootstrapState {
+    let has_endpoint_fields =
+        http_base.is_some() || ws_base.is_some() || node_role.is_some() || session_bound.is_some();
     if let Some(service_state) = service_state {
-        match service_state.as_str() {
-            "service_offline" => {
-                return NativeBootstrapState::Blocked(NativeBootstrapBlocker::ServiceOffline);
-            }
-            "foreground_reprobe" => {
-                return NativeBootstrapState::Blocked(NativeBootstrapBlocker::ForegroundReprobe);
-            }
-            "session_invalid" => {
-                return NativeBootstrapState::Blocked(NativeBootstrapBlocker::SessionInvalid);
-            }
-            "endpoint_ready" | "session_bound" | "runtime_ready" => {}
+        let recovery_blocker = match service_state.as_str() {
+            "service_offline" => Some(NativeBootstrapBlocker::ServiceOffline),
+            "foreground_reprobe" => Some(NativeBootstrapBlocker::ForegroundReprobe),
+            "session_invalid" => Some(NativeBootstrapBlocker::SessionInvalid),
+            "endpoint_ready" | "session_bound" | "runtime_ready" => None,
             _ => return NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape),
+        };
+        if let Some(blocker) = recovery_blocker {
+            if has_endpoint_fields {
+                return NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape);
+            }
+            return NativeBootstrapState::Blocked(blocker);
         }
     }
 

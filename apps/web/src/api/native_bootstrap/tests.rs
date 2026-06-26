@@ -110,6 +110,20 @@ fn maps_native_service_offline_to_blocked_state() {
 }
 
 #[test]
+fn rejects_recovery_bootstrap_with_endpoint_fields() {
+    assert_eq!(
+        parse_native_bootstrap_fields(
+            Some("http://127.0.0.1:3001".to_string()),
+            Some("ws://127.0.0.1:3001".to_string()),
+            Some("main".to_string()),
+            Some(true),
+            Some("service_offline".into()),
+        ),
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
+    );
+}
+
+#[test]
 fn maps_native_session_invalid_to_unauthorized_status() {
     assert_eq!(
         parse_native_bootstrap_fields(None, None, None, None, Some("session_invalid".into()))
