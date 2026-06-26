@@ -130,12 +130,14 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `11_ui_design/01_web#web-layout-persistence` | `## 6. Resizable Layout` | Web 布局尺寸、面板持久化与 local UI prefs 边界 |
 | `11_ui_design/02_desktop#desktop-current-native-boundary` | `## 1. 原生适配器边界` | Desktop native adapter 当前边界与 post-gate 目标区分（check-native-track-boundary.sh 断言）; no-rust-plan-ref |
 | `11_ui_design/02_desktop#desktop-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Desktop native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
+| `11_ui_design/02_desktop#desktop-native-shell-modes` | `### 1.1.1 Desktop Native Shell Modes` | Desktop `NativeShellMode` 的 `LocalBackend` / `RemoteBrowser` 语义、sidecar/loopback/session handoff 与 remote preference 探测边界 |
 | `11_ui_design/02_desktop#desktop-packaging-scaffold` | `### 1.2 Desktop Packaging Scaffold` | Desktop packaging scaffold 与 no-packaging skeleton 边界 |
 | `11_ui_design/02_desktop#desktop-packaging-dependency-gate-decision` | `### 1.3 Desktop Packaging Dependency Gate` | Desktop native-packaging dependency spike 决策与默认关闭边界 |
 | `11_ui_design/02_desktop#desktop-service-supervisor-contract` | `### 1.4 Embedded Service Supervisor Contract` | Desktop embedded service supervisor 状态机与 readiness 分类 |
 | `11_ui_design/02_desktop#desktop-process-adapter-decision` | `### 1.5 Process Adapter Gate` | Desktop process adapter gate 的诊断、authority 与 packaging 前置条件 |
 | `11_ui_design/03_mobile#mobile-current-native-boundary` | `## 1. 原生适配器边界` | Mobile native adapter 当前边界与 post-gate 目标区分 |
 | `11_ui_design/03_mobile#mobile-native-adapter-contract` | `### 1.1 Minimal Native Adapter Contract` | Mobile native adapter 的最小 endpoint/session/bootstrap/readiness 合同 |
+| `11_ui_design/03_mobile#mobile-native-shell-modes` | `### 1.1.1 Mobile Native Shell Modes` | Mobile `NativeShellMode` 的 embedded loopback/session bootstrap、WebView readiness 与 `RemoteBrowser` 边界 |
 | `11_ui_design/03_mobile#mobile-service-supervisor-contract` | `### 1.2 Embedded Service Supervisor Contract` | Mobile embedded service supervisor、foreground reprobe 与 suspension 边界 |
 | `11_ui_design/03_mobile#mobile-process-adapter-decision` | `### 1.3 Process Adapter Gate` | Mobile process adapter gate 的诊断、authority 与 runtime 前置条件 |
 | `11_ui_design/03_mobile#mobile-packaging-scaffold` | `### 1.4 Mobile Packaging Scaffold` | Mobile packaging scaffold 与 no-packaging skeleton 边界（check-native-track-boundary.sh 断言）; no-rust-plan-ref |
@@ -167,6 +169,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `14_commands#cli-commands` | `## 1. CLI Commands` | CLI 命令集合、帮助面与配置命令入口 |
 | `14_commands#command-palette-shortcuts` | `## 2. Command Palette` | Command Palette、Quick Open 与全局快捷键入口 |
 | `15_settings#configuration-settings` | `## 2. Configuration Settings (config.toml)` | `config.toml` 运行时配置读取/写入合同 |
+| `15_settings#native-host-local-backend-preference` | `### 2.2.2 Native Host-local Backend Preference` | Desktop/Mobile native backend preference 的 host-local JSON 持久化、local/remote 模式与敏感数据禁止边界 |
 | `15_settings#keyboard-shortcuts` | `## 3. Keyboard Shortcuts` | 用户可见快捷键映射合同 |
 | `15_settings#browser-ui-prefs` | `## 4. Browser UI Preferences` | 浏览器本地 UI 偏好持久化与敏感数据禁止边界 |
 | `17_tech_stack#graph-visualization` | `### 1.1 图谱可视化` | Graph visualization baseline 与 graph projection 技术边界 |
