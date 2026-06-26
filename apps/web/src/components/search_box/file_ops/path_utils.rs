@@ -20,7 +20,7 @@ pub fn normalize_doc_path(raw: &str) -> String {
     if normalized.ends_with('/') {
         return normalized;
     }
-    if Path::new(&normalized).extension().is_some() {
+    if normalized.ends_with(".md") {
         return normalized;
     }
     format!("{}.md", normalized)
@@ -144,6 +144,11 @@ mod tests {
         assert_eq!(normalize_doc_path("folder\\note"), "folder/note.md");
         assert_eq!(normalize_doc_path("folder\\note.md"), "folder/note.md");
         assert_eq!(normalize_doc_path("folder\\"), "folder/");
+    }
+
+    #[test]
+    fn normalize_doc_path_matches_backend_markdown_leaf_policy() {
+        assert_eq!(normalize_doc_path("folder\\note.txt"), "folder/note.txt.md");
     }
 
     #[test]

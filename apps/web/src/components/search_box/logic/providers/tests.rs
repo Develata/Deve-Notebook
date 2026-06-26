@@ -55,11 +55,11 @@ fn create_file_mode_builds_create_action_for_valid_path() {
     let results = create_file_results("notes/new", Locale::En);
 
     assert_eq!(results.len(), 1);
-    assert_eq!(results[0].title, "Create: 'notes/new'");
+    assert_eq!(results[0].title, "Create: 'notes/new.md'");
     assert_eq!(results[0].detail.as_deref(), Some("New File"));
     assert_eq!(
         results[0].action,
-        SearchAction::CreateDoc("notes/new".to_string())
+        SearchAction::CreateDoc("notes/new.md".to_string())
     );
 }
 

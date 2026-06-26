@@ -49,6 +49,22 @@ fn copy_different_destination_builds_file_op_action() {
 }
 
 #[test]
+fn move_non_markdown_leaf_destination_matches_backend_canonical_path() {
+    let parsed = parsed_args(&["notes/today.md", "archive/today.txt"], false);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
+
+    assert_eq!(results.len(), 1);
+    match &results[0].action {
+        SearchAction::FileOp(FileOpAction { kind, src, dst }) => {
+            assert_eq!(*kind, FileOpKind::Move);
+            assert_eq!(src, "notes/today.md");
+            assert_eq!(dst.as_deref(), Some("archive/today.txt.md"));
+        }
+        other => panic!("expected FileOp result, got {:?}", other),
+    }
+}
+
+#[test]
 fn move_without_source_returns_error() {
     let parsed = parsed_args(&[], false);
     let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
