@@ -29,7 +29,9 @@ Deve Notebook 是一个 Rust workspace，用于构建自托管的协作型 Markd
 - Dockerfile、生产 `docker-compose.yml`、embedded Web release build smoke、
   runtime smoke、release/baseline guard 与 architecture registry check。
 - Desktop/Mobile native shell crate，Tauri v2 仅在可选 `native-packaging` gate
-  后启用。当前证据是 shell/package/startup 方向，不是已签名 store readiness。
+  后启用。Desktop native-packaging 默认进入 LocalBackend，也可以显式作为
+  RemoteBrowser HTTPS shell 运行。当前证据是 shell/package/startup 方向，不是已签名
+  store readiness。
 
 ## 明确边界
 
@@ -135,6 +137,32 @@ NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080
 ```
 
 然后打开 `http://127.0.0.1:8080/`。
+
+### Desktop Native Packaging
+
+Desktop `native-packaging` 默认进入 `LocalBackend`：Tauri shell 加载 bundled
+Web assets，并启动受控 sibling `deve_cli serve --native-loopback` 本地服务。它
+不依赖外部已经运行在 `3001` 端口的 server。
+
+本地 debug 运行前，先确保 sibling CLI binary 存在：
+
+```bash
+cargo build -p deve_cli --bin deve_cli
+cargo run -p deve_desktop --features native-packaging
+```
+
+LocalBackend runtime data 默认使用平台 app-private data directory。仅在诊断或
+smoke-test 隔离时使用 `DEVE_DESKTOP_DATA_DIR=<absolute-path>`。
+
+如果要把 Desktop 作为远端 HTTPS Web shell 使用，而不是启动本地后端：
+
+```bash
+cargo run -p deve_desktop --features native-packaging -- --remote-url https://example.invalid
+```
+
+packaged 或脚本化启动也可以使用
+`DEVE_NATIVE_REMOTE_URL=https://example.invalid`。RemoteBrowser URL 必须是 HTTPS
+origin：不得包含 userinfo、query、fragment 或业务子路径。
 
 ## 配置
 

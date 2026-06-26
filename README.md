@@ -36,8 +36,9 @@ release.
   smoke, runtime smoke scripts, release/baseline guards, and architecture
   registry checks.
 - Desktop and mobile native shell crates with optional Tauri v2
-  `native-packaging` gates. Current evidence is shell/package/startup oriented,
-  not signed store readiness.
+  `native-packaging` gates. Desktop native-packaging defaults to LocalBackend
+  and can explicitly run as a RemoteBrowser HTTPS shell. Current evidence is
+  shell/package/startup oriented, not signed store readiness.
 
 ## Explicit Boundaries
 
@@ -146,6 +147,35 @@ NO_COLOR=true trunk serve --address 127.0.0.1 --port 8080
 ```
 
 Then open `http://127.0.0.1:8080/`.
+
+### Desktop Native Packaging
+
+Desktop `native-packaging` defaults to `LocalBackend`: the Tauri shell loads the
+bundled Web assets and starts a controlled sibling `deve_cli serve
+--native-loopback` local service. It does not depend on an externally running
+server on port `3001`.
+
+For a local debug run, make sure the sibling CLI binary exists first:
+
+```bash
+cargo build -p deve_cli --bin deve_cli
+cargo run -p deve_desktop --features native-packaging
+```
+
+LocalBackend runtime data uses the platform app-private data directory. Use
+`DEVE_DESKTOP_DATA_DIR=<absolute-path>` only for diagnostic or smoke-test
+isolation.
+
+To use Desktop as a remote HTTPS Web shell instead of starting the local
+backend:
+
+```bash
+cargo run -p deve_desktop --features native-packaging -- --remote-url https://example.invalid
+```
+
+Packaged or scripted launches may also use
+`DEVE_NATIVE_REMOTE_URL=https://example.invalid`. RemoteBrowser URLs must be
+HTTPS origins: no userinfo, query, fragment, or application subpath.
 
 ## Configuration
 
