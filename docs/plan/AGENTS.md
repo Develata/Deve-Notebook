@@ -94,6 +94,8 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `10_rendering#large-document-runtime` | `## 7. Large Document Strategy` | 大文档、UTF-16 index cache 与渲染/runtime 定位策略 |
 | `10_rendering#document-authority-bridge` | `### 12.4 Authority Bridge` | 文档 snapshot/history/edit/ack/reject 权威桥接合同 |
 | `03_storage/authority#facts-partition` | `authority.md ### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |
+| `03_storage/authority#ledger-entry-format-contract` | `authority.md ### 4.1.1 Ledger Entry Format Contract` | LedgerEntry 序列化/解码格式与版本兼容合同 |
+| `03_storage/authority#redb-schema-version-contract` | `authority.md ### 4.3.1 Redb Schema Version Gate` | redb schema 版本闸门与迁移/拒绝边界 |
 | `03_storage/projection#projection-contract` | `projection.md ## 7. Projection and Persistence Contract` | 投影与持久化合同（drift detection、projection writeback） |
 | `03_storage/watcher#watcher-contract` | `watcher.md ## 8. Watcher Contract` | 文件监听合同（watcher、pending_fs） |
 | `03_storage/repair#backup-export` | `repair.md ### 9.4 Backup / Export` | 备份与灾备导出（JSONL export） |
