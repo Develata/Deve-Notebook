@@ -248,6 +248,7 @@
     - ui_assert: source_control_git_bridge_badge_authority_first true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true
+    - api_assert: confirmed_only_commit_advances_committed_snapshot_base true
     - ui_assert: confirmed_ledger_changes_section_visible true
     - ui_assert: confirmed_ledger_rows_stage_discard_absent true
 

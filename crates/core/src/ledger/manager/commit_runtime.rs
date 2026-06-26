@@ -11,10 +11,13 @@ use crate::config::GitBridgeMode;
 use crate::ledger::manager::git_mirror_queue_runtime;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::manager::{commit_plan, commit_preflight};
-use crate::ledger::range;
+use crate::ledger::{ops, range};
 use crate::models::DocId;
-use crate::source_control::{ChangeEntry, CommitInfo, commits, ledger_dirty, staging};
+use crate::source_control::{
+    ChangeEntry, ChangeStatus, CommitInfo, changes, commits, ledger_dirty, staging,
+};
 use anyhow::Result;
+use redb::Database;
 use std::collections::HashSet;
 
 pub(crate) struct CommitRuntime<'a> {
@@ -69,7 +72,6 @@ impl<'a> CommitRuntime<'a> {
             None
         };
 
-        let doc_count = covered_doc_count(&targets, &confirmed);
         for target in &targets {
             if target.delete_only {
                 self.manager.commit_delete_snapshot_in_local_repo(
@@ -86,7 +88,13 @@ impl<'a> CommitRuntime<'a> {
             }
         }
 
+        let final_confirmed = self
+            .manager
+            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
+        let doc_count = covered_doc_count(&final_confirmed);
+
         let commit = self.manager.run_on_local_repo(repo_name, |db| {
+            sync_confirmed_commit_snapshots(db, &final_confirmed)?;
             let ledger_seq = range::get_max_seq(db)?;
             let commit = commits::create(db, message, doc_count, ledger_seq)?;
             #[cfg(not(target_arch = "wasm32"))]
@@ -113,11 +121,8 @@ impl<'a> CommitRuntime<'a> {
     }
 }
 
-fn covered_doc_count(targets: &[commit_plan::CommitTarget], confirmed: &[ChangeEntry]) -> u32 {
+fn covered_doc_count(confirmed: &[ChangeEntry]) -> u32 {
     let mut keys = HashSet::new();
-    for target in targets {
-        insert_covered_key(&mut keys, target.doc_id, &target.path);
-    }
     for entry in confirmed {
         insert_covered_key(&mut keys, entry.doc_id, &entry.path);
     }
@@ -130,6 +135,23 @@ fn insert_covered_key(keys: &mut HashSet<String>, doc_id: Option<DocId>, path: &
         None => format!("path:{path}"),
     };
     keys.insert(key);
+}
+
+fn sync_confirmed_commit_snapshots(db: &Database, confirmed: &[ChangeEntry]) -> Result<()> {
+    for entry in confirmed {
+        let Some(doc_id) = entry.doc_id else {
+            continue;
+        };
+        if entry.status == ChangeStatus::Deleted {
+            changes::remove_snapshot(db, doc_id)?;
+            continue;
+        }
+        let entries = ops::get_ops_from_db(db, doc_id)?;
+        let facts: Vec<_> = entries.into_iter().map(|(_, entry)| entry).collect();
+        let content = crate::state::reconstruct_content(&facts);
+        changes::save_snapshot(db, doc_id, &content)?;
+    }
+    Ok(())
 }
 
 impl RepoManager {

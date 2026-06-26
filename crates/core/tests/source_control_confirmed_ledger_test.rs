@@ -2,6 +2,7 @@ use deve_core::config::GitBridgeMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::{LedgerEntry, Op, PeerId};
 use deve_core::protocol::ScPathTarget;
+use deve_core::source_control::conflict;
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeDomain, ChangeStatus};
 use tempfile::{TempDir, tempdir};
@@ -132,6 +133,28 @@ fn source_control_confirmed_only_commit_creates_anchor_without_new_ledger_facts(
         repo.list_confirmed_ledger_changes()
             .expect("confirmed after commit")
             .is_empty()
+    );
+}
+
+#[test]
+fn source_control_confirmed_only_commit_updates_committed_snapshot_base() {
+    let (_dir, repo) = new_repo();
+    let doc_id = seed_initial_commit(&repo);
+    append_confirmed_ledger_edit(&repo, doc_id);
+
+    repo.commit_staged_with_git_bridge("confirmed", GitBridgeMode::Off)
+        .expect("confirmed-only commit");
+
+    let pending_hash = pending_fs::content_hash("external edit");
+    let has_conflict = repo
+        .run_on_local_repo(repo.local_repo_name(), |db| {
+            conflict::check_conflict(db, doc_id, &pending_hash)
+        })
+        .expect("conflict check");
+
+    assert!(
+        !has_conflict,
+        "confirmed-only commit must advance commit_snapshots with the commit anchor"
     );
 }
 

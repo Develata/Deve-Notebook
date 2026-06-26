@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-24`
+- `Last Review`: `2026-06-25`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -178,6 +178,7 @@ EditorOrCliLedgerWrite
 - confirmed ledger dirty 只表示“已进 ledger、未被最新 Source Control commit anchor 覆盖”。
 - 它不得进入 `pending_fs_ops`、staging、pending overlay 或 watcher 清理流程。
 - 首版采用整锚提交：一次 commit 覆盖 latest commit anchor 到当前 ledger head 的全部 confirmed ledger changes。
+- confirmed-only commit 在创建 commit anchor 时必须同步 `snapshot_index` / committed snapshot base 到当前 ledger projection；否则后续 Working Directory conflict 检测会把已提交 ledger 内容误判为 ledger divergence。
 - 首版不支持逐文件 include/exclude，也不开放 confirmed revert。未来若开放 Revert，必须通过追加反向 ledger facts 完成。
 
 ### 3.2 Commit Diff Lifecycle
