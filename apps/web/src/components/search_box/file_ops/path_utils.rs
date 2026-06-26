@@ -62,6 +62,16 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
     None
 }
 
+pub fn validate_doc_create_path(raw: &str) -> Option<&'static str> {
+    if let Some(err) = validate_doc_shell_path(raw) {
+        return Some(err);
+    }
+    if to_forward_slash(raw).trim().ends_with('/') {
+        return Some(path_err::INVALID_PATH);
+    }
+    None
+}
+
 pub(super) fn finalize_dst(src: &str, dst_raw: &str) -> String {
     // 移除光标占位符 `|` (由 build_prefill_command 生成)
     let dst_clean = dst_raw.replace('|', "");
@@ -183,5 +193,14 @@ mod tests {
         ] {
             assert_eq!(validate_doc_shell_path(path), Some(path_err::INVALID_PATH));
         }
+    }
+
+    #[test]
+    fn validate_doc_create_path_rejects_directory_path() {
+        assert_eq!(validate_doc_shell_path("notes/"), None);
+        assert_eq!(
+            validate_doc_create_path("notes/"),
+            Some(path_err::INVALID_PATH)
+        );
     }
 }

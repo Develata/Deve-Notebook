@@ -2,7 +2,7 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 03_storage/index#internal-path-normalization
 //!
-use crate::components::search_box::file_ops::{normalize_doc_path, validate_doc_shell_path};
+use crate::components::search_box::file_ops::{normalize_doc_path, validate_doc_create_path};
 use crate::components::search_box::score::score_desc;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
 use crate::i18n::{Locale, t};
@@ -66,7 +66,7 @@ impl SearchProvider for FileProvider {
         results.truncate(20);
 
         let create_query = query.trim();
-        if validate_doc_shell_path(create_query).is_none() {
+        if validate_doc_create_path(create_query).is_none() {
             let create_path = normalize_doc_path(create_query);
             if self.docs.iter().any(|(_, path)| path == &create_path) {
                 return results;

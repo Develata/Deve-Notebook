@@ -41,7 +41,7 @@ pub(crate) fn execute_action(
             if path.is_empty() {
                 return;
             }
-            if file_ops::validate_doc_shell_path(path).is_some() {
+            if file_ops::validate_doc_create_path(path).is_some() {
                 return;
             }
             runtime
