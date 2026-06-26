@@ -143,6 +143,11 @@ fn remote_browser_accepts_https_origin_only() {
     }
 }
 
+// SET-007A: native backend preference is host-local shell config. The preference
+// contract below (defaults to local, canonicalizes local by dropping any remote_url,
+// remote requires a valid bare https origin) is the automated half of the case; the
+// browser-section-unavailable and route/storage-absent checks are the manual Chrome
+// walkthrough.
 #[test]
 fn native_backend_preference_defaults_to_local_backend() {
     let preference = NativeBackendPreference::default();

@@ -331,4 +331,17 @@
     - reconnect_sends_fresh_sync_hello: true
     - vector_aligned_after_reconnect: true
     - no_automatic_local_merge_after_reconnect: true
+
+- case_id: NET-017
+  goal: 入站 remote facts 落库满足 apply 端单调性与连续性（plan 07_network 7.1）——陈旧或乱序到达的 snapshot 不回退 peer vector、不 reset 更 newer 的 shadow；增量 ops 不越过 seq 空洞、不重复 append 已接收的 seq。
+  preconditions:
+    - 一个配置了 RepoKey 的 sync engine，shadow ledger 已持有该 peer 的若干 ops
+  steps:
+    - run: cargo test -p deve_core sync::engine::manual -- --nocapture
+  assertions:
+    - stale_snapshot_does_not_regress_peer_vector: true
+    - stale_snapshot_does_not_wipe_newer_shadow_ops: true
+    - incremental_apply_rejects_seq_gap: true
+    - replayed_remote_ops_skip_duplicate_shadow_append: true
+    - snapshot_base_allows_newer_contiguous_ops: true
 ```

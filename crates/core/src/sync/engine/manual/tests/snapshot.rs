@@ -27,6 +27,9 @@ fn manual_receive_buffers_remote_snapshot_until_confirmed() -> anyhow::Result<()
     Ok(())
 }
 
+// NET-017: apply-side monotonicity and contiguity for inbound remote facts.
+// The stale-snapshot tests here plus the seq-gap, replay-idempotency and
+// snapshot-base tests in the parent module are the automated coverage for the case.
 #[test]
 fn auto_stale_snapshot_does_not_regress_peer_vector() -> anyhow::Result<()> {
     let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Auto)?;
