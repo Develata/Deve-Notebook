@@ -38,6 +38,7 @@ fn desktop_native_remote_origin_normalization_keeps_https_origin_only() {
         normalized_native_remote_origin("https://deve.example/").expect("origin"),
         "https://deve.example"
     );
+    assert!(normalized_native_remote_origin("https://deve.example//").is_err());
     assert!(normalized_native_remote_origin("http://deve.example").is_err());
     assert!(normalized_native_remote_origin("https://deve.example/app").is_err());
 }

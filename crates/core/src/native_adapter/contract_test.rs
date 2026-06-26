@@ -120,6 +120,7 @@ fn remote_browser_accepts_https_origin_only() {
     for invalid in [
         "http://deve.example",
         "https://user@deve.example",
+        "https://deve.example/",
         "https://deve.example/app",
         "https://deve.example?token=secret",
         "https://deve.example#fragment",
@@ -180,6 +181,7 @@ fn native_backend_preference_remote_requires_valid_https_origin() {
             remote_url: Some(String::new()),
         },
         NativeBackendPreference::remote("http://deve.example"),
+        NativeBackendPreference::remote("https://deve.example/"),
         NativeBackendPreference::remote("https://deve.example/app"),
     ] {
         assert!(

@@ -181,7 +181,7 @@ fn validate_https_origin_url(field: &'static str, value: &str) -> Result<(), Nat
     if authority.contains('@') {
         return Err(NativeAdapterError::UserInfoForbidden { field });
     }
-    if !path.is_empty() && path != "/" {
+    if !path.is_empty() {
         return Err(NativeAdapterError::RemoteTargetMustBeHttpsOrigin);
     }
 
