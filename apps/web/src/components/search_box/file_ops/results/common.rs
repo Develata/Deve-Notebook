@@ -8,7 +8,7 @@ use crate::components::search_box::types::{
 use crate::i18n::{Locale, t};
 
 use super::super::path_utils::{
-    finalize_dst, format_arg, format_dir_arg_with_cursor, normalize_doc_path,
+    finalize_dst, format_arg, format_dir_arg_with_cursor, normalize_doc_path, utf16_len,
 };
 
 pub(super) fn build_execute_result(
@@ -53,7 +53,7 @@ pub(super) fn build_insert_query(kind: &FileOpKind, src: &str, dir: &str) -> Ins
     let (dst_text, cursor_offset) = format_dir_arg_with_cursor(dir);
     let prefix = format!(">{} {} ", cmd, src_text);
     let query_text = format!("{}{}", prefix, dst_text);
-    let cursor = prefix.len() + cursor_offset;
+    let cursor = utf16_len(&prefix) + cursor_offset;
     InsertQuery {
         query: query_text,
         cursor,

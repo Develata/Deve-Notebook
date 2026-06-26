@@ -12,6 +12,10 @@ fn parsed_args(args: &[&str], ends_with_space: bool) -> ParsedArgs {
     }
 }
 
+fn utf16_len(text: &str) -> usize {
+    text.encode_utf16().count()
+}
+
 #[test]
 fn move_same_source_and_destination_returns_error() {
     let parsed = parsed_args(&["notes/today.md", "notes/today.md"], false);
@@ -120,4 +124,48 @@ fn move_directory_suggestions_skip_noop_target() {
             .iter()
             .any(|query| query == ">mv notes/today.md archive/")
     );
+}
+
+#[test]
+fn move_directory_insert_cursor_uses_browser_utf16_offset() {
+    let parsed = parsed_args(&["记录.md"], true);
+    let docs = [
+        (DocId::from_u128(1), "记录.md".to_string()),
+        (DocId::from_u128(2), "归档/其他.md".to_string()),
+    ];
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[], Locale::En);
+
+    let insert = results
+        .iter()
+        .find_map(|result| match &result.action {
+            SearchAction::InsertQuery(insert) if insert.query == ">mv 记录.md 归档/" => {
+                Some(insert)
+            }
+            _ => None,
+        })
+        .expect("missing unicode directory completion");
+
+    assert_eq!(insert.cursor, utf16_len(&insert.query));
+}
+
+#[test]
+fn copy_quoted_directory_insert_cursor_stays_before_closing_quote_in_utf16_offset() {
+    let parsed = parsed_args(&["记录.md"], true);
+    let docs = [
+        (DocId::from_u128(1), "记录.md".to_string()),
+        (DocId::from_u128(2), "归 档/其他.md".to_string()),
+    ];
+    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &docs, &[], Locale::En);
+
+    let insert = results
+        .iter()
+        .find_map(|result| match &result.action {
+            SearchAction::InsertQuery(insert) if insert.query == ">cp 记录.md \"归 档/\"" => {
+                Some(insert)
+            }
+            _ => None,
+        })
+        .expect("missing quoted unicode directory completion");
+
+    assert_eq!(insert.cursor, utf16_len(">cp 记录.md \"归 档/"));
 }

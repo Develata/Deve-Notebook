@@ -124,13 +124,19 @@ pub(super) fn format_arg(arg: &str) -> String {
     }
 }
 
+pub(super) fn utf16_len(text: &str) -> usize {
+    text.encode_utf16().count()
+}
+
 pub(super) fn format_dir_arg_with_cursor(dir: &str) -> (String, usize) {
     if dir.contains(' ') {
         let text = format!("\"{}\"", dir);
-        (text.clone(), text.len().saturating_sub(1))
+        let cursor = utf16_len(&text).saturating_sub(1);
+        (text, cursor)
     } else {
         let text = dir.to_string();
-        (text.clone(), text.len())
+        let cursor = utf16_len(&text);
+        (text, cursor)
     }
 }
 
