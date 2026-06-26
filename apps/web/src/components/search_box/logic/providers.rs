@@ -118,19 +118,7 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
             }
             SearchSurfaceMode::CreateFile => {
                 let path = q.strip_prefix('+').unwrap_or_default().trim();
-                if path.is_empty() {
-                    Vec::new()
-                } else {
-                    vec![SearchResult {
-                        id: "create-doc-only".to_string(),
-                        title: format!("{}: '{}'", t::common::create(now_locale), path),
-                        detail: Some(t::common::new_file(now_locale).to_string()),
-                        score: 1.0,
-                        action: crate::components::search_box::types::SearchAction::CreateDoc(
-                            path.to_string(),
-                        ),
-                    }]
-                }
+                create_file_results(path, now_locale)
             }
             SearchSurfaceMode::File => {
                 let doc_list = docs
@@ -141,6 +129,28 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
             }
         }
     })
+}
+
+fn create_file_results(path: &str, locale: Locale) -> Vec<SearchResult> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+    if let Some(err) = file_ops::validate_doc_shell_path(path) {
+        return vec![SearchResult {
+            id: "create-doc-error".to_string(),
+            title: err.to_string(),
+            detail: Some(t::search::error_detail(locale).to_string()),
+            score: 0.0,
+            action: SearchAction::Noop,
+        }];
+    }
+    vec![SearchResult {
+        id: "create-doc-only".to_string(),
+        title: format!("{}: '{}'", t::common::create(locale), path),
+        detail: Some(t::common::new_file(locale).to_string()),
+        score: 1.0,
+        action: SearchAction::CreateDoc(path.to_string()),
+    }]
 }
 
 pub fn create_placeholder_memo(query: Signal<String>, locale: RwSignal<Locale>) -> Memo<String> {

@@ -1,6 +1,8 @@
-use super::{SearchSurfaceMode, full_text_results, search_surface_mode};
+use super::{SearchSurfaceMode, create_file_results, full_text_results, search_surface_mode};
+use crate::components::search_box::types::SearchAction;
 use crate::hooks::use_core::SearchHit;
 use crate::i18n::{Locale, t};
+use deve_core::protocol::doc_file_op_errors as path_err;
 
 #[test]
 fn unified_search_mode_routes_command_branch_file_prefixes() {
@@ -36,6 +38,29 @@ fn unified_search_mode_exposes_stable_dom_values() {
     assert_eq!(SearchSurfaceMode::FileOp.as_str(), "file-op");
     assert_eq!(SearchSurfaceMode::FullText.as_str(), "full-text");
     assert_eq!(SearchSurfaceMode::CreateFile.as_str(), "create-file");
+}
+
+#[test]
+fn create_file_mode_rejects_invalid_path_before_dispatch() {
+    let results = create_file_results("../secret.md", Locale::En);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].title, path_err::INVALID_PATH);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].action, SearchAction::Noop);
+}
+
+#[test]
+fn create_file_mode_builds_create_action_for_valid_path() {
+    let results = create_file_results("notes/new", Locale::En);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].title, "Create: 'notes/new'");
+    assert_eq!(results[0].detail.as_deref(), Some("New File"));
+    assert_eq!(
+        results[0].action,
+        SearchAction::CreateDoc("notes/new".to_string())
+    );
 }
 
 #[test]
