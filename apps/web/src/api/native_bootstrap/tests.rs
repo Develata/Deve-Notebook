@@ -7,6 +7,7 @@ fn parse(http_base: &str, ws_base: &str, session_bound: bool) -> NativeBootstrap
         Some("main".to_string()),
         Some(session_bound),
         None,
+        false,
     )
 }
 
@@ -58,6 +59,7 @@ fn rejects_missing_native_bootstrap_fields() {
             None,
             Some(true),
             None,
+            false,
         ),
         NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
     );
@@ -72,6 +74,22 @@ fn rejects_native_bootstrap_without_node_role() {
             None,
             Some(true),
             None,
+            false,
+        ),
+        NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
+    );
+}
+
+#[test]
+fn rejects_native_bootstrap_with_forbidden_material() {
+    assert_eq!(
+        parse_native_bootstrap_fields(
+            Some("http://127.0.0.1:3001".to_string()),
+            Some("ws://127.0.0.1:3001".to_string()),
+            Some("main".to_string()),
+            Some(true),
+            None,
+            true,
         ),
         NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
     );
@@ -104,7 +122,14 @@ fn browser_origin_without_bootstrap_remains_absent() {
 #[test]
 fn maps_native_service_offline_to_blocked_state() {
     assert_eq!(
-        parse_native_bootstrap_fields(None, None, None, None, Some("service_offline".into())),
+        parse_native_bootstrap_fields(
+            None,
+            None,
+            None,
+            None,
+            Some("service_offline".into()),
+            false
+        ),
         NativeBootstrapState::Blocked(NativeBootstrapBlocker::ServiceOffline)
     );
 }
@@ -118,6 +143,7 @@ fn rejects_recovery_bootstrap_with_endpoint_fields() {
             Some("main".to_string()),
             Some(true),
             Some("service_offline".into()),
+            false,
         ),
         NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape)
     );
@@ -126,8 +152,15 @@ fn rejects_recovery_bootstrap_with_endpoint_fields() {
 #[test]
 fn maps_native_session_invalid_to_unauthorized_status() {
     assert_eq!(
-        parse_native_bootstrap_fields(None, None, None, None, Some("session_invalid".into()))
-            .blocked_status(),
+        parse_native_bootstrap_fields(
+            None,
+            None,
+            None,
+            None,
+            Some("session_invalid".into()),
+            false
+        )
+        .blocked_status(),
         Some(ConnectionStatus::Unauthorized)
     );
 }
@@ -135,8 +168,15 @@ fn maps_native_session_invalid_to_unauthorized_status() {
 #[test]
 fn maps_native_foreground_reprobe_to_recovery_status() {
     assert_eq!(
-        parse_native_bootstrap_fields(None, None, None, None, Some("foreground_reprobe".into()))
-            .blocked_status(),
+        parse_native_bootstrap_fields(
+            None,
+            None,
+            None,
+            None,
+            Some("foreground_reprobe".into()),
+            false,
+        )
+        .blocked_status(),
         Some(ConnectionStatus::NativeReprobeRequired)
     );
 }

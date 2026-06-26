@@ -11,6 +11,25 @@ use super::ConnectionStatus;
 #[cfg(target_arch = "wasm32")]
 const NATIVE_BOOTSTRAP_GLOBAL: &str = "__DEVE_NATIVE_BOOTSTRAP";
 
+#[cfg(target_arch = "wasm32")]
+const FORBIDDEN_NATIVE_BOOTSTRAP_FIELDS: &[&str] = &[
+    "reason",
+    "retryable",
+    "token",
+    "p2p_token",
+    "p2p_token_material",
+    "session_secret",
+    "session_material",
+    "session_token",
+    "bootstrap_secret",
+    "auth_material",
+    "auth_token",
+    "repo_write",
+    "repo_write_permission",
+    "writer_ready",
+    "scope_nonce",
+];
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct NativeWebBootstrap {
     pub http_base: String,
@@ -79,12 +98,14 @@ pub(super) fn read_native_bootstrap() -> NativeBootstrapState {
         return absent_native_bootstrap_state(hostname.as_deref(), protocol.as_deref());
     }
 
+    let forbidden_material_present = forbidden_native_bootstrap_material_present(&value);
     parse_native_bootstrap_fields(
         js_string_field(&value, "http_base"),
         js_string_field(&value, "ws_base"),
         js_string_field(&value, "node_role"),
         js_bool_field(&value, "session_bound"),
         js_string_field(&value, "service_state"),
+        forbidden_material_present,
     )
 }
 
@@ -113,6 +134,21 @@ fn js_bool_field(value: &wasm_bindgen::JsValue, key: &str) -> Option<bool> {
         .and_then(|field| field.as_bool())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn forbidden_native_bootstrap_material_present(value: &wasm_bindgen::JsValue) -> bool {
+    FORBIDDEN_NATIVE_BOOTSTRAP_FIELDS
+        .iter()
+        .any(|key| js_field_present(value, key))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn js_field_present(value: &wasm_bindgen::JsValue, key: &str) -> bool {
+    use js_sys::Reflect;
+    use wasm_bindgen::JsValue;
+
+    Reflect::has(value, &JsValue::from_str(key)).unwrap_or(false)
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 fn parse_native_bootstrap_fields(
     http_base: Option<String>,
@@ -120,7 +156,12 @@ fn parse_native_bootstrap_fields(
     node_role: Option<String>,
     session_bound: Option<bool>,
     service_state: Option<String>,
+    forbidden_material_present: bool,
 ) -> NativeBootstrapState {
+    if forbidden_material_present {
+        return NativeBootstrapState::Blocked(NativeBootstrapBlocker::InvalidShape);
+    }
+
     let has_endpoint_fields =
         http_base.is_some() || ws_base.is_some() || node_role.is_some() || session_bound.is_some();
     if let Some(service_state) = service_state {
