@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 11_ui_design/03_mobile#mobile-native-shell-modes
+//!   - 11_ui_design/03_mobile#mobile-service-supervisor-contract
+//!
+
 use deve_core::native_adapter::{
     NATIVE_SESSION_BOOTSTRAP_HEADER, NativeEndpointReady, NativeLoopbackHttpError,
     NativeLoopbackHttpProbe as CoreLoopbackHttpProbe, loopback_host_from_http_base,

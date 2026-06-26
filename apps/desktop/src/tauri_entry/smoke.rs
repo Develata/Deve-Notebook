@@ -1,3 +1,9 @@
+//! plan_ref:
+//!   - 17_tech_stack#native-packaging-dependency-gate
+//!   - 11_ui_design/02_desktop#desktop-packaging-scaffold
+//!   - 11_ui_design/02_desktop#desktop-service-supervisor-contract
+//!
+
 use crate::{DesktopTauriBootstrapError, try_desktop_tauri_local_service_bootstrap_from_env};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

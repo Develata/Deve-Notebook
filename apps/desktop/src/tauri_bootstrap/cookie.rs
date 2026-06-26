@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 11_ui_design/02_desktop#desktop-service-supervisor-contract
+//!   - 11_ui_design/02_desktop#desktop-packaging-scaffold
+//!
+
 use tauri::webview::Cookie;
 use tauri::webview::cookie::SameSite;
 
