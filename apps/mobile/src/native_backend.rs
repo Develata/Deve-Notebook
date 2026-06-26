@@ -32,6 +32,8 @@ pub enum MobileNativeBackendError {
     InvalidPreference(String),
     #[error("mobile remote backend probe failed: {0}")]
     ProbeFailed(String),
+    #[error("mobile remote backend probe redirected away from requested origin")]
+    ProbeRedirected,
     #[error("mobile remote backend returned invalid node role payload")]
     InvalidNodeRolePayload,
 }
@@ -183,6 +185,7 @@ async fn try_probe_mobile_native_remote_backend(
     let origin = normalized_native_remote_origin(remote_url)?;
     let client = reqwest::Client::builder()
         .timeout(REMOTE_PROBE_TIMEOUT)
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|error| MobileNativeBackendError::ProbeFailed(error.to_string()))?;
     let url = format!("{origin}/api/node/role");
@@ -191,6 +194,7 @@ async fn try_probe_mobile_native_remote_backend(
         .send()
         .await
         .map_err(|error| MobileNativeBackendError::ProbeFailed(error.to_string()))?;
+    ensure_probe_response_origin(&origin, response.url())?;
     if !response.status().is_success() {
         return Err(MobileNativeBackendError::ProbeFailed(format!(
             "HTTP {}",
@@ -207,6 +211,17 @@ async fn try_probe_mobile_native_remote_backend(
         .filter(|role| !role.trim().is_empty())
         .ok_or(MobileNativeBackendError::InvalidNodeRolePayload)?;
     Ok(NativeBackendValidationResult::success(origin, node_role))
+}
+
+fn ensure_probe_response_origin(
+    expected_origin: &str,
+    response_url: &reqwest::Url,
+) -> Result<(), MobileNativeBackendError> {
+    if response_url.origin().ascii_serialization() == expected_origin {
+        Ok(())
+    } else {
+        Err(MobileNativeBackendError::ProbeRedirected)
+    }
 }
 
 #[cfg(test)]

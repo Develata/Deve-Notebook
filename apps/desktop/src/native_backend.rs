@@ -32,6 +32,8 @@ pub enum DesktopNativeBackendError {
     InvalidPreference(String),
     #[error("desktop remote backend probe failed: {0}")]
     ProbeFailed(String),
+    #[error("desktop remote backend probe redirected away from requested origin")]
+    ProbeRedirected,
     #[error("desktop remote backend returned invalid node role payload")]
     InvalidNodeRolePayload,
     #[error("desktop native backend app navigation failed: {0}")]
@@ -187,6 +189,7 @@ async fn try_probe_desktop_native_remote_backend(
     let origin = normalized_native_remote_origin(remote_url)?;
     let client = reqwest::Client::builder()
         .timeout(REMOTE_PROBE_TIMEOUT)
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|error| DesktopNativeBackendError::ProbeFailed(error.to_string()))?;
     let url = format!("{origin}/api/node/role");
@@ -195,6 +198,7 @@ async fn try_probe_desktop_native_remote_backend(
         .send()
         .await
         .map_err(|error| DesktopNativeBackendError::ProbeFailed(error.to_string()))?;
+    ensure_probe_response_origin(&origin, response.url())?;
     if !response.status().is_success() {
         return Err(DesktopNativeBackendError::ProbeFailed(format!(
             "HTTP {}",
@@ -211,6 +215,17 @@ async fn try_probe_desktop_native_remote_backend(
         .filter(|role| !role.trim().is_empty())
         .ok_or(DesktopNativeBackendError::InvalidNodeRolePayload)?;
     Ok(NativeBackendValidationResult::success(origin, node_role))
+}
+
+fn ensure_probe_response_origin(
+    expected_origin: &str,
+    response_url: &reqwest::Url,
+) -> Result<(), DesktopNativeBackendError> {
+    if response_url.origin().ascii_serialization() == expected_origin {
+        Ok(())
+    } else {
+        Err(DesktopNativeBackendError::ProbeRedirected)
+    }
 }
 
 #[cfg(test)]

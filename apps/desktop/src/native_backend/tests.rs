@@ -42,6 +42,28 @@ fn desktop_native_remote_origin_normalization_keeps_https_origin_only() {
     assert!(normalized_native_remote_origin("https://deve.example/app").is_err());
 }
 
+#[test]
+fn desktop_native_remote_probe_error_reports_redirect_boundary() {
+    assert_eq!(
+        DesktopNativeBackendError::ProbeRedirected.to_string(),
+        "desktop remote backend probe redirected away from requested origin"
+    );
+}
+
+#[test]
+fn desktop_native_remote_probe_rejects_cross_origin_response_url() {
+    let same_origin =
+        reqwest::Url::parse("https://deve.example/api/node/role").expect("same origin url");
+    let other_origin =
+        reqwest::Url::parse("https://other.example/api/node/role").expect("other origin url");
+
+    ensure_probe_response_origin("https://deve.example", &same_origin).expect("same origin");
+    assert!(matches!(
+        ensure_probe_response_origin("https://deve.example", &other_origin),
+        Err(DesktopNativeBackendError::ProbeRedirected)
+    ));
+}
+
 fn unique_temp_root(name: &str) -> PathBuf {
     let suffix = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
