@@ -28,8 +28,8 @@ fn ignores_repo_scoped_messages_from_other_branch() {
     let repo_id = uuid::Uuid::new_v4();
     let (current_repo_id, _) = signal(Some(repo_id.to_string()));
     let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
-    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-    let (pending_repo_switch, _) = signal(None::<String>);
+    let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
     assert!(!matches_current_scope(
         &Some(repo_id),
         &Some(PeerId::new("peer-b")),
@@ -47,8 +47,8 @@ fn rejects_repo_scoped_messages_while_repo_switch_pending() {
     let repo_id = uuid::Uuid::new_v4();
     let (current_repo_id, _) = signal(Some(repo_id.to_string()));
     let (active_branch, _) = signal(None::<PeerId>);
-    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-    let (pending_repo_switch, _) = signal(Some("test".to_string()));
+    let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, _) = signal(Some(PendingRepoSwitch::switch("test", 1)));
     assert!(!matches_current_scope(
         &Some(repo_id),
         &None,

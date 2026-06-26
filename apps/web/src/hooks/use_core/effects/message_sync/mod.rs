@@ -21,8 +21,14 @@ pub fn handle_sync_hello(
     let accepted = should_accept_sync_hello(
         signals.current_repo_id.get_untracked(),
         signals.active_branch.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
-        signals.pending_repo_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
         signals.handshake_scope_nonce.get_untracked(),
         &repo_id,
         scope_nonce,

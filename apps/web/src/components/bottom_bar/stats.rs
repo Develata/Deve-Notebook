@@ -3,6 +3,7 @@
 //!   - 18_release#runtime-observability
 //!
 use crate::editor::EditorStats;
+use crate::hooks::use_core::LoadPhase;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -10,13 +11,13 @@ use leptos::prelude::*;
 pub fn BottomBarStats(
     locale: RwSignal<Locale>,
     displayed_stats: Signal<EditorStats>,
-    load_state: ReadSignal<String>,
+    load_state: ReadSignal<LoadPhase>,
     load_progress: ReadSignal<(usize, usize)>,
     load_eta_ms: ReadSignal<u64>,
 ) -> impl IntoView {
     let load_text = Memo::new(move |_| {
         let state = load_state.get();
-        if state == "ready" {
+        if state.is_ready() {
             return None;
         }
         let (done, total) = load_progress.get();

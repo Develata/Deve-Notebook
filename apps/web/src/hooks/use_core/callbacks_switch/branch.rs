@@ -9,7 +9,7 @@ use leptos::prelude::*;
 
 use super::super::navigation::{NavigationTarget, guard_navigation};
 use super::super::switch_nonce::next_switch_nonce_after;
-use super::super::types::{PendingBranchTarget, SwitchScopeSignals};
+use super::super::types::{PendingBranchSwitch, PendingBranchTarget, SwitchScopeSignals};
 use super::{can_start_scope_switch, prepare_scope_switch, show_switch_block};
 
 pub(super) fn build_switch_branch_callback(
@@ -46,12 +46,10 @@ pub(super) fn build_switch_branch_callback(
                 .map(PendingBranchTarget::Shadow)
                 .unwrap_or(PendingBranchTarget::Local);
             prepare_scope_switch(&ws_branch_action, signals);
-            signals.set_pending_branch_switch.set(Some(pending));
             signals
-                .set_pending_branch_switch_nonce
-                .set(Some(switch_nonce));
+                .set_pending_branch_switch
+                .set(Some(PendingBranchSwitch::new(pending, switch_nonce)));
             signals.set_pending_repo_switch.set(None);
-            signals.set_pending_repo_switch_nonce.set(None);
             ws_branch_action.send(ClientMessage::SwitchBranch {
                 peer_id: target_peer.clone(),
                 switch_nonce: Some(switch_nonce),

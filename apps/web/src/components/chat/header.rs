@@ -2,16 +2,15 @@
 //! plan_ref:
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!
-use crate::api::AI_BACKEND_NATIVE;
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::components::icons::*;
-use crate::hooks::use_core::ChatContext;
+use crate::hooks::use_core::{AiBackendMode, ChatContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 #[component]
 pub fn ChatHeader(
-    #[prop(optional)] ai_mode: Option<ReadSignal<String>>,
+    #[prop(optional)] ai_mode: Option<ReadSignal<AiBackendMode>>,
     #[prop(optional)] session_mode: Option<ReadSignal<ChatSessionMode>>,
     #[prop(optional)] mobile: bool,
     on_close: Callback<()>,
@@ -23,8 +22,8 @@ pub fn ChatHeader(
             .as_ref()
             .map(|signal| signal.get())
             .or_else(|| context_ai_mode.map(|signal| signal.get()))
-            .unwrap_or_else(|| AI_BACKEND_NATIVE.to_string());
-        if mode == AI_BACKEND_NATIVE {
+            .unwrap_or(AiBackendMode::Native);
+        if mode == AiBackendMode::Native {
             t::chat::ai_chat(locale.get())
         } else {
             t::chat::agent_bridge(locale.get())

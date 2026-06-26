@@ -5,7 +5,7 @@
 use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_runtime};
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
-use crate::hooks::use_core::{ChatContext, ChatMessage};
+use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
 use crate::runtime::document_client::DocumentClient;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -65,7 +65,10 @@ pub fn make_send_text(
                 stop_streaming,
             } = plan_chat_send_runtime(decision);
             if let Some(backend) = switch_backend {
-                runtime_for_send.chat.set_ai_mode.set(backend.to_string());
+                runtime_for_send
+                    .chat
+                    .set_ai_mode
+                    .set(AiBackendMode::from_backend_str_or_native(backend));
             }
             for message in messages {
                 append_planned_chat_message(&runtime_for_send.chat, &msg, &req_id, message);

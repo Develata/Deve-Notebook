@@ -11,6 +11,7 @@ use super::snapshot_finish::{LoadFinish, emit_stats, finalize_load, now_ms};
 use super::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
 use crate::editor::ffi::{applyRemoteContent, set_read_only};
 use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
+use crate::hooks::use_core::LoadPhase;
 use deve_core::models::{Op, PeerId, RepoId};
 use deve_core::protocol::{ClientMessage, ConfirmedOp};
 use leptos::prelude::*;
@@ -73,7 +74,7 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
     ctx.set_content.set(message.new_content);
     ctx.set_local_version.set(message.base_seq);
     ctx.set_playback_version.set(message.base_seq);
-    ctx.set_load_state.set("partial".to_string());
+    ctx.set_load_state.set(LoadPhase::Partial);
     ctx.set_load_progress.set((0, message.delta_ops.len()));
     ctx.set_load_eta_ms.set(0);
 
@@ -167,7 +168,7 @@ fn build_delta_failure_fallback(
         set_local_version.set(0);
         set_history.set(Vec::new());
         set_playback_version.set(0);
-        set_load_state.set("loading".to_string());
+        set_load_state.set(LoadPhase::Loading);
         set_load_progress.set((0, 0));
         set_load_eta_ms.set(0);
         ws.send(ClientMessage::OpenDoc {

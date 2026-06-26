@@ -3,8 +3,8 @@
 //!
 
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch, SearchHit};
 use crate::i18n::{Locale, t};
 use deve_core::protocol::{ServerError, ServerErrorCode};
 use leptos::prelude::{GetUntracked, ReadSignal, Set, WriteSignal};
@@ -19,13 +19,10 @@ pub(crate) fn is_session_auth_error(code: ServerErrorCode) -> bool {
 
 #[derive(Clone, Copy)]
 pub struct ProtocolControlSignals {
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
-    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
-    pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
-    pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
-    pub set_pending_repo_switch: WriteSignal<Option<String>>,
-    pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
+    pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
     pub set_shadow_list_request_id: WriteSignal<Option<String>>,
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub set_doc_list_request_id: WriteSignal<Option<String>>,
@@ -34,7 +31,7 @@ pub struct ProtocolControlSignals {
     pub set_pending_ops_request_id: WriteSignal<Option<String>>,
     pub search_request_id: ReadSignal<Option<String>>,
     pub set_search_request_id: WriteSignal<Option<String>>,
-    pub set_search_results: WriteSignal<Vec<(String, String, f32)>>,
+    pub set_search_results: WriteSignal<Vec<SearchHit>>,
     pub changes_request_id: ReadSignal<Option<String>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
     pub commit_history_request_id: ReadSignal<Option<String>>,

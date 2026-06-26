@@ -8,13 +8,8 @@ use deve_core::models::{DocId, PeerId, VersionVector};
 use leptos::prelude::*;
 
 use super::super::navigation::PendingNavigation;
+use super::pending_switch::{PendingBranchSwitch, PendingRepoSwitch};
 use crate::runtime::document::pending::PendingLocalEdits;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PendingBranchTarget {
-    Local,
-    Shadow(String),
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PeerSession {
@@ -40,16 +35,12 @@ pub struct SwitchScopeSignals {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub set_handshake_ready: WriteSignal<bool>,
     pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
-    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
-    pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
-    pub set_pending_repo_switch: WriteSignal<Option<String>>,
-    pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
+    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchSwitch>>,
+    pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
 }
 
 #[derive(Clone, Copy)]
@@ -61,12 +52,10 @@ pub struct HandshakeSignals {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
-    pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub set_pending_repo_switch: WriteSignal<Option<String>>,
-    pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
+    pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
     pub set_handshake_scope_nonce: WriteSignal<Option<u64>>,
     pub handshake_retry_nonce: ReadSignal<u64>,
@@ -80,10 +69,8 @@ pub struct HandshakeSignals {
 pub struct RepoSwitchSignals {
     pub current_repo: ReadSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub set_pending_repo_switch: WriteSignal<Option<String>>,
-    pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
-    pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
+    pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub set_current_scope_nonce: WriteSignal<u64>,
     pub set_current_repo: WriteSignal<Option<String>>,

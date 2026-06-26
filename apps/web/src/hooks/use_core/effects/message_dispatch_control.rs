@@ -32,8 +32,14 @@ pub fn handle_repo_list_message(
         branch,
         &RepoListScope {
             active_branch: signals.active_branch.get_untracked(),
-            pending_branch_switch: signals.pending_branch_switch.get_untracked(),
-            pending_repo_switch: signals.pending_repo_switch.get_untracked(),
+            pending_branch_switch: signals
+                .pending_branch_switch
+                .get_untracked()
+                .map(|pending| pending.into_target()),
+            pending_repo_switch: signals
+                .pending_repo_switch
+                .get_untracked()
+                .map(|pending| pending.expected_name),
         },
     ) {
         return;

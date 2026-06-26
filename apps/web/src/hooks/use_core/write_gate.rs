@@ -4,22 +4,22 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::types::CoreState;
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::models::PeerId;
 use leptos::prelude::{Get, GetUntracked, ReadSignal, Signal};
 
 mod logic;
 #[derive(Clone, Copy)]
 pub(crate) struct RepoWriteSignals {
-    pub load_state: ReadSignal<String>,
+    pub load_state: ReadSignal<LoadPhase>,
     pub is_spectator: Signal<bool>,
     pub handshake_ready: ReadSignal<bool>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
 }
 
 pub(crate) use self::logic::{
@@ -40,7 +40,7 @@ pub(crate) fn repo_write_block_untracked(
     );
     repo_write_block(RepoWriteGateState {
         connection_status: ws.status.get_untracked(),
-        load_state: &load_state,
+        load_state: load_state.as_str(),
         is_read_only: signals.is_spectator.get_untracked()
             || signals.active_branch.get_untracked().is_some(),
         node_role_probe_failed: ws.node_role_probe_failed.get_untracked(),
@@ -67,7 +67,7 @@ pub(crate) fn repo_write_block_tracked(
     );
     repo_write_block(RepoWriteGateState {
         connection_status: ws.status.get(),
-        load_state: &load_state,
+        load_state: load_state.as_str(),
         is_read_only: signals.is_spectator.get() || signals.active_branch.get().is_some(),
         node_role_probe_failed: ws.node_role_probe_failed.get(),
         node_role_readable: readiness.node_role_readable,
@@ -95,7 +95,7 @@ pub(crate) fn repo_source_control_read_block_untracked(
     );
     repo_source_control_read_block(RepoWriteGateState {
         connection_status: ws.status.get_untracked(),
-        load_state: &load_state,
+        load_state: load_state.as_str(),
         is_read_only,
         node_role_probe_failed: ws.node_role_probe_failed.get_untracked(),
         node_role_readable: readiness.node_role_readable,
@@ -122,7 +122,7 @@ pub(crate) fn repo_source_control_read_block_tracked(
     );
     repo_source_control_read_block(RepoWriteGateState {
         connection_status: ws.status.get(),
-        load_state: &load_state,
+        load_state: load_state.as_str(),
         is_read_only,
         node_role_probe_failed: ws.node_role_probe_failed.get(),
         node_role_readable: readiness.node_role_readable,

@@ -74,8 +74,8 @@ mod tests {
     use super::super::context::SyncContext;
     use super::handle_write_ready_message;
     use crate::api::{ConnectionStatus, WsService};
-    use crate::hooks::use_core::PendingBranchTarget;
     use crate::hooks::use_core::navigation::PendingNavigation;
+    use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
     use crate::runtime::document::pending::{
         PendingLocalEditInput, pending_count_for_doc, push_pending_edit,
     };
@@ -103,12 +103,12 @@ mod tests {
         pending_scope_nonce: u64,
     ) -> SyncContext<'a> {
         let (active_branch, _) = signal(None);
-        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
         let (current_repo_id, _) = signal(Some(repo_id.to_string()));
         let (current_scope_nonce, _) = signal(scope_nonce);
-        let (pending_repo_switch, _) = signal(None::<String>);
+        let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
         let (handshake_scope_nonce, _) = signal(Some(scope_nonce));
-        let (load_state, set_load_state) = signal("ready".to_string());
+        let (load_state, set_load_state) = signal(LoadPhase::Ready);
         let (is_spectator, _) = signal(false);
         let (handshake_ready, _) = signal(true);
         let (open_request_id, _) = signal(0u64);

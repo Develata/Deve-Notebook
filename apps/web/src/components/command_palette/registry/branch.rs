@@ -35,7 +35,7 @@ mod tests {
         SourceControlNotice, is_establish_branch_unavailable_notice,
     };
     use crate::hooks::use_core::write_gate::RepoWriteBlock;
-    use crate::hooks::use_core::{PendingBranchTarget, SourceControlContext};
+    use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch, SourceControlContext};
     use crate::i18n::Locale;
     use deve_core::models::PeerId;
     use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
@@ -55,8 +55,8 @@ mod tests {
         let (current_repo_id, _) = signal(Some("default".to_string()));
         let (current_scope_nonce, _) = signal(1u64);
         let (active_branch, _) = signal(None::<PeerId>);
-        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-        let (pending_repo_switch, _) = signal(None::<String>);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+        let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
         let (git_bridge_mode, _) = signal("unknown".to_string());
         let (diff_content, set_diff_content) = signal(None::<DiffSessionWire>);
         let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());

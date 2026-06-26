@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::hooks::use_core::{LoadPhase, SyncModeState};
 #[cfg(test)]
 use deve_core::models::PeerId;
 use leptos::prelude::Set;
@@ -13,17 +14,17 @@ mod requests;
 
 pub(super) fn clear_repo_scoped_runtime(signals: CoreSignals) {
     signals.set_peers.set(Default::default());
-    signals.set_load_state.set("ready".to_string());
+    signals.set_load_state.set(LoadPhase::Ready);
     signals.set_load_progress.set((0, 0));
     signals.set_load_eta_ms.set(0);
-    signals.set_sync_mode.set("auto".to_string());
+    signals.set_sync_mode.set(SyncModeState::Auto);
     signals.set_sync_mode_request_id.set(None);
     signals.set_pending_ops_count.set(0);
     signals.set_pending_ops_previews.set(Vec::new());
     signals.set_pending_ops_request_id.set(None);
     signals.set_handshake_scope_nonce.set(None);
-    signals.set_pending_branch_switch_nonce.set(None);
-    signals.set_pending_repo_switch_nonce.set(None);
+    signals.set_pending_branch_switch.set(None);
+    signals.set_pending_repo_switch.set(None);
     signals.set_plugin_response.set(None);
     signals.set_plugin_request_ids.set(Vec::new());
     signals.set_chat_messages.set(Vec::new());

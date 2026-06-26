@@ -8,7 +8,7 @@ use crate::api::{
     AiBackendCapabilities, BackendSendDecision, fetch_ai_backend_capabilities,
     resolve_backend_for_effective_state,
 };
-use crate::hooks::use_core::{ChatContext, ChatMessage};
+use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -55,7 +55,8 @@ fn attach_trusted_cli_fallback(
         let fallback = select_backend_fallback(chat.ai_mode.get().as_str(), &cap);
         let reason = match fallback {
             BackendFallback::Switch { backend, reason } => {
-                chat.set_ai_mode.set(backend.to_string());
+                chat.set_ai_mode
+                    .set(AiBackendMode::from_backend_str_or_native(backend));
                 reason
             }
             BackendFallback::Blocked { reason } => reason,

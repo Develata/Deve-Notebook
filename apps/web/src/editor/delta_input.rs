@@ -8,8 +8,8 @@ use super::delta_input_forward::forward_deltas;
 use super::delta_input_gate::can_send_delta;
 use super::delta_input_state::sync_local_state;
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use crate::runtime::document::pending::PendingLocalEdits;
 use deve_core::models::{DocId, PeerId};
 use leptos::prelude::*;
@@ -21,9 +21,9 @@ pub struct DeltaInputCtx {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub load_state: ReadSignal<String>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
+    pub load_state: ReadSignal<LoadPhase>,
     pub is_spectator: Signal<bool>,
     pub handshake_ready: ReadSignal<bool>,
     pub is_playback: ReadSignal<bool>,

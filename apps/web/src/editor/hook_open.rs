@@ -5,7 +5,7 @@
 use super::buffered_ops::clear_sync_buffers;
 use super::open_scope::{OpenDocScope, OpenRequestKey, open_request_key};
 use crate::api::{ConnectionStatus, WsService};
-use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::{EditorContext, LoadPhase};
 use deve_core::models::{DocId, Op};
 use deve_core::protocol::{ClientMessage, ConfirmedOp};
 use deve_core::security::EncryptedOp;
@@ -53,7 +53,7 @@ pub fn setup_open_doc_effect(ctx: OpenDocEffectCtx) {
         ctx.set_history.set(Vec::new());
         ctx.core.set_doc_version.set(0);
         ctx.core.set_playback_version.set(0);
-        ctx.core.set_load_state.set("loading".to_string());
+        ctx.core.set_load_state.set(LoadPhase::Loading);
         ctx.core.set_load_progress.set((0, 0));
         ctx.core.set_load_eta_ms.set(0);
         leptos::logging::log!(

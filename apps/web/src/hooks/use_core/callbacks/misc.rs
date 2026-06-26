@@ -2,9 +2,9 @@
 //!   - 07_network#web-ws-runtime
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch, SearchHit};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
@@ -16,20 +16,20 @@ pub struct MiscCallbacks {
 
 pub struct SearchScopeSignals {
     pub current_scope_nonce: ReadSignal<u64>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
 }
 
 pub struct MiscRequestSignals {
     pub set_plugin_request_ids: WriteSignal<Vec<String>>,
     pub set_search_request_id: WriteSignal<Option<String>>,
-    pub set_search_results: WriteSignal<Vec<(String, String, f32)>>,
+    pub set_search_results: WriteSignal<Vec<SearchHit>>,
 }
 
 pub fn create_misc_callbacks(
     ws: &WsService,
     set_stats: WriteSignal<crate::editor::EditorStats>,
-    load_state: ReadSignal<String>,
+    load_state: ReadSignal<LoadPhase>,
     search_scope: SearchScopeSignals,
     request_signals: MiscRequestSignals,
     set_sync_banner: WriteSignal<Option<String>>,
@@ -58,7 +58,7 @@ pub fn create_misc_callbacks(
     );
     let ws_search = ws.clone();
     let on_search = Callback::new(move |query: String| {
-        if load_state.get_untracked() != "ready" {
+        if !load_state.get_untracked().is_ready() {
             show_search_block(set_sync_banner, "snapshot loading");
             return;
         }

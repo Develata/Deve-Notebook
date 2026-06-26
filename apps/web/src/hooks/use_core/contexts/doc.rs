@@ -2,6 +2,8 @@ use deve_core::models::DocId;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
+use super::super::types::SearchHit;
+
 #[derive(Clone)]
 pub struct DocContext {
     pub docs: ReadSignal<Vec<(DocId, String)>>,
@@ -14,6 +16,6 @@ pub struct DocContext {
     pub on_doc_delete: Callback<String>,
     pub on_doc_copy: Callback<(String, String)>,
     pub on_doc_move: Callback<(String, String)>,
-    pub search_results: ReadSignal<Vec<(String, String, f32)>>,
+    pub search_results: ReadSignal<Vec<SearchHit>>,
     pub on_search: Callback<String>,
 }

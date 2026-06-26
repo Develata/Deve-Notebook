@@ -9,7 +9,9 @@ use std::collections::HashMap;
 use super::super::callbacks_switch::SwitchCallbacks;
 use super::super::callbacks_sync::SyncCallbacks;
 use super::super::state::CoreSignals;
-use super::super::types::{PeerSession, PendingBranchTarget};
+use super::super::types::{
+    PeerSession, PendingBranchSwitch, PendingOpsPreview, PendingRepoSwitch, SyncModeState,
+};
 use deve_core::protocol::RepoListEntry;
 
 pub(super) struct SyncStateSection {
@@ -22,9 +24,9 @@ pub(super) struct SyncStateSection {
     pub set_repo_list_request_id: WriteSignal<Option<String>>,
     pub set_doc_list_request_id: WriteSignal<Option<String>>,
     pub set_tree_request_id: WriteSignal<Option<String>>,
-    pub sync_mode: ReadSignal<String>,
+    pub sync_mode: ReadSignal<SyncModeState>,
     pub pending_ops_count: ReadSignal<u32>,
-    pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
+    pub pending_ops_previews: ReadSignal<Vec<PendingOpsPreview>>,
     pub on_get_sync_mode: Callback<()>,
     pub on_set_sync_mode: Callback<String>,
     pub on_get_pending_ops: Callback<()>,
@@ -32,13 +34,13 @@ pub(super) struct SyncStateSection {
     pub on_discard_pending: Callback<()>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub set_active_branch: WriteSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
     pub current_repo: ReadSignal<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub shadow_repos: ReadSignal<Vec<String>>,
     pub on_list_shadows: Callback<()>,
     pub repo_list: ReadSignal<Vec<String>>,

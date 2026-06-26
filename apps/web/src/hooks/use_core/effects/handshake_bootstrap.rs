@@ -8,7 +8,10 @@ use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, Set};
 
 use super::super::types::HandshakeSignals;
-use super::super::{PendingBranchTarget, switch_nonce::next_switch_nonce_after};
+use super::super::{
+    PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch,
+    switch_nonce::next_switch_nonce_after,
+};
 mod repo;
 use self::repo::{build_switch_repo, request_repo_list};
 
@@ -28,10 +31,10 @@ pub(super) fn restore_session_scope(
         };
         signals
             .set_pending_branch_switch
-            .set(Some(PendingBranchTarget::Shadow(branch.to_string())));
-        signals
-            .set_pending_branch_switch_nonce
-            .set(Some(switch_nonce));
+            .set(Some(PendingBranchSwitch::new(
+                PendingBranchTarget::Shadow(branch.to_string()),
+                switch_nonce,
+            )));
         ws.send(ClientMessage::SwitchBranch {
             peer_id: Some(branch.to_string()),
             switch_nonce: Some(switch_nonce),
@@ -40,10 +43,9 @@ pub(super) fn restore_session_scope(
             && let Some(msg) =
                 build_switch_repo(repo_name.clone(), current_repo_id.clone(), switch_nonce)
         {
-            signals.set_pending_repo_switch.set(Some(repo_name));
             signals
-                .set_pending_repo_switch_nonce
-                .set(Some(switch_nonce));
+                .set_pending_repo_switch
+                .set(Some(PendingRepoSwitch::switch(repo_name, switch_nonce)));
             ws.send(msg);
         }
         return;
@@ -57,10 +59,9 @@ pub(super) fn restore_session_scope(
             return;
         };
         if let Some(msg) = build_switch_repo(repo_name.clone(), current_repo_id, switch_nonce) {
-            signals.set_pending_repo_switch.set(Some(repo_name));
             signals
-                .set_pending_repo_switch_nonce
-                .set(Some(switch_nonce));
+                .set_pending_repo_switch
+                .set(Some(PendingRepoSwitch::switch(repo_name, switch_nonce)));
             ws.send(msg);
             return;
         }

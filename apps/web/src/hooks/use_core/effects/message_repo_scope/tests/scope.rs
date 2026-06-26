@@ -40,7 +40,9 @@ fn projection_messages_accept_exact_current_repo_during_repo_switch_settle() {
     let signals = init_signals(status);
     let repo_id = uuid::Uuid::new_v4();
     signals.set_current_repo_id.set(Some(repo_id.to_string()));
-    signals.set_pending_repo_switch.set(Some("default".into()));
+    signals
+        .set_pending_repo_switch
+        .set(Some(PendingRepoSwitch::switch("default", 7)));
 
     assert!(matches_projection_message_scope(
         &Some(repo_id),
@@ -52,7 +54,13 @@ fn projection_messages_accept_exact_current_repo_during_repo_switch_settle() {
         &None,
         signals.current_repo_id,
         signals.active_branch.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
-        signals.pending_repo_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
     ));
 }

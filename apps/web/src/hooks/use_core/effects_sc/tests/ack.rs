@@ -31,12 +31,12 @@ fn commit_ack_dispatch_sets_refresh_request_ids_when_gate_is_ready() {
     let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiff>::new());
     let (notice, set_notice) = signal(None::<SourceControlNotice>);
     let (current_repo_id, _) = signal(Some(repo_id.to_string()));
-    let (load_state, _) = signal("ready".to_string());
+    let (load_state, _) = signal(LoadPhase::Ready);
     let (is_spectator, _) = signal(false);
     let (handshake_ready, _) = signal(true);
     let (active_branch, _) = signal(None::<PeerId>);
-    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-    let (pending_repo_switch, _) = signal(None::<String>);
+    let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
     let (current_scope_nonce, _) = signal(7u64);
     let schedule_refresh = || {};
 
@@ -181,12 +181,12 @@ fn commit_ack_clears_open_source_control_diffs() {
     }]);
     let (_notice, set_notice) = signal(None::<SourceControlNotice>);
     let (current_repo_id, _) = signal(Some(repo_id.to_string()));
-    let (load_state, _) = signal("ready".to_string());
+    let (load_state, _) = signal(LoadPhase::Ready);
     let (is_spectator, _) = signal(false);
     let (handshake_ready, _) = signal(true);
     let (active_branch, _) = signal(None::<PeerId>);
-    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-    let (pending_repo_switch, _) = signal(None::<String>);
+    let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
     let (current_scope_nonce, _) = signal(7u64);
     let schedule_refresh = || {};
 

@@ -14,16 +14,18 @@ pub fn handle_repo_switched(
 ) -> RepoSwitchOutcome {
     let current_repo = signals.current_repo.get_untracked();
     let current_repo_id = signals.current_repo_id.get_untracked();
-    let pending_nonce = signals.pending_repo_switch_nonce.get_untracked();
+    let pending_repo_switch = signals.pending_repo_switch.get_untracked();
+    let pending_nonce = pending_repo_switch
+        .as_ref()
+        .map(|pending| pending.switch_nonce);
     let current_scope_nonce = signals.current_scope_nonce.get_untracked();
-    match signals.pending_repo_switch.get_untracked() {
-        Some(pending) if pending == name => {
-            if pending_nonce != switch_nonce {
+    match pending_repo_switch {
+        Some(pending) if pending.expected_name() == name => {
+            if Some(pending.switch_nonce) != switch_nonce {
                 leptos::logging::warn!("忽略过期 RepoSwitched: {}", name);
                 return ignored_repo_switch();
             }
             signals.set_pending_repo_switch.set(None);
-            signals.set_pending_repo_switch_nonce.set(None);
             if let Some(switch_nonce) = switch_nonce {
                 signals.set_current_scope_nonce.set(switch_nonce);
             }
@@ -47,7 +49,6 @@ pub fn handle_repo_switched(
                 leptos::logging::warn!("忽略无 pending 的 RepoSwitched: {}", name);
                 return ignored_repo_switch();
             }
-            signals.set_pending_repo_switch_nonce.set(None);
             if let Some(switch_nonce) = switch_nonce {
                 signals.set_current_scope_nonce.set(switch_nonce);
             }

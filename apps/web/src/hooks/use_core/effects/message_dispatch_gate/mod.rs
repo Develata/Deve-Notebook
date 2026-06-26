@@ -10,8 +10,14 @@ mod logic;
 
 pub fn accepts_unscoped_update(signals: CoreSignals) -> bool {
     logic::accepts_unscoped_update(
-        signals.pending_branch_switch.get_untracked(),
-        signals.pending_repo_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
     )
 }
 

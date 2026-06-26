@@ -59,7 +59,7 @@ pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
         );
         let summary = derive_sync_status(SyncStatusInput {
             connection_status: session.connection_status.get(),
-            load_state: &rendering.load_state.get(),
+            load_state: rendering.load_state.get().as_str(),
             remote_branch_active: scope.active_branch.get().is_some(),
             degraded_storage: scope.is_spectator.get() && scope.active_branch.get().is_none(),
             node_role_probe_failed: session.ws.node_role_probe_failed.get(),
@@ -150,14 +150,14 @@ pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
 /// Loading progress bar (hidden when `load_state == "ready"`).
 #[component]
 pub fn LoadStatus(
-    load_state: ReadSignal<String>,
+    load_state: ReadSignal<crate::hooks::use_core::LoadPhase>,
     load_progress: ReadSignal<(usize, usize)>,
     load_eta_ms: ReadSignal<u64>,
     is_narrow: ReadSignal<bool>,
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
     move || {
-        if load_state.get() == "ready" {
+        if load_state.get().is_ready() {
             return view! {}.into_any();
         }
         let (done, total) = load_progress.get();

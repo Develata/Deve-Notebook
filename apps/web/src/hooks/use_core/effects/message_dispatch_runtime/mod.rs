@@ -9,6 +9,7 @@ use super::message_dispatch_gate::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results,
 };
 use super::message_runtime::handle_chat_chunk;
+use crate::hooks::use_core::SearchHit;
 use crate::i18n::{Locale, t};
 use deve_core::models::{PeerId, RepoId};
 
@@ -111,7 +112,9 @@ pub fn handle_search_results_message(
         return;
     }
     signals.set_search_request_id.set(None);
-    signals.set_search_results.set(results);
+    signals
+        .set_search_results
+        .set(results.into_iter().map(SearchHit::from).collect());
 }
 
 #[cfg(test)]

@@ -32,16 +32,15 @@ fn switch_errors_clear_pending_scope_switches_only_for_matching_nonce() {
 }
 
 #[test]
-fn switch_errors_clear_orphan_repo_switch_nonce_without_pending_name() {
+fn switch_errors_ignore_orphan_repo_switch_nonce_without_pending_value() {
     let harness = protocol_signal_harness(None, None, None, Some(7));
     clear_failed_scope_switch(
         ServerErrorCode::ScRepoContextInvalid,
         Some(7),
         harness.control(),
     );
-    harness.assert_all_requests_cleared();
+    harness.assert_requests_still_pending();
     assert_eq!(harness.pending_repo_switch.get_untracked(), None);
-    assert_eq!(harness.pending_repo_switch_nonce.get_untracked(), None);
 }
 
 #[test]
@@ -59,7 +58,10 @@ fn stale_or_missing_nonce_keeps_pending_scope_switches() {
             harness.control(),
         );
         assert_eq!(
-            harness.pending_branch_switch.get_untracked(),
+            harness
+                .pending_branch_switch
+                .get_untracked()
+                .map(|pending| pending.into_target()),
             Some(PendingBranchTarget::Local)
         );
         assert_eq!(

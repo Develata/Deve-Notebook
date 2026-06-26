@@ -10,7 +10,7 @@ use leptos::prelude::*;
 
 use super::super::navigation::{NavigationTarget, guard_navigation};
 use super::super::switch_nonce::next_switch_nonce_after;
-use super::super::types::SwitchScopeSignals;
+use super::super::types::{PendingRepoSwitch, SwitchScopeSignals};
 use super::{can_start_scope_switch, prepare_scope_switch, show_switch_block};
 
 pub(super) fn build_switch_repo_callback(
@@ -39,10 +39,10 @@ pub(super) fn build_switch_repo_callback(
             prepare_scope_switch(&ws_repo_action, signals);
             signals
                 .set_pending_repo_switch
-                .set(Some(target_repo.clone()));
-            signals
-                .set_pending_repo_switch_nonce
-                .set(Some(switch_nonce));
+                .set(Some(PendingRepoSwitch::switch(
+                    target_repo.clone(),
+                    switch_nonce,
+                )));
             ws_repo_action.send(ClientMessage::SwitchRepo {
                 name: target_repo.clone(),
                 switch_nonce: Some(switch_nonce),
@@ -91,10 +91,10 @@ pub(super) fn build_create_repo_callback(
             prepare_scope_switch(&ws_repo_action, signals);
             signals
                 .set_pending_repo_switch
-                .set(Some(target_repo.clone()));
-            signals
-                .set_pending_repo_switch_nonce
-                .set(Some(switch_nonce));
+                .set(Some(PendingRepoSwitch::create(
+                    target_repo.clone(),
+                    switch_nonce,
+                )));
             ws_repo_action.send(ClientMessage::CreateRepo {
                 name: target_repo.clone(),
                 switch_nonce: Some(switch_nonce),
@@ -146,10 +146,10 @@ pub(super) fn build_rename_repo_callback(
                 prepare_scope_switch(&ws_repo_action, signals);
                 signals
                     .set_pending_repo_switch
-                    .set(Some(target_repo.clone()));
-                signals
-                    .set_pending_repo_switch_nonce
-                    .set(Some(switch_nonce));
+                    .set(Some(PendingRepoSwitch::rename_current(
+                        target_repo.clone(),
+                        switch_nonce,
+                    )));
             }
             ws_repo_action.send(ClientMessage::RenameRepo {
                 repo_id: request.repo_id,
@@ -206,12 +206,12 @@ pub(super) fn build_remove_repo_callback(
             };
             if targets_current {
                 prepare_scope_switch(&ws_repo_action, signals);
-                signals
-                    .set_pending_repo_switch
-                    .set(request.fallback_name.clone());
-                signals
-                    .set_pending_repo_switch_nonce
-                    .set(Some(switch_nonce));
+                signals.set_pending_repo_switch.set(
+                    request
+                        .fallback_name
+                        .clone()
+                        .map(|name| PendingRepoSwitch::remove_current(name, switch_nonce)),
+                );
             }
             ws_repo_action.send(ClientMessage::RemoveRepo {
                 repo_id: request.repo_id,

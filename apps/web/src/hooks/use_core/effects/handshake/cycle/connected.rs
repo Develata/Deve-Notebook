@@ -35,12 +35,16 @@ pub(super) fn run_connected_handshake_cycle(
     let is_reconnect_bootstrap = last_mode.borrow().is_none();
     let should_restore = should_restore_session_scope(
         is_reconnect_bootstrap,
-        pending_branch_switch.as_ref(),
+        pending_branch_switch
+            .as_ref()
+            .map(|pending| pending.target()),
         pending_repo_switch.as_deref(),
     );
     if should_suspend_handshake(
         &branch,
-        pending_branch_switch.as_ref(),
+        pending_branch_switch
+            .as_ref()
+            .map(|pending| pending.target()),
         pending_repo_switch.as_deref(),
     ) {
         suspend_current_handshake(

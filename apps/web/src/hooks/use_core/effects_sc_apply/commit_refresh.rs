@@ -5,6 +5,7 @@
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::write_gate::RepoWriteGateState;
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use leptos::prelude::*;
 
 use super::gate::source_control_refresh_allowed;
@@ -13,11 +14,11 @@ pub(in crate::hooks::use_core) struct CommitRefreshSignals {
     pub expected_scope_nonce: u64,
     pub current_scope_nonce: ReadSignal<u64>,
     pub current_repo_id: ReadSignal<Option<String>>,
-    pub load_state: ReadSignal<String>,
+    pub load_state: ReadSignal<LoadPhase>,
     pub is_spectator: Signal<bool>,
     pub handshake_ready: ReadSignal<bool>,
-    pub pending_branch_switch: ReadSignal<Option<super::super::types::PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub set_changes_request_id: WriteSignal<Option<String>>,
     pub set_commit_history_request_id: WriteSignal<Option<String>>,
     pub set_doc_list_request_id: WriteSignal<Option<String>>,
@@ -45,7 +46,7 @@ pub(in crate::hooks::use_core) fn refresh_after_commit(
         current_scope_nonce,
         RepoWriteGateState {
             connection_status: ws.status.get_untracked(),
-            load_state: &load_state,
+            load_state: load_state.as_str(),
             is_read_only: signals.is_spectator.get_untracked(),
             node_role_probe_failed: ws.node_role_probe_failed.get_untracked(),
             node_role_readable: readiness.node_role_readable,

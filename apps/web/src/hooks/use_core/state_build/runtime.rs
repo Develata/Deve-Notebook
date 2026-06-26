@@ -8,7 +8,7 @@ use leptos::prelude::*;
 use super::super::callbacks::MiscCallbacks;
 use super::super::state::CoreSignals;
 use super::super::state::PluginResponse;
-use super::super::types::ChatMessage;
+use super::super::types::{AiBackendMode, ChatMessage, LoadPhase, SearchHit};
 
 pub(super) struct RuntimeStateSection {
     pub status_text: Signal<String>,
@@ -19,10 +19,10 @@ pub(super) struct RuntimeStateSection {
     pub plugin_last_response: ReadSignal<PluginResponse>,
     pub plugin_request_ids: ReadSignal<Vec<String>>,
     pub on_plugin_call: Callback<(String, String, String, Vec<serde_json::Value>)>,
-    pub search_results: ReadSignal<Vec<(String, String, f32)>>,
+    pub search_results: ReadSignal<Vec<SearchHit>>,
     pub on_search: Callback<String>,
-    pub load_state: ReadSignal<String>,
-    pub set_load_state: WriteSignal<String>,
+    pub load_state: ReadSignal<LoadPhase>,
+    pub set_load_state: WriteSignal<LoadPhase>,
     pub load_progress: ReadSignal<(usize, usize)>,
     pub set_load_progress: WriteSignal<(usize, usize)>,
     pub load_eta_ms: ReadSignal<u64>,
@@ -31,8 +31,8 @@ pub(super) struct RuntimeStateSection {
     pub set_chat_messages: WriteSignal<Vec<ChatMessage>>,
     pub is_chat_streaming: ReadSignal<bool>,
     pub set_is_chat_streaming: WriteSignal<bool>,
-    pub ai_mode: ReadSignal<String>,
-    pub set_ai_mode: WriteSignal<String>,
+    pub ai_mode: ReadSignal<AiBackendMode>,
+    pub set_ai_mode: WriteSignal<AiBackendMode>,
 }
 
 pub(super) fn build_runtime_section(

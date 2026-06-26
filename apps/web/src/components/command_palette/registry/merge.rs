@@ -87,7 +87,9 @@ mod tests {
     use super::merge_peer_commands;
     use crate::components::command_palette::logic::create_filtered_commands_memo;
     use crate::components::command_palette::types::{Command, CommandAvailability};
-    use crate::hooks::use_core::{BranchContext, SyncMergeContext};
+    use crate::hooks::use_core::{
+        BranchContext, PendingOpsPreview, SyncMergeContext, SyncModeState,
+    };
     use crate::i18n::Locale;
     use deve_core::models::PeerId;
     use leptos::prelude::*;
@@ -245,9 +247,9 @@ mod tests {
     }
 
     fn sync_context(calls: Arc<Mutex<Vec<String>>>) -> SyncMergeContext {
-        let (sync_mode, _) = signal("auto".to_string());
+        let (sync_mode, _) = signal(SyncModeState::Auto);
         let (pending_ops_count, _) = signal(0u32);
-        let (pending_ops_previews, _) = signal(Vec::<(String, String, String)>::new());
+        let (pending_ops_previews, _) = signal(Vec::<PendingOpsPreview>::new());
         SyncMergeContext {
             sync_mode,
             pending_ops_count,

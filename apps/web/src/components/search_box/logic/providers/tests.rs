@@ -1,4 +1,5 @@
 use super::{SearchSurfaceMode, full_text_results, search_surface_mode};
+use crate::hooks::use_core::SearchHit;
 use crate::i18n::{Locale, t};
 
 #[test]
@@ -43,8 +44,8 @@ fn full_text_results_parse_doc_ids() {
     let results = full_text_results(
         "rust",
         vec![
-            (doc_id.to_string(), "notes/rust.md".into(), 1.0),
-            ("broken".into(), "notes/broken.md".into(), 1.0),
+            SearchHit::new(doc_id.to_string(), "notes/rust.md".into(), 1.0),
+            SearchHit::new("broken".into(), "notes/broken.md".into(), 1.0),
         ],
         Locale::En,
     );
@@ -63,7 +64,11 @@ fn full_text_results_localize_detail() {
     let doc_id = uuid::Uuid::new_v4();
     let results = full_text_results(
         "rust",
-        vec![(doc_id.to_string(), "notes/rust.md".into(), 1.0)],
+        vec![SearchHit::new(
+            doc_id.to_string(),
+            "notes/rust.md".into(),
+            1.0,
+        )],
         Locale::Zh,
     );
     assert_eq!(

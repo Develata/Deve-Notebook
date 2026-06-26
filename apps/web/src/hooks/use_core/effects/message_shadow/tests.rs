@@ -2,20 +2,23 @@ use super::{
     should_recover_local_branch_from_deleted_peer, should_recover_local_branch_from_shadow_list,
     should_refresh_shadow_list,
 };
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
 use deve_core::models::PeerId;
 
 #[test]
 fn peer_deleted_only_refreshes_shadows_when_scope_is_stable() {
     assert!(should_refresh_shadow_list(None, None, false));
     assert!(!should_refresh_shadow_list(
-        Some(PendingBranchTarget::Shadow("peer-a".into())),
+        Some(PendingBranchSwitch::new(
+            PendingBranchTarget::Shadow("peer-a".into()),
+            1,
+        )),
         None,
         false,
     ));
     assert!(!should_refresh_shadow_list(
         None,
-        Some("default".into()),
+        Some(PendingRepoSwitch::switch("default", 1)),
         false
     ));
     assert!(!should_refresh_shadow_list(None, None, true));
@@ -47,7 +50,7 @@ fn shadow_list_recovers_local_only_when_current_peer_disappears() {
     assert!(!should_recover_local_branch_from_shadow_list(
         &["peer-b".into()],
         Some(PeerId::new("peer-a")),
-        Some(PendingBranchTarget::Local),
+        Some(PendingBranchSwitch::new(PendingBranchTarget::Local, 1)),
         None,
         true,
     ));
@@ -55,7 +58,7 @@ fn shadow_list_recovers_local_only_when_current_peer_disappears() {
         &["peer-b".into()],
         Some(PeerId::new("peer-a")),
         None,
-        Some("default".into()),
+        Some(PendingRepoSwitch::switch("default", 1)),
         true,
     ));
     assert!(!should_recover_local_branch_from_shadow_list(
@@ -84,13 +87,13 @@ fn peer_deleted_recovers_local_only_for_active_shadow_branch() {
     assert!(!should_recover_local_branch_from_deleted_peer(
         &PeerId::new("peer-a"),
         Some(PeerId::new("peer-a")),
-        Some(PendingBranchTarget::Local),
+        Some(PendingBranchSwitch::new(PendingBranchTarget::Local, 1)),
         None,
     ));
     assert!(!should_recover_local_branch_from_deleted_peer(
         &PeerId::new("peer-a"),
         Some(PeerId::new("peer-a")),
         None,
-        Some("default".into()),
+        Some(PendingRepoSwitch::switch("default", 1)),
     ));
 }

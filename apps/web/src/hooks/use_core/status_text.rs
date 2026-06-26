@@ -44,7 +44,7 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
             .unwrap_or_default();
         derive_sync_status(SyncStatusInput {
             connection_status: status_signal_for_text.get(),
-            load_state: &load_state_for_text.get(),
+            load_state: load_state_for_text.get().as_str(),
             remote_branch_active: active_branch_for_text.get().is_some(),
             degraded_storage: degraded_for_text.get().is_some(),
             node_role_probe_failed: ws_for_text.node_role_probe_failed.get(),

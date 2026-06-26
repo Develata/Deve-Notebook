@@ -8,12 +8,12 @@
 //!
 //! Extracted sub-sections: local preferences, sync mode, AI backend.
 
-use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI};
 use crate::components::layout_context::ChatControl;
 use crate::components::settings_sections_policy::{
     ai_backend_button_state, ai_chat_visibility_button_state, sync_mode_button_state,
 };
 use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
+use crate::hooks::use_core::AiBackendMode;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -92,7 +92,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                             title=move || button_state.get().native_title
                             on:click=move |_| {
                                 if !button_state.get_untracked().native_disabled {
-                                    chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string());
+                                    chat.set_ai_mode.set(AiBackendMode::Native);
                                 }
                             }
                         >
@@ -106,7 +106,7 @@ pub fn AiBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                             title=move || button_state.get().trusted_title
                             on:click=move |_| {
                                 if !button_state.get_untracked().trusted_disabled {
-                                    chat.set_ai_mode.set(AI_BACKEND_TRUSTED_CLI.to_string());
+                                    chat.set_ai_mode.set(AiBackendMode::TrustedCli);
                                 }
                             }
                         >

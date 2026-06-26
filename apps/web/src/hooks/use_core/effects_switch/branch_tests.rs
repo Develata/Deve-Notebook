@@ -1,5 +1,5 @@
 use super::{BranchSwitchSignals, handle_branch_switched};
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget};
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 
@@ -9,18 +9,16 @@ fn branch_switch_reports_when_scope_changed() {
     runtime.set();
 
     let (active_branch, set_active_branch) = signal(Some(PeerId::new("peer-a")));
-    let (pending_branch_switch, set_pending_branch_switch) =
-        signal(Some(PendingBranchTarget::Shadow("peer-b".into())));
-    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(Some(11));
+    let (pending_branch_switch, set_pending_branch_switch) = signal(Some(
+        PendingBranchSwitch::new(PendingBranchTarget::Shadow("peer-b".into()), 11),
+    ));
     let changed = handle_branch_switched(
         Some("peer-b".into()),
         true,
         Some(11),
         BranchSwitchSignals {
             pending_branch_switch,
-            pending_branch_switch_nonce,
             set_pending_branch_switch,
-            set_pending_branch_switch_nonce,
             set_active_branch,
         },
     );
@@ -28,7 +26,6 @@ fn branch_switch_reports_when_scope_changed() {
     assert!(changed);
     assert_eq!(active_branch.get_untracked(), Some(PeerId::new("peer-b")));
     assert_eq!(pending_branch_switch.get_untracked(), None);
-    assert_eq!(pending_branch_switch_nonce.get_untracked(), None);
 }
 
 #[test]
@@ -37,8 +34,7 @@ fn ignores_branch_switched_without_pending_target() {
     runtime.set();
 
     let (active_branch, set_active_branch) = signal(Some(PeerId::new("peer-a")));
-    let (pending_branch_switch, set_pending_branch_switch) = signal(None);
-    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(None);
+    let (pending_branch_switch, set_pending_branch_switch) = signal(None::<PendingBranchSwitch>);
 
     assert!(!handle_branch_switched(
         Some("peer-b".into()),
@@ -46,9 +42,7 @@ fn ignores_branch_switched_without_pending_target() {
         Some(3),
         BranchSwitchSignals {
             pending_branch_switch,
-            pending_branch_switch_nonce,
             set_pending_branch_switch,
-            set_pending_branch_switch_nonce,
             set_active_branch,
         },
     ));
@@ -61,9 +55,9 @@ fn ignores_branch_switched_with_stale_nonce() {
     runtime.set();
 
     let (active_branch, set_active_branch) = signal(Some(PeerId::new("peer-a")));
-    let (pending_branch_switch, set_pending_branch_switch) =
-        signal(Some(PendingBranchTarget::Shadow("peer-b".into())));
-    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(Some(9));
+    let (pending_branch_switch, set_pending_branch_switch) = signal(Some(
+        PendingBranchSwitch::new(PendingBranchTarget::Shadow("peer-b".into()), 9),
+    ));
 
     assert!(!handle_branch_switched(
         Some("peer-b".into()),
@@ -71,9 +65,7 @@ fn ignores_branch_switched_with_stale_nonce() {
         Some(7),
         BranchSwitchSignals {
             pending_branch_switch,
-            pending_branch_switch_nonce,
             set_pending_branch_switch,
-            set_pending_branch_switch_nonce,
             set_active_branch,
         },
     ));
@@ -86,9 +78,9 @@ fn accepts_same_branch_rebind_with_new_scope_nonce() {
     runtime.set();
 
     let (active_branch, set_active_branch) = signal(Some(PeerId::new("peer-a")));
-    let (pending_branch_switch, set_pending_branch_switch) =
-        signal(Some(PendingBranchTarget::Shadow("peer-a".into())));
-    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(Some(13));
+    let (pending_branch_switch, set_pending_branch_switch) = signal(Some(
+        PendingBranchSwitch::new(PendingBranchTarget::Shadow("peer-a".into()), 13),
+    ));
 
     assert!(handle_branch_switched(
         Some("peer-a".into()),
@@ -96,13 +88,10 @@ fn accepts_same_branch_rebind_with_new_scope_nonce() {
         Some(13),
         BranchSwitchSignals {
             pending_branch_switch,
-            pending_branch_switch_nonce,
             set_pending_branch_switch,
-            set_pending_branch_switch_nonce,
             set_active_branch,
         },
     ));
     assert_eq!(active_branch.get_untracked(), Some(PeerId::new("peer-a")));
     assert_eq!(pending_branch_switch.get_untracked(), None);
-    assert_eq!(pending_branch_switch_nonce.get_untracked(), None);
 }

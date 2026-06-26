@@ -7,7 +7,7 @@ use deve_core::models::{DocId, PeerId};
 use leptos::prelude::*;
 
 use super::super::navigation::PendingNavigation;
-use super::super::types::PendingBranchTarget;
+use super::super::types::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use crate::runtime::document::pending::PendingLocalEdits;
 
 #[derive(Clone)]
@@ -16,8 +16,8 @@ pub struct EditorContext {
     pub current_doc: ReadSignal<Option<DocId>>,
     pub stats: ReadSignal<EditorStats>,
     pub on_stats: Callback<EditorStats>,
-    pub load_state: ReadSignal<String>,
-    pub set_load_state: WriteSignal<String>,
+    pub load_state: ReadSignal<LoadPhase>,
+    pub set_load_state: WriteSignal<LoadPhase>,
     pub load_progress: ReadSignal<(usize, usize)>,
     pub set_load_progress: WriteSignal<(usize, usize)>,
     pub load_eta_ms: ReadSignal<u64>,
@@ -28,10 +28,10 @@ pub struct EditorContext {
     pub set_playback_version: WriteSignal<u64>,
     pub is_spectator: Signal<bool>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub handshake_ready: ReadSignal<bool>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
     pub pending_local_edits: ReadSignal<PendingLocalEdits>,

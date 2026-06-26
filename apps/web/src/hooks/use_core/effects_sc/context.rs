@@ -13,7 +13,7 @@ use super::super::effects_sc_scope::matches_current_scope;
 use super::super::effects_sc_state::scoped_ack_matches;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::CoreSignals;
-use super::super::types::PendingBranchTarget;
+use super::super::types::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 
 pub(crate) struct ScMessageContext<'a> {
     pub(crate) set_staged: WriteSignal<Vec<ChangeEntry>>,
@@ -38,12 +38,12 @@ pub(crate) struct ScMessageContext<'a> {
     pub(crate) set_commit_diff: WriteSignal<Vec<CommitFileDiff>>,
     pub(crate) set_notice: WriteSignal<Option<SourceControlNotice>>,
     pub(crate) current_repo_id: ReadSignal<Option<String>>,
-    pub(crate) load_state: ReadSignal<String>,
+    pub(crate) load_state: ReadSignal<LoadPhase>,
     pub(crate) is_spectator: Signal<bool>,
     pub(crate) handshake_ready: ReadSignal<bool>,
     pub(crate) active_branch: ReadSignal<Option<PeerId>>,
-    pub(crate) pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub(crate) pending_repo_switch: ReadSignal<Option<String>>,
+    pub(crate) pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub(crate) pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub(crate) current_scope_nonce: ReadSignal<u64>,
     pub(crate) schedule_refresh: &'a dyn Fn(),
     pub(crate) ws: &'a WsService,

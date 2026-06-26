@@ -113,6 +113,7 @@ fn should_force_foreground_reprobe(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
     use crate::storage::DegradedSyncMode;
     use deve_core::models::VersionVector;
     use leptos::prelude::{Set, signal};
@@ -177,12 +178,9 @@ mod tests {
         let (current_repo_id, _) = signal(Some("repo-a".to_string()));
         let (current_scope_nonce, _) = signal(7u64);
         let (active_branch, _) = signal(None);
-        let (pending_branch_switch, _) = signal(None);
-        let (_, set_pending_branch_switch) = signal(None);
-        let (_, set_pending_branch_switch_nonce) = signal(None);
-        let (pending_repo_switch, _) = signal(None);
-        let (_, set_pending_repo_switch) = signal(None);
-        let (_, set_pending_repo_switch_nonce) = signal(None);
+        let (pending_branch_switch, set_pending_branch_switch) =
+            signal(None::<PendingBranchSwitch>);
+        let (pending_repo_switch, set_pending_repo_switch) = signal(None::<PendingRepoSwitch>);
         let (handshake_scope_nonce, set_handshake_scope_nonce) = signal(None);
         let (handshake_retry_nonce, _) = signal(0u64);
         let (_, set_repo_list_request_id) = signal(None);
@@ -200,10 +198,8 @@ mod tests {
             active_branch,
             pending_branch_switch,
             set_pending_branch_switch,
-            set_pending_branch_switch_nonce,
             pending_repo_switch,
             set_pending_repo_switch,
-            set_pending_repo_switch_nonce,
             handshake_scope_nonce,
             set_handshake_scope_nonce,
             handshake_retry_nonce,

@@ -3,7 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use super::scope::matches_scope;
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
 use deve_core::models::{PeerId, RepoId};
 use leptos::prelude::*;
 use std::sync::Arc;
@@ -13,9 +13,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 pub(super) struct SnapshotRequestGate {
     open_request_id: ReadSignal<u64>,
     current_repo_id: ReadSignal<Option<String>>,
-    pending_repo_switch: ReadSignal<Option<String>>,
+    pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     active_branch: ReadSignal<Option<PeerId>>,
-    pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
     current_scope_nonce: ReadSignal<u64>,
     session_generation: Arc<AtomicU64>,
     expected_generation: u64,
@@ -29,9 +29,9 @@ pub(super) struct SnapshotRequestGate {
 pub(super) struct SnapshotRequestGateInput {
     pub open_request_id: ReadSignal<u64>,
     pub current_repo_id: ReadSignal<Option<String>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub session_generation: Arc<AtomicU64>,
     pub expected_generation: u64,
@@ -84,9 +84,15 @@ impl SnapshotRequestGate {
             open_request_id: self.open_request_id.get_untracked(),
             request_id: self.request_id,
             current_repo_id: self.current_repo_id.get_untracked(),
-            pending_repo_switch: self.pending_repo_switch.get_untracked(),
+            pending_repo_switch: self
+                .pending_repo_switch
+                .get_untracked()
+                .map(|pending| pending.expected_name),
             active_branch: self.active_branch.get_untracked(),
-            pending_branch_switch: self.pending_branch_switch.get_untracked(),
+            pending_branch_switch: self
+                .pending_branch_switch
+                .get_untracked()
+                .map(|pending| pending.into_target()),
             current_scope_nonce: self.current_scope_nonce.get_untracked(),
             scope_nonce: self.scope_nonce,
             current_generation,

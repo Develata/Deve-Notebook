@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 04_repository#repo-scope-runtime
 //!
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::models::PeerId;
 use leptos::prelude::{GetUntracked, ReadSignal};
 
@@ -10,8 +10,8 @@ pub struct LocalScopeSignals {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
 }
 
 pub fn stable_local_scope_nonce(signals: LocalScopeSignals) -> Option<u64> {
@@ -28,7 +28,7 @@ fn stable_local_scope_ready(signals: LocalScopeSignals) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{LocalScopeSignals, stable_local_scope_nonce};
-    use crate::hooks::use_core::PendingBranchTarget;
+    use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
     use deve_core::models::PeerId;
     use leptos::prelude::*;
 
@@ -39,8 +39,8 @@ mod tests {
         let (current_repo_id, _) = signal(Some("repo-1".to_string()));
         let (current_scope_nonce, _) = signal(7u64);
         let (active_branch, _) = signal(None);
-        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-        let (pending_repo_switch, _) = signal(None::<String>);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+        let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
 
         assert_eq!(
             stable_local_scope_nonce(LocalScopeSignals {
@@ -63,8 +63,11 @@ mod tests {
         let (active_branch, _) = signal(None);
 
         for (pending_branch_switch, pending_repo_switch) in [
-            (Some(PendingBranchTarget::Local), None),
-            (None, Some("repo-2".to_string())),
+            (
+                Some(PendingBranchSwitch::new(PendingBranchTarget::Local, 1)),
+                None,
+            ),
+            (None, Some(PendingRepoSwitch::switch("repo-2", 1))),
         ] {
             let (pending_branch_switch, _) = signal(pending_branch_switch.clone());
             let (pending_repo_switch, _) = signal(pending_repo_switch.clone());
@@ -89,8 +92,8 @@ mod tests {
         let (current_repo_id, _) = signal(Some("repo-1".to_string()));
         let (current_scope_nonce, _) = signal(9u64);
         let (active_branch, _) = signal(None::<PeerId>);
-        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-        let (pending_repo_switch, _) = signal(None::<String>);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+        let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
 
         assert_eq!(
             stable_local_scope_nonce(LocalScopeSignals {
@@ -103,7 +106,7 @@ mod tests {
             Some(9)
         );
 
-        let (pending_repo_switch, _) = signal(Some("repo-2".to_string()));
+        let (pending_repo_switch, _) = signal(Some(PendingRepoSwitch::switch("repo-2", 1)));
         assert_eq!(
             stable_local_scope_nonce(LocalScopeSignals {
                 current_repo_id,

@@ -11,10 +11,8 @@ fn reset_handshake_attempt_state_clears_retry_blockers() {
     let (current_repo_id, _) = signal(Some(uuid::Uuid::new_v4().to_string()));
     let (current_scope_nonce, _) = signal(7u64);
     let (active_branch, _) = signal(None::<PeerId>);
-    let (pending_branch_switch, set_pending_branch_switch) = signal(None::<PendingBranchTarget>);
-    let (_pending_branch_switch_nonce, set_pending_branch_switch_nonce) = signal(None::<u64>);
-    let (pending_repo_switch, set_pending_repo_switch) = signal(None::<String>);
-    let (_pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(None::<u64>);
+    let (pending_branch_switch, set_pending_branch_switch) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, set_pending_repo_switch) = signal(None::<PendingRepoSwitch>);
     let (handshake_scope_nonce, set_handshake_scope_nonce) = signal(Some(7u64));
     let (handshake_retry_nonce, _) = signal(0u64);
     let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo-1".to_string()));
@@ -32,10 +30,8 @@ fn reset_handshake_attempt_state_clears_retry_blockers() {
         active_branch,
         pending_branch_switch,
         set_pending_branch_switch,
-        set_pending_branch_switch_nonce,
         pending_repo_switch,
         set_pending_repo_switch,
-        set_pending_repo_switch_nonce,
         handshake_scope_nonce,
         set_handshake_scope_nonce,
         handshake_retry_nonce,

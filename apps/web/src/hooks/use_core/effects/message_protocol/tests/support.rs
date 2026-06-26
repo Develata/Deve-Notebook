@@ -1,13 +1,14 @@
 use super::super::ProtocolControlSignals;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::hooks::use_core::{
+    PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch, SearchHit,
+};
 use leptos::prelude::{GetUntracked, ReadSignal, signal};
 
 pub struct ProtocolSignalHarness {
     _runtime: leptos::reactive::owner::Owner,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     shadow_list_request_id: ReadSignal<Option<String>>,
     repo_list_request_id: ReadSignal<Option<String>>,
     doc_list_request_id: ReadSignal<Option<String>>,
@@ -15,7 +16,7 @@ pub struct ProtocolSignalHarness {
     sync_mode_request_id: ReadSignal<Option<String>>,
     pending_ops_request_id: ReadSignal<Option<String>>,
     pub search_request_id: ReadSignal<Option<String>>,
-    pub search_results: ReadSignal<Vec<(String, String, f32)>>,
+    pub search_results: ReadSignal<Vec<SearchHit>>,
     changes_request_id: ReadSignal<Option<String>>,
     commit_history_request_id: ReadSignal<Option<String>>,
     doc_diff_request_id: ReadSignal<Option<String>>,
@@ -33,11 +34,16 @@ pub fn protocol_signal_harness(
 ) -> ProtocolSignalHarness {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
-    let (pending_branch_switch, set_pending_branch_switch) = signal(pending_branch);
-    let (pending_branch_switch_nonce, set_pending_branch_switch_nonce) =
-        signal(pending_branch_nonce);
-    let (pending_repo_switch, set_pending_repo_switch) = signal(pending_repo.map(str::to_string));
-    let (pending_repo_switch_nonce, set_pending_repo_switch_nonce) = signal(pending_repo_nonce);
+    let (pending_branch_switch, set_pending_branch_switch) = signal(
+        pending_branch
+            .zip(pending_branch_nonce)
+            .map(|(target, nonce)| PendingBranchSwitch::new(target, nonce)),
+    );
+    let (pending_repo_switch, set_pending_repo_switch) = signal(
+        pending_repo
+            .zip(pending_repo_nonce)
+            .map(|(name, nonce)| PendingRepoSwitch::switch(name, nonce)),
+    );
     let (shadow_list_request_id, set_shadow_list_request_id) = signal(Some("shadow-1".to_string()));
     let (repo_list_request_id, set_repo_list_request_id) = signal(Some("repo-1".to_string()));
     let (doc_list_request_id, set_doc_list_request_id) = signal(Some("doc-1".to_string()));
@@ -46,8 +52,11 @@ pub fn protocol_signal_harness(
     let (pending_ops_request_id, set_pending_ops_request_id) =
         signal(Some("pending-1".to_string()));
     let (search_request_id, set_search_request_id) = signal(Some("search-1".to_string()));
-    let (search_results, set_search_results) =
-        signal(vec![("doc-1".to_string(), "notes/a.md".to_string(), 1.0)]);
+    let (search_results, set_search_results) = signal(vec![SearchHit::new(
+        "doc-1".to_string(),
+        "notes/a.md".to_string(),
+        1.0,
+    )]);
     let (changes_request_id, set_changes_request_id) = signal(Some("changes-1".to_string()));
     let (commit_history_request_id, set_commit_history_request_id) =
         signal(Some("history-1".to_string()));
@@ -61,7 +70,6 @@ pub fn protocol_signal_harness(
         _runtime: runtime,
         pending_branch_switch,
         pending_repo_switch,
-        pending_repo_switch_nonce,
         shadow_list_request_id,
         repo_list_request_id,
         doc_list_request_id,
@@ -78,12 +86,9 @@ pub fn protocol_signal_harness(
         sync_banner,
         control: ProtocolControlSignals {
             pending_branch_switch,
-            pending_branch_switch_nonce,
             set_pending_branch_switch,
-            set_pending_branch_switch_nonce,
-            pending_repo_switch_nonce,
+            pending_repo_switch,
             set_pending_repo_switch,
-            set_pending_repo_switch_nonce,
             set_shadow_list_request_id,
             set_repo_list_request_id,
             set_doc_list_request_id,
@@ -124,6 +129,20 @@ impl ProtocolSignalHarness {
         assert_eq!(self.commit_history_request_id.get_untracked(), None);
         assert_eq!(self.doc_diff_request_id.get_untracked(), None);
         assert_eq!(self.commit_diff_request_id.get_untracked(), None);
+    }
+
+    pub fn assert_requests_still_pending(&self) {
+        assert!(self.shadow_list_request_id.get_untracked().is_some());
+        assert!(self.repo_list_request_id.get_untracked().is_some());
+        assert!(self.doc_list_request_id.get_untracked().is_some());
+        assert!(self.tree_request_id.get_untracked().is_some());
+        assert!(self.sync_mode_request_id.get_untracked().is_some());
+        assert!(self.pending_ops_request_id.get_untracked().is_some());
+        assert!(self.search_request_id.get_untracked().is_some());
+        assert!(self.changes_request_id.get_untracked().is_some());
+        assert!(self.commit_history_request_id.get_untracked().is_some());
+        assert!(self.doc_diff_request_id.get_untracked().is_some());
+        assert!(self.commit_diff_request_id.get_untracked().is_some());
     }
 
     pub fn assert_source_control_requests_cleared(&self) {

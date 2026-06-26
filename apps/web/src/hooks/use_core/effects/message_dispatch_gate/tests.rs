@@ -5,9 +5,9 @@ use super::{
     accepts_chat_chunk, accepts_plugin_response, accepts_search_results, accepts_unscoped_update,
 };
 use crate::api::ConnectionStatus;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::state::init_signals;
 use crate::hooks::use_core::types::ChatMessage;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
 use crate::i18n::Locale;
 use deve_core::models::PeerId;
 use leptos::prelude::*;
@@ -18,7 +18,9 @@ fn rejects_unscoped_updates_while_repo_switch_pending() {
     runtime.set();
     let (connection_status, _) = signal(ConnectionStatus::Connected);
     let signals = init_signals(connection_status);
-    signals.set_pending_repo_switch.set(Some("test".into()));
+    signals
+        .set_pending_repo_switch
+        .set(Some(PendingRepoSwitch::switch("test", 1)));
     assert!(!accepts_unscoped_update(signals));
 }
 
@@ -30,7 +32,10 @@ fn rejects_unscoped_updates_while_branch_switch_pending() {
     let signals = init_signals(connection_status);
     signals
         .set_pending_branch_switch
-        .set(Some(PendingBranchTarget::Local));
+        .set(Some(PendingBranchSwitch::new(
+            PendingBranchTarget::Local,
+            1,
+        )));
     assert!(!accepts_unscoped_update(signals));
 }
 
@@ -100,7 +105,9 @@ fn rejects_search_results_while_scope_switch_is_pending() {
     signals.set_current_scope_nonce.set(11);
     signals.set_current_repo_id.set(Some(repo_id.to_string()));
 
-    signals.set_pending_repo_switch.set(Some("other".into()));
+    signals
+        .set_pending_repo_switch
+        .set(Some(PendingRepoSwitch::switch("other", 1)));
     assert!(!accepts_search_results(
         "fresh",
         Some(repo_id),
@@ -112,7 +119,10 @@ fn rejects_search_results_while_scope_switch_is_pending() {
     signals.set_pending_repo_switch.set(None);
     signals
         .set_pending_branch_switch
-        .set(Some(PendingBranchTarget::Local));
+        .set(Some(PendingBranchSwitch::new(
+            PendingBranchTarget::Local,
+            1,
+        )));
     assert!(!accepts_search_results(
         "fresh",
         Some(repo_id),

@@ -7,6 +7,7 @@ use super::history_replay::{merge_history_tail, replay_buffered_live_ops, replay
 use super::history_resend::resend_pending_edits_if_ready;
 use crate::editor::EditorStats;
 use crate::editor::ffi::getEditorContent;
+use crate::hooks::use_core::LoadPhase;
 use crate::runtime::document::pending;
 use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
@@ -29,7 +30,7 @@ pub(super) fn handle_history(ctx: &SyncContext, expected_generation: u64, ops: V
         .set(ctx.local_version.get_untracked());
     ctx.mark_live_ready(expected_generation);
     replay_buffered_live_ops(ctx, expected_generation);
-    ctx.set_load_state.set("ready".to_string());
+    ctx.set_load_state.set(LoadPhase::Ready);
     ctx.set_load_progress.set((0, 0));
     ctx.set_load_eta_ms.set(0);
     resend_pending_edits_if_ready(ctx);

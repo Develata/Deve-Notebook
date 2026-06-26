@@ -48,9 +48,15 @@ pub fn handle_server_message(msg: ServerMessage, ctx: &SyncContext) {
 fn current_scoped_message_scope(ctx: &SyncContext) -> ScopedMessageScope {
     ScopedMessageScope {
         current_repo_id: ctx.current_repo_id.get_untracked(),
-        pending_repo_switch: ctx.pending_repo_switch.get_untracked(),
+        pending_repo_switch: ctx
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
         current_branch: ctx.active_branch.get_untracked(),
-        pending_branch_switch: ctx.pending_branch_switch.get_untracked(),
+        pending_branch_switch: ctx
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
         current_scope_nonce: ctx.current_scope_nonce.get_untracked(),
     }
 }
@@ -64,9 +70,15 @@ fn accepts_current_sync_payload(
     accepts_sync_payload(
         SyncPayloadScope {
             current_repo_id: ctx.current_repo_id.get_untracked(),
-            pending_repo_switch: ctx.pending_repo_switch.get_untracked(),
+            pending_repo_switch: ctx
+                .pending_repo_switch
+                .get_untracked()
+                .map(|pending| pending.expected_name),
             current_branch: ctx.active_branch.get_untracked(),
-            pending_branch_switch: ctx.pending_branch_switch.get_untracked(),
+            pending_branch_switch: ctx
+                .pending_branch_switch
+                .get_untracked()
+                .map(|pending| pending.into_target()),
             handshake_scope_nonce: ctx.handshake_scope_nonce.get_untracked(),
         },
         repo_id,

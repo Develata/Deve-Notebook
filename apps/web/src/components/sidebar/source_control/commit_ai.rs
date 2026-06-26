@@ -6,7 +6,7 @@ use super::commit_ai_runtime::{
     CommitAiEffectRunner, plan_commit_ai_effects, plan_commit_ai_runtime, run_commit_ai_effects,
 };
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
-use crate::hooks::use_core::{ChatContext, ChatMessage, SourceControlContext};
+use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage, SourceControlContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -81,7 +81,9 @@ struct CommitAiSignalEffectRunner {
 
 impl CommitAiEffectRunner for CommitAiSignalEffectRunner {
     fn switch_backend(&mut self, backend: &'static str) {
-        self.chat_ctx.set_ai_mode.set(backend.to_string());
+        self.chat_ctx
+            .set_ai_mode
+            .set(AiBackendMode::from_backend_str_or_native(backend));
     }
 
     fn append_notice(&mut self, notice: String) {

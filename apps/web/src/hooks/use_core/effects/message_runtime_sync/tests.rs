@@ -85,7 +85,11 @@ fn merge_complete_clears_pending_ops_only_for_current_repo_scope() {
     signals.set_pending_ops_count.set(3);
     signals
         .set_pending_ops_previews
-        .set(vec![("a".into(), "b".into(), "c".into())]);
+        .set(vec![PendingOpsPreview::new(
+            "a".into(),
+            "b".into(),
+            "c".into(),
+        )]);
 
     handle_merge_complete(Some(other_repo_id), None, Some(7), 3, signals);
 

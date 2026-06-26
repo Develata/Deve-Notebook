@@ -7,7 +7,7 @@ use deve_core::protocol::RepoListEntry;
 use deve_core::tree::FileNode;
 use leptos::prelude::*;
 
-use super::super::types::PendingBranchTarget;
+use super::super::types::{PendingBranchSwitch, PendingRepoSwitch};
 mod projection;
 mod scope;
 use self::projection::init_repo_projection_signals;
@@ -17,18 +17,14 @@ use self::scope::init_repo_scope_signals;
 pub(super) struct RepoSignals {
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub set_active_branch: WriteSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
-    pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
-    pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchSwitch>>,
     pub current_repo: ReadSignal<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
-    pub set_pending_repo_switch: WriteSignal<Option<String>>,
-    pub pending_repo_switch_nonce: ReadSignal<Option<u64>>,
-    pub set_pending_repo_switch_nonce: WriteSignal<Option<u64>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
+    pub set_pending_repo_switch: WriteSignal<Option<PendingRepoSwitch>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub set_current_scope_nonce: WriteSignal<u64>,
     pub shadow_repos: ReadSignal<Vec<String>>,
@@ -62,16 +58,12 @@ pub(super) fn init_repo_signals() -> RepoSignals {
         set_active_branch: scope.set_active_branch,
         pending_branch_switch: scope.pending_branch_switch,
         set_pending_branch_switch: scope.set_pending_branch_switch,
-        pending_branch_switch_nonce: scope.pending_branch_switch_nonce,
-        set_pending_branch_switch_nonce: scope.set_pending_branch_switch_nonce,
         current_repo: scope.current_repo,
         set_current_repo: scope.set_current_repo,
         current_repo_id: scope.current_repo_id,
         set_current_repo_id: scope.set_current_repo_id,
         pending_repo_switch: scope.pending_repo_switch,
         set_pending_repo_switch: scope.set_pending_repo_switch,
-        pending_repo_switch_nonce: scope.pending_repo_switch_nonce,
-        set_pending_repo_switch_nonce: scope.set_pending_repo_switch_nonce,
         current_scope_nonce: scope.current_scope_nonce,
         set_current_scope_nonce: scope.set_current_scope_nonce,
         shadow_repos: projection.shadow_repos,

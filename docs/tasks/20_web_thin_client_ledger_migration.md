@@ -24,6 +24,18 @@ Web 端迁移目标必须使用 client runtime 命名与边界：
 
 这些 client runtime 均属于 Flow Coordination 或 Object Plane adapter；最终业务事实只能由 server/core ledger authority 追溯。
 
+### 1.2 `use_core` Typed Runtime State Hardening
+
+`use_core` 作为当前 Web application-control composition root，可以在不改变 WS wire
+shape、不 bump `WS_PROTOCOL_VERSION` 的前提下，把内部 UI/runtime 状态收紧为命名类型：
+
+* load phase、sync mode、AI backend mode 必须在 Web 内部以 closed typed state 表达，wire
+  string 只允许出现在入站/出站转换边界。
+* full-text search result 与 pending ops preview 必须使用具名结构，禁止在 runtime state 中继续传播裸三元组。
+* repo / branch pending switch 必须把 target 与 `switch_nonce` 作为同一 pending value 更新，避免消息 effect 观察到 target/nonce 半更新组合。
+* 本 hardening 不改变 ledger authority、pending overlay、source-control confirmed ledger dirty
+  语义，也不改变 server/core 协议字段。
+
 ## 2. 验证目标
 
 1. Web 切文件不再出现“改动消失但无提示”。

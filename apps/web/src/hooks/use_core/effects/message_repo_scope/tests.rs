@@ -3,8 +3,8 @@ use super::{
     accepts_write_ready, matches_projection_message_scope, matches_repo_scope,
 };
 use crate::api::ConnectionStatus;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::state::init_signals;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch};
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 

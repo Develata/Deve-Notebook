@@ -81,17 +81,17 @@ pub fn MergePanel() -> impl IntoView {
                         <div class="space-y-2 mb-4 max-h-48 overflow-y-auto">
                             <For
                                 each=move || core.pending_ops_previews.get()
-                                key=|(path, _, _)| path.clone()
-                                children=move |(path, old_preview, new_preview)| {
+                                key=|preview| preview.path.clone()
+                                children=move |preview| {
                                     view! {
                                         <div class="bg-panel rounded border border-default p-2 text-xs">
-                                            <div class="font-medium text-primary mb-1">{path}</div>
+                                            <div class="font-medium text-primary mb-1">{preview.path}</div>
                                             <div class="grid grid-cols-2 gap-2">
                                                 <div class="bg-red-50 p-1 rounded text-red-700 font-mono truncate">
-                                                    {format!("- {}", old_preview)}
+                                                    {format!("- {}", preview.old_preview)}
                                                 </div>
                                                 <div class="bg-green-50 p-1 rounded text-green-700 font-mono truncate">
-                                                    {format!("+ {}", new_preview)}
+                                                    {format!("+ {}", preview.new_preview)}
                                                 </div>
                                             </div>
                                         </div>

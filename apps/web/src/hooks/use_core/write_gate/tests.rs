@@ -8,7 +8,7 @@ use super::{
     repo_write_block,
 };
 use crate::api::{ConnectionStatus, WsService};
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::models::PeerId;
 use leptos::prelude::{GetUntracked, ReadSignal, Signal, signal};
 
@@ -47,12 +47,12 @@ fn gate_state_with_status(connection_status: ConnectionStatus) -> RepoWriteGateS
 }
 
 fn read_signals(active_branch: ReadSignal<Option<PeerId>>, is_spectator: bool) -> RepoWriteSignals {
-    let (load_state, _) = signal("ready".to_string());
+    let (load_state, _) = signal(LoadPhase::Ready);
     let (handshake_ready, _) = signal(false);
     let (current_repo_id, _) = signal(Some("repo-a".to_string()));
     let (current_scope_nonce, _) = signal(7u64);
-    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-    let (pending_repo_switch, _) = signal(None::<String>);
+    let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
 
     RepoWriteSignals {
         load_state,

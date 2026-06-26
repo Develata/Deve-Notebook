@@ -47,8 +47,14 @@ pub fn accepts_write_ready_message(
         scope_nonce,
         current_repo_id: signals.current_repo_id.get_untracked(),
         active_branch: signals.active_branch.get_untracked(),
-        pending_branch_switch: signals.pending_branch_switch.get_untracked(),
-        pending_repo_switch: signals.pending_repo_switch.get_untracked(),
+        pending_branch_switch: signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        pending_repo_switch: signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
         handshake_scope_nonce: signals.handshake_scope_nonce.get_untracked(),
     })
 }
@@ -57,8 +63,14 @@ pub fn accepts_edit_rejected_message(scope_nonce: Option<u64>, signals: CoreSign
     logic::accepts_current_scope_message(
         scope_nonce,
         signals.current_scope_nonce.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
-        signals.pending_repo_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
     )
 }
 
@@ -70,14 +82,26 @@ pub fn accepts_protocol_error_message(
     if scope_nonce.is_none() {
         return logic::accepts_switch_protocol_error(
             switch_nonce,
-            signals.pending_branch_switch_nonce.get_untracked(),
-            signals.pending_repo_switch_nonce.get_untracked(),
+            signals
+                .pending_branch_switch
+                .get_untracked()
+                .map(|pending| pending.switch_nonce),
+            signals
+                .pending_repo_switch
+                .get_untracked()
+                .map(|pending| pending.switch_nonce),
         );
     }
     logic::accepts_current_scope_message(
         scope_nonce,
         signals.current_scope_nonce.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
-        signals.pending_repo_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
     )
 }

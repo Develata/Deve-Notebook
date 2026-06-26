@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::hooks::use_core::state::CoreSignals;
+use crate::hooks::use_core::{PendingOpsPreview, SyncModeState};
 use deve_core::models::{PeerId, RepoId};
 use leptos::prelude::Set;
 
@@ -29,7 +30,9 @@ pub fn handle_sync_mode_status(
         return;
     }
     signals.set_sync_mode_request_id.set(None);
-    signals.set_sync_mode.set(mode);
+    signals
+        .set_sync_mode
+        .set(SyncModeState::from_wire_or_auto(&mode));
 }
 
 pub fn handle_pending_ops_info(
@@ -53,7 +56,9 @@ pub fn handle_pending_ops_info(
     }
     signals.set_pending_ops_request_id.set(None);
     signals.set_pending_ops_count.set(count);
-    signals.set_pending_ops_previews.set(previews);
+    signals
+        .set_pending_ops_previews
+        .set(previews.into_iter().map(PendingOpsPreview::from).collect());
 }
 
 pub fn handle_merge_complete(

@@ -47,7 +47,7 @@ pub fn BottomBarStatus(locale: RwSignal<Locale>) -> impl IntoView {
         );
         derive_sync_status(SyncStatusInput {
             connection_status: session.connection_status.get(),
-            load_state: &rendering.load_state.get(),
+            load_state: rendering.load_state.get().as_str(),
             remote_branch_active: scope.active_branch.get().is_some(),
             degraded_storage: scope.is_spectator.get() && scope.active_branch.get().is_none(),
             node_role_probe_failed: session.ws.node_role_probe_failed.get(),

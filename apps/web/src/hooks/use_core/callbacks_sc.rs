@@ -4,10 +4,10 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use leptos::prelude::*;
 
@@ -37,8 +37,8 @@ pub struct SourceControlScopeSignals {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub active_branch: ReadSignal<Option<deve_core::models::PeerId>>,
     pub current_scope_nonce: ReadSignal<u64>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
 }
 
 #[derive(Clone, Copy)]

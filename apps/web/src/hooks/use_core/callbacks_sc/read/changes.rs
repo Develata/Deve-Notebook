@@ -66,9 +66,9 @@ pub(super) fn create_get_history_callback(
 mod tests {
     use super::{create_get_changes_callback, create_get_history_callback};
     use crate::api::{ConnectionStatus, WsService};
-    use crate::hooks::use_core::PendingBranchTarget;
     use crate::hooks::use_core::callbacks_sc::SourceControlScopeSignals;
     use crate::hooks::use_core::write_gate::RepoWriteSignals;
+    use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
     use deve_core::models::PeerId;
     use deve_core::protocol::ClientMessage;
     use leptos::prelude::{Callable, GetUntracked, signal};
@@ -85,9 +85,9 @@ mod tests {
         let (current_repo_id, _) = signal(Some("repo-a".to_string()));
         let (active_branch, _) = signal(Some(PeerId::new("peer-a")));
         let (current_scope_nonce, _) = signal(11u64);
-        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-        let (pending_repo_switch, _) = signal(None::<String>);
-        let (load_state, _) = signal("ready".to_string());
+        let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+        let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
+        let (load_state, _) = signal(LoadPhase::Ready);
         let (is_spectator, _) = signal(true);
         let (handshake_ready, _) = signal(false);
         let scope = SourceControlScopeSignals {

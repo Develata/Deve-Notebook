@@ -22,12 +22,9 @@ use leptos::prelude::{GetUntracked, Set, Update};
 pub fn protocol_control_signals(signals: CoreSignals) -> ProtocolControlSignals {
     ProtocolControlSignals {
         pending_branch_switch: signals.pending_branch_switch,
-        pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
         set_pending_branch_switch: signals.set_pending_branch_switch,
-        set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
-        pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
+        pending_repo_switch: signals.pending_repo_switch,
         set_pending_repo_switch: signals.set_pending_repo_switch,
-        set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
         set_shadow_list_request_id: signals.set_shadow_list_request_id,
         set_repo_list_request_id: signals.set_repo_list_request_id,
         set_doc_list_request_id: signals.set_doc_list_request_id,
@@ -116,7 +113,10 @@ pub fn handle_protocol_error_message(
     if should_recover_scope_pref_after_failed_repo_switch(
         error.code,
         switch_nonce,
-        signals.pending_repo_switch_nonce.get_untracked(),
+        signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.switch_nonce),
     ) {
         clear_failed_scope_switch(error.code, switch_nonce, protocol_control_signals(signals));
         recover_from_failed_scope_restore(ws, signals);

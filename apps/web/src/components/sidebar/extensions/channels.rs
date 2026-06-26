@@ -7,7 +7,7 @@ use crate::api::{
 };
 use crate::components::icons::{Terminal, Zap};
 use crate::hooks::use_ai_backend::use_ai_backend_capabilities_with_fallback;
-use crate::hooks::use_core::ChatContext;
+use crate::hooks::use_core::{AiBackendMode, ChatContext};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
@@ -44,7 +44,7 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
                 title=native_reason
                 on:click=move |_| {
                     if native_available.get_untracked() {
-                        chat.set_ai_mode.set(AI_BACKEND_NATIVE.to_string());
+                        chat.set_ai_mode.set(AiBackendMode::Native);
                     }
                 }
             >
@@ -74,7 +74,7 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
                 title=trusted_reason
                 on:click=move |_| {
                     if trusted_available.get_untracked() {
-                        chat.set_ai_mode.set(AI_BACKEND_TRUSTED_CLI.to_string());
+                        chat.set_ai_mode.set(AiBackendMode::TrustedCli);
                     }
                 }
             >

@@ -3,9 +3,9 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::state::CoreSignals;
 use crate::hooks::use_core::switch_nonce::next_switch_nonce_after;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingBranchTarget};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, Set};
 
@@ -29,12 +29,11 @@ pub fn recover_local_branch(ws: &WsService, signals: CoreSignals) {
     signals.set_handshake_ready.set(false);
     signals
         .set_pending_branch_switch
-        .set(Some(PendingBranchTarget::Local));
-    signals
-        .set_pending_branch_switch_nonce
-        .set(Some(switch_nonce));
+        .set(Some(PendingBranchSwitch::new(
+            PendingBranchTarget::Local,
+            switch_nonce,
+        )));
     signals.set_pending_repo_switch.set(None);
-    signals.set_pending_repo_switch_nonce.set(None);
     ws.send(ClientMessage::SwitchBranch {
         peer_id: None,
         switch_nonce: Some(switch_nonce),

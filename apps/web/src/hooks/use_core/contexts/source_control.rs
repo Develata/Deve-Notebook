@@ -7,7 +7,7 @@ use leptos::prelude::*;
 
 use super::super::diff_session::DiffSessionWire;
 use super::super::source_control_notice::SourceControlNotice;
-use super::super::types::PendingBranchTarget;
+use super::super::types::{PendingBranchSwitch, PendingRepoSwitch};
 use super::super::write_gate::RepoWriteBlock;
 use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
@@ -31,8 +31,8 @@ pub struct SourceControlContext {
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<ChangeEntry>,
     pub on_stage_files: Callback<Vec<ChangeEntry>>,

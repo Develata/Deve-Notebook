@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::hooks::use_core::PendingRepoSwitch;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, Set};
 
@@ -26,10 +27,10 @@ pub fn maybe_switch_to_first_repo(repos: &[String], ws: &WsService, signals: Cor
     signals.set_handshake_scope_nonce.set(None);
     signals
         .set_pending_repo_switch
-        .set(Some(first_repo.clone()));
-    signals
-        .set_pending_repo_switch_nonce
-        .set(Some(switch_nonce));
+        .set(Some(PendingRepoSwitch::switch(
+            first_repo.clone(),
+            switch_nonce,
+        )));
     ws.send(ClientMessage::SwitchRepo {
         name: first_repo,
         switch_nonce: Some(switch_nonce),
@@ -42,17 +43,13 @@ fn should_auto_switch_to_first_repo(repos: &[String], signals: CoreSignals) -> b
         && signals.current_repo_id.get_untracked().is_none()
         && signals.active_branch.get_untracked().is_none()
         && signals.pending_branch_switch.get_untracked().is_none()
-        && signals
-            .pending_branch_switch_nonce
-            .get_untracked()
-            .is_none()
         && signals.pending_repo_switch.get_untracked().is_none()
-        && signals.pending_repo_switch_nonce.get_untracked().is_none()
 }
 
 #[cfg(test)]
 mod tests {
     use super::should_auto_switch_to_first_repo;
+    use crate::hooks::use_core::PendingRepoSwitch;
     use crate::hooks::use_core::state::init_signals;
     use leptos::prelude::*;
 
@@ -67,7 +64,7 @@ mod tests {
 
         signals
             .set_pending_repo_switch
-            .set(Some("default".to_string()));
+            .set(Some(PendingRepoSwitch::switch("default", 1)));
         assert!(!should_auto_switch_to_first_repo(&repos, signals));
     }
 

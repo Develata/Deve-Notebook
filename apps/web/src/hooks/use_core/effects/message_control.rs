@@ -23,9 +23,7 @@ pub fn handle_branch_switched(
         switch_nonce,
         effects_switch::BranchSwitchSignals {
             pending_branch_switch: signals.pending_branch_switch,
-            pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
             set_pending_branch_switch: signals.set_pending_branch_switch,
-            set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
             set_active_branch: signals.set_active_branch,
         },
     ) {
@@ -44,7 +42,10 @@ pub fn handle_repo_switched(
     if !string_branch_matches_scope(
         &branch,
         signals.active_branch.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
     ) {
         leptos::logging::warn!("忽略 RepoSwitched: branch 与当前 scope 不匹配");
         return;
@@ -58,8 +59,6 @@ pub fn handle_repo_switched(
             current_repo_id: signals.current_repo_id,
             pending_repo_switch: signals.pending_repo_switch,
             set_pending_repo_switch: signals.set_pending_repo_switch,
-            pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
-            set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
             current_scope_nonce: signals.current_scope_nonce,
             set_current_scope_nonce: signals.set_current_scope_nonce,
             set_current_repo: signals.set_current_repo,

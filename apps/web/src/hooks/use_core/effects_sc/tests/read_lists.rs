@@ -102,12 +102,12 @@ fn dispatch_read_list_from_repo(
         detail: Some("previous error".into()),
     }));
     let (current_repo_id, _) = signal(Some(current_repo_id_value.to_string()));
-    let (load_state, _) = signal("ready".to_string());
+    let (load_state, _) = signal(LoadPhase::Ready);
     let (is_spectator, _) = signal(active_branch_value.is_some());
     let (handshake_ready, _) = signal(active_branch_value.is_none());
     let (active_branch, _) = signal(active_branch_value);
-    let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
-    let (pending_repo_switch, _) = signal(None::<String>);
+    let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
     let (current_scope_nonce, _) = signal(17u64);
     let schedule_refresh = || {};
 

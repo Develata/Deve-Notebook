@@ -2,12 +2,12 @@
 //!   - 07_network#web-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 //!
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::models::PeerId;
 
 pub fn should_refresh_shadow_list(
-    pending_branch_switch: Option<PendingBranchTarget>,
-    pending_repo_switch: Option<String>,
+    pending_branch_switch: Option<PendingBranchSwitch>,
+    pending_repo_switch: Option<PendingRepoSwitch>,
     has_inflight_shadow_list: bool,
 ) -> bool {
     pending_branch_switch.is_none() && pending_repo_switch.is_none() && !has_inflight_shadow_list
@@ -16,8 +16,8 @@ pub fn should_refresh_shadow_list(
 pub fn should_recover_local_branch_from_deleted_peer(
     peer_id: &PeerId,
     active_branch: Option<PeerId>,
-    pending_branch_switch: Option<PendingBranchTarget>,
-    pending_repo_switch: Option<String>,
+    pending_branch_switch: Option<PendingBranchSwitch>,
+    pending_repo_switch: Option<PendingRepoSwitch>,
 ) -> bool {
     pending_branch_switch.is_none()
         && pending_repo_switch.is_none()
@@ -28,8 +28,8 @@ pub fn should_recover_local_branch_from_deleted_peer(
 pub fn should_recover_local_branch_from_shadow_list(
     shadows: &[String],
     active_branch: Option<PeerId>,
-    pending_branch_switch: Option<PendingBranchTarget>,
-    pending_repo_switch: Option<String>,
+    pending_branch_switch: Option<PendingBranchSwitch>,
+    pending_repo_switch: Option<PendingRepoSwitch>,
     authoritative_refresh: bool,
 ) -> bool {
     authoritative_refresh

@@ -17,8 +17,14 @@ pub fn handle_shadow_list_message(
     signals: CoreSignals,
 ) {
     let scope = ShadowListScope {
-        pending_branch_switch: signals.pending_branch_switch.get_untracked(),
-        pending_repo_switch: signals.pending_repo_switch.get_untracked(),
+        pending_branch_switch: signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        pending_repo_switch: signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
     };
     let accepts_system_shadow = request_id.is_none()
         && shadow_list_matches_scope(

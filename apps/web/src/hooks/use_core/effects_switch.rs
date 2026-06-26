@@ -5,7 +5,7 @@
 use deve_core::models::PeerId;
 use leptos::prelude::*;
 
-use super::types::{PendingBranchTarget, RepoSwitchSignals};
+use super::types::{PendingBranchSwitch, RepoSwitchSignals};
 mod branch;
 mod repo;
 
@@ -22,10 +22,8 @@ pub struct RepoSwitchOutcome {
 
 #[derive(Clone, Copy)]
 pub struct BranchSwitchSignals {
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
-    pub pending_branch_switch_nonce: ReadSignal<Option<u64>>,
-    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchTarget>>,
-    pub set_pending_branch_switch_nonce: WriteSignal<Option<u64>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
+    pub set_pending_branch_switch: WriteSignal<Option<PendingBranchSwitch>>,
     pub set_active_branch: WriteSignal<Option<PeerId>>,
 }
 

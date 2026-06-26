@@ -9,6 +9,7 @@ use crate::components::search_box::providers::{
 };
 use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::hooks::use_core::SearchHit;
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -160,7 +161,7 @@ pub fn create_placeholder_memo(query: Signal<String>, locale: RwSignal<Locale>) 
 
 fn full_text_results(
     query: &str,
-    raw_results: Vec<(String, String, f32)>,
+    raw_results: Vec<SearchHit>,
     locale: Locale,
 ) -> Vec<SearchResult> {
     if query.trim().is_empty() {
@@ -169,13 +170,13 @@ fn full_text_results(
     let detail = t::search::full_text_match(locale);
     raw_results
         .into_iter()
-        .filter_map(|(doc_id, path, score)| {
-            let uuid = uuid::Uuid::parse_str(&doc_id).ok()?;
+        .filter_map(|hit| {
+            let uuid = uuid::Uuid::parse_str(&hit.doc_id).ok()?;
             Some(SearchResult {
-                id: format!("full-text-{doc_id}"),
-                title: path,
+                id: format!("full-text-{}", hit.doc_id),
+                title: hit.path,
                 detail: Some(detail.to_string()),
-                score,
+                score: hit.score,
                 action: SearchAction::OpenDoc(DocId(uuid)),
             })
         })

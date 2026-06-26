@@ -89,7 +89,7 @@ pub(super) fn build_progress_handler(
 mod tests {
     use super::{SnapshotApplySignals, build_apply_batch_with_applier, build_progress_handler};
     use crate::editor::sync::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
-    use crate::hooks::use_core::PendingBranchTarget;
+    use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
     use deve_core::models::Op;
     use deve_core::protocol::ConfirmedOp;
     use leptos::prelude::*;
@@ -184,9 +184,9 @@ mod tests {
         let repo_id = uuid::Uuid::new_v4();
         let (open_request_id, _) = signal(7u64);
         let (current_repo_id, _) = signal(Some(repo_id.to_string()));
-        let (pending_repo_switch, _) = signal(None::<String>);
+        let (pending_repo_switch, _) = signal(None::<PendingRepoSwitch>);
         let (active_branch, _) = signal(None);
-        let (pending_branch_switch, _) = signal(None::<PendingBranchTarget>);
+        let (pending_branch_switch, _) = signal(None::<PendingBranchSwitch>);
         let (current_scope_nonce, _) = signal(11u64);
         SnapshotRequestGate::new(SnapshotRequestGateInput {
             open_request_id,

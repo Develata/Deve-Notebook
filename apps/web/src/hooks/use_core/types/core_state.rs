@@ -17,7 +17,9 @@ use super::super::diff_session::DiffSessionWire;
 use super::super::navigation::PendingNavigation;
 use super::super::source_control_notice::SourceControlNotice;
 use super::super::state::PluginResponse;
-use super::shared::{ChatMessage, PeerSession, PendingBranchTarget};
+use super::pending_switch::{PendingBranchSwitch, PendingRepoSwitch};
+use super::runtime_state::{AiBackendMode, LoadPhase, PendingOpsPreview, SearchHit, SyncModeState};
+use super::shared::{ChatMessage, PeerSession};
 use crate::runtime::document::pending::PendingLocalEdits;
 
 #[derive(Clone)]
@@ -53,19 +55,19 @@ pub struct CoreState {
     pub set_chat_messages: WriteSignal<Vec<ChatMessage>>,
     pub is_chat_streaming: ReadSignal<bool>,
     pub set_is_chat_streaming: WriteSignal<bool>,
-    pub ai_mode: ReadSignal<String>,
-    pub set_ai_mode: WriteSignal<String>,
-    pub search_results: ReadSignal<Vec<(String, String, f32)>>,
+    pub ai_mode: ReadSignal<AiBackendMode>,
+    pub set_ai_mode: WriteSignal<AiBackendMode>,
+    pub search_results: ReadSignal<Vec<SearchHit>>,
     pub on_search: Callback<String>,
-    pub load_state: ReadSignal<String>,
-    pub set_load_state: WriteSignal<String>,
+    pub load_state: ReadSignal<LoadPhase>,
+    pub set_load_state: WriteSignal<LoadPhase>,
     pub load_progress: ReadSignal<(usize, usize)>,
     pub set_load_progress: WriteSignal<(usize, usize)>,
     pub load_eta_ms: ReadSignal<u64>,
     pub set_load_eta_ms: WriteSignal<u64>,
-    pub sync_mode: ReadSignal<String>,
+    pub sync_mode: ReadSignal<SyncModeState>,
     pub pending_ops_count: ReadSignal<u32>,
-    pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
+    pub pending_ops_previews: ReadSignal<Vec<PendingOpsPreview>>,
     pub on_get_sync_mode: Callback<()>,
     pub on_set_sync_mode: Callback<String>,
     pub on_get_pending_ops: Callback<()>,
@@ -73,14 +75,14 @@ pub struct CoreState {
     pub on_discard_pending: Callback<()>,
     pub active_branch: ReadSignal<Option<PeerId>>,
     pub set_active_branch: WriteSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
     pub on_switch_branch: Callback<Option<String>>,
     pub current_repo: ReadSignal<Option<String>>,
     pub set_current_repo: WriteSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub on_switch_repo: Callback<String>,
     pub on_create_repo: Callback<String>,
     pub on_rename_repo: Callback<RepoRenameRequest>,

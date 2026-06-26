@@ -4,12 +4,13 @@
 //!
 use super::footer_playback::{PlaybackNarrow, PlaybackWide};
 use super::footer_status::LoadStatus;
+use crate::hooks::use_core::LoadPhase;
 use crate::i18n::Locale;
 use leptos::prelude::*;
 
 #[component]
 pub fn FooterDetails(
-    load_state: ReadSignal<String>,
+    load_state: ReadSignal<LoadPhase>,
     load_progress: ReadSignal<(usize, usize)>,
     load_eta_ms: ReadSignal<u64>,
     is_narrow: ReadSignal<bool>,
@@ -27,7 +28,7 @@ pub fn FooterDetails(
             data-deve-mobile-bottom-bar-details="expanded"
             class="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none"
         >
-            <Show when=move || load_state.get() != "ready">
+            <Show when=move || !load_state.get().is_ready()>
                 <div class="shrink-0 px-2 h-7 rounded-md bg-sidebar border border-default flex items-center">
                     <LoadStatus
                         load_state=load_state

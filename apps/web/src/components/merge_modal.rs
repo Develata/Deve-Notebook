@@ -63,22 +63,22 @@ pub fn MergeModal(show: ReadSignal<bool>, set_show: WriteSignal<bool>) -> impl I
                     <div class="flex-1 overflow-y-auto mb-4 border border-default rounded-lg p-2 bg-sidebar">
                         <For
                             each=move || core.pending_ops_previews.get()
-                            key=|(path, _, _)| path.clone()
-                            children=move |(path, old_preview, new_preview)| {
+                            key=|preview| preview.path.clone()
+                            children=move |preview| {
                                 view! {
                                     <div class="bg-panel rounded shadow-sm border border-default p-3 mb-2 text-sm last:mb-0">
-                                        <div class="font-medium text-primary mb-2 border-b border-default pb-1">{path}</div>
+                                        <div class="font-medium text-primary mb-2 border-b border-default pb-1">{preview.path}</div>
                                         <div class="grid grid-cols-2 gap-2 font-mono text-xs">
                                             <div>
                                                 <div class="text-xs text-muted mb-0.5">{move || t::merge::current(locale.get())}</div>
                                                 <div class="bg-red-50 text-red-700 p-1.5 rounded break-all">
-                                                    {format!("- {}", old_preview)}
+                                                    {format!("- {}", preview.old_preview)}
                                                 </div>
                                             </div>
                                             <div>
                                                  <div class="text-xs text-muted mb-0.5">{move || t::merge::incoming(locale.get())}</div>
                                                 <div class="bg-green-50 text-green-700 p-1.5 rounded break-all">
-                                                    {format!("+ {}", new_preview)}
+                                                    {format!("+ {}", preview.new_preview)}
                                                 </div>
                                             </div>
                                         </div>

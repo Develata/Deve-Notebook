@@ -9,7 +9,9 @@ use std::collections::HashMap;
 use super::super::contexts::SystemMetricsData;
 use super::super::navigation::PendingNavigation;
 use super::super::state::PluginResponse;
-use super::super::types::{ChatMessage, PeerSession};
+use super::super::types::{
+    AiBackendMode, ChatMessage, LoadPhase, PeerSession, PendingOpsPreview, SearchHit, SyncModeState,
+};
 use crate::runtime::document::pending::PendingLocalEdits;
 mod ai;
 mod connection;
@@ -40,26 +42,26 @@ pub(super) struct RuntimeSignals {
     pub set_chat_messages: WriteSignal<Vec<ChatMessage>>,
     pub is_chat_streaming: ReadSignal<bool>,
     pub set_is_chat_streaming: WriteSignal<bool>,
-    pub ai_mode: ReadSignal<String>,
-    pub set_ai_mode: WriteSignal<String>,
+    pub ai_mode: ReadSignal<AiBackendMode>,
+    pub set_ai_mode: WriteSignal<AiBackendMode>,
     pub search_request_id: ReadSignal<Option<String>>,
     pub set_search_request_id: WriteSignal<Option<String>>,
-    pub search_results: ReadSignal<Vec<(String, String, f32)>>,
-    pub set_search_results: WriteSignal<Vec<(String, String, f32)>>,
-    pub load_state: ReadSignal<String>,
-    pub set_load_state: WriteSignal<String>,
+    pub search_results: ReadSignal<Vec<SearchHit>>,
+    pub set_search_results: WriteSignal<Vec<SearchHit>>,
+    pub load_state: ReadSignal<LoadPhase>,
+    pub set_load_state: WriteSignal<LoadPhase>,
     pub load_progress: ReadSignal<(usize, usize)>,
     pub set_load_progress: WriteSignal<(usize, usize)>,
     pub load_eta_ms: ReadSignal<u64>,
     pub set_load_eta_ms: WriteSignal<u64>,
-    pub sync_mode: ReadSignal<String>,
-    pub set_sync_mode: WriteSignal<String>,
+    pub sync_mode: ReadSignal<SyncModeState>,
+    pub set_sync_mode: WriteSignal<SyncModeState>,
     pub sync_mode_request_id: ReadSignal<Option<String>>,
     pub set_sync_mode_request_id: WriteSignal<Option<String>>,
     pub pending_ops_count: ReadSignal<u32>,
     pub set_pending_ops_count: WriteSignal<u32>,
-    pub pending_ops_previews: ReadSignal<Vec<(String, String, String)>>,
-    pub set_pending_ops_previews: WriteSignal<Vec<(String, String, String)>>,
+    pub pending_ops_previews: ReadSignal<Vec<PendingOpsPreview>>,
+    pub set_pending_ops_previews: WriteSignal<Vec<PendingOpsPreview>>,
     pub pending_ops_request_id: ReadSignal<Option<String>>,
     pub set_pending_ops_request_id: WriteSignal<Option<String>>,
     pub system_metrics: ReadSignal<Option<SystemMetricsData>>,

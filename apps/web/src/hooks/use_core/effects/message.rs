@@ -39,8 +39,14 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                 let refresh_scope = capture_refresh_scope(
                     signals.current_repo_id.get_untracked(),
                     signals.active_branch.get_untracked(),
-                    signals.pending_branch_switch.get_untracked(),
-                    signals.pending_repo_switch.get_untracked(),
+                    signals
+                        .pending_branch_switch
+                        .get_untracked()
+                        .map(|pending| pending.into_target()),
+                    signals
+                        .pending_repo_switch
+                        .get_untracked()
+                        .map(|pending| pending.expected_name),
                     signals.current_scope_nonce.get_untracked(),
                 );
                 let Some(refresh_scope) = refresh_scope else {
@@ -60,6 +66,10 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                     let branch = active_branch.get_untracked();
                     let pending_branch = pending_branch_switch.get_untracked();
                     let pending_repo = pending_repo_switch.get_untracked();
+                    let pending_branch_target =
+                        pending_branch.clone().map(|pending| pending.into_target());
+                    let pending_repo_name =
+                        pending_repo.clone().map(|pending| pending.expected_name);
                     let scope_nonce = signals.current_scope_nonce.get_untracked();
                     let load_state = signals.load_state.get_untracked();
                     let readiness = ws_for_timer.native_runtime_readiness_for_untracked(
@@ -71,12 +81,12 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                         &refresh_scope,
                         repo_id.clone(),
                         branch,
-                        pending_branch.clone(),
-                        pending_repo.clone(),
+                        pending_branch_target,
+                        pending_repo_name,
                         scope_nonce,
                         RepoWriteGateState {
                             connection_status: ws_for_timer.status.get_untracked(),
-                            load_state: &load_state,
+                            load_state: load_state.as_str(),
                             is_read_only: signals.is_spectator.get_untracked(),
                             node_role_probe_failed: ws_for_timer
                                 .node_role_probe_failed

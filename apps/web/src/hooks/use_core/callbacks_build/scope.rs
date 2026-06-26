@@ -76,14 +76,10 @@ pub(super) fn switch_scope(signals: &CoreSignals) -> SwitchScopeSignals {
         current_scope_nonce: signals.current_scope_nonce,
         active_branch: signals.active_branch,
         pending_branch_switch: signals.pending_branch_switch,
-        pending_branch_switch_nonce: signals.pending_branch_switch_nonce,
         pending_repo_switch: signals.pending_repo_switch,
-        pending_repo_switch_nonce: signals.pending_repo_switch_nonce,
         set_handshake_ready: signals.set_handshake_ready,
         set_handshake_scope_nonce: signals.set_handshake_scope_nonce,
         set_pending_branch_switch: signals.set_pending_branch_switch,
-        set_pending_branch_switch_nonce: signals.set_pending_branch_switch_nonce,
         set_pending_repo_switch: signals.set_pending_repo_switch,
-        set_pending_repo_switch_nonce: signals.set_pending_repo_switch_nonce,
     }
 }

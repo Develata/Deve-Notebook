@@ -7,8 +7,8 @@
 
 use crate::api::WsService;
 use crate::editor::EditorStats;
-use crate::hooks::use_core::PendingBranchTarget;
 use crate::hooks::use_core::navigation::PendingNavigation;
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use crate::runtime::document::pending::PendingLocalEdits;
 use deve_core::models::{DocId, Op, PeerId};
 use deve_core::protocol::ConfirmedOp;
@@ -32,12 +32,12 @@ pub struct SyncContext<'a> {
     pub buffered_live_ops: Arc<Mutex<Vec<ConfirmedOp>>>,
     pub buffered_encrypted_ops: Arc<Mutex<Vec<EncryptedOp>>>,
     pub active_branch: ReadSignal<Option<PeerId>>,
-    pub pending_branch_switch: ReadSignal<Option<PendingBranchTarget>>,
+    pub pending_branch_switch: ReadSignal<Option<PendingBranchSwitch>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
-    pub pending_repo_switch: ReadSignal<Option<String>>,
+    pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
     pub handshake_scope_nonce: ReadSignal<Option<u64>>,
-    pub load_state: ReadSignal<String>,
+    pub load_state: ReadSignal<LoadPhase>,
     pub is_spectator: Signal<bool>,
     pub handshake_ready: ReadSignal<bool>,
     pub open_request_id: ReadSignal<u64>,
@@ -57,7 +57,7 @@ pub struct SyncContext<'a> {
     pub is_playback: ReadSignal<bool>,
     pub set_playback_version: WriteSignal<u64>,
     // 加载进度
-    pub set_load_state: WriteSignal<String>,
+    pub set_load_state: WriteSignal<LoadPhase>,
     pub set_load_progress: WriteSignal<(usize, usize)>,
     pub set_load_eta_ms: WriteSignal<u64>,
     // 统计回调

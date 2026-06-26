@@ -1,7 +1,9 @@
 use super::{MiscCallbacks, MiscRequestSignals, SearchScopeSignals, create_misc_callbacks};
 use crate::api::{ConnectionStatus, WsService};
 use crate::editor::EditorStats;
-use crate::hooks::use_core::PendingBranchTarget;
+use crate::hooks::use_core::{
+    LoadPhase, PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch, SearchHit,
+};
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{Callable, GetUntracked, ReadSignal, signal};
 use leptos::reactive::owner::Owner;
@@ -11,7 +13,7 @@ struct SearchHarness {
     ws: WsService,
     sync_banner: ReadSignal<Option<String>>,
     search_request_id: ReadSignal<Option<String>>,
-    search_results: ReadSignal<Vec<(String, String, f32)>>,
+    search_results: ReadSignal<Vec<SearchHit>>,
     callbacks: MiscCallbacks,
 }
 
@@ -24,13 +26,18 @@ fn search_harness(
     runtime.set();
     let ws = WsService::new_for_test(ConnectionStatus::Connected);
     let (_stats, set_stats) = signal(EditorStats::default());
-    let (load_state, _) = signal(load_state_value.to_string());
+    let (load_state, _) = signal(LoadPhase::from_wire_or_ready(load_state_value));
     let (current_scope_nonce, _) = signal(37u64);
-    let (pending_branch_switch, _) = signal(pending_branch_value);
-    let (pending_repo_switch, _) = signal(pending_repo_value);
+    let (pending_branch_switch, _) =
+        signal(pending_branch_value.map(|target| PendingBranchSwitch::new(target, 1)));
+    let (pending_repo_switch, _) =
+        signal(pending_repo_value.map(|name| PendingRepoSwitch::switch(name, 1)));
     let (search_request_id, set_search_request_id) = signal(Some("previous-search".to_string()));
-    let (search_results, set_search_results) =
-        signal(vec![("doc.md".to_string(), "existing".to_string(), 1.0)]);
+    let (search_results, set_search_results) = signal(vec![SearchHit::new(
+        "doc.md".to_string(),
+        "existing".to_string(),
+        1.0,
+    )]);
     let (_plugin_request_ids, set_plugin_request_ids) = signal(Vec::<String>::new());
     let (sync_banner, set_sync_banner) = signal(None::<String>);
 

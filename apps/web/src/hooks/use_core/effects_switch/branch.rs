@@ -5,7 +5,8 @@
 use deve_core::models::PeerId;
 use leptos::prelude::{GetUntracked, Set};
 
-use super::{BranchSwitchSignals, PendingBranchTarget};
+use super::BranchSwitchSignals;
+use crate::hooks::use_core::PendingBranchTarget;
 
 pub fn handle_branch_switched(
     peer_id: Option<String>,
@@ -21,13 +22,11 @@ pub fn handle_branch_switched(
         .clone()
         .map(PendingBranchTarget::Shadow)
         .unwrap_or(PendingBranchTarget::Local);
-    if pending != next_target || signals.pending_branch_switch_nonce.get_untracked() != switch_nonce
-    {
+    if pending.target != next_target || Some(pending.switch_nonce) != switch_nonce {
         leptos::logging::warn!("忽略过期 BranchSwitched: {:?}", peer_id);
         return false;
     }
     signals.set_pending_branch_switch.set(None);
-    signals.set_pending_branch_switch_nonce.set(None);
     if !success {
         leptos::logging::warn!("分支切换失败");
         return false;

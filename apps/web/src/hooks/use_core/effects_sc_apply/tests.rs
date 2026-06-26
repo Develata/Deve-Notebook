@@ -3,6 +3,7 @@ use super::{
 };
 use crate::api::{ConnectionStatus, WsService};
 use crate::hooks::use_core::write_gate::RepoWriteGateState;
+use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{GetUntracked, signal};
@@ -88,12 +89,11 @@ fn run_fs_refresh(
     }
     let (current_scope_nonce, _set_current_scope_nonce) = signal(7u64);
     let (current_repo_id, _set_current_repo_id) = signal(Some("repo-a".to_string()));
-    let (load_state, _set_load_state) = signal("ready".to_string());
+    let (load_state, _set_load_state) = signal(LoadPhase::Ready);
     let (is_spectator, _set_is_spectator) = signal(false);
     let (handshake_ready, _set_handshake_ready) = signal(true);
-    let (pending_branch_switch, _set_pending_branch_switch) =
-        signal(None::<super::super::types::PendingBranchTarget>);
-    let (pending_repo_switch, _set_pending_repo_switch) = signal(None::<String>);
+    let (pending_branch_switch, _set_pending_branch_switch) = signal(None::<PendingBranchSwitch>);
+    let (pending_repo_switch, _set_pending_repo_switch) = signal(None::<PendingRepoSwitch>);
     let (degraded_sync_mode, _set_degraded_sync_mode) = signal(None);
     let (sync_banner, set_sync_banner) = signal(None::<String>);
     let (doc_list_request_id, set_doc_list_request_id) = signal(None::<String>);

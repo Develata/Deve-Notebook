@@ -15,9 +15,14 @@ pub(super) fn clear_failed_scope_switch(
     let Some(switch_nonce) = switch_nonce else {
         return;
     };
-    let clear_branch = signals.pending_branch_switch.get_untracked().is_some()
-        && signals.pending_branch_switch_nonce.get_untracked() == Some(switch_nonce);
-    let clear_repo = signals.pending_repo_switch_nonce.get_untracked() == Some(switch_nonce);
+    let clear_branch = signals
+        .pending_branch_switch
+        .get_untracked()
+        .is_some_and(|pending| pending.switch_nonce == switch_nonce);
+    let clear_repo = signals
+        .pending_repo_switch
+        .get_untracked()
+        .is_some_and(|pending| pending.switch_nonce == switch_nonce);
     if !clear_branch && !clear_repo {
         return;
     }
@@ -35,11 +40,9 @@ pub(super) fn clear_failed_scope_switch(
     signals.set_commit_diff_request_id.set(None);
     if clear_branch {
         signals.set_pending_branch_switch.set(None);
-        signals.set_pending_branch_switch_nonce.set(None);
     }
     if clear_repo {
         signals.set_pending_repo_switch.set(None);
-        signals.set_pending_repo_switch_nonce.set(None);
     }
 }
 

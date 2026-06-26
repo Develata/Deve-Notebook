@@ -43,8 +43,14 @@ pub fn matches_current_message_scope(
         branch,
         signals.current_repo_id,
         signals.active_branch.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
-        signals.pending_repo_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
+        signals
+            .pending_repo_switch
+            .get_untracked()
+            .map(|pending| pending.expected_name),
     )
 }
 
@@ -56,7 +62,10 @@ pub fn matches_projection_message_scope(
     peer_branch_matches_scope(
         branch,
         signals.active_branch.get_untracked(),
-        signals.pending_branch_switch.get_untracked(),
+        signals
+            .pending_branch_switch
+            .get_untracked()
+            .map(|pending| pending.into_target()),
     ) && logic::current_repo_matches(repo_id, signals.current_repo_id.get_untracked())
 }
 

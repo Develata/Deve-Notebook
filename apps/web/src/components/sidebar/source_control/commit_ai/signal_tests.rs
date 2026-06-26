@@ -2,9 +2,9 @@ use super::super::commit_ai_runtime::{
     CommitAiRuntimeEffect, plan_commit_ai_effects, plan_commit_ai_runtime, run_commit_ai_effects,
 };
 use super::CommitAiSignalEffectRunner;
-use crate::api::{AI_BACKEND_NATIVE, AI_PLUGIN_TRUSTED_CLI, BackendSendDecision};
+use crate::api::{AI_PLUGIN_TRUSTED_CLI, BackendSendDecision};
 use crate::hooks::use_core::state::PluginResponse;
-use crate::hooks::use_core::{ChatContext, ChatMessage};
+use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
 use leptos::prelude::*;
 use leptos::reactive::owner::Owner;
 
@@ -16,7 +16,7 @@ fn source_control_commit_ai_signal_runner_dispatches_full_plugin_call_tuple() {
     _runtime.set();
     let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
     let (is_streaming, set_is_streaming) = signal(true);
-    let (ai_mode, set_ai_mode) = signal(AI_BACKEND_NATIVE.to_string());
+    let (ai_mode, set_ai_mode) = signal(AiBackendMode::Native);
     let (plugin_last_response, _) = signal(PluginResponse::default());
     let (plugin_calls, set_plugin_calls) = signal(Vec::<PluginCall>::new());
     let active_req_id = RwSignal::new(None::<String>);
@@ -81,7 +81,7 @@ fn source_control_commit_ai_signal_runner_block_stops_active_request() {
     _runtime.set();
     let (messages, set_messages) = signal(Vec::<ChatMessage>::new());
     let (is_streaming, set_is_streaming) = signal(true);
-    let (ai_mode, set_ai_mode) = signal(AI_BACKEND_NATIVE.to_string());
+    let (ai_mode, set_ai_mode) = signal(AiBackendMode::Native);
     let (plugin_last_response, _) = signal(PluginResponse::default());
     let (plugin_calls, set_plugin_calls) = signal(Vec::<PluginCall>::new());
     let active_req_id = RwSignal::new(Some("req-42".to_string()));
