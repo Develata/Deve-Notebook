@@ -152,6 +152,70 @@ fn auto_receive_applies_remote_ops_immediately() -> anyhow::Result<()> {
 }
 
 #[test]
+fn auto_apply_remote_ops_rejects_seq_gap() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Auto)?;
+    let peer = PeerId::new("remote");
+    engine.apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+    assert_eq!(engine.version_vector().get(&peer), 1);
+
+    // 跳过 seq 2 直接给 seq 3 会让 vector 越过一个未接收的 op、静默丢失它；
+    // apply 必须 fail-closed，而不是悄悄推进 vector。
+    let err = engine
+        .apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 3)?)
+        .expect_err("seq gap must fail closed");
+    assert!(
+        err.to_string().contains("non-contiguous"),
+        "unexpected error: {err}"
+    );
+    assert_eq!(
+        engine.version_vector().get(&peer),
+        1,
+        "vector advanced past an unreceived op"
+    );
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+    Ok(())
+}
+
+#[test]
+fn auto_replayed_remote_ops_do_not_append_duplicate_shadow_entries() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Auto)?;
+    let peer = PeerId::new("remote");
+    engine.apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+    assert_eq!(engine.version_vector().get(&peer), 1);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+
+    engine.apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+
+    assert_eq!(engine.version_vector().get(&peer), 1);
+    assert_eq!(
+        repo.get_shadow_max_seq(&peer, &repo_id)?,
+        1,
+        "stale replay appended a duplicate shadow entry"
+    );
+    Ok(())
+}
+
+#[test]
+fn manual_merge_rejects_incremental_seq_gap() -> anyhow::Result<()> {
+    let (_dir, repo, repo_id, key, mut engine) = build_engine(SyncMode::Manual)?;
+    let peer = PeerId::new("remote");
+    engine.apply_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 1)?)?;
+    engine.buffer_remote_ops(encrypted_response_with_seq(&peer, repo_id, &key, 3)?);
+
+    let err = engine
+        .merge_pending()
+        .expect_err("seq gap must fail closed");
+    assert!(
+        err.to_string().contains("non-contiguous"),
+        "unexpected error: {err}"
+    );
+    assert_eq!(engine.pending_ops_count(), 1);
+    assert_eq!(engine.version_vector().get(&peer), 1);
+    assert_eq!(repo.get_shadow_max_seq(&peer, &repo_id)?, 1);
+    Ok(())
+}
+
+#[test]
 fn failed_manual_merge_retains_pending_ops() -> anyhow::Result<()> {
     let (_dir, _repo, repo_id, _key, mut engine) = build_engine(SyncMode::Manual)?;
     let peer = PeerId::new("remote");

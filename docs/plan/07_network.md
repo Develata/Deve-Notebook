@@ -358,6 +358,15 @@ Vector authority 规则：
   `SyncHello` diff. A committed local Projection Workspace change on peer A must produce either an incremental
   `SyncPush` or snapshot response for peer B, and peer B must write it only to peer A's shadow repo.
 
+Apply 端单调性与连续性规则（与第 5 节「不得破坏 vector monotonicity」一致，定义入站 facts 落库的合法性）：
+
+- **Snapshot 单调性**：远端 snapshot 是「整库 reset 到该状态」。其携带的 peer 水位 `max_seq` **MUST NOT**
+  低于本地已持有的同一 peer vector；`max_seq <= 本地 vector` 的陈旧或乱序到达 snapshot **MUST** 跳过——既不
+  reset shadow ledger，也不回退 vector。否则会清掉更 newer 的 ops 并令 vector 倒退。
+- **增量连续性**：增量 ops apply **MUST** 从 `本地 vector + 1` 起严格连续地推进 peer 水位。`seq <= 本地 vector`
+  的已应用区间 **MUST** 幂等跳过，不得二次 append 到 shadow；遇到序号空洞或重复 seq **MUST** fail-closed 并保持
+  状态不变，留待重连/重新请求，**MUST NOT** 把 vector 推过未接收的 op 造成静默丢失。
+
 ### 7.2 Envelope Pattern
 
 - plaintext header：

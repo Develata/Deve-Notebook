@@ -8,6 +8,8 @@ use anyhow::Result;
 mod apply;
 mod snapshot;
 
+pub(crate) use apply::{entries_with_seq, new_contiguous_remote_ops};
+
 impl SyncEngine {
     /// 从本地仓库获取指定范围的操作 (用于发送给远端)。
     ///

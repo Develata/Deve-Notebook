@@ -10,6 +10,8 @@ use crate::sync::buffer::PendingSyncPayload;
 use crate::sync::protocol::SyncResponse;
 use anyhow::{Result, bail};
 
+use super::transfer::{entries_with_seq, new_contiguous_remote_ops};
+
 struct DecryptedPendingPayload {
     kind: DecryptedPendingKind,
     peer_id: PeerId,
@@ -95,25 +97,42 @@ impl SyncEngine {
             bail!("Manual merge requires one peer/repo target to preserve atomicity");
         }
 
-        let shadow_payloads: Vec<_> = decrypted
+        // 单调化归约（批内单 peer/repo）：最新且非陈旧的 snapshot 是整库 base；
+        // 只应用 base 之后严格连续的增量 ops。陈旧 snapshot 与已应用 ops 必须幂等跳过，
+        // 不得 reset newer shadow，也不得二次 append 已接收 remote seq。
+        let current = self.version_vector.get(&peer_id);
+        let newest_snapshot = decrypted
             .iter()
-            .map(DecryptedPendingPayload::as_shadow_payload)
+            .filter(|payload| matches!(payload.kind, DecryptedPendingKind::Snapshot))
+            .filter(|payload| payload.max_seq > current)
+            .max_by_key(|payload| payload.max_seq);
+        let base_seq = newest_snapshot.map_or(current, |payload| payload.max_seq);
+        let ops_decrypted: Vec<_> = decrypted
+            .iter()
+            .filter(|payload| matches!(payload.kind, DecryptedPendingKind::Ops))
+            .flat_map(|payload| entries_with_seq(&payload.entries))
             .collect();
-        self.repo
-            .apply_remote_payloads(&peer_id, &repo_id, &shadow_payloads)?;
+        let new_ops = new_contiguous_remote_ops(ops_decrypted, base_seq)?;
 
-        for payload in &decrypted {
-            match payload.kind {
-                DecryptedPendingKind::Ops => {
-                    if payload.max_seq > 0 {
-                        self.version_vector
-                            .update(payload.peer_id.clone(), payload.max_seq);
-                    }
-                }
-                DecryptedPendingKind::Snapshot => {
-                    self.version_vector
-                        .set_exact(payload.peer_id.clone(), payload.max_seq);
-                }
+        if let Some(snapshot) = newest_snapshot {
+            let mut payloads = vec![snapshot.as_shadow_payload()];
+            if !new_ops.entries.is_empty() {
+                payloads.push(ShadowPayload::Ops(&new_ops.entries));
+            }
+            self.repo
+                .apply_remote_payloads(&peer_id, &repo_id, &payloads)?;
+            self.version_vector
+                .update(peer_id, base_seq.max(new_ops.max_seq));
+        } else {
+            if !new_ops.entries.is_empty() {
+                self.repo.apply_remote_payloads(
+                    &peer_id,
+                    &repo_id,
+                    &[ShadowPayload::Ops(&new_ops.entries)],
+                )?;
+            }
+            if new_ops.max_seq > 0 {
+                self.version_vector.update(peer_id, new_ops.max_seq);
             }
         }
 
