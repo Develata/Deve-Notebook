@@ -51,6 +51,16 @@ fn create_file_mode_rejects_invalid_path_before_dispatch() {
 }
 
 #[test]
+fn create_file_mode_rejects_directory_path_before_dispatch() {
+    let results = create_file_results("notes/", Locale::En);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].title, path_err::INVALID_PATH);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].action, SearchAction::Noop);
+}
+
+#[test]
 fn create_file_mode_builds_create_action_for_valid_path() {
     let results = create_file_results("notes/new", Locale::En);
 

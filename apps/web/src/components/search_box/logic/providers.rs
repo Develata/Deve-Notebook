@@ -135,8 +135,7 @@ fn create_file_results(path: &str, locale: Locale) -> Vec<SearchResult> {
     if path.is_empty() {
         return Vec::new();
     }
-    let path = file_ops::normalize_doc_path(path);
-    if let Some(err) = file_ops::validate_doc_shell_path(&path) {
+    if let Some(err) = file_ops::validate_doc_create_path(path) {
         return vec![SearchResult {
             id: "create-doc-error".to_string(),
             title: err.to_string(),
@@ -145,6 +144,7 @@ fn create_file_results(path: &str, locale: Locale) -> Vec<SearchResult> {
             action: SearchAction::Noop,
         }];
     }
+    let path = file_ops::normalize_doc_path(path);
     vec![SearchResult {
         id: "create-doc-only".to_string(),
         title: format!("{}: '{}'", t::common::create(locale), path),
