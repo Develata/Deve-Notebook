@@ -127,18 +127,47 @@ fn move_directory_suggestions_skip_noop_target() {
 }
 
 #[test]
-fn move_directory_insert_cursor_uses_browser_utf16_offset() {
-    let parsed = parsed_args(&["记录.md"], true);
+fn move_directory_suggestions_filter_non_empty_destination_prefix() {
+    let parsed = parsed_args(&["notes/today.md", "arc"], false);
     let docs = [
-        (DocId::from_u128(1), "记录.md".to_string()),
-        (DocId::from_u128(2), "归档/其他.md".to_string()),
+        (DocId::from_u128(1), "notes/today.md".to_string()),
+        (DocId::from_u128(2), "archive/other.md".to_string()),
+    ];
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[], Locale::En);
+
+    assert!(
+        matches!(
+            results.first().map(|result| &result.action),
+            Some(SearchAction::FileOp(_))
+        ),
+        "execute candidate should remain the default result"
+    );
+    assert!(results.iter().any(|result| {
+        matches!(
+            &result.action,
+            SearchAction::InsertQuery(insert) if insert.query == ">mv notes/today.md archive/"
+        )
+    }));
+}
+
+#[test]
+fn move_directory_insert_cursor_uses_browser_utf16_offset() {
+    let parsed = parsed_args(&["\u{8bb0}\u{5f55}.md"], true);
+    let docs = [
+        (DocId::from_u128(1), "\u{8bb0}\u{5f55}.md".to_string()),
+        (
+            DocId::from_u128(2),
+            "\u{5f52}\u{6863}/\u{5176}\u{4ed6}.md".to_string(),
+        ),
     ];
     let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[], Locale::En);
 
     let insert = results
         .iter()
         .find_map(|result| match &result.action {
-            SearchAction::InsertQuery(insert) if insert.query == ">mv 记录.md 归档/" => {
+            SearchAction::InsertQuery(insert)
+                if insert.query == ">mv \u{8bb0}\u{5f55}.md \u{5f52}\u{6863}/" =>
+            {
                 Some(insert)
             }
             _ => None,
@@ -150,22 +179,30 @@ fn move_directory_insert_cursor_uses_browser_utf16_offset() {
 
 #[test]
 fn copy_quoted_directory_insert_cursor_stays_before_closing_quote_in_utf16_offset() {
-    let parsed = parsed_args(&["记录.md"], true);
+    let parsed = parsed_args(&["\u{8bb0}\u{5f55}.md"], true);
     let docs = [
-        (DocId::from_u128(1), "记录.md".to_string()),
-        (DocId::from_u128(2), "归 档/其他.md".to_string()),
+        (DocId::from_u128(1), "\u{8bb0}\u{5f55}.md".to_string()),
+        (
+            DocId::from_u128(2),
+            "\u{5f52} \u{6863}/\u{5176}\u{4ed6}.md".to_string(),
+        ),
     ];
     let results = build_move_copy_results(FileOpKind::Copy, &parsed, &docs, &[], Locale::En);
 
     let insert = results
         .iter()
         .find_map(|result| match &result.action {
-            SearchAction::InsertQuery(insert) if insert.query == ">cp 记录.md \"归 档/\"" => {
+            SearchAction::InsertQuery(insert)
+                if insert.query == ">cp \u{8bb0}\u{5f55}.md \"\u{5f52} \u{6863}/\"" =>
+            {
                 Some(insert)
             }
             _ => None,
         })
         .expect("missing quoted unicode directory completion");
 
-    assert_eq!(insert.cursor, utf16_len(">cp 记录.md \"归 档/"));
+    assert_eq!(
+        insert.cursor,
+        utf16_len(">cp \u{8bb0}\u{5f55}.md \"\u{5f52} \u{6863}/")
+    );
 }

@@ -35,12 +35,24 @@ pub(super) fn build_move_copy_results(
         return vec![super::error_result(locale, err.to_string())];
     }
     if parsed.args.len() == 2 && !parsed.args[1].is_empty() {
-        return vec![execute_result_or_error(
-            kind,
-            &parsed.args[0],
-            &parsed.args[1],
+        let execute_result =
+            execute_result_or_error(kind.clone(), &parsed.args[0], &parsed.args[1], locale);
+        if !matches!(&execute_result.action, SearchAction::FileOp(_)) {
+            return vec![execute_result];
+        }
+
+        let src = parsed.args[0].clone();
+        let dst_prefix = parsed.args[1].clone();
+        let mut results = vec![execute_result];
+        results.extend(build_filtered_dir_group_results(
+            &kind,
+            &src,
+            &dst_prefix,
+            docs,
+            recent_dirs,
             locale,
-        )];
+        ));
+        return results;
     }
 
     if !is_ready_for_dst(parsed) {
@@ -49,13 +61,7 @@ pub(super) fn build_move_copy_results(
 
     let src = parsed.args.first().cloned().unwrap_or_default();
     let dst_prefix = parsed.args.get(1).cloned().unwrap_or_default();
-    let dirs = collect_dirs(docs);
-    let recent_dirs = if kind == FileOpKind::Move {
-        recent_dirs
-    } else {
-        &[]
-    };
-    build_dir_group_results(&kind, &src, &dst_prefix, recent_dirs, &dirs, locale)
+    build_filtered_dir_group_results(&kind, &src, &dst_prefix, docs, recent_dirs, locale)
 }
 
 fn source_required_error(locale: Locale) -> SearchResult {
@@ -77,6 +83,23 @@ fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str, locale: Local
         }
     }
     result
+}
+
+fn build_filtered_dir_group_results(
+    kind: &FileOpKind,
+    src: &str,
+    dst_prefix: &str,
+    docs: &[(DocId, String)],
+    recent_dirs: &[String],
+    locale: Locale,
+) -> Vec<SearchResult> {
+    let dirs = collect_dirs(docs);
+    let recent_dirs = if *kind == FileOpKind::Move {
+        recent_dirs
+    } else {
+        &[]
+    };
+    build_dir_group_results(kind, src, dst_prefix, recent_dirs, &dirs, locale)
 }
 
 fn build_dir_group_results(
