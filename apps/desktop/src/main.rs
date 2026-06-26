@@ -21,7 +21,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    deve_desktop::run_desktop_tauri_app()?;
+    let launch_options =
+        deve_desktop::DesktopTauriLaunchOptions::from_args(std::env::args().skip(1))
+            .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))?;
+
+    deve_desktop::run_desktop_tauri_app_with_launch_options(launch_options)?;
     Ok(())
 }
 

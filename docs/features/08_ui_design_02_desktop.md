@@ -35,7 +35,7 @@
 ### 5. Native 双模式
 
 - Desktop native-packaging 默认以 `LocalBackend` 模式启动，包含本地受控后端、默认 repo/projection 初始化、loopback endpoint、session handoff、健康探测和重启协调。
-- Desktop 可显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin。
+- Desktop 可通过启动参数 `--remote-url https://host[:port]` 显式切换为 `RemoteBrowser` 模式，把壳层作为浏览器连接到远端 Docker/Web 的 HTTPS origin；脚本化/诊断启动仍可使用 `DEVE_NATIVE_REMOTE_URL`。
 - `RemoteBrowser` 不启动本地后端，不注入本地 endpoint/session bootstrap，不把远端 URL 保存为本地 writer authority。
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过本地 server/core writer gate。

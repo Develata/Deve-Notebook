@@ -67,6 +67,8 @@ fn desktop_tauri_manifest_declares_shell_metadata_only() {
     assert_eq!(shell.tauri_config_path, DESKTOP_TAURI_CONFIG_PATH);
     assert_eq!(config["productName"], DESKTOP_TAURI_PRODUCT_NAME);
     assert_eq!(config["identifier"], DESKTOP_TAURI_IDENTIFIER);
+    assert!(config["build"].get("devUrl").is_none());
+    assert_eq!(config["build"]["frontendDist"], "../web/dist");
     assert_eq!(window["label"], DESKTOP_TAURI_MAIN_WINDOW_LABEL);
     assert_eq!(window["title"], DESKTOP_TAURI_MAIN_WINDOW_TITLE);
     assert_eq!(window["resizable"], true);

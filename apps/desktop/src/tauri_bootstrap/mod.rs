@@ -13,10 +13,12 @@ use thiserror::Error;
 
 use crate::{
     DesktopBootstrap, DesktopCommandProcessLauncher, DesktopLocalServiceBootstrapError,
-    DesktopLocalServiceEntrypointError, DesktopLocalServiceRuntime, DesktopLoopbackHttpProbe,
-    DesktopNativeSessionCookie, DesktopProcessLauncher, DesktopProcessRuntimeError,
-    DesktopRecoveryBootstrap, DesktopShell, DesktopShellError,
-    plan_desktop_local_service_entrypoint_from_env, run_desktop_local_service_bootstrap,
+    DesktopLocalServiceEntrypointError, DesktopLocalServiceEntrypointPolicy,
+    DesktopLocalServiceRuntime, DesktopLoopbackHttpProbe, DesktopNativeSessionCookie,
+    DesktopProcessLauncher, DesktopProcessRuntimeError, DesktopRecoveryBootstrap, DesktopShell,
+    DesktopShellError, desktop_local_service_entrypoint_policy_from_env,
+    ensure_desktop_local_service_data_root,
+    plan_desktop_local_service_entrypoint_for_current_process, run_desktop_local_service_bootstrap,
 };
 
 mod cookie;
@@ -24,6 +26,7 @@ mod cookie;
 use cookie::{tauri_cookie_from_native_session, validate_tauri_bootstrap_source};
 
 const DESKTOP_LOCAL_BACKEND_PORT_ATTEMPTS: usize = 3;
+pub const DEVE_NATIVE_REMOTE_URL_ENV: &str = "DEVE_NATIVE_REMOTE_URL";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesktopTauriBootstrapScript {
@@ -188,40 +191,55 @@ pub fn desktop_tauri_local_service_bootstrap_from_env(
 ) -> Option<DesktopTauriLocalServiceBootstrap> {
     match try_desktop_tauri_local_service_bootstrap_from_env(timestamp_unix_ms) {
         Ok(result) => result,
-        Err(DesktopTauriBootstrapError::LocalService(
-            DesktopLocalServiceBootstrapError::SessionHandoffFailed
-            | DesktopLocalServiceBootstrapError::MissingNativeSessionBootstrapSecret
-            | DesktopLocalServiceBootstrapError::NativeSessionCookieInvalid,
-        )) => desktop_tauri_session_invalid_init_script()
-            .ok()
-            .map(recovery_bootstrap),
-        Err(_) => desktop_tauri_service_offline_init_script()
-            .ok()
-            .map(recovery_bootstrap),
+        Err(error) => local_service_recovery_bootstrap(error),
+    }
+}
+
+pub fn desktop_tauri_local_service_bootstrap_with_policy(
+    timestamp_unix_ms: i64,
+    policy: DesktopLocalServiceEntrypointPolicy,
+) -> Option<DesktopTauriLocalServiceBootstrap> {
+    match try_desktop_tauri_local_service_bootstrap_with_policy(timestamp_unix_ms, policy) {
+        Ok(result) => result,
+        Err(error) => local_service_recovery_bootstrap(error),
     }
 }
 
 pub fn desktop_tauri_remote_browser_bootstrap_from_env()
 -> Result<Option<DesktopTauriBootstrapScript>, DesktopTauriBootstrapError> {
-    let Some(value) = std::env::var_os("DEVE_NATIVE_REMOTE_URL") else {
+    let Some(value) = std::env::var_os(DEVE_NATIVE_REMOTE_URL_ENV) else {
         return Ok(None);
     };
     if value.is_empty() {
         return Ok(None);
     }
-    let target = NativeRemoteTarget {
-        https_origin: value.to_string_lossy().into_owned(),
-    };
-    desktop_tauri_remote_browser_init_script(&target).map(Some)
+    desktop_tauri_remote_browser_bootstrap_from_origin(&value.to_string_lossy()).map(Some)
+}
+
+pub fn desktop_tauri_remote_browser_bootstrap_from_origin(
+    https_origin: &str,
+) -> Result<DesktopTauriBootstrapScript, DesktopTauriBootstrapError> {
+    desktop_tauri_remote_browser_init_script(&NativeRemoteTarget {
+        https_origin: https_origin.to_string(),
+    })
 }
 
 pub fn try_desktop_tauri_local_service_bootstrap_from_env(
     timestamp_unix_ms: i64,
 ) -> Result<Option<DesktopTauriLocalServiceBootstrap>, DesktopTauriBootstrapError> {
+    let policy = desktop_local_service_entrypoint_policy_from_env()?;
+    try_desktop_tauri_local_service_bootstrap_with_policy(timestamp_unix_ms, policy)
+}
+
+pub fn try_desktop_tauri_local_service_bootstrap_with_policy(
+    timestamp_unix_ms: i64,
+    policy: DesktopLocalServiceEntrypointPolicy,
+) -> Result<Option<DesktopTauriLocalServiceBootstrap>, DesktopTauriBootstrapError> {
     for attempt in 0..DESKTOP_LOCAL_BACKEND_PORT_ATTEMPTS {
-        let Some(plan) = plan_desktop_local_service_entrypoint_from_env()? else {
+        let Some(plan) = plan_desktop_local_service_entrypoint_for_current_process(policy)? else {
             return Ok(None);
         };
+        ensure_desktop_local_service_data_root(&plan.spawn_spec.cwd)?;
 
         let mut runtime = DesktopLocalServiceRuntime::with_launcher(
             plan.policy.native_policy(),
@@ -293,5 +311,22 @@ fn recovery_bootstrap(
     DesktopTauriLocalServiceBootstrap {
         script,
         runtime: None,
+    }
+}
+
+fn local_service_recovery_bootstrap(
+    error: DesktopTauriBootstrapError,
+) -> Option<DesktopTauriLocalServiceBootstrap<DesktopCommandProcessLauncher>> {
+    match error {
+        DesktopTauriBootstrapError::LocalService(
+            DesktopLocalServiceBootstrapError::SessionHandoffFailed
+            | DesktopLocalServiceBootstrapError::MissingNativeSessionBootstrapSecret
+            | DesktopLocalServiceBootstrapError::NativeSessionCookieInvalid,
+        ) => desktop_tauri_session_invalid_init_script()
+            .ok()
+            .map(recovery_bootstrap),
+        _ => desktop_tauri_service_offline_init_script()
+            .ok()
+            .map(recovery_bootstrap),
     }
 }

@@ -859,8 +859,14 @@ modes:
   Docker/Web HTTPS origin. It does not start the local backend and does not
   inject native endpoint/session bootstrap.
 
-Use the default environment for LocalBackend. For RemoteBrowser, configure a
-validated HTTPS origin:
+Use the default environment for LocalBackend. For RemoteBrowser, pass a
+validated HTTPS origin at startup:
+
+```bash
+deve_desktop --remote-url https://example.invalid
+```
+
+Packaged/scripted launches may also use:
 
 ```bash
 DEVE_NATIVE_REMOTE_URL=https://example.invalid
@@ -868,6 +874,14 @@ DEVE_NATIVE_REMOTE_URL=https://example.invalid
 
 The URL must be exactly an HTTPS origin: no userinfo, query, fragment, or
 application subpath.
+
+Desktop LocalBackend does not depend on an externally running server on port
+3001. The Tauri shell loads bundled Web assets and gets the child-process
+endpoint only through native bootstrap.
+
+Its default data root is the platform app-private data directory, not the
+current working directory. Use `DEVE_DESKTOP_DATA_DIR=<absolute path>` only for
+diagnostic or smoke-test isolation.
 
 LocalBackend runtime enablement and native shell direct-authority experiments
 are separate knobs. `DEVE_DESKTOP_LOCAL_SERVICE=0` disables the Desktop

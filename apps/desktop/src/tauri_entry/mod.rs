@@ -12,14 +12,18 @@
 //! `.notegit` authority.
 
 use crate::{
-    DESKTOP_TAURI_MAIN_WINDOW_LABEL, DesktopLocalServiceTauriState, DesktopMenuAction,
-    DesktopTrayAction, build_desktop_menu, build_desktop_tray_icon, build_desktop_tray_menu,
-    desktop_tauri_bootstrap_plugin, desktop_tauri_local_service_bootstrap_from_env,
-    desktop_tauri_remote_browser_bootstrap_from_env, resolve_desktop_menu_action_id,
+    DESKTOP_TAURI_MAIN_WINDOW_LABEL, DesktopLocalServiceEntrypointPolicy,
+    DesktopLocalServiceTauriState, DesktopMenuAction, DesktopTrayAction, build_desktop_menu,
+    build_desktop_tray_icon, build_desktop_tray_menu, desktop_tauri_bootstrap_plugin,
+    desktop_tauri_local_service_bootstrap_from_env,
+    desktop_tauri_local_service_bootstrap_with_policy,
+    desktop_tauri_remote_browser_bootstrap_from_env,
+    desktop_tauri_remote_browser_bootstrap_from_origin, resolve_desktop_menu_action_id,
     resolve_desktop_tray_action_id,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager, Runtime};
+use thiserror::Error;
 
 mod smoke;
 
@@ -34,6 +38,71 @@ pub enum DesktopTauriShellEffect {
     ShowMainWindow,
     ToggleMainWindowVisibility,
     QuitRequested,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DesktopTauriLaunchOptions {
+    pub remote_url: Option<String>,
+    pub local_backend: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum DesktopTauriLaunchOptionsError {
+    #[error("desktop remote browser URL argument requires a value")]
+    MissingRemoteUrlValue,
+    #[error("desktop remote browser URL must be an HTTPS origin")]
+    InvalidRemoteUrl,
+    #[error("desktop remote browser mode conflicts with forced local backend mode")]
+    ConflictingModes,
+}
+
+impl DesktopTauriLaunchOptions {
+    pub fn from_args<I, S>(args: I) -> Result<Self, DesktopTauriLaunchOptionsError>
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        let mut options = Self::default();
+        let mut iter = args.into_iter().map(Into::into);
+
+        while let Some(arg) = iter.next() {
+            match arg.as_str() {
+                "--remote-url" | "--remote" => {
+                    let value = iter
+                        .next()
+                        .filter(|value| is_non_flag_value(value))
+                        .ok_or(DesktopTauriLaunchOptionsError::MissingRemoteUrlValue)?;
+                    options.remote_url = Some(value);
+                }
+                "--local-backend" => options.local_backend = Some(true),
+                "--no-local-backend" => options.local_backend = Some(false),
+                _ if arg.starts_with("--remote-url=") => {
+                    let value = arg.trim_start_matches("--remote-url=");
+                    if !is_non_flag_value(value) {
+                        return Err(DesktopTauriLaunchOptionsError::MissingRemoteUrlValue);
+                    }
+                    options.remote_url = Some(value.to_string());
+                }
+                _ if arg.starts_with("--remote=") => {
+                    let value = arg.trim_start_matches("--remote=");
+                    if !is_non_flag_value(value) {
+                        return Err(DesktopTauriLaunchOptionsError::MissingRemoteUrlValue);
+                    }
+                    options.remote_url = Some(value.to_string());
+                }
+                _ => {}
+            }
+        }
+
+        if options.remote_url.is_some() && options.local_backend == Some(true) {
+            return Err(DesktopTauriLaunchOptionsError::ConflictingModes);
+        }
+        if let Some(remote_url) = options.remote_url.as_deref() {
+            desktop_tauri_remote_browser_bootstrap_from_origin(remote_url)
+                .map_err(|_| DesktopTauriLaunchOptionsError::InvalidRemoteUrl)?;
+        }
+        Ok(options)
+    }
 }
 
 pub fn menu_action_shell_effect(action: DesktopMenuAction) -> DesktopTauriShellEffect {
@@ -56,15 +125,29 @@ pub fn tray_action_shell_effect(action: DesktopTrayAction) -> DesktopTauriShellE
 }
 
 pub fn run_desktop_tauri_app() -> tauri::Result<()> {
-    let remote_browser_bootstrap = match desktop_tauri_remote_browser_bootstrap_from_env() {
+    run_desktop_tauri_app_with_launch_options(DesktopTauriLaunchOptions::default())
+}
+
+pub fn run_desktop_tauri_app_with_launch_options(
+    options: DesktopTauriLaunchOptions,
+) -> tauri::Result<()> {
+    let remote_browser_bootstrap = match remote_browser_bootstrap_for_launch_options(&options) {
         Ok(bootstrap) => bootstrap,
         Err(error) => {
             eprintln!("desktop remote browser bootstrap refused: {error}");
             return Ok(());
         }
     };
+    let timestamp_unix_ms = current_unix_time_millis();
     let mut local_service_bootstrap = if remote_browser_bootstrap.is_none() {
-        desktop_tauri_local_service_bootstrap_from_env(current_unix_time_millis())
+        match options.local_backend {
+            Some(true) => desktop_tauri_local_service_bootstrap_with_policy(
+                timestamp_unix_ms,
+                DesktopLocalServiceEntrypointPolicy::local_backend_default(),
+            ),
+            Some(false) => None,
+            None => desktop_tauri_local_service_bootstrap_from_env(timestamp_unix_ms),
+        }
     } else {
         None
     };
@@ -111,6 +194,19 @@ pub fn run_desktop_tauri_app() -> tauri::Result<()> {
             _ => {}
         })
         .run(tauri::generate_context!())
+}
+
+fn remote_browser_bootstrap_for_launch_options(
+    options: &DesktopTauriLaunchOptions,
+) -> Result<Option<crate::DesktopTauriBootstrapScript>, crate::DesktopTauriBootstrapError> {
+    if let Some(remote_url) = options.remote_url.as_deref() {
+        return desktop_tauri_remote_browser_bootstrap_from_origin(remote_url).map(Some);
+    }
+    desktop_tauri_remote_browser_bootstrap_from_env()
+}
+
+fn is_non_flag_value(value: &str) -> bool {
+    !value.trim().is_empty() && !value.starts_with("--")
 }
 
 fn current_unix_time_millis() -> i64 {
@@ -186,6 +282,62 @@ mod tests {
         assert!(!smoke.session_bound);
         assert!(!smoke.native_session_cookie_installed_before_bootstrap);
         assert!(!smoke.opens_authority_write_path);
+    }
+
+    #[test]
+    fn desktop_launch_options_parse_remote_browser_url() {
+        let options =
+            DesktopTauriLaunchOptions::from_args(["--remote-url", "https://deve.example"])
+                .expect("options");
+
+        assert_eq!(options.remote_url.as_deref(), Some("https://deve.example"));
+        assert_eq!(options.local_backend, None);
+    }
+
+    #[test]
+    fn desktop_launch_options_parse_remote_browser_url_equals_form() {
+        let options = DesktopTauriLaunchOptions::from_args(["--remote-url=https://deve.example"])
+            .expect("options");
+
+        assert_eq!(options.remote_url.as_deref(), Some("https://deve.example"));
+        assert_eq!(options.local_backend, None);
+    }
+
+    #[test]
+    fn desktop_launch_options_reject_conflicting_local_and_remote_modes() {
+        let error = DesktopTauriLaunchOptions::from_args([
+            "--remote-url",
+            "https://deve.example",
+            "--local-backend",
+        ])
+        .expect_err("conflicting mode must fail");
+
+        assert_eq!(error, DesktopTauriLaunchOptionsError::ConflictingModes);
+    }
+
+    #[test]
+    fn desktop_launch_options_reject_missing_remote_url_value() {
+        let error = DesktopTauriLaunchOptions::from_args(["--remote-url", "--local-backend"])
+            .expect_err("missing url must fail");
+
+        assert_eq!(error, DesktopTauriLaunchOptionsError::MissingRemoteUrlValue);
+    }
+
+    #[test]
+    fn desktop_launch_options_reject_invalid_remote_browser_url() {
+        let error = DesktopTauriLaunchOptions::from_args(["--remote-url", "http://deve.example"])
+            .expect_err("invalid url must fail");
+
+        assert_eq!(error, DesktopTauriLaunchOptionsError::InvalidRemoteUrl);
+    }
+
+    #[test]
+    fn desktop_launch_options_support_manual_local_backend_disable() {
+        let options =
+            DesktopTauriLaunchOptions::from_args(["--no-local-backend"]).expect("options");
+
+        assert_eq!(options.remote_url, None);
+        assert_eq!(options.local_backend, Some(false));
     }
 
     #[test]

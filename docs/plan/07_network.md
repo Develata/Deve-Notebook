@@ -561,4 +561,4 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - relay / proxy 相关端口配置
 - `[p2p] enabled`, `connect_interval_ms`, `inbound_token_env`
 - `[[p2p.peers]] label`, `peer_id`, `repo_id`, `ws_url`, `auth_token_env`, `enabled`
-- Native shell mode：默认 `LocalBackend`；显式 `RemoteBrowser` 使用 `DEVE_NATIVE_REMOTE_URL=https://...`
+- Native shell mode：默认 `LocalBackend`；显式 `RemoteBrowser` 使用 Desktop `--remote-url https://...` 或诊断/脚本环境变量 `DEVE_NATIVE_REMOTE_URL=https://...`

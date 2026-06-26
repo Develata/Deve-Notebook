@@ -37,8 +37,8 @@ Desktop native adapter 是进程与平台壳层，不是业务 authority；第�
 `NativeShellMode` 的 Desktop 语义如下：
 
 *   `LocalBackend` 是 native-packaging 默认模式。Desktop 壳层只负责 sidecar 生命周期、loopback endpoint、native session handoff、health probe、restart budget、bootstrap/recovery 注入与窗口/菜单/托盘事件。
-*   `LocalBackend` 的本地数据根位于 app-private data root；后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
-*   `RemoteBrowser { https_origin }` 是显式远端模式。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
+*   `LocalBackend` 的本地数据根位于 app-private data root（诊断覆盖入口：`DEVE_DESKTOP_DATA_DIR`）；不得把 shell 启动目录当作默认数据根。后端启动前必须由 server/CLI runtime 初始化默认 repo、Projection Locator、workspace identity、`.notegit/` 与 repo-local `.gitignore`。
+*   `RemoteBrowser { https_origin }` 是显式远端模式，Desktop 可通过启动参数 `--remote-url https://host[:port]` 或诊断/脚本环境变量 `DEVE_NATIVE_REMOTE_URL` 选择。壳层只加载远端 Web origin，后续 `/api` 与 `/ws` 均由浏览器同源规则解析；native 壳不提供本机 session cookie、端口、repo bootstrap 或 native bridge。
 *   模式切换不得复用旧 session、旧 endpoint 或旧 `scope_nonce`。从 `RemoteBrowser` 回到 `LocalBackend` 必须重新启动本机 service 并完成完整 session handoff。
 
 Packaging dependency gate 见 `17_tech_stack.md#native-packaging-dependency-gate`。
@@ -127,6 +127,7 @@ NativeColdStart
 
 *   Native 壳必须在 Web connection manager 启动前注入 `http_base/ws_base` 与 session 绑定状态；优先使用内存 bridge 或初始 HTML bootstrap。
 *   Native 壳可注入只含 `service_state` 的 recovery bootstrap；payload 只能表达 `service_offline`、`foreground_reprobe` 或 `session_invalid`，不得携带 token、session secret、服务失败 reason 或 repo 写权限。
+*   Desktop Tauri manifest 不得把 native Web shell 固定到后端端口（例如 `devUrl = http://127.0.0.1:3001`）。Desktop shell 必须加载 bundled/frontendDist 资产，并只通过 native bootstrap 获取 LocalBackend endpoint 或 RemoteBrowser origin。
 *   `?ws_port=` 只能作为开发期 fallback。native production 不得让 Web 端枚举、猜测或扫描本机端口。
 *   session 绑定完成前 Web shell 不得显示可写主界面；过期 session 必须走 `08_auth.md#unauthorized-disconnected-ui`。
 

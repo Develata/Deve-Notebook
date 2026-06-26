@@ -73,27 +73,34 @@ pub use service_bootstrap::{
 };
 #[cfg(feature = "native-packaging")]
 pub use service_entrypoint::{
-    DEVE_DESKTOP_LOCAL_SERVICE_ENV, DEVE_NATIVE_AUTHORITY_ENV, DesktopLocalServiceEntrypointError,
-    DesktopLocalServiceEntrypointInput, DesktopLocalServiceEntrypointPlan,
-    DesktopLocalServiceEntrypointPolicy, desktop_local_service_entrypoint_policy_from_env,
-    plan_desktop_local_service_entrypoint, plan_desktop_local_service_entrypoint_from_env,
+    DEVE_DESKTOP_DATA_DIR_ENV, DEVE_DESKTOP_LOCAL_SERVICE_ENV, DEVE_NATIVE_AUTHORITY_ENV,
+    DesktopLocalServiceEntrypointError, DesktopLocalServiceEntrypointInput,
+    DesktopLocalServiceEntrypointPlan, DesktopLocalServiceEntrypointPolicy,
+    desktop_local_service_entrypoint_policy_from_env, ensure_desktop_local_service_data_root,
+    plan_desktop_local_service_entrypoint,
+    plan_desktop_local_service_entrypoint_for_current_process,
+    plan_desktop_local_service_entrypoint_from_env, resolve_desktop_local_service_data_root,
 };
 pub use shell::DesktopShell;
 #[cfg(feature = "native-packaging")]
 pub use tauri_bootstrap::{
-    DesktopLocalServiceTauriState, DesktopTauriBootstrapError, DesktopTauriBootstrapScript,
-    DesktopTauriLocalServiceBootstrap, desktop_tauri_bootstrap_plugin,
-    desktop_tauri_local_service_bootstrap_from_env, desktop_tauri_recovery_init_script,
-    desktop_tauri_remote_browser_bootstrap_from_env, desktop_tauri_remote_browser_init_script,
+    DEVE_NATIVE_REMOTE_URL_ENV, DesktopLocalServiceTauriState, DesktopTauriBootstrapError,
+    DesktopTauriBootstrapScript, DesktopTauriLocalServiceBootstrap, desktop_tauri_bootstrap_plugin,
+    desktop_tauri_local_service_bootstrap_from_env,
+    desktop_tauri_local_service_bootstrap_with_policy, desktop_tauri_recovery_init_script,
+    desktop_tauri_remote_browser_bootstrap_from_env,
+    desktop_tauri_remote_browser_bootstrap_from_origin, desktop_tauri_remote_browser_init_script,
     desktop_tauri_service_offline_init_script, desktop_tauri_session_invalid_init_script,
     desktop_tauri_success_init_script, try_desktop_tauri_local_service_bootstrap_from_env,
+    try_desktop_tauri_local_service_bootstrap_with_policy,
 };
 #[cfg(feature = "native-packaging")]
 pub use tauri_entry::{
     DESKTOP_TAURI_NATIVE_SESSION_SMOKE_OK, DESKTOP_TAURI_STARTUP_SMOKE_OK,
-    DesktopTauriNativeSessionSmoke, DesktopTauriRuntimeSurface, DesktopTauriShellEffect,
-    DesktopTauriStartupSmoke, desktop_tauri_native_session_smoke, desktop_tauri_runtime_surface,
-    desktop_tauri_startup_smoke, menu_action_shell_effect, run_desktop_tauri_app,
+    DesktopTauriLaunchOptions, DesktopTauriLaunchOptionsError, DesktopTauriNativeSessionSmoke,
+    DesktopTauriRuntimeSurface, DesktopTauriShellEffect, DesktopTauriStartupSmoke,
+    desktop_tauri_native_session_smoke, desktop_tauri_runtime_surface, desktop_tauri_startup_smoke,
+    menu_action_shell_effect, run_desktop_tauri_app, run_desktop_tauri_app_with_launch_options,
     tray_action_shell_effect,
 };
 pub use types::{

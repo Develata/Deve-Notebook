@@ -271,12 +271,19 @@ impl BaselineContext {
 }
 
 fn repo_root() -> Result<PathBuf> {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .parent()
-        .and_then(Path::parent)
-        .map(Path::to_path_buf)
-        .context("failed to resolve repository root from CARGO_MANIFEST_DIR")
+    let mut cursor = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    loop {
+        if cursor.join("Cargo.toml").is_file()
+            && cursor.join("apps").is_dir()
+            && cursor.join("crates").is_dir()
+            && cursor.join("docs").is_dir()
+        {
+            return Ok(cursor);
+        }
+        if !cursor.pop() {
+            bail!("failed to resolve repository root from CARGO_MANIFEST_DIR");
+        }
+    }
 }
 
 fn display_rel(rel: &str) -> String {
@@ -430,7 +437,7 @@ fn git_check_ignore_args(rel: &str) -> [&str; 4] {
 
 #[cfg(test)]
 mod tests {
-    use super::{case_block, css_number_value, git_check_ignore_args, is_test_file};
+    use super::{case_block, css_number_value, git_check_ignore_args, is_test_file, repo_root};
     use std::path::Path;
 
     #[test]
@@ -480,6 +487,15 @@ mod tests {
         assert!(is_test_file(Path::new("components/foo_test.rs")));
         assert!(is_test_file(Path::new("components/tests.rs")));
         assert!(!is_test_file(Path::new("components/foo.rs")));
+    }
+
+    #[test]
+    fn repo_root_resolves_workspace_root_from_baseline_manifest() {
+        let root = repo_root().expect("repo root");
+
+        assert!(root.join("Cargo.toml").is_file());
+        assert!(root.join("apps/desktop/src/lib.rs").is_file());
+        assert!(root.join("docs/acceptance-cases").is_dir());
     }
 
     #[test]
