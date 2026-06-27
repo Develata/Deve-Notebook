@@ -97,7 +97,13 @@ pub(super) fn LeftDrawerMoreMenu(
     view! {
         {move || if show_more.get() {
             view! {
-                <div class="mobile-more-backdrop fixed inset-0 z-[var(--z-floating)]" on:click=move |_| set_show_more.set(false)></div>
+                <button
+                    type="button"
+                    class="mobile-more-backdrop fixed inset-0 z-[var(--z-floating)] border-0 bg-transparent p-0"
+                    title=move || t::common::close(locale.get())
+                    aria-label=move || t::common::close(locale.get())
+                    on:click=move |_| set_show_more.set(false)
+                ></button>
                 <div
                     class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-panel shadow-xl rounded-lg border border-default py-1 z-[calc(var(--z-floating)_+_1)]"
                     data-deve-mobile-more-menu=move || mobile_more_menu_marker(show_more.get())
@@ -118,6 +124,7 @@ pub(super) fn LeftDrawerMoreMenu(
                                 class=mobile_more_item_row_class(item)
                             >
                                 <button
+                                    type="button"
                                     data-deve-mobile-more-item=mobile_more_item_marker(item)
                                     class=mobile_more_item_button_class()
                                     role="menuitem"
@@ -129,6 +136,7 @@ pub(super) fn LeftDrawerMoreMenu(
                                     <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title(locale.get())}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     data-deve-mobile-more-pin-action=mobile_more_pin_action_marker(item)
                                     class=move || mobile_more_pin_button_class(pinned.get())
                                     aria-pressed=move || pinned.get().to_string()

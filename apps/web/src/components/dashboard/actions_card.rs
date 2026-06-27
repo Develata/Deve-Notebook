@@ -56,6 +56,7 @@ pub fn ActionsCard() -> impl IntoView {
             <h3 class="text-sm font-semibold text-secondary mb-3">{move || t::dashboard::quick_actions(locale.get())}</h3>
             <div class="flex gap-2">
                 <button
+                    type="button"
                     class="flex-1 px-3 py-2 text-xs font-medium rounded-md \
                            bg-accent text-on-accent hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled=move || create_block_reason(&session_for_disabled, &editor_for_disabled).is_some()
@@ -64,6 +65,7 @@ pub fn ActionsCard() -> impl IntoView {
                     {move || t::dashboard::new_doc(locale.get())}
                 </button>
                 <button
+                    type="button"
                     class="flex-1 px-3 py-2 text-xs font-medium rounded-md \
                            border border-default text-primary hover:bg-active transition-colors"
                     on:click=on_sync

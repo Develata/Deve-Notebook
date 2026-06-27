@@ -62,6 +62,7 @@ pub(super) fn ExplorerHeader(
             }>
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
+                        type="button"
                         class="p-1 rounded hover:bg-hover text-secondary"
                         title=move || t::sidebar::new_doc(locale.get())
                         data-deve-new-doc-button="true"

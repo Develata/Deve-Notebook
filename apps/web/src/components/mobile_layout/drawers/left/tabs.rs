@@ -86,6 +86,7 @@ pub(super) fn LeftDrawerTabs(
                     </div>
                 </div>
                 <button
+                    type="button"
                     class=mobile_more_button_class()
                     data-deve-mobile-sidebar-action=mobile_more_button_marker()
                     data-deve-mobile-touch-target=mobile_more_button_marker()

@@ -23,6 +23,7 @@ pub(super) fn LeftDrawerHeader(
         >
             <span class="text-primary flex items-center gap-1">{move || title.get()}</span>
             <button
+                type="button"
                 data-deve-mobile-touch-target="drawer_close_buttons"
                 class=drawer_close_button_class()
                 title=move || t::sidebar::close_file_tree(locale.get())

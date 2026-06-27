@@ -126,6 +126,7 @@ pub fn MobileChatSheet(
                     fallback=move || {
                         view! {
                             <button
+                                type="button"
                                 data-deve-mobile-chat-action="mobile_chat_chip"
                                 class="mobile-chat-chip h-11 min-w-[44px] px-3 rounded-full bg-panel border border-default shadow-sm text-sm font-medium text-primary active:bg-hover"
                                 title=move || t::chat::toggle_mobile_chat(locale.get())

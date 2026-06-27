@@ -31,6 +31,7 @@ pub(super) fn LeftDrawerTabButton(
 
     view! {
         <button
+            type="button"
             data-deve-mobile-sidebar-tab=sidebar_tab_marker(view)
             data-deve-mobile-sidebar-tab-active=move || (active_view.get() == view).to_string()
             class=move || {

@@ -57,6 +57,7 @@ pub fn RightDrawer(
                         {move || t::sidebar::outline(locale.get())}
                     </span>
                     <button
+                        type="button"
                         data-deve-mobile-touch-target="drawer_close_buttons"
                         class=drawer_close_button_class()
                         title=move || t::sidebar::close_outline(locale.get())

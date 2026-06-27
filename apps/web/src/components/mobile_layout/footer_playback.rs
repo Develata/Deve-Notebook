@@ -30,10 +30,10 @@ pub fn PlaybackWide(
 ) -> impl IntoView {
     view! {
         <div class="flex items-center gap-1.5 px-1 py-1 rounded-lg bg-sidebar border border-default">
-            <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::first(locale.get()) aria-label=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
+            <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::first(locale.get()) aria-label=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
                 "«"
             </button>
-            <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::prev(locale.get()) aria-label=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
+            <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::prev(locale.get()) aria-label=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
                 "‹"
             </button>
             <input
@@ -49,10 +49,10 @@ pub fn PlaybackWide(
                 class="flex-1 min-w-16 h-1 bg-active rounded-lg appearance-none cursor-pointer accent-accent"
                 title=move || t::bottom_bar::time_travel(locale.get())
             />
-            <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::next(locale.get()) aria-label=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
+            <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::next(locale.get()) aria-label=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
                 "›"
             </button>
-            <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::latest(locale.get()) aria-label=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
+            <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(false) title=move || t::bottom_bar::latest(locale.get()) aria-label=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
                 "»"
             </button>
         </div>
@@ -74,19 +74,19 @@ pub fn PlaybackNarrow(
     view! {
         <div class="rounded-lg bg-sidebar border border-default px-1 py-1 flex flex-col gap-1">
             <div class="flex items-center justify-between gap-1">
-                <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::first(locale.get()) aria-label=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
+                <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::first(locale.get()) aria-label=move || t::bottom_bar::first(locale.get()) on:click=move |_| on_to_start.run(())>
                     "«"
                 </button>
-                <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::prev(locale.get()) aria-label=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
+                <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::prev(locale.get()) aria-label=move || t::bottom_bar::prev(locale.get()) on:click=move |_| on_prev.run(())>
                     "‹"
                 </button>
                 <span class="text-[9px] text-muted font-mono px-0.5 min-w-12 text-center">
                     {move || format!("v{}/{}", curr_ver.get(), max_ver.get())}
                 </span>
-                <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::next(locale.get()) aria-label=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
+                <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::next(locale.get()) aria-label=move || t::bottom_bar::next(locale.get()) on:click=move |_| on_next.run(())>
                     "›"
                 </button>
-                <button data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::latest(locale.get()) aria-label=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
+                <button type="button" data-deve-mobile-touch-target="bottom_bar_playback_buttons" class=playback_button_class(true) title=move || t::bottom_bar::latest(locale.get()) aria-label=move || t::bottom_bar::latest(locale.get()) on:click=move |_| on_to_end.run(())>
                     "»"
                 </button>
             </div>

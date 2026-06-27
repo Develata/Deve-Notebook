@@ -49,6 +49,7 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
 
     view! {
         <button
+            type="button"
             class=move || {
                 if compact {
                     "min-w-0 max-w-full flex items-center gap-1 overflow-hidden px-1.5 py-0.5 rounded border border-default bg-sidebar hover:bg-hover transition-colors duration-200 ease-out text-[10px] font-medium text-primary"
