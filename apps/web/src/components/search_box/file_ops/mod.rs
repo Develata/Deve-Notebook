@@ -12,7 +12,7 @@ mod parser;
 mod path_utils;
 mod results;
 
-pub use path_utils::{normalize_doc_path, validate_doc_create_path};
+pub use path_utils::{normalize_doc_path, validate_doc_create_path, validate_doc_shell_path};
 
 use crate::components::search_box::types::{FileOpKind, SearchResult};
 use crate::i18n::{Locale, t};
