@@ -1,8 +1,10 @@
 //! plan_ref:
+//!   - 03_storage/index#internal-path-normalization
 //!   - 11_ui_design/index#context-action-surface
 //!
 //! Context Action target normalization and matching.
 
+use deve_core::utils::notegit::is_internal_repo_segment;
 use deve_core::utils::path::to_forward_slash;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,5 +64,13 @@ impl ContextActionTarget {
         };
 
         Self::new(kind, normalized)
+    }
+
+    pub(crate) fn is_repo_user_path(&self) -> bool {
+        !self
+            .path
+            .split('/')
+            .filter(|segment| !segment.is_empty())
+            .any(is_internal_repo_segment)
     }
 }

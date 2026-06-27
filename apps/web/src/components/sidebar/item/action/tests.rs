@@ -228,3 +228,26 @@ fn unrepresentable_path_blocks_search_prefill_side_effects() {
     assert_eq!(delete_count.get_untracked(), 0);
     assert_eq!(search_count.get_untracked(), 0);
 }
+
+#[test]
+fn internal_repo_path_blocks_action_handler_side_effects() {
+    let (readiness, _) = signal(ContextActionReadiness::from_readonly(false));
+    let (delete_count, set_delete_count) = signal(0);
+    let (search_count, set_search_count) = signal(0);
+    let delete_req = Callback::new(move |_: String| {
+        set_delete_count.update(|count| *count += 1);
+    });
+    let open_search = Callback::new(move |_: String| {
+        set_search_count.update(|count| *count += 1);
+    });
+
+    let handler = create_action_handler(readiness.into(), delete_req, open_search);
+
+    handler.run(file_tree_intent(
+        ContextActionId::Rename,
+        "notes/.git/config.md",
+    ));
+
+    assert_eq!(delete_count.get_untracked(), 0);
+    assert_eq!(search_count.get_untracked(), 0);
+}

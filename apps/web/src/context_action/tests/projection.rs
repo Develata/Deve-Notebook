@@ -158,6 +158,20 @@ fn context_action_readiness_write_gate_blocks_write_projection() {
 }
 
 #[test]
+fn file_tree_action_projection_rejects_internal_repo_segments() {
+    let actions = project_context_actions(ContextActionProjectionRequest::new(
+        ContextActionSurface::FileTree,
+        ContextActionTarget::new(
+            ContextActionTargetKind::MarkdownFile,
+            "notes/.git/config.md",
+        ),
+        file_tree_readiness(false),
+    ));
+
+    assert!(actions.is_empty());
+}
+
+#[test]
 fn file_tree_action_projected_intents_resolve_again() {
     let readiness = file_tree_readiness(false)
         .with_scope(ContextActionScope::new(Some("repo-a".to_string()), 7));

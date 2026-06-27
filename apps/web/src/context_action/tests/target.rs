@@ -35,6 +35,22 @@ fn context_action_target_new_normalizes_paths() {
 }
 
 #[test]
+fn context_action_target_rejects_internal_repo_segments() {
+    assert!(
+        !ContextActionTarget::new(ContextActionTargetKind::File, ".git/config.md")
+            .is_repo_user_path()
+    );
+    assert!(
+        !ContextActionTarget::new(ContextActionTargetKind::File, "notes/.notegit/state.md")
+            .is_repo_user_path()
+    );
+    assert!(
+        ContextActionTarget::new(ContextActionTargetKind::File, ".github/workflow.md")
+            .is_repo_user_path()
+    );
+}
+
+#[test]
 fn file_tree_action_target_kind_matching_keeps_markdown_as_file_but_not_folder() {
     assert!(ContextActionTargetKind::File.accepts(ContextActionTargetKind::MarkdownFile));
     assert!(ContextActionTargetKind::AnyNode.accepts(ContextActionTargetKind::Folder));

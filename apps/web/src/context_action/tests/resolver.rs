@@ -114,6 +114,26 @@ fn context_action_readiness_write_gate_keeps_readonly_action_available() {
 }
 
 #[test]
+fn file_tree_action_resolver_rejects_internal_repo_segments() {
+    let intent = ContextActionIntent::new(
+        ContextActionId::Rename,
+        ContextActionSurface::FileTree,
+        ContextActionTarget::new(
+            ContextActionTargetKind::MarkdownFile,
+            "notes/.notegit/state.md",
+        ),
+    );
+
+    assert!(
+        resolve_context_action(ContextActionResolveRequest::new(
+            intent,
+            file_tree_readiness(false),
+        ))
+        .is_none()
+    );
+}
+
+#[test]
 fn file_tree_action_resolver_rejects_target_mismatch() {
     let actions = [ContextActionDescriptor {
         id: ContextActionId::Copy,
