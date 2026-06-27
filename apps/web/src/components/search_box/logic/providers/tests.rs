@@ -4,6 +4,10 @@ use crate::hooks::use_core::SearchHit;
 use crate::i18n::{Locale, t};
 use deve_core::protocol::doc_file_op_errors as path_err;
 
+fn doc_paths(paths: &[&str]) -> Vec<String> {
+    paths.iter().map(|path| (*path).to_string()).collect()
+}
+
 #[test]
 fn unified_search_mode_routes_command_branch_file_prefixes() {
     assert_eq!(search_surface_mode(">toggle"), SearchSurfaceMode::Command);
@@ -42,7 +46,7 @@ fn unified_search_mode_exposes_stable_dom_values() {
 
 #[test]
 fn create_file_mode_rejects_invalid_path_before_dispatch() {
-    let results = create_file_results("../secret.md", Locale::En);
+    let results = create_file_results("../secret.md", std::iter::empty(), Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].title, path_err::INVALID_PATH);
@@ -52,7 +56,7 @@ fn create_file_mode_rejects_invalid_path_before_dispatch() {
 
 #[test]
 fn create_file_mode_rejects_directory_path_before_dispatch() {
-    let results = create_file_results("notes/", Locale::En);
+    let results = create_file_results("notes/", std::iter::empty(), Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].title, path_err::INVALID_PATH);
@@ -62,7 +66,7 @@ fn create_file_mode_rejects_directory_path_before_dispatch() {
 
 #[test]
 fn create_file_mode_builds_create_action_for_valid_path() {
-    let results = create_file_results("notes/new", Locale::En);
+    let results = create_file_results("notes/new", std::iter::empty(), Locale::En);
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].title, "Create: 'notes/new.md'");
@@ -71,6 +75,18 @@ fn create_file_mode_builds_create_action_for_valid_path() {
         results[0].action,
         SearchAction::CreateDoc("notes/new.md".to_string())
     );
+}
+
+#[test]
+fn create_file_mode_does_not_offer_duplicate_create_action() {
+    let docs = doc_paths(&["notes/existing.md"]);
+    let results = create_file_results(
+        "notes/existing",
+        docs.iter().map(String::as_str),
+        Locale::En,
+    );
+
+    assert!(results.is_empty());
 }
 
 #[test]

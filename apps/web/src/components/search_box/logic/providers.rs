@@ -120,7 +120,11 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
             }
             SearchSurfaceMode::CreateFile => {
                 let path = q.strip_prefix('+').unwrap_or_default().trim();
-                create_file_results(path, now_locale)
+                create_file_results(
+                    path,
+                    docs.iter().map(|(_, doc_path)| doc_path.as_str()),
+                    now_locale,
+                )
             }
             SearchSurfaceMode::File => {
                 let doc_list = docs
@@ -133,7 +137,11 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
     })
 }
 
-fn create_file_results(path: &str, locale: Locale) -> Vec<SearchResult> {
+fn create_file_results<'a>(
+    path: &str,
+    doc_paths: impl IntoIterator<Item = &'a str>,
+    locale: Locale,
+) -> Vec<SearchResult> {
     if path.is_empty() {
         return Vec::new();
     }
@@ -148,6 +156,12 @@ fn create_file_results(path: &str, locale: Locale) -> Vec<SearchResult> {
         }];
     }
     let path = file_ops::normalize_doc_path(path);
+    if doc_paths
+        .into_iter()
+        .any(|doc_path| file_ops::normalize_doc_path(doc_path) == path)
+    {
+        return Vec::new();
+    }
     vec![SearchResult {
         id: "create-doc-only".to_string(),
         title: format!("{}: '{}'", t::common::create(locale), path),
