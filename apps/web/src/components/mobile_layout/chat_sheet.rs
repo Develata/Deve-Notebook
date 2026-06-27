@@ -24,6 +24,16 @@ pub(crate) fn should_show_mobile_chat_sheet(
         && (expanded || keyboard_offset <= 0)
 }
 
+pub(crate) fn mobile_chat_runtime_conflict_should_close(
+    visible: bool,
+    drawer_open: bool,
+    diff_open: bool,
+    surface_switcher_open: bool,
+    expanded: bool,
+) -> bool {
+    expanded && (!visible || drawer_open || diff_open || surface_switcher_open)
+}
+
 pub(crate) fn mobile_chat_sheet_style(expanded: bool, keyboard_offset: i32) -> String {
     if expanded {
         if keyboard_offset > 0 {
@@ -80,6 +90,18 @@ pub fn MobileChatSheet(
     });
     let close_chat = Callback::new(move |_| set_expanded.set(mobile_chat_after_close()));
 
+    Effect::new(move |_| {
+        if mobile_chat_runtime_conflict_should_close(
+            visible.get(),
+            drawer_open.get(),
+            diff_open.get(),
+            surface_switcher_open.get(),
+            expanded.get(),
+        ) {
+            set_expanded.set(mobile_chat_after_close());
+        }
+    });
+
     view! {
         <Show when=move || {
             should_show_mobile_chat_sheet(
@@ -126,7 +148,8 @@ pub fn MobileChatSheet(
 mod tests {
     use super::{
         mobile_chat_after_close, mobile_chat_after_open, mobile_chat_page_mode,
-        mobile_chat_sheet_class, mobile_chat_sheet_style, should_show_mobile_chat_sheet,
+        mobile_chat_runtime_conflict_should_close, mobile_chat_sheet_class,
+        mobile_chat_sheet_style, should_show_mobile_chat_sheet,
     };
 
     #[test]
@@ -206,5 +229,27 @@ mod tests {
         assert!(mobile_chat_sheet_class(false).contains("z-[var(--z-floating)]"));
         assert!(mobile_chat_after_open());
         assert!(!mobile_chat_after_close());
+    }
+
+    #[test]
+    fn mobile_chat_runtime_conflicts_close_expanded_page() {
+        assert!(mobile_chat_runtime_conflict_should_close(
+            false, false, false, false, true
+        ));
+        assert!(mobile_chat_runtime_conflict_should_close(
+            true, true, false, false, true
+        ));
+        assert!(mobile_chat_runtime_conflict_should_close(
+            true, false, true, false, true
+        ));
+        assert!(mobile_chat_runtime_conflict_should_close(
+            true, false, false, true, true
+        ));
+        assert!(!mobile_chat_runtime_conflict_should_close(
+            true, false, false, false, true
+        ));
+        assert!(!mobile_chat_runtime_conflict_should_close(
+            true, true, false, false, false
+        ));
     }
 }
