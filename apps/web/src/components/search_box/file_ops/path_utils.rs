@@ -51,7 +51,7 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
     }
     let leaf_is_dir = path.ends_with('/');
     for (index, segment) in segments.iter().enumerate() {
-        if *segment == ".notegit" {
+        if deve_core::utils::notegit::is_internal_repo_segment(segment) {
             return Some(path_err::RESERVED_INTERNAL_PATH);
         }
         let is_leaf = index + 1 == segments.len();
@@ -192,6 +192,20 @@ mod tests {
             "notes/a\nb.md",
         ] {
             assert_eq!(validate_doc_shell_path(path), Some(path_err::INVALID_PATH));
+        }
+    }
+
+    #[test]
+    fn validate_doc_shell_path_rejects_internal_repo_segments() {
+        for path in [
+            ".git/config.md",
+            "notes/.git/config.md",
+            ".notegit/state.md",
+        ] {
+            assert_eq!(
+                validate_doc_shell_path(path),
+                Some(path_err::RESERVED_INTERNAL_PATH)
+            );
         }
     }
 

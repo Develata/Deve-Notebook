@@ -117,6 +117,17 @@ fn file_provider_does_not_offer_create_for_reserved_path() {
 }
 
 #[test]
+fn file_provider_does_not_offer_create_for_git_internal_path() {
+    let results = provider().search(".git/config");
+
+    assert!(
+        results
+            .iter()
+            .all(|result| !matches!(result.action, SearchAction::CreateDoc(_)))
+    );
+}
+
+#[test]
 fn file_provider_does_not_offer_create_for_shell_reserved_path() {
     let results = provider().search("notes/a|b.md");
 
