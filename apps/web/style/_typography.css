@@ -23,6 +23,42 @@
   line-height: 1.4;
 }
 
+.cm-heading-line-1 {
+  line-height: 2.4em;
+  min-height: 2.4em;
+}
+
+.cm-heading-line-2 {
+  line-height: 1.95em;
+  min-height: 1.95em;
+}
+
+.cm-heading-line-3 {
+  line-height: 1.75em;
+  min-height: 1.75em;
+}
+
+.markdown-body h1 {
+  font-size: 2em;
+  font-weight: bold;
+  line-height: 1.2;
+  min-height: 1.2em;
+}
+
+.markdown-body h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  line-height: 1.3;
+  min-height: 1.3em;
+}
+
+.markdown-body h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  line-height: 1.4;
+  min-height: 1.4em;
+}
+
 .cm-h4 {
   font-size: 1.1em;
   font-weight: bold;

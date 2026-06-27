@@ -2,6 +2,11 @@ import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import { findMathRanges, findFrontmatterRange } from "./utils.js";
 
+function atxHeadingLevel(nodeName) {
+  const match = /^ATXHeading([1-3])$/.exec(nodeName);
+  return match ? match[1] : null;
+}
+
 /**
  * Hybrid Plugin (混合插件)
  * 
@@ -116,6 +121,16 @@ export const hybridPlugin = ViewPlugin.fromClass(
             // 跳过 Frontmatter 内部 (如果已检测到)
             // 避免 Frontmatter 内部的 key: value 被识别为 Setext Heading 的一部分并被隐藏/错误处理
             if (fm && node.from >= fm.from && node.to <= fm.to) return;
+
+            const headingLevel = atxHeadingLevel(node.name);
+            if (headingLevel) {
+                const line = view.state.doc.lineAt(node.from);
+                widgets.push(
+                    Decoration.line({
+                        class: `cm-heading-line cm-heading-line-${headingLevel}`,
+                    }).range(line.from)
+                );
+            }
 
             // ---------------------------------------------------------
             // 2. Syntax Hiding (Hiding Marks and Syntax when not active)
