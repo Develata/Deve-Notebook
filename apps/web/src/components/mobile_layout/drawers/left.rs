@@ -76,9 +76,9 @@ pub fn LeftDrawer(
                     set_pinned_views
                     open
                     on_search=Callback::new(move |_| {
+                        on_close.run(());
                         search_control.set_mode.set("?".to_string());
                         search_control.set_show.set(true);
-                        on_close.run(());
                     })
                 />
 
@@ -94,6 +94,7 @@ pub fn LeftDrawer(
                                 on_close.run(())
                             })
                             on_delete=document.on_doc_delete
+                            on_search_open=on_close
                         />
                     </div>
                 </div>

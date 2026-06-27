@@ -42,6 +42,7 @@ pub fn Sidebar(
     is_readonly: Signal<bool>,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
+    #[prop(into)] on_search_open: Callback<()>,
 ) -> impl IntoView {
     let search_control = expect_context::<SearchControl>();
     let last_active_view = StoredValue::new_local(active_view.get_untracked());
@@ -52,8 +53,7 @@ pub fn Sidebar(
         last_active_view.set_value(current);
 
         if should_open_search_overlay(previous, current) {
-            search_control.set_mode.set("?".to_string());
-            search_control.set_show.set(true);
+            open_search_overlay(search_control, on_search_open, "?".to_string());
         }
     });
 
@@ -67,6 +67,7 @@ pub fn Sidebar(
                         is_readonly=is_readonly
                         on_select=on_select
                         on_delete=on_delete
+                        on_search_open=on_search_open
                     />
                 }.into_any(),
                 SidebarView::SourceControl => view! {
@@ -79,6 +80,7 @@ pub fn Sidebar(
                         is_readonly=is_readonly
                         on_select=on_select
                         on_delete=on_delete
+                        on_search_open=on_search_open
                     />
                 }.into_any(),
                 SidebarView::Extensions => view! {
@@ -93,9 +95,21 @@ fn should_open_search_overlay(previous: SidebarView, current: SidebarView) -> bo
     previous != SidebarView::Search && current == SidebarView::Search
 }
 
+pub(super) fn open_search_overlay(
+    search_control: SearchControl,
+    on_search_open: Callback<()>,
+    query: String,
+) {
+    on_search_open.run(());
+    search_control.set_mode.set(query);
+    search_control.set_show.set(true);
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{SidebarView, should_open_search_overlay};
+    use super::{SidebarView, open_search_overlay, should_open_search_overlay};
+    use crate::components::main_layout::SearchControl;
+    use leptos::prelude::*;
 
     #[test]
     fn search_overlay_opens_only_on_search_view_transition() {
@@ -111,5 +125,32 @@ mod tests {
             SidebarView::Search,
             SidebarView::Explorer
         ));
+    }
+
+    #[test]
+    fn search_overlay_runs_pre_open_hook_before_showing_search() {
+        let owner = leptos::reactive::owner::Owner::new();
+        owner.with(|| {
+            let (show_search, set_show_search) = signal(false);
+            let (search_mode, set_search_mode) = signal(String::new());
+            let (hook_ran, set_hook_ran) = signal(false);
+
+            open_search_overlay(
+                SearchControl {
+                    set_show: set_show_search,
+                    set_mode: set_search_mode,
+                },
+                Callback::new(move |_| {
+                    assert!(!show_search.get_untracked());
+                    assert!(search_mode.get_untracked().is_empty());
+                    set_hook_ran.set(true);
+                }),
+                "+Untitled.md".to_string(),
+            );
+
+            assert!(hook_ran.get_untracked());
+            assert!(show_search.get_untracked());
+            assert_eq!(search_mode.get_untracked(), "+Untitled.md");
+        });
     }
 }

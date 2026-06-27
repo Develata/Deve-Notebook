@@ -68,6 +68,7 @@ pub fn result_item(view: SearchResultItemView) -> impl IntoView {
 
     view! {
         <button
+            type="button"
             class=format!(
                 "{} {}",
                 base,
