@@ -76,15 +76,98 @@ pub fn MobileAccessoryToolbar(
                 style=move || mobile_toolbar_style(keyboard_offset.get())
             >
                 <div class="flex items-center gap-1 overflow-x-auto">
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" data-deve-mobile-history-action="undo" class=base on:click=move |_| on_undo.run(()) disabled=disabled title=move || t::common::undo(locale.get())>"↩"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" data-deve-mobile-history-action="redo" class=base on:click=move |_| on_redo.run(()) disabled=disabled title=move || t::common::redo(locale.get())>"↪"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_tab.run(()) disabled=disabled title=move || t::common::tab(locale.get())>"⇥"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_h1.run(()) disabled=disabled title=move || t::common::heading(locale.get())>"H"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_list.run(()) disabled=disabled title=move || t::common::list(locale.get())>"•"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_task.run(()) disabled=disabled title=move || t::common::task(locale.get())>"☑"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_bold.run(()) disabled=disabled title=move || t::common::bold(locale.get())>"B"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_italic.run(()) disabled=disabled title=move || t::common::italic(locale.get())>"I"</button>
-                    <button data-deve-mobile-touch-target="accessory_toolbar_buttons" class=base on:click=move |_| on_code.run(()) disabled=disabled title=move || t::common::code(locale.get())>"<>"</button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        data-deve-mobile-history-action="undo"
+                        class=base
+                        on:click=move |_| on_undo.run(())
+                        disabled=disabled
+                        title=move || t::common::undo(locale.get())
+                        aria-label=move || t::common::undo(locale.get())
+                    >
+                        "↩"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        data-deve-mobile-history-action="redo"
+                        class=base
+                        on:click=move |_| on_redo.run(())
+                        disabled=disabled
+                        title=move || t::common::redo(locale.get())
+                        aria-label=move || t::common::redo(locale.get())
+                    >
+                        "↪"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        class=base
+                        on:click=move |_| on_tab.run(())
+                        disabled=disabled
+                        title=move || t::common::tab(locale.get())
+                        aria-label=move || t::common::tab(locale.get())
+                    >
+                        "⇥"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        class=base
+                        on:click=move |_| on_h1.run(())
+                        disabled=disabled
+                        title=move || t::common::heading(locale.get())
+                        aria-label=move || t::common::heading(locale.get())
+                    >
+                        "H"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        class=base
+                        on:click=move |_| on_list.run(())
+                        disabled=disabled
+                        title=move || t::common::list(locale.get())
+                        aria-label=move || t::common::list(locale.get())
+                    >
+                        "•"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        class=base
+                        on:click=move |_| on_task.run(())
+                        disabled=disabled
+                        title=move || t::common::task(locale.get())
+                        aria-label=move || t::common::task(locale.get())
+                    >
+                        "☑"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        class=base
+                        on:click=move |_| on_bold.run(())
+                        disabled=disabled
+                        title=move || t::common::bold(locale.get())
+                        aria-label=move || t::common::bold(locale.get())
+                    >
+                        "B"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        class=base
+                        on:click=move |_| on_italic.run(())
+                        disabled=disabled
+                        title=move || t::common::italic(locale.get())
+                        aria-label=move || t::common::italic(locale.get())
+                    >
+                        "I"
+                    </button>
+                    <button
+                        data-deve-mobile-touch-target="accessory_toolbar_buttons"
+                        class=base
+                        on:click=move |_| on_code.run(())
+                        disabled=disabled
+                        title=move || t::common::code(locale.get())
+                        aria-label=move || t::common::code(locale.get())
+                    >
+                        "<>"
+                    </button>
                 </div>
             </div>
         </Show>
