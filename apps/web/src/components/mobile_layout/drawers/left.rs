@@ -80,6 +80,7 @@ pub fn LeftDrawer(
                         search_control.set_mode.set("?".to_string());
                         search_control.set_show.set(true);
                     })
+                    on_view_select=on_close
                 />
 
                 <div class="flex-1 overflow-hidden px-2 pb-3" style="padding-bottom: env(safe-area-inset-bottom);">

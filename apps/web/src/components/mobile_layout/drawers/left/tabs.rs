@@ -25,6 +25,21 @@ pub(super) fn mobile_more_button_class() -> &'static str {
     "mobile-more-button h-11 min-w-[44px] px-2 rounded-md bg-panel border border-default text-secondary active:bg-hover active:scale-95 transition-transform duration-150 ease-out"
 }
 
+pub(super) fn select_mobile_sidebar_view(
+    view: SidebarView,
+    set_active_view: WriteSignal<SidebarView>,
+    on_search: Callback<()>,
+    on_view_select: Callback<()>,
+) {
+    if view == SidebarView::Search {
+        on_search.run(());
+        return;
+    }
+
+    set_active_view.set(view);
+    on_view_select.run(());
+}
+
 #[component]
 pub(super) fn LeftDrawerTabs(
     locale: RwSignal<Locale>,
@@ -34,15 +49,12 @@ pub(super) fn LeftDrawerTabs(
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
     open: ReadSignal<bool>,
     on_search: Callback<()>,
+    on_view_select: Callback<()>,
 ) -> impl IntoView {
     let (show_more, set_show_more) = signal(false);
     let more_menu_ref = NodeRef::<html::Div>::new();
     let select_view = Callback::new(move |view: SidebarView| {
-        if view == SidebarView::Search {
-            on_search.run(());
-        } else {
-            set_active_view.set(view);
-        }
+        select_mobile_sidebar_view(view, set_active_view, on_search, on_view_select);
         set_show_more.set(false);
     });
 
@@ -116,7 +128,10 @@ pub(super) fn LeftDrawerTabs(
 mod tests {
     use super::{
         mobile_more_button_class, mobile_more_button_marker, mobile_sidebar_icon_tabs_marker,
+        select_mobile_sidebar_view,
     };
+    use crate::components::activity_bar::SidebarView;
+    use leptos::prelude::*;
 
     #[test]
     fn mobile_sidebar_icon_tabs_marker_is_visible_when_drawer_open() {
@@ -135,5 +150,47 @@ mod tests {
 
         assert!(class.contains("h-11"));
         assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_sidebar_tab_selection_closes_drawer_after_non_search_view_switch() {
+        let owner = leptos::reactive::owner::Owner::new();
+        owner.with(|| {
+            let (active_view, set_active_view) = signal(SidebarView::Explorer);
+            let (search_opened, set_search_opened) = signal(false);
+            let (drawer_closed, set_drawer_closed) = signal(false);
+
+            select_mobile_sidebar_view(
+                SidebarView::SourceControl,
+                set_active_view,
+                Callback::new(move |_| set_search_opened.set(true)),
+                Callback::new(move |_| set_drawer_closed.set(true)),
+            );
+
+            assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
+            assert!(!search_opened.get_untracked());
+            assert!(drawer_closed.get_untracked());
+        });
+    }
+
+    #[test]
+    fn mobile_sidebar_search_tab_uses_search_handler_for_close() {
+        let owner = leptos::reactive::owner::Owner::new();
+        owner.with(|| {
+            let (active_view, set_active_view) = signal(SidebarView::Explorer);
+            let (search_opened, set_search_opened) = signal(false);
+            let (drawer_closed, set_drawer_closed) = signal(false);
+
+            select_mobile_sidebar_view(
+                SidebarView::Search,
+                set_active_view,
+                Callback::new(move |_| set_search_opened.set(true)),
+                Callback::new(move |_| set_drawer_closed.set(true)),
+            );
+
+            assert_eq!(active_view.get_untracked(), SidebarView::Explorer);
+            assert!(search_opened.get_untracked());
+            assert!(!drawer_closed.get_untracked());
+        });
     }
 }
