@@ -113,10 +113,16 @@ pub(super) fn collect_dirs(docs: &[(DocId, String)]) -> Vec<String> {
 
 pub(super) fn filter_dirs(dirs: &[String], query: &str) -> Vec<(String, f32)> {
     if query.is_empty() {
-        return dirs.iter().cloned().map(|d| (d, 1.0)).collect();
+        return dirs
+            .iter()
+            .filter(|dir| is_valid_dir_candidate(dir))
+            .cloned()
+            .map(|d| (d, 1.0))
+            .collect();
     }
     let mut results: Vec<(String, f32)> = dirs
         .iter()
+        .filter(|dir| is_valid_dir_candidate(dir))
         .filter_map(|dir| {
             sublime_fuzzy::best_match(query, dir).map(|m| (dir.clone(), m.score() as f32))
         })
@@ -124,6 +130,10 @@ pub(super) fn filter_dirs(dirs: &[String], query: &str) -> Vec<(String, f32)> {
         .collect();
     results.sort_by(|a, b| score_desc(a.1, b.1));
     results
+}
+
+fn is_valid_dir_candidate(dir: &str) -> bool {
+    validate_doc_shell_path(dir).is_none()
 }
 
 pub(super) fn format_arg(arg: &str) -> String {
@@ -177,6 +187,18 @@ mod tests {
             dirs,
             vec!["folder/".to_string(), "folder/nested/".to_string()]
         );
+    }
+
+    #[test]
+    fn filter_dirs_rejects_internal_repo_segments() {
+        let dirs = vec![
+            "notes/".to_string(),
+            "notes/.git/".to_string(),
+            ".notegit/".to_string(),
+        ];
+
+        assert_eq!(filter_dirs(&dirs, ""), vec![("notes/".to_string(), 1.0)]);
+        assert!(filter_dirs(&dirs, "git").is_empty());
     }
 
     #[test]
