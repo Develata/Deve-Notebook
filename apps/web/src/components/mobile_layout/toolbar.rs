@@ -12,6 +12,10 @@ pub(super) fn toolbar_button_class() -> &'static str {
     "h-11 min-w-[44px] px-2 rounded-md border border-default bg-panel text-primary active:bg-hover text-xs font-medium"
 }
 
+pub(super) fn toolbar_button_type() -> &'static str {
+    "button"
+}
+
 pub(super) fn mobile_toolbar_style(keyboard_offset: i32) -> String {
     format!(
         "bottom: calc({}px + {}px + env(safe-area-inset-bottom));",
@@ -65,6 +69,7 @@ pub fn MobileAccessoryToolbar(
     });
 
     let base = toolbar_button_class();
+    let button_type = toolbar_button_type();
     let disabled = move || readonly.get();
 
     view! {
@@ -77,6 +82,7 @@ pub fn MobileAccessoryToolbar(
             >
                 <div class="flex items-center gap-1 overflow-x-auto">
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         data-deve-mobile-history-action="undo"
                         class=base
@@ -88,6 +94,7 @@ pub fn MobileAccessoryToolbar(
                         "↩"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         data-deve-mobile-history-action="redo"
                         class=base
@@ -99,6 +106,7 @@ pub fn MobileAccessoryToolbar(
                         "↪"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         class=base
                         on:click=move |_| on_tab.run(())
@@ -109,6 +117,7 @@ pub fn MobileAccessoryToolbar(
                         "⇥"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         class=base
                         on:click=move |_| on_h1.run(())
@@ -119,6 +128,7 @@ pub fn MobileAccessoryToolbar(
                         "H"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         class=base
                         on:click=move |_| on_list.run(())
@@ -129,6 +139,7 @@ pub fn MobileAccessoryToolbar(
                         "•"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         class=base
                         on:click=move |_| on_task.run(())
@@ -139,6 +150,7 @@ pub fn MobileAccessoryToolbar(
                         "☑"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         class=base
                         on:click=move |_| on_bold.run(())
@@ -149,6 +161,7 @@ pub fn MobileAccessoryToolbar(
                         "B"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         class=base
                         on:click=move |_| on_italic.run(())
@@ -159,6 +172,7 @@ pub fn MobileAccessoryToolbar(
                         "I"
                     </button>
                     <button
+                        type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
                         class=base
                         on:click=move |_| on_code.run(())
@@ -176,7 +190,10 @@ pub fn MobileAccessoryToolbar(
 
 #[cfg(test)]
 mod tests {
-    use super::{mobile_toolbar_action_enabled, mobile_toolbar_style, toolbar_button_class};
+    use super::{
+        mobile_toolbar_action_enabled, mobile_toolbar_style, toolbar_button_class,
+        toolbar_button_type,
+    };
 
     #[test]
     fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard() {
@@ -191,6 +208,11 @@ mod tests {
         let class = toolbar_button_class();
         assert!(class.contains("h-11"));
         assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_toolbar_buttons_are_explicit_non_submit_buttons() {
+        assert_eq!(toolbar_button_type(), "button");
     }
 
     #[test]
