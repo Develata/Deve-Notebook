@@ -51,9 +51,9 @@ pub(crate) fn execute_action(
             set_show.set(false);
         }
         SearchAction::FileOp(op) => {
-            if !file_op_action_is_executable(op) {
+            let Some(op) = normalize_executable_file_op_action(op) else {
                 return;
-            }
+            };
             match op.kind {
                 FileOpKind::Move => {
                     if !allow_repo_write(runtime, "move document") {
@@ -122,27 +122,46 @@ fn update_recent_move_dirs(set_recent_move_dirs: WriteSignal<Vec<String>>, dst: 
     });
 }
 
-fn file_op_action_is_executable(op: &FileOpAction) -> bool {
-    if file_ops::validate_doc_file_path(&op.src).is_some() {
-        return false;
+fn normalize_executable_file_op_action(op: &FileOpAction) -> Option<FileOpAction> {
+    let src_raw = op.src.trim();
+    if file_ops::validate_doc_file_path(src_raw).is_some() {
+        return None;
     }
+    let src = file_ops::normalize_doc_path(src_raw);
 
-    match op.kind {
+    match &op.kind {
         FileOpKind::Move | FileOpKind::Copy => {
-            let Some(dst) = op.dst.as_deref() else {
-                return false;
-            };
-            file_ops::validate_doc_file_path(dst).is_none() && dst != op.src
+            let dst = op.dst.as_deref()?;
+            let dst_raw = dst.trim();
+            if file_ops::validate_doc_file_path(dst_raw).is_some() {
+                return None;
+            }
+            let dst = file_ops::normalize_doc_path(dst_raw);
+            if dst == src {
+                return None;
+            }
+            Some(FileOpAction {
+                kind: op.kind.clone(),
+                src,
+                dst: Some(dst),
+            })
         }
         FileOpKind::Remove => {
-            op.dst.is_none() && file_ops::validate_doc_file_path(&op.src).is_none()
+            if op.dst.is_some() {
+                return None;
+            }
+            Some(FileOpAction {
+                kind: op.kind.clone(),
+                src,
+                dst: None,
+            })
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::file_op_action_is_executable;
+    use super::normalize_executable_file_op_action;
     use crate::components::search_box::types::{FileOpAction, FileOpKind};
 
     #[test]
@@ -153,7 +172,7 @@ mod tests {
             dst: Some("notes/.git/config.md".to_string()),
         };
 
-        assert!(!file_op_action_is_executable(&op));
+        assert!(normalize_executable_file_op_action(&op).is_none());
     }
 
     #[test]
@@ -164,7 +183,32 @@ mod tests {
             dst: Some("notes/readme.md".to_string()),
         };
 
-        assert!(!file_op_action_is_executable(&op));
+        assert!(normalize_executable_file_op_action(&op).is_none());
+    }
+
+    #[test]
+    fn file_op_action_execution_rejects_normalized_same_move_target() {
+        let op = FileOpAction {
+            kind: FileOpKind::Move,
+            src: "notes/readme.md".to_string(),
+            dst: Some("notes\\readme".to_string()),
+        };
+
+        assert!(normalize_executable_file_op_action(&op).is_none());
+    }
+
+    #[test]
+    fn file_op_action_execution_normalizes_dispatch_paths() {
+        let op = FileOpAction {
+            kind: FileOpKind::Copy,
+            src: "notes\\readme".to_string(),
+            dst: Some("archive\\readme".to_string()),
+        };
+
+        let normalized = normalize_executable_file_op_action(&op).expect("valid file op");
+
+        assert_eq!(normalized.src, "notes/readme.md");
+        assert_eq!(normalized.dst.as_deref(), Some("archive/readme.md"));
     }
 
     #[test]
@@ -175,7 +219,7 @@ mod tests {
             dst: None,
         };
 
-        assert!(!file_op_action_is_executable(&op));
+        assert!(normalize_executable_file_op_action(&op).is_none());
     }
 
     #[test]
@@ -191,8 +235,8 @@ mod tests {
             dst: None,
         };
 
-        assert!(file_op_action_is_executable(&mv));
-        assert!(file_op_action_is_executable(&rm));
+        assert!(normalize_executable_file_op_action(&mv).is_some());
+        assert!(normalize_executable_file_op_action(&rm).is_some());
     }
 
     #[test]
@@ -203,7 +247,7 @@ mod tests {
             dst: None,
         };
 
-        assert!(!file_op_action_is_executable(&op));
+        assert!(normalize_executable_file_op_action(&op).is_none());
     }
 
     #[test]
@@ -214,7 +258,7 @@ mod tests {
             dst: Some("archive/notes.md".to_string()),
         };
 
-        assert!(!file_op_action_is_executable(&op));
+        assert!(normalize_executable_file_op_action(&op).is_none());
     }
 
     #[test]
@@ -225,6 +269,6 @@ mod tests {
             dst: Some("archive/".to_string()),
         };
 
-        assert!(!file_op_action_is_executable(&op));
+        assert!(normalize_executable_file_op_action(&op).is_none());
     }
 }
