@@ -19,6 +19,10 @@ pub(super) fn outline_toggle_button_class(show_outline: bool) -> &'static str {
     }
 }
 
+pub(super) fn outline_toggle_expanded_state(show_outline: bool) -> &'static str {
+    if show_outline { "true" } else { "false" }
+}
+
 #[component]
 pub fn OutlineToggleButton(
     show_outline: ReadSignal<bool>,
@@ -28,6 +32,7 @@ pub fn OutlineToggleButton(
 ) -> impl IntoView {
     view! {
         <button
+            type="button"
             data-deve-mobile-touch-target="outline_toggle"
             class=move || outline_toggle_button_class(show_outline.get())
             style=move || {
@@ -39,6 +44,7 @@ pub fn OutlineToggleButton(
             }
             title=move || t::header::toggle_outline(locale.get())
             aria-label=move || t::header::toggle_outline(locale.get())
+            aria-expanded=move || outline_toggle_expanded_state(show_outline.get())
             on:click=move |_| {
                 set_show_sidebar.set(false);
                 set_show_outline.update(|v| *v = !*v);
@@ -57,7 +63,7 @@ pub fn OutlineToggleButton(
 
 #[cfg(test)]
 mod tests {
-    use super::outline_toggle_button_class;
+    use super::{outline_toggle_button_class, outline_toggle_expanded_state};
 
     #[test]
     fn mobile_touch_targets_outline_toggle_is_at_least_44px() {
@@ -66,5 +72,11 @@ mod tests {
             assert!(class.contains("h-11"));
             assert!(class.contains("w-11"));
         }
+    }
+
+    #[test]
+    fn outline_toggle_exposes_expanded_state() {
+        assert_eq!(outline_toggle_expanded_state(false), "false");
+        assert_eq!(outline_toggle_expanded_state(true), "true");
     }
 }
