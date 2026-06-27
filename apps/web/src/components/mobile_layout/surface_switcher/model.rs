@@ -6,7 +6,7 @@ use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTab
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MobileSurfaceSummary {
     pub kind: &'static str,
-    pub title: String,
+    pub title: Option<String>,
     pub total_count: usize,
 }
 
@@ -26,7 +26,7 @@ pub(crate) fn mobile_surface_summary(
                 if let Some(tab) = doc_tabs.iter().find(|tab| tab.doc_id == doc_id) {
                     return Some(MobileSurfaceSummary {
                         kind: "document",
-                        title: tab.title.clone(),
+                        title: Some(tab.title.clone()),
                         total_count,
                     });
                 }
@@ -35,7 +35,7 @@ pub(crate) fn mobile_surface_summary(
                 if let Some(tab) = diff_tabs.iter().find(|tab| tab.key == key) {
                     return Some(MobileSurfaceSummary {
                         kind: "diff",
-                        title: tab.title.clone(),
+                        title: Some(tab.title.clone()),
                         total_count,
                     });
                 }
@@ -43,20 +43,11 @@ pub(crate) fn mobile_surface_summary(
         }
     }
 
-    doc_tabs
-        .first()
-        .map(|tab| MobileSurfaceSummary {
-            kind: "document",
-            title: tab.title.clone(),
-            total_count,
-        })
-        .or_else(|| {
-            diff_tabs.first().map(|tab| MobileSurfaceSummary {
-                kind: "diff",
-                title: tab.title.clone(),
-                total_count,
-            })
-        })
+    Some(MobileSurfaceSummary {
+        kind: "tabs",
+        title: None,
+        total_count,
+    })
 }
 
 pub(crate) fn mobile_surface_sheet_visible(open: bool, drawer_open: bool, has_tabs: bool) -> bool {
@@ -114,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn mobile_surface_summary_falls_back_to_first_document() {
+    fn mobile_surface_summary_uses_open_tabs_fallback_when_no_surface_is_active() {
         let doc_id = DocId::from_u128(1);
         let docs = vec![EditorDocumentTab {
             doc_id,
@@ -124,8 +115,8 @@ mod tests {
 
         let summary = mobile_surface_summary(None, &docs, &[]).expect("summary");
 
-        assert_eq!(summary.kind, "document");
-        assert_eq!(summary.title, "a.md");
+        assert_eq!(summary.kind, "tabs");
+        assert_eq!(summary.title, None);
         assert_eq!(summary.total_count, 1);
     }
 

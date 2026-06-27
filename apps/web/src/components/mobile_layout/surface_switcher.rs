@@ -73,7 +73,15 @@ pub fn MobileSurfaceSwitcher(
                         }
                     }}
                     <span class="min-w-0 flex-1 truncate text-[13px] font-medium">
-                        {move || summary.get().map(|item| item.title).unwrap_or_default()}
+                        {move || {
+                            summary
+                                .get()
+                                .map(|item| {
+                                    item.title
+                                        .unwrap_or_else(|| t::common::open_tabs(locale.get()).to_string())
+                                })
+                                .unwrap_or_default()
+                        }}
                     </span>
                     <span class="shrink-0 rounded bg-muted px-2 py-0.5 text-[11px] text-secondary">
                         {move || {
