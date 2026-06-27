@@ -4,7 +4,9 @@
 //!
 use crate::components::command_palette::Command;
 use crate::components::search_box::score::score_desc;
-use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::components::search_box::types::{
+    SearchAction, SearchProvider, SearchResult, SearchResultRole,
+};
 use crate::i18n::{Locale, t};
 
 pub struct CommandProvider {
@@ -31,6 +33,7 @@ impl SearchProvider for CommandProvider {
                     id: cmd.id.clone(),
                     title: cmd.title.clone(),
                     detail: Some(command_result_detail(cmd, self.locale)),
+                    role: SearchResultRole::Action,
                     score: 1.0,
                     action: SearchAction::RunCommand(cmd.clone()),
                 })
@@ -49,6 +52,7 @@ impl SearchProvider for CommandProvider {
                 id: cmd.id.clone(),
                 title: cmd.title.clone(),
                 detail: Some(command_result_detail(cmd, self.locale)),
+                role: SearchResultRole::Action,
                 score,
                 action: SearchAction::RunCommand(cmd.clone()),
             })

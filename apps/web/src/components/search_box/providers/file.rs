@@ -4,7 +4,9 @@
 //!
 use crate::components::search_box::file_ops::{normalize_doc_path, validate_doc_create_path};
 use crate::components::search_box::score::score_desc;
-use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::components::search_box::types::{
+    SearchAction, SearchProvider, SearchResult, SearchResultRole,
+};
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 
@@ -36,6 +38,7 @@ impl SearchProvider for FileProvider {
                     id: id.to_string(),
                     title: path.clone(),
                     detail: None,
+                    role: SearchResultRole::Action,
                     score: 1.0,
                     action: SearchAction::OpenDoc(*id),
                 })
@@ -57,6 +60,7 @@ impl SearchProvider for FileProvider {
                 id: id.to_string(),
                 title: path.clone(),
                 detail: None,
+                role: SearchResultRole::Action,
                 score,
                 action: SearchAction::OpenDoc(*id),
             })
@@ -75,6 +79,7 @@ impl SearchProvider for FileProvider {
                 id: "create-doc".to_string(),
                 title: t::search::create_or_open(self.locale, &create_path),
                 detail: Some(t::common::new_file(self.locale).to_string()),
+                role: SearchResultRole::Action,
                 score: 0.1,
                 action: SearchAction::CreateDoc(create_path),
             });

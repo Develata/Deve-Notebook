@@ -8,7 +8,9 @@ use crate::components::search_box::providers::{
     self, CommandProvider, FileProvider, LOCAL_BRANCH_LABEL,
 };
 use crate::components::search_box::runtime::SearchRuntime;
-use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::components::search_box::types::{
+    SearchAction, SearchProvider, SearchResult, SearchResultRole,
+};
 use crate::hooks::use_core::SearchHit;
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
@@ -140,6 +142,7 @@ fn create_file_results(path: &str, locale: Locale) -> Vec<SearchResult> {
             id: "create-doc-error".to_string(),
             title: err.to_string(),
             detail: Some(t::search::error_detail(locale).to_string()),
+            role: SearchResultRole::Error,
             score: 0.0,
             action: SearchAction::Noop,
         }];
@@ -149,6 +152,7 @@ fn create_file_results(path: &str, locale: Locale) -> Vec<SearchResult> {
         id: "create-doc-only".to_string(),
         title: format!("{}: '{}'", t::common::create(locale), path),
         detail: Some(t::common::new_file(locale).to_string()),
+        role: SearchResultRole::Action,
         score: 1.0,
         action: SearchAction::CreateDoc(path),
     }]
@@ -187,6 +191,7 @@ fn full_text_results(
                 id: format!("full-text-{}", hit.doc_id),
                 title: hit.path,
                 detail: Some(detail.to_string()),
+                role: SearchResultRole::Action,
                 score: hit.score,
                 action: SearchAction::OpenDoc(DocId(uuid)),
             })

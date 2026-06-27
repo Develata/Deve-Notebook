@@ -2,7 +2,9 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use crate::components::search_box::types::{FileOpKind, SearchAction, SearchResult};
+use crate::components::search_box::types::{
+    FileOpKind, SearchAction, SearchResult, SearchResultRole,
+};
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use deve_core::protocol::doc_file_op_errors as path_err;
@@ -145,6 +147,7 @@ fn build_dir_results(
             id: format!("dir-{}", dir),
             title: dir.clone(),
             detail: Some(t::search::directory_detail(locale).to_string()),
+            role: SearchResultRole::Action,
             score,
             action: SearchAction::InsertQuery(build_insert_query(kind, src, &dir)),
         })

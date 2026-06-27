@@ -2,7 +2,9 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use crate::components::search_box::types::{FileOpAction, FileOpKind, SearchAction, SearchResult};
+use crate::components::search_box::types::{
+    FileOpAction, FileOpKind, SearchAction, SearchResult, SearchResultRole,
+};
 use crate::i18n::{Locale, t};
 use deve_core::protocol::doc_file_op_errors as path_err;
 
@@ -39,6 +41,7 @@ pub(super) fn build_remove_results(args: &[String], locale: Locale) -> Vec<Searc
         id: format!("rm-{}", path),
         title: t::search::remove_file_op(locale, &path),
         detail: Some(t::search::file_op_detail(locale).to_string()),
+        role: SearchResultRole::Action,
         score: 1.0,
         action: SearchAction::FileOp(FileOpAction {
             kind: FileOpKind::Remove,

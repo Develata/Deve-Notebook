@@ -3,7 +3,7 @@
 //!   - 03_storage/index#internal-path-normalization
 //!
 use crate::components::search_box::types::{
-    FileOpAction, FileOpKind, InsertQuery, SearchAction, SearchResult,
+    FileOpAction, FileOpKind, InsertQuery, SearchAction, SearchResult, SearchResultRole,
 };
 use crate::i18n::{Locale, t};
 
@@ -34,6 +34,7 @@ pub(super) fn build_execute_result(
         id: format!("fileop-{}-{}", src_norm, dst_norm),
         title,
         detail: Some(t::search::file_op_detail(locale).to_string()),
+        role: SearchResultRole::Action,
         score: 1.0,
         action: SearchAction::FileOp(FileOpAction {
             kind,
@@ -65,6 +66,7 @@ pub(super) fn group_header(title: &str, locale: Locale) -> SearchResult {
         id: format!("group-{}", title.to_lowercase()),
         title: title.to_string(),
         detail: Some(t::search::group_detail(locale).to_string()),
+        role: SearchResultRole::Group,
         score: 0.0,
         action: SearchAction::Noop,
     }
@@ -75,6 +77,7 @@ pub(super) fn error_result(locale: Locale, msg: String) -> SearchResult {
         id: "fileop-error".to_string(),
         title: msg,
         detail: Some(t::search::error_detail(locale).to_string()),
+        role: SearchResultRole::Error,
         score: 0.0,
         action: SearchAction::Noop,
     }
