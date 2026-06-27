@@ -8,7 +8,7 @@ use crate::components::search_box::types::{
 use crate::i18n::{Locale, t};
 use deve_core::protocol::doc_file_op_errors as path_err;
 
-use super::super::path_utils::{normalize_doc_path, validate_doc_shell_path};
+use super::super::path_utils::{normalize_doc_path, validate_doc_file_path};
 
 #[cfg(test)]
 mod tests;
@@ -34,7 +34,7 @@ pub(super) fn build_remove_results(args: &[String], locale: Locale) -> Vec<Searc
     }
 
     let path = normalize_doc_path(&args[0]);
-    if let Some(err) = validate_doc_shell_path(&path) {
+    if let Some(err) = validate_doc_file_path(&path) {
         return vec![super::error_result(locale, err.to_string())];
     }
     vec![SearchResult {

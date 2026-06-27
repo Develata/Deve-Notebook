@@ -4,8 +4,9 @@
 
 use super::close::{build_close_document_callback, close_diff_tab};
 use super::ops::{
-    evict_lru_document_tab, ordered_editor_tab_items, reorder_visible_tab,
-    touch_document_access_order, upsert_diff_tab, upsert_document_tab, upsert_visible_tab_order,
+    evict_lru_document_tab, ordered_editor_tab_items, reconcile_document_tabs_with_docs,
+    reorder_visible_tab, touch_document_access_order, upsert_diff_tab, upsert_document_tab,
+    upsert_visible_tab_order,
 };
 use super::policy::{active_editor_tab_key, scope_changed, should_clear_diff_on_document_change};
 use super::{
@@ -110,6 +111,23 @@ pub(crate) fn create_editor_tab_runtime(
     });
 
     let docs = inputs.document.docs;
+    Effect::new(move |_| {
+        let docs = docs.get();
+        let mut next_tabs = doc_tabs.get_untracked();
+        let mut next_order = tab_order.get_untracked();
+        let mut next_access_order = doc_access_order.get_untracked();
+        if reconcile_document_tabs_with_docs(
+            &mut next_tabs,
+            &mut next_order,
+            &mut next_access_order,
+            &docs,
+        ) {
+            set_doc_tabs.set(next_tabs);
+            set_tab_order.set(next_order);
+            set_doc_access_order.set(next_access_order);
+        }
+    });
+
     Effect::new(move |_| {
         if let Some(doc_id) = current_editor_doc.get()
             && let Some(tab) = document_tab_from_docs(&docs.get(), doc_id)

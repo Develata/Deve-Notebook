@@ -2,7 +2,9 @@
 //!   - 11_ui_design/index#editor-group-tabstrip
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
-use super::model::{DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey};
+use super::model::{
+    DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey, display_name,
+};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use deve_core::models::DocId;
 
@@ -42,6 +44,44 @@ pub(crate) fn touch_document_access_order(order: &mut Vec<DocId>, doc_id: DocId)
 
 pub(crate) fn prune_document_access_order(order: &mut Vec<DocId>, tabs: &[EditorDocumentTab]) {
     order.retain(|doc_id| tabs.iter().any(|tab| tab.doc_id == *doc_id));
+}
+
+pub(crate) fn reconcile_document_tabs_with_docs(
+    tabs: &mut Vec<EditorDocumentTab>,
+    visible_order: &mut Vec<EditorTabKey>,
+    access_order: &mut Vec<DocId>,
+    docs: &[(DocId, String)],
+) -> bool {
+    let mut changed = false;
+    for tab in tabs.iter_mut() {
+        let Some((_, path)) = docs.iter().find(|(doc_id, _)| *doc_id == tab.doc_id) else {
+            continue;
+        };
+        let title = display_name(path);
+        if tab.title != title || tab.tooltip != *path {
+            tab.title = title;
+            tab.tooltip.clone_from(path);
+            changed = true;
+        }
+    }
+
+    let before_len = tabs.len();
+    let mut removed = Vec::new();
+    tabs.retain(|tab| {
+        let keep = docs.iter().any(|(doc_id, _)| *doc_id == tab.doc_id);
+        if !keep {
+            removed.push(tab.doc_id);
+        }
+        keep
+    });
+    if tabs.len() != before_len {
+        changed = true;
+    }
+    for doc_id in removed {
+        remove_visible_tab_order(visible_order, &EditorTabKey::Document(doc_id));
+        access_order.retain(|existing| *existing != doc_id);
+    }
+    changed
 }
 
 pub(crate) fn ordered_editor_tab_items(

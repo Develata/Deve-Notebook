@@ -63,6 +63,10 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
 }
 
 pub fn validate_doc_create_path(raw: &str) -> Option<&'static str> {
+    validate_doc_file_path(raw)
+}
+
+pub fn validate_doc_file_path(raw: &str) -> Option<&'static str> {
     if let Some(err) = validate_doc_shell_path(raw) {
         return Some(err);
     }

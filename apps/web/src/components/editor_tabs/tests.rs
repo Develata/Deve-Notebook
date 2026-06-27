@@ -4,9 +4,9 @@ use super::{
     diff_tab_from_session,
     model::display_name,
     ops::{
-        evict_lru_document_tab, ordered_editor_tab_items, remove_diff_tab, remove_document_tab,
-        reorder_visible_tab, touch_document_access_order, upsert_document_tab,
-        upsert_visible_tab_order,
+        evict_lru_document_tab, ordered_editor_tab_items, reconcile_document_tabs_with_docs,
+        remove_diff_tab, remove_document_tab, reorder_visible_tab, touch_document_access_order,
+        upsert_document_tab, upsert_visible_tab_order,
     },
     policy::active_editor_tab_key,
     policy::scope_changed,
@@ -158,6 +158,51 @@ fn editor_tab_document_lru_evicts_oldest_non_active_document_only() {
     assert!(tabs.iter().any(|tab| tab.doc_id == third));
     assert!(visible_order.contains(&EditorTabKey::Diff(diff_key)));
     assert!(!access_order.contains(&second));
+}
+
+#[test]
+fn editor_tab_doc_projection_reconciles_titles_and_removes_deleted_docs() {
+    let first = DocId::from_u128(1);
+    let second = DocId::from_u128(2);
+    let stale = DocId::from_u128(3);
+    let mut tabs = vec![
+        EditorDocumentTab {
+            doc_id: first,
+            title: "old-a.md".into(),
+            tooltip: "old-a.md".into(),
+        },
+        EditorDocumentTab {
+            doc_id: second,
+            title: "b.md".into(),
+            tooltip: "b.md".into(),
+        },
+        EditorDocumentTab {
+            doc_id: stale,
+            title: "deleted.md".into(),
+            tooltip: "deleted.md".into(),
+        },
+    ];
+    let mut visible_order = vec![
+        EditorTabKey::Document(stale),
+        EditorTabKey::Document(first),
+        EditorTabKey::Document(second),
+    ];
+    let mut access_order = vec![stale, second, first];
+
+    let changed = reconcile_document_tabs_with_docs(
+        &mut tabs,
+        &mut visible_order,
+        &mut access_order,
+        &[(first, "notes/a.md".into()), (second, "b.md".into())],
+    );
+
+    assert!(changed);
+    assert_eq!(tabs.len(), 2);
+    assert_eq!(tabs[0].title, "a.md");
+    assert_eq!(tabs[0].tooltip, "notes/a.md");
+    assert!(!tabs.iter().any(|tab| tab.doc_id == stale));
+    assert!(!visible_order.contains(&EditorTabKey::Document(stale)));
+    assert!(!access_order.contains(&stale));
 }
 
 #[test]

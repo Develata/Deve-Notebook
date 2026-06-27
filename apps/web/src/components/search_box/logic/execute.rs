@@ -134,7 +134,9 @@ fn file_op_action_is_executable(op: &FileOpAction) -> bool {
             };
             file_ops::validate_doc_shell_path(dst).is_none() && dst != op.src
         }
-        FileOpKind::Remove => op.dst.is_none(),
+        FileOpKind::Remove => {
+            op.dst.is_none() && file_ops::validate_doc_file_path(&op.src).is_none()
+        }
     }
 }
 
@@ -191,5 +193,16 @@ mod tests {
 
         assert!(file_op_action_is_executable(&mv));
         assert!(file_op_action_is_executable(&rm));
+    }
+
+    #[test]
+    fn file_op_action_execution_rejects_directory_remove() {
+        let op = FileOpAction {
+            kind: FileOpKind::Remove,
+            src: "notes/".to_string(),
+            dst: None,
+        };
+
+        assert!(!file_op_action_is_executable(&op));
     }
 }

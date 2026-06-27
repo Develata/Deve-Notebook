@@ -34,6 +34,15 @@ fn remove_rejects_absolute_path() {
 }
 
 #[test]
+fn remove_rejects_directory_path() {
+    let results = build_remove_results(&args(&["notes/"]), Locale::En);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Invalid path");
+}
+
+#[test]
 fn remove_normalizes_file_target_before_action() {
     let results = build_remove_results(&args(&["notes/today"]), Locale::En);
 
