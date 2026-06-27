@@ -198,7 +198,6 @@ pub(crate) fn create_editor_tab_runtime(
             &inputs.source_control,
             doc_tabs,
             set_doc_tabs,
-            diff_tabs,
             tab_order,
             set_tab_order,
             doc_access_order,
