@@ -37,9 +37,12 @@ pub(crate) fn mobile_chat_runtime_conflict_should_close(
 pub(crate) fn mobile_chat_sheet_style(expanded: bool, keyboard_offset: i32) -> String {
     if expanded {
         if keyboard_offset > 0 {
-            format!("bottom: {}px;", keyboard_offset)
+            format!(
+                "padding-top: env(safe-area-inset-top); bottom: {}px;",
+                keyboard_offset
+            )
         } else {
-            String::new()
+            "padding-top: env(safe-area-inset-top);".to_string()
         }
     } else {
         let base = if keyboard_offset > 0 {
@@ -158,7 +161,9 @@ mod tests {
         assert!(should_show_mobile_chat_sheet(
             true, false, false, false, true, 280
         ));
-        assert_eq!(mobile_chat_sheet_style(true, 280), "bottom: 280px;");
+        let style = mobile_chat_sheet_style(true, 280);
+        assert!(style.contains("padding-top: env(safe-area-inset-top);"));
+        assert!(style.contains("bottom: 280px;"));
     }
 
     #[test]
@@ -166,7 +171,7 @@ mod tests {
         assert!(should_show_mobile_chat_sheet(
             true, false, false, false, true, 320
         ));
-        assert_eq!(mobile_chat_sheet_style(true, 320), "bottom: 320px;");
+        assert!(mobile_chat_sheet_style(true, 320).contains("bottom: 320px;"));
     }
 
     #[test]
@@ -222,6 +227,7 @@ mod tests {
         assert_eq!(mobile_chat_page_mode(true), "fullscreen");
         assert!(mobile_chat_sheet_class(true).contains("fixed inset-0"));
         assert!(mobile_chat_sheet_class(true).contains("z-[var(--z-overlay)]"));
+        assert!(mobile_chat_sheet_style(true, 0).contains("safe-area-inset-top"));
     }
 
     #[test]
