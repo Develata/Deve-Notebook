@@ -23,7 +23,13 @@ pub(super) fn handle_search_box_shortcut(
 ) {
     let key = ev.key();
     let is_ctrl = ev.ctrl_key() || ev.meta_key();
-    let action = plan_search_box_shortcut(is_ctrl, ev.shift_key(), &key, &query.get_untracked());
+    let action = plan_search_box_shortcut(
+        is_ctrl,
+        ev.shift_key(),
+        ev.alt_key(),
+        &key,
+        &query.get_untracked(),
+    );
 
     match action {
         Some(SearchBoxShortcutAction::Close) => {
@@ -59,9 +65,14 @@ pub(super) fn handle_search_box_shortcut(
 fn plan_search_box_shortcut(
     is_ctrl: bool,
     shift: bool,
+    alt: bool,
     key: &str,
     query: &str,
 ) -> Option<SearchBoxShortcutAction> {
+    if alt {
+        return None;
+    }
+
     let key_lower = key.to_lowercase();
 
     if key == "Escape" {
@@ -107,27 +118,40 @@ mod tests {
     #[test]
     fn search_box_shortcut_routes_branch_switcher_while_input_has_focus() {
         assert_eq!(
-            plan_search_box_shortcut(true, true, "K", ">settings"),
+            plan_search_box_shortcut(true, true, false, "K", ">settings"),
             Some(SearchBoxShortcutAction::BranchMode)
+        );
+    }
+
+    #[test]
+    fn search_box_shortcut_ignores_alt_modified_global_shortcuts() {
+        assert_eq!(plan_search_box_shortcut(true, false, true, "p", "@"), None);
+        assert_eq!(
+            plan_search_box_shortcut(true, true, true, "P", "file.md"),
+            None
+        );
+        assert_eq!(
+            plan_search_box_shortcut(true, true, true, "K", ">settings"),
+            None
         );
     }
 
     #[test]
     fn search_box_shortcut_keeps_existing_command_and_file_toggles() {
         assert_eq!(
-            plan_search_box_shortcut(true, true, "P", "file.md"),
+            plan_search_box_shortcut(true, true, false, "P", "file.md"),
             Some(SearchBoxShortcutAction::CommandMode)
         );
         assert_eq!(
-            plan_search_box_shortcut(true, true, "P", ">settings"),
+            plan_search_box_shortcut(true, true, false, "P", ">settings"),
             Some(SearchBoxShortcutAction::Close)
         );
         assert_eq!(
-            plan_search_box_shortcut(true, false, "p", "@"),
+            plan_search_box_shortcut(true, false, false, "p", "@"),
             Some(SearchBoxShortcutAction::FileMode)
         );
         assert_eq!(
-            plan_search_box_shortcut(true, true, "k", "@peer"),
+            plan_search_box_shortcut(true, true, false, "k", "@peer"),
             Some(SearchBoxShortcutAction::Close)
         );
     }
