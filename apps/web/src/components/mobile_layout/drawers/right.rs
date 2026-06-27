@@ -4,12 +4,13 @@
 //!   - 10_rendering#document-authority-bridge
 //!
 
+use crate::components::focus_scope;
 use crate::components::outline::Outline;
 use crate::editor::ffi::scroll_global;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
-use super::drawer_class;
+use super::{drawer_class, drawer_hidden_style};
 
 pub(super) fn drawer_close_button_class() -> &'static str {
     "h-11 min-w-[44px] px-3 text-sm font-medium text-secondary rounded-md hover:bg-hover active:bg-active transition-colors duration-200 ease-out"
@@ -22,11 +23,30 @@ pub fn RightDrawer(
     content_signal: Option<ReadSignal<String>>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let drawer_ref = NodeRef::<leptos::html::Div>::new();
+    let (surface_hidden, set_surface_hidden) = signal(!open.get_untracked());
+
+    Effect::new(move |_| {
+        let hidden = !open.get();
+        if !hidden {
+            set_surface_hidden.set(false);
+            return;
+        }
+        if let Some(drawer) = drawer_ref.get_untracked() {
+            let root: &web_sys::Element = drawer.as_ref();
+            let _ = focus_scope::blur_active_element_inside(root);
+        }
+        set_surface_hidden.set(true);
+    });
+
     view! {
         <div
+            node_ref=drawer_ref
             data-deve-mobile-drawer="right"
             data-deve-mobile-drawer-open=move || open.get().to_string()
+            aria-hidden=move || surface_hidden.get().to_string()
             class=move || drawer_class("right", open.get())
+            style=move || drawer_hidden_style(surface_hidden.get())
         >
             <div class="flex flex-col h-full">
                 <div
