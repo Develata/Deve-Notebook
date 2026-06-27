@@ -98,14 +98,14 @@ pub fn editor_density_compact(locale: Locale) -> &'static str {
 pub fn max_document_tabs(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Max Document Tabs",
-        Locale::Zh => "最大文档 Tab 数",
+        Locale::Zh => "最大文档标签页数",
     }
 }
 
 pub fn max_document_tabs_desc(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Applies only to Markdown document tabs.",
-        Locale::Zh => "仅作用于 Markdown 文档 tab。",
+        Locale::Zh => "仅作用于 Markdown 文档标签页。",
     }
 }
 
@@ -156,6 +156,11 @@ mod tests {
         assert!(appearance_desc(Locale::En).contains("locally"));
         assert!(editor_basics_desc(Locale::En).contains("local UI"));
         assert!(max_document_tabs_desc(Locale::En).contains("Markdown"));
+        assert_eq!(super::max_document_tabs(Locale::Zh), "最大文档标签页数");
+        assert_eq!(
+            max_document_tabs_desc(Locale::Zh),
+            "仅作用于 Markdown 文档标签页。"
+        );
         assert!(runtime_diagnostics_desc(Locale::En).contains("smoke"));
     }
 }

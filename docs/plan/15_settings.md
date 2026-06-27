@@ -179,11 +179,11 @@ Desktop/Mobile native shell 可以在 Settings 暴露 Backend section，但其�
 Settings v1 最小 UI surface：
 
 *   外观：视觉风格 `warm` / `cold` / `night`（默认 `warm`），只写浏览器本地 `deve.ui.theme`，并通过根节点主题标记 `data-deve-theme-pref` 提供即时反馈。三种风格是平级命名风格而非 light/dark 二元开关：`warm` 暖中性纸面、`cold` 冷蓝白、`night` 夜间深色；`night` 同时设置 `color-scheme: dark`。启动期 MUST 在 CSS 绘制前由内联 bootstrap 设置该标记以避免主题闪烁，WASM 启动后仍以浏览器本地 `deve.ui.theme` 为准重放。旧值按 `dark→night`、`light`/`auto→warm` 迁移；未知值回退默认 `warm`。
-*   编辑器：自动换行、编辑器密度与最大文档 tab 数只作为本地 UI 标记，不写 server-backed settings，不改变 repo 文档事实。
-    *   最大文档 tab 数 key 为 `deve.ui.max_document_tabs`，默认值 `8`，有效范围 `1..=20`。
+*   编辑器：自动换行、编辑器密度与最大文档标签页数只作为本地 UI 标记，不写 server-backed settings，不改变 repo 文档事实。
+    *   最大文档标签页数 key 为 `deve.ui.max_document_tabs`，默认值 `8`，有效范围 `1..=20`。
     *   非法值必须回退默认值；合法但越界的用户输入必须 clamp 到有效范围。
     *   数字输入编辑过程使用 draft value；只有 blur / Enter / change 这类显式提交点才能更新
-        `MaxDocumentTabs` runtime state，避免两位数输入过程短暂触发过小上限并自动淘汰 tab。
+        `MaxDocumentTabs` runtime state，避免两位数输入过程短暂触发过小上限并自动淘汰标签页。
     *   该值只控制 UI shell tab registry 的 `DocumentTab` 自动淘汰，不持久化打开文档列表、visible tab order 或 document access order。
 *   运行诊断：可展示 embedded browser 与 Trunk fallback smoke 入口；这些入口只指向本地 runbook/script，不启动后台 writer。
 

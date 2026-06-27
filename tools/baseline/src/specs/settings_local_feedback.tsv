@@ -53,7 +53,7 @@ contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: max_docu
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: ai_chat_divider_hidden_when_setting_hidden true
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: display_editor_visible_when_ai_chat_setting_hidden true
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: hidden_ai_chat_preserves_layout_width_pref true
-contains	docs/features/13_settings.md	主题、自动换行、编辑器密度、最大文档 tab 数
+contains	docs/features/13_settings.md	主题、自动换行、编辑器密度、最大文档标签页数
 contains	docs/features/13_settings.md	AI Chat 面板可见性
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: SET-007
 contains	docs/acceptance-cases/11_commands_settings.md	unsupported_key_rejected: "server.settings.api_enabled"

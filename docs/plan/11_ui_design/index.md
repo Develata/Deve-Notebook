@@ -428,7 +428,7 @@ PinnedSetChanged
   - 中间显示/编辑区宽度
   - 面板宽度
   - AI Chat 面板可见性
-  - 最大文档 tab 数
+  - 最大文档标签页数
   - 主题
   - 最近活动 view
   - 语言
