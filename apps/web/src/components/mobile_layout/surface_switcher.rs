@@ -118,11 +118,10 @@ pub fn MobileSurfaceSwitcher(
                             let doc_id = tab.doc_id;
                             let select_doc = on_select_document;
                             let close_doc = on_close_document;
-                            let active = Signal::derive(move || active_tab.get() == Some(EditorTabKey::Document(doc_id)));
                             view! {
                                 <SurfaceDocumentRow
                                     tab=tab
-                                    active=active
+                                    active_tab=active_tab
                                     on_select=Callback::new(move |_| {
                                         set_open.set(false);
                                         select_doc.run(doc_id);
@@ -140,16 +139,14 @@ pub fn MobileSurfaceSwitcher(
                             {move || t::common::diffs(locale.get())}
                         </div>
                         <For each=move || diff_tabs.get() key=|tab| tab.key.clone() children=move |tab| {
-                            let key = tab.key.clone();
                             let key_for_close = tab.key.clone();
                             let session = tab.session.clone();
                             let select_diff = on_select_diff;
                             let close_diff = on_close_diff;
-                            let active = Signal::derive(move || active_tab.get() == Some(EditorTabKey::Diff(key.clone())));
                             view! {
                                 <SurfaceDiffRow
                                     tab=tab
-                                    active=active
+                                    active_tab=active_tab
                                     on_select=Callback::new(move |_| {
                                         set_open.set(false);
                                         select_diff.run(session.clone());

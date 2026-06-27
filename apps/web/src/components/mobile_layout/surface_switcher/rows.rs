@@ -2,29 +2,33 @@
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
 use super::model::mobile_surface_row_class;
-use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab};
+use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
 use crate::components::icons::{FileText, SourceControl, X};
 use crate::i18n::{Locale, t};
+use deve_core::models::DocId;
 use leptos::prelude::*;
 
 #[component]
 pub(super) fn SurfaceDocumentRow(
     tab: EditorDocumentTab,
-    active: Signal<bool>,
+    active_tab: Signal<Option<EditorTabKey>>,
     on_select: Callback<()>,
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let doc_id = tab.doc_id;
     view! {
         <div
             data-deve-mobile-surface-row="document"
-            data-deve-mobile-surface-active=move || active.get().to_string()
+            data-deve-mobile-surface-active=move || {
+                document_row_active(active_tab.get(), doc_id).to_string()
+            }
             class="flex items-center gap-1"
         >
             <button
                 type="button"
                 data-deve-mobile-surface-action="mobile_surface_document_row"
-                class=move || mobile_surface_row_class(active.get())
+                class=move || mobile_surface_row_class(document_row_active(active_tab.get(), doc_id))
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::document_tab(locale.get())
                 on:click=move |_| on_select.run(())
@@ -52,21 +56,30 @@ pub(super) fn SurfaceDocumentRow(
 #[component]
 pub(super) fn SurfaceDiffRow(
     tab: EditorDiffTab,
-    active: Signal<bool>,
+    active_tab: Signal<Option<EditorTabKey>>,
     on_select: Callback<()>,
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let key_for_active_attr = tab.key.clone();
+    let key_for_active_class = tab.key.clone();
     view! {
         <div
             data-deve-mobile-surface-row="diff"
-            data-deve-mobile-surface-active=move || active.get().to_string()
+            data-deve-mobile-surface-active=move || {
+                diff_row_active(active_tab.get(), &key_for_active_attr).to_string()
+            }
             class="flex items-center gap-1"
         >
             <button
                 type="button"
                 data-deve-mobile-surface-action="mobile_surface_diff_row"
-                class=move || mobile_surface_row_class(active.get())
+                class=move || {
+                    mobile_surface_row_class(diff_row_active(
+                        active_tab.get(),
+                        &key_for_active_class,
+                    ))
+                }
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::diff_tab(locale.get())
                 on:click=move |_| on_select.run(())
@@ -88,5 +101,56 @@ pub(super) fn SurfaceDiffRow(
                 <X class="h-4 w-4"/>
             </button>
         </div>
+    }
+}
+
+fn document_row_active(active_tab: Option<EditorTabKey>, doc_id: DocId) -> bool {
+    active_tab == Some(EditorTabKey::Document(doc_id))
+}
+
+fn diff_row_active(active_tab: Option<EditorTabKey>, key: &str) -> bool {
+    matches!(active_tab, Some(EditorTabKey::Diff(active_key)) if active_key == key)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{diff_row_active, document_row_active};
+    use crate::components::editor_tabs::EditorTabKey;
+    use deve_core::models::DocId;
+
+    #[test]
+    fn document_row_active_tracks_matching_document_key() {
+        let doc_id = DocId::from_u128(7);
+
+        assert!(document_row_active(
+            Some(EditorTabKey::Document(doc_id)),
+            doc_id
+        ));
+        assert!(!document_row_active(
+            Some(EditorTabKey::Document(DocId::from_u128(8))),
+            doc_id
+        ));
+        assert!(!document_row_active(
+            Some(EditorTabKey::Diff("diff-a".into())),
+            doc_id
+        ));
+        assert!(!document_row_active(None, doc_id));
+    }
+
+    #[test]
+    fn diff_row_active_tracks_matching_diff_key() {
+        assert!(diff_row_active(
+            Some(EditorTabKey::Diff("diff-a".into())),
+            "diff-a"
+        ));
+        assert!(!diff_row_active(
+            Some(EditorTabKey::Diff("diff-b".into())),
+            "diff-a"
+        ));
+        assert!(!diff_row_active(
+            Some(EditorTabKey::Document(DocId::from_u128(7))),
+            "diff-a"
+        ));
+        assert!(!diff_row_active(None, "diff-a"));
     }
 }

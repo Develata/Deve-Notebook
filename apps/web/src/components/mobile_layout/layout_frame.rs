@@ -10,6 +10,7 @@ use super::header::MobileHeader;
 use super::layout_backdrop::MobileDrawerBackdrop;
 use super::layout_banner::MobileSyncBanner;
 use super::outline_button::OutlineToggleButton;
+use super::surface_runtime::collapse_surface_switcher_on_runtime_transition;
 use super::surface_switcher::MobileSurfaceSwitcher;
 use super::toolbar::MobileAccessoryToolbar;
 use crate::components::activity_bar::SidebarView;
@@ -96,6 +97,16 @@ pub fn MobileLayoutFrame(
         current_editor_doc,
     );
     let (surface_switcher_open, set_surface_switcher_open) = signal(false);
+    let pending_branch_switch = editor.pending_branch_switch;
+    let pending_repo_switch = editor.pending_repo_switch;
+    collapse_surface_switcher_on_runtime_transition(
+        scope.current_repo_id,
+        scope.current_scope_nonce,
+        scope.active_branch,
+        Signal::derive(move || pending_branch_switch.get().is_some()),
+        Signal::derive(move || pending_repo_switch.get().is_some()),
+        set_surface_switcher_open,
+    );
 
     view! {
         <div

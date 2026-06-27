@@ -23,6 +23,7 @@ mod layout_banner;
 mod layout_frame;
 mod layout_runtime;
 mod outline_button;
+mod surface_runtime;
 mod surface_switcher;
 mod toolbar;
 
