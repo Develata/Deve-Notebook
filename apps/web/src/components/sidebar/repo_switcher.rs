@@ -4,7 +4,9 @@
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
 use crate::components::icons::{Check, ChevronRight, EllipsisVertical, Pencil, Plus, Trash2, X};
-use crate::hooks::use_core::{BranchContext, RepoRemoveRequest, RepoRenameRequest};
+use crate::hooks::use_core::{
+    BranchContext, RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest,
+};
 use crate::i18n::{Locale, t};
 use deve_core::models::RepoId;
 use leptos::ev::{MouseEvent, SubmitEvent};
@@ -23,7 +25,8 @@ use self::logic::{
     repo_switcher_create_input_marker, repo_switcher_item_marker, repo_switcher_menu_marker,
     repo_switcher_remove_button_marker, repo_switcher_remove_confirmed,
     repo_switcher_rename_button_marker, repo_switcher_rename_input_marker,
-    repo_switcher_row_is_active, repo_switcher_rows, repo_switcher_trigger_marker,
+    repo_switcher_row_is_active, repo_switcher_rows, repo_switcher_switch_target,
+    repo_switcher_trigger_marker,
 };
 
 #[component]
@@ -157,7 +160,7 @@ pub fn RepoSwitcher() -> impl IntoView {
                                      let active_bg_row = row.clone();
                                      let active_text_row = row.clone();
                                      let active_badge_row = row.clone();
-                                     let switch_name = row.name.clone();
+                                     let switch_target = repo_switcher_switch_target(&row);
                                      let label_name = row.name.clone();
                                      let title_name = row.name.clone();
                                      let rename_current_name = row.name.clone();
@@ -231,7 +234,7 @@ pub fn RepoSwitcher() -> impl IntoView {
                                                  let active_bg_row = active_bg_row.clone();
                                                  let active_text_row = active_text_row.clone();
                                                  let active_badge_row = active_badge_row.clone();
-                                                 let switch_name = switch_name.clone();
+                                                 let switch_target = switch_target.clone();
                                                  let label_name = label_name.clone();
                                                  let title_name = title_name.clone();
                                                  view! {
@@ -255,11 +258,20 @@ pub fn RepoSwitcher() -> impl IntoView {
                                                              class="min-w-0 flex-1 px-3 py-2 cursor-pointer text-xs flex items-center justify-between gap-2"
                                                              role="menuitem"
                                                              on:click=move |_| {
-                                                                 let name = switch_name.clone();
+                                                                 let request = match switch_target.repo_id {
+                                                                     Some(repo_id) => RepoSwitchRequest::exact(
+                                                                         switch_target.selector_name.clone(),
+                                                                         switch_target.expected_name.clone(),
+                                                                         repo_id,
+                                                                     ),
+                                                                     None => RepoSwitchRequest::by_name(
+                                                                         switch_target.selector_name.clone(),
+                                                                     ),
+                                                                 };
                                                                  let cb = core.on_switch_repo.clone();
                                                                  let set_menu = set_show_menu;
                                                                  request_animation_frame(move || {
-                                                                     cb.run(name);
+                                                                     cb.run(request);
                                                                      set_menu.set(repo_switcher_after_item_click());
                                                                  });
                                                              }

@@ -5,7 +5,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate_banner::cannot_action;
-use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest};
+use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
 use leptos::prelude::*;
 
 mod branch;
@@ -17,7 +17,7 @@ pub(super) use scope::{can_start_scope_switch, prepare_scope_switch};
 
 pub struct SwitchCallbacks {
     pub on_switch_branch: Callback<Option<String>>,
-    pub on_switch_repo: Callback<String>,
+    pub on_switch_repo: Callback<RepoSwitchRequest>,
     pub on_create_repo: Callback<String>,
     pub on_rename_repo: Callback<RepoRenameRequest>,
     pub on_remove_repo: Callback<RepoRemoveRequest>,

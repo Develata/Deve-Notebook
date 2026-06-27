@@ -16,6 +16,13 @@ pub(super) struct RepoSwitcherRow {
     pub execution_name: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(super) struct RepoSwitcherSwitchTarget {
+    pub selector_name: String,
+    pub expected_name: String,
+    pub repo_id: Option<RepoId>,
+}
+
 impl RepoSwitcherRow {
     pub(super) fn key(&self) -> String {
         self.repo_id
@@ -116,11 +123,19 @@ pub(super) fn repo_switcher_row_is_active(
     row: &RepoSwitcherRow,
 ) -> bool {
     if let Some(repo_id) = row.repo_id
-        && current_repo_id.as_deref() == Some(repo_id.to_string().as_str())
+        && let Some(current_repo_id) = current_repo_id
     {
-        return true;
+        return current_repo_id == repo_id.to_string();
     }
     current_repo.as_deref() == Some(row.name.as_str())
+}
+
+pub(super) fn repo_switcher_switch_target(row: &RepoSwitcherRow) -> RepoSwitcherSwitchTarget {
+    RepoSwitcherSwitchTarget {
+        selector_name: row.execution_name.clone(),
+        expected_name: row.name.clone(),
+        repo_id: row.repo_id,
+    }
 }
 
 pub(super) fn repo_switcher_remove_confirmed(locale: Locale, name: &str) -> bool {

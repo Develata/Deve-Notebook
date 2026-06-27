@@ -141,9 +141,9 @@ contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switche
 contains	apps/web/src/components/sidebar/repo_switcher.rs	type="button"
 contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menu"
 contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menuitem"
-contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_trigger_click_toggles_menu()
-contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_outside_click_closes_menu()
-contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_item_click_closes_menu()
+contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_trigger_click_toggles_menu()
+contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_outside_click_closes_menu()
+contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_item_click_closes_menu()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-006
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	run: scripts/check-ui-desktop-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	run: cd apps/web && NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk build
@@ -196,7 +196,7 @@ contains	apps/web/src/components/sidebar/item/action/tests.rs	fn readonly_curren
 contains	apps/web/src/context_action/tests/catalog.rs	fn file_tree_action_catalog_preserves_existing_order()
 contains	apps/web/src/context_action/tests/catalog.rs	fn file_tree_action_registry_lives_outside_sidebar_menu()
 contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_readonly_catalog_keeps_shell_local_open_only()
-contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_target_projection_accepts_file_and_folder_nodes()
+contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_target_projection_keeps_write_actions_for_file_and_folder_nodes()
 contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_projected_intents_resolve_again()
 contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_export_pdf_is_registered_but_default_unavailable()
 contains	apps/web/src/context_action/tests/resolver.rs	fn file_tree_action_export_pdf_default_not_resolved()

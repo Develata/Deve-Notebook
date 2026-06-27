@@ -6,7 +6,7 @@ use super::logic::{
     repo_switcher_create_input_marker, repo_switcher_item_marker, repo_switcher_menu_marker,
     repo_switcher_remove_button_marker, repo_switcher_rename_button_marker,
     repo_switcher_rename_input_marker, repo_switcher_row_is_active, repo_switcher_rows,
-    repo_switcher_trigger_marker,
+    repo_switcher_switch_target, repo_switcher_trigger_marker,
 };
 use deve_core::protocol::RepoListEntry;
 
@@ -145,4 +145,52 @@ fn repo_switcher_active_state_accepts_repo_id_or_display_name() {
         None,
         &row
     ));
+}
+
+#[test]
+fn repo_switcher_active_state_does_not_fallback_to_display_when_ids_differ() {
+    let active_repo_id = uuid::Uuid::new_v4();
+    let inactive_repo_id = uuid::Uuid::new_v4();
+    let row = RepoSwitcherRow {
+        repo_id: Some(inactive_repo_id),
+        name: "shared".to_string(),
+        execution_name: "shared--inactive".to_string(),
+    };
+
+    assert!(!repo_switcher_row_is_active(
+        Some("shared".to_string()),
+        Some(active_repo_id.to_string()),
+        &row
+    ));
+}
+
+#[test]
+fn repo_switcher_switch_target_uses_execution_selector_with_repo_id() {
+    let repo_id = uuid::Uuid::new_v4();
+    let row = RepoSwitcherRow {
+        repo_id: Some(repo_id),
+        name: "display".to_string(),
+        execution_name: "display--id".to_string(),
+    };
+
+    let target = repo_switcher_switch_target(&row);
+
+    assert_eq!(target.selector_name, "display--id");
+    assert_eq!(target.expected_name, "display");
+    assert_eq!(target.repo_id, Some(repo_id));
+}
+
+#[test]
+fn repo_switcher_switch_target_keeps_legacy_name_selector() {
+    let row = RepoSwitcherRow {
+        repo_id: None,
+        name: "legacy".to_string(),
+        execution_name: "legacy".to_string(),
+    };
+
+    let target = repo_switcher_switch_target(&row);
+
+    assert_eq!(target.selector_name, "legacy");
+    assert_eq!(target.expected_name, "legacy");
+    assert_eq!(target.repo_id, None);
 }

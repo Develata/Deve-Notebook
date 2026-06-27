@@ -235,7 +235,7 @@ mod tests {
             set_current_repo,
             current_repo_id,
             set_current_repo_id,
-            on_switch_repo: Callback::new(|_: String| {}),
+            on_switch_repo: Callback::new(|_| {}),
             on_create_repo: Callback::new(|_: String| {}),
             on_rename_repo: Callback::new(|_| {}),
             on_remove_repo: Callback::new(|_| {}),

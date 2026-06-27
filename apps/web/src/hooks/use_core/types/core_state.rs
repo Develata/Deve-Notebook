@@ -4,7 +4,7 @@
 //!
 use crate::api::WsService;
 use crate::editor::EditorStats;
-use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest};
+use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
 use crate::runtime::CoreRuntimeClients;
 use deve_core::models::{DocId, PeerId};
 use deve_core::protocol::RepoListEntry;
@@ -83,7 +83,7 @@ pub struct CoreState {
     pub set_current_repo_id: WriteSignal<Option<String>>,
     pub current_scope_nonce: ReadSignal<u64>,
     pub pending_repo_switch: ReadSignal<Option<PendingRepoSwitch>>,
-    pub on_switch_repo: Callback<String>,
+    pub on_switch_repo: Callback<RepoSwitchRequest>,
     pub on_create_repo: Callback<String>,
     pub on_rename_repo: Callback<RepoRenameRequest>,
     pub on_remove_repo: Callback<RepoRemoveRequest>,
