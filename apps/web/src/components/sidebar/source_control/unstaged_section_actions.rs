@@ -27,6 +27,7 @@ pub fn UnstagedSectionActions(
             >
                 <Show when=move || write_block.get().is_none()>
                     <button
+                        type="button"
                         class="p-0.5 hover:bg-active rounded"
                         title=move || t::source_control::discard_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()
@@ -39,6 +40,7 @@ pub fn UnstagedSectionActions(
                         <RotateCcw class="w-3.5 h-3.5" />
                     </button>
                     <button
+                        type="button"
                         class="p-0.5 hover:bg-active rounded"
                         title=move || t::source_control::stage_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()

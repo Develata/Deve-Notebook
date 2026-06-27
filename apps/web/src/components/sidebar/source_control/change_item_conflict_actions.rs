@@ -22,6 +22,7 @@ pub fn ChangeItemConflictActions(
 
     view! {
         <button
+            type="button"
             class="p-0.5 hover:bg-active rounded text-warning"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_file_system(locale.get())
@@ -40,6 +41,7 @@ pub fn ChangeItemConflictActions(
             <Upload class="w-3.5 h-3.5" />
         </button>
         <button
+            type="button"
             class="p-0.5 hover:bg-active rounded text-warning"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_ledger(locale.get())

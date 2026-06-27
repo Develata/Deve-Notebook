@@ -106,6 +106,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     view! {
         <div class="border-t border-default">
             <button
+                type="button"
                 class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase"
                 on:click=move |_| {
                     let next_open = !expanded.get_untracked();

@@ -187,6 +187,7 @@ pub fn ErrorNotice(
                         </div>
                     </div>
                     <button
+                        type="button"
                         class="text-xs text-secondary hover:text-primary"
                         on:click=move |_| clear_notice.run(())
                     >

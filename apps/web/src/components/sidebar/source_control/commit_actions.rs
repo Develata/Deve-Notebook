@@ -22,6 +22,7 @@ pub fn CommitActions(
     view! {
         <div class="flex relative">
             <button
+                type="button"
                 class=move || format!(
                     "flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 {} flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm",
                     if show_write_actions.get() { "rounded-l-[2px]" } else { "rounded-[2px]" }
@@ -43,6 +44,7 @@ pub fn CommitActions(
             </button>
             <Show when=move || show_write_actions.get()>
                 <button
+                    type="button"
                     class="bg-accent hover:bg-accent-hover text-on-accent px-2 rounded-r-[2px] border-l border-white/20"
                     disabled=move || !can_prepare_commit.get()
                     aria-label=move || t::sidebar::more_actions(locale.get())
@@ -61,6 +63,7 @@ pub fn CommitActions(
                 view! {
                     <div class="absolute top-full left-0 right-0 mt-1 bg-dropdown border border-default rounded shadow-lg z-[var(--z-floating)] text-[13px]">
                         <button
+                            type="button"
                             class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2"
                             disabled=move || !can_commit_now.get()
                             on:click=move |_| {
@@ -72,6 +75,7 @@ pub fn CommitActions(
                             {move || t::source_control::commit(locale.get())}
                         </button>
                         <button
+                            type="button"
                             class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled=move || !can_commit_now.get()
                             on:click=move |_| {

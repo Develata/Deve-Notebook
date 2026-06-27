@@ -81,6 +81,7 @@ pub fn ViewPopupMenu(
             view! {
                 <div class=activity_more_row_class()>
                     <button
+                        type="button"
                         data-deve-activity-more-item=activity_more_item_marker(item)
                         class=activity_more_item_button_class()
                         role="menuitem"
@@ -93,6 +94,7 @@ pub fn ViewPopupMenu(
                     {move || if is_pinned() {
                         view! {
                             <button
+                                type="button"
                                 data-deve-activity-more-pin-action=activity_more_pin_action_marker(item)
                                 class=activity_more_pin_button_class(true)
                                 title=move || t::common::unpin(locale.get())
@@ -108,6 +110,7 @@ pub fn ViewPopupMenu(
                     } else {
                         view! {
                             <button
+                                type="button"
                                 data-deve-activity-more-pin-action=activity_more_pin_action_marker(item)
                                 class=activity_more_pin_button_class(false)
                                 title=move || t::common::pin(locale.get())

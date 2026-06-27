@@ -38,8 +38,9 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
             view! {
                 <div class="border-t border-default">
                     <button
-                            class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
-                            on:click=move |_| expanded.update(|b| *b = !*b)
+                        type="button"
+                        class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
+                        on:click=move |_| expanded.update(|b| *b = !*b)
                     >
                         <span class=move || if expanded.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
                             <ChevronRight class="w-3 h-3" />

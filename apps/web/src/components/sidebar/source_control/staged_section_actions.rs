@@ -27,6 +27,7 @@ pub fn StagedSectionActions(
             >
                 <Show when=move || write_block.get().is_none()>
                     <button
+                        type="button"
                         class="p-0.5 hover:bg-active rounded"
                         title=move || t::source_control::unstage_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()

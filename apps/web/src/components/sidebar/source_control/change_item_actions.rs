@@ -31,6 +31,7 @@ pub fn ChangeItemActions(
             } else if is_staged {
                 view! {
                     <button
+                        type="button"
                         class="p-0.5 hover:bg-active rounded text-secondary"
                         disabled=move || !core.can_write.get()
                         title=move || t::source_control::unstage_changes(locale.get())

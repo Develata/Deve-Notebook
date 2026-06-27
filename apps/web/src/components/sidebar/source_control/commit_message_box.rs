@@ -41,6 +41,7 @@ pub fn CommitMessageBox(
             />
             <Show when=move || show_write_actions.get()>
                 <button
+                    type="button"
                     class="absolute right-1 top-1 bottom-1 w-7 bg-accent hover:bg-accent-hover text-on-accent rounded flex items-center justify-center transition-colors z-[calc(var(--z-editor)_+_1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label=move || t::source_control::generate_commit_message(locale.get())
                     title=move || {

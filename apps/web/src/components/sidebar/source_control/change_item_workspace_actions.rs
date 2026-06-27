@@ -26,6 +26,7 @@ pub fn ChangeItemWorkspaceActions(
     view! {
         <Show when=move || can_open_diff>
             <button
+                type="button"
                 class="p-0.5 hover:bg-active rounded text-secondary"
                 disabled=move || {
                     !can_open_change_item_diff(
@@ -45,6 +46,7 @@ pub fn ChangeItemWorkspaceActions(
             </button>
         </Show>
         <button
+            type="button"
             class="p-0.5 hover:bg-active rounded text-secondary"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::discard_changes(locale.get())
@@ -60,6 +62,7 @@ pub fn ChangeItemWorkspaceActions(
             <RotateCcw class="w-3.5 h-3.5" />
         </button>
         <button
+            type="button"
             class="p-0.5 hover:bg-active rounded text-secondary"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::stage_changes(locale.get())
