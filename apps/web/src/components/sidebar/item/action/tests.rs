@@ -94,6 +94,17 @@ fn new_window_url_replaces_stale_doc_query_param() {
 }
 
 #[test]
+fn new_window_url_replaces_percent_encoded_doc_query_key() {
+    assert_eq!(
+        build_new_window_url(
+            "http://127.0.0.1:8080/?do%63=old.md&sc_full=1#section",
+            "notes%2Fnew.md"
+        ),
+        "http://127.0.0.1:8080/?sc_full=1&doc=notes%2Fnew.md#section"
+    );
+}
+
+#[test]
 fn export_pdf_action_handler_is_fail_closed_without_side_effects() {
     let (readiness, _) = signal(ContextActionReadiness::from_readonly(false));
     let (delete_count, set_delete_count) = signal(0);
