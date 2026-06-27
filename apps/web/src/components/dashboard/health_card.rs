@@ -68,3 +68,17 @@ pub fn HealthCard(metrics: SystemMetricsData) -> impl IntoView {
         </div>
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::format_uptime;
+
+    #[test]
+    fn dashboard_health_uptime_formatting_tracks_minute_hour_day_boundaries() {
+        assert_eq!(format_uptime(0), "0m");
+        assert_eq!(format_uptime(59), "0m");
+        assert_eq!(format_uptime(60), "1m");
+        assert_eq!(format_uptime(3_600), "1h 0m");
+        assert_eq!(format_uptime(86_400 + 3_600 + 60), "1d 1h 1m");
+    }
+}
