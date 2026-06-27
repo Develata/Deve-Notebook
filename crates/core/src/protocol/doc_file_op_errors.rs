@@ -10,6 +10,7 @@ pub const MARKDOWN_DIRECTORY_FORBIDDEN: &str = "Markdown directory is forbidden"
 pub const PATH_REQUIRED: &str = "Path required";
 pub const RESERVED_INTERNAL_PATH: &str = "Reserved internal path";
 pub const SOURCE_PATH_REQUIRED: &str = "Source path required";
+pub const SOURCE_NOT_FOUND: &str = "Source not found";
 
 pub fn depth_limit_exceeded(max_depth: usize) -> String {
     format!("Directory depth limit exceeded (max {})", max_depth)
@@ -25,4 +26,8 @@ pub fn markdown_directory_forbidden(path: &str) -> String {
 
 pub fn reserved_internal_path(path: &str) -> String {
     format!("{}: {}", RESERVED_INTERNAL_PATH, path)
+}
+
+pub fn source_not_found(path: &str) -> String {
+    format!("{}: {}", SOURCE_NOT_FOUND, path)
 }

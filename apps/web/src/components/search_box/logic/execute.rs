@@ -123,7 +123,7 @@ fn update_recent_move_dirs(set_recent_move_dirs: WriteSignal<Vec<String>>, dst: 
 }
 
 fn file_op_action_is_executable(op: &FileOpAction) -> bool {
-    if file_ops::validate_doc_shell_path(&op.src).is_some() {
+    if file_ops::validate_doc_file_path(&op.src).is_some() {
         return false;
     }
 
@@ -132,7 +132,7 @@ fn file_op_action_is_executable(op: &FileOpAction) -> bool {
             let Some(dst) = op.dst.as_deref() else {
                 return false;
             };
-            file_ops::validate_doc_shell_path(dst).is_none() && dst != op.src
+            file_ops::validate_doc_file_path(dst).is_none() && dst != op.src
         }
         FileOpKind::Remove => {
             op.dst.is_none() && file_ops::validate_doc_file_path(&op.src).is_none()
@@ -201,6 +201,28 @@ mod tests {
             kind: FileOpKind::Remove,
             src: "notes/".to_string(),
             dst: None,
+        };
+
+        assert!(!file_op_action_is_executable(&op));
+    }
+
+    #[test]
+    fn file_op_action_execution_rejects_directory_move_source() {
+        let op = FileOpAction {
+            kind: FileOpKind::Move,
+            src: "notes/".to_string(),
+            dst: Some("archive/notes.md".to_string()),
+        };
+
+        assert!(!file_op_action_is_executable(&op));
+    }
+
+    #[test]
+    fn file_op_action_execution_rejects_directory_copy_destination() {
+        let op = FileOpAction {
+            kind: FileOpKind::Copy,
+            src: "notes/readme.md".to_string(),
+            dst: Some("archive/".to_string()),
         };
 
         assert!(!file_op_action_is_executable(&op));

@@ -16,6 +16,14 @@ fn utf16_len(text: &str) -> usize {
     text.encode_utf16().count()
 }
 
+fn docs(paths: &[&str]) -> Vec<(DocId, String)> {
+    paths
+        .iter()
+        .enumerate()
+        .map(|(index, path)| (DocId::from_u128(index as u128 + 1), (*path).to_string()))
+        .collect()
+}
+
 #[test]
 fn move_same_source_and_destination_returns_error() {
     let parsed = parsed_args(&["notes/today.md", "notes/today.md"], false);
@@ -39,7 +47,8 @@ fn move_same_directory_target_returns_error_after_finalization() {
 #[test]
 fn copy_different_destination_builds_file_op_action() {
     let parsed = parsed_args(&["notes/today.md", "archive/"], false);
-    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &[], &[], Locale::En);
+    let docs = docs(&["notes/today.md"]);
+    let results = build_move_copy_results(FileOpKind::Copy, &parsed, &docs, &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     match &results[0].action {
@@ -55,7 +64,8 @@ fn copy_different_destination_builds_file_op_action() {
 #[test]
 fn move_non_markdown_leaf_destination_matches_backend_canonical_path() {
     let parsed = parsed_args(&["notes/today.md", "archive/today.txt"], false);
-    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
+    let docs = docs(&["notes/today.md"]);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[], Locale::En);
 
     assert_eq!(results.len(), 1);
     match &results[0].action {
@@ -86,6 +96,28 @@ fn move_rejects_traversal_source_path() {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].detail.as_deref(), Some("Error"));
     assert_eq!(results[0].title, "Invalid path");
+}
+
+#[test]
+fn move_rejects_directory_source_path() {
+    let parsed = parsed_args(&["notes/", "archive/"], false);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &[], &[], Locale::En);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Invalid path");
+}
+
+#[test]
+fn move_rejects_source_path_missing_from_current_docs() {
+    let parsed = parsed_args(&["notes/today.md", "archive/today.md"], false);
+    let docs = docs(&["archive/today.md"]);
+    let results = build_move_copy_results(FileOpKind::Move, &parsed, &docs, &[], Locale::En);
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].detail.as_deref(), Some("Error"));
+    assert_eq!(results[0].title, "Source not found: notes/today.md");
+    assert_eq!(results[0].action, SearchAction::Noop);
 }
 
 #[test]

@@ -16,8 +16,12 @@ pub(super) fn error_result(locale: Locale, msg: String) -> SearchResult {
     common::error_result(locale, msg)
 }
 
-pub(super) fn build_remove_results(args: &[String], locale: Locale) -> Vec<SearchResult> {
-    remove::build_remove_results(args, locale)
+pub(super) fn build_remove_results(
+    args: &[String],
+    docs: &[(DocId, String)],
+    locale: Locale,
+) -> Vec<SearchResult> {
+    remove::build_remove_results(args, docs, locale)
 }
 
 pub(super) fn build_move_copy_results(
