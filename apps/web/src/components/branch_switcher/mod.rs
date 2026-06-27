@@ -51,7 +51,7 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
         <button
             class=move || {
                 if compact {
-                    "flex items-center gap-1 px-1.5 py-0.5 rounded border border-default bg-sidebar hover:bg-hover transition-colors duration-200 ease-out text-[10px] font-medium text-primary max-w-[96px]"
+                    "min-w-0 max-w-full flex items-center gap-1 overflow-hidden px-1.5 py-0.5 rounded border border-default bg-sidebar hover:bg-hover transition-colors duration-200 ease-out text-[10px] font-medium text-primary"
                 } else {
                     "flex items-center gap-1.5 px-2 py-0.5 rounded hover:bg-active transition-colors duration-200 ease-out text-xs font-medium text-primary"
                 }
@@ -60,8 +60,8 @@ pub fn BranchSwitcher(#[prop(optional)] compact: bool) -> impl IntoView {
             title=move || t::sidebar::switch_branch_hint(locale.get())
         >
             // Git 分支图标
-            <GitBranch class="w-3.5 h-3.5"/>
-            <span class=move || if compact { "truncate max-w-[60px]" } else { "" }>{current_branch}</span>
+            <GitBranch class="w-3.5 h-3.5 shrink-0"/>
+            <span class=move || if compact { "min-w-0 truncate" } else { "" }>{current_branch}</span>
             {move || if is_spectator() && !compact {
                 view! { <span class="text-[10px] bg-amber-100 text-amber-700 px-1 rounded font-normal">{t::sidebar::read_badge(locale.get())}</span> }.into_any()
             } else {

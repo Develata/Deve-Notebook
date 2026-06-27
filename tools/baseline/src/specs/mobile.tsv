@@ -101,14 +101,14 @@ contains	apps/web/src/components/mobile_layout/footer.rs	data-deve-mobile-bottom
 contains	apps/web/src/components/mobile_layout/footer.rs	fn mobile_bottom_bar_collapsed_state_is_single_line()
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-row="summary"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-single-line="true"
-contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-fields-overflow="scroll-x"
+contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-fields-overflow="clip"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="branch"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="status"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="words"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="lines"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="col"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-col-source="placeholder"
-contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_fields_scroll_horizontally_without_wrapping()
+contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_fields_fit_without_horizontal_scroll()
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_summary_exposes_required_fields()
 contains	apps/web/src/i18n/bottom_bar.rs	pub fn branch(locale: Locale) -> &'static str
 contains	apps/web/src/i18n/bottom_bar.rs	pub fn col(locale: Locale) -> &'static str
