@@ -30,6 +30,28 @@ pub(super) fn mobile_more_pin_action_marker(view: SidebarView) -> &'static str {
     }
 }
 
+pub(super) fn mobile_more_item_row_class(view: SidebarView) -> String {
+    format!(
+        "mobile-more-item {} w-full h-11 text-sm text-primary flex items-stretch justify-between",
+        more_item_class(view)
+    )
+}
+
+pub(super) fn mobile_more_item_button_class() -> &'static str {
+    "flex-1 h-full px-3 text-left active:bg-hover"
+}
+
+pub(super) fn mobile_more_pin_button_class(pinned: bool) -> String {
+    format!(
+        "h-full min-w-[44px] px-3 flex items-center justify-center rounded-md {}",
+        if pinned {
+            "text-accent active:bg-hover"
+        } else {
+            "text-muted active:bg-hover"
+        }
+    )
+}
+
 pub(super) fn mobile_more_after_item_click() -> bool {
     false
 }
@@ -93,14 +115,11 @@ pub(super) fn LeftDrawerMoreMenu(
                         let pinned = Signal::derive(move || pinned_views.get().contains(&item));
                         view! {
                             <div
-                                class=format!(
-                                    "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-primary active:bg-hover flex items-center justify-between",
-                                    more_item_class(item)
-                                )
+                                class=mobile_more_item_row_class(item)
                             >
                                 <button
                                     data-deve-mobile-more-item=mobile_more_item_marker(item)
-                                    class="flex-1 h-full text-left"
+                                    class=mobile_more_item_button_class()
                                     role="menuitem"
                                     on:click=move |_| {
                                         select_view.run(item);
@@ -111,14 +130,8 @@ pub(super) fn LeftDrawerMoreMenu(
                                 </button>
                                 <button
                                     data-deve-mobile-more-pin-action=mobile_more_pin_action_marker(item)
-                                    class=move || format!(
-                                        "rounded-md p-1.5 {}",
-                                        if pinned.get() {
-                                            "text-accent active:bg-hover"
-                                        } else {
-                                            "text-muted active:bg-hover"
-                                        }
-                                    )
+                                    class=move || mobile_more_pin_button_class(pinned.get())
+                                    aria-pressed=move || pinned.get().to_string()
                                     title=move || {
                                         if pinned.get() {
                                             t::common::unpin(locale.get())
