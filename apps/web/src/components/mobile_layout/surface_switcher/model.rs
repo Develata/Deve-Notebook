@@ -63,6 +63,10 @@ pub(crate) fn mobile_surface_sheet_visible(open: bool, drawer_open: bool, has_ta
     open && !drawer_open && has_tabs
 }
 
+pub(crate) fn mobile_surface_expanded_state(sheet_visible: bool) -> &'static str {
+    if sheet_visible { "true" } else { "false" }
+}
+
 pub(crate) fn mobile_surface_switcher_button_class() -> &'static str {
     "flex h-11 min-w-0 w-full items-center gap-2 rounded-md border border-default bg-editor px-3 text-left text-primary active:bg-hover"
 }
@@ -75,11 +79,15 @@ pub(crate) fn mobile_surface_row_class(active: bool) -> &'static str {
     }
 }
 
+pub(crate) fn mobile_surface_current_state(active: bool) -> &'static str {
+    if active { "true" } else { "false" }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        mobile_surface_row_class, mobile_surface_sheet_visible, mobile_surface_summary,
-        mobile_surface_switcher_button_class,
+        mobile_surface_current_state, mobile_surface_expanded_state, mobile_surface_row_class,
+        mobile_surface_sheet_visible, mobile_surface_summary, mobile_surface_switcher_button_class,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -127,6 +135,18 @@ mod tests {
         assert!(!mobile_surface_sheet_visible(true, true, true));
         assert!(!mobile_surface_sheet_visible(true, false, false));
         assert!(!mobile_surface_sheet_visible(false, false, true));
+    }
+
+    #[test]
+    fn mobile_surface_exposes_expanded_state() {
+        assert_eq!(mobile_surface_expanded_state(false), "false");
+        assert_eq!(mobile_surface_expanded_state(true), "true");
+    }
+
+    #[test]
+    fn mobile_surface_rows_expose_current_state() {
+        assert_eq!(mobile_surface_current_state(false), "false");
+        assert_eq!(mobile_surface_current_state(true), "true");
     }
 
     #[test]

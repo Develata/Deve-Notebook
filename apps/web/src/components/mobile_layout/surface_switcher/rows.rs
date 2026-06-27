@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
-use super::model::mobile_surface_row_class;
+use super::model::{mobile_surface_current_state, mobile_surface_row_class};
 use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
 use crate::components::icons::{FileText, SourceControl, X};
 use crate::i18n::{Locale, t};
@@ -31,6 +31,10 @@ pub(super) fn SurfaceDocumentRow(
                 class=move || mobile_surface_row_class(document_row_active(active_tab.get(), doc_id))
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::document_tab(locale.get())
+                aria-current=move || mobile_surface_current_state(document_row_active(
+                    active_tab.get(),
+                    doc_id,
+                ))
                 on:click=move |_| on_select.run(())
             >
                 <FileText class="h-4 w-4 shrink-0"/>
@@ -63,6 +67,7 @@ pub(super) fn SurfaceDiffRow(
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let key_for_active_attr = tab.key.clone();
     let key_for_active_class = tab.key.clone();
+    let key_for_current_attr = tab.key.clone();
     view! {
         <div
             data-deve-mobile-surface-row="diff"
@@ -82,6 +87,10 @@ pub(super) fn SurfaceDiffRow(
                 }
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::diff_tab(locale.get())
+                aria-current=move || mobile_surface_current_state(diff_row_active(
+                    active_tab.get(),
+                    &key_for_current_attr,
+                ))
                 on:click=move |_| on_select.run(())
             >
                 <SourceControl class="h-4 w-4 shrink-0"/>

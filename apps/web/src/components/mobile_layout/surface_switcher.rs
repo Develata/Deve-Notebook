@@ -12,7 +12,8 @@ use deve_core::models::DocId;
 use leptos::prelude::*;
 
 use self::model::{
-    mobile_surface_sheet_visible, mobile_surface_summary, mobile_surface_switcher_button_class,
+    mobile_surface_expanded_state, mobile_surface_sheet_visible, mobile_surface_summary,
+    mobile_surface_switcher_button_class,
 };
 use self::rows::{SurfaceDiffRow, SurfaceDocumentRow};
 
@@ -61,6 +62,8 @@ pub fn MobileSurfaceSwitcher(
                     class=mobile_surface_switcher_button_class()
                     title=move || t::common::switch_open_tabs(locale.get())
                     aria-label=move || t::common::switch_open_tabs(locale.get())
+                    aria-haspopup="dialog"
+                    aria-expanded=move || mobile_surface_expanded_state(sheet_visible.get())
                     on:click=move |_| set_open.set(true)
                 >
                     {move || {
@@ -91,8 +94,10 @@ pub fn MobileSurfaceSwitcher(
             ></div>
             <section
                 data-deve-mobile-surface-sheet="open"
+                role="dialog"
                 class="fixed inset-x-0 bottom-0 z-[var(--z-modal)] max-h-[72vh] overflow-hidden rounded-t-lg border border-default bg-panel shadow-lg"
                 style="padding-bottom: env(safe-area-inset-bottom);"
+                aria-label=move || t::common::switch_open_tabs(locale.get())
             >
                 <div class="flex h-12 items-center justify-between border-b border-default px-3">
                     <span class="text-sm font-semibold text-primary">
