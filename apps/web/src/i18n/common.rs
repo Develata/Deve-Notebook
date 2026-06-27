@@ -36,6 +36,13 @@ pub fn confirm(locale: Locale) -> &'static str {
     }
 }
 
+pub fn close(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Close",
+        Locale::Zh => "关闭",
+    }
+}
+
 /// 新建文件
 pub fn new_file(locale: Locale) -> &'static str {
     match locale {
@@ -224,6 +231,7 @@ mod tests {
         assert_eq!(unpin(Locale::Zh), "取消固定");
         assert_eq!(document_tab(Locale::Zh), "文档标签");
         assert_eq!(diff_tab(Locale::En), "Diff tab");
+        assert_eq!(close(Locale::Zh), "关闭");
         assert_eq!(close_tab(Locale::Zh), "关闭标签");
         assert_eq!(open_tabs(Locale::En), "Open tabs");
         assert_eq!(open_tabs(Locale::Zh), "已打开标签页");

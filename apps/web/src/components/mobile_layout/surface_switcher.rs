@@ -107,8 +107,8 @@ pub fn MobileSurfaceSwitcher(
                         type="button"
                         data-deve-mobile-surface-action="close_sheet"
                         class="flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
-                        title=move || t::common::close_tab(locale.get())
-                        aria-label=move || t::common::close_tab(locale.get())
+                        title=move || t::common::close(locale.get())
+                        aria-label=move || t::common::close(locale.get())
                         on:click=move |_| set_open.set(false)
                     >
                         <X class="h-4 w-4"/>
