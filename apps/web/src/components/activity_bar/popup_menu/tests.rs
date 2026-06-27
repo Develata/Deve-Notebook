@@ -1,6 +1,7 @@
 use super::{
-    activity_more_after_item_click, activity_more_after_pin_click, activity_more_item_marker,
-    activity_more_pin_action_marker, toggle_activity_more_pin,
+    activity_more_after_item_click, activity_more_after_pin_click, activity_more_item_button_class,
+    activity_more_item_marker, activity_more_pin_action_marker, activity_more_pin_button_class,
+    activity_more_row_class, toggle_activity_more_pin,
 };
 use crate::components::activity_bar::SidebarView;
 
@@ -53,6 +54,32 @@ fn activity_more_item_click_closes_menu() {
 fn activity_more_pin_click_keeps_menu_state() {
     assert!(activity_more_after_pin_click(true));
     assert!(!activity_more_after_pin_click(false));
+}
+
+#[test]
+fn activity_more_row_layout_keeps_view_button_covering_row_body() {
+    let row_class = activity_more_row_class();
+    let item_class = activity_more_item_button_class();
+
+    assert!(row_class.contains("items-stretch"));
+    assert!(!row_class.contains("gap-"));
+    assert!(!row_class.contains("px-"));
+    assert!(item_class.contains("flex-1"));
+    assert!(item_class.contains("px-4"));
+}
+
+#[test]
+fn activity_more_pin_button_keeps_independent_hit_area() {
+    let pinned = activity_more_pin_button_class(true);
+    let unpinned = activity_more_pin_button_class(false);
+
+    for class in [pinned, unpinned] {
+        assert!(class.contains("flex-none"));
+        assert!(class.contains("w-10"));
+        assert!(class.contains("justify-center"));
+    }
+    assert!(pinned.contains("text-accent"));
+    assert!(unpinned.contains("text-muted"));
 }
 
 #[test]
