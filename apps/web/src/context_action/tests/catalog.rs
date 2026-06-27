@@ -50,6 +50,7 @@ fn file_tree_action_lookup_returns_descriptor_metadata() {
     let delete = context_action_by_id(ContextActionId::Delete).expect("delete action");
 
     assert_eq!(open.effect, ContextActionEffect::ReadOnly);
+    assert_eq!(open.target_kind, ContextActionTargetKind::MarkdownFile);
     assert!(open.readonly_allowed);
     assert_eq!(delete.effect, ContextActionEffect::DestructiveWrite);
     assert!(!delete.readonly_allowed);
