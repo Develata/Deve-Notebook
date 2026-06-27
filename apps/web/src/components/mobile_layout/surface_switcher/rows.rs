@@ -1,7 +1,10 @@
 //! plan_ref:
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
-use super::model::{mobile_surface_current_state, mobile_surface_row_class};
+use super::model::{
+    mobile_surface_close_button_class, mobile_surface_close_touch_target,
+    mobile_surface_current_state, mobile_surface_row_class, mobile_surface_row_touch_target,
+};
 use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
 use crate::components::icons::{FileText, SourceControl, X};
 use crate::i18n::{Locale, t};
@@ -28,6 +31,7 @@ pub(super) fn SurfaceDocumentRow(
             <button
                 type="button"
                 data-deve-mobile-surface-action="mobile_surface_document_row"
+                data-deve-mobile-touch-target=mobile_surface_row_touch_target()
                 class=move || mobile_surface_row_class(document_row_active(active_tab.get(), doc_id))
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::document_tab(locale.get())
@@ -43,7 +47,8 @@ pub(super) fn SurfaceDocumentRow(
             <button
                 type="button"
                 data-deve-mobile-surface-action="close_document"
-                class="flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+                data-deve-mobile-touch-target=mobile_surface_close_touch_target()
+                class=mobile_surface_close_button_class()
                 title=move || t::common::close_tab(locale.get())
                 aria-label=move || t::common::close_tab(locale.get())
                 on:click=move |ev| {
@@ -79,6 +84,7 @@ pub(super) fn SurfaceDiffRow(
             <button
                 type="button"
                 data-deve-mobile-surface-action="mobile_surface_diff_row"
+                data-deve-mobile-touch-target=mobile_surface_row_touch_target()
                 class=move || {
                     mobile_surface_row_class(diff_row_active(
                         active_tab.get(),
@@ -99,7 +105,8 @@ pub(super) fn SurfaceDiffRow(
             <button
                 type="button"
                 data-deve-mobile-surface-action="close_diff"
-                class="flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+                data-deve-mobile-touch-target=mobile_surface_close_touch_target()
+                class=mobile_surface_close_button_class()
                 title=move || t::common::close_tab(locale.get())
                 aria-label=move || t::common::close_tab(locale.get())
                 on:click=move |ev| {

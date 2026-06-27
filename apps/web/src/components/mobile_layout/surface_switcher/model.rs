@@ -70,6 +70,18 @@ pub(crate) fn mobile_surface_row_class(active: bool) -> &'static str {
     }
 }
 
+pub(crate) fn mobile_surface_close_button_class() -> &'static str {
+    "flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+}
+
+pub(crate) fn mobile_surface_row_touch_target() -> &'static str {
+    "mobile_surface_rows"
+}
+
+pub(crate) fn mobile_surface_close_touch_target() -> &'static str {
+    "mobile_surface_close_buttons"
+}
+
 pub(crate) fn mobile_surface_current_state(active: bool) -> &'static str {
     if active { "true" } else { "false" }
 }
@@ -77,8 +89,10 @@ pub(crate) fn mobile_surface_current_state(active: bool) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
+        mobile_surface_close_button_class, mobile_surface_close_touch_target,
         mobile_surface_current_state, mobile_surface_expanded_state, mobile_surface_row_class,
-        mobile_surface_sheet_visible, mobile_surface_summary, mobile_surface_switcher_button_class,
+        mobile_surface_row_touch_target, mobile_surface_sheet_visible, mobile_surface_summary,
+        mobile_surface_switcher_button_class,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -145,5 +159,21 @@ mod tests {
         assert!(mobile_surface_switcher_button_class().contains("h-11"));
         assert!(mobile_surface_row_class(false).contains("h-11"));
         assert!(mobile_surface_row_class(true).contains("h-11"));
+    }
+
+    #[test]
+    fn mobile_surface_close_buttons_are_at_least_44px() {
+        let class = mobile_surface_close_button_class();
+        assert!(class.contains("h-11"));
+        assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_surface_touch_target_markers_are_stable() {
+        assert_eq!(mobile_surface_row_touch_target(), "mobile_surface_rows");
+        assert_eq!(
+            mobile_surface_close_touch_target(),
+            "mobile_surface_close_buttons"
+        );
     }
 }

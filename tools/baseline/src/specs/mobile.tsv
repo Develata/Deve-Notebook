@@ -446,6 +446,8 @@ contains	apps/web/src/i18n/common.rs	pub fn redo(locale: Locale) -> &'static str
 contains	docs/acceptance-cases/17_mobile_surface_switcher.md	case_id: UI-MOB-021
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: cargo test -p deve_web mobile_surface -- --nocapture
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_rows"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_close_buttons"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_switcher_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_sheet_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_touch_targets_min_size_bound true
@@ -465,11 +467,15 @@ contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mob
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target="surface_switcher"
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_document_row"
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_diff_row"
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_row_touch_target()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_close_touch_target()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="document"
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="diff"
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_summary_prefers_active_diff()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_sheet_gate_closes_for_drawer_or_empty_tabs()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_targets_are_at_least_44px()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_close_buttons_are_at_least_44px()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_target_markers_are_stable()
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_surface_switcher_hides_bottom_bar()
