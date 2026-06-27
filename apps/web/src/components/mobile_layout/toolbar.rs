@@ -9,7 +9,7 @@ use leptos::prelude::*;
 const FOOTER_HEIGHT_PX: i32 = 0;
 
 pub(super) fn toolbar_button_class() -> &'static str {
-    "h-11 min-w-[44px] px-2 rounded-md border border-default bg-panel text-primary active:bg-hover text-xs font-medium"
+    "h-11 min-w-[44px] px-2 rounded-md border border-default bg-panel text-primary active:bg-hover text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
 }
 
 pub(super) fn toolbar_button_type() -> &'static str {
@@ -208,6 +208,13 @@ mod tests {
         let class = toolbar_button_class();
         assert!(class.contains("h-11"));
         assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_toolbar_write_gate_blocked_buttons_have_disabled_affordance() {
+        let class = toolbar_button_class();
+        assert!(class.contains("disabled:opacity-50"));
+        assert!(class.contains("disabled:cursor-not-allowed"));
     }
 
     #[test]
