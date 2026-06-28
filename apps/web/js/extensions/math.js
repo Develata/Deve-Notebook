@@ -2,6 +2,8 @@ import { WidgetType, Decoration, EditorView } from "@codemirror/view";
 import { StateField } from "@codemirror/state";
 import { findMathRanges } from "./utils.js";
 
+const MAX_NESTED_MATH_DEPTH = 10;
+
 // --- 辅助函数: 计算行的引用深度 ---
 function getLineQuoteDepth(lineText) {
     let depth = 0;
@@ -52,7 +54,7 @@ export class MathWidget extends WidgetType {
         
         // [NEW] 应用嵌套深度样式
         if (this.quoteDepth > 0) {
-            const effectiveDepth = Math.min(this.quoteDepth, 5);
+            const effectiveDepth = Math.min(this.quoteDepth, MAX_NESTED_MATH_DEPTH);
             wrapper.classList.add(`cm-nested-math-depth-${effectiveDepth}`);
         }
         
