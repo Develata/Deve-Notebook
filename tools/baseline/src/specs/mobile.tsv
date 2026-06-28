@@ -234,7 +234,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_send_button_marker_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_keyboard_offset_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_bottom_bar_hidden_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_input_font_size_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: chat_input_not_overlapped_by_keyboard true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: computed_style "chat_input" "font-size" "16px"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: min_target_size "44x44"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: bottom_bar_hidden true
 contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	case_id: UI-MOB-CHAT-REG-002
@@ -247,16 +249,20 @@ case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_send_button_marker_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_keyboard_offset_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_bottom_bar_hidden_bound true
+case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_input_font_size_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: chat_input_not_overlapped_by_keyboard true
+case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: computed_style "chat_input" "font-size" "16px"
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: min_target_size "44x44"
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: bottom_bar_hidden true
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-chat-input-area=move || mobile_chat_input_area_marker(mobile)
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-chat-input=move || mobile_chat_input_marker(mobile)
+contains	apps/web/src/components/chat/input_area.rs	style=move || mobile_chat_input_style(mobile)
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-chat-action=move || mobile_chat_send_button_marker(mobile)
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-touch-target=move || mobile_chat_send_button_marker(mobile)
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_input_area_uses_safe_area_padding()
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_send_button_is_at_least_44px()
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_markers_are_mobile_only()
+contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_input_uses_16px_font_size()
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-chat-keyboard-offset=move || keyboard_offset.get().to_string()
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_chat_keyboard_sheet_stays_above_keyboard()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_bottom_bar_visible(
