@@ -7,6 +7,12 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 const FOOTER_HEIGHT_PX: i32 = 0;
+const TOOLBAR_HISTORY_ACTIONS: [&str; 2] = ["undo", "redo"];
+const TOOLBAR_HISTORY_TARGET: &str = "mobile_toolbar_history_actions";
+
+pub(super) fn mobile_toolbar_history_actions_front_order() -> [&'static str; 2] {
+    TOOLBAR_HISTORY_ACTIONS
+}
 
 pub(super) fn toolbar_button_class() -> &'static str {
     "h-11 min-w-[44px] px-2 rounded-md border border-default bg-panel text-primary active:bg-hover text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -84,7 +90,8 @@ pub fn MobileAccessoryToolbar(
                     <button
                         type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
-                        data-deve-mobile-history-action="undo"
+                        data-deve-mobile-toolbar-history-target=TOOLBAR_HISTORY_TARGET
+                        data-deve-mobile-history-action=mobile_toolbar_history_actions_front_order()[0]
                         class=base
                         on:click=move |_| on_undo.run(())
                         disabled=disabled
@@ -96,7 +103,8 @@ pub fn MobileAccessoryToolbar(
                     <button
                         type=button_type
                         data-deve-mobile-touch-target="accessory_toolbar_buttons"
-                        data-deve-mobile-history-action="redo"
+                        data-deve-mobile-toolbar-history-target=TOOLBAR_HISTORY_TARGET
+                        data-deve-mobile-history-action=mobile_toolbar_history_actions_front_order()[1]
                         class=base
                         on:click=move |_| on_redo.run(())
                         disabled=disabled
@@ -191,7 +199,8 @@ pub fn MobileAccessoryToolbar(
 #[cfg(test)]
 mod tests {
     use super::{
-        mobile_toolbar_action_enabled, mobile_toolbar_style, toolbar_button_class,
+        TOOLBAR_HISTORY_TARGET, mobile_toolbar_action_enabled,
+        mobile_toolbar_history_actions_front_order, mobile_toolbar_style, toolbar_button_class,
         toolbar_button_type,
     };
 
@@ -215,6 +224,16 @@ mod tests {
         let class = toolbar_button_class();
         assert!(class.contains("disabled:opacity-50"));
         assert!(class.contains("disabled:cursor-not-allowed"));
+    }
+
+    #[test]
+    fn mobile_toolbar_history_actions_stay_front_loaded_for_390px() {
+        assert_eq!(
+            mobile_toolbar_history_actions_front_order(),
+            ["undo", "redo"]
+        );
+        assert!(mobile_toolbar_history_actions_front_order().len() * 44 <= 390);
+        assert_eq!(TOOLBAR_HISTORY_TARGET, "mobile_toolbar_history_actions");
     }
 
     #[test]
