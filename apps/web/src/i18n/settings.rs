@@ -7,8 +7,10 @@
 use super::Locale;
 
 mod local_prefs;
+mod native_backend;
 
 pub use local_prefs::*;
+pub use native_backend::*;
 
 pub fn title(locale: Locale) -> &'static str {
     match locale {

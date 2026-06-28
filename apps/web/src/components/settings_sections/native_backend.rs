@@ -2,7 +2,8 @@
 //!   - 15_settings#native-host-local-backend-preference
 
 use crate::components::settings_sections_policy::{
-    native_backend_button_state, native_backend_can_switch_local, native_backend_validation_state,
+    native_backend_button_state, native_backend_can_switch_local,
+    native_backend_unavailable_feedback, native_backend_validation_state,
 };
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -29,9 +30,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             set_feedback.set(String::new());
         } else {
             set_remote_validation_succeeded.set(false);
-            set_feedback.set(config.error.unwrap_or_else(|| {
-                t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
-            }));
+            set_feedback.set(config.error.unwrap_or_default());
         }
     });
 
@@ -58,9 +57,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             if !result.available {
                 set_available.set(false);
                 set_remote_validation_succeeded.set(false);
-                set_feedback.set(result.error.unwrap_or_else(|| {
-                    t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
-                }));
+                set_feedback.set(result.error.unwrap_or_default());
                 return;
             }
             if result.ok {
@@ -104,9 +101,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             } else {
                 set_available.set(false);
                 set_remote_validation_succeeded.set(false);
-                set_feedback.set(config.error.unwrap_or_else(|| {
-                    t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
-                }));
+                set_feedback.set(config.error.unwrap_or_default());
             }
         });
     };
@@ -152,11 +147,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                 >
                     {move || {
                         let text = feedback.get();
-                        if text.is_empty() {
-                            t::settings::native_backend_unavailable(locale.get()).to_string()
-                        } else {
-                            text
-                        }
+                        native_backend_unavailable_feedback(locale.get(), &text)
                     }}
                 </p>
             </Show>
