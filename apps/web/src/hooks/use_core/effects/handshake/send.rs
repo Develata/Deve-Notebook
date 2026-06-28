@@ -36,7 +36,7 @@ pub(super) fn spawn_handshake_attempt(ctx: HandshakeAttemptCtx) {
     ctx.handshake_attempt.set(next_attempt);
     spawn_local(async move {
         if let Some(mode) = ctx.maybe_mode {
-            leptos::logging::warn!("{}", mode.banner_text());
+            leptos::logging::warn!("Storage degraded; skipping handshake: {}", mode.reason);
             restore_scope_if_needed(
                 &ctx.ws,
                 ctx.signals,

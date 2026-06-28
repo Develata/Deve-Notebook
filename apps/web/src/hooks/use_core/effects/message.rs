@@ -2,7 +2,7 @@
 //!   - 07_network#web-ws-runtime
 //!
 use crate::api::{WsService, is_current_connection_message};
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use deve_core::protocol::ClientMessage;
 use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
@@ -25,9 +25,10 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
 
     Effect::new(move |_| {
+        let locale = locale.get();
         let banner = degraded_sync_mode
             .get()
-            .map(|mode| format!("存储受限（{}），当前处于只读模式", mode.reason));
+            .map(|mode| t::bottom_bar::storage_limited_read_only(locale, &mode.reason));
         set_sync_banner.set(banner);
     });
 

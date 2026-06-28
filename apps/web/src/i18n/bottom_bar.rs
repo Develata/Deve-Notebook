@@ -104,6 +104,13 @@ pub fn pending_ack(locale: Locale, count: usize) -> String {
     }
 }
 
+pub fn storage_limited_read_only(locale: Locale, reason: &str) -> String {
+    match locale {
+        Locale::En => format!("Storage limited ({reason}); read-only mode is active"),
+        Locale::Zh => format!("存储受限（{reason}），当前处于只读模式"),
+    }
+}
+
 pub fn unauthorized(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Session Expired",
@@ -209,11 +216,23 @@ pub fn loading_progress(locale: Locale, done: usize, total: usize, eta_ms: u64) 
 
 #[cfg(test)]
 mod tests {
-    use super::toggle_status_details;
+    use super::{storage_limited_read_only, toggle_status_details};
     use crate::i18n::Locale;
 
     #[test]
     fn mobile_i18n_bottom_bar_toggle_copy_has_facade_key() {
         assert_eq!(toggle_status_details(Locale::En), "Toggle status details");
+    }
+
+    #[test]
+    fn degraded_storage_banner_is_localized_by_locale() {
+        assert_eq!(
+            storage_limited_read_only(Locale::En, "IndexedDB=false"),
+            "Storage limited (IndexedDB=false); read-only mode is active"
+        );
+        assert_eq!(
+            storage_limited_read_only(Locale::Zh, "IndexedDB=false"),
+            "存储受限（IndexedDB=false），当前处于只读模式"
+        );
     }
 }
