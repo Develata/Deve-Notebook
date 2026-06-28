@@ -35,6 +35,8 @@
   preconditions:
     - 打开 render_heading.md
   steps:
+    - run: scripts/check-rendering-baseline.sh
+    - run: cargo test -p deve_web empty_atx_headings -- --nocapture
     - ui_type: |
         #
         ##

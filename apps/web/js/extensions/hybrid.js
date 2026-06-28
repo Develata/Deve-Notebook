@@ -7,6 +7,10 @@ function atxHeadingLevel(nodeName) {
   return match ? match[1] : null;
 }
 
+function isEmptyAtxHeadingLine(lineText, level) {
+  return new RegExp(`^\\s*#{${level}}\\s*#*\\s*$`).test(lineText);
+}
+
 /**
  * Hybrid Plugin (混合插件)
  * 
@@ -125,11 +129,13 @@ export const hybridPlugin = ViewPlugin.fromClass(
             const headingLevel = atxHeadingLevel(node.name);
             if (headingLevel) {
                 const line = view.state.doc.lineAt(node.from);
-                widgets.push(
-                    Decoration.line({
-                        class: `cm-heading-line cm-heading-line-${headingLevel}`,
-                    }).range(line.from)
-                );
+                if (isEmptyAtxHeadingLine(line.text, headingLevel)) {
+                    widgets.push(
+                        Decoration.line({
+                            class: `cm-heading-line cm-heading-line-${headingLevel}`,
+                        }).range(line.from)
+                    );
+                }
             }
 
             // ---------------------------------------------------------

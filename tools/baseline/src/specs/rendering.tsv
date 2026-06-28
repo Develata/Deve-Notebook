@@ -27,6 +27,18 @@ contains	apps/web/src/utils/markdown.rs	html_filter_allows_br_only
 contains	apps/web/src/utils/markdown.rs	link_rendering_adds_blank_target_and_rel
 contains	apps/web/src/utils/markdown.rs	link_rendering_rejects_script_scheme
 contains	apps/web/src/utils/markdown.rs	unsupported_highlight_syntax_stays_plain_text
+contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-HEADING-001
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	run: scripts/check-rendering-baseline.sh
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	run: cargo test -p deve_web empty_atx_headings -- --nocapture
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: markdown_body_empty_heading_heights_distinct true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_not_double_scaled true
+contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty ATX heading editor/html workflow
+contains	apps/web/js/extensions/hybrid.js	function isEmptyAtxHeadingLine(lineText, level)
+contains	apps/web/js/extensions/hybrid.js	isEmptyAtxHeadingLine(line.text, headingLevel)
+contains	apps/web/style/_typography.css	.cm-heading-line-1
+contains	apps/web/style/_typography.css	.markdown-body h1
+contains	apps/web/src/utils/markdown.rs	fn empty_atx_headings_emit_distinct_html_levels()
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-LINK-002
 contains	docs/acceptance-cases/03_rendering.md	ui_dom_attr_eq: ["target", "_blank"]
 contains	docs/acceptance-cases/03_rendering.md	ui_dom_attr_eq: ["rel", "noopener noreferrer"]
