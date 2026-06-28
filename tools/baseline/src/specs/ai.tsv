@@ -36,6 +36,7 @@ contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_core --test ai_c
 contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_web chat_context -- --nocapture
 contains	docs/acceptance-cases/10_plugins.md	cargo test -p deve_web plugin_text_response -- --nocapture
 contains	crates/core/tests/ai_chat_plugin_test.rs	test_chat_with_api_key_reaches_stream_bridge
+contains	crates/core/tests/ai_chat_plugin_test.rs	test_chat_with_api_key_accepts_empty_string_context_as_no_context
 contains	apps/web/src/components/chat/actions/send/tests.rs	chat_context_includes_current_doc_markdown_selection_and_mode
 contains	apps/web/src/components/chat/actions/send.rs	chat.on_plugin_call.run
 contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_finishes_matching_chat_placeholder
