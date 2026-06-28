@@ -73,6 +73,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             document: document.clone(),
         },
         is_streaming,
+        locale,
         session_mode,
         set_session_mode,
         Some(on_req_id),

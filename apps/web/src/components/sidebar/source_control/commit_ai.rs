@@ -61,6 +61,7 @@ pub fn build_generate_callback(
             let plan = plan_commit_ai_runtime(decision);
             let mut runner = CommitAiSignalEffectRunner {
                 chat_ctx: chat_ctx_for_send,
+                locale,
                 active_req_id,
                 set_is_generating,
                 req_id,
@@ -73,6 +74,7 @@ pub fn build_generate_callback(
 
 struct CommitAiSignalEffectRunner {
     chat_ctx: ChatContext,
+    locale: RwSignal<Locale>,
     active_req_id: RwSignal<Option<String>>,
     set_is_generating: WriteSignal<bool>,
     req_id: String,
@@ -87,7 +89,11 @@ impl CommitAiEffectRunner for CommitAiSignalEffectRunner {
     }
 
     fn append_notice(&mut self, notice: String) {
-        append_commit_ai_message(&self.chat_ctx, notice, None);
+        append_commit_ai_message(
+            &self.chat_ctx,
+            t::extensions::ai_backend_fallback(self.locale.get_untracked(), &notice),
+            None,
+        );
     }
 
     fn register_active_request(&mut self) {
@@ -108,7 +114,11 @@ impl CommitAiEffectRunner for CommitAiSignalEffectRunner {
     }
 
     fn append_block_reason(&mut self, reason: String) {
-        append_commit_ai_message(&self.chat_ctx, reason, None);
+        append_commit_ai_message(
+            &self.chat_ctx,
+            t::extensions::ai_backend_reason(self.locale.get_untracked(), &reason),
+            None,
+        );
     }
 
     fn stop_streaming(&mut self) {

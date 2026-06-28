@@ -6,6 +6,7 @@ use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_r
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
+use crate::i18n::{Locale, t};
 use crate::runtime::document_client::DocumentClient;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -25,6 +26,7 @@ pub struct ChatSendRuntime {
 pub fn make_send_text(
     runtime: ChatSendRuntime,
     is_streaming: ReadSignal<bool>,
+    locale: RwSignal<Locale>,
     session_mode: ReadSignal<ChatSessionMode>,
     set_session_mode: WriteSignal<ChatSessionMode>,
     on_req_id: Option<Callback<String>>,
@@ -70,8 +72,14 @@ pub fn make_send_text(
                     .set_ai_mode
                     .set(AiBackendMode::from_backend_str_or_native(backend));
             }
+            let locale = locale.get_untracked();
             for message in messages {
-                append_planned_chat_message(&runtime_for_send.chat, &msg, &req_id, message);
+                append_planned_chat_message(
+                    &runtime_for_send.chat,
+                    &msg,
+                    &req_id,
+                    localize_backend_chat_message(locale, message),
+                );
             }
             if let Some(cb) = on_user_text.as_ref() {
                 cb.run(msg.clone());
@@ -127,6 +135,18 @@ pub fn make_send_text(
             ));
         });
     })
+}
+
+fn localize_backend_chat_message(locale: Locale, message: ChatMessagePlan) -> ChatMessagePlan {
+    match message {
+        ChatMessagePlan::AssistantNotice(notice) => {
+            ChatMessagePlan::AssistantNotice(t::extensions::ai_backend_fallback(locale, &notice))
+        }
+        ChatMessagePlan::AssistantError(reason) => {
+            ChatMessagePlan::AssistantError(t::extensions::ai_backend_reason(locale, &reason))
+        }
+        other => other,
+    }
 }
 
 fn append_planned_chat_message(

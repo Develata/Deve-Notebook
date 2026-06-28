@@ -1,9 +1,11 @@
+use super::super::send_backend::ChatMessagePlan;
 use super::{
     MAX_CHAT_CONTEXT_CHARS, MAX_CHAT_HISTORY_MESSAGES, bounded_chat_history, build_chat_context,
-    truncate_markdown_context,
+    localize_backend_chat_message, truncate_markdown_context,
 };
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::ChatMessage;
+use crate::i18n::{Locale, t};
 
 #[test]
 fn markdown_context_is_bounded_on_char_boundaries() {
@@ -49,6 +51,46 @@ fn chat_context_allows_empty_doc_context_without_inventing_path() {
     assert_eq!(context["current_markdown"], "");
     assert_eq!(context["selection"], serde_json::Value::Null);
     assert_eq!(context["chat_mode"], "plan");
+}
+
+#[test]
+fn backend_switch_notice_is_localized_at_chat_display_boundary() {
+    assert_eq!(
+        localize_backend_chat_message(
+            Locale::Zh,
+            ChatMessagePlan::AssistantNotice("trusted mode required".to_string())
+        ),
+        ChatMessagePlan::AssistantNotice(t::extensions::ai_backend_fallback(
+            Locale::Zh,
+            "trusted mode required"
+        ))
+    );
+}
+
+#[test]
+fn backend_block_reason_is_localized_at_chat_display_boundary() {
+    assert_eq!(
+        localize_backend_chat_message(
+            Locale::Zh,
+            ChatMessagePlan::AssistantError("native AI disabled by config".to_string())
+        ),
+        ChatMessagePlan::AssistantError(t::extensions::ai_backend_reason(
+            Locale::Zh,
+            "native AI disabled by config"
+        ))
+    );
+}
+
+#[test]
+fn non_backend_chat_message_plans_are_not_rewritten_by_localization() {
+    assert_eq!(
+        localize_backend_chat_message(Locale::Zh, ChatMessagePlan::UserInput),
+        ChatMessagePlan::UserInput
+    );
+    assert_eq!(
+        localize_backend_chat_message(Locale::Zh, ChatMessagePlan::AssistantPlaceholder),
+        ChatMessagePlan::AssistantPlaceholder
+    );
 }
 
 #[test]
