@@ -163,12 +163,13 @@ pub fn filter_commands(query: &str, commands: Vec<Command>, max_results: usize) 
 
     for cmd in commands {
         let shortcut = cmd.shortcut.as_deref().unwrap_or_default().to_lowercase();
+        let detail = cmd.detail_text().to_lowercase();
         if q.is_empty()
             || cmd.title.to_lowercase().contains(&q)
             || cmd.id.contains(&q)
             || cmd.group.to_lowercase().contains(&q)
             || shortcut.contains(&q)
-            || cmd.enabled_when.to_lowercase().contains(&q)
+            || detail.contains(&q)
         {
             results.push(cmd);
         }

@@ -1,5 +1,6 @@
-use super::create_static_commands;
+use super::{create_static_commands, filter_commands};
 use crate::components::activity_bar::SidebarView;
+use crate::components::command_palette::Command;
 use crate::components::layout_context::SidebarControl;
 use crate::i18n::Locale;
 use leptos::prelude::*;
@@ -143,6 +144,27 @@ fn static_commands_expose_group_shortcut_and_enabled_conditions() {
         assert_eq!(settings.group, "Settings");
         assert!(settings.enabled_when.contains("browser-local"));
     });
+}
+
+#[test]
+fn filter_commands_matches_visible_unavailable_reason() {
+    let commands = vec![
+        Command::unavailable(
+            "establish_branch",
+            "P2P: Establish Branch",
+            "Unavailable: no branch creation backend",
+            Callback::new(|_| {}),
+        )
+        .with_group("Peer")
+        .with_enabled_when("Future backend contract"),
+    ];
+
+    let results = filter_commands("branch creation backend", commands, 50);
+
+    assert_eq!(
+        results.first().map(|command| command.id.as_str()),
+        Some("establish_branch")
+    );
 }
 
 #[test]

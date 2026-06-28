@@ -132,8 +132,10 @@ contains	apps/web/src/components/command_palette/types.rs	pub shortcut: Option<S
 contains	apps/web/src/components/command_palette/types.rs	pub enabled_when: String
 contains	apps/web/src/components/command_palette/registry/tests.rs	static_commands_expose_group_shortcut_and_enabled_conditions
 contains	apps/web/src/components/command_palette/registry/tests.rs	settings_command_routes_to_settings_surface_and_closes_palette
-contains	apps/web/src/components/search_box/providers/command.rs	command_provider_detail_includes_group_shortcut_and_enabled_condition
-contains	apps/web/src/components/search_box/providers/command.rs	command_provider_uses_registry_metadata_for_settings_entry
+contains	apps/web/src/components/command_palette/registry/tests.rs	filter_commands_matches_visible_unavailable_reason
+contains	apps/web/src/components/search_box/providers/command/tests.rs	command_provider_detail_includes_group_shortcut_and_enabled_condition
+contains	apps/web/src/components/search_box/providers/command/tests.rs	command_provider_uses_registry_metadata_for_settings_entry
+contains	apps/web/src/components/search_box/providers/command/tests.rs	command_provider_matches_visible_unavailable_reason
 contains	apps/web/src/components/command_palette/registry/tests.rs	static_commands_include_sidebar_toggle_when_control_is_available
 contains	apps/web/src/components/command_palette/registry/reserved.rs	source_control_reserved_commands
 contains	apps/web/src/components/command_palette/registry/reserved.rs	ai_reserved_commands
