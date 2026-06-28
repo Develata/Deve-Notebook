@@ -128,7 +128,7 @@ mod tests {
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
-    use crate::i18n::Locale;
+    use crate::i18n::{Locale, t};
     use deve_core::models::DocId;
 
     #[test]
@@ -205,7 +205,11 @@ mod tests {
     fn mobile_surface_badge_text_shows_surface_type_and_count() {
         assert_eq!(
             mobile_surface_summary_badge_text("document", 2, Locale::Zh),
-            "文档标签页 · 2 已打开标签页"
+            format!(
+                "{} · 2 {}",
+                t::common::document_tab(Locale::Zh),
+                t::common::open_tabs(Locale::Zh)
+            )
         );
         assert_eq!(
             mobile_surface_summary_badge_text("diff", 1, Locale::En),
@@ -213,7 +217,7 @@ mod tests {
         );
         assert_eq!(
             mobile_surface_summary_badge_text("tabs", 3, Locale::Zh),
-            "3 已打开标签页"
+            format!("3 {}", t::common::open_tabs(Locale::Zh))
         );
     }
 

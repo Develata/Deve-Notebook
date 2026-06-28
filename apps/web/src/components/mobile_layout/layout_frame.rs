@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 11_ui_design/03_mobile#mobile-responsive-layout
 //!   - 11_ui_design/03_mobile#mobile-current-native-boundary
+//!   - 11_ui_design/03_mobile#mobile-surface-switcher
 //!
 use super::chat_sheet::MobileChatSheet;
 use super::content::MobileContent;
@@ -98,7 +99,7 @@ pub fn MobileLayoutFrame(
     );
     let (surface_switcher_open, set_surface_switcher_open) = signal(false);
     let pending_branch_switch = editor.pending_branch_switch;
-    let pending_repo_switch = editor.pending_repo_switch;
+    let pending_repo_switch = scope.pending_repo_switch;
     collapse_surface_switcher_on_runtime_transition(
         scope.current_repo_id,
         scope.current_scope_nonce,

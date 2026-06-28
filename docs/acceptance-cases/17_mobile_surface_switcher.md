@@ -14,6 +14,10 @@
     - ui_assert: mobile_surface_sheet_visible true
     - ui_measure: "mobile_surface_rows"
     - ui_measure: "mobile_surface_close_buttons"
+    - ui_open_drawer: "left"
+    - ui_assert: mobile_surface_sheet_visible false
+    - ui_click: "drawer_close_buttons"
+    - ui_click: "open_switcher"
     - ui_click: "close_sheet"
     - ui_assert: mobile_surface_sheet_visible false
     - ui_click: "open_switcher"
@@ -28,6 +32,8 @@
     - cli_assert: mobile_surface_switcher_marker_bound true
     - cli_assert: mobile_surface_type_label_marker_bound true
     - cli_assert: mobile_surface_sheet_marker_bound true
+    - cli_assert: mobile_surface_runtime_transition_close_bound true
+    - cli_assert: mobile_surface_drawer_close_bound true
     - cli_assert: mobile_surface_touch_targets_min_size_bound true
     - cli_assert: mobile_surface_diff_restore_bound true
     - cli_assert: mobile_surface_close_diff_keeps_source_control_state true
