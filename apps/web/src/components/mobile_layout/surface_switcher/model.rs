@@ -62,6 +62,14 @@ pub(crate) fn mobile_surface_switcher_button_class() -> &'static str {
     "flex h-11 min-w-0 w-full items-center gap-2 rounded-md border border-default bg-editor px-3 text-left text-primary active:bg-hover"
 }
 
+pub(crate) fn mobile_surface_summary_title_class(has_title: bool) -> &'static str {
+    if has_title {
+        "min-w-0 flex-1 truncate text-[13px] font-medium"
+    } else {
+        "min-w-0 flex-1 whitespace-nowrap text-[13px] font-medium"
+    }
+}
+
 pub(crate) fn mobile_surface_row_class(active: bool) -> &'static str {
     if active {
         "flex h-11 w-full items-center gap-3 rounded-md bg-active px-3 text-left text-primary"
@@ -92,7 +100,7 @@ mod tests {
         mobile_surface_close_button_class, mobile_surface_close_touch_target,
         mobile_surface_current_state, mobile_surface_expanded_state, mobile_surface_row_class,
         mobile_surface_row_touch_target, mobile_surface_sheet_visible, mobile_surface_summary,
-        mobile_surface_switcher_button_class,
+        mobile_surface_summary_title_class, mobile_surface_switcher_button_class,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -159,6 +167,13 @@ mod tests {
         assert!(mobile_surface_switcher_button_class().contains("h-11"));
         assert!(mobile_surface_row_class(false).contains("h-11"));
         assert!(mobile_surface_row_class(true).contains("h-11"));
+    }
+
+    #[test]
+    fn mobile_surface_fallback_title_keeps_open_tabs_copy_visible() {
+        assert!(mobile_surface_summary_title_class(false).contains("whitespace-nowrap"));
+        assert!(!mobile_surface_summary_title_class(false).contains("truncate"));
+        assert!(mobile_surface_summary_title_class(true).contains("truncate"));
     }
 
     #[test]

@@ -14,7 +14,7 @@ use leptos::prelude::*;
 use self::model::{
     mobile_surface_close_button_class, mobile_surface_close_touch_target,
     mobile_surface_expanded_state, mobile_surface_sheet_visible, mobile_surface_summary,
-    mobile_surface_switcher_button_class,
+    mobile_surface_summary_title_class, mobile_surface_switcher_button_class,
 };
 use self::rows::{SurfaceDiffRow, SurfaceDocumentRow};
 
@@ -73,7 +73,12 @@ pub fn MobileSurfaceSwitcher(
                             _ => view! { <FileText class="h-4 w-4 shrink-0"/> }.into_any(),
                         }
                     }}
-                    <span class="min-w-0 flex-1 truncate text-[13px] font-medium">
+                    <span class=move || {
+                        let has_title = summary
+                            .get()
+                            .is_some_and(|item| item.title.is_some());
+                        mobile_surface_summary_title_class(has_title)
+                    }>
                         {move || {
                             summary
                                 .get()

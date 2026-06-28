@@ -3,6 +3,10 @@ contains	apps/web/src/i18n/command_palette.rs	pub fn keyboard_navigate_hint
 contains	apps/web/src/i18n/search.rs	pub fn command_detail
 contains	apps/web/src/i18n/search.rs	pub fn file_op_detail
 contains	apps/web/src/i18n/common.rs	pub fn status
+case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: open_tabs_zh_copy_eq "已打开标签页"
+contains	apps/web/src/i18n/common.rs	Locale::Zh => "已打开标签页"
+contains	apps/web/src/i18n/common.rs	assert_eq!(open_tabs(Locale::Zh), "已打开标签页")
+absent	apps/web/src/i18n/common.rs	Locale::Zh => "已打开标签"
 contains	apps/web/src/i18n/extensions.rs	pub fn editor_copy_code
 contains	apps/web/src/i18n/js_bridge.rs	publish_browser_i18n
 contains	apps/web/js/i18n.js	export function editorCopy
