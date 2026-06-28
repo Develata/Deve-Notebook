@@ -174,7 +174,7 @@ pub fn EditorBasicsSection(locale: RwSignal<Locale>) -> impl IntoView {
                         title=move || t::settings::max_document_tabs_hint(locale.get())
                         aria-label=move || t::settings::max_document_tabs(locale.get())
                         data-deve-settings-max-document-tabs=move || max_document_tabs.get().to_string()
-                        value=move || max_document_tabs_draft.get()
+                        prop:value=move || max_document_tabs_draft.get()
                         on:input=move |ev| set_max_document_tabs_draft.set(event_target_value(&ev))
                         on:change=move |ev| commit_max_document_tabs.run(event_target_value(&ev))
                         on:blur=move |_| commit_max_document_tabs.run(max_document_tabs_draft.get_untracked())
