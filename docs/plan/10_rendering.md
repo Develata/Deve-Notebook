@@ -278,7 +278,7 @@ Baseline contract 的行内支持集合：
 - frontmatter 在光标离开时可隐藏 `---` 边界，但内容区仍由源码投影而来。
 - 若未来启用 callout/admonition，其视觉类型（`NOTE`/`TIP`/`CAUTION`）只能来自源码第一行解析，不得在 UI 层凭颜色或 label 猜测。
 
-### 6.4 Code Block Toolbar Contract
+### 6.4 Code Block Toolbar Contract {#code-block-toolbar-contract}
 
 - 代码块右上角必须有：
   - `Copy`

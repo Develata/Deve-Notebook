@@ -161,7 +161,7 @@
     - ui_click: "ellipsis"
   assertions:
     - ui_assert: toolbar_has_buttons ["Copy", "Ellipsis"]
-    - ui_assert: menu_empty_state_text "No actions available"
+    - ui_assert: menu_empty_state_text localized_editor_copy "noActionsAvailable"
 
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。
