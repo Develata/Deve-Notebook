@@ -41,6 +41,10 @@ pub(super) fn mobile_more_item_button_class() -> &'static str {
     "flex-1 h-full px-3 text-left active:bg-hover"
 }
 
+pub(super) fn mobile_more_item_touch_target() -> &'static str {
+    "mobile_more_items"
+}
+
 pub(super) fn mobile_more_pin_button_class(pinned: bool) -> String {
     format!(
         "h-full min-w-[44px] px-3 flex items-center justify-center rounded-md {}",
@@ -50,6 +54,10 @@ pub(super) fn mobile_more_pin_button_class(pinned: bool) -> String {
             "text-muted active:bg-hover"
         }
     )
+}
+
+pub(super) fn mobile_more_pin_touch_target() -> &'static str {
+    "mobile_more_pin_actions"
 }
 
 pub(super) fn mobile_more_after_item_click() -> bool {
@@ -126,6 +134,7 @@ pub(super) fn LeftDrawerMoreMenu(
                                 <button
                                     type="button"
                                     data-deve-mobile-more-item=mobile_more_item_marker(item)
+                                    data-deve-mobile-touch-target=mobile_more_item_touch_target()
                                     class=mobile_more_item_button_class()
                                     role="menuitem"
                                     on:click=move |_| {
@@ -138,6 +147,7 @@ pub(super) fn LeftDrawerMoreMenu(
                                 <button
                                     type="button"
                                     data-deve-mobile-more-pin-action=mobile_more_pin_action_marker(item)
+                                    data-deve-mobile-touch-target=mobile_more_pin_touch_target()
                                     class=move || mobile_more_pin_button_class(pinned.get())
                                     aria-pressed=move || pinned.get().to_string()
                                     title=move || {

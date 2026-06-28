@@ -137,6 +137,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "topbar_buttons"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_open_drawer: "left"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "drawer_close_buttons"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_click: "mobile-more-button"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "mobile_more_items"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "mobile_more_pin_actions"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_open_drawer: "right"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "outline_toggle"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "bottom_bar_toggle"
@@ -149,6 +152,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_focus_editor: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_wait_keyboard: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_touch_target_markers_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_touch_targets_min_size_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_more_touch_target_markers_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_assert: all_targets_min_size "44x44"
 contains	apps/web/src/components/mobile_layout/header.rs	data-deve-mobile-touch-target="topbar_buttons"
 contains	apps/web/src/components/mobile_layout/header.rs	fn mobile_touch_targets_topbar_buttons_are_at_least_44px()
@@ -357,10 +361,14 @@ contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	f
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	fn mobile_sidebar_icon_tab_classes_cover_sidebar_entries()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-more-menu=move || mobile_more_menu_marker(show_more.get())
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-more-item=mobile_more_item_marker(item)
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-touch-target=mobile_more_item_touch_target()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-more-pin-action=mobile_more_pin_action_marker(item)
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-touch-target=mobile_more_pin_touch_target()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_menu_marker_is_visible_when_open()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_menu_items_cover_sidebar_entries()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_menu_reuses_desktop_entry_classes()
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_mobile_touch_targets_are_at_least_44px()
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_mobile_touch_targets_markers_are_stable()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-016
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	run: cargo test -p deve_web mobile_sidebar_more -- --nocapture

@@ -1,8 +1,9 @@
 use super::{
     mobile_more_after_escape, mobile_more_after_item_click, mobile_more_after_pin_click,
     mobile_more_item_button_class, mobile_more_item_marker, mobile_more_item_row_class,
-    mobile_more_menu_marker, mobile_more_pin_action_marker, mobile_more_pin_button_class,
-    more_item_class, toggle_mobile_more_pin,
+    mobile_more_item_touch_target, mobile_more_menu_marker, mobile_more_pin_action_marker,
+    mobile_more_pin_button_class, mobile_more_pin_touch_target, more_item_class,
+    toggle_mobile_more_pin,
 };
 use crate::components::activity_bar::SidebarView;
 
@@ -60,7 +61,7 @@ fn mobile_sidebar_more_menu_reuses_desktop_entry_classes() {
 }
 
 #[test]
-fn mobile_sidebar_more_item_hit_area_is_carried_by_buttons() {
+fn mobile_sidebar_more_mobile_touch_targets_are_at_least_44px() {
     let row_class = mobile_more_item_row_class(SidebarView::Explorer);
     let item_button_class = mobile_more_item_button_class();
     let pin_button_class = mobile_more_pin_button_class(true);
@@ -74,6 +75,12 @@ fn mobile_sidebar_more_item_hit_area_is_carried_by_buttons() {
     assert!(pin_button_class.contains("h-full"));
     assert!(pin_button_class.contains("min-w-[44px]"));
     assert!(pin_button_class.contains("px-3"));
+}
+
+#[test]
+fn mobile_sidebar_more_mobile_touch_targets_markers_are_stable() {
+    assert_eq!(mobile_more_item_touch_target(), "mobile_more_items");
+    assert_eq!(mobile_more_pin_touch_target(), "mobile_more_pin_actions");
 }
 
 #[test]
