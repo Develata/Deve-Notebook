@@ -460,6 +460,7 @@ contains	apps/web/src/i18n/common.rs	pub fn redo(locale: Locale) -> &'static str
 contains	docs/acceptance-cases/17_mobile_surface_switcher.md	case_id: UI-MOB-021
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: cargo test -p deve_web mobile_surface -- --nocapture
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "surface_switcher"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_rows"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_close_buttons"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "close_sheet"
@@ -480,7 +481,7 @@ contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_rese
 contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_prefers_active_diff_over_document()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-switcher="summary"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-sheet="open"
-contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target="surface_switcher"
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_switcher_touch_target()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_close_touch_target()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	class=mobile_surface_close_button_class()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_document_row"

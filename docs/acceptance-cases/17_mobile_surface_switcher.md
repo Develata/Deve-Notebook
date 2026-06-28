@@ -8,6 +8,7 @@
   steps:
     - run: scripts/check-mobile-baseline.sh
     - run: cargo test -p deve_web mobile_surface -- --nocapture
+    - ui_measure: "surface_switcher"
     - ui_click: "open_switcher"
     - ui_assert: mobile_surface_sheet_visible true
     - ui_measure: "mobile_surface_rows"

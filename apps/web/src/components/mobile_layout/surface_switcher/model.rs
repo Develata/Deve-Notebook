@@ -86,6 +86,10 @@ pub(crate) fn mobile_surface_row_touch_target() -> &'static str {
     "mobile_surface_rows"
 }
 
+pub(crate) fn mobile_surface_switcher_touch_target() -> &'static str {
+    "surface_switcher"
+}
+
 pub(crate) fn mobile_surface_close_touch_target() -> &'static str {
     "mobile_surface_close_buttons"
 }
@@ -101,6 +105,7 @@ mod tests {
         mobile_surface_current_state, mobile_surface_expanded_state, mobile_surface_row_class,
         mobile_surface_row_touch_target, mobile_surface_sheet_visible, mobile_surface_summary,
         mobile_surface_summary_title_class, mobile_surface_switcher_button_class,
+        mobile_surface_switcher_touch_target,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -185,6 +190,7 @@ mod tests {
 
     #[test]
     fn mobile_surface_touch_target_markers_are_stable() {
+        assert_eq!(mobile_surface_switcher_touch_target(), "surface_switcher");
         assert_eq!(mobile_surface_row_touch_target(), "mobile_surface_rows");
         assert_eq!(
             mobile_surface_close_touch_target(),

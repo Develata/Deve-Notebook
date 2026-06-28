@@ -15,6 +15,7 @@ use self::model::{
     mobile_surface_close_button_class, mobile_surface_close_touch_target,
     mobile_surface_expanded_state, mobile_surface_sheet_visible, mobile_surface_summary,
     mobile_surface_summary_title_class, mobile_surface_switcher_button_class,
+    mobile_surface_switcher_touch_target,
 };
 use self::rows::{SurfaceDiffRow, SurfaceDocumentRow};
 
@@ -56,7 +57,7 @@ pub fn MobileSurfaceSwitcher(
                 <button
                     type="button"
                     data-deve-mobile-surface-action="open_switcher"
-                    data-deve-mobile-touch-target="surface_switcher"
+                    data-deve-mobile-touch-target=mobile_surface_switcher_touch_target()
                     data-deve-mobile-surface-kind=move || {
                         summary.get().map(|item| item.kind).unwrap_or("none")
                     }
