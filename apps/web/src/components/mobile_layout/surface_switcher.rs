@@ -14,8 +14,9 @@ use leptos::prelude::*;
 use self::model::{
     mobile_surface_close_button_class, mobile_surface_close_touch_target,
     mobile_surface_expanded_state, mobile_surface_sheet_visible, mobile_surface_summary,
-    mobile_surface_summary_title_class, mobile_surface_switcher_button_class,
-    mobile_surface_switcher_touch_target,
+    mobile_surface_summary_badge_text, mobile_surface_summary_title_class,
+    mobile_surface_switcher_button_class, mobile_surface_switcher_touch_target,
+    mobile_surface_type_label_marker,
 };
 use self::rows::{SurfaceDiffRow, SurfaceDocumentRow};
 
@@ -90,10 +91,21 @@ pub fn MobileSurfaceSwitcher(
                                 .unwrap_or_default()
                         }}
                     </span>
-                    <span class="shrink-0 rounded bg-muted px-2 py-0.5 text-[11px] text-secondary">
+                    <span
+                        data-deve-mobile-surface-type-label=mobile_surface_type_label_marker()
+                        class="shrink-0 rounded bg-muted px-2 py-0.5 text-[11px] text-secondary"
+                    >
                         {move || {
-                            let count = summary.get().map(|item| item.total_count).unwrap_or(0);
-                            format!("{} {}", count, t::common::open_tabs(locale.get()))
+                            summary
+                                .get()
+                                .map(|item| {
+                                    mobile_surface_summary_badge_text(
+                                        item.kind,
+                                        item.total_count,
+                                        locale.get(),
+                                    )
+                                })
+                                .unwrap_or_default()
                         }}
                     </span>
                     <ChevronDown class="h-4 w-4 shrink-0 text-muted"/>

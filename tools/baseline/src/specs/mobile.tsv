@@ -461,11 +461,13 @@ contains	docs/acceptance-cases/17_mobile_surface_switcher.md	case_id: UI-MOB-021
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: cargo test -p deve_web mobile_surface -- --nocapture
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "surface_switcher"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_surface_type_label_visible true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_rows"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_close_buttons"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "close_sheet"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_surface_sheet_visible false
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_switcher_marker_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_type_label_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_sheet_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_touch_targets_min_size_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_diff_restore_bound true
@@ -482,6 +484,7 @@ contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_pref
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-switcher="summary"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-sheet="open"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_switcher_touch_target()
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-type-label=mobile_surface_type_label_marker()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_close_touch_target()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	class=mobile_surface_close_button_class()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_document_row"
@@ -495,6 +498,7 @@ contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobi
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_targets_are_at_least_44px()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_close_buttons_are_at_least_44px()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_target_markers_are_stable()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_badge_text_shows_surface_type_and_count()
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_surface_switcher_hides_bottom_bar()

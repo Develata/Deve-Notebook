@@ -9,6 +9,7 @@
     - run: scripts/check-mobile-baseline.sh
     - run: cargo test -p deve_web mobile_surface -- --nocapture
     - ui_measure: "surface_switcher"
+    - ui_assert: mobile_surface_type_label_visible true
     - ui_click: "open_switcher"
     - ui_assert: mobile_surface_sheet_visible true
     - ui_measure: "mobile_surface_rows"
@@ -25,6 +26,7 @@
     - ui_click: "close_diff"
   assertions:
     - cli_assert: mobile_surface_switcher_marker_bound true
+    - cli_assert: mobile_surface_type_label_marker_bound true
     - cli_assert: mobile_surface_sheet_marker_bound true
     - cli_assert: mobile_surface_touch_targets_min_size_bound true
     - cli_assert: mobile_surface_diff_restore_bound true

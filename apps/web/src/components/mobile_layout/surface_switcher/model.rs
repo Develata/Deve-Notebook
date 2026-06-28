@@ -2,6 +2,7 @@
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
 use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
+use crate::i18n::{Locale, t};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct MobileSurfaceSummary {
@@ -70,6 +71,19 @@ pub(crate) fn mobile_surface_summary_title_class(has_title: bool) -> &'static st
     }
 }
 
+pub(crate) fn mobile_surface_summary_badge_text(
+    kind: &str,
+    total_count: usize,
+    locale: Locale,
+) -> String {
+    let count_label = format!("{} {}", total_count, t::common::open_tabs(locale));
+    match kind {
+        "document" => format!("{} · {count_label}", t::common::document_tab(locale)),
+        "diff" => format!("{} · {count_label}", t::common::diff_tab(locale)),
+        _ => count_label,
+    }
+}
+
 pub(crate) fn mobile_surface_row_class(active: bool) -> &'static str {
     if active {
         "flex h-11 w-full items-center gap-3 rounded-md bg-active px-3 text-left text-primary"
@@ -90,6 +104,10 @@ pub(crate) fn mobile_surface_switcher_touch_target() -> &'static str {
     "surface_switcher"
 }
 
+pub(crate) fn mobile_surface_type_label_marker() -> &'static str {
+    "surface_type"
+}
+
 pub(crate) fn mobile_surface_close_touch_target() -> &'static str {
     "mobile_surface_close_buttons"
 }
@@ -104,11 +122,13 @@ mod tests {
         mobile_surface_close_button_class, mobile_surface_close_touch_target,
         mobile_surface_current_state, mobile_surface_expanded_state, mobile_surface_row_class,
         mobile_surface_row_touch_target, mobile_surface_sheet_visible, mobile_surface_summary,
-        mobile_surface_summary_title_class, mobile_surface_switcher_button_class,
-        mobile_surface_switcher_touch_target,
+        mobile_surface_summary_badge_text, mobile_surface_summary_title_class,
+        mobile_surface_switcher_button_class, mobile_surface_switcher_touch_target,
+        mobile_surface_type_label_marker,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
+    use crate::i18n::Locale;
     use deve_core::models::DocId;
 
     #[test]
@@ -182,6 +202,22 @@ mod tests {
     }
 
     #[test]
+    fn mobile_surface_badge_text_shows_surface_type_and_count() {
+        assert_eq!(
+            mobile_surface_summary_badge_text("document", 2, Locale::Zh),
+            "文档标签页 · 2 已打开标签页"
+        );
+        assert_eq!(
+            mobile_surface_summary_badge_text("diff", 1, Locale::En),
+            "Diff tab · 1 Open tabs"
+        );
+        assert_eq!(
+            mobile_surface_summary_badge_text("tabs", 3, Locale::Zh),
+            "3 已打开标签页"
+        );
+    }
+
+    #[test]
     fn mobile_surface_close_buttons_are_at_least_44px() {
         let class = mobile_surface_close_button_class();
         assert!(class.contains("h-11"));
@@ -191,6 +227,7 @@ mod tests {
     #[test]
     fn mobile_surface_touch_target_markers_are_stable() {
         assert_eq!(mobile_surface_switcher_touch_target(), "surface_switcher");
+        assert_eq!(mobile_surface_type_label_marker(), "surface_type");
         assert_eq!(mobile_surface_row_touch_target(), "mobile_surface_rows");
         assert_eq!(
             mobile_surface_close_touch_target(),
