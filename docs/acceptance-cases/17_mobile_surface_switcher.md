@@ -12,6 +12,9 @@
     - ui_assert: mobile_surface_sheet_visible true
     - ui_measure: "mobile_surface_rows"
     - ui_measure: "mobile_surface_close_buttons"
+    - ui_click: "close_sheet"
+    - ui_assert: mobile_surface_sheet_visible false
+    - ui_click: "open_switcher"
     - ui_click: "mobile_surface_document_row"
     - ui_assert: editor_visible true
     - ui_click: "open_switcher"

@@ -12,6 +12,7 @@ use deve_core::models::DocId;
 use leptos::prelude::*;
 
 use self::model::{
+    mobile_surface_close_button_class, mobile_surface_close_touch_target,
     mobile_surface_expanded_state, mobile_surface_sheet_visible, mobile_surface_summary,
     mobile_surface_switcher_button_class,
 };
@@ -114,7 +115,8 @@ pub fn MobileSurfaceSwitcher(
                     <button
                         type="button"
                         data-deve-mobile-surface-action="close_sheet"
-                        class="flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+                        data-deve-mobile-touch-target=mobile_surface_close_touch_target()
+                        class=mobile_surface_close_button_class()
                         title=move || t::common::close(locale.get())
                         aria-label=move || t::common::close(locale.get())
                         on:click=move |_| set_open.set(false)
