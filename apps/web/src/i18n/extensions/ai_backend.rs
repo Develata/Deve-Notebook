@@ -14,12 +14,21 @@ pub fn ai_backend_reason(locale: Locale, reason: &str) -> String {
             Locale::Zh => format!("AI 后端能力探测失败：{detail}"),
         };
     }
+    if let Some(backend) = reason.strip_prefix("effective backend is ") {
+        let backend = ai_backend_label(locale, backend);
+        return match locale {
+            Locale::En => format!("Effective backend is {backend}"),
+            Locale::Zh => format!("当前有效后端为{backend}"),
+        };
+    }
     match (locale, reason) {
         (_, "") => trusted_cli_unavailable(locale).to_string(),
         (Locale::En, "external agent disabled") => "External agent disabled".to_string(),
         (Locale::Zh, "external agent disabled") => "外部 Agent 已禁用".to_string(),
         (Locale::En, "trusted mode required") => "Trusted mode required".to_string(),
         (Locale::Zh, "trusted mode required") => "需要启用受信任模式".to_string(),
+        (Locale::En, "trusted-cli unavailable") => "Trusted CLI unavailable".to_string(),
+        (Locale::Zh, "trusted-cli unavailable") => "受信任 CLI 不可用".to_string(),
         (Locale::En, "native AI disabled by config") => "Native AI disabled by config".to_string(),
         (Locale::Zh, "native AI disabled by config") => "原生 AI 已被配置禁用".to_string(),
         (Locale::En, "trusted-cli explicitly requested") => {
@@ -38,7 +47,35 @@ pub fn ai_backend_reason(locale: Locale, reason: &str) -> String {
             "AI backend capability probe failed".to_string()
         }
         (Locale::Zh, "AI backend capability probe failed") => "AI 后端能力探测失败".to_string(),
+        (Locale::En, "AI backend policy unavailable") => {
+            "AI backend policy unavailable".to_string()
+        }
+        (Locale::Zh, "AI backend policy unavailable") => "AI 后端策略不可用".to_string(),
+        (Locale::En, "AGENT_CLI_PATH required") => "AGENT_CLI_PATH required".to_string(),
+        (Locale::Zh, "AGENT_CLI_PATH required") => "需要设置 AGENT_CLI_PATH".to_string(),
+        (Locale::En, "AGENT_CLI_PATH must be absolute") => {
+            "AGENT_CLI_PATH must be absolute".to_string()
+        }
+        (Locale::Zh, "AGENT_CLI_PATH must be absolute") => {
+            "AGENT_CLI_PATH 必须是绝对路径".to_string()
+        }
+        (Locale::En, "AGENT_CLI_PATH must point to an executable file") => {
+            "AGENT_CLI_PATH must point to an executable file".to_string()
+        }
+        (Locale::Zh, "AGENT_CLI_PATH must point to an executable file") => {
+            "AGENT_CLI_PATH 必须指向可执行文件".to_string()
+        }
         _ => reason.to_string(),
+    }
+}
+
+fn ai_backend_label(locale: Locale, backend: &str) -> String {
+    match (locale, backend) {
+        (Locale::En, "native") => "Native AI".to_string(),
+        (Locale::Zh, "native") => "原生 AI".to_string(),
+        (Locale::En, "trusted-cli") => "Trusted CLI".to_string(),
+        (Locale::Zh, "trusted-cli") => "受信任 CLI".to_string(),
+        _ => backend.to_string(),
     }
 }
 
@@ -68,6 +105,22 @@ mod tests {
         assert_eq!(
             ai_backend_reason(Locale::Zh, "native AI disabled by config"),
             "原生 AI 已被配置禁用"
+        );
+        assert_eq!(
+            ai_backend_reason(Locale::Zh, "trusted-cli unavailable"),
+            "受信任 CLI 不可用"
+        );
+        assert_eq!(
+            ai_backend_reason(Locale::Zh, "AGENT_CLI_PATH required"),
+            "需要设置 AGENT_CLI_PATH"
+        );
+        assert_eq!(
+            ai_backend_reason(Locale::Zh, "AI backend policy unavailable"),
+            "AI 后端策略不可用"
+        );
+        assert_eq!(
+            ai_backend_reason(Locale::Zh, "effective backend is trusted-cli"),
+            "当前有效后端为受信任 CLI"
         );
         assert_eq!(
             ai_backend_reason(Locale::Zh, "AI backend capability probe failed: HTTP 503"),
