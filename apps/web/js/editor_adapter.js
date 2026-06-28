@@ -10,7 +10,7 @@ import {
   highlightActiveLineGutter,
 } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { GFM, Subscript, Superscript, Emoji } from "@lezer/markdown";
+import { GFM } from "@lezer/markdown";
 import {
   defaultHighlightStyle,
   syntaxHighlighting,
@@ -104,7 +104,7 @@ export function initCodeMirror(element, onDelta) {
         markdown({
           base: markdownLanguage,
           codeLanguages: languages,
-          extensions: [...GFM, Subscript, Superscript, Emoji],
+          extensions: [GFM],
         }),
         hybridPlugin,
         mathStateField,

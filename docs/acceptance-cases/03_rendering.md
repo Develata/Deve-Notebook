@@ -166,12 +166,13 @@
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。
   preconditions:
-    - 文档包含 `==highlight==` 与 `<div>`
+    - 文档包含 `==highlight==`、`<div>`、`H~2~O`、`^sup^` 与 `:smile:`
   steps:
     - ui_wait_render: true
   assertions:
     - ui_assert: highlight_not_rendered true
     - ui_assert: html_div_filtered true
+    - ui_assert: extended_inline_syntax_plain_text ["H~2~O", "^sup^", ":smile:"]
 
 - case_id: RENDER-NEST-001
   goal: 深度嵌套渲染稳定。
