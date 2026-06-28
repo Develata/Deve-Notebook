@@ -116,6 +116,19 @@ pub fn is_establish_branch_unavailable_notice(notice: &SourceControlNotice) -> b
     notice.detail.as_deref() == Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
 }
 
+pub fn is_local_command_notice(notice: &SourceControlNotice) -> bool {
+    matches!(
+        notice.detail.as_deref(),
+        Some(GIT_STATUS_CLI_NOTICE_DETAIL)
+            | Some(GIT_MIRROR_CLI_NOTICE_DETAIL)
+            | Some(GIT_EXPORT_CLI_NOTICE_DETAIL)
+            | Some(GIT_IMPORT_CLI_NOTICE_DETAIL)
+            | Some(GIT_PUSH_CLI_NOTICE_DETAIL)
+            | Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
+            | Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
+    )
+}
+
 pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
     matches!(
         code,
@@ -142,19 +155,19 @@ mod tests {
         SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
         is_establish_branch_unavailable_notice, is_git_export_cli_notice, is_git_import_cli_notice,
         is_git_mirror_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
-        is_git_status_cli_notice, is_source_control_error,
+        is_git_status_cli_notice, is_local_command_notice, is_source_control_error,
     };
     use deve_core::protocol::{ServerError, ServerErrorCode};
 
     #[test]
     fn sc_codes_are_classified_as_source_control_errors() {
-        assert!(is_source_control_error(ServerErrorCode::ScNothingToCommit));
-        assert!(is_source_control_error(
-            ServerErrorCode::ScRemoteBranchReadonly
-        ));
-        assert!(is_source_control_error(
-            ServerErrorCode::ScCommitDiffUnprojectable
-        ));
+        for code in [
+            ServerErrorCode::ScNothingToCommit,
+            ServerErrorCode::ScRemoteBranchReadonly,
+            ServerErrorCode::ScCommitDiffUnprojectable,
+        ] {
+            assert!(is_source_control_error(code));
+        }
         assert!(!is_source_control_error(ServerErrorCode::RequestFailed));
     }
 
@@ -180,56 +193,53 @@ mod tests {
     }
 
     #[test]
-    fn local_git_cli_notices_are_detected() {
-        let status_notice = SourceControlNotice::git_status_cli_only();
-        assert_eq!(
-            status_notice.detail.as_deref(),
-            Some(GIT_STATUS_CLI_NOTICE_DETAIL)
-        );
-        assert!(is_git_status_cli_notice(&status_notice));
+    fn local_command_notices_are_detected() {
+        for (notice, detail, classifier) in [
+            (
+                SourceControlNotice::git_status_cli_only(),
+                GIT_STATUS_CLI_NOTICE_DETAIL,
+                is_git_status_cli_notice as fn(&SourceControlNotice) -> bool,
+            ),
+            (
+                SourceControlNotice::git_mirror_cli_only(),
+                GIT_MIRROR_CLI_NOTICE_DETAIL,
+                is_git_mirror_cli_notice,
+            ),
+            (
+                SourceControlNotice::git_export_cli_only(),
+                GIT_EXPORT_CLI_NOTICE_DETAIL,
+                is_git_export_cli_notice,
+            ),
+            (
+                SourceControlNotice::git_import_cli_only(),
+                GIT_IMPORT_CLI_NOTICE_DETAIL,
+                is_git_import_cli_notice,
+            ),
+            (
+                SourceControlNotice::git_push_cli_only(),
+                GIT_PUSH_CLI_NOTICE_DETAIL,
+                is_git_push_cli_notice,
+            ),
+            (
+                SourceControlNotice::git_repair_cli_only(),
+                GIT_REPAIR_CLI_NOTICE_DETAIL,
+                is_git_repair_cli_notice,
+            ),
+            (
+                SourceControlNotice::establish_branch_unavailable(),
+                ESTABLISH_BRANCH_UNAVAILABLE_DETAIL,
+                is_establish_branch_unavailable_notice,
+            ),
+        ] {
+            assert_eq!(notice.detail.as_deref(), Some(detail));
+            assert!(classifier(&notice));
+            assert!(is_local_command_notice(&notice));
+        }
 
-        let mirror_notice = SourceControlNotice::git_mirror_cli_only();
-        assert_eq!(
-            mirror_notice.detail.as_deref(),
-            Some(GIT_MIRROR_CLI_NOTICE_DETAIL)
-        );
-        assert!(is_git_mirror_cli_notice(&mirror_notice));
-
-        let export_notice = SourceControlNotice::git_export_cli_only();
-        assert_eq!(
-            export_notice.detail.as_deref(),
-            Some(GIT_EXPORT_CLI_NOTICE_DETAIL)
-        );
-        assert!(is_git_export_cli_notice(&export_notice));
-
-        let import_notice = SourceControlNotice::git_import_cli_only();
-        assert_eq!(
-            import_notice.detail.as_deref(),
-            Some(GIT_IMPORT_CLI_NOTICE_DETAIL)
-        );
-        assert!(is_git_import_cli_notice(&import_notice));
-
-        let push_notice = SourceControlNotice::git_push_cli_only();
-        assert_eq!(
-            push_notice.detail.as_deref(),
-            Some(GIT_PUSH_CLI_NOTICE_DETAIL)
-        );
-        assert!(is_git_push_cli_notice(&push_notice));
-
-        let repair_notice = SourceControlNotice::git_repair_cli_only();
-        assert_eq!(
-            repair_notice.detail.as_deref(),
-            Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
-        );
-        assert!(is_git_repair_cli_notice(&repair_notice));
-
-        let establish_branch_notice = SourceControlNotice::establish_branch_unavailable();
-        assert_eq!(
-            establish_branch_notice.detail.as_deref(),
-            Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
-        );
-        assert!(is_establish_branch_unavailable_notice(
-            &establish_branch_notice
-        ));
+        let server_notice = SourceControlNotice {
+            code: ServerErrorCode::ScDocNotFound,
+            detail: None,
+        };
+        assert!(!is_local_command_notice(&server_notice));
     }
 }

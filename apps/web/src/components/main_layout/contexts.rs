@@ -43,8 +43,18 @@ pub fn provide_outline_control(visible: ReadSignal<bool>, set_visible: WriteSign
     });
 }
 
-pub fn provide_sidebar_control(set_visible: WriteSignal<bool>) {
-    provide_context(SidebarControl { set_visible });
+pub fn provide_sidebar_control(
+    is_mobile: ReadSignal<bool>,
+    set_visible: WriteSignal<bool>,
+    set_mobile_visible: WriteSignal<bool>,
+    set_active_view: WriteSignal<crate::components::activity_bar::SidebarView>,
+) {
+    provide_context(SidebarControl {
+        is_mobile,
+        set_visible,
+        set_mobile_visible,
+        set_active_view,
+    });
 }
 
 pub(crate) fn viewport_width_maps_to_mobile(width: f64) -> bool {

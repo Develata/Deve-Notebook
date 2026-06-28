@@ -6,6 +6,7 @@ use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::LOCAL_BRANCH_LABEL;
 use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{FileOpAction, FileOpKind, InsertQuery, SearchAction};
+use deve_core::utils::path::to_forward_slash;
 use leptos::prelude::*;
 
 use super::write_gate_feedback::allow_repo_write;
@@ -104,7 +105,7 @@ pub(crate) fn execute_action(
 }
 
 fn update_recent_move_dirs(set_recent_move_dirs: WriteSignal<Vec<String>>, dst: &str) {
-    let normalized = dst.replace('\\', "/");
+    let normalized = to_forward_slash(dst);
     let parent = std::path::Path::new(&normalized)
         .parent()
         .and_then(|p| p.to_str())
@@ -161,8 +162,9 @@ fn normalize_executable_file_op_action(op: &FileOpAction) -> Option<FileOpAction
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_executable_file_op_action;
+    use super::{normalize_executable_file_op_action, update_recent_move_dirs};
     use crate::components::search_box::types::{FileOpAction, FileOpKind};
+    use leptos::prelude::*;
 
     #[test]
     fn file_op_action_execution_rejects_internal_repo_paths() {
@@ -270,5 +272,21 @@ mod tests {
         };
 
         assert!(normalize_executable_file_op_action(&op).is_none());
+    }
+
+    #[test]
+    fn recent_move_dirs_uses_shared_forward_slash_policy() {
+        let owner = leptos::reactive::owner::Owner::new();
+
+        owner.with(|| {
+            let (recent_move_dirs, set_recent_move_dirs) = signal(Vec::new());
+
+            update_recent_move_dirs(set_recent_move_dirs, "archive\\nested\\readme.md");
+
+            assert_eq!(
+                recent_move_dirs.get_untracked(),
+                vec!["archive/nested/".to_string()]
+            );
+        });
     }
 }

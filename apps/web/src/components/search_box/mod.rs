@@ -19,7 +19,10 @@ mod ui_footer;
 mod ui_sections;
 mod ui_sheet;
 
-use crate::hooks::use_core::{BranchContext, DocContext, EditorContext};
+use crate::components::main_layout::SidebarControl;
+use crate::hooks::use_core::{
+    BranchContext, DocContext, EditorContext, source_control_notice::SourceControlNotice,
+};
 use crate::i18n::Locale;
 use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
@@ -42,6 +45,7 @@ pub fn UnifiedSearch(
     #[prop(into)] ui_mode: Signal<SearchUiMode>,
     on_settings: Callback<()>,
     on_open: Callback<()>,
+    set_source_control_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let runtime = runtime::SearchRuntime {
@@ -50,6 +54,7 @@ pub fn UnifiedSearch(
         editor: expect_context::<EditorContext>(),
         branch: expect_context::<BranchContext>(),
     };
+    let sidebar_control = use_context::<SidebarControl>();
 
     let (query, set_query) = signal(String::new());
     let (selected_index, set_selected_index) = signal(0);
@@ -119,6 +124,8 @@ pub fn UnifiedSearch(
         on_settings,
         on_open,
         set_show,
+        set_source_control_notice,
+        sidebar_control,
     });
 
     let active_index = Arc::new(logic::make_active_index(

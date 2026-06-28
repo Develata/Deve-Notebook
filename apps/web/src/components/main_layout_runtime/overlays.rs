@@ -3,6 +3,7 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::hooks::use_core::navigation::PendingNavigation;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use leptos::prelude::*;
 
 #[component]
@@ -15,6 +16,7 @@ pub fn MainLayoutOverlays(
     set_show_settings: WriteSignal<bool>,
     on_settings: Callback<()>,
     on_open: Callback<()>,
+    set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     pending_navigation: ReadSignal<Option<PendingNavigation>>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
 ) -> impl IntoView {
@@ -32,6 +34,7 @@ pub fn MainLayoutOverlays(
             })
             on_settings=on_settings
             on_open=on_open
+            set_source_control_notice=Some(set_source_control_notice)
         />
 
         <crate::components::settings::SettingsModal

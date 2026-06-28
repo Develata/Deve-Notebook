@@ -7,6 +7,7 @@
 
 use super::types::Command;
 use crate::components::main_layout::{ChatControl, SearchControl, SidebarControl};
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::{BranchContext, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
@@ -33,11 +34,12 @@ pub fn create_static_commands(
     on_open: Callback<()>,
     set_show: WriteSignal<bool>,
     locale_signal: RwSignal<Locale>,
+    set_source_control_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
 ) -> Vec<Command> {
     // Try to get ChatControl from context at creation time
     let chat_control = use_context::<ChatControl>();
     let search_control = use_context::<SearchControl>();
-    let sidebar_control = use_context::<SidebarControl>();
     let branch_context = use_context::<BranchContext>();
     let sync_merge_context = use_context::<SyncMergeContext>();
 
@@ -101,9 +103,7 @@ pub fn create_static_commands(
                 "toggle_sidebar",
                 (t::command_palette::toggle_sidebar)(locale),
                 Callback::new(move |_| {
-                    sidebar_control
-                        .set_visible
-                        .update(|visible| *visible = !*visible);
+                    sidebar_control.toggle_visible();
                     set_show.set(false);
                 }),
             )
@@ -114,7 +114,12 @@ pub fn create_static_commands(
     }
 
     commands.extend(source_control_reserved_commands(locale));
-    commands.push(establish_branch_command(locale, set_show));
+    commands.push(establish_branch_command(
+        locale,
+        set_show,
+        set_source_control_notice,
+        sidebar_control,
+    ));
     commands.extend(merge_peer_commands(
         locale,
         set_show,
@@ -122,12 +127,12 @@ pub fn create_static_commands(
         sync_merge_context,
     ));
     commands.extend(vec![
-        git_status_command(locale, set_show),
-        git_mirror_command(locale, set_show),
-        git_export_command(locale, set_show),
-        git_import_command(locale, set_show),
-        git_push_command(locale, set_show),
-        git_repair_command(locale, set_show),
+        git_status_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_mirror_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_export_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_import_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_push_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_repair_command(locale, set_show, set_source_control_notice, sidebar_control),
     ]);
 
     // Add AI Chat toggle command if ChatControl is available

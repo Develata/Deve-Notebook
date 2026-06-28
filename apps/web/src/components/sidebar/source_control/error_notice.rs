@@ -7,12 +7,17 @@ use crate::components::sidebar::source_control::error_notice_copy as copy;
 use crate::components::sidebar::source_control::repair_review_copy::{
     self as repair_copy, GitRepairReviewFetchState,
 };
-use crate::hooks::use_core::source_control_notice::SourceControlNotice;
-use crate::hooks::use_core::source_control_notice::is_git_repair_cli_notice;
+use crate::hooks::use_core::source_control_notice::{
+    SourceControlNotice, is_git_repair_cli_notice, is_local_command_notice,
+};
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::Locale;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+
+fn should_show_notice(block: Option<RepoWriteBlock>, notice: Option<&SourceControlNotice>) -> bool {
+    notice.is_some_and(|notice| block.is_none() || is_local_command_notice(notice))
+}
 
 #[component]
 pub fn ErrorNotice(
@@ -56,7 +61,7 @@ pub fn ErrorNotice(
     });
 
     view! {
-        <Show when=move || block.get().is_none() && notice.get().is_some()>
+        <Show when=move || should_show_notice(block.get(), notice.get().as_ref())>
             <div class="px-4 py-3 text-sm border-b border-default bg-warning/5">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -196,5 +201,37 @@ pub fn ErrorNotice(
                 </div>
             </div>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_show_notice;
+    use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+    use crate::hooks::use_core::write_gate::RepoWriteBlock;
+    use deve_core::protocol::ServerErrorCode;
+
+    #[test]
+    fn local_cli_notice_displays_even_when_read_gate_is_blocked() {
+        let notice = SourceControlNotice::git_push_cli_only();
+
+        assert!(should_show_notice(
+            Some(RepoWriteBlock::HandshakingRepo),
+            Some(&notice)
+        ));
+    }
+
+    #[test]
+    fn server_notice_still_respects_read_gate() {
+        let notice = SourceControlNotice {
+            code: ServerErrorCode::ScDocNotFound,
+            detail: None,
+        };
+
+        assert!(!should_show_notice(
+            Some(RepoWriteBlock::HandshakingRepo),
+            Some(&notice)
+        ));
+        assert!(should_show_notice(None, Some(&notice)));
     }
 }

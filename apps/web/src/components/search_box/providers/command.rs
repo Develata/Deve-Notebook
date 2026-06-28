@@ -223,6 +223,8 @@ mod tests {
                 Callback::new(|_| {}),
                 set_show,
                 locale,
+                None,
+                None,
             );
             let provider = CommandProvider::new(commands, Locale::En);
 

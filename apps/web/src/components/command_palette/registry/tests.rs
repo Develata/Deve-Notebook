@@ -1,4 +1,5 @@
 use super::create_static_commands;
+use crate::components::activity_bar::SidebarView;
 use crate::components::layout_context::SidebarControl;
 use crate::i18n::Locale;
 use leptos::prelude::*;
@@ -17,6 +18,8 @@ fn acc_cmd_004b_static_commands_include_git_bridge_notices() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            None,
         );
         let ids = commands
             .iter()
@@ -46,6 +49,8 @@ fn acc_cmd_004c_static_commands_partition_reserved_surfaces() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            None,
         );
 
         for id in [
@@ -76,7 +81,15 @@ fn static_commands_include_sidebar_toggle_when_control_is_available() {
     owner.with(|| {
         let (_, set_show) = signal(false);
         let (visible, set_visible) = signal(true);
-        provide_context(SidebarControl { set_visible });
+        let (is_mobile, _) = signal(false);
+        let (_, set_mobile_visible) = signal(false);
+        let (_, set_active_view) = signal(SidebarView::Explorer);
+        let sidebar_control = SidebarControl {
+            is_mobile,
+            set_visible,
+            set_mobile_visible,
+            set_active_view,
+        };
         let locale = RwSignal::new(Locale::En);
         let commands = create_static_commands(
             Locale::En,
@@ -84,6 +97,8 @@ fn static_commands_include_sidebar_toggle_when_control_is_available() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            Some(sidebar_control),
         );
         let command = commands
             .iter()
@@ -109,6 +124,8 @@ fn static_commands_expose_group_shortcut_and_enabled_conditions() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            None,
         );
 
         let open = commands
@@ -142,6 +159,8 @@ fn settings_command_routes_to_settings_surface_and_closes_palette() {
             Callback::new(|_| {}),
             set_show_palette,
             locale,
+            None,
+            None,
         );
         let command = commands
             .iter()

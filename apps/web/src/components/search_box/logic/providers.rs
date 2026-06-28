@@ -3,6 +3,7 @@
 //!   - 14_commands#command-palette-shortcuts
 //!
 use crate::components::command_palette::registry::create_static_commands;
+use crate::components::main_layout::SidebarControl;
 use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::{
     self, CommandProvider, FileProvider, LOCAL_BRANCH_LABEL,
@@ -11,7 +12,7 @@ use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{
     SearchAction, SearchProvider, SearchResult, SearchResultRole,
 };
-use crate::hooks::use_core::SearchHit;
+use crate::hooks::use_core::{SearchHit, source_control_notice::SourceControlNotice};
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -66,6 +67,8 @@ pub struct SearchResultsMemoInput {
     pub on_settings: Callback<()>,
     pub on_open: Callback<()>,
     pub set_show: WriteSignal<bool>,
+    pub set_source_control_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    pub sidebar_control: Option<SidebarControl>,
 }
 
 pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResult>> {
@@ -78,6 +81,8 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
         on_settings,
         on_open,
         set_show,
+        set_source_control_notice,
+        sidebar_control,
     } = input;
     Memo::new(move |_| {
         if !show.get() {
@@ -96,8 +101,15 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
                 file_ops::build_file_ops_results(&q, &doc_list, &recent_move_dirs.get(), now_locale)
             }
             SearchSurfaceMode::Command => {
-                let cmds =
-                    create_static_commands(now_locale, on_settings, on_open, set_show, locale);
+                let cmds = create_static_commands(
+                    now_locale,
+                    on_settings,
+                    on_open,
+                    set_show,
+                    locale,
+                    set_source_control_notice,
+                    sidebar_control,
+                );
                 CommandProvider::new(cmds, now_locale).search(&q)
             }
             SearchSurfaceMode::Branch => {

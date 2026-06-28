@@ -6,6 +6,7 @@
 //!
 //! 定义跨组件共享的布局控制上下文。
 
+use crate::components::activity_bar::SidebarView;
 use leptos::prelude::*;
 
 /// 搜索控制上下文
@@ -41,7 +42,30 @@ pub struct OutlineControl {
 /// Sidebar visibility control context.
 #[derive(Clone, Copy)]
 pub struct SidebarControl {
+    pub is_mobile: ReadSignal<bool>,
     pub set_visible: WriteSignal<bool>,
+    pub set_mobile_visible: WriteSignal<bool>,
+    pub set_active_view: WriteSignal<SidebarView>,
+}
+
+impl SidebarControl {
+    pub fn show_view(self, view: SidebarView) {
+        self.set_active_view.set(view);
+        if self.is_mobile.get_untracked() {
+            self.set_mobile_visible.set(true);
+        } else {
+            self.set_visible.set(true);
+        }
+    }
+
+    pub fn toggle_visible(self) {
+        if self.is_mobile.get_untracked() {
+            self.set_mobile_visible
+                .update(|visible| *visible = !*visible);
+        } else {
+            self.set_visible.update(|visible| *visible = !*visible);
+        }
+    }
 }
 
 /// Editor content context for outline rendering

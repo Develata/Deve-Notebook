@@ -3,8 +3,10 @@ use super::{
     git_repair_command, git_status_command,
 };
 use crate::api::{ConnectionStatus, WsService};
+use crate::components::activity_bar::SidebarView;
 use crate::components::command_palette::logic::create_filtered_commands_memo;
 use crate::components::command_palette::types::Command;
+use crate::components::main_layout::SidebarControl;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::{
     SourceControlNotice, is_git_export_cli_notice, is_git_import_cli_notice,
@@ -19,7 +21,7 @@ use deve_core::models::PeerId;
 use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
 use leptos::prelude::{
     Callable, Callback, GetUntracked, Memo, ReadSignal, RwSignal, Set, Signal, WriteSignal,
-    provide_context, signal,
+    provide_context, signal, use_context,
 };
 use leptos::reactive::owner::Owner;
 
@@ -83,6 +85,32 @@ fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
     notice
 }
 
+fn provide_sidebar_control_context(
+    mobile: bool,
+) -> (ReadSignal<bool>, ReadSignal<bool>, ReadSignal<SidebarView>) {
+    let (is_mobile, _) = signal(mobile);
+    let (sidebar_visible, set_sidebar_visible) = signal(false);
+    let (mobile_visible, set_mobile_visible) = signal(false);
+    let (active_view, set_active_view) = signal(SidebarView::Explorer);
+    provide_context(SidebarControl {
+        is_mobile,
+        set_visible: set_sidebar_visible,
+        set_mobile_visible,
+        set_active_view,
+    });
+    (sidebar_visible, mobile_visible, active_view)
+}
+
+fn command_contexts() -> (
+    Option<WriteSignal<Option<SourceControlNotice>>>,
+    Option<SidebarControl>,
+) {
+    (
+        use_context::<SourceControlContext>().map(|source_control| source_control.set_notice),
+        use_context::<SidebarControl>(),
+    )
+}
+
 fn assert_cli_notice_command(
     command: Command,
     show: ReadSignal<bool>,
@@ -120,6 +148,7 @@ fn create_commands(set_show: WriteSignal<bool>) -> Memo<Vec<Command>> {
         Callback::new(|_| {}),
         Callback::new(|_| {}),
         set_show,
+        None,
     )
 }
 
@@ -138,7 +167,8 @@ fn git_import_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_import_command(Locale::En, set_show);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_import_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_import_cli_notice);
@@ -151,7 +181,8 @@ fn git_status_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_status_command(Locale::En, set_show);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert!(
@@ -169,7 +200,8 @@ fn git_mirror_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_mirror_command(Locale::En, set_show);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_mirror_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_mirror_cli_notice);
@@ -182,7 +214,8 @@ fn git_export_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_export_command(Locale::En, set_show);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_export_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_export_cli_notice);
@@ -195,10 +228,45 @@ fn git_push_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_push_command(Locale::En, set_show);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_push_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
+    });
+}
+
+#[test]
+fn git_push_command_routes_notice_to_source_control_sidebar() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let notice = provide_source_control_context();
+        let (sidebar_visible, mobile_visible, active_view) = provide_sidebar_control_context(false);
+        let (show, set_show) = signal(true);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_push_command(Locale::En, set_show, source_control, sidebar_control);
+
+        assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
+        assert!(sidebar_visible.get_untracked());
+        assert!(!mobile_visible.get_untracked());
+        assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
+    });
+}
+
+#[test]
+fn git_push_command_routes_notice_to_mobile_source_control_drawer() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let notice = provide_source_control_context();
+        let (sidebar_visible, mobile_visible, active_view) = provide_sidebar_control_context(true);
+        let (show, set_show) = signal(true);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_push_command(Locale::En, set_show, source_control, sidebar_control);
+
+        assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
+        assert!(!sidebar_visible.get_untracked());
+        assert!(mobile_visible.get_untracked());
+        assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
     });
 }
 
@@ -208,7 +276,8 @@ fn git_repair_command_sets_cli_only_notice() {
     owner.with(|| {
         let notice = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_repair_command(Locale::En, set_show);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_repair_command(Locale::En, set_show, source_control, sidebar_control);
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_repair_cli_notice);

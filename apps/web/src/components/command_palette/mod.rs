@@ -35,8 +35,14 @@ pub fn CommandPalette(
     logic::attach_reset_effect(show, set_query, set_selected_index);
     logic::attach_focus_restore_effect(show, input_ref);
 
-    let filtered_commands =
-        logic::create_filtered_commands_memo(query.into(), locale, on_settings, on_open, set_show);
+    let filtered_commands = logic::create_filtered_commands_memo(
+        query.into(),
+        locale,
+        on_settings,
+        on_open,
+        set_show,
+        None,
+    );
     let active_index = Arc::new(logic::make_active_index(
         selected_index.into(),
         filtered_commands,

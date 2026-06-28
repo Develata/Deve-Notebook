@@ -158,6 +158,7 @@ mod tests {
                 Callback::new(|_| {}),
                 Callback::new(|_| {}),
                 set_show,
+                None,
             );
 
             assert!(

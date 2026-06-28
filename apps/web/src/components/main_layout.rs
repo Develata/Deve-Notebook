@@ -33,17 +33,16 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
 
     use_ctrl_key();
 
+    let is_mobile = use_mobile_breakpoint();
     let search = init_search_ui_state();
     let outline = init_outline_ui_state();
-    let sidebar = init_sidebar_ui_state();
+    let sidebar = init_sidebar_ui_state(is_mobile);
     let _max_document_tabs = init_editor_tab_limit_ui_state();
     let desktop_layout = use_layout(sidebar.visible, sidebar.chat_visible);
     let stop_resize = desktop_layout.stop_resize;
     let do_resize = desktop_layout.do_resize;
     let is_resizing = desktop_layout.is_resizing;
     bind_global_shortcuts(&search, &outline, &sidebar, locale);
-
-    let is_mobile = use_mobile_breakpoint();
 
     let on_settings = Callback::new(move |_| sidebar.set_show_settings.set(true));
     let on_command = toggle_search_callback(
@@ -87,10 +86,13 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
             set_pinned_views=sidebar.set_pinned_views
             chat_visible=sidebar.chat_visible
             sidebar_visible=sidebar.visible
+            mobile_sidebar_visible=sidebar.mobile_visible
+            set_mobile_sidebar_visible=sidebar.set_mobile_visible
             on_home=on_home
             on_open=on_open
             on_command=on_command
             on_settings=on_settings
+            set_source_control_notice=core.set_source_control_notice
             on_logout=on_logout
             pending_navigation=core.pending_navigation
             set_pending_navigation=core.set_pending_navigation
