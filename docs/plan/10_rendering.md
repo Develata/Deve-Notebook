@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-07`
+- `Last Review`: `2026-06-29`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -217,7 +217,7 @@ Baseline contract 的行内支持集合：
   - frontmatter
   - link source
 
-### 5.2 Link Activation
+### 5.2 Link Activation {#link-activation-gate}
 
 - 默认链接不可直接点击。
 - 只有 Ctrl/Cmd 激活态下才可点击。

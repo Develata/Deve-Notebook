@@ -1,6 +1,6 @@
 // apps/web/src/hooks/use_ctrl_key.rs
 //! plan_ref:
-//!   - 15_settings#keyboard-shortcuts
+//!   - 10_rendering#link-activation-gate
 //!
 //! Global Ctrl/Meta key state management for link navigation.
 //!
