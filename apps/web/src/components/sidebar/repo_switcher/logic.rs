@@ -92,6 +92,13 @@ pub(super) fn repo_switcher_can_submit_rename_repo(current_name: &str, next_name
     !next_name.is_empty() && next_name != current_name
 }
 
+pub(super) fn repo_switcher_row_is_renaming(
+    renaming_repo: Option<RepoId>,
+    row_repo_id: Option<RepoId>,
+) -> bool {
+    row_repo_id.is_some() && renaming_repo == row_repo_id
+}
+
 pub(super) fn repo_switcher_rows(
     repos: Vec<String>,
     entries: Vec<RepoListEntry>,

@@ -5,8 +5,8 @@ use super::logic::{
     repo_switcher_can_submit_rename_repo, repo_switcher_create_button_marker,
     repo_switcher_create_input_marker, repo_switcher_item_marker, repo_switcher_menu_marker,
     repo_switcher_remove_button_marker, repo_switcher_rename_button_marker,
-    repo_switcher_rename_input_marker, repo_switcher_row_is_active, repo_switcher_rows,
-    repo_switcher_switch_target, repo_switcher_trigger_marker,
+    repo_switcher_rename_input_marker, repo_switcher_row_is_active, repo_switcher_row_is_renaming,
+    repo_switcher_rows, repo_switcher_switch_target, repo_switcher_trigger_marker,
 };
 use deve_core::protocol::RepoListEntry;
 
@@ -83,6 +83,16 @@ fn repo_switcher_rename_submit_requires_non_empty_changed_name() {
     assert!(!repo_switcher_can_submit_rename_repo("default", "   "));
     assert!(!repo_switcher_can_submit_rename_repo("default", "default"));
     assert!(repo_switcher_can_submit_rename_repo("default", "research"));
+}
+
+#[test]
+fn repo_switcher_rename_state_requires_row_repo_id() {
+    let repo_id = uuid::Uuid::new_v4();
+
+    assert!(repo_switcher_row_is_renaming(Some(repo_id), Some(repo_id)));
+    assert!(!repo_switcher_row_is_renaming(None, Some(repo_id)));
+    assert!(!repo_switcher_row_is_renaming(None, None));
+    assert!(!repo_switcher_row_is_renaming(Some(repo_id), None));
 }
 
 #[test]
