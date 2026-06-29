@@ -60,6 +60,14 @@ pub(super) fn mobile_more_pin_touch_target() -> &'static str {
     "mobile_more_pin_actions"
 }
 
+pub(super) fn mobile_more_pin_label(pinned: bool, locale: Locale) -> &'static str {
+    if pinned {
+        t::common::unpin(locale)
+    } else {
+        t::common::pin(locale)
+    }
+}
+
 pub(super) fn mobile_more_after_item_click() -> bool {
     false
 }
@@ -150,13 +158,8 @@ pub(super) fn LeftDrawerMoreMenu(
                                     data-deve-mobile-touch-target=mobile_more_pin_touch_target()
                                     class=move || mobile_more_pin_button_class(pinned.get())
                                     aria-pressed=move || pinned.get().to_string()
-                                    title=move || {
-                                        if pinned.get() {
-                                            t::common::unpin(locale.get())
-                                        } else {
-                                            t::common::pin(locale.get())
-                                        }
-                                    }
+                                    title=move || mobile_more_pin_label(pinned.get(), locale.get())
+                                    aria-label=move || mobile_more_pin_label(pinned.get(), locale.get())
                                     on:click=move |ev| {
                                         ev.stop_propagation();
                                         toggle_pin(item);
