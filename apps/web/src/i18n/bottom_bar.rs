@@ -214,9 +214,16 @@ pub fn loading_progress(locale: Locale, done: usize, total: usize, eta_ms: u64) 
     }
 }
 
+pub fn loading_progress_compact(locale: Locale, done: usize, total: usize) -> String {
+    match locale {
+        Locale::En => format!("Load {done}/{total}"),
+        Locale::Zh => format!("加载 {done}/{total}"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{storage_limited_read_only, toggle_status_details};
+    use super::{loading_progress_compact, storage_limited_read_only, toggle_status_details};
     use crate::i18n::Locale;
 
     #[test]
@@ -234,5 +241,11 @@ mod tests {
             storage_limited_read_only(Locale::Zh, "IndexedDB=false"),
             "存储受限（IndexedDB=false），当前处于只读模式"
         );
+    }
+
+    #[test]
+    fn mobile_compact_loading_progress_is_localized() {
+        assert_eq!(loading_progress_compact(Locale::En, 2, 5), "Load 2/5");
+        assert_eq!(loading_progress_compact(Locale::Zh, 2, 5), "加载 2/5");
     }
 }

@@ -32,6 +32,24 @@ fn pending_ack_count_for_current_scope(
         .unwrap_or_default()
 }
 
+fn mobile_load_status_text(
+    locale: Locale,
+    done: usize,
+    total: usize,
+    eta_ms: u64,
+    is_narrow: bool,
+) -> String {
+    if total == 0 {
+        return t::bottom_bar::loading(locale).to_string();
+    }
+
+    if is_narrow {
+        t::bottom_bar::loading_progress_compact(locale, done, total)
+    } else {
+        t::bottom_bar::loading_progress(locale, done, total, eta_ms)
+    }
+}
+
 /// Connection status indicator (green/yellow/red dot + text).
 #[component]
 pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
@@ -162,21 +180,7 @@ pub fn LoadStatus(
         }
         let (done, total) = load_progress.get();
         let eta_ms = load_eta_ms.get();
-        let text = if total > 0 {
-            if eta_ms > 0 && !is_narrow.get() {
-                format!(
-                    "{} {}/{} (~{}ms)",
-                    t::bottom_bar::loading(locale.get()),
-                    done,
-                    total,
-                    eta_ms,
-                )
-            } else {
-                format!("L {}/{}", done, total)
-            }
-        } else {
-            t::bottom_bar::loading(locale.get()).to_string()
-        };
+        let text = mobile_load_status_text(locale.get(), done, total, eta_ms, is_narrow.get());
         view! { <div class="text-[10px] text-muted font-mono">{text}</div> }.into_any()
     }
 }
@@ -184,6 +188,7 @@ pub fn LoadStatus(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::i18n::{Locale, t};
     use crate::runtime::document::pending::{PendingLocalEditInput, push_pending_edit};
     use deve_core::models::{Op, RepoId};
 
@@ -238,6 +243,26 @@ mod tests {
         assert_eq!(
             pending_ack_count_for_current_scope(&pending, Some(current_doc), Some("not-a-uuid"), 7),
             0
+        );
+    }
+
+    #[test]
+    fn mobile_load_status_text_uses_bottom_bar_i18n_facade() {
+        assert_eq!(
+            mobile_load_status_text(Locale::En, 2, 5, 40, false),
+            "Loading 2/5 (~40ms)"
+        );
+        assert_eq!(
+            mobile_load_status_text(Locale::Zh, 2, 5, 40, false),
+            t::bottom_bar::loading_progress(Locale::Zh, 2, 5, 40)
+        );
+        assert_eq!(
+            mobile_load_status_text(Locale::Zh, 2, 5, 40, true),
+            t::bottom_bar::loading_progress_compact(Locale::Zh, 2, 5)
+        );
+        assert_eq!(
+            mobile_load_status_text(Locale::Zh, 0, 0, 0, true),
+            t::bottom_bar::loading(Locale::Zh)
         );
     }
 }
