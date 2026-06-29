@@ -41,17 +41,22 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
     view! {
         <div>
             <div
-                class="px-2 py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
-                on:click=move |_| expanded.update(|v| *v = !*v)
+                class="px-2 py-0.5 flex justify-between items-center group hover:bg-hover"
             >
-                <div class="flex items-center">
+                <button
+                    type="button"
+                    class="flex min-w-0 flex-1 items-center rounded-sm text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                    data-deve-sc-section-toggle="unstaged"
+                    aria-expanded=move || expanded.get().to_string()
+                    on:click=move |_| expanded.update(|v| *v = !*v)
+                >
                     <span class=move || format!("w-4 h-4 flex items-center justify-center text-primary transition-transform {}", if expanded.get() { "rotate-90" } else { "" })>
                         <ChevronRight class="w-3 h-3" />
                     </span>
-                    <span class="text-[11px] font-bold text-primary uppercase">
+                    <span class="truncate text-[11px] font-bold text-primary uppercase">
                         {move || t::source_control::changes(locale.get())}
                     </span>
-                </div>
+                </button>
                 <UnstagedSectionActions
                     count=unstaged_count
                     bulk_busy=bulk_busy

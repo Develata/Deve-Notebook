@@ -129,13 +129,24 @@ contains	apps/web/src/i18n/source_control/actions.rs	Open Diff
 contains	apps/web/src/i18n/source_control/actions.rs	打开差异
 contains	apps/web/src/i18n/source_control/actions.rs	Ledger-confirmed changes cannot be staged or discarded per file
 contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	confirmed_ledger_hint(locale.get())
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	data-deve-sc-section-toggle="confirmed-ledger"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	data-deve-sc-section-toggle="staged"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	data-deve-sc-section-toggle="unstaged"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	aria-expanded=move || expanded.get().to_string()
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_stage_discard_absent true
+contains	docs/acceptance-cases/04_diff.md	source_control_resource_group_headers_are_buttons true
+contains	docs/acceptance-cases/04_diff.md	source_control_section_actions_do_not_toggle_group true
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	change_item_action_surface(&entry, is_staged, has_conflict)
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	open_diff(locale.get())
 contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	open_diff(locale.get())
 absent	apps/web/src/i18n/source_control/actions.rs	Open File
+absent	apps/web/src/components/sidebar/source_control/confirmed_section.rs	cursor-pointer
+absent	apps/web/src/components/sidebar/source_control/staged_section.rs	cursor-pointer
+absent	apps/web/src/components/sidebar/source_control/unstaged_section.rs	cursor-pointer
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-DIFF-001
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: scripts/check-source-control-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: cargo test -p deve_web diff_first_viewport -- --nocapture

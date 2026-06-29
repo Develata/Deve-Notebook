@@ -85,6 +85,8 @@ HistoryOrGraphSecondary
 规则：
 
 - `Staged Changes`、`Changes` 与 `Confirmed Ledger Changes` 必须可见区分，并显示 count。
+- 可折叠 resource group header 必须使用真实 `button` 语义并暴露 `aria-expanded`；header 右侧的
+  `Stage All` / `Unstage All` / `Discard All` 等 section action 必须是独立按钮，不能嵌套在折叠按钮内，也不能触发展开/收起。
 - `Changes` 中的条目表示 pending / working changes。
 - `Staged Changes` 中的条目表示即将进入 commit 的 staged entries。
 - `Confirmed Ledger Changes` 中的条目表示已进入 ledger、但未被最新 Source Control commit anchor 覆盖的 changes。

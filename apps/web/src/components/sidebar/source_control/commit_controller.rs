@@ -18,9 +18,9 @@ pub struct CommitController {
     pub is_generating: ReadSignal<bool>,
     pub dropdown_open: RwSignal<bool>,
     pub write_block: Signal<Option<RepoWriteBlock>>,
-    pub show_write_actions: Signal<bool>,
-    pub can_prepare_commit: Signal<bool>,
-    pub can_commit_now: Signal<bool>,
+    pub show_write_actions: Memo<bool>,
+    pub can_prepare_commit: Memo<bool>,
+    pub can_commit_now: Memo<bool>,
     pub on_keydown: Callback<KeyboardEvent>,
     pub on_generate: Callback<()>,
     pub on_commit: Callback<()>,
@@ -49,14 +49,13 @@ pub fn use_commit_controller(
     let active_req_id = RwSignal::new(None::<String>);
     let saw_streaming = RwSignal::new(false);
     let write_block = core.write_block;
-    let show_write_actions = Signal::derive(move || write_block.get().is_none());
-    let has_commit_source = Signal::derive(move || {
-        !core.staged_changes.get().is_empty() || !core.confirmed_changes.get().is_empty()
+    let show_write_actions = Memo::new(move |_| write_block.get().is_none());
+    let can_prepare_commit = Memo::new(move |_| {
+        core.can_write.get()
+            && (!core.staged_changes.get().is_empty() || !core.confirmed_changes.get().is_empty())
     });
-    let can_prepare_commit =
-        Signal::derive(move || core.can_write.get() && has_commit_source.get());
     let can_commit_now =
-        Signal::derive(move || can_prepare_commit.get() && !msg.get().trim().is_empty());
+        Memo::new(move |_| can_prepare_commit.get() && !msg.get().trim().is_empty());
 
     let on_keydown = Callback::new({
         let core = core.clone();

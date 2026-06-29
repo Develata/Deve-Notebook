@@ -24,9 +24,9 @@ fn commit_dropdown_after_outside_click() -> bool {
 pub fn CommitActions(
     locale: RwSignal<Locale>,
     write_block: Signal<Option<RepoWriteBlock>>,
-    show_write_actions: Signal<bool>,
-    can_prepare_commit: Signal<bool>,
-    can_commit_now: Signal<bool>,
+    show_write_actions: Memo<bool>,
+    can_prepare_commit: Memo<bool>,
+    can_commit_now: Memo<bool>,
     dropdown_open: RwSignal<bool>,
     on_commit: Callback<()>,
     on_commit_and_push: Callback<()>,

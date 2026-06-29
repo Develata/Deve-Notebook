@@ -15,8 +15,8 @@ use web_sys::KeyboardEvent;
 pub fn CommitMessageBox(
     locale: RwSignal<Locale>,
     write_block: Signal<Option<RepoWriteBlock>>,
-    show_write_actions: Signal<bool>,
-    can_prepare_commit: Signal<bool>,
+    show_write_actions: Memo<bool>,
+    can_prepare_commit: Memo<bool>,
     msg: ReadSignal<String>,
     set_msg: WriteSignal<String>,
     is_generating: ReadSignal<bool>,
