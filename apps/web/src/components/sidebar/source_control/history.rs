@@ -107,7 +107,9 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
         <div class="border-t border-default">
             <button
                 type="button"
-                class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase"
+                class="w-full flex items-center rounded-sm px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                data-deve-sc-panel-toggle="history"
+                aria-expanded=move || expanded.get().to_string()
                 on:click=move |_| {
                     let next_open = !expanded.get_untracked();
                     if !next_open {

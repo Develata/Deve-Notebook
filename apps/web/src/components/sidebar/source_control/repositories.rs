@@ -39,7 +39,9 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
                 <div class="border-t border-default">
                     <button
                         type="button"
-                        class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
+                        class="w-full flex items-center rounded-sm px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                        data-deve-sc-panel-toggle="repositories"
+                        aria-expanded=move || expanded.get().to_string()
                         on:click=move |_| expanded.update(|b| *b = !*b)
                     >
                         <span class=move || if expanded.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>

@@ -70,6 +70,8 @@ HistoryOrGraphSecondary
 - 单 repo 场景下 `RepositoryContext` **SHOULD** 保持紧凑或折叠。
 - 多 repo / provider 场景下才允许展开 repositories list。
 - `HistoryOrGraphSecondary` **SHOULD** 默认折叠或作为 secondary view；不得挤占 commit / changes primary flow。
+- `RepositoryContext`、`History` 与 `Graph` 等可折叠 secondary panel header 必须使用真实 `button`
+  语义并暴露 `aria-expanded`；它们只能展开/收起 view-local state，不得触发 source-control 写入。
 - `Graph` 是只读 projection surface，不得写 ledger、workspace、source-control state 或 Git mirror state。
 
 ## 4. Resource Groups

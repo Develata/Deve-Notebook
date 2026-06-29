@@ -46,6 +46,8 @@
 - 用户可以打开 diff 查看变更内容。
 - 用户可以查看 commit history / graph。
 - 这些视图必须与当前 repo scope 一致。
+- Repository / history / graph 这类 secondary panel header 应是可键盘触发的折叠按钮，并通过
+  `aria-expanded` 暴露状态。
 - remote / spectator scope 下，diff / history / graph 仍作为只读视图可用；
   stage、unstage、discard、commit、resolve conflict 等写操作必须被隐藏或禁用。
 - Graph 数据面是只读 projection，不写 ledger、workspace、search index 或 source-control state。
