@@ -31,7 +31,7 @@
     - ui_assert: text_contains_literal "|"
 
 - case_id: RENDER-HEADING-001
-  goal: 空 ATX 标题行保持层级行高。
+  goal: 空与非空 ATX 标题行保持层级行高。
   preconditions:
     - 打开 render_heading.md
   steps:
@@ -41,10 +41,15 @@
         #
         ##
         ###
+        # title
+        ## title
+        ### title
     - ui_wait_render: true
   assertions:
     - ui_assert: editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
+    - ui_assert: nonempty_editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
     - ui_assert: markdown_body_empty_heading_heights_distinct true
+    - ui_assert: nonempty_heading_keeps_layered_height true
     - ui_assert: nonempty_heading_not_double_scaled true
 
 - case_id: RENDER-CURSOR-001

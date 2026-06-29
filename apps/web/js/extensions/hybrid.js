@@ -7,8 +7,19 @@ function atxHeadingLevel(nodeName) {
   return match ? match[1] : null;
 }
 
-function isEmptyAtxHeadingLine(lineText, level) {
-  return new RegExp(`^\\s*#{${level}}\\s*#*\\s*$`).test(lineText);
+function atxHeadingLevelFromLine(lineText) {
+  const match = /^ {0,3}(#{1,3})(?!#)(?:\s|$)/.exec(lineText);
+  return match ? String(match[1].length) : null;
+}
+
+function addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel) {
+  if (decoratedHeadingLines.has(line.from)) return;
+  decoratedHeadingLines.add(line.from);
+  widgets.push(
+    Decoration.line({
+      class: `cm-heading-line cm-heading-line-${headingLevel}`,
+    }).range(line.from)
+  );
 }
 
 /**
@@ -36,6 +47,7 @@ export const hybridPlugin = ViewPlugin.fromClass(
       const { from, to } = view.viewport;
       const selection = view.state.selection.main;
       const doc = view.state.doc.toString();
+      const decoratedHeadingLines = new Set();
       
       // 辅助函数: 检查光标是否在范围内
       const isCursorIn = (nodeFrom, nodeTo) =>
@@ -112,6 +124,19 @@ export const hybridPlugin = ViewPlugin.fromClass(
         return codeRanges.find(r => pos >= r.from && pos <= r.to);
       };
 
+      for (let pos = from; pos <= to; ) {
+        const line = view.state.doc.lineAt(pos);
+        const headingLevel = atxHeadingLevelFromLine(line.text);
+        if (headingLevel &&
+            !isInsideMath(line.from, line.to) &&
+            !findContainingCode(line.from) &&
+            !(fm && line.from >= fm.from && line.to <= fm.to)) {
+          addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel);
+        }
+        if (line.to >= to || line.to >= view.state.doc.length) break;
+        pos = line.to + 1;
+      }
+
       try {
         let tree = syntaxTree(view.state);
 
@@ -129,13 +154,7 @@ export const hybridPlugin = ViewPlugin.fromClass(
             const headingLevel = atxHeadingLevel(node.name);
             if (headingLevel) {
                 const line = view.state.doc.lineAt(node.from);
-                if (isEmptyAtxHeadingLine(line.text, headingLevel)) {
-                    widgets.push(
-                        Decoration.line({
-                            class: `cm-heading-line cm-heading-line-${headingLevel}`,
-                        }).range(line.from)
-                    );
-                }
+                addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel);
             }
 
             // ---------------------------------------------------------

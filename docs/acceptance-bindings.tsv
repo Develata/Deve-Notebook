@@ -42,7 +42,7 @@ POS-004|manual-doc|docs/features/02_positioning.md|collaboration positioning rev
 POS-005|manual-doc|docs/features/02_positioning.md|privacy positioning review
 POS-006|manual-doc|docs/features/02_positioning.md|plugin positioning review
 RENDER-CODE-001|manual-chrome|docs/features/03_rendering.md|code block rendering workflow
-RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty ATX heading editor/html workflow
+RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 RENDER-LINK-001|manual-chrome|docs/features/03_rendering.md|Ctrl/Cmd link activation gate workflow
 RENDER-LINK-002|manual-chrome|docs/features/03_rendering.md|external link safety workflow
 RENDER-NEST-001|manual-chrome|docs/features/03_rendering.md|nested markdown rendering workflow
