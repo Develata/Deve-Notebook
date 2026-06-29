@@ -13,9 +13,9 @@ use leptos::task::spawn_local;
 
 use crate::components::chat::slash_commands::{ChatSessionMode, consume_slash_command};
 
-const MAX_CHAT_CONTEXT_CHARS: usize = 16_000;
-const MAX_CHAT_HISTORY_MESSAGES: usize = 8;
-const MAX_CHAT_HISTORY_CHARS: usize = 8_000;
+mod context;
+
+use context::{bounded_chat_history, build_chat_context, truncate_markdown_context};
 
 #[derive(Clone)]
 pub struct ChatSendRuntime {
@@ -188,55 +188,6 @@ fn append_chat_message(chat: &ChatContext, role: &str, content: &str, req_id: Op
             ts_ms: js_sys::Date::now() as u64,
         });
     });
-}
-
-fn truncate_markdown_context(content: String) -> String {
-    let Some((end, _)) = content.char_indices().nth(MAX_CHAT_CONTEXT_CHARS) else {
-        return content;
-    };
-    content[..end].to_string()
-}
-
-fn build_chat_context(
-    current_doc_path: String,
-    current_markdown: String,
-    selection: serde_json::Value,
-    session_mode: ChatSessionMode,
-) -> serde_json::Value {
-    serde_json::json!({
-        "current_file": current_doc_path,
-        "current_markdown": current_markdown,
-        "selection": selection,
-        "chat_mode": session_mode.as_str(),
-    })
-}
-
-fn bounded_chat_history(messages: Vec<ChatMessage>) -> Vec<serde_json::Value> {
-    let mut total_chars = 0usize;
-    let mut selected = Vec::new();
-    for message in messages.into_iter().rev() {
-        if message.content.is_empty() {
-            continue;
-        }
-        let role = match message.role.as_str() {
-            "user" | "assistant" => message.role,
-            _ => continue,
-        };
-        let content_len = message.content.chars().count();
-        if total_chars.saturating_add(content_len) > MAX_CHAT_HISTORY_CHARS {
-            break;
-        }
-        total_chars += content_len;
-        selected.push(serde_json::json!({
-            "role": role,
-            "content": message.content,
-        }));
-        if selected.len() >= MAX_CHAT_HISTORY_MESSAGES {
-            break;
-        }
-    }
-    selected.reverse();
-    selected
 }
 
 pub fn make_send_example(

@@ -1,8 +1,9 @@
 use super::super::send_backend::ChatMessagePlan;
-use super::{
+use super::context::{
     MAX_CHAT_CONTEXT_CHARS, MAX_CHAT_HISTORY_MESSAGES, bounded_chat_history, build_chat_context,
-    localize_backend_chat_message, truncate_markdown_context,
+    truncate_markdown_context,
 };
+use super::localize_backend_chat_message;
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::hooks::use_core::ChatMessage;
 use crate::i18n::{Locale, t};
