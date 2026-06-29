@@ -80,6 +80,8 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - Git bridge 写命令在执行 import apply、mirror/export 或 push 前必须复用本地 Projection Workspace identity gate；
   `.notegit` identity marker 或 Projection Locator 破损时不得写 pending/import、`.git` mirror 或发布 mirror HEAD。
 - Web Command Palette 与 Source Control UI 只展示当前 mode 与 CLI-only notice，不直接执行 Git writer；Source Control header 的 badge 应写成 `NoteGit + Git mirror` / `NoteGit only` 这类 authority-first 文案，避免把 Git bridge mode 误读成 Git authority 切换。
+- Source Control header 的 section visibility menu 只用于切换 view-local section 显示；trigger 应暴露
+  menu 展开状态，菜单项应暴露 checked 状态，并在选择后自动关闭。
 - Web `Commit & Push` 入口只展示 Git push CLI-only notice；兼容期旧 WS `CommitAndPush` frame 不得等价为普通 commit，服务端必须返回结构化 blocker 且无 source-control 写副作用。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须遵守同一个 mode；代理模式必须展示主进程 mode 或 delegated/unknown，而不能硬编码为 mirror。
 - 后端 commit writer API 不提供无策略默认 `mirror` 入口；新增 CLI、HTTP、WS 或插件提交路径时必须显式传入当前 Git bridge mode，代理路径只能转发到主进程策略。

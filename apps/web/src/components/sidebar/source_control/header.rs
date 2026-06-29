@@ -47,7 +47,12 @@ pub fn SourceControlHeader(
             >
                 <button
                     type="button"
-                    class="p-1 hover:bg-hover rounded"
+                    class="p-1 hover:bg-hover rounded focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                    data-deve-sc-section-menu-trigger="true"
+                    aria-haspopup="menu"
+                    aria-controls="source-control-section-menu"
+                    aria-expanded=move || show_menu.get().to_string()
+                    aria-label=move || t::sidebar::more_actions(locale.get())
                     title=move || t::sidebar::more_actions(locale.get())
                     on:click=toggle_menu
                 >

@@ -257,6 +257,7 @@
     - ui_assert: source_control_resource_group_headers_are_buttons true
     - ui_assert: source_control_section_actions_do_not_toggle_group true
     - ui_assert: source_control_secondary_panel_headers_are_buttons true
+    - ui_assert: source_control_header_section_menu_exposes_checked_state true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。

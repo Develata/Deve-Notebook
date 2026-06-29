@@ -129,6 +129,9 @@ Commit surface 规则：
 ## 7. Menus and Commands
 
 所有 action 必须映射到 stable command/control intent。
+Source Control header 的 section visibility menu 必须是 button-driven：trigger 暴露
+`aria-haspopup="menu"` 与 `aria-expanded`，menu item 暴露 checked state，选择任一 item
+后自动关闭；该菜单只能切换 view-local section visibility，不得触发 source-control 写入。
 
 推荐 command ids：
 
