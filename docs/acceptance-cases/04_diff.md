@@ -115,6 +115,7 @@
     - run: cargo test -p deve_web commit_write_block -- --nocapture
     - run: cargo test -p deve_web commit_refresh -- --nocapture
     - run: cargo test -p deve_web commit_ack_dispatch -- --nocapture
+    - run: cargo test -p deve_web commit_shortcut -- --nocapture
     - run: cargo test -p deve_web fs_refresh -- --nocapture
     - run: cargo test -p deve_web read_list_dispatch -- --nocapture
     - run: cargo test -p deve_web doc_diff_read_gate -- --nocapture
@@ -182,6 +183,7 @@
     - run: cargo test -p deve_web confirmed_ledger_changes -- --nocapture
   assertions:
     - ui_assert: source_control_commit_available true
+    - ui_assert: source_control_commit_shortcut_prevents_textarea_default true
     - ui_assert: source_control_commit_and_push_cli_only_notice true
     - ui_assert: command_palette_git_sync_absent true
     - cli_assert: git_import_apply_pending_only true

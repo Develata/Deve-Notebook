@@ -124,10 +124,14 @@ contains	apps/web/src/api/git_mirror.rs	encode_query_component(repo_id)
 contains	apps/web/src/api/git_mirror.rs	repair_review_url_encodes_repo_id_query_component
 contains	apps/web/src/components/sidebar/source_control/error_notice.rs	fetched_scope_nonce == current_scope_nonce
 contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	on_commit_and_push.run(())
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	commit_submit_shortcut_pressed(ev.ctrl_key(), ev.meta_key(), &ev.key())
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	ev.prevent_default()
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	fn commit_shortcut_supports_ctrl_and_meta_enter()
 contains	apps/web/src/i18n/source_control/actions.rs	Commit & Push
 contains	apps/web/src/i18n/source_control/actions.rs	Open Diff
 contains	apps/web/src/i18n/source_control/actions.rs	打开差异
 contains	apps/web/src/i18n/source_control/actions.rs	Ledger-confirmed changes cannot be staged or discarded per file
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_shortcut -- --nocapture
 contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	confirmed_ledger_hint(locale.get())
 contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	data-deve-sc-section-toggle="confirmed-ledger"
 contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	aria-expanded=move || expanded.get().to_string()
@@ -174,6 +178,7 @@ contains	apps/web/src/components/sidebar/source_control/context_menu.rs	data-dev
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	role="menuitemcheckbox"
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	aria-checked=move || checked.get().to_string()
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
+contains	docs/acceptance-cases/04_diff.md	source_control_commit_shortcut_prevents_textarea_default true
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_stage_discard_absent true
 contains	docs/acceptance-cases/04_diff.md	source_control_resource_group_headers_are_buttons true
 contains	docs/acceptance-cases/04_diff.md	source_control_section_actions_do_not_toggle_group true
