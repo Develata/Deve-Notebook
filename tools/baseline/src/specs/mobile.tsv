@@ -232,8 +232,8 @@ contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-ch
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-chat-fullscreen=move || expanded.get().to_string()
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	set_expanded.set(mobile_chat_after_open())
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	set_expanded.set(mobile_chat_after_close())
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_chat_page_expands_to_fullscreen()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_chat_page_close_returns_to_editor_surface()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_page_expands_to_fullscreen()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_page_close_returns_to_editor_surface()
 contains	apps/web/src/components/chat/header.rs	data-deve-mobile-chat-action="chat_close_button"
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-012
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	run: scripts/check-mobile-baseline.sh
@@ -275,7 +275,7 @@ contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_send
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_markers_are_mobile_only()
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_input_uses_16px_font_size()
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-chat-keyboard-offset=move || keyboard_offset.get().to_string()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_chat_keyboard_sheet_stays_above_keyboard()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_keyboard_sheet_stays_above_keyboard()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_bottom_bar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open.get()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_chat_keyboard_hides_bottom_bar()
@@ -416,7 +416,7 @@ contains	docs/acceptance-bindings.tsv	UI-MOB-017|manual-chrome|docs/features/08_
 contains	docs/plan/11_ui_design/03_mobile.md	移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。
 contains	apps/web/src/components/diff_view/mod.rs	pub(crate) fn diff_view_class(mobile: bool) -> &'static str
 contains	apps/web/src/components/diff_view/mod.rs	fn mobile_diff_uses_mobile_dom_marker()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_diff_hides_chat_chip_and_expanded_chat()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_diff_hides_chat_chip_and_expanded_chat()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_accessory_toolbar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	mobile_accessory_toolbar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_diff_hides_accessory_toolbar()
@@ -528,7 +528,7 @@ contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surf
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	11_ui_design/03_mobile#mobile-surface-switcher
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_surface_switcher_hides_bottom_bar()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_surface_switcher_hides_chat_sheet()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_surface_switcher_hides_chat_sheet()
 contains	apps/web/style/_base.css	.cm-content
 contains	apps/web/style/_base.css	font-size: 16px;
 contains	docs/plan/11_ui_design/03_mobile.md	**Font Size**: 默认字号 **SHOULD** 设为 `16px`
