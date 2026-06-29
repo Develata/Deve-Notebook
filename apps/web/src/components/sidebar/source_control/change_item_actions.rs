@@ -13,6 +13,30 @@ use leptos::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ChangeItemActionSurface {
+    ConfirmedLedger,
+    Staged,
+    Conflict,
+    Workspace,
+}
+
+fn change_item_action_surface(
+    entry: &ChangeEntry,
+    is_staged: bool,
+    has_conflict: bool,
+) -> ChangeItemActionSurface {
+    if entry.domain == ChangeDomain::ConfirmedLedger {
+        ChangeItemActionSurface::ConfirmedLedger
+    } else if is_staged {
+        ChangeItemActionSurface::Staged
+    } else if has_conflict {
+        ChangeItemActionSurface::Conflict
+    } else {
+        ChangeItemActionSurface::Workspace
+    }
+}
+
 #[component]
 pub fn ChangeItemActions(
     core: SourceControlContext,
@@ -28,8 +52,8 @@ pub fn ChangeItemActions(
 
     view! {
         {move || {
-            if entry.domain == ChangeDomain::ConfirmedLedger {
-                view! {
+            match change_item_action_surface(&entry, is_staged, has_conflict) {
+                ChangeItemActionSurface::ConfirmedLedger => view! {
                     <Show when=move || can_open_diff>
                         <button
                             type="button"
@@ -52,9 +76,8 @@ pub fn ChangeItemActions(
                             <ExternalLink class="w-3.5 h-3.5" />
                         </button>
                     </Show>
-                }.into_any()
-            } else if is_staged {
-                view! {
+                }.into_any(),
+                ChangeItemActionSurface::Staged => view! {
                     <button
                         type="button"
                         class="p-0.5 hover:bg-active rounded text-secondary"
@@ -72,13 +95,12 @@ pub fn ChangeItemActions(
                     >
                         <Minus class="w-3.5 h-3.5" />
                     </button>
+                }.into_any(),
+                ChangeItemActionSurface::Conflict => {
+                    view! { <ChangeItemConflictActions core=core.clone() locale entry=entry.clone() action_busy /> }
+                        .into_any()
                 }
-                .into_any()
-            } else if has_conflict {
-                view! { <ChangeItemConflictActions core=core.clone() locale entry=entry.clone() action_busy /> }
-                    .into_any()
-            } else {
-                view! {
+                ChangeItemActionSurface::Workspace => view! {
                     <ChangeItemWorkspaceActions
                         core=core.clone()
                         locale
@@ -86,9 +108,59 @@ pub fn ChangeItemActions(
                         can_open_diff
                         action_busy
                     />
-                }
-                .into_any()
+                }.into_any(),
             }
         }}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ChangeItemActionSurface, change_item_action_surface};
+    use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
+
+    fn entry(domain: ChangeDomain) -> ChangeEntry {
+        ChangeEntry {
+            path: "notes/a.md".into(),
+            renamed_from: None,
+            doc_id: None,
+            status: ChangeStatus::Modified,
+            has_conflict: false,
+            domain,
+            base_seq: None,
+            target_seq: None,
+        }
+    }
+
+    #[test]
+    fn confirmed_ledger_rows_only_use_confirmed_action_surface() {
+        let entry = entry(ChangeDomain::ConfirmedLedger);
+
+        assert_eq!(
+            change_item_action_surface(&entry, false, false),
+            ChangeItemActionSurface::ConfirmedLedger
+        );
+        assert_eq!(
+            change_item_action_surface(&entry, true, true),
+            ChangeItemActionSurface::ConfirmedLedger
+        );
+    }
+
+    #[test]
+    fn non_confirmed_rows_keep_existing_action_surfaces() {
+        let entry = entry(ChangeDomain::WorkingDirectory);
+
+        assert_eq!(
+            change_item_action_surface(&entry, true, false),
+            ChangeItemActionSurface::Staged
+        );
+        assert_eq!(
+            change_item_action_surface(&entry, false, true),
+            ChangeItemActionSurface::Conflict
+        );
+        assert_eq!(
+            change_item_action_surface(&entry, false, false),
+            ChangeItemActionSurface::Workspace
+        );
     }
 }
