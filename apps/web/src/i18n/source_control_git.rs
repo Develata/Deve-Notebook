@@ -115,6 +115,15 @@ pub fn git_push_cli_only_hint(locale: Locale) -> &'static str {
     }
 }
 
+pub fn commit_and_push_cli_only_banner(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Commit & Push is CLI-only; create a commit first, then run `deve_cli git push`."
+        }
+        Locale::Zh => "Commit & Push 只能通过 CLI 完成；请先创建提交，再运行 `deve_cli git push`。",
+    }
+}
+
 pub fn git_push_cli_only_details(locale: Locale) -> [&'static str; 5] {
     match locale {
         Locale::En => [
@@ -180,6 +189,7 @@ mod tests {
             "Git mirror 推送只能通过 CLI 执行"
         );
         assert!(git_push_cli_only_hint(Locale::Zh).contains("--remote <remote> --branch <branch>"));
+        assert!(commit_and_push_cli_only_banner(Locale::Zh).contains("deve_cli git push"));
         assert!(
             git_push_cli_only_details(Locale::En)
                 .iter()

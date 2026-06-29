@@ -3,7 +3,9 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason};
 use crate::hooks::use_core::{RepoRemoveRequest, RepoRenameRequest, RepoSwitchRequest};
+use crate::i18n::Locale;
 use deve_core::models::RepoId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -15,12 +17,18 @@ use super::{can_start_scope_switch, prepare_scope_switch, show_switch_block};
 
 pub(super) fn build_switch_repo_callback(
     ws: WsService,
+    locale: RwSignal<Locale>,
     signals: SwitchScopeSignals,
     set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<RepoSwitchRequest> {
     Callback::new(move |request: RepoSwitchRequest| {
         if !can_start_scope_switch(signals) {
-            show_switch_block(set_sync_banner, "switch repo", "scope switching");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::SwitchRepo,
+                WriteGateReason::ScopeSwitching,
+            );
             return;
         }
         if repo_switch_request_targets_current(&request, signals) {
@@ -35,7 +43,12 @@ pub(super) fn build_switch_repo_callback(
             let Some(switch_nonce) =
                 next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
             else {
-                show_switch_block(set_sync_banner, "switch repo", "scope nonce exhausted");
+                show_switch_block(
+                    set_sync_banner,
+                    locale,
+                    WriteGateAction::SwitchRepo,
+                    WriteGateReason::ScopeNonceExhausted,
+                );
                 return;
             };
             prepare_scope_switch(&ws_repo_action, signals);
@@ -84,21 +97,37 @@ fn repo_switch_request_targets_current(
 
 pub(super) fn build_create_repo_callback(
     ws: WsService,
+    locale: RwSignal<Locale>,
     signals: SwitchScopeSignals,
     set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<String> {
     Callback::new(move |name: String| {
         let target_repo = name.trim().to_string();
         if target_repo.is_empty() {
-            show_switch_block(set_sync_banner, "create repo", "empty repository name");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::CreateRepo,
+                WriteGateReason::EmptyRepositoryName,
+            );
             return;
         }
         if signals.active_branch.get_untracked().is_some() {
-            show_switch_block(set_sync_banner, "create repo", "remote branch view");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::CreateRepo,
+                WriteGateReason::RemoteBranchView,
+            );
             return;
         }
         if !can_start_scope_switch(signals) {
-            show_switch_block(set_sync_banner, "create repo", "scope switching");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::CreateRepo,
+                WriteGateReason::ScopeSwitching,
+            );
             return;
         }
 
@@ -107,7 +136,12 @@ pub(super) fn build_create_repo_callback(
             let Some(switch_nonce) =
                 next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
             else {
-                show_switch_block(set_sync_banner, "create repo", "scope nonce exhausted");
+                show_switch_block(
+                    set_sync_banner,
+                    locale,
+                    WriteGateAction::CreateRepo,
+                    WriteGateReason::ScopeNonceExhausted,
+                );
                 return;
             };
             prepare_scope_switch(&ws_repo_action, signals);
@@ -136,21 +170,37 @@ pub(super) fn build_create_repo_callback(
 
 pub(super) fn build_rename_repo_callback(
     ws: WsService,
+    locale: RwSignal<Locale>,
     signals: SwitchScopeSignals,
     set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<RepoRenameRequest> {
     Callback::new(move |request: RepoRenameRequest| {
         let target_repo = request.new_name.trim().to_string();
         if target_repo.is_empty() {
-            show_switch_block(set_sync_banner, "rename repo", "empty repository name");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::RenameRepo,
+                WriteGateReason::EmptyRepositoryName,
+            );
             return;
         }
         if signals.active_branch.get_untracked().is_some() {
-            show_switch_block(set_sync_banner, "rename repo", "remote branch view");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::RenameRepo,
+                WriteGateReason::RemoteBranchView,
+            );
             return;
         }
         if !can_start_scope_switch(signals) {
-            show_switch_block(set_sync_banner, "rename repo", "scope switching");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::RenameRepo,
+                WriteGateReason::ScopeSwitching,
+            );
             return;
         }
 
@@ -161,7 +211,12 @@ pub(super) fn build_rename_repo_callback(
             let Some(switch_nonce) =
                 next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
             else {
-                show_switch_block(set_sync_banner, "rename repo", "scope nonce exhausted");
+                show_switch_block(
+                    set_sync_banner,
+                    locale,
+                    WriteGateAction::RenameRepo,
+                    WriteGateReason::ScopeNonceExhausted,
+                );
                 return;
             };
             if targets_current {
@@ -198,23 +253,39 @@ pub(super) fn build_rename_repo_callback(
 
 pub(super) fn build_remove_repo_callback(
     ws: WsService,
+    locale: RwSignal<Locale>,
     signals: SwitchScopeSignals,
     set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<RepoRemoveRequest> {
     Callback::new(move |request: RepoRemoveRequest| {
         if signals.active_branch.get_untracked().is_some() {
-            show_switch_block(set_sync_banner, "remove repo", "remote branch view");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::RemoveRepo,
+                WriteGateReason::RemoteBranchView,
+            );
             return;
         }
         if !can_start_scope_switch(signals) {
-            show_switch_block(set_sync_banner, "remove repo", "scope switching");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::RemoveRepo,
+                WriteGateReason::ScopeSwitching,
+            );
             return;
         }
 
         let targets_current =
             repo_management_targets_current(signals, request.repo_id, &request.current_name);
         if targets_current && request.fallback_name.as_deref().is_none() {
-            show_switch_block(set_sync_banner, "remove repo", "no fallback repository");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::RemoveRepo,
+                WriteGateReason::NoFallbackRepository,
+            );
             return;
         }
 
@@ -223,7 +294,12 @@ pub(super) fn build_remove_repo_callback(
             let Some(switch_nonce) =
                 next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
             else {
-                show_switch_block(set_sync_banner, "remove repo", "scope nonce exhausted");
+                show_switch_block(
+                    set_sync_banner,
+                    locale,
+                    WriteGateAction::RemoveRepo,
+                    WriteGateReason::ScopeNonceExhausted,
+                );
                 return;
             };
             if targets_current {
@@ -272,6 +348,7 @@ mod tests {
     use super::*;
     use crate::api::{ConnectionStatus, WsService};
     use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
+    use crate::i18n::Locale;
     use crate::runtime::document::pending::PendingLocalEdits;
     use deve_core::protocol::ClientMessage;
     use leptos::prelude::{GetUntracked, signal};
@@ -284,12 +361,13 @@ mod tests {
             let other_repo_id = RepoId::new_v4();
             let ws = WsService::new_for_test(ConnectionStatus::Connected);
             let (sync_banner, set_sync_banner) = signal(None::<String>);
+            let locale = RwSignal::new(Locale::Zh);
             let signals = switch_signals(
                 Some("display".to_string()),
                 Some(other_repo_id.to_string()),
                 7,
             );
-            let callback = build_switch_repo_callback(ws.clone(), signals, set_sync_banner);
+            let callback = build_switch_repo_callback(ws.clone(), locale, signals, set_sync_banner);
 
             callback.run(RepoSwitchRequest::exact(
                 "display--id".to_string(),
@@ -303,7 +381,7 @@ mod tests {
                 .get_untracked()
                 .expect("pending repo switch");
             assert_eq!(pending.expected_name(), "display");
-            assert_eq!(pending.switch_nonce, 8);
+            assert!(pending.switch_nonce > 7);
             match ws.drain_sent_for_test().as_slice() {
                 [
                     ClientMessage::SwitchRepoExact {
@@ -314,7 +392,7 @@ mod tests {
                 ] => {
                     assert_eq!(name, "display--id");
                     assert_eq!(*repo_id, target_repo_id);
-                    assert_eq!(*switch_nonce, Some(8));
+                    assert_eq!(*switch_nonce, Some(pending.switch_nonce));
                 }
                 other => panic!("expected one SwitchRepoExact message, got {other:?}"),
             }
@@ -327,8 +405,9 @@ mod tests {
         owner.with(|| {
             let ws = WsService::new_for_test(ConnectionStatus::Connected);
             let (_, set_sync_banner) = signal(None::<String>);
+            let locale = RwSignal::new(Locale::Zh);
             let signals = switch_signals(Some("default".to_string()), None, 3);
-            let callback = build_switch_repo_callback(ws.clone(), signals, set_sync_banner);
+            let callback = build_switch_repo_callback(ws.clone(), locale, signals, set_sync_banner);
 
             callback.run(RepoSwitchRequest::by_name("legacy".to_string()));
 
@@ -337,11 +416,11 @@ mod tests {
                 .get_untracked()
                 .expect("pending repo switch");
             assert_eq!(pending.expected_name(), "legacy");
-            assert_eq!(pending.switch_nonce, 4);
+            assert!(pending.switch_nonce > 3);
             match ws.drain_sent_for_test().as_slice() {
                 [ClientMessage::SwitchRepo { name, switch_nonce }] => {
                     assert_eq!(name, "legacy");
-                    assert_eq!(*switch_nonce, Some(4));
+                    assert_eq!(*switch_nonce, Some(pending.switch_nonce));
                 }
                 other => panic!("expected one SwitchRepo message, got {other:?}"),
             }

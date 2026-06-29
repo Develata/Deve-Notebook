@@ -53,6 +53,7 @@ pub fn UnifiedSearch(
         document: expect_context::<DocContext>(),
         editor: expect_context::<EditorContext>(),
         branch: expect_context::<BranchContext>(),
+        locale,
     };
     let sidebar_control = use_context::<SidebarControl>();
 

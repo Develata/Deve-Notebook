@@ -4,7 +4,7 @@
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
 use crate::components::chat::actions::{
-    make_on_apply, make_send_example, make_send_message, make_send_text,
+    ChatSendControls, make_on_apply, make_send_example, make_send_message, make_send_text,
 };
 use crate::components::chat::drag_overlay::DragOverlay;
 use crate::components::chat::drop_handler::{on_drag_leave, on_drag_over, on_drop};
@@ -72,19 +72,22 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             chat: chat.clone(),
             document: document.clone(),
         },
-        is_streaming,
-        locale,
-        session_mode,
-        set_session_mode,
-        Some(on_req_id),
-        Some(on_user_text),
-        Some(on_mode_change),
+        ChatSendControls {
+            is_streaming,
+            locale,
+            session_mode,
+            set_session_mode,
+            on_req_id: Some(on_req_id),
+            on_user_text: Some(on_user_text),
+            on_mode_change: Some(on_mode_change),
+        },
     );
     let send_message = make_send_message(input, set_input, is_streaming, send_text.clone());
     let send_example = make_send_example(send_text.clone(), set_input);
     let on_apply = make_on_apply(crate::components::chat::actions::ChatApplyRuntime {
         session: session.clone(),
         editor: editor.clone(),
+        locale,
     });
     let retry = Callback::new(move |_| {
         if let Some(prompt) = chat_retry_prompt(&last_prompt.get_untracked()) {
@@ -112,7 +115,7 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
             }
             on:dragover=on_drag_over(set_is_drag_over)
             on:dragleave=on_drag_leave(set_is_drag_over)
-            on:drop=on_drop(set_input, set_is_drag_over, session.set_sync_banner)
+            on:drop=on_drop(set_input, set_is_drag_over, session.set_sync_banner, locale)
         >
             <DragOverlay is_drag_over=is_drag_over />
             <ChatHeader mobile=mobile on_close=on_close session_mode=session_mode />

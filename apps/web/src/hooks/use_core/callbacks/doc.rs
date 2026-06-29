@@ -6,6 +6,7 @@ use crate::api::WsService;
 use crate::hooks::use_core::callbacks_scope::LocalScopeSignals;
 use crate::hooks::use_core::navigation::PendingNavigation;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
+use crate::i18n::Locale;
 use crate::runtime::document::pending::PendingLocalEdits;
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -14,7 +15,7 @@ mod select;
 mod write;
 
 use select::create_doc_select_callback;
-use write::create_doc_write_callbacks;
+use write::{DocWriteSignals, create_doc_write_callbacks};
 
 pub struct DocCallbacks {
     pub on_doc_select: Callback<DocId>,
@@ -27,6 +28,7 @@ pub struct DocCallbacks {
 
 #[derive(Clone, Copy)]
 pub struct DocCallbackSignals {
+    pub locale: RwSignal<Locale>,
     pub current_doc: ReadSignal<Option<DocId>>,
     pub local_scope: LocalScopeSignals,
     pub write_gate: RepoWriteSignals,
@@ -50,12 +52,15 @@ pub fn create_doc_callbacks(ws: &WsService, signals: DocCallbackSignals) -> DocC
     );
     let write = create_doc_write_callbacks(
         ws,
-        signals.current_doc,
-        signals.local_scope,
-        signals.write_gate,
-        signals.set_sync_banner,
-        signals.set_pending_created_doc_path,
-        signals.set_explicit_home,
+        DocWriteSignals {
+            locale: signals.locale,
+            current_doc: signals.current_doc,
+            local_scope: signals.local_scope,
+            write_gate: signals.write_gate,
+            set_sync_banner: signals.set_sync_banner,
+            set_pending_created_doc_path: signals.set_pending_created_doc_path,
+            set_explicit_home: signals.set_explicit_home,
+        },
     );
     DocCallbacks {
         on_doc_select,

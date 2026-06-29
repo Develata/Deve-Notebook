@@ -9,8 +9,10 @@
 
 use crate::hooks::use_core::doc_name::next_untitled_doc_name;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
-use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
-use crate::hooks::use_core::write_gate_banner::cannot_create_document;
+use crate::hooks::use_core::write_gate::{
+    RepoWriteBlock, RepoWriteSignals, repo_write_block_tracked,
+};
+use crate::hooks::use_core::write_gate_banner::{cannot_create_document, reason_from_block};
 use crate::hooks::use_core::{DocContext, EditorContext, SyncMergeContext};
 use crate::i18n::{Locale, t};
 use crate::runtime::session_client::SessionClient;
@@ -40,8 +42,8 @@ pub fn ActionsCard() -> impl IntoView {
     let session_for_disabled = session.clone();
 
     let on_new_doc = move |_| {
-        if let Some(reason) = create_block_reason(&session_for_create, &editor_for_create) {
-            let message = cannot_create_document(reason);
+        if let Some(block) = create_block_reason(&session_for_create, &editor_for_create) {
+            let message = cannot_create_document(locale.get_untracked(), reason_from_block(block));
             warn_sync_banner(session_for_create.set_sync_banner, message);
             return;
         }
@@ -88,7 +90,7 @@ pub fn ActionsCard() -> impl IntoView {
     }
 }
 
-fn create_block_reason(session: &SessionClient, editor: &EditorContext) -> Option<&'static str> {
+fn create_block_reason(session: &SessionClient, editor: &EditorContext) -> Option<RepoWriteBlock> {
     repo_write_block_tracked(
         &session.ws,
         RepoWriteSignals {
@@ -102,7 +104,6 @@ fn create_block_reason(session: &SessionClient, editor: &EditorContext) -> Optio
             pending_repo_switch: editor.pending_repo_switch,
         },
     )
-    .map(|block| block.label())
 }
 
 #[cfg(test)]

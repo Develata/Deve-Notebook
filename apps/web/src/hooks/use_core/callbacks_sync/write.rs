@@ -6,7 +6,10 @@
 use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
-use crate::hooks::use_core::write_gate_banner::cannot_send;
+use crate::hooks::use_core::write_gate_banner::{
+    WriteGateAction, WriteGateReason, cannot_send, reason_from_block,
+};
+use crate::i18n::Locale;
 use deve_core::models::DocId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -22,6 +25,7 @@ pub(super) struct SyncWriteCallbacks {
 
 pub(super) fn create_sync_write_callbacks(
     ws: &WsService,
+    locale: RwSignal<Locale>,
     current_doc: ReadSignal<Option<DocId>>,
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
@@ -34,7 +38,8 @@ pub(super) fn create_sync_write_callbacks(
             local_scope,
             write_gate,
             set_sync_banner,
-            "SetSyncMode",
+            locale,
+            WriteGateAction::SetSyncMode,
         ) else {
             return;
         };
@@ -51,7 +56,8 @@ pub(super) fn create_sync_write_callbacks(
             local_scope,
             write_gate,
             set_sync_banner,
-            "ConfirmMerge",
+            locale,
+            WriteGateAction::ConfirmMerge,
         ) else {
             return;
         };
@@ -67,7 +73,8 @@ pub(super) fn create_sync_write_callbacks(
             local_scope,
             write_gate,
             set_sync_banner,
-            "DiscardPending",
+            locale,
+            WriteGateAction::DiscardPending,
         ) else {
             return;
         };
@@ -78,13 +85,22 @@ pub(super) fn create_sync_write_callbacks(
 
     let ws4 = ws.clone();
     let on_merge_peer = Callback::new(move |peer_id: String| {
-        let Some(scope_nonce) =
-            sync_write_scope_nonce(&ws4, local_scope, write_gate, set_sync_banner, "MergePeer")
-        else {
+        let Some(scope_nonce) = sync_write_scope_nonce(
+            &ws4,
+            local_scope,
+            write_gate,
+            set_sync_banner,
+            locale,
+            WriteGateAction::MergePeer,
+        ) else {
             return;
         };
         let Some(doc_id) = current_doc.get_untracked() else {
-            let message = cannot_send("MergePeer", "no current document selected");
+            let message = cannot_send(
+                locale.get_untracked(),
+                WriteGateAction::MergePeer,
+                WriteGateReason::NoCurrentDocumentSelected,
+            );
             warn_sync_banner(set_sync_banner, message);
             return;
         };
@@ -108,15 +124,20 @@ fn sync_write_scope_nonce(
     local_scope: LocalScopeSignals,
     write_gate: RepoWriteSignals,
     set_sync_banner: WriteSignal<Option<String>>,
-    action: &'static str,
+    locale: RwSignal<Locale>,
+    action: WriteGateAction,
 ) -> Option<u64> {
     if let Some(block) = repo_write_block_untracked(ws, write_gate) {
-        let message = cannot_send(action, block.label());
+        let message = cannot_send(locale.get_untracked(), action, reason_from_block(block));
         warn_sync_banner(set_sync_banner, message);
         return None;
     }
     let Some(scope_nonce) = stable_local_scope_nonce(local_scope) else {
-        let message = cannot_send(action, "local repo scope is not stable");
+        let message = cannot_send(
+            locale.get_untracked(),
+            action,
+            WriteGateReason::LocalRepoScopeUnstable,
+        );
         warn_sync_banner(set_sync_banner, message);
         return None;
     };
@@ -128,6 +149,7 @@ mod tests {
     use super::*;
     use crate::api::ConnectionStatus;
     use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch};
+    use crate::i18n::Locale;
     use deve_core::models::PeerId;
     use leptos::prelude::{GetUntracked, Signal, signal};
 
@@ -139,8 +161,10 @@ mod tests {
             let doc_id = DocId::new();
             let (current_doc, _) = signal(Some(doc_id));
             let (banner, set_banner) = signal(None::<String>);
+            let locale = RwSignal::new(Locale::Zh);
             let callbacks = create_sync_write_callbacks(
                 &ws,
+                locale,
                 current_doc,
                 local_scope_signals(None),
                 write_signals(None),
@@ -176,8 +200,10 @@ mod tests {
             let (current_doc, _) = signal(Some(DocId::new()));
             let (banner, set_banner) = signal(None::<String>);
             let active_branch = Some(PeerId::new("peer-a"));
+            let locale = RwSignal::new(Locale::Zh);
             let callbacks = create_sync_write_callbacks(
                 &ws,
+                locale,
                 current_doc,
                 local_scope_signals(active_branch.clone()),
                 write_signals(active_branch),
@@ -189,7 +215,7 @@ mod tests {
             assert!(ws.drain_sent_for_test().is_empty());
             assert_eq!(
                 banner.get_untracked().as_deref(),
-                Some("Cannot send MergePeer: read-only")
+                Some("无法发送 合并节点请求：只读模式")
             );
         });
     }

@@ -3,8 +3,9 @@
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
-use crate::hooks::use_core::write_gate_banner::cannot_action;
+use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason, cannot_action};
 use crate::hooks::use_core::{LoadPhase, PendingBranchSwitch, PendingRepoSwitch, SearchHit};
+use crate::i18n::Locale;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
@@ -28,6 +29,7 @@ pub struct MiscRequestSignals {
 
 pub fn create_misc_callbacks(
     ws: &WsService,
+    locale: RwSignal<Locale>,
     set_stats: WriteSignal<crate::editor::EditorStats>,
     load_state: ReadSignal<LoadPhase>,
     search_scope: SearchScopeSignals,
@@ -59,13 +61,13 @@ pub fn create_misc_callbacks(
     let ws_search = ws.clone();
     let on_search = Callback::new(move |query: String| {
         if !load_state.get_untracked().is_ready() {
-            show_search_block(set_sync_banner, "snapshot loading");
+            show_search_block(set_sync_banner, locale, WriteGateReason::SnapshotLoading);
             return;
         }
         if search_scope.pending_branch_switch.get_untracked().is_some()
             || search_scope.pending_repo_switch.get_untracked().is_some()
         {
-            show_search_block(set_sync_banner, "scope switching");
+            show_search_block(set_sync_banner, locale, WriteGateReason::ScopeSwitching);
             return;
         }
         let request_id = uuid::Uuid::new_v4().to_string();
@@ -87,8 +89,12 @@ pub fn create_misc_callbacks(
     }
 }
 
-fn show_search_block(set_sync_banner: WriteSignal<Option<String>>, reason: &str) {
-    let message = cannot_action("search", reason);
+fn show_search_block(
+    set_sync_banner: WriteSignal<Option<String>>,
+    locale: RwSignal<Locale>,
+    reason: WriteGateReason,
+) {
+    let message = cannot_action(locale.get_untracked(), WriteGateAction::Search, reason);
     warn_sync_banner(set_sync_banner, message);
 }
 

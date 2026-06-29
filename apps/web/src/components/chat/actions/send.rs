@@ -23,16 +23,26 @@ pub struct ChatSendRuntime {
     pub document: DocumentClient,
 }
 
-pub fn make_send_text(
-    runtime: ChatSendRuntime,
-    is_streaming: ReadSignal<bool>,
-    locale: RwSignal<Locale>,
-    session_mode: ReadSignal<ChatSessionMode>,
-    set_session_mode: WriteSignal<ChatSessionMode>,
-    on_req_id: Option<Callback<String>>,
-    on_user_text: Option<Callback<String>>,
-    on_mode_change: Option<Callback<ChatSessionMode>>,
-) -> Callback<String> {
+pub struct ChatSendControls {
+    pub is_streaming: ReadSignal<bool>,
+    pub locale: RwSignal<Locale>,
+    pub session_mode: ReadSignal<ChatSessionMode>,
+    pub set_session_mode: WriteSignal<ChatSessionMode>,
+    pub on_req_id: Option<Callback<String>>,
+    pub on_user_text: Option<Callback<String>>,
+    pub on_mode_change: Option<Callback<ChatSessionMode>>,
+}
+
+pub fn make_send_text(runtime: ChatSendRuntime, controls: ChatSendControls) -> Callback<String> {
+    let ChatSendControls {
+        is_streaming,
+        locale,
+        session_mode,
+        set_session_mode,
+        on_req_id,
+        on_user_text,
+        on_mode_change,
+    } = controls;
     Callback::new(move |msg: String| {
         let msg = msg.trim().to_string();
         if msg.is_empty() || is_streaming.get() {

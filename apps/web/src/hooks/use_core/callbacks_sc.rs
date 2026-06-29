@@ -8,6 +8,7 @@ use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use crate::hooks::use_core::{PendingBranchSwitch, PendingRepoSwitch};
+use crate::i18n::Locale;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
 use leptos::prelude::*;
 
@@ -49,17 +50,30 @@ pub struct SourceControlRequestSignals {
     pub set_commit_diff_request_id: WriteSignal<Option<String>>,
 }
 
+#[derive(Clone, Copy)]
+pub struct SourceControlCallbackInputs {
+    pub locale: RwSignal<Locale>,
+    pub scope: SourceControlScopeSignals,
+    pub write_gate: RepoWriteSignals,
+    pub request: SourceControlRequestSignals,
+    pub set_notice: WriteSignal<Option<SourceControlNotice>>,
+    pub set_diff_content: WriteSignal<Option<DiffSessionWire>>,
+    pub set_sync_banner: WriteSignal<Option<String>>,
+}
+
 pub fn create_source_control_callbacks(
     ws: &WsService,
-    scope: SourceControlScopeSignals,
-    write_gate: RepoWriteSignals,
-    request: SourceControlRequestSignals,
-    set_notice: WriteSignal<Option<SourceControlNotice>>,
-    set_diff_content: WriteSignal<Option<DiffSessionWire>>,
-    set_sync_banner: WriteSignal<Option<String>>,
+    inputs: SourceControlCallbackInputs,
 ) -> SourceControlCallbacks {
     let (on_get_changes, on_get_history, on_get_doc_diff, on_get_commit_diff) =
-        create_read_callbacks(ws, scope, write_gate, request, set_notice, set_diff_content);
+        create_read_callbacks(
+            ws,
+            inputs.scope,
+            inputs.write_gate,
+            inputs.request,
+            inputs.set_notice,
+            inputs.set_diff_content,
+        );
     let (
         on_stage_file,
         on_stage_files,
@@ -69,7 +83,13 @@ pub fn create_source_control_callbacks(
         on_commit,
         on_resolve_conflict,
         on_commit_and_push,
-    ) = create_write_callbacks(ws, scope, write_gate, set_sync_banner);
+    ) = create_write_callbacks(
+        ws,
+        inputs.locale,
+        inputs.scope,
+        inputs.write_gate,
+        inputs.set_sync_banner,
+    );
 
     SourceControlCallbacks {
         on_get_changes,

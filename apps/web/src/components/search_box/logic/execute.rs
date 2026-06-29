@@ -6,6 +6,7 @@ use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::LOCAL_BRANCH_LABEL;
 use crate::components::search_box::runtime::SearchRuntime;
 use crate::components::search_box::types::{FileOpAction, FileOpKind, InsertQuery, SearchAction};
+use crate::hooks::use_core::write_gate_banner::WriteGateAction;
 use deve_core::utils::path::to_forward_slash;
 use leptos::prelude::*;
 
@@ -35,7 +36,7 @@ pub(crate) fn execute_action(
             set_show.set(false);
         }
         SearchAction::CreateDoc(path) => {
-            if !allow_repo_write(runtime, "create document") {
+            if !allow_repo_write(runtime, WriteGateAction::CreateDocument) {
                 return;
             }
             let path = path.trim();
@@ -57,7 +58,7 @@ pub(crate) fn execute_action(
             };
             match op.kind {
                 FileOpKind::Move => {
-                    if !allow_repo_write(runtime, "move document") {
+                    if !allow_repo_write(runtime, WriteGateAction::MoveDocument) {
                         return;
                     }
                     if let Some(dst) = &op.dst {
@@ -70,7 +71,7 @@ pub(crate) fn execute_action(
                     }
                 }
                 FileOpKind::Copy => {
-                    if !allow_repo_write(runtime, "copy document") {
+                    if !allow_repo_write(runtime, WriteGateAction::CopyDocument) {
                         return;
                     }
                     if let Some(dst) = &op.dst {
@@ -82,7 +83,7 @@ pub(crate) fn execute_action(
                     }
                 }
                 FileOpKind::Remove => {
-                    if !allow_repo_write(runtime, "delete document") {
+                    if !allow_repo_write(runtime, WriteGateAction::DeleteDocument) {
                         return;
                     }
                     runtime.document.on_doc_delete.run(op.src.clone());

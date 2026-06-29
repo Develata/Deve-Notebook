@@ -8,7 +8,10 @@ use crate::hooks::use_core::callbacks_scope::{LocalScopeSignals, stable_local_sc
 use crate::hooks::use_core::contexts::EditorContext;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
-use crate::hooks::use_core::write_gate_banner::cannot_action;
+use crate::hooks::use_core::write_gate_banner::{
+    WriteGateAction, WriteGateReason, cannot_action, reason_from_block,
+};
+use crate::i18n::Locale;
 use crate::runtime::document::pending;
 use crate::runtime::session_client::SessionClient;
 use deve_core::models::{Op, RepoId};
@@ -24,12 +27,17 @@ enum ApplyEditPlanError {
 pub struct ChatApplyRuntime {
     pub session: SessionClient,
     pub editor: EditorContext,
+    pub locale: RwSignal<Locale>,
 }
 
 pub fn make_on_apply(runtime: ChatApplyRuntime) -> Callback<String> {
     Callback::new(move |code: String| {
         let Some(doc_id) = runtime.editor.current_doc.get_untracked() else {
-            show_apply_block(&runtime.session, "no active document");
+            show_apply_block(
+                &runtime.session,
+                runtime.locale,
+                WriteGateReason::NoActiveDocument,
+            );
             return;
         };
         if let Some(block) = repo_write_block_untracked(
@@ -45,13 +53,17 @@ pub fn make_on_apply(runtime: ChatApplyRuntime) -> Callback<String> {
                 pending_repo_switch: runtime.editor.pending_repo_switch,
             },
         ) {
-            show_apply_block(&runtime.session, block.label());
+            show_apply_block(&runtime.session, runtime.locale, reason_from_block(block));
             return;
         }
         let op = match build_append_markdown_op(&getEditorContent(), code) {
             Ok(op) => op,
             Err(ApplyEditPlanError::DocumentTooLarge) => {
-                show_apply_block(&runtime.session, "document is too large");
+                show_apply_block(
+                    &runtime.session,
+                    runtime.locale,
+                    WriteGateReason::DocumentTooLarge,
+                );
                 return;
             }
         };
@@ -62,14 +74,22 @@ pub fn make_on_apply(runtime: ChatApplyRuntime) -> Callback<String> {
             pending_branch_switch: runtime.editor.pending_branch_switch,
             pending_repo_switch: runtime.editor.pending_repo_switch,
         }) else {
-            show_apply_block(&runtime.session, "local repo scope is not stable");
+            show_apply_block(
+                &runtime.session,
+                runtime.locale,
+                WriteGateReason::LocalRepoScopeUnstable,
+            );
             return;
         };
         let Some(client_id) = runtime.session.ws.writer_client_id_for(
             runtime.editor.current_repo_id.get_untracked().as_deref(),
             Some(scope_nonce),
         ) else {
-            show_apply_block(&runtime.session, "writer client id unavailable");
+            show_apply_block(
+                &runtime.session,
+                runtime.locale,
+                WriteGateReason::WriterClientIdUnavailable,
+            );
             return;
         };
         let Some(repo_id) = runtime
@@ -78,11 +98,19 @@ pub fn make_on_apply(runtime: ChatApplyRuntime) -> Callback<String> {
             .get_untracked()
             .and_then(|repo_id| repo_id.parse::<RepoId>().ok())
         else {
-            show_apply_block(&runtime.session, "current repo id unavailable");
+            show_apply_block(
+                &runtime.session,
+                runtime.locale,
+                WriteGateReason::CurrentRepoIdUnavailable,
+            );
             return;
         };
         if !apply_local_programmatic_op(&op) {
-            show_apply_block(&runtime.session, "failed to apply code locally");
+            show_apply_block(
+                &runtime.session,
+                runtime.locale,
+                WriteGateReason::FailedApplyCodeLocally,
+            );
             return;
         }
         let client_op_id = next_client_op_id();
@@ -122,8 +150,8 @@ fn apply_local_programmatic_op(op: &Op) -> bool {
     true
 }
 
-fn show_apply_block(session: &SessionClient, reason: &str) {
-    let message = cannot_action("apply code", reason);
+fn show_apply_block(session: &SessionClient, locale: RwSignal<Locale>, reason: WriteGateReason) {
+    let message = cannot_action(locale.get_untracked(), WriteGateAction::ApplyCode, reason);
     warn_sync_banner(session.set_sync_banner, message);
 }
 
