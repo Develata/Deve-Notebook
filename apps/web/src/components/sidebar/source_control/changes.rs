@@ -16,6 +16,16 @@ use super::confirmed_section::ConfirmedSection;
 use super::staged_section::StagedSection;
 use super::unstaged_section::UnstagedSection;
 
+pub(crate) fn should_request_changes(
+    has_repo: bool,
+    _remote_branch_active: bool,
+    branch_switching: bool,
+    repo_switching: bool,
+    read_blocked: bool,
+) -> bool {
+    has_repo && !branch_switching && !repo_switching && !read_blocked
+}
+
 /// 变更列表主组件
 ///
 /// 职责:
@@ -25,15 +35,16 @@ use super::unstaged_section::UnstagedSection;
 pub fn Changes() -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let write_block = core.write_block;
+    let read_block = core.read_block;
 
     Effect::new(move |_| {
-        if core.current_repo_id.get().is_none()
-            || core.active_branch.get().is_some()
-            || core.pending_branch_switch.get().is_some()
-            || core.pending_repo_switch.get().is_some()
-            || write_block.get().is_some()
-        {
+        if !should_request_changes(
+            core.current_repo_id.get().is_some(),
+            core.active_branch.get().is_some(),
+            core.pending_branch_switch.get().is_some(),
+            core.pending_repo_switch.get().is_some(),
+            read_block.get().is_some(),
+        ) {
             return;
         }
         core.on_get_changes.run(());
@@ -65,5 +76,20 @@ pub fn Changes() -> impl IntoView {
                 }
             }}
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_request_changes;
+
+    #[test]
+    fn remote_branch_uses_read_gate_for_changes_refresh() {
+        assert!(should_request_changes(true, true, false, false, false));
+    }
+
+    #[test]
+    fn read_block_still_suppresses_changes_refresh() {
+        assert!(!should_request_changes(true, false, false, false, true));
     }
 }
