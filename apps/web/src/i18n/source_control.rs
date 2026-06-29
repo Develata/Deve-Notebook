@@ -86,6 +86,8 @@ mod tests {
 
     #[test]
     fn source_control_diff_copy_is_localized() {
+        assert_eq!(open_diff(Locale::En), "Open Diff");
+        assert_eq!(open_diff(Locale::Zh), "打开差异");
         assert_eq!(loading_commit_diff(Locale::Zh), "正在加载提交差异...");
         assert_eq!(counterpart_staged_badge(Locale::Zh), "暂存区");
     }

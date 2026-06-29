@@ -43,7 +43,7 @@ pub fn ChangeItemActions(
                                     core.read_block.get().is_some(),
                                 )
                             }
-                            title=move || t::source_control::open_file(locale.get())
+                            title=move || t::source_control::open_diff(locale.get())
                             on:click=move |ev| {
                                 ev.stop_propagation();
                                 core.on_get_doc_diff.run(entry_for_open.get_value());

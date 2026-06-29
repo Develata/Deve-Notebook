@@ -125,6 +125,11 @@ contains	apps/web/src/api/git_mirror.rs	repair_review_url_encodes_repo_id_query_
 contains	apps/web/src/components/sidebar/source_control/error_notice.rs	fetched_scope_nonce == current_scope_nonce
 contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	on_commit_and_push.run(())
 contains	apps/web/src/i18n/source_control/actions.rs	Commit & Push
+contains	apps/web/src/i18n/source_control/actions.rs	Open Diff
+contains	apps/web/src/i18n/source_control/actions.rs	打开差异
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	open_diff(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	open_diff(locale.get())
+absent	apps/web/src/i18n/source_control/actions.rs	Open File
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-DIFF-001
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: scripts/check-source-control-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: cargo test -p deve_web diff_first_viewport -- --nocapture

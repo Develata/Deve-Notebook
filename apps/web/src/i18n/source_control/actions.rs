@@ -39,10 +39,10 @@ pub fn graph(locale: Locale) -> &'static str {
     }
 }
 
-pub fn open_file(locale: Locale) -> &'static str {
+pub fn open_diff(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Open File",
-        Locale::Zh => "打开文件",
+        Locale::En => "Open Diff",
+        Locale::Zh => "打开差异",
     }
 }
 

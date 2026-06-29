@@ -251,6 +251,7 @@
     - api_assert: confirmed_only_commit_advances_committed_snapshot_base true
     - ui_assert: confirmed_ledger_changes_section_visible true
     - ui_assert: confirmed_ledger_rows_open_diff_action_present true
+    - ui_assert: confirmed_ledger_rows_open_diff_action_title true
     - ui_assert: confirmed_ledger_rows_stage_discard_absent true
 
 - case_id: DIFF-010
