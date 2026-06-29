@@ -25,6 +25,15 @@ pub fn confirmed_ledger_changes(locale: Locale) -> &'static str {
     }
 }
 
+pub fn confirmed_ledger_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Ledger-confirmed changes cannot be staged or discarded per file; commit covers this group as one anchor."
+        }
+        Locale::Zh => "账本已确认更改不支持逐文件暂存或放弃；提交会整体覆盖本组。",
+    }
+}
+
 pub fn no_changes(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "No changes",

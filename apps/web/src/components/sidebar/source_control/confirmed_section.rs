@@ -38,6 +38,12 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
                 </div>
                 <span class="text-[11px] text-muted pr-2">{confirmed_count}</span>
             </div>
+            <div
+                class="px-8 pb-1 text-[11px] leading-4 text-muted"
+                data-deve-sc-confirmed-ledger-hint="true"
+            >
+                {move || t::source_control::confirmed_ledger_hint(locale.get())}
+            </div>
 
             {move || if expanded.get() {
                 view! {

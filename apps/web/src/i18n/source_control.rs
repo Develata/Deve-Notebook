@@ -88,6 +88,10 @@ mod tests {
     fn source_control_diff_copy_is_localized() {
         assert_eq!(open_diff(Locale::En), "Open Diff");
         assert_eq!(open_diff(Locale::Zh), "打开差异");
+        assert_eq!(
+            confirmed_ledger_hint(Locale::Zh),
+            "账本已确认更改不支持逐文件暂存或放弃；提交会整体覆盖本组。"
+        );
         assert_eq!(loading_commit_diff(Locale::Zh), "正在加载提交差异...");
         assert_eq!(counterpart_staged_badge(Locale::Zh), "暂存区");
     }

@@ -127,6 +127,9 @@ contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	on_com
 contains	apps/web/src/i18n/source_control/actions.rs	Commit & Push
 contains	apps/web/src/i18n/source_control/actions.rs	Open Diff
 contains	apps/web/src/i18n/source_control/actions.rs	打开差异
+contains	apps/web/src/i18n/source_control/actions.rs	Ledger-confirmed changes cannot be staged or discarded per file
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	confirmed_ledger_hint(locale.get())
+contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	open_diff(locale.get())
 contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	open_diff(locale.get())
 absent	apps/web/src/i18n/source_control/actions.rs	Open File

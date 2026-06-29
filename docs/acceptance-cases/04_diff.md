@@ -253,6 +253,7 @@
     - ui_assert: confirmed_ledger_rows_open_diff_action_present true
     - ui_assert: confirmed_ledger_rows_open_diff_action_title true
     - ui_assert: confirmed_ledger_rows_stage_discard_absent true
+    - ui_assert: confirmed_ledger_section_hint_present true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。
