@@ -2,6 +2,7 @@
 //! plan_ref:
 //!   - 03_storage/index#browser-storage-layering
 //!   - 18_release#runtime-observability
+//!   - 13_i18n#i18n-facade-contract
 //!
 //! # Storage Card (存储状态卡片)
 //!
@@ -10,19 +11,6 @@
 use crate::hooks::use_core::SystemMetricsData;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
-
-/// 将字节数格式化为人类可读单位 (KB / MB / GB)
-fn format_bytes(bytes: u64) -> String {
-    if bytes >= 1_073_741_824 {
-        format!("{:.2} GB", bytes as f64 / 1_073_741_824.0)
-    } else if bytes >= 1_048_576 {
-        format!("{:.1} MB", bytes as f64 / 1_048_576.0)
-    } else if bytes >= 1024 {
-        format!("{:.1} KB", bytes as f64 / 1024.0)
-    } else {
-        format!("{} B", bytes)
-    }
-}
 
 #[component]
 pub fn StorageCard(metrics: SystemMetricsData) -> impl IntoView {
@@ -41,7 +29,7 @@ pub fn StorageCard(metrics: SystemMetricsData) -> impl IntoView {
                 <div class="flex justify-between items-center">
                     <span class="text-xs text-muted">{move || t::dashboard::db_size(locale.get())}</span>
                     <span class="text-sm font-mono font-semibold text-primary">
-                        {format_bytes(metrics.db_size_bytes)}
+                        {move || t::dashboard::format_bytes(locale.get(), metrics.db_size_bytes)}
                     </span>
                 </div>
                 <div class="flex justify-between items-center">
@@ -52,19 +40,5 @@ pub fn StorageCard(metrics: SystemMetricsData) -> impl IntoView {
                 </div>
             </div>
         </div>
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::format_bytes;
-
-    #[test]
-    fn dashboard_storage_bytes_formatting_tracks_unit_boundaries() {
-        assert_eq!(format_bytes(0), "0 B");
-        assert_eq!(format_bytes(1023), "1023 B");
-        assert_eq!(format_bytes(1024), "1.0 KB");
-        assert_eq!(format_bytes(1_048_576), "1.0 MB");
-        assert_eq!(format_bytes(1_073_741_824), "1.00 GB");
     }
 }

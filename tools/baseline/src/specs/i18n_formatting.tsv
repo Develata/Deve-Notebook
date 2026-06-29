@@ -1,3 +1,9 @@
 contains	apps/web/src/components/chat/message_item.rs	format_time_of_day
 contains	apps/web/src/utils/time.rs	to_locale_time_string
+contains	apps/web/src/i18n/dashboard/metrics.rs	pub fn format_uptime(locale: Locale, secs: u64) -> String
+contains	apps/web/src/i18n/dashboard/metrics.rs	assert_eq!(format_uptime(Locale::Zh, 90_060), "1 天 1 小时 1 分钟")
+contains	apps/web/src/components/dashboard/health_card.rs	t::dashboard::format_uptime
+contains	apps/web/src/components/dashboard/storage_card.rs	t::dashboard::format_bytes
+absent_tree	apps/web/src/components/dashboard	format!("{}d {}h {}m"
+absent_tree	apps/web/src/components/dashboard	format!("{:.1} MB"
 absent_tree	apps/web/src	format!("{:02}:{:02}"

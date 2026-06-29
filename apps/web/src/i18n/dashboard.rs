@@ -7,6 +7,9 @@
 
 use super::Locale;
 
+mod metrics;
+pub use metrics::{format_bytes, format_cpu_percent, format_memory_mb, format_uptime};
+
 pub fn title(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Server Dashboard",

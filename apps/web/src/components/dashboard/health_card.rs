@@ -1,6 +1,7 @@
 // apps/web/src/components/dashboard/health_card.rs
 //! plan_ref:
 //!   - 18_release#runtime-observability
+//!   - 13_i18n#i18n-facade-contract
 //!
 //! # Health Card (健康状态卡片)
 //!
@@ -9,20 +10,6 @@
 use crate::hooks::use_core::SystemMetricsData;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
-
-/// 将秒数格式化为 "Xd Xh Xm" 可读格式
-fn format_uptime(secs: u64) -> String {
-    let days = secs / 86400;
-    let hours = (secs % 86400) / 3600;
-    let mins = (secs % 3600) / 60;
-    if days > 0 {
-        format!("{}d {}h {}m", days, hours, mins)
-    } else if hours > 0 {
-        format!("{}h {}m", hours, mins)
-    } else {
-        format!("{}m", mins)
-    }
-}
 
 #[component]
 pub fn HealthCard(metrics: SystemMetricsData) -> impl IntoView {
@@ -49,36 +36,22 @@ pub fn HealthCard(metrics: SystemMetricsData) -> impl IntoView {
                 <div class="flex justify-between items-center">
                     <span class="text-xs text-muted">{move || t::dashboard::cpu(locale.get())}</span>
                     <span class={format!("text-sm font-mono font-semibold {}", cpu_color)}>
-                        {format!("{:.1}%", metrics.cpu_usage_percent)}
+                        {move || t::dashboard::format_cpu_percent(locale.get(), metrics.cpu_usage_percent)}
                     </span>
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="text-xs text-muted">{move || t::dashboard::memory(locale.get())}</span>
                     <span class="text-sm font-mono font-semibold text-primary">
-                        {format!("{} MB", metrics.memory_used_mb)}
+                        {move || t::dashboard::format_memory_mb(locale.get(), metrics.memory_used_mb)}
                     </span>
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="text-xs text-muted">{move || t::dashboard::uptime(locale.get())}</span>
                     <span class="text-sm font-mono text-primary">
-                        {format_uptime(metrics.uptime_secs)}
+                        {move || t::dashboard::format_uptime(locale.get(), metrics.uptime_secs)}
                     </span>
                 </div>
             </div>
         </div>
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::format_uptime;
-
-    #[test]
-    fn dashboard_health_uptime_formatting_tracks_minute_hour_day_boundaries() {
-        assert_eq!(format_uptime(0), "0m");
-        assert_eq!(format_uptime(59), "0m");
-        assert_eq!(format_uptime(60), "1m");
-        assert_eq!(format_uptime(3_600), "1h 0m");
-        assert_eq!(format_uptime(86_400 + 3_600 + 60), "1d 1h 1m");
     }
 }
