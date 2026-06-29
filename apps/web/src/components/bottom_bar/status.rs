@@ -88,37 +88,7 @@ pub fn BottomBarStatus(locale: RwSignal<Locale>) -> impl IntoView {
 
     let text = move || {
         let summary = summary.get();
-        match summary.kind {
-            SyncStatusKind::Ready => t::bottom_bar::ready(locale.get()).to_string(),
-            SyncStatusKind::PendingAck => {
-                t::bottom_bar::pending_ack(locale.get(), summary.pending_ack_count)
-            }
-            SyncStatusKind::ReadOnly => t::bottom_bar::read_only(locale.get()).to_string(),
-            SyncStatusKind::HandshakingRepo => {
-                t::bottom_bar::handshaking_repo(locale.get()).to_string()
-            }
-            SyncStatusKind::PeerNotRegistered => {
-                t::bottom_bar::peer_not_registered(locale.get()).to_string()
-            }
-            SyncStatusKind::SnapshotLoading => {
-                t::bottom_bar::snapshot_loading(locale.get()).to_string()
-            }
-            SyncStatusKind::Reconnecting => t::bottom_bar::reconnecting(locale.get()).to_string(),
-            SyncStatusKind::SessionExpired => t::bottom_bar::unauthorized(locale.get()).to_string(),
-            SyncStatusKind::NativeBootstrapInvalid => {
-                t::bottom_bar::native_bootstrap_invalid(locale.get()).to_string()
-            }
-            SyncStatusKind::NativeSessionPending => {
-                t::bottom_bar::native_session_pending(locale.get()).to_string()
-            }
-            SyncStatusKind::NativeServiceOffline => {
-                t::bottom_bar::native_service_offline(locale.get()).to_string()
-            }
-            SyncStatusKind::NativeReprobeRequired => {
-                t::bottom_bar::native_reprobe_required(locale.get()).to_string()
-            }
-            SyncStatusKind::Offline => t::bottom_bar::offline(locale.get()).to_string(),
-        }
+        summary.display_text(locale.get())
     };
 
     view! {

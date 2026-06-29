@@ -3,6 +3,7 @@
 //!
 use super::{SyncStatusInput, SyncStatusKind, SyncStatusSummary, derive_sync_status};
 use crate::api::ConnectionStatus;
+use crate::i18n::Locale;
 
 fn ready_input() -> SyncStatusInput<'static> {
     SyncStatusInput {
@@ -33,7 +34,8 @@ fn reports_session_expired_for_unauthorized_status() {
         ..ready_input()
     });
     assert_eq!(summary.kind, SyncStatusKind::SessionExpired);
-    assert_eq!(summary.header_text(), "Session Expired");
+    assert_eq!(summary.display_text(Locale::En), "Session Expired");
+    assert_eq!(summary.display_text(Locale::Zh), "会话已过期");
 }
 
 #[test]
@@ -43,7 +45,7 @@ fn reports_native_session_pending_before_snapshot_state() {
         ..ready_input()
     });
     assert_eq!(summary.kind, SyncStatusKind::NativeSessionPending);
-    assert_eq!(summary.header_text(), "Native Session Pending");
+    assert_eq!(summary.display_text(Locale::En), "Native Session Pending");
 }
 
 #[test]
@@ -57,7 +59,7 @@ fn reports_native_service_offline_as_specific_recovery_state() {
         ..ready_input()
     });
     assert_eq!(summary.kind, SyncStatusKind::NativeServiceOffline);
-    assert_eq!(summary.header_text(), "Native Service Offline");
+    assert_eq!(summary.display_text(Locale::En), "Native Service Offline");
 }
 
 #[test]
@@ -103,7 +105,10 @@ fn reports_peer_not_registered_until_writer_is_ready() {
         ..ready_input()
     });
     assert_eq!(summary.kind, SyncStatusKind::PeerNotRegistered);
-    assert_eq!(summary.header_text(), "Logged in / Peer not registered");
+    assert_eq!(
+        summary.display_text(Locale::En),
+        "Logged in / Peer not registered"
+    );
 }
 
 #[test]
@@ -153,4 +158,14 @@ fn reports_pending_ack_after_handshake_is_confirmed() {
     });
     assert_eq!(summary.kind, SyncStatusKind::PendingAck);
     assert_eq!(summary.pending_ack_count, 3);
+    assert_eq!(summary.display_text(Locale::Zh), "等待确认 (3)");
+}
+
+#[test]
+fn localizes_ready_status_for_header_and_status_surfaces() {
+    let summary = summary(ready_input());
+
+    assert_eq!(summary.kind, SyncStatusKind::Ready);
+    assert_eq!(summary.display_text(Locale::En), "Ready");
+    assert_eq!(summary.display_text(Locale::Zh), "就绪");
 }

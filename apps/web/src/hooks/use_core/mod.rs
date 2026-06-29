@@ -56,6 +56,7 @@ use self::scope_prefs::{restore_scope_pref, setup_scope_pref_effect};
 use self::state_build::build_core_state;
 use self::status_text::build_status_text;
 use self::storage_runtime::init_storage_runtime;
+use crate::i18n::Locale;
 
 /// 初始化核心状态钩子。
 pub fn use_core() -> CoreState {
@@ -66,7 +67,8 @@ pub fn use_core() -> CoreState {
     reset_dashboard_metrics_live_on_disconnect(ws.status, signals.set_system_metrics_live);
     restore_scope_pref(&signals);
     setup_scope_pref_effect(&signals);
-    let status_text = build_status_text(&ws, &signals);
+    let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let status_text = build_status_text(&ws, &signals, locale);
 
     // 浏览器 peer identity 现在必须经由 storage_runtime 间接初始化：
     // `localStorage` 只允许承载 UI 偏好，而 repo-scoped identity 需要走

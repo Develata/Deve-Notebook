@@ -22,6 +22,7 @@
 //! - `source_control_history`: 版本控制历史面板翻译
 //! - `time`: 时间与相对时间翻译
 //! - `write_gate`: 写入门禁与受限操作提示
+//! - `login`: 登录页与认证错误翻译
 
 pub mod bottom_bar;
 pub mod chat;
@@ -148,6 +149,7 @@ pub mod t {
     pub use super::diff;
     pub use super::extensions;
     pub use super::header;
+    pub use super::login;
     pub use super::merge;
     pub use super::playback;
     pub use super::search;

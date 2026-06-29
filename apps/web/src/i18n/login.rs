@@ -127,3 +127,29 @@ pub fn auth_error(locale: Locale, code: AuthErrorCode) -> &'static str {
         (Locale::Zh, AuthErrorCode::InternalError) => "服务器内部错误",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{auth_error, button, password, username};
+    use crate::i18n::{Locale, t};
+    use deve_core::protocol::auth::AuthErrorCode;
+
+    #[test]
+    fn login_copy_is_exposed_through_t_facade() {
+        assert_eq!(t::login::button(Locale::Zh), "登录");
+        assert_eq!(t::login::username(Locale::Zh), "用户名");
+        assert_eq!(t::login::password(Locale::Zh), "密码");
+    }
+
+    #[test]
+    fn login_copy_remains_localized() {
+        assert_eq!(button(Locale::En), "Sign In");
+        assert_eq!(button(Locale::Zh), "登录");
+        assert_eq!(username(Locale::Zh), "用户名");
+        assert_eq!(password(Locale::Zh), "密码");
+        assert_eq!(
+            auth_error(Locale::Zh, AuthErrorCode::InvalidPassword),
+            "用户名或密码错误"
+        );
+    }
+}

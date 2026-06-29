@@ -1,15 +1,21 @@
 //! plan_ref:
 //!   - 07_network#web-ws-runtime
 //!   - 18_release#runtime-observability
+//!   - 13_i18n#i18n-facade-contract
 //!
 use crate::api::WsService;
-use leptos::prelude::{Get, Signal};
+use crate::i18n::Locale;
+use leptos::prelude::{Get, RwSignal, Signal};
 
 use super::state::CoreSignals;
 use super::status_summary::{SyncStatusInput, derive_sync_status};
 use crate::runtime::document::pending::{PendingScope, pending_count_for_doc_in_scope};
 
-pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal<String> {
+pub(super) fn build_status_text(
+    ws: &WsService,
+    signals: &CoreSignals,
+    locale: RwSignal<Locale>,
+) -> Signal<String> {
     let status_signal_for_text = ws.status;
     let degraded_for_text = signals.degraded_sync_mode;
     let load_state_for_text = signals.load_state;
@@ -57,7 +63,6 @@ pub(super) fn build_status_text(ws: &WsService, signals: &CoreSignals) -> Signal
             pending_branch_switch: pending_branch_switch_for_text.get().is_some(),
             pending_ack_count,
         })
-        .header_text()
-        .to_string()
+        .display_text(locale.get())
     })
 }
