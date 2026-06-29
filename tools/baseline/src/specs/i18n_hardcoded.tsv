@@ -6,7 +6,7 @@ contains	apps/web/src/i18n/common.rs	pub fn status
 case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: open_tabs_zh_copy_eq "已打开标签页"
 contains	apps/web/src/i18n/common.rs	Locale::Zh => "已打开标签页"
 contains	apps/web/src/i18n/common.rs	assert_eq!(open_tabs(Locale::Zh), "已打开标签页")
-absent	apps/web/src/i18n/common.rs	Locale::Zh => "已打开标签"
+regex_absent	apps/web/src/i18n/common.rs	Locale::Zh => "\x{5df2}\x{6253}\x{5f00}\x{6807}\x{7b7e}"
 contains	apps/web/src/i18n/extensions.rs	pub fn editor_copy_code
 contains	apps/web/src/i18n/js_bridge.rs	publish_browser_i18n
 contains	apps/web/js/i18n.js	export function editorCopy
