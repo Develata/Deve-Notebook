@@ -3,7 +3,7 @@ contains	docs/plan/14_commands.md	AI: Switch to PLAN Mode
 contains	docs/plan/14_commands.md	AI: Switch to BUILD Mode
 contains	docs/plan/14_commands.md	不负责切换 `native / trusted-cli` 后端
 contains	apps/web/src/components/command_palette/registry.rs	merge_peer_command
-contains	apps/web/src/components/command_palette/registry.rs	establish_branch_command(locale, set_show)
+contains	apps/web/src/components/command_palette/registry.rs	establish_branch_command(
 contains	apps/web/src/components/command_palette/registry/branch.rs	Command::unavailable
 contains	apps/web/src/components/command_palette/registry/branch.rs	establish_branch_command_is_unavailable_notice_only
 contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_status_command_sets_cli_only_notice
@@ -51,13 +51,13 @@ contains	docs/plan/17_tech_stack.md	任何可执行 Git repair UI 都必须另�
 contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	Web 只提供 CLI-only notice 与只读 repair review
 contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	不得后台执行 Git，不得让 Command Palette 直接写 Git
 contains	apps/cli/src/server/router.rs	"/api/sc/git-mirror/repair-review"
-contains	apps/web/src/components/sidebar/source_control/error_notice.rs	data-deve-git-repair-review="readonly"
+contains	apps/web/src/components/sidebar/source_control/error_notice/repair_review.rs	data-deve-git-repair-review="readonly"
 contains	apps/web/src/i18n/source_control_git.rs	Git mirror repair is CLI-only
 contains	docs/plan/05_diff_logic.md	CommitStaged
 contains	docs/features/operations/sc_commit.md	ClientMessage::Commit { scope_nonce }
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::Commit
 absent	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::CommitAndPush
-contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	Commit & Push is CLI-only
+contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	commit_and_push_cli_only_banner
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	source_control_scope_nonce(scope)
 contains	apps/cli/src/server/ws/route/source_control.rs	ClientMessage::CommitAndPush { message, .. }
 contains	apps/cli/src/server/ws/route/source_control.rs	source_control::handle_commit_and_push
@@ -122,7 +122,7 @@ contains	apps/cli/src/commands/git_output/status.rs	let retry_command = git_comm
 contains	apps/web/src/api/git_mirror.rs	scope_nonce={scope_nonce}
 contains	apps/web/src/api/git_mirror.rs	encode_query_component(repo_id)
 contains	apps/web/src/api/git_mirror.rs	repair_review_url_encodes_repo_id_query_component
-contains	apps/web/src/components/sidebar/source_control/error_notice.rs	current_scope_nonce.get_untracked() == scope_nonce
+contains	apps/web/src/components/sidebar/source_control/error_notice.rs	fetched_scope_nonce == current_scope_nonce
 contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	on_commit_and_push.run(())
 contains	apps/web/src/i18n/source_control/actions.rs	Commit & Push
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-DIFF-001
