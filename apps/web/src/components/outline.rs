@@ -1,6 +1,6 @@
 // apps\web\src\components
 //! plan_ref:
-//!   - 10_rendering#document-authority-bridge
+//!   - 10_rendering#outline-projection
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
 //! # Outline 组件 (Outline Component)
@@ -26,7 +26,8 @@ pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
     let mut in_code_block = false;
 
     for (i, line) in content.lines().enumerate() {
-        let trimmed = line.trim();
+        let leading_spaces = line.chars().take_while(|c| *c == ' ').count();
+        let trimmed = line.trim_start();
 
         // Check for code block fences (``` or ~~~)
         // Note: This is a simplified check. It assumes the fence is at the start of the line (after trim).
@@ -40,32 +41,128 @@ pub fn parse_headers(content: &str) -> Vec<HeaderNode> {
             continue;
         }
 
-        if trimmed.starts_with('#') {
-            let mut level = 0;
-            for c in trimmed.chars() {
-                if c == '#' {
-                    level += 1;
-                } else {
-                    break;
-                }
-            }
-
-            // 仅当后面有空格且级别 <= 6 时转换
-            if level > 0 && level <= 6 {
-                // 检查下一个字符是否为空格
-                let rest = &trimmed[level..];
-                if rest.starts_with(' ') {
-                    headers.push(HeaderNode {
-                        level,
-                        text: rest.trim().to_string(),
-                        line: i + 1,
-                    });
-                }
-            }
+        if leading_spaces <= 3
+            && let Some((level, text)) = parse_atx_heading(trimmed)
+        {
+            headers.push(HeaderNode {
+                level,
+                text,
+                line: i + 1,
+            });
         }
     }
 
     headers
+}
+
+fn parse_atx_heading(line: &str) -> Option<(usize, String)> {
+    if !line.starts_with('#') {
+        return None;
+    }
+
+    let level = line.bytes().take_while(|b| *b == b'#').count();
+    if level == 0 || level > 6 {
+        return None;
+    }
+
+    let rest = &line[level..];
+    if rest.chars().next().is_some_and(|ch| !ch.is_whitespace()) {
+        return None;
+    }
+
+    Some((level, strip_atx_closing_sequence(rest).to_string()))
+}
+
+fn strip_atx_closing_sequence(rest: &str) -> &str {
+    let text = rest.trim();
+    let without_trailing_space = text.trim_end_matches([' ', '\t']);
+    let without_closing_hashes = without_trailing_space.trim_end_matches('#');
+    if without_closing_hashes.len() == without_trailing_space.len() {
+        return text;
+    }
+
+    if without_closing_hashes.is_empty()
+        || without_closing_hashes
+            .chars()
+            .last()
+            .is_some_and(|ch| ch.is_whitespace())
+    {
+        without_closing_hashes.trim_end_matches([' ', '\t'])
+    } else {
+        text
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{HeaderNode, parse_headers};
+
+    #[test]
+    fn outline_atx_heading_scan_supports_empty_tab_and_closing_sequence() {
+        let headers = parse_headers(
+            "\
+#
+##\tTabbed
+### Title ###
+#### Keep#
+# ###
+",
+        );
+
+        assert_eq!(
+            headers,
+            vec![
+                HeaderNode {
+                    level: 1,
+                    text: String::new(),
+                    line: 1,
+                },
+                HeaderNode {
+                    level: 2,
+                    text: "Tabbed".to_string(),
+                    line: 2,
+                },
+                HeaderNode {
+                    level: 3,
+                    text: "Title".to_string(),
+                    line: 3,
+                },
+                HeaderNode {
+                    level: 4,
+                    text: "Keep#".to_string(),
+                    line: 4,
+                },
+                HeaderNode {
+                    level: 1,
+                    text: String::new(),
+                    line: 5,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn outline_atx_heading_scan_skips_code_and_invalid_openers() {
+        let headers = parse_headers(
+            "\
+```md
+# fenced
+```
+####### too-many
+    # indented-code
+   ## allowed
+",
+        );
+
+        assert_eq!(
+            headers,
+            vec![HeaderNode {
+                level: 2,
+                text: "allowed".to_string(),
+                line: 6,
+            }]
+        );
+    }
 }
 
 #[component]
@@ -87,24 +184,38 @@ pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl 
 
                     let text = header.text.clone();
                     let title_text = text.clone();
+                    let aria_text = text.clone();
                     let rendered = render_outline_inline(&text);
                     let padding = format!("padding-left: {}px", (header.level - 1) * 10 + 8);
 
                     view! {
-                        <div
+                        <button
+                            type="button"
+                            data-deve-outline-heading-item="true"
+                            data-deve-outline-heading-level=header.level.to_string()
+                            data-deve-outline-heading-line=line.to_string()
                             class=format!(
-                                "min-h-8 py-1.5 pr-2 text-xs cursor-pointer rounded transition-colors truncate flex items-center {}",
+                                "min-h-8 w-full py-1.5 pr-2 text-left text-xs cursor-pointer rounded transition-colors truncate flex items-center {}",
                                 interactive_item_state_class(false, true),
                             )
                             style={padding}
                             on:click=move |_| on_click.run(line)
-                            title={title_text}
+                            title=move || outline_heading_label(locale.get(), &title_text, line)
+                            aria-label=move || outline_heading_label(locale.get(), &aria_text, line)
                         >
                             {rendered}
-                        </div>
+                        </button>
                     }
                 }
             />
         </div>
+    }
+}
+
+fn outline_heading_label(locale: Locale, text: &str, line: usize) -> String {
+    if text.is_empty() {
+        t::sidebar::empty_outline_heading(locale, line)
+    } else {
+        text.to_string()
     }
 }

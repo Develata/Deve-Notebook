@@ -133,6 +133,7 @@ EditorBufferChanged
 
 - render refresh 只能消费 editor projection，不得直接改 ledger authority。
 - outline、widget、preview 必须基于同一份 confirmed+pending buffer 构建。
+- ATX h1/h2/h3 在主编辑器中必须作为同一行级 projection 应用字号、粗细与行高；空标题与非空标题不得因为语法标记显示/隐藏而回落到正文尺寸，也不得叠加双倍缩放。
 
 ## 4. Parsing Contract
 
@@ -287,12 +288,14 @@ Baseline contract 的行内支持集合：
 - 若未注册 action，允许显示空状态，但不得报错中断渲染。
 - 轻量 HTML 渲染器只承担 wrapper 与可选 apply button 语义；完整 toolbar 属于 CodeMirror adapter 路径，不应混为同一实现。
 
-### 6.5 Outline Projection
+### 6.5 Outline Projection {#outline-projection}
 
 - outline 必须从解析后的 heading projection 导出。
 - outline 渲染不得发明新语义。
 - 不受支持的 inline syntax 在 outline 中必须按普通文本保留。
 - outline heading scan 只按轻量解析器处理：跳过 fenced code，支持 heading 层级与 inline code/math/strong/em/del projection；不支持的 `==highlight==` 保留为普通文本。
+- outline heading scan 的 ATX 标题识别必须与主编辑器 baseline 保持一致：支持 `#` 空标题、space/tab
+  分隔、可选 closing `#` 序列剥离；fenced code 内的 `#` 与四空格缩进代码样式行不得进入 outline。
 
 ### 6.6 Hybrid / Frontmatter / Preview Status
 

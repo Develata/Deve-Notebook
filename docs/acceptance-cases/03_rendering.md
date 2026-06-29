@@ -50,6 +50,7 @@
     - ui_assert: nonempty_editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
     - ui_assert: markdown_body_empty_heading_heights_distinct true
     - ui_assert: nonempty_heading_keeps_layered_height true
+    - ui_assert: nonempty_heading_font_scales_match_levels true
     - ui_assert: nonempty_heading_not_double_scaled true
 
 - case_id: RENDER-CURSOR-001
@@ -198,4 +199,6 @@
   assertions:
     - ui_assert: outline_contains_math true
     - ui_assert: outline_treats_highlight_as_text true
+    - ui_assert: outline_atx_empty_tab_and_closing_headings_supported true
+    - ui_assert: outline_heading_items_are_buttons true
 ```
