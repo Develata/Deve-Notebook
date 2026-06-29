@@ -20,6 +20,9 @@ pub(super) fn SurfaceDocumentRow(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let doc_id = tab.doc_id;
+    let row_label_title = tab.title.clone();
+    let close_title_label = tab.title.clone();
+    let close_aria_label = tab.title.clone();
     view! {
         <div
             data-deve-mobile-surface-row="document"
@@ -34,7 +37,9 @@ pub(super) fn SurfaceDocumentRow(
                 data-deve-mobile-touch-target=mobile_surface_row_touch_target()
                 class=move || mobile_surface_row_class(document_row_active(active_tab.get(), doc_id))
                 title=tab.tooltip.clone()
-                aria-label=move || t::common::document_tab(locale.get())
+                aria-label=move || {
+                    surface_row_aria_label(t::common::document_tab(locale.get()), &row_label_title)
+                }
                 aria-current=move || mobile_surface_current_state(document_row_active(
                     active_tab.get(),
                     doc_id,
@@ -49,8 +54,12 @@ pub(super) fn SurfaceDocumentRow(
                 data-deve-mobile-surface-action="close_document"
                 data-deve-mobile-touch-target=mobile_surface_close_touch_target()
                 class=mobile_surface_close_button_class()
-                title=move || t::common::close_tab(locale.get())
-                aria-label=move || t::common::close_tab(locale.get())
+                title=move || {
+                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_title_label)
+                }
+                aria-label=move || {
+                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_aria_label)
+                }
                 on:click=move |ev| {
                     ev.stop_propagation();
                     on_close.run(());
@@ -73,6 +82,9 @@ pub(super) fn SurfaceDiffRow(
     let key_for_active_attr = tab.key.clone();
     let key_for_active_class = tab.key.clone();
     let key_for_current_attr = tab.key.clone();
+    let row_label_title = tab.title.clone();
+    let close_title_label = tab.title.clone();
+    let close_aria_label = tab.title.clone();
     view! {
         <div
             data-deve-mobile-surface-row="diff"
@@ -92,7 +104,9 @@ pub(super) fn SurfaceDiffRow(
                     ))
                 }
                 title=tab.tooltip.clone()
-                aria-label=move || t::common::diff_tab(locale.get())
+                aria-label=move || {
+                    surface_row_aria_label(t::common::diff_tab(locale.get()), &row_label_title)
+                }
                 aria-current=move || mobile_surface_current_state(diff_row_active(
                     active_tab.get(),
                     &key_for_current_attr,
@@ -107,8 +121,12 @@ pub(super) fn SurfaceDiffRow(
                 data-deve-mobile-surface-action="close_diff"
                 data-deve-mobile-touch-target=mobile_surface_close_touch_target()
                 class=mobile_surface_close_button_class()
-                title=move || t::common::close_tab(locale.get())
-                aria-label=move || t::common::close_tab(locale.get())
+                title=move || {
+                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_title_label)
+                }
+                aria-label=move || {
+                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_aria_label)
+                }
                 on:click=move |ev| {
                     ev.stop_propagation();
                     on_close.run(());
@@ -128,10 +146,20 @@ fn diff_row_active(active_tab: Option<EditorTabKey>, key: &str) -> bool {
     matches!(active_tab, Some(EditorTabKey::Diff(active_key)) if active_key == key)
 }
 
+fn surface_row_aria_label(surface_label: &str, title: &str) -> String {
+    let title = title.trim();
+    if title.is_empty() {
+        surface_label.to_string()
+    } else {
+        format!("{surface_label}: {title}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{diff_row_active, document_row_active};
+    use super::{diff_row_active, document_row_active, surface_row_aria_label};
     use crate::components::editor_tabs::EditorTabKey;
+    use crate::i18n::{Locale, t};
     use deve_core::models::DocId;
 
     #[test]
@@ -168,5 +196,25 @@ mod tests {
             "diff-a"
         ));
         assert!(!diff_row_active(None, "diff-a"));
+    }
+
+    #[test]
+    fn row_aria_label_includes_visible_surface_title() {
+        assert_eq!(
+            surface_row_aria_label(t::common::document_tab(Locale::Zh), "notes/a.md"),
+            format!("{}: notes/a.md", t::common::document_tab(Locale::Zh))
+        );
+        assert_eq!(
+            surface_row_aria_label(t::common::diff_tab(Locale::En), "src/lib.rs"),
+            "Diff tab: src/lib.rs"
+        );
+        assert_ne!(
+            surface_row_aria_label(t::common::document_tab(Locale::En), "a.md"),
+            surface_row_aria_label(t::common::document_tab(Locale::En), "b.md")
+        );
+        assert_eq!(
+            surface_row_aria_label(t::common::document_tab(Locale::En), "  "),
+            t::common::document_tab(Locale::En)
+        );
     }
 }
