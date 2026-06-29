@@ -15,8 +15,8 @@ use self::model::{
     mobile_surface_close_button_class, mobile_surface_close_touch_target,
     mobile_surface_expanded_state, mobile_surface_sheet_visible, mobile_surface_summary,
     mobile_surface_summary_badge_text, mobile_surface_summary_title_class,
-    mobile_surface_switcher_button_class, mobile_surface_switcher_touch_target,
-    mobile_surface_type_label_marker,
+    mobile_surface_switcher_button_class, mobile_surface_switcher_next_open,
+    mobile_surface_switcher_touch_target, mobile_surface_type_label_marker,
 };
 use self::rows::{SurfaceDiffRow, SurfaceDocumentRow};
 
@@ -67,7 +67,13 @@ pub fn MobileSurfaceSwitcher(
                     aria-label=move || t::common::switch_open_tabs(locale.get())
                     aria-haspopup="dialog"
                     aria-expanded=move || mobile_surface_expanded_state(sheet_visible.get())
-                    on:click=move |_| set_open.set(true)
+                    on:click=move |_| {
+                        set_open.set(mobile_surface_switcher_next_open(
+                            open.get_untracked(),
+                            drawer_open.get_untracked(),
+                            has_tabs.get_untracked(),
+                        ));
+                    }
                 >
                     {move || {
                         match summary.get().map(|item| item.kind) {

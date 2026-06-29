@@ -480,6 +480,8 @@ case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "drawer_close_buttons"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "close_sheet"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_surface_sheet_visible false
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_focus: "open_switcher"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_keypress: "Enter"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "mobile_surface_document_row"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: editor_visible true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "mobile_surface_diff_row"
@@ -490,6 +492,7 @@ case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_sheet_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_runtime_transition_close_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_drawer_close_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_switcher_keyboard_toggle_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_touch_targets_min_size_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_diff_restore_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_close_diff_keeps_source_control_state true
@@ -518,6 +521,7 @@ contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-dev
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="diff"
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_summary_prefers_active_diff()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_sheet_gate_closes_for_drawer_or_empty_tabs()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_switcher_toggle_respects_sheet_gate()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_targets_are_at_least_44px()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_close_buttons_are_at_least_44px()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_target_markers_are_stable()

@@ -20,6 +20,11 @@
     - ui_click: "open_switcher"
     - ui_click: "close_sheet"
     - ui_assert: mobile_surface_sheet_visible false
+    - ui_focus: "open_switcher"
+    - ui_keypress: "Enter"
+    - ui_assert: mobile_surface_sheet_visible true
+    - ui_keypress: "Enter"
+    - ui_assert: mobile_surface_sheet_visible false
     - ui_click: "open_switcher"
     - ui_click: "mobile_surface_document_row"
     - ui_assert: editor_visible true
@@ -34,6 +39,7 @@
     - cli_assert: mobile_surface_sheet_marker_bound true
     - cli_assert: mobile_surface_runtime_transition_close_bound true
     - cli_assert: mobile_surface_drawer_close_bound true
+    - cli_assert: mobile_surface_switcher_keyboard_toggle_bound true
     - cli_assert: mobile_surface_touch_targets_min_size_bound true
     - cli_assert: mobile_surface_diff_restore_bound true
     - cli_assert: mobile_surface_close_diff_keeps_source_control_state true

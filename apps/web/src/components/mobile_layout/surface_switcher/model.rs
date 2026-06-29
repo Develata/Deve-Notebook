@@ -55,6 +55,18 @@ pub(crate) fn mobile_surface_sheet_visible(open: bool, drawer_open: bool, has_ta
     open && !drawer_open && has_tabs
 }
 
+pub(crate) fn mobile_surface_switcher_next_open(
+    open: bool,
+    drawer_open: bool,
+    has_tabs: bool,
+) -> bool {
+    if drawer_open || !has_tabs {
+        return false;
+    }
+
+    !open
+}
+
 pub(crate) fn mobile_surface_expanded_state(sheet_visible: bool) -> &'static str {
     if sheet_visible { "true" } else { "false" }
 }
@@ -123,8 +135,8 @@ mod tests {
         mobile_surface_current_state, mobile_surface_expanded_state, mobile_surface_row_class,
         mobile_surface_row_touch_target, mobile_surface_sheet_visible, mobile_surface_summary,
         mobile_surface_summary_badge_text, mobile_surface_summary_title_class,
-        mobile_surface_switcher_button_class, mobile_surface_switcher_touch_target,
-        mobile_surface_type_label_marker,
+        mobile_surface_switcher_button_class, mobile_surface_switcher_next_open,
+        mobile_surface_switcher_touch_target, mobile_surface_type_label_marker,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -173,6 +185,15 @@ mod tests {
         assert!(!mobile_surface_sheet_visible(true, true, true));
         assert!(!mobile_surface_sheet_visible(true, false, false));
         assert!(!mobile_surface_sheet_visible(false, false, true));
+    }
+
+    #[test]
+    fn mobile_surface_switcher_toggle_respects_sheet_gate() {
+        assert!(mobile_surface_switcher_next_open(false, false, true));
+        assert!(!mobile_surface_switcher_next_open(true, false, true));
+        assert!(!mobile_surface_switcher_next_open(false, true, true));
+        assert!(!mobile_surface_switcher_next_open(false, false, false));
+        assert!(!mobile_surface_switcher_next_open(true, true, false));
     }
 
     #[test]
