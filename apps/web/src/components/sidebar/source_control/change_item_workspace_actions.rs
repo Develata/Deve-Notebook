@@ -28,6 +28,7 @@ pub fn ChangeItemWorkspaceActions(
             <button
                 type="button"
                 class="p-0.5 hover:bg-active rounded text-secondary"
+                data-deve-sc-action="open-diff"
                 disabled=move || {
                     !can_open_change_item_diff(
                         core.current_repo_id.get().is_some(),
@@ -48,6 +49,7 @@ pub fn ChangeItemWorkspaceActions(
         <button
             type="button"
             class="p-0.5 hover:bg-active rounded text-secondary"
+            data-deve-sc-action="discard"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::discard_changes(locale.get())
             on:click=move |ev| {
@@ -64,6 +66,7 @@ pub fn ChangeItemWorkspaceActions(
         <button
             type="button"
             class="p-0.5 hover:bg-active rounded text-secondary"
+            data-deve-sc-action="stage"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::stage_changes(locale.get())
             on:click=move |ev| {

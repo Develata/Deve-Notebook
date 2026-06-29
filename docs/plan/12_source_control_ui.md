@@ -106,7 +106,7 @@ HistoryOrGraphSecondary
 - 点击 row 默认打开 diff。
 - unstaged row 的 inline action 是 `Stage`；可提供 `Discard`。
 - staged row 的 inline action 是 `Unstage`。
-- confirmed ledger row 的 inline action 不得使用 `Stage` / `Discard` 文案；首版只提供打开 diff。
+- confirmed ledger row 的 inline action 只能是 `Open Diff`；不得使用 `Stage` / `Discard` / `Revert` 文案或语义；首版只提供打开 diff。
 - section header 可提供 `Stage All` / `Unstage All` / `Discard All`。
 - destructive actions 必须经 source-control runtime gate；必要时需要 explicit confirmation。
 - remote readonly branch 中，row actions 必须 disabled 或替换为 read-only explanation。

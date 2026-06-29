@@ -4,6 +4,7 @@
 //!
 use crate::components::icons::*;
 use crate::components::sidebar::source_control::change_item_conflict_actions::ChangeItemConflictActions;
+use crate::components::sidebar::source_control::change_item_read_gate::can_open_change_item_diff;
 use crate::components::sidebar::source_control::change_item_workspace_actions::ChangeItemWorkspaceActions;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
@@ -22,17 +23,42 @@ pub fn ChangeItemActions(
     can_open_diff: bool,
     action_busy: StoredValue<Arc<AtomicBool>>,
 ) -> impl IntoView {
+    let entry_for_open = StoredValue::new(entry.clone());
     let entry_for_unstage = StoredValue::new(entry.clone());
 
     view! {
         {move || {
             if entry.domain == ChangeDomain::ConfirmedLedger {
-                view! {}.into_any()
+                view! {
+                    <Show when=move || can_open_diff>
+                        <button
+                            type="button"
+                            class="p-0.5 hover:bg-active rounded text-secondary"
+                            data-deve-sc-action="open-diff"
+                            disabled=move || {
+                                !can_open_change_item_diff(
+                                    core.current_repo_id.get().is_some(),
+                                    core.pending_branch_switch.get().is_some(),
+                                    core.pending_repo_switch.get().is_some(),
+                                    core.read_block.get().is_some(),
+                                )
+                            }
+                            title=move || t::source_control::open_file(locale.get())
+                            on:click=move |ev| {
+                                ev.stop_propagation();
+                                core.on_get_doc_diff.run(entry_for_open.get_value());
+                            }
+                        >
+                            <ExternalLink class="w-3.5 h-3.5" />
+                        </button>
+                    </Show>
+                }.into_any()
             } else if is_staged {
                 view! {
                     <button
                         type="button"
                         class="p-0.5 hover:bg-active rounded text-secondary"
+                        data-deve-sc-action="unstage"
                         disabled=move || !core.can_write.get()
                         title=move || t::source_control::unstage_changes(locale.get())
                         on:click=move |ev| {

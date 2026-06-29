@@ -36,7 +36,7 @@
 
 - 程序内编辑或 CLI 受控写入 ack 后，变化已经进入 ledger，不应出现在工作区 pending 列表。
 - 若这些变化尚未被最新 Source Control commit anchor 覆盖，Source Control 应展示 `Confirmed Ledger Changes`。
-- 该分组不提供 Stage / Discard；首版 commit 一次性覆盖全部 confirmed ledger changes。
+- 该分组不提供 Stage / Discard / Revert；首版只提供打开 diff，commit 一次性覆盖全部 confirmed ledger changes。
 - confirmed-only commit 成功后，该分组应清空并刷新 history。
 
 ### 3. Diff / History / Graph
@@ -174,6 +174,6 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 
 期望结果：
 
-- confirmed row 不显示 Stage / Discard。
+- confirmed row 不显示 Stage / Discard / Revert，只显示打开 diff 的只读动作。
 - diff 基于 latest commit anchor 与当前 ledger head。
 - commit 成功后 `Confirmed Ledger Changes` 清空，history 增加新 commit。

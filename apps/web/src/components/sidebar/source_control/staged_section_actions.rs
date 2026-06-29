@@ -2,6 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
+use super::action_tray::SECTION_ACTION_TRAY_CLASS;
 use crate::components::icons::Minus;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
@@ -22,13 +23,15 @@ pub fn StagedSectionActions(
     view! {
         <div class="flex items-center gap-2">
             <div
-                class="flex items-center gap-1 text-primary md:hidden md:group-hover:!flex"
+                class=SECTION_ACTION_TRAY_CLASS
+                data-deve-sc-action-tray="section"
                 on:click=move |e| e.stop_propagation()
             >
                 <Show when=move || write_block.get().is_none()>
                     <button
                         type="button"
                         class="p-0.5 hover:bg-active rounded"
+                        data-deve-sc-action="unstage-all"
                         title=move || t::source_control::unstage_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()
                         on:click=move |_| {
