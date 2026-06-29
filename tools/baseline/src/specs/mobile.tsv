@@ -51,6 +51,7 @@ contains	apps/web/src/components/mobile_layout/effects.rs	fn mobile_toolbar_keyb
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar="accessory"
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-keyboard-offset=move || keyboard_offset.get().to_string()
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar-history-target=TOOLBAR_HISTORY_TARGET
+contains	apps/web/src/components/mobile_layout/toolbar.rs	t::common::indent(locale.get())
 contains	apps/web/src/components/mobile_layout/toolbar.rs	fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard()
 contains	apps/web/src/components/mobile_layout/toolbar.rs	fn mobile_toolbar_history_actions_stay_front_loaded_for_390px()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-005

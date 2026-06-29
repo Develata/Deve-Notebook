@@ -119,8 +119,8 @@ pub fn MobileAccessoryToolbar(
                         class=base
                         on:click=move |_| on_tab.run(())
                         disabled=disabled
-                        title=move || t::common::tab(locale.get())
-                        aria-label=move || t::common::tab(locale.get())
+                        title=move || t::common::indent(locale.get())
+                        aria-label=move || t::common::indent(locale.get())
                     >
                         "⇥"
                     </button>

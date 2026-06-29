@@ -79,13 +79,6 @@ pub fn unpin(locale: Locale) -> &'static str {
     }
 }
 
-pub fn tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Tab",
-        Locale::Zh => "制表",
-    }
-}
-
 pub fn document_tab(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Document tab",
@@ -104,6 +97,13 @@ pub fn close_tab(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Close tab",
         Locale::Zh => "关闭标签页",
+    }
+}
+
+pub fn indent(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Indent",
+        Locale::Zh => "缩进",
     }
 }
 
@@ -234,6 +234,8 @@ mod tests {
         assert_eq!(diff_tab(Locale::Zh), "差异标签页");
         assert_eq!(close(Locale::Zh), "关闭");
         assert_eq!(close_tab(Locale::Zh), "关闭标签页");
+        assert_eq!(indent(Locale::En), "Indent");
+        assert_eq!(indent(Locale::Zh), "缩进");
         assert_eq!(open_tabs(Locale::En), "Open tabs");
         assert_eq!(open_tabs(Locale::Zh), "已打开标签页");
         assert_eq!(switch_open_tabs(Locale::Zh), "切换已打开标签页");
