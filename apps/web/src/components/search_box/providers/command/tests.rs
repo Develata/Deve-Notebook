@@ -89,6 +89,37 @@ fn command_provider_matches_visible_unavailable_reason() {
 }
 
 #[test]
+fn command_provider_detail_includes_unavailable_enabled_condition() {
+    let reason = "Unavailable: use the CLI";
+    let enabled_when = "CLI-only notice; source_control.git_bridge=off";
+    let provider = CommandProvider::new(
+        vec![
+            unavailable_command("git_status", "Git: Status", reason)
+                .with_enabled_when(enabled_when),
+        ],
+        Locale::En,
+    );
+
+    let results = provider.search(">source_control.git_bridge=off");
+
+    let detail = results
+        .first()
+        .and_then(|result| result.detail.as_deref())
+        .expect("command detail");
+    assert!(detail.contains(reason));
+    assert!(detail.contains(enabled_when));
+}
+
+#[test]
+fn command_detail_deduplicates_unavailable_reason_enabled_condition() {
+    let reason = "Unavailable: use the CLI";
+    let command =
+        unavailable_command("git_status", "Git: Status", reason).with_enabled_when(reason);
+
+    assert_eq!(command.detail_text(), reason);
+}
+
+#[test]
 fn command_provider_detail_includes_group_shortcut_and_enabled_condition() {
     let provider = CommandProvider::new(
         vec![

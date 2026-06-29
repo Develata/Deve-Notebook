@@ -126,10 +126,17 @@ impl Command {
     }
 
     pub fn detail_text(&self) -> String {
-        self.availability
-            .reason()
-            .map(str::to_string)
-            .unwrap_or_else(|| self.enabled_when.clone())
+        match self.availability.reason() {
+            Some(reason)
+                if !self.enabled_when.is_empty()
+                    && self.enabled_when != "Unavailable"
+                    && self.enabled_when != reason =>
+            {
+                format!("{reason} · {}", self.enabled_when)
+            }
+            Some(reason) => reason.to_string(),
+            None => self.enabled_when.clone(),
+        }
     }
 
     pub fn metadata_text(&self) -> String {

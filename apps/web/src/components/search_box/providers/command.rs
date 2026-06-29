@@ -77,17 +77,12 @@ fn command_result_detail(cmd: &Command, locale: Locale) -> String {
     {
         parts.push(shortcut.clone());
     }
-    let detail = cmd
-        .availability
-        .reason()
-        .map(str::to_string)
-        .unwrap_or_else(|| {
-            if cmd.enabled_when.is_empty() {
-                t::search::command_detail(locale).to_string()
-            } else {
-                cmd.enabled_when.clone()
-            }
-        });
+    let detail = cmd.detail_text();
+    let detail = if detail.is_empty() {
+        t::search::command_detail(locale).to_string()
+    } else {
+        detail
+    };
     if !detail.is_empty() {
         parts.push(detail);
     }

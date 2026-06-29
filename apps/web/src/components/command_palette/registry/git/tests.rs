@@ -195,6 +195,30 @@ fn git_status_command_sets_cli_only_notice() {
 }
 
 #[test]
+fn git_status_detail_text_exposes_bridge_mode() {
+    let owner = Owner::new();
+    owner.with(|| {
+        provide_source_control_context();
+        let ws = WsService::new_for_test(ConnectionStatus::Connected);
+        ws.complete_foreground_node_role_reprobe("main", "off");
+        provide_session_client(ws);
+        let (show, set_show) = signal(true);
+        let command = create_commands(set_show)
+            .get_untracked()
+            .into_iter()
+            .find(|command| command.id == "git_status")
+            .expect("git status command");
+
+        let reason = command.availability.reason().expect("unavailable reason");
+        let detail = command.detail_text();
+
+        assert!(detail.contains(reason));
+        assert!(detail.contains("source_control.git_bridge=off"));
+        assert!(show.get_untracked());
+    });
+}
+
+#[test]
 fn git_mirror_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
