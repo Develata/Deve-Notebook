@@ -491,6 +491,7 @@ case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_type_label_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_sheet_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_runtime_transition_close_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: editor_tab_runtime_resets_on_branch_scope_change true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_drawer_close_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_switcher_keyboard_toggle_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_touch_targets_min_size_bound true
@@ -503,9 +504,11 @@ contains	docs/plan/11_ui_design/03_mobile.md	docs/acceptance-cases/17_mobile_sur
 contains	docs/plan/11_ui_design/03_mobile.md	顶部当前 surface 胶囊 **MUST** 位于 sync banner 与 content stack 之间
 contains	docs/features/08_ui_design_03_mobile.md	顶部当前 surface 胶囊应显示当前文档或差异
 contains	apps/web/src/components/editor_tabs.rs	11_ui_design/03_mobile#mobile-surface-switcher
+contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn editor_tab_runtime_scope(
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn scope_changed(
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn active_editor_tab_key(
-contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_resets_on_repo_or_scope_change()
+contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_resets_on_repo_branch_or_scope_change()
+contains	apps/web/src/components/editor_tabs/tests.rs	PeerId::new("peer-a")
 contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_prefers_active_diff_over_document()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-switcher="summary"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-sheet="open"

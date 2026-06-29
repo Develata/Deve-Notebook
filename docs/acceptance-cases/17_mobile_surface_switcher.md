@@ -38,6 +38,7 @@
     - cli_assert: mobile_surface_type_label_marker_bound true
     - cli_assert: mobile_surface_sheet_marker_bound true
     - cli_assert: mobile_surface_runtime_transition_close_bound true
+    - cli_assert: editor_tab_runtime_resets_on_branch_scope_change true
     - cli_assert: mobile_surface_drawer_close_bound true
     - cli_assert: mobile_surface_switcher_keyboard_toggle_bound true
     - cli_assert: mobile_surface_touch_targets_min_size_bound true

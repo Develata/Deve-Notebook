@@ -8,12 +8,13 @@ use super::{
         remove_diff_tab, remove_document_tab, reorder_visible_tab, touch_document_access_order,
         upsert_document_tab, upsert_visible_tab_order,
     },
-    policy::active_editor_tab_key,
-    policy::scope_changed,
-    policy::should_clear_diff_on_document_change,
+    policy::{
+        active_editor_tab_key, editor_tab_runtime_scope, scope_changed,
+        should_clear_diff_on_document_change,
+    },
 };
 use crate::hooks::use_core::diff_session::DiffSessionWire;
-use deve_core::models::DocId;
+use deve_core::models::{DocId, PeerId};
 use leptos::prelude::{GetUntracked, signal};
 
 #[test]
@@ -315,12 +316,24 @@ fn mobile_surface_close_diff_keeps_source_control_state() {
 }
 
 #[test]
-fn editor_tab_runtime_resets_on_repo_or_scope_change() {
-    let original = (Some("repo-a".to_string()), 1);
+fn editor_tab_runtime_resets_on_repo_branch_or_scope_change() {
+    let original = editor_tab_runtime_scope(Some("repo-a".to_string()), 1, None);
+    let shadow_branch =
+        editor_tab_runtime_scope(Some("repo-a".to_string()), 1, Some(PeerId::new("peer-a")));
 
-    assert!(!scope_changed(&original, &(Some("repo-a".to_string()), 1)));
-    assert!(scope_changed(&original, &(Some("repo-b".to_string()), 1)));
-    assert!(scope_changed(&original, &(Some("repo-a".to_string()), 2)));
+    assert!(!scope_changed(
+        &original,
+        &editor_tab_runtime_scope(Some("repo-a".to_string()), 1, None),
+    ));
+    assert!(scope_changed(
+        &original,
+        &editor_tab_runtime_scope(Some("repo-b".to_string()), 1, None),
+    ));
+    assert!(scope_changed(
+        &original,
+        &editor_tab_runtime_scope(Some("repo-a".to_string()), 2, None),
+    ));
+    assert!(scope_changed(&original, &shadow_branch));
 }
 
 #[test]

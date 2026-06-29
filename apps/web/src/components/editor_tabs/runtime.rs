@@ -8,7 +8,10 @@ use super::ops::{
     reorder_visible_tab, touch_document_access_order, upsert_diff_tab, upsert_document_tab,
     upsert_visible_tab_order,
 };
-use super::policy::{active_editor_tab_key, scope_changed, should_clear_diff_on_document_change};
+use super::policy::{
+    active_editor_tab_key, editor_tab_runtime_scope, scope_changed,
+    should_clear_diff_on_document_change,
+};
 use super::{
     DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey,
     diff_tab_from_session, document_tab_from_docs,
@@ -74,15 +77,21 @@ pub(crate) fn create_editor_tab_runtime(
     let set_diff_content = inputs.source_control.set_diff_content;
     let current_repo_id = inputs.scope.current_repo_id;
     let current_scope_nonce = inputs.scope.current_scope_nonce;
+    let active_branch = inputs.scope.active_branch;
     let current_doc = inputs.document.current_doc;
-    let last_scope = StoredValue::new((
+    let last_scope = StoredValue::new(editor_tab_runtime_scope(
         current_repo_id.get_untracked(),
         current_scope_nonce.get_untracked(),
+        active_branch.get_untracked(),
     ));
     let last_current_doc = StoredValue::new(current_doc.get_untracked());
 
     Effect::new(move |_| {
-        let scope = (current_repo_id.get(), current_scope_nonce.get());
+        let scope = editor_tab_runtime_scope(
+            current_repo_id.get(),
+            current_scope_nonce.get(),
+            active_branch.get(),
+        );
         if !scope_changed(&last_scope.get_value(), &scope) {
             return;
         }

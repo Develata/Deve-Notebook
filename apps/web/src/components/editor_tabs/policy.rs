@@ -4,11 +4,21 @@
 
 use super::model::{EditorTabKey, diff_tab_key};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
-use deve_core::models::DocId;
+use deve_core::models::{DocId, PeerId};
+
+pub(crate) type EditorTabRuntimeScope = (Option<String>, u64, Option<PeerId>);
+
+pub(crate) fn editor_tab_runtime_scope(
+    repo_id: Option<String>,
+    scope_nonce: u64,
+    active_branch: Option<PeerId>,
+) -> EditorTabRuntimeScope {
+    (repo_id, scope_nonce, active_branch)
+}
 
 pub(crate) fn scope_changed(
-    previous: &(Option<String>, u64),
-    next: &(Option<String>, u64),
+    previous: &EditorTabRuntimeScope,
+    next: &EditorTabRuntimeScope,
 ) -> bool {
     previous != next
 }
