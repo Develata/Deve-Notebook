@@ -279,7 +279,7 @@ contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-ch
 contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_keyboard_sheet_stays_above_keyboard()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_bottom_bar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open.get()
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_chat_keyboard_hides_bottom_bar()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_chat_keyboard_hides_bottom_bar()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-013
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-013	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-013	run: cargo test -p deve_web mobile_chat_readability -- --nocapture
@@ -420,8 +420,8 @@ contains	apps/web/src/components/diff_view/mod.rs	fn mobile_diff_uses_mobile_dom
 contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_diff_hides_chat_chip_and_expanded_chat()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_accessory_toolbar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	mobile_accessory_toolbar_visible(
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_diff_hides_accessory_toolbar()
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_diff_keeps_accessory_toolbar_gate_strict()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_diff_hides_accessory_toolbar()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_diff_keeps_accessory_toolbar_gate_strict()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-018
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	run: cargo test -p deve_web mobile_diff_close -- --nocapture
@@ -528,7 +528,7 @@ contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surf
 contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surface_switcher_closes_for_pending_branch_or_repo_switch()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	11_ui_design/03_mobile#mobile-surface-switcher
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_surface_switcher_hides_bottom_bar()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_surface_switcher_hides_bottom_bar()
 contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_surface_switcher_hides_chat_sheet()
 contains	apps/web/style/_base.css	.cm-content
 contains	apps/web/style/_base.css	font-size: 16px;
