@@ -86,9 +86,9 @@ pub(crate) fn mobile_surface_summary_badge_text(
 
 pub(crate) fn mobile_surface_row_class(active: bool) -> &'static str {
     if active {
-        "flex h-11 w-full items-center gap-3 rounded-md bg-active px-3 text-left text-primary"
+        "flex h-11 min-w-0 flex-1 items-center gap-3 rounded-md bg-active px-3 text-left text-primary"
     } else {
-        "flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-secondary active:bg-hover"
+        "flex h-11 min-w-0 flex-1 items-center gap-3 rounded-md px-3 text-left text-secondary active:bg-hover"
     }
 }
 
@@ -190,8 +190,15 @@ mod tests {
     #[test]
     fn mobile_surface_touch_targets_are_at_least_44px() {
         assert!(mobile_surface_switcher_button_class().contains("h-11"));
-        assert!(mobile_surface_row_class(false).contains("h-11"));
-        assert!(mobile_surface_row_class(true).contains("h-11"));
+        for class in [
+            mobile_surface_row_class(false),
+            mobile_surface_row_class(true),
+        ] {
+            assert!(class.contains("h-11"));
+            assert!(class.contains("min-w-0"));
+            assert!(class.contains("flex-1"));
+            assert!(!class.contains("w-full"));
+        }
     }
 
     #[test]
