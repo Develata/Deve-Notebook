@@ -153,7 +153,7 @@ fn filter_commands_matches_visible_unavailable_reason() {
             "establish_branch",
             "P2P: Establish Branch",
             "Unavailable: no branch creation backend",
-            Callback::new(|_| {}),
+            || {},
         )
         .with_group("Peer")
         .with_enabled_when("Future backend contract"),

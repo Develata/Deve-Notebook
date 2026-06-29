@@ -53,14 +53,10 @@ fn merge_peer_source_command(
 ) -> Command {
     let title = format!("{}: {}", (t::command_palette::merge_peer)(locale), peer_id);
     let command_id = format!("merge_peer_{}", peer_id);
-    Command::available(
-        command_id,
-        title,
-        Callback::new(move |_| {
-            sync.on_merge_peer.run(peer_id.clone());
-            set_show.set(false);
-        }),
-    )
+    Command::available(command_id, title, move || {
+        sync.on_merge_peer.run(peer_id.clone());
+        set_show.set(false);
+    })
     .with_group((t::command_palette::group_peer)(locale))
     .with_enabled_when((t::command_palette::enabled_peer_merge_source)(locale))
 }
@@ -74,9 +70,9 @@ fn merge_peer_unavailable_command(
         "merge_peer",
         (t::command_palette::merge_peer)(locale),
         reason,
-        Callback::new(move |_| {
+        move || {
             set_show.set(false);
-        }),
+        },
     )
     .with_group((t::command_palette::group_peer)(locale))
     .with_enabled_when(reason)

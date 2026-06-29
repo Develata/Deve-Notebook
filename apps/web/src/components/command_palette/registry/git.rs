@@ -54,14 +54,14 @@ pub(super) fn git_import_command(
         "git_import_changes",
         (t::command_palette::git_import_changes)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
                 set_notice,
                 sidebar_control,
                 SourceControlNotice::git_import_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
@@ -77,14 +77,14 @@ pub(super) fn git_status_command(
         "git_status",
         (t::command_palette::git_status)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
                 set_notice,
                 sidebar_control,
                 SourceControlNotice::git_status_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
@@ -100,14 +100,14 @@ pub(super) fn git_mirror_command(
         "git_mirror",
         (t::command_palette::git_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
                 set_notice,
                 sidebar_control,
                 SourceControlNotice::git_mirror_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
@@ -123,14 +123,14 @@ pub(super) fn git_export_command(
         "git_export_mirror",
         (t::command_palette::git_export_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
                 set_notice,
                 sidebar_control,
                 SourceControlNotice::git_export_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
@@ -146,14 +146,14 @@ pub(super) fn git_push_command(
         "git_push_mirror",
         (t::command_palette::git_push_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
                 set_notice,
                 sidebar_control,
                 SourceControlNotice::git_push_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
@@ -169,14 +169,14 @@ pub(super) fn git_repair_command(
         "git_repair_mirror",
         (t::command_palette::git_repair_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
                 set_notice,
                 sidebar_control,
                 SourceControlNotice::git_repair_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))

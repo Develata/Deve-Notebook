@@ -3,7 +3,6 @@
 //!
 use crate::components::command_palette::types::Command;
 use crate::i18n::{Locale, t};
-use leptos::prelude::*;
 
 fn disabled_command(
     id: &'static str,
@@ -11,7 +10,7 @@ fn disabled_command(
     reason: &'static str,
     group: &'static str,
 ) -> Command {
-    Command::unavailable(id, title, reason, Callback::new(|_| {}))
+    Command::unavailable(id, title, reason, || {})
         .with_group(group)
         .with_enabled_when(reason)
 }

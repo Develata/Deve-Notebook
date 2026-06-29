@@ -6,11 +6,11 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::{Callback, RwSignal, signal};
 
 fn command(id: &str, title: &str) -> Command {
-    Command::available(id, title, Callback::new(|_| {}))
+    Command::available(id.to_string(), title.to_string(), || {})
 }
 
 fn unavailable_command(id: &str, title: &str, reason: &str) -> Command {
-    Command::unavailable(id, title, reason, Callback::new(|_| {}))
+    Command::unavailable(id.to_string(), title.to_string(), reason.to_string(), || {})
 }
 
 #[test]

@@ -137,3 +137,43 @@ pub(super) fn build_keydown_handler(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::create_filtered_commands_memo;
+    use crate::i18n::Locale;
+    use leptos::prelude::{Callback, GetUntracked, RwSignal, Set, signal};
+    use leptos::reactive::owner::Owner;
+
+    #[test]
+    fn filtered_command_actions_survive_memo_recompute() {
+        let owner = Owner::new();
+
+        owner.with(|| {
+            let (query, set_query) = signal(String::new());
+            let (show_palette, set_show_palette) = signal(true);
+            let (settings_opened, set_settings_opened) = signal(false);
+            let locale = RwSignal::new(Locale::En);
+            let commands = create_filtered_commands_memo(
+                query.into(),
+                locale,
+                Callback::new(move |_| set_settings_opened.set(true)),
+                Callback::new(|_| {}),
+                set_show_palette,
+                None,
+            );
+            let settings = commands
+                .get_untracked()
+                .into_iter()
+                .find(|command| command.id == "settings")
+                .expect("settings command");
+
+            set_query.set("lang".to_string());
+            let _ = commands.get_untracked();
+            settings.action.run(());
+
+            assert!(settings_opened.get_untracked());
+            assert!(!show_palette.get_untracked());
+        });
+    }
+}

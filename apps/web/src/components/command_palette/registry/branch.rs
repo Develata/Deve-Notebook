@@ -18,7 +18,7 @@ pub(super) fn establish_branch_command(
         "establish_branch",
         (t::command_palette::establish_branch)(locale),
         (t::command_palette::establish_branch_unavailable_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             if let Some(set_notice) = set_notice {
                 set_notice.set(Some(SourceControlNotice::establish_branch_unavailable()));
             }
@@ -26,7 +26,7 @@ pub(super) fn establish_branch_command(
                 sidebar_control.show_view(SidebarView::SourceControl);
             }
             set_show.set(false);
-        }),
+        },
     )
     .with_group((t::command_palette::group_peer)(locale))
     .with_enabled_when((t::command_palette::establish_branch_unavailable_reason)(
@@ -49,8 +49,8 @@ mod tests {
     use deve_core::models::PeerId;
     use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
     use leptos::prelude::{
-        Callable, Callback, GetUntracked, ReadSignal, Set, Signal, WriteSignal, provide_context,
-        signal, use_context,
+        Callback, GetUntracked, ReadSignal, Set, Signal, WriteSignal, provide_context, signal,
+        use_context,
     };
     use leptos::reactive::owner::Owner;
 

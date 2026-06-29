@@ -48,10 +48,10 @@ pub fn create_static_commands(
         Command::available(
             "open",
             (t::command_palette::open_document)(locale),
-            Callback::new(move |_| {
+            move || {
                 on_open.run(());
                 // Do not close, as on_open re-purposes the search box
-            }),
+            },
         )
         .with_group((t::command_palette::group_navigation)(locale))
         .with_shortcut(t::command_palette::shortcut_ctrl_p())
@@ -59,23 +59,23 @@ pub fn create_static_commands(
         Command::available(
             "settings",
             (t::command_palette::open_settings)(locale),
-            Callback::new(move |_| {
+            move || {
                 on_settings.run(());
                 set_show.set(false);
-            }),
+            },
         )
         .with_group((t::command_palette::group_settings)(locale))
         .with_enabled_when((t::command_palette::enabled_local_settings)(locale)),
         Command::available(
             "lang",
             (t::command_palette::toggle_language)(locale),
-            Callback::new(move |_| {
+            move || {
                 locale_signal.update(|locale| {
                     *locale = locale.toggle();
                     persist_locale_preference(*locale);
                 });
                 set_show.set(false);
-            }),
+            },
         )
         .with_group((t::command_palette::group_settings)(locale))
         .with_shortcut(t::command_palette::shortcut_ctrl_l())
@@ -84,13 +84,13 @@ pub fn create_static_commands(
         Command::available(
             "switch_peer",
             (t::command_palette::switch_peer)(locale),
-            Callback::new(move |_| {
+            move || {
                 if let Some(search_control) = search_control {
                     search_control.set_mode.set("@".to_string());
                     search_control.set_show.set(true);
                 }
                 set_show.set(false);
-            }),
+            },
         )
         .with_group((t::command_palette::group_peer)(locale))
         .with_shortcut(t::command_palette::shortcut_ctrl_shift_k())
@@ -102,10 +102,10 @@ pub fn create_static_commands(
             Command::available(
                 "toggle_sidebar",
                 (t::command_palette::toggle_sidebar)(locale),
-                Callback::new(move |_| {
+                move || {
                     sidebar_control.toggle_visible();
                     set_show.set(false);
-                }),
+                },
             )
             .with_group((t::command_palette::group_layout)(locale))
             .with_shortcut(t::command_palette::shortcut_ctrl_b())
@@ -141,11 +141,11 @@ pub fn create_static_commands(
             Command::available(
                 "toggle_ai_chat",
                 (t::command_palette::toggle_ai_chat)(locale),
-                Callback::new(move |_| {
+                move || {
                     let current = chat_ctrl.chat_visible.get_untracked();
                     chat_ctrl.set_chat_visible.set(!current);
                     set_show.set(false);
-                }),
+                },
             )
             .with_group((t::command_palette::group_ai)(locale))
             .with_enabled_when((t::command_palette::enabled_local_ui)(locale)),

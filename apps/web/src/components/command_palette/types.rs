@@ -6,7 +6,7 @@
 
 #![allow(dead_code)] // is_file: 为文件搜索功能预留
 
-use leptos::prelude::*;
+use std::{fmt, sync::Arc};
 
 /// Command Palette entry availability.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -29,6 +29,29 @@ impl CommandAvailability {
 }
 
 /// 可以从面板执行的命令。
+#[derive(Clone)]
+pub struct CommandAction {
+    action: Arc<dyn Fn() + Send + Sync>,
+}
+
+impl CommandAction {
+    pub fn new(action: impl Fn() + Send + Sync + 'static) -> Self {
+        Self {
+            action: Arc::new(action),
+        }
+    }
+
+    pub fn run(&self, _: ()) {
+        (self.action)();
+    }
+}
+
+impl fmt::Debug for CommandAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("CommandAction(..)")
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Command {
     /// 命令的唯一标识符。
@@ -42,7 +65,7 @@ pub struct Command {
     /// 命令可用时的启用条件说明。
     pub enabled_when: String,
     /// 选中命令时执行的操作。
-    pub action: Callback<()>,
+    pub action: CommandAction,
     /// 该命令是否代表一个文件/文档。
     pub is_file: bool,
     /// 当前入口是否绑定可执行能力。
@@ -53,7 +76,7 @@ impl Command {
     pub fn available(
         id: impl Into<String>,
         title: impl Into<String>,
-        action: Callback<()>,
+        action: impl Fn() + Send + Sync + 'static,
     ) -> Self {
         Self {
             id: id.into(),
@@ -61,7 +84,7 @@ impl Command {
             group: "General".to_string(),
             shortcut: None,
             enabled_when: "Available".to_string(),
-            action,
+            action: CommandAction::new(action),
             is_file: false,
             availability: CommandAvailability::Available,
         }
@@ -71,7 +94,7 @@ impl Command {
         id: impl Into<String>,
         title: impl Into<String>,
         reason: impl Into<String>,
-        action: Callback<()>,
+        action: impl Fn() + Send + Sync + 'static,
     ) -> Self {
         Self {
             id: id.into(),
@@ -79,7 +102,7 @@ impl Command {
             group: "General".to_string(),
             shortcut: None,
             enabled_when: "Unavailable".to_string(),
-            action,
+            action: CommandAction::new(action),
             is_file: false,
             availability: CommandAvailability::Unavailable {
                 reason: reason.into(),
