@@ -71,7 +71,8 @@ HistoryOrGraphSecondary
 - 多 repo / provider 场景下才允许展开 repositories list。
 - `HistoryOrGraphSecondary` **SHOULD** 默认折叠或作为 secondary view；不得挤占 commit / changes primary flow。
 - `RepositoryContext`、`History` 与 `Graph` 等可折叠 secondary panel header 必须使用真实 `button`
-  语义并暴露 `aria-expanded`；它们只能展开/收起 view-local state，不得触发 source-control 写入。
+  语义并暴露 `aria-expanded` 与 `aria-controls`，被控制内容必须以稳定 `id` 常驻 DOM，并在折叠时
+  使用 `hidden` 隐藏；它们只能展开/收起 view-local state，不得触发 source-control 写入。
 - `Graph` 是只读 projection surface，不得写 ledger、workspace、source-control state 或 Git mirror state。
 
 ## 4. Resource Groups
@@ -87,7 +88,8 @@ HistoryOrGraphSecondary
 规则：
 
 - `Staged Changes`、`Changes` 与 `Confirmed Ledger Changes` 必须可见区分，并显示 count。
-- 可折叠 resource group header 必须使用真实 `button` 语义并暴露 `aria-expanded`；header 右侧的
+- 可折叠 resource group header 必须使用真实 `button` 语义并暴露 `aria-expanded` 与 `aria-controls`，
+  被控制内容必须以稳定 `id` 常驻 DOM，并在折叠时使用 `hidden` 隐藏；header 右侧的
   `Stage All` / `Unstage All` / `Discard All` 等 section action 必须是独立按钮，不能嵌套在折叠按钮内，也不能触发展开/收起。
 - `Changes` 中的条目表示 pending / working changes。
 - `Staged Changes` 中的条目表示即将进入 commit 的 staged entries。

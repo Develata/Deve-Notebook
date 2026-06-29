@@ -131,16 +131,40 @@ contains	apps/web/src/i18n/source_control/actions.rs	Ledger-confirmed changes ca
 contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	confirmed_ledger_hint(locale.get())
 contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	data-deve-sc-section-toggle="confirmed-ledger"
 contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	aria-controls="source-control-confirmed-ledger-panel"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	id="source-control-confirmed-ledger-panel"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	data-deve-sc-section-body="confirmed-ledger"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	hidden=move || !expanded.get()
 contains	apps/web/src/components/sidebar/source_control/staged_section.rs	data-deve-sc-section-toggle="staged"
 contains	apps/web/src/components/sidebar/source_control/staged_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	aria-controls="source-control-staged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	id="source-control-staged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	data-deve-sc-section-body="staged"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	hidden=move || !expanded.get()
 contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	data-deve-sc-section-toggle="unstaged"
 contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	aria-controls="source-control-unstaged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	id="source-control-unstaged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	data-deve-sc-section-body="unstaged"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	hidden=move || !expanded.get()
 contains	apps/web/src/components/sidebar/source_control/repositories.rs	data-deve-sc-panel-toggle="repositories"
 contains	apps/web/src/components/sidebar/source_control/repositories.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	aria-controls="source-control-repositories-panel"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	id="source-control-repositories-panel"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	data-deve-sc-panel-body="repositories"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	hidden=move || !expanded.get()
 contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-sc-panel-toggle="graph"
 contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	aria-controls="source-control-graph-panel"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	id="source-control-graph-panel"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-sc-panel-body="graph"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	hidden=move || !expanded.get()
 contains	apps/web/src/components/sidebar/source_control/history.rs	data-deve-sc-panel-toggle="history"
 contains	apps/web/src/components/sidebar/source_control/history.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/history.rs	aria-controls="source-control-history-panel"
+contains	apps/web/src/components/sidebar/source_control/history.rs	id="source-control-history-panel"
+contains	apps/web/src/components/sidebar/source_control/history.rs	data-deve-sc-panel-body="history"
+contains	apps/web/src/components/sidebar/source_control/history.rs	hidden=move || !expanded.get()
 contains	apps/web/src/components/sidebar/source_control/header.rs	data-deve-sc-section-menu-trigger="true"
 contains	apps/web/src/components/sidebar/source_control/header.rs	aria-haspopup="menu"
 contains	apps/web/src/components/sidebar/source_control/header.rs	aria-expanded=move || show_menu.get().to_string()
@@ -154,6 +178,7 @@ contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_stage_discard_ab
 contains	docs/acceptance-cases/04_diff.md	source_control_resource_group_headers_are_buttons true
 contains	docs/acceptance-cases/04_diff.md	source_control_section_actions_do_not_toggle_group true
 contains	docs/acceptance-cases/04_diff.md	source_control_secondary_panel_headers_are_buttons true
+contains	docs/acceptance-cases/04_diff.md	source_control_collapsible_headers_control_stable_panels true
 contains	docs/acceptance-cases/04_diff.md	source_control_header_section_menu_exposes_checked_state true
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	change_item_action_surface(&entry, is_staged, has_conflict)
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface

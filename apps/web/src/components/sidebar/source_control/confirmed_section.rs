@@ -32,6 +32,7 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
                     class="flex min-w-0 flex-1 items-center justify-between rounded-sm text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
                     data-deve-sc-section-toggle="confirmed-ledger"
                     aria-expanded=move || expanded.get().to_string()
+                    aria-controls="source-control-confirmed-ledger-panel"
                     on:click=move |_| expanded.update(|v| *v = !*v)
                 >
                     <span class="flex min-w-0 items-center">
@@ -46,36 +47,35 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
                 </button>
             </div>
             <div
-                class="px-8 pb-1 text-[11px] leading-4 text-muted"
-                data-deve-sc-confirmed-ledger-hint="true"
+                id="source-control-confirmed-ledger-panel"
+                data-deve-sc-section-body="confirmed-ledger"
+                hidden=move || !expanded.get()
             >
-                {move || t::source_control::confirmed_ledger_hint(locale.get())}
+                <div
+                    class="px-8 pb-1 text-[11px] leading-4 text-muted"
+                    data-deve-sc-confirmed-ledger-hint="true"
+                >
+                    {move || t::source_control::confirmed_ledger_hint(locale.get())}
+                </div>
+                <For
+                    each=move || confirmed_list.get_value()
+                    key=|e| {
+                        format!(
+                            "{:?}:{}:{}:{:?}:{}:{}:{}",
+                            e.domain,
+                            e.doc_id
+                                .map(|doc_id| doc_id.to_string())
+                                .unwrap_or_default(),
+                            e.path,
+                            e.status,
+                            e.renamed_from.clone().unwrap_or_default(),
+                            e.base_seq.unwrap_or_default(),
+                            e.target_seq.unwrap_or_default()
+                        )
+                    }
+                    children=move |e| view! { <ChangeItem entry=e is_staged=false /> }
+                />
             </div>
-
-            {move || if expanded.get() {
-                view! {
-                    <For
-                        each=move || confirmed_list.get_value()
-                        key=|e| {
-                            format!(
-                                "{:?}:{}:{}:{:?}:{}:{}:{}",
-                                e.domain,
-                                e.doc_id
-                                    .map(|doc_id| doc_id.to_string())
-                                    .unwrap_or_default(),
-                                e.path,
-                                e.status,
-                                e.renamed_from.clone().unwrap_or_default(),
-                                e.base_seq.unwrap_or_default(),
-                                e.target_seq.unwrap_or_default()
-                            )
-                        }
-                        children=move |e| view! { <ChangeItem entry=e is_staged=false /> }
-                    />
-                }.into_any()
-            } else {
-                view! {}.into_any()
-            }}
         </div>
     }.into_any()
 }

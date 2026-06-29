@@ -31,7 +31,9 @@
 
 - 用户可以把候选变化移入或移出 staged 区域。
 - staged 与 unstaged 必须可见区分。
-- Staged / unstaged / confirmed ledger resource group header 应是可键盘触发的折叠按钮，并通过 `aria-expanded` 暴露状态；section action 按钮不应顺带触发展开/收起。
+- Staged / unstaged / confirmed ledger resource group header 应是可键盘触发的折叠按钮，并通过 `aria-expanded`
+  与 `aria-controls` 暴露状态和受控内容；受控内容应以稳定 `id` 常驻 DOM，折叠时使用 `hidden`
+  隐藏；section action 按钮不应顺带触发展开/收起。
 
 ### 2.1 Confirmed Ledger Changes
 
@@ -47,7 +49,8 @@
 - 用户可以查看 commit history / graph。
 - 这些视图必须与当前 repo scope 一致。
 - Repository / history / graph 这类 secondary panel header 应是可键盘触发的折叠按钮，并通过
-  `aria-expanded` 暴露状态。
+  `aria-expanded` 与 `aria-controls` 暴露状态和受控内容；受控内容应以稳定 `id` 常驻 DOM，折叠时
+  使用 `hidden` 隐藏。
 - remote / spectator scope 下，diff / history / graph 仍作为只读视图可用；
   stage、unstage、discard、commit、resolve conflict 等写操作必须被隐藏或禁用。
 - Graph 数据面是只读 projection，不写 ledger、workspace、search index 或 source-control state。
