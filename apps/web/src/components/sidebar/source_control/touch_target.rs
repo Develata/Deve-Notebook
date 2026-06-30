@@ -28,7 +28,7 @@ pub(super) fn change_item_row_class(has_conflict: bool, can_open_diff: bool) -> 
 }
 
 pub(super) fn section_header_class() -> &'static str {
-    "min-h-11 md:min-h-0 px-2 py-1 md:py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
+    "h-11 md:h-auto px-2 py-1 md:py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
 }
 
 pub(super) fn icon_button_class(tone: SourceControlActionTone) -> String {
@@ -42,10 +42,39 @@ pub(super) fn icon_button_class(tone: SourceControlActionTone) -> String {
     )
 }
 
+pub(super) fn commit_message_textarea_class() -> &'static str {
+    "w-full h-11 md:h-9 p-2 md:p-1.5 pr-12 md:pr-9 text-[13px] bg-input border border-default rounded-[2px] focus:outline-none focus:border-b-accent focus:ring-1 focus:ring-accent placeholder:text-muted text-primary font-sans resize-none block leading-tight"
+}
+
+pub(super) fn commit_generate_button_class() -> &'static str {
+    "absolute right-0 md:right-1 top-0 md:top-1 bottom-0 md:bottom-1 w-11 md:w-7 bg-accent hover:bg-accent-hover text-on-accent rounded flex items-center justify-center transition-colors z-[calc(var(--z-editor)_+_1)] disabled:opacity-50 disabled:cursor-not-allowed"
+}
+
+pub(super) fn commit_primary_button_class(show_split: bool) -> String {
+    format!(
+        "flex-1 h-11 md:h-auto bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-2 md:py-1.5 {} flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm",
+        if show_split {
+            "rounded-l-[2px]"
+        } else {
+            "rounded-[2px]"
+        }
+    )
+}
+
+pub(super) fn commit_dropdown_button_class() -> &'static str {
+    "h-11 w-11 md:h-auto md:w-auto bg-accent hover:bg-accent-hover text-on-accent px-3 md:px-2 rounded-r-[2px] border-l border-white/20 flex items-center justify-center"
+}
+
+pub(super) fn commit_menu_item_class() -> &'static str {
+    "w-full h-11 md:h-auto text-left px-3 py-2 md:py-1.5 hover:bg-hover text-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        SourceControlActionTone, change_item_row_class, icon_button_class, section_header_class,
+        SourceControlActionTone, change_item_row_class, commit_dropdown_button_class,
+        commit_generate_button_class, commit_menu_item_class, commit_message_textarea_class,
+        commit_primary_button_class, icon_button_class, section_header_class,
     };
 
     #[test]
@@ -56,8 +85,8 @@ mod tests {
         assert!(row.contains("cursor-pointer"));
 
         let section = section_header_class();
-        assert!(section.contains("min-h-11"));
-        assert!(section.contains("md:min-h-0"));
+        assert!(section.contains("h-11"));
+        assert!(section.contains("md:h-auto"));
 
         for tone in [
             SourceControlActionTone::Primary,
@@ -70,5 +99,34 @@ mod tests {
             assert!(button.contains("md:h-auto"));
             assert!(button.contains("md:w-auto"));
         }
+    }
+
+    #[test]
+    fn mobile_source_control_commit_touch_targets_min_size_bound() {
+        let textarea = commit_message_textarea_class();
+        assert!(textarea.contains("h-11"));
+        assert!(textarea.contains("md:h-9"));
+
+        let generate = commit_generate_button_class();
+        assert!(generate.contains("w-11"));
+        assert!(generate.contains("md:w-7"));
+
+        let primary = commit_primary_button_class(true);
+        assert!(primary.contains("h-11"));
+        assert!(primary.contains("md:h-auto"));
+        assert!(primary.contains("rounded-l-[2px]"));
+
+        let primary_unsplit = commit_primary_button_class(false);
+        assert!(primary_unsplit.contains("rounded-[2px]"));
+
+        let dropdown = commit_dropdown_button_class();
+        assert!(dropdown.contains("h-11"));
+        assert!(dropdown.contains("w-11"));
+        assert!(dropdown.contains("md:h-auto"));
+        assert!(dropdown.contains("md:w-auto"));
+
+        let menu_item = commit_menu_item_class();
+        assert!(menu_item.contains("h-11"));
+        assert!(menu_item.contains("md:h-auto"));
     }
 }

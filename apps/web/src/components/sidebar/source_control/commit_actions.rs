@@ -4,6 +4,9 @@
 //!
 use crate::components::icons::{Check, ChevronDown, Upload};
 use crate::components::sidebar::source_control::status_notice::blocked_title as blocked_status_title;
+use crate::components::sidebar::source_control::touch_target::{
+    commit_dropdown_button_class, commit_menu_item_class, commit_primary_button_class,
+};
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -22,10 +25,7 @@ pub fn CommitActions(
     view! {
         <div class="flex relative">
             <button
-                class=move || format!(
-                    "flex-1 bg-accent hover:bg-accent-hover text-on-accent text-[13px] font-medium py-1.5 {} flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-accent disabled:cursor-not-allowed transition-colors shadow-sm",
-                    if show_write_actions.get() { "rounded-l-[2px]" } else { "rounded-[2px]" }
-                )
+                class=move || commit_primary_button_class(show_write_actions.get())
                 disabled=move || !can_commit_now.get()
                 title=move || {
                     write_block
@@ -43,7 +43,7 @@ pub fn CommitActions(
             </button>
             <Show when=move || show_write_actions.get()>
                 <button
-                    class="bg-accent hover:bg-accent-hover text-on-accent px-2 rounded-r-[2px] border-l border-white/20"
+                    class=commit_dropdown_button_class()
                     disabled=move || !can_prepare_commit.get()
                     aria-label=move || t::sidebar::more_actions(locale.get())
                     title=move || {
@@ -61,7 +61,7 @@ pub fn CommitActions(
                 view! {
                     <div class="absolute top-full left-0 right-0 mt-1 bg-dropdown border border-default rounded shadow-lg z-[var(--z-floating)] text-[13px]">
                         <button
-                            class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2"
+                            class=commit_menu_item_class()
                             disabled=move || !can_commit_now.get()
                             on:click=move |_| {
                                 dropdown_open.set(false);
@@ -72,7 +72,7 @@ pub fn CommitActions(
                             {move || t::source_control::commit(locale.get())}
                         </button>
                         <button
-                            class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            class=commit_menu_item_class()
                             disabled=move || !can_commit_now.get()
                             on:click=move |_| {
                                 dropdown_open.set(false);

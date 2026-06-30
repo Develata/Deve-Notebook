@@ -6,6 +6,9 @@ use crate::components::icons::Sparkles;
 use crate::components::sidebar::source_control::status_notice::{
     blocked_hint as blocked_status_hint, blocked_title as blocked_status_title,
 };
+use crate::components::sidebar::source_control::touch_target::{
+    commit_generate_button_class, commit_message_textarea_class,
+};
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -42,7 +45,7 @@ pub fn CommitMessageBox(
         <div class="relative w-full">
             <textarea
                 name="commit-message"
-                class="w-full h-9 p-1.5 pr-9 text-[13px] bg-input border border-default rounded-[2px] focus:outline-none focus:border-b-accent focus:ring-1 focus:ring-accent placeholder:text-muted text-primary font-sans resize-none block leading-tight"
+                class=commit_message_textarea_class()
                 placeholder=move || {
                     commit_message_placeholder_text(
                         locale.get(),
@@ -57,7 +60,7 @@ pub fn CommitMessageBox(
             />
             <Show when=move || show_write_actions.get()>
                 <button
-                    class="absolute right-1 top-1 bottom-1 w-7 bg-accent hover:bg-accent-hover text-on-accent rounded flex items-center justify-center transition-colors z-[calc(var(--z-editor)_+_1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    class=commit_generate_button_class()
                     aria-label=move || t::source_control::generate_commit_message(locale.get())
                     title=move || {
                         write_block

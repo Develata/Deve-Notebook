@@ -47,9 +47,9 @@ pub(super) fn sheet_position(mode: SearchUiMode) -> Option<&'static str> {
 pub(super) fn backdrop_class(mode: SearchUiMode) -> &'static str {
     match mode {
         SearchUiMode::Sheet => {
-            "fixed inset-0 z-[var(--z-overlay)] font-sans bg-black/20 backdrop-blur-[1px]"
+            "fixed inset-0 z-[var(--z-modal)] font-sans bg-black/20 backdrop-blur-[1px]"
         }
-        SearchUiMode::Overlay => "fixed inset-0 z-[var(--z-overlay)] font-sans",
+        SearchUiMode::Overlay => "fixed inset-0 z-[var(--z-modal)] font-sans",
     }
 }
 
@@ -71,7 +71,7 @@ pub(super) fn drag_handle(mode: SearchUiMode) -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
-    use super::{panel_class, panel_style, sheet_position};
+    use super::{backdrop_class, panel_class, panel_style, sheet_position};
     use crate::components::search_box::SearchUiMode;
 
     #[test]
@@ -90,5 +90,11 @@ mod tests {
             "padding-top: env(safe-area-inset-top); transform: translateY(-64px); transition: none;"
         );
         assert!(panel_style(SearchUiMode::Overlay, -64, true).is_empty());
+    }
+
+    #[test]
+    fn search_sheet_uses_modal_layer_above_mobile_drawers() {
+        assert!(backdrop_class(SearchUiMode::Sheet).contains("z-[var(--z-modal)]"));
+        assert!(backdrop_class(SearchUiMode::Overlay).contains("z-[var(--z-modal)]"));
     }
 }

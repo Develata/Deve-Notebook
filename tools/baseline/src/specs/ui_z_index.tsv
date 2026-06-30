@@ -11,7 +11,7 @@ css_number_lt	apps/web/style/_variables.css	--z-panels	--z-floating
 css_number_lt	apps/web/style/_variables.css	--z-floating	--z-overlay
 css_number_lt	apps/web/style/_variables.css	--z-overlay	--z-modal
 css_number_lt	apps/web/style/_variables.css	--z-modal	--z-toast
-contains	apps/web/src/components/search_box/ui_sheet/style.rs	z-[var(--z-overlay)]
+contains	apps/web/src/components/search_box/ui_sheet/style.rs	z-[var(--z-modal)]
 contains	apps/web/src/components/command_palette/ui.rs	z-[var(--z-modal)]
 contains	apps/web/src/components/disconnect_overlay.rs	z-[var(--z-toast)]
 contains	apps/web/src/components/dropdown.rs	z-[calc(var(--z-floating)_+_1)]
