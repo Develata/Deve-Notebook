@@ -25,6 +25,13 @@ pub(super) fn should_clear_mobile_source_control_notice_for_drawer(
     open && should_clear_mobile_source_control_notice(view, notice)
 }
 
+pub(super) fn should_observe_mobile_source_control_notice_for_drawer(
+    open: bool,
+    view: SidebarView,
+) -> bool {
+    open && view == SidebarView::SourceControl
+}
+
 pub(super) fn clear_mobile_source_control_notice_for_view(
     view: SidebarView,
     source_control: Option<&SourceControlContext>,
@@ -45,13 +52,12 @@ pub(super) fn clear_mobile_source_control_notice_for_drawer(
     source_control: Option<&SourceControlContext>,
 ) {
     if let Some(source_control) = source_control
-        && should_clear_mobile_source_control_notice_for_drawer(
-            open,
-            view,
-            source_control.notice.get_untracked().as_ref(),
-        )
+        && should_observe_mobile_source_control_notice_for_drawer(open, view)
     {
-        source_control.clear_notice.run(());
+        let notice = source_control.notice.get();
+        if should_clear_mobile_source_control_notice_for_drawer(open, view, notice.as_ref()) {
+            source_control.clear_notice.run(());
+        }
     }
 }
 
@@ -60,6 +66,7 @@ mod tests {
     use super::{
         should_clear_mobile_source_control_notice,
         should_clear_mobile_source_control_notice_for_drawer,
+        should_observe_mobile_source_control_notice_for_drawer,
     };
     use crate::components::activity_bar::SidebarView;
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
@@ -88,13 +95,22 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_command_notice_survives_active_view() {
+    fn mobile_source_control_open_read_surface_observes_notice_changes() {
         let git_notice = SourceControlNotice::git_status_cli_only();
         let source_control_notice = SourceControlNotice::establish_branch_unavailable();
 
-        // Plain Source Control entry clears stale Git CLI notices. Explicit
-        // Git commands set the same notice through command runtime and must
-        // not be erased by an active-view subscription.
+        assert!(should_observe_mobile_source_control_notice_for_drawer(
+            true,
+            SidebarView::SourceControl,
+        ));
+        assert!(!should_observe_mobile_source_control_notice_for_drawer(
+            false,
+            SidebarView::SourceControl,
+        ));
+        assert!(!should_observe_mobile_source_control_notice_for_drawer(
+            true,
+            SidebarView::Explorer,
+        ));
         assert!(should_clear_mobile_source_control_notice(
             SidebarView::SourceControl,
             Some(&git_notice),
