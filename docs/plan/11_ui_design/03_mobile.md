@@ -305,6 +305,8 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
     *   关闭按钮建议使用 `X` 图标而非文本 `Close`，以符合移动端通用习惯。
     *   行为：点击文件后自动收起。
     *   `More(...)` 菜单 **MUST** 复用桌面端语义：整行点击切换视图，`Pin/Unpin` 仅修改固定状态，不得伪装成“点击无反应”。
+    *   Source Control tab **MUST** 渲染共享 Source Control view；普通移动端 Source Control 入口不得被
+        Git mirror 本地命令 notice（如 `git status` CLI-only 诊断提示）替代。
 *   **Outline Drawer**:
     *   内容：标题结构、大纲条目。
     *   行为：点击条目后自动收起并滚动定位。

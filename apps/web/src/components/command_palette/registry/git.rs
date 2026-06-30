@@ -25,6 +25,22 @@ fn show_source_control_notice(
     set_show.set(false);
 }
 
+fn show_git_status_notice(
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+    set_show: WriteSignal<bool>,
+) {
+    if let Some(set_notice) = set_notice {
+        set_notice.set(Some(SourceControlNotice::git_status_cli_only()));
+    }
+    if let Some(sidebar_control) = sidebar_control
+        && !sidebar_control.is_mobile.get_untracked()
+    {
+        sidebar_control.show_view(SidebarView::SourceControl);
+    }
+    set_show.set(false);
+}
+
 fn git_bridge_enabled_when(locale: Locale) -> String {
     let mode = use_context::<SessionClient>()
         .map(|session| git_bridge_mode_from_value(&session.ws.source_control_git_bridge.get()))
@@ -78,12 +94,7 @@ pub(super) fn git_status_command(
         (t::command_palette::git_status)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
-            show_source_control_notice(
-                set_notice,
-                sidebar_control,
-                SourceControlNotice::git_status_cli_only(),
-                set_show,
-            );
+            show_git_status_notice(set_notice, sidebar_control, set_show);
         },
     )
     .with_group((t::command_palette::group_git)(locale))

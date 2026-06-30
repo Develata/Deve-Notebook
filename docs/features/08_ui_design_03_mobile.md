@@ -19,6 +19,7 @@
 
 - Outline、Source Control、Search 等入口必须在移动端可达。
 - 移动端不应因为手势或边缘滑动吞掉关键按钮点击。
+- 移动端 Source Control 入口应显示同一套 Source Control 面板，不应被 `Git: Status` 这类 Git mirror CLI-only 诊断提示替代。
 - 顶部当前 surface 胶囊应显示当前文档或差异；点击后通过底部面板在已打开文档和差异之间切换。
 
 ### 3. Bottom Bar 与状态折叠
