@@ -3,6 +3,9 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::icons::{Download, Upload};
+use crate::components::sidebar::source_control::touch_target::{
+    SourceControlActionTone, icon_button_class,
+};
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
@@ -22,7 +25,8 @@ pub fn ChangeItemConflictActions(
 
     view! {
         <button
-            class="p-0.5 hover:bg-active rounded text-warning"
+            class=icon_button_class(SourceControlActionTone::Warning)
+            data-deve-mobile-touch-target="source-control-keep-fs-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_file_system(locale.get())
             on:click=move |ev| {
@@ -40,7 +44,8 @@ pub fn ChangeItemConflictActions(
             <Upload class="w-3.5 h-3.5" />
         </button>
         <button
-            class="p-0.5 hover:bg-active rounded text-warning"
+            class=icon_button_class(SourceControlActionTone::Warning)
+            data-deve-mobile-touch-target="source-control-keep-ledger-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_ledger(locale.get())
             on:click=move |ev| {

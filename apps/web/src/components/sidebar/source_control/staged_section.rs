@@ -9,6 +9,7 @@
 
 use super::change_item::ChangeItem;
 use super::staged_section_actions::StagedSectionActions;
+use super::touch_target::section_header_class;
 use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
@@ -41,7 +42,8 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     view! {
         <div>
             <div
-                class="px-2 py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
+                class=section_header_class()
+                data-deve-mobile-touch-target="source-control-section-header"
                 on:click=move |_| expanded.update(|v| *v = !*v)
             >
                 <div class="flex items-center">

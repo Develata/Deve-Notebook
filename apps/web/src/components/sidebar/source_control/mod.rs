@@ -39,6 +39,7 @@ pub mod repair_review_copy;
 pub mod repositories;
 pub mod staged_section_actions;
 pub mod status_notice;
+mod touch_target;
 
 pub mod staged_section;
 pub mod unstaged_section;
