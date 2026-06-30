@@ -40,19 +40,6 @@
 /* ==================== Source Control ==================== */
 .sc-action-tray {
   display: flex;
-}
-
-@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
-  .sc-action-tray {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 120ms ease;
-  }
-
-  .group:hover .sc-action-tray,
-  .group:focus-within .sc-action-tray,
-  .sc-action-tray:focus-within {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  opacity: 1;
+  pointer-events: auto;
 }

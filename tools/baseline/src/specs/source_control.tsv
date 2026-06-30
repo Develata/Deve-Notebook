@@ -201,7 +201,12 @@ contains	apps/web/src/components/sidebar/source_control/change_item_conflict_act
 contains	apps/web/src/components/sidebar/source_control/staged_section_actions.rs	aria-label=move || t::source_control::unstage_all_changes(locale.get())
 contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::stage_all_changes(locale.get())
 contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::discard_all_changes(locale.get())
+contains	apps/web/style/_widgets.css	.sc-action-tray
+contains	apps/web/style/_widgets.css	opacity: 1
+contains	apps/web/style/_widgets.css	pointer-events: auto
 absent	apps/web/src/i18n/source_control/actions.rs	Open File
+absent	apps/web/style/_widgets.css	opacity: 0
+absent	apps/web/style/_widgets.css	pointer-events: none
 absent	apps/web/src/components/sidebar/source_control/confirmed_section.rs	cursor-pointer
 absent	apps/web/src/components/sidebar/source_control/staged_section.rs	cursor-pointer
 absent	apps/web/src/components/sidebar/source_control/unstaged_section.rs	cursor-pointer
