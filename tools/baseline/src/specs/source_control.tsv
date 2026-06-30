@@ -104,6 +104,10 @@ contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_message_
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disabled_reason
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_text
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_reports_no_changes_when_commit_source_empty
+contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_visible true
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	should_show_confirmed_open_diff_action
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	data-deve-mobile-touch-target="source-control-confirmed-open-diff-action"
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_open_diff_action_policy
 absent	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_staged(
 absent	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_staged_in_local_repo(
 absent	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_staged_in_local_repo(
