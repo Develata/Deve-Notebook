@@ -287,7 +287,7 @@ Baseline contract 的行内支持集合：
 - 若未注册 action，允许显示空状态，但不得报错中断渲染。
 - 轻量 HTML 渲染器只承担 wrapper 与可选 apply button 语义；完整 toolbar 属于 CodeMirror adapter 路径，不应混为同一实现。
 
-### 6.5 Outline Projection
+### 6.5 Outline Projection {#outline-projection}
 
 - outline 必须从解析后的 heading projection 导出。
 - outline 渲染不得发明新语义。
