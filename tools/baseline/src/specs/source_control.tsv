@@ -192,6 +192,15 @@ contains	apps/web/src/components/sidebar/source_control/repositories.rs	fn repo_
 contains	apps/web/src/components/sidebar/source_control/repositories.rs	repo_branch_dirty_suffix_marks_confirmed_ledger_changes_dirty
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	open_diff(locale.get())
 contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	open_diff(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	aria-label=move || t::source_control::open_diff(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	aria-label=move || t::source_control::unstage_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	aria-label=move || t::source_control::stage_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	aria-label=move || t::source_control::discard_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	aria-label=move || t::source_control::keep_file_system(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	aria-label=move || t::source_control::keep_ledger(locale.get())
+contains	apps/web/src/components/sidebar/source_control/staged_section_actions.rs	aria-label=move || t::source_control::unstage_all_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::stage_all_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::discard_all_changes(locale.get())
 absent	apps/web/src/i18n/source_control/actions.rs	Open File
 absent	apps/web/src/components/sidebar/source_control/confirmed_section.rs	cursor-pointer
 absent	apps/web/src/components/sidebar/source_control/staged_section.rs	cursor-pointer

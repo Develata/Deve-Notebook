@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
 use crate::components::icons::*;
 use crate::components::sidebar::source_control::change_item_conflict_actions::ChangeItemConflictActions;
@@ -68,6 +69,7 @@ pub fn ChangeItemActions(
                                 )
                             }
                             title=move || t::source_control::open_diff(locale.get())
+                            aria-label=move || t::source_control::open_diff(locale.get())
                             on:click=move |ev| {
                                 ev.stop_propagation();
                                 core.on_get_doc_diff.run(entry_for_open.get_value());
@@ -84,6 +86,7 @@ pub fn ChangeItemActions(
                         data-deve-sc-action="unstage"
                         disabled=move || !core.can_write.get()
                         title=move || t::source_control::unstage_changes(locale.get())
+                        aria-label=move || t::source_control::unstage_changes(locale.get())
                         on:click=move |ev| {
                             ev.stop_propagation();
                             if action_busy.get_value().swap(true, Ordering::AcqRel) {

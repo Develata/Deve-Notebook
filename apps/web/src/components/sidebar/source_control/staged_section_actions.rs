@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
 use super::action_tray::SECTION_ACTION_TRAY_CLASS;
 use crate::components::icons::Minus;
@@ -33,6 +34,7 @@ pub fn StagedSectionActions(
                         class="p-0.5 hover:bg-active rounded"
                         data-deve-sc-action="unstage-all"
                         title=move || t::source_control::unstage_all_changes(locale.get())
+                        aria-label=move || t::source_control::unstage_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()
                         on:click=move |_| {
                             set_bulk_busy.set(true);

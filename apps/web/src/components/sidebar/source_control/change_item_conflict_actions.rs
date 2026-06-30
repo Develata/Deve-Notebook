@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
 use crate::components::icons::{Download, Upload};
 use crate::hooks::use_core::SourceControlContext;
@@ -26,6 +27,7 @@ pub fn ChangeItemConflictActions(
             class="p-0.5 hover:bg-active rounded text-warning"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_file_system(locale.get())
+            aria-label=move || t::source_control::keep_file_system(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {
@@ -45,6 +47,7 @@ pub fn ChangeItemConflictActions(
             class="p-0.5 hover:bg-active rounded text-warning"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_ledger(locale.get())
+            aria-label=move || t::source_control::keep_ledger(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {
