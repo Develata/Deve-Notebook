@@ -12,10 +12,17 @@ fn file_tree_action_readonly_catalog_keeps_shell_local_open_only() {
 
 #[test]
 fn file_tree_action_target_projection_accepts_file_and_folder_nodes() {
-    let file_len =
-        project_context_actions(file_tree_request(false, ContextActionTargetKind::File)).len();
-    let folder_len =
-        project_context_actions(file_tree_request(false, ContextActionTargetKind::Folder)).len();
+    let readiness = file_tree_readiness(false).with_host_file_actions(true, true);
+    let file_len = project_context_actions(file_tree_request_with_readiness(
+        readiness.clone(),
+        ContextActionTargetKind::File,
+    ))
+    .len();
+    let folder_len = project_context_actions(file_tree_request_with_readiness(
+        readiness,
+        ContextActionTargetKind::Folder,
+    ))
+    .len();
     let web_projectable_len = CONTEXT_ACTIONS
         .iter()
         .filter(|action| action.is_web_projectable())
@@ -23,6 +30,27 @@ fn file_tree_action_target_projection_accepts_file_and_folder_nodes() {
 
     assert_eq!(file_len, web_projectable_len);
     assert_eq!(folder_len, web_projectable_len);
+}
+
+#[test]
+fn file_tree_action_host_actions_project_only_with_capability() {
+    let default_ids =
+        project_context_actions(file_tree_request(false, ContextActionTargetKind::AnyNode))
+            .into_iter()
+            .map(|action| action.descriptor.id)
+            .collect::<Vec<_>>();
+    let enabled_ids = project_context_actions(file_tree_request_with_readiness(
+        file_tree_readiness(false).with_host_file_actions(true, true),
+        ContextActionTargetKind::AnyNode,
+    ))
+    .into_iter()
+    .map(|action| action.descriptor.id)
+    .collect::<Vec<_>>();
+
+    assert!(!default_ids.contains(&ContextActionId::CopyAbsolutePath));
+    assert!(!default_ids.contains(&ContextActionId::RevealInSystemExplorer));
+    assert!(enabled_ids.contains(&ContextActionId::CopyAbsolutePath));
+    assert!(enabled_ids.contains(&ContextActionId::RevealInSystemExplorer));
 }
 
 #[test]

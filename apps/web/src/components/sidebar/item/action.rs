@@ -40,6 +40,8 @@ pub(super) fn create_action_handler(
     readiness: Signal<ContextActionReadiness>,
     delete_req: Callback<String>,
     open_search: Callback<String>,
+    copy_absolute_path: Callback<String>,
+    reveal_in_system_explorer: Callback<String>,
 ) -> Callback<ContextActionIntent> {
     Callback::new(move |intent: ContextActionIntent| {
         leptos::logging::log!(
@@ -78,6 +80,8 @@ pub(super) fn create_action_handler(
                     open_search.run(prefill);
                 }
             }
+            ContextActionId::CopyAbsolutePath => copy_absolute_path.run(path),
+            ContextActionId::RevealInSystemExplorer => reveal_in_system_explorer.run(path),
             ContextActionId::ExportPdf => {}
         }
     })

@@ -8,6 +8,7 @@
 //! 侧边栏的主要文件浏览器视图。
 //! 管理文件树、顶部动作和上下文菜单状态。
 
+use crate::api::{copy_host_file_absolute_path_to_clipboard, reveal_host_file_in_system_explorer};
 use crate::components::sidebar::types::FileActionsContext;
 use crate::context_action::{ContextActionReadiness, ContextActionScope};
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
@@ -19,6 +20,7 @@ use crate::runtime::{
 };
 use deve_core::models::DocId;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 
 mod header;
 mod tree_view;
@@ -62,7 +64,10 @@ fn context_action_readiness_for_runtime(
     )
     .is_some();
 
-    ContextActionReadiness::new(action_scope, readonly, write_blocked)
+    ContextActionReadiness::new(action_scope, readonly, write_blocked).with_host_file_actions(
+        session.ws.host_file_copy_absolute_path.get(),
+        session.ws.host_file_reveal_in_system_explorer.get(),
+    )
 }
 
 #[component]
@@ -112,6 +117,29 @@ pub fn ExplorerView(
     let request_delete = Callback::new(move |path: String| {
         on_delete.run(path);
     });
+    let repo_id_for_copy_absolute_path = scope.current_repo_id;
+    let copy_absolute_path = Callback::new(move |path: String| {
+        let repo_id = repo_id_for_copy_absolute_path.get_untracked();
+        spawn_local(async move {
+            match copy_host_file_absolute_path_to_clipboard(repo_id, path).await {
+                Ok(_) => {
+                    leptos::logging::log!("Host file absolute path copied");
+                }
+                Err(error) => {
+                    leptos::logging::error!("Host file absolute path copy failed: {:?}", error);
+                }
+            }
+        });
+    });
+    let repo_id_for_reveal = scope.current_repo_id;
+    let reveal_in_system_explorer = Callback::new(move |path: String| {
+        let repo_id = repo_id_for_reveal.get_untracked();
+        spawn_local(async move {
+            if let Err(error) = reveal_host_file_in_system_explorer(repo_id, path).await {
+                leptos::logging::error!("Host file reveal failed: {:?}", error);
+            }
+        });
+    });
 
     let on_menu_click = Callback::new(move |(path, anchor): (String, AnchorRect)| {
         set_active_menu.update(|curr| {
@@ -147,6 +175,8 @@ pub fn ExplorerView(
         active_menu,
         menu_anchor,
         on_delete: request_delete.clone(),
+        on_copy_absolute_path: copy_absolute_path,
+        on_reveal_in_system_explorer: reveal_in_system_explorer,
     };
     provide_context(actions);
 

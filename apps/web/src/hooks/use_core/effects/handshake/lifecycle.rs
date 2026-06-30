@@ -89,6 +89,8 @@ fn spawn_node_role_reprobe(ws: WsService) {
             Some(result) => ws.complete_foreground_node_role_reprobe(
                 result.summary,
                 result.source_control_git_bridge,
+                result.host_file_copy_absolute_path,
+                result.host_file_reveal_in_system_explorer,
             ),
             None => ws.fail_foreground_node_role_reprobe(),
         }

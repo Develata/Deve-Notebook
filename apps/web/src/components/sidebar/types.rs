@@ -29,4 +29,6 @@ pub struct FileActionsContext {
     pub active_menu: ReadSignal<Option<String>>,
     pub menu_anchor: ReadSignal<Option<AnchorRect>>,
     pub on_delete: Callback<String>,
+    pub on_copy_absolute_path: Callback<String>,
+    pub on_reveal_in_system_explorer: Callback<String>,
 }

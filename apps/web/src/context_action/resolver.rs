@@ -5,7 +5,7 @@
 
 use super::catalog::CONTEXT_ACTIONS;
 use super::intent::{ContextActionResolveRequest, ResolvedContextAction};
-use super::types::{ContextActionDescriptor, ContextActionEffect};
+use super::types::{ContextActionDescriptor, ContextActionEffect, ContextActionId};
 
 fn descriptor_matches_request(
     descriptor: ContextActionDescriptor,
@@ -17,6 +17,7 @@ fn descriptor_matches_request(
         && request.intent.scope == request.readiness.scope
         && (!request.readiness.readonly || descriptor.readonly_allowed)
         && (!request.readiness.write_blocked || !is_write_effect(descriptor.effect))
+        && host_file_action_supported(descriptor.id, request)
 }
 
 fn is_write_effect(effect: ContextActionEffect) -> bool {
@@ -26,6 +27,16 @@ fn is_write_effect(effect: ContextActionEffect) -> bool {
             | ContextActionEffect::DestructiveWrite
             | ContextActionEffect::ExternalSideEffect
     )
+}
+
+fn host_file_action_supported(id: ContextActionId, request: &ContextActionResolveRequest) -> bool {
+    match id {
+        ContextActionId::CopyAbsolutePath => request.readiness.host_file_copy_absolute_path,
+        ContextActionId::RevealInSystemExplorer => {
+            request.readiness.host_file_reveal_in_system_explorer
+        }
+        _ => true,
+    }
 }
 
 pub(crate) fn context_action_descriptor_resolves(

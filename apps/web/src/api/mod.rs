@@ -15,6 +15,7 @@ mod connection_role;
 mod connection_urls;
 mod git_mirror;
 mod graph;
+mod host_file;
 mod incoming;
 mod native_backend_bridge;
 mod native_bootstrap;
@@ -39,6 +40,9 @@ pub(crate) use self::connection_role::{http_base_from_ws_url, probe_node_role_fo
 pub use self::git_mirror::GitMirrorRepairReviewRecord;
 pub use self::git_mirror::{GitMirrorRepairReview, fetch_git_mirror_repair_review};
 pub use self::graph::{GraphProjectionFetchError, fetch_graph_projection};
+pub(crate) use self::host_file::{
+    copy_host_file_absolute_path_to_clipboard, reveal_host_file_in_system_explorer,
+};
 pub(crate) use self::native_backend_bridge::{
     NativeBackendConfig, NativeBackendValidation, get_native_backend_config,
     save_native_backend_remote, switch_native_backend_local,

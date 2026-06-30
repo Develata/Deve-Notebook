@@ -48,6 +48,12 @@ pub struct SourceControlSummary {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HostFileActionSummary {
+    pub copy_absolute_path: bool,
+    pub reveal_in_system_explorer: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct P2pSummary {
     pub enabled: bool,
     pub peers: Vec<P2pPeerSummary>,
@@ -115,6 +121,30 @@ impl P2pSummary {
             enabled: false,
             peers: Vec::new(),
         }
+    }
+}
+
+pub fn host_file_actions_for(role: &NodeRole) -> HostFileActionSummary {
+    let local_host =
+        role.role == "native-main" || (role.role == "main" && role.environment == "development");
+    HostFileActionSummary {
+        copy_absolute_path: local_host,
+        reveal_in_system_explorer: local_host && system_file_manager_reveal_available(),
+    }
+}
+
+fn system_file_manager_reveal_available() -> bool {
+    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    {
+        true
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some()
+    }
+    #[cfg(not(any(unix, target_os = "windows")))]
+    {
+        false
     }
 }
 
@@ -203,7 +233,10 @@ fn default_node_role() -> NodeRole {
 
 #[cfg(test)]
 mod tests {
-    use super::{RepoHealthSummary, SourceControlSummary, runtime_environment_label};
+    use super::{
+        NodeRole, P2pSummary, RepoHealthSummary, SourceControlSummary, host_file_actions_for,
+        runtime_environment_label,
+    };
     use deve_core::config::GitBridgeMode;
 
     #[test]
@@ -269,6 +302,34 @@ mod tests {
             "off"
         );
         assert_eq!(SourceControlSummary::unknown().git_bridge, "unknown");
+    }
+
+    #[test]
+    fn host_file_actions_are_local_dev_or_native_only() {
+        let mut role = NodeRole {
+            role: "main".into(),
+            ws_port: 3001,
+            main_port: 3001,
+            version: "0.0.1".into(),
+            profile: "standard".into(),
+            delivery: "embedded-frontend".into(),
+            environment: "production".into(),
+            repo_health: RepoHealthSummary::unknown(),
+            source_control: SourceControlSummary::unknown(),
+            p2p: P2pSummary::disabled(),
+            native_service: None,
+        };
+        assert!(!host_file_actions_for(&role).copy_absolute_path);
+
+        role.environment = "development".into();
+        assert!(host_file_actions_for(&role).copy_absolute_path);
+
+        role.role = "proxy".into();
+        assert!(!host_file_actions_for(&role).copy_absolute_path);
+
+        role.role = "native-main".into();
+        role.environment = "production".into();
+        assert!(host_file_actions_for(&role).copy_absolute_path);
     }
 
     #[test]

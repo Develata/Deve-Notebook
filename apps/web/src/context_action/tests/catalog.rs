@@ -21,6 +21,8 @@ fn file_tree_action_catalog_preserves_existing_order() {
             ContextActionId::Rename,
             ContextActionId::Copy,
             ContextActionId::OpenInNewWindow,
+            ContextActionId::CopyAbsolutePath,
+            ContextActionId::RevealInSystemExplorer,
             ContextActionId::MoveTo,
             ContextActionId::Delete,
         ]
@@ -33,6 +35,11 @@ fn file_tree_action_stable_ids_are_surface_neutral() {
         (ContextActionId::Rename, "file.rename"),
         (ContextActionId::Copy, "file.copy"),
         (ContextActionId::OpenInNewWindow, "file.open_in_new_window"),
+        (ContextActionId::CopyAbsolutePath, "file.copy_absolute_path"),
+        (
+            ContextActionId::RevealInSystemExplorer,
+            "file.reveal_in_system_explorer",
+        ),
         (ContextActionId::MoveTo, "file.move_to"),
         (ContextActionId::Delete, "file.delete"),
         (ContextActionId::ExportPdf, "file.export_pdf"),
@@ -73,10 +80,18 @@ fn file_tree_action_descriptor_labels_remain_localized() {
         .iter()
         .find(|action| action.id == ContextActionId::Rename)
         .expect("rename action");
+    let copy_absolute_path =
+        context_action_by_id(ContextActionId::CopyAbsolutePath).expect("copy path action");
+    let reveal =
+        context_action_by_id(ContextActionId::RevealInSystemExplorer).expect("reveal action");
     let export = context_action_by_id(ContextActionId::ExportPdf).expect("export pdf action");
 
     assert_eq!(rename.label(Locale::En), "Rename");
     assert_eq!(rename.label(Locale::Zh), "重命名");
+    assert_eq!(copy_absolute_path.label(Locale::En), "Copy Absolute Path");
+    assert_eq!(copy_absolute_path.label(Locale::Zh), "复制绝对路径");
+    assert_eq!(reveal.label(Locale::En), "Show in System File Manager");
+    assert_eq!(reveal.label(Locale::Zh), "在系统资源管理器中显示");
     assert_eq!(export.label(Locale::En), "Export PDF");
     assert_eq!(export.label(Locale::Zh), "导出 PDF");
 }

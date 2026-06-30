@@ -114,6 +114,48 @@ fn context_action_readiness_write_gate_keeps_readonly_action_available() {
 }
 
 #[test]
+fn file_tree_action_host_actions_require_runtime_capability() {
+    for action_id in [
+        ContextActionId::CopyAbsolutePath,
+        ContextActionId::RevealInSystemExplorer,
+    ] {
+        let resolved = resolve_context_action(ContextActionResolveRequest::new(
+            file_tree_intent(action_id, ContextActionTargetKind::AnyNode),
+            file_tree_readiness(true),
+        ));
+
+        assert!(
+            resolved.is_none(),
+            "{} should fail closed",
+            action_id.stable_id()
+        );
+    }
+
+    let copy = resolve_context_action(ContextActionResolveRequest::new(
+        file_tree_intent(
+            ContextActionId::CopyAbsolutePath,
+            ContextActionTargetKind::AnyNode,
+        ),
+        file_tree_readiness(true).with_host_file_actions(true, false),
+    ))
+    .expect("copy absolute path should resolve when supported");
+    let reveal = resolve_context_action(ContextActionResolveRequest::new(
+        file_tree_intent(
+            ContextActionId::RevealInSystemExplorer,
+            ContextActionTargetKind::AnyNode,
+        ),
+        file_tree_readiness(true).with_host_file_actions(true, true),
+    ))
+    .expect("reveal should resolve when supported");
+
+    assert_eq!(copy.descriptor.id, ContextActionId::CopyAbsolutePath);
+    assert_eq!(
+        reveal.descriptor.id,
+        ContextActionId::RevealInSystemExplorer
+    );
+}
+
+#[test]
 fn file_tree_action_resolver_rejects_target_mismatch() {
     let actions = [ContextActionDescriptor {
         id: ContextActionId::Copy,

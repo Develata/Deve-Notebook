@@ -29,6 +29,20 @@ pub fn open_in_new_window(locale: Locale) -> &'static str {
     }
 }
 
+pub fn copy_absolute_path(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Copy Absolute Path",
+        Locale::Zh => "复制绝对路径",
+    }
+}
+
+pub fn reveal_in_system_explorer(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Show in System File Manager",
+        Locale::Zh => "在系统资源管理器中显示",
+    }
+}
+
 pub fn move_to(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Move to...",
