@@ -52,6 +52,7 @@
     - ui_assert: nonempty_heading_keeps_layered_height true
     - ui_assert: nonempty_heading_font_scales_match_levels true
     - ui_assert: nonempty_heading_not_double_scaled true
+    - ui_assert: heading_with_inline_math_keeps_line_class true
 
 - case_id: RENDER-CURSOR-001
   goal: 光标揭示规则。

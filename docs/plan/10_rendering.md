@@ -134,6 +134,7 @@ EditorBufferChanged
 - render refresh 只能消费 editor projection，不得直接改 ledger authority。
 - outline、widget、preview 必须基于同一份 confirmed+pending buffer 构建。
 - ATX h1/h2/h3 在主编辑器中必须作为同一行级 projection 应用字号、粗细与行高；空标题与非空标题不得因为语法标记显示/隐藏而回落到正文尺寸，也不得叠加双倍缩放。
+- 标题行内包含 inline math 时，math widget/reveal 范围不得取消该行的 heading line projection；只有标题 opener 本身位于 math/code/frontmatter 范围内时才可拒绝标题行级样式。
 
 ## 4. Parsing Contract
 

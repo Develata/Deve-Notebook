@@ -68,6 +68,9 @@ export const hybridPlugin = ViewPlugin.fromClass(
         return false;
       };
 
+      const isPositionInsideMath = (pos) =>
+        mathRanges.some((range) => pos >= range.from && pos <= range.to);
+
       // 2. Frontmatter Detection (Strict)
       // 计算一次，如果存在有效的 Frontmatter，则添加装饰
       const fm = findFrontmatterRange(doc);
@@ -132,7 +135,7 @@ export const hybridPlugin = ViewPlugin.fromClass(
         const line = view.state.doc.lineAt(pos);
         const headingLevel = atxHeadingLevelFromLine(line.text);
         if (headingLevel &&
-            !isInsideMath(line.from, line.to) &&
+            !isPositionInsideMath(line.from) &&
             !findContainingCode(line.from) &&
             !(fm && line.from >= fm.from && line.to <= fm.to)) {
           addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel);

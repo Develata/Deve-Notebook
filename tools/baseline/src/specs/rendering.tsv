@@ -37,12 +37,14 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_keeps_layered_height true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_font_scales_match_levels true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_not_double_scaled true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_with_inline_math_keeps_line_class true
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
 contains	apps/web/js/extensions/hybrid.js	attributes: {
 contains	apps/web/js/extensions/hybrid.js	class: headingLineClass,
 contains	apps/web/js/extensions/hybrid.js	"data-deve-heading-level": headingLevel,
 contains	apps/web/js/extensions/hybrid.js	function atxHeadingLevelFromLine(lineText)
+contains	apps/web/js/extensions/hybrid.js	const isPositionInsideMath = (pos) =>
 contains	apps/web/js/extensions/hybrid.js	addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel)
 contains	apps/web/js/extensions/hybrid.js	!findContainingCode(line.from)
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line
