@@ -32,8 +32,11 @@ class CodeToolbarWidget extends WidgetType {
 
         // Copy Button
         const copyBtn = document.createElement("button");
+        const copyLabel = editorCopy("copyCode");
         copyBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors flex items-center justify-center";
-        copyBtn.title = editorCopy("copyCode");
+        copyBtn.title = copyLabel;
+        copyBtn.setAttribute("aria-label", copyLabel);
+        copyBtn.setAttribute("data-deve-code-toolbar-action", "copy");
         copyBtn.innerHTML = ICON_COPY;
 
         copyBtn.onclick = async (e) => {
@@ -51,8 +54,11 @@ class CodeToolbarWidget extends WidgetType {
 
         // Menu Button
         const menuBtn = document.createElement("button");
+        const menuLabel = editorCopy("moreActions");
         menuBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors relative group flex items-center justify-center";
-        menuBtn.title = editorCopy("moreActions");
+        menuBtn.title = menuLabel;
+        menuBtn.setAttribute("aria-label", menuLabel);
+        menuBtn.setAttribute("data-deve-code-toolbar-action", "ellipsis");
         menuBtn.innerHTML = ICON_ELLIPSIS;
         menuBtn.onclick = (e) => {
             e.preventDefault();

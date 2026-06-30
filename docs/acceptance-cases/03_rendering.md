@@ -160,8 +160,9 @@
     - ui_hover: "code_block"
     - ui_click: "ellipsis"
   assertions:
-    - ui_assert: toolbar_has_buttons ["Copy", "Ellipsis"]
-    - ui_assert: menu_empty_state_text "No actions available"
+    - ui_assert: code_toolbar_action_markers ["copy", "ellipsis"]
+    - ui_assert: code_menu_empty_state_marker_visible true
+    - ui_assert: code_menu_empty_state_uses_i18n_key "noActionsAvailable"
 
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。

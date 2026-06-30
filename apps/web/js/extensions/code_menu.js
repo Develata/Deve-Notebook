@@ -63,6 +63,8 @@ export function showMenu(anchor, context) {
     if (actions.length === 0) {
         const empty = document.createElement("div");
         empty.className = "px-3 py-2 text-gray-400 dark:text-gray-500 whitespace-nowrap";
+        empty.setAttribute("data-deve-code-menu-empty-state", "true");
+        empty.setAttribute("data-deve-i18n-key", "noActionsAvailable");
         empty.textContent = editorCopy("noActionsAvailable");
         menu.appendChild(empty);
     } else {

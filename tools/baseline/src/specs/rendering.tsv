@@ -76,10 +76,15 @@ absent	apps/web/src/hooks/use_ctrl_key.rs	expect("window")
 absent	apps/web/src/hooks/use_ctrl_key.rs	expect("document")
 absent	apps/web/src/hooks/use_ctrl_key.rs	body().unwrap()
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-CODE-001
-contains	docs/acceptance-cases/03_rendering.md	toolbar_has_buttons ["Copy", "Ellipsis"]
-contains	docs/acceptance-cases/03_rendering.md	menu_empty_state_text "No actions available"
+contains	docs/acceptance-cases/03_rendering.md	code_toolbar_action_markers ["copy", "ellipsis"]
+contains	docs/acceptance-cases/03_rendering.md	code_menu_empty_state_marker_visible true
+contains	docs/acceptance-cases/03_rendering.md	code_menu_empty_state_uses_i18n_key "noActionsAvailable"
 contains	apps/web/js/extensions/code_toolbar.js	ICON_COPY
 contains	apps/web/js/extensions/code_toolbar.js	ICON_ELLIPSIS
+contains	apps/web/js/extensions/code_toolbar.js	copyBtn.setAttribute("data-deve-code-toolbar-action", "copy");
+contains	apps/web/js/extensions/code_toolbar.js	menuBtn.setAttribute("data-deve-code-toolbar-action", "ellipsis");
+contains	apps/web/js/extensions/code_menu.js	empty.setAttribute("data-deve-code-menu-empty-state", "true");
+contains	apps/web/js/extensions/code_menu.js	empty.setAttribute("data-deve-i18n-key", "noActionsAvailable");
 contains	apps/web/js/extensions/code_menu.js	editorCopy("noActionsAvailable")
 contains	apps/web/js/init.js	window.deve_code_actions = window.deve_code_actions || [];
 absent	apps/web/js/init.js	Run Code
