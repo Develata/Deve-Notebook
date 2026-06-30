@@ -12,9 +12,14 @@ use deve_core::models::DocId;
 use leptos::prelude::*;
 
 use self::model::{
-    mobile_surface_sheet_visible, mobile_surface_summary, mobile_surface_switcher_button_class,
+    mobile_surface_close_button_class, mobile_surface_sheet_visible, mobile_surface_summary,
+    mobile_surface_switcher_button_class,
 };
 use self::rows::{SurfaceDiffRow, SurfaceDocumentRow};
+
+pub(crate) fn mobile_surface_close_sheet_marker() -> &'static str {
+    "close_sheet"
+}
 
 #[component]
 pub fn MobileSurfaceSwitcher(
@@ -100,8 +105,9 @@ pub fn MobileSurfaceSwitcher(
                     </span>
                     <button
                         type="button"
-                        data-deve-mobile-surface-action="close_sheet"
-                        class="flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+                        data-deve-mobile-surface-action=mobile_surface_close_sheet_marker()
+                        data-deve-mobile-touch-target=mobile_surface_close_sheet_marker()
+                        class=mobile_surface_close_button_class()
                         title=move || t::common::close_tab(locale.get())
                         aria-label=move || t::common::close_tab(locale.get())
                         on:click=move |_| set_open.set(false)
@@ -165,5 +171,15 @@ pub fn MobileSurfaceSwitcher(
                 </div>
             </section>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mobile_surface_close_sheet_marker;
+
+    #[test]
+    fn mobile_surface_close_sheet_marker_is_stable() {
+        assert_eq!(mobile_surface_close_sheet_marker(), "close_sheet");
     }
 }
