@@ -490,13 +490,18 @@ contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_pref
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-switcher="summary"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-sheet="open"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target="surface_switcher"
-contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_document_row"
-contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_diff_row"
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action=mobile_surface_document_row_marker()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action=mobile_surface_diff_row_marker()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_document_row_marker()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_diff_row_marker()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_close_document_marker()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_close_diff_marker()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="document"
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="diff"
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_summary_prefers_active_diff()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_sheet_gate_closes_for_drawer_or_empty_tabs()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_targets_are_at_least_44px()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	fn mobile_surface_touch_target_markers_are_stable()
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_surface_switcher_hides_bottom_bar()

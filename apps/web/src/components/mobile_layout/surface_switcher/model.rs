@@ -75,11 +75,15 @@ pub(crate) fn mobile_surface_row_class(active: bool) -> &'static str {
     }
 }
 
+pub(crate) fn mobile_surface_close_button_class() -> &'static str {
+    "flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        mobile_surface_row_class, mobile_surface_sheet_visible, mobile_surface_summary,
-        mobile_surface_switcher_button_class,
+        mobile_surface_close_button_class, mobile_surface_row_class, mobile_surface_sheet_visible,
+        mobile_surface_summary, mobile_surface_switcher_button_class,
     };
     use crate::components::editor_tabs::{EditorDocumentTab, EditorTabKey, diff_tab_from_session};
     use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -134,5 +138,7 @@ mod tests {
         assert!(mobile_surface_switcher_button_class().contains("h-11"));
         assert!(mobile_surface_row_class(false).contains("h-11"));
         assert!(mobile_surface_row_class(true).contains("h-11"));
+        assert!(mobile_surface_close_button_class().contains("h-11"));
+        assert!(mobile_surface_close_button_class().contains("min-w-[44px]"));
     }
 }

@@ -1,11 +1,27 @@
 //! plan_ref:
 //!   - 11_ui_design/03_mobile#mobile-surface-switcher
 
-use super::model::mobile_surface_row_class;
+use super::model::{mobile_surface_close_button_class, mobile_surface_row_class};
 use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab};
 use crate::components::icons::{FileText, SourceControl, X};
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
+
+pub(super) fn mobile_surface_document_row_marker() -> &'static str {
+    "mobile_surface_document_row"
+}
+
+pub(super) fn mobile_surface_diff_row_marker() -> &'static str {
+    "mobile_surface_diff_row"
+}
+
+pub(super) fn mobile_surface_close_document_marker() -> &'static str {
+    "close_document"
+}
+
+pub(super) fn mobile_surface_close_diff_marker() -> &'static str {
+    "close_diff"
+}
 
 #[component]
 pub(super) fn SurfaceDocumentRow(
@@ -23,7 +39,8 @@ pub(super) fn SurfaceDocumentRow(
         >
             <button
                 type="button"
-                data-deve-mobile-surface-action="mobile_surface_document_row"
+                data-deve-mobile-surface-action=mobile_surface_document_row_marker()
+                data-deve-mobile-touch-target=mobile_surface_document_row_marker()
                 class=move || mobile_surface_row_class(active.get())
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::document_tab(locale.get())
@@ -34,8 +51,9 @@ pub(super) fn SurfaceDocumentRow(
             </button>
             <button
                 type="button"
-                data-deve-mobile-surface-action="close_document"
-                class="flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+                data-deve-mobile-surface-action=mobile_surface_close_document_marker()
+                data-deve-mobile-touch-target=mobile_surface_close_document_marker()
+                class=mobile_surface_close_button_class()
                 title=move || t::common::close_tab(locale.get())
                 aria-label=move || t::common::close_tab(locale.get())
                 on:click=move |ev| {
@@ -65,7 +83,8 @@ pub(super) fn SurfaceDiffRow(
         >
             <button
                 type="button"
-                data-deve-mobile-surface-action="mobile_surface_diff_row"
+                data-deve-mobile-surface-action=mobile_surface_diff_row_marker()
+                data-deve-mobile-touch-target=mobile_surface_diff_row_marker()
                 class=move || mobile_surface_row_class(active.get())
                 title=tab.tooltip.clone()
                 aria-label=move || t::common::diff_tab(locale.get())
@@ -76,8 +95,9 @@ pub(super) fn SurfaceDiffRow(
             </button>
             <button
                 type="button"
-                data-deve-mobile-surface-action="close_diff"
-                class="flex h-11 min-w-[44px] items-center justify-center rounded-md text-muted active:bg-hover"
+                data-deve-mobile-surface-action=mobile_surface_close_diff_marker()
+                data-deve-mobile-touch-target=mobile_surface_close_diff_marker()
+                class=mobile_surface_close_button_class()
                 title=move || t::common::close_tab(locale.get())
                 aria-label=move || t::common::close_tab(locale.get())
                 on:click=move |ev| {
@@ -88,5 +108,24 @@ pub(super) fn SurfaceDiffRow(
                 <X class="h-4 w-4"/>
             </button>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        mobile_surface_close_diff_marker, mobile_surface_close_document_marker,
+        mobile_surface_diff_row_marker, mobile_surface_document_row_marker,
+    };
+
+    #[test]
+    fn mobile_surface_touch_target_markers_are_stable() {
+        assert_eq!(
+            mobile_surface_document_row_marker(),
+            "mobile_surface_document_row"
+        );
+        assert_eq!(mobile_surface_diff_row_marker(), "mobile_surface_diff_row");
+        assert_eq!(mobile_surface_close_document_marker(), "close_document");
+        assert_eq!(mobile_surface_close_diff_marker(), "close_diff");
     }
 }
