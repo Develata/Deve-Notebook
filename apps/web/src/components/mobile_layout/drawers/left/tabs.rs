@@ -156,7 +156,7 @@ mod tests {
     };
     use crate::components::activity_bar::SidebarView;
     use crate::hooks::use_core::source_control_notice::{
-        SourceControlNotice, is_git_status_cli_notice,
+        SourceControlNotice, is_local_command_notice,
     };
     use leptos::prelude::*;
 
@@ -224,32 +224,42 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_tab_clears_local_git_command_notice() {
+    fn mobile_source_control_tab_clears_local_command_notices() {
         let owner = leptos::reactive::owner::Owner::new();
         owner.with(|| {
-            let (active_view, set_active_view) = signal(SidebarView::Explorer);
-            let (notice, set_notice) = signal(Some(SourceControlNotice::git_status_cli_only()));
-            let (drawer_closed, set_drawer_closed) = signal(false);
+            for local_notice in [
+                SourceControlNotice::git_status_cli_only(),
+                SourceControlNotice::git_mirror_cli_only(),
+                SourceControlNotice::git_export_cli_only(),
+                SourceControlNotice::git_import_cli_only(),
+                SourceControlNotice::git_push_cli_only(),
+                SourceControlNotice::git_repair_cli_only(),
+                SourceControlNotice::establish_branch_unavailable(),
+            ] {
+                let (active_view, set_active_view) = signal(SidebarView::Explorer);
+                let (notice, set_notice) = signal(Some(local_notice));
+                let (drawer_closed, set_drawer_closed) = signal(false);
 
-            select_mobile_sidebar_view(
-                SidebarView::SourceControl,
-                set_active_view,
-                Callback::new(move |_| ()),
-                Callback::new(move |_| set_drawer_closed.set(true)),
-                Callback::new(move |_| {
-                    if notice
-                        .get_untracked()
-                        .as_ref()
-                        .is_some_and(is_git_status_cli_notice)
-                    {
-                        set_notice.set(None);
-                    }
-                }),
-            );
+                select_mobile_sidebar_view(
+                    SidebarView::SourceControl,
+                    set_active_view,
+                    Callback::new(move |_| ()),
+                    Callback::new(move |_| set_drawer_closed.set(true)),
+                    Callback::new(move |_| {
+                        if notice
+                            .get_untracked()
+                            .as_ref()
+                            .is_some_and(is_local_command_notice)
+                        {
+                            set_notice.set(None);
+                        }
+                    }),
+                );
 
-            assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
-            assert!(drawer_closed.get_untracked());
-            assert_eq!(notice.get_untracked(), None);
+                assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
+                assert!(drawer_closed.get_untracked());
+                assert_eq!(notice.get_untracked(), None);
+            }
         });
     }
 }

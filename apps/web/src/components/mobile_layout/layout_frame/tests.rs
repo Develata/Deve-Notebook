@@ -101,20 +101,29 @@ fn mobile_diff_keeps_accessory_toolbar_gate_strict() {
 
 #[test]
 fn mobile_menu_open_clears_stale_source_control_local_command_notice() {
-    let local_notice = SourceControlNotice::git_status_cli_only();
     let server_notice = SourceControlNotice {
         code: ServerErrorCode::ScDocNotFound,
         detail: None,
     };
 
-    assert!(should_clear_mobile_source_control_local_notice(
-        SidebarView::SourceControl,
-        Some(&local_notice),
-    ));
-    assert!(!should_clear_mobile_source_control_local_notice(
-        SidebarView::Explorer,
-        Some(&local_notice),
-    ));
+    for local_notice in [
+        SourceControlNotice::git_status_cli_only(),
+        SourceControlNotice::git_mirror_cli_only(),
+        SourceControlNotice::git_export_cli_only(),
+        SourceControlNotice::git_import_cli_only(),
+        SourceControlNotice::git_push_cli_only(),
+        SourceControlNotice::git_repair_cli_only(),
+        SourceControlNotice::establish_branch_unavailable(),
+    ] {
+        assert!(should_clear_mobile_source_control_local_notice(
+            SidebarView::SourceControl,
+            Some(&local_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_local_notice(
+            SidebarView::Explorer,
+            Some(&local_notice),
+        ));
+    }
     assert!(!should_clear_mobile_source_control_local_notice(
         SidebarView::SourceControl,
         Some(&server_notice),
