@@ -10,14 +10,15 @@ use super::header::MobileHeader;
 use super::layout_backdrop::MobileDrawerBackdrop;
 use super::layout_banner::MobileSyncBanner;
 use super::outline_button::OutlineToggleButton;
+use super::source_control_notice::clear_mobile_source_control_notice_for_view;
 use super::surface_switcher::MobileSurfaceSwitcher;
 use super::toolbar::MobileAccessoryToolbar;
 use crate::components::activity_bar::SidebarView;
 use crate::components::editor_tabs::{
     EditorTabRuntimeInputs, create_current_editor_doc, create_editor_tab_runtime,
 };
-use crate::hooks::use_core::EditorContext;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
+use crate::hooks::use_core::{EditorContext, SourceControlContext};
 use crate::i18n::Locale;
 use crate::runtime::{
     document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
@@ -83,6 +84,7 @@ pub fn MobileLayoutFrame(
     let scope = expect_context::<ScopeClient>();
     let session = expect_context::<SessionClient>();
     let rendering = expect_context::<RenderingClient>();
+    let source_control_context = use_context::<SourceControlContext>();
     let current_doc = document.current_doc;
     let diff_content = source_control.diff_content;
     let current_editor_doc = create_current_editor_doc(&document, &editor);
@@ -109,6 +111,10 @@ pub fn MobileLayoutFrame(
             <MobileHeader
                 title=title
                 on_menu=Callback::new(move |_| {
+                    clear_mobile_source_control_notice_for_view(
+                        active_view.get_untracked(),
+                        source_control_context.as_ref(),
+                    );
                     set_show_outline.set(false);
                     set_show_sidebar.set(true);
                 })
