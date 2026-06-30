@@ -5,6 +5,8 @@
 use super::registry::{create_static_commands, filter_commands};
 use super::types::Command;
 use crate::components::focus_scope;
+use crate::components::main_layout::SidebarControl;
+use crate::hooks::use_core::{SourceControlContext, source_control_notice::SourceControlNotice};
 use crate::i18n::Locale;
 use leptos::prelude::*;
 use std::sync::Arc;
@@ -52,12 +54,24 @@ pub(super) fn create_filtered_commands_memo(
     on_settings: Callback<()>,
     on_open: Callback<()>,
     set_show: WriteSignal<bool>,
+    set_source_control_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
 ) -> Memo<Vec<Command>> {
+    let set_source_control_notice = set_source_control_notice.or_else(|| {
+        use_context::<SourceControlContext>().map(|source_control| source_control.set_notice)
+    });
+    let sidebar_control = use_context::<SidebarControl>();
     Memo::new(move |_| {
         let q = query.get();
         let current_locale = locale.get();
-        let static_cmds =
-            create_static_commands(current_locale, on_settings, on_open, set_show, locale);
+        let static_cmds = create_static_commands(
+            current_locale,
+            on_settings,
+            on_open,
+            set_show,
+            locale,
+            set_source_control_notice,
+            sidebar_control,
+        );
         filter_commands(&q, static_cmds, 50)
     })
 }
@@ -121,5 +135,45 @@ pub(super) fn build_keydown_handler(
                 let _ = selected_index;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::create_filtered_commands_memo;
+    use crate::i18n::Locale;
+    use leptos::prelude::{Callback, GetUntracked, RwSignal, Set, signal};
+    use leptos::reactive::owner::Owner;
+
+    #[test]
+    fn filtered_command_actions_survive_memo_recompute() {
+        let owner = Owner::new();
+
+        owner.with(|| {
+            let (query, set_query) = signal(String::new());
+            let (show_palette, set_show_palette) = signal(true);
+            let (settings_opened, set_settings_opened) = signal(false);
+            let locale = RwSignal::new(Locale::En);
+            let commands = create_filtered_commands_memo(
+                query.into(),
+                locale,
+                Callback::new(move |_| set_settings_opened.set(true)),
+                Callback::new(|_| {}),
+                set_show_palette,
+                None,
+            );
+            let settings = commands
+                .get_untracked()
+                .into_iter()
+                .find(|command| command.id == "settings")
+                .expect("settings command");
+
+            set_query.set("lang".to_string());
+            let _ = commands.get_untracked();
+            settings.action.run(());
+
+            assert!(settings_opened.get_untracked());
+            assert!(!show_palette.get_untracked());
+        });
     }
 }

@@ -1,13 +1,16 @@
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-001
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	run: cargo test -p deve_web mobile_viewport_mapping -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	run: cargo test -p deve_web git_status_command_keeps_mobile_source_control_drawer_closed -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	cli_assert: mobile_viewport_mapping_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	cli_assert: mobile_layout_mode_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	cli_assert: mobile_git_status_notice_does_not_replace_source_control_entry true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	ui_assert: layout_mode_eq "mobile"
 contains	apps/web/src/components/main_layout/contexts.rs	pub(crate) const MOBILE_BREAKPOINT_WIDTH: f64 = 768.0;
 contains	apps/web/src/components/main_layout/contexts.rs	pub(crate) fn viewport_width_maps_to_mobile(width: f64) -> bool
 contains	apps/web/src/components/main_layout/contexts.rs	fn mobile_viewport_mapping_uses_inclusive_768px_boundary()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-layout-mode="mobile"
+contains	apps/web/src/components/command_palette/registry/git/tests.rs	fn git_status_command_keeps_mobile_source_control_drawer_closed()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-002
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_web mobile_drawer_edge_swipe -- --nocapture
@@ -35,17 +38,25 @@ absent_tree	apps/web/src/components/mobile_layout	resizer-handle
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-004
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	run: cargo test -p deve_web mobile_toolbar_keyboard -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_focus_editor: true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_wait_keyboard: true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_measure: "mobile_toolbar_history_actions"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_visual_viewport_offset_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_dom_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	cli_assert: mobile_toolbar_history_actions_front_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: toolbar_visible true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: toolbar_not_overlapped_by_keyboard true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: mobile_toolbar_history_actions_visible_at_390px true
 contains	docs/plan/11_ui_design/03_mobile.md	必须使用 `visualViewport` API 监听键盘高度变化
 contains	apps/web/src/components/mobile_layout/effects.rs	visual_viewport_keyboard_offset(
 contains	apps/web/src/components/mobile_layout/effects.rs	fn mobile_toolbar_keyboard_offset_uses_visual_viewport_overlap()
 contains	apps/web/src/components/mobile_layout/effects.rs	fn mobile_toolbar_keyboard_offset_clamps_to_zero_without_overlap()
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar="accessory"
 contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-keyboard-offset=move || keyboard_offset.get().to_string()
+contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-toolbar-history-target=TOOLBAR_HISTORY_TARGET
+contains	apps/web/src/components/mobile_layout/toolbar.rs	t::common::indent(locale.get())
 contains	apps/web/src/components/mobile_layout/toolbar.rs	fn mobile_toolbar_keyboard_style_places_toolbar_above_keyboard()
+contains	apps/web/src/components/mobile_layout/toolbar.rs	fn mobile_toolbar_history_actions_stay_front_loaded_for_390px()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-005
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	run: cargo test -p deve_web mobile_search_sheet -- --nocapture
@@ -101,14 +112,14 @@ contains	apps/web/src/components/mobile_layout/footer.rs	data-deve-mobile-bottom
 contains	apps/web/src/components/mobile_layout/footer.rs	fn mobile_bottom_bar_collapsed_state_is_single_line()
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-row="summary"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-single-line="true"
-contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-fields-overflow="scroll-x"
+contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-fields-overflow="clip"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="branch"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="status"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="words"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="lines"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-field="col"
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	data-deve-mobile-bottom-bar-col-source="placeholder"
-contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_fields_scroll_horizontally_without_wrapping()
+contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_fields_fit_without_horizontal_scroll()
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	fn mobile_bottom_bar_collapsed_summary_exposes_required_fields()
 contains	apps/web/src/i18n/bottom_bar.rs	pub fn branch(locale: Locale) -> &'static str
 contains	apps/web/src/i18n/bottom_bar.rs	pub fn col(locale: Locale) -> &'static str
@@ -137,6 +148,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "topbar_buttons"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_open_drawer: "left"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "drawer_close_buttons"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_click: "mobile-more-button"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "mobile_more_items"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "mobile_more_pin_actions"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_open_drawer: "right"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "outline_toggle"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "bottom_bar_toggle"
@@ -149,6 +163,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_focus_editor: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_wait_keyboard: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_touch_target_markers_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_touch_targets_min_size_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_more_touch_target_markers_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_assert: all_targets_min_size "44x44"
 contains	apps/web/src/components/mobile_layout/header.rs	data-deve-mobile-touch-target="topbar_buttons"
 contains	apps/web/src/components/mobile_layout/header.rs	fn mobile_touch_targets_topbar_buttons_are_at_least_44px()
@@ -221,8 +236,8 @@ contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-ch
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-chat-fullscreen=move || expanded.get().to_string()
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	set_expanded.set(mobile_chat_after_open())
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	set_expanded.set(mobile_chat_after_close())
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_chat_page_expands_to_fullscreen()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_chat_page_close_returns_to_editor_surface()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_page_expands_to_fullscreen()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_page_close_returns_to_editor_surface()
 contains	apps/web/src/components/chat/header.rs	data-deve-mobile-chat-action="chat_close_button"
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-012
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	run: scripts/check-mobile-baseline.sh
@@ -234,7 +249,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_send_button_marker_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_keyboard_offset_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_bottom_bar_hidden_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	cli_assert: mobile_chat_input_font_size_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: chat_input_not_overlapped_by_keyboard true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: computed_style "chat_input" "font-size" "16px"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: min_target_size "44x44"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-012	ui_assert: bottom_bar_hidden true
 contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	case_id: UI-MOB-CHAT-REG-002
@@ -247,21 +264,27 @@ case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_send_button_marker_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_keyboard_offset_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_bottom_bar_hidden_bound true
+case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	cli_assert: mobile_chat_input_font_size_bound true
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: chat_input_not_overlapped_by_keyboard true
+case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: computed_style "chat_input" "font-size" "16px"
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: min_target_size "44x44"
 case_contains	docs/acceptance-cases/13_ui_mobile_chat_regression.md	UI-MOB-CHAT-REG-002	ui_assert: bottom_bar_hidden true
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-chat-input-area=move || mobile_chat_input_area_marker(mobile)
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-chat-input=move || mobile_chat_input_marker(mobile)
+contains	apps/web/src/components/chat/input_area.rs	style=move || mobile_chat_input_style(mobile)
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-chat-action=move || mobile_chat_send_button_marker(mobile)
 contains	apps/web/src/components/chat/input_area.rs	data-deve-mobile-touch-target=move || mobile_chat_send_button_marker(mobile)
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_input_area_uses_safe_area_padding()
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_send_button_is_at_least_44px()
 contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_markers_are_mobile_only()
+contains	apps/web/src/components/chat/input_area.rs	fn mobile_chat_keyboard_input_uses_16px_font_size()
 contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-chat-keyboard-offset=move || keyboard_offset.get().to_string()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_chat_keyboard_sheet_stays_above_keyboard()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_keyboard_sheet_stays_above_keyboard()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_bottom_bar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open.get()
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_chat_keyboard_hides_bottom_bar()
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	should_clear_mobile_source_control_local_notice(
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_chat_keyboard_hides_bottom_bar()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_menu_open_clears_stale_source_control_local_command_notice()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-013
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-013	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-013	run: cargo test -p deve_web mobile_chat_readability -- --nocapture
@@ -345,16 +368,21 @@ contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	data-deve-mo
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_sidebar_icon_tabs_marker_is_visible_when_drawer_open()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_sidebar_more_button_marker_is_stable()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_sidebar_more_button_is_at_least_44px()
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_source_control_tab_clears_local_command_notices()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	data-deve-mobile-sidebar-tab=sidebar_tab_marker(view)
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	data-deve-mobile-sidebar-tab-active=move || (active_view.get() == view).to_string()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	fn mobile_sidebar_icon_tab_markers_cover_sidebar_entries()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	fn mobile_sidebar_icon_tab_classes_cover_sidebar_entries()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-more-menu=move || mobile_more_menu_marker(show_more.get())
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-more-item=mobile_more_item_marker(item)
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-touch-target=mobile_more_item_touch_target()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-more-pin-action=mobile_more_pin_action_marker(item)
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu.rs	data-deve-mobile-touch-target=mobile_more_pin_touch_target()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_menu_marker_is_visible_when_open()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_menu_items_cover_sidebar_entries()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_menu_reuses_desktop_entry_classes()
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_mobile_touch_targets_are_at_least_44px()
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/more_menu/tests.rs	fn mobile_sidebar_more_mobile_touch_targets_markers_are_stable()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-016
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-016	run: cargo test -p deve_web mobile_sidebar_more -- --nocapture
@@ -395,11 +423,11 @@ contains	docs/acceptance-bindings.tsv	UI-MOB-017|manual-chrome|docs/features/08_
 contains	docs/plan/11_ui_design/03_mobile.md	移动端 Diff **MUST** 使用 Unified View，并避免 AI Chat、辅助键盘栏或抽屉层级遮挡 diff 操作。
 contains	apps/web/src/components/diff_view/mod.rs	pub(crate) fn diff_view_class(mobile: bool) -> &'static str
 contains	apps/web/src/components/diff_view/mod.rs	fn mobile_diff_uses_mobile_dom_marker()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_diff_hides_chat_chip_and_expanded_chat()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_diff_hides_chat_chip_and_expanded_chat()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_accessory_toolbar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	mobile_accessory_toolbar_visible(
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_diff_hides_accessory_toolbar()
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_diff_keeps_accessory_toolbar_gate_strict()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_diff_hides_accessory_toolbar()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_diff_keeps_accessory_toolbar_gate_strict()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-018
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-018	run: cargo test -p deve_web mobile_diff_close -- --nocapture
@@ -420,6 +448,8 @@ contains	apps/web/src/components/mobile_layout/content.rs	fn mobile_diff_close_r
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-019
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	run: cargo test -p deve_web mobile_toolbar_write_gate -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	ui_focus_editor: true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	ui_wait_keyboard: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	cli_assert: mobile_toolbar_uses_repo_write_gate true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	cli_assert: mobile_toolbar_actions_guarded true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-019	ui_assert: accessory_toolbar_buttons_disabled_when_write_blocked true
@@ -436,8 +466,8 @@ contains	apps/web/src/components/mobile_layout/toolbar.rs	pub(super) fn mobile_t
 contains	apps/web/src/components/mobile_layout/toolbar.rs	fn run_mobile_toolbar_action(readonly: Signal<bool>, action: impl FnOnce())
 contains	apps/web/src/components/mobile_layout/toolbar.rs	run_mobile_toolbar_action(readonly, ffi::mobile_undo)
 contains	apps/web/src/components/mobile_layout/toolbar.rs	run_mobile_toolbar_action(readonly, ffi::mobile_redo)
-contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-history-action="undo"
-contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-history-action="redo"
+contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-history-action=mobile_toolbar_history_actions_front_order()[0]
+contains	apps/web/src/components/mobile_layout/toolbar.rs	data-deve-mobile-history-action=mobile_toolbar_history_actions_front_order()[1]
 contains	apps/web/src/components/mobile_layout/toolbar.rs	fn mobile_toolbar_write_gate_blocks_actions()
 contains	apps/web/index.html	if (view.state?.readOnly) return false;
 contains	apps/web/index.html	window.mobileRedo = () =>
@@ -459,40 +489,80 @@ contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobi
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_read_gate_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_commit_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	source-control-confirmed-open-diff-action
-contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_only_git_cli_notice()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_local_command_notice()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	clear_tracked_mobile_source_control_notice_for_view(
 contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_view(
 contains	docs/acceptance-cases/17_mobile_surface_switcher.md	case_id: UI-MOB-021
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: cargo test -p deve_web mobile_surface -- --nocapture
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "surface_switcher"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_surface_type_label_visible true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "open_switcher"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_surface_sheet_visible true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_rows"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_measure: "mobile_surface_close_buttons"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_open_drawer: "left"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "drawer_close_buttons"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "close_sheet"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_surface_sheet_visible false
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_focus: "open_switcher"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_keypress: "Enter"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "mobile_surface_document_row"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: editor_visible true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "mobile_surface_diff_row"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_diff_mode "unified"
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_click: "close_diff"
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_switcher_marker_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_type_label_marker_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_sheet_marker_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_runtime_transition_close_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: editor_tab_runtime_resets_on_branch_scope_change true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_drawer_close_bound true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_switcher_keyboard_toggle_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_touch_targets_min_size_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_diff_restore_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_close_diff_keeps_source_control_state true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: staged_pending_commit_state_unchanged true
 contains	docs/acceptance-bindings.tsv	UI-MOB-021|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile document diff switcher workflow
 contains	docs/plan/11_ui_design/03_mobile.md	Mobile Surface Switcher {#mobile-surface-switcher}
+contains	docs/plan/11_ui_design/03_mobile.md	docs/acceptance-cases/17_mobile_surface_switcher.md
 contains	docs/plan/11_ui_design/03_mobile.md	顶部当前 surface 胶囊 **MUST** 位于 sync banner 与 content stack 之间
 contains	docs/features/08_ui_design_03_mobile.md	顶部当前 surface 胶囊应显示当前文档或差异
 contains	apps/web/src/components/editor_tabs.rs	11_ui_design/03_mobile#mobile-surface-switcher
+contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn editor_tab_runtime_scope(
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn scope_changed(
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn active_editor_tab_key(
-contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_resets_on_repo_or_scope_change()
+contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_resets_on_repo_branch_or_scope_change()
+contains	apps/web/src/components/editor_tabs/tests.rs	PeerId::new("peer-a")
 contains	apps/web/src/components/editor_tabs/tests.rs	fn editor_tab_runtime_prefers_active_diff_over_document()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-switcher="summary"
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-sheet="open"
-contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target="surface_switcher"
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_switcher_touch_target()
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-surface-type-label=mobile_surface_type_label_marker()
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	data-deve-mobile-touch-target=mobile_surface_close_touch_target()
+contains	apps/web/src/components/mobile_layout/surface_switcher.rs	class=mobile_surface_close_button_class()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_document_row"
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-action="mobile_surface_diff_row"
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_row_touch_target()
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_close_touch_target()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="document"
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="diff"
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_summary_prefers_active_diff()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_sheet_gate_closes_for_drawer_or_empty_tabs()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_switcher_toggle_respects_sheet_gate()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_targets_are_at_least_44px()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_close_buttons_are_at_least_44px()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_target_markers_are_stable()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_badge_text_shows_surface_type_and_count()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_badge_text_uses_tabs_page_copy_in_zh()
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
+contains	apps/web/src/components/mobile_layout/surface_runtime.rs	pub(super) fn collapse_surface_switcher_on_runtime_transition(
+contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surface_switcher_closes_for_runtime_scope_transitions()
+contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surface_switcher_closes_for_pending_branch_or_repo_switch()
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	11_ui_design/03_mobile#mobile-surface-switcher
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open
-contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_surface_switcher_hides_bottom_bar()
-contains	apps/web/src/components/mobile_layout/chat_sheet.rs	fn mobile_surface_switcher_hides_chat_sheet()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_surface_switcher_hides_bottom_bar()
+contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_surface_switcher_hides_chat_sheet()
 contains	apps/web/style/_base.css	.cm-content
 contains	apps/web/style/_base.css	font-size: 16px;
 contains	docs/plan/11_ui_design/03_mobile.md	**Font Size**: 默认字号 **SHOULD** 设为 `16px`

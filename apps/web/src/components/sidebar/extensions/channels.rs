@@ -20,12 +20,18 @@ pub fn AiChannelCards(locale: RwSignal<Locale>, chat: ChatContext) -> impl IntoV
         trusted_cap
             .get()
             .native_reason
-            .unwrap_or_else(|| "Native AI disabled by config".to_string())
+            .as_deref()
+            .map(|reason| t::extensions::ai_backend_reason(locale.get(), reason))
+            .unwrap_or_else(|| {
+                t::extensions::ai_backend_reason(locale.get(), "native AI disabled by config")
+            })
     };
     let trusted_reason = move || {
         trusted_cap
             .get()
             .trusted_cli_reason
+            .as_deref()
+            .map(|reason| t::extensions::ai_backend_reason(locale.get(), reason))
             .unwrap_or_else(|| t::extensions::trusted_cli_unavailable(locale.get()).to_string())
     };
 

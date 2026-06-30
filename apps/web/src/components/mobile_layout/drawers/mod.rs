@@ -61,3 +61,32 @@ pub(super) fn drawer_class(side: &str, open: bool) -> String {
     };
     format!("{} {} {} {}", base, width, surface, offset)
 }
+
+pub(super) fn drawer_hidden_style(hidden: bool) -> &'static str {
+    if hidden {
+        "visibility: hidden; pointer-events: none;"
+    } else {
+        ""
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{drawer_class, drawer_hidden_style};
+
+    #[test]
+    fn mobile_drawer_class_offsets_closed_drawers_by_side() {
+        assert!(drawer_class("left", false).contains("-translate-x-full"));
+        assert!(drawer_class("right", false).contains("translate-x-full"));
+        assert!(drawer_class("left", true).contains("translate-x-0"));
+    }
+
+    #[test]
+    fn mobile_drawer_hidden_style_removes_closed_surface_from_interaction() {
+        assert_eq!(
+            drawer_hidden_style(true),
+            "visibility: hidden; pointer-events: none;"
+        );
+        assert_eq!(drawer_hidden_style(false), "");
+    }
+}

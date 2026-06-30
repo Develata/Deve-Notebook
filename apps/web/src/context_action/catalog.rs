@@ -40,7 +40,7 @@ pub const CONTEXT_ACTIONS: &[ContextActionDescriptor] = &[
         label: t::context_menu::open_in_new_window,
         icon: ContextActionIcon::OpenInNewWindow,
         origin: ContextActionOrigin::ShellLocal,
-        target_kind: ContextActionTargetKind::AnyNode,
+        target_kind: ContextActionTargetKind::MarkdownFile,
         effect: ContextActionEffect::ReadOnly,
         readonly_allowed: true,
         separator_before: false,

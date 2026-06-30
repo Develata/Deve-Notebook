@@ -4,7 +4,8 @@
 //!   - 10_rendering#document-authority-bridge
 //!
 use crate::hooks::use_core::sync_banner_notice::show_sync_banner;
-use crate::hooks::use_core::write_gate_banner::cannot_action;
+use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason, cannot_action};
+use crate::i18n::Locale;
 use leptos::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -14,8 +15,8 @@ use wasm_bindgen::closure::Closure;
 type EventClosure = Rc<RefCell<Option<Closure<dyn FnMut(web_sys::Event)>>>>;
 const MAX_CHAT_ATTACHMENT_BYTES: f64 = 1024.0 * 1024.0;
 
-fn attach_file_error(reason: &str) -> String {
-    cannot_action("attach file", reason)
+fn attach_file_error(locale: Locale, reason: WriteGateReason) -> String {
+    cannot_action(locale, WriteGateAction::AttachFile, reason)
 }
 
 pub fn on_drag_over(set_is_drag_over: WriteSignal<bool>) -> impl Fn(web_sys::DragEvent) {
@@ -36,6 +37,7 @@ pub fn on_drop(
     set_input: WriteSignal<String>,
     set_is_drag_over: WriteSignal<bool>,
     set_sync_banner: WriteSignal<Option<String>>,
+    locale: RwSignal<Locale>,
 ) -> impl Fn(web_sys::DragEvent) {
     move |ev: web_sys::DragEvent| {
         ev.prevent_default();
@@ -48,14 +50,20 @@ pub fn on_drop(
                 if let Some(file) = files.item(i) {
                     let name = file.name();
                     if file.size() > MAX_CHAT_ATTACHMENT_BYTES {
-                        let message = attach_file_error("file is larger than 1 MiB");
+                        let message = attach_file_error(
+                            locale.get_untracked(),
+                            WriteGateReason::FileTooLarge,
+                        );
                         leptos::logging::warn!("{}: {}", message, name);
                         show_sync_banner(set_sync_banner, message);
                         continue;
                     }
 
                     let Ok(reader) = web_sys::FileReader::new() else {
-                        let message = attach_file_error("file reader is unavailable");
+                        let message = attach_file_error(
+                            locale.get_untracked(),
+                            WriteGateReason::FileReaderUnavailable,
+                        );
                         leptos::logging::warn!("{}: {}", message, name);
                         show_sync_banner(set_sync_banner, message);
                         continue;
@@ -87,7 +95,10 @@ pub fn on_drop(
                     if reader.read_as_text(&file).is_err() {
                         reader.set_onload(None);
                         let _ = onload_slot.borrow_mut().take();
-                        let message = attach_file_error("file read failed");
+                        let message = attach_file_error(
+                            locale.get_untracked(),
+                            WriteGateReason::FileReadFailed,
+                        );
                         leptos::logging::warn!("{}: {}", message, name);
                         show_sync_banner(set_sync_banner, message);
                     }
@@ -100,20 +111,34 @@ pub fn on_drop(
 #[cfg(test)]
 mod tests {
     use super::attach_file_error;
+    use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason};
+    use crate::i18n::{Locale, t};
 
     #[test]
-    fn attach_file_errors_are_visible_banner_copy() {
+    fn attach_file_errors_are_localized_banner_copy() {
         assert_eq!(
-            attach_file_error("file is larger than 1 MiB"),
-            "Cannot attach file: file is larger than 1 MiB"
+            attach_file_error(Locale::Zh, WriteGateReason::FileTooLarge),
+            t::write_gate::cannot_action(
+                Locale::Zh,
+                WriteGateAction::AttachFile,
+                WriteGateReason::FileTooLarge,
+            )
         );
         assert_eq!(
-            attach_file_error("file reader is unavailable"),
-            "Cannot attach file: file reader is unavailable"
+            attach_file_error(Locale::En, WriteGateReason::FileReaderUnavailable),
+            t::write_gate::cannot_action(
+                Locale::En,
+                WriteGateAction::AttachFile,
+                WriteGateReason::FileReaderUnavailable,
+            )
         );
         assert_eq!(
-            attach_file_error("file read failed"),
-            "Cannot attach file: file read failed"
+            attach_file_error(Locale::Zh, WriteGateReason::FileReadFailed),
+            t::write_gate::cannot_action(
+                Locale::Zh,
+                WriteGateAction::AttachFile,
+                WriteGateReason::FileReadFailed,
+            )
         );
     }
 }

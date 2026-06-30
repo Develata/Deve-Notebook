@@ -1,0 +1,232 @@
+//! plan_ref:
+//!   - 13_i18n#i18n-keys-reference
+//!   - 09_web_thin_client_ledger#write-readiness
+//!
+//! User-visible write-gate banner strings.
+
+use super::Locale;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WriteGateAction {
+    Search,
+    AttachFile,
+    ApplyCode,
+    CreateDocument,
+    MoveDocument,
+    CopyDocument,
+    DeleteDocument,
+    SwitchRepo,
+    CreateRepo,
+    RenameRepo,
+    RemoveRepo,
+    SwitchBranch,
+    RenameDoc,
+    DeleteDoc,
+    CopyDoc,
+    MoveDoc,
+    CreateDoc,
+    StageFile,
+    StageFiles,
+    UnstageFile,
+    UnstageFiles,
+    DiscardFile,
+    Commit,
+    ResolveConflict,
+    CommitAndPush,
+    SetSyncMode,
+    ConfirmMerge,
+    DiscardPending,
+    MergePeer,
+    GetSyncMode,
+    GetPendingOps,
+    ListShadows,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WriteGateReason {
+    SessionExpired,
+    NativeBootstrapInvalid,
+    NativeSessionPending,
+    NativeServiceOffline,
+    NativeReprobeRequired,
+    Offline,
+    Reconnecting,
+    SnapshotLoading,
+    ReadOnly,
+    ScopeSwitching,
+    NoRepo,
+    HandshakingRepo,
+    LocalRepoScopeUnstable,
+    ScopeNonceExhausted,
+    EmptyRepositoryName,
+    RemoteBranchView,
+    NoFallbackRepository,
+    NoActiveDocument,
+    DocumentTooLarge,
+    WriterClientIdUnavailable,
+    CurrentRepoIdUnavailable,
+    FailedApplyCodeLocally,
+    NoCurrentDocumentSelected,
+    FileTooLarge,
+    FileReaderUnavailable,
+    FileReadFailed,
+}
+
+pub fn cannot_action(locale: Locale, action: WriteGateAction, reason: WriteGateReason) -> String {
+    match locale {
+        Locale::En => format!(
+            "Cannot {}: {}",
+            action_label(locale, action),
+            reason_label(locale, reason)
+        ),
+        Locale::Zh => format!(
+            "无法{}：{}",
+            action_label(locale, action),
+            reason_label(locale, reason)
+        ),
+    }
+}
+
+pub fn cannot_send(locale: Locale, action: WriteGateAction, reason: WriteGateReason) -> String {
+    match locale {
+        Locale::En => format!(
+            "Cannot send {}: {}",
+            action_label(locale, action),
+            reason_label(locale, reason)
+        ),
+        Locale::Zh => format!(
+            "无法发送 {}：{}",
+            action_label(locale, action),
+            reason_label(locale, reason)
+        ),
+    }
+}
+
+pub fn action_label(locale: Locale, action: WriteGateAction) -> &'static str {
+    match (locale, action) {
+        (Locale::En, WriteGateAction::Search) => "search",
+        (Locale::Zh, WriteGateAction::Search) => "搜索",
+        (Locale::En, WriteGateAction::AttachFile) => "attach file",
+        (Locale::Zh, WriteGateAction::AttachFile) => "附加文件",
+        (Locale::En, WriteGateAction::ApplyCode) => "apply code",
+        (Locale::Zh, WriteGateAction::ApplyCode) => "应用代码",
+        (Locale::En, WriteGateAction::CreateDocument) => "create document",
+        (Locale::Zh, WriteGateAction::CreateDocument) => "新建文档",
+        (Locale::En, WriteGateAction::MoveDocument) => "move document",
+        (Locale::Zh, WriteGateAction::MoveDocument) => "移动文档",
+        (Locale::En, WriteGateAction::CopyDocument) => "copy document",
+        (Locale::Zh, WriteGateAction::CopyDocument) => "复制文档",
+        (Locale::En, WriteGateAction::DeleteDocument) => "delete document",
+        (Locale::Zh, WriteGateAction::DeleteDocument) => "删除文档",
+        (Locale::En, WriteGateAction::SwitchRepo) => "switch repo",
+        (Locale::Zh, WriteGateAction::SwitchRepo) => "切换仓库",
+        (Locale::En, WriteGateAction::CreateRepo) => "create repo",
+        (Locale::Zh, WriteGateAction::CreateRepo) => "创建仓库",
+        (Locale::En, WriteGateAction::RenameRepo) => "rename repo",
+        (Locale::Zh, WriteGateAction::RenameRepo) => "重命名仓库",
+        (Locale::En, WriteGateAction::RemoveRepo) => "remove repo",
+        (Locale::Zh, WriteGateAction::RemoveRepo) => "移除仓库",
+        (Locale::En, WriteGateAction::SwitchBranch) => "switch branch",
+        (Locale::Zh, WriteGateAction::SwitchBranch) => "切换分支",
+        (Locale::En, WriteGateAction::RenameDoc) => "RenameDoc",
+        (Locale::Zh, WriteGateAction::RenameDoc) => "重命名文档请求",
+        (Locale::En, WriteGateAction::DeleteDoc) => "DeleteDoc",
+        (Locale::Zh, WriteGateAction::DeleteDoc) => "删除文档请求",
+        (Locale::En, WriteGateAction::CopyDoc) => "CopyDoc",
+        (Locale::Zh, WriteGateAction::CopyDoc) => "复制文档请求",
+        (Locale::En, WriteGateAction::MoveDoc) => "MoveDoc",
+        (Locale::Zh, WriteGateAction::MoveDoc) => "移动文档请求",
+        (Locale::En, WriteGateAction::CreateDoc) => "CreateDoc",
+        (Locale::Zh, WriteGateAction::CreateDoc) => "新建文档请求",
+        (Locale::En, WriteGateAction::StageFile) => "StageFile",
+        (Locale::Zh, WriteGateAction::StageFile) => "暂存文件请求",
+        (Locale::En, WriteGateAction::StageFiles) => "StageFiles",
+        (Locale::Zh, WriteGateAction::StageFiles) => "批量暂存请求",
+        (Locale::En, WriteGateAction::UnstageFile) => "UnstageFile",
+        (Locale::Zh, WriteGateAction::UnstageFile) => "取消暂存文件请求",
+        (Locale::En, WriteGateAction::UnstageFiles) => "UnstageFiles",
+        (Locale::Zh, WriteGateAction::UnstageFiles) => "批量取消暂存请求",
+        (Locale::En, WriteGateAction::DiscardFile) => "DiscardFile",
+        (Locale::Zh, WriteGateAction::DiscardFile) => "放弃文件变更请求",
+        (Locale::En, WriteGateAction::Commit) => "Commit",
+        (Locale::Zh, WriteGateAction::Commit) => "提交请求",
+        (Locale::En, WriteGateAction::ResolveConflict) => "ResolveConflict",
+        (Locale::Zh, WriteGateAction::ResolveConflict) => "解决冲突请求",
+        (Locale::En, WriteGateAction::CommitAndPush) => "CommitAndPush",
+        (Locale::Zh, WriteGateAction::CommitAndPush) => "提交并推送请求",
+        (Locale::En, WriteGateAction::SetSyncMode) => "SetSyncMode",
+        (Locale::Zh, WriteGateAction::SetSyncMode) => "设置同步模式请求",
+        (Locale::En, WriteGateAction::ConfirmMerge) => "ConfirmMerge",
+        (Locale::Zh, WriteGateAction::ConfirmMerge) => "确认合并请求",
+        (Locale::En, WriteGateAction::DiscardPending) => "DiscardPending",
+        (Locale::Zh, WriteGateAction::DiscardPending) => "放弃待处理请求",
+        (Locale::En, WriteGateAction::MergePeer) => "MergePeer",
+        (Locale::Zh, WriteGateAction::MergePeer) => "合并节点请求",
+        (Locale::En, WriteGateAction::GetSyncMode) => "GetSyncMode",
+        (Locale::Zh, WriteGateAction::GetSyncMode) => "读取同步模式请求",
+        (Locale::En, WriteGateAction::GetPendingOps) => "GetPendingOps",
+        (Locale::Zh, WriteGateAction::GetPendingOps) => "读取待处理操作请求",
+        (Locale::En, WriteGateAction::ListShadows) => "ListShadows",
+        (Locale::Zh, WriteGateAction::ListShadows) => "列出远端影子请求",
+    }
+}
+
+pub fn reason_label(locale: Locale, reason: WriteGateReason) -> &'static str {
+    match (locale, reason) {
+        (Locale::En, WriteGateReason::SessionExpired) => "session expired",
+        (Locale::Zh, WriteGateReason::SessionExpired) => "会话已过期",
+        (Locale::En, WriteGateReason::NativeBootstrapInvalid) => "native bootstrap invalid",
+        (Locale::Zh, WriteGateReason::NativeBootstrapInvalid) => "原生启动信息无效",
+        (Locale::En, WriteGateReason::NativeSessionPending) => "native session pending",
+        (Locale::Zh, WriteGateReason::NativeSessionPending) => "原生会话仍在准备",
+        (Locale::En, WriteGateReason::NativeServiceOffline) => "native service offline",
+        (Locale::Zh, WriteGateReason::NativeServiceOffline) => "原生服务离线",
+        (Locale::En, WriteGateReason::NativeReprobeRequired) => "native reprobe required",
+        (Locale::Zh, WriteGateReason::NativeReprobeRequired) => "需要重新探测原生服务",
+        (Locale::En, WriteGateReason::Offline) => "offline",
+        (Locale::Zh, WriteGateReason::Offline) => "离线",
+        (Locale::En, WriteGateReason::Reconnecting) => "reconnecting",
+        (Locale::Zh, WriteGateReason::Reconnecting) => "正在重连",
+        (Locale::En, WriteGateReason::SnapshotLoading) => "snapshot loading",
+        (Locale::Zh, WriteGateReason::SnapshotLoading) => "正在加载快照",
+        (Locale::En, WriteGateReason::ReadOnly) => "read-only",
+        (Locale::Zh, WriteGateReason::ReadOnly) => "只读模式",
+        (Locale::En, WriteGateReason::ScopeSwitching) => "scope switching",
+        (Locale::Zh, WriteGateReason::ScopeSwitching) => "正在切换作用域",
+        (Locale::En, WriteGateReason::NoRepo) => "no repo selected",
+        (Locale::Zh, WriteGateReason::NoRepo) => "尚未选择仓库",
+        (Locale::En, WriteGateReason::HandshakingRepo) => "repo handshaking",
+        (Locale::Zh, WriteGateReason::HandshakingRepo) => "正在协商仓库写入权限",
+        (Locale::En, WriteGateReason::LocalRepoScopeUnstable) => "local repo scope is not stable",
+        (Locale::Zh, WriteGateReason::LocalRepoScopeUnstable) => "本地仓库作用域不稳定",
+        (Locale::En, WriteGateReason::ScopeNonceExhausted) => "scope nonce exhausted",
+        (Locale::Zh, WriteGateReason::ScopeNonceExhausted) => "作用域 nonce 已耗尽",
+        (Locale::En, WriteGateReason::EmptyRepositoryName) => "empty repository name",
+        (Locale::Zh, WriteGateReason::EmptyRepositoryName) => "仓库名称为空",
+        (Locale::En, WriteGateReason::RemoteBranchView) => "remote branch view",
+        (Locale::Zh, WriteGateReason::RemoteBranchView) => "当前是远程分支视图",
+        (Locale::En, WriteGateReason::NoFallbackRepository) => "no fallback repository",
+        (Locale::Zh, WriteGateReason::NoFallbackRepository) => "没有可切换的 fallback 仓库",
+        (Locale::En, WriteGateReason::NoActiveDocument) => "no active document",
+        (Locale::Zh, WriteGateReason::NoActiveDocument) => "当前没有打开的文档",
+        (Locale::En, WriteGateReason::DocumentTooLarge) => "document is too large",
+        (Locale::Zh, WriteGateReason::DocumentTooLarge) => "文档过大",
+        (Locale::En, WriteGateReason::WriterClientIdUnavailable) => "writer client id unavailable",
+        (Locale::Zh, WriteGateReason::WriterClientIdUnavailable) => "写入客户端 ID 不可用",
+        (Locale::En, WriteGateReason::CurrentRepoIdUnavailable) => "current repo id unavailable",
+        (Locale::Zh, WriteGateReason::CurrentRepoIdUnavailable) => "当前仓库 ID 不可用",
+        (Locale::En, WriteGateReason::FailedApplyCodeLocally) => "failed to apply code locally",
+        (Locale::Zh, WriteGateReason::FailedApplyCodeLocally) => "本地应用代码失败",
+        (Locale::En, WriteGateReason::NoCurrentDocumentSelected) => "no current document selected",
+        (Locale::Zh, WriteGateReason::NoCurrentDocumentSelected) => "当前未选择文档",
+        (Locale::En, WriteGateReason::FileTooLarge) => "file is larger than 1 MiB",
+        (Locale::Zh, WriteGateReason::FileTooLarge) => "文件超过 1 MiB",
+        (Locale::En, WriteGateReason::FileReaderUnavailable) => "file reader is unavailable",
+        (Locale::Zh, WriteGateReason::FileReaderUnavailable) => "文件读取器不可用",
+        (Locale::En, WriteGateReason::FileReadFailed) => "file read failed",
+        (Locale::Zh, WriteGateReason::FileReadFailed) => "文件读取失败",
+    }
+}
+
+#[cfg(test)]
+mod tests;

@@ -1,3 +1,8 @@
+//! plan_ref:
+//!   - 11_ui_design/03_mobile#mobile-native-shell-modes
+//!   - 11_ui_design/03_mobile#mobile-service-supervisor-contract
+//!
+
 use std::fmt;
 
 use tauri::webview::Cookie;

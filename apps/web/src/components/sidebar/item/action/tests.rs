@@ -98,6 +98,17 @@ fn new_window_url_replaces_stale_doc_query_param() {
 }
 
 #[test]
+fn new_window_url_replaces_percent_encoded_doc_query_key() {
+    assert_eq!(
+        build_new_window_url(
+            "http://127.0.0.1:8080/?do%63=old.md&sc_full=1#section",
+            "notes%2Fnew.md"
+        ),
+        "http://127.0.0.1:8080/?sc_full=1&doc=notes%2Fnew.md#section"
+    );
+}
+
+#[test]
 fn export_pdf_action_handler_is_fail_closed_without_side_effects() {
     let (readiness, _) = signal(ContextActionReadiness::from_readonly(false));
     let (delete_count, set_delete_count) = signal(0);
@@ -264,6 +275,35 @@ fn unrepresentable_path_blocks_search_prefill_side_effects() {
     );
 
     handler.run(file_tree_intent(ContextActionId::Rename, "notes/a|b.md"));
+
+    assert_eq!(delete_count.get_untracked(), 0);
+    assert_eq!(search_count.get_untracked(), 0);
+}
+
+#[test]
+fn internal_repo_path_blocks_action_handler_side_effects() {
+    let (readiness, _) = signal(ContextActionReadiness::from_readonly(false));
+    let (delete_count, set_delete_count) = signal(0);
+    let (search_count, set_search_count) = signal(0);
+    let delete_req = Callback::new(move |_: String| {
+        set_delete_count.update(|count| *count += 1);
+    });
+    let open_search = Callback::new(move |_: String| {
+        set_search_count.update(|count| *count += 1);
+    });
+
+    let handler = create_action_handler(
+        readiness.into(),
+        delete_req,
+        open_search,
+        no_op_host_action(),
+        no_op_host_action(),
+    );
+
+    handler.run(file_tree_intent(
+        ContextActionId::Rename,
+        "notes/.git/config.md",
+    ));
 
     assert_eq!(delete_count.get_untracked(), 0);
     assert_eq!(search_count.get_untracked(), 0);

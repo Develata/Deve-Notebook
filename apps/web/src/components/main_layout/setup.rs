@@ -41,6 +41,8 @@ pub struct SidebarUiState {
     pub chat_visible: ReadSignal<bool>,
     pub visible: ReadSignal<bool>,
     pub set_visible: WriteSignal<bool>,
+    pub mobile_visible: ReadSignal<bool>,
+    pub set_mobile_visible: WriteSignal<bool>,
 }
 
 pub fn watch_session_expired(
@@ -74,14 +76,15 @@ pub fn init_outline_ui_state() -> OutlineUiState {
     OutlineUiState { set_visible }
 }
 
-pub fn init_sidebar_ui_state() -> SidebarUiState {
+pub fn init_sidebar_ui_state(is_mobile: ReadSignal<bool>) -> SidebarUiState {
     let (show_settings, set_show_settings) = signal(false);
     let (active_view, set_active_view) = signal(SidebarView::Explorer);
     let (pinned_views, set_pinned_views) = signal(SidebarView::all());
     let (chat_visible, set_chat_visible) = use_chat_visibility();
     let (visible, set_visible) = use_sidebar_visibility();
+    let (mobile_visible, set_mobile_visible) = signal(false);
     provide_chat_control(chat_visible, set_chat_visible);
-    provide_sidebar_control(set_visible);
+    provide_sidebar_control(is_mobile, set_visible, set_mobile_visible, set_active_view);
 
     SidebarUiState {
         show_settings,
@@ -93,6 +96,8 @@ pub fn init_sidebar_ui_state() -> SidebarUiState {
         chat_visible,
         visible,
         set_visible,
+        mobile_visible,
+        set_mobile_visible,
     }
 }
 

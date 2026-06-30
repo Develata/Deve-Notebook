@@ -3,6 +3,24 @@ contains	apps/web/src/i18n/command_palette.rs	pub fn keyboard_navigate_hint
 contains	apps/web/src/i18n/search.rs	pub fn command_detail
 contains	apps/web/src/i18n/search.rs	pub fn file_op_detail
 contains	apps/web/src/i18n/common.rs	pub fn status
+case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: open_tabs_zh_copy_eq "已打开标签页"
+case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: mobile_toolbar_indent_zh_copy_eq "缩进"
+case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: login_button_zh_copy_eq "登录"
+case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: header_status_ready_zh_copy_eq "就绪"
+contains	apps/web/src/i18n/common.rs	Locale::Zh => "已打开标签页"
+contains	apps/web/src/i18n/common.rs	assert_eq!(open_tabs(Locale::Zh), "已打开标签页")
+contains	apps/web/src/i18n/common.rs	pub fn indent(locale: Locale) -> &'static str
+contains	apps/web/src/i18n/common.rs	Locale::Zh => "缩进"
+contains	apps/web/src/i18n/common.rs	assert_eq!(indent(Locale::Zh), "缩进")
+contains	apps/web/src/hooks/use_core/status_summary.rs	display_text(&self, locale: Locale) -> String
+contains	apps/web/src/hooks/use_core/status_summary.rs	SyncStatusKind::Ready => t::bottom_bar::ready(locale).to_string()
+contains	apps/web/src/hooks/use_core/status_summary/tests.rs	assert_eq!(summary.display_text(Locale::Zh), "就绪")
+contains	apps/web/src/i18n/mod.rs	pub use super::login;
+contains	apps/web/src/i18n/login.rs	pub fn button(locale: Locale) -> &'static str
+contains	apps/web/src/i18n/login.rs	Locale::Zh => "登录"
+contains	apps/web/src/i18n/login.rs	assert_eq!(t::login::button(Locale::Zh), "登录")
+regex_absent	apps/web/src/i18n/common.rs	Locale::Zh => "\x{5df2}\x{6253}\x{5f00}\x{6807}\x{7b7e}"
+regex_absent	apps/web/src/i18n/common.rs	Locale::Zh => "\x{5236}\x{8868}"
 contains	apps/web/src/i18n/extensions.rs	pub fn editor_copy_code
 contains	apps/web/src/i18n/js_bridge.rs	publish_browser_i18n
 contains	apps/web/js/i18n.js	export function editorCopy

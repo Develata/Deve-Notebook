@@ -4,10 +4,14 @@
 
 use super::close::{build_close_document_callback, close_diff_tab};
 use super::ops::{
-    evict_lru_document_tab, ordered_editor_tab_items, reorder_visible_tab,
-    touch_document_access_order, upsert_diff_tab, upsert_document_tab, upsert_visible_tab_order,
+    evict_lru_document_tab, ordered_editor_tab_items, reconcile_document_tabs_with_docs,
+    reorder_visible_tab, touch_document_access_order, upsert_diff_tab, upsert_document_tab,
+    upsert_visible_tab_order,
 };
-use super::policy::{active_editor_tab_key, scope_changed, should_clear_diff_on_document_change};
+use super::policy::{
+    active_editor_tab_key, editor_tab_runtime_scope, scope_changed,
+    should_clear_diff_on_document_change,
+};
 use super::{
     DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey,
     diff_tab_from_session, document_tab_from_docs,
@@ -73,15 +77,21 @@ pub(crate) fn create_editor_tab_runtime(
     let set_diff_content = inputs.source_control.set_diff_content;
     let current_repo_id = inputs.scope.current_repo_id;
     let current_scope_nonce = inputs.scope.current_scope_nonce;
+    let active_branch = inputs.scope.active_branch;
     let current_doc = inputs.document.current_doc;
-    let last_scope = StoredValue::new((
+    let last_scope = StoredValue::new(editor_tab_runtime_scope(
         current_repo_id.get_untracked(),
         current_scope_nonce.get_untracked(),
+        active_branch.get_untracked(),
     ));
     let last_current_doc = StoredValue::new(current_doc.get_untracked());
 
     Effect::new(move |_| {
-        let scope = (current_repo_id.get(), current_scope_nonce.get());
+        let scope = editor_tab_runtime_scope(
+            current_repo_id.get(),
+            current_scope_nonce.get(),
+            active_branch.get(),
+        );
         if !scope_changed(&last_scope.get_value(), &scope) {
             return;
         }
@@ -110,6 +120,23 @@ pub(crate) fn create_editor_tab_runtime(
     });
 
     let docs = inputs.document.docs;
+    Effect::new(move |_| {
+        let docs = docs.get();
+        let mut next_tabs = doc_tabs.get_untracked();
+        let mut next_order = tab_order.get_untracked();
+        let mut next_access_order = doc_access_order.get_untracked();
+        if reconcile_document_tabs_with_docs(
+            &mut next_tabs,
+            &mut next_order,
+            &mut next_access_order,
+            &docs,
+        ) {
+            set_doc_tabs.set(next_tabs);
+            set_tab_order.set(next_order);
+            set_doc_access_order.set(next_access_order);
+        }
+    });
+
     Effect::new(move |_| {
         if let Some(doc_id) = current_editor_doc.get()
             && let Some(tab) = document_tab_from_docs(&docs.get(), doc_id)
@@ -180,7 +207,6 @@ pub(crate) fn create_editor_tab_runtime(
             &inputs.source_control,
             doc_tabs,
             set_doc_tabs,
-            diff_tabs,
             tab_order,
             set_tab_order,
             doc_access_order,

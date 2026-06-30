@@ -3,6 +3,8 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason};
+use crate::i18n::Locale;
 use deve_core::models::PeerId;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
@@ -14,12 +16,18 @@ use super::{can_start_scope_switch, prepare_scope_switch, show_switch_block};
 
 pub(super) fn build_switch_branch_callback(
     ws: WsService,
+    locale: RwSignal<Locale>,
     signals: SwitchScopeSignals,
     set_sync_banner: WriteSignal<Option<String>>,
 ) -> Callback<Option<String>> {
     Callback::new(move |peer_id: Option<String>| {
         if !can_start_scope_switch(signals) {
-            show_switch_block(set_sync_banner, "switch branch", "scope switching");
+            show_switch_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::SwitchBranch,
+                WriteGateReason::ScopeSwitching,
+            );
             return;
         }
         let same_branch = signals
@@ -38,7 +46,12 @@ pub(super) fn build_switch_branch_callback(
             let Some(switch_nonce) =
                 next_switch_nonce_after(signals.current_scope_nonce.get_untracked())
             else {
-                show_switch_block(set_sync_banner, "switch branch", "scope nonce exhausted");
+                show_switch_block(
+                    set_sync_banner,
+                    locale,
+                    WriteGateAction::SwitchBranch,
+                    WriteGateReason::ScopeNonceExhausted,
+                );
                 return;
             };
             let pending = target_peer

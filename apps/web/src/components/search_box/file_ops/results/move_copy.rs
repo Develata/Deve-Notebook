@@ -2,14 +2,18 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
-use crate::components::search_box::types::{FileOpKind, SearchAction, SearchResult};
+use crate::components::search_box::types::{
+    FileOpKind, SearchAction, SearchResult, SearchResultRole,
+};
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use deve_core::protocol::doc_file_op_errors as path_err;
 use std::collections::HashSet;
 
 use super::super::parser::{ParsedArgs, is_ready_for_dst};
-use super::super::path_utils::{collect_dirs, filter_dirs, validate_doc_shell_path};
+use super::super::path_utils::{
+    collect_dirs, filter_dirs, normalize_doc_path, validate_doc_file_path,
+};
 use super::common::{build_execute_result, build_insert_query, group_header};
 
 #[cfg(test)]
@@ -31,35 +35,56 @@ pub(super) fn build_move_copy_results(
             t::search::paths_with_spaces_must_be_quoted(locale).to_string(),
         )];
     }
-    if let Some(err) = validate_doc_shell_path(&parsed.args[0]) {
+    if let Some(err) = validate_doc_file_path(&parsed.args[0]) {
         return vec![super::error_result(locale, err.to_string())];
     }
+    let src = normalize_doc_path(&parsed.args[0]);
     if parsed.args.len() == 2 && !parsed.args[1].is_empty() {
-        return vec![execute_result_or_error(
-            kind,
-            &parsed.args[0],
-            &parsed.args[1],
+        let execute_result =
+            execute_result_or_error(kind.clone(), &parsed.args[0], &parsed.args[1], locale);
+        if !matches!(&execute_result.action, SearchAction::FileOp(_)) {
+            return vec![execute_result];
+        }
+        if !source_exists(docs, &src) {
+            return vec![source_not_found_error(locale, &src)];
+        }
+
+        let dst_prefix = parsed.args[1].clone();
+        let mut results = vec![execute_result];
+        results.extend(build_filtered_dir_group_results(
+            &kind,
+            &src,
+            &dst_prefix,
+            docs,
+            recent_dirs,
             locale,
-        )];
+        ));
+        return results;
     }
 
     if !is_ready_for_dst(parsed) {
         return Vec::new();
     }
 
-    let src = parsed.args.first().cloned().unwrap_or_default();
+    if !source_exists(docs, &src) {
+        return vec![source_not_found_error(locale, &src)];
+    }
+
     let dst_prefix = parsed.args.get(1).cloned().unwrap_or_default();
-    let dirs = collect_dirs(docs);
-    let recent_dirs = if kind == FileOpKind::Move {
-        recent_dirs
-    } else {
-        &[]
-    };
-    build_dir_group_results(&kind, &src, &dst_prefix, recent_dirs, &dirs, locale)
+    build_filtered_dir_group_results(&kind, &src, &dst_prefix, docs, recent_dirs, locale)
 }
 
 fn source_required_error(locale: Locale) -> SearchResult {
     super::error_result(locale, path_err::SOURCE_PATH_REQUIRED.to_string())
+}
+
+fn source_not_found_error(locale: Locale, src: &str) -> SearchResult {
+    super::error_result(locale, path_err::source_not_found(src))
+}
+
+fn source_exists(docs: &[(DocId, String)], src: &str) -> bool {
+    docs.iter()
+        .any(|(_, path)| normalize_doc_path(path).as_str() == src)
 }
 
 fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str, locale: Locale) -> SearchResult {
@@ -67,8 +92,8 @@ fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str, locale: Local
         return super::error_result(locale, path_err::DESTINATION_PATH_REQUIRED.to_string());
     };
     if let SearchAction::FileOp(action) = &result.action {
-        if let Some(err) = validate_doc_shell_path(&action.src)
-            .or_else(|| action.dst.as_deref().and_then(validate_doc_shell_path))
+        if let Some(err) = validate_doc_file_path(&action.src)
+            .or_else(|| action.dst.as_deref().and_then(validate_doc_file_path))
         {
             return super::error_result(locale, err.to_string());
         }
@@ -77,6 +102,23 @@ fn execute_result_or_error(kind: FileOpKind, src: &str, dst: &str, locale: Local
         }
     }
     result
+}
+
+fn build_filtered_dir_group_results(
+    kind: &FileOpKind,
+    src: &str,
+    dst_prefix: &str,
+    docs: &[(DocId, String)],
+    recent_dirs: &[String],
+    locale: Locale,
+) -> Vec<SearchResult> {
+    let dirs = collect_dirs(docs);
+    let recent_dirs = if *kind == FileOpKind::Move {
+        recent_dirs
+    } else {
+        &[]
+    };
+    build_dir_group_results(kind, src, dst_prefix, recent_dirs, &dirs, locale)
 }
 
 fn build_dir_group_results(
@@ -122,6 +164,7 @@ fn build_dir_results(
             id: format!("dir-{}", dir),
             title: dir.clone(),
             detail: Some(t::search::directory_detail(locale).to_string()),
+            role: SearchResultRole::Action,
             score,
             action: SearchAction::InsertQuery(build_insert_query(kind, src, &dir)),
         })

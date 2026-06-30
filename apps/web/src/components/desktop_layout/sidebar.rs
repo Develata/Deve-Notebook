@@ -62,6 +62,7 @@ pub fn DesktopSidebar(
                     is_readonly=scope.is_spectator
                     on_select=document.on_doc_select
                     on_delete=document.on_doc_delete
+                    on_search_open=Callback::new(|_| {})
                 />
             </div>
         </aside>

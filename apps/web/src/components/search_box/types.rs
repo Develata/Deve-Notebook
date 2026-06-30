@@ -18,6 +18,13 @@ pub enum SearchAction {
     Noop,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SearchResultRole {
+    Action,
+    Group,
+    Error,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum FileOpKind {
     Move,
@@ -43,6 +50,7 @@ pub struct SearchResult {
     pub id: String,
     pub title: String,
     pub detail: Option<String>,
+    pub role: SearchResultRole,
     pub score: f32,
     pub action: SearchAction,
 }

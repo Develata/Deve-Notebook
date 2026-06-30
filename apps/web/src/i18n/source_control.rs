@@ -50,6 +50,14 @@ mod tests {
         assert_eq!(no_changes(Locale::En), "No changes");
         assert_eq!(no_changes(Locale::Zh), "没有更改");
         assert_eq!(
+            commit_disabled_no_changes(Locale::Zh),
+            "没有可提交的暂存或已确认账本更改"
+        );
+        assert_eq!(
+            commit_disabled_empty_message(Locale::En),
+            "Enter a commit message before committing"
+        );
+        assert_eq!(
             session_expired_hint(Locale::En),
             "Sign in again before staging, discarding, or committing changes."
         );
@@ -86,6 +94,12 @@ mod tests {
 
     #[test]
     fn source_control_diff_copy_is_localized() {
+        assert_eq!(open_diff(Locale::En), "Open Diff");
+        assert_eq!(open_diff(Locale::Zh), "打开差异");
+        assert_eq!(
+            confirmed_ledger_hint(Locale::Zh),
+            "账本已确认更改不支持逐文件暂存或放弃；提交会整体覆盖本组。"
+        );
         assert_eq!(loading_commit_diff(Locale::Zh), "正在加载提交差异...");
         assert_eq!(counterpart_staged_badge(Locale::Zh), "暂存区");
     }

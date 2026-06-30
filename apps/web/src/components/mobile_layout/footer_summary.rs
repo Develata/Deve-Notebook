@@ -12,7 +12,11 @@ use leptos::prelude::*;
 const COL_PLACEHOLDER: &str = "-";
 
 pub(super) fn summary_fields_class() -> &'static str {
-    "flex-1 min-w-0 flex items-center gap-1 whitespace-nowrap overflow-x-auto scrollbar-none"
+    "flex-1 min-w-0 flex items-center gap-1 whitespace-nowrap overflow-hidden"
+}
+
+pub(super) fn summary_branch_field_class() -> &'static str {
+    "min-w-0 flex-1 flex items-center gap-1 overflow-hidden"
 }
 
 pub(super) fn mobile_summary_stat_label(
@@ -25,6 +29,10 @@ pub(super) fn mobile_summary_stat_label(
 
 pub(super) fn bottom_bar_after_toggle(expanded: bool) -> bool {
     !expanded
+}
+
+pub(super) fn bottom_bar_expanded_state(expanded: bool) -> &'static str {
+    if expanded { "true" } else { "false" }
 }
 
 pub(super) fn bottom_bar_toggle_button_class() -> &'static str {
@@ -62,11 +70,11 @@ pub fn FooterSummaryRow(
             class="flex items-center gap-1.5 whitespace-nowrap overflow-hidden"
         >
             <div
-                data-deve-mobile-bottom-bar-fields-overflow="scroll-x"
+                data-deve-mobile-bottom-bar-fields-overflow="clip"
                 class=summary_fields_class()
             >
-                <div data-deve-mobile-bottom-bar-field="branch" class="shrink-0 flex items-center gap-1">
-                    <span class="text-[10px] text-muted">{move || t::bottom_bar::branch(locale.get())}</span>
+                <div data-deve-mobile-bottom-bar-field="branch" class=summary_branch_field_class()>
+                    <span class="shrink-0 text-[10px] text-muted">{move || t::bottom_bar::branch(locale.get())}</span>
                     <BranchSwitcher compact=true />
                 </div>
                 <div data-deve-mobile-bottom-bar-field="status" class="shrink-0 px-1.5 h-6 rounded-md bg-sidebar border border-default flex items-center">
@@ -91,11 +99,14 @@ pub fn FooterSummaryRow(
             </div>
 
             <button
+                type="button"
                 data-deve-mobile-bottom-bar-toggle="bottom_bar_toggle"
                 data-deve-mobile-touch-target="bottom_bar_toggle"
                 class=bottom_bar_toggle_button_class()
                 title=move || t::bottom_bar::toggle_status_details(locale.get())
                 aria-label=move || t::bottom_bar::toggle_status_details(locale.get())
+                aria-controls="deve-mobile-bottom-bar-details"
+                aria-expanded=move || bottom_bar_expanded_state(expanded.get())
                 on:click=move |_| set_expanded.update(|v| *v = bottom_bar_after_toggle(*v))
             >
                 {move || if expanded.get() {
@@ -119,8 +130,9 @@ pub fn FooterSummaryRow(
 #[cfg(test)]
 mod tests {
     use super::{
-        bottom_bar_after_toggle, bottom_bar_toggle_button_class, collapsed_summary_fields,
-        mobile_summary_stat_label, summary_fields_class,
+        bottom_bar_after_toggle, bottom_bar_expanded_state, bottom_bar_toggle_button_class,
+        collapsed_summary_fields, mobile_summary_stat_label, summary_branch_field_class,
+        summary_fields_class,
     };
     use crate::i18n::Locale;
 
@@ -139,17 +151,32 @@ mod tests {
     }
 
     #[test]
-    fn mobile_bottom_bar_collapsed_fields_scroll_horizontally_without_wrapping() {
+    fn mobile_bottom_bar_collapsed_fields_fit_without_horizontal_scroll() {
         let class = summary_fields_class();
         assert!(class.contains("whitespace-nowrap"));
-        assert!(class.contains("overflow-x-auto"));
-        assert!(!class.contains("overflow-hidden"));
+        assert!(class.contains("overflow-hidden"));
+        assert!(!class.contains("overflow-x-auto"));
+    }
+
+    #[test]
+    fn mobile_bottom_bar_branch_field_shrinks_before_status_fields() {
+        let class = summary_branch_field_class();
+        assert!(class.contains("min-w-0"));
+        assert!(class.contains("flex-1"));
+        assert!(class.contains("overflow-hidden"));
+        assert!(!class.contains("shrink-0"));
     }
 
     #[test]
     fn mobile_bottom_bar_expand_toggle_flips_state() {
         assert!(bottom_bar_after_toggle(false));
         assert!(!bottom_bar_after_toggle(true));
+    }
+
+    #[test]
+    fn mobile_bottom_bar_toggle_exposes_expanded_state() {
+        assert_eq!(bottom_bar_expanded_state(false), "false");
+        assert_eq!(bottom_bar_expanded_state(true), "true");
     }
 
     #[test]

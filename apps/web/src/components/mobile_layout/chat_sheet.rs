@@ -13,23 +13,36 @@ pub(crate) fn should_show_mobile_chat_sheet(
     visible: bool,
     drawer_open: bool,
     diff_open: bool,
-    surface_switcher_open: bool,
+    surface_switcher_sheet_visible: bool,
     expanded: bool,
     keyboard_offset: i32,
 ) -> bool {
     visible
         && !drawer_open
         && !diff_open
-        && !surface_switcher_open
+        && !surface_switcher_sheet_visible
         && (expanded || keyboard_offset <= 0)
+}
+
+pub(crate) fn mobile_chat_runtime_conflict_should_close(
+    visible: bool,
+    drawer_open: bool,
+    diff_open: bool,
+    surface_switcher_sheet_visible: bool,
+    expanded: bool,
+) -> bool {
+    expanded && (!visible || drawer_open || diff_open || surface_switcher_sheet_visible)
 }
 
 pub(crate) fn mobile_chat_sheet_style(expanded: bool, keyboard_offset: i32) -> String {
     if expanded {
         if keyboard_offset > 0 {
-            format!("bottom: {}px;", keyboard_offset)
+            format!(
+                "padding-top: env(safe-area-inset-top); bottom: {}px;",
+                keyboard_offset
+            )
         } else {
-            String::new()
+            "padding-top: env(safe-area-inset-top);".to_string()
         }
     } else {
         let base = if keyboard_offset > 0 {
@@ -66,7 +79,7 @@ pub fn MobileChatSheet(
     keyboard_offset: ReadSignal<i32>,
     drawer_open: Signal<bool>,
     diff_open: Signal<bool>,
-    surface_switcher_open: ReadSignal<bool>,
+    surface_switcher_sheet_visible: Signal<bool>,
     expanded: ReadSignal<bool>,
     set_expanded: WriteSignal<bool>,
 ) -> impl IntoView {
@@ -80,13 +93,25 @@ pub fn MobileChatSheet(
     });
     let close_chat = Callback::new(move |_| set_expanded.set(mobile_chat_after_close()));
 
+    Effect::new(move |_| {
+        if mobile_chat_runtime_conflict_should_close(
+            visible.get(),
+            drawer_open.get(),
+            diff_open.get(),
+            surface_switcher_sheet_visible.get(),
+            expanded.get(),
+        ) {
+            set_expanded.set(mobile_chat_after_close());
+        }
+    });
+
     view! {
         <Show when=move || {
             should_show_mobile_chat_sheet(
                 visible.get(),
                 drawer_open.get(),
                 diff_open.get(),
-                surface_switcher_open.get(),
+                surface_switcher_sheet_visible.get(),
                 expanded.get(),
                 keyboard_offset.get(),
             )
@@ -104,6 +129,7 @@ pub fn MobileChatSheet(
                     fallback=move || {
                         view! {
                             <button
+                                type="button"
                                 data-deve-mobile-chat-action="mobile_chat_chip"
                                 class="mobile-chat-chip h-11 min-w-[44px] px-3 rounded-full bg-panel border border-default shadow-sm text-sm font-medium text-primary active:bg-hover"
                                 title=move || t::chat::toggle_mobile_chat(locale.get())
@@ -123,88 +149,4 @@ pub fn MobileChatSheet(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        mobile_chat_after_close, mobile_chat_after_open, mobile_chat_page_mode,
-        mobile_chat_sheet_class, mobile_chat_sheet_style, should_show_mobile_chat_sheet,
-    };
-
-    #[test]
-    fn expanded_chat_stays_visible_when_keyboard_is_open() {
-        assert!(should_show_mobile_chat_sheet(
-            true, false, false, false, true, 280
-        ));
-        assert_eq!(mobile_chat_sheet_style(true, 280), "bottom: 280px;");
-    }
-
-    #[test]
-    fn mobile_chat_keyboard_sheet_stays_above_keyboard() {
-        assert!(should_show_mobile_chat_sheet(
-            true, false, false, false, true, 320
-        ));
-        assert_eq!(mobile_chat_sheet_style(true, 320), "bottom: 320px;");
-    }
-
-    #[test]
-    fn collapsed_chip_hides_when_keyboard_is_open() {
-        assert!(!should_show_mobile_chat_sheet(
-            true, false, false, false, false, 280
-        ));
-    }
-
-    #[test]
-    fn drawer_and_diff_still_hide_mobile_chat() {
-        assert!(!should_show_mobile_chat_sheet(
-            true, true, false, false, true, 0
-        ));
-        assert!(!should_show_mobile_chat_sheet(
-            true, false, true, false, true, 0
-        ));
-    }
-
-    #[test]
-    fn mobile_diff_hides_chat_chip_and_expanded_chat() {
-        assert!(!should_show_mobile_chat_sheet(
-            true, false, true, false, false, 0
-        ));
-        assert!(!should_show_mobile_chat_sheet(
-            true, false, true, false, true, 0
-        ));
-    }
-
-    #[test]
-    fn mobile_surface_switcher_hides_chat_sheet() {
-        assert!(!should_show_mobile_chat_sheet(
-            true, false, false, true, false, 0
-        ));
-        assert!(!should_show_mobile_chat_sheet(
-            true, false, false, true, true, 0
-        ));
-    }
-
-    #[test]
-    fn collapsed_chip_uses_footer_offset_when_keyboard_is_closed() {
-        assert!(should_show_mobile_chat_sheet(
-            true, false, false, false, false, 0
-        ));
-        assert_eq!(
-            mobile_chat_sheet_style(false, 0),
-            "bottom: calc(58px + env(safe-area-inset-bottom));"
-        );
-    }
-
-    #[test]
-    fn mobile_chat_page_expands_to_fullscreen() {
-        assert_eq!(mobile_chat_page_mode(true), "fullscreen");
-        assert!(mobile_chat_sheet_class(true).contains("fixed inset-0"));
-        assert!(mobile_chat_sheet_class(true).contains("z-[var(--z-overlay)]"));
-    }
-
-    #[test]
-    fn mobile_chat_page_close_returns_to_editor_surface() {
-        assert_eq!(mobile_chat_page_mode(false), "chip");
-        assert!(mobile_chat_sheet_class(false).contains("z-[var(--z-floating)]"));
-        assert!(mobile_chat_after_open());
-        assert!(!mobile_chat_after_close());
-    }
-}
+mod tests;

@@ -29,6 +29,7 @@ pub fn MobileHeader(
             style="padding-top: env(safe-area-inset-top);"
         >
             <button
+                type="button"
                 data-deve-mobile-touch-target="topbar_buttons"
                 class=topbar_button_class()
                 title=move || t::header::file_tree(locale.get())
@@ -42,6 +43,7 @@ pub fn MobileHeader(
             </div>
             <div class="flex items-center gap-2">
                 <button
+                    type="button"
                     data-deve-mobile-touch-target="topbar_buttons"
                     class=topbar_button_class()
                     title=move || t::header::home(locale.get())
@@ -51,6 +53,7 @@ pub fn MobileHeader(
                     <Home class="w-[18px] h-[18px]"/>
                 </button>
                 <button
+                    type="button"
                     data-deve-mobile-touch-target="topbar_buttons"
                     class=topbar_button_class()
                     title=move || t::header::open(locale.get())
@@ -60,6 +63,7 @@ pub fn MobileHeader(
                     <Book class="w-[18px] h-[18px]"/>
                 </button>
                 <button
+                    type="button"
                     data-deve-mobile-touch-target="topbar_buttons"
                     class=topbar_button_class()
                     title=move || t::header::command(locale.get())
@@ -69,6 +73,7 @@ pub fn MobileHeader(
                     <Terminal class="w-[18px] h-[18px]"/>
                 </button>
                 <button
+                    type="button"
                     data-deve-mobile-touch-target="topbar_buttons"
                     class=topbar_button_class()
                     title=move || t::header::logout(locale.get())

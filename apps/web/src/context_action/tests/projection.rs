@@ -2,34 +2,61 @@ use super::*;
 
 #[test]
 fn file_tree_action_readonly_catalog_keeps_shell_local_open_only() {
-    let ids = project_context_actions(file_tree_request(true, ContextActionTargetKind::AnyNode))
-        .into_iter()
-        .map(|action| action.descriptor.id)
-        .collect::<Vec<_>>();
+    let ids = project_context_actions(file_tree_request(
+        true,
+        ContextActionTargetKind::MarkdownFile,
+    ))
+    .into_iter()
+    .map(|action| action.descriptor.id)
+    .collect::<Vec<_>>();
 
     assert_eq!(ids, vec![ContextActionId::OpenInNewWindow]);
 }
 
 #[test]
-fn file_tree_action_target_projection_accepts_file_and_folder_nodes() {
-    let readiness = file_tree_readiness(false).with_host_file_actions(true, true);
-    let file_len = project_context_actions(file_tree_request_with_readiness(
-        readiness.clone(),
-        ContextActionTargetKind::File,
+fn file_tree_action_open_in_new_window_projects_for_markdown_only() {
+    let markdown_ids = project_context_actions(file_tree_request(
+        false,
+        ContextActionTargetKind::MarkdownFile,
     ))
-    .len();
-    let folder_len = project_context_actions(file_tree_request_with_readiness(
-        readiness,
-        ContextActionTargetKind::Folder,
-    ))
-    .len();
-    let web_projectable_len = CONTEXT_ACTIONS
-        .iter()
-        .filter(|action| action.is_web_projectable())
-        .count();
+    .into_iter()
+    .map(|action| action.descriptor.id)
+    .collect::<Vec<_>>();
+    let file_ids = project_context_actions(file_tree_request(false, ContextActionTargetKind::File))
+        .into_iter()
+        .map(|action| action.descriptor.id)
+        .collect::<Vec<_>>();
+    let folder_ids =
+        project_context_actions(file_tree_request(false, ContextActionTargetKind::Folder))
+            .into_iter()
+            .map(|action| action.descriptor.id)
+            .collect::<Vec<_>>();
 
-    assert_eq!(file_len, web_projectable_len);
-    assert_eq!(folder_len, web_projectable_len);
+    assert!(markdown_ids.contains(&ContextActionId::OpenInNewWindow));
+    assert!(!file_ids.contains(&ContextActionId::OpenInNewWindow));
+    assert!(!folder_ids.contains(&ContextActionId::OpenInNewWindow));
+}
+
+#[test]
+fn file_tree_action_target_projection_keeps_write_actions_for_file_and_folder_nodes() {
+    let file_ids = project_context_actions(file_tree_request(false, ContextActionTargetKind::File))
+        .into_iter()
+        .map(|action| action.descriptor.id)
+        .collect::<Vec<_>>();
+    let folder_ids =
+        project_context_actions(file_tree_request(false, ContextActionTargetKind::Folder))
+            .into_iter()
+            .map(|action| action.descriptor.id)
+            .collect::<Vec<_>>();
+    let write_ids = vec![
+        ContextActionId::Rename,
+        ContextActionId::Copy,
+        ContextActionId::MoveTo,
+        ContextActionId::Delete,
+    ];
+
+    assert_eq!(file_ids, write_ids);
+    assert_eq!(folder_ids, write_ids);
 }
 
 #[test]
@@ -176,13 +203,27 @@ fn file_tree_action_external_process_is_not_projected_by_web() {
 fn context_action_readiness_write_gate_blocks_write_projection() {
     let ids = project_context_actions(file_tree_request_with_readiness(
         file_tree_readiness(false).with_write_blocked(true),
-        ContextActionTargetKind::AnyNode,
+        ContextActionTargetKind::MarkdownFile,
     ))
     .into_iter()
     .map(|action| action.descriptor.id)
     .collect::<Vec<_>>();
 
     assert_eq!(ids, vec![ContextActionId::OpenInNewWindow]);
+}
+
+#[test]
+fn file_tree_action_projection_rejects_internal_repo_segments() {
+    let actions = project_context_actions(ContextActionProjectionRequest::new(
+        ContextActionSurface::FileTree,
+        ContextActionTarget::new(
+            ContextActionTargetKind::MarkdownFile,
+            "notes/.git/config.md",
+        ),
+        file_tree_readiness(false),
+    ));
+
+    assert!(actions.is_empty());
 }
 
 #[test]

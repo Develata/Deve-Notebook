@@ -1,4 +1,7 @@
-use super::gesture::{SwipeOutcome, SwipeTarget, resolve_swipe_outcome, resolve_swipe_target};
+use super::gesture::{
+    SwipeOutcome, SwipeTarget, resolve_swipe_outcome, resolve_swipe_target,
+    resolve_touch_end_outcome,
+};
 
 #[test]
 fn mobile_drawer_edge_swipe_opens_left_from_left_edge() {
@@ -48,4 +51,12 @@ fn edge_swipe_ignores_interactive_targets() {
 fn edge_swipe_still_opens_outline_on_bare_edge_drag() {
     let target = resolve_swipe_target(490, 500, false, false, false);
     assert_eq!(target, Some(SwipeTarget::OpenRight));
+}
+
+#[test]
+fn mobile_drawer_touch_end_without_changed_touch_clears_capture() {
+    let (outcome, next_target) = resolve_touch_end_outcome(Some(SwipeTarget::OpenLeft), 10, None);
+
+    assert_eq!(outcome, SwipeOutcome::None);
+    assert_eq!(next_target, None);
 }

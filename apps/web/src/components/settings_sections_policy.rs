@@ -161,6 +161,33 @@ pub(super) fn native_backend_can_switch_local(mode: &str) -> bool {
     mode == "remote"
 }
 
+pub(super) fn native_backend_validation_state(
+    busy: bool,
+    feedback: &str,
+    mode: &str,
+    remote_validation_succeeded: bool,
+) -> &'static str {
+    if busy {
+        "pending"
+    } else if mode != "remote" || feedback.is_empty() {
+        "idle"
+    } else if remote_validation_succeeded {
+        "success"
+    } else {
+        "failed"
+    }
+}
+
+pub(super) fn native_backend_unavailable_feedback(locale: Locale, feedback: &str) -> String {
+    let feedback = feedback.trim();
+    let error = if feedback.is_empty() {
+        None
+    } else {
+        Some(feedback)
+    };
+    t::settings::native_backend_error(locale, error)
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AiBackendButtonState {
     pub native_class: &'static str,
@@ -187,8 +214,11 @@ pub(super) fn ai_backend_button_state(
         native_title: if native_disabled {
             capabilities
                 .native_reason
-                .clone()
-                .unwrap_or_else(|| "Native AI disabled by config".to_string())
+                .as_deref()
+                .map(|reason| t::extensions::ai_backend_reason(locale, reason))
+                .unwrap_or_else(|| {
+                    t::extensions::ai_backend_reason(locale, "native AI disabled by config")
+                })
         } else {
             String::new()
         },
@@ -197,7 +227,8 @@ pub(super) fn ai_backend_button_state(
         trusted_title: if trusted_disabled {
             capabilities
                 .trusted_cli_reason
-                .clone()
+                .as_deref()
+                .map(|reason| t::extensions::ai_backend_reason(locale, reason))
                 .unwrap_or_else(|| t::extensions::trusted_cli_unavailable(locale).to_string())
         } else {
             String::new()

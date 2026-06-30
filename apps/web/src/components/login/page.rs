@@ -4,8 +4,7 @@
 //!
 
 use crate::api::{LoginAttemptError, LoginTransportError, attempt_login};
-use crate::i18n::Locale;
-use crate::i18n::login as login_i18n;
+use crate::i18n::{Locale, t::login as login_i18n};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 

@@ -6,15 +6,16 @@ use super::send_backend::{ChatMessagePlan, ChatSendRuntimePlan, plan_chat_send_r
 use crate::api::{fetch_ai_backend_capabilities, resolve_backend_for_send};
 use crate::editor::ffi::{getEditorContent, try_get_editor_selection};
 use crate::hooks::use_core::{AiBackendMode, ChatContext, ChatMessage};
+use crate::i18n::{Locale, t};
 use crate::runtime::document_client::DocumentClient;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 use crate::components::chat::slash_commands::{ChatSessionMode, consume_slash_command};
 
-const MAX_CHAT_CONTEXT_CHARS: usize = 16_000;
-const MAX_CHAT_HISTORY_MESSAGES: usize = 8;
-const MAX_CHAT_HISTORY_CHARS: usize = 8_000;
+mod context;
+
+use context::{bounded_chat_history, build_chat_context, truncate_markdown_context};
 
 #[derive(Clone)]
 pub struct ChatSendRuntime {
@@ -22,15 +23,26 @@ pub struct ChatSendRuntime {
     pub document: DocumentClient,
 }
 
-pub fn make_send_text(
-    runtime: ChatSendRuntime,
-    is_streaming: ReadSignal<bool>,
-    session_mode: ReadSignal<ChatSessionMode>,
-    set_session_mode: WriteSignal<ChatSessionMode>,
-    on_req_id: Option<Callback<String>>,
-    on_user_text: Option<Callback<String>>,
-    on_mode_change: Option<Callback<ChatSessionMode>>,
-) -> Callback<String> {
+pub struct ChatSendControls {
+    pub is_streaming: ReadSignal<bool>,
+    pub locale: RwSignal<Locale>,
+    pub session_mode: ReadSignal<ChatSessionMode>,
+    pub set_session_mode: WriteSignal<ChatSessionMode>,
+    pub on_req_id: Option<Callback<String>>,
+    pub on_user_text: Option<Callback<String>>,
+    pub on_mode_change: Option<Callback<ChatSessionMode>>,
+}
+
+pub fn make_send_text(runtime: ChatSendRuntime, controls: ChatSendControls) -> Callback<String> {
+    let ChatSendControls {
+        is_streaming,
+        locale,
+        session_mode,
+        set_session_mode,
+        on_req_id,
+        on_user_text,
+        on_mode_change,
+    } = controls;
     Callback::new(move |msg: String| {
         let msg = msg.trim().to_string();
         if msg.is_empty() || is_streaming.get() {
@@ -70,8 +82,14 @@ pub fn make_send_text(
                     .set_ai_mode
                     .set(AiBackendMode::from_backend_str_or_native(backend));
             }
+            let locale = locale.get_untracked();
             for message in messages {
-                append_planned_chat_message(&runtime_for_send.chat, &msg, &req_id, message);
+                append_planned_chat_message(
+                    &runtime_for_send.chat,
+                    &msg,
+                    &req_id,
+                    localize_backend_chat_message(locale, message),
+                );
             }
             if let Some(cb) = on_user_text.as_ref() {
                 cb.run(msg.clone());
@@ -129,6 +147,18 @@ pub fn make_send_text(
     })
 }
 
+fn localize_backend_chat_message(locale: Locale, message: ChatMessagePlan) -> ChatMessagePlan {
+    match message {
+        ChatMessagePlan::AssistantNotice(notice) => {
+            ChatMessagePlan::AssistantNotice(t::extensions::ai_backend_fallback(locale, &notice))
+        }
+        ChatMessagePlan::AssistantError(reason) => {
+            ChatMessagePlan::AssistantError(t::extensions::ai_backend_reason(locale, &reason))
+        }
+        other => other,
+    }
+}
+
 fn append_planned_chat_message(
     chat: &ChatContext,
     msg: &str,
@@ -158,55 +188,6 @@ fn append_chat_message(chat: &ChatContext, role: &str, content: &str, req_id: Op
             ts_ms: js_sys::Date::now() as u64,
         });
     });
-}
-
-fn truncate_markdown_context(content: String) -> String {
-    let Some((end, _)) = content.char_indices().nth(MAX_CHAT_CONTEXT_CHARS) else {
-        return content;
-    };
-    content[..end].to_string()
-}
-
-fn build_chat_context(
-    current_doc_path: String,
-    current_markdown: String,
-    selection: serde_json::Value,
-    session_mode: ChatSessionMode,
-) -> serde_json::Value {
-    serde_json::json!({
-        "current_file": current_doc_path,
-        "current_markdown": current_markdown,
-        "selection": selection,
-        "chat_mode": session_mode.as_str(),
-    })
-}
-
-fn bounded_chat_history(messages: Vec<ChatMessage>) -> Vec<serde_json::Value> {
-    let mut total_chars = 0usize;
-    let mut selected = Vec::new();
-    for message in messages.into_iter().rev() {
-        if message.content.is_empty() {
-            continue;
-        }
-        let role = match message.role.as_str() {
-            "user" | "assistant" => message.role,
-            _ => continue,
-        };
-        let content_len = message.content.chars().count();
-        if total_chars.saturating_add(content_len) > MAX_CHAT_HISTORY_CHARS {
-            break;
-        }
-        total_chars += content_len;
-        selected.push(serde_json::json!({
-            "role": role,
-            "content": message.content,
-        }));
-        if selected.len() >= MAX_CHAT_HISTORY_MESSAGES {
-            break;
-        }
-    }
-    selected.reverse();
-    selected
 }
 
 pub fn make_send_example(

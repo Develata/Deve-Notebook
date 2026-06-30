@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-07`
+- `Last Review`: `2026-06-29`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -133,6 +133,8 @@ EditorBufferChanged
 
 - render refresh 只能消费 editor projection，不得直接改 ledger authority。
 - outline、widget、preview 必须基于同一份 confirmed+pending buffer 构建。
+- ATX h1/h2/h3 在主编辑器中必须作为同一行级 projection 应用字号、粗细与行高；空标题与非空标题不得因为语法标记显示/隐藏而回落到正文尺寸，也不得叠加双倍缩放。
+- 标题行内包含 inline math 时，math widget/reveal 范围不得取消该行的 heading line projection；只有标题 opener 本身位于 math/code/frontmatter 范围内时才可拒绝标题行级样式。
 
 ## 4. Parsing Contract
 
@@ -217,7 +219,7 @@ Baseline contract 的行内支持集合：
   - frontmatter
   - link source
 
-### 5.2 Link Activation
+### 5.2 Link Activation {#link-activation-gate}
 
 - 默认链接不可直接点击。
 - 只有 Ctrl/Cmd 激活态下才可点击。
@@ -278,7 +280,7 @@ Baseline contract 的行内支持集合：
 - frontmatter 在光标离开时可隐藏 `---` 边界，但内容区仍由源码投影而来。
 - 若未来启用 callout/admonition，其视觉类型（`NOTE`/`TIP`/`CAUTION`）只能来自源码第一行解析，不得在 UI 层凭颜色或 label 猜测。
 
-### 6.4 Code Block Toolbar Contract
+### 6.4 Code Block Toolbar Contract {#code-block-toolbar-contract}
 
 - 代码块右上角必须有：
   - `Copy`
@@ -293,6 +295,7 @@ Baseline contract 的行内支持集合：
 - outline 渲染不得发明新语义。
 - 不受支持的 inline syntax 在 outline 中必须按普通文本保留。
 - outline heading scan 只按轻量解析器处理：跳过 fenced code，支持 heading 层级与 inline code/math/strong/em/del projection；不支持的 `==highlight==` 保留为普通文本。
+- outline heading scan 的 ATX 标题识别必须与主编辑器 baseline 保持一致：支持 `#` 空标题、space/tab 分隔、可选 closing `#` 序列剥离；fenced code 内的 `#` 与四空格缩进代码样式行不得进入 outline。
 
 ### 6.6 Hybrid / Frontmatter / Preview Status
 

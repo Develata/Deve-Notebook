@@ -7,10 +7,13 @@ use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
-use crate::hooks::use_core::write_gate_banner::cannot_send;
+use crate::hooks::use_core::write_gate_banner::{
+    WriteGateAction, WriteGateReason, cannot_send, reason_from_block,
+};
+use crate::i18n::Locale;
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::ChangeEntry;
-use leptos::prelude::{Callback, WriteSignal};
+use leptos::prelude::{Callback, GetUntracked, RwSignal, WriteSignal};
 
 use super::SourceControlScopeSignals;
 
@@ -25,8 +28,8 @@ fn send_scoped(
     ws.send(build(scope_nonce));
 }
 
-fn write_block_label(ws: &WsService, gate: RepoWriteSignals) -> Option<&'static str> {
-    repo_write_block_untracked(ws, gate).map(|block| block.label())
+fn write_block_reason(ws: &WsService, gate: RepoWriteSignals) -> Option<WriteGateReason> {
+    repo_write_block_untracked(ws, gate).map(reason_from_block)
 }
 
 pub(super) fn guarded_entry_callback(
@@ -34,13 +37,14 @@ pub(super) fn guarded_entry_callback(
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
     set_sync_banner: WriteSignal<Option<String>>,
-    action: &'static str,
+    locale: RwSignal<Locale>,
+    action: WriteGateAction,
     build: impl Fn(ChangeEntry, u64) -> ClientMessage + Clone + Send + Sync + 'static,
 ) -> Callback<ChangeEntry> {
     let ws = ws.clone();
     Callback::new(move |entry: ChangeEntry| {
-        if let Some(label) = write_block_label(&ws, gate) {
-            show_source_control_write_block(set_sync_banner, action, label);
+        if let Some(reason) = write_block_reason(&ws, gate) {
+            show_source_control_write_block(set_sync_banner, locale, action, reason);
             return;
         }
         let build = build.clone();
@@ -53,13 +57,14 @@ pub(super) fn guarded_entries_callback(
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
     set_sync_banner: WriteSignal<Option<String>>,
-    action: &'static str,
+    locale: RwSignal<Locale>,
+    action: WriteGateAction,
     build: impl Fn(Vec<ChangeEntry>, u64) -> ClientMessage + Clone + Send + Sync + 'static,
 ) -> Callback<Vec<ChangeEntry>> {
     let ws = ws.clone();
     Callback::new(move |entries: Vec<ChangeEntry>| {
-        if let Some(label) = write_block_label(&ws, gate) {
-            show_source_control_write_block(set_sync_banner, action, label);
+        if let Some(reason) = write_block_reason(&ws, gate) {
+            show_source_control_write_block(set_sync_banner, locale, action, reason);
             return;
         }
         let build = build.clone();
@@ -69,27 +74,36 @@ pub(super) fn guarded_entries_callback(
 
 fn show_source_control_write_block(
     set_sync_banner: WriteSignal<Option<String>>,
-    action: &str,
-    reason: &str,
+    locale: RwSignal<Locale>,
+    action: WriteGateAction,
+    reason: WriteGateReason,
 ) {
-    let message = cannot_send(action, reason);
+    let message = cannot_send(locale.get_untracked(), action, reason);
     warn_sync_banner(set_sync_banner, message);
 }
 
 #[cfg(test)]
 mod tests {
     use super::show_source_control_write_block;
+    use crate::hooks::use_core::write_gate_banner::{WriteGateAction, WriteGateReason};
+    use crate::i18n::Locale;
     use leptos::prelude::{GetUntracked, signal};
 
     #[test]
     fn source_control_write_block_banner_includes_action_and_reason() {
         let (sync_banner, set_sync_banner) = signal(None::<String>);
+        let locale = leptos::prelude::RwSignal::new(Locale::Zh);
 
-        show_source_control_write_block(set_sync_banner, "Stage", "read-only");
+        show_source_control_write_block(
+            set_sync_banner,
+            locale,
+            WriteGateAction::StageFile,
+            WriteGateReason::ReadOnly,
+        );
 
         assert_eq!(
             sync_banner.get_untracked().as_deref(),
-            Some("Cannot send Stage: read-only")
+            Some("无法发送 暂存文件请求：只读模式")
         );
     }
 }

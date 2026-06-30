@@ -2,19 +2,41 @@
 //!   - 14_commands#command-palette-shortcuts
 //!   - 05_diff_logic#git-mirror-lifecycle
 //!
+use crate::components::activity_bar::SidebarView;
 use crate::components::command_palette::types::Command;
-use crate::hooks::use_core::{SourceControlContext, source_control_notice::SourceControlNotice};
+use crate::components::main_layout::SidebarControl;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, t};
 use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
 fn show_source_control_notice(
-    source_control: Option<SourceControlContext>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
     notice: SourceControlNotice,
     set_show: WriteSignal<bool>,
 ) {
-    if let Some(source_control) = source_control {
-        source_control.set_notice.set(Some(notice));
+    if let Some(set_notice) = set_notice {
+        set_notice.set(Some(notice));
+    }
+    if let Some(sidebar_control) = sidebar_control {
+        sidebar_control.show_view(SidebarView::SourceControl);
+    }
+    set_show.set(false);
+}
+
+fn show_git_status_notice(
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+    set_show: WriteSignal<bool>,
+) {
+    if let Some(set_notice) = set_notice {
+        set_notice.set(Some(SourceControlNotice::git_status_cli_only()));
+    }
+    if let Some(sidebar_control) = sidebar_control
+        && !sidebar_control.is_mobile.get_untracked()
+    {
+        sidebar_control.show_view(SidebarView::SourceControl);
     }
     set_show.set(false);
 }
@@ -38,109 +60,134 @@ fn git_bridge_mode_from_value(mode: &str) -> &'static str {
     }
 }
 
-pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_import_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+) -> Command {
     Command::unavailable(
         "git_import_changes",
         (t::command_palette::git_import_changes)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
-                source_control.clone(),
+                set_notice,
+                sidebar_control,
                 SourceControlNotice::git_import_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_status_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_status_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+) -> Command {
     Command::unavailable(
         "git_status",
         (t::command_palette::git_status)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
-            show_source_control_notice(
-                source_control.clone(),
-                SourceControlNotice::git_status_cli_only(),
-                set_show,
-            );
-        }),
+        move || {
+            show_git_status_notice(set_notice, sidebar_control, set_show);
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_mirror_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_mirror_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+) -> Command {
     Command::unavailable(
         "git_mirror",
         (t::command_palette::git_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
-                source_control.clone(),
+                set_notice,
+                sidebar_control,
                 SourceControlNotice::git_mirror_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_export_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+) -> Command {
     Command::unavailable(
         "git_export_mirror",
         (t::command_palette::git_export_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
-                source_control.clone(),
+                set_notice,
+                sidebar_control,
                 SourceControlNotice::git_export_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_push_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+) -> Command {
     Command::unavailable(
         "git_push_mirror",
         (t::command_palette::git_push_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
-                source_control.clone(),
+                set_notice,
+                sidebar_control,
                 SourceControlNotice::git_push_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_repair_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+) -> Command {
     Command::unavailable(
         "git_repair_mirror",
         (t::command_palette::git_repair_mirror)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
-        Callback::new(move |_| {
+        move || {
             show_source_control_notice(
-                source_control.clone(),
+                set_notice,
+                sidebar_control,
                 SourceControlNotice::git_repair_cli_only(),
                 set_show,
             );
-        }),
+        },
     )
     .with_group((t::command_palette::group_git)(locale))
     .with_enabled_when(git_bridge_enabled_when(locale))

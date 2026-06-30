@@ -12,13 +12,13 @@ mod parser;
 mod path_utils;
 mod results;
 
-pub use path_utils::{normalize_doc_path, validate_doc_shell_path};
+pub use path_utils::{normalize_doc_path, validate_doc_create_path, validate_doc_file_path};
 
 use crate::components::search_box::types::{FileOpKind, SearchResult};
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 
-use parser::{parse_args, split_command};
+use parser::{ParseError, parse_args, split_command};
 use results::{build_move_copy_results, build_remove_results, error_result};
 
 pub fn detect_file_op(query: &str) -> Option<(FileOpKind, &str)> {
@@ -49,7 +49,7 @@ pub fn build_file_ops_results(
 
     let parsed = parse_args(after_cmd);
     if let Some(err) = parsed.error {
-        return vec![error_result(locale, err)];
+        return vec![error_result(locale, parse_error_message(err, locale))];
     }
 
     if parsed.in_quote {
@@ -60,9 +60,33 @@ pub fn build_file_ops_results(
     }
 
     match kind {
-        FileOpKind::Remove => build_remove_results(&parsed.args, locale),
+        FileOpKind::Remove => build_remove_results(&parsed.args, docs, locale),
         FileOpKind::Move | FileOpKind::Copy => {
             build_move_copy_results(kind, &parsed, docs, recent_dirs, locale)
         }
+    }
+}
+
+fn parse_error_message(error: ParseError, locale: Locale) -> String {
+    match error {
+        ParseError::PathsWithSpacesMustBeQuoted => {
+            t::search::paths_with_spaces_must_be_quoted(locale).to_string()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_file_ops_results;
+    use crate::components::search_box::types::SearchAction;
+    use crate::i18n::Locale;
+
+    #[test]
+    fn file_op_rejects_adjacent_text_after_quoted_arg_before_action() {
+        let results = build_file_ops_results(">mv \"old name.md\"new.md", &[], &[], Locale::En);
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Paths with spaces must be quoted");
+        assert_eq!(results[0].action, SearchAction::Noop);
     }
 }

@@ -56,6 +56,7 @@ pub fn ActivityBar(
         let is_active = move || active_view.get() == view;
         view! {
             <button
+                type="button"
                 class=move || format!(
                     "p-2 mr-1 rounded-lg transition-colors relative group {}",
                     if is_active() { "text-accent" } else { "text-muted hover:text-primary" }
@@ -92,6 +93,7 @@ pub fn ActivityBar(
 
             <div class="flex-none flex items-center relative ml-1">
                 <button
+                    type="button"
                     data-deve-activity-more-button=activity_more_button_marker()
                     class="p-2 text-muted hover:text-primary rounded-lg transition-colors"
                     title=move || t::sidebar::more_actions(locale.get())

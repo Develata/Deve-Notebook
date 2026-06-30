@@ -38,6 +38,28 @@ fn confirmed_ledger_changes_dispatch_to_confirmed_signal() {
 }
 
 #[test]
+fn changes_list_keeps_local_command_notice() {
+    let repo_id = uuid::Uuid::new_v4();
+    let result = dispatch_read_list_from_repo_with_notice(
+        ReadListKind::Changes,
+        repo_id,
+        repo_id,
+        None,
+        None,
+        Some(17),
+        SourceControlNotice::git_push_cli_only(),
+    );
+
+    assert!(result.handled);
+    assert_eq!(result.changes_request_id, None);
+    assert_eq!(
+        result.notice,
+        Some(SourceControlNotice::git_push_cli_only())
+    );
+    assert_eq!(result.staged[0].path, "fresh-staged.md");
+}
+
+#[test]
 fn read_list_dispatch_rejects_changes_stale_scope_nonce() {
     let repo_id = uuid::Uuid::new_v4();
     let branch = PeerId::new("peer-a");

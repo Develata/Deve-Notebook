@@ -74,7 +74,11 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
     view! {
         <div class="border-t border-default">
             <button
-                class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase"
+                type="button"
+                class="w-full flex items-center rounded-sm px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                data-deve-sc-panel-toggle="graph"
+                aria-expanded=move || expanded.get().to_string()
+                aria-controls="source-control-graph-panel"
                 on:click=move |_| expanded.update(|open| *open = !*open)
             >
                 <span class=move || if expanded.get() {
@@ -86,16 +90,17 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
                 </span>
                 <span class="flex-1 text-left">{move || t::source_control::graph(locale.get())}</span>
             </button>
-            <Show when=move || expanded.get()>
-                <div
-                    class="px-4 pb-3 pt-2"
-                    data-deve-graph-panel="readonly"
-                    data-deve-graph-projection-mode="readonly-summary"
-                    data-deve-graph-renderer-gate="closed"
-                >
-                    {move || graph_panel_body(locale.get(), &fetch_state.get())}
-                </div>
-            </Show>
+            <div
+                id="source-control-graph-panel"
+                class="px-4 pb-3 pt-2"
+                data-deve-sc-panel-body="graph"
+                data-deve-graph-panel="readonly"
+                data-deve-graph-projection-mode="readonly-summary"
+                data-deve-graph-renderer-gate="closed"
+                hidden=move || !expanded.get()
+            >
+                {move || graph_panel_body(locale.get(), &fetch_state.get())}
+            </div>
         </div>
     }
 }

@@ -9,6 +9,18 @@ use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
+pub(crate) fn repo_branch_dirty_suffix(
+    staged_count: usize,
+    unstaged_count: usize,
+    confirmed_count: usize,
+) -> &'static str {
+    if staged_count == 0 && unstaged_count == 0 && confirmed_count == 0 {
+        ""
+    } else {
+        "*"
+    }
+}
+
 #[component]
 pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<crate::hooks::use_core::BranchContext>();
@@ -24,13 +36,11 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
     let current_branch =
         Signal::derive(move || current_branch_label(core.active_branch.get(), locale.get()));
     let branch_suffix = Signal::derive(move || {
-        if source_control.staged_changes.get().is_empty()
-            && source_control.unstaged_changes.get().is_empty()
-        {
-            ""
-        } else {
-            "*"
-        }
+        repo_branch_dirty_suffix(
+            source_control.staged_changes.get().len(),
+            source_control.unstaged_changes.get().len(),
+            source_control.confirmed_changes.get().len(),
+        )
     });
 
     view! {
@@ -38,8 +48,12 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
             view! {
                 <div class="border-t border-default">
                     <button
-                            class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none"
-                            on:click=move |_| expanded.update(|b| *b = !*b)
+                        type="button"
+                        class="w-full flex items-center rounded-sm px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                        data-deve-sc-panel-toggle="repositories"
+                        aria-expanded=move || expanded.get().to_string()
+                        aria-controls="source-control-repositories-panel"
+                        on:click=move |_| expanded.update(|b| *b = !*b)
                     >
                         <span class=move || if expanded.get() { "transform rotate-90 w-4 h-4 flex items-center justify-center transition-transform" } else { "w-4 h-4 flex items-center justify-center transition-transform" }>
                             <ChevronRight class="w-3 h-3" />
@@ -47,38 +61,50 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
                         <span class="flex-1 text-left">{move || t::source_control::repositories(locale.get())}</span>
                     </button>
 
-                    {move || if expanded.get() {
-                        view! {
-                            <div class="px-0 pb-1">
-                                // Active Repo Row
-                                <div class="flex items-center h-6 px-3 text-primary">
-                                    // Icon
-                                    <Book class="w-3.5 h-3.5 mr-2 opacity-70" />
+                    <div
+                        id="source-control-repositories-panel"
+                        class="px-0 pb-1"
+                        data-deve-sc-panel-body="repositories"
+                        hidden=move || !expanded.get()
+                    >
+                        // Active Repo Row
+                        <div class="flex items-center h-6 px-3 text-primary">
+                            // Icon
+                            <Book class="w-3.5 h-3.5 mr-2 opacity-70" />
 
-                                    <RepoSwitcher />
+                            <RepoSwitcher />
 
-                                    // Repo Name
-                                    <span class="truncate font-medium flex-1 ml-2">{active_repo_label}</span>
+                            // Repo Name
+                            <span class="truncate font-medium flex-1 ml-2">{active_repo_label}</span>
 
-                                    // Branch Info (Right side)
-                                        <div class="flex items-center gap-1 text-xs opacity-80 ml-2">
-                                            <div class="flex items-center gap-1">
-                                            <GitBranch class="w-3 h-3" />
-                                            <span>
-                                                {move || format!("{}{}", current_branch.get(), branch_suffix.get())}
-                                            </span>
-                                        </div>
-                                    </div>
+                            // Branch Info (Right side)
+                            <div class="flex items-center gap-1 text-xs opacity-80 ml-2">
+                                <div class="flex items-center gap-1">
+                                    <GitBranch class="w-3 h-3" />
+                                    <span>
+                                        {move || format!("{}{}", current_branch.get(), branch_suffix.get())}
+                                    </span>
                                 </div>
                             </div>
-                        }.into_any()
-                    } else {
-                        view! {}.into_any()
-                    }}
+                        </div>
+                    </div>
                 </div>
             }.into_any()
         } else {
             view! {}.into_any()
         }}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::repo_branch_dirty_suffix;
+
+    #[test]
+    fn repo_branch_dirty_suffix_marks_confirmed_ledger_changes_dirty() {
+        assert_eq!(repo_branch_dirty_suffix(0, 0, 0), "");
+        assert_eq!(repo_branch_dirty_suffix(1, 0, 0), "*");
+        assert_eq!(repo_branch_dirty_suffix(0, 1, 0), "*");
+        assert_eq!(repo_branch_dirty_suffix(0, 0, 1), "*");
     }
 }

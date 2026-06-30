@@ -30,6 +30,18 @@ pub(crate) fn mobile_chat_send_button_class(mobile: bool) -> &'static str {
     }
 }
 
+pub(crate) fn mobile_chat_input_class(mobile: bool) -> &'static str {
+    if mobile {
+        "w-full max-h-32 p-2 bg-transparent border-none outline-none resize-none text-primary font-sans"
+    } else {
+        "w-full max-h-32 p-2 bg-transparent border-none outline-none text-sm resize-none text-primary font-sans"
+    }
+}
+
+pub(crate) fn mobile_chat_input_style(mobile: bool) -> &'static str {
+    if mobile { "font-size: 16px;" } else { "" }
+}
+
 pub(crate) fn mobile_chat_input_area_marker(mobile: bool) -> Option<&'static str> {
     mobile.then_some("keyboard-safe")
 }
@@ -61,7 +73,8 @@ pub fn InputArea(
                 <textarea
                     name="ai-chat-input"
                     data-deve-mobile-chat-input=move || mobile_chat_input_marker(mobile)
-                    class="w-full max-h-32 p-2 bg-transparent border-none outline-none text-sm resize-none text-primary font-sans"
+                    class=mobile_chat_input_class(mobile)
+                    style=move || mobile_chat_input_style(mobile)
                     placeholder=move || t::chat::input_placeholder(locale.get())
                     rows="1"
                     prop:value=input
@@ -99,7 +112,8 @@ pub fn InputArea(
 mod tests {
     use super::{
         mobile_chat_input_area_class, mobile_chat_input_area_marker, mobile_chat_input_area_style,
-        mobile_chat_input_marker, mobile_chat_send_button_class, mobile_chat_send_button_marker,
+        mobile_chat_input_class, mobile_chat_input_marker, mobile_chat_input_style,
+        mobile_chat_send_button_class, mobile_chat_send_button_marker,
     };
 
     #[test]
@@ -115,6 +129,14 @@ mod tests {
 
         assert!(class.contains("h-11"));
         assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_chat_keyboard_input_uses_16px_font_size() {
+        assert!(!mobile_chat_input_class(true).contains("text-sm"));
+        assert!(mobile_chat_input_class(false).contains("text-sm"));
+        assert_eq!(mobile_chat_input_style(true), "font-size: 16px;");
+        assert_eq!(mobile_chat_input_style(false), "");
     }
 
     #[test]

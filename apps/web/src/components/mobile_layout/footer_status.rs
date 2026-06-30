@@ -32,6 +32,24 @@ fn pending_ack_count_for_current_scope(
         .unwrap_or_default()
 }
 
+fn mobile_load_status_text(
+    locale: Locale,
+    done: usize,
+    total: usize,
+    eta_ms: u64,
+    is_narrow: bool,
+) -> String {
+    if total == 0 {
+        return t::bottom_bar::loading(locale).to_string();
+    }
+
+    if is_narrow {
+        t::bottom_bar::loading_progress_compact(locale, done, total)
+    } else {
+        t::bottom_bar::loading_progress(locale, done, total, eta_ms)
+    }
+}
+
 /// Connection status indicator (green/yellow/red dot + text).
 #[component]
 pub fn StatusView(locale: RwSignal<Locale>) -> impl IntoView {
@@ -162,82 +180,10 @@ pub fn LoadStatus(
         }
         let (done, total) = load_progress.get();
         let eta_ms = load_eta_ms.get();
-        let text = if total > 0 {
-            if eta_ms > 0 && !is_narrow.get() {
-                format!(
-                    "{} {}/{} (~{}ms)",
-                    t::bottom_bar::loading(locale.get()),
-                    done,
-                    total,
-                    eta_ms,
-                )
-            } else {
-                format!("L {}/{}", done, total)
-            }
-        } else {
-            t::bottom_bar::loading(locale.get()).to_string()
-        };
+        let text = mobile_load_status_text(locale.get(), done, total, eta_ms, is_narrow.get());
         view! { <div class="text-[10px] text-muted font-mono">{text}</div> }.into_any()
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::runtime::document::pending::{PendingLocalEditInput, push_pending_edit};
-    use deve_core::models::{Op, RepoId};
-
-    fn push_insert(
-        pending: &mut PendingLocalEdits,
-        repo_id: RepoId,
-        doc_id: DocId,
-        scope_nonce: u64,
-        client_op_id: u64,
-    ) {
-        push_pending_edit(
-            pending,
-            PendingLocalEditInput {
-                repo_id,
-                doc_id,
-                scope_nonce,
-                client_id: 1,
-                client_op_id,
-                base_version: 0,
-                op: Op::Insert {
-                    pos: 0,
-                    content: "x".into(),
-                },
-            },
-        );
-    }
-
-    #[test]
-    fn pending_ack_count_uses_current_repo_scope() {
-        let current_repo = RepoId::from_u128(1);
-        let other_repo = RepoId::from_u128(2);
-        let current_doc = DocId::from_u128(10);
-        let mut pending = PendingLocalEdits::new();
-
-        push_insert(&mut pending, current_repo, current_doc, 7, 1);
-        push_insert(&mut pending, current_repo, current_doc, 8, 2);
-        push_insert(&mut pending, other_repo, current_doc, 7, 3);
-
-        assert_eq!(
-            pending_ack_count_for_current_scope(
-                &pending,
-                Some(current_doc),
-                Some(&current_repo.to_string()),
-                7,
-            ),
-            1
-        );
-        assert_eq!(
-            pending_ack_count_for_current_scope(&pending, Some(current_doc), None, 7),
-            0
-        );
-        assert_eq!(
-            pending_ack_count_for_current_scope(&pending, Some(current_doc), Some("not-a-uuid"), 7),
-            0
-        );
-    }
-}
+mod tests;

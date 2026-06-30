@@ -51,6 +51,7 @@ pub fn ItemActions(
         >
             // 更多/菜单 按钮
             <button
+                type="button"
                 class="p-1 rounded hover:bg-hover text-secondary transition-colors"
                 title=move || t::sidebar::more(locale.get())
                 on:click=move |ev| on_menu.run(ev)
@@ -62,6 +63,7 @@ pub fn ItemActions(
                 view! {
                     // 新建文件按钮 (仅文件夹显示)
                     <button
+                        type="button"
                         class="p-1 rounded hover:bg-hover text-secondary transition-colors"
                         title=move || t::common::new_file(locale.get())
                         on:click=move |ev| on_create.run(ev)

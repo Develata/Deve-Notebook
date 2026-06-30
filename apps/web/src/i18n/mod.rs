@@ -21,6 +21,8 @@
 //! - `source_control`: 版本控制面板翻译
 //! - `source_control_history`: 版本控制历史面板翻译
 //! - `time`: 时间与相对时间翻译
+//! - `write_gate`: 写入门禁与受限操作提示
+//! - `login`: 登录页与认证错误翻译
 
 pub mod bottom_bar;
 pub mod chat;
@@ -45,6 +47,7 @@ pub mod source_control_graph;
 pub mod source_control_history;
 pub mod source_control_native;
 pub mod time;
+pub mod write_gate;
 
 use crate::storage::prefs::{read_pref, write_pref};
 
@@ -146,6 +149,7 @@ pub mod t {
     pub use super::diff;
     pub use super::extensions;
     pub use super::header;
+    pub use super::login;
     pub use super::merge;
     pub use super::playback;
     pub use super::search;
@@ -153,6 +157,7 @@ pub mod t {
     pub use super::settings;
     pub use super::sidebar;
     pub use super::source_control;
+    pub use super::write_gate;
 }
 
 #[cfg(test)]

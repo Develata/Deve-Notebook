@@ -209,6 +209,10 @@ mod tests {
         assert_eq!(close_outline(Locale::En), "Close outline");
         assert_eq!(outline_unavailable(Locale::En), "Outline unavailable");
         assert_eq!(no_headings_found(Locale::En), "No headings found");
+        assert_eq!(
+            empty_outline_heading(Locale::En, 3),
+            "Empty heading on line 3"
+        );
         assert_eq!(empty_outline_heading(Locale::Zh, 3), "第 3 行空标题");
     }
 }

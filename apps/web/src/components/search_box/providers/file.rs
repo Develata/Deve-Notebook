@@ -2,9 +2,11 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 03_storage/index#internal-path-normalization
 //!
-use crate::components::search_box::file_ops::validate_doc_shell_path;
+use crate::components::search_box::file_ops::{normalize_doc_path, validate_doc_create_path};
 use crate::components::search_box::score::score_desc;
-use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::components::search_box::types::{
+    SearchAction, SearchProvider, SearchResult, SearchResultRole,
+};
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 
@@ -36,6 +38,7 @@ impl SearchProvider for FileProvider {
                     id: id.to_string(),
                     title: path.clone(),
                     detail: None,
+                    role: SearchResultRole::Action,
                     score: 1.0,
                     action: SearchAction::OpenDoc(*id),
                 })
@@ -57,6 +60,7 @@ impl SearchProvider for FileProvider {
                 id: id.to_string(),
                 title: path.clone(),
                 detail: None,
+                role: SearchResultRole::Action,
                 score,
                 action: SearchAction::OpenDoc(*id),
             })
@@ -66,15 +70,18 @@ impl SearchProvider for FileProvider {
         results.truncate(20);
 
         let create_query = query.trim();
-        if validate_doc_shell_path(create_query).is_none()
-            && !results.iter().any(|r| r.title == create_query)
-        {
+        if validate_doc_create_path(create_query).is_none() {
+            let create_path = normalize_doc_path(create_query);
+            if self.docs.iter().any(|(_, path)| path == &create_path) {
+                return results;
+            }
             results.push(SearchResult {
                 id: "create-doc".to_string(),
-                title: t::search::create_or_open(self.locale, create_query),
+                title: t::search::create_or_open(self.locale, &create_path),
                 detail: Some(t::common::new_file(self.locale).to_string()),
+                role: SearchResultRole::Action,
                 score: 0.1,
-                action: SearchAction::CreateDoc(create_query.to_string()),
+                action: SearchAction::CreateDoc(create_path),
             });
         }
 

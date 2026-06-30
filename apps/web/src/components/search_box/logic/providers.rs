@@ -3,13 +3,16 @@
 //!   - 14_commands#command-palette-shortcuts
 //!
 use crate::components::command_palette::registry::create_static_commands;
+use crate::components::main_layout::SidebarControl;
 use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::{
     self, CommandProvider, FileProvider, LOCAL_BRANCH_LABEL,
 };
 use crate::components::search_box::runtime::SearchRuntime;
-use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
-use crate::hooks::use_core::SearchHit;
+use crate::components::search_box::types::{
+    SearchAction, SearchProvider, SearchResult, SearchResultRole,
+};
+use crate::hooks::use_core::{SearchHit, source_control_notice::SourceControlNotice};
 use crate::i18n::{Locale, t};
 use deve_core::models::DocId;
 use leptos::prelude::*;
@@ -64,6 +67,8 @@ pub struct SearchResultsMemoInput {
     pub on_settings: Callback<()>,
     pub on_open: Callback<()>,
     pub set_show: WriteSignal<bool>,
+    pub set_source_control_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    pub sidebar_control: Option<SidebarControl>,
 }
 
 pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResult>> {
@@ -76,6 +81,8 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
         on_settings,
         on_open,
         set_show,
+        set_source_control_notice,
+        sidebar_control,
     } = input;
     Memo::new(move |_| {
         if !show.get() {
@@ -94,8 +101,15 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
                 file_ops::build_file_ops_results(&q, &doc_list, &recent_move_dirs.get(), now_locale)
             }
             SearchSurfaceMode::Command => {
-                let cmds =
-                    create_static_commands(now_locale, on_settings, on_open, set_show, locale);
+                let cmds = create_static_commands(
+                    now_locale,
+                    on_settings,
+                    on_open,
+                    set_show,
+                    locale,
+                    set_source_control_notice,
+                    sidebar_control,
+                );
                 CommandProvider::new(cmds, now_locale).search(&q)
             }
             SearchSurfaceMode::Branch => {
@@ -118,19 +132,11 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
             }
             SearchSurfaceMode::CreateFile => {
                 let path = q.strip_prefix('+').unwrap_or_default().trim();
-                if path.is_empty() {
-                    Vec::new()
-                } else {
-                    vec![SearchResult {
-                        id: "create-doc-only".to_string(),
-                        title: format!("{}: '{}'", t::common::create(now_locale), path),
-                        detail: Some(t::common::new_file(now_locale).to_string()),
-                        score: 1.0,
-                        action: crate::components::search_box::types::SearchAction::CreateDoc(
-                            path.to_string(),
-                        ),
-                    }]
-                }
+                create_file_results(
+                    path,
+                    docs.iter().map(|(_, doc_path)| doc_path.as_str()),
+                    now_locale,
+                )
             }
             SearchSurfaceMode::File => {
                 let doc_list = docs
@@ -141,6 +147,41 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
             }
         }
     })
+}
+
+fn create_file_results<'a>(
+    path: &str,
+    doc_paths: impl IntoIterator<Item = &'a str>,
+    locale: Locale,
+) -> Vec<SearchResult> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+    if let Some(err) = file_ops::validate_doc_create_path(path) {
+        return vec![SearchResult {
+            id: "create-doc-error".to_string(),
+            title: err.to_string(),
+            detail: Some(t::search::error_detail(locale).to_string()),
+            role: SearchResultRole::Error,
+            score: 0.0,
+            action: SearchAction::Noop,
+        }];
+    }
+    let path = file_ops::normalize_doc_path(path);
+    if doc_paths
+        .into_iter()
+        .any(|doc_path| file_ops::normalize_doc_path(doc_path) == path)
+    {
+        return Vec::new();
+    }
+    vec![SearchResult {
+        id: "create-doc-only".to_string(),
+        title: format!("{}: '{}'", t::common::create(locale), path),
+        detail: Some(t::common::new_file(locale).to_string()),
+        role: SearchResultRole::Action,
+        score: 1.0,
+        action: SearchAction::CreateDoc(path),
+    }]
 }
 
 pub fn create_placeholder_memo(query: Signal<String>, locale: RwSignal<Locale>) -> Memo<String> {
@@ -176,6 +217,7 @@ fn full_text_results(
                 id: format!("full-text-{}", hit.doc_id),
                 title: hit.path,
                 detail: Some(detail.to_string()),
+                role: SearchResultRole::Action,
                 score: hit.score,
                 action: SearchAction::OpenDoc(DocId(uuid)),
             })

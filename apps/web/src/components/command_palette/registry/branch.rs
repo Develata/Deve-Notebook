@@ -1,25 +1,32 @@
 //! plan_ref:
 //!   - 14_commands#command-palette-shortcuts
 //!
+use crate::components::activity_bar::SidebarView;
 use crate::components::command_palette::types::Command;
-use crate::hooks::use_core::{SourceControlContext, source_control_notice::SourceControlNotice};
+use crate::components::main_layout::SidebarControl;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
-pub(super) fn establish_branch_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn establish_branch_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+) -> Command {
     Command::unavailable(
         "establish_branch",
         (t::command_palette::establish_branch)(locale),
         (t::command_palette::establish_branch_unavailable_reason)(locale),
-        Callback::new(move |_| {
-            if let Some(source_control) = source_control.clone() {
-                source_control
-                    .set_notice
-                    .set(Some(SourceControlNotice::establish_branch_unavailable()));
+        move || {
+            if let Some(set_notice) = set_notice {
+                set_notice.set(Some(SourceControlNotice::establish_branch_unavailable()));
+            }
+            if let Some(sidebar_control) = sidebar_control {
+                sidebar_control.show_view(SidebarView::SourceControl);
             }
             set_show.set(false);
-        }),
+        },
     )
     .with_group((t::command_palette::group_peer)(locale))
     .with_enabled_when((t::command_palette::establish_branch_unavailable_reason)(
@@ -30,6 +37,8 @@ pub(super) fn establish_branch_command(locale: Locale, set_show: WriteSignal<boo
 #[cfg(test)]
 mod tests {
     use super::establish_branch_command;
+    use crate::components::activity_bar::SidebarView;
+    use crate::components::main_layout::SidebarControl;
     use crate::hooks::use_core::diff_session::DiffSessionWire;
     use crate::hooks::use_core::source_control_notice::{
         SourceControlNotice, is_establish_branch_unavailable_notice,
@@ -40,7 +49,8 @@ mod tests {
     use deve_core::models::PeerId;
     use deve_core::source_control::{ChangeEntry, CommitFileDiff, CommitInfo, ConflictResolution};
     use leptos::prelude::{
-        Callable, Callback, GetUntracked, ReadSignal, Set, Signal, provide_context, signal,
+        Callback, GetUntracked, ReadSignal, Set, Signal, WriteSignal, provide_context, signal,
+        use_context,
     };
     use leptos::reactive::owner::Owner;
 
@@ -104,14 +114,41 @@ mod tests {
         notice
     }
 
+    fn provide_sidebar_control_context() -> (ReadSignal<bool>, ReadSignal<SidebarView>) {
+        let (is_mobile, _) = signal(false);
+        let (sidebar_visible, set_sidebar_visible) = signal(false);
+        let (_, set_mobile_visible) = signal(false);
+        let (active_view, set_active_view) = signal(SidebarView::Explorer);
+        provide_context(SidebarControl {
+            is_mobile,
+            set_visible: set_sidebar_visible,
+            set_mobile_visible,
+            set_active_view,
+        });
+        (sidebar_visible, active_view)
+    }
+
+    fn command_contexts() -> (
+        Option<WriteSignal<Option<SourceControlNotice>>>,
+        Option<SidebarControl>,
+    ) {
+        (
+            use_context::<SourceControlContext>().map(|source_control| source_control.set_notice),
+            use_context::<SidebarControl>(),
+        )
+    }
+
     #[test]
     fn acc_cmd_004a_establish_branch_command_is_unavailable_notice_only() {
         // CMD-004A: unimplemented P2P branch creation is an unavailable notice.
         let owner = Owner::new();
         owner.with(|| {
             let notice = provide_source_control_context();
+            let (sidebar_visible, active_view) = provide_sidebar_control_context();
             let (show, set_show) = signal(true);
-            let command = establish_branch_command(Locale::En, set_show);
+            let (source_control, sidebar_control) = command_contexts();
+            let command =
+                establish_branch_command(Locale::En, set_show, source_control, sidebar_control);
 
             assert!(command.availability.is_unavailable());
             assert_eq!(command.group, "P2P / Branch");
@@ -121,6 +158,8 @@ mod tests {
             assert!(!show.get_untracked());
             let notice = notice.get_untracked().expect("source control notice");
             assert!(is_establish_branch_unavailable_notice(&notice));
+            assert!(sidebar_visible.get_untracked());
+            assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
         });
     }
 }

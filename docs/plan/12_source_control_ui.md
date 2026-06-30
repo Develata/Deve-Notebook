@@ -70,6 +70,9 @@ HistoryOrGraphSecondary
 - 单 repo 场景下 `RepositoryContext` **SHOULD** 保持紧凑或折叠。
 - 多 repo / provider 场景下才允许展开 repositories list。
 - `HistoryOrGraphSecondary` **SHOULD** 默认折叠或作为 secondary view；不得挤占 commit / changes primary flow。
+- `RepositoryContext`、`History` 与 `Graph` 等可折叠 secondary panel header 必须使用真实 `button`
+  语义并暴露 `aria-expanded` 与 `aria-controls`，被控制内容必须以稳定 `id` 常驻 DOM，并在折叠时
+  使用 `hidden` 隐藏；它们只能展开/收起 view-local state，不得触发 source-control 写入。
 - `Graph` 是只读 projection surface，不得写 ledger、workspace、source-control state 或 Git mirror state。
 
 ## 4. Resource Groups
@@ -85,6 +88,9 @@ HistoryOrGraphSecondary
 规则：
 
 - `Staged Changes`、`Changes` 与 `Confirmed Ledger Changes` 必须可见区分，并显示 count。
+- 可折叠 resource group header 必须使用真实 `button` 语义并暴露 `aria-expanded` 与 `aria-controls`，
+  被控制内容必须以稳定 `id` 常驻 DOM，并在折叠时使用 `hidden` 隐藏；header 右侧的
+  `Stage All` / `Unstage All` / `Discard All` 等 section action 必须是独立按钮，不能嵌套在折叠按钮内，也不能触发展开/收起。
 - `Changes` 中的条目表示 pending / working changes。
 - `Staged Changes` 中的条目表示即将进入 commit 的 staged entries。
 - `Confirmed Ledger Changes` 中的条目表示已进入 ledger、但未被最新 Source Control commit anchor 覆盖的 changes。
@@ -106,7 +112,7 @@ HistoryOrGraphSecondary
 - 点击 row 默认打开 diff。
 - unstaged row 的 inline action 是 `Stage`；可提供 `Discard`。
 - staged row 的 inline action 是 `Unstage`。
-- confirmed ledger row 的 inline action 不得使用 `Stage` / `Discard` 文案；首版只提供打开 diff。
+- confirmed ledger row 的 inline action 只能是 `Open Diff`；不得使用 `Stage` / `Discard` / `Revert` 文案或语义；首版只提供打开 diff。
 - section header 可提供 `Stage All` / `Unstage All` / `Discard All`。
 - destructive actions 必须经 source-control runtime gate；必要时需要 explicit confirmation。
 - remote readonly branch 中，row actions 必须 disabled 或替换为 read-only explanation。
@@ -125,6 +131,9 @@ Commit surface 规则：
 ## 7. Menus and Commands
 
 所有 action 必须映射到 stable command/control intent。
+Source Control header 的 section visibility menu 必须是 button-driven：trigger 暴露
+`aria-haspopup="menu"` 与 `aria-expanded`，menu item 暴露 checked state，选择任一 item
+后自动关闭；该菜单只能切换 view-local section visibility，不得触发 source-control 写入。
 
 推荐 command ids：
 

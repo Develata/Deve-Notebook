@@ -3,7 +3,7 @@ contains	docs/plan/14_commands.md	AI: Switch to PLAN Mode
 contains	docs/plan/14_commands.md	AI: Switch to BUILD Mode
 contains	docs/plan/14_commands.md	不负责切换 `native / trusted-cli` 后端
 contains	apps/web/src/components/command_palette/registry.rs	merge_peer_command
-contains	apps/web/src/components/command_palette/registry.rs	establish_branch_command(locale, set_show)
+contains	apps/web/src/components/command_palette/registry.rs	establish_branch_command(
 contains	apps/web/src/components/command_palette/registry/branch.rs	Command::unavailable
 contains	apps/web/src/components/command_palette/registry/branch.rs	establish_branch_command_is_unavailable_notice_only
 contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_status_command_sets_cli_only_notice
@@ -51,13 +51,13 @@ contains	docs/plan/17_tech_stack.md	任何可执行 Git repair UI 都必须另�
 contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	Web 只提供 CLI-only notice 与只读 repair review
 contains	docs/report/git-ecosystem-bridge-baseline-2026-05-01.md	不得后台执行 Git，不得让 Command Palette 直接写 Git
 contains	apps/cli/src/server/router.rs	"/api/sc/git-mirror/repair-review"
-contains	apps/web/src/components/sidebar/source_control/error_notice.rs	data-deve-git-repair-review="readonly"
+contains	apps/web/src/components/sidebar/source_control/error_notice/repair_review.rs	data-deve-git-repair-review="readonly"
 contains	apps/web/src/i18n/source_control_git.rs	Git mirror repair is CLI-only
 contains	docs/plan/05_diff_logic.md	CommitStaged
 contains	docs/features/operations/sc_commit.md	ClientMessage::Commit { scope_nonce }
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::Commit
 absent	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	ClientMessage::CommitAndPush
-contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	Commit & Push is CLI-only
+contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	commit_and_push_cli_only_banner
 contains	apps/web/src/hooks/use_core/callbacks_sc/write/commit.rs	source_control_scope_nonce(scope)
 contains	apps/cli/src/server/ws/route/source_control.rs	ClientMessage::CommitAndPush { message, .. }
 contains	apps/cli/src/server/ws/route/source_control.rs	source_control::handle_commit_and_push
@@ -102,12 +102,12 @@ contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette
 contains	docs/acceptance-cases/04_diff.md	command_palette_git_bridge_mode_reactive_after_node_role_probe
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_message_placeholder -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disabled_reason
-contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_text
-contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_reports_no_changes_when_commit_source_empty
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	fn commit_input_placeholder
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	commit_disabled_copy_is_structured_for_local_commit_states
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_visible true
-contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	should_show_confirmed_open_diff_action
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	enum ChangeItemActionSurface
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	data-deve-mobile-touch-target="source-control-confirmed-open-diff-action"
-contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_open_diff_action_policy
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
 absent	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_staged(
 absent	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_staged_in_local_repo(
 absent	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_staged_in_local_repo(
@@ -130,9 +130,96 @@ contains	apps/cli/src/commands/git_output/status.rs	let retry_command = git_comm
 contains	apps/web/src/api/git_mirror.rs	scope_nonce={scope_nonce}
 contains	apps/web/src/api/git_mirror.rs	encode_query_component(repo_id)
 contains	apps/web/src/api/git_mirror.rs	repair_review_url_encodes_repo_id_query_component
-contains	apps/web/src/components/sidebar/source_control/error_notice.rs	current_scope_nonce.get_untracked() == scope_nonce
+contains	apps/web/src/components/sidebar/source_control/error_notice.rs	fetched_scope_nonce == current_scope_nonce
 contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	on_commit_and_push.run(())
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	commit_submit_shortcut_pressed(ev.ctrl_key(), ev.meta_key(), &ev.key())
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	ev.prevent_default()
+contains	apps/web/src/components/sidebar/source_control/commit_controller.rs	fn commit_shortcut_supports_ctrl_and_meta_enter()
 contains	apps/web/src/i18n/source_control/actions.rs	Commit & Push
+contains	apps/web/src/i18n/source_control/actions.rs	Open Diff
+contains	apps/web/src/i18n/source_control/actions.rs	打开差异
+contains	apps/web/src/i18n/source_control/actions.rs	Ledger-confirmed changes cannot be staged or discarded per file
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_shortcut -- --nocapture
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	confirmed_ledger_hint(locale.get())
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	data-deve-sc-section-toggle="confirmed-ledger"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	aria-controls="source-control-confirmed-ledger-panel"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	id="source-control-confirmed-ledger-panel"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	data-deve-sc-section-body="confirmed-ledger"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	hidden=move || !expanded.get()
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	data-deve-sc-section-toggle="staged"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	aria-controls="source-control-staged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	id="source-control-staged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	data-deve-sc-section-body="staged"
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	hidden=move || !expanded.get()
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	data-deve-sc-section-toggle="unstaged"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	aria-controls="source-control-unstaged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	id="source-control-unstaged-changes-panel"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	data-deve-sc-section-body="unstaged"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	hidden=move || !expanded.get()
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	data-deve-sc-panel-toggle="repositories"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	aria-controls="source-control-repositories-panel"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	id="source-control-repositories-panel"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	data-deve-sc-panel-body="repositories"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	hidden=move || !expanded.get()
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-sc-panel-toggle="graph"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	aria-controls="source-control-graph-panel"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	id="source-control-graph-panel"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-sc-panel-body="graph"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	hidden=move || !expanded.get()
+contains	apps/web/src/components/sidebar/source_control/history.rs	data-deve-sc-panel-toggle="history"
+contains	apps/web/src/components/sidebar/source_control/history.rs	aria-expanded=move || expanded.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/history.rs	aria-controls="source-control-history-panel"
+contains	apps/web/src/components/sidebar/source_control/history.rs	id="source-control-history-panel"
+contains	apps/web/src/components/sidebar/source_control/history.rs	data-deve-sc-panel-body="history"
+contains	apps/web/src/components/sidebar/source_control/history.rs	hidden=move || !expanded.get()
+contains	apps/web/src/components/sidebar/source_control/header.rs	data-deve-sc-section-menu-trigger="true"
+contains	apps/web/src/components/sidebar/source_control/header.rs	aria-haspopup="menu"
+contains	apps/web/src/components/sidebar/source_control/header.rs	aria-expanded=move || show_menu.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/context_menu.rs	data-deve-sc-section-menu="true"
+contains	apps/web/src/components/sidebar/source_control/context_menu.rs	role="menu"
+contains	apps/web/src/components/sidebar/source_control/context_menu.rs	data-deve-sc-section-menu-item=item_id
+contains	apps/web/src/components/sidebar/source_control/context_menu.rs	role="menuitemcheckbox"
+contains	apps/web/src/components/sidebar/source_control/context_menu.rs	aria-checked=move || checked.get().to_string()
+contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
+contains	docs/acceptance-cases/04_diff.md	source_control_repo_context_confirmed_dirty_marker true
+contains	docs/acceptance-cases/04_diff.md	source_control_commit_shortcut_prevents_textarea_default true
+contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_stage_discard_absent true
+contains	docs/acceptance-cases/04_diff.md	source_control_resource_group_headers_are_buttons true
+contains	docs/acceptance-cases/04_diff.md	source_control_section_actions_do_not_toggle_group true
+contains	docs/acceptance-cases/04_diff.md	source_control_secondary_panel_headers_are_buttons true
+contains	docs/acceptance-cases/04_diff.md	source_control_collapsible_headers_control_stable_panels true
+contains	docs/acceptance-cases/04_diff.md	source_control_header_section_menu_exposes_checked_state true
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	change_item_action_surface(&entry, is_staged, has_conflict)
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	fn repo_branch_dirty_suffix
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	repo_branch_dirty_suffix_marks_confirmed_ledger_changes_dirty
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	open_diff(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	open_diff(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	aria-label=move || t::source_control::open_diff(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	aria-label=move || t::source_control::unstage_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	aria-label=move || t::source_control::stage_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	aria-label=move || t::source_control::discard_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	aria-label=move || t::source_control::keep_file_system(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	aria-label=move || t::source_control::keep_ledger(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	data-deve-sc-action="keep-fs"
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	data-deve-sc-action="keep-ledger"
+contains	apps/web/src/components/sidebar/source_control/staged_section_actions.rs	aria-label=move || t::source_control::unstage_all_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::stage_all_changes(locale.get())
+contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::discard_all_changes(locale.get())
+contains	apps/web/style/_widgets.css	.sc-action-tray
+contains	apps/web/style/_widgets.css	opacity: 1
+contains	apps/web/style/_widgets.css	pointer-events: auto
+absent	apps/web/src/i18n/source_control/actions.rs	Open File
+absent	apps/web/style/_widgets.css	opacity: 0
+absent	apps/web/style/_widgets.css	pointer-events: none
+absent	apps/web/src/components/sidebar/source_control/confirmed_section.rs	cursor-pointer
+absent	apps/web/src/components/sidebar/source_control/staged_section.rs	cursor-pointer
+absent	apps/web/src/components/sidebar/source_control/unstaged_section.rs	cursor-pointer
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-DIFF-001
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: scripts/check-source-control-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-DIFF-001	run: cargo test -p deve_web diff_first_viewport -- --nocapture
@@ -241,6 +328,7 @@ contains	docs/plan/05_diff_logic.md	  - `doc_id`
 contains	crates/core/src/protocol/server.rs	DocDiff {
 contains	crates/core/src/protocol/server.rs	#[serde(default)] doc_id: Option<DocId>
 contains	apps/cli/src/server/handlers/source_control/diff/mod.rs	doc_diff_payload_for_target_in_local_repo
+contains	crates/core/src/ledger/manager/source_control_workdir_diff.rs	workdir_diff_payload_for_target_in_local_repo
 contains	apps/cli/src/server/handlers/source_control/diff/remote.rs	doc_id: Some(doc_id)
 contains	apps/web/src/runtime/source_control_client/diff_session.rs	pub doc_id: Option<DocId>
 contains	apps/web/src/hooks/use_core/effects_sc_apply/tests.rs	apply_doc_diff_preserves_doc_identity

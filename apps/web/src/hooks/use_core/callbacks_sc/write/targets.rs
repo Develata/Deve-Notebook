@@ -7,9 +7,11 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_target::{to_target, to_targets};
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
+use crate::hooks::use_core::write_gate_banner::WriteGateAction;
+use crate::i18n::Locale;
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::ChangeEntry;
-use leptos::prelude::{Callback, WriteSignal};
+use leptos::prelude::{Callback, RwSignal, WriteSignal};
 
 use super::SourceControlScopeSignals;
 use super::targets_guard::{guarded_entries_callback, guarded_entry_callback};
@@ -24,6 +26,7 @@ type SourceControlTargetWriteCallbacks = (
 
 pub(super) fn create_target_write_callbacks(
     ws: &WsService,
+    locale: RwSignal<Locale>,
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
     set_sync_banner: WriteSignal<Option<String>>,
@@ -34,7 +37,8 @@ pub(super) fn create_target_write_callbacks(
             scope,
             gate,
             set_sync_banner,
-            "StageFile",
+            locale,
+            WriteGateAction::StageFile,
             |entry, scope_nonce| ClientMessage::StageFile {
                 target: to_target(&entry),
                 scope_nonce: Some(scope_nonce),
@@ -45,7 +49,8 @@ pub(super) fn create_target_write_callbacks(
             scope,
             gate,
             set_sync_banner,
-            "StageFiles",
+            locale,
+            WriteGateAction::StageFiles,
             |entries, scope_nonce| ClientMessage::StageFiles {
                 targets: to_targets(entries),
                 scope_nonce: Some(scope_nonce),
@@ -56,7 +61,8 @@ pub(super) fn create_target_write_callbacks(
             scope,
             gate,
             set_sync_banner,
-            "UnstageFile",
+            locale,
+            WriteGateAction::UnstageFile,
             |entry, scope_nonce| ClientMessage::UnstageFile {
                 target: to_target(&entry),
                 scope_nonce: Some(scope_nonce),
@@ -67,7 +73,8 @@ pub(super) fn create_target_write_callbacks(
             scope,
             gate,
             set_sync_banner,
-            "UnstageFiles",
+            locale,
+            WriteGateAction::UnstageFiles,
             |entries, scope_nonce| ClientMessage::UnstageFiles {
                 targets: to_targets(entries),
                 scope_nonce: Some(scope_nonce),
@@ -78,7 +85,8 @@ pub(super) fn create_target_write_callbacks(
             scope,
             gate,
             set_sync_banner,
-            "DiscardFile",
+            locale,
+            WriteGateAction::DiscardFile,
             |entry, scope_nonce| ClientMessage::DiscardFile {
                 target: to_target(&entry),
                 scope_nonce: Some(scope_nonce),

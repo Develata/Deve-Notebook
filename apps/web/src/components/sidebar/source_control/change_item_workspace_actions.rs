@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
 use crate::components::icons::{ExternalLink, Plus, RotateCcw};
 use crate::components::sidebar::source_control::change_item_read_gate::can_open_change_item_diff;
@@ -29,7 +30,9 @@ pub fn ChangeItemWorkspaceActions(
     view! {
         <Show when=move || can_open_diff>
             <button
+                type="button"
                 class=icon_button_class(SourceControlActionTone::Secondary)
+                data-deve-sc-action="open-diff"
                 data-deve-mobile-touch-target="source-control-open-diff-action"
                 disabled=move || {
                     !can_open_change_item_diff(
@@ -39,7 +42,8 @@ pub fn ChangeItemWorkspaceActions(
                         core.read_block.get().is_some(),
                     )
                 }
-                title=move || t::source_control::open_file(locale.get())
+                title=move || t::source_control::open_diff(locale.get())
+                aria-label=move || t::source_control::open_diff(locale.get())
                 on:click=move |ev| {
                     ev.stop_propagation();
                     core.on_get_doc_diff.run(entry_for_open.get_value());
@@ -49,10 +53,13 @@ pub fn ChangeItemWorkspaceActions(
             </button>
         </Show>
         <button
+            type="button"
             class=icon_button_class(SourceControlActionTone::Secondary)
+            data-deve-sc-action="discard"
             data-deve-mobile-touch-target="source-control-discard-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::discard_changes(locale.get())
+            aria-label=move || t::source_control::discard_changes(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {
@@ -65,10 +72,13 @@ pub fn ChangeItemWorkspaceActions(
             <RotateCcw class="w-3.5 h-3.5" />
         </button>
         <button
+            type="button"
             class=icon_button_class(SourceControlActionTone::Secondary)
+            data-deve-sc-action="stage"
             data-deve-mobile-touch-target="source-control-stage-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::stage_changes(locale.get())
+            aria-label=move || t::source_control::stage_changes(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {

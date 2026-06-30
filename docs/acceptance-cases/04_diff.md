@@ -115,6 +115,7 @@
     - run: cargo test -p deve_web commit_write_block -- --nocapture
     - run: cargo test -p deve_web commit_refresh -- --nocapture
     - run: cargo test -p deve_web commit_ack_dispatch -- --nocapture
+    - run: cargo test -p deve_web commit_shortcut -- --nocapture
     - run: cargo test -p deve_web fs_refresh -- --nocapture
     - run: cargo test -p deve_web read_list_dispatch -- --nocapture
     - run: cargo test -p deve_web doc_diff_read_gate -- --nocapture
@@ -183,6 +184,7 @@
     - run: cargo test -p deve_web confirmed_ledger_changes -- --nocapture
   assertions:
     - ui_assert: source_control_commit_available true
+    - ui_assert: source_control_commit_shortcut_prevents_textarea_default true
     - ui_assert: source_control_commit_and_push_cli_only_notice true
     - ui_assert: command_palette_git_sync_absent true
     - cli_assert: git_import_apply_pending_only true
@@ -251,9 +253,18 @@
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true
     - api_assert: confirmed_only_commit_advances_committed_snapshot_base true
+    - ui_assert: source_control_repo_context_confirmed_dirty_marker true
     - ui_assert: confirmed_ledger_changes_section_visible true
+    - ui_assert: confirmed_ledger_rows_open_diff_action_present true
+    - ui_assert: confirmed_ledger_rows_open_diff_action_title true
     - ui_assert: confirmed_ledger_rows_open_diff_action_visible true
     - ui_assert: confirmed_ledger_rows_stage_discard_absent true
+    - ui_assert: confirmed_ledger_section_hint_present true
+    - ui_assert: source_control_resource_group_headers_are_buttons true
+    - ui_assert: source_control_section_actions_do_not_toggle_group true
+    - ui_assert: source_control_secondary_panel_headers_are_buttons true
+    - ui_assert: source_control_collapsible_headers_control_stable_panels true
+    - ui_assert: source_control_header_section_menu_exposes_checked_state true
 
 - case_id: DIFF-010
   goal: Source Control smoke 不依赖 checked-in dev ledger 处于 clean 状态。

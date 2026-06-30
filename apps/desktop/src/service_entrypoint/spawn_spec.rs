@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 11_ui_design/02_desktop#desktop-process-adapter-decision
+//!
+
 use std::path::{Path, PathBuf};
 
 use deve_core::config::AppProfile;

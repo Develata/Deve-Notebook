@@ -2,9 +2,11 @@
 //!   - 11_ui_design/02_desktop#desktop-native-adapter-contract
 //!   - 11_ui_design/03_mobile#mobile-native-adapter-contract
 //!   - 08_auth#unauthorized-disconnected-ui
+//!   - 13_i18n#i18n-facade-contract
 //!
 
 use crate::api::ConnectionStatus;
+use crate::i18n::{Locale, t};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SyncStatusKind {
@@ -47,21 +49,33 @@ pub(crate) struct SyncStatusInput<'a> {
 }
 
 impl SyncStatusSummary {
-    pub fn header_text(&self) -> &'static str {
+    pub fn display_text(&self, locale: Locale) -> String {
         match self.kind {
-            SyncStatusKind::SessionExpired => "Session Expired",
-            SyncStatusKind::NativeBootstrapInvalid => "Native Bootstrap Invalid",
-            SyncStatusKind::NativeSessionPending => "Native Session Pending",
-            SyncStatusKind::NativeServiceOffline => "Native Service Offline",
-            SyncStatusKind::NativeReprobeRequired => "Native Reprobe Required",
-            SyncStatusKind::Offline => "Offline",
-            SyncStatusKind::Reconnecting => "Reconnecting",
-            SyncStatusKind::SnapshotLoading => "Loading Snapshot",
-            SyncStatusKind::ReadOnly => "Read-only",
-            SyncStatusKind::HandshakingRepo => "Handshaking repo",
-            SyncStatusKind::PeerNotRegistered => "Logged in / Peer not registered",
-            SyncStatusKind::PendingAck => "Pending Ack",
-            SyncStatusKind::Ready => "Ready",
+            SyncStatusKind::SessionExpired => t::bottom_bar::unauthorized(locale).to_string(),
+            SyncStatusKind::NativeBootstrapInvalid => {
+                t::bottom_bar::native_bootstrap_invalid(locale).to_string()
+            }
+            SyncStatusKind::NativeSessionPending => {
+                t::bottom_bar::native_session_pending(locale).to_string()
+            }
+            SyncStatusKind::NativeServiceOffline => {
+                t::bottom_bar::native_service_offline(locale).to_string()
+            }
+            SyncStatusKind::NativeReprobeRequired => {
+                t::bottom_bar::native_reprobe_required(locale).to_string()
+            }
+            SyncStatusKind::Offline => t::bottom_bar::offline(locale).to_string(),
+            SyncStatusKind::Reconnecting => t::bottom_bar::reconnecting(locale).to_string(),
+            SyncStatusKind::SnapshotLoading => t::bottom_bar::snapshot_loading(locale).to_string(),
+            SyncStatusKind::ReadOnly => t::bottom_bar::read_only(locale).to_string(),
+            SyncStatusKind::HandshakingRepo => t::bottom_bar::handshaking_repo(locale).to_string(),
+            SyncStatusKind::PeerNotRegistered => {
+                t::bottom_bar::peer_not_registered(locale).to_string()
+            }
+            SyncStatusKind::PendingAck => {
+                t::bottom_bar::pending_ack(locale, self.pending_ack_count)
+            }
+            SyncStatusKind::Ready => t::bottom_bar::ready(locale).to_string(),
         }
     }
 }

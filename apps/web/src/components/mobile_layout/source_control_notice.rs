@@ -6,7 +6,7 @@
 use crate::components::activity_bar::SidebarView;
 use crate::hooks::use_core::{
     SourceControlContext,
-    source_control_notice::{SourceControlNotice, is_git_cli_notice},
+    source_control_notice::{SourceControlNotice, is_local_command_notice},
 };
 use leptos::prelude::*;
 
@@ -14,7 +14,7 @@ pub(super) fn should_clear_mobile_source_control_notice(
     view: SidebarView,
     notice: Option<&SourceControlNotice>,
 ) -> bool {
-    view == SidebarView::SourceControl && notice.is_some_and(is_git_cli_notice)
+    view == SidebarView::SourceControl && notice.is_some_and(is_local_command_notice)
 }
 
 pub(super) fn clear_mobile_source_control_notice_for_view(
@@ -50,7 +50,7 @@ mod tests {
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
-    fn mobile_source_control_read_gate_plain_entry_clears_only_git_cli_notice() {
+    fn mobile_source_control_read_gate_plain_entry_clears_local_command_notice() {
         let git_notice = SourceControlNotice::git_status_cli_only();
         let source_control_notice = SourceControlNotice::establish_branch_unavailable();
 
@@ -62,7 +62,7 @@ mod tests {
             SidebarView::Explorer,
             Some(&git_notice),
         ));
-        assert!(!should_clear_mobile_source_control_notice(
+        assert!(should_clear_mobile_source_control_notice(
             SidebarView::SourceControl,
             Some(&source_control_notice),
         ));
@@ -73,7 +73,7 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_read_gate_active_view_tracks_git_cli_notice() {
+    fn mobile_source_control_read_gate_active_view_tracks_local_command_notice() {
         let git_notice = SourceControlNotice::git_status_cli_only();
         let source_control_notice = SourceControlNotice::establish_branch_unavailable();
 
@@ -85,7 +85,7 @@ mod tests {
             SidebarView::Explorer,
             Some(&git_notice),
         ));
-        assert!(!should_clear_mobile_source_control_notice(
+        assert!(should_clear_mobile_source_control_notice(
             SidebarView::SourceControl,
             Some(&source_control_notice),
         ));

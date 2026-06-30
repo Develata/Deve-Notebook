@@ -61,18 +61,14 @@ pub fn build_touch_end(
     Callback::new(move |ev: TouchEvent| {
         let target = swipe_target.get_untracked();
         let start_x = swipe_start_x.get_untracked();
-        let end_x = match first_touch_x(&ev) {
-            Some(v) => v,
-            None => return,
-        };
-        let delta = end_x - start_x;
-        match resolve_swipe_outcome(target, delta) {
+        let (outcome, next_target) = resolve_touch_end_outcome(target, start_x, first_touch_x(&ev));
+        match outcome {
             SwipeOutcome::OpenLeft => open_left_drawer.run(()),
             SwipeOutcome::OpenRight => open_right_drawer.run(()),
             SwipeOutcome::CloseDrawers => close_drawers.run(()),
             SwipeOutcome::None => {}
         }
-        set_swipe_target.set(None);
+        set_swipe_target.set(next_target);
     })
 }
 
@@ -113,6 +109,17 @@ pub(super) fn resolve_swipe_outcome(target: Option<SwipeTarget>, delta: i32) -> 
         Some(SwipeTarget::CloseRight) if delta >= SWIPE_THRESHOLD => SwipeOutcome::CloseDrawers,
         _ => SwipeOutcome::None,
     }
+}
+
+pub(super) fn resolve_touch_end_outcome(
+    target: Option<SwipeTarget>,
+    start_x: i32,
+    end_x: Option<i32>,
+) -> (SwipeOutcome, Option<SwipeTarget>) {
+    let Some(end_x) = end_x else {
+        return (SwipeOutcome::None, None);
+    };
+    (resolve_swipe_outcome(target, end_x - start_x), None)
 }
 
 fn is_interactive_target(ev: &TouchEvent) -> bool {

@@ -1,6 +1,7 @@
 //! plan_ref:
 //!   - 11_ui_design/03_mobile#mobile-responsive-layout
 //!   - 11_ui_design/03_mobile#mobile-current-native-boundary
+//!   - 11_ui_design/03_mobile#mobile-surface-switcher
 //!
 use super::chat_sheet::MobileChatSheet;
 use super::content::MobileContent;
@@ -10,7 +11,8 @@ use super::header::MobileHeader;
 use super::layout_backdrop::MobileDrawerBackdrop;
 use super::layout_banner::MobileSyncBanner;
 use super::outline_button::OutlineToggleButton;
-use super::surface_switcher::MobileSurfaceSwitcher;
+use super::surface_runtime::collapse_surface_switcher_on_runtime_transition;
+use super::surface_switcher::{MobileSurfaceSwitcher, mobile_surface_sheet_visible};
 use super::toolbar::MobileAccessoryToolbar;
 use crate::components::activity_bar::SidebarView;
 use crate::components::editor_tabs::{
@@ -29,9 +31,9 @@ use leptos::prelude::*;
 pub(crate) fn mobile_bottom_bar_visible(
     keyboard_offset: i32,
     chat_expanded: bool,
-    surface_switcher_open: bool,
+    surface_switcher_sheet_visible: bool,
 ) -> bool {
-    keyboard_offset <= 0 && !chat_expanded && !surface_switcher_open
+    keyboard_offset <= 0 && !chat_expanded && !surface_switcher_sheet_visible
 }
 
 pub(crate) fn mobile_accessory_toolbar_visible(
@@ -40,14 +42,25 @@ pub(crate) fn mobile_accessory_toolbar_visible(
     drawer_open: bool,
     keyboard_offset: i32,
     chat_expanded: bool,
-    surface_switcher_open: bool,
+    surface_switcher_sheet_visible: bool,
 ) -> bool {
     has_doc
         && !diff_open
         && !drawer_open
         && keyboard_offset > 0
         && !chat_expanded
-        && !surface_switcher_open
+        && !surface_switcher_sheet_visible
+}
+
+#[cfg(test)]
+use crate::hooks::use_core::source_control_notice::{SourceControlNotice, is_local_command_notice};
+
+#[cfg(test)]
+pub(crate) fn should_clear_mobile_source_control_local_notice(
+    active_view: SidebarView,
+    notice: Option<&SourceControlNotice>,
+) -> bool {
+    active_view == SidebarView::SourceControl && notice.is_some_and(is_local_command_notice)
 }
 
 #[component]
@@ -96,7 +109,29 @@ pub fn MobileLayoutFrame(
         },
         current_editor_doc,
     );
+    let surface_doc_tabs = tabs.doc_tabs;
+    let surface_diff_tabs = tabs.diff_tabs;
+    let surface_switcher_has_tabs = Signal::derive(move || {
+        !surface_doc_tabs.get().is_empty() || !surface_diff_tabs.get().is_empty()
+    });
     let (surface_switcher_open, set_surface_switcher_open) = signal(false);
+    let surface_switcher_sheet_visible = Signal::derive(move || {
+        mobile_surface_sheet_visible(
+            surface_switcher_open.get(),
+            drawer_open.get(),
+            surface_switcher_has_tabs.get(),
+        )
+    });
+    let pending_branch_switch = editor.pending_branch_switch;
+    let pending_repo_switch = scope.pending_repo_switch;
+    collapse_surface_switcher_on_runtime_transition(
+        scope.current_repo_id,
+        scope.current_scope_nonce,
+        scope.active_branch,
+        Signal::derive(move || pending_branch_switch.get().is_some()),
+        Signal::derive(move || pending_repo_switch.get().is_some()),
+        set_surface_switcher_open,
+    );
 
     view! {
         <div
@@ -184,7 +219,7 @@ pub fn MobileLayoutFrame(
                         drawer_open.get(),
                         keyboard_offset.get(),
                         chat_expanded.get(),
-                        surface_switcher_open.get(),
+                        surface_switcher_sheet_visible.get(),
                     )
                 })
             />
@@ -193,7 +228,7 @@ pub fn MobileLayoutFrame(
                 keyboard_offset=keyboard_offset
                 drawer_open=drawer_open
                 diff_open=Signal::derive(move || diff_content.get().is_some())
-                surface_switcher_open=surface_switcher_open
+                surface_switcher_sheet_visible=surface_switcher_sheet_visible
                 expanded=chat_expanded
                 set_expanded=set_chat_expanded
             />
@@ -202,7 +237,7 @@ pub fn MobileLayoutFrame(
                 mobile_bottom_bar_visible(
                     keyboard_offset.get(),
                     chat_expanded.get(),
-                    surface_switcher_open.get(),
+                    surface_switcher_sheet_visible.get(),
                 )
             }>
                 <MobileFooter />
@@ -212,50 +247,4 @@ pub fn MobileLayoutFrame(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{mobile_accessory_toolbar_visible, mobile_bottom_bar_visible};
-
-    #[test]
-    fn mobile_chat_keyboard_hides_bottom_bar() {
-        assert!(!mobile_bottom_bar_visible(280, true, false));
-        assert!(!mobile_bottom_bar_visible(280, false, false));
-        assert!(!mobile_bottom_bar_visible(0, true, false));
-        assert!(mobile_bottom_bar_visible(0, false, false));
-        assert!(!mobile_bottom_bar_visible(0, false, true));
-    }
-
-    #[test]
-    fn mobile_surface_switcher_hides_bottom_bar() {
-        assert!(!mobile_bottom_bar_visible(0, false, true));
-        assert!(mobile_bottom_bar_visible(0, false, false));
-    }
-
-    #[test]
-    fn mobile_diff_hides_accessory_toolbar() {
-        assert!(mobile_accessory_toolbar_visible(
-            true, false, false, 280, false, false
-        ));
-        assert!(!mobile_accessory_toolbar_visible(
-            true, true, false, 280, false, false
-        ));
-    }
-
-    #[test]
-    fn mobile_diff_keeps_accessory_toolbar_gate_strict() {
-        assert!(!mobile_accessory_toolbar_visible(
-            false, false, false, 280, false, false
-        ));
-        assert!(!mobile_accessory_toolbar_visible(
-            true, false, true, 280, false, false
-        ));
-        assert!(!mobile_accessory_toolbar_visible(
-            true, false, false, 0, false, false
-        ));
-        assert!(!mobile_accessory_toolbar_visible(
-            true, false, false, 280, true, false
-        ));
-        assert!(!mobile_accessory_toolbar_visible(
-            true, false, false, 280, false, true
-        ));
-    }
-}
+mod tests;

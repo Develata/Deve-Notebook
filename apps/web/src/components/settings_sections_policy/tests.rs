@@ -2,14 +2,15 @@ use super::{
     BUTTON_CLASS_ACCENT_ACTIVE, BUTTON_CLASS_DISABLED, BUTTON_CLASS_IDLE, SYNC_AUTO_CLASS_ACTIVE,
     SYNC_MANUAL_CLASS_ACTIVE, ai_backend_button_state, ai_chat_visibility_button_state,
     editor_density_button_state, editor_wrap_button_state, language_button_state,
-    native_backend_button_state, native_backend_can_switch_local, reserved_setting_state,
+    native_backend_button_state, native_backend_can_switch_local,
+    native_backend_unavailable_feedback, native_backend_validation_state, reserved_setting_state,
     sync_mode_button_state, theme_button_state,
 };
 use crate::api::{AI_BACKEND_NATIVE, AI_BACKEND_TRUSTED_CLI, AiBackendCapabilities};
 use crate::components::settings_prefs::{
     EditorDensityPreference, EditorWrapPreference, ThemePreference,
 };
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 
 #[test]
 fn language_buttons_reflect_current_locale() {
@@ -130,6 +131,50 @@ fn native_backend_switch_local_only_has_effect_from_remote_mode() {
 }
 
 #[test]
+fn native_backend_validation_state_does_not_treat_failed_feedback_as_success() {
+    assert_eq!(
+        native_backend_validation_state(false, "remote backend probe failed", "remote", false),
+        "failed"
+    );
+}
+
+#[test]
+fn native_backend_validation_state_marks_only_current_remote_success() {
+    assert_eq!(
+        native_backend_validation_state(false, "Remote backend saved", "remote", true),
+        "success"
+    );
+    assert_eq!(
+        native_backend_validation_state(false, "Local backend saved", "local", false),
+        "idle"
+    );
+    assert_eq!(
+        native_backend_validation_state(true, "Validating remote backend", "remote", false),
+        "pending"
+    );
+}
+
+#[test]
+fn native_backend_unavailable_feedback_localizes_known_bridge_reason_at_render_time() {
+    assert_eq!(
+        native_backend_unavailable_feedback(Locale::Zh, "native backend bridge unavailable"),
+        t::settings::native_backend_unavailable(Locale::Zh)
+    );
+    assert_eq!(
+        native_backend_unavailable_feedback(Locale::En, "native backend bridge unavailable"),
+        "Native-only setting unavailable in a regular browser."
+    );
+    assert_eq!(
+        native_backend_unavailable_feedback(Locale::Zh, ""),
+        t::settings::native_backend_unavailable(Locale::Zh)
+    );
+    assert_eq!(
+        native_backend_unavailable_feedback(Locale::Zh, "remote backend probe failed"),
+        "remote backend probe failed"
+    );
+}
+
+#[test]
 fn ai_backend_buttons_disable_only_unavailable_backends() {
     let state = ai_backend_button_state(
         AI_BACKEND_NATIVE,
@@ -147,7 +192,23 @@ fn ai_backend_buttons_disable_only_unavailable_backends() {
     assert!(state.native_title.is_empty());
     assert_eq!(state.trusted_class, BUTTON_CLASS_DISABLED);
     assert!(state.trusted_disabled);
-    assert_eq!(state.trusted_title, "external agent disabled");
+    assert_eq!(state.trusted_title, "External agent disabled");
+
+    let zh_state = ai_backend_button_state(
+        AI_BACKEND_NATIVE,
+        &AiBackendCapabilities {
+            native_available: true,
+            trusted_cli_available: false,
+            trusted_cli_reason: Some("external agent disabled".to_string()),
+            ..AiBackendCapabilities::default()
+        },
+        Locale::Zh,
+    );
+
+    assert_eq!(
+        zh_state.trusted_title,
+        t::extensions::ai_backend_reason(Locale::Zh, "external agent disabled")
+    );
 }
 
 #[test]
@@ -163,7 +224,7 @@ fn trusted_cli_default_off_keeps_native_visible_and_disables_trusted_backend() {
     assert!(state.native_title.is_empty());
     assert_eq!(state.trusted_class, BUTTON_CLASS_DISABLED);
     assert!(state.trusted_disabled);
-    assert_eq!(state.trusted_title, "external agent disabled");
+    assert_eq!(state.trusted_title, "External agent disabled");
 }
 
 #[test]
@@ -181,10 +242,26 @@ fn ai_backend_buttons_show_disabled_reason_only_for_disabled_native() {
 
     assert_eq!(state.native_class, BUTTON_CLASS_DISABLED);
     assert!(state.native_disabled);
-    assert_eq!(state.native_title, "native AI disabled by config");
+    assert_eq!(state.native_title, "Native AI disabled by config");
     assert_eq!(state.trusted_class, BUTTON_CLASS_IDLE);
     assert!(!state.trusted_disabled);
     assert!(state.trusted_title.is_empty());
+
+    let zh_state = ai_backend_button_state(
+        AI_BACKEND_NATIVE,
+        &AiBackendCapabilities {
+            native_available: false,
+            native_reason: Some("native AI disabled by config".to_string()),
+            trusted_cli_available: true,
+            ..AiBackendCapabilities::default()
+        },
+        Locale::Zh,
+    );
+
+    assert_eq!(
+        zh_state.native_title,
+        t::extensions::ai_backend_reason(Locale::Zh, "native AI disabled by config")
+    );
 }
 
 #[test]

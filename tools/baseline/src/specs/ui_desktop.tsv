@@ -32,13 +32,13 @@ contains	apps/web/src/hooks/use_layout.rs	read_width("ui_right_panel_width")
 contains	apps/web/src/hooks/use_layout.rs	write_width("ui_sidebar_width",
 contains	apps/web/src/hooks/use_layout.rs	write_width("ui_center_panel_width",
 contains	apps/web/src/hooks/use_layout.rs	write_width("ui_right_panel_width",
-contains	apps/web/src/hooks/use_layout.rs	fn panel_center_width(
-contains	apps/web/src/hooks/use_layout.rs	fn visible_divider_count(
-contains	apps/web/src/hooks/use_layout.rs	fn clamped_side_widths_for_visibility(
+contains	apps/web/src/hooks/use_layout/geometry.rs	fn panel_center_width(
+contains	apps/web/src/hooks/use_layout/geometry.rs	fn visible_divider_count(
+contains	apps/web/src/hooks/use_layout/geometry.rs	fn clamped_side_widths_for_visibility(
 contains	apps/web/src/hooks/use_layout/resize.rs	fn resized_values_for_target(
-contains	apps/web/src/hooks/use_layout/resize.rs	fn desktop_layout_resize_hidden_regions_only_affect_constraints()
-contains	apps/web/src/hooks/use_layout/resize.rs	fn desktop_layout_resize_left_divider_collapses_sidebar_or_center()
-contains	apps/web/src/hooks/use_layout/resize.rs	fn desktop_layout_resize_right_divider_collapses_chat_or_center()
+contains	apps/web/src/hooks/use_layout/resize/tests.rs	fn desktop_layout_resize_hidden_regions_only_affect_constraints()
+contains	apps/web/src/hooks/use_layout/resize/tests.rs	fn desktop_layout_resize_left_divider_collapses_sidebar_or_center()
+contains	apps/web/src/hooks/use_layout/resize/tests.rs	fn desktop_layout_resize_right_divider_collapses_chat_or_center()
 contains	apps/web/src/components/desktop_layout/handles.rs	data-deve-desktop-resizer=marker
 contains	apps/web/src/components/desktop_layout.rs	marker="left-divider"
 contains	apps/web/src/components/desktop_chat_panel.rs	data-deve-desktop-resizer="right-divider"
@@ -134,13 +134,13 @@ contains	docs/report/web-repo-switcher-browser-smoke-2026-05-17.md	Repo Switcher
 contains	docs/report/web-repo-switcher-browser-smoke-2026-05-17.md	Browser console `error` / `warn` count after the final reload was `0`.
 contains	docs/report/web-repo-switcher-browser-smoke-2026-05-17.md	focus_scope::attach_modal_focus_restore_effect
 contains	apps/web/src/components/sidebar/repo_switcher.rs	11_ui_design/01_web#web-layout-persistence
-contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-trigger=repo_switcher_trigger_marker()
-contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-backdrop=repo_switcher_backdrop_marker()
-contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-menu=move || repo_switcher_menu_marker(show_menu.get())
-contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switcher-item=repo_switcher_item_marker()
-contains	apps/web/src/components/sidebar/repo_switcher.rs	type="button"
-contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menu"
-contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menuitem"
+contains	apps/web/src/components/sidebar/repo_switcher/trigger.rs	data-deve-repo-switcher-trigger=repo_switcher_trigger_marker()
+contains	apps/web/src/components/sidebar/repo_switcher/menu.rs	data-deve-repo-switcher-backdrop=repo_switcher_backdrop_marker()
+contains	apps/web/src/components/sidebar/repo_switcher/menu.rs	data-deve-repo-switcher-menu=move || repo_switcher_menu_marker(show_menu.get())
+contains	apps/web/src/components/sidebar/repo_switcher/row/display.rs	data-deve-repo-switcher-item=repo_switcher_item_marker()
+contains	apps/web/src/components/sidebar/repo_switcher/row/display.rs	type="button"
+contains	apps/web/src/components/sidebar/repo_switcher/menu.rs	role="menu"
+contains	apps/web/src/components/sidebar/repo_switcher/row/display.rs	role="menuitem"
 contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_trigger_click_toggles_menu()
 contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_outside_click_closes_menu()
 contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_item_click_closes_menu()
@@ -204,7 +204,7 @@ contains	apps/web/src/components/sidebar/item/action/tests.rs	fn readonly_curren
 contains	apps/web/src/context_action/tests/catalog.rs	fn file_tree_action_catalog_preserves_existing_order()
 contains	apps/web/src/context_action/tests/catalog.rs	fn file_tree_action_registry_lives_outside_sidebar_menu()
 contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_readonly_catalog_keeps_shell_local_open_only()
-contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_target_projection_accepts_file_and_folder_nodes()
+contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_target_projection_keeps_write_actions_for_file_and_folder_nodes()
 contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_projected_intents_resolve_again()
 contains	apps/web/src/context_action/tests/projection.rs	fn file_tree_action_export_pdf_is_registered_but_default_unavailable()
 contains	apps/web/src/context_action/tests/resolver.rs	fn file_tree_action_export_pdf_default_not_resolved()

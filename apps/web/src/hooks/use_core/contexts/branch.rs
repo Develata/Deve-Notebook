@@ -1,6 +1,34 @@
+//! plan_ref:
+//!   - 04_repository#repo-scope-runtime
+//!
 use deve_core::models::{PeerId, RepoId};
 use deve_core::protocol::RepoListEntry;
 use leptos::prelude::*;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RepoSwitchRequest {
+    pub selector_name: String,
+    pub expected_name: String,
+    pub repo_id: Option<RepoId>,
+}
+
+impl RepoSwitchRequest {
+    pub fn by_name(name: String) -> Self {
+        Self {
+            selector_name: name.clone(),
+            expected_name: name,
+            repo_id: None,
+        }
+    }
+
+    pub fn exact(selector_name: String, expected_name: String, repo_id: RepoId) -> Self {
+        Self {
+            selector_name,
+            expected_name,
+            repo_id: Some(repo_id),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RepoRenameRequest {
@@ -25,7 +53,7 @@ pub struct BranchContext {
     pub set_current_repo: WriteSignal<Option<String>>,
     pub current_repo_id: ReadSignal<Option<String>>,
     pub set_current_repo_id: WriteSignal<Option<String>>,
-    pub on_switch_repo: Callback<String>,
+    pub on_switch_repo: Callback<RepoSwitchRequest>,
     pub on_create_repo: Callback<String>,
     pub on_rename_repo: Callback<RepoRenameRequest>,
     pub on_remove_repo: Callback<RepoRemoveRequest>,

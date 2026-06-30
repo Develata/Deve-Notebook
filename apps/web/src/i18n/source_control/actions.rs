@@ -25,6 +25,15 @@ pub fn confirmed_ledger_changes(locale: Locale) -> &'static str {
     }
 }
 
+pub fn confirmed_ledger_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "Ledger-confirmed changes cannot be staged or discarded per file; commit covers this group as one anchor."
+        }
+        Locale::Zh => "账本已确认更改不支持逐文件暂存或放弃；提交会整体覆盖本组。",
+    }
+}
+
 pub fn no_changes(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "No changes",
@@ -39,10 +48,10 @@ pub fn graph(locale: Locale) -> &'static str {
     }
 }
 
-pub fn open_file(locale: Locale) -> &'static str {
+pub fn open_diff(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Open File",
-        Locale::Zh => "打开文件",
+        Locale::En => "Open Diff",
+        Locale::Zh => "打开差异",
     }
 }
 
@@ -92,6 +101,27 @@ pub fn commit_message_placeholder(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Message (Ctrl+Enter to commit on the current branch)",
         Locale::Zh => "提交信息（Ctrl+Enter 在当前分支提交）",
+    }
+}
+
+pub fn commit_disabled_no_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "No staged or confirmed ledger changes to commit",
+        Locale::Zh => "没有可提交的暂存或已确认账本更改",
+    }
+}
+
+pub fn commit_disabled_no_changes_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Stage changes or edit the ledger before committing.",
+        Locale::Zh => "请先暂存更改，或在账本出现已确认更改后再提交。",
+    }
+}
+
+pub fn commit_disabled_empty_message(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Enter a commit message before committing",
+        Locale::Zh => "请输入提交信息后再提交",
     }
 }
 

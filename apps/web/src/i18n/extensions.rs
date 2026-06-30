@@ -6,6 +6,10 @@
 
 use super::Locale;
 
+mod ai_backend;
+
+pub use ai_backend::*;
+
 pub fn channel_desc(locale: Locale, mode: &str) -> &'static str {
     match (locale, mode) {
         (Locale::En, "agent-bridge") => "Trusted external CLI bridge. Advanced mode, default off.",
@@ -52,13 +56,6 @@ pub fn trusted_cli_unavailable(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Trusted CLI unavailable",
         Locale::Zh => "受信任 CLI 不可用",
-    }
-}
-
-pub fn ai_backend_fallback(locale: Locale, reason: &str) -> String {
-    match locale {
-        Locale::En => format!("AI backend changed by runtime policy. Reason: {reason}"),
-        Locale::Zh => format!("AI 后端已按运行时策略切换。原因：{reason}"),
     }
 }
 

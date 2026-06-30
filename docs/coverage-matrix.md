@@ -27,7 +27,7 @@
 | `11_ui_design/index` | `08_ui_design` | `05_ui`, `13_ui_mobile_chat_regression` | Chrome MCP + UI automation |
 | `11_ui_design/01_web` | `08_ui_design_01_web` | `05_ui` | Web shell automation + Chrome MCP |
 | `11_ui_design/02_desktop` | `08_ui_design_02_desktop` | `05_ui` | desktop shell automation |
-| `11_ui_design/03_mobile` | `08_ui_design_03_mobile` | `05_ui`, `13_ui_mobile_chat_regression` | mobile shell automation + Chrome MCP |
+| `11_ui_design/03_mobile` | `08_ui_design_03_mobile` | `05_ui`, `13_ui_mobile_chat_regression`, `17_mobile_surface_switcher` | mobile shell automation + Chrome MCP |
 | `12_source_control_ui` | `07_diff_logic`, `08_ui_design_02_desktop` | `04_diff`, `05_ui` | Source Control UI reference + automation |
 | `13_i18n` | `11_i18n` | `09_i18n` | locale/error-code automation |
 | `14_commands` | `12_commands` | `11_commands_settings` | command/control automation |

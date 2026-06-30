@@ -22,6 +22,28 @@ fn read_list_dispatch_accepts_history_remote_branch_scope() {
 }
 
 #[test]
+fn history_list_keeps_local_command_notice() {
+    let repo_id = uuid::Uuid::new_v4();
+    let result = dispatch_read_list_from_repo_with_notice(
+        ReadListKind::History,
+        repo_id,
+        repo_id,
+        None,
+        None,
+        Some(17),
+        SourceControlNotice::git_push_cli_only(),
+    );
+
+    assert!(result.handled);
+    assert_eq!(result.history_request_id, None);
+    assert_eq!(
+        result.notice,
+        Some(SourceControlNotice::git_push_cli_only())
+    );
+    assert_eq!(result.history[0].id, "fresh");
+}
+
+#[test]
 fn read_list_dispatch_rejects_history_stale_scope_nonce() {
     let repo_id = uuid::Uuid::new_v4();
     let branch = PeerId::new("peer-a");

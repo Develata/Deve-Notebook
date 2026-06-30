@@ -36,7 +36,7 @@ fn file_tree_action_resolver_blocks_writes_in_readonly_state() {
     let open = resolve_context_action(ContextActionResolveRequest::new(
         file_tree_intent(
             ContextActionId::OpenInNewWindow,
-            ContextActionTargetKind::AnyNode,
+            ContextActionTargetKind::MarkdownFile,
         ),
         file_tree_readiness(true),
     ))
@@ -104,13 +104,48 @@ fn context_action_readiness_write_gate_keeps_readonly_action_available() {
     let resolved = resolve_context_action(ContextActionResolveRequest::new(
         file_tree_intent(
             ContextActionId::OpenInNewWindow,
-            ContextActionTargetKind::AnyNode,
+            ContextActionTargetKind::MarkdownFile,
         ),
         file_tree_readiness(false).with_write_blocked(true),
     ))
     .expect("open in new window should resolve when write gate is blocked");
 
     assert_eq!(resolved.descriptor.id, ContextActionId::OpenInNewWindow);
+}
+
+#[test]
+fn file_tree_action_resolver_rejects_open_in_new_window_for_non_markdown_targets() {
+    for target_kind in [
+        ContextActionTargetKind::File,
+        ContextActionTargetKind::Folder,
+    ] {
+        let resolved = resolve_context_action(ContextActionResolveRequest::new(
+            file_tree_intent(ContextActionId::OpenInNewWindow, target_kind),
+            file_tree_readiness(false),
+        ));
+
+        assert!(resolved.is_none(), "{target_kind:?} should not resolve");
+    }
+}
+
+#[test]
+fn file_tree_action_resolver_rejects_internal_repo_segments() {
+    let intent = ContextActionIntent::new(
+        ContextActionId::Rename,
+        ContextActionSurface::FileTree,
+        ContextActionTarget::new(
+            ContextActionTargetKind::MarkdownFile,
+            "notes/.notegit/state.md",
+        ),
+    );
+
+    assert!(
+        resolve_context_action(ContextActionResolveRequest::new(
+            intent,
+            file_tree_readiness(false),
+        ))
+        .is_none()
+    );
 }
 
 #[test]

@@ -5,9 +5,12 @@
 use crate::components::search_box::runtime::SearchRuntime;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
-use crate::hooks::use_core::write_gate_banner::cannot_action;
+use crate::hooks::use_core::write_gate_banner::{
+    WriteGateAction, cannot_action, reason_from_block,
+};
+use leptos::prelude::GetUntracked;
 
-pub(super) fn allow_repo_write(runtime: &SearchRuntime, action: &'static str) -> bool {
+pub(super) fn allow_repo_write(runtime: &SearchRuntime, action: WriteGateAction) -> bool {
     let block = repo_write_block_untracked(
         &runtime.session.ws,
         RepoWriteSignals {
@@ -24,7 +27,11 @@ pub(super) fn allow_repo_write(runtime: &SearchRuntime, action: &'static str) ->
     let Some(block) = block else {
         return true;
     };
-    let message = cannot_action(action, block.label());
+    let message = cannot_action(
+        runtime.locale.get_untracked(),
+        action,
+        reason_from_block(block),
+    );
     warn_sync_banner(runtime.session.set_sync_banner, message);
     false
 }

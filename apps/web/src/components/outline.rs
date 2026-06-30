@@ -146,6 +146,7 @@ pub fn Outline(content: ReadSignal<String>, on_scroll: Callback<usize>) -> impl 
                         <button
                             type="button"
                             data-deve-outline-heading-item="true"
+                            data-deve-outline-heading-level=header.level.to_string()
                             data-deve-outline-heading-line=line.to_string()
                             class=format!(
                                 "w-full min-h-8 py-1.5 pr-2 text-left text-xs cursor-pointer rounded transition-colors truncate flex items-center bg-transparent border-0 {}",

@@ -18,6 +18,7 @@ pub(super) fn ExplorerHeader(
     locale: RwSignal<Locale>,
     search_control: SearchControl,
     is_readonly: Signal<bool>,
+    #[prop(into)] on_search_open: Callback<()>,
 ) -> impl IntoView {
     let branch = expect_context::<BranchContext>();
     let document = expect_context::<DocumentClient>();
@@ -27,11 +28,11 @@ pub(super) fn ExplorerHeader(
     let editor = expect_context::<EditorContext>();
     let docs_for_create = document.docs;
     let request_create = Callback::new(move |parent: Option<String>| {
-        search_control.set_mode.set(super::new_doc_search_query(
-            docs_for_create,
-            parent.as_deref(),
-        ));
-        search_control.set_show.set(true);
+        super::super::open_search_overlay(
+            search_control,
+            on_search_open,
+            super::new_doc_search_query(docs_for_create, parent.as_deref()),
+        );
     });
 
     let branch_for_title = branch.clone();
@@ -62,6 +63,7 @@ pub(super) fn ExplorerHeader(
             }>
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
+                        type="button"
                         class="p-1 rounded hover:bg-hover text-secondary"
                         title=move || t::sidebar::new_doc(locale.get())
                         data-deve-new-doc-button="true"

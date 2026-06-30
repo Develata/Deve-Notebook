@@ -106,7 +106,11 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
     view! {
         <div class="border-t border-default">
             <button
-                class="w-full flex items-center px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase"
+                type="button"
+                class="w-full flex items-center rounded-sm px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                data-deve-sc-panel-toggle="history"
+                aria-expanded=move || expanded.get().to_string()
+                aria-controls="source-control-history-panel"
                 on:click=move |_| {
                     let next_open = !expanded.get_untracked();
                     if !next_open {
@@ -126,7 +130,11 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                 </span>
                 {move || t::source_control::history(locale.get())}
             </button>
-            <Show when=move || expanded.get()>
+            <div
+                id="source-control-history-panel"
+                data-deve-sc-panel-body="history"
+                hidden=move || !expanded.get()
+            >
                 <HistoryBody
                     locale
                     history_loading
@@ -136,7 +144,7 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
                     clear_compare_base
                     use_selected_as_base
                 />
-            </Show>
+            </div>
         </div>
     }
 }

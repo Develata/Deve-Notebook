@@ -30,6 +30,44 @@ pub(super) fn mobile_more_pin_action_marker(view: SidebarView) -> &'static str {
     }
 }
 
+pub(super) fn mobile_more_item_row_class(view: SidebarView) -> String {
+    format!(
+        "mobile-more-item {} w-full h-11 text-sm text-primary flex items-stretch justify-between",
+        more_item_class(view)
+    )
+}
+
+pub(super) fn mobile_more_item_button_class() -> &'static str {
+    "flex-1 h-full px-3 text-left active:bg-hover"
+}
+
+pub(super) fn mobile_more_item_touch_target() -> &'static str {
+    "mobile_more_items"
+}
+
+pub(super) fn mobile_more_pin_button_class(pinned: bool) -> String {
+    format!(
+        "h-full min-w-[44px] px-3 flex items-center justify-center rounded-md {}",
+        if pinned {
+            "text-accent active:bg-hover"
+        } else {
+            "text-muted active:bg-hover"
+        }
+    )
+}
+
+pub(super) fn mobile_more_pin_touch_target() -> &'static str {
+    "mobile_more_pin_actions"
+}
+
+pub(super) fn mobile_more_pin_label(pinned: bool, locale: Locale) -> &'static str {
+    if pinned {
+        t::common::unpin(locale)
+    } else {
+        t::common::pin(locale)
+    }
+}
+
 pub(super) fn mobile_more_after_item_click() -> bool {
     false
 }
@@ -75,7 +113,13 @@ pub(super) fn LeftDrawerMoreMenu(
     view! {
         {move || if show_more.get() {
             view! {
-                <div class="mobile-more-backdrop fixed inset-0 z-[var(--z-floating)]" on:click=move |_| set_show_more.set(false)></div>
+                <button
+                    type="button"
+                    class="mobile-more-backdrop fixed inset-0 z-[var(--z-floating)] border-0 bg-transparent p-0"
+                    title=move || t::common::close(locale.get())
+                    aria-label=move || t::common::close(locale.get())
+                    on:click=move |_| set_show_more.set(false)
+                ></button>
                 <div
                     class="mobile-more-panel absolute right-2 top-full mt-1 w-44 bg-panel shadow-xl rounded-lg border border-default py-1 z-[calc(var(--z-floating)_+_1)]"
                     data-deve-mobile-more-menu=move || mobile_more_menu_marker(show_more.get())
@@ -93,14 +137,13 @@ pub(super) fn LeftDrawerMoreMenu(
                         let pinned = Signal::derive(move || pinned_views.get().contains(&item));
                         view! {
                             <div
-                                class=format!(
-                                    "mobile-more-item {} w-full h-11 px-3 text-left text-sm text-primary active:bg-hover flex items-center justify-between",
-                                    more_item_class(item)
-                                )
+                                class=mobile_more_item_row_class(item)
                             >
                                 <button
+                                    type="button"
                                     data-deve-mobile-more-item=mobile_more_item_marker(item)
-                                    class="flex-1 h-full text-left"
+                                    data-deve-mobile-touch-target=mobile_more_item_touch_target()
+                                    class=mobile_more_item_button_class()
                                     role="menuitem"
                                     on:click=move |_| {
                                         select_view.run(item);
@@ -110,22 +153,13 @@ pub(super) fn LeftDrawerMoreMenu(
                                     <span class=move || if active_view.get() == item { "font-semibold" } else { "" }>{item.title(locale.get())}</span>
                                 </button>
                                 <button
+                                    type="button"
                                     data-deve-mobile-more-pin-action=mobile_more_pin_action_marker(item)
-                                    class=move || format!(
-                                        "rounded-md p-1.5 {}",
-                                        if pinned.get() {
-                                            "text-accent active:bg-hover"
-                                        } else {
-                                            "text-muted active:bg-hover"
-                                        }
-                                    )
-                                    title=move || {
-                                        if pinned.get() {
-                                            t::common::unpin(locale.get())
-                                        } else {
-                                            t::common::pin(locale.get())
-                                        }
-                                    }
+                                    data-deve-mobile-touch-target=mobile_more_pin_touch_target()
+                                    class=move || mobile_more_pin_button_class(pinned.get())
+                                    aria-pressed=move || pinned.get().to_string()
+                                    title=move || mobile_more_pin_label(pinned.get(), locale.get())
+                                    aria-label=move || mobile_more_pin_label(pinned.get(), locale.get())
                                     on:click=move |ev| {
                                         ev.stop_propagation();
                                         toggle_pin(item);

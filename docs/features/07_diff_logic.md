@@ -31,12 +31,16 @@
 
 - 用户可以把候选变化移入或移出 staged 区域。
 - staged 与 unstaged 必须可见区分。
+- Staged / unstaged / confirmed ledger resource group header 应是可键盘触发的折叠按钮，并通过 `aria-expanded`
+  与 `aria-controls` 暴露状态和受控内容；受控内容应以稳定 `id` 常驻 DOM，折叠时使用 `hidden`
+  隐藏；section action 按钮不应顺带触发展开/收起。
 
 ### 2.1 Confirmed Ledger Changes
 
 - 程序内编辑或 CLI 受控写入 ack 后，变化已经进入 ledger，不应出现在工作区 pending 列表。
 - 若这些变化尚未被最新 Source Control commit anchor 覆盖，Source Control 应展示 `Confirmed Ledger Changes`。
-- 该分组不提供 Stage / Discard；首版 commit 一次性覆盖全部 confirmed ledger changes。
+- 该分组不提供 Stage / Discard / Revert；首版只提供打开 diff，commit 一次性覆盖全部 confirmed ledger changes。
+- UI 应在该分组中说明它们已进入 ledger，不能逐文件暂存或放弃，只能打开 diff 或随本组整体 commit anchor 覆盖。
 - confirmed-only commit 成功后，该分组应清空并刷新 history。
 
 ### 3. Diff / History / Graph
@@ -44,6 +48,9 @@
 - 用户可以打开 diff 查看变更内容。
 - 用户可以查看 commit history / graph。
 - 这些视图必须与当前 repo scope 一致。
+- Repository / history / graph 这类 secondary panel header 应是可键盘触发的折叠按钮，并通过
+  `aria-expanded` 与 `aria-controls` 暴露状态和受控内容；受控内容应以稳定 `id` 常驻 DOM，折叠时
+  使用 `hidden` 隐藏。
 - remote / spectator scope 下，diff / history / graph 仍作为只读视图可用；
   stage、unstage、discard、commit、resolve conflict 等写操作必须被隐藏或禁用。
 - Graph 数据面是只读 projection，不写 ledger、workspace、search index 或 source-control state。
@@ -76,6 +83,8 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - Git bridge 写命令在执行 import apply、mirror/export 或 push 前必须复用本地 Projection Workspace identity gate；
   `.notegit` identity marker 或 Projection Locator 破损时不得写 pending/import、`.git` mirror 或发布 mirror HEAD。
 - Web Command Palette 与 Source Control UI 只展示当前 mode 与 CLI-only notice，不直接执行 Git writer；Source Control header 的 badge 应写成 `NoteGit + Git mirror` / `NoteGit only` 这类 authority-first 文案，避免把 Git bridge mode 误读成 Git authority 切换。
+- Source Control header 的 section visibility menu 只用于切换 view-local section 显示；trigger 应暴露
+  menu 展开状态，菜单项应暴露 checked 状态，并在选择后自动关闭。
 - Web `Commit & Push` 入口只展示 Git push CLI-only notice；兼容期旧 WS `CommitAndPush` frame 不得等价为普通 commit，服务端必须返回结构化 blocker 且无 source-control 写副作用。
 - 插件 host 的 `sc_commit` 与 plugin-host HTTP commit 必须遵守同一个 mode；代理模式必须展示主进程 mode 或 delegated/unknown，而不能硬编码为 mirror。
 - 后端 commit writer API 不提供无策略默认 `mirror` 入口；新增 CLI、HTTP、WS 或插件提交路径时必须显式传入当前 Git bridge mode，代理路径只能转发到主进程策略。
@@ -174,6 +183,6 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 
 期望结果：
 
-- confirmed row 不显示 Stage / Discard。
+- confirmed row 不显示 Stage / Discard / Revert，只显示打开 diff 的只读动作。
 - diff 基于 latest commit anchor 与当前 ledger head。
 - commit 成功后 `Confirmed Ledger Changes` 清空，history 增加新 commit。

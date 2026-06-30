@@ -13,12 +13,7 @@ use std::rc::Rc;
 use super::bootstrap;
 use super::repo;
 
-fn set_degraded(
-    set_mode: WriteSignal<Option<DegradedSyncMode>>,
-    set_banner: WriteSignal<Option<String>>,
-    mode: DegradedSyncMode,
-) {
-    set_banner.set(Some(mode.banner_text()));
+fn set_degraded(set_mode: WriteSignal<Option<DegradedSyncMode>>, mode: DegradedSyncMode) {
     set_mode.set(Some(mode));
 }
 
@@ -57,7 +52,7 @@ pub(super) fn run_storage_runtime_cycle(
         let bootstrap = match bootstrap::bootstrap_repo_storage(&repo_id).await {
             Ok(bootstrap) => bootstrap,
             Err(mode) => {
-                set_degraded(set_degraded_sync_mode, set_sync_banner, mode);
+                set_degraded(set_degraded_sync_mode, mode);
                 return;
             }
         };

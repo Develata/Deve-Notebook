@@ -77,6 +77,7 @@ pub fn ExplorerView(
     is_readonly: Signal<bool>,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
+    #[prop(into)] on_search_open: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let doc = expect_context::<DocContext>();
@@ -105,8 +106,7 @@ pub fn ExplorerView(
     // 回调函数
     let search_control = expect_context::<crate::components::main_layout::SearchControl>();
     let open_search = Callback::new(move |query: String| {
-        search_control.set_mode.set(query);
-        search_control.set_show.set(true);
+        super::open_search_overlay(search_control, on_search_open, query);
     });
 
     let docs_for_create = document.docs;
@@ -186,6 +186,7 @@ pub fn ExplorerView(
                 locale
                 search_control
                 is_readonly
+                on_search_open
             />
             <ExplorerTree locale doc />
         </div>

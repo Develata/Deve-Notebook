@@ -1,7 +1,9 @@
 //! plan_ref:
 //!   - 05_diff_logic#source-control-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
+use super::action_tray::SECTION_ACTION_TRAY_CLASS;
 use crate::components::icons::Minus;
 use crate::components::sidebar::source_control::touch_target::{
     SourceControlActionTone, icon_button_class,
@@ -25,14 +27,18 @@ pub fn StagedSectionActions(
     view! {
         <div class="flex items-center gap-2">
             <div
-                class="flex items-center gap-1 text-primary md:hidden md:group-hover:!flex"
+                class=SECTION_ACTION_TRAY_CLASS
+                data-deve-sc-action-tray="section"
                 on:click=move |e| e.stop_propagation()
             >
                 <Show when=move || write_block.get().is_none()>
                     <button
+                        type="button"
                         class=icon_button_class(SourceControlActionTone::Primary)
+                        data-deve-sc-action="unstage-all"
                         data-deve-mobile-touch-target="source-control-unstage-all-action"
                         title=move || t::source_control::unstage_all_changes(locale.get())
+                        aria-label=move || t::source_control::unstage_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()
                         on:click=move |_| {
                             set_bulk_busy.set(true);

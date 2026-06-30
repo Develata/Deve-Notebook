@@ -148,11 +148,60 @@ fn replace_doc_query_param(query: &str, doc_param: &str) -> String {
     let mut pairs = query
         .split('&')
         .filter(|pair| !pair.is_empty())
-        .filter(|pair| pair.split_once('=').map_or(*pair, |(key, _)| key) != "doc")
+        .filter(|pair| !query_pair_key_is_doc(pair))
         .map(str::to_string)
         .collect::<Vec<_>>();
     pairs.push(format!("doc={doc_param}"));
     pairs.join("&")
+}
+
+fn query_pair_key_is_doc(pair: &str) -> bool {
+    let key = pair.split_once('=').map_or(pair, |(key, _)| key);
+    query_key_matches_doc(key)
+}
+
+fn query_key_matches_doc(key: &str) -> bool {
+    if key == "doc" {
+        return true;
+    }
+
+    let bytes = key.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'%' if index + 2 < bytes.len() => {
+                let Some(high) = hex_value(bytes[index + 1]) else {
+                    return false;
+                };
+                let Some(low) = hex_value(bytes[index + 2]) else {
+                    return false;
+                };
+                decoded.push((high << 4) | low);
+                index += 3;
+            }
+            b'%' => return false,
+            b'+' => {
+                decoded.push(b' ');
+                index += 1;
+            }
+            byte => {
+                decoded.push(byte);
+                index += 1;
+            }
+        }
+    }
+
+    decoded == b"doc"
+}
+
+fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 fn quote_arg(arg: &str) -> Option<String> {

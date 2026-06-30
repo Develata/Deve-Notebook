@@ -30,6 +30,33 @@
     - ui_assert: text_contains_literal "$"
     - ui_assert: text_contains_literal "|"
 
+- case_id: RENDER-HEADING-001
+  goal: 空与非空 ATX 标题行保持层级行高。
+  preconditions:
+    - 打开 render_heading.md
+  steps:
+    - run: scripts/check-rendering-baseline.sh
+    - run: cargo test -p deve_web empty_atx_headings -- --nocapture
+    - ui_type: |
+        #
+        ##
+        ###
+        # title
+        ## title
+        ### title
+    - ui_wait_render: true
+  assertions:
+    - ui_assert: editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
+    - ui_assert: nonempty_editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
+    - ui_assert: markdown_body_empty_heading_heights_distinct true
+    - ui_assert: nonempty_heading_keeps_layered_height true
+    - ui_assert: nonempty_heading_font_scales_match_levels true
+    - ui_assert: nonempty_heading_not_double_scaled true
+    - ui_assert: heading_with_inline_math_keeps_line_class true
+    - ui_assert: atx_heading_lines_have_heading_class true
+    - ui_assert: atx_heading_text_line_height_gt_plain true
+    - ui_assert: atx_empty_heading_line_height_gt_plain true
+
 - case_id: RENDER-CURSOR-001
   goal: 光标揭示规则。
   preconditions:
@@ -41,35 +68,20 @@
   assertions:
     - ui_assert: source_visible_for_current_token true
 
-- case_id: RENDER-HEADING-001
-  goal: ATX 标题正文使用标题层级的整行视觉高度。
-  preconditions:
-    - 打开 render_heading.md
-  steps:
-    - ui_type: |
-        #
-        # h1
-        ## h2
-        ### h3
-        plain
-    - ui_wait_render: true
-  assertions:
-    - ui_assert: atx_heading_lines_have_heading_class true
-    - ui_assert: atx_heading_text_line_height_gt_plain true
-    - ui_assert: atx_empty_heading_line_height_gt_plain true
-
 - case_id: RENDER-LINK-001
   goal: 链接需 Ctrl/Cmd 激活。
   preconditions:
-    - 文档包含 [link](https://example.com)
+    - 文档包含 [link](https://example.com) 与 [bad](javascript:alert(1))
   steps:
     - ui_click: "link"
     - ui_keydown: "Ctrl"
     - ui_click: "link"
+    - ui_click: "bad"
     - ui_keyup: "Ctrl"
   assertions:
     - ui_assert: navigation_not_triggered_first_click true
     - ui_assert: navigation_triggered_second_click true
+    - ui_assert: unsafe_scheme_not_opened true
 
 - case_id: RENDER-LINK-002
   goal: 外链安全属性强制。
@@ -161,17 +173,18 @@
     - ui_click: "ellipsis"
   assertions:
     - ui_assert: toolbar_has_buttons ["Copy", "Ellipsis"]
-    - ui_assert: menu_empty_state_text "No actions available"
+    - ui_assert: menu_empty_state_text localized_editor_copy "noActionsAvailable"
 
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。
   preconditions:
-    - 文档包含 `==highlight==` 与 `<div>`
+    - 文档包含 `==highlight==`、`<div>`、`H~2~O`、`^sup^` 与 `:smile:`
   steps:
     - ui_wait_render: true
   assertions:
     - ui_assert: highlight_not_rendered true
     - ui_assert: html_div_filtered true
+    - ui_assert: extended_inline_syntax_plain_text ["H~2~O", "^sup^", ":smile:"]
 
 - case_id: RENDER-NEST-001
   goal: 深度嵌套渲染稳定。

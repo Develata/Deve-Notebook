@@ -28,26 +28,33 @@ pub fn SectionMenu(
             <>
                 <div
                     class="fixed inset-0 z-[var(--z-floating)]"
+                    data-deve-sc-section-menu-backdrop="true"
                     on:click=move |e: MouseEvent| {
                         e.stop_propagation();
                         show_menu.set(false);
                     }
                 ></div>
                 <div
+                    id="source-control-section-menu"
+                    role="menu"
+                    data-deve-sc-section-menu="true"
                     class="absolute right-0 top-full mt-1 w-32 bg-panel border border-default shadow-lg rounded z-[calc(var(--z-floating)_+_1)] text-[12px] py-1"
                     on:click=move |e: MouseEvent| e.stop_propagation()
                 >
                     <MenuItem
+                        item_id="repositories"
                         label=move || t::source_control::repositories(locale.get())
                         checked=show_repos
                         show_menu=show_menu
                     />
                     <MenuItem
+                        item_id="changes"
                         label=move || t::source_control::changes(locale.get())
                         checked=show_changes
                         show_menu=show_menu
                     />
                     <MenuItem
+                        item_id="graph"
                         label=move || t::source_control::graph(locale.get())
                         checked=show_graph
                         show_menu=show_menu
@@ -61,6 +68,7 @@ pub fn SectionMenu(
 
 #[component]
 fn MenuItem(
+    item_id: &'static str,
     label: impl Fn() -> &'static str + Send + 'static,
     checked: RwSignal<bool>,
     show_menu: RwSignal<bool>,
@@ -74,7 +82,10 @@ fn MenuItem(
     view! {
         <button
             type="button"
-            class="w-full px-3 py-1.5 hover:bg-hover text-left flex items-center justify-between"
+            role="menuitemcheckbox"
+            data-deve-sc-section-menu-item=item_id
+            aria-checked=move || checked.get().to_string()
+            class="w-full px-3 py-1.5 hover:bg-hover text-left flex items-center justify-between focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
             on:click=on_click
         >
             <span>{label}</span>

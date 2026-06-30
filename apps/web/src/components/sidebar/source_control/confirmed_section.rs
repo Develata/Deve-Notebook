@@ -28,43 +28,57 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
             <div
                 class=section_header_class()
                 data-deve-mobile-touch-target="source-control-section-header"
-                on:click=move |_| expanded.update(|v| *v = !*v)
             >
-                <div class="flex items-center">
-                    <span class=move || format!("w-4 h-4 flex items-center justify-center text-primary transition-transform {}", if expanded.get() { "rotate-90" } else { "" })>
-                        <ChevronRight class="w-3 h-3" />
+                <button
+                    type="button"
+                    class="flex min-w-0 flex-1 items-center justify-between rounded-sm text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                    data-deve-sc-section-toggle="confirmed-ledger"
+                    aria-expanded=move || expanded.get().to_string()
+                    aria-controls="source-control-confirmed-ledger-panel"
+                    on:click=move |_| expanded.update(|v| *v = !*v)
+                >
+                    <span class="flex min-w-0 items-center">
+                        <span class=move || format!("w-4 h-4 flex items-center justify-center text-primary transition-transform {}", if expanded.get() { "rotate-90" } else { "" })>
+                            <ChevronRight class="w-3 h-3" />
+                        </span>
+                        <span class="truncate text-[11px] font-bold text-primary uppercase">
+                            {move || t::source_control::confirmed_ledger_changes(locale.get())}
+                        </span>
                     </span>
-                    <span class="text-[11px] font-bold text-primary uppercase">
-                        {move || t::source_control::confirmed_ledger_changes(locale.get())}
-                    </span>
-                </div>
-                <span class="text-[11px] text-muted pr-2">{confirmed_count}</span>
+                    <span class="text-[11px] text-muted pr-2">{confirmed_count}</span>
+                </button>
             </div>
 
-            {move || if expanded.get() {
-                view! {
-                    <For
-                        each=move || confirmed_list.get_value()
-                        key=|e| {
-                            format!(
-                                "{:?}:{}:{}:{:?}:{}:{}:{}",
-                                e.domain,
-                                e.doc_id
-                                    .map(|doc_id| doc_id.to_string())
-                                    .unwrap_or_default(),
-                                e.path,
-                                e.status,
-                                e.renamed_from.clone().unwrap_or_default(),
-                                e.base_seq.unwrap_or_default(),
-                                e.target_seq.unwrap_or_default()
-                            )
-                        }
-                        children=move |e| view! { <ChangeItem entry=e is_staged=false /> }
-                    />
-                }.into_any()
-            } else {
-                view! {}.into_any()
-            }}
+            <div
+                id="source-control-confirmed-ledger-panel"
+                data-deve-sc-section-body="confirmed-ledger"
+                hidden=move || !expanded.get()
+            >
+                <div
+                    class="px-8 pb-1 text-[11px] leading-4 text-muted"
+                    data-deve-sc-confirmed-ledger-hint="true"
+                >
+                    {move || t::source_control::confirmed_ledger_hint(locale.get())}
+                </div>
+                <For
+                    each=move || confirmed_list.get_value()
+                    key=|e| {
+                        format!(
+                            "{:?}:{}:{}:{:?}:{}:{}:{}",
+                            e.domain,
+                            e.doc_id
+                                .map(|doc_id| doc_id.to_string())
+                                .unwrap_or_default(),
+                            e.path,
+                            e.status,
+                            e.renamed_from.clone().unwrap_or_default(),
+                            e.base_seq.unwrap_or_default(),
+                            e.target_seq.unwrap_or_default()
+                        )
+                    }
+                    children=move |e| view! { <ChangeItem entry=e is_staged=false /> }
+                />
+            </div>
         </div>
     }.into_any()
 }

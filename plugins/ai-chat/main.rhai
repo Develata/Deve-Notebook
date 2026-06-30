@@ -52,6 +52,9 @@ fn build_system_prompt(context) {
     }
 
     let ctx = if type_of(context) == "string" {
+        if context == "" {
+            return system;
+        }
         parse_json(context)
     } else {
         context

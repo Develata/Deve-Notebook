@@ -3,7 +3,9 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::components::search_box::score::score_desc;
-use crate::components::search_box::types::{SearchAction, SearchProvider, SearchResult};
+use crate::components::search_box::types::{
+    SearchAction, SearchProvider, SearchResult, SearchResultRole,
+};
 use crate::i18n::{Locale, t};
 
 pub const LOCAL_BRANCH_LABEL: &str = "Local";
@@ -48,6 +50,7 @@ impl SearchProvider for BranchProvider {
                 id: name.clone(),
                 title: name.clone(),
                 detail: branch_detail(name, self.current_branch.as_deref(), self.locale),
+                role: SearchResultRole::Action,
                 score,
                 action: SearchAction::SwitchBranch(name.clone()),
             })

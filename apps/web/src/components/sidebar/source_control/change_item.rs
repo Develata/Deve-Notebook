@@ -8,6 +8,7 @@
 //! 渲染单个文件变更条目，包含文件图标、名称、路径和状态标记。
 //! 支持 Stage/Unstage/Open/Discard 操作。
 
+use crate::components::sidebar::source_control::action_tray::CHANGE_ITEM_ACTION_TRAY_CLASS;
 use crate::components::sidebar::source_control::change_item_actions::ChangeItemActions;
 use crate::components::sidebar::source_control::change_item_content::ChangeItemContent;
 use crate::components::sidebar::source_control::change_item_meta::build_change_item_meta;
@@ -45,10 +46,20 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         let _ = core.staged_changes.get();
         let _ = core.unstaged_changes.get();
         let _ = core.confirmed_changes.get();
-        let _ = core.notice.get();
         action_busy_reset
             .get_value()
             .store(false, Ordering::Release);
+    });
+
+    let action_busy_feedback_reset = action_busy;
+    Effect::new(move |_| {
+        let notice = core.notice.get();
+        let write_block = core.write_block.get();
+        if notice.is_some() || write_block.is_some() {
+            action_busy_feedback_reset
+                .get_value()
+                .store(false, Ordering::Release);
+        }
     });
 
     view! {
@@ -79,8 +90,11 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             />
 
             <div class="flex items-center gap-2 pl-2">
-                // 移动端默认显示，桌面端保持 hover 显示，避免触屏下操作不可达。
-                <div class="flex items-center gap-0.5 mr-1 md:hidden md:group-hover:!flex">
+                // 行操作区在桌面和触屏环境都保持可达，避免 hover-only 交互。
+                <div
+                    class=CHANGE_ITEM_ACTION_TRAY_CLASS
+                    data-deve-sc-action-tray="row"
+                >
                     <ChangeItemActions
                         core=core.clone()
                         locale

@@ -36,3 +36,10 @@
   margin-right: 0.5em;
   vertical-align: middle;
 }
+
+/* ==================== Source Control ==================== */
+.sc-action-tray {
+  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+}

@@ -24,6 +24,7 @@ mod layout_frame;
 mod layout_runtime;
 mod outline_button;
 mod source_control_notice;
+mod surface_runtime;
 mod surface_switcher;
 mod toolbar;
 
@@ -46,6 +47,8 @@ pub fn MobileLayout(
     set_active_view: WriteSignal<SidebarView>,
     pinned_views: ReadSignal<Vec<SidebarView>>,
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
+    show_sidebar: ReadSignal<bool>,
+    set_show_sidebar: WriteSignal<bool>,
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
@@ -53,7 +56,6 @@ pub fn MobileLayout(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let document = expect_context::<DocumentClient>();
-    let (show_sidebar, set_show_sidebar) = signal(false);
     let (show_outline, set_show_outline) = signal(false);
     let drawer_open = Signal::derive(move || show_sidebar.get() || show_outline.get());
     let (swipe_start_x, set_swipe_start_x) = signal(0i32);

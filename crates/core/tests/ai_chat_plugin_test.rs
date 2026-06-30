@@ -281,4 +281,30 @@ mod tests {
             "prompt construction must not fail on hidden constant scope: {detail}"
         );
     }
+
+    #[test]
+    fn test_chat_with_api_key_accepts_empty_string_context_as_no_context() {
+        let _guard = AI_ENV_LOCK.lock().expect("ai env lock");
+        let _env = EnvGuard::set(&[
+            ("AI_API_KEY", Some("deve-test-key")),
+            ("AI_BASE_URL", Some("http://127.0.0.1:1/v1")),
+            ("AI_MODEL", Some("deve-test-model")),
+            ("OPENAI_API_KEY", None),
+            ("ANTHROPIC_API_KEY", None),
+        ]);
+        let plugin = load_ai_chat();
+
+        let err = plugin
+            .call(
+                "chat",
+                vec!["test-req-id".into(), "Summarize changes".into(), "".into()],
+            )
+            .expect_err("stream bridge is not configured in this plugin-only test");
+        let detail = err.to_string();
+
+        assert!(
+            detail.contains("Chat stream handler not configured"),
+            "empty context should be treated as no context and reach the stream bridge, got: {detail}"
+        );
+    }
 }

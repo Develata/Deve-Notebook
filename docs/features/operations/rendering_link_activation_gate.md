@@ -24,7 +24,7 @@
 - `Surface`: `editor`
 - `Trigger`: left-click a link while `Ctrl/Cmd` is pressed
 - `Preconditions`: modifier state is armed and clicked token resolves to a link URL
-- `Immediate Result`: link click plugin opens the URL through the guarded path instead of plain cursor movement
+- `Immediate Result`: link click plugin opens a safe URL through the guarded path instead of plain cursor movement; unsafe schemes are ignored without navigation
 - `Application Entry`: `apps/web/js/extensions/hyperlink_click.js`
 
 ### `op.render.link.release-modifier`
@@ -46,4 +46,5 @@
 ## Notes
 
 - Ordinary clicks must remain editing actions, not navigation.
+- Guarded opens must reject unsafe explicit schemes such as `javascript:` instead of normalizing them into external URLs.
 - Main objects: `render::projection`, `editor::selection`, `link::activation`.

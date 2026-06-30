@@ -91,6 +91,9 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | Anchor | Plan 位置 | 语义 |
 |---|---|---|
 | `10_rendering#markdown-render-whitelist` | `### 4.3 Whitelist Rule` | Markdown 渲染白名单、HTML 过滤与安全链接边界 |
+| `10_rendering#link-activation-gate` | `### 5.2 Link Activation` | Ctrl/Cmd 链接激活闸门、全局 modifier state 与 guarded external open |
+| `10_rendering#code-block-toolbar-contract` | `### 6.4 Code Block Toolbar Contract` | CodeMirror adapter 代码块 Copy/Ellipsis toolbar、可扩展菜单与空 action 状态; no-rust-plan-ref |
+| `10_rendering#outline-projection` | `### 6.5 Outline Projection` | Outline heading scan、inline projection 与跳转语义 |
 | `10_rendering#large-document-runtime` | `## 7. Large Document Strategy` | 大文档、UTF-16 index cache 与渲染/runtime 定位策略 |
 | `10_rendering#document-authority-bridge` | `### 12.4 Authority Bridge` | 文档 snapshot/history/edit/ack/reject 权威桥接合同 |
 | `03_storage/authority#facts-partition` | `authority.md ### 2.3 Facts Partition` | Content Facts / Structure Facts 与 LedgerEvent 权威模型 |

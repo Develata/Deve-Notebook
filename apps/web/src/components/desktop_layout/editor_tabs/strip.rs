@@ -1,7 +1,9 @@
 //! plan_ref:
 //!   - 11_ui_design/index#editor-group-tabstrip
 
-use crate::components::editor_tabs::{DropPosition, EditorTabItem, EditorTabKey};
+use crate::components::editor_tabs::{
+    DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey,
+};
 use crate::components::icons::{FileText, SourceControl, X};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::i18n::{Locale, t};
@@ -19,9 +21,11 @@ pub(crate) fn tab_button_class(active: bool) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{tab_button_class, trailing_blank_drop_target};
+    use super::{
+        diff_tab_projection, document_tab_projection, tab_button_class, trailing_blank_drop_target,
+    };
     use crate::components::editor_tabs::{
-        DropPosition, EditorDocumentTab, EditorTabItem, EditorTabKey,
+        DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey,
     };
     use deve_core::models::DocId;
 
@@ -53,6 +57,37 @@ mod tests {
             Some((EditorTabKey::Document(second), DropPosition::After))
         );
         assert_eq!(trailing_blank_drop_target(&[]), None);
+    }
+
+    #[test]
+    fn tab_projection_helpers_follow_current_ordered_items() {
+        let doc_id = DocId::from_u128(1);
+        let items = vec![
+            EditorTabItem::Document(EditorDocumentTab {
+                doc_id,
+                title: "renamed.md".into(),
+                tooltip: "archive/renamed.md".into(),
+            }),
+            EditorTabItem::Diff(EditorDiffTab {
+                key: "diff-1".into(),
+                title: "current.diff".into(),
+                tooltip: "current.diff".into(),
+                session: crate::hooks::use_core::diff_session::DiffSessionWire::new(
+                    "current.diff".into(),
+                    "old".into(),
+                    "new".into(),
+                ),
+            }),
+        ];
+
+        assert_eq!(
+            document_tab_projection(&items, doc_id).map(|tab| tab.tooltip),
+            Some("archive/renamed.md".into())
+        );
+        assert_eq!(
+            diff_tab_projection(&items, "diff-1").map(|tab| tab.title),
+            Some("current.diff".into())
+        );
     }
 }
 
@@ -101,6 +136,9 @@ pub(crate) fn EditorTabStrip(
                         let body = match item {
                             EditorTabItem::Document(tab) => {
                                 let doc_id = tab.doc_id;
+                                let tab_projection = Signal::derive(move || {
+                                    document_tab_projection(&ordered_tabs.get(), doc_id)
+                                });
                                 let select_doc = on_select_document;
                                 let close_doc = on_close_document;
                                 view! {
@@ -108,12 +146,24 @@ pub(crate) fn EditorTabStrip(
                                         <button
                                             type="button"
                                             class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
-                                            title=tab.tooltip.clone()
+                                            title=move || {
+                                                tab_projection
+                                                    .get()
+                                                    .map(|tab| tab.tooltip)
+                                                    .unwrap_or_default()
+                                            }
                                             aria-label=move || t::common::document_tab(locale.get())
                                             on:click=move |_| select_doc.run(doc_id)
                                         >
                                             <FileText class="h-3.5 w-3.5 shrink-0"/>
-                                            <span class="min-w-0 truncate text-[13px]">{tab.title.clone()}</span>
+                                            <span class="min-w-0 truncate text-[13px]">
+                                                {move || {
+                                                    tab_projection
+                                                        .get()
+                                                        .map(|tab| tab.title)
+                                                        .unwrap_or_default()
+                                                }}
+                                            </span>
                                         </button>
                                         <button
                                             type="button"
@@ -132,6 +182,10 @@ pub(crate) fn EditorTabStrip(
                             }
                             EditorTabItem::Diff(tab) => {
                                 let key_for_close = tab.key.clone();
+                                let tab_projection_key = tab.key.clone();
+                                let tab_projection = Signal::derive(move || {
+                                    diff_tab_projection(&ordered_tabs.get(), &tab_projection_key)
+                                });
                                 let session = tab.session.clone();
                                 let select_diff = on_select_diff;
                                 let close_diff = on_close_diff;
@@ -140,12 +194,30 @@ pub(crate) fn EditorTabStrip(
                                         <button
                                             type="button"
                                             class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
-                                            title=tab.tooltip.clone()
+                                            title=move || {
+                                                tab_projection
+                                                    .get()
+                                                    .map(|tab| tab.tooltip)
+                                                    .unwrap_or_default()
+                                            }
                                             aria-label=move || t::common::diff_tab(locale.get())
-                                            on:click=move |_| select_diff.run(session.clone())
+                                            on:click=move |_| {
+                                                let session = tab_projection
+                                                    .get()
+                                                    .map(|tab| tab.session)
+                                                    .unwrap_or_else(|| session.clone());
+                                                select_diff.run(session);
+                                            }
                                         >
                                             <SourceControl class="h-3.5 w-3.5 shrink-0"/>
-                                            <span class="min-w-0 truncate text-[13px]">{tab.title.clone()}</span>
+                                            <span class="min-w-0 truncate text-[13px]">
+                                                {move || {
+                                                    tab_projection
+                                                        .get()
+                                                        .map(|tab| tab.title)
+                                                        .unwrap_or_default()
+                                                }}
+                                            </span>
                                         </button>
                                         <button
                                             type="button"
@@ -192,6 +264,20 @@ pub(crate) fn EditorTabStrip(
             </div>
         </Show>
     }
+}
+
+fn document_tab_projection(tabs: &[EditorTabItem], doc_id: DocId) -> Option<EditorDocumentTab> {
+    tabs.iter().find_map(|item| match item {
+        EditorTabItem::Document(tab) if tab.doc_id == doc_id => Some(tab.clone()),
+        _ => None,
+    })
+}
+
+fn diff_tab_projection(tabs: &[EditorTabItem], key: &str) -> Option<EditorDiffTab> {
+    tabs.iter().find_map(|item| match item {
+        EditorTabItem::Diff(tab) if tab.key == key => Some(tab.clone()),
+        _ => None,
+    })
 }
 
 fn trailing_blank_drop_target(tabs: &[EditorTabItem]) -> Option<(EditorTabKey, DropPosition)> {

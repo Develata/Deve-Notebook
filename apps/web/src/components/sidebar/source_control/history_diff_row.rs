@@ -27,6 +27,7 @@ pub fn HistoryDiffRow(file: CommitFileDiff) -> impl IntoView {
 
     view! {
         <button
+            type="button"
             class="w-full flex items-center gap-1 text-[12px] text-secondary py-0.5 hover:bg-hover px-1 rounded cursor-pointer text-left"
             on:click=move |_| {
                 source_control.clear_notice.run(());

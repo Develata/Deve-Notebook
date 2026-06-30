@@ -7,6 +7,7 @@
 
 use super::types::Command;
 use crate::components::main_layout::{ChatControl, SearchControl, SidebarControl};
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::{BranchContext, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
@@ -33,11 +34,12 @@ pub fn create_static_commands(
     on_open: Callback<()>,
     set_show: WriteSignal<bool>,
     locale_signal: RwSignal<Locale>,
+    set_source_control_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
 ) -> Vec<Command> {
     // Try to get ChatControl from context at creation time
     let chat_control = use_context::<ChatControl>();
     let search_control = use_context::<SearchControl>();
-    let sidebar_control = use_context::<SidebarControl>();
     let branch_context = use_context::<BranchContext>();
     let sync_merge_context = use_context::<SyncMergeContext>();
 
@@ -46,10 +48,10 @@ pub fn create_static_commands(
         Command::available(
             "open",
             (t::command_palette::open_document)(locale),
-            Callback::new(move |_| {
+            move || {
                 on_open.run(());
                 // Do not close, as on_open re-purposes the search box
-            }),
+            },
         )
         .with_group((t::command_palette::group_navigation)(locale))
         .with_shortcut(t::command_palette::shortcut_ctrl_p())
@@ -57,23 +59,23 @@ pub fn create_static_commands(
         Command::available(
             "settings",
             (t::command_palette::open_settings)(locale),
-            Callback::new(move |_| {
+            move || {
                 on_settings.run(());
                 set_show.set(false);
-            }),
+            },
         )
         .with_group((t::command_palette::group_settings)(locale))
         .with_enabled_when((t::command_palette::enabled_local_settings)(locale)),
         Command::available(
             "lang",
             (t::command_palette::toggle_language)(locale),
-            Callback::new(move |_| {
+            move || {
                 locale_signal.update(|locale| {
                     *locale = locale.toggle();
                     persist_locale_preference(*locale);
                 });
                 set_show.set(false);
-            }),
+            },
         )
         .with_group((t::command_palette::group_settings)(locale))
         .with_shortcut(t::command_palette::shortcut_ctrl_l())
@@ -82,13 +84,13 @@ pub fn create_static_commands(
         Command::available(
             "switch_peer",
             (t::command_palette::switch_peer)(locale),
-            Callback::new(move |_| {
+            move || {
                 if let Some(search_control) = search_control {
                     search_control.set_mode.set("@".to_string());
                     search_control.set_show.set(true);
                 }
                 set_show.set(false);
-            }),
+            },
         )
         .with_group((t::command_palette::group_peer)(locale))
         .with_shortcut(t::command_palette::shortcut_ctrl_shift_k())
@@ -100,12 +102,10 @@ pub fn create_static_commands(
             Command::available(
                 "toggle_sidebar",
                 (t::command_palette::toggle_sidebar)(locale),
-                Callback::new(move |_| {
-                    sidebar_control
-                        .set_visible
-                        .update(|visible| *visible = !*visible);
+                move || {
+                    sidebar_control.toggle_visible();
                     set_show.set(false);
-                }),
+                },
             )
             .with_group((t::command_palette::group_layout)(locale))
             .with_shortcut(t::command_palette::shortcut_ctrl_b())
@@ -114,7 +114,12 @@ pub fn create_static_commands(
     }
 
     commands.extend(source_control_reserved_commands(locale));
-    commands.push(establish_branch_command(locale, set_show));
+    commands.push(establish_branch_command(
+        locale,
+        set_show,
+        set_source_control_notice,
+        sidebar_control,
+    ));
     commands.extend(merge_peer_commands(
         locale,
         set_show,
@@ -122,12 +127,12 @@ pub fn create_static_commands(
         sync_merge_context,
     ));
     commands.extend(vec![
-        git_status_command(locale, set_show),
-        git_mirror_command(locale, set_show),
-        git_export_command(locale, set_show),
-        git_import_command(locale, set_show),
-        git_push_command(locale, set_show),
-        git_repair_command(locale, set_show),
+        git_status_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_mirror_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_export_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_import_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_push_command(locale, set_show, set_source_control_notice, sidebar_control),
+        git_repair_command(locale, set_show, set_source_control_notice, sidebar_control),
     ]);
 
     // Add AI Chat toggle command if ChatControl is available
@@ -136,11 +141,11 @@ pub fn create_static_commands(
             Command::available(
                 "toggle_ai_chat",
                 (t::command_palette::toggle_ai_chat)(locale),
-                Callback::new(move |_| {
+                move || {
                     let current = chat_ctrl.chat_visible.get_untracked();
                     chat_ctrl.set_chat_visible.set(!current);
                     set_show.set(false);
-                }),
+                },
             )
             .with_group((t::command_palette::group_ai)(locale))
             .with_enabled_when((t::command_palette::enabled_local_ui)(locale)),
@@ -158,12 +163,13 @@ pub fn filter_commands(query: &str, commands: Vec<Command>, max_results: usize) 
 
     for cmd in commands {
         let shortcut = cmd.shortcut.as_deref().unwrap_or_default().to_lowercase();
+        let detail = cmd.detail_text().to_lowercase();
         if q.is_empty()
             || cmd.title.to_lowercase().contains(&q)
             || cmd.id.contains(&q)
             || cmd.group.to_lowercase().contains(&q)
             || shortcut.contains(&q)
-            || cmd.enabled_when.to_lowercase().contains(&q)
+            || detail.contains(&q)
         {
             results.push(cmd);
         }

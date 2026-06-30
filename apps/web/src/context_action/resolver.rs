@@ -14,6 +14,7 @@ fn descriptor_matches_request(
     descriptor.supports_surface(request.intent.surface)
         && descriptor.is_web_projectable()
         && descriptor.target_kind.accepts(request.intent.target.kind)
+        && request.intent.target.is_repo_user_path()
         && request.intent.scope == request.readiness.scope
         && (!request.readiness.readonly || descriptor.readonly_allowed)
         && (!request.readiness.write_blocked || !is_write_effect(descriptor.effect))

@@ -440,7 +440,7 @@
         );
         window.logToOverlay("Lazy-loading editor adapter bundle...");
 
-        window._adapter_loading = import("./js/editor.bundle.js?rev=20260308-buildfix")
+        window._adapter_loading = import("./js/editor.bundle.js?rev=20260630-heading-inline-math")
           .then((module) => {
             attachEditorAdapter(module);
           })

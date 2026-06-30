@@ -25,6 +25,7 @@ pub fn FooterDetails(
 ) -> impl IntoView {
     view! {
         <div
+            id="deve-mobile-bottom-bar-details"
             data-deve-mobile-bottom-bar-details="expanded"
             class="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none"
         >

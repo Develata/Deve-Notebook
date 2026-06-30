@@ -4,6 +4,7 @@
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
+use crate::i18n::Locale;
 use deve_core::models::DocId;
 use leptos::prelude::*;
 
@@ -24,6 +25,7 @@ pub struct SyncCallbacks {
 
 #[derive(Clone, Copy)]
 pub struct SyncCallbackSignals {
+    pub locale: RwSignal<Locale>,
     pub current_doc: ReadSignal<Option<DocId>>,
     pub local_scope: LocalScopeSignals,
     pub write_gate: RepoWriteSignals,
@@ -36,6 +38,7 @@ pub struct SyncCallbackSignals {
 pub fn create_sync_callbacks(ws: &WsService, signals: SyncCallbackSignals) -> SyncCallbacks {
     let read = read::create_sync_read_callbacks(
         ws,
+        signals.locale,
         signals.local_scope,
         signals.set_shadow_list_request_id,
         signals.set_sync_mode_request_id,
@@ -44,6 +47,7 @@ pub fn create_sync_callbacks(ws: &WsService, signals: SyncCallbackSignals) -> Sy
     );
     let write = write::create_sync_write_callbacks(
         ws,
+        signals.locale,
         signals.current_doc,
         signals.local_scope,
         signals.write_gate,

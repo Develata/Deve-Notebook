@@ -5,6 +5,7 @@
 use crate::components::activity_bar::SidebarView;
 use crate::components::disconnect_overlay::DisconnectedOverlay;
 use crate::hooks::use_core::navigation::PendingNavigation;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_layout::LayoutHookReturn;
 use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
@@ -33,10 +34,13 @@ pub fn MainLayoutRuntime(
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
     chat_visible: ReadSignal<bool>,
     sidebar_visible: ReadSignal<bool>,
+    mobile_sidebar_visible: ReadSignal<bool>,
+    set_mobile_sidebar_visible: WriteSignal<bool>,
     on_home: Callback<()>,
     on_open: Callback<()>,
     on_command: Callback<()>,
     on_settings: Callback<()>,
+    set_source_control_notice: WriteSignal<Option<SourceControlNotice>>,
     on_logout: Callback<()>,
     pending_navigation: ReadSignal<Option<PendingNavigation>>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
@@ -62,6 +66,7 @@ pub fn MainLayoutRuntime(
                 set_show_settings=set_show_settings
                 on_settings=on_settings
                 on_open=on_open
+                set_source_control_notice=set_source_control_notice
                 pending_navigation=pending_navigation
                 set_pending_navigation=set_pending_navigation
             />
@@ -75,6 +80,8 @@ pub fn MainLayoutRuntime(
                 set_pinned_views=set_pinned_views
                 chat_visible=chat_visible
                 sidebar_visible=sidebar_visible
+                mobile_sidebar_visible=mobile_sidebar_visible
+                set_mobile_sidebar_visible=set_mobile_sidebar_visible
                 on_home=on_home
                 on_open=on_open
                 on_command=on_command

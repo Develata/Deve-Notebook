@@ -37,6 +37,22 @@ pub(super) fn activity_more_after_pin_click(open: bool) -> bool {
     open
 }
 
+pub(super) fn activity_more_row_class() -> &'static str {
+    "flex items-stretch text-sm text-primary"
+}
+
+pub(super) fn activity_more_item_button_class() -> &'static str {
+    "min-w-0 flex-1 px-4 py-2 text-left hover:bg-hover"
+}
+
+pub(super) fn activity_more_pin_button_class(is_pinned: bool) -> &'static str {
+    if is_pinned {
+        "flex w-10 flex-none items-center justify-center py-2 text-accent hover:bg-hover"
+    } else {
+        "flex w-10 flex-none items-center justify-center py-2 text-muted hover:bg-hover hover:text-primary"
+    }
+}
+
 pub(super) fn toggle_activity_more_pin(pinned: &mut Vec<SidebarView>, view: SidebarView) -> bool {
     if pinned.contains(&view) {
         pinned.retain(|v| *v != view);
@@ -63,10 +79,11 @@ pub fn ViewPopupMenu(
             let is_pinned = move || pinned_views.get().contains(&item);
             let is_active = move || active_view.get() == item;
             view! {
-                <div class="px-2 py-1 flex items-center gap-2 text-sm text-primary">
+                <div class=activity_more_row_class()>
                     <button
+                        type="button"
                         data-deve-activity-more-item=activity_more_item_marker(item)
-                        class="flex-1 rounded-md px-2 py-1.5 text-left hover:bg-hover"
+                        class=activity_more_item_button_class()
                         role="menuitem"
                         on:click=move |_| select_view.run(item)
                     >
@@ -77,8 +94,9 @@ pub fn ViewPopupMenu(
                     {move || if is_pinned() {
                         view! {
                             <button
+                                type="button"
                                 data-deve-activity-more-pin-action=activity_more_pin_action_marker(item)
-                                class="rounded-md p-1.5 text-accent hover:bg-hover"
+                                class=activity_more_pin_button_class(true)
                                 title=move || t::common::unpin(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();
@@ -92,8 +110,9 @@ pub fn ViewPopupMenu(
                     } else {
                         view! {
                             <button
+                                type="button"
                                 data-deve-activity-more-pin-action=activity_more_pin_action_marker(item)
-                                class="rounded-md p-1.5 text-muted hover:bg-hover hover:text-primary"
+                                class=activity_more_pin_button_class(false)
                                 title=move || t::common::pin(locale.get())
                                 on:click=move |ev| {
                                     ev.stop_propagation();

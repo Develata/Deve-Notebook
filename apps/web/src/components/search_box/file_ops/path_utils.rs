@@ -20,7 +20,7 @@ pub fn normalize_doc_path(raw: &str) -> String {
     if normalized.ends_with('/') {
         return normalized;
     }
-    if Path::new(&normalized).extension().is_some() {
+    if normalized.ends_with(".md") {
         return normalized;
     }
     format!("{}.md", normalized)
@@ -51,13 +51,27 @@ pub fn validate_doc_shell_path(raw: &str) -> Option<&'static str> {
     }
     let leaf_is_dir = path.ends_with('/');
     for (index, segment) in segments.iter().enumerate() {
-        if *segment == ".notegit" {
+        if deve_core::utils::notegit::is_internal_repo_segment(segment) {
             return Some(path_err::RESERVED_INTERNAL_PATH);
         }
         let is_leaf = index + 1 == segments.len();
         if segment.ends_with(".md") && (!is_leaf || leaf_is_dir) {
             return Some(path_err::MARKDOWN_DIRECTORY_FORBIDDEN);
         }
+    }
+    None
+}
+
+pub fn validate_doc_create_path(raw: &str) -> Option<&'static str> {
+    validate_doc_file_path(raw)
+}
+
+pub fn validate_doc_file_path(raw: &str) -> Option<&'static str> {
+    if let Some(err) = validate_doc_shell_path(raw) {
+        return Some(err);
+    }
+    if to_forward_slash(raw).trim().ends_with('/') {
+        return Some(path_err::INVALID_PATH);
     }
     None
 }
@@ -103,10 +117,16 @@ pub(super) fn collect_dirs(docs: &[(DocId, String)]) -> Vec<String> {
 
 pub(super) fn filter_dirs(dirs: &[String], query: &str) -> Vec<(String, f32)> {
     if query.is_empty() {
-        return dirs.iter().cloned().map(|d| (d, 1.0)).collect();
+        return dirs
+            .iter()
+            .filter(|dir| is_valid_dir_candidate(dir))
+            .cloned()
+            .map(|d| (d, 1.0))
+            .collect();
     }
     let mut results: Vec<(String, f32)> = dirs
         .iter()
+        .filter(|dir| is_valid_dir_candidate(dir))
         .filter_map(|dir| {
             sublime_fuzzy::best_match(query, dir).map(|m| (dir.clone(), m.score() as f32))
         })
@@ -114,6 +134,10 @@ pub(super) fn filter_dirs(dirs: &[String], query: &str) -> Vec<(String, f32)> {
         .collect();
     results.sort_by(|a, b| score_desc(a.1, b.1));
     results
+}
+
+fn is_valid_dir_candidate(dir: &str) -> bool {
+    validate_doc_shell_path(dir).is_none()
 }
 
 pub(super) fn format_arg(arg: &str) -> String {
@@ -124,13 +148,19 @@ pub(super) fn format_arg(arg: &str) -> String {
     }
 }
 
+pub(super) fn utf16_len(text: &str) -> usize {
+    text.encode_utf16().count()
+}
+
 pub(super) fn format_dir_arg_with_cursor(dir: &str) -> (String, usize) {
     if dir.contains(' ') {
         let text = format!("\"{}\"", dir);
-        (text.clone(), text.len().saturating_sub(1))
+        let cursor = utf16_len(&text).saturating_sub(1);
+        (text, cursor)
     } else {
         let text = dir.to_string();
-        (text.clone(), text.len())
+        let cursor = utf16_len(&text);
+        (text, cursor)
     }
 }
 
@@ -147,6 +177,11 @@ mod tests {
     }
 
     #[test]
+    fn normalize_doc_path_matches_backend_markdown_leaf_policy() {
+        assert_eq!(normalize_doc_path("folder\\note.txt"), "folder/note.txt.md");
+    }
+
+    #[test]
     fn collect_dirs_uses_shared_forward_slash_policy() {
         let docs = vec![(DocId(Uuid::new_v4()), "folder\\nested\\note.md".to_string())];
 
@@ -156,6 +191,18 @@ mod tests {
             dirs,
             vec!["folder/".to_string(), "folder/nested/".to_string()]
         );
+    }
+
+    #[test]
+    fn filter_dirs_rejects_internal_repo_segments() {
+        let dirs = vec![
+            "notes/".to_string(),
+            "notes/.git/".to_string(),
+            ".notegit/".to_string(),
+        ];
+
+        assert_eq!(filter_dirs(&dirs, ""), vec![("notes/".to_string(), 1.0)]);
+        assert!(filter_dirs(&dirs, "git").is_empty());
     }
 
     #[test]
@@ -172,5 +219,28 @@ mod tests {
         ] {
             assert_eq!(validate_doc_shell_path(path), Some(path_err::INVALID_PATH));
         }
+    }
+
+    #[test]
+    fn validate_doc_shell_path_rejects_internal_repo_segments() {
+        for path in [
+            ".git/config.md",
+            "notes/.git/config.md",
+            ".notegit/state.md",
+        ] {
+            assert_eq!(
+                validate_doc_shell_path(path),
+                Some(path_err::RESERVED_INTERNAL_PATH)
+            );
+        }
+    }
+
+    #[test]
+    fn validate_doc_create_path_rejects_directory_path() {
+        assert_eq!(validate_doc_shell_path("notes/"), None);
+        assert_eq!(
+            validate_doc_create_path("notes/"),
+            Some(path_err::INVALID_PATH)
+        );
     }
 }

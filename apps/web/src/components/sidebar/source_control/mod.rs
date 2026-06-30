@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
+pub mod action_tray;
 pub mod change_item;
 pub mod change_item_actions;
 pub mod change_item_conflict_actions;

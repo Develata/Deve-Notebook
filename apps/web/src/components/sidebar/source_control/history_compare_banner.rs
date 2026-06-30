@@ -61,6 +61,7 @@ pub fn HistoryCompareBanner(
                     if compare_base_commit_id.get().is_some() {
                         view! {
                             <button
+                                type="button"
                                 class="shrink-0 text-[11px] font-medium text-accent hover:underline"
                                 on:click=move |ev| {
                                     ev.stop_propagation();
@@ -74,6 +75,7 @@ pub fn HistoryCompareBanner(
                     } else if selected_target.get().is_some() {
                         view! {
                             <button
+                                type="button"
                                 class="shrink-0 rounded px-2 py-1 text-[11px] font-medium bg-accent/15 text-accent hover:bg-accent/20"
                                 on:click=move |ev| {
                                     ev.stop_propagation();

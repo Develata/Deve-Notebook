@@ -23,7 +23,6 @@ pub(super) fn build_close_document_callback(
     source_control: &SourceControlClient,
     doc_tabs: ReadSignal<Vec<EditorDocumentTab>>,
     set_doc_tabs: WriteSignal<Vec<EditorDocumentTab>>,
-    diff_tabs: ReadSignal<Vec<EditorDiffTab>>,
     tab_order: ReadSignal<Vec<EditorTabKey>>,
     set_tab_order: WriteSignal<Vec<EditorTabKey>>,
     doc_access_order: ReadSignal<Vec<DocId>>,
@@ -56,11 +55,6 @@ pub(super) fn build_close_document_callback(
         let next_doc = remove_document_tab_with_order(&mut next_tabs, &mut next_order, doc_id);
         next_access_order.retain(|existing| *existing != doc_id);
         let active_diff = diff_content.get_untracked();
-        let fallback_diff = if active_diff.is_none() {
-            first_diff_session(&next_order, &diff_tabs.get_untracked())
-        } else {
-            None
-        };
         let action = Callback::new(move |_| {
             set_doc_tabs.set(next_tabs.clone());
             set_tab_order.set(next_order.clone());
@@ -68,7 +62,6 @@ pub(super) fn build_close_document_callback(
             apply_document_close_result(
                 active_diff.clone(),
                 next_doc,
-                fallback_diff.clone(),
                 set_current_doc,
                 set_explicit_home,
                 set_diff_content,
@@ -95,28 +88,22 @@ pub(super) fn build_close_document_callback(
 fn apply_document_close_result(
     active_diff: Option<DiffSessionWire>,
     next_doc: Option<DocId>,
-    fallback_diff: Option<DiffSessionWire>,
     set_current_doc: WriteSignal<Option<DocId>>,
     set_explicit_home: WriteSignal<bool>,
     set_diff_content: WriteSignal<Option<DiffSessionWire>>,
 ) {
-    match (active_diff, next_doc, fallback_diff) {
-        (Some(session), next_doc, _) => {
+    match (active_diff, next_doc) {
+        (Some(session), next_doc) => {
             set_current_doc.set(next_doc);
             set_explicit_home.set(false);
             set_diff_content.set(Some(session));
         }
-        (None, Some(next_doc), _) => {
+        (None, Some(next_doc)) => {
             set_explicit_home.set(false);
             set_diff_content.set(None);
             set_current_doc.set(Some(next_doc));
         }
-        (None, None, Some(session)) => {
-            set_explicit_home.set(false);
-            set_current_doc.set(None);
-            set_diff_content.set(Some(session));
-        }
-        (None, None, None) => {
+        (None, None) => {
             set_diff_content.set(None);
             set_current_doc.set(None);
             set_explicit_home.set(true);
@@ -146,20 +133,6 @@ pub(super) fn close_diff_tab(
     }
 }
 
-fn first_diff_session(
-    visible_order: &[EditorTabKey],
-    diff_tabs: &[EditorDiffTab],
-) -> Option<DiffSessionWire> {
-    visible_order
-        .iter()
-        .find_map(|key| {
-            let EditorTabKey::Diff(diff_key) = key else {
-                return None;
-            };
-            diff_tabs
-                .iter()
-                .find(|tab| tab.key == *diff_key)
-                .map(|tab| tab.session.clone())
-        })
-        .or_else(|| diff_tabs.first().map(|tab| tab.session.clone()))
-}
+#[cfg(test)]
+#[path = "close_tests.rs"]
+mod close_tests;

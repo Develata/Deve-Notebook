@@ -40,16 +40,6 @@ pub struct DegradedSyncMode {
     pub reason: String,
 }
 
-impl DegradedSyncMode {
-    /// 返回顶部横幅文案，供 UI 呈现只读原因。
-    pub fn banner_text(&self) -> String {
-        format!(
-            "浏览器持久存储不可用，已切换为只读同步模式：允许查看与拉取，禁止 Peer 注册、编辑提交与 SyncPush（{}）",
-            self.reason
-        )
-    }
-}
-
 /// repo 级同步元数据，仅保存可恢复缓存，不承载私钥字节。
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct RepoMetadata {
@@ -113,8 +103,5 @@ mod tests {
 
         let mode = caps.degraded_mode().expect("missing IndexedDB degrades");
         assert!(mode.reason.contains("IndexedDB=false"));
-        assert!(mode.banner_text().contains("只读同步模式"));
-        assert!(mode.banner_text().contains("禁止 Peer 注册"));
-        assert!(mode.banner_text().contains("SyncPush"));
     }
 }

@@ -3,12 +3,12 @@
 //!   - 03_storage/index#internal-path-normalization
 //!
 use crate::components::search_box::types::{
-    FileOpAction, FileOpKind, InsertQuery, SearchAction, SearchResult,
+    FileOpAction, FileOpKind, InsertQuery, SearchAction, SearchResult, SearchResultRole,
 };
 use crate::i18n::{Locale, t};
 
 use super::super::path_utils::{
-    finalize_dst, format_arg, format_dir_arg_with_cursor, normalize_doc_path,
+    finalize_dst, format_arg, format_dir_arg_with_cursor, normalize_doc_path, utf16_len,
 };
 
 pub(super) fn build_execute_result(
@@ -34,6 +34,7 @@ pub(super) fn build_execute_result(
         id: format!("fileop-{}-{}", src_norm, dst_norm),
         title,
         detail: Some(t::search::file_op_detail(locale).to_string()),
+        role: SearchResultRole::Action,
         score: 1.0,
         action: SearchAction::FileOp(FileOpAction {
             kind,
@@ -53,7 +54,7 @@ pub(super) fn build_insert_query(kind: &FileOpKind, src: &str, dir: &str) -> Ins
     let (dst_text, cursor_offset) = format_dir_arg_with_cursor(dir);
     let prefix = format!(">{} {} ", cmd, src_text);
     let query_text = format!("{}{}", prefix, dst_text);
-    let cursor = prefix.len() + cursor_offset;
+    let cursor = utf16_len(&prefix) + cursor_offset;
     InsertQuery {
         query: query_text,
         cursor,
@@ -65,6 +66,7 @@ pub(super) fn group_header(title: &str, locale: Locale) -> SearchResult {
         id: format!("group-{}", title.to_lowercase()),
         title: title.to_string(),
         detail: Some(t::search::group_detail(locale).to_string()),
+        role: SearchResultRole::Group,
         score: 0.0,
         action: SearchAction::Noop,
     }
@@ -75,6 +77,7 @@ pub(super) fn error_result(locale: Locale, msg: String) -> SearchResult {
         id: "fileop-error".to_string(),
         title: msg,
         detail: Some(t::search::error_detail(locale).to_string()),
+        role: SearchResultRole::Error,
         score: 0.0,
         action: SearchAction::Noop,
     }

@@ -4,6 +4,7 @@ use crate::editor::EditorStats;
 use crate::hooks::use_core::{
     LoadPhase, PendingBranchSwitch, PendingBranchTarget, PendingRepoSwitch, SearchHit,
 };
+use crate::i18n::Locale;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::{Callable, GetUntracked, ReadSignal, signal};
 use leptos::reactive::owner::Owner;
@@ -40,9 +41,11 @@ fn search_harness(
     )]);
     let (_plugin_request_ids, set_plugin_request_ids) = signal(Vec::<String>::new());
     let (sync_banner, set_sync_banner) = signal(None::<String>);
+    let locale = leptos::prelude::RwSignal::new(Locale::Zh);
 
     let callbacks = create_misc_callbacks(
         &ws,
+        locale,
         set_stats,
         load_state,
         SearchScopeSignals {
@@ -83,7 +86,7 @@ fn large_doc_search_gate_blocks_until_prefetch_ready() {
         assert_eq!(harness.search_results.get_untracked().len(), 1);
         assert_eq!(
             harness.sync_banner.get_untracked().as_deref(),
-            Some("Cannot search: snapshot loading")
+            Some("无法搜索：正在加载快照")
         );
     }
 }
@@ -132,6 +135,6 @@ fn large_doc_search_gate_blocks_during_scope_switch() {
     );
     assert_eq!(
         harness.sync_banner.get_untracked().as_deref(),
-        Some("Cannot search: scope switching")
+        Some("无法搜索：正在切换作用域")
     );
 }

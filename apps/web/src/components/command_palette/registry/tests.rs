@@ -1,4 +1,6 @@
-use super::create_static_commands;
+use super::{create_static_commands, filter_commands};
+use crate::components::activity_bar::SidebarView;
+use crate::components::command_palette::Command;
 use crate::components::layout_context::SidebarControl;
 use crate::i18n::Locale;
 use leptos::prelude::*;
@@ -17,6 +19,8 @@ fn acc_cmd_004b_static_commands_include_git_bridge_notices() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            None,
         );
         let ids = commands
             .iter()
@@ -46,6 +50,8 @@ fn acc_cmd_004c_static_commands_partition_reserved_surfaces() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            None,
         );
 
         for id in [
@@ -76,7 +82,15 @@ fn static_commands_include_sidebar_toggle_when_control_is_available() {
     owner.with(|| {
         let (_, set_show) = signal(false);
         let (visible, set_visible) = signal(true);
-        provide_context(SidebarControl { set_visible });
+        let (is_mobile, _) = signal(false);
+        let (_, set_mobile_visible) = signal(false);
+        let (_, set_active_view) = signal(SidebarView::Explorer);
+        let sidebar_control = SidebarControl {
+            is_mobile,
+            set_visible,
+            set_mobile_visible,
+            set_active_view,
+        };
         let locale = RwSignal::new(Locale::En);
         let commands = create_static_commands(
             Locale::En,
@@ -84,6 +98,8 @@ fn static_commands_include_sidebar_toggle_when_control_is_available() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            Some(sidebar_control),
         );
         let command = commands
             .iter()
@@ -109,6 +125,8 @@ fn static_commands_expose_group_shortcut_and_enabled_conditions() {
             Callback::new(|_| {}),
             set_show,
             locale,
+            None,
+            None,
         );
 
         let open = commands
@@ -129,6 +147,27 @@ fn static_commands_expose_group_shortcut_and_enabled_conditions() {
 }
 
 #[test]
+fn filter_commands_matches_visible_unavailable_reason() {
+    let commands = vec![
+        Command::unavailable(
+            "establish_branch",
+            "P2P: Establish Branch",
+            "Unavailable: no branch creation backend",
+            || {},
+        )
+        .with_group("Peer")
+        .with_enabled_when("Future backend contract"),
+    ];
+
+    let results = filter_commands("branch creation backend", commands, 50);
+
+    assert_eq!(
+        results.first().map(|command| command.id.as_str()),
+        Some("establish_branch")
+    );
+}
+
+#[test]
 fn settings_command_routes_to_settings_surface_and_closes_palette() {
     let owner = leptos::reactive::owner::Owner::new();
 
@@ -142,6 +181,8 @@ fn settings_command_routes_to_settings_surface_and_closes_palette() {
             Callback::new(|_| {}),
             set_show_palette,
             locale,
+            None,
+            None,
         );
         let command = commands
             .iter()
