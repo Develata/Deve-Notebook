@@ -1,6 +1,7 @@
 use super::create_static_commands;
 use crate::components::layout_context::SidebarControl;
 use crate::i18n::Locale;
+use crate::i18n::command_palette::{group_source_control, source_control_panel_reason};
 use leptos::prelude::*;
 
 #[test]
@@ -66,6 +67,34 @@ fn acc_cmd_004c_static_commands_partition_reserved_surfaces() {
                 "{id} must remain unavailable until a backend contract is wired"
             );
         }
+    });
+}
+
+#[test]
+fn source_control_reserved_commands_use_localized_group_metadata() {
+    let owner = leptos::reactive::owner::Owner::new();
+
+    owner.with(|| {
+        let (_, set_show) = signal(false);
+        let locale = RwSignal::new(Locale::Zh);
+        let commands = create_static_commands(
+            Locale::Zh,
+            Callback::new(|_| {}),
+            Callback::new(|_| {}),
+            set_show,
+            locale,
+        );
+        let command = commands
+            .iter()
+            .find(|command| command.id == "source_control_commit")
+            .expect("source control commit command");
+
+        assert_eq!(command.group, group_source_control(Locale::Zh));
+        assert!(
+            command
+                .detail_text()
+                .contains(source_control_panel_reason(Locale::Zh))
+        );
     });
 }
 

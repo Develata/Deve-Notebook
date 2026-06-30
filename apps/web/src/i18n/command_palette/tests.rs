@@ -7,7 +7,9 @@ fn git_bridge_commands_are_localized() {
         "不可用：尚无分支创建后端"
     );
     assert_eq!(source_control_commit(Locale::En), "Source Control: Commit");
+    assert_eq!(group_source_control(Locale::Zh), "源代码管理");
     assert!(source_control_panel_reason(Locale::En).contains("Source Control panel"));
+    assert!(source_control_panel_reason(Locale::Zh).contains("源代码管理面板"));
     assert_eq!(git_status(Locale::En), "Git: Status");
     assert_eq!(git_mirror(Locale::Zh), "Git: 执行 Mirror");
     assert_eq!(git_export_mirror(Locale::En), "Git: Export Mirror");

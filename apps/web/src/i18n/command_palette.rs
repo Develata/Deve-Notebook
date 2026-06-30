@@ -122,7 +122,7 @@ pub fn source_control_panel_reason(locale: Locale) -> &'static str {
         Locale::En => {
             "Unavailable: use the Source Control panel for scoped state and message input"
         }
-        Locale::Zh => "不可用：请在 Source Control 面板中使用带作用域与提交信息的操作",
+        Locale::Zh => "不可用：请在源代码管理面板中使用带作用域与提交信息的操作",
     }
 }
 
