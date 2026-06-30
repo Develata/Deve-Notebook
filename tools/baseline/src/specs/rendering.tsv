@@ -49,8 +49,8 @@ contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line spa
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line span span
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line-1
 contains	apps/web/style/_typography.css	font-size: 2em;
-contains	apps/web/style/_typography.css	font-size: 1em;
-contains	apps/web/style/_typography.css	--deve-heading-line-box: 2.4em;
+contains	apps/web/style/_typography.css	font-size: inherit;
+contains	apps/web/style/_typography.css	--deve-heading-line-box: 1.2em;
 contains	apps/web/style/_typography.css	--deve-heading-inline-line-height: 1.2;
 contains	apps/web/style/_typography.css	.markdown-body h1
 contains	apps/web/src/utils/markdown.rs	fn empty_atx_headings_emit_distinct_html_levels()
