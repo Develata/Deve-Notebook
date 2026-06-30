@@ -13,6 +13,11 @@ function getLineQuoteDepth(lineText) {
     return depth;
 }
 
+function mathSourceText(content, isBlock) {
+    const marker = isBlock ? "$$" : "$";
+    return marker + content + marker;
+}
+
 // --- Math Widget (数学公式组件) ---
 export class MathWidget extends WidgetType {
   constructor(content, isBlock, quoteDepth = 0) {
@@ -34,13 +39,10 @@ export class MathWidget extends WidgetType {
         });
       } else {
         // 降级处理：如果没有加载 KaTeX，直接显示源码
-        span.innerText =
-          (this.isBlock ? "$$" : "$") +
-          this.content +
-          (this.isBlock ? "$$" : "$"); 
+        span.innerText = mathSourceText(this.content, this.isBlock);
       }
     } catch (e) {
-      span.innerText = "Error";
+      span.innerText = mathSourceText(this.content, this.isBlock);
     }
 
     // [Block Math] 使用 wrapper + padding 代替 margin

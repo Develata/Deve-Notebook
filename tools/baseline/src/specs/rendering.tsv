@@ -11,6 +11,8 @@ contains	docs/features/03_rendering.md	下列能力不得作为本功能篇的�
 contains	docs/features/03_rendering.md	不承担主编辑器职责
 contains	docs/features/03_rendering.md	不宣称完整 virtual rendering
 contains	docs/features/03_rendering.md	ATX 标题（`#` 到 `######`）的标题正文和空标题行都必须保持对应标题层级的整行视觉高度
+contains	apps/web/js/extensions/math.js	mathSourceText
+absent	apps/web/js/extensions/math.js	span.innerText = "Error"
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_lines_have_heading_class true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_text_line_height_gt_plain true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_empty_heading_line_height_gt_plain true
