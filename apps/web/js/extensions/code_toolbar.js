@@ -59,6 +59,8 @@ class CodeToolbarWidget extends WidgetType {
         const menuLabel = editorCopy("moreActions");
         menuBtn.title = menuLabel;
         menuBtn.setAttribute("aria-label", menuLabel);
+        menuBtn.setAttribute("aria-haspopup", "menu");
+        menuBtn.setAttribute("aria-expanded", "false");
         menuBtn.innerHTML = ICON_ELLIPSIS;
         menuBtn.onclick = (e) => {
             e.preventDefault();

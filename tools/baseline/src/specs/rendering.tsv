@@ -125,7 +125,10 @@ contains	apps/web/js/extensions/code_toolbar.js	copyBtn.type = "button"
 contains	apps/web/js/extensions/code_toolbar.js	copyBtn.setAttribute("aria-label", copyLabel)
 contains	apps/web/js/extensions/code_toolbar.js	menuBtn.type = "button"
 contains	apps/web/js/extensions/code_toolbar.js	menuBtn.setAttribute("aria-label", menuLabel)
+contains	apps/web/js/extensions/code_toolbar.js	menuBtn.setAttribute("aria-haspopup", "menu")
+contains	apps/web/js/extensions/code_toolbar.js	menuBtn.setAttribute("aria-expanded", "false")
 contains	apps/web/js/extensions/code_menu.js	editorCopy("noActionsAvailable")
+contains	apps/web/js/extensions/code_menu.js	menuHostFor(anchor).appendChild(menu)
 contains	apps/web/js/i18n.js	noActionsAvailable: "No actions available"
 contains	apps/web/js/i18n.js	noActionsAvailable: "暂无可用操作"
 contains	apps/web/js/init.js	window.deve_code_actions = window.deve_code_actions || [];

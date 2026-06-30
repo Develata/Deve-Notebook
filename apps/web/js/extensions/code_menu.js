@@ -23,6 +23,10 @@ if (typeof window !== 'undefined') {
 
 let activeAnchor = null;
 
+function menuHostFor(anchor) {
+    return anchor?.parentElement || document.body;
+}
+
 /**
  * Get registered actions (safe access)
  * @returns {Array} Array of action objects
@@ -53,6 +57,7 @@ export function toggleMenu(anchor, context) {
 export function showMenu(anchor, context) {
     closeMenu();
     activeAnchor = anchor;
+    anchor.setAttribute("aria-expanded", "true");
     
     const actions = getActions();
     const menu = document.createElement("div");
@@ -84,7 +89,7 @@ export function showMenu(anchor, context) {
         }
     }
     
-    anchor.appendChild(menu);
+    menuHostFor(anchor).appendChild(menu);
     setTimeout(() => {
         document.addEventListener("click", handleClickOutside, { capture: true });
     }, 0);
@@ -97,6 +102,7 @@ export function showMenu(anchor, context) {
 export function closeMenu() {
     const existing = document.getElementById("deve-code-menu");
     if (existing) existing.remove();
+    if (activeAnchor) activeAnchor.setAttribute("aria-expanded", "false");
     activeAnchor = null;
     document.removeEventListener("click", handleClickOutside, { capture: true });
 }
