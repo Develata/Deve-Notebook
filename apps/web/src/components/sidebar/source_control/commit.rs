@@ -23,6 +23,7 @@ pub fn Commit() -> impl IntoView {
                     locale
                     write_block=controller.write_block
                     show_write_actions=controller.show_write_actions
+                    has_commit_source=controller.has_commit_source
                     can_prepare_commit=controller.can_prepare_commit
                     msg=controller.msg
                     set_msg=controller.set_msg

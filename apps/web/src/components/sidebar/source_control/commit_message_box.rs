@@ -11,11 +11,26 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
+pub(crate) fn commit_message_placeholder_text(
+    locale: Locale,
+    write_block: Option<RepoWriteBlock>,
+    has_commit_source: bool,
+) -> &'static str {
+    if let Some(block) = write_block {
+        return blocked_status_hint(locale, block);
+    }
+    if !has_commit_source {
+        return t::source_control::no_changes(locale);
+    }
+    t::source_control::commit_message_placeholder(locale)
+}
+
 #[component]
 pub fn CommitMessageBox(
     locale: RwSignal<Locale>,
     write_block: Signal<Option<RepoWriteBlock>>,
     show_write_actions: Signal<bool>,
+    has_commit_source: Signal<bool>,
     can_prepare_commit: Signal<bool>,
     msg: ReadSignal<String>,
     set_msg: WriteSignal<String>,
@@ -29,10 +44,11 @@ pub fn CommitMessageBox(
                 name="commit-message"
                 class="w-full h-9 p-1.5 pr-9 text-[13px] bg-input border border-default rounded-[2px] focus:outline-none focus:border-b-accent focus:ring-1 focus:ring-accent placeholder:text-muted text-primary font-sans resize-none block leading-tight"
                 placeholder=move || {
-                    write_block
-                        .get()
-                        .map(|block| blocked_status_hint(locale.get(), block))
-                        .unwrap_or_else(|| t::source_control::commit_message_placeholder(locale.get()))
+                    commit_message_placeholder_text(
+                        locale.get(),
+                        write_block.get(),
+                        has_commit_source.get(),
+                    )
                 }
                 prop:value=msg
                 on:input=move |ev| set_msg.set(event_target_value(&ev))
@@ -56,5 +72,40 @@ pub fn CommitMessageBox(
                 </button>
             </Show>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::commit_message_placeholder_text;
+    use crate::hooks::use_core::write_gate::RepoWriteBlock;
+    use crate::i18n::{Locale, source_control};
+
+    #[test]
+    fn commit_message_placeholder_reports_no_changes_when_commit_source_empty() {
+        assert_eq!(
+            commit_message_placeholder_text(Locale::En, None, false),
+            source_control::no_changes(Locale::En)
+        );
+        assert_eq!(
+            commit_message_placeholder_text(Locale::Zh, None, false),
+            source_control::no_changes(Locale::Zh)
+        );
+    }
+
+    #[test]
+    fn commit_message_placeholder_prefers_write_block_hint_over_no_changes() {
+        assert_eq!(
+            commit_message_placeholder_text(Locale::En, Some(RepoWriteBlock::ReadOnly), false),
+            source_control::readonly_write_gate_hint(Locale::En)
+        );
+    }
+
+    #[test]
+    fn commit_message_placeholder_uses_commit_message_when_commit_is_prepareable() {
+        assert_eq!(
+            commit_message_placeholder_text(Locale::En, None, true),
+            source_control::commit_message_placeholder(Locale::En)
+        );
     }
 }

@@ -100,6 +100,10 @@ contains	apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_writer_requires_explicit_git_bridge_policy
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	command_palette_git_bridge_mode_reactive_after_node_role_probe
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_message_placeholder -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disabled_reason
+contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_text
+contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_reports_no_changes_when_commit_source_empty
 absent	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_staged(
 absent	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_staged_in_local_repo(
 absent	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_staged_in_local_repo(

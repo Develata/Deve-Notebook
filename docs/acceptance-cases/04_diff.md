@@ -175,6 +175,7 @@
     - run: cargo test -p deve_web command_palette_git_bridge_mode_reads_session_signal -- --nocapture
     - run: cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture
     - run: cargo test -p deve_web source_control_header_git_bridge_mode_badge -- --nocapture
+    - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
     - run: cargo test -p deve_core source_control_confirmed_ledger -- --nocapture
@@ -246,6 +247,7 @@
     - ui_assert: command_palette_git_bridge_mode_reactive_after_node_role_probe true
     - ui_assert: source_control_git_bridge_mode_visible true
     - ui_assert: source_control_git_bridge_badge_authority_first true
+    - ui_assert: source_control_commit_empty_state_disabled_reason true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true
     - api_assert: confirmed_only_commit_advances_committed_snapshot_base true
