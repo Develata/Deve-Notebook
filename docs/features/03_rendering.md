@@ -72,8 +72,9 @@
 
 - Outline 语法支持是轻量子集。
 - Outline 反映标题层级。
+- Outline 应识别空与非空 ATX 标题、tab 分隔标题，并剥离可选 closing `#` 序列。
 - Outline 不应错误解释非支持语法。
-- 点击 Outline 项后，编辑区应跳转到对应标题位置。
+- 点击 Outline 项后，编辑区应跳转到对应标题位置；Outline 项应使用可键盘触发的按钮语义。
 - 细粒度操作示例：[`operations/rendering_outline_navigation.md`](./operations/rendering_outline_navigation.md)
 
 ### 7. 链接激活

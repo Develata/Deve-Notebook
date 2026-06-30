@@ -44,6 +44,17 @@ contains	apps/web/src/components/outline_render/scan.rs	pub(super) fn next_char_
 contains	apps/web/src/components/outline_render/parse_test.rs	outline_scan_helpers_fail_soft_on_non_char_boundary_start
 absent	apps/web/src/components/outline_render/parse.rs	chars().next().unwrap()
 absent	apps/web/src/components/outline_render/scan.rs	chars().next().unwrap()
+contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-OUTLINE-001
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-OUTLINE-001	ui_assert: outline_atx_empty_tab_and_closing_headings_supported true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-OUTLINE-001	ui_assert: outline_heading_items_are_buttons true
+contains	docs/features/03_rendering.md	Outline 应识别空与非空 ATX 标题、tab 分隔标题
+contains	apps/web/src/components/outline.rs	10_rendering#outline-projection
+contains	apps/web/src/components/outline.rs	fn parse_atx_heading
+contains	apps/web/src/components/outline.rs	fn strip_atx_closing_sequence
+contains	apps/web/src/components/outline.rs	outline_atx_heading_scan_supports_empty_tab_and_closing_sequence
+contains	apps/web/src/components/outline.rs	outline_atx_heading_scan_skips_code_and_invalid_openers
+contains	apps/web/src/components/outline.rs	data-deve-outline-heading-item="true"
+contains	apps/web/src/components/outline.rs	type="button"
 contains	docs/features/operations/rendering_link_activation_gate.md	apps/web/src/hooks/use_ctrl_key.rs
 contains	apps/web/src/hooks/use_ctrl_key.rs	fn body() -> Option<web_sys::HtmlElement>
 contains	apps/web/src/hooks/use_ctrl_key.rs	fn browser_window() -> Option<web_sys::Window>

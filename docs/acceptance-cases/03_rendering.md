@@ -175,4 +175,6 @@
   assertions:
     - ui_assert: outline_contains_math true
     - ui_assert: outline_treats_highlight_as_text true
+    - ui_assert: outline_atx_empty_tab_and_closing_headings_supported true
+    - ui_assert: outline_heading_items_are_buttons true
 ```
