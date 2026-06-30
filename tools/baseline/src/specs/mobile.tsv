@@ -135,6 +135,7 @@ contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-009
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	run: cargo test -p deve_web mobile_touch_targets -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "topbar_buttons"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "dashboard_quick_actions"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_open_drawer: "left"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_measure: "drawer_close_buttons"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_open_drawer: "right"
@@ -149,9 +150,12 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_focus_editor: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_wait_keyboard: true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_touch_target_markers_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_touch_targets_min_size_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	cli_assert: mobile_dashboard_quick_action_touch_targets_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-009	ui_assert: all_targets_min_size "44x44"
 contains	apps/web/src/components/mobile_layout/header.rs	data-deve-mobile-touch-target="topbar_buttons"
 contains	apps/web/src/components/mobile_layout/header.rs	fn mobile_touch_targets_topbar_buttons_are_at_least_44px()
+contains	apps/web/src/components/dashboard/actions_card.rs	data-deve-mobile-touch-target=dashboard_quick_action_touch_target_marker()
+contains	apps/web/src/components/dashboard/actions_card.rs	fn mobile_touch_targets_dashboard_quick_actions_are_at_least_44px()
 contains	apps/web/src/components/mobile_layout/drawers/left/header.rs	data-deve-mobile-touch-target="drawer_close_buttons"
 contains	apps/web/src/components/mobile_layout/drawers/left/header.rs	fn mobile_touch_targets_left_drawer_close_button_is_at_least_44px()
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	data-deve-mobile-touch-target="drawer_close_buttons"

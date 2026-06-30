@@ -15,6 +15,18 @@ use crate::i18n::{Locale, t};
 use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
 
+pub(crate) fn dashboard_quick_action_touch_target_marker() -> &'static str {
+    "dashboard_quick_actions"
+}
+
+fn dashboard_primary_action_button_class() -> &'static str {
+    "flex h-11 flex-1 items-center justify-center rounded-md bg-accent px-3 py-2 text-xs font-medium text-on-accent transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
+}
+
+fn dashboard_secondary_action_button_class() -> &'static str {
+    "flex h-11 flex-1 items-center justify-center rounded-md border border-default px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-active"
+}
+
 #[component]
 pub fn ActionsCard() -> impl IntoView {
     let document = expect_context::<DocContext>();
@@ -56,16 +68,16 @@ pub fn ActionsCard() -> impl IntoView {
             <h3 class="text-sm font-semibold text-secondary mb-3">{move || t::dashboard::quick_actions(locale.get())}</h3>
             <div class="flex gap-2">
                 <button
-                    class="flex-1 px-3 py-2 text-xs font-medium rounded-md \
-                           bg-accent text-on-accent hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    data-deve-mobile-touch-target=dashboard_quick_action_touch_target_marker()
+                    class=dashboard_primary_action_button_class()
                     disabled=move || create_block_reason(&session_for_disabled, &editor_for_disabled).is_some()
                     on:click=on_new_doc
                 >
                     {move || t::dashboard::new_doc(locale.get())}
                 </button>
                 <button
-                    class="flex-1 px-3 py-2 text-xs font-medium rounded-md \
-                           border border-default text-primary hover:bg-active transition-colors"
+                    data-deve-mobile-touch-target=dashboard_quick_action_touch_target_marker()
+                    class=dashboard_secondary_action_button_class()
                     on:click=on_sync
                 >
                     {move || t::dashboard::sync_now(locale.get())}
@@ -90,4 +102,30 @@ fn create_block_reason(session: &SessionClient, editor: &EditorContext) -> Optio
         },
     )
     .map(|block| block.label())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        dashboard_primary_action_button_class, dashboard_quick_action_touch_target_marker,
+        dashboard_secondary_action_button_class,
+    };
+
+    #[test]
+    fn mobile_touch_targets_dashboard_quick_actions_are_at_least_44px() {
+        assert_eq!(
+            dashboard_quick_action_touch_target_marker(),
+            "dashboard_quick_actions"
+        );
+        assert!(dashboard_primary_action_button_class().contains("h-11"));
+        assert!(dashboard_secondary_action_button_class().contains("h-11"));
+        assert!(
+            dashboard_primary_action_button_class().contains("items-center")
+                && dashboard_primary_action_button_class().contains("justify-center")
+        );
+        assert!(
+            dashboard_secondary_action_button_class().contains("items-center")
+                && dashboard_secondary_action_button_class().contains("justify-center")
+        );
+    }
 }
