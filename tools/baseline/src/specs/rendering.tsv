@@ -38,11 +38,15 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_not_double_scaled true
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
-contains	apps/web/js/extensions/hybrid.js	class: `cm-heading-line cm-heading-line-${headingLevel}`,
+contains	apps/web/js/extensions/hybrid.js	attributes: {
+contains	apps/web/js/extensions/hybrid.js	class: headingLineClass,
+contains	apps/web/js/extensions/hybrid.js	"data-deve-heading-level": headingLevel,
 contains	apps/web/js/extensions/hybrid.js	function atxHeadingLevelFromLine(lineText)
 contains	apps/web/js/extensions/hybrid.js	addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel)
 contains	apps/web/js/extensions/hybrid.js	!findContainingCode(line.from)
-contains	apps/web/style/_typography.css	.cm-heading-line-1
+contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line
+contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line > span
+contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line-1
 contains	apps/web/style/_typography.css	font-size: 2em;
 contains	apps/web/style/_typography.css	line-height: 1.2;
 contains	apps/web/style/_typography.css	.markdown-body h1

@@ -15,9 +15,13 @@ function atxHeadingLevelFromLine(lineText) {
 function addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel) {
   if (decoratedHeadingLines.has(line.from)) return;
   decoratedHeadingLines.add(line.from);
+  const headingLineClass = `cm-heading-line cm-heading-line-${headingLevel}`;
   widgets.push(
     Decoration.line({
-      class: `cm-heading-line cm-heading-line-${headingLevel}`,
+      attributes: {
+        class: headingLineClass,
+        "data-deve-heading-level": headingLevel,
+      },
     }).range(line.from)
   );
 }
