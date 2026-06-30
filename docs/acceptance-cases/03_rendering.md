@@ -41,6 +41,23 @@
   assertions:
     - ui_assert: source_visible_for_current_token true
 
+- case_id: RENDER-HEADING-001
+  goal: ATX 标题正文使用标题层级的整行视觉高度。
+  preconditions:
+    - 打开 render_heading.md
+  steps:
+    - ui_type: |
+        #
+        # h1
+        ## h2
+        ### h3
+        plain
+    - ui_wait_render: true
+  assertions:
+    - ui_assert: atx_heading_lines_have_heading_class true
+    - ui_assert: atx_heading_text_line_height_gt_plain true
+    - ui_assert: atx_empty_heading_line_height_gt_plain true
+
 - case_id: RENDER-LINK-001
   goal: 链接需 Ctrl/Cmd 激活。
   preconditions:

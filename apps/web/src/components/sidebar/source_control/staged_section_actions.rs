@@ -3,6 +3,9 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::icons::Minus;
+use crate::components::sidebar::source_control::touch_target::{
+    SourceControlActionTone, icon_button_class,
+};
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
@@ -27,7 +30,8 @@ pub fn StagedSectionActions(
             >
                 <Show when=move || write_block.get().is_none()>
                     <button
-                        class="p-0.5 hover:bg-active rounded"
+                        class=icon_button_class(SourceControlActionTone::Primary)
+                        data-deve-mobile-touch-target="source-control-unstage-all-action"
                         title=move || t::source_control::unstage_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()
                         on:click=move |_| {

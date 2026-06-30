@@ -39,6 +39,7 @@ pub mod repair_review_copy;
 pub mod repositories;
 pub mod staged_section_actions;
 pub mod status_notice;
+mod touch_target;
 
 pub mod staged_section;
 pub mod unstaged_section;
@@ -88,6 +89,7 @@ pub fn SourceControlView() -> impl IntoView {
                     expanded=expand_repos
                     visible=show_repos
                 />
+                <Commit />
                 <StatusNotice block=core.write_block />
                 <ErrorNotice
                     notice=core.notice
@@ -96,7 +98,6 @@ pub fn SourceControlView() -> impl IntoView {
                     current_scope_nonce=core.current_scope_nonce
                     clear_notice=core.clear_notice
                 />
-                <Commit />
                 <ChangesPanel visible=show_changes />
                 <Show when=move || show_graph.get()>
                     <GraphPanel expanded=expand_graph />

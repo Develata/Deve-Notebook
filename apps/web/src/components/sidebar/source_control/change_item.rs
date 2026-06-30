@@ -12,6 +12,7 @@ use crate::components::sidebar::source_control::change_item_actions::ChangeItemA
 use crate::components::sidebar::source_control::change_item_content::ChangeItemContent;
 use crate::components::sidebar::source_control::change_item_meta::build_change_item_meta;
 use crate::components::sidebar::source_control::change_item_read_gate::can_open_change_item_diff;
+use crate::components::sidebar::source_control::touch_target::change_item_row_class;
 use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::Locale;
 use deve_core::source_control::ChangeEntry;
@@ -52,11 +53,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
     view! {
         <div
-            class=format!(
-                "flex items-center px-4 py-0.5 hover:bg-hover text-[13px] group h-[22px] {} {}",
-                if has_conflict { "text-warning bg-warning/5" } else { "text-primary" },
-                if can_open_diff { "cursor-pointer" } else { "cursor-help" }
-            )
+            class=change_item_row_class(has_conflict, can_open_diff)
+            data-deve-mobile-touch-target="source-control-change-row"
             on:click=move |_| {
                 if !can_open_change_item_diff(
                     current_repo_id.get().is_some(),

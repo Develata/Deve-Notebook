@@ -100,6 +100,14 @@ contains	apps/cli/src/server/tests/switcher/switcher_current_scope_binding_test.
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_writer_requires_explicit_git_bridge_policy
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette_git_bridge_mode_updates_after_node_role_probe -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	command_palette_git_bridge_mode_reactive_after_node_role_probe
+contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_message_placeholder -- --nocapture
+contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disabled_reason
+contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_text
+contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_reports_no_changes_when_commit_source_empty
+contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_visible true
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	should_show_confirmed_open_diff_action
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	data-deve-mobile-touch-target="source-control-confirmed-open-diff-action"
+contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_open_diff_action_policy
 absent	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_staged(
 absent	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_staged_in_local_repo(
 absent	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_staged_in_local_repo(
@@ -232,7 +240,7 @@ contains	docs/plan/05_diff_logic.md	- `DocDiff`
 contains	docs/plan/05_diff_logic.md	  - `doc_id`
 contains	crates/core/src/protocol/server.rs	DocDiff {
 contains	crates/core/src/protocol/server.rs	#[serde(default)] doc_id: Option<DocId>
-contains	apps/cli/src/server/handlers/source_control/diff/mod.rs	workdir_diff_payload_for_target_in_local_repo
+contains	apps/cli/src/server/handlers/source_control/diff/mod.rs	doc_diff_payload_for_target_in_local_repo
 contains	apps/cli/src/server/handlers/source_control/diff/remote.rs	doc_id: Some(doc_id)
 contains	apps/web/src/runtime/source_control_client/diff_session.rs	pub doc_id: Option<DocId>
 contains	apps/web/src/hooks/use_core/effects_sc_apply/tests.rs	apply_doc_diff_preserves_doc_identity

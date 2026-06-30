@@ -70,17 +70,11 @@ fn command_result_detail(cmd: &Command, locale: Locale) -> String {
     {
         parts.push(shortcut.clone());
     }
-    let detail = cmd
-        .availability
-        .reason()
-        .map(str::to_string)
-        .unwrap_or_else(|| {
-            if cmd.enabled_when.is_empty() {
-                t::search::command_detail(locale).to_string()
-            } else {
-                cmd.enabled_when.clone()
-            }
-        });
+    let detail = if cmd.enabled_when.is_empty() && !cmd.availability.is_unavailable() {
+        t::search::command_detail(locale).to_string()
+    } else {
+        cmd.detail_text()
+    };
     if !detail.is_empty() {
         parts.push(detail);
     }
@@ -181,6 +175,30 @@ mod tests {
             .and_then(|result| result.detail.as_deref())
             .expect("command detail");
         assert!(detail.contains("Unavailable: no branch creation backend"));
+    }
+
+    #[test]
+    fn command_provider_exposes_unavailable_enabled_condition_when_distinct() {
+        let provider = CommandProvider::new(
+            vec![
+                unavailable_command(
+                    "git_status",
+                    "Git: Status",
+                    "CLI-only: Web does not execute Git writer commands",
+                )
+                .with_enabled_when("Shows a CLI-only notice; source_control.git_bridge=off"),
+            ],
+            Locale::En,
+        );
+
+        let results = provider.search(">git status");
+
+        let detail = results
+            .first()
+            .and_then(|result| result.detail.as_deref())
+            .expect("command detail");
+        assert!(detail.contains("CLI-only: Web does not execute Git writer commands"));
+        assert!(detail.contains("source_control.git_bridge=off"));
     }
 
     #[test]

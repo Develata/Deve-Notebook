@@ -112,6 +112,15 @@ pub fn is_git_repair_cli_notice(notice: &SourceControlNotice) -> bool {
     notice.detail.as_deref() == Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
 }
 
+pub fn is_git_cli_notice(notice: &SourceControlNotice) -> bool {
+    is_git_status_cli_notice(notice)
+        || is_git_mirror_cli_notice(notice)
+        || is_git_export_cli_notice(notice)
+        || is_git_import_cli_notice(notice)
+        || is_git_push_cli_notice(notice)
+        || is_git_repair_cli_notice(notice)
+}
+
 pub fn is_establish_branch_unavailable_notice(notice: &SourceControlNotice) -> bool {
     notice.detail.as_deref() == Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
 }
@@ -140,9 +149,9 @@ mod tests {
         GIT_EXPORT_CLI_NOTICE_DETAIL, GIT_IMPORT_CLI_NOTICE_DETAIL, GIT_MIRROR_CLI_NOTICE_DETAIL,
         GIT_PUSH_CLI_NOTICE_DETAIL, GIT_REPAIR_CLI_NOTICE_DETAIL, GIT_STATUS_CLI_NOTICE_DETAIL,
         SourceControlNotice, deleted_no_doc_id_path, is_deleted_no_doc_id_notice,
-        is_establish_branch_unavailable_notice, is_git_export_cli_notice, is_git_import_cli_notice,
-        is_git_mirror_cli_notice, is_git_push_cli_notice, is_git_repair_cli_notice,
-        is_git_status_cli_notice, is_source_control_error,
+        is_establish_branch_unavailable_notice, is_git_cli_notice, is_git_export_cli_notice,
+        is_git_import_cli_notice, is_git_mirror_cli_notice, is_git_push_cli_notice,
+        is_git_repair_cli_notice, is_git_status_cli_notice, is_source_control_error,
     };
     use deve_core::protocol::{ServerError, ServerErrorCode};
 
@@ -187,6 +196,7 @@ mod tests {
             Some(GIT_STATUS_CLI_NOTICE_DETAIL)
         );
         assert!(is_git_status_cli_notice(&status_notice));
+        assert!(is_git_cli_notice(&status_notice));
 
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         assert_eq!(
@@ -194,6 +204,7 @@ mod tests {
             Some(GIT_MIRROR_CLI_NOTICE_DETAIL)
         );
         assert!(is_git_mirror_cli_notice(&mirror_notice));
+        assert!(is_git_cli_notice(&mirror_notice));
 
         let export_notice = SourceControlNotice::git_export_cli_only();
         assert_eq!(
@@ -201,6 +212,7 @@ mod tests {
             Some(GIT_EXPORT_CLI_NOTICE_DETAIL)
         );
         assert!(is_git_export_cli_notice(&export_notice));
+        assert!(is_git_cli_notice(&export_notice));
 
         let import_notice = SourceControlNotice::git_import_cli_only();
         assert_eq!(
@@ -208,6 +220,7 @@ mod tests {
             Some(GIT_IMPORT_CLI_NOTICE_DETAIL)
         );
         assert!(is_git_import_cli_notice(&import_notice));
+        assert!(is_git_cli_notice(&import_notice));
 
         let push_notice = SourceControlNotice::git_push_cli_only();
         assert_eq!(
@@ -215,6 +228,7 @@ mod tests {
             Some(GIT_PUSH_CLI_NOTICE_DETAIL)
         );
         assert!(is_git_push_cli_notice(&push_notice));
+        assert!(is_git_cli_notice(&push_notice));
 
         let repair_notice = SourceControlNotice::git_repair_cli_only();
         assert_eq!(
@@ -222,6 +236,7 @@ mod tests {
             Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
         );
         assert!(is_git_repair_cli_notice(&repair_notice));
+        assert!(is_git_cli_notice(&repair_notice));
 
         let establish_branch_notice = SourceControlNotice::establish_branch_unavailable();
         assert_eq!(
@@ -231,5 +246,6 @@ mod tests {
         assert!(is_establish_branch_unavailable_notice(
             &establish_branch_notice
         ));
+        assert!(!is_git_cli_notice(&establish_branch_notice));
     }
 }

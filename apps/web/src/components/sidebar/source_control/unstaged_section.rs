@@ -8,6 +8,7 @@
 //! 渲染工作区 (Unstaged Changes) 的文件列表。
 
 use super::change_item::ChangeItem;
+use super::touch_target::section_header_class;
 use super::unstaged_section_actions::UnstagedSectionActions;
 use crate::components::icons::ChevronRight;
 use crate::hooks::use_core::SourceControlContext;
@@ -41,7 +42,8 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
     view! {
         <div>
             <div
-                class="px-2 py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
+                class=section_header_class()
+                data-deve-mobile-touch-target="source-control-section-header"
                 on:click=move |_| expanded.update(|v| *v = !*v)
             >
                 <div class="flex items-center">

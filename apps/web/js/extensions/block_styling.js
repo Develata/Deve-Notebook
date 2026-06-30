@@ -1,6 +1,8 @@
 import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 
+const ATX_HEADING_LINE_RE = /^ {0,3}(#{1,6})(?:[ \t]|$)/;
+
 /**
  * Block Styling Plugin
  * 
@@ -8,6 +10,7 @@ import { syntaxTree } from "@codemirror/language";
  * to lines that are part of:
  * 1. Fenced Code Block (.cm-code-block-line)
  * 2. Blockquote (.cm-blockquote-line)
+ * 3. ATX Headings (.cm-h1 ... .cm-h6)
  */
 export const blockStyling = ViewPlugin.fromClass(
   class {
@@ -23,7 +26,9 @@ export const blockStyling = ViewPlugin.fromClass(
 
     computeDecorations(view) {
       let widgets = [];
+      const codeLineStarts = new Set();
       const { from, to } = view.viewport;
+      const doc = view.state.doc;
 
       // 遍历语法树
       const tree = syntaxTree(view.state);
@@ -34,7 +39,6 @@ export const blockStyling = ViewPlugin.fromClass(
         enter: (node) => {
           // 处理 FencedCode, IndentedCode 和通用的 CodeBlock
           if (["FencedCode", "IndentedCode", "CodeBlock"].includes(node.name)) {
-             let doc = view.state.doc;
              let startLine = doc.lineAt(node.from);
              let endLine = doc.lineAt(node.to);
              
@@ -46,11 +50,24 @@ export const blockStyling = ViewPlugin.fromClass(
                  if (i === startLine.number) lineClasses += " cm-code-block-start";
                  if (i === endLine.number) lineClasses += " cm-code-block-end";
                  
+                 codeLineStarts.add(line.from);
                  widgets.push(Decoration.line({ class: lineClasses }).range(line.from));
              }
           }
         },
       });
+
+      const firstLine = doc.lineAt(from);
+      const lastLine = doc.lineAt(to);
+      for (let i = firstLine.number; i <= lastLine.number; i++) {
+          const line = doc.line(i);
+          if (codeLineStarts.has(line.from)) continue;
+          const atxHeading = line.text.match(ATX_HEADING_LINE_RE);
+          if (!atxHeading) continue;
+          widgets.push(
+              Decoration.line({ class: `cm-h${atxHeading[1].length}` }).range(line.from)
+          );
+      }
 
       return Decoration.set(widgets, true); 
     }

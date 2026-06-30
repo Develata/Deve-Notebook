@@ -3,6 +3,9 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::icons::{Plus, RotateCcw};
+use crate::components::sidebar::source_control::touch_target::{
+    SourceControlActionTone, icon_button_class,
+};
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
@@ -27,7 +30,8 @@ pub fn UnstagedSectionActions(
             >
                 <Show when=move || write_block.get().is_none()>
                     <button
-                        class="p-0.5 hover:bg-active rounded"
+                        class=icon_button_class(SourceControlActionTone::Primary)
+                        data-deve-mobile-touch-target="source-control-discard-all-action"
                         title=move || t::source_control::discard_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()
                         on:click=move |_| {
@@ -39,7 +43,8 @@ pub fn UnstagedSectionActions(
                         <RotateCcw class="w-3.5 h-3.5" />
                     </button>
                     <button
-                        class="p-0.5 hover:bg-active rounded"
+                        class=icon_button_class(SourceControlActionTone::Primary)
+                        data-deve-mobile-touch-target="source-control-stage-all-action"
                         title=move || t::source_control::stage_all_changes(locale.get())
                         disabled=move || bulk_busy.get() || !core.can_write.get()
                         on:click=move |_| {

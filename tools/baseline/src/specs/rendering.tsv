@@ -10,6 +10,19 @@ contains	docs/plan/10_rendering.md	远程 snapshot、history replay、live op �
 contains	docs/features/03_rendering.md	下列能力不得作为本功能篇的已完成验收目标
 contains	docs/features/03_rendering.md	不承担主编辑器职责
 contains	docs/features/03_rendering.md	不宣称完整 virtual rendering
+contains	docs/features/03_rendering.md	ATX 标题（`#` 到 `######`）的标题正文和空标题行都必须保持对应标题层级的整行视觉高度
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_lines_have_heading_class true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_text_line_height_gt_plain true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_empty_heading_line_height_gt_plain true
+contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|ATX heading line height workflow
+contains	apps/web/js/extensions/block_styling.js	ATX_HEADING_LINE_RE
+contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h${atxHeading[1].length}` }).range(line.from)
+contains	apps/web/style/_typography.css	.cm-h1
+contains	apps/web/style/_typography.css	.cm-h2
+contains	apps/web/style/_typography.css	.cm-h3
+contains	apps/web/style/_typography.css	min-height: 1.2em;
+contains	apps/web/style/_typography.css	min-height: 1.3em;
+contains	apps/web/style/_typography.css	min-height: 1.4em;
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-008
 contains	docs/acceptance-cases/05_ui.md	cli_assert: editor_history_keymap_bound true
 contains	docs/acceptance-bindings.tsv	UI-WEB-008|manual-chrome|docs/features/03_rendering.md|editor undo redo workflow

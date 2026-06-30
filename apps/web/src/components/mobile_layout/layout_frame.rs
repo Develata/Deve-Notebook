@@ -60,6 +60,7 @@ pub fn MobileLayoutFrame(
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
     show_sidebar: ReadSignal<bool>,
     set_show_sidebar: WriteSignal<bool>,
+    on_open_left_drawer: Callback<()>,
     show_outline: ReadSignal<bool>,
     set_show_outline: WriteSignal<bool>,
     drawer_open: Signal<bool>,
@@ -108,10 +109,7 @@ pub fn MobileLayoutFrame(
         >
             <MobileHeader
                 title=title
-                on_menu=Callback::new(move |_| {
-                    set_show_outline.set(false);
-                    set_show_sidebar.set(true);
-                })
+                on_menu=on_open_left_drawer
                 on_home=on_home
                 on_open=on_open
                 on_command=on_command

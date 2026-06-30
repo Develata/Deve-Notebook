@@ -3,6 +3,11 @@
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::components::icons::MoreHorizontal;
+use crate::components::mobile_layout::source_control_notice::{
+    clear_mobile_source_control_notice_for_view,
+    clear_tracked_mobile_source_control_notice_for_view,
+};
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
@@ -37,13 +42,23 @@ pub(super) fn LeftDrawerTabs(
 ) -> impl IntoView {
     let (show_more, set_show_more) = signal(false);
     let more_menu_ref = NodeRef::<html::Div>::new();
+    let source_control = use_context::<SourceControlContext>();
+    let visible_source_control = source_control.clone();
     let select_view = Callback::new(move |view: SidebarView| {
         if view == SidebarView::Search {
             on_search.run(());
         } else {
+            clear_mobile_source_control_notice_for_view(view, source_control.as_ref());
             set_active_view.set(view);
         }
         set_show_more.set(false);
+    });
+
+    Effect::new(move |_| {
+        clear_tracked_mobile_source_control_notice_for_view(
+            active_view.get(),
+            visible_source_control.as_ref(),
+        );
     });
 
     Effect::new(move |_| {

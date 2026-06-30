@@ -8,6 +8,9 @@
 
 use leptos::prelude::*;
 
+const DEFAULT_AVAILABLE_CONDITION: &str = "Available";
+const DEFAULT_UNAVAILABLE_CONDITION: &str = "Unavailable";
+
 /// Command Palette entry availability.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CommandAvailability {
@@ -60,7 +63,7 @@ impl Command {
             title: title.into(),
             group: "General".to_string(),
             shortcut: None,
-            enabled_when: "Available".to_string(),
+            enabled_when: DEFAULT_AVAILABLE_CONDITION.to_string(),
             action,
             is_file: false,
             availability: CommandAvailability::Available,
@@ -78,7 +81,7 @@ impl Command {
             title: title.into(),
             group: "General".to_string(),
             shortcut: None,
-            enabled_when: "Unavailable".to_string(),
+            enabled_when: DEFAULT_UNAVAILABLE_CONDITION.to_string(),
             action,
             is_file: false,
             availability: CommandAvailability::Unavailable {
@@ -103,10 +106,17 @@ impl Command {
     }
 
     pub fn detail_text(&self) -> String {
-        self.availability
-            .reason()
-            .map(str::to_string)
-            .unwrap_or_else(|| self.enabled_when.clone())
+        match self.availability.reason() {
+            Some(reason)
+                if !self.enabled_when.is_empty()
+                    && self.enabled_when != DEFAULT_UNAVAILABLE_CONDITION
+                    && self.enabled_when != reason =>
+            {
+                format!("{reason} · {}", self.enabled_when)
+            }
+            Some(reason) => reason.to_string(),
+            None => self.enabled_when.clone(),
+        }
     }
 
     pub fn metadata_text(&self) -> String {
@@ -120,5 +130,43 @@ impl Command {
 impl PartialEq for Command {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Command;
+    use leptos::prelude::Callback;
+
+    #[test]
+    fn unavailable_detail_exposes_reason_and_distinct_enabled_condition() {
+        let command = Command::unavailable(
+            "git_status",
+            "Git: Status",
+            "CLI-only: Web does not execute Git writer commands",
+            Callback::new(|_| {}),
+        )
+        .with_enabled_when("Shows a CLI-only notice; source_control.git_bridge=mirror");
+
+        let detail = command.detail_text();
+
+        assert!(detail.contains("CLI-only: Web does not execute Git writer commands"));
+        assert!(detail.contains("source_control.git_bridge=mirror"));
+    }
+
+    #[test]
+    fn unavailable_detail_does_not_repeat_reserved_reason() {
+        let command = Command::unavailable(
+            "source_control_commit",
+            "Source Control: Commit",
+            "Unavailable: use the Source Control panel",
+            Callback::new(|_| {}),
+        )
+        .with_enabled_when("Unavailable: use the Source Control panel");
+
+        assert_eq!(
+            command.detail_text(),
+            "Unavailable: use the Source Control panel"
+        );
     }
 }

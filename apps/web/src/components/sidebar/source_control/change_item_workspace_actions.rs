@@ -4,6 +4,9 @@
 //!
 use crate::components::icons::{ExternalLink, Plus, RotateCcw};
 use crate::components::sidebar::source_control::change_item_read_gate::can_open_change_item_diff;
+use crate::components::sidebar::source_control::touch_target::{
+    SourceControlActionTone, icon_button_class,
+};
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
@@ -26,7 +29,8 @@ pub fn ChangeItemWorkspaceActions(
     view! {
         <Show when=move || can_open_diff>
             <button
-                class="p-0.5 hover:bg-active rounded text-secondary"
+                class=icon_button_class(SourceControlActionTone::Secondary)
+                data-deve-mobile-touch-target="source-control-open-diff-action"
                 disabled=move || {
                     !can_open_change_item_diff(
                         core.current_repo_id.get().is_some(),
@@ -45,7 +49,8 @@ pub fn ChangeItemWorkspaceActions(
             </button>
         </Show>
         <button
-            class="p-0.5 hover:bg-active rounded text-secondary"
+            class=icon_button_class(SourceControlActionTone::Secondary)
+            data-deve-mobile-touch-target="source-control-discard-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::discard_changes(locale.get())
             on:click=move |ev| {
@@ -60,7 +65,8 @@ pub fn ChangeItemWorkspaceActions(
             <RotateCcw class="w-3.5 h-3.5" />
         </button>
         <button
-            class="p-0.5 hover:bg-active rounded text-secondary"
+            class=icon_button_class(SourceControlActionTone::Secondary)
+            data-deve-mobile-touch-target="source-control-stage-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::stage_changes(locale.get())
             on:click=move |ev| {
