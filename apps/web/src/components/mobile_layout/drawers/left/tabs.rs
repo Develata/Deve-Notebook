@@ -3,6 +3,8 @@
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::components::icons::MoreHorizontal;
+use crate::hooks::use_core::SourceControlContext;
+use crate::hooks::use_core::source_control_notice::is_local_command_notice;
 use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
@@ -30,10 +32,15 @@ pub(super) fn select_mobile_sidebar_view(
     set_active_view: WriteSignal<SidebarView>,
     on_search: Callback<()>,
     on_view_select: Callback<()>,
+    clear_source_control_local_notice: Callback<()>,
 ) {
     if view == SidebarView::Search {
         on_search.run(());
         return;
+    }
+
+    if view == SidebarView::SourceControl {
+        clear_source_control_local_notice.run(());
     }
 
     set_active_view.set(view);
@@ -51,10 +58,27 @@ pub(super) fn LeftDrawerTabs(
     on_search: Callback<()>,
     on_view_select: Callback<()>,
 ) -> impl IntoView {
+    let source_control = expect_context::<SourceControlContext>();
+    let source_control_notice = source_control.notice;
+    let clear_source_control_notice = source_control.clear_notice;
     let (show_more, set_show_more) = signal(false);
     let more_menu_ref = NodeRef::<html::Div>::new();
     let select_view = Callback::new(move |view: SidebarView| {
-        select_mobile_sidebar_view(view, set_active_view, on_search, on_view_select);
+        select_mobile_sidebar_view(
+            view,
+            set_active_view,
+            on_search,
+            on_view_select,
+            Callback::new(move |_| {
+                if source_control_notice
+                    .get_untracked()
+                    .as_ref()
+                    .is_some_and(is_local_command_notice)
+                {
+                    clear_source_control_notice.run(());
+                }
+            }),
+        );
         set_show_more.set(false);
     });
 
@@ -131,6 +155,9 @@ mod tests {
         select_mobile_sidebar_view,
     };
     use crate::components::activity_bar::SidebarView;
+    use crate::hooks::use_core::source_control_notice::{
+        SourceControlNotice, is_git_status_cli_notice,
+    };
     use leptos::prelude::*;
 
     #[test]
@@ -165,6 +192,7 @@ mod tests {
                 set_active_view,
                 Callback::new(move |_| set_search_opened.set(true)),
                 Callback::new(move |_| set_drawer_closed.set(true)),
+                Callback::new(move |_| ()),
             );
 
             assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
@@ -186,11 +214,42 @@ mod tests {
                 set_active_view,
                 Callback::new(move |_| set_search_opened.set(true)),
                 Callback::new(move |_| set_drawer_closed.set(true)),
+                Callback::new(move |_| ()),
             );
 
             assert_eq!(active_view.get_untracked(), SidebarView::Explorer);
             assert!(search_opened.get_untracked());
             assert!(!drawer_closed.get_untracked());
+        });
+    }
+
+    #[test]
+    fn mobile_source_control_tab_clears_local_git_command_notice() {
+        let owner = leptos::reactive::owner::Owner::new();
+        owner.with(|| {
+            let (active_view, set_active_view) = signal(SidebarView::Explorer);
+            let (notice, set_notice) = signal(Some(SourceControlNotice::git_status_cli_only()));
+            let (drawer_closed, set_drawer_closed) = signal(false);
+
+            select_mobile_sidebar_view(
+                SidebarView::SourceControl,
+                set_active_view,
+                Callback::new(move |_| ()),
+                Callback::new(move |_| set_drawer_closed.set(true)),
+                Callback::new(move |_| {
+                    if notice
+                        .get_untracked()
+                        .as_ref()
+                        .is_some_and(is_git_status_cli_notice)
+                    {
+                        set_notice.set(None);
+                    }
+                }),
+            );
+
+            assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
+            assert!(drawer_closed.get_untracked());
+            assert_eq!(notice.get_untracked(), None);
         });
     }
 }
