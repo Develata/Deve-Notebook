@@ -59,10 +59,10 @@ pub(crate) async fn fetch_host_file_absolute_path(
 pub(crate) async fn copy_host_file_absolute_path_to_clipboard(
     repo_id: Option<String>,
     path: String,
-) -> Result<String, HostFileActionError> {
+) -> Result<(), HostFileActionError> {
     let absolute_path = fetch_host_file_absolute_path(repo_id, &path).await?;
     write_text_to_clipboard(&absolute_path).await?;
-    Ok(absolute_path)
+    Ok(())
 }
 
 pub(crate) async fn reveal_host_file_in_system_explorer(
