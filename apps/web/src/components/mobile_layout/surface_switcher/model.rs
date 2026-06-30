@@ -250,6 +250,18 @@ mod tests {
     }
 
     #[test]
+    fn mobile_surface_badge_text_uses_tabs_page_copy_in_zh() {
+        assert_eq!(
+            mobile_surface_summary_badge_text("document", 2, Locale::Zh),
+            "文档标签页 · 2 已打开标签页"
+        );
+        assert_eq!(
+            mobile_surface_summary_badge_text("tabs", 3, Locale::Zh),
+            "3 已打开标签页"
+        );
+    }
+
+    #[test]
     fn mobile_surface_close_buttons_are_at_least_44px() {
         let class = mobile_surface_close_button_class();
         assert!(class.contains("h-11"));

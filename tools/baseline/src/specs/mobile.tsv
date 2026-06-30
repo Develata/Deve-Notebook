@@ -530,6 +530,7 @@ contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobi
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_close_buttons_are_at_least_44px()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_target_markers_are_stable()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_badge_text_shows_surface_type_and_count()
+contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_badge_text_uses_tabs_page_copy_in_zh()
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/mobile_layout/surface_runtime.rs	pub(super) fn collapse_surface_switcher_on_runtime_transition(
 contains	apps/web/src/components/mobile_layout/surface_runtime.rs	fn mobile_surface_switcher_closes_for_runtime_scope_transitions()
