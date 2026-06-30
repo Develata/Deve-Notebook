@@ -16,6 +16,62 @@
 import { ViewPlugin } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 
+const LINK_ACTIVATION_CLASS = "is-ctrl-pressed";
+
+let activationListenerRefs = 0;
+
+function setLinkActivationState(active) {
+  if (typeof document === "undefined" || !document.body) return;
+  document.body.classList.toggle(LINK_ACTIVATION_CLASS, active);
+}
+
+function handleActivationKeyDown(event) {
+  if (event.ctrlKey || event.metaKey) {
+    setLinkActivationState(true);
+  }
+}
+
+function handleActivationKeyUp(event) {
+  if (!event.ctrlKey && !event.metaKey) {
+    setLinkActivationState(false);
+  }
+}
+
+function clearLinkActivationState() {
+  setLinkActivationState(false);
+}
+
+function clearHiddenLinkActivationState() {
+  if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+    setLinkActivationState(false);
+  }
+}
+
+function acquireLinkActivationListeners() {
+  activationListenerRefs += 1;
+  if (activationListenerRefs !== 1 || typeof window === "undefined") return;
+
+  window.addEventListener("keydown", handleActivationKeyDown);
+  window.addEventListener("keyup", handleActivationKeyUp);
+  window.addEventListener("blur", clearLinkActivationState);
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", clearHiddenLinkActivationState);
+  }
+}
+
+function releaseLinkActivationListeners() {
+  activationListenerRefs = Math.max(0, activationListenerRefs - 1);
+  if (activationListenerRefs !== 0 || typeof window === "undefined") return;
+
+  window.removeEventListener("keydown", handleActivationKeyDown);
+  window.removeEventListener("keyup", handleActivationKeyUp);
+  window.removeEventListener("blur", clearLinkActivationState);
+  if (typeof document !== "undefined") {
+    document.removeEventListener("visibilitychange", clearHiddenLinkActivationState);
+  }
+  clearLinkActivationState();
+}
+
 /**
  * 从 Link 节点中提取 URL
  * Link 节点结构: [text](url) 或 [text][ref]
@@ -107,6 +163,7 @@ export const hyperlinkClickPlugin = ViewPlugin.fromClass(
     constructor(view) {
       this.view = view;
       this.handleMouseDown = this.handleMouseDown.bind(this);
+      acquireLinkActivationListeners();
       view.dom.addEventListener("mousedown", this.handleMouseDown);
     }
 
@@ -133,6 +190,7 @@ export const hyperlinkClickPlugin = ViewPlugin.fromClass(
 
     destroy() {
       this.view.dom.removeEventListener("mousedown", this.handleMouseDown);
+      releaseLinkActivationListeners();
     }
   }
 );
