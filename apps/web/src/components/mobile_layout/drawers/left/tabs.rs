@@ -3,6 +3,10 @@
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::components::icons::MoreHorizontal;
+use crate::hooks::use_core::{
+    SourceControlContext,
+    source_control_notice::{SourceControlNotice, is_git_cli_notice},
+};
 use crate::i18n::{Locale, t};
 use leptos::html;
 use leptos::prelude::*;
@@ -25,6 +29,13 @@ pub(super) fn mobile_more_button_class() -> &'static str {
     "mobile-more-button h-11 min-w-[44px] px-2 rounded-md bg-panel border border-default text-secondary active:bg-hover active:scale-95 transition-transform duration-150 ease-out"
 }
 
+fn should_clear_mobile_source_control_notice(
+    view: SidebarView,
+    notice: Option<&SourceControlNotice>,
+) -> bool {
+    view == SidebarView::SourceControl && notice.is_some_and(is_git_cli_notice)
+}
+
 #[component]
 pub(super) fn LeftDrawerTabs(
     locale: RwSignal<Locale>,
@@ -37,10 +48,19 @@ pub(super) fn LeftDrawerTabs(
 ) -> impl IntoView {
     let (show_more, set_show_more) = signal(false);
     let more_menu_ref = NodeRef::<html::Div>::new();
+    let source_control = use_context::<SourceControlContext>();
     let select_view = Callback::new(move |view: SidebarView| {
         if view == SidebarView::Search {
             on_search.run(());
         } else {
+            if let Some(source_control) = source_control.as_ref()
+                && should_clear_mobile_source_control_notice(
+                    view,
+                    source_control.notice.get_untracked().as_ref(),
+                )
+            {
+                source_control.clear_notice.run(());
+            }
             set_active_view.set(view);
         }
         set_show_more.set(false);
@@ -115,7 +135,10 @@ pub(super) fn LeftDrawerTabs(
 mod tests {
     use super::{
         mobile_more_button_class, mobile_more_button_marker, mobile_sidebar_icon_tabs_marker,
+        should_clear_mobile_source_control_notice,
     };
+    use crate::components::activity_bar::SidebarView;
+    use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
     fn mobile_sidebar_icon_tabs_marker_is_visible_when_drawer_open() {
@@ -134,5 +157,28 @@ mod tests {
 
         assert!(class.contains("h-11"));
         assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_source_control_read_gate_plain_entry_clears_only_git_cli_notice() {
+        let git_notice = SourceControlNotice::git_status_cli_only();
+        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+
+        assert!(should_clear_mobile_source_control_notice(
+            SidebarView::SourceControl,
+            Some(&git_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_notice(
+            SidebarView::Explorer,
+            Some(&git_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_notice(
+            SidebarView::SourceControl,
+            Some(&source_control_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_notice(
+            SidebarView::SourceControl,
+            None,
+        ));
     }
 }
