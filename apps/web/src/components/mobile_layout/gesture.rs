@@ -53,8 +53,8 @@ pub fn build_touch_start(
 pub fn build_touch_end(
     swipe_target: ReadSignal<Option<SwipeTarget>>,
     swipe_start_x: ReadSignal<i32>,
-    set_show_sidebar: WriteSignal<bool>,
-    set_show_outline: WriteSignal<bool>,
+    open_left_drawer: Callback<()>,
+    open_right_drawer: Callback<()>,
     close_drawers: Callback<()>,
     set_swipe_target: WriteSignal<Option<SwipeTarget>>,
 ) -> Callback<TouchEvent> {
@@ -67,14 +67,8 @@ pub fn build_touch_end(
         };
         let delta = end_x - start_x;
         match resolve_swipe_outcome(target, delta) {
-            SwipeOutcome::OpenLeft => {
-                set_show_sidebar.set(true);
-                set_show_outline.set(false);
-            }
-            SwipeOutcome::OpenRight => {
-                set_show_outline.set(true);
-                set_show_sidebar.set(false);
-            }
+            SwipeOutcome::OpenLeft => open_left_drawer.run(()),
+            SwipeOutcome::OpenRight => open_right_drawer.run(()),
             SwipeOutcome::CloseDrawers => close_drawers.run(()),
             SwipeOutcome::None => {}
         }

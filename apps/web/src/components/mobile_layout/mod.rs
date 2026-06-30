@@ -29,6 +29,7 @@ mod toolbar;
 
 use crate::components::activity_bar::SidebarView;
 use crate::editor::ffi::getEditorContent;
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::Locale;
 use crate::runtime::document_client::DocumentClient;
 use effects::apply_body_scroll_lock;
@@ -37,6 +38,7 @@ use gesture::{build_touch_end, build_touch_start};
 use layout_frame::MobileLayoutFrame;
 use layout_runtime::{build_doc_select_callback, build_mobile_title, resolve_content_signal};
 use leptos::prelude::*;
+use source_control_notice::clear_mobile_source_control_notice_for_view;
 
 #[component]
 pub fn MobileLayout(
@@ -58,6 +60,7 @@ pub fn MobileLayout(
     let (swipe_target, set_swipe_target) = signal(None::<gesture::SwipeTarget>);
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
     let (chat_expanded, set_chat_expanded) = signal(false);
+    let source_control_context = use_context::<SourceControlContext>();
 
     let title = build_mobile_title(document.clone());
     let (content_signal, set_outline_content) = resolve_content_signal();
@@ -65,6 +68,18 @@ pub fn MobileLayout(
     let close_drawers = Callback::new(move |_| {
         set_show_sidebar.set(false);
         set_show_outline.set(false);
+    });
+    let open_left_drawer = Callback::new(move |_| {
+        clear_mobile_source_control_notice_for_view(
+            active_view.get_untracked(),
+            source_control_context.as_ref(),
+        );
+        set_show_outline.set(false);
+        set_show_sidebar.set(true);
+    });
+    let open_right_drawer = Callback::new(move |_| {
+        set_show_outline.set(true);
+        set_show_sidebar.set(false);
     });
 
     let on_touch_start = build_touch_start(
@@ -76,8 +91,8 @@ pub fn MobileLayout(
     let on_touch_end = build_touch_end(
         swipe_target,
         swipe_start_x,
-        set_show_sidebar,
-        set_show_outline,
+        open_left_drawer,
+        open_right_drawer,
         close_drawers,
         set_swipe_target,
     );
@@ -103,6 +118,7 @@ pub fn MobileLayout(
             set_pinned_views=set_pinned_views
             show_sidebar=show_sidebar
             set_show_sidebar=set_show_sidebar
+            on_open_left_drawer=open_left_drawer
             show_outline=show_outline
             set_show_outline=set_show_outline
             drawer_open=drawer_open
