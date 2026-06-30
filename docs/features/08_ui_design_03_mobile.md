@@ -20,6 +20,7 @@
 - Outline、Source Control、Search 等入口必须在移动端可达。
 - 移动端不应因为手势或边缘滑动吞掉关键按钮点击。
 - 顶部当前 surface 胶囊应显示当前文档或差异；点击后通过底部面板在已打开文档和差异之间切换。
+- 移动端 Source Control 必须显示与桌面相同的 Source Control read surface；只读或远端视角只禁用写动作，不得用 `Git status 只能通过 CLI 查看` 这类 Git bridge notice 替代正常变更列表。
 
 ### 3. Bottom Bar 与状态折叠
 
@@ -109,6 +110,25 @@
 - 选择文档走受保护的文档导航；选择 diff 只恢复已有 diff session。
 - 移动端 diff 始终使用 Unified View。
 - 关闭 diff 不改变 staged、pending 或 commit state。
+
+### MOBILE-UI-05: Mobile Source Control 正常显示
+
+前置条件：
+
+- 页面处于移动端视口。
+- 当前 Source Control scope 可读；可处于只读或远端视角。
+
+步骤：
+
+1. 打开左侧 drawer。
+2. 切换到 Source Control。
+3. 观察 Source Control panel。
+
+期望结果：
+
+- Source Control 显示 `Staged Changes` / `Changes` / `Confirmed Ledger Changes` 或 clean empty state。
+- 只读或远端视角下写动作被禁用，但 read list / diff 仍走 Source Control read gate。
+- 未显式触发 Git bridge 命令时，不显示 `Git status 只能通过 CLI 查看` 作为 Source Control 的替代内容。
 
 ### MOBILE-UI-04: Native 双模式边界
 

@@ -232,7 +232,7 @@ contains	docs/plan/05_diff_logic.md	- `DocDiff`
 contains	docs/plan/05_diff_logic.md	  - `doc_id`
 contains	crates/core/src/protocol/server.rs	DocDiff {
 contains	crates/core/src/protocol/server.rs	#[serde(default)] doc_id: Option<DocId>
-contains	apps/cli/src/server/handlers/source_control/diff/mod.rs	workdir_diff_payload_for_target_in_local_repo
+contains	apps/cli/src/server/handlers/source_control/diff/mod.rs	doc_diff_payload_for_target_in_local_repo
 contains	apps/cli/src/server/handlers/source_control/diff/remote.rs	doc_id: Some(doc_id)
 contains	apps/web/src/runtime/source_control_client/diff_session.rs	pub doc_id: Option<DocId>
 contains	apps/web/src/hooks/use_core/effects_sc_apply/tests.rs	apply_doc_diff_preserves_doc_identity
