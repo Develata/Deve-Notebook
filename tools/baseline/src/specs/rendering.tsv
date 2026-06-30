@@ -20,9 +20,15 @@ contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h$
 contains	apps/web/style/_typography.css	.cm-line.cm-h1
 contains	apps/web/style/_typography.css	.cm-line.cm-h2
 contains	apps/web/style/_typography.css	.cm-line.cm-h3
+contains	apps/web/style/_typography.css	.cm-line.cm-h4
+contains	apps/web/style/_typography.css	.cm-line.cm-h5
+contains	apps/web/style/_typography.css	.cm-line.cm-h6
 contains	apps/web/style/_typography.css	min-height: 1.2em;
 contains	apps/web/style/_typography.css	min-height: 1.3em;
 contains	apps/web/style/_typography.css	min-height: 1.4em;
+contains	apps/web/style/_typography.css	min-height: 1.5em;
+contains	apps/web/style/_typography.css	min-height: 1.7em;
+contains	apps/web/style/_typography.css	min-height: 1.9em;
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-008
 contains	docs/acceptance-cases/05_ui.md	cli_assert: editor_history_keymap_bound true
 contains	docs/acceptance-bindings.tsv	UI-WEB-008|manual-chrome|docs/features/03_rendering.md|editor undo redo workflow
