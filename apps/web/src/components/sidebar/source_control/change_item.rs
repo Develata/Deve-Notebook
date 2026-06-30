@@ -45,10 +45,20 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
         let _ = core.staged_changes.get();
         let _ = core.unstaged_changes.get();
         let _ = core.confirmed_changes.get();
-        let _ = core.notice.get();
         action_busy_reset
             .get_value()
             .store(false, Ordering::Release);
+    });
+
+    let action_busy_feedback_reset = action_busy;
+    Effect::new(move |_| {
+        let notice = core.notice.get();
+        let write_block = core.write_block.get();
+        if notice.is_some() || write_block.is_some() {
+            action_busy_feedback_reset
+                .get_value()
+                .store(false, Ordering::Release);
+        }
     });
 
     view! {
