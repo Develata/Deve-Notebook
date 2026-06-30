@@ -93,6 +93,20 @@ pub fn diff_tab(locale: Locale) -> &'static str {
     }
 }
 
+pub fn document_surface(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Document",
+        Locale::Zh => "文档",
+    }
+}
+
+pub fn diff_surface(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Diff",
+        Locale::Zh => "差异",
+    }
+}
+
 pub fn close_tab(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Close tab",
@@ -225,6 +239,10 @@ mod tests {
         assert_eq!(document_tab(Locale::Zh), "文档标签页");
         assert_eq!(diff_tab(Locale::En), "Diff tab");
         assert_eq!(diff_tab(Locale::Zh), "差异标签页");
+        assert_eq!(document_surface(Locale::En), "Document");
+        assert_eq!(document_surface(Locale::Zh), "文档");
+        assert_eq!(diff_surface(Locale::En), "Diff");
+        assert_eq!(diff_surface(Locale::Zh), "差异");
         assert_eq!(close_tab(Locale::Zh), "关闭标签页");
         assert_eq!(open_tabs(Locale::En), "Open tabs");
         assert_eq!(open_tabs(Locale::Zh), "已打开标签页");

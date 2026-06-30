@@ -21,6 +21,13 @@ pub(crate) fn mobile_surface_close_sheet_marker() -> &'static str {
     "close_sheet"
 }
 
+pub(crate) fn mobile_surface_kind_label(locale: Locale, kind: &str) -> &'static str {
+    match kind {
+        "diff" => t::common::diff_surface(locale),
+        _ => t::common::document_surface(locale),
+    }
+}
+
 #[component]
 pub fn MobileSurfaceSwitcher(
     doc_tabs: ReadSignal<Vec<EditorDocumentTab>>,
@@ -76,6 +83,24 @@ pub fn MobileSurfaceSwitcher(
                     }}
                     <span class="min-w-0 flex-1 truncate text-[13px] font-medium">
                         {move || summary.get().map(|item| item.title).unwrap_or_default()}
+                    </span>
+                    <span
+                        data-deve-mobile-surface-kind-label=move || {
+                            let locale = locale.get();
+                            summary
+                                .get()
+                                .map(|item| mobile_surface_kind_label(locale, item.kind))
+                                .unwrap_or("")
+                        }
+                        class="shrink-0 rounded border border-default px-1.5 py-0.5 text-[11px] font-medium text-secondary"
+                    >
+                        {move || {
+                            let locale = locale.get();
+                            summary
+                                .get()
+                                .map(|item| mobile_surface_kind_label(locale, item.kind))
+                                .unwrap_or("")
+                        }}
                     </span>
                     <span class="shrink-0 rounded bg-muted px-2 py-0.5 text-[11px] text-secondary">
                         {move || {
@@ -176,7 +201,32 @@ pub fn MobileSurfaceSwitcher(
 
 #[cfg(test)]
 mod tests {
-    use super::mobile_surface_close_sheet_marker;
+    use super::{mobile_surface_close_sheet_marker, mobile_surface_kind_label};
+    use crate::i18n::{Locale, t};
+
+    #[test]
+    fn mobile_surface_kind_label_is_localized() {
+        assert_eq!(
+            mobile_surface_kind_label(Locale::En, "document"),
+            t::common::document_surface(Locale::En)
+        );
+        assert_eq!(
+            mobile_surface_kind_label(Locale::Zh, "document"),
+            t::common::document_surface(Locale::Zh)
+        );
+        assert_eq!(
+            mobile_surface_kind_label(Locale::En, "diff"),
+            t::common::diff_surface(Locale::En)
+        );
+        assert_eq!(
+            mobile_surface_kind_label(Locale::Zh, "diff"),
+            t::common::diff_surface(Locale::Zh)
+        );
+        assert_eq!(
+            mobile_surface_kind_label(Locale::Zh, "unknown"),
+            t::common::document_surface(Locale::Zh)
+        );
+    }
 
     #[test]
     fn mobile_surface_close_sheet_marker_is_stable() {
