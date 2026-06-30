@@ -31,6 +31,18 @@ pub(super) fn clear_mobile_source_control_notice_for_view(
     }
 }
 
+pub(super) fn clear_tracked_mobile_source_control_notice_for_view(
+    view: SidebarView,
+    source_control: Option<&SourceControlContext>,
+) {
+    if let Some(source_control) = source_control {
+        let notice = source_control.notice.get();
+        if should_clear_mobile_source_control_notice(view, notice.as_ref()) {
+            source_control.clear_notice.run(());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::should_clear_mobile_source_control_notice;
@@ -57,6 +69,25 @@ mod tests {
         assert!(!should_clear_mobile_source_control_notice(
             SidebarView::SourceControl,
             None,
+        ));
+    }
+
+    #[test]
+    fn mobile_source_control_read_gate_active_view_tracks_git_cli_notice() {
+        let git_notice = SourceControlNotice::git_status_cli_only();
+        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+
+        assert!(should_clear_mobile_source_control_notice(
+            SidebarView::SourceControl,
+            Some(&git_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_notice(
+            SidebarView::Explorer,
+            Some(&git_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_notice(
+            SidebarView::SourceControl,
+            Some(&source_control_notice),
         ));
     }
 }
