@@ -198,6 +198,8 @@ contains	apps/web/src/components/sidebar/source_control/change_item_workspace_ac
 contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	aria-label=move || t::source_control::discard_changes(locale.get())
 contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	aria-label=move || t::source_control::keep_file_system(locale.get())
 contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	aria-label=move || t::source_control::keep_ledger(locale.get())
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	data-deve-sc-action="keep-fs"
+contains	apps/web/src/components/sidebar/source_control/change_item_conflict_actions.rs	data-deve-sc-action="keep-ledger"
 contains	apps/web/src/components/sidebar/source_control/staged_section_actions.rs	aria-label=move || t::source_control::unstage_all_changes(locale.get())
 contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::stage_all_changes(locale.get())
 contains	apps/web/src/components/sidebar/source_control/unstaged_section_actions.rs	aria-label=move || t::source_control::discard_all_changes(locale.get())

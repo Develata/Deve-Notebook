@@ -25,6 +25,7 @@ pub fn ChangeItemConflictActions(
         <button
             type="button"
             class="p-0.5 hover:bg-active rounded text-warning"
+            data-deve-sc-action="keep-fs"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_file_system(locale.get())
             aria-label=move || t::source_control::keep_file_system(locale.get())
@@ -45,6 +46,7 @@ pub fn ChangeItemConflictActions(
         <button
             type="button"
             class="p-0.5 hover:bg-active rounded text-warning"
+            data-deve-sc-action="keep-ledger"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_ledger(locale.get())
             aria-label=move || t::source_control::keep_ledger(locale.get())
