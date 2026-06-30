@@ -17,9 +17,9 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|ATX heading line height workflow
 contains	apps/web/js/extensions/block_styling.js	ATX_HEADING_LINE_RE
 contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h${atxHeading[1].length}` }).range(line.from)
-contains	apps/web/style/_typography.css	.cm-h1
-contains	apps/web/style/_typography.css	.cm-h2
-contains	apps/web/style/_typography.css	.cm-h3
+contains	apps/web/style/_typography.css	.cm-line.cm-h1
+contains	apps/web/style/_typography.css	.cm-line.cm-h2
+contains	apps/web/style/_typography.css	.cm-line.cm-h3
 contains	apps/web/style/_typography.css	min-height: 1.2em;
 contains	apps/web/style/_typography.css	min-height: 1.3em;
 contains	apps/web/style/_typography.css	min-height: 1.4em;
