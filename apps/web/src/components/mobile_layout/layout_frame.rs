@@ -18,8 +18,9 @@ use crate::components::activity_bar::SidebarView;
 use crate::components::editor_tabs::{
     EditorTabRuntimeInputs, create_current_editor_doc, create_editor_tab_runtime,
 };
-use crate::hooks::use_core::EditorContext;
+use crate::hooks::use_core::source_control_notice::{SourceControlNotice, is_local_command_notice};
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
+use crate::hooks::use_core::{EditorContext, SourceControlContext};
 use crate::i18n::Locale;
 use crate::runtime::{
     document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
@@ -52,6 +53,13 @@ pub(crate) fn mobile_accessory_toolbar_visible(
         && !surface_switcher_sheet_visible
 }
 
+pub(crate) fn should_clear_mobile_source_control_local_notice(
+    active_view: SidebarView,
+    notice: Option<&SourceControlNotice>,
+) -> bool {
+    active_view == SidebarView::SourceControl && notice.is_some_and(is_local_command_notice)
+}
+
 #[component]
 pub fn MobileLayoutFrame(
     locale: RwSignal<Locale>,
@@ -82,11 +90,14 @@ pub fn MobileLayoutFrame(
     let document = expect_context::<DocumentClient>();
     let editor = expect_context::<EditorContext>();
     let source_control = expect_context::<SourceControlClient>();
+    let source_control_context = expect_context::<SourceControlContext>();
     let scope = expect_context::<ScopeClient>();
     let session = expect_context::<SessionClient>();
     let rendering = expect_context::<RenderingClient>();
     let current_doc = document.current_doc;
     let diff_content = source_control.diff_content;
+    let source_control_notice = source_control_context.notice;
+    let clear_source_control_notice = source_control_context.clear_notice;
     let current_editor_doc = create_current_editor_doc(&document, &editor);
     let tabs = create_editor_tab_runtime(
         EditorTabRuntimeInputs {
@@ -133,6 +144,12 @@ pub fn MobileLayoutFrame(
             <MobileHeader
                 title=title
                 on_menu=Callback::new(move |_| {
+                    if should_clear_mobile_source_control_local_notice(
+                        active_view.get_untracked(),
+                        source_control_notice.get_untracked().as_ref(),
+                    ) {
+                        clear_source_control_notice.run(());
+                    }
                     set_show_outline.set(false);
                     set_show_sidebar.set(true);
                 })

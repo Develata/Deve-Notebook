@@ -1,5 +1,11 @@
-use super::{mobile_accessory_toolbar_visible, mobile_bottom_bar_visible};
+use super::{
+    mobile_accessory_toolbar_visible, mobile_bottom_bar_visible,
+    should_clear_mobile_source_control_local_notice,
+};
+use crate::components::activity_bar::SidebarView;
 use crate::components::mobile_layout::surface_switcher::mobile_surface_sheet_visible;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use deve_core::protocol::ServerErrorCode;
 
 #[test]
 fn mobile_chat_keyboard_hides_bottom_bar() {
@@ -90,5 +96,31 @@ fn mobile_diff_keeps_accessory_toolbar_gate_strict() {
     ));
     assert!(!mobile_accessory_toolbar_visible(
         true, false, false, 280, false, true
+    ));
+}
+
+#[test]
+fn mobile_menu_open_clears_stale_source_control_local_command_notice() {
+    let local_notice = SourceControlNotice::git_status_cli_only();
+    let server_notice = SourceControlNotice {
+        code: ServerErrorCode::ScDocNotFound,
+        detail: None,
+    };
+
+    assert!(should_clear_mobile_source_control_local_notice(
+        SidebarView::SourceControl,
+        Some(&local_notice),
+    ));
+    assert!(!should_clear_mobile_source_control_local_notice(
+        SidebarView::Explorer,
+        Some(&local_notice),
+    ));
+    assert!(!should_clear_mobile_source_control_local_notice(
+        SidebarView::SourceControl,
+        Some(&server_notice),
+    ));
+    assert!(!should_clear_mobile_source_control_local_notice(
+        SidebarView::SourceControl,
+        None,
     ));
 }

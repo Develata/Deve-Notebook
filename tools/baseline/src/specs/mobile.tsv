@@ -279,7 +279,9 @@ contains	apps/web/src/components/mobile_layout/chat_sheet.rs	data-deve-mobile-ch
 contains	apps/web/src/components/mobile_layout/chat_sheet/tests.rs	fn mobile_chat_keyboard_sheet_stays_above_keyboard()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	pub(crate) fn mobile_bottom_bar_visible(
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open.get()
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	should_clear_mobile_source_control_local_notice(
 contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_chat_keyboard_hides_bottom_bar()
+contains	apps/web/src/components/mobile_layout/layout_frame/tests.rs	fn mobile_menu_open_clears_stale_source_control_local_command_notice()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-013
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-013	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-013	run: cargo test -p deve_web mobile_chat_readability -- --nocapture
