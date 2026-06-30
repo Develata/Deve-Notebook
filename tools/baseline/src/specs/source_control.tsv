@@ -105,6 +105,11 @@ contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disa
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_text
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_reports_no_changes_when_commit_source_empty
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_visible true
+contains	apps/web/src/components/sidebar/source_control/changes.rs	data-deve-source-control-empty-state=source_control_empty_state_marker()
+contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	data-deve-source-control-read-gate=source_control_read_gate_marker()
+contains	apps/web/src/components/sidebar/source_control/staged_section.rs	data-deve-source-control-section="staged"
+contains	apps/web/src/components/sidebar/source_control/unstaged_section.rs	data-deve-source-control-section="unstaged"
+contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	data-deve-source-control-section="confirmed"
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	should_show_confirmed_open_diff_action
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	data-deve-mobile-touch-target="source-control-confirmed-open-diff-action"
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_open_diff_action_policy

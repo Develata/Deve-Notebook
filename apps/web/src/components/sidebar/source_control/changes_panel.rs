@@ -10,13 +10,20 @@ pub(crate) fn changes_panel_visible(visible: bool, read_blocked: bool) -> bool {
     visible && !read_blocked
 }
 
+pub(crate) fn source_control_read_gate_marker() -> &'static str {
+    "visible"
+}
+
 #[component]
 pub fn ChangesPanel(visible: RwSignal<bool>) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
 
     view! {
         <Show when=move || changes_panel_visible(visible.get(), core.read_block.get().is_some())>
-            <div class="border-t border-default">
+            <div
+                class="border-t border-default"
+                data-deve-source-control-read-gate=source_control_read_gate_marker()
+            >
                 <Changes />
             </div>
         </Show>
@@ -25,12 +32,17 @@ pub fn ChangesPanel(visible: RwSignal<bool>) -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
-    use super::changes_panel_visible;
+    use super::{changes_panel_visible, source_control_read_gate_marker};
 
     #[test]
     fn mobile_source_control_read_gate_renders_panel() {
         assert!(changes_panel_visible(true, false));
         assert!(!changes_panel_visible(true, true));
         assert!(!changes_panel_visible(false, false));
+    }
+
+    #[test]
+    fn mobile_source_control_read_gate_marker_is_stable() {
+        assert_eq!(source_control_read_gate_marker(), "visible");
     }
 }

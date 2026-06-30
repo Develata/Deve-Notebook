@@ -40,7 +40,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
     }
 
     view! {
-        <div>
+        <div data-deve-source-control-section="staged">
             <div
                 class=section_header_class()
                 data-deve-mobile-touch-target="source-control-section-header"

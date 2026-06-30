@@ -16,6 +16,10 @@ use super::confirmed_section::ConfirmedSection;
 use super::staged_section::StagedSection;
 use super::unstaged_section::UnstagedSection;
 
+pub(crate) fn source_control_empty_state_marker() -> &'static str {
+    "clean"
+}
+
 /// 变更列表主组件
 ///
 /// 职责:
@@ -50,7 +54,10 @@ pub fn Changes() -> impl IntoView {
                     <div>
                         {if staged.is_empty() && unstaged.is_empty() && confirmed.is_empty() {
                             view! {
-                                <div class="px-3 py-6 text-xs text-muted text-center">
+                                <div
+                                    class="px-3 py-6 text-xs text-muted text-center"
+                                    data-deve-source-control-empty-state=source_control_empty_state_marker()
+                                >
                                     {t::source_control::no_changes(locale.get())}
                                 </div>
                             }.into_any()
@@ -79,7 +86,7 @@ pub(crate) fn should_request_changes(
 
 #[cfg(test)]
 mod tests {
-    use super::should_request_changes;
+    use super::{should_request_changes, source_control_empty_state_marker};
 
     #[test]
     fn mobile_source_control_read_gate_allows_readonly_refresh() {
@@ -88,5 +95,10 @@ mod tests {
         assert!(!should_request_changes(true, true, false, false));
         assert!(!should_request_changes(true, false, true, false));
         assert!(!should_request_changes(true, false, false, true));
+    }
+
+    #[test]
+    fn mobile_source_control_clean_empty_state_marker_is_stable() {
+        assert_eq!(source_control_empty_state_marker(), "clean");
     }
 }

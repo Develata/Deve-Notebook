@@ -24,7 +24,7 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
     }
 
     view! {
-        <div>
+        <div data-deve-source-control-section="confirmed">
             <div
                 class=section_header_class()
                 data-deve-mobile-touch-target="source-control-section-header"
