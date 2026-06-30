@@ -79,6 +79,10 @@ fn menu_icon(icon: ContextActionIcon, class: &str) -> AnyView {
         ContextActionIcon::Rename => view! { <icons::Pencil class=cls/> }.into_any(),
         ContextActionIcon::Copy => view! { <icons::Copy class=cls/> }.into_any(),
         ContextActionIcon::OpenInNewWindow => view! { <icons::ExternalLink class=cls/> }.into_any(),
+        ContextActionIcon::CopyAbsolutePath => view! { <icons::Copy class=cls/> }.into_any(),
+        ContextActionIcon::RevealInSystemExplorer => {
+            view! { <icons::ExternalLink class=cls/> }.into_any()
+        }
         ContextActionIcon::MoveTo => view! { <icons::FolderInput class=cls/> }.into_any(),
         ContextActionIcon::Delete => view! { <icons::Trash2 class=cls/> }.into_any(),
         ContextActionIcon::ExportPdf => view! { <icons::Download class=cls/> }.into_any(),

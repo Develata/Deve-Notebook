@@ -2,4 +2,5 @@
 //!   - 04_repository#repo-scope-runtime
 //!   - 07_network#server-ws-runtime
 //!
+pub mod host_file;
 pub mod http;

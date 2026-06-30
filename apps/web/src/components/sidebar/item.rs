@@ -58,10 +58,18 @@ pub fn FileTreeItem(node: FileNode, #[prop(default = 0)] depth: usize) -> impl I
 
     // 构建统一的操作处理程序
     let delete_req = actions.on_delete.clone();
+    let copy_absolute_path = actions.on_copy_absolute_path.clone();
+    let reveal_in_system_explorer = actions.on_reveal_in_system_explorer.clone();
     let is_readonly = actions.is_readonly;
     let context_action_readiness = actions.context_action_readiness;
     let open_search = actions.on_open_search.clone();
-    let handle_action = create_action_handler(context_action_readiness, delete_req, open_search);
+    let handle_action = create_action_handler(
+        context_action_readiness,
+        delete_req,
+        open_search,
+        copy_absolute_path,
+        reveal_in_system_explorer,
+    );
 
     let on_close_clone = actions.on_menu_close.clone();
     let current_doc = actions.current_doc;

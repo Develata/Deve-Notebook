@@ -33,6 +33,9 @@ impl WsService {
         let (node_role, set_node_role) = signal(String::new());
         let (source_control_git_bridge, set_source_control_git_bridge) =
             signal("unknown".to_string());
+        let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(false);
+        let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
+            signal(false);
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (tx, rx) = unbounded::<ClientMessage>();
 
@@ -50,6 +53,10 @@ impl WsService {
             set_node_role,
             source_control_git_bridge,
             set_source_control_git_bridge,
+            host_file_copy_absolute_path,
+            set_host_file_copy_absolute_path,
+            host_file_reveal_in_system_explorer,
+            set_host_file_reveal_in_system_explorer,
             node_role_probe_failed,
             set_node_role_probe_failed,
             msg_seq,
@@ -66,10 +73,17 @@ impl WsService {
         self.set_node_role_probe_failed.set(false);
     }
 
+    pub(crate) fn set_host_file_actions_for_test(&self, copy_absolute_path: bool, reveal: bool) {
+        self.set_host_file_copy_absolute_path
+            .set(copy_absolute_path);
+        self.set_host_file_reveal_in_system_explorer.set(reveal);
+    }
+
     pub(crate) fn set_node_role_probe_failed_for_test(&self) {
         self.set_node_role.set(String::new());
         self.set_source_control_git_bridge
             .set("unknown".to_string());
+        self.set_host_file_actions_for_test(false, false);
         self.set_node_role_probe_failed.set(true);
     }
 

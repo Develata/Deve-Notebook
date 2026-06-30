@@ -43,6 +43,10 @@ pub struct WsService {
     set_node_role: WriteSignal<String>,
     pub source_control_git_bridge: ReadSignal<String>,
     set_source_control_git_bridge: WriteSignal<String>,
+    pub host_file_copy_absolute_path: ReadSignal<bool>,
+    set_host_file_copy_absolute_path: WriteSignal<bool>,
+    pub host_file_reveal_in_system_explorer: ReadSignal<bool>,
+    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     pub node_role_probe_failed: ReadSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
     pub msg_seq: ReadSignal<u64>,
@@ -67,6 +71,9 @@ impl WsService {
         let (node_role, set_node_role) = signal(String::new());
         let (source_control_git_bridge, set_source_control_git_bridge) =
             signal("unknown".to_string());
+        let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(false);
+        let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
+            signal(false);
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (tx, rx) = unbounded::<ClientMessage>();
         let lifecycle = ConnectionLifecycle::new();
@@ -90,6 +97,8 @@ impl WsService {
                 set_endpoint,
                 set_node_role,
                 set_source_control_git_bridge,
+                set_host_file_copy_absolute_path,
+                set_host_file_reveal_in_system_explorer,
                 set_node_role_probe_failed,
                 writer_ready_reset,
             },
@@ -111,6 +120,10 @@ impl WsService {
             set_node_role,
             source_control_git_bridge,
             set_source_control_git_bridge,
+            host_file_copy_absolute_path,
+            set_host_file_copy_absolute_path,
+            host_file_reveal_in_system_explorer,
+            set_host_file_reveal_in_system_explorer,
             node_role_probe_failed,
             set_node_role_probe_failed,
             msg_seq,
@@ -157,10 +170,16 @@ impl WsService {
         &self,
         summary: impl Into<String>,
         source_control_git_bridge: impl Into<String>,
+        host_file_copy_absolute_path: bool,
+        host_file_reveal_in_system_explorer: bool,
     ) {
         self.set_node_role.set(summary.into());
         self.set_source_control_git_bridge
             .set(source_control_git_bridge.into());
+        self.set_host_file_copy_absolute_path
+            .set(host_file_copy_absolute_path);
+        self.set_host_file_reveal_in_system_explorer
+            .set(host_file_reveal_in_system_explorer);
         self.set_node_role_probe_failed.set(false);
     }
 
@@ -172,6 +191,8 @@ impl WsService {
         self.set_node_role.set(String::new());
         self.set_source_control_git_bridge
             .set("unknown".to_string());
+        self.set_host_file_copy_absolute_path.set(false);
+        self.set_host_file_reveal_in_system_explorer.set(false);
         self.set_node_role_probe_failed.set(probe_failed);
     }
 

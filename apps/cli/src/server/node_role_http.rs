@@ -58,8 +58,16 @@ fn role_payload(r: &node_role::NodeRole) -> serde_json::Value {
         "source_control": {
             "git_bridge": r.source_control.git_bridge,
         },
+        "host_file_actions": host_file_actions_payload(&node_role::host_file_actions_for(r)),
         "p2p": p2p_payload(&r.p2p),
         "native_service": r.native_service.as_ref().map(native_service_payload),
+    })
+}
+
+fn host_file_actions_payload(summary: &node_role::HostFileActionSummary) -> serde_json::Value {
+    serde_json::json!({
+        "copy_absolute_path": summary.copy_absolute_path,
+        "reveal_in_system_explorer": summary.reveal_in_system_explorer,
     })
 }
 
@@ -129,6 +137,7 @@ mod tests {
         assert_eq!(payload["repo_health"]["healthy"], 1);
         assert_eq!(payload["repo_health"]["degraded"], 1);
         assert_eq!(payload["source_control"]["git_bridge"], "mirror");
+        assert_eq!(payload["host_file_actions"]["copy_absolute_path"], true);
         assert_eq!(payload["native_service"], serde_json::Value::Null);
     }
 
@@ -266,5 +275,30 @@ mod tests {
         assert_eq!(payload["native_service"]["offline"]["retryable"], true);
         assert!(payload["native_service"]["offline"].get("reason").is_none());
         assert!(!payload.to_string().contains("AppData"));
+    }
+
+    #[test]
+    fn host_file_actions_payload_does_not_expose_paths() {
+        let payload = role_payload(&node_role::NodeRole {
+            role: "proxy".into(),
+            ws_port: 3002,
+            main_port: 3001,
+            version: "0.0.1".into(),
+            profile: "standard".into(),
+            delivery: "embedded-frontend".into(),
+            environment: "production".into(),
+            repo_health: node_role::RepoHealthSummary::unknown(),
+            source_control: node_role::SourceControlSummary::unknown(),
+            p2p: node_role::P2pSummary::disabled(),
+            native_service: None,
+        });
+
+        assert_eq!(payload["host_file_actions"]["copy_absolute_path"], false);
+        assert_eq!(
+            payload["host_file_actions"]["reveal_in_system_explorer"],
+            false
+        );
+        assert!(!payload.to_string().contains(":\\"));
+        assert!(!payload.to_string().contains("/Users/"));
     }
 }

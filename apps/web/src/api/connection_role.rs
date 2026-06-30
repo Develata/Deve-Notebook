@@ -18,6 +18,8 @@ pub(super) async fn fetch_node_role(
     ws_url: String,
     set_node_role: WriteSignal<String>,
     set_source_control_git_bridge: WriteSignal<String>,
+    set_host_file_copy_absolute_path: WriteSignal<bool>,
+    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
@@ -27,6 +29,8 @@ pub(super) async fn fetch_node_role(
         http_base_from_ws_url(&ws_url),
         set_node_role,
         set_source_control_git_bridge,
+        set_host_file_copy_absolute_path,
+        set_host_file_reveal_in_system_explorer,
         set_node_role_probe_failed,
         current_connection_epoch,
         probe_connection_epoch,
@@ -39,6 +43,8 @@ pub(super) async fn fetch_node_role_for_http_base(
     http_base: String,
     set_node_role: WriteSignal<String>,
     set_source_control_git_bridge: WriteSignal<String>,
+    set_host_file_copy_absolute_path: WriteSignal<bool>,
+    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
@@ -54,6 +60,8 @@ pub(super) async fn fetch_node_role_for_http_base(
             &lifecycle,
             set_node_role,
             set_source_control_git_bridge,
+            set_host_file_copy_absolute_path,
+            set_host_file_reveal_in_system_explorer,
             set_node_role_probe_failed,
             current_connection_epoch,
             probe_connection_epoch,
@@ -66,6 +74,8 @@ pub(super) async fn fetch_node_role_for_http_base(
         &lifecycle,
         set_node_role,
         set_source_control_git_bridge,
+        set_host_file_copy_absolute_path,
+        set_host_file_reveal_in_system_explorer,
         set_node_role_probe_failed,
         current_connection_epoch,
         probe_connection_epoch,
@@ -83,6 +93,8 @@ pub(crate) async fn probe_node_role_for_http_base(
 pub(crate) struct NodeRoleProbeResult {
     pub summary: String,
     pub source_control_git_bridge: String,
+    pub host_file_copy_absolute_path: bool,
+    pub host_file_reveal_in_system_explorer: bool,
 }
 
 impl NodeRoleProbeResult {
@@ -90,6 +102,11 @@ impl NodeRoleProbeResult {
         is_node_role_payload(json).then(|| Self {
             summary: format_node_role_summary(json),
             source_control_git_bridge: source_control_git_bridge(json).to_string(),
+            host_file_copy_absolute_path: host_file_action_bool(json, "copy_absolute_path"),
+            host_file_reveal_in_system_explorer: host_file_action_bool(
+                json,
+                "reveal_in_system_explorer",
+            ),
         })
     }
 }
@@ -136,6 +153,8 @@ fn apply_node_role_probe_success(
     lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
     set_source_control_git_bridge: WriteSignal<String>,
+    set_host_file_copy_absolute_path: WriteSignal<bool>,
+    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
@@ -149,6 +168,14 @@ fn apply_node_role_probe_success(
             set_source_control_git_bridge,
             result.source_control_git_bridge,
         )
+        && lifecycle.try_set(
+            set_host_file_copy_absolute_path,
+            result.host_file_copy_absolute_path,
+        )
+        && lifecycle.try_set(
+            set_host_file_reveal_in_system_explorer,
+            result.host_file_reveal_in_system_explorer,
+        )
         && lifecycle.try_set(set_node_role_probe_failed, false)
 }
 
@@ -156,6 +183,8 @@ fn apply_node_role_probe_failure(
     lifecycle: &ConnectionLifecycle,
     set_node_role: WriteSignal<String>,
     set_source_control_git_bridge: WriteSignal<String>,
+    set_host_file_copy_absolute_path: WriteSignal<bool>,
+    set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     set_node_role_probe_failed: WriteSignal<bool>,
     current_connection_epoch: ReadSignal<u64>,
     probe_connection_epoch: u64,
@@ -165,6 +194,8 @@ fn apply_node_role_probe_failure(
     }
     lifecycle.try_set(set_node_role, String::new())
         && lifecycle.try_set(set_source_control_git_bridge, "unknown".to_string())
+        && lifecycle.try_set(set_host_file_copy_absolute_path, false)
+        && lifecycle.try_set(set_host_file_reveal_in_system_explorer, false)
         && lifecycle.try_set(set_node_role_probe_failed, true)
 }
 
@@ -234,6 +265,9 @@ fn is_node_role_payload(json: &serde_json::Value) -> bool {
         && json
             .get("source_control")
             .is_some_and(is_source_control_payload)
+        && json
+            .get("host_file_actions")
+            .is_some_and(is_host_file_actions_payload)
 }
 
 fn format_repo_health(json: &serde_json::Value) -> String {
@@ -263,6 +297,13 @@ fn source_control_git_bridge(json: &serde_json::Value) -> &str {
     normalize_git_bridge_mode(str_field(source_control, "git_bridge", "unknown"))
 }
 
+fn host_file_action_bool(json: &serde_json::Value, key: &str) -> bool {
+    json.get("host_file_actions")
+        .and_then(|actions| actions.get(key))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
 fn is_repo_health_payload(json: &serde_json::Value) -> bool {
     has_str_field(json, "status")
         && has_u64_field(json, "local_total")
@@ -274,6 +315,16 @@ fn is_source_control_payload(json: &serde_json::Value) -> bool {
     json.get("git_bridge")
         .and_then(serde_json::Value::as_str)
         .is_some_and(|mode| matches!(mode, "mirror" | "off" | "unknown"))
+}
+
+fn is_host_file_actions_payload(json: &serde_json::Value) -> bool {
+    json.get("copy_absolute_path")
+        .and_then(serde_json::Value::as_bool)
+        .is_some()
+        && json
+            .get("reveal_in_system_explorer")
+            .and_then(serde_json::Value::as_bool)
+            .is_some()
 }
 
 fn has_str_field(json: &serde_json::Value, key: &str) -> bool {

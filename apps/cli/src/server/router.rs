@@ -104,6 +104,14 @@ pub fn build_app_with_native_session_and_p2p(
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .route(
+            "/api/repo/host-file-path",
+            get(handlers::repo::host_file::absolute_path),
+        )
+        .route(
+            "/api/repo/host-file-reveal",
+            post(handlers::repo::host_file::reveal),
+        )
+        .route(
             "/api/repo/graph",
             get(handlers::repo::http::graph_projection),
         )

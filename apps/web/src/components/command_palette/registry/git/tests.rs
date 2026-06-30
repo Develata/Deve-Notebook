@@ -221,7 +221,7 @@ fn command_palette_git_bridge_mode_reads_session_signal() {
     owner.with(|| {
         provide_source_control_context();
         let ws = WsService::new_for_test(ConnectionStatus::Connected);
-        ws.complete_foreground_node_role_reprobe("main", "off");
+        ws.complete_foreground_node_role_reprobe("main", "off", false, false);
         provide_session_client(ws);
         let (_, set_show) = signal(true);
 
@@ -243,7 +243,7 @@ fn command_palette_git_bridge_mode_updates_after_node_role_probe() {
 
         assert!(git_status_enabled_when(commands).contains("source_control.git_bridge=unknown"));
 
-        ws.complete_foreground_node_role_reprobe("main", "off");
+        ws.complete_foreground_node_role_reprobe("main", "off", false, false);
 
         assert!(git_status_enabled_when(commands).contains("source_control.git_bridge=off"));
     });

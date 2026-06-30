@@ -36,6 +36,8 @@
 - `Home`、`Open`、`Command` 等入口应可用。
 - `Open in New Window` 应保留现有 query context，并正确追加文档参数。
 - 文件树右键菜单应由 Context Action registry 投影；触发时提交 action intent，并在 handler 中重新 resolve。
+- 当当前后端声明 host-file capability 时，文件树右键菜单应显示 `复制绝对路径` 与 `在系统资源管理器中显示`；前者复制后端返回的 canonical absolute path，后者请求后端/native adapter 在宿主系统文件管理器中 reveal 该 projection target。
+- 普通远端 Web / VPS / 不支持的 native adapter 不应显示 host-file 菜单项；即使旧客户端直接请求，后端也应 fail-closed。
 
 ## 非目标
 
@@ -88,10 +90,12 @@
 
 1. 打开文件树节点右键菜单。
 2. 检查菜单动作来自 Context Action registry projection。
-3. 在 readonly 状态或不匹配 surface/target 下触发动作。
+3. 检查本机 host-file capability 可用时菜单包含 `复制绝对路径` 与 `在系统资源管理器中显示`。
+4. 在 readonly 状态、不匹配 surface/target 或不支持 host-file capability 下触发动作。
 
 期望结果：
 
 - 菜单只展示 resolver 允许的动作。
 - handler 会重新 resolve intent；resolver miss fail-closed 且无副作用。
 - external action 默认不投影、不执行。
+- host-file action 不由前端拼绝对路径或执行系统命令；复制路径使用后端 canonical path，系统资源管理器 reveal 由后端/native adapter 受控执行。

@@ -23,6 +23,8 @@ pub struct ContextActionReadiness {
     pub scope: ContextActionScope,
     pub readonly: bool,
     pub write_blocked: bool,
+    pub host_file_copy_absolute_path: bool,
+    pub host_file_reveal_in_system_explorer: bool,
 }
 
 impl ContextActionReadiness {
@@ -31,7 +33,19 @@ impl ContextActionReadiness {
             scope,
             readonly,
             write_blocked,
+            host_file_copy_absolute_path: false,
+            host_file_reveal_in_system_explorer: false,
         }
+    }
+
+    pub fn with_host_file_actions(
+        mut self,
+        copy_absolute_path: bool,
+        reveal_in_system_explorer: bool,
+    ) -> Self {
+        self.host_file_copy_absolute_path = copy_absolute_path;
+        self.host_file_reveal_in_system_explorer = reveal_in_system_explorer;
+        self
     }
 
     #[cfg(test)]

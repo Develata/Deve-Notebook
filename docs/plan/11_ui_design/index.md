@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-26`
+- `Last Review`: `2026-06-30`
 - `Counterpart Feature`: `docs/features/08_ui_design.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`
 - `Primary Code Areas`: `apps/web/src/context_action/`, `apps/web/src/components/`, `apps/web/src/hooks/use_core/callbacks*.rs`, `apps/web/src/hooks/use_core/navigation.rs`, `apps/web/src/components/mobile_layout/`
@@ -124,6 +124,9 @@ Context action 是 command/control 体系在具体对象上的投影，不是某
 - `ExportPdf` 可作为 dormant `ExternalProcess` descriptor 注册在 Markdown target 上，但在 server/native adapter 明确启用前 MUST NOT 被 Web 投影为可执行 action。
 - 外部动作图标只是用户可见 provenance 信号，不是安全边界。
 - `ShellLocal` action 只能改变浏览器 shell 状态，例如打开新窗口；不得写 document、repo、source-control 或 projection authority。
+- `CopyAbsolutePath` 与 `RevealInSystemExplorer` 这类 host-file action MUST 建模为 read-only `BackendNativeIntent`，只在当前 node role 明确声明 host-file capability 时投影；普通远端 Web / VPS / 不支持的 native adapter MUST 隐藏这些 action，并在后端 fail-closed。
+- host-file action 的执行域 MUST 重新解析当前 repo scope，并基于 `03_storage/projection#projection-locator-contract` 计算 projection workspace root；后端必须 canonicalize root 与 target，确认 target 仍位于 workspace 内，且不得暴露 `.git/`、`.notegit/` 内部路径。
+- Web 前端 MUST NOT 拼接、缓存或推断绝对路径，也不得直接执行系统资源管理器、shell command、exe 或 script；前端只能提交 `ContextActionIntent` 并调用后端返回 canonical path 或执行受控 reveal。
 
 ### 3.4 Layout Tokens and Layer Registry
 

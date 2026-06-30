@@ -24,6 +24,8 @@ pub(super) struct ConnectedSessionSignals {
     pub set_msg_queue: WriteSignal<VecDeque<(u64, u64, deve_core::protocol::ServerMessage)>>,
     pub set_node_role: WriteSignal<String>,
     pub set_source_control_git_bridge: WriteSignal<String>,
+    pub set_host_file_copy_absolute_path: WriteSignal<bool>,
+    pub set_host_file_reveal_in_system_explorer: WriteSignal<bool>,
     pub set_node_role_probe_failed: WriteSignal<bool>,
     pub writer_ready_reset: WriterReadyResetSignals,
     pub connection_epoch: u64,
@@ -131,6 +133,12 @@ fn reset_node_role_runtime(signals: &ConnectedSessionSignals) -> bool {
             .try_set(signals.set_source_control_git_bridge, "unknown".to_string())
         && signals
             .lifecycle
+            .try_set(signals.set_host_file_copy_absolute_path, false)
+        && signals
+            .lifecycle
+            .try_set(signals.set_host_file_reveal_in_system_explorer, false)
+        && signals
+            .lifecycle
             .try_set(signals.set_node_role_probe_failed, false)
 }
 
@@ -163,6 +171,9 @@ mod tests {
         let (node_role, set_node_role) = signal("main".to_string());
         let (source_control_git_bridge, set_source_control_git_bridge) =
             signal("mirror".to_string());
+        let (host_file_copy_absolute_path, set_host_file_copy_absolute_path) = signal(true);
+        let (host_file_reveal_in_system_explorer, set_host_file_reveal_in_system_explorer) =
+            signal(true);
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(true);
         let (writer_ready_repo_id, set_writer_ready_repo_id) = signal(Some("repo-a".to_string()));
         let (writer_ready_scope_nonce, set_writer_ready_scope_nonce) = signal(Some(7u64));
@@ -175,6 +186,8 @@ mod tests {
             set_msg_queue,
             set_node_role,
             set_source_control_git_bridge,
+            set_host_file_copy_absolute_path,
+            set_host_file_reveal_in_system_explorer,
             set_node_role_probe_failed,
             writer_ready_reset: WriterReadyResetSignals::new(
                 set_writer_ready_repo_id,
@@ -192,6 +205,8 @@ mod tests {
         assert_eq!(status.get_untracked(), ConnectionStatus::Disconnected);
         assert_eq!(node_role.get_untracked(), "");
         assert_eq!(source_control_git_bridge.get_untracked(), "unknown");
+        assert!(!host_file_copy_absolute_path.get_untracked());
+        assert!(!host_file_reveal_in_system_explorer.get_untracked());
         assert!(!node_role_probe_failed.get_untracked());
         assert!(writer_ready_repo_id.get_untracked().is_none());
         assert!(writer_ready_scope_nonce.get_untracked().is_none());

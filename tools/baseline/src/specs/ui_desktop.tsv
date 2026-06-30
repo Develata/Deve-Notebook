@@ -141,9 +141,9 @@ contains	apps/web/src/components/sidebar/repo_switcher.rs	data-deve-repo-switche
 contains	apps/web/src/components/sidebar/repo_switcher.rs	type="button"
 contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menu"
 contains	apps/web/src/components/sidebar/repo_switcher.rs	role="menuitem"
-contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_trigger_click_toggles_menu()
-contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_outside_click_closes_menu()
-contains	apps/web/src/components/sidebar/repo_switcher.rs	fn repo_switcher_item_click_closes_menu()
+contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_trigger_click_toggles_menu()
+contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_outside_click_closes_menu()
+contains	apps/web/src/components/sidebar/repo_switcher/tests.rs	fn repo_switcher_item_click_closes_menu()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-WEB-006
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	run: scripts/check-ui-desktop-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-006	run: cd apps/web && NO_COLOR=true BROWSERSLIST_IGNORE_OLD_DATA=true trunk build
@@ -174,6 +174,10 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_acti
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_handler_re_resolves_intent true
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_surface_target_mismatch_no_side_effect true
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: context_action_readonly_current_state_blocks_writes true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_host_action_capability_controls_projection true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_copy_absolute_path_backend_canonical_path true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_reveal_in_system_explorer_backend_native_route true
+case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_host_action_unsupported_fail_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_external_action_provenance_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_external_action_default_unavailable true
 case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_export_pdf_default_unavailable true
@@ -182,6 +186,10 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-WEB-007	cli_assert: file_tree_ex
 contains	docs/acceptance-bindings.tsv	UI-WEB-007|manual-chrome|docs/features/08_ui_design_01_web.md|file tree context action registry workflow
 contains	docs/features/08_ui_design_01_web.md	文件树右键菜单应由 Context Action registry 投影
 contains	docs/plan/11_ui_design/index.md	Context Action resolver 属于 Flow Coordination
+contains	docs/features/08_ui_design_01_web.md	复制绝对路径
+contains	docs/features/08_ui_design_01_web.md	在系统资源管理器中显示
+contains	docs/plan/11_ui_design/index.md	CopyAbsolutePath
+contains	docs/plan/11_ui_design/index.md	RevealInSystemExplorer
 contains	docs/plan/14_commands.md	ContextActionIntent
 contains	apps/web/src/context_action/mod.rs	pub use intent::{ContextActionIntent, ContextActionResolveRequest};
 contains	apps/web/src/context_action/projection.rs	context_action_descriptor_resolves
