@@ -5,7 +5,9 @@
 //!
 
 use crate::components::activity_bar::SidebarView;
+use crate::components::mobile_layout::source_control_notice::clear_mobile_source_control_notice_for_drawer;
 use crate::components::sidebar::Sidebar;
+use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use crate::runtime::{document_client::DocumentClient, scope_client::ScopeClient};
 use leptos::prelude::*;
@@ -32,12 +34,21 @@ pub fn LeftDrawer(
     let search_control = expect_context::<crate::components::main_layout::SearchControl>();
     let document = expect_context::<DocumentClient>();
     let scope = expect_context::<ScopeClient>();
+    let source_control = use_context::<SourceControlContext>();
 
     let title = Signal::derive(move || match active_view.get() {
         SidebarView::Explorer => t::sidebar::explorer(locale.get()).to_string(),
         SidebarView::Search => t::sidebar::search(locale.get()).to_string(),
         SidebarView::SourceControl => t::sidebar::source_control(locale.get()).to_string(),
         SidebarView::Extensions => t::sidebar::extensions(locale.get()).to_string(),
+    });
+
+    Effect::new(move |_| {
+        clear_mobile_source_control_notice_for_drawer(
+            open.get(),
+            active_view.get(),
+            source_control.as_ref(),
+        );
     });
 
     view! {

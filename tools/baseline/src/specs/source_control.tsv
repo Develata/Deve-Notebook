@@ -21,6 +21,8 @@ contains	apps/web/src/i18n/command_palette.rs	git_mirror
 contains	apps/web/src/i18n/command_palette.rs	git_export_mirror
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_command_notice_survives_active_view()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_cli_notice()
+contains	apps/web/src/components/mobile_layout/drawers/left.rs	clear_mobile_source_control_notice_for_drawer(
 absent	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	clear_tracked_mobile_source_control_notice_for_view
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web establish_branch_command -- --nocapture
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004B
