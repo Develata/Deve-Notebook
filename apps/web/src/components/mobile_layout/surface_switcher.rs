@@ -4,6 +4,8 @@
 mod model;
 mod rows;
 
+pub(crate) use self::model::mobile_surface_sheet_visible;
+
 use crate::components::editor_tabs::{EditorDiffTab, EditorDocumentTab, EditorTabKey};
 use crate::components::icons::{ChevronDown, FileText, SourceControl, X};
 use crate::hooks::use_core::diff_session::DiffSessionWire;
@@ -13,10 +15,10 @@ use leptos::prelude::*;
 
 use self::model::{
     mobile_surface_close_button_class, mobile_surface_close_touch_target,
-    mobile_surface_expanded_state, mobile_surface_sheet_visible, mobile_surface_summary,
-    mobile_surface_summary_badge_text, mobile_surface_summary_title_class,
-    mobile_surface_switcher_button_class, mobile_surface_switcher_next_open,
-    mobile_surface_switcher_touch_target, mobile_surface_type_label_marker,
+    mobile_surface_expanded_state, mobile_surface_summary, mobile_surface_summary_badge_text,
+    mobile_surface_summary_title_class, mobile_surface_switcher_button_class,
+    mobile_surface_switcher_next_open, mobile_surface_switcher_touch_target,
+    mobile_surface_type_label_marker,
 };
 use self::rows::{SurfaceDiffRow, SurfaceDocumentRow};
 

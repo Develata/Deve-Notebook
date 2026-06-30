@@ -12,7 +12,7 @@ use super::layout_backdrop::MobileDrawerBackdrop;
 use super::layout_banner::MobileSyncBanner;
 use super::outline_button::OutlineToggleButton;
 use super::surface_runtime::collapse_surface_switcher_on_runtime_transition;
-use super::surface_switcher::MobileSurfaceSwitcher;
+use super::surface_switcher::{MobileSurfaceSwitcher, mobile_surface_sheet_visible};
 use super::toolbar::MobileAccessoryToolbar;
 use crate::components::activity_bar::SidebarView;
 use crate::components::editor_tabs::{
@@ -31,9 +31,9 @@ use leptos::prelude::*;
 pub(crate) fn mobile_bottom_bar_visible(
     keyboard_offset: i32,
     chat_expanded: bool,
-    surface_switcher_open: bool,
+    surface_switcher_sheet_visible: bool,
 ) -> bool {
-    keyboard_offset <= 0 && !chat_expanded && !surface_switcher_open
+    keyboard_offset <= 0 && !chat_expanded && !surface_switcher_sheet_visible
 }
 
 pub(crate) fn mobile_accessory_toolbar_visible(
@@ -42,14 +42,14 @@ pub(crate) fn mobile_accessory_toolbar_visible(
     drawer_open: bool,
     keyboard_offset: i32,
     chat_expanded: bool,
-    surface_switcher_open: bool,
+    surface_switcher_sheet_visible: bool,
 ) -> bool {
     has_doc
         && !diff_open
         && !drawer_open
         && keyboard_offset > 0
         && !chat_expanded
-        && !surface_switcher_open
+        && !surface_switcher_sheet_visible
 }
 
 #[component]
@@ -97,7 +97,19 @@ pub fn MobileLayoutFrame(
         },
         current_editor_doc,
     );
+    let surface_doc_tabs = tabs.doc_tabs;
+    let surface_diff_tabs = tabs.diff_tabs;
+    let surface_switcher_has_tabs = Signal::derive(move || {
+        !surface_doc_tabs.get().is_empty() || !surface_diff_tabs.get().is_empty()
+    });
     let (surface_switcher_open, set_surface_switcher_open) = signal(false);
+    let surface_switcher_sheet_visible = Signal::derive(move || {
+        mobile_surface_sheet_visible(
+            surface_switcher_open.get(),
+            drawer_open.get(),
+            surface_switcher_has_tabs.get(),
+        )
+    });
     let pending_branch_switch = editor.pending_branch_switch;
     let pending_repo_switch = scope.pending_repo_switch;
     collapse_surface_switcher_on_runtime_transition(
@@ -198,7 +210,7 @@ pub fn MobileLayoutFrame(
                         drawer_open.get(),
                         keyboard_offset.get(),
                         chat_expanded.get(),
-                        surface_switcher_open.get(),
+                        surface_switcher_sheet_visible.get(),
                     )
                 })
             />
@@ -207,7 +219,7 @@ pub fn MobileLayoutFrame(
                 keyboard_offset=keyboard_offset
                 drawer_open=drawer_open
                 diff_open=Signal::derive(move || diff_content.get().is_some())
-                surface_switcher_open=surface_switcher_open
+                surface_switcher_sheet_visible=surface_switcher_sheet_visible
                 expanded=chat_expanded
                 set_expanded=set_chat_expanded
             />
@@ -216,7 +228,7 @@ pub fn MobileLayoutFrame(
                 mobile_bottom_bar_visible(
                     keyboard_offset.get(),
                     chat_expanded.get(),
-                    surface_switcher_open.get(),
+                    surface_switcher_sheet_visible.get(),
                 )
             }>
                 <MobileFooter />

@@ -13,14 +13,14 @@ pub(crate) fn should_show_mobile_chat_sheet(
     visible: bool,
     drawer_open: bool,
     diff_open: bool,
-    surface_switcher_open: bool,
+    surface_switcher_sheet_visible: bool,
     expanded: bool,
     keyboard_offset: i32,
 ) -> bool {
     visible
         && !drawer_open
         && !diff_open
-        && !surface_switcher_open
+        && !surface_switcher_sheet_visible
         && (expanded || keyboard_offset <= 0)
 }
 
@@ -28,10 +28,10 @@ pub(crate) fn mobile_chat_runtime_conflict_should_close(
     visible: bool,
     drawer_open: bool,
     diff_open: bool,
-    surface_switcher_open: bool,
+    surface_switcher_sheet_visible: bool,
     expanded: bool,
 ) -> bool {
-    expanded && (!visible || drawer_open || diff_open || surface_switcher_open)
+    expanded && (!visible || drawer_open || diff_open || surface_switcher_sheet_visible)
 }
 
 pub(crate) fn mobile_chat_sheet_style(expanded: bool, keyboard_offset: i32) -> String {
@@ -79,7 +79,7 @@ pub fn MobileChatSheet(
     keyboard_offset: ReadSignal<i32>,
     drawer_open: Signal<bool>,
     diff_open: Signal<bool>,
-    surface_switcher_open: ReadSignal<bool>,
+    surface_switcher_sheet_visible: Signal<bool>,
     expanded: ReadSignal<bool>,
     set_expanded: WriteSignal<bool>,
 ) -> impl IntoView {
@@ -98,7 +98,7 @@ pub fn MobileChatSheet(
             visible.get(),
             drawer_open.get(),
             diff_open.get(),
-            surface_switcher_open.get(),
+            surface_switcher_sheet_visible.get(),
             expanded.get(),
         ) {
             set_expanded.set(mobile_chat_after_close());
@@ -111,7 +111,7 @@ pub fn MobileChatSheet(
                 visible.get(),
                 drawer_open.get(),
                 diff_open.get(),
-                surface_switcher_open.get(),
+                surface_switcher_sheet_visible.get(),
                 expanded.get(),
                 keyboard_offset.get(),
             )
