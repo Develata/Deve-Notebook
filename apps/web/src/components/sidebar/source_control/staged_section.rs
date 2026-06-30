@@ -34,6 +34,14 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
         set_bulk_busy.set(false);
     });
 
+    Effect::new(move |_| {
+        let notice = core.notice.get();
+        let write_block = core.write_block.get();
+        if notice.is_some() || write_block.is_some() {
+            set_bulk_busy.set(false);
+        }
+    });
+
     if staged_count == 0 {
         return view! {}.into_any();
     }
