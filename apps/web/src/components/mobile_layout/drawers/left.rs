@@ -20,6 +20,10 @@ mod tabs;
 use header::LeftDrawerHeader;
 use tabs::LeftDrawerTabs;
 
+pub(super) fn left_drawer_content_marker(open: bool) -> Option<&'static str> {
+    open.then_some("visible")
+}
+
 #[component]
 pub fn LeftDrawer(
     active_view: ReadSignal<SidebarView>,
@@ -74,22 +78,39 @@ pub fn LeftDrawer(
                     })
                 />
 
-                <div class="flex-1 overflow-hidden px-2 pb-3" style="padding-bottom: env(safe-area-inset-bottom);">
-                    <div class="h-full overflow-y-auto">
-                        <Sidebar
-                            active_view=active_view
-                            docs=document.docs
-                            current_doc=document.current_doc
-                            is_readonly=scope.is_spectator
-                            on_select=Callback::new(move |id| {
-                                on_doc_select.run(id);
-                                on_close.run(())
-                            })
-                            on_delete=document.on_doc_delete
-                        />
+                <Show when=move || open.get()>
+                    <div
+                        class="flex-1 overflow-hidden px-2 pb-3"
+                        style="padding-bottom: env(safe-area-inset-bottom);"
+                        data-deve-mobile-drawer-content=move || left_drawer_content_marker(open.get())
+                    >
+                        <div class="h-full overflow-y-auto">
+                            <Sidebar
+                                active_view=active_view
+                                docs=document.docs
+                                current_doc=document.current_doc
+                                is_readonly=scope.is_spectator
+                                on_select=Callback::new(move |id| {
+                                    on_doc_select.run(id);
+                                    on_close.run(())
+                                })
+                                on_delete=document.on_doc_delete
+                            />
+                        </div>
                     </div>
-                </div>
+                </Show>
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::left_drawer_content_marker;
+
+    #[test]
+    fn closed_mobile_left_drawer_does_not_render_panel_content() {
+        assert_eq!(left_drawer_content_marker(false), None);
+        assert_eq!(left_drawer_content_marker(true), Some("visible"));
     }
 }
