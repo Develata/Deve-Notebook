@@ -67,15 +67,17 @@
 - case_id: RENDER-LINK-001
   goal: 链接需 Ctrl/Cmd 激活。
   preconditions:
-    - 文档包含 [link](https://example.com)
+    - 文档包含 [link](https://example.com) 与 [bad](javascript:alert(1))
   steps:
     - ui_click: "link"
     - ui_keydown: "Ctrl"
     - ui_click: "link"
+    - ui_click: "bad"
     - ui_keyup: "Ctrl"
   assertions:
     - ui_assert: navigation_not_triggered_first_click true
     - ui_assert: navigation_triggered_second_click true
+    - ui_assert: unsafe_scheme_not_opened true
 
 - case_id: RENDER-LINK-002
   goal: 外链安全属性强制。

@@ -70,6 +70,9 @@ contains	apps/web/src/hooks/use_ctrl_key.rs	10_rendering#link-activation-gate
 contains	apps/web/src/components/main_layout.rs	use_ctrl_key();
 contains	apps/web/js/extensions/hyperlink_click.js	if (!event.ctrlKey && !event.metaKey) return;
 contains	apps/web/js/extensions/hyperlink_click.js	if (event.button !== 0) return;
+contains	apps/web/js/extensions/hyperlink_click.js	function isSafeMarkdownHref(url)
+contains	apps/web/js/extensions/hyperlink_click.js	if (!isSafeMarkdownHref(trimmed)) return null;
+contains	apps/web/js/extensions/hyperlink_click.js	if (!finalUrl) return;
 contains	apps/web/js/extensions/hyperlink_click.js	window.open(finalUrl, "_blank", "noopener,noreferrer")
 contains	apps/web/style/_typography.css	.is-ctrl-pressed .cm-link
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-WHITELIST-001

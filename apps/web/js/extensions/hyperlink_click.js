@@ -84,12 +84,34 @@ function findLinkAtPos(state, pos) {
  * 安全地打开 URL
  * 使用 noopener noreferrer 防止安全问题
  */
-function safeOpenUrl(url) {
-  // 补全协议 (如果缺失)
-  let finalUrl = url;
-  if (!/^https?:\/\//i.test(url) && !url.startsWith("mailto:")) {
-    finalUrl = "https://" + url;
+function isSafeMarkdownHref(url) {
+  if (!url || /[\u0000-\u001f\u007f]/.test(url)) return false;
+
+  const colon = url.indexOf(":");
+  if (colon === -1) return true;
+
+  const firstPathDelim = [url.indexOf("/"), url.indexOf("?"), url.indexOf("#")]
+    .filter((index) => index >= 0)
+    .reduce((min, index) => Math.min(min, index), Number.MAX_SAFE_INTEGER);
+  if (colon > firstPathDelim) return true;
+
+  const scheme = url.slice(0, colon).toLowerCase();
+  return scheme === "http" || scheme === "https" || scheme === "mailto";
+}
+
+export function externalUrlFromMarkdownHref(url) {
+  const trimmed = url.trim();
+  if (!isSafeMarkdownHref(trimmed)) return null;
+
+  if (/^https?:\/\//i.test(trimmed) || /^mailto:/i.test(trimmed)) {
+    return trimmed;
   }
+  return "https://" + trimmed;
+}
+
+function safeOpenUrl(url) {
+  const finalUrl = externalUrlFromMarkdownHref(url);
+  if (!finalUrl) return;
 
   // 使用 noopener noreferrer 安全打开
   const newWindow = window.open(finalUrl, "_blank", "noopener,noreferrer");
