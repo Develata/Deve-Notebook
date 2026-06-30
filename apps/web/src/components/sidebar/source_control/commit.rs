@@ -21,9 +21,10 @@ pub fn Commit() -> impl IntoView {
             <div class="flex flex-col gap-2">
                 <CommitMessageBox
                     locale
-                    write_block=controller.write_block
                     show_write_actions=controller.show_write_actions
                     can_prepare_commit=controller.can_prepare_commit
+                    commit_input_placeholder=controller.commit_input_placeholder
+                    prepare_commit_title=controller.prepare_commit_title
                     msg=controller.msg
                     set_msg=controller.set_msg
                     is_generating=controller.is_generating
@@ -33,10 +34,11 @@ pub fn Commit() -> impl IntoView {
 
                 <CommitActions
                     locale
-                    write_block=controller.write_block
                     show_write_actions=controller.show_write_actions
                     can_prepare_commit=controller.can_prepare_commit
                     can_commit_now=controller.can_commit_now
+                    prepare_commit_title=controller.prepare_commit_title
+                    commit_action_title=controller.commit_action_title
                     dropdown_open=controller.dropdown_open
                     on_commit=controller.on_commit
                     on_commit_and_push=controller.on_commit_and_push

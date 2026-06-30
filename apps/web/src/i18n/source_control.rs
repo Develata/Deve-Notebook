@@ -50,6 +50,14 @@ mod tests {
         assert_eq!(no_changes(Locale::En), "No changes");
         assert_eq!(no_changes(Locale::Zh), "没有更改");
         assert_eq!(
+            commit_disabled_no_changes(Locale::Zh),
+            "没有可提交的暂存或已确认账本更改"
+        );
+        assert_eq!(
+            commit_disabled_empty_message(Locale::En),
+            "Enter a commit message before committing"
+        );
+        assert_eq!(
             session_expired_hint(Locale::En),
             "Sign in again before staging, discarding, or committing changes."
         );

@@ -3,8 +3,6 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::icons::{Check, ChevronDown, Upload};
-use crate::components::sidebar::source_control::status_notice::blocked_title as blocked_status_title;
-use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, t};
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
@@ -23,10 +21,11 @@ fn commit_dropdown_after_outside_click() -> bool {
 #[component]
 pub fn CommitActions(
     locale: RwSignal<Locale>,
-    write_block: Signal<Option<RepoWriteBlock>>,
     show_write_actions: Memo<bool>,
     can_prepare_commit: Memo<bool>,
     can_commit_now: Memo<bool>,
+    prepare_commit_title: Memo<String>,
+    commit_action_title: Memo<String>,
     dropdown_open: RwSignal<bool>,
     on_commit: Callback<()>,
     on_commit_and_push: Callback<()>,
@@ -40,12 +39,7 @@ pub fn CommitActions(
                     if show_write_actions.get() { "rounded-l-[2px]" } else { "rounded-[2px]" }
                 )
                 disabled=move || !can_commit_now.get()
-                title=move || {
-                    write_block
-                        .get()
-                        .map(|block| blocked_status_title(locale.get(), block))
-                        .unwrap_or_else(|| t::source_control::commit(locale.get()).to_string())
-                }
+                title=move || commit_action_title.get()
                 on:click=move |_| {
                     dropdown_open.set(false);
                     on_commit.run(());
@@ -61,10 +55,11 @@ pub fn CommitActions(
                     disabled=move || !can_prepare_commit.get()
                     aria-label=move || t::sidebar::more_actions(locale.get())
                     title=move || {
-                        write_block
-                            .get()
-                            .map(|block| blocked_status_title(locale.get(), block))
-                            .unwrap_or_else(|| t::sidebar::more_actions(locale.get()).to_string())
+                        if can_prepare_commit.get() {
+                            t::sidebar::more_actions(locale.get()).to_string()
+                        } else {
+                            prepare_commit_title.get()
+                        }
                     }
                     aria-expanded=move || dropdown_open.get()
                     on:click=move |_| {
@@ -95,6 +90,7 @@ pub fn CommitActions(
                             type="button"
                             class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2"
                             disabled=move || !can_commit_now.get()
+                            title=move || commit_action_title.get()
                             on:click=move |_| {
                                 dropdown_open.set(false);
                                 on_commit.run(());
@@ -107,6 +103,7 @@ pub fn CommitActions(
                             type="button"
                             class="w-full text-left px-3 py-1.5 hover:bg-hover text-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled=move || !can_commit_now.get()
+                            title=move || commit_action_title.get()
                             on:click=move |_| {
                                 dropdown_open.set(false);
                                 on_commit_and_push.run(());
