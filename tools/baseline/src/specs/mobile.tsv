@@ -458,7 +458,9 @@ contains	apps/web/src/components/sidebar/source_control/changes.rs	fn mobile_sou
 contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobile_source_control_read_gate_renders_panel()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_read_gate_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_commit_touch_targets_min_size_bound()
-contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_source_control_read_gate_plain_entry_clears_only_git_cli_notice()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_only_git_cli_notice()
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	clear_tracked_mobile_source_control_notice_for_view(
+contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_view(
 contains	docs/acceptance-cases/17_mobile_surface_switcher.md	case_id: UI-MOB-021
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: cargo test -p deve_web mobile_surface -- --nocapture
