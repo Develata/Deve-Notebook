@@ -27,6 +27,7 @@ contains	apps/web/src/utils/markdown.rs	html_filter_allows_br_only
 contains	apps/web/src/utils/markdown.rs	link_rendering_adds_blank_target_and_rel
 contains	apps/web/src/utils/markdown.rs	link_rendering_rejects_script_scheme
 contains	apps/web/src/utils/markdown.rs	unsupported_highlight_syntax_stays_plain_text
+contains	apps/web/src/utils/markdown.rs	code_block_language_class_is_escaped
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-HEADING-001
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	run: scripts/check-rendering-baseline.sh
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	run: cargo test -p deve_web empty_atx_headings -- --nocapture

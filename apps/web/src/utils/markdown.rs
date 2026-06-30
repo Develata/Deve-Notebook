@@ -86,6 +86,7 @@ fn render_code_block(code: &str, lang: &str, apply_label: Option<&str>) -> Strin
     } else {
         format!("language-{}", lang)
     };
+    let escaped_lang_class = escape_html(&lang_class);
 
     match apply_label {
         Some(label) => {
@@ -94,13 +95,13 @@ fn render_code_block(code: &str, lang: &str, apply_label: Option<&str>) -> Strin
                 "<div class=\"markdown-code-block\"><div class=\"code-toolbar\"><button class=\"apply-code\" data-code=\"{}\">{}</button></div><pre><code class=\"{}\">{}</code></pre></div>",
                 encoded,
                 escape_html(label),
-                lang_class,
+                escaped_lang_class,
                 escaped
             )
         }
         None => format!(
             "<div class=\"markdown-code-block\"><pre><code class=\"{}\">{}</code></pre></div>",
-            lang_class, escaped
+            escaped_lang_class, escaped
         ),
     }
 }
@@ -235,6 +236,14 @@ mod tests {
         assert!(html.contains("markdown-code-block"));
         assert!(html.contains("<pre><code class=\"language-text\">"));
         assert!(html.contains("$not_math$"));
+    }
+
+    #[test]
+    fn code_block_language_class_is_escaped() {
+        let html = render_markdown("```rust\" onclick=\"alert(1)\nfn main() {}\n```", None);
+        assert!(html.contains("class=\"language-rust&quot;"));
+        assert!(!html.contains("onclick="));
+        assert!(html.contains("fn main() {}"));
     }
 
     #[test]
