@@ -178,6 +178,7 @@ contains	apps/web/src/components/sidebar/source_control/context_menu.rs	data-dev
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	role="menuitemcheckbox"
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	aria-checked=move || checked.get().to_string()
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
+contains	docs/acceptance-cases/04_diff.md	source_control_repo_context_confirmed_dirty_marker true
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_shortcut_prevents_textarea_default true
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_stage_discard_absent true
 contains	docs/acceptance-cases/04_diff.md	source_control_resource_group_headers_are_buttons true
@@ -187,6 +188,8 @@ contains	docs/acceptance-cases/04_diff.md	source_control_collapsible_headers_con
 contains	docs/acceptance-cases/04_diff.md	source_control_header_section_menu_exposes_checked_state true
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	change_item_action_surface(&entry, is_staged, has_conflict)
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	fn repo_branch_dirty_suffix
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	repo_branch_dirty_suffix_marks_confirmed_ledger_changes_dirty
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	open_diff(locale.get())
 contains	apps/web/src/components/sidebar/source_control/change_item_workspace_actions.rs	open_diff(locale.get())
 absent	apps/web/src/i18n/source_control/actions.rs	Open File
