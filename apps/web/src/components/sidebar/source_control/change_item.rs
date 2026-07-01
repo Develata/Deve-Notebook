@@ -12,10 +12,12 @@ use crate::components::sidebar::source_control::change_item_actions::ChangeItemA
 use crate::components::sidebar::source_control::change_item_content::ChangeItemContent;
 use crate::components::sidebar::source_control::change_item_meta::build_change_item_meta;
 use crate::components::sidebar::source_control::change_item_read_gate::can_open_change_item_diff;
-use crate::components::sidebar::source_control::touch_target::change_item_row_class;
+use crate::components::sidebar::source_control::touch_target::{
+    change_item_action_container_class, change_item_row_class,
+};
 use crate::hooks::use_core::{SourceControlContext, can_request_doc_diff};
 use crate::i18n::Locale;
-use deve_core::source_control::ChangeEntry;
+use deve_core::source_control::{ChangeDomain, ChangeEntry};
 use leptos::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -37,6 +39,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
     let has_conflict = entry.has_conflict;
     let can_open_diff = can_request_doc_diff(&entry);
+    let is_confirmed_ledger = entry.domain == ChangeDomain::ConfirmedLedger;
     let meta = build_change_item_meta(&entry);
     let entry_for_click = entry.clone();
 
@@ -79,8 +82,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             />
 
             <div class="flex items-center gap-2 pl-2">
-                // 移动端默认显示，桌面端保持 hover 显示，避免触屏下操作不可达。
-                <div class="flex items-center gap-0.5 mr-1 md:hidden md:group-hover:!flex">
+                // Confirmed ledger 只有打开 diff 一个合法行操作，必须常驻可见。
+                <div class=change_item_action_container_class(is_confirmed_ledger)>
                     <ChangeItemActions
                         core=core.clone()
                         locale

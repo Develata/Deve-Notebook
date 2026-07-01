@@ -111,6 +111,8 @@ contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disa
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_text
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_reports_no_changes_when_commit_source_empty
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_visible true
+contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_not_hover_gated true
+contains	docs/features/07_diff_logic.md	已确认账本行的打开 diff 操作必须常驻可见
 contains	apps/web/src/components/sidebar/source_control/changes.rs	data-deve-source-control-empty-state=source_control_empty_state_marker()
 contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	data-deve-source-control-read-gate=source_control_read_gate_marker()
 contains	apps/web/src/components/sidebar/source_control/staged_section.rs	data-deve-source-control-section="staged"
@@ -121,6 +123,8 @@ contains	apps/web/src/components/sidebar/source_control/repositories.rs	source_c
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	should_show_confirmed_open_diff_action
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	data-deve-mobile-touch-target="source-control-confirmed-open-diff-action"
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_open_diff_action_policy
+contains	apps/web/src/components/sidebar/source_control/touch_target.rs	change_item_action_container_class
+contains	apps/web/src/components/sidebar/source_control/touch_target.rs	confirmed_ledger_actions_are_not_hover_gated
 absent	crates/core/src/ledger/manager/source_control_default_api.rs	pub fn commit_staged(
 absent	crates/core/src/ledger/manager/source_control_ops.rs	pub fn commit_staged_in_local_repo(
 absent	crates/core/src/ledger/manager/source_control_runtime.rs	fn commit_staged_in_local_repo(

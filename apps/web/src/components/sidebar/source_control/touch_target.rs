@@ -27,6 +27,14 @@ pub(super) fn change_item_row_class(has_conflict: bool, can_open_diff: bool) -> 
     )
 }
 
+pub(super) fn change_item_action_container_class(is_confirmed_ledger: bool) -> &'static str {
+    if is_confirmed_ledger {
+        "flex items-center gap-0.5 mr-1"
+    } else {
+        "flex items-center gap-0.5 mr-1 md:hidden md:group-hover:!flex"
+    }
+}
+
 pub(super) fn section_header_class() -> &'static str {
     "h-11 md:h-auto px-2 py-1 md:py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
 }
@@ -72,9 +80,10 @@ pub(super) fn commit_menu_item_class() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        SourceControlActionTone, change_item_row_class, commit_dropdown_button_class,
-        commit_generate_button_class, commit_menu_item_class, commit_message_textarea_class,
-        commit_primary_button_class, icon_button_class, section_header_class,
+        SourceControlActionTone, change_item_action_container_class, change_item_row_class,
+        commit_dropdown_button_class, commit_generate_button_class, commit_menu_item_class,
+        commit_message_textarea_class, commit_primary_button_class, icon_button_class,
+        section_header_class,
     };
 
     #[test]
@@ -99,6 +108,17 @@ mod tests {
             assert!(button.contains("md:h-auto"));
             assert!(button.contains("md:w-auto"));
         }
+    }
+
+    #[test]
+    fn confirmed_ledger_actions_are_not_hover_gated() {
+        let confirmed = change_item_action_container_class(true);
+        assert!(!confirmed.contains("md:hidden"));
+        assert!(!confirmed.contains("group-hover"));
+
+        let regular = change_item_action_container_class(false);
+        assert!(regular.contains("md:hidden"));
+        assert!(regular.contains("md:group-hover:!flex"));
     }
 
     #[test]

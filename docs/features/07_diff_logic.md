@@ -37,6 +37,7 @@
 - 程序内编辑或 CLI 受控写入 ack 后，变化已经进入 ledger，不应出现在工作区 pending 列表。
 - 若这些变化尚未被最新 Source Control commit anchor 覆盖，Source Control 应展示 `Confirmed Ledger Changes`。
 - 该分组不提供 Stage / Discard；首版 commit 一次性覆盖全部 confirmed ledger changes。
+- 已确认账本行的打开 diff 操作必须常驻可见，不得依赖桌面 hover 才能发现，因为该分组没有 Stage / Discard 作为替代行操作。
 - confirmed-only commit 成功后，该分组应清空并刷新 history。
 
 ### 3. Diff / History / Graph
