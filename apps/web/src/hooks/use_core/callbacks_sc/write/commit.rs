@@ -7,12 +7,13 @@
 use crate::api::WsService;
 use crate::hooks::use_core::callbacks_sc_scope::source_control_scope_nonce;
 use crate::hooks::use_core::callbacks_sc_target::to_target;
+use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 use crate::hooks::use_core::sync_banner_notice::warn_sync_banner;
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_untracked};
 use crate::hooks::use_core::write_gate_banner::cannot_send;
 use deve_core::protocol::ClientMessage;
 use deve_core::source_control::{ChangeEntry, ConflictResolution};
-use leptos::prelude::{Callback, WriteSignal};
+use leptos::prelude::{Callback, Set, WriteSignal};
 
 use super::SourceControlScopeSignals;
 
@@ -40,17 +41,15 @@ fn show_write_block(
     warn_sync_banner(set_sync_banner, message);
 }
 
-fn show_commit_and_push_cli_only(set_sync_banner: WriteSignal<Option<String>>) {
-    warn_sync_banner(
-        set_sync_banner,
-        "Commit & Push is CLI-only; create a commit first, then run `deve git push`.".to_string(),
-    );
+fn show_commit_and_push_cli_only(set_notice: WriteSignal<Option<SourceControlNotice>>) {
+    set_notice.set(Some(SourceControlNotice::git_push_cli_only()));
 }
 
 pub(super) fn create_commit_write_callbacks(
     ws: &WsService,
     scope: SourceControlScopeSignals,
     gate: RepoWriteSignals,
+    set_notice: WriteSignal<Option<SourceControlNotice>>,
     set_sync_banner: WriteSignal<Option<String>>,
 ) -> (
     Callback<String>,
@@ -90,7 +89,7 @@ pub(super) fn create_commit_write_callbacks(
             show_write_block(set_sync_banner, "CommitAndPush", label);
             return;
         }
-        show_commit_and_push_cli_only(set_sync_banner);
+        show_commit_and_push_cli_only(set_notice);
     });
     (on_commit, on_resolve_conflict, on_commit_and_push)
 }
@@ -98,6 +97,7 @@ pub(super) fn create_commit_write_callbacks(
 #[cfg(test)]
 mod tests {
     use super::{show_commit_and_push_cli_only, show_write_block};
+    use crate::hooks::use_core::source_control_notice::is_git_push_cli_notice;
     use leptos::prelude::{GetUntracked, signal};
 
     #[test]
@@ -125,14 +125,17 @@ mod tests {
     }
 
     #[test]
-    fn commit_and_push_callback_uses_cli_only_banner() {
-        let (sync_banner, set_sync_banner) = signal(None::<String>);
+    fn commit_and_push_callback_uses_git_push_cli_only_notice() {
+        let (notice, set_notice) = signal(None);
 
-        show_commit_and_push_cli_only(set_sync_banner);
+        show_commit_and_push_cli_only(set_notice);
 
         assert_eq!(
-            sync_banner.get_untracked().as_deref(),
-            Some("Commit & Push is CLI-only; create a commit first, then run `deve git push`.")
+            notice
+                .get_untracked()
+                .as_ref()
+                .is_some_and(is_git_push_cli_notice),
+            true
         );
     }
 }

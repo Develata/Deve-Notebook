@@ -69,7 +69,7 @@ pub fn create_source_control_callbacks(
         on_commit,
         on_resolve_conflict,
         on_commit_and_push,
-    ) = create_write_callbacks(ws, scope, write_gate, set_sync_banner);
+    ) = create_write_callbacks(ws, scope, write_gate, set_notice, set_sync_banner);
 
     SourceControlCallbacks {
         on_get_changes,
