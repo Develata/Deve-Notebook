@@ -12,7 +12,7 @@ use crate::hooks::use_core::source_control_notice::{
     is_git_repair_cli_notice, is_git_status_cli_notice,
 };
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
@@ -208,7 +208,10 @@ pub fn ErrorNotice(
                         </div>
                     </div>
                     <button
+                        type="button"
                         class="text-xs text-secondary hover:text-primary"
+                        title=move || t::source_control::dismiss_notice(locale.get())
+                        aria-label=move || t::source_control::dismiss_notice(locale.get())
                         on:click=move |_| clear_notice.run(())
                     >
                         {"×"}
