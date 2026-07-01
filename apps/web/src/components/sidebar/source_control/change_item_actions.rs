@@ -3,6 +3,7 @@
 //!   - 09_web_thin_client_ledger#web-edit-intent
 //!
 use crate::components::icons::*;
+use crate::components::sidebar::source_control::change_item::ChangeItemKind;
 use crate::components::sidebar::source_control::change_item_conflict_actions::ChangeItemConflictActions;
 use crate::components::sidebar::source_control::change_item_read_gate::can_open_change_item_diff;
 use crate::components::sidebar::source_control::change_item_workspace_actions::ChangeItemWorkspaceActions;
@@ -11,7 +12,7 @@ use crate::components::sidebar::source_control::touch_target::{
 };
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
-use deve_core::source_control::{ChangeDomain, ChangeEntry};
+use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -21,7 +22,7 @@ pub fn ChangeItemActions(
     core: SourceControlContext,
     locale: RwSignal<Locale>,
     entry: ChangeEntry,
-    is_staged: bool,
+    row_kind: ChangeItemKind,
     has_conflict: bool,
     can_open_diff: bool,
     action_busy: StoredValue<Arc<AtomicBool>>,
@@ -31,7 +32,7 @@ pub fn ChangeItemActions(
 
     view! {
         {move || {
-            if should_show_confirmed_open_diff_action(entry.domain, can_open_diff) {
+            if should_show_confirmed_open_diff_action(row_kind, can_open_diff) {
                 view! {
                     <button
                         class=icon_button_class(SourceControlActionTone::Secondary)
@@ -53,9 +54,9 @@ pub fn ChangeItemActions(
                         <ExternalLink class="w-3.5 h-3.5" />
                     </button>
                 }.into_any()
-            } else if entry.domain == ChangeDomain::ConfirmedLedger {
+            } else if row_kind.is_confirmed_ledger() {
                 view! {}.into_any()
-            } else if is_staged {
+            } else if row_kind.is_staged() {
                 view! {
                     <button
                         class=icon_button_class(SourceControlActionTone::Secondary)
@@ -95,29 +96,28 @@ pub fn ChangeItemActions(
 }
 
 pub(crate) fn should_show_confirmed_open_diff_action(
-    domain: ChangeDomain,
+    row_kind: ChangeItemKind,
     can_open_diff: bool,
 ) -> bool {
-    domain == ChangeDomain::ConfirmedLedger && can_open_diff
+    row_kind.is_confirmed_ledger() && can_open_diff
 }
 
 #[cfg(test)]
 mod tests {
-    use super::should_show_confirmed_open_diff_action;
-    use deve_core::source_control::ChangeDomain;
+    use super::{ChangeItemKind, should_show_confirmed_open_diff_action};
 
     #[test]
     fn confirmed_ledger_open_diff_action_policy() {
         assert!(should_show_confirmed_open_diff_action(
-            ChangeDomain::ConfirmedLedger,
+            ChangeItemKind::ConfirmedLedger,
             true
         ));
         assert!(!should_show_confirmed_open_diff_action(
-            ChangeDomain::ConfirmedLedger,
+            ChangeItemKind::ConfirmedLedger,
             false
         ));
         assert!(!should_show_confirmed_open_diff_action(
-            ChangeDomain::WorkingDirectory,
+            ChangeItemKind::Working,
             true
         ));
     }

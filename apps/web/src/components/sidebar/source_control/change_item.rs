@@ -22,13 +22,45 @@ use leptos::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ChangeItemKind {
+    Working,
+    Staged,
+    ConfirmedLedger,
+}
+
+impl ChangeItemKind {
+    pub(crate) const fn is_staged(self) -> bool {
+        matches!(self, Self::Staged)
+    }
+
+    pub(crate) const fn is_confirmed_ledger(self) -> bool {
+        matches!(self, Self::ConfirmedLedger)
+    }
+
+    pub(crate) const fn shows_counterpart_badge(self) -> bool {
+        matches!(self, Self::Working | Self::Staged)
+    }
+}
+
+pub(crate) fn effective_change_item_kind(
+    row_kind: ChangeItemKind,
+    entry: &ChangeEntry,
+) -> ChangeItemKind {
+    if entry.domain == ChangeDomain::ConfirmedLedger {
+        ChangeItemKind::ConfirmedLedger
+    } else {
+        row_kind
+    }
+}
+
 /// 变更条目组件
 ///
 /// # 参数
 /// - `entry`: 变更条目数据
-/// - `is_staged`: 是否为暂存区条目
+/// - `row_kind`: 行所在 Source Control 分组语义
 #[component]
-pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
+pub fn ChangeItem(entry: ChangeEntry, row_kind: ChangeItemKind) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().unwrap_or_else(|| RwSignal::new(Locale::En));
     let current_repo_id = core.current_repo_id;
@@ -39,7 +71,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
     let has_conflict = entry.has_conflict;
     let can_open_diff = can_request_doc_diff(&entry);
-    let is_confirmed_ledger = entry.domain == ChangeDomain::ConfirmedLedger;
+    let row_kind = effective_change_item_kind(row_kind, &entry);
     let meta = build_change_item_meta(&entry);
     let entry_for_click = entry.clone();
 
@@ -74,7 +106,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
             <ChangeItemContent
                 locale
                 entry=entry.clone()
-                is_staged
+                row_kind
                 meta
                 has_conflict
                 staged_changes=core.staged_changes
@@ -83,12 +115,12 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
 
             <div class="flex items-center gap-2 pl-2">
                 // Confirmed ledger 只有打开 diff 一个合法行操作，必须常驻可见。
-                <div class=change_item_action_container_class(is_confirmed_ledger)>
+                <div class=change_item_action_container_class(row_kind.is_confirmed_ledger())>
                     <ChangeItemActions
                         core=core.clone()
                         locale
                         entry=entry.clone()
-                        is_staged
+                        row_kind
                         has_conflict
                         can_open_diff
                         action_busy
@@ -98,5 +130,35 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 // 右侧 hover 操作区与主内容分离，避免挤压文件名。
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ChangeItemKind, effective_change_item_kind};
+    use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
+
+    fn entry(domain: ChangeDomain) -> ChangeEntry {
+        ChangeEntry {
+            path: "note.md".into(),
+            renamed_from: None,
+            doc_id: None,
+            status: ChangeStatus::Modified,
+            has_conflict: false,
+            domain,
+            base_seq: None,
+            target_seq: None,
+        }
+    }
+
+    #[test]
+    fn confirmed_ledger_domain_forces_confirmed_row_kind() {
+        assert_eq!(
+            effective_change_item_kind(
+                ChangeItemKind::Working,
+                &entry(ChangeDomain::ConfirmedLedger)
+            ),
+            ChangeItemKind::ConfirmedLedger
+        );
     }
 }

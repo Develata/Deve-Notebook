@@ -2,19 +2,20 @@
 //!   - 05_diff_logic#source-control-runtime
 //!
 use crate::components::icons::{AlertTriangle, FileText};
+use crate::components::sidebar::source_control::change_item::ChangeItemKind;
 use crate::components::sidebar::source_control::change_item_counterpart::{
     counterpart_badge_text, counterpart_badge_title, find_counterpart_kind,
 };
 use crate::components::sidebar::source_control::change_item_meta::ChangeItemMeta;
 use crate::i18n::{Locale, t};
-use deve_core::source_control::{ChangeDomain, ChangeEntry};
+use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 
 #[component]
 pub fn ChangeItemContent(
     locale: RwSignal<Locale>,
     entry: ChangeEntry,
-    is_staged: bool,
+    row_kind: ChangeItemKind,
     meta: ChangeItemMeta,
     has_conflict: bool,
     staged_changes: ReadSignal<Vec<ChangeEntry>>,
@@ -29,12 +30,16 @@ pub fn ChangeItemContent(
             <span class="truncate">{meta.display_name}</span>
             <span class="text-xs text-muted truncate shrink-0 ml-1">{meta.directory}</span>
             {move || {
-                let counterpart = find_counterpart_kind(
-                    &entry_for_counterpart,
-                    is_staged,
-                    &staged_changes.get(),
-                    &unstaged_changes.get(),
-                ).filter(|_| entry_for_counterpart.domain != ChangeDomain::ConfirmedLedger);
+                let counterpart = if row_kind.shows_counterpart_badge() {
+                    find_counterpart_kind(
+                        &entry_for_counterpart,
+                        row_kind.is_staged(),
+                        &staged_changes.get(),
+                        &unstaged_changes.get(),
+                    )
+                } else {
+                    None
+                };
                 counterpart.map(|kind| {
                     let locale_value = locale.get();
                     view! {

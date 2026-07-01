@@ -7,7 +7,7 @@
 //!
 //! 渲染工作区 (Unstaged Changes) 的文件列表。
 
-use super::change_item::ChangeItem;
+use super::change_item::{ChangeItem, ChangeItemKind};
 use super::touch_target::section_header_class;
 use super::unstaged_section_actions::UnstagedSectionActions;
 use crate::components::icons::ChevronRight;
@@ -77,7 +77,7 @@ pub fn UnstagedSection(unstaged: Vec<ChangeEntry>) -> impl IntoView {
                                 e.renamed_from.clone().unwrap_or_default()
                             )
                         }
-                        children=move |e| view! { <ChangeItem entry=e is_staged=false /> }
+                        children=move |e| view! { <ChangeItem entry=e row_kind=ChangeItemKind::Working /> }
                     />
                 }.into_any()
             } else {

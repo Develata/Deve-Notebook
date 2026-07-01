@@ -7,7 +7,7 @@
 //!
 //! 渲染暂存区 (Staged Changes) 的文件列表。
 
-use super::change_item::ChangeItem;
+use super::change_item::{ChangeItem, ChangeItemKind};
 use super::staged_section_actions::StagedSectionActions;
 use super::touch_target::section_header_class;
 use crate::components::icons::ChevronRight;
@@ -77,7 +77,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
                                 e.renamed_from.clone().unwrap_or_default()
                             )
                         }
-                        children=move |e| view! { <ChangeItem entry=e is_staged=true /> }
+                        children=move |e| view! { <ChangeItem entry=e row_kind=ChangeItemKind::Staged /> }
                     />
                 }.into_any()
             } else {

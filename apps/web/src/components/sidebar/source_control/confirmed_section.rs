@@ -5,7 +5,7 @@
 //! Confirmed ledger changes are already authoritative ledger facts, not
 //! pending_fs_ops. First batch exposes diff + whole-anchor commit only.
 
-use super::change_item::ChangeItem;
+use super::change_item::{ChangeItem, ChangeItemKind};
 use super::touch_target::section_header_class;
 use crate::components::icons::ChevronRight;
 use crate::i18n::{Locale, t};
@@ -59,7 +59,7 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
                                 e.target_seq.unwrap_or_default()
                             )
                         }
-                        children=move |e| view! { <ChangeItem entry=e is_staged=false /> }
+                        children=move |e| view! { <ChangeItem entry=e row_kind=ChangeItemKind::ConfirmedLedger /> }
                     />
                 }.into_any()
             } else {
