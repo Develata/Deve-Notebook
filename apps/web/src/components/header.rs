@@ -40,6 +40,7 @@ pub fn Header(
                 <button
                     class="p-2 text-secondary hover:bg-hover rounded transition-colors"
                     title=move || t::header::home(locale.get())
+                    aria-label=move || t::header::home(locale.get())
                     on:click=move |_| on_home.run(())
                 >
                     <Home class="w-[18px] h-[18px]"/>
@@ -49,6 +50,7 @@ pub fn Header(
                 <button
                     class="p-2 text-secondary hover:bg-hover rounded transition-colors"
                     title=move || t::header::open(locale.get())
+                    aria-label=move || t::header::open(locale.get())
                     data-deve-open-search-button="true"
                     on:click=move |_| on_open.run(())
                 >
@@ -59,6 +61,7 @@ pub fn Header(
                 <button
                     class="p-2 text-secondary hover:bg-hover rounded transition-colors"
                     title=move || t::header::command(locale.get())
+                    aria-label=move || t::header::command(locale.get())
                     on:click=move |_| on_command.run(())
                 >
                     <Terminal class="w-[18px] h-[18px]"/>
