@@ -108,6 +108,9 @@ contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_palette
 contains	docs/acceptance-cases/04_diff.md	command_palette_git_bridge_mode_reactive_after_node_role_probe
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web commit_message_placeholder -- --nocapture
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_empty_state_disabled_reason
+contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	commit_action_title
+contains	apps/web/src/components/sidebar/source_control/commit_actions.rs	commit_action_title_reports_missing_message
+contains	apps/web/src/i18n/source_control/actions.rs	commit_message_required
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_text
 contains	apps/web/src/components/sidebar/source_control/commit_message_box.rs	commit_message_placeholder_reports_no_changes_when_commit_source_empty
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_open_diff_action_visible true

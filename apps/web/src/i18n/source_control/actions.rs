@@ -109,6 +109,13 @@ pub fn commit(locale: Locale) -> &'static str {
     }
 }
 
+pub fn commit_message_required(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Enter a commit message before committing.",
+        Locale::Zh => "请输入提交信息后再提交。",
+    }
+}
+
 pub fn generate_commit_message(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Generate Commit Message",
