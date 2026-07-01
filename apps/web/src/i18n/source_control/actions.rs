@@ -46,6 +46,13 @@ pub fn open_file(locale: Locale) -> &'static str {
     }
 }
 
+pub fn open_diff(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Open Diff",
+        Locale::Zh => "打开差异",
+    }
+}
+
 pub fn stage_changes(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Stage Changes",
