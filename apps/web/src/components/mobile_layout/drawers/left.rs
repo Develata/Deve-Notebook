@@ -92,6 +92,7 @@ pub fn LeftDrawer(
                                 docs=document.docs
                                 current_doc=document.current_doc
                                 is_readonly=scope.is_spectator
+                                suppress_source_control_git_cli_notices=true
                                 on_select=Callback::new(move |id| {
                                     on_doc_select.run(id);
                                     on_close.run(())

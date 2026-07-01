@@ -8,11 +8,20 @@ use crate::components::sidebar::source_control::repair_review_copy::{
     self as repair_copy, GitRepairReviewFetchState,
 };
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
-use crate::hooks::use_core::source_control_notice::is_git_repair_cli_notice;
+use crate::hooks::use_core::source_control_notice::{is_git_cli_notice, is_git_repair_cli_notice};
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::Locale;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+
+pub(crate) fn error_notice_visible(
+    read_blocked: bool,
+    notice: Option<&SourceControlNotice>,
+    suppress_git_cli_notices: bool,
+) -> bool {
+    !read_blocked
+        && notice.is_some_and(|notice| !(suppress_git_cli_notices && is_git_cli_notice(notice)))
+}
 
 #[component]
 pub fn ErrorNotice(
@@ -21,14 +30,16 @@ pub fn ErrorNotice(
     current_repo_id: ReadSignal<Option<String>>,
     current_scope_nonce: ReadSignal<u64>,
     clear_notice: Callback<()>,
+    suppress_git_cli_notices: bool,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let repair_review = RwSignal::new(GitRepairReviewFetchState::Idle);
 
     Effect::new(move |_| {
         let notice_value = notice.get();
-        let should_fetch =
-            block.get().is_none() && notice_value.as_ref().is_some_and(is_git_repair_cli_notice);
+        let should_fetch = !suppress_git_cli_notices
+            && block.get().is_none()
+            && notice_value.as_ref().is_some_and(is_git_repair_cli_notice);
         let repo_id = current_repo_id.get();
 
         if !should_fetch {
@@ -56,7 +67,14 @@ pub fn ErrorNotice(
     });
 
     view! {
-        <Show when=move || block.get().is_none() && notice.get().is_some()>
+        <Show when=move || {
+            let notice_value = notice.get();
+            error_notice_visible(
+                block.get().is_some(),
+                notice_value.as_ref(),
+                suppress_git_cli_notices,
+            )
+        }>
             <div class="px-4 py-3 text-sm border-b border-default bg-warning/5">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -195,5 +213,31 @@ pub fn ErrorNotice(
                 </div>
             </div>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::error_notice_visible;
+    use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+
+    #[test]
+    fn mobile_source_control_read_gate_hides_git_cli_notice() {
+        let git_notice = SourceControlNotice::git_status_cli_only();
+        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+
+        assert!(!error_notice_visible(false, Some(&git_notice), true));
+        assert!(error_notice_visible(false, Some(&git_notice), false));
+        assert!(error_notice_visible(
+            false,
+            Some(&source_control_notice),
+            true,
+        ));
+        assert!(!error_notice_visible(
+            true,
+            Some(&source_control_notice),
+            true
+        ));
+        assert!(!error_notice_visible(false, None, true));
     }
 }

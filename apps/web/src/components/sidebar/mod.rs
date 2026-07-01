@@ -40,6 +40,7 @@ pub fn Sidebar(
     docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
     is_readonly: Signal<bool>,
+    suppress_source_control_git_cli_notices: bool,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
 ) -> impl IntoView {
@@ -70,7 +71,9 @@ pub fn Sidebar(
                     />
                 }.into_any(),
                 SidebarView::SourceControl => view! {
-                    <crate::components::sidebar::source_control::SourceControlView />
+                    <crate::components::sidebar::source_control::SourceControlView
+                        suppress_git_cli_notices=suppress_source_control_git_cli_notices
+                    />
                 }.into_any(),
                 SidebarView::Search => view! {
                     <ExplorerView
