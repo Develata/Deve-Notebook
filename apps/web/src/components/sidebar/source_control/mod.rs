@@ -56,7 +56,7 @@ use crate::hooks::use_core::SourceControlContext;
 use leptos::prelude::*;
 
 #[component]
-pub fn SourceControlView(suppress_git_cli_notices: bool) -> impl IntoView {
+pub fn SourceControlView(suppress_git_status_cli_notice: bool) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
 
@@ -97,7 +97,7 @@ pub fn SourceControlView(suppress_git_cli_notices: bool) -> impl IntoView {
                     current_repo_id=core.current_repo_id
                     current_scope_nonce=core.current_scope_nonce
                     clear_notice=core.clear_notice
-                    suppress_git_cli_notices=suppress_git_cli_notices
+                    suppress_git_status_cli_notice=suppress_git_status_cli_notice
                 />
                 <ChangesPanel visible=show_changes />
                 <Show when=move || show_graph.get()>

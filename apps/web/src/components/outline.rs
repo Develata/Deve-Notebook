@@ -71,12 +71,12 @@ fn parse_atx_heading(line: &str) -> Option<(usize, String)> {
         return None;
     }
 
-    let text = strip_atx_closing_sequence(rest.trim_start_matches(|ch| ch == ' ' || ch == '\t'));
+    let text = strip_atx_closing_sequence(rest.trim_start_matches([' ', '\t']));
     Some((level, text.to_string()))
 }
 
 fn strip_atx_closing_sequence(rest: &str) -> &str {
-    let trimmed = rest.trim_end_matches(|ch| ch == ' ' || ch == '\t');
+    let trimmed = rest.trim_end_matches([' ', '\t']);
     if !trimmed.ends_with('#') {
         return trimmed;
     }
@@ -92,7 +92,7 @@ fn strip_atx_closing_sequence(rest: &str) -> &str {
 
     let before_closing = &trimmed[..closing_start];
     if before_closing.ends_with(' ') || before_closing.ends_with('\t') {
-        before_closing.trim_end_matches(|ch| ch == ' ' || ch == '\t')
+        before_closing.trim_end_matches([' ', '\t'])
     } else {
         trimmed
     }

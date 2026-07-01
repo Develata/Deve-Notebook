@@ -130,12 +130,11 @@ mod tests {
 
         show_commit_and_push_cli_only(set_notice);
 
-        assert_eq!(
+        assert!(
             notice
                 .get_untracked()
                 .as_ref()
-                .is_some_and(is_git_push_cli_notice),
-            true
+                .is_some_and(is_git_push_cli_notice)
         );
     }
 }

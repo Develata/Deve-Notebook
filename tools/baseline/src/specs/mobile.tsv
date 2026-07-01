@@ -477,10 +477,12 @@ contains	apps/web/src/components/sidebar/source_control/confirmed_section.rs	dat
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_read_gate_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_commit_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	source-control-confirmed-open-diff-action
-contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_only_git_cli_notice()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	is_git_status_cli_notice
+absent	apps/web/src/components/mobile_layout/source_control_notice.rs	is_git_cli_notice
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_only_git_status_notice()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_open_read_surface_observes_notice_changes()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_active_surface_observes_notice_changes()
-contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_cli_notice()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_status_notice()
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	clear_mobile_source_control_notice_for_drawer(
 absent	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	clear_tracked_mobile_source_control_notice_for_view
 contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_view(
