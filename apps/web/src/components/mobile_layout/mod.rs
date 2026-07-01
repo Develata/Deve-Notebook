@@ -28,6 +28,7 @@ mod surface_switcher;
 mod toolbar;
 
 use crate::components::activity_bar::SidebarView;
+use crate::components::main_layout::SearchControl;
 use crate::editor::ffi::getEditorContent;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::Locale;
@@ -65,6 +66,7 @@ pub fn MobileLayout(
     let source_control_context = use_context::<SourceControlContext>();
     let source_control_for_drawer = source_control_context.clone();
     let source_control_for_active_view = source_control_context.clone();
+    let search_control = expect_context::<SearchControl>();
 
     let title = build_mobile_title(document.clone());
     let (content_signal, set_outline_content) = resolve_content_signal();
@@ -74,6 +76,7 @@ pub fn MobileLayout(
         set_show_outline.set(false);
     });
     let open_left_drawer = Callback::new(move |_| {
+        search_control.set_show.set(false);
         clear_mobile_source_control_notice_for_view(
             active_view.get_untracked(),
             source_control_for_drawer.as_ref(),

@@ -3,6 +3,7 @@
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::components::icons::MoreHorizontal;
+use crate::components::main_layout::SearchControl;
 use crate::components::mobile_layout::source_control_notice::clear_mobile_source_control_notice_for_view;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
@@ -27,6 +28,10 @@ pub(super) fn mobile_more_button_class() -> &'static str {
     "mobile-more-button h-11 min-w-[44px] px-2 rounded-md bg-panel border border-default text-secondary active:bg-hover active:scale-95 transition-transform duration-150 ease-out"
 }
 
+pub(super) fn should_close_search_overlay_for_view(view: SidebarView) -> bool {
+    view != SidebarView::Search
+}
+
 #[component]
 pub(super) fn LeftDrawerTabs(
     locale: RwSignal<Locale>,
@@ -40,7 +45,11 @@ pub(super) fn LeftDrawerTabs(
     let (show_more, set_show_more) = signal(false);
     let more_menu_ref = NodeRef::<html::Div>::new();
     let source_control = use_context::<SourceControlContext>();
+    let search_control = expect_context::<SearchControl>();
     let select_view = Callback::new(move |view: SidebarView| {
+        if should_close_search_overlay_for_view(view) {
+            search_control.set_show.set(false);
+        }
         if view == SidebarView::Search {
             on_search.run(());
         } else {
@@ -119,7 +128,9 @@ pub(super) fn LeftDrawerTabs(
 mod tests {
     use super::{
         mobile_more_button_class, mobile_more_button_marker, mobile_sidebar_icon_tabs_marker,
+        should_close_search_overlay_for_view,
     };
+    use crate::components::activity_bar::SidebarView;
 
     #[test]
     fn mobile_sidebar_icon_tabs_marker_is_visible_when_drawer_open() {
@@ -138,5 +149,17 @@ mod tests {
 
         assert!(class.contains("h-11"));
         assert!(class.contains("min-w-[44px]"));
+    }
+
+    #[test]
+    fn mobile_sidebar_non_search_tabs_close_command_overlay() {
+        assert!(should_close_search_overlay_for_view(SidebarView::Explorer));
+        assert!(should_close_search_overlay_for_view(
+            SidebarView::SourceControl
+        ));
+        assert!(should_close_search_overlay_for_view(
+            SidebarView::Extensions
+        ));
+        assert!(!should_close_search_overlay_for_view(SidebarView::Search));
     }
 }
