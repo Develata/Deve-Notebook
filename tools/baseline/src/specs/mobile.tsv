@@ -57,13 +57,17 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	cli_assert: mobile_search_top_sheet_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	cli_assert: mobile_search_sheet_swipe_close_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	cli_assert: mobile_search_sheet_handle_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	cli_assert: mobile_search_sheet_dialog_named_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	ui_assert: search_sheet_position "top"
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	ui_swipe: "search_sheet_handle" (direction: "up", distance: 90)
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-005	ui_assert: search_sheet_closed true
 contains	docs/plan/11_ui_design/03_mobile.md	点击 Search -> Top Sheet 自上而下展开。
 contains	docs/plan/11_ui_design/03_mobile.md	关闭手势以顶部拖拽上滑为主
+contains	docs/features/08_ui_design_03_mobile.md	Search / Command sheet 打开后应以带可访问名称的 dialog 语义呈现
 contains	apps/web/src/components/main_layout_runtime/overlays.rs	SearchUiMode::Sheet
 contains	apps/web/src/components/search_box/ui.rs	data-deve-search-sheet-position=move || ui_sheet::sheet_position(ui_mode.get())
+contains	apps/web/src/components/search_box/ui.rs	aria-label=move || search_dialog_label(locale.get(), &query.get())
+contains	apps/web/src/components/search_box/ui.rs	fn mobile_search_sheet_dialog_named_bound()
 absent	apps/web/src/components/search_box/ui.rs	data-deve-search-sheet-open
 contains	apps/web/src/components/search_box/ui_sheet/style.rs	data-deve-search-sheet-handle="top"
 contains	apps/web/src/components/search_box/ui_sheet/style.rs	SearchUiMode::Overlay => None

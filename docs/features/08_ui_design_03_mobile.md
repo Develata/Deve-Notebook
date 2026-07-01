@@ -34,6 +34,7 @@
 ### 4. 搜索与 Sheet
 
 - Search / Command 入口在移动端应以适合窄屏的方式呈现。
+- Search / Command sheet 打开后应以带可访问名称的 dialog 语义呈现。
 - 打开与关闭 sheet 时，不应和滚动、drawer、outline 产生语义冲突。
 
 ### 5. Native 双模式

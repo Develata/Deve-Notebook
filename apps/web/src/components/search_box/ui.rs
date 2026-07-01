@@ -10,7 +10,7 @@ use crate::components::search_box::types::SearchResult;
 use crate::components::search_box::ui_footer::footer;
 use crate::components::search_box::ui_sections;
 use crate::components::search_box::ui_sheet;
-use crate::i18n::Locale;
+use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use std::sync::Arc;
 use web_sys::{KeyboardEvent, MouseEvent, TouchEvent};
@@ -31,6 +31,15 @@ pub struct SearchOverlayView {
     pub locale: RwSignal<Locale>,
     pub set_recent_move_dirs: WriteSignal<Vec<String>>,
     pub ui_mode: Signal<SearchUiMode>,
+}
+
+pub(super) fn search_dialog_label(locale: Locale, query: &str) -> &'static str {
+    match super::logic::search_surface_mode(query) {
+        super::logic::SearchSurfaceMode::Command | super::logic::SearchSurfaceMode::FileOp => {
+            t::header::command(locale)
+        }
+        _ => t::sidebar::search(locale),
+    }
 }
 
 /// 负责渲染整体遮罩与内部布局。
@@ -73,6 +82,7 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                     node_ref=panel_ref
                     role="dialog"
                     aria-modal="true"
+                    aria-label=move || search_dialog_label(locale.get(), &query.get())
                     tabindex="-1"
                     data-deve-search-sheet-position=move || ui_sheet::sheet_position(ui_mode.get())
                     class=move || ui_sheet::panel_class(ui_mode.get())
@@ -159,5 +169,22 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
                 </div>
             </div>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::search_dialog_label;
+    use crate::i18n::Locale;
+
+    #[test]
+    fn mobile_search_sheet_dialog_named_bound() {
+        assert_eq!(search_dialog_label(Locale::En, ""), "Search");
+        assert_eq!(search_dialog_label(Locale::Zh, "?全文"), "搜索");
+        assert_eq!(
+            search_dialog_label(Locale::En, ">git status"),
+            "Command Palette"
+        );
+        assert_eq!(search_dialog_label(Locale::Zh, ">git status"), "命令面板");
     }
 }

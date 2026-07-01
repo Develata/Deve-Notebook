@@ -23,6 +23,10 @@ pub(super) struct CommandPaletteOverlay {
     pub input_ref: NodeRef<leptos::html::Input>,
 }
 
+pub(super) fn command_palette_dialog_label(locale: Locale) -> &'static str {
+    t::header::command(locale)
+}
+
 pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
     let panel_ref = NodeRef::<leptos::html::Div>::new();
     let CommandPaletteOverlay {
@@ -48,6 +52,7 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                     node_ref=panel_ref
                     role="dialog"
                     aria-modal="true"
+                    aria-label=move || command_palette_dialog_label(locale.get())
                     tabindex="-1"
                     class="absolute top-2 left-1/2 -translate-x-1/2 w-full max-w-xl bg-panel rounded-lg shadow-xl border border-default overflow-hidden flex flex-col max-h-[60vh] animate-in fade-in zoom-in-95 duration-100"
                     on:click=move |ev: MouseEvent| ev.stop_propagation()
@@ -175,5 +180,17 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
                 </div>
             </div>
         </Show>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::command_palette_dialog_label;
+    use crate::i18n::Locale;
+
+    #[test]
+    fn command_palette_dialog_named_bound() {
+        assert_eq!(command_palette_dialog_label(Locale::En), "Command Palette");
+        assert_eq!(command_palette_dialog_label(Locale::Zh), "命令面板");
     }
 }
