@@ -18,11 +18,19 @@ pub fn document_tab(locale: Locale) -> &'static str {
     }
 }
 
+pub fn document_tab_named(locale: Locale, title: &str) -> String {
+    labelled(locale, document_tab(locale), title)
+}
+
 pub fn diff_tab(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Diff tab",
         Locale::Zh => "差异标签页",
     }
+}
+
+pub fn diff_tab_named(locale: Locale, title: &str) -> String {
+    labelled(locale, diff_tab(locale), title)
 }
 
 pub fn document_surface(locale: Locale) -> &'static str {
@@ -44,6 +52,10 @@ pub fn close_tab(locale: Locale) -> &'static str {
         Locale::En => "Close tab",
         Locale::Zh => "关闭标签页",
     }
+}
+
+pub fn close_tab_named(locale: Locale, title: &str) -> String {
+    labelled(locale, close_tab(locale), title)
 }
 
 pub fn close_tab_switcher(locale: Locale) -> &'static str {
@@ -89,6 +101,13 @@ pub fn diffs(locale: Locale) -> &'static str {
     }
 }
 
+fn labelled(locale: Locale, label: &str, title: &str) -> String {
+    match locale {
+        Locale::En => format!("{label}: {title}"),
+        Locale::Zh => format!("{label}：{title}"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -108,6 +127,26 @@ mod tests {
         assert_eq!(close_tab_switcher(Locale::Zh), "关闭标签页切换面板");
         assert_eq!(documents(Locale::Zh), "文档");
         assert_eq!(diffs(Locale::En), "Diffs");
+    }
+
+    #[test]
+    fn tab_action_labels_include_titles() {
+        assert_eq!(
+            document_tab_named(Locale::En, "notes/a.md"),
+            "Document tab: notes/a.md"
+        );
+        assert_eq!(
+            document_tab_named(Locale::Zh, "notes/a.md"),
+            "文档标签页：notes/a.md"
+        );
+        assert_eq!(
+            diff_tab_named(Locale::Zh, "notes/a.md"),
+            "差异标签页：notes/a.md"
+        );
+        assert_eq!(
+            close_tab_named(Locale::En, "notes/a.md"),
+            "Close tab: notes/a.md"
+        );
     }
 
     #[test]

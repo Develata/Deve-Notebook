@@ -486,11 +486,13 @@ case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_diff_restore_bound true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_close_diff_keeps_source_control_state true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_close_inactive_diff_preserves_active_diff true
+case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	cli_assert: mobile_surface_accessible_labels_include_titles true
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	ui_assert: mobile_surface_summary_kind_visible true
 contains	docs/acceptance-bindings.tsv	UI-MOB-021|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile document diff switcher workflow
 contains	docs/plan/11_ui_design/03_mobile.md	Mobile Surface Switcher {#mobile-surface-switcher}
 contains	docs/plan/11_ui_design/03_mobile.md	顶部当前 surface 胶囊 **MUST** 位于 sync banner 与 content stack 之间
 contains	docs/features/08_ui_design_03_mobile.md	顶部当前 surface 胶囊应显示当前文档或差异
+contains	docs/features/08_ui_design_03_mobile.md	底部面板中的文档/差异行与关闭按钮应在可访问名称中包含对应标题
 contains	apps/web/src/components/editor_tabs.rs	11_ui_design/03_mobile#mobile-surface-switcher
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn scope_changed(
 contains	apps/web/src/components/editor_tabs/policy.rs	pub(crate) fn active_editor_tab_key(
@@ -510,6 +512,10 @@ contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-dev
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-touch-target=mobile_surface_close_diff_marker()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="document"
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	data-deve-mobile-surface-row="diff"
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	t::common::document_tab_named
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	t::common::diff_tab_named
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	t::common::close_tab_named
+contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	fn mobile_surface_accessible_labels_include_titles()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_summary_prefers_active_diff()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_sheet_gate_closes_for_drawer_or_empty_tabs()
 contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobile_surface_touch_targets_are_at_least_44px()
@@ -520,6 +526,9 @@ contains	apps/web/src/i18n/common/tabs.rs	pub fn document_surface(locale: Locale
 contains	apps/web/src/i18n/common/tabs.rs	pub fn diff_surface(locale: Locale)
 contains	apps/web/src/i18n/common/tabs.rs	pub fn close_tab_switcher(locale: Locale)
 contains	apps/web/src/i18n/common/tabs.rs	pub fn open_tabs_count(locale: Locale, count: usize)
+contains	apps/web/src/i18n/common/tabs.rs	pub fn document_tab_named(locale: Locale, title: &str) -> String
+contains	apps/web/src/i18n/common/tabs.rs	pub fn diff_tab_named(locale: Locale, title: &str) -> String
+contains	apps/web/src/i18n/common/tabs.rs	pub fn close_tab_named(locale: Locale, title: &str) -> String
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_inactive_diff_preserves_active_diff()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open

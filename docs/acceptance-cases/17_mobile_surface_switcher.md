@@ -25,5 +25,6 @@
     - cli_assert: mobile_surface_diff_restore_bound true
     - cli_assert: mobile_surface_close_diff_keeps_source_control_state true
     - cli_assert: mobile_surface_close_inactive_diff_preserves_active_diff true
+    - cli_assert: mobile_surface_accessible_labels_include_titles true
     - ui_assert: mobile_surface_summary_kind_visible true
     - ui_assert: staged_pending_commit_state_unchanged true

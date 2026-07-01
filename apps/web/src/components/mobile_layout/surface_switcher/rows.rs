@@ -31,6 +31,11 @@ pub(super) fn SurfaceDocumentRow(
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let title = tab.title.clone();
+    let row_label_title = title.clone();
+    let close_title = title.clone();
+    let close_label_title = title.clone();
+    let tooltip = tab.tooltip.clone();
     view! {
         <div
             data-deve-mobile-surface-row="document"
@@ -42,20 +47,20 @@ pub(super) fn SurfaceDocumentRow(
                 data-deve-mobile-surface-action=mobile_surface_document_row_marker()
                 data-deve-mobile-touch-target=mobile_surface_document_row_marker()
                 class=move || mobile_surface_row_class(active.get())
-                title=tab.tooltip.clone()
-                aria-label=move || t::common::document_tab(locale.get())
+                title=tooltip
+                aria-label=move || t::common::document_tab_named(locale.get(), &row_label_title)
                 on:click=move |_| on_select.run(())
             >
                 <FileText class="h-4 w-4 shrink-0"/>
-                <span class="min-w-0 flex-1 truncate text-[13px]">{tab.title.clone()}</span>
+                <span class="min-w-0 flex-1 truncate text-[13px]">{title}</span>
             </button>
             <button
                 type="button"
                 data-deve-mobile-surface-action=mobile_surface_close_document_marker()
                 data-deve-mobile-touch-target=mobile_surface_close_document_marker()
                 class=mobile_surface_close_button_class()
-                title=move || t::common::close_tab(locale.get())
-                aria-label=move || t::common::close_tab(locale.get())
+                title=move || t::common::close_tab_named(locale.get(), &close_title)
+                aria-label=move || t::common::close_tab_named(locale.get(), &close_label_title)
                 on:click=move |ev| {
                     ev.stop_propagation();
                     on_close.run(());
@@ -75,6 +80,11 @@ pub(super) fn SurfaceDiffRow(
     on_close: Callback<()>,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
+    let title = tab.title.clone();
+    let row_label_title = title.clone();
+    let close_title = title.clone();
+    let close_label_title = title.clone();
+    let tooltip = tab.tooltip.clone();
     view! {
         <div
             data-deve-mobile-surface-row="diff"
@@ -86,20 +96,20 @@ pub(super) fn SurfaceDiffRow(
                 data-deve-mobile-surface-action=mobile_surface_diff_row_marker()
                 data-deve-mobile-touch-target=mobile_surface_diff_row_marker()
                 class=move || mobile_surface_row_class(active.get())
-                title=tab.tooltip.clone()
-                aria-label=move || t::common::diff_tab(locale.get())
+                title=tooltip
+                aria-label=move || t::common::diff_tab_named(locale.get(), &row_label_title)
                 on:click=move |_| on_select.run(())
             >
                 <SourceControl class="h-4 w-4 shrink-0"/>
-                <span class="min-w-0 flex-1 truncate text-[13px]">{tab.title.clone()}</span>
+                <span class="min-w-0 flex-1 truncate text-[13px]">{title}</span>
             </button>
             <button
                 type="button"
                 data-deve-mobile-surface-action=mobile_surface_close_diff_marker()
                 data-deve-mobile-touch-target=mobile_surface_close_diff_marker()
                 class=mobile_surface_close_button_class()
-                title=move || t::common::close_tab(locale.get())
-                aria-label=move || t::common::close_tab(locale.get())
+                title=move || t::common::close_tab_named(locale.get(), &close_title)
+                aria-label=move || t::common::close_tab_named(locale.get(), &close_label_title)
                 on:click=move |ev| {
                     ev.stop_propagation();
                     on_close.run(());
@@ -117,6 +127,7 @@ mod tests {
         mobile_surface_close_diff_marker, mobile_surface_close_document_marker,
         mobile_surface_diff_row_marker, mobile_surface_document_row_marker,
     };
+    use crate::i18n::{Locale, t};
 
     #[test]
     fn mobile_surface_touch_target_markers_are_stable() {
@@ -127,5 +138,22 @@ mod tests {
         assert_eq!(mobile_surface_diff_row_marker(), "mobile_surface_diff_row");
         assert_eq!(mobile_surface_close_document_marker(), "close_document");
         assert_eq!(mobile_surface_close_diff_marker(), "close_diff");
+    }
+
+    #[test]
+    fn mobile_surface_accessible_labels_include_titles() {
+        let title = "notes/alpha.md";
+        assert_eq!(
+            t::common::document_tab_named(Locale::Zh, title),
+            "文档标签页：notes/alpha.md"
+        );
+        assert_eq!(
+            t::common::diff_tab_named(Locale::En, title),
+            "Diff tab: notes/alpha.md"
+        );
+        assert_eq!(
+            t::common::close_tab_named(Locale::Zh, title),
+            "关闭标签页：notes/alpha.md"
+        );
     }
 }
