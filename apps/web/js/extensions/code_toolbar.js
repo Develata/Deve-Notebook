@@ -72,7 +72,7 @@ class CodeToolbarWidget extends WidgetType {
     }
 
     ignoreEvent() {
-        return false;
+        return true;
     }
 }
 
