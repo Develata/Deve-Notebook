@@ -20,11 +20,12 @@ function mathSourceText(content, isBlock) {
 
 // --- Math Widget (数学公式组件) ---
 export class MathWidget extends WidgetType {
-  constructor(content, isBlock, quoteDepth = 0) {
+  constructor(content, isBlock, quoteDepth = 0, sourceAnchor = null) {
     super();
     this.content = content;
     this.isBlock = isBlock;
     this.quoteDepth = quoteDepth;  // [NEW] 嵌套深度
+    this.sourceAnchor = sourceAnchor;
   }
   
   toDOM(view) {
@@ -63,7 +64,9 @@ export class MathWidget extends WidgetType {
         // [Fix RangeError] Handle selection manually
         wrapper.onclick = (e) => {
             e.preventDefault();
-            const pos = view.posAtDOM(wrapper);
+            const pos = Number.isInteger(this.sourceAnchor)
+                ? this.sourceAnchor
+                : view.posAtDOM(wrapper);
             if (pos !== null) {
                 view.dispatch({ selection: { anchor: pos } });
                 view.focus();
@@ -111,7 +114,7 @@ function computeMathDecorations(state) {
       if (!isCursorTouching) {
         widgets.push(
             Decoration.replace({ 
-                widget: new MathWidget(content, isBlock, quoteDepth),
+                widget: new MathWidget(content, isBlock, quoteDepth, r.contentFrom),
                 // [NEW] block: true 让 Block Math 支持块级光标行为
                 block: isBlock
             }).range(r.from, r.to)

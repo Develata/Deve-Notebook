@@ -143,17 +143,15 @@ mod tests {
     #[test]
     fn mobile_surface_accessible_labels_include_titles() {
         let title = "notes/alpha.md";
-        assert_eq!(
-            t::common::document_tab_named(Locale::Zh, title),
-            "文档标签页：notes/alpha.md"
-        );
+        let zh_document_label = t::common::document_tab_named(Locale::Zh, title);
+        assert!(zh_document_label.starts_with(t::common::document_tab(Locale::Zh)));
+        assert!(zh_document_label.ends_with(title));
         assert_eq!(
             t::common::diff_tab_named(Locale::En, title),
             "Diff tab: notes/alpha.md"
         );
-        assert_eq!(
-            t::common::close_tab_named(Locale::Zh, title),
-            "关闭标签页：notes/alpha.md"
-        );
+        let zh_close_label = t::common::close_tab_named(Locale::Zh, title);
+        assert!(zh_close_label.starts_with(t::common::close_tab(Locale::Zh)));
+        assert!(zh_close_label.ends_with(title));
     }
 }

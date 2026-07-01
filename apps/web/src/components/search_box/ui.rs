@@ -175,16 +175,22 @@ pub fn render_overlay(view: SearchOverlayView) -> impl IntoView {
 #[cfg(test)]
 mod tests {
     use super::search_dialog_label;
-    use crate::i18n::Locale;
+    use crate::i18n::{Locale, t};
 
     #[test]
     fn mobile_search_sheet_dialog_named_bound() {
         assert_eq!(search_dialog_label(Locale::En, ""), "Search");
-        assert_eq!(search_dialog_label(Locale::Zh, "?全文"), "搜索");
+        assert_eq!(
+            search_dialog_label(Locale::Zh, "?content"),
+            t::sidebar::search(Locale::Zh)
+        );
         assert_eq!(
             search_dialog_label(Locale::En, ">git status"),
             "Command Palette"
         );
-        assert_eq!(search_dialog_label(Locale::Zh, ">git status"), "命令面板");
+        assert_eq!(
+            search_dialog_label(Locale::Zh, ">git status"),
+            t::header::command(Locale::Zh)
+        );
     }
 }

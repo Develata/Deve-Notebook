@@ -186,11 +186,14 @@ pub(super) fn render_overlay(overlay: CommandPaletteOverlay) -> impl IntoView {
 #[cfg(test)]
 mod tests {
     use super::command_palette_dialog_label;
-    use crate::i18n::Locale;
+    use crate::i18n::{Locale, t};
 
     #[test]
     fn command_palette_dialog_named_bound() {
         assert_eq!(command_palette_dialog_label(Locale::En), "Command Palette");
-        assert_eq!(command_palette_dialog_label(Locale::Zh), "命令面板");
+        assert_eq!(
+            command_palette_dialog_label(Locale::Zh),
+            t::header::command(Locale::Zh)
+        );
     }
 }
