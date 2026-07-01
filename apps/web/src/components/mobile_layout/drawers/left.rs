@@ -12,7 +12,7 @@ use crate::i18n::{Locale, t};
 use crate::runtime::{document_client::DocumentClient, scope_client::ScopeClient};
 use leptos::prelude::*;
 
-use super::drawer_class;
+use super::{drawer_aria_hidden, drawer_class};
 
 mod header;
 mod tabs;
@@ -59,26 +59,28 @@ pub fn LeftDrawer(
         <div
             data-deve-mobile-drawer="left"
             data-deve-mobile-drawer-open=move || open.get().to_string()
+            aria-hidden=move || drawer_aria_hidden(open.get())
+            class:pointer-events-none=move || !open.get()
             class=move || drawer_class("left", open.get())
         >
-            <div class="flex flex-col h-full">
-                <LeftDrawerHeader locale title on_close />
+            <Show when=move || open.get()>
+                <div class="flex flex-col h-full">
+                    <LeftDrawerHeader locale title on_close />
 
-                <LeftDrawerTabs
-                    locale
-                    active_view
-                    set_active_view
-                    pinned_views
-                    set_pinned_views
-                    open
-                    on_search=Callback::new(move |_| {
-                        search_control.set_mode.set("?".to_string());
-                        search_control.set_show.set(true);
-                        on_close.run(());
-                    })
-                />
+                    <LeftDrawerTabs
+                        locale
+                        active_view
+                        set_active_view
+                        pinned_views
+                        set_pinned_views
+                        open
+                        on_search=Callback::new(move |_| {
+                            search_control.set_mode.set("?".to_string());
+                            search_control.set_show.set(true);
+                            on_close.run(());
+                        })
+                    />
 
-                <Show when=move || open.get()>
                     <div
                         class="flex-1 overflow-hidden px-2 pb-3"
                         style="padding-bottom: env(safe-area-inset-bottom);"
@@ -98,8 +100,8 @@ pub fn LeftDrawer(
                             />
                         </div>
                     </div>
-                </Show>
-            </div>
+                </div>
+            </Show>
         </div>
     }
 }

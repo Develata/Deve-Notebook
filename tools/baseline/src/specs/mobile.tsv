@@ -13,8 +13,10 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: scripts/check-mobil
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_web mobile_drawer_edge_swipe -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_edge_swipe_threshold_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_dom_marker_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	cli_assert: mobile_drawer_closed_state_a11y_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: left_drawer_open true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: right_drawer_open true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	ui_assert: closed_drawers_hidden_from_a11y true
 contains	apps/web/src/components/mobile_layout/gesture.rs	pub(super) fn resolve_swipe_outcome(
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_left_from_left_edge()
 contains	apps/web/src/components/mobile_layout/gesture_test.rs	fn mobile_drawer_edge_swipe_opens_right_from_right_edge()
@@ -24,6 +26,9 @@ contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	data-deve-mobile-drawer="right"
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	data-deve-mobile-drawer-open=move || open.get().to_string()
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	data-deve-mobile-drawer-open=move || open.get().to_string()
+contains	apps/web/src/components/mobile_layout/drawers/mod.rs	fn mobile_drawer_closed_state_a11y_bound()
+contains	apps/web/src/components/mobile_layout/drawers/left.rs	aria-hidden=move || drawer_aria_hidden(open.get())
+contains	apps/web/src/components/mobile_layout/drawers/right.rs	aria-hidden=move || drawer_aria_hidden(open.get())
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-003
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-003	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-003	ui_query_dom: ".resizer-handle"

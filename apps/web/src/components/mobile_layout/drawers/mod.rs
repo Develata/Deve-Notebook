@@ -61,3 +61,18 @@ pub(super) fn drawer_class(side: &str, open: bool) -> String {
     };
     format!("{} {} {} {}", base, width, surface, offset)
 }
+
+pub(super) fn drawer_aria_hidden(open: bool) -> &'static str {
+    if open { "false" } else { "true" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::drawer_aria_hidden;
+
+    #[test]
+    fn mobile_drawer_closed_state_a11y_bound() {
+        assert_eq!(drawer_aria_hidden(false), "true");
+        assert_eq!(drawer_aria_hidden(true), "false");
+    }
+}
