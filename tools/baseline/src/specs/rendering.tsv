@@ -11,14 +11,18 @@ contains	docs/features/03_rendering.md	下列能力不得作为本功能篇的�
 contains	docs/features/03_rendering.md	不承担主编辑器职责
 contains	docs/features/03_rendering.md	不宣称完整 virtual rendering
 contains	docs/features/03_rendering.md	ATX 标题（`#` 到 `######`）的标题正文和空标题行都必须保持对应标题层级的整行视觉高度
+contains	docs/features/03_rendering.md	活动编辑行中的 CJK 无空格标题候选
 contains	apps/web/js/extensions/math.js	mathSourceText
 absent	apps/web/js/extensions/math.js	span.innerText = "Error"
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_lines_have_heading_class true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_text_line_height_gt_plain true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_empty_heading_line_height_gt_plain true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_active_cjk_candidate_line_height_gt_plain true
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|ATX heading line height workflow
 contains	apps/web/js/extensions/block_styling.js	ATX_HEADING_LINE_RE
-contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h${atxHeading[1].length}` }).range(line.from)
+contains	apps/web/js/extensions/block_styling.js	ACTIVE_CJK_ATX_HEADING_LINE_RE
+contains	apps/web/js/extensions/block_styling.js	update.selectionSet
+contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h${headingLevel}` }).range(line.from)
 contains	apps/web/style/_typography.css	.cm-line.cm-h1
 contains	apps/web/style/_typography.css	.cm-line.cm-h2
 contains	apps/web/style/_typography.css	.cm-line.cm-h3

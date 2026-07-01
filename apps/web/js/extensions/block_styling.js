@@ -2,6 +2,18 @@ import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 
 const ATX_HEADING_LINE_RE = /^ {0,3}(#{1,6})(?:[ \t]|$)/;
+// Editing affordance only: keep active CJK "#标题" candidates tall without changing saved Markdown semantics.
+const ACTIVE_CJK_ATX_HEADING_LINE_RE = /^ {0,3}(#{1,6})(?=[^\s#\x00-\x7F])/u;
+
+function atxHeadingLevel(lineText, isActiveLine) {
+  const atxHeading = lineText.match(ATX_HEADING_LINE_RE);
+  if (atxHeading) return atxHeading[1].length;
+
+  const activeCjkCandidate = isActiveLine
+    ? lineText.match(ACTIVE_CJK_ATX_HEADING_LINE_RE)
+    : null;
+  return activeCjkCandidate ? activeCjkCandidate[1].length : null;
+}
 
 /**
  * Block Styling Plugin
@@ -19,7 +31,12 @@ export const blockStyling = ViewPlugin.fromClass(
     }
 
     update(update) {
-      if (update.docChanged || update.viewportChanged || update.searchChanged) {
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        update.searchChanged ||
+        update.selectionSet
+      ) {
         this.decorations = this.computeDecorations(update.view);
       }
     }
@@ -29,6 +46,7 @@ export const blockStyling = ViewPlugin.fromClass(
       const codeLineStarts = new Set();
       const { from, to } = view.viewport;
       const doc = view.state.doc;
+      const activeLineNumber = doc.lineAt(view.state.selection.main.head).number;
 
       // 遍历语法树
       const tree = syntaxTree(view.state);
@@ -62,10 +80,10 @@ export const blockStyling = ViewPlugin.fromClass(
       for (let i = firstLine.number; i <= lastLine.number; i++) {
           const line = doc.line(i);
           if (codeLineStarts.has(line.from)) continue;
-          const atxHeading = line.text.match(ATX_HEADING_LINE_RE);
-          if (!atxHeading) continue;
+          const headingLevel = atxHeadingLevel(line.text, i === activeLineNumber);
+          if (!headingLevel) continue;
           widgets.push(
-              Decoration.line({ class: `cm-h${atxHeading[1].length}` }).range(line.from)
+              Decoration.line({ class: `cm-h${headingLevel}` }).range(line.from)
           );
       }
 
@@ -76,4 +94,3 @@ export const blockStyling = ViewPlugin.fromClass(
     decorations: (v) => v.decorations,
   }
 );
-

@@ -51,12 +51,15 @@
         # h1
         ## h2
         ### h3
+        #申话
         plain
+    - ui_move_cursor_into: "#申话"
     - ui_wait_render: true
   assertions:
     - ui_assert: atx_heading_lines_have_heading_class true
     - ui_assert: atx_heading_text_line_height_gt_plain true
     - ui_assert: atx_empty_heading_line_height_gt_plain true
+    - ui_assert: atx_active_cjk_candidate_line_height_gt_plain true
 
 - case_id: RENDER-LINK-001
   goal: 链接需 Ctrl/Cmd 激活。
