@@ -302,7 +302,7 @@ Toolbar **SHOULD** 仅在软键盘可见时显示；软键盘弹出时底部状�
 ### 5.3 Drawer 规范 (Side Drawers)
 *   **Sidebar Drawer**:
     *   内容：文件树、快速操作、新建。
-    *   关闭按钮建议使用 `X` 图标而非文本 `Close`，以符合移动端通用习惯。
+    *   关闭按钮建议使用 `X` 图标而非文本 `Close`，以符合移动端通用习惯；其可访问名称必须表达关闭左侧栏，而不得在 Search / Source Control / Extensions 等视图中固定为关闭文件树。
     *   行为：点击文件后自动收起。
     *   `More(...)` 菜单 **MUST** 复用桌面端语义：整行点击切换视图，`Pin/Unpin` 仅修改固定状态，不得伪装成“点击无反应”。
     *   Source Control tab **MUST** 复用共享 Source Control read surface 与 read gate；移动端不得把正常 `Staged Changes` / `Changes` / `Confirmed Ledger Changes` 视图退化成 `git status` CLI-only Git bridge notice。

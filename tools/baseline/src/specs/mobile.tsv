@@ -181,6 +181,7 @@ contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-010
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-010	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-010	run: cargo test -p deve_web mobile_i18n -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-010	cli_assert: mobile_i18n_facade_keys_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-010	cli_assert: mobile_left_drawer_close_uses_sidebar_label true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-010	cli_assert: mobile_layout_hardcoded_copy_absent true
 contains	apps/web/src/i18n/header.rs	fn mobile_i18n_header_action_copy_has_facade_keys()
 contains	apps/web/src/i18n/sidebar.rs	fn mobile_i18n_sidebar_drawer_copy_has_facade_keys()
@@ -190,7 +191,7 @@ contains	apps/web/src/components/mobile_layout/header.rs	t::header::home(locale.
 contains	apps/web/src/components/mobile_layout/header.rs	t::header::open(locale.get())
 contains	apps/web/src/components/mobile_layout/header.rs	t::header::command(locale.get())
 contains	apps/web/src/components/mobile_layout/outline_button.rs	t::header::toggle_outline(locale.get())
-contains	apps/web/src/components/mobile_layout/drawers/left/header.rs	t::sidebar::close_file_tree(locale.get())
+contains	apps/web/src/components/mobile_layout/drawers/left/header.rs	t::sidebar::close_sidebar(locale.get())
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	t::sidebar::close_outline(locale.get())
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	t::bottom_bar::toggle_status_details(locale.get())
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	t::sidebar::outline_unavailable(locale.get())
