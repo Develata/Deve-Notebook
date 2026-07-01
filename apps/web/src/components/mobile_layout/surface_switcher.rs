@@ -102,10 +102,13 @@ pub fn MobileSurfaceSwitcher(
                                 .unwrap_or("")
                         }}
                     </span>
-                    <span class="shrink-0 rounded bg-muted px-2 py-0.5 text-[11px] text-secondary">
+                    <span
+                        title=move || t::common::open_tabs(locale.get())
+                        class="shrink-0 rounded bg-muted px-2 py-0.5 text-[11px] text-secondary"
+                    >
                         {move || {
                             let count = summary.get().map(|item| item.total_count).unwrap_or(0);
-                            format!("{} {}", count, t::common::open_tabs(locale.get()))
+                            t::common::open_tabs_count(locale.get(), count)
                         }}
                     </span>
                     <ChevronDown class="h-4 w-4 shrink-0 text-muted"/>

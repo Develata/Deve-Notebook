@@ -513,8 +513,9 @@ contains	apps/web/src/components/mobile_layout/surface_switcher/model.rs	fn mobi
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	fn mobile_surface_kind_label_is_localized()
 contains	apps/web/src/components/mobile_layout/surface_switcher.rs	fn mobile_surface_close_sheet_marker_is_stable()
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	fn mobile_surface_touch_target_markers_are_stable()
-contains	apps/web/src/i18n/common.rs	pub fn document_surface(locale: Locale)
-contains	apps/web/src/i18n/common.rs	pub fn diff_surface(locale: Locale)
+contains	apps/web/src/i18n/common/tabs.rs	pub fn document_surface(locale: Locale)
+contains	apps/web/src/i18n/common/tabs.rs	pub fn diff_surface(locale: Locale)
+contains	apps/web/src/i18n/common/tabs.rs	pub fn open_tabs_count(locale: Locale, count: usize)
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	fn mobile_surface_switcher_hides_bottom_bar()

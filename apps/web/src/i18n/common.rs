@@ -10,9 +10,11 @@ use super::Locale;
 
 mod native;
 mod pending;
+mod tabs;
 
 pub use native::*;
 pub use pending::*;
+pub use tabs::*;
 
 /// 创建
 pub fn create(locale: Locale) -> &'static str {
@@ -69,76 +71,6 @@ pub fn unpin(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Unpin",
         Locale::Zh => "取消固定",
-    }
-}
-
-pub fn tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Tab",
-        Locale::Zh => "制表",
-    }
-}
-
-pub fn document_tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Document tab",
-        Locale::Zh => "文档标签页",
-    }
-}
-
-pub fn diff_tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Diff tab",
-        Locale::Zh => "差异标签页",
-    }
-}
-
-pub fn document_surface(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Document",
-        Locale::Zh => "文档",
-    }
-}
-
-pub fn diff_surface(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Diff",
-        Locale::Zh => "差异",
-    }
-}
-
-pub fn close_tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Close tab",
-        Locale::Zh => "关闭标签页",
-    }
-}
-
-pub fn open_tabs(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Open tabs",
-        Locale::Zh => "已打开标签页",
-    }
-}
-
-pub fn switch_open_tabs(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Switch open tabs",
-        Locale::Zh => "切换已打开标签页",
-    }
-}
-
-pub fn documents(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Documents",
-        Locale::Zh => "文档",
-    }
-}
-
-pub fn diffs(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Diffs",
-        Locale::Zh => "差异",
     }
 }
 
@@ -236,18 +168,5 @@ mod tests {
         assert_eq!(pin(Locale::Zh), "固定");
         assert_eq!(unpin(Locale::En), "Unpin");
         assert_eq!(unpin(Locale::Zh), "取消固定");
-        assert_eq!(document_tab(Locale::Zh), "文档标签页");
-        assert_eq!(diff_tab(Locale::En), "Diff tab");
-        assert_eq!(diff_tab(Locale::Zh), "差异标签页");
-        assert_eq!(document_surface(Locale::En), "Document");
-        assert_eq!(document_surface(Locale::Zh), "文档");
-        assert_eq!(diff_surface(Locale::En), "Diff");
-        assert_eq!(diff_surface(Locale::Zh), "差异");
-        assert_eq!(close_tab(Locale::Zh), "关闭标签页");
-        assert_eq!(open_tabs(Locale::En), "Open tabs");
-        assert_eq!(open_tabs(Locale::Zh), "已打开标签页");
-        assert_eq!(switch_open_tabs(Locale::Zh), "切换已打开标签页");
-        assert_eq!(documents(Locale::Zh), "文档");
-        assert_eq!(diffs(Locale::En), "Diffs");
     }
 }
