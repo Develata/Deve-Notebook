@@ -270,6 +270,54 @@ fn mobile_surface_close_diff_keeps_source_control_state() {
 }
 
 #[test]
+fn mobile_surface_close_inactive_diff_preserves_active_diff() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let first = diff_tab_from_session(DiffSessionWire::new(
+        "a.md".into(),
+        "old-a".into(),
+        "new-a".into(),
+    ));
+    let second = diff_tab_from_session(DiffSessionWire::new(
+        "b.md".into(),
+        "old-b".into(),
+        "new-b".into(),
+    ));
+    let (diff_content, set_diff_content) = signal(Some(first.session.clone()));
+    let (diff_tabs, set_diff_tabs) = signal(vec![first.clone(), second.clone()]);
+    let (tab_order, set_tab_order) = signal(vec![
+        EditorTabKey::Diff(first.key.clone()),
+        EditorTabKey::Diff(second.key.clone()),
+    ]);
+
+    close_diff_tab(
+        second.key.clone(),
+        diff_content,
+        set_diff_content,
+        diff_tabs,
+        set_diff_tabs,
+        tab_order,
+        set_tab_order,
+    );
+
+    assert_eq!(
+        diff_content
+            .get_untracked()
+            .as_ref()
+            .map(|session| session.path.as_str()),
+        Some(first.session.path.as_str())
+    );
+    assert_eq!(
+        diff_tabs
+            .get_untracked()
+            .iter()
+            .map(|tab| tab.key.as_str())
+            .collect::<Vec<_>>(),
+        vec![first.key.as_str()]
+    );
+}
+
+#[test]
 fn editor_tab_runtime_resets_on_repo_or_scope_change() {
     let original = (Some("repo-a".to_string()), 1);
 
