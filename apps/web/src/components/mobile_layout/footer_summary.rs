@@ -45,14 +45,13 @@ pub(super) fn collapsed_summary_fields(is_narrow: bool, locale: Locale) -> Vec<&
 #[component]
 pub fn FooterSummaryRow(
     locale: RwSignal<Locale>,
-    is_narrow: ReadSignal<bool>,
     expanded: ReadSignal<bool>,
     set_expanded: WriteSignal<bool>,
     displayed_stats: Signal<EditorStats>,
 ) -> impl IntoView {
     let stat_label = move |compact: &'static str, full: fn(Locale) -> &'static str| {
         let locale = locale;
-        move || mobile_summary_stat_label(is_narrow.get(), compact, full(locale.get())).to_string()
+        move || mobile_summary_stat_label(false, compact, full(locale.get())).to_string()
     };
 
     view! {

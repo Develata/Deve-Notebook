@@ -111,7 +111,6 @@ pub fn MobileFooter() -> impl IntoView {
         >
             <FooterSummaryRow
                 locale=locale
-                is_narrow=is_narrow
                 expanded=expanded
                 set_expanded=set_expanded
                 displayed_stats=displayed_stats
