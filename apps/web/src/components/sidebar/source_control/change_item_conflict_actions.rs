@@ -29,6 +29,7 @@ pub fn ChangeItemConflictActions(
             data-deve-mobile-touch-target="source-control-keep-fs-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_file_system(locale.get())
+            aria-label=move || t::source_control::keep_file_system(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {
@@ -48,6 +49,7 @@ pub fn ChangeItemConflictActions(
             data-deve-mobile-touch-target="source-control-keep-ledger-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::keep_ledger(locale.get())
+            aria-label=move || t::source_control::keep_ledger(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {

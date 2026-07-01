@@ -46,6 +46,7 @@ pub fn ChangeItemActions(
                             )
                         }
                         title=move || t::source_control::open_diff(locale.get())
+                        aria-label=move || t::source_control::open_diff(locale.get())
                         on:click=move |ev| {
                             ev.stop_propagation();
                             core.on_get_doc_diff.run(entry_for_open.get_value());
@@ -63,6 +64,7 @@ pub fn ChangeItemActions(
                         data-deve-mobile-touch-target="source-control-unstage-action"
                         disabled=move || !core.can_write.get()
                         title=move || t::source_control::unstage_changes(locale.get())
+                        aria-label=move || t::source_control::unstage_changes(locale.get())
                         on:click=move |ev| {
                             ev.stop_propagation();
                             if action_busy.get_value().swap(true, Ordering::AcqRel) {

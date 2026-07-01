@@ -40,6 +40,7 @@ pub fn ChangeItemWorkspaceActions(
                     )
                 }
                 title=move || t::source_control::open_diff(locale.get())
+                aria-label=move || t::source_control::open_diff(locale.get())
                 on:click=move |ev| {
                     ev.stop_propagation();
                     core.on_get_doc_diff.run(entry_for_open.get_value());
@@ -53,6 +54,7 @@ pub fn ChangeItemWorkspaceActions(
             data-deve-mobile-touch-target="source-control-discard-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::discard_changes(locale.get())
+            aria-label=move || t::source_control::discard_changes(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {
@@ -69,6 +71,7 @@ pub fn ChangeItemWorkspaceActions(
             data-deve-mobile-touch-target="source-control-stage-action"
             disabled=move || !core.can_write.get()
             title=move || t::source_control::stage_changes(locale.get())
+            aria-label=move || t::source_control::stage_changes(locale.get())
             on:click=move |ev| {
                 ev.stop_propagation();
                 if action_busy.get_value().swap(true, Ordering::AcqRel) {
