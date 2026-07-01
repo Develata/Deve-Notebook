@@ -12,6 +12,12 @@ mermaid.initialize({
     securityLevel: 'strict', // 禁止 HTML 注入 (XSS 防护)
 });
 
+function sourceLineHeight(view) {
+    const computed = window.getComputedStyle(view.contentDOM).lineHeight;
+    const height = Number.parseFloat(computed);
+    return Number.isFinite(height) && height > 0 ? height : (view.defaultLineHeight || 22);
+}
+
 /**
  * MermaidWidget (Mermaid 渲染组件)
  * 
@@ -38,8 +44,7 @@ class MermaidWidget extends WidgetType {
         // --- 高度计算逻辑 (Height Calculation) ---
         // 根据代码行数计算高度，以匹配源代码块的高度，避免页面抖动。
         const lineCount = this.code.split('\n').length;
-        // 使用默认行高 (回退值为 22px)
-        const lineHeight = view.defaultLineHeight || 22; 
+        const lineHeight = sourceLineHeight(view);
         // 增加一点缓冲 (例如 1 行)，避免太拥挤
         const height = (lineCount * lineHeight); 
         
@@ -98,6 +103,7 @@ class MermaidWidget extends WidgetType {
                     // 确保 SVG 适应固定高度的容器
                     const svgEl = container.querySelector('svg');
                     if(svgEl) {
+                        svgEl.classList.add('mermaid');
                         // 强制 SVG 充满由代码行数定义的容器
                         svgEl.style.width = "100%";
                         svgEl.style.height = "100%"; 
