@@ -8,14 +8,19 @@ import { syntaxTree } from "@codemirror/language";
  * 渲染漂亮的复选框，即时响应点击事件。
  */
 export class CheckboxWidget extends WidgetType {
-  constructor(checked, pos) {
+  constructor(checked, pos, readOnly) {
     super();
     this.checked = checked;
     this.pos = pos;
+    this.readOnly = readOnly;
   }
 
   eq(other) {
-    return this.checked === other.checked && this.pos === other.pos;
+    return (
+      this.checked === other.checked &&
+      this.pos === other.pos &&
+      this.readOnly === other.readOnly
+    );
   }
 
   toDOM(view) {
@@ -29,6 +34,8 @@ export class CheckboxWidget extends WidgetType {
     let input = document.createElement("input");
     input.type = "checkbox";
     input.checked = this.checked;
+    input.disabled = this.readOnly;
+    input.setAttribute("aria-disabled", this.readOnly ? "true" : "false");
     // 使用 Tailwind 类 + 内联兜底
     input.className = "cursor-pointer appearance-none w-4 h-4 border border-gray-400 rounded bg-white checked:bg-blue-600 checked:border-blue-600 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all duration-200 relative";
     input.style.width = "1em";
@@ -37,7 +44,8 @@ export class CheckboxWidget extends WidgetType {
     input.style.border = "1px solid #ccc";
     input.style.borderRadius = "3px";
     input.style.backgroundColor = "white";
-    input.style.cursor = "pointer";
+    input.style.cursor = this.readOnly ? "not-allowed" : "pointer";
+    input.style.opacity = this.readOnly ? "0.65" : "1";
 
     if (this.checked) {
         input.style.backgroundColor = "#2563eb"; // blue-600
@@ -51,6 +59,11 @@ export class CheckboxWidget extends WidgetType {
 
     input.onclick = (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      if (view.state.readOnly) {
+        input.checked = this.checked;
+        return;
+      }
       const newStatusMark = this.checked ? " " : "x";
       // pos 是 '[' 的位置. 复选框内容可能是 "[ ]" 或 "[x]"
       // 我们替换 pos+1 (即 '[') 后面的字符
@@ -64,7 +77,7 @@ export class CheckboxWidget extends WidgetType {
   }
 
   ignoreEvent() {
-    return false;
+    return true;
   }
 }
 
@@ -74,6 +87,7 @@ export class CheckboxWidget extends WidgetType {
 function computeCheckboxDecorations(state) {
   let widgets = [];
   const selection = state.selection.main;
+  const readOnly = state.readOnly;
   
   // 使用语法树遍历，比正则更可靠 (避免代码块内的误判)
   const tree = syntaxTree(state);
@@ -94,7 +108,7 @@ function computeCheckboxDecorations(state) {
               if (!isCursorTouching) {
                   widgets.push(
                     Decoration.replace({
-                        widget: new CheckboxWidget(isChecked, from),
+                        widget: new CheckboxWidget(isChecked, from, readOnly),
                         inclusive: true
                     }).range(from, to)
                   );
@@ -114,7 +128,11 @@ export const checkboxStateField = StateField.define({
     return computeCheckboxDecorations(state);
   },
   update(decorations, transaction) {
-    if (transaction.docChanged || transaction.selection) {
+    if (
+      transaction.docChanged ||
+      transaction.selection ||
+      transaction.startState.readOnly !== transaction.state.readOnly
+    ) {
       return computeCheckboxDecorations(transaction.state);
     }
     return decorations;
