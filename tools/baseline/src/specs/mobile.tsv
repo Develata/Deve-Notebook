@@ -470,10 +470,12 @@ contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobil
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	source-control-confirmed-open-diff-action
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_only_git_cli_notice()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_open_read_surface_observes_notice_changes()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_active_surface_observes_notice_changes()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_cli_notice()
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	clear_mobile_source_control_notice_for_drawer(
 absent	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	clear_tracked_mobile_source_control_notice_for_view
 contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_view(
+contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_active_view(
 contains	docs/acceptance-cases/17_mobile_surface_switcher.md	case_id: UI-MOB-021
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: cargo test -p deve_web mobile_surface -- --nocapture
@@ -515,6 +517,7 @@ contains	apps/web/src/components/mobile_layout/surface_switcher.rs	fn mobile_sur
 contains	apps/web/src/components/mobile_layout/surface_switcher/rows.rs	fn mobile_surface_touch_target_markers_are_stable()
 contains	apps/web/src/i18n/common/tabs.rs	pub fn document_surface(locale: Locale)
 contains	apps/web/src/i18n/common/tabs.rs	pub fn diff_surface(locale: Locale)
+contains	apps/web/src/i18n/common/tabs.rs	pub fn close_tab_switcher(locale: Locale)
 contains	apps/web/src/i18n/common/tabs.rs	pub fn open_tabs_count(locale: Locale, count: usize)
 contains	apps/web/src/components/editor_tabs/tests.rs	fn mobile_surface_close_diff_keeps_source_control_state()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	surface_switcher_open

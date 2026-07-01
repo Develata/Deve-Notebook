@@ -32,6 +32,12 @@ pub(super) fn should_observe_mobile_source_control_notice_for_drawer(
     open && view == SidebarView::SourceControl
 }
 
+pub(super) fn should_observe_mobile_source_control_notice_for_active_view(
+    view: SidebarView,
+) -> bool {
+    view == SidebarView::SourceControl
+}
+
 pub(super) fn clear_mobile_source_control_notice_for_view(
     view: SidebarView,
     source_control: Option<&SourceControlContext>,
@@ -43,6 +49,20 @@ pub(super) fn clear_mobile_source_control_notice_for_view(
         )
     {
         source_control.clear_notice.run(());
+    }
+}
+
+pub(super) fn clear_mobile_source_control_notice_for_active_view(
+    view: SidebarView,
+    source_control: Option<&SourceControlContext>,
+) {
+    if let Some(source_control) = source_control
+        && should_observe_mobile_source_control_notice_for_active_view(view)
+    {
+        let notice = source_control.notice.get();
+        if should_clear_mobile_source_control_notice(view, notice.as_ref()) {
+            source_control.clear_notice.run(());
+        }
     }
 }
 
@@ -66,6 +86,7 @@ mod tests {
     use super::{
         should_clear_mobile_source_control_notice,
         should_clear_mobile_source_control_notice_for_drawer,
+        should_observe_mobile_source_control_notice_for_active_view,
         should_observe_mobile_source_control_notice_for_drawer,
     };
     use crate::components::activity_bar::SidebarView;
@@ -123,6 +144,20 @@ mod tests {
             SidebarView::SourceControl,
             Some(&source_control_notice),
         ));
+    }
+
+    #[test]
+    fn mobile_source_control_read_gate_active_surface_observes_notice_changes() {
+        assert!(should_observe_mobile_source_control_notice_for_active_view(
+            SidebarView::SourceControl,
+        ));
+        for view in [
+            SidebarView::Explorer,
+            SidebarView::Search,
+            SidebarView::Extensions,
+        ] {
+            assert!(!should_observe_mobile_source_control_notice_for_active_view(view,));
+        }
     }
 
     #[test]

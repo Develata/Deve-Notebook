@@ -38,7 +38,9 @@ use gesture::{build_touch_end, build_touch_start};
 use layout_frame::MobileLayoutFrame;
 use layout_runtime::{build_doc_select_callback, build_mobile_title, resolve_content_signal};
 use leptos::prelude::*;
-use source_control_notice::clear_mobile_source_control_notice_for_view;
+use source_control_notice::{
+    clear_mobile_source_control_notice_for_active_view, clear_mobile_source_control_notice_for_view,
+};
 
 #[component]
 pub fn MobileLayout(
@@ -61,6 +63,8 @@ pub fn MobileLayout(
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
     let (chat_expanded, set_chat_expanded) = signal(false);
     let source_control_context = use_context::<SourceControlContext>();
+    let source_control_for_drawer = source_control_context.clone();
+    let source_control_for_active_view = source_control_context.clone();
 
     let title = build_mobile_title(document.clone());
     let (content_signal, set_outline_content) = resolve_content_signal();
@@ -72,7 +76,7 @@ pub fn MobileLayout(
     let open_left_drawer = Callback::new(move |_| {
         clear_mobile_source_control_notice_for_view(
             active_view.get_untracked(),
-            source_control_context.as_ref(),
+            source_control_for_drawer.as_ref(),
         );
         set_show_outline.set(false);
         set_show_sidebar.set(true);
@@ -101,6 +105,13 @@ pub fn MobileLayout(
 
     apply_body_scroll_lock(drawer_open);
     apply_visual_viewport_offset(set_keyboard_offset);
+
+    Effect::new(move |_| {
+        clear_mobile_source_control_notice_for_active_view(
+            active_view.get(),
+            source_control_for_active_view.as_ref(),
+        );
+    });
 
     Effect::new(move |_| {
         if show_outline.get() {

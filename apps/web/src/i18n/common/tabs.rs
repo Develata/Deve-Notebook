@@ -46,6 +46,13 @@ pub fn close_tab(locale: Locale) -> &'static str {
     }
 }
 
+pub fn close_tab_switcher(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Close tab switcher",
+        Locale::Zh => "关闭标签页切换面板",
+    }
+}
+
 pub fn open_tabs(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Open tabs",
@@ -97,6 +104,8 @@ mod tests {
         assert_eq!(diff_surface(Locale::En), "Diff");
         assert_eq!(diff_surface(Locale::Zh), "差异");
         assert_eq!(close_tab(Locale::Zh), "关闭标签页");
+        assert_eq!(close_tab_switcher(Locale::En), "Close tab switcher");
+        assert_eq!(close_tab_switcher(Locale::Zh), "关闭标签页切换面板");
         assert_eq!(documents(Locale::Zh), "文档");
         assert_eq!(diffs(Locale::En), "Diffs");
     }

@@ -136,8 +136,8 @@ pub fn MobileSurfaceSwitcher(
                         data-deve-mobile-surface-action=mobile_surface_close_sheet_marker()
                         data-deve-mobile-touch-target=mobile_surface_close_sheet_marker()
                         class=mobile_surface_close_button_class()
-                        title=move || t::common::close_tab(locale.get())
-                        aria-label=move || t::common::close_tab(locale.get())
+                        title=move || t::common::close_tab_switcher(locale.get())
+                        aria-label=move || t::common::close_tab_switcher(locale.get())
                         on:click=move |_| set_open.set(false)
                     >
                         <X class="h-4 w-4"/>
