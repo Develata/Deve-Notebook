@@ -16,14 +16,39 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
+#[cfg(test)]
 pub(crate) fn error_notice_visible(
     read_blocked: bool,
     notice: Option<&SourceControlNotice>,
     suppress_git_status_notice: bool,
 ) -> bool {
-    !read_blocked
-        && notice
-            .is_some_and(|notice| !(suppress_git_status_notice && is_git_status_cli_notice(notice)))
+    visible_error_notice(read_blocked, notice, suppress_git_status_notice).is_some()
+}
+
+pub(crate) fn visible_error_notice<'a>(
+    read_blocked: bool,
+    notice: Option<&'a SourceControlNotice>,
+    suppress_git_status_notice: bool,
+) -> Option<&'a SourceControlNotice> {
+    if read_blocked {
+        return None;
+    }
+
+    notice.filter(|notice| !(suppress_git_status_notice && is_git_status_cli_notice(notice)))
+}
+
+fn visible_notice_snapshot(
+    notice: ReadSignal<Option<SourceControlNotice>>,
+    block: Signal<Option<RepoWriteBlock>>,
+    suppress_git_status_notice: bool,
+) -> Option<SourceControlNotice> {
+    let notice_value = notice.get();
+    visible_error_notice(
+        block.get().is_some(),
+        notice_value.as_ref(),
+        suppress_git_status_notice,
+    )
+    .cloned()
 }
 
 #[component]
@@ -70,36 +95,28 @@ pub fn ErrorNotice(
 
     view! {
         <Show when=move || {
-            let notice_value = notice.get();
-            error_notice_visible(
-                block.get().is_some(),
-                notice_value.as_ref(),
-                suppress_git_status_notice,
-            )
+            visible_notice_snapshot(notice, block, suppress_git_status_notice).is_some()
         }>
             <div class="px-4 py-3 text-sm border-b border-default bg-warning/5">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
                         <p class="text-primary font-medium">
                             {move || {
-                                notice
-                                    .get()
+                                visible_notice_snapshot(notice, block, suppress_git_status_notice)
                                     .map(|current| copy::title(locale.get(), &current))
                                     .unwrap_or_default()
                             }}
                         </p>
                         <p class="mt-1 text-xs text-muted">
                             {move || {
-                                notice
-                                    .get()
+                                visible_notice_snapshot(notice, block, suppress_git_status_notice)
                                     .map(|current| copy::hint(locale.get(), &current))
                                     .unwrap_or_default()
                             }}
                         </p>
                         <div class="mt-2 space-y-1 text-xs text-muted">
                             {move || {
-                                notice
-                                    .get()
+                                visible_notice_snapshot(notice, block, suppress_git_status_notice)
                                     .map(|current| {
                                         copy::details(locale.get(), &current)
                                             .into_iter()
@@ -118,8 +135,7 @@ pub fn ErrorNotice(
                         </div>
                         <div>
                             {move || {
-                                notice
-                                    .get()
+                                visible_notice_snapshot(notice, block, suppress_git_status_notice)
                                     .filter(is_git_repair_cli_notice)
                                     .map(|_| repair_copy::git_repair_review(locale.get(), &repair_review.get()))
                                     .map(|review| {
@@ -223,7 +239,7 @@ pub fn ErrorNotice(
 
 #[cfg(test)]
 mod tests {
-    use super::error_notice_visible;
+    use super::{error_notice_visible, visible_error_notice};
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
@@ -258,5 +274,33 @@ mod tests {
             true
         ));
         assert!(!error_notice_visible(false, None, true));
+    }
+
+    #[test]
+    fn mobile_source_control_read_gate_filters_rendered_git_status_notice() {
+        let status_notice = SourceControlNotice::git_status_cli_only();
+        let repair_notice = SourceControlNotice::git_repair_cli_only();
+        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+
+        assert_eq!(
+            visible_error_notice(false, Some(&status_notice), true),
+            None
+        );
+        assert_eq!(
+            visible_error_notice(false, Some(&repair_notice), true),
+            Some(&repair_notice)
+        );
+        assert_eq!(
+            visible_error_notice(false, Some(&source_control_notice), true),
+            Some(&source_control_notice)
+        );
+        assert_eq!(
+            visible_error_notice(false, Some(&status_notice), false),
+            Some(&status_notice)
+        );
+        assert_eq!(
+            visible_error_notice(true, Some(&source_control_notice), true),
+            None
+        );
     }
 }
