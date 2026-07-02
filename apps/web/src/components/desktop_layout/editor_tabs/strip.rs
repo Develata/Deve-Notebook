@@ -17,12 +17,28 @@ pub(crate) fn tab_button_class(active: bool) -> &'static str {
     }
 }
 
+pub(crate) fn desktop_document_tab_label(locale: Locale, title: &str) -> String {
+    t::common::document_tab_named(locale, title)
+}
+
+pub(crate) fn desktop_diff_tab_label(locale: Locale, title: &str) -> String {
+    t::common::diff_tab_named(locale, title)
+}
+
+pub(crate) fn desktop_close_tab_label(locale: Locale, title: &str) -> String {
+    t::common::close_tab_named(locale, title)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{tab_button_class, trailing_blank_drop_target};
+    use super::{
+        desktop_close_tab_label, desktop_diff_tab_label, desktop_document_tab_label,
+        tab_button_class, trailing_blank_drop_target,
+    };
     use crate::components::editor_tabs::{
         DropPosition, EditorDocumentTab, EditorTabItem, EditorTabKey,
     };
+    use crate::i18n::Locale;
     use deve_core::models::DocId;
 
     #[test]
@@ -53,6 +69,17 @@ mod tests {
             Some((EditorTabKey::Document(second), DropPosition::After))
         );
         assert_eq!(trailing_blank_drop_target(&[]), None);
+    }
+
+    #[test]
+    fn desktop_tab_accessible_labels_include_titles() {
+        let en = Locale::En;
+        let zh = Locale::Zh;
+        let title = "notes/a.md";
+
+        assert!(desktop_document_tab_label(en, title).ends_with(title));
+        assert!(desktop_diff_tab_label(zh, title).ends_with(title));
+        assert!(desktop_close_tab_label(en, title).ends_with(title));
     }
 }
 
@@ -101,6 +128,9 @@ pub(crate) fn EditorTabStrip(
                         let body = match item {
                             EditorTabItem::Document(tab) => {
                                 let doc_id = tab.doc_id;
+                                let title = tab.title.clone();
+                                let close_title = tab.title.clone();
+                                let close_label_title = tab.title.clone();
                                 let select_doc = on_select_document;
                                 let close_doc = on_close_document;
                                 view! {
@@ -109,7 +139,7 @@ pub(crate) fn EditorTabStrip(
                                             type="button"
                                             class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
                                             title=tab.tooltip.clone()
-                                            aria-label=move || t::common::document_tab(locale.get())
+                                            aria-label=move || desktop_document_tab_label(locale.get(), &title)
                                             on:click=move |_| select_doc.run(doc_id)
                                         >
                                             <FileText class="h-3.5 w-3.5 shrink-0"/>
@@ -118,8 +148,8 @@ pub(crate) fn EditorTabStrip(
                                         <button
                                             type="button"
                                             class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
-                                            title=move || t::common::close_tab(locale.get())
-                                            aria-label=move || t::common::close_tab(locale.get())
+                                            title=move || desktop_close_tab_label(locale.get(), &close_title)
+                                            aria-label=move || desktop_close_tab_label(locale.get(), &close_label_title)
                                             on:click=move |ev| {
                                                 ev.stop_propagation();
                                                 close_doc.run(doc_id);
@@ -132,6 +162,9 @@ pub(crate) fn EditorTabStrip(
                             }
                             EditorTabItem::Diff(tab) => {
                                 let key_for_close = tab.key.clone();
+                                let title = tab.title.clone();
+                                let close_title = tab.title.clone();
+                                let close_label_title = tab.title.clone();
                                 let session = tab.session.clone();
                                 let select_diff = on_select_diff;
                                 let close_diff = on_close_diff;
@@ -141,7 +174,7 @@ pub(crate) fn EditorTabStrip(
                                             type="button"
                                             class="flex h-full min-w-0 flex-1 items-center gap-2 px-3 text-left"
                                             title=tab.tooltip.clone()
-                                            aria-label=move || t::common::diff_tab(locale.get())
+                                            aria-label=move || desktop_diff_tab_label(locale.get(), &title)
                                             on:click=move |_| select_diff.run(session.clone())
                                         >
                                             <SourceControl class="h-3.5 w-3.5 shrink-0"/>
@@ -150,8 +183,8 @@ pub(crate) fn EditorTabStrip(
                                         <button
                                             type="button"
                                             class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
-                                            title=move || t::common::close_tab(locale.get())
-                                            aria-label=move || t::common::close_tab(locale.get())
+                                            title=move || desktop_close_tab_label(locale.get(), &close_title)
+                                            aria-label=move || desktop_close_tab_label(locale.get(), &close_label_title)
                                             on:click=move |ev| {
                                                 ev.stop_propagation();
                                                 close_diff.run(key_for_close.clone());
