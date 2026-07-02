@@ -262,6 +262,7 @@
     - ui_assert: source_control_working_rows_open_discard_stage_actions_present true
     - ui_assert: source_control_staged_rows_unstage_action_present true
     - ui_assert: source_control_row_actions_desktop_hover_focus_visible true
+    - ui_assert: source_control_row_actions_desktop_hidden_tray_does_not_reserve_width true
     - ui_assert: source_control_status_badge_action_tray_separated true
     - ui_assert: confirmed_ledger_section_hint_present true
     - ui_assert: source_control_resource_group_headers_are_buttons true

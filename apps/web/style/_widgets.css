@@ -43,14 +43,19 @@
 }
 
 .sc-row-action-tray {
+  max-width: 0;
+  overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 120ms ease;
+  transition:
+    max-width 120ms ease,
+    opacity 120ms ease;
 }
 
 .group:hover .sc-row-action-tray,
 .group:focus-within .sc-row-action-tray,
 .sc-row-action-tray:focus-within {
+  max-width: 8rem;
   opacity: 1;
   pointer-events: auto;
 }
@@ -62,6 +67,8 @@
 
 @media (hover: none), (pointer: coarse) {
   .sc-row-action-tray {
+    max-width: none;
+    overflow: visible;
     opacity: 1;
     pointer-events: auto;
   }

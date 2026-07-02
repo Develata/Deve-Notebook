@@ -217,6 +217,10 @@ contains	apps/web/style/_widgets.css	.sc-section-action-tray
 contains	apps/web/style/_widgets.css	.group:hover .sc-row-action-tray
 contains	apps/web/style/_widgets.css	.group:focus-within .sc-row-action-tray
 contains	apps/web/style/_widgets.css	@media (hover: none), (pointer: coarse)
+contains	apps/web/style/_widgets.css	max-width: 0
+contains	apps/web/style/_widgets.css	max-width: 8rem
+contains	apps/web/style/_widgets.css	overflow: hidden
+contains	apps/web/style/_widgets.css	overflow: visible
 contains	apps/web/style/_widgets.css	opacity: 0
 contains	apps/web/style/_widgets.css	opacity: 1
 contains	apps/web/style/_widgets.css	pointer-events: none
