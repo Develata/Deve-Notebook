@@ -35,7 +35,7 @@ pub fn group_peer(locale: Locale) -> &'static str {
 pub fn group_source_control(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Source Control",
-        Locale::Zh => "Source Control",
+        Locale::Zh => "源代码管理",
     }
 }
 

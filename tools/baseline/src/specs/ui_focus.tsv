@@ -2,6 +2,7 @@ contains	docs/acceptance-cases/05_ui.md	case_id: UI-GEN-003
 contains	docs/acceptance-cases/05_ui.md	scripts/check-ui-focus-baseline.sh
 contains	docs/acceptance-cases/05_ui.md	command_palette_focus_trap_bound true
 contains	docs/acceptance-cases/05_ui.md	command_palette_focus_restore_bound true
+contains	docs/acceptance-cases/05_ui.md	command_palette_dialog_named_bound true
 contains	docs/acceptance-cases/05_ui.md	settings_modal_focus_trap_bound true
 contains	docs/acceptance-cases/05_ui.md	pending_navigation_modal_focus_trap_bound true
 contains	docs/acceptance-cases/05_ui.md	merge_modal_focus_trap_bound true
@@ -40,8 +41,10 @@ contains	apps/web/src/components/command_palette/logic.rs	previous_focus.set_val
 contains	apps/web/src/components/command_palette/logic.rs	focus_scope::restore_focus_next_frame(previous)
 contains	apps/web/src/components/command_palette/ui.rs	role="dialog"
 contains	apps/web/src/components/command_palette/ui.rs	aria-modal="true"
+contains	apps/web/src/components/command_palette/ui.rs	aria-label=move || command_palette_dialog_label(locale.get())
 contains	apps/web/src/components/command_palette/ui.rs	focus_scope::handle_focus_trap_keydown(&ev, panel_ref)
 contains	apps/web/src/components/command_palette/ui.rs	node_ref=input_ref
+contains	apps/web/src/components/command_palette/ui.rs	fn command_palette_dialog_label
 contains	apps/web/src/components/settings.rs	focus_scope::attach_modal_focus_restore_effect
 contains	apps/web/src/components/settings.rs	role="dialog"
 contains	apps/web/src/components/settings.rs	aria-modal="true"

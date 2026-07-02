@@ -115,5 +115,12 @@ pub(crate) fn repo_source_control_read_block(
         };
     }
 
-    repo_write_block(state).filter(|block| *block != RepoWriteBlock::ReadOnly)
+    match repo_write_block(state).filter(|block| *block != RepoWriteBlock::ReadOnly) {
+        Some(RepoWriteBlock::HandshakingRepo)
+            if state.node_role_readable && state.handshake_ready =>
+        {
+            None
+        }
+        block => block,
+    }
 }

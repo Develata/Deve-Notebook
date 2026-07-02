@@ -13,10 +13,10 @@ pub fn no_docs(locale: Locale) -> &'static str {
     }
 }
 
-pub fn close_file_tree(locale: Locale) -> &'static str {
+pub fn close_sidebar(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Close file tree",
-        Locale::Zh => "关闭文件树",
+        Locale::En => "Close sidebar",
+        Locale::Zh => "关闭侧栏",
     }
 }
 
@@ -198,14 +198,14 @@ pub fn read_badge(locale: Locale) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        close_file_tree, close_outline, empty_outline_heading, no_headings_found,
-        outline_unavailable,
+        close_outline, close_sidebar, empty_outline_heading, no_headings_found, outline_unavailable,
     };
     use crate::i18n::Locale;
 
     #[test]
     fn mobile_i18n_sidebar_drawer_copy_has_facade_keys() {
-        assert_eq!(close_file_tree(Locale::En), "Close file tree");
+        assert_eq!(close_sidebar(Locale::En), "Close sidebar");
+        assert_eq!(close_sidebar(Locale::Zh), "关闭侧栏");
         assert_eq!(close_outline(Locale::En), "Close outline");
         assert_eq!(outline_unavailable(Locale::En), "Outline unavailable");
         assert_eq!(no_headings_found(Locale::En), "No headings found");

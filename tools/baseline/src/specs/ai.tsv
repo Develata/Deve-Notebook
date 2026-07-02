@@ -42,16 +42,16 @@ contains	apps/web/src/components/chat/actions/send.rs	chat.on_plugin_call.run
 contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_finishes_matching_chat_placeholder
 contains	apps/web/src/hooks/use_core/effects/message_dispatch_gate/tests.rs	plugin_text_response_does_not_duplicate_streamed_chat_content
 contains	apps/web/src/components/chat/actions/send_backend/tests.rs	trusted_cli_untrusted_send_uses_native_plugin_and_visible_notice
-contains	apps/web/src/components/chat/actions/apply.rs	chat_apply_append_markdown_op_uses_utf16_end_position
+contains	apps/web/src/components/chat/actions/apply/tests.rs	chat_apply_append_markdown_op_uses_utf16_end_position
 contains	apps/web/src/components/chat/actions/apply/tests.rs	chat_apply_edit_message_carries_current_scope_nonce
 contains	apps/web/src/components/chat/actions/apply.rs	apply_local_programmatic_op
 contains	apps/web/src/components/chat/actions/apply.rs	sync_editor_state_to_rust
 contains	apps/web/js/editor_adapter.js	window.syncEditorStateToRust = syncEditorStateToRust
 contains	apps/web/src/components/chat/message_item.rs	chat_apply_label_is_build_only_for_assistant_messages
 contains	apps/web/src/components/chat/message_list.rs	chat_apply_click_is_consumed_only_in_build_mode
-contains	apps/web/src/components/chat/drop_handler.rs	file reader is unavailable
-contains	apps/web/src/components/chat/drop_handler.rs	file read failed
-contains	apps/web/src/components/chat/drop_handler.rs	attach_file_errors_are_visible_banner_copy
+contains	apps/web/src/i18n/write_gate.rs	file reader is unavailable
+contains	apps/web/src/i18n/write_gate.rs	file read failed
+contains	apps/web/src/components/chat/drop_handler.rs	attach_file_errors_are_localized_banner_copy
 absent	apps/web/src/components/chat/drop_handler.rs	FileReader::new().unwrap()
 absent	apps/web/src/components/chat/drop_handler.rs	let _ = reader.read_as_text(&file);
 contains	docs/features/operations/ai_chat.md	Native AI 默认拒绝请求侧
@@ -93,7 +93,7 @@ contains	apps/web/src/hooks/use_ai_backend.rs	select_backend_fallback
 contains	apps/web/src/hooks/use_ai_backend.rs	native_does_not_auto_promote_to_trusted_cli_when_native_is_disabled
 contains	apps/cli/src/server/agent_bridge/policy/tests.rs	capabilities_do_not_promote_native_mode_to_trusted_cli_when_native_is_disabled
 contains	apps/cli/src/server/agent_bridge/policy/tests.rs	capabilities_keep_requested_trusted_cli_reason_when_policy_blocks_it
-contains	apps/web/src/i18n/extensions.rs	ai_backend_fallback
+contains	apps/web/src/i18n/extensions/ai_backend.rs	ai_backend_fallback
 contains	apps/cli/src/server/agent_bridge/stream.rs	Agent CLI exited with status
 contains	apps/cli/src/server/agent_bridge/stream.rs	Check AGENT_CLI_PATH points to an existing absolute executable path
 contains	apps/cli/src/server/agent_bridge/AGENTS.md	default-off

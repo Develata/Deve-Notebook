@@ -37,6 +37,7 @@
   steps:
     - run: scripts/check-rendering-baseline.sh
     - run: cargo test -p deve_web empty_atx_headings -- --nocapture
+    - run: node apps/web/js/extensions/block_styling.test.cjs
     - ui_type: |
         #
         ##
@@ -44,6 +45,8 @@
         # title
         ## title
         ### title
+        #申话
+    - ui_move_cursor_into: "#申话"
     - ui_wait_render: true
   assertions:
     - ui_assert: editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
@@ -56,6 +59,7 @@
     - ui_assert: atx_heading_lines_have_heading_class true
     - ui_assert: atx_heading_text_line_height_gt_plain true
     - ui_assert: atx_empty_heading_line_height_gt_plain true
+    - ui_assert: atx_active_cjk_candidate_line_height_gt_plain true
 
 - case_id: RENDER-CURSOR-001
   goal: 光标揭示规则。
@@ -174,6 +178,9 @@
   assertions:
     - ui_assert: toolbar_has_buttons ["Copy", "Ellipsis"]
     - ui_assert: menu_empty_state_text localized_editor_copy "noActionsAvailable"
+    - ui_assert: code_toolbar_action_markers ["copy", "ellipsis"]
+    - ui_assert: code_menu_empty_state_marker_visible true
+    - ui_assert: code_menu_empty_state_uses_i18n_key "noActionsAvailable"
 
 - case_id: RENDER-WHITELIST-001
   goal: 语法白名单与限制。

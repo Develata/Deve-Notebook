@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.sc.commit`
 - `Domain`: `source-control`
 - `Related Feature Chapters`: `docs/features/07_diff_logic.md`, `docs/features/10_ai_agent.md`
-- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-03`, `DIFF-FEAT-04`, `AI-007`
+- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-03`, `DIFF-009`, `AI-007`
 
 ## Operations
 

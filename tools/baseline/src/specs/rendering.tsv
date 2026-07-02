@@ -14,8 +14,10 @@ contains	docs/features/03_rendering.md	ATX 标题（`#` 到 `######`）的标题
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_lines_have_heading_class true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_heading_text_line_height_gt_plain true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_empty_heading_line_height_gt_plain true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: atx_active_cjk_candidate_line_height_gt_plain true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	run: scripts/check-rendering-baseline.sh
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	run: cargo test -p deve_web empty_atx_headings -- --nocapture
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	run: node apps/web/js/extensions/block_styling.test.cjs
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_editor_heading_line_classes ["cm-heading-line-1", "cm-heading-line-2", "cm-heading-line-3"]
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: markdown_body_empty_heading_heights_distinct true
@@ -25,7 +27,12 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_with_inline_math_keeps_line_class true
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 contains	apps/web/js/extensions/block_styling.js	ATX_HEADING_LINE_RE
-contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h${atxHeading[1].length}` }).range(line.from)
+contains	apps/web/js/extensions/block_styling.js	ACTIVE_CJK_ATX_HEADING_LINE_RE
+contains	apps/web/js/extensions/block_styling.js	const activeCjkCandidate = isActiveLine
+contains	apps/web/js/extensions/block_styling.js	update.selectionSet
+contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h${headingLevel}` }).range(line.from)
+contains	apps/web/js/extensions/block_styling.test.cjs	#申话
+contains	apps/web/index.html	editor.bundle.js?rev=20260701-heading-lineheight
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
 contains	apps/web/js/extensions/hybrid.js	attributes: {
 contains	apps/web/js/extensions/hybrid.js	class: headingLineClass,
@@ -37,6 +44,12 @@ contains	apps/web/js/extensions/hybrid.js	!findContainingCode(line.from)
 contains	apps/web/style/_typography.css	.cm-h1
 contains	apps/web/style/_typography.css	.cm-h2
 contains	apps/web/style/_typography.css	.cm-h3
+contains	apps/web/style/_typography.css	.cm-line.cm-h1
+contains	apps/web/style/_typography.css	.cm-line.cm-h2
+contains	apps/web/style/_typography.css	.cm-line.cm-h3
+contains	apps/web/style/_typography.css	.cm-line.cm-h4
+contains	apps/web/style/_typography.css	.cm-line.cm-h5
+contains	apps/web/style/_typography.css	.cm-line.cm-h6
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line span
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line span span
@@ -44,6 +57,9 @@ contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line-1
 contains	apps/web/style/_typography.css	min-height: 1.2em;
 contains	apps/web/style/_typography.css	min-height: 1.3em;
 contains	apps/web/style/_typography.css	min-height: 1.4em;
+contains	apps/web/style/_typography.css	min-height: 1.5em;
+contains	apps/web/style/_typography.css	min-height: 1.7em;
+contains	apps/web/style/_typography.css	min-height: 1.9em;
 contains	apps/web/style/_typography.css	font-size: inherit;
 contains	apps/web/style/_typography.css	--deve-heading-line-box: 1.2em;
 contains	apps/web/style/_typography.css	--deve-heading-inline-line-height: 1.2;
@@ -180,6 +196,12 @@ absent	apps/web/src/hooks/use_ctrl_key.rs	body().unwrap()
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-CODE-001
 contains	docs/acceptance-cases/03_rendering.md	toolbar_has_buttons ["Copy", "Ellipsis"]
 contains	docs/acceptance-cases/03_rendering.md	menu_empty_state_text localized_editor_copy "noActionsAvailable"
+contains	docs/acceptance-cases/03_rendering.md	code_toolbar_action_markers ["copy", "ellipsis"]
+contains	docs/acceptance-cases/03_rendering.md	code_menu_empty_state_marker_visible true
+contains	apps/web/js/extensions/code_toolbar.js	copyBtn.setAttribute("data-deve-code-toolbar-action", "copy");
+contains	apps/web/js/extensions/code_toolbar.js	menuBtn.setAttribute("data-deve-code-toolbar-action", "ellipsis");
+contains	apps/web/js/extensions/code_menu.js	empty.setAttribute("data-deve-code-menu-empty-state", "true");
+contains	apps/web/js/extensions/code_menu.js	empty.setAttribute("data-deve-i18n-key", "noActionsAvailable");
 contains	docs/plan/10_rendering.md	### 6.4 Code Block Toolbar Contract {#code-block-toolbar-contract}
 contains	docs/plan/AGENTS.md	10_rendering#code-block-toolbar-contract
 contains	apps/web/js/extensions/code_toolbar.js	ICON_COPY

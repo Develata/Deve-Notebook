@@ -39,7 +39,7 @@ pub fn DisconnectedOverlay(status: Signal<ConnectionStatus>) -> impl IntoView {
                 set_native_local_feedback
                     .set(t::settings::local_backend_saved(locale.get_untracked()).to_string());
             } else {
-                set_native_local_feedback.set(config.error.unwrap_or_else(|| {
+                set_native_local_feedback.set(config.error_message.unwrap_or_else(|| {
                     t::settings::native_backend_unavailable(locale.get_untracked()).to_string()
                 }));
             }

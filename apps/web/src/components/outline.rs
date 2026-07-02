@@ -71,12 +71,12 @@ fn parse_atx_heading(line: &str) -> Option<(usize, String)> {
         return None;
     }
 
-    let text = strip_atx_closing_sequence(rest.trim_start_matches(|ch| ch == ' ' || ch == '\t'));
+    let text = strip_atx_closing_sequence(rest.trim_start_matches([' ', '\t']));
     Some((level, text.to_string()))
 }
 
 fn strip_atx_closing_sequence(rest: &str) -> &str {
-    let trimmed = rest.trim_end_matches(|ch| ch == ' ' || ch == '\t');
+    let trimmed = rest.trim_end_matches([' ', '\t']);
     if !trimmed.ends_with('#') {
         return trimmed;
     }
@@ -92,7 +92,7 @@ fn strip_atx_closing_sequence(rest: &str) -> &str {
 
     let before_closing = &trimmed[..closing_start];
     if before_closing.ends_with(' ') || before_closing.ends_with('\t') {
-        before_closing.trim_end_matches(|ch| ch == ' ' || ch == '\t')
+        before_closing.trim_end_matches([' ', '\t'])
     } else {
         trimmed
     }
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn outline_atx_heading_scan_supports_empty_tab_and_closing_sequence() {
-        let headers = parse_headers("#\n#\tTabbed\n## title ##\n### title ###   \n# ###\n");
+        let headers = parse_headers("#\n# s\n#\tTabbed\n## title ##\n### title ###   \n# ###\n");
 
         assert_eq!(
             headers,
@@ -184,23 +184,28 @@ mod tests {
                 },
                 HeaderNode {
                     level: 1,
-                    text: "Tabbed".to_string(),
+                    text: "s".to_string(),
                     line: 2,
+                },
+                HeaderNode {
+                    level: 1,
+                    text: "Tabbed".to_string(),
+                    line: 3,
                 },
                 HeaderNode {
                     level: 2,
                     text: "title".to_string(),
-                    line: 3,
+                    line: 4,
                 },
                 HeaderNode {
                     level: 3,
                     text: "title".to_string(),
-                    line: 4,
+                    line: 5,
                 },
                 HeaderNode {
                     level: 1,
                     text: String::new(),
-                    line: 5,
+                    line: 6,
                 },
             ]
         );

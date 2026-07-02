@@ -33,10 +33,11 @@ class CodeToolbarWidget extends WidgetType {
         // Copy Button
         const copyBtn = document.createElement("button");
         copyBtn.type = "button";
-        copyBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors flex items-center justify-center";
         const copyLabel = editorCopy("copyCode");
+        copyBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors flex items-center justify-center";
         copyBtn.title = copyLabel;
         copyBtn.setAttribute("aria-label", copyLabel);
+        copyBtn.setAttribute("data-deve-code-toolbar-action", "copy");
         copyBtn.innerHTML = ICON_COPY;
 
         copyBtn.onclick = async (e) => {
@@ -55,12 +56,13 @@ class CodeToolbarWidget extends WidgetType {
         // Menu Button
         const menuBtn = document.createElement("button");
         menuBtn.type = "button";
-        menuBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors relative group flex items-center justify-center";
         const menuLabel = editorCopy("moreActions");
+        menuBtn.className = "p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors relative group flex items-center justify-center";
         menuBtn.title = menuLabel;
         menuBtn.setAttribute("aria-label", menuLabel);
         menuBtn.setAttribute("aria-haspopup", "menu");
         menuBtn.setAttribute("aria-expanded", "false");
+        menuBtn.setAttribute("data-deve-code-toolbar-action", "ellipsis");
         menuBtn.innerHTML = ICON_ELLIPSIS;
         menuBtn.onclick = (e) => {
             e.preventDefault();
@@ -74,7 +76,7 @@ class CodeToolbarWidget extends WidgetType {
     }
 
     ignoreEvent() {
-        return false;
+        return true;
     }
 }
 

@@ -192,7 +192,7 @@ contains	apps/web/src/components/mobile_layout/header.rs	t::header::home(locale.
 contains	apps/web/src/components/mobile_layout/header.rs	t::header::open(locale.get())
 contains	apps/web/src/components/mobile_layout/header.rs	t::header::command(locale.get())
 contains	apps/web/src/components/mobile_layout/outline_button.rs	t::header::toggle_outline(locale.get())
-contains	apps/web/src/components/mobile_layout/drawers/left/header.rs	t::sidebar::close_file_tree(locale.get())
+contains	apps/web/src/components/mobile_layout/drawers/left/header.rs	t::sidebar::close_sidebar(locale.get())
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	t::sidebar::close_outline(locale.get())
 contains	apps/web/src/components/mobile_layout/footer_summary.rs	t::bottom_bar::toggle_status_details(locale.get())
 contains	apps/web/src/components/mobile_layout/drawers/right.rs	t::sidebar::outline_unavailable(locale.get())
@@ -368,7 +368,7 @@ contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	data-deve-mo
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_sidebar_icon_tabs_marker_is_visible_when_drawer_open()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_sidebar_more_button_marker_is_stable()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_sidebar_more_button_is_at_least_44px()
-contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_source_control_tab_clears_local_command_notices()
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	fn mobile_sidebar_non_search_tabs_close_command_overlay()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	data-deve-mobile-sidebar-tab=sidebar_tab_marker(view)
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	data-deve-mobile-sidebar-tab-active=move || (active_view.get() == view).to_string()
 contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	fn mobile_sidebar_icon_tab_markers_cover_sidebar_entries()
@@ -489,9 +489,13 @@ contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobi
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_read_gate_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_commit_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	source-control-confirmed-open-diff-action
-contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_local_command_notice()
-contains	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	clear_tracked_mobile_source_control_notice_for_view(
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	is_git_status_cli_notice
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_git_status_notice()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_active_surface_observes_notice_changes()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_status_notice()
+contains	apps/web/src/components/mobile_layout/drawers/left.rs	clear_mobile_source_control_notice_for_drawer(
 contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_view(
+contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_active_view(
 contains	docs/acceptance-cases/17_mobile_surface_switcher.md	case_id: UI-MOB-021
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/17_mobile_surface_switcher.md	UI-MOB-021	run: cargo test -p deve_web mobile_surface -- --nocapture

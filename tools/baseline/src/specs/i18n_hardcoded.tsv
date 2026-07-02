@@ -7,8 +7,8 @@ case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: open_tabs_zh
 case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: mobile_toolbar_indent_zh_copy_eq "缩进"
 case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: login_button_zh_copy_eq "登录"
 case_contains	docs/acceptance-cases/09_i18n.md	I18N-001	cli_assert: header_status_ready_zh_copy_eq "就绪"
-contains	apps/web/src/i18n/common.rs	Locale::Zh => "已打开标签页"
-contains	apps/web/src/i18n/common.rs	assert_eq!(open_tabs(Locale::Zh), "已打开标签页")
+contains	apps/web/src/i18n/common/tabs.rs	Locale::Zh => "已打开标签页"
+contains	apps/web/src/i18n/common/tabs.rs	assert_eq!(open_tabs(Locale::Zh), "已打开标签页")
 contains	apps/web/src/i18n/common.rs	pub fn indent(locale: Locale) -> &'static str
 contains	apps/web/src/i18n/common.rs	Locale::Zh => "缩进"
 contains	apps/web/src/i18n/common.rs	assert_eq!(indent(Locale::Zh), "缩进")

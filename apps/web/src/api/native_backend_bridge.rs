@@ -10,7 +10,7 @@ pub struct NativeBackendConfig {
     pub available: bool,
     pub mode: String,
     pub remote_url: String,
-    pub error: Option<String>,
+    pub error_message: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -19,7 +19,7 @@ pub struct NativeBackendValidation {
     pub ok: bool,
     pub https_origin: String,
     pub node_role: String,
-    pub error: Option<String>,
+    pub error_message: Option<String>,
 }
 
 pub async fn get_native_backend_config() -> NativeBackendConfig {
@@ -78,7 +78,7 @@ fn parse_config_response(value: &JsValue) -> NativeBackendConfig {
         remote_url: string_field(&config, "remote_url")
             .or_else(|| string_field(&config, "remoteUrl"))
             .unwrap_or_default(),
-        error: None,
+        error_message: None,
     }
 }
 
@@ -96,7 +96,7 @@ fn parse_validation_response(value: &JsValue) -> NativeBackendValidation {
         node_role: string_field(&result, "node_role")
             .or_else(|| string_field(&result, "nodeRole"))
             .unwrap_or_default(),
-        error: string_field(&result, "error"),
+        error_message: string_field(&result, "error"),
     }
 }
 
@@ -123,24 +123,24 @@ fn js_error_to_string(value: JsValue) -> String {
 }
 
 impl NativeBackendConfig {
-    fn unavailable(error: Option<String>) -> Self {
+    fn unavailable(error_message: Option<String>) -> Self {
         Self {
             available: false,
             mode: "local".to_string(),
             remote_url: String::new(),
-            error,
+            error_message,
         }
     }
 }
 
 impl NativeBackendValidation {
-    fn unavailable(error: Option<String>) -> Self {
+    fn unavailable(error_message: Option<String>) -> Self {
         Self {
             available: false,
             ok: false,
             https_origin: String::new(),
             node_role: String::new(),
-            error,
+            error_message,
         }
     }
 }

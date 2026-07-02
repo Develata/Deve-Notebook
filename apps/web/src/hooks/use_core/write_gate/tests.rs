@@ -200,6 +200,14 @@ fn repo_source_control_read_gate_allows_remote_branch_reads_without_writer_hands
 }
 
 #[test]
+fn repo_source_control_read_gate_allows_local_reads_without_writer_ready() {
+    assert_eq!(
+        repo_source_control_read_block(gate_state(false, true, false)),
+        None
+    );
+}
+
+#[test]
 fn repo_source_control_read_gate_allows_remote_branch_reads_without_node_role() {
     assert_eq!(
         repo_source_control_read_block(RepoWriteGateState {

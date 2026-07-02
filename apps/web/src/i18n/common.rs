@@ -10,9 +10,11 @@ use super::Locale;
 
 mod native;
 mod pending;
+mod tabs;
 
 pub use native::*;
 pub use pending::*;
+pub use tabs::*;
 
 /// 创建
 pub fn create(locale: Locale) -> &'static str {
@@ -76,55 +78,6 @@ pub fn unpin(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Unpin",
         Locale::Zh => "取消固定",
-    }
-}
-
-pub fn document_tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Document tab",
-        Locale::Zh => "文档标签页",
-    }
-}
-
-pub fn diff_tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Diff tab",
-        Locale::Zh => "差异标签页",
-    }
-}
-
-pub fn close_tab(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Close tab",
-        Locale::Zh => "关闭标签页",
-    }
-}
-
-pub fn open_tabs(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Open tabs",
-        Locale::Zh => "已打开标签页",
-    }
-}
-
-pub fn switch_open_tabs(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Switch open tabs",
-        Locale::Zh => "切换已打开标签页",
-    }
-}
-
-pub fn documents(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Documents",
-        Locale::Zh => "文档",
-    }
-}
-
-pub fn diffs(locale: Locale) -> &'static str {
-    match locale {
-        Locale::En => "Diffs",
-        Locale::Zh => "差异",
     }
 }
 

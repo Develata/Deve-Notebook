@@ -60,6 +60,7 @@ pub fn DesktopSidebar(
                     docs=document.docs
                     current_doc=document.current_doc
                     is_readonly=scope.is_spectator
+                    suppress_source_control_git_status_notice=false
                     on_select=document.on_doc_select
                     on_delete=document.on_doc_delete
                     on_search_open=Callback::new(|_| {})

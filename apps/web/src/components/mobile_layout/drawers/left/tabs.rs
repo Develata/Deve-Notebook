@@ -3,10 +3,8 @@
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::components::icons::MoreHorizontal;
-use crate::components::mobile_layout::source_control_notice::{
-    clear_mobile_source_control_notice_for_view,
-    clear_tracked_mobile_source_control_notice_for_view,
-};
+use crate::components::main_layout::SearchControl;
+use crate::components::mobile_layout::source_control_notice::clear_mobile_source_control_notice_for_view;
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::html;
@@ -30,24 +28,8 @@ pub(super) fn mobile_more_button_class() -> &'static str {
     "mobile-more-button h-11 min-w-[44px] px-2 rounded-md bg-panel border border-default text-secondary active:bg-hover active:scale-95 transition-transform duration-150 ease-out"
 }
 
-pub(super) fn select_mobile_sidebar_view(
-    view: SidebarView,
-    set_active_view: WriteSignal<SidebarView>,
-    on_search: Callback<()>,
-    on_view_select: Callback<()>,
-    clear_source_control_local_notice: Callback<()>,
-) {
-    if view == SidebarView::Search {
-        on_search.run(());
-        return;
-    }
-
-    if view == SidebarView::SourceControl {
-        clear_source_control_local_notice.run(());
-    }
-
-    set_active_view.set(view);
-    on_view_select.run(());
+pub(super) fn should_close_search_overlay_for_view(view: SidebarView) -> bool {
+    view != SidebarView::Search
 }
 
 #[component]
@@ -59,31 +41,22 @@ pub(super) fn LeftDrawerTabs(
     set_pinned_views: WriteSignal<Vec<SidebarView>>,
     open: ReadSignal<bool>,
     on_search: Callback<()>,
-    on_view_select: Callback<()>,
 ) -> impl IntoView {
     let (show_more, set_show_more) = signal(false);
     let more_menu_ref = NodeRef::<html::Div>::new();
     let source_control = use_context::<SourceControlContext>();
-    let visible_source_control = source_control.clone();
+    let search_control = expect_context::<SearchControl>();
     let select_view = Callback::new(move |view: SidebarView| {
-        let source_control = source_control.clone();
-        select_mobile_sidebar_view(
-            view,
-            set_active_view,
-            on_search,
-            on_view_select,
-            Callback::new(move |_| {
-                clear_mobile_source_control_notice_for_view(view, source_control.as_ref());
-            }),
-        );
+        if should_close_search_overlay_for_view(view) {
+            search_control.set_show.set(false);
+        }
+        if view == SidebarView::Search {
+            on_search.run(());
+        } else {
+            clear_mobile_source_control_notice_for_view(view, source_control.as_ref());
+            set_active_view.set(view);
+        }
         set_show_more.set(false);
-    });
-
-    Effect::new(move |_| {
-        clear_tracked_mobile_source_control_notice_for_view(
-            active_view.get(),
-            visible_source_control.as_ref(),
-        );
     });
 
     Effect::new(move |_| {
@@ -126,7 +99,6 @@ pub(super) fn LeftDrawerTabs(
                     </div>
                 </div>
                 <button
-                    type="button"
                     class=mobile_more_button_class()
                     data-deve-mobile-sidebar-action=mobile_more_button_marker()
                     data-deve-mobile-touch-target=mobile_more_button_marker()
@@ -156,13 +128,9 @@ pub(super) fn LeftDrawerTabs(
 mod tests {
     use super::{
         mobile_more_button_class, mobile_more_button_marker, mobile_sidebar_icon_tabs_marker,
-        select_mobile_sidebar_view,
+        should_close_search_overlay_for_view,
     };
     use crate::components::activity_bar::SidebarView;
-    use crate::hooks::use_core::source_control_notice::{
-        SourceControlNotice, is_local_command_notice,
-    };
-    use leptos::prelude::*;
 
     #[test]
     fn mobile_sidebar_icon_tabs_marker_is_visible_when_drawer_open() {
@@ -184,86 +152,14 @@ mod tests {
     }
 
     #[test]
-    fn mobile_sidebar_tab_selection_closes_drawer_after_non_search_view_switch() {
-        let owner = leptos::reactive::owner::Owner::new();
-        owner.with(|| {
-            let (active_view, set_active_view) = signal(SidebarView::Explorer);
-            let (search_opened, set_search_opened) = signal(false);
-            let (drawer_closed, set_drawer_closed) = signal(false);
-
-            select_mobile_sidebar_view(
-                SidebarView::SourceControl,
-                set_active_view,
-                Callback::new(move |_| set_search_opened.set(true)),
-                Callback::new(move |_| set_drawer_closed.set(true)),
-                Callback::new(move |_| ()),
-            );
-
-            assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
-            assert!(!search_opened.get_untracked());
-            assert!(drawer_closed.get_untracked());
-        });
-    }
-
-    #[test]
-    fn mobile_sidebar_search_tab_uses_search_handler_for_close() {
-        let owner = leptos::reactive::owner::Owner::new();
-        owner.with(|| {
-            let (active_view, set_active_view) = signal(SidebarView::Explorer);
-            let (search_opened, set_search_opened) = signal(false);
-            let (drawer_closed, set_drawer_closed) = signal(false);
-
-            select_mobile_sidebar_view(
-                SidebarView::Search,
-                set_active_view,
-                Callback::new(move |_| set_search_opened.set(true)),
-                Callback::new(move |_| set_drawer_closed.set(true)),
-                Callback::new(move |_| ()),
-            );
-
-            assert_eq!(active_view.get_untracked(), SidebarView::Explorer);
-            assert!(search_opened.get_untracked());
-            assert!(!drawer_closed.get_untracked());
-        });
-    }
-
-    #[test]
-    fn mobile_source_control_tab_clears_local_command_notices() {
-        let owner = leptos::reactive::owner::Owner::new();
-        owner.with(|| {
-            for local_notice in [
-                SourceControlNotice::git_status_cli_only(),
-                SourceControlNotice::git_mirror_cli_only(),
-                SourceControlNotice::git_export_cli_only(),
-                SourceControlNotice::git_import_cli_only(),
-                SourceControlNotice::git_push_cli_only(),
-                SourceControlNotice::git_repair_cli_only(),
-                SourceControlNotice::establish_branch_unavailable(),
-            ] {
-                let (active_view, set_active_view) = signal(SidebarView::Explorer);
-                let (notice, set_notice) = signal(Some(local_notice));
-                let (drawer_closed, set_drawer_closed) = signal(false);
-
-                select_mobile_sidebar_view(
-                    SidebarView::SourceControl,
-                    set_active_view,
-                    Callback::new(move |_| ()),
-                    Callback::new(move |_| set_drawer_closed.set(true)),
-                    Callback::new(move |_| {
-                        if notice
-                            .get_untracked()
-                            .as_ref()
-                            .is_some_and(is_local_command_notice)
-                        {
-                            set_notice.set(None);
-                        }
-                    }),
-                );
-
-                assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
-                assert!(drawer_closed.get_untracked());
-                assert_eq!(notice.get_untracked(), None);
-            }
-        });
+    fn mobile_sidebar_non_search_tabs_close_command_overlay() {
+        assert!(should_close_search_overlay_for_view(SidebarView::Explorer));
+        assert!(should_close_search_overlay_for_view(
+            SidebarView::SourceControl
+        ));
+        assert!(should_close_search_overlay_for_view(
+            SidebarView::Extensions
+        ));
+        assert!(!should_close_search_overlay_for_view(SidebarView::Search));
     }
 }

@@ -26,8 +26,8 @@ pub(super) fn LeftDrawerHeader(
                 type="button"
                 data-deve-mobile-touch-target="drawer_close_buttons"
                 class=drawer_close_button_class()
-                title=move || t::sidebar::close_file_tree(locale.get())
-                aria-label=move || t::sidebar::close_file_tree(locale.get())
+                title=move || t::sidebar::close_sidebar(locale.get())
+                aria-label=move || t::sidebar::close_sidebar(locale.get())
                 on:click=move |_| on_close.run(())
             >
                 <X class="w-4 h-4 mx-auto"/>

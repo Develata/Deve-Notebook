@@ -6,7 +6,7 @@
 use crate::components::activity_bar::SidebarView;
 use crate::hooks::use_core::{
     SourceControlContext,
-    source_control_notice::{SourceControlNotice, is_local_command_notice},
+    source_control_notice::{SourceControlNotice, is_git_status_cli_notice},
 };
 use leptos::prelude::*;
 
@@ -14,7 +14,28 @@ pub(super) fn should_clear_mobile_source_control_notice(
     view: SidebarView,
     notice: Option<&SourceControlNotice>,
 ) -> bool {
-    view == SidebarView::SourceControl && notice.is_some_and(is_local_command_notice)
+    view == SidebarView::SourceControl && notice.is_some_and(is_git_status_cli_notice)
+}
+
+pub(super) fn should_clear_mobile_source_control_notice_for_drawer(
+    open: bool,
+    view: SidebarView,
+    notice: Option<&SourceControlNotice>,
+) -> bool {
+    open && should_clear_mobile_source_control_notice(view, notice)
+}
+
+pub(super) fn should_observe_mobile_source_control_notice_for_drawer(
+    open: bool,
+    view: SidebarView,
+) -> bool {
+    open && view == SidebarView::SourceControl
+}
+
+pub(super) fn should_observe_mobile_source_control_notice_for_active_view(
+    view: SidebarView,
+) -> bool {
+    view == SidebarView::SourceControl
 }
 
 pub(super) fn clear_mobile_source_control_notice_for_view(
@@ -31,11 +52,13 @@ pub(super) fn clear_mobile_source_control_notice_for_view(
     }
 }
 
-pub(super) fn clear_tracked_mobile_source_control_notice_for_view(
+pub(super) fn clear_mobile_source_control_notice_for_active_view(
     view: SidebarView,
     source_control: Option<&SourceControlContext>,
 ) {
-    if let Some(source_control) = source_control {
+    if let Some(source_control) = source_control
+        && should_observe_mobile_source_control_notice_for_active_view(view)
+    {
         let notice = source_control.notice.get();
         if should_clear_mobile_source_control_notice(view, notice.as_ref()) {
             source_control.clear_notice.run(());
@@ -43,26 +66,63 @@ pub(super) fn clear_tracked_mobile_source_control_notice_for_view(
     }
 }
 
+pub(super) fn clear_mobile_source_control_notice_for_drawer(
+    open: bool,
+    view: SidebarView,
+    source_control: Option<&SourceControlContext>,
+) {
+    if let Some(source_control) = source_control
+        && should_observe_mobile_source_control_notice_for_drawer(open, view)
+    {
+        let notice = source_control.notice.get();
+        if should_clear_mobile_source_control_notice_for_drawer(open, view, notice.as_ref()) {
+            source_control.clear_notice.run(());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::should_clear_mobile_source_control_notice;
+    use super::{
+        should_clear_mobile_source_control_notice,
+        should_clear_mobile_source_control_notice_for_drawer,
+        should_observe_mobile_source_control_notice_for_active_view,
+        should_observe_mobile_source_control_notice_for_drawer,
+    };
     use crate::components::activity_bar::SidebarView;
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
-    fn mobile_source_control_read_gate_plain_entry_clears_local_command_notice() {
-        let git_notice = SourceControlNotice::git_status_cli_only();
+    fn mobile_source_control_read_gate_plain_entry_clears_git_status_notice() {
+        let status_notice = SourceControlNotice::git_status_cli_only();
+        let mirror_notice = SourceControlNotice::git_mirror_cli_only();
+        let export_notice = SourceControlNotice::git_export_cli_only();
+        let import_notice = SourceControlNotice::git_import_cli_only();
+        let push_notice = SourceControlNotice::git_push_cli_only();
+        let repair_notice = SourceControlNotice::git_repair_cli_only();
         let source_control_notice = SourceControlNotice::establish_branch_unavailable();
 
         assert!(should_clear_mobile_source_control_notice(
             SidebarView::SourceControl,
-            Some(&git_notice),
+            Some(&status_notice),
         ));
+        for notice in [
+            &mirror_notice,
+            &export_notice,
+            &import_notice,
+            &push_notice,
+            &repair_notice,
+        ] {
+            assert!(!should_clear_mobile_source_control_notice(
+                SidebarView::SourceControl,
+                Some(notice),
+            ));
+        }
         assert!(!should_clear_mobile_source_control_notice(
             SidebarView::Explorer,
-            Some(&git_notice),
+            Some(&status_notice),
         ));
-        assert!(should_clear_mobile_source_control_notice(
+        assert!(!should_clear_mobile_source_control_notice(
             SidebarView::SourceControl,
             Some(&source_control_notice),
         ));
@@ -73,19 +133,107 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_read_gate_active_view_tracks_local_command_notice() {
-        let git_notice = SourceControlNotice::git_status_cli_only();
+    fn mobile_source_control_open_read_surface_observes_git_status_changes() {
+        let status_notice = SourceControlNotice::git_status_cli_only();
+        let mirror_notice = SourceControlNotice::git_mirror_cli_only();
+        let export_notice = SourceControlNotice::git_export_cli_only();
+        let import_notice = SourceControlNotice::git_import_cli_only();
+        let push_notice = SourceControlNotice::git_push_cli_only();
+        let repair_notice = SourceControlNotice::git_repair_cli_only();
         let source_control_notice = SourceControlNotice::establish_branch_unavailable();
 
+        assert!(should_observe_mobile_source_control_notice_for_drawer(
+            true,
+            SidebarView::SourceControl,
+        ));
+        assert!(!should_observe_mobile_source_control_notice_for_drawer(
+            false,
+            SidebarView::SourceControl,
+        ));
+        assert!(!should_observe_mobile_source_control_notice_for_drawer(
+            true,
+            SidebarView::Explorer,
+        ));
         assert!(should_clear_mobile_source_control_notice(
             SidebarView::SourceControl,
-            Some(&git_notice),
+            Some(&status_notice),
         ));
+        for notice in [
+            &mirror_notice,
+            &export_notice,
+            &import_notice,
+            &push_notice,
+            &repair_notice,
+        ] {
+            assert!(!should_clear_mobile_source_control_notice(
+                SidebarView::SourceControl,
+                Some(notice),
+            ));
+        }
         assert!(!should_clear_mobile_source_control_notice(
             SidebarView::Explorer,
-            Some(&git_notice),
+            Some(&status_notice),
         ));
-        assert!(should_clear_mobile_source_control_notice(
+        assert!(!should_clear_mobile_source_control_notice(
+            SidebarView::SourceControl,
+            Some(&source_control_notice),
+        ));
+    }
+
+    #[test]
+    fn mobile_source_control_read_gate_active_surface_observes_notice_changes() {
+        assert!(should_observe_mobile_source_control_notice_for_active_view(
+            SidebarView::SourceControl,
+        ));
+        for view in [
+            SidebarView::Explorer,
+            SidebarView::Search,
+            SidebarView::Extensions,
+        ] {
+            assert!(!should_observe_mobile_source_control_notice_for_active_view(view,));
+        }
+    }
+
+    #[test]
+    fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_status_notice() {
+        let status_notice = SourceControlNotice::git_status_cli_only();
+        let mirror_notice = SourceControlNotice::git_mirror_cli_only();
+        let export_notice = SourceControlNotice::git_export_cli_only();
+        let import_notice = SourceControlNotice::git_import_cli_only();
+        let push_notice = SourceControlNotice::git_push_cli_only();
+        let repair_notice = SourceControlNotice::git_repair_cli_only();
+        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+
+        assert!(should_clear_mobile_source_control_notice_for_drawer(
+            true,
+            SidebarView::SourceControl,
+            Some(&status_notice),
+        ));
+        for notice in [
+            &mirror_notice,
+            &export_notice,
+            &import_notice,
+            &push_notice,
+            &repair_notice,
+        ] {
+            assert!(!should_clear_mobile_source_control_notice_for_drawer(
+                true,
+                SidebarView::SourceControl,
+                Some(notice),
+            ));
+        }
+        assert!(!should_clear_mobile_source_control_notice_for_drawer(
+            false,
+            SidebarView::SourceControl,
+            Some(&status_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_notice_for_drawer(
+            true,
+            SidebarView::Explorer,
+            Some(&status_notice),
+        ));
+        assert!(!should_clear_mobile_source_control_notice_for_drawer(
+            true,
             SidebarView::SourceControl,
             Some(&source_control_notice),
         ));

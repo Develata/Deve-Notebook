@@ -2,9 +2,9 @@ contains	docs/acceptance-cases/05_ui.md	case_id: UI-GEN-001
 contains	docs/acceptance-cases/05_ui.md	scripts/check-ui-token-baseline.sh
 contains	docs/plan/11_ui_design/index.md	design tokens MUST 通过 CSS variables 暴露
 contains	apps/web/style/_variables.css	_variables.css — Design Tokens
-contains	apps/web/style/_variables-dark.css	_variables-dark.css — Design Tokens
+contains	apps/web/style/_variables-night.css	_variables-night.css — Design Tokens
 contains	apps/web/style/_variables.css	--color-added
 contains	apps/web/style/_variables.css	--color-modified
 contains	apps/web/style/_variables.css	--color-deleted
 contains	apps/web/style/codemirror.css	@import "./_variables.css";
-regex_absent_tree_ext_skip	apps/web/style	css	#([0-9a-fA-F]{3,6})	_variables.css|_variables-dark.css
+regex_absent_tree_ext_skip	apps/web/style	css	#([0-9a-fA-F]{3,6})	_variables.css|_variables-cold.css|_variables-night.css

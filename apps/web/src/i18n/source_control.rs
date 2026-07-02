@@ -34,6 +34,13 @@ pub fn repositories(locale: Locale) -> &'static str {
     }
 }
 
+pub fn dismiss_notice(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Dismiss Source Control notice",
+        Locale::Zh => "关闭源代码管理提示",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,6 +76,8 @@ mod tests {
 
     #[test]
     fn source_control_notice_copy_is_localized() {
+        assert_eq!(dismiss_notice(Locale::En), "Dismiss Source Control notice");
+        assert_eq!(dismiss_notice(Locale::Zh), "关闭源代码管理提示");
         assert_eq!(diff_unavailable(Locale::Zh), "无法显示差异");
         assert_eq!(
             deleted_change_no_doc_diff(Locale::En, "old.md"),
@@ -102,5 +111,7 @@ mod tests {
         );
         assert_eq!(loading_commit_diff(Locale::Zh), "正在加载提交差异...");
         assert_eq!(counterpart_staged_badge(Locale::Zh), "暂存区");
+        assert_eq!(open_diff(Locale::En), "Open Diff");
+        assert_eq!(open_diff(Locale::Zh), "打开差异");
     }
 }

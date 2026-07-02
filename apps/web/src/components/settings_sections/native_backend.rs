@@ -30,7 +30,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             set_feedback.set(String::new());
         } else {
             set_remote_validation_succeeded.set(false);
-            set_feedback.set(config.error.unwrap_or_default());
+            set_feedback.set(config.error_message.unwrap_or_default());
         }
     });
 
@@ -57,7 +57,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             if !result.available {
                 set_available.set(false);
                 set_remote_validation_succeeded.set(false);
-                set_feedback.set(result.error.unwrap_or_default());
+                set_feedback.set(result.error_message.unwrap_or_default());
                 return;
             }
             if result.ok {
@@ -69,7 +69,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
                     .set(t::settings::remote_backend_saved(locale.get_untracked()).to_string());
             } else {
                 set_remote_validation_succeeded.set(false);
-                set_feedback.set(result.error.unwrap_or_else(|| {
+                set_feedback.set(result.error_message.unwrap_or_else(|| {
                     t::settings::remote_backend_requires_validation(locale.get_untracked())
                         .to_string()
                 }));
@@ -101,7 +101,7 @@ pub fn NativeBackendSection(locale: RwSignal<Locale>) -> impl IntoView {
             } else {
                 set_available.set(false);
                 set_remote_validation_succeeded.set(false);
-                set_feedback.set(config.error.unwrap_or_default());
+                set_feedback.set(config.error_message.unwrap_or_default());
             }
         });
     };

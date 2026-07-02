@@ -18,6 +18,7 @@
 - 标题、强调、引用、链接、frontmatter 等语法标记可以在非编辑焦点下隐藏或美化，但光标进入时必须显示真实源码。
 - ATX 标题（`#` 到 `######`）的标题正文和空标题行都必须保持对应标题层级的整行视觉高度；隐藏 `#` 标记时不得退回普通段落行高。
 - 空与非空 ATX 标题行（如 `#`、`# 标题`、`## 标题`、`### 标题`）在主编辑器与辅助 HTML Markdown 展示中应按 h1/h2/h3 层级保持可区分字号与高度；标题内的行内公式不应让整行回落到正文行高。
+- 活动编辑行中的 CJK 无空格 ATX 标题候选（如 `#标题`）只作为编辑期视觉 affordance 维持标题行高，不改变保存后的 Markdown 语义。
 - Math、Mermaid、task checkbox、frontmatter styling、table/image/list/blockquote/code toolbar、Ctrl/Cmd link activation 必须通过 Chrome MCP 手工走查确认具体浏览器行为。
 - Outline 必须支持标题扫描、点击跳转、inline code/math/strong/em/del 的轻量显示，并把不支持语法按普通文本保留。
 - 辅助 HTML 区域只承担轻量 Markdown 展示与操作入口职责；支持 tables、strikethrough、task list、code block wrapper、可选 apply button、`<br>` allowlist 与安全链接降级；AI chat 消息体额外支持 KaTeX TeX 展示；不承担主编辑器职责。

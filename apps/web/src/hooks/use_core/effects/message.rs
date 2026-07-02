@@ -65,6 +65,7 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                 let timer = Timeout::new(120, move || {
                     let repo_id = current_repo_id.get_untracked();
                     let branch = active_branch.get_untracked();
+                    let is_remote_branch_read = branch.is_some();
                     let pending_branch = pending_branch_switch.get_untracked();
                     let pending_repo = pending_repo_switch.get_untracked();
                     let pending_branch_target =
@@ -88,7 +89,8 @@ pub fn setup(ws: &WsService, signals: &CoreSignals) {
                         RepoWriteGateState {
                             connection_status: ws_for_timer.status.get_untracked(),
                             load_state: load_state.as_str(),
-                            is_read_only: signals.is_spectator.get_untracked(),
+                            is_read_only: signals.is_spectator.get_untracked()
+                                || is_remote_branch_read,
                             node_role_probe_failed: ws_for_timer
                                 .node_role_probe_failed
                                 .get_untracked(),

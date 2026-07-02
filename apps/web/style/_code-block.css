@@ -129,6 +129,7 @@
   background-color: var(--bg-frontmatter);
   font-family: var(--code-font);
   font-size: 0.85em;
+  min-height: 1.6em;
   color: var(--editor-muted);
 }
 

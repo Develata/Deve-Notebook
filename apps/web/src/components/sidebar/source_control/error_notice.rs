@@ -10,7 +10,8 @@ use crate::components::sidebar::source_control::repair_review_copy::{
     self as repair_copy, GitRepairReviewFetchState,
 };
 use crate::hooks::use_core::source_control_notice::{
-    SourceControlNotice, is_git_repair_cli_notice, is_local_command_notice,
+    SourceControlNotice, is_git_repair_cli_notice, is_git_status_cli_notice,
+    is_local_command_notice,
 };
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::Locale;
@@ -21,6 +22,17 @@ use self::repair_review::GitRepairReviewPanel;
 
 fn should_show_notice(block: Option<RepoWriteBlock>, notice: Option<&SourceControlNotice>) -> bool {
     notice.is_some_and(|notice| block.is_none() || is_local_command_notice(notice))
+}
+
+fn should_show_visible_notice(
+    block: Option<RepoWriteBlock>,
+    notice: Option<&SourceControlNotice>,
+    suppress_git_status_notice: bool,
+) -> bool {
+    if suppress_git_status_notice && notice.is_some_and(is_git_status_cli_notice) {
+        return false;
+    }
+    should_show_notice(block, notice)
 }
 
 fn repair_review_fetch_still_current(
@@ -44,6 +56,7 @@ pub fn ErrorNotice(
     current_repo_id: ReadSignal<Option<String>>,
     current_scope_nonce: ReadSignal<u64>,
     clear_notice: Callback<()>,
+    #[prop(optional)] suppress_git_status_notice: bool,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let repair_review = RwSignal::new(GitRepairReviewFetchState::Idle);
@@ -83,7 +96,11 @@ pub fn ErrorNotice(
     });
 
     view! {
-        <Show when=move || should_show_notice(block.get(), notice.get().as_ref())>
+        <Show when=move || should_show_visible_notice(
+            block.get(),
+            notice.get().as_ref(),
+            suppress_git_status_notice,
+        )>
             <div class="px-4 py-3 text-sm border-b border-default bg-warning/5">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
@@ -154,7 +171,9 @@ pub fn ErrorNotice(
 
 #[cfg(test)]
 mod tests {
-    use super::{repair_review_fetch_still_current, should_show_notice};
+    use super::{
+        repair_review_fetch_still_current, should_show_notice, should_show_visible_notice,
+    };
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
     use crate::hooks::use_core::write_gate::RepoWriteBlock;
     use deve_core::protocol::ServerErrorCode;
@@ -181,6 +200,16 @@ mod tests {
             Some(&notice)
         ));
         assert!(should_show_notice(None, Some(&notice)));
+    }
+
+    #[test]
+    fn mobile_git_status_notice_can_be_suppressed_without_hiding_other_cli_notices() {
+        let status = SourceControlNotice::git_status_cli_only();
+        let push = SourceControlNotice::git_push_cli_only();
+
+        assert!(!should_show_visible_notice(None, Some(&status), true));
+        assert!(should_show_visible_notice(None, Some(&push), true));
+        assert!(should_show_visible_notice(None, Some(&status), false));
     }
 
     #[test]

@@ -19,6 +19,13 @@ pub fn placeholder(locale: Locale) -> &'static str {
     }
 }
 
+pub fn dialog_label(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "Command Palette",
+        Locale::Zh => "命令面板",
+    }
+}
+
 pub fn no_results(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "No results found.",
@@ -122,7 +129,7 @@ pub fn source_control_panel_reason(locale: Locale) -> &'static str {
         Locale::En => {
             "Unavailable: use the Source Control panel for scoped state and message input"
         }
-        Locale::Zh => "不可用：请在 Source Control 面板中使用带作用域与提交信息的操作",
+        Locale::Zh => "不可用：请在源代码管理面板中使用带作用域与提交信息的操作",
     }
 }
 
