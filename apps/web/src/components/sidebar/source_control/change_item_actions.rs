@@ -120,8 +120,7 @@ pub fn ChangeItemActions(
                         can_open_diff
                         action_busy
                     />
-                }
-                .into_any()
+                }.into_any(),
             }
         }}
     }

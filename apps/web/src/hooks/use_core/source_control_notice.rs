@@ -172,13 +172,13 @@ mod tests {
 
     #[test]
     fn sc_codes_are_classified_as_source_control_errors() {
-        assert!(is_source_control_error(ServerErrorCode::ScNothingToCommit));
-        assert!(is_source_control_error(
-            ServerErrorCode::ScRemoteBranchReadonly
-        ));
-        assert!(is_source_control_error(
-            ServerErrorCode::ScCommitDiffUnprojectable
-        ));
+        for code in [
+            ServerErrorCode::ScNothingToCommit,
+            ServerErrorCode::ScRemoteBranchReadonly,
+            ServerErrorCode::ScCommitDiffUnprojectable,
+        ] {
+            assert!(is_source_control_error(code));
+        }
         assert!(!is_source_control_error(ServerErrorCode::RequestFailed));
     }
 

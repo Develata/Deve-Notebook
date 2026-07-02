@@ -16,6 +16,16 @@ use super::confirmed_section::ConfirmedSection;
 use super::staged_section::StagedSection;
 use super::unstaged_section::UnstagedSection;
 
+pub(crate) fn should_request_changes(
+    has_repo: bool,
+    _remote_branch_active: bool,
+    branch_switching: bool,
+    repo_switching: bool,
+    read_blocked: bool,
+) -> bool {
+    has_repo && !branch_switching && !repo_switching && !read_blocked
+}
+
 /// 变更列表主组件
 ///
 /// 职责:
@@ -30,6 +40,7 @@ pub fn Changes() -> impl IntoView {
     Effect::new(move |_| {
         if !should_request_changes(
             core.current_repo_id.get().is_some(),
+            core.active_branch.get().is_some(),
             core.pending_branch_switch.get().is_some(),
             core.pending_repo_switch.get().is_some(),
             read_block.get().is_some(),
@@ -68,25 +79,26 @@ pub fn Changes() -> impl IntoView {
     }
 }
 
-pub(crate) fn should_request_changes(
-    has_repo: bool,
-    pending_branch_switch: bool,
-    pending_repo_switch: bool,
-    read_blocked: bool,
-) -> bool {
-    has_repo && !pending_branch_switch && !pending_repo_switch && !read_blocked
-}
-
 #[cfg(test)]
 mod tests {
     use super::should_request_changes;
 
     #[test]
     fn mobile_source_control_read_gate_allows_readonly_refresh() {
-        assert!(should_request_changes(true, false, false, false));
-        assert!(!should_request_changes(false, false, false, false));
-        assert!(!should_request_changes(true, true, false, false));
-        assert!(!should_request_changes(true, false, true, false));
-        assert!(!should_request_changes(true, false, false, true));
+        assert!(should_request_changes(true, false, false, false, false));
+        assert!(!should_request_changes(false, false, false, false, false));
+        assert!(!should_request_changes(true, false, true, false, false));
+        assert!(!should_request_changes(true, false, false, true, false));
+        assert!(!should_request_changes(true, false, false, false, true));
+    }
+
+    #[test]
+    fn remote_branch_uses_read_gate_for_changes_refresh() {
+        assert!(should_request_changes(true, true, false, false, false));
+    }
+
+    #[test]
+    fn read_block_still_suppresses_changes_refresh() {
+        assert!(!should_request_changes(true, false, false, false, true));
     }
 }

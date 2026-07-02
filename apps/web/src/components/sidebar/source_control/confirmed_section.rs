@@ -48,7 +48,6 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
                     <span class="text-[11px] text-muted pr-2">{confirmed_count}</span>
                 </button>
             </div>
-
             <div
                 id="source-control-confirmed-ledger-panel"
                 data-deve-sc-section-body="confirmed-ledger"
