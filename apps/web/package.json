@@ -28,6 +28,7 @@
   },
   "scripts": {
     "build": "node builder.js",
+    "test:rendering-heading": "node js/extensions/block_styling.test.cjs",
     "postinstall": "npm run build"
   },
   "devDependencies": {

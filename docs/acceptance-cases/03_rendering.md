@@ -46,6 +46,7 @@
   preconditions:
     - 打开 render_heading.md
   steps:
+    - run: node apps/web/js/extensions/block_styling.test.cjs
     - ui_type: |
         #
         # h1
