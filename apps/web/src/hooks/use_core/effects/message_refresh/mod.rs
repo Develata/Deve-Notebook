@@ -23,7 +23,7 @@ pub fn capture_refresh_scope(
     pending_repo_switch: Option<String>,
     scope_nonce: u64,
 ) -> Option<RefreshScope> {
-    if branch.is_some() || pending_branch_switch.is_some() || pending_repo_switch.is_some() {
+    if pending_branch_switch.is_some() || pending_repo_switch.is_some() {
         return None;
     }
     Some(RefreshScope {

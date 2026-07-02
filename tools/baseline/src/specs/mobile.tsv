@@ -460,6 +460,7 @@ contains	apps/web/src/i18n/common.rs	pub fn redo(locale: Locale) -> &'static str
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-023
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	run: cargo test -p deve_web mobile_source_control_read_gate -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	run: cargo test -p deve_web message_refresh -- --nocapture
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_source_control_uses_read_gate true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_source_control_does_not_require_write_gate true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_source_control_touch_targets_min_size_bound true
@@ -469,6 +470,8 @@ contains	docs/acceptance-bindings.tsv	UI-MOB-023|manual-chrome|docs/features/08_
 contains	docs/plan/11_ui_design/03_mobile.md	Source Control tab **MUST** 复用共享 Source Control read surface 与 read gate
 contains	docs/features/08_ui_design_03_mobile.md	移动端 Source Control 必须显示与桌面相同的 Source Control read surface
 contains	apps/web/src/components/sidebar/source_control/changes.rs	fn mobile_source_control_read_gate_allows_readonly_refresh()
+contains	apps/web/src/hooks/use_core/effects/message_refresh/tests.rs	fn captures_refresh_scope_for_remote_branch_reads()
+contains	apps/web/src/hooks/use_core/effects/message_refresh/tests.rs	fn refresh_read_gate_allows_remote_branch_reads_without_writer_ready()
 contains	apps/web/src/components/sidebar/source_control/changes.rs	data-deve-source-control-empty-state=source_control_empty_state_marker()
 contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobile_source_control_read_gate_renders_panel()
 contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	data-deve-source-control-read-gate=source_control_read_gate_marker()
