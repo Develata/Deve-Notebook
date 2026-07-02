@@ -489,6 +489,7 @@ contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobi
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_read_gate_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_commit_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	source-control-confirmed-open-diff-action
+contains	apps/web/src/components/sidebar/source_control/mod.rs	fn mobile_source_control_view_clears_suppressed_git_status_notice()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	is_git_status_cli_notice
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_plain_entry_clears_git_status_notice()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_active_surface_observes_notice_changes()

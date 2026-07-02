@@ -2,6 +2,7 @@
 //!   - 05_diff_logic#source-control-runtime
 //!   - 04_repository#repo-scope-runtime
 //!   - 12_source_control_ui#source-control-vscode-reference-contract
+//!   - 11_ui_design/03_mobile#mobile-interaction-design
 //!
 pub mod action_tray;
 pub mod change_item;
@@ -53,13 +54,24 @@ use self::graph_panel::GraphPanel;
 use self::header::SourceControlHeader;
 use self::history::History;
 use self::status_notice::StatusNotice;
-use crate::hooks::use_core::SourceControlContext;
+use crate::hooks::use_core::{
+    SourceControlContext,
+    source_control_notice::{SourceControlNotice, is_git_status_cli_notice},
+};
 use leptos::prelude::*;
+
+fn should_clear_suppressed_git_status_notice(
+    suppress_git_status_notice: bool,
+    notice: Option<&SourceControlNotice>,
+) -> bool {
+    suppress_git_status_notice && notice.is_some_and(is_git_status_cli_notice)
+}
 
 #[component]
 pub fn SourceControlView(#[prop(optional)] suppress_git_status_notice: bool) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
+    let notice_guard = core.clone();
 
     let expand_repos = RwSignal::new(false);
     let expand_graph = RwSignal::new(false);
@@ -70,6 +82,13 @@ pub fn SourceControlView(#[prop(optional)] suppress_git_status_notice: bool) -> 
     let show_graph = RwSignal::new(false);
 
     let show_menu = RwSignal::new(false);
+
+    Effect::new(move |_| {
+        let notice = notice_guard.notice.get();
+        if should_clear_suppressed_git_status_notice(suppress_git_status_notice, notice.as_ref()) {
+            notice_guard.clear_notice.run(());
+        }
+    });
 
     view! {
         <div
@@ -109,5 +128,31 @@ pub fn SourceControlView(#[prop(optional)] suppress_git_status_notice: bool) -> 
                 <div class="h-8"></div>
             </div>
         </div>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_clear_suppressed_git_status_notice;
+    use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+
+    #[test]
+    fn mobile_source_control_view_clears_suppressed_git_status_notice() {
+        let status = SourceControlNotice::git_status_cli_only();
+        let push = SourceControlNotice::git_push_cli_only();
+
+        assert!(should_clear_suppressed_git_status_notice(
+            true,
+            Some(&status)
+        ));
+        assert!(!should_clear_suppressed_git_status_notice(
+            false,
+            Some(&status)
+        ));
+        assert!(!should_clear_suppressed_git_status_notice(
+            true,
+            Some(&push)
+        ));
+        assert!(!should_clear_suppressed_git_status_notice(true, None));
     }
 }
