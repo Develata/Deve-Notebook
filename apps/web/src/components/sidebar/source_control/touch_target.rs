@@ -33,7 +33,7 @@ pub(super) fn section_header_class() -> &'static str {
 
 pub(super) fn icon_button_class(tone: SourceControlActionTone) -> String {
     format!(
-        "h-11 w-11 md:h-auto md:w-auto p-0.5 hover:bg-active rounded flex items-center justify-center {}",
+        "h-11 w-11 md:h-5 md:w-5 p-0.5 hover:bg-active rounded flex items-center justify-center {}",
         match tone {
             SourceControlActionTone::Primary => "text-primary",
             SourceControlActionTone::Secondary => "text-secondary",
@@ -96,8 +96,8 @@ mod tests {
             let button = icon_button_class(tone);
             assert!(button.contains("h-11"));
             assert!(button.contains("w-11"));
-            assert!(button.contains("md:h-auto"));
-            assert!(button.contains("md:w-auto"));
+            assert!(button.contains("md:h-5"));
+            assert!(button.contains("md:w-5"));
         }
     }
 

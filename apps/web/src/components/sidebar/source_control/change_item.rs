@@ -39,6 +39,8 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
     let has_conflict = entry.has_conflict;
     let can_open_diff = can_request_doc_diff(&entry);
     let meta = build_change_item_meta(&entry);
+    let status_char = meta.icon_char;
+    let status_class = meta.color_class;
     let entry_for_click = entry.clone();
 
     let action_busy_reset = action_busy;
@@ -89,8 +91,7 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                 unstaged_changes=core.unstaged_changes
             />
 
-            <div class="flex items-center gap-2 pl-2">
-                // 行操作区在桌面和触屏环境都保持可达，避免 hover-only 交互。
+            <div class="ml-auto flex shrink-0 items-center gap-1 pl-2">
                 <div
                     class=CHANGE_ITEM_ACTION_TRAY_CLASS
                     data-deve-sc-action-tray="row"
@@ -106,7 +107,12 @@ pub fn ChangeItem(entry: ChangeEntry, is_staged: bool) -> impl IntoView {
                     />
                 </div>
 
-                // 右侧 hover 操作区与主内容分离，避免挤压文件名。
+                <span
+                    class=format!("{} text-[11px] font-bold w-3 text-center shrink-0", status_class)
+                    data-deve-sc-status-kind=status_char
+                >
+                    {status_char}
+                </span>
             </div>
         </div>
     }

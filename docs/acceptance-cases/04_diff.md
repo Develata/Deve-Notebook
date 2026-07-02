@@ -259,6 +259,10 @@
     - ui_assert: confirmed_ledger_rows_open_diff_action_title true
     - ui_assert: confirmed_ledger_rows_open_diff_action_visible true
     - ui_assert: confirmed_ledger_rows_stage_discard_absent true
+    - ui_assert: source_control_working_rows_open_discard_stage_actions_present true
+    - ui_assert: source_control_staged_rows_unstage_action_present true
+    - ui_assert: source_control_row_actions_desktop_hover_focus_visible true
+    - ui_assert: source_control_status_badge_action_tray_separated true
     - ui_assert: confirmed_ledger_section_hint_present true
     - ui_assert: source_control_resource_group_headers_are_buttons true
     - ui_assert: source_control_section_actions_do_not_toggle_group true

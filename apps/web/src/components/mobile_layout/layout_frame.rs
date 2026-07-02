@@ -18,9 +18,10 @@ use crate::components::activity_bar::SidebarView;
 use crate::components::editor_tabs::{
     EditorTabRuntimeInputs, create_current_editor_doc, create_editor_tab_runtime,
 };
+use crate::hooks::use_core::EditorContext;
+#[cfg(test)]
 use crate::hooks::use_core::source_control_notice::{SourceControlNotice, is_local_command_notice};
 use crate::hooks::use_core::write_gate::{RepoWriteSignals, repo_write_block_tracked};
-use crate::hooks::use_core::EditorContext;
 use crate::i18n::Locale;
 use crate::runtime::{
     document_client::DocumentClient, rendering_client::RenderingClient, scope_client::ScopeClient,
@@ -53,6 +54,7 @@ pub(crate) fn mobile_accessory_toolbar_visible(
         && !surface_switcher_sheet_visible
 }
 
+#[cfg(test)]
 pub(crate) fn should_clear_mobile_source_control_local_notice(
     active_view: SidebarView,
     notice: Option<&SourceControlNotice>,

@@ -60,8 +60,5 @@ pub fn ChangeItemContent(
                 view! {}.into_any()
             }}
         </div>
-        <span class=format!("{} text-[11px] font-bold w-3 text-center shrink-0", meta.color_class)>
-            {meta.icon_char}
-        </span>
     }
 }

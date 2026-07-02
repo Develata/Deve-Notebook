@@ -216,7 +216,7 @@ mod tests {
     };
     use crate::hooks::use_core::source_control_notice::is_git_push_cli_notice;
     use crate::hooks::use_core::write_gate::RepoWriteBlock;
-    use crate::i18n::Locale;
+    use crate::i18n::{Locale, t};
     use leptos::prelude::{GetUntracked, signal};
 
     #[test]
@@ -263,7 +263,7 @@ mod tests {
     fn commit_disabled_copy_is_structured_for_local_commit_states() {
         assert_eq!(
             commit_disabled_title(Locale::Zh, CommitDisabledReason::NoChanges),
-            "没有可提交的暂存或已确认账本更改"
+            t::source_control::commit_disabled_no_changes(Locale::Zh)
         );
         assert_eq!(
             commit_disabled_title(Locale::En, CommitDisabledReason::EmptyMessage),
@@ -271,7 +271,7 @@ mod tests {
         );
         assert_eq!(
             commit_input_placeholder(Locale::Zh, Some(CommitDisabledReason::NoChanges)),
-            "请先暂存更改，或在账本出现已确认更改后再提交。"
+            t::source_control::commit_disabled_no_changes_hint(Locale::Zh)
         );
     }
 }

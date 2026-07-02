@@ -31,6 +31,9 @@
 
 - 用户可以把候选变化移入或移出 staged 区域。
 - staged 与 unstaged 必须可见区分。
+- Working row 右侧应提供 VS Code-like inline actions：打开 diff、Discard、Stage；桌面通过 hover/focus 显示，移动端保持可见并满足触控尺寸。
+- Staged row 右侧应提供 Unstage；Confirmed Ledger row 只提供打开 diff，不提供逐文件 Stage / Discard / Revert。
+- 变更状态字母 `M` / `A` / `D` / `R` 必须保留，但应与 row action tray 分区显示，避免挤压文件名或覆盖按钮。
 - Staged / unstaged / confirmed ledger resource group header 应是可键盘触发的折叠按钮，并通过 `aria-expanded`
   与 `aria-controls` 暴露状态和受控内容；受控内容应以稳定 `id` 常驻 DOM，折叠时使用 `hidden`
   隐藏；section action 按钮不应顺带触发展开/收起。
