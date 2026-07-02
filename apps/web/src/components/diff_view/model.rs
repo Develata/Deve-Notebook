@@ -74,8 +74,8 @@ pub fn create_diff_chunk_job(old_content: String, new_content: String) -> DiffCh
 pub fn to_unified(left: &[LineView], right: &[LineView]) -> Vec<UnifiedLine> {
     let mut lines = Vec::with_capacity(left.len().saturating_add(right.len()));
     for (l, r) in left.iter().zip(right.iter()) {
-        if !l.content.is_empty()
-            && !r.content.is_empty()
+        if l.kind == LineKind::Normal
+            && r.kind == LineKind::Normal
             && l.class.is_empty()
             && r.class.is_empty()
         {
@@ -88,7 +88,7 @@ pub fn to_unified(left: &[LineView], right: &[LineView]) -> Vec<UnifiedLine> {
             });
             continue;
         }
-        if !l.content.is_empty() {
+        if l.kind == LineKind::Del {
             let ranges = l.word_ranges.iter().map(|(s, e)| (s + 2, e + 2)).collect();
             lines.push(UnifiedLine {
                 num: l.num,
@@ -98,7 +98,7 @@ pub fn to_unified(left: &[LineView], right: &[LineView]) -> Vec<UnifiedLine> {
                 kind: LineKind::Del,
             });
         }
-        if !r.content.is_empty() {
+        if r.kind == LineKind::Add {
             let ranges = r.word_ranges.iter().map(|(s, e)| (s + 2, e + 2)).collect();
             lines.push(UnifiedLine {
                 num: r.num,
@@ -164,6 +164,41 @@ mod tests {
         assert!(
             unified.iter().any(|line| line.kind == LineKind::Add
                 && line.content.contains("confirmed ledger smoke"))
+        );
+    }
+
+    #[test]
+    fn unified_diff_preserves_blank_added_and_deleted_lines() {
+        let ((left, right), _) = compute_diff_preview_with_meta("a\n\nb", "a\nb\n", 20);
+        let unified = to_unified(&left, &right);
+
+        assert_eq!(
+            unified
+                .iter()
+                .filter(|line| line.kind == LineKind::Del)
+                .count(),
+            1
+        );
+        assert!(
+            unified
+                .iter()
+                .any(|line| line.kind == LineKind::Del && line.content == "- ")
+        );
+
+        let ((left, right), _) = compute_diff_preview_with_meta("a\nb\n", "a\n\nb", 20);
+        let unified = to_unified(&left, &right);
+
+        assert_eq!(
+            unified
+                .iter()
+                .filter(|line| line.kind == LineKind::Add)
+                .count(),
+            1
+        );
+        assert!(
+            unified
+                .iter()
+                .any(|line| line.kind == LineKind::Add && line.content == "+ ")
         );
     }
 }

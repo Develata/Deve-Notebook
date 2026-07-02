@@ -19,8 +19,8 @@ pub fn apply_lines_diff(
     left: &mut Vec<LineView>,
     right: &mut Vec<LineView>,
 ) -> isize {
-    let old_text = old_lines.join("\n");
-    let new_text = new_lines.join("\n");
+    let old_text = lines_to_diff_text(old_lines);
+    let new_text = lines_to_diff_text(new_lines);
     let diff = TextDiff::from_lines(&old_text, &new_text);
     let mut delta = 0isize;
 
@@ -90,4 +90,13 @@ pub fn apply_lines_diff(
     }
 
     delta
+}
+
+fn lines_to_diff_text(lines: &[&str]) -> String {
+    let mut text = String::new();
+    for line in lines {
+        text.push_str(line);
+        text.push('\n');
+    }
+    text
 }
