@@ -112,7 +112,6 @@ pub fn is_git_repair_cli_notice(notice: &SourceControlNotice) -> bool {
     notice.detail.as_deref() == Some(GIT_REPAIR_CLI_NOTICE_DETAIL)
 }
 
-#[cfg(test)]
 pub fn is_git_cli_notice(notice: &SourceControlNotice) -> bool {
     is_git_status_cli_notice(notice)
         || is_git_mirror_cli_notice(notice)

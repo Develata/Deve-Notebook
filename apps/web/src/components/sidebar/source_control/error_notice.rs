@@ -8,9 +8,7 @@ use crate::components::sidebar::source_control::repair_review_copy::{
     self as repair_copy, GitRepairReviewFetchState,
 };
 use crate::hooks::use_core::source_control_notice::SourceControlNotice;
-use crate::hooks::use_core::source_control_notice::{
-    is_git_repair_cli_notice, is_git_status_cli_notice,
-};
+use crate::hooks::use_core::source_control_notice::{is_git_cli_notice, is_git_repair_cli_notice};
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
@@ -19,12 +17,10 @@ use leptos::task::spawn_local;
 pub(crate) fn error_notice_visible(
     read_blocked: bool,
     notice: Option<&SourceControlNotice>,
-    suppress_git_status_cli_notice: bool,
+    suppress_git_cli_notice: bool,
 ) -> bool {
     !read_blocked
-        && notice.is_some_and(|notice| {
-            !(suppress_git_status_cli_notice && is_git_status_cli_notice(notice))
-        })
+        && notice.is_some_and(|notice| !(suppress_git_cli_notice && is_git_cli_notice(notice)))
 }
 
 #[component]
@@ -34,15 +30,16 @@ pub fn ErrorNotice(
     current_repo_id: ReadSignal<Option<String>>,
     current_scope_nonce: ReadSignal<u64>,
     clear_notice: Callback<()>,
-    suppress_git_status_cli_notice: bool,
+    suppress_git_cli_notice: bool,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let repair_review = RwSignal::new(GitRepairReviewFetchState::Idle);
 
     Effect::new(move |_| {
         let notice_value = notice.get();
-        let should_fetch =
-            block.get().is_none() && notice_value.as_ref().is_some_and(is_git_repair_cli_notice);
+        let should_fetch = !suppress_git_cli_notice
+            && block.get().is_none()
+            && notice_value.as_ref().is_some_and(is_git_repair_cli_notice);
         let repo_id = current_repo_id.get();
 
         if !should_fetch {
@@ -75,7 +72,7 @@ pub fn ErrorNotice(
             error_notice_visible(
                 block.get().is_some(),
                 notice_value.as_ref(),
-                suppress_git_status_cli_notice,
+                suppress_git_cli_notice,
             )
         }>
             <div class="px-4 py-3 text-sm border-b border-default bg-warning/5">
@@ -228,16 +225,26 @@ mod tests {
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
-    fn mobile_source_control_read_gate_hides_git_status_notice_only() {
+    fn mobile_source_control_read_gate_hides_git_cli_notices() {
         let status_notice = SourceControlNotice::git_status_cli_only();
+        let mirror_notice = SourceControlNotice::git_mirror_cli_only();
+        let export_notice = SourceControlNotice::git_export_cli_only();
+        let import_notice = SourceControlNotice::git_import_cli_only();
         let push_notice = SourceControlNotice::git_push_cli_only();
         let repair_notice = SourceControlNotice::git_repair_cli_only();
         let source_control_notice = SourceControlNotice::establish_branch_unavailable();
 
         assert!(!error_notice_visible(false, Some(&status_notice), true));
         assert!(error_notice_visible(false, Some(&status_notice), false));
-        assert!(error_notice_visible(false, Some(&push_notice), true));
-        assert!(error_notice_visible(false, Some(&repair_notice), true));
+        for notice in [
+            &mirror_notice,
+            &export_notice,
+            &import_notice,
+            &push_notice,
+            &repair_notice,
+        ] {
+            assert!(!error_notice_visible(false, Some(notice), true));
+        }
         assert!(error_notice_visible(
             false,
             Some(&source_control_notice),
