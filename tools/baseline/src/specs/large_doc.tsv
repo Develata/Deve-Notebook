@@ -21,13 +21,13 @@ contains	docs/features/operations/rendering_large_doc_prefetch.md	op.render.larg
 contains	docs/features/operations/rendering_large_doc_prefetch.md	Failed delta replay must not advance local version or history.
 contains	docs/features/operations/rendering_large_doc_prefetch.md	snapshot reopen is only a last-resort fallback
 contains	apps/web/src/editor/sync/snapshot.rs	applyRemoteContent(&message.new_content);
-contains	apps/web/src/editor/sync/snapshot.rs	ctx.set_load_state.set("partial".to_string())
+contains	apps/web/src/editor/sync/snapshot.rs	ctx.set_load_state.set(LoadPhase::Partial)
 contains	apps/web/src/editor/sync/snapshot.rs	apply_ops_in_batches(
 before	apps/web/src/editor/sync/snapshot.rs	applyRemoteContent(&message.new_content);	apply_ops_in_batches(
 contains	apps/web/src/editor/prefetch.rs	Timeout::new(0, task).forget();
 contains	apps/web/src/editor/sync/snapshot.rs	initial_batch: 16
 contains	apps/web/src/editor/sync/snapshot.rs	max_batch: 256
-contains	apps/web/src/hooks/use_core/callbacks/misc.rs	load_state.get_untracked() != "ready"
+contains	apps/web/src/hooks/use_core/callbacks/misc.rs	!load_state.get_untracked().is_ready()
 contains	apps/web/src/hooks/use_core/callbacks/misc.rs	show_search_block(set_sync_banner, "snapshot loading")
 contains	apps/web/src/hooks/use_core/callbacks/misc.rs	ClientMessage::Search
 contains	apps/web/src/hooks/use_core/callbacks/misc/tests.rs	large_doc_search_gate_blocks_until_prefetch_ready
