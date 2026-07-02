@@ -99,9 +99,9 @@ pub fn ChangeItemActions(
 
 pub(crate) fn should_show_confirmed_open_diff_action(
     row_kind: ChangeItemKind,
-    can_open_diff: bool,
+    _can_open_diff: bool,
 ) -> bool {
-    row_kind.is_confirmed_ledger() && can_open_diff
+    row_kind.is_confirmed_ledger()
 }
 
 #[cfg(test)]
@@ -114,7 +114,7 @@ mod tests {
             ChangeItemKind::ConfirmedLedger,
             true
         ));
-        assert!(!should_show_confirmed_open_diff_action(
+        assert!(should_show_confirmed_open_diff_action(
             ChangeItemKind::ConfirmedLedger,
             false
         ));
