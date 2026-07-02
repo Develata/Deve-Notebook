@@ -204,10 +204,30 @@ fn git_status_command_keeps_mobile_source_control_drawer_closed() {
         let (source_control, sidebar_control) = command_contexts();
         let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
 
-        assert_cli_notice_command(command, show, notice, is_git_status_cli_notice);
+        command.action.run(());
+
+        assert!(!show.get_untracked());
+        assert!(notice.get_untracked().is_none());
         assert!(!sidebar_visible.get_untracked());
         assert!(!mobile_visible.get_untracked());
         assert_eq!(active_view.get_untracked(), SidebarView::Explorer);
+    });
+}
+
+#[test]
+fn git_status_command_routes_notice_to_source_control_sidebar_on_desktop() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let notice = provide_source_control_context();
+        let (sidebar_visible, mobile_visible, active_view) = provide_sidebar_control_context(false);
+        let (show, set_show) = signal(true);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
+
+        assert_cli_notice_command(command, show, notice, is_git_status_cli_notice);
+        assert!(sidebar_visible.get_untracked());
+        assert!(!mobile_visible.get_untracked());
+        assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
     });
 }
 

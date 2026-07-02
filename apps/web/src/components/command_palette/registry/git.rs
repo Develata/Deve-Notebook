@@ -30,11 +30,14 @@ fn show_git_status_notice(
     sidebar_control: Option<SidebarControl>,
     set_show: WriteSignal<bool>,
 ) {
-    if let Some(set_notice) = set_notice {
+    let is_mobile = sidebar_control
+        .as_ref()
+        .is_some_and(|sidebar_control| sidebar_control.is_mobile.get_untracked());
+    if !is_mobile && let Some(set_notice) = set_notice {
         set_notice.set(Some(SourceControlNotice::git_status_cli_only()));
     }
     if let Some(sidebar_control) = sidebar_control
-        && !sidebar_control.is_mobile.get_untracked()
+        && !is_mobile
     {
         sidebar_control.show_view(SidebarView::SourceControl);
     }
