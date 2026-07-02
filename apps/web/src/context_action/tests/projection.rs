@@ -38,6 +38,36 @@ fn file_tree_action_open_in_new_window_projects_for_markdown_only() {
 }
 
 #[test]
+fn file_tree_action_target_projection_accepts_file_and_folder_nodes() {
+    let readiness = file_tree_readiness(false).with_host_file_actions(true, true);
+    let file_ids = project_context_actions(file_tree_request_with_readiness(
+        readiness.clone(),
+        ContextActionTargetKind::File,
+    ))
+    .into_iter()
+    .map(|action| action.descriptor.id)
+    .collect::<Vec<_>>();
+    let folder_ids = project_context_actions(file_tree_request_with_readiness(
+        readiness,
+        ContextActionTargetKind::Folder,
+    ))
+    .into_iter()
+    .map(|action| action.descriptor.id)
+    .collect::<Vec<_>>();
+    let expected_ids = vec![
+        ContextActionId::Rename,
+        ContextActionId::Copy,
+        ContextActionId::CopyAbsolutePath,
+        ContextActionId::RevealInSystemExplorer,
+        ContextActionId::MoveTo,
+        ContextActionId::Delete,
+    ];
+
+    assert_eq!(file_ids, expected_ids);
+    assert_eq!(folder_ids, expected_ids);
+}
+
+#[test]
 fn file_tree_action_target_projection_keeps_write_actions_for_file_and_folder_nodes() {
     let file_ids = project_context_actions(file_tree_request(false, ContextActionTargetKind::File))
         .into_iter()
