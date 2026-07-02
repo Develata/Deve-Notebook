@@ -4,6 +4,7 @@
 //!
 use crate::components::activity_bar::SidebarView;
 use crate::components::disconnect_overlay::DisconnectedOverlay;
+use crate::hooks::use_core::SourceControlContext;
 use crate::hooks::use_core::navigation::PendingNavigation;
 use crate::hooks::use_layout::LayoutHookReturn;
 use crate::runtime::session_client::SessionClient;
@@ -38,6 +39,7 @@ pub fn MainLayoutRuntime(
     on_command: Callback<()>,
     on_settings: Callback<()>,
     on_logout: Callback<()>,
+    source_control_context: SourceControlContext,
     pending_navigation: ReadSignal<Option<PendingNavigation>>,
     set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
 ) -> impl IntoView {
@@ -62,6 +64,7 @@ pub fn MainLayoutRuntime(
                 set_show_settings=set_show_settings
                 on_settings=on_settings
                 on_open=on_open
+                source_control_context=source_control_context
                 pending_navigation=pending_navigation
                 set_pending_navigation=set_pending_navigation
             />

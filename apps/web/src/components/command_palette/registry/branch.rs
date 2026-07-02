@@ -6,8 +6,11 @@ use crate::hooks::use_core::{SourceControlContext, source_control_notice::Source
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
-pub(super) fn establish_branch_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn establish_branch_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    source_control: Option<SourceControlContext>,
+) -> Command {
     Command::unavailable(
         "establish_branch",
         (t::command_palette::establish_branch)(locale),
@@ -44,7 +47,10 @@ mod tests {
     };
     use leptos::reactive::owner::Owner;
 
-    fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
+    fn provide_source_control_context() -> (
+        SourceControlContext,
+        ReadSignal<Option<SourceControlNotice>>,
+    ) {
         let (staged_changes, _) = signal(Vec::<ChangeEntry>::new());
         let (unstaged_changes, _) = signal(Vec::<ChangeEntry>::new());
         let (confirmed_changes, _) = signal(Vec::<ChangeEntry>::new());
@@ -62,7 +68,7 @@ mod tests {
         let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
         let clear_notice = Callback::new(move |_| set_notice.set(None));
 
-        provide_context(SourceControlContext {
+        let source_control = SourceControlContext {
             staged_changes,
             unstaged_changes,
             confirmed_changes,
@@ -99,9 +105,10 @@ mod tests {
             on_resolve_conflict: Callback::new(|_: (ChangeEntry, ConflictResolution)| {}),
             on_get_commit_diff: Callback::new(|_: (Option<String>, String)| {}),
             on_commit_and_push: Callback::new(|_: String| {}),
-        });
+        };
+        provide_context(source_control.clone());
 
-        notice
+        (source_control, notice)
     }
 
     #[test]
@@ -109,9 +116,9 @@ mod tests {
         // CMD-004A: unimplemented P2P branch creation is an unavailable notice.
         let owner = Owner::new();
         owner.with(|| {
-            let notice = provide_source_control_context();
+            let (source_control, notice) = provide_source_control_context();
             let (show, set_show) = signal(true);
-            let command = establish_branch_command(Locale::En, set_show);
+            let command = establish_branch_command(Locale::En, set_show, Some(source_control));
 
             assert!(command.availability.is_unavailable());
             assert_eq!(command.group, "P2P / Branch");

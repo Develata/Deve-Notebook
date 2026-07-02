@@ -2,7 +2,7 @@
 //!   - 14_commands#command-palette-shortcuts
 //!   - 11_ui_design/01_web#web-layout-persistence
 //!
-use super::registry::{create_static_commands, filter_commands};
+use super::registry::{StaticCommandContext, create_static_commands_with_context, filter_commands};
 use super::types::Command;
 use crate::components::focus_scope;
 use crate::i18n::Locale;
@@ -52,12 +52,19 @@ pub(super) fn create_filtered_commands_memo(
     on_settings: Callback<()>,
     on_open: Callback<()>,
     set_show: WriteSignal<bool>,
+    command_context: StaticCommandContext,
 ) -> Memo<Vec<Command>> {
     Memo::new(move |_| {
         let q = query.get();
         let current_locale = locale.get();
-        let static_cmds =
-            create_static_commands(current_locale, on_settings, on_open, set_show, locale);
+        let static_cmds = create_static_commands_with_context(
+            current_locale,
+            on_settings,
+            on_open,
+            set_show,
+            locale,
+            command_context.clone(),
+        );
         filter_commands(&q, static_cmds, 50)
     })
 }

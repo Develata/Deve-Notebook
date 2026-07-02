@@ -19,7 +19,7 @@ mod ui_footer;
 mod ui_sections;
 mod ui_sheet;
 
-use crate::hooks::use_core::{BranchContext, DocContext, EditorContext};
+use crate::hooks::use_core::{BranchContext, DocContext, EditorContext, SourceControlContext};
 use crate::i18n::Locale;
 use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
@@ -42,6 +42,7 @@ pub fn UnifiedSearch(
     #[prop(into)] ui_mode: Signal<SearchUiMode>,
     on_settings: Callback<()>,
     on_open: Callback<()>,
+    source_control_context: SourceControlContext,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let runtime = runtime::SearchRuntime {
@@ -55,6 +56,9 @@ pub fn UnifiedSearch(
     let (selected_index, set_selected_index) = signal(0);
     let input_ref = NodeRef::<leptos::html::Input>::new();
     let (recent_move_dirs, set_recent_move_dirs) = signal(Vec::<String>::new());
+    let command_context =
+        crate::components::command_palette::registry::StaticCommandContext::from_current_context()
+            .with_source_control_context(source_control_context);
 
     // 打开时重置查询并聚焦输入，关闭时返回编辑器焦点。
     effects::attach_focus_effect(show, mode_signal, set_query, set_selected_index, input_ref);
@@ -119,6 +123,7 @@ pub fn UnifiedSearch(
         on_settings,
         on_open,
         set_show,
+        command_context,
     });
 
     let active_index = Arc::new(logic::make_active_index(

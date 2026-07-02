@@ -4,6 +4,9 @@ use super::{
 };
 use crate::api::{ConnectionStatus, WsService};
 use crate::components::command_palette::logic::create_filtered_commands_memo;
+use crate::components::command_palette::registry::{
+    StaticCommandContext, create_static_commands_with_context,
+};
 use crate::components::command_palette::types::Command;
 use crate::hooks::use_core::diff_session::DiffSessionWire;
 use crate::hooks::use_core::source_control_notice::{
@@ -23,7 +26,10 @@ use leptos::prelude::{
 };
 use leptos::reactive::owner::Owner;
 
-fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
+fn provide_source_control_context() -> (
+    SourceControlContext,
+    ReadSignal<Option<SourceControlNotice>>,
+) {
     let (staged_changes, _) = signal(Vec::<ChangeEntry>::new());
     let (unstaged_changes, _) = signal(Vec::<ChangeEntry>::new());
     let (confirmed_changes, _) = signal(Vec::<ChangeEntry>::new());
@@ -41,7 +47,7 @@ fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
     let (commit_diff_result, set_commit_diff_result) = signal(Vec::<CommitFileDiff>::new());
     let clear_notice = Callback::new(move |_| set_notice.set(None));
 
-    provide_context(SourceControlContext {
+    let source_control = SourceControlContext {
         staged_changes,
         unstaged_changes,
         confirmed_changes,
@@ -78,9 +84,10 @@ fn provide_source_control_context() -> ReadSignal<Option<SourceControlNotice>> {
         on_resolve_conflict: Callback::new(|_: (ChangeEntry, ConflictResolution)| {}),
         on_get_commit_diff: Callback::new(|_: (Option<String>, String)| {}),
         on_commit_and_push: Callback::new(|_: String| {}),
-    });
+    };
+    provide_context(source_control.clone());
 
-    notice
+    (source_control, notice)
 }
 
 fn assert_cli_notice_command(
@@ -120,6 +127,7 @@ fn create_commands(set_show: WriteSignal<bool>) -> Memo<Vec<Command>> {
         Callback::new(|_| {}),
         Callback::new(|_| {}),
         set_show,
+        StaticCommandContext::from_current_context(),
     )
 }
 
@@ -136,9 +144,9 @@ fn git_status_enabled_when(commands: Memo<Vec<Command>>) -> String {
 fn git_import_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
-        let notice = provide_source_control_context();
+        let (source_control, notice) = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_import_command(Locale::En, set_show);
+        let command = git_import_command(Locale::En, set_show, Some(source_control));
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_import_cli_notice);
@@ -149,9 +157,9 @@ fn git_import_command_sets_cli_only_notice() {
 fn git_status_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
-        let notice = provide_source_control_context();
+        let (source_control, notice) = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_status_command(Locale::En, set_show);
+        let command = git_status_command(Locale::En, set_show, Some(source_control));
 
         assert!(command.availability.is_unavailable());
         assert!(
@@ -167,9 +175,9 @@ fn git_status_command_sets_cli_only_notice() {
 fn git_mirror_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
-        let notice = provide_source_control_context();
+        let (source_control, notice) = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_mirror_command(Locale::En, set_show);
+        let command = git_mirror_command(Locale::En, set_show, Some(source_control));
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_mirror_cli_notice);
@@ -180,9 +188,9 @@ fn git_mirror_command_sets_cli_only_notice() {
 fn git_export_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
-        let notice = provide_source_control_context();
+        let (source_control, notice) = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_export_command(Locale::En, set_show);
+        let command = git_export_command(Locale::En, set_show, Some(source_control));
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_export_cli_notice);
@@ -193,9 +201,9 @@ fn git_export_command_sets_cli_only_notice() {
 fn git_push_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
-        let notice = provide_source_control_context();
+        let (source_control, notice) = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_push_command(Locale::En, set_show);
+        let command = git_push_command(Locale::En, set_show, Some(source_control));
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
@@ -206,12 +214,36 @@ fn git_push_command_sets_cli_only_notice() {
 fn git_repair_command_sets_cli_only_notice() {
     let owner = Owner::new();
     owner.with(|| {
-        let notice = provide_source_control_context();
+        let (source_control, notice) = provide_source_control_context();
         let (show, set_show) = signal(true);
-        let command = git_repair_command(Locale::En, set_show);
+        let command = git_repair_command(Locale::En, set_show, Some(source_control));
 
         assert!(command.availability.is_unavailable());
         assert_cli_notice_command(command, show, notice, is_git_repair_cli_notice);
+    });
+}
+
+#[test]
+fn static_commands_with_explicit_source_control_context_set_git_notice() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let (source_control, notice) = provide_source_control_context();
+        let (show, set_show) = signal(true);
+        let locale = RwSignal::new(Locale::En);
+        let commands = create_static_commands_with_context(
+            Locale::En,
+            Callback::new(|_| {}),
+            Callback::new(|_| {}),
+            set_show,
+            locale,
+            StaticCommandContext::default().with_source_control_context(source_control),
+        );
+        let command = commands
+            .into_iter()
+            .find(|command| command.id == "git_push_mirror")
+            .expect("git push command");
+
+        assert_cli_notice_command(command, show, notice, is_git_push_cli_notice);
     });
 }
 

@@ -88,6 +88,7 @@ fn dispatch_commit_diff_from_repo(
         commit_diff_request_id,
         set_commit_diff_request_id,
         set_commit_diff,
+        notice,
         set_notice,
         current_repo_id,
         load_state,

@@ -7,7 +7,7 @@
 
 use super::types::Command;
 use crate::components::main_layout::{ChatControl, SearchControl, SidebarControl};
-use crate::hooks::use_core::{BranchContext, SyncMergeContext};
+use crate::hooks::use_core::{BranchContext, SourceControlContext, SyncMergeContext};
 use crate::i18n::{Locale, persist_locale_preference, t};
 use leptos::prelude::*;
 
@@ -26,6 +26,34 @@ use git::{
 use merge::merge_peer_commands;
 use reserved::{ai_reserved_commands, source_control_reserved_commands};
 
+#[derive(Clone, Default)]
+pub struct StaticCommandContext {
+    chat_control: Option<ChatControl>,
+    search_control: Option<SearchControl>,
+    sidebar_control: Option<SidebarControl>,
+    branch_context: Option<BranchContext>,
+    source_control_context: Option<SourceControlContext>,
+    sync_merge_context: Option<SyncMergeContext>,
+}
+
+impl StaticCommandContext {
+    pub fn from_current_context() -> Self {
+        Self {
+            chat_control: use_context::<ChatControl>(),
+            search_control: use_context::<SearchControl>(),
+            sidebar_control: use_context::<SidebarControl>(),
+            branch_context: use_context::<BranchContext>(),
+            source_control_context: use_context::<SourceControlContext>(),
+            sync_merge_context: use_context::<SyncMergeContext>(),
+        }
+    }
+
+    pub fn with_source_control_context(mut self, source_control: SourceControlContext) -> Self {
+        self.source_control_context = Some(source_control);
+        self
+    }
+}
+
 /// 创建静态命令列表。
 pub fn create_static_commands(
     locale: Locale,
@@ -34,12 +62,32 @@ pub fn create_static_commands(
     set_show: WriteSignal<bool>,
     locale_signal: RwSignal<Locale>,
 ) -> Vec<Command> {
-    // Try to get ChatControl from context at creation time
-    let chat_control = use_context::<ChatControl>();
-    let search_control = use_context::<SearchControl>();
-    let sidebar_control = use_context::<SidebarControl>();
-    let branch_context = use_context::<BranchContext>();
-    let sync_merge_context = use_context::<SyncMergeContext>();
+    create_static_commands_with_context(
+        locale,
+        on_settings,
+        on_open,
+        set_show,
+        locale_signal,
+        StaticCommandContext::from_current_context(),
+    )
+}
+
+pub fn create_static_commands_with_context(
+    locale: Locale,
+    on_settings: Callback<()>,
+    on_open: Callback<()>,
+    set_show: WriteSignal<bool>,
+    locale_signal: RwSignal<Locale>,
+    context: StaticCommandContext,
+) -> Vec<Command> {
+    let StaticCommandContext {
+        chat_control,
+        search_control,
+        sidebar_control,
+        branch_context,
+        source_control_context,
+        sync_merge_context,
+    } = context;
 
     let mut commands = vec![
         // 打开文档命令 - 打开文档模态框
@@ -114,7 +162,11 @@ pub fn create_static_commands(
     }
 
     commands.extend(source_control_reserved_commands(locale));
-    commands.push(establish_branch_command(locale, set_show));
+    commands.push(establish_branch_command(
+        locale,
+        set_show,
+        source_control_context.clone(),
+    ));
     commands.extend(merge_peer_commands(
         locale,
         set_show,
@@ -122,12 +174,12 @@ pub fn create_static_commands(
         sync_merge_context,
     ));
     commands.extend(vec![
-        git_status_command(locale, set_show),
-        git_mirror_command(locale, set_show),
-        git_export_command(locale, set_show),
-        git_import_command(locale, set_show),
-        git_push_command(locale, set_show),
-        git_repair_command(locale, set_show),
+        git_status_command(locale, set_show, source_control_context.clone()),
+        git_mirror_command(locale, set_show, source_control_context.clone()),
+        git_export_command(locale, set_show, source_control_context.clone()),
+        git_import_command(locale, set_show, source_control_context.clone()),
+        git_push_command(locale, set_show, source_control_context.clone()),
+        git_repair_command(locale, set_show, source_control_context),
     ]);
 
     // Add AI Chat toggle command if ChatControl is available

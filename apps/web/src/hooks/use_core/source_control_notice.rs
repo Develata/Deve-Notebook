@@ -125,6 +125,10 @@ pub fn is_establish_branch_unavailable_notice(notice: &SourceControlNotice) -> b
     notice.detail.as_deref() == Some(ESTABLISH_BRANCH_UNAVAILABLE_DETAIL)
 }
 
+pub fn is_local_command_notice(notice: &SourceControlNotice) -> bool {
+    is_git_cli_notice(notice) || is_establish_branch_unavailable_notice(notice)
+}
+
 pub const fn is_source_control_error(code: ServerErrorCode) -> bool {
     matches!(
         code,

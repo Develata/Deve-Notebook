@@ -52,18 +52,20 @@ use self::graph_panel::GraphPanel;
 use self::header::SourceControlHeader;
 use self::history::History;
 use self::status_notice::StatusNotice;
-use crate::hooks::use_core::{SourceControlContext, source_control_notice::is_git_cli_notice};
+use crate::hooks::use_core::{
+    SourceControlContext, source_control_notice::is_git_status_cli_notice,
+};
 use leptos::prelude::*;
 
-fn should_clear_suppressed_git_cli_notice(
-    suppress_git_cli_notice: bool,
+fn should_clear_suppressed_git_status_notice(
+    suppress_git_status_notice: bool,
     notice: Option<&crate::hooks::use_core::source_control_notice::SourceControlNotice>,
 ) -> bool {
-    suppress_git_cli_notice && notice.is_some_and(is_git_cli_notice)
+    suppress_git_status_notice && notice.is_some_and(is_git_status_cli_notice)
 }
 
 #[component]
-pub fn SourceControlView(suppress_git_cli_notice: bool) -> impl IntoView {
+pub fn SourceControlView(suppress_git_status_notice: bool) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
 
@@ -79,7 +81,7 @@ pub fn SourceControlView(suppress_git_cli_notice: bool) -> impl IntoView {
 
     Effect::new(move |_| {
         let notice = core.notice.get();
-        if should_clear_suppressed_git_cli_notice(suppress_git_cli_notice, notice.as_ref()) {
+        if should_clear_suppressed_git_status_notice(suppress_git_status_notice, notice.as_ref()) {
             core.clear_notice.run(());
         }
     });
@@ -111,7 +113,7 @@ pub fn SourceControlView(suppress_git_cli_notice: bool) -> impl IntoView {
                     current_repo_id=core.current_repo_id
                     current_scope_nonce=core.current_scope_nonce
                     clear_notice=core.clear_notice
-                    suppress_git_cli_notice=suppress_git_cli_notice
+                    suppress_git_status_notice=suppress_git_status_notice
                 />
                 <ChangesPanel visible=show_changes />
                 <Show when=move || show_graph.get()>
@@ -127,11 +129,11 @@ pub fn SourceControlView(suppress_git_cli_notice: bool) -> impl IntoView {
 
 #[cfg(test)]
 mod tests {
-    use super::should_clear_suppressed_git_cli_notice;
+    use super::should_clear_suppressed_git_status_notice;
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
-    fn mobile_source_control_read_surface_clears_git_cli_notices() {
+    fn mobile_source_control_read_surface_clears_git_status_notice_only() {
         let status_notice = SourceControlNotice::git_status_cli_only();
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         let export_notice = SourceControlNotice::git_export_cli_only();
@@ -139,7 +141,7 @@ mod tests {
         let push_notice = SourceControlNotice::git_push_cli_only();
         let repair_notice = SourceControlNotice::git_repair_cli_only();
 
-        assert!(should_clear_suppressed_git_cli_notice(
+        assert!(should_clear_suppressed_git_status_notice(
             true,
             Some(&status_notice),
         ));
@@ -150,12 +152,15 @@ mod tests {
             &push_notice,
             &repair_notice,
         ] {
-            assert!(should_clear_suppressed_git_cli_notice(true, Some(notice)));
+            assert!(!should_clear_suppressed_git_status_notice(
+                true,
+                Some(notice)
+            ));
         }
-        assert!(!should_clear_suppressed_git_cli_notice(
+        assert!(!should_clear_suppressed_git_status_notice(
             false,
             Some(&status_notice)
         ));
-        assert!(!should_clear_suppressed_git_cli_notice(true, None));
+        assert!(!should_clear_suppressed_git_status_notice(true, None));
     }
 }

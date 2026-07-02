@@ -3,7 +3,7 @@ contains	docs/plan/14_commands.md	AI: Switch to PLAN Mode
 contains	docs/plan/14_commands.md	AI: Switch to BUILD Mode
 contains	docs/plan/14_commands.md	不负责切换 `native / trusted-cli` 后端
 contains	apps/web/src/components/command_palette/registry.rs	merge_peer_command
-contains	apps/web/src/components/command_palette/registry.rs	establish_branch_command(locale, set_show)
+contains	apps/web/src/components/command_palette/registry.rs	source_control_context.clone()
 contains	apps/web/src/components/command_palette/registry/branch.rs	Command::unavailable
 contains	apps/web/src/components/command_palette/registry/branch.rs	establish_branch_command_is_unavailable_notice_only
 contains	apps/web/src/components/command_palette/registry/git/tests.rs	git_status_command_sets_cli_only_notice
@@ -15,16 +15,16 @@ contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_STATUS_CLI_NOT
 contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_MIRROR_CLI_NOTICE_DETAIL
 contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_EXPORT_CLI_NOTICE_DETAIL
 contains	apps/web/src/components/sidebar/source_control/error_notice_copy.rs	is_establish_branch_unavailable_notice
-contains	apps/web/src/components/sidebar/source_control/error_notice.rs	is_git_cli_notice
+contains	apps/web/src/components/sidebar/source_control/error_notice.rs	is_git_status_cli_notice
 contains	apps/web/src/i18n/command_palette.rs	establish_branch_unavailable_reason
 contains	apps/web/src/i18n/command_palette.rs	git_status
 contains	apps/web/src/i18n/command_palette.rs	git_mirror
 contains	apps/web/src/i18n/command_palette.rs	git_export_mirror
 contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
-contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_open_read_surface_observes_notice_changes()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_open_read_surface_observes_git_status_changes()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_active_surface_observes_notice_changes()
 contains	apps/web/src/components/mobile_layout/mod.rs	clear_mobile_source_control_notice_for_active_view(
-contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_cli_notice()
+contains	apps/web/src/components/mobile_layout/source_control_notice.rs	fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_status_notice()
 contains	apps/web/src/components/mobile_layout/drawers/left.rs	clear_mobile_source_control_notice_for_drawer(
 absent	apps/web/src/components/mobile_layout/drawers/left/tabs.rs	clear_tracked_mobile_source_control_notice_for_view
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web establish_branch_command -- --nocapture

@@ -76,6 +76,29 @@ fn dispatch_read_list_from_repo(
     message_branch: Option<PeerId>,
     message_scope_nonce: Option<u64>,
 ) -> ReadListDispatchResult {
+    dispatch_read_list_from_repo_with_notice(
+        kind,
+        current_repo_id_value,
+        message_repo_id_value,
+        active_branch_value,
+        message_branch,
+        message_scope_nonce,
+        Some(SourceControlNotice {
+            code: ServerErrorCode::ScRepoContextInvalid,
+            detail: Some("previous error".into()),
+        }),
+    )
+}
+
+fn dispatch_read_list_from_repo_with_notice(
+    kind: ReadListKind,
+    current_repo_id_value: uuid::Uuid,
+    message_repo_id_value: uuid::Uuid,
+    active_branch_value: Option<PeerId>,
+    message_branch: Option<PeerId>,
+    message_scope_nonce: Option<u64>,
+    initial_notice: Option<SourceControlNotice>,
+) -> ReadListDispatchResult {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
     let ws = WsService::new_for_test(ConnectionStatus::Connected);
@@ -97,10 +120,7 @@ fn dispatch_read_list_from_repo(
     let (diff, set_diff) = signal(None::<DiffSessionWire>);
     let (commit_diff_request_id, set_commit_diff_request_id) = signal(None::<String>);
     let (commit_diff, set_commit_diff) = signal(Vec::<CommitFileDiff>::new());
-    let (notice, set_notice) = signal(Some(SourceControlNotice {
-        code: ServerErrorCode::ScRepoContextInvalid,
-        detail: Some("previous error".into()),
-    }));
+    let (notice, set_notice) = signal(initial_notice);
     let (current_repo_id, _) = signal(Some(current_repo_id_value.to_string()));
     let (load_state, _) = signal(LoadPhase::Ready);
     let (is_spectator, _) = signal(active_branch_value.is_some());
@@ -132,6 +152,7 @@ fn dispatch_read_list_from_repo(
         commit_diff_request_id,
         set_commit_diff_request_id,
         set_commit_diff,
+        notice,
         set_notice,
         current_repo_id,
         load_state,

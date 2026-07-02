@@ -6,7 +6,7 @@
 use crate::components::activity_bar::SidebarView;
 use crate::hooks::use_core::{
     SourceControlContext,
-    source_control_notice::{SourceControlNotice, is_git_cli_notice},
+    source_control_notice::{SourceControlNotice, is_git_status_cli_notice},
 };
 use leptos::prelude::*;
 
@@ -14,7 +14,7 @@ pub(super) fn should_clear_mobile_source_control_notice(
     view: SidebarView,
     notice: Option<&SourceControlNotice>,
 ) -> bool {
-    view == SidebarView::SourceControl && notice.is_some_and(is_git_cli_notice)
+    view == SidebarView::SourceControl && notice.is_some_and(is_git_status_cli_notice)
 }
 
 pub(super) fn should_clear_mobile_source_control_notice_for_drawer(
@@ -93,7 +93,7 @@ mod tests {
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
-    fn mobile_source_control_read_gate_plain_entry_clears_git_cli_notices() {
+    fn mobile_source_control_read_gate_plain_entry_clears_git_status_notice() {
         let status_notice = SourceControlNotice::git_status_cli_only();
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         let export_notice = SourceControlNotice::git_export_cli_only();
@@ -113,7 +113,7 @@ mod tests {
             &push_notice,
             &repair_notice,
         ] {
-            assert!(should_clear_mobile_source_control_notice(
+            assert!(!should_clear_mobile_source_control_notice(
                 SidebarView::SourceControl,
                 Some(notice),
             ));
@@ -133,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_open_read_surface_observes_notice_changes() {
+    fn mobile_source_control_open_read_surface_observes_git_status_changes() {
         let status_notice = SourceControlNotice::git_status_cli_only();
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         let export_notice = SourceControlNotice::git_export_cli_only();
@@ -165,7 +165,7 @@ mod tests {
             &push_notice,
             &repair_notice,
         ] {
-            assert!(should_clear_mobile_source_control_notice(
+            assert!(!should_clear_mobile_source_control_notice(
                 SidebarView::SourceControl,
                 Some(notice),
             ));
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_cli_notice() {
+    fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_status_notice() {
         let status_notice = SourceControlNotice::git_status_cli_only();
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         let export_notice = SourceControlNotice::git_export_cli_only();
@@ -216,7 +216,7 @@ mod tests {
             &push_notice,
             &repair_notice,
         ] {
-            assert!(should_clear_mobile_source_control_notice_for_drawer(
+            assert!(!should_clear_mobile_source_control_notice_for_drawer(
                 true,
                 SidebarView::SourceControl,
                 Some(notice),

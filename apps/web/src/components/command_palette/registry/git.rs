@@ -38,8 +38,11 @@ fn git_bridge_mode_from_value(mode: &str) -> &'static str {
     }
 }
 
-pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_import_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    source_control: Option<SourceControlContext>,
+) -> Command {
     Command::unavailable(
         "git_import_changes",
         (t::command_palette::git_import_changes)(locale),
@@ -56,8 +59,11 @@ pub(super) fn git_import_command(locale: Locale, set_show: WriteSignal<bool>) ->
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_status_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_status_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    source_control: Option<SourceControlContext>,
+) -> Command {
     Command::unavailable(
         "git_status",
         (t::command_palette::git_status)(locale),
@@ -74,8 +80,11 @@ pub(super) fn git_status_command(locale: Locale, set_show: WriteSignal<bool>) ->
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_mirror_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_mirror_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    source_control: Option<SourceControlContext>,
+) -> Command {
     Command::unavailable(
         "git_mirror",
         (t::command_palette::git_mirror)(locale),
@@ -92,8 +101,11 @@ pub(super) fn git_mirror_command(locale: Locale, set_show: WriteSignal<bool>) ->
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_export_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    source_control: Option<SourceControlContext>,
+) -> Command {
     Command::unavailable(
         "git_export_mirror",
         (t::command_palette::git_export_mirror)(locale),
@@ -110,8 +122,11 @@ pub(super) fn git_export_command(locale: Locale, set_show: WriteSignal<bool>) ->
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_push_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    source_control: Option<SourceControlContext>,
+) -> Command {
     Command::unavailable(
         "git_push_mirror",
         (t::command_palette::git_push_mirror)(locale),
@@ -128,8 +143,11 @@ pub(super) fn git_push_command(locale: Locale, set_show: WriteSignal<bool>) -> C
     .with_enabled_when(git_bridge_enabled_when(locale))
 }
 
-pub(super) fn git_repair_command(locale: Locale, set_show: WriteSignal<bool>) -> Command {
-    let source_control = use_context::<SourceControlContext>();
+pub(super) fn git_repair_command(
+    locale: Locale,
+    set_show: WriteSignal<bool>,
+    source_control: Option<SourceControlContext>,
+) -> Command {
     Command::unavailable(
         "git_repair_mirror",
         (t::command_palette::git_repair_mirror)(locale),

@@ -15,7 +15,7 @@ pub use crate::components::layout_context::{
     ChatControl, EditorTabLimitControl, OutlineControl, SearchControl, SidebarControl,
 };
 use crate::components::main_layout_runtime::MainLayoutRuntime;
-use crate::hooks::use_core::use_core;
+use crate::hooks::use_core::{SourceControlContext, use_core};
 use crate::hooks::use_ctrl_key::use_ctrl_key;
 use crate::hooks::use_layout::use_layout;
 use crate::i18n::Locale;
@@ -29,6 +29,7 @@ mod setup;
 pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> AnyView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let core = use_core();
+    let source_control_context = expect_context::<SourceControlContext>();
     watch_session_expired(core.ws.status, on_session_expired);
 
     use_ctrl_key();
@@ -92,6 +93,7 @@ pub fn MainLayout(on_session_expired: Callback<()>, on_logout: Callback<()>) -> 
             on_command=on_command
             on_settings=on_settings
             on_logout=on_logout
+            source_control_context=source_control_context
             pending_navigation=core.pending_navigation
             set_pending_navigation=core.set_pending_navigation
         />

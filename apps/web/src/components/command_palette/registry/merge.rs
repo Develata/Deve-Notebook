@@ -86,6 +86,7 @@ fn merge_peer_unavailable_command(
 mod tests {
     use super::merge_peer_commands;
     use crate::components::command_palette::logic::create_filtered_commands_memo;
+    use crate::components::command_palette::registry::StaticCommandContext;
     use crate::components::command_palette::types::{Command, CommandAvailability};
     use crate::hooks::use_core::{
         BranchContext, PendingOpsPreview, SyncMergeContext, SyncModeState,
@@ -158,6 +159,7 @@ mod tests {
                 Callback::new(|_| {}),
                 Callback::new(|_| {}),
                 set_show,
+                StaticCommandContext::from_current_context(),
             );
 
             assert!(

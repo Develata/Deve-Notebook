@@ -12,6 +12,7 @@ use super::super::effects_sc_state::{
     changes_list_matches_request, commit_diff_matches_request, commit_history_matches_request,
     doc_diff_matches_request,
 };
+use super::super::source_control_notice::is_local_command_notice;
 use super::ScMessageContext;
 
 pub(crate) fn handle_sc_list_message(
@@ -40,7 +41,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
-            ctx.set_notice.set(None);
+            clear_notice_unless_local_command(ctx);
             ctx.set_changes_request_id.set(None);
             ctx.set_staged.set(staged.clone());
             ctx.set_unstaged.set(unstaged.clone());
@@ -65,7 +66,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
-            ctx.set_notice.set(None);
+            clear_notice_unless_local_command(ctx);
             ctx.set_commit_history_request_id.set(None);
             ctx.set_history.set(commits.clone());
             true
@@ -91,7 +92,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
-            ctx.set_notice.set(None);
+            clear_notice_unless_local_command(ctx);
             ctx.set_doc_diff_request_id.set(None);
             if is_merge_conflict_diff_fallback(ctx.diff.get_untracked(), request_id, *doc_id, path)
             {
@@ -115,7 +116,7 @@ pub(crate) fn handle_sc_list_message(
             if !ctx.in_scope(repo_id, branch) || *scope_nonce != Some(active_scope_nonce) {
                 return true;
             }
-            ctx.set_notice.set(None);
+            clear_notice_unless_local_command(ctx);
             leptos::logging::log!("收到合并冲突: {} ({} actions)", path, actions.len());
             ctx.set_diff.set(Some(
                 DiffSessionWire::new(
@@ -150,7 +151,7 @@ pub(crate) fn handle_sc_list_message(
             ) {
                 return true;
             }
-            ctx.set_notice.set(None);
+            clear_notice_unless_local_command(ctx);
             ctx.set_commit_diff_request_id.set(None);
             leptos::logging::log!("收到提交差异: {} 个文件变更", diffs.len());
             ctx.set_commit_diff.set(diffs.clone());
@@ -158,6 +159,18 @@ pub(crate) fn handle_sc_list_message(
         }
         _ => false,
     }
+}
+
+fn clear_notice_unless_local_command(ctx: &ScMessageContext<'_>) {
+    if ctx
+        .notice
+        .get_untracked()
+        .as_ref()
+        .is_some_and(is_local_command_notice)
+    {
+        return;
+    }
+    ctx.set_notice.set(None);
 }
 
 fn is_merge_conflict_diff_fallback(

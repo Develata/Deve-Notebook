@@ -2,7 +2,9 @@
 //!   - 17_tech_stack#search-baseline
 //!   - 14_commands#command-palette-shortcuts
 //!
-use crate::components::command_palette::registry::create_static_commands;
+use crate::components::command_palette::registry::{
+    StaticCommandContext, create_static_commands_with_context,
+};
 use crate::components::search_box::file_ops;
 use crate::components::search_box::providers::{
     self, CommandProvider, FileProvider, LOCAL_BRANCH_LABEL,
@@ -64,6 +66,7 @@ pub struct SearchResultsMemoInput {
     pub on_settings: Callback<()>,
     pub on_open: Callback<()>,
     pub set_show: WriteSignal<bool>,
+    pub command_context: StaticCommandContext,
 }
 
 pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResult>> {
@@ -76,6 +79,7 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
         on_settings,
         on_open,
         set_show,
+        command_context,
     } = input;
     Memo::new(move |_| {
         if !show.get() {
@@ -94,8 +98,14 @@ pub fn create_results_memo(input: SearchResultsMemoInput) -> Memo<Vec<SearchResu
                 file_ops::build_file_ops_results(&q, &doc_list, &recent_move_dirs.get(), now_locale)
             }
             SearchSurfaceMode::Command => {
-                let cmds =
-                    create_static_commands(now_locale, on_settings, on_open, set_show, locale);
+                let cmds = create_static_commands_with_context(
+                    now_locale,
+                    on_settings,
+                    on_open,
+                    set_show,
+                    locale,
+                    command_context.clone(),
+                );
                 CommandProvider::new(cmds, now_locale).search(&q)
             }
             SearchSurfaceMode::Branch => {
