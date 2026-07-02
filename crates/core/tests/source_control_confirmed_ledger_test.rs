@@ -81,12 +81,76 @@ fn append_confirmed_ledger_edit(repo: &RepoManager, doc_id: deve_core::models::D
     .expect("append editor ledger op");
 }
 
+fn append_confirmed_ledger_insert(
+    repo: &RepoManager,
+    doc_id: deve_core::models::DocId,
+    content: &str,
+) {
+    let peer_id = PeerId::new("editor");
+    let content = content.to_string();
+    repo.append_generated_op_in_local_repo(
+        repo.local_repo_name(),
+        doc_id,
+        peer_id.clone(),
+        |seq| {
+            LedgerEntry::new_content(
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: content.clone().into(),
+                },
+                1000,
+                peer_id.clone(),
+                seq,
+                None,
+                None,
+            )
+        },
+    )
+    .expect("append editor ledger insert");
+}
+
 fn ledger_head(repo: &RepoManager) -> u64 {
     repo.run_on_local_repo(
         repo.local_repo_name(),
         deve_core::ledger::range::get_max_seq,
     )
     .expect("ledger head")
+}
+
+#[test]
+fn source_control_confirmed_added_doc_diff_contains_new_content() {
+    let (_dir, repo) = new_repo();
+    let base_head = ledger_head(&repo);
+    let (doc_id, _) = repo
+        .apply_file_structure_in_local_repo(repo.local_repo_name(), "notes/new.md", None, "editor")
+        .expect("create confirmed ledger doc");
+    append_confirmed_ledger_insert(&repo, doc_id, "confirmed ledger smoke\nline 2");
+
+    let confirmed = repo
+        .list_confirmed_ledger_changes()
+        .expect("confirmed ledger changes");
+    assert_eq!(confirmed.len(), 1);
+    assert_eq!(confirmed[0].domain, ChangeDomain::ConfirmedLedger);
+    assert_eq!(confirmed[0].doc_id, Some(doc_id));
+    assert_eq!(confirmed[0].path, "notes/new.md");
+    assert_eq!(confirmed[0].status, ChangeStatus::Added);
+    assert_eq!(confirmed[0].base_seq, Some(base_head));
+    assert_eq!(confirmed[0].target_seq, Some(ledger_head(&repo)));
+
+    let diff = repo
+        .diff_doc_target_in_local_repo(
+            repo.local_repo_name(),
+            &ScPathTarget {
+                path: "notes/new.md".into(),
+                doc_id: Some(doc_id),
+                domain: Some(ChangeDomain::ConfirmedLedger),
+            },
+        )
+        .expect("confirmed added doc diff");
+
+    assert!(diff.contains("+confirmed ledger smoke"), "{diff}");
+    assert!(diff.contains("+line 2"), "{diff}");
 }
 
 #[test]

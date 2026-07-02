@@ -147,4 +147,23 @@ mod tests {
         assert!(deleted.content.starts_with("- "));
         assert!(deleted.word_ranges.iter().all(|(start, _)| *start >= 2));
     }
+
+    #[test]
+    fn unified_diff_counts_insert_only_document_lines() {
+        let ((left, right), _) =
+            compute_diff_preview_with_meta("", "confirmed ledger smoke\nline 2", 20);
+        let unified = to_unified(&left, &right);
+
+        assert_eq!(
+            unified
+                .iter()
+                .filter(|line| line.kind == LineKind::Add)
+                .count(),
+            2
+        );
+        assert!(
+            unified.iter().any(|line| line.kind == LineKind::Add
+                && line.content.contains("confirmed ledger smoke"))
+        );
+    }
 }
