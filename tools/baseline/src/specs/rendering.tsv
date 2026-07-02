@@ -76,11 +76,13 @@ contains	apps/web/src/components/outline_render/parse_test.rs	outline_scan_helpe
 absent	apps/web/src/components/outline_render/parse.rs	chars().next().unwrap()
 absent	apps/web/src/components/outline_render/scan.rs	chars().next().unwrap()
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-OUTLINE-001
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-OUTLINE-001	run: cargo test -p deve_web outline_atx -- --nocapture
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-OUTLINE-001	ui_assert: outline_atx_empty_tab_and_closing_headings_supported true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-OUTLINE-001	ui_assert: outline_heading_items_are_buttons true
 contains	docs/features/03_rendering.md	Outline 应识别空与非空 ATX 标题、tab 分隔标题
 contains	apps/web/src/components/outline.rs	10_rendering#outline-projection
 contains	apps/web/src/components/outline.rs	fn parse_atx_heading
+contains	apps/web/src/components/outline.rs	# s
 contains	apps/web/src/components/outline.rs	fn strip_atx_closing_sequence
 contains	apps/web/src/components/outline.rs	outline_atx_heading_scan_supports_empty_tab_and_closing_sequence
 contains	apps/web/src/components/outline.rs	outline_atx_heading_scan_skips_code_and_invalid_openers

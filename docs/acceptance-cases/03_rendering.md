@@ -194,6 +194,7 @@
     - 标题含 **bold**/*italic*/~~strike~~/`code`/$a^2$ 与 `==highlight==`
   steps:
     - ui_open_outline: true
+    - run: cargo test -p deve_web outline_atx -- --nocapture
   assertions:
     - ui_assert: outline_contains_math true
     - ui_assert: outline_treats_highlight_as_text true

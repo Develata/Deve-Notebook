@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn outline_atx_heading_scan_supports_empty_tab_and_closing_sequence() {
-        let headers = parse_headers("#\n#\tTabbed\n## title ##\n### title ###   \n# ###\n");
+        let headers = parse_headers("#\n# s\n#\tTabbed\n## title ##\n### title ###   \n# ###\n");
 
         assert_eq!(
             headers,
@@ -183,23 +183,28 @@ mod tests {
                 },
                 HeaderNode {
                     level: 1,
-                    text: "Tabbed".to_string(),
+                    text: "s".to_string(),
                     line: 2,
+                },
+                HeaderNode {
+                    level: 1,
+                    text: "Tabbed".to_string(),
+                    line: 3,
                 },
                 HeaderNode {
                     level: 2,
                     text: "title".to_string(),
-                    line: 3,
+                    line: 4,
                 },
                 HeaderNode {
                     level: 3,
                     text: "title".to_string(),
-                    line: 4,
+                    line: 5,
                 },
                 HeaderNode {
                     level: 1,
                     text: String::new(),
-                    line: 5,
+                    line: 6,
                 },
             ]
         );
