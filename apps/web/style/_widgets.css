@@ -65,7 +65,7 @@
   pointer-events: auto;
 }
 
-@media (hover: none), (pointer: coarse) {
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
   .sc-row-action-tray {
     max-width: none;
     overflow: visible;
