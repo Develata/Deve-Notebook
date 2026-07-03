@@ -6,8 +6,10 @@
 //!
 //! 当文件同时在文件系统和 Ledger 中存在未提交变更时，标记为冲突。
 //!
-//! **不变量**: 冲突仅在 pending_fs_ops 条目上标记（`has_conflict` 字段），
-//! 不引入额外存储表。
+//! **不变量**: FS vs Ledger 内容冲突仅在 pending_fs_ops 条目上持久化
+//! （`has_conflict` 字段），不引入额外存储表。External Changes 与
+//! confirmed ledger dirty 的重叠 blocker 是 read projection 上的派生标记，
+//! 由 `external_overlap` 负责。
 //!
 //! **算法复杂度**: O(1) per fs event — 仅需两次哈希比较。
 

@@ -34,6 +34,8 @@ pub mod commits;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod conflict;
 #[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod external_overlap;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod ledger_dirty;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod pending_fs;

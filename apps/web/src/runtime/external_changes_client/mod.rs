@@ -16,7 +16,6 @@ use leptos::prelude::*;
 pub struct ExternalChangesClient {
     pub staged_changes: ReadSignal<Vec<ChangeEntry>>,
     pub unstaged_changes: ReadSignal<Vec<ChangeEntry>>,
-    pub confirmed_changes: ReadSignal<Vec<ChangeEntry>>,
     pub on_get_changes: Callback<()>,
     pub on_stage_file: Callback<ChangeEntry>,
     pub on_stage_files: Callback<Vec<ChangeEntry>>,

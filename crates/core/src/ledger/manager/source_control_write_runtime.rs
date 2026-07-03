@@ -9,7 +9,7 @@ use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, ledger_dirty, pending_fs, staging,
+    ChangeEntry, ChangeStatus, CommitInfo, external_overlap, ledger_dirty, pending_fs, staging,
 };
 use anyhow::Result;
 use std::collections::HashSet;
@@ -199,31 +199,18 @@ fn ensure_pending_entry_not_confirmed_overlap(
     entry: &pending_fs::PendingFsEntry,
     confirmed: &[ChangeEntry],
 ) -> Result<()> {
-    if confirmed
-        .iter()
-        .any(|confirmed| pending_entry_overlaps_confirmed(entry, confirmed))
-    {
+    if external_overlap::fields_overlap_any_confirmed(
+        entry.doc_id,
+        &entry.path,
+        entry.renamed_from.as_deref(),
+        confirmed,
+    ) {
         anyhow::bail!(
             "external change overlaps confirmed ledger changes: {}",
             entry.path
         );
     }
     Ok(())
-}
-
-fn pending_entry_overlaps_confirmed(
-    entry: &pending_fs::PendingFsEntry,
-    confirmed: &ChangeEntry,
-) -> bool {
-    matches!(
-        (entry.doc_id, confirmed.doc_id),
-        (Some(pending_doc), Some(confirmed_doc)) if pending_doc == confirmed_doc
-    ) || entry.path == confirmed.path
-        || confirmed.renamed_from.as_deref() == Some(entry.path.as_str())
-        || entry
-            .renamed_from
-            .as_deref()
-            .is_some_and(|renamed_from| renamed_from == confirmed.path)
 }
 
 fn collect_stage_entries_for_pending_target(

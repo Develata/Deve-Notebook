@@ -172,6 +172,9 @@ PendingFsEntry + ConfirmedLedgerChange(same doc) -> OverlapBlocked
   external changes 伪装成 Source Control commit。
 - 当 external change 与 confirmed ledger dirty 指向同一 `DocId`，或缺失 `DocId` 时指向同一 canonical
   path，普通 stage/apply **MUST** 禁用；UI 和 API 都必须保留 fail-closed 语义，不得由前端自行覆盖。
+- Source Control / External Changes read projection **MUST** 将 staged / unstaged external
+  entry 与 confirmed ledger dirty 的重叠派生为 typed conflict state（当前为 `ChangeEntry.has_conflict=true`）；
+  view 层只能消费该状态，不得重新实现 doc/path/rename overlap 判断。
 
 补充：
 

@@ -84,7 +84,11 @@ pub struct ChangeEntry {
     pub doc_id: Option<DocId>,
     /// 变更状态
     pub status: ChangeStatus,
-    /// 是否存在冲突 (仅 unstaged 条目可能为 true)
+    /// 是否存在冲突或 External/Confirmed overlap blocker。
+    ///
+    /// pending_fs_ops 只持久化外部文件冲突；read projection 也会把
+    /// staged/unstaged external changes 与 confirmed ledger dirty 的重叠
+    /// 派生为 true，供 UI 禁用普通 Stage / Apply to Ledger。
     #[serde(default)]
     pub has_conflict: bool,
     /// 该条目所属差异域；旧客户端缺省解析为 Working Directory。

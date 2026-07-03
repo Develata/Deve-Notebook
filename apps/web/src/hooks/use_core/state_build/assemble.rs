@@ -112,7 +112,6 @@ pub(super) fn assemble_core_state(
         external_changes: ExternalChangesClient {
             staged_changes: sc.staged_changes,
             unstaged_changes: sc.unstaged_changes,
-            confirmed_changes: sc.confirmed_changes,
             on_get_changes: sc.on_get_changes.clone(),
             on_stage_file: sc.on_stage_file.clone(),
             on_stage_files: sc.on_stage_files.clone(),

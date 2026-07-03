@@ -98,7 +98,7 @@ Source Control 默认 resource groups：
 - conflict group 出现时必须优先展示，不能伪装成普通 modified row。
 - empty state 必须说明当前 scope clean、readonly、blocked 或 unavailable，不能只显示空白。
 
-## 4.1 External Changes Sibling View
+## 4.1 External Changes Sibling View {#external-changes-sibling-view}
 
 External Changes / 外部修改 是 Source Control 的同级入口，负责展示 Projection Workspace 与当前 ledger projection 的偏差。
 

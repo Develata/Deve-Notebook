@@ -153,10 +153,7 @@ fn external_change_row(
                     <span class="truncate text-[12px] text-primary">{display_name}</span>
                     <span class="shrink truncate text-[11px] text-muted">{directory}</span>
                 </div>
-                <Show when=move || external_change_overlaps_confirmed(
-                    &entry_store.get_value(),
-                    &core.confirmed_changes.get(),
-                )>
+                <Show when=move || external_change_is_overlap_blocked(&entry_store.get_value())>
                     <div
                         class="mt-0.5 flex items-center gap-1 text-[11px] leading-4 text-warning"
                         data-deve-external-overlap="true"
@@ -180,10 +177,7 @@ fn external_change_row(
                     <FileText class="h-3.5 w-3.5" />
                 </ExternalChangeIconButton>
                 {move || {
-                    let overlaps = external_change_overlaps_confirmed(
-                        &entry_store.get_value(),
-                        &core.confirmed_changes.get(),
-                    );
+                    let overlaps = external_change_is_overlap_blocked(&entry_store.get_value());
                     if overlaps {
                         let core_for_disabled = core.clone();
                         let core_for_click = core.clone();
@@ -276,11 +270,7 @@ fn ExternalChangeIconButton(
 
 fn can_apply_to_ledger(core: &ExternalChangesContext) -> bool {
     let staged = core.staged_changes.get();
-    core.can_write.get()
-        && !staged.is_empty()
-        && !staged
-            .iter()
-            .any(|entry| external_change_overlaps_confirmed(entry, &core.confirmed_changes.get()))
+    core.can_write.get() && !staged.is_empty() && !staged.iter().any(|entry| entry.has_conflict)
 }
 
 fn apply_title(locale: Locale, core: &ExternalChangesContext) -> String {
@@ -290,22 +280,8 @@ fn apply_title(locale: Locale, core: &ExternalChangesContext) -> String {
     t::external_changes::apply_to_ledger_disabled(locale).to_string()
 }
 
-pub(crate) fn external_change_overlaps_confirmed(
-    entry: &ChangeEntry,
-    confirmed: &[ChangeEntry],
-) -> bool {
-    confirmed
-        .iter()
-        .any(|confirmed| same_change_identity(entry, confirmed))
-}
-
-fn same_change_identity(left: &ChangeEntry, right: &ChangeEntry) -> bool {
-    matches!(
-        (left.doc_id, right.doc_id),
-        (Some(left_doc), Some(right_doc)) if left_doc == right_doc
-    ) || left.path == right.path
-        || left.renamed_from.as_deref() == Some(right.path.as_str())
-        || right.renamed_from.as_deref() == Some(left.path.as_str())
+fn external_change_is_overlap_blocked(entry: &ChangeEntry) -> bool {
+    entry.has_conflict
 }
 
 fn external_change_key(entry: &ChangeEntry) -> String {
@@ -334,17 +310,16 @@ fn directory_name(path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{directory_name, external_change_overlaps_confirmed, file_name};
-    use deve_core::models::DocId;
+    use super::{directory_name, external_change_is_overlap_blocked, file_name};
     use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
 
-    fn entry(path: &str, doc_id: Option<DocId>, domain: ChangeDomain) -> ChangeEntry {
+    fn entry(path: &str, has_conflict: bool, domain: ChangeDomain) -> ChangeEntry {
         ChangeEntry {
             path: path.to_string(),
             renamed_from: None,
-            doc_id,
+            doc_id: None,
             status: ChangeStatus::Modified,
-            has_conflict: false,
+            has_conflict,
             domain,
             base_seq: None,
             target_seq: None,
@@ -352,53 +327,12 @@ mod tests {
     }
 
     #[test]
-    fn overlap_uses_doc_identity_before_path() {
-        let doc_id = DocId::new();
-        let external = entry("notes/new.md", Some(doc_id), ChangeDomain::WorkingDirectory);
-        let confirmed = entry("notes/old.md", Some(doc_id), ChangeDomain::ConfirmedLedger);
+    fn overlap_state_comes_from_backend_conflict_flag() {
+        let blocked = entry("notes/a.md", true, ChangeDomain::WorkingDirectory);
+        let clean = entry("notes/a.md", false, ChangeDomain::WorkingDirectory);
 
-        assert!(external_change_overlaps_confirmed(&external, &[confirmed]));
-    }
-
-    #[test]
-    fn overlap_falls_back_to_path_for_docless_changes() {
-        let external = entry("notes/a.md", None, ChangeDomain::WorkingDirectory);
-        let confirmed = entry("notes/a.md", None, ChangeDomain::ConfirmedLedger);
-
-        assert!(external_change_overlaps_confirmed(&external, &[confirmed]));
-    }
-
-    #[test]
-    fn overlap_falls_back_to_path_when_doc_ids_disagree() {
-        let external = entry(
-            "notes/a.md",
-            Some(DocId::new()),
-            ChangeDomain::WorkingDirectory,
-        );
-        let confirmed = entry(
-            "notes/a.md",
-            Some(DocId::new()),
-            ChangeDomain::ConfirmedLedger,
-        );
-
-        assert!(external_change_overlaps_confirmed(&external, &[confirmed]));
-    }
-
-    #[test]
-    fn overlap_falls_back_to_rename_path_when_doc_ids_disagree() {
-        let mut external = entry(
-            "notes/renamed.md",
-            Some(DocId::new()),
-            ChangeDomain::WorkingDirectory,
-        );
-        external.renamed_from = Some("notes/a.md".into());
-        let confirmed = entry(
-            "notes/a.md",
-            Some(DocId::new()),
-            ChangeDomain::ConfirmedLedger,
-        );
-
-        assert!(external_change_overlaps_confirmed(&external, &[confirmed]));
+        assert!(external_change_is_overlap_blocked(&blocked));
+        assert!(!external_change_is_overlap_blocked(&clean));
     }
 
     #[test]
@@ -421,5 +355,14 @@ mod tests {
         assert!(source.contains("md:h-7 md:w-7"));
         assert!(source.contains("class=\"group flex min-h-11"));
         assert!(source.contains("md:min-h-9"));
+    }
+
+    #[test]
+    fn external_changes_keeps_its_action_surface_separate() {
+        let source = include_str!("external_changes.rs");
+
+        assert!(!source.contains(concat!("change_item_", "action_surface")));
+        assert!(!source.contains(concat!("ChangeItem", "ActionSurface")));
+        assert!(!source.contains(concat!("change_item_", "conflict_actions")));
     }
 }

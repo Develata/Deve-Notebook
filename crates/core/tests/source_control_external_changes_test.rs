@@ -211,7 +211,12 @@ fn external_stage_rejects_overlap_with_confirmed_ledger_dirty() {
             .contains("external change overlaps confirmed ledger changes"),
         "unexpected error: {err}"
     );
-    assert_eq!(repo.list_pending_fs().expect("pending retained").len(), 1);
+    let pending = repo.list_pending_fs().expect("pending retained");
+    assert_eq!(pending.len(), 1);
+    assert!(
+        pending[0].has_conflict,
+        "read surface must flag external/confirmed overlap for UI"
+    );
     assert!(repo.list_staged().expect("staged remains empty").is_empty());
 }
 
@@ -246,7 +251,12 @@ fn external_stage_rejects_docless_rename_overlap_with_confirmed_path() {
             .contains("external change overlaps confirmed ledger changes"),
         "unexpected error: {err}"
     );
-    assert_eq!(repo.list_pending_fs().expect("pending retained").len(), 1);
+    let pending = repo.list_pending_fs().expect("pending retained");
+    assert_eq!(pending.len(), 1);
+    assert!(
+        pending[0].has_conflict,
+        "docless rename overlap must be surfaced as conflict state"
+    );
     assert!(repo.list_staged().expect("staged remains empty").is_empty());
 }
 
@@ -282,7 +292,12 @@ fn external_stage_fails_closed_on_same_path_different_doc_id_overlap() {
             || err.to_string().contains("Path is not in pending_fs_ops"),
         "unexpected error: {err}"
     );
-    assert_eq!(repo.list_pending_fs().expect("pending retained").len(), 1);
+    let pending = repo.list_pending_fs().expect("pending retained");
+    assert_eq!(pending.len(), 1);
+    assert!(
+        pending[0].has_conflict,
+        "same-path doc mismatch must surface as conflict state"
+    );
     assert!(repo.list_staged().expect("staged remains empty").is_empty());
 }
 
@@ -307,7 +322,12 @@ fn external_apply_rejects_staged_overlap_with_confirmed_ledger_dirty() {
         "unexpected error: {err}"
     );
     assert_eq!(ledger_head(&repo), before_apply_head);
-    assert_eq!(repo.list_staged().expect("staged retained").len(), 1);
+    let staged = repo.list_staged().expect("staged retained");
+    assert_eq!(staged.len(), 1);
+    assert!(
+        staged[0].has_conflict,
+        "staged overlap must be surfaced as conflict state"
+    );
     assert_eq!(
         repo.list_confirmed_ledger_changes()
             .expect("confirmed retained")
@@ -349,7 +369,12 @@ fn external_apply_rejects_docless_rename_overlap_with_confirmed_path() {
         "unexpected error: {err}"
     );
     assert_eq!(ledger_head(&repo), before_apply_head);
-    assert_eq!(repo.list_staged().expect("staged retained").len(), 1);
+    let staged = repo.list_staged().expect("staged retained");
+    assert_eq!(staged.len(), 1);
+    assert!(
+        staged[0].has_conflict,
+        "docless staged rename overlap must be surfaced as conflict state"
+    );
 }
 
 #[test]
@@ -385,7 +410,12 @@ fn external_apply_rejects_docful_rename_overlap_with_confirmed_path() {
         "unexpected error: {err}"
     );
     assert_eq!(ledger_head(&repo), before_apply_head);
-    assert_eq!(repo.list_staged().expect("staged retained").len(), 1);
+    let staged = repo.list_staged().expect("staged retained");
+    assert_eq!(staged.len(), 1);
+    assert!(
+        staged[0].has_conflict,
+        "docful staged rename overlap must be surfaced as conflict state"
+    );
 }
 
 #[test]

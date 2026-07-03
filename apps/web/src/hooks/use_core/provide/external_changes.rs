@@ -9,7 +9,7 @@ use super::super::write_gate::{
     RepoWriteSignals, repo_source_control_read_block_tracked, repo_write_allowed_for_core_tracked,
     repo_write_block_tracked,
 };
-use leptos::prelude::{Callback, Set, Signal};
+use leptos::prelude::Signal;
 
 pub(super) fn build_external_changes_context(state: &CoreState) -> ExternalChangesContext {
     let external_changes = &state.runtime_clients.external_changes;
@@ -17,15 +17,10 @@ pub(super) fn build_external_changes_context(state: &CoreState) -> ExternalChang
     let state_for_can_write = state.clone();
     let state_for_block = state.clone();
     let state_for_read_block = state.clone();
-    let clear_notice = Callback::new({
-        let set_notice = state.set_source_control_notice;
-        move |_| set_notice.set(None)
-    });
 
     ExternalChangesContext {
         staged_changes: external_changes.staged_changes,
         unstaged_changes: external_changes.unstaged_changes,
-        confirmed_changes: external_changes.confirmed_changes,
         can_write: Signal::derive(move || {
             repo_write_allowed_for_core_tracked(&state_for_can_write)
         }),
@@ -59,8 +54,6 @@ pub(super) fn build_external_changes_context(state: &CoreState) -> ExternalChang
                 },
             )
         }),
-        notice: state.source_control_notice,
-        clear_notice,
         current_repo_id: scope.current_repo_id,
         current_scope_nonce: scope.current_scope_nonce,
         active_branch: scope.active_branch,

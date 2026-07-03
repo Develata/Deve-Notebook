@@ -214,7 +214,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: external_conf
 contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-changes-view="true"
 contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-apply="true"
 contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-overlap="true"
-contains	apps/web/src/components/sidebar/external_changes.rs	fn external_change_overlaps_confirmed
+contains	apps/web/src/components/sidebar/external_changes.rs	fn external_change_is_overlap_blocked
+contains	apps/web/src/components/sidebar/external_changes.rs	entry.has_conflict
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	change_item_action_surface(&entry, is_staged, has_conflict)
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
 contains	apps/web/src/components/sidebar/source_control/repositories.rs	fn repo_branch_dirty_suffix

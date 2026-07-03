@@ -9,8 +9,8 @@ use crate::ledger::source_control;
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{
-    ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, diff, ledger_dirty,
-    pending_fs,
+    ChangeDomain, ChangeEntry, ChangeStatus, CommitFileDiff, CommitInfo, diff, external_overlap,
+    ledger_dirty, pending_fs,
 };
 use anyhow::Result;
 use std::collections::HashSet;
@@ -27,14 +27,53 @@ impl<'a> SourceControlReadRuntime<'a> {
     }
 
     pub(crate) fn list_staged_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
-        self.manager
-            .run_on_local_repo(repo_name, source_control::list_staged)
+        let confirmed = self.list_confirmed_ledger_in_local_repo(repo_name)?;
+        let mut entries = self.list_staged_raw_in_local_repo(repo_name)?;
+        external_overlap::mark_entries_with_confirmed_overlap(&mut entries, &confirmed);
+        Ok(entries)
     }
 
     pub(crate) fn list_pending_fs_in_local_repo(
         &self,
         repo_name: &str,
     ) -> Result<Vec<ChangeEntry>> {
+        let confirmed = self.list_confirmed_ledger_in_local_repo(repo_name)?;
+        let mut entries = self.list_pending_fs_raw_in_local_repo(repo_name)?;
+        external_overlap::mark_entries_with_confirmed_overlap(&mut entries, &confirmed);
+        Ok(entries)
+    }
+
+    pub(crate) fn list_confirmed_ledger_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        self.manager
+            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)
+    }
+
+    pub(crate) fn list_changes_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
+        let confirmed = self.list_confirmed_ledger_in_local_repo(repo_name)?;
+        let mut staged = self.list_staged_raw_in_local_repo(repo_name)?;
+        external_overlap::mark_entries_with_confirmed_overlap(&mut staged, &confirmed);
+        let staged_keys: HashSet<_> = staged.iter().map(change_identity_key).collect();
+        let mut changes = staged;
+        let mut pending = self.list_pending_fs_raw_in_local_repo(repo_name)?;
+        external_overlap::mark_entries_with_confirmed_overlap(&mut pending, &confirmed);
+        changes.extend(
+            pending
+                .into_iter()
+                .filter(|entry| !staged_keys.contains(&change_identity_key(entry))),
+        );
+        changes.extend(confirmed);
+        Ok(changes)
+    }
+
+    fn list_staged_raw_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
+        self.manager
+            .run_on_local_repo(repo_name, source_control::list_staged)
+    }
+
+    fn list_pending_fs_raw_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
         self.manager.run_on_local_repo(repo_name, |db| {
             let entries = pending_fs::list_all(db)?;
             Ok(entries
@@ -51,27 +90,6 @@ impl<'a> SourceControlReadRuntime<'a> {
                 })
                 .collect())
         })
-    }
-
-    pub(crate) fn list_confirmed_ledger_in_local_repo(
-        &self,
-        repo_name: &str,
-    ) -> Result<Vec<ChangeEntry>> {
-        self.manager
-            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)
-    }
-
-    pub(crate) fn list_changes_in_local_repo(&self, repo_name: &str) -> Result<Vec<ChangeEntry>> {
-        let staged = self.list_staged_in_local_repo(repo_name)?;
-        let staged_keys: HashSet<_> = staged.iter().map(change_identity_key).collect();
-        let mut changes = staged;
-        changes.extend(
-            self.list_pending_fs_in_local_repo(repo_name)?
-                .into_iter()
-                .filter(|entry| !staged_keys.contains(&change_identity_key(entry))),
-        );
-        changes.extend(self.list_confirmed_ledger_in_local_repo(repo_name)?);
-        Ok(changes)
     }
 
     pub(crate) fn diff_doc_path_in_local_repo(

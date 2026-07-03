@@ -15,7 +15,8 @@ use crate::ledger::manager::{commit_plan, commit_preflight};
 use crate::ledger::{ops, range};
 use crate::models::DocId;
 use crate::source_control::{
-    ChangeEntry, ChangeStatus, CommitInfo, changes, commits, ledger_dirty, staging,
+    ChangeEntry, ChangeStatus, CommitInfo, changes, commits, external_overlap, ledger_dirty,
+    staging,
 };
 use anyhow::Result;
 use redb::Database;
@@ -148,10 +149,12 @@ fn ensure_external_targets_do_not_overlap_confirmed(
     confirmed: &[ChangeEntry],
 ) -> Result<()> {
     for target in targets {
-        if confirmed
-            .iter()
-            .any(|entry| target_overlaps_confirmed(target, entry))
-        {
+        if external_overlap::fields_overlap_any_confirmed(
+            target.doc_id,
+            &target.path,
+            target.renamed_from.as_deref(),
+            confirmed,
+        ) {
             anyhow::bail!(
                 "external change overlaps confirmed ledger changes: {}",
                 target.path
@@ -159,18 +162,6 @@ fn ensure_external_targets_do_not_overlap_confirmed(
         }
     }
     Ok(())
-}
-
-fn target_overlaps_confirmed(target: &CommitTarget, entry: &ChangeEntry) -> bool {
-    matches!(
-        (target.doc_id, entry.doc_id),
-        (Some(target_doc), Some(entry_doc)) if target_doc == entry_doc
-    ) || target.path == entry.path
-        || entry.renamed_from.as_deref() == Some(target.path.as_str())
-        || target
-            .renamed_from
-            .as_deref()
-            .is_some_and(|renamed_from| renamed_from == entry.path)
 }
 
 fn covered_doc_count(confirmed: &[ChangeEntry]) -> u32 {
