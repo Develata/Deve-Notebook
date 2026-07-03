@@ -95,8 +95,7 @@ fn ledger_head(repo: &RepoManager) -> u64 {
     .expect("ledger head")
 }
 
-#[test]
-fn external_changes_apply_writes_ledger_without_commit_anchor() {
+fn assert_apply_external_changes_writes_ledger_without_commit_anchor() {
     let (_dir, repo) = new_repo();
     let before_head = ledger_head(&repo);
     write_workspace_file(&repo, "notes/external.md", "external");
@@ -126,6 +125,88 @@ fn external_changes_apply_writes_ledger_without_commit_anchor() {
             && entry.domain == ChangeDomain::ConfirmedLedger
             && entry.status == ChangeStatus::Added
     }));
+}
+
+#[test]
+fn external_changes_apply_writes_ledger_without_commit_anchor() {
+    assert_apply_external_changes_writes_ledger_without_commit_anchor();
+}
+
+#[test]
+fn apply_external_changes_to_ledger() {
+    assert_apply_external_changes_writes_ledger_without_commit_anchor();
+}
+
+#[test]
+fn external_file_changes_enter_external_changes_not_ledger() {
+    let (_dir, repo) = new_repo();
+    let before_head = ledger_head(&repo);
+
+    write_workspace_file(&repo, "notes/external.md", "external");
+    seed_pending(&repo, "notes/external.md", ChangeStatus::Added, "external");
+
+    let pending = repo.list_pending_fs().expect("pending external changes");
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].path, "notes/external.md");
+    assert_eq!(pending[0].domain, ChangeDomain::WorkingDirectory);
+    assert_eq!(ledger_head(&repo), before_head);
+    assert!(
+        repo.list_confirmed_ledger_changes()
+            .expect("confirmed remains clean")
+            .is_empty()
+    );
+}
+
+#[test]
+fn external_stage_unstage_only_moves_external_staging() {
+    let (_dir, repo) = new_repo();
+    let before_head = ledger_head(&repo);
+
+    write_workspace_file(&repo, "notes/external.md", "external");
+    seed_pending(&repo, "notes/external.md", ChangeStatus::Added, "external");
+    repo.stage_pending("notes/external.md")
+        .expect("stage external");
+
+    assert!(
+        repo.list_pending_fs()
+            .expect("pending after stage")
+            .is_empty()
+    );
+    let staged = repo.list_staged().expect("staged external");
+    assert_eq!(staged.len(), 1);
+    assert_eq!(staged[0].path, "notes/external.md");
+    assert_eq!(staged[0].domain, ChangeDomain::Staged);
+    assert_eq!(ledger_head(&repo), before_head);
+
+    repo.unstage_file("notes/external.md")
+        .expect("unstage external");
+
+    assert!(repo.list_staged().expect("staged after unstage").is_empty());
+    let pending = repo.list_pending_fs().expect("pending after unstage");
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].path, "notes/external.md");
+    assert_eq!(pending[0].domain, ChangeDomain::WorkingDirectory);
+    assert_eq!(ledger_head(&repo), before_head);
+}
+
+#[test]
+fn source_control_confirmed_ledger_changes_visible_after_apply() {
+    let (_dir, repo) = new_repo();
+
+    write_workspace_file(&repo, "notes/external.md", "external");
+    seed_pending(&repo, "notes/external.md", ChangeStatus::Added, "external");
+    repo.stage_pending("notes/external.md")
+        .expect("stage external add");
+    repo.apply_external_changes()
+        .expect("apply external changes");
+
+    let confirmed = repo
+        .list_confirmed_ledger_changes()
+        .expect("confirmed after apply");
+    assert_eq!(confirmed.len(), 1);
+    assert_eq!(confirmed[0].path, "notes/external.md");
+    assert_eq!(confirmed[0].status, ChangeStatus::Added);
+    assert_eq!(confirmed[0].domain, ChangeDomain::ConfirmedLedger);
 }
 
 #[test]

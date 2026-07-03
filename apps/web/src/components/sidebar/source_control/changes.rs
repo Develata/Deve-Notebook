@@ -76,6 +76,24 @@ pub fn Changes() -> impl IntoView {
 mod tests {
     use super::should_request_changes;
 
+    fn changes_component_source() -> &'static str {
+        let source = include_str!("changes.rs");
+        source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("component source before tests")
+    }
+
+    fn assert_confirmed_only_changes_source() {
+        let source = changes_component_source();
+        assert!(source.contains("use super::confirmed_section::ConfirmedSection;"));
+        assert!(source.contains(concat!("<", "ConfirmedSection")));
+        assert!(!source.contains("StagedSection"));
+        assert!(!source.contains("UnstagedSection"));
+        assert!(!source.contains("ExternalChanges"));
+        assert!(!source.contains("external_changes"));
+    }
+
     #[test]
     fn mobile_source_control_read_gate_allows_readonly_refresh() {
         assert!(should_request_changes(true, false, false, false, false));
@@ -97,9 +115,11 @@ mod tests {
 
     #[test]
     fn source_control_changes_panel_is_confirmed_only() {
-        let source = include_str!("changes.rs");
-        assert!(source.contains("ConfirmedSection"));
-        assert!(!source.contains(concat!("<", "StagedSection")));
-        assert!(!source.contains(concat!("<", "UnstagedSection")));
+        assert_confirmed_only_changes_source();
+    }
+
+    #[test]
+    fn source_control_confirmed_only_view() {
+        assert_confirmed_only_changes_source();
     }
 }

@@ -293,7 +293,10 @@
     - Projection Workspace 中存在一个外部文件修改
     - 同一文档可构造 confirmed ledger dirty
   steps:
+    - run: cargo test -p deve_core external_file_changes_enter_external_changes_not_ledger -- --nocapture
+    - run: cargo test -p deve_core external_stage_unstage_only_moves_external_staging -- --nocapture
     - run: cargo test -p deve_core apply_external_changes_to_ledger -- --nocapture
+    - run: cargo test -p deve_core source_control_confirmed_ledger_changes_visible_after_apply -- --nocapture
     - run: cargo test -p deve_web external_changes -- --nocapture
     - run: cargo test -p deve_web source_control_confirmed_only_view -- --nocapture
     - ui_open: "External Changes"
