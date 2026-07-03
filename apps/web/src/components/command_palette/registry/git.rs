@@ -48,12 +48,17 @@ fn show_git_status_notice_for_viewport(
         .as_ref()
         .is_some_and(|sidebar_control| sidebar_control.is_mobile.get_untracked())
         || viewport_mobile;
-    if !is_mobile && let Some(set_notice) = set_notice {
+    if is_mobile {
+        if let Some(sidebar_control) = sidebar_control {
+            sidebar_control.show_view(SidebarView::SourceControl);
+        }
+        set_show.set(false);
+        return;
+    }
+    if let Some(set_notice) = set_notice {
         set_notice.set(Some(SourceControlNotice::git_status_cli_only()));
     }
-    if let Some(sidebar_control) = sidebar_control
-        && !is_mobile
-    {
+    if let Some(sidebar_control) = sidebar_control {
         sidebar_control.show_view(SidebarView::SourceControl);
     }
     set_show.set(false);

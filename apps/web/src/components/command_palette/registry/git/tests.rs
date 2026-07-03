@@ -195,7 +195,7 @@ fn git_status_command_sets_cli_only_notice() {
 }
 
 #[test]
-fn git_status_command_keeps_mobile_source_control_drawer_closed() {
+fn git_status_command_routes_mobile_to_source_control_drawer() {
     let owner = Owner::new();
     owner.with(|| {
         let notice = provide_source_control_context();
@@ -209,8 +209,8 @@ fn git_status_command_keeps_mobile_source_control_drawer_closed() {
         assert!(!show.get_untracked());
         assert!(notice.get_untracked().is_none());
         assert!(!sidebar_visible.get_untracked());
-        assert!(!mobile_visible.get_untracked());
-        assert_eq!(active_view.get_untracked(), SidebarView::Explorer);
+        assert!(mobile_visible.get_untracked());
+        assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
     });
 }
 
