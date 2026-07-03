@@ -29,6 +29,7 @@ repomix-output.xml
 
 .codex/*
 !.codex/prompts/
+.codex-tmp/
 /target_codex*
 
 .omc/*
