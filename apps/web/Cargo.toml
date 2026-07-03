@@ -14,7 +14,7 @@ tracing.workspace = true
 tracing-wasm.workspace = true
 
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["BinaryType", "Clipboard", "CloseEvent", "DomRect", "Element", "Event", "EventTarget", "DataTransfer", "DataTransferItem", "DataTransferItemList", "DragEvent", "File", "FileList", "FileReader", "HtmlDivElement", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "Location", "MessageEvent", "Navigator", "Node", "NodeList", "Performance", "RequestCredentials", "Storage", "Touch", "TouchEvent", "TouchList", "WebSocket", "Window"] }
+web-sys = { version = "0.3", features = ["BinaryType", "Clipboard", "CloseEvent", "DomRect", "Element", "Event", "EventTarget", "DataTransfer", "DataTransferItem", "DataTransferItemList", "DragEvent", "File", "FileList", "FileReader", "HtmlDivElement", "HtmlElement", "HtmlInputElement", "KeyboardEvent", "Location", "MediaQueryList", "MessageEvent", "Navigator", "Node", "NodeList", "Performance", "RequestCredentials", "Storage", "Touch", "TouchEvent", "TouchList", "WebSocket", "Window"] }
 base64 = "0.22"
 gloo-net = "0.6"
 futures = "0.3"

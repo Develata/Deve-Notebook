@@ -34,7 +34,7 @@ fn show_git_status_notice(
         set_notice,
         sidebar_control,
         set_show,
-        current_viewport_maps_to_mobile(),
+        current_command_surface_maps_to_mobile(),
     );
 }
 
@@ -64,9 +64,8 @@ fn show_git_status_notice_for_viewport(
     set_show.set(false);
 }
 
-fn current_viewport_maps_to_mobile() -> bool {
-    crate::components::layout_breakpoint::current_viewport_width()
-        .is_some_and(crate::components::layout_breakpoint::viewport_width_maps_to_mobile)
+fn current_command_surface_maps_to_mobile() -> bool {
+    crate::components::layout_breakpoint::current_command_surface_maps_to_mobile()
 }
 
 fn git_bridge_enabled_when(locale: Locale) -> String {
