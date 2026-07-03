@@ -5,8 +5,10 @@
 //!
 //! External Changes sidebar view.
 
-use crate::components::icons::{AlertTriangle, Check, FileText, Minus, Plus, RotateCcw};
-use crate::components::sidebar::source_control::changes::should_request_changes;
+mod row;
+
+use self::row::{external_change_key, external_change_row};
+use crate::components::icons::Check;
 use crate::hooks::use_core::ExternalChangesContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
@@ -21,9 +23,8 @@ pub fn ExternalChangesView() -> impl IntoView {
     Effect::new({
         let core = core.clone();
         move |_| {
-            if !should_request_changes(
+            if !should_request_external_changes(
                 core.current_repo_id.get().is_some(),
-                core.active_branch.get().is_some(),
                 core.pending_branch_switch.get().is_some(),
                 core.pending_repo_switch.get().is_some(),
                 read_block.get().is_some(),
@@ -93,6 +94,15 @@ pub fn ExternalChangesView() -> impl IntoView {
     }
 }
 
+fn should_request_external_changes(
+    has_repo: bool,
+    branch_switching: bool,
+    repo_switching: bool,
+    read_blocked: bool,
+) -> bool {
+    has_repo && !branch_switching && !repo_switching && !read_blocked
+}
+
 #[component]
 fn ExternalChangesSection(
     title: String,
@@ -131,143 +141,6 @@ fn ExternalChangesSection(
     }.into_any()
 }
 
-fn external_change_row(
-    entry: ChangeEntry,
-    is_staged: bool,
-    core: ExternalChangesContext,
-    locale: RwSignal<Locale>,
-) -> AnyView {
-    let entry_store = StoredValue::new(entry);
-    let display_path = entry_store.get_value().path;
-    let display_name = file_name(&display_path);
-    let directory = directory_name(&display_path);
-
-    view! {
-        <div
-            class="group flex min-h-11 items-center gap-2 px-3 py-1 hover:bg-hover md:min-h-9"
-            data-deve-external-changes-row=display_path.clone()
-        >
-            <FileText class="h-3.5 w-3.5 shrink-0 text-muted" />
-            <div class="min-w-0 flex-1">
-                <div class="flex min-w-0 items-center gap-1.5">
-                    <span class="truncate text-[12px] text-primary">{display_name}</span>
-                    <span class="shrink truncate text-[11px] text-muted">{directory}</span>
-                </div>
-                <Show when=move || external_change_is_overlap_blocked(&entry_store.get_value())>
-                    <div
-                        class="mt-0.5 flex items-center gap-1 text-[11px] leading-4 text-warning"
-                        data-deve-external-overlap="true"
-                    >
-                        <AlertTriangle class="h-3 w-3" />
-                        <span>{move || t::external_changes::overlap_blocked(locale.get())}</span>
-                    </div>
-                </Show>
-            </div>
-            <div class="flex shrink-0 items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
-                <ExternalChangeIconButton
-                    title=Signal::derive(move || {
-                        t::external_changes::open_diff(locale.get()).to_string()
-                    })
-                    disabled=Signal::derive(|| false)
-                    on_click=Callback::new({
-                        let core = core.clone();
-                        move |_| core.on_get_doc_diff.run(entry_store.get_value())
-                    })
-                >
-                    <FileText class="h-3.5 w-3.5" />
-                </ExternalChangeIconButton>
-                {move || {
-                    let overlaps = external_change_is_overlap_blocked(&entry_store.get_value());
-                    if overlaps {
-                        let core_for_disabled = core.clone();
-                        let core_for_click = core.clone();
-                        view! {
-                            <ExternalChangeIconButton
-                                title=Signal::derive(move || {
-                                    t::external_changes::discard(locale.get()).to_string()
-                                })
-                                disabled=Signal::derive(move || !core_for_disabled.can_write.get())
-                                on_click=Callback::new(move |_| {
-                                    core_for_click.on_discard_file.run(entry_store.get_value())
-                                })
-                            >
-                                <RotateCcw class="h-3.5 w-3.5" />
-                            </ExternalChangeIconButton>
-                        }.into_any()
-                    } else if is_staged {
-                        let core_for_disabled = core.clone();
-                        let core_for_click = core.clone();
-                        view! {
-                            <ExternalChangeIconButton
-                                title=Signal::derive(move || {
-                                    t::external_changes::unstage(locale.get()).to_string()
-                                })
-                                disabled=Signal::derive(move || !core_for_disabled.can_write.get())
-                                on_click=Callback::new(move |_| {
-                                    core_for_click.on_unstage_file.run(entry_store.get_value())
-                                })
-                            >
-                                <Minus class="h-3.5 w-3.5" />
-                            </ExternalChangeIconButton>
-                        }.into_any()
-                    } else {
-                        let core_for_discard_disabled = core.clone();
-                        let core_for_discard_click = core.clone();
-                        let core_for_stage_disabled = core.clone();
-                        let core_for_stage_click = core.clone();
-                        view! {
-                            <ExternalChangeIconButton
-                                title=Signal::derive(move || {
-                                    t::external_changes::discard(locale.get()).to_string()
-                                })
-                                disabled=Signal::derive(move || !core_for_discard_disabled.can_write.get())
-                                on_click=Callback::new(move |_| {
-                                    core_for_discard_click.on_discard_file.run(entry_store.get_value())
-                                })
-                            >
-                                <RotateCcw class="h-3.5 w-3.5" />
-                            </ExternalChangeIconButton>
-                            <ExternalChangeIconButton
-                                title=Signal::derive(move || {
-                                    t::external_changes::stage(locale.get()).to_string()
-                                })
-                                disabled=Signal::derive(move || !core_for_stage_disabled.can_write.get())
-                                on_click=Callback::new(move |_| {
-                                    core_for_stage_click.on_stage_file.run(entry_store.get_value())
-                                })
-                            >
-                                <Plus class="h-3.5 w-3.5" />
-                            </ExternalChangeIconButton>
-                        }.into_any()
-                    }
-                }}
-            </div>
-        </div>
-    }.into_any()
-}
-
-#[component]
-fn ExternalChangeIconButton(
-    #[prop(into)] title: Signal<String>,
-    #[prop(into)] disabled: Signal<bool>,
-    on_click: Callback<()>,
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <button
-            type="button"
-            class="inline-flex h-11 w-11 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 md:h-7 md:w-7"
-            title=move || title.get()
-            aria-label=move || title.get()
-            disabled=move || disabled.get()
-            data-deve-mobile-touch-target="external-changes-action"
-            on:click=move |_| on_click.run(())
-        >
-            {children()}
-        </button>
-    }
-}
-
 fn can_apply_to_ledger(core: &ExternalChangesContext) -> bool {
     let staged = core.staged_changes.get();
     core.can_write.get() && !staged.is_empty() && !staged.iter().any(|entry| entry.has_conflict)
@@ -278,91 +151,4 @@ fn apply_title(locale: Locale, core: &ExternalChangesContext) -> String {
         return t::external_changes::apply_to_ledger(locale).to_string();
     }
     t::external_changes::apply_to_ledger_disabled(locale).to_string()
-}
-
-fn external_change_is_overlap_blocked(entry: &ChangeEntry) -> bool {
-    entry.has_conflict
-}
-
-fn external_change_key(entry: &ChangeEntry) -> String {
-    format!(
-        "{}:{}:{}:{:?}:{:?}",
-        entry
-            .doc_id
-            .map(|doc_id| doc_id.to_string())
-            .unwrap_or_default(),
-        entry.path,
-        entry.renamed_from.clone().unwrap_or_default(),
-        entry.status,
-        entry.domain,
-    )
-}
-
-fn file_name(path: &str) -> String {
-    path.rsplit('/').next().unwrap_or(path).to_string()
-}
-
-fn directory_name(path: &str) -> String {
-    path.rsplit_once('/')
-        .map(|(dir, _)| dir.to_string())
-        .unwrap_or_default()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{directory_name, external_change_is_overlap_blocked, file_name};
-    use deve_core::source_control::{ChangeDomain, ChangeEntry, ChangeStatus};
-
-    fn entry(path: &str, has_conflict: bool, domain: ChangeDomain) -> ChangeEntry {
-        ChangeEntry {
-            path: path.to_string(),
-            renamed_from: None,
-            doc_id: None,
-            status: ChangeStatus::Modified,
-            has_conflict,
-            domain,
-            base_seq: None,
-            target_seq: None,
-        }
-    }
-
-    #[test]
-    fn overlap_state_comes_from_backend_conflict_flag() {
-        let blocked = entry("notes/a.md", true, ChangeDomain::WorkingDirectory);
-        let clean = entry("notes/a.md", false, ChangeDomain::WorkingDirectory);
-
-        assert!(external_change_is_overlap_blocked(&blocked));
-        assert!(!external_change_is_overlap_blocked(&clean));
-    }
-
-    #[test]
-    fn path_display_splits_name_and_directory() {
-        assert_eq!(file_name("notes/a.md"), "a.md");
-        assert_eq!(directory_name("notes/a.md"), "notes");
-        assert_eq!(file_name("a.md"), "a.md");
-        assert_eq!(directory_name("a.md"), "");
-    }
-
-    #[test]
-    fn mobile_external_changes_touch_targets_min_size_bound() {
-        let source = include_str!("external_changes.rs");
-
-        assert!(source.contains("data-deve-mobile-touch-target=\"external-changes-action\""));
-        assert!(
-            source.contains("data-deve-mobile-touch-target=\"external-changes-section-header\"")
-        );
-        assert!(source.contains("class=\"inline-flex h-11 w-11"));
-        assert!(source.contains("md:h-7 md:w-7"));
-        assert!(source.contains("class=\"group flex min-h-11"));
-        assert!(source.contains("md:min-h-9"));
-    }
-
-    #[test]
-    fn external_changes_keeps_its_action_surface_separate() {
-        let source = include_str!("external_changes.rs");
-
-        assert!(!source.contains(concat!("change_item_", "action_surface")));
-        assert!(!source.contains(concat!("ChangeItem", "ActionSurface")));
-        assert!(!source.contains(concat!("change_item_", "conflict_actions")));
-    }
 }
