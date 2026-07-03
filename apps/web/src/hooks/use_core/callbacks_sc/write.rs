@@ -26,7 +26,6 @@ type SourceControlWriteCallbacks = (
     Callback<Vec<ChangeEntry>>,
     Callback<ChangeEntry>,
     Callback<String>,
-    Callback<()>,
     Callback<(ChangeEntry, ConflictResolution)>,
     Callback<String>,
 );
@@ -40,7 +39,7 @@ pub(super) fn create_write_callbacks(
 ) -> SourceControlWriteCallbacks {
     let (on_stage_file, on_stage_files, on_unstage_file, on_unstage_files, on_discard_file) =
         create_target_write_callbacks(ws, locale, scope, gate, set_sync_banner);
-    let (on_commit, on_apply_external_changes, on_resolve_conflict, on_commit_and_push) =
+    let (on_commit, on_resolve_conflict, on_commit_and_push) =
         create_commit_write_callbacks(ws, locale, scope, gate, set_sync_banner);
     (
         on_stage_file,
@@ -49,7 +48,6 @@ pub(super) fn create_write_callbacks(
         on_unstage_files,
         on_discard_file,
         on_commit,
-        on_apply_external_changes,
         on_resolve_conflict,
         on_commit_and_push,
     )

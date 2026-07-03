@@ -3,6 +3,7 @@
 //!   - 04_repository#repo-scope-runtime
 //!
 use crate::api::WsService;
+use crate::i18n::Locale;
 use leptos::prelude::*;
 
 use super::CoreState;
@@ -19,6 +20,7 @@ pub(super) fn build_core_state(
     signals: &CoreSignals,
     status_text: Signal<String>,
     callbacks: CoreStateCallbacks,
+    locale: RwSignal<Locale>,
 ) -> CoreState {
     let CoreStateCallbacks {
         doc,
@@ -32,5 +34,5 @@ pub(super) fn build_core_state(
     let sync = sync::build_sync_section(signals, &sync, &switch);
     let sc = source_control::build_source_control_section(signals, &sc);
 
-    assemble::assemble_core_state(ws, doc, runtime, sync, sc, switch)
+    assemble::assemble_core_state(ws, doc, runtime, sync, sc, switch, locale)
 }

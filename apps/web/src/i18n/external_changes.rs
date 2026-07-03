@@ -54,6 +54,13 @@ pub fn overlap_blocked(locale: Locale) -> &'static str {
     }
 }
 
+pub fn request_failed(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "External Changes request failed",
+        Locale::Zh => "外部修改请求失败",
+    }
+}
+
 pub fn open_diff(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Open Diff",

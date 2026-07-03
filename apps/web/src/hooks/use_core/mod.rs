@@ -101,7 +101,7 @@ pub fn use_core() -> CoreState {
     effects::setup_message_effect(&ws, &signals);
 
     let callbacks = build_callbacks(&ws, &signals);
-    let state = build_core_state(ws, &signals, status_text, callbacks);
+    let state = build_core_state(ws, &signals, status_text, callbacks, locale);
 
     provide_context(state.clone());
     provide::provide_sub_contexts(&state);

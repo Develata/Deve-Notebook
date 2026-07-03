@@ -180,19 +180,58 @@ fn external_section_panel_id(is_staged: bool) -> &'static str {
 
 fn can_apply_to_ledger(core: &ExternalChangesContext) -> bool {
     let staged = core.staged_changes.get();
-    core.can_write.get() && !staged.is_empty() && !staged.iter().any(|entry| entry.has_conflict)
+    let unstaged = core.unstaged_changes.get();
+    can_apply_to_ledger_state(core.can_write.get(), &staged, &unstaged)
 }
 
 fn apply_title(locale: Locale, core: &ExternalChangesContext) -> String {
-    if can_apply_to_ledger(core) {
+    let staged = core.staged_changes.get();
+    let unstaged = core.unstaged_changes.get();
+
+    if can_apply_to_ledger_state(core.can_write.get(), &staged, &unstaged) {
         return t::external_changes::apply_to_ledger(locale).to_string();
+    }
+    if external_changes_have_overlap(&staged, &unstaged) {
+        return t::external_changes::overlap_blocked(locale).to_string();
     }
     t::external_changes::apply_to_ledger_disabled(locale).to_string()
 }
 
+fn can_apply_to_ledger_state(
+    can_write: bool,
+    staged: &[ChangeEntry],
+    unstaged: &[ChangeEntry],
+) -> bool {
+    can_write && !staged.is_empty() && !external_changes_have_overlap(staged, unstaged)
+}
+
+fn external_changes_have_overlap(staged: &[ChangeEntry], unstaged: &[ChangeEntry]) -> bool {
+    staged
+        .iter()
+        .chain(unstaged.iter())
+        .any(|entry| entry.has_conflict)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{external_section_key, external_section_panel_id};
+    use super::{
+        can_apply_to_ledger_state, external_changes_have_overlap, external_section_key,
+        external_section_panel_id,
+    };
+    use deve_core::source_control::{ChangeEntry, ChangeStatus};
+
+    fn entry(path: &str, has_conflict: bool) -> ChangeEntry {
+        ChangeEntry {
+            path: path.into(),
+            renamed_from: None,
+            doc_id: None,
+            status: ChangeStatus::Modified,
+            has_conflict,
+            domain: Default::default(),
+            base_seq: None,
+            target_seq: None,
+        }
+    }
 
     #[test]
     fn external_changes_sections_use_stable_local_ids() {
@@ -223,5 +262,14 @@ mod tests {
         assert!(source.contains(concat!("data-deve-", "external-section-body")));
         assert!(source.contains(concat!("hidden=move || ", "!expanded.get()")));
         assert!(!source.contains(concat!("data-deve-", "sc-section-toggle")));
+    }
+
+    #[test]
+    fn apply_to_ledger_fails_closed_when_any_external_change_overlaps() {
+        let staged = vec![entry("clean.md", false)];
+        let unstaged = vec![entry("overlap.md", true)];
+
+        assert!(external_changes_have_overlap(&staged, &unstaged));
+        assert!(!can_apply_to_ledger_state(true, &staged, &unstaged));
     }
 }

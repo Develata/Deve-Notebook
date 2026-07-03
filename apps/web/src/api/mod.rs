@@ -13,6 +13,7 @@ mod backoff;
 mod connection;
 mod connection_role;
 mod connection_urls;
+mod external_changes;
 mod git_mirror;
 mod graph;
 mod host_file;
@@ -36,6 +37,10 @@ pub use self::ai_backend::{
 pub(crate) use self::auth_login::{LoginAttemptError, LoginTransportError, attempt_login, logout};
 pub use self::auth_probe::{AuthProbe, probe_auth_status};
 pub(crate) use self::connection_role::{http_base_from_ws_url, probe_node_role_for_http_base};
+pub(crate) use self::external_changes::{
+    ExternalChangesMutationError, ExternalChangesTargetOp, apply_external_changes_to_ledger,
+    fetch_external_changes, mutate_external_change_target,
+};
 #[cfg(test)]
 pub use self::git_mirror::GitMirrorRepairReviewRecord;
 pub use self::git_mirror::{GitMirrorRepairReview, fetch_git_mirror_repair_review};

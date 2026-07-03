@@ -2,14 +2,21 @@
 //!   - 07_network#web-ws-runtime
 //!   - 04_repository#repo-scope-runtime
 //!
-use crate::api::WsService;
+use crate::api::{ExternalChangesMutationError, WsService};
+use crate::i18n::{Locale, t};
 use crate::runtime::{
-    CoreRuntimeClients, document_client::DocumentClient,
-    external_changes_client::ExternalChangesClient, rendering_client::RenderingClient,
-    scope_client::ScopeClient, session_client::SessionClient,
+    CoreRuntimeClients,
+    document_client::DocumentClient,
+    external_changes_client::{
+        ExternalChangesClient, ExternalChangesHttpScope,
+        create_external_changes_mutation_callbacks, create_external_changes_refresh_callback,
+    },
+    rendering_client::RenderingClient,
+    scope_client::ScopeClient,
+    session_client::SessionClient,
     source_control_client::SourceControlClient,
 };
-use leptos::prelude::{Callback, Set, Update, WriteSignal};
+use leptos::prelude::{Callback, GetUntracked, RwSignal, Set, Update, WriteSignal, signal};
 
 use super::super::CoreState;
 use super::super::callbacks_switch::SwitchCallbacks;
@@ -25,6 +32,7 @@ pub(super) fn assemble_core_state(
     sync: SyncStateSection,
     sc: SourceControlStateSection,
     switch: SwitchCallbacks,
+    locale: RwSignal<Locale>,
 ) -> CoreState {
     let on_retry_peer_registration = build_retry_peer_registration_callback(
         ws.clone(),
@@ -36,6 +44,42 @@ pub(super) fn assemble_core_state(
             set_doc_list_request_id: sync.set_doc_list_request_id,
             set_tree_request_id: sync.set_tree_request_id,
         },
+    );
+    let external_changes_error = {
+        let set_sync_banner = runtime.set_sync_banner;
+        Callback::new(move |error: ExternalChangesMutationError| {
+            leptos::logging::error!("External Changes request failed: {:?}", error);
+            set_sync_banner.set(Some(external_changes_error_message(
+                locale.get_untracked(),
+                &error,
+            )));
+        })
+    };
+    let external_changes_scope = ExternalChangesHttpScope {
+        current_repo_id: sync.current_repo_id,
+        current_scope_nonce: sync.current_scope_nonce,
+    };
+    let (external_staged_changes, set_external_staged_changes) =
+        signal(Vec::<deve_core::source_control::ChangeEntry>::new());
+    let (external_unstaged_changes, set_external_unstaged_changes) =
+        signal(Vec::<deve_core::source_control::ChangeEntry>::new());
+    let external_changes_refresh = create_external_changes_refresh_callback(
+        external_changes_scope,
+        set_external_staged_changes,
+        set_external_unstaged_changes,
+        external_changes_error.clone(),
+    );
+    let external_changes_apply_confirmed = {
+        let set_confirmed_changes = sc.set_confirmed_changes;
+        Callback::new(move |confirmed_changes| {
+            set_confirmed_changes.set(confirmed_changes);
+        })
+    };
+    let external_changes_mutations = create_external_changes_mutation_callbacks(
+        external_changes_scope,
+        external_changes_refresh.clone(),
+        external_changes_apply_confirmed,
+        external_changes_error,
     );
     let runtime_clients = CoreRuntimeClients {
         session: SessionClient {
@@ -110,15 +154,15 @@ pub(super) fn assemble_core_state(
             on_commit_and_push: sc.on_commit_and_push.clone(),
         },
         external_changes: ExternalChangesClient {
-            staged_changes: sc.staged_changes,
-            unstaged_changes: sc.unstaged_changes,
-            on_get_changes: sc.on_get_changes.clone(),
-            on_stage_file: sc.on_stage_file.clone(),
-            on_stage_files: sc.on_stage_files.clone(),
-            on_unstage_file: sc.on_unstage_file.clone(),
-            on_unstage_files: sc.on_unstage_files.clone(),
-            on_discard_file: sc.on_discard_file.clone(),
-            on_apply_to_ledger: sc.on_apply_external_changes.clone(),
+            staged_changes: external_staged_changes,
+            unstaged_changes: external_unstaged_changes,
+            on_get_changes: external_changes_refresh,
+            on_stage_file: external_changes_mutations.on_stage_file,
+            on_stage_files: external_changes_mutations.on_stage_files,
+            on_unstage_file: external_changes_mutations.on_unstage_file,
+            on_unstage_files: external_changes_mutations.on_unstage_files,
+            on_discard_file: external_changes_mutations.on_discard_file,
+            on_apply_to_ledger: external_changes_mutations.on_apply_to_ledger,
             on_get_doc_diff: sc.on_get_doc_diff.clone(),
         },
         rendering: RenderingClient {
@@ -237,6 +281,19 @@ pub(super) fn assemble_core_state(
     }
 }
 
+fn external_changes_error_message(locale: Locale, error: &ExternalChangesMutationError) -> String {
+    let base = t::external_changes::request_failed(locale);
+    match error {
+        ExternalChangesMutationError::Rejected {
+            detail: Some(detail),
+            ..
+        } if !detail.trim().is_empty() => format!("{base}: {detail}"),
+        ExternalChangesMutationError::Rejected { status, .. } => format!("{base}: HTTP {status}"),
+        ExternalChangesMutationError::RequestBuild
+        | ExternalChangesMutationError::RequestFailed => base.to_string(),
+    }
+}
+
 #[derive(Clone, Copy)]
 struct RetryPeerRegistrationSignals {
     set_handshake_ready: WriteSignal<bool>,
@@ -304,5 +361,29 @@ mod tests {
         assert_eq!(repo_list_request_id.get_untracked(), None);
         assert_eq!(doc_list_request_id.get_untracked(), None);
         assert_eq!(tree_request_id.get_untracked(), None);
+    }
+
+    #[test]
+    fn external_changes_error_message_preserves_backend_detail() {
+        assert_eq!(
+            external_changes_error_message(
+                Locale::Zh,
+                &ExternalChangesMutationError::Rejected {
+                    status: 409,
+                    detail: Some("pending target vanished".into()),
+                },
+            ),
+            "外部修改请求失败: pending target vanished"
+        );
+        assert_eq!(
+            external_changes_error_message(
+                Locale::En,
+                &ExternalChangesMutationError::Rejected {
+                    status: 409,
+                    detail: None,
+                },
+            ),
+            "External Changes request failed: HTTP 409"
+        );
     }
 }
