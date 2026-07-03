@@ -4,6 +4,8 @@ use deve_core::ledger::traits::RepoSelector;
 use deve_core::models::{DocId, LedgerEntry, Op, PeerId};
 use deve_core::source_control::pending_fs::{self, PendingFsEntry};
 use deve_core::source_control::{ChangeDomain, ChangeStatus, SourceControlApi, staging};
+use deve_core::sync::SyncManager;
+use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 
 fn new_repo() -> (TempDir, RepoManager) {
@@ -140,21 +142,26 @@ fn apply_external_changes_to_ledger() {
 #[test]
 fn external_file_changes_enter_external_changes_not_ledger() {
     let (_dir, repo) = new_repo();
-    let before_head = ledger_head(&repo);
+    let repo = Arc::new(repo);
+    let sync = SyncManager::new_checked(Arc::clone(&repo)).expect("sync manager");
+    sync.scan().expect("materialize clean projection workspace");
+    let before_head = ledger_head(repo.as_ref());
 
-    write_workspace_file(&repo, "notes/external.md", "external");
-    seed_pending(&repo, "notes/external.md", ChangeStatus::Added, "external");
+    write_workspace_file(repo.as_ref(), "notes/external.md", "external");
+    sync.scan().expect("scan projection workspace");
 
     let pending = repo.list_pending_fs().expect("pending external changes");
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].path, "notes/external.md");
+    assert_eq!(pending[0].status, ChangeStatus::Added);
     assert_eq!(pending[0].domain, ChangeDomain::WorkingDirectory);
-    assert_eq!(ledger_head(&repo), before_head);
+    assert_eq!(ledger_head(repo.as_ref()), before_head);
     assert!(
         repo.list_confirmed_ledger_changes()
             .expect("confirmed remains clean")
             .is_empty()
     );
+    assert!(repo.list_staged().expect("staged remains clean").is_empty());
 }
 
 #[test]
