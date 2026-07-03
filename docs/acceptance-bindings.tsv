@@ -114,6 +114,7 @@ AUTH-013|manual-security|docs/features/09_auth.md|host identity key owner-only p
 AUTH-015|manual-security|docs/features/09_auth.md|anonymous localhost gated out of production env review
 DIFF-009|manual-chrome|docs/features/07_diff_logic.md|source control entry vs git palette CLI-only notice layering
 DIFF-010|manual-cli|docs/features/07_diff_logic.md|source control smoke independent of checked-in dev ledger state
+DIFF-011|manual-chrome|docs/features/07_diff_logic.md|external changes and source control sibling workflow
 REL-004|manual-doc|docs/features/15_release.md|runtime/test entrypoint docs match implementation boundary
 REL-005|manual-doc|docs/features/15_release.md|docker/compose/release embedded-frontend shell-only boundary
 SET-007|manual-cli|docs/features/13_settings.md|server-backed settings api future boundary review
@@ -124,6 +125,7 @@ STORE-017|manual-cli|docs/features/04_storage.md|repo catalog hard-fail / quaran
 UI-DESK-004|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop editor tab cap, drag reorder, difftab boundary
 UI-DESK-005|manual-chrome|docs/features/08_ui_design_02_desktop.md|desktop native dual-mode boundary
 UI-MOB-020|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile editor 16px font avoids ios focus zoom
+UI-MOB-024|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile external changes sibling workflow
 UI-WEB-004|manual-chrome|docs/features/08_ui_design_01_web.md|activity bar more menu row click and pin/unpin independence
 UI-WEB-005|manual-chrome|docs/features/08_ui_design_01_web.md|repo switcher button semantics and click-outside dismiss
 UI-WEB-006|manual-chrome|docs/features/08_ui_design_01_web.md|web pwa manifest standalone install contract
