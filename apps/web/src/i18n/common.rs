@@ -192,6 +192,10 @@ mod tests {
         assert_eq!(open_tabs(Locale::En), "Open tabs");
         assert_eq!(open_tabs(Locale::Zh), "已打开标签页");
         assert_eq!(switch_open_tabs(Locale::Zh), "切换已打开标签页");
+        assert_eq!(
+            tab_title_label(document_tab(Locale::En), "a.md"),
+            "Document tab: a.md"
+        );
         assert_eq!(documents(Locale::Zh), "文档");
         assert_eq!(diffs(Locale::En), "Diffs");
     }

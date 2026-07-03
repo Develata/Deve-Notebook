@@ -22,7 +22,8 @@ pub(crate) fn tab_button_class(active: bool) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        diff_tab_projection, document_tab_projection, tab_button_class, trailing_blank_drop_target,
+        diff_tab_projection, document_tab_projection, tab_accessible_label, tab_button_class,
+        trailing_blank_drop_target,
     };
     use crate::components::editor_tabs::{
         DropPosition, EditorDiffTab, EditorDocumentTab, EditorTabItem, EditorTabKey,
@@ -89,6 +90,27 @@ mod tests {
             Some("current.diff".into())
         );
     }
+
+    #[test]
+    fn tab_accessible_labels_include_surface_title() {
+        assert_eq!(
+            tab_accessible_label("Document tab", Some("notes/a.md")),
+            "Document tab: notes/a.md"
+        );
+        assert_eq!(
+            tab_accessible_label("Diff tab", Some("src/lib.rs")),
+            "Diff tab: src/lib.rs"
+        );
+        assert_ne!(
+            tab_accessible_label("Document tab", Some("a.md")),
+            tab_accessible_label("Document tab", Some("b.md"))
+        );
+        assert_eq!(
+            tab_accessible_label("Document tab", Some("  ")),
+            "Document tab"
+        );
+        assert_eq!(tab_accessible_label("Document tab", None), "Document tab");
+    }
 }
 
 #[component]
@@ -152,7 +174,13 @@ pub(crate) fn EditorTabStrip(
                                                     .map(|tab| tab.tooltip)
                                                     .unwrap_or_default()
                                             }
-                                            aria-label=move || t::common::document_tab(locale.get())
+                                            aria-label=move || {
+                                                let tab = tab_projection.get();
+                                                tab_accessible_label(
+                                                    t::common::document_tab(locale.get()),
+                                                    tab.as_ref().map(|tab| tab.title.as_str()),
+                                                )
+                                            }
                                             on:click=move |_| select_doc.run(doc_id)
                                         >
                                             <FileText class="h-3.5 w-3.5 shrink-0"/>
@@ -168,8 +196,20 @@ pub(crate) fn EditorTabStrip(
                                         <button
                                             type="button"
                                             class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
-                                            title=move || t::common::close_tab(locale.get())
-                                            aria-label=move || t::common::close_tab(locale.get())
+                                            title=move || {
+                                                let tab = tab_projection.get();
+                                                tab_accessible_label(
+                                                    t::common::close_tab(locale.get()),
+                                                    tab.as_ref().map(|tab| tab.title.as_str()),
+                                                )
+                                            }
+                                            aria-label=move || {
+                                                let tab = tab_projection.get();
+                                                tab_accessible_label(
+                                                    t::common::close_tab(locale.get()),
+                                                    tab.as_ref().map(|tab| tab.title.as_str()),
+                                                )
+                                            }
                                             on:click=move |ev| {
                                                 ev.stop_propagation();
                                                 close_doc.run(doc_id);
@@ -200,7 +240,13 @@ pub(crate) fn EditorTabStrip(
                                                     .map(|tab| tab.tooltip)
                                                     .unwrap_or_default()
                                             }
-                                            aria-label=move || t::common::diff_tab(locale.get())
+                                            aria-label=move || {
+                                                let tab = tab_projection.get();
+                                                tab_accessible_label(
+                                                    t::common::diff_tab(locale.get()),
+                                                    tab.as_ref().map(|tab| tab.title.as_str()),
+                                                )
+                                            }
                                             on:click=move |_| {
                                                 let session = tab_projection
                                                     .get()
@@ -222,8 +268,20 @@ pub(crate) fn EditorTabStrip(
                                         <button
                                             type="button"
                                             class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted hover:bg-hover hover:text-primary"
-                                            title=move || t::common::close_tab(locale.get())
-                                            aria-label=move || t::common::close_tab(locale.get())
+                                            title=move || {
+                                                let tab = tab_projection.get();
+                                                tab_accessible_label(
+                                                    t::common::close_tab(locale.get()),
+                                                    tab.as_ref().map(|tab| tab.title.as_str()),
+                                                )
+                                            }
+                                            aria-label=move || {
+                                                let tab = tab_projection.get();
+                                                tab_accessible_label(
+                                                    t::common::close_tab(locale.get()),
+                                                    tab.as_ref().map(|tab| tab.title.as_str()),
+                                                )
+                                            }
                                             on:click=move |ev| {
                                                 ev.stop_propagation();
                                                 close_diff.run(key_for_close.clone());
@@ -278,6 +336,12 @@ fn diff_tab_projection(tabs: &[EditorTabItem], key: &str) -> Option<EditorDiffTa
         EditorTabItem::Diff(tab) if tab.key == key => Some(tab.clone()),
         _ => None,
     })
+}
+
+fn tab_accessible_label(surface_label: &str, title: Option<&str>) -> String {
+    title
+        .map(|title| t::common::tab_title_label(surface_label, title))
+        .unwrap_or_else(|| surface_label.to_string())
 }
 
 fn trailing_blank_drop_target(tabs: &[EditorTabItem]) -> Option<(EditorTabKey, DropPosition)> {

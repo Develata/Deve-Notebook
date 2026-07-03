@@ -28,6 +28,7 @@
 - 大屏主编辑区顶部应显示已打开 surface 的 tab；Markdown 文档 tab 超过用户设置的上限时，应自动关闭最早访问且不是当前 active 的文档 tab。
 - 大屏 tab strip 中的可见 tab 应可拖拽到任意显式可见位置，包括拖到最后一个 tab 之后的可见空白区域；拖拽只改变可见顺序，不改变后台文档访问 LRU。
 - Diff tab 不参与 Markdown 文档 tab 上限；打开 diff 不应挤掉文档 tab，也不应被文档上限自动关闭。
+- 大屏 tab 的选择与关闭控件应在可访问标签中同时包含 surface 类型与当前 tab 标题，避免多个 tab 在辅助技术中重名。
 - 窄屏下应映射到 mobile-style shell。
 - URL、刷新、打开新窗口后，页面应保持可解释的工作台状态。
 

@@ -71,6 +71,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	run: cargo test -p deve
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	cli_assert: editor_tab_visible_order_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	cli_assert: editor_tab_document_lru_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	cli_assert: editor_tab_reorder_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	cli_assert: editor_tab_accessible_labels_include_title true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	ui_assert: editor_tab_trailing_blank_drop_moves_to_end true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-004	ui_assert: diff_tab_not_counted_against_document_limit true
 contains	docs/plan/11_ui_design/index.md	visible tab order
@@ -78,6 +79,7 @@ contains	docs/plan/11_ui_design/index.md	document access order
 contains	docs/plan/11_ui_design/index.md	components/editor_tabs/runtime
 contains	docs/features/08_ui_design_01_web.md	Markdown 文档 tab 超过用户设置的上限
 contains	docs/features/08_ui_design_01_web.md	可见空白区域
+contains	docs/features/08_ui_design_01_web.md	可访问标签中同时包含 surface 类型与当前 tab 标题
 contains	apps/web/src/components/editor_tabs/model.rs	pub(crate) enum EditorTabItem
 contains	apps/web/src/components/editor_tabs/model.rs	pub(crate) enum DropPosition
 contains	apps/web/src/components/editor_tabs/ops.rs	pub(crate) fn touch_document_access_order
@@ -86,6 +88,7 @@ contains	apps/web/src/components/editor_tabs/ops.rs	pub(crate) fn reorder_visibl
 contains	apps/web/src/components/editor_tabs/runtime.rs	doc_access_order
 contains	apps/web/src/components/editor_tabs/runtime.rs	ordered_tabs
 contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	data-deve-editor-tab-key
+contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	tab_accessible_label
 contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	draggable="true"
 contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	data-deve-editor-tabstrip-trailing-drop="after-last"
 contains	apps/web/src/components/desktop_layout/editor_tabs/strip.rs	trailing_blank_drop_target

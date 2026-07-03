@@ -25,6 +25,15 @@ pub fn close_tab(locale: Locale) -> &'static str {
     }
 }
 
+pub fn tab_title_label(surface_label: &str, title: &str) -> String {
+    let title = title.trim();
+    if title.is_empty() {
+        surface_label.to_string()
+    } else {
+        format!("{surface_label}: {title}")
+    }
+}
+
 pub fn open_tabs(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Open tabs",
@@ -65,6 +74,26 @@ mod tests {
         assert_eq!(close_tab(Locale::Zh), "关闭标签页");
         assert_eq!(documents(Locale::Zh), "文档");
         assert_eq!(diffs(Locale::En), "Diffs");
+    }
+
+    #[test]
+    fn tab_title_labels_include_trimmed_title() {
+        assert_eq!(
+            tab_title_label(document_tab(Locale::Zh), "notes/a.md"),
+            "文档标签页: notes/a.md"
+        );
+        assert_eq!(
+            tab_title_label(diff_tab(Locale::En), "src/lib.rs"),
+            "Diff tab: src/lib.rs"
+        );
+        assert_ne!(
+            tab_title_label(document_tab(Locale::En), "a.md"),
+            tab_title_label(document_tab(Locale::En), "b.md")
+        );
+        assert_eq!(
+            tab_title_label(document_tab(Locale::En), "  "),
+            document_tab(Locale::En)
+        );
     }
 
     #[test]

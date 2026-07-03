@@ -38,7 +38,7 @@ pub(super) fn SurfaceDocumentRow(
                 class=move || mobile_surface_row_class(document_row_active(active_tab.get(), doc_id))
                 title=tab.tooltip.clone()
                 aria-label=move || {
-                    surface_row_aria_label(t::common::document_tab(locale.get()), &row_label_title)
+                    t::common::tab_title_label(t::common::document_tab(locale.get()), &row_label_title)
                 }
                 aria-current=move || mobile_surface_current_state(document_row_active(
                     active_tab.get(),
@@ -55,10 +55,10 @@ pub(super) fn SurfaceDocumentRow(
                 data-deve-mobile-touch-target=mobile_surface_close_touch_target()
                 class=mobile_surface_close_button_class()
                 title=move || {
-                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_title_label)
+                    t::common::tab_title_label(t::common::close_tab(locale.get()), &close_title_label)
                 }
                 aria-label=move || {
-                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_aria_label)
+                    t::common::tab_title_label(t::common::close_tab(locale.get()), &close_aria_label)
                 }
                 on:click=move |ev| {
                     ev.stop_propagation();
@@ -105,7 +105,7 @@ pub(super) fn SurfaceDiffRow(
                 }
                 title=tab.tooltip.clone()
                 aria-label=move || {
-                    surface_row_aria_label(t::common::diff_tab(locale.get()), &row_label_title)
+                    t::common::tab_title_label(t::common::diff_tab(locale.get()), &row_label_title)
                 }
                 aria-current=move || mobile_surface_current_state(diff_row_active(
                     active_tab.get(),
@@ -122,10 +122,10 @@ pub(super) fn SurfaceDiffRow(
                 data-deve-mobile-touch-target=mobile_surface_close_touch_target()
                 class=mobile_surface_close_button_class()
                 title=move || {
-                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_title_label)
+                    t::common::tab_title_label(t::common::close_tab(locale.get()), &close_title_label)
                 }
                 aria-label=move || {
-                    surface_row_aria_label(t::common::close_tab(locale.get()), &close_aria_label)
+                    t::common::tab_title_label(t::common::close_tab(locale.get()), &close_aria_label)
                 }
                 on:click=move |ev| {
                     ev.stop_propagation();
@@ -146,18 +146,9 @@ fn diff_row_active(active_tab: Option<EditorTabKey>, key: &str) -> bool {
     matches!(active_tab, Some(EditorTabKey::Diff(active_key)) if active_key == key)
 }
 
-fn surface_row_aria_label(surface_label: &str, title: &str) -> String {
-    let title = title.trim();
-    if title.is_empty() {
-        surface_label.to_string()
-    } else {
-        format!("{surface_label}: {title}")
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{diff_row_active, document_row_active, surface_row_aria_label};
+    use super::{diff_row_active, document_row_active};
     use crate::components::editor_tabs::EditorTabKey;
     use crate::i18n::{Locale, t};
     use deve_core::models::DocId;
@@ -201,19 +192,19 @@ mod tests {
     #[test]
     fn row_aria_label_includes_visible_surface_title() {
         assert_eq!(
-            surface_row_aria_label(t::common::document_tab(Locale::Zh), "notes/a.md"),
+            t::common::tab_title_label(t::common::document_tab(Locale::Zh), "notes/a.md"),
             format!("{}: notes/a.md", t::common::document_tab(Locale::Zh))
         );
         assert_eq!(
-            surface_row_aria_label(t::common::diff_tab(Locale::En), "src/lib.rs"),
+            t::common::tab_title_label(t::common::diff_tab(Locale::En), "src/lib.rs"),
             "Diff tab: src/lib.rs"
         );
         assert_ne!(
-            surface_row_aria_label(t::common::document_tab(Locale::En), "a.md"),
-            surface_row_aria_label(t::common::document_tab(Locale::En), "b.md")
+            t::common::tab_title_label(t::common::document_tab(Locale::En), "a.md"),
+            t::common::tab_title_label(t::common::document_tab(Locale::En), "b.md")
         );
         assert_eq!(
-            surface_row_aria_label(t::common::document_tab(Locale::En), "  "),
+            t::common::tab_title_label(t::common::document_tab(Locale::En), "  "),
             t::common::document_tab(Locale::En)
         );
     }
