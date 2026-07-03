@@ -34,18 +34,18 @@ contains	apps/web/js/extensions/block_styling.js	function headingLineClass(headi
 contains	apps/web/js/extensions/block_styling.js	cm-heading-line cm-heading-line-${headingLevel}
 contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: headingLineClass(headingLevel) }).range(line.from)
 contains	apps/web/js/extensions/block_styling.test.cjs	#申话
-contains	apps/web/js/extensions/block_styling.test.cjs	hybridHeadingCases
+contains	apps/web/js/extensions/block_styling.test.cjs	hybrid plugin must not duplicate the block styling heading line projection
 contains	apps/web/js/extensions/block_styling.test.cjs	# 申话
 contains	apps/web/js/extensions/block_styling.test.cjs	headingLineRule
 contains	apps/web/index.html	editor.bundle.js?rev=20260703-heading-lineheight
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
 contains	apps/web/js/extensions/hybrid.js	attributes: {
-contains	apps/web/js/extensions/hybrid.js	class: headingLineClass,
-contains	apps/web/js/extensions/hybrid.js	"data-deve-heading-level": headingLevel,
-contains	apps/web/js/extensions/hybrid.js	function atxHeadingLevelFromLine(lineText)
-contains	apps/web/js/extensions/hybrid.js	const isPositionInsideMath = (pos) =>
-contains	apps/web/js/extensions/hybrid.js	addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel)
-contains	apps/web/js/extensions/hybrid.js	!findContainingCode(line.from)
+absent	apps/web/js/extensions/hybrid.js	cm-heading-line
+absent	apps/web/js/extensions/hybrid.js	"data-deve-heading-level"
+absent	apps/web/js/extensions/hybrid.js	function atxHeadingLevelFromLine(lineText)
+absent	apps/web/js/extensions/hybrid.js	const isPositionInsideMath = (pos) =>
+absent	apps/web/js/extensions/hybrid.js	addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel)
+contains	apps/web/js/extensions/hybrid.js	findContainingCode(node.from)
 contains	apps/web/style/_typography.css	.cm-h1
 contains	apps/web/style/_typography.css	.cm-h2
 contains	apps/web/style/_typography.css	.cm-h3
@@ -117,12 +117,12 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
 contains	apps/web/js/extensions/hybrid.js	attributes: {
-contains	apps/web/js/extensions/hybrid.js	class: headingLineClass,
-contains	apps/web/js/extensions/hybrid.js	"data-deve-heading-level": headingLevel,
-contains	apps/web/js/extensions/hybrid.js	function atxHeadingLevelFromLine(lineText)
-contains	apps/web/js/extensions/hybrid.js	const isPositionInsideMath = (pos) =>
-contains	apps/web/js/extensions/hybrid.js	addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel)
-contains	apps/web/js/extensions/hybrid.js	!findContainingCode(line.from)
+absent	apps/web/js/extensions/hybrid.js	cm-heading-line
+absent	apps/web/js/extensions/hybrid.js	"data-deve-heading-level"
+absent	apps/web/js/extensions/hybrid.js	function atxHeadingLevelFromLine(lineText)
+absent	apps/web/js/extensions/hybrid.js	const isPositionInsideMath = (pos) =>
+absent	apps/web/js/extensions/hybrid.js	addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel)
+contains	apps/web/js/extensions/hybrid.js	findContainingCode(node.from)
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line span
 contains	apps/web/style/_typography.css	.cm-content .cm-line.cm-heading-line span span

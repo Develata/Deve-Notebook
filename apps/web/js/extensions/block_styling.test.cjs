@@ -9,8 +9,6 @@ const purePrefix = source.split("/**")[0].replace(/^import .*$/gm, "");
 const context = {};
 const hybridSourcePath = path.join(__dirname, "hybrid.js");
 const hybridSource = fs.readFileSync(hybridSourcePath, "utf8");
-const hybridPurePrefix = hybridSource.split("/**")[0].replace(/^import .*$/gm, "");
-const hybridContext = {};
 const typographyCssPath = path.join(__dirname, "../../style/_typography.css");
 const baseCssPath = path.join(__dirname, "../../style/_base.css");
 const typographyCss = fs.readFileSync(typographyCssPath, "utf8");
@@ -26,20 +24,12 @@ const { atxHeadingLevel, headingLineClass } = context;
 assert.equal(typeof atxHeadingLevel, "function");
 assert.equal(typeof headingLineClass, "function");
 
-vm.runInNewContext(
-  `${hybridPurePrefix}\nglobalThis.atxHeadingLevelFromLine = atxHeadingLevelFromLine;`,
-  hybridContext,
-  { filename: hybridSourcePath }
-);
-
-const { atxHeadingLevelFromLine } = hybridContext;
-assert.equal(typeof atxHeadingLevelFromLine, "function");
-
 const cases = [
   ["#", false, 1],
   ["# s", false, 1],
   ["# h1", false, 1],
   ["#\th1", false, 1],
+  ["# 申话", false, 1],
   ["## h2", false, 2],
   ["### h3", false, 3],
   ["###### h6", false, 6],
@@ -75,26 +65,11 @@ for (const level of [4, 5, 6]) {
   );
 }
 
-const hybridHeadingCases = [
-  ["#", "1"],
-  ["# s", "1"],
-  ["# 申话", "1"],
-  ["#\ts", "1"],
-  ["## s", "2"],
-  ["### s", "3"],
-  ["#### s", null],
-  ["#ascii", null],
-  ["#申话", null],
-  ["    # code", null],
-];
-
-for (const [line, expected] of hybridHeadingCases) {
-  assert.equal(
-    atxHeadingLevelFromLine(line),
-    expected,
-    `hybrid ${JSON.stringify(line)}`
-  );
-}
+assert.doesNotMatch(
+  hybridSource,
+  /cm-heading-line/,
+  "hybrid plugin must not duplicate the block styling heading line projection"
+);
 
 function cssRule(css, selector) {
   const start = css.indexOf(`${selector} {`);

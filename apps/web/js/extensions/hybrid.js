@@ -2,30 +2,6 @@ import { ViewPlugin, Decoration } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import { findMathRanges, findFrontmatterRange } from "./utils.js";
 
-function atxHeadingLevel(nodeName) {
-  const match = /^ATXHeading([1-3])$/.exec(nodeName);
-  return match ? match[1] : null;
-}
-
-function atxHeadingLevelFromLine(lineText) {
-  const match = /^ {0,3}(#{1,3})(?!#)(?:\s|$)/.exec(lineText);
-  return match ? String(match[1].length) : null;
-}
-
-function addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel) {
-  if (decoratedHeadingLines.has(line.from)) return;
-  decoratedHeadingLines.add(line.from);
-  const headingLineClass = `cm-heading-line cm-heading-line-${headingLevel}`;
-  widgets.push(
-    Decoration.line({
-      attributes: {
-        class: headingLineClass,
-        "data-deve-heading-level": headingLevel,
-      },
-    }).range(line.from)
-  );
-}
-
 /**
  * Hybrid Plugin (混合插件)
  * 
@@ -51,7 +27,6 @@ export const hybridPlugin = ViewPlugin.fromClass(
       const { from, to } = view.viewport;
       const selection = view.state.selection.main;
       const doc = view.state.doc.toString();
-      const decoratedHeadingLines = new Set();
       
       // 辅助函数: 检查光标是否在范围内
       const isCursorIn = (nodeFrom, nodeTo) =>
@@ -67,9 +42,6 @@ export const hybridPlugin = ViewPlugin.fromClass(
         }
         return false;
       };
-
-      const isPositionInsideMath = (pos) =>
-        mathRanges.some((range) => pos >= range.from && pos <= range.to);
 
       // 2. Frontmatter Detection (Strict)
       // 计算一次，如果存在有效的 Frontmatter，则添加装饰
@@ -131,19 +103,6 @@ export const hybridPlugin = ViewPlugin.fromClass(
         return codeRanges.find(r => pos >= r.from && pos <= r.to);
       };
 
-      for (let pos = from; pos <= to; ) {
-        const line = view.state.doc.lineAt(pos);
-        const headingLevel = atxHeadingLevelFromLine(line.text);
-        if (headingLevel &&
-            !isPositionInsideMath(line.from) &&
-            !findContainingCode(line.from) &&
-            !(fm && line.from >= fm.from && line.to <= fm.to)) {
-          addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel);
-        }
-        if (line.to >= to || line.to >= view.state.doc.length) break;
-        pos = line.to + 1;
-      }
-
       try {
         let tree = syntaxTree(view.state);
 
@@ -157,12 +116,6 @@ export const hybridPlugin = ViewPlugin.fromClass(
             // 跳过 Frontmatter 内部 (如果已检测到)
             // 避免 Frontmatter 内部的 key: value 被识别为 Setext Heading 的一部分并被隐藏/错误处理
             if (fm && node.from >= fm.from && node.to <= fm.to) return;
-
-            const headingLevel = atxHeadingLevel(node.name);
-            if (headingLevel) {
-                const line = view.state.doc.lineAt(node.from);
-                addHeadingLineDecoration(widgets, decoratedHeadingLines, line, headingLevel);
-            }
 
             // ---------------------------------------------------------
             // 2. Syntax Hiding (Hiding Marks and Syntax when not active)
