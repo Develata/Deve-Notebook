@@ -13,6 +13,7 @@ use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 use super::confirmed_section::ConfirmedSection;
+use super::resource_group_visibility::has_any_resource_group_changes;
 use super::staged_section::StagedSection;
 use super::unstaged_section::UnstagedSection;
 
@@ -59,7 +60,11 @@ pub fn Changes() -> impl IntoView {
 
                 view! {
                     <div>
-                        {if staged.is_empty() && unstaged.is_empty() && confirmed.is_empty() {
+                        {if !has_any_resource_group_changes(
+                            staged.len(),
+                            unstaged.len(),
+                            confirmed.len(),
+                        ) {
                             view! {
                                 <div class="px-3 py-6 text-xs text-muted text-center">
                                     {t::source_control::no_changes(locale.get())}
@@ -67,9 +72,9 @@ pub fn Changes() -> impl IntoView {
                             }.into_any()
                         } else {
                             view! {
-                                <StagedSection staged=staged />
-                                <UnstagedSection unstaged=unstaged />
-                                <ConfirmedSection confirmed=confirmed />
+                                <StagedSection staged=staged show_empty_group=true />
+                                <UnstagedSection unstaged=unstaged show_empty_group=true />
+                                <ConfirmedSection confirmed=confirmed show_empty_group=true />
                             }.into_any()
                         }}
                     </div>

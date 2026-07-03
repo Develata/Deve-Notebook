@@ -186,6 +186,8 @@ contains	apps/web/src/components/sidebar/source_control/context_menu.rs	data-dev
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	role="menuitemcheckbox"
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	aria-checked=move || checked.get().to_string()
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
+contains	apps/web/src/components/sidebar/source_control/resource_group_visibility.rs	non_empty_source_control_state_keeps_all_primary_groups_visible
+contains	apps/web/src/components/sidebar/source_control/resource_group_visibility.rs	empty_resource_group_bulk_actions_are_disabled
 contains	docs/acceptance-cases/04_diff.md	source_control_repo_context_confirmed_dirty_marker true
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_shortcut_prevents_textarea_default true
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_stage_discard_absent true

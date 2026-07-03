@@ -8,6 +8,7 @@
 //! 渲染暂存区 (Staged Changes) 的文件列表。
 
 use super::change_item::ChangeItem;
+use super::resource_group_visibility::should_render_resource_group;
 use super::staged_section_actions::StagedSectionActions;
 use super::touch_target::section_header_class;
 use crate::components::icons::ChevronRight;
@@ -18,7 +19,10 @@ use leptos::prelude::*;
 
 /// 暂存区组件
 #[component]
-pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
+pub fn StagedSection(
+    staged: Vec<ChangeEntry>,
+    #[prop(optional)] show_empty_group: bool,
+) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let (bulk_busy, set_bulk_busy) = signal(false);
@@ -43,7 +47,7 @@ pub fn StagedSection(staged: Vec<ChangeEntry>) -> impl IntoView {
         }
     });
 
-    if staged_count == 0 {
+    if !should_render_resource_group(staged_count, show_empty_group) {
         return view! {}.into_any();
     }
 

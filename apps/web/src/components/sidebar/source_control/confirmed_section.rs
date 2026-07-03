@@ -6,6 +6,7 @@
 //! pending_fs_ops. First batch exposes diff + whole-anchor commit only.
 
 use super::change_item::ChangeItem;
+use super::resource_group_visibility::should_render_resource_group;
 use super::touch_target::section_header_class;
 use crate::components::icons::ChevronRight;
 use crate::i18n::{Locale, t};
@@ -13,13 +14,16 @@ use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
 
 #[component]
-pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
+pub fn ConfirmedSection(
+    confirmed: Vec<ChangeEntry>,
+    #[prop(optional)] show_empty_group: bool,
+) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let expanded = RwSignal::new(true);
     let confirmed_count = confirmed.len();
     let confirmed_list = StoredValue::new(confirmed);
 
-    if confirmed_count == 0 {
+    if !should_render_resource_group(confirmed_count, show_empty_group) {
         return view! {}.into_any();
     }
 
@@ -53,12 +57,14 @@ pub fn ConfirmedSection(confirmed: Vec<ChangeEntry>) -> impl IntoView {
                 data-deve-sc-section-body="confirmed-ledger"
                 hidden=move || !expanded.get()
             >
-                <div
-                    class="px-8 pb-1 text-[11px] leading-4 text-muted"
-                    data-deve-sc-confirmed-ledger-hint="true"
-                >
-                    {move || t::source_control::confirmed_ledger_hint(locale.get())}
-                </div>
+                <Show when=move || confirmed_count != 0>
+                    <div
+                        class="px-8 pb-1 text-[11px] leading-4 text-muted"
+                        data-deve-sc-confirmed-ledger-hint="true"
+                    >
+                        {move || t::source_control::confirmed_ledger_hint(locale.get())}
+                    </div>
+                </Show>
                 <For
                     each=move || confirmed_list.get_value()
                     key=|e| {

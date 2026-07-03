@@ -39,6 +39,7 @@ pub mod history_empty_state;
 pub mod history_timeline;
 pub mod repair_review_copy;
 pub mod repositories;
+mod resource_group_visibility;
 pub mod staged_section_actions;
 pub mod status_notice;
 mod touch_target;

@@ -4,6 +4,7 @@
 //!   - 12_source_control_ui#source-control-vscode-reference-contract
 //!
 use super::action_tray::SECTION_ACTION_TRAY_CLASS;
+use super::resource_group_visibility::section_bulk_action_disabled;
 use crate::components::icons::Minus;
 use crate::components::sidebar::source_control::touch_target::{
     SourceControlActionTone, icon_button_class,
@@ -39,7 +40,13 @@ pub fn StagedSectionActions(
                         data-deve-mobile-touch-target="source-control-unstage-all-action"
                         title=move || t::source_control::unstage_all_changes(locale.get())
                         aria-label=move || t::source_control::unstage_all_changes(locale.get())
-                        disabled=move || bulk_busy.get() || !core.can_write.get()
+                        disabled=move || {
+                            section_bulk_action_disabled(
+                                count,
+                                bulk_busy.get(),
+                                core.can_write.get(),
+                            )
+                        }
                         on:click=move |_| {
                             set_bulk_busy.set(true);
                             core.clear_notice.run(());
