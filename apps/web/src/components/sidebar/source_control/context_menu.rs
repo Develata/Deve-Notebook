@@ -12,12 +12,28 @@ use crate::i18n::{Locale, t};
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 
+const SECTION_MENU_REPOSITORIES: &str = "repositories";
+const SECTION_MENU_CHANGES: &str = "changes";
+const SECTION_MENU_GRAPH: &str = "graph";
+const SECTION_MENU_HISTORY: &str = "history";
+
+#[cfg(test)]
+fn section_menu_item_ids() -> [&'static str; 4] {
+    [
+        SECTION_MENU_REPOSITORIES,
+        SECTION_MENU_CHANGES,
+        SECTION_MENU_GRAPH,
+        SECTION_MENU_HISTORY,
+    ]
+}
+
 #[component]
 pub fn SectionMenu(
     show_menu: RwSignal<bool>,
     show_repos: RwSignal<bool>,
     show_changes: RwSignal<bool>,
     show_graph: RwSignal<bool>,
+    show_history: RwSignal<bool>,
     locale: RwSignal<Locale>,
 ) -> impl IntoView {
     move || {
@@ -42,21 +58,27 @@ pub fn SectionMenu(
                     on:click=move |e: MouseEvent| e.stop_propagation()
                 >
                     <MenuItem
-                        item_id="repositories"
+                        item_id=SECTION_MENU_REPOSITORIES
                         label=move || t::source_control::repositories(locale.get())
                         checked=show_repos
                         show_menu=show_menu
                     />
                     <MenuItem
-                        item_id="changes"
+                        item_id=SECTION_MENU_CHANGES
                         label=move || t::source_control::changes(locale.get())
                         checked=show_changes
                         show_menu=show_menu
                     />
                     <MenuItem
-                        item_id="graph"
+                        item_id=SECTION_MENU_GRAPH
                         label=move || t::source_control::graph(locale.get())
                         checked=show_graph
+                        show_menu=show_menu
+                    />
+                    <MenuItem
+                        item_id=SECTION_MENU_HISTORY
+                        label=move || t::source_control::history(locale.get())
+                        checked=show_history
                         show_menu=show_menu
                     />
                 </div>
@@ -97,5 +119,18 @@ fn MenuItem(
                 }
             }}
         </button>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::section_menu_item_ids;
+
+    #[test]
+    fn source_control_history_visibility_menu_item_present() {
+        assert_eq!(
+            section_menu_item_ids(),
+            ["repositories", "changes", "graph", "history"]
+        );
     }
 }

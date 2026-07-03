@@ -16,6 +16,7 @@ pub fn SourceControlHeader(
     show_repos: RwSignal<bool>,
     show_changes: RwSignal<bool>,
     show_graph: RwSignal<bool>,
+    show_history: RwSignal<bool>,
 ) -> impl IntoView {
     let toggle_menu = move |e: MouseEvent| {
         e.stop_propagation();
@@ -64,6 +65,7 @@ pub fn SourceControlHeader(
                     show_repos
                     show_changes
                     show_graph
+                    show_history
                     locale
                 />
             </div>

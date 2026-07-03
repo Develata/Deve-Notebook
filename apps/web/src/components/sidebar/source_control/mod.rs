@@ -81,6 +81,7 @@ pub fn SourceControlView(#[prop(optional)] suppress_local_command_notice: bool) 
     let show_repos = RwSignal::new(true);
     let show_changes = RwSignal::new(true);
     let show_graph = RwSignal::new(false);
+    let show_history = RwSignal::new(true);
 
     let show_menu = RwSignal::new(false);
 
@@ -106,6 +107,7 @@ pub fn SourceControlView(#[prop(optional)] suppress_local_command_notice: bool) 
                 show_repos
                 show_changes
                 show_graph
+                show_history
             />
 
             <div class="flex-1 overflow-y-auto">
@@ -127,7 +129,9 @@ pub fn SourceControlView(#[prop(optional)] suppress_local_command_notice: bool) 
                 <Show when=move || show_graph.get()>
                     <GraphPanel expanded=expand_graph />
                 </Show>
-                <History expanded=expand_history />
+                <Show when=move || show_history.get()>
+                    <History expanded=expand_history />
+                </Show>
 
                 <div class="h-8"></div>
             </div>

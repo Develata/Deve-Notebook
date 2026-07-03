@@ -185,6 +185,7 @@ contains	apps/web/src/components/sidebar/source_control/context_menu.rs	role="me
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	data-deve-sc-section-menu-item=item_id
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	role="menuitemcheckbox"
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	aria-checked=move || checked.get().to_string()
+contains	apps/web/src/components/sidebar/source_control/context_menu.rs	source_control_history_visibility_menu_item_present
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
 contains	apps/web/src/components/sidebar/source_control/resource_group_visibility.rs	non_empty_source_control_state_keeps_all_primary_groups_visible
 contains	apps/web/src/components/sidebar/source_control/resource_group_visibility.rs	empty_resource_group_bulk_actions_are_disabled
