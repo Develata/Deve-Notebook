@@ -114,9 +114,14 @@
   * ack/reject
   * navigation guard
 * `runtime/source_control_client/`
-  * staged/unstaged
+  * confirmed ledger changes
   * diff sessions
   * graph/history
+  * commit anchor intent
+* `runtime/external_changes_client/`
+  * external staged/unstaged projections
+  * open diff intent
+  * stage / unstage / discard / apply-to-ledger typed intents
 * `runtime/rendering_client/`
   * Markdown / editor bridge
   * render hints
@@ -125,6 +130,7 @@
   * editor
   * explorer
   * source_control
+  * external_changes
   * mobile_shell
 
 说明：
