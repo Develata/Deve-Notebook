@@ -132,7 +132,7 @@
     - run: cargo test -p deve_cli readonly_remote_commit_diff_reports_rename_projection -- --nocapture
     - run: cargo test -p deve_web change_item_read_gate -- --nocapture
     - run: cargo test -p deve_core discard_docless_added_on_tracked_path -- --nocapture
-    - run: cargo test -p deve_core commit_staged_rejects_docless_upsert_on_tracked_path -- --nocapture
+    - run: cargo test -p deve_core --test source_control_commit_apply_error_test apply_external_changes_rejects_docless_upsert_on_tracked_path -- --nocapture
     - run: cargo test -p deve_core stage_pending_rejects_unresolved_conflict -- --nocapture
     - run: cargo test -p deve_cli sc_stage_all_rejects_unresolved_conflict -- --nocapture
     - run: cargo test -p deve_cli sc_stage_all_rejects_broken_workspace_identity -- --nocapture
@@ -231,7 +231,7 @@
     - api_assert: delegated_source_control_proxy_api_is_type_marked true
     - api_assert: remote_source_control_proxy_reads_use_delegated_capability true
     - api_assert: discard_docless_added_on_tracked_path_fails_closed true
-    - api_assert: commit_docless_upsert_on_tracked_path_fails_closed true
+    - api_assert: apply_external_docless_upsert_on_tracked_path_fails_closed true
     - api_assert: stage_unresolved_conflict_fails_closed true
     - cli_assert: sc_stage_all_unresolved_conflict_fails_closed true
     - cli_assert: sc_write_rejects_broken_workspace_identity true
