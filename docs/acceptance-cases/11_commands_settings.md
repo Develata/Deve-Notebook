@@ -286,7 +286,7 @@
   steps:
     - run: scripts/check-settings-local-feedback-baseline.sh
     - run: cargo test -p deve_core native_adapter -- --nocapture
-    - run: cargo test -p deve_web settings native_backend -- --nocapture
+    - run: cargo test -p deve_web native_backend -- --nocapture
     - run: cargo test -p deve_desktop --features native-packaging native_backend -- --nocapture
     - run: cargo test -p deve_mobile --features native-packaging native_backend -- --nocapture
     - browser_open: "Settings"
