@@ -199,8 +199,7 @@
     - Unix-like host
     - identity.key 存在或由启动流程生成
   steps:
-    - run: cargo test -p deve_cli identity_key_permissions_are_corrected_to_owner_only -- --nocapture
-    - run: cargo test -p deve_cli identity_key_permissions_fail_closed_for_non_file -- --nocapture
+    - run: cargo test -p deve_cli identity_key_permissions -- --nocapture
     - run: scripts/check-auth-baseline.sh
   assertions:
     - cli_assert: identity_key_permission_corrected_to_0600 true
