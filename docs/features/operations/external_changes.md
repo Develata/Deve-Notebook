@@ -5,7 +5,7 @@
 - `Flow ID`: `flow.external-changes`
 - `Domain`: `external-changes`
 - `Related Feature Chapters`: `docs/features/07_diff_logic.md`, `docs/features/08_ui_design_03_mobile.md`
-- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-01B`, `DIFF-FEAT-05`, `MOBILE-UI-05`
+- `Related Acceptance Cases`: `DIFF-FEAT-01`, `DIFF-FEAT-01B`, `DIFF-FEAT-05`, `MOBILE-UI-06`
 
 ## Operations
 
