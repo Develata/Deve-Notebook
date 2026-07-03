@@ -8,7 +8,7 @@
 mod row;
 
 use self::row::{external_change_key, external_change_row};
-use crate::components::icons::Check;
+use crate::components::icons::{Check, ChevronRight};
 use crate::hooks::use_core::ExternalChangesContext;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
@@ -113,32 +113,69 @@ fn ExternalChangesSection(
 ) -> impl IntoView {
     let count = entries.len();
     let entries = StoredValue::new(entries);
+    let expanded = RwSignal::new(true);
 
     if count == 0 {
         return view! {}.into_any();
     }
 
-    let section_marker = title.clone();
+    let section_key = external_section_key(is_staged);
+    let panel_id = external_section_panel_id(is_staged);
     let section_title = title;
 
     view! {
-        <section data-deve-external-section=section_marker>
+        <section data-deve-external-section=section_key>
             <div
-                class="flex min-h-11 items-center justify-between px-3 text-[11px] font-bold uppercase text-muted md:min-h-7"
-                data-deve-mobile-touch-target="external-changes-section-header"
+                class="flex h-11 items-center px-1 text-[11px] font-bold uppercase text-muted md:h-7"
             >
-                <span class="truncate">{section_title}</span>
-                <span>{count}</span>
+                <button
+                    type="button"
+                    class="flex h-11 w-full min-w-0 items-center justify-between rounded-sm px-2 text-left hover:bg-hover focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40 md:h-7"
+                    data-deve-mobile-touch-target="external-changes-section-header"
+                    data-deve-external-section-toggle=section_key
+                    aria-expanded=move || expanded.get().to_string()
+                    aria-controls=panel_id
+                    on:click=move |_| expanded.update(|value| *value = !*value)
+                >
+                    <span class="flex min-w-0 items-center">
+                        <span class=move || format!(
+                            "flex h-4 w-4 items-center justify-center text-primary transition-transform {}",
+                            if expanded.get() { "rotate-90" } else { "" },
+                        )>
+                            <ChevronRight class="h-3 w-3" />
+                        </span>
+                        <span class="truncate">{section_title.clone()}</span>
+                    </span>
+                    <span class="pl-2 text-[11px] text-muted">{count}</span>
+                </button>
             </div>
-            <For
-                each=move || entries.get_value()
-                key=external_change_key
-                children=move |entry| {
-                    external_change_row(entry, is_staged, core.clone(), locale)
-                }
-            />
+            <div
+                id=panel_id
+                data-deve-external-section-body=section_key
+                hidden=move || !expanded.get()
+            >
+                <For
+                    each=move || entries.get_value()
+                    key=external_change_key
+                    children=move |entry| {
+                        external_change_row(entry, is_staged, core.clone(), locale)
+                    }
+                />
+            </div>
         </section>
     }.into_any()
+}
+
+fn external_section_key(is_staged: bool) -> &'static str {
+    if is_staged { "staged" } else { "pending" }
+}
+
+fn external_section_panel_id(is_staged: bool) -> &'static str {
+    if is_staged {
+        "external-changes-staged-panel"
+    } else {
+        "external-changes-pending-panel"
+    }
 }
 
 fn can_apply_to_ledger(core: &ExternalChangesContext) -> bool {
@@ -151,4 +188,40 @@ fn apply_title(locale: Locale, core: &ExternalChangesContext) -> String {
         return t::external_changes::apply_to_ledger(locale).to_string();
     }
     t::external_changes::apply_to_ledger_disabled(locale).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{external_section_key, external_section_panel_id};
+
+    #[test]
+    fn external_changes_sections_use_stable_local_ids() {
+        assert_eq!(external_section_key(true), "staged");
+        assert_eq!(external_section_key(false), "pending");
+        assert_eq!(
+            external_section_panel_id(true),
+            "external-changes-staged-panel"
+        );
+        assert_eq!(
+            external_section_panel_id(false),
+            "external-changes-pending-panel"
+        );
+    }
+
+    #[test]
+    fn external_changes_section_headers_are_accessible_toggles() {
+        let source = include_str!("external_changes.rs");
+
+        assert!(source.contains(concat!("data-deve-", "external-section-toggle")));
+        assert!(source.contains(concat!("class=\"flex ", "h-11 w-full")));
+        assert!(source.contains(concat!("md:", "h-7")));
+        assert!(source.contains(concat!(
+            "aria-expanded=move || ",
+            "expanded.get().to_string()"
+        )));
+        assert!(source.contains(concat!("aria-controls=", "panel_id")));
+        assert!(source.contains(concat!("data-deve-", "external-section-body")));
+        assert!(source.contains(concat!("hidden=move || ", "!expanded.get()")));
+        assert!(!source.contains(concat!("data-deve-", "sc-section-toggle")));
+    }
 }
