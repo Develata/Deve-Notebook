@@ -60,6 +60,7 @@
     - ui_assert: nonempty_heading_font_scales_match_levels true
     - ui_assert: nonempty_heading_not_double_scaled true
     - ui_assert: heading_with_inline_math_keeps_line_class true
+    - ui_assert: heading_opener_inside_math_frontmatter_not_styled true
     - ui_assert: atx_heading_lines_have_heading_class true
     - ui_assert: atx_heading_text_line_height_gt_plain true
     - ui_assert: atx_empty_heading_line_height_gt_plain true

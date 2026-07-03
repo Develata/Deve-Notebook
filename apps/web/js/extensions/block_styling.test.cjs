@@ -6,7 +6,24 @@ const vm = require("node:vm");
 const sourcePath = path.join(__dirname, "block_styling.js");
 const source = fs.readFileSync(sourcePath, "utf8");
 const purePrefix = source.split("/**")[0].replace(/^import .*$/gm, "");
-const context = {};
+const context = {
+  findMathRanges: (doc) => {
+    const blockStart = doc.indexOf("$$");
+    if (blockStart !== -1) {
+      const blockEnd = doc.indexOf("$$", blockStart + 2);
+      if (blockEnd !== -1) return [{ from: blockStart, to: blockEnd + 2 }];
+    }
+    const inlineStart = doc.indexOf("$");
+    if (inlineStart === -1) return [];
+    const inlineEnd = doc.indexOf("$", inlineStart + 1);
+    return inlineEnd === -1 ? [] : [{ from: inlineStart, to: inlineEnd + 1 }];
+  },
+  findFrontmatterRange: (doc) => {
+    if (!doc.startsWith("---\n")) return null;
+    const end = doc.indexOf("\n---", 4);
+    return end === -1 ? null : { from: 0, to: end + 4 };
+  },
+};
 const hybridSourcePath = path.join(__dirname, "hybrid.js");
 const hybridSource = fs.readFileSync(hybridSourcePath, "utf8");
 const typographyCssPath = path.join(__dirname, "../../style/_typography.css");
@@ -15,14 +32,51 @@ const typographyCss = fs.readFileSync(typographyCssPath, "utf8");
 const baseCss = fs.readFileSync(baseCssPath, "utf8");
 
 vm.runInNewContext(
-  `${purePrefix}\nglobalThis.atxHeadingLevel = atxHeadingLevel; globalThis.headingLineClass = headingLineClass;`,
+  `${purePrefix}
+globalThis.atxHeadingLevel = atxHeadingLevel;
+globalThis.headingLineClass = headingLineClass;
+globalThis.protectedHeadingRanges = protectedHeadingRanges;
+globalThis.textMayContainProtectedDelimiter = textMayContainProtectedDelimiter;
+globalThis.mapProtectedRanges = mapProtectedRanges;
+globalThis.frontmatterCandidateBoundary = frontmatterCandidateBoundary;
+globalThis.headingLineClassForLine = headingLineClassForLine;`,
   context,
   { filename: sourcePath }
 );
 
-const { atxHeadingLevel, headingLineClass } = context;
+const {
+  atxHeadingLevel,
+  headingLineClass,
+  protectedHeadingRanges,
+  textMayContainProtectedDelimiter,
+  mapProtectedRanges,
+  frontmatterCandidateBoundary,
+  headingLineClassForLine,
+} = context;
 assert.equal(typeof atxHeadingLevel, "function");
 assert.equal(typeof headingLineClass, "function");
+assert.equal(typeof protectedHeadingRanges, "function");
+assert.equal(typeof textMayContainProtectedDelimiter, "function");
+assert.equal(typeof mapProtectedRanges, "function");
+assert.equal(typeof frontmatterCandidateBoundary, "function");
+assert.equal(typeof headingLineClassForLine, "function");
+
+function fakeDoc(text) {
+  const parts = text.split("\n");
+  let pos = 0;
+  const lines = parts.map((line) => {
+    const from = pos;
+    const to = from + line.length;
+    pos = to + 1;
+    return { from, to, text: line };
+  });
+  return {
+    length: text.length,
+    lines: lines.length,
+    line: (lineNo) => lines[lineNo - 1],
+    sliceString: (from, to) => text.slice(from, to),
+  };
+}
 
 const cases = [
   ["#", false, 1],
@@ -67,6 +121,54 @@ for (const level of [4, 5, 6]) {
     `h${level} keeps the legacy class until line-level CSS variables exist`
   );
 }
+
+assert.equal(
+  headingLineClassForLine({ from: 0, text: "# s" }, false, []),
+  "cm-h1 cm-heading-line cm-heading-line-1"
+);
+assert.equal(
+  headingLineClassForLine({ from: 3, text: "  ## s" }, false, [{ from: 0, to: 12 }]),
+  null,
+  "heading opener inside protected math/frontmatter range must not be styled"
+);
+assert.equal(
+  headingLineClassForLine({ from: 12, text: "# s" }, false, [{ from: 0, to: 12 }]),
+  "cm-h1 cm-heading-line cm-heading-line-1",
+  "range end is exclusive so following headings remain styled"
+);
+assert.equal(
+  JSON.stringify(protectedHeadingRanges("$$\n# not heading\n$$")),
+  JSON.stringify([{ from: 0, to: 19 }])
+);
+assert.equal(
+  JSON.stringify(protectedHeadingRanges("$# not heading$")),
+  JSON.stringify([{ from: 0, to: 15 }])
+);
+assert.equal(
+  JSON.stringify(protectedHeadingRanges("---\n# comment\n---\n# heading")),
+  JSON.stringify([{ from: 0, to: 17 }])
+);
+assert.equal(textMayContainProtectedDelimiter("plain edit"), false);
+assert.equal(textMayContainProtectedDelimiter("$"), true);
+assert.equal(textMayContainProtectedDelimiter("$$"), true);
+assert.equal(textMayContainProtectedDelimiter("`"), true);
+assert.equal(textMayContainProtectedDelimiter("\\"), true);
+assert.equal(textMayContainProtectedDelimiter("---"), true);
+assert.equal(textMayContainProtectedDelimiter("\n"), true);
+assert.equal(
+  JSON.stringify(
+    mapProtectedRanges([{ from: 10, to: 20 }], {
+      mapPos: (pos) => (pos >= 10 ? pos + 3 : pos),
+    })
+  ),
+  JSON.stringify([{ from: 13, to: 23 }])
+);
+assert.equal(frontmatterCandidateBoundary(fakeDoc("no frontmatter\n# heading")), 0);
+assert.equal(frontmatterCandidateBoundary(fakeDoc("---\nplain\n---\n# heading")), 9);
+assert.equal(
+  frontmatterCandidateBoundary(fakeDoc("---\nplain: value\n---\n# heading")),
+  20
+);
 
 assert.doesNotMatch(
   hybridSource,

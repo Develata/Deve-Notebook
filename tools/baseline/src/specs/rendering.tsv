@@ -26,6 +26,7 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_font_scales_match_levels true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_not_double_scaled true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_with_inline_math_keeps_line_class true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_opener_inside_math_frontmatter_not_styled true
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 contains	apps/web/js/extensions/block_styling.js	ATX_HEADING_LINE_RE
 contains	apps/web/js/extensions/block_styling.js	ACTIVE_CJK_ATX_HEADING_LINE_RE
@@ -33,7 +34,11 @@ contains	apps/web/js/extensions/block_styling.js	const activeCjkCandidate = isAc
 contains	apps/web/js/extensions/block_styling.js	update.selectionSet
 contains	apps/web/js/extensions/block_styling.js	function headingLineClass(headingLevel)
 contains	apps/web/js/extensions/block_styling.js	cm-heading-line cm-heading-line-${headingLevel}
-contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: headingLineClass(headingLevel) }).range(line.from)
+contains	apps/web/js/extensions/block_styling.js	function protectedHeadingRanges(docText)
+contains	apps/web/js/extensions/block_styling.js	function nextProtectedRanges(currentRanges, update)
+contains	apps/web/js/extensions/block_styling.js	function frontmatterCandidateBoundary(doc)
+contains	apps/web/js/extensions/block_styling.js	function headingLineClassForLine(line, isActiveLine, protectedRanges)
+contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: lineClass }).range(line.from)
 contains	apps/web/js/extensions/block_styling.test.cjs	#申话
 contains	apps/web/js/extensions/block_styling.test.cjs	hybrid plugin must not duplicate the block styling heading line projection
 contains	apps/web/js/extensions/block_styling.test.cjs	# 申话
@@ -118,6 +123,7 @@ case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_font_scales_match_levels true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: nonempty_heading_not_double_scaled true
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_with_inline_math_keeps_line_class true
+case_contains	docs/acceptance-cases/03_rendering.md	RENDER-HEADING-001	ui_assert: heading_opener_inside_math_frontmatter_not_styled true
 contains	docs/acceptance-bindings.tsv	RENDER-HEADING-001|manual-chrome|docs/features/03_rendering.md|empty and nonempty ATX heading editor/html workflow
 contains	apps/web/js/extensions/hybrid.js	Decoration.line({
 contains	apps/web/js/extensions/hybrid.js	attributes: {
