@@ -178,6 +178,38 @@ tracked_rust_files() {
     sed "s|^|$ROOT/|"
 }
 
+REWRITE_TMP_FILES=()
+
+cleanup_rewrite_tmp_files() {
+  [ "${#REWRITE_TMP_FILES[@]}" -eq 0 ] && return 0
+  rm -f "${REWRITE_TMP_FILES[@]}" 2>/dev/null || true
+}
+
+plan_ref_rewrite_candidate_files() {
+  local grep_output
+  local grep_error
+  local grep_status
+  grep_error="$(mktemp)" || return 2
+  REWRITE_TMP_FILES+=("$grep_error")
+  set +e
+  grep_output="$(git_in_repo grep -l -F -- "$REWRITE_FROM" -- 'crates' 'apps' 2>"$grep_error")"
+  grep_status=$?
+  set -e
+  if [ "$grep_status" -eq 1 ] && [ ! -s "$grep_error" ]; then
+    return 0
+  fi
+  if [ "$grep_status" -ne 0 ]; then
+    printf 'ERROR: rewrite-plan-ref candidate scan failed:\n%s\n' "$grep_output" >&2
+    cat "$grep_error" >&2
+    return "$grep_status"
+  fi
+  if [ -s "$grep_error" ]; then
+    cat "$grep_error" >&2
+  fi
+  printf '%s\n' "$grep_output" |
+    awk -v root="$ROOT" '{ sub(/\r$/, "", $0); if ($0 ~ /\.rs$/) print root "/" $0 }'
+}
+
 # resolve_plan_anchor <chapter_ref> -> echoes the chapter markdown file path.
 # Supports single-file chapters (`04_repository`) and multi-file chapter paths
 # (`03_storage/authority`). The chapter_ref is the part before the `#` anchor.
@@ -256,15 +288,24 @@ run_rewrite_plan_ref() {
   local mode_label="dry-run"
   [ "$REWRITE_APPLY" = "1" ] && mode_label="apply"
   echo "== rewrite-plan-ref ($mode_label): '$REWRITE_FROM' -> '$REWRITE_TO' =="
+  REWRITE_TMP_FILES=()
+  trap 'status=$?; cleanup_rewrite_tmp_files; exit "$status"' EXIT
+  trap 'cleanup_rewrite_tmp_files; exit 141' PIPE
   local total_files=0 total_lines=0
+  local candidates
+  candidates="$(plan_ref_rewrite_candidate_files)" || return 2
   while IFS= read -r f; do
     [ -n "$f" ] || continue
-    grep -q '^//! plan_ref:' "$f" 2>/dev/null || continue
-    # Pre-filter: skip files that do not contain the from-prefix at all, so we
-    # only pay the mktemp+awk cost for files that can actually change.
-    grep -Fq "$REWRITE_FROM" "$f" 2>/dev/null || continue
+    if ! grep -q '^//! plan_ref:' "$f" 2>/dev/null; then
+      continue
+    fi
     local tmp
-    tmp="$(mktemp "${f}.rewrite.XXXXXX")"
+    if [ "$REWRITE_APPLY" = "1" ]; then
+      tmp="$(mktemp "${f}.rewrite.XXXXXX")" || return 2
+    else
+      tmp="$(mktemp)" || return 2
+    fi
+    REWRITE_TMP_FILES+=("$tmp")
     awk -v from="$REWRITE_FROM" -v to="$REWRITE_TO" '
       /^\/\/! plan_ref:/ { inblock = 1; print; next }
       inblock && /^\/\/![ \t]*-[ \t]*/ {
@@ -283,9 +324,9 @@ run_rewrite_plan_ref() {
       }
       inblock { inblock = 0 }
       { print }
-    ' "$f" > "$tmp"
+    ' "$f" > "$tmp" || return 2
     if cmp -s "$f" "$tmp"; then
-      rm -f "$tmp"
+      rm -f "$tmp" || return 2
       continue
     fi
     local hits rel
@@ -295,12 +336,12 @@ run_rewrite_plan_ref() {
     total_lines=$((total_lines + hits))
     echo "  $rel ($hits line(s))"
     if [ "$REWRITE_APPLY" = "1" ]; then
-      mv "$tmp" "$f"
+      mv "$tmp" "$f" || return 2
     else
       diff "$f" "$tmp" | grep -E '^[<>]' | sed 's/^/    /' || true
-      rm -f "$tmp"
+      rm -f "$tmp" || return 2
     fi
-  done < <(tracked_rust_files)
+  done < <(printf '%s\n' "$candidates" | sort)
   echo "rewrite-plan-ref: $total_files file(s), $total_lines line(s) [$mode_label]"
   return 0
 }

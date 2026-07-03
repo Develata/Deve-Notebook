@@ -62,9 +62,9 @@ assert_reject "03_storage/authority"                                     "missin
 # (b) --rewrite-plan-ref dry-run must not modify tracked files
 # ---------------------------------------------------------------------------
 echo "== (b) --rewrite-plan-ref dry-run leaves files untouched =="
-before="$(git_in_repo status --porcelain | sort)"
+before="$(git_in_repo diff --name-only | sort)"
 "$COVERAGE" --rewrite-plan-ref --from 04_storage# --to 04_storage/authority# >/dev/null 2>&1
-after="$(git_in_repo status --porcelain | sort)"
+after="$(git_in_repo diff --name-only | sort)"
 if [ "$before" = "$after" ]; then
   echo "ok        (dry-run wrote no changes)"; pass=$((pass + 1))
 else
@@ -72,6 +72,37 @@ else
   diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") || true
   fail=$((fail + 1))
 fi
+residue="$(find "$ROOT/apps" "$ROOT/crates" -type f -name '*.rewrite.*' -print -quit 2>/dev/null || true)"
+if [ -z "$residue" ]; then
+  echo "ok        (dry-run left no rewrite temp files)"; pass=$((pass + 1))
+else
+  echo "FAIL: --rewrite-plan-ref dry-run left temp file: $residue"
+  fail=$((fail + 1))
+fi
+git_fail_tmp="$(mktemp -d)"
+cat >"$git_fail_tmp/git-fail" <<'SH'
+#!/usr/bin/env bash
+for arg in "$@"; do
+  if [ "$arg" = "ls-files" ]; then
+    echo "Cargo.toml"
+    exit 0
+  fi
+  if [ "$arg" = "grep" ]; then
+    echo "fake git grep failure" >&2
+    exit 2
+  fi
+done
+git "$@"
+SH
+chmod +x "$git_fail_tmp/git-fail"
+if GIT_BIN="$git_fail_tmp/git-fail" "$COVERAGE" --rewrite-plan-ref --from 04_storage# --to 04_storage/authority# >/dev/null 2>&1; then
+  echo "FAIL: --rewrite-plan-ref candidate scan failure returned success"
+  fail=$((fail + 1))
+else
+  echo "ok       (rejected): rewrite candidate scan failure"
+  pass=$((pass + 1))
+fi
+rm -rf "$git_fail_tmp"
 
 # ---------------------------------------------------------------------------
 # (c) --check-metadata-completeness passes on the current tree (B0 enforcing)
