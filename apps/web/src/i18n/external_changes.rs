@@ -49,6 +49,13 @@ pub fn blocked_hint(locale: Locale) -> &'static str {
     }
 }
 
+pub fn blocked_hint_with_reason(locale: Locale, reason: &str) -> String {
+    match locale {
+        Locale::En => format!("{} Reason: {}", blocked_hint(locale), reason),
+        Locale::Zh => format!("{}原因：{}", blocked_hint(locale), reason),
+    }
+}
+
 pub fn apply_to_ledger(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Apply to Ledger",

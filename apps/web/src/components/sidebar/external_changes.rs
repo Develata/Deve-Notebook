@@ -246,18 +246,7 @@ fn apply_title(locale: Locale, core: &ExternalChangesContext) -> String {
 
 fn external_changes_blocked_hint(locale: Locale, block: RepoWriteBlock) -> String {
     let reason = t::write_gate::reason_label(locale, reason_from_block(block));
-    match locale {
-        Locale::En => format!(
-            "{} Reason: {}",
-            t::external_changes::blocked_hint(locale),
-            reason
-        ),
-        Locale::Zh => format!(
-            "{}原因：{}",
-            t::external_changes::blocked_hint(locale),
-            reason
-        ),
-    }
+    t::external_changes::blocked_hint_with_reason(locale, reason)
 }
 
 fn can_apply_to_ledger_state(
@@ -283,7 +272,8 @@ mod tests {
         external_section_panel_id,
     };
     use crate::hooks::use_core::write_gate::RepoWriteBlock;
-    use crate::i18n::Locale;
+    use crate::i18n::write_gate::WriteGateReason;
+    use crate::i18n::{Locale, t};
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
 
     fn entry(path: &str, has_conflict: bool) -> ChangeEntry {
@@ -362,12 +352,14 @@ mod tests {
     #[test]
     fn external_changes_blocked_hint_uses_write_gate_reason_copy() {
         assert!(
-            external_changes_blocked_hint(Locale::Zh, RepoWriteBlock::ReadOnly)
-                .contains("只读模式")
+            external_changes_blocked_hint(Locale::Zh, RepoWriteBlock::ReadOnly).contains(
+                t::write_gate::reason_label(Locale::Zh, WriteGateReason::ReadOnly)
+            )
         );
         assert!(
-            external_changes_blocked_hint(Locale::En, RepoWriteBlock::HandshakingRepo)
-                .contains("repo handshaking")
+            external_changes_blocked_hint(Locale::En, RepoWriteBlock::HandshakingRepo).contains(
+                t::write_gate::reason_label(Locale::En, WriteGateReason::HandshakingRepo)
+            )
         );
     }
 }
