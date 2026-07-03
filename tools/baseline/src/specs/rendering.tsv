@@ -82,15 +82,15 @@ contains	apps/web/js/editor_remote_ops.js	Transaction.addToHistory.of(false)
 contains	apps/web/src/utils/markdown.rs	Options::ENABLE_TABLES
 contains	apps/web/src/utils/markdown.rs	Options::ENABLE_STRIKETHROUGH
 contains	apps/web/src/utils/markdown.rs	Options::ENABLE_TASKLISTS
-contains	apps/web/src/utils/markdown.rs	code_block_omits_apply_button_without_label
-contains	apps/web/src/utils/markdown.rs	code_block_includes_apply_button_with_label
-contains	apps/web/src/utils/markdown.rs	html_filter_allows_br_only
-contains	apps/web/src/utils/markdown.rs	link_rendering_adds_blank_target_and_rel
-contains	apps/web/src/utils/markdown.rs	link_rendering_rejects_script_scheme
-contains	apps/web/src/utils/markdown.rs	unsupported_highlight_syntax_stays_plain_text
-contains	apps/web/src/utils/markdown.rs	code_block_language_class_is_escaped
-contains	apps/web/src/utils/markdown.rs	fn empty_atx_headings_emit_distinct_html_levels()
-contains	apps/web/src/utils/markdown.rs	fn markdown_heading_modes_keep_nonempty_atx_rows_tall()
+contains	apps/web/src/utils/markdown_tests.rs	code_block_omits_apply_button_without_label
+contains	apps/web/src/utils/markdown_tests.rs	code_block_includes_apply_button_with_label
+contains	apps/web/src/utils/markdown_tests.rs	html_filter_allows_br_only
+contains	apps/web/src/utils/markdown_tests.rs	link_rendering_adds_blank_target_and_rel
+contains	apps/web/src/utils/markdown_tests.rs	link_rendering_rejects_script_scheme
+contains	apps/web/src/utils/markdown_tests.rs	unsupported_highlight_syntax_stays_plain_text
+contains	apps/web/src/utils/markdown_tests.rs	code_block_language_class_is_escaped
+contains	apps/web/src/utils/markdown_tests.rs	fn empty_atx_headings_emit_distinct_html_levels()
+contains	apps/web/src/utils/markdown_tests.rs	fn markdown_heading_modes_keep_nonempty_atx_rows_tall()
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-LINK-001
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-LINK-001	ui_keydown: "Ctrl"
 case_contains	docs/acceptance-cases/03_rendering.md	RENDER-LINK-001	navigation_not_triggered_first_click true
@@ -137,8 +137,8 @@ contains	apps/web/style/_typography.css	font-size: inherit;
 contains	apps/web/style/_typography.css	--deve-heading-line-box: 1.2em;
 contains	apps/web/style/_typography.css	--deve-heading-inline-line-height: 1.2;
 contains	apps/web/style/_typography.css	.markdown-body h1
-contains	apps/web/src/utils/markdown.rs	fn empty_atx_headings_emit_distinct_html_levels()
-contains	apps/web/src/utils/markdown.rs	fn markdown_heading_modes_keep_nonempty_atx_rows_tall()
+contains	apps/web/src/utils/markdown_tests.rs	fn empty_atx_headings_emit_distinct_html_levels()
+contains	apps/web/src/utils/markdown_tests.rs	fn markdown_heading_modes_keep_nonempty_atx_rows_tall()
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-LINK-002
 contains	docs/acceptance-cases/03_rendering.md	ui_dom_attr_eq: ["target", "_blank"]
 contains	docs/acceptance-cases/03_rendering.md	ui_dom_attr_eq: ["rel", "noopener noreferrer"]
