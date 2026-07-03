@@ -17,13 +17,14 @@ const typographyCss = fs.readFileSync(typographyCssPath, "utf8");
 const baseCss = fs.readFileSync(baseCssPath, "utf8");
 
 vm.runInNewContext(
-  `${purePrefix}\nglobalThis.atxHeadingLevel = atxHeadingLevel;`,
+  `${purePrefix}\nglobalThis.atxHeadingLevel = atxHeadingLevel; globalThis.headingLineClass = headingLineClass;`,
   context,
   { filename: sourcePath }
 );
 
-const { atxHeadingLevel } = context;
+const { atxHeadingLevel, headingLineClass } = context;
 assert.equal(typeof atxHeadingLevel, "function");
+assert.equal(typeof headingLineClass, "function");
 
 vm.runInNewContext(
   `${hybridPurePrefix}\nglobalThis.atxHeadingLevelFromLine = atxHeadingLevelFromLine;`,
@@ -55,6 +56,22 @@ for (const [line, isActiveLine, expected] of cases) {
     atxHeadingLevel(line, isActiveLine),
     expected,
     `${JSON.stringify(line)} active=${isActiveLine}`
+  );
+}
+
+for (const level of [1, 2, 3]) {
+  assert.equal(
+    headingLineClass(level),
+    `cm-h${level} cm-heading-line cm-heading-line-${level}`,
+    `h${level} must carry the shared heading line projection class`
+  );
+}
+
+for (const level of [4, 5, 6]) {
+  assert.equal(
+    headingLineClass(level),
+    `cm-h${level}`,
+    `h${level} keeps the legacy class until line-level CSS variables exist`
   );
 }
 

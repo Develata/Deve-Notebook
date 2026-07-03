@@ -30,7 +30,9 @@ contains	apps/web/js/extensions/block_styling.js	ATX_HEADING_LINE_RE
 contains	apps/web/js/extensions/block_styling.js	ACTIVE_CJK_ATX_HEADING_LINE_RE
 contains	apps/web/js/extensions/block_styling.js	const activeCjkCandidate = isActiveLine
 contains	apps/web/js/extensions/block_styling.js	update.selectionSet
-contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: `cm-h${headingLevel}` }).range(line.from)
+contains	apps/web/js/extensions/block_styling.js	function headingLineClass(headingLevel)
+contains	apps/web/js/extensions/block_styling.js	cm-heading-line cm-heading-line-${headingLevel}
+contains	apps/web/js/extensions/block_styling.js	Decoration.line({ class: headingLineClass(headingLevel) }).range(line.from)
 contains	apps/web/js/extensions/block_styling.test.cjs	#申话
 contains	apps/web/js/extensions/block_styling.test.cjs	hybridHeadingCases
 contains	apps/web/js/extensions/block_styling.test.cjs	# 申话

@@ -15,6 +15,14 @@ function atxHeadingLevel(lineText, isActiveLine) {
   return activeCjkCandidate ? activeCjkCandidate[1].length : null;
 }
 
+function headingLineClass(headingLevel) {
+  const baseClass = `cm-h${headingLevel}`;
+  if (headingLevel <= 3) {
+    return `${baseClass} cm-heading-line cm-heading-line-${headingLevel}`;
+  }
+  return baseClass;
+}
+
 /**
  * Block Styling Plugin
  * 
@@ -83,7 +91,7 @@ export const blockStyling = ViewPlugin.fromClass(
           const headingLevel = atxHeadingLevel(line.text, i === activeLineNumber);
           if (!headingLevel) continue;
           widgets.push(
-              Decoration.line({ class: `cm-h${headingLevel}` }).range(line.from)
+              Decoration.line({ class: headingLineClass(headingLevel) }).range(line.from)
           );
       }
 
