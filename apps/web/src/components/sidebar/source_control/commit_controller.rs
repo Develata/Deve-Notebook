@@ -271,4 +271,16 @@ mod tests {
             t::source_control::commit_disabled_no_changes_hint(Locale::Zh)
         );
     }
+
+    #[test]
+    fn commit_message_placeholder_uses_standard_copy_for_empty_message() {
+        assert_eq!(
+            commit_input_placeholder(Locale::Zh, Some(CommitDisabledReason::EmptyMessage)),
+            t::source_control::commit_message_placeholder(Locale::Zh)
+        );
+        assert_eq!(
+            commit_input_placeholder(Locale::En, None),
+            t::source_control::commit_message_placeholder(Locale::En)
+        );
+    }
 }
