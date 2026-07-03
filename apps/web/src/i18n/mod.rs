@@ -157,6 +157,7 @@ pub mod t {
     pub use super::settings;
     pub use super::sidebar;
     pub use super::source_control;
+    pub use super::time;
     pub use super::write_gate;
 }
 
@@ -191,5 +192,12 @@ mod tests {
         assert_eq!(initial_locale(), Locale::Zh);
 
         remove_pref(LOCALE_STORAGE_KEY);
+    }
+
+    #[test]
+    fn t_facade_exposes_time_namespace() {
+        assert_eq!(super::t::time::just_now(Locale::En), "just now");
+        assert_eq!(super::t::time::minutes_ago(Locale::Zh, 2), "2 分钟前");
+        assert_eq!(super::t::time::date_locale(Locale::Zh), "zh-CN");
     }
 }

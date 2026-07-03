@@ -1,4 +1,7 @@
 contains	apps/web/src/components/chat/message_item.rs	format_time_of_day
+contains	apps/web/src/i18n/mod.rs	pub use super::time;
+contains	apps/web/src/i18n/mod.rs	fn t_facade_exposes_time_namespace()
+contains	apps/web/src/utils/time.rs	t::time::date_locale
 contains	apps/web/src/utils/time.rs	to_locale_time_string
 contains	apps/web/src/i18n/dashboard/metrics.rs	pub fn format_uptime(locale: Locale, secs: u64) -> String
 contains	apps/web/src/i18n/dashboard/metrics.rs	assert_eq!(format_uptime(Locale::Zh, 90_060), "1 天 1 小时 1 分钟")
