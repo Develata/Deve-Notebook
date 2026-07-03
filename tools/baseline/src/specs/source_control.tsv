@@ -205,11 +205,15 @@ contains	docs/acceptance-cases/04_diff.md	source_control_header_section_menu_exp
 contains	docs/acceptance-cases/04_diff.md	case_id: DIFF-011
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_core apply_external_changes_to_ledger -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_core external_file_changes_enter_external_changes_not_ledger -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_core external_scan_modified_enters_external_changes_not_ledger -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_core external_scan_deleted_enters_external_changes_not_ledger -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_core external_stage_unstage_only_moves_external_staging -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_core source_control_confirmed_ledger_changes_visible_after_apply -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_web external_changes -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_web source_control_confirmed_only_view -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	api_assert: external_file_changes_enter_external_changes_not_ledger true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	api_assert: external_scan_modified_enters_external_changes_not_ledger true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	api_assert: external_scan_deleted_enters_external_changes_not_ledger true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	api_assert: external_stage_unstage_only_moves_external_staging true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	api_assert: apply_external_changes_writes_ledger_facts true
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	api_assert: apply_external_changes_does_not_create_commit_anchor true
@@ -223,6 +227,8 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: external_conf
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: external_confirmed_overlap_allows_diff_and_discard true
 cargo_test	deve_core	apply_external_changes_to_ledger
 cargo_test	deve_core	external_file_changes_enter_external_changes_not_ledger
+cargo_test	deve_core	external_scan_modified_enters_external_changes_not_ledger
+cargo_test	deve_core	external_scan_deleted_enters_external_changes_not_ledger
 cargo_test	deve_core	external_stage_unstage_only_moves_external_staging
 cargo_test	deve_core	source_control_confirmed_ledger_changes_visible_after_apply
 cargo_test	deve_web	source_control_confirmed_only_view
@@ -232,6 +238,8 @@ contains	apps/web/src/components/sidebar/external_changes/row.rs	data-deve-exter
 contains	apps/web/src/components/sidebar/external_changes/row.rs	fn external_change_is_overlap_blocked
 contains	apps/web/src/components/sidebar/external_changes/row.rs	entry.has_conflict
 contains	crates/core/tests/source_control_external_changes_test.rs	fn external_file_changes_enter_external_changes_not_ledger
+contains	crates/core/tests/source_control_external_changes_test.rs	fn external_scan_modified_enters_external_changes_not_ledger
+contains	crates/core/tests/source_control_external_changes_test.rs	fn external_scan_deleted_enters_external_changes_not_ledger
 contains	crates/core/tests/source_control_external_changes_test.rs	fn external_stage_unstage_only_moves_external_staging
 contains	crates/core/tests/source_control_external_changes_test.rs	fn source_control_confirmed_ledger_changes_visible_after_apply
 contains	crates/core/tests/source_control_external_changes_test.rs	fn apply_external_changes_to_ledger

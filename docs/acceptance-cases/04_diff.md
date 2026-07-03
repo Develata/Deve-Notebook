@@ -294,6 +294,8 @@
     - 同一文档可构造 confirmed ledger dirty
   steps:
     - run: cargo test -p deve_core external_file_changes_enter_external_changes_not_ledger -- --nocapture
+    - run: cargo test -p deve_core external_scan_modified_enters_external_changes_not_ledger -- --nocapture
+    - run: cargo test -p deve_core external_scan_deleted_enters_external_changes_not_ledger -- --nocapture
     - run: cargo test -p deve_core external_stage_unstage_only_moves_external_staging -- --nocapture
     - run: cargo test -p deve_core apply_external_changes_to_ledger -- --nocapture
     - run: cargo test -p deve_core source_control_confirmed_ledger_changes_visible_after_apply -- --nocapture
@@ -305,6 +307,8 @@
     - ui_open: "Source Control"
   assertions:
     - api_assert: external_file_changes_enter_external_changes_not_ledger true
+    - api_assert: external_scan_modified_enters_external_changes_not_ledger true
+    - api_assert: external_scan_deleted_enters_external_changes_not_ledger true
     - api_assert: external_stage_unstage_only_moves_external_staging true
     - api_assert: apply_external_changes_writes_ledger_facts true
     - api_assert: apply_external_changes_does_not_create_commit_anchor true

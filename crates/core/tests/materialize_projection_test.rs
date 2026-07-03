@@ -12,7 +12,7 @@ fn new_repo() -> (TempDir, std::sync::Arc<RepoManager>) {
     (dir, std::sync::Arc::new(repo))
 }
 
-fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) {
+fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) -> deve_core::models::DocId {
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo(repo.local_repo_name(), doc_path, None, "test")
         .expect("create file");
@@ -36,6 +36,7 @@ fn seed_file(repo: &RepoManager, doc_path: &str, content: &str) {
         },
     )
     .expect("append content");
+    doc_id
 }
 
 fn inject_legacy_doc_path(repo: &RepoManager, doc_id: deve_core::models::DocId, path: &str) {
@@ -95,4 +96,25 @@ fn materialize_projection_prefers_node_path_over_legacy_doc_mapping() {
         "ledger"
     );
     assert!(!root.join("stale/a.md").exists());
+}
+
+#[test]
+fn explicit_materialize_restores_missing_bound_workspace_file() {
+    let (_dir, repo) = new_repo();
+    seed_file(repo.as_ref(), "notes/a.md", "ledger");
+    let sync = SyncManager::new_checked(repo.clone()).expect("sync manager");
+    sync.materialize_local_repo("default")
+        .expect("initial materialize");
+    let path = repo
+        .local_repo_workspace_path("default", "notes/a.md")
+        .expect("workspace path");
+    std::fs::remove_file(&path).expect("remove materialized file");
+
+    sync.materialize_local_repo("default")
+        .expect("explicit rematerialize");
+
+    assert_eq!(
+        std::fs::read_to_string(path).expect("read rematerialized doc"),
+        "ledger"
+    );
 }

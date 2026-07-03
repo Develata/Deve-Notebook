@@ -5,6 +5,7 @@
 use super::projection_plan;
 use super::rebuild;
 use crate::ledger::RepoManager;
+use crate::ledger::inode_index;
 use crate::utils::fs::checked_exists;
 use crate::writeback::PersistGuard;
 use anyhow::Result;
@@ -23,7 +24,7 @@ pub(super) fn prepare_local_workspaces(
             skipped.push(repo_name);
             continue;
         }
-        if let Err(err) = materialize_local_repo(repo, guard, &repo_name) {
+        if let Err(err) = prepare_local_repo_for_startup(repo, guard, &repo_name) {
             if is_broken_structure_projection_error(&err) {
                 warn!(
                     repo_name = %repo_name,
@@ -39,6 +40,18 @@ pub(super) fn prepare_local_workspaces(
     Ok(skipped)
 }
 
+fn prepare_local_repo_for_startup(
+    repo: &RepoManager,
+    guard: &PersistGuard,
+    repo_name: &str,
+) -> Result<()> {
+    // Startup scan must not erase external deletions that are already known to
+    // belong to this workspace; explicit materialize/rebuild still restores all
+    // missing files through materialize_local_repo.
+    let bound_doc_ids = repo.run_on_local_repo(repo_name, inode_index::list_docids)?;
+    materialize_local_repo_with_policy(repo, guard, repo_name, Some(&bound_doc_ids))
+}
+
 /// 将指定本地 repo 的文档视图投影到 `<projection_base>/<safe_repo_name>--<repo_id>/`。
 ///
 /// Invariants:
@@ -48,6 +61,15 @@ pub(super) fn materialize_local_repo(
     repo: &RepoManager,
     guard: &PersistGuard,
     repo_name: &str,
+) -> Result<()> {
+    materialize_local_repo_with_policy(repo, guard, repo_name, None)
+}
+
+fn materialize_local_repo_with_policy(
+    repo: &RepoManager,
+    guard: &PersistGuard,
+    repo_name: &str,
+    skip_missing_bound_doc_ids: Option<&HashSet<crate::models::DocId>>,
 ) -> Result<()> {
     let repo_root = repo.local_repo_workspace_root(repo_name)?;
     std::fs::create_dir_all(&repo_root)?;
@@ -64,6 +86,9 @@ pub(super) fn materialize_local_repo(
     for (repo_path, doc_id) in plan.docs {
         let file_path = repo.local_repo_workspace_path(repo_name, &repo_path)?;
         if checked_exists(&file_path, "workspace path while materializing projection")? {
+            continue;
+        }
+        if skip_missing_bound_doc_ids.is_some_and(|doc_ids| doc_ids.contains(&doc_id)) {
             continue;
         }
         let rebuilt = rebuild::rebuild_local_doc_in_repo(repo, repo_name, doc_id)?;

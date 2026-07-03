@@ -97,6 +97,28 @@ fn ledger_head(repo: &RepoManager) -> u64 {
     .expect("ledger head")
 }
 
+fn assert_single_pending_external_change(
+    repo: &RepoManager,
+    path: &str,
+    doc_id: Option<DocId>,
+    status: ChangeStatus,
+    before_head: u64,
+) {
+    let pending = repo.list_pending_fs().expect("pending external changes");
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].path, path);
+    assert_eq!(pending[0].doc_id, doc_id);
+    assert_eq!(pending[0].status, status);
+    assert_eq!(pending[0].domain, ChangeDomain::WorkingDirectory);
+    assert_eq!(ledger_head(repo), before_head);
+    assert!(
+        repo.list_confirmed_ledger_changes()
+            .expect("confirmed remains clean")
+            .is_empty()
+    );
+    assert!(repo.list_staged().expect("staged remains clean").is_empty());
+}
+
 fn assert_apply_external_changes_writes_ledger_without_commit_anchor() {
     let (_dir, repo) = new_repo();
     let before_head = ledger_head(&repo);
@@ -150,18 +172,56 @@ fn external_file_changes_enter_external_changes_not_ledger() {
     write_workspace_file(repo.as_ref(), "notes/external.md", "external");
     sync.scan().expect("scan projection workspace");
 
-    let pending = repo.list_pending_fs().expect("pending external changes");
-    assert_eq!(pending.len(), 1);
-    assert_eq!(pending[0].path, "notes/external.md");
-    assert_eq!(pending[0].status, ChangeStatus::Added);
-    assert_eq!(pending[0].domain, ChangeDomain::WorkingDirectory);
-    assert_eq!(ledger_head(repo.as_ref()), before_head);
-    assert!(
-        repo.list_confirmed_ledger_changes()
-            .expect("confirmed remains clean")
-            .is_empty()
+    assert_single_pending_external_change(
+        repo.as_ref(),
+        "notes/external.md",
+        None,
+        ChangeStatus::Added,
+        before_head,
     );
-    assert!(repo.list_staged().expect("staged remains clean").is_empty());
+}
+
+#[test]
+fn external_scan_modified_enters_external_changes_not_ledger() {
+    let (_dir, repo) = new_repo();
+    let repo = Arc::new(repo);
+    let sync = SyncManager::new_checked(Arc::clone(&repo)).expect("sync manager");
+    sync.scan().expect("materialize clean projection workspace");
+    let doc_id = seed_initial_commit(repo.as_ref());
+    let before_head = ledger_head(repo.as_ref());
+
+    write_workspace_file(repo.as_ref(), "notes/a.md", "hello external");
+    sync.scan().expect("scan modified projection file");
+
+    assert_single_pending_external_change(
+        repo.as_ref(),
+        "notes/a.md",
+        Some(doc_id),
+        ChangeStatus::Modified,
+        before_head,
+    );
+}
+
+#[test]
+fn external_scan_deleted_enters_external_changes_not_ledger() {
+    let (_dir, repo) = new_repo();
+    let repo = Arc::new(repo);
+    let sync = SyncManager::new_checked(Arc::clone(&repo)).expect("sync manager");
+    sync.scan().expect("materialize clean projection workspace");
+    let doc_id = seed_initial_commit(repo.as_ref());
+    let before_head = ledger_head(repo.as_ref());
+
+    std::fs::remove_file(workspace_path(repo.as_ref(), "notes/a.md"))
+        .expect("delete projection file");
+    sync.scan().expect("scan deleted projection file");
+
+    assert_single_pending_external_change(
+        repo.as_ref(),
+        "notes/a.md",
+        Some(doc_id),
+        ChangeStatus::Deleted,
+        before_head,
+    );
 }
 
 #[test]
