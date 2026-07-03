@@ -30,9 +30,24 @@ fn show_git_status_notice(
     sidebar_control: Option<SidebarControl>,
     set_show: WriteSignal<bool>,
 ) {
+    show_git_status_notice_for_viewport(
+        set_notice,
+        sidebar_control,
+        set_show,
+        current_viewport_maps_to_mobile(),
+    );
+}
+
+fn show_git_status_notice_for_viewport(
+    set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
+    sidebar_control: Option<SidebarControl>,
+    set_show: WriteSignal<bool>,
+    viewport_mobile: bool,
+) {
     let is_mobile = sidebar_control
         .as_ref()
-        .is_some_and(|sidebar_control| sidebar_control.is_mobile.get_untracked());
+        .is_some_and(|sidebar_control| sidebar_control.is_mobile.get_untracked())
+        || viewport_mobile;
     if !is_mobile && let Some(set_notice) = set_notice {
         set_notice.set(Some(SourceControlNotice::git_status_cli_only()));
     }
@@ -42,6 +57,11 @@ fn show_git_status_notice(
         sidebar_control.show_view(SidebarView::SourceControl);
     }
     set_show.set(false);
+}
+
+fn current_viewport_maps_to_mobile() -> bool {
+    crate::components::layout_breakpoint::current_viewport_width()
+        .is_some_and(crate::components::layout_breakpoint::viewport_width_maps_to_mobile)
 }
 
 fn git_bridge_enabled_when(locale: Locale) -> String {

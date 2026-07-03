@@ -1,6 +1,6 @@
 use super::{
     git_export_command, git_import_command, git_mirror_command, git_push_command,
-    git_repair_command, git_status_command,
+    git_repair_command, git_status_command, show_git_status_notice_for_viewport,
 };
 use crate::api::{ConnectionStatus, WsService};
 use crate::components::activity_bar::SidebarView;
@@ -211,6 +211,39 @@ fn git_status_command_keeps_mobile_source_control_drawer_closed() {
         assert!(!sidebar_visible.get_untracked());
         assert!(!mobile_visible.get_untracked());
         assert_eq!(active_view.get_untracked(), SidebarView::Explorer);
+    });
+}
+
+#[test]
+fn git_status_command_does_not_write_notice_on_mobile_viewport_without_sidebar_context() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let notice = provide_source_control_context();
+        let (show, set_show) = signal(true);
+        let (source_control, sidebar_control) = command_contexts();
+
+        assert!(sidebar_control.is_none());
+        show_git_status_notice_for_viewport(source_control, sidebar_control, set_show, true);
+
+        assert!(!show.get_untracked());
+        assert!(notice.get_untracked().is_none());
+    });
+}
+
+#[test]
+fn git_status_command_keeps_desktop_cli_notice_without_sidebar_context() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let notice = provide_source_control_context();
+        let (show, set_show) = signal(true);
+        let (source_control, sidebar_control) = command_contexts();
+
+        assert!(sidebar_control.is_none());
+        show_git_status_notice_for_viewport(source_control, sidebar_control, set_show, false);
+
+        assert!(!show.get_untracked());
+        let notice = notice.get_untracked().expect("source control notice");
+        assert!(is_git_status_cli_notice(&notice));
     });
 }
 

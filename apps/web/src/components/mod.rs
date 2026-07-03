@@ -13,6 +13,7 @@ pub mod dropdown;
 pub(crate) mod editor_tabs;
 pub mod header;
 pub mod icons;
+pub(crate) mod layout_breakpoint;
 pub mod layout_context;
 pub mod outline;
 pub mod outline_render;

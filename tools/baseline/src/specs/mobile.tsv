@@ -6,9 +6,9 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	cli_assert: mobile_viewp
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	cli_assert: mobile_layout_mode_marker_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	cli_assert: mobile_git_status_notice_does_not_replace_source_control_entry true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-001	ui_assert: layout_mode_eq "mobile"
-contains	apps/web/src/components/main_layout/contexts.rs	pub(crate) const MOBILE_BREAKPOINT_WIDTH: f64 = 768.0;
-contains	apps/web/src/components/main_layout/contexts.rs	pub(crate) fn viewport_width_maps_to_mobile(width: f64) -> bool
-contains	apps/web/src/components/main_layout/contexts.rs	fn mobile_viewport_mapping_uses_inclusive_768px_boundary()
+contains	apps/web/src/components/layout_breakpoint.rs	pub(crate) const MOBILE_BREAKPOINT_WIDTH: f64 = 768.0;
+contains	apps/web/src/components/layout_breakpoint.rs	pub(crate) fn viewport_width_maps_to_mobile(width: f64) -> bool
+contains	apps/web/src/components/layout_breakpoint.rs	fn mobile_viewport_mapping_uses_inclusive_768px_boundary()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-layout-mode="mobile"
 contains	apps/web/src/components/command_palette/registry/git/tests.rs	fn git_status_command_keeps_mobile_source_control_drawer_closed()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-002
