@@ -200,6 +200,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#backup-provider-dispatch-contract` | `### 10.1 Backup Runtime` | WebDAV/S3 provider adapter dispatch、credential/key ref 接入与 provider metadata 非权威边界 |
 | `06_backup#backup-command-output-contract` | `### 5.3 Outputs` | BackupBindingStatus / BackupPlan / BackupError 的命令可见结构化输出与 fail-closed 分类边界 |
 | `12_source_control_ui#source-control-vscode-reference-contract` | `## 2. Reference Policy` | VS Code-like SCM mental model、reference baseline 与禁止复制实现资产边界 |
+| `12_source_control_ui#external-changes-sibling-view` | `## 4.1 External Changes Sibling View` | External Changes 同级入口、投影偏差导入 ledger 与 Source Control commit anchor 分离边界 |
 | `20_operations_catalog#opid-catalog` | `## 1. Scope & Authority` | operation-flow 目录唯一权威（OpId catalog）; planned/no-code-yet |
 | `20_operations_catalog#extension-point-index` | `## 4. Extension Point Index` | 暴露给 plugins/host 的扩展点索引; planned/no-code-yet |
 | `20_operations_catalog#replacement-point-index` | `## 5. Replacement Point Index` | feature-flag 可替换点索引; planned/no-code-yet |
