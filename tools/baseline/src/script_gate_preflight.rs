@@ -15,6 +15,7 @@ const ANDROID_EMULATOR_LABEL: &str = "mobile-android-emulator-install-startup-sm
 
 pub fn run_local_quick_gate() -> Result<()> {
     flag_from_env(QUICK_LABEL, "DEVE_QUICK_GATE_TESTS", true)?;
+    local_quick_gate_target_dir_from_env()?;
     ok(QUICK_LABEL)
 }
 
@@ -189,6 +190,45 @@ fn validate_non_empty(label: &str, name: &str, value: &str) -> Result<String> {
     Ok(value.to_string())
 }
 
+fn local_quick_gate_target_dir_from_env() -> Result<String> {
+    match env::var("DEVE_LOCAL_QUICK_GATE_TARGET_DIR") {
+        Ok(value) => validate_local_quick_gate_target_dir(&value),
+        Err(env::VarError::NotPresent) => {
+            validate_local_quick_gate_target_dir("target/local-quick-gate")
+        }
+        Err(env::VarError::NotUnicode(_)) => {
+            bail!("{QUICK_LABEL}: DEVE_LOCAL_QUICK_GATE_TARGET_DIR must be valid Unicode")
+        }
+    }
+}
+
+fn validate_local_quick_gate_target_dir(value: &str) -> Result<String> {
+    if value.trim().is_empty() {
+        bail!("{QUICK_LABEL}: DEVE_LOCAL_QUICK_GATE_TARGET_DIR must not be empty");
+    }
+    if value != value.trim() {
+        bail!("{QUICK_LABEL}: DEVE_LOCAL_QUICK_GATE_TARGET_DIR must not contain outer whitespace");
+    }
+    if value.chars().any(|ch| ch.is_ascii_control()) {
+        bail!(
+            "{QUICK_LABEL}: DEVE_LOCAL_QUICK_GATE_TARGET_DIR must not contain control characters"
+        );
+    }
+
+    let normalized = value.replace('\\', "/");
+    let trimmed = normalized.trim_end_matches('/');
+    let relative = trimmed
+        .strip_prefix("./")
+        .unwrap_or(trimmed)
+        .to_ascii_lowercase();
+    if relative == "target" || relative == "target/debug" {
+        bail!(
+            "{QUICK_LABEL}: DEVE_LOCAL_QUICK_GATE_TARGET_DIR must not point at the shared default cargo target directory"
+        );
+    }
+    Ok(value.to_string())
+}
+
 fn native_session_timeout_from_env() -> Result<u64> {
     match env::var("DEVE_DESKTOP_NATIVE_SESSION_SMOKE_TIMEOUT_SECS") {
         Ok(value) => parse_positive_integer(
@@ -299,7 +339,7 @@ mod tests {
     use super::{
         ANDROID_EMULATOR_LABEL, BundlePolicy, DESKTOP_INSTALLER_LABEL, DESKTOP_PLATFORM_LABEL,
         DESKTOP_STARTUP_LABEL, parse_positive_integer, validate_android_package_target,
-        validate_desktop_bundles,
+        validate_desktop_bundles, validate_local_quick_gate_target_dir,
     };
     use crate::env_gate::parse_binary_flag;
 
@@ -322,6 +362,33 @@ mod tests {
 
         for value in ["", "0", "01", "08", "-1", "1.5", "ten"] {
             assert!(parse_positive_integer("gate", "DEVE_TIMEOUT", value).is_err());
+        }
+    }
+
+    #[test]
+    fn local_quick_gate_target_dir_stays_isolated_from_default_target() {
+        for value in [
+            "target/local-quick-gate",
+            "target\\local-quick-gate",
+            "target/local-quick-gate-custom",
+            "/tmp/deve-local-quick-gate",
+            "E:\\deve\\local-quick-gate",
+        ] {
+            validate_local_quick_gate_target_dir(value).expect("isolated target dir");
+        }
+
+        for value in [
+            "",
+            " target/local-quick-gate",
+            "target ",
+            "target",
+            "target/",
+            "./target",
+            "target/debug",
+            "target\\debug",
+            "target/local\nquick",
+        ] {
+            validate_local_quick_gate_target_dir(value).expect_err("shared or invalid target dir");
         }
     }
 

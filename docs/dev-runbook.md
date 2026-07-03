@@ -938,11 +938,14 @@ Use the local quick gate before handing off a normal implementation batch:
 ```bash
 scripts/check-local-quick-gate.sh
 DEVE_QUICK_GATE_TESTS=0 scripts/check-local-quick-gate.sh
+DEVE_LOCAL_QUICK_GATE_TARGET_DIR=target/local-quick-gate-alt scripts/check-local-quick-gate.sh
 ```
 
 The quick gate runs diff hygiene, `deve_core`/`deve_cli` checks, focused
 governance checks, and focused storage/source-control tests. The second form
-keeps only the compile/governance subset for very small doc-only changes.
+keeps only the compile/governance subset for very small doc-only changes. The
+quick gate uses an isolated Cargo target directory by default so it can run
+while a development `deve_cli` server is holding `target/debug/deve_cli.exe`.
 
 Use the deep audit gate for broad architecture changes, release-prep, or after
 several related batches have landed:

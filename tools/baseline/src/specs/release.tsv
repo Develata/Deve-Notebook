@@ -776,6 +776,8 @@ contains	tools/baseline/src/main.rs	"desktop-installer-smoke" => script_gate_pre
 contains	tools/baseline/src/main.rs	"mobile-android-emulator-install-startup-smoke" => {
 contains	tools/baseline/src/main.rs	script_gate_preflight::run_mobile_android_emulator_install_startup_smoke()
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_QUICK_GATE_TESTS
+contains	tools/baseline/src/script_gate_preflight.rs	DEVE_LOCAL_QUICK_GATE_TARGET_DIR
+contains	tools/baseline/src/script_gate_preflight.rs	must not point at the shared default cargo target directory
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DEEP_AUDIT_WRITE_REPORT
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DEEP_AUDIT_FULL_TESTS
 contains	tools/baseline/src/script_gate_preflight.rs	DEVE_DEEP_AUDIT_DOCKER_SMOKE
@@ -809,6 +811,11 @@ contains	tools/baseline/src/script_gate_preflight.rs	DEVE_MOBILE_ANDROID_PACKAGE
 contains	tools/baseline/src/script_gate_preflight.rs	unsupported Android target
 contains	scripts/check-local-quick-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-local-quick-gate.sh	run_deve_baseline "$ROOT_DIR" "local-quick-gate" "local-quick-gate"
+contains	scripts/check-local-quick-gate.sh	LOCAL_CARGO_TARGET_DIR="${DEVE_LOCAL_QUICK_GATE_TARGET_DIR:-target/local-quick-gate}"
+contains	scripts/check-local-quick-gate.sh	run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core
+contains	scripts/check-local-quick-gate.sh	run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli
+contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core projection_locator_ --lib -- --nocapture
+contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control -- --nocapture
 contains	scripts/check-deep-audit-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-deep-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "deep-audit-gate" "deep-audit-gate"
 contains	scripts/check-desktop-platform-package-build.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"

@@ -9,6 +9,7 @@ export GIT_CONFIG_COUNT="${GIT_CONFIG_COUNT:-1}"
 export GIT_CONFIG_KEY_0="${GIT_CONFIG_KEY_0:-safe.directory}"
 export GIT_CONFIG_VALUE_0="${GIT_CONFIG_VALUE_0:-$ROOT_DIR}"
 TOOL_SHIM_DIR="${DEVE_GATE_TOOL_SHIM_DIR:-${TMPDIR:-/tmp}/deve-gate-tools-${UID:-user}/bin}"
+LOCAL_CARGO_TARGET_DIR="${DEVE_LOCAL_QUICK_GATE_TARGET_DIR:-target/local-quick-gate}"
 
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 run_deve_baseline "$ROOT_DIR" "local-quick-gate" "local-quick-gate"
@@ -38,15 +39,15 @@ run() {
 }
 
 run git diff --check
-run cargo check -p deve_core
-run cargo check -p deve_cli
+run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core
+run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli
 run scripts/plan-coverage.sh --check-no-adr-plan-ref
 run scripts/check-acceptance-bindings.sh
 run scripts/check-feature-operation-paths.sh
 
 if [[ "${DEVE_QUICK_GATE_TESTS:-1}" == "1" ]]; then
-  run cargo test -p deve_core projection_locator_ --lib -- --nocapture
-  run cargo test -p deve_cli source_control -- --nocapture
+  run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core projection_locator_ --lib -- --nocapture
+  run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control -- --nocapture
 else
   echo "local-quick-gate: skipped focused tests because DEVE_QUICK_GATE_TESTS=${DEVE_QUICK_GATE_TESTS:-}"
 fi
