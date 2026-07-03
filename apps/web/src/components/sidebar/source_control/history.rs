@@ -13,6 +13,7 @@ mod compare_state;
 
 use self::compare_reset::{has_compare_state_to_clear, should_reset_compare_state};
 use self::compare_state::reset_compare_state;
+use super::touch_target::secondary_panel_toggle_class;
 
 #[component]
 pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
@@ -107,7 +108,8 @@ pub fn History(expanded: RwSignal<bool>) -> impl IntoView {
         <div class="border-t border-default">
             <button
                 type="button"
-                class="w-full flex items-center rounded-sm px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                class=secondary_panel_toggle_class()
+                data-deve-mobile-touch-target="source_control_secondary_panel_toggle"
                 data-deve-sc-panel-toggle="history"
                 aria-expanded=move || expanded.get().to_string()
                 aria-controls="source-control-history-panel"

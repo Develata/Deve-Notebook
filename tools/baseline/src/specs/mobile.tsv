@@ -488,6 +488,12 @@ contains	apps/web/src/components/sidebar/source_control/changes.rs	fn mobile_sou
 contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobile_source_control_read_gate_renders_panel()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_read_gate_touch_targets_min_size_bound()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_commit_touch_targets_min_size_bound()
+contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_header_menu_trigger_is_at_least_44px()
+contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_secondary_panel_toggles_are_at_least_44px()
+contains	apps/web/src/components/sidebar/source_control/header.rs	data-deve-mobile-touch-target="source_control_header_menu"
+contains	apps/web/src/components/sidebar/source_control/repositories.rs	data-deve-mobile-touch-target="source_control_secondary_panel_toggle"
+contains	apps/web/src/components/sidebar/source_control/history.rs	data-deve-mobile-touch-target="source_control_secondary_panel_toggle"
+contains	apps/web/src/components/sidebar/source_control/graph_panel.rs	data-deve-mobile-touch-target="source_control_secondary_panel_toggle"
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	source-control-confirmed-open-diff-action
 contains	apps/web/src/components/sidebar/source_control/mod.rs	fn mobile_source_control_view_clears_suppressed_local_command_notice()
 contains	apps/web/src/components/mobile_layout/source_control_notice.rs	is_local_command_notice

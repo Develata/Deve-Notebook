@@ -14,6 +14,8 @@ use deve_core::graph::GraphProjection;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
+use super::touch_target::secondary_panel_toggle_class;
+
 #[derive(Clone, Debug, PartialEq)]
 enum GraphProjectionFetchState {
     Idle,
@@ -75,7 +77,8 @@ pub fn GraphPanel(expanded: RwSignal<bool>) -> impl IntoView {
         <div class="border-t border-default">
             <button
                 type="button"
-                class="w-full flex items-center rounded-sm px-1 py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                class=secondary_panel_toggle_class()
+                data-deve-mobile-touch-target="source_control_secondary_panel_toggle"
                 data-deve-sc-panel-toggle="graph"
                 aria-expanded=move || expanded.get().to_string()
                 aria-controls="source-control-graph-panel"

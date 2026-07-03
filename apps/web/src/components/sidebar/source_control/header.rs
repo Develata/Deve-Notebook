@@ -8,6 +8,8 @@ use crate::i18n::{Locale, t};
 use leptos::ev::MouseEvent;
 use leptos::prelude::*;
 
+use super::touch_target::{header_container_class, header_menu_trigger_class};
+
 #[component]
 pub fn SourceControlHeader(
     locale: RwSignal<Locale>,
@@ -24,7 +26,7 @@ pub fn SourceControlHeader(
     };
 
     view! {
-        <div class="flex-none h-9 flex items-center justify-between px-4 hover:bg-hover group border-b border-transparent hover:border-default relative">
+        <div class=header_container_class()>
             <div class="flex items-center gap-2 overflow-hidden">
                 <span class="font-normal text-[11px] text-secondary uppercase whitespace-nowrap">
                     {move || t::source_control::title(locale.get())}
@@ -48,8 +50,9 @@ pub fn SourceControlHeader(
             >
                 <button
                     type="button"
-                    class="p-1 hover:bg-hover rounded focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+                    class=header_menu_trigger_class()
                     data-deve-sc-section-menu-trigger="true"
+                    data-deve-mobile-touch-target="source_control_header_menu"
                     aria-haspopup="menu"
                     aria-controls="source-control-section-menu"
                     aria-expanded=move || show_menu.get().to_string()

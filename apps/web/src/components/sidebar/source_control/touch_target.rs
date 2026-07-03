@@ -31,6 +31,18 @@ pub(super) fn section_header_class() -> &'static str {
     "h-11 md:h-auto px-2 py-1 md:py-0.5 flex justify-between items-center group cursor-pointer hover:bg-hover"
 }
 
+pub(super) fn secondary_panel_toggle_class() -> &'static str {
+    "w-full h-11 md:h-auto flex items-center rounded-sm px-2 md:px-1 py-2 md:py-0.5 hover:bg-hover text-[11px] font-bold text-primary uppercase group focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+}
+
+pub(super) fn header_container_class() -> &'static str {
+    "flex-none h-11 md:h-9 flex items-center justify-between px-4 hover:bg-hover group border-b border-transparent hover:border-default relative"
+}
+
+pub(super) fn header_menu_trigger_class() -> &'static str {
+    "h-11 w-11 md:h-5 md:w-5 p-0.5 hover:bg-active rounded flex items-center justify-center focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/40"
+}
+
 pub(super) fn icon_button_class(tone: SourceControlActionTone) -> String {
     format!(
         "h-11 w-11 md:h-5 md:w-5 p-0.5 hover:bg-active rounded flex items-center justify-center {}",
@@ -74,7 +86,8 @@ mod tests {
     use super::{
         SourceControlActionTone, change_item_row_class, commit_dropdown_button_class,
         commit_generate_button_class, commit_menu_item_class, commit_message_textarea_class,
-        commit_primary_button_class, icon_button_class, section_header_class,
+        commit_primary_button_class, header_container_class, header_menu_trigger_class,
+        icon_button_class, secondary_panel_toggle_class, section_header_class,
     };
 
     #[test]
@@ -128,5 +141,25 @@ mod tests {
         let menu_item = commit_menu_item_class();
         assert!(menu_item.contains("h-11"));
         assert!(menu_item.contains("md:h-auto"));
+    }
+
+    #[test]
+    fn mobile_source_control_header_menu_trigger_is_at_least_44px() {
+        let header = header_container_class();
+        assert!(header.contains("h-11"));
+        assert!(header.contains("md:h-9"));
+
+        let trigger = header_menu_trigger_class();
+        assert!(trigger.contains("h-11"));
+        assert!(trigger.contains("w-11"));
+        assert!(trigger.contains("md:h-5"));
+        assert!(trigger.contains("md:w-5"));
+    }
+
+    #[test]
+    fn mobile_source_control_secondary_panel_toggles_are_at_least_44px() {
+        let toggle = secondary_panel_toggle_class();
+        assert!(toggle.contains("h-11"));
+        assert!(toggle.contains("md:h-auto"));
     }
 }
