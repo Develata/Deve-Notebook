@@ -55,9 +55,32 @@ async fn clean_source_control_smoke_fixture_stage_unstage_commit() -> anyhow::Re
     );
 
     post_path(&harness, "/api/sc/stage-pending", "smoke/a.md").await?;
+    let applied = post_apply_external_changes(&harness).await?;
+    assert_eq!(applied.len(), 1);
+    assert_eq!(applied[0].path, "smoke/a.md");
+    assert!(
+        harness
+            .repo
+            .list_staged_in_local_repo(repo_name)?
+            .is_empty()
+    );
+    assert_eq!(
+        harness
+            .repo
+            .list_confirmed_ledger_changes_in_local_repo(repo_name)?
+            .len(),
+        1
+    );
     let commit = post_commit(&harness, "clean smoke fixture").await?;
     assert_eq!(commit.doc_count, 1);
     assert_eq!(commit.message, "clean smoke fixture");
+    assert!(
+        harness
+            .repo
+            .list_confirmed_ledger_changes_in_local_repo(repo_name)?
+            .is_empty()
+    );
+    assert!(http_status(&harness).await?.is_empty());
     assert!(
         harness
             .repo
@@ -125,6 +148,7 @@ async fn http_source_control_commit_respects_git_bridge_off() -> anyhow::Result<
     write_workspace_file(&harness.dir, "smoke/off.md", "hello");
     seed_pending(&harness.repo, "smoke/off.md", ChangeStatus::Added, "hello");
     post_path(&harness, "/api/sc/stage-pending", "smoke/off.md").await?;
+    post_apply_external_changes(&harness).await?;
 
     let commit = post_commit(&harness, "git bridge off").await?;
     let record = harness
@@ -168,6 +192,31 @@ async fn post_path(harness: &ProxyHarness, endpoint: &str, path: &str) -> anyhow
     Ok(())
 }
 
+async fn post_apply_external_changes(
+    harness: &ProxyHarness,
+) -> anyhow::Result<Vec<ChangeEntry>> {
+    harness.grant_browser_write(1)?;
+    let response = harness
+        .client
+        .post(format!(
+            "{}/api/sc/apply-external-changes",
+            harness.base_url
+        ))
+        .json(&serde_json::json!({
+            "scope_nonce": 1,
+        }))
+        .send()
+        .await?;
+    let status = response.status();
+    let body = response.text().await?;
+    assert_eq!(
+        status,
+        reqwest::StatusCode::OK,
+        "apply external changes failed with body: {body}"
+    );
+    Ok(serde_json::from_str(&body)?)
+}
+
 async fn post_commit(harness: &ProxyHarness, message: &str) -> anyhow::Result<CommitInfo> {
     harness.grant_browser_write(1)?;
     let response = harness
@@ -179,6 +228,12 @@ async fn post_commit(harness: &ProxyHarness, message: &str) -> anyhow::Result<Co
         }))
         .send()
         .await?;
-    assert_eq!(response.status(), reqwest::StatusCode::OK);
-    Ok(response.json().await?)
+    let status = response.status();
+    let body = response.text().await?;
+    assert_eq!(
+        status,
+        reqwest::StatusCode::OK,
+        "commit failed with body: {body}"
+    );
+    Ok(serde_json::from_str(&body)?)
 }
