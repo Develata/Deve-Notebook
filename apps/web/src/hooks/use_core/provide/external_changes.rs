@@ -6,8 +6,7 @@
 use super::super::contexts::ExternalChangesContext;
 use super::super::types::CoreState;
 use super::super::write_gate::{
-    RepoWriteSignals, repo_source_control_read_block_tracked, repo_write_allowed_for_core_tracked,
-    repo_write_block_tracked,
+    RepoWriteSignals, repo_write_allowed_for_core_tracked, repo_write_block_tracked,
 };
 use leptos::prelude::Signal;
 
@@ -16,7 +15,21 @@ pub(super) fn build_external_changes_context(state: &CoreState) -> ExternalChang
     let scope = &state.runtime_clients.scope;
     let state_for_can_write = state.clone();
     let state_for_block = state.clone();
-    let state_for_read_block = state.clone();
+    let external_changes_block = Signal::derive(move || {
+        repo_write_block_tracked(
+            &state_for_block.ws,
+            RepoWriteSignals {
+                load_state: state_for_block.load_state,
+                is_spectator: state_for_block.is_spectator,
+                handshake_ready: state_for_block.handshake_ready,
+                current_repo_id: state_for_block.current_repo_id,
+                current_scope_nonce: state_for_block.current_scope_nonce,
+                active_branch: state_for_block.active_branch,
+                pending_branch_switch: state_for_block.pending_branch_switch,
+                pending_repo_switch: state_for_block.pending_repo_switch,
+            },
+        )
+    });
 
     ExternalChangesContext {
         staged_changes: external_changes.staged_changes,
@@ -24,36 +37,8 @@ pub(super) fn build_external_changes_context(state: &CoreState) -> ExternalChang
         can_write: Signal::derive(move || {
             repo_write_allowed_for_core_tracked(&state_for_can_write)
         }),
-        write_block: Signal::derive(move || {
-            repo_write_block_tracked(
-                &state_for_block.ws,
-                RepoWriteSignals {
-                    load_state: state_for_block.load_state,
-                    is_spectator: state_for_block.is_spectator,
-                    handshake_ready: state_for_block.handshake_ready,
-                    current_repo_id: state_for_block.current_repo_id,
-                    current_scope_nonce: state_for_block.current_scope_nonce,
-                    active_branch: state_for_block.active_branch,
-                    pending_branch_switch: state_for_block.pending_branch_switch,
-                    pending_repo_switch: state_for_block.pending_repo_switch,
-                },
-            )
-        }),
-        read_block: Signal::derive(move || {
-            repo_source_control_read_block_tracked(
-                &state_for_read_block.ws,
-                RepoWriteSignals {
-                    load_state: state_for_read_block.load_state,
-                    is_spectator: state_for_read_block.is_spectator,
-                    handshake_ready: state_for_read_block.handshake_ready,
-                    current_repo_id: state_for_read_block.current_repo_id,
-                    current_scope_nonce: state_for_read_block.current_scope_nonce,
-                    active_branch: state_for_read_block.active_branch,
-                    pending_branch_switch: state_for_read_block.pending_branch_switch,
-                    pending_repo_switch: state_for_read_block.pending_repo_switch,
-                },
-            )
-        }),
+        write_block: external_changes_block,
+        read_block: external_changes_block,
         current_repo_id: scope.current_repo_id,
         current_scope_nonce: scope.current_scope_nonce,
         active_branch: scope.active_branch,

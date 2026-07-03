@@ -10,6 +10,8 @@ mod row;
 use self::row::{external_change_key, external_change_row};
 use crate::components::icons::{Check, ChevronRight};
 use crate::hooks::use_core::ExternalChangesContext;
+use crate::hooks::use_core::write_gate::RepoWriteBlock;
+use crate::hooks::use_core::write_gate_banner::reason_from_block;
 use crate::i18n::{Locale, t};
 use deve_core::source_control::ChangeEntry;
 use leptos::prelude::*;
@@ -62,16 +64,19 @@ pub fn ExternalChangesView() -> impl IntoView {
             </div>
             <div class="flex-1 overflow-y-auto">
                 {move || {
+                    let read_block_value = read_block.get();
                     let staged = core.staged_changes.get();
                     let unstaged = core.unstaged_changes.get();
-                    if staged.is_empty() && unstaged.is_empty() {
-                        view! {
+                    match external_changes_visible_state(read_block_value, staged.len(), unstaged.len()) {
+                        ExternalChangesVisibleState::Blocked(block) => view! {
+                            <ExternalChangesBlockedNotice block locale />
+                        }.into_any(),
+                        ExternalChangesVisibleState::Empty => view! {
                             <div class="px-3 py-6 text-center text-xs text-muted">
                                 {t::external_changes::no_changes(locale.get())}
                             </div>
-                        }.into_any()
-                    } else {
-                        view! {
+                        }.into_any(),
+                        ExternalChangesVisibleState::Changes => view! {
                             <ExternalChangesSection
                                 title=t::external_changes::staged(locale.get()).to_string()
                                 entries=staged
@@ -86,7 +91,7 @@ pub fn ExternalChangesView() -> impl IntoView {
                                 core=core.clone()
                                 locale
                             />
-                        }.into_any()
+                        }.into_any(),
                     }
                 }}
             </div>
@@ -101,6 +106,45 @@ fn should_request_external_changes(
     read_blocked: bool,
 ) -> bool {
     has_repo && !branch_switching && !repo_switching && !read_blocked
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ExternalChangesVisibleState {
+    Blocked(RepoWriteBlock),
+    Empty,
+    Changes,
+}
+
+fn external_changes_visible_state(
+    read_block: Option<RepoWriteBlock>,
+    staged_count: usize,
+    unstaged_count: usize,
+) -> ExternalChangesVisibleState {
+    if let Some(block) = read_block {
+        return ExternalChangesVisibleState::Blocked(block);
+    }
+    if staged_count == 0 && unstaged_count == 0 {
+        return ExternalChangesVisibleState::Empty;
+    }
+    ExternalChangesVisibleState::Changes
+}
+
+#[component]
+fn ExternalChangesBlockedNotice(block: RepoWriteBlock, locale: RwSignal<Locale>) -> impl IntoView {
+    view! {
+        <div
+            class="px-3 py-5 text-xs text-muted"
+            data-deve-external-blocked="true"
+            data-deve-external-block=block.label()
+        >
+            <p class="text-primary font-medium">
+                {move || t::external_changes::blocked_title(locale.get())}
+            </p>
+            <p class="mt-1 leading-5">
+                {move || external_changes_blocked_hint(locale.get(), block)}
+            </p>
+        </div>
+    }
 }
 
 #[component]
@@ -191,10 +235,29 @@ fn apply_title(locale: Locale, core: &ExternalChangesContext) -> String {
     if can_apply_to_ledger_state(core.can_write.get(), &staged, &unstaged) {
         return t::external_changes::apply_to_ledger(locale).to_string();
     }
+    if let Some(block) = core.write_block.get() {
+        return external_changes_blocked_hint(locale, block);
+    }
     if external_changes_have_overlap(&staged, &unstaged) {
         return t::external_changes::overlap_blocked(locale).to_string();
     }
     t::external_changes::apply_to_ledger_disabled(locale).to_string()
+}
+
+fn external_changes_blocked_hint(locale: Locale, block: RepoWriteBlock) -> String {
+    let reason = t::write_gate::reason_label(locale, reason_from_block(block));
+    match locale {
+        Locale::En => format!(
+            "{} Reason: {}",
+            t::external_changes::blocked_hint(locale),
+            reason
+        ),
+        Locale::Zh => format!(
+            "{}原因：{}",
+            t::external_changes::blocked_hint(locale),
+            reason
+        ),
+    }
 }
 
 fn can_apply_to_ledger_state(
@@ -215,9 +278,12 @@ fn external_changes_have_overlap(staged: &[ChangeEntry], unstaged: &[ChangeEntry
 #[cfg(test)]
 mod tests {
     use super::{
-        can_apply_to_ledger_state, external_changes_have_overlap, external_section_key,
+        ExternalChangesVisibleState, can_apply_to_ledger_state, external_changes_blocked_hint,
+        external_changes_have_overlap, external_changes_visible_state, external_section_key,
         external_section_panel_id,
     };
+    use crate::hooks::use_core::write_gate::RepoWriteBlock;
+    use crate::i18n::Locale;
     use deve_core::source_control::{ChangeEntry, ChangeStatus};
 
     fn entry(path: &str, has_conflict: bool) -> ChangeEntry {
@@ -271,5 +337,37 @@ mod tests {
 
         assert!(external_changes_have_overlap(&staged, &unstaged));
         assert!(!can_apply_to_ledger_state(true, &staged, &unstaged));
+    }
+
+    #[test]
+    fn blocked_external_changes_state_hides_empty_or_stale_rows() {
+        assert_eq!(
+            external_changes_visible_state(Some(RepoWriteBlock::ReadOnly), 0, 0),
+            ExternalChangesVisibleState::Blocked(RepoWriteBlock::ReadOnly)
+        );
+        assert_eq!(
+            external_changes_visible_state(Some(RepoWriteBlock::HandshakingRepo), 1, 0),
+            ExternalChangesVisibleState::Blocked(RepoWriteBlock::HandshakingRepo)
+        );
+        assert_eq!(
+            external_changes_visible_state(None, 0, 0),
+            ExternalChangesVisibleState::Empty
+        );
+        assert_eq!(
+            external_changes_visible_state(None, 0, 1),
+            ExternalChangesVisibleState::Changes
+        );
+    }
+
+    #[test]
+    fn external_changes_blocked_hint_uses_write_gate_reason_copy() {
+        assert!(
+            external_changes_blocked_hint(Locale::Zh, RepoWriteBlock::ReadOnly)
+                .contains("只读模式")
+        );
+        assert!(
+            external_changes_blocked_hint(Locale::En, RepoWriteBlock::HandshakingRepo)
+                .contains("repo handshaking")
+        );
     }
 }

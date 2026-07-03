@@ -33,6 +33,22 @@ pub fn no_changes(locale: Locale) -> &'static str {
     }
 }
 
+pub fn blocked_title(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "External Changes unavailable",
+        Locale::Zh => "外部修改不可用",
+    }
+}
+
+pub fn blocked_hint(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => {
+            "External Changes can prepare projection-file imports only when the current ledger scope is writable."
+        }
+        Locale::Zh => "外部修改只在当前账本作用域可写时用于准备导入投影文件变更。",
+    }
+}
+
 pub fn apply_to_ledger(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Apply to Ledger",

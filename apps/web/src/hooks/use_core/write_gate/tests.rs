@@ -192,6 +192,18 @@ fn repo_source_control_read_gate_allows_remote_branch_reads() {
 }
 
 #[test]
+fn remote_branch_source_control_read_differs_from_external_changes_write_scope() {
+    assert_eq!(
+        repo_source_control_read_block(gate_state(true, true, true)),
+        None
+    );
+    assert_eq!(
+        repo_write_block(gate_state(true, true, true)),
+        Some(RepoWriteBlock::ReadOnly)
+    );
+}
+
+#[test]
 fn repo_source_control_read_gate_allows_remote_branch_reads_without_writer_handshake() {
     assert_eq!(
         repo_source_control_read_block(gate_state(true, false, false)),
