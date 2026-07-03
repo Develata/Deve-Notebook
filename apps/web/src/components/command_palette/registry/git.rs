@@ -5,7 +5,10 @@
 use crate::components::activity_bar::SidebarView;
 use crate::components::command_palette::types::Command;
 use crate::components::main_layout::SidebarControl;
-use crate::hooks::use_core::source_control_notice::SourceControlNotice;
+use crate::hooks::use_core::{
+    SourceControlContext,
+    source_control_notice::{SourceControlNotice, is_local_command_notice},
+};
 use crate::i18n::{Locale, t};
 use crate::runtime::session_client::SessionClient;
 use leptos::prelude::*;
@@ -28,11 +31,13 @@ fn show_source_control_notice(
 fn show_git_status_notice(
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     sidebar_control: Option<SidebarControl>,
+    source_control: Option<SourceControlContext>,
     set_show: WriteSignal<bool>,
 ) {
     show_git_status_notice_for_viewport(
         set_notice,
         sidebar_control,
+        source_control,
         set_show,
         current_command_surface_maps_to_mobile(),
     );
@@ -41,6 +46,7 @@ fn show_git_status_notice(
 fn show_git_status_notice_for_viewport(
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     sidebar_control: Option<SidebarControl>,
+    source_control: Option<SourceControlContext>,
     set_show: WriteSignal<bool>,
     viewport_mobile: bool,
 ) {
@@ -49,6 +55,7 @@ fn show_git_status_notice_for_viewport(
         .is_some_and(|sidebar_control| sidebar_control.is_mobile.get_untracked())
         || viewport_mobile;
     if is_mobile {
+        clear_local_command_notice(source_control.as_ref());
         if let Some(sidebar_control) = sidebar_control {
             sidebar_control.show_view(SidebarView::SourceControl);
         }
@@ -62,6 +69,20 @@ fn show_git_status_notice_for_viewport(
         sidebar_control.show_view(SidebarView::SourceControl);
     }
     set_show.set(false);
+}
+
+fn clear_local_command_notice(source_control: Option<&SourceControlContext>) {
+    let Some(source_control) = source_control else {
+        return;
+    };
+    if source_control
+        .notice
+        .get_untracked()
+        .as_ref()
+        .is_some_and(is_local_command_notice)
+    {
+        source_control.clear_notice.run(());
+    }
 }
 
 fn current_command_surface_maps_to_mobile() -> bool {
@@ -116,12 +137,18 @@ pub(super) fn git_status_command(
     set_notice: Option<WriteSignal<Option<SourceControlNotice>>>,
     sidebar_control: Option<SidebarControl>,
 ) -> Command {
+    let source_control = use_context::<SourceControlContext>();
     Command::unavailable(
         "git_status",
         (t::command_palette::git_status)(locale),
         (t::command_palette::git_cli_only_reason)(locale),
         move || {
-            show_git_status_notice(set_notice, sidebar_control, set_show);
+            show_git_status_notice(
+                set_notice,
+                sidebar_control,
+                source_control.clone(),
+                set_show,
+            );
         },
     )
     .with_group((t::command_palette::group_git)(locale))

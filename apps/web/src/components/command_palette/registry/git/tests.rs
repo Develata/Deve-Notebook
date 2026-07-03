@@ -215,6 +215,29 @@ fn git_status_command_routes_mobile_to_source_control_drawer() {
 }
 
 #[test]
+fn git_status_command_clears_stale_cli_notice_on_mobile() {
+    let owner = Owner::new();
+    owner.with(|| {
+        let notice = provide_source_control_context();
+        let source_control = use_context::<SourceControlContext>().expect("source control context");
+        source_control
+            .set_notice
+            .set(Some(SourceControlNotice::git_status_cli_only()));
+        let (_, mobile_visible, active_view) = provide_sidebar_control_context(true);
+        let (show, set_show) = signal(true);
+        let (source_control, sidebar_control) = command_contexts();
+        let command = git_status_command(Locale::En, set_show, source_control, sidebar_control);
+
+        command.action.run(());
+
+        assert!(!show.get_untracked());
+        assert!(notice.get_untracked().is_none());
+        assert!(mobile_visible.get_untracked());
+        assert_eq!(active_view.get_untracked(), SidebarView::SourceControl);
+    });
+}
+
+#[test]
 fn git_status_command_does_not_write_notice_on_mobile_viewport_without_sidebar_context() {
     let owner = Owner::new();
     owner.with(|| {
@@ -223,7 +246,13 @@ fn git_status_command_does_not_write_notice_on_mobile_viewport_without_sidebar_c
         let (source_control, sidebar_control) = command_contexts();
 
         assert!(sidebar_control.is_none());
-        show_git_status_notice_for_viewport(source_control, sidebar_control, set_show, true);
+        show_git_status_notice_for_viewport(
+            source_control,
+            sidebar_control,
+            use_context::<SourceControlContext>(),
+            set_show,
+            true,
+        );
 
         assert!(!show.get_untracked());
         assert!(notice.get_untracked().is_none());
@@ -239,7 +268,13 @@ fn git_status_command_keeps_desktop_cli_notice_without_sidebar_context() {
         let (source_control, sidebar_control) = command_contexts();
 
         assert!(sidebar_control.is_none());
-        show_git_status_notice_for_viewport(source_control, sidebar_control, set_show, false);
+        show_git_status_notice_for_viewport(
+            source_control,
+            sidebar_control,
+            use_context::<SourceControlContext>(),
+            set_show,
+            false,
+        );
 
         assert!(!show.get_untracked());
         let notice = notice.get_untracked().expect("source control notice");
