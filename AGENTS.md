@@ -45,8 +45,8 @@ Rust workspace for a self-hosted collaborative Markdown notebook targeting low-r
 ### Working In This Directory
 
 - Read the nearest applicable `AGENTS.md` before editing a subdirectory; narrower files override this root file.
-- Every work item MUST follow the project execution flow: read [00_engineering_constitution.md](docs/plan/00_engineering_constitution.md) and [01_terminology.md](docs/plan/01_terminology.md) first, then inspect the matching `docs/plan/` contract, then the matching `docs/` feature/acceptance/registry/overview/task documents, then implement code only as a projection of those contracts, then review the result for cohesion, coupling, boundary drift, file size, failure paths, and verification coverage.
-- Changes MUST proceed in this order: `docs/plan/` -> `docs/` -> code. Code is a strict projection of `docs/`, not an independent source of design authority. If a change requires modifying `docs/plan/`, first read [00_engineering_constitution.md](docs/plan/00_engineering_constitution.md) and [01_terminology.md](docs/plan/01_terminology.md), then make only local edits that preserve the original chapter style.
+- For implementation/debugging/review work items where code or docs may change, follow the scoped "User-Requested Implementation Workflow" below. Pure explanation, planning, read-only investigation, or user-directed no-code discussion does not require that workflow.
+- For changes covered by that workflow and affecting product or runtime behavior, proceed in this order: `docs/plan/` -> `docs/` -> code. Code is a strict projection of `docs/`, not an independent source of design authority. If a change requires modifying `docs/plan/`, first read [00_engineering_constitution.md](docs/plan/00_engineering_constitution.md) and [01_terminology.md](docs/plan/01_terminology.md), then make only local edits that preserve the original chapter style.
 - `docs/plan/` is the authoritative engineering blueprint. `docs/features/` describes user-visible behavior, `docs/acceptance-cases/` describes automation-oriented proof, and `docs/report/` is dated evidence rather than a live contract.
 - Use `docs/coverage-matrix.md` to find the matching plan/features/acceptance documents before implementing or moving behavior.
 - Treat code that disagrees with a current plan invariant as implementation drift by default. Align code to plan, or record explicit drift/registry evidence; do not weaken the plan merely because code already exists.
@@ -61,6 +61,33 @@ Rust workspace for a self-hosted collaborative Markdown notebook targeting low-r
 - Edition 2024 Rust. Error handling: `anyhow` (app layer), `thiserror` (library layer).
 - This repo is often used from WSL2. If Chrome MCP is unavailable because `127.0.0.1:9222` is down, run `chrome-mcp` from the shell before retrying MCP browser actions.
 - `chrome-mcp [url]` launches Windows Chrome with `--remote-debugging-port=9222` using a dedicated profile and can optionally open a target URL.
+
+### User-Requested Implementation Workflow
+
+For implementation, debugging, review, architecture-convergence, or commit-producing work items where code or docs may be changed, follow this scoped workflow:
+
+1. Read `docs/plan/00_engineering_constitution.md`.
+2. Read `docs/plan/01_terminology.md`.
+3. Read the matching `docs/plan/` contract.
+4. Read matching `docs/` feature / acceptance / registry / overview / task documents.
+5. Implement `docs/plan/` -> `docs/` -> code, keeping code as a projection of contracts.
+6. Run review with a review subagent when available; if unavailable, perform an explicit self-review and report that the subagent was unavailable.
+7. Fix review findings.
+8. Run targeted tests and relevant contract/baseline checks.
+9. Run Chrome MCP for UI/browser/mobile/editor/Source Control-visible behavior.
+10. If verification finds problems, return to the relevant `docs/plan/` -> `docs/` -> code step and repeat.
+11. If verification passes, stage only relevant files and create a git commit.
+
+This workflow is not required for pure explanation, planning, read-only investigation, or user-directed no-code discussion.
+
+Small, bounded bugs may be fixed through this workflow. Changes touching authority, ledger, protocol, Source Control semantics, module boundaries, data migrations, or architecture models MUST stop for user decision before implementation.
+
+Architecture constraints for this workflow:
+
+- The frontend is a thin shell: render UI, collect user intent, and dispatch typed intents.
+- Computation, state transitions, ledger/source-control authority mutations, diff/external-change decisions, and commit-anchor business decisions belong in backend/core infra.
+- Do not move ledger, External Changes, Source Control, diff, or commit-anchor business judgment into the frontend for UI convenience.
+- Review subagents must focus on high cohesion, low coupling, boundary drift, file size, failure paths, and verification coverage.
 
 ### Testing Requirements
 
