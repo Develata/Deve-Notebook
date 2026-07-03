@@ -815,7 +815,9 @@ contains	scripts/check-local-quick-gate.sh	LOCAL_CARGO_TARGET_DIR="${DEVE_LOCAL_
 contains	scripts/check-local-quick-gate.sh	run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core
 contains	scripts/check-local-quick-gate.sh	run cargo check --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli
 contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core projection_locator_ --lib -- --nocapture
-contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control -- --nocapture
+contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control_http_scope_requires_nonzero_nonce -- --nocapture
+contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control_scope_nonce_gate_rejects_missing_scope_before_handler -- --nocapture
+absent	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control -- --nocapture
 contains	scripts/check-deep-audit-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-deep-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "deep-audit-gate" "deep-audit-gate"
 contains	scripts/check-desktop-platform-package-build.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"

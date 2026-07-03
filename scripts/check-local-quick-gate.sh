@@ -47,7 +47,8 @@ run scripts/check-feature-operation-paths.sh
 
 if [[ "${DEVE_QUICK_GATE_TESTS:-1}" == "1" ]]; then
   run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_core projection_locator_ --lib -- --nocapture
-  run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control -- --nocapture
+  run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control_http_scope_requires_nonzero_nonce -- --nocapture
+  run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control_scope_nonce_gate_rejects_missing_scope_before_handler -- --nocapture
 else
   echo "local-quick-gate: skipped focused tests because DEVE_QUICK_GATE_TESTS=${DEVE_QUICK_GATE_TESTS:-}"
 fi

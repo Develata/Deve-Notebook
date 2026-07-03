@@ -942,10 +942,11 @@ DEVE_LOCAL_QUICK_GATE_TARGET_DIR=target/local-quick-gate-alt scripts/check-local
 ```
 
 The quick gate runs diff hygiene, `deve_core`/`deve_cli` checks, focused
-governance checks, and focused storage/source-control tests. The second form
-keeps only the compile/governance subset for very small doc-only changes. The
-quick gate uses an isolated Cargo target directory by default so it can run
-while a development `deve_cli` server is holding `target/debug/deve_cli.exe`.
+governance checks, focused projection-locator tests, and Source Control
+HTTP/WS scope-gate tests. The second form keeps only the compile/governance
+subset for very small doc-only changes. The quick gate uses an isolated Cargo
+target directory by default so it can run while a development `deve_cli` server
+is holding `target/debug/deve_cli.exe`.
 
 Use the deep audit gate for broad architecture changes, release-prep, or after
 several related batches have landed:

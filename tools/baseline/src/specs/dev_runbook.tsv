@@ -11,6 +11,8 @@ contains	docs/dev-runbook.md	chrome-mcp http://127.0.0.1:8080/
 check_scripts_listed	docs/dev-runbook.md
 contains	docs/dev-runbook.md	scripts/plan-coverage.sh
 contains	docs/dev-runbook.md	DEVE_LOCAL_QUICK_GATE_TARGET_DIR=target/local-quick-gate-alt scripts/check-local-quick-gate.sh
+contains	docs/dev-runbook.md	Source Control
+contains	docs/dev-runbook.md	HTTP/WS scope-gate tests
 contains	docs/dev-runbook.md	target/debug/deve_cli.exe
 contains	docs/dev-runbook.md	DEVE_RUNTIME_SMOKE_REQUIRED=1 scripts/smoke-runtime-release-info.sh
 contains	docs/dev-runbook.md	repo switch, `SyncHello`, `RegisterWriter`, document create, edit ack
