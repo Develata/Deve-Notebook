@@ -19,6 +19,7 @@
 pub mod components;
 pub mod explorer;
 pub mod extensions;
+pub mod external_changes;
 pub mod item;
 pub mod path_utils;
 pub mod repo_switcher;
@@ -28,6 +29,7 @@ pub mod types;
 
 use self::explorer::ExplorerView;
 use self::extensions::ExtensionsView;
+use self::external_changes::ExternalChangesView;
 use crate::components::activity_bar::SidebarView;
 use crate::components::main_layout::SearchControl;
 
@@ -75,6 +77,9 @@ pub fn Sidebar(
                     <crate::components::sidebar::source_control::SourceControlView
                         suppress_local_command_notice=suppress_source_control_local_command_notice
                     />
+                }.into_any(),
+                SidebarView::ExternalChanges => view! {
+                    <ExternalChangesView />
                 }.into_any(),
                 SidebarView::Search => view! {
                     <ExplorerView

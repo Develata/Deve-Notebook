@@ -28,28 +28,50 @@ pub struct ProjectionDiagnosticIssue {
 
 pub(super) fn diagnose(repo: &RepoManager, repo_name: &str) -> Result<ProjectionDiagnostic> {
     match projection_plan::build(repo, repo_name) {
-        Ok(_) => Ok(ProjectionDiagnostic {
-            repo_name: repo_name.to_string(),
-            status: ProjectionDiagnosticStatus::Healthy,
-            issue: None,
-            rebuild_supported: true,
-            repair_hint: "projection authority is healthy; rebuild is available if workspace files need regeneration",
-        }),
-        Err(err) if materialize::is_broken_structure_projection_error(&err) => {
-            let detail = err.to_string();
-            Ok(ProjectionDiagnostic {
-                repo_name: repo_name.to_string(),
-                status: ProjectionDiagnosticStatus::AuthorityCorrupt,
-                issue: Some(ProjectionDiagnosticIssue {
-                    code: classify_authority_corruption(&detail).to_string(),
-                    detail,
-                }),
-                rebuild_supported: false,
-                repair_hint: "Structure Facts authority is corrupt; projection rebuild is unsupported, inspect ledger/backups before repair",
-            })
-        }
-        Err(err) => Err(err),
+        Ok(_) => healthy_projection(repo_name),
+        Err(err) => projection_diagnostic_from_error(repo_name, err),
     }
+}
+
+pub(super) fn diagnose_stem(
+    repo: &RepoManager,
+    repo_name: &str,
+    repo_stem: &str,
+) -> Result<ProjectionDiagnostic> {
+    match projection_plan::build_stem(repo, repo_stem) {
+        Ok(_) => healthy_projection(repo_name),
+        Err(err) => projection_diagnostic_from_error(repo_name, err),
+    }
+}
+
+fn healthy_projection(repo_name: &str) -> Result<ProjectionDiagnostic> {
+    Ok(ProjectionDiagnostic {
+        repo_name: repo_name.to_string(),
+        status: ProjectionDiagnosticStatus::Healthy,
+        issue: None,
+        rebuild_supported: true,
+        repair_hint: "projection authority is healthy; rebuild is available if workspace files need regeneration",
+    })
+}
+
+fn projection_diagnostic_from_error(
+    repo_name: &str,
+    err: anyhow::Error,
+) -> Result<ProjectionDiagnostic> {
+    if materialize::is_broken_structure_projection_error(&err) {
+        let detail = err.to_string();
+        return Ok(ProjectionDiagnostic {
+            repo_name: repo_name.to_string(),
+            status: ProjectionDiagnosticStatus::AuthorityCorrupt,
+            issue: Some(ProjectionDiagnosticIssue {
+                code: classify_authority_corruption(&detail).to_string(),
+                detail,
+            }),
+            rebuild_supported: false,
+            repair_hint: "Structure Facts authority is corrupt; projection rebuild is unsupported, inspect ledger/backups before repair",
+        });
+    }
+    Err(err)
 }
 
 fn classify_authority_corruption(detail: &str) -> &'static str {

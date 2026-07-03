@@ -37,12 +37,16 @@
   steps:
     - run: scripts/check-rendering-baseline.sh
     - run: cargo test -p deve_web empty_atx_headings -- --nocapture
+    - run: cargo test -p deve_web markdown_heading_modes -- --nocapture
     - run: node apps/web/js/extensions/block_styling.test.cjs
     - ui_type: |
         #
         ##
         ###
         # title
+        # s
+        ## s
+        ### s
         ## title
         ### title
         #申话
@@ -59,7 +63,14 @@
     - ui_assert: atx_heading_lines_have_heading_class true
     - ui_assert: atx_heading_text_line_height_gt_plain true
     - ui_assert: atx_empty_heading_line_height_gt_plain true
+    - ui_assert: atx_nonempty_short_heading_line_height_gt_plain true
     - ui_assert: atx_active_cjk_candidate_line_height_gt_plain true
+    - ui_assert: source_mode_heading_line_height_gt_plain true
+    - ui_assert: hybrid_active_heading_line_height_gt_plain true
+    - ui_assert: hybrid_inactive_heading_mark_hidden_and_line_height_gt_plain true
+    - ui_assert: preview_mode_heading_line_height_gt_plain true
+    - ui_assert: preview_mode_markdown_source_hidden true
+    - ui_assert: preview_mode_editing_disabled true
 
 - case_id: RENDER-CURSOR-001
   goal: 光标揭示规则。

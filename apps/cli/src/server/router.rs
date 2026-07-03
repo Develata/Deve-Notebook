@@ -101,6 +101,10 @@ pub fn build_app_with_native_session_and_p2p(
             "/api/sc/commit",
             post(handlers::source_control::http_mutations::commit),
         )
+        .route(
+            "/api/sc/apply-external-changes",
+            post(handlers::source_control::http_mutations::apply_external_changes),
+        )
         .route("/api/repo/docs", get(handlers::repo::http::list_docs))
         .route("/api/repo/doc", get(handlers::repo::http::doc_content))
         .route(
@@ -176,6 +180,10 @@ pub fn build_app_with_native_session_and_p2p(
         .route(
             "/api/delegated/sc/commit",
             post(handlers::source_control::http_mutations::commit_delegated),
+        )
+        .route(
+            "/api/delegated/sc/apply-external-changes",
+            post(handlers::source_control::http_mutations::apply_external_changes_delegated),
         )
         .layer(axum::middleware::from_fn(
             auth::middleware::delegated_source_control_middleware,

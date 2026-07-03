@@ -15,6 +15,7 @@
 
 pub mod document;
 pub mod document_client;
+pub mod external_changes_client;
 pub mod rendering_client;
 pub mod scope_client;
 pub mod session_client;
@@ -26,5 +27,6 @@ pub struct CoreRuntimeClients {
     pub scope: scope_client::ScopeClient,
     pub document: document_client::DocumentClient,
     pub source_control: source_control_client::SourceControlClient,
+    pub external_changes: external_changes_client::ExternalChangesClient,
     pub rendering: rendering_client::RenderingClient,
 }

@@ -60,6 +60,7 @@ fn discard_tracked_add_prefers_node_projection_path() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     let repo = scan_initial(repo, &dir);
     repo.stage_pending("notes/a.md").expect("stage file");
+    repo.apply_external_changes().expect("apply external file");
     repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit file");
     let doc_id = repo
@@ -100,6 +101,7 @@ fn scan_rename_prefers_node_projection_path() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     let repo = scan_initial(repo, &dir);
     repo.stage_pending("notes/a.md").expect("stage file");
+    repo.apply_external_changes().expect("apply external file");
     repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit file");
     let doc_id = repo

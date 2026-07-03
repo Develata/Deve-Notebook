@@ -10,6 +10,7 @@ mod chat;
 mod dashboard;
 mod doc;
 mod editor;
+mod external_changes;
 mod source_control;
 mod sync;
 
@@ -18,5 +19,6 @@ pub use chat::ChatContext;
 pub use dashboard::{DashboardContext, SystemMetricsData};
 pub use doc::DocContext;
 pub use editor::EditorContext;
+pub use external_changes::ExternalChangesContext;
 pub use source_control::SourceControlContext;
 pub use sync::SyncMergeContext;

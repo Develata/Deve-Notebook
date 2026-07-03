@@ -93,6 +93,7 @@ impl ClientMessage {
             | Self::UnstageFiles { scope_nonce, .. }
             | Self::DiscardFile { scope_nonce, .. }
             | Self::Commit { scope_nonce, .. }
+            | Self::ApplyExternalChanges { scope_nonce, .. }
             | Self::GetCommitHistory { scope_nonce, .. }
             | Self::GetDocDiff { scope_nonce, .. }
             | Self::GetCommitDiff { scope_nonce, .. }

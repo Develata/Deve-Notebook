@@ -16,7 +16,8 @@ pub enum SidebarView {
     Explorer, // 资源管理器
     Search,        // 搜索
     SourceControl, // 源代码管理 (Git)
-    Extensions,    // 扩展
+    ExternalChanges,
+    Extensions, // 扩展
 }
 
 impl SidebarView {
@@ -25,6 +26,7 @@ impl SidebarView {
             Self::Explorer,
             Self::Search,
             Self::SourceControl,
+            Self::ExternalChanges,
             Self::Extensions,
         ]
     }
@@ -34,6 +36,7 @@ impl SidebarView {
             Self::Explorer => t::sidebar::explorer(locale),
             Self::Search => t::sidebar::search(locale),
             Self::SourceControl => t::sidebar::source_control(locale),
+            Self::ExternalChanges => t::sidebar::external_changes(locale),
             Self::Extensions => t::sidebar::extensions(locale),
         }
     }
@@ -45,6 +48,7 @@ impl SidebarView {
             Self::Explorer => view! { <icons::File class=cls/> }.into_any(),
             Self::Search => view! { <icons::Search class=cls/> }.into_any(),
             Self::SourceControl => view! { <icons::SourceControl class=cls/> }.into_any(),
+            Self::ExternalChanges => view! { <icons::FolderInput class=cls/> }.into_any(),
             Self::Extensions => view! { <icons::LayoutGrid class=cls/> }.into_any(),
         }
     }

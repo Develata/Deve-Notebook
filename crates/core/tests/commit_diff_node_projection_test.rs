@@ -161,6 +161,7 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
     })
     .expect("seed initial add");
     repo.stage_pending("notes/a.md").expect("stage first");
+    repo.apply_external_changes().expect("apply external first");
     let first = repo
         .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit first");
@@ -183,6 +184,8 @@ fn commit_diff_prefers_node_projection_path_over_stale_metadata() {
     })
     .expect("seed modify");
     repo.stage_pending("notes/a.md").expect("stage second");
+    repo.apply_external_changes()
+        .expect("apply external second");
     let second = repo
         .commit_staged_with_git_bridge("second", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit second");
@@ -230,6 +233,7 @@ fn commit_diff_rejects_reversed_commit_order() {
     })
     .expect("seed initial add");
     repo.stage_pending("notes/a.md").expect("stage first");
+    repo.apply_external_changes().expect("apply external first");
     let first = repo
         .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit first");
@@ -252,6 +256,8 @@ fn commit_diff_rejects_reversed_commit_order() {
     })
     .expect("seed modify");
     repo.stage_pending("notes/a.md").expect("stage second");
+    repo.apply_external_changes()
+        .expect("apply external second");
     let second = repo
         .commit_staged_with_git_bridge("second", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit second");
@@ -287,6 +293,7 @@ fn commit_diff_reports_rename_from_structure_facts() {
     })
     .expect("seed initial add");
     repo.stage_pending("notes/a.md").expect("stage first");
+    repo.apply_external_changes().expect("apply external first");
     let first = repo
         .commit_staged_with_git_bridge("first", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit first");
@@ -327,6 +334,8 @@ fn commit_diff_reports_rename_from_structure_facts() {
     .expect("seed rename");
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("notes/b.md").expect("stage add");
+    repo.apply_external_changes()
+        .expect("apply external rename");
     let second = repo
         .commit_staged_with_git_bridge("rename", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit rename");

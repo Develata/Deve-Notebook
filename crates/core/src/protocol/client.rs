@@ -230,6 +230,10 @@ pub enum ClientMessage {
         #[serde(default)]
         scope_nonce: Option<u64>,
     },
+    ApplyExternalChanges {
+        #[serde(default)]
+        scope_nonce: Option<u64>,
+    },
     GetCommitHistory {
         request_id: String,
         limit: u32,

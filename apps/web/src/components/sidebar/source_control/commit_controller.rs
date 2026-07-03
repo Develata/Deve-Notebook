@@ -41,8 +41,7 @@ enum CommitDisabledReason {
 
 fn can_submit_commit_now(core: &SourceControlContext, message: &str) -> bool {
     core.can_write.get_untracked()
-        && (!core.staged_changes.get_untracked().is_empty()
-            || !core.confirmed_changes.get_untracked().is_empty())
+        && !core.confirmed_changes.get_untracked().is_empty()
         && !message.trim().is_empty()
 }
 
@@ -109,9 +108,7 @@ pub fn use_commit_controller(
     let saw_streaming = RwSignal::new(false);
     let write_block = core.write_block;
     let show_write_actions = Memo::new(move |_| write_block.get().is_none());
-    let has_commit_changes = Memo::new(move |_| {
-        !core.staged_changes.get().is_empty() || !core.confirmed_changes.get().is_empty()
-    });
+    let has_commit_changes = Memo::new(move |_| !core.confirmed_changes.get().is_empty());
     let can_prepare_commit = Memo::new(move |_| core.can_write.get() && has_commit_changes.get());
     let can_commit_now =
         Memo::new(move |_| can_prepare_commit.get() && !msg.get().trim().is_empty());

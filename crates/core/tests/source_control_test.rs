@@ -118,6 +118,8 @@ mod tests {
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_pending("notes/a.md").expect("stage a");
         repo.stage_pending("notes/b.md").expect("stage b");
+        repo.apply_external_changes()
+            .expect("apply external changes");
         let c = repo
             .commit_staged_with_git_bridge("test commit", deve_core::config::GitBridgeMode::Mirror)
             .expect("commit staged");
@@ -135,12 +137,14 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
+        repo.apply_external_changes().expect("apply external c1");
         let c1 = repo
             .commit_staged_with_git_bridge("c1", deve_core::config::GitBridgeMode::Mirror)
             .expect("commit 1");
         write_workspace_file(&repo, "notes/b.md", "world");
         seed_pending(&repo, "notes/b.md", ChangeStatus::Added, "world");
         repo.stage_pending("notes/b.md").expect("stage b");
+        repo.apply_external_changes().expect("apply external c2");
         let c2 = repo
             .commit_staged_with_git_bridge("c2", deve_core::config::GitBridgeMode::Mirror)
             .expect("commit 2");
@@ -192,6 +196,8 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
+        repo.apply_external_changes()
+            .expect("apply initial external change");
         repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
             .expect("commit a");
 
@@ -216,6 +222,8 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
+        repo.apply_external_changes()
+            .expect("apply initial external change");
         repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
             .expect("commit a");
 
@@ -231,6 +239,8 @@ mod tests {
         write_workspace_file(&repo, "notes/a.md", "hello");
         seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
         repo.stage_pending("notes/a.md").expect("stage a");
+        repo.apply_external_changes()
+            .expect("apply initial external change");
         repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
             .expect("commit a");
         std::fs::remove_file(workspace_path(&repo, "notes/a.md")).expect("remove workspace file");

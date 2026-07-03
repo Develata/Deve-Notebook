@@ -13,4 +13,5 @@ pub enum ScOp {
     CommitHistory,
     CommitDiff(String),
     Commit,
+    ApplyExternalChanges,
 }

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-24`
+- `Last Review`: `2026-07-03`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`, `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`, `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/sidebar/source_control/`, `apps/web/src/hooks/use_core/`
@@ -16,12 +16,13 @@ Reference baseline 位于 `docs/reference/source-control/vscode-scm-baseline/`�
 
 ## 1. Scope
 
-本章只处理 Source Control view 的 view contract：
+本章只处理 Source Control view 与其同级 External Changes view 的 view contract：
 
 1. primary flow 的布局顺序。
 2. resource groups、row actions 与 menu placement。
 3. readonly / blocked / CLI-only notices 的可见状态。
 4. history / graph 与 primary commit flow 的优先级。
+5. 外部投影文件夹修改与 Source Control commit anchor 的显示边界。
 
 非目标：
 
@@ -29,6 +30,7 @@ Reference baseline 位于 `docs/reference/source-control/vscode-scm-baseline/`�
 - 不把 Git index、Git refs 或 `.git` object store 作为 Deve authority。
 - 不复制 VS Code 源码、DOM、CSS、品牌图标或产品截图作为实现输入。
 - 不要求 Web 直接执行 Git import / push / repair。
+- 不把 External Changes 的 `Apply to Ledger` 解释为 Source Control commit。
 
 ## 2. Reference Policy {#source-control-vscode-reference-contract}
 
@@ -60,7 +62,7 @@ RepositoryContext
 CommitInput
 PrimaryCommitActions
 BlockingNotice?
-ResourceGroups
+ConfirmedLedgerChanges
 HistoryOrGraphSecondary
 ```
 
@@ -69,7 +71,7 @@ HistoryOrGraphSecondary
 - `CommitInput` 是 top-level surface，不得嵌套在 `Changes` resource group 内。
 - 单 repo 场景下 `RepositoryContext` **SHOULD** 保持紧凑或折叠。
 - 多 repo / provider 场景下才允许展开 repositories list。
-- `HistoryOrGraphSecondary` **SHOULD** 默认折叠或作为 secondary view；不得挤占 commit / changes primary flow。
+- `HistoryOrGraphSecondary` **SHOULD** 默认折叠或作为 secondary view；不得挤占 commit / confirmed changes primary flow。
 - `RepositoryContext`、`History` 与 `Graph` 等可折叠 secondary panel header 必须使用真实 `button`
   语义并暴露 `aria-expanded` 与 `aria-controls`，被控制内容必须以稳定 `id` 常驻 DOM，并在折叠时
   使用 `hidden` 隐藏；它们只能展开/收起 view-local state，不得触发 source-control 写入。
@@ -77,26 +79,55 @@ HistoryOrGraphSecondary
 
 ## 4. Resource Groups
 
-默认 resource groups：
+Source Control 默认 resource groups：
 
-- `Staged Changes`
-- `Changes`
 - `Confirmed Ledger Changes`
 - `Merge Changes` / conflict group（仅存在冲突时）
 - optional read-only diagnostics group
 
 规则：
 
-- `Staged Changes`、`Changes` 与 `Confirmed Ledger Changes` 必须可见区分，并显示 count。
+- `Confirmed Ledger Changes` 必须显示 count，并明确其含义是已进入 ledger、尚未被最新 Source Control commit anchor 覆盖。
 - 可折叠 resource group header 必须使用真实 `button` 语义并暴露 `aria-expanded` 与 `aria-controls`，
   被控制内容必须以稳定 `id` 常驻 DOM，并在折叠时使用 `hidden` 隐藏；header 右侧的
-  `Stage All` / `Unstage All` / `Discard All` 等 section action 必须是独立按钮，不能嵌套在折叠按钮内，也不能触发展开/收起。
-- `Changes` 中的条目表示 pending / working changes。
-- `Staged Changes` 中的条目表示即将进入 commit 的 staged entries。
+  section action 必须是独立按钮，不能嵌套在折叠按钮内，也不能触发展开/收起。
 - `Confirmed Ledger Changes` 中的条目表示已进入 ledger、但未被最新 Source Control commit anchor 覆盖的 changes。
 - 首版 `Confirmed Ledger Changes` 只能整体随 commit anchor 覆盖，不提供逐文件 include/exclude。
+- Source Control **MUST NOT** 展示 External Changes 的 `Staged Changes` / `Changes` working groups。
+- Source Control **MUST NOT** 对 `Confirmed Ledger Changes` 提供 Discard；未来撤回只能由独立 Revert flow 追加反向 ledger facts。
 - conflict group 出现时必须优先展示，不能伪装成普通 modified row。
 - empty state 必须说明当前 scope clean、readonly、blocked 或 unavailable，不能只显示空白。
+
+## 4.1 External Changes Sibling View
+
+External Changes / 外部修改 是 Source Control 的同级入口，负责展示 Projection Workspace 与当前 ledger projection 的偏差。
+
+默认顺序 **MUST** 是：
+
+```text
+Header
+RepositoryContext?
+BlockingNotice?
+ApplyToLedgerAction
+ExternalResourceGroups
+```
+
+默认 resource groups：
+
+- `Staged External Changes`
+- `External Changes`
+- `Overlapping External Changes`（可作为行级状态或独立优先组）
+
+规则：
+
+- External Changes 只显示外部投影文件夹修改、watcher/scan 发现的偏差与对应 diff 入口。
+- External Changes 支持 `Open Diff`、`Stage`、`Unstage`、`Discard External Change`、`Apply to Ledger` / `确认外部修改`。
+- `Apply to Ledger` 按钮不得简称为 `Commit`；中文推荐文案是 `确认外部修改`，英文推荐文案是 `Apply to Ledger`。
+- External Changes 不显示 history、graph、commit anchor 信息，也不创建 Source Control commit。
+- External Changes 可共享 button、icon、row shell、section shell、touch target primitive；不得复用 Source Control 的业务 controller、commit controller、history/graph state、notice/error 语义。
+- External Changes 的业务判断必须来自独立 domain/controller 或 backend/core typed state；view 层不得为了 UI 方便自行判定 ledger/source-control authority mutation。
+- 如果 external change 与 confirmed ledger dirty 重叠，行必须显示 `与已确认账本更改重叠` / `Overlaps confirmed ledger changes`，
+  禁用普通 `Stage` 与 `Apply to Ledger`，只允许 `Open Diff` 与 `Discard External Change`。
 
 ## 5. Row Interaction
 
@@ -110,12 +141,12 @@ HistoryOrGraphSecondary
 交互规则：
 
 - 点击 row 默认打开 diff。
-- unstaged row 的 inline action 是 `Stage`；可提供 `Discard`。
-- staged row 的 inline action 是 `Unstage`。
+- External Changes unstaged row 的 inline action 是 `Stage`；可提供 `Discard External Change`。
+- External Changes staged row 的 inline action 是 `Unstage`。
 - confirmed ledger row 的 inline action 只能是 `Open Diff`；不得使用 `Stage` / `Discard` / `Revert` 文案或语义；首版只提供打开 diff。
 - Desktop row action tray 应采用 VS Code-like hover/focus affordance：row hover 或 keyboard focus 进入该行时显示 action buttons；coarse pointer / touch viewport 中 action buttons 必须保持可见且满足移动端触控尺寸。
 - status kind 字母标记必须保留在 row 右侧独立 status slot；不得与 row action tray 混合，也不得覆盖或挤压 display path。
-- section header 可提供 `Stage All` / `Unstage All` / `Discard All`。
+- External Changes section header 可提供 `Stage All` / `Unstage All` / `Discard All`；Source Control confirmed section 不提供这些动作。
 - destructive actions 必须经 source-control runtime gate；必要时需要 explicit confirmation。
 - remote readonly branch 中，row actions 必须 disabled 或替换为 read-only explanation。
 
@@ -128,7 +159,8 @@ Commit surface 规则：
 - `Commit & Push` 是 secondary action；它不得暗示 Web Git mirror push authority。
 - AI-generated commit message 是辅助输入，必须服从 `16_ai_agent.md` 的 capability gate。
 - message empty、staged empty and confirmed empty、readonly、writer-not-ready、scope switching、service offline 都必须显示结构化 disabled reason。
-- commit button 在 staged changes 或 confirmed ledger changes 非空时可用；confirmed-only commit 采用整锚提交。
+- commit button 在 confirmed ledger changes 非空时可用；confirmed-only commit 采用整锚提交。
+- staged external changes 必须先通过 External Changes 的 `Apply to Ledger` 进入 ledger，之后才由 Source Control commit anchor 覆盖。
 
 ## 7. Menus and Commands
 
@@ -160,6 +192,17 @@ Git mirror command ids 必须保持独立：
 - `git.push_mirror`
 - `git.repair_mirror`
 
+External Changes command ids 必须保持独立：
+
+- `external_changes.refresh`
+- `external_changes.stage`
+- `external_changes.stage_all`
+- `external_changes.unstage`
+- `external_changes.unstage_all`
+- `external_changes.discard`
+- `external_changes.apply_to_ledger`
+- `external_changes.open_diff`
+
 Web Git mirror commands 当前只能打开 CLI-only notice 或 read-only repair review；不得直接升级为 Git writer。
 
 ## 8. Failure and Boundary States
@@ -176,6 +219,17 @@ Source Control view 必须显式展示以下状态：
 - source-control runtime error
 - Git mirror queued / out-of-sync / CLI-only repair notice
 
+External Changes view 必须显式展示以下状态：
+
+- no repo selected
+- repo switching / branch switching
+- remote readonly branch
+- writer not ready
+- service offline
+- projection workspace unavailable
+- external change overlaps confirmed ledger changes
+- external-change runtime error
+
 状态来源必须是 runtime typed state 或 structured error code，不得由 view 层猜测。
 
 ## 9. Forbidden Patterns
@@ -185,6 +239,9 @@ Source Control view 必须显式展示以下状态：
 - 默认展开 graph/history 并压过 staged/changes flow。
 - 用 `git.*` command id 表示 Deve stage / commit authority。
 - 让 view 组件直接改写 pending/staged side tables。
+- 让 Source Control controller 同时管理 External Changes 业务状态。
+- 在 Source Control 中对 confirmed ledger row 暴露 Discard。
+- 将 External Changes 的 `Apply to Ledger` 文案写成普通 `Commit`。
 - 复制 VS Code DOM/CSS/source files 作为 Deve UI implementation。
 - 把 reference screenshots 当作 pixel-perfect requirement。
 
@@ -211,21 +268,39 @@ Source Control view 必须显式展示以下状态：
 
 职责：
 
-- request changes / staged state
-- stage / unstage / discard / commit
+- request confirmed ledger changes
+- commit anchor creation
 - history / commit diff
 - structured notices
+
+### 10.4 External Changes Runtime
+
+职责：
+
+- request external pending / staged state
+- stage / unstage / discard external changes
+- apply staged external changes to ledger
+- detect overlap with confirmed ledger dirty and fail-closed
+- structured external-change notices
 
 View layer 不得直接操作 repo state、ledger state、pending/staged side tables、Git mirror state 或 `.notegit`。
 
 ## 11. Refactor Target
 
-本章不新增 authority runtime。Source Control UI 应继续归属：
+Source Control UI 应继续归属：
 
 - `ui_shell`
 - `application_control`
 - `feature_runtime`
 - `source_control_runtime`
+- `diff_session_runtime`
+
+External Changes UI 应登记为独立 `external_changes_client` / runtime facade，归属：
+
+- `ui_shell`
+- `application_control`
+- `feature_runtime`
+- `external_changes_runtime`
 - `diff_session_runtime`
 
 若未来新增 `source_control_view_runtime`，必须先登记到 `docs/registry/runtime-skeleton-registry.md`，并说明它只拥有 view-local state。

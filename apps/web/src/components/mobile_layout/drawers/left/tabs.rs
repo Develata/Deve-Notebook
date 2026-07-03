@@ -158,6 +158,9 @@ mod tests {
             SidebarView::SourceControl
         ));
         assert!(should_close_search_overlay_for_view(
+            SidebarView::ExternalChanges
+        ));
+        assert!(should_close_search_overlay_for_view(
             SidebarView::Extensions
         ));
         assert!(!should_close_search_overlay_for_view(SidebarView::Search));

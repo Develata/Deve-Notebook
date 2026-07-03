@@ -27,11 +27,14 @@ assert.equal(typeof headingLineClass, "function");
 const cases = [
   ["#", false, 1],
   ["# s", false, 1],
+  ["# s", true, 1],
   ["# h1", false, 1],
   ["#\th1", false, 1],
   ["# 申话", false, 1],
   ["## h2", false, 2],
+  ["## s", true, 2],
   ["### h3", false, 3],
+  ["### s", true, 3],
   ["###### h6", false, 6],
   ["####### too many", false, null],
   ["    # code", false, null],
@@ -127,10 +130,42 @@ assert.match(
   /min-height:\s*var\(--deve-heading-line-box\);/,
   "heading line must keep a stable line box"
 );
+assert.match(
+  headingLineRule,
+  /padding-top:\s*0;/,
+  "heading line must not grow or shrink from source-mode padding"
+);
+assert.match(
+  headingLineRule,
+  /padding-bottom:\s*0;/,
+  "heading line must not grow or shrink from source-mode padding"
+);
+
+const activeHeadingLineRule = cssRule(
+  typographyCss,
+  ".cm-content .cm-line.cm-heading-line.cm-activeLine"
+);
+assert.match(
+  activeHeadingLineRule,
+  /font-size:\s*var\(--deve-heading-font-size\);/,
+  "active source heading line must keep heading font-size"
+);
+assert.match(
+  activeHeadingLineRule,
+  /line-height:\s*var\(--deve-heading-inline-line-height\);/,
+  "active source heading line must keep heading line-height"
+);
+assert.match(
+  activeHeadingLineRule,
+  /min-height:\s*var\(--deve-heading-line-box\);/,
+  "active source heading line must keep heading line box"
+);
 
 for (const selector of [
   ".cm-content .cm-line.cm-heading-line span",
   ".cm-content .cm-line.cm-heading-line span span",
+  ".cm-content .cm-line.cm-heading-line > span",
+  ".cm-content .cm-line.cm-heading-line .cm-heading-mark",
 ]) {
   const rule = cssRule(typographyCss, selector);
   assert.match(

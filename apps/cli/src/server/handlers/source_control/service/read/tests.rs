@@ -80,6 +80,10 @@ impl SourceControlApi for FakeRepo {
     ) -> anyhow::Result<CommitInfo> {
         unreachable!("unused in this test")
     }
+
+    fn apply_external_changes_in_repo(&self, _: &RepoSelector) -> anyhow::Result<Vec<ChangeEntry>> {
+        unreachable!("unused in this test")
+    }
 }
 
 #[test]

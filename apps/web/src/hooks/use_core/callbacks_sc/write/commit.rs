@@ -62,6 +62,7 @@ pub(super) fn create_commit_write_callbacks(
     set_sync_banner: WriteSignal<Option<String>>,
 ) -> (
     Callback<String>,
+    Callback<()>,
     Callback<(ChangeEntry, ConflictResolution)>,
     Callback<String>,
 ) {
@@ -74,6 +75,23 @@ pub(super) fn create_commit_write_callbacks(
         send_scoped(scope, &ws_commit, move |scope_nonce| {
             ClientMessage::Commit {
                 message,
+                scope_nonce: Some(scope_nonce),
+            }
+        });
+    });
+    let ws_apply_external = ws.clone();
+    let on_apply_external_changes = Callback::new(move |_: ()| {
+        if let Some(reason) = write_block_reason(&ws_apply_external, gate) {
+            show_write_block(
+                set_sync_banner,
+                locale,
+                WriteGateAction::ApplyExternalChanges,
+                reason,
+            );
+            return;
+        }
+        send_scoped(scope, &ws_apply_external, move |scope_nonce| {
+            ClientMessage::ApplyExternalChanges {
                 scope_nonce: Some(scope_nonce),
             }
         });
@@ -110,7 +128,12 @@ pub(super) fn create_commit_write_callbacks(
         }
         show_commit_and_push_cli_only(set_sync_banner, locale);
     });
-    (on_commit, on_resolve_conflict, on_commit_and_push)
+    (
+        on_commit,
+        on_apply_external_changes,
+        on_resolve_conflict,
+        on_commit_and_push,
+    )
 }
 
 #[cfg(test)]

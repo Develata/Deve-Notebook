@@ -10,7 +10,7 @@
 
 use crate::config::GitBridgeMode;
 use crate::ledger::RepoManager;
-use crate::source_control::CommitInfo;
+use crate::source_control::{ChangeEntry, CommitInfo};
 use anyhow::Result;
 
 impl RepoManager {
@@ -27,6 +27,14 @@ impl RepoManager {
     ) -> Result<CommitInfo> {
         self.source_control_runtime()
             .commit_staged_in_local_repo_with_git_bridge(repo_name, message, git_bridge)
+    }
+
+    pub fn apply_external_changes_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        self.source_control_runtime()
+            .apply_external_changes_in_local_repo(repo_name)
     }
 
     // === Pending FS Ops (Working Directory) ===

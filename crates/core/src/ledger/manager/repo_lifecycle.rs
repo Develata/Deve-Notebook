@@ -99,9 +99,9 @@ impl RepoManager {
             .join(repo_workspace_segment(&new_name, repo_id)?);
         realign_workspace_root(&old_workspace, &new_workspace, repo_id)?;
 
+        self.set_projection_base_for_repo_id(repo_id, &new_name, locator.projection_base_abs)?;
         info.name = new_name.clone();
         self.run_on_local_repo_stem(&stem, |db| Self::write_repo_info_to_db(db, &info))?;
-        self.set_projection_base_for_repo_id(repo_id, &new_name, locator.projection_base_abs)?;
         notegit::ensure_repo_identity_marker(&new_workspace, repo_id, &new_name)?;
         notegit::ensure_gitignore_ignores_notegit(&new_workspace)
             .with_context(|| format!("Failed to protect .notegit in {:?}", new_workspace))?;

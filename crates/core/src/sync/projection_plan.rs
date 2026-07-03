@@ -16,6 +16,15 @@ pub(super) struct ProjectionPlan {
 
 pub(super) fn build(repo: &RepoManager, repo_name: &str) -> Result<ProjectionPlan> {
     let nodes = repo.run_on_local_repo(repo_name, build_structure_state)?;
+    build_from_nodes(nodes)
+}
+
+pub(super) fn build_stem(repo: &RepoManager, repo_stem: &str) -> Result<ProjectionPlan> {
+    let nodes = repo.run_on_local_repo_stem(repo_stem, build_structure_state)?;
+    build_from_nodes(nodes)
+}
+
+fn build_from_nodes(nodes: HashMap<NodeId, ProjectionNode>) -> Result<ProjectionPlan> {
     let mut dirs = HashSet::from([String::new()]);
     let mut docs = HashMap::new();
     let mut cache = HashMap::new();

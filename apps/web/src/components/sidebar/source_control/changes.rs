@@ -5,17 +5,13 @@
 //!
 //! # Changes 组件 (变更列表组件)
 //!
-//! 组合 `StagedSection` 和 `UnstagedSection` 子组件，
-//! 显示完整的变更列表视图。
+//! Source Control 只显示已进入 ledger、尚未被 commit anchor 覆盖的变更。
 
 use crate::hooks::use_core::SourceControlContext;
 use crate::i18n::{Locale, t};
 use leptos::prelude::*;
 
 use super::confirmed_section::ConfirmedSection;
-use super::resource_group_visibility::has_any_resource_group_changes;
-use super::staged_section::StagedSection;
-use super::unstaged_section::UnstagedSection;
 
 pub(crate) fn should_request_changes(
     has_repo: bool,
@@ -54,17 +50,11 @@ pub fn Changes() -> impl IntoView {
     view! {
         <div>
             {move || {
-                let staged = core.staged_changes.get();
-                let unstaged = core.unstaged_changes.get();
                 let confirmed = core.confirmed_changes.get();
 
                 view! {
                     <div>
-                        {if !has_any_resource_group_changes(
-                            staged.len(),
-                            unstaged.len(),
-                            confirmed.len(),
-                        ) {
+                        {if confirmed.is_empty() {
                             view! {
                                 <div class="px-3 py-6 text-xs text-muted text-center">
                                     {t::source_control::no_changes(locale.get())}
@@ -72,8 +62,6 @@ pub fn Changes() -> impl IntoView {
                             }.into_any()
                         } else {
                             view! {
-                                <StagedSection staged=staged show_empty_group=true />
-                                <UnstagedSection unstaged=unstaged show_empty_group=true />
                                 <ConfirmedSection confirmed=confirmed show_empty_group=true />
                             }.into_any()
                         }}
@@ -105,5 +93,13 @@ mod tests {
     #[test]
     fn read_block_still_suppresses_changes_refresh() {
         assert!(!should_request_changes(true, false, false, false, true));
+    }
+
+    #[test]
+    fn source_control_changes_panel_is_confirmed_only() {
+        let source = include_str!("changes.rs");
+        assert!(source.contains("ConfirmedSection"));
+        assert!(!source.contains(concat!("<", "StagedSection")));
+        assert!(!source.contains(concat!("<", "UnstagedSection")));
     }
 }

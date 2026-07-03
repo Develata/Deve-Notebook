@@ -10,6 +10,7 @@ pub(super) fn sidebar_tab_marker(view: SidebarView) -> &'static str {
         SidebarView::Explorer => "explorer",
         SidebarView::Search => "search",
         SidebarView::SourceControl => "source_control",
+        SidebarView::ExternalChanges => "external_changes",
         SidebarView::Extensions => "extensions",
     }
 }
@@ -26,6 +27,7 @@ pub(super) fn LeftDrawerTabButton(
         SidebarView::Explorer => t::sidebar::explorer(locale.get()),
         SidebarView::Search => t::sidebar::search(locale.get()),
         SidebarView::SourceControl => t::sidebar::source_control(locale.get()),
+        SidebarView::ExternalChanges => t::sidebar::external_changes(locale.get()),
         SidebarView::Extensions => t::sidebar::extensions(locale.get()),
     });
 
@@ -63,6 +65,7 @@ pub(super) fn sidebar_tab_class(view: SidebarView) -> &'static str {
         SidebarView::Explorer => "mobile-tab-explorer",
         SidebarView::Search => "mobile-tab-search",
         SidebarView::SourceControl => "mobile-tab-source-control",
+        SidebarView::ExternalChanges => "mobile-tab-external-changes",
         SidebarView::Extensions => "mobile-tab-extensions",
     }
 }
@@ -80,6 +83,10 @@ mod tests {
             sidebar_tab_marker(SidebarView::SourceControl),
             "source_control"
         );
+        assert_eq!(
+            sidebar_tab_marker(SidebarView::ExternalChanges),
+            "external_changes"
+        );
         assert_eq!(sidebar_tab_marker(SidebarView::Extensions), "extensions");
     }
 
@@ -95,8 +102,24 @@ mod tests {
             "mobile-tab-source-control"
         );
         assert_eq!(
+            sidebar_tab_class(SidebarView::ExternalChanges),
+            "mobile-tab-external-changes"
+        );
+        assert_eq!(
             sidebar_tab_class(SidebarView::Extensions),
             "mobile-tab-extensions"
+        );
+    }
+
+    #[test]
+    fn mobile_external_changes_entry_visible() {
+        assert_eq!(
+            sidebar_tab_marker(SidebarView::ExternalChanges),
+            "external_changes"
+        );
+        assert_eq!(
+            sidebar_tab_class(SidebarView::ExternalChanges),
+            "mobile-tab-external-changes"
         );
     }
 }

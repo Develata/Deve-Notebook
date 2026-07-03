@@ -45,7 +45,9 @@ pub(super) enum EntryKind {
 pub fn detect_repo_drift(repo: &RepoManager, repo_name: &str) -> Result<DriftReport> {
     let projection = enumerate::enumerate_projection(repo, repo_name)?;
     let workspace = walk::enumerate_workspace(repo, repo_name)?;
-    detect_repo_drift_from_entries(repo, repo_name, projection, workspace)
+    let pending = repo.run_on_local_repo(repo_name, pending_fs::list_all)?;
+    let staged = repo.run_on_local_repo(repo_name, staging::list_staged_entries)?;
+    detect_repo_drift_from_entries(projection, workspace, &pending, &staged)
 }
 
 pub fn detect_repo_drift_at_workspace_root(
@@ -55,17 +57,29 @@ pub fn detect_repo_drift_at_workspace_root(
 ) -> Result<DriftReport> {
     let projection = enumerate::enumerate_projection(repo, repo_name)?;
     let workspace = walk::enumerate_workspace_root(workspace_root)?;
-    detect_repo_drift_from_entries(repo, repo_name, projection, workspace)
+    let pending = repo.run_on_local_repo(repo_name, pending_fs::list_all)?;
+    let staged = repo.run_on_local_repo(repo_name, staging::list_staged_entries)?;
+    detect_repo_drift_from_entries(projection, workspace, &pending, &staged)
+}
+
+pub(crate) fn detect_repo_drift_at_workspace_root_stem(
+    repo: &RepoManager,
+    repo_stem: &str,
+    workspace_root: &Path,
+) -> Result<DriftReport> {
+    let projection = enumerate::enumerate_projection_stem(repo, repo_stem)?;
+    let workspace = walk::enumerate_workspace_root(workspace_root)?;
+    let pending = repo.run_on_local_repo_stem(repo_stem, pending_fs::list_all)?;
+    let staged = repo.run_on_local_repo_stem(repo_stem, staging::list_staged_entries)?;
+    detect_repo_drift_from_entries(projection, workspace, &pending, &staged)
 }
 
 fn detect_repo_drift_from_entries(
-    repo: &RepoManager,
-    repo_name: &str,
     projection: std::collections::BTreeMap<String, enumerate::ProjectedEntry>,
     workspace: std::collections::BTreeMap<String, walk::WorkspaceEntry>,
+    pending: &[pending_fs::PendingFsEntry],
+    staged: &[(String, staging::StagedEntry)],
 ) -> Result<DriftReport> {
-    let pending = repo.run_on_local_repo(repo_name, pending_fs::list_all)?;
-    let staged = repo.run_on_local_repo(repo_name, staging::list_staged_entries)?;
     let mut report = DriftReport::default();
 
     for (path, expected) in &projection {
@@ -77,8 +91,8 @@ fn detect_repo_drift_from_entries(
                         path,
                         DriftKind::ContentMismatch,
                         actual.content_hash.as_deref(),
-                        &pending,
-                        &staged,
+                        pending,
+                        staged,
                     );
                 }
             }
@@ -87,8 +101,8 @@ fn detect_repo_drift_from_entries(
                 path,
                 DriftKind::MissingOnDisk,
                 None,
-                &pending,
-                &staged,
+                pending,
+                staged,
             ),
         }
     }
@@ -105,8 +119,8 @@ fn detect_repo_drift_from_entries(
             path,
             DriftKind::UnexpectedOnDisk,
             actual.content_hash.as_deref(),
-            &pending,
-            &staged,
+            pending,
+            staged,
         );
     }
 

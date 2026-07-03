@@ -33,6 +33,17 @@ pub(super) fn classify_op_specific_error(op: &ScOp, detail: &str) -> Option<Serv
         ScOp::Commit if detail.to_ascii_lowercase().contains("nothing to commit") => {
             Some(ServerError::new(ServerErrorCode::ScNothingToCommit))
         }
+        ScOp::ApplyExternalChanges if detail.contains("No external changes staged to apply") => {
+            Some(ServerError::new(ServerErrorCode::ScNothingToCommit))
+        }
+        ScOp::ApplyExternalChanges
+            if detail.contains("external change overlaps confirmed ledger changes") =>
+        {
+            Some(ServerError::with_detail(
+                ServerErrorCode::StorageConflict,
+                detail,
+            ))
+        }
         _ => None,
     }
 }
@@ -44,6 +55,7 @@ fn is_pending_conflict(detail: &str) -> bool {
             "Ambiguous pending_fs target",
             "Tracked source control target requires document identity",
             "unresolved source control conflict",
+            "external change overlaps confirmed ledger changes",
         ],
     )
 }
@@ -53,6 +65,7 @@ fn is_pending_missing(detail: &str) -> bool {
         detail,
         &[
             "Path is not in pending_fs_ops",
+            "Path is not in pending_fs_ops or staging",
             "Source control target not resolved for path",
             "Source control target not resolved for doc",
         ],

@@ -6,7 +6,6 @@
 
 #[derive(Clone, Copy)]
 pub(super) enum SourceControlActionTone {
-    Primary,
     Secondary,
     Warning,
 }
@@ -47,7 +46,6 @@ pub(super) fn icon_button_class(tone: SourceControlActionTone) -> String {
     format!(
         "h-11 w-11 md:h-5 md:w-5 p-0.5 hover:bg-active rounded flex items-center justify-center {}",
         match tone {
-            SourceControlActionTone::Primary => "text-primary",
             SourceControlActionTone::Secondary => "text-secondary",
             SourceControlActionTone::Warning => "text-warning",
         }
@@ -102,7 +100,6 @@ mod tests {
         assert!(section.contains("md:h-auto"));
 
         for tone in [
-            SourceControlActionTone::Primary,
             SourceControlActionTone::Secondary,
             SourceControlActionTone::Warning,
         ] {

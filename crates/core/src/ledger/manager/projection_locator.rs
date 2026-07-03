@@ -250,6 +250,19 @@ pub(crate) fn read_projection_locator_file(path: &Path) -> Result<ProjectionLoca
     Ok(file)
 }
 
+pub(crate) fn locator_authorizes_repo_name(
+    ledger_dir: &Path,
+    repo_id: RepoId,
+    repo_name: &str,
+) -> Result<bool> {
+    let repo_name_hint = safe_repo_path_segment(repo_name)?;
+    let file = read_projection_locator_file(&projection_locator_path_for(ledger_dir))?;
+    Ok(file
+        .locators
+        .iter()
+        .any(|record| record.repo_id == repo_id && record.repo_name_hint == repo_name_hint))
+}
+
 fn write_projection_locator_file(path: &Path, file: &ProjectionLocatorFile) -> Result<()> {
     let Some(parent) = path.parent() else {
         return Err(anyhow!("Projection Locator path has no parent: {:?}", path));

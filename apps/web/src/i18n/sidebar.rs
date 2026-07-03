@@ -76,6 +76,13 @@ pub fn source_control(locale: Locale) -> &'static str {
     }
 }
 
+pub fn external_changes(locale: Locale) -> &'static str {
+    match locale {
+        Locale::En => "External Changes",
+        Locale::Zh => "外部修改",
+    }
+}
+
 pub fn extensions(locale: Locale) -> &'static str {
     match locale {
         Locale::En => "Extensions",

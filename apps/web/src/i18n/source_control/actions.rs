@@ -106,15 +106,15 @@ pub fn commit_message_placeholder(locale: Locale) -> &'static str {
 
 pub fn commit_disabled_no_changes(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "No staged or confirmed ledger changes to commit",
-        Locale::Zh => "没有可提交的暂存或已确认账本更改",
+        Locale::En => "No confirmed ledger changes to commit",
+        Locale::Zh => "没有可提交的已确认账本更改",
     }
 }
 
 pub fn commit_disabled_no_changes_hint(locale: Locale) -> &'static str {
     match locale {
-        Locale::En => "Stage changes or edit the ledger before committing.",
-        Locale::Zh => "请先暂存更改，或在账本出现已确认更改后再提交。",
+        Locale::En => "Apply external changes to the ledger or edit the ledger before committing.",
+        Locale::Zh => "请先确认外部修改写入账本，或在账本出现已确认更改后再提交。",
     }
 }
 

@@ -95,6 +95,13 @@ impl SourceControlApi for RecordingSourceControlApi {
         *self.commit_mode.lock().expect("commit mode lock") = Some(git_bridge);
         Ok(commit_info(message))
     }
+
+    fn apply_external_changes_in_repo(
+        &self,
+        _repo: &RepoSelector,
+    ) -> anyhow::Result<Vec<ChangeEntry>> {
+        self.unused()
+    }
 }
 
 fn commit_info(message: &str) -> CommitInfo {

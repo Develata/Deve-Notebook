@@ -32,6 +32,7 @@ pub mod context_menu;
 pub mod dashboard;
 pub mod diff;
 pub mod extensions;
+pub mod external_changes;
 pub mod header;
 pub mod js_bridge;
 pub mod login;
@@ -148,6 +149,7 @@ pub mod t {
     pub use super::dashboard;
     pub use super::diff;
     pub use super::extensions;
+    pub use super::external_changes;
     pub use super::header;
     pub use super::login;
     pub use super::merge;

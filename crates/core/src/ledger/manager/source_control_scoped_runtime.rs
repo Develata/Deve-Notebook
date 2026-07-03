@@ -127,6 +127,28 @@ impl<'a> SourceControlScopedRuntime<'a> {
                 &repo_name, message, git_bridge,
             )
     }
+
+    pub(crate) fn commit_staged_in_repo_with_git_bridge(
+        &self,
+        repo: &RepoSelector,
+        message: &str,
+        git_bridge: GitBridgeMode,
+    ) -> Result<CommitInfo> {
+        let repo_name = self.resolve_local_repo_for_execution(repo)?;
+        self.manager
+            .source_control_runtime()
+            .commit_staged_in_local_repo_with_git_bridge(&repo_name, message, git_bridge)
+    }
+
+    pub(crate) fn apply_external_changes_in_repo(
+        &self,
+        repo: &RepoSelector,
+    ) -> Result<Vec<ChangeEntry>> {
+        let repo_name = self.resolve_local_repo_for_execution(repo)?;
+        self.manager
+            .source_control_runtime()
+            .apply_external_changes_in_local_repo(&repo_name)
+    }
 }
 
 impl RepoManager {

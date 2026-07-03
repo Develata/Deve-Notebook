@@ -7,6 +7,7 @@
 //! Source Control commit orchestration runtime.
 
 use crate::config::GitBridgeMode;
+use crate::ledger::manager::commit_plan::CommitTarget;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::ledger::manager::git_mirror_queue_runtime;
 use crate::ledger::manager::types::RepoManager;
@@ -51,19 +52,11 @@ impl<'a> CommitRuntime<'a> {
         if message.is_empty() {
             anyhow::bail!("source control commit requires a non-empty message");
         }
-        let staged = self
-            .manager
-            .run_on_local_repo(repo_name, staging::list_staged_entries)?;
         let confirmed = self
             .manager
             .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
-        let mut targets = commit_plan::build_targets(staged);
-        if targets.is_empty() && confirmed.is_empty() {
-            anyhow::bail!("Nothing to commit: staging and confirmed ledger changes are empty");
-        }
-        targets.sort_by_key(|target| target.delete_only);
-        if !targets.is_empty() {
-            commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &targets)?;
+        if confirmed.is_empty() {
+            anyhow::bail!("Nothing to commit: confirmed ledger changes are empty");
         }
         #[cfg(not(target_arch = "wasm32"))]
         let git_mirror_repo_id = if git_bridge == GitBridgeMode::Mirror {
@@ -71,22 +64,6 @@ impl<'a> CommitRuntime<'a> {
         } else {
             None
         };
-
-        for target in &targets {
-            if target.delete_only {
-                self.manager.commit_delete_snapshot_in_local_repo(
-                    repo_name,
-                    &target.path,
-                    target.doc_id,
-                )?;
-            } else {
-                self.manager.commit_file_ops_in_local_repo(
-                    repo_name,
-                    &target.path,
-                    target.doc_id,
-                )?;
-            }
-        }
 
         let final_confirmed = self
             .manager
@@ -108,7 +85,6 @@ impl<'a> CommitRuntime<'a> {
                     "Git mirror queue update failed after Deve commit; ledger commit is kept"
                 );
             }
-            staging::clear(db)?;
             Ok(commit)
         })?;
         tracing::info!(
@@ -119,6 +95,82 @@ impl<'a> CommitRuntime<'a> {
         );
         Ok(commit)
     }
+
+    pub(crate) fn apply_external_changes_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        let staged = self
+            .manager
+            .run_on_local_repo(repo_name, staging::list_staged_entries)?;
+        let confirmed = self
+            .manager
+            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
+        let mut targets = commit_plan::build_targets(staged);
+        if targets.is_empty() {
+            anyhow::bail!("No external changes staged to apply");
+        }
+        targets.sort_by_key(|target| target.delete_only);
+        ensure_external_targets_do_not_overlap_confirmed(&targets, &confirmed)?;
+        commit_preflight::preflight_staged_commit_targets(self.manager, repo_name, &targets)?;
+
+        for target in &targets {
+            if target.delete_only {
+                self.manager.apply_external_delete_in_local_repo(
+                    repo_name,
+                    &target.path,
+                    target.doc_id,
+                )?;
+            } else {
+                self.manager.apply_external_file_ops_in_local_repo(
+                    repo_name,
+                    &target.path,
+                    target.doc_id,
+                )?;
+            }
+        }
+
+        let final_confirmed = self
+            .manager
+            .run_on_local_repo(repo_name, ledger_dirty::list_confirmed)?;
+        self.manager.run_on_local_repo(repo_name, staging::clear)?;
+        tracing::info!(
+            "Applied {} external changes to ledger in {}",
+            targets.len(),
+            repo_name
+        );
+        Ok(final_confirmed)
+    }
+}
+
+fn ensure_external_targets_do_not_overlap_confirmed(
+    targets: &[CommitTarget],
+    confirmed: &[ChangeEntry],
+) -> Result<()> {
+    for target in targets {
+        if confirmed
+            .iter()
+            .any(|entry| target_overlaps_confirmed(target, entry))
+        {
+            anyhow::bail!(
+                "external change overlaps confirmed ledger changes: {}",
+                target.path
+            );
+        }
+    }
+    Ok(())
+}
+
+fn target_overlaps_confirmed(target: &CommitTarget, entry: &ChangeEntry) -> bool {
+    matches!(
+        (target.doc_id, entry.doc_id),
+        (Some(target_doc), Some(entry_doc)) if target_doc == entry_doc
+    ) || target.path == entry.path
+        || entry.renamed_from.as_deref() == Some(target.path.as_str())
+        || target
+            .renamed_from
+            .as_deref()
+            .is_some_and(|renamed_from| renamed_from == entry.path)
 }
 
 fn covered_doc_count(confirmed: &[ChangeEntry]) -> u32 {

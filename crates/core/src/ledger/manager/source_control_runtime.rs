@@ -117,9 +117,10 @@ impl<'a> SourceControlRuntime<'a> {
         message: &str,
         git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
-        self.commit_source_control_changes_in_local_repo_with_git_bridge(
-            repo_name, message, git_bridge,
-        )
+        self.write()
+            .commit_source_control_changes_in_local_repo_with_git_bridge(
+                repo_name, message, git_bridge,
+            )
     }
 
     pub(crate) fn commit_source_control_changes_in_local_repo_with_git_bridge(
@@ -132,6 +133,13 @@ impl<'a> SourceControlRuntime<'a> {
             .commit_source_control_changes_in_local_repo_with_git_bridge(
                 repo_name, message, git_bridge,
             )
+    }
+
+    pub(crate) fn apply_external_changes_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        self.write().apply_external_changes_in_local_repo(repo_name)
     }
 
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {

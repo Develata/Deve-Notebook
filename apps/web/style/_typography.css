@@ -53,6 +53,14 @@
   font-weight: bold;
   line-height: var(--deve-heading-inline-line-height);
   min-height: var(--deve-heading-line-box);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.cm-content .cm-line.cm-heading-line.cm-activeLine {
+  font-size: var(--deve-heading-font-size);
+  line-height: var(--deve-heading-inline-line-height);
+  min-height: var(--deve-heading-line-box);
 }
 
 .cm-content .cm-line.cm-heading-line span {
@@ -62,6 +70,18 @@
 }
 
 .cm-content .cm-line.cm-heading-line span span {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.cm-content .cm-line.cm-heading-line > span {
+  display: inline;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.cm-content .cm-line.cm-heading-line .cm-heading-mark {
+  display: inline;
   font-size: inherit;
   line-height: inherit;
 }

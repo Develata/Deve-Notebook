@@ -149,6 +149,10 @@ impl SourceControlApi for RemoteSourceControlApi {
         // Delegated proxy commits run on the authoritative main process; its runtime mode applies.
         commits::commit_staged(self, repo, message)
     }
+
+    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
+        mutations::apply_external_changes(self, repo)
+    }
 }
 
 impl DelegatedSourceControlApi for RemoteSourceControlApi {}

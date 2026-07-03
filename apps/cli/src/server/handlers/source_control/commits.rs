@@ -30,6 +30,31 @@ pub async fn handle_commit(
     .await;
 }
 
+/// 将 External Changes staging 写入 ledger，但不创建 Source Control commit anchor。
+pub async fn handle_apply_external_changes(
+    state: &Arc<AppState>,
+    ch: &DualChannel,
+    session: &mut WsSession,
+) {
+    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    let scope =
+        match super::repo_scope::resolve_current_authorized_writable_local_repo(state, session) {
+            Ok(scope) => scope,
+            Err(e) => return super::errors::send_ws_scoped(ch, e, scope_nonce),
+        };
+    let selector = super::service::selector_from_scope(&scope);
+    match super::service::apply_external_changes(state.repo.as_ref(), &selector) {
+        Ok(_) => {
+            tracing::info!("Applied external changes to ledger");
+            super::changes::handle_get_changes(state, ch, session, None).await;
+        }
+        Err(e) => {
+            tracing::error!("Failed to apply external changes to ledger: {:?}", e);
+            super::errors::send_ws_scoped(ch, e, scope_nonce);
+        }
+    }
+}
+
 /// 获取提交历史
 pub async fn handle_get_commit_history(
     state: &Arc<AppState>,

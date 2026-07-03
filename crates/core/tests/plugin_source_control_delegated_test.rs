@@ -104,6 +104,13 @@ impl SourceControlApi for RecordingDelegatedSourceControlApi {
     ) -> anyhow::Result<CommitInfo> {
         self.unused()
     }
+
+    fn apply_external_changes_in_repo(
+        &self,
+        _repo: &RepoSelector,
+    ) -> anyhow::Result<Vec<ChangeEntry>> {
+        self.unused()
+    }
 }
 
 impl DelegatedSourceControlApi for RecordingDelegatedSourceControlApi {}

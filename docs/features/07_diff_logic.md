@@ -6,6 +6,7 @@
 
 - 用户应能看清当前有哪些工作区变化。
 - 用户应能明确区分 working directory、staged、confirmed ledger dirty、committed。
+- 用户应能明确区分外部投影文件夹修改与已经进入 ledger 的 Source Control 变更。
 - 冲突与只读场景不能伪装成正常提交。
 
 ## Operation 示例
@@ -19,32 +20,44 @@
 - Merge Runtime：`docs/features/operations/sc_merge_runtime.md`
 - CommitAndPush：`docs/features/operations/sc_commit_and_push.md`
 - Commit History / Commit Diff：`docs/features/operations/sc_history_commit_diff.md`
+- External Changes：`docs/features/operations/external_changes.md`
 
 ## 功能项
 
-### 1. Working Changes
+### 1. External Changes / 外部修改
 
-- 外部文件变化或本地工作区偏差应进入变更列表。
+- 外部文件变化或本地投影工作区偏差应进入 `External Changes / 外部修改` 同级板块。
 - 用户可以看到文件级变化状态。
+- 用户可以 Open Diff、Stage / Unstage、Discard External Change，并用 `Apply to Ledger` / `确认外部修改` 写入 ledger facts。
+- External Changes 不显示 history / graph，不创建 Source Control commit anchor。
+- `Apply to Ledger` 不是普通 `Commit`，UI 不应只写 `Commit`。
 
-### 2. Stage / Unstage
+### 2. External Stage / Unstage
 
-- 用户可以把候选变化移入或移出 staged 区域。
+- 用户可以把外部候选变化移入或移出 External Changes staged 区域。
 - staged 与 unstaged 必须可见区分。
-- Working row 右侧应提供 VS Code-like inline actions：打开 diff、Discard、Stage；桌面通过 hover/focus 显示，移动端保持可见并满足触控尺寸。
-- Staged row 右侧应提供 Unstage；Confirmed Ledger row 只提供打开 diff，不提供逐文件 Stage / Discard / Revert。
+- External Changes working row 右侧应提供 VS Code-like inline actions：打开 diff、Discard External Change、Stage；桌面通过 hover/focus 显示，移动端保持可见并满足触控尺寸。
+- External Changes staged row 右侧应提供 Unstage；Confirmed Ledger row 只提供打开 diff，不提供逐文件 Stage / Discard / Revert。
 - 变更状态字母 `M` / `A` / `D` / `R` 必须保留，但应与 row action tray 分区显示，避免挤压文件名或覆盖按钮。
-- Staged / unstaged / confirmed ledger resource group header 应是可键盘触发的折叠按钮，并通过 `aria-expanded`
+- External staged / external unstaged / confirmed ledger resource group header 应是可键盘触发的折叠按钮，并通过 `aria-expanded`
   与 `aria-controls` 暴露状态和受控内容；受控内容应以稳定 `id` 常驻 DOM，折叠时使用 `hidden`
   隐藏；section action 按钮不应顺带触发展开/收起。
 
-### 2.1 Confirmed Ledger Changes
+### 2.1 External / Confirmed Ledger Overlap
+
+- 如果同一文档同时存在外部修改与 `Confirmed Ledger Changes`，External Changes 行应显示
+  `与已确认账本更改重叠` / `Overlaps confirmed ledger changes`。
+- 重叠行禁用普通 Stage 和 `Apply to Ledger`，只允许打开 diff 或丢弃外部修改。
+- 系统不得自动用外部文件覆盖 ledger，也不得自动把 ledger dirty 覆盖到投影文件；任何未来“用外部文件覆盖 ledger”都必须是单独明确操作。
+
+### 2.2 Confirmed Ledger Changes
 
 - 程序内编辑或 CLI 受控写入 ack 后，变化已经进入 ledger，不应出现在工作区 pending 列表。
 - 若这些变化尚未被最新 Source Control commit anchor 覆盖，Source Control 应展示 `Confirmed Ledger Changes`。
 - 该分组不提供 Stage / Discard / Revert；首版只提供打开 diff，commit 一次性覆盖全部 confirmed ledger changes。
 - UI 应在该分组中说明它们已进入 ledger，不能逐文件暂存或放弃，只能打开 diff 或随本组整体 commit anchor 覆盖。
 - confirmed-only commit 成功后，该分组应清空并刷新 history。
+- Source Control 只负责 ledger/version-anchor 状态、Commit、history、graph；不显示 External Changes 的 staged/unstaged working groups。
 
 ### 3. Diff / History / Graph
 
@@ -126,15 +139,36 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 
 步骤：
 
-1. 打开 Source Control。
-2. 观察 `Changes` 列表。
+1. 打开 External Changes。
+2. 观察 `External Changes` 列表。
 3. 执行 `Stage`。
 4. 再执行 `Unstage`。
 
 期望结果：
 
-- 条目能在 `Changes` 与 `Staged Changes` 之间移动。
+- 条目能在 `External Changes` 与 `Staged External Changes` 之间移动。
 - 不出现点击无效或状态错位。
+
+### DIFF-FEAT-01B: External Changes -> Apply to Ledger
+
+前置条件：
+
+- 当前 repo 可写。
+- Projection Workspace 中存在外部修改。
+
+步骤：
+
+1. 打开 External Changes。
+2. Stage 一个外部修改。
+3. 点击 `Apply to Ledger` / `确认外部修改`。
+4. 打开 Source Control。
+
+期望结果：
+
+- 外部修改写入 ledger facts。
+- External Changes staged/unstaged 列表刷新。
+- Source Control 显示对应 `Confirmed Ledger Changes`。
+- history / graph 不因 `Apply to Ledger` 创建新 commit anchor。
 
 ### DIFF-FEAT-02: 打开 Diff 与 History
 
@@ -189,3 +223,25 @@ Web 只提供 `Git: Import Changes`、`Git: Push Mirror` 与 `Git: Repair Mirror
 - confirmed row 不显示 Stage / Discard / Revert，只显示打开 diff 的只读动作。
 - diff 基于 latest commit anchor 与当前 ledger head。
 - commit 成功后 `Confirmed Ledger Changes` 清空，history 增加新 commit。
+
+### DIFF-FEAT-05: External 与 Confirmed Ledger 重叠 fail-closed
+
+前置条件：
+
+- 同一文档已有 `Confirmed Ledger Changes`。
+- Projection Workspace 中同一路径或同一 `DocId` 又出现外部修改。
+
+步骤：
+
+1. 打开 External Changes。
+2. 观察重叠行。
+3. 尝试普通 Stage。
+4. 打开 diff。
+5. 丢弃外部修改。
+
+期望结果：
+
+- 行显示 `与已确认账本更改重叠` / `Overlaps confirmed ledger changes`。
+- Stage 与 Apply to Ledger 禁用。
+- Open Diff 可用。
+- Discard External Change 可用，并恢复投影文件到当前 ledger projection。

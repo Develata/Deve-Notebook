@@ -51,6 +51,7 @@ fn scan_records_rename_candidate_by_inode() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending_add(&repo, "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage a");
+    repo.apply_external_changes().expect("apply external add");
     repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit a");
     let doc_id = repo

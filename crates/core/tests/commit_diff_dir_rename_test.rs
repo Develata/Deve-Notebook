@@ -51,6 +51,8 @@ fn commit_diff_reports_child_rename_after_directory_move() {
     write_workspace_file(&workspace_root, "notes/a.md", "hello");
     seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage initial");
+    repo.apply_external_changes()
+        .expect("apply external initial");
     let first = repo
         .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit initial");
@@ -71,6 +73,8 @@ fn commit_diff_reports_child_rename_after_directory_move() {
         .expect("repo-scoped result");
     repo.stage_pending("notes/a.md").expect("stage delete");
     repo.stage_pending("docs/a.md").expect("stage add");
+    repo.apply_external_changes()
+        .expect("apply external rename");
     let second = repo
         .commit_staged_with_git_bridge("rename dir", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit rename");

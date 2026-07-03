@@ -8,6 +8,7 @@ mod branch;
 mod chat;
 mod doc;
 mod editor;
+mod external_changes;
 mod source_control;
 mod sync;
 
@@ -24,11 +25,13 @@ pub fn provide_sub_contexts(state: &CoreState) {
     provide_context(state.runtime_clients.scope.clone());
     provide_context(state.runtime_clients.document.clone());
     provide_context(state.runtime_clients.source_control.clone());
+    provide_context(state.runtime_clients.external_changes.clone());
     provide_context(state.runtime_clients.rendering.clone());
     provide_context(doc::build_doc_context(state));
     provide_context(editor::build_editor_context(state));
     provide_context(chat::build_chat_context(state));
     provide_context(sync::build_sync_context(state));
     provide_context(source_control::build_source_control_context(state));
+    provide_context(external_changes::build_external_changes_context(state));
     provide_context(branch::build_branch_context(state));
 }

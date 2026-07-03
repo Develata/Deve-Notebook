@@ -5,19 +5,16 @@
 
 pub const CHANGE_ITEM_ACTION_TRAY_CLASS: &str =
     "sc-action-tray sc-row-action-tray flex items-center gap-0.5";
-pub const SECTION_ACTION_TRAY_CLASS: &str =
-    "sc-action-tray sc-section-action-tray flex items-center gap-1 text-primary";
 
 #[cfg(test)]
 mod tests {
-    use super::{CHANGE_ITEM_ACTION_TRAY_CLASS, SECTION_ACTION_TRAY_CLASS};
+    use super::CHANGE_ITEM_ACTION_TRAY_CLASS;
 
     #[test]
     fn source_control_action_tray_uses_stable_css_gates() {
         assert!(CHANGE_ITEM_ACTION_TRAY_CLASS.contains("sc-row-action-tray"));
-        assert!(SECTION_ACTION_TRAY_CLASS.contains("sc-section-action-tray"));
 
-        for class in [CHANGE_ITEM_ACTION_TRAY_CLASS, SECTION_ACTION_TRAY_CLASS] {
+        for class in [CHANGE_ITEM_ACTION_TRAY_CLASS] {
             assert!(class.contains("sc-action-tray"));
             assert!(!class.contains("md:hidden"));
             assert!(!class.contains("md:group-hover"));

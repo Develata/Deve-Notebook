@@ -72,7 +72,7 @@ fn apply_file_delete_structure_returns_none_when_only_legacy_path_mapping_exists
 }
 
 #[test]
-fn commit_staged_fails_when_workspace_file_is_missing() {
+fn apply_external_changes_fails_when_workspace_file_is_missing() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
@@ -96,16 +96,14 @@ fn commit_staged_fails_when_workspace_file_is_missing() {
 
     repo.stage_pending("notes/missing.md")
         .expect("stage pending");
-    let err = repo
-        .commit_staged_with_git_bridge("commit missing", deve_core::config::GitBridgeMode::Mirror)
-        .expect_err("must fail");
+    let err = repo.apply_external_changes().expect_err("must fail");
     let msg = err.to_string();
     assert!(msg.contains("Failed to read staged workspace file"));
     assert!(msg.contains("notes/missing.md"));
 }
 
 #[test]
-fn commit_staged_preflights_all_workspace_files_before_ledger_append() {
+fn apply_external_changes_preflights_all_workspace_files_before_ledger_append() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
@@ -151,7 +149,7 @@ fn commit_staged_preflights_all_workspace_files_before_ledger_append() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged_with_git_bridge("commit mixed", deve_core::config::GitBridgeMode::Mirror)
+        .apply_external_changes()
         .expect_err("preflight must reject missing file");
 
     let after_seq = repo
@@ -166,7 +164,7 @@ fn commit_staged_preflights_all_workspace_files_before_ledger_append() {
 }
 
 #[test]
-fn commit_staged_rejects_delete_target_when_doc_id_path_mismatches() {
+fn apply_external_changes_rejects_delete_target_when_doc_id_path_mismatches() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
@@ -178,6 +176,8 @@ fn commit_staged_rejects_delete_target_when_doc_id_path_mismatches() {
         .apply_file_structure_in_local_repo("default", "notes/b.md", None, "test")
         .expect("doc b");
     assert_ne!(doc_a, doc_b);
+    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit baseline");
     repo.run_on_local_repo("default", |db| {
         staging::stage_pending_entry(
             db,
@@ -198,7 +198,7 @@ fn commit_staged_rejects_delete_target_when_doc_id_path_mismatches() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged_with_git_bridge("delete corrupt", deve_core::config::GitBridgeMode::Mirror)
+        .apply_external_changes()
         .expect_err("delete target mismatch must fail closed");
 
     let after_seq = repo
@@ -217,7 +217,7 @@ fn commit_staged_rejects_delete_target_when_doc_id_path_mismatches() {
 }
 
 #[test]
-fn commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc() {
+fn apply_external_changes_rejects_upsert_target_when_path_is_bound_to_another_doc() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
@@ -229,6 +229,8 @@ fn commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc() {
         .apply_file_structure_in_local_repo("default", "notes/b.md", None, "test")
         .expect("doc b");
     assert_ne!(doc_a, doc_b);
+    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit baseline");
     let disk_path = repo
         .local_repo_workspace_path("default", "notes/b.md")
         .expect("workspace path");
@@ -254,7 +256,7 @@ fn commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged_with_git_bridge("upsert corrupt", deve_core::config::GitBridgeMode::Mirror)
+        .apply_external_changes()
         .expect_err("upsert target bound to another doc must fail closed");
 
     let after_seq = repo
@@ -273,7 +275,7 @@ fn commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc() {
 }
 
 #[test]
-fn commit_staged_rejects_upsert_move_without_rename_evidence() {
+fn apply_external_changes_rejects_upsert_move_without_rename_evidence() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
@@ -281,6 +283,8 @@ fn commit_staged_rejects_upsert_move_without_rename_evidence() {
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
         .expect("doc a");
+    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit baseline");
     let disk_path = repo
         .local_repo_workspace_path("default", "notes/c.md")
         .expect("workspace path");
@@ -306,7 +310,7 @@ fn commit_staged_rejects_upsert_move_without_rename_evidence() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged_with_git_bridge("move corrupt", deve_core::config::GitBridgeMode::Mirror)
+        .apply_external_changes()
         .expect_err("upsert move without rename evidence must fail closed");
 
     let after_seq = repo
@@ -325,7 +329,7 @@ fn commit_staged_rejects_upsert_move_without_rename_evidence() {
 }
 
 #[test]
-fn commit_staged_rejects_docless_upsert_on_tracked_path() {
+fn apply_external_changes_rejects_docless_upsert_on_tracked_path() {
     let dir = tempdir().expect("tempdir");
     let mut repo = RepoManager::init(dir.path().join("ledger"), 10, None, None).expect("init repo");
     repo.set_projection_base_for_all_local_repos_checked(dir.path().join("notes"))
@@ -333,6 +337,8 @@ fn commit_staged_rejects_docless_upsert_on_tracked_path() {
     let (doc_id, _ops) = repo
         .apply_file_structure_in_local_repo("default", "notes/a.md", None, "test")
         .expect("doc a");
+    repo.commit_staged_with_git_bridge("baseline", deve_core::config::GitBridgeMode::Mirror)
+        .expect("commit baseline");
     let disk_path = repo
         .local_repo_workspace_path("default", "notes/a.md")
         .expect("workspace path");
@@ -358,10 +364,7 @@ fn commit_staged_rejects_docless_upsert_on_tracked_path() {
         .expect("before seq");
 
     let err = repo
-        .commit_staged_with_git_bridge(
-            "docless tracked corrupt",
-            deve_core::config::GitBridgeMode::Mirror,
-        )
+        .apply_external_changes()
         .expect_err("docless upsert on tracked path must fail closed");
 
     let after_seq = repo

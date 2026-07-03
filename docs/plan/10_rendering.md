@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-29`
+- `Last Review`: `2026-07-03`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -71,7 +71,7 @@ V_editor = Project(L_confirmed) + O_pending
 
 ### 2.3 Mode Semantics
 
-工程上必须区分：
+工程上必须区分三种 Markdown 显示模式：
 
 - `Source Projection`
 - `Hybrid Decoration`
@@ -79,9 +79,9 @@ V_editor = Project(L_confirmed) + O_pending
 
 其中：
 
-- `Source Projection` 是真实可编辑主视图。
-- `Hybrid` 只是对 source 的 decoration / reveal 规则，不是独立 authority。
-- `Preview Projection` 是派生阅读投影，不得成为写入真值源。
+- `Source Projection` 是真实可编辑主视图，显示完整 Markdown 源码；但 ATX 标题行仍按标题层级应用整行字号与行高。
+- `Hybrid Decoration` 是混合模式：光标/选区所在行及其关联块显示源码；非活动区域可隐藏 `#`、强调、链接等语法标记并显示投影样式。它只是对 source 的 decoration / reveal 规则，不是独立 authority。
+- `Preview Projection` 是只读阅读投影，参考 Obsidian reading mode：显示渲染结果，不显示 Markdown 源码，不允许编辑，不得成为写入真值源。
 
 ### 2.4 Editor Kernel Stack
 
@@ -134,6 +134,8 @@ EditorBufferChanged
 - render refresh 只能消费 editor projection，不得直接改 ledger authority。
 - outline、widget、preview 必须基于同一份 confirmed+pending buffer 构建。
 - ATX h1/h2/h3 在主编辑器中必须作为同一行级 projection 应用字号、粗细与行高；空标题与非空标题不得因为语法标记显示/隐藏而回落到正文尺寸，也不得叠加双倍缩放。
+- `#`、`# s`、`## s`、`### s` 等空与非空 ATX 标题在 Source Projection、Hybrid Decoration 与 Preview Projection 三种模式下都必须保持对应标题层级的行高。
+- Hybrid Decoration 的 active 行显示源码时仍必须保留标题级行高；光标/选区只控制语法标记 reveal，不得把标题行压回正文 line box。
 - 标题行内包含 inline math 时，math widget/reveal 范围不得取消该行的 heading line projection；只有标题 opener 本身位于 math/code/frontmatter 范围内时才可拒绝标题行级样式。
 
 ## 4. Parsing Contract
@@ -212,6 +214,8 @@ Baseline contract 的行内支持集合：
 ### 5.1 Cursor Reveal
 
 - 光标进入 widget 的源码范围时，render projection **MUST** 让位给源码。
+- 在 Hybrid Decoration 中，光标/选区所在行及关联块让位给源码；非活动行继续按渲染投影显示。
+- Cursor reveal 只改变标记可见性与 widget/source 切换，不得取消标题、引用、代码块等块级行高 projection。
 - 适用范围：
   - math
   - mermaid

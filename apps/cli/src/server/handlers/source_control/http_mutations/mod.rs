@@ -60,6 +60,14 @@ pub struct CommitPayload {
     pub repo: RepoSelector,
 }
 
+#[derive(Deserialize)]
+pub struct ApplyExternalPayload {
+    #[serde(default)]
+    pub scope_nonce: Option<u64>,
+    #[serde(flatten)]
+    pub repo: RepoSelector,
+}
+
 pub(crate) async fn stage(
     State(state): State<Arc<AppState>>,
     Extension(auth_session_id): Extension<AuthSessionId>,
@@ -197,6 +205,51 @@ pub async fn unstage_delegated(
     let target = payload.target();
     match service::unstage_file(state.repo.as_ref(), &payload.repo, &target) {
         Ok(_) => axum::http::StatusCode::NO_CONTENT.into_response(),
+        Err(e) => super::errors::http(e),
+    }
+}
+
+pub(crate) async fn apply_external_changes(
+    State(state): State<Arc<AppState>>,
+    Extension(auth_session_id): Extension<AuthSessionId>,
+    Json(payload): Json<ApplyExternalPayload>,
+) -> impl IntoResponse {
+    let scope_nonce = match super::http_scope::require(payload.scope_nonce) {
+        Ok(scope_nonce) => scope_nonce,
+        Err(error) => return super::errors::http(error),
+    };
+    if let Err(error) = authorize_http_write(
+        &state,
+        &payload.repo,
+        scope_nonce,
+        SourceControlWriteAuthority::BrowserSessionGrant(&auth_session_id),
+    ) {
+        return super::errors::http(error);
+    }
+    match service::apply_external_changes(state.repo.as_ref(), &payload.repo) {
+        Ok(changes) => Json(changes).into_response(),
+        Err(e) => super::errors::http(e),
+    }
+}
+
+pub async fn apply_external_changes_delegated(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<ApplyExternalPayload>,
+) -> impl IntoResponse {
+    let scope_nonce = match super::http_scope::require(payload.scope_nonce) {
+        Ok(scope_nonce) => scope_nonce,
+        Err(error) => return super::errors::http(error),
+    };
+    if let Err(error) = authorize_http_write(
+        &state,
+        &payload.repo,
+        scope_nonce,
+        SourceControlWriteAuthority::DelegatedRemoteProxy,
+    ) {
+        return super::errors::http(error);
+    }
+    match service::apply_external_changes(state.repo.as_ref(), &payload.repo) {
+        Ok(changes) => Json(changes).into_response(),
         Err(e) => super::errors::http(e),
     }
 }

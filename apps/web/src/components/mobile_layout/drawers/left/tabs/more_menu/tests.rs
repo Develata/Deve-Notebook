@@ -29,6 +29,10 @@ fn mobile_sidebar_more_menu_items_cover_sidebar_entries() {
         "more_menu_item_source_control"
     );
     assert_eq!(
+        mobile_more_item_marker(SidebarView::ExternalChanges),
+        "more_menu_item_external_changes"
+    );
+    assert_eq!(
         mobile_more_item_marker(SidebarView::Extensions),
         "more_menu_item_extensions"
     );
@@ -47,6 +51,10 @@ fn mobile_sidebar_more_pin_actions_cover_sidebar_entries() {
     assert_eq!(
         mobile_more_pin_action_marker(SidebarView::SourceControl),
         "more_menu_pin_source_control"
+    );
+    assert_eq!(
+        mobile_more_pin_action_marker(SidebarView::ExternalChanges),
+        "more_menu_pin_external_changes"
     );
     assert_eq!(
         mobile_more_pin_action_marker(SidebarView::Extensions),

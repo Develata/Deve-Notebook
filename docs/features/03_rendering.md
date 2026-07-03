@@ -15,9 +15,14 @@
 本功能篇只把下列用户可见行为纳入验收：
 
 - 主编辑器默认 source-first；增强渲染只能作为源码之上的视觉投影存在。
+- Markdown 显示必须区分三种模式：纯源码模式、混合模式、禁止编辑的纯 preview 模式。
+- 纯源码模式显示完整 Markdown 源码，但标题行仍保留标题字号和行高。
+- 混合模式中，鼠标指针、光标或选区所在行及其关联块显示源码；非活动区域参与渲染，可隐藏 `#` 等 Markdown 标记。
+- 纯 preview 模式是只读阅读模式，参考 Obsidian reading mode，显示渲染结果，不显示 Markdown 源码。
 - 标题、强调、引用、链接、frontmatter 等语法标记可以在非编辑焦点下隐藏或美化，但光标进入时必须显示真实源码。
 - ATX 标题（`#` 到 `######`）的标题正文和空标题行都必须保持对应标题层级的整行视觉高度；隐藏 `#` 标记时不得退回普通段落行高。
 - 空与非空 ATX 标题行（如 `#`、`# 标题`、`## 标题`、`### 标题`）在主编辑器与辅助 HTML Markdown 展示中应按 h1/h2/h3 层级保持可区分字号与高度；标题内的行内公式不应让整行回落到正文行高。
+- `# s`、`## s`、`### s` 这类标准 Markdown 标题行，在纯源码、混合与 preview 三种模式下都不得退回正文行高；混合模式 active 行显示源码时也必须保持标题层级行高。
 - 活动编辑行中的 CJK 无空格 ATX 标题候选（如 `#标题`）只作为编辑期视觉 affordance 维持标题行高，不改变保存后的 Markdown 语义。
 - Math、Mermaid、task checkbox、frontmatter styling、table/image/list/blockquote/code toolbar、Ctrl/Cmd link activation 必须通过 Chrome MCP 手工走查确认具体浏览器行为。
 - Outline 必须支持标题扫描、点击跳转、inline code/math/strong/em/del 的轻量显示，并把不支持语法按普通文本保留。
@@ -38,12 +43,14 @@
 - 文档打开后默认进入源码编辑态。
 - 所有增强渲染都只是源码之上的视觉投影。
 - 用户在任何时刻都可以通过移动光标看到真实 Markdown 源码。
+- 纯源码模式不隐藏 Markdown 标记；但块级标题、引用、代码块等行级 projection 仍可承担可读性样式。
 - 原子操作示例：[`operations/doc_edit_confirmed_op.md`](./operations/doc_edit_confirmed_op.md)
 
 ### 2. Cursor Reveal
 
 - 当光标进入公式、Frontmatter、强调、引用、列表标记等渲染区域时，对应渲染必须立即让位给源码。
 - 用户不应被只读装饰遮挡，导致无法精确编辑。
+- Cursor reveal 不应改变标题行的行高；它只控制源码标记是否显示。
 - 原子操作示例：[`operations/rendering_cursor_reveal.md`](./operations/rendering_cursor_reveal.md)
 - 细粒度操作示例：[`operations/rendering_inline_source_reveal.md`](./operations/rendering_inline_source_reveal.md)
 
@@ -130,6 +137,27 @@
 
 - 光标进入对应范围时，源码立即可见。
 - 用户可以直接编辑，而不是被装饰层阻挡。
+- 若光标进入 `# s` 标题行，源码标记显示，但该行仍保持 h1 行高。
+
+### RENDER-FEAT-01B: Markdown 三模式标题行高
+
+前置条件：
+
+- 文档包含 `#`、`# s`、`## s`、`### s`。
+
+步骤：
+
+1. 切到纯源码模式。
+2. 观察四个标题行。
+3. 切到混合模式，并把光标放入 `# s`。
+4. 移出光标，让 `# s` 回到非活动渲染状态。
+5. 切到禁止编辑的纯 preview 模式。
+
+期望结果：
+
+- 三种模式下 `#`、`# s`、`## s`、`### s` 都保持对应标题层级行高。
+- 混合模式 active 行显示源码，但不退回正文行高。
+- preview 模式不显示 Markdown 源码，不允许编辑。
 
 ### RENDER-FEAT-02: 数学公式与 Mermaid
 

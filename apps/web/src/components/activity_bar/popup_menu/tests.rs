@@ -20,6 +20,10 @@ fn activity_more_menu_items_cover_sidebar_entries() {
         "activity_more_item_source_control"
     );
     assert_eq!(
+        activity_more_item_marker(SidebarView::ExternalChanges),
+        "activity_more_item_external_changes"
+    );
+    assert_eq!(
         activity_more_item_marker(SidebarView::Extensions),
         "activity_more_item_extensions"
     );
@@ -38,6 +42,10 @@ fn activity_more_pin_actions_cover_sidebar_entries() {
     assert_eq!(
         activity_more_pin_action_marker(SidebarView::SourceControl),
         "activity_more_pin_source_control"
+    );
+    assert_eq!(
+        activity_more_pin_action_marker(SidebarView::ExternalChanges),
+        "activity_more_pin_external_changes"
     );
     assert_eq!(
         activity_more_pin_action_marker(SidebarView::Extensions),

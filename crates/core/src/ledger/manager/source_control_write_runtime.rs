@@ -8,7 +8,9 @@ use crate::config::GitBridgeMode;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
 use crate::protocol::ScPathTarget;
-use crate::source_control::{ChangeStatus, CommitInfo, pending_fs, staging};
+use crate::source_control::{
+    ChangeEntry, ChangeStatus, CommitInfo, ledger_dirty, pending_fs, staging,
+};
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -47,6 +49,15 @@ impl<'a> SourceControlWriteRuntime<'a> {
             )
     }
 
+    pub(crate) fn apply_external_changes_in_local_repo(
+        &self,
+        repo_name: &str,
+    ) -> Result<Vec<ChangeEntry>> {
+        self.manager
+            .commit_runtime()
+            .apply_external_changes_in_local_repo(repo_name)
+    }
+
     pub(crate) fn stage_pending_in_local_repo(&self, repo_name: &str, path: &str) -> Result<()> {
         let target = self
             .manager
@@ -74,8 +85,10 @@ impl<'a> SourceControlWriteRuntime<'a> {
                 anyhow::bail!("Path is not in pending_fs_ops: {}", target.path);
             };
             let entries = collect_stage_entries_for_pending_target(db, entry)?;
+            let confirmed = ledger_dirty::list_confirmed(db)?;
             for entry in &entries {
                 ensure_pending_entry_stageable(entry)?;
+                ensure_pending_entry_not_confirmed_overlap(entry, &confirmed)?;
             }
             for entry in entries {
                 pending_fs::remove(db, &entry.path)?;
@@ -114,6 +127,11 @@ impl<'a> SourceControlWriteRuntime<'a> {
                     }
                 }
             }
+            let confirmed = ledger_dirty::list_confirmed(db)?;
+            for entry in &selected {
+                ensure_pending_entry_stageable(entry)?;
+                ensure_pending_entry_not_confirmed_overlap(entry, &confirmed)?;
+            }
             for mut entry in selected {
                 pending_fs::remove(db, &entry.path)?;
                 entry.has_conflict = false;
@@ -130,8 +148,16 @@ impl<'a> SourceControlWriteRuntime<'a> {
     ) -> Result<()> {
         let path = self
             .manager
-            .run_on_local_repo(repo_name, |db| pending_fs::get_for_target(db, target))?
-            .map(|entry| entry.path)
+            .run_on_local_repo(repo_name, |db| {
+                if let Some(entry) = pending_fs::get_for_target(db, target)? {
+                    return Ok(Some(entry.path));
+                }
+                if let Some((path, _)) = staging::get_staged_for_target(db, target)? {
+                    return Ok(Some(path));
+                }
+                let path = crate::utils::path::to_forward_slash(&target.path);
+                Ok(staging::get_staged(db, &path)?.map(|_| path))
+            })?
             .ok_or_else(|| anyhow::anyhow!("Path is not in pending_fs_ops: {}", target.path))?;
         self.manager
             .discard_pending_workdir_in_local_repo(repo_name, &path)
@@ -167,6 +193,37 @@ fn ensure_pending_entry_stageable(entry: &pending_fs::PendingFsEntry) -> Result<
         anyhow::bail!("unresolved source control conflict: {}", entry.path);
     }
     Ok(())
+}
+
+fn ensure_pending_entry_not_confirmed_overlap(
+    entry: &pending_fs::PendingFsEntry,
+    confirmed: &[ChangeEntry],
+) -> Result<()> {
+    if confirmed
+        .iter()
+        .any(|confirmed| pending_entry_overlaps_confirmed(entry, confirmed))
+    {
+        anyhow::bail!(
+            "external change overlaps confirmed ledger changes: {}",
+            entry.path
+        );
+    }
+    Ok(())
+}
+
+fn pending_entry_overlaps_confirmed(
+    entry: &pending_fs::PendingFsEntry,
+    confirmed: &ChangeEntry,
+) -> bool {
+    matches!(
+        (entry.doc_id, confirmed.doc_id),
+        (Some(pending_doc), Some(confirmed_doc)) if pending_doc == confirmed_doc
+    ) || entry.path == confirmed.path
+        || confirmed.renamed_from.as_deref() == Some(entry.path.as_str())
+        || entry
+            .renamed_from
+            .as_deref()
+            .is_some_and(|renamed_from| renamed_from == confirmed.path)
 }
 
 fn collect_stage_entries_for_pending_target(

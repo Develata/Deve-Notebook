@@ -50,6 +50,8 @@ fn seed_initial_commit(repo: &RepoManager) -> deve_core::models::DocId {
     write_workspace_file(repo, "notes/a.md", "hello");
     seed_pending(repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage initial");
+    repo.apply_external_changes()
+        .expect("apply initial external change");
     repo.commit_staged_with_git_bridge("initial", GitBridgeMode::Off)
         .expect("initial commit");
     repo.get_tracked_docid_in_local_repo(repo.local_repo_name(), "notes/a.md")

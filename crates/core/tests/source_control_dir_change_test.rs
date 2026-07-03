@@ -50,6 +50,7 @@ fn dir_change_rescan_records_child_rename_candidates() {
     write_workspace_file(repo.as_ref(), "notes/a.md", "hello");
     seed_pending_add(repo.as_ref(), "notes/a.md", "hello");
     repo.stage_pending("notes/a.md").expect("stage file");
+    repo.apply_external_changes().expect("apply external file");
     repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit file");
     let doc_id = repo

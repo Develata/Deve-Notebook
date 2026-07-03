@@ -62,6 +62,8 @@ fn commit_queues_git_mirror_record_when_mirror_is_ready() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
+    repo.apply_external_changes()
+        .expect("apply external change");
 
     let commit = repo
         .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
@@ -86,6 +88,8 @@ fn commit_without_git_mirror_keeps_no_mirror_record() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
+    repo.apply_external_changes()
+        .expect("apply external change");
 
     let commit = repo
         .commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
@@ -108,6 +112,8 @@ fn source_control_git_bridge_off_skips_mirror_queue_when_git_ready() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
+    repo.apply_external_changes()
+        .expect("apply external change");
 
     let commit = repo
         .commit_staged_with_git_bridge("initial", GitBridgeMode::Off)
@@ -146,6 +152,8 @@ fn git_mirror_queue_failure_does_not_rollback_deve_commit() {
     write_workspace_file(&repo, "notes/a.md", "hello");
     seed_pending(&repo, "notes/a.md", ChangeStatus::Added, "hello");
     repo.stage_pending("notes/a.md").expect("stage");
+    repo.apply_external_changes()
+        .expect("apply external change");
 
     let commit = repo
         .commit_staged_with_git_bridge(

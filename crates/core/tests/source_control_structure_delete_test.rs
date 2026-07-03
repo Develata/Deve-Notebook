@@ -42,6 +42,7 @@ fn delete_commit_emits_delete_structure_fact() {
     })
     .expect("seed add");
     repo.stage_pending("notes/a.md").expect("stage add");
+    repo.apply_external_changes().expect("apply external add");
     repo.commit_staged_with_git_bridge("initial", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit add");
     let doc_id = repo
@@ -69,6 +70,8 @@ fn delete_commit_emits_delete_structure_fact() {
     })
     .expect("seed delete");
     repo.stage_pending("notes/a.md").expect("stage delete");
+    repo.apply_external_changes()
+        .expect("apply external delete");
     repo.commit_staged_with_git_bridge("delete", deve_core::config::GitBridgeMode::Mirror)
         .expect("commit delete");
     let facts = repo

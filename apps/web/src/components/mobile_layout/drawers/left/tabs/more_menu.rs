@@ -17,6 +17,7 @@ pub(super) fn mobile_more_item_marker(view: SidebarView) -> &'static str {
         SidebarView::Explorer => "more_menu_item_explorer",
         SidebarView::Search => "more_menu_item_search",
         SidebarView::SourceControl => "more_menu_item_source_control",
+        SidebarView::ExternalChanges => "more_menu_item_external_changes",
         SidebarView::Extensions => "more_menu_item_extensions",
     }
 }
@@ -26,6 +27,7 @@ pub(super) fn mobile_more_pin_action_marker(view: SidebarView) -> &'static str {
         SidebarView::Explorer => "more_menu_pin_explorer",
         SidebarView::Search => "more_menu_pin_search",
         SidebarView::SourceControl => "more_menu_pin_source_control",
+        SidebarView::ExternalChanges => "more_menu_pin_external_changes",
         SidebarView::Extensions => "more_menu_pin_extensions",
     }
 }

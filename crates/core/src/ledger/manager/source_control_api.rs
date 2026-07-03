@@ -70,7 +70,7 @@ impl SourceControlApi for RepoManager {
         git_bridge: GitBridgeMode,
     ) -> Result<CommitInfo> {
         self.source_control_scoped_runtime()
-            .commit_source_control_changes_in_repo_with_git_bridge(repo, message, git_bridge)
+            .commit_staged_in_repo_with_git_bridge(repo, message, git_bridge)
     }
 
     fn commit_source_control_changes_in_repo_with_git_bridge(
@@ -81,5 +81,10 @@ impl SourceControlApi for RepoManager {
     ) -> Result<CommitInfo> {
         self.source_control_scoped_runtime()
             .commit_source_control_changes_in_repo_with_git_bridge(repo, message, git_bridge)
+    }
+
+    fn apply_external_changes_in_repo(&self, repo: &RepoSelector) -> Result<Vec<ChangeEntry>> {
+        self.source_control_scoped_runtime()
+            .apply_external_changes_in_repo(repo)
     }
 }

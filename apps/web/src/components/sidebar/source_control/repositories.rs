@@ -11,16 +11,8 @@ use leptos::prelude::*;
 
 use super::touch_target::secondary_panel_toggle_class;
 
-pub(crate) fn repo_branch_dirty_suffix(
-    staged_count: usize,
-    unstaged_count: usize,
-    confirmed_count: usize,
-) -> &'static str {
-    if staged_count == 0 && unstaged_count == 0 && confirmed_count == 0 {
-        ""
-    } else {
-        "*"
-    }
+pub(crate) fn repo_branch_dirty_suffix(confirmed_count: usize) -> &'static str {
+    if confirmed_count == 0 { "" } else { "*" }
 }
 
 #[component]
@@ -38,11 +30,7 @@ pub fn RepositoriesSection(expanded: RwSignal<bool>, visible: RwSignal<bool>) ->
     let current_branch =
         Signal::derive(move || current_branch_label(core.active_branch.get(), locale.get()));
     let branch_suffix = Signal::derive(move || {
-        repo_branch_dirty_suffix(
-            source_control.staged_changes.get().len(),
-            source_control.unstaged_changes.get().len(),
-            source_control.confirmed_changes.get().len(),
-        )
+        repo_branch_dirty_suffix(source_control.confirmed_changes.get().len())
     });
 
     view! {
@@ -105,9 +93,7 @@ mod tests {
 
     #[test]
     fn repo_branch_dirty_suffix_marks_confirmed_ledger_changes_dirty() {
-        assert_eq!(repo_branch_dirty_suffix(0, 0, 0), "");
-        assert_eq!(repo_branch_dirty_suffix(1, 0, 0), "*");
-        assert_eq!(repo_branch_dirty_suffix(0, 1, 0), "*");
-        assert_eq!(repo_branch_dirty_suffix(0, 0, 1), "*");
+        assert_eq!(repo_branch_dirty_suffix(0), "");
+        assert_eq!(repo_branch_dirty_suffix(1), "*");
     }
 }

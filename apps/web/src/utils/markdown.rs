@@ -253,4 +253,26 @@ mod tests {
             assert!(html.contains(tag));
         }
     }
+
+    #[test]
+    fn markdown_heading_modes_keep_nonempty_atx_rows_tall() {
+        let html = render_markdown("# s\n## s\n### s", None);
+        for tag in ["<h1>s</h1>", "<h2>s</h2>", "<h3>s</h3>"] {
+            assert!(html.contains(tag));
+        }
+        assert!(!html.contains("# s"));
+        assert!(!html.contains("## s"));
+        assert!(!html.contains("### s"));
+
+        let block_styling = include_str!("../../js/extensions/block_styling.js");
+        assert!(block_styling.contains("ATX_HEADING_LINE_RE"));
+        assert!(block_styling.contains("ACTIVE_CJK_ATX_HEADING_LINE_RE"));
+        assert!(block_styling.contains("cm-heading-line-${headingLevel}"));
+
+        let typography = include_str!("../../style/_typography.css");
+        assert!(typography.contains(".cm-content .cm-line.cm-heading-line.cm-activeLine"));
+        assert!(typography.contains("--deve-heading-line-box"));
+        assert!(typography.contains("--deve-heading-inline-line-height"));
+        assert!(typography.contains(".markdown-body h1"));
+    }
 }

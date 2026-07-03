@@ -152,3 +152,11 @@ pub fn diagnose_projection_local_repo(
 ) -> Result<ProjectionDiagnostic> {
     projection_diagnostic::diagnose(repo, repo_name)
 }
+
+pub(crate) fn diagnose_projection_local_repo_stem(
+    repo: &RepoManager,
+    repo_name: &str,
+    repo_stem: &str,
+) -> Result<ProjectionDiagnostic> {
+    projection_diagnostic::diagnose_stem(repo, repo_name, repo_stem)
+}

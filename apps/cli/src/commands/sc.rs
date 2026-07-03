@@ -16,19 +16,19 @@ use std::path::Path;
 
 #[derive(Subcommand, Debug)]
 pub(crate) enum ScAction {
-    /// Print staged and unstaged source-control counts
+    /// Print external and confirmed source-control counts
     Status {
         #[arg(long)]
         repo: Option<String>,
     },
-    /// Stage pending source-control changes
+    /// Stage pending external projection changes
     Stage {
         #[arg(long)]
         repo: Option<String>,
         #[arg(long)]
         all: bool,
     },
-    /// Commit staged source-control changes
+    /// Create a Source Control commit anchor for confirmed ledger changes
     Commit {
         #[arg(long)]
         repo: Option<String>,

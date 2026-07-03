@@ -27,7 +27,7 @@ impl RepoManager {
         self.list_commits_in_local_repo(self.local_repo_name(), limit)
     }
 
-    /// 提交已暂存文件；调用方必须显式选择 Git bridge policy。
+    /// 创建 Source Control 版本锚点；只覆盖 confirmed ledger changes。
     pub fn commit_staged_with_git_bridge(
         &self,
         message: &str,
@@ -38,6 +38,11 @@ impl RepoManager {
             message,
             git_bridge,
         )
+    }
+
+    /// 将 External Changes staging 显式写入 ledger，但不创建 Source Control commit anchor。
+    pub fn apply_external_changes(&self) -> Result<Vec<ChangeEntry>> {
+        self.apply_external_changes_in_local_repo(self.local_repo_name())
     }
 
     /// 获取所有待确认的文件变更

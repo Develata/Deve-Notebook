@@ -259,8 +259,9 @@
     - ui_assert: confirmed_ledger_rows_open_diff_action_title true
     - ui_assert: confirmed_ledger_rows_open_diff_action_visible true
     - ui_assert: confirmed_ledger_rows_stage_discard_absent true
-    - ui_assert: source_control_working_rows_open_discard_stage_actions_present true
-    - ui_assert: source_control_staged_rows_unstage_action_present true
+    - ui_assert: source_control_working_rows_absent true
+    - ui_assert: external_changes_working_rows_open_discard_stage_actions_present true
+    - ui_assert: external_changes_staged_rows_unstage_action_present true
     - ui_assert: source_control_row_actions_desktop_hover_focus_visible true
     - ui_assert: source_control_row_actions_desktop_hidden_tray_does_not_reserve_width true
     - ui_assert: source_control_status_badge_action_tray_separated true
@@ -284,4 +285,32 @@
   assertions:
     - stdout_contains: "sc_status[default]: staged="
     - exit_code_all_eq: 0
+
+- case_id: DIFF-011
+  goal: External Changes 与 Source Control 分离。
+  preconditions:
+    - 当前 repo 可写
+    - Projection Workspace 中存在一个外部文件修改
+    - 同一文档可构造 confirmed ledger dirty
+  steps:
+    - run: cargo test -p deve_core apply_external_changes_to_ledger -- --nocapture
+    - run: cargo test -p deve_web external_changes -- --nocapture
+    - run: cargo test -p deve_web source_control_confirmed_only_view -- --nocapture
+    - ui_open: "External Changes"
+    - ui_click: "external_change_stage"
+    - ui_click: "external_changes_apply_to_ledger"
+    - ui_open: "Source Control"
+  assertions:
+    - api_assert: external_file_changes_enter_external_changes_not_ledger true
+    - api_assert: external_stage_unstage_only_moves_external_staging true
+    - api_assert: apply_external_changes_writes_ledger_facts true
+    - api_assert: apply_external_changes_does_not_create_commit_anchor true
+    - ui_assert: external_changes_sibling_entry_visible true
+    - ui_assert: external_changes_minimal_actions_visible true
+    - ui_assert: external_changes_history_graph_absent true
+    - ui_assert: external_changes_apply_label_not_commit true
+    - ui_assert: source_control_external_working_groups_absent true
+    - ui_assert: source_control_confirmed_ledger_changes_visible_after_apply true
+    - ui_assert: external_confirmed_overlap_disables_stage true
+    - ui_assert: external_confirmed_overlap_allows_diff_and_discard true
 ```

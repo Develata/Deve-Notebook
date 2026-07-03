@@ -192,15 +192,29 @@ contains	apps/web/src/components/sidebar/source_control/context_menu.rs	aria-che
 contains	apps/web/src/components/sidebar/source_control/context_menu.rs	source_control_history_visibility_menu_item_present
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_section_hint_present true
 contains	apps/web/src/components/sidebar/source_control/resource_group_visibility.rs	non_empty_source_control_state_keeps_all_primary_groups_visible
-contains	apps/web/src/components/sidebar/source_control/resource_group_visibility.rs	empty_resource_group_bulk_actions_are_disabled
 contains	docs/acceptance-cases/04_diff.md	source_control_repo_context_confirmed_dirty_marker true
 contains	docs/acceptance-cases/04_diff.md	source_control_commit_shortcut_prevents_textarea_default true
 contains	docs/acceptance-cases/04_diff.md	confirmed_ledger_rows_stage_discard_absent true
+contains	docs/acceptance-cases/04_diff.md	external_changes_working_rows_open_discard_stage_actions_present true
+contains	docs/acceptance-cases/04_diff.md	external_changes_staged_rows_unstage_action_present true
 contains	docs/acceptance-cases/04_diff.md	source_control_resource_group_headers_are_buttons true
 contains	docs/acceptance-cases/04_diff.md	source_control_section_actions_do_not_toggle_group true
 contains	docs/acceptance-cases/04_diff.md	source_control_secondary_panel_headers_are_buttons true
 contains	docs/acceptance-cases/04_diff.md	source_control_collapsible_headers_control_stable_panels true
 contains	docs/acceptance-cases/04_diff.md	source_control_header_section_menu_exposes_checked_state true
+contains	docs/acceptance-cases/04_diff.md	case_id: DIFF-011
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_core apply_external_changes_to_ledger -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	run: cargo test -p deve_web external_changes -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	api_assert: apply_external_changes_does_not_create_commit_anchor true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: external_changes_sibling_entry_visible true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: external_changes_apply_label_not_commit true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: source_control_external_working_groups_absent true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: external_confirmed_overlap_disables_stage true
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-011	ui_assert: external_confirmed_overlap_allows_diff_and_discard true
+contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-changes-view="true"
+contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-apply="true"
+contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-overlap="true"
+contains	apps/web/src/components/sidebar/external_changes.rs	fn external_change_overlaps_confirmed
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	change_item_action_surface(&entry, is_staged, has_conflict)
 contains	apps/web/src/components/sidebar/source_control/change_item_actions.rs	confirmed_ledger_rows_only_use_confirmed_action_surface
 contains	apps/web/src/components/sidebar/source_control/repositories.rs	fn repo_branch_dirty_suffix
@@ -374,8 +388,8 @@ contains	apps/cli/src/server/handlers/source_control/diff/remote_content.rs	Remo
 contains	apps/cli/src/server/handlers/source_control/diff/remote_test_extra.rs	remote_diff_rejects_doc_id_path_mismatch
 contains	crates/core/src/ledger/manager/commit_preflight.rs	preflight_staged_upsert_identity
 contains	crates/core/src/ledger/manager/commit_preflight.rs	lacks rename evidence
-contains	crates/core/tests/source_control_commit_apply_error_test.rs	commit_staged_rejects_upsert_target_when_path_is_bound_to_another_doc
-contains	crates/core/tests/source_control_commit_apply_error_test.rs	commit_staged_rejects_upsert_move_without_rename_evidence
+contains	crates/core/tests/source_control_commit_apply_error_test.rs	apply_external_changes_rejects_upsert_target_when_path_is_bound_to_another_doc
+contains	crates/core/tests/source_control_commit_apply_error_test.rs	apply_external_changes_rejects_upsert_move_without_rename_evidence
 contains	docs/plan/05_diff_logic.md	legacy `Deleted + doc_id=None` 的 exact delete selector
 contains	crates/core/src/ledger/manager/source_control_path_target.rs	has_legacy_docless_exact_delete
 contains	crates/core/src/ledger/manager/source_control_path_target/tests.rs	path_wrapper_promotes_docless_non_delete_to_tracked_identity

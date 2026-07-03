@@ -482,10 +482,23 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_sourc
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_source_control_does_not_require_write_gate true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_source_control_touch_targets_min_size_bound true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	ui_assert: source_control_git_status_cli_notice_visible false
-case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	ui_assert: source_control_commit_controls_change_rows_and_actions_min_size "44x44"
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	cli_assert: mobile_source_control_external_groups_absent true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-023	ui_assert: source_control_commit_controls_confirmed_rows_and_actions_min_size "44x44"
 contains	docs/acceptance-bindings.tsv	UI-MOB-023|manual-chrome|docs/features/08_ui_design_03_mobile.md|mobile source control read gate workflow
 contains	docs/plan/11_ui_design/03_mobile.md	Source Control tab **MUST** 复用共享 Source Control read surface 与 read gate
 contains	docs/features/08_ui_design_03_mobile.md	移动端 Source Control 必须显示与桌面相同的 Source Control read surface
+contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-024
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	run: scripts/check-mobile-baseline.sh
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	run: cargo test -p deve_web mobile_external_changes -- --nocapture
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	cli_assert: mobile_external_changes_entry_visible true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	cli_assert: mobile_external_changes_touch_targets_min_size_bound true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	ui_assert: external_changes_history_graph_absent true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	ui_assert: external_changes_apply_label_not_commit true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	ui_assert: mobile_external_changes_row_actions_visible_without_hover true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-024	ui_assert: external_changes_rows_and_actions_min_size "44x44"
+contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-mobile-touch-target="external-changes-action"
+contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-mobile-touch-target="external-changes-section-header"
+contains	apps/web/src/components/mobile_layout/drawers/left/tabs/tab_button.rs	SidebarView::ExternalChanges
 contains	apps/web/src/components/sidebar/source_control/changes.rs	fn mobile_source_control_read_gate_allows_readonly_refresh()
 contains	apps/web/src/components/sidebar/source_control/changes_panel.rs	fn mobile_source_control_read_gate_renders_panel()
 contains	apps/web/src/components/sidebar/source_control/touch_target.rs	fn mobile_source_control_read_gate_touch_targets_min_size_bound()

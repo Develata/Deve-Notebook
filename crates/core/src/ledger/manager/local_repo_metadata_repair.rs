@@ -3,6 +3,9 @@
 //!   - 04_repository#repo-catalog-repair-contract
 
 use crate::ledger::database::cached_or_create_database;
+use crate::ledger::manager::projection_locator::{
+    locator_authorizes_repo_name, safe_repo_path_segment,
+};
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::{RepoInfo, RepoManager};
 use anyhow::{Context, Result, anyhow};
@@ -11,8 +14,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::ledger::manager::local_repo_metadata_repair_support::{
-    preflight_workspace_root_repair, prepare_workspace_root_repair, repair_workspace_root,
-    validate_local_repo_info,
+    ensure_local_repo_metadata_name_authorized, preflight_workspace_root_repair,
+    prepare_workspace_root_repair, repair_workspace_root, validate_local_repo_info,
 };
 
 pub(super) fn validate_local_repo_metadata(
@@ -25,10 +28,14 @@ pub(super) fn validate_local_repo_metadata(
     let mut seen = HashMap::new();
     let mut seen_urls = HashMap::new();
     let mut seen_names = HashMap::new();
+    let main_info = RepoManager::read_repo_info_from_db(main_db)?;
+    if let Some(info) = main_info.as_ref() {
+        ensure_local_repo_metadata_name_authorized(ledger_dir, main_repo_name, info)?;
+    }
     validate_local_repo_info(
         main_repo_name,
         main_repo_name,
-        RepoManager::read_repo_info_from_db(main_db)?,
+        main_info,
         &mut seen,
         &mut seen_urls,
         &mut seen_names,
@@ -55,6 +62,14 @@ pub(super) fn validate_local_repo_metadata(
                 err
             )
         })?;
+        let report_duplicate_name_first = info.as_ref().is_some_and(|info| {
+            should_report_duplicate_display_name_first(&stem, info, &seen, &seen_urls, &seen_names)
+        });
+        if let Some(info) = info.as_ref()
+            && !report_duplicate_name_first
+        {
+            ensure_local_repo_metadata_name_authorized(ledger_dir, &stem, info)?;
+        }
         validate_local_repo_info(
             &stem,
             &stem,
@@ -65,6 +80,23 @@ pub(super) fn validate_local_repo_metadata(
         )?;
     }
     Ok(())
+}
+
+fn should_report_duplicate_display_name_first(
+    stem: &str,
+    info: &RepoInfo,
+    seen: &HashMap<uuid::Uuid, String>,
+    seen_urls: &HashMap<String, String>,
+    seen_names: &HashMap<String, String>,
+) -> bool {
+    if info.name == stem || !seen_names.contains_key(&info.name) {
+        return false;
+    }
+    let url_conflict = info
+        .url
+        .as_ref()
+        .is_some_and(|url| seen_urls.contains_key(url));
+    !seen.contains_key(&info.uuid) && !url_conflict
 }
 
 pub(crate) fn repair_local_repo_metadata(
@@ -148,7 +180,13 @@ pub(crate) fn repair_local_repo_metadata(
         let original = info.clone();
         let previous_name = info.name.clone();
         let display_name_owner = seen_names.get(&info.name).cloned();
-        if info.name.trim().is_empty() || display_name_owner.is_some_and(|owner| owner != stem) {
+        let unauthorized_name_drift = info.name != stem
+            && (safe_repo_path_segment(&info.name).is_err()
+                || !locator_authorizes_repo_name(ledger_dir, info.uuid, &info.name)?);
+        if info.name.trim().is_empty()
+            || display_name_owner.is_some_and(|owner| owner != stem)
+            || unauthorized_name_drift
+        {
             info.name = stem.clone();
         }
         seen_names.insert(info.name.clone(), stem.clone());
@@ -176,7 +214,7 @@ pub(crate) fn repair_local_repo_metadata(
             info.url = Some(format!("urn:uuid:{}", info.uuid));
         }
         let workspace_repair = if allow_workspace_root_rewrite {
-            prepare_workspace_root_repair(ledger_dir, info.uuid, &previous_name, &info.name)?
+            prepare_workspace_root_repair(ledger_dir, &stem, info.uuid, &previous_name, &info.name)?
         } else {
             None
         };

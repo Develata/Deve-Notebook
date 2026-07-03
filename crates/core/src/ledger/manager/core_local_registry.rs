@@ -6,6 +6,7 @@ use redb::Database;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLockReadGuard, RwLockWriteGuard};
 
+use crate::ledger::manager::local_repo_metadata_repair_support::ensure_local_repo_metadata_name_authorized;
 use crate::ledger::manager::repo_catalog_entries::redb_repo_entries;
 use crate::ledger::manager::types::RepoManager;
 use crate::ledger::source_control;
@@ -74,9 +75,15 @@ impl RepoManager {
         }
         if let Some(info) = Self::read_repo_info_from_db(&self.local_db)?
             && !self.is_local_repo_removed(info.uuid)?
-            && info.name == selector
         {
-            display_matches.push(self.local_repo_name.clone());
+            ensure_local_repo_metadata_name_authorized(
+                &self.ledger_dir,
+                &self.local_repo_name,
+                &info,
+            )?;
+            if info.name == selector {
+                display_matches.push(self.local_repo_name.clone());
+            }
         }
         let local_dir = Self::checked_local_dir_for(&self.ledger_dir, "resolving local selector")?;
         for (path, stem) in redb_repo_entries(&local_dir, "resolving local selector")? {
@@ -99,6 +106,7 @@ impl RepoManager {
             if stem == selector {
                 return Ok(Some(stem));
             }
+            ensure_local_repo_metadata_name_authorized(&self.ledger_dir, &stem, &info)?;
             if info.name == selector {
                 display_matches.push(stem);
             }

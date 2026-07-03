@@ -14,6 +14,7 @@ enum CommitKey {
 
 pub(super) struct CommitTarget {
     pub path: String,
+    pub renamed_from: Option<String>,
     pub doc_id: Option<DocId>,
     pub delete_only: bool,
     pub has_rename_evidence: bool,
@@ -48,6 +49,7 @@ fn resolve_group(entries: Vec<(String, StagedEntry)>) -> CommitTarget {
         .any(|(_, entry)| entry.status == ChangeStatus::Deleted);
     CommitTarget {
         path: path.clone(),
+        renamed_from: entry.renamed_from.clone(),
         doc_id: entry.doc_id,
         delete_only: entries
             .iter()
@@ -86,6 +88,7 @@ mod tests {
         ]);
         assert_eq!(targets.len(), 1);
         assert_eq!(targets[0].path, "notes/b.md");
+        assert_eq!(targets[0].renamed_from, None);
         assert!(!targets[0].delete_only);
         assert!(targets[0].has_rename_evidence);
     }

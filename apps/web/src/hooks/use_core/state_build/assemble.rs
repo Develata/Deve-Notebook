@@ -4,7 +4,8 @@
 //!
 use crate::api::WsService;
 use crate::runtime::{
-    CoreRuntimeClients, document_client::DocumentClient, rendering_client::RenderingClient,
+    CoreRuntimeClients, document_client::DocumentClient,
+    external_changes_client::ExternalChangesClient, rendering_client::RenderingClient,
     scope_client::ScopeClient, session_client::SessionClient,
     source_control_client::SourceControlClient,
 };
@@ -107,6 +108,19 @@ pub(super) fn assemble_core_state(
             on_resolve_conflict: sc.on_resolve_conflict.clone(),
             on_get_commit_diff: sc.on_get_commit_diff.clone(),
             on_commit_and_push: sc.on_commit_and_push.clone(),
+        },
+        external_changes: ExternalChangesClient {
+            staged_changes: sc.staged_changes,
+            unstaged_changes: sc.unstaged_changes,
+            confirmed_changes: sc.confirmed_changes,
+            on_get_changes: sc.on_get_changes.clone(),
+            on_stage_file: sc.on_stage_file.clone(),
+            on_stage_files: sc.on_stage_files.clone(),
+            on_unstage_file: sc.on_unstage_file.clone(),
+            on_unstage_files: sc.on_unstage_files.clone(),
+            on_discard_file: sc.on_discard_file.clone(),
+            on_apply_to_ledger: sc.on_apply_external_changes.clone(),
+            on_get_doc_diff: sc.on_get_doc_diff.clone(),
         },
         rendering: RenderingClient {
             stats: runtime.stats,

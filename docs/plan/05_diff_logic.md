@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-25`
+- `Last Review`: `2026-07-03`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -40,17 +40,21 @@ authority 仍是 ledger facts 与 commit anchors。
 
 ### 2.1 Diff Domains
 
-系统必须显式区分两个差异域：
+系统必须显式区分四个差异域：
 
-- `Working Directory Domain`
+- `External Changes Domain`
   - 来源：repo Projection Workspace 与当前规范 projection 的偏差
-  - 状态：`pending_fs_ops`
+  - 状态：`pending_fs_ops` + External Changes staging
+  - 语义：投影文件夹只是待确认输入源；外部文件变化在用户确认前不得写入 ledger。
 - `Confirmed Ledger Domain`
   - 来源：最新 commit anchor 之后已经确认的 ledger facts
   - 状态：只读派生 `ConfirmedLedgerChange`
 - `Ledger Commit Domain`
   - 来源：已确认 ledger facts 与 commit anchors
-  - 状态：`staged`, `commits`, `commit_diff`
+  - 状态：`commits`, `commit_diff`
+- `Git Mirror Domain`
+  - 来源：已完成 Deve commit 的外部生态映射
+  - 状态：mirror queue、out-of-sync diagnostics、只读 status / repair review
 
 ### 2.2 Core State
 
@@ -70,6 +74,10 @@ authority 仍是 ledger facts 与 commit anchors。
 - `pending_fs_ops`、`staging`、`diff cache` 都不是 authority。
 - `ConfirmedLedgerChange` 不是 runtime side table；它只能由 commit anchor 与 ledger head 派生。
 - Git mirror commit 不是 authority；它只是已确认 Deve commit 的外部生态映射。
+- Source Control commit 是版本锚点创建动作；External Changes 的 `Apply to Ledger`
+  只是把 staged external changes 写入 ledger facts，**MUST NOT** 同时创建 commit anchor。
+- 若同一文档同时存在 external change 与 confirmed ledger dirty，External Changes
+  **MUST** fail-closed：禁止普通 stage / apply-to-ledger，只允许打开 diff 或丢弃外部修改。
 
 ### 2.3.1 Git Mirror Lifecycle {#git-mirror-lifecycle}
 
@@ -130,13 +138,14 @@ Git mirror 命令面必须遵守以下边界：
 
 ## 3. State Machines
 
-### 3.1 External Edit Lifecycle
+### 3.1 External Changes Lifecycle
 
 ```text
 ProjectionWorkspaceChangeDetected
   -> PendingFsEntry
-  -> Staged
-  -> LedgerCommitted
+  -> ExternalChangeStaged
+  -> AppliedToLedger
+  -> ConfirmedLedgerChange
   -> Cleared
 ```
 
@@ -145,23 +154,31 @@ ProjectionWorkspaceChangeDetected
 ```text
 PendingFsEntry -> Discarded
 PendingFsEntry -> Conflict
-Staged -> Unstaged
+ExternalChangeStaged -> ExternalChangeUnstaged
+PendingFsEntry + ConfirmedLedgerChange(same doc) -> OverlapBlocked
 ```
 
 约束：
 
 - Watcher 检测到的变更 **MUST NOT** 直接写入 ledger。
-- `Stage` 是 repo-scoped side-table 迁移，不是 UI 样式变化。
+- External Changes 的 `Stage` 是 repo-scoped side-table 迁移，不是 UI 样式变化，也不是 Source Control commit anchor 的 include/exclude 模型。
 - `Discard` 的语义是恢复 workspace 到当前规范 projection。
 - 普通 `Stage` **MUST** fail-closed 于 `has_conflict=true` 的 pending entry；
   只有显式 `ResolveConflict(KeepFs)` flow 可以通过 resolved-stage 路径清除 conflict 标记并移入 staged。
+- `Apply to Ledger` / `确认外部修改` **MUST** 使用 core/server 写入路径把 staged external changes
+  转换为 ledger facts；成功后清空 External Changes staging，并让 Source Control 从 commit anchor 到
+  ledger head 派生 `ConfirmedLedgerChange`。
+- `Apply to Ledger` **MUST NOT** 创建 commit anchor、更新 history、写 Git mirror queue 或把 staged
+  external changes 伪装成 Source Control commit。
+- 当 external change 与 confirmed ledger dirty 指向同一 `DocId`，或缺失 `DocId` 时指向同一 canonical
+  path，普通 stage/apply **MUST** 禁用；UI 和 API 都必须保留 fail-closed 语义，不得由前端自行覆盖。
 
 补充：
 
 - watcher **MUST** 忽略 `.notegit/`
 - watcher、启动扫描、目录重扫 **MUST** 统一应用 `.deveignore`；被忽略路径不得生成 pending / staged / ledger diff。
-- `pending_fs_ops` **MUST** 表示 Working Directory Domain
-- `staging` **MUST** 表示用户确认后的过渡域，而非已提交历史
+- `pending_fs_ops` **MUST** 表示 External Changes Domain
+- `staging` **MUST** 表示用户确认后的 External Changes 过渡域，而非已提交历史或 commit anchor include set
 
 ### 3.1.1 Confirmed Ledger Dirty Lifecycle
 
@@ -180,6 +197,7 @@ EditorOrCliLedgerWrite
 - 首版采用整锚提交：一次 commit 覆盖 latest commit anchor 到当前 ledger head 的全部 confirmed ledger changes。
 - confirmed-only commit 在创建 commit anchor 时必须同步 `snapshot_index` / committed snapshot base 到当前 ledger projection；否则后续 Working Directory conflict 检测会把已提交 ledger 内容误判为 ledger divergence。
 - 首版不支持逐文件 include/exclude，也不开放 confirmed revert。未来若开放 Revert，必须通过追加反向 ledger facts 完成。
+- Source Control **MUST NOT** 对 `ConfirmedLedgerChange` 提供 Discard；撤回已确认 ledger facts 的唯一未来方向是显式 Revert flow，且 Revert 必须追加反向 ledger facts。
 
 ### 3.2 Commit Diff Lifecycle
 

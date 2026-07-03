@@ -40,13 +40,8 @@ pub mod history_timeline;
 pub mod repair_review_copy;
 pub mod repositories;
 mod resource_group_visibility;
-pub mod staged_section_actions;
 pub mod status_notice;
 mod touch_target;
-
-pub mod staged_section;
-pub mod unstaged_section;
-pub mod unstaged_section_actions;
 
 use self::changes_panel::ChangesPanel;
 use self::commit::Commit;

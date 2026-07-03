@@ -143,7 +143,7 @@ RepoNameBinding = {
 - catalog 中的 `RepoName` 只缓存当前 `RepoNameBinding`；缓存漂移时只能从 ledger authority 修复，不得反向改写 authority。
 - remote catalog 文件名冲突只能通过安全重命名或受控 repair 处理，不得合并不同 logical identity。
 - local repo catalog 不得承载 projection base 或 workspace root；projection base 必须通过 host-local Projection Locator 解析，workspace root 必须由 base、当前 safe repo name 与完整 `RepoId` 计算。
-- Projection Locator 的 `repo_name_hint` 只能作为诊断信息；不得替代 `RepoId` 绑定。
+- Projection Locator 的 `repo_name_hint` 只能作为诊断信息；不得替代 `RepoId` 绑定。Catalog repair / selector resolution 只允许用它判断 `metadata.name != execution_stem` 是否来自受控 rename / workspace realign；它不得让漂移出的 display alias 获得新的 authority，也不得替代 exact execution stem 或 `RepoId`。
 - workspace admission 必须读取 `.notegit` identity marker 并验证其 `repo_id == resolved RepoId`；路径名匹配但 marker 缺失或不一致时不得进入 mounted write path。
 
 ### 3.4 Tree State Storage Model

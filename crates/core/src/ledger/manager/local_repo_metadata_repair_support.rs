@@ -7,6 +7,26 @@ use anyhow::{Context, Result, anyhow};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+pub(crate) fn ensure_local_repo_metadata_name_authorized(
+    ledger_dir: &Path,
+    stem: &str,
+    info: &RepoInfo,
+) -> Result<()> {
+    if info.name == stem {
+        return Ok(());
+    }
+    if crate::ledger::manager::projection_locator::locator_authorizes_repo_name(
+        ledger_dir, info.uuid, &info.name,
+    )? {
+        return Ok(());
+    }
+    Err(anyhow!(
+        "Local repo {} metadata name drifted to {}",
+        stem,
+        info.name
+    ))
+}
+
 pub(super) fn validate_local_repo_info(
     stem: &str,
     _expected_name: &str,
@@ -61,6 +81,7 @@ pub(super) fn validate_local_repo_info(
 }
 
 pub(super) struct WorkspaceRootRepairPlan {
+    stem: String,
     repo_id: uuid::Uuid,
     current_name: String,
     old_root: PathBuf,
@@ -69,6 +90,7 @@ pub(super) struct WorkspaceRootRepairPlan {
 
 pub(super) fn prepare_workspace_root_repair(
     ledger_dir: &Path,
+    stem: &str,
     repo_id: uuid::Uuid,
     previous_name: &str,
     current_name: &str,
@@ -148,6 +170,7 @@ pub(super) fn prepare_workspace_root_repair(
     }
     let old_root = existing_sources.into_iter().next().expect("checked len");
     Ok(Some(WorkspaceRootRepairPlan {
+        stem: stem.to_string(),
         repo_id,
         current_name: current_name.to_string(),
         old_root,
@@ -164,7 +187,9 @@ pub(super) fn preflight_workspace_root_repair(
     manager: &RepoManager,
     plan: &WorkspaceRootRepairPlan,
 ) -> Result<()> {
-    let pending = manager.list_pending_fs_in_local_repo(&plan.current_name)?;
+    let pending = manager.run_on_local_repo_stem(&plan.stem, |db| {
+        crate::source_control::pending_fs::list_all(db)
+    })?;
     if !pending.is_empty() {
         return Err(anyhow!(
             "Workspace root realign for {} refused: {} pending workspace change(s)",
@@ -172,7 +197,9 @@ pub(super) fn preflight_workspace_root_repair(
             pending.len()
         ));
     }
-    let staged = manager.list_staged_in_local_repo(&plan.current_name)?;
+    let staged = manager.run_on_local_repo_stem(&plan.stem, |db| {
+        crate::source_control::staging::list_staged_entries(db)
+    })?;
     if !staged.is_empty() {
         return Err(anyhow!(
             "Workspace root realign for {} refused: {} staged source-control change(s)",
@@ -192,7 +219,11 @@ pub(super) fn preflight_workspace_root_repair(
             ));
         }
 
-        let diagnostic = crate::sync::diagnose_projection_local_repo(manager, &plan.current_name)?;
+        let diagnostic = crate::sync::diagnose_projection_local_repo_stem(
+            manager,
+            &plan.current_name,
+            &plan.stem,
+        )?;
         if diagnostic.status != crate::sync::ProjectionDiagnosticStatus::Healthy {
             return Err(anyhow!(
                 "Workspace root realign for {} refused: projection fault {}",
@@ -205,9 +236,9 @@ pub(super) fn preflight_workspace_root_repair(
             ));
         }
 
-        let drift = crate::sync::drift_detect::detect_repo_drift_at_workspace_root(
+        let drift = crate::sync::drift_detect::detect_repo_drift_at_workspace_root_stem(
             manager,
-            &plan.current_name,
+            &plan.stem,
             &plan.old_root,
         )?;
         if drift.is_fault() {

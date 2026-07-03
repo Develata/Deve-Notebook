@@ -26,6 +26,7 @@ pub struct SourceControlCallbacks {
     pub on_unstage_files: Callback<Vec<ChangeEntry>>,
     pub on_discard_file: Callback<ChangeEntry>,
     pub on_commit: Callback<String>,
+    pub on_apply_external_changes: Callback<()>,
     pub on_get_history: Callback<u32>,
     pub on_get_doc_diff: Callback<ChangeEntry>,
     pub on_resolve_conflict: Callback<(ChangeEntry, ConflictResolution)>,
@@ -81,6 +82,7 @@ pub fn create_source_control_callbacks(
         on_unstage_files,
         on_discard_file,
         on_commit,
+        on_apply_external_changes,
         on_resolve_conflict,
         on_commit_and_push,
     ) = create_write_callbacks(
@@ -99,6 +101,7 @@ pub fn create_source_control_callbacks(
         on_unstage_files,
         on_discard_file,
         on_commit,
+        on_apply_external_changes,
         on_get_history,
         on_get_doc_diff,
         on_resolve_conflict,
