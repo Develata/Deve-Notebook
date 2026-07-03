@@ -40,7 +40,7 @@ pub fn Sidebar(
     docs: ReadSignal<Vec<(DocId, String)>>,
     current_doc: ReadSignal<Option<DocId>>,
     is_readonly: Signal<bool>,
-    suppress_source_control_git_status_notice: bool,
+    suppress_source_control_local_command_notice: bool,
     #[prop(into)] on_select: Callback<DocId>,
     #[prop(into)] on_delete: Callback<String>,
     #[prop(into)] on_search_open: Callback<()>,
@@ -73,7 +73,7 @@ pub fn Sidebar(
                 }.into_any(),
                 SidebarView::SourceControl => view! {
                     <crate::components::sidebar::source_control::SourceControlView
-                        suppress_git_status_notice=suppress_source_control_git_status_notice
+                        suppress_local_command_notice=suppress_source_control_local_command_notice
                     />
                 }.into_any(),
                 SidebarView::Search => view! {

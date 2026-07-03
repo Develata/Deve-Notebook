@@ -6,7 +6,7 @@
 use crate::components::activity_bar::SidebarView;
 use crate::hooks::use_core::{
     SourceControlContext,
-    source_control_notice::{SourceControlNotice, is_git_status_cli_notice},
+    source_control_notice::{SourceControlNotice, is_local_command_notice},
 };
 use leptos::prelude::*;
 
@@ -14,7 +14,7 @@ pub(super) fn should_clear_mobile_source_control_notice(
     view: SidebarView,
     notice: Option<&SourceControlNotice>,
 ) -> bool {
-    view == SidebarView::SourceControl && notice.is_some_and(is_git_status_cli_notice)
+    view == SidebarView::SourceControl && notice.is_some_and(is_local_command_notice)
 }
 
 pub(super) fn should_clear_mobile_source_control_notice_for_drawer(
@@ -93,27 +93,29 @@ mod tests {
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
-    fn mobile_source_control_read_gate_plain_entry_clears_git_status_notice() {
+    fn mobile_source_control_read_gate_plain_entry_clears_local_command_notice() {
         let status_notice = SourceControlNotice::git_status_cli_only();
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         let export_notice = SourceControlNotice::git_export_cli_only();
         let import_notice = SourceControlNotice::git_import_cli_only();
         let push_notice = SourceControlNotice::git_push_cli_only();
         let repair_notice = SourceControlNotice::git_repair_cli_only();
-        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+        let establish_branch_notice = SourceControlNotice::establish_branch_unavailable();
+        let source_control_notice = SourceControlNotice {
+            code: deve_core::protocol::ServerErrorCode::ScDocNotFound,
+            detail: None,
+        };
 
-        assert!(should_clear_mobile_source_control_notice(
-            SidebarView::SourceControl,
-            Some(&status_notice),
-        ));
         for notice in [
+            &status_notice,
             &mirror_notice,
             &export_notice,
             &import_notice,
             &push_notice,
             &repair_notice,
+            &establish_branch_notice,
         ] {
-            assert!(!should_clear_mobile_source_control_notice(
+            assert!(should_clear_mobile_source_control_notice(
                 SidebarView::SourceControl,
                 Some(notice),
             ));
@@ -133,14 +135,18 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_open_read_surface_observes_git_status_changes() {
+    fn mobile_source_control_open_read_surface_observes_local_command_changes() {
         let status_notice = SourceControlNotice::git_status_cli_only();
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         let export_notice = SourceControlNotice::git_export_cli_only();
         let import_notice = SourceControlNotice::git_import_cli_only();
         let push_notice = SourceControlNotice::git_push_cli_only();
         let repair_notice = SourceControlNotice::git_repair_cli_only();
-        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+        let establish_branch_notice = SourceControlNotice::establish_branch_unavailable();
+        let source_control_notice = SourceControlNotice {
+            code: deve_core::protocol::ServerErrorCode::ScDocNotFound,
+            detail: None,
+        };
 
         assert!(should_observe_mobile_source_control_notice_for_drawer(
             true,
@@ -154,18 +160,16 @@ mod tests {
             true,
             SidebarView::Explorer,
         ));
-        assert!(should_clear_mobile_source_control_notice(
-            SidebarView::SourceControl,
-            Some(&status_notice),
-        ));
         for notice in [
+            &status_notice,
             &mirror_notice,
             &export_notice,
             &import_notice,
             &push_notice,
             &repair_notice,
+            &establish_branch_notice,
         ] {
-            assert!(!should_clear_mobile_source_control_notice(
+            assert!(should_clear_mobile_source_control_notice(
                 SidebarView::SourceControl,
                 Some(notice),
             ));
@@ -195,28 +199,29 @@ mod tests {
     }
 
     #[test]
-    fn mobile_source_control_read_gate_drawer_activation_clears_stale_git_status_notice() {
+    fn mobile_source_control_read_gate_drawer_activation_clears_stale_local_command_notice() {
         let status_notice = SourceControlNotice::git_status_cli_only();
         let mirror_notice = SourceControlNotice::git_mirror_cli_only();
         let export_notice = SourceControlNotice::git_export_cli_only();
         let import_notice = SourceControlNotice::git_import_cli_only();
         let push_notice = SourceControlNotice::git_push_cli_only();
         let repair_notice = SourceControlNotice::git_repair_cli_only();
-        let source_control_notice = SourceControlNotice::establish_branch_unavailable();
+        let establish_branch_notice = SourceControlNotice::establish_branch_unavailable();
+        let source_control_notice = SourceControlNotice {
+            code: deve_core::protocol::ServerErrorCode::ScDocNotFound,
+            detail: None,
+        };
 
-        assert!(should_clear_mobile_source_control_notice_for_drawer(
-            true,
-            SidebarView::SourceControl,
-            Some(&status_notice),
-        ));
         for notice in [
+            &status_notice,
             &mirror_notice,
             &export_notice,
             &import_notice,
             &push_notice,
             &repair_notice,
+            &establish_branch_notice,
         ] {
-            assert!(!should_clear_mobile_source_control_notice_for_drawer(
+            assert!(should_clear_mobile_source_control_notice_for_drawer(
                 true,
                 SidebarView::SourceControl,
                 Some(notice),

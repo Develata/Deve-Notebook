@@ -56,19 +56,19 @@ use self::history::History;
 use self::status_notice::StatusNotice;
 use crate::hooks::use_core::{
     SourceControlContext,
-    source_control_notice::{SourceControlNotice, is_git_status_cli_notice},
+    source_control_notice::{SourceControlNotice, is_local_command_notice},
 };
 use leptos::prelude::*;
 
-fn should_clear_suppressed_git_status_notice(
-    suppress_git_status_notice: bool,
+fn should_clear_suppressed_local_command_notice(
+    suppress_local_command_notice: bool,
     notice: Option<&SourceControlNotice>,
 ) -> bool {
-    suppress_git_status_notice && notice.is_some_and(is_git_status_cli_notice)
+    suppress_local_command_notice && notice.is_some_and(is_local_command_notice)
 }
 
 #[component]
-pub fn SourceControlView(#[prop(optional)] suppress_git_status_notice: bool) -> impl IntoView {
+pub fn SourceControlView(#[prop(optional)] suppress_local_command_notice: bool) -> impl IntoView {
     let core = expect_context::<SourceControlContext>();
     let locale = use_context::<RwSignal<crate::i18n::Locale>>().expect("locale context");
     let notice_guard = core.clone();
@@ -85,7 +85,10 @@ pub fn SourceControlView(#[prop(optional)] suppress_git_status_notice: bool) -> 
 
     Effect::new(move |_| {
         let notice = notice_guard.notice.get();
-        if should_clear_suppressed_git_status_notice(suppress_git_status_notice, notice.as_ref()) {
+        if should_clear_suppressed_local_command_notice(
+            suppress_local_command_notice,
+            notice.as_ref(),
+        ) {
             notice_guard.clear_notice.run(());
         }
     });
@@ -117,7 +120,7 @@ pub fn SourceControlView(#[prop(optional)] suppress_git_status_notice: bool) -> 
                     current_repo_id=core.current_repo_id
                     current_scope_nonce=core.current_scope_nonce
                     clear_notice=core.clear_notice
-                    suppress_git_status_notice=suppress_git_status_notice
+                    suppress_local_command_notice=suppress_local_command_notice
                 />
                 <ChangesPanel visible=show_changes />
                 <Show when=move || show_graph.get()>
@@ -133,26 +136,39 @@ pub fn SourceControlView(#[prop(optional)] suppress_git_status_notice: bool) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::should_clear_suppressed_git_status_notice;
+    use super::should_clear_suppressed_local_command_notice;
     use crate::hooks::use_core::source_control_notice::SourceControlNotice;
 
     #[test]
-    fn mobile_source_control_view_clears_suppressed_git_status_notice() {
+    fn mobile_source_control_view_clears_suppressed_local_command_notice() {
         let status = SourceControlNotice::git_status_cli_only();
         let push = SourceControlNotice::git_push_cli_only();
+        let establish_branch = SourceControlNotice::establish_branch_unavailable();
+        let server = SourceControlNotice {
+            code: deve_core::protocol::ServerErrorCode::ScDocNotFound,
+            detail: None,
+        };
 
-        assert!(should_clear_suppressed_git_status_notice(
+        assert!(should_clear_suppressed_local_command_notice(
             true,
             Some(&status)
         ));
-        assert!(!should_clear_suppressed_git_status_notice(
-            false,
-            Some(&status)
-        ));
-        assert!(!should_clear_suppressed_git_status_notice(
+        assert!(should_clear_suppressed_local_command_notice(
             true,
             Some(&push)
         ));
-        assert!(!should_clear_suppressed_git_status_notice(true, None));
+        assert!(should_clear_suppressed_local_command_notice(
+            true,
+            Some(&establish_branch)
+        ));
+        assert!(!should_clear_suppressed_local_command_notice(
+            false,
+            Some(&status)
+        ));
+        assert!(!should_clear_suppressed_local_command_notice(
+            true,
+            Some(&server)
+        ));
+        assert!(!should_clear_suppressed_local_command_notice(true, None));
     }
 }

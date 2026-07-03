@@ -10,8 +10,7 @@ use crate::components::sidebar::source_control::repair_review_copy::{
     self as repair_copy, GitRepairReviewFetchState,
 };
 use crate::hooks::use_core::source_control_notice::{
-    SourceControlNotice, is_git_repair_cli_notice, is_git_status_cli_notice,
-    is_local_command_notice,
+    SourceControlNotice, is_git_repair_cli_notice, is_local_command_notice,
 };
 use crate::hooks::use_core::write_gate::RepoWriteBlock;
 use crate::i18n::Locale;
@@ -27,9 +26,9 @@ fn should_show_notice(block: Option<RepoWriteBlock>, notice: Option<&SourceContr
 fn should_show_visible_notice(
     block: Option<RepoWriteBlock>,
     notice: Option<&SourceControlNotice>,
-    suppress_git_status_notice: bool,
+    suppress_local_command_notice: bool,
 ) -> bool {
-    if suppress_git_status_notice && notice.is_some_and(is_git_status_cli_notice) {
+    if suppress_local_command_notice && notice.is_some_and(is_local_command_notice) {
         return false;
     }
     should_show_notice(block, notice)
@@ -56,7 +55,7 @@ pub fn ErrorNotice(
     current_repo_id: ReadSignal<Option<String>>,
     current_scope_nonce: ReadSignal<u64>,
     clear_notice: Callback<()>,
-    #[prop(optional)] suppress_git_status_notice: bool,
+    #[prop(optional)] suppress_local_command_notice: bool,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let repair_review = RwSignal::new(GitRepairReviewFetchState::Idle);
@@ -99,7 +98,7 @@ pub fn ErrorNotice(
         <Show when=move || should_show_visible_notice(
             block.get(),
             notice.get().as_ref(),
-            suppress_git_status_notice,
+            suppress_local_command_notice,
         )>
             <div class="px-4 py-3 text-sm border-b border-default bg-warning/5">
                 <div class="flex items-start justify-between gap-3">
@@ -203,12 +202,23 @@ mod tests {
     }
 
     #[test]
-    fn mobile_git_status_notice_can_be_suppressed_without_hiding_other_cli_notices() {
+    fn mobile_local_command_notice_can_be_suppressed_without_hiding_server_notices() {
         let status = SourceControlNotice::git_status_cli_only();
         let push = SourceControlNotice::git_push_cli_only();
+        let establish_branch = SourceControlNotice::establish_branch_unavailable();
+        let server = SourceControlNotice {
+            code: ServerErrorCode::ScDocNotFound,
+            detail: None,
+        };
 
         assert!(!should_show_visible_notice(None, Some(&status), true));
-        assert!(should_show_visible_notice(None, Some(&push), true));
+        assert!(!should_show_visible_notice(None, Some(&push), true));
+        assert!(!should_show_visible_notice(
+            None,
+            Some(&establish_branch),
+            true
+        ));
+        assert!(should_show_visible_notice(None, Some(&server), true));
         assert!(should_show_visible_notice(None, Some(&status), false));
     }
 
