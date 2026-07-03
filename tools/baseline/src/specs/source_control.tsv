@@ -234,6 +234,7 @@ cargo_test	deve_core	external_scan_deleted_enters_external_changes_not_ledger
 cargo_test	deve_core	external_scan_renamed_enters_external_changes_not_ledger
 cargo_test	deve_core	external_stage_unstage_only_moves_external_staging
 cargo_test	deve_core	source_control_confirmed_ledger_changes_visible_after_apply
+cargo_test	deve_web	external_changes
 cargo_test	deve_web	source_control_confirmed_only_view
 contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-changes-view="true"
 contains	apps/web/src/components/sidebar/external_changes.rs	data-deve-external-apply="true"
