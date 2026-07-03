@@ -29,7 +29,7 @@
 ### 2. 即时反馈
 
 - 修改主题、语言、面板显示等设置后，界面应出现即时变化。
-- 浏览器本地主题与编辑器基础偏好应通过根节点标记、可见按钮状态或数字输入反馈；不得写入 repo authority。
+- 浏览器本地主题与编辑器基础偏好应通过根节点标记、可见按钮状态、编辑器 chrome（含行号 gutter）或数字输入反馈；不得写入 repo authority。
 - 最大文档标签页数是本地 UI 偏好，只限制 Markdown 文档标签页自动淘汰，不限制 Diff 标签页，也不持久化打开文档列表；该数字输入必须在 blur / Enter / change 时提交，输入两位数的中间过程不应触发临时淘汰。
 - AI Chat 面板可见性是本地 UI 偏好；关闭后应同时移除 Chat 面板和桌面 Chat 分界线，不应改变 AI 后端配置。
 - Backend section 在普通浏览器中必须显示 native-only unavailable；在 Desktop/Mobile native 中可选择 Local Backend 或 Remote Backend。Remote URL 未经 native node-role 校验成功不能保存，校验中/失败/成功都应有可见反馈。

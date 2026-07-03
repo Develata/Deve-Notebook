@@ -46,7 +46,12 @@ absent	apps/web/src/components/settings.rs	data-deve-settings-close="primary"
 contains	apps/web/src/components/settings_sections/local_prefs.rs	data-deve-runtime-smoke="embedded"
 contains	apps/web/style/tailwind.css	html[data-deve-editor-wrap="off"] .cm-content
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_click: "Night"
+contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: editor_line_number_gutter_theme_synced true
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_click: "Hide AI Chat"
+contains	docs/features/operations/settings_ui_preferences.md	line-number gutter, follows the active design tokens
+contains	docs/features/operations/settings_runtime_feedback.md	Theme feedback must reach embedded editor chrome through design tokens
+contains	apps/web/style/_base.css	.cm-lineNumbers .cm-gutterElement
+contains	apps/web/style/_base.css	.cm-activeLineGutter
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_submit_number: "max_document_tabs"
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: settings_primary_close_absent true
 contains	docs/acceptance-cases/15_settings_operation_refs.md	ui_assert: max_document_tabs_pref_unchanged_before_submit true

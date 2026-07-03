@@ -24,7 +24,7 @@
 - `Surface`: `settings-modal`
 - `Trigger`: click Warm, Cold, or Night visual style in Settings
 - `Preconditions`: settings modal is open
-- `Immediate Result`: browser-local theme preference updates and root theme marker re-renders
+- `Immediate Result`: browser-local theme preference updates and root theme marker re-renders; editor chrome, including the line-number gutter, follows the active design tokens
 - `Application Entry`: `apps/web/src/components/settings_sections.rs`,
   `apps/web/src/components/settings_prefs.rs`
 

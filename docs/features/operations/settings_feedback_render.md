@@ -16,7 +16,7 @@
 - `Trigger`: language, layout, or panel preference changes
 - `Preconditions`: setting has a visible UI effect
 - `Immediate Result`: user sees changed labels, theme marker, editor marker,
-  selection state, or layout
+  editor chrome such as the line-number gutter, selection state, or layout
 - `Application Entry`: `apps/web/src/components/settings.rs`,
   `apps/web/src/components/settings_sections.rs`
 
@@ -50,6 +50,7 @@
 ## Notes
 
 - Feedback/render is the observable end of a settings change, not the mutation itself.
+- Theme rendering must project root design tokens into CodeMirror chrome, including the line-number gutter, without adding a second settings authority.
 - Main objects: `settings::feedback`, `ui::preference`, `runtime::profile`.
 - Reserved future settings must expose both visible copy and an accessibility
   signal such as `aria-disabled`; hiding a tooltip behind `pointer-events: none`

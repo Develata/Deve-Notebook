@@ -16,7 +16,7 @@
 - `Trigger`: language, panel, or layout preference changes
 - `Preconditions`: setting has visible UI effect
 - `Immediate Result`: user sees changed labels, theme marker, editor marker,
-  layout, or selected state
+  editor chrome such as the line-number gutter, layout, or selected state
 - `Application Entry`: `apps/web/src/components/settings.rs`,
   `apps/web/src/components/settings_sections.rs`
 
@@ -50,6 +50,7 @@
 ## Notes
 
 - Feedback operations prevent “changed but invisible” settings drift.
+- Theme feedback must reach embedded editor chrome through design tokens rather than a second CodeMirror-specific theme state.
 - Main objects: `settings::feedback`, `runtime::profile`, `ui::preference`.
 - Reserved UI feedback is still non-authoritative: it may communicate a future
   boundary, but it must not enable persistence or runtime writes.

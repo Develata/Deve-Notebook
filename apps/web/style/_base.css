@@ -28,6 +28,31 @@
 /* ==================== CodeMirror 覆盖样式 ==================== */
 .cm-editor {
   height: 100%;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+}
+
+html[data-deve-theme-pref] .cm-editor .cm-gutters {
+  background-color: var(--editor-bg);
+  color: var(--editor-muted);
+  border-color: var(--editor-border);
+}
+
+html[data-deve-theme-pref] .cm-editor .cm-gutters.cm-gutters-before {
+  border-right-color: var(--editor-border);
+}
+
+html[data-deve-theme-pref] .cm-editor .cm-gutters.cm-gutters-after {
+  border-left-color: var(--editor-border);
+}
+
+html[data-deve-theme-pref] .cm-editor .cm-lineNumbers .cm-gutterElement {
+  color: var(--editor-muted);
+}
+
+html[data-deve-theme-pref] .cm-editor .cm-lineNumbers .cm-activeLineGutter {
+  background-color: var(--bg-active);
+  color: var(--fg-secondary);
 }
 
 .cm-scroller {

@@ -7,4 +7,14 @@ contains	apps/web/style/_variables.css	--color-added
 contains	apps/web/style/_variables.css	--color-modified
 contains	apps/web/style/_variables.css	--color-deleted
 contains	apps/web/style/codemirror.css	@import "./_variables.css";
+contains	docs/acceptance-cases/05_ui.md	cli_assert: codemirror_gutter_uses_design_tokens true
+contains	apps/web/style/_base.css	html[data-deve-theme-pref] .cm-editor .cm-gutters
+contains	apps/web/style/_base.css	.cm-gutters
+contains	apps/web/style/_base.css	.cm-lineNumbers .cm-gutterElement
+contains	apps/web/style/_base.css	.cm-activeLineGutter
+contains	apps/web/style/_base.css	var(--editor-bg)
+contains	apps/web/style/_base.css	var(--editor-muted)
+contains	apps/web/style/_base.css	var(--editor-border)
+contains	apps/web/style/_base.css	var(--bg-active)
+contains	apps/web/style/_base.css	var(--fg-secondary)
 regex_absent_tree_ext_skip	apps/web/style	css	#([0-9a-fA-F]{3,6})	_variables.css|_variables-cold.css|_variables-night.css

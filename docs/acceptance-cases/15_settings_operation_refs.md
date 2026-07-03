@@ -53,6 +53,7 @@
   assertions:
     - ui_assert: locale_eq "zh-CN"
     - ui_assert: theme_pref_eq "night"
+    - ui_assert: editor_line_number_gutter_theme_synced true
     - ui_assert: editor_wrap_eq "off"
     - ui_assert: editor_density_eq "compact"
     - ui_assert: sync_mode_eq "manual"
