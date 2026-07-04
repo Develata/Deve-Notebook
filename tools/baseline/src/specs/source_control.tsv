@@ -6,9 +6,9 @@ contains	apps/web/src/components/command_palette/registry.rs	merge_peer_command
 contains	apps/web/src/components/command_palette/registry.rs	establish_branch_command(
 contains	apps/web/src/components/command_palette/registry/branch.rs	Command::unavailable
 contains	apps/web/src/components/command_palette/registry/branch.rs	establish_branch_command_is_unavailable_notice_only
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	ngit_status_command_sets_cli_only_notice
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	ngit_mirror_command_sets_cli_only_notice
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	ngit_export_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/ngit/tests/status.rs	ngit_status_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/ngit/tests/commands.rs	ngit_mirror_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/ngit/tests/commands.rs	ngit_export_command_sets_cli_only_notice
 contains	apps/web/src/components/command_palette/ui.rs	data-deve-command-unavailable
 contains	apps/web/src/hooks/use_core/source_control_notice.rs	ESTABLISH_BRANCH_UNAVAILABLE_DETAIL
 contains	apps/web/src/hooks/use_core/source_control_notice.rs	GIT_STATUS_CLI_NOTICE_DETAIL
@@ -40,9 +40,9 @@ contains	apps/web/src/i18n/command_palette/ngit.rs	ngit: push mirror
 contains	apps/web/src/components/command_palette/registry/ngit.rs	ngit_status_command
 contains	apps/web/src/components/command_palette/registry/ngit.rs	ngit_mirror_command
 contains	apps/web/src/components/command_palette/registry/ngit.rs	ngit_export_command
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	ngit_import_command_sets_cli_only_notice
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	ngit_push_command_sets_cli_only_notice
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	ngit_repair_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/ngit/tests/commands.rs	ngit_import_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/ngit/tests/commands.rs	ngit_push_command_sets_cli_only_notice
+contains	apps/web/src/components/command_palette/registry/ngit/tests/commands.rs	ngit_repair_command_sets_cli_only_notice
 contains	docs/acceptance-cases/11_commands_settings.md	case_id: CMD-004A
 contains	docs/features/07_diff_logic.md	Git import/push/repair 写操作只允许通过显式 backend/runtime surface 触发
 contains	docs/features/07_diff_logic.md	当前阶段不实现 Web 后端直接 Git import/push/repair，也不实现后台自动 Git mirror repair

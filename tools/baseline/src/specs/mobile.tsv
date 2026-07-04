@@ -11,8 +11,8 @@ contains	apps/web/src/components/layout_breakpoint.rs	pub(crate) const MOBILE_BR
 contains	apps/web/src/components/layout_breakpoint.rs	pub(crate) fn viewport_width_maps_to_mobile(width: f64) -> bool
 contains	apps/web/src/components/layout_breakpoint.rs	fn mobile_viewport_mapping_uses_inclusive_768px_boundary()
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-layout-mode="mobile"
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	fn ngit_status_command_routes_mobile_to_source_control_drawer()
-contains	apps/web/src/components/command_palette/registry/ngit/tests.rs	fn ngit_status_command_clears_stale_cli_notice_on_mobile()
+contains	apps/web/src/components/command_palette/registry/ngit/tests/status.rs	fn ngit_status_command_routes_mobile_to_source_control_drawer()
+contains	apps/web/src/components/command_palette/registry/ngit/tests/status.rs	fn ngit_status_command_clears_stale_cli_notice_on_mobile()
 contains	docs/acceptance-cases/05_ui.md	case_id: UI-MOB-002
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: scripts/check-mobile-baseline.sh
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: cargo test -p deve_web mobile_drawer_edge_swipe -- --nocapture
