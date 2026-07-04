@@ -146,8 +146,10 @@ RemoteProjectionCommand
 
 约束：
 
-- 当前 v1 只开放 admission plan 与命令入口；WebDAV/S3 provider I/O 未接线时必须显式
-  fail-closed，并报告 `provider_io_ready=false`。不得把 plan 输出伪装成已完成 push/pull。
+- 未接线的 WebDAV/S3 provider/direction 必须显式 fail-closed，并报告
+  `provider_io_ready=false`。已接线的 provider/direction 只有在 backend/core runtime
+  完成 Projection Locator、`.notegit` identity gate 与 provider adapter 调用后，才可报告
+  `provider_io_ready=true`。不得把 admission plan 输出伪装成已完成 push/pull。
 - `webdav:push` / `s3:push` 只能上传当前 Markdown Projection Workspace 文件集合；
   不上传 `.notegit/`、`.git/`、ledger、staging、snapshot 或 runtime state。
 - `webdav:pull` / `s3:pull` 只能覆盖 Projection Workspace 中的 Markdown projection 文件；

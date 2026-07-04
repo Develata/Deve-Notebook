@@ -26,7 +26,7 @@ chrono = { version = "0.4", features = ["serde"] }
 rhai = { version = "1.19", features = ["serde", "sync"] }
 uuid.workspace = true
 ctrlc = "3.4"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls-webpki-roots"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls-webpki-roots"] }
 reqwest-eventsource = "0.6"
 tokio-tungstenite = "0.24"
 

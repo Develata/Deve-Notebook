@@ -183,6 +183,13 @@
     - run: cargo test -p deve_core provider_request_reuses_transport_admission_validator -- --nocapture
     - run: cargo test -p deve_core fake_adapter_push_stores_projection_files_without_authority_effects -- --nocapture
     - run: cargo test -p deve_core fake_adapter_pull_returns_external_changes_candidate_only -- --nocapture
+    - run: cargo test -p deve_cli collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
+    - run: cargo test -p deve_cli collect_markdown_projection_files_skips_ignored_directories -- --nocapture
+    - run: cargo test -p deve_cli webdav_push_puts_projection_files_without_authority_effects -- --nocapture
+    - run: cargo test -p deve_cli webdav_streaming_push_reads_files_one_at_a_time_without_authority_effects -- --nocapture
+    - run: cargo test -p deve_cli webdav_push_rejects_failed_put -- --nocapture
+    - run: cargo test -p deve_cli run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
+    - run: cargo test -p deve_cli run_webdav_push_returns_provider_error_before_success_report -- --nocapture
     - run: cargo test -p deve_cli run_reports_provider_io_fail_closed_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
@@ -262,6 +269,12 @@
     - api_assert: remote_projection_fake_adapter_markdown_only true
     - api_assert: remote_projection_pull_candidate_external_changes_only true
     - api_assert: remote_projection_provider_metadata_diagnostic_only true
+    - api_assert: webdav_push_uploads_markdown_projection_only true
+    - api_assert: webdav_push_skips_deveignore_directories true
+    - api_assert: webdav_push_streams_projection_files true
+    - api_assert: webdav_push_authority_effects_absent true
+    - cli_assert: webdav_push_failure_does_not_report_provider_io_ready true
+    - cli_assert: webdav_push_provider_io_ready true
     - ui_assert: source_control_commit_empty_state_disabled_reason true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true

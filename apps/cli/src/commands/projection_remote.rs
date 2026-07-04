@@ -4,6 +4,8 @@
 //!
 //! CLI shell for remote Markdown projection transport intents.
 
+mod webdav;
+
 use crate::commands::repo_arg::resolve_local_repo_args;
 use crate::commands::source_control_workspace_gate::ensure_local_repo_workspace_identity_for_write;
 use anyhow::{Result, bail};
@@ -48,15 +50,31 @@ pub(crate) enum ProjectionRemoteDirectionAction {
 }
 
 pub fn run(ledger_dir: &Path, action: ProjectionRemoteAction, snapshot_depth: usize) -> Result<()> {
+    let mut webdav_provider = webdav::WebDavProjectionProvider::new()?;
+    run_with_provider(ledger_dir, action, snapshot_depth, &mut webdav_provider)
+}
+
+fn run_with_provider(
+    ledger_dir: &Path,
+    action: ProjectionRemoteAction,
+    snapshot_depth: usize,
+    webdav_provider: &mut dyn webdav::WebDavProjectionPushAdapter,
+) -> Result<()> {
     let request = request_from_action(action);
     let plan = plan_remote_projection_transport(RemoteProjectionPlanInput {
         provider: request.provider,
         direction: request.direction,
-        locator: request.locator,
+        locator: request.locator.clone(),
     })?;
+    let provider_direction_wired = provider_direction_wired_for(&request);
 
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, request.repo.as_deref())?;
+    if provider_direction_wired && request.repo.is_none() && repo_names.len() != 1 {
+        bail!(
+            "remote projection provider I/O requires an explicit --repo when multiple local repos are present"
+        );
+    }
     for repo_name in repo_names {
         ensure_local_repo_workspace_identity_for_write(
             &repo,
@@ -64,16 +82,48 @@ pub fn run(ledger_dir: &Path, action: ProjectionRemoteAction, snapshot_depth: us
             "remote projection transport",
         )?;
         let workspace = repo.local_repo_workspace_root(&repo_name)?;
-        println!(
-            "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready={}",
-            plan.provider.as_str(),
-            plan.direction.as_str(),
-            plan.projection_scope,
-            workspace.display(),
-            plan.writes_ledger,
-            plan.external_changes_confirmation_required,
-            plan.provider_io_ready,
-        );
+        if provider_direction_wired {
+            let files = webdav::collect_markdown_projection_files(&workspace)?;
+            println!(
+                "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_direction_wired=true provider_io_ready=false planned_files={}",
+                plan.provider.as_str(),
+                plan.direction.as_str(),
+                plan.projection_scope,
+                workspace.display(),
+                plan.writes_ledger,
+                plan.external_changes_confirmation_required,
+                files.len(),
+            );
+            let outcome =
+                webdav_provider.push_projection_files(request.provider, &plan.locator, &files)?;
+            println!(
+                "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=true uploaded_files={} writes_source_control_staging={} writes_commit_anchor={} writes_git_main_mirror={} provider_metadata_diagnostic_only={}",
+                plan.provider.as_str(),
+                plan.direction.as_str(),
+                plan.projection_scope,
+                workspace.display(),
+                plan.writes_ledger,
+                plan.external_changes_confirmation_required,
+                outcome.uploaded_files,
+                outcome.effects.writes_source_control_staging,
+                outcome.effects.writes_commit_anchor,
+                outcome.effects.writes_git_main_mirror,
+                outcome.provider_metadata_is_diagnostic_only,
+            );
+        } else {
+            println!(
+                "projection_remote[{repo_name}]: provider={} direction={} scope={} workspace={} writes_ledger={} external_changes_confirmation_required={} provider_io_ready=false",
+                plan.provider.as_str(),
+                plan.direction.as_str(),
+                plan.projection_scope,
+                workspace.display(),
+                plan.writes_ledger,
+                plan.external_changes_confirmation_required,
+            );
+        }
+    }
+    if provider_direction_wired {
+        return Ok(());
     }
     bail!(
         "remote projection provider I/O is not wired yet (provider_io_ready=false); no projection files were pushed or pulled"
@@ -118,116 +168,15 @@ fn direction_request(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    #[test]
-    fn webdav_push_builds_provider_request() {
-        let request = request_from_action(ProjectionRemoteAction::Webdav {
-            action: ProjectionRemoteDirectionAction::Push {
-                repo: Some("default".into()),
-                locator: "webdav+https://dav.example.com/notebooks/main".into(),
-            },
-        });
-
-        assert_eq!(request.provider, RemoteProjectionProvider::WebDav);
-        assert_eq!(request.direction, RemoteProjectionDirection::Push);
-        assert_eq!(request.repo.as_deref(), Some("default"));
-    }
-
-    #[test]
-    fn s3_pull_builds_provider_request() {
-        let request = request_from_action(ProjectionRemoteAction::S3 {
-            action: ProjectionRemoteDirectionAction::Pull {
-                repo: None,
-                locator: "s3://bucket/notebooks/main".into(),
-            },
-        });
-
-        assert_eq!(request.provider, RemoteProjectionProvider::S3);
-        assert_eq!(request.direction, RemoteProjectionDirection::Pull);
-        assert_eq!(request.locator, "s3://bucket/notebooks/main");
-    }
-
-    #[test]
-    fn run_reports_provider_io_fail_closed_after_workspace_gate() {
-        let repo = initialized_default_repo();
-
-        let err = run(&repo.ledger_dir(), webdav_pull_action(), 8)
-            .expect_err("provider I/O must remain fail-closed");
-
-        let message = err.to_string();
-        assert!(message.contains("provider I/O is not wired yet"));
-        assert!(message.contains("provider_io_ready=false"));
-    }
-
-    #[test]
-    fn run_checks_workspace_identity_before_provider_io() {
-        let repo = initialized_default_repo();
-        std::fs::remove_file(deve_core::utils::notegit::repo_identity_path(
-            &repo.workspace,
-        ))
-        .expect("remove identity marker");
-
-        let err = run(&repo.ledger_dir(), webdav_pull_action(), 8)
-            .expect_err("workspace identity gate must fail before provider I/O");
-
-        let message = err.to_string();
-        assert!(message.contains("Projection workspace identity marker is invalid"));
-        assert!(message.contains("identity marker"));
-        assert!(!message.contains("provider_io_ready=false"));
-    }
-
-    struct ProjectionRemoteHarness {
-        _dir: tempfile::TempDir,
-        root: PathBuf,
-        workspace: PathBuf,
-    }
-
-    impl ProjectionRemoteHarness {
-        fn ledger_dir(&self) -> PathBuf {
-            self.root.join("ledger")
-        }
-    }
-
-    fn initialized_default_repo() -> ProjectionRemoteHarness {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let root = dir.path().to_path_buf();
-        crate::commands::init::run(
-            &root.join("ledger"),
-            "default",
-            &root.join("notes"),
-            root.clone(),
-            8,
-            None,
-            None,
+fn provider_direction_wired_for(request: &ProjectionRemoteRequest) -> bool {
+    matches!(
+        (request.provider, request.direction),
+        (
+            RemoteProjectionProvider::WebDav,
+            RemoteProjectionDirection::Push
         )
-        .expect("init");
-        let workspace = std::fs::read_dir(root.join("notes"))
-            .expect("notes dir")
-            .map(|entry| entry.expect("workspace entry").path())
-            .find(|path| {
-                path.file_name()
-                    .and_then(|name| name.to_str())
-                    .is_some_and(|name| name.starts_with("default--"))
-            })
-            .expect("default workspace");
-
-        ProjectionRemoteHarness {
-            _dir: dir,
-            root,
-            workspace,
-        }
-    }
-
-    fn webdav_pull_action() -> ProjectionRemoteAction {
-        ProjectionRemoteAction::Webdav {
-            action: ProjectionRemoteDirectionAction::Pull {
-                repo: Some("default".into()),
-                locator: "webdav+https://dav.example.com/notebooks/main".into(),
-            },
-        }
-    }
+    )
 }
+
+#[cfg(test)]
+mod tests;

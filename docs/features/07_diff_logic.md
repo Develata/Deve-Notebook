@@ -108,8 +108,9 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 ### 7. WebDAV/S3 Remote Projection Transport
 
 - Command Palette 应提供 `webdav:push`、`webdav:pull`、`s3:push`、`s3:pull`。
-- 当前 v1 只允许 backend/core 生成 admission plan；provider I/O 未接线时必须显示
-  `provider_io_ready=false` 并 fail-closed，不能伪装成已经 push/pull 成功。
+- 未接线的 provider/direction 必须显示 `provider_io_ready=false` 并 fail-closed，不能伪装成
+  已经 push/pull 成功。已接线的 provider/direction 只有在 backend/core runtime 完成
+  workspace identity gate 与 provider adapter 调用后，才能显示 `provider_io_ready=true`。
 - push 只上传当前 Markdown Projection Workspace 文件集合，不上传 ledger、`.notegit/`、`.git/` 或 runtime state。
 - pull 只覆盖 Markdown Projection Workspace 文件；随后由 watcher/scan 进入 External Changes。
 - pull 不直接写 ledger、不创建 commit anchor、不自动 Apply to Ledger，也不直接写 Git main mirror queue。

@@ -178,6 +178,8 @@ pub enum RemoteProjectionProviderError {
     DuplicateProjectionPath,
     #[error("remote projection locator has no fake remote content")]
     MissingFakeRemote,
+    #[error("remote projection provider I/O failed: {0}")]
+    ProviderIo(String),
 }
 
 #[cfg(test)]
