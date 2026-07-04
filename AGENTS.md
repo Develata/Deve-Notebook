@@ -71,7 +71,7 @@ For implementation, debugging, review, architecture-convergence, or commit-produ
 3. Read the matching `docs/plan/` contract.
 4. Read matching `docs/` feature / acceptance / registry / overview / task documents.
 5. Implement `docs/plan/` -> `docs/` -> code, keeping code as a projection of contracts.
-6. Run review with a review subagent when available; if unavailable, perform an explicit self-review and report that the subagent was unavailable.
+6. Run review with a single review subagent when available; close that subagent after it returns a final result or is no longer needed. Do not spawn multiple review subagents for one work item unless the user explicitly authorizes parallel review. If unavailable, perform an explicit self-review and report that the subagent was unavailable.
 7. Fix review findings.
 8. Run targeted tests and relevant contract/baseline checks.
 9. Run Chrome MCP for UI/browser/mobile/editor/Source Control-visible behavior.
@@ -87,7 +87,7 @@ Architecture constraints for this workflow:
 - The frontend is a thin shell: render UI, collect user intent, and dispatch typed intents.
 - Computation, state transitions, ledger/source-control authority mutations, diff/external-change decisions, and commit-anchor business decisions belong in backend/core infra.
 - Do not move ledger, External Changes, Source Control, diff, or commit-anchor business judgment into the frontend for UI convenience.
-- Review subagents must focus on high cohesion, low coupling, boundary drift, file size, failure paths, and verification coverage.
+- Review subagents must focus on high cohesion, low coupling, boundary drift, file size, failure paths, and verification coverage, and completed review subagents must be closed promptly.
 
 ### Testing Requirements
 
