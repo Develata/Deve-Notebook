@@ -1,0 +1,14 @@
+        subgraph cluster_mod_external_changes {
+            label="external changes [05_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_external_client [label="external_changes::client", fillcolor="#f0fdf4"];
+            mod_external_runtime [label="external_changes::runtime", fillcolor="#f0fdf4"];
+            mod_external_pending [label="source_control::pending_fs", fillcolor="#f0fdf4"];
+            mod_external_staging [label="source_control::staging", fillcolor="#f0fdf4"];
+            mod_external_materialize [label="sync::materialize", fillcolor="#f0fdf4"];
+            mod_external_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_external_proto [label="protocol::ws", fillcolor="#f0fdf4"];
+        }

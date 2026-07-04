@@ -29,6 +29,10 @@
     core_tree_nav -> obj_repo_scope;
 
     core_sc_stage -> obj_sc_staging;
+    core_external_sc -> obj_sc_pending_fs;
+    core_external_sc -> obj_sc_staging;
+    core_external_ledger -> obj_confirmed_op;
+    core_external_sync -> obj_workspace_projection;
     core_sc_commit -> obj_commit;
     core_ledger_commit -> obj_commit;
     core_sc_history -> obj_commit;

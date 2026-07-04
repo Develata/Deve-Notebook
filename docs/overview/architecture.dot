@@ -295,6 +295,20 @@ digraph DeveNoteArchitecture {
                 op_ai_trusted_stream [label="Receive Trusted\nAgent Stream", fillcolor="#fef9c3"];
             }
 
+            subgraph cluster_user_external_changes {
+                label="external changes [05_diff_logic + 12_source_control_ui]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_external_refresh [label="Refresh External Changes", fillcolor="#fef9c3"];
+                op_external_stage [label="Stage External Change", fillcolor="#fde68a"];
+                op_external_unstage [label="Unstage External Change", fillcolor="#fde68a"];
+                op_external_discard [label="Discard External Change", fillcolor="#fde68a"];
+                op_external_apply [label="Apply to Ledger", fillcolor="#fde68a"];
+                op_external_overlap [label="Overlap With Confirmed Ledger Changes", fillcolor="#fef9c3"];
+            }
+
         subgraph cluster_user_shared_all {
             label="shared(all)";
             style="rounded,dashed";
@@ -1027,6 +1041,20 @@ digraph DeveNoteArchitecture {
             app_repo_result [label="repo_switch::result", fillcolor="#eff6ff"];
         }
 
+        subgraph cluster_app_external_changes {
+            label="external changes [05_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_external_refresh [label="external_changes::refresh", fillcolor="#eff6ff"];
+            app_external_stage [label="external_changes::stage", fillcolor="#bfdbfe"];
+            app_external_unstage [label="external_changes::unstage", fillcolor="#bfdbfe"];
+            app_external_discard [label="external_changes::discard", fillcolor="#bfdbfe"];
+            app_external_apply [label="external_changes::apply_to_ledger", fillcolor="#bfdbfe"];
+            app_external_overlap [label="external_changes::overlap_blocked", fillcolor="#eff6ff"];
+        }
+
         subgraph cluster_app_sc_stage {
             label="stage / unstage [05_diff_logic]";
             style="rounded,filled";
@@ -1635,6 +1663,21 @@ digraph DeveNoteArchitecture {
             mod_proto_ws_repo [label="protocol::ws", fillcolor="#f0fdf4"];
         }
 
+        subgraph cluster_mod_external_changes {
+            label="external changes [05_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#effef3";
+            color="#16a34a";
+
+            mod_external_client [label="external_changes::client", fillcolor="#f0fdf4"];
+            mod_external_runtime [label="external_changes::runtime", fillcolor="#f0fdf4"];
+            mod_external_pending [label="source_control::pending_fs", fillcolor="#f0fdf4"];
+            mod_external_staging [label="source_control::staging", fillcolor="#f0fdf4"];
+            mod_external_materialize [label="sync::materialize", fillcolor="#f0fdf4"];
+            mod_external_ledger [label="ledger::manager", fillcolor="#f0fdf4"];
+            mod_external_proto [label="protocol::ws", fillcolor="#f0fdf4"];
+        }
+
         subgraph cluster_mod_sc_stage {
             label="stage / unstage [05_diff_logic]";
             style="rounded,filled";
@@ -2128,6 +2171,18 @@ digraph DeveNoteArchitecture {
             core_proto_repo [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
         }
 
+        subgraph cluster_core_external_changes {
+            label="external changes [05_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_external_sc [label="source control\n(workflow)", fillcolor="#fdf2f8"];
+            core_external_ledger [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_external_sync [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_external_proto [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }
+
         subgraph cluster_core_sc_stage {
             label="stage / unstage [05_diff_logic]";
             style="rounded,filled";
@@ -2470,6 +2525,12 @@ digraph DeveNoteArchitecture {
     op_repo_choose -> app_repo_select;
     op_repo_request -> app_repo_request;
     op_repo_result -> app_repo_result;
+    op_external_refresh -> app_external_refresh;
+    op_external_stage -> app_external_stage;
+    op_external_unstage -> app_external_unstage;
+    op_external_discard -> app_external_discard;
+    op_external_apply -> app_external_apply;
+    op_external_overlap -> app_external_overlap;
     op_sc_stage -> app_sc_stage;
     op_sc_stage_ack -> app_sc_stage_ack;
     op_sc_unstage -> app_sc_unstage;
@@ -2569,6 +2630,27 @@ digraph DeveNoteArchitecture {
     app_repo_result -> mod_proto_ws_repo;
     app_repo_result -> mod_tree_repo;
     app_repo_result -> mod_ledger_repo;
+    app_external_refresh -> mod_external_client;
+    app_external_refresh -> mod_external_runtime;
+    app_external_refresh -> mod_external_proto;
+    app_external_stage -> mod_external_client;
+    app_external_stage -> mod_external_runtime;
+    app_external_stage -> mod_external_staging;
+    app_external_stage -> mod_external_proto;
+    app_external_unstage -> mod_external_client;
+    app_external_unstage -> mod_external_runtime;
+    app_external_unstage -> mod_external_staging;
+    app_external_unstage -> mod_external_proto;
+    app_external_discard -> mod_external_client;
+    app_external_discard -> mod_external_runtime;
+    app_external_discard -> mod_external_materialize;
+    app_external_discard -> mod_external_proto;
+    app_external_apply -> mod_external_client;
+    app_external_apply -> mod_external_runtime;
+    app_external_apply -> mod_external_ledger;
+    app_external_apply -> mod_external_proto;
+    app_external_overlap -> mod_external_runtime;
+    app_external_overlap -> mod_external_ledger;
     app_sc_stage -> mod_sc_pending;
     app_sc_stage -> mod_sc_stage_table;
     app_sc_stage -> mod_proto_ws_sc;
@@ -2707,6 +2789,13 @@ digraph DeveNoteArchitecture {
     mod_proto_ws_repo -> core_proto_repo;
     mod_tree_repo -> core_tree_repo;
     mod_ledger_repo -> core_ledger_repo;
+    mod_external_client -> core_external_sc;
+    mod_external_runtime -> core_external_sc;
+    mod_external_pending -> core_external_sc;
+    mod_external_staging -> core_external_sc;
+    mod_external_materialize -> core_external_sync;
+    mod_external_ledger -> core_external_ledger;
+    mod_external_proto -> core_external_proto;
     mod_sc_pending -> core_sc_stage;
     mod_sc_stage_table -> core_sc_stage;
     mod_proto_ws_sc -> core_proto_sc;
@@ -3481,6 +3570,10 @@ digraph DeveNoteArchitecture {
     core_tree_nav -> obj_repo_scope;
 
     core_sc_stage -> obj_sc_staging;
+    core_external_sc -> obj_sc_pending_fs;
+    core_external_sc -> obj_sc_staging;
+    core_external_ledger -> obj_confirmed_op;
+    core_external_sync -> obj_workspace_projection;
     core_sc_commit -> obj_commit;
     core_ledger_commit -> obj_commit;
     core_sc_history -> obj_commit;
@@ -3675,6 +3768,14 @@ digraph DeveNoteArchitecture {
     user_repo_switch_spine -> app_repo_switch_spine [penwidth=2.2, color="#0f172a"];
     app_repo_switch_spine -> mod_repo_switch_spine [penwidth=2.2, color="#0f172a"];
     mod_repo_switch_spine -> core_repo_switch_spine [penwidth=2.2, color="#0f172a"];
+
+    user_external_changes_spine [label="external changes flow", shape=plaintext, fontcolor="#92400e"];
+    app_external_changes_spine [label="", shape=point, width=0.01];
+    mod_external_changes_spine [label="", shape=point, width=0.01];
+    core_external_changes_spine [label="", shape=point, width=0.01];
+    user_external_changes_spine -> app_external_changes_spine [penwidth=2.2, color="#0f172a"];
+    app_external_changes_spine -> mod_external_changes_spine [penwidth=2.2, color="#0f172a"];
+    mod_external_changes_spine -> core_external_changes_spine [penwidth=2.2, color="#0f172a"];
 
     user_sc_stage_spine [label="stage / unstage flow", shape=plaintext, fontcolor="#92400e"];
     app_sc_stage_spine [label="", shape=point, width=0.01];
@@ -4180,7 +4281,8 @@ digraph DeveNoteArchitecture {
         legend_core [label="execution domain", fillcolor="#fdf2f8"];
         legend_object [label="object plane (sidecar)", fillcolor="#f8fafc"];
         legend_owner [label="ownership axis (sidecar)", fillcolor="#f1f5f9"];
-        legend_note [label="clean shared baseline;\nno active drift markers", fillcolor="#e2e8f0"];
+        legend_note [label="clean shared baseline;
+no active drift markers", fillcolor="#e2e8f0"];
         legend_gate [label="scope / contract gate", fillcolor="#fde68a", shape=note];
 
         legend_op -> legend_platform -> legend_intersection -> legend_app -> legend_mod -> legend_core [style=invis];

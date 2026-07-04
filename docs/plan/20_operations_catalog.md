@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-06-24`
+- `Last Review`: `2026-07-04`
 - `Authority Owns`: `operation-flow catalog (Flow ID 键；atomic OpId 见 01_terminology §2.ter) / Extension Point Index / Replacement Point Index / Configuration Entry Index`
 - `Authority Defers To`: `01_terminology, 03_storage, 06_backup, 07_network, 08_auth, 13_i18n (failure family codes), 15_settings (具体配置项定义), 各章末尾「本章相关配置」段`
 - `Counterpart Feature`: `docs/features/operation-coverage.md`
@@ -54,6 +54,7 @@
 | `flow.cli.projection-workspace-indexing` | ED | PW | N | `STORAGE_*` | N | N | `03_storage/projection` | workspace-mounted |
 | `flow.doc.edit-confirmed-op` | UO | L+PW+PO | Y | `SYNC_*` | N | N | `03_storage/authority` | writer-gate+scope_nonce |
 | `flow.doc.pending-navigation-guard` | UO | PO | N | `SYNC_*` | N | N | `09_web_thin_client_ledger` | pending-nonempty |
+| `flow.external-changes` | UO | L+PW+FS | Y | `SC_*` | N | N | `05_diff_logic#authority-diff-core` | external-change-present+writer-gate+no-overlap |
 | `flow.i18n.error-mapping` | II | — | N | (all) | N | N | `13_i18n` | error-code-present |
 | `flow.i18n.hardcoded-audit` | ED | — | N | — | N | N | `13_i18n` | audit-run |
 | `flow.i18n.locale-error` | II | — | N | (all) | N | N | `13_i18n` | locale-load-fail |

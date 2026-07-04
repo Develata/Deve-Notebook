@@ -127,6 +127,14 @@
     app_repo_switch_spine -> mod_repo_switch_spine [penwidth=2.2, color="#0f172a"];
     mod_repo_switch_spine -> core_repo_switch_spine [penwidth=2.2, color="#0f172a"];
 
+    user_external_changes_spine [label="external changes flow", shape=plaintext, fontcolor="#92400e"];
+    app_external_changes_spine [label="", shape=point, width=0.01];
+    mod_external_changes_spine [label="", shape=point, width=0.01];
+    core_external_changes_spine [label="", shape=point, width=0.01];
+    user_external_changes_spine -> app_external_changes_spine [penwidth=2.2, color="#0f172a"];
+    app_external_changes_spine -> mod_external_changes_spine [penwidth=2.2, color="#0f172a"];
+    mod_external_changes_spine -> core_external_changes_spine [penwidth=2.2, color="#0f172a"];
+
     user_sc_stage_spine [label="stage / unstage flow", shape=plaintext, fontcolor="#92400e"];
     app_sc_stage_spine [label="", shape=point, width=0.01];
     mod_sc_stage_spine [label="", shape=point, width=0.01];

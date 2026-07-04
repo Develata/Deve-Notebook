@@ -1,0 +1,13 @@
+            subgraph cluster_user_external_changes {
+                label="external changes [05_diff_logic + 12_source_control_ui]";
+                style="rounded,filled";
+                fillcolor="#fff7d6";
+                color="#d97706";
+
+                op_external_refresh [label="Refresh External Changes", fillcolor="#fef9c3"];
+                op_external_stage [label="Stage External Change", fillcolor="#fde68a"];
+                op_external_unstage [label="Unstage External Change", fillcolor="#fde68a"];
+                op_external_discard [label="Discard External Change", fillcolor="#fde68a"];
+                op_external_apply [label="Apply to Ledger", fillcolor="#fde68a"];
+                op_external_overlap [label="Overlap With Confirmed Ledger Changes", fillcolor="#fef9c3"];
+            }

@@ -1,0 +1,11 @@
+        subgraph cluster_core_external_changes {
+            label="external changes [05_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#fff0f7";
+            color="#be185d";
+
+            core_external_sc [label="source control\n(workflow)", fillcolor="#fdf2f8"];
+            core_external_ledger [label="ledger\n(authority)", fillcolor="#fdf2f8"];
+            core_external_sync [label="sync\n(runtime)", fillcolor="#fdf2f8"];
+            core_external_proto [label="protocol\n(runtime)", fillcolor="#fdf2f8"];
+        }

@@ -1,0 +1,13 @@
+        subgraph cluster_app_external_changes {
+            label="external changes [05_diff_logic]";
+            style="rounded,filled";
+            fillcolor="#edf5ff";
+            color="#2563eb";
+
+            app_external_refresh [label="external_changes::refresh", fillcolor="#eff6ff"];
+            app_external_stage [label="external_changes::stage", fillcolor="#bfdbfe"];
+            app_external_unstage [label="external_changes::unstage", fillcolor="#bfdbfe"];
+            app_external_discard [label="external_changes::discard", fillcolor="#bfdbfe"];
+            app_external_apply [label="external_changes::apply_to_ledger", fillcolor="#bfdbfe"];
+            app_external_overlap [label="external_changes::overlap_blocked", fillcolor="#eff6ff"];
+        }

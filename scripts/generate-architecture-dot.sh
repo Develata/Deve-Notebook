@@ -101,13 +101,17 @@ if [[ ${#fragments[@]} -eq 0 ]]; then
 fi
 
 {
+  first_fragment=1
   for fragment in "${fragments[@]}"; do
+    if [[ "$first_fragment" -eq 0 ]]; then
+      printf '\n'
+    fi
+    first_fragment=0
     if [[ "$(basename "$fragment")" == "70_legend.dotfrag" ]]; then
       awk -v note="$legend_note" '{ gsub(/__LEGEND_NOTE__/, note); print }' "$fragment"
     else
       cat "$fragment"
     fi
-    printf '\n'
   done
 } > "$OUT_DOT"
 

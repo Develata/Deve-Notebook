@@ -8,6 +8,7 @@ command surface mode routing	command_surface_mode
 command surface action routing	command_surface_action
 branch-switch	branch
 repo file-op shell routing	repo_fileop_shell
+external changes	external_changes
 source-control commit	sc_commit
 history / commit diff	sc_history
 commit-and-push	sc_commit_publish
