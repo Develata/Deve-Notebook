@@ -16,6 +16,14 @@ pub use crate::protocol::{
     RemoteProjectionProvider,
 };
 
+mod provider;
+
+pub use provider::{
+    RemoteProjectionAuthorityEffects, RemoteProjectionFile, RemoteProjectionProviderAdapter,
+    RemoteProjectionProviderError, RemoteProjectionPullOutcome, RemoteProjectionPullRequest,
+    RemoteProjectionPushOutcome, RemoteProjectionPushRequest,
+};
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RemoteProjectionPlanInput {
     pub provider: RemoteProjectionProvider,

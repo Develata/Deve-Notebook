@@ -179,6 +179,12 @@
     - run: cargo test -p deve_web command_palette_source_control_authority_updates_after_node_role_probe -- --nocapture
     - run: cargo test -p deve_web source_control_header_ngit_authority_badge -- --nocapture
     - run: cargo test -p deve_web remote_projection_commands -- --nocapture
+    - run: cargo test -p deve_core remote_projection_file_accepts_only_markdown_projection_paths -- --nocapture
+    - run: cargo test -p deve_core provider_request_reuses_transport_admission_validator -- --nocapture
+    - run: cargo test -p deve_core fake_adapter_push_stores_projection_files_without_authority_effects -- --nocapture
+    - run: cargo test -p deve_core fake_adapter_pull_returns_external_changes_candidate_only -- --nocapture
+    - run: cargo test -p deve_cli run_reports_provider_io_fail_closed_after_workspace_gate -- --nocapture
+    - run: cargo test -p deve_cli run_checks_workspace_identity_before_provider_io -- --nocapture
     - run: cargo test -p deve_web commit_message_placeholder -- --nocapture
     - run: cargo test -p deve_web command_sets_cli_only_notice -- --nocapture
     - run: cargo test -p deve_web local_git_repair_notice -- --nocapture
@@ -253,6 +259,9 @@
     - ui_assert: command_palette_source_control_authority_reactive_after_node_role_probe true
     - ui_assert: source_control_legacy_bridge_mode_absent true
     - ui_assert: source_control_ngit_authority_badge_present true
+    - api_assert: remote_projection_fake_adapter_markdown_only true
+    - api_assert: remote_projection_pull_candidate_external_changes_only true
+    - api_assert: remote_projection_provider_metadata_diagnostic_only true
     - ui_assert: source_control_commit_empty_state_disabled_reason true
     - api_assert: confirmed_ledger_changes_are_not_pending_fs_ops true
     - api_assert: confirmed_only_commit_creates_anchor_without_duplicate_facts true
