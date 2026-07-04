@@ -1,4 +1,5 @@
 use super::*;
+use crate::i18n::Locale;
 
 #[test]
 fn write_gate_banner_copy_is_localized() {

@@ -24,6 +24,7 @@ Internationalization strings organized by UI feature. Provides localized text fo
 | `source_control_git/` | Git mirror source control string groups |
 | `source_control_history.rs` | Source control history strings |
 | `diff.rs` | Diff view strings |
+| `write_gate/` | Write gate action, reason, and template string groups |
 | `search.rs` | Search strings |
 | `chat.rs` | Chat strings |
 | `command_palette.rs` | Command palette strings |
