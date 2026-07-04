@@ -71,6 +71,7 @@ jobs:
           scripts/plan-coverage.sh --check-reverse-coverage
           scripts/plan-coverage.sh --check-metadata-completeness
           scripts/plan-coverage.sh --check-perf-budget
+          scripts/check-perf-budget-baseline.sh
           scripts/plan-coverage.sh --check-no-adr-plan-ref
           scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
           scripts/plan-coverage-selftest.sh

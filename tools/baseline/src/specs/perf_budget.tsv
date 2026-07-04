@@ -1,0 +1,32 @@
+contains	docs/plan/21_perf_budget.md	| `flow.repo.open-doc` | `standard` | 60ms | 200ms | +8MB | `PERF-001` open-doc bench |
+contains	docs/plan/21_perf_budget.md	| `flow.repo.open-doc` | `low-spec` | 120ms | 400ms | +4MB | `PERF-001` open-doc bench |
+contains	docs/plan/21_perf_budget.md	| `flow.doc.edit-confirmed-op` (edit→ack) | `standard` | 25ms | 90ms | +2MB | `PERF-001` edit-ack bench |
+contains	docs/plan/21_perf_budget.md	| `flow.doc.edit-confirmed-op` (edit→ack) | `low-spec` | 40ms | 150ms | +2MB | `PERF-001` edit-ack bench |
+contains	docs/plan/21_perf_budget.md	| cold mount (repo open → ready) | `standard` | 300ms | 800ms | ≤128MB | `REL-002` startup bench |
+contains	docs/plan/21_perf_budget.md	| cold mount (repo open → ready) | `low-spec` | 500ms | 1200ms | ≤64MB | `REL-002` startup bench |
+contains	docs/plan/21_perf_budget.md	**RSS baseline
+contains	docs/plan/21_perf_budget.md	`standard` ≤ 128MB
+contains	docs/plan/21_perf_budget.md	`low-spec` ≤ 64MB
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	scripts/plan-coverage.sh --check-perf-budget
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	scripts/check-perf-budget-baseline.sh
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	cargo run -p deve_baseline -- perf-budget
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	DEVE_PROFILE=low-spec
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	open-doc
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	edit-ack
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	cold-mount
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	RSS baseline
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	contract_assert: open_doc_budget_entry_present true
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	contract_assert: edit_ack_budget_entry_present true
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	contract_assert: cold_mount_budget_entry_present true
+case_contains	docs/acceptance-cases/12_tech_release.md	PERF-001	contract_assert: rss_baseline_entry_present true
+absent	docs/acceptance-cases/12_tech_release.md	perf_assert:
+contains	docs/features/operations/tech_stack_runtime_budget_check.md	scripts/check-perf-budget-baseline.sh
+contains	docs/features/operations/tech_stack_runtime_budget_check.md	budget contract drift and low-spec config drift
+contains	docs/features/operations/tech_stack_runtime_budget_check.md	`PERF-001` open-doc / edit-ack / cold-mount / RSS contract entries are bound
+contains	scripts/check-perf-budget-baseline.sh	run_deve_baseline "$ROOT_DIR" "perf-budget" "perf-budget-baseline-check"
+contains	.github/workflows/check.yml	scripts/check-perf-budget-baseline.sh
+contains	.github/workflows/release.yml	scripts/check-perf-budget-baseline.sh
+contains	tools/baseline/src/main.rs	mod perf_budget;
+contains	tools/baseline/src/main.rs	"perf-budget" => perf_budget::run()
+contains	tools/baseline/src/main.rs	perf_budget::run_text()?
+cargo_test	deve_core	low_spec_profile_applies_unset_runtime_presets

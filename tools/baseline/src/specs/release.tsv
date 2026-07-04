@@ -9,6 +9,7 @@ contains	.github/workflows/release.yml	cargo check --locked -p deve_web --target
 contains	.github/workflows/release.yml	cargo install cargo-audit --locked
 contains	.github/workflows/release.yml	DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
 contains	.github/workflows/release.yml	scripts/plan-coverage.sh --write-report
+contains	.github/workflows/release.yml	scripts/check-perf-budget-baseline.sh
 contains	.github/workflows/release.yml	scripts/check-architecture-registry.sh
 contains	.github/workflows/release.yml	scripts/check-native-track-boundary.sh
 contains	.github/workflows/release.yml	scripts/check-native-packaging-gate.sh
@@ -29,6 +30,7 @@ contains	.github/workflows/check.yml	workflow_dispatch:
 contains	.github/workflows/check.yml	contents: read
 contains	.github/workflows/check.yml	cargo fmt --check
 contains	.github/workflows/check.yml	cargo run --quiet -p deve_baseline -- all
+contains	.github/workflows/check.yml	scripts/check-perf-budget-baseline.sh
 contains	.github/workflows/check.yml	cargo clippy --locked --all-targets -- -D warnings
 contains	.github/workflows/check.yml	cargo check --locked -p deve_web --target wasm32-unknown-unknown
 contains	.github/workflows/check.yml	cargo test --locked
@@ -818,6 +820,8 @@ contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_C
 contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control_http_scope_requires_nonzero_nonce -- --nocapture
 contains	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control_scope_nonce_gate_rejects_missing_scope_before_handler -- --nocapture
 absent	scripts/check-local-quick-gate.sh	run cargo test --target-dir "$LOCAL_CARGO_TARGET_DIR" -p deve_cli source_control -- --nocapture
+contains	scripts/check-perf-budget-baseline.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+contains	scripts/check-perf-budget-baseline.sh	run_deve_baseline "$ROOT_DIR" "perf-budget" "perf-budget-baseline-check"
 contains	scripts/check-deep-audit-gate.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-deep-audit-gate.sh	run_deve_baseline "$ROOT_DIR" "deep-audit-gate" "deep-audit-gate"
 contains	scripts/check-desktop-platform-package-build.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"

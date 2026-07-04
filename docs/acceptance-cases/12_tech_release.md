@@ -22,12 +22,23 @@
     - stdout_empty true
 
 - case_id: PERF-001
-  goal: Low-Spec 配置禁用重能力。
+  goal: 最小性能预算入口覆盖 open-doc、edit-ack、cold-mount 与 RSS baseline，并绑定 low-spec 配置检查。
   preconditions:
+    - `docs/plan/21_perf_budget.md` 可读
+    - Rust baseline checker 可运行
     - DEVE_PROFILE=low-spec
   steps:
+    - run: scripts/plan-coverage.sh --check-perf-budget
+    - run: scripts/check-perf-budget-baseline.sh
+    - run: cargo run -p deve_baseline -- perf-budget
     - run: deve config print
   assertions:
+    - stdout_contains: "check-perf-budget: OK"
+    - stdout_contains: "perf-budget-baseline-check: ok"
+    - contract_assert: open_doc_budget_entry_present true
+    - contract_assert: edit_ack_budget_entry_present true
+    - contract_assert: cold_mount_budget_entry_present true
+    - contract_assert: rss_baseline_entry_present true
     - stdout_contains: "profile = 'low-spec'"
 
 - case_id: REL-001

@@ -41,6 +41,7 @@ mod native_process_adapter_gate;
 mod native_target_host_evidence;
 mod native_track_boundary;
 mod network;
+mod perf_budget;
 mod release;
 mod release_audit_gate;
 mod rendering;
@@ -132,6 +133,7 @@ fn run() -> Result<()> {
         "native-process-adapter-gate" => native_process_adapter_gate::run(),
         "native-track-boundary" => native_track_boundary::run(),
         "native-target-host-evidence" => native_target_host_evidence::run(&command_args),
+        "perf-budget" => perf_budget::run(),
         "release-audit-gate" => release_audit_gate::run(&command_args),
         "repo-file-ops" => repo_file_ops::run(),
         "settings-local-feedback" => settings_local_feedback::run(),
@@ -147,7 +149,7 @@ fn run() -> Result<()> {
         "full" => run_full_baselines(),
         "-h" | "--help" | "help" => {
             println!(
-                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|web-runtime-boundary|ws-structured-errors|all|full>"
+                "Usage: deve_baseline <storage-repo|acceptance-bindings|architecture-registry|network|release|dev-runbook|diff-color|feature-operation-paths|graph|i18n-formatting|i18n-hardcoded|rendering|search|ui-token|ui-z-index|ui-focus|auth|auth-unauthorized-state|browser-prefs-boundary|ai|cli-settings|dev-data-health|deep-audit-gate|docker-smoke-preflight|desktop-package-preflight|desktop-signing-preflight|desktop-target-host-preflight|desktop-platform-package-build|desktop-package-startup-smoke|desktop-native-session-package-smoke|desktop-installer-smoke|foundation|large-doc|local-quick-gate|mobile|mobile-android-release-preflight|mobile-android-emulator-install-startup-smoke|mobile-android-install-startup-smoke|mobile-android-shell-package-build|mobile-ios-install-startup-smoke|mobile-ios-shell-package-build|mobile-platform-package-preflight|native-packaging-gate|native-process-adapter-gate|native-track-boundary|native-target-host-evidence|perf-budget|release-audit-gate|repo-file-ops|settings-local-feedback|source-control|source-control-smoke-hygiene|ui-dashboard-refresh|ui-desktop|ui-disconnect|ui-spa-routing|web-runtime-boundary|ws-structured-errors|all|full>"
             );
             Ok(())
         }
@@ -187,6 +189,7 @@ fn run_text_baselines() -> Result<()> {
     mobile::run_text()?;
     native_track_boundary::run()?;
     native_target_host_evidence::run(&[])?;
+    perf_budget::run_text()?;
     settings_local_feedback::run_text()?;
     source_control::run_text()?;
     source_control_smoke_hygiene::run()?;
@@ -228,6 +231,7 @@ fn run_full_baselines() -> Result<()> {
     native_packaging_gate::run()?;
     native_process_adapter_gate::run()?;
     native_target_host_evidence::run(&[])?;
+    perf_budget::run()?;
     repo_file_ops::run()?;
     settings_local_feedback::run()?;
     source_control::run()?;

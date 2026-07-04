@@ -24,8 +24,9 @@
 - `Surface`: `cli-or-ci`
 - `Trigger`: maintainer runs budget or release checks
 - `Preconditions`: repo is checked out and dependencies are available
-- `Immediate Result`: low-spec regressions are caught before release
-- `Application Entry`: `scripts/plan-coverage.sh`, `.github/workflows/release.yml`
+- `Immediate Result`: budget contract drift and low-spec config drift are caught before release
+- `Application Entry`: `scripts/plan-coverage.sh`, `scripts/check-perf-budget-baseline.sh`, `.github/workflows/release.yml`
+- `Baseline`: `PERF-001` open-doc / edit-ack / cold-mount / RSS contract entries are bound by `cargo run -p deve_baseline -- perf-budget`; measured regression gates are added by the later benchmark harness.
 
 ### `op.tech.budget.review-heavy-feature`
 
